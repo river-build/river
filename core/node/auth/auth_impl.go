@@ -322,7 +322,7 @@ func (ca *chainAuth) getSpaceEntitlementsForPermissionUncached(
 	return &entitlementCacheResult{allowed: true, entitlementData: entitlementData, owner: owner}, nil
 }
 
-func deserialize(serialized string) []common.Address {
+func deserializeWallets(serialized string) []common.Address {
 	addressStrings := strings.Split(serialized, ",")
 	linkedWallets := make([]common.Address, len(addressStrings))
 	for i, addrStr := range addressStrings {
@@ -369,16 +369,16 @@ func (ca *chainAuth) isEntitledToSpaceUncached(ctx context.Context, cfg *config.
 		if ent.entitlementType == "RuleEntitlement" {
 			re := ent.ruleEntitlement
 			log.Debug("RuleEntitlement", "ruleEntitlement", re)
-			result, err := entitlement.EvaluateRuleData(ctx, cfg, deserialize(args.linkedWallets), re)
+			result, err := entitlement.EvaluateRuleData(ctx, cfg, deserializeWallets(args.linkedWallets), re)
 
 			if err != nil {
 				return &boolCacheResult{allowed: false}, AsRiverError(err).Func("isEntitledToSpace")
 			}
 			if result {
-				log.Debug("rule entitlment is true", "spaceId", args.spaceId)
+				log.Debug("rule entitlement is true", "spaceId", args.spaceId)
 				return &boolCacheResult{allowed: true}, nil
 			} else {
-				log.Debug("rule entitlment is false", "spaceId", args.spaceId)
+				log.Debug("rule entitlement is false", "spaceId", args.spaceId)
 				return &boolCacheResult{allowed: false}, nil
 			}
 		} else if ent.entitlementType == "UserEntitlement" {
