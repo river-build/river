@@ -99,6 +99,8 @@ contract MembershipFacet is
       Permissions.JoinSpace
     );
 
+    bool shouldRevert;
+
     for (uint256 i = 0; i < roles.length; i++) {
       IRolesBase.Role memory role = roles[i];
 
@@ -116,7 +118,9 @@ contract MembershipFacet is
             // fact pass for this user, and no asynchronous checks will be emitted.
             if (entitlement.isEntitled(0x0, users, JOIN_SPACE)) {
               _issueToken(transactionId);
-              return;
+              shouldRevert = false;
+            } else {
+              shouldRevert = true;
             }
           } else {
             _requestEntitlementCheck(
@@ -124,13 +128,22 @@ contract MembershipFacet is
               IRuleEntitlement(address(entitlement)),
               role.id
             );
+            shouldRevert = false;
             isCrosschainPending = true;
           }
         }
       }
     }
+
     if (!isCrosschainPending) {
       emit MembershipTokenRejected(receiver);
+    }
+
+    if (shouldRevert) {
+      _captureData(transactionId, "");
+      if (msg.value > 0) _releaseCapturedValue(transactionId, msg.value);
+      emit MembershipTokenRejected(receiver);
+      revert Membership__InsufficientAllowance();
     }
   }
 
@@ -383,20 +396,22 @@ contract MembershipFacet is
       );
 
       _captureData(transactionId, "");
-
-      uint256 value = _getCapturedValue(transactionId);
-
-      if (value > 0) {
-        _releaseCapturedValue(transactionId, value);
-        CurrencyTransfer.transferCurrency(
-          _getMembershipCurrency(),
-          address(this),
-          sender,
-          value
-        );
-      }
+      _refundBalance(transactionId, sender);
 
       emit MembershipTokenRejected(receiver);
+    }
+  }
+
+  function _refundBalance(bytes32 transactionId, address sender) internal {
+    uint256 userValue = _getCapturedValue(transactionId);
+    if (userValue > 0) {
+      _releaseCapturedValue(transactionId, userValue);
+      CurrencyTransfer.transferCurrency(
+        _getMembershipCurrency(),
+        address(this),
+        sender,
+        userValue
+      );
     }
   }
 }
