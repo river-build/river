@@ -244,11 +244,12 @@ contract River is
     address account,
     address delegatee
   ) internal virtual override {
-    if (balanceOf(account) <= MIN_TOKEN_THRESHOLD)
-      revert River__InvalidTokenAmount();
-
     // revert if the delegatee is the same as the current delegatee
     if (delegates(account) == delegatee) revert River__DelegateeSameAsCurrent();
+
+    // revert if the balance is below the threshold
+    if (balanceOf(account) < MIN_TOKEN_THRESHOLD)
+      revert River__InvalidTokenAmount();
 
     // if the delegatee is the zero address, initialize disable lock
     if (delegatee == address(0)) {
