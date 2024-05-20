@@ -26,7 +26,9 @@ contract NodeOperatorFacet is INodeOperator, OwnableBase, ERC721ABase, Facet {
   // =============================================================
 
   /// @inheritdoc INodeOperator
-  function registerOperator() external {
+  function registerOperator(address claimer) external {
+    if (claimer == address(0)) revert NodeOperator__InvalidAddress();
+
     NodeOperatorStorage.Layout storage ds = NodeOperatorStorage.layout();
 
     if (ds.operators.contains(msg.sender))
@@ -36,8 +38,8 @@ contract NodeOperatorFacet is INodeOperator, OwnableBase, ERC721ABase, Facet {
 
     ds.operators.add(msg.sender);
     ds.statusByOperator[msg.sender] = NodeOperatorStatus.Standby;
-    ds.claimerByOperator[msg.sender] = msg.sender;
-    ds.operatorsByClaimer[msg.sender].add(msg.sender);
+    ds.claimerByOperator[msg.sender] = claimer;
+    ds.operatorsByClaimer[claimer].add(msg.sender);
 
     emit OperatorRegistered(msg.sender);
   }
