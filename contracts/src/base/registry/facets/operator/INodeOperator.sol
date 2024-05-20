@@ -24,6 +24,7 @@ interface INodeOperatorBase {
   error NodeOperator__InvalidStakeRequirement();
   error NodeOperator__ClaimAddressNotChanged();
   error NodeOperator__InvalidCommissionRate();
+  error NodeOperator__NotClaimer();
   // =============================================================
   //                           Events
   // =============================================================
@@ -78,9 +79,14 @@ interface INodeOperator is INodeOperatorBase {
   // =============================================================
   //                           Operator Information
   // =============================================================
-  function setClaimAddress(address claimAddress) external;
+  function setClaimAddressForOperator(
+    address claimer,
+    address operator
+  ) external;
 
-  function getClaimAddress(address operator) external view returns (address);
+  function getClaimAddressForOperator(
+    address operator
+  ) external view returns (address);
 
   // =============================================================
   //                           Commission
