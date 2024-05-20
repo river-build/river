@@ -235,7 +235,8 @@ func (params *aeParams) canAddSpacePayload(payload *StreamEvent_SpacePayload) ru
 		}
 		if content.Channel.Op == ChannelOp_CO_UPDATED {
 			return aeBuilder().
-				check(params.creatorIsMember)
+				check(params.creatorIsMember).
+				check(ru.validSpaceChannelOp)
 		} else {
 			return aeBuilder().
 				check(params.creatorIsValidNode).

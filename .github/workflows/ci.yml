@@ -813,8 +813,7 @@ jobs:
               working-directory: core
 
             - name: Run node tests
-              # TODO: dropping --race for now, takes long and there is a flake in ./events that repores only on CI
-              run: go test -timeout 10m ./...
+              run: go test -race -timeout 12m ./...
               working-directory: core/node
 
     XChain_Node:

@@ -341,7 +341,7 @@ func (r *transactionPool) Submit(
 	r.transactionGasCap.With(prometheus.Labels{"replacement": "false"}).Set(gasCap)
 	r.transactionGasTip.With(prometheus.Labels{"replacement": "false"}).Set(tipCap)
 
-	log.Info(
+	log.Debug(
 		"TxPool: Transaction SENT",
 		"txHash", tx.Hash(),
 		"chain", r.chainID,
@@ -436,7 +436,7 @@ func (r *transactionPool) OnBlock(ctx context.Context, blockNumber BlockNumber) 
 				r.transactionsProcessed.With(prometheus.Labels{"status": status}).Inc()
 				r.transactionsPending.Add(-1)
 
-				log.Info(
+				log.Debug(
 					"TxPool: Transaction DONE",
 					"txHash", txHash,
 					"chain", r.chainID,
@@ -487,7 +487,7 @@ func (r *transactionPool) OnBlock(ctx context.Context, blockNumber BlockNumber) 
 			}
 
 			if err := r.client.SendTransaction(ctx, tx); err == nil {
-				log.Info(
+				log.Debug(
 					"TxPool: Transaction REPLACED",
 					"old", pendingTx.tx.Hash(),
 					"txHash", tx.Hash(),
