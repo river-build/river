@@ -9,6 +9,8 @@ import {IRuleEntitlement} from "./../../entitlements/rule/IRuleEntitlement.sol";
 import {IUserEntitlement} from "./../../entitlements/user/IUserEntitlement.sol";
 
 // libraries
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {ChannelService} from "../channels/ChannelService.sol";
 
 // contracts
 import {EntitlementsManagerBase} from "./EntitlementsManagerBase.sol";
@@ -21,6 +23,9 @@ contract EntitlementsManager is
   RolesBase,
   Entitled
 {
+  using EnumerableSet for EnumerableSet.UintSet;
+  using EnumerableSet for EnumerableSet.Bytes32Set;
+
   function addImmutableEntitlements(
     address[] memory entitlements
   ) external onlyOwner {
@@ -60,10 +65,45 @@ contract EntitlementsManager is
     return _isEntitledToChannel(channelId, user, permission);
   }
 
-  function getEntitlementDataByPermission(
+  function _getChannelRolesWithPermission(
+    bytes32 channelId,
     string calldata permission
-  ) external view returns (EntitlementData[] memory) {
-    IRolesBase.Role[] memory roles = _getRolesWithPermission(permission);
+  ) internal view returns (IRolesBase.Role[] memory) {
+    uint256[] memory channelRoles = ChannelService.getRolesByChannel(channelId);
+
+    uint256 roleCount = 0;
+    uint256[] memory matchedRoleIds = new uint256[](channelRoles.length);
+
+    bytes32 requestedPermission = keccak256(abi.encodePacked(permission));
+
+    // Count the number of roles that have the requested permission and record their ids.
+    for (uint256 i = 0; i < channelRoles.length; i++) {
+      IRolesBase.Role memory role = _getRoleById(channelRoles[i]);
+      if (role.disabled) {
+        continue;
+      }
+      // Check if the role has the requested permission.
+      for (uint256 j = 0; j < role.permissions.length; j++) {
+        if (keccak256(bytes(role.permissions[j])) == requestedPermission) {
+          matchedRoleIds[roleCount] = role.id;
+          roleCount++;
+          break;
+        }
+      }
+    }
+
+    // Assemble the roles that have the requested permission for the specified channel.
+    IRolesBase.Role[] memory roles = new IRolesBase.Role[](roleCount);
+    for (uint256 i = 0; i < roleCount; i++) {
+      roles[i] = _getRoleById(matchedRoleIds[i]);
+    }
+
+    return roles;
+  }
+
+  function _getEntitlements(
+    IRolesBase.Role[] memory roles
+  ) internal view returns (EntitlementData[] memory) {
     uint256 entitlementCount = 0;
     for (uint256 i = 0; i < roles.length; i++) {
       IRolesBase.Role memory role = roles[i];
@@ -101,5 +141,23 @@ contract EntitlementsManager is
       }
     }
     return entitlementData;
+  }
+
+  function getEntitlementDataByPermission(
+    string calldata permission
+  ) external view returns (EntitlementData[] memory) {
+    IRolesBase.Role[] memory roles = _getRolesWithPermission(permission);
+    return _getEntitlements(roles);
+  }
+
+  function getChannelEntitlementDataByPermission(
+    bytes32 channelId,
+    string calldata permission
+  ) external view returns (EntitlementData[] memory) {
+    IRolesBase.Role[] memory roles = _getChannelRolesWithPermission(
+      channelId,
+      permission
+    );
+    return _getEntitlements(roles);
   }
 }

@@ -6,9 +6,13 @@ import {IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
 import {IEntitlementsManager} from "contracts/src/spaces/facets/entitlements/IEntitlementsManager.sol";
 import {IEntitlementsManagerBase} from "contracts/src/spaces/facets/entitlements/IEntitlementsManager.sol";
 import {IMembershipBase} from "contracts/src/spaces/facets/membership/IMembership.sol";
+import {IChannel} from "contracts/src/spaces/facets/channels/IChannel.sol";
+import {IRoles, IRolesBase} from "contracts/src/spaces/facets/roles/IRoles.sol";
+import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 
 // libraries
 import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
+import {RuleEntitlementUtil} from "../../crosschain/RuleEntitlementUtil.sol";
 
 // contracts
 import {EntitlementsManager} from "contracts/src/spaces/facets/entitlements/EntitlementsManager.sol";
@@ -209,7 +213,6 @@ contract EntitlementsManagerTest is
 
   function test_getSingleEntitlement() external {
     _arrangeInitialEntitlements();
-
     Entitlement memory entitlement = entitlements.getEntitlement(
       address(mockEntitlement)
     );
@@ -227,6 +230,47 @@ contract EntitlementsManagerTest is
     assertEq(
       keccak256(abi.encodePacked(entitlement[0].entitlementType)),
       keccak256(abi.encodePacked("UserEntitlement"))
+    );
+  }
+
+  function test_GetChannelEntitlementDataByPermission() external {
+    _arrangeInitialEntitlements();
+
+    string[] memory permissions = new string[](1);
+    permissions[0] = Permissions.Read;
+    address[] memory users = new address[](1);
+    users[0] = founder;
+    IRolesBase.CreateEntitlement[]
+      memory createEntitlements = new IRolesBase.CreateEntitlement[](1);
+    createEntitlements[0] = IRolesBase.CreateEntitlement({
+      module: IEntitlement(mockEntitlement),
+      data: abi.encode(users)
+    });
+
+    uint256 roleId = IRoles(everyoneSpace).createRole(
+      "test-channel-member",
+      permissions,
+      createEntitlements
+    );
+    vm.stopPrank();
+
+    uint256[] memory roles = new uint256[](1);
+    roles[0] = roleId;
+    bytes32 channelId = "test-channel";
+    IChannel(everyoneSpace).createChannel(channelId, "Metadata", roles);
+
+    IEntitlementsManager.EntitlementData[]
+      memory channelEntitlements = entitlements
+        .getChannelEntitlementDataByPermission(channelId, Permissions.Read);
+
+    assertEq(channelEntitlements.length == 1, true);
+    assertEq(
+      keccak256(abi.encodePacked(channelEntitlements[0].entitlementType)),
+      keccak256(abi.encodePacked("MockUserEntitlement"))
+    );
+    assertEq(
+      keccak256(abi.encodePacked(channelEntitlements[0].entitlementData)),
+      keccak256(abi.encode(users))
     );
   }
 
