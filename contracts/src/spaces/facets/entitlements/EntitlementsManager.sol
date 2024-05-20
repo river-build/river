@@ -9,7 +9,6 @@ import {IRuleEntitlement} from "./../../entitlements/rule/IRuleEntitlement.sol";
 import {IUserEntitlement} from "./../../entitlements/user/IUserEntitlement.sol";
 
 // libraries
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {ChannelService} from "../channels/ChannelService.sol";
 
 // contracts
@@ -23,9 +22,6 @@ contract EntitlementsManager is
   RolesBase,
   Entitled
 {
-  using EnumerableSet for EnumerableSet.UintSet;
-  using EnumerableSet for EnumerableSet.Bytes32Set;
-
   function addImmutableEntitlements(
     address[] memory entitlements
   ) external onlyOwner {
