@@ -33,8 +33,8 @@ RUN cd xchain && go build -trimpath -o /bin/xchain_node ./node
 FROM alpine:latest
 LABEL org.opencontainers.image.title="River Node" \
     org.opencontainers.image.description="River Node reference implementation, written in Go" \
-    org.opencontainers.image.source="https://github.com/river-build/river-stage" \
-    org.opencontainers.image.licenses="Apache-2.0"
+    org.opencontainers.image.source="https://github.com/river-build/river" \
+    org.opencontainers.image.licenses="MIT"
 
 # Install dependencies
 RUN apk add --no-cache libcap supervisor && \
@@ -62,7 +62,7 @@ USER riveruser
 
 # Environment variables setup
 ARG GIT_SHA
-ARG DD_GIT_REPOSITORY_URL="https://github.com/river-build/river-stage"
+ARG DD_GIT_REPOSITORY_URL="https://github.com/river-build/river"
 
 ENV DD_GIT_REPOSITORY_URL=${DD_GIT_REPOSITORY_URL} \
     DD_GIT_COMMIT_SHA=${GIT_SHA}
