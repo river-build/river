@@ -127,7 +127,7 @@ contract NodeOperatorFacet is INodeOperator, OwnableBase, ERC721ABase, Facet {
     ds.claimerByOperator[operator] = claimer;
     ds.operatorsByClaimer[claimer].add(operator);
 
-    emit OperatorClaimAddressChanged(operator, msg.sender);
+    emit OperatorClaimAddressChanged(operator, claimer);
   }
 
   /// @inheritdoc INodeOperator
