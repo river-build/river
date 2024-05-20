@@ -12,7 +12,6 @@ import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 
 // libraries
 import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
-import {RuleEntitlementUtil} from "../../crosschain/RuleEntitlementUtil.sol";
 
 // contracts
 import {EntitlementsManager} from "contracts/src/spaces/facets/entitlements/EntitlementsManager.sol";
