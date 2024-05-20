@@ -99,7 +99,7 @@ contract MembershipFacet is
       Permissions.JoinSpace
     );
 
-    bool shouldRevert;
+    bool shouldRefund;
 
     for (uint256 i = 0; i < roles.length; i++) {
       IRolesBase.Role memory role = roles[i];
@@ -118,9 +118,9 @@ contract MembershipFacet is
             // fact pass for this user, and no asynchronous checks will be emitted.
             if (entitlement.isEntitled(0x0, users, JOIN_SPACE)) {
               _issueToken(transactionId);
-              shouldRevert = false;
+              shouldRefund = false;
             } else {
-              shouldRevert = true;
+              shouldRefund = true;
             }
           } else {
             _requestEntitlementCheck(
@@ -128,7 +128,7 @@ contract MembershipFacet is
               IRuleEntitlement(address(entitlement)),
               role.id
             );
-            shouldRevert = false;
+            shouldRefund = false;
             isCrosschainPending = true;
           }
         }
@@ -139,7 +139,7 @@ contract MembershipFacet is
       emit MembershipTokenRejected(receiver);
     }
 
-    if (shouldRevert) {
+    if (shouldRefund) {
       _captureData(transactionId, "");
       if (msg.value > 0) _releaseCapturedValue(transactionId, msg.value);
       emit MembershipTokenRejected(receiver);
