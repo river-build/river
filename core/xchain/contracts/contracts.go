@@ -2,10 +2,11 @@ package contracts
 
 import (
 	"context"
-	"core/xchain/config"
 	dev "core/xchain/contracts/dev"
 	v3 "core/xchain/contracts/v3"
 	"math/big"
+
+	"github.com/river-build/river/core/node/config"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
