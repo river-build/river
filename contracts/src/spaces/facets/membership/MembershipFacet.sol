@@ -143,7 +143,6 @@ contract MembershipFacet is
       _captureData(transactionId, "");
       if (msg.value > 0) _releaseCapturedValue(transactionId, msg.value);
       emit MembershipTokenRejected(receiver);
-      revert Membership__InsufficientAllowance();
     }
   }
 
