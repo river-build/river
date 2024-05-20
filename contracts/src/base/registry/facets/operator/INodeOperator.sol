@@ -50,7 +50,7 @@ interface INodeOperator is INodeOperatorBase {
   /*
    * @notice  Registers an operator.
    */
-  function registerOperator() external;
+  function registerOperator(address claimer) external;
 
   /*
    * @notice  Returns whether an operator is registered.

@@ -1133,7 +1133,7 @@ contract RewardsDistributionTest is
     vm.expectEmit();
     emit INodeOperatorBase.OperatorRegistered(operatorAddr);
     vm.prank(operatorAddr);
-    operator.registerOperator();
+    operator.registerOperator(operatorAddr);
   }
 
   function setOperatorCommissionRate(

@@ -63,7 +63,7 @@ contract NodeOperatorFacetTest is
     emit OperatorRegistered(_operator);
     emit OperatorRegistered(_operator);
     vm.prank(_operator);
-    operator.registerOperator();
+    operator.registerOperator(_operator);
     _;
   }
 
@@ -72,7 +72,7 @@ contract NodeOperatorFacetTest is
   ) public givenOperatorIsRegistered(randomOperator) {
     vm.expectRevert(NodeOperator__AlreadyRegistered.selector);
     vm.prank(randomOperator);
-    operator.registerOperator();
+    operator.registerOperator(randomOperator);
   }
 
   function test_registerOperatorWithValidAddress(
