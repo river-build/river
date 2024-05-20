@@ -26,6 +26,18 @@ import type {
   PromiseOrValue,
 } from "./common";
 
+export declare namespace IEntitlementsManager {
+  export type EntitlementDataStruct = {
+    entitlementType: PromiseOrValue<string>;
+    entitlementData: PromiseOrValue<BytesLike>;
+  };
+
+  export type EntitlementDataStructOutput = [string, string] & {
+    entitlementType: string;
+    entitlementData: string;
+  };
+}
+
 export declare namespace IEntitlementsManagerBase {
   export type EntitlementStruct = {
     name: PromiseOrValue<string>;
@@ -42,22 +54,11 @@ export declare namespace IEntitlementsManagerBase {
   };
 }
 
-export declare namespace IEntitlementsManager {
-  export type EntitlementDataStruct = {
-    entitlementType: PromiseOrValue<string>;
-    entitlementData: PromiseOrValue<BytesLike>;
-  };
-
-  export type EntitlementDataStructOutput = [string, string] & {
-    entitlementType: string;
-    entitlementData: string;
-  };
-}
-
 export interface IEntitlementsManagerInterface extends utils.Interface {
   functions: {
     "addEntitlementModule(address)": FunctionFragment;
     "addImmutableEntitlements(address[])": FunctionFragment;
+    "getChannelEntitlementDataByPermission(bytes32,string)": FunctionFragment;
     "getEntitlement(address)": FunctionFragment;
     "getEntitlementDataByPermission(string)": FunctionFragment;
     "getEntitlements()": FunctionFragment;
@@ -70,6 +71,7 @@ export interface IEntitlementsManagerInterface extends utils.Interface {
     nameOrSignatureOrTopic:
       | "addEntitlementModule"
       | "addImmutableEntitlements"
+      | "getChannelEntitlementDataByPermission"
       | "getEntitlement"
       | "getEntitlementDataByPermission"
       | "getEntitlements"
@@ -85,6 +87,10 @@ export interface IEntitlementsManagerInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "addImmutableEntitlements",
     values: [PromiseOrValue<string>[]]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getChannelEntitlementDataByPermission",
+    values: [PromiseOrValue<BytesLike>, PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
     functionFragment: "getEntitlement",
@@ -121,6 +127,10 @@ export interface IEntitlementsManagerInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "addImmutableEntitlements",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getChannelEntitlementDataByPermission",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -218,6 +228,12 @@ export interface IEntitlementsManager extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
+    getChannelEntitlementDataByPermission(
+      channelId: PromiseOrValue<BytesLike>,
+      permission: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<[IEntitlementsManager.EntitlementDataStructOutput[]]>;
+
     getEntitlement(
       entitlement: PromiseOrValue<string>,
       overrides?: CallOverrides
@@ -269,6 +285,12 @@ export interface IEntitlementsManager extends BaseContract {
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
+  getChannelEntitlementDataByPermission(
+    channelId: PromiseOrValue<BytesLike>,
+    permission: PromiseOrValue<string>,
+    overrides?: CallOverrides
+  ): Promise<IEntitlementsManager.EntitlementDataStructOutput[]>;
+
   getEntitlement(
     entitlement: PromiseOrValue<string>,
     overrides?: CallOverrides
@@ -311,6 +333,12 @@ export interface IEntitlementsManager extends BaseContract {
       entitlements: PromiseOrValue<string>[],
       overrides?: CallOverrides
     ): Promise<void>;
+
+    getChannelEntitlementDataByPermission(
+      channelId: PromiseOrValue<BytesLike>,
+      permission: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<IEntitlementsManager.EntitlementDataStructOutput[]>;
 
     getEntitlement(
       entitlement: PromiseOrValue<string>,
@@ -376,6 +404,12 @@ export interface IEntitlementsManager extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
+    getChannelEntitlementDataByPermission(
+      channelId: PromiseOrValue<BytesLike>,
+      permission: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     getEntitlement(
       entitlement: PromiseOrValue<string>,
       overrides?: CallOverrides
@@ -416,6 +450,12 @@ export interface IEntitlementsManager extends BaseContract {
     addImmutableEntitlements(
       entitlements: PromiseOrValue<string>[],
       overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    getChannelEntitlementDataByPermission(
+      channelId: PromiseOrValue<BytesLike>,
+      permission: PromiseOrValue<string>,
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     getEntitlement(

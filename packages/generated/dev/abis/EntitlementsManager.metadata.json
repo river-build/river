@@ -60,6 +60,11 @@
       },
       {
         "inputs": [],
+        "name": "ChannelService__ChannelDoesNotExist",
+        "type": "error"
+      },
+      {
+        "inputs": [],
         "name": "ERC5643__DurationZero",
         "type": "error"
       },
@@ -573,6 +578,42 @@
         "name": "addImmutableEntitlements",
         "outputs": [],
         "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "bytes32",
+            "name": "channelId",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "string",
+            "name": "permission",
+            "type": "string"
+          }
+        ],
+        "name": "getChannelEntitlementDataByPermission",
+        "outputs": [
+          {
+            "components": [
+              {
+                "internalType": "string",
+                "name": "entitlementType",
+                "type": "string"
+              },
+              {
+                "internalType": "bytes",
+                "name": "entitlementData",
+                "type": "bytes"
+              }
+            ],
+            "internalType": "struct IEntitlementsManager.EntitlementData[]",
+            "name": "",
+            "type": "tuple[]"
+          }
+        ],
+        "stateMutability": "view",
         "type": "function"
       },
       {
@@ -1157,11 +1198,11 @@
       ]
     },
     "contracts/src/spaces/facets/entitlements/EntitlementsManager.sol": {
-      "keccak256": "0x1b0d20ce3f263c49e8c7112b46980092277901dd5c0396172d7787419201e5b5",
+      "keccak256": "0x31e974e970c903f7a1d0fd8b920864d07ae5d44f84e07893a4be567ce2dfaf53",
       "license": "MIT",
       "urls": [
-        "bzz-raw://c986325f1a1b45520e0dd14aa63ce6328dc8be88c8c71075d81eab18cd471a3e",
-        "dweb:/ipfs/QmThzS66hcNF6zkUPvwqB9PuNVurqNDzkNtBQnDFyAWWWR"
+        "bzz-raw://7419ab75f12d3693085ac3790178d554ebc50fbf1ae17a847fdbe482e350b930",
+        "dweb:/ipfs/QmV3P9wNS8eKPoUxy26THJZeRKHEbpbrbj32AdvAs2Jt5N"
       ]
     },
     "contracts/src/spaces/facets/entitlements/EntitlementsManagerBase.sol": {
@@ -1189,11 +1230,11 @@
       ]
     },
     "contracts/src/spaces/facets/entitlements/IEntitlementsManager.sol": {
-      "keccak256": "0x5ee898213dcafa00f673f6563b55606fe402f04fe7f5629b82c8c5ebb1c53be2",
+      "keccak256": "0x620f95de0b8a7f91e6071f75348ed8a75ea609729b6e55c157deef5cd492c4f0",
       "license": "MIT",
       "urls": [
-        "bzz-raw://a61570c3e8f9755429d66029b8e7055d4f85f38a107b50c5bd5bf5acefd44ec5",
-        "dweb:/ipfs/QmTMA1F8nc3RD5fRSrHC1QhCYCQ37C3JgP3iVyRskNNd4W"
+        "bzz-raw://d958704cbbbaf8ae78cdf04a4292b5f3cacd5b1b4233032359c0a9f700b525cc",
+        "dweb:/ipfs/QmaksBw9Ho9fiXjiX1poe1UdqeMMC8MWJEjDUM6iMcnBh7"
       ]
     },
     "contracts/src/spaces/facets/membership/MembershipStorage.sol": {
