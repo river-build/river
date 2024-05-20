@@ -2,6 +2,8 @@ package client_simulator
 
 import (
 	"context"
+	"core/xchain/config"
+	"core/xchain/contracts"
 	"core/xchain/entitlement"
 	"core/xchain/examples"
 	"crypto/ecdsa"
@@ -9,17 +11,13 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/river-build/river/core/xchain/contracts"
-
-	"github.com/river-build/river/core/node/config"
-
 	node_contracts "github.com/river-build/river/core/node/contracts"
 	node_crypto "github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 
 	xc "core/xchain/common"
 
-	e "github.com/river-build/river/core/xchain/contracts"
+	e "core/xchain/contracts"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -179,7 +177,7 @@ type postResult struct {
 type ClientSimulator interface {
 	Start(ctx context.Context)
 	Stop()
-	EvaluateRuleData(ctx context.Context, cfg *config.Config, ruleData e.IRuleData) (bool, error)
+	EvaluateRuleData(ctx context.Context, ruleData e.IRuleData) (bool, error)
 	Wallet() *node_crypto.Wallet
 }
 
@@ -215,7 +213,7 @@ func New(
 	wallet *node_crypto.Wallet,
 ) (ClientSimulator, error) {
 	entitlementGated, err := e.NewMockEntitlementGated(
-		cfg.GetTestEntitlementContractAddress(),
+		cfg.GetMockEntitlementContractAddress(),
 		nil,
 		cfg.GetContractVersion(),
 	)
@@ -230,7 +228,7 @@ func New(
 	var (
 		entitlementGatedABI      = entitlementGated.GetAbi()
 		entitlementGatedContract = bind.NewBoundContract(
-			cfg.GetTestEntitlementContractAddress(),
+			cfg.GetMockEntitlementContractAddress(),
 			*entitlementGated.GetAbi(),
 			nil,
 			nil,
@@ -284,7 +282,7 @@ func (cs *clientSimulator) Stop() {
 
 func (cs *clientSimulator) Start(ctx context.Context) {
 	cs.baseChain.ChainMonitor.OnContractWithTopicsEvent(
-		cs.cfg.GetTestEntitlementContractAddress(),
+		cs.cfg.GetMockEntitlementContractAddress(),
 		[][]common.Hash{{cs.entitlementGatedABI.Events["EntitlementCheckResultPosted"].ID}},
 		func(ctx context.Context, event types.Log) {
 			cs.onEntitlementCheckResultPosted(ctx, event, cs.resultPosted)
@@ -306,26 +304,20 @@ func (cs *clientSimulator) Start(ctx context.Context) {
 
 func (cs *clientSimulator) executeCheck(ctx context.Context, ruleData *e.IRuleData) error {
 	log := dlog.FromCtx(ctx).With("application", "clientSimulator")
-	log.Info("ClientSimulator executing check", "ruleData", ruleData, "cfg", cs.cfg)
 
 	pendingTx, err := cs.baseChain.TxPool.Submit(
 		ctx,
 		"RequestEntitlementCheck",
 		func(opts *bind.TransactOpts) (*types.Transaction, error) {
-			log.Info("Calling RequestEntitlementCheck", "opts", opts, "ruleData", ruleData)
 			gated, err := contracts.NewMockEntitlementGated(
-				cs.cfg.GetTestEntitlementContractAddress(),
+				cs.cfg.GetMockEntitlementContractAddress(),
 				cs.baseChain.Client,
 				cs.cfg.GetContractVersion(),
 			)
 			if err != nil {
-				log.Error("Failed to get NewMockEntitlementGated", "err", err)
 				return nil, err
 			}
-			log.Info("NewMockEntitlementGated", "gated", gated.RequestEntitlementCheck, "err", err)
-			tx, err := gated.RequestEntitlementCheck(opts, big.NewInt(0), *ruleData)
-			log.Info("RequestEntitlementCheck called", "tx", tx, "err", err)
-			return tx, err
+			return gated.RequestEntitlementCheck(opts, big.NewInt(0), *ruleData)
 		},
 	)
 
@@ -334,13 +326,13 @@ func (cs *clientSimulator) executeCheck(ctx context.Context, ruleData *e.IRuleDa
 	customErr, stringErr, err := cs.decoder.DecodeEVMError(err)
 	switch {
 	case customErr != nil:
-		log.Error("Failed to submit entitlement check", "type", "customErr", "err", customErr)
+		log.Error("Failed to submit entitlement check", "err", customErr)
 		return err
 	case stringErr != nil:
-		log.Error("Failed to submit entitlement check", "type", "stringErr", "err", stringErr)
+		log.Error("Failed to submit entitlement check", "err", stringErr)
 		return err
 	case err != nil:
-		log.Error("Failed to submit entitlement check", "type", "err", "err", err)
+		log.Error("Failed to submit entitlement check", "err", err)
 		return err
 	}
 
@@ -472,9 +464,8 @@ func (cs *clientSimulator) Wallet() *node_crypto.Wallet {
 	return cs.wallet
 }
 
-func (cs *clientSimulator) EvaluateRuleData(ctx context.Context, cfg *config.Config, ruleData e.IRuleData) (bool, error) {
+func (cs *clientSimulator) EvaluateRuleData(ctx context.Context, ruleData e.IRuleData) (bool, error) {
 	log := dlog.FromCtx(ctx).With("application", "clientSimulator")
-	log.Info("ClientSimulator evaluating rule data", "ruleData", ruleData)
 
 	err := cs.executeCheck(ctx, &ruleData)
 	if err != nil {
@@ -536,7 +527,7 @@ func RunClientSimulator(ctx context.Context, cfg *config.Config, wallet *node_cr
 		return
 	}
 
-	cs.EvaluateRuleData(ctx, cfg, ruleData)
+	cs.EvaluateRuleData(ctx, ruleData)
 }
 
 func ToggleEntitlement(ctx context.Context, cfg *config.Config, wallet *node_crypto.Wallet) {

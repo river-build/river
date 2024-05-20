@@ -141,9 +141,8 @@ func newEntitlementManagerCache(ctx context.Context, cfg *config.ChainConfig) (*
 
 func (ec *entitlementCache) executeUsingCache(
 	ctx context.Context,
-	cfg *config.Config,
 	key *ChainAuthArgs,
-	onMiss func(context.Context, *config.Config, *ChainAuthArgs) (CacheResult, error),
+	onMiss func(context.Context, *ChainAuthArgs) (CacheResult, error),
 ) (CacheResult, bool, error) {
 	// Check positive cache first
 	if val, ok := ec.positiveCache.Get(*key); ok {
@@ -168,7 +167,7 @@ func (ec *entitlementCache) executeUsingCache(
 	}
 
 	// Cache miss, execute the closure
-	result, err := onMiss(ctx, cfg, key)
+	result, err := onMiss(ctx, key)
 	if err != nil {
 		return nil, false, err
 	}

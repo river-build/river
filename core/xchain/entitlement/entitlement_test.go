@@ -2,12 +2,11 @@ package entitlement
 
 import (
 	"context"
+	"core/xchain/config"
 	"core/xchain/examples"
 	"math/big"
 	"testing"
 	"time"
-
-	"github.com/river-build/river/core/node/config"
 
 	"github.com/stretchr/testify/require"
 

@@ -4,13 +4,12 @@ import (
 	"context"
 	"core/xchain/bindings/erc20"
 	"core/xchain/bindings/erc721"
+	"core/xchain/config"
 	"core/xchain/contracts"
 	"fmt"
 	"math/big"
 	"sync"
 	"time"
-
-	"github.com/river-build/river/core/node/config"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"

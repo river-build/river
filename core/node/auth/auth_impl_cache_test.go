@@ -25,8 +25,6 @@ func TestCache(t *testing.T) {
 	ctx, cancel := test.NewTestContext()
 	defer cancel()
 
-	cfg := &config.Config{}
-
 	c, err := newEntitlementCache(
 		ctx,
 		&config.ChainConfig{
@@ -43,9 +41,8 @@ func TestCache(t *testing.T) {
 	var cacheMissForReal bool
 	result, cacheHit, err := c.executeUsingCache(
 		ctx,
-		cfg,
 		NewChainAuthArgsForChannel(spaceId, channelId, "3", PermissionWrite),
-		func(context.Context, *config.Config, *ChainAuthArgs) (CacheResult, error) {
+		func(context.Context, *ChainAuthArgs) (CacheResult, error) {
 			cacheMissForReal = true
 			return &simpleCacheResult{allowed: true}, nil
 		},
@@ -58,9 +55,8 @@ func TestCache(t *testing.T) {
 	cacheMissForReal = false
 	result, cacheHit, err = c.executeUsingCache(
 		ctx,
-		cfg,
 		NewChainAuthArgsForChannel(spaceId, channelId, "3", PermissionWrite),
-		func(context.Context, *config.Config, *ChainAuthArgs) (CacheResult, error) {
+		func(context.Context, *ChainAuthArgs) (CacheResult, error) {
 			cacheMissForReal = true
 			return &simpleCacheResult{allowed: false}, nil
 		},
