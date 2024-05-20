@@ -88,7 +88,6 @@ func initConfigAndLog() {
 		if logNoColor {
 			configStruct.Log.NoColor = true
 		}
-		configStruct.Init()
 
 		// If loaded successfully, set the global config
 		cmdConfig = &configStruct

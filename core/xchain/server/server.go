@@ -2,15 +2,13 @@ package server
 
 import (
 	"context"
+	"core/xchain/config"
+	"core/xchain/contracts"
 	"core/xchain/entitlement"
 	"core/xchain/util"
 	"log/slog"
 	"math/big"
 	"time"
-
-	"github.com/river-build/river/core/xchain/contracts"
-
-	"github.com/river-build/river/core/node/config"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"

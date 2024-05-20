@@ -2,8 +2,7 @@ package entitlement
 
 import (
 	"context"
-
-	"github.com/river-build/river/core/node/config"
+	"core/xchain/config"
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	. "github.com/river-build/river/core/node/base"

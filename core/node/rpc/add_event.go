@@ -74,7 +74,7 @@ func (s *Service) addParsedEvent(
 	}
 
 	if chainAuthArgs != nil {
-		err := s.chainAuth.IsEntitled(ctx, s.config, chainAuthArgs)
+		err := s.chainAuth.IsEntitled(ctx, chainAuthArgs)
 		if err != nil {
 			return err
 		}
