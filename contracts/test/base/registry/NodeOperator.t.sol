@@ -189,8 +189,10 @@ contract NodeOperatorFacetTest is
     address _claimAddress
   ) {
     vm.assume(_claimAddress != address(0));
+    vm.assume(_operator != address(0));
+    vm.assume(_operator != _claimAddress);
     vm.prank(_operator);
-    operator.setClaimAddress(_claimAddress);
+    operator.setClaimAddressForOperator(_claimAddress, _operator);
     _;
   }
 
@@ -369,22 +371,25 @@ contract NodeOperatorFacetTest is
 
   function test_revertWhen_setClaimAddressIsCalledByInvalidOperator(
     address randomOperator,
-    address randomClaimAddress
+    address randomClaimer
   ) public {
-    vm.expectRevert(NodeOperator__NotRegistered.selector);
-    vm.prank(randomOperator);
-    operator.setClaimAddress(randomClaimAddress);
+    vm.expectRevert(NodeOperator__NotClaimer.selector);
+    vm.prank(randomClaimer);
+    operator.setClaimAddressForOperator(randomClaimer, randomOperator);
   }
 
   function test_setClaimAddress(
     address randomOperator,
-    address randomClaimAddress
+    address randomClaimer
   )
     public
     givenOperatorIsRegistered(randomOperator)
-    givenOperatorHasSetClaimAddress(randomOperator, randomClaimAddress)
+    givenOperatorHasSetClaimAddress(randomOperator, randomClaimer)
   {
-    assertEq(operator.getClaimAddress(randomOperator), randomClaimAddress);
+    assertEq(
+      operator.getClaimAddressForOperator(randomOperator),
+      randomClaimer
+    );
   }
 
   // =============================================================
