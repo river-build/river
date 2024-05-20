@@ -1,0 +1,36 @@
+{
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "eslint.workingDirectories": [
+    "./core/debug-app",
+    "./core/dlog",
+    "./core/encryption",
+    "./core/proto",
+    "./core/sdk",
+    "./core/stress",
+    "./core/web3",
+  ],
+  "[solidity]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "solidity.formatter": "prettier",
+  "go.lintTool": "golangci-lint",
+  "go.lintFlags": [
+    "--fast"
+  ],
+  "solidity.defaultCompiler": "remote",
+  "solidity.packageDefaultDependenciesContractsDirectory": "contracts/src",
+  "solidity.packageDefaultDependenciesDirectory": "lib,node_modules",
+  "solidity.compileUsingRemoteVersion": "v0.8.23+commit.f704f362",
+  "[makefile]": {
+    "editor.renderWhitespace": "all"
+  },
+  "go.formatTool": "gofumpt",
+  "go.testFlags": [
+    "-v",
+    "-tags",
+    "integration",
+  ],
+  "go.buildTags": "integration",
+}

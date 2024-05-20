@@ -1,0 +1,104 @@
+# Network configuration
+port: <RPC_PORT>
+database:
+    url: postgres://postgres:postgres@localhost:<DB_PORT>/river?sslmode=disable&pool_max_conns=1000
+    database: ''
+    user: ''
+    password: ''
+    port: ''
+    extra: ''
+    host: ''
+storageType: postgres
+
+# Certificates for TLS
+TLSConfig:
+    cert: certs/cert.pem
+    key: certs/key.pem
+UseHttps: true
+
+# Blockchain configuration
+baseChain:
+    chainId: 31337
+    networkUrl: 'http://127.0.0.1:8545'
+    blockTimeMs: <BLOCK_TIME_MS>
+riverChain:
+    chainId: 31338
+    networkUrl: 'http://127.0.0.1:8546'
+    blockTimeMs: <BLOCK_TIME_MS>
+    transactionPool:
+        # transactionTimeout specifies the duration after which a pending transaction is replaced. Recommended is a
+        # multiple of the chain block period. If not specified the node uses blockTimeMs, if that is not set it tries
+        # to estimate the block period based on the 2 last blocks and sets Timeout to 3 * chain.BlockPeriod.
+        transactionTimeout: 6s
+        # gasFeeCap is a hard limit for the max price per gas in EIP1559 transactions (in Wei)
+        gasFeeCap: 150_000_000_000 # 150 Gwei
+        # The miner tip increase (%) for EIP-1559 replacement transactions.
+        # Nodes typically accept replacement transactions with at least a 10% miner tip increase.
+        minerTipFeeReplacementPercentage: 10
+        # The gas price increase (%) for legacy replacement transactions.
+        # Nodes typically accept legacy replacement transactions with at least a 10% gas fee increase.
+        gasFeeIncreasePercentage: 10
+
+# Base contracts
+architectContract:
+    address: <SPACE_FACTORY_ADDRESS>
+    version: 'dev'
+
+# River contracts
+registryContract:
+    address: <RIVER_REGISTRY_ADDRESS>
+    version: '' # Explicitely uses IRiverRegistryV1 interface
+
+# Logging
+log:
+    file: logs/dev.log
+    level: <LOG_LEVEL>
+    console: true
+    noColor: <LOG_NOCOLOR>
+    format: text
+
+# Metrics
+metrics:
+    enabled: <METRICS_ENABLED>
+    port: <METRICS_PORT>
+performanceTracking:
+    profilingEnabled: false
+    tracingEnabled: false
+
+# Stream settings
+stream:
+    media:
+        maxChunkCount: 10 # max number of chunks in a media stream
+        maxChunkSize: 500000 # max number of bytes in a single chunk
+    streamMembershipLimits:
+        77: 6 # GDMs
+        88: 2 # DMs
+    recencyConstraints:
+        # Each event must be unique and reference the hash of a previous miniblock
+        # If the hash is not of the most recent block, the referenced miniblock must be less than M seconds old.
+        ageSeconds: 11
+        # The node will load M generation miniblocks before the most recent snapshot
+        generations: 5
+    replicationFactor: <REPL_FACTOR>
+    defaultMinEventsPerSnapshot: 100
+    minEventsPerSnapshot:
+        # stream prefixes should be lower case because go is lower casing them anyway
+        a8: 10 # USER
+        ad: 10 # USER_DEVICE_KEY
+        a1: 10 # USER_INBOX
+        a5: 10 # USER_SETTINGS
+    # Timeout after streams with no activity in the cache are expired and evicted
+    # valid time unites are "ns", "us" (or "µs"), "ms", "s", "m", "h"
+    # Set to 0 to disable cache expiration
+    cacheExpiration: 5m
+    # Interval to check for inactive streams in the cache (default=cacheExpiration/10)
+    # valid time unites are "ns", "us" (or "µs"), "ms", "s", "m", "h"
+    cacheExpirationPollInterval: 30s
+
+network:
+    numRetries: 3
+    # Make this nice and long to not break anything.
+    requestTimeout: 30s
+
+# Debug feature flags.
+disableBaseChain: <DISABLE_BASE_CHAIN>
