@@ -16,7 +16,7 @@ contract EntitlementsManagerHelper is FacetHelper {
   constructor() {
     entitlements = new EntitlementsManager();
 
-    bytes4[] memory selectors_ = new bytes4[](8);
+    bytes4[] memory selectors_ = new bytes4[](9);
     selectors_[0] = IEntitlementsManager.addImmutableEntitlements.selector;
     selectors_[1] = IEntitlementsManager.isEntitledToSpace.selector;
     selectors_[2] = IEntitlementsManager.isEntitledToChannel.selector;
@@ -26,6 +26,9 @@ contract EntitlementsManagerHelper is FacetHelper {
     selectors_[6] = IEntitlementsManager.getEntitlements.selector;
     selectors_[7] = IEntitlementsManager
       .getEntitlementDataByPermission
+      .selector;
+    selectors_[8] = IEntitlementsManager
+      .getChannelEntitlementDataByPermission
       .selector;
     addSelectors(selectors_);
   }

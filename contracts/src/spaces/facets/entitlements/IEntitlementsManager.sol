@@ -73,7 +73,14 @@ interface IEntitlementsManager is IEntitlementsManagerBase {
     view
     returns (Entitlement[] memory entitlements);
 
+  // Entitlement data pertaining to all roles in the space.
   function getEntitlementDataByPermission(
+    string calldata permission
+  ) external view returns (EntitlementData[] memory);
+
+  // Entitlement data pertaining to all roles assigned to a channel.
+  function getChannelEntitlementDataByPermission(
+    bytes32 channelId,
     string calldata permission
   ) external view returns (EntitlementData[] memory);
 }

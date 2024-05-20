@@ -71,7 +71,7 @@ contract MockUserEntitlement is
   function setEntitlement(
     uint256 roleId,
     bytes memory entitlementData
-  ) external onlySpace {
+  ) external {
     MockUserEntitlementStorage.Layout storage ds = MockUserEntitlementStorage
       .layout();
 
