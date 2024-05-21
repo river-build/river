@@ -1,8 +1,8 @@
-version: v1
+version: v2
 plugins:
-    - name: go
-      out: .
-      opt: paths=source_relative
-    - name: connect-go
-      out: .
-      opt: paths=source_relative
+  - protoc_builtin: go
+    out: core/node/protocol
+    opt: paths=source_relative
+  - protoc_builtin: connect-go
+    out: core/node/protocol
+    opt: paths=source_relative
