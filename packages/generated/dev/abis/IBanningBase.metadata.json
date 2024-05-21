@@ -120,11 +120,11 @@
   },
   "sources": {
     "contracts/src/spaces/facets/banning/IBanning.sol": {
-      "keccak256": "0x1983a3e375f4dd8a21be759a637b85ed5e416ca8fc7109153986eb2d4b08a505",
-      "license": "Apache-2.0",
+      "keccak256": "0x173bebc8fdb71d3ad50fc6d9e8c715af293f3ee28d955670a8485584953b90e2",
+      "license": "MIT",
       "urls": [
-        "bzz-raw://1f5f5a54e4cbaca9e10cc174ba73f5f80b0875d097084a9ebc6b259b2c4c1419",
-        "dweb:/ipfs/QmQSfNhhRNkiHeG1XXWVYhQtvuPRyrv72gxuARgsgupjn6"
+        "bzz-raw://702725c9956a963e501cf6ff84a40dad3bbfefecae624729c9ab7f6bc0385d18",
+        "dweb:/ipfs/QmU9T2tJ4Qs8buBNsiFbbAQUBgaaDiDfh5cAnKmVH8okc1"
       ]
     }
   },

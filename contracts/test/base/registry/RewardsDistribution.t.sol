@@ -131,6 +131,29 @@ contract RewardsDistributionTest is
     );
   }
 
+  //specific test case of users delegating to operators
+  function test_exUserRewardsClaimAction() public {
+    _createEntitiesForTest(
+      exAmountsPerUser,
+      exCommissionsPerOperator,
+      exDelegationsPerUser
+    );
+
+    setupOperators(tOperators);
+    setupUsersAndDelegation(tUsers, tDelegations);
+
+    verifyUsersRewardsClaimAction(
+      exDistributionAmount,
+      tUsers,
+      tOperators,
+      tDelegations
+    );
+
+    vm.prank(tUsers[0].addr);
+    vm.expectRevert(RewardsDistribution_NoRewardsToClaim.selector);
+    rewardsDistributionFacet.claim();
+  }
+
   //specific test case of users delegating to operators and spaces
   function test_exUserRewardsWithSpaceDelegation() public {
     _createEntitiesForTest(
@@ -363,7 +386,7 @@ contract RewardsDistributionTest is
     );
   }
 
-  function test_OperatorRewards(
+  function test_OperatorRewardsClaimAddress(
     uint256 distributionAmount,
     uint16 totalUsers,
     uint8 totalOperators
@@ -447,6 +470,42 @@ contract RewardsDistributionTest is
   function setupOperatorClaimAddress(
     Entity[] memory operators
   ) internal givenOperatorsHaveSetClaimAddresses(operators) {}
+
+  function verifyUsersRewardsClaimAction(
+    uint256 distributionAmount,
+    Entity[] memory users,
+    Entity[] memory operators,
+    Delegation[] memory delegations
+  )
+    internal
+    givenWeeklyDistributionAmountHasBeenSet(distributionAmount)
+    givenFundsHaveBeenDisbursed(operators, distributionAmount)
+    givenTokensHaveBeenSentToDistributionContract(distributionAmount)
+  {
+    uint256[] memory expectedRewardsForUsers = new uint256[](users.length);
+    for (uint256 i = 0; i < users.length; i++) {
+      uint256 expectedReward = _calculateExpectedUserReward(
+        users[i].addr,
+        distributionAmount,
+        operators,
+        delegations
+      );
+
+      expectedRewardsForUsers[i] = expectedReward;
+    }
+
+    for (uint256 i = 0; i < users.length; i++) {
+      uint256 prevBalance = IERC20(riverFacet).balanceOf(users[i].addr);
+      vm.prank(users[i].addr);
+      rewardsDistributionFacet.claim();
+
+      assertEq(
+        prevBalance + expectedRewardsForUsers[i],
+        IERC20(riverFacet).balanceOf(users[i].addr),
+        "User Reward from claim action does not match expected reward"
+      );
+    }
+  }
 
   function verifyUsersRewards(
     uint256 distributionAmount,
@@ -563,7 +622,7 @@ contract RewardsDistributionTest is
   {
     for (uint256 i = 0; i < operators.length; i++) {
       uint256 reward = rewardsDistributionFacet.getClaimableAmount(
-        operator.getClaimAddress(operators[i].addr)
+        operator.getClaimAddressForOperator(operators[i].addr)
       );
 
       uint256 expectedReward = _calculateExpectedOperatorReward(
@@ -601,7 +660,7 @@ contract RewardsDistributionTest is
   ) internal {
     for (uint256 i = 0; i < operators.length; i++) {
       uint256 reward = rewardsDistributionFacet.getClaimableAmount(
-        operator.getClaimAddress(operators[i].addr)
+        operator.getClaimAddressForOperator(operators[i].addr)
       );
 
       assertEq(
@@ -1128,12 +1187,18 @@ contract RewardsDistributionTest is
     riverFacet.mint(user, amount);
   }
 
+  function sendTokensToContract(address dist, uint256 amount) internal {
+    vm.assume(dist != address(0));
+    vm.prank(bridge);
+    riverFacet.mint(dist, amount);
+  }
+
   function registerOperator(address operatorAddr) internal {
     vm.assume(operatorAddr != address(0));
     vm.expectEmit();
     emit INodeOperatorBase.OperatorRegistered(operatorAddr);
     vm.prank(operatorAddr);
-    operator.registerOperator();
+    operator.registerOperator(operatorAddr);
   }
 
   function setOperatorCommissionRate(
@@ -1157,7 +1222,7 @@ contract RewardsDistributionTest is
     vm.expectEmit();
     emit INodeOperatorBase.OperatorClaimAddressChanged(operatorAddr, claimAddr);
     vm.prank(operatorAddr);
-    operator.setClaimAddress(claimAddr);
+    operator.setClaimAddressForOperator(claimAddr, operatorAddr);
   }
 
   function delegateToOperator(address user, address operatorAddr) internal {
@@ -1354,6 +1419,17 @@ contract RewardsDistributionTest is
       vm.prank(deployer);
       rewardsDistributionFacet.distributeRewards(operators[i].addr);
     }
+    _;
+  }
+
+  modifier givenTokensHaveBeenSentToDistributionContract(uint256 amount) {
+    // vm.expectEmit();
+    // emit IERC20.Transfer(
+    //   address(riverFacet),
+    //   address(rewardsDistributionFacet),
+    //   amount
+    // );
+    sendTokensToContract(address(rewardsDistributionFacet), amount);
     _;
   }
 }
