@@ -107,7 +107,7 @@ func (s *Service) createStream(ctx context.Context, req *CreateStreamRequest) (*
 
 	// check entitlements
 	if csRules.ChainAuth != nil {
-		err := s.chainAuth.IsEntitled(ctx, csRules.ChainAuth)
+		err := s.chainAuth.IsEntitled(ctx, s.config, csRules.ChainAuth)
 		if err != nil {
 			return nil, err
 		}
