@@ -27,42 +27,6 @@ export default [
   },
   {
     "type": "function",
-    "name": "getChannelEntitlementDataByPermission",
-    "inputs": [
-      {
-        "name": "channelId",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "permission",
-        "type": "string",
-        "internalType": "string"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "tuple[]",
-        "internalType": "struct IEntitlementsManager.EntitlementData[]",
-        "components": [
-          {
-            "name": "entitlementType",
-            "type": "string",
-            "internalType": "string"
-          },
-          {
-            "name": "entitlementData",
-            "type": "bytes",
-            "internalType": "bytes"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "getEntitlement",
     "inputs": [
       {
@@ -96,37 +60,6 @@ export default [
             "name": "isImmutable",
             "type": "bool",
             "internalType": "bool"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getEntitlementDataByPermission",
-    "inputs": [
-      {
-        "name": "permission",
-        "type": "string",
-        "internalType": "string"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "tuple[]",
-        "internalType": "struct IEntitlementsManager.EntitlementData[]",
-        "components": [
-          {
-            "name": "entitlementType",
-            "type": "string",
-            "internalType": "string"
-          },
-          {
-            "name": "entitlementData",
-            "type": "bytes",
-            "internalType": "bytes"
           }
         ]
       }
@@ -406,63 +339,6 @@ export default [
   },
   {
     "type": "event",
-    "name": "RoleCreated",
-    "inputs": [
-      {
-        "name": "creator",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "roleId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "RoleRemoved",
-    "inputs": [
-      {
-        "name": "remover",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "roleId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "RoleUpdated",
-    "inputs": [
-      {
-        "name": "updater",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "roleId",
-        "type": "uint256",
-        "indexed": true,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "SubscriptionUpdate",
     "inputs": [
       {
@@ -592,11 +468,6 @@ export default [
   },
   {
     "type": "error",
-    "name": "ChannelService__ChannelDoesNotExist",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "ERC5643__DurationZero",
     "inputs": []
   },
@@ -721,41 +592,6 @@ export default [
   {
     "type": "error",
     "name": "Pausable__Paused",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "Roles__EntitlementAlreadyExists",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "Roles__EntitlementDoesNotExist",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "Roles__InvalidEntitlementAddress",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "Roles__InvalidPermission",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "Roles__PermissionAlreadyExists",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "Roles__PermissionDoesNotExist",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "Roles__RoleDoesNotExist",
     "inputs": []
   },
   {
