@@ -2,15 +2,15 @@ package entitlement
 
 import (
 	"context"
-	"core/xchain/bindings/erc20"
-	"core/xchain/bindings/erc721"
-	"core/xchain/contracts"
 	"fmt"
 	"math/big"
 	"sync"
 	"time"
 
 	"github.com/river-build/river/core/node/config"
+	"github.com/river-build/river/core/xchain/bindings/erc20"
+	"github.com/river-build/river/core/xchain/bindings/erc721"
+	"github.com/river-build/river/core/xchain/contracts"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"

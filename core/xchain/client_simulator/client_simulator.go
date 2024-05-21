@@ -2,22 +2,21 @@ package client_simulator
 
 import (
 	"context"
-	"core/xchain/entitlement"
-	"core/xchain/examples"
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
 	"time"
 
-	"github.com/river-build/river/core/xchain/contracts"
-
 	"github.com/river-build/river/core/node/config"
+	"github.com/river-build/river/core/xchain/contracts"
+	"github.com/river-build/river/core/xchain/entitlement"
+	"github.com/river-build/river/core/xchain/examples"
 
 	node_contracts "github.com/river-build/river/core/node/contracts"
 	node_crypto "github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 
-	xc "core/xchain/common"
+	xc "github.com/river-build/river/core/xchain/common"
 
 	e "github.com/river-build/river/core/xchain/contracts"
 

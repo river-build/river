@@ -5,10 +5,6 @@ package server_test
 
 import (
 	"context"
-	"core/xchain/client_simulator"
-	xc_common "core/xchain/common"
-	"core/xchain/entitlement"
-	"core/xchain/server"
 	"fmt"
 	"log"
 	"log/slog"
@@ -16,10 +12,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/river-build/river/core/node/config"
+	"github.com/river-build/river/core/xchain/client_simulator"
+	xc_common "github.com/river-build/river/core/xchain/common"
 	"github.com/river-build/river/core/xchain/contracts"
 	test_contracts "github.com/river-build/river/core/xchain/contracts/test"
-
-	"github.com/river-build/river/core/node/config"
+	"github.com/river-build/river/core/xchain/entitlement"
+	"github.com/river-build/river/core/xchain/server"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
