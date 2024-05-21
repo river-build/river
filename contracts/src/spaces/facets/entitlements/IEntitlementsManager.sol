@@ -22,11 +22,6 @@ interface IEntitlementsManagerBase {
 }
 
 interface IEntitlementsManager is IEntitlementsManagerBase {
-  struct EntitlementData {
-    string entitlementType;
-    bytes entitlementData;
-  }
-
   /// @notice Allows the space owner to add immutable entitlements to the space
   /// @param entitlements The entitlements to add
   function addImmutableEntitlements(address[] memory entitlements) external;
@@ -72,15 +67,4 @@ interface IEntitlementsManager is IEntitlementsManagerBase {
     external
     view
     returns (Entitlement[] memory entitlements);
-
-  // Entitlement data pertaining to all roles in the space.
-  function getEntitlementDataByPermission(
-    string calldata permission
-  ) external view returns (EntitlementData[] memory);
-
-  // Entitlement data pertaining to all roles assigned to a channel.
-  function getChannelEntitlementDataByPermission(
-    bytes32 channelId,
-    string calldata permission
-  ) external view returns (EntitlementData[] memory);
 }
