@@ -21,6 +21,11 @@ type Entitlements interface {
 		opts *bind.CallOpts,
 		permission string,
 	) ([]base.IEntitlementsManagerEntitlementData, error)
+	GetChannelEntitlementDataByPermission(
+		opts *bind.CallOpts,
+		channelId [32]byte,
+		permission string,
+	) ([]base.IEntitlementsManagerEntitlementData, error)
 }
 type entitlementsProxy struct {
 	contract *base.EntitlementsManager
@@ -33,6 +38,10 @@ var (
 	isEntitledToSpaceCalls               = infra.NewSuccessMetrics("is_entitled_to_space_calls", contractCalls)
 	getEntitlementDataByPermissionsCalls = infra.NewSuccessMetrics(
 		"get_entitlement_data_by_permissions_calls",
+		contractCalls,
+	)
+	getChannelEntitlementDataByPermissionsCalls = infra.NewSuccessMetrics(
+		"get_channel_entitlement_data_by_permissions_calls",
 		contractCalls,
 	)
 )
@@ -146,6 +155,39 @@ func (proxy *entitlementsProxy) IsEntitledToSpace(
 		time.Since(start).Milliseconds(),
 	)
 	return result, nil
+}
+
+func (proxy *entitlementsProxy) GetChannelEntitlementDataByPermission(
+	opts *bind.CallOpts,
+	channelId [32]byte,
+	permission string,
+) ([]base.IEntitlementsManagerEntitlementData, error) {
+	log := dlog.FromCtx(proxy.ctx)
+	start := time.Now()
+	defer infra.StoreExecutionTimeMetrics("GetChannelEntitlementDataByPermissions", infra.CONTRACT_CALLS_CATEGORY, start)
+	log.Debug("GetChannelEntitlementDataByPermissions", "channelId", channelId, "permission", permission, "address", proxy.address)
+	result, err := proxy.contract.GetChannelEntitlementDataByPermission(opts, channelId, permission)
+	if err != nil {
+		getChannelEntitlementDataByPermissionsCalls.FailInc()
+		log.Error("GetChannelEntitlementDataByPermissions", "channelId", channelId, "permission", permission, "address", proxy.address, "error", err)
+		return nil, WrapRiverError(Err_CANNOT_CALL_CONTRACT, err)
+	}
+	getChannelEntitlementDataByPermissionsCalls.PassInc()
+	log.Debug(
+		"GetChannelEntitlementDataByPermissions",
+		"channelId",
+		channelId,
+		"permission",
+		permission,
+		"address",
+		proxy.address,
+		"result",
+		result,
+		"duration",
+		time.Since(start).Milliseconds(),
+	)
+	return result, nil
+
 }
 
 func (proxy *entitlementsProxy) GetEntitlementDataByPermission(

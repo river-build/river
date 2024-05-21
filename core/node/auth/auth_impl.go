@@ -268,7 +268,7 @@ func (ca *chainAuth) checkChannelEnabled(
 // not that the caller is allowed to access the permission
 type entitlementCacheResult struct {
 	allowed         bool
-	entitlementData []SpaceEntitlements
+	entitlementData []Entitlement
 	owner           common.Address
 }
 
@@ -299,6 +299,63 @@ func (ca *chainAuth) getSpaceEntitlementsForPermissionUncached(
 				Message("Failed to get space entitlements")
 	}
 	return &entitlementCacheResult{allowed: true, entitlementData: entitlementData, owner: owner}, nil
+}
+
+// If entitlements are found for the permissions, they are returned and the allowed flag is set true so the results may be cached.
+// If the call fails or the space is not found, the allowed flag is set to false so the negative caching time applies.
+func (ca *chainAuth) getChannelEntitlementsForPermissionUncached(
+	ctx context.Context,
+	args *ChainAuthArgs,
+) (CacheResult, error) {
+	log := dlog.FromCtx(ctx)
+	entitlementData, err := ca.spaceContract.GetChannelEntitlementsForPermission(
+		ctx,
+		args.spaceId,
+		args.channelId,
+		args.permission,
+	)
+
+	log.Debug("getChannelEntitlementsForPermissionUncached", "args", args, "entitlementData", entitlementData)
+	if err != nil {
+		return &entitlementCacheResult{
+				allowed: false,
+			}, AsRiverError(
+				err,
+			).Func("getChannelEntitlementsForPermission").
+				Message("Failed to get channel entitlements")
+	}
+	return &entitlementCacheResult{allowed: true, entitlementData: entitlementData}, nil
+}
+
+func (ca *chainAuth) isEntitledToChannelUncached(ctx context.Context, args *ChainAuthArgs) (CacheResult, error) {
+	log := dlog.FromCtx(ctx)
+	log.Debug("isEntitledToChannelUncached", "args", args)
+	result, cacheHit, err := ca.entitlementManagerCache.executeUsingCache(
+		ctx,
+		args,
+		ca.getChannelEntitlementsForPermissionUncached,
+	)
+	if err != nil {
+		return &boolCacheResult{
+				allowed: false,
+			}, AsRiverError(
+				err,
+			).Func("isEntitledToChannel").
+				Message("Failed to get channel entitlements")
+	}
+
+	if cacheHit {
+		entitlementCacheHit.PassInc()
+	} else {
+		entitlementCacheMiss.PassInc()
+	}
+
+	temp := (result.(*timestampedCacheValue).Result())
+	entitlementData := temp.(*entitlementCacheResult) // Assuming result is of *entitlementCacheResult type
+
+	
+
+	// TODO: check user bans
 }
 
 func (ca *chainAuth) isEntitledToSpaceUncached(ctx context.Context, args *ChainAuthArgs) (CacheResult, error) {
@@ -371,17 +428,6 @@ func (ca *chainAuth) isEntitledToSpace(ctx context.Context, args *ChainAuthArgs)
 	}
 
 	return isEntitled.IsAllowed(), nil
-}
-
-func (ca *chainAuth) isEntitledToChannelUncached(ctx context.Context, args *ChainAuthArgs) (CacheResult, error) {
-	allowed, err := ca.spaceContract.IsEntitledToChannel(
-		ctx,
-		args.spaceId,
-		args.channelId,
-		args.principal,
-		args.permission,
-	)
-	return &boolCacheResult{allowed: allowed}, err
 }
 
 func (ca *chainAuth) isEntitledToChannel(ctx context.Context, args *ChainAuthArgs) (bool, error) {
