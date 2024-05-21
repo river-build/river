@@ -919,11 +919,11 @@
       ]
     },
     "contracts/src/spaces/facets/entitlements/IEntitlementsManager.sol": {
-      "keccak256": "0xabab7b2901a3882f0cd0ec3b757bf3b3c3d0f8b54cff1b47a66a9a38c39e8b9e",
+      "keccak256": "0x34a60558a6f78d2681dec157ca65a784a5c0b9d7a754ac9795c1a4554ddd4cd6",
       "license": "Apache-2.0",
       "urls": [
-        "bzz-raw://86c910aa6d4cf5e6fe74ae09391d53d9a16337fb562d901cb0f0b66ffa083b0c",
-        "dweb:/ipfs/QmbvzcRfw11Y3FgLpnmshSegbmFboS1Kmknjr4pCHebAN7"
+        "bzz-raw://9d10e1bf1a7d5fe3edc54f2a6fc634f4b84d68c294958947d47706b4a22f16b1",
+        "dweb:/ipfs/QmSezMoHki3UawNg8dkTFAMSqLijw6bdgNVSh3tfyis5Y8"
       ]
     },
     "contracts/src/spaces/facets/gated/EntitlementGatedBase.sol": {
