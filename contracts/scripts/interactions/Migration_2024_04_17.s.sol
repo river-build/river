@@ -43,7 +43,7 @@ contract Migration_2024_04_17 is Interaction {
   address[] factoryAddresses;
   bytes[] factoryDatas;
 
-  function __interact(uint256 pk, address) public override {
+  function __interact(address) public override {
     address multiInit = multiInitHelper.deploy();
 
     // Space Operations
@@ -91,7 +91,7 @@ contract Migration_2024_04_17 is Interaction {
     factoryDatas.push(walletLinkHelper.makeInitData(""));
 
     // Update the Diamond
-    vm.startBroadcast(pk);
+    vm.startBroadcast();
     IDiamondCut(spaceManager).diamondCut({
       facetCuts: factoryCuts,
       init: multiInit,
@@ -104,7 +104,7 @@ contract Migration_2024_04_17 is Interaction {
     address space = spaceHelper.deploy();
 
     // Update the Space Implementation on the Space Factory
-    vm.startBroadcast(pk);
+    vm.startBroadcast();
     IProxyManager(spaceManager).setImplementation(space);
     vm.stopBroadcast();
 

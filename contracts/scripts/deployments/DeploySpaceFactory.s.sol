@@ -101,7 +101,6 @@ contract DeploySpaceFactory is DiamondDeployer {
   }
 
   function diamondInitParams(
-    uint256 deployerPK,
     address deployer
   ) public override returns (Diamond.InitParams memory) {
     address multiInit = deployMultiInit.deploy();
@@ -134,7 +133,7 @@ contract DeploySpaceFactory is DiamondDeployer {
     walletLink = walletLinkHelper.deploy();
     proxyManager = proxyManagerHelper.deploy();
 
-    vm.startBroadcast(deployerPK);
+    vm.startBroadcast();
     pausable = address(new PausableFacet());
     platformReqs = address(new PlatformRequirementsFacet());
     prepay = address(new PrepayFacet());

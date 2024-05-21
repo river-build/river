@@ -17,11 +17,8 @@ contract DeployAuthorizedClaimers is Deployer, FacetHelper {
     return "authorizedClaimers";
   }
 
-  function __deploy(
-    uint256 deployerPK,
-    address
-  ) public override returns (address) {
-    vm.broadcast(deployerPK);
+  function __deploy(address) public override returns (address) {
+    vm.broadcast();
     return address(new AuthorizedClaimers());
   }
 }

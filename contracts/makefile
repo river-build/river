@@ -73,6 +73,10 @@ deploy-base-sepolia :;
 	@echo "Deploying $(contract)..."
 	@SAVE_DEPLOYMENTS=1 forge script scripts/deployments/$(if $(findstring facet,$(type)),facets/)${contract}.s.sol:${contract} --ffi --rpc-url base_sepolia --private-key ${BASE_PRIVATE_KEY} --broadcast --verify --verifier blockscout --verifier-url ${BLOCKSCOUT_SEPOLIA_URL}
 
+deploy-ledger-base-sepolia :;
+	@echo "Deploying $(contract)..."
+	@SAVE_DEPLOYMENTS=1 OVERRIDE_DEPLOYMENTS=1 forge script scripts/deployments/$(if $(findstring facet,$(type)),facets/)${contract}.s.sol:${contract} --ledger --hd-paths "m/44'/60'/1'/0/0" --ffi --rpc-url base_sepolia --broadcast --verify --verifier blockscout --verifier-url ${BLOCKSCOUT_SEPOLIA_URL}
+
 interact-base-sepolia :;
 	@echo "Interacting through $(contract)..."
 	@SAVE_DEPLOYMENTS=1 OVERRIDE_DEPLOYMENTS=1 forge script scripts/interactions/${contract}.s.sol:${contract} --ffi --rpc-url base_sepolia --private-key ${BASE_PRIVATE_KEY} --broadcast --verify --verifier-url ${BASESCAN_SEPOLIA_URL} --etherscan-api-key ${BASESCAN_API_KEY}

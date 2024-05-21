@@ -33,11 +33,8 @@ contract DeployMetadata is FacetHelper, Deployer {
     return "metadataFacet";
   }
 
-  function __deploy(
-    uint256 deployerPK,
-    address
-  ) public override returns (address) {
-    vm.startBroadcast(deployerPK);
+  function __deploy(address) public override returns (address) {
+    vm.startBroadcast();
     MetadataFacet metadataFacet = new MetadataFacet();
     vm.stopBroadcast();
     return address(metadataFacet);

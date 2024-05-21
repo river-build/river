@@ -20,11 +20,8 @@ contract DeployOwnable is FacetHelper, Deployer {
     return "ownableFacet";
   }
 
-  function __deploy(
-    uint256 deployerPK,
-    address
-  ) public override returns (address) {
-    vm.startBroadcast(deployerPK);
+  function __deploy(address) public override returns (address) {
+    vm.startBroadcast();
     OwnableFacet facet = new OwnableFacet();
     vm.stopBroadcast();
     return address(facet);

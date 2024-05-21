@@ -90,7 +90,6 @@ contract DeploySpace is DiamondDeployer {
   }
 
   function diamondInitParams(
-    uint256 deployerPK,
     address deployer
   ) public override returns (Diamond.InitParams memory) {
     diamondCut = diamondCutHelper.deploy();
@@ -103,7 +102,7 @@ contract DeploySpace is DiamondDeployer {
     entitlementDataQueryable = entitlementDataQueryableHelper.deploy();
     multiInit = deployMultiInit.deploy();
 
-    vm.startBroadcast(deployerPK);
+    vm.startBroadcast();
     ownable = address(new OwnablePendingFacet());
     tokenOwnable = address(new TokenOwnableFacet());
     entitlements = address(new EntitlementsManager());

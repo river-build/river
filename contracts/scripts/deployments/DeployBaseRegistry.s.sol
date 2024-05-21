@@ -72,7 +72,6 @@ contract DeployBaseRegistry is DiamondDeployer {
   }
 
   function diamondInitParams(
-    uint256 deployerPK,
     address deployer
   ) public override returns (Diamond.InitParams memory) {
     multiInit = deployMultiInit.deploy();
@@ -88,12 +87,12 @@ contract DeployBaseRegistry is DiamondDeployer {
 
     spaceDelegation = spaceDelegationHelper.deploy();
 
-    vm.startBroadcast(deployerPK);
+    vm.startBroadcast(deployer);
     nft = address(new ERC721ANonTransferable());
     vm.stopBroadcast();
 
     if (isAnvil() || isTesting()) {
-      vm.broadcast(deployerPK);
+      vm.broadcast(deployer);
       messenger = address(new MockMessenger());
     } else {
       messenger = _getMessenger();

@@ -18,10 +18,7 @@ abstract contract Deployer is Script, DeployBase {
   // - loading private keys
   // - saving deployments
   // - logging
-  function __deploy(
-    uint256 deployerPrivateKey,
-    address deployer
-  ) public virtual returns (address);
+  function __deploy(address deployer) public virtual returns (address);
 
   function cache() public returns (address) {
     address cachedAddress = getDeployment(versionName());
@@ -58,7 +55,9 @@ abstract contract Deployer is Script, DeployBase {
     uint256 pk = isAnvil() ? vm.envUint("LOCAL_PRIVATE_KEY") : isRiver()
       ? vm.envUint("RIVER_PRIVATE_KEY")
       : vm.envUint("BASE_PRIVATE_KEY");
-    address deployer = vm.addr(pk);
+
+    address potential = vm.addr(pk);
+    address deployer = msg.sender != potential ? msg.sender : potential;
 
     if (!isTesting()) {
       info(
@@ -74,7 +73,7 @@ abstract contract Deployer is Script, DeployBase {
     }
 
     // call __deploy hook
-    deployedAddr = __deploy(pk, deployer);
+    deployedAddr = __deploy(deployer);
 
     if (!isTesting()) {
       info(

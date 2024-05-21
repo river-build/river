@@ -19,11 +19,8 @@ contract DeployMembershipMetadata is Deployer, FacetHelper {
     return "membershipMetadataFacet";
   }
 
-  function __deploy(
-    uint256 deployerPK,
-    address
-  ) public override returns (address) {
-    vm.startBroadcast(deployerPK);
+  function __deploy(address) public override returns (address) {
+    vm.startBroadcast();
     MembershipMetadata membershipMetadata = new MembershipMetadata();
     vm.stopBroadcast();
     return address(membershipMetadata);

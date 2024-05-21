@@ -40,11 +40,8 @@ contract DeployRiverMainnet is Deployer, IRiverBase {
     return "riverMainnet";
   }
 
-  function __deploy(
-    uint256 deployerPK,
-    address
-  ) public override returns (address) {
-    vm.broadcast(deployerPK);
+  function __deploy(address) public override returns (address) {
+    vm.broadcast();
     return address(new River(config));
   }
 }

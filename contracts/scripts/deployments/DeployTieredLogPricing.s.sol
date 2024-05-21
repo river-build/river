@@ -17,15 +17,10 @@ contract DeployTieredLogPricing is Deployer {
     return "tieredLogPricing";
   }
 
-  function __deploy(
-    uint256 deployerPK,
-    address
-  ) public override returns (address) {
-    address oracle = isAnvil()
-      ? _setupLocalOracle(deployerPK)
-      : _getOracleAddress();
+  function __deploy(address) public override returns (address) {
+    address oracle = isAnvil() ? _setupLocalOracle() : _getOracleAddress();
 
-    vm.broadcast(deployerPK);
+    vm.broadcast();
     return address(new TieredLogPricingOracle(oracle));
   }
 
@@ -41,8 +36,8 @@ contract DeployTieredLogPricing is Deployer {
     }
   }
 
-  function _setupLocalOracle(uint256 deployerPK) internal returns (address) {
-    vm.startBroadcast(deployerPK);
+  function _setupLocalOracle() internal returns (address) {
+    vm.startBroadcast();
     MockAggregatorV3 oracle = new MockAggregatorV3({
       _decimals: 8,
       _description: "ETH/USD",

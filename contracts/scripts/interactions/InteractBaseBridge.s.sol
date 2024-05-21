@@ -42,8 +42,8 @@ interface IL1StandardBridge {
 contract InteractBaseBridge is Interaction {
   address l1StandardBridge = 0xfd0Bf71F60660E2f608ed56e1659C450eB113120;
 
-  function __interact(uint256 pk, address) public override {
-    // vm.broadcast(pk);
+  function __interact(address) public override {
+    // vm.broadcast();
     // IL1StandardBridge(l1StandardBridge).depositETH{value: 0.001 ether}(
     //   100000,
     //   ""
@@ -53,7 +53,7 @@ contract InteractBaseBridge is Interaction {
     address riverOnBaseSepolia = 0xDaF401580d509117738bF1F38D2CD4ABAEd3c2c5;
     uint256 tokensToDeposit = 1 ether;
 
-    vm.startBroadcast(pk);
+    vm.startBroadcast();
     IERC20(riverOnSepolia).approve(l1StandardBridge, tokensToDeposit);
     IL1StandardBridge(l1StandardBridge).depositERC20({
       _l1Token: riverOnSepolia,

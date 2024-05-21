@@ -88,11 +88,8 @@ contract DeployMockFacet is Deployer, FacetHelper {
     return "mockFacet";
   }
 
-  function __deploy(
-    uint256 deployerPK,
-    address
-  ) public override returns (address) {
-    vm.startBroadcast(deployerPK);
+  function __deploy(address) public override returns (address) {
+    vm.startBroadcast();
     MockFacet facet = new MockFacet();
     vm.stopBroadcast();
     return address(facet);

@@ -23,11 +23,8 @@ contract DeployDiamondCut is FacetHelper, Deployer {
     return "diamondCutFacet";
   }
 
-  function __deploy(
-    uint256 deployerPK,
-    address
-  ) public override returns (address) {
-    vm.startBroadcast(deployerPK);
+  function __deploy(address) public override returns (address) {
+    vm.startBroadcast();
     DiamondCutFacet diamondCut = new DiamondCutFacet();
     vm.stopBroadcast();
     return address(diamondCut);

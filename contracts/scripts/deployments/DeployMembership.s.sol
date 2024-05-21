@@ -62,11 +62,8 @@ contract DeployMembership is Deployer, FacetHelper {
     return "membershipFacet";
   }
 
-  function __deploy(
-    uint256 deployerPK,
-    address
-  ) public override returns (address) {
-    vm.startBroadcast(deployerPK);
+  function __deploy(address) public override returns (address) {
+    vm.startBroadcast();
     address membership = address(new MembershipFacet());
     vm.stopBroadcast();
 
