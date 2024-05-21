@@ -76,7 +76,7 @@ contract DeployRiverRegistry is DiamondDeployer {
     operators[0] = deployer;
     configManagers[0] = deployer;
 
-    vm.startBroadcast();
+    vm.startBroadcast(deployer);
 
     nodeRegistry = address(new NodeRegistry());
     streamRegistry = address(new StreamRegistry());

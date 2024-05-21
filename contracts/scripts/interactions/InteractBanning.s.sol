@@ -14,7 +14,7 @@ import {Interaction} from "contracts/scripts/common/Interaction.s.sol";
 contract InteractBanning is Interaction {
   DeployBanning banningHelper = new DeployBanning();
 
-  function __interact(address) public override {
+  function __interact(address deployer) public override {
     address space = getDeployment("space");
     address banning = banningHelper.deploy();
 
@@ -31,7 +31,7 @@ contract InteractBanning is Interaction {
     });
 
     // upgrade banning facet
-    vm.startBroadcast();
+    vm.startBroadcast(deployer);
     IDiamondCut(space).diamondCut({
       facetCuts: cuts,
       init: address(0),

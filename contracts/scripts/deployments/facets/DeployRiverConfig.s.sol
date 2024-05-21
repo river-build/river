@@ -17,8 +17,8 @@ contract DeployRiverConfig is Deployer {
     return "riverConfigFacet";
   }
 
-  function __deploy(address) public override returns (address) {
-    vm.startBroadcast();
+  function __deploy(address deployer) public override returns (address) {
+    vm.startBroadcast(deployer);
     RiverConfig riverConfig = new RiverConfig();
     vm.stopBroadcast();
     return address(riverConfig);

@@ -24,8 +24,8 @@ contract DeployEntitlementGated is FacetHelper, Deployer {
     return "entitlementGated";
   }
 
-  function __deploy(address) public override returns (address) {
-    vm.startBroadcast();
+  function __deploy(address deployer) public override returns (address) {
+    vm.startBroadcast(deployer);
     EntitlementGated facet = new EntitlementGated();
     vm.stopBroadcast();
     return address(facet);

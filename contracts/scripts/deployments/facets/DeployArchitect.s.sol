@@ -41,8 +41,8 @@ contract DeployArchitect is FacetHelper, Deployer {
     return "architectFacet";
   }
 
-  function __deploy(address) public override returns (address) {
-    vm.startBroadcast();
+  function __deploy(address deployer) public override returns (address) {
+    vm.startBroadcast(deployer);
     Architect architect = new Architect();
     vm.stopBroadcast();
     return address(architect);

@@ -26,8 +26,8 @@ contract DeployEntitlementDataQueryable is Deployer, FacetHelper {
     return "entitlementDataQueryable";
   }
 
-  function __deploy(address) public override returns (address) {
-    vm.startBroadcast();
+  function __deploy(address deployer) public override returns (address) {
+    vm.startBroadcast(deployer);
     EntitlementDataQueryable facet = new EntitlementDataQueryable();
     vm.stopBroadcast();
     return address(facet);

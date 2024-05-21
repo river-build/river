@@ -24,8 +24,8 @@ contract DeployBanning is Deployer, FacetHelper {
     return "banningFacet";
   }
 
-  function __deploy(address) public override returns (address) {
-    vm.startBroadcast();
+  function __deploy(address deployer) public override returns (address) {
+    vm.startBroadcast(deployer);
     Banning banning = new Banning();
     vm.stopBroadcast();
     return address(banning);

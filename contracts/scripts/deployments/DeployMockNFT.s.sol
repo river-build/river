@@ -39,7 +39,7 @@ contract DeployMockNFT is DiamondDeployer {
   }
 
   function diamondInitParams(
-    address
+    address deployer
   ) public override returns (Diamond.InitParams memory) {
     address multiInit = multiInitHelper.deploy();
 
@@ -47,7 +47,7 @@ contract DeployMockNFT is DiamondDeployer {
     diamondLoupe = loupeHelper.deploy();
     introspection = introspectionHelper.deploy();
 
-    vm.startBroadcast();
+    vm.startBroadcast(deployer);
     erc721aMock = address(new MockERC721A());
     vm.stopBroadcast();
 

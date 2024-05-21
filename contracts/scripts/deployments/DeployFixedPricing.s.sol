@@ -14,8 +14,8 @@ contract DeployFixedPricing is Deployer {
     return "fixedPricing";
   }
 
-  function __deploy(address) public override returns (address) {
-    vm.broadcast();
+  function __deploy(address deployer) public override returns (address) {
+    vm.broadcast(deployer);
     return address(new FixedPricing());
   }
 }
