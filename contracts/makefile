@@ -75,7 +75,7 @@ deploy-base-sepolia :;
 
 deploy-ledger-base-sepolia :;
 	@echo "Deploying $(contract)..."
-	@SAVE_DEPLOYMENTS=1 OVERRIDE_DEPLOYMENTS=1 forge script scripts/deployments/$(if $(findstring facet,$(type)),facets/)${contract}.s.sol:${contract} --ledger --hd-paths "m/44'/60'/1'/0/0" --ffi --rpc-url base_sepolia --broadcast --verify --verifier blockscout --verifier-url ${BLOCKSCOUT_SEPOLIA_URL}
+	@SAVE_DEPLOYMENTS=1 OVERRIDE_DEPLOYMENTS=1 forge script scripts/deployments/$(if $(findstring facet,$(type)),facets/)${contract}.s.sol:${contract} --ledger --hd-paths "m/44'/60'/1'/0/0" --sender ${PRODUCTION_ADDRESS} --ffi --rpc-url base_sepolia --broadcast --verify --verifier blockscout --verifier-url ${BLOCKSCOUT_SEPOLIA_URL}
 
 interact-base-sepolia :;
 	@echo "Interacting through $(contract)..."
@@ -101,7 +101,7 @@ deploy-base :;
 
 interact-base :;
 	@echo "Interacting through $(contract)..."
-	@forge script scripts/interactions/${contract}.s.sol:${contract} --ledger --hd-paths "m/44'/60'/1'/0/0" --ffi --rpc-url base --broadcast
+	@forge script scripts/interactions/${contract}.s.sol:${contract} --ledger --hd-paths "m/44'/60'/1'/0/0" --sender ${PRODUCTION_ADDRESS} --ffi --rpc-url base --broadcast
 
 verify-base :;
 	@forge verify-contract ${address} ${contract} --verifier-url ${BASESCAN_URL} -e ${BASESCAN_API_KEY}
