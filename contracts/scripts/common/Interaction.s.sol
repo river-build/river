@@ -25,7 +25,7 @@ abstract contract Interaction is Script, DeployBase {
   function interact() public virtual {
     uint256 pk = isAnvil() ? vm.envUint("LOCAL_PRIVATE_KEY") : isRiver()
       ? vm.envUint("RIVER_PRIVATE_KEY")
-      : vm.envUint("BASE_PRIVATE_KEY");
+      : vm.envUint("TESTNET_PRIVATE_KEY");
     address deployer = vm.addr(pk);
 
     info(

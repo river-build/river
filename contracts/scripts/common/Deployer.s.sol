@@ -54,7 +54,7 @@ abstract contract Deployer is Script, DeployBase {
 
     uint256 pk = isAnvil() ? vm.envUint("LOCAL_PRIVATE_KEY") : isRiver()
       ? vm.envUint("RIVER_PRIVATE_KEY")
-      : vm.envUint("BASE_PRIVATE_KEY");
+      : vm.envUint("TESTNET_PRIVATE_KEY");
 
     address potential = vm.addr(pk);
     address deployer = msg.sender != potential ? msg.sender : potential;
