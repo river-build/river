@@ -17,6 +17,7 @@ import (
 	"github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/xchain/bindings/erc721"
 	"github.com/river-build/river/core/xchain/bindings/ierc5313"
+	"github.com/river-build/river/core/xchain/contracts"
 	v3 "github.com/river-build/river/core/xchain/contracts/v3"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -137,7 +138,7 @@ func (sc *SpaceContractV3) marshalEntitlements(
 				return nil, err
 			}
 
-			var ruleData v3.IRuleEntitlementRuleData
+			var ruleData contracts.IRuleData
 
 			unpackedData, err := parsedABI.Unpack("getRuleData", entitlement.EntitlementData)
 			if err != nil {
@@ -177,7 +178,7 @@ func (sc *SpaceContractV3) marshalEntitlements(
 				log.Warn("No data unpacked", "unpackedData", unpackedData)
 			}
 
-			entitlements[i].ruleEntitlement = ruleData
+			entitlements[i].ruleEntitlement = &ruleData
 
 		} else if entitlement.EntitlementType == "UserEntitlement" {
 			entitlements[i].entitlementType = entitlement.EntitlementType

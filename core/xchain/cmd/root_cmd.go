@@ -1,12 +1,13 @@
 package cmd
 
 import (
-	"core/xchain/config"
 	"fmt"
 	"os"
 	"strings"
 
-	sconfig "github.com/river-build/river/core/node/config"
+	"github.com/mitchellh/mapstructure"
+	"github.com/river-build/river/core/node/config"
+
 	"github.com/river-build/river/core/node/infra"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -48,8 +49,15 @@ func initConfigAndLog() {
 			fmt.Printf("Failed to read config file, file=%v, error=%v\n", configFile, err)
 		}
 
-		var configStruct config.Config
-		if err := viper.Unmarshal(&configStruct, viper.DecodeHook(sconfig.DecodeDurationHook())); err != nil {
+		var (
+			configStruct config.Config
+			decodeHooks  = mapstructure.ComposeDecodeHookFunc(
+				config.DecodeAddressOrAddressFileHook(),
+				config.DecodeDurationHook(),
+			)
+		)
+
+		if err := viper.Unmarshal(&configStruct, viper.DecodeHook(decodeHooks)); err != nil {
 			fmt.Printf("Failed to unmarshal config, error=%v\n", err)
 		}
 

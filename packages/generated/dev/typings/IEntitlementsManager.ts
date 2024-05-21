@@ -26,18 +26,6 @@ import type {
   PromiseOrValue,
 } from "./common";
 
-export declare namespace IEntitlementsManager {
-  export type EntitlementDataStruct = {
-    entitlementType: PromiseOrValue<string>;
-    entitlementData: PromiseOrValue<BytesLike>;
-  };
-
-  export type EntitlementDataStructOutput = [string, string] & {
-    entitlementType: string;
-    entitlementData: string;
-  };
-}
-
 export declare namespace IEntitlementsManagerBase {
   export type EntitlementStruct = {
     name: PromiseOrValue<string>;
@@ -58,9 +46,7 @@ export interface IEntitlementsManagerInterface extends utils.Interface {
   functions: {
     "addEntitlementModule(address)": FunctionFragment;
     "addImmutableEntitlements(address[])": FunctionFragment;
-    "getChannelEntitlementDataByPermission(bytes32,string)": FunctionFragment;
     "getEntitlement(address)": FunctionFragment;
-    "getEntitlementDataByPermission(string)": FunctionFragment;
     "getEntitlements()": FunctionFragment;
     "isEntitledToChannel(bytes32,address,string)": FunctionFragment;
     "isEntitledToSpace(address,string)": FunctionFragment;
@@ -71,9 +57,7 @@ export interface IEntitlementsManagerInterface extends utils.Interface {
     nameOrSignatureOrTopic:
       | "addEntitlementModule"
       | "addImmutableEntitlements"
-      | "getChannelEntitlementDataByPermission"
       | "getEntitlement"
-      | "getEntitlementDataByPermission"
       | "getEntitlements"
       | "isEntitledToChannel"
       | "isEntitledToSpace"
@@ -89,15 +73,7 @@ export interface IEntitlementsManagerInterface extends utils.Interface {
     values: [PromiseOrValue<string>[]]
   ): string;
   encodeFunctionData(
-    functionFragment: "getChannelEntitlementDataByPermission",
-    values: [PromiseOrValue<BytesLike>, PromiseOrValue<string>]
-  ): string;
-  encodeFunctionData(
     functionFragment: "getEntitlement",
-    values: [PromiseOrValue<string>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getEntitlementDataByPermission",
     values: [PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
@@ -130,15 +106,7 @@ export interface IEntitlementsManagerInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "getChannelEntitlementDataByPermission",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "getEntitlement",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getEntitlementDataByPermission",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -228,12 +196,6 @@ export interface IEntitlementsManager extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
-    getChannelEntitlementDataByPermission(
-      channelId: PromiseOrValue<BytesLike>,
-      permission: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<[IEntitlementsManager.EntitlementDataStructOutput[]]>;
-
     getEntitlement(
       entitlement: PromiseOrValue<string>,
       overrides?: CallOverrides
@@ -242,11 +204,6 @@ export interface IEntitlementsManager extends BaseContract {
         entitlements: IEntitlementsManagerBase.EntitlementStructOutput;
       }
     >;
-
-    getEntitlementDataByPermission(
-      permission: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<[IEntitlementsManager.EntitlementDataStructOutput[]]>;
 
     getEntitlements(
       overrides?: CallOverrides
@@ -285,21 +242,10 @@ export interface IEntitlementsManager extends BaseContract {
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
-  getChannelEntitlementDataByPermission(
-    channelId: PromiseOrValue<BytesLike>,
-    permission: PromiseOrValue<string>,
-    overrides?: CallOverrides
-  ): Promise<IEntitlementsManager.EntitlementDataStructOutput[]>;
-
   getEntitlement(
     entitlement: PromiseOrValue<string>,
     overrides?: CallOverrides
   ): Promise<IEntitlementsManagerBase.EntitlementStructOutput>;
-
-  getEntitlementDataByPermission(
-    permission: PromiseOrValue<string>,
-    overrides?: CallOverrides
-  ): Promise<IEntitlementsManager.EntitlementDataStructOutput[]>;
 
   getEntitlements(
     overrides?: CallOverrides
@@ -334,21 +280,10 @@ export interface IEntitlementsManager extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>;
 
-    getChannelEntitlementDataByPermission(
-      channelId: PromiseOrValue<BytesLike>,
-      permission: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<IEntitlementsManager.EntitlementDataStructOutput[]>;
-
     getEntitlement(
       entitlement: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<IEntitlementsManagerBase.EntitlementStructOutput>;
-
-    getEntitlementDataByPermission(
-      permission: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<IEntitlementsManager.EntitlementDataStructOutput[]>;
 
     getEntitlements(
       overrides?: CallOverrides
@@ -404,19 +339,8 @@ export interface IEntitlementsManager extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
-    getChannelEntitlementDataByPermission(
-      channelId: PromiseOrValue<BytesLike>,
-      permission: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
     getEntitlement(
       entitlement: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    getEntitlementDataByPermission(
-      permission: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
@@ -452,19 +376,8 @@ export interface IEntitlementsManager extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
-    getChannelEntitlementDataByPermission(
-      channelId: PromiseOrValue<BytesLike>,
-      permission: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
     getEntitlement(
       entitlement: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    getEntitlementDataByPermission(
-      permission: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 

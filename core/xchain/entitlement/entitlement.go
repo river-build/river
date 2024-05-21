@@ -2,13 +2,14 @@ package entitlement
 
 import (
 	"context"
-	"core/xchain/config"
 	"errors"
 	"fmt"
 	"math/big"
 	"sync"
 
-	er "core/xchain/contracts"
+	"github.com/river-build/river/core/node/config"
+
+	er "github.com/river-build/river/core/xchain/contracts"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/river-build/river/core/node/dlog"
@@ -21,7 +22,7 @@ func EvaluateRuleData(
 	ruleData *er.IRuleData,
 ) (bool, error) {
 	log := dlog.FromCtx(ctx)
-	log.Debug("Evaluating rule data", "ruleData", ruleData)
+	log.Info("Evaluating rule data", "ruleData", ruleData)
 	opTree, err := getOperationTree(ctx, ruleData)
 	if err != nil {
 		return false, err

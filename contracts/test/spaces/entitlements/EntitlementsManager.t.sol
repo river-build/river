@@ -134,27 +134,27 @@ contract EntitlementsManagerTest is
     vm.stopPrank();
   }
 
-  function _arrangeInitialEntitlements() internal {
+  modifier givenInitialEntitlementsAreSet() {
     vm.startPrank(founder);
     entitlements.addImmutableEntitlements(immutableEntitlements);
     entitlements.addEntitlementModule(address(mockEntitlement));
     vm.stopPrank();
+    _;
   }
 
   // =============================================================
   //                      Remove Entitlements
   // =============================================================
 
-  function test_removeEntitlement() external {
-    _arrangeInitialEntitlements();
-
+  function test_removeEntitlement() external givenInitialEntitlementsAreSet {
     vm.prank(founder);
     entitlements.removeEntitlementModule(address(mockEntitlement));
   }
 
-  function test_removeEntitlement_revert_when_not_owner() external {
-    _arrangeInitialEntitlements();
-
+  function test_removeEntitlement_revert_when_not_owner()
+    external
+    givenInitialEntitlementsAreSet
+  {
     address user = _randomAddress();
 
     vm.prank(user);
@@ -188,9 +188,8 @@ contract EntitlementsManagerTest is
 
   function test_removeEntitlement_revert_when_removing_immutable_entitlement()
     external
+    givenInitialEntitlementsAreSet
   {
-    _arrangeInitialEntitlements();
-
     vm.prank(founder);
     vm.expectRevert(EntitlementsService__ImmutableEntitlement.selector);
     entitlements.removeEntitlementModule(address(mockImmutableEntitlement));
@@ -199,9 +198,7 @@ contract EntitlementsManagerTest is
   // =============================================================
   //                      Get Entitlements
   // =============================================================
-  function test_getEntitlements() external {
-    _arrangeInitialEntitlements();
-
+  function test_getEntitlements() external givenInitialEntitlementsAreSet {
     Entitlement[] memory allEntitlements = entitlements.getEntitlements();
     assertEq(allEntitlements.length > 0, true);
   }
@@ -210,67 +207,12 @@ contract EntitlementsManagerTest is
   //                      Get Entitlement
   // =============================================================
 
-  function test_getSingleEntitlement() external {
-    _arrangeInitialEntitlements();
+  function test_getSingleEntitlement() external givenInitialEntitlementsAreSet {
     Entitlement memory entitlement = entitlements.getEntitlement(
       address(mockEntitlement)
     );
 
     assertEq(address(entitlement.moduleAddress), address(mockEntitlement));
-  }
-
-  function test_getEntitlementDataByRole() external {
-    _arrangeInitialEntitlements();
-
-    IEntitlementsManager.EntitlementData[] memory entitlement = entitlements
-      .getEntitlementDataByPermission(Permissions.JoinSpace);
-
-    assertEq(entitlement.length == 1, true);
-    assertEq(
-      keccak256(abi.encodePacked(entitlement[0].entitlementType)),
-      keccak256(abi.encodePacked("UserEntitlement"))
-    );
-  }
-
-  function test_GetChannelEntitlementDataByPermission() external {
-    _arrangeInitialEntitlements();
-
-    string[] memory permissions = new string[](1);
-    permissions[0] = Permissions.Read;
-    address[] memory users = new address[](1);
-    users[0] = founder;
-    IRolesBase.CreateEntitlement[]
-      memory createEntitlements = new IRolesBase.CreateEntitlement[](1);
-    createEntitlements[0] = IRolesBase.CreateEntitlement({
-      module: IEntitlement(mockEntitlement),
-      data: abi.encode(users)
-    });
-
-    uint256 roleId = IRoles(everyoneSpace).createRole(
-      "test-channel-member",
-      permissions,
-      createEntitlements
-    );
-    vm.stopPrank();
-
-    uint256[] memory roles = new uint256[](1);
-    roles[0] = roleId;
-    bytes32 channelId = "test-channel";
-    IChannel(everyoneSpace).createChannel(channelId, "Metadata", roles);
-
-    IEntitlementsManager.EntitlementData[]
-      memory channelEntitlements = entitlements
-        .getChannelEntitlementDataByPermission(channelId, Permissions.Read);
-
-    assertEq(channelEntitlements.length == 1, true);
-    assertEq(
-      keccak256(abi.encodePacked(channelEntitlements[0].entitlementType)),
-      keccak256(abi.encodePacked("MockUserEntitlement"))
-    );
-    assertEq(
-      keccak256(abi.encodePacked(channelEntitlements[0].entitlementData)),
-      keccak256(abi.encode(users))
-    );
   }
 
   function test_getEntitlement_revert_when_invalid_entitlement_address()
