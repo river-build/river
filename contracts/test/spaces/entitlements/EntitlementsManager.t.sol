@@ -234,6 +234,7 @@ contract EntitlementsManagerTest is
 
   function test_GetChannelEntitlementDataByPermission() external {
     _arrangeInitialEntitlements();
+    vm.prank(founder);
 
     string[] memory permissions = new string[](1);
     permissions[0] = Permissions.Read;
@@ -251,7 +252,6 @@ contract EntitlementsManagerTest is
       permissions,
       createEntitlements
     );
-    vm.stopPrank();
 
     uint256[] memory roles = new uint256[](1);
     roles[0] = roleId;
