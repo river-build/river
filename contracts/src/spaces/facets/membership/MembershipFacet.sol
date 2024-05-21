@@ -83,9 +83,7 @@ contract MembershipFacet is
   function joinSpace(address receiver) external payable nonReentrant {
     _validateJoinSpace(receiver);
 
-    bool isCrosschainPending;
     address sender = msg.sender;
-
     bytes32 keyHash = keccak256(abi.encodePacked(sender, block.number));
     bytes32 transactionId = _makeDispatchId(
       keyHash,
@@ -93,12 +91,15 @@ contract MembershipFacet is
     );
 
     _captureData(transactionId, abi.encode(sender, receiver));
-    if (msg.value > 0) _captureValue(transactionId, msg.value);
+    if (msg.value > 0) {
+      _captureValue(transactionId, msg.value);
+    }
 
     IRolesBase.Role[] memory roles = _getRolesWithPermission(
       Permissions.JoinSpace
     );
 
+    bool isCrosschainPending;
     bool shouldRefund;
 
     for (uint256 i = 0; i < roles.length; i++) {
@@ -107,18 +108,14 @@ contract MembershipFacet is
       if (!role.disabled) {
         for (uint256 j = 0; j < role.entitlements.length; j++) {
           IEntitlement entitlement = IEntitlement(role.entitlements[j]);
+
           if (!entitlement.isCrosschain()) {
             address[] memory users = new address[](1);
             users[0] = sender;
-            // Note: the UserEntitlement contract checks across *all* roles for an entitlement that
-            // matches the permission, so we really only need to execute this code block 1 time
-            // for all roles with a user entitlement...
-            // I BELIEVE THAT The first entitlement of the first role we encounter is actually the user entitlement
-            // created on space creation, so if we pass this check, we can be sure that the user entitlements do in
-            // fact pass for this user, and no asynchronous checks will be emitted.
+
             if (entitlement.isEntitled(0x0, users, JOIN_SPACE)) {
               _issueToken(transactionId);
-              shouldRefund = false;
+              return;
             } else {
               shouldRefund = true;
             }
@@ -135,13 +132,11 @@ contract MembershipFacet is
       }
     }
 
-    if (!isCrosschainPending) {
-      emit MembershipTokenRejected(receiver);
-    }
-
-    if (shouldRefund) {
+    if (!isCrosschainPending && shouldRefund) {
       _captureData(transactionId, "");
-      if (msg.value > 0) _releaseCapturedValue(transactionId, msg.value);
+      if (msg.value > 0) {
+        _releaseCapturedValue(transactionId, msg.value);
+      }
       emit MembershipTokenRejected(receiver);
     }
   }
