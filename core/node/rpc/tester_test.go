@@ -106,6 +106,20 @@ func newServiceTesterWithReplication(t *testing.T, numNodes int, replicationFact
 
 	st.startAutoMining()
 
+	pendingTx, err := st.btc.DeployerBlockchain.TxPool.Submit(ctx, "SetReplicationFactor",
+		func(opts *bind.TransactOpts) (*types.Transaction, error) {
+			return btc.Configuration.SetConfiguration(
+				opts,
+				crypto.StreamReplicationFactorConfigKey.ID(),
+				0,
+				crypto.ABIEncodeUint64(uint64(replicationFactor)),
+			)
+		})
+
+	require.NoError(err, "unable to set stream replication factor")
+	receipt := <-pendingTx.Wait()
+	require.Equal(crypto.TransactionResultSuccess, receipt.Status, "set stream replication factor tx failed")
+
 	return st
 }
 

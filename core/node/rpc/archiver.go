@@ -338,6 +338,7 @@ func (a *Archiver) onStreamPlacementUpdated(
 	event *contracts.StreamRegistryV1StreamPlacementUpdated,
 ) {
 	a.streamPlacementUpdated.Add(1)
+
 	id := StreamId(event.StreamId)
 	record, loaded := a.streams.Load(id)
 	if !loaded {
@@ -353,6 +354,7 @@ func (a *Archiver) onStreamLastMiniblockUpdated(
 	event *contracts.StreamRegistryV1StreamLastMiniblockUpdated,
 ) {
 	a.streamLastMiniblockUpdated.Add(1)
+
 	id := StreamId(event.StreamId)
 	record, loaded := a.streams.Load(id)
 	if !loaded {
