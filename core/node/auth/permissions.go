@@ -30,6 +30,7 @@ func (p Permission) String() string {
 	case PermissionRedact:
 		return "Redact"
 	case PermissionBan:
+		// return "ModifyBan"
 		return "Ban"
 	case PermissionPinMessages:
 		return "PinMessages"

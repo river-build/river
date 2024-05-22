@@ -31,7 +31,7 @@ describe('channelsWithEntitlements', () => {
     // Banning with entitlements — users need permission to ban other users.
     test('adminsCanRedactChannelMessages', async () => {
         log('start adminsCanRedactChannelMessages')
-        // set up the web3 provider and spacedap
+        // set up the web3 provider and spacedapp
         const baseConfig = makeBaseChainConfig()
         const bobsWallet = ethers.Wallet.createRandom()
         const bobsContext = await makeUserContextFromWallet(bobsWallet)

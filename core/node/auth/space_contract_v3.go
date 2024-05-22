@@ -122,7 +122,7 @@ func getABI() (abi.ABI, error) {
 
 func (sc *SpaceContractV3) marshalEntitlements(
 	ctx context.Context,
-	entitlementData []base.IEntitlementsManagerEntitlementData,
+	entitlementData []base.IEntitlementDataQueryableBaseEntitlementData,
 ) ([]Entitlement, error) {
 	log := dlog.FromCtx(ctx)
 	entitlements := make([]Entitlement, len(entitlementData))
