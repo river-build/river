@@ -72,7 +72,8 @@ contract NodeOperatorFacet is INodeOperator, OwnableBase, ERC721ABase, Facet {
     // Check for valid newStatus transitions
     // Exiting -> Standby
     // Standby -> Approved
-    // Approved -> Exiting
+    // Approved -> Exiting || Active
+    // Active -> Exiting
     if (
       currentStatus == NodeOperatorStatus.Exiting &&
       newStatus != NodeOperatorStatus.Standby
@@ -85,6 +86,12 @@ contract NodeOperatorFacet is INodeOperator, OwnableBase, ERC721ABase, Facet {
       revert NodeOperator__InvalidStatusTransition();
     } else if (
       currentStatus == NodeOperatorStatus.Approved &&
+      (newStatus != NodeOperatorStatus.Exiting &&
+        newStatus != NodeOperatorStatus.Active)
+    ) {
+      revert NodeOperator__InvalidStatusTransition();
+    } else if (
+      currentStatus == NodeOperatorStatus.Active &&
       newStatus != NodeOperatorStatus.Exiting
     ) {
       revert NodeOperator__InvalidStatusTransition();
