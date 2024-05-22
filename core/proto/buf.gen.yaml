@@ -5,7 +5,7 @@ plugins:
       opt: target=ts
     - remote: buf.build/connectrpc/es:v1.4.0
       out: core/proto/src/gen
-      opt: target=ts      
+      opt: target=ts
 inputs:
     - directory: protocol
     - directory: core/proto
