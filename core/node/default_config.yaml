@@ -122,7 +122,3 @@ entitlement_contract:
 test_contract:
     address: ''
     version: '3'
-
-wallet_link_contract:
-    address: ''
-    version: '3'

@@ -427,7 +427,7 @@ contract RewardsDistributionTest is
     internal
     givenOperatorsHaveRegistered(operators)
     givenOperatorsHaveCommissionRates(operators)
-    givenOperatorsHaveBeenApproved(operators)
+    givenOperatorsAreActive(operators)
   {}
 
   function setupUsersAndDelegation(
@@ -1398,14 +1398,16 @@ contract RewardsDistributionTest is
     _;
   }
 
-  modifier givenOperatorHasBeenApproved(address _operator) {
+  modifier givenOperatorIsActive(address _operator) {
     setOperatorStatus(_operator, NodeOperatorStatus.Approved);
+    setOperatorStatus(_operator, NodeOperatorStatus.Active);
     _;
   }
 
-  modifier givenOperatorsHaveBeenApproved(Entity[] memory operators) {
+  modifier givenOperatorsAreActive(Entity[] memory operators) {
     for (uint256 i = 0; i < operators.length; i++) {
       setOperatorStatus(operators[i].addr, NodeOperatorStatus.Approved);
+      setOperatorStatus(operators[i].addr, NodeOperatorStatus.Active);
     }
     _;
   }

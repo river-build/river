@@ -258,7 +258,7 @@ contract RewardsDistribution is
       NodeOperatorStatus currentStatus = nos.statusByOperator[operator];
 
       if (
-        currentStatus == NodeOperatorStatus.Approved &&
+        currentStatus == NodeOperatorStatus.Active &&
         _isActiveSinceLastCycle(nos.approvalTimeByOperator[operator])
       ) {
         expectedOperators[i] = operator;
