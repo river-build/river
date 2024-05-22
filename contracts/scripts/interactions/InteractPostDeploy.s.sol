@@ -31,13 +31,13 @@ contract InteractPostDeploy is Interaction {
     address spaceFactory = deploySpaceFactory.deploy();
     address baseRegistry = deployBaseRegistry.deploy();
     address riverBaseToken = deployRiverBaseToken.deploy();
-    address mainnetProxyDelegation = deployProxyDelegation.deploy();
+    // address mainnetProxyDelegation = deployProxyDelegation.deploy();
 
     vm.startBroadcast(deployer);
     ISpaceOwner(spaceOwner).setFactory(spaceFactory);
     IImplementationRegistry(spaceFactory).addImplementation(baseRegistry);
     SpaceDelegationFacet(baseRegistry).setRiverToken(riverBaseToken);
-    IMainnetDelegation(baseRegistry).setProxyDelegation(mainnetProxyDelegation);
+    // IMainnetDelegation(baseRegistry).setProxyDelegation(mainnetProxyDelegation);
     vm.stopBroadcast();
   }
 }

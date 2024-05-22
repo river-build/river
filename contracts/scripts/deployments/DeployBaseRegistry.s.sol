@@ -84,7 +84,6 @@ contract DeployBaseRegistry is DiamondDeployer {
     operator = operatorHelper.deploy();
     distribution = distributionHelper.deploy();
     mainnetDelegation = mainnetDelegationHelper.deploy();
-
     spaceDelegation = spaceDelegationHelper.deploy();
 
     vm.startBroadcast(deployer);
@@ -150,7 +149,9 @@ contract DeployBaseRegistry is DiamondDeployer {
         IDiamond.FacetCutAction.Add
       ),
       spaceDelegation,
-      spaceDelegationHelper.makeInitData(address(0))
+      spaceDelegationHelper.makeInitData(
+        0x9172852305F32819469bf38A3772f29361d7b768
+      )
     );
     addFacet(
       mainnetDelegationHelper.makeCut(
