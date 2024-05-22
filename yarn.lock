@@ -573,13 +573,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@bufbuild/protobuf@npm:^1.4.1":
-  version: 1.4.1
-  resolution: "@bufbuild/protobuf@npm:1.4.1"
-  checksum: c42c29dd70e580b19b32a94ab7cde9f86f2540554dd2fa7a8f9af9909534c3ad6c06980b16e5453530934f744076ab2870e2b0d31d3ed567b399b901ecf9fa51
-  languageName: node
-  linkType: hard
-
 "@bufbuild/protoc-gen-es@npm:^1.9.0":
   version: 1.9.0
   resolution: "@bufbuild/protoc-gen-es@npm:1.9.0"
@@ -625,16 +618,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@connectrpc/connect-web@npm:^1.3.0":
-  version: 1.3.0
-  resolution: "@connectrpc/connect-web@npm:1.3.0"
-  peerDependencies:
-    "@bufbuild/protobuf": ^1.4.2
-    "@connectrpc/connect": 1.3.0
-  checksum: 085dcf01cfe652849dd5c046acdeb9baa578add4a58d35643c162e8eccd5203021451b49bfb3d66c69d1e65759ef25727b6b64ee62ea017a040097c3535d214a
-  languageName: node
-  linkType: hard
-
 "@connectrpc/connect-web@npm:^1.4.0":
   version: 1.4.0
   resolution: "@connectrpc/connect-web@npm:1.4.0"
@@ -642,15 +625,6 @@ __metadata:
     "@bufbuild/protobuf": ^1.4.2
     "@connectrpc/connect": 1.4.0
   checksum: bf53f5cdd0be69be1cdebf7d7e01f74936f83b410fb26d7f515284771290e6c24f5701e6144ea600805fa2e39d5255ef009210f7b1c35f1dade60005e231b022
-  languageName: node
-  linkType: hard
-
-"@connectrpc/connect@npm:^1.3.0":
-  version: 1.3.0
-  resolution: "@connectrpc/connect@npm:1.3.0"
-  peerDependencies:
-    "@bufbuild/protobuf": ^1.4.2
-  checksum: a68bfffedd817a7db3563c00e5efc5eb510cc00a93c722d81fa1f52b71a96300d7175b0c0710a9d2ef2e8aaabee36921c90470a80343e7a9fbccffd3cc83f868
   languageName: node
   linkType: hard
 
@@ -2375,7 +2349,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@river-build/dlog@workspace:core/dlog"
   dependencies:
-    "@bufbuild/protobuf": ^1.4.1
+    "@bufbuild/protobuf": ^1.9.0
     "@river-build/proto": "workspace:^"
     "@types/jest": ^29.5.3
     "@typescript-eslint/eslint-plugin": ^6.10.0
@@ -2399,7 +2373,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@river-build/encryption@workspace:core/encryption"
   dependencies:
-    "@bufbuild/protobuf": ^1.4.1
+    "@bufbuild/protobuf": ^1.9.0
     "@ethereumjs/util": ^8.0.1
     "@matrix-org/olm": ^3.2.15
     "@river-build/dlog": "workspace:^"
@@ -2459,7 +2433,7 @@ __metadata:
   resolution: "@river-build/stress@workspace:core/stress"
   dependencies:
     "@babel/node": ^7.23.9
-    "@bufbuild/protobuf": ^1.4.1
+    "@bufbuild/protobuf": ^1.9.0
     "@jest/globals": ^29.6.2
     "@river-build/dlog": "workspace:^"
     "@river-build/encryption": "workspace:^"
@@ -2565,9 +2539,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@river/sdk@workspace:core/sdk"
   dependencies:
-    "@bufbuild/protobuf": ^1.4.1
-    "@connectrpc/connect": ^1.3.0
-    "@connectrpc/connect-web": ^1.3.0
+    "@bufbuild/protobuf": ^1.9.0
+    "@connectrpc/connect": ^1.4.0
+    "@connectrpc/connect-web": ^1.4.0
     "@datadog/browser-rum": ^5.8.0
     "@ethereumjs/util": ^8.0.1
     "@jest/globals": ^29.6.2
