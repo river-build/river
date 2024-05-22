@@ -752,6 +752,7 @@ export class SpaceDapp implements ISpaceDapp {
         logger.log('joinSpace wrap', Date.now() - wrapStart, blockNumberAfterTx)
 
         const issued = await issuedListener
+
         const blockNumberAfter = await space.provider?.getBlockNumber()
 
         logger.log(
@@ -953,6 +954,7 @@ export class SpaceDapp implements ISpaceDapp {
         return undefined
     }
 
+    // If the caller doesn't provide an abort controller, listenForMembershipToken will create one
     public listenForMembershipEvent(
         spaceId: string,
         receiver: string,

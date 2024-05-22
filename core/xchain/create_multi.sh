@@ -43,7 +43,6 @@ cd "$(dirname "$0")"
 : ${RIVER_ENV:?} 
 
 : ${SPACE_FACTORY_ADDRESS:?}
-: ${WALLET_LINK_ADDRESS:?}
 : ${BASE_REGISTRY_ADDRESS:?}
 : ${RIVER_REGISTRY_ADDRESS:?}
 
@@ -85,7 +84,6 @@ do
     
     yq eval ".metrics.port = \"$METRICS_PORT\"" -i "${INSTANCE_DIR}/config/config.yaml"
     yq eval ".entitlement_contract.address = strenv(BASE_REGISTRY_ADDRESS)" -i "${INSTANCE_DIR}/config/config.yaml"
-    yq eval ".wallet_link_contract.address = strenv(WALLET_LINK_ADDRESS)" -i "${INSTANCE_DIR}/config/config.yaml"
     yq eval ".test_contract.address = strenv(ENTITLEMENT_TEST_ADDRESS)" -i "${INSTANCE_DIR}/config/config.yaml"
     yq eval ".architectContract.address = strenv(SPACE_FACTORY_ADDRESS)" -i "${INSTANCE_DIR}/config/config.yaml"
     yq eval ".registryContract.address = strenv(RIVER_REGISTRY_ADDRESS)" -i "${INSTANCE_DIR}/config/config.yaml"
