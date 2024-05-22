@@ -32,7 +32,7 @@ const log = dlog('csb:test:channelsWithEntitlements')
 
 describe('channelsWithEntitlements', () => {
     test('channel join gated on nft', async () => {
-        // set up the web3 provider and spacedapp
+        // Have bob establish a new town with a default channel and an nft-gated channel.
         const baseConfig = makeBaseChainConfig()
         const bobsWallet = ethers.Wallet.createRandom()
         const bobsContext = await makeUserContextFromWallet(bobsWallet)
@@ -40,7 +40,7 @@ describe('channelsWithEntitlements', () => {
         await bobProvider.fundWallet()
         const spaceDapp = createSpaceDapp(bobProvider, baseConfig.chainConfig)
 
-        // create a user stream
+        // create bob's user stream
         const bob = await makeTestClient({ context: bobsContext })
         const bobsUserStreamId = makeUserStreamId(bob.userId)
         await expect(bob.initializeUser()).toResolve()
@@ -50,9 +50,8 @@ describe('channelsWithEntitlements', () => {
         const dynamicPricingModule = getDynamicPricingModule(pricingModules)
         expect(dynamicPricingModule).toBeDefined()
 
-        // create a space stream,
+        // create a space stream
         log('Bob created user, about to create space')
-        // first on the blockchain
         const membershipInfo: MembershipStruct = {
             settings: {
                 name: 'Everyone',
@@ -83,38 +82,32 @@ describe('channelsWithEntitlements', () => {
             bobProvider.wallet,
         )
         const receipt = await transaction.wait()
-        log('transaction receipt', receipt)
         expect(receipt.status).toEqual(1)
         const spaceAddress = spaceDapp.getSpaceAddress(receipt)
         expect(spaceAddress).toBeDefined()
+
+        // On the river node, establish the space and default channel streams.
         const spaceId = makeSpaceStreamId(spaceAddress!)
         const defaultChannelId = makeDefaultChannelStreamId(spaceAddress!)
-        // then on the river node
         const returnVal = await bob.createSpace(spaceId)
         expect(returnVal.streamId).toEqual(spaceId)
+
         // Now there must be "joined space" event in the user stream.
         const bobUserStreamView = bob.stream(bobsUserStreamId)!.view
         expect(bobUserStreamView).toBeDefined()
         expect(bobUserStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN)).toBe(true)
 
-        const waitForStreamPromise = makeDonePromise()
-        bob.on('userJoinedStream', (streamId) => {
-            if (streamId === channelId) {
-                waitForStreamPromise.done()
-            }
-        })
-
         // create the channel
-        log('Bob created space, about to create channel')
-        const channelProperties = 'Bobs channel properties'
+        log('Bob created space, about to create default channel')
         const channelReturnVal = await bob.createChannel(
             spaceId,
             'general',
-            channelProperties,
+            'Bobs channel properties',
             defaultChannelId,
         )
         expect(channelReturnVal.streamId).toEqual(defaultChannelId)
 
+        // Sanity check: Bob should be a member of the space and the default channel.
         await waitFor(() => {
             expect(bobUserStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN)).toBe(true)
             expect(
@@ -137,7 +130,7 @@ describe('channelsWithEntitlements', () => {
         expect(roleError).toBeUndefined()
         console.log('roleId', roleId)
 
-        // Create nft-gated channel on-chain
+        // Attach above role to a new channel created on-chain
         let { channelId, error: channelError } = await createChannel(
             spaceDapp,
             bobProvider,
@@ -149,7 +142,7 @@ describe('channelsWithEntitlements', () => {
         expect(channelError).toBeUndefined()
         console.log('channelId', channelId)
 
-        // then on the river node
+        // Then, establish channel stream on the river node.
         let { streamId: channelStreamId } = await bob.createChannel(
             spaceId,
             'nft-gated-channel',
@@ -157,6 +150,8 @@ describe('channelsWithEntitlements', () => {
             channelId!,
         )
         expect(channelStreamId).toEqual(channelId)
+        // As the space owner, Bob should be able to join the nft-gated channel.
+        expect(bob.joinStream(channelId!)).toResolve()
 
         // Create alice and add to space. Alice should be able to join default
         // channel but not the nft-gated channel.
@@ -198,7 +193,7 @@ describe('channelsWithEntitlements', () => {
     })
 
     // Banning with entitlements — users need permission to ban other users.
-    test.skip('adminsCanRedactChannelMessages', async () => {
+    test('adminsCanRedactChannelMessages', async () => {
         log('start adminsCanRedactChannelMessages')
         // set up the web3 provider and spacedapp
         const baseConfig = makeBaseChainConfig()
@@ -264,13 +259,6 @@ describe('channelsWithEntitlements', () => {
         const bobUserStreamView = bob.stream(bobsUserStreamId)!.view
         expect(bobUserStreamView).toBeDefined()
         expect(bobUserStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN)).toBe(true)
-
-        const waitForStreamPromise = makeDonePromise()
-        bob.on('userJoinedStream', (streamId) => {
-            if (streamId === channelId) {
-                waitForStreamPromise.done()
-            }
-        })
 
         // create the channel
         log('Bob created space, about to create channel')
