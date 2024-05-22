@@ -84,14 +84,14 @@ contract RewardsDistributionTest is
   function setUp() public override {
     super.setUp();
 
-    operator = NodeOperatorFacet(nodeOperator);
-    ownable = OwnableFacet(nodeOperator);
-    introspection = IntrospectionFacet(nodeOperator);
-    erc721 = ERC721A(nodeOperator);
+    operator = NodeOperatorFacet(baseRegistry);
+    ownable = OwnableFacet(baseRegistry);
+    introspection = IntrospectionFacet(baseRegistry);
+    erc721 = ERC721A(baseRegistry);
     riverFacet = River(riverToken);
     mainnetDelegationFacet = MainnetDelegation(baseRegistry);
-    rewardsDistributionFacet = RewardsDistribution(nodeOperator);
-    spaceDelegationFacet = SpaceDelegationFacet(nodeOperator);
+    rewardsDistributionFacet = RewardsDistribution(baseRegistry);
+    spaceDelegationFacet = SpaceDelegationFacet(baseRegistry);
     spaceOwnerFacet = SpaceOwner(spaceFactory);
 
     messenger.setXDomainMessageSender(mainnetProxyDelegation);
