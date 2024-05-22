@@ -11,7 +11,7 @@ import {
 } from '@river-build/proto'
 import { PlainMessage } from '@bufbuild/protobuf'
 import { Client } from './client'
-import { genId, makeSpaceStreamId, userIdFromAddress } from './id'
+import { genId, makeSpaceStreamId, userIdFromAddress, makeUniqueChannelStreamId } from './id'
 import { ParsedEvent, DecryptedTimelineEvent } from './types'
 import { getPublicKey, utils } from 'ethereum-cryptography/secp256k1'
 import { EntitlementsDelegate } from '@river-build/encryption'
@@ -28,18 +28,11 @@ import {
     PricingModuleStruct,
     createExternalNFTStruct,
     createRiverRegistry,
-    treeToRuleData,
-} from '@river-build/web3'
-import { makeRiverChainConfig } from './riverConfig'
-import {
     IRuleEntitlement,
-    CheckOperation,
-    CheckOperationType,
-    OperationType,
     Permission,
     ISpaceDapp,
 } from '@river-build/web3'
-import { makeUniqueChannelStreamId } from './id'
+import { makeRiverChainConfig } from './riverConfig'
 
 const log = dlog('csb:test:util')
 
@@ -395,7 +388,7 @@ export function getNftRuleData(testNftAddress: `0x${string}`): IRuleEntitlement.
 }
 
 export interface CreateRoleContext {
-    roleId: Number | undefined
+    roleId: number | undefined
     error: Error | undefined
 }
 
@@ -419,7 +412,7 @@ export async function createRole(
         return { roleId: undefined, error }
     }
 
-    const receipt = await provider.waitForTransaction(txn!.hash)
+    const receipt = await provider.waitForTransaction(txn.hash)
     if (receipt.status === 0) {
         return { roleId: undefined, error: new Error('Transaction failed') }
     }
@@ -449,7 +442,7 @@ export async function createChannel(
     let txn: ethers.ContractTransaction | undefined = undefined
     let error: Error | undefined = undefined
 
-    let channelId = makeUniqueChannelStreamId(spaceId)
+    const channelId = makeUniqueChannelStreamId(spaceId)
     try {
         txn = await spaceDapp.createChannel(spaceId, channelName, channelId, roleIds, signer)
     } catch (err) {
@@ -457,7 +450,7 @@ export async function createChannel(
         return { channelId: undefined, error }
     }
 
-    const receipt = await provider.waitForTransaction(txn!.hash)
+    const receipt = await provider.waitForTransaction(txn.hash)
     if (receipt.status === 0) {
         return { channelId: undefined, error: new Error('Transaction failed') }
     }

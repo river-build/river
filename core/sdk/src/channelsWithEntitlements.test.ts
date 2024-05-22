@@ -6,10 +6,12 @@
 import {
     getChannelMessagePayload,
     getDynamicPricingModule,
-    makeDonePromise,
     makeTestClient,
     makeUserContextFromWallet,
     waitFor,
+    getNftRuleData,
+    createRole,
+    createChannel,
 } from './util.test'
 import { dlog } from '@river-build/dlog'
 import { makeDefaultChannelStreamId, makeSpaceStreamId, makeUserStreamId } from './id'
@@ -26,7 +28,6 @@ import {
     publicMint,
 } from '@river-build/web3'
 import { makeBaseChainConfig } from './riverConfig'
-import { getNftRuleData, createRole, createChannel } from './util.test'
 
 const log = dlog('csb:test:channelsWithEntitlements')
 
@@ -117,7 +118,7 @@ describe('channelsWithEntitlements', () => {
 
         // Create nft-gated role
         const testNftAddress = await getContractAddress('TestNFT')
-        let { roleId, error: roleError } = await createRole(
+        const { roleId, error: roleError } = await createRole(
             spaceDapp,
             bobProvider,
             spaceId,
@@ -128,10 +129,10 @@ describe('channelsWithEntitlements', () => {
             bobProvider.wallet,
         )
         expect(roleError).toBeUndefined()
-        console.log('roleId', roleId)
+        log('roleId', roleId)
 
         // Attach above role to a new channel created on-chain
-        let { channelId, error: channelError } = await createChannel(
+        const { channelId, error: channelError } = await createChannel(
             spaceDapp,
             bobProvider,
             spaceId,
@@ -140,10 +141,10 @@ describe('channelsWithEntitlements', () => {
             bobProvider.wallet,
         )
         expect(channelError).toBeUndefined()
-        console.log('channelId', channelId)
+        log('channelId', channelId)
 
         // Then, establish channel stream on the river node.
-        let { streamId: channelStreamId } = await bob.createChannel(
+        const { streamId: channelStreamId } = await bob.createChannel(
             spaceId,
             'nft-gated-channel',
             '',
@@ -151,7 +152,7 @@ describe('channelsWithEntitlements', () => {
         )
         expect(channelStreamId).toEqual(channelId)
         // As the space owner, Bob should be able to join the nft-gated channel.
-        expect(bob.joinStream(channelId!)).toResolve()
+        await expect(bob.joinStream(channelId!)).toResolve()
 
         // Create alice and add to space. Alice should be able to join default
         // channel but not the nft-gated channel.
@@ -189,7 +190,7 @@ describe('channelsWithEntitlements', () => {
 
         // After minting the NFT token, Alice should be able to join the nft-gated channel.
         await publicMint('test', alicesWallet.address as `0x${string}`)
-        expect(alice.joinStream(channelId!)).toResolve()
+        await expect(alice.joinStream(channelId!)).toResolve()
     })
 
     // Banning with entitlements — users need permission to ban other users.
