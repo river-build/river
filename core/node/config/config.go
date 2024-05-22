@@ -91,7 +91,6 @@ type Config struct {
 	ChainsString                  string            `mapstructure:"chains"`
 	Chains                        map[uint64]string `mapstructure:"-"` // This is a derived field
 	EntitlementContract           ContractConfig    `mapstructure:"entitlement_contract"`
-	WalletLinkContract            ContractConfig    `mapstructure:"wallet_link_contract"`
 	contractVersion               ContractVersion   `mapstructure:"contract_version"`
 	TestEntitlementContract       ContractConfig    `mapstructure:"test_contract"`
 	TestCustomEntitlementContract ContractConfig    `mapstructure:"test_custom_entitlement_contract"`
@@ -275,7 +274,7 @@ func (c *Config) GetEntitlementContractAddress() common.Address {
 }
 
 func (c *Config) GetWalletLinkContractAddress() common.Address {
-	return c.WalletLinkContract.Address
+	return c.ArchitectContract.Address
 }
 
 func (c *Config) GetTestEntitlementContractAddress() common.Address {
