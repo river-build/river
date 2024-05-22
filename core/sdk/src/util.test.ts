@@ -23,8 +23,23 @@ import assert from 'assert'
 import _ from 'lodash'
 import { MockEntitlementsDelegate } from './utils'
 import { SignerContext, makeSignerContext } from './signerContext'
-import { LocalhostWeb3Provider, PricingModuleStruct, createRiverRegistry } from '@river-build/web3'
+import {
+    LocalhostWeb3Provider,
+    PricingModuleStruct,
+    createExternalNFTStruct,
+    createRiverRegistry,
+    treeToRuleData,
+} from '@river-build/web3'
 import { makeRiverChainConfig } from './riverConfig'
+import {
+    IRuleEntitlement,
+    CheckOperation,
+    CheckOperationType,
+    OperationType,
+    Permission,
+    ISpaceDapp,
+} from '@river-build/web3'
+import { makeUniqueChannelStreamId } from './id'
 
 const log = dlog('csb:test:util')
 
@@ -373,4 +388,78 @@ export const getDynamicPricingModule = (pricingModules: PricingModuleStruct[]) =
 
 export const getFixedPricingModule = (pricingModules: PricingModuleStruct[]) => {
     return pricingModules.find((module) => module.name === FIXED_PRICING)
+}
+
+export function getNftRuleData(testNftAddress: `0x${string}`): IRuleEntitlement.RuleDataStruct {
+    return createExternalNFTStruct([testNftAddress])
+}
+
+export interface CreateRoleContext {
+    roleId: Number | undefined
+    error: Error | undefined
+}
+
+export async function createRole(
+    spaceDapp: ISpaceDapp,
+    provider: ethers.providers.Provider,
+    spaceId: string,
+    roleName: string,
+    permissions: Permission[],
+    users: string[],
+    ruleData: IRuleEntitlement.RuleDataStruct,
+    signer: ethers.Signer,
+): Promise<CreateRoleContext> {
+    let txn: ethers.ContractTransaction | undefined = undefined
+    let error: Error | undefined = undefined
+
+    try {
+        txn = await spaceDapp.createRole(spaceId, roleName, permissions, users, ruleData, signer)
+    } catch (err) {
+        error = await spaceDapp.parseSpaceError(spaceId, err)
+        return { roleId: undefined, error }
+    }
+
+    const receipt = await provider.waitForTransaction(txn!.hash)
+    if (receipt.status === 0) {
+        return { roleId: undefined, error: new Error('Transaction failed') }
+    }
+
+    const parsedLogs = await spaceDapp.parseSpaceLogs(spaceId, receipt.logs)
+    const roleCreatedEvent = parsedLogs.find((log) => log?.name === 'RoleCreated')
+    if (!roleCreatedEvent) {
+        return { roleId: undefined, error: new Error('RoleCreated event not found') }
+    }
+    const roleId = (roleCreatedEvent.args[1] as ethers.BigNumber).toNumber()
+    return { roleId, error: undefined }
+}
+
+export interface CreateChannelContext {
+    channelId: string | undefined
+    error: Error | undefined
+}
+
+export async function createChannel(
+    spaceDapp: ISpaceDapp,
+    provider: ethers.providers.Provider,
+    spaceId: string,
+    channelName: string,
+    roleIds: number[],
+    signer: ethers.Signer,
+): Promise<CreateChannelContext> {
+    let txn: ethers.ContractTransaction | undefined = undefined
+    let error: Error | undefined = undefined
+
+    let channelId = makeUniqueChannelStreamId(spaceId)
+    try {
+        txn = await spaceDapp.createChannel(spaceId, channelName, channelId, roleIds, signer)
+    } catch (err) {
+        error = await spaceDapp.parseSpaceError(spaceId, err)
+        return { channelId: undefined, error }
+    }
+
+    const receipt = await provider.waitForTransaction(txn!.hash)
+    if (receipt.status === 0) {
+        return { channelId: undefined, error: new Error('Transaction failed') }
+    }
+    return { channelId, error: undefined }
 }
