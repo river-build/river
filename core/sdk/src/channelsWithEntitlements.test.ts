@@ -25,7 +25,6 @@ import {
     Permission,
     createSpaceDapp,
     getContractAddress,
-    publicMint,
 } from '@river-build/web3'
 import { makeBaseChainConfig } from './riverConfig'
 
