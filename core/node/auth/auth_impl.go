@@ -121,8 +121,6 @@ var (
 	isEntitledToChannelCacheMiss = infra.NewSuccessMetrics("is_entitled_to_channel_cache_miss", contractCalls)
 	isEntitledToSpaceCacheHit    = infra.NewSuccessMetrics("is_entitled_to_space_cache_hit", contractCalls)
 	isEntitledToSpaceCacheMiss   = infra.NewSuccessMetrics("is_entitled_to_space_cache_miss", contractCalls)
-	isSpaceMemberCacheHit        = infra.NewSuccessMetrics("is_space_member_cache_hit", contractCalls)
-	isSpaceMemberCacheMiss       = infra.NewSuccessMetrics("is_space_member_cache_miss", contractCalls)
 	isSpaceEnabledCacheHit       = infra.NewSuccessMetrics("is_space_enabled_cache_hit", contractCalls)
 	isSpaceEnabledCacheMiss      = infra.NewSuccessMetrics("is_space_enabled_cache_miss", contractCalls)
 	isChannelEnabledCacheHit     = infra.NewSuccessMetrics("is_channel_enabled_cache_hit", contractCalls)
@@ -228,7 +226,7 @@ func (ca *chainAuth) isWalletEntitled(ctx context.Context, cfg *config.Config, a
 		return ca.isEntitledToChannel(ctx, cfg, args)
 	} else if args.kind == chainAuthKindIsSpaceMember {
 		log.Debug("isWalletEntitled", "kind", "isSpaceMember", "args", args)
-		return ca.isSpaceMember(ctx, cfg, args)
+		return true, nil // is space member is checked by the calling code in checkEntitlement
 	} else {
 		return false, RiverError(Err_INTERNAL, "Unknown chain auth kind").Func("isWalletEntitled")
 	}
@@ -411,47 +409,6 @@ func (ca *chainAuth) isEntitledToSpaceUncached(ctx context.Context, cfg *config.
 	}
 
 	return &boolCacheResult{allowed: false}, nil
-}
-
-func (ca *chainAuth) isSpaceMember(ctx context.Context, cfg *config.Config, args *ChainAuthArgs) (bool, error) {
-	if args.kind != chainAuthKindIsSpaceMember {
-		return false, RiverError(Err_INTERNAL, "Wrong chain auth kind")
-	}
-	isEntitled, cacheHit, err := ca.entitlementCache.executeUsingCache(ctx, cfg, args, ca.isSpaceMemberUncached)
-	if err != nil {
-		return false, err
-	}
-	if cacheHit {
-		isSpaceMemberCacheHit.PassInc()
-	} else {
-		isSpaceMemberCacheMiss.PassInc()
-	}
-
-	return isEntitled.IsAllowed(), nil
-}
-
-func (ca *chainAuth) isSpaceMemberUncached(
-	ctx context.Context,
-	cfg *config.Config,
-	args *ChainAuthArgs,
-) (CacheResult, error) {
-	log := dlog.FromCtx(ctx)
-	isMember, err := ca.spaceContract.IsMember(
-		ctx,
-		args.spaceId,
-		args.principal,
-	)
-
-	log.Debug("isSpaceMemberUncached", "args", args, "isMember", isMember)
-	if err != nil {
-		return &entitlementCacheResult{
-				allowed: false,
-			}, AsRiverError(
-				err,
-			).Func("isSpaceMemberUncached").
-				Message("Failed to get space membership")
-	}
-	return &entitlementCacheResult{allowed: isMember}, nil
 }
 
 func (ca *chainAuth) isEntitledToSpace(ctx context.Context, cfg *config.Config, args *ChainAuthArgs) (bool, error) {
