@@ -264,7 +264,7 @@ func (st *serviceTester) Config() *config.Config {
 		EntitlementContract: config.ContractConfig{
 			Address: st.entitlementCheckerAddress,
 		},
-		WalletLinkContract: config.ContractConfig{
+		ArchitectContract: config.ContractConfig{
 			Address: st.walletLinkingAddress,
 		},
 		TestCustomEntitlementContract: config.ContractConfig{
