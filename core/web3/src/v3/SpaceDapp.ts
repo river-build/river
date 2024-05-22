@@ -24,7 +24,7 @@ import { createEntitlementStruct } from '../ConvertersRoles'
 import { BaseChainConfig } from '../IStaticContractsInfo'
 import { WalletLink } from './WalletLink'
 import { SpaceInfo } from '../types'
-import { IRuleEntitlement, UserEntitlementShim } from './index'
+import { IRuleEntitlement, UNKNOWN_ERROR, UserEntitlementShim } from './index'
 import { PricingModules } from './PricingModules'
 import { IPrepayShim } from './IPrepayShim'
 import { dlogger, isJest } from '@river-build/dlog'
@@ -453,6 +453,37 @@ export class SpaceDapp implements ISpaceDapp {
         const decodedErr = space.parseError(error)
         logger.error(decodedErr)
         return decodedErr
+    }
+
+    /**
+     * Attempts to parse an error against all contracts
+     * If you're error is not showing any data with this call, make sure the contract is listed either in parseSpaceError or nonSpaceContracts
+     * @param args
+     * @returns
+     */
+    public async parseAllContractErrors(args: {
+        spaceId?: string
+        error: unknown
+    }): Promise<Error> {
+        let err: Error | undefined
+        if (args.spaceId) {
+            err = await this.parseSpaceError(args.spaceId, args.error)
+        }
+        if (err && err?.name !== UNKNOWN_ERROR) {
+            return err
+        }
+        err = this.spaceRegistrar.SpaceArchitect.parseError(args.error)
+        if (err?.name !== UNKNOWN_ERROR) {
+            return err
+        }
+        const nonSpaceContracts = [this.pricingModules, this.prepay, this.walletLink]
+        for (const contract of nonSpaceContracts) {
+            err = contract.parseError(args.error)
+            if (err?.name !== UNKNOWN_ERROR) {
+                return err
+            }
+        }
+        return err
     }
 
     public parsePrepayError(error: unknown): Error {

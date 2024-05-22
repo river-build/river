@@ -135,6 +135,7 @@ export interface ISpaceDapp {
         wallet: string,
         supportedXChainRpcUrls: string[],
     ) => Promise<string | undefined>
+    parseAllContractErrors: (args: { spaceId?: string; error: unknown }) => Promise<Error>
     parseSpaceFactoryError: (error: unknown) => Error
     parseSpaceError: (spaceId: string, error: unknown) => Promise<Error>
     parsePrepayError: (error: unknown) => Error
