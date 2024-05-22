@@ -217,14 +217,28 @@ func (sc *SpaceContractV3) GetChannelEntitlementsForPermission(
 	spaceId shared.StreamId,
 	channelId shared.StreamId,
 	permission Permission,
-) ([]Entitlement, error) {
+) ([]Entitlement, common.Address, error) {
 	log := dlog.FromCtx(ctx)
-	// get the space entitlements and check if user is entitled.
+	// get the channel entitlements and check if user is entitled.
 	space, err := sc.getSpace(ctx, spaceId)
 	if err != nil || space == nil {
 		log.Warn("Failed to get space", "space_id", spaceId, "error", err)
-		return nil, err
+		return nil, EMPTY_ADDRESS, err
 	}
+
+	// get owner address - owner has all permissions
+	spaceAsIerc5313, err := ierc5313.NewIerc5313(space.address, sc.backend)
+	if err != nil {
+		log.Warn("Failed to get spaceAsIerc5313", "space_id", spaceId, "error", err)
+		return nil, EMPTY_ADDRESS, err
+	}
+
+	owner, err := spaceAsIerc5313.Owner(nil)
+	if err != nil {
+		log.Warn("Failed to get owner", "space_id", spaceId, "error", err)
+		return nil, EMPTY_ADDRESS, err
+	}
+
 	entitlementData, err := space.entitlements.GetChannelEntitlementDataByPermission(
 		nil,
 		channelId,
@@ -244,10 +258,15 @@ func (sc *SpaceContractV3) GetChannelEntitlementsForPermission(
 		permission.String(),
 	)
 	if err != nil {
-		return nil, err
+		return nil, EMPTY_ADDRESS, err
 	}
 
-	return sc.marshalEntitlements(ctx, entitlementData)
+	entitlements, err := sc.marshalEntitlements(ctx, entitlementData)
+	if err != nil {
+		return nil, EMPTY_ADDRESS, err
+	}
+
+	return entitlements, owner, nil
 }
 
 /**

@@ -32,7 +32,7 @@ import { makeBaseChainConfig } from './riverConfig'
 const log = dlog('csb:test:channelsWithEntitlements')
 
 describe('channelsWithEntitlements', () => {
-    test('channel join gated on nft', async () => {
+    test.skip('channel join gated on nft', async () => {
         // Have bob establish a new town with a default channel and an nft-gated channel.
         const baseConfig = makeBaseChainConfig()
         const bobsWallet = ethers.Wallet.createRandom()

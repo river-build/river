@@ -330,7 +330,7 @@ func (ca *chainAuth) getChannelEntitlementsForPermissionUncached(
 	args *ChainAuthArgs,
 ) (CacheResult, error) {
 	log := dlog.FromCtx(ctx)
-	entitlementData, err := ca.spaceContract.GetChannelEntitlementsForPermission(
+	entitlementData, owner, err := ca.spaceContract.GetChannelEntitlementsForPermission(
 		ctx,
 		args.spaceId,
 		args.channelId,
@@ -346,7 +346,7 @@ func (ca *chainAuth) getChannelEntitlementsForPermissionUncached(
 			).Func("getChannelEntitlementsForPermission").
 				Message("Failed to get channel entitlements")
 	}
-	return &entitlementCacheResult{allowed: true, entitlementData: entitlementData}, nil
+	return &entitlementCacheResult{allowed: true, entitlementData: entitlementData, owner: owner}, nil
 }
 
 func (ca *chainAuth) isEntitledToChannelUncached(ctx context.Context, cfg *config.Config, args *ChainAuthArgs) (CacheResult, error) {
@@ -377,6 +377,13 @@ func (ca *chainAuth) isEntitledToChannelUncached(ctx context.Context, cfg *confi
 		}
 
 		temp := (result.(*timestampedCacheValue).Result())
+
+		// Space owner has su over all channel operations.
+		if args.principal == temp.(*entitlementCacheResult).owner {
+			log.Debug("owner is entitled to channel", "spaceId", args.spaceId, "channelId", args.channelId, "userId", args.principal)
+			return &boolCacheResult{allowed: true}, nil
+		}
+
 		entitlementData := temp.(*entitlementCacheResult) // Assuming result is of *entitlementCacheResult type
 		allowed, err := ca.evaluateEntitlementData(ctx, entitlementData.entitlementData, cfg, args)
 		if err != nil {

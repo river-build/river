@@ -44,7 +44,7 @@ type SpaceContract interface {
 		spaceId shared.StreamId,
 		channelId shared.StreamId,
 		permission Permission,
-	) ([]Entitlement, error)
+	) ([]Entitlement, common.Address, error)
 	IsMember(
 		ctx context.Context,
 		spaceId shared.StreamId,
