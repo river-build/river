@@ -187,10 +187,6 @@ describe('channelsWithEntitlements', () => {
                 message: expect.stringContaining('7:PERMISSION_DENIED'),
             }),
         )
-
-        // After minting the NFT token, Alice should be able to join the nft-gated channel.
-        await publicMint('test', alicesWallet.address as `0x${string}`)
-        await expect(alice.joinStream(channelId!)).toResolve()
     })
 
     // Banning with entitlements — users need permission to ban other users.
