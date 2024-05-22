@@ -5,7 +5,6 @@ pragma solidity ^0.8.23;
 import {IEntitlementsManager} from "./IEntitlementsManager.sol";
 
 // libraries
-import {ChannelService} from "../channels/ChannelService.sol";
 
 // contracts
 import {EntitlementsManagerBase} from "./EntitlementsManagerBase.sol";
