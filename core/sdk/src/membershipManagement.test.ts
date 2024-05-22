@@ -97,7 +97,5 @@ describe('membershipManagement', () => {
             const result = await spaceDapp.joinSpace(spaceId, wallet.address, bobProvider.wallet)
             log('minted membership', result)
         }
-
-        await bob.stopSync()
     })
 })
