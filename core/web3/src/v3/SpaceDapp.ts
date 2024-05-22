@@ -445,7 +445,7 @@ export class SpaceDapp implements ISpaceDapp {
         return decodedErr
     }
 
-    public async parseSpaceError(spaceId: string, error: unknown): Promise<Error> {
+    public parseSpaceError(spaceId: string, error: unknown): Error {
         const space = this.getSpace(spaceId)
         if (!space) {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
@@ -461,13 +461,10 @@ export class SpaceDapp implements ISpaceDapp {
      * @param args
      * @returns
      */
-    public async parseAllContractErrors(args: {
-        spaceId?: string
-        error: unknown
-    }): Promise<Error> {
+    public parseAllContractErrors(args: { spaceId?: string; error: unknown }): Error {
         let err: Error | undefined
         if (args.spaceId) {
-            err = await this.parseSpaceError(args.spaceId, args.error)
+            err = this.parseSpaceError(args.spaceId, args.error)
         }
         if (err && err?.name !== UNKNOWN_ERROR) {
             return err
