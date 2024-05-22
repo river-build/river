@@ -472,7 +472,6 @@ func (ru *csChannelRules) derivedChannelSpaceParentEvent() (*DerivedEvent, error
 	payload := events.Make_SpacePayload_Channel(
 		ChannelOp_CO_CREATED,
 		channelId,
-		ru.inception.ChannelProperties,
 		&EventRef{
 			StreamId:  ru.inception.StreamId,
 			Hash:      ru.params.parsedEvents[0].Envelope.Hash,
