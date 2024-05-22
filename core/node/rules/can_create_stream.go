@@ -559,10 +559,9 @@ func (ru *csParams) getNewUserStreamChainAuth() (*auth.ChainAuthArgs, error) {
 		if err != nil {
 			return nil, err
 		}
-		return auth.NewChainAuthArgsForSpace(
+		return auth.NewChainAuthArgsForIsSpaceMember(
 			spaceId,
 			userId,
-			auth.PermissionRead,
 		), nil
 	} else {
 		return nil, RiverError(Err_BAD_STREAM_CREATION_PARAMS, "spaceId must be provided in metadata for user stream")
