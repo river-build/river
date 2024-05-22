@@ -642,8 +642,13 @@ export class SpaceDapp implements ISpaceDapp {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
         }
         const membershipAddress = space.Membership.address
+        const cost = await this.prepay.read.calculateMembershipPrepayFee(supply)
+
         return wrapTransaction(
-            () => this.prepay.write(signer).prepayMembership(membershipAddress, supply),
+            () =>
+                this.prepay.write(signer).prepayMembership(membershipAddress, supply, {
+                    value: cost,
+                }),
             txnOpts,
         )
     }
