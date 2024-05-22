@@ -202,8 +202,6 @@ describe('channelsWithEntitlements', () => {
         // create a user stream
         const bob = await makeTestClient({ context: bobsContext })
         const bobsUserStreamId = makeUserStreamId(bob.userId)
-        await expect(bob.initializeUser()).toResolve()
-        bob.startSync()
 
         const pricingModules = await spaceDapp.listPricingModules()
         const dynamicPricingModule = getDynamicPricingModule(pricingModules)
@@ -249,6 +247,8 @@ describe('channelsWithEntitlements', () => {
         const spaceId = makeSpaceStreamId(spaceAddress!)
         const channelId = makeDefaultChannelStreamId(spaceAddress!)
         // then on the river node
+        await expect(bob.initializeUser({ spaceId })).toResolve()
+        bob.startSync()
         const returnVal = await bob.createSpace(spaceId)
         expect(returnVal.streamId).toEqual(spaceId)
         // Now there must be "joined space" event in the user stream.
@@ -282,8 +282,6 @@ describe('channelsWithEntitlements', () => {
         const alice = await makeTestClient({
             context: alicesContext,
         })
-        await alice.initializeUser()
-        alice.startSync()
         log('Alice created user, about to join space', { alicesUserId: alice.userId })
 
         // first join the space on chain
@@ -296,6 +294,8 @@ describe('channelsWithEntitlements', () => {
         )
         expect(issued).toBe(true)
 
+        await alice.initializeUser({ spaceId })
+        alice.startSync()
         await expect(alice.joinStream(spaceId)).toResolve()
         await expect(alice.joinStream(channelId)).toResolve()
 
