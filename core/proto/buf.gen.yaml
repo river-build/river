@@ -1,9 +1,9 @@
 version: v2
 plugins:
-    - remote: buf.build/bufbuild/connect-es
+    - remote: buf.build/bufbuild/es
       out: core/proto/src/gen
       opt: target=ts
-    - remote: buf.build/bufbuild/es
+    - remote: buf.build/connectrpc/es
       out: core/proto/src/gen
       opt: target=ts
 inputs:
