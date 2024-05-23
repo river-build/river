@@ -411,7 +411,7 @@ func (ca *chainAuth) isEntitledToSpaceUncached(
 				return &boolCacheResult{allowed: true}, nil
 			} else {
 				log.Debug("rule entitlement is false", "spaceId", args.spaceId)
-				return &boolCacheResult{allowed: false}, nil
+				continue
 			}
 		} else if ent.entitlementType == "UserEntitlement" {
 			for _, user := range ent.userEntitlement {
