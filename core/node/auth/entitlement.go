@@ -175,12 +175,34 @@ func (proxy *entitlementsProxy) GetChannelEntitlementDataByPermission(
 ) ([]base.IEntitlementDataQueryableBaseEntitlementData, error) {
 	log := dlog.FromCtx(proxy.ctx)
 	start := time.Now()
-	defer infra.StoreExecutionTimeMetrics("GetChannelEntitlementDataByPermissions", infra.CONTRACT_CALLS_CATEGORY, start)
-	log.Debug("GetChannelEntitlementDataByPermissions", "channelId", channelId, "permission", permission, "address", proxy.address)
+	defer infra.StoreExecutionTimeMetrics(
+		"GetChannelEntitlementDataByPermissions",
+		infra.CONTRACT_CALLS_CATEGORY,
+		start,
+	)
+	log.Debug(
+		"GetChannelEntitlementDataByPermissions",
+		"channelId",
+		channelId,
+		"permission",
+		permission,
+		"address",
+		proxy.address,
+	)
 	result, err := proxy.queryContract.GetChannelEntitlementDataByPermission(opts, channelId, permission)
 	if err != nil {
 		getChannelEntitlementDataByPermissionsCalls.FailInc()
-		log.Error("GetChannelEntitlementDataByPermissions", "channelId", channelId, "permission", permission, "address", proxy.address, "error", err)
+		log.Error(
+			"GetChannelEntitlementDataByPermissions",
+			"channelId",
+			channelId,
+			"permission",
+			permission,
+			"address",
+			proxy.address,
+			"error",
+			err,
+		)
 		return nil, WrapRiverError(Err_CANNOT_CALL_CONTRACT, err)
 	}
 	getChannelEntitlementDataByPermissionsCalls.PassInc()
@@ -198,7 +220,6 @@ func (proxy *entitlementsProxy) GetChannelEntitlementDataByPermission(
 		time.Since(start).Milliseconds(),
 	)
 	return result, nil
-
 }
 
 func (proxy *entitlementsProxy) GetEntitlementDataByPermission(
