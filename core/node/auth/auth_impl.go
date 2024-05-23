@@ -527,6 +527,8 @@ func (ca *chainAuth) isEntitledToSpaceUncached(
 
 	temp := (result.(*timestampedCacheValue).Result())
 
+	// 1. Check if the user is the space owner
+	// Space owner has su over all space operations.
 	wallets := deserializeWallets(args.linkedWallets)
 	for _, wallet := range wallets {
 		if wallet == temp.(*entitlementCacheResult).owner {
@@ -553,6 +555,7 @@ func (ca *chainAuth) isEntitledToSpaceUncached(
 		return &boolCacheResult{allowed: false}, nil
 	}
 
+	// 3. Evaluate entitlement data to check if the user is entitled to the space.
 	entitlementData := temp.(*entitlementCacheResult) // Assuming result is of *entitlementCacheResult type
 	allowed, err := ca.evaluateEntitlementData(ctx, entitlementData.entitlementData, cfg, args)
 	if err != nil {
