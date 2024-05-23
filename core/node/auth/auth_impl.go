@@ -142,7 +142,7 @@ func NewChainAuth(
 	contractCallsTimeoutMs int,
 ) (*chainAuth, error) {
 	// instantiate contract facets from diamond configuration
-	spaceContract, err := NewSpaceContractV3(ctx, architectCfg, blockchain.Client)
+	spaceContract, err := NewSpaceContractV3(ctx, architectCfg, blockchain.Config, blockchain.Client)
 	if err != nil {
 		return nil, err
 	}
@@ -399,9 +399,10 @@ func (ca *chainAuth) isEntitledToChannelUncached(
 
 		temp := (result.(*timestampedCacheValue).Result())
 
+		// 1. Check if the user is the space owner
+		// Space owner has su over all channel operations.
 		wallets := deserializeWallets(args.linkedWallets)
 		for _, wallet := range wallets {
-			// Space owner has su over all channel operations.
 			if wallet == temp.(*entitlementCacheResult).owner {
 				log.Debug(
 					"owner is entitled to channel",
@@ -416,17 +417,27 @@ func (ca *chainAuth) isEntitledToChannelUncached(
 			}
 		}
 
+		// 2. Check if the user has been banned
+		banned, err := ca.spaceContract.IsBanned(ctx, args.spaceId, wallets)
+		if err != nil {
+			return &boolCacheResult{allowed: false}, AsRiverError(err).Func("isEntitledToChannel")
+		}
+		if banned {
+			log.Warn("User is banned from the space", "userId", args.principal, "spaceId", args.spaceId, "linkedWallets", args.linkedWallets)
+			return &boolCacheResult{allowed: false}, nil
+		}
+
+		// 3. Evaluate entitlement data to check if the user is entitled to the channel.
 		entitlementData := temp.(*entitlementCacheResult) // Assuming result is of *entitlementCacheResult type
 		allowed, err := ca.evaluateEntitlementData(ctx, entitlementData.entitlementData, cfg, args)
 		if err != nil {
 			return &boolCacheResult{allowed: false}, AsRiverError(err).Func("isEntitledToChannel")
 		}
 		return &boolCacheResult{allowed}, nil
-
-		// TODO: check user bans
 	}
 
-	// For other permissions, defer the entitlement check to the space contract.
+	// For all other permissions, defer the entitlement check to existing synchronous logic on the space contract.
+	// This call will ignore cross-chain entitlements.
 	allowed, err := ca.spaceContract.IsEntitledToChannel(
 		ctx,
 		args.spaceId,
@@ -517,7 +528,6 @@ func (ca *chainAuth) isEntitledToSpaceUncached(
 	temp := (result.(*timestampedCacheValue).Result())
 
 	wallets := deserializeWallets(args.linkedWallets)
-
 	for _, wallet := range wallets {
 		if wallet == temp.(*entitlementCacheResult).owner {
 			log.Debug(
@@ -531,6 +541,16 @@ func (ca *chainAuth) isEntitledToSpaceUncached(
 			)
 			return &boolCacheResult{allowed: true}, nil
 		}
+	}
+
+	// 2. Check if the user has been banned
+	banned, err := ca.spaceContract.IsBanned(ctx, args.spaceId, wallets)
+	if err != nil {
+		return &boolCacheResult{allowed: false}, AsRiverError(err).Func("isEntitledToChannel")
+	}
+	if banned {
+		log.Warn("User is banned from the space", "userId", args.principal, "spaceId", args.spaceId, "linkedWallets", args.linkedWallets)
+		return &boolCacheResult{allowed: false}, nil
 	}
 
 	entitlementData := temp.(*entitlementCacheResult) // Assuming result is of *entitlementCacheResult type

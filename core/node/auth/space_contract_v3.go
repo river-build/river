@@ -36,6 +36,7 @@ type Space struct {
 
 type SpaceContractV3 struct {
 	architect  Architect
+	chainCfg   *config.ChainConfig
 	version    string
 	backend    bind.ContractBackend
 	spaces     map[shared.StreamId]*Space
@@ -49,6 +50,7 @@ var EMPTY_ADDRESS = common.Address{}
 func NewSpaceContractV3(
 	ctx context.Context,
 	architectCfg *config.ContractConfig,
+	chainCfg *config.ChainConfig,
 	backend bind.ContractBackend,
 	// walletLinkingCfg *config.ContractConfig,
 ) (SpaceContract, error) {
@@ -59,6 +61,7 @@ func NewSpaceContractV3(
 
 	spaceContract := &SpaceContractV3{
 		architect: architect,
+		chainCfg:  chainCfg,
 		version:   architectCfg.Version,
 		backend:   backend,
 		spaces:    make(map[shared.StreamId]*Space),
@@ -417,7 +420,7 @@ func (sc *SpaceContractV3) getSpace(ctx context.Context, spaceId shared.StreamId
 		if err != nil {
 			return nil, err
 		}
-		banning, err := NewBanning(ctx, sc.version, address, sc.backend)
+		banning, err := NewBanning(ctx, sc.chainCfg, sc.version, address, sc.backend)
 		if err != nil {
 			return nil, err
 		}
