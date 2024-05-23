@@ -19,9 +19,10 @@ import (
 
 type csParams struct {
 	ctx                 context.Context
-	cfg                 *config.StreamConfig
+	cfg                 *config.Config
 	streamId            shared.StreamId
 	parsedEvents        []*events.ParsedEvent
+	requestMetadata     map[string][]byte
 	inceptionPayload    IsInceptionPayload
 	creatorAddress      []byte
 	creatorUserId       string
@@ -100,10 +101,11 @@ type csUserInboxRules struct {
 */
 func CanCreateStream(
 	ctx context.Context,
-	cfg *config.StreamConfig,
+	cfg *config.Config,
 	currentTime time.Time,
 	streamId shared.StreamId,
 	parsedEvents []*events.ParsedEvent,
+	requestMetadata map[string][]byte,
 ) (*CreateStreamRules, error) {
 	if len(parsedEvents) == 0 {
 		return nil, RiverError(Err_BAD_STREAM_CREATION_PARAMS, "no events")
@@ -162,6 +164,7 @@ func CanCreateStream(
 		cfg:                 cfg,
 		streamId:            streamId,
 		parsedEvents:        parsedEvents,
+		requestMetadata:     requestMetadata,
 		inceptionPayload:    inceptionPayload,
 		creatorAddress:      creatorAddress,
 		creatorUserId:       creatorUserId,
@@ -270,8 +273,8 @@ func (ru *csParams) canCreateStream() ruleBuilderCS {
 				ru.params.streamIdTypeIsCorrect(shared.STREAM_USER_BIN),
 				ru.params.eventCountMatches(1),
 				ru.params.isUserStreamId,
-			)
-		// TODO HNT-4630 add chain auth for user stream
+			).
+			requireChainAuth(ru.params.getNewUserStreamChainAuth)
 
 	case *UserDeviceKeyPayload_Inception:
 		ru := &csUserDeviceKeyRules{
@@ -283,8 +286,8 @@ func (ru *csParams) canCreateStream() ruleBuilderCS {
 				ru.params.streamIdTypeIsCorrect(shared.STREAM_USER_DEVICE_KEY_BIN),
 				ru.params.eventCountMatches(1),
 				ru.params.isUserStreamId,
-			)
-		// TODO HNT-4630 add chain auth for user stream
+			).
+			requireChainAuth(ru.params.getNewUserStreamChainAuth)
 
 	case *UserSettingsPayload_Inception:
 		ru := &csUserSettingsRules{
@@ -296,8 +299,8 @@ func (ru *csParams) canCreateStream() ruleBuilderCS {
 				ru.params.streamIdTypeIsCorrect(shared.STREAM_USER_SETTINGS_BIN),
 				ru.params.eventCountMatches(1),
 				ru.params.isUserStreamId,
-			)
-		// TODO HNT-4630 add chain auth for user stream
+			).
+			requireChainAuth(ru.params.getNewUserStreamChainAuth)
 
 	case *UserInboxPayload_Inception:
 		ru := &csUserInboxRules{
@@ -309,8 +312,8 @@ func (ru *csParams) canCreateStream() ruleBuilderCS {
 				ru.params.streamIdTypeIsCorrect(shared.STREAM_USER_INBOX_BIN),
 				ru.params.eventCountMatches(1),
 				ru.params.isUserStreamId,
-			)
-		// TODO HNT-4630 add chain auth for user stream
+			).
+			requireChainAuth(ru.params.getNewUserStreamChainAuth)
 
 	default:
 		return builder.fail(unknownPayloadType(inception))
@@ -510,10 +513,10 @@ func (ru *csMediaRules) checkMediaInceptionPayload() error {
 	if len(ru.inception.ChannelId) == 0 {
 		return RiverError(Err_BAD_STREAM_CREATION_PARAMS, "channel id must not be empty for media stream")
 	}
-	if ru.inception.ChunkCount > int32(ru.params.cfg.Media.MaxChunkCount) {
+	if ru.inception.ChunkCount > int32(ru.params.cfg.Stream.Media.MaxChunkCount) {
 		return RiverError(
 			Err_BAD_STREAM_CREATION_PARAMS,
-			fmt.Sprintf("chunk count must be less than or equal to %d", ru.params.cfg.Media.MaxChunkCount),
+			fmt.Sprintf("chunk count must be less than or equal to %d", ru.params.cfg.Stream.Media.MaxChunkCount),
 		)
 	}
 
@@ -531,6 +534,37 @@ func (ru *csMediaRules) checkMediaInceptionPayload() error {
 		return nil
 	} else {
 		return RiverError(Err_BAD_STREAM_CREATION_PARAMS, "invalid channel id")
+	}
+}
+
+func (ru *csParams) getNewUserStreamChainAuth() (*auth.ChainAuthArgs, error) {
+	// if we're not using chain auth don't bother
+	if ru.cfg.DisableBaseChain {
+		return nil, nil
+	}
+	// get the user id for the stream
+	userAddress, err := shared.GetUserAddressFromStreamId(ru.streamId)
+	if err != nil {
+		return nil, err
+	}
+	// convert to user id
+	userId, err := shared.AddressHex(userAddress[:])
+	if err != nil {
+		return nil, err
+	}
+	// we don't have a good way to check to see if they have on chain assets yet,
+	// so require a space id to be passed in the metadata and check that the user has read permissions there
+	if spaceIdBytes, ok := ru.requestMetadata["spaceId"]; ok {
+		spaceId, err := shared.StreamIdFromBytes(spaceIdBytes)
+		if err != nil {
+			return nil, err
+		}
+		return auth.NewChainAuthArgsForIsSpaceMember(
+			spaceId,
+			userId,
+		), nil
+	} else {
+		return nil, RiverError(Err_BAD_STREAM_CREATION_PARAMS, "A spaceId where spaceContract.isMember(userId)==true must be provided in metadata for user stream")
 	}
 }
 
@@ -668,7 +702,7 @@ func (ru *csGdmChannelRules) checkGDMPayloads() error {
 
 	// GDM memberships cannot exceed the configured limit. the first event is the inception event
 	// and is subtracted from the parsed events count.
-	membershipLimit := ru.params.cfg.GetMembershipLimit(ru.params.streamId)
+	membershipLimit := ru.params.cfg.Stream.GetMembershipLimit(ru.params.streamId)
 	if len(ru.params.parsedEvents)-1 > membershipLimit {
 		return RiverError(
 			Err_INVALID_ARGUMENT,
