@@ -366,7 +366,11 @@ func (ca *chainAuth) getChannelEntitlementsForPermissionUncached(
 	return &entitlementCacheResult{allowed: true, entitlementData: entitlementData, owner: owner}, nil
 }
 
-func (ca *chainAuth) isEntitledToChannelUncached(ctx context.Context, cfg *config.Config, args *ChainAuthArgs) (CacheResult, error) {
+func (ca *chainAuth) isEntitledToChannelUncached(
+	ctx context.Context,
+	cfg *config.Config,
+	args *ChainAuthArgs,
+) (CacheResult, error) {
 	log := dlog.FromCtx(ctx)
 	log.Debug("isEntitledToChannelUncached", "args", args)
 
@@ -399,7 +403,15 @@ func (ca *chainAuth) isEntitledToChannelUncached(ctx context.Context, cfg *confi
 		for _, wallet := range wallets {
 			// Space owner has su over all channel operations.
 			if wallet == temp.(*entitlementCacheResult).owner {
-				log.Debug("owner is entitled to channel", "spaceId", args.spaceId, "channelId", args.channelId, "userId", args.principal)
+				log.Debug(
+					"owner is entitled to channel",
+					"spaceId",
+					args.spaceId,
+					"channelId",
+					args.channelId,
+					"userId",
+					args.principal,
+				)
 				return &boolCacheResult{allowed: true}, nil
 			}
 		}
@@ -434,7 +446,12 @@ func deserializeWallets(serialized string) []common.Address {
 	return linkedWallets
 }
 
-func (ca *chainAuth) evaluateEntitlementData(ctx context.Context, entitlements []Entitlement, cfg *config.Config, args *ChainAuthArgs) (bool, error) {
+func (ca *chainAuth) evaluateEntitlementData(
+	ctx context.Context,
+	entitlements []Entitlement,
+	cfg *config.Config,
+	args *ChainAuthArgs,
+) (bool, error) {
 	log := dlog.FromCtx(ctx).With("function", "evaluateEntitlementData")
 	log.Debug("evaluateEntitlementData", "args", args)
 	for _, ent := range entitlements {
@@ -443,7 +460,6 @@ func (ca *chainAuth) evaluateEntitlementData(ctx context.Context, entitlements [
 			re := ent.ruleEntitlement
 			log.Debug("RuleEntitlement", "ruleEntitlement", re)
 			result, err := entitlement.EvaluateRuleData(ctx, cfg, deserializeWallets(args.linkedWallets), re)
-
 			if err != nil {
 				return false, err
 			}
