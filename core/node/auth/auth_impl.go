@@ -76,13 +76,6 @@ type ChainAuthArgs struct {
 	linkedWallets string // a serialized list of linked wallets to comply with the cache key constraints
 }
 
-// Replaces principal with given wallet and returns new copy of args.
-func (args *ChainAuthArgs) withWallet(wallet common.Address) *ChainAuthArgs {
-	ret := *args
-	ret.principal = wallet
-	return &ret
-}
-
 func (args *ChainAuthArgs) withLinkedWallets(linkedWallets []common.Address) *ChainAuthArgs {
 	ret := *args
 	var builder strings.Builder
@@ -496,11 +489,6 @@ func (ca *chainAuth) isEntitledToChannel(ctx context.Context, cfg *config.Config
 	}
 
 	return isEntitled.IsAllowed(), nil
-}
-
-type entitlementCheckResult struct {
-	allowed bool
-	err     error
 }
 
 func (ca *chainAuth) getLinkedWallets(ctx context.Context, rootKey common.Address) ([]common.Address, error) {
