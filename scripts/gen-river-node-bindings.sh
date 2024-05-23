@@ -58,6 +58,7 @@ generate_go base Channels channels
 generate_go base IEntitlementsManager entitlements_manager
 generate_go base IEntitlementDataQueryable entitlement_data_queryable
 generate_go base IPausable pausable
+generate_go base IBanning banning
 generate_go base IWalletLink wallet_link
 generate_go base IRuleEntitlement rule_entitlement
 

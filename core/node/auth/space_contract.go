@@ -50,4 +50,9 @@ type SpaceContract interface {
 		spaceId shared.StreamId,
 		user common.Address,
 	) (bool, error)
+	IsBanned(
+		ctx context.Context,
+		spaceId shared.StreamId,
+		linkedWallets []common.Address,
+	) (bool, error)
 }

@@ -28,6 +28,7 @@ import (
 type Space struct {
 	address      common.Address
 	entitlements Entitlements
+	banning      Banning
 	pausable     Pausable
 	channels     map[shared.StreamId]Channels
 	channelsLock sync.Mutex
@@ -201,6 +202,20 @@ func (sc *SpaceContractV3) marshalEntitlements(
 		}
 	}
 	return entitlements, nil
+}
+
+func (sc *SpaceContractV3) IsBanned(
+	ctx context.Context,
+	spaceId shared.StreamId,
+	linkedWallets []common.Address,
+) (bool, error) {
+	log := dlog.FromCtx(ctx).With("function", "SpaceContractV3.IsBanned")
+	space, err := sc.getSpace(ctx, spaceId)
+	if err != nil || space == nil {
+		log.Warn("Failed to get space", "space_id", spaceId, "error", err)
+		return false, err
+	}
+	return space.banning.IsBanned(ctx, linkedWallets)
 }
 
 /**
@@ -402,10 +417,16 @@ func (sc *SpaceContractV3) getSpace(ctx context.Context, spaceId shared.StreamId
 		if err != nil {
 			return nil, err
 		}
+		banning, err := NewBanning(ctx, sc.version, address, sc.backend)
+		if err != nil {
+			return nil, err
+		}
+
 		// cache the space
 		sc.spaces[spaceId] = &Space{
 			address:      address,
 			entitlements: entitlements,
+			banning:      banning,
 			pausable:     pausable,
 			channels:     make(map[shared.StreamId]Channels),
 		}
