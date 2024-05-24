@@ -143,6 +143,7 @@ export class SpaceDapp implements ISpaceDapp {
                 metadata: params.channelName || '',
             },
         }
+        
         return wrapTransaction(
             () => this.spaceRegistrar.SpaceArchitect.write(signer).createSpace(spaceInfo),
             txnOpts,

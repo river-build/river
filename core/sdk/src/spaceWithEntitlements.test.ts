@@ -9,6 +9,8 @@ import {
     makeTestClient,
     makeUserContextFromWallet,
     waitFor,
+    createUserStreamAndSyncClient,
+    createSpaceAndDefaultChannel,
 } from './util.test'
 import { dlog } from '@river-build/dlog'
 import { makeDefaultChannelStreamId, makeSpaceStreamId, makeUserStreamId } from './id'
@@ -128,60 +130,17 @@ describe('spaceWithEntitlements', () => {
                 ruleData: NoopRuleData,
             },
         }
-        log('transaction start bob creating space')
-        const transaction = await bobSpaceDapp.createSpace(
-            {
-                spaceName: 'bobs-space-metadata',
-                spaceMetadata: 'bobs-space-metadata',
-                channelName: 'general', // default channel name
-                membership: membershipInfo,
-            },
-            bobProvider.wallet,
+        const {
+            spaceId, defaultChannelId:
+            channelId, userStreamView:
+            bobUserStreamView,
+        } = await createSpaceAndDefaultChannel(
+            bob,
+            bobSpaceDapp,
+            bobsWallet,
+            "bobs",
+            membershipInfo,
         )
-
-        const receipt = await transaction.wait()
-        log('transaction receipt', receipt)
-        expect(receipt.status).toEqual(1)
-        const spaceAddress = bobSpaceDapp.getSpaceAddress(receipt)
-        expect(spaceAddress).toBeDefined()
-        const spaceId = makeSpaceStreamId(spaceAddress!)
-        const channelId = makeDefaultChannelStreamId(spaceAddress!)
-        // then on the river node
-        await bob.initializeUser({ spaceId })
-        bob.startSync()
-        const returnVal = await bob.createSpace(spaceId)
-        expect(returnVal.streamId).toEqual(spaceId)
-        // Now there must be "joined space" event in the user stream.
-        const bobUserStreamView = bob.stream(bobsUserStreamId)!.view
-        expect(bobUserStreamView).toBeDefined()
-        expect(bobUserStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN)).toBe(true)
-
-        const waitForStreamPromise = makeDonePromise()
-        bob.on('userJoinedStream', (streamId) => {
-            if (streamId === channelId) {
-                waitForStreamPromise.done()
-            }
-        })
-
-        // create the channel
-        log('Bob created space, about to create channel')
-        const channelProperties = 'Bobs channel properties'
-        const channelReturnVal = await bob.createChannel(
-            spaceId,
-            'general',
-            channelProperties,
-            channelId,
-        )
-        expect(channelReturnVal.streamId).toEqual(channelId)
-
-        await waitFor(() => {
-            expect(bobUserStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN)).toBe(true)
-            expect(bobUserStreamView.userContent.isMember(channelId, MembershipOp.SO_JOIN)).toBe(
-                true,
-            )
-        })
-
-        log('Bob created channel')
 
         // join alice
         const alicesWallet = ethers.Wallet.createRandom()
@@ -206,7 +165,6 @@ describe('spaceWithEntitlements', () => {
             aliceProvider.wallet,
         )
         expect(issued).toBe(true)
-
         await alice.initializeUser({ spaceId })
         alice.startSync()
 
@@ -314,84 +272,26 @@ describe('spaceWithEntitlements', () => {
                 },
             },
         }
-        log('transaction start bob creating space')
-        const createSpaceStart = Date.now()
-        const transaction = await bobSpaceDapp.createSpace(
-            {
-                spaceName: 'bobs-space-metadata',
-                spaceMetadata: 'bobs-space-metadata',
-                channelName: 'general', // default channel name
-                membership: membershipInfo,
-            },
+
+        const {
+            spaceId, defaultChannelId:
+            channelId, userStreamView:
+            bobUserStreamView,
+        } = await createSpaceAndDefaultChannel(
+            bob,
+            bobSpaceDapp,
             bobProvider.wallet,
+            "bobs",
+            membershipInfo,
         )
-        log('transaction took', Date.now() - createSpaceStart)
-
-        const createSpaceTxStart = Date.now()
-        const receipt = await transaction.wait()
-        log('createSpaceTxStart transaction receipt', Date.now() - createSpaceTxStart)
-
-        expect(receipt.status).toEqual(1)
-        const bobMakeStreamStart = Date.now()
-        const spaceAddress = bobSpaceDapp.getSpaceAddress(receipt)
-        expect(spaceAddress).toBeDefined()
-        const spaceId = makeSpaceStreamId(spaceAddress!)
-        const channelId = makeDefaultChannelStreamId(spaceAddress!)
-
-        await bob.initializeUser({ spaceId })
-        bob.startSync()
-        const returnVal = await bob.createSpace(spaceId)
-        expect(returnVal.streamId).toEqual(spaceId)
-        // Now there must be "joined space" event in the user stream.
-        const bobsUserStreamId = makeUserStreamId(bob.userId)
-
-        const bobUserStreamView = bob.stream(bobsUserStreamId)!.view
-        expect(bobUserStreamView).toBeDefined()
-        expect(bobUserStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN)).toBe(true)
-
-        const waitForStreamPromise = makeDonePromise()
-        bob.on('userJoinedStream', (streamId) => {
-            if (streamId === channelId) {
-                waitForStreamPromise.done()
-            }
-        })
-
-        log('bobMakeStream took', Date.now() - bobMakeStreamStart)
-        log('Bob created space, about to create channel')
-        const channelProperties = 'Bobs channel properties'
-        const channelReturnVal = await bob.createChannel(
-            spaceId,
-            'general',
-            channelProperties,
-            channelId,
-        )
-        expect(channelReturnVal.streamId).toEqual(channelId)
-
-        await waitFor(() => {
-            expect(bobUserStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN)).toBe(true)
-            expect(bobUserStreamView.userContent.isMember(channelId, MembershipOp.SO_JOIN)).toBe(
-                true,
-            )
-        })
 
         // join alice
-        const createAliceStart = Date.now()
-
-        log('Creating alice spaceDapp took', Date.now() - createAliceStart)
-
-        log('Alice created user, about to mint gating NFT')
-
-        const makeAliceClientStart = Date.now()
-        log('Creating alice client took', Date.now() - makeAliceClientStart)
-
-        log('Alice created user, about to join space', { alicesUserId: alice.userId })
-
+        console.log("Minting an NFT for alice")
         await aliceMintTx
 
         // first join the space on chain
         const aliceJoinStart = Date.now()
         log('transaction start Alice joining space')
-
         const { issued, tokenId } = await aliceSpaceDapp.joinSpace(
             spaceId,
             alicesWallet.address,
@@ -440,6 +340,7 @@ describe('spaceWithEntitlements', () => {
         } = await setupWalletsAndContexts()
 
         log('createAliceAndBobStart took', Date.now() - createAliceAndBobStart)
+        log("aliceWallet", alicesWallet.address)
 
         const listPricingModulesStart = Date.now()
         const pricingModules = await bobSpaceDapp.listPricingModules()
@@ -495,7 +396,7 @@ describe('spaceWithEntitlements', () => {
         log('transaction took', Date.now() - createSpaceStart)
 
         const createSpaceTxStart = Date.now()
-        const receipt = await transaction.wait()
+        let receipt = await transaction.wait()
         log('createSpaceTxStart transaction receipt', Date.now() - createSpaceTxStart)
 
         expect(receipt.status).toEqual(1)
@@ -510,6 +411,7 @@ describe('spaceWithEntitlements', () => {
 
         const returnVal = await bob.createSpace(spaceId)
         expect(returnVal.streamId).toEqual(spaceId)
+        console.log("bobSpaceId", spaceId)
         // Now there must be "joined space" event in the user stream.
         const bobsUserStreamId = makeUserStreamId(bob.userId)
 
@@ -542,17 +444,7 @@ describe('spaceWithEntitlements', () => {
             )
         })
 
-        // join alice
-        const createAliceStart = Date.now()
-
-        log('Creating alice spaceDapp took', Date.now() - createAliceStart)
-
-        log('Alice created user, about to mint gating NFT')
-
-        const makeAliceClientStart = Date.now()
-        log('Creating alice client took', Date.now() - makeAliceClientStart)
-
-        log('Alice created user, about to join space', { alicesUserId: alice.userId })
+        log('Alice about to join space', { alicesUserId: alice.userId })
 
         // first join the space on chain
         const aliceJoinStart = Date.now()
@@ -568,6 +460,19 @@ describe('spaceWithEntitlements', () => {
             'Alice correctly failed to join space and has a MembershipNFT',
             Date.now() - aliceJoinStart,
         )
+
+        // Have alice create a user stream attached to her own space.
+        // Then she will attempt to join the space from the client, which should fail.
+        createUserStreamAndSyncClient(
+            alice,
+            aliceSpaceDapp,
+            "alice",
+            membershipInfo,
+            alicesWallet,
+        )
+
+        // Alice cannot join the space on the stream node.
+        expect(alice.joinStream(spaceId)).rejects.toThrow('PERMISSION_DENIED')
 
         // kill the clients
         await bob.stopSync()
@@ -756,7 +661,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test.skip('twoNftGateJoinFail', async () => {
+    test('twoNftGateJoinFail', async () => {
         const createAliceAndBobStart = Date.now()
 
         const {
@@ -840,7 +745,7 @@ describe('spaceWithEntitlements', () => {
         log('transaction took', Date.now() - createSpaceStart)
 
         const createSpaceTxStart = Date.now()
-        const receipt = await transaction.wait()
+        let receipt = await transaction.wait()
         log('createSpaceTxStart transaction receipt', Date.now() - createSpaceTxStart)
 
         expect(receipt.status).toEqual(1)
@@ -887,23 +792,12 @@ describe('spaceWithEntitlements', () => {
         })
 
         // join alice
-        const createAliceStart = Date.now()
-
-        log('Creating alice spaceDapp took', Date.now() - createAliceStart)
-
-        log('Alice created user, about to mint gating NFT')
-
-        const makeAliceClientStart = Date.now()
-        log('Creating alice client took', Date.now() - makeAliceClientStart)
-
-        log('Alice created user, about to join space', { alicesUserId: alice.userId })
-
+        log("Minting an NFT for alice")
         await Promise.all([aliceMintTx1])
 
         // first join the space on chain
         const aliceJoinStart = Date.now()
         log('transaction start Alice joining space')
-
         const { issued } = await aliceSpaceDapp.joinSpace(
             spaceId,
             alicesWallet.address,
@@ -911,6 +805,18 @@ describe('spaceWithEntitlements', () => {
         )
         expect(issued).toBe(false)
         log('Alice failed to join space and has a MembershipNFT', Date.now() - aliceJoinStart)
+
+        // Have alice create her own space so she can initialize her user stream.
+        // Then she will attempt to join the space from the client, which should fail.
+        createUserStreamAndSyncClient(
+            alice,
+            aliceSpaceDapp,
+            "alice",
+            membershipInfo,
+            alicesWallet,
+        )
+        // Alice cannot join the space on the stream node.
+        expect(alice.joinStream(spaceId)).rejects.toThrow('PERMISSION_DENIED')
 
         // kill the clients
         await bob.stopSync()
