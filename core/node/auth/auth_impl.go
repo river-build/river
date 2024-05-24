@@ -553,6 +553,7 @@ func (ca *chainAuth) checkEntitlement(
 	args *ChainAuthArgs,
 ) (CacheResult, error) {
 	log := dlog.FromCtx(ctx)
+	log.Info("AUTH_IMPL checkEntitlement", "args", args)
 
 	ctx, cancel := context.WithTimeout(ctx, time.Millisecond*time.Duration(ca.contractCallsTimeoutMs))
 	defer cancel()

@@ -276,7 +276,7 @@ export async function createSpaceAndDefaultChannel(
     const spaceId = makeSpaceStreamId(spaceAddress!)
     const channelId = makeDefaultChannelStreamId(spaceAddress!)
 
-    client.initializeUser({spaceId})
+    await client.initializeUser({spaceId})
     client.startSync()
 
     const userStreamId = makeUserStreamId(client.userId)
@@ -325,9 +325,9 @@ export async function createUserStreamAndSyncClient(
     expect(receipt.status).toEqual(1)
     const spaceAddress = spaceDapp.getSpaceAddress(receipt)
     expect(spaceAddress).toBeDefined()
+
     const spaceId = makeSpaceStreamId(spaceAddress!)
     await client.initializeUser({spaceId})
-    client.startSync()
 }
 
 export function waitFor<T>(

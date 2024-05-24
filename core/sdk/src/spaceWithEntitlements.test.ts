@@ -89,7 +89,7 @@ describe('spaceWithEntitlements', () => {
     })
 
     // Banning with entitlements — users need permission to ban other users.
-    test.skip('ownerCanBanOtherUsers', async () => {
+    test('ownerCanBanOtherUsers', async () => {
         log('start ownerCanBanOtherUsers')
         // set up the web3 provider and spacedap
         const baseConfig = makeBaseChainConfig()
@@ -137,7 +137,7 @@ describe('spaceWithEntitlements', () => {
         } = await createSpaceAndDefaultChannel(
             bob,
             bobSpaceDapp,
-            bobsWallet,
+            bobProvider.wallet,
             "bobs",
             membershipInfo,
         )
@@ -182,11 +182,7 @@ describe('spaceWithEntitlements', () => {
         })
 
         // Alice cannot kick Bob
-        await expect(alice.removeUser(spaceId, bob.userId)).rejects.toThrow(
-            expect.objectContaining({
-                message: expect.stringContaining('7:PERMISSION_DENIED'),
-            }),
-        )
+        await expect(alice.removeUser(spaceId, bob.userId)).rejects.toThrow(/7:PERMISSION_DENIED/)
 
         // Bob is still a a member — Alice can't kick him because he's the owner
         await waitFor(() => {
@@ -215,7 +211,7 @@ describe('spaceWithEntitlements', () => {
         log('Done')
     })
 
-    test.skip('oneNftGateJoinPass', async () => {
+    test('oneNftGateJoinPass', async () => {
         const createAliceAndBobStart = Date.now()
 
         const {
@@ -333,6 +329,7 @@ describe('spaceWithEntitlements', () => {
             alice,
             bob,
             alicesWallet,
+            bobsWallet,
             aliceProvider,
             bobProvider,
             aliceSpaceDapp,
@@ -463,23 +460,27 @@ describe('spaceWithEntitlements', () => {
 
         // Have alice create a user stream attached to her own space.
         // Then she will attempt to join the space from the client, which should fail.
-        createUserStreamAndSyncClient(
+        await createUserStreamAndSyncClient(
             alice,
             aliceSpaceDapp,
             "alice",
             membershipInfo,
-            alicesWallet,
+            aliceProvider.wallet,
         )
 
+        log("alice wallet address", alicesWallet.address)
+        log("bob wallet address", bobsWallet.address)
+        log("spaceId", spaceId)
+        log("channelId", channelId)
         // Alice cannot join the space on the stream node.
-        expect(alice.joinStream(spaceId)).rejects.toThrow('PERMISSION_DENIED')
-
+        await expect(alice.joinStream(spaceId)).rejects.toThrow(/PERMISSION_DENIED/)
+    
         // kill the clients
         await bob.stopSync()
         await alice.stopSync()
     })
 
-    test.skip('twoNftGateJoinPass', async () => {
+    test('twoNftGateJoinPass', async () => {
         const createAliceAndBobStart = Date.now()
 
         const {
@@ -808,22 +809,22 @@ describe('spaceWithEntitlements', () => {
 
         // Have alice create her own space so she can initialize her user stream.
         // Then she will attempt to join the space from the client, which should fail.
-        createUserStreamAndSyncClient(
+        await createUserStreamAndSyncClient(
             alice,
             aliceSpaceDapp,
             "alice",
             membershipInfo,
-            alicesWallet,
+            aliceProvider.wallet,
         )
         // Alice cannot join the space on the stream node.
-        expect(alice.joinStream(spaceId)).rejects.toThrow('PERMISSION_DENIED')
+        await expect(alice.joinStream(spaceId)).rejects.toThrow('PERMISSION_DENIED')
 
         // kill the clients
         await bob.stopSync()
         await alice.stopSync()
     })
 
-    test.skip('OrOfTwoNftGateJoinPass', async () => {
+    test('OrOfTwoNftGateJoinPass', async () => {
         const createAliceAndBobStart = Date.now()
 
         const {
@@ -1004,7 +1005,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test.skip('orOfTwoNftOrOneNftGateJoinPass', async () => {
+    test('orOfTwoNftOrOneNftGateJoinPass', async () => {
         const createAliceAndBobStart = Date.now()
 
         const {
