@@ -98,6 +98,9 @@ type Config struct {
 	// History indicates how far back xchain must look for entitlement check requests after start
 	History        time.Duration
 	EnableTestAPIs bool
+
+	// Enables go profiler, gc and so on enpoints on /debug
+	EnableDebugEndpoints bool
 }
 
 type NetworkConfig struct {
@@ -220,6 +223,15 @@ type ArchiveConfig struct {
 
 	// Number of miniblocks to read at once from the remote node.
 	ReadMiniblcocksSize uint64
+
+	DisablePrintStats bool
+	PrintStatsPeriod  time.Duration // If 0, default to 1 minute.
+
+	TaskQueueSize int // If 0, default to 100000.
+
+	WorkerPoolSize int // If 0, default to 20.
+
+	StreamsContractCallPageSize int64 // If 0, default to 5000.
 }
 
 func (ac *ArchiveConfig) GetReadMiniblocksSize() uint64 {
@@ -227,6 +239,37 @@ func (ac *ArchiveConfig) GetReadMiniblocksSize() uint64 {
 		return 100
 	}
 	return ac.ReadMiniblcocksSize
+}
+
+func (ac *ArchiveConfig) GetPrintStatsPeriod() time.Duration {
+	if ac.DisablePrintStats {
+		return 0
+	}
+	if ac.PrintStatsPeriod <= 0 {
+		return time.Minute
+	}
+	return ac.PrintStatsPeriod
+}
+
+func (ac *ArchiveConfig) GetTaskQueueSize() int {
+	if ac.TaskQueueSize <= 0 {
+		return 100000
+	}
+	return ac.TaskQueueSize
+}
+
+func (ac *ArchiveConfig) GetWorkerPoolSize() int {
+	if ac.WorkerPoolSize <= 0 {
+		return 20
+	}
+	return ac.WorkerPoolSize
+}
+
+func (ac *ArchiveConfig) GetStreamsContractCallPageSize() int64 {
+	if ac.StreamsContractCallPageSize <= 0 {
+		return 5000
+	}
+	return ac.StreamsContractCallPageSize
 }
 
 type FilterConfig struct {
