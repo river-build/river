@@ -354,7 +354,7 @@ func (ca *chainAuth) isEntitledToSpaceUncached(
 	args *ChainAuthArgs,
 ) (CacheResult, error) {
 	log := dlog.FromCtx(ctx)
-	log.Debug("isEntitledToSpaceUncached", "args", args)
+	log.Info("AUTH_IMPL isEntitledToSpaceUncached", "args", args)
 	result, cacheHit, err := ca.entitlementManagerCache.executeUsingCache(
 		ctx,
 		cfg,
@@ -391,35 +391,38 @@ func (ca *chainAuth) isEntitledToSpaceUncached(
 				"principal",
 				args.principal,
 			)
+			log.Info("AUTH_IMPL owner is entitled to space", "spaceId", args.spaceId, "userId", wallet)
 			return &boolCacheResult{allowed: true}, nil
 		}
 	}
 
 	entitlementData := temp.(*entitlementCacheResult) // Assuming result is of *entitlementCacheResult type
-	log.Debug("entitlementData", "args", args, "entitlementData", entitlementData)
+	log.Info("AUTH_IMPL entitlementData", "args", args, "entitlementData", entitlementData)
 	for _, ent := range entitlementData.entitlementData {
 		log.Debug("entitlement", "entitlement", ent)
 		if ent.entitlementType == "RuleEntitlement" {
 			re := ent.ruleEntitlement
-			log.Debug("RuleEntitlement", "ruleEntitlement", re)
+			log.Info("AUTH_IMPL RuleEntitlement", "ruleEntitlement", re)
 			result, err := entitlement.EvaluateRuleData(ctx, cfg, wallets, re)
 			if err != nil {
+				log.Error("AUTH_IMPL error evaluating rule data", "error", err, "ruleEntitlement", re)
 				return &boolCacheResult{allowed: false}, AsRiverError(err).Func("isEntitledToSpace")
 			}
 			if result {
-				log.Debug("rule entitlement is true", "spaceId", args.spaceId)
+				log.Info("AUTH_IMPL rule entitlement is true", "spaceId", args.spaceId)
 				return &boolCacheResult{allowed: true}, nil
 			} else {
-				log.Debug("rule entitlement is false", "spaceId", args.spaceId)
+				log.Info("AUTH_IMPL rule entitlement is false", "spaceId", args.spaceId)
 				continue
 			}
 		} else if ent.entitlementType == "UserEntitlement" {
+			log.Info("AUTH_IMPL UserEntitlement", "userEntitlement", ent)
 			for _, user := range ent.userEntitlement {
 				if user == everyone {
-					log.Debug("everyone is entitled to space", "spaceId", args.spaceId)
+					log.Info("AUTH_IMPL everyone is entitled to space", "spaceId", args.spaceId)
 					return &boolCacheResult{allowed: true}, nil
 				} else if user == args.principal {
-					log.Debug("user is entitled to space", "spaceId", args.spaceId, "userId", args.principal)
+					log.Info("AUTH_IMPL user is entitled to space", "spaceId", args.spaceId, "userId", args.principal)
 					return &boolCacheResult{allowed: true}, nil
 				}
 			}
@@ -428,10 +431,13 @@ func (ca *chainAuth) isEntitledToSpaceUncached(
 		}
 	}
 
+	log.Info("AUTH_IMPL user is not entitled to space", "spaceId", args.spaceId, "userId", args.principal)
 	return &boolCacheResult{allowed: false}, nil
 }
 
 func (ca *chainAuth) isEntitledToSpace(ctx context.Context, cfg *config.Config, args *ChainAuthArgs) (bool, error) {
+	log := dlog.FromCtx(ctx)
+	log.Info("AUTH_IMPL isEntitledToSpace", "args", args)
 	if args.kind != chainAuthKindSpace {
 		return false, RiverError(Err_INTERNAL, "Wrong chain auth kind")
 	}
@@ -454,6 +460,8 @@ func (ca *chainAuth) isEntitledToChannelUncached(
 	cfg *config.Config,
 	args *ChainAuthArgs,
 ) (CacheResult, error) {
+	log := dlog.FromCtx(ctx)
+	log.Info("AUTH_IMPL isEntitledToChannelUncached", "args", args)
 	wallets := deserializeWallets(args.linkedWallets)
 	for _, wallet := range wallets {
 		allowed, err := ca.spaceContract.IsEntitledToChannel(
@@ -474,6 +482,8 @@ func (ca *chainAuth) isEntitledToChannelUncached(
 }
 
 func (ca *chainAuth) isEntitledToChannel(ctx context.Context, cfg *config.Config, args *ChainAuthArgs) (bool, error) {
+	log := dlog.FromCtx(ctx)
+	log.Info("AUTH_IMPL isEntitledToChannel", "args", args)
 	if args.kind != chainAuthKindChannel {
 		return false, RiverError(Err_INTERNAL, "Wrong chain auth kind")
 	}
@@ -519,6 +529,7 @@ func (ca *chainAuth) checkMembership(
 	wg *sync.WaitGroup,
 ) {
 	log := dlog.FromCtx(ctx)
+	log.Info("AUTH_IMPL checkMembership", "address", address.Hex(), "spaceId", spaceId)
 	defer wg.Done()
 	isMember, err := ca.spaceContract.IsMember(ctx, spaceId, address)
 	if err != nil {

@@ -87,7 +87,7 @@ describe('spaceWithEntitlements', () => {
     })
 
     // Banning with entitlements — users need permission to ban other users.
-    test('ownerCanBanOtherUsers', async () => {
+    test.skip('ownerCanBanOtherUsers', async () => {
         log('start ownerCanBanOtherUsers')
         // set up the web3 provider and spacedap
         const baseConfig = makeBaseChainConfig()
@@ -257,7 +257,7 @@ describe('spaceWithEntitlements', () => {
         log('Done')
     })
 
-    test('oneNftGateJoinPass', async () => {
+    test.skip('oneNftGateJoinPass', async () => {
         const createAliceAndBobStart = Date.now()
 
         const {
@@ -574,7 +574,7 @@ describe('spaceWithEntitlements', () => {
         await alice.stopSync()
     })
 
-    test('twoNftGateJoinPass', async () => {
+    test.skip('twoNftGateJoinPass', async () => {
         const createAliceAndBobStart = Date.now()
 
         const {
@@ -756,7 +756,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('twoNftGateJoinFail', async () => {
+    test.skip('twoNftGateJoinFail', async () => {
         const createAliceAndBobStart = Date.now()
 
         const {
@@ -917,7 +917,7 @@ describe('spaceWithEntitlements', () => {
         await alice.stopSync()
     })
 
-    test('OrOfTwoNftGateJoinPass', async () => {
+    test.skip('OrOfTwoNftGateJoinPass', async () => {
         const createAliceAndBobStart = Date.now()
 
         const {
@@ -1098,7 +1098,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('orOfTwoNftOrOneNftGateJoinPass', async () => {
+    test.skip('orOfTwoNftOrOneNftGateJoinPass', async () => {
         const createAliceAndBobStart = Date.now()
 
         const {

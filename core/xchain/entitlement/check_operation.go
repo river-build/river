@@ -26,6 +26,7 @@ var (
 func Init(ctx context.Context, cfg *config.Config) error {
 	var err error
 	clientsOnce.Do(func() {
+		dlog.FromCtx(ctx).Info("Initializing blockchain client pool!!!!!")
 		clients, err = NewBlockchainClientPool(ctx, cfg)
 	})
 	return err
@@ -191,6 +192,7 @@ func evaluateErc721Operation(
 	linkedWallets []common.Address,
 ) (bool, error) {
 	log := dlog.FromCtx(ctx).With("function", "evaluateErc721Operation")
+	log.Info("AUTH_IMPL Evaluating ERC721 operation")
 
 	client, err := clients.Get(op.ChainID.Uint64())
 	if err != nil {

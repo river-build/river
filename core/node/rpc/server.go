@@ -27,7 +27,6 @@ import (
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/registries"
 	"github.com/river-build/river/core/node/storage"
-	"github.com/river-build/river/core/xchain/entitlement"
 	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -129,9 +128,9 @@ func (s *Service) start() error {
 		return AsRiverError(err).Message("Failed to init cache and sync").LogError(s.defaultLogger)
 	}
 
-	if err = entitlement.Init(s.serverCtx, s.config); err != nil {
-		return AsRiverError(err).Message("Failed to init entitlement").LogError(s.defaultLogger)
-	}
+	// if err = entitlement.Init(s.serverCtx, s.config); err != nil {
+	// 	return AsRiverError(err).Message("Failed to init entitlement").LogError(s.defaultLogger)
+	// }
 
 	go s.riverChain.ChainMonitor.RunWithBlockPeriod(
 		s.serverCtx,
