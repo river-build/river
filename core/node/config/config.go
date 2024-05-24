@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	infra "github.com/river-build/river/core/node/infra/config"
 	"github.com/river-build/river/core/node/shared"
 )
 
@@ -51,10 +50,10 @@ type Config struct {
 	RegistryContract ContractConfig
 
 	// Logging
-	Log infra.LogConfig
+	Log LogConfig
 
 	// Metrics
-	Metrics             infra.MetricsConfig
+	Metrics             MetricsConfig
 	PerformanceTracking PerformanceTrackingConfig
 
 	// Stream configuration
@@ -232,6 +231,22 @@ type ArchiveConfig struct {
 	WorkerPoolSize int // If 0, default to 20.
 
 	StreamsContractCallPageSize int64 // If 0, default to 5000.
+}
+
+type LogConfig struct {
+	Level        string // Used for both file and console if their levels not set explicitly
+	File         string // Path to log file
+	FileLevel    string // If not set, use Level
+	Console      bool   // Log to sederr if true
+	ConsoleLevel string // If not set, use Level
+	NoColor      bool
+	Format       string // "json" or "text"
+}
+
+type MetricsConfig struct {
+	Enabled   bool
+	Interface string
+	Port      int
 }
 
 func (ac *ArchiveConfig) GetReadMiniblocksSize() uint64 {
