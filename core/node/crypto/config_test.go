@@ -85,7 +85,7 @@ func TestLoadConfiguration(t *testing.T) {
 	require.NoError(err, "unable to construct blockchain test context")
 
 	// ensure that settings in missing are dropped from the on chain config
-	for keyID, _ := range missing {
+	for keyID := range missing {
 		pendingTx, err := btc.DeployerBlockchain.TxPool.Submit(ctx, "DeleteConfig",
 			func(opts *bind.TransactOpts) (*types.Transaction, error) {
 				return btc.Configuration.DeleteConfiguration(opts, keyID)
