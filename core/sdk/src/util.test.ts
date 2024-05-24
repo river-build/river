@@ -12,7 +12,13 @@ import {
 import { PlainMessage } from '@bufbuild/protobuf'
 import { StreamStateView } from './streamStateView'
 import { Client } from './client'
-import { genId, makeSpaceStreamId, makeDefaultChannelStreamId, makeUserStreamId, userIdFromAddress } from './id'
+import {
+    genId,
+    makeSpaceStreamId,
+    makeDefaultChannelStreamId,
+    makeUserStreamId,
+    userIdFromAddress,
+} from './id'
 import { ParsedEvent, DecryptedTimelineEvent } from './types'
 import { getPublicKey, utils } from 'ethereum-cryptography/secp256k1'
 import { MembershipOp } from '@river-build/proto'
@@ -25,7 +31,13 @@ import assert from 'assert'
 import _ from 'lodash'
 import { MockEntitlementsDelegate } from './utils'
 import { SignerContext, makeSignerContext } from './signerContext'
-import { IArchitectBase, ISpaceDapp, LocalhostWeb3Provider, PricingModuleStruct, createRiverRegistry } from '@river-build/web3'
+import {
+    IArchitectBase,
+    ISpaceDapp,
+    LocalhostWeb3Provider,
+    PricingModuleStruct,
+    createRiverRegistry,
+} from '@river-build/web3'
 import { makeRiverChainConfig } from './riverConfig'
 
 const log = dlog('csb:test:util')
@@ -254,16 +266,15 @@ export async function createSpaceAndDefaultChannel(
     name: string,
     membership: IArchitectBase.MembershipStruct,
 ): Promise<{
-    spaceId: string,
-    defaultChannelId: string,
-    userStreamView: StreamStateView,
+    spaceId: string
+    defaultChannelId: string
+    userStreamView: StreamStateView
 }> {
-
     const transaction = await spaceDapp.createSpace(
         {
             spaceName: `${name}-space`,
             spaceMetadata: `${name}-space-metadata`,
-            channelName: "general",
+            channelName: 'general',
             membership,
         },
         wallet,
@@ -276,11 +287,12 @@ export async function createSpaceAndDefaultChannel(
     const spaceId = makeSpaceStreamId(spaceAddress!)
     const channelId = makeDefaultChannelStreamId(spaceAddress!)
 
-    await client.initializeUser({spaceId})
+    await client.initializeUser({ spaceId })
     client.startSync()
 
     const userStreamId = makeUserStreamId(client.userId)
     const userStreamView = client.stream(userStreamId)!.view
+    expect(userStreamView).toBeDefined()
 
     const returnVal = await client.createSpace(spaceId)
     expect(returnVal.streamId).toEqual(spaceId)
@@ -288,7 +300,7 @@ export async function createSpaceAndDefaultChannel(
 
     const channelReturnVal = await client.createChannel(
         spaceId,
-        "general",
+        'general',
         `${name} general channel properties`,
         channelId,
     )
@@ -316,7 +328,7 @@ export async function createUserStreamAndSyncClient(
         {
             spaceName: `${name}-space`,
             spaceMetadata: `${name}-space-metadata`,
-            channelName: "general",
+            channelName: 'general',
             membership: membershipInfo,
         },
         wallet,
@@ -327,7 +339,34 @@ export async function createUserStreamAndSyncClient(
     expect(spaceAddress).toBeDefined()
 
     const spaceId = makeSpaceStreamId(spaceAddress!)
-    await client.initializeUser({spaceId})
+    await client.initializeUser({ spaceId })
+}
+
+export async function expectUserCanJoin(
+    spaceId: string,
+    channelId: string,
+    name: string,
+    client: Client,
+    spaceDapp: ISpaceDapp,
+    address: string,
+    wallet: ethers.Wallet,
+) {
+    const joinStart = Date.now()
+    const { issued, tokenId } = await spaceDapp.joinSpace(spaceId, address, wallet)
+    expect(issued).toBe(true)
+    log(`${name} joined space ${spaceId}`, Date.now() - joinStart)
+
+    await client.initializeUser({ spaceId })
+    client.startSync()
+
+    await expect(client.joinStream(spaceId)).toResolve()
+    await expect(client.joinStream(channelId)).toResolve()
+
+    const userStreamView = client.stream(client.userStreamId!)!.view
+    await waitFor(() => {
+        expect(userStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN)).toBeTrue()
+        expect(userStreamView.userContent.isMember(channelId, MembershipOp.SO_JOIN)).toBeTrue()
+    })
 }
 
 export function waitFor<T>(
