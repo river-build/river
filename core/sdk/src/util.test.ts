@@ -257,7 +257,7 @@ export const lastEventFiltered = <T extends (a: ParsedEvent) => any>(
     return ret
 }
 
-// craeteSpaceAndDefaultChannel creates a space and default channel for a given
+// createSpaceAndDefaultChannel creates a space and default channel for a given
 // client, on the spaceDapp and the stream node. It creates a user stream, joins
 // the user to the space, and starts syncing the client.
 export async function createSpaceAndDefaultChannel(
@@ -370,6 +370,7 @@ export async function expectUserCanJoin(
     })
 }
 
+// Hint: pass in the wallets attached to the providers.
 export async function linkWallets(
     rootSpaceDapp: ISpaceDapp,
     rootWallet: ethers.Wallet,

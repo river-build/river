@@ -32,8 +32,6 @@ import { EVERYONE_ADDRESS } from '../Utils'
 import { evaluateOperationsForEntitledWallet, ruleDataToOperations } from '../entitlement'
 import { RuleEntitlementShim } from './RuleEntitlementShim'
 
-import { IArchitectBase } from '@river-build/generated/v3/typings/IArchitect'
-
 const logger = dlogger('csb:SpaceDapp:debug')
 
 export class SpaceDapp implements ISpaceDapp {
@@ -135,7 +133,7 @@ export class SpaceDapp implements ISpaceDapp {
         signer: ethers.Signer,
         txnOpts?: TransactionOpts,
     ): Promise<ContractTransaction> {
-        const spaceInfo: IArchitectBase.SpaceInfoStruct = {
+        const spaceInfo = {
             name: params.spaceName,
             uri: params.spaceMetadata,
             membership: params.membership as any,
@@ -143,7 +141,6 @@ export class SpaceDapp implements ISpaceDapp {
                 metadata: params.channelName || '',
             },
         }
-
         return wrapTransaction(
             () => this.spaceRegistrar.SpaceArchitect.write(signer).createSpace(spaceInfo),
             txnOpts,
