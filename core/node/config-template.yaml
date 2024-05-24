@@ -102,3 +102,20 @@ network:
 
 # Debug feature flags.
 disableBaseChain: <DISABLE_BASE_CHAIN>
+
+# Include local testing chains (foundry),
+# sepolia chains (ethereum, base, arbitrum, polygon, optimism),
+# mainnet chains (ethereum, base, arbitrum, polygon, optimism).
+chains: >-
+    31337:http://localhost:8545,
+    31338:http://localhost:8546,
+    11155111:https://ethereum-sepolia-rpc.publicnode.com,
+    84532:https://sepolia.base.org,
+    421614:https://sepolia-rollup.arbitrum.io/rpc,
+    80002:https://rpc-amoy.polygon.technology,
+    11155420:https://sepolia.optimism.io,
+    1:https://cloudflare-eth.com,
+    8453:https://mainnet.base.org,
+    42161:https://arbitrum.llamarpc.com,
+    137:https://polygon.gateway.tenderly.co,
+    10:https://optimism.llamarpc.com

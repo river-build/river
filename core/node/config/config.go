@@ -293,7 +293,7 @@ func (c *Config) parseChains() {
 	chainUrls := make(map[uint64]string)
 	chainPairs := strings.Split(c.ChainsString, ",")
 	for _, pair := range chainPairs {
-		parts := strings.SplitN(pair, ":", 2) // Use SplitN to split into exactly two parts
+		parts := strings.SplitN(strings.TrimSpace(pair), ":", 2) // Use SplitN to split into exactly two parts
 		if len(parts) == 2 {
 			chainID, err := strconv.Atoi(parts[0])
 			if err != nil {
