@@ -565,7 +565,7 @@ func (ca *chainAuth) checkEntitlement(
 	}
 
 	// Get all linked wallets.
-	wall ts, err := ca.getLinkedWallets(ctx, args.principal)
+	wallets, err := ca.getLinkedWallets(ctx, args.principal)
 	if err != nil {
 		return &boolCacheResult{allowed: false}, err
 	}
