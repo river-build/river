@@ -160,7 +160,7 @@ describe('spaceWithEntitlements', () => {
         // await expect(alice.joinStream(spaceId)).rejects.toThrow() // todo
 
         log('Alice should be able to join space')
-        expectUserCanJoin(
+        await expectUserCanJoin(
             spaceId,
             channelId,
             'alice',
@@ -192,16 +192,105 @@ describe('spaceWithEntitlements', () => {
         await waitFor(() => {
             expect(
                 aliceUserStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN),
-            ).toBeTrue()
+            ).toBeFalse()
             expect(
                 aliceUserStreamView.userContent.isMember(channelId, MembershipOp.SO_JOIN),
-            ).toBeTrue()
+            ).toBeFalse()
         })
 
         // kill the clients
         await bob.stopSync()
         await alice.stopSync()
         log('Done')
+    })
+
+    test('oneNftGateJoinPass - linkedWallet', async () => {
+        const createAliceAndBobStart = Date.now()
+
+        const {
+            alice,
+            bob,
+            alicesWallet,
+            aliceProvider,
+            bobProvider,
+            aliceSpaceDapp,
+            bobSpaceDapp,
+        } = await setupWalletsAndContexts()
+
+        log('createAliceAndBobStart took', Date.now() - createAliceAndBobStart)
+
+        const listPricingModulesStart = Date.now()
+        const pricingModules = await bobSpaceDapp.listPricingModules()
+        const dynamicPricingModule = getDynamicPricingModule(pricingModules)
+        expect(dynamicPricingModule).toBeDefined()
+
+        log('listPricingModules took', Date.now() - listPricingModulesStart)
+
+        // create a space stream,
+        log('Bob created user, about to create space')
+        // first on the blockchain
+        const membershipInfo: MembershipStruct = {
+            settings: {
+                name: 'Everyone',
+                symbol: 'MEMBER',
+                price: 0,
+                maxSupply: 1000,
+                duration: 0,
+                currency: ETH_ADDRESS,
+                feeRecipient: bob.userId,
+                freeAllocation: 0,
+                pricingModule: dynamicPricingModule!.module,
+            },
+            permissions: [Permission.Read, Permission.Write],
+            requirements: {
+                everyone: false,
+                users: [],
+                ruleData: {
+                    operations: [{ opType: OperationType.CHECK, index: 0 }],
+                    checkOperations: [
+                        {
+                            opType: CheckOperationType.ERC721,
+                            chainId: 31337n,
+                            contractAddress: testNft1Address,
+                            threshold: 1n,
+                        },
+                    ],
+                    logicalOperations: [],
+                },
+            },
+        }
+
+        const {
+            spaceId,
+            defaultChannelId: channelId,
+            userStreamView: bobUserStreamView,
+        } = await createSpaceAndDefaultChannel(
+            bob,
+            bobSpaceDapp,
+            bobProvider.wallet,
+            'bobs',
+            membershipInfo,
+        )
+
+        // join alice
+        console.log('Minting an NFT for alice')
+        await publicMint('TestNFT1', alicesWallet.address as `0x${string}`)
+
+        await expectUserCanJoin(
+            spaceId,
+            channelId,
+            'alice',
+            alice,
+            aliceSpaceDapp,
+            alicesWallet.address,
+            aliceProvider.wallet,
+        )
+
+        const doneStart = Date.now()
+        // kill the clients
+        await bob.stopSync()
+        await alice.stopSync()
+        log('Done', Date.now() - doneStart)
     })
 
     test('oneNftGateJoinPass', async () => {
@@ -276,7 +365,7 @@ describe('spaceWithEntitlements', () => {
         console.log('Minting an NFT for alice')
         await publicMint('TestNFT1', alicesWallet.address as `0x${string}`)
 
-        expectUserCanJoin(
+        await expectUserCanJoin(
             spaceId,
             channelId,
             'alice',
@@ -292,6 +381,7 @@ describe('spaceWithEntitlements', () => {
         await alice.stopSync()
         log('Done', Date.now() - doneStart)
     })
+
 
     test('oneNftGateJoinFail', async () => {
         const createAliceAndBobStart = Date.now()
@@ -497,7 +587,7 @@ describe('spaceWithEntitlements', () => {
         await Promise.all([aliceMintTx1, aliceMintTx2])
 
         log('Alice should be able to join space')
-        expectUserCanJoin(
+        await expectUserCanJoin(
             spaceId,
             channelId,
             'alice',
@@ -675,7 +765,7 @@ describe('spaceWithEntitlements', () => {
 
         // first join the space on chain
         log('Expect alice can join space')
-        expectUserCanJoin(
+        await expectUserCanJoin(
             spaceId,
             channelId,
             'alice',
@@ -795,7 +885,7 @@ describe('spaceWithEntitlements', () => {
         const aliceJoinStart = Date.now()
 
         log('expect alice can join space')
-        expectUserCanJoin(
+        await expectUserCanJoin(
             spaceId,
             channelId,
             'alice',

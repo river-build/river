@@ -352,8 +352,8 @@ export async function expectUserCanJoin(
     wallet: ethers.Wallet,
 ) {
     const joinStart = Date.now()
-    const { issued, tokenId } = await spaceDapp.joinSpace(spaceId, address, wallet)
-    expect(issued).toBe(true)
+    const { issued } = await spaceDapp.joinSpace(spaceId, address, wallet)
+    expect(issued).toBeTrue()
     log(`${name} joined space ${spaceId}`, Date.now() - joinStart)
 
     await client.initializeUser({ spaceId })
