@@ -39,6 +39,7 @@ import {
     createRiverRegistry,
 } from '@river-build/web3'
 import { makeRiverChainConfig } from './riverConfig'
+import { ContractTransaction } from 'ethers'
 
 const log = dlog('csb:test:util')
 
@@ -367,6 +368,27 @@ export async function expectUserCanJoin(
         expect(userStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN)).toBeTrue()
         expect(userStreamView.userContent.isMember(channelId, MembershipOp.SO_JOIN)).toBeTrue()
     })
+}
+
+export async function linkWallets(
+    rootSpaceDapp: ISpaceDapp,
+    rootWallet: ethers.Wallet,
+    linkedWallet: ethers.Wallet,
+) {
+    const walletLink = rootSpaceDapp.getWalletLink()
+    let txn: ContractTransaction | undefined
+    let error: Error | undefined
+    try {
+        txn = await walletLink.linkWalletToRootKey(rootWallet, linkedWallet)
+    } catch (err: any) {
+        const parsedError = walletLink.parseError(err)
+        error = parsedError
+        log('linkWallets error', parsedError)
+    }
+
+    expect(txn).toBeDefined()
+    const receipt = await txn?.wait()
+    expect(receipt!.status).toEqual(1)
 }
 
 export function waitFor<T>(

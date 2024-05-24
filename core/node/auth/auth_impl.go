@@ -421,9 +421,13 @@ func (ca *chainAuth) isEntitledToSpaceUncached(
 				if user == everyone {
 					log.Info("AUTH_IMPL everyone is entitled to space", "spaceId", args.spaceId)
 					return &boolCacheResult{allowed: true}, nil
-				} else if user == args.principal {
-					log.Info("AUTH_IMPL user is entitled to space", "spaceId", args.spaceId, "userId", args.principal)
-					return &boolCacheResult{allowed: true}, nil
+				} else {
+					for _, wallet := range wallets {
+						if user == wallet {
+							log.Info("AUTH_IMPL user is entitled to space", "spaceId", args.spaceId, "userId", wallet)
+							return &boolCacheResult{allowed: true}, nil
+						}
+					}
 				}
 			}
 		} else {
