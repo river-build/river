@@ -42,7 +42,7 @@ func (r *streamViewImpl) GetChannelInfo(channelId shared.StreamId) (*SpacePayloa
 	}
 	channel, _ := findChannel(snap.Channels, channelId[:])
 
-	updateFn := func(e *ParsedEvent) (bool, error) {
+	updateFn := func(e *ParsedEvent, minibockNum int64, eventNum int64) (bool, error) {
 		switch payload := e.Event.Payload.(type) {
 		case *StreamEvent_SpacePayload:
 			switch spacePayload := payload.SpacePayload.Content.(type) {
