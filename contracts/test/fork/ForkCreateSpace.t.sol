@@ -7,6 +7,8 @@ import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 //interfaces
 import {IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.sol";
 import {IMembership} from "contracts/src/spaces/facets/membership/IMembership.sol";
+import {IERC173} from "contracts/src/diamond/facets/ownable/IERC173.sol";
+import {IPrepay} from "contracts/src/factory/facets/prepay/IPrepay.sol";
 
 //libraries
 
@@ -14,16 +16,10 @@ import {IMembership} from "contracts/src/spaces/facets/membership/IMembership.so
 import {SpaceHelper} from "contracts/test/spaces/SpaceHelper.sol";
 import {Architect} from "contracts/src/factory/facets/architect/Architect.sol";
 
-import {Migration_2024_05_01} from "contracts/scripts/interactions/Migration_2024_05_01.s.sol";
-
-contract ForkCreateSpace is IArchitectBase, TestUtils, SpaceHelper {
-  Migration_2024_05_01 internal migration = new Migration_2024_05_01();
-
+contract ForkSpaceInteractions is IArchitectBase, TestUtils, SpaceHelper {
   address spaceFactory = 0x968696BC59431Ef085441641f550C8e2Eaca8BEd;
 
-  function setUp() public onlyForked {
-    migration.run();
-  }
+  function setUp() public onlyForked {}
 
   function test_createForkSpace() external onlyForked {
     address founder = _randomAddress();
@@ -42,4 +38,12 @@ contract ForkCreateSpace is IArchitectBase, TestUtils, SpaceHelper {
     address pricingModule = IMembership(space).getMembershipPricingModule();
     assertEq(pricingModule, spaceInfo.membership.settings.pricingModule);
   }
+
+  // function test_prepayFacet() external onlyForked {
+  //   address space = 0xA8dCd52c87897220C8AF74Bee5A7F67C663c2B48;
+  //   address owner = IERC173(space).owner();
+
+  //   vm.prank(owner);
+  //   IPrepay(spaceFactory).prepayMembership(space, 1);
+  // }
 }

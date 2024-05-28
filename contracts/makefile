@@ -87,6 +87,10 @@ test-base-sepolia :;
 	@echo "Testing $(contract)..."
 	@forge script scripts/interactions/${contract}.s.sol:${contract} --ffi --fork-url base_sepolia --private-key ${TESTNET_PRIVATE_KEY}
 
+fork-test-base-sepolia :;
+	@echo "Fork Testing $(contract)..."
+	@forge test --mc ${contract} --fork-url base_sepolia
+
 verify-basescan-base-sepolia :;
 	@forge verify-contract ${address} ${contract} --chain-id 84532 --verifier-url ${BASESCAN_SEPOLIA_URL} --etherscan-api-key ${BASESCAN_API_KEY}
 
