@@ -15,6 +15,39 @@ import {MainnetDelegationStorage} from "./MainnetDelegationStorage.sol";
 abstract contract MainnetDelegationBase is IMainnetDelegationBase {
   using EnumerableSet for EnumerableSet.AddressSet;
 
+  function _replaceDelegation(
+    address delegator,
+    address claimer,
+    address operator,
+    uint256 quantity
+  ) internal {
+    MainnetDelegationStorage.Layout storage ds = MainnetDelegationStorage
+      .layout();
+    Delegation memory delegation = ds.delegationByDelegator[delegator];
+    address currentClaimer = ds.claimerByDelegator[delegator];
+
+    // Remove the current delegation
+    delete ds.delegationByDelegator[delegator];
+    ds.delegatorsByOperator[delegation.operator].remove(delegator);
+
+    if (ds.delegatorsByAuthorizedClaimer[currentClaimer].contains(delegator)) {
+      ds.delegatorsByAuthorizedClaimer[currentClaimer].remove(delegator);
+    }
+
+    // Set the new delegation
+    ds.delegatorsByOperator[operator].add(delegator);
+    ds.delegationByDelegator[delegator] = Delegation(
+      operator,
+      quantity,
+      delegator,
+      block.timestamp
+    );
+
+    // Set the claimer
+    ds.claimerByDelegator[delegator] = claimer;
+    ds.delegatorsByAuthorizedClaimer[claimer].add(delegator);
+  }
+
   function _setDelegation(
     address delegator,
     address operator,
