@@ -128,7 +128,7 @@ archive:
     filter: ''
     readMiniblocksSize: ''
     disablePrintStats: ''
-    printStatsPeriod: ''
+    printStatsPeriod: '10s'
     taskQueueSize: ''
     workerPoolSize: ''
     streamsContractCallPageSize: ''
