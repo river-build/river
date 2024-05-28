@@ -212,7 +212,7 @@ func TestArchiveOneStream(t *testing.T) {
 
 	archiveCfg := tester.getConfig()
 	archiveCfg.Archive.ArchiveId = "arch" + GenShortNanoid()
-	archiveCfg.Archive.ReadMiniblcocksSize = 3
+	archiveCfg.Archive.ReadMiniblocksSize = 3
 
 	chainMonitor := tester.btc.ChainMonitor
 	bc := tester.btc.NewWalletAndBlockchain(ctx)
@@ -352,7 +352,7 @@ func TestArchive100StreamsWithData(t *testing.T) {
 
 	archiveCfg := tester.getConfig()
 	archiveCfg.Archive.ArchiveId = "arch" + GenShortNanoid()
-	archiveCfg.Archive.ReadMiniblcocksSize = 3
+	archiveCfg.Archive.ReadMiniblocksSize = 3
 
 	listener, err := net.Listen("tcp", "localhost:0")
 	require.NoError(err)
@@ -391,7 +391,7 @@ func TestArchiveContinuous(t *testing.T) {
 
 	archiveCfg := tester.getConfig()
 	archiveCfg.Archive.ArchiveId = "arch" + GenShortNanoid()
-	archiveCfg.Archive.ReadMiniblcocksSize = 3
+	archiveCfg.Archive.ReadMiniblocksSize = 3
 
 	listener, err := net.Listen("tcp", "localhost:0")
 	require.NoError(err)

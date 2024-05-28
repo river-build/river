@@ -122,3 +122,8 @@ entitlement_contract:
 test_contract:
     address: ''
     version: '3'
+
+archive:
+    archiveId: ""
+    filter: ""
+    readMiniblocksSize: ""

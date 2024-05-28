@@ -219,14 +219,14 @@ type ArchiveConfig struct {
 	Filter FilterConfig
 
 	// Number of miniblocks to read at once from the remote node.
-	ReadMiniblcocksSize uint64
+	ReadMiniblocksSize uint64
 }
 
 func (ac *ArchiveConfig) GetReadMiniblocksSize() uint64 {
-	if ac.ReadMiniblcocksSize <= 0 {
+	if ac.ReadMiniblocksSize <= 0 {
 		return 100
 	}
-	return ac.ReadMiniblcocksSize
+	return ac.ReadMiniblocksSize
 }
 
 type FilterConfig struct {
