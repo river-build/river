@@ -52,7 +52,7 @@ interface IMainnetDelegation is IMainnetDelegationBase {
    * @param claimers The address the delegator is allowing to claim
    * @param quantities The quantity to delegate
    */
-  function setBatchDelegate(
+  function setBatchDelegation(
     address[] calldata delegators,
     address[] calldata delegates,
     address[] calldata claimers,

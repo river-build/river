@@ -50,7 +50,7 @@ contract MainnetDelegation is
   // =============================================================
   //                           Batch Delegation
   // =============================================================
-  function setBatchDelegate(
+  function setBatchDelegation(
     address[] calldata delegators,
     address[] calldata delegates,
     address[] calldata claimers,
