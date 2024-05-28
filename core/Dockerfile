@@ -70,4 +70,4 @@ ARG DD_GIT_REPOSITORY_URL="https://github.com/river-build/river"
 ENV DD_GIT_REPOSITORY_URL=${DD_GIT_REPOSITORY_URL} \
     DD_GIT_COMMIT_SHA=${GIT_SHA}
 
-CMD ["/etc/run.sh"]
+CMD ["sh", "/etc/run.sh"]
