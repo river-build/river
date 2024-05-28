@@ -156,6 +156,10 @@ contract RewardsDistribution is
     return RewardsDistributionStorage.layout().activePeriodLength;
   }
 
+  function getActiveOperators() public view returns (address[] memory) {
+    return _getActiveOperators();
+  }
+
   // =============================================================
   //                           Internal
   // =============================================================
