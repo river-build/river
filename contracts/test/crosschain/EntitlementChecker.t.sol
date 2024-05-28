@@ -12,9 +12,6 @@ import {IEntitlementChecker, IEntitlementCheckerBase} from "contracts/src/base/r
 //contracts
 import {EntitlementChecker} from "contracts/src/base/registry/facets/checker/EntitlementChecker.sol";
 
-// debuggging
-import {console} from "forge-std/console.sol";
-
 contract EntitlementCheckerTest is TestUtils, IEntitlementCheckerBase {
   IEntitlementChecker public checker;
 
@@ -104,6 +101,7 @@ contract EntitlementCheckerTest is TestUtils, IEntitlementCheckerBase {
   function _registerNodes() internal {
     for (uint256 i = 0; i < 10; i++) {
       address node = _randomAddress();
+
       nodeKeys[node] = string(abi.encodePacked("node", vm.toString(i)));
 
       vm.prank(node);
