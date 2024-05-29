@@ -3,6 +3,7 @@ import { Permission } from '@river-build/web3'
 import {
     AddEventResponse_Error,
     EncryptedData,
+    Err,
     SessionKeys,
     UserInboxPayload_GroupEncryptionSessions,
 } from '@river-build/proto'
@@ -717,7 +718,9 @@ export abstract class BaseDecryptionExtensions {
             streamId,
             userAddress: item.fromUserAddress,
             deviceKey: item.solicitation.deviceKey,
-            sessionIds: item.solicitation.isNewDevice ? [] : sessions.map((x) => x.sessionId),
+            sessionIds: item.solicitation.isNewDevice
+                ? []
+                : sessions.map((x) => x.sessionId).sort(),
         })
 
         if (!error) {
@@ -726,6 +729,9 @@ export abstract class BaseDecryptionExtensions {
                 item,
                 sessions,
             })
+        } else if (!error.msg.includes('DUPLICATE_EVENT')) {
+            // duplicate events are expected, we can ignore them, others are not
+            this.log.error('failed to send key fulfillment', error)
         }
     }
 
