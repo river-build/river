@@ -190,11 +190,6 @@ type StreamConfig struct {
 	ReplicationFactor           int
 	DefaultMinEventsPerSnapshot int
 	MinEventsPerSnapshot        map[string]int
-	// CacheExpiration is the interval (secs) after streams with no activity in the cache are expired and evicted
-	CacheExpiration time.Duration
-	// CacheExpirationPollIntervalSec is the interval to check for inactive streams in the cache
-	// (default=CacheExpiration/10)
-	CacheExpirationPollInterval time.Duration
 }
 
 type MediaStreamConfig struct {

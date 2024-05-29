@@ -66,7 +66,7 @@ func makeTestStreamParams(p testParams) (context.Context, *testContext) {
 		StreamConfig: &streamConfig_viewstate_space_t,
 	}
 
-	cache, err := NewStreamCache(ctx, params, blockNumber, bc.ChainMonitor, infra.NewMetrics("", ""))
+	cache, err := NewStreamCache(ctx, params, blockNumber, bc.ChainMonitor, infra.NewMetrics("", ""), nil)
 	if err != nil {
 		panic(err)
 	}
@@ -95,8 +95,8 @@ func makeTestStreamCache(p testParams) (context.Context, *testContext) {
 		testContext.closer()
 		panic(err)
 	}
-
-	streamCache, err := NewStreamCache(ctx, testContext.params, blockNumber, bc.ChainMonitor, infra.NewMetrics("", ""))
+	
+	streamCache, err := NewStreamCache(ctx, testContext.params, blockNumber, bc.ChainMonitor, infra.NewMetrics("", ""), nil)
 	if err != nil {
 		testContext.closer()
 		panic(err)

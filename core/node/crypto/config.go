@@ -3,6 +3,7 @@ package crypto
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/big"
 	"sort"
 	"strings"
@@ -80,6 +81,9 @@ type (
 		ID() common.Hash
 		// Name is the human-readable name of the setting.
 		Name() string
+		// DefaultAsInt64 returns the default value for the key as an int64.
+		// Panics if the default value isn't, or could not be converted to an int64.
+		DefaultAsInt64() int64
 	}
 
 	allSettingValue struct {
@@ -432,6 +436,9 @@ func (s *settingValue) Uint64() (uint64, error) {
 	if v, ok := s.Value.(uint64); ok {
 		return v, nil
 	}
+	if v, ok := s.Value.(int64); ok && v >= 0 {
+		return uint64(v), nil
+	}
 	return 0, RiverError(Err_BAD_CONFIG, "Invalid configuration setting").
 		Tag("typ", fmt.Sprintf("%T", s.Value)).Func("Uint64")
 }
@@ -445,8 +452,11 @@ func (s *settingValue) Int64() (int64, error) {
 	if v, ok := s.Value.(int64); ok {
 		return v, nil
 	}
+	if v, ok := s.Value.(uint64); ok && v < math.MaxInt64 {
+		return int64(v), nil
+	}
 	return 0, RiverError(Err_BAD_CONFIG, "Invalid configuration setting").
-		Tag("typ", fmt.Sprintf("%T", s.Value)).Func("Int64")
+		Tags("typ", fmt.Sprintf("%T", s.Value)).Func("Int64")
 }
 
 // Int returns the setting value as the systems native integer type.
@@ -458,10 +468,10 @@ func (s *settingValue) Int() (int, error) {
 	if v, ok := s.Value.(int); ok {
 		return v, nil
 	}
-	if v, err := s.Uint64(); err == nil {
+	if v, err := s.Uint64(); err == nil && v < math.MaxInt {
 		return int(v), nil
 	}
-	if v, err := s.Int64(); err == nil {
+	if v, err := s.Int64(); err == nil && v < math.MaxInt {
 		return int(v), nil
 	}
 	return 0, RiverError(Err_BAD_CONFIG, "Invalid configuration setting").
@@ -476,6 +486,17 @@ func (ck chainKeyImpl) ID() common.Hash {
 
 func (ck chainKeyImpl) Name() string {
 	return ck.name
+}
+
+func (ck chainKeyImpl) DefaultAsInt64() int64 {
+	switch v := ck.defaultValue.(type) {
+	case int:
+		return int64(v)
+	case int64:
+		return v
+	default:
+		panic(fmt.Sprintf("Unable to retrieve default value for chain key %s as int64", ck.name))
+	}
 }
 
 func newChainKeyImpl(key string, typ abi.Type, defaultValue any) chainKeyImpl {
