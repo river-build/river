@@ -3,7 +3,6 @@ import { Permission } from '@river-build/web3'
 import {
     AddEventResponse_Error,
     EncryptedData,
-    Err,
     SessionKeys,
     UserInboxPayload_GroupEncryptionSessions,
 } from '@river-build/proto'
