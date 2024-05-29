@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"slices"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/events/migrations"
 	. "github.com/river-build/river/core/node/protocol"
