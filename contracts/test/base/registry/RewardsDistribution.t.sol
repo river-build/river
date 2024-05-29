@@ -148,6 +148,31 @@ contract RewardsDistributionTest is
     }
   }
 
+  function test_subsetActiveOperators() public {
+    setupOperators(tOperators);
+    assertEq(
+      rewardsDistributionFacet.getActiveOperators().length,
+      tOperators.length,
+      "Active Operators length does not match expected length"
+    );
+    for (uint256 i = 0; i < tOperators.length; i++) {
+      setOperatorStatus(tOperators[i].addr, NodeOperatorStatus.Approved);
+    }
+    assertEq(
+      rewardsDistributionFacet.getActiveOperators().length,
+      0,
+      "Approved Operators length does not match expected length"
+    );
+    for (uint256 i = 0; i < tOperators.length / 2; i++) {
+      setOperatorStatus(tOperators[i].addr, NodeOperatorStatus.Active);
+    }
+    assertEq(
+      rewardsDistributionFacet.getActiveOperators().length,
+      tOperators.length / 2,
+      "Active Operators length does not match expected length"
+    );
+  }
+
   //specific test case of users delegating to operators
   function test_exUserRewards() public {
     _createEntitiesForTest(
