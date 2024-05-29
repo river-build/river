@@ -389,6 +389,7 @@ func httpGet(t *testing.T, url string) string {
 	require.NoError(t, err)
 	return string(body)
 }
+
 func TestArchiveContinuous(t *testing.T) {
 	tester := newServiceTesterAndStart(t, 1)
 	ctx := tester.ctx
