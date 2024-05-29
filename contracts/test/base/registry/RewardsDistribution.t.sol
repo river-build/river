@@ -31,7 +31,6 @@ import {MainnetDelegation} from "contracts/src/tokens/river/base/delegation/Main
 import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/RewardsDistribution.sol";
 import {SpaceDelegationFacet} from "contracts/src/base/registry/facets/delegation/SpaceDelegationFacet.sol";
 import {INodeOperatorBase} from "contracts/src/base/registry/facets/operator/INodeOperator.sol";
-import {console} from "forge-std/console.sol";
 
 contract RewardsDistributionTest is
   BaseSetup,
