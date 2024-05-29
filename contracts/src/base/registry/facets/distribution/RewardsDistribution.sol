@@ -273,7 +273,7 @@ contract RewardsDistribution is
         currentStatus == NodeOperatorStatus.Active &&
         _isActiveSinceLastCycle(nos.approvalTimeByOperator[operator])
       ) {
-        expectedOperators[i] = operator;
+        expectedOperators[totalActiveOperators] = operator;
         totalActiveOperators++;
       }
     }
