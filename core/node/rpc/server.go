@@ -129,8 +129,7 @@ func (s *Service) start() error {
 		return AsRiverError(err).Message("Failed to init cache and sync").LogError(s.defaultLogger)
 	}
 
-	err = entitlement.Init(s.serverCtx, s.config)
-	if err != nil {
+	if err = entitlement.Init(s.serverCtx, s.config); err != nil {
 		return AsRiverError(err).Message("Failed to init entitlement").LogError(s.defaultLogger)
 	}
 
@@ -494,7 +493,7 @@ func (s *Service) initHandlers() {
 	nodeServicePattern, nodeServiceHandler := protocolconnect.NewNodeToNodeHandler(s, interceptors)
 	s.mux.Handle(nodeServicePattern, nodeServiceHandler)
 
-	s.registerDebugHandlers()
+	s.registerDebugHandlers(s.config.EnableDebugEndpoints)
 }
 
 // StartServer starts the server with the given configuration.

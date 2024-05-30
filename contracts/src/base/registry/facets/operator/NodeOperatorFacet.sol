@@ -72,7 +72,8 @@ contract NodeOperatorFacet is INodeOperator, OwnableBase, ERC721ABase, Facet {
     // Check for valid newStatus transitions
     // Exiting -> Standby
     // Standby -> Approved
-    // Approved -> Exiting
+    // Approved -> Exiting || Active
+    // Active -> Exiting || Approved
     if (
       currentStatus == NodeOperatorStatus.Exiting &&
       newStatus != NodeOperatorStatus.Standby
@@ -85,11 +86,18 @@ contract NodeOperatorFacet is INodeOperator, OwnableBase, ERC721ABase, Facet {
       revert NodeOperator__InvalidStatusTransition();
     } else if (
       currentStatus == NodeOperatorStatus.Approved &&
-      newStatus != NodeOperatorStatus.Exiting
+      (newStatus != NodeOperatorStatus.Exiting &&
+        newStatus != NodeOperatorStatus.Active)
+    ) {
+      revert NodeOperator__InvalidStatusTransition();
+    } else if (
+      currentStatus == NodeOperatorStatus.Active &&
+      (newStatus != NodeOperatorStatus.Exiting &&
+        newStatus != NodeOperatorStatus.Approved)
     ) {
       revert NodeOperator__InvalidStatusTransition();
     }
-    if (newStatus == NodeOperatorStatus.Approved) {
+    if (newStatus == NodeOperatorStatus.Active) {
       ds.approvalTimeByOperator[operator] = block.timestamp;
     } else {
       ds.approvalTimeByOperator[operator] = 0;
