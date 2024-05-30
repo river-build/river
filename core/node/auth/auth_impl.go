@@ -420,7 +420,13 @@ func (ca *chainAuth) isEntitledToChannelUncached(
 		temp := (result.(*timestampedCacheValue).Result())
 		entitlementData := temp.(*entitlementCacheResult) // Assuming result is of *entitlementCacheResult type
 
-		allowed, err := ca.evaluateEntitlements(ctx, cfg, args, entitlementData.owner, entitlementData.entitlementData)
+		allowed, err := ca.evaluateWithEntitlements(
+			ctx,
+			cfg,
+			args,
+			entitlementData.owner,
+			entitlementData.entitlementData,
+		)
 		if err != nil {
 			err = AsRiverError(err).
 				Func("isEntitledToChannel").
@@ -451,6 +457,9 @@ func deserializeWallets(serialized string) []common.Address {
 	return linkedWallets
 }
 
+// evaluateEntitlementData evaluates a list of entitlements and returns true if any of them are true.
+// The entitlements are evaluated across all linked wallets - if any of the wallets are entitled, the user is entitled.
+// Rule entitlements are evaluated by a library shared with xchain and user entitlements are evaluated in the loop.
 func (ca *chainAuth) evaluateEntitlementData(
 	ctx context.Context,
 	entitlements []Entitlement,
@@ -459,12 +468,13 @@ func (ca *chainAuth) evaluateEntitlementData(
 ) (bool, error) {
 	log := dlog.FromCtx(ctx).With("function", "evaluateEntitlementData")
 	log.Debug("evaluateEntitlementData", "args", args)
+
+	wallets := deserializeWallets(args.linkedWallets)
 	for _, ent := range entitlements {
-		log.Debug("entitlement", "entitlement", ent)
 		if ent.entitlementType == "RuleEntitlement" {
 			re := ent.ruleEntitlement
 			log.Debug("RuleEntitlement", "ruleEntitlement", re)
-			result, err := entitlement.EvaluateRuleData(ctx, cfg, deserializeWallets(args.linkedWallets), re)
+			result, err := entitlement.EvaluateRuleData(ctx, cfg, wallets, re)
 			if err != nil {
 				return false, err
 			}
@@ -475,13 +485,18 @@ func (ca *chainAuth) evaluateEntitlementData(
 				log.Debug("rule entitlement is false", "spaceId", args.spaceId)
 			}
 		} else if ent.entitlementType == "UserEntitlement" {
+			log.Debug("UserEntitlement", "userEntitlement", ent.userEntitlement)
 			for _, user := range ent.userEntitlement {
 				if user == everyone {
-					log.Debug("everyone is entitled to space", "spaceId", args.spaceId)
+					log.Debug("user entitlement: everyone is entitled to space", "spaceId", args.spaceId)
 					return true, nil
-				} else if user == args.principal {
-					log.Debug("user is entitled to space", "spaceId", args.spaceId, "userId", args.principal)
-					return true, nil
+				} else {
+					for _, wallet := range wallets {
+						if wallet == user {
+							log.Debug("user entitlement: wallet is entitled to space", "spaceId", args.spaceId, "wallet", wallet)
+							return true, nil
+						}
+					}
 				}
 			}
 		} else {
@@ -491,7 +506,11 @@ func (ca *chainAuth) evaluateEntitlementData(
 	return false, nil
 }
 
-func (ca *chainAuth) evaluateEntitlements(
+// evaluateWithEntitlements evaluates a user permission considering 3 factors:
+// 1. Are they the space owner? The space owner has su over all space operations.
+// 2. Are they banned from the space? If so, they are not entitled to anything.
+// 3. Are they entitled to the space based on the entitlement data?
+func (ca *chainAuth) evaluateWithEntitlements(
 	ctx context.Context,
 	cfg *config.Config,
 	args *ChainAuthArgs,
@@ -520,10 +539,22 @@ func (ca *chainAuth) evaluateEntitlements(
 	// 2. Check if the user has been banned
 	banned, err := ca.spaceContract.IsBanned(ctx, args.spaceId, wallets)
 	if err != nil {
-		return false, AsRiverError(err).Func("evaluateEntitlements").Tag("spaceId", args.spaceId).Tag("userId", args.principal)
+		return false, AsRiverError(
+			err,
+		).Func("evaluateEntitlements").
+			Tag("spaceId", args.spaceId).
+			Tag("userId", args.principal)
 	}
 	if banned {
-		log.Warn("Evaluating entitlements for a user who is banned from the space", "userId", args.principal, "spaceId", args.spaceId, "linkedWallets", args.linkedWallets)
+		log.Warn(
+			"Evaluating entitlements for a user who is banned from the space",
+			"userId",
+			args.principal,
+			"spaceId",
+			args.spaceId,
+			"linkedWallets",
+			args.linkedWallets,
+		)
 		return false, nil
 	}
 
@@ -534,7 +565,6 @@ func (ca *chainAuth) evaluateEntitlements(
 	} else {
 		return allowed, nil
 	}
-
 }
 
 func (ca *chainAuth) isEntitledToSpaceUncached(
@@ -568,7 +598,7 @@ func (ca *chainAuth) isEntitledToSpaceUncached(
 	temp := (result.(*timestampedCacheValue).Result())
 	entitlementData := temp.(*entitlementCacheResult) // Assuming result is of *entitlementCacheResult type
 
-	allowed, err := ca.evaluateEntitlements(ctx, cfg, args, entitlementData.owner, entitlementData.entitlementData)
+	allowed, err := ca.evaluateWithEntitlements(ctx, cfg, args, entitlementData.owner, entitlementData.entitlementData)
 	if err != nil {
 		err = AsRiverError(err).
 			Func("isEntitledToSpace").

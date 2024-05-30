@@ -32,7 +32,10 @@ func NewBannedAddressCache(ttl time.Duration) *bannedAddressCache {
 	}
 }
 
-func (b *bannedAddressCache) IsBanned(wallets []common.Address, onMiss func() (map[common.Address]struct{}, error)) (bool, error) {
+func (b *bannedAddressCache) IsBanned(
+	wallets []common.Address,
+	onMiss func() (map[common.Address]struct{}, error),
+) (bool, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
