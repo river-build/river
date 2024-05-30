@@ -5,6 +5,7 @@ import {
     Envelope,
     StreamEvent,
     ChannelMessage,
+    MembershipOp,
     SnapshotCaseType,
     SyncStreamsResponse,
     SyncOp,
@@ -21,10 +22,9 @@ import {
 } from './id'
 import { ParsedEvent, DecryptedTimelineEvent } from './types'
 import { getPublicKey, utils } from 'ethereum-cryptography/secp256k1'
-import { MembershipOp } from '@river-build/proto'
 import { EntitlementsDelegate } from '@river-build/encryption'
 import { bin_fromHexString, check, dlog } from '@river-build/dlog'
-import { ethers } from 'ethers'
+import { ethers, ContractTransaction } from 'ethers'
 import { RiverDbManager } from './riverDbManager'
 import { StreamRpcClientType, makeStreamRpcClient } from './makeStreamRpcClient'
 import assert from 'assert'
@@ -39,7 +39,6 @@ import {
     createRiverRegistry,
 } from '@river-build/web3'
 import { makeRiverChainConfig } from './riverConfig'
-import { ContractTransaction } from 'ethers'
 
 const log = dlog('csb:test:util')
 
@@ -378,12 +377,10 @@ export async function linkWallets(
 ) {
     const walletLink = rootSpaceDapp.getWalletLink()
     let txn: ContractTransaction | undefined
-    let error: Error | undefined
     try {
         txn = await walletLink.linkWalletToRootKey(rootWallet, linkedWallet)
     } catch (err: any) {
         const parsedError = walletLink.parseError(err)
-        error = parsedError
         log('linkWallets error', parsedError)
     }
 

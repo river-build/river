@@ -15,7 +15,6 @@ import {
 } from './util.test'
 import { Client } from './client'
 import { dlog } from '@river-build/dlog'
-import { makeDefaultChannelStreamId, makeSpaceStreamId, makeUserStreamId } from './id'
 import { MembershipOp } from '@river-build/proto'
 import { ethers } from 'ethers'
 import {
@@ -116,7 +115,6 @@ describe('spaceWithEntitlements', () => {
 
         // create a user stream
         const bob = await makeTestClient({ context: bobsContext })
-        const bobsUserStreamId = makeUserStreamId(bob.userId)
 
         const pricingModules = await bobSpaceDapp.listPricingModules()
         const dynamicPricingModule = getDynamicPricingModule(pricingModules)
@@ -565,11 +563,7 @@ describe('spaceWithEntitlements', () => {
             },
         }
 
-        const {
-            spaceId,
-            defaultChannelId: channelId,
-            userStreamView: bobUserStreamView,
-        } = await createSpaceAndDefaultChannel(
+        const { spaceId, defaultChannelId: channelId } = await createSpaceAndDefaultChannel(
             bob,
             bobSpaceDapp,
             bobProvider.wallet,
@@ -580,7 +574,7 @@ describe('spaceWithEntitlements', () => {
         await linkWallets(aliceSpaceDapp, aliceProvider.wallet, carolProvider.wallet)
 
         // join alice
-        console.log('Minting an NFT for carols wallet, which is linked to alices wallet')
+        log('Minting an NFT for carols wallet, which is linked to alices wallet')
         await publicMint('TestNFT1', carolsWallet.address as `0x${string}`)
 
         await expectUserCanJoin(
@@ -659,11 +653,7 @@ describe('spaceWithEntitlements', () => {
             },
         }
 
-        const {
-            spaceId,
-            defaultChannelId: channelId,
-            userStreamView: bobUserStreamView,
-        } = await createSpaceAndDefaultChannel(
+        const { spaceId, defaultChannelId: channelId } = await createSpaceAndDefaultChannel(
             bob,
             bobSpaceDapp,
             bobProvider.wallet,
@@ -675,10 +665,10 @@ describe('spaceWithEntitlements', () => {
         await linkWallets(carolSpaceDapp, carolProvider.wallet, aliceProvider.wallet)
 
         // join alice
-        console.log('Minting an NFT for carols wallet, which is the root to alices wallet')
+        log('Minting an NFT for carols wallet, which is the root to alices wallet')
         await publicMint('TestNFT1', carolsWallet.address as `0x${string}`)
 
-        console.log('expect that alice can join the space')
+        log('expect that alice can join the space')
         await expectUserCanJoin(
             spaceId,
             channelId,
@@ -752,11 +742,7 @@ describe('spaceWithEntitlements', () => {
             },
         }
 
-        const {
-            spaceId,
-            defaultChannelId: channelId,
-            userStreamView: bobUserStreamView,
-        } = await createSpaceAndDefaultChannel(
+        const { spaceId, defaultChannelId: channelId } = await createSpaceAndDefaultChannel(
             bob,
             bobSpaceDapp,
             bobProvider.wallet,
@@ -765,7 +751,7 @@ describe('spaceWithEntitlements', () => {
         )
 
         // join alice
-        console.log('Minting an NFT for alice')
+        log('Minting an NFT for alice')
         await publicMint('TestNFT1', alicesWallet.address as `0x${string}`)
 
         await expectUserCanJoin(
@@ -957,22 +943,7 @@ describe('spaceWithEntitlements', () => {
             },
         }
         log('transaction start bob creating space')
-        const createSpaceStart = Date.now()
-        const transaction = await bobSpaceDapp.createSpace(
-            {
-                spaceName: 'bobs-space-metadata',
-                spaceMetadata: 'bobs-space-metadata',
-                channelName: 'general', // default channel name
-                membership: membershipInfo,
-            },
-            bobProvider.wallet,
-        )
-        log('transaction took', Date.now() - createSpaceStart)
-        const {
-            spaceId,
-            defaultChannelId: channelId,
-            userStreamView: bobUserStreamView,
-        } = await createSpaceAndDefaultChannel(
+        const { spaceId, defaultChannelId: channelId } = await createSpaceAndDefaultChannel(
             bob,
             bobSpaceDapp,
             bobProvider.wallet,
@@ -1074,11 +1045,7 @@ describe('spaceWithEntitlements', () => {
                 ruleData,
             },
         }
-        const {
-            spaceId,
-            defaultChannelId: channelId,
-            userStreamView: bobUserStreamView,
-        } = await createSpaceAndDefaultChannel(
+        const { spaceId, defaultChannelId: channelId } = await createSpaceAndDefaultChannel(
             bob,
             bobSpaceDapp,
             bobProvider.wallet,
@@ -1362,11 +1329,7 @@ describe('spaceWithEntitlements', () => {
                 ruleData,
             },
         }
-        const {
-            spaceId,
-            defaultChannelId: channelId,
-            userStreamView: bobUserStreamView,
-        } = await createSpaceAndDefaultChannel(
+        const { spaceId, defaultChannelId: channelId } = await createSpaceAndDefaultChannel(
             bob,
             bobSpaceDapp,
             bobProvider.wallet,
@@ -1376,9 +1339,6 @@ describe('spaceWithEntitlements', () => {
 
         log("Mint Alice's NFTs")
         await Promise.all([aliceMintTx1, aliceMintTx2])
-
-        // first join the space on chain
-        const aliceJoinStart = Date.now()
 
         log('expect alice can join space')
         await expectUserCanJoin(
