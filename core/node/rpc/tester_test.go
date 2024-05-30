@@ -215,12 +215,6 @@ func (st *serviceTester) getConfig(opts ...startOpts) *config.Config {
 			StartupDelay: 2 * time.Millisecond,
 		},
 		StorageType: "postgres",
-		Stream: config.StreamConfig{
-			RecencyConstraints: config.RecencyConstraintsConfig{
-				AgeSeconds:  11,
-				Generations: 5,
-			},
-		},
 		Network: config.NetworkConfig{
 			NumRetries: 3,
 		},

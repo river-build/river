@@ -5,7 +5,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/river-build/river/core/node/base/test"
-	"github.com/river-build/river/core/node/config"
 	"github.com/river-build/river/core/node/crypto"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
@@ -16,11 +15,6 @@ import (
 	"testing"
 	"time"
 )
-
-var recencyConstraintsConfig_t = config.RecencyConstraintsConfig{
-	Generations: 5,
-	AgeSeconds:  11,
-}
 
 func parsedEvent(t *testing.T, envelope *Envelope) *ParsedEvent {
 	parsed, err := ParseEvent(envelope)
@@ -171,7 +165,7 @@ func TestLoad(t *testing.T) {
 	)
 	assert.NoError(t, err)
 	nextEvent := parsedEvent(t, join2)
-	err = view.ValidateNextEvent(ctx, &recencyConstraintsConfig_t, nextEvent, time.Now())
+	err = view.ValidateNextEvent(ctx, btc.OnChainConfig, nextEvent, time.Now())
 	assert.NoError(t, err)
 	view, err = view.copyAndAddEvent(nextEvent)
 	assert.NoError(t, err)
@@ -193,7 +187,7 @@ func TestLoad(t *testing.T) {
 	assert.NoError(t, err)
 	nextEvent = parsedEvent(t, join3)
 	assert.NoError(t, err)
-	err = view.ValidateNextEvent(ctx, &recencyConstraintsConfig_t, nextEvent, time.Now())
+	err = view.ValidateNextEvent(ctx, btc.OnChainConfig, nextEvent, time.Now())
 	assert.NoError(t, err)
 	view, err = view.copyAndAddEvent(nextEvent)
 	assert.NoError(t, err)
@@ -272,17 +266,19 @@ func TestLoad(t *testing.T) {
 	assert.NoError(t, err)
 	nextEvent = parsedEvent(t, join4)
 	assert.NoError(t, err)
-	err = newSV1.ValidateNextEvent(ctx, &recencyConstraintsConfig_t, nextEvent, time.Now())
+	err = newSV1.ValidateNextEvent(ctx, btc.OnChainConfig, nextEvent, time.Now())
 	assert.NoError(t, err)
 	_, err = newSV1.copyAndAddEvent(nextEvent)
 	assert.NoError(t, err)
 	// wait 1 second
 	time.Sleep(1 * time.Second)
 	// try with tighter recency constraints
-	err = newSV1.ValidateNextEvent(ctx, &config.RecencyConstraintsConfig{
-		Generations: 5,
-		AgeSeconds:  1,
-	}, nextEvent, time.Now())
+	setOnChainStreamConfig(ctx, btc, testParams{
+		recencyConstraintsGenerations: 5,
+		recencyConstraintsAgeSec:      1,
+	})
+
+	err = newSV1.ValidateNextEvent(ctx, btc.OnChainConfig, nextEvent, time.Now())
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "BAD_PREV_MINIBLOCK_HASH")
 }

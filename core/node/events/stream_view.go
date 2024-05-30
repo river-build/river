@@ -8,7 +8,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/config"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	. "github.com/river-build/river/core/node/protocol"
@@ -39,7 +38,7 @@ type StreamView interface {
 	LastBlock() *MiniblockInfo
 	ValidateNextEvent(
 		ctx context.Context,
-		cfg *config.RecencyConstraintsConfig,
+		cfg crypto.OnChainConfiguration,
 		parsedEvent *ParsedEvent,
 		currentTime time.Time,
 	) error
@@ -529,7 +528,7 @@ func (r *streamViewImpl) shouldSnapshot(ctx context.Context, cfg crypto.OnChainC
 
 func (r *streamViewImpl) ValidateNextEvent(
 	ctx context.Context,
-	cfg *config.RecencyConstraintsConfig,
+	cfg crypto.OnChainConfiguration,
 	parsedEvent *ParsedEvent,
 	currentTime time.Time,
 ) error {
@@ -601,11 +600,16 @@ func (r *streamViewImpl) ValidateNextEvent(
 
 func (r *streamViewImpl) isRecentBlock(
 	ctx context.Context,
-	cfg *config.RecencyConstraintsConfig,
+	cfg crypto.OnChainConfiguration,
 	block *MiniblockInfo,
 	currentTime time.Time,
 ) bool {
-	maxAgeDuration := time.Duration(cfg.AgeSeconds) * time.Second
+	ageSec, err := cfg.GetInt64(crypto.StreamRecencyConstraintsAgeSecConfigKey)
+	if err != nil {
+		ageSec = 5
+	}
+
+	maxAgeDuration := time.Duration(ageSec) * time.Second
 	if maxAgeDuration == 0 {
 		maxAgeDuration = 5 * time.Second
 	}

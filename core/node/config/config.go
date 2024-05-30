@@ -54,9 +54,6 @@ type Config struct {
 	Metrics             MetricsConfig
 	PerformanceTracking PerformanceTrackingConfig
 
-	// Stream configuration
-	Stream StreamConfig
-
 	// Network configuration
 	Network NetworkConfig
 
@@ -179,15 +176,6 @@ type ChainConfig struct {
 type PerformanceTrackingConfig struct {
 	ProfilingEnabled bool
 	TracingEnabled   bool
-}
-
-type StreamConfig struct {
-	RecencyConstraints RecencyConstraintsConfig
-}
-
-type RecencyConstraintsConfig struct {
-	AgeSeconds  int
-	Generations int
 }
 
 type ContractConfig struct {

@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/river-build/river/core/node/auth"
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/config"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
 	. "github.com/river-build/river/core/node/protocol"
@@ -102,7 +101,6 @@ type aeKeyFulfillmentRules struct {
 */
 func CanAddEvent(
 	ctx context.Context,
-	cfg *config.StreamConfig,
 	chainConfig crypto.OnChainConfiguration,
 	validNodeAddresses []common.Address,
 	currentTime time.Time,
@@ -126,7 +124,7 @@ func CanAddEvent(
 		return false, nil, nil, RiverError(Err_INVALID_ARGUMENT, "event has no prevMiniblockHash")
 	}
 	// check preceding miniblock hash
-	err := streamView.ValidateNextEvent(ctx, &cfg.RecencyConstraints, parsedEvent, currentTime)
+	err := streamView.ValidateNextEvent(ctx, chainConfig, parsedEvent, currentTime)
 	if err != nil {
 		return false, nil, nil, err
 	}
