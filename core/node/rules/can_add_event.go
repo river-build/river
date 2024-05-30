@@ -3,6 +3,7 @@ package rules
 import (
 	"bytes"
 	"context"
+	"github.com/river-build/river/core/node/crypto"
 	"log/slog"
 	"slices"
 	"time"
@@ -20,6 +21,7 @@ import (
 type aeParams struct {
 	ctx                context.Context
 	cfg                *config.StreamConfig
+	mediaMaxChunkSize  int
 	validNodeAddresses []common.Address
 	currentTime        time.Time
 	streamView         events.StreamView
@@ -100,6 +102,7 @@ type aeKeyFulfillmentRules struct {
 func CanAddEvent(
 	ctx context.Context,
 	cfg *config.StreamConfig,
+	chainConfig crypto.OnChainConfiguration,
 	validNodeAddresses []common.Address,
 	currentTime time.Time,
 	parsedEvent *events.ParsedEvent,
@@ -132,9 +135,15 @@ func CanAddEvent(
 		return false, nil, nil, err
 	}
 
+	mediaMaxChunkSize, err := chainConfig.GetInt(crypto.StreamMediaMaxChunkSizeConfigKey)
+	if err != nil {
+		return false, nil, nil, err
+	}
+
 	ru := &aeParams{
 		ctx:                ctx,
 		cfg:                cfg,
+		mediaMaxChunkSize:  mediaMaxChunkSize,
 		validNodeAddresses: validNodeAddresses,
 		currentTime:        currentTime,
 		parsedEvent:        parsedEvent,
@@ -1075,12 +1084,12 @@ func (ru *aeMediaPayloadChunkRules) canAddMediaChunk() (bool, error) {
 		return false, RiverError(Err_INVALID_ARGUMENT, "chunk index out of bounds")
 	}
 
-	if len(chunk.Data) > ru.params.cfg.Media.MaxChunkSize {
+	if len(chunk.Data) > ru.params.mediaMaxChunkSize {
 		return false, RiverError(
 			Err_INVALID_ARGUMENT,
 			"chunk size must be less than or equal to",
 			"cfg.Media.MaxChunkSize",
-			ru.params.cfg.Media.MaxChunkSize)
+			ru.params.mediaMaxChunkSize)
 	}
 
 	return true, nil

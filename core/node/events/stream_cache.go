@@ -8,7 +8,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/config"
 	"github.com/river-build/river/core/node/contracts"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
@@ -27,11 +26,11 @@ const (
 )
 
 type StreamCacheParams struct {
-	Storage      storage.StreamStorage
-	Wallet       *crypto.Wallet
-	Riverchain   *crypto.Blockchain
-	Registry     *registries.RiverRegistryContract
-	StreamConfig *config.StreamConfig
+	Storage     storage.StreamStorage
+	Wallet      *crypto.Wallet
+	RiverChain  *crypto.Blockchain
+	Registry    *registries.RiverRegistryContract
+	ChainConfig crypto.OnChainConfiguration
 }
 
 type StreamCache interface {
@@ -82,16 +81,17 @@ func NewStreamCache(
 			"stream_cache_size", "Number of streams in stream cache",
 			"chain_id", "address",
 		).WithLabelValues(
-			params.Riverchain.ChainId.String(),
+			params.RiverChain.ChainId.String(),
 			params.Wallet.Address.String(),
 		),
 		streamCacheUnloadedGauge: metrics.NewGaugeVecEx(
 			"stream_cache_unloaded", "Number of unloaded streams in stream cache",
 			"chain_id", "address",
 		).WithLabelValues(
-			params.Riverchain.ChainId.String(),
+			params.RiverChain.ChainId.String(),
 			params.Wallet.Address.String(),
 		),
+		chainConfig: chainConfig,
 	}
 
 	streams, err := params.Registry.GetAllStreams(ctx, appliedBlockNum)

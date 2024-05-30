@@ -4,30 +4,15 @@ import (
 	"context"
 	"testing"
 
-	"github.com/river-build/river/core/node/config"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/node/testutils"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 )
-
-var streamConfig_viewstate_space_t = config.StreamConfig{
-	Media: config.MediaStreamConfig{
-		MaxChunkCount: 100,
-		MaxChunkSize:  1000000,
-	},
-	RecencyConstraints: config.RecencyConstraintsConfig{
-		AgeSeconds:  5,
-		Generations: 5,
-	},
-	DefaultMinEventsPerSnapshot: 2,
-	MinEventsPerSnapshot:        map[string]int{},
-}
 
 func makeEnvelopeWithPayload_T(
 	t *testing.T,
@@ -206,7 +191,7 @@ func leaveChannel_T(
 
 func TestSpaceViewState(t *testing.T) {
 	ctx, tt := makeTestStreamCache(testParams{
-		replFactor: 1,
+		defaultMinEventsPerSnapshot: 2,
 	})
 	defer tt.closer()
 
@@ -245,6 +230,8 @@ func TestSpaceViewState(t *testing.T) {
 	spaceViewStateTest_CheckUserJoined(t, view1.(JoinableStreamView), user1Wallet, true)
 	spaceViewStateTest_CheckUserJoined(t, view1.(JoinableStreamView), user2Wallet, true)
 	spaceViewStateTest_CheckUserJoined(t, view1.(JoinableStreamView), user3Wallet, true)
+	require.Equal(t, 1, len(stream.view.blocks))
+
 	// make a miniblock
 	_, _, err = stream.TestMakeMiniblock(ctx, false, -1)
 	require.NoError(t, err)
@@ -292,7 +279,8 @@ func spaceViewStateTest_CheckUserJoined(
 
 func TestChannelViewState_JoinedMembers(t *testing.T) {
 	ctx, tt := makeTestStreamCache(testParams{
-		replFactor: 1,
+		replFactor:                  1,
+		defaultMinEventsPerSnapshot: 2,
 	})
 	defer tt.closer()
 
@@ -350,7 +338,8 @@ func TestChannelViewState_JoinedMembers(t *testing.T) {
 
 func TestChannelViewState_RemainingMembers(t *testing.T) {
 	ctx, tt := makeTestStreamCache(testParams{
-		replFactor: 1,
+		replFactor:                  1,
+		defaultMinEventsPerSnapshot: 2,
 	})
 	defer tt.closer()
 

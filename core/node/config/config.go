@@ -184,16 +184,8 @@ type PerformanceTrackingConfig struct {
 }
 
 type StreamConfig struct {
-	Media                       MediaStreamConfig
-	StreamMembershipLimits      map[string]int
-	RecencyConstraints          RecencyConstraintsConfig
-	DefaultMinEventsPerSnapshot int
-	MinEventsPerSnapshot        map[string]int
-}
-
-type MediaStreamConfig struct {
-	MaxChunkCount int
-	MaxChunkSize  int
+	StreamMembershipLimits map[string]int
+	RecencyConstraints     RecencyConstraintsConfig
 }
 
 type RecencyConstraintsConfig struct {

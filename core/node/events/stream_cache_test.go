@@ -102,11 +102,11 @@ func testStreamCacheViewEviction(t *testing.T, useBatchRegistration bool) {
 	require.Equal(crypto.TransactionResultSuccess, receipt.Status, "set configuration transaction failed")
 
 	streamCache, err := NewStreamCache(ctx, &StreamCacheParams{
-		Storage:      pg.Storage,
-		Wallet:       node.Wallet,
-		Riverchain:   node,
-		Registry:     riverRegistry,
-		StreamConfig: &config.StreamConfig{},
+		Storage:     pg.Storage,
+		Wallet:      node.Wallet,
+		RiverChain:  node,
+		Registry:    riverRegistry,
+		ChainConfig: btc.OnChainConfig,
 	}, 0, chainMonitor, infra.NewMetrics("", ""), nil)
 	require.NoError(err, "instantiating stream cache")
 
@@ -277,11 +277,11 @@ func testCacheEvictionWithFilledMiniBlockPool(t *testing.T, useBatchRegistration
 	defer pg.Close()
 
 	streamCacheParams := &StreamCacheParams{
-		Storage:      pg.Storage,
-		Wallet:       node.Wallet,
-		Riverchain:   node,
-		Registry:     riverRegistry,
-		StreamConfig: &config.StreamConfig{},
+		Storage:     pg.Storage,
+		Wallet:      node.Wallet,
+		RiverChain:  node,
+		Registry:    riverRegistry,
+		ChainConfig: btc.OnChainConfig,
 	}
 
 	streamCache, err := NewStreamCache(ctx, streamCacheParams, 0, chainMonitor, infra.NewMetrics("", ""), nil)
@@ -434,11 +434,11 @@ func testStreamMiniblockBatchProduction(t *testing.T, useBatchRegistration bool)
 	defer pg.Close()
 
 	streamCache, err := NewStreamCache(ctx, &StreamCacheParams{
-		Storage:      pg.Storage,
-		Wallet:       node.Wallet,
-		Riverchain:   node,
-		Registry:     riverRegistry,
-		StreamConfig: &config.StreamConfig{},
+		Storage:     pg.Storage,
+		Wallet:      node.Wallet,
+		RiverChain:  node,
+		Registry:    riverRegistry,
+		ChainConfig: btc.OnChainConfig,
 	}, node.InitialBlockNum, node.ChainMonitor, infra.NewMetrics("", ""), nil)
 	require.NoError(err, "instantiating stream cache")
 
@@ -582,11 +582,11 @@ func TestStreamUnloadWithSubscribers(t *testing.T) {
 	defer pg.Close()
 
 	streamCache, err := NewStreamCache(ctx, &StreamCacheParams{
-		Storage:      pg.Storage,
-		Wallet:       node.Wallet,
-		Riverchain:   node,
-		Registry:     riverRegistry,
-		StreamConfig: &config.StreamConfig{},
+		Storage:     pg.Storage,
+		Wallet:      node.Wallet,
+		RiverChain:  node,
+		Registry:    riverRegistry,
+		ChainConfig: btc.OnChainConfig,
 	}, node.InitialBlockNum, node.ChainMonitor, infra.NewMetrics("", ""), nil)
 	require.NoError(err, "instantiating stream cache")
 
@@ -628,11 +628,11 @@ func TestStreamUnloadWithSubscribers(t *testing.T) {
 
 	// create fresh stream cache and subscribe
 	streamCache, err = NewStreamCache(ctx, &StreamCacheParams{
-		Storage:      pg.Storage,
-		Wallet:       node.Wallet,
-		Riverchain:   node,
-		Registry:     riverRegistry,
-		StreamConfig: &config.StreamConfig{},
+		Storage:     pg.Storage,
+		Wallet:      node.Wallet,
+		RiverChain:  node,
+		Registry:    riverRegistry,
+		ChainConfig: btc.OnChainConfig,
 	}, blockNum, node.ChainMonitor, infra.NewMetrics("", ""), nil)
 	require.NoError(err, "instantiating stream cache")
 

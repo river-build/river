@@ -66,7 +66,7 @@ func (s *Service) registerDebugHandlers(enableDebugEndpoints bool) {
 	if enableDebugEndpoints {
 		handler.Handle(mux, "/debug/cache", &cacheHandler{cache: s.cache})
 		handler.Handle(mux, "/debug/txpool", &txpoolHandler{riverTxPool: s.riverChain.TxPool})
-		handler.Handle(mux, "/debug/config", &onChainConfigHandler{onChainConfig: s.onChainConfig})
+		handler.Handle(mux, "/debug/config", &onChainConfigHandler{onChainConfig: s.chainConfig})
 		handler.HandleFunc(mux, "/debug/memory", MemoryHandler)
 		handler.HandleFunc(mux, "/debug/pprof/", pprof.Index)
 		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)

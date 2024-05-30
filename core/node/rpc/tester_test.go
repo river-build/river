@@ -216,10 +216,6 @@ func (st *serviceTester) getConfig(opts ...startOpts) *config.Config {
 		},
 		StorageType: "postgres",
 		Stream: config.StreamConfig{
-			Media: config.MediaStreamConfig{
-				MaxChunkCount: 100,
-				MaxChunkSize:  1000000,
-			},
 			RecencyConstraints: config.RecencyConstraintsConfig{
 				AgeSeconds:  11,
 				Generations: 5,

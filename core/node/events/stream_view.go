@@ -3,18 +3,18 @@ package events
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
+	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/config"
+	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
 	. "github.com/river-build/river/core/node/utils"
-
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -44,7 +44,7 @@ type StreamView interface {
 		currentTime time.Time,
 	) error
 	GetStats() StreamViewStats
-	ProposeNextMiniblock(ctx context.Context, cfg *config.StreamConfig, forceSnapshot bool) (*MiniblockProposal, error)
+	ProposeNextMiniblock(ctx context.Context, cfg crypto.OnChainConfiguration, forceSnapshot bool) (*MiniblockProposal, error)
 	IsMember(userAddress []byte) (bool, error)
 }
 
@@ -199,7 +199,7 @@ func (r *streamViewImpl) LastBlock() *MiniblockInfo {
 // Returns nil if there are no events to propose.
 func (r *streamViewImpl) ProposeNextMiniblock(
 	ctx context.Context,
-	cfg *config.StreamConfig,
+	cfg crypto.OnChainConfiguration,
 	forceSnapshot bool,
 ) (*MiniblockProposal, error) {
 	if r.minipool.events.Len() == 0 && !forceSnapshot {
@@ -213,7 +213,7 @@ func (r *streamViewImpl) ProposeNextMiniblock(
 		Hashes:            hashes,
 		NewMiniblockNum:   r.minipool.generation,
 		PrevMiniblockHash: r.LastBlock().headerEvent.Hash[:],
-		ShouldSnapshot:    forceSnapshot || r.shouldSnapshot(cfg),
+		ShouldSnapshot:    forceSnapshot || r.shouldSnapshot(ctx, cfg),
 	}, nil
 }
 
@@ -306,8 +306,13 @@ func (r *streamViewImpl) makeMiniblockHeader(
 
 func (r *streamViewImpl) copyAndApplyBlock(
 	miniblock *MiniblockInfo,
-	cfg *config.StreamConfig,
+	cfg crypto.OnChainConfiguration,
 ) (*streamViewImpl, error) {
+	recencyConstraintsGenerations, err := cfg.GetInt(crypto.StreamRecencyConstraintsGenerationsConfigKey)
+	if err != nil {
+		return nil, err
+	}
+
 	header := miniblock.headerEvent.Event.GetMiniblockHeader()
 	if header == nil {
 		return nil, RiverError(
@@ -367,7 +372,7 @@ func (r *streamViewImpl) copyAndApplyBlock(
 	var snapshot *Snapshot
 	if header.Snapshot != nil {
 		snapshot = header.Snapshot
-		startIndex = max(0, len(r.blocks)-cfg.RecencyConstraints.Generations)
+		startIndex = max(0, len(r.blocks)-recencyConstraintsGenerations)
 		snapshotIndex = len(r.blocks) - startIndex
 	} else {
 		startIndex = 0
@@ -494,24 +499,13 @@ func (r *streamViewImpl) SyncCookie(localNodeAddress common.Address) *SyncCookie
 	}
 }
 
-func (r *streamViewImpl) getMinEventsPerSnapshot(cfg *config.StreamConfig) int {
-	// does this stream have a custom value for it's prefix?
-	if cfg.MinEventsPerSnapshot != nil {
-		streamPrefix := hex.EncodeToString(r.streamId[:1])
-		if value, ok := cfg.MinEventsPerSnapshot[streamPrefix]; ok {
-			return value
-		}
+func (r *streamViewImpl) shouldSnapshot(ctx context.Context, cfg crypto.OnChainConfiguration) bool {
+	minEventsPerSnapshot, err := cfg.GetMinEventsPerSnapshot(r.streamId[0])
+	if err != nil {
+		dlog.FromCtx(ctx).Error("Unable to determine minimum events per snapshot",
+			"streamType", fmt.Sprintf("%x", r.streamId[0]), "err", err)
+		return false
 	}
-	// is the value set in the config?
-	if cfg.DefaultMinEventsPerSnapshot != 0 {
-		return cfg.DefaultMinEventsPerSnapshot
-	}
-	// nothing is set, return magic number
-	return 100
-}
-
-func (r *streamViewImpl) shouldSnapshot(cfg *config.StreamConfig) bool {
-	minEventsPerSnapshot := r.getMinEventsPerSnapshot(cfg)
 
 	count := 0
 	// count the events in the minipool
