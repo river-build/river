@@ -4,7 +4,6 @@ pragma solidity ^0.8.23;
 // interfaces
 import {IMainnetDelegation} from "contracts/src/tokens/river/base/delegation/IMainnetDelegation.sol";
 import {ICrossDomainMessenger} from "contracts/src/tokens/river/mainnet/delegation/ICrossDomainMessenger.sol";
-import {IProxyDelegation} from "contracts/src/tokens/river/mainnet/delegation/IProxyDelegation.sol";
 
 // libraries
 
@@ -69,9 +68,8 @@ contract MainnetDelegation is
   // =============================================================
   //                           Delegation
   // =============================================================
-
   function setProxyDelegation(address proxyDelegation) external onlyOwner {
-    _setProxyDelegation(IProxyDelegation(proxyDelegation));
+    _setProxyDelegation(proxyDelegation);
   }
 
   /// @inheritdoc IMainnetDelegation

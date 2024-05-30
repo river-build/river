@@ -3,7 +3,6 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {IMainnetDelegationBase} from "./IMainnetDelegation.sol";
-import {IProxyDelegation} from "contracts/src/tokens/river/mainnet/delegation/IProxyDelegation.sol";
 import {ICrossDomainMessenger} from "contracts/src/tokens/river/mainnet/delegation/ICrossDomainMessenger.sol";
 
 // libraries
@@ -143,11 +142,11 @@ abstract contract MainnetDelegationBase is IMainnetDelegationBase {
     return MainnetDelegationStorage.layout().claimerByDelegator[owner];
   }
 
-  function _setProxyDelegation(IProxyDelegation proxyDelegation) internal {
+  function _setProxyDelegation(address proxyDelegation) internal {
     MainnetDelegationStorage.layout().proxyDelegation = proxyDelegation;
   }
 
-  function _getProxyDelegation() internal view returns (IProxyDelegation) {
+  function _getProxyDelegation() internal view returns (address) {
     return MainnetDelegationStorage.layout().proxyDelegation;
   }
 

@@ -4,6 +4,7 @@ pragma solidity ^0.8.23;
 // interfaces
 import {ICrossDomainMessenger} from "./ICrossDomainMessenger.sol";
 import {IMainnetDelegation} from "contracts/src/tokens/river/base/delegation/IMainnetDelegation.sol";
+import {IProxyBatchDelegation} from "./IProxyBatchDelegation.sol";
 
 // libraries
 
@@ -11,7 +12,7 @@ import {IMainnetDelegation} from "contracts/src/tokens/river/base/delegation/IMa
 import {River} from "contracts/src/tokens/river/mainnet/River.sol";
 import {AuthorizedClaimers} from "contracts/src/tokens/river/mainnet/claimer/AuthorizedClaimers.sol";
 
-contract ProxyBatchDelegation {
+contract ProxyBatchDelegation is IProxyBatchDelegation {
   address public immutable MESSENGER;
   address public immutable TARGET;
 
