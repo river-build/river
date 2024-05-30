@@ -19,16 +19,17 @@ import (
 )
 
 type csParams struct {
-	ctx                 context.Context
-	cfg                 *config.Config
-	maxChunkCount       int
-	streamId            shared.StreamId
-	parsedEvents        []*events.ParsedEvent
-	requestMetadata     map[string][]byte
-	inceptionPayload    IsInceptionPayload
-	creatorAddress      []byte
-	creatorUserId       string
-	creatorUserStreamId shared.StreamId
+	ctx                   context.Context
+	cfg                   *config.Config
+	maxChunkCount         int
+	streamMembershipLimit int
+	streamId              shared.StreamId
+	parsedEvents          []*events.ParsedEvent
+	requestMetadata       map[string][]byte
+	inceptionPayload      IsInceptionPayload
+	creatorAddress        []byte
+	creatorUserId         string
+	creatorUserStreamId   shared.StreamId
 }
 
 type csSpaceRules struct {
@@ -167,17 +168,23 @@ func CanCreateStream(
 		return nil, err
 	}
 
+	streamMembershipLimit, err := chainConfig.GetStreamMembershipLimit(streamId[0])
+	if err != nil {
+		return nil, err
+	}
+
 	r := &csParams{
-		ctx:                 ctx,
-		cfg:                 cfg,
-		maxChunkCount:       maxChunkCount,
-		streamId:            streamId,
-		parsedEvents:        parsedEvents,
-		requestMetadata:     requestMetadata,
-		inceptionPayload:    inceptionPayload,
-		creatorAddress:      creatorAddress,
-		creatorUserId:       creatorUserId,
-		creatorUserStreamId: creatorUserStreamId,
+		ctx:                   ctx,
+		cfg:                   cfg,
+		maxChunkCount:         maxChunkCount,
+		streamMembershipLimit: streamMembershipLimit,
+		streamId:              streamId,
+		parsedEvents:          parsedEvents,
+		requestMetadata:       requestMetadata,
+		inceptionPayload:      inceptionPayload,
+		creatorAddress:        creatorAddress,
+		creatorUserId:         creatorUserId,
+		creatorUserStreamId:   creatorUserStreamId,
 	}
 
 	builder := r.canCreateStream()
@@ -711,13 +718,12 @@ func (ru *csGdmChannelRules) checkGDMPayloads() error {
 
 	// GDM memberships cannot exceed the configured limit. the first event is the inception event
 	// and is subtracted from the parsed events count.
-	membershipLimit := ru.params.cfg.Stream.GetMembershipLimit(ru.params.streamId)
-	if len(ru.params.parsedEvents)-1 > membershipLimit {
+	if len(ru.params.parsedEvents)-1 > ru.params.streamMembershipLimit {
 		return RiverError(
 			Err_INVALID_ARGUMENT,
 			"membership limit reached",
 			"membershipLimit",
-			membershipLimit)
+			ru.params.streamMembershipLimit)
 	}
 
 	// check the first join

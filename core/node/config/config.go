@@ -1,14 +1,12 @@
 package config
 
 import (
-	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/river-build/river/core/node/shared"
 )
 
 type ContractVersion string
@@ -184,8 +182,7 @@ type PerformanceTrackingConfig struct {
 }
 
 type StreamConfig struct {
-	StreamMembershipLimits map[string]int
-	RecencyConstraints     RecencyConstraintsConfig
+	RecencyConstraints RecencyConstraintsConfig
 }
 
 type RecencyConstraintsConfig struct {
@@ -286,16 +283,6 @@ type FilterConfig struct {
 	// archive only listed shards.
 	NumShards uint64
 	Shards    []uint64
-}
-
-func (cfg *StreamConfig) GetMembershipLimit(streamId shared.StreamId) int {
-	if cfg.StreamMembershipLimits != nil {
-		streamPrefix := hex.EncodeToString(streamId[:1])
-		if value, ok := cfg.StreamMembershipLimits[streamPrefix]; ok {
-			return value
-		}
-	}
-	return 0
 }
 
 func (c *Config) GetGraffiti() string {

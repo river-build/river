@@ -3,7 +3,6 @@ package crypto
 import (
 	"context"
 	"fmt"
-	"github.com/river-build/river/core/node/shared"
 	"math"
 	"math/big"
 	"sort"
@@ -20,6 +19,7 @@ import (
 	"github.com/river-build/river/core/node/contracts"
 	"github.com/river-build/river/core/node/dlog"
 	. "github.com/river-build/river/core/node/protocol"
+	"github.com/river-build/river/core/node/shared"
 )
 
 var (
@@ -71,11 +71,16 @@ var (
 		MediaStreamMembershipLimitsDMConfigKey.ID():          MediaStreamMembershipLimitsDMConfigKey,
 	}
 
-	streamTypeToKey = map[byte]ChainKey{
+	streamTypeToMinEventsPerSnapshotKey = map[byte]ChainKey{
 		shared.STREAM_USER_INBOX_BIN:      StreamMinEventsPerSnapshotUserInboxConfigKey,
 		shared.STREAM_USER_SETTINGS_BIN:   StreamMinEventsPerSnapshotUserSettingsConfigKey,
 		shared.STREAM_USER_BIN:            StreamMinEventsPerSnapshotUserConfigKey,
 		shared.STREAM_USER_DEVICE_KEY_BIN: StreamMinEventsPerSnapshotUserDeviceConfigKey,
+	}
+
+	streamTypeToUserLimitKey = map[byte]ChainKey{
+		shared.STREAM_GDM_CHANNEL_BIN: MediaStreamMembershipLimitsGDMConfigKey,
+		shared.STREAM_DM_CHANNEL_BIN:  MediaStreamMembershipLimitsDMConfigKey,
 	}
 
 	uint64Type, _ = abi.NewType("uint64", "", nil)
@@ -126,6 +131,8 @@ type (
 		// GetMinEventsPerSnapshot returns the minimum events in a stream before a snapshot is taken. If there is no
 		// special setting for the requested stream the default value is returned.
 		GetMinEventsPerSnapshot(streamType byte) (int, error)
+		// GetStreamMembershipLimit returns the maximum number of clients that are allowed in a stream.
+		GetStreamMembershipLimit(streamType byte) (int, error)
 	}
 
 	onChainConfiguration struct {
@@ -320,12 +327,21 @@ func (occ *onChainConfiguration) GetInt(key ChainKey) (int, error) {
 }
 
 func (occ *onChainConfiguration) GetMinEventsPerSnapshot(streamType byte) (int, error) {
-	if key, ok := streamTypeToKey[streamType]; ok {
+	if key, ok := streamTypeToMinEventsPerSnapshotKey[streamType]; ok {
 		if val, err := occ.GetInt(key); err == nil {
 			return val, nil
 		}
 	}
 	return occ.GetInt(StreamDefaultMinEventsPerSnapshotConfigKey)
+}
+
+func (occ *onChainConfiguration) GetStreamMembershipLimit(streamType byte) (int, error) {
+	if key, ok := streamTypeToUserLimitKey[streamType]; ok {
+		if val, err := occ.GetInt(key); err == nil {
+			return val, err
+		}
+	}
+	return 0, nil
 }
 
 func (occ *onChainConfiguration) GetUint64OnBlock(blockNumber uint64, key ChainKey) (uint64, error) {
