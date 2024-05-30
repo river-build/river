@@ -47,6 +47,17 @@ contract MainnetDelegation is
   }
 
   // =============================================================
+  //                           Getters
+  // =============================================================
+  function getMessenger() external view returns (address) {
+    return address(_getMessenger());
+  }
+
+  function getProxyDelegation() external view returns (address) {
+    return address(_getProxyDelegation());
+  }
+
+  // =============================================================
   //                           Batch Delegation
   // =============================================================
   function setBatchDelegation(
@@ -55,7 +66,8 @@ contract MainnetDelegation is
     address[] calldata claimers,
     uint256[] calldata quantities
   ) external onlyCrossDomainMessenger {
-    for (uint256 i = 0; i < delegators.length; i++) {
+    uint256 delegatorsLen = delegators.length;
+    for (uint256 i; i < delegatorsLen; i++) {
       _replaceDelegation(
         delegators[i],
         claimers[i],

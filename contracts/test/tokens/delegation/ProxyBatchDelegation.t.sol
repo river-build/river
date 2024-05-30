@@ -38,7 +38,7 @@ contract ProxyBatchDelegationTest is BaseSetup, IMainnetDelegationBase {
 
     rvr = River(mainnetRiverToken);
     proxyDelegation = ProxyBatchDelegation(mainnetProxyDelegation);
-    crossDomainMessenger = ICrossDomainMessenger(messenger);
+    crossDomainMessenger = ICrossDomainMessenger(address(messenger));
 
     delegation = MainnetDelegation(baseRegistry);
     authorizedClaimers = AuthorizedClaimers(claimers);

@@ -56,6 +56,6 @@ contract ProxyBatchDelegation is IProxyBatchDelegation {
   }
 
   function _sendMessage(bytes memory data) internal {
-    ICrossDomainMessenger(MESSENGER).sendMessage(TARGET, data, 50_000);
+    ICrossDomainMessenger(MESSENGER).sendMessage(TARGET, data, 400_000);
   }
 }
