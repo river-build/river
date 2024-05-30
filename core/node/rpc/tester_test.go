@@ -224,7 +224,6 @@ func (st *serviceTester) getConfig(opts ...startOpts) *config.Config {
 				AgeSeconds:  11,
 				Generations: 5,
 			},
-			ReplicationFactor: st.replicationFactor,
 		},
 		Network: config.NetworkConfig{
 			NumRetries: 3,

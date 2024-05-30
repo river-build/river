@@ -286,7 +286,6 @@ func (s *Service) initRiverChain() error {
 		walletAddress,
 		s.nodeRegistry,
 		s.registryContract,
-		s.config.Stream.ReplicationFactor,
 		s.onChainConfig,
 	)
 

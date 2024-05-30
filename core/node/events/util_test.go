@@ -2,6 +2,8 @@ package events
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/core/types"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/river-build/river/core/node/base/test"
@@ -56,7 +58,19 @@ func makeTestStreamParams(p testParams) (context.Context, *testContext) {
 		panic(err)
 	}
 
-	sr := NewStreamRegistry(bc.Wallet.Address, nr, registry, p.replFactor, btc.OnChainConfig)
+	pendingTx, err := btc.DeployerBlockchain.TxPool.Submit(
+		ctx, "SetConfiguration", func(opts *bind.TransactOpts) (*types.Transaction, error) {
+			return btc.Configuration.SetConfiguration(
+				opts, crypto.StreamReplicationFactorConfigKey.ID(), 0, crypto.ABIEncodeUint64(uint64(p.replFactor)))
+		})
+
+	if err != nil {
+		panic(err)
+	}
+
+	<-pendingTx.Wait()
+
+	sr := NewStreamRegistry(bc.Wallet.Address, nr, registry, btc.OnChainConfig)
 
 	params := &StreamCacheParams{
 		Storage:      pg.Storage,

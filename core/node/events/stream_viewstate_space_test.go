@@ -205,7 +205,9 @@ func leaveChannel_T(
 }
 
 func TestSpaceViewState(t *testing.T) {
-	ctx, tt := makeTestStreamCache(testParams{})
+	ctx, tt := makeTestStreamCache(testParams{
+		replFactor: 1,
+	})
 	defer tt.closer()
 
 	user1Wallet, _ := crypto.NewWallet(ctx)
@@ -289,7 +291,9 @@ func spaceViewStateTest_CheckUserJoined(
 }
 
 func TestChannelViewState_JoinedMembers(t *testing.T) {
-	ctx, tt := makeTestStreamCache(testParams{})
+	ctx, tt := makeTestStreamCache(testParams{
+		replFactor: 1,
+	})
 	defer tt.closer()
 
 	userWallet, _ := crypto.NewWallet(ctx)
@@ -345,7 +349,9 @@ func TestChannelViewState_JoinedMembers(t *testing.T) {
 }
 
 func TestChannelViewState_RemainingMembers(t *testing.T) {
-	ctx, tt := makeTestStreamCache(testParams{})
+	ctx, tt := makeTestStreamCache(testParams{
+		replFactor: 1,
+	})
 	defer tt.closer()
 
 	userWallet, _ := crypto.NewWallet(ctx)

@@ -44,13 +44,11 @@ func NewStreamRegistry(
 	localNodeAddress common.Address,
 	nodeRegistry NodeRegistry,
 	contract *registries.RiverRegistryContract,
-	replFactor int,
 	onChainConfig crypto.OnChainConfiguration,
 ) *streamRegistryImpl {
 	return &streamRegistryImpl{
 		localNodeAddress: localNodeAddress,
 		nodeRegistry:     nodeRegistry,
-		replFactor:       replFactor,
 		onChainConfig:    onChainConfig,
 		contract:         contract,
 	}
