@@ -9,6 +9,7 @@ import (
 	"github.com/river-build/river/core/node/dlog"
 	shared_infra "github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/xchain/contracts"
+	"github.com/river-build/river/core/xchain/infra"
 )
 
 type WrappedWalletLink interface {
@@ -46,10 +47,10 @@ func GetLinkedWallets(
 	shared_infra.StoreExecutionTimeMetrics("GetRootKeyForWallet", shared_infra.CONTRACT_CALLS_CATEGORY, start)
 	if err != nil {
 		log.Error("Failed to GetRootKeyForWallet", "err", err, "wallet", wallet.Hex())
-		//xchain_infra.GetRootKeyForWalletCalls.FailInc()
+		infra.GetRootKeyForWalletCalls.FailInc()
 		return nil, err
 	}
-	//xchain_infra.GetRootKeyForWalletCalls.PassInc()
+	infra.GetRootKeyForWalletCalls.PassInc()
 
 	var zero common.Address
 	if rootKey == zero {
@@ -61,10 +62,10 @@ func GetLinkedWallets(
 	wallets, err := walletLink.GetWalletsByRootKey(ctx, rootKey)
 	shared_infra.StoreExecutionTimeMetrics("GetWalletsByRootKey", shared_infra.CONTRACT_CALLS_CATEGORY, start)
 	if err != nil {
-		//xchain_infra.GetWalletsByRootKeyCalls.FailInc()
+		infra.GetWalletsByRootKeyCalls.FailInc()
 		return nil, err
 	}
-	//xchain_infra.GetWalletsByRootKeyCalls.PassInc()
+	infra.GetWalletsByRootKeyCalls.PassInc()
 
 	if len(wallets) == 0 {
 		log.Debug("No linked wallets found", "rootKey", rootKey.Hex())
