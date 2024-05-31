@@ -6,9 +6,16 @@ import (
 	"math/big"
 	"time"
 
+	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/config"
+	node_contracts "github.com/river-build/river/core/node/contracts"
+	"github.com/river-build/river/core/node/crypto"
+	"github.com/river-build/river/core/node/dlog"
+	shared_infra "github.com/river-build/river/core/node/infra"
+	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/xchain/contracts"
 	"github.com/river-build/river/core/xchain/entitlement"
+	"github.com/river-build/river/core/xchain/infra"
 	"github.com/river-build/river/core/xchain/util"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -16,13 +23,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	go_eth_types "github.com/ethereum/go-ethereum/core/types"
-	. "github.com/river-build/river/core/node/base"
-	node_contracts "github.com/river-build/river/core/node/contracts"
-	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
-	shared_infra "github.com/river-build/river/core/node/infra"
-	. "github.com/river-build/river/core/node/protocol"
-	"github.com/river-build/river/core/xchain/infra"
 )
 
 type (

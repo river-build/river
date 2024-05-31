@@ -163,11 +163,6 @@ func getOperationTree(ctx context.Context,
 	decodedOperations := []Operation{}
 	log.Debug("Decoding operations", "ruleData", ruleData)
 
-	// Detect NoOpRuleDatas
-	if len(ruleData.Operations) == 0 {
-		return nil, nil
-	}
-
 	for _, operation := range ruleData.Operations {
 		if OperationType(operation.OpType) == CHECK {
 			checkOperation := ruleData.CheckOperations[operation.Index]
