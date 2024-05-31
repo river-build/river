@@ -518,15 +518,6 @@ export async function linkWallets(
     expect(linkedWallets).toContain(linkedWallet.address)
 }
 
-export async function getLinkedWallets(
-    spaceDapp: ISpaceDapp,
-    wallet: ethers.Wallet,
-): Promise<string[]> {
-    const walletLink = spaceDapp.getWalletLink()
-    const linkedWallets = await walletLink.getLinkedWallets(wallet.address)
-    return linkedWallets
-}
-
 export function waitFor<T>(
     callback: (() => T) | (() => Promise<T>),
     options: { timeoutMS: number } = { timeoutMS: 5000 },

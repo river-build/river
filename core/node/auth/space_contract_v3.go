@@ -229,7 +229,6 @@ func (sc *SpaceContractV3) IsBanned(
  * The RuleEntitlement contains the rule data.
  * The UserEntitlement contains the list of user addresses.
  */
-
 func (sc *SpaceContractV3) GetChannelEntitlementsForPermission(
 	ctx context.Context,
 	spaceId shared.StreamId,
