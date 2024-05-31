@@ -478,6 +478,9 @@ export async function linkWallets(
     expect(txn).toBeDefined()
     const receipt = await txn?.wait()
     expect(receipt!.status).toEqual(1)
+
+    const linkedWallets = await walletLink.getLinkedWallets(rootWallet.address)
+    expect(linkedWallets).toContain(linkedWallet.address)
 }
 
 export async function getLinkedWallets(
