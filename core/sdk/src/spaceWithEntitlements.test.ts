@@ -11,6 +11,7 @@ import {
     createUserStreamAndSyncClient,
     createSpaceAndDefaultChannel,
     expectUserCanJoin,
+    setupWalletsAndContexts,
     linkWallets,
 } from './util.test'
 import { Client } from './client'
@@ -36,60 +37,6 @@ import {
 import { makeBaseChainConfig } from './riverConfig'
 
 const log = dlog('csb:test:spaceWithEntitlements')
-
-async function setupWalletsAndContexts() {
-    const baseConfig = makeBaseChainConfig()
-
-    const [alicesWallet, bobsWallet, carolsWallet] = await Promise.all([
-        ethers.Wallet.createRandom(),
-        ethers.Wallet.createRandom(),
-        ethers.Wallet.createRandom(),
-    ])
-
-    const [alicesContext, bobsContext] = await Promise.all([
-        makeUserContextFromWallet(alicesWallet),
-        makeUserContextFromWallet(bobsWallet),
-    ])
-
-    const aliceProvider = new LocalhostWeb3Provider(baseConfig.rpcUrl, alicesWallet)
-    const bobProvider = new LocalhostWeb3Provider(baseConfig.rpcUrl, bobsWallet)
-    const carolProvider = new LocalhostWeb3Provider(baseConfig.rpcUrl, carolsWallet)
-
-    await Promise.all([
-        aliceProvider.fundWallet(),
-        bobProvider.fundWallet(),
-        carolProvider.fundWallet(),
-    ])
-
-    const bobSpaceDapp = createSpaceDapp(bobProvider, baseConfig.chainConfig)
-    const aliceSpaceDapp = createSpaceDapp(aliceProvider, baseConfig.chainConfig)
-    const carolSpaceDapp = createSpaceDapp(carolProvider, baseConfig.chainConfig)
-
-    // create a user
-    const [alice, bob] = await Promise.all([
-        makeTestClient({
-            context: alicesContext,
-        }),
-        makeTestClient({ context: bobsContext }),
-    ])
-
-    return {
-        alice,
-        bob,
-        alicesWallet,
-        bobsWallet,
-        alicesContext,
-        bobsContext,
-        aliceProvider,
-        bobProvider,
-        aliceSpaceDapp,
-        bobSpaceDapp,
-        // Return a third wallet / provider for wallet linking
-        carolsWallet,
-        carolProvider,
-        carolSpaceDapp,
-    }
-}
 
 describe('spaceWithEntitlements', () => {
     let testNft1Address: string, testNft2Address: string, testNft3Address: string

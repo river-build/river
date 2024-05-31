@@ -236,12 +236,12 @@ func evaluateErc721Operation(
 
 		// Accumulate the total balance across evaluated wallets
 		total.Add(total, tokenBalance)
-		// log.Info("Retrieved ERC721 token balance for wallet",
-		// 	"balance", tokenBalance.String(),
-		// 	"total", total.String(),
-		// 	"threshold", op.Threshold.String(),
-		// 	"wallet", wallet,
-		// )
+		log.Info("Retrieved ERC721 token balance for wallet",
+			"balance", tokenBalance.String(),
+			"total", total.String(),
+			"threshold", op.Threshold.String(),
+			"wallet", wallet,
+		)
 
 		// Iteratively check if the total balance of evaluated wallets is greater than or equal to the threshold
 		if total.Cmp(op.Threshold) >= 0 {

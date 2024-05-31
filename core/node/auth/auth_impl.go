@@ -521,6 +521,7 @@ func (ca *chainAuth) evaluateWithEntitlements(
 
 	// 1. Check if the user is the space owner
 	// Space owner has su over all space operations.
+	log.Info("evaluateWithEntitlements", "args", args, "owner", owner.Hex(), "wallets", args.linkedWallets)
 	wallets := deserializeWallets(args.linkedWallets)
 	for _, wallet := range wallets {
 		if wallet == owner {
@@ -658,6 +659,25 @@ func (ca *chainAuth) getLinkedWallets(ctx context.Context, rootKey common.Addres
 		return nil, err
 	}
 
+	if len(wallets) == 0 {
+		log.Info("This may not be the root key wallet, trying to get the root key for the wallet")
+		tryRootKey, err := ca.walletLinkContract.GetRootKeyForWallet(ctx, rootKey)
+		if err != nil {
+			log.Error("error getting root key for wallet", "wallet", rootKey.Hex(), "error", err)
+			return nil, err
+		}
+		log.Info("Got the root key for the wallet", "rootKey", rootKey.Hex())
+		zeroAddress := common.Address{}
+		if tryRootKey != zeroAddress {
+			rootKey = tryRootKey
+			wallets, err = ca.walletLinkContract.GetWalletsByRootKey(ctx, rootKey)
+			if err != nil {
+				log.Error("error getting linked wallets for root key", "rootKey", rootKey.Hex(), "error", err)
+				return nil, err
+			}
+		}
+	}
+	wallets = append(wallets, rootKey)
 	log.Debug("allRelevantWallets", "wallets", wallets)
 
 	return wallets, nil
@@ -718,8 +738,6 @@ func (ca *chainAuth) checkEntitlement(
 		return &boolCacheResult{allowed: false}, err
 	}
 
-	// Add the root key to the list of wallets.
-	wallets = append(wallets, args.principal)
 	args = args.withLinkedWallets(wallets)
 
 	isMemberCtx, isMemberCancel := context.WithCancel(ctx)

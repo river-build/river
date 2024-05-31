@@ -13,6 +13,7 @@ import {
 import { PlainMessage } from '@bufbuild/protobuf'
 import { StreamStateView } from './streamStateView'
 import { Client } from './client'
+import { makeBaseChainConfig, makeRiverChainConfig } from './riverConfig'
 import {
     genId,
     makeSpaceStreamId,
@@ -37,12 +38,15 @@ import {
     PricingModuleStruct,
     createExternalNFTStruct,
     createRiverRegistry,
+    createSpaceDapp,
     IRuleEntitlement,
     Permission,
     ISpaceDapp,
     IArchitectBase,
+    ETH_ADDRESS,
+    MembershipStruct,
+    NoopRuleData,
 } from '@river-build/web3'
-import { makeRiverChainConfig } from './riverConfig'
 
 const log = dlog('csb:test:util')
 
@@ -161,6 +165,60 @@ export const makeTestClient = async (opts?: TestClientOpts): Promise<Client> => 
     const cryptoStore = RiverDbManager.getCryptoDb(userId, dbName)
     const rpcClient = await makeTestRpcClient()
     return new Client(context, rpcClient, cryptoStore, entitlementsDelegate, persistenceDbName)
+}
+
+export async function setupWalletsAndContexts() {
+    const baseConfig = makeBaseChainConfig()
+
+    const [alicesWallet, bobsWallet, carolsWallet] = await Promise.all([
+        ethers.Wallet.createRandom(),
+        ethers.Wallet.createRandom(),
+        ethers.Wallet.createRandom(),
+    ])
+
+    const [alicesContext, bobsContext] = await Promise.all([
+        makeUserContextFromWallet(alicesWallet),
+        makeUserContextFromWallet(bobsWallet),
+    ])
+
+    const aliceProvider = new LocalhostWeb3Provider(baseConfig.rpcUrl, alicesWallet)
+    const bobProvider = new LocalhostWeb3Provider(baseConfig.rpcUrl, bobsWallet)
+    const carolProvider = new LocalhostWeb3Provider(baseConfig.rpcUrl, carolsWallet)
+
+    await Promise.all([
+        aliceProvider.fundWallet(),
+        bobProvider.fundWallet(),
+        carolProvider.fundWallet(),
+    ])
+
+    const bobSpaceDapp = createSpaceDapp(bobProvider, baseConfig.chainConfig)
+    const aliceSpaceDapp = createSpaceDapp(aliceProvider, baseConfig.chainConfig)
+    const carolSpaceDapp = createSpaceDapp(carolProvider, baseConfig.chainConfig)
+
+    // create a user
+    const [alice, bob] = await Promise.all([
+        makeTestClient({
+            context: alicesContext,
+        }),
+        makeTestClient({ context: bobsContext }),
+    ])
+
+    return {
+        alice,
+        bob,
+        alicesWallet,
+        bobsWallet,
+        alicesContext,
+        bobsContext,
+        aliceProvider,
+        bobProvider,
+        aliceSpaceDapp,
+        bobSpaceDapp,
+        // Return a third wallet / provider for wallet linking
+        carolsWallet,
+        carolProvider,
+        carolSpaceDapp,
+    }
 }
 
 class DonePromise {
@@ -373,6 +431,35 @@ export async function expectUserCanJoin(
     })
 }
 
+export async function everyoneMembershipStruct(
+    spaceDapp: ISpaceDapp,
+    client: Client,
+): Promise<MembershipStruct> {
+    const pricingModules = await spaceDapp.listPricingModules()
+    const dynamicPricingModule = getDynamicPricingModule(pricingModules)
+    expect(dynamicPricingModule).toBeDefined()
+
+    return {
+        settings: {
+            name: 'Everyone',
+            symbol: 'MEMBER',
+            price: 0,
+            maxSupply: 1000,
+            duration: 0,
+            currency: ETH_ADDRESS,
+            feeRecipient: client.userId,
+            freeAllocation: 0,
+            pricingModule: dynamicPricingModule!.module,
+        },
+        permissions: [Permission.Read, Permission.Write],
+        requirements: {
+            everyone: true,
+            users: [],
+            ruleData: NoopRuleData,
+        },
+    }
+}
+
 // Hint: pass in the wallets attached to the providers.
 export async function linkWallets(
     rootSpaceDapp: ISpaceDapp,
@@ -391,6 +478,15 @@ export async function linkWallets(
     expect(txn).toBeDefined()
     const receipt = await txn?.wait()
     expect(receipt!.status).toEqual(1)
+}
+
+export async function getLinkedWallets(
+    spaceDapp: ISpaceDapp,
+    wallet: ethers.Wallet,
+): Promise<string[]> {
+    const walletLink = spaceDapp.getWalletLink()
+    const linkedWallets = await walletLink.getLinkedWallets(wallet.address)
+    return linkedWallets
 }
 
 export function waitFor<T>(
@@ -551,7 +647,7 @@ export async function createRole(
     try {
         txn = await spaceDapp.createRole(spaceId, roleName, permissions, users, ruleData, signer)
     } catch (err) {
-        error = await spaceDapp.parseSpaceError(spaceId, err)
+        error = spaceDapp.parseSpaceError(spaceId, err)
         return { roleId: undefined, error }
     }
 
@@ -589,7 +685,7 @@ export async function createChannel(
     try {
         txn = await spaceDapp.createChannel(spaceId, channelName, channelId, roleIds, signer)
     } catch (err) {
-        error = await spaceDapp.parseSpaceError(spaceId, err)
+        error = spaceDapp.parseSpaceError(spaceId, err)
         return { channelId: undefined, error }
     }
 
