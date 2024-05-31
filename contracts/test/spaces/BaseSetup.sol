@@ -140,8 +140,8 @@ contract BaseSetup is TestUtils, SpaceHelper {
     everyoneSpace = Architect(spaceFactory).createSpace(everyoneSpaceInfo);
     vm.stopPrank();
 
-    _registerOperators();
-    _registerNodes();
+    // _registerOperators();
+    // _registerNodes();
   }
 
   function _registerOperators() internal {
