@@ -12,29 +12,32 @@ import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 import {DeployProxyBatchDelegation} from "contracts/scripts/deployments/DeployProxyBatchDelegation.s.sol";
 import {ProxyBatchDelegation} from "contracts/src/tokens/river/mainnet/delegation/ProxyBatchDelegation.sol";
 
+import {MockMessenger} from "contracts/test/mocks/MockMessenger.sol";
+import {MainnetDelegation} from "contracts/src/tokens/river/base/delegation/MainnetDelegation.sol";
+
 contract ForkPlaygroundTest is TestUtils {
-  address caller = 0x4200000000000000000000000000000000000007;
-  address baseRegistry = 0x08cC41b782F27d62995056a4EF2fCBAe0d3c266F;
+  // Base Registry on Base
+  address baseRegistryAddress = 0x7c0422b31401C936172C897802CF0373B35B7698;
 
   DeployProxyBatchDelegation deployer = new DeployProxyBatchDelegation();
+
   ProxyBatchDelegation internal proxyBatchDelegation;
+  MainnetDelegation internal mainnetDelegation;
 
   function setUp() external onlyForked {
-    deployer.setDependencies({
-      mainnetDelegation_: baseRegistry,
-      messenger_: 0xC34855F4De64F1840e5686e64278da901e261f20
-    });
-
-    proxyBatchDelegation = ProxyBatchDelegation(deployer.deploy());
-  }
-
-  function testGasEstimation() external onlyForked {
-    proxyBatchDelegation.sendDelegators();
+    mainnetDelegation = MainnetDelegation(baseRegistryAddress);
   }
 
   function test_setBatchDelegationCross() external onlyForked {
-    vm.prank(caller);
-    (bool success, bytes memory result) = baseRegistry.call{gas: 0x3E3F2}(
+    address getMessenger = mainnetDelegation.getMessenger();
+    address getProxyDelegation = mainnetDelegation.getProxyDelegation();
+
+    MockMessenger mockMessenger = new MockMessenger();
+    vm.etch(getMessenger, address(mockMessenger).code);
+    MockMessenger(getMessenger).setXDomainMessageSender(getProxyDelegation);
+
+    vm.prank(address(getMessenger));
+    (bool success, ) = baseRegistryAddress.call{gas: 400_000}(
       hex"f59832ed000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000e0000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000000000000000000000000000000000000000000002000000000000000000000000406d4b68d5b0797c5d26437938958f2bb2e9c84e000000000000000000000000a28c8d49957f757dc9eb3df461f0c416f97a2b000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000406d4b68d5b0797c5d26437938958f2bb2e9c84e00000000000000000000000053319181e003e7f86fb79f794649a2ab680db244000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008ac7230489e80000"
     );
 

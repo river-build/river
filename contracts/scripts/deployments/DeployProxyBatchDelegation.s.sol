@@ -49,7 +49,7 @@ contract DeployProxyBatchDelegation is Deployer {
         vm.broadcast(deployer);
         messenger = address(new MockMessenger());
       } else {
-        messenger = _getMessenger();
+        messenger = getMessenger();
       }
     }
 
@@ -75,10 +75,15 @@ contract DeployProxyBatchDelegation is Deployer {
       return 0x08cC41b782F27d62995056a4EF2fCBAe0d3c266F;
     }
 
+    if (block.chainid == 1) {
+      // Base Registry contract on Base
+      return 0x7c0422b31401C936172C897802CF0373B35B7698;
+    }
+
     return getDeployment("baseRegistry");
   }
 
-  function _getMessenger() internal view returns (address) {
+  function getMessenger() public view returns (address) {
     // Base or Base (Sepolia)
     if (block.chainid == 8453 || block.chainid == 84532) {
       return 0x4200000000000000000000000000000000000007;
