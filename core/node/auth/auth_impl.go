@@ -644,41 +644,19 @@ func (ca *chainAuth) isEntitledToChannel(ctx context.Context, cfg *config.Config
 	return isEntitled.IsAllowed(), nil
 }
 
-func (ca *chainAuth) getLinkedWallets(ctx context.Context, rootKey common.Address) ([]common.Address, error) {
+func (ca *chainAuth) getLinkedWallets(ctx context.Context, wallet common.Address) ([]common.Address, error) {
 	log := dlog.FromCtx(ctx)
 
 	if ca.walletLinkContract == nil {
 		log.Warn("Wallet link contract is not setup properly, returning root key only")
-		return []common.Address{rootKey}, nil
+		return []common.Address{wallet}, nil
 	}
 
-	// get all the wallets for the root key.
-	wallets, err := ca.walletLinkContract.GetWalletsByRootKey(ctx, rootKey)
+	wallets, err := entitlement.GetLinkedWallets(ctx, wallet, ca.walletLinkContract)
 	if err != nil {
-		log.Error("error getting all wallets", "rootKey", rootKey.Hex(), "error", err)
+		log.Error("Failed to get linked wallets", "err", err, "wallet", wallet.Hex())
 		return nil, err
 	}
-
-	if len(wallets) == 0 {
-		log.Info("This may not be the root key wallet, trying to get the root key for the wallet")
-		tryRootKey, err := ca.walletLinkContract.GetRootKeyForWallet(ctx, rootKey)
-		if err != nil {
-			log.Error("error getting root key for wallet", "wallet", rootKey.Hex(), "error", err)
-			return nil, err
-		}
-		log.Info("Got the root key for the wallet", "rootKey", rootKey.Hex())
-		zeroAddress := common.Address{}
-		if tryRootKey != zeroAddress {
-			rootKey = tryRootKey
-			wallets, err = ca.walletLinkContract.GetWalletsByRootKey(ctx, rootKey)
-			if err != nil {
-				log.Error("error getting linked wallets for root key", "rootKey", rootKey.Hex(), "error", err)
-				return nil, err
-			}
-		}
-	}
-	wallets = append(wallets, rootKey)
-	log.Debug("allRelevantWallets", "wallets", wallets)
 
 	return wallets, nil
 }
