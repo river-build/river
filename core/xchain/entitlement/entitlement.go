@@ -24,14 +24,12 @@ func EvaluateRuleData(
 	log := dlog.FromCtx(ctx)
 	log.Info("Evaluating rule data", "ruleData", ruleData)
 	opTree, err := getOperationTree(ctx, ruleData)
-	log.Info("Got operation tree", "opTree", opTree, "err", err)
 
 	if err != nil {
 		return false, err
 	}
 
 	result, err := evaluateOp(ctx, cfg, opTree, linkedWallets)
-	log.Info("Evaluated rule data", "ruleData", ruleData, "result", result, "err", err)
 	return result, err
 }
 
@@ -162,7 +160,6 @@ func getOperationTree(ctx context.Context,
 	log := dlog.FromCtx(ctx)
 	decodedOperations := []Operation{}
 	log.Debug("Decoding operations", "ruleData", ruleData)
-
 	for _, operation := range ruleData.Operations {
 		if OperationType(operation.OpType) == CHECK {
 			checkOperation := ruleData.CheckOperations[operation.Index]
