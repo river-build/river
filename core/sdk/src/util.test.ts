@@ -46,6 +46,11 @@ import {
     ETH_ADDRESS,
     MembershipStruct,
     NoopRuleData,
+    CheckOperationType,
+    LogicalOperationType,
+    Operation,
+    OperationType,
+    treeToRuleData,
 } from '@river-build/web3'
 
 const log = dlog('csb:test:util')
@@ -458,6 +463,36 @@ export async function everyoneMembershipStruct(
             ruleData: NoopRuleData,
         },
     }
+}
+
+export function twoNftRuleData(
+    nft1Address: string,
+    nft2Address: string,
+    logOpType: LogicalOperationType.AND | LogicalOperationType.OR = LogicalOperationType.AND,
+): IRuleEntitlement.RuleDataStruct {
+    const leftOperation: Operation = {
+        opType: OperationType.CHECK,
+        checkType: CheckOperationType.ERC721,
+        chainId: 31337n,
+        contractAddress: nft1Address as `0x${string}`,
+        threshold: 1n,
+    }
+
+    const rightOperation: Operation = {
+        opType: OperationType.CHECK,
+        checkType: CheckOperationType.ERC721,
+        chainId: 31337n,
+        contractAddress: nft2Address as `0x${string}`,
+        threshold: 1n,
+    }
+    const root: Operation = {
+        opType: OperationType.LOGICAL,
+        logicalType: logOpType,
+        leftOperation,
+        rightOperation,
+    }
+
+    return treeToRuleData(root)
 }
 
 // Hint: pass in the wallets attached to the providers.

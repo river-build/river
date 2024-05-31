@@ -13,6 +13,7 @@ import {
     setupWalletsAndContexts,
     linkWallets,
     getNftRuleData,
+    twoNftRuleData,
 } from './util.test'
 import { dlog } from '@river-build/dlog'
 import { MembershipOp } from '@river-build/proto'
@@ -213,15 +214,23 @@ describe('spaceWithEntitlements', () => {
     })
 
     test('userEntitlementFail', async () => {
-        const { alice, bob, aliceSpaceDapp, aliceProvider, spaceId } =
+        const { alice, bob, aliceSpaceDapp, alicesWallet, aliceProvider, spaceId } =
             await createTownWithRequirements({
                 everyone: false,
                 users: ['carol'], // not alice!
                 ruleData: NoopRuleData,
             })
 
+        // Alice cannot join the space in the contract.
+        const { issued } = await aliceSpaceDapp.joinSpace(
+            spaceId,
+            alicesWallet.address,
+            aliceProvider.wallet,
+        )
+        expect(issued).toBe(false)
+
         // Have alice create a user stream attached to her own space.
-        // Then she will attempt to join the space from the client, which should fail.
+        // Then she will attempt to join the space from the client, which should also fail.
         await createUserStreamAndSyncClient(
             alice,
             aliceSpaceDapp,
@@ -539,36 +548,6 @@ describe('spaceWithEntitlements', () => {
         await alice.stopSync()
         log('Done', Date.now() - doneStart)
     })
-
-    function twoNftRuleData(
-        nft1Address: string,
-        nft2Address: string,
-        logOpType: LogicalOperationType.AND | LogicalOperationType.OR = LogicalOperationType.AND,
-    ): IRuleEntitlement.RuleDataStruct {
-        const leftOperation: Operation = {
-            opType: OperationType.CHECK,
-            checkType: CheckOperationType.ERC721,
-            chainId: 31337n,
-            contractAddress: nft1Address as `0x${string}`,
-            threshold: 1n,
-        }
-
-        const rightOperation: Operation = {
-            opType: OperationType.CHECK,
-            checkType: CheckOperationType.ERC721,
-            chainId: 31337n,
-            contractAddress: nft2Address as `0x${string}`,
-            threshold: 1n,
-        }
-        const root: Operation = {
-            opType: OperationType.LOGICAL,
-            logicalType: logOpType,
-            leftOperation,
-            rightOperation,
-        }
-
-        return treeToRuleData(root)
-    }
 
     test('twoNftGateJoinFail', async () => {
         const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId } =
