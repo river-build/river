@@ -25,40 +25,6 @@ import (
 
 var (
 	_ TransactionPool = (*transactionPool)(nil)
-
-	transactionsSubmittedCounter = infra.NewCounterVec(
-		"txpool_submitted", "Number of transactions submitted",
-		"chain_id", "address", "func_selector",
-	)
-	transactionsReplacedCounter = infra.NewCounterVec(
-		"txpool_replaced", "Number of replacement transactions submitted",
-		"chain_id", "address", "func_selector",
-	)
-	transactionsPendingCounter = infra.NewGaugeVec(
-		"txpool_pending", "Number of transactions that are waiting to be included in the chain",
-		"chain_id", "address",
-	)
-	transactionsProcessedCounter = infra.NewCounterVec(
-		"txpool_processed", "Number of submitted transactions that are included in the chain",
-		"chain_id", "address", "status",
-	)
-	transactionGasCap = infra.NewGaugeVec(
-		"txpool_tx_fee_cap_wei", "Latest submitted EIP1559 transaction gas fee cap",
-		"chain_id", "address", "replacement",
-	)
-	transactionGasTip = infra.NewGaugeVec(
-		"txpool_tx_miner_tip_wei", "Latest submitted EIP1559 transaction gas fee miner tip",
-		"chain_id", "address", "replacement",
-	)
-	transactionInclusionDuration = infra.NewHistogram(
-		"txpool_tx_inclusion_duration_sec",
-		"How long it takes before a transaction is included in the chain",
-		prometheus.LinearBuckets(1.0, 2.0, 10), "chain_id", "address",
-	)
-	walletBalance = infra.NewGaugeVec(
-		"txpool_wallet_balance_eth", "Wallet native coin balance",
-		"chain_id", "address",
-	)
 )
 
 type (
@@ -156,6 +122,7 @@ func NewTransactionPoolWithPoliciesFromConfig(
 	riverClient BlockchainClient,
 	wallet *Wallet,
 	chainMonitor ChainMonitor,
+	metrics *infra.Metrics,
 ) (*transactionPool, error) {
 	if cfg.BlockTimeMs <= 0 {
 		return nil, RiverError(Err_BAD_CONFIG, "BlockTimeMs must be set").
@@ -176,7 +143,7 @@ func NewTransactionPoolWithPoliciesFromConfig(
 	)
 
 	return NewTransactionPoolWithPolicies(
-		ctx, riverClient, wallet, replacementPolicy, pricePolicy, chainMonitor)
+		ctx, riverClient, wallet, replacementPolicy, pricePolicy, chainMonitor, metrics)
 }
 
 // NewTransactionPoolWithPolicies creates an in-memory transaction pool that tracks transactions that are submitted
@@ -191,6 +158,7 @@ func NewTransactionPoolWithPolicies(
 	replacePolicy TransactionPoolReplacePolicy,
 	pricePolicy TransactionPricePolicy,
 	chainMonitor ChainMonitor,
+	metrics *infra.Metrics,
 ) (*transactionPool, error) {
 	chainID, err := client.ChainID(ctx)
 	if err != nil {
@@ -207,30 +175,57 @@ func NewTransactionPoolWithPolicies(
 		return tx.WithSignature(signer, signature)
 	}
 
+	transactionsSubmittedCounter := metrics.NewCounterVecHelper(
+		"txpool_submitted", "Number of transactions submitted",
+		"chain_id", "address", "func_selector",
+	)
+	transactionsReplacedCounter := metrics.NewCounterVecHelper(
+		"txpool_replaced", "Number of replacement transactions submitted",
+		"chain_id", "address", "func_selector",
+	)
+	transactionsPendingCounter := metrics.NewGaugeVecHelper(
+		"txpool_pending", "Number of transactions that are waiting to be included in the chain",
+		"chain_id", "address",
+	)
+	transactionsProcessedCounter := metrics.NewCounterVecHelper(
+		"txpool_processed", "Number of submitted transactions that are included in the chain",
+		"chain_id", "address", "status",
+	)
+	transactionGasCap := metrics.NewGaugeVecHelper(
+		"txpool_tx_fee_cap_wei", "Latest submitted EIP1559 transaction gas fee cap",
+		"chain_id", "address", "replacement",
+	)
+	transactionGasTip := metrics.NewGaugeVecHelper(
+		"txpool_tx_miner_tip_wei", "Latest submitted EIP1559 transaction gas fee miner tip",
+		"chain_id", "address", "replacement",
+	)
+	transactionInclusionDuration := metrics.NewHistogramHelper(
+		"txpool_tx_inclusion_duration_sec",
+		"How long it takes before a transaction is included in the chain",
+		prometheus.LinearBuckets(1.0, 2.0, 10), "chain_id", "address",
+	)
+	walletBalance := metrics.NewGaugeVecHelper(
+		"txpool_wallet_balance_eth", "Wallet native coin balance",
+		"chain_id", "address",
+	)
+
+	curryLabels := prometheus.Labels{"chain_id": chainID.String(), "address": wallet.Address.String()}
 	txPool := &transactionPool{
-		client:        client,
-		wallet:        wallet,
-		chainID:       chainID.Uint64(),
-		chainIDStr:    chainID.String(),
-		replacePolicy: replacePolicy,
-		pricePolicy:   pricePolicy,
-		signerFn:      signerFn,
-		transactionSubmitted: transactionsSubmittedCounter.MustCurryWith(
-			prometheus.Labels{"chain_id": chainID.String(), "address": wallet.Address.String()}),
-		transactionsReplaced: transactionsReplacedCounter.MustCurryWith(
-			prometheus.Labels{"chain_id": chainID.String(), "address": wallet.Address.String()}),
-		transactionsPending: transactionsPendingCounter.With(
-			prometheus.Labels{"chain_id": chainID.String(), "address": wallet.Address.String()}),
-		transactionsProcessed: transactionsProcessedCounter.MustCurryWith(
-			prometheus.Labels{"chain_id": chainID.String(), "address": wallet.Address.String()}),
-		transactionInclusionDuration: transactionInclusionDuration.With(
-			prometheus.Labels{"chain_id": chainID.String(), "address": wallet.Address.String()}),
-		transactionGasCap: transactionGasCap.MustCurryWith(
-			prometheus.Labels{"chain_id": chainID.String(), "address": wallet.Address.String()}),
-		transactionGasTip: transactionGasTip.MustCurryWith(
-			prometheus.Labels{"chain_id": chainID.String(), "address": wallet.Address.String()}),
-		walletBalance: walletBalance.With(
-			prometheus.Labels{"chain_id": chainID.String(), "address": wallet.Address.String()}),
+		client:                       client,
+		wallet:                       wallet,
+		chainID:                      chainID.Uint64(),
+		chainIDStr:                   chainID.String(),
+		replacePolicy:                replacePolicy,
+		pricePolicy:                  pricePolicy,
+		signerFn:                     signerFn,
+		transactionSubmitted:         transactionsSubmittedCounter.MustCurryWith(curryLabels),
+		transactionsReplaced:         transactionsReplacedCounter.MustCurryWith(curryLabels),
+		transactionsPending:          transactionsPendingCounter.With(curryLabels),
+		transactionsProcessed:        transactionsProcessedCounter.MustCurryWith(curryLabels),
+		transactionInclusionDuration: transactionInclusionDuration.With(curryLabels),
+		transactionGasCap:            transactionGasCap.MustCurryWith(curryLabels),
+		transactionGasTip:            transactionGasTip.MustCurryWith(curryLabels),
+		walletBalance:                walletBalance.With(curryLabels),
 	}
 
 	chainMonitor.OnBlock(txPool.OnBlock)

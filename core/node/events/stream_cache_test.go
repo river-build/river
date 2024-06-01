@@ -12,6 +12,7 @@ import (
 	"github.com/river-build/river/core/node/base/test"
 	"github.com/river-build/river/core/node/config"
 	"github.com/river-build/river/core/node/crypto"
+	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/registries"
 	"github.com/river-build/river/core/node/shared"
@@ -65,7 +66,7 @@ func testStreamCacheViewEviction(t *testing.T, useBatchRegistration bool) {
 	require.NoError(err, "instantiating blockchain test context")
 	defer btc.Close()
 
-	go chainMonitor.RunWithBlockPeriod(ctx, btc.Client(), 0, 10*time.Millisecond)
+	go chainMonitor.RunWithBlockPeriod(ctx, btc.Client(), 0, 10*time.Millisecond, infra.NewMetrics())
 
 	node := btc.GetBlockchain(ctx, 0)
 
@@ -96,7 +97,7 @@ func testStreamCacheViewEviction(t *testing.T, useBatchRegistration bool) {
 		StreamConfig: &config.StreamConfig{
 			CacheExpiration: 0, // disable cache expiration, done manually
 		},
-	}, 0, chainMonitor)
+	}, 0, chainMonitor, infra.NewMetrics())
 	require.NoError(err, "instantiating stream cache")
 
 	streamCache.registerMiniBlocksBatched = useBatchRegistration
@@ -231,7 +232,7 @@ func testCacheEvictionWithFilledMiniBlockPool(t *testing.T, useBatchRegistration
 	require.NoError(err, "instantiating blockchain test context")
 	defer btc.Close()
 
-	go chainMonitor.RunWithBlockPeriod(ctx, btc.Client(), 0, 10*time.Millisecond)
+	go chainMonitor.RunWithBlockPeriod(ctx, btc.Client(), 0, 10*time.Millisecond, infra.NewMetrics())
 
 	node := btc.GetBlockchain(ctx, 0)
 
@@ -264,7 +265,7 @@ func testCacheEvictionWithFilledMiniBlockPool(t *testing.T, useBatchRegistration
 		},
 	}
 
-	streamCache, err := NewStreamCache(ctx, streamCacheParams, 0, chainMonitor)
+	streamCache, err := NewStreamCache(ctx, streamCacheParams, 0, chainMonitor, infra.NewMetrics())
 	require.NoError(err, "instantiating stream cache")
 
 	streamCache.registerMiniBlocksBatched = useBatchRegistration
@@ -411,7 +412,7 @@ func testStreamMiniblockBatchProduction(t *testing.T, useBatchRegistration bool)
 		StreamConfig: &config.StreamConfig{
 			CacheExpiration: 0, // disable cache expiration, done manually
 		},
-	}, node.InitialBlockNum, node.ChainMonitor)
+	}, node.InitialBlockNum, node.ChainMonitor, infra.NewMetrics())
 	require.NoError(err, "instantiating stream cache")
 
 	streamCache.registerMiniBlocksBatched = useBatchRegistration
@@ -550,7 +551,7 @@ func TestStreamUnloadWithSubscribers(t *testing.T) {
 		StreamConfig: &config.StreamConfig{
 			CacheExpiration: 0, // disable cache expiration, done manually
 		},
-	}, node.InitialBlockNum, node.ChainMonitor)
+	}, node.InitialBlockNum, node.ChainMonitor, infra.NewMetrics())
 	require.NoError(err, "instantiating stream cache")
 
 	streamCache.registerMiniBlocksBatched = true
@@ -598,7 +599,7 @@ func TestStreamUnloadWithSubscribers(t *testing.T) {
 		StreamConfig: &config.StreamConfig{
 			CacheExpiration: 0, // disable cache expiration, done manually
 		},
-	}, blockNum, node.ChainMonitor)
+	}, blockNum, node.ChainMonitor, infra.NewMetrics())
 	require.NoError(err, "instantiating stream cache")
 
 	for streamID, syncCookie := range syncCookies {

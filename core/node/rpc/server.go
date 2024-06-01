@@ -22,6 +22,7 @@ import (
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
@@ -138,6 +139,7 @@ func (s *Service) start() error {
 		s.riverChain.Client,
 		s.riverChain.InitialBlockNum,
 		time.Duration(s.riverChain.Config.BlockTimeMs)*time.Millisecond,
+		s.metrics,
 	)
 
 	s.initHandlers()
@@ -171,6 +173,10 @@ func (s *Service) initInstance(mode string) {
 	)
 	s.serverCtx = dlog.CtxWithLog(s.serverCtx, s.defaultLogger)
 	s.defaultLogger.Info("Starting server", "config", s.config, "mode", mode)
+
+	s.metrics = infra.NewMetrics()
+	s.serviceRequestsMetric = s.metrics.NewSuccessMetrics(infra.RPC_CATEGORY, nil)
+	s.metrics.StartMetricsServer(s.serverCtx, s.config.Metrics)
 }
 
 func (s *Service) initWallet() error {
@@ -209,7 +215,7 @@ func (s *Service) initBaseChain() error {
 	cfg := s.config
 
 	if !s.config.DisableBaseChain {
-		baseChain, err := crypto.NewBlockchain(ctx, &s.config.BaseChain, nil)
+		baseChain, err := crypto.NewBlockchain(ctx, &s.config.BaseChain, nil, s.metrics)
 		if err != nil {
 			return err
 		}
@@ -220,6 +226,7 @@ func (s *Service) initBaseChain() error {
 			&cfg.ArchitectContract,
 			cfg.BaseChain.LinkedWalletsLimit,
 			cfg.BaseChain.ContractCallsTimeoutMs,
+			s.metrics,
 		)
 		if err != nil {
 			return err
@@ -237,7 +244,7 @@ func (s *Service) initRiverChain() error {
 	ctx := s.serverCtx
 	var err error
 	if s.riverChain == nil {
-		s.riverChain, err = crypto.NewBlockchain(ctx, &s.config.RiverChain, s.wallet)
+		s.riverChain, err = crypto.NewBlockchain(ctx, &s.config.RiverChain, s.wallet, s.metrics)
 		if err != nil {
 			return err
 		}
@@ -467,6 +474,7 @@ func (s *Service) initCacheAndSync() error {
 		},
 		s.riverChain.InitialBlockNum,
 		s.riverChain.ChainMonitor,
+		s.metrics,
 	)
 	if err != nil {
 		return err
@@ -484,14 +492,14 @@ func (s *Service) initCacheAndSync() error {
 
 func (s *Service) initHandlers() {
 	interceptors := connect.WithInterceptors(
-		NewMetricsInterceptor(),
+		s.NewMetricsInterceptor(),
 		NewTimeoutInterceptor(s.config.Network.RequestTimeout),
 	)
 	streamServicePattern, streamServiceHandler := protocolconnect.NewStreamServiceHandler(s, interceptors)
-	s.mux.Handle(streamServicePattern, newHttpHandler(streamServiceHandler, s.defaultLogger))
+	s.mux.Handle(streamServicePattern, newHttpHandler(streamServiceHandler, s.defaultLogger, s.metrics))
 
 	nodeServicePattern, nodeServiceHandler := protocolconnect.NewNodeToNodeHandler(s, interceptors)
-	s.mux.Handle(nodeServicePattern, nodeServiceHandler)
+	s.mux.Handle(nodeServicePattern, newHttpHandler(nodeServiceHandler, s.defaultLogger, s.metrics))
 
 	s.registerDebugHandlers(s.config.EnableDebugEndpoints)
 }

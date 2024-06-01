@@ -26,17 +26,6 @@ const (
 	MiniblockCandidateBatchSize = 50
 )
 
-var (
-	streamCacheSizeGauge = infra.NewGaugeVec(
-		"stream_cache_size", "Number of streams in stream cache",
-		"chain_id", "address",
-	)
-	streamCacheUnloadedGauge = infra.NewGaugeVec(
-		"stream_cache_unloaded", "Number of unloaded streams in stream cache",
-		"chain_id", "address",
-	)
-)
-
 type StreamCacheParams struct {
 	Storage      storage.StreamStorage
 	Wallet       *crypto.Wallet
@@ -81,18 +70,25 @@ func NewStreamCache(
 	params *StreamCacheParams,
 	appliedBlockNum crypto.BlockNumber,
 	chainMonitor crypto.ChainMonitor,
+	metrics *infra.Metrics,
 ) (*streamCacheImpl, error) {
 	s := &streamCacheImpl{
 		params:                    params,
 		registerMiniBlocksBatched: true,
-		streamCacheSizeGauge: streamCacheSizeGauge.With(prometheus.Labels{
-			"chain_id": params.Riverchain.ChainId.String(),
-			"address":  params.Wallet.Address.String(),
-		}),
-		streamCacheUnloadedGauge: streamCacheUnloadedGauge.With(prometheus.Labels{
-			"chain_id": params.Riverchain.ChainId.String(),
-			"address":  params.Wallet.Address.String(),
-		}),
+		streamCacheSizeGauge: metrics.NewGaugeVecHelper(
+			"stream_cache_size", "Number of streams in stream cache",
+			"chain_id", "address",
+		).WithLabelValues(
+			params.Riverchain.ChainId.String(),
+			params.Wallet.Address.String(),
+		),
+		streamCacheUnloadedGauge: metrics.NewGaugeVecHelper(
+			"stream_cache_unloaded", "Number of unloaded streams in stream cache",
+			"chain_id", "address",
+		).WithLabelValues(
+			params.Riverchain.ChainId.String(),
+			params.Wallet.Address.String(),
+		),
 	}
 
 	streams, err := params.Registry.GetAllStreams(ctx, appliedBlockNum)

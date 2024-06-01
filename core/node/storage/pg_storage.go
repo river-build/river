@@ -11,13 +11,13 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prometheus/client_golang/prometheus"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/config"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
 
 	"github.com/river-build/river/core/node/dlog"
-	"github.com/river-build/river/core/node/infra"
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
@@ -43,6 +43,9 @@ type PostgresEventStore struct {
 
 	regularConnections   *semaphore.Weighted
 	streamingConnections *semaphore.Weighted
+
+	txCounter  *prometheus.CounterVec
+	txDuration *prometheus.HistogramVec
 }
 
 var _ StreamStorage = (*PostgresEventStore)(nil)
@@ -50,8 +53,6 @@ var _ StreamStorage = (*PostgresEventStore)(nil)
 const (
 	PG_REPORT_INTERVAL = 3 * time.Minute
 )
-
-var dbCalls = infra.NewSuccessMetrics(infra.DB_CALLS_CATEGORY, nil)
 
 type txRunnerOpts struct {
 	disableCompareUUID  bool
@@ -164,8 +165,9 @@ func (s *PostgresEventStore) txRunner(
 	accessMode pgx.TxAccessMode,
 	txFn func(context.Context, pgx.Tx) error,
 	opts *txRunnerOpts,
+	tags ...any,
 ) error {
-	log := dlog.FromCtx(ctx)
+	log := dlog.FromCtx(ctx).With(append(tags, "name", name, "currentUUID", s.nodeUUID, "dbSchema", s.schemaName)...)
 
 	if accessMode == pgx.ReadWrite {
 		// For write transactions context should not be cancelled if a client connection drops. Cancellations due to lost client connections can cause
@@ -173,28 +175,36 @@ func (s *PostgresEventStore) txRunner(
 		ctx = context.WithoutCancel(ctx)
 	}
 
+	timer := prometheus.NewTimer(s.txDuration.WithLabelValues(name))
+	defer timer.ObserveDuration()
+
 	for {
 		err := s.txRunnerInner(ctx, accessMode, txFn, opts)
 		if err != nil {
+			result := "failure"
+
 			if pgErr, ok := err.(*pgconn.PgError); ok {
 				if pgErr.Code == pgerrcode.SerializationFailure {
 					log.Warn(
 						"pg.txRunner: retrying transaction due to serialization failure",
-						"name",
-						name,
-						"pgErr",
-						pgErr,
+						"pgErr", pgErr,
 					)
+					s.txCounter.WithLabelValues(name, "retry").Inc()
 					continue
 				}
-				log.Warn("pg.txRunner: transaction failed", "name", name, "pgErr", pgErr)
+				log.Warn("pg.txRunner: transaction failed", "pgErr", pgErr)
 			} else {
 				level := slog.LevelWarn
 				if opts != nil && opts.skipLoggingNotFound && AsRiverError(err).Code == Err_NOT_FOUND {
+					// Count "not found" as succeess if error is potentially expected
+					result = "success"
 					level = slog.LevelDebug
 				}
-				log.Log(ctx, level, "pg.txRunner: transaction failed", "name", name, "err", err)
+				log.Log(ctx, level, "pg.txRunner: transaction failed", "err", err)
 			}
+
+			s.txCounter.WithLabelValues(name, result).Inc()
+
 			return WrapRiverError(
 				Err_DB_OPERATION_FAILURE,
 				err,
@@ -202,39 +212,11 @@ func (s *PostgresEventStore) txRunner(
 				Message("transaction failed").
 				Tag("name", name)
 		}
+
+		log.Debug("pg.txRunner: transaction succeeded")
+		s.txCounter.WithLabelValues(name, "success").Inc()
 		return nil
 	}
-}
-
-func (s *PostgresEventStore) txRunnerWithMetrics(
-	ctx context.Context,
-	name string,
-	accessMode pgx.TxAccessMode,
-	txFn func(context.Context, pgx.Tx) error,
-	opts *txRunnerOpts,
-	tags ...any,
-) error {
-	log := dlog.FromCtx(ctx)
-	logTags := append(tags, "name", name, "currentUUID", s.nodeUUID, "dbSchema", s.schemaName)
-	log.Debug("pg.txRunnerWithMetrics: START", logTags...)
-
-	defer infra.StoreExecutionTimeMetrics(name, infra.DB_CALLS_CATEGORY, time.Now())
-
-	err := s.txRunner(
-		ctx,
-		name,
-		accessMode,
-		txFn,
-		opts,
-	)
-	if err != nil {
-		dbCalls.FailIncForChild(name)
-		return AsRiverError(err, Err_DB_OPERATION_FAILURE).Message("pg.txRunnerWithMetrics: FAILED").Func(name).
-			Tags(tags...).Tag("currentUUID", s.nodeUUID).Tag("dbSchema", s.schemaName).LogDebug(log)
-	}
-	dbCalls.PassIncForChild(name)
-	log.Debug("pg.txRunnerWithMetrics: SUCCESS", logTags...)
-	return nil
 }
 
 func (s *PostgresEventStore) CreateStreamStorage(
@@ -242,7 +224,7 @@ func (s *PostgresEventStore) CreateStreamStorage(
 	streamId StreamId,
 	genesisMiniblock []byte,
 ) error {
-	return s.txRunnerWithMetrics(
+	return s.txRunner(
 		ctx,
 		"CreateStreamStorage",
 		pgx.ReadWrite,
@@ -284,7 +266,7 @@ func (s *PostgresEventStore) CreateStreamArchiveStorage(
 	ctx context.Context,
 	streamId StreamId,
 ) error {
-	return s.txRunnerWithMetrics(
+	return s.txRunner(
 		ctx,
 		"CreateStreamArchiveStorage",
 		pgx.ReadWrite,
@@ -319,7 +301,7 @@ func (s *PostgresEventStore) createStreamArchiveStorageTx(
 
 func (s *PostgresEventStore) GetMaxArchivedMiniblockNumber(ctx context.Context, streamId StreamId) (int64, error) {
 	var maxArchivedMiniblockNumber int64
-	err := s.txRunnerWithMetrics(
+	err := s.txRunner(
 		ctx,
 		"GetMaxArchivedMiniblockNumber",
 		pgx.ReadOnly,
@@ -372,7 +354,7 @@ func (s *PostgresEventStore) WriteArchiveMiniblocks(
 	startMiniblockNum int64,
 	miniblocks [][]byte,
 ) error {
-	return s.txRunnerWithMetrics(
+	return s.txRunner(
 		ctx,
 		"WriteArchiveMiniblocks",
 		pgx.ReadWrite,
@@ -428,7 +410,7 @@ func (s *PostgresEventStore) ReadStreamFromLastSnapshot(
 	precedingBlockCount int,
 ) (*ReadStreamFromLastSnapshotResult, error) {
 	var ret *ReadStreamFromLastSnapshotResult
-	err := s.txRunnerWithMetrics(
+	err := s.txRunner(
 		ctx,
 		"ReadStreamFromLastSnapshot",
 		pgx.ReadOnly,
@@ -572,7 +554,7 @@ func (s *PostgresEventStore) WriteEvent(
 	minipoolSlot int,
 	envelope []byte,
 ) error {
-	return s.txRunnerWithMetrics(
+	return s.txRunner(
 		ctx,
 		"WriteEvent",
 		pgx.ReadWrite,
@@ -664,7 +646,7 @@ func (s *PostgresEventStore) ReadMiniblocks(
 	toExclusive int64,
 ) ([][]byte, error) {
 	var miniblocks [][]byte
-	err := s.txRunnerWithMetrics(
+	err := s.txRunner(
 		ctx,
 		"ReadMiniblocks",
 		pgx.ReadOnly,
@@ -735,7 +717,7 @@ func (s *PostgresEventStore) WriteBlockProposal(
 	blockNumber int64,
 	miniblock []byte,
 ) error {
-	return s.txRunnerWithMetrics(
+	return s.txRunner(
 		ctx,
 		"WriteBlockProposal",
 		pgx.ReadWrite,
@@ -795,7 +777,7 @@ func (s *PostgresEventStore) PromoteBlock(
 	snapshotMiniblock bool,
 	envelopes [][]byte,
 ) error {
-	return s.txRunnerWithMetrics(
+	return s.txRunner(
 		ctx,
 		"PromoteBlock",
 		pgx.ReadWrite,
@@ -915,7 +897,7 @@ func (s *PostgresEventStore) promoteBlockTxn(
 
 func (s *PostgresEventStore) GetStreamsNumber(ctx context.Context) (int, error) {
 	var count int
-	err := s.txRunnerWithMetrics(
+	err := s.txRunner(
 		ctx,
 		"GetStreamsNumber",
 		pgx.ReadOnly,
@@ -977,7 +959,7 @@ func (s *PostgresEventStore) compareUUID(ctx context.Context, tx pgx.Tx) error {
 }
 
 func (s *PostgresEventStore) CleanupStorage(ctx context.Context) error {
-	return s.txRunnerWithMetrics(
+	return s.txRunner(
 		ctx,
 		"CleanupStorage",
 		pgx.ReadWrite,
@@ -994,7 +976,7 @@ func (s *PostgresEventStore) cleanupStorageTx(ctx context.Context, tx pgx.Tx) er
 // GetStreams returns a list of all event streams
 func (s *PostgresEventStore) GetStreams(ctx context.Context) ([]StreamId, error) {
 	var streams []StreamId
-	err := s.txRunnerWithMetrics(
+	err := s.txRunner(
 		ctx,
 		"GetStreams",
 		pgx.ReadOnly,
@@ -1038,7 +1020,7 @@ func (s *PostgresEventStore) getStreamsTx(ctx context.Context, tx pgx.Tx) ([]Str
 }
 
 func (s *PostgresEventStore) DeleteStream(ctx context.Context, streamId StreamId) error {
-	return s.txRunnerWithMetrics(
+	return s.txRunner(
 		ctx,
 		"DeleteStream",
 		pgx.ReadWrite,
@@ -1452,7 +1434,7 @@ func (s *PostgresEventStore) listenForNewNodes(ctx context.Context) {
 }
 
 func (s *PostgresEventStore) initStorage(ctx context.Context) error {
-	err := s.txRunnerWithMetrics(
+	err := s.txRunner(
 		ctx,
 		"createSchema",
 		pgx.ReadWrite,
@@ -1468,7 +1450,7 @@ func (s *PostgresEventStore) initStorage(ctx context.Context) error {
 		return err
 	}
 
-	err = s.txRunnerWithMetrics(
+	err = s.txRunner(
 		ctx,
 		"listOtherInstances",
 		pgx.ReadOnly,
@@ -1479,7 +1461,7 @@ func (s *PostgresEventStore) initStorage(ctx context.Context) error {
 		return err
 	}
 
-	return s.txRunnerWithMetrics(
+	return s.txRunner(
 		ctx,
 		"initializeSingleNodeKey",
 		pgx.ReadWrite,

@@ -4,14 +4,10 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/prometheus/client_golang/prometheus"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
-)
-
-var (
-	http2Requests = infra.NewCounter("http2_requests", "")
-	http1Requests = infra.NewCounter("http1_requests", "")
 )
 
 const (
@@ -21,15 +17,33 @@ const (
 type httpHandler struct {
 	base http.Handler
 	log  *slog.Logger
+
+	counter *prometheus.CounterVec
 }
 
 var _ http.Handler = (*httpHandler)(nil)
 
-func newHttpHandler(b http.Handler, l *slog.Logger) *httpHandler {
+func newHttpHandler(b http.Handler, l *slog.Logger, m *infra.Metrics) *httpHandler {
 	return &httpHandler{
 		base: b,
 		log:  l,
+		counter: m.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "http_requests",
+			},
+			[]string{"method", "path", "protocol", "status"},
+		),
 	}
+}
+
+type statusInterceptWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (w *statusInterceptWriter) WriteHeader(status int) {
+	w.status = status
+	w.ResponseWriter.WriteHeader(status)
 }
 
 func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -49,14 +63,15 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log := h.log.With("requestId", id)
 	r = r.WithContext(dlog.CtxWithLog(r.Context(), log))
 
-	if r.Proto == "HTTP/2.0" {
-		http2Requests.Inc()
-	} else {
-		http1Requests.Inc()
+	if r.Proto != "HTTP/2.0" {
 		log.Debug("Non HTTP/2.0 request received", "method", r.Method, "path", r.URL.Path, "protocol", r.Proto)
 	}
 
 	w.Header().Add("X-Http-Version", r.Proto)
 	w.Header().Add(RequestIdHeader, id)
-	h.base.ServeHTTP(w, r)
+
+	sw := statusInterceptWriter{ResponseWriter: w}
+	h.base.ServeHTTP(&sw, r)
+
+	h.counter.WithLabelValues(r.Method, r.URL.Path, r.Proto, http.StatusText(sw.status)).Inc()
 }

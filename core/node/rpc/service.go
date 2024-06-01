@@ -19,8 +19,6 @@ import (
 	"github.com/river-build/river/core/node/storage"
 )
 
-var serviceRequests = infra.NewSuccessMetrics(infra.RPC_CATEGORY, nil)
-
 type Service struct {
 	// Context and config
 	serverCtx     context.Context
@@ -62,8 +60,12 @@ type Service struct {
 	// Status string
 	status atomic.Pointer[string]
 
-	// Archiver if in archive mode
+	// Archiver is not nil if running in archive mode
 	Archiver *Archiver
+
+	// Metrics
+	metrics               *infra.Metrics
+	serviceRequestsMetric *infra.SuccessMetrics
 }
 
 var (
