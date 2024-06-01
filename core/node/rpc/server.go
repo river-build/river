@@ -92,6 +92,11 @@ func (s *Service) start() error {
 		return AsRiverError(err).Message("Failed to init wallet").LogError(s.defaultLogger)
 	}
 
+	err = s.initEntitlements()
+	if err != nil {
+		return AsRiverError(err).Message("Failed to init entitlements").LogError(s.defaultLogger)
+	}
+
 	err = s.initBaseChain()
 	if err != nil {
 		return AsRiverError(err).Message("Failed to init base chain").LogError(s.defaultLogger)
@@ -127,10 +132,6 @@ func (s *Service) start() error {
 	err = s.initCacheAndSync()
 	if err != nil {
 		return AsRiverError(err).Message("Failed to init cache and sync").LogError(s.defaultLogger)
-	}
-
-	if err = entitlement.Init(s.serverCtx, s.config); err != nil {
-		return AsRiverError(err).Message("Failed to init entitlement").LogError(s.defaultLogger)
 	}
 
 	go s.riverChain.ChainMonitor.RunWithBlockPeriod(
@@ -217,6 +218,7 @@ func (s *Service) initBaseChain() error {
 		chainAuth, err := auth.NewChainAuth(
 			ctx,
 			baseChain,
+			s.entitlementEvaluator,
 			&cfg.ArchitectContract,
 			cfg.BaseChain.LinkedWalletsLimit,
 			cfg.BaseChain.ContractCallsTimeoutMs,
@@ -423,6 +425,15 @@ func (s *Service) serveH2C() {
 	} else {
 		s.defaultLogger.Info("serveH2C stopped")
 	}
+}
+
+func (s *Service) initEntitlements() error {
+	var err error
+	s.entitlementEvaluator, err = entitlement.NewEvaluatorFromConfig(s.serverCtx, s.config)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *Service) initStore() error {
