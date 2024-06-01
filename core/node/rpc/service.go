@@ -17,6 +17,7 @@ import (
 	. "github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/registries"
 	"github.com/river-build/river/core/node/storage"
+	"github.com/river-build/river/core/xchain/entitlement"
 )
 
 type Service struct {
@@ -51,6 +52,9 @@ type Service struct {
 
 	// Base chain
 	chainAuth auth.ChainAuth
+
+	// Entitlements
+	entitlementEvaluator *entitlement.Evaluator
 
 	// Network
 	listener   net.Listener

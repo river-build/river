@@ -54,6 +54,7 @@ type (
 		evmErrDecoder   *node_contracts.EvmErrorDecoder
 		config          *config.Config
 		cancel          context.CancelFunc
+		evaluator       *entitlement.Evaluator
 	}
 
 	// entitlementCheckReceipt holds the outcome of an xchain entitlement check request
@@ -94,7 +95,8 @@ func New(
 		}
 	}()
 
-	if err = entitlement.Init(ctx, cfg); err != nil {
+	evaluator, err := entitlement.NewEvaluatorFromConfig(ctx, cfg)
+	if err != nil {
 		return nil, err
 	}
 
@@ -180,6 +182,7 @@ func New(
 		baseChain:       baseChain,
 		evmErrDecoder:   decoder,
 		config:          cfg,
+		evaluator:       evaluator,
 	}
 
 	isRegistered, err := x.isRegistered(ctx)
@@ -558,7 +561,7 @@ func (x *xchain) process(
 
 	// Embed log metadata for rule evaluation logs
 	ctx = dlog.CtxWithLog(ctx, log)
-	result, err = entitlement.EvaluateRuleData(ctx, x.config, wallets, ruleData)
+	result, err = x.evaluator.EvaluateRuleData(ctx, wallets, ruleData)
 	if err != nil {
 		log.Error("Failed to EvaluateRuleData", "err", err)
 		return false, err

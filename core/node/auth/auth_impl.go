@@ -145,6 +145,7 @@ const (
 
 type chainAuth struct {
 	blockchain              *crypto.Blockchain
+	evaluator               *entitlement.Evaluator
 	spaceContract           SpaceContract
 	walletLinkContract      WalletLinkContract
 	linkedWalletsLimit      int
@@ -169,6 +170,7 @@ var _ ChainAuth = (*chainAuth)(nil)
 func NewChainAuth(
 	ctx context.Context,
 	blockchain *crypto.Blockchain,
+	evaluator *entitlement.Evaluator,
 	architectCfg *config.ContractConfig,
 	linkedWalletsLimit int,
 	contractCallsTimeoutMs int,
@@ -208,6 +210,7 @@ func NewChainAuth(
 
 	return &chainAuth{
 		blockchain:              blockchain,
+		evaluator:               evaluator,
 		spaceContract:           spaceContract,
 		walletLinkContract:      walletLinkContract,
 		linkedWalletsLimit:      linkedWalletsLimit,
@@ -448,7 +451,7 @@ func (ca *chainAuth) isEntitledToSpaceUncached(
 		log.Debug("entitlement", "entitlement", ent)
 		if ent.entitlementType == "RuleEntitlement" {
 			re := ent.ruleEntitlement
-			result, err := entitlement.EvaluateRuleData(ctx, cfg, wallets, re)
+			result, err := ca.evaluator.EvaluateRuleData(ctx, wallets, re)
 			if err != nil {
 				return &boolCacheResult{allowed: false}, AsRiverError(err).Func("isEntitledToSpace")
 			}
