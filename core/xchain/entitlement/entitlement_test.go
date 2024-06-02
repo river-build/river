@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/river-build/river/core/node/config"
+	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/xchain/examples"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -161,7 +162,7 @@ var evaluator *Evaluator
 
 func TestMain(m *testing.M) {
 	var err error
-	evaluator, err = NewEvaluatorFromConfig(context.Background(), cfg)
+	evaluator, err = NewEvaluatorFromConfig(context.Background(), cfg, infra.NewMetricsFactory("", ""))
 	if err != nil {
 		panic(err)
 	}

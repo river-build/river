@@ -6,6 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/river-build/river/core/node/base/test"
 	"github.com/river-build/river/core/node/crypto"
+	"github.com/river-build/river/core/node/infra"
 	. "github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/registries"
@@ -65,7 +66,7 @@ func makeTestStreamParams(p testParams) (context.Context, *testContext) {
 		StreamConfig: &streamConfig_viewstate_space_t,
 	}
 
-	cache, err := NewStreamCache(ctx, params, blockNumber, bc.ChainMonitor)
+	cache, err := NewStreamCache(ctx, params, blockNumber, bc.ChainMonitor, infra.NewMetrics("", ""))
 	if err != nil {
 		panic(err)
 	}
@@ -95,7 +96,7 @@ func makeTestStreamCache(p testParams) (context.Context, *testContext) {
 		panic(err)
 	}
 
-	streamCache, err := NewStreamCache(ctx, testContext.params, blockNumber, bc.ChainMonitor)
+	streamCache, err := NewStreamCache(ctx, testContext.params, blockNumber, bc.ChainMonitor, infra.NewMetrics("", ""))
 	if err != nil {
 		testContext.closer()
 		panic(err)
