@@ -48,6 +48,25 @@ const (
 	ISENTITLED
 )
 
+func (t CheckOperationType) String() string {
+	switch t {
+	case CheckNONE:
+		return "CheckNONE"
+	case MOCK:
+		return "MOCK"
+	case ERC20:
+		return "ERC20"
+	case ERC721:
+		return "ERC721"
+	case ERC1155:
+		return "ERC1155"
+	case ISENTITLED:
+		return "ISENTITLED"
+	default:
+		return "UNKNOWN"
+	}
+}
+
 // LogicalOperationType Enum
 type LogicalOperationType int
 

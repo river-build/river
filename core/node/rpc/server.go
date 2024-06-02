@@ -175,9 +175,13 @@ func (s *Service) initInstance(mode string) {
 	s.serverCtx = dlog.CtxWithLog(s.serverCtx, s.defaultLogger)
 	s.defaultLogger.Info("Starting server", "config", s.config, "mode", mode)
 
-	s.metrics = infra.NewMetrics()
-	s.serviceRequestsMetric = s.metrics.NewSuccessMetrics(infra.RPC_CATEGORY, nil)
+	subsystem := mode
+	if mode == ServerModeFull {
+		subsystem = "stream"
+	}
+	s.metrics = infra.NewMetrics("river", subsystem)
 	s.metrics.StartMetricsServer(s.serverCtx, s.config.Metrics)
+	s.rpcDuration = s.metrics.NewHistogramVecEx("rpc_duration_seconds", "RPC duration in seconds", infra.DefaultDurationBucketsSeconds, "method")
 }
 
 func (s *Service) initWallet() error {
@@ -436,7 +440,7 @@ func (s *Service) serveH2C() {
 
 func (s *Service) initEntitlements() error {
 	var err error
-	s.entitlementEvaluator, err = entitlement.NewEvaluatorFromConfig(s.serverCtx, s.config)
+	s.entitlementEvaluator, err = entitlement.NewEvaluatorFromConfig(s.serverCtx, s.config, s.metrics)
 	if err != nil {
 		return err
 	}
@@ -449,7 +453,7 @@ func (s *Service) initStore() error {
 
 	switch s.config.StorageType {
 	case storage.StreamStorageTypePostgres:
-		store, err := storage.NewPostgresEventStore(ctx, s.storagePoolInfo, s.instanceId, s.exitSignal)
+		store, err := storage.NewPostgresEventStore(ctx, s.storagePoolInfo, s.instanceId, s.exitSignal, s.metrics)
 		if err != nil {
 			return err
 		}

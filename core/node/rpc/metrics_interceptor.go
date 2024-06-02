@@ -2,8 +2,8 @@ package rpc
 
 import (
 	"context"
-	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 
 	"connectrpc.com/connect"
@@ -20,7 +20,7 @@ func (s *Service) NewMetricsInterceptor() connect.UnaryInterceptorFunc {
 			req connect.AnyRequest,
 		) (connect.AnyResponse, error) {
 			proc := req.Spec().Procedure
-			defer s.metrics.StoreExecutionTimeMetrics(proc, "rpc", time.Now())
+			defer prometheus.NewTimer(s.rpcDuration.WithLabelValues(proc)).ObserveDuration()
 
 			r, ok := req.Any().(streamIdProvider)
 			if ok {

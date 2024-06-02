@@ -18,7 +18,7 @@ import (
 
 func srdump(cfg *config.Config, countOnly bool) error {
 	ctx := context.Background() // lint:ignore context.Background() is fine here
-	blockchain, err := crypto.NewBlockchain(ctx, &cfg.RiverChain, nil, infra.NewMetrics())
+	blockchain, err := crypto.NewBlockchain(ctx, &cfg.RiverChain, nil, infra.NewMetrics("river", "cmdline"))
 	if err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func srdump(cfg *config.Config, countOnly bool) error {
 func srstream(cfg *config.Config, streamId string) error {
 	ctx := context.Background() // lint:ignore context.Background() is fine here
 
-	blockchain, err := crypto.NewBlockchain(ctx, &cfg.RiverChain, nil, infra.NewMetrics())
+	blockchain, err := crypto.NewBlockchain(ctx, &cfg.RiverChain, nil, infra.NewMetrics("river", "cmdline"))
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func srstream(cfg *config.Config, streamId string) error {
 func nodesdump(cfg *config.Config) error {
 	ctx := context.Background() // lint:ignore context.Background() is fine here
 
-	blockchain, err := crypto.NewBlockchain(ctx, &cfg.RiverChain, nil, infra.NewMetrics())
+	blockchain, err := crypto.NewBlockchain(ctx, &cfg.RiverChain, nil, infra.NewMetrics("river", "cmdline"))
 	if err != nil {
 		return err
 	}

@@ -70,19 +70,19 @@ func NewStreamCache(
 	params *StreamCacheParams,
 	appliedBlockNum crypto.BlockNumber,
 	chainMonitor crypto.ChainMonitor,
-	metrics *infra.Metrics,
+	metrics infra.MetricsFactory,
 ) (*streamCacheImpl, error) {
 	s := &streamCacheImpl{
 		params:                    params,
 		registerMiniBlocksBatched: true,
-		streamCacheSizeGauge: metrics.NewGaugeVecHelper(
+		streamCacheSizeGauge: metrics.NewGaugeVecEx(
 			"stream_cache_size", "Number of streams in stream cache",
 			"chain_id", "address",
 		).WithLabelValues(
 			params.Riverchain.ChainId.String(),
 			params.Wallet.Address.String(),
 		),
-		streamCacheUnloadedGauge: metrics.NewGaugeVecHelper(
+		streamCacheUnloadedGauge: metrics.NewGaugeVecEx(
 			"stream_cache_unloaded", "Number of unloaded streams in stream cache",
 			"chain_id", "address",
 		).WithLabelValues(

@@ -23,7 +23,7 @@ type (
 			client BlockchainClient,
 			initialBlock BlockNumber,
 			blockPeriod time.Duration,
-			metrics *infra.Metrics,
+			metrics infra.MetricsFactory,
 		)
 		// OnHeader adds a callback that is when a new header is received.
 		// Note: it is not guaranteed to be called for every new header!
@@ -161,26 +161,26 @@ func (ecm *chainMonitor) RunWithBlockPeriod(
 	client BlockchainClient,
 	initialBlock BlockNumber,
 	blockPeriod time.Duration,
-	metrics *infra.Metrics,
+	metrics infra.MetricsFactory,
 ) {
 	var (
-		chainBaseFee = metrics.NewGaugeVecHelper(
+		chainBaseFee = metrics.NewGaugeVecEx(
 			"chain_monitor_base_fee_wei", "Current EIP-1559 base fee as obtained from the block header",
 			"chain_id",
 		)
-		chainMonitorHeadBlock = metrics.NewGaugeVecHelper(
+		chainMonitorHeadBlock = metrics.NewGaugeVecEx(
 			"chain_monitor_head_block", "Latest block available for the chain monitor",
 			"chain_id",
 		)
-		chainMonitorProcessedBlock = metrics.NewGaugeVecHelper(
+		chainMonitorProcessedBlock = metrics.NewGaugeVecEx(
 			"chain_monitor_processed_block", "Latest block processed by the chain monitor",
 			"chain_id",
 		)
-		chainMonitorRecvEvents = metrics.NewCounterVecHelper(
+		chainMonitorRecvEvents = metrics.NewCounterVecEx(
 			"chain_monitor_received_events", "Chain monitor total received events",
 			"chain_id",
 		)
-		chainMonitorPollCounter = metrics.NewCounterVecHelper(
+		chainMonitorPollCounter = metrics.NewCounterVecEx(
 			"chain_monitor_pollcounter", "How many times the chain monitor poll loop has run",
 			"chain_id",
 		)

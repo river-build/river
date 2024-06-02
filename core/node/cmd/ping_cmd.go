@@ -18,7 +18,7 @@ import (
 func runPing(cfg *config.Config) error {
 	ctx := context.Background() // lint:ignore context.Background() is fine here
 
-	blockchain, err := crypto.NewBlockchain(ctx, &cfg.RiverChain, nil, infra.NewMetrics())
+	blockchain, err := crypto.NewBlockchain(ctx, &cfg.RiverChain, nil, infra.NewMetrics("river", "cmdline"))
 	if err != nil {
 		return err
 	}

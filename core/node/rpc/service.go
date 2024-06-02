@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/river-build/river/core/node/auth"
 	"github.com/river-build/river/core/node/config"
 	"github.com/river-build/river/core/node/crypto"
@@ -68,8 +69,8 @@ type Service struct {
 	Archiver *Archiver
 
 	// Metrics
-	metrics               *infra.Metrics
-	serviceRequestsMetric *infra.SuccessMetrics
+	metrics     *infra.Metrics
+	rpcDuration *prometheus.HistogramVec
 }
 
 var (

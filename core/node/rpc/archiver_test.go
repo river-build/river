@@ -15,6 +15,7 @@ import (
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
@@ -245,6 +246,7 @@ func TestArchiveOneStream(t *testing.T) {
 		pool,
 		GenShortNanoid(),
 		make(chan error, 1),
+		infra.NewMetricsFactory("", ""),
 	)
 	require.NoError(err)
 

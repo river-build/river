@@ -14,6 +14,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/config"
+	"github.com/river-build/river/core/node/infra"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
 
@@ -44,7 +45,7 @@ type PostgresEventStore struct {
 	regularConnections   *semaphore.Weighted
 	streamingConnections *semaphore.Weighted
 
-	txCounter  *prometheus.CounterVec
+	txCounter  *infra.StatusCounterVec
 	txDuration *prometheus.HistogramVec
 }
 
@@ -175,13 +176,12 @@ func (s *PostgresEventStore) txRunner(
 		ctx = context.WithoutCancel(ctx)
 	}
 
-	timer := prometheus.NewTimer(s.txDuration.WithLabelValues(name))
-	defer timer.ObserveDuration()
+	defer prometheus.NewTimer(s.txDuration.WithLabelValues(name)).ObserveDuration()
 
 	for {
 		err := s.txRunnerInner(ctx, accessMode, txFn, opts)
 		if err != nil {
-			result := "failure"
+			pass := false
 
 			if pgErr, ok := err.(*pgconn.PgError); ok {
 				if pgErr.Code == pgerrcode.SerializationFailure {
@@ -197,24 +197,29 @@ func (s *PostgresEventStore) txRunner(
 				level := slog.LevelWarn
 				if opts != nil && opts.skipLoggingNotFound && AsRiverError(err).Code == Err_NOT_FOUND {
 					// Count "not found" as succeess if error is potentially expected
-					result = "success"
+					pass = true
 					level = slog.LevelDebug
 				}
 				log.Log(ctx, level, "pg.txRunner: transaction failed", "err", err)
 			}
 
-			s.txCounter.WithLabelValues(name, result).Inc()
+			if pass {
+				s.txCounter.IncPass(name)
+			} else {
+				s.txCounter.IncFail(name)
+			}
 
 			return WrapRiverError(
 				Err_DB_OPERATION_FAILURE,
 				err,
 			).Func("pg.txRunner").
 				Message("transaction failed").
-				Tag("name", name)
+				Tag("name", name).
+				Tags(tags...)
 		}
 
 		log.Debug("pg.txRunner: transaction succeeded")
-		s.txCounter.WithLabelValues(name, "success").Inc()
+		s.txCounter.IncPass(name)
 		return nil
 	}
 }
@@ -1129,12 +1134,14 @@ func NewPostgresEventStore(
 	poolInfo *PgxPoolInfo,
 	instanceId string,
 	exitSignal chan error,
+	metrics infra.MetricsFactory,
 ) (*PostgresEventStore, error) {
 	store, err := newPostgresEventStore(
 		ctx,
 		poolInfo,
 		instanceId,
 		exitSignal,
+		metrics,
 		migrationsDir,
 	)
 	if err != nil {
@@ -1152,6 +1159,7 @@ func newPostgresEventStore(
 	poolInfo *PgxPoolInfo,
 	instanceId string,
 	exitSignal chan error,
+	metrics infra.MetricsFactory,
 	migrations embed.FS,
 ) (*PostgresEventStore, error) {
 	log := dlog.FromCtx(ctx)
@@ -1198,6 +1206,9 @@ func newPostgresEventStore(
 		migrationDir:         migrations,
 		regularConnections:   semaphore.NewWeighted(numRegularConnections),
 		streamingConnections: semaphore.NewWeighted(numStreamingConnections),
+
+		txCounter:  metrics.NewStatusCounterVecEx("transaction", "PG transaction status", "name"),
+		txDuration: metrics.NewHistogramVecEx("transaction_duration", "PG transaction duration", infra.DefaultDurationBucketsSeconds, "name"),
 	}
 
 	err := store.InitStorage(ctx)

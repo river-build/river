@@ -23,7 +23,7 @@ type httpHandler struct {
 
 var _ http.Handler = (*httpHandler)(nil)
 
-func newHttpHandler(b http.Handler, l *slog.Logger, m *infra.Metrics) *httpHandler {
+func newHttpHandler(b http.Handler, l *slog.Logger, m infra.MetricsFactory) *httpHandler {
 	return &httpHandler{
 		base: b,
 		log:  l,
@@ -34,16 +34,6 @@ func newHttpHandler(b http.Handler, l *slog.Logger, m *infra.Metrics) *httpHandl
 			[]string{"method", "path", "protocol", "status"},
 		),
 	}
-}
-
-type statusInterceptWriter struct {
-	http.ResponseWriter
-	status int
-}
-
-func (w *statusInterceptWriter) WriteHeader(status int) {
-	w.status = status
-	w.ResponseWriter.WriteHeader(status)
 }
 
 func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -70,8 +60,8 @@ func (h *httpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("X-Http-Version", r.Proto)
 	w.Header().Add(RequestIdHeader, id)
 
-	sw := statusInterceptWriter{ResponseWriter: w}
-	h.base.ServeHTTP(&sw, r)
+	h.base.ServeHTTP(w, r)
 
-	h.counter.WithLabelValues(r.Method, r.URL.Path, r.Proto, http.StatusText(sw.status)).Inc()
+	// TODO: implement status reporting here
+	h.counter.WithLabelValues(r.Method, r.URL.Path, r.Proto, "TODO").Inc()
 }

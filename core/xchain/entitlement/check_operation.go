@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/river-build/river/core/xchain/bindings/erc20"
 	"github.com/river-build/river/core/xchain/bindings/erc721"
 	"github.com/river-build/river/core/xchain/contracts"
@@ -13,7 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/river-build/river/core/node/dlog"
-	"github.com/river-build/river/core/node/infra"
 )
 
 func (e *Evaluator) evaluateCheckOperation(
@@ -21,21 +21,18 @@ func (e *Evaluator) evaluateCheckOperation(
 	op *CheckOperation,
 	linkedWallets []common.Address,
 ) (bool, error) {
+	defer prometheus.NewTimer(e.evalHistrogram.WithLabelValues(op.CheckType.String())).ObserveDuration()
+
 	switch op.CheckType {
 	case MOCK:
-		defer infra.StoreExecutionTimeMetrics("evaluateMockOperation", infra.CONTRACT_CALLS_CATEGORY, time.Now())
 		return e.evaluateMockOperation(ctx, op)
 	case ISENTITLED:
-		defer infra.StoreExecutionTimeMetrics("evaluateIsEntitledOperation", infra.CONTRACT_CALLS_CATEGORY, time.Now())
 		return e.evaluateIsEntitledOperation(ctx, op, linkedWallets)
 	case ERC20:
-		defer infra.StoreExecutionTimeMetrics("evaluateErc20Operation", infra.CONTRACT_CALLS_CATEGORY, time.Now())
 		return e.evaluateErc20Operation(ctx, op, linkedWallets)
 	case ERC721:
-		defer infra.StoreExecutionTimeMetrics("evaluateErc721Operation", infra.CONTRACT_CALLS_CATEGORY, time.Now())
 		return e.evaluateErc721Operation(ctx, op, linkedWallets)
 	case ERC1155:
-		defer infra.StoreExecutionTimeMetrics("evaluateErc1155Operation", infra.CONTRACT_CALLS_CATEGORY, time.Now())
 		return e.evaluateErc1155Operation(ctx, op)
 	case CheckNONE:
 		fallthrough

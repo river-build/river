@@ -275,7 +275,7 @@ func NewBlockchainTestContext(ctx context.Context, numKeys int, mineOnTx bool) (
 	// Add deployer as operator so it can register nodes
 	btc.ChainMonitor = NewChainMonitor()
 	btc.DeployerBlockchain = makeTestBlockchain(ctx, wallets[len(wallets)-1], client, btc.ChainMonitor, chainId)
-	go btc.ChainMonitor.RunWithBlockPeriod(ctx, client, btc.DeployerBlockchain.InitialBlockNum, 10*time.Millisecond, infra.NewMetrics())
+	go btc.ChainMonitor.RunWithBlockPeriod(ctx, client, btc.DeployerBlockchain.InitialBlockNum, 10*time.Millisecond, infra.NewMetrics("", ""))
 
 	// commit the river registry deployment transaction
 	if !mineOnTx {
@@ -456,7 +456,7 @@ func makeTestBlockchain(
 		client,
 		nil,
 		chainMonitor,
-		infra.NewMetrics(),
+		infra.NewMetrics("", ""),
 	)
 	if err != nil {
 		panic(err)

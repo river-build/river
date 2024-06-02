@@ -174,7 +174,7 @@ func NewChainAuth(
 	architectCfg *config.ContractConfig,
 	linkedWalletsLimit int,
 	contractCallsTimeoutMs int,
-	metrics *infra.Metrics,
+	metrics infra.MetricsFactory,
 ) (*chainAuth, error) {
 	// instantiate contract facets from diamond configuration
 	spaceContract, err := NewSpaceContractV3(ctx, architectCfg, blockchain.Client)
@@ -205,8 +205,8 @@ func NewChainAuth(
 		contractCallsTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS
 	}
 
-	counter := metrics.NewCounterVecHelper(
-		"entitlement_cache", "Counters for cache hits and misses for entitelement cache", "function", "result")
+	counter := metrics.NewCounterVecEx(
+		"entitlement_cache", "Cache hits and misses for entitelement cache", "function", "result")
 
 	return &chainAuth{
 		blockchain:              blockchain,

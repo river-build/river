@@ -122,7 +122,7 @@ func NewTransactionPoolWithPoliciesFromConfig(
 	riverClient BlockchainClient,
 	wallet *Wallet,
 	chainMonitor ChainMonitor,
-	metrics *infra.Metrics,
+	metrics infra.MetricsFactory,
 ) (*transactionPool, error) {
 	if cfg.BlockTimeMs <= 0 {
 		return nil, RiverError(Err_BAD_CONFIG, "BlockTimeMs must be set").
@@ -158,7 +158,7 @@ func NewTransactionPoolWithPolicies(
 	replacePolicy TransactionPoolReplacePolicy,
 	pricePolicy TransactionPricePolicy,
 	chainMonitor ChainMonitor,
-	metrics *infra.Metrics,
+	metrics infra.MetricsFactory,
 ) (*transactionPool, error) {
 	chainID, err := client.ChainID(ctx)
 	if err != nil {
@@ -175,36 +175,36 @@ func NewTransactionPoolWithPolicies(
 		return tx.WithSignature(signer, signature)
 	}
 
-	transactionsSubmittedCounter := metrics.NewCounterVecHelper(
+	transactionsSubmittedCounter := metrics.NewCounterVecEx(
 		"txpool_submitted", "Number of transactions submitted",
 		"chain_id", "address", "func_selector",
 	)
-	transactionsReplacedCounter := metrics.NewCounterVecHelper(
+	transactionsReplacedCounter := metrics.NewCounterVecEx(
 		"txpool_replaced", "Number of replacement transactions submitted",
 		"chain_id", "address", "func_selector",
 	)
-	transactionsPendingCounter := metrics.NewGaugeVecHelper(
+	transactionsPendingCounter := metrics.NewGaugeVecEx(
 		"txpool_pending", "Number of transactions that are waiting to be included in the chain",
 		"chain_id", "address",
 	)
-	transactionsProcessedCounter := metrics.NewCounterVecHelper(
+	transactionsProcessedCounter := metrics.NewCounterVecEx(
 		"txpool_processed", "Number of submitted transactions that are included in the chain",
 		"chain_id", "address", "status",
 	)
-	transactionGasCap := metrics.NewGaugeVecHelper(
+	transactionGasCap := metrics.NewGaugeVecEx(
 		"txpool_tx_fee_cap_wei", "Latest submitted EIP1559 transaction gas fee cap",
 		"chain_id", "address", "replacement",
 	)
-	transactionGasTip := metrics.NewGaugeVecHelper(
+	transactionGasTip := metrics.NewGaugeVecEx(
 		"txpool_tx_miner_tip_wei", "Latest submitted EIP1559 transaction gas fee miner tip",
 		"chain_id", "address", "replacement",
 	)
-	transactionInclusionDuration := metrics.NewHistogramHelper(
+	transactionInclusionDuration := metrics.NewHistogramVecEx(
 		"txpool_tx_inclusion_duration_sec",
 		"How long it takes before a transaction is included in the chain",
 		prometheus.LinearBuckets(1.0, 2.0, 10), "chain_id", "address",
 	)
-	walletBalance := metrics.NewGaugeVecHelper(
+	walletBalance := metrics.NewGaugeVecEx(
 		"txpool_wallet_balance_eth", "Wallet native coin balance",
 		"chain_id", "address",
 	)
