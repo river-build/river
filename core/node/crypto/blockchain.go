@@ -57,7 +57,12 @@ type Blockchain struct {
 // If wallet is nil, the blockchain will be read-only.
 // If wallet is not nil, the blockchain will be read-write:
 // TxRunner will be created to track nonce used by the account.
-func NewBlockchain(ctx context.Context, cfg *config.ChainConfig, wallet *Wallet, metrics infra.MetricsFactory) (*Blockchain, error) {
+func NewBlockchain(
+	ctx context.Context,
+	cfg *config.ChainConfig,
+	wallet *Wallet,
+	metrics infra.MetricsFactory,
+) (*Blockchain, error) {
 	client, err := ethclient.DialContext(ctx, cfg.NetworkUrl)
 	if err != nil {
 		return nil, AsRiverError(err, Err_CANNOT_CONNECT).

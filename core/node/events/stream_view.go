@@ -97,7 +97,9 @@ func MakeStreamView(streamData *storage.ReadStreamFromLastSnapshotResult) (*stre
 
 	lastBlockHeader := miniblocks[len(miniblocks)-1].header()
 	generation := lastBlockHeader.MiniblockNum + 1
-	eventNumOffset := lastBlockHeader.EventNumOffset + int64(len(lastBlockHeader.EventHashes)) + 1 // plus one for header
+	eventNumOffset := lastBlockHeader.EventNumOffset + int64(
+		len(lastBlockHeader.EventHashes),
+	) + 1 // plus one for header
 
 	return &streamViewImpl{
 		streamId:      streamId,
@@ -152,7 +154,9 @@ func MakeRemoteStreamView(resp *GetStreamResponse) (*streamViewImpl, error) {
 
 	lastBlockHeader := miniblocks[len(miniblocks)-1].header()
 	generation := lastBlockHeader.MiniblockNum + 1
-	eventNumOffset := lastBlockHeader.EventNumOffset + int64(len(lastBlockHeader.EventHashes)) + 1 // plus one for header
+	eventNumOffset := lastBlockHeader.EventNumOffset + int64(
+		len(lastBlockHeader.EventHashes),
+	) + 1 // plus one for header
 
 	return &streamViewImpl{
 		streamId:      streamId,
@@ -429,7 +433,10 @@ func (r *streamViewImpl) indexOfMiniblockWithNum(mininblockNum int64) (int, erro
 }
 
 // iterate over events starting at startBlock including events in the minipool
-func (r *streamViewImpl) forEachEvent(startBlock int, op func(e *ParsedEvent, minibockNum int64, eventNum int64) (bool, error)) error {
+func (r *streamViewImpl) forEachEvent(
+	startBlock int,
+	op func(e *ParsedEvent, minibockNum int64, eventNum int64) (bool, error),
+) error {
 	if startBlock < 0 || startBlock > len(r.blocks) {
 		return RiverError(Err_INVALID_ARGUMENT, "iterateEvents: bad startBlock", "startBlock", startBlock)
 	}

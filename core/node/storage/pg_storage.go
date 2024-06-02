@@ -1207,8 +1207,13 @@ func newPostgresEventStore(
 		regularConnections:   semaphore.NewWeighted(numRegularConnections),
 		streamingConnections: semaphore.NewWeighted(numStreamingConnections),
 
-		txCounter:  metrics.NewStatusCounterVecEx("transaction", "PG transaction status", "name"),
-		txDuration: metrics.NewHistogramVecEx("transaction_duration", "PG transaction duration", infra.DefaultDurationBucketsSeconds, "name"),
+		txCounter: metrics.NewStatusCounterVecEx("transaction", "PG transaction status", "name"),
+		txDuration: metrics.NewHistogramVecEx(
+			"transaction_duration",
+			"PG transaction duration",
+			infra.DefaultDurationBucketsSeconds,
+			"name",
+		),
 	}
 
 	err := store.InitStorage(ctx)

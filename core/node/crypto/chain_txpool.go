@@ -23,9 +23,7 @@ import (
 	. "github.com/river-build/river/core/node/protocol"
 )
 
-var (
-	_ TransactionPool = (*transactionPool)(nil)
-)
+var _ TransactionPool = (*transactionPool)(nil)
 
 type (
 	// TransactionPoolPendingTransaction is a transaction that is submitted to the network but not yet included in the

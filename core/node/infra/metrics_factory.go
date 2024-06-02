@@ -178,7 +178,12 @@ func (f *metricsFactory) NewHistogramVec(opts prometheus.HistogramOpts, labelNam
 	})
 }
 
-func (f *metricsFactory) NewHistogramVecEx(name string, help string, buckets []float64, labels ...string) *prometheus.HistogramVec {
+func (f *metricsFactory) NewHistogramVecEx(
+	name string,
+	help string,
+	buckets []float64,
+	labels ...string,
+) *prometheus.HistogramVec {
 	return f.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    name,
 		Help:    help,
@@ -210,7 +215,12 @@ func (f *metricsFactory) NewSummaryVec(opts prometheus.SummaryOpts, labelNames [
 	})
 }
 
-func (f *metricsFactory) NewSummaryVecEx(name string, help string, objectives map[float64]float64, labels ...string) *prometheus.SummaryVec {
+func (f *metricsFactory) NewSummaryVecEx(
+	name string,
+	help string,
+	objectives map[float64]float64,
+	labels ...string,
+) *prometheus.SummaryVec {
 	return f.NewSummaryVec(prometheus.SummaryOpts{
 		Name:       name,
 		Help:       help,

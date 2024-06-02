@@ -181,7 +181,12 @@ func (s *Service) initInstance(mode string) {
 	}
 	s.metrics = infra.NewMetrics("river", subsystem)
 	s.metrics.StartMetricsServer(s.serverCtx, s.config.Metrics)
-	s.rpcDuration = s.metrics.NewHistogramVecEx("rpc_duration_seconds", "RPC duration in seconds", infra.DefaultDurationBucketsSeconds, "method")
+	s.rpcDuration = s.metrics.NewHistogramVecEx(
+		"rpc_duration_seconds",
+		"RPC duration in seconds",
+		infra.DefaultDurationBucketsSeconds,
+		"method",
+	)
 }
 
 func (s *Service) initWallet() error {
