@@ -12,7 +12,24 @@ import (
 	"github.com/river-build/river/core/node/dlog"
 )
 
-var DefaultDurationBucketsSeconds = []float64{0.001, 0.002, 0.005, 0.01, 0.02, 0.03, 0.06, 0.12, 0.3, 0.6, 1.2, 1.8, 2.8, 3.6, 4.8, 10}
+var DefaultDurationBucketsSeconds = []float64{
+	0.001,
+	0.002,
+	0.005,
+	0.01,
+	0.02,
+	0.03,
+	0.06,
+	0.12,
+	0.3,
+	0.6,
+	1.2,
+	1.8,
+	2.8,
+	3.6,
+	4.8,
+	10,
+}
 
 // Metrics provides MetricsFactory and runs an HTTP server to expose metrics
 // registered with the MetricsFactory.
