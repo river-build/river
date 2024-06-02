@@ -25,25 +25,6 @@ import (
 	. "github.com/river-build/river/core/node/protocol"
 )
 
-// var (
-// 	// contractReads is the root for contract reads/event decode operations.
-// 	contractReads = infra.NewSuccessMetrics(infra.CONTRACT_CALLS_CATEGORY, nil)
-// 	// contractWrites is the root for transactions sent by xchain.
-// 	contractWrites = infra.NewSuccessMetrics(infra.CONTRACT_WRITES_CATEGORY, nil)
-// 	// entitlementCheckRequested keeps track how many entitlement check requests are read and decoded from Base.
-// 	entitlementCheckRequested = infra.NewSuccessMetrics("entitlement_checks_requested", nil)
-// 	// entitlementCheckProcessed keeps track how many entitlement check requests are processed.
-// 	// Failures are expected when other xchain instances have already reached a quorum and the request was dropped on
-// 	// Base.
-// 	entitlementCheckProcessed = infra.NewSuccessMetrics("entitlement_checks_processed", nil)
-// 	// entitlementCheckTx keeps tracks how many times an entitlement check result transaction was sent to Base.
-// 	entitlementCheckTx = infra.NewSuccessMetrics("entitlement_checks", contractWrites)
-
-// 	getRootKeyForWalletCalls = infra.NewSuccessMetrics("get_root_key_for_wallet", contractReads)
-// 	getWalletsByRootKeyCalls = infra.NewSuccessMetrics("get_wallets_by_root_key", contractReads)
-// 	getRuleDataCalls         = infra.NewSuccessMetrics("get_rule_data", contractReads)
-// )
-
 type (
 	// xchain reads entitlement requests from base chain and writes the result after processing back to base.
 	xchain struct {
@@ -188,8 +169,8 @@ func New(
 		return nil, err
 	}
 
-	entCounter := metrics.NewStatusCounterVecEx("entitlement_checks", "TODO", "op")
-	contractCounter := metrics.NewStatusCounterVecEx("contract_calls", "TODO", "op", "name")
+	entCounter := metrics.NewStatusCounterVecEx("entitlement_checks", "Counters for entitelement check ops", "op")
+	contractCounter := metrics.NewStatusCounterVecEx("contract_calls", "Contract calls fro entitlement checks", "op", "name")
 	x := &xchain{
 		workerID:        workerID,
 		checker:         checker,
@@ -207,7 +188,7 @@ func New(
 		getRootKeyForWalletCalls:  contractCounter.MustCurryWith(map[string]string{"op": "read", "name": "get_root_key_for_wallet"}),
 		getWalletsByRootKeyCalls:  contractCounter.MustCurryWith(map[string]string{"op": "read", "name": "get_wallets_by_root_key"}),
 		getRuleDataCalls:          contractCounter.MustCurryWith(map[string]string{"op": "read", "name": "get_rule_data"}),
-		callDurations:             metrics.NewHistogramVecEx("call_durations", "TODO", infra.DefaultDurationBucketsSeconds, "op"),
+		callDurations:             metrics.NewHistogramVecEx("call_duration_seconds", "Durations of contract calls", infra.DefaultDurationBucketsSeconds, "op"),
 	}
 
 	isRegistered, err := x.isRegistered(ctx)

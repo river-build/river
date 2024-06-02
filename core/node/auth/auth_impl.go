@@ -130,19 +130,6 @@ const (
 	DEFAULT_MAX_WALLETS        = 10
 )
 
-// var (
-// 	isEntitledToChannelCacheHit  = infra.NewSuccessMetrics("is_entitled_to_channel_cache_hit", contractCalls)
-// 	isEntitledToChannelCacheMiss = infra.NewSuccessMetrics("is_entitled_to_channel_cache_miss", contractCalls)
-// 	isEntitledToSpaceCacheHit    = infra.NewSuccessMetrics("is_entitled_to_space_cache_hit", contractCalls)
-// 	isEntitledToSpaceCacheMiss   = infra.NewSuccessMetrics("is_entitled_to_space_cache_miss", contractCalls)
-// 	isSpaceEnabledCacheHit       = infra.NewSuccessMetrics("is_space_enabled_cache_hit", contractCalls)
-// 	isSpaceEnabledCacheMiss      = infra.NewSuccessMetrics("is_space_enabled_cache_miss", contractCalls)
-// 	isChannelEnabledCacheHit     = infra.NewSuccessMetrics("is_channel_enabled_cache_hit", contractCalls)
-// 	isChannelEnabledCacheMiss    = infra.NewSuccessMetrics("is_channel_enabled_cache_miss", contractCalls)
-// 	entitlementCacheHit          = infra.NewSuccessMetrics("entitlement_cache_hit", contractCalls)
-// 	entitlementCacheMiss         = infra.NewSuccessMetrics("entitlement_cache_miss", contractCalls)
-// )
-
 type chainAuth struct {
 	blockchain              *crypto.Blockchain
 	evaluator               *entitlement.Evaluator
