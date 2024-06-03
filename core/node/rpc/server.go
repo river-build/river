@@ -276,7 +276,7 @@ func (s *Service) initRiverChain() error {
 		return err
 	}
 
-	s.onChainConfig, err = crypto.NewOnChainConfig(
+	s.chainConfig, err = crypto.NewOnChainConfig(
 		ctx, s.riverChain.Client, s.registryContract.Address, s.riverChain.InitialBlockNum, s.riverChain.ChainMonitor)
 	if err != nil {
 		return err
@@ -286,8 +286,7 @@ func (s *Service) initRiverChain() error {
 		walletAddress,
 		s.nodeRegistry,
 		s.registryContract,
-		s.config.Stream.ReplicationFactor,
-		s.onChainConfig,
+		s.chainConfig,
 	)
 
 	return nil
@@ -486,11 +485,11 @@ func (s *Service) initCacheAndSync() error {
 	s.cache, err = events.NewStreamCache(
 		s.serverCtx,
 		&events.StreamCacheParams{
-			Storage:      s.storage,
-			Wallet:       s.wallet,
-			Riverchain:   s.riverChain,
-			Registry:     s.registryContract,
-			StreamConfig: &s.config.Stream,
+			Storage:     s.storage,
+			Wallet:      s.wallet,
+			RiverChain:  s.riverChain,
+			Registry:    s.registryContract,
+			ChainConfig: s.chainConfig,
 		},
 		s.riverChain.InitialBlockNum,
 		s.riverChain.ChainMonitor,
