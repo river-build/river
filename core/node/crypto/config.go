@@ -371,9 +371,7 @@ func (occ *onChainConfiguration) GetStreamMembershipLimit(streamType byte) (int,
 func (occ *onChainConfiguration) GetUint64OnBlock(blockNumber uint64, key ChainKey) (uint64, error) {
 	setting := occ.settings.getOnBlock(key, blockNumber)
 	if setting == nil {
-		return 0, RiverError(Err_NOT_FOUND, "Missing on-chain configuration setting").
-			Tag("key", key.Name()).
-			Func("GetUint64OnBlock")
+		return uint64(key.DefaultAsInt64()), nil
 	}
 	return setting.Uint64()
 }
@@ -381,9 +379,7 @@ func (occ *onChainConfiguration) GetUint64OnBlock(blockNumber uint64, key ChainK
 func (occ *onChainConfiguration) GetIntOnBlock(blockNumber uint64, key ChainKey) (int, error) {
 	setting := occ.settings.getOnBlock(key, blockNumber)
 	if setting == nil {
-		return 0, RiverError(Err_NOT_FOUND, "Missing on-chain configuration setting").
-			Tag("key", key.Name()).
-			Func("GetIntOnBlock")
+		return int(key.DefaultAsInt64()), nil
 	}
 	return setting.Int()
 }
@@ -391,9 +387,7 @@ func (occ *onChainConfiguration) GetIntOnBlock(blockNumber uint64, key ChainKey)
 func (occ *onChainConfiguration) GetInt64OnBlock(blockNumber uint64, key ChainKey) (int64, error) {
 	setting := occ.settings.getOnBlock(key, blockNumber)
 	if setting == nil {
-		return 0, RiverError(Err_NOT_FOUND, "Missing on-chain configuration setting").
-			Tag("key", key.Name()).
-			Func("GetInt64OnBlock")
+		return key.DefaultAsInt64(), nil
 	}
 	return setting.Int64()
 }

@@ -163,3 +163,85 @@ func TestConfigSwitchAfterNewBlock(t *testing.T) {
 		time.Sleep(25 * time.Millisecond)
 	}
 }
+
+func TestConfigDefaultValue(t *testing.T) {
+	var (
+		ctx, cancel = test.NewTestContext()
+		require     = require.New(t)
+		tc, errTC   = NewBlockchainTestContext(ctx, 1, false)
+		newIntVal   = int64(239398893)
+		newValue    = ABIEncodeInt64(newIntVal)
+	)
+	defer cancel()
+
+	require.NoError(errTC, "unable to construct block test context")
+
+	dv, err := tc.OnChainConfig.GetInt64(StreamRecencyConstraintsAgeSecConfigKey)
+	require.NoError(err, "StreamRecencyConstraintsAgeSecConfigKey get int 64")
+	require.Equal(StreamRecencyConstraintsAgeSecConfigKey.DefaultAsInt64(), dv, "invalid default config")
+
+	// set custom value to ensure that config falls back to default value when deleted
+	pendingTx, err := tc.DeployerBlockchain.TxPool.Submit(
+		ctx,
+		"SetConfiguration",
+		func(opts *bind.TransactOpts) (*types.Transaction, error) {
+			return tc.Configuration.SetConfiguration(opts, StreamRecencyConstraintsAgeSecConfigKey.ID(), 0, newValue)
+		})
+
+	require.NoError(err, "unable to set configuration")
+	tc.Commit(ctx)
+	receipt := <-pendingTx.Wait()
+	require.Equal(TransactionResultSuccess, receipt.Status, "tx failed")
+
+	// make sure the chain config moved after the block the key was updated
+	for {
+		tc.Commit(ctx)
+		if tc.OnChainConfig.ActiveBlock() > receipt.BlockNumber.Uint64() {
+			break
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+
+	val, err := tc.OnChainConfig.GetInt(StreamRecencyConstraintsAgeSecConfigKey)
+	require.NoError(err)
+	require.Equal(int(newIntVal), val, "invalid config")
+
+	val64, err := tc.OnChainConfig.GetInt64(StreamRecencyConstraintsAgeSecConfigKey)
+	require.NoError(err)
+	require.Equal(newIntVal, val64, "invalid config")
+
+	valu64, err := tc.OnChainConfig.GetUint64(StreamRecencyConstraintsAgeSecConfigKey)
+	require.NoError(err)
+	require.Equal(uint64(newIntVal), valu64, "invalid config")
+
+	// drop configuration and check that the chain config falls back to the default value
+	pendingTx, err = tc.DeployerBlockchain.TxPool.Submit(
+		ctx,
+		"SetConfiguration",
+		func(opts *bind.TransactOpts) (*types.Transaction, error) {
+			return tc.Configuration.DeleteConfiguration(opts, StreamRecencyConstraintsAgeSecConfigKey.ID())
+		})
+
+	require.NoError(err, "unable to set configuration")
+	tc.Commit(ctx)
+	receipt = <-pendingTx.Wait()
+	require.Equal(TransactionResultSuccess, receipt.Status, "tx failed")
+
+	// make sure the chain config moved after the block the key was deleted
+	for {
+		tc.Commit(ctx)
+		if tc.OnChainConfig.ActiveBlock() > receipt.BlockNumber.Uint64() {
+			break
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+
+	// ensure that the default value is returned
+	dv, err = tc.OnChainConfig.GetInt64(StreamRecencyConstraintsAgeSecConfigKey)
+	require.NoError(err)
+	require.Equal(StreamRecencyConstraintsAgeSecConfigKey.DefaultAsInt64(), dv)
+
+	dvu, err := tc.OnChainConfig.GetUint64(StreamRecencyConstraintsAgeSecConfigKey)
+	require.NoError(err)
+	require.Equal(uint64(StreamRecencyConstraintsAgeSecConfigKey.DefaultAsInt64()), dvu)
+}
