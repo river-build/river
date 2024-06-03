@@ -66,8 +66,12 @@ func (m *Metrics) StartMetricsServer(ctx context.Context, config config.MetricsC
 
 	mux.Handle("/metrics", metricsHandler)
 
+	iface := config.Interface
+	if iface == "" {
+		iface = "localhost"
+	}
 	m.httpServer = &http.Server{
-		Addr:    fmt.Sprintf("%s:%d", config.Interface, config.Port),
+		Addr:    fmt.Sprintf("%s:%d", iface, config.Port),
 		Handler: mux,
 	}
 
@@ -78,7 +82,7 @@ func (m *Metrics) StartMetricsServer(ctx context.Context, config config.MetricsC
 func (m *Metrics) serveHttp(ctx context.Context) {
 	log := dlog.FromCtx(ctx)
 
-	log.Info("Starting metrics HTTP server", "addr", m.httpServer.Addr)
+	log.Info("Starting metrics HTTP server", "url", fmt.Sprintf("http://%s/metrics", m.httpServer.Addr))
 	err := m.httpServer.ListenAndServe()
 	if err != nil {
 		if err == http.ErrServerClosed {
@@ -97,6 +101,6 @@ func (m *Metrics) waitForClose(ctx context.Context) {
 	if err != nil {
 		log.Error("Error closing metrics HTTP server", "err", err)
 	} else {
-		log.Info("Metrics HTTP server closed")
+		log.Info("Closing metrics HTTP server")
 	}
 }
