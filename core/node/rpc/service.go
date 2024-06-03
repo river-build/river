@@ -49,7 +49,7 @@ type Service struct {
 	registryContract *registries.RiverRegistryContract
 	nodeRegistry     nodes.NodeRegistry
 	streamRegistry   nodes.StreamRegistry
-	onChainConfig    crypto.OnChainConfiguration
+	chainConfig      crypto.OnChainConfiguration
 
 	// Base chain
 	chainAuth auth.ChainAuth

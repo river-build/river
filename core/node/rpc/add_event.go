@@ -66,7 +66,7 @@ func (s *Service) addParsedEvent(
 
 	canAddEvent, chainAuthArgs, requiredParentEvent, err := rules.CanAddEvent(
 		ctx,
-		&s.config.Stream,
+		s.chainConfig,
 		s.nodeRegistry.GetValidNodeAddresses(),
 		time.Now(),
 		parsedEvent,
