@@ -31,7 +31,6 @@ import {MainnetDelegation} from "contracts/src/tokens/river/base/delegation/Main
 import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/RewardsDistribution.sol";
 import {SpaceDelegationFacet} from "contracts/src/base/registry/facets/delegation/SpaceDelegationFacet.sol";
 import {INodeOperatorBase} from "contracts/src/base/registry/facets/operator/INodeOperator.sol";
-import {console} from "forge-std/console.sol";
 
 contract RewardsDistributionTest is
   BaseSetup,
@@ -68,6 +67,7 @@ contract RewardsDistributionTest is
 
   //reused by all tests to setup users, operators, delegations, etc
   Entity[] tUsers;
+  Entity[] tUsersWithDifferentAmounts;
   Entity[] tOperators;
   Entity[] tSpaces;
   Entity[] tSpaceUsers;
@@ -114,6 +114,28 @@ contract RewardsDistributionTest is
   // =============================================================
   //                           Tests
   // =============================================================
+  function test_userRewardsWithMultipleDelegations() public {
+    _createEntitiesForTest(
+      exAmountsPerUser,
+      exCommissionsPerOperator,
+      exDelegationsPerUser
+    );
+
+    //creates users entities with same addresses but different amounts
+    _createUserEntitiesWithDifferentAmountsForTest(tUsers);
+    setupOperators(tOperators);
+    setupUsersAndDelegation(tUsers, tDelegations);
+
+    setupMainnetDelegation(tUsersWithDifferentAmounts, tDelegations);
+    setupDistributionInformation(exDistributionAmount, exActivePeriodLength);
+    verifyUsersRewardsWithMultipleDelegations(
+      exDistributionAmount,
+      tUsers,
+      tOperators,
+      tDelegations,
+      tUsersWithDifferentAmounts
+    );
+  }
 
   function test_getActiveOperators() public {
     _createEntitiesForTest(
@@ -213,7 +235,7 @@ contract RewardsDistributionTest is
 
     vm.prank(tUsers[0].addr);
     vm.expectRevert(RewardsDistribution_NoRewardsToClaim.selector);
-    rewardsDistributionFacet.claim();
+    rewardsDistributionFacet.delegatorClaim();
   }
 
   //specific test case of users delegating to operators and spaces
@@ -293,7 +315,6 @@ contract RewardsDistributionTest is
 
     setupOperators(tOperators);
     setupUsersAndDelegation(tUsers, tDelegations);
-    setupOperatorClaimAddress(tOperators);
 
     verifyOperatorsRewards(exDistributionAmount, tOperators);
 
@@ -478,7 +499,7 @@ contract RewardsDistributionTest is
     );
 
     setupOperators(tOperators);
-    setupOperatorClaimAddress(tOperators);
+    // setupOperatorClaimAddress(tOperators);
     verifyOperatorsRewards(distributionAmount, tOperators);
   }
 
@@ -530,6 +551,7 @@ contract RewardsDistributionTest is
       mainnetUsers,
       mainnetUserDelegations
     )
+    givenMainnetUsersHaveSetAuthorizedClaimersToSelf(mainnetUsers)
   {}
 
   function setupOperatorClaimAddress(
@@ -571,7 +593,7 @@ contract RewardsDistributionTest is
     for (uint256 i = 0; i < users.length; i++) {
       uint256 prevBalance = IERC20(riverFacet).balanceOf(users[i].addr);
       vm.prank(users[i].addr);
-      rewardsDistributionFacet.claim();
+      rewardsDistributionFacet.delegatorClaim();
 
       assertEq(
         prevBalance + expectedRewardsForUsers[i],
@@ -588,7 +610,7 @@ contract RewardsDistributionTest is
     Delegation[] memory delegations
   ) internal givenFundsHaveBeenDisbursed(operators, distributionAmount) {
     for (uint256 i = 0; i < users.length; i++) {
-      uint256 reward = rewardsDistributionFacet.getClaimableAmount(
+      uint256 reward = rewardsDistributionFacet.getClaimableAmountForDelegator(
         users[i].addr
       );
       uint256 expectedReward = _calculateExpectedUserReward(
@@ -616,7 +638,9 @@ contract RewardsDistributionTest is
   ) internal givenFundsHaveBeenDisbursed(operators, distributionAmount) {
     for (uint256 i = 0; i < spaceUsers.length; i++) {
       assertEq(
-        rewardsDistributionFacet.getClaimableAmount(spaceUsers[i].addr),
+        rewardsDistributionFacet.getClaimableAmountForDelegator(
+          spaceUsers[i].addr
+        ),
         _calculateExpectedSpaceUserReward(
           spaceUsers[i].addr,
           distributionAmount,
@@ -639,9 +663,8 @@ contract RewardsDistributionTest is
     Delegation[] memory mainnetUserDelegations
   ) internal givenFundsHaveBeenDisbursed(operators, distributionAmount) {
     for (uint256 i = 0; i < mainnetUsers.length; i++) {
-      uint256 reward = rewardsDistributionFacet.getClaimableAmount(
-        mainnetUsers[i].addr
-      );
+      uint256 reward = rewardsDistributionFacet
+        .getClaimableAmountForAuthorizedClaimer(mainnetUsers[i].addr);
 
       //find operator this user is delegating to:
       for (uint256 j = 0; j < mainnetUserDelegations.length; j++) {
@@ -664,6 +687,46 @@ contract RewardsDistributionTest is
     }
   }
 
+  function verifyUsersRewardsWithMultipleDelegations(
+    uint256 distributionAmount,
+    Entity[] memory users,
+    Entity[] memory operators,
+    Delegation[] memory delegations,
+    Entity[] memory usersWithDifferentAmounts
+  ) internal givenFundsHaveBeenDisbursed(operators, distributionAmount) {
+    for (uint256 i = 0; i < users.length; i++) {
+      uint256 reward = rewardsDistributionFacet.getClaimableAmountForDelegator(
+        users[i].addr
+      );
+
+      //calculate the total delegation to the operator for mainnet and base
+      //calculate the expected reward for this user using both delegations
+
+      uint256 amountDelegatingOnMainnet = 0;
+      //find operator this user is delegating to on mainnet
+      for (uint256 j = 0; j < delegations.length; j++) {
+        if (delegations[j].user == usersWithDifferentAmounts[i].addr) {
+          amountDelegatingOnMainnet = usersWithDifferentAmounts[i].amount;
+          break;
+        }
+      }
+      uint256 expectedReward = _calculateExpectedUserRewardWithMainnetDelegation(
+          users[i].addr,
+          distributionAmount,
+          operators,
+          delegations,
+          usersWithDifferentAmounts,
+          amountDelegatingOnMainnet
+        );
+
+      assertEq(
+        reward,
+        expectedReward,
+        "User Reward does not match expected reward"
+      );
+    }
+  }
+
   function verifyOperatorsRewards(
     uint256 distributionAmount,
     Entity[] memory operators
@@ -674,7 +737,7 @@ contract RewardsDistributionTest is
     givenFundsHaveBeenDisbursed(operators, distributionAmount)
   {
     for (uint256 i = 0; i < operators.length; i++) {
-      uint256 reward = rewardsDistributionFacet.getClaimableAmount(
+      uint256 reward = rewardsDistributionFacet.getClaimableAmountForOperator(
         operator.getClaimAddressForOperator(operators[i].addr)
       );
 
@@ -696,7 +759,7 @@ contract RewardsDistributionTest is
     uint256[] memory expectedUserClaims
   ) internal {
     for (uint256 i = 0; i < users.length; i++) {
-      uint256 reward = rewardsDistributionFacet.getClaimableAmount(
+      uint256 reward = rewardsDistributionFacet.getClaimableAmountForDelegator(
         users[i].addr
       );
       assertEq(
@@ -712,7 +775,7 @@ contract RewardsDistributionTest is
     uint256[] memory expectedOperatorClaims
   ) internal {
     for (uint256 i = 0; i < operators.length; i++) {
-      uint256 reward = rewardsDistributionFacet.getClaimableAmount(
+      uint256 reward = rewardsDistributionFacet.getClaimableAmountForOperator(
         operator.getClaimAddressForOperator(operators[i].addr)
       );
 
@@ -749,6 +812,35 @@ contract RewardsDistributionTest is
     );
 
     return (delegatorsReward * userDelegatedAmount) / totalDelegatedToOperator;
+  }
+
+  function _calculateExpectedUserRewardWithMainnetDelegation(
+    address user,
+    uint256 totalDistribution,
+    Entity[] memory operators,
+    Delegation[] memory delegations,
+    Entity[] memory usersWithDifferentAmounts,
+    uint256 amountDelegatingOnMainnet
+  ) internal view returns (uint256) {
+    uint256 userDelegatedAmount = IERC20(riverFacet).balanceOf(user);
+    address operatorAddr = _getOperatorDelegatee(user);
+
+    uint256 delegatorsReward = _calculateDelegatorsRewardForOperator(
+      operatorAddr,
+      operators,
+      totalDistribution
+    );
+
+    uint256 totalDelegatedToOperator = _getDelegatedAmountToOperatorWithMainnet(
+      operatorAddr,
+      delegations,
+      usersWithDifferentAmounts,
+      delegations
+    );
+
+    return
+      (delegatorsReward * (userDelegatedAmount + amountDelegatingOnMainnet)) /
+      totalDelegatedToOperator;
   }
 
   function _calculateExpectedMainnetUserReward(
@@ -941,6 +1033,16 @@ contract RewardsDistributionTest is
     );
     for (uint256 i = 0; i < delegations.length; i++) {
       tMainnetUserDelegations.push(delegations[i]);
+    }
+  }
+
+  function _createUserEntitiesWithDifferentAmountsForTest(
+    Entity[] memory users
+  ) internal {
+    for (uint256 i = 0; i < users.length; i++) {
+      tUsersWithDifferentAmounts.push(
+        Entity(users[i].addr, users[i].amount + 1000000 * 1e18)
+      );
     }
   }
 
@@ -1424,6 +1526,24 @@ contract RewardsDistributionTest is
           break;
         }
       }
+    }
+    _;
+  }
+
+  modifier givenMainnetUserHasSetAuthorizedClaimerToSelf(Entity memory user) {
+    // vm.expectEmit();
+    // emit IMainnetDelegationBase.AuthorizedClaimerSet(user.addr, claimer);
+    vm.prank(address(messenger));
+    mainnetDelegationFacet.setAuthorizedClaimer(user.addr, user.addr);
+    _;
+  }
+
+  modifier givenMainnetUsersHaveSetAuthorizedClaimersToSelf(
+    Entity[] memory users
+  ) {
+    for (uint256 i = 0; i < users.length; i++) {
+      vm.prank(address(messenger));
+      mainnetDelegationFacet.setAuthorizedClaimer(users[i].addr, users[i].addr);
     }
     _;
   }
