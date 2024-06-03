@@ -31,6 +31,7 @@ import {MainnetDelegation} from "contracts/src/tokens/river/base/delegation/Main
 import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/RewardsDistribution.sol";
 import {SpaceDelegationFacet} from "contracts/src/base/registry/facets/delegation/SpaceDelegationFacet.sol";
 import {INodeOperatorBase} from "contracts/src/base/registry/facets/operator/INodeOperator.sol";
+import {console} from "forge-std/console.sol";
 
 contract RewardsDistributionTest is
   BaseSetup,
@@ -113,6 +114,64 @@ contract RewardsDistributionTest is
   // =============================================================
   //                           Tests
   // =============================================================
+
+  function test_getActiveOperators() public {
+    _createEntitiesForTest(
+      exAmountsPerUser,
+      exCommissionsPerOperator,
+      exDelegationsPerUser
+    );
+
+    setupOperators(tOperators);
+    setupDistributionInformation(exDistributionAmount, exActivePeriodLength);
+
+    assertEq(
+      rewardsDistributionFacet.getActiveOperators().length,
+      tOperators.length,
+      "Active Operators length does not match expected length"
+    );
+    for (
+      uint256 i = 0;
+      i < rewardsDistributionFacet.getActiveOperators().length;
+      i++
+    ) {
+      bool found = false;
+      for (uint256 j = 0; j < tOperators.length; j++) {
+        if (
+          rewardsDistributionFacet.getActiveOperators()[i] == tOperators[j].addr
+        ) {
+          found = true;
+          break;
+        }
+      }
+      assertEq(found, true, "Operator not found in active operators");
+    }
+  }
+
+  function test_subsetActiveOperators() public {
+    setupOperators(tOperators);
+    assertEq(
+      rewardsDistributionFacet.getActiveOperators().length,
+      tOperators.length,
+      "Active Operators length does not match expected length"
+    );
+    for (uint256 i = 0; i < tOperators.length; i++) {
+      setOperatorStatus(tOperators[i].addr, NodeOperatorStatus.Approved);
+    }
+    assertEq(
+      rewardsDistributionFacet.getActiveOperators().length,
+      0,
+      "Approved Operators length does not match expected length"
+    );
+    for (uint256 i = 0; i < tOperators.length / 2; i++) {
+      setOperatorStatus(tOperators[i].addr, NodeOperatorStatus.Active);
+    }
+    assertEq(
+      rewardsDistributionFacet.getActiveOperators().length,
+      tOperators.length / 2,
+      "Active Operators length does not match expected length"
+    );
+  }
 
   //specific test case of users delegating to operators
   function test_exUserRewards() public {
@@ -778,7 +837,7 @@ contract RewardsDistributionTest is
     uint256 commission,
     uint256 operatorShare
   ) internal pure returns (uint256) {
-    uint256 operatorReward = (operatorShare * commission) / 100;
+    uint256 operatorReward = (operatorShare * commission) / 10000;
     return operatorReward;
   }
 
@@ -900,7 +959,7 @@ contract RewardsDistributionTest is
   ) internal view returns (uint256[] memory) {
     uint256[] memory commissionsPerOperator = new uint256[](totalOperators);
     for (uint256 i = 0; i < totalOperators; i++) {
-      uint256 commission = _generateRandom(0, 100);
+      uint256 commission = _generateRandom(0, 10000);
       commissionsPerOperator[i] = commission;
     }
     return commissionsPerOperator;
@@ -1004,9 +1063,9 @@ contract RewardsDistributionTest is
     exAmountsPerUser.push(3000 * 1e18);
     exAmountsPerUser.push(4000 * 1e18);
 
-    exCommissionsPerOperator.push(10);
-    exCommissionsPerOperator.push(15);
-    exCommissionsPerOperator.push(20);
+    exCommissionsPerOperator.push(1000);
+    exCommissionsPerOperator.push(1500);
+    exCommissionsPerOperator.push(2000);
 
     exDelegationsPerUser.push(0);
     exDelegationsPerUser.push(0);
@@ -1207,7 +1266,7 @@ contract RewardsDistributionTest is
     uint256 commission
   ) internal {
     vm.assume(operatorAddr != address(0));
-    vm.assume(0 <= commission && commission <= 100);
+    vm.assume(0 <= commission && commission <= 10000);
     vm.expectEmit();
     emit INodeOperatorBase.OperatorCommissionChanged(operatorAddr, commission);
     vm.prank(operatorAddr);
@@ -1428,7 +1487,7 @@ contract RewardsDistributionTest is
       vm.expectEmit();
       emit RewardsDistributed(
         operators[i].addr,
-        (operatorAmount * operators[i].amount) / 100
+        (operatorAmount * operators[i].amount) / 10000
       );
       vm.prank(deployer);
       rewardsDistributionFacet.distributeRewards(operators[i].addr);

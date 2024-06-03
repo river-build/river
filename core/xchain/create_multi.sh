@@ -46,8 +46,8 @@ cd "$(dirname "$0")"
 : ${BASE_REGISTRY_ADDRESS:?}
 : ${RIVER_REGISTRY_ADDRESS:?}
 
-# export ENTITLEMENT_TEST_ADDRESS=$(jq -r '.address' ../../packages/generated/deployments/${RIVER_ENV}/base/addresses/entitlementGatedExample.json)
-# export CUSTOM_ENTITLEMENT_TEST_ADDRESS=$(jq -r '.address' ../../packages/generated/deployments/${RIVER_ENV}/base/addresses/customEntitlementExample.json)
+export ENTITLEMENT_TEST_ADDRESS=$(jq -r '.address' ../../packages/generated/deployments/${RIVER_ENV}/base/addresses/entitlementGatedExample.json)
+export CUSTOM_ENTITLEMENT_TEST_ADDRESS=$(jq -r '.address' ../../packages/generated/deployments/${RIVER_ENV}/base/addresses/customEntitlementExample.json)
 
 make
 
@@ -58,8 +58,6 @@ N=5
 BASE_DIR="./run_files/${RUN_ENV}"
 
 mkdir -p "${BASE_DIR}"
-
-source ../../contracts/.env.localhost
 
 # Loop to create N instances in parallel
 for (( i=1; i<=N; i++ ))
@@ -79,8 +77,6 @@ do
     # Using the shared default_config.yaml with the node
     cp ../node/default_config.yaml "${INSTANCE_DIR}/config/config.yaml"
 
-    echo ${LOCAL_PRIVATE_KEY:2} > "${INSTANCE_DIR}/wallet/operator_private_key"
-
     # Substitute METRIC_PORT and create config.yaml
     METRICS_PORT=$((9080 + i))
 
@@ -88,7 +84,7 @@ do
     
     yq eval ".metrics.port = \"$METRICS_PORT\"" -i "${INSTANCE_DIR}/config/config.yaml"
     yq eval ".entitlement_contract.address = strenv(BASE_REGISTRY_ADDRESS)" -i "${INSTANCE_DIR}/config/config.yaml"
-    # yq eval ".test_contract.address = strenv(ENTITLEMENT_TEST_ADDRESS)" -i "${INSTANCE_DIR}/config/config.yaml"
+    yq eval ".test_contract.address = strenv(ENTITLEMENT_TEST_ADDRESS)" -i "${INSTANCE_DIR}/config/config.yaml"
     yq eval ".architectContract.address = strenv(SPACE_FACTORY_ADDRESS)" -i "${INSTANCE_DIR}/config/config.yaml"
     yq eval ".registryContract.address = strenv(RIVER_REGISTRY_ADDRESS)" -i "${INSTANCE_DIR}/config/config.yaml"
 
