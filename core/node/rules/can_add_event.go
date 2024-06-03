@@ -139,7 +139,7 @@ func CanAddEvent(
 		return false, nil, nil, err
 	}
 
-	streamMembershipLimit, err := chainConfig.GetStreamMembershipLimit(streamView.StreamId()[0])
+	streamMembershipLimit, err := chainConfig.GetStreamMembershipLimit(streamView.StreamId().Type())
 	if err != nil {
 		return false, nil, nil, err
 	}

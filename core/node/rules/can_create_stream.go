@@ -168,7 +168,7 @@ func CanCreateStream(
 		return nil, err
 	}
 
-	streamMembershipLimit, err := chainConfig.GetStreamMembershipLimit(streamId[0])
+	streamMembershipLimit, err := chainConfig.GetStreamMembershipLimit(streamId.Type())
 	if err != nil {
 		return nil, err
 	}

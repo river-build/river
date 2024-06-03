@@ -499,7 +499,7 @@ func (r *streamViewImpl) SyncCookie(localNodeAddress common.Address) *SyncCookie
 }
 
 func (r *streamViewImpl) shouldSnapshot(ctx context.Context, cfg crypto.OnChainConfiguration) bool {
-	minEventsPerSnapshot, err := cfg.GetMinEventsPerSnapshot(r.streamId[0])
+	minEventsPerSnapshot, err := cfg.GetMinEventsPerSnapshot(r.streamId.Type())
 	if err != nil {
 		dlog.FromCtx(ctx).Error("Unable to determine minimum events per snapshot",
 			"streamType", fmt.Sprintf("%x", r.streamId[0]), "err", err)

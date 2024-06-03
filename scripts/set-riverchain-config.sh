@@ -36,15 +36,16 @@ echo "Set River on-chain configuration"
 
 set_config_uint "stream.media.maxChunkCount" 0 10
 set_config_uint "stream.media.maxChunkSize" 0 500000
+set_config_uint "media.streamMembershipLimits.77" 0 6
+set_config_uint "media.streamMembershipLimits.88" 0 2
 set_config_uint "stream.recencyConstraints.ageSeconds" 0 11
 set_config_uint "stream.recencyConstraints.generations" 0 5
 set_config_uint "stream.replicationFactor" 0 1
-set_config_uint "stream.defaultMinEventsPerSnapshot" 0 10
+set_config_uint "stream.defaultMinEventsPerSnapshot" 0 100
 set_config_uint "stream.minEventsPerSnapshot.a1" 0 10
 set_config_uint "stream.minEventsPerSnapshot.a5" 0 10
 set_config_uint "stream.minEventsPerSnapshot.a8" 0 10
 set_config_uint "stream.minEventsPerSnapshot.ad" 0 10
 set_config_uint "stream.cacheExpirationMs" 0 300000            # 5m
 set_config_uint "stream.cacheExpirationPollIntervalMs" 0 30000 # 30s
-set_config_uint "media.streamMembershipLimits.77" 0 6
-set_config_uint "media.streamMembershipLimits.88" 0 2
+
