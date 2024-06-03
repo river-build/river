@@ -159,7 +159,7 @@ contract NodeOperatorFacetTest is
   //   address randomOperator
   // ) public givenOperatorIsRegistered(randomOperator) whenCalledByDeployer {
   //   vm.expectRevert(NodeOperator__NotEnoughStake.selector);
-  //   nodenodeOperator.setOperatorStatus(randomOperator, NodeOperatorStatus.Approved);
+  //   nodeOperator.setOperatorStatus(randomOperator, NodeOperatorStatus.Approved);
   // }
 
   modifier whenSetOperatorStatusIsCalledByTheOwner(
@@ -216,7 +216,7 @@ contract NodeOperatorFacetTest is
   //     stakeRequirement
   //   );
   //   assertTrue(
-  //     nodenodeOperator.getOperatorStatus(randomOperator) == NodeOperatorStatus.Approved
+  //     nodeOperator.getOperatorStatus(randomOperator) == NodeOperatorStatus.Approved
   //   );
   // }
 
@@ -439,14 +439,14 @@ contract NodeOperatorFacetTest is
   //   address randomOperator
   // ) public givenOperatorIsRegistered(randomOperator) {
   //   vm.expectRevert(NodeOperator__InvalidAddress.selector);
-  //   nodenodeOperator.addSpaceDelegation(address(0), randomOperator);
+  //   nodeOperator.addSpaceDelegation(address(0), randomOperator);
   // }
 
   // function test_revertWhen_addSpaceDelegationIsCalledWithZeroOperatorAddress()
   //   public
   // {
   //   vm.expectRevert(NodeOperator__InvalidAddress.selector);
-  //   nodenodeOperator.addSpaceDelegation(space, address(0));
+  //   nodeOperator.addSpaceDelegation(space, address(0));
   // }
 
   // function test_revertWhen_addSpaceDelegationIsCalledByInvalidSpaceOwner(
@@ -457,7 +457,7 @@ contract NodeOperatorFacetTest is
 
   //   vm.prank(randomUser);
   //   vm.expectRevert(NodeOperator__InvalidSpace.selector);
-  //   nodenodeOperator.addSpaceDelegation(space, randomOperator);
+  //   nodeOperator.addSpaceDelegation(space, randomOperator);
   // }
 
   // function test_revertWhen_addSpaceDelegationIsCalledWithInvalidOperator(
@@ -465,14 +465,14 @@ contract NodeOperatorFacetTest is
   // ) public {
   //   vm.assume(randomOperator != address(0));
   //   vm.expectRevert(NodeOperator__NotRegistered.selector);
-  //   nodenodeOperator.addSpaceDelegation(space, randomOperator);
+  //   nodeOperator.addSpaceDelegation(space, randomOperator);
   // }
 
   // modifier givenSpaceHasDelegatedToOperator(address _operator) {
   //   vm.prank(founder);
   //   vm.expectEmit();
   //   emit SpaceDelegatedToOperator(space, _operator);
-  //   nodenodeOperator.addSpaceDelegation(space, _operator);
+  //   nodeOperator.addSpaceDelegation(space, _operator);
   //   _;
   // }
 
@@ -490,7 +490,7 @@ contract NodeOperatorFacetTest is
   //       randomOperator
   //     )
   //   );
-  //   nodenodeOperator.addSpaceDelegation(space, randomOperator);
+  //   nodeOperator.addSpaceDelegation(space, randomOperator);
   // }
 
   // function test_addSpaceDelegation(
@@ -500,7 +500,7 @@ contract NodeOperatorFacetTest is
   //   givenOperatorIsRegistered(randomOperator)
   //   givenSpaceHasDelegatedToOperator(randomOperator)
   // {
-  //   assertEq(nodenodeOperator.getSpaceDelegation(space), randomOperator);
+  //   assertEq(nodeOperator.getSpaceDelegation(space), randomOperator);
   // }
 
   // =============================================================
