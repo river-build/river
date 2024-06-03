@@ -72,7 +72,6 @@ func NewStreamCache(
 	appliedBlockNum crypto.BlockNumber,
 	chainMonitor crypto.ChainMonitor,
 	metrics infra.MetricsFactory,
-	chainConfig crypto.OnChainConfiguration,
 ) (*streamCacheImpl, error) {
 	s := &streamCacheImpl{
 		params:                    params,
@@ -91,7 +90,7 @@ func NewStreamCache(
 			params.RiverChain.ChainId.String(),
 			params.Wallet.Address.String(),
 		),
-		chainConfig: chainConfig,
+		chainConfig: params.ChainConfig,
 	}
 
 	streams, err := params.Registry.GetAllStreams(ctx, appliedBlockNum)

@@ -107,7 +107,7 @@ func testStreamCacheViewEviction(t *testing.T, useBatchRegistration bool) {
 		RiverChain:  node,
 		Registry:    riverRegistry,
 		ChainConfig: btc.OnChainConfig,
-	}, 0, chainMonitor, infra.NewMetrics("", ""), nil)
+	}, 0, chainMonitor, infra.NewMetrics("", ""))
 	require.NoError(err, "instantiating stream cache")
 
 	streamCache.registerMiniBlocksBatched = useBatchRegistration
@@ -284,7 +284,7 @@ func testCacheEvictionWithFilledMiniBlockPool(t *testing.T, useBatchRegistration
 		ChainConfig: btc.OnChainConfig,
 	}
 
-	streamCache, err := NewStreamCache(ctx, streamCacheParams, 0, chainMonitor, infra.NewMetrics("", ""), nil)
+	streamCache, err := NewStreamCache(ctx, streamCacheParams, 0, chainMonitor, infra.NewMetrics("", ""))
 	require.NoError(err, "instantiating stream cache")
 
 	streamCache.registerMiniBlocksBatched = useBatchRegistration
@@ -439,7 +439,7 @@ func testStreamMiniblockBatchProduction(t *testing.T, useBatchRegistration bool)
 		RiverChain:  node,
 		Registry:    riverRegistry,
 		ChainConfig: btc.OnChainConfig,
-	}, node.InitialBlockNum, node.ChainMonitor, infra.NewMetrics("", ""), nil)
+	}, node.InitialBlockNum, node.ChainMonitor, infra.NewMetrics("", ""))
 	require.NoError(err, "instantiating stream cache")
 
 	streamCache.registerMiniBlocksBatched = useBatchRegistration
@@ -587,7 +587,7 @@ func TestStreamUnloadWithSubscribers(t *testing.T) {
 		RiverChain:  node,
 		Registry:    riverRegistry,
 		ChainConfig: btc.OnChainConfig,
-	}, node.InitialBlockNum, node.ChainMonitor, infra.NewMetrics("", ""), nil)
+	}, node.InitialBlockNum, node.ChainMonitor, infra.NewMetrics("", ""))
 	require.NoError(err, "instantiating stream cache")
 
 	streamCache.registerMiniBlocksBatched = true
@@ -633,7 +633,7 @@ func TestStreamUnloadWithSubscribers(t *testing.T) {
 		RiverChain:  node,
 		Registry:    riverRegistry,
 		ChainConfig: btc.OnChainConfig,
-	}, blockNum, node.ChainMonitor, infra.NewMetrics("", ""), nil)
+	}, blockNum, node.ChainMonitor, infra.NewMetrics("", ""))
 	require.NoError(err, "instantiating stream cache")
 
 	for streamID, syncCookie := range syncCookies {

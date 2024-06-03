@@ -74,7 +74,7 @@ func makeTestStreamParams(p testParams) (context.Context, *testContext) {
 		ChainConfig: btc.OnChainConfig,
 	}
 
-	cache, err := NewStreamCache(ctx, params, blockNumber, bc.ChainMonitor, infra.NewMetrics("", ""), nil)
+	cache, err := NewStreamCache(ctx, params, blockNumber, bc.ChainMonitor, infra.NewMetrics("", ""))
 	if err != nil {
 		panic(err)
 	}
@@ -141,8 +141,8 @@ func makeTestStreamCache(p testParams) (context.Context, *testContext) {
 		testContext.closer()
 		panic(err)
 	}
-	
-	streamCache, err := NewStreamCache(ctx, testContext.params, blockNumber, bc.ChainMonitor, infra.NewMetrics("", ""), nil)
+
+	streamCache, err := NewStreamCache(ctx, testContext.params, blockNumber, bc.ChainMonitor, infra.NewMetrics("", ""))
 	if err != nil {
 		testContext.closer()
 		panic(err)

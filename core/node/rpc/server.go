@@ -494,7 +494,6 @@ func (s *Service) initCacheAndSync() error {
 		s.riverChain.InitialBlockNum,
 		s.riverChain.ChainMonitor,
 		s.metrics,
-		s.chainConfig,
 	)
 	if err != nil {
 		return err
