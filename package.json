@@ -129,6 +129,7 @@
     },
     "workspaces": [
         "core/*",
+        "protocol",
         "packages/*",
         "contracts"
     ]
