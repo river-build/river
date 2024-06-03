@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 )
 
 func TestOnChainConfigSettingMultipleActiveBlockValues(t *testing.T) {
@@ -109,5 +110,56 @@ func TestLoadConfiguration(t *testing.T) {
 			_, err := cfg.GetInt(key)
 			require.NoErrorf(err, "unable to retrieve setting %s", key.Name())
 		}
+	}
+}
+
+func TestConfigSwitchAfterNewBlock(t *testing.T) {
+	var (
+		ctx, cancel = test.NewTestContext()
+		require     = require.New(t)
+		tc, errTC   = NewBlockchainTestContext(ctx, 1, false)
+
+		currentBlockNum = tc.BlockNum(ctx)
+		activeBlockNum  = currentBlockNum.AsUint64() + 5
+		newValue        = int64(3939232)
+		newValueEncoded = ABIEncodeInt64(newValue)
+	)
+	defer cancel()
+
+	require.NoError(errTC, "unable to construct block test context")
+
+	dv, err := tc.OnChainConfig.GetInt64(StreamRecencyConstraintsAgeSecConfigKey)
+	require.NoError(err, "StreamRecencyConstraintsAgeSecConfigKey get int 64")
+	require.Equal(StreamRecencyConstraintsAgeSecConfigKey.DefaultAsInt64(), dv, "invalid default config")
+
+	// change config on the future block 'activeBlockNum'
+	pendingTx, err := tc.DeployerBlockchain.TxPool.Submit(
+		ctx,
+		"SetConfiguration",
+		func(opts *bind.TransactOpts) (*types.Transaction, error) {
+			return tc.Configuration.SetConfiguration(
+				opts, StreamRecencyConstraintsAgeSecConfigKey.ID(), activeBlockNum, newValueEncoded)
+		})
+
+	require.NoError(err, "unable to set configuration")
+	tc.Commit(ctx)
+	receipt := <-pendingTx.Wait()
+	require.Equal(TransactionResultSuccess, receipt.Status, "tx failed")
+
+	// make sure new change is not yet active, should happen on a future block
+	dv, err = tc.OnChainConfig.GetInt64(StreamRecencyConstraintsAgeSecConfigKey)
+	require.NoError(err, "StreamRecencyConstraintsAgeSecConfigKey get int 64")
+	require.Equal(StreamRecencyConstraintsAgeSecConfigKey.DefaultAsInt64(), dv, "invalid default config")
+
+	// make sure new change becomes active when the chain reached activeBlockNum
+	for {
+		tc.Commit(ctx)
+		if tc.OnChainConfig.ActiveBlock() >= activeBlockNum {
+			dv, err = tc.OnChainConfig.GetInt64(StreamRecencyConstraintsAgeSecConfigKey)
+			require.NoError(err, "StreamRecencyConstraintsAgeSecConfigKey get int 64")
+			require.Equal(newValue, dv, "invalid default config")
+			return
+		}
+		time.Sleep(25 * time.Millisecond)
 	}
 }

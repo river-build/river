@@ -114,6 +114,8 @@ type (
 
 	// OnChainConfiguration retrieves configuration settings from the RiverConfig facet smart contract.
 	OnChainConfiguration interface {
+		// ActiveBlock returns the blocknumber of the active config
+		ActiveBlock() uint64
 		// GetUint64 returns the setting value for the given key that is active on the current block.
 		GetUint64(key ChainKey) (uint64, error)
 		// GetInt64 returns the setting value for the given key that is active on the current block.
@@ -297,6 +299,10 @@ func (occ *onChainConfiguration) log(ctx context.Context) {
 
 func (occ *onChainConfiguration) onBlock(_ context.Context, blockNumber BlockNumber) {
 	occ.activeBlock.Store(blockNumber.AsUint64())
+}
+
+func (occ *onChainConfiguration) ActiveBlock() uint64 {
+	return occ.activeBlock.Load()
 }
 
 func (occ *onChainConfiguration) onConfigChanged(ctx context.Context, event types.Log) {
