@@ -209,6 +209,9 @@ func NewOnChainConfig(
 	// load default settings for config settings that have no active value at the current block height.
 	cfg.loadMissing(ctx, appliedBlockNum.AsUint64())
 
+	// print configuration
+	cfg.log(ctx)
+
 	// on block sets the current block number that is used to determine the active configuration setting.
 	chainMonitor.OnBlock(cfg.onBlock)
 
@@ -276,7 +279,23 @@ func (occ *onChainConfiguration) loadMissing(ctx context.Context, activeBlock ui
 	}
 }
 
-func (occ *onChainConfiguration) onBlock(ctx context.Context, blockNumber BlockNumber) {
+// log prints the loaded configuration
+func (occ *onChainConfiguration) log(ctx context.Context) {
+	log := dlog.FromCtx(ctx)
+	for keyID, settings := range occ.settings.s {
+		if key, ok := configKeyIDToKey[keyID]; ok {
+			for _, setting := range settings {
+				log.Info("chain config setting",
+					"key", key.Name(),
+					"activeBlock", setting.ActiveFromBlockNumber,
+					"value", setting.Value,
+				)
+			}
+		}
+	}
+}
+
+func (occ *onChainConfiguration) onBlock(_ context.Context, blockNumber BlockNumber) {
 	occ.activeBlock.Store(blockNumber.AsUint64())
 }
 
@@ -302,7 +321,6 @@ func (occ *onChainConfiguration) onConfigChanged(ctx context.Context, event type
 	} else {
 		value, err := configKey.decode(e.Value)
 		if err != nil {
-			fmt.Printf("unable to decode config update: %v\n", err)
 			log.Error("OnChainConfiguration: received config update with invalid value",
 				"tx", event.TxHash, "key", configKey.name, "err", err)
 			return
