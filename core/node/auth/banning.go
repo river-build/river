@@ -104,9 +104,15 @@ func NewBanning(
 		return nil, err
 	}
 
+	// Default to 2s
+	negativeCacheTTL := 2 * time.Second
+	if cfg.NegativeEntitlementCacheTTLSeconds > 0 {
+		negativeCacheTTL = time.Duration(cfg.NegativeEntitlementCacheTTLSeconds) * time.Second
+	}
+
 	return &banning{
 		contract:           contract,
 		spaceAddress:       spaceAddress,
-		bannedAddressCache: NewBannedAddressCache(time.Duration(cfg.NegativeEntitlementCacheTTLSeconds) * time.Second),
+		bannedAddressCache: NewBannedAddressCache(negativeCacheTTL),
 	}, nil
 }
