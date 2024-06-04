@@ -160,8 +160,9 @@ abstract contract Entitled is
     address[] memory linkedWallets = wl.getWalletsByRootKey(rootKey);
 
     // Allow for the possibility that the user is not a root key, but a linked wallet.
-    if (linkedWallets.length == 0) {
-      rootKey = wl.getRootKeyForWallet(user);
+    address alternateRootKey = wl.getRootKeyForWallet(user);
+    if (linkedWallets.length == 0 && alternateRootKey != address(0)) {
+      rootKey = alternateRootKey;
       linkedWallets = wl.getWalletsByRootKey(rootKey);
     }
 

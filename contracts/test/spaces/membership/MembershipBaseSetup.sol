@@ -101,6 +101,7 @@ contract MembershipBaseSetup is
     vm.startPrank(alice);
     vm.deal(alice, MEMBERSHIP_PRICE);
     membership.joinSpace{value: MEMBERSHIP_PRICE}(alice);
+    assert(membership.balanceOf(alice) == 1);
     vm.stopPrank();
     _;
   }

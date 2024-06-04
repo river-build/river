@@ -89,6 +89,12 @@ contract MembershipJoinSpace is
     return abi.encodePacked(r, s, v);
   }
 
+  function test_joinSpaceWithUserEntitlement_passes() external {
+    vm.prank(alice);
+    membership.joinSpace(alice);
+    assertEq(membership.balanceOf(alice), 1);
+  }
+
   function test_joinSpaceWithRootWalletUserEntitlement_passes() external {
     IWalletLink wl = IWalletLink(spaceFactory);
     Vm.Wallet memory daveWallet = vm.createWallet("dave");
@@ -128,6 +134,7 @@ contract MembershipJoinSpace is
       nonce
     );
     vm.stopPrank();
+
     vm.prank(emilyWallet.addr);
     membership.joinSpace(emilyWallet.addr);
     assertEq(membership.balanceOf(emilyWallet.addr), 1);
