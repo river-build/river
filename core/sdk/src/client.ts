@@ -1124,7 +1124,7 @@ export class Client
     async sendChannelMessage(
         streamId: string,
         payload: ChannelMessage,
-        opts: SendChannelMessageOptions = {},
+        opts?: SendChannelMessageOptions,
     ): Promise<{ eventId: string }> {
         const stream = this.stream(streamId)
         check(stream !== undefined, 'stream not found')
@@ -1178,7 +1178,7 @@ export class Client
         payload: Omit<PlainMessage<ChannelMessage_Post>, 'content'> & {
             content: PlainMessage<ChannelMessage_Post_Content_Text>
         },
-        opts: SendChannelMessageOptions = {},
+        opts?: SendChannelMessageOptions,
     ): Promise<{ eventId: string }> {
         const { content, ...options } = payload
         return this.sendChannelMessage(
@@ -1204,7 +1204,7 @@ export class Client
         payload: Omit<PlainMessage<ChannelMessage_Post>, 'content'> & {
             content: PlainMessage<ChannelMessage_Post_Content_Image>
         },
-        opts: SendChannelMessageOptions = {},
+        opts?: SendChannelMessageOptions,
     ): Promise<{ eventId: string }> {
         const { content, ...options } = payload
         return this.sendChannelMessage(
@@ -1230,7 +1230,7 @@ export class Client
         payload: Omit<PlainMessage<ChannelMessage_Post>, 'content'> & {
             content: PlainMessage<ChannelMessage_Post_Content_GM>
         },
-        opts: SendChannelMessageOptions = {},
+        opts?: SendChannelMessageOptions,
     ): Promise<{ eventId: string }> {
         const { content, ...options } = payload
         return this.sendChannelMessage(
@@ -1267,7 +1267,7 @@ export class Client
     async sendChannelMessage_Reaction(
         streamId: string,
         payload: PlainMessage<ChannelMessage_Reaction>,
-        opts: SendChannelMessageOptions = {},
+        opts?: SendChannelMessageOptions,
     ): Promise<{ eventId: string }> {
         return this.sendChannelMessage(
             streamId,
