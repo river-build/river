@@ -102,6 +102,8 @@ contract MembershipFacet is
     bool isCrosschainPending;
     bool shouldRefund;
 
+    address[] memory linkedWallets = _getLinkedWalletsWithUser(msg.sender);
+
     for (uint256 i = 0; i < roles.length; i++) {
       IRolesBase.Role memory role = roles[i];
 
@@ -110,10 +112,7 @@ contract MembershipFacet is
           IEntitlement entitlement = IEntitlement(role.entitlements[j]);
 
           if (!entitlement.isCrosschain()) {
-            address[] memory users = new address[](1);
-            users[0] = sender;
-
-            if (entitlement.isEntitled(0x0, users, JOIN_SPACE)) {
+            if (entitlement.isEntitled(0x0, linkedWallets, JOIN_SPACE)) {
               _issueToken(transactionId);
               return;
             } else {
