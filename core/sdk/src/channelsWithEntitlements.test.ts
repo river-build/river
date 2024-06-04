@@ -32,7 +32,6 @@ import {
     treeToRuleData,
 } from '@river-build/web3'
 import { Client } from './client'
-import { expect } from '@jest/globals'
 
 const log = dlog('csb:test:channelsWithEntitlements')
 
