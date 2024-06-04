@@ -292,6 +292,7 @@ contract RewardsDistribution is
     address[] memory delegators = IVotesEnumerable(sd.riverToken)
       .getDelegatorsByDelegatee(operator);
     address[] memory validDelegators = new address[](delegators.length);
+    uint256 activeDelegators = 0;
     for (uint256 i = 0; i < delegators.length; i++) {
       if (
         _isActiveSinceLastCycle(
@@ -300,7 +301,8 @@ contract RewardsDistribution is
           )
         )
       ) {
-        validDelegators[i] = delegators[i];
+        validDelegators[activeDelegators] = delegators[i];
+        activeDelegators++;
       }
     }
     return validDelegators;
