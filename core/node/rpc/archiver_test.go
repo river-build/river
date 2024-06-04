@@ -2,7 +2,9 @@ package rpc_test
 
 import (
 	"context"
+	"io"
 	"net"
+	"net/http"
 	"sync"
 	"testing"
 	"time"
@@ -13,6 +15,7 @@ import (
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
@@ -22,6 +25,7 @@ import (
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/node/testutils/dbtestutils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func fillUserSettingsStreamWithData(
@@ -74,7 +78,12 @@ func createUserSettingsStreamsWithData(
 			}
 			wallets[i] = wallet
 
-			streamId, _, _, err := createUserSettingsStream(ctx, wallet, client, &StreamSettings{DisableMiniblockCreation: true})
+			streamId, _, _, err := createUserSettingsStream(
+				ctx,
+				wallet,
+				client,
+				&StreamSettings{DisableMiniblockCreation: true},
+			)
 			if err != nil {
 				errChan <- err
 				return
@@ -207,12 +216,17 @@ func TestArchiveOneStream(t *testing.T) {
 	client := tester.testClient(0)
 	wallet, err := crypto.NewWallet(ctx)
 	require.NoError(err)
-	streamId, _, _, err := createUserSettingsStream(ctx, wallet, client, &StreamSettings{DisableMiniblockCreation: true})
+	streamId, _, _, err := createUserSettingsStream(
+		ctx,
+		wallet,
+		client,
+		&StreamSettings{DisableMiniblockCreation: true},
+	)
 	require.NoError(err)
 
 	archiveCfg := tester.getConfig()
 	archiveCfg.Archive.ArchiveId = "arch" + GenShortNanoid()
-	archiveCfg.Archive.ReadMiniblcocksSize = 3
+	archiveCfg.Archive.ReadMiniblocksSize = 3
 
 	chainMonitor := tester.btc.ChainMonitor
 	bc := tester.btc.NewWalletAndBlockchain(ctx)
@@ -242,6 +256,7 @@ func TestArchiveOneStream(t *testing.T) {
 		pool,
 		GenShortNanoid(),
 		make(chan error, 1),
+		infra.NewMetricsFactory("", ""),
 	)
 	require.NoError(err)
 
@@ -313,7 +328,12 @@ func TestArchive100Streams(t *testing.T) {
 	require := tester.require
 
 	// Create 100 streams
-	streamIds := testCreate100Streams(ctx, require, tester.testClient(0), &StreamSettings{DisableMiniblockCreation: true})
+	streamIds := testCreate100Streams(
+		ctx,
+		require,
+		tester.testClient(0),
+		&StreamSettings{DisableMiniblockCreation: true},
+	)
 
 	archiveCfg := tester.getConfig()
 	archiveCfg.Archive.ArchiveId = "arch" + GenShortNanoid()
@@ -352,7 +372,7 @@ func TestArchive100StreamsWithData(t *testing.T) {
 
 	archiveCfg := tester.getConfig()
 	archiveCfg.Archive.ArchiveId = "arch" + GenShortNanoid()
-	archiveCfg.Archive.ReadMiniblcocksSize = 3
+	archiveCfg.Archive.ReadMiniblocksSize = 3
 
 	listener, err := net.Listen("tcp", "localhost:0")
 	require.NoError(err)
@@ -378,6 +398,15 @@ func TestArchive100StreamsWithData(t *testing.T) {
 	require.Zero(stats.FailedOpsCount)
 }
 
+func httpGet(t *testing.T, url string) string {
+	resp, err := http.Get(url)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	return string(body)
+}
+
 func TestArchiveContinuous(t *testing.T) {
 	tester := newServiceTesterAndStart(t, 1)
 	ctx := tester.ctx
@@ -386,12 +415,17 @@ func TestArchiveContinuous(t *testing.T) {
 	client := tester.testClient(0)
 	wallet, err := crypto.NewWallet(ctx)
 	require.NoError(err)
-	streamId, _, _, err := createUserSettingsStream(ctx, wallet, client, &StreamSettings{DisableMiniblockCreation: true})
+	streamId, _, _, err := createUserSettingsStream(
+		ctx,
+		wallet,
+		client,
+		&StreamSettings{DisableMiniblockCreation: true},
+	)
 	require.NoError(err)
 
 	archiveCfg := tester.getConfig()
 	archiveCfg.Archive.ArchiveId = "arch" + GenShortNanoid()
-	archiveCfg.Archive.ReadMiniblcocksSize = 3
+	archiveCfg.Archive.ReadMiniblocksSize = 3
 
 	listener, err := net.Listen("tcp", "localhost:0")
 	require.NoError(err)
@@ -403,6 +437,9 @@ func TestArchiveContinuous(t *testing.T) {
 
 	arch.Archiver.WaitForStart()
 	require.Len(arch.ExitSignal(), 0)
+
+	status := httpGet(t, "http://"+listener.Addr().String()+"/status")
+	require.Contains(status, "OK")
 
 	require.EventuallyWithT(
 		func(c *assert.CollectT) {
@@ -430,7 +467,12 @@ func TestArchiveContinuous(t *testing.T) {
 	client2 := tester.testClient(0)
 	wallet2, err := crypto.NewWallet(ctx)
 	require.NoError(err)
-	streamId2, _, _, err := createUserSettingsStream(ctx, wallet2, client2, &StreamSettings{DisableMiniblockCreation: true})
+	streamId2, _, _, err := createUserSettingsStream(
+		ctx,
+		wallet2,
+		client2,
+		&StreamSettings{DisableMiniblockCreation: true},
+	)
 	require.NoError(err)
 	_, lastMBNum2, err := fillUserSettingsStreamWithData(ctx, streamId2, wallet2, client2, 10, 5, nil)
 	require.NoError(err)
