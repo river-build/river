@@ -523,7 +523,7 @@ export async function evaluateTree(
 // checks for testing.
 export function createExternalTokenStruct(
     addresses: Address[],
-    checkOptions?: (Partial<Omit<ContractCheckOperation, 'address'>>),
+    checkOptions?: Partial<Omit<ContractCheckOperation, 'address'>>,
 ) {
     if (addresses.length === 0) {
         return NoopRuleData
@@ -531,7 +531,7 @@ export function createExternalTokenStruct(
     const defaultChain = addresses.map((address) => ({
         chainId: checkOptions?.chainId ?? 1n,
         address: address,
-        type: checkOptions?.type ?? CheckOperationType.ERC20 as const,
+        type: checkOptions?.type ?? (CheckOperationType.ERC20 as const),
         threshold: checkOptions?.threshold ?? BigInt(1),
     }))
     return createOperationsTree(defaultChain)
@@ -539,7 +539,7 @@ export function createExternalTokenStruct(
 
 export function createExternalNFTStruct(
     addresses: Address[],
-    checkOptions?: (Partial<Omit<ContractCheckOperation, 'address'>>),
+    checkOptions?: Partial<Omit<ContractCheckOperation, 'address'>>,
 ) {
     if (addresses.length === 0) {
         return NoopRuleData
@@ -548,7 +548,7 @@ export function createExternalNFTStruct(
         // Anvil chain id
         chainId: checkOptions?.chainId ?? 31337n,
         address: address,
-        type: checkOptions?.type ?? CheckOperationType.ERC721 as const,
+        type: checkOptions?.type ?? (CheckOperationType.ERC721 as const),
         threshold: checkOptions?.threshold ?? BigInt(1),
     }))
     return createOperationsTree(defaultChain)
