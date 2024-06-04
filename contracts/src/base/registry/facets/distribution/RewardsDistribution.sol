@@ -160,6 +160,27 @@ contract RewardsDistribution is
     return _getActiveOperators();
   }
 
+  function setWithdrawalRecipient(address recipient) external onlyOwner {
+    RewardsDistributionStorage.layout().withdrawalRecipient = recipient;
+  }
+
+  function getWithdrawalRecipient() public view returns (address) {
+    return RewardsDistributionStorage.layout().withdrawalRecipient;
+  }
+
+  function withdraw() external onlyOwner {
+    RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
+      .layout();
+    CurrencyTransfer.transferCurrency(
+      SpaceDelegationStorage.layout().riverToken,
+      address(this),
+      RewardsDistributionStorage.layout().withdrawalRecipient,
+      IERC20(SpaceDelegationStorage.layout().riverToken).balanceOf(
+        address(this)
+      )
+    );
+  }
+
   // =============================================================
   //                           Internal
   // =============================================================
