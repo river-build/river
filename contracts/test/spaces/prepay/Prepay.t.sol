@@ -14,7 +14,10 @@ import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {PrepayFacet} from "contracts/src/factory/facets/prepay/PrepayFacet.sol";
 import {MembershipFacet} from "contracts/src/spaces/facets/membership/MembershipFacet.sol";
 
-contract PrepayTest is BaseSetup {
+import {IMembershipBase} from "contracts/src/spaces/facets/membership/IMembership.sol";
+import {IPrepayBase} from "contracts/src/factory/facets/prepay/IPrepay.sol";
+
+contract PrepayTest is BaseSetup, IPrepayBase, IMembershipBase {
   Architect public architect;
   PrepayFacet public prepay;
 
@@ -22,6 +25,14 @@ contract PrepayTest is BaseSetup {
     super.setUp();
     prepay = PrepayFacet(spaceFactory);
     architect = Architect(spaceFactory);
+  }
+
+  function test_prepayMembership_revertWhen_notOwner() external {
+    address alice = _randomAddress();
+
+    vm.expectRevert(PrepayBase__InvalidAddress.selector);
+    hoax(alice, 1 ether);
+    prepay.prepayMembership{value: 1 ether}(everyoneSpace, 1);
   }
 
   function test_prepayMembership() external {
@@ -42,7 +53,7 @@ contract PrepayTest is BaseSetup {
 
     // bob will not since our free allocation changed, so now he has to pay
     vm.prank(bob);
-    vm.expectRevert();
+    vm.expectRevert(Membership__InsufficientPayment.selector);
     membership.joinSpace(bob);
 
     // founder prepays
