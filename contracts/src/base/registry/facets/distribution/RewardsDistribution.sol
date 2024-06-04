@@ -263,9 +263,10 @@ contract RewardsDistribution is
     // Copy elements from the space delegators
     for (uint256 i = 0; i < spaceDelegatorsLen; i++) {
       //get all the spaces delegating to this operator
-      address[] memory spaceDelegatorDelegators = IVotesEnumerable(
-        sd.riverToken
-      ).getDelegatorsByDelegatee(delegatingSpaces[i]);
+      address[] memory spaceDelegatorDelegators = _getValidDelegators(
+        sd,
+        delegatingSpaces[i]
+      );
 
       //for each space, get all the users delegating to it
       for (uint256 j = 0; j < spaceDelegatorDelegators.length; j++) {
