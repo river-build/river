@@ -27,12 +27,24 @@ contract PrepayTest is BaseSetup, IPrepayBase, IMembershipBase {
     architect = Architect(spaceFactory);
   }
 
+  function test_prepayMembership_revertWhen_invalidAmount() external {
+    vm.expectRevert(PrepayBase__InvalidAmount.selector);
+    prepay.prepayMembership(everyoneSpace, 0);
+  }
+
+  function test_prepayMembership_revertWhen_invalidAddress() external {
+    vm.expectRevert(PrepayBase__InvalidAddress.selector);
+    prepay.prepayMembership(address(0), 1);
+  }
+
   function test_prepayMembership_revertWhen_notOwner() external {
     address alice = _randomAddress();
 
+    uint256 membershipFee = prepay.calculateMembershipPrepayFee(1);
+
     vm.expectRevert(PrepayBase__InvalidAddress.selector);
-    hoax(alice, 1 ether);
-    prepay.prepayMembership{value: 1 ether}(everyoneSpace, 1);
+    hoax(alice, membershipFee);
+    prepay.prepayMembership{value: membershipFee}(everyoneSpace, 1);
   }
 
   function test_prepayMembership() external {
@@ -56,10 +68,12 @@ contract PrepayTest is BaseSetup, IPrepayBase, IMembershipBase {
     vm.expectRevert(Membership__InsufficientPayment.selector);
     membership.joinSpace(bob);
 
+    uint256 membershipFee = prepay.calculateMembershipPrepayFee(1);
+
     // founder prepays
     vm.prank(founder);
-    vm.deal(founder, 1 ether);
-    prepay.prepayMembership{value: 1 ether}(address(membership), 1);
+    vm.deal(founder, membershipFee);
+    prepay.prepayMembership{value: membershipFee}(address(membership), 1);
 
     uint256 supply = prepay.prepaidMembershipSupply(address(membership));
     assertEq(supply, membership.totalSupply() + 1);
@@ -70,7 +84,7 @@ contract PrepayTest is BaseSetup, IPrepayBase, IMembershipBase {
 
     // charlie can't join since no more prepaid supply
     vm.prank(charlie);
-    vm.expectRevert();
+    vm.expectRevert(Membership__InsufficientPayment.selector);
     membership.joinSpace(charlie);
   }
 }
