@@ -13,7 +13,6 @@ import (
 	. "github.com/river-build/river/core/node/protocol"
 
 	"github.com/river-build/river/core/node/config"
-	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/xchain/bindings/erc721"
 	"github.com/river-build/river/core/xchain/bindings/ierc5313"
@@ -42,8 +41,6 @@ type SpaceContractV3 struct {
 	spaces     map[shared.StreamId]*Space
 	spacesLock sync.Mutex
 }
-
-var contractCalls = infra.NewSuccessMetrics("contract_calls", nil)
 
 var EMPTY_ADDRESS = common.Address{}
 

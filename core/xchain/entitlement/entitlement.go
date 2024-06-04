@@ -7,30 +7,24 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/river-build/river/core/node/config"
-
 	er "github.com/river-build/river/core/xchain/contracts"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/river-build/river/core/node/dlog"
 )
 
-func EvaluateRuleData(
+func (e *Evaluator) EvaluateRuleData(
 	ctx context.Context,
-	cfg *config.Config,
 	linkedWallets []common.Address,
 	ruleData *er.IRuleData,
 ) (bool, error) {
 	log := dlog.FromCtx(ctx)
 	log.Info("Evaluating rule data", "ruleData", ruleData)
 	opTree, err := getOperationTree(ctx, ruleData)
-
 	if err != nil {
 		return false, err
 	}
-
-	result, err := evaluateOp(ctx, cfg, opTree, linkedWallets)
-	return result, err
+	return e.evaluateOp(ctx, opTree, linkedWallets)
 }
 
 // OperationType Enum
@@ -53,6 +47,25 @@ const (
 	ERC1155
 	ISENTITLED
 )
+
+func (t CheckOperationType) String() string {
+	switch t {
+	case CheckNONE:
+		return "CheckNONE"
+	case MOCK:
+		return "MOCK"
+	case ERC20:
+		return "ERC20"
+	case ERC721:
+		return "ERC721"
+	case ERC1155:
+		return "ERC1155"
+	case ISENTITLED:
+		return "ISENTITLED"
+	default:
+		return "UNKNOWN"
+	}
+}
 
 // LogicalOperationType Enum
 type LogicalOperationType int
@@ -156,7 +169,8 @@ func (a *AndOperation) SetRightOperation(right Operation) {
 }
 
 func getOperationTree(ctx context.Context,
-	ruleData *er.IRuleData) (Operation, error) {
+	ruleData *er.IRuleData,
+) (Operation, error) {
 	log := dlog.FromCtx(ctx)
 	decodedOperations := []Operation{}
 	log.Debug("Decoding operations", "ruleData", ruleData)
@@ -228,9 +242,8 @@ func getOperationTree(ctx context.Context,
 	return stack[0], nil
 }
 
-func evaluateAndOperation(
+func (e *Evaluator) evaluateAndOperation(
 	ctx context.Context,
-	cfg *config.Config,
 	op *AndOperation,
 	linkedWallets []common.Address,
 ) (bool, error) {
@@ -248,7 +261,7 @@ func evaluateAndOperation(
 	defer leftCancel()
 	defer rightCancel()
 	go func() {
-		leftResult, leftErr = evaluateOp(leftCtx, cfg, op.LeftOperation, linkedWallets)
+		leftResult, leftErr = e.evaluateOp(leftCtx, op.LeftOperation, linkedWallets)
 		if !leftResult || leftErr != nil {
 			// cancel the other goroutine
 			// if the left result is false or there is an error
@@ -258,7 +271,7 @@ func evaluateAndOperation(
 	}()
 
 	go func() {
-		rightResult, rightErr = evaluateOp(rightCtx, cfg, op.RightOperation, linkedWallets)
+		rightResult, rightErr = e.evaluateOp(rightCtx, op.RightOperation, linkedWallets)
 		if !rightResult || rightErr != nil {
 			// cancel the other goroutine
 			// if the right result is false or there is an error
@@ -271,9 +284,8 @@ func evaluateAndOperation(
 	return leftResult && rightResult, nil
 }
 
-func evaluateOrOperation(
+func (e *Evaluator) evaluateOrOperation(
 	ctx context.Context,
-	cfg *config.Config,
 	op *OrOperation,
 	linkedWallets []common.Address,
 ) (bool, error) {
@@ -291,7 +303,7 @@ func evaluateOrOperation(
 	defer leftCancel()
 	defer rightCancel()
 	go func() {
-		leftResult, leftErr = evaluateOp(leftCtx, cfg, op.LeftOperation, linkedWallets)
+		leftResult, leftErr = e.evaluateOp(leftCtx, op.LeftOperation, linkedWallets)
 		if leftResult || leftErr != nil {
 			// cancel the other goroutine
 			// if the left result is true or there is an error
@@ -301,7 +313,7 @@ func evaluateOrOperation(
 	}()
 
 	go func() {
-		rightResult, rightErr = evaluateOp(rightCtx, cfg, op.RightOperation, linkedWallets)
+		rightResult, rightErr = e.evaluateOp(rightCtx, op.RightOperation, linkedWallets)
 		if rightResult || rightErr != nil {
 			// cancel the other goroutine
 			// if the right result is true or there is an error
@@ -331,9 +343,8 @@ func awaitTimeout(ctx context.Context, f func() error) error {
 	}
 }
 
-func evaluateOp(
+func (e *Evaluator) evaluateOp(
 	ctx context.Context,
-	cfg *config.Config,
 	op Operation,
 	linkedWallets []common.Address,
 ) (bool, error) {
@@ -344,17 +355,17 @@ func evaluateOp(
 	switch op.GetOpType() {
 	case CHECK:
 		checkOp := (op).(*CheckOperation)
-		return evaluateCheckOperation(ctx, cfg, checkOp, linkedWallets)
+		return e.evaluateCheckOperation(ctx, checkOp, linkedWallets)
 	case LOGICAL:
 		logicalOp := (op).(LogicalOperation)
 
 		switch logicalOp.GetLogicalType() {
 		case AND:
 			andOp := (op).(*AndOperation)
-			return evaluateAndOperation(ctx, cfg, andOp, linkedWallets)
+			return e.evaluateAndOperation(ctx, andOp, linkedWallets)
 		case OR:
 			orOp := (op).(*OrOperation)
-			return evaluateOrOperation(ctx, cfg, orOp, linkedWallets)
+			return e.evaluateOrOperation(ctx, orOp, linkedWallets)
 		case LogNONE:
 			fallthrough
 		default:

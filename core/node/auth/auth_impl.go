@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/config"
 	"github.com/river-build/river/core/node/crypto"
@@ -17,6 +18,11 @@ import (
 	"github.com/river-build/river/core/xchain/entitlement"
 
 	"github.com/ethereum/go-ethereum/common"
+)
+
+var (
+	evaluator         entitlement.Evaluator
+	initEvaluatorOnce sync.Once
 )
 
 type ChainAuth interface {
@@ -129,27 +135,26 @@ const (
 	DEFAULT_MAX_WALLETS        = 10
 )
 
-var (
-	isEntitledToChannelCacheHit  = infra.NewSuccessMetrics("is_entitled_to_channel_cache_hit", contractCalls)
-	isEntitledToChannelCacheMiss = infra.NewSuccessMetrics("is_entitled_to_channel_cache_miss", contractCalls)
-	isEntitledToSpaceCacheHit    = infra.NewSuccessMetrics("is_entitled_to_space_cache_hit", contractCalls)
-	isEntitledToSpaceCacheMiss   = infra.NewSuccessMetrics("is_entitled_to_space_cache_miss", contractCalls)
-	isSpaceEnabledCacheHit       = infra.NewSuccessMetrics("is_space_enabled_cache_hit", contractCalls)
-	isSpaceEnabledCacheMiss      = infra.NewSuccessMetrics("is_space_enabled_cache_miss", contractCalls)
-	isChannelEnabledCacheHit     = infra.NewSuccessMetrics("is_channel_enabled_cache_hit", contractCalls)
-	isChannelEnabledCacheMiss    = infra.NewSuccessMetrics("is_channel_enabled_cache_miss", contractCalls)
-	entitlementCacheHit          = infra.NewSuccessMetrics("entitlement_cache_hit", contractCalls)
-	entitlementCacheMiss         = infra.NewSuccessMetrics("entitlement_cache_miss", contractCalls)
-)
-
 type chainAuth struct {
 	blockchain              *crypto.Blockchain
+	evaluator               *entitlement.Evaluator
 	spaceContract           SpaceContract
 	walletLinkContract      WalletLinkContract
 	linkedWalletsLimit      int
 	contractCallsTimeoutMs  int
 	entitlementCache        *entitlementCache
 	entitlementManagerCache *entitlementCache
+
+	isEntitledToChannelCacheHit  prometheus.Counter
+	isEntitledToChannelCacheMiss prometheus.Counter
+	isEntitledToSpaceCacheHit    prometheus.Counter
+	isEntitledToSpaceCacheMiss   prometheus.Counter
+	isSpaceEnabledCacheHit       prometheus.Counter
+	isSpaceEnabledCacheMiss      prometheus.Counter
+	isChannelEnabledCacheHit     prometheus.Counter
+	isChannelEnabledCacheMiss    prometheus.Counter
+	entitlementCacheHit          prometheus.Counter
+	entitlementCacheMiss         prometheus.Counter
 }
 
 var _ ChainAuth = (*chainAuth)(nil)
@@ -157,9 +162,11 @@ var _ ChainAuth = (*chainAuth)(nil)
 func NewChainAuth(
 	ctx context.Context,
 	blockchain *crypto.Blockchain,
+	evaluator *entitlement.Evaluator,
 	architectCfg *config.ContractConfig,
 	linkedWalletsLimit int,
 	contractCallsTimeoutMs int,
+	metrics infra.MetricsFactory,
 ) (*chainAuth, error) {
 	// instantiate contract facets from diamond configuration
 	spaceContract, err := NewSpaceContractV3(ctx, architectCfg, blockchain.Config, blockchain.Client)
@@ -190,14 +197,29 @@ func NewChainAuth(
 		contractCallsTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS
 	}
 
+	counter := metrics.NewCounterVecEx(
+		"entitlement_cache", "Cache hits and misses for entitelement cache", "function", "result")
+
 	return &chainAuth{
 		blockchain:              blockchain,
+		evaluator:               evaluator,
 		spaceContract:           spaceContract,
 		walletLinkContract:      walletLinkContract,
 		linkedWalletsLimit:      linkedWalletsLimit,
 		contractCallsTimeoutMs:  contractCallsTimeoutMs,
 		entitlementCache:        entitlementCache,
 		entitlementManagerCache: entitlementManagerCache,
+
+		isEntitledToChannelCacheHit:  counter.WithLabelValues("isEntitledToChannel", "hit"),
+		isEntitledToChannelCacheMiss: counter.WithLabelValues("isEntitledToChannel", "miss"),
+		isEntitledToSpaceCacheHit:    counter.WithLabelValues("isEntitledToSpace", "hit"),
+		isEntitledToSpaceCacheMiss:   counter.WithLabelValues("isEntitledToSpace", "miss"),
+		isSpaceEnabledCacheHit:       counter.WithLabelValues("isSpaceEnabled", "hit"),
+		isSpaceEnabledCacheMiss:      counter.WithLabelValues("isSpaceEnabled", "miss"),
+		isChannelEnabledCacheHit:     counter.WithLabelValues("isChannelEnabled", "hit"),
+		isChannelEnabledCacheMiss:    counter.WithLabelValues("isChannelEnabled", "miss"),
+		entitlementCacheHit:          counter.WithLabelValues("entitlement", "hit"),
+		entitlementCacheMiss:         counter.WithLabelValues("entitlement", "miss"),
 	}, nil
 }
 
@@ -270,9 +292,9 @@ func (ca *chainAuth) checkSpaceEnabled(ctx context.Context, cfg *config.Config, 
 		return err
 	}
 	if cacheHit {
-		isSpaceEnabledCacheHit.PassInc()
+		ca.isSpaceEnabledCacheHit.Inc()
 	} else {
-		isSpaceEnabledCacheMiss.PassInc()
+		ca.isSpaceEnabledCacheMiss.Inc()
 	}
 
 	if isEnabled.IsAllowed() {
@@ -308,9 +330,9 @@ func (ca *chainAuth) checkChannelEnabled(
 		return err
 	}
 	if cacheHit {
-		isChannelEnabledCacheHit.PassInc()
+		ca.isChannelEnabledCacheHit.Inc()
 	} else {
-		isChannelEnabledCacheMiss.PassInc()
+		ca.isChannelEnabledCacheMiss.Inc()
 	}
 
 	if isEnabled.IsAllowed() {
@@ -412,9 +434,9 @@ func (ca *chainAuth) isEntitledToChannelUncached(
 		}
 
 		if cacheHit {
-			entitlementCacheHit.PassInc()
+			ca.entitlementCacheHit.Inc()
 		} else {
-			entitlementCacheMiss.PassInc()
+			ca.entitlementCacheMiss.Inc()
 		}
 
 		temp := (result.(*timestampedCacheValue).Result())
@@ -474,7 +496,7 @@ func (ca *chainAuth) evaluateEntitlementData(
 		if ent.entitlementType == "RuleEntitlement" {
 			re := ent.ruleEntitlement
 			log.Debug("RuleEntitlement", "ruleEntitlement", re)
-			result, err := entitlement.EvaluateRuleData(ctx, cfg, wallets, re)
+			result, err := ca.evaluator.EvaluateRuleData(ctx, wallets, re)
 			if err != nil {
 				return false, err
 			}
@@ -591,9 +613,9 @@ func (ca *chainAuth) isEntitledToSpaceUncached(
 	}
 
 	if cacheHit {
-		entitlementCacheHit.PassInc()
+		ca.entitlementCacheHit.Inc()
 	} else {
-		entitlementCacheMiss.PassInc()
+		ca.entitlementCacheMiss.Inc()
 	}
 
 	temp := (result.(*timestampedCacheValue).Result())
@@ -618,9 +640,9 @@ func (ca *chainAuth) isEntitledToSpace(ctx context.Context, cfg *config.Config, 
 		return false, err
 	}
 	if cacheHit {
-		isEntitledToSpaceCacheHit.PassInc()
+		ca.isEntitledToSpaceCacheHit.Inc()
 	} else {
-		isEntitledToSpaceCacheMiss.PassInc()
+		ca.isEntitledToSpaceCacheMiss.Inc()
 	}
 
 	return isEntitled.IsAllowed(), nil
@@ -636,9 +658,9 @@ func (ca *chainAuth) isEntitledToChannel(ctx context.Context, cfg *config.Config
 		return false, err
 	}
 	if cacheHit {
-		isEntitledToChannelCacheHit.PassInc()
+		ca.isEntitledToChannelCacheHit.Inc()
 	} else {
-		isEntitledToChannelCacheMiss.PassInc()
+		ca.isEntitledToChannelCacheMiss.Inc()
 	}
 
 	return isEntitled.IsAllowed(), nil
@@ -652,7 +674,7 @@ func (ca *chainAuth) getLinkedWallets(ctx context.Context, wallet common.Address
 		return []common.Address{wallet}, nil
 	}
 
-	wallets, err := entitlement.GetLinkedWallets(ctx, wallet, ca.walletLinkContract)
+	wallets, err := entitlement.GetLinkedWallets(ctx, wallet, ca.walletLinkContract, nil, nil, nil)
 	if err != nil {
 		log.Error("Failed to get linked wallets", "err", err, "wallet", wallet.Hex())
 		return nil, err

@@ -7,7 +7,6 @@ import (
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/contracts/base"
 	"github.com/river-build/river/core/node/dlog"
-	"github.com/river-build/river/core/node/infra"
 	. "github.com/river-build/river/core/node/protocol"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -33,19 +32,6 @@ type entitlementsProxy struct {
 	address         common.Address
 	ctx             context.Context
 }
-
-var (
-	isEntitledToChannelCalls             = infra.NewSuccessMetrics("is_entitled_to_channel_calls", contractCalls)
-	isEntitledToSpaceCalls               = infra.NewSuccessMetrics("is_entitled_to_space_calls", contractCalls)
-	getEntitlementDataByPermissionsCalls = infra.NewSuccessMetrics(
-		"get_entitlement_data_by_permissions_calls",
-		contractCalls,
-	)
-	getChannelEntitlementDataByPermissionsCalls = infra.NewSuccessMetrics(
-		"get_channel_entitlement_data_by_permissions_calls",
-		contractCalls,
-	)
-)
 
 func NewEntitlements(
 	ctx context.Context,
@@ -86,8 +72,6 @@ func (proxy *entitlementsProxy) IsEntitledToChannel(
 	permission string,
 ) (bool, error) {
 	log := dlog.FromCtx(proxy.ctx)
-	start := time.Now()
-	defer infra.StoreExecutionTimeMetrics("IsEntitledToChannel", infra.CONTRACT_CALLS_CATEGORY, start)
 	log.Debug(
 		"IsEntitledToChannel",
 		"channelId",
@@ -101,7 +85,6 @@ func (proxy *entitlementsProxy) IsEntitledToChannel(
 	)
 	result, err := proxy.managerContract.IsEntitledToChannel(opts, channelId, user, permission)
 	if err != nil {
-		isEntitledToChannelCalls.FailInc()
 		log.Error(
 			"IsEntitledToChannel",
 			"channelId",
@@ -117,7 +100,6 @@ func (proxy *entitlementsProxy) IsEntitledToChannel(
 		)
 		return false, WrapRiverError(Err_CANNOT_CALL_CONTRACT, err)
 	}
-	isEntitledToChannelCalls.PassInc()
 	log.Debug(
 		"IsEntitledToChannel",
 		"channelId",
@@ -130,8 +112,6 @@ func (proxy *entitlementsProxy) IsEntitledToChannel(
 		proxy.address,
 		"result",
 		result,
-		"duration",
-		time.Since(start).Milliseconds(),
 	)
 	return result, nil
 }
@@ -143,15 +123,12 @@ func (proxy *entitlementsProxy) IsEntitledToSpace(
 ) (bool, error) {
 	log := dlog.FromCtx(proxy.ctx)
 	start := time.Now()
-	defer infra.StoreExecutionTimeMetrics("IsEntitledToSpace", infra.CONTRACT_CALLS_CATEGORY, start)
 	log.Debug("IsEntitledToSpace", "user", user, "permission", permission, "address", proxy.address)
 	result, err := proxy.managerContract.IsEntitledToSpace(opts, user, permission)
 	if err != nil {
-		isEntitledToSpaceCalls.FailInc()
 		log.Error("IsEntitledToSpace", "user", user, "permission", permission, "address", proxy.address, "error", err)
 		return false, WrapRiverError(Err_CANNOT_CALL_CONTRACT, err)
 	}
-	isEntitledToSpaceCalls.PassInc()
 	log.Debug(
 		"IsEntitledToSpace",
 		"user",
@@ -175,11 +152,6 @@ func (proxy *entitlementsProxy) GetChannelEntitlementDataByPermission(
 ) ([]base.IEntitlementDataQueryableBaseEntitlementData, error) {
 	log := dlog.FromCtx(proxy.ctx)
 	start := time.Now()
-	defer infra.StoreExecutionTimeMetrics(
-		"GetChannelEntitlementDataByPermissions",
-		infra.CONTRACT_CALLS_CATEGORY,
-		start,
-	)
 	log.Debug(
 		"GetChannelEntitlementDataByPermissions",
 		"channelId",
@@ -191,7 +163,6 @@ func (proxy *entitlementsProxy) GetChannelEntitlementDataByPermission(
 	)
 	result, err := proxy.queryContract.GetChannelEntitlementDataByPermission(opts, channelId, permission)
 	if err != nil {
-		getChannelEntitlementDataByPermissionsCalls.FailInc()
 		log.Error(
 			"GetChannelEntitlementDataByPermissions",
 			"channelId",
@@ -205,7 +176,6 @@ func (proxy *entitlementsProxy) GetChannelEntitlementDataByPermission(
 		)
 		return nil, WrapRiverError(Err_CANNOT_CALL_CONTRACT, err)
 	}
-	getChannelEntitlementDataByPermissionsCalls.PassInc()
 	log.Debug(
 		"GetChannelEntitlementDataByPermissions",
 		"channelId",
@@ -227,16 +197,12 @@ func (proxy *entitlementsProxy) GetEntitlementDataByPermission(
 	permission string,
 ) ([]base.IEntitlementDataQueryableBaseEntitlementData, error) {
 	log := dlog.FromCtx(proxy.ctx)
-	start := time.Now()
-	defer infra.StoreExecutionTimeMetrics("GetEntitlementDataByPermissions", infra.CONTRACT_CALLS_CATEGORY, start)
 	log.Debug("GetEntitlementDataByPermissions", "permission", permission, "address", proxy.address)
 	result, err := proxy.queryContract.GetEntitlementDataByPermission(opts, permission)
 	if err != nil {
-		getEntitlementDataByPermissionsCalls.FailInc()
 		log.Error("GetEntitlementDataByPermissions", "permission", permission, "address", proxy.address, "error", err)
 		return nil, WrapRiverError(Err_CANNOT_CALL_CONTRACT, err)
 	}
-	getEntitlementDataByPermissionsCalls.PassInc()
 	log.Debug(
 		"GetEntitlementDataByPermissions",
 		"permission",
@@ -245,8 +211,6 @@ func (proxy *entitlementsProxy) GetEntitlementDataByPermission(
 		proxy.address,
 		"result",
 		result,
-		"duration",
-		time.Since(start).Milliseconds(),
 	)
 	return result, nil
 }

@@ -2,14 +2,13 @@ package entitlement
 
 import (
 	"context"
-	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/river-build/river/core/node/dlog"
-	shared_infra "github.com/river-build/river/core/node/infra"
+	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/xchain/contracts"
-	"github.com/river-build/river/core/xchain/infra"
 )
 
 type WrappedWalletLink interface {
@@ -39,18 +38,31 @@ func GetLinkedWallets(
 	ctx context.Context,
 	wallet common.Address,
 	walletLink WrappedWalletLink,
+	callDurations *prometheus.HistogramVec,
+	getRootKeyForWalletCalls *infra.StatusCounterVec,
+	getWalletsByRootKeyCalls *infra.StatusCounterVec,
 ) ([]common.Address, error) {
 	log := dlog.FromCtx(ctx)
+	var timer *prometheus.Timer
 
-	start := time.Now()
+	if callDurations != nil {
+		timer = prometheus.NewTimer(callDurations.WithLabelValues("GetRootKeyForWallet"))
+	}
 	rootKey, err := walletLink.GetRootKeyForWallet(ctx, wallet)
-	shared_infra.StoreExecutionTimeMetrics("GetRootKeyForWallet", shared_infra.CONTRACT_CALLS_CATEGORY, start)
+	if timer != nil {
+		timer.ObserveDuration()
+	}
+
 	if err != nil {
 		log.Error("Failed to GetRootKeyForWallet", "err", err, "wallet", wallet.Hex())
-		infra.GetRootKeyForWalletCalls.FailInc()
+		if getRootKeyForWalletCalls != nil {
+			getRootKeyForWalletCalls.IncFail()
+		}
 		return nil, err
 	}
-	infra.GetRootKeyForWalletCalls.PassInc()
+	if getRootKeyForWalletCalls != nil {
+		getRootKeyForWalletCalls.IncPass()
+	}
 
 	var zero common.Address
 	if rootKey == zero {
@@ -58,14 +70,22 @@ func GetLinkedWallets(
 		rootKey = wallet
 	}
 
-	start = time.Now()
+	if callDurations != nil {
+		timer = prometheus.NewTimer(callDurations.WithLabelValues("GetWalletsByRootKey"))
+	}
 	wallets, err := walletLink.GetWalletsByRootKey(ctx, rootKey)
-	shared_infra.StoreExecutionTimeMetrics("GetWalletsByRootKey", shared_infra.CONTRACT_CALLS_CATEGORY, start)
+	if timer != nil {
+		timer.ObserveDuration()
+	}
 	if err != nil {
-		infra.GetWalletsByRootKeyCalls.FailInc()
+		if getWalletsByRootKeyCalls != nil {
+			getWalletsByRootKeyCalls.IncFail()
+		}
 		return nil, err
 	}
-	infra.GetWalletsByRootKeyCalls.PassInc()
+	if getWalletsByRootKeyCalls != nil {
+		getWalletsByRootKeyCalls.IncPass()
+	}
 
 	if len(wallets) == 0 {
 		log.Debug("No linked wallets found", "rootKey", rootKey.Hex())
