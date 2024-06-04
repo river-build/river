@@ -20,11 +20,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-var (
-	evaluator         entitlement.Evaluator
-	initEvaluatorOnce sync.Once
-)
-
 type ChainAuth interface {
 	/*
 		IsEntitled algorithm
