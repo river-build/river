@@ -79,7 +79,7 @@ do
     # Using the shared default_config.yaml with the node
     cp ../node/default_config.yaml "${INSTANCE_DIR}/config/config.yaml"
 
-    echo ${LOCAL_PRIVATE_KEY:2} > "${INSTANCE_DIR}/wallet/operator_private_key"
+    echo $LOCAL_PRIVATE_KEY > "${INSTANCE_DIR}/wallet/operator_private_key"
 
     # Substitute METRIC_PORT and create config.yaml
     METRICS_PORT=$((9080 + i))
