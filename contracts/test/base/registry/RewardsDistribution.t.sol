@@ -136,7 +136,10 @@ contract RewardsDistributionTest is
     uint256 amount = 1200 * 1e18;
     sendTokensToContract(address(rewardsDistributionFacet), amount);
 
-    vm.expectRevert();
+    vm.prank(msg.sender);
+    vm.expectRevert(
+      abi.encodeWithSelector(Ownable__NotOwner.selector, msg.sender)
+    );
     rewardsDistributionFacet.withdraw();
 
     vm.prank(deployer);
