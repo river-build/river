@@ -526,7 +526,7 @@ export function createExternalTokenStruct(addresses: Address[]) {
         return NoopRuleData
     }
     const defaultChain = addresses.map((address) => ({
-        chainId: 1n,
+        chainId: 31337n,
         address: address,
         type: CheckOperationType.ERC20 as const,
     }))
