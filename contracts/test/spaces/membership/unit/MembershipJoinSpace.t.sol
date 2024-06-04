@@ -19,7 +19,8 @@ import {Vm, Test} from "forge-std/Test.sol";
 contract MembershipJoinSpace is
   MembershipBaseSetup,
   IEntitlementCheckerBase,
-  IEntitlementGatedBase
+  IEntitlementGatedBase,
+  IWalletLinkBase
 {
   bytes32 constant CHECK_REQUESTED =
     keccak256(
@@ -105,9 +106,9 @@ contract MembershipJoinSpace is
 
     vm.startPrank(daveWallet.addr);
     vm.expectEmit(address(wl));
-    emit IWalletLinkBase.LinkWalletToRootKey(daveWallet.addr, aliceWallet.addr);
+    emit LinkWalletToRootKey(daveWallet.addr, aliceWallet.addr);
     walletLink.linkCallerToRootKey(
-      IWalletLinkBase.LinkedWallet(aliceWallet.addr, signature),
+      LinkedWallet(aliceWallet.addr, signature),
       nonce
     );
 
