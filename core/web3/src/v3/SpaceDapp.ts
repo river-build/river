@@ -915,7 +915,7 @@ export class SpaceDapp implements ISpaceDapp {
         space: Space,
         params: UpdateRoleParams,
     ): Promise<IRolesBase.CreateEntitlementStruct[]> {
-        return createEntitlementStruct(space, params.users, params.ruleData);
+        return createEntitlementStruct(space, params.users, params.ruleData)
     }
 
     public getSpaceAddress(receipt: ContractReceipt): string | undefined {
