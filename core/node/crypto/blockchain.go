@@ -2,16 +2,14 @@ package crypto
 
 import (
 	"context"
-	"math/big"
-	"time"
-
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/ethclient"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/config"
 	"github.com/river-build/river/core/node/infra"
 	. "github.com/river-build/river/core/node/protocol"
-
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/ethclient"
+	"math/big"
+	"time"
 )
 
 // BlockchainClient is an interface that covers common functionality
@@ -94,7 +92,7 @@ func NewBlockchainWithClient(
 			Func("NewBlockchainWithClient")
 	}
 
-	if chainId.Uint64() != uint64(cfg.ChainId) {
+	if chainId.Uint64() != cfg.ChainId {
 		return nil, RiverError(Err_BAD_CONFIG, "Chain id mismatch",
 			"configured", cfg.ChainId,
 			"providerChainId", chainId.Uint64()).Func("NewBlockchainWithClient")
@@ -125,8 +123,8 @@ func NewBlockchainWithClient(
 		ctx,
 		client,
 		initialBlockNum,
-		10*time.Millisecond,
-		infra.NewMetrics("", ""),
+		time.Duration(cfg.BlockTimeMs)*time.Millisecond,
+		metrics,
 	)
 
 	if wallet != nil {
