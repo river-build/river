@@ -915,26 +915,7 @@ export class SpaceDapp implements ISpaceDapp {
         space: Space,
         params: UpdateRoleParams,
     ): Promise<IRolesBase.CreateEntitlementStruct[]> {
-        const updatedEntitlements: IRolesBase.CreateEntitlementStruct[] = []
-        const [userEntitlement, ruleEntitlement] = await Promise.all([
-            space.findEntitlementByType(EntitlementModuleType.UserEntitlement),
-            space.findEntitlementByType(EntitlementModuleType.RuleEntitlement),
-        ])
-        if (params.users.length > 0 && userEntitlement?.address) {
-            const entitlementData = createUserEntitlementStruct(
-                userEntitlement.address,
-                params.users,
-            )
-            updatedEntitlements.push(entitlementData)
-        }
-        if (params.ruleData && ruleEntitlement?.address) {
-            const entitlementData = createRuleEntitlementStruct(
-                ruleEntitlement.address as `0x${string}`,
-                params.ruleData,
-            )
-            updatedEntitlements.push(entitlementData)
-        }
-        return updatedEntitlements
+        return createEntitlementStruct(space, params.users, params.ruleData);
     }
 
     public getSpaceAddress(receipt: ContractReceipt): string | undefined {
