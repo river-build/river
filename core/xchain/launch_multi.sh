@@ -12,11 +12,7 @@ RUN_FILES_DIR="./run_files"
 # PID file for the script, stored in the base directory
 SCRIPT_PID_FILE="${RUN_FILES_DIR}/${RUN_ENV}/launch_multi.pid"
 
-source ../../contracts/.env.localhost
-
 BASE_DIR="${RUN_FILES_DIR}/${RUN_ENV}"
-BASE_REGISTRY_ADDRESS=$(jq -r '.address' ../../packages/generated/deployments/local_single/base/addresses/baseRegistry.json)
-OPERATOR_ADDRESS=$(cast wallet addr $LOCAL_PRIVATE_KEY)
 
 mkdir -p "${BASE_DIR}"
 
@@ -57,13 +53,6 @@ trap cleanup SIGINT SIGTERM
 # Fund the instances
 ./fund_multi.sh
 
-cast send \
-    --rpc-url http://127.0.0.1:8545 \
-    --private-key $LOCAL_PRIVATE_KEY \
-    $BASE_REGISTRY_ADDRESS \
-    "registerOperator(address)" \
-    $OPERATOR_ADDRESS \
-    2 > /dev/null
 
 # Loop to launch N instances from instance directories
 for (( i=1; i<=N; i++ ))
@@ -71,15 +60,6 @@ do
   INSTANCE_DIR="${BASE_DIR}/instance_${i}"
   cp bin/xchain_node "${INSTANCE_DIR}/bin/xchain_node"
   pushd "${INSTANCE_DIR}"
-  NODE_ADDRESS=$(cat wallet/node_address)
-
-  cast send \
-      --rpc-url http://127.0.0.1:8545 \
-      --private-key $LOCAL_PRIVATE_KEY \
-      $BASE_REGISTRY_ADDRESS \
-      "registerNode(address)" \
-      $NODE_ADDRESS \
-      2 > /dev/null
 
   "./bin/xchain_node" run &
   node_pid=$!
