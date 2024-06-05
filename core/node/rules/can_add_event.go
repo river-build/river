@@ -405,9 +405,13 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 			params:      params,
 			fulfillment: content.KeyFulfillment,
 		}
-		return aeBuilder().
+		ruleBuilderAE := aeBuilder().
 			checkOneOf(params.creatorIsMember).
 			check(ru.validKeyFulfillment)
+		if _, err := params.streamView.(events.ChannelStreamView).GetChannelInception(); err == nil {
+			ruleBuilderAE = ruleBuilderAE.requireChainAuth(params.channelMessageReadEntitlements)
+		}
+		return ruleBuilderAE
 	case *MemberPayload_DisplayName:
 		return aeBuilder().
 			check(params.creatorIsMember)
