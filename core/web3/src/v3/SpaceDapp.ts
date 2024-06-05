@@ -15,7 +15,6 @@ import {
     UpdateChannelParams,
     UpdateRoleParams,
 } from '../ISpaceDapp'
-import { createRuleEntitlementStruct, createUserEntitlementStruct } from '../ConvertersEntitlements'
 
 import { IRolesBase } from './IRolesShim'
 import { Space } from './Space'
