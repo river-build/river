@@ -1,1 +1,0 @@
-{"version":3,"file":"riverDbManager.js","sourceRoot":"","sources":["../src/riverDbManager.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,WAAW,EAAE,MAAM,yBAAyB,CAAA;AAErD,MAAM,OAAO,cAAc;IAChB,MAAM,CAAC,WAAW,CAAC,MAAc,EAAE,MAAe;QACrD,OAAO,IAAI,WAAW,CAAC,MAAM,IAAI,YAAY,MAAM,EAAE,EAAE,MAAM,CAAC,CAAA;IAClE,CAAC;CACJ"}
