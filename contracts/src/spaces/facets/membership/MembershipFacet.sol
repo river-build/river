@@ -103,8 +103,9 @@ contract MembershipFacet is
     bool shouldRefund;
 
     address[] memory linkedWallets = _getLinkedWalletsWithUser(msg.sender);
+    uint256 rolesLen = roles.length;
 
-    for (uint256 i = 0; i < roles.length; i++) {
+    for (uint256 i = 0; i < rolesLen; i++) {
       IRolesBase.Role memory role = roles[i];
 
       if (!role.disabled) {
@@ -112,7 +113,7 @@ contract MembershipFacet is
           IEntitlement entitlement = IEntitlement(role.entitlements[j]);
 
           if (!entitlement.isCrosschain()) {
-            if (entitlement.isEntitled(0x0, linkedWallets, JOIN_SPACE)) {
+            if (entitlement.isEntitled(IN_TOWN, linkedWallets, JOIN_SPACE)) {
               _issueToken(transactionId);
               return;
             } else {

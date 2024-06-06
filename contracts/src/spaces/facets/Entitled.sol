@@ -153,14 +153,13 @@ abstract contract Entitled is
   }
 
   function _getLinkedWalletsWithUser(
-    address user
+    address rootKey
   ) internal view returns (address[] memory) {
-    address rootKey = user;
     IWalletLink wl = IWalletLink(MembershipStorage.layout().spaceFactory);
     address[] memory linkedWallets = wl.getWalletsByRootKey(rootKey);
 
     // Allow for the possibility that the user is not a root key, but a linked wallet.
-    address alternateRootKey = wl.getRootKeyForWallet(user);
+    address alternateRootKey = wl.getRootKeyForWallet(rootKey);
     if (linkedWallets.length == 0 && alternateRootKey != address(0)) {
       rootKey = alternateRootKey;
       linkedWallets = wl.getWalletsByRootKey(rootKey);
