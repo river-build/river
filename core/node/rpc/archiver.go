@@ -60,21 +60,27 @@ type Archiver struct {
 	// set to done when archiver has started
 	startedWG sync.WaitGroup
 
-	streamsExamined     atomic.Uint64
-	streamsCreated      atomic.Uint64
-	streamsUpToDate     atomic.Uint64
-	successOpsCount     atomic.Uint64
-	failedOpsCount      atomic.Uint64
-	miniblocksProcessed atomic.Uint64
+	streamsExamined            atomic.Uint64
+	streamsCreated             atomic.Uint64
+	streamsUpToDate            atomic.Uint64
+	successOpsCount            atomic.Uint64
+	failedOpsCount             atomic.Uint64
+	miniblocksProcessed        atomic.Uint64
+	newStreamAllocated         atomic.Uint64
+	streamPlacementUpdated     atomic.Uint64
+	streamLastMiniblockUpdated atomic.Uint64
 }
 
 type ArchiverStats struct {
-	StreamsExamined     uint64
-	StreamsCreated      uint64
-	StreamsUpToDate     uint64
-	SuccessOpsCount     uint64
-	FailedOpsCount      uint64
-	MiniblocksProcessed uint64
+	StreamsExamined            uint64
+	StreamsCreated             uint64
+	StreamsUpToDate            uint64
+	SuccessOpsCount            uint64
+	FailedOpsCount             uint64
+	MiniblocksProcessed        uint64
+	NewStreamAllocated         uint64
+	StreamPlacementUpdated     uint64
+	StreamLastMiniblockUpdated uint64
 }
 
 func NewArchiver(
@@ -88,17 +94,23 @@ func NewArchiver(
 		contract:     contract,
 		nodeRegistry: nodeRegistry,
 		storage:      storage,
-		tasks:        make(chan StreamId, 100000), // TODO: setting
+		tasks:        make(chan StreamId, config.GetTaskQueueSize()),
 	}
 	a.startedWG.Add(1)
 	return a
 }
 
-func (a *Archiver) addNewStream(ctx context.Context, streamId StreamId, nn *[]common.Address, lastKnownMiniblock uint64) {
+func (a *Archiver) addNewStream(
+	ctx context.Context,
+	streamId StreamId,
+	nn *[]common.Address,
+	lastKnownMiniblock uint64,
+) {
 	_, loaded := a.streams.Load(streamId)
 	if loaded {
 		// TODO: Double notificaion, shouldn't happen.
-		dlog.FromCtx(ctx).Error("Stream already exists in archiver map", "streamId", streamId, "lastKnownMiniblock", lastKnownMiniblock)
+		dlog.FromCtx(ctx).
+			Error("Stream already exists in archiver map", "streamId", streamId, "lastKnownMiniblock", lastKnownMiniblock)
 		return
 	}
 
@@ -144,7 +156,6 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 		}
 	}
 
-	
 	mbsInContract := stream.numBlocksInContract.Load()
 	if mbsInDb >= mbsInContract {
 		return nil
@@ -190,10 +201,13 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 		msg := resp.Msg
 		if len(msg.Miniblocks) == 0 {
 			log.Info(
-				"ArchiveStream: GetMiniblocks returned empty miniblocks, remote storage is not up-to-date with contract yet", 
-				"streamId", stream.streamId,
-				"fromInclusive", mbsInDb,
-				"toExclusive", toBlock,
+				"ArchiveStream: GetMiniblocks returned empty miniblocks, remote storage is not up-to-date with contract yet",
+				"streamId",
+				stream.streamId,
+				"fromInclusive",
+				mbsInDb,
+				"toExclusive",
+				toBlock,
 			)
 			// Reschedule with delay.
 			streamId := stream.streamId
@@ -252,15 +266,13 @@ func (a *Archiver) startImpl(ctx context.Context, once bool) error {
 		a.tasksWG = &sync.WaitGroup{}
 	}
 
-	// TODO: setting
-	const numWorkers = 20
+	numWorkers := a.config.GetWorkerPoolSize()
 	for i := 0; i < numWorkers; i++ {
 		a.workersWG.Add(1)
 		go a.worker(ctx)
 	}
 
-	// TODO: setting
-	const pageSize = int64(5000)
+	pageSize := a.config.GetStreamsContractCallPageSize()
 
 	blockNum := a.contract.Blockchain.InitialBlockNum
 
@@ -307,18 +319,26 @@ func (a *Archiver) startImpl(ctx context.Context, once bool) error {
 		if err != nil {
 			return err
 		}
+
+		go a.printStats(ctx)
 	}
 
 	return nil
 }
 
 func (a *Archiver) onStreamAllocated(ctx context.Context, event *contracts.StreamRegistryV1StreamAllocated) {
+	a.newStreamAllocated.Add(1)
 	id := StreamId(event.StreamId)
 	a.addNewStream(ctx, id, &event.Nodes, 0)
 	a.tasks <- id
 }
 
-func (a *Archiver) onStreamPlacementUpdated(ctx context.Context, event *contracts.StreamRegistryV1StreamPlacementUpdated) {
+func (a *Archiver) onStreamPlacementUpdated(
+	ctx context.Context,
+	event *contracts.StreamRegistryV1StreamPlacementUpdated,
+) {
+	a.streamPlacementUpdated.Add(1)
+
 	id := StreamId(event.StreamId)
 	record, loaded := a.streams.Load(id)
 	if !loaded {
@@ -329,7 +349,12 @@ func (a *Archiver) onStreamPlacementUpdated(ctx context.Context, event *contract
 	_ = stream.nodes.Update(event.NodeAddress, event.IsAdded)
 }
 
-func (a *Archiver) onStreamLastMiniblockUpdated(ctx context.Context, event *contracts.StreamRegistryV1StreamLastMiniblockUpdated) {
+func (a *Archiver) onStreamLastMiniblockUpdated(
+	ctx context.Context,
+	event *contracts.StreamRegistryV1StreamLastMiniblockUpdated,
+) {
+	a.streamLastMiniblockUpdated.Add(1)
+
 	id := StreamId(event.StreamId)
 	record, loaded := a.streams.Load(id)
 	if !loaded {
@@ -356,12 +381,15 @@ func (a *Archiver) WaitForStart() {
 
 func (a *Archiver) GetStats() *ArchiverStats {
 	return &ArchiverStats{
-		StreamsExamined:     a.streamsExamined.Load(),
-		StreamsCreated:      a.streamsCreated.Load(),
-		StreamsUpToDate:     a.streamsUpToDate.Load(),
-		SuccessOpsCount:     a.successOpsCount.Load(),
-		FailedOpsCount:      a.failedOpsCount.Load(),
-		MiniblocksProcessed: a.miniblocksProcessed.Load(),
+		StreamsExamined:            a.streamsExamined.Load(),
+		StreamsCreated:             a.streamsCreated.Load(),
+		StreamsUpToDate:            a.streamsUpToDate.Load(),
+		SuccessOpsCount:            a.successOpsCount.Load(),
+		FailedOpsCount:             a.failedOpsCount.Load(),
+		MiniblocksProcessed:        a.miniblocksProcessed.Load(),
+		NewStreamAllocated:         a.newStreamAllocated.Load(),
+		StreamPlacementUpdated:     a.streamPlacementUpdated.Load(),
+		StreamLastMiniblockUpdated: a.streamLastMiniblockUpdated.Load(),
 	}
 }
 
@@ -390,6 +418,24 @@ func (a *Archiver) worker(ctx context.Context) {
 			if a.tasksWG != nil {
 				a.tasksWG.Done()
 			}
+		}
+	}
+}
+
+func (a *Archiver) printStats(ctx context.Context) {
+	log := dlog.FromCtx(ctx)
+	period := a.config.GetPrintStatsPeriod()
+	if period <= 0 {
+		return
+	}
+	ticker := time.NewTicker(period)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			log.Info("Archiver stats", "stats", a.GetStats())
 		}
 	}
 }

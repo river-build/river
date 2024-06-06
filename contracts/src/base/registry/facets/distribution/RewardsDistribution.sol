@@ -124,7 +124,7 @@ contract RewardsDistribution is
     SpaceDelegationStorage.Layout storage sd = SpaceDelegationStorage.layout();
 
     //Rewards are distributed equally amongst all active node operators
-    uint256 amountPerOperator = ds.weeklyDistributionAmount /
+    uint256 amountPerOperator = ds.periodDistributionAmount /
       totalActiveOperators;
 
     uint256 operatorClaimAmount = _calculateOperatorDistribution(
@@ -140,12 +140,45 @@ contract RewardsDistribution is
     _distributeDelegatorsRewards(sd, operator, delegatorClaimAmount);
   }
 
-  function setWeeklyDistributionAmount(uint256 amount) external onlyOwner {
-    RewardsDistributionStorage.layout().weeklyDistributionAmount = amount;
+  function setPeriodDistributionAmount(uint256 amount) external onlyOwner {
+    RewardsDistributionStorage.layout().periodDistributionAmount = amount;
   }
 
-  function getWeeklyDistributionAmount() public view returns (uint256) {
-    return RewardsDistributionStorage.layout().weeklyDistributionAmount;
+  function getPeriodDistributionAmount() public view returns (uint256) {
+    return RewardsDistributionStorage.layout().periodDistributionAmount;
+  }
+
+  function setActivePeriodLength(uint256 length) external onlyOwner {
+    RewardsDistributionStorage.layout().activePeriodLength = length;
+  }
+
+  function getActivePeriodLength() public view returns (uint256) {
+    return RewardsDistributionStorage.layout().activePeriodLength;
+  }
+
+  function getActiveOperators() public view returns (address[] memory) {
+    return _getActiveOperators();
+  }
+
+  function setWithdrawalRecipient(address recipient) external onlyOwner {
+    RewardsDistributionStorage.layout().withdrawalRecipient = recipient;
+  }
+
+  function getWithdrawalRecipient() public view returns (address) {
+    return RewardsDistributionStorage.layout().withdrawalRecipient;
+  }
+
+  function withdraw() external onlyOwner {
+    RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
+      .layout();
+    CurrencyTransfer.transferCurrency(
+      SpaceDelegationStorage.layout().riverToken,
+      address(this),
+      RewardsDistributionStorage.layout().withdrawalRecipient,
+      IERC20(SpaceDelegationStorage.layout().riverToken).balanceOf(
+        address(this)
+      )
+    );
   }
 
   // =============================================================
@@ -158,7 +191,7 @@ contract RewardsDistribution is
   ) internal view returns (uint256) {
     NodeOperatorStorage.Layout storage nos = NodeOperatorStorage.layout();
     uint256 commission = nos.commissionByOperator[operator];
-    uint256 operatorClaimAmount = (commission * amountPerOperator) / 100;
+    uint256 operatorClaimAmount = (commission * amountPerOperator) / 10000;
     return operatorClaimAmount;
   }
 
@@ -258,10 +291,10 @@ contract RewardsDistribution is
       NodeOperatorStatus currentStatus = nos.statusByOperator[operator];
 
       if (
-        currentStatus == NodeOperatorStatus.Approved &&
+        currentStatus == NodeOperatorStatus.Active &&
         _isActiveSinceLastCycle(nos.approvalTimeByOperator[operator])
       ) {
-        expectedOperators[i] = operator;
+        expectedOperators[totalActiveOperators] = operator;
         totalActiveOperators++;
       }
     }
@@ -280,6 +313,7 @@ contract RewardsDistribution is
     address[] memory delegators = IVotesEnumerable(sd.riverToken)
       .getDelegatorsByDelegatee(operator);
     address[] memory validDelegators = new address[](delegators.length);
+    uint256 activeDelegators = 0;
     for (uint256 i = 0; i < delegators.length; i++) {
       if (
         _isActiveSinceLastCycle(
@@ -288,7 +322,8 @@ contract RewardsDistribution is
           )
         )
       ) {
-        validDelegators[i] = delegators[i];
+        validDelegators[activeDelegators] = delegators[i];
+        activeDelegators++;
       }
     }
     return validDelegators;
@@ -349,6 +384,6 @@ contract RewardsDistribution is
   function _isActiveSinceLastCycle(
     uint256 startTime
   ) internal view returns (bool) {
-    return startTime < (block.timestamp - 7 days);
+    return startTime < (block.timestamp - getActivePeriodLength());
   }
 }

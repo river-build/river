@@ -22,6 +22,7 @@ import {
     ChannelMessage_Post_Attachment,
     MemberPayload_Nft,
     CreateStreamRequest,
+    AddEventResponse_Error,
 } from '@river-build/proto'
 import {
     bin_fromHexString,
@@ -80,7 +81,7 @@ import {
     make_MemberPayload_Membership2,
     make_SpacePayload_Inception,
     make_UserPayload_Inception,
-    make_SpacePayload_Channel,
+    make_SpacePayload_ChannelUpdate,
     make_UserSettingsPayload_FullyReadMarkers,
     make_UserSettingsPayload_UserBlock,
     make_UserSettingsPayload_Inception,
@@ -121,6 +122,11 @@ import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
 
 type ClientEvents = StreamEvents & DecryptionEvents
+
+type SendChannelMessageOptions = {
+    beforeSendEventHook?: Promise<void>
+    onLocalEventAppended?: (localId: string) => void
+}
 
 export class Client
     extends (EventEmitter as new () => TypedEmitter<ClientEvents>)
@@ -400,7 +406,7 @@ export class Client
         const response = await this.rpcClient.createStream({
             events: userEvents,
             streamId: streamIdAsBytes(userStreamId),
-            metadata: metadata ?? {},
+            metadata: metadata,
         })
         return unpackStream(response.stream)
     }
@@ -421,7 +427,7 @@ export class Client
         const response = await this.rpcClient.createStream({
             events: userDeviceKeyEvents,
             streamId: streamIdAsBytes(userDeviceKeyStreamId),
-            metadata: metadata ?? {},
+            metadata: metadata,
         })
         return unpackStream(response.stream)
     }
@@ -442,7 +448,7 @@ export class Client
         const response = await this.rpcClient.createStream({
             events: userInboxEvents,
             streamId: streamIdAsBytes(userInboxStreamId),
-            metadata: metadata ?? {},
+            metadata: metadata,
         })
         return unpackStream(response.stream)
     }
@@ -464,7 +470,7 @@ export class Client
         const response = await this.rpcClient.createStream({
             events: userSettingsEvents,
             streamId: userSettingsStreamId,
-            metadata: metadata ?? {},
+            metadata: metadata,
         })
         return unpackStream(response.stream)
     }
@@ -716,7 +722,7 @@ export class Client
 
         return this.makeEventAndAddToStream(
             spaceId, // we send events to the stream of the space where updated channel belongs to
-            make_SpacePayload_Channel({
+            make_SpacePayload_ChannelUpdate({
                 op: ChannelOp.CO_UPDATED,
                 channelId: streamIdAsBytes(channelId),
             }),
@@ -1105,7 +1111,7 @@ export class Client
         body: string,
         mentions?: ChannelMessage_Post_Mention[],
         attachments: ChannelMessage_Post_Attachment[] = [],
-    ): Promise<string> {
+    ): Promise<{ eventId: string }> {
         return this.sendChannelMessage_Text(streamId, {
             content: {
                 body,
@@ -1118,11 +1124,12 @@ export class Client
     async sendChannelMessage(
         streamId: string,
         payload: ChannelMessage,
-        opts: { beforeSendEventHook?: Promise<void> } = {},
-    ): Promise<string> {
+        opts?: SendChannelMessageOptions,
+    ): Promise<{ eventId: string }> {
         const stream = this.stream(streamId)
         check(stream !== undefined, 'stream not found')
         const localId = stream.view.appendLocalEvent(payload, 'sending', this)
+        opts?.onLocalEventAppended?.(localId)
         if (opts?.beforeSendEventHook) {
             await opts?.beforeSendEventHook
         }
@@ -1171,8 +1178,8 @@ export class Client
         payload: Omit<PlainMessage<ChannelMessage_Post>, 'content'> & {
             content: PlainMessage<ChannelMessage_Post_Content_Text>
         },
-        opts: { beforeSendEventHook?: Promise<void> } = {},
-    ): Promise<string> {
+        opts?: SendChannelMessageOptions,
+    ): Promise<{ eventId: string }> {
         const { content, ...options } = payload
         return this.sendChannelMessage(
             streamId,
@@ -1197,8 +1204,8 @@ export class Client
         payload: Omit<PlainMessage<ChannelMessage_Post>, 'content'> & {
             content: PlainMessage<ChannelMessage_Post_Content_Image>
         },
-        opts: { beforeSendEventHook?: Promise<void> } = {},
-    ): Promise<string> {
+        opts?: SendChannelMessageOptions,
+    ): Promise<{ eventId: string }> {
         const { content, ...options } = payload
         return this.sendChannelMessage(
             streamId,
@@ -1223,8 +1230,8 @@ export class Client
         payload: Omit<PlainMessage<ChannelMessage_Post>, 'content'> & {
             content: PlainMessage<ChannelMessage_Post_Content_GM>
         },
-        opts: { beforeSendEventHook?: Promise<void> } = {},
-    ): Promise<string> {
+        opts?: SendChannelMessageOptions,
+    ): Promise<{ eventId: string }> {
         const { content, ...options } = payload
         return this.sendChannelMessage(
             streamId,
@@ -1254,20 +1261,14 @@ export class Client
             data: data,
             chunkIndex: chunkIndex,
         })
-        return this.makeEventWithHashAndAddToStream(
-            streamId,
-            payload,
-            prevMiniblockHash,
-            undefined,
-            undefined,
-        )
+        return this.makeEventWithHashAndAddToStream(streamId, payload, prevMiniblockHash)
     }
 
     async sendChannelMessage_Reaction(
         streamId: string,
         payload: PlainMessage<ChannelMessage_Reaction>,
-        opts: { beforeSendEventHook?: Promise<void> } = {},
-    ): Promise<string> {
+        opts?: SendChannelMessageOptions,
+    ): Promise<{ eventId: string }> {
         return this.sendChannelMessage(
             streamId,
             new ChannelMessage({
@@ -1283,7 +1284,7 @@ export class Client
     async sendChannelMessage_Redaction(
         streamId: string,
         payload: PlainMessage<ChannelMessage_Redaction>,
-    ): Promise<string> {
+    ): Promise<{ eventId: string }> {
         const stream = this.stream(streamId)
         if (!stream) {
             throw new Error(`stream not found: ${streamId}`)
@@ -1306,7 +1307,7 @@ export class Client
         streamId: string,
         refEventId: string,
         newPost: PlainMessage<ChannelMessage_Post>,
-    ): Promise<string> {
+    ): Promise<{ eventId: string }> {
         return this.sendChannelMessage(
             streamId,
             new ChannelMessage({
@@ -1327,7 +1328,7 @@ export class Client
         payload: Omit<PlainMessage<ChannelMessage_Post>, 'content'> & {
             content: PlainMessage<ChannelMessage_Post_Content_Text>
         },
-    ): Promise<string> {
+    ): Promise<{ eventId: string }> {
         const { content, ...options } = payload
         return this.sendChannelMessage_Edit(streamId, refEventId, {
             ...options,
@@ -1338,7 +1339,7 @@ export class Client
         })
     }
 
-    async redactMessage(streamId: string, eventId: string): Promise<string> {
+    async redactMessage(streamId: string, eventId: string): Promise<{ eventId: string }> {
         const stream = this.stream(streamId)
         check(isDefined(stream), 'stream not found')
 
@@ -1365,7 +1366,7 @@ export class Client
         )
     }
 
-    async inviteUser(streamId: string | Uint8Array, userId: string): Promise<string> {
+    async inviteUser(streamId: string | Uint8Array, userId: string): Promise<{ eventId: string }> {
         await this.initStream(streamId)
         check(isDefined(this.userStreamId))
         return this.makeEventAndAddToStream(
@@ -1379,7 +1380,7 @@ export class Client
         )
     }
 
-    async joinUser(streamId: string | Uint8Array, userId: string): Promise<string> {
+    async joinUser(streamId: string | Uint8Array, userId: string): Promise<{ eventId: string }> {
         await this.initStream(streamId)
         check(isDefined(this.userStreamId))
         return this.makeEventAndAddToStream(
@@ -1437,7 +1438,7 @@ export class Client
         return stream
     }
 
-    async leaveStream(streamId: string | Uint8Array): Promise<string> {
+    async leaveStream(streamId: string | Uint8Array): Promise<{ eventId: string }> {
         this.logCall('leaveStream', streamId)
         check(isDefined(this.userStreamId))
 
@@ -1466,7 +1467,7 @@ export class Client
         )
     }
 
-    async removeUser(streamId: string | Uint8Array, userId: string): Promise<string> {
+    async removeUser(streamId: string | Uint8Array, userId: string): Promise<{ eventId: string }> {
         check(isDefined(this.userStreamId))
         this.logCall('removeUser', streamId, userId)
 
@@ -1698,8 +1699,8 @@ export class Client
     async makeEventAndAddToStream(
         streamId: string | Uint8Array,
         payload: PlainMessage<StreamEvent>['payload'],
-        options: { method?: string; localId?: string; cleartext?: string } = {},
-    ): Promise<string> {
+        options: { method?: string; localId?: string; cleartext?: string; optional?: boolean } = {},
+    ): Promise<{ eventId: string; error?: AddEventResponse_Error }> {
         // TODO: filter this.logged payload for PII reasons
         this.logCall(
             'await makeEventAndAddToStream',
@@ -1707,6 +1708,7 @@ export class Client
             streamId,
             payload,
             options.localId,
+            options.optional,
         )
         assert(this.userStreamId !== undefined, 'userStreamId must be set')
 
@@ -1718,24 +1720,26 @@ export class Client
             isDefined(prevHash),
             'no prev miniblock hash for stream ' + streamIdAsString(streamId),
         )
-        const { eventId } = await this.makeEventWithHashAndAddToStream(
+        const { eventId, error } = await this.makeEventWithHashAndAddToStream(
             streamId,
             payload,
             prevHash,
+            options.optional,
             options.localId,
             options.cleartext,
         )
-        return eventId
+        return { eventId, error }
     }
 
     async makeEventWithHashAndAddToStream(
         streamId: string | Uint8Array,
         payload: PlainMessage<StreamEvent>['payload'],
         prevMiniblockHash: Uint8Array,
+        optional?: boolean,
         localId?: string,
         cleartext?: string,
         retryCount?: number,
-    ): Promise<{ prevMiniblockHash: Uint8Array; eventId: string }> {
+    ): Promise<{ prevMiniblockHash: Uint8Array; eventId: string; error?: AddEventResponse_Error }> {
         const event = await makeEvent(this.signerContext, payload, prevMiniblockHash)
         const eventId = bin_toHexString(event.hash)
         if (localId) {
@@ -1751,11 +1755,16 @@ export class Client
         }
 
         try {
-            await this.rpcClient.addEvent({ streamId: streamIdAsBytes(streamId), event })
+            const { error } = await this.rpcClient.addEvent({
+                streamId: streamIdAsBytes(streamId),
+                event,
+                optional,
+            })
             if (localId) {
                 const stream = this.streams.get(streamId)
                 stream?.view.updateLocalEvent(localId, eventId, 'sent', this)
             }
+            return { prevMiniblockHash, eventId, error }
         } catch (err) {
             // custom retry logic for addEvent
             // if we send up a stale prevMiniblockHash, the server will return a BAD_PREV_MINIBLOCK_HASH
@@ -1777,6 +1786,7 @@ export class Client
                     streamId,
                     payload,
                     bin_fromHexString(expectedHash),
+                    optional,
                     isDefined(localId) ? eventId : undefined,
                     cleartext,
                     retryCount + 1,
@@ -1789,7 +1799,6 @@ export class Client
                 throw err
             }
         }
-        return { prevMiniblockHash, eventId }
     }
 
     async getStreamLastMiniblockHash(streamId: string | Uint8Array): Promise<Uint8Array> {

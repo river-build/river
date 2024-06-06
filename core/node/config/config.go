@@ -1,15 +1,12 @@
 package config
 
 import (
-	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	infra "github.com/river-build/river/core/node/infra/config"
-	"github.com/river-build/river/core/node/shared"
 )
 
 type ContractVersion string
@@ -51,14 +48,11 @@ type Config struct {
 	RegistryContract ContractConfig
 
 	// Logging
-	Log infra.LogConfig
+	Log LogConfig
 
 	// Metrics
-	Metrics             infra.MetricsConfig
+	Metrics             MetricsConfig
 	PerformanceTracking PerformanceTrackingConfig
-
-	// Stream configuration
-	Stream StreamConfig
 
 	// Network configuration
 	Network NetworkConfig
@@ -98,6 +92,9 @@ type Config struct {
 	// History indicates how far back xchain must look for entitlement check requests after start
 	History        time.Duration
 	EnableTestAPIs bool
+
+	// Enables go profiler, gc and so on enpoints on /debug
+	EnableDebugEndpoints bool
 }
 
 type NetworkConfig struct {
@@ -181,30 +178,6 @@ type PerformanceTrackingConfig struct {
 	TracingEnabled   bool
 }
 
-type StreamConfig struct {
-	Media                       MediaStreamConfig
-	StreamMembershipLimits      map[string]int
-	RecencyConstraints          RecencyConstraintsConfig
-	ReplicationFactor           int
-	DefaultMinEventsPerSnapshot int
-	MinEventsPerSnapshot        map[string]int
-	// CacheExpiration is the interval (secs) after streams with no activity in the cache are expired and evicted
-	CacheExpiration time.Duration
-	// CacheExpirationPollIntervalSec is the interval to check for inactive streams in the cache
-	// (default=CacheExpiration/10)
-	CacheExpirationPollInterval time.Duration
-}
-
-type MediaStreamConfig struct {
-	MaxChunkCount int
-	MaxChunkSize  int
-}
-
-type RecencyConstraintsConfig struct {
-	AgeSeconds  int
-	Generations int
-}
-
 type ContractConfig struct {
 	// Address of the contract
 	Address common.Address
@@ -219,14 +192,70 @@ type ArchiveConfig struct {
 	Filter FilterConfig
 
 	// Number of miniblocks to read at once from the remote node.
-	ReadMiniblcocksSize uint64
+	ReadMiniblocksSize uint64
+
+	DisablePrintStats bool
+	PrintStatsPeriod  time.Duration // If 0, default to 1 minute.
+
+	TaskQueueSize int // If 0, default to 100000.
+
+	WorkerPoolSize int // If 0, default to 20.
+
+	StreamsContractCallPageSize int64 // If 0, default to 5000.
+}
+
+type LogConfig struct {
+	Level        string // Used for both file and console if their levels not set explicitly
+	File         string // Path to log file
+	FileLevel    string // If not set, use Level
+	Console      bool   // Log to sederr if true
+	ConsoleLevel string // If not set, use Level
+	NoColor      bool
+	Format       string // "json" or "text"
+}
+
+type MetricsConfig struct {
+	Enabled   bool
+	Interface string
+	Port      int
 }
 
 func (ac *ArchiveConfig) GetReadMiniblocksSize() uint64 {
-	if ac.ReadMiniblcocksSize <= 0 {
+	if ac.ReadMiniblocksSize <= 0 {
 		return 100
 	}
-	return ac.ReadMiniblcocksSize
+	return ac.ReadMiniblocksSize
+}
+
+func (ac *ArchiveConfig) GetPrintStatsPeriod() time.Duration {
+	if ac.DisablePrintStats {
+		return 0
+	}
+	if ac.PrintStatsPeriod <= 0 {
+		return time.Minute
+	}
+	return ac.PrintStatsPeriod
+}
+
+func (ac *ArchiveConfig) GetTaskQueueSize() int {
+	if ac.TaskQueueSize <= 0 {
+		return 100000
+	}
+	return ac.TaskQueueSize
+}
+
+func (ac *ArchiveConfig) GetWorkerPoolSize() int {
+	if ac.WorkerPoolSize <= 0 {
+		return 20
+	}
+	return ac.WorkerPoolSize
+}
+
+func (ac *ArchiveConfig) GetStreamsContractCallPageSize() int64 {
+	if ac.StreamsContractCallPageSize <= 0 {
+		return 5000
+	}
+	return ac.StreamsContractCallPageSize
 }
 
 type FilterConfig struct {
@@ -242,16 +271,6 @@ type FilterConfig struct {
 	// archive only listed shards.
 	NumShards uint64
 	Shards    []uint64
-}
-
-func (cfg *StreamConfig) GetMembershipLimit(streamId shared.StreamId) int {
-	if cfg.StreamMembershipLimits != nil {
-		streamPrefix := hex.EncodeToString(streamId[:1])
-		if value, ok := cfg.StreamMembershipLimits[streamPrefix]; ok {
-			return value
-		}
-	}
-	return 0
 }
 
 func (c *Config) GetGraffiti() string {

@@ -2,14 +2,14 @@ package crypto
 
 import (
 	"context"
-	"math/big"
-
-	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/config"
-	. "github.com/river-build/river/core/node/protocol"
-
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/ethclient"
+	. "github.com/river-build/river/core/node/base"
+	"github.com/river-build/river/core/node/config"
+	"github.com/river-build/river/core/node/infra"
+	. "github.com/river-build/river/core/node/protocol"
+	"math/big"
+	"time"
 )
 
 // BlockchainClient is an interface that covers common functionality
@@ -56,7 +56,12 @@ type Blockchain struct {
 // If wallet is nil, the blockchain will be read-only.
 // If wallet is not nil, the blockchain will be read-write:
 // TxRunner will be created to track nonce used by the account.
-func NewBlockchain(ctx context.Context, cfg *config.ChainConfig, wallet *Wallet) (*Blockchain, error) {
+func NewBlockchain(
+	ctx context.Context,
+	cfg *config.ChainConfig,
+	wallet *Wallet,
+	metrics infra.MetricsFactory,
+) (*Blockchain, error) {
 	client, err := ethclient.DialContext(ctx, cfg.NetworkUrl)
 	if err != nil {
 		return nil, AsRiverError(err, Err_CANNOT_CONNECT).
@@ -65,7 +70,7 @@ func NewBlockchain(ctx context.Context, cfg *config.ChainConfig, wallet *Wallet)
 			Func("NewBlockchain")
 	}
 
-	return NewBlockchainWithClient(ctx, cfg, wallet, client, client, NewChainMonitor())
+	return NewBlockchainWithClient(ctx, cfg, wallet, client, client, metrics)
 }
 
 func NewBlockchainWithClient(
@@ -74,7 +79,7 @@ func NewBlockchainWithClient(
 	wallet *Wallet,
 	client BlockchainClient,
 	clientCloser Closable,
-	chainMonitor ChainMonitor,
+	metrics infra.MetricsFactory,
 ) (*Blockchain, error) {
 	if cfg.BlockTimeMs <= 0 {
 		return nil, RiverError(Err_BAD_CONFIG, "BlockTimeMs must be set").
@@ -87,7 +92,7 @@ func NewBlockchainWithClient(
 			Func("NewBlockchainWithClient")
 	}
 
-	if chainId.Uint64() != uint64(cfg.ChainId) {
+	if chainId.Uint64() != cfg.ChainId {
 		return nil, RiverError(Err_BAD_CONFIG, "Chain id mismatch",
 			"configured", cfg.ChainId,
 			"providerChainId", chainId.Uint64()).Func("NewBlockchainWithClient")
@@ -103,18 +108,28 @@ func NewBlockchainWithClient(
 	}
 	initialBlockNum := BlockNumber(blockNum)
 
+	monitor := NewChainMonitor()
+
 	bc := &Blockchain{
 		ChainId:         big.NewInt(int64(cfg.ChainId)),
 		Client:          client,
 		ClientCloser:    clientCloser,
 		Config:          cfg,
 		InitialBlockNum: initialBlockNum,
-		ChainMonitor:    chainMonitor,
+		ChainMonitor:    monitor,
 	}
+
+	go monitor.RunWithBlockPeriod(
+		ctx,
+		client,
+		initialBlockNum,
+		time.Duration(cfg.BlockTimeMs)*time.Millisecond,
+		metrics,
+	)
 
 	if wallet != nil {
 		bc.Wallet = wallet
-		bc.TxPool, err = NewTransactionPoolWithPoliciesFromConfig(ctx, cfg, bc.Client, wallet, bc.ChainMonitor)
+		bc.TxPool, err = NewTransactionPoolWithPoliciesFromConfig(ctx, cfg, bc.Client, wallet, bc.ChainMonitor, metrics)
 		if err != nil {
 			return nil, err
 		}

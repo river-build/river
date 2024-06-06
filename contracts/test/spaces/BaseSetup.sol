@@ -27,7 +27,7 @@ import {ISpaceDelegation} from "contracts/src/base/registry/facets/delegation/IS
 // deployments
 import {DeploySpaceFactory} from "contracts/scripts/deployments/DeploySpaceFactory.s.sol";
 import {DeployRiverBase} from "contracts/scripts/deployments/DeployRiverBase.s.sol";
-import {DeployProxyDelegation} from "contracts/scripts/deployments/DeployProxyDelegation.s.sol";
+import {DeployProxyBatchDelegation} from "contracts/scripts/deployments/DeployProxyBatchDelegation.s.sol";
 import {DeployBaseRegistry} from "contracts/scripts/deployments/DeployBaseRegistry.s.sol";
 
 /*
@@ -38,8 +38,11 @@ contract BaseSetup is TestUtils, SpaceHelper {
   DeployBaseRegistry internal deployBaseRegistry = new DeployBaseRegistry();
   DeploySpaceFactory internal deploySpaceFactory = new DeploySpaceFactory();
   DeployRiverBase internal deployRiverTokenBase = new DeployRiverBase();
-  DeployProxyDelegation internal deployProxyDelegation =
-    new DeployProxyDelegation();
+  DeployProxyBatchDelegation internal deployProxyBatchDelegation =
+    new DeployProxyBatchDelegation();
+
+  address[] internal operators;
+  address[] internal nodes;
 
   address internal deployer;
   address internal founder;
@@ -50,7 +53,6 @@ contract BaseSetup is TestUtils, SpaceHelper {
   address internal userEntitlement;
   address internal ruleEntitlement;
   address internal spaceOwner;
-  address[] internal nodes;
 
   address internal baseRegistry;
   address internal riverToken;
@@ -68,6 +70,8 @@ contract BaseSetup is TestUtils, SpaceHelper {
   IEntitlementChecker internal entitlementChecker;
   IImplementationRegistry internal implementationRegistry;
   IWalletLink internal walletLink;
+  INodeOperator internal nodeOperator;
+
   MockMessenger internal messenger;
 
   // @notice - This function is called before each test function
@@ -75,20 +79,23 @@ contract BaseSetup is TestUtils, SpaceHelper {
   function setUp() public virtual {
     deployer = getDeployer();
 
+    operators = _createAccounts(10);
+
     // Base Registry
     baseRegistry = deployBaseRegistry.deploy();
     entitlementChecker = IEntitlementChecker(baseRegistry);
+    nodeOperator = INodeOperator(baseRegistry);
 
     // Mainnet
     messenger = MockMessenger(deployBaseRegistry.messenger());
-    deployProxyDelegation.setDependencies({
+    deployProxyBatchDelegation.setDependencies({
       mainnetDelegation_: baseRegistry,
       messenger_: address(messenger)
     });
-    mainnetProxyDelegation = deployProxyDelegation.deploy();
-    mainnetRiverToken = deployProxyDelegation.riverToken();
-    vault = deployProxyDelegation.vault();
-    claimers = deployProxyDelegation.claimers();
+    mainnetProxyDelegation = deployProxyBatchDelegation.deploy();
+    mainnetRiverToken = deployProxyBatchDelegation.riverToken();
+    vault = deployProxyBatchDelegation.vault();
+    claimers = deployProxyBatchDelegation.claimers();
 
     // Space Factory Diamond
     spaceFactory = deploySpaceFactory.deploy();
@@ -133,15 +140,23 @@ contract BaseSetup is TestUtils, SpaceHelper {
     everyoneSpace = Architect(spaceFactory).createSpace(everyoneSpaceInfo);
     vm.stopPrank();
 
-    _registerNodes();
+    // _registerOperators();
+    // _registerNodes();
+  }
+
+  function _registerOperators() internal {
+    for (uint256 i = 0; i < operators.length; i++) {
+      vm.prank(operators[i]);
+      nodeOperator.registerOperator(operators[i]);
+    }
   }
 
   function _registerNodes() internal {
-    nodes = new address[](10);
-    for (uint256 i = 0; i < 10; i++) {
+    nodes = new address[](operators.length);
+
+    for (uint256 i = 0; i < operators.length; i++) {
       nodes[i] = _randomAddress();
-      vm.startPrank(nodes[i]);
-      // INodeOperator(baseRegistry).registerOperator(nodes[i]);
+      vm.startPrank(operators[i]);
       entitlementChecker.registerNode(nodes[i]);
       vm.stopPrank();
     }

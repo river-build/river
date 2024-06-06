@@ -3,6 +3,7 @@ package events
 import (
 	"bytes"
 	"context"
+	"github.com/river-build/river/core/node/crypto"
 	"sync"
 	"time"
 
@@ -111,16 +112,22 @@ func (s *streamImpl) loadInternal(ctx context.Context) error {
 	if s.view != nil {
 		return nil
 	}
+
+	streamRecencyConstraintsGenerations, err :=
+		s.params.ChainConfig.GetInt(crypto.StreamRecencyConstraintsGenerationsConfigKey)
+	if err != nil {
+		return err
+	}
+
 	streamData, err := s.params.Storage.ReadStreamFromLastSnapshot(
 		ctx,
 		s.streamId,
-		max(0, s.params.StreamConfig.RecencyConstraints.Generations-1),
+		max(0, streamRecencyConstraintsGenerations-1),
 	)
 	if err != nil {
 		if AsRiverError(err).Code == Err_NOT_FOUND {
 			return s.initFromBlockchain(ctx)
 		}
-
 		return err
 	}
 
@@ -142,7 +149,7 @@ func (s *streamImpl) generateMiniblockProposal(ctx context.Context, forceSnapsho
 		return nil, nil
 	}
 
-	return s.view.ProposeNextMiniblock(ctx, s.params.StreamConfig, forceSnapshot)
+	return s.view.ProposeNextMiniblock(ctx, s.params.ChainConfig, forceSnapshot)
 }
 
 func (s *streamImpl) ProposeNextMiniblock(ctx context.Context, forceSnapshot bool) (*MiniblockInfo, error) {
@@ -224,7 +231,7 @@ func (s *streamImpl) ApplyMiniblock(ctx context.Context, miniblock *MiniblockInf
 	}
 
 	// Lets see if this miniblock can be applied.
-	newSV, err := s.view.copyAndApplyBlock(miniblock, s.params.StreamConfig)
+	newSV, err := s.view.copyAndApplyBlock(miniblock, s.params.ChainConfig)
 	if err != nil {
 		return err
 	}
@@ -436,20 +443,21 @@ func (s *streamImpl) tryGetView() StreamView {
 	}
 }
 
+// tryCleanup unloads its internal view when s haven't got activity within the given expiration period.
+// It returns true when the view is unloaded
 func (s *streamImpl) tryCleanup(expiration time.Duration) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	expired := time.Since(s.lastAccessedTime) >= expiration
-
-	// return immediately if the view is already purged or if the mini block creation routine
-	// is running for this stream
+	// return immediately if the view is already purged or if the mini block creation routine is running for this stream
 	if s.view == nil {
-		return false
+		return true
 	}
 
-	// only unload if there is no-one is listing to this stream and there are no events in the minipool.
-	if expired && (s.receivers == nil || s.receivers.Cardinality() == 0) && s.view.minipool.events.Len() == 0 {
+	expired := time.Since(s.lastAccessedTime) >= expiration
+
+	// unload if there is no activity within expiration
+	if expired && s.view.minipool.events.Len() == 0 {
 		s.view = nil
 		return true
 	}
@@ -628,7 +636,7 @@ func (s *streamImpl) Sub(ctx context.Context, cookie *SyncCookie, receiver SyncR
 
 		// append events from blocks
 		envelopes := make([]*Envelope, 0, 16)
-		err = s.view.forEachEvent(miniblockIndex, func(e *ParsedEvent) (bool, error) {
+		err = s.view.forEachEvent(miniblockIndex, func(e *ParsedEvent, minibockNum int64, eventNum int64) (bool, error) {
 			envelopes = append(envelopes, e.Envelope)
 			return true, nil
 		})
@@ -676,6 +684,7 @@ func (s *streamImpl) ForceFlush(ctx context.Context) {
 func (s *streamImpl) canCreateMiniblock() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+
 	// Loaded, has events in minipool, fake leader and periodic miniblock creation is not disabled in test settings.
 	return s.view != nil &&
 		s.view.minipool.events.Len() > 0 &&

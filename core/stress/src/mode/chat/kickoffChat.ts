@@ -26,7 +26,7 @@ export async function kickoffChat(rootClient: StressClient, cfg: ChatConfig) {
     const shareKeysDuration = Date.now() - shareKeysStart
 
     logger.log('send message')
-    const eventId = await rootClient.sendMessage(
+    const { eventId } = await rootClient.sendMessage(
         announceChannelId,
         `hello, we're starting the stress test now!, containers: ${cfg.containerCount} ppc: ${cfg.processesPerContainer} clients: ${cfg.clientsCount} sessionId: ${sessionId}`,
     )
@@ -90,7 +90,7 @@ async function startRootClient(
         if (!isMember) {
             await client.joinSpace(spaceId)
         } else {
-            await client.startStreamsClient()
+            await client.startStreamsClient({ spaceId })
         }
     }
 

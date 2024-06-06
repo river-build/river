@@ -72,7 +72,8 @@ contract NodeOperatorFacet is INodeOperator, OwnableBase, ERC721ABase, Facet {
     // Check for valid newStatus transitions
     // Exiting -> Standby
     // Standby -> Approved
-    // Approved -> Exiting
+    // Approved -> Exiting || Active
+    // Active -> Exiting || Approved
     if (
       currentStatus == NodeOperatorStatus.Exiting &&
       newStatus != NodeOperatorStatus.Standby
@@ -85,11 +86,18 @@ contract NodeOperatorFacet is INodeOperator, OwnableBase, ERC721ABase, Facet {
       revert NodeOperator__InvalidStatusTransition();
     } else if (
       currentStatus == NodeOperatorStatus.Approved &&
-      newStatus != NodeOperatorStatus.Exiting
+      (newStatus != NodeOperatorStatus.Exiting &&
+        newStatus != NodeOperatorStatus.Active)
+    ) {
+      revert NodeOperator__InvalidStatusTransition();
+    } else if (
+      currentStatus == NodeOperatorStatus.Active &&
+      (newStatus != NodeOperatorStatus.Exiting &&
+        newStatus != NodeOperatorStatus.Approved)
     ) {
       revert NodeOperator__InvalidStatusTransition();
     }
-    if (newStatus == NodeOperatorStatus.Approved) {
+    if (newStatus == NodeOperatorStatus.Active) {
       ds.approvalTimeByOperator[operator] = block.timestamp;
     } else {
       ds.approvalTimeByOperator[operator] = 0;
@@ -146,13 +154,14 @@ contract NodeOperatorFacet is INodeOperator, OwnableBase, ERC721ABase, Facet {
   // =============================================================
   //                           Commission
   // =============================================================
-  function setCommissionRate(uint256 rate) external {
+  function setCommissionRate(uint256 rateBps) external {
     NodeOperatorStorage.Layout storage ds = NodeOperatorStorage.layout();
     if (!ds.operators.contains(msg.sender))
       revert NodeOperator__NotRegistered();
-    if (rate > 100) revert NodeOperator__InvalidCommissionRate();
-    ds.commissionByOperator[msg.sender] = rate;
-    emit OperatorCommissionChanged(msg.sender, rate);
+    if (rateBps > 10000) revert NodeOperator__InvalidCommissionRate();
+
+    ds.commissionByOperator[msg.sender] = rateBps;
+    emit OperatorCommissionChanged(msg.sender, rateBps);
   }
 
   function getCommissionRate(address operator) external view returns (uint256) {
