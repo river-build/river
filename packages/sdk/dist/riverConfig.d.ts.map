@@ -1,0 +1,1 @@
+{"version":3,"file":"riverConfig.d.ts","sourceRoot":"","sources":["../src/riverConfig.ts"],"names":[],"mappings":"AAAA,OAAO,EAEH,eAAe,EAEf,gBAAgB,EAInB,MAAM,mBAAmB,CAAA;AAsE1B,wBAAgB,oBAAoB,CAAC,aAAa,CAAC,EAAE,MAAM;;;EAM1D;AAED,wBAAgB,mBAAmB,CAAC,aAAa,CAAC,EAAE,MAAM;;;EAMzD;AAED,MAAM,MAAM,WAAW,GAAG,UAAU,CAAC,OAAO,eAAe,CAAC,CAAA;AAE5D,wBAAgB,eAAe;;;;;;;;;;EAQ9B"}
