@@ -113,7 +113,7 @@ jobs:
               if: ${{ success() && steps.build-image.outputs.tag_valid == 'true' }}
               id: create-tag
               run: |
-                new_tag=$(./scripts/create_new_release_tag.sh ${{ steps.build-image.outputs.tag_value }})
+                new_tag=$(./scripts/create-new-release-tag.sh ${{ steps.build-image.outputs.tag_value }})
                 echo "::set-output name=new_tag::$new_tag"
 
             - name: Push tag
