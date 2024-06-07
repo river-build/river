@@ -15,7 +15,7 @@
         "csb:dev": "yarn csb:dev:entitlements",
         "csb:dev:entitlements": "./core/scripts/launch.sh",
         "csb:dev:no-entitlements": "./core/scripts/launch.sh --disable_entitlements",
-        "csb:list": "yarn workspaces list --json | grep core | grep -o '\"name\":\"[^\"]*' | grep -o '[^\"]*$'",
+        "csb:list": "yarn workspaces list --json | grep packages | grep -o '\"name\":\"[^\"]*' | grep -o '[^\"]*$'",
         "csb:list:exclude:filter": "yarn csb:list | xargs -I arg echo -n \"--filter=!arg \"",
         "csb:list:filter": "yarn csb:list | xargs -I arg echo -n \"--filter arg \"",
         "csb:list:filter-without-sdk": "yarn csb:list | grep -v sdk | xargs -I arg echo -n \"--filter arg \"",
@@ -23,8 +23,8 @@
         "csb:multi": "./core/scripts/launch_multi.sh",
         "csb:multi:no-entitlements": "./core/scripts/launch_multi.sh --disable_entitlements",
         "csb:node": "./core/scripts/start_node.sh",
-        "csb:prettier:check": "prettier --check ./core",
-        "csb:prettier:fix": "prettier --write ./core",
+        "csb:prettier:check": "prettier --check ./packages",
+        "csb:prettier:fix": "prettier --write ./packages",
         "csb:start": "yarn csb:start:entitlements",
         "csb:start:entitlements": "./core/scripts/start_node.sh",
         "csb:start:no-entitlements": "./core/scripts/start_node.sh --disable_entitlements",
@@ -128,7 +128,6 @@
         ]
     },
     "workspaces": [
-        "core/*",
         "protocol",
         "packages/*",
         "contracts"
