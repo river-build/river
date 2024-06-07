@@ -3,8 +3,20 @@
 set -x
 set -eo pipefail
 
-# Define the prefix
-prefix="mainnet"
+# Check if prefix is provided as an argument
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <prefix>"
+    exit 1
+fi
+
+# Get the prefix argument
+prefix="$1"
+
+# Check if prefix is either "mainnet" or "testnet"
+if [ "$prefix" != "mainnet" ] && [ "$prefix" != "testnet" ]; then
+    echo "Prefix must be either 'mainnet' or 'testnet'"
+    exit 1
+fi
 
 # Get the current year and month in YYYY-MM format
 current_date=$(date "+%Y-%m")
