@@ -405,13 +405,9 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 			params:      params,
 			fulfillment: content.KeyFulfillment,
 		}
-		ruleBuilderAE := aeBuilder().
+		return aeBuilder().
 			checkOneOf(params.creatorIsMember).
 			check(ru.validKeyFulfillment)
-		if _, err := params.streamView.(events.ChannelStreamView).GetChannelInception(); err == nil {
-			ruleBuilderAE = ruleBuilderAE.requireChainAuth(params.channelMessageReadEntitlements)
-		}
-		return ruleBuilderAE
 	case *MemberPayload_DisplayName:
 		return aeBuilder().
 			check(params.creatorIsMember)
@@ -923,32 +919,6 @@ func (params *aeParams) channelMessageWriteEntitlements() (*auth.ChainAuthArgs, 
 		*params.streamView.StreamId(),
 		userId,
 		auth.PermissionWrite,
-	)
-
-	return chainAuthArgs, nil
-}
-
-func (params *aeParams) channelMessageReadEntitlements() (*auth.ChainAuthArgs, error) {
-	userId, err := shared.AddressHex(params.parsedEvent.Event.CreatorAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	inception, err := params.streamView.(events.ChannelStreamView).GetChannelInception()
-	if err != nil {
-		return nil, err
-	}
-
-	spaceId, err := shared.StreamIdFromBytes(inception.SpaceId)
-	if err != nil {
-		return nil, err
-	}
-
-	chainAuthArgs := auth.NewChainAuthArgsForChannel(
-		spaceId,
-		*params.streamView.StreamId(),
-		userId,
-		auth.PermissionRead,
 	)
 
 	return chainAuthArgs, nil
