@@ -1,1 +1,0 @@
-{"version":3,"file":"riverDbManager.d.ts","sourceRoot":"","sources":["../src/riverDbManager.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,WAAW,EAAE,MAAM,yBAAyB,CAAA;AAErD,qBAAa,cAAc;WACT,WAAW,CAAC,MAAM,EAAE,MAAM,EAAE,MAAM,CAAC,EAAE,MAAM,GAAG,WAAW;CAG1E"}

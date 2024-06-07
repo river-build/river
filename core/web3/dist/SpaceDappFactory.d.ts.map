@@ -1,1 +1,0 @@
-{"version":3,"file":"SpaceDappFactory.d.ts","sourceRoot":"","sources":["../src/SpaceDappFactory.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,UAAU,EAAE,MAAM,cAAc,CAAA;AACzC,OAAO,EAAE,MAAM,EAAE,MAAM,QAAQ,CAAA;AAC/B,OAAO,EAAE,eAAe,EAAE,MAAM,wBAAwB,CAAA;AAKxD,wBAAgB,eAAe,CAC3B,QAAQ,EAAE,MAAM,CAAC,SAAS,CAAC,QAAQ,EACnC,MAAM,EAAE,eAAe,GACxB,UAAU,CAaZ"}
