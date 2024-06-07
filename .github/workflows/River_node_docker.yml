@@ -101,7 +101,7 @@ jobs:
 
                 echo "::set-output name=tag_valid::false"
                 for tag in "${TAGS[@]}"; do
-                  if [ "$tag" == "mainnet" || "$tag" == "testnet" ]; then
+                  if [ "$tag" == "mainnet" ] || [ "$tag" == "testnet" ]; then
                     echo "::set-output name=tag_valid::true"
                     echo "::set-output name=tag_value::$tag"
                   fi
