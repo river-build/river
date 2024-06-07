@@ -158,6 +158,9 @@ contract DeploySpace is DiamondDeployer {
         IDiamond.FacetCutAction.Add
       )
     );
+    addCut(
+      ownablePendingHelper.makeCut(ownablePending, IDiamond.FacetCutAction.Add)
+    );
 
     addInit(ownablePending, ownablePendingHelper.makeInitData(deployer));
     addInit(diamondCut, diamondCutHelper.makeInitData(""));
