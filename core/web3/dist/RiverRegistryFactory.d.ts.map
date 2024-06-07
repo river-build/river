@@ -1,1 +1,0 @@
-{"version":3,"file":"RiverRegistryFactory.d.ts","sourceRoot":"","sources":["../src/RiverRegistryFactory.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,aAAa,EAAE,MAAM,oBAAoB,CAAA;AAClD,OAAO,EAAE,MAAM,EAAE,MAAM,QAAQ,CAAA;AAC/B,OAAO,EAAE,gBAAgB,EAAE,MAAM,wBAAwB,CAAA;AAEzD,wBAAgB,mBAAmB,CAC/B,QAAQ,EAAE,MAAM,CAAC,SAAS,CAAC,QAAQ,EACnC,MAAM,EAAE,gBAAgB,GACzB,aAAa,CAEf"}
