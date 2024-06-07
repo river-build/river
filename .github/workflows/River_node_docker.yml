@@ -103,6 +103,28 @@ jobs:
                   docker push $ECR_REGISTRY/$REGISTRY_ALIAS/$ECR_REPOSITORY:$tag
                 done
 
+            - name: Create new release tag
+              if: success()
+              id: create-tag
+              run: |
+                new_tag=$(./scripts/create_new_release_tag.sh)
+                echo "::set-output name=new_tag::$new_tag"
+
+            - name: Push tag
+              if: success()
+              uses: actions/github-script@v4
+              with:
+                github-token: ${{ secrets.GITHUB_TOKEN }}
+                script: |
+                  const response = await github.git.createRef({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    ref: 'refs/tags/' + '${{ steps.create-tag.outputs.new_tag }}',
+                    sha: ${{ github.sha }}
+                  })
+                  console.log(response)
+
+
             # If action failed, we send a slack notification
             - name: Slack notification
               if: failure()
