@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 
-set -x
-set -eo pipefail
-
 # Check if prefix is provided as an argument
 if [ "$#" -ne 1 ]; then
     echo "Usage: $0 <prefix>"
@@ -39,11 +36,11 @@ for tag in $sorted_tags; do
         new_number=$((tag_number + 1))
         new_tag="$prefix/$current_date-$new_number"
 
-        echo "New tag: $new_tag"
+        echo "$new_tag"
         exit 0
     fi
 done
 
 # If no matching tag was found for the current date, create a new one with number 01
 new_tag="$prefix/$current_date-01"
-echo "New tag: $new_tag"
+echo "$new_tag"
