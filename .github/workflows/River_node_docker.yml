@@ -126,7 +126,7 @@ jobs:
                     owner: context.repo.owner,
                     repo: context.repo.repo,
                     ref: 'refs/tags/' + '${{ steps.create-tag.outputs.new_tag }}',
-                    sha: ${{ github.sha }}
+                    sha: context.sha
                   })
                   console.log(response)
 
