@@ -18,6 +18,8 @@ fi
 # Get the current year and month in YYYY-MM format
 current_date=$(date "+%Y-%m-%d")
 
+git fetch --tags > /dev/null 2>&1
+
 # Get the list of tags matching the prefix and filter them by the format
 tags=$(git tag -l "$prefix/*" | grep -E "^$prefix/[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]+$")
 
