@@ -180,8 +180,7 @@ contract MembershipFacet is
   /// @inheritdoc IMembership
   function joinSpaceWithReferral(
     address receiver,
-    address referrer,
-    uint256 referralCode
+    address partner
   ) external payable nonReentrant {
     _validateJoinSpace(receiver);
 
@@ -201,11 +200,12 @@ contract MembershipFacet is
 
       if (surplus > 0) {
         // calculate referral fee from net membership price
+        uint256 referralCode = _referralPartnerCode(partner);
         uint256 referralFee = _calculateReferralAmount(surplus, referralCode);
         CurrencyTransfer.transferCurrency(
           currency,
-          receiver,
-          referrer,
+          msg.sender,
+          partner,
           referralFee
         );
 

@@ -18,7 +18,6 @@ contract MembershipReferralFacet is
   Facet
 {
   function __MembershipReferralFacet_init() external onlyInitializing {
-    __MembershipReferralBase_init();
     _addInterface(type(IMembershipReferral).interfaceId);
   }
 
@@ -38,8 +37,21 @@ contract MembershipReferralFacet is
   }
 
   /// @inheritdoc IMembershipReferral
+  function createReferralCodeForPartner(
+    address partner,
+    uint256 code,
+    uint16 bps
+  ) external onlyOwner {
+    _createReferralCodeForPartner(partner, code, bps);
+  }
+
+  /// @inheritdoc IMembershipReferral
   function removeReferralCode(uint256 code) external onlyOwner {
     _removeReferralCode(code);
+  }
+
+  function removePartnerReferralCode(address partner) external onlyOwner {
+    _removePartnerReferralCode(partner);
   }
 
   /// @inheritdoc IMembershipReferral
@@ -52,6 +64,12 @@ contract MembershipReferralFacet is
     uint256 code
   ) external view returns (TimeData memory) {
     return _referralCodeTime(code);
+  }
+
+  function referralPartnerCode(
+    address partner
+  ) external view returns (uint256) {
+    return _referralPartnerCode(partner);
   }
 
   /// @inheritdoc IMembershipReferral

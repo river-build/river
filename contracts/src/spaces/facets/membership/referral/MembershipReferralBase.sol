@@ -12,8 +12,25 @@ import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 
 abstract contract MembershipReferralBase is IMembershipReferralBase {
   function __MembershipReferralBase_init() internal {
-    // create default referral code for client side developers
     _createReferralCode(123, 1000); // 10%
+  }
+
+  function _createReferralCodeForPartner(
+    address partner,
+    uint256 code,
+    uint16 bps
+  ) internal {
+    if (code == 0) revert Membership__InvalidReferralCode();
+    if (bps > BasisPoints.MAX_BPS) revert Membership__InvalidReferralBps();
+    if (partner == address(0)) revert Membership__InvalidReferralAddress();
+
+    MembershipReferralStorage.Layout storage ds = MembershipReferralStorage
+      .layout();
+
+    ds.referralCodes[code] = bps;
+    ds.referralCodeByPartner[partner] = code;
+
+    emit Membership__ReferralCreatedForPartner(code, bps, partner);
   }
 
   /**
@@ -62,6 +79,19 @@ abstract contract MembershipReferralBase is IMembershipReferralBase {
     emit Membership__ReferralTimeCreated(code, bps, startTime, endTime);
   }
 
+  function _removePartnerReferralCode(address partner) internal {
+    MembershipReferralStorage.Layout storage ds = MembershipReferralStorage
+      .layout();
+
+    uint256 referralCode = ds.referralCodeByPartner[partner];
+
+    if (referralCode == 0) revert Membership__InvalidReferralCode();
+
+    delete ds.referralCodeByPartner[partner];
+
+    emit Membership__ReferralRemoved(referralCode);
+  }
+
   function _removeReferralCode(uint256 code) internal {
     MembershipReferralStorage.Layout storage ds = MembershipReferralStorage
       .layout();
@@ -84,6 +114,12 @@ abstract contract MembershipReferralBase is IMembershipReferralBase {
     uint256 code
   ) internal view returns (TimeData memory) {
     return MembershipReferralStorage.layout().referralCodeTimes[code];
+  }
+
+  function _referralPartnerCode(
+    address partner
+  ) internal view returns (uint256) {
+    return MembershipReferralStorage.layout().referralCodeByPartner[partner];
   }
 
   function _calculateReferralAmount(

@@ -16,6 +16,7 @@ library MembershipReferralStorage {
   struct Layout {
     mapping(uint256 => uint16) referralCodes;
     mapping(uint256 => IMembershipReferralBase.TimeData) referralCodeTimes;
+    mapping(address => uint256) referralCodeByPartner;
   }
 
   function layout() internal pure returns (Layout storage l) {

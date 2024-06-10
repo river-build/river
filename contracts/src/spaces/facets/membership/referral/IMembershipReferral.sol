@@ -14,6 +14,7 @@ interface IMembershipReferralBase {
   error Membership__InvalidReferralCode();
   error Membership__InvalidReferralBps();
   error Membership__InvalidReferralTime();
+  error Membership__InvalidReferralAddress();
 
   // =============================================================
   //                           EVENTS
@@ -26,6 +27,11 @@ interface IMembershipReferralBase {
   );
   event Membership__ReferralCreated(uint256 indexed code, uint16 bps);
   event Membership__ReferralRemoved(uint256 indexed code);
+  event Membership__ReferralCreatedForPartner(
+    uint256 indexed code,
+    uint16 bps,
+    address partner
+  );
 
   // =============================================================
   //                           STRUCTS
@@ -37,6 +43,18 @@ interface IMembershipReferralBase {
 }
 
 interface IMembershipReferral is IMembershipReferralBase {
+  /**
+   * @notice Create a referral code for a partner
+   * @param partner The partner address
+   * @param code The referral code
+   * @param bps The basis points to be paid to the referrer
+   */
+  function createReferralCodeForPartner(
+    address partner,
+    uint256 code,
+    uint16 bps
+  ) external;
+
   /**
    * @notice Create a referral code
    * @param code The referral code
@@ -57,6 +75,12 @@ interface IMembershipReferral is IMembershipReferralBase {
     uint256 startTime,
     uint256 endTime
   ) external;
+
+  /**
+   * @notice Remove a referral code for a partner
+   * @param partner The partner address
+   */
+  function removePartnerReferralCode(address partner) external;
 
   /**
    * @notice Remove a referral code

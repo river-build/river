@@ -14,9 +14,12 @@ contract DeployMembershipReferral is FacetHelper, Deployer {
   constructor() {
     addSelector(MembershipReferralFacet.createReferralCode.selector);
     addSelector(MembershipReferralFacet.createReferralCodeWithTime.selector);
+    addSelector(MembershipReferralFacet.createReferralCodeForPartner.selector);
     addSelector(MembershipReferralFacet.removeReferralCode.selector);
+    addSelector(MembershipReferralFacet.removePartnerReferralCode.selector);
     addSelector(MembershipReferralFacet.referralCodeBps.selector);
     addSelector(MembershipReferralFacet.referralCodeTime.selector);
+    addSelector(MembershipReferralFacet.referralPartnerCode.selector);
     addSelector(MembershipReferralFacet.calculateReferralAmount.selector);
   }
 
