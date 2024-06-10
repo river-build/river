@@ -181,14 +181,17 @@ export async function setupWalletsAndContexts() {
         ethers.Wallet.createRandom(),
     ])
 
-    const [alicesContext, bobsContext] = await Promise.all([
+    const [alicesContext, bobsContext, carolsContext, davesContext] = await Promise.all([
         makeUserContextFromWallet(alicesWallet),
         makeUserContextFromWallet(bobsWallet),
+        makeUserContextFromWallet(carolsWallet),
+        makeUserContextFromWallet(alicesWallet),
     ])
 
     const aliceProvider = new LocalhostWeb3Provider(baseConfig.rpcUrl, alicesWallet)
     const bobProvider = new LocalhostWeb3Provider(baseConfig.rpcUrl, bobsWallet)
     const carolProvider = new LocalhostWeb3Provider(baseConfig.rpcUrl, carolsWallet)
+    const daveProvider = new LocalhostWeb3Provider(baseConfig.rpcUrl, alicesWallet)
 
     await Promise.all([
         aliceProvider.fundWallet(),
@@ -199,30 +202,38 @@ export async function setupWalletsAndContexts() {
     const bobSpaceDapp = createSpaceDapp(bobProvider, baseConfig.chainConfig)
     const aliceSpaceDapp = createSpaceDapp(aliceProvider, baseConfig.chainConfig)
     const carolSpaceDapp = createSpaceDapp(carolProvider, baseConfig.chainConfig)
+    const daveSpaceDapp = createSpaceDapp(daveProvider, baseConfig.chainConfig)
 
     // create a user
-    const [alice, bob] = await Promise.all([
+    const [alice, bob, carol, dave] = await Promise.all([
         makeTestClient({
             context: alicesContext,
         }),
         makeTestClient({ context: bobsContext }),
+        makeTestClient({ context: carolsContext }),
+        makeTestClient({ context: davesContext }),
     ])
 
     return {
         alice,
         bob,
+        carol,
+        dave,
         alicesWallet,
         bobsWallet,
+        carolsWallet,
         alicesContext,
         bobsContext,
+        carolsContext,
+        davesContext,
         aliceProvider,
         bobProvider,
+        carolProvider,
+        daveProvider,
         aliceSpaceDapp,
         bobSpaceDapp,
-        // Return a third wallet / provider for wallet linking
-        carolsWallet,
-        carolProvider,
         carolSpaceDapp,
+        daveSpaceDapp,
     }
 }
 

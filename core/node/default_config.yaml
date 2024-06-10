@@ -22,6 +22,8 @@ baseChain:
     chainId: 31337
     networkUrl: 'http://127.0.0.1:8545'
     blockTimeMs: 2000
+    # TODO: make sure this does not get propagated to production
+    positiveEntitlementCacheTTLSeconds: 5 # Short TTL for testing
 riverChain:
     chainId: 31338
     networkUrl: 'http://127.0.0.1:8546'

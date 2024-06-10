@@ -80,6 +80,27 @@ func (s *Service) addParsedEvent(
 	if chainAuthArgs != nil {
 		err := s.chainAuth.IsEntitled(ctx, s.config, chainAuthArgs)
 		if err != nil {
+			// log := dlog.FromCtx(ctx).With("function", "addParsedEvent")
+			// log.Info("entitlement check failed, potential entitlement loss?", "error", err, "chainAuthArgs", chainAuthArgs)
+			// // If the user entitlement failed, we may need to proactively propogate an event as a result
+			// // of detecting an entitlement loss.
+			// propogatedEntitlementLossEvent, err := rules.ProcessEntitlementLoss(ctx, parsedEvent, streamView)
+			// log.Info("processed potential entitlement loss", "propogatedEntitlementLossEvent", propogatedEntitlementLossEvent, "error", err, "chainAuthArgs", chainAuthArgs)
+			// if err != nil {
+			// 	log.Error("error processing potential entitlement loss", "error", err)
+			// 	return err
+			// }
+			// if propogatedEntitlementLossEvent != nil {
+			// 	log.Info("propogating entitlement loss event", "event", propogatedEntitlementLossEvent, "chainAuthArgs", chainAuthArgs)
+			// 	err := s.addEventPayload(ctx, propogatedEntitlementLossEvent.StreamId, propogatedEntitlementLossEvent.Payload)
+			// 	if err != nil {
+			// 		log.Error("error propogating entitlement loss event", "error", err)
+			// 		return err
+			// 	} else {
+			// 		log.Info("entitlement loss event propogated", "event", propogatedEntitlementLossEvent, "chainAuthArgs", chainAuthArgs)
+			// 	}
+			// }
+			// log.Info("finished propogating any potential entitlement loss", "chainAuthArgs", chainAuthArgs)
 			return err
 		}
 	}

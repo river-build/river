@@ -3,8 +3,9 @@ import { foundry } from 'viem/chains'
 
 import MockERC721a from './MockERC721A'
 
-import { keccak256 } from 'viem/utils'
+import { decodeAbiParameters, keccak256 } from 'viem/utils'
 import { dlogger } from '@river-build/dlog'
+import { AbiParameter, AbiFunction } from 'abitype'
 
 const logger = dlogger('csb:TestGatingNFT')
 
@@ -165,7 +166,13 @@ export async function getTestGatingNFTContractAddress(): Promise<`0x${string}`> 
     return await getContractAddress('TestGatingNFT')
 }
 
-export async function publicMint(nftName: string, toAddress: `0x${string}`) {
+const getTotalSupplyOutputs: readonly AbiParameter[] | undefined = (
+    Object.values(MockERC721a.abi).find((abi) => abi.name === 'totalSupply') as
+        | AbiFunction
+        | undefined
+)?.outputs
+
+export async function publicMint(nftName: string, toAddress: `0x${string}`): Promise<number> {
     const client = createTestClient({
         chain: foundry,
         mode: 'anvil',
@@ -190,4 +197,71 @@ export async function publicMint(nftName: string, toAddress: `0x${string}`) {
 
     const receipt = await client.waitForTransactionReceipt({ hash: nftReceipt })
     expect(receipt.status).toBe('success')
+
+    const totalSupplyEncoded = await client.readContract({
+        address: contractAddress,
+        abi: MockERC721a.abi,
+        functionName: 'totalSupply',
+    });
+
+    // Check from highest minted token id to lowest for the token we just minted and return
+    // the token id if we find it.
+    for (var i = Number(totalSupplyEncoded) - 1; i >= 0; i--) {
+        const owner = await client.readContract({
+            address: contractAddress,
+            abi: MockERC721a.abi,
+            functionName: 'ownerOf',
+            args: [BigInt(i)],
+        })
+        if (owner === toAddress) {
+            return i
+        }
+    }
+    throw new Error('Failed to find minted token')
+}
+
+export async function burn(nftName: string, tokenId: number): Promise<void> {
+    const client = createTestClient({
+        chain: foundry,
+        mode: 'anvil',
+        transport: http(),
+    })
+        .extend(publicActions)
+        .extend(walletActions)
+
+    const contractAddress = await getContractAddress(nftName)
+
+    const account = (await client.getAddresses())[0]
+
+    const nftReceipt = await client.writeContract({
+        address: contractAddress,
+        abi: MockERC721a.abi,
+        functionName: 'burn',
+        args: [BigInt(tokenId)],
+        account,
+    })
+
+    const receipt = await client.waitForTransactionReceipt({ hash: nftReceipt })
+    expect(receipt.status).toBe('success')
+}
+
+export async function balanceOf(nftName: string, address: `0x${string}`): Promise<number> {
+    const client = createTestClient({
+        chain: foundry,
+        mode: 'anvil',
+        transport: http(),
+    })
+        .extend(publicActions)
+        .extend(walletActions)
+
+    const contractAddress = await getContractAddress(nftName)
+
+    const balanceEncoded = await client.readContract({
+        address: contractAddress,
+        abi: MockERC721a.abi,
+        functionName: 'balanceOf',
+        args: [address],
+    })
+
+    return Number(balanceEncoded)
 }
