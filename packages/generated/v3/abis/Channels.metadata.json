@@ -34,6 +34,11 @@
       {
         "inputs": [],
         "type": "error",
+        "name": "Banning__CannotBanOwner"
+      },
+      {
+        "inputs": [],
+        "type": "error",
         "name": "Banning__CannotBanSelf"
       },
       {
@@ -1055,10 +1060,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/facets/Entitled.sol": {
-      "keccak256": "0xdd68187d18577806fb2462439af92a13be34b63989ac40282d4aca3456632f8c",
+      "keccak256": "0x90204085688bf4dd1e1b6ca30684ee37db79210070c405406898c8a77d50bfce",
       "urls": [
-        "bzz-raw://77deb7fe3aeb8545373e2612d5fe38c07fb8ceabc309b6b50678a9bf9d4cb98f",
-        "dweb:/ipfs/QmVfzGUUf7qAcopMrDGQpeM9gPCgxHtZkZnzUcsPxMt4Ke"
+        "bzz-raw://b9b194cc9977b03fbccc81529147a0fce7857893c8146927570c1ee5a28aa900",
+        "dweb:/ipfs/QmZMvPPj5ZPYaRQaSraBkv3PSMeUZ4wN1tQ9EVvwW6SL4r"
       ],
       "license": "MIT"
     },
@@ -1087,10 +1092,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/facets/banning/IBanning.sol": {
-      "keccak256": "0x173bebc8fdb71d3ad50fc6d9e8c715af293f3ee28d955670a8485584953b90e2",
+      "keccak256": "0x350ec182a95a86a41335979cd7212132858c5cfcd366602b2f6cd0ec0694b63e",
       "urls": [
-        "bzz-raw://702725c9956a963e501cf6ff84a40dad3bbfefecae624729c9ab7f6bc0385d18",
-        "dweb:/ipfs/QmU9T2tJ4Qs8buBNsiFbbAQUBgaaDiDfh5cAnKmVH8okc1"
+        "bzz-raw://ecb4ad0c5a1086c38448b3e279733f33edc0cc39648368e5cb43dfff139ff7e8",
+        "dweb:/ipfs/QmWYfYE8Haqk9kBRxmLijfQSfqbfxf7LB3wQ24d3pG5PE3"
       ],
       "license": "MIT"
     },

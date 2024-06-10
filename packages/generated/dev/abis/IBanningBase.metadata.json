@@ -19,6 +19,11 @@
       {
         "inputs": [],
         "type": "error",
+        "name": "Banning__CannotBanOwner"
+      },
+      {
+        "inputs": [],
+        "type": "error",
         "name": "Banning__CannotBanSelf"
       },
       {
@@ -120,10 +125,10 @@
   },
   "sources": {
     "contracts/src/spaces/facets/banning/IBanning.sol": {
-      "keccak256": "0x173bebc8fdb71d3ad50fc6d9e8c715af293f3ee28d955670a8485584953b90e2",
+      "keccak256": "0x350ec182a95a86a41335979cd7212132858c5cfcd366602b2f6cd0ec0694b63e",
       "urls": [
-        "bzz-raw://702725c9956a963e501cf6ff84a40dad3bbfefecae624729c9ab7f6bc0385d18",
-        "dweb:/ipfs/QmU9T2tJ4Qs8buBNsiFbbAQUBgaaDiDfh5cAnKmVH8okc1"
+        "bzz-raw://ecb4ad0c5a1086c38448b3e279733f33edc0cc39648368e5cb43dfff139ff7e8",
+        "dweb:/ipfs/QmWYfYE8Haqk9kBRxmLijfQSfqbfxf7LB3wQ24d3pG5PE3"
       ],
       "license": "MIT"
     }
