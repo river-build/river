@@ -181,17 +181,15 @@ export async function setupWalletsAndContexts() {
         ethers.Wallet.createRandom(),
     ])
 
-    const [alicesContext, bobsContext, carolsContext, davesContext] = await Promise.all([
+    const [alicesContext, bobsContext, carolsContext] = await Promise.all([
         makeUserContextFromWallet(alicesWallet),
         makeUserContextFromWallet(bobsWallet),
         makeUserContextFromWallet(carolsWallet),
-        makeUserContextFromWallet(alicesWallet),
     ])
 
     const aliceProvider = new LocalhostWeb3Provider(baseConfig.rpcUrl, alicesWallet)
     const bobProvider = new LocalhostWeb3Provider(baseConfig.rpcUrl, bobsWallet)
     const carolProvider = new LocalhostWeb3Provider(baseConfig.rpcUrl, carolsWallet)
-    const daveProvider = new LocalhostWeb3Provider(baseConfig.rpcUrl, alicesWallet)
 
     await Promise.all([
         aliceProvider.fundWallet(),
@@ -202,38 +200,37 @@ export async function setupWalletsAndContexts() {
     const bobSpaceDapp = createSpaceDapp(bobProvider, baseConfig.chainConfig)
     const aliceSpaceDapp = createSpaceDapp(aliceProvider, baseConfig.chainConfig)
     const carolSpaceDapp = createSpaceDapp(carolProvider, baseConfig.chainConfig)
-    const daveSpaceDapp = createSpaceDapp(daveProvider, baseConfig.chainConfig)
+
+    genId(5)
 
     // create a user
-    const [alice, bob, carol, dave] = await Promise.all([
+    const [alice, bob, carol, aliceMobile] = await Promise.all([
         makeTestClient({
             context: alicesContext,
+            deviceId: 'alice',
         }),
         makeTestClient({ context: bobsContext }),
         makeTestClient({ context: carolsContext }),
-        makeTestClient({ context: davesContext }),
+        makeTestClient({ context: alicesContext, deviceId: 'alice-mobile' }),
     ])
 
     return {
         alice,
         bob,
         carol,
-        dave,
+        aliceMobile,
         alicesWallet,
         bobsWallet,
         carolsWallet,
         alicesContext,
         bobsContext,
         carolsContext,
-        davesContext,
         aliceProvider,
         bobProvider,
         carolProvider,
-        daveProvider,
         aliceSpaceDapp,
         bobSpaceDapp,
         carolSpaceDapp,
-        daveSpaceDapp,
     }
 }
 
