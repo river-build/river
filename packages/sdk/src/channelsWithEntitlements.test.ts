@@ -144,7 +144,7 @@ async function expectUserCanJoinChannel(client: Client, channelId: string) {
 }
 
 describe('channelsWithEntitlements', () => {
-    test.skip('userEntitlementPass', async () => {
+    test('userEntitlementPass', async () => {
         const { alice, bob, channelId } = await setupChannelWithCustomRole(['alice'], NoopRuleData)
 
         // Validate alice can join the channel
@@ -157,7 +157,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test.skip('userEntitlementFail', async () => {
+    test('userEntitlementFail', async () => {
         const { alice, bob, channelId } = await setupChannelWithCustomRole(['carol'], NoopRuleData)
 
         await expect(alice.joinStream(channelId!)).rejects.toThrow(/7:PERMISSION_DENIED/)
@@ -189,7 +189,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test.skip('userEntitlementPass - join as root, linked wallet whitelisted', async () => {
+    test('userEntitlementPass - join as root, linked wallet whitelisted', async () => {
         const { alice, aliceSpaceDapp, aliceProvider, carolProvider, bob, channelId } =
             await setupChannelWithCustomRole(['carol'], NoopRuleData)
 
@@ -206,7 +206,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test.skip('userEntitlementPass - join as linked wallet, root wallet whitelisted', async () => {
+    test('userEntitlementPass - join as linked wallet, root wallet whitelisted', async () => {
         const { alice, carolSpaceDapp, aliceProvider, carolProvider, bob, channelId } =
             await setupChannelWithCustomRole(['carol'], NoopRuleData)
 
@@ -223,7 +223,7 @@ describe('channelsWithEntitlements', () => {
         log('Done linked-wallet-whitelist', Date.now() - doneStart)
     })
 
-    test.skip('oneNftGateJoinPass - join as root, asset in linked wallet', async () => {
+    test('oneNftGateJoinPass - join as root, asset in linked wallet', async () => {
         const testNft1Address = await getContractAddress('TestNFT1')
         const {
             alice,
@@ -251,7 +251,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test.skip('oneNftGateJoinPass - join as linked wallet, asset in root wallet', async () => {
+    test('oneNftGateJoinPass - join as linked wallet, asset in root wallet', async () => {
         const testNft1Address = await getContractAddress('TestNFT1')
         const {
             alice,
@@ -280,7 +280,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test.skip('oneNftGateJoinPass', async () => {
+    test('oneNftGateJoinPass', async () => {
         const testNftAddress = await getContractAddress('TestNFT')
         const { alice, alicesWallet, bob, channelId } = await setupChannelWithCustomRole(
             [],
@@ -298,7 +298,7 @@ describe('channelsWithEntitlements', () => {
         await alice.stopSync()
     })
 
-    test.skip('oneNftGateJoinFail', async () => {
+    test('oneNftGateJoinFail', async () => {
         const testNft1Address = await getContractAddress('TestNFT1')
         const { alice, bob, channelId } = await setupChannelWithCustomRole(
             [],
@@ -313,7 +313,7 @@ describe('channelsWithEntitlements', () => {
         await alice.stopSync()
     })
 
-    test.skip('twoNftGateJoinPass', async () => {
+    test('twoNftGateJoinPass', async () => {
         const testNft1Address = await getContractAddress('TestNFT1')
         const testNft2Address = await getContractAddress('TestNFT2')
         const { alice, bob, alicesWallet, channelId } = await setupChannelWithCustomRole(
@@ -338,7 +338,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test.skip('twoNftGateJoinPass - acrossLinkedWallets', async () => {
+    test('twoNftGateJoinPass - acrossLinkedWallets', async () => {
         const testNft1Address = await getContractAddress('TestNFT1')
         const testNft2Address = await getContractAddress('TestNFT2')
         const {
@@ -371,7 +371,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test.skip('twoNftGateJoinFail', async () => {
+    test('twoNftGateJoinFail', async () => {
         const testNft1Address = await getContractAddress('TestNFT1')
         const testNft2Address = await getContractAddress('TestNFT2')
         const { alice, bob, alicesWallet, channelId } = await setupChannelWithCustomRole(
@@ -391,7 +391,7 @@ describe('channelsWithEntitlements', () => {
         await alice.stopSync()
     })
 
-    test.skip('OrOfTwoNftGateJoinPass', async () => {
+    test('OrOfTwoNftGateJoinPass', async () => {
         const testNft1Address = await getContractAddress('TestNFT1')
         const testNft2Address = await getContractAddress('TestNFT2')
         const { alice, bob, alicesWallet, channelId } = await setupChannelWithCustomRole(
@@ -412,7 +412,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test.skip('orOfTwoNftOrOneNftGateJoinPass', async () => {
+    test('orOfTwoNftOrOneNftGateJoinPass', async () => {
         const testNft1Address = await getContractAddress('TestNFT1')
         const testNft2Address = await getContractAddress('TestNFT2')
         const testNft3Address = await getContractAddress('TestNFT3')
@@ -473,7 +473,7 @@ describe('channelsWithEntitlements', () => {
     })
 
     // Banning with entitlements — users need permission to ban other users.
-    test.skip('adminsCanRedactChannelMessages', async () => {
+    test('adminsCanRedactChannelMessages', async () => {
         // log('start adminsCanRedactChannelMessages')
         // // set up the web3 provider and spacedapp
         const {
