@@ -362,6 +362,7 @@ describe('channelsWithEntitlements', () => {
         // The client waits for event confirmation via snapshot before processing membership
         // exit, so the rejoin will not produce the expected error in tests because the client
         // considers the user to still be a member of the channel until it processes the snapshot.
+        // We may reconsider this, however, so leaving it here commented out for now.
         // await expect(alice.joinStream(channelId!)).rejects.toThrow(/7:PERMISSION_DENIED/)
 
         await bob.stopSync()
