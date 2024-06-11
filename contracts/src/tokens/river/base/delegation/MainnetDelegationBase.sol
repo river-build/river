@@ -11,6 +11,9 @@ import {MainnetDelegationStorage} from "./MainnetDelegationStorage.sol";
 
 // contracts
 
+// debuggging
+import {console} from "forge-std/console.sol";
+
 abstract contract MainnetDelegationBase is IMainnetDelegationBase {
   using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -131,6 +134,8 @@ abstract contract MainnetDelegationBase is IMainnetDelegationBase {
     if (ds.delegatorsByAuthorizedClaimer[currentClaimer].contains(delegator)) {
       ds.delegatorsByAuthorizedClaimer[currentClaimer].remove(delegator);
     }
+
+    console.log("Setting authorized claimer", delegator, claimer);
 
     ds.claimerByDelegator[delegator] = claimer;
     ds.delegatorsByAuthorizedClaimer[claimer].add(delegator);
