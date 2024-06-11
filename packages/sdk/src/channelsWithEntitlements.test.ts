@@ -346,9 +346,6 @@ describe('channelsWithEntitlements', () => {
         console.log("Initializing alice's 'mobile' client (different device id)")
         await aliceMobile.initializeUser({ spaceId })
 
-        // 1 second for streams to sync
-        await new Promise((f) => setTimeout(f, 1000))
-
         // Additionally, alice should no longer be a channel member.
         channelStream.waitForMembership(MembershipOp.SO_LEAVE, alice.userId)
 
