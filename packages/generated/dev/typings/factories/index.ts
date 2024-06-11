@@ -12,7 +12,6 @@ export { IERC721AQueryable__factory } from "./IERC721AQueryable__factory";
 export { IEntitlementDataQueryable__factory } from "./IEntitlementDataQueryable__factory";
 export { IEntitlementsManager__factory } from "./IEntitlementsManager__factory";
 export { IMulticall__factory } from "./IMulticall__factory";
-export { INodeOperator__factory } from "./INodeOperator__factory";
 export { INodeRegistry__factory } from "./INodeRegistry__factory";
 export { IOperatorRegistry__factory } from "./IOperatorRegistry__factory";
 export { IPausable__factory } from "./IPausable__factory";
