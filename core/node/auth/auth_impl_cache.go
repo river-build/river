@@ -152,6 +152,7 @@ func (ec *entitlementCache) executeUsingCache(
 		if time.Since(val.GetTimestamp()) < ec.positiveCacheTTL {
 			return val, true, nil
 		} else {
+			// Positive cache key is stale, remove it
 			ec.positiveCache.Remove(*key)
 		}
 	}
@@ -162,6 +163,7 @@ func (ec *entitlementCache) executeUsingCache(
 		if time.Since(val.GetTimestamp()) < ec.negativeCacheTTL {
 			return val, true, nil
 		} else {
+			// Negative cache key is stale, remove it
 			ec.negativeCache.Remove(*key)
 		}
 	}

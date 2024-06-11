@@ -408,7 +408,7 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 		ruleBuilderAE := aeBuilder().
 			checkOneOf(params.creatorIsMember).
 			check(ru.validKeyFulfillment)
-		if _, err := params.streamView.(events.ChannelStreamView).GetChannelInception(); err == nil {
+		if shared.ValidChannelStreamId(params.streamView.StreamId()) {
 			ruleBuilderAE = ruleBuilderAE.requireChainAuth(params.channelMessageReadEntitlements)
 		}
 		return ruleBuilderAE
