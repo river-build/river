@@ -3,7 +3,7 @@ import { foundry } from 'viem/chains'
 
 import MockERC721a from './MockERC721A'
 
-import { decodeAbiParameters, keccak256 } from 'viem/utils'
+import { keccak256 } from 'viem/utils'
 import { dlogger } from '@river-build/dlog'
 import { AbiParameter, AbiFunction } from 'abitype'
 
@@ -165,12 +165,6 @@ export async function getContractAddress(nftName: string): Promise<`0x${string}`
 export async function getTestGatingNFTContractAddress(): Promise<`0x${string}`> {
     return await getContractAddress('TestGatingNFT')
 }
-
-const getTotalSupplyOutputs: readonly AbiParameter[] | undefined = (
-    Object.values(MockERC721a.abi).find((abi) => abi.name === 'totalSupply') as
-        | AbiFunction
-        | undefined
-)?.outputs
 
 export async function publicMint(nftName: string, toAddress: `0x${string}`): Promise<number> {
     const client = createTestClient({
