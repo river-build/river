@@ -49,7 +49,7 @@ var (
 	StreamCacheExpirationPollIntervalMsConfigKey = newChainKeyImpl(
 		"stream.cacheExpirationPollIntervalMs", uint64Type, 30000)
 	MediaStreamMembershipLimitsGDMConfigKey = newChainKeyImpl(
-		"media.streamMembershipLimits.77", uint64Type, 6)
+		"media.streamMembershipLimits.77", uint64Type, 48)
 	MediaStreamMembershipLimitsDMConfigKey = newChainKeyImpl(
 		"media.streamMembershipLimits.88", uint64Type, 2)
 
@@ -211,9 +211,6 @@ func NewOnChainConfig(
 	// load default settings for config settings that have no active value at the current block height.
 	cfg.loadMissing(ctx, appliedBlockNum.AsUint64())
 
-	// print configuration
-	cfg.log(ctx)
-
 	// on block sets the current block number that is used to determine the active configuration setting.
 	chainMonitor.OnBlock(cfg.onBlock)
 
@@ -270,7 +267,7 @@ func (occ *onChainConfiguration) loadMissing(ctx context.Context, activeBlock ui
 			continue
 		}
 
-		log.Warn(
+		log.Debug(
 			"OnChainConfiguration: missing config setting on chain, use default",
 			"key", key.Name(),
 			"default", key.defaultValue,
@@ -278,22 +275,6 @@ func (occ *onChainConfiguration) loadMissing(ctx context.Context, activeBlock ui
 		)
 
 		occ.settings.Set(key, activeBlock, key.defaultValue)
-	}
-}
-
-// log prints the loaded configuration
-func (occ *onChainConfiguration) log(ctx context.Context) {
-	log := dlog.FromCtx(ctx)
-	for keyID, settings := range occ.settings.s {
-		if key, ok := configKeyIDToKey[keyID]; ok {
-			for _, setting := range settings {
-				log.Info("chain config setting",
-					"key", key.Name(),
-					"activeBlock", setting.ActiveFromBlockNumber,
-					"value", setting.Value,
-				)
-			}
-		}
 	}
 }
 
@@ -416,7 +397,10 @@ func (occ *onChainConfiguration) All() (*AllSettings, error) {
 }
 
 func (ocs *onChainSettings) Remove(key chainKeyImpl, activeOnBlockNumber uint64) {
-	keyID := key.ID()
+	var (
+		log   = dlog.FromCtx(context.Background()) // lint:ignore context.Background() is fine here
+		keyID = key.ID()
+	)
 
 	ocs.mu.Lock()
 	defer ocs.mu.Unlock()
@@ -425,6 +409,7 @@ func (ocs *onChainSettings) Remove(key chainKeyImpl, activeOnBlockNumber uint64)
 		if v.ActiveFromBlockNumber == activeOnBlockNumber {
 			ocs.s[keyID][len(ocs.s[keyID])-1], ocs.s[keyID][i] = ocs.s[keyID][i], ocs.s[keyID][len(ocs.s[keyID])-1]
 			ocs.s[keyID] = ocs.s[keyID][:len(ocs.s[keyID])-1]
+			log.Info("dropped chain config", "key", key.Name(), "activationBlock", activeOnBlockNumber)
 			return
 		}
 	}
@@ -433,7 +418,10 @@ func (ocs *onChainSettings) Remove(key chainKeyImpl, activeOnBlockNumber uint64)
 // Set the given value to the settings identified by the given key for the
 // given block number.
 func (ocs *onChainSettings) Set(key chainKeyImpl, activeOnBlockNumber uint64, value any) {
-	keyID := key.ID()
+	var (
+		log   = dlog.FromCtx(context.Background()) // lint:ignore context.Background() is fine here
+		keyID = key.ID()
+	)
 
 	ocs.mu.Lock()
 	defer ocs.mu.Unlock()
@@ -446,6 +434,8 @@ func (ocs *onChainSettings) Set(key chainKeyImpl, activeOnBlockNumber uint64, va
 				ActiveFromBlockNumber: activeOnBlockNumber,
 				Value:                 value,
 			}
+			log.Info("set chain config",
+				"key", key.Name(), "activationBlock", activeOnBlockNumber, "value", value)
 			return
 		}
 	}
@@ -454,6 +444,7 @@ func (ocs *onChainSettings) Set(key chainKeyImpl, activeOnBlockNumber uint64, va
 		ActiveFromBlockNumber: activeOnBlockNumber,
 		Value:                 value,
 	})
+	log.Info("set chain config", "key", key.Name(), "activationBlock", activeOnBlockNumber, "value", value)
 
 	sort.Sort(byBlockNumber(ocs.s[keyID]))
 }
@@ -488,6 +479,9 @@ func (s *settingValue) Uint64() (uint64, error) {
 	if s == nil {
 		return 0, RiverError(Err_NOT_FOUND, "Missing on-chain configuration setting")
 	}
+	if v, ok := s.Value.(int); ok && v >= 0 {
+		return uint64(v), nil
+	}
 	if v, ok := s.Value.(uint64); ok {
 		return v, nil
 	}
@@ -503,6 +497,9 @@ func (s *settingValue) Uint64() (uint64, error) {
 func (s *settingValue) Int64() (int64, error) {
 	if s == nil {
 		return 0, RiverError(Err_NOT_FOUND, "Missing on-chain configuration setting")
+	}
+	if v, ok := s.Value.(int); ok {
+		return int64(v), nil
 	}
 	if v, ok := s.Value.(int64); ok {
 		return v, nil
@@ -549,9 +546,12 @@ func (ck chainKeyImpl) DefaultAsInt64() int64 {
 		return int64(v)
 	case int64:
 		return v
-	default:
-		panic(fmt.Sprintf("Unable to retrieve default value for chain key %s as int64", ck.name))
+	case uint64:
+		if v < math.MaxInt64 {
+			return int64(v)
+		}
 	}
+	panic(fmt.Sprintf("Unable to retrieve default value for chain key %s as int64", ck.name))
 }
 
 func newChainKeyImpl(key string, typ abi.Type, defaultValue any) chainKeyImpl {
