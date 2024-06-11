@@ -189,14 +189,16 @@ export async function publicMint(nftName: string, toAddress: `0x${string}`) {
     try {
         const currentNonce = await client.getTransactionCount({ address: address })
 
-        const estimatedGas = await client.estimateContractGas({
-            address: contractAddress,
-            abi: MockERC721a.abi,
-            functionName: 'mint',
-            args: [toAddress, 1n],
-            account: address,
-            nonce: currentNonce,
-        })
+        const estimatedGas = (
+            await client.estimateContractGas({
+                address: contractAddress,
+                abi: MockERC721a.abi,
+                functionName: 'mint',
+                args: [toAddress, 1n],
+                account: address,
+                nonce: currentNonce,
+            })
+        ).valueOf()
 
         nftReceipt = await client.writeContract({
             address: contractAddress,
@@ -205,7 +207,7 @@ export async function publicMint(nftName: string, toAddress: `0x${string}`) {
             args: [toAddress, 1n],
             account: address,
             nonce: currentNonce,
-            gasPrice: estimatedGas + BigInt(1e9), // 1 Gwei for cover any increases between estimation and execution
+            gasPrice: (estimatedGas + BigInt(1e9)).valueOf(), // 1 Gwei for cover any increases between estimation and execution
         })
     } finally {
         publicMintMutex.unlock()
