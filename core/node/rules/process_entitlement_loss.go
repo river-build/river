@@ -55,7 +55,6 @@ func processMembershipEntitlementLoss(
 				StreamId: userStreamId, // user stream id
 			}, nil
 		}
-
 	}
 	return nil, nil
 }
