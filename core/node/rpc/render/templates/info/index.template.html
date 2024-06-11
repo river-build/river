@@ -5,9 +5,9 @@
   </head>
   <body>
     {{if eq .Status 200}}
-      <h1>All good in the River land!</h1>
+    <h1>All good in the River land!</h1>
     {{else}}
-      <h1>{{.Status}} &#128546;</h1>
+    <h1>{{.Status}} &#128546;</h1>
     {{end}}
     <pre>{{.StatusJson}}</pre>
   </body>
