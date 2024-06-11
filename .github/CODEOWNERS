@@ -55,5 +55,5 @@
 /protocol/ @texuf
 /scripts/ @texuf
 turbo.json @mechanical-turk
-/* @brianathere
-/* @texuf
+/*.* @brianathere
+/*.* @texuf
