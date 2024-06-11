@@ -12,6 +12,7 @@ export type { IERC721AQueryable } from "./IERC721AQueryable";
 export type { IEntitlementDataQueryable } from "./IEntitlementDataQueryable";
 export type { IEntitlementsManager } from "./IEntitlementsManager";
 export type { IMulticall } from "./IMulticall";
+export type { INodeOperator } from "./INodeOperator";
 export type { INodeRegistry } from "./INodeRegistry";
 export type { IOperatorRegistry } from "./IOperatorRegistry";
 export type { IPausable } from "./IPausable";
@@ -43,6 +44,7 @@ export { IEntitlementsManager__factory } from "./factories/IEntitlementsManager_
 export { IERC721A__factory } from "./factories/IERC721A__factory";
 export { IERC721AQueryable__factory } from "./factories/IERC721AQueryable__factory";
 export { IMulticall__factory } from "./factories/IMulticall__factory";
+export { INodeOperator__factory } from "./factories/INodeOperator__factory";
 export { INodeRegistry__factory } from "./factories/INodeRegistry__factory";
 export { IOperatorRegistry__factory } from "./factories/IOperatorRegistry__factory";
 export { IPausable__factory } from "./factories/IPausable__factory";
