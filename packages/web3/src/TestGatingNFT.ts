@@ -3,7 +3,9 @@ import { foundry } from 'viem/chains'
 
 import MockERC721a from './MockERC721A'
 
-import { keccak256 } from 'viem/utils'
+import { keccak256, parseEther } from 'viem/utils'
+import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts'
+
 import { dlogger } from '@river-build/dlog'
 
 const logger = dlogger('csb:TestGatingNFT')
@@ -165,6 +167,8 @@ export async function getTestGatingNFTContractAddress(): Promise<`0x${string}`> 
     return await getContractAddress('TestGatingNFT')
 }
 
+const publicMintMutex = new Mutex()
+
 export async function publicMint(nftName: string, toAddress: `0x${string}`) {
     const client = createTestClient({
         chain: foundry,
@@ -178,15 +182,35 @@ export async function publicMint(nftName: string, toAddress: `0x${string}`) {
 
     logger.log('minting', contractAddress, toAddress)
 
-    const account = (await client.getAddresses())[0]
+    const address = (await client.getAddresses())[0]
 
-    const nftReceipt = await client.writeContract({
-        address: contractAddress,
-        abi: MockERC721a.abi,
-        functionName: 'mint',
-        args: [toAddress, 1n],
-        account,
-    })
+    // Lock around the minting to prevent multiple mints from happening at the same nonce
+    await publicMintMutex.lock()
+    let nftReceipt: `0x${string}` | undefined
+    try {
+        const currentNonce = await client.getTransactionCount({ address: address })
+
+        const estimatedGas = await client.estimateContractGas({
+            address: contractAddress,
+            abi: MockERC721a.abi,
+            functionName: 'mint',
+            args: [toAddress, 1n],
+            account: address,
+            nonce: currentNonce,
+        })
+
+        nftReceipt = await client.writeContract({
+            address: contractAddress,
+            abi: MockERC721a.abi,
+            functionName: 'mint',
+            args: [toAddress, 1n],
+            account: address,
+            nonce: currentNonce,
+            gasPrice: estimatedGas + BigInt(1e9), // 1 Gwei for cover any increases between estimation and execution
+        })
+    } finally {
+        publicMintMutex.unlock()
+    }
 
     const receipt = await client.waitForTransactionReceipt({ hash: nftReceipt })
     expect(receipt.status).toBe('success')
