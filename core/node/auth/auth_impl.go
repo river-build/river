@@ -649,8 +649,6 @@ func (ca *chainAuth) isEntitledToChannel(ctx context.Context, cfg *config.Config
 	}
 
 	isEntitled, cacheHit, err := ca.entitlementCache.executeUsingCache(ctx, cfg, args, ca.isEntitledToChannelUncached)
-	log := dlog.FromCtx(ctx)
-	log.Info("isEntitledToChannel", "args", args, "isEntitled", isEntitled.IsAllowed(), "cacheHit", cacheHit)
 
 	if err != nil {
 		return false, err
