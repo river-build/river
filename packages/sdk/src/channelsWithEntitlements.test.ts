@@ -341,7 +341,7 @@ describe('channelsWithEntitlements', () => {
         await expect(balanceOf('TestNFT', alicesWallet.address as `0x${string}`)).resolves.toBe(0)
 
         // Wait 5 seconds for the positive auth cache to expire
-        await new Promise((f) => setTimeout(f, 6000))
+        await new Promise((f) => setTimeout(f, 5000))
 
         console.log("Initializing alice's 'mobile' client (different device id)")
         await aliceMobile.initializeUser({ spaceId })
