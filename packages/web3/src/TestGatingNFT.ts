@@ -202,7 +202,7 @@ export async function publicMint(nftName: string, toAddress: `0x${string}`): Pro
         address: contractAddress,
         abi: MockERC721a.abi,
         functionName: 'totalSupply',
-    });
+    })
 
     // Check from highest minted token id to lowest for the token we just minted and return
     // the token id if we find it.

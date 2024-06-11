@@ -231,11 +231,11 @@ describe('channelsWithEntitlements', () => {
         const tokenId = await publicMint('TestNFT1', carolsWallet.address as `0x${string}`)
 
         // Wait 2 seconds for the negative auth cache to expire
-        await new Promise(f => setTimeout(f, 2000))
+        await new Promise((f) => setTimeout(f, 2000))
 
         // Validate alice can join the channel
         await expectUserCanJoinChannel(alice, channelId!)
-    
+
         const doneStart = Date.now()
         // kill the clients
         await bob.stopSync()
@@ -274,13 +274,11 @@ describe('channelsWithEntitlements', () => {
 
     test.skip('oneNftGate - JoinPass, user booted on key request after entitlement loss', async () => {
         const testNftAddress = await getContractAddress('TestNFT')
-        const { alice, alicesWallet, bob, aliceMobile, spaceId, channelId } = await setupChannelWithCustomRole(
-            [],
-            getNftRuleData(testNftAddress),
-        )
+        const { alice, alicesWallet, bob, aliceMobile, spaceId, channelId } =
+            await setupChannelWithCustomRole([], getNftRuleData(testNftAddress))
 
         console.log("Alice's wallet address", alicesWallet.address)
-        console.log("test nft address", testNftAddress)
+        console.log('test nft address', testNftAddress)
 
         // Alice initially cannot join because she has no nft
         await expect(alice.joinStream(channelId!)).rejects.toThrow(/7:PERMISSION_DENIED/)
@@ -290,7 +288,7 @@ describe('channelsWithEntitlements', () => {
         console.log('Minted nft', tokenId)
 
         // Wait 2 seconds for the negative auth cache to expire
-        await new Promise(f => setTimeout(f, 2000))
+        await new Promise((f) => setTimeout(f, 2000))
 
         // Validate alice can join the channel
         await expectUserCanJoinChannel(alice, channelId!)
@@ -301,10 +299,8 @@ describe('channelsWithEntitlements', () => {
 
     test('oneNftGate - JoinPass, user booted on key request after entitlement loss', async () => {
         const testNftAddress = await getContractAddress('TestNFT')
-        const { alice, alicesWallet, bob, aliceMobile, spaceId, channelId } = await setupChannelWithCustomRole(
-            [],
-            getNftRuleData(testNftAddress),
-        )
+        const { alice, alicesWallet, bob, aliceMobile, spaceId, channelId } =
+            await setupChannelWithCustomRole([], getNftRuleData(testNftAddress))
 
         // Mint an nft for alice - she should be able to join now
         const tokenId = await publicMint('TestNFT', alicesWallet.address as `0x${string}`)
@@ -315,7 +311,9 @@ describe('channelsWithEntitlements', () => {
 
         const channelStream = await bob.waitForStream(channelId!)
         // Validate Alice is member of the channel
-        await waitFor(() => channelStream.view.membershipContent.isMember(MembershipOp.SO_JOIN, alice.userId))
+        await waitFor(() =>
+            channelStream.view.membershipContent.isMember(MembershipOp.SO_JOIN, alice.userId),
+        )
 
         // Burn Alice's NFT and validate her zero balance. She should now fail an entitlement check for the
         // channel.
@@ -323,13 +321,13 @@ describe('channelsWithEntitlements', () => {
         await expect(balanceOf('TestNFT', alicesWallet.address as `0x${string}`)).resolves.toBe(0)
 
         // Wait 5 seconds for the positive auth cache to expire
-        await new Promise(f => setTimeout(f, 6000))
+        await new Promise((f) => setTimeout(f, 6000))
 
         console.log("Initializing alice's 'mobile' client (different device id)")
-        await aliceMobile.initializeUser({spaceId})
+        await aliceMobile.initializeUser({ spaceId })
 
         // 1 second for streams to sync
-        await new Promise(f => setTimeout(f, 1000))
+        await new Promise((f) => setTimeout(f, 1000))
 
         // Additionally, alice should no longer be a channel member.
         channelStream.waitForMembership(MembershipOp.SO_LEAVE, alice.userId)
@@ -352,7 +350,6 @@ describe('channelsWithEntitlements', () => {
         await bob.stopSync()
         await alice.stopSync()
     })
-
 
     test.skip('oneNftGateJoinFail', async () => {
         const testNft1Address = await getContractAddress('TestNFT1')
