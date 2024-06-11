@@ -3,8 +3,7 @@ import { foundry } from 'viem/chains'
 
 import MockERC721a from './MockERC721A'
 
-import { keccak256, parseEther } from 'viem/utils'
-import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts'
+import { keccak256 } from 'viem/utils'
 
 import { dlogger } from '@river-build/dlog'
 
