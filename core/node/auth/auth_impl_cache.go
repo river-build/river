@@ -152,18 +152,6 @@ func (ec *entitlementCache) executeUsingCache(
 		if time.Since(val.GetTimestamp()) < ec.positiveCacheTTL {
 			return val, true, nil
 		} else {
-			// Positive cache key is stale, remove it
-			log := dlog.FromCtx(ctx)
-			log.Info("entitlement cache key stale in positive cache",
-				"kind", key.kind,
-				"wallets", key.linkedWallets,
-				"permission", key.permission,
-				"spaceId", key.spaceId,
-				"channelId", key.channelId,
-				"principal", key.principal,
-				"timestamp", val.GetTimestamp(),
-				"now", time.Now(),
-			)
 			ec.positiveCache.Remove(*key)
 		}
 	}
@@ -174,18 +162,6 @@ func (ec *entitlementCache) executeUsingCache(
 		if time.Since(val.GetTimestamp()) < ec.negativeCacheTTL {
 			return val, true, nil
 		} else {
-			// Negative cache key is stale, remove it
-			log := dlog.FromCtx(ctx)
-			log.Info("entitlement cache key stale in negative cache",
-				"kind", key.kind,
-				"wallets", key.linkedWallets,
-				"permission", key.permission,
-				"spaceId", key.spaceId,
-				"channelId", key.channelId,
-				"principal", key.principal,
-				"timestamp", val.GetTimestamp(),
-				"now", time.Now(),
-			)
 			ec.negativeCache.Remove(*key)
 		}
 	}
