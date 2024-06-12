@@ -661,7 +661,6 @@ func (ca *chainAuth) isEntitledToChannel(ctx context.Context, cfg *config.Config
 	}
 
 	isEntitled, cacheHit, err := ca.entitlementCache.executeUsingCache(ctx, cfg, args, ca.isEntitledToChannelUncached)
-
 	if err != nil {
 		return false, err
 	}
