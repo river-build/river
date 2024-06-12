@@ -102,10 +102,19 @@ func (s *Service) createStream(ctx context.Context, req *CreateStreamRequest) (*
 
 	// check entitlements
 	if csRules.ChainAuth != nil {
-		err := s.chainAuth.IsEntitled(ctx, s.config, csRules.ChainAuth)
+		isEntitled, err := s.chainAuth.IsEntitled(ctx, s.config, csRules.ChainAuth)
 		if err != nil {
 			return nil, err
 		}
+		if !isEntitled {
+			return nil, RiverError(
+				Err_PERMISSION_DENIED,
+				"IsEntitled failed",
+				"chainAuthArgs",
+				csRules.ChainAuth.String(),
+			).Func("addParsedEvent")
+		}
+
 	}
 
 	// create the stream
