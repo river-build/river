@@ -62,7 +62,6 @@ async function setupChannelWithCustomRole(
         alice: alicesWallet.address,
         bob: bobsWallet.address,
         carol: carolsWallet.address,
-        dave: alicesWallet.address,
     }
     const users = userNames.map((user) => userNameToWallet[user])
 
