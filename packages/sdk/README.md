@@ -17,3 +17,5 @@ Set this in console to switch encoding to JSON instead of binary:
     localStorage.RIVER_DEBUG_TRANSPORT = 'true'
 
 Now in Network tab of the browser dev tool requests and responses are more readable.
+
+test
