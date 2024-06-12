@@ -85,9 +85,7 @@ type aeKeyFulfillmentRules struct {
 
   - @return chainAuthArgs *auth.ChainAuthArgs // on chain requirements for adding an event to the stream
 
-  - @return requiredParentEvent *RequiredParentEvent // event that must exist in the stream before the event can be added
-    // required parent events must be replayable - meaning that in the case of a no-op, the can_add_event function should return false, nil, nil, nil to indicate
-    // that the event cannot be added to the stream, but there is no error
+  - @return sideEffects *AddEventSideEffects // side effects that need to be executed before adding the event to the stream or on failures
 
   - @return error // if adding result would result in invalid state
 
@@ -107,7 +105,7 @@ func CanAddEvent(
 	currentTime time.Time,
 	parsedEvent *events.ParsedEvent,
 	streamView events.StreamView,
-) (bool, *auth.ChainAuthArgs, *RequiredParentEvent, error) {
+) (bool, *auth.ChainAuthArgs, *AddEventSideEffects, error) {
 	if parsedEvent.Event.DelegateExpiryEpochMs > 0 &&
 		isPastExpiry(currentTime, parsedEvent.Event.DelegateExpiryEpochMs) {
 		return false, nil, nil, RiverError(
@@ -397,13 +395,18 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 			params:       params,
 			solicitation: content.KeySolicitation,
 		}
-		ruleBuilderAE := aeBuilder().
-			checkOneOf(params.creatorIsMember).
-			check(ru.validKeySolicitation)
+
 		if shared.ValidChannelStreamId(params.streamView.StreamId()) {
-			ruleBuilderAE = ruleBuilderAE.requireChainAuth(params.channelMessageReadEntitlements)
+			return aeBuilder().
+				checkOneOf(params.creatorIsMember).
+				check(ru.validKeySolicitation).
+				requireChainAuth(params.channelMessageReadEntitlements).
+				onEntitlementFailure(params.onEntitlementFailureForChannelKeySolicitation)
+		} else {
+			return aeBuilder().
+				checkOneOf(params.creatorIsMember).
+				check(ru.validKeySolicitation)
 		}
-		return ruleBuilderAE
 	case *MemberPayload_KeyFulfillment_:
 		ru := &aeKeyFulfillmentRules{
 			params:      params,
@@ -952,6 +955,37 @@ func (params *aeParams) channelMessageReadEntitlements() (*auth.ChainAuthArgs, e
 	)
 
 	return chainAuthArgs, nil
+}
+
+func (params *aeParams) onEntitlementFailureForChannelKeySolicitation() (*OnEntitlementFailure, error) {
+	userId, err := shared.AddressHex(params.parsedEvent.Event.CreatorAddress)
+	if err != nil {
+		return nil, err
+	}
+	userStreamId, err := shared.UserStreamIdFromBytes(params.parsedEvent.Event.CreatorAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	channelId := params.streamView.StreamId()
+	if !shared.ValidChannelStreamId(channelId) {
+		return nil, RiverError(Err_INVALID_ARGUMENT, "invalid channel stream id", "streamId", channelId)
+	}
+	spaceId := params.streamView.StreamParentId()
+	if spaceId == nil {
+		return nil, RiverError(Err_INVALID_ARGUMENT, "channel has no parent", "channelId", channelId)
+	}
+
+	return &OnEntitlementFailure{
+		StreamId: userStreamId,
+		Payload: events.Make_UserPayload_Membership(
+			MembershipOp_SO_LEAVE,
+			*channelId,
+			&userId,
+			spaceId[:],
+		),
+	}, nil
+
 }
 
 func (params *aeParams) redactChannelMessageEntitlements() (*auth.ChainAuthArgs, error) {
