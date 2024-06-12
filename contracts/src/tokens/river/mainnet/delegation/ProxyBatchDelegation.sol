@@ -40,12 +40,14 @@ contract ProxyBatchDelegation is IProxyBatchDelegation {
       authorizedClaimers[i] = claimers.getAuthorizedClaimer(delegators[i]);
     }
 
-    _sendMessage(
+    ICrossDomainMessenger(MESSENGER).sendMessage(
+      TARGET,
       abi.encodeWithSelector(
         IMainnetDelegation.setBatchAuthorizedClaimers.selector,
         delegators,
         authorizedClaimers
-      )
+      ),
+      200_000
     );
   }
 
@@ -61,18 +63,16 @@ contract ProxyBatchDelegation is IProxyBatchDelegation {
       quantities[i] = rvr.balanceOf(delegators[i]);
     }
 
-    _sendMessage(
+    ICrossDomainMessenger(MESSENGER).sendMessage(
+      TARGET,
       abi.encodeWithSelector(
         IMainnetDelegation.setBatchDelegation.selector,
         delegators,
         delegates,
         authorizedClaimers,
         quantities
-      )
+      ),
+      5_000_000
     );
-  }
-
-  function _sendMessage(bytes memory data) internal {
-    ICrossDomainMessenger(MESSENGER).sendMessage(TARGET, data, 400_000);
   }
 }
