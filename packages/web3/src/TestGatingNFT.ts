@@ -6,6 +6,7 @@ import MockERC721a from './MockERC721A'
 import { keccak256 } from 'viem/utils'
 
 import { dlogger } from '@river-build/dlog'
+import { log } from 'console'
 
 const logger = dlogger('csb:TestGatingNFT')
 
@@ -183,11 +184,14 @@ export async function publicMint(nftName: string, toAddress: `0x${string}`) {
 
     const address = (await client.getAddresses())[0]
 
+    logger.log('locking')
     // Lock around the minting to prevent multiple mints from happening at the same nonce
     await publicMintMutex.lock()
+    logger.log('locked')
     let nftReceipt: `0x${string}` | undefined
     try {
-        const currentNonce = await client.getTransactionCount({ address: address })
+        const currentNonce = (await client.getTransactionCount({ address: address })).valueOf()
+        logger.log('currentNonce', currentNonce)
 
         const estimatedGas = (
             await client.estimateContractGas({
@@ -206,11 +210,13 @@ export async function publicMint(nftName: string, toAddress: `0x${string}`) {
             functionName: 'mint',
             args: [toAddress, 1n],
             account: address,
-            nonce: currentNonce,
+            nonce: currentNonce + 1,
             gasPrice: (estimatedGas + BigInt(1e9)).valueOf(), // 1 Gwei for cover any increases between estimation and execution
         })
+        logger.log('minted', nftReceipt)
     } finally {
         publicMintMutex.unlock()
+        logger.log('unlocked')
     }
 
     const receipt = await client.waitForTransactionReceipt({ hash: nftReceipt })
