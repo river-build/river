@@ -318,7 +318,7 @@ describe('channelsWithEntitlements', () => {
         await alice.stopSync()
     })
 
-    test.only('oneNftGate - JoinPass, user booted on key request after entitlement loss', async () => {
+    test('oneNftGate - JoinPass, user booted on key request after entitlement loss', async () => {
         const testNftAddress = await getContractAddress('TestNFT')
         const { alice, alicesWallet, bob, aliceMobile, spaceId, channelId } =
             await setupChannelWithCustomRole([], getNftRuleData(testNftAddress))
