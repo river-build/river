@@ -88,18 +88,18 @@ func (s *Service) addParsedEvent(
 				"chainAuthArgs",
 				chainAuthArgs,
 			)
-			if sideEffects.OnEntitlementFailure != nil {
+			if sideEffects.OnChainAuthFailure != nil {
 				log.Info(
 					"propogating entitlement loss event",
 					"event",
-					sideEffects.OnEntitlementFailure,
+					sideEffects.OnChainAuthFailure,
 					"chainAuthArgs",
 					chainAuthArgs,
 				)
 				err := s.addEventPayload(
 					ctx,
-					sideEffects.OnEntitlementFailure.StreamId,
-					sideEffects.OnEntitlementFailure.Payload,
+					sideEffects.OnChainAuthFailure.StreamId,
+					sideEffects.OnChainAuthFailure.Payload,
 				)
 				if err != nil {
 					log.Error("error propogating entitlement loss event", "error", err)

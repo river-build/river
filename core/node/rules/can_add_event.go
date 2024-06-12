@@ -401,7 +401,7 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 				checkOneOf(params.creatorIsMember).
 				check(ru.validKeySolicitation).
 				requireChainAuth(params.channelMessageReadEntitlements).
-				onEntitlementFailure(params.onEntitlementFailureForChannelKeySolicitation)
+				onChainAuthFailure(params.onEntitlementFailureForChannelKeySolicitation)
 		} else {
 			return aeBuilder().
 				checkOneOf(params.creatorIsMember).

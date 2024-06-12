@@ -7,8 +7,8 @@ import (
 )
 
 type AddEventSideEffects struct {
-	RequiredParentEvent  *DerivedEvent
-	OnEntitlementFailure *DerivedEvent
+	RequiredParentEvent *DerivedEvent
+	OnChainAuthFailure  *DerivedEvent
 }
 
 type ruleBuilderAE interface {
@@ -16,17 +16,17 @@ type ruleBuilderAE interface {
 	checkOneOf(f ...func() (bool, error)) ruleBuilderAE
 	requireChainAuth(f func() (*auth.ChainAuthArgs, error)) ruleBuilderAE
 	requireParentEvent(f func() (*DerivedEvent, error)) ruleBuilderAE
-	onEntitlementFailure(f func() (*DerivedEvent, error)) ruleBuilderAE
+	onChainAuthFailure(f func() (*DerivedEvent, error)) ruleBuilderAE
 	fail(err error) ruleBuilderAE
 	run() (bool, *auth.ChainAuthArgs, *AddEventSideEffects, error)
 }
 
 type ruleBuilderAEImpl struct {
-	failErr            error
-	checks             [][]func() (bool, error)
-	chainAuth          func() (*auth.ChainAuthArgs, error)
-	parentEvent        func() (*DerivedEvent, error)
-	entitlementFailure func() (*DerivedEvent, error)
+	failErr          error
+	checks           [][]func() (bool, error)
+	chainAuth        func() (*auth.ChainAuthArgs, error)
+	parentEvent      func() (*DerivedEvent, error)
+	chainAuthFailure func() (*DerivedEvent, error)
 }
 
 func aeBuilder() ruleBuilderAE {
@@ -39,7 +39,7 @@ func aeBuilder() ruleBuilderAE {
 		parentEvent: func() (*DerivedEvent, error) {
 			return nil, nil
 		},
-		entitlementFailure: func() (*DerivedEvent, error) {
+		chainAuthFailure: func() (*DerivedEvent, error) {
 			return nil, nil
 		},
 	}
@@ -64,8 +64,8 @@ func (re *ruleBuilderAEImpl) requireParentEvent(f func() (*DerivedEvent, error))
 	return re
 }
 
-func (re *ruleBuilderAEImpl) onEntitlementFailure(f func() (*DerivedEvent, error)) ruleBuilderAE {
-	re.entitlementFailure = f
+func (re *ruleBuilderAEImpl) onChainAuthFailure(f func() (*DerivedEvent, error)) ruleBuilderAE {
+	re.chainAuthFailure = f
 	return re
 }
 
@@ -119,7 +119,7 @@ func (re *ruleBuilderAEImpl) run() (bool, *auth.ChainAuthArgs, *AddEventSideEffe
 	if err != nil {
 		return false, nil, nil, err
 	}
-	onEntitlementFailure, err := re.entitlementFailure()
+	onEntitlementFailure, err := re.chainAuthFailure()
 	if err != nil {
 		return false, nil, nil, err
 	}
@@ -127,8 +127,8 @@ func (re *ruleBuilderAEImpl) run() (bool, *auth.ChainAuthArgs, *AddEventSideEffe
 		return false, nil, nil, RiverError(Err_INTERNAL, "no checks or requirements")
 	}
 	sideEffects := &AddEventSideEffects{
-		RequiredParentEvent:  requiredParentEvent,
-		OnEntitlementFailure: onEntitlementFailure,
+		RequiredParentEvent: requiredParentEvent,
+		OnChainAuthFailure:  onEntitlementFailure,
 	}
 	return true, chainAuthArgs, sideEffects, nil
 }
