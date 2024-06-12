@@ -89,7 +89,6 @@ func newEntitlementCache(ctx context.Context, cfg *config.ChainConfig) (*entitle
 	if cfg.NegativeEntitlementCacheTTLSeconds > 0 {
 		negativeCacheTTL = time.Duration(cfg.NegativeEntitlementCacheTTLSeconds) * time.Second
 	}
-	log.Info("entitlement cache created", "negativeCacheTTL", negativeCacheTTL)
 
 	return &entitlementCache{
 		positiveCache,
