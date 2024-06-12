@@ -6,7 +6,6 @@ import MockERC721a from './MockERC721A'
 import { keccak256 } from 'viem/utils'
 
 import { dlogger } from '@river-build/dlog'
-import { log } from 'console'
 
 const logger = dlogger('csb:TestGatingNFT')
 
