@@ -47,7 +47,6 @@ async function setupChannelWithCustomRole(
         alice,
         bob,
         carol,
-        aliceMobile,
         alicesWallet,
         bobsWallet,
         carolsWallet,
@@ -127,7 +126,6 @@ async function setupChannelWithCustomRole(
         alice,
         bob,
         carol,
-        aliceMobile,
         alicesWallet,
         bobsWallet,
         carolsWallet,
@@ -249,7 +247,7 @@ describe('channelsWithEntitlements', () => {
         await expect(alice.joinStream(channelId!)).rejects.toThrow(/7:PERMISSION_DENIED/)
 
         log('Minting an NFT for carols wallet, which is linked to alices wallet')
-        const tokenId = await publicMint('TestNFT1', carolsWallet.address as `0x${string}`)
+        await publicMint('TestNFT1', carolsWallet.address as `0x${string}`)
 
         // Wait 2 seconds for the negative auth cache to expire
         await new Promise((f) => setTimeout(f, 2000))
@@ -293,20 +291,18 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('oneNftGate - JoinPass, user booted on key request after entitlement loss', async () => {
+    test('oneNftGateJoinPass', async () => {
         const testNftAddress = await getContractAddress('TestNFT')
-        const { alice, alicesWallet, bob, aliceMobile, spaceId, channelId } =
-            await setupChannelWithCustomRole([], getNftRuleData(testNftAddress))
-
-        console.log("Alice's wallet address", alicesWallet.address)
-        console.log('test nft address', testNftAddress)
+        const { alice, alicesWallet, bob, channelId } = await setupChannelWithCustomRole(
+            [],
+            getNftRuleData(testNftAddress),
+        )
 
         // Alice initially cannot join because she has no nft
         await expect(alice.joinStream(channelId!)).rejects.toThrow(/7:PERMISSION_DENIED/)
 
         // Mint an nft for alice - she should be able to join now
-        const tokenId = await publicMint('TestNFT', alicesWallet.address as `0x${string}`)
-        console.log('Minted nft', tokenId)
+        await publicMint('TestNFT', alicesWallet.address as `0x${string}`)
 
         // Wait 2 seconds for the negative auth cache to expire
         await new Promise((f) => setTimeout(f, 2000))
@@ -318,16 +314,15 @@ describe('channelsWithEntitlements', () => {
         await alice.stopSync()
     })
 
-    test('oneNftGate - JoinPass, user booted on key request after entitlement loss', async () => {
+    test('user booted on key request after entitlement loss', async () => {
         const testNftAddress = await getContractAddress('TestNFT')
-        const { alice, alicesWallet, bob, aliceMobile, spaceId, channelId } =
-            await setupChannelWithCustomRole([], getNftRuleData(testNftAddress))
-        console.log('nft gated channelId', channelId)
+        const { alice, alicesWallet, bob, channelId } = await setupChannelWithCustomRole(
+            [],
+            getNftRuleData(testNftAddress),
+        )
 
         // Mint an nft for alice - she should be able to join now
         const tokenId = await publicMint('TestNFT', alicesWallet.address as `0x${string}`)
-        console.log('Minted nft', tokenId)
-        console.log("Alice's wallet address", alicesWallet.address)
 
         // Validate alice can join the channel
         await expectUserCanJoinChannel(alice, channelId!)

@@ -5,7 +5,6 @@ import MockERC721a from './MockERC721A'
 
 import { keccak256 } from 'viem/utils'
 import { dlogger } from '@river-build/dlog'
-import { AbiParameter, AbiFunction } from 'abitype'
 
 const logger = dlogger('csb:TestGatingNFT')
 
@@ -200,7 +199,8 @@ export async function publicMint(nftName: string, toAddress: `0x${string}`): Pro
 
     // Check from highest minted token id to lowest for the token we just minted and return
     // the token id if we find it.
-    for (var i = Number(totalSupplyEncoded) - 1; i >= 0; i--) {
+
+    for (let i = Number(totalSupplyEncoded) - 1; i >= 0; i = i - 1) {
         const owner = await client.readContract({
             address: contractAddress,
             abi: MockERC721a.abi,

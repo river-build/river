@@ -204,21 +204,19 @@ export async function setupWalletsAndContexts() {
     genId(5)
 
     // create a user
-    const [alice, bob, carol, aliceMobile] = await Promise.all([
+    const [alice, bob, carol] = await Promise.all([
         makeTestClient({
             context: alicesContext,
             deviceId: 'alice',
         }),
         makeTestClient({ context: bobsContext }),
         makeTestClient({ context: carolsContext }),
-        makeTestClient({ context: alicesContext, deviceId: 'alice-mobile' }),
     ])
 
     return {
         alice,
         bob,
         carol,
-        aliceMobile,
         alicesWallet,
         bobsWallet,
         carolsWallet,
