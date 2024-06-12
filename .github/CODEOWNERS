@@ -26,15 +26,11 @@
 ##
 
 /.github/ @mechanical-turk
-/.github/CODEOWNERS @brianathere
-/.github/CODEOWNERS @sergekh2
-/.github/CODEOWNERS @texuf
+/.github/CODEOWNERS @brianathere @sergekh2 @texuf
 /.vscode/ @texuf
 /.yarn/ @brianathere
 /assets/ @texuf
-/contracts/ @pfives
-/contracts/ @giuseppecrj
-/contracts/ @brianathere
+/contracts/ @pfives @giuseppecrj @brianathere
 /contracts/src/node-network/ @mechanical-turk
 /core/ @sergekh2
 /core/node/ @bas-vk
@@ -42,18 +38,13 @@
 /core/node/protocol/ @texuf
 /core/node/protocol_extensions/ @texuf
 /core/node/rules/ @texuf
-/core/xchain/ @bas-vk
-/core/xchain/ @clemire
-/core/xchain/ @brianathere
+/core/xchain/ @bas-vk @clemire @brianathere
 /infra/ @mechanical-turk
-/packages/ @texuf
-/packages/ @sergekh2
+/packages/ @sergekh2 @texuf
 /packages/addresses/ @giuseppecrj
 /packages/generated/ @giuseppecrj
 /packages/sdk/ @erikolsson
-/protocol/ @sergekh2
-/protocol/ @texuf
+/protocol/ @sergekh2 @texuf
 /scripts/ @texuf
 turbo.json @mechanical-turk
-/*.* @brianathere
-/*.* @texuf
+/*.* @brianathere @texuf
