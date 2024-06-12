@@ -114,7 +114,8 @@ contract TestUtils is Test {
   }
 
   function isAnvil() internal view returns (bool) {
-    return block.chainid == 31337 || block.chainid == 31338;
+    return
+      block.chainid == 1337 || block.chainid == 31337 || block.chainid == 31338;
   }
 
   function isTesting() internal view returns (bool) {

@@ -55,7 +55,7 @@ contract DeployBase is DeployHelpers, Script {
   /// @notice returns the chain alias for the current chain
   function chainIdAlias() internal returns (string memory) {
     return
-      block.chainid == 31337
+      block.chainid == 31337 || block.chainid == 1337
         ? "base_anvil"
         : getChain(block.chainid).chainAlias;
   }
@@ -126,7 +126,8 @@ contract DeployBase is DeployHelpers, Script {
   }
 
   function isAnvil() internal view returns (bool) {
-    return block.chainid == 31337 || block.chainid == 31338;
+    return
+      block.chainid == 1337 || block.chainid == 31337 || block.chainid == 31338;
   }
 
   function isRiver() internal view returns (bool) {
