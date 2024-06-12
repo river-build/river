@@ -4,30 +4,19 @@ import (
 	"github.com/river-build/river/core/node/auth"
 	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/protocol"
-	"github.com/river-build/river/core/node/shared"
 )
 
 type AddEventSideEffects struct {
-	RequiredParentEvent  *RequiredParentEvent
-	OnEntitlementFailure *OnEntitlementFailure
-}
-
-type RequiredParentEvent struct {
-	Payload  IsStreamEvent_Payload
-	StreamId shared.StreamId
-}
-
-type OnEntitlementFailure struct {
-	Payload  IsStreamEvent_Payload
-	StreamId shared.StreamId
+	RequiredParentEvent  *DerivedEvent
+	OnEntitlementFailure *DerivedEvent
 }
 
 type ruleBuilderAE interface {
 	check(f func() (bool, error)) ruleBuilderAE
 	checkOneOf(f ...func() (bool, error)) ruleBuilderAE
 	requireChainAuth(f func() (*auth.ChainAuthArgs, error)) ruleBuilderAE
-	requireParentEvent(f func() (*RequiredParentEvent, error)) ruleBuilderAE
-	onEntitlementFailure(f func() (*OnEntitlementFailure, error)) ruleBuilderAE
+	requireParentEvent(f func() (*DerivedEvent, error)) ruleBuilderAE
+	onEntitlementFailure(f func() (*DerivedEvent, error)) ruleBuilderAE
 	fail(err error) ruleBuilderAE
 	run() (bool, *auth.ChainAuthArgs, *AddEventSideEffects, error)
 }
@@ -36,8 +25,8 @@ type ruleBuilderAEImpl struct {
 	failErr            error
 	checks             [][]func() (bool, error)
 	chainAuth          func() (*auth.ChainAuthArgs, error)
-	parentEvent        func() (*RequiredParentEvent, error)
-	entitlementFailure func() (*OnEntitlementFailure, error)
+	parentEvent        func() (*DerivedEvent, error)
+	entitlementFailure func() (*DerivedEvent, error)
 }
 
 func aeBuilder() ruleBuilderAE {
@@ -47,10 +36,10 @@ func aeBuilder() ruleBuilderAE {
 		chainAuth: func() (*auth.ChainAuthArgs, error) {
 			return nil, nil
 		},
-		parentEvent: func() (*RequiredParentEvent, error) {
+		parentEvent: func() (*DerivedEvent, error) {
 			return nil, nil
 		},
-		entitlementFailure: func() (*OnEntitlementFailure, error) {
+		entitlementFailure: func() (*DerivedEvent, error) {
 			return nil, nil
 		},
 	}
@@ -70,12 +59,12 @@ func (re *ruleBuilderAEImpl) requireChainAuth(f func() (*auth.ChainAuthArgs, err
 	return re
 }
 
-func (re *ruleBuilderAEImpl) requireParentEvent(f func() (*RequiredParentEvent, error)) ruleBuilderAE {
+func (re *ruleBuilderAEImpl) requireParentEvent(f func() (*DerivedEvent, error)) ruleBuilderAE {
 	re.parentEvent = f
 	return re
 }
 
-func (re *ruleBuilderAEImpl) onEntitlementFailure(f func() (*OnEntitlementFailure, error)) ruleBuilderAE {
+func (re *ruleBuilderAEImpl) onEntitlementFailure(f func() (*DerivedEvent, error)) ruleBuilderAE {
 	re.entitlementFailure = f
 	return re
 }

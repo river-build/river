@@ -716,7 +716,7 @@ func (ru *aeMembershipRules) validMembershipTransitionForGDM() (bool, error) {
 	}
 }
 
-func (ru *aeMembershipRules) requireStreamParentMembership() (*RequiredParentEvent, error) {
+func (ru *aeMembershipRules) requireStreamParentMembership() (*DerivedEvent, error) {
 	if ru.membership == nil {
 		return nil, RiverError(Err_INVALID_ARGUMENT, "membership is nil")
 	}
@@ -740,7 +740,7 @@ func (ru *aeMembershipRules) requireStreamParentMembership() (*RequiredParentEve
 		return nil, err
 	}
 	// for joins and invites, require space membership
-	return &RequiredParentEvent{
+	return &DerivedEvent{
 		Payload:  events.Make_UserPayload_Membership(MembershipOp_SO_JOIN, *streamParentId, &initiatorId, nil),
 		StreamId: userStreamId,
 	}, nil
@@ -793,7 +793,7 @@ func (ru *aeUserMembershipRules) validUserMembershipTransition() (bool, error) {
 }
 
 // / user membership triggers membership events on space, channel, dm, gdm streams
-func (ru *aeUserMembershipRules) parentEventForUserMembership() (*RequiredParentEvent, error) {
+func (ru *aeUserMembershipRules) parentEventForUserMembership() (*DerivedEvent, error) {
 	if ru.userMembership == nil {
 		return nil, RiverError(Err_INVALID_ARGUMENT, "event is not a user membership event")
 	}
@@ -819,7 +819,7 @@ func (ru *aeUserMembershipRules) parentEventForUserMembership() (*RequiredParent
 		initiatorAddress = creatorAddress
 	}
 
-	return &RequiredParentEvent{
+	return &DerivedEvent{
 		Payload: events.Make_MemberPayload_Membership(
 			userMembership.Op,
 			userAddress.Bytes(),
@@ -831,7 +831,7 @@ func (ru *aeUserMembershipRules) parentEventForUserMembership() (*RequiredParent
 }
 
 // / user actions perform user membership events on other user's streams
-func (ru *aeUserMembershipActionRules) parentEventForUserMembershipAction() (*RequiredParentEvent, error) {
+func (ru *aeUserMembershipActionRules) parentEventForUserMembershipAction() (*DerivedEvent, error) {
 	if ru.action == nil {
 		return nil, RiverError(Err_INVALID_ARGUMENT, "event is not a user membership action event")
 	}
@@ -849,7 +849,7 @@ func (ru *aeUserMembershipActionRules) parentEventForUserMembershipAction() (*Re
 	if err != nil {
 		return nil, err
 	}
-	return &RequiredParentEvent{
+	return &DerivedEvent{
 		Payload:  payload,
 		StreamId: toUserStreamId,
 	}, nil
@@ -957,7 +957,7 @@ func (params *aeParams) channelMessageReadEntitlements() (*auth.ChainAuthArgs, e
 	return chainAuthArgs, nil
 }
 
-func (params *aeParams) onEntitlementFailureForChannelKeySolicitation() (*OnEntitlementFailure, error) {
+func (params *aeParams) onEntitlementFailureForChannelKeySolicitation() (*DerivedEvent, error) {
 	userId, err := shared.AddressHex(params.parsedEvent.Event.CreatorAddress)
 	if err != nil {
 		return nil, err
@@ -976,7 +976,7 @@ func (params *aeParams) onEntitlementFailureForChannelKeySolicitation() (*OnEnti
 		return nil, RiverError(Err_INVALID_ARGUMENT, "channel has no parent", "channelId", channelId)
 	}
 
-	return &OnEntitlementFailure{
+	return &DerivedEvent{
 		StreamId: userStreamId,
 		Payload: events.Make_UserPayload_Membership(
 			MembershipOp_SO_LEAVE,
