@@ -78,8 +78,8 @@ func (s *Service) addParsedEvent(
 	}
 
 	if chainAuthArgs != nil {
-		err := s.chainAuth.IsEntitled(ctx, s.config, chainAuthArgs)
-		if err != nil {
+		chainAuthErr := s.chainAuth.IsEntitled(ctx, s.config, chainAuthArgs)
+		if chainAuthErr != nil {
 			log := dlog.FromCtx(ctx).With("function", "addParsedEvent")
 			log.Info(
 				"entitlement check failed, potential entitlement loss?",
@@ -124,8 +124,8 @@ func (s *Service) addParsedEvent(
 					log.Info("entitlement loss event propogated", "event", propogatedEntitlementLossEvent, "chainAuthArgs", chainAuthArgs)
 				}
 			}
-			log.Info("finished propogating any potential entitlement loss", "chainAuthArgs", chainAuthArgs)
-			return err
+			log.Info("finished propogating any potential entitlement loss", "chainAuthArgs", chainAuthArgs, "error", chainAuthErr)
+			return chainAuthErr
 		}
 	}
 

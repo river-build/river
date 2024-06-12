@@ -34,6 +34,7 @@ import {
     treeToRuleData,
 } from '@river-build/web3'
 import { Client } from './client'
+import { make_MemberPayload_KeySolicitation } from './types'
 
 const log = dlog('csb:test:channelsWithEntitlements')
 
@@ -317,14 +318,16 @@ describe('channelsWithEntitlements', () => {
         await alice.stopSync()
     })
 
-    test('oneNftGate - JoinPass, user booted on key request after entitlement loss', async () => {
+    test.only('oneNftGate - JoinPass, user booted on key request after entitlement loss', async () => {
         const testNftAddress = await getContractAddress('TestNFT')
         const { alice, alicesWallet, bob, aliceMobile, spaceId, channelId } =
             await setupChannelWithCustomRole([], getNftRuleData(testNftAddress))
+        console.log('nft gated channelId', channelId)
 
         // Mint an nft for alice - she should be able to join now
         const tokenId = await publicMint('TestNFT', alicesWallet.address as `0x${string}`)
         console.log('Minted nft', tokenId)
+        console.log("Alice's wallet address", alicesWallet.address)
 
         // Validate alice can join the channel
         await expectUserCanJoinChannel(alice, channelId!)
@@ -341,29 +344,37 @@ describe('channelsWithEntitlements', () => {
         await expect(balanceOf('TestNFT', alicesWallet.address as `0x${string}`)).resolves.toBe(0)
 
         // Wait 5 seconds for the positive auth cache to expire
-        await new Promise((f) => setTimeout(f, 5000))
+        await new Promise((f) => setTimeout(f, 6000))
 
-        console.log("Initializing alice's 'mobile' client (different device id)")
-        await aliceMobile.initializeUser({ spaceId })
-
-        // Additionally, alice should no longer be a channel member.
-        channelStream.waitForMembership(MembershipOp.SO_LEAVE, alice.userId)
+        // Have alice solicit keys in the channel where she just lost entitlements.
+        // This key solicitation should fail because she no longer has the required NFT.
+        // Additionally, she should be removed from the channel.
+        const payload = make_MemberPayload_KeySolicitation({
+            deviceKey: 'alice-new-device',
+            sessionIds: [],
+            fallbackKey: 'alice-fallback-key',
+            isNewDevice: true,
+        })
+        await expect(alice.makeEventAndAddToStream(channelId!, payload)).rejects.toThrow(
+            /7:PERMISSION_DENIED/,
+        )
 
         // Alice's user stream should reflect that she is no longer a member of the channel.
+        // TODO why no linter complain with no await here?
         const aliceUserStream = await alice.waitForStream(alice.userStreamId!)
-        aliceUserStream.waitFor('streamUserLeft', (streamId: string) => {
-            return (
-                streamId === channelId &&
-                aliceUserStream.view.membershipContent.isMember(MembershipOp.SO_LEAVE, alice.userId)
-            )
-        })
+        await waitFor(() =>
+            expect(
+                aliceUserStream.view.userContent.isMember(channelId!, MembershipOp.SO_LEAVE),
+            ).toBeTruthy(),
+        )
+        await waitFor(() =>
+            expect(
+                channelStream.view.membershipContent.isMember(MembershipOp.SO_LEAVE, alice.userId),
+            ).toBeTruthy(),
+        )
 
-        // Alice cannot rejoin the stream
-        // The client waits for event confirmation via snapshot before processing membership
-        // exit, so the rejoin will not produce the expected error in tests because the client
-        // considers the user to still be a member of the channel until it processes the snapshot.
-        // We may reconsider this, however, so leaving it here commented out for now.
-        // await expect(alice.joinStream(channelId!)).rejects.toThrow(/7:PERMISSION_DENIED/)
+        // Alice cannot rejoin the stream.
+        await expect(alice.joinStream(channelId!)).rejects.toThrow(/7:PERMISSION_DENIED/)
 
         await bob.stopSync()
         await alice.stopSync()

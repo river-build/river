@@ -97,6 +97,18 @@ type ChainAuthArgs struct {
 	linkedWallets string // a serialized list of linked wallets to comply with the cache key constraints
 }
 
+func (args *ChainAuthArgs) String() string {
+	return fmt.Sprintf(
+		"ChainAuthArgs{kind: %d, spaceId: %s, channelId: %s, principal: %s, permission: %s, linkedWallets: %s}",
+		args.kind,
+		args.spaceId,
+		args.channelId,
+		args.principal.Hex(),
+		args.permission,
+		args.linkedWallets,
+	)
+}
+
 func (args *ChainAuthArgs) withLinkedWallets(linkedWallets []common.Address) *ChainAuthArgs {
 	ret := *args
 	var builder strings.Builder
