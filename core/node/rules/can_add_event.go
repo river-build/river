@@ -395,13 +395,18 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 			params:       params,
 			solicitation: content.KeySolicitation,
 		}
-		ruleBuilderAE := aeBuilder().
-			checkOneOf(params.creatorIsMember).
-			check(ru.validKeySolicitation)
+
 		if shared.ValidChannelStreamId(params.streamView.StreamId()) {
-			ruleBuilderAE = ruleBuilderAE.requireChainAuth(params.channelMessageReadEntitlements)
+			return aeBuilder().
+				checkOneOf(params.creatorIsMember).
+				check(ru.validKeySolicitation).
+				requireChainAuth(params.channelMessageReadEntitlements).
+				onChainAuthFailure(params.onEntitlementFailureForChannelKeySolicitation)
+		} else {
+			return aeBuilder().
+				checkOneOf(params.creatorIsMember).
+				check(ru.validKeySolicitation)
 		}
-		return ruleBuilderAE
 	case *MemberPayload_KeyFulfillment_:
 		ru := &aeKeyFulfillmentRules{
 			params:      params,
@@ -950,6 +955,37 @@ func (params *aeParams) channelMessageReadEntitlements() (*auth.ChainAuthArgs, e
 	)
 
 	return chainAuthArgs, nil
+}
+
+func (params *aeParams) onEntitlementFailureForChannelKeySolicitation() (*DerivedEvent, error) {
+	userId, err := shared.AddressHex(params.parsedEvent.Event.CreatorAddress)
+	if err != nil {
+		return nil, err
+	}
+	userStreamId, err := shared.UserStreamIdFromBytes(params.parsedEvent.Event.CreatorAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	channelId := params.streamView.StreamId()
+	if !shared.ValidChannelStreamId(channelId) {
+		return nil, RiverError(Err_INVALID_ARGUMENT, "invalid channel stream id", "streamId", channelId)
+	}
+	spaceId := params.streamView.StreamParentId()
+	if spaceId == nil {
+		return nil, RiverError(Err_INVALID_ARGUMENT, "channel has no parent", "channelId", channelId)
+	}
+
+	return &DerivedEvent{
+		StreamId: userStreamId,
+		Payload: events.Make_UserPayload_Membership(
+			MembershipOp_SO_LEAVE,
+			*channelId,
+			&userId,
+			spaceId[:],
+		),
+	}, nil
+
 }
 
 func (params *aeParams) redactChannelMessageEntitlements() (*auth.ChainAuthArgs, error) {
