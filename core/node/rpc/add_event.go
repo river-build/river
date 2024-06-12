@@ -64,7 +64,7 @@ func (s *Service) addParsedEvent(
 		return err
 	}
 
-	canAddEvent, chainAuthArgs, requiredParentEvent, err := rules.CanAddEvent(
+	canAddEvent, chainAuthArgs, sideEffects, err := rules.CanAddEvent(
 		ctx,
 		s.chainConfig,
 		s.nodeRegistry.GetValidNodeAddresses(),
@@ -78,59 +78,32 @@ func (s *Service) addParsedEvent(
 	}
 
 	if chainAuthArgs != nil {
-		chainAuthErr := s.chainAuth.IsEntitled(ctx, s.config, chainAuthArgs)
-		if chainAuthErr != nil {
-			log := dlog.FromCtx(ctx).With("function", "addParsedEvent")
-			log.Info(
-				"entitlement check failed, potential entitlement loss?",
-				"error",
-				err,
-				"chainAuthArgs",
-				chainAuthArgs,
-			)
-			// If the user entitlement failed, we may need to proactively propogate an event as a result
-			// of detecting an entitlement loss.
-			propogatedEntitlementLossEvent, err := rules.ProcessEntitlementLoss(ctx, parsedEvent, streamView)
-			log.Info(
-				"processed potential entitlement loss",
-				"propogatedEntitlementLossEvent",
-				propogatedEntitlementLossEvent,
-				"error",
-				err,
-				"chainAuthArgs",
-				chainAuthArgs,
-			)
-			if err != nil {
-				log.Error("error processing potential entitlement loss", "error", err)
-				return err
-			}
-			if propogatedEntitlementLossEvent != nil {
-				log.Info(
-					"propogating entitlement loss event",
-					"event",
-					propogatedEntitlementLossEvent,
-					"chainAuthArgs",
-					chainAuthArgs,
-				)
+		isEntitled, err := s.chainAuth.IsEntitled(ctx, s.config, chainAuthArgs)
+		if err != nil {
+			return err
+		}
+		if !isEntitled {
+			if sideEffects.OnChainAuthFailure != nil {
 				err := s.addEventPayload(
 					ctx,
-					propogatedEntitlementLossEvent.StreamId,
-					propogatedEntitlementLossEvent.Payload,
+					sideEffects.OnChainAuthFailure.StreamId,
+					sideEffects.OnChainAuthFailure.Payload,
 				)
 				if err != nil {
-					log.Error("error propogating entitlement loss event", "error", err)
 					return err
-				} else {
-					log.Info("entitlement loss event propogated", "event", propogatedEntitlementLossEvent, "chainAuthArgs", chainAuthArgs)
 				}
 			}
-			log.Info("finished propogating any potential entitlement loss", "chainAuthArgs", chainAuthArgs, "error", chainAuthErr)
-			return chainAuthErr
+			return RiverError(
+				Err_PERMISSION_DENIED,
+				"IsEntitled failed",
+				"chainAuthArgs",
+				chainAuthArgs.String(),
+			).Func("addParsedEvent")
 		}
 	}
 
-	if requiredParentEvent != nil {
-		err := s.addEventPayload(ctx, requiredParentEvent.StreamId, requiredParentEvent.Payload)
+	if sideEffects.RequiredParentEvent != nil {
+		err := s.addEventPayload(ctx, sideEffects.RequiredParentEvent.StreamId, sideEffects.RequiredParentEvent.Payload)
 		if err != nil {
 			return err
 		}
