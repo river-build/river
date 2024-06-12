@@ -34,7 +34,7 @@
 /.vscode/ @texuf
 /.yarn/ @brianathere
 /assets/ @texuf
-/contracts/ @pfives @giuseppecrj @brianathere
+/contracts/ @pfives @giuseppecrj @brianathere @jterzis
 /contracts/src/node-network/ @pfives @giuseppecrj @mechanical-turk
 /core/ @sergekh2
 /core/node/ @sergekh2 @bas-vk
