@@ -242,22 +242,6 @@ func (ca *chainAuth) IsEntitled(ctx context.Context, cfg *config.Config, args *C
 		return false, AsRiverError(err).Func("IsEntitled")
 	}
 	return result.IsAllowed(), nil
-
-	// if !result.IsAllowed() {
-	// 	return RiverError(
-	// 		Err_PERMISSION_DENIED,
-	// 		"IsEntitled failed",
-	// 		"spaceId",
-	// 		args.spaceId,
-	// 		"channelId",
-	// 		args.channelId,
-	// 		"userId",
-	// 		args.principal,
-	// 		"permission",
-	// 		args.permission.String(),
-	// 	).Func("IsAllowed")
-	// }
-	// return nil
 }
 
 func (ca *chainAuth) areLinkedWalletsEntitled(
