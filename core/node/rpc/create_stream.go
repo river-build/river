@@ -51,7 +51,15 @@ func (s *Service) createStream(ctx context.Context, req *CreateStreamRequest) (*
 
 	log.Debug("createStream", "parsedEvents", parsedEvents)
 
-	csRules, err := rules.CanCreateStream(ctx, s.config, s.chainConfig, time.Now(), streamId, parsedEvents, req.Metadata)
+	csRules, err := rules.CanCreateStream(
+		ctx,
+		s.config,
+		s.chainConfig,
+		time.Now(),
+		streamId,
+		parsedEvents,
+		req.Metadata,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +120,7 @@ func (s *Service) createStream(ctx context.Context, req *CreateStreamRequest) (*
 				"IsEntitled failed",
 				"chainAuthArgs",
 				csRules.ChainAuth.String(),
-			).Func("addParsedEvent")
+			).Func("createStream")
 		}
 
 	}
