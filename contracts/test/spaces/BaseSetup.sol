@@ -116,6 +116,7 @@ contract BaseSetup is TestUtils, SpaceHelper {
     ISpaceOwner(spaceOwner).setFactory(spaceFactory);
     IImplementationRegistry(spaceFactory).addImplementation(baseRegistry);
     ISpaceDelegation(baseRegistry).setRiverToken(riverToken);
+    ISpaceDelegation(baseRegistry).setMainnetDelegation(baseRegistry);
     IMainnetDelegation(baseRegistry).setProxyDelegation(mainnetProxyDelegation);
     MockMessenger(messenger).setXDomainMessageSender(mainnetProxyDelegation);
     vm.stopPrank();
