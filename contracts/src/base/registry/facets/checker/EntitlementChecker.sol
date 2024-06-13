@@ -170,14 +170,20 @@ contract EntitlementChecker is IEntitlementChecker, Facet {
   ) external view returns (address[] memory) {
     EntitlementCheckerStorage.Layout storage layout = EntitlementCheckerStorage
       .layout();
-    uint256 nodeCount = layout.nodes.length();
+    uint256 totalNodeCount = layout.nodes.length();
+    uint256 nodeCount;
+    for (uint256 i = 0; i < totalNodeCount; i++) {
+      if (layout.operatorByNode[layout.nodes.at(i)] == operator) {
+        nodeCount++;
+      }
+    }
     address[] memory nodes = new address[](nodeCount);
-    for (uint256 i = 0; i < nodeCount; i++) {
-      nodes[i] = layout.nodes.at(i);
-      if (layout.operatorByNode[nodes[i]] == operator) {
+    for (uint256 i = 0; i < totalNodeCount; i++) {
+      if (layout.operatorByNode[layout.nodes.at(i)] == operator) {
         nodes[i] = layout.nodes.at(i);
       }
     }
+
     return nodes;
   }
 
