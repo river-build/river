@@ -42,7 +42,7 @@ func Execute() {
 	}
 }
 
-func initConfigAndLog() {
+func initConfigAndLogWithError() error {
 	if configFile != "" {
 		viper.SetConfigFile(configFile)
 
@@ -51,8 +51,9 @@ func initConfigAndLog() {
 		viper.SetEnvKeyReplacer(strings.NewReplacer(".", "__"))
 		viper.AutomaticEnv()
 
-		if err := viper.ReadInConfig(); err != nil {
-			fmt.Printf("Failed to read config file, file=%v, error=%v\n", configFile, err)
+		err := viper.ReadInConfig()
+		if err != nil {
+			return err
 		}
 
 		var (
@@ -60,11 +61,13 @@ func initConfigAndLog() {
 			decodeHooks  = mapstructure.ComposeDecodeHookFunc(
 				config.DecodeAddressOrAddressFileHook(),
 				config.DecodeDurationHook(),
+				config.DecodeUint64SliceHook(),
 			)
 		)
 
-		if err := viper.Unmarshal(&configStruct, viper.DecodeHook(decodeHooks)); err != nil {
-			fmt.Printf("Failed to unmarshal config, error=%v\n", err)
+		err = viper.Unmarshal(&configStruct, viper.DecodeHook(decodeHooks))
+		if err != nil {
+			return err
 		}
 
 		if configStruct.Log.Format == "" {
@@ -87,13 +90,26 @@ func initConfigAndLog() {
 		if logNoColor {
 			configStruct.Log.NoColor = true
 		}
-		configStruct.Init()
+
+		err = configStruct.Init()
+		if err != nil {
+			return err
+		}
 
 		// If loaded successfully, set the global config
 		cmdConfig = &configStruct
 		InitLogFromConfig(&cmdConfig.Log)
 	} else {
 		fmt.Println("No config file specified")
+	}
+	return nil
+}
+
+func initConfigAndLog() {
+	err := initConfigAndLogWithError()
+	if err != nil {
+		fmt.Println("Failed to initialize config and log, error=", err)
+		os.Exit(1)
 	}
 }
 

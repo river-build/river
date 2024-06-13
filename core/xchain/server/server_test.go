@@ -263,9 +263,10 @@ func (st *serviceTester) Start(t *testing.T) {
 
 func (st *serviceTester) Config() *config.Config {
 	cfg := &config.Config{
-		BaseChain:    node_config.ChainConfig{},
-		RiverChain:   node_config.ChainConfig{},
-		ChainsString: fmt.Sprintf("%d:%s", ChainID, BaseRpcEndpoint),
+		BaseChain:         node_config.ChainConfig{},
+		RiverChain:        node_config.ChainConfig{},
+		Chains:            fmt.Sprintf("%d:%s", ChainID, BaseRpcEndpoint),
+		XChainBlockchains: []uint64{ChainID},
 		TestEntitlementContract: config.ContractConfig{
 			Address: st.mockEntitlementGatedAddress,
 		},

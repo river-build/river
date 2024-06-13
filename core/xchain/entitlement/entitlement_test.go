@@ -149,13 +149,20 @@ var nftMultiCheckHighThresholdBaseSepolia = CheckOperation{
 	Threshold:       big.NewInt(10),
 }
 
-var chains = map[uint64]string{
-	examples.BaseSepoliaChainId.Uint64(): "https://sepolia.base.org",
-	examples.EthSepoliaChainId.Uint64():  "https://ethereum-sepolia-rpc.publicnode.com",
-}
-
 var cfg = &config.Config{
-	Chains: chains,
+	ChainConfigs: map[uint64]*config.ChainConfig{
+		examples.EthSepoliaChainIdUint64: {
+			NetworkUrl:  "https://ethereum-sepolia-rpc.publicnode.com",
+			ChainId:     examples.EthSepoliaChainIdUint64,
+			BlockTimeMs: 12000,
+		},
+		examples.BaseSepoliaChainIdUint64: {
+			NetworkUrl:  "https://sepolia.base.org",
+			ChainId:     examples.BaseSepoliaChainIdUint64,
+			BlockTimeMs: 2000,
+		},
+	},
+	XChainBlockchains: []uint64{examples.EthSepoliaChainIdUint64, examples.BaseSepoliaChainIdUint64},
 }
 
 var evaluator *Evaluator
