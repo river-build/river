@@ -10,6 +10,7 @@ import {IWalletLink} from "contracts/src/factory/facets/wallet-link/IWalletLink.
 import {ISpaceOwner} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
 import {IMainnetDelegation} from "contracts/src/tokens/river/base/delegation/IMainnetDelegation.sol";
 import {INodeOperator} from "contracts/src/base/registry/facets/operator/INodeOperator.sol";
+import {NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
 
 // libraries
 
@@ -149,6 +150,8 @@ contract BaseSetup is TestUtils, SpaceHelper {
     for (uint256 i = 0; i < operators.length; i++) {
       vm.prank(operators[i]);
       nodeOperator.registerOperator(operators[i]);
+      vm.prank(deployer);
+      nodeOperator.setOperatorStatus(operators[i], NodeOperatorStatus.Approved);
     }
   }
 
