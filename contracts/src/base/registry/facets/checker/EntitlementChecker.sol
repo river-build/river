@@ -171,16 +171,20 @@ contract EntitlementChecker is IEntitlementChecker, Facet {
     EntitlementCheckerStorage.Layout storage layout = EntitlementCheckerStorage
       .layout();
     uint256 totalNodeCount = layout.nodes.length();
-    uint256 nodeCount;
+    uint256 nodeCount = 0;
     for (uint256 i = 0; i < totalNodeCount; i++) {
-      if (layout.operatorByNode[layout.nodes.at(i)] == operator) {
+      address node = layout.nodes.at(i);
+      if (layout.operatorByNode[node] == operator) {
         nodeCount++;
       }
     }
     address[] memory nodes = new address[](nodeCount);
+    uint256 j = 0;
     for (uint256 i = 0; i < totalNodeCount; i++) {
-      if (layout.operatorByNode[layout.nodes.at(i)] == operator) {
-        nodes[i] = layout.nodes.at(i);
+      address node = layout.nodes.at(i);
+      if (layout.operatorByNode[node] == operator) {
+        nodes[j] = node;
+        j++;
       }
     }
 
