@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"os"
-	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -86,6 +85,5 @@ func TestXChainFallback(t *testing.T) {
 	require.Equal("https//river.org/foobar", cmdConfig.ChainConfigs[6524490].NetworkUrl)
 	require.Equal(uint64(2000), cmdConfig.ChainConfigs[6524490].BlockTimeMs)
 
-	slices.Sort(cmdConfig.XChainBlockchains)
-	require.Equal([]uint64{1, 2, 123, 6524490}, cmdConfig.XChainBlockchains)
+	require.ElementsMatch([]uint64{1, 2, 123, 6524490}, cmdConfig.XChainBlockchains)
 }
