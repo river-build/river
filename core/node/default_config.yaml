@@ -1,3 +1,6 @@
+# This config is included in the docker image as default config.
+# CI and local tests use config-template.yaml
+
 # Network configuration
 port: 443
 database:
@@ -115,12 +118,14 @@ disableBaseChain: false
 # This is comma separted list of CHAID_ID:PROVIDER_URL pairs.
 Chains: ''
 
-#ChainBlocktimes is acomma-separated list chaidID:blockTimeDuration pairs
+#ChainBlocktimes is a comma-separated list chaidID:blockTimeDuration pairs
 # I.e. 0:12s,84532:2s,6524490:2s
-# Blocktimes for common known chains are pre-set in GetDefaultBlockchainInfo()
+# Blocktimes for common known chains are pre-set in GetDefaultBlockchainInfo(),
+# so there is no need to configure them here.
 ChainBlocktimes: ''
 
 # This is a comma separated list of chain IDs that are allowed to be used for XChain checks.
+# TODO: move this setting to blockchain so it is shared between all nodes and clients.
 XChainBlockchains: ''
 
 history: 30s

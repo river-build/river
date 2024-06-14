@@ -1,3 +1,5 @@
+# This config template is used for local and CI tests. Default protuction config is in default_config.yaml
+
 # Network configuration
 port: <RPC_PORT>
 database:
