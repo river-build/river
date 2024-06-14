@@ -250,6 +250,7 @@ export class Client
         await this.decryptionExtensions?.stop()
         await this.syncedStreamsExtensions?.stop()
         await this.stopSync()
+        this.rpcClient.stop()
     }
 
     getSizeOfEncryptedСontentQueue(): number {

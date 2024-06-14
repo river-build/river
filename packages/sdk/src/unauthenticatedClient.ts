@@ -35,6 +35,10 @@ export class UnauthenticatedClient {
         this.logCall('new UnauthenticatedClient')
     }
 
+    public stop() {
+        this.rpcClient.stop()
+    }
+
     async userExists(userId: string): Promise<boolean> {
         const userStreamId = makeUserStreamId(userId)
         this.logCall('userExists', userId)

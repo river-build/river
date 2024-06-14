@@ -83,7 +83,10 @@ const retryInterceptor: (retryParams: RetryParams) => Interceptor = (retryParams
         }
 }
 
-const loggingInterceptor: (transportId: number) => Interceptor = (transportId: number) => {
+// Histogram data structure
+const loggingInterceptor: (transportId: number) => Interceptor & { stop: () => void } = (
+    transportId: number,
+) => {
     // Histogram data structure
     const callHistogram: Record<string, { interval: number; total: number; error?: number }> = {}
 
@@ -103,7 +106,7 @@ const loggingInterceptor: (transportId: number) => Interceptor = (transportId: n
     }
 
     // Periodic logging
-    setInterval(() => {
+    const intervalId = setInterval(() => {
         if (Object.keys(callHistogram).length !== 0) {
             let interval = 0
             let total = 0
@@ -136,7 +139,8 @@ const loggingInterceptor: (transportId: number) => Interceptor = (transportId: n
         }
     }, histogramIntervalMs)
 
-    return (next) =>
+    const interceptor: Interceptor & { stop: () => void } =
+        (next) =>
         async (
             req: UnaryRequest<AnyMessage, AnyMessage> | StreamRequest<AnyMessage, AnyMessage>,
         ) => {
@@ -267,6 +271,11 @@ const loggingInterceptor: (transportId: number) => Interceptor = (transportId: n
         }
         logProtos(name, 'STREAMING RESPONSE DONE', id)
     }
+
+    interceptor.stop = () => {
+        clearInterval(intervalId)
+    }
+    return interceptor
 }
 
 /// check to see of the error message contains an Rrc Err defineded in the protocol.proto
@@ -337,7 +346,9 @@ function getRetryDelay(error: unknown, attempts: number, retryParams: RetryParam
     return -1
 }
 
-export type StreamRpcClient = PromiseClient<typeof StreamService> & { url?: string }
+export type StreamRpcClient = PromiseClient<typeof StreamService> & { url?: string } & {
+    stop: () => void
+}
 
 export function makeStreamRpcClient(
     dest: Transport | string,
@@ -348,15 +359,13 @@ export function makeStreamRpcClient(
     logCallsHistogram('makeStreamRpcClient, transportId =', transportId)
     let transport: Transport
     let url: string | undefined
+    const logInt = loggingInterceptor(transportId)
     if (typeof dest === 'string') {
         url = randomUrlSelector(dest)
         logInfo('makeStreamRpcClient: Connecting to url=', url, ' allUrls=', dest)
         const options: ConnectTransportOptions = {
             baseUrl: url,
-            interceptors: [
-                retryInterceptor({ ...retryParams, refreshNodeUrl }),
-                loggingInterceptor(transportId),
-            ],
+            interceptors: [retryInterceptor({ ...retryParams, refreshNodeUrl }), logInt],
         }
         if (getEnvVar('RIVER_DEBUG_TRANSPORT') !== 'true') {
             options.useBinaryFormat = true
