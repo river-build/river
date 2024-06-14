@@ -33,6 +33,25 @@ export default [
   },
   {
     "type": "function",
+    "name": "getNodesByOperator",
+    "inputs": [
+      {
+        "name": "operator",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getRandomNodes",
     "inputs": [
       {
@@ -209,6 +228,11 @@ export default [
   {
     "type": "error",
     "name": "EntitlementChecker_NodeNotRegistered",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "EntitlementChecker_OperatorNotActive",
     "inputs": []
   }
 ] as const

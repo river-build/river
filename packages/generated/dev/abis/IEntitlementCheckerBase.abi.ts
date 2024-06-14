@@ -86,5 +86,10 @@ export default [
     "type": "error",
     "name": "EntitlementChecker_NodeNotRegistered",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "EntitlementChecker_OperatorNotActive",
+    "inputs": []
   }
 ] as const

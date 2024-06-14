@@ -39,6 +39,25 @@ export default [
   },
   {
     "type": "function",
+    "name": "getTotalDelegation",
+    "inputs": [
+      {
+        "name": "operator",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "riverToken",
     "inputs": [],
     "outputs": [

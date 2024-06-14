@@ -163,10 +163,10 @@
   },
   "sources": {
     "contracts/src/base/registry/facets/delegation/ISpaceDelegation.sol": {
-      "keccak256": "0xb0cbddd00b197e12f9a5b24f1fc96660bb354ef43fa27328014285a64f3bc6b3",
+      "keccak256": "0xb7796a50a2686902fb7bc6b25664b6a24c485092718c9eb8501a61b841a36c04",
       "urls": [
-        "bzz-raw://e190f5aed0a97f35667652417adc76656a07d34561d31200e7626681a2f7e89d",
-        "dweb:/ipfs/QmaWgwrQ8p3ubK93KCAwmrnk46ENBoW3a1UonhCPunwuHy"
+        "bzz-raw://a54b27f059faa0868c8df0757de492ad8559040cb6956ff71595c8e3f1c783c5",
+        "dweb:/ipfs/QmXy4KFpJEHDvDCNNyEdbeYhUGJtamd8DToKHTbBXuWwdp"
       ],
       "license": "MIT"
     }

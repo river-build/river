@@ -1020,139 +1020,6 @@
         "name": "__Membership_init"
       },
       {
-        "inputs": [],
-        "stateMutability": "view",
-        "type": "function",
-        "name": "_getMembershipCurrency",
-        "outputs": [
-          {
-            "internalType": "address",
-            "name": "",
-            "type": "address"
-          }
-        ]
-      },
-      {
-        "inputs": [],
-        "stateMutability": "view",
-        "type": "function",
-        "name": "_getMembershipFreeAllocation",
-        "outputs": [
-          {
-            "internalType": "uint256",
-            "name": "",
-            "type": "uint256"
-          }
-        ]
-      },
-      {
-        "inputs": [],
-        "stateMutability": "view",
-        "type": "function",
-        "name": "_getMembershipImage",
-        "outputs": [
-          {
-            "internalType": "string",
-            "name": "",
-            "type": "string"
-          }
-        ]
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "totalSupply",
-            "type": "uint256"
-          }
-        ],
-        "stateMutability": "view",
-        "type": "function",
-        "name": "_getMembershipPrice",
-        "outputs": [
-          {
-            "internalType": "uint256",
-            "name": "",
-            "type": "uint256"
-          }
-        ]
-      },
-      {
-        "inputs": [],
-        "stateMutability": "view",
-        "type": "function",
-        "name": "_getMembershipSupplyLimit",
-        "outputs": [
-          {
-            "internalType": "uint256",
-            "name": "",
-            "type": "uint256"
-          }
-        ]
-      },
-      {
-        "inputs": [],
-        "stateMutability": "view",
-        "type": "function",
-        "name": "_getPricingModule",
-        "outputs": [
-          {
-            "internalType": "address",
-            "name": "",
-            "type": "address"
-          }
-        ]
-      },
-      {
-        "inputs": [],
-        "stateMutability": "view",
-        "type": "function",
-        "name": "_getSpaceFactory",
-        "outputs": [
-          {
-            "internalType": "address",
-            "name": "",
-            "type": "address"
-          }
-        ]
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "newAllocation",
-            "type": "uint256"
-          }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function",
-        "name": "_setMembershipFreeAllocation"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "newLimit",
-            "type": "uint256"
-          }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function",
-        "name": "_setMembershipSupplyLimit"
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "address",
-            "name": "newPricingModule",
-            "type": "address"
-          }
-        ],
-        "stateMutability": "nonpayable",
-        "type": "function",
-        "name": "_setPricingModule"
-      },
-      {
         "inputs": [
           {
             "internalType": "address",
@@ -1777,9 +1644,6 @@
         "__Membership_init((string,string,uint256,uint256,uint64,address,address,uint256,address),address)": {
           "details": "Initialization logic when facet is added to diamond"
         },
-        "_getMembershipPrice(uint256)": {
-          "details": "Makes it virtual to allow other pricing strategies"
-        },
         "approve(address,uint256)": {
           "details": "Gives permission to `to` to transfer `tokenId` token to another account. See {ERC721A-_approve}. Requirements: - The caller must own the token or be an approved operator."
         },
@@ -1997,10 +1861,10 @@
   },
   "sources": {
     "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol": {
-      "keccak256": "0x5b5744a311db2a4bc87ce409be80404dacab62b24cbff4e18b9a19eb34b59cb8",
+      "keccak256": "0xbeb7bfa236f19172b29eac53be03a3b377de3524b2d836192b0c64ebe708c204",
       "urls": [
-        "bzz-raw://e020096c2cce7eacb226292588556e20f061de42577ffa07ef7566fa80c764f0",
-        "dweb:/ipfs/QmRgU2mqWYTjJMS8pKUnvaQMBCwTQTbSXXgByenuDJPTMZ"
+        "bzz-raw://3d5a103a2b7b6be1ffa6662db6081763bcd210216fefc25307b835c555e0cf4d",
+        "dweb:/ipfs/QmUCvhZdZpVnyJuZVgd2qGduTf11384TmmBJb2RaEBHxhh"
       ],
       "license": "MIT"
     },
@@ -2237,10 +2101,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol": {
-      "keccak256": "0x795b58a2ed6205d814e01e58a4a5e88ff69401ee7540d01c4881b7b28f04cfcf",
+      "keccak256": "0x667a71b4ea5c072ed8039139345f73779f7f08820a09848f708cd159fd9f1b79",
       "urls": [
-        "bzz-raw://684e395bce3abedfb499ba8b2708a4f0ca9d1b1f73eb0ebc647d4cead0b8fdd1",
-        "dweb:/ipfs/QmWz2Eu8UGXYskoBFtFXLBuwDrxUfYDLeQuTCeApALdf97"
+        "bzz-raw://988f98a1147ecfa0480bf747fbed8202229aa0c37f43dd25a967ebca213b8050",
+        "dweb:/ipfs/QmWHdrRbCu48aHYKhhGt2UgukaQsQhuHV38c51Yk566Rse"
       ],
       "license": "MIT"
     },
@@ -2397,10 +2261,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/facets/membership/MembershipBase.sol": {
-      "keccak256": "0xc104f5cbadf13f8e3bea32239e593ae078e6d1f2cbdcc84d75b8756ea81737de",
+      "keccak256": "0xe54260e2da7ae9d1bb2c1394fa09636f69a3989fd1e0a9dc2305f8ea5dbcbf5a",
       "urls": [
-        "bzz-raw://b76f3a50d0c32b42acf849b2cb02f2b88c2a0b16bd1512870ec66ed09dbdd910",
-        "dweb:/ipfs/Qmd9J8pF6pw8g383vnRWCSqUQqg6vZ2pYQokzk9BrWwTy7"
+        "bzz-raw://b6e67fa15ea5c2976c6387e6c1d05c216c64cfb05bcb253c68d3b839ce8be447",
+        "dweb:/ipfs/QmaJpZbfeWYL4R7xRxNevTQbKpsV1sUGaVS5rAx99fT2Vq"
       ],
       "license": "MIT"
     },
