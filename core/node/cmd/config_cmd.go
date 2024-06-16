@@ -10,9 +10,15 @@ import (
 )
 
 func init() {
-	cmd := &cobra.Command{
+	configCmd := &cobra.Command{
 		Use:   "config",
-		Short: "Print config",
+		Short: "Config inspection commands",
+	}
+	rootCmd.AddCommand(configCmd)
+
+	configCmd.AddCommand(&cobra.Command{
+		Use:   "print",
+		Short: "Print current config (sensitive fields are omitted)",
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println("Viper settings:")
 			fmt.Println()
@@ -39,7 +45,15 @@ func init() {
 
 			fmt.Println(string(yamlData))
 		},
-	}
+	})
 
-	rootCmd.AddCommand(cmd)
+	configCmd.AddCommand(&cobra.Command{
+		Use:   "names",
+		Short: "Print environment variable names for all config settings",
+		Run: func(cmd *cobra.Command, args []string) {
+			for _, envVar := range canonicalConfigEnvVars {
+				fmt.Println(envVar)
+			}
+		},
+	})
 }
