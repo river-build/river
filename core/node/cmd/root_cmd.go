@@ -45,19 +45,26 @@ func Execute() {
 
 var canonicalConfigEnvVars []string
 
-func bindViperKeys(varPrefix string, envPrefixSingle string, envPrefixDouble string, m map[string]interface{}, canonicalEnvVar *[]string) {
+func bindViperKeys(varPrefix string, envPrefixSingle string, envPrefixDouble string, m map[string]interface{}, canonicalEnvVar *[]string) error {
 	for k, v := range m {
 		subMap, ok := v.(map[string]interface{})
 		if ok {
 			upperK := strings.ToUpper(k)
-			bindViperKeys(varPrefix+k+".", envPrefixSingle+upperK+"_", envPrefixDouble+upperK+"__", subMap, canonicalEnvVar)
+			err := bindViperKeys(varPrefix+k+".", envPrefixSingle+upperK+"_", envPrefixDouble+upperK+"__", subMap, canonicalEnvVar)
+			if err != nil {
+				return err
+			}
 		} else {
 			envName := strings.ToUpper(k)
 			canonical := "RIVER_" + envPrefixSingle + envName
 			*canonicalEnvVar = append(*canonicalEnvVar, canonical)
-			viper.BindEnv(varPrefix+k, canonical, envPrefixDouble+envName)
+			err := viper.BindEnv(varPrefix+k, canonical, envPrefixDouble+envName)
+			if err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
 func initConfigAndLog() {
@@ -77,7 +84,10 @@ func initConfigAndLog() {
 	if err != nil {
 		panic(err)
 	}
-	bindViperKeys("", "", "", configMap, &canonicalConfigEnvVars)
+	err = bindViperKeys("", "", "", configMap, &canonicalConfigEnvVars)
+	if err != nil {
+		panic(err)
+	}
 	slices.Sort(canonicalConfigEnvVars)
 
 	if err := viper.ReadInConfig(); err != nil {
