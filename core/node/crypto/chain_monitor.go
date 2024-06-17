@@ -110,11 +110,11 @@ func (p *defaultChainMonitorPollIntervalCalculator) Interval(
 
 // setFromBlock must be called with ecm.mu locked.
 func (ecm *chainMonitor) setFromBlock(processed *big.Int) {
-	ecm.setFromBlockOnModified(ecm.fromBlockVersion+1, processed)
+	ecm.setFromBlockVersioned(ecm.fromBlockVersion+1, processed)
 }
 
-// setFromBlockOnModified must be called with ecm.mu locked.
-func (ecm *chainMonitor) setFromBlockOnModified(version uint64, processed *big.Int) {
+// setFromBlockVersioned must be called with ecm.mu locked.
+func (ecm *chainMonitor) setFromBlockVersioned(version uint64, processed *big.Int) {
 	if ecm.fromBlock == nil || ecm.fromBlockVersion == version {
 		ecm.fromBlock = processed
 	} else if ecm.fromBlock.Cmp(processed) > 0 && version > ecm.fromBlockVersion {
@@ -342,7 +342,7 @@ func (ecm *chainMonitor) RunWithBlockPeriod(
 			callbacksExecuted.Wait()
 
 			// from and toBlocks are inclusive, start at the next block on next iteration
-			ecm.setFromBlockOnModified(fromBlockVersion, new(big.Int).Add(query.ToBlock, one))
+			ecm.setFromBlockVersioned(fromBlockVersion, new(big.Int).Add(query.ToBlock, one))
 			ecm.mu.Unlock()
 			pollInterval = poll.Interval(time.Since(start), moreBlocksAvailable, false)
 			lastProcessed = toBlock
