@@ -186,6 +186,9 @@ func (st *serviceTester) Close() {
 		// if the node failed to start, it may not have a server
 		if node.svr != nil {
 			node.svr.Stop()
+		} else {
+			log := dlog.FromCtx(st.ctx)
+			log.Warn("Skipping srv Stop, node wasn't started")
 		}
 	}
 	if st.stopBlockAutoMining != nil {
