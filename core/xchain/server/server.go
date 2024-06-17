@@ -274,6 +274,7 @@ func (x *xchain) Run(ctx context.Context) {
 
 	// register callback for Base EntitlementCheckRequested events
 	x.baseChain.ChainMonitor.OnContractWithTopicsEvent(
+		0,
 		entitlementAddress,
 		[][]common.Hash{{x.checkerABI.Events["EntitlementCheckRequested"].ID}},
 		onEntitlementCheckRequestedCallback)
