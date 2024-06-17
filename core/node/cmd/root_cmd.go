@@ -43,6 +43,8 @@ func Execute() {
 	}
 }
 
+var canonicalConfigEnvVars []string
+
 func bindViperKeys(varPrefix string, envPrefixSingle string, envPrefixDouble string, m map[string]interface{}, canonicalEnvVar *[]string) error {
 	for k, v := range m {
 		subMap, ok := v.(map[string]interface{})
@@ -64,8 +66,6 @@ func bindViperKeys(varPrefix string, envPrefixSingle string, envPrefixDouble str
 	}
 	return nil
 }
-
-var canonicalConfigEnvVars []string
 
 func initConfigAndLogWithError() error {
 	if configFile != "" {

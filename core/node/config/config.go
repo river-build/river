@@ -154,8 +154,13 @@ type Config struct {
 	// It is parsed into ChainsString variable.
 	Chains string `dlog:"omit" json:"-"`
 
+	// ChainsString is an another alias for Chains kept for backward compatibility.
+	ChainsString string `dlog:"omit" json:"-"`
+
 	// This is comma-separated list chaidID:blockTimeDuration pairs.
-	// I.e. 0:12s,84532:2s,6524490:2s
+	// GetDefaultBlockchainInfo() provides default values for known chains so there is no
+	// need to set block time is it's in the GetDefaultBlockchainInfo().
+	// I.e. 1:12s,84532:2s,6524490:2s
 	ChainBlocktimes string
 
 	ChainConfigs map[uint64]*ChainConfig `mapstructure:"-"` // This is a derived field from Chains.
@@ -426,8 +431,14 @@ func (c *Config) parseChains() error {
 		return err
 	}
 
+	chains := strings.TrimSpace(c.Chains)
+	// If Chains is empty, fallback to ChainsString.
+	if chains == "" {
+		chains = strings.TrimSpace(c.ChainsString)
+	}
+
 	chainConfigs := make(map[uint64]*ChainConfig)
-	chainPairs := strings.Split(c.Chains, ",")
+	chainPairs := strings.Split(chains, ",")
 	for _, pair := range chainPairs {
 		if pair == "" {
 			continue
