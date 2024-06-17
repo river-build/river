@@ -228,8 +228,8 @@ func NewTransactionPoolWithPolicies(
 		walletBalance:                walletBalance.With(curryLabels),
 	}
 
-	chainMonitor.OnBlock(initialBlockNumber+1, txPool.OnBlock)
-	chainMonitor.OnHeader(initialBlockNumber+1, txPool.OnHeader)
+	chainMonitor.OnBlock(txPool.OnBlock)
+	chainMonitor.OnHeader(txPool.OnHeader)
 
 	return txPool, nil
 }

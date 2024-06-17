@@ -215,7 +215,7 @@ func NewOnChainConfig(
 	cfg.loadMissing(ctx, appliedBlockNum.AsUint64())
 
 	// on block sets the current block number that is used to determine the active configuration setting.
-	chainMonitor.OnBlock(appliedBlockNum+1, cfg.onBlock)
+	chainMonitor.OnBlock(cfg.onBlock)
 
 	cfgABI, err := contracts.RiverConfigV1MetaData.GetAbi()
 	if err != nil {

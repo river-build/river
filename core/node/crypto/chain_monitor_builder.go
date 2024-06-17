@@ -40,13 +40,13 @@ func (lfb *chainMonitorBuilder) Query() ethereum.FilterQuery {
 	return query
 }
 
-func (lfb *chainMonitorBuilder) OnHeader(from BlockNumber, cb OnChainNewHeader) {
-	lfb.headerCallbacks = append(lfb.headerCallbacks, &chainHeaderCallback{handler: cb, fromBlock: from})
+func (lfb *chainMonitorBuilder) OnHeader(cb OnChainNewHeader) {
+	lfb.headerCallbacks = append(lfb.headerCallbacks, &chainHeaderCallback{handler: cb})
 	lfb.dirty = true
 }
 
-func (lfb *chainMonitorBuilder) OnBlock(from BlockNumber, cb OnChainNewBlock) {
-	lfb.blockCallbacks = append(lfb.blockCallbacks, &chainBlockCallback{handler: cb, fromBlock: from})
+func (lfb *chainMonitorBuilder) OnBlock(cb OnChainNewBlock) {
+	lfb.blockCallbacks = append(lfb.blockCallbacks, &chainBlockCallback{handler: cb})
 	lfb.dirty = true
 }
 
