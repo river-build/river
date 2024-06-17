@@ -56,7 +56,10 @@ func (lfb *chainMonitorBuilder) OnAllEvents(cb OnChainEventCallback) {
 }
 
 func (lfb *chainMonitorBuilder) OnContractEvent(addr common.Address, cb OnChainEventCallback) {
-	lfb.eventCallbacks = append(lfb.eventCallbacks, &chainEventCallback{handler: cb, address: &addr, logProcessed: false})
+	lfb.eventCallbacks = append(
+		lfb.eventCallbacks,
+		&chainEventCallback{handler: cb, address: &addr, logProcessed: false},
+	)
 	lfb.dirty = true
 }
 
