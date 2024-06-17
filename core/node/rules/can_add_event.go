@@ -195,7 +195,8 @@ func (params *aeParams) canAddChannelPayload(payload *StreamEvent_ChannelPayload
 	case *ChannelPayload_Message:
 		return aeBuilder().
 			check(params.creatorIsMember).
-			requireChainAuth(params.channelMessageWriteEntitlements)
+			requireChainAuth(params.channelMessageWriteEntitlements).
+			onChainAuthFailure(params.onEntitlementFailureForUserEvent)
 	case *ChannelPayload_Redaction_:
 		return aeBuilder().check(params.creatorIsMember).
 			requireChainAuth(params.redactChannelMessageEntitlements)
@@ -401,7 +402,7 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 				checkOneOf(params.creatorIsMember).
 				check(ru.validKeySolicitation).
 				requireChainAuth(params.channelMessageReadEntitlements).
-				onChainAuthFailure(params.onEntitlementFailureForChannelKeySolicitation)
+				onChainAuthFailure(params.onEntitlementFailureForUserEvent)
 		} else {
 			return aeBuilder().
 				checkOneOf(params.creatorIsMember).
@@ -957,7 +958,7 @@ func (params *aeParams) channelMessageReadEntitlements() (*auth.ChainAuthArgs, e
 	return chainAuthArgs, nil
 }
 
-func (params *aeParams) onEntitlementFailureForChannelKeySolicitation() (*DerivedEvent, error) {
+func (params *aeParams) onEntitlementFailureForUserEvent() (*DerivedEvent, error) {
 	userId, err := shared.AddressHex(params.parsedEvent.Event.CreatorAddress)
 	if err != nil {
 		return nil, err
@@ -985,7 +986,6 @@ func (params *aeParams) onEntitlementFailureForChannelKeySolicitation() (*Derive
 			spaceId[:],
 		),
 	}, nil
-
 }
 
 func (params *aeParams) redactChannelMessageEntitlements() (*auth.ChainAuthArgs, error) {
