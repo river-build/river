@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/mitchellh/mapstructure"
@@ -42,66 +43,101 @@ func Execute() {
 	}
 }
 
+func bindViperKeys(varPrefix string, envPrefixSingle string, envPrefixDouble string, m map[string]interface{}, canonicalEnvVar *[]string) error {
+	for k, v := range m {
+		subMap, ok := v.(map[string]interface{})
+		if ok {
+			upperK := strings.ToUpper(k)
+			err := bindViperKeys(varPrefix+k+".", envPrefixSingle+upperK+"_", envPrefixDouble+upperK+"__", subMap, canonicalEnvVar)
+			if err != nil {
+				return err
+			}
+		} else {
+			envName := strings.ToUpper(k)
+			canonical := "RIVER_" + envPrefixSingle + envName
+			*canonicalEnvVar = append(*canonicalEnvVar, canonical)
+			err := viper.BindEnv(varPrefix+k, canonical, envPrefixDouble+envName)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+var canonicalConfigEnvVars []string
+
 func initConfigAndLogWithError() error {
 	if configFile != "" {
 		viper.SetConfigFile(configFile)
-
-		// This is needed to allow for nested config values to be set via environment variables
-		// For example: METRICS__ENABLED=true, METRICS__PORT=8080
-		viper.SetEnvKeyReplacer(strings.NewReplacer(".", "__"))
-		viper.AutomaticEnv()
-
-		err := viper.ReadInConfig()
-		if err != nil {
-			return err
-		}
-
-		var (
-			configStruct config.Config
-			decodeHooks  = mapstructure.ComposeDecodeHookFunc(
-				config.DecodeAddressOrAddressFileHook(),
-				config.DecodeDurationHook(),
-				config.DecodeUint64SliceHook(),
-			)
-		)
-
-		err = viper.Unmarshal(&configStruct, viper.DecodeHook(decodeHooks))
-		if err != nil {
-			return err
-		}
-
-		if configStruct.Log.Format == "" {
-			configStruct.Log.Format = "text"
-		}
-
-		if logLevel != "" {
-			configStruct.Log.Level = logLevel
-		}
-		if logFile != "default" {
-			if logFile != "none" {
-				configStruct.Log.File = logFile
-			} else {
-				configStruct.Log.File = ""
-			}
-		}
-		if logToConsole {
-			configStruct.Log.Console = true
-		}
-		if logNoColor {
-			configStruct.Log.NoColor = true
-		}
-
-		err = configStruct.Init()
-		if err != nil {
-			return err
-		}
-
-		// If loaded successfully, set the global config
-		cmdConfig = &configStruct
-		InitLogFromConfig(&cmdConfig.Log)
 	} else {
 		fmt.Println("No config file specified")
 	}
+
+	// This iterates over all possible keys in config.Config and binds evn vars to them
+	// For each key, there are two bound env vars:
+	// Mertics.Enabled <= RIVER_METRICS_ENABLED, METRICS__ENABLED
+	// With RIVER_METRICS_ENABLED being canonical and recommended.
+	// The double underscore version is for compatibility with older versions of the settings.
+	configMap := make(map[string]interface{})
+	err := mapstructure.Decode(config.Config{}, &configMap)
+	if err != nil {
+		return err
+	}
+	err = bindViperKeys("", "", "", configMap, &canonicalConfigEnvVars)
+	if err != nil {
+		return err
+	}
+	slices.Sort(canonicalConfigEnvVars)
+
+	err = viper.ReadInConfig()
+	if err != nil {
+		return err
+	}
+
+	var (
+		configStruct config.Config
+		decodeHooks  = mapstructure.ComposeDecodeHookFunc(
+			config.DecodeAddressOrAddressFileHook(),
+			config.DecodeDurationHook(),
+			config.DecodeUint64SliceHook(),
+		)
+	)
+
+	err = viper.Unmarshal(&configStruct, viper.DecodeHook(decodeHooks))
+	if err != nil {
+		return err
+	}
+
+	if configStruct.Log.Format == "" {
+		configStruct.Log.Format = "text"
+	}
+
+	if logLevel != "" {
+		configStruct.Log.Level = logLevel
+	}
+	if logFile != "default" {
+		if logFile != "none" {
+			configStruct.Log.File = logFile
+		} else {
+			configStruct.Log.File = ""
+		}
+	}
+	if logToConsole {
+		configStruct.Log.Console = true
+	}
+	if logNoColor {
+		configStruct.Log.NoColor = true
+	}
+
+	err = configStruct.Init()
+	if err != nil {
+		return err
+	}
+
+	// If loaded successfully, set the global config
+	cmdConfig = &configStruct
+	InitLogFromConfig(&cmdConfig.Log)
 	return nil
 }
 
