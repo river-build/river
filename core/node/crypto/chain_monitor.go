@@ -27,9 +27,9 @@ type (
 		)
 		// OnHeader adds a callback that is when a new header is received.
 		// Note: it is not guaranteed to be called for every new header!
-		OnHeader(from BlockNumber, cb OnChainNewHeader)
+		OnHeader(cb OnChainNewHeader)
 		// OnBlock adds a callback that is called for each new block
-		OnBlock(from BlockNumber, cb OnChainNewBlock)
+		OnBlock(cb OnChainNewBlock)
 		// OnAllEvents matches all events for all contracts, e.g. all chain events.
 		OnAllEvents(from BlockNumber, cb OnChainEventCallback)
 		// OnContractEvent matches all events created by the contract on the given address.
@@ -123,18 +123,16 @@ func (ecm *chainMonitor) setFromBlockOnModified(version uint64, processed *big.I
 	ecm.fromBlockVersion++
 }
 
-func (ecm *chainMonitor) OnHeader(from BlockNumber, cb OnChainNewHeader) {
+func (ecm *chainMonitor) OnHeader(cb OnChainNewHeader) {
 	ecm.mu.Lock()
 	defer ecm.mu.Unlock()
-	ecm.builder.OnHeader(from, cb)
-	ecm.setFromBlock(from.AsBigInt())
+	ecm.builder.OnHeader(cb)
 }
 
-func (ecm *chainMonitor) OnBlock(from BlockNumber, cb OnChainNewBlock) {
+func (ecm *chainMonitor) OnBlock(cb OnChainNewBlock) {
 	ecm.mu.Lock()
 	defer ecm.mu.Unlock()
-	ecm.builder.OnBlock(from, cb)
-	ecm.setFromBlock(from.AsBigInt())
+	ecm.builder.OnBlock(cb)
 }
 
 func (ecm *chainMonitor) OnAllEvents(from BlockNumber, cb OnChainEventCallback) {
