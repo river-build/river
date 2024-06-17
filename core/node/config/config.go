@@ -431,11 +431,11 @@ func (c *Config) parseChains() error {
 		return err
 	}
 
-	chains := strings.TrimSpace(c.Chains)
 	// If Chains is empty, fallback to ChainsString.
-	if chains == "" {
-		chains = strings.TrimSpace(c.ChainsString)
+	if c.Chains == "" {
+		c.Chains = strings.TrimSpace(c.ChainsString)
 	}
+	chains := strings.TrimSpace(c.Chains)
 
 	chainConfigs := make(map[uint64]*ChainConfig)
 	chainPairs := strings.Split(chains, ",")
