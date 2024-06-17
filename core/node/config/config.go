@@ -86,7 +86,7 @@ const (
 
 type TLSConfig struct {
 	Cert   string // Path to certificate file or BASE64 encoded certificate
-	Key    string `dlog:"omit" json:"-"` // Path to key file or BASE64 encoded key. Sensitive data, omitted from logging.
+	Key    string `dlog:"omit" json:"-" yaml:"-"` // Path to key file or BASE64 encoded key. Sensitive data, omitted from logging.
 	TestCA string // Path to CA certificate file or BASE64 encoded CA certificate
 }
 
@@ -152,10 +152,10 @@ type Config struct {
 	// Chains provides a map of chain IDs to their provider URLs as
 	// a comma-serparated list of chainID:URL pairs.
 	// It is parsed into ChainsString variable.
-	Chains string `dlog:"omit" json:"-"`
+	Chains string `dlog:"omit" json:"-" yaml:"-"`
 
 	// ChainsString is an another alias for Chains kept for backward compatibility.
-	ChainsString string `dlog:"omit" json:"-"`
+	ChainsString string `dlog:"omit" json:"-" yaml:"-"`
 
 	// This is comma-separated list chaidID:blockTimeDuration pairs.
 	// GetDefaultBlockchainInfo() provides default values for known chains so there is no
@@ -201,11 +201,11 @@ func (nc *NetworkConfig) GetHttpRequestTimeout() time.Duration {
 }
 
 type DatabaseConfig struct {
-	Url                       string `dlog:"omit" json:"-"` // Sensitive data, omitted from logging.
+	Url                       string `dlog:"omit" json:"-" yaml:"-"` // Sensitive data, omitted from logging.
 	Host                      string
 	Port                      int
 	User                      string
-	Password                  string `dlog:"omit" json:"-"` // Sensitive data, omitted from logging.
+	Password                  string `dlog:"omit" json:"-" yaml:"-"` // Sensitive data, omitted from logging.
 	Database                  string
 	Extra                     string
 	StreamingConnectionsRatio float32
@@ -241,7 +241,7 @@ type TransactionPoolConfig struct {
 }
 
 type ChainConfig struct {
-	NetworkUrl  string `dlog:"omit" json:"-"` // Sensitive data, omitted from logging.
+	NetworkUrl  string `dlog:"omit" json:"-" yaml:"-"` // Sensitive data, omitted from logging.
 	ChainId     uint64
 	BlockTimeMs uint64
 

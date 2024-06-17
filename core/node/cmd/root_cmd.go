@@ -43,14 +43,12 @@ func Execute() {
 	}
 }
 
-var canonicalConfigEnvVars []string
-
-func bindViperKeys(varPrefix string, envPrefixSingle string, envPrefixDouble string, m map[string]interface{}, canonicalEnvVar *[]string) error {
+func bindViperKeys(vpr *viper.Viper, varPrefix string, envPrefixSingle string, envPrefixDouble string, m map[string]interface{}, canonicalEnvVar *[]string) error {
 	for k, v := range m {
 		subMap, ok := v.(map[string]interface{})
 		if ok {
 			upperK := strings.ToUpper(k)
-			err := bindViperKeys(varPrefix+k+".", envPrefixSingle+upperK+"_", envPrefixDouble+upperK+"__", subMap, canonicalEnvVar)
+			err := bindViperKeys(vpr, varPrefix+k+".", envPrefixSingle+upperK+"_", envPrefixDouble+upperK+"__", subMap, canonicalEnvVar)
 			if err != nil {
 				return err
 			}
@@ -58,7 +56,7 @@ func bindViperKeys(varPrefix string, envPrefixSingle string, envPrefixDouble str
 			envName := strings.ToUpper(k)
 			canonical := "RIVER_" + envPrefixSingle + envName
 			*canonicalEnvVar = append(*canonicalEnvVar, canonical)
-			err := viper.BindEnv(varPrefix+k, canonical, envPrefixDouble+envName)
+			err := vpr.BindEnv(varPrefix+k, canonical, envPrefixDouble+envName)
 			if err != nil {
 				return err
 			}
@@ -67,9 +65,11 @@ func bindViperKeys(varPrefix string, envPrefixSingle string, envPrefixDouble str
 	return nil
 }
 
-func initConfigAndLogWithError() error {
+func initViperConfig() (*config.Config, *viper.Viper, []string, error) {
+	vpr := viper.New()
+
 	if configFile != "" {
-		viper.SetConfigFile(configFile)
+		vpr.SetConfigFile(configFile)
 	} else {
 		fmt.Println("No config file specified")
 	}
@@ -82,31 +82,33 @@ func initConfigAndLogWithError() error {
 	configMap := make(map[string]interface{})
 	err := mapstructure.Decode(config.Config{}, &configMap)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
-	err = bindViperKeys("", "", "", configMap, &canonicalConfigEnvVars)
+	canonicalConfigEnvVars := make([]string, 0, 50)
+	err = bindViperKeys(vpr, "", "", "", configMap, &canonicalConfigEnvVars)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 	slices.Sort(canonicalConfigEnvVars)
 
-	err = viper.ReadInConfig()
+	err = vpr.ReadInConfig()
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
-	var (
-		configStruct config.Config
-		decodeHooks  = mapstructure.ComposeDecodeHookFunc(
-			config.DecodeAddressOrAddressFileHook(),
-			config.DecodeDurationHook(),
-			config.DecodeUint64SliceHook(),
-		)
+	var configStruct config.Config
+	err = vpr.Unmarshal(
+		&configStruct,
+		viper.DecodeHook(
+			mapstructure.ComposeDecodeHookFunc(
+				config.DecodeAddressOrAddressFileHook(),
+				config.DecodeDurationHook(),
+				config.DecodeUint64SliceHook(),
+			),
+		),
 	)
-
-	err = viper.Unmarshal(&configStruct, viper.DecodeHook(decodeHooks))
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
 	if configStruct.Log.Format == "" {
@@ -132,21 +134,20 @@ func initConfigAndLogWithError() error {
 
 	err = configStruct.Init()
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
-	// If loaded successfully, set the global config
-	cmdConfig = &configStruct
-	InitLogFromConfig(&cmdConfig.Log)
-	return nil
+	return &configStruct, vpr, canonicalConfigEnvVars, nil
 }
 
 func initConfigAndLog() {
-	err := initConfigAndLogWithError()
+	var err error
+	cmdConfig, _, _, err = initViperConfig()
 	if err != nil {
-		fmt.Println("Failed to initialize config and log, error=", err)
+		fmt.Println("Failed to initialize config, error=", err)
 		os.Exit(1)
 	}
+	InitLogFromConfig(&cmdConfig.Log)
 }
 
 func init() {

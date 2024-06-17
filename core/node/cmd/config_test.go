@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -17,7 +16,8 @@ func TestBlockchainConfiNotSetByDefault(t *testing.T) {
 	require := require.New(t)
 
 	configFile = "../default_config.yaml"
-	require.NoError(initConfigAndLogWithError())
+	cmdConfig, _, _, err := initViperConfig()
+	require.NoError(err)
 	require.NotNil(cmdConfig)
 
 	require.Empty(cmdConfig.Chains)
@@ -31,12 +31,13 @@ func TestBlockchainConfigSetByEnv(t *testing.T) {
 
 	chainsValue := "1:https//eth0.org/foobar,2:https//eth1.org/foobar,123:https//eth123.org/foobar,6524490:https//river.org/foobar"
 	xchainsValue := "1,2"
-	os.Setenv("CHAINS", chainsValue)
-	os.Setenv("CHAINBLOCKTIMES", "2:100s,123:2.5s")
-	os.Setenv("XCHAINBLOCKCHAINS", xchainsValue)
+	t.Setenv("CHAINS", chainsValue)
+	t.Setenv("CHAINBLOCKTIMES", "2:100s,123:2.5s")
+	t.Setenv("XCHAINBLOCKCHAINS", xchainsValue)
 
 	configFile = "../default_config.yaml"
-	require.NoError(initConfigAndLogWithError())
+	cmdConfig, _, _, err := initViperConfig()
+	require.NoError(err)
 	require.NotNil(cmdConfig)
 
 	require.Equal(chainsValue, cmdConfig.Chains)
@@ -62,12 +63,13 @@ func TestXChainFallback(t *testing.T) {
 	require := require.New(t)
 
 	chainsValue := "1:https//eth0.org/foobar,2:https//eth1.org/foobar,123:https//eth123.org/foobar,6524490:https//river.org/foobar"
-	os.Setenv("CHAINS", chainsValue)
-	os.Setenv("CHAINBLOCKTIMES", "2:100s,123:2.5s")
-	os.Setenv("XCHAINBLOCKCHAINS", "")
+	t.Setenv("CHAINS", chainsValue)
+	t.Setenv("CHAINBLOCKTIMES", "2:100s,123:2.5s")
+	t.Setenv("XCHAINBLOCKCHAINS", "")
 
 	configFile = "../default_config.yaml"
-	require.NoError(initConfigAndLogWithError())
+	cmdConfig, _, _, err := initViperConfig()
+	require.NoError(err)
 	require.NotNil(cmdConfig)
 
 	require.Equal(chainsValue, cmdConfig.Chains)
@@ -94,13 +96,14 @@ func TestBlockchainChainsStringFallbakc(t *testing.T) {
 
 	chainsValue := "1:https//eth0.org/foobar,2:https//eth1.org/foobar,123:https//eth123.org/foobar,6524490:https//river.org/foobar"
 	xchainsValue := "1,2"
-	os.Setenv("CHAINS", "")
-	os.Setenv("CHAINSSTRING", chainsValue)
-	os.Setenv("CHAINBLOCKTIMES", "2:100s,123:2.5s")
-	os.Setenv("XCHAINBLOCKCHAINS", xchainsValue)
+	t.Setenv("CHAINS", "")
+	t.Setenv("CHAINSSTRING", chainsValue)
+	t.Setenv("CHAINBLOCKTIMES", "2:100s,123:2.5s")
+	t.Setenv("XCHAINBLOCKCHAINS", xchainsValue)
 
 	configFile = "../default_config.yaml"
-	require.NoError(initConfigAndLogWithError())
+	cmdConfig, _, _, err := initViperConfig()
+	require.NoError(err)
 	require.NotNil(cmdConfig)
 
 	require.Equal(chainsValue, cmdConfig.Chains)
