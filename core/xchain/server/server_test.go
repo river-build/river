@@ -101,7 +101,6 @@ func newServiceTester(numNodes int, require *require.Assertions) *serviceTester 
 }
 
 func (st *serviceTester) deployXchainTestContracts() {
-
 	var (
 		log                   = dlog.FromCtx(st.ctx)
 		approvedNodeOperators []common.Address
@@ -120,7 +119,12 @@ func (st *serviceTester) deployXchainTestContracts() {
 	st.require.NoError(err)
 
 	// Deploy the mock entitlement checker
-	addr, _, _, err := contracts.DeployMockEntitlementChecker(auth, client, approvedNodeOperators, st.Config().GetContractVersion())
+	addr, _, _, err := contracts.DeployMockEntitlementChecker(
+		auth,
+		client,
+		approvedNodeOperators,
+		st.Config().GetContractVersion(),
+	)
 	st.require.NoError(err)
 
 	st.entitlementCheckerAddress = addr
@@ -249,9 +253,13 @@ func (st *serviceTester) Start(t *testing.T) {
 		bc := st.btc.GetBlockchain(st.ctx, i)
 
 		// register node
-		pendingTx, err := bc.TxPool.Submit(ctx, "RegisterNode", func(opts *bind.TransactOpts) (*types.Transaction, error) {
-			return st.entitlementChecker.RegisterNode(opts, bc.Wallet.Address)
-		})
+		pendingTx, err := bc.TxPool.Submit(
+			ctx,
+			"RegisterNode",
+			func(opts *bind.TransactOpts) (*types.Transaction, error) {
+				return st.entitlementChecker.RegisterNode(opts, bc.Wallet.Address)
+			},
+		)
 
 		require.NoError(t, err, "register node")
 		receipt := <-pendingTx.Wait()

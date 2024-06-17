@@ -43,12 +43,26 @@ func Execute() {
 	}
 }
 
-func bindViperKeys(vpr *viper.Viper, varPrefix string, envPrefixSingle string, envPrefixDouble string, m map[string]interface{}, canonicalEnvVar *[]string) error {
+func bindViperKeys(
+	vpr *viper.Viper,
+	varPrefix string,
+	envPrefixSingle string,
+	envPrefixDouble string,
+	m map[string]interface{},
+	canonicalEnvVar *[]string,
+) error {
 	for k, v := range m {
 		subMap, ok := v.(map[string]interface{})
 		if ok {
 			upperK := strings.ToUpper(k)
-			err := bindViperKeys(vpr, varPrefix+k+".", envPrefixSingle+upperK+"_", envPrefixDouble+upperK+"__", subMap, canonicalEnvVar)
+			err := bindViperKeys(
+				vpr,
+				varPrefix+k+".",
+				envPrefixSingle+upperK+"_",
+				envPrefixDouble+upperK+"__",
+				subMap,
+				canonicalEnvVar,
+			)
 			if err != nil {
 				return err
 			}
