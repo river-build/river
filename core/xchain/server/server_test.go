@@ -183,7 +183,13 @@ func (st *serviceTester) ClientSimulatorBlockchain() *node_crypto.Blockchain {
 func (st *serviceTester) Close() {
 	// Is this needed? Or is the cancel enough here? Do we need to cancel individual nodes?
 	for _, node := range st.nodes {
-		node.svr.Stop()
+		// if the node failed to start, it may not have a server
+		if node.svr != nil {
+			node.svr.Stop()
+		} else {
+			log := dlog.FromCtx(st.ctx)
+			log.Warn("Skipping srv Stop, node wasn't started")
+		}
 	}
 	if st.stopBlockAutoMining != nil {
 		st.stopBlockAutoMining()
