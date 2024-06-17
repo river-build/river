@@ -51,10 +51,7 @@ func (lfb *chainMonitorBuilder) OnBlock(cb OnChainNewBlock) {
 }
 
 func (lfb *chainMonitorBuilder) OnAllEvents(from BlockNumber, cb OnChainEventCallback) {
-	lfb.eventCallbacks = append(
-		lfb.eventCallbacks,
-		&chainEventCallback{handler: cb, logProcessed: false, fromBlock: from},
-	)
+	lfb.eventCallbacks = append(lfb.eventCallbacks, &chainEventCallback{handler: cb, logProcessed: false, fromBlock: from})
 	lfb.dirty = true
 }
 

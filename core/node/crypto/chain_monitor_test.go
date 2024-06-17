@@ -177,11 +177,7 @@ func TestChainMonitorEvents(t *testing.T) {
 
 	tc.DeployerBlockchain.ChainMonitor.OnBlock(onBlockCallback)
 	tc.DeployerBlockchain.ChainMonitor.OnAllEvents(owner.InitialBlockNum+1, allEventCallback)
-	tc.DeployerBlockchain.ChainMonitor.OnContractEvent(
-		owner.InitialBlockNum+1,
-		tc.RiverRegistryAddress,
-		contractEventCallback,
-	)
+	tc.DeployerBlockchain.ChainMonitor.OnContractEvent(owner.InitialBlockNum+1, tc.RiverRegistryAddress, contractEventCallback)
 	tc.DeployerBlockchain.ChainMonitor.OnContractWithTopicsEvent(
 		owner.InitialBlockNum+1,
 		tc.RiverRegistryAddress,
@@ -547,12 +543,7 @@ func TestContractEventsWithTopicsFromPast(t *testing.T) {
 			ctx,
 			"RegisterNode",
 			func(opts *bind.TransactOpts) (*types.Transaction, error) {
-				return tc.NodeRegistry.RegisterNode(
-					opts,
-					wallet.Address,
-					fmt.Sprintf("https://node%d.river.test", i),
-					contracts.NodeStatus_NotInitialized,
-				)
+				return tc.NodeRegistry.RegisterNode(opts, wallet.Address, fmt.Sprintf("https://node%d.river.test", i), contracts.NodeStatus_NotInitialized)
 			},
 		)
 		require.NoError(err, "register node")
