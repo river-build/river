@@ -120,6 +120,7 @@ func NewTransactionPoolWithPoliciesFromConfig(
 	riverClient BlockchainClient,
 	wallet *Wallet,
 	chainMonitor ChainMonitor,
+	initialBlockNumber BlockNumber,
 	metrics infra.MetricsFactory,
 ) (*transactionPool, error) {
 	if cfg.BlockTimeMs <= 0 {
@@ -141,7 +142,7 @@ func NewTransactionPoolWithPoliciesFromConfig(
 	)
 
 	return NewTransactionPoolWithPolicies(
-		ctx, riverClient, wallet, replacementPolicy, pricePolicy, chainMonitor, metrics)
+		ctx, riverClient, wallet, replacementPolicy, pricePolicy, chainMonitor, initialBlockNumber, metrics)
 }
 
 // NewTransactionPoolWithPolicies creates an in-memory transaction pool that tracks transactions that are submitted
@@ -156,6 +157,7 @@ func NewTransactionPoolWithPolicies(
 	replacePolicy TransactionPoolReplacePolicy,
 	pricePolicy TransactionPricePolicy,
 	chainMonitor ChainMonitor,
+	initialBlockNumber BlockNumber,
 	metrics infra.MetricsFactory,
 ) (*transactionPool, error) {
 	chainID, err := client.ChainID(ctx)
@@ -226,8 +228,8 @@ func NewTransactionPoolWithPolicies(
 		walletBalance:                walletBalance.With(curryLabels),
 	}
 
-	chainMonitor.OnBlock(txPool.OnBlock)
-	chainMonitor.OnHeader(txPool.OnHeader)
+	chainMonitor.OnBlock(initialBlockNumber+1, txPool.OnBlock)
+	chainMonitor.OnHeader(initialBlockNumber+1, txPool.OnHeader)
 
 	return txPool, nil
 }
