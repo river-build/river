@@ -7,27 +7,29 @@ import {WalletLink} from "contracts/src/factory/facets/wallet-link/WalletLink.so
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 // libraries
+import {Vm} from "forge-std/Test.sol";
 
 // contracts
-import {Test, Vm} from "forge-std/Test.sol";
-import {DeployWalletLink} from "contracts/scripts/deployments/facets/DeployWalletLink.s.sol";
+import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
+
 import {Nonces} from "contracts/src/diamond/utils/Nonces.sol";
+import {EIP712Facet} from "contracts/src/diamond/utils/cryptography/signature/EIP712Facet.sol";
 
-contract WalletLinkTest is IWalletLinkBase, Test {
-  DeployWalletLink deployWalletLink = new DeployWalletLink();
+contract WalletLinkTest is IWalletLinkBase, BaseSetup {
+  bytes32 private constant _LINKED_WALLET_TYPEHASH =
+    0x32d6e5648703e8835c24b277f7d517e9172988e7d5b3822be953e268608869e1;
 
-  WalletLink walletLink;
+  EIP712Facet eip712Facet;
+
   Vm.Wallet rootWallet;
   Vm.Wallet wallet;
   Vm.Wallet smartAccount;
 
-  function setUp() public virtual {
-    vm.setEnv("IN_TESTING", "true");
-    vm.setEnv(
-      "LOCAL_PRIVATE_KEY",
-      "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-    );
-    walletLink = WalletLink(deployWalletLink.deploy());
+  function setUp() public override {
+    super.setUp();
+
+    eip712Facet = EIP712Facet(spaceFactory);
+
     rootWallet = vm.createWallet("rootKey");
     wallet = vm.createWallet("wallet");
     smartAccount = vm.createWallet("smartAccount");
@@ -38,8 +40,12 @@ contract WalletLinkTest is IWalletLinkBase, Test {
   // =============================================================
   modifier givenCallerIsLinked() {
     uint256 nonce = walletLink.getLatestNonceForRootKey(rootWallet.addr);
-    bytes32 messageHash = keccak256(abi.encode(wallet.addr, nonce));
-    bytes memory signature = _signMessage(rootWallet.privateKey, messageHash);
+
+    bytes memory signature = _signWalletLink(
+      rootWallet.privateKey,
+      wallet.addr,
+      nonce
+    );
 
     // as a wallet, delegate to root wallet
     vm.startPrank(wallet.addr);
@@ -59,8 +65,12 @@ contract WalletLinkTest is IWalletLinkBase, Test {
 
   function test_revertWhen_linkCallerToRootKeyAddressIsZero() external {
     uint256 nonce = walletLink.getLatestNonceForRootKey(rootWallet.addr);
-    bytes32 messageHash = keccak256(abi.encode(wallet.addr, nonce));
-    bytes memory signature = _signMessage(rootWallet.privateKey, messageHash);
+
+    bytes memory signature = _signWalletLink(
+      rootWallet.privateKey,
+      wallet.addr,
+      nonce
+    );
 
     vm.prank(wallet.addr);
     vm.expectRevert(WalletLink__InvalidAddress.selector);
@@ -87,8 +97,12 @@ contract WalletLinkTest is IWalletLinkBase, Test {
     givenCallerIsLinked
   {
     uint256 nonce = walletLink.getLatestNonceForRootKey(rootWallet.addr);
-    bytes32 messageHash = keccak256(abi.encode(wallet.addr, nonce));
-    bytes memory signature = _signMessage(rootWallet.privateKey, messageHash);
+
+    bytes memory signature = _signWalletLink(
+      rootWallet.privateKey,
+      wallet.addr,
+      nonce
+    );
 
     vm.startPrank(wallet.addr);
     vm.expectRevert(
@@ -145,8 +159,12 @@ contract WalletLinkTest is IWalletLinkBase, Test {
 
   function test_revertWhen_linkCallerToRootKeyInvalidSignature() external {
     uint256 nonce = walletLink.getLatestNonceForRootKey(rootWallet.addr);
-    bytes32 messageHash = keccak256(abi.encode(wallet.addr, nonce));
-    bytes memory signature = _signMessage(wallet.privateKey, messageHash);
+
+    bytes memory signature = _signWalletLink(
+      wallet.privateKey,
+      wallet.addr,
+      nonce
+    );
 
     vm.prank(wallet.addr);
     vm.expectRevert(WalletLink__InvalidSignature.selector);
@@ -162,8 +180,12 @@ contract WalletLinkTest is IWalletLinkBase, Test {
   {
     uint256 nonce = 0;
     address anotherWallet = vm.createWallet("wallet2").addr;
-    bytes32 messageHash = keccak256(abi.encode(anotherWallet, nonce));
-    bytes memory signature = _signMessage(rootWallet.privateKey, messageHash);
+
+    bytes memory signature = _signWalletLink(
+      rootWallet.privateKey,
+      anotherWallet,
+      nonce
+    );
 
     vm.prank(anotherWallet);
     vm.expectRevert(
@@ -184,19 +206,19 @@ contract WalletLinkTest is IWalletLinkBase, Test {
   // =============================================================
   modifier givenWalletIsLinked() {
     uint256 rootNonce = walletLink.getLatestNonceForRootKey(rootWallet.addr);
-    bytes32 rootMessageHash = keccak256(abi.encode(wallet.addr, rootNonce));
-    bytes memory rootSignature = _signMessage(
+
+    bytes memory rootSignature = _signWalletLink(
       rootWallet.privateKey,
-      rootMessageHash
+      wallet.addr,
+      rootNonce
     );
 
     uint256 walletNonce = walletLink.getLatestNonceForRootKey(wallet.addr);
-    bytes32 walletMessageHash = keccak256(
-      abi.encode(rootWallet.addr, walletNonce)
-    );
-    bytes memory walletSignature = _signMessage(
+
+    bytes memory walletSignature = _signWalletLink(
       wallet.privateKey,
-      walletMessageHash
+      rootWallet.addr,
+      walletNonce
     );
 
     // as a smart wallet, delegate another wallet to a root wallet
@@ -303,8 +325,12 @@ contract WalletLinkTest is IWalletLinkBase, Test {
     address wrongWallet = vm.createWallet("wallet2").addr;
 
     uint256 nonce = walletLink.getLatestNonceForRootKey(rootWallet.addr);
-    bytes32 messageHash = keccak256(abi.encode(wrongWallet, nonce));
-    bytes memory signature = _signMessage(rootWallet.privateKey, messageHash);
+
+    bytes memory signature = _signWalletLink(
+      rootWallet.privateKey,
+      wrongWallet,
+      nonce
+    );
 
     vm.prank(smartAccount.addr);
     vm.expectRevert(WalletLink__InvalidSignature.selector);
@@ -322,12 +348,12 @@ contract WalletLinkTest is IWalletLinkBase, Test {
 
     uint256 nonce = walletLink.getLatestNonceForRootKey(rootWallet.addr);
 
-    bytes memory rootSignature = _signMessage(
+    bytes memory rootSignature = _signWalletLink(
       rootWallet.privateKey,
       keccak256(abi.encode(wallet, nonce))
     );
 
-    bytes memory walletSignature = _signMessage(
+    bytes memory walletSignature = _signWalletLink(
       wallet.privateKey,
       keccak256(abi.encode(wrongWallet, nonce))
     );
@@ -348,14 +374,16 @@ contract WalletLinkTest is IWalletLinkBase, Test {
     uint256 nonce = 0;
     Vm.Wallet memory anotherWallet = vm.createWallet("wallet2");
 
-    bytes memory rootSignature = _signMessage(
+    bytes memory rootSignature = _signWalletLink(
       rootWallet.privateKey,
-      keccak256(abi.encode(anotherWallet.addr, nonce))
+      anotherWallet.addr,
+      nonce
     );
 
-    bytes memory walletSignature = _signMessage(
+    bytes memory walletSignature = _signWalletLink(
       anotherWallet.privateKey,
-      keccak256(abi.encode(rootWallet.addr, nonce))
+      rootWallet.addr,
+      nonce
     );
 
     vm.prank(smartAccount.addr);
@@ -376,15 +404,24 @@ contract WalletLinkTest is IWalletLinkBase, Test {
   // =============================================================
   //                           Helpers
   // =============================================================
-
-  function _signMessage(
+  function _signWalletLink(
     uint256 privateKey,
-    bytes32 message
-  ) internal pure returns (bytes memory) {
-    (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-      privateKey,
-      MessageHashUtils.toEthSignedMessageHash(message)
+    address newWallet,
+    uint256 nonce
+  ) internal view returns (bytes memory) {
+    bytes32 domainSeparator = eip712Facet.DOMAIN_SEPARATOR();
+
+    bytes32 structHash = keccak256(
+      abi.encode(_LINKED_WALLET_TYPEHASH, newWallet, nonce)
     );
+
+    bytes32 typeDataHash = MessageHashUtils.toTypedDataHash(
+      domainSeparator,
+      structHash
+    );
+
+    (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, typeDataHash);
+
     return abi.encodePacked(r, s, v);
   }
 }

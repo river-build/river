@@ -7,14 +7,21 @@ import {IWalletLinkBase} from "./IWalletLink.sol";
 // libraries
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {WalletLinkStorage} from "./WalletLinkStorage.sol";
 
 // contracts
 import {Nonces} from "contracts/src/diamond/utils/Nonces.sol";
+import {EIP712Base} from "contracts/src/diamond/utils/cryptography/signature/EIP712Base.sol";
 
-abstract contract WalletLinkBase is IWalletLinkBase, Nonces {
+abstract contract WalletLinkBase is IWalletLinkBase, EIP712Base, Nonces {
   using EnumerableSet for EnumerableSet.AddressSet;
+
+  // =============================================================
+  //                           Constants
+  // =============================================================
+  /// @dev `keccak256("LinkedWallet(address wallet,uint256 nonce)")`.
+  bytes32 private constant _LINKED_WALLET_TYPEHASH =
+    0x32d6e5648703e8835c24b277f7d517e9172988e7d5b3822be953e268608869e1;
 
   // =============================================================
   //                      External - Write
@@ -34,10 +41,12 @@ abstract contract WalletLinkBase is IWalletLinkBase, Nonces {
 
     _verifyWallets(ds, newWallet, rootWallet.addr);
 
-    //Verify that the root wallet signature contains the correct nonce and the correct caller wallet
-    bytes32 rootKeyMessageHash = MessageHashUtils.toEthSignedMessageHash(
-      keccak256(abi.encode(newWallet, nonce))
+    bytes32 structHash = keccak256(
+      abi.encode(_LINKED_WALLET_TYPEHASH, newWallet, nonce)
     );
+
+    //Verify that the root wallet signature contains the correct nonce and the correct caller wallet
+    bytes32 rootKeyMessageHash = _hashTypedDataV4(structHash);
 
     // Verify the signature of the root wallet is correct for the nonce and wallet address
     if (
@@ -69,10 +78,12 @@ abstract contract WalletLinkBase is IWalletLinkBase, Nonces {
 
     _verifyWallets(ds, wallet.addr, rootWallet.addr);
 
-    //Verify that the root wallet signature contains the correct nonce and the correct wallet
-    bytes32 rootKeyMessageHash = MessageHashUtils.toEthSignedMessageHash(
-      keccak256(abi.encode(wallet.addr, nonce))
+    bytes32 structHash = keccak256(
+      abi.encode(_LINKED_WALLET_TYPEHASH, wallet.addr, nonce)
     );
+
+    //Verify that the root wallet signature contains the correct nonce and the correct wallet
+    bytes32 rootKeyMessageHash = _hashTypedDataV4(structHash);
 
     // Verify the signature of the root wallet is correct for the nonce and wallet address
     if (
@@ -81,9 +92,10 @@ abstract contract WalletLinkBase is IWalletLinkBase, Nonces {
       revert WalletLink__InvalidSignature();
     }
 
-    bytes32 walletMessageHash = MessageHashUtils.toEthSignedMessageHash(
-      keccak256(abi.encode(rootWallet.addr, nonce))
+    structHash = keccak256(
+      abi.encode(_LINKED_WALLET_TYPEHASH, rootWallet.addr, nonce)
     );
+    bytes32 walletMessageHash = _hashTypedDataV4(structHash);
 
     // Verify the signature of the wallet is correct for the nonce and root wallet address
     if (ECDSA.recover(walletMessageHash, wallet.signature) != wallet.addr) {
@@ -126,9 +138,11 @@ abstract contract WalletLinkBase is IWalletLinkBase, Nonces {
       revert WalletLink__NotLinked(walletToRemove, rootWallet.addr);
     }
 
-    bytes32 rootKeyMessageHash = MessageHashUtils.toEthSignedMessageHash(
-      keccak256(abi.encode(walletToRemove, nonce))
+    // Verify that the root wallet signature contains the correct nonce and the correct wallet
+    bytes32 structHash = keccak256(
+      abi.encode(_LINKED_WALLET_TYPEHASH, walletToRemove, nonce)
     );
+    bytes32 rootKeyMessageHash = _hashTypedDataV4(structHash);
 
     // Verify the signature of the root wallet is correct for the nonce and wallet address
     if (
