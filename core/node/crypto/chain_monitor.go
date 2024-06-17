@@ -35,7 +35,7 @@ type (
 		// OnContractEvent matches all events created by the contract on the given address.
 		OnContractEvent(addr common.Address, cb OnChainEventCallback)
 		// OnContractWithTopicsEvent matches events created by the contract on the given
-		OnContractWithTopicsEvent(addr common.Address, topics [][]common.Hash, cb OnChainEventCallback)
+		OnContractWithTopicsEvent(from BlockNumber, addr common.Address, topics [][]common.Hash, cb OnChainEventCallback)
 		// OnStopped calls cb after the chain monitor stopped monitoring the chain
 		OnStopped(cb OnChainMonitorStoppedCallback)
 	}
@@ -131,13 +131,14 @@ func (ecm *chainMonitor) OnContractEvent(addr common.Address, cb OnChainEventCal
 }
 
 func (ecm *chainMonitor) OnContractWithTopicsEvent(
+	from BlockNumber,
 	addr common.Address,
 	topics [][]common.Hash,
 	cb OnChainEventCallback,
 ) {
 	ecm.muBuilder.Lock()
 	defer ecm.muBuilder.Unlock()
-	ecm.builder.OnContractWithTopicsEvent(addr, topics, cb)
+	ecm.builder.OnContractWithTopicsEvent(from, addr, topics, cb)
 }
 
 func (ecm *chainMonitor) OnStopped(cb OnChainMonitorStoppedCallback) {

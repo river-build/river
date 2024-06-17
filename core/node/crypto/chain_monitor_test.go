@@ -179,6 +179,7 @@ func TestChainMonitorEvents(t *testing.T) {
 	tc.DeployerBlockchain.ChainMonitor.OnAllEvents(allEventCallback)
 	tc.DeployerBlockchain.ChainMonitor.OnContractEvent(tc.RiverRegistryAddress, contractEventCallback)
 	tc.DeployerBlockchain.ChainMonitor.OnContractWithTopicsEvent(
+		0,
 		tc.RiverRegistryAddress,
 		[][]common.Hash{{nodeRegistryABI.Events["NodeAdded"].ID}},
 		contractWithTopicsEventCallback,
