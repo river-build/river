@@ -17,6 +17,7 @@ func TestBanningCache(t *testing.T) {
 	isBanned, err := bannedAddressCache.IsBanned(
 		[]common.Address{common.HexToAddress("0x1")},
 		func() (map[common.Address]struct{}, error) {
+
 			return map[common.Address]struct{}{
 				common.HexToAddress("0x1"): {},
 			}, nil
@@ -38,6 +39,7 @@ func TestBanningCache(t *testing.T) {
 	isBanned, err = bannedAddressCache.IsBanned(
 		[]common.Address{common.HexToAddress("0x1")},
 		func() (map[common.Address]struct{}, error) {
+
 			return map[common.Address]struct{}{
 				common.HexToAddress("0x2"): {},
 			}, nil
@@ -68,4 +70,5 @@ func TestBanningCache(t *testing.T) {
 	require.NoError(t, err)
 	// Update time has not changed
 	require.Equal(t, lastUpdated, bannedAddressCache.lastUpdated)
+
 }

@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/river-build/river/core/node/crypto"
 	"log/slog"
 	"time"
-
-	"github.com/river-build/river/core/node/crypto"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/river-build/river/core/node/auth"

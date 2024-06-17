@@ -3,10 +3,9 @@ package events
 import (
 	"bytes"
 	"context"
+	"github.com/river-build/river/core/node/crypto"
 	"sync"
 	"time"
-
-	"github.com/river-build/river/core/node/crypto"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/river-build/river/core/node/dlog"
@@ -114,9 +113,8 @@ func (s *streamImpl) loadInternal(ctx context.Context) error {
 		return nil
 	}
 
-	streamRecencyConstraintsGenerations, err := s.params.ChainConfig.GetInt(
-		crypto.StreamRecencyConstraintsGenerationsConfigKey,
-	)
+	streamRecencyConstraintsGenerations, err :=
+		s.params.ChainConfig.GetInt(crypto.StreamRecencyConstraintsGenerationsConfigKey)
 	if err != nil {
 		return err
 	}

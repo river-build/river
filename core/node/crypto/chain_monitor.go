@@ -35,12 +35,7 @@ type (
 		// OnContractEvent matches all events created by the contract on the given address.
 		OnContractEvent(from BlockNumber, addr common.Address, cb OnChainEventCallback)
 		// OnContractWithTopicsEvent matches events created by the contract on the given
-		OnContractWithTopicsEvent(
-			from BlockNumber,
-			addr common.Address,
-			topics [][]common.Hash,
-			cb OnChainEventCallback,
-		)
+		OnContractWithTopicsEvent(from BlockNumber, addr common.Address, topics [][]common.Hash, cb OnChainEventCallback)
 		// OnStopped calls cb after the chain monitor stopped monitoring the chain
 		OnStopped(cb OnChainMonitorStoppedCallback)
 	}
