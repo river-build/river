@@ -421,7 +421,6 @@ func parseBlockchainDurations(str string, result map[uint64]BlockchainInfo) erro
 		}
 	}
 	return nil
-
 }
 
 func (c *Config) parseChains() error {
