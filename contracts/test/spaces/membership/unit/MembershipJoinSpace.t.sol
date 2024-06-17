@@ -12,7 +12,7 @@ import {IWalletLink, IWalletLinkBase} from "contracts/src/factory/facets/wallet-
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 //libraries
-import {Vm, Test} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Test.sol";
 
 //contracts
 
@@ -79,17 +79,6 @@ contract MembershipJoinSpace is
     address[] selectedNodes;
   }
 
-  function _signMessage(
-    uint256 privateKey,
-    bytes32 message
-  ) internal pure returns (bytes memory) {
-    (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-      privateKey,
-      MessageHashUtils.toEthSignedMessageHash(message)
-    );
-    return abi.encodePacked(r, s, v);
-  }
-
   function test_joinSpaceWithUserEntitlement_passes() external {
     vm.prank(alice);
     membership.joinSpace(alice);
@@ -101,8 +90,12 @@ contract MembershipJoinSpace is
     Vm.Wallet memory daveWallet = vm.createWallet("dave");
 
     uint256 nonce = walletLink.getLatestNonceForRootKey(daveWallet.addr);
-    bytes32 messageHash = keccak256(abi.encode(daveWallet.addr, nonce));
-    bytes memory signature = _signMessage(aliceWallet.privateKey, messageHash);
+
+    bytes memory signature = _signWalletLink(
+      aliceWallet.privateKey,
+      daveWallet.addr,
+      nonce
+    );
 
     vm.startPrank(daveWallet.addr);
     vm.expectEmit(address(wl));
@@ -121,8 +114,12 @@ contract MembershipJoinSpace is
     Vm.Wallet memory emilyWallet = vm.createWallet("emily");
 
     uint256 nonce = walletLink.getLatestNonceForRootKey(aliceWallet.addr);
-    bytes32 messageHash = keccak256(abi.encode(aliceWallet.addr, nonce));
-    bytes memory signature = _signMessage(emilyWallet.privateKey, messageHash);
+
+    bytes memory signature = _signWalletLink(
+      emilyWallet.privateKey,
+      aliceWallet.addr,
+      nonce
+    );
 
     vm.startPrank(alice);
     vm.expectEmit(address(wl));

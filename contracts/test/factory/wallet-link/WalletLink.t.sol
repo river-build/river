@@ -4,7 +4,6 @@ pragma solidity ^0.8.23;
 // interfaces
 import {IWalletLinkBase} from "contracts/src/factory/facets/wallet-link/IWalletLink.sol";
 import {WalletLink} from "contracts/src/factory/facets/wallet-link/WalletLink.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 // libraries
 import {Vm} from "forge-std/Test.sol";
@@ -13,22 +12,14 @@ import {Vm} from "forge-std/Test.sol";
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 
 import {Nonces} from "contracts/src/diamond/utils/Nonces.sol";
-import {EIP712Facet} from "contracts/src/diamond/utils/cryptography/signature/EIP712Facet.sol";
 
 contract WalletLinkTest is IWalletLinkBase, BaseSetup {
-  bytes32 private constant _LINKED_WALLET_TYPEHASH =
-    0x32d6e5648703e8835c24b277f7d517e9172988e7d5b3822be953e268608869e1;
-
-  EIP712Facet eip712Facet;
-
   Vm.Wallet rootWallet;
   Vm.Wallet wallet;
   Vm.Wallet smartAccount;
 
   function setUp() public override {
     super.setUp();
-
-    eip712Facet = EIP712Facet(spaceFactory);
 
     rootWallet = vm.createWallet("rootKey");
     wallet = vm.createWallet("wallet");
@@ -350,12 +341,14 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
 
     bytes memory rootSignature = _signWalletLink(
       rootWallet.privateKey,
-      keccak256(abi.encode(wallet, nonce))
+      wallet.addr,
+      nonce
     );
 
     bytes memory walletSignature = _signWalletLink(
       wallet.privateKey,
-      keccak256(abi.encode(wrongWallet, nonce))
+      wrongWallet,
+      nonce
     );
 
     vm.prank(smartAccount.addr);
@@ -399,29 +392,5 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
       LinkedWallet(rootWallet.addr, rootSignature),
       nonce
     );
-  }
-
-  // =============================================================
-  //                           Helpers
-  // =============================================================
-  function _signWalletLink(
-    uint256 privateKey,
-    address newWallet,
-    uint256 nonce
-  ) internal view returns (bytes memory) {
-    bytes32 domainSeparator = eip712Facet.DOMAIN_SEPARATOR();
-
-    bytes32 structHash = keccak256(
-      abi.encode(_LINKED_WALLET_TYPEHASH, newWallet, nonce)
-    );
-
-    bytes32 typeDataHash = MessageHashUtils.toTypedDataHash(
-      domainSeparator,
-      structHash
-    );
-
-    (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, typeDataHash);
-
-    return abi.encodePacked(r, s, v);
   }
 }

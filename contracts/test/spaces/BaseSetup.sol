@@ -10,10 +10,11 @@ import {IWalletLink} from "contracts/src/factory/facets/wallet-link/IWalletLink.
 import {ISpaceOwner} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
 import {IMainnetDelegation} from "contracts/src/tokens/river/base/delegation/IMainnetDelegation.sol";
 import {INodeOperator} from "contracts/src/base/registry/facets/operator/INodeOperator.sol";
-
+import {EIP712Facet} from "contracts/src/diamond/utils/cryptography/signature/EIP712Facet.sol";
 import {NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
 
 // libraries
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 // contracts
 import {MockMessenger} from "contracts/test/mocks/MockMessenger.sol";
@@ -37,6 +38,9 @@ import {DeployBaseRegistry} from "contracts/scripts/deployments/DeployBaseRegist
  * @dev - This contract is inherited by all other test contracts, it will create one diamond contract which represent the factory contract that creates all spaces
  */
 contract BaseSetup is TestUtils, SpaceHelper {
+  bytes32 private constant _LINKED_WALLET_TYPEHASH =
+    0x32d6e5648703e8835c24b277f7d517e9172988e7d5b3822be953e268608869e1;
+
   DeployBaseRegistry internal deployBaseRegistry = new DeployBaseRegistry();
   DeploySpaceFactory internal deploySpaceFactory = new DeploySpaceFactory();
   DeployRiverBase internal deployRiverTokenBase = new DeployRiverBase();
@@ -73,6 +77,7 @@ contract BaseSetup is TestUtils, SpaceHelper {
   IImplementationRegistry internal implementationRegistry;
   IWalletLink internal walletLink;
   INodeOperator internal nodeOperator;
+  EIP712Facet eip712Facet;
 
   MockMessenger internal messenger;
 
@@ -108,6 +113,7 @@ contract BaseSetup is TestUtils, SpaceHelper {
     fixedPricingModule = deploySpaceFactory.fixedPricing();
     walletLink = IWalletLink(spaceFactory);
     implementationRegistry = IImplementationRegistry(spaceFactory);
+    eip712Facet = EIP712Facet(spaceFactory);
 
     // Base Registry Diamond
     riverToken = deployRiverTokenBase.deploy();
@@ -165,5 +171,26 @@ contract BaseSetup is TestUtils, SpaceHelper {
       entitlementChecker.registerNode(nodes[i]);
       vm.stopPrank();
     }
+  }
+
+  function _signWalletLink(
+    uint256 privateKey,
+    address newWallet,
+    uint256 nonce
+  ) internal view returns (bytes memory) {
+    bytes32 domainSeparator = eip712Facet.DOMAIN_SEPARATOR();
+
+    bytes32 structHash = keccak256(
+      abi.encode(_LINKED_WALLET_TYPEHASH, newWallet, nonce)
+    );
+
+    bytes32 typeDataHash = MessageHashUtils.toTypedDataHash(
+      domainSeparator,
+      structHash
+    );
+
+    (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, typeDataHash);
+
+    return abi.encodePacked(r, s, v);
   }
 }
