@@ -46,7 +46,10 @@ export class UnauthenticatedClient {
 
     async streamExists(streamId: string | Uint8Array): Promise<boolean> {
         this.logCall('streamExists?', streamId)
-        const response = await this.rpcClient.getStream({ streamId: streamIdAsBytes(streamId) })
+        const response = await this.rpcClient.getStream({
+            streamId: streamIdAsBytes(streamId),
+            optional: true,
+        })
         this.logCall('streamExists=', streamId, response.stream)
         return response.stream !== undefined
     }
