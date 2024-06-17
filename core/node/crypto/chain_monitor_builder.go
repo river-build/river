@@ -40,23 +40,26 @@ func (lfb *chainMonitorBuilder) Query() ethereum.FilterQuery {
 	return query
 }
 
-func (lfb *chainMonitorBuilder) OnHeader(cb OnChainNewHeader) {
-	lfb.headerCallbacks = append(lfb.headerCallbacks, &chainHeaderCallback{handler: cb})
+func (lfb *chainMonitorBuilder) OnHeader(from BlockNumber, cb OnChainNewHeader) {
+	lfb.headerCallbacks = append(lfb.headerCallbacks, &chainHeaderCallback{handler: cb, fromBlock: from})
 	lfb.dirty = true
 }
 
-func (lfb *chainMonitorBuilder) OnBlock(cb OnChainNewBlock) {
-	lfb.blockCallbacks = append(lfb.blockCallbacks, &chainBlockCallback{handler: cb})
+func (lfb *chainMonitorBuilder) OnBlock(from BlockNumber, cb OnChainNewBlock) {
+	lfb.blockCallbacks = append(lfb.blockCallbacks, &chainBlockCallback{handler: cb, fromBlock: from})
 	lfb.dirty = true
 }
 
-func (lfb *chainMonitorBuilder) OnAllEvents(cb OnChainEventCallback) {
-	lfb.eventCallbacks = append(lfb.eventCallbacks, &chainEventCallback{handler: cb, logProcessed: false})
+func (lfb *chainMonitorBuilder) OnAllEvents(from BlockNumber, cb OnChainEventCallback) {
+	lfb.eventCallbacks = append(lfb.eventCallbacks, &chainEventCallback{handler: cb, logProcessed: false, fromBlock: from})
 	lfb.dirty = true
 }
 
-func (lfb *chainMonitorBuilder) OnContractEvent(addr common.Address, cb OnChainEventCallback) {
-	lfb.eventCallbacks = append(lfb.eventCallbacks, &chainEventCallback{handler: cb, address: &addr, logProcessed: false})
+func (lfb *chainMonitorBuilder) OnContractEvent(from BlockNumber, addr common.Address, cb OnChainEventCallback) {
+	lfb.eventCallbacks = append(
+		lfb.eventCallbacks,
+		&chainEventCallback{handler: cb, address: &addr, logProcessed: false, fromBlock: from},
+	)
 	lfb.dirty = true
 }
 
@@ -89,6 +92,7 @@ type chainEventCallback struct {
 	lastProcessedBlock    uint64
 	lastProcessedTxIndex  uint
 	lastProcessedLogIndex uint
+	fromBlock             BlockNumber
 }
 
 // alreadyProcessed returns an indication if cb already processed the given log.

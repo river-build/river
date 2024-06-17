@@ -34,7 +34,7 @@ func TestChainMonitorBlocks(t *testing.T) {
 		}
 	)
 
-	tc.DeployerBlockchain.ChainMonitor.OnBlock(onBlockCallback)
+	tc.DeployerBlockchain.ChainMonitor.OnBlock(0, onBlockCallback)
 
 	var prev uint64
 	for i := 0; i < 5; i++ {
@@ -175,11 +175,11 @@ func TestChainMonitorEvents(t *testing.T) {
 		addrs = []common.Address{tc.Wallets[0].Address}
 	)
 
-	tc.DeployerBlockchain.ChainMonitor.OnBlock(onBlockCallback)
-	tc.DeployerBlockchain.ChainMonitor.OnAllEvents(allEventCallback)
-	tc.DeployerBlockchain.ChainMonitor.OnContractEvent(tc.RiverRegistryAddress, contractEventCallback)
+	tc.DeployerBlockchain.ChainMonitor.OnBlock(owner.InitialBlockNum+1, onBlockCallback)
+	tc.DeployerBlockchain.ChainMonitor.OnAllEvents(owner.InitialBlockNum+1, allEventCallback)
+	tc.DeployerBlockchain.ChainMonitor.OnContractEvent(owner.InitialBlockNum+1, tc.RiverRegistryAddress, contractEventCallback)
 	tc.DeployerBlockchain.ChainMonitor.OnContractWithTopicsEvent(
-		0,
+		owner.InitialBlockNum+1,
 		tc.RiverRegistryAddress,
 		[][]common.Hash{{nodeRegistryABI.Events["NodeAdded"].ID}},
 		contractWithTopicsEventCallback,
@@ -223,4 +223,111 @@ func TestChainMonitorEvents(t *testing.T) {
 
 	cancel()
 	<-onMonitorStoppedCount // if the on stop callback isn't called this will time out
+}
+
+func TestContractEventsWithTopicsFromPast(t *testing.T) {
+	require := require.New(t)
+	ctx, cancel := test.NewTestContext()
+	defer cancel()
+
+	tc, err := crypto.NewBlockchainTestContext(ctx, 0, false)
+	require.NoError(err)
+	defer tc.Close()
+
+	var (
+		owner                                         = tc.DeployerBlockchain
+		chainMonitor                                  = tc.DeployerBlockchain.ChainMonitor
+		nodeCount                                     = 5
+		contractWithTopicsEventCallbackCapturedEvents = make(chan types.Log, nodeCount)
+		contractWithTopicsEventCallback               = func(ctx context.Context, event types.Log) {
+			contractWithTopicsEventCallbackCapturedEvents <- event
+		}
+		historicalContractWithTopicsEventCallbackCapturedEvents = make(chan types.Log, nodeCount)
+		historicalContractWithTopicsEventCallback               = func(ctx context.Context, event types.Log) {
+			historicalContractWithTopicsEventCallbackCapturedEvents <- event
+		}
+		nodeRegistryABI, _ = abi.JSON(strings.NewReader(contracts.NodeRegistryV1MetaData.ABI))
+		readCapturedEvents = func(captured <-chan types.Log) []types.Log {
+			var logs []types.Log
+			for i := 0; i < nodeCount; i++ {
+				logs = append(logs, <-captured)
+			}
+			return logs
+		}
+	)
+
+	chainMonitor.OnContractWithTopicsEvent(
+		0,
+		tc.RiverRegistryAddress,
+		[][]common.Hash{{nodeRegistryABI.Events["NodeAdded"].ID}},
+		contractWithTopicsEventCallback,
+	)
+
+	// register several nodes
+	var (
+		pendingTx     crypto.TransactionPoolPendingTransaction
+		nodeAddresses = make([]common.Address, nodeCount)
+	)
+	for i := range nodeCount {
+		wallet, err := crypto.NewWallet(ctx)
+		require.NoError(err, "new wallet")
+		nodeAddresses[0] = wallet.Address
+		pendingTx, err = owner.TxPool.Submit(
+			ctx,
+			"RegisterNode",
+			func(opts *bind.TransactOpts) (*types.Transaction, error) {
+				return tc.NodeRegistry.RegisterNode(opts, wallet.Address, fmt.Sprintf("https://node%d.river.test", i), contracts.NodeStatus_NotInitialized)
+			},
+		)
+		require.NoError(err, "register node")
+	}
+
+	require.NoError(err)
+
+	// generate some blocks
+	N := 5
+	for i := 0; i < N; i++ {
+		tc.Commit(ctx)
+	}
+
+	receipt := <-pendingTx.Wait()
+	require.Equal(crypto.TransactionResultSuccess, receipt.Status)
+
+	var (
+		events                   = readCapturedEvents(contractWithTopicsEventCallbackCapturedEvents)
+		firstRegisteredNodeEvent = events[0]
+		lastRegisteredNodeEvent  = events[nodeCount-1]
+	)
+
+	require.Equal(nodeCount, len(events), "unexpected NodeAdded logs count")
+
+	// generate extra blocks to ensure that the chain monitor is past the existing set of blocks and needs to look at
+	// historical blocks to find the NodeAdded events.
+	for i := 0; i < N; i++ {
+		tc.Commit(ctx)
+	}
+
+	for {
+		blockNum := tc.BlockNum(ctx)
+		if blockNum.AsUint64() > lastRegisteredNodeEvent.BlockNumber {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	// register a callback for the NodeAdded event on an old block.
+	// Ensure that historicalContractWithTopicsEventCallback receives all node added events from the past.
+	chainMonitor.OnContractWithTopicsEvent(
+		crypto.BlockNumber(firstRegisteredNodeEvent.BlockNumber),
+		tc.RiverRegistryAddress,
+		[][]common.Hash{{nodeRegistryABI.Events["NodeAdded"].ID}},
+		historicalContractWithTopicsEventCallback,
+	)
+
+	// ensure that historicalContractWithTopicsEventCallback received old NodeAdded events
+	historicalEvents := readCapturedEvents(historicalContractWithTopicsEventCallbackCapturedEvents)
+
+	// make sure all logs match and that contractWithTopicsEventCallback didn't receive the same logs again
+	require.Equal(nodeCount, len(historicalEvents), "unexpected NodeAdded logs count")
+	require.EqualValues(events, historicalEvents, "unexpected logs")
 }

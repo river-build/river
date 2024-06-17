@@ -113,7 +113,7 @@ func NewStreamCache(
 
 	// TODO: setup monitor for stream updates and update records accordingly.
 
-	chainMonitor.OnBlock(func(ctx context.Context, _ crypto.BlockNumber) { s.OnNewBlock(ctx) })
+	chainMonitor.OnBlock(appliedBlockNum+1, func(ctx context.Context, _ crypto.BlockNumber) { s.OnNewBlock(ctx) })
 
 	go s.runCacheCleanup(ctx)
 
