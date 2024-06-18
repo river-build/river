@@ -125,6 +125,29 @@ contract RewardsDistribution is
     );
   }
 
+  function mainnetClaimByAddress(address mainnetDelegatorToClaim) external {
+    RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
+      .layout();
+
+    if (_getAuthorizedClaimer(mainnetDelegatorToClaim) != msg.sender)
+      revert RewardsDistribution_UnauthorizedClaimer(
+        mainnetDelegatorToClaim,
+        msg.sender
+      );
+
+    uint256 amount = getClaimableAmountForDelegator(mainnetDelegatorToClaim);
+    if (amount == 0) revert RewardsDistribution_NoRewardsToClaim();
+
+    ds.distributionByDelegator[mainnetDelegatorToClaim] = 0;
+
+    CurrencyTransfer.transferCurrency(
+      SpaceDelegationStorage.layout().riverToken,
+      address(this),
+      msg.sender,
+      amount
+    );
+  }
+
   function delegatorClaim() external {
     uint256 amount = getClaimableAmountForDelegator(msg.sender);
     if (amount == 0) revert RewardsDistribution_NoRewardsToClaim();

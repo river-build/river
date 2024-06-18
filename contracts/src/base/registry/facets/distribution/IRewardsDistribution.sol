@@ -12,6 +12,10 @@ interface IRewardsDistributionBase {
   error RewardsDistribution_InsufficientRewardBalance();
   error RewardsDistribution_InvalidOperator();
   event RewardsDistributed(address operator, uint256 amount);
+  error RewardsDistribution_UnauthorizedClaimer(
+    address delegator,
+    address claimer
+  );
 }
 
 interface IRewardsDistribution is IRewardsDistributionBase {
