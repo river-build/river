@@ -8,6 +8,7 @@ import {RuleEntitlement} from "contracts/src/spaces/entitlements/rule/RuleEntitl
 import {IEntitlementBase} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {validateRuleData} from "contracts/src/spaces/entitlements/rule/RuleEntitlement.sol";
 
 contract RuleEntitlementTest is TestUtils, IEntitlementBase {
   RuleEntitlement internal implementation;
@@ -130,6 +131,12 @@ contract RuleEntitlementTest is TestUtils, IEntitlementBase {
     ruleEntitlement.setEntitlement(roleId, makeMockEncodedRuleData());
     ruleOperations = ruleEntitlement.getOperations(roleId);
     assertEq(ruleOperations.length, 3);
+
+    IRuleEntitlement.RuleData memory ruleData = ruleEntitlement.getRuleData(
+      roleId
+    );
+
+    validateRuleData(ruleData);
   }
 
   function test_removeRuleEntitlement() external givenRuleEntitlementIsSet {
