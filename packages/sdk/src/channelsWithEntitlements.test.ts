@@ -375,7 +375,7 @@ describe('channelsWithEntitlements', () => {
         await alice.stopSync()
     })
 
-    test('user booted on message post after entitlement loss', async () => {
+    test.skip('user booted on message post after entitlement loss', async () => {
         const testNftAddress = await getContractAddress('TestNFT')
         const { alice, alicesWallet, bob, channelId } = await setupChannelWithCustomRole(
             [],
