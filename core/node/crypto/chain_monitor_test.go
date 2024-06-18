@@ -319,9 +319,6 @@ func TestContractAllEventsFromFuture(t *testing.T) {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	// register a callback for the NodeAdded event on a future block.
-	// Ensure that historicalContractAllEventsCallback and historicalContractEventsCallback receive all node added
-	// events from the past.
 	futureBlockNum := 2 + tc.BlockNum(ctx)
 	chainMonitor.OnAllEvents(futureBlockNum, futureContractEventsCallback)
 
@@ -361,7 +358,7 @@ func TestContractAllEventsFromFuture(t *testing.T) {
 	receipt = <-pendingTx.Wait()
 	require.Equal(crypto.TransactionResultSuccess, receipt.Status)
 
-	// ensure that historicalContractWithTopicsEventCallback received old NodeAdded events
+	// ensure that futureContractEventsCallbackCapturedEvents received old NodeAdded events
 	futureEvents := readCapturedEvents(futureContractEventsCallbackCapturedEvents)
 
 	// make sure we received the node added events after the future block
