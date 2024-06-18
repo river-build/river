@@ -170,6 +170,11 @@ contract RuleEntitlement is
     entitlement.grantedBy = sender;
     entitlement.grantedTime = currentTime;
 
+    // If the entitlement already exists, clear the existing data
+    delete entitlement.data.checkOperations;
+    delete entitlement.data.logicalOperations;
+    delete entitlement.data.operations;
+
     // All checks passed; initialize state variables
     // Manually copy _checkOperations to checkOperations
     for (uint256 i = 0; i < checkOperationsLength; i++) {
