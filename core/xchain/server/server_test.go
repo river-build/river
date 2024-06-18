@@ -261,7 +261,7 @@ func (st *serviceTester) Start(t *testing.T) {
 			},
 		)
 
-		require.NoError(t, err, "register node")
+		st.AssertNoEVMError(err)
 		receipt := <-pendingTx.Wait()
 		if receipt == nil || receipt.Status != node_crypto.TransactionResultSuccess {
 			log.Fatal("unable to register node")
