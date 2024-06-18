@@ -598,3 +598,86 @@ func TestContractEventsWithTopicsFromPast(t *testing.T) {
 	require.Equal(nodeCount, len(historicalEvents), "unexpected NodeAdded logs count")
 	require.EqualValues(events, historicalEvents, "unexpected logs")
 }
+
+func TestEventsOrder(t *testing.T) {
+	require := require.New(t)
+	ctx, cancel := test.NewTestContext()
+	defer cancel()
+
+	tc, err := crypto.NewBlockchainTestContext(ctx, 0, false)
+	require.NoError(err)
+	defer tc.Close()
+
+	var (
+		owner                           = tc.DeployerBlockchain
+		chainMonitor                    = tc.DeployerBlockchain.ChainMonitor
+		nodeCount                       = 100
+		capturedEvents                  = make(chan types.Log, nodeCount)
+		contractWithTopicsEventCallback = func(ctx context.Context, event types.Log) {
+			capturedEvents <- event
+		}
+
+		nodeRegistryABI, _ = abi.JSON(strings.NewReader(contracts.NodeRegistryV1MetaData.ABI))
+		readCapturedEvents = func(captured <-chan types.Log) []types.Log {
+			var logs []types.Log
+			for i := 0; i < nodeCount; i++ {
+				logs = append(logs, <-captured)
+			}
+			return logs
+		}
+	)
+
+	chainMonitor.OnContractWithTopicsEvent(
+		0,
+		tc.RiverRegistryAddress,
+		[][]common.Hash{{nodeRegistryABI.Events["NodeAdded"].ID}},
+		contractWithTopicsEventCallback,
+	)
+
+	// register several nodes
+	var (
+		pendingTx     crypto.TransactionPoolPendingTransaction
+		nodeAddresses = make([]common.Address, nodeCount)
+	)
+	for i := range nodeCount {
+		wallet, err := crypto.NewWallet(ctx)
+		require.NoError(err, "new wallet")
+		nodeAddresses[i] = wallet.Address
+		pendingTx, err = owner.TxPool.Submit(
+			ctx,
+			"RegisterNode",
+			func(opts *bind.TransactOpts) (*types.Transaction, error) {
+				return tc.NodeRegistry.RegisterNode(opts, wallet.Address, fmt.Sprintf("https://node%d.river.test", i), contracts.NodeStatus_NotInitialized)
+			},
+		)
+		require.NoError(err, "register node")
+	}
+
+	require.NoError(err)
+
+	// generate blocks until last tx is processed
+	var receipt *types.Receipt
+	for receipt == nil {
+		tc.Commit(ctx)
+		select {
+		case r := <-pendingTx.Wait():
+			receipt = r
+		default:
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	require.Equal(crypto.TransactionResultSuccess, receipt.Status)
+
+	// make sure that the event callback is called in the correct order
+	for i, event := range readCapturedEvents(capturedEvents) {
+		if nodeRegistryABI.Events["NodeAdded"].ID != event.Topics[0] {
+			continue
+		}
+		var e contracts.NodeRegistryV1NodeAdded
+		if err := tc.NodeRegistry.BoundContract().UnpackLog(&e, "NodeAdded", event); err != nil {
+			require.NoError(err, "OnNodeAdded: unable to decode NodeAdded event")
+		}
+		require.Equal(nodeAddresses[i], e.NodeAddress, "unexpected node added order")
+	}
+}
