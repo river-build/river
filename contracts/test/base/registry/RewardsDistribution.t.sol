@@ -320,6 +320,37 @@ contract RewardsDistributionTest is
     rewardsDistributionFacet.mainnetClaimByAddress(tMainnetUsers[0].addr);
   }
 
+  //specific test case of mainnet user delegation with an authorized claimer
+  function test_exOperatorClaimAction() public {
+    _createEntitiesForTest(
+      exAmountsPerUser,
+      exCommissionsPerOperator,
+      exDelegationsPerUser
+    );
+
+    setupOperators(tOperators);
+    setupUsersAndDelegation(tUsers, tDelegations);
+    setupDistributionInformation(exDistributionAmount, exActivePeriodLength);
+
+    address randomAddress = _getRandomAddress();
+
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        RewardsDistribution_UnauthorizedOperatorClaimer.selector,
+        tOperators[0].addr,
+        randomAddress
+      )
+    );
+    vm.prank(randomAddress);
+    rewardsDistributionFacet.operatorClaimByAddress(tOperators[0].addr);
+
+    verifyOperatorsRewardsClaimAction(exDistributionAmount, tOperators);
+
+    vm.expectRevert(RewardsDistribution_NoRewardsToClaim.selector);
+    vm.prank(tOperators[0].addr);
+    rewardsDistributionFacet.operatorClaimByAddress(tOperators[0].addr);
+  }
+
   //specific test case of users delegating to operators and spaces
   function test_exUserRewardsWithSpaceDelegation() public {
     _createEntitiesForTest(
@@ -884,6 +915,35 @@ contract RewardsDistributionTest is
         reward,
         expectedReward,
         "User Reward does not match expected reward"
+      );
+    }
+  }
+
+  function verifyOperatorsRewardsClaimAction(
+    uint256 distributionAmount,
+    Entity[] memory operators
+  )
+    internal
+    givenActivePeriodLengthHasElapsed(exActivePeriodLength)
+    givenPeriodDistributionAmountHasBeenSet(distributionAmount)
+    givenFundsHaveBeenDisbursed(operators, distributionAmount)
+    givenTokensHaveBeenSentToDistributionContract(distributionAmount)
+  {
+    for (uint256 i = 0; i < operators.length; i++) {
+      uint256 expectedReward = _calculateExpectedOperatorReward(
+        operators[i].amount,
+        distributionAmount / operators.length
+      );
+
+      uint256 prevBalance = IERC20(riverFacet).balanceOf(operators[i].addr);
+      //since the operator is its own authorized claimer, it can call it with itself
+      vm.prank(operators[i].addr);
+      rewardsDistributionFacet.operatorClaimByAddress(operators[i].addr);
+
+      assertEq(
+        prevBalance + expectedReward,
+        IERC20(riverFacet).balanceOf(operators[i].addr),
+        "Operator Reward from claim action does not match expected reward"
       );
     }
   }

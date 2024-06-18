@@ -16,6 +16,10 @@ interface IRewardsDistributionBase {
     address delegator,
     address claimer
   );
+  error RewardsDistribution_UnauthorizedOperatorClaimer(
+    address operator,
+    address claimer
+  );
 }
 
 interface IRewardsDistribution is IRewardsDistributionBase {
