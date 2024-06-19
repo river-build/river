@@ -18,6 +18,11 @@ import {IntrospectionFacet} from "contracts/src/diamond/facets/introspection/Int
 contract TieredLogPricingOracle is IMembershipPricing, IntrospectionFacet {
   AggregatorV3Interface internal dataFeed;
 
+  error InvalidAnswer();
+  error InvalidRound();
+  error InvalidTimestamp();
+  error StaleData();
+
   uint256 internal constant SCALE = 1e18; // 1 ether
   uint256 internal constant CENT_SCALE = 100;
   uint256 internal constant LOG_BASE = 10 ** 16;
@@ -66,12 +71,18 @@ contract TieredLogPricingOracle is IMembershipPricing, IntrospectionFacet {
   function getChainlinkDataFeedLatestAnswer() public view returns (uint256) {
     // prettier-ignore
     (
-      /* uint80 roundID */,
+      uint80 roundId,
       int answer,
-      /*uint startedAt*/,
+      uint startedAt,
       /*uint timeStamp*/,
       /*uint80 answeredInRound*/
     ) = dataFeed.latestRoundData();
+
+    if (answer <= 0) revert InvalidAnswer();
+    if (roundId == 0) revert InvalidRound();
+    if (startedAt == 0) revert InvalidRound();
+    if (startedAt > block.timestamp) revert InvalidTimestamp();
+
     return uint256(answer);
   }
 
