@@ -13,7 +13,6 @@ import {EIP712Facet} from "contracts/src/diamond/utils/cryptography/signature/EI
 contract DeployEIP712Facet is FacetHelper, Deployer {
   constructor() {
     addSelector(EIP712Facet.eip712Domain.selector);
-    addSelector(EIP712Facet.DOMAIN_SEPARATOR.selector);
   }
 
   function versionName() public pure override returns (string memory) {

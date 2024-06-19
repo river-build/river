@@ -20,10 +20,6 @@ contract EIP712Facet is IERC5267, EIP712Base, Nonces, Facet {
     __EIP712_init_unchained(name, version);
   }
 
-  function DOMAIN_SEPARATOR() external view returns (bytes32 result) {
-    return _domainSeparatorV4();
-  }
-
   function eip712Domain()
     public
     view
@@ -39,15 +35,14 @@ contract EIP712Facet is IERC5267, EIP712Base, Nonces, Facet {
       uint256[] memory extensions
     )
   {
+    EIP712Storage.Layout storage dl = EIP712Storage.layout();
+
     // If the hashed name and version in storage are non-zero, the contract hasn't been properly initialized
     // and the EIP712 domain is not reliable, as it will be missing name and version.
     require(
-      EIP712Storage.layout().hashedName == 0 &&
-        EIP712Storage.layout().hashedVersion == 0,
+      dl.hashedName == 0 && dl.hashedVersion == 0,
       "EIP712: Uninitialized"
     );
-
-    EIP712Storage.Layout storage dl = EIP712Storage.layout();
 
     return (
       hex"0f", // 01111

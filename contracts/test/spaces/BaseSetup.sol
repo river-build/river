@@ -40,6 +40,10 @@ import {DeployBaseRegistry} from "contracts/scripts/deployments/DeployBaseRegist
 contract BaseSetup is TestUtils, SpaceHelper {
   bytes32 private constant _LINKED_WALLET_TYPEHASH =
     0x32d6e5648703e8835c24b277f7d517e9172988e7d5b3822be953e268608869e1;
+  bytes32 private constant _TYPE_HASH =
+    keccak256(
+      "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+    );
 
   DeployBaseRegistry internal deployBaseRegistry = new DeployBaseRegistry();
   DeploySpaceFactory internal deploySpaceFactory = new DeploySpaceFactory();
@@ -178,19 +182,45 @@ contract BaseSetup is TestUtils, SpaceHelper {
     address newWallet,
     uint256 nonce
   ) internal view returns (bytes memory) {
-    bytes32 domainSeparator = eip712Facet.DOMAIN_SEPARATOR();
+    (
+      ,
+      string memory name,
+      string memory version,
+      uint256 chainId,
+      address verifyingContract,
+      ,
 
-    bytes32 structHash = keccak256(
-      abi.encode(_LINKED_WALLET_TYPEHASH, newWallet, nonce)
-    );
+    ) = eip712Facet.eip712Domain();
 
     bytes32 typeDataHash = MessageHashUtils.toTypedDataHash(
-      domainSeparator,
-      structHash
+      _getDomainSeparator(name, version, chainId, verifyingContract),
+      keccak256(abi.encode(_LINKED_WALLET_TYPEHASH, newWallet, nonce))
     );
 
     (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, typeDataHash);
 
     return abi.encodePacked(r, s, v);
+  }
+
+  // https://eips.ethereum.org/EIPS/eip-5267
+  function _getDomainSeparator(
+    string memory name,
+    string memory version,
+    uint256 chainId,
+    address verifyingContract
+  ) public pure returns (bytes32) {
+    bytes32 nameHash = keccak256(abi.encodePacked(name));
+    bytes32 versionHash = keccak256(abi.encodePacked(version));
+
+    return
+      keccak256(
+        abi.encode(
+          _TYPE_HASH,
+          nameHash,
+          versionHash,
+          chainId,
+          verifyingContract
+        )
+      );
   }
 }
