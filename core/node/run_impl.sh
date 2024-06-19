@@ -114,7 +114,7 @@ if [ "$BUILD" == "true" ]; then
         -o ${OUTPUT} \
         -race \
         -ldflags="-X github.com/river-build/river/core/river_node/version.branch=$(git rev-parse --abbrev-ref HEAD) -X github.com/river-build/river/core/river_node/version.commit=$(git describe --tags --always --dirty)" \
-        ./node/main.go
+        ../river_node/main.go
 fi
 
 if [ "$RUN" == "true" ]; then
