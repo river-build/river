@@ -132,11 +132,20 @@ jobs:
                     exit 1
                   fi
 
-            - name: Staticcheck River Node
+            - name: Linting Xchain Node
+              uses: golangci/golangci-lint-action@v3
+              with:
+                  version: latest
+                  working-directory: core/xchain
+                  skip-pkg-cache: true
+                  args: --timeout=10m
+    
+
+            - name: Staticcheck Xchain Node
               uses: dominikh/staticcheck-action@v1
               with:
                   version: latest
-                  working-directory: core/node
+                  working-directory: core/xchain
                   install-go: false
 
             # - name: Terraform Lint
