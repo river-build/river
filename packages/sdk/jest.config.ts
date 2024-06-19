@@ -44,7 +44,7 @@ const config: JestConfigWithTsJest = {
     testTimeout: 120000,
     modulePathIgnorePatterns: ['/dist/'],
     testPathIgnorePatterns: ['/dist/', '/node_modules/', 'util.test.ts', 'setupUrl.test.ts'],
-    setupFilesAfterEnv: ['jest-extended/all', './../jest.matchers.ts', './jest.setup.js'],
+    setupFilesAfterEnv: ['jest-extended/all', './../jest.matchers.ts'],
     setupFiles: ['fake-indexeddb/auto'],
     extensionsToTreatAsEsm: ['.ts'],
     transform: {

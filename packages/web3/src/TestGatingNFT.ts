@@ -201,32 +201,34 @@ export async function publicMint(nftName: string, toAddress: `0x${string}`): Pro
         args: [toAddress, 1n],
         account: throwawayAccount,
     })
+
     logger.log('minted', nftReceipt)
 
     const receipt = await client.waitForTransactionReceipt({ hash: nftReceipt })
     expect(receipt.status).toBe('success')
 
-    const totalSupplyEncoded = await client.readContract({
-        address: contractAddress,
+    // create a filter to listen for the Transfer event to find the token id
+    // don't worry about the possibility of non-matching arguments, as we're specifying the contract
+    // address of the contract we're interested in.
+    const filter = await client.createContractEventFilter({
         abi: MockERC721a.abi,
-        functionName: 'totalSupply',
+        address: contractAddress,
+        eventName: 'Transfer',
+        args: {
+            to: toAddress,
+        },
+        fromBlock: receipt.blockNumber,
+        toBlock: receipt.blockNumber,
     })
-
-    // Check from highest minted token id to lowest for the token we just minted and return
-    // the token id if we find it.
-
-    for (let i = Number(totalSupplyEncoded) - 1; i >= 0; i = i - 1) {
-        const owner = await client.readContract({
-            address: contractAddress,
-            abi: MockERC721a.abi,
-            functionName: 'ownerOf',
-            args: [BigInt(i)],
-        })
-        if (owner === toAddress) {
-            return i
+    const eventLogs = await client.getFilterLogs({ filter })
+    for (const eventLog of eventLogs) {
+        if (eventLog.transactionHash === receipt.transactionHash) {
+            expect(eventLog.args.tokenId).toBeDefined()
+            return Number(eventLog.args.tokenId)
         }
     }
-    throw new Error('Failed to find minted token')
+
+    throw Error('No mint event found')
 }
 
 export async function burn(nftName: string, tokenId: number): Promise<void> {
