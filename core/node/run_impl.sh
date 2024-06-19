@@ -113,7 +113,7 @@ if [ "$BUILD" == "true" ]; then
     go build \
         -o ${OUTPUT} \
         -race \
-        -ldflags="-X github.com/river-build/river/core/node/node/version.branch=$(git rev-parse --abbrev-ref HEAD) -X github.com/river-build/river/core/node/node/version.commit=$(git describe --tags --always --dirty)" \
+        -ldflags="-X github.com/river-build/river/core/river_node/version.branch=$(git rev-parse --abbrev-ref HEAD) -X github.com/river-build/river/core/river_node/version.commit=$(git describe --tags --always --dirty)" \
         ./node/main.go
 fi
 

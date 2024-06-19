@@ -19,8 +19,8 @@ WORKDIR /build
 RUN go build \
     -trimpath \
     -o /bin/river_node \
-    -ldflags="-X github.com/river-build/river/core/node/node/version.version=$VER_VERSION -X github.com/river-build/river/core/node/node/version.branch=$VER_BRANCH -X github.com/river-build/river/core/node/node/version.commit=$VER_COMMIT" \
-    ./node/node
+    -ldflags="-X github.com/river-build/river/core/river_node/version.version=$VER_VERSION -X github.com/river-build/river/core/river_node/version.branch=$VER_BRANCH -X github.com/river-build/river/core/river_node/version.commit=$VER_COMMIT" \
+    ./river_node
 
 # Final stage
 FROM alpine:latest

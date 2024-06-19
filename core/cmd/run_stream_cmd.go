@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/river-build/river/core/config"
-	"github.com/river-build/river/core/node/node/version"
 	"github.com/river-build/river/core/node/rpc"
+	"github.com/river-build/river/core/river_node/version"
 
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	"gopkg.in/DataDog/dd-trace-go.v1/profiler"
