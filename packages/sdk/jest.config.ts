@@ -41,6 +41,7 @@ const config: JestConfigWithTsJest = {
     },
     runner: 'groups',
     verbose: true,
+    workerThreads: true,
     testTimeout: 120000,
     modulePathIgnorePatterns: ['/dist/'],
     testPathIgnorePatterns: ['/dist/', '/node_modules/', 'util.test.ts', 'setupUrl.test.ts'],
