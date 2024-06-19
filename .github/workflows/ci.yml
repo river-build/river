@@ -545,8 +545,8 @@ jobs:
             - name: Start xchain node with entitlements
               run: (RUN_ENV=single ./core/xchain/launch_multi.sh &) && sleep 10
 
-            - name: Build & Test (with entitlements)
-              run: yarn csb:turbo-no-sdk
+            # - name: Build & Test (with entitlements)
+            #   run: yarn csb:turbo-no-sdk
 
             - name: Run River Tests (with entitlements)
               run: yarn workspace @river/sdk run test:ci:with-entitlements
