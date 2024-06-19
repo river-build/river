@@ -45,7 +45,7 @@ const config: JestConfigWithTsJest = {
     modulePathIgnorePatterns: ['/dist/'],
     testPathIgnorePatterns: ['/dist/', '/node_modules/', 'util.test.ts', 'setupUrl.test.ts'],
     setupFilesAfterEnv: ['jest-extended/all', './../jest.matchers.ts'],
-    setupFiles: ['fake-indexeddb/auto'],
+    setupFiles: ['fake-indexeddb/auto', './jest.setup.js'],
     extensionsToTreatAsEsm: ['.ts'],
     transform: {
         '^.+\\.tsx?$': [
