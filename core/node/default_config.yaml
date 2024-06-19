@@ -118,6 +118,9 @@ disableBaseChain: false
 # This is comma separated list of CHAID_ID:PROVIDER_URL pairs.
 chains: ''
 
+# Another alias for chains.
+chainsString: ''
+
 #ChainBlocktimes is a comma-separated list chaidID:blockTimeDuration pairs
 # I.e. 1:12s,84532:2s,6524490:2s
 # Blocktimes for common known chains are pre-set in GetDefaultBlockchainInfo(),
