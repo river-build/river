@@ -542,7 +542,7 @@ func RunClientSimulator(ctx context.Context, cfg *config.Config, wallet *node_cr
 		return
 	}
 
-	cs.EvaluateRuleData(ctx, cfg, ruleData)
+	_, _ = cs.EvaluateRuleData(ctx, cfg, ruleData)
 }
 
 func ToggleEntitlement(ctx context.Context, cfg *config.Config, wallet *node_crypto.Wallet) {

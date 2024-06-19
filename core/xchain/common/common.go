@@ -7,7 +7,6 @@ import (
 	"math/big"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/river-build/river/core/node/dlog"
@@ -19,8 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 )
-
-var loadAddressesOnce sync.Once
 
 func ConvertHTTPToWebSocket(httpURL string) (string, error) {
 	// Parse the URL

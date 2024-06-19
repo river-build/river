@@ -35,6 +35,3 @@ vet:
 lint:
 	golangci-lint run --enable exhaustive --path-prefix=.
 
-fmt:
-	./fmt.sh
-

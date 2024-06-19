@@ -28,6 +28,8 @@ func (e *Evaluator) evaluateCheckOperation(
 		return e.evaluateMockOperation(ctx, op)
 	case CheckNONE:
 		return false, fmt.Errorf("unknown operation")
+	default:
+		break
 	}
 
 	// Sanity checks

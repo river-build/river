@@ -424,7 +424,7 @@ func (x *xchain) writeEntitlementCheckResults(ctx context.Context, checkResults 
 
 				if err != nil {
 					x.entitlementCheckTx.IncFail()
-					x.handleContractError(log, err, "Failed to submit transaction for xchain request")
+					_ = x.handleContractError(log, err, "Failed to submit transaction for xchain request")
 					continue
 				}
 				pending <- &inprogress{pendingTx, gasEstimate, receipt}
