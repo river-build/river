@@ -130,8 +130,7 @@ func NewBlockchainWithClient(
 
 	if wallet != nil {
 		bc.Wallet = wallet
-		bc.TxPool, err = NewTransactionPoolWithPoliciesFromConfig(
-			ctx, cfg, bc.Client, wallet, bc.ChainMonitor, initialBlockNum, metrics)
+		bc.TxPool, err = NewTransactionPoolWithPoliciesFromConfig(ctx, cfg, bc.Client, wallet, bc.ChainMonitor, metrics)
 		if err != nil {
 			return nil, err
 		}
