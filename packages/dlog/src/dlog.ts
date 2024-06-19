@@ -164,9 +164,6 @@ const makeDlog = (d: Debugger, opts?: DLogOpts): DLogger => {
                     c = shortenHexString(c)
                 }
                 newArgs.push(c)
-            } else if (typeof c === 'bigint') {
-                fmt.push('%s ')
-                newArgs.push(c.toString())
             } else if (typeof c === 'object' && c !== null) {
                 if (c instanceof Error) {
                     tailArgs.push('\n')

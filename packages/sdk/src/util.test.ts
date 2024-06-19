@@ -201,8 +201,6 @@ export async function setupWalletsAndContexts() {
     const aliceSpaceDapp = createSpaceDapp(aliceProvider, baseConfig.chainConfig)
     const carolSpaceDapp = createSpaceDapp(carolProvider, baseConfig.chainConfig)
 
-    genId(5)
-
     // create a user
     const [alice, bob, carol] = await Promise.all([
         makeTestClient({
