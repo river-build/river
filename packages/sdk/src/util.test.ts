@@ -504,7 +504,11 @@ export async function linkWallets(
     const walletLink = rootSpaceDapp.getWalletLink()
     let txn: ContractTransaction | undefined
     try {
-        txn = await walletLink.linkWalletToRootKey(rootWallet, linkedWallet)
+        txn = await walletLink.linkWalletToRootKey(
+            rootWallet,
+            linkedWallet,
+            new URL('http://localhost'),
+        )
     } catch (err: any) {
         const parsedError = walletLink.parseError(err)
         log('linkWallets error', parsedError)
