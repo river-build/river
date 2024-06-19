@@ -7,6 +7,7 @@
     "scripts": {
         "anvil": "yarn workspace @river/contracts exec anvil",
         "build": "turbo build",
+        "build:react": "turbo build --filter @river-build/react",
         "cast": "yarn workspace @river/contracts exec cast",
         "csb:build": "yarn workspace @river-build/proto run build && yarn workspace @river-build/dlog run build && yarn workspace @river-build/web3 run build && yarn workspace @river-build/encryption run build && yarn workspace @river/sdk run build && echo BUILD DONE || (echo BUILD ERROR; exit 1)",
         "csb:cb": "yarn csb:clean && yarn csb:build",
@@ -50,11 +51,14 @@
         "syncpack:check": "syncpack list-mismatches",
         "syncpack:fix": "syncpack fix-mismatches && syncpack format",
         "test": "turbo test",
+        "test:react": "vitest --project @river-build/react",
+        "test:build": "turbo test:build",
         "test:unit": "turbo test:unit -- --silent",
         "worker:wait:stackup": "wait-on tcp:127.0.0.1:${PORT:-8686} --timeout=900000 --i=5000 --verbose",
         "workers:build": "turbo build --filter gateway-worker --filter siwe-worker --filter token-worker --filter unfurl-worker --filter jwt-worker"
     },
     "devDependencies": {
+        "@arethetypeswrong/cli": "^0.15.3",
         "@typechain/ethers-v5": "^10.1.1",
         "@types/node": "^20.5.0",
         "eslint": "^8.53.0",
@@ -65,12 +69,14 @@
         "husky": "^8.0.1",
         "lint-staged": "^13.1.2",
         "prettier": "^2.8.8",
+        "publint": "^0.2.8",
         "solidity-docgen": "^0.6.0-beta.29",
         "syncpack": "^10.7.3",
         "ts-node": "^10.9.1",
         "turbo": "^1.13.3",
         "typechain": "^8.1.1",
         "typescript": "^5.1.6",
+        "vitest": "^1.6.0",
         "wait-on": "^7.0.1"
     },
     "husky": {
