@@ -9,10 +9,6 @@ import (
 	"time"
 
 	"github.com/river-build/river/core/config"
-<<<<<<<< HEAD:core/cmd/run_stream_cmd.go
-========
-	"github.com/river-build/river/core/node/node/version"
->>>>>>>> origin/main:core/cmd/run_cmd.go
 	"github.com/river-build/river/core/node/rpc"
 	"github.com/river-build/river/core/river_node/version"
 
