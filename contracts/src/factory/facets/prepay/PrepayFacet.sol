@@ -35,6 +35,12 @@ contract PrepayFacet is
     if (supply == 0) revert PrepayBase__InvalidAmount();
     if (membership == address(0)) revert PrepayBase__InvalidAddress();
 
+    // check if current free allocation is used up
+    uint256 totalSupply = IERC721A(membership).totalSupply();
+    if (totalSupply < _getMembershipMintLimit()) {
+      revert PrepayBase__FreeAllocationNotUsed();
+    }
+
     // validate caller is owner
     if (IERC173(membership).owner() != msg.sender) {
       revert PrepayBase__InvalidAddress();

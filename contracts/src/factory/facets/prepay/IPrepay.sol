@@ -13,6 +13,7 @@ interface IPrepayBase {
   error PrepayBase__InvalidAmount();
   error PrepayBase__InvalidAddress();
   error PrepayBase__InvalidMembership();
+  error PrepayBase__FreeAllocationNotUsed();
 
   // =============================================================
   //                           EVENTS
