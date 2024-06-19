@@ -308,10 +308,10 @@ type MetricsConfig struct {
 	// If set, do not publish /metrics on public port.
 	DisablePublic bool
 
-	// If not 0, also publish metrics on this port on /metrics endpoint.
+	// If not 0, also publish /metrics on this port.
 	Port int
 
-	// Interface to use with the port above, if empty, bind to all interfaces.
+	// Interface to use with the port above. Usually left empty to bind to all interfaces.
 	Interface string
 }
 
