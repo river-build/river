@@ -245,6 +245,11 @@ export default [
   },
   {
     "type": "error",
+    "name": "PrepayBase__FreeAllocationNotUsed",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "PrepayBase__InvalidAddress",
     "inputs": []
   },
