@@ -17,9 +17,7 @@ export function createSpaceDapp(
     // so that we don't miss events that may be emitted in between polling intervals. The Ethers
     // default is 4000ms, which is based on the assumption of 12s mainnet blocktimes.
     if ('pollingInterval' in provider && typeof provider.pollingInterval === 'number') {
-        const oldValue = provider.pollingInterval
         provider.pollingInterval = 250
-        log.info('pollingInterval was: ', oldValue, 'now: ', provider.pollingInterval)
     }
     return new SpaceDapp(config, provider)
 }
