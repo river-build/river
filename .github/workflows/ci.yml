@@ -34,13 +34,13 @@ on:
                 required: false
                 default: false
                 type: boolean
-            skip_node:
-                description: Skip Node Tests
+            skip_go:
+                description: Skip Go Tests
                 required: false
                 default: false
                 type: boolean
-            skip_xchain_node:
-                description: Skip XChain Node Tests
+            skip_xchain_integration:
+                description: Skip XChain Integration Tests
                 required: false
                 default: false
                 type: boolean
@@ -704,9 +704,9 @@ jobs:
                       ./core/xchain/run_files/
                       !./core/**/bin/**
 
-    Node:
+    Go_Tests:
         permissions: write-all
-        if: github.event_name != 'workflow_dispatch' || !inputs.skip_node
+        if: github.event_name != 'workflow_dispatch' || !inputs.skip_go
         runs-on: ubuntu-latest-8-cores
         timeout-minutes: 30
         services:
@@ -823,7 +823,7 @@ jobs:
 
             - name: Run node tests
               run: go test -race -timeout 12m ./...
-              working-directory: core/node
+              working-directory: core
 
     XChain_Node:
         permissions: write-all
@@ -890,7 +890,7 @@ jobs:
 
     XChain_Integration:
         permissions: write-all
-        if: github.event_name != 'workflow_dispatch' || !inputs.skip_client_noentitlements
+        if: github.event_name != 'workflow_dispatch' || !inputs.skip_xchain_integration
         runs-on: ubuntu-latest-8-cores
         timeout-minutes: 30
 
@@ -956,8 +956,8 @@ jobs:
                 Multinode,
                 Client_Entitlements,
                 Multinode_Ent,
-                Node,
-                XChain_Node,
+                Go_Tests,
+                XChain_Integration,
             ]
         if: failure()
         runs-on: ubuntu-latest
