@@ -7,7 +7,7 @@
     "scripts": {
         "anvil": "yarn workspace @river/contracts exec anvil",
         "build": "turbo build",
-        "build:react": "turbo build --filter @river-build/react",
+        "build:react": "turbo build --filter @river-build/react-sdk",
         "cast": "yarn workspace @river/contracts exec cast",
         "csb:build": "yarn workspace @river-build/proto run build && yarn workspace @river-build/dlog run build && yarn workspace @river-build/web3 run build && yarn workspace @river-build/encryption run build && yarn workspace @river/sdk run build && echo BUILD DONE || (echo BUILD ERROR; exit 1)",
         "csb:cb": "yarn csb:clean && yarn csb:build",
@@ -51,7 +51,7 @@
         "syncpack:check": "syncpack list-mismatches",
         "syncpack:fix": "syncpack fix-mismatches && syncpack format",
         "test": "turbo test",
-        "test:react": "vitest --project @river-build/react",
+        "test:react": "vitest --project @river-build/react-sdk",
         "test:build": "turbo test:build",
         "test:unit": "turbo test:unit -- --silent",
         "worker:wait:stackup": "wait-on tcp:127.0.0.1:${PORT:-8686} --timeout=900000 --i=5000 --verbose",

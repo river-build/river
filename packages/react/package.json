@@ -1,5 +1,5 @@
 {
-    "name": "@river-build/react",
+    "name": "@river-build/react-sdk",
     "description": "React Hooks for River SDK",
     "version": "0.1.0",
     "repository": {

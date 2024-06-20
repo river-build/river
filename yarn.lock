@@ -2480,9 +2480,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@river-build/react@workspace:packages/react":
+"@river-build/react-sdk@workspace:packages/react":
   version: 0.0.0-use.local
-  resolution: "@river-build/react@workspace:packages/react"
+  resolution: "@river-build/react-sdk@workspace:packages/react"
   dependencies:
     "@testing-library/react": ^14.0.0
     "@types/react": ^18.3.1

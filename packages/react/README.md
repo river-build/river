@@ -1,4 +1,4 @@
-# @river-build/react
+# @river-build/react-sdk
 
 React Hooks for River SDK.
 
@@ -7,7 +7,7 @@ React Hooks for River SDK.
 in the future:
 
 ```sh
-yarn add @river-build/react
+yarn add @river-build/react-sdk
 ```
 
 # Usage

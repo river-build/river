@@ -3,7 +3,7 @@ import { defineWorkspace } from 'vitest/config'
 export default defineWorkspace([
     {
         test: {
-            name: '@river-build/react',
+            name: '@river-build/react-sdk',
             environment: 'node',
             include: ['./packages/react/src/**/*.test.ts'],
             testTimeout: 10_000,
