@@ -10,7 +10,7 @@ import {
     createUserStreamAndSyncClient,
     createSpaceAndDefaultChannel,
     expectUserCanJoin,
-    expectUserCanNotJoin,
+    expectUserCannotJoin,
     setupWalletsAndContexts,
     linkWallets,
     getNftRuleData,
@@ -100,11 +100,9 @@ async function createTownWithRequirements(requirements: {
     const entitledWallet = await bobSpaceDapp.getEntitledWalletForJoiningSpace(
         spaceId,
         bobsWallet.address,
-        ['http://127.0.0.1:8545', 'http://127.0.0.1:8546']
+        ['http://127.0.0.1:8545', 'http://127.0.0.1:8546'],
     )
     expect(entitledWallet).toBeDefined()
-
-
 
     return {
         alice,
@@ -251,7 +249,7 @@ describe('spaceWithEntitlements', () => {
         )
 
         // Alice cannot join the space on the stream node.
-        await expectUserCanNotJoin(spaceId, alice, aliceSpaceDapp, alicesWallet.address, aliceProvider.wallet)
+        await expectUserCannotJoin(spaceId, alice, aliceSpaceDapp, alicesWallet.address)
 
         // Kill the clients
         const doneStart = Date.now()
@@ -262,7 +260,7 @@ describe('spaceWithEntitlements', () => {
 
     // This test is commented out as the membership joinSpace does not check linked wallets
     // against the user entitlement.
-    test.only('userEntitlementPass - join as root, linked wallet whitelisted', async () => {
+    test('userEntitlementPass - join as root, linked wallet whitelisted', async () => {
         const {
             alice,
             bob,
@@ -477,7 +475,7 @@ describe('spaceWithEntitlements', () => {
         )
 
         // Alice cannot join the space on the stream node.
-        expectUserCanNotJoin(spaceId, alice, aliceSpaceDapp, alicesWallet.address, aliceProvider.wallet)
+        await expectUserCannotJoin(spaceId, alice, aliceSpaceDapp, alicesWallet.address)
 
         // kill the clients
         await bob.stopSync()
@@ -593,7 +591,7 @@ describe('spaceWithEntitlements', () => {
             aliceProvider.wallet,
         )
         // Alice cannot join the space on the stream node.
-        await expectUserCanNotJoin(spaceId, alice, aliceSpaceDapp, alicesWallet.address, aliceProvider.wallet)
+        await expectUserCannotJoin(spaceId, alice, aliceSpaceDapp, alicesWallet.address)
 
         // kill the clients
         await bob.stopSync()

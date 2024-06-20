@@ -426,11 +426,10 @@ export async function expectUserCanJoin(
 
     // Check that the local evaluation of the user's entitlements for joining the space
     // passes.
-    const entitledWallet = await spaceDapp.getEntitledWalletForJoiningSpace(
-        spaceId,
-        address,
-        ['http://127.0.0.1:8545', 'http://127.0.0.1:8546']
-    )
+    const entitledWallet = await spaceDapp.getEntitledWalletForJoiningSpace(spaceId, address, [
+        'http://127.0.0.1:8545',
+        'http://127.0.0.1:8546',
+    ])
     expect(entitledWallet).toBeDefined()
 
     const { issued } = await spaceDapp.joinSpace(spaceId, address, wallet)
@@ -450,21 +449,18 @@ export async function expectUserCanJoin(
     })
 }
 
-export async function expectUserCanNotJoin(
+export async function expectUserCannotJoin(
     spaceId: string,
     client: Client,
     spaceDapp: ISpaceDapp,
     address: string,
-    wallet: ethers.Wallet,
 ) {
-
     // Check that the local evaluation of the user's entitlements for joining the space
     // fails.
-    const entitledWallet = await spaceDapp.getEntitledWalletForJoiningSpace(
-        spaceId,
-        address,
-        ['http://127.0.0.1:8545', 'http://127.0.0.1:8546']
-    )
+    const entitledWallet = await spaceDapp.getEntitledWalletForJoiningSpace(spaceId, address, [
+        'http://127.0.0.1:8545',
+        'http://127.0.0.1:8546',
+    ])
     expect(entitledWallet).toBeUndefined()
     await expect(client.joinStream(spaceId)).rejects.toThrow(/PERMISSION_DENIED/)
 }
