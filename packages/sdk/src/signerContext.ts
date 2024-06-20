@@ -101,7 +101,7 @@ export async function makeSignerContext(
     }
 }
 
-export async function generateDelegate(
+export async function makeSignerDelegate(
     signer: ethers.Signer,
     expiry?: {
         days?: number

@@ -15,7 +15,7 @@ import { TEST_ENCRYPTED_MESSAGE_PROPS } from './util.test'
 import {
     SignerContext,
     checkDelegateSig,
-    generateDelegate,
+    makeSignerDelegate,
     makeSignerContext,
 } from './signerContext'
 
@@ -163,11 +163,11 @@ describe('sign', () => {
         ).not.toThrow()
     })
 
-    test('generate-delegate', async () => {
+    test('make-signer-delegate', async () => {
         const user = keys[0]
         const userWallet = new ethers.Wallet(user.privateKey)
 
-        const { signerContext, delegateWallet } = await generateDelegate(userWallet)
+        const { signerContext, delegateWallet } = await makeSignerDelegate(userWallet)
 
         expect(signerContext.delegateSig).toBeDefined()
         expect(() =>
