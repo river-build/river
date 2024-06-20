@@ -3,9 +3,6 @@ import { ISpaceDapp } from './ISpaceDapp'
 import { ethers } from 'ethers'
 import { BaseChainConfig } from './IStaticContractsInfo'
 
-import { dlogger } from '@river-build/dlog'
-
-const log = dlogger('csb:SpaceDappFactory')
 export function createSpaceDapp(
     provider: ethers.providers.Provider,
     config: BaseChainConfig,
