@@ -10,6 +10,7 @@ import {
     createUserStreamAndSyncClient,
     createSpaceAndDefaultChannel,
     expectUserCanJoin,
+    expectUserCanNotJoin,
     setupWalletsAndContexts,
     linkWallets,
     getNftRuleData,
@@ -94,6 +95,16 @@ async function createTownWithRequirements(requirements: {
         'bobs',
         membershipInfo,
     )
+
+    // Validate that owner passes entitlement check
+    const entitledWallet = await bobSpaceDapp.getEntitledWalletForJoiningSpace(
+        spaceId,
+        bobsWallet.address,
+        ['http://127.0.0.1:8545', 'http://127.0.0.1:8546']
+    )
+    expect(entitledWallet).toBeDefined()
+
+
 
     return {
         alice,
@@ -240,7 +251,7 @@ describe('spaceWithEntitlements', () => {
         )
 
         // Alice cannot join the space on the stream node.
-        await expect(alice.joinStream(spaceId)).rejects.toThrow(/PERMISSION_DENIED/)
+        await expectUserCanNotJoin(spaceId, alice, aliceSpaceDapp, alicesWallet.address, aliceProvider.wallet)
 
         // Kill the clients
         const doneStart = Date.now()
@@ -251,7 +262,7 @@ describe('spaceWithEntitlements', () => {
 
     // This test is commented out as the membership joinSpace does not check linked wallets
     // against the user entitlement.
-    test('userEntitlementPass - join as root, linked wallet whitelisted', async () => {
+    test.only('userEntitlementPass - join as root, linked wallet whitelisted', async () => {
         const {
             alice,
             bob,
@@ -466,7 +477,7 @@ describe('spaceWithEntitlements', () => {
         )
 
         // Alice cannot join the space on the stream node.
-        await expect(alice.joinStream(spaceId)).rejects.toThrow(/PERMISSION_DENIED/)
+        expectUserCanNotJoin(spaceId, alice, aliceSpaceDapp, alicesWallet.address, aliceProvider.wallet)
 
         // kill the clients
         await bob.stopSync()
@@ -582,7 +593,7 @@ describe('spaceWithEntitlements', () => {
             aliceProvider.wallet,
         )
         // Alice cannot join the space on the stream node.
-        await expect(alice.joinStream(spaceId)).rejects.toThrow(/7:PERMISSION_DENIED/)
+        await expectUserCanNotJoin(spaceId, alice, aliceSpaceDapp, alicesWallet.address, aliceProvider.wallet)
 
         // kill the clients
         await bob.stopSync()

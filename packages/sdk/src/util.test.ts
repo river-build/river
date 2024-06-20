@@ -423,6 +423,16 @@ export async function expectUserCanJoin(
     wallet: ethers.Wallet,
 ) {
     const joinStart = Date.now()
+
+    // Check that the local evaluation of the user's entitlements for joining the space
+    // passes.
+    const entitledWallet = await spaceDapp.getEntitledWalletForJoiningSpace(
+        spaceId,
+        address,
+        ['http://127.0.0.1:8545', 'http://127.0.0.1:8546']
+    )
+    expect(entitledWallet).toBeDefined()
+
     const { issued } = await spaceDapp.joinSpace(spaceId, address, wallet)
     expect(issued).toBeTrue()
     log(`${name} joined space ${spaceId}`, Date.now() - joinStart)
@@ -438,6 +448,25 @@ export async function expectUserCanJoin(
         expect(userStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN)).toBeTrue()
         expect(userStreamView.userContent.isMember(channelId, MembershipOp.SO_JOIN)).toBeTrue()
     })
+}
+
+export async function expectUserCanNotJoin(
+    spaceId: string,
+    client: Client,
+    spaceDapp: ISpaceDapp,
+    address: string,
+    wallet: ethers.Wallet,
+) {
+
+    // Check that the local evaluation of the user's entitlements for joining the space
+    // fails.
+    const entitledWallet = await spaceDapp.getEntitledWalletForJoiningSpace(
+        spaceId,
+        address,
+        ['http://127.0.0.1:8545', 'http://127.0.0.1:8546']
+    )
+    expect(entitledWallet).toBeUndefined()
+    await expect(client.joinStream(spaceId)).rejects.toThrow(/PERMISSION_DENIED/)
 }
 
 export async function everyoneMembershipStruct(

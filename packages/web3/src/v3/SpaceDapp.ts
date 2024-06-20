@@ -406,9 +406,17 @@ export class SpaceDapp implements ISpaceDapp {
             e.userEntitlement?.includes(EVERYONE_ADDRESS),
         )
 
-        // TODO: more user checks
         if (isEveryOneSpace) {
             return rootKey
+        }
+
+        // Evaluate all user entitlements first, as they do not require external calls.
+        for (const entitlement of entitlements) {
+            for (const user of allWallets) {
+                if (entitlement.userEntitlement?.includes(user)) {
+                    return user
+                }
+            }
         }
 
         const providers = supportedXChainRpcUrls.map(
@@ -454,8 +462,6 @@ export class SpaceDapp implements ISpaceDapp {
         if (!space) {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
         }
-
-        // TODO: space owner is always entitled to join
 
         // TODO: check if a user is banned
 
