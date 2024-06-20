@@ -4,6 +4,7 @@ import { BaseChainConfig } from '../IStaticContractsInfo'
 import { arrayify } from 'ethers/lib/utils'
 import { WalletAlreadyLinkedError, WalletNotLinkedError } from '../error-types'
 import { Address } from '../ContractTypes'
+import { createEip712LinkAccountdData } from './EIP-712'
 
 export class WalletLink {
     private readonly walletLinkShim: IWalletLinkShim
@@ -61,7 +62,6 @@ export class WalletLink {
 
     private async generateWalletSignatureForRootKey({
         chainId,
-        domain,
         wallet,
         rootKeyAddress,
         rootKeyNonce,
@@ -69,23 +69,19 @@ export class WalletLink {
         chainId: number
         domain: URL
         wallet: ethers.Signer
-        rootKeyAddress: string
+        rootKeyAddress: Address
         rootKeyNonce: BigNumber
     }): Promise<string> {
-        const uri = new URL(domain)
-        uri.hostname = uri.host
-        uri.pathname = '/link-account'
-        const signMessage = erc4361SignInMessageFormat({
-            address: await wallet.getAddress(),
+        const { domain, types, value } = createEip712LinkAccountdData({
             chainId,
-            domain,
-            issuedAt: new Date(),
+            verifyingContract: this.address,
             nonce: rootKeyNonce,
-            resources: [`rootkey://${rootKeyAddress}`],
-            statement: 'Link your account to the sign in key',
-            uri: uri.toString(),
+            linkAccount: (await wallet.getAddress()) as Address,
+            rootAccount: rootKeyAddress,
+            message: 'Link your accounts',
         })
-        return wallet.signMessage(signMessage)
+        const signature = (await wallet._signTypedData(domain, types, value)) as string
+        return signature
     }
 
     private async generateLinkCallerData(rootKey: ethers.Signer, wallet: ethers.Signer | Address) {
@@ -123,7 +119,7 @@ export class WalletLink {
         // sign new wallet with root key address
         const walletSignature = await this.generateWalletSignatureForRootKey({
             wallet,
-            rootKeyAddress,
+            rootKeyAddress: rootKeyAddress as Address,
             rootKeyNonce: nonce,
             chainId: this.chainId,
             domain,
@@ -278,44 +274,4 @@ function packAddressWithNonce(address: string, nonce: BigNumber): Uint8Array {
     const packed = abi.encode(['address', 'uint256'], [address, nonce.toNumber()])
     const hash = ethers.utils.keccak256(packed)
     return arrayify(hash)
-}
-
-//https://eips.ethereum.org/EIPS/eip-4361#message-format
-interface Erc4361SignInMessageArgs {
-    address: string
-    chainId: number
-    domain: URL
-    issuedAt: Date
-    nonce: BigNumber
-    resources?: string[]
-    statement?: string
-    uri: string
-}
-
-function erc4361SignInMessageFormat({
-    address,
-    chainId,
-    domain,
-    issuedAt,
-    nonce,
-    resources,
-    statement,
-    uri,
-}: Erc4361SignInMessageArgs): string {
-    const scheme = domain.protocol
-    const hostname = domain.hostname
-    const signInMessage = `${scheme}//${hostname} wants you to link your Ethereum account:
-${address}
-${statement ? '\n' + statement + '\n' : ''}
-URI: ${uri}
-Version: 1
-Chain ID: ${chainId}
-Nonce: ${nonce.toString()}
-Issued At: ${issuedAt.toISOString()}
-${
-    resources && resources.length > 0
-        ? `Resources:\n${resources.map((item) => `- ${item}`).join('\n')}`
-        : ''
-}`
-    return signInMessage
 }
