@@ -31,9 +31,15 @@ import { EVERYONE_ADDRESS, stringifyChannelMetadataJSON } from '../Utils'
 import { evaluateOperationsForEntitledWallet, ruleDataToOperations } from '../entitlement'
 import { RuleEntitlementShim } from './RuleEntitlementShim'
 import { PlatformRequirements } from './PlatformRequirements'
+import { EntitlementDataStructOutput } from './IEntitlementDataQueryableShim'
 
 const logger = dlogger('csb:SpaceDapp:debug')
 
+type EntitlementData = {
+    entitlementType: EntitlementModuleType
+    ruleEntitlement: IRuleEntitlement.RuleDataStruct[] | undefined
+    userEntitlement: string[] | undefined
+}
 export class SpaceDapp implements ISpaceDapp {
     public readonly config: BaseChainConfig
     public readonly provider: ethers.providers.Provider
@@ -304,21 +310,10 @@ export class SpaceDapp implements ISpaceDapp {
         )
     }
 
-    private async getEntitlementsForPermission(spaceId: string, permission: Permission) {
-        const space = this.getSpace(spaceId)
-        if (!space) {
-            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
-        }
-
-        const entitlementData =
-            await space.EntitlementDataQueryable.read.getEntitlementDataByPermission(permission)
-
-        type EntitlementData = {
-            entitlementType: EntitlementModuleType
-            ruleEntitlement: IRuleEntitlement.RuleDataStruct[] | undefined
-            userEntitlement: string[] | undefined
-        }
-
+    private async decodeEntitlementData(
+        space: Space,
+        entitlementData: EntitlementDataStructOutput[],
+    ): Promise<EntitlementData[]> {
         const entitlements: EntitlementData[] = entitlementData.map((x) => ({
             entitlementType: x.entitlementType as EntitlementModuleType,
             ruleEntitlement: undefined,
@@ -362,29 +357,56 @@ export class SpaceDapp implements ISpaceDapp {
         return entitlements
     }
 
-    /**
-     * Checks if user has a wallet entitled to join a space based on the minter role rule entitlements
-     */
-    public async getEntitledWalletForJoiningSpace(
+    private async getEntitlementsForPermission(
         spaceId: string,
-        rootKey: string,
-        supportedXChainRpcUrls: string[],
-    ): Promise<string | undefined> {
-        const linkedWallets = await this.walletLink.getLinkedWallets(rootKey)
-        const allWallets = [rootKey, ...linkedWallets]
-
+        permission: Permission,
+    ): Promise<EntitlementData[]> {
         const space = this.getSpace(spaceId)
         if (!space) {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
         }
 
-        const entitlements = await this.getEntitlementsForPermission(spaceId, Permission.JoinSpace)
+        const entitlementData =
+            await space.EntitlementDataQueryable.read.getEntitlementDataByPermission(permission)
 
+        return await this.decodeEntitlementData(space, entitlementData)
+    }
+
+    private async getChannelEntitlementsForPermission(
+        spaceId: string,
+        channelId: string,
+        permission: Permission,
+    ): Promise<EntitlementData[]> {
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+
+        const entitlementData =
+            await space.EntitlementDataQueryable.read.getChannelEntitlementDataByPermission(
+                channelId,
+                permission,
+            )
+
+        return await this.decodeEntitlementData(space, entitlementData)
+    }
+
+    public async getLinkedWallets(wallet: string): Promise<string[]> {
+        const linkedWallets = await this.walletLink.getLinkedWallets(wallet)
+        return [wallet, ...linkedWallets]
+    }
+
+    private async evaluateEntitledWallet(
+        rootKey: string,
+        allWallets: string[],
+        entitlements: EntitlementData[],
+        supportedXChainRpcUrls: string[],
+    ): Promise<string | undefined> {
         const isEveryOneSpace = entitlements.some((e) =>
             e.userEntitlement?.includes(EVERYONE_ADDRESS),
         )
 
-        // todo: more user checks
+        // TODO: more user checks
         if (isEveryOneSpace) {
             return rootKey
         }
@@ -418,6 +440,34 @@ export class SpaceDapp implements ISpaceDapp {
         return
     }
 
+    /**
+     * Checks if user has a wallet entitled to join a space based on the minter role rule entitlements
+     */
+    public async getEntitledWalletForJoiningSpace(
+        spaceId: string,
+        rootKey: string,
+        supportedXChainRpcUrls: string[],
+    ): Promise<string | undefined> {
+        const allWallets = await this.getLinkedWallets(rootKey)
+
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+
+        // TODO: space owner is always entitled to join
+
+        // TODO: check if a user is banned
+
+        const entitlements = await this.getEntitlementsForPermission(spaceId, Permission.JoinSpace)
+        return this.evaluateEntitledWallet(
+            rootKey,
+            allWallets,
+            entitlements,
+            supportedXChainRpcUrls,
+        )
+    }
+
     public async isEntitledToSpace(
         spaceId: string,
         user: string,
@@ -439,6 +489,7 @@ export class SpaceDapp implements ISpaceDapp {
         channelNetworkId: string,
         user: string,
         permission: Permission,
+        supportedXChainRpcUrls: string[] = [],
     ): Promise<boolean> {
         const space = this.getSpace(spaceId)
         if (!space) {
@@ -447,6 +498,32 @@ export class SpaceDapp implements ISpaceDapp {
         const channelId = channelNetworkId.startsWith('0x')
             ? channelNetworkId
             : `0x${channelNetworkId}`
+
+        if (permission === Permission.Read || permission === Permission.Write) {
+            const linkedWallets = await this.getLinkedWallets(user)
+
+            const owner = await space.Ownable.read.owner()
+
+            // Space owner is entitled to all channels
+            if (linkedWallets.includes(owner)) {
+                return true
+            }
+
+            // TODO: check if linked wallets are banned
+
+            const entitlements = await this.getChannelEntitlementsForPermission(
+                spaceId,
+                channelId,
+                permission,
+            )
+            const entitledWallet = await this.evaluateEntitledWallet(
+                user,
+                linkedWallets,
+                entitlements,
+                supportedXChainRpcUrls,
+            )
+            return entitledWallet !== undefined
+        }
 
         return space.Entitlements.read.isEntitledToChannel(channelId, user, permission)
     }

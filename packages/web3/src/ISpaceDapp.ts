@@ -132,6 +132,7 @@ export interface ISpaceDapp {
         channelId: string,
         user: string,
         permission: Permission,
+        supportedXChainRpcUrls: string[],
     ) => Promise<boolean>
     getEntitledWalletForJoiningSpace: (
         spaceId: string,
