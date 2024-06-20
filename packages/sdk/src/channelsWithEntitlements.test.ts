@@ -233,7 +233,7 @@ describe('channelsWithEntitlements', () => {
             channelId,
         } = await setupChannelWithCustomRole(['alice'], NoopRuleData)
 
-        expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
+        await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
 
         const tx = await bobSpaceDapp.banWalletAddress(
             spaceId,
