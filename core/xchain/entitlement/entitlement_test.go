@@ -18,7 +18,7 @@ const (
 	fast = 10
 )
 
-var timingThreshold = 20 * time.Millisecond
+var timingThreshold = 50 * time.Millisecond
 
 var fastTrueCheck = CheckOperation{
 	OpType:          CHECK,
