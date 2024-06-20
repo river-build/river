@@ -111,7 +111,7 @@ contract TieredLogPricingOracle is IMembershipPricing, IntrospectionFacet {
     uint256 totalMinted
   ) internal pure returns (uint256) {
     // Free allocation handling
-    if (freeAllocation > 0 && totalMinted <= freeAllocation) {
+    if (freeAllocation > 0 && totalMinted < freeAllocation) {
       return 0;
     }
 
