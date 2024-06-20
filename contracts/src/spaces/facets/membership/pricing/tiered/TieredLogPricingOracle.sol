@@ -21,10 +21,17 @@ contract TieredLogPricingOracle is IMembershipPricing, IntrospectionFacet {
   uint256 internal constant SCALE = 1e18; // 1 ether
   uint256 internal constant CENT_SCALE = 100;
   uint256 internal constant LOG_BASE = 10 ** 16;
+  uint256 internal constant FEED_TIMEOUT = 24 hours;
 
   // Cached values for optimization
   uint256 private immutable exchangeRateDecimals;
   uint256 private immutable exchangeRateScale;
+
+  // Error messages
+  error TieredLogPricingOracle__InvalidAnswer();
+  error TieredLogPricingOracle__InvalidRound();
+  error TieredLogPricingOracle__InvalidTimestamp();
+  error TieredLogPricingOracle__StaleData();
 
   constructor(address priceFeed) {
     __IntrospectionBase_init();
@@ -66,12 +73,21 @@ contract TieredLogPricingOracle is IMembershipPricing, IntrospectionFacet {
   function getChainlinkDataFeedLatestAnswer() public view returns (uint256) {
     // prettier-ignore
     (
-      /* uint80 roundID */,
+       uint80 roundId ,
       int answer,
       /*uint startedAt*/,
-      /*uint timeStamp*/,
+      uint updatedAt,
       /*uint80 answeredInRound*/
     ) = dataFeed.latestRoundData();
+
+    if (answer <= 0) revert TieredLogPricingOracle__InvalidAnswer();
+    if (roundId == 0) revert TieredLogPricingOracle__InvalidRound();
+    if (updatedAt == 0) revert TieredLogPricingOracle__InvalidRound();
+    if (updatedAt > block.timestamp)
+      revert TieredLogPricingOracle__InvalidTimestamp();
+    if (block.timestamp - updatedAt > FEED_TIMEOUT)
+      revert TieredLogPricingOracle__StaleData();
+
     return uint256(answer);
   }
 
