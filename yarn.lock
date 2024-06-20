@@ -1447,20 +1447,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@harmony/eslint-config@workspace:packages/eslint-config":
-  version: 0.0.0-use.local
-  resolution: "@harmony/eslint-config@workspace:packages/eslint-config"
-  languageName: unknown
-  linkType: soft
-
-"@harmony/prettier-config@workspace:packages/prettier-config":
-  version: 0.0.0-use.local
-  resolution: "@harmony/prettier-config@workspace:packages/prettier-config"
-  peerDependencies:
-    prettier: ^2.8.8
-  languageName: unknown
-  linkType: soft
-
 "@humanwhocodes/config-array@npm:^0.11.13":
   version: 0.11.13
   resolution: "@humanwhocodes/config-array@npm:0.11.13"
@@ -2402,9 +2388,23 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@river-build/eslint-config@workspace:packages/eslint-config":
+  version: 0.0.0-use.local
+  resolution: "@river-build/eslint-config@workspace:packages/eslint-config"
+  languageName: unknown
+  linkType: soft
+
 "@river-build/generated@workspace:^, @river-build/generated@workspace:packages/generated":
   version: 0.0.0-use.local
   resolution: "@river-build/generated@workspace:packages/generated"
+  languageName: unknown
+  linkType: soft
+
+"@river-build/prettier-config@workspace:packages/prettier-config":
+  version: 0.0.0-use.local
+  resolution: "@river-build/prettier-config@workspace:packages/prettier-config"
+  peerDependencies:
+    prettier: ^2.8.8
   languageName: unknown
   linkType: soft
 
