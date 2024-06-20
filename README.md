@@ -4,7 +4,9 @@ Welcome to the River repo. Here you will find all of the components to run the c
 
 [/contracts](contracts) - Smart contracts related to the operation of the River network
 
-[/core](core) - All Stream Node, and client artifacts.
+[/core](core) - All Stream Node.
+
+[/packages](packages) - All sdk code and client artifacts.
 
 ## Prerequisites
 
