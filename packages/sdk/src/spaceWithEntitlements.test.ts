@@ -150,8 +150,6 @@ describe('spaceWithEntitlements', () => {
             ruleData: NoopRuleData,
         })
 
-        // await expect(alice.joinStream(spaceId)).rejects.toThrow() // todo
-
         log('Alice should be able to join space')
         await expectUserCanJoin(
             spaceId,

@@ -21,7 +21,7 @@ import { Space } from './Space'
 import { SpaceRegistrar } from './SpaceRegistrar'
 import { createEntitlementStruct } from '../ConvertersRoles'
 import { BaseChainConfig } from '../IStaticContractsInfo'
-import { WalletLink } from './WalletLink'
+import { WalletLink, INVALID_ADDRESS } from './WalletLink'
 import { SpaceInfo } from '../types'
 import { IRuleEntitlement, UNKNOWN_ERROR, UserEntitlementShim } from './index'
 import { PricingModules } from './PricingModules'
@@ -392,7 +392,15 @@ export class SpaceDapp implements ISpaceDapp {
     }
 
     public async getLinkedWallets(wallet: string): Promise<string[]> {
-        const linkedWallets = await this.walletLink.getLinkedWallets(wallet)
+        let linkedWallets = await this.walletLink.getLinkedWallets(wallet)
+        // If there are no linked wallets, consider that the wallet may be linked to another root key.
+        if (linkedWallets.length === 0) {
+            const possibleRoot = await this.walletLink.getRootKeyForWallet(wallet)
+            if (possibleRoot !== INVALID_ADDRESS) {
+                linkedWallets = await this.walletLink.getLinkedWallets(possibleRoot)
+                return [possibleRoot, ...linkedWallets]
+            }
+        }
         return [wallet, ...linkedWallets]
     }
 
@@ -461,6 +469,13 @@ export class SpaceDapp implements ISpaceDapp {
         const space = this.getSpace(spaceId)
         if (!space) {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+
+        const owner = await space.Ownable.read.owner()
+
+        // Space owner is entitled to all channels
+        if (allWallets.includes(owner)) {
+            return owner
         }
 
         // TODO: check if a user is banned
