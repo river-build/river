@@ -18,7 +18,7 @@ const (
 	fast = 10
 )
 
-var TimingThreshold = 20 * time.Millisecond
+var timingThreshold = 20 * time.Millisecond
 
 var fastTrueCheck = CheckOperation{
 	OpType:          CHECK,
@@ -222,7 +222,7 @@ func TestAndOperation(t *testing.T) {
 		if !areDurationsClose(
 			elapsedTime,
 			expectedDuration,
-			TimingThreshold,
+			timingThreshold,
 		) {
 			t.Errorf("evaluateAndOperation(%v) took %v; want %v", idx, elapsedTime, expectedDuration)
 		}
@@ -273,7 +273,7 @@ func TestOrOperation(t *testing.T) {
 		if !areDurationsClose(
 			elapsedTime,
 			expectedDuration,
-			TimingThreshold,
+			timingThreshold,
 		) {
 			t.Errorf("evaluateOrOperation(%v) took %v; want %v", idx, elapsedTime, expectedDuration)
 		}
@@ -319,7 +319,7 @@ func TestCheckOperation(t *testing.T) {
 		if !areDurationsClose(
 			elapsedTime,
 			expectedDuration,
-			TimingThreshold,
+			timingThreshold,
 		) {
 			t.Errorf(
 				"evaluateCheckOperation(%v) took %v; want %v",
