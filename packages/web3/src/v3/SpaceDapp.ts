@@ -478,10 +478,15 @@ export class SpaceDapp implements ISpaceDapp {
             return owner
         }
 
-        // TODO: check if a user is banned
+        const bannedWallets = await this.bannedWalletAddresses(spaceId)
+        for (const wallet of allWallets) {
+            if (bannedWallets.includes(wallet)) {
+                return
+            }
+        }
 
         const entitlements = await this.getEntitlementsForPermission(spaceId, Permission.JoinSpace)
-        return this.evaluateEntitledWallet(
+        return await this.evaluateEntitledWallet(
             rootKey,
             allWallets,
             entitlements,
@@ -530,7 +535,12 @@ export class SpaceDapp implements ISpaceDapp {
                 return true
             }
 
-            // TODO: check if linked wallets are banned
+            const bannedWallets = await this.bannedWalletAddresses(spaceId)
+            for (const wallet of linkedWallets) {
+                if (bannedWallets.includes(wallet)) {
+                    return false
+                }
+            }
 
             const entitlements = await this.getChannelEntitlementsForPermission(
                 spaceId,

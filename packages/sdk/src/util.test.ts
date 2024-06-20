@@ -121,6 +121,11 @@ export const TEST_ENCRYPTED_MESSAGE_PROPS: PlainMessage<EncryptedData> = {
     senderKey: '',
 }
 
+export const getXchainSupportedRpcUrlsForTesting = (): string[] => {
+    // TODO: generate this for test environment and read from it
+    return ['http://127.0.0.1:8545', 'http://127.0.0.1:8546']
+}
+
 /**
  * makeUniqueSpaceStreamId - space stream ids are derived from the contract
  * in tests without entitlements there are no contracts, so we use a random id
@@ -447,22 +452,6 @@ export async function expectUserCanJoin(
         expect(userStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN)).toBeTrue()
         expect(userStreamView.userContent.isMember(channelId, MembershipOp.SO_JOIN)).toBeTrue()
     })
-}
-
-export async function expectUserCannotJoin(
-    spaceId: string,
-    client: Client,
-    spaceDapp: ISpaceDapp,
-    address: string,
-) {
-    // Check that the local evaluation of the user's entitlements for joining the space
-    // fails.
-    const entitledWallet = await spaceDapp.getEntitledWalletForJoiningSpace(spaceId, address, [
-        'http://127.0.0.1:8545',
-        'http://127.0.0.1:8546',
-    ])
-    expect(entitledWallet).toBeUndefined()
-    await expect(client.joinStream(spaceId)).rejects.toThrow(/PERMISSION_DENIED/)
 }
 
 export async function everyoneMembershipStruct(
