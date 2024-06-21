@@ -3,7 +3,6 @@ package builder
 import (
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/mitchellh/mapstructure"
@@ -37,12 +36,10 @@ func NewConfigBuilder[T any](defaults *T, envPrefix string) (*ConfigBuilder[T], 
 	if err != nil {
 		return nil, err
 	}
-	canonicalConfigEnvVars := make([]string, 0, 50)
 	err = bindViperKeys(envPrefix, b.v, "", "", "", configMap, b.envMap)
 	if err != nil {
 		return nil, err
 	}
-	slices.Sort(canonicalConfigEnvVars)
 
 	return b, nil
 }
@@ -51,6 +48,7 @@ func (b *ConfigBuilder[T]) LoadConfig(path string) error {
 	// Viper doesn't support prefixes in env files, but does support them in env vars.
 	// To address this inconsistency, env file is pre-proccessed.
 	ext := filepath.Ext(path)
+	// TODO: add support for .env.local and so on.
 	if ext == ".env" || ext == ".dotenv" {
 		data, err := os.ReadFile(path)
 		if err != nil {
