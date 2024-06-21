@@ -13,13 +13,10 @@ import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 
 import {Nonces} from "contracts/src/diamond/utils/Nonces.sol";
 
-// debuggging
-import {console} from "forge-std/console.sol";
-
 contract WalletLinkTest is IWalletLinkBase, BaseSetup {
-  Vm.Wallet rootWallet;
-  Vm.Wallet wallet;
-  Vm.Wallet smartAccount;
+  Vm.Wallet internal rootWallet;
+  Vm.Wallet internal wallet;
+  Vm.Wallet internal smartAccount;
 
   function setUp() public override {
     super.setUp();
@@ -34,6 +31,7 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
   // =============================================================
 
   /// @notice Modifier that links the caller (EOA wallet) to the root wallet
+  // solhint-disable-next-line max-line-length
   /// @dev The root wallet signs its latest nonce and the caller's wallet address, but the EOA is the one calling the function to link
   modifier givenWalletIsLinkedViaCaller() {
     uint256 nonce = walletLink.getLatestNonceForRootKey(rootWallet.addr);
@@ -57,6 +55,7 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
   }
 
   /// @notice Modifier that links a wallet to the root wallet through a proxy wallet (smart wallet)
+  // solhint-disable-next-line max-line-length
   /// @dev The root wallet signs its latest nonce and the wallet's address, then the EOA wallet signs its latest nonce and the root wallet's address, but the smart wallet is the one calling the function to link both of these wallets
   modifier givenWalletIsLinkedViaProxy() {
     uint256 rootNonce = walletLink.getLatestNonceForRootKey(rootWallet.addr);
