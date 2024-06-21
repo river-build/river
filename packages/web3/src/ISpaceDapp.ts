@@ -15,7 +15,6 @@ import { BigNumber, BytesLike, ContractReceipt, ContractTransaction, ethers } fr
 import { SpaceInfo } from './types'
 import { IRolesBase, Space, SpaceRegistrar, IRuleEntitlement } from './v3'
 import { PricingModules } from './v3/PricingModules'
-import { IPrepayShim } from './v3/IPrepayShim'
 import { BaseChainConfig } from './IStaticContractsInfo'
 import { PlatformRequirements } from './v3/PlatformRequirements'
 
