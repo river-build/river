@@ -1,8 +1,7 @@
 {
-    "name": "river",
-    "version": "1.0.0",
+    "name": "river-build",
+    "version": "0.0.0",
     "license": "MIT",
-    "private": true,
     "packageManager": "yarn@3.8.0",
     "scripts": {
         "anvil": "yarn workspace @river-build/contracts exec anvil",

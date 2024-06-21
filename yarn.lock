@@ -12117,9 +12117,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"river@workspace:.":
+"river-build@workspace:.":
   version: 0.0.0-use.local
-  resolution: "river@workspace:."
+  resolution: "river-build@workspace:."
   dependencies:
     "@arethetypeswrong/cli": ^0.15.3
     "@typechain/ethers-v5": ^10.1.1
