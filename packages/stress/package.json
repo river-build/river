@@ -19,8 +19,8 @@
         "@river-build/dlog": "workspace:^",
         "@river-build/encryption": "workspace:^",
         "@river-build/proto": "workspace:^",
+        "@river-build/sdk": "workspace:^",
         "@river-build/web3": "workspace:^",
-        "@river/sdk": "workspace:^",
         "ethers": "^5.7.2",
         "fake-indexeddb": "^4.0.1",
         "ioredis": "^5.3.2"
@@ -28,7 +28,7 @@
     "devDependencies": {
         "@jest/globals": "^29.6.2",
         "@testing-library/jest-dom": "^5.16.5",
-        "@testing-library/react": "^14.0.0",
+        "@testing-library/react": "^14.2.1",
         "@types/debug": "^4.1.8",
         "@types/jest": "^29.5.3",
         "@types/lodash": "^4.14.186",
