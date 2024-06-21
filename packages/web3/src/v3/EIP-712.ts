@@ -21,10 +21,10 @@ export function createEip712LinkedWalletdData({ domain, wallet, nonce }: Eip712L
     // should match the types and order of _LINKED_WALLET_TYPEHASH in
     // river/contracts/src/factory/facets/wallet-link/WalletLinkBase.sol
     const linkedWalletTypes: Record<string, TypedDataField[]> = {
-      LinkedWallet: [
-          { name: 'wallet', type: 'address' },
-          { name: 'nonce', type: 'uint256' },
-      ],
+        LinkedWallet: [
+            { name: 'wallet', type: 'address' },
+            { name: 'nonce', type: 'uint256' },
+        ],
     }
     const types = linkedWalletTypes
     const value: LinkedWalletValue = {
