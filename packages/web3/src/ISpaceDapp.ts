@@ -66,7 +66,6 @@ export interface ISpaceDapp {
     readonly spaceRegistrar: SpaceRegistrar
     readonly walletLink: WalletLinkV3
     readonly pricingModules: PricingModules
-    readonly prepay: IPrepayShim
     readonly platformRequirements: PlatformRequirements
     addRoleToChannel: (
         spaceId: string,
@@ -141,7 +140,6 @@ export interface ISpaceDapp {
     parseAllContractErrors: (args: { spaceId?: string; error: unknown }) => Error
     parseSpaceFactoryError: (error: unknown) => Error
     parseSpaceError: (spaceId: string, error: unknown) => Error
-    parsePrepayError: (error: unknown) => Error
     parseSpaceLogs: (
         spaceId: string,
         logs: ethers.providers.Log[],
