@@ -27,7 +27,7 @@
         "@bufbuild/buf": "^1.32.0",
         "@bufbuild/protoc-gen-es": "^1.9.0",
         "@connectrpc/protoc-gen-connect-es": "^1.4.0",
-        "@river-build/proto-source": "workspace:^",
+        "@river-build/proto-source": "^0.0.5",
         "@types/jest": "^29.5.3",
         "jest": "^29.6.2",
         "jest-extended": "^4.0.1",
@@ -39,5 +39,5 @@
     "files": [
         "/dist"
     ],
-    "gitHead": "89aeb16e9773d2ca6fb6b84192d9804bf60f9be6"
+    "gitHead": "5203ee3180a70923f448ee2decef7e2d547de78e"
 }
