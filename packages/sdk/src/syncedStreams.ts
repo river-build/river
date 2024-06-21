@@ -155,15 +155,6 @@ export class SyncedStreams {
         return Array.from(this.streams.keys())
     }
 
-    public onNetworkStatusChanged(isOnline: boolean) {
-        this.log('network status changed. Network online?', isOnline)
-        if (isOnline) {
-            // immediate retry if the network comes back online
-            this.log('back online, release retry wait', { syncState: this.syncState })
-            this.releaseRetryWait?.()
-        }
-    }
-
     private onMobileSafariBackgrounded = () => {
         this.isMobileSafariBackgrounded = document.visibilityState === 'hidden'
         this.log('onMobileSafariBackgrounded', this.isMobileSafariBackgrounded)
