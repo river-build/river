@@ -82,7 +82,7 @@ contract TieredLogPricingOracle is IMembershipPricing, IntrospectionFacet {
 
     if (answer <= 0) revert TieredLogPricingOracle__InvalidAnswer();
     if (roundId == 0) revert TieredLogPricingOracle__InvalidRound();
-    if (updatedAt == 0) revert TieredLogPricingOracle__InvalidRound();
+    if (updatedAt == 0) revert TieredLogPricingOracle__InvalidTimestamp();
     if (updatedAt > block.timestamp)
       revert TieredLogPricingOracle__InvalidTimestamp();
     if (block.timestamp - updatedAt > FEED_TIMEOUT)
