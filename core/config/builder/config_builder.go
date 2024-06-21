@@ -23,9 +23,9 @@ type ConfigBuilder[T any] struct {
 // cfg is a pointer to the config struct that may contain default values.
 // envPrefix is the prefix (without '_') for environment variables that will be bound to the config struct.
 // NOTE: default values of bound flags override the default values provided in cfg.
-func NewConfigBuilder[T any](cfg *T, envPrefix string) (*ConfigBuilder[T], error) {
+func NewConfigBuilder[T any](defaults *T, envPrefix string) (*ConfigBuilder[T], error) {
 	b := &ConfigBuilder[T]{
-		cfg:    cfg,
+		cfg:    defaults,
 		v:      viper.New(),
 		envMap: make(map[string]string),
 		prefix: envPrefix + "_",
@@ -33,7 +33,7 @@ func NewConfigBuilder[T any](cfg *T, envPrefix string) (*ConfigBuilder[T], error
 	b.v.AllowEmptyEnv(true)
 
 	configMap := make(map[string]interface{})
-	err := mapstructure.Decode(*cfg, &configMap)
+	err := mapstructure.Decode(*defaults, &configMap)
 	if err != nil {
 		return nil, err
 	}
