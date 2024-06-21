@@ -15,8 +15,6 @@ import {Architect} from "contracts/src/factory/facets/architect/Architect.sol";
 import {ProxyManager} from "contracts/src/diamond/proxy/manager/ProxyManager.sol";
 
 // space helpers
-
-import {PrepayHelper} from "contracts/test/spaces/prepay/PrepayHelper.sol";
 import {MultiInit} from "contracts/src/diamond/initializers/MultiInit.sol";
 
 // deployments
@@ -40,7 +38,6 @@ import {DeployPricingModules} from "contracts/scripts/deployments/facets/DeployP
 import {DeployImplementationRegistry} from "contracts/scripts/deployments/facets/DeployImplementationRegistry.s.sol";
 import {DeployPausable} from "contracts/scripts/deployments/facets/DeployPausable.s.sol";
 import {DeployPlatformRequirements} from "./facets/DeployPlatformRequirements.s.sol";
-import {DeployPrepayFacet} from "contracts/scripts/deployments/facets/DeployPrepayFacet.s.sol";
 import {DeployEIP712Facet} from "contracts/scripts/deployments/facets/DeployEIP712Facet.s.sol";
 
 contract DeploySpaceFactory is DiamondDeployer {
@@ -69,7 +66,6 @@ contract DeploySpaceFactory is DiamondDeployer {
   DeployFixedPricing deployFixedPricing = new DeployFixedPricing();
   DeployPlatformRequirements platformReqsHelper =
     new DeployPlatformRequirements();
-  DeployPrepayFacet prepayHelper = new DeployPrepayFacet();
   DeployEIP712Facet eip712Helper = new DeployEIP712Facet();
 
   // helpers
@@ -86,7 +82,7 @@ contract DeploySpaceFactory is DiamondDeployer {
   address proxyManager;
   address pausable;
   address platformReqs;
-  address prepay;
+
   address registry;
   address walletLink;
   address eip712;
@@ -139,7 +135,7 @@ contract DeploySpaceFactory is DiamondDeployer {
 
     pausable = pausableHelper.deploy();
     platformReqs = platformReqsHelper.deploy();
-    prepay = prepayHelper.deploy();
+
     eip712 = eip712Helper.deploy();
 
     addFacet(
@@ -196,11 +192,6 @@ contract DeploySpaceFactory is DiamondDeployer {
         1_000, // membershipFreeAllocation
         365 days // membershipDuration
       )
-    );
-    addFacet(
-      prepayHelper.makeCut(prepay, IDiamond.FacetCutAction.Add),
-      prepay,
-      prepayHelper.makeInitData("")
     );
     addFacet(
       pricingModulesHelper.makeCut(
