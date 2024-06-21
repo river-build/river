@@ -25,7 +25,6 @@ import { WalletLink } from './WalletLink'
 import { SpaceInfo } from '../types'
 import { IRuleEntitlement, UNKNOWN_ERROR, UserEntitlementShim } from './index'
 import { PricingModules } from './PricingModules'
-import { IPrepayShim } from './IPrepayShim'
 import { dlogger, isJest } from '@river-build/dlog'
 import { EVERYONE_ADDRESS, stringifyChannelMetadataJSON } from '../Utils'
 import { evaluateOperationsForEntitledWallet, ruleDataToOperations } from '../entitlement'
@@ -40,7 +39,6 @@ export class SpaceDapp implements ISpaceDapp {
     public readonly spaceRegistrar: SpaceRegistrar
     public readonly pricingModules: PricingModules
     public readonly walletLink: WalletLink
-    public readonly prepay: IPrepayShim
     public readonly platformRequirements: PlatformRequirements
 
     constructor(config: BaseChainConfig, provider: ethers.providers.Provider) {
@@ -49,11 +47,6 @@ export class SpaceDapp implements ISpaceDapp {
         this.spaceRegistrar = new SpaceRegistrar(config, provider)
         this.walletLink = new WalletLink(config, provider)
         this.pricingModules = new PricingModules(config, provider)
-        this.prepay = new IPrepayShim(
-            config.addresses.spaceFactory,
-            config.contractVersion,
-            provider,
-        )
         this.platformRequirements = new PlatformRequirements(
             config.addresses.spaceFactory,
             config.contractVersion,
@@ -495,7 +488,7 @@ export class SpaceDapp implements ISpaceDapp {
         if (err?.name !== UNKNOWN_ERROR) {
             return err
         }
-        const nonSpaceContracts = [this.pricingModules, this.prepay, this.walletLink]
+        const nonSpaceContracts = [this.pricingModules, this.walletLink]
         for (const contract of nonSpaceContracts) {
             err = contract.parseError(args.error)
             if (err?.name !== UNKNOWN_ERROR) {
@@ -503,15 +496,6 @@ export class SpaceDapp implements ISpaceDapp {
             }
         }
         return err
-    }
-
-    public parsePrepayError(error: unknown): Error {
-        if (!this.prepay) {
-            throw new Error('Prepay is not deployed properly.')
-        }
-        const decodedErr = this.prepay.parseError(error)
-        logger.error(decodedErr)
-        return decodedErr
     }
 
     public async parseSpaceLogs(
@@ -694,12 +678,11 @@ export class SpaceDapp implements ISpaceDapp {
         if (!space) {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
         }
-        const membershipAddress = space.Membership.address
-        const cost = await this.prepay.read.calculateMembershipPrepayFee(supply)
+        const cost = await space.Prepay.read.calculateMembershipPrepayFee(supply)
 
         return wrapTransaction(
             () =>
-                this.prepay.write(signer).prepayMembership(membershipAddress, supply, {
+                space.Prepay.write(signer).prepayMembership(supply, {
                     value: cost,
                 }),
             txnOpts,
@@ -711,8 +694,7 @@ export class SpaceDapp implements ISpaceDapp {
         if (!space) {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
         }
-        const membershipAddress = space.Membership.address
-        return this.prepay.read.prepaidMembershipSupply(membershipAddress)
+        return space.Prepay.read.prepaidMembershipSupply()
     }
 
     public async setChannelAccess(
