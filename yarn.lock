@@ -2649,20 +2649,20 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@river-build/react-sdk@workspace:packages/react"
   dependencies:
-    "@testing-library/react": ^14.0.0
-    "@types/react": ^18.3.1
-    "@types/react-dom": ^18.3.0
+    "@testing-library/react": ^14.2.1
+    "@types/react": ^18.2.11
+    "@types/react-dom": ^18.2.4
     "@typescript-eslint/eslint-plugin": ^6.10.0
     "@typescript-eslint/parser": ^6.10.0
     eslint: ^8.53.0
     eslint-plugin-import: ^2.27.5
-    eslint-plugin-react: ^7.34.2
+    eslint-plugin-react: ^7.32.2
     eslint-plugin-react-hooks: ^4.6.0
-    react: ^18.3.1
-    react-dom: ^18.3.1
+    react: ^18.2.0
+    react-dom: ^18.2.0
     typescript: ^5.1.6
   peerDependencies:
-    react: ^18.3.1
+    react: ^18.2.11
     typescript: ^5.1.6
   languageName: unknown
   linkType: soft
@@ -3413,6 +3413,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@testing-library/react@npm:^14.2.1":
+  version: 14.3.1
+  resolution: "@testing-library/react@npm:14.3.1"
+  dependencies:
+    "@babel/runtime": ^7.12.5
+    "@testing-library/dom": ^9.0.0
+    "@types/react-dom": ^18.0.0
+  peerDependencies:
+    react: ^18.0.0
+    react-dom: ^18.0.0
+  checksum: b057d4c9db5a523acfc24d7bc4665a924ab8d6f252c7f51eecf7dd30f1239413e1134925fd5cc9cbdef80496af64c04e6719b2081f89fe05ba87e8c6305bcc16
+  languageName: node
+  linkType: hard
+
 "@thehubbleproject/bls@npm:^0.5.1":
   version: 0.5.1
   resolution: "@thehubbleproject/bls@npm:0.5.1"
@@ -3707,7 +3721,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react-dom@npm:^18.0.0, @types/react-dom@npm:^18.3.0":
+"@types/react-dom@npm:^18.0.0, @types/react-dom@npm:^18.2.4":
   version: 18.3.0
   resolution: "@types/react-dom@npm:18.3.0"
   dependencies:
@@ -3716,7 +3730,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react@npm:*, @types/react@npm:^18.3.1":
+"@types/react@npm:*, @types/react@npm:^18.2.11":
   version: 18.3.3
   resolution: "@types/react@npm:18.3.3"
   dependencies:
@@ -7536,7 +7550,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint-plugin-react@npm:^7.34.2":
+"eslint-plugin-react@npm:^7.32.2":
   version: 7.34.3
   resolution: "eslint-plugin-react@npm:7.34.3"
   dependencies:
@@ -12608,7 +12622,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-dom@npm:^18.3.1":
+"react-dom@npm:^18.2.0":
   version: 18.3.1
   resolution: "react-dom@npm:18.3.1"
   dependencies:
@@ -12648,7 +12662,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react@npm:^18.3.1":
+"react@npm:^18.2.0":
   version: 18.3.1
   resolution: "react@npm:18.3.1"
   dependencies:
