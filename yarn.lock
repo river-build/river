@@ -2478,6 +2478,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@river-build/react-sdk@workspace:packages/react-sdk"
   dependencies:
+    "@river-build/sdk": "workspace:^"
     "@testing-library/react": ^14.2.1
     "@types/react": ^18.2.11
     "@types/react-dom": ^18.2.4
