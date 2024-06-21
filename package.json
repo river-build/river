@@ -42,6 +42,7 @@
         "install:foundry": "./scripts/foundry-up.sh && yarn forge install",
         "lint": "turbo lint",
         "postinstall": "husky install",
+        "preinstall": "yarn workspace @river-build/proto buf:generate",
         "prepare": "husky install",
         "prettier:check": "prettier --check .",
         "prettier:fix": "prettier --write .",

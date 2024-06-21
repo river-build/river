@@ -9,11 +9,10 @@
         "buf:clean": "rm -rf ./src/gen/*",
         "buf:generate": "cd ../.. && buf generate --template packages/proto/buf.gen.yaml --path protocol/protocol.proto --path protocol/payloads.proto --path packages/proto/internal.proto",
         "buf:lint": "cd ../.. && buf lint --path protocol/protocol.proto --path protocol/payloads.proto --path packages/proto/internal.proto",
-        "build": "yarn buf:generate && tsc",
         "cb": "yarn clean && yarn build",
         "clean": "yarn buf:clean && rm -rf ./dist",
         "my-jest": "yarn node -r ../../scripts/node-no-warn.js --experimental-vm-modules $(yarn bin jest) --passWithNoTests",
-        "postinstall": "yarn build",
+        "prepack": "yarn buf:generate",
         "test": "yarn my-jest",
         "test:ci": "yarn my-jest",
         "watch": "node scripts/watch_proto_files.cjs",
@@ -22,13 +21,13 @@
     "dependencies": {
         "@bufbuild/protobuf": "^1.9.0",
         "@connectrpc/connect": "^1.4.0",
-        "@connectrpc/connect-web": "^1.4.0",
-        "@river-build/proto-source": "workspace:^"
+        "@connectrpc/connect-web": "^1.4.0"
     },
     "devDependencies": {
         "@bufbuild/buf": "^1.32.0",
         "@bufbuild/protoc-gen-es": "^1.9.0",
         "@connectrpc/protoc-gen-connect-es": "^1.4.0",
+        "@river-build/proto-source": "workspace:^",
         "@types/jest": "^29.5.3",
         "jest": "^29.6.2",
         "jest-extended": "^4.0.1",
