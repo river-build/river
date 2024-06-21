@@ -6,13 +6,6 @@ import { Address } from '../ContractTypes'
 /**
  * https://github.com/ethereum/EIPs/blob/master/EIPS/eip-712.md
  * */
-const linkedWalletTypes: Record<string, TypedDataField[]> = {
-    LinkedWallet: [
-        { name: 'wallet', type: 'address' },
-        { name: 'nonce', type: 'uint256' },
-    ],
-}
-
 interface LinkedWalletValue {
     wallet: Address
     nonce: BigNumber
@@ -25,8 +18,14 @@ interface Eip712LinkedWalletArgs {
 }
 
 export function createEip712LinkedWalletdData({ domain, wallet, nonce }: Eip712LinkedWalletArgs) {
-    const domainHash = getDomainHash(domain)
-    const linkedWalletHash = toLinkedWalletHash(wallet, nonce)
+    // should match the types and order of _LINKED_WALLET_TYPEHASH in
+    // river/contracts/src/factory/facets/wallet-link/WalletLinkBase.sol
+    const linkedWalletTypes: Record<string, TypedDataField[]> = {
+      LinkedWallet: [
+          { name: 'wallet', type: 'address' },
+          { name: 'nonce', type: 'uint256' },
+      ],
+    }
     const types = linkedWalletTypes
     const value: LinkedWalletValue = {
         wallet,
@@ -36,12 +35,10 @@ export function createEip712LinkedWalletdData({ domain, wallet, nonce }: Eip712L
         types,
         domain,
         value,
-        domainHash,
-        linkedWalletHash,
     }
 }
 
-export function getDomainHash(domain: TypedDataDomain): string {
+export function getDomainSeparator(domain: TypedDataDomain): string {
     // this hash should match _TYPE_HASH
     // in river/contracts/src/diamond/utils/cryptography/signature/EIP712Base.sol
     const DOMAIN_TYPE_HASH = keccak256(
@@ -86,7 +83,7 @@ export function toLinkedWalletHash(address: string, nonce: BigNumber): string {
  * See {ECDSA-recover}.
  */
 export function toTypedDataHash(domain: TypedDataDomain, structHash: string): string {
-    const domainSeparator = getDomainHash(domain)
+    const domainSeparator = getDomainSeparator(domain)
     const encodedData = solidityPack(
         ['bytes2', 'bytes32', 'bytes32'],
         ['0x1901', domainSeparator, structHash],
