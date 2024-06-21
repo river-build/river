@@ -71,7 +71,7 @@ export class WalletLink {
         return this.signTypedData(rootKey, domain, types, value)
     }
 
-    private async generateWalletSignatureForRootKey({
+    private generateWalletSignatureForRootKey({
         wallet,
         rootKeyAddress,
         nonce: rootKeyNonce,
