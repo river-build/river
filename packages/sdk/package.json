@@ -37,10 +37,10 @@
         "@connectrpc/connect-web": "^1.4.0",
         "@datadog/browser-rum": "^5.8.0",
         "@ethereumjs/util": "^8.0.1",
-        "@river-build/dlog": "workspace:^",
-        "@river-build/encryption": "workspace:^",
-        "@river-build/proto": "workspace:^",
-        "@river-build/web3": "workspace:^",
+        "@river-build/dlog": "^0.0.2",
+        "@river-build/encryption": "^0.0.2",
+        "@river-build/proto": "^0.0.2",
+        "@river-build/web3": "^0.0.2",
         "axios": "^1.2.6",
         "browser-or-node": "^2.1.1",
         "debug": "^4.3.4",
@@ -88,5 +88,6 @@
     ],
     "resolutions": {
         "jest-worker@^29.5.0": "patch:jest-worker@npm%3A29.5.0#./.yarn/patches/jest-worker-npm-29.5.0-70da3388f1.patch"
-    }
+    },
+    "gitHead": "89aeb16e9773d2ca6fb6b84192d9804bf60f9be6"
 }

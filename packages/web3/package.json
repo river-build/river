@@ -18,8 +18,8 @@
         "watch": "tsc --watch"
     },
     "dependencies": {
-        "@river-build/dlog": "workspace:^",
-        "@river-build/generated": "workspace:^",
+        "@river-build/dlog": "^0.0.2",
+        "@river-build/generated": "^0.0.2",
         "abitype": "^0.9.10",
         "debug": "^4.3.4",
         "ethers": "^5.7.2",
@@ -49,5 +49,6 @@
     "files": [
         "/dist",
         "/v4"
-    ]
+    ],
+    "gitHead": "89aeb16e9773d2ca6fb6b84192d9804bf60f9be6"
 }

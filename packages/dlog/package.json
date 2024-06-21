@@ -19,7 +19,7 @@
     },
     "dependencies": {
         "@bufbuild/protobuf": "^1.9.0",
-        "@river-build/proto": "workspace:^",
+        "@river-build/proto": "^0.0.2",
         "browser-or-node": "^2.1.1",
         "debug": "^4.3.4",
         "ethereum-cryptography": "^1.2.0"
@@ -40,5 +40,6 @@
     },
     "files": [
         "/dist"
-    ]
+    ],
+    "gitHead": "89aeb16e9773d2ca6fb6b84192d9804bf60f9be6"
 }

@@ -5,5 +5,6 @@
     "main": "config.js",
     "peerDependencies": {
         "prettier": "^2.8.8"
-    }
+    },
+    "gitHead": "89aeb16e9773d2ca6fb6b84192d9804bf60f9be6"
 }
