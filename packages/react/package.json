@@ -27,7 +27,7 @@
     "types": "./dist/types/exports/index.d.ts",
     "typings": "./dist/types/exports/index.d.ts",
     "peerDependencies": {
-        "react": "^18.2.11",
+        "react": "^18.2.0",
         "typescript": "^5.1.6"
     },
     "devDependencies": {
