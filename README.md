@@ -91,3 +91,13 @@ d) you want its e2e tests to be run on CI, add a `"test:e2e"` script
 e) you want a single script to run all tests within the package, add `"test: yarn test:unit && yarn test:e2e"` script to its package.json
 
 Similarly, if you edit or delete these scripts, be aware that you may be removing those scripts from CI.
+
+## Publish to npm
+
+```
+yarn publish-packages
+```
+
+We use changeset to manage versions and upload to npm
+[changeset cli](https://github.com/changesets/changesets/blob/main/packages/cli/README.md)
+[turbo documentation](https://turbo.build/repo/docs/guides/publishing-libraries#versioning-and-publishing)

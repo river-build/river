@@ -132,5 +132,8 @@
         "protocol",
         "packages/*",
         "contracts"
-    ]
+    ],
+    "dependencies": {
+        "@changesets/cli": "^2.27.5"
+    }
 }
