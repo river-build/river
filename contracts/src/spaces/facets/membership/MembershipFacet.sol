@@ -174,8 +174,7 @@ contract MembershipFacet is
       uint256 userValue = _getCapturedValue(transactionId);
 
       if (userValue == 0) revert Membership__InsufficientPayment();
-      if (userValue != membershipPrice)
-        revert Membership__InsufficientPayment();
+      if (userValue != membershipPrice) revert Membership__InvalidPayment();
 
       // set renewal price for token
       _setMembershipRenewalPrice(tokenId, membershipPrice);
