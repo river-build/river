@@ -21,8 +21,10 @@ var (
 	logNoColor   bool
 )
 
-var cmdConfig *config.Config
-var cmdConfigBuilder *builder.ConfigBuilder[config.Config]
+var (
+	cmdConfig        *config.Config
+	cmdConfigBuilder *builder.ConfigBuilder[config.Config]
+)
 
 var rootCmd = &cobra.Command{
 	Use:          "river_node",

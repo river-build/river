@@ -256,7 +256,13 @@ func TestAllTogether2(t *testing.T) {
 
 	pflags := pflag.NewFlagSet("test", pflag.ContinueOnError)
 	var configFiles []string
-	pflags.StringSliceVarP(&configFiles, "config", "c", []string{"def"}, "Path to the configuration file. Can be specified multiple times. Values are applied in sequence.")
+	pflags.StringSliceVarP(
+		&configFiles,
+		"config",
+		"c",
+		[]string{"def"},
+		"Path to the configuration file. Can be specified multiple times. Values are applied in sequence.",
+	)
 	pflags.Set("config", "")
 
 	require.Equal([]string{}, configFiles)
