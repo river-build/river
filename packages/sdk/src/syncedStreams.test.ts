@@ -4,7 +4,8 @@
 
 /* eslint-disable jest/no-commented-out-tests */
 import { makeEvent, unpackStream } from './sign'
-import { SyncState, SyncedStreams, stateConstraints } from './syncedStreams'
+import { SyncedStreams } from './syncedStreams'
+import { SyncState, stateConstraints } from './syncedStreamsLoop'
 import { makeDonePromise, makeRandomUserContext, makeTestRpcClient, waitFor } from './util.test'
 import { makeUserInboxStreamId, streamIdToBytes, userIdFromAddress } from './id'
 import { make_UserInboxPayload_Ack, make_UserInboxPayload_Inception } from './types'
@@ -73,12 +74,12 @@ describe('syncStreams', () => {
         const alicesUserInboxStreamIdStr = makeUserInboxStreamId(alicesUserId)
         const alicesUserInboxStreamId = streamIdToBytes(alicesUserInboxStreamIdStr)
         const userInboxStreamResponse = await createStream(alicesUserInboxStreamId, [
-            await makeEvent(
-                alicesContext,
+                await makeEvent(
+                    alicesContext,
                 make_UserInboxPayload_Inception({
                     streamId: alicesUserInboxStreamId,
-                }),
-            ),
+                    }),
+                ),
         ])
         const userInboxStream = new SyncedStream(
             alicesUserId,
