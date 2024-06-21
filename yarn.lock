@@ -2846,12 +2846,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@river-build/dlog@^0.0.4, @river-build/dlog@workspace:^, @river-build/dlog@workspace:packages/dlog":
+"@river-build/dlog@^0.0.5, @river-build/dlog@workspace:^, @river-build/dlog@workspace:packages/dlog":
   version: 0.0.0-use.local
   resolution: "@river-build/dlog@workspace:packages/dlog"
   dependencies:
     "@bufbuild/protobuf": ^1.9.0
-    "@river-build/proto": ^0.0.4
+    "@river-build/proto": ^0.0.5
     "@types/jest": ^29.5.3
     "@typescript-eslint/eslint-plugin": ^6.10.0
     "@typescript-eslint/parser": ^6.10.0
@@ -2870,16 +2870,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@river-build/encryption@^0.0.4, @river-build/encryption@workspace:^, @river-build/encryption@workspace:packages/encryption":
+"@river-build/encryption@^0.0.5, @river-build/encryption@workspace:^, @river-build/encryption@workspace:packages/encryption":
   version: 0.0.0-use.local
   resolution: "@river-build/encryption@workspace:packages/encryption"
   dependencies:
     "@bufbuild/protobuf": ^1.9.0
     "@ethereumjs/util": ^8.0.1
     "@matrix-org/olm": ^3.2.15
-    "@river-build/dlog": ^0.0.4
-    "@river-build/proto": ^0.0.4
-    "@river-build/web3": ^0.0.4
+    "@river-build/dlog": ^0.0.5
+    "@river-build/proto": ^0.0.5
+    "@river-build/web3": ^0.0.5
     "@types/jest": ^29.5.3
     "@types/lodash": ^4.14.186
     "@types/node": ^20.5.0
@@ -2909,7 +2909,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@river-build/generated@^0.0.4, @river-build/generated@workspace:packages/generated":
+"@river-build/generated@^0.0.5, @river-build/generated@workspace:packages/generated":
   version: 0.0.0-use.local
   resolution: "@river-build/generated@workspace:packages/generated"
   languageName: unknown
@@ -2929,7 +2929,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@river-build/proto@^0.0.4, @river-build/proto@workspace:^, @river-build/proto@workspace:packages/proto":
+"@river-build/proto@^0.0.5, @river-build/proto@workspace:^, @river-build/proto@workspace:packages/proto":
   version: 0.0.0-use.local
   resolution: "@river-build/proto@workspace:packages/proto"
   dependencies:
@@ -2982,10 +2982,10 @@ __metadata:
     "@datadog/browser-rum": ^5.8.0
     "@ethereumjs/util": ^8.0.1
     "@jest/globals": ^29.6.2
-    "@river-build/dlog": ^0.0.4
-    "@river-build/encryption": ^0.0.4
-    "@river-build/proto": ^0.0.4
-    "@river-build/web3": ^0.0.4
+    "@river-build/dlog": ^0.0.5
+    "@river-build/encryption": ^0.0.5
+    "@river-build/proto": ^0.0.5
+    "@river-build/web3": ^0.0.5
     "@testing-library/jest-dom": ^5.16.5
     "@testing-library/react": ^14.2.1
     "@types/debug": ^4.1.8
@@ -3067,12 +3067,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@river-build/web3@^0.0.4, @river-build/web3@workspace:^, @river-build/web3@workspace:packages/web3":
+"@river-build/web3@^0.0.5, @river-build/web3@workspace:^, @river-build/web3@workspace:packages/web3":
   version: 0.0.0-use.local
   resolution: "@river-build/web3@workspace:packages/web3"
   dependencies:
-    "@river-build/dlog": ^0.0.4
-    "@river-build/generated": ^0.0.4
+    "@river-build/dlog": ^0.0.5
+    "@river-build/generated": ^0.0.5
     "@types/jest": ^29.5.3
     "@types/lodash": ^4.14.186
     "@types/node": ^20.5.0

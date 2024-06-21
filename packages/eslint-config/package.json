@@ -1,6 +1,6 @@
 {
     "name": "@river-build/eslint-config",
-    "version": "0.0.4",
+    "version": "0.0.5",
     "license": "MIT",
     "main": "typescript.js",
     "gitHead": "89aeb16e9773d2ca6fb6b84192d9804bf60f9be6"
