@@ -151,6 +151,9 @@ abstract contract WalletLinkBase is IWalletLinkBase, EIP712Base, Nonces {
       revert WalletLink__InvalidSignature();
     }
 
+    //Check that the nonce being used is higher than the last nonce used
+    _useCheckedNonce(rootWallet.addr, nonce);
+
     // Remove the link in the walletToRemove to root keys map
     ds.rootKeyByWallet[walletToRemove] = address(0);
     ds.walletsByRootKey[rootWallet.addr].remove(walletToRemove);

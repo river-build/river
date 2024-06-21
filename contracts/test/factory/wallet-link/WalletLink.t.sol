@@ -13,6 +13,9 @@ import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 
 import {Nonces} from "contracts/src/diamond/utils/Nonces.sol";
 
+// debuggging
+import {console} from "forge-std/console.sol";
+
 contract WalletLinkTest is IWalletLinkBase, BaseSetup {
   Vm.Wallet rootWallet;
   Vm.Wallet wallet;
@@ -27,9 +30,12 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
   }
 
   // =============================================================
-  //                   linkCallerToRootKey
+  //                           Modifiers
   // =============================================================
-  modifier givenCallerIsLinked() {
+
+  /// @notice Modifier that links the caller (EOA wallet) to the root wallet
+  /// @dev The root wallet signs its latest nonce and the caller's wallet address, but the EOA is the one calling the function to link
+  modifier givenWalletIsLinkedViaCaller() {
     uint256 nonce = walletLink.getLatestNonceForRootKey(rootWallet.addr);
 
     bytes memory signature = _signWalletLink(
@@ -50,7 +56,43 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
     _;
   }
 
-  function test_linkCallerToRootKey() external givenCallerIsLinked {
+  /// @notice Modifier that links a wallet to the root wallet through a proxy wallet (smart wallet)
+  /// @dev The root wallet signs its latest nonce and the wallet's address, then the EOA wallet signs its latest nonce and the root wallet's address, but the smart wallet is the one calling the function to link both of these wallets
+  modifier givenWalletIsLinkedViaProxy() {
+    uint256 rootNonce = walletLink.getLatestNonceForRootKey(rootWallet.addr);
+
+    bytes memory rootSignature = _signWalletLink(
+      rootWallet.privateKey,
+      wallet.addr,
+      rootNonce
+    );
+
+    uint256 walletNonce = walletLink.getLatestNonceForRootKey(wallet.addr);
+
+    bytes memory walletSignature = _signWalletLink(
+      wallet.privateKey,
+      rootWallet.addr,
+      walletNonce
+    );
+
+    // as a smart wallet, delegate another wallet to a root wallet
+    vm.startPrank(smartAccount.addr);
+    vm.expectEmit(address(walletLink));
+    emit LinkWalletToRootKey(wallet.addr, rootWallet.addr);
+    walletLink.linkWalletToRootKey(
+      LinkedWallet(wallet.addr, walletSignature),
+      LinkedWallet(rootWallet.addr, rootSignature),
+      rootNonce
+    );
+    vm.stopPrank();
+    _;
+  }
+
+  // =============================================================
+  //                   linkCallerToRootKey
+  // =============================================================
+
+  function test_linkCallerToRootKey() external givenWalletIsLinkedViaCaller {
     assertTrue(walletLink.checkIfLinked(rootWallet.addr, wallet.addr));
   }
 
@@ -70,7 +112,7 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
 
   function test_revertWhen_linkCallerToRootKeyLinkToSelf()
     external
-    givenCallerIsLinked
+    givenWalletIsLinkedViaCaller
   {
     uint256 nonce = walletLink.getLatestNonceForRootKey(rootWallet.addr);
     bytes memory signature = "0x00";
@@ -85,7 +127,7 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
 
   function test_revertWhen_linkCallerToRootKeyAlreadyLinked()
     external
-    givenCallerIsLinked
+    givenWalletIsLinkedViaCaller
   {
     uint256 nonce = walletLink.getLatestNonceForRootKey(rootWallet.addr);
 
@@ -112,7 +154,7 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
 
   function test_revertWhen_linkCallerToRootKeyRootLinkAlreadyExists()
     external
-    givenCallerIsLinked
+    givenWalletIsLinkedViaCaller
   {
     uint256 nonce = walletLink.getLatestNonceForRootKey(rootWallet.addr);
     address caller = vm.createWallet("wallet3").addr;
@@ -130,7 +172,7 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
 
   function test_revertWhen_linkCallerToRootKeyLinkingToAnotherRootWallet()
     external
-    givenCallerIsLinked
+    givenWalletIsLinkedViaCaller
   {
     address root = vm.createWallet("rootKey2").addr;
 
@@ -167,7 +209,7 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
 
   function test_revertWhen_linkCallerToRootKeyInvalidNonce()
     external
-    givenCallerIsLinked
+    givenWalletIsLinkedViaCaller
   {
     uint256 nonce = 0;
     address anotherWallet = vm.createWallet("wallet2").addr;
@@ -195,37 +237,8 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
   // =============================================================
   //                   linkWalletToRootKey
   // =============================================================
-  modifier givenWalletIsLinked() {
-    uint256 rootNonce = walletLink.getLatestNonceForRootKey(rootWallet.addr);
 
-    bytes memory rootSignature = _signWalletLink(
-      rootWallet.privateKey,
-      wallet.addr,
-      rootNonce
-    );
-
-    uint256 walletNonce = walletLink.getLatestNonceForRootKey(wallet.addr);
-
-    bytes memory walletSignature = _signWalletLink(
-      wallet.privateKey,
-      rootWallet.addr,
-      walletNonce
-    );
-
-    // as a smart wallet, delegate another wallet to a root wallet
-    vm.startPrank(smartAccount.addr);
-    vm.expectEmit(address(walletLink));
-    emit LinkWalletToRootKey(wallet.addr, rootWallet.addr);
-    walletLink.linkWalletToRootKey(
-      LinkedWallet(wallet.addr, walletSignature),
-      LinkedWallet(rootWallet.addr, rootSignature),
-      rootNonce
-    );
-    vm.stopPrank();
-    _;
-  }
-
-  function test_linkWalletToRootKey() external givenWalletIsLinked {
+  function test_linkWalletToRootKey() external givenWalletIsLinkedViaProxy {
     assertTrue(walletLink.checkIfLinked(rootWallet.addr, wallet.addr));
   }
 
@@ -251,7 +264,7 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
 
   function test_revertWhen_linkWalletToRootKeyAlreadyLinked()
     external
-    givenWalletIsLinked
+    givenWalletIsLinkedViaProxy
   {
     vm.startPrank(smartAccount.addr);
     vm.expectRevert(
@@ -271,7 +284,7 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
 
   function test_revertWhen_linkWalletToRootKeyRootLinkAlreadyExists()
     external
-    givenWalletIsLinked
+    givenWalletIsLinkedViaProxy
   {
     uint256 nonce = walletLink.getLatestNonceForRootKey(rootWallet.addr);
     address anotherWallet = vm.createWallet("wallet3").addr;
@@ -292,7 +305,7 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
 
   function test_revertWhen_linkWalletToRootKeyLinkingToAnotherRootWallet()
     external
-    givenWalletIsLinked
+    givenWalletIsLinkedViaProxy
   {
     address root = vm.createWallet("rootKey2").addr;
     uint256 nonce2 = walletLink.getLatestNonceForRootKey(root);
@@ -362,7 +375,7 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
 
   function test_revertWhen_linkWalletToRootKeyInvalidNonce()
     external
-    givenWalletIsLinked
+    givenWalletIsLinkedViaProxy
   {
     uint256 nonce = 0;
     Vm.Wallet memory anotherWallet = vm.createWallet("wallet2");
@@ -392,5 +405,141 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
       LinkedWallet(rootWallet.addr, rootSignature),
       nonce
     );
+  }
+
+  // =============================================================
+  //                         removeLink
+  // =============================================================
+  function test_removeLink() external givenWalletIsLinkedViaCaller {
+    uint256 nonce = walletLink.getLatestNonceForRootKey(rootWallet.addr);
+
+    bytes memory signature = _signWalletLink(
+      rootWallet.privateKey,
+      wallet.addr,
+      nonce
+    );
+
+    vm.startPrank(smartAccount.addr);
+    vm.expectEmit(address(walletLink));
+    emit RemoveLink(wallet.addr, smartAccount.addr);
+    walletLink.removeLink({
+      wallet: wallet.addr,
+      rootWallet: LinkedWallet(rootWallet.addr, signature),
+      nonce: nonce
+    });
+    vm.stopPrank();
+
+    assertFalse(walletLink.checkIfLinked(rootWallet.addr, wallet.addr));
+  }
+
+  function test_revertWhen_removeLinkInvalidAddress() external {
+    uint256 nonce = walletLink.getLatestNonceForRootKey(rootWallet.addr);
+    bytes memory signature = _signWalletLink(
+      rootWallet.privateKey,
+      wallet.addr,
+      nonce
+    );
+
+    vm.prank(smartAccount.addr);
+    vm.expectRevert(WalletLink__InvalidAddress.selector);
+    walletLink.removeLink({
+      wallet: address(0),
+      rootWallet: LinkedWallet(rootWallet.addr, signature),
+      nonce: nonce
+    });
+
+    vm.prank(smartAccount.addr);
+    vm.expectRevert(WalletLink__InvalidAddress.selector);
+    walletLink.removeLink({
+      wallet: wallet.addr,
+      rootWallet: LinkedWallet(address(0), signature),
+      nonce: nonce
+    });
+  }
+
+  function test_revertWhen_removeLinkCannotRemoveRootWallet() external {
+    uint256 nonce = walletLink.getLatestNonceForRootKey(rootWallet.addr);
+    bytes memory signature = _signWalletLink(
+      rootWallet.privateKey,
+      wallet.addr,
+      nonce
+    );
+
+    vm.prank(smartAccount.addr);
+    vm.expectRevert(WalletLink__CannotRemoveRootWallet.selector);
+    walletLink.removeLink({
+      wallet: rootWallet.addr,
+      rootWallet: LinkedWallet(rootWallet.addr, signature),
+      nonce: nonce
+    });
+  }
+
+  function test_revertWhen_removeLinkWalletLink__NotLinked() external {
+    uint256 nonce = walletLink.getLatestNonceForRootKey(rootWallet.addr);
+    bytes memory signature = _signWalletLink(
+      rootWallet.privateKey,
+      wallet.addr,
+      nonce
+    );
+
+    vm.prank(smartAccount.addr);
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        WalletLink__NotLinked.selector,
+        wallet.addr,
+        rootWallet.addr
+      )
+    );
+    walletLink.removeLink({
+      wallet: wallet.addr,
+      rootWallet: LinkedWallet(rootWallet.addr, signature),
+      nonce: nonce
+    });
+  }
+
+  function test_revertWhen_removeLinkWalletLink__InvalidSignature()
+    external
+    givenWalletIsLinkedViaCaller
+  {
+    uint256 nonce = walletLink.getLatestNonceForRootKey(rootWallet.addr);
+    bytes memory signature = _signWalletLink(
+      wallet.privateKey, // wrong private key
+      wallet.addr,
+      nonce
+    );
+
+    vm.prank(smartAccount.addr);
+    vm.expectRevert(WalletLink__InvalidSignature.selector);
+    walletLink.removeLink({
+      wallet: wallet.addr,
+      rootWallet: LinkedWallet(rootWallet.addr, signature),
+      nonce: nonce
+    });
+  }
+
+  function test_revertWhen_removeLinkInvalidAccountNonce()
+    external
+    givenWalletIsLinkedViaCaller
+  {
+    uint256 nonce = walletLink.getLatestNonceForRootKey(rootWallet.addr) + 1;
+    bytes memory signature = _signWalletLink(
+      rootWallet.privateKey,
+      wallet.addr,
+      nonce
+    );
+
+    vm.prank(smartAccount.addr);
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        Nonces.InvalidAccountNonce.selector,
+        rootWallet.addr,
+        walletLink.getLatestNonceForRootKey(rootWallet.addr)
+      )
+    );
+    walletLink.removeLink({
+      wallet: wallet.addr,
+      rootWallet: LinkedWallet(rootWallet.addr, signature),
+      nonce: nonce
+    });
   }
 }
