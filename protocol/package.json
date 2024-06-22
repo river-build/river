@@ -4,6 +4,5 @@
     "packageManager": "yarn@3.8.0",
     "files": [
         "*.proto"
-    ],
-    "gitHead": "5203ee3180a70923f448ee2decef7e2d547de78e"
+    ]
 }
