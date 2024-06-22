@@ -2923,7 +2923,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@river-build/proto-source@workspace:^, @river-build/proto-source@workspace:protocol":
+"@river-build/proto-source@^0.0.5, @river-build/proto-source@workspace:protocol":
   version: 0.0.0-use.local
   resolution: "@river-build/proto-source@workspace:protocol"
   languageName: unknown
@@ -2939,8 +2939,9 @@ __metadata:
     "@connectrpc/connect": ^1.4.0
     "@connectrpc/connect-web": ^1.4.0
     "@connectrpc/protoc-gen-connect-es": ^1.4.0
-    "@river-build/proto-source": "workspace:^"
+    "@river-build/proto-source": ^0.0.5
     "@types/jest": ^29.5.3
+    "@types/node": ^20.5.0
     jest: ^29.6.2
     jest-extended: ^4.0.1
     lodash.debounce: ^4.0.8
