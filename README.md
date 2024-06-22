@@ -96,8 +96,10 @@ Similarly, if you edit or delete these scripts, be aware that you may be removin
 
 1. create a new branch and push it
 2. run the lerna command:
+
 ```
 yarn build
 npx lerna publish --no-private --force-publish
 ```
+
 3. this modifies a lot of files. commit the changes, make a pr
