@@ -1,13 +1,15 @@
 'use client'
-import { useContext } from 'react'
-import { SyncContext } from './SyncContext'
+import { useRiverSync } from './internals/useRiverSync'
 
 export const useSyncAgent = () => {
-    const sync = useContext(SyncContext)
+    const river = useRiverSync()
 
-    if (!sync) {
-        throw new Error('No SyncAgent set, use SyncContextProvider to set one')
+    if (!river?.syncAgent) {
+        console.error(
+            'No SyncAgent set, use RiverSyncProvider to set one or use useConnected to check if connected',
+        )
+        return undefined
     }
 
-    return sync
+    return river.syncAgent
 }

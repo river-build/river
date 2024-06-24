@@ -10,10 +10,15 @@ type BaseObservableConfig<T> = {
 
 type ObservableValue<T> = T | PersistedModel<T>
 
-export const useObservable = <T>(
+// TODO: Currenty return type is broken, fix it using function overloading
+// Doing that, we will be able to use the same function for both persisted and non persisted observables
+// and still have a good type inference for status properties
+// function useObservable<T>(observable: Observable<T> | undefined, config?: BaseObservableConfig<T>): ObservableReturn<T>
+// function useObservable<T>(observable: PersistedObservable<T> | undefined, config?: BaseObservableConfig<T>): PersistedReturn<T>
+export function useObservable<T>(
     observable: Observable<T> | undefined,
     config?: BaseObservableConfig<T>,
-) => {
+) {
     const [value, setValue] = useState<ObservableValue<T> | undefined>(observable?.value)
     const opts = { fireImmediately: true, ...config } satisfies BaseObservableConfig<T>
 
@@ -63,14 +68,15 @@ export const useObservable = <T>(
                 isSaving: status === 'saving',
                 isLoaded: status === 'loaded',
             }
-        }
-        return {
-            data: value,
-            status: undefined,
-            isLoading: false,
-            isError: false,
-            isSaving: false,
-            isLoaded: true,
+        } else {
+            return {
+                data: value,
+                status: undefined,
+                isLoading: false,
+                isError: false,
+                isSaving: false,
+                isLoaded: true,
+            }
         }
     }, [value])
 

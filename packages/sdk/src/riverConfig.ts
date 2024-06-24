@@ -11,13 +11,14 @@ import { isDefined } from './check'
 import { check } from '@river-build/dlog'
 
 function getEnvironmentId(): string {
-    return process.env.RIVER_ENV || 'local_single'
+    // return process.env.RIVER_ENV || 'local_single'
+    return 'local_single'
 }
 
 function getBaseRpcUrlForChain(chainId: number): string {
-    if (process.env.BASE_CHAIN_RPC_URL) {
-        return process.env.BASE_CHAIN_RPC_URL
-    }
+    // if (process.env.BASE_CHAIN_RPC_URL) {
+    //     return process.env.BASE_CHAIN_RPC_URL
+    // }
     switch (chainId) {
         case 31337:
             return 'http://localhost:8545'
@@ -29,9 +30,9 @@ function getBaseRpcUrlForChain(chainId: number): string {
 }
 
 function getRiverRpcUrlForChain(chainId: number): string {
-    if (process.env.RIVER_CHAIN_RPC_URL) {
-        return process.env.RIVER_CHAIN_RPC_URL
-    }
+    // if (process.env.RIVER_CHAIN_RPC_URL) {
+    //     return process.env.RIVER_CHAIN_RPC_URL
+    // }
     switch (chainId) {
         case 31338:
             return 'http://localhost:8546'

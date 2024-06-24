@@ -24,15 +24,16 @@
     ],
     "sideEffects": false,
     "type": "module",
-    "main": "./dist/esm/exports/index.js",
-    "types": "./dist/types/exports/index.d.ts",
-    "typings": "./dist/types/exports/index.d.ts",
+    "main": "./dist/esm/index.js",
+    "types": "./dist/types/index.d.ts",
+    "typings": "./dist/types/index.d.ts",
     "peerDependencies": {
         "react": "^18.2.0",
         "typescript": "^5.1.6"
     },
     "dependencies": {
-        "@river-build/sdk": "workspace:^"
+        "@river-build/sdk": "workspace:^",
+        "ethers": "^5.7.2"
     },
     "devDependencies": {
         "@testing-library/react": "^14.2.1",

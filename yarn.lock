@@ -3537,6 +3537,8 @@ __metadata:
     "@radix-ui/react-switch": ^1.0.3
     "@river-build/eslint-config": "workspace:^"
     "@river-build/prettier-config": "workspace:^"
+    "@river-build/react-sdk": "workspace:*"
+    "@river-build/sdk": "workspace:*"
     "@types/node": ^20.5.0
     "@types/react": ^18.2.11
     "@types/react-dom": ^18.2.4
@@ -3550,6 +3552,7 @@ __metadata:
     eslint-plugin-import: ^2.27.5
     eslint-plugin-react: ^7.32.2
     eslint-plugin-react-hooks: ^4.6.0
+    ethers: ^5.7.2
     postcss: ^8.4.38
     prettier: ^2.8.8
     prettier-plugin-tailwindcss: ^0.4.1
@@ -3561,8 +3564,10 @@ __metadata:
     tailwindcss: ^3.4.4
     tailwindcss-animate: ^1.0.7
     typescript: ^5.1.6
+    viem: ^1.18.2
     vite: ^5.3.1
     vite-plugin-checker: ^0.6.4
+    wagmi: ^1.4.12
     zod: ^3.21.4
   languageName: unknown
   linkType: soft
@@ -3603,7 +3608,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@river-build/react-sdk@workspace:packages/react-sdk":
+"@river-build/react-sdk@workspace:*, @river-build/react-sdk@workspace:packages/react-sdk":
   version: 0.0.0-use.local
   resolution: "@river-build/react-sdk@workspace:packages/react-sdk"
   dependencies:
@@ -3617,6 +3622,7 @@ __metadata:
     eslint-plugin-import: ^2.27.5
     eslint-plugin-react: ^7.32.2
     eslint-plugin-react-hooks: ^4.6.0
+    ethers: ^5.7.2
     react: ^18.2.0
     react-dom: ^18.2.0
     typescript: ^5.1.6
@@ -3626,7 +3632,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@river-build/sdk@workspace:^, @river-build/sdk@workspace:packages/sdk":
+"@river-build/sdk@workspace:*, @river-build/sdk@workspace:^, @river-build/sdk@workspace:packages/sdk":
   version: 0.0.0-use.local
   resolution: "@river-build/sdk@workspace:packages/sdk"
   dependencies:
