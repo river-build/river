@@ -3,6 +3,7 @@ import { RiverChainConfig } from '../IStaticContractsInfo'
 import { INodeRegistryShim } from './INodeRegistryShim'
 import { ethers } from 'ethers'
 import { IStreamRegistryShim } from './IStreamRegistryShim'
+import { IOperatorRegistryShim } from './IOperatorRegistryShim'
 
 interface RiverNodesMap {
     [nodeAddress: string]: NodeStructOutput
@@ -17,6 +18,7 @@ export class RiverRegistry {
     public readonly provider: ethers.providers.Provider
     public readonly nodeRegistry: INodeRegistryShim
     public readonly streamRegistry: IStreamRegistryShim
+    public readonly operatorRegistry: IOperatorRegistryShim
     public readonly riverNodesMap: RiverNodesMap = {}
 
     constructor(config: RiverChainConfig, provider: ethers.providers.Provider) {
@@ -28,6 +30,11 @@ export class RiverRegistry {
             provider,
         )
         this.streamRegistry = new IStreamRegistryShim(
+            this.config.addresses.riverRegistry,
+            this.config.contractVersion,
+            provider,
+        )
+        this.operatorRegistry = new IOperatorRegistryShim(
             this.config.addresses.riverRegistry,
             this.config.contractVersion,
             provider,
