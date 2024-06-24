@@ -4,7 +4,7 @@ import { INodeRegistryShim } from './INodeRegistryShim'
 import { ethers } from 'ethers'
 import { IStreamRegistryShim } from './IStreamRegistryShim'
 
-interface IRiverRegistry {
+interface RiverNodesMap {
     [nodeAddress: string]: NodeStructOutput
 }
 
@@ -17,7 +17,7 @@ export class RiverRegistry {
     public readonly provider: ethers.providers.Provider
     public readonly nodeRegistry: INodeRegistryShim
     public readonly streamRegistry: IStreamRegistryShim
-    public readonly registry: IRiverRegistry = {}
+    public readonly registry: RiverNodesMap = {}
 
     constructor(config: RiverChainConfig, provider: ethers.providers.Provider) {
         this.config = config
@@ -34,12 +34,12 @@ export class RiverRegistry {
         )
     }
 
-    public async getAllNodes(nodeStatus?: number): Promise<IRiverRegistry | undefined> {
+    public async getAllNodes(nodeStatus?: number): Promise<RiverNodesMap | undefined> {
         const allNodes = await this.nodeRegistry.read.getAllNodes()
         if (allNodes.length == 0) {
             return undefined
         }
-        const registry: IRiverRegistry = {}
+        const registry: RiverNodesMap = {}
         for (const node of allNodes) {
             if (nodeStatus && node.status != nodeStatus) {
                 continue
