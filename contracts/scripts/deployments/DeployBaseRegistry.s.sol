@@ -29,8 +29,7 @@ import {DeployMetadata} from "contracts/scripts/deployments/facets/DeployMetadat
 import {DeploySpaceDelegation} from "contracts/scripts/deployments/facets/DeploySpaceDelegation.s.sol";
 import {DeployRewardsDistribution} from "contracts/scripts/deployments/facets/DeployRewardsDistribution.s.sol";
 import {DeployERC721ANonTransferable} from "contracts/scripts/deployments/facets/DeployERC721ANonTransferable.s.sol";
-
-import {MockMessenger} from "contracts/test/mocks/MockMessenger.sol";
+import {DeployMockMessenger} from "contracts/scripts/deployments/facets/DeployMockMessenger.s.sol";
 
 contract DeployBaseRegistry is DiamondDeployer {
   // SpaceDelegationHelper spaceDelegationHelper = new SpaceDelegationHelper();
@@ -50,6 +49,7 @@ contract DeployBaseRegistry is DiamondDeployer {
   DeploySpaceDelegation spaceDelegationHelper = new DeploySpaceDelegation();
   DeployRewardsDistribution distributionHelper =
     new DeployRewardsDistribution();
+  DeployMockMessenger messengerHelper = new DeployMockMessenger();
 
   address multiInit;
   address diamondCut;
@@ -85,13 +85,7 @@ contract DeployBaseRegistry is DiamondDeployer {
     mainnetDelegation = mainnetDelegationHelper.deploy();
     spaceDelegation = spaceDelegationHelper.deploy();
     nft = deployNFT.deploy();
-
-    if (isAnvil() || isTesting()) {
-      vm.broadcast(deployer);
-      messenger = address(new MockMessenger());
-    } else {
-      messenger = _getMessenger();
-    }
+    messenger = messengerHelper.deploy();
 
     addFacet(
       cutHelper.makeCut(diamondCut, IDiamond.FacetCutAction.Add),
