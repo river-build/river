@@ -91,6 +91,10 @@ export class RiverRegistry {
         return nodeUrls.map((x) => x.url).join(',')
     }
 
+    async getStreamCount(): Promise<ethers.BigNumber> {
+        return this.streamRegistry.read.getStreamCount()
+    }
+
     private async getStreamCountOnNode(nodeAddress: string): Promise<ethers.BigNumber> {
         return this.streamRegistry.read.getStreamCountOnNode(nodeAddress)
     }
