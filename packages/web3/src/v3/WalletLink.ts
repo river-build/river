@@ -7,6 +7,8 @@ import { IWalletLinkShim } from './WalletLinkShim'
 import { arrayify } from 'ethers/lib/utils'
 import { createEip712LinkedWalletdData } from './EIP-712'
 
+export const INVALID_ADDRESS = '0x0000000000000000000000000000000000000000'
+
 export class WalletLink {
     private readonly walletLinkShim: IWalletLinkShim
     private readonly eip712Domain: ethers.TypedDataDomain
