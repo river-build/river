@@ -42,7 +42,7 @@ contract TieredLogPricingOracle is IMembershipPricing, IntrospectionFacet {
   }
 
   function name() public pure override returns (string memory) {
-    return "TieredLogPricingOracle";
+    return "TieredLogPricingOracleV2";
   }
 
   function description() public pure override returns (string memory) {
