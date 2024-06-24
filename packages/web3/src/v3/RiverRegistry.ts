@@ -17,7 +17,7 @@ export class RiverRegistry {
     public readonly provider: ethers.providers.Provider
     public readonly nodeRegistry: INodeRegistryShim
     public readonly streamRegistry: IStreamRegistryShim
-    public readonly registry: RiverNodesMap = {}
+    public readonly riverNodesMap: RiverNodesMap = {}
 
     constructor(config: RiverChainConfig, provider: ethers.providers.Provider) {
         this.config = config
@@ -48,13 +48,13 @@ export class RiverRegistry {
                 registry[node.nodeAddress] = node
             }
             // update in-memory registry
-            this.registry[node.nodeAddress] = node
+            this.riverNodesMap[node.nodeAddress] = node
         }
         if (nodeStatus !== undefined) {
             return registry
         }
         // if we've updated the entire registry return that
-        return this.registry
+        return this.riverNodesMap
     }
 
     public async getAllNodeUrls(nodeStatus?: number): Promise<NodeUrls[] | undefined> {
@@ -70,7 +70,7 @@ export class RiverRegistry {
             }
             nodeUrls.push({ url: node.url })
             // update registry
-            this.registry[node.nodeAddress] = node
+            this.riverNodesMap[node.nodeAddress] = node
         }
         return nodeUrls
     }
