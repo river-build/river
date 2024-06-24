@@ -17,13 +17,11 @@ export class SpaceRegistrar {
     public readonly config: BaseChainConfig
     private readonly provider: ethers.providers.Provider | undefined
     private readonly spaceArchitect: ISpaceArchitectShim
-    private readonly spaceOwnerAddress: string
     private readonly spaces: SpaceMap = {}
 
     constructor(config: BaseChainConfig, provider: ethers.providers.Provider | undefined) {
         this.config = config
         this.provider = provider
-        this.spaceOwnerAddress = this.config.addresses.spaceOwner
         this.spaceArchitect = new ISpaceArchitectShim(
             config.addresses.spaceFactory,
             config.contractVersion,
@@ -44,7 +42,7 @@ export class SpaceRegistrar {
             this.spaces[spaceId] = new Space({
                 address: spaceAddress,
                 spaceId: spaceId,
-                spaceOwnerAddress: this.spaceOwnerAddress,
+                spaceOwnerAddress: this.config.addresses.spaceOwner,
                 version: this.config.contractVersion,
                 provider: this.provider,
             })
