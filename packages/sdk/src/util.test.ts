@@ -28,7 +28,7 @@ import { EntitlementsDelegate } from '@river-build/encryption'
 import { bin_fromHexString, check, dlog } from '@river-build/dlog'
 import { ethers, ContractTransaction } from 'ethers'
 import { RiverDbManager } from './riverDbManager'
-import { StreamRpcClientType, makeStreamRpcClient } from './makeStreamRpcClient'
+import { StreamRpcClient, makeStreamRpcClient } from './makeStreamRpcClient'
 import assert from 'assert'
 import _ from 'lodash'
 import { MockEntitlementsDelegate } from './utils'
@@ -119,6 +119,11 @@ export const TEST_ENCRYPTED_MESSAGE_PROPS: PlainMessage<EncryptedData> = {
     ciphertext: '',
     algorithm: '',
     senderKey: '',
+}
+
+export const getXchainSupportedRpcUrlsForTesting = (): string[] => {
+    // TODO: generate this for test environment and read from it
+    return ['http://127.0.0.1:8545', 'http://127.0.0.1:8546']
 }
 
 /**
@@ -282,7 +287,7 @@ export const makeDonePromise = (): DonePromise => {
     return new DonePromise()
 }
 
-export const sendFlush = async (client: StreamRpcClientType): Promise<void> => {
+export const sendFlush = async (client: StreamRpcClient): Promise<void> => {
     const r = await client.info({ debug: ['flush_cache'] })
     assert(r.graffiti === 'cache flushed')
 }
@@ -423,6 +428,16 @@ export async function expectUserCanJoin(
     wallet: ethers.Wallet,
 ) {
     const joinStart = Date.now()
+
+    // Check that the local evaluation of the user's entitlements for joining the space
+    // passes.
+    const entitledWallet = await spaceDapp.getEntitledWalletForJoiningSpace(
+        spaceId,
+        address,
+        getXchainSupportedRpcUrlsForTesting(),
+    )
+    expect(entitledWallet).toBeDefined()
+
     const { issued } = await spaceDapp.joinSpace(spaceId, address, wallet)
     expect(issued).toBeTrue()
     log(`${name} joined space ${spaceId}`, Date.now() - joinStart)

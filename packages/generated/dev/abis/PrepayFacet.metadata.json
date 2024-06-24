@@ -6,6 +6,143 @@
   "output": {
     "abi": [
       {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "target",
+            "type": "address"
+          }
+        ],
+        "name": "AddressEmptyCode",
+        "type": "error"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          }
+        ],
+        "name": "AddressInsufficientBalance",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "ApprovalCallerNotOwnerNorApproved",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "ApprovalQueryForNonexistentToken",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "BalanceQueryForZeroAddress",
+        "type": "error"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          }
+        ],
+        "name": "Banning__AlreadyBanned",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "Banning__CannotBanOwner",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "Banning__CannotBanSelf",
+        "type": "error"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          }
+        ],
+        "name": "Banning__InvalidTokenId",
+        "type": "error"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          }
+        ],
+        "name": "Banning__NotBanned",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "ERC5643__DurationZero",
+        "type": "error"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          }
+        ],
+        "name": "ERC5643__InvalidTokenId",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "ERC5643__NotApprovedOrOwner",
+        "type": "error"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          }
+        ],
+        "name": "ERC5643__SubscriptionNotRenewable",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "Entitlement__InvalidValue",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "Entitlement__NotAllowed",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "Entitlement__NotMember",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "Entitlement__ValueAlreadyExists",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "FailedInnerCall",
+        "type": "error"
+      },
+      {
         "inputs": [],
         "name": "Initializable_InInitializingState",
         "type": "error"
@@ -27,48 +164,215 @@
       },
       {
         "inputs": [],
-        "name": "Platform__InvalidFeeRecipient",
+        "name": "MintERC2309QuantityExceedsLimit",
         "type": "error"
       },
       {
         "inputs": [],
-        "name": "Platform__InvalidMembershipBps",
+        "name": "MintToZeroAddress",
         "type": "error"
       },
       {
         "inputs": [],
-        "name": "Platform__InvalidMembershipDuration",
+        "name": "MintZeroQuantity",
+        "type": "error"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          }
+        ],
+        "name": "Ownable__NotOwner",
         "type": "error"
       },
       {
         "inputs": [],
-        "name": "Platform__InvalidMembershipMinPrice",
+        "name": "Ownable__ZeroAddress",
         "type": "error"
       },
       {
         "inputs": [],
-        "name": "Platform__InvalidMembershipMintLimit",
+        "name": "OwnerQueryForNonexistentToken",
         "type": "error"
       },
       {
         "inputs": [],
-        "name": "PrepayBase__InvalidAddress",
+        "name": "OwnershipNotInitializedForExtraData",
         "type": "error"
       },
       {
         "inputs": [],
-        "name": "PrepayBase__InvalidAmount",
+        "name": "Pausable__NotPaused",
         "type": "error"
       },
       {
         "inputs": [],
-        "name": "PrepayBase__InvalidMembership",
+        "name": "Pausable__Paused",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "Prepay__InvalidAddress",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "Prepay__InvalidAmount",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "Prepay__InvalidMembership",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "Prepay__InvalidSupplyAmount",
         "type": "error"
       },
       {
         "inputs": [],
         "name": "ReentrancyGuard__ReentrantCall",
         "type": "error"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "token",
+            "type": "address"
+          }
+        ],
+        "name": "SafeERC20FailedOperation",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "TransferCallerNotOwnerNorApproved",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "TransferFromIncorrectOwner",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "TransferToNonERC721ReceiverImplementer",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "TransferToZeroAddress",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "URIQueryForNonexistentToken",
+        "type": "error"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "owner",
+            "type": "address"
+          },
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "approved",
+            "type": "address"
+          },
+          {
+            "indexed": true,
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          }
+        ],
+        "name": "Approval",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "owner",
+            "type": "address"
+          },
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "operator",
+            "type": "address"
+          },
+          {
+            "indexed": false,
+            "internalType": "bool",
+            "name": "approved",
+            "type": "bool"
+          }
+        ],
+        "name": "ApprovalForAll",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "moderator",
+            "type": "address"
+          },
+          {
+            "indexed": true,
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          }
+        ],
+        "name": "Banned",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "internalType": "uint256",
+            "name": "fromTokenId",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "toTokenId",
+            "type": "uint256"
+          },
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "from",
+            "type": "address"
+          },
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "to",
+            "type": "address"
+          }
+        ],
+        "name": "ConsecutiveTransfer",
+        "type": "event"
       },
       {
         "anonymous": false,
@@ -115,11 +419,17 @@
           {
             "indexed": true,
             "internalType": "address",
-            "name": "recipient",
+            "name": "previousOwner",
+            "type": "address"
+          },
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "newOwner",
             "type": "address"
           }
         ],
-        "name": "PlatformFeeRecipientSet",
+        "name": "OwnershipTransferred",
         "type": "event"
       },
       {
@@ -127,25 +437,12 @@
         "inputs": [
           {
             "indexed": false,
-            "internalType": "uint16",
-            "name": "bps",
-            "type": "uint16"
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
           }
         ],
-        "name": "PlatformMembershipBpsSet",
-        "type": "event"
-      },
-      {
-        "anonymous": false,
-        "inputs": [
-          {
-            "indexed": false,
-            "internalType": "uint256",
-            "name": "duration",
-            "type": "uint256"
-          }
-        ],
-        "name": "PlatformMembershipDurationSet",
+        "name": "Paused",
         "type": "event"
       },
       {
@@ -154,37 +451,30 @@
           {
             "indexed": false,
             "internalType": "uint256",
-            "name": "fee",
+            "name": "supply",
             "type": "uint256"
           }
         ],
-        "name": "PlatformMembershipFeeSet",
+        "name": "Prepay__Prepaid",
         "type": "event"
       },
       {
         "anonymous": false,
         "inputs": [
           {
-            "indexed": false,
+            "indexed": true,
             "internalType": "uint256",
-            "name": "minPrice",
+            "name": "tokenId",
             "type": "uint256"
-          }
-        ],
-        "name": "PlatformMembershipMinPriceSet",
-        "type": "event"
-      },
-      {
-        "anonymous": false,
-        "inputs": [
+          },
           {
             "indexed": false,
-            "internalType": "uint256",
-            "name": "limit",
-            "type": "uint256"
+            "internalType": "uint64",
+            "name": "expiration",
+            "type": "uint64"
           }
         ],
-        "name": "PlatformMembershipMintLimitSet",
+        "name": "SubscriptionUpdate",
         "type": "event"
       },
       {
@@ -193,17 +483,55 @@
           {
             "indexed": true,
             "internalType": "address",
-            "name": "membership",
+            "name": "from",
             "type": "address"
           },
           {
-            "indexed": false,
+            "indexed": true,
+            "internalType": "address",
+            "name": "to",
+            "type": "address"
+          },
+          {
+            "indexed": true,
             "internalType": "uint256",
-            "name": "supply",
+            "name": "tokenId",
             "type": "uint256"
           }
         ],
-        "name": "PrepayBase__Prepaid",
+        "name": "Transfer",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "moderator",
+            "type": "address"
+          },
+          {
+            "indexed": true,
+            "internalType": "uint256",
+            "name": "tokenId",
+            "type": "uint256"
+          }
+        ],
+        "name": "Unbanned",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": false,
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          }
+        ],
+        "name": "Unpaused",
         "type": "event"
       },
       {
@@ -233,13 +561,7 @@
         "type": "function"
       },
       {
-        "inputs": [
-          {
-            "internalType": "address",
-            "name": "account",
-            "type": "address"
-          }
-        ],
+        "inputs": [],
         "name": "prepaidMembershipSupply",
         "outputs": [
           {
@@ -254,11 +576,6 @@
       {
         "inputs": [
           {
-            "internalType": "address",
-            "name": "membership",
-            "type": "address"
-          },
-          {
             "internalType": "uint256",
             "name": "supply",
             "type": "uint256"
@@ -271,6 +588,48 @@
       }
     ],
     "devdoc": {
+      "errors": {
+        "AddressEmptyCode(address)": [
+          {
+            "details": "There's no code at `target` (it is not a contract)."
+          }
+        ],
+        "AddressInsufficientBalance(address)": [
+          {
+            "details": "The ETH balance of the account is not enough to perform the operation."
+          }
+        ],
+        "FailedInnerCall()": [
+          {
+            "details": "A call to an address target failed. The target may have reverted."
+          }
+        ],
+        "SafeERC20FailedOperation(address)": [
+          {
+            "details": "An operation with an ERC20 token failed."
+          }
+        ]
+      },
+      "events": {
+        "Approval(address,address,uint256)": {
+          "details": "Emitted when `owner` enables `approved` to manage the `tokenId` token."
+        },
+        "ApprovalForAll(address,address,bool)": {
+          "details": "Emitted when `owner` enables or disables (`approved`) `operator` to manage all of its assets."
+        },
+        "ConsecutiveTransfer(uint256,uint256,address,address)": {
+          "details": "Emitted when tokens in `fromTokenId` to `toTokenId` (inclusive) is transferred from `from` to `to`, as defined in the [ERC2309](https://eips.ethereum.org/EIPS/eip-2309) standard. See {_mintERC2309} for more details."
+        },
+        "OwnershipTransferred(address,address)": {
+          "details": "This emits when ownership of a contract changes."
+        },
+        "SubscriptionUpdate(uint256,uint64)": {
+          "details": "When a subscription is canceled, the expiration value should also be 0."
+        },
+        "Transfer(address,address,uint256)": {
+          "details": "Emitted when `tokenId` token is transferred from `from` to `to`."
+        }
+      },
       "kind": "dev",
       "methods": {
         "calculateMembershipPrepayFee(uint256)": {
@@ -281,17 +640,13 @@
             "_0": "The fee"
           }
         },
-        "prepaidMembershipSupply(address)": {
-          "params": {
-            "account": "The account to get the prepaid supply for"
-          },
+        "prepaidMembershipSupply()": {
           "returns": {
-            "_0": "The prepaid supply"
+            "_0": "The remaining prepaid supply"
           }
         },
-        "prepayMembership(address,uint256)": {
+        "prepayMembership(uint256)": {
           "params": {
-            "membership": "The membership contract address",
             "supply": "The amount of memberships to prepay"
           }
         }
@@ -299,12 +654,82 @@
       "version": 1
     },
     "userdoc": {
+      "errors": {
+        "ApprovalCallerNotOwnerNorApproved()": [
+          {
+            "notice": "The caller must own the token or be an approved operator."
+          }
+        ],
+        "ApprovalQueryForNonexistentToken()": [
+          {
+            "notice": "The token does not exist."
+          }
+        ],
+        "BalanceQueryForZeroAddress()": [
+          {
+            "notice": "Cannot query the balance for the zero address."
+          }
+        ],
+        "MintERC2309QuantityExceedsLimit()": [
+          {
+            "notice": "The `quantity` minted with ERC2309 exceeds the safety limit."
+          }
+        ],
+        "MintToZeroAddress()": [
+          {
+            "notice": "Cannot mint to the zero address."
+          }
+        ],
+        "MintZeroQuantity()": [
+          {
+            "notice": "The quantity of tokens minted must be more than zero."
+          }
+        ],
+        "OwnerQueryForNonexistentToken()": [
+          {
+            "notice": "The token does not exist."
+          }
+        ],
+        "OwnershipNotInitializedForExtraData()": [
+          {
+            "notice": "The `extraData` cannot be set on an unintialized ownership slot."
+          }
+        ],
+        "TransferCallerNotOwnerNorApproved()": [
+          {
+            "notice": "The caller must own the token or be an approved operator."
+          }
+        ],
+        "TransferFromIncorrectOwner()": [
+          {
+            "notice": "The token must be owned by `from`."
+          }
+        ],
+        "TransferToNonERC721ReceiverImplementer()": [
+          {
+            "notice": "Cannot safely transfer to a contract that does not implement the ERC721Receiver interface."
+          }
+        ],
+        "TransferToZeroAddress()": [
+          {
+            "notice": "Cannot transfer to the zero address."
+          }
+        ],
+        "URIQueryForNonexistentToken()": [
+          {
+            "notice": "The token does not exist."
+          }
+        ]
+      },
       "events": {
         "InterfaceAdded(bytes4)": {
           "notice": "Emitted when an interface is added to the contract via `_addInterface`."
         },
         "InterfaceRemoved(bytes4)": {
           "notice": "Emitted when an interface is removed from the contract via `_removeInterface`."
+        },
+        "SubscriptionUpdate(uint256,uint64)": {
+          "notice": "Emitted when a subscription expiration changes"
         }
       },
       "kind": "user",
@@ -312,10 +737,10 @@
         "calculateMembershipPrepayFee(uint256)": {
           "notice": "Calculate the prepay fee for a given supply"
         },
-        "prepaidMembershipSupply(address)": {
-          "notice": "Get the prepaid supply for an account"
+        "prepaidMembershipSupply()": {
+          "notice": "Get the prepaid supply"
         },
-        "prepayMembership(address,uint256)": {
+        "prepayMembership(uint256)": {
           "notice": "Prepay a membership"
         }
       },
@@ -324,7 +749,7 @@
   },
   "settings": {
     "compilationTarget": {
-      "contracts/src/factory/facets/prepay/PrepayFacet.sol": "PrepayFacet"
+      "contracts/src/spaces/facets/prepay/PrepayFacet.sol": "PrepayFacet"
     },
     "evmVersion": "paris",
     "libraries": {},
@@ -404,6 +829,54 @@
         "dweb:/ipfs/QmeTuAZMwRf3uRHMtHEd7M7LvGyRAEmoCikF4Pb6dCAKXd"
       ]
     },
+    "contracts/src/diamond/facets/ownable/token/ITokenOwnable.sol": {
+      "keccak256": "0x086fd1151d35e0b231d9d184b93b413721c6f8e96777df597146fc194d346816",
+      "license": "MIT",
+      "urls": [
+        "bzz-raw://e0db5e9362bd9886c65d29a1369cf6450a18dd138f36e479c549a640459c57eb",
+        "dweb:/ipfs/QmWY12UEr3DpVFhUyAjKyz9V5pAZPSKcZbNgdqXMusyNUs"
+      ]
+    },
+    "contracts/src/diamond/facets/ownable/token/TokenOwnableBase.sol": {
+      "keccak256": "0xeb38d5601e3e5ea48c47722e1f7294e78ad55649961ff7605b8fdeee8f84f0e4",
+      "license": "MIT",
+      "urls": [
+        "bzz-raw://399307a92513cbb97d8f753415fd520598bac64a93871e9b5ce0941275bf3beb",
+        "dweb:/ipfs/QmVaPg5DkVNfBPLqg5jPaddaKBhcptHgdyLbNwwnrnN6CQ"
+      ]
+    },
+    "contracts/src/diamond/facets/ownable/token/TokenOwnableStorage.sol": {
+      "keccak256": "0xb2646ac976d46fe9b135f0fe5b0ca680279a74d6491c8cc49bc9c212d39da479",
+      "license": "MIT",
+      "urls": [
+        "bzz-raw://413b2dbc619e27f5b43d38c3aee457a2217ad41aece2689fa7913a6756689faf",
+        "dweb:/ipfs/QmW8ToN4UN4FZognfXRgBuKqPkYPJhoQrJAU45GpZoX32F"
+      ]
+    },
+    "contracts/src/diamond/facets/pausable/IPausable.sol": {
+      "keccak256": "0x3df1579165cc634718d4619e0760ea3c492b2766c2e42328208a38457e103ca1",
+      "license": "MIT",
+      "urls": [
+        "bzz-raw://1c6d3f4e3a3437075fb09c4875cfbf640af5cdc50c31b64e77ff5678dc1a8684",
+        "dweb:/ipfs/QmNSnSYZrtNLdQqidpGR6ujbhuxhSr6LJEQBc3pCu6MNNJ"
+      ]
+    },
+    "contracts/src/diamond/facets/pausable/PausableBase.sol": {
+      "keccak256": "0xc15f937b2c4844ecf4831fb7bad77c29db231a6a046bbbf4fc60a4066d138cf0",
+      "license": "MIT",
+      "urls": [
+        "bzz-raw://7c787b1d900ab0442f89503a50aba744b7403bb4609c161fae8c9c11a142d6d3",
+        "dweb:/ipfs/QmafDG4KCRyetPzLXVjyz4NxUafFKJ8xwGUJEnu7Y3wz8V"
+      ]
+    },
+    "contracts/src/diamond/facets/pausable/PausableStorage.sol": {
+      "keccak256": "0x998397ccc66cda4d76d219cf08bdd45eb26f583e0b484670f43d3b59ed64c19f",
+      "license": "MIT",
+      "urls": [
+        "bzz-raw://a153e74c68fc0e2d7aa422d3b169b712a242bbf92da316732c4efd52e31781fd",
+        "dweb:/ipfs/QmVtPuvumAG5qRHinmdQn7wkEK3J4HK9gBB5LBDWbeTRNj"
+      ]
+    },
     "contracts/src/diamond/facets/reentrancy/IReentrancyGuard.sol": {
       "keccak256": "0x89ad30ac5476efd023189fca20b13214fe5541ea5fff11760e00f229c62c896e",
       "license": "MIT",
@@ -428,6 +901,46 @@
         "dweb:/ipfs/QmTLHQWuRp1L45oRV8oWWbk4Y4MMNYW1Rp9WUJ86gzVVRv"
       ]
     },
+    "contracts/src/diamond/facets/token/ERC5643/ERC5643Base.sol": {
+      "keccak256": "0x21d3c281732e54c93520a4f2cc72cc5af38c517f2a150ee67aa84704a3d78627",
+      "license": "MIT",
+      "urls": [
+        "bzz-raw://52ce7c061da0142a4d775bb85896410d363d4a28c0275d3171a70872344fc9a4",
+        "dweb:/ipfs/Qmdwgs3TaC4b83JVn6RG5pJJdCrxb74ZMRqZbYSe5DuqZf"
+      ]
+    },
+    "contracts/src/diamond/facets/token/ERC5643/ERC5643Storage.sol": {
+      "keccak256": "0x68cbff071e6a6a6b91b675af567616799435676fbbbebf4f9226e1226d6128b2",
+      "license": "MIT",
+      "urls": [
+        "bzz-raw://2e2c7aee6ef32477733a50ba667cc510c8c165b9a9e146609b1f800acd0e4832",
+        "dweb:/ipfs/QmcWAz74x3AR6kpzWdyPWw3iLQ1yHBT3ZVoK6jT7T3LwXq"
+      ]
+    },
+    "contracts/src/diamond/facets/token/ERC5643/IERC5643.sol": {
+      "keccak256": "0x82dfa9b4063600f22326a66626284bc1d2dfad2efd89e5057c820d182298f224",
+      "license": "MIT",
+      "urls": [
+        "bzz-raw://7ab9fc298c8239a7469c1a55d052eb904620e31e5183904b5928cb48f27f1615",
+        "dweb:/ipfs/QmUn3WWo3s6xDYQosaAURbartVnWAbfUffLjNWR5jrbLjU"
+      ]
+    },
+    "contracts/src/diamond/facets/token/ERC721A/ERC721ABase.sol": {
+      "keccak256": "0x27b65225578e0cd90b90ab4ce91c4dfe621b43a58df227d3fdb0494c8f317d62",
+      "license": "MIT",
+      "urls": [
+        "bzz-raw://70db26d8735dd6b7e7a847712603f793728521ebd05ad8640d6068b395dce3ba",
+        "dweb:/ipfs/QmYeC1EM3XQWgHjQKpT41TksDFcCzr4Sz8JPRdagFms7mE"
+      ]
+    },
+    "contracts/src/diamond/facets/token/ERC721A/ERC721AStorage.sol": {
+      "keccak256": "0x1f85619c07524883b96fd2f3ca92ea3e2343466c0832cc03f6eb1cbb828896f4",
+      "license": "MIT",
+      "urls": [
+        "bzz-raw://06adf57b874d40a123eb3e7bf89cd7f49d29a93c142b26336263529ccd692e04",
+        "dweb:/ipfs/QmQAhsfGRBPuBcSE1mqocTvutK9c4NfJPsbN4XQXtbsLey"
+      ]
+    },
     "contracts/src/diamond/facets/token/ERC721A/IERC721A.sol": {
       "keccak256": "0xb57dee608d37c98c32ac38fa3c84e77f5962cf39a0697815ad209edf55593782",
       "license": "MIT",
@@ -444,60 +957,116 @@
         "dweb:/ipfs/QmS6DXYXtPTfePgtrUxH1vmPycsVoumBQRJZugjGButowT"
       ]
     },
-    "contracts/src/factory/facets/platform/requirements/PlatformRequirementsBase.sol": {
-      "keccak256": "0xb256841987c7f77cadf430216a6b8bbff94d3d577d90def1a5d5253aa29a661b",
+    "contracts/src/factory/facets/wallet-link/IWalletLink.sol": {
+      "keccak256": "0xd5990654ce80ba51a4d30d170720113a7bd4a92ed6fc48f4698c8d15a5ea1eab",
       "license": "MIT",
       "urls": [
-        "bzz-raw://302e78d305305d70ba6036525664f2f7491ec16a0ccd5cdc132c999c7d214e73",
-        "dweb:/ipfs/QmbE9LomwpRdQnNwdcsFTSz3bJMHWdTmca41wmEjVPAQxT"
+        "bzz-raw://0381e604f23647408ec878b6ef611028cb596950b1bda84b5737bace1d94fd20",
+        "dweb:/ipfs/QmcVvLxnUk2bS3ULrQthy8ZxdHM5KEmeEQf6NiS5dPL5VW"
       ]
     },
-    "contracts/src/factory/facets/platform/requirements/PlatformRequirementsStorage.sol": {
-      "keccak256": "0xf3c5696434fa3666260b4b6f5dfdd386184f513cf59d7e7bc012d87cfe56c9d6",
+    "contracts/src/spaces/entitlements/IEntitlement.sol": {
+      "keccak256": "0x81712a4b9127000ba341966d99395917dcb4b1305eadeddd1e1ad4e562587fdd",
       "license": "MIT",
       "urls": [
-        "bzz-raw://c0197f583dfad8dbde7e98503ad9d0ae996398caf51d8fd5cdd40aaee71feba6",
-        "dweb:/ipfs/QmPN6QXdLiAxms2krCrqv9JJrmdru2kAC2C2tQUTbBkvyM"
+        "bzz-raw://df0fcc9d7ed7489786684f5fa8375b277146969021f96f6a9feb81cb39176eca",
+        "dweb:/ipfs/QmbxXXeXe6AzXUL8cSoABMx2E2QbRAK2uJXd8TRnDuKSJ8"
       ]
     },
-    "contracts/src/factory/facets/prepay/IPrepay.sol": {
-      "keccak256": "0xc315a0e72aa54f3ac769a5d7b3c2f15af13f5627f46140311a14511fc169fff3",
+    "contracts/src/spaces/facets/Entitled.sol": {
+      "keccak256": "0x90204085688bf4dd1e1b6ca30684ee37db79210070c405406898c8a77d50bfce",
       "license": "MIT",
       "urls": [
-        "bzz-raw://351857fc5d154648e48b7afeda7efb20150f18faf1f4c74528bb091e9ecf2d97",
-        "dweb:/ipfs/QmVt9TweLhwZAv4ouydcW2jHLR9mZ2RcxPZ3RwfkCFEFiu"
+        "bzz-raw://b9b194cc9977b03fbccc81529147a0fce7857893c8146927570c1ee5a28aa900",
+        "dweb:/ipfs/QmZMvPPj5ZPYaRQaSraBkv3PSMeUZ4wN1tQ9EVvwW6SL4r"
       ]
     },
-    "contracts/src/factory/facets/prepay/PrepayBase.sol": {
-      "keccak256": "0xcfda4a54605f46b4a9d1b5874f84da4e994155326a80a18ca0d02158041a539d",
+    "contracts/src/spaces/facets/banning/BanningBase.sol": {
+      "keccak256": "0x38c44494221f96568f3efb540a8a6c7af141de95f25caf26df6e8a8333f31249",
       "license": "MIT",
       "urls": [
-        "bzz-raw://76da6031fc33381e8422a82d9ca0f11052780e4a2678b2db78d5ec1808d6f242",
-        "dweb:/ipfs/QmNahYxust6fyHeXgQuZTJkaoHm1NrkfsuMKYLxeE1ZZSH"
+        "bzz-raw://cf1f509347cab5090655ff8272443d18f9716fea5ef27cd86269ccbd2570aa7e",
+        "dweb:/ipfs/QmbF8StzLRGnVvVXWYBowvdULoPPqQkU5hZR548cnRzuVs"
       ]
     },
-    "contracts/src/factory/facets/prepay/PrepayFacet.sol": {
-      "keccak256": "0xddcf58196536a0e839d4b75bd1dc77c1bbb885fb24e73a8766c1d0dc132cbcbe",
+    "contracts/src/spaces/facets/banning/BanningStorage.sol": {
+      "keccak256": "0xcfbf5c113056e569abf23158853ff4877744b22a4bf2bf49a282d04dab23ab17",
       "license": "MIT",
       "urls": [
-        "bzz-raw://db3c9c8d0e4f6ee7b6e51cb323d3ac6919d50cc4e572cad33df21204aac4553b",
-        "dweb:/ipfs/QmPXkTmqMiSXatQ91r4dVaH7X524Hwtk3NfKZtwXg7owKz"
+        "bzz-raw://4f825e97ca65c9cd3bd5885d2fa8b8e5f8f0dcbe227dec064abbbab645685fbe",
+        "dweb:/ipfs/QmXAMntxrjzeNUKh9WcyHvzDmnV89vrJ9PkKRceqxJSxZp"
       ]
     },
-    "contracts/src/factory/facets/prepay/PrepayStorage.sol": {
-      "keccak256": "0xfaddbb271687c4fecafcfbbc000a19f9c1f80c00178bc6601c6ac266d72931f8",
+    "contracts/src/spaces/facets/banning/IBanning.sol": {
+      "keccak256": "0x350ec182a95a86a41335979cd7212132858c5cfcd366602b2f6cd0ec0694b63e",
       "license": "MIT",
       "urls": [
-        "bzz-raw://32e3781b0575f06e8d67eee450fc92845002fea3b161f0549f15996dec439a65",
-        "dweb:/ipfs/Qmac5Dm6AfDcuCtyWnzDRQT5JEjSJttZQULwY9PgzsLTom"
+        "bzz-raw://ecb4ad0c5a1086c38448b3e279733f33edc0cc39648368e5cb43dfff139ff7e8",
+        "dweb:/ipfs/QmWYfYE8Haqk9kBRxmLijfQSfqbfxf7LB3wQ24d3pG5PE3"
       ]
     },
-    "contracts/src/spaces/facets/membership/IMembership.sol": {
-      "keccak256": "0x677bd0b837a9122d28f0946009d241411c6243ab9ad3e193b82ec62b927db64b",
+    "contracts/src/spaces/facets/delegation/WalletLinkProxyBase.sol": {
+      "keccak256": "0xffef403556b46744bd1833e5df57b02eb79e010841b16610e1740bc0dac929b2",
       "license": "MIT",
       "urls": [
-        "bzz-raw://6ff8653e498b99c98bd22144d6b4c02a251469532288bbc9e059a057fca6e3ab",
-        "dweb:/ipfs/QmURz989yqwEd8D9ogo1rqggn6zkfVf553JLUJ6n2T44QR"
+        "bzz-raw://1afa30929e8c6b0c69528d328774c98789825a8de53e5945a1e95092bee2ad08",
+        "dweb:/ipfs/QmTbCqLJTBHgcMuFwWSTbrgR7uaASJqwqYuku4YkGzTWW1"
+      ]
+    },
+    "contracts/src/spaces/facets/delegation/WalletLinkProxyStorage.sol": {
+      "keccak256": "0x9667e475b9ad9f1130583840c9b0594a7512f7edd33163b926b3db21f70d9909",
+      "license": "MIT",
+      "urls": [
+        "bzz-raw://d6271ce56258b1e9150378872d250cfaeb4501b5d0288e8f19f02096114c687f",
+        "dweb:/ipfs/QmXSBA2CpLL9BdvZb994JYStgB9fJfsHwgcke6gsD3zybW"
+      ]
+    },
+    "contracts/src/spaces/facets/entitlements/EntitlementsManagerStorage.sol": {
+      "keccak256": "0x688692231af49bcca80f7da97be12d448b0c20a4338d259d5f654b95c5b046ca",
+      "license": "MIT",
+      "urls": [
+        "bzz-raw://be9964e110363bf68fb4bbb8ff230fecf8c26e695077910ba07163db57030a8e",
+        "dweb:/ipfs/QmNS3eUqCQU7H48LtW6hrB9xPGy9DrKCqh7JKWsAtje5dK"
+      ]
+    },
+    "contracts/src/spaces/facets/membership/MembershipStorage.sol": {
+      "keccak256": "0xe9085b2b8ec900936853d0f8d7204f11eb5db3aba8c9c72799da62817afed8c0",
+      "license": "MIT",
+      "urls": [
+        "bzz-raw://3fec75bce4b207c375b54dacc0296dc11991f7cc89da0e81e13457ae2120146a",
+        "dweb:/ipfs/QmXzZdw5FnTZqpskq3yLguKTRmhLRBVueMVfH6RY4HuSsa"
+      ]
+    },
+    "contracts/src/spaces/facets/prepay/IPrepay.sol": {
+      "keccak256": "0x4cc23cd204f20bd4a094d9292aaa494f73478d27c8f59e646454cbba11d781fa",
+      "license": "MIT",
+      "urls": [
+        "bzz-raw://4f54c224f56396ac03335c95c4808acbeec6366f0c475d29edb2461cd53bcd15",
+        "dweb:/ipfs/QmdDKUR8VVXJuR5Fj29SZxvR9GwxXeNQ6rtAT3TxX8VjwT"
+      ]
+    },
+    "contracts/src/spaces/facets/prepay/PrepayBase.sol": {
+      "keccak256": "0x07fbb598088d52ff90a2dc5c3fea344823ae240f39b104f8db8a0b3953752ba3",
+      "license": "MIT",
+      "urls": [
+        "bzz-raw://d34b9a5703ac33b27f91049a81f106bdf327ac57f4ac5886e21f3782104a5084",
+        "dweb:/ipfs/QmR8ds7bpXxSLZX6QNhVRVYY8Fk2xHVFNqcAD1fY38kERs"
+      ]
+    },
+    "contracts/src/spaces/facets/prepay/PrepayFacet.sol": {
+      "keccak256": "0x3ca6d7982bf0417ee32b002d82aa50caaa6a3a45a0da839b2ee8000449e05a36",
+      "license": "MIT",
+      "urls": [
+        "bzz-raw://3446cea239e3a07d9696b2f71e71247718c54377a222618af4849a01fa132716",
+        "dweb:/ipfs/QmZd5Le44qU7VtUTqRhWCxDbiSJps1dQv5yAxTgXvnoVwH"
+      ]
+    },
+    "contracts/src/spaces/facets/prepay/PrepayStorage.sol": {
+      "keccak256": "0x5daebdd10dafc3bc3552064a2fecd4a2639226b1af240351dd2e005a7ab270b4",
+      "license": "MIT",
+      "urls": [
+        "bzz-raw://06cf75e08e360a74822cd846728c5d9f8440698bb43d29a8bcab3c0cebbec336",
+        "dweb:/ipfs/QmZ4UfwTNqQg88A7mHmXM3ZExjTJQhPf3qvFLGzcVaGwwG"
       ]
     },
     "contracts/src/utils/interfaces/IWETH.sol": {
@@ -506,14 +1075,6 @@
       "urls": [
         "bzz-raw://701edb4dbdb8ab50ed2fdb568cc0956c07184e1f4e7d63854efc158408fa72a5",
         "dweb:/ipfs/QmV58ikDDcTC92hGEuQKerfsygnPg5cwCVLuMh9R9uYXb6"
-      ]
-    },
-    "contracts/src/utils/libraries/BasisPoints.sol": {
-      "keccak256": "0xfaa5790726afc20e29f2a00e67693a59ae85a045beaa95f8f58bcbcef01ed87b",
-      "license": "MIT",
-      "urls": [
-        "bzz-raw://a2da5e15739fc7093ea7b935c6542f7c01d9c33843a3d1a1d8895db404f8160e",
-        "dweb:/ipfs/QmYVUkSh3QX7u9rnKfqLeb9Rh8tko5Q3Gpry6KnhTRF58L"
       ]
     },
     "contracts/src/utils/libraries/CurrencyTransfer.sol": {
@@ -548,6 +1109,14 @@
         "dweb:/ipfs/QmUNfSBdoVtjhETaUJCYcaC7pTMgbhht926tJ2uXJbiVd3"
       ]
     },
+    "lib/@openzeppelin/contracts/token/ERC721/IERC721.sol": {
+      "keccak256": "0x5ef46daa3b58ef2702279d514780316efaa952915ee1aa3396f041ee2982b0b4",
+      "license": "MIT",
+      "urls": [
+        "bzz-raw://2f8f2a76e23b02fc69e8cd24c3cb47da6c7af3a2d6c3a382f8ac25c6e094ade7",
+        "dweb:/ipfs/QmPV4ZS4tPVv4mTCf9ejyZ1ai57EEibDRj7mN2ARDCLV5n"
+      ]
+    },
     "lib/@openzeppelin/contracts/utils/Address.sol": {
       "keccak256": "0xaf28a975a78550e45f65e559a3ad6a5ad43b9b8a37366999abd1b7084eb70721",
       "license": "MIT",
@@ -562,6 +1131,14 @@
       "urls": [
         "bzz-raw://87b3541437c8c443ccd36795e56a338ed12855eec17f8da624511b8d1a7e14df",
         "dweb:/ipfs/QmeJQCtZrQjtJLr6u7ZHWeH3pBnjtLWzvRrKViAi7UZqxL"
+      ]
+    },
+    "lib/@openzeppelin/contracts/utils/structs/EnumerableSet.sol": {
+      "keccak256": "0x86c1470cbfd878491e5de030072b647352d36bd27122cffb928970b1945282aa",
+      "license": "MIT",
+      "urls": [
+        "bzz-raw://ad85dd393ee0a1917c57046abc5155f51f77844b2c6a42c05c1b8dd26d6ff3c1",
+        "dweb:/ipfs/QmNqYc8To2NdnpP6E1tGz7t6A7beuENde5yovwov5pW1fA"
       ]
     }
   },

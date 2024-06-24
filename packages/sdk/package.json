@@ -1,5 +1,6 @@
 {
-    "name": "@river/sdk",
+    "name": "@river-build/sdk",
+    "version": "0.0.6",
     "packageManager": "yarn@3.8.0",
     "type": "module",
     "main": "dist/index.js",
@@ -55,7 +56,7 @@
     "devDependencies": {
         "@jest/globals": "^29.6.2",
         "@testing-library/jest-dom": "^5.16.5",
-        "@testing-library/react": "^14.0.0",
+        "@testing-library/react": "^14.2.1",
         "@types/debug": "^4.1.8",
         "@types/jest": "^29.5.3",
         "@types/lodash": "^4.14.186",
