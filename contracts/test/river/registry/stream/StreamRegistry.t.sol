@@ -15,7 +15,7 @@ contract StreamRegistryTest is RiverRegistryBaseSetup, IOwnableBase {
   //                        allocateStream
   // =============================================================
 
-  function test_streamCountOnNode(
+  function test_streamCount(
     address nodeOperator,
     address node
   )
@@ -51,5 +51,43 @@ contract StreamRegistryTest is RiverRegistryBaseSetup, IOwnableBase {
     );
 
     assertEq(streamRegistry.getStreamCount(), 2);
+  }
+
+  function test_streamCountOnNode(
+    address nodeOperator,
+    address node
+  )
+    external
+    givenNodeOperatorIsApproved(nodeOperator)
+    givenNodeIsRegistered(nodeOperator, node, url)
+  {
+    address[] memory nodes = new address[](1);
+    nodes[0] = node;
+    bytes memory genesisMiniblock = abi.encodePacked("genesisMiniblock");
+    bytes32 streamIdOne = 0x0000000000000000000000000000000000000000000000000000000000000001;
+    bytes32 streamIdTwo = 0x0000000000000000000000000000000000000000000000000000000000000002;
+    bytes32 genesisMiniblockHash = 0;
+
+    assertEq(streamRegistry.getStreamCountOnNode(node), 0);
+
+    vm.prank(node);
+    streamRegistry.allocateStream(
+      streamIdOne,
+      nodes,
+      genesisMiniblockHash,
+      genesisMiniblock
+    );
+
+    assertEq(streamRegistry.getStreamCountOnNode(node), 1);
+
+    vm.prank(node);
+    streamRegistry.allocateStream(
+      streamIdTwo,
+      nodes,
+      genesisMiniblockHash,
+      genesisMiniblock
+    );
+
+    assertEq(streamRegistry.getStreamCountOnNode(node), 3);
   }
 }
