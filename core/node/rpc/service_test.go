@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
@@ -1015,6 +1016,13 @@ func TestForwardingWithRetries(t *testing.T) {
 				}))
 				require.NoError(t, err)
 			}
+
+			// Note: The GetStreamEx implementation bypasses the stream cache, which fetches miniblocks from the
+			// registry if none are present in the local cache, and hits storage directly. This means that sometimes
+			// quorum will be achieved and the createUser call will return when a node may not have received the miniblock,
+			// and we could occasionally end up with a stream response that does not contain the genesis miniblock.
+			// This is why we sleep for a bit before making the stream requests.
+			time.Sleep(2 * time.Second)
 
 			// Shut down replicationfactor - 1 nodes. All streams should still be available, but many
 			// stream requests should result in at least some retries.
