@@ -219,8 +219,8 @@ export class GroupEncryptionCrypto {
                     if (opts.progressCallback) {
                         updateProgress()
                     }
-                } catch (e) {
-                    log(`failed to import key: ${e}`)
+                } catch (error) {
+                    log('failed to import key', error)
                     failures++
                     if (opts.progressCallback) {
                         updateProgress()
