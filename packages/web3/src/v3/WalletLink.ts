@@ -67,8 +67,9 @@ export class WalletLink {
     }): Promise<string> {
         const { domain, types, value } = createEip712LinkedWalletdData({
             domain: this.eip712Domain,
+            message: 'Link your external wallet',
             nonce: rootKeyNonce,
-            wallet: walletAddress,
+            userID: walletAddress,
         })
         return this.signTypedData(rootKey, domain, types, value)
     }
@@ -84,8 +85,9 @@ export class WalletLink {
     }): Promise<string> {
         const { domain, types, value } = createEip712LinkedWalletdData({
             domain: this.eip712Domain,
+            message: 'Link your external wallet',
             nonce: rootKeyNonce,
-            wallet: rootKeyAddress,
+            userID: rootKeyAddress,
         })
         return this.signTypedData(wallet, domain, types, value)
     }
@@ -221,8 +223,9 @@ export class WalletLink {
         const nonce = await this.walletLinkShim.read.getLatestNonceForRootKey(rootKeyAddress)
         const { domain, types, value } = createEip712LinkedWalletdData({
             domain: this.eip712Domain,
+            message: 'Remove your external wallet link',
             nonce,
-            wallet: walletAddress as Address,
+            userID: walletAddress as Address,
         })
         const rootKeySignature = await this.signTypedData(rootKey, domain, types, value)
         return { rootKeyAddress, rootKeySignature, nonce }
