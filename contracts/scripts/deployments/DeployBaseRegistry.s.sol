@@ -10,12 +10,10 @@ import {Diamond} from "contracts/src/diamond/Diamond.sol";
 
 // helpers
 import {OwnableHelper} from "contracts/test/diamond/ownable/OwnableSetup.sol";
-import {ERC721AHelper} from "contracts/test/diamond/erc721a/ERC721ASetup.sol";
 import {IntrospectionHelper} from "contracts/test/diamond/introspection/IntrospectionSetup.sol";
 
 // facets
 import {MainnetDelegation} from "contracts/src/tokens/river/base/delegation/MainnetDelegation.sol";
-import {ERC721ANonTransferable} from "contracts/src/diamond/facets/token/ERC721A/ERC721ANonTransferable.sol";
 import {MultiInit} from "contracts/src/diamond/initializers/MultiInit.sol";
 
 // deployers
@@ -30,12 +28,13 @@ import {DeployNodeOperator} from "contracts/scripts/deployments/facets/DeployNod
 import {DeployMetadata} from "contracts/scripts/deployments/facets/DeployMetadata.s.sol";
 import {DeploySpaceDelegation} from "contracts/scripts/deployments/facets/DeploySpaceDelegation.s.sol";
 import {DeployRewardsDistribution} from "contracts/scripts/deployments/facets/DeployRewardsDistribution.s.sol";
+import {DeployERC721ANonTransferable} from "contracts/scripts/deployments/facets/DeployERC721ANonTransferable.s.sol";
 
 import {MockMessenger} from "contracts/test/mocks/MockMessenger.sol";
 
 contract DeployBaseRegistry is DiamondDeployer {
   // SpaceDelegationHelper spaceDelegationHelper = new SpaceDelegationHelper();
-  ERC721AHelper erc721aHelper = new ERC721AHelper();
+  DeployERC721ANonTransferable deployNFT = new DeployERC721ANonTransferable();
 
   // deployments
   DeployMultiInit deployMultiInit = new DeployMultiInit();
@@ -85,10 +84,7 @@ contract DeployBaseRegistry is DiamondDeployer {
     distribution = distributionHelper.deploy();
     mainnetDelegation = mainnetDelegationHelper.deploy();
     spaceDelegation = spaceDelegationHelper.deploy();
-
-    vm.startBroadcast(deployer);
-    nft = address(new ERC721ANonTransferable());
-    vm.stopBroadcast();
+    nft = deployNFT.deploy();
 
     if (isAnvil() || isTesting()) {
       vm.broadcast(deployer);
@@ -113,9 +109,9 @@ contract DeployBaseRegistry is DiamondDeployer {
       ownableHelper.makeInitData(deployer)
     );
     addFacet(
-      erc721aHelper.makeCut(nft, IDiamond.FacetCutAction.Add),
+      deployNFT.makeCut(nft, IDiamond.FacetCutAction.Add),
       nft,
-      erc721aHelper.makeInitData("Operator", "OPR")
+      deployNFT.makeInitData("Operator", "OPR")
     );
     addFacet(
       operatorHelper.makeCut(operator, IDiamond.FacetCutAction.Add),
