@@ -28,8 +28,8 @@
         "zod": "^3.21.4"
     },
     "devDependencies": {
-        "@river-build/eslint-config": "*",
-        "@river-build/prettier-config": "*",
+        "@river-build/eslint-config": "workspace:^",
+        "@river-build/prettier-config": "workspace:^",
         "@types/node": "^20.5.0",
         "@types/react": "^18.2.11",
         "@types/react-dom": "^18.2.4",
