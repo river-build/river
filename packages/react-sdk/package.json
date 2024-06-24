@@ -11,6 +11,7 @@
         "build": "yarn run clean && yarn run build:esm+types",
         "build:esm+types": "tsc --project tsconfig.build.json --outDir ./dist/esm --declaration --declarationMap --declarationDir ./dist/types",
         "clean": "rm -rf dist tsconfig.tsbuildinfo",
+        "watch": "yarn build -w",
         "test:build": "publint --strict && attw --pack --ignore-rules cjs-resolves-to-esm",
         "typecheck": "tsc --noEmit"
     },
