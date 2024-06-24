@@ -15,11 +15,11 @@ interface SpaceMap {
  */
 export class SpaceRegistrar {
     public readonly config: BaseChainConfig
-    private readonly provider: ethers.providers.Provider | undefined
+    private readonly provider: ethers.providers.Provider
     private readonly spaceArchitect: ISpaceArchitectShim
     private readonly spaces: SpaceMap = {}
 
-    constructor(config: BaseChainConfig, provider: ethers.providers.Provider | undefined) {
+    constructor(config: BaseChainConfig, provider: ethers.providers.Provider) {
         this.config = config
         this.provider = provider
         this.spaceArchitect = new ISpaceArchitectShim(
@@ -39,13 +39,7 @@ export class SpaceRegistrar {
             if (!spaceAddress || spaceAddress === ethers.constants.AddressZero) {
                 return undefined // space is not found
             }
-            this.spaces[spaceId] = new Space({
-                address: spaceAddress,
-                spaceId: spaceId,
-                spaceOwnerAddress: this.config.addresses.spaceOwner,
-                version: this.config.contractVersion,
-                provider: this.provider,
-            })
+            this.spaces[spaceId] = new Space(spaceAddress, spaceId, this.config, this.provider)
         }
         return this.spaces[spaceId]
     }
