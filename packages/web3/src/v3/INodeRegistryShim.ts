@@ -14,7 +14,7 @@ import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'
 import { ContractVersion } from '../IStaticContractsInfo'
 
-export class IRiverRegistryShim extends BaseContractShim<
+export class INodeRegistryShim extends BaseContractShim<
     DevContract,
     DevInterface,
     V3Contract,

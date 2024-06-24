@@ -1,7 +1,8 @@
 import { NodeStructOutput } from '@river-build/generated/dev/typings/INodeRegistry'
 import { RiverChainConfig } from '../IStaticContractsInfo'
-import { IRiverRegistryShim } from './IRiverRegistryShim'
+import { INodeRegistryShim } from './INodeRegistryShim'
 import { ethers } from 'ethers'
+import { IStreamRegistryShim } from './IStreamRegistryShim'
 
 interface IRiverRegistry {
     [nodeAddress: string]: NodeStructOutput
@@ -14,13 +15,19 @@ interface NodeUrls {
 export class RiverRegistry {
     public readonly config: RiverChainConfig
     public readonly provider: ethers.providers.Provider
-    public readonly riverRegistry: IRiverRegistryShim
+    public readonly nodeRegistry: INodeRegistryShim
+    public readonly streamRegistry: IStreamRegistryShim
     public readonly registry: IRiverRegistry = {}
 
     constructor(config: RiverChainConfig, provider: ethers.providers.Provider) {
         this.config = config
         this.provider = provider
-        this.riverRegistry = new IRiverRegistryShim(
+        this.nodeRegistry = new INodeRegistryShim(
+            this.config.addresses.riverRegistry,
+            this.config.contractVersion,
+            provider,
+        )
+        this.streamRegistry = new IStreamRegistryShim(
             this.config.addresses.riverRegistry,
             this.config.contractVersion,
             provider,
@@ -28,7 +35,7 @@ export class RiverRegistry {
     }
 
     public async getAllNodes(nodeStatus?: number): Promise<IRiverRegistry | undefined> {
-        const allNodes = await this.riverRegistry.read.getAllNodes()
+        const allNodes = await this.nodeRegistry.read.getAllNodes()
         if (allNodes.length == 0) {
             return undefined
         }
@@ -51,7 +58,7 @@ export class RiverRegistry {
     }
 
     public async getAllNodeUrls(nodeStatus?: number): Promise<NodeUrls[] | undefined> {
-        const allNodes = await this.riverRegistry.read.getAllNodes()
+        const allNodes = await this.nodeRegistry.read.getAllNodes()
         if (allNodes.length == 0) {
             return undefined
         }
