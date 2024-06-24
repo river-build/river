@@ -9,7 +9,6 @@ import {IEntitlementGated} from "contracts/src/spaces/facets/gated/IEntitlementG
 import {IEntitlementGatedBase} from "contracts/src/spaces/facets/gated/IEntitlementGated.sol";
 import {IEntitlementCheckerBase} from "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol";
 import {IWalletLink, IWalletLinkBase} from "contracts/src/factory/facets/wallet-link/IWalletLink.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 //libraries
 import {Vm} from "forge-std/Test.sol";
