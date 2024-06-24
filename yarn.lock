@@ -3537,8 +3537,8 @@ __metadata:
     "@radix-ui/react-switch": ^1.0.3
     "@river-build/eslint-config": "workspace:^"
     "@river-build/prettier-config": "workspace:^"
-    "@river-build/react-sdk": "workspace:*"
-    "@river-build/sdk": "workspace:*"
+    "@river-build/react-sdk": "workspace:^"
+    "@river-build/sdk": "workspace:^"
     "@types/node": ^20.5.0
     "@types/react": ^18.2.11
     "@types/react-dom": ^18.2.4
@@ -3608,7 +3608,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@river-build/react-sdk@workspace:*, @river-build/react-sdk@workspace:packages/react-sdk":
+"@river-build/react-sdk@workspace:^, @river-build/react-sdk@workspace:packages/react-sdk":
   version: 0.0.0-use.local
   resolution: "@river-build/react-sdk@workspace:packages/react-sdk"
   dependencies:
@@ -3632,7 +3632,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@river-build/sdk@workspace:*, @river-build/sdk@workspace:^, @river-build/sdk@workspace:packages/sdk":
+"@river-build/sdk@workspace:^, @river-build/sdk@workspace:packages/sdk":
   version: 0.0.0-use.local
   resolution: "@river-build/sdk@workspace:packages/sdk"
   dependencies:
