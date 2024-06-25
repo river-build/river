@@ -970,19 +970,32 @@ func TestForwardingWithRetries(t *testing.T) {
 			require.Equal(t, streamId[:], resp.Msg.Stream.NextSyncCookie.StreamId)
 		},
 		"GetStreamEx": func(t *testing.T, ctx context.Context, client protocolconnect.StreamServiceClient, streamId StreamId) {
-			resp, err := client.GetStreamEx(ctx, connect.NewRequest(&protocol.GetStreamExRequest{
-				StreamId: streamId[:],
-			}))
-			require.NoError(t, err)
+			// Note: the GetStreamEx implementation bypasses the stream cache, which fetches miniblocks from the
+			// registry if none are yet present in the local cache. The stream creation flow returns when a quorum of
+			// nodes terminates the stream creation call successfully, meaning that some nodes may not have finished
+			// committing the stream's genesis miniblock to storage yet. We use the info request to force the making of
+			// a miniblock for this stream, but these streams are replicated and the debug make miniblock call only
+			// operates on a local node. This means that the GetStreamEx request may occasionally return an empty
+			// stream, so we retry until we get the expected result.
+			require.Eventually(
+				t,
+				func() bool {
+					resp, err := client.GetStreamEx(ctx, connect.NewRequest(&protocol.GetStreamExRequest{
+						StreamId: streamId[:],
+					}))
+					require.NoError(t, err)
 
-			// Read messages
-			msgs := make([]*protocol.GetStreamExResponse, 0)
-			for resp.Receive() {
-				msgs = append(msgs, resp.Msg())
-			}
-			require.NoError(t, resp.Err())
-			// Expect 1 miniblock, 1 empty minipool message.
-			require.Len(t, msgs, 2)
+					// Read messages
+					msgs := make([]*protocol.GetStreamExResponse, 0)
+					for resp.Receive() {
+						msgs = append(msgs, resp.Msg())
+					}
+					require.NoError(t, resp.Err())
+					return len(msgs) == 2
+				},
+				10*time.Second,
+				100*time.Millisecond,
+			)
 		},
 	}
 
@@ -1016,13 +1029,6 @@ func TestForwardingWithRetries(t *testing.T) {
 				}))
 				require.NoError(t, err)
 			}
-
-			// Note: The GetStreamEx implementation bypasses the stream cache, which fetches miniblocks from the
-			// registry if none are present in the local cache, and hits storage directly. This means that sometimes
-			// quorum will be achieved and the createUser call will return when a node may not have received the miniblock,
-			// and we could occasionally end up with a stream response that does not contain the genesis miniblock.
-			// This is why we sleep for a bit before making the stream requests.
-			time.Sleep(2 * time.Second)
 
 			// Shut down replicationfactor - 1 nodes. All streams should still be available, but many
 			// stream requests should result in at least some retries.
