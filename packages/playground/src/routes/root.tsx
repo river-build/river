@@ -75,5 +75,11 @@ const ConnectRiver = () => {
 
 const ConnectedContent = () => {
     const { data: nodeUrls } = useSyncValue((s) => s.riverConnection.nodeUrls)
-    return <span>{JSON.stringify(nodeUrls)}</span>
+    return (
+        <div className="max-w-xl rounded-sm border border-zinc-200 bg-zinc-100 p-2">
+            <pre className="overflow-auto whitespace-pre-wrap">
+                {JSON.stringify(nodeUrls, null, 2)}
+            </pre>
+        </div>
+    )
 }
