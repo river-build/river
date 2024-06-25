@@ -19,12 +19,17 @@ interface Eip712LinkedWalletArgs {
     message: string
 }
 
-export function createEip712LinkedWalletdData({ domain, userID, nonce, message }: Eip712LinkedWalletArgs) {
+export function createEip712LinkedWalletdData({
+    domain,
+    userID,
+    nonce,
+    message,
+}: Eip712LinkedWalletArgs) {
     // should match the types and order of _LINKED_WALLET_TYPEHASH in
     // river/contracts/src/factory/facets/wallet-link/WalletLinkBase.sol
     const linkedWalletTypes: Record<string, TypedDataField[]> = {
         LinkedWallet: [
-            { name: 'message', type: 'string' }
+            { name: 'message', type: 'string' },
             { name: 'userID', type: 'address' },
             { name: 'nonce', type: 'uint256' },
         ],
