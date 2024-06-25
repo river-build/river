@@ -98,6 +98,11 @@ const _abi = [
         internalType: "struct IWalletLinkBase.LinkedWallet",
         components: [
           {
+            name: "message",
+            type: "string",
+            internalType: "string",
+          },
+          {
             name: "addr",
             type: "address",
             internalType: "address",
@@ -128,6 +133,11 @@ const _abi = [
         internalType: "struct IWalletLinkBase.LinkedWallet",
         components: [
           {
+            name: "message",
+            type: "string",
+            internalType: "string",
+          },
+          {
             name: "addr",
             type: "address",
             internalType: "address",
@@ -144,6 +154,11 @@ const _abi = [
         type: "tuple",
         internalType: "struct IWalletLinkBase.LinkedWallet",
         components: [
+          {
+            name: "message",
+            type: "string",
+            internalType: "string",
+          },
           {
             name: "addr",
             type: "address",
@@ -179,6 +194,11 @@ const _abi = [
         type: "tuple",
         internalType: "struct IWalletLinkBase.LinkedWallet",
         components: [
+          {
+            name: "message",
+            type: "string",
+            internalType: "string",
+          },
           {
             name: "addr",
             type: "address",

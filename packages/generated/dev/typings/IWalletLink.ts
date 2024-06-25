@@ -29,11 +29,13 @@ import type {
 
 export declare namespace IWalletLinkBase {
   export type LinkedWalletStruct = {
+    message: PromiseOrValue<string>;
     addr: PromiseOrValue<string>;
     signature: PromiseOrValue<BytesLike>;
   };
 
-  export type LinkedWalletStructOutput = [string, string] & {
+  export type LinkedWalletStructOutput = [string, string, string] & {
+    message: string;
     addr: string;
     signature: string;
   };
@@ -45,9 +47,9 @@ export interface IWalletLinkInterface extends utils.Interface {
     "getLatestNonceForRootKey(address)": FunctionFragment;
     "getRootKeyForWallet(address)": FunctionFragment;
     "getWalletsByRootKey(address)": FunctionFragment;
-    "linkCallerToRootKey((address,bytes),uint256)": FunctionFragment;
-    "linkWalletToRootKey((address,bytes),(address,bytes),uint256)": FunctionFragment;
-    "removeLink(address,(address,bytes),uint256)": FunctionFragment;
+    "linkCallerToRootKey((string,address,bytes),uint256)": FunctionFragment;
+    "linkWalletToRootKey((string,address,bytes),(string,address,bytes),uint256)": FunctionFragment;
+    "removeLink(address,(string,address,bytes),uint256)": FunctionFragment;
   };
 
   getFunction(

@@ -97,6 +97,11 @@ export default [
         "internalType": "struct IWalletLinkBase.LinkedWallet",
         "components": [
           {
+            "name": "message",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
             "name": "addr",
             "type": "address",
             "internalType": "address"
@@ -127,6 +132,11 @@ export default [
         "internalType": "struct IWalletLinkBase.LinkedWallet",
         "components": [
           {
+            "name": "message",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
             "name": "addr",
             "type": "address",
             "internalType": "address"
@@ -143,6 +153,11 @@ export default [
         "type": "tuple",
         "internalType": "struct IWalletLinkBase.LinkedWallet",
         "components": [
+          {
+            "name": "message",
+            "type": "string",
+            "internalType": "string"
+          },
           {
             "name": "addr",
             "type": "address",
@@ -178,6 +193,11 @@ export default [
         "type": "tuple",
         "internalType": "struct IWalletLinkBase.LinkedWallet",
         "components": [
+          {
+            "name": "message",
+            "type": "string",
+            "internalType": "string"
+          },
           {
             "name": "addr",
             "type": "address",
