@@ -162,6 +162,8 @@ export declare namespace IArchitectBase {
   export type SpaceInfoStruct = {
     name: PromiseOrValue<string>;
     uri: PromiseOrValue<string>;
+    shortDescription: PromiseOrValue<string>;
+    longDescription: PromiseOrValue<string>;
     membership: IArchitectBase.MembershipStruct;
     channel: IArchitectBase.ChannelInfoStruct;
   };
@@ -169,11 +171,15 @@ export declare namespace IArchitectBase {
   export type SpaceInfoStructOutput = [
     string,
     string,
+    string,
+    string,
     IArchitectBase.MembershipStructOutput,
     IArchitectBase.ChannelInfoStructOutput
   ] & {
     name: string;
     uri: string;
+    shortDescription: string;
+    longDescription: string;
     membership: IArchitectBase.MembershipStructOutput;
     channel: IArchitectBase.ChannelInfoStructOutput;
   };
@@ -181,7 +187,7 @@ export declare namespace IArchitectBase {
 
 export interface IArchitectInterface extends utils.Interface {
   functions: {
-    "createSpace((string,string,((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[])),string[]),(string)))": FunctionFragment;
+    "createSpace((string,string,string,string,((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[])),string[]),(string)))": FunctionFragment;
     "getSpaceArchitectImplementations()": FunctionFragment;
     "getSpaceByTokenId(uint256)": FunctionFragment;
     "getTokenIdBySpace(address)": FunctionFragment;
