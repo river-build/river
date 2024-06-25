@@ -93,7 +93,12 @@ abstract contract WalletLinkBase is IWalletLinkBase, EIP712Base, Nonces {
     }
 
     structHash = keccak256(
-      abi.encode(_LINKED_WALLET_TYPEHASH, rootWallet.message, rootWallet.addr, nonce)
+      abi.encode(
+        _LINKED_WALLET_TYPEHASH,
+        rootWallet.message,
+        rootWallet.addr,
+        nonce
+      )
     );
     bytes32 walletMessageHash = _hashTypedDataV4(structHash);
 
@@ -140,7 +145,12 @@ abstract contract WalletLinkBase is IWalletLinkBase, EIP712Base, Nonces {
 
     // Verify that the root wallet signature contains the correct nonce and the correct wallet
     bytes32 structHash = keccak256(
-      abi.encode(_LINKED_WALLET_TYPEHASH, rootWallet.message, walletToRemove, nonce)
+      abi.encode(
+        _LINKED_WALLET_TYPEHASH,
+        rootWallet.message,
+        walletToRemove,
+        nonce
+      )
     );
     bytes32 rootKeyMessageHash = _hashTypedDataV4(structHash);
 

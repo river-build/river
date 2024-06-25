@@ -21,7 +21,6 @@ contract MembershipJoinSpace is
   IEntitlementGatedBase,
   IWalletLinkBase
 {
-  string internal constant _LINKED_WALLET_MESSAGE = "Link your external wallet";
   bytes32 internal constant CHECK_REQUESTED =
     keccak256(
       "EntitlementCheckRequested(address,address,bytes32,uint256,address[])"
@@ -128,7 +127,11 @@ contract MembershipJoinSpace is
       emilyWallet.addr
     );
     walletLink.linkCallerToRootKey(
-      IWalletLinkBase.LinkedWallet(_LINKED_WALLET_MESSAGE, emilyWallet.addr, signature),
+      IWalletLinkBase.LinkedWallet(
+        _LINKED_WALLET_MESSAGE,
+        emilyWallet.addr,
+        signature
+      ),
       nonce
     );
     vm.stopPrank();

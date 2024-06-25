@@ -14,8 +14,6 @@ import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {Nonces} from "contracts/src/diamond/utils/Nonces.sol";
 
 contract WalletLinkTest is IWalletLinkBase, BaseSetup {
-  string internal constant _LINKED_WALLET_MESSAGE = "Link your external wallet";
-
   Vm.Wallet internal rootWallet;
   Vm.Wallet internal wallet;
   Vm.Wallet internal smartAccount;
@@ -108,7 +106,10 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
 
     vm.prank(wallet.addr);
     vm.expectRevert(WalletLink__InvalidAddress.selector);
-    walletLink.linkCallerToRootKey(LinkedWallet(_LINKED_WALLET_MESSAGE, address(0), signature), nonce);
+    walletLink.linkCallerToRootKey(
+      LinkedWallet(_LINKED_WALLET_MESSAGE, address(0), signature),
+      nonce
+    );
   }
 
   function test_revertWhen_linkCallerToRootKeyLinkToSelf()
@@ -168,7 +169,10 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
         rootWallet.addr
       )
     );
-    walletLink.linkCallerToRootKey(LinkedWallet(_LINKED_WALLET_MESSAGE, wallet.addr, ""), nonce);
+    walletLink.linkCallerToRootKey(
+      LinkedWallet(_LINKED_WALLET_MESSAGE, wallet.addr, ""),
+      nonce
+    );
   }
 
   function test_revertWhen_linkCallerToRootKeyLinkingToAnotherRootWallet()
@@ -188,7 +192,10 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
         root
       )
     );
-    walletLink.linkCallerToRootKey(LinkedWallet(_LINKED_WALLET_MESSAGE, root, signature), nonce2);
+    walletLink.linkCallerToRootKey(
+      LinkedWallet(_LINKED_WALLET_MESSAGE, root, signature),
+      nonce2
+    );
   }
 
   function test_revertWhen_linkCallerToRootKeyInvalidSignature() external {
@@ -425,7 +432,11 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
     emit RemoveLink(wallet.addr, smartAccount.addr);
     walletLink.removeLink({
       wallet: wallet.addr,
-      rootWallet: LinkedWallet(_LINKED_WALLET_MESSAGE, rootWallet.addr, signature),
+      rootWallet: LinkedWallet(
+        _LINKED_WALLET_MESSAGE,
+        rootWallet.addr,
+        signature
+      ),
       nonce: nonce
     });
     vm.stopPrank();
@@ -445,7 +456,11 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
     vm.expectRevert(WalletLink__InvalidAddress.selector);
     walletLink.removeLink({
       wallet: address(0),
-      rootWallet: LinkedWallet(_LINKED_WALLET_MESSAGE, rootWallet.addr, signature),
+      rootWallet: LinkedWallet(
+        _LINKED_WALLET_MESSAGE,
+        rootWallet.addr,
+        signature
+      ),
       nonce: nonce
     });
 
@@ -470,7 +485,11 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
     vm.expectRevert(WalletLink__CannotRemoveRootWallet.selector);
     walletLink.removeLink({
       wallet: rootWallet.addr,
-      rootWallet: LinkedWallet(_LINKED_WALLET_MESSAGE, rootWallet.addr, signature),
+      rootWallet: LinkedWallet(
+        _LINKED_WALLET_MESSAGE,
+        rootWallet.addr,
+        signature
+      ),
       nonce: nonce
     });
   }
@@ -493,7 +512,11 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
     );
     walletLink.removeLink({
       wallet: wallet.addr,
-      rootWallet: LinkedWallet(_LINKED_WALLET_MESSAGE, rootWallet.addr, signature),
+      rootWallet: LinkedWallet(
+        _LINKED_WALLET_MESSAGE,
+        rootWallet.addr,
+        signature
+      ),
       nonce: nonce
     });
   }
@@ -513,7 +536,11 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
     vm.expectRevert(WalletLink__InvalidSignature.selector);
     walletLink.removeLink({
       wallet: wallet.addr,
-      rootWallet: LinkedWallet(_LINKED_WALLET_MESSAGE, rootWallet.addr, signature),
+      rootWallet: LinkedWallet(
+        _LINKED_WALLET_MESSAGE,
+        rootWallet.addr,
+        signature
+      ),
       nonce: nonce
     });
   }
@@ -539,7 +566,11 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
     );
     walletLink.removeLink({
       wallet: wallet.addr,
-      rootWallet: LinkedWallet(_LINKED_WALLET_MESSAGE, rootWallet.addr, signature),
+      rootWallet: LinkedWallet(
+        _LINKED_WALLET_MESSAGE,
+        rootWallet.addr,
+        signature
+      ),
       nonce: nonce
     });
   }
