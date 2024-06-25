@@ -26,7 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	node_config "github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/base/test"
-	node_contracts "github.com/river-build/river/core/node/contracts"
+	"github.com/river-build/river/core/node/crypto"
 	node_crypto "github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/stretchr/testify/require"
@@ -60,7 +60,7 @@ type serviceTester struct {
 	entitlementChecker *contracts.IEntitlementChecker
 	walletLink         *contracts.IWalletLink
 
-	decoder *node_contracts.EvmErrorDecoder
+	decoder *crypto.EvmErrorDecoder
 }
 
 // Disable color output for console testing.
@@ -171,7 +171,7 @@ func (st *serviceTester) deployXchainTestContracts() {
 		st.walletLinkingAddress.Hex(),
 	)
 
-	decoder, err := node_contracts.NewEVMErrorDecoder(iChecker.GetMetadata(), walletLink.GetMetadata())
+	decoder, err := node_crypto.NewEVMErrorDecoder(iChecker.GetMetadata(), walletLink.GetMetadata())
 	st.decoder = decoder
 }
 
