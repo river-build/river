@@ -19,7 +19,7 @@ const ChainConnectButton = () => {
     const { connect, connectors, error, isLoading, pendingConnector } = useConnect()
 
     return (
-        <>
+        <div>
             {connectors.map((connector) => (
                 <Button
                     disabled={!connector.ready}
@@ -33,7 +33,7 @@ const ChainConnectButton = () => {
                 </Button>
             ))}
             {error && <div>{error.message}</div>}
-        </>
+        </div>
     )
 }
 
@@ -74,7 +74,11 @@ const ConnectRiver = () => {
 }
 
 const ConnectedContent = () => {
-    const { data: nodeUrls } = useSyncValue((s) => s.riverConnection.nodeUrls)
+    const { data: nodeUrls } = useSyncValue((s) => s.riverConnection.nodeUrls, {
+        onUpdate: (data) => console.log('onUpdate', data),
+        onError: (error) => console.error('onError', error),
+        onSaved: (data) => console.log('onSaved', data),
+    })
     return (
         <div className="max-w-xl rounded-sm border border-zinc-200 bg-zinc-100 p-2">
             <pre className="overflow-auto whitespace-pre-wrap">
