@@ -5,7 +5,7 @@ import { Address } from '../ContractTypes'
 import { BaseChainConfig } from '../IStaticContractsInfo'
 import { IWalletLinkShim } from './WalletLinkShim'
 import { arrayify } from 'ethers/lib/utils'
-import { createEip712LinkedWalletdData, toLinkedWalletHash } from './EIP-712'
+import { createEip712LinkedWalletdData } from './EIP-712'
 
 export const INVALID_ADDRESS = '0x0000000000000000000000000000000000000000'
 
@@ -66,7 +66,6 @@ export class WalletLink {
         walletAddress: Address
         rootKeyNonce: BigNumber
     }): Promise<string> {
-        toLinkedWalletHash(walletAddress, rootKeyNonce)
         const { domain, types, value } = createEip712LinkedWalletdData({
             domain: this.eip712Domain,
             message: this.LINKED_WALLET_MESSAGE,

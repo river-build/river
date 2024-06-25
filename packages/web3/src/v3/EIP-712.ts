@@ -68,19 +68,19 @@ export function getDomainSeparator(domain: TypedDataDomain): string {
     return keccak256(encodedData)
 }
 
-export function toLinkedWalletHash(address: string, nonce: BigNumber): string {
+export function toLinkedWalletHash(message: string, address: string, nonce: BigNumber): string {
     // this hash should match _LINKED_WALLET_TYPEHASH in
     // river/contracts/src/factory/facets/wallet-link/WalletLinkBase.sol
     const LINKED_WALLET_TYPE_HASH = keccak256(
         toUtf8Bytes('LinkedWallet(string message,address userID,uint256 nonce)'),
     )
-    console.log('[tak] LINKED_WALLET_TYPE_HASH', LINKED_WALLET_TYPE_HASH)
-    return keccak256(
+    const structHash = keccak256(
         defaultAbiCoder.encode(
-            ['bytes32', 'address', 'uint256'],
-            [LINKED_WALLET_TYPE_HASH, address, nonce],
+            ['bytes32', 'string', 'address', 'uint256'],
+            [LINKED_WALLET_TYPE_HASH, message, address, nonce],
         ),
     )
+    return structHash
 }
 
 /**
