@@ -29,12 +29,17 @@ import type {
 
 export declare namespace IWalletLinkBase {
   export type LinkedWalletStruct = {
+    message: PromiseOrValue<string>;
     addr: PromiseOrValue<string>;
     signature: PromiseOrValue<BytesLike>;
     message: PromiseOrValue<string>;
   };
 
   export type LinkedWalletStructOutput = [string, string, string] & {
+<<<<<<< HEAD
+=======
+    message: string;
+>>>>>>> tak/wallet-link-eip712-v2
     addr: string;
     signature: string;
     message: string;
@@ -47,9 +52,15 @@ export interface IWalletLinkInterface extends utils.Interface {
     "getLatestNonceForRootKey(address)": FunctionFragment;
     "getRootKeyForWallet(address)": FunctionFragment;
     "getWalletsByRootKey(address)": FunctionFragment;
+<<<<<<< HEAD
     "linkCallerToRootKey((address,bytes,string),uint256)": FunctionFragment;
     "linkWalletToRootKey((address,bytes,string),(address,bytes,string),uint256)": FunctionFragment;
     "removeLink(address,(address,bytes,string),uint256)": FunctionFragment;
+=======
+    "linkCallerToRootKey((string,address,bytes),uint256)": FunctionFragment;
+    "linkWalletToRootKey((string,address,bytes),(string,address,bytes),uint256)": FunctionFragment;
+    "removeLink(address,(string,address,bytes),uint256)": FunctionFragment;
+>>>>>>> tak/wallet-link-eip712-v2
   };
 
   getFunction(

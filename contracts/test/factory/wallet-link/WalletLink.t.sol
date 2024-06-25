@@ -14,6 +14,8 @@ import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {Nonces} from "contracts/src/diamond/utils/Nonces.sol";
 
 contract WalletLinkTest is IWalletLinkBase, BaseSetup {
+  string internal constant _LINKED_WALLET_MESSAGE = "Link your external wallet";
+
   Vm.Wallet internal rootWallet;
   Vm.Wallet internal wallet;
   Vm.Wallet internal smartAccount;

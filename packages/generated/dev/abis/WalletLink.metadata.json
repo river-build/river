@@ -324,6 +324,11 @@
             "type": "tuple",
             "components": [
               {
+                "internalType": "string",
+                "name": "message",
+                "type": "string"
+              },
+              {
                 "internalType": "address",
                 "name": "addr",
                 "type": "address"
@@ -358,6 +363,11 @@
             "type": "tuple",
             "components": [
               {
+                "internalType": "string",
+                "name": "message",
+                "type": "string"
+              },
+              {
                 "internalType": "address",
                 "name": "addr",
                 "type": "address"
@@ -379,6 +389,11 @@
             "name": "rootWallet",
             "type": "tuple",
             "components": [
+              {
+                "internalType": "string",
+                "name": "message",
+                "type": "string"
+              },
               {
                 "internalType": "address",
                 "name": "addr",
@@ -418,6 +433,11 @@
             "name": "rootWallet",
             "type": "tuple",
             "components": [
+              {
+                "internalType": "string",
+                "name": "message",
+                "type": "string"
+              },
               {
                 "internalType": "address",
                 "name": "addr",
@@ -479,20 +499,32 @@
             "wallets": "an array of ethereum wallets linked to this root key"
           }
         },
+<<<<<<< HEAD
         "linkCallerToRootKey((address,bytes,string),uint256)": {
+=======
+        "linkCallerToRootKey((string,address,bytes),uint256)": {
+>>>>>>> tak/wallet-link-eip712-v2
           "params": {
             "nonce": "a nonce used to prevent replay attacks, nonce must always be higher than previous nonce",
             "rootWallet": "the root wallet that the caller is linking to"
           }
         },
+<<<<<<< HEAD
         "linkWalletToRootKey((address,bytes,string),(address,bytes,string),uint256)": {
+=======
+        "linkWalletToRootKey((string,address,bytes),(string,address,bytes),uint256)": {
+>>>>>>> tak/wallet-link-eip712-v2
           "params": {
             "nonce": "a nonce used to prevent replay attacks, nonce must always be higher than previous nonce",
             "rootWallet": "the root wallet that the caller is linking to",
             "wallet": "the wallet being linked to the root wallet"
           }
         },
+<<<<<<< HEAD
         "removeLink(address,(address,bytes,string),uint256)": {
+=======
+        "removeLink(address,(string,address,bytes),uint256)": {
+>>>>>>> tak/wallet-link-eip712-v2
           "params": {
             "wallet": "the wallet being unlinked from the sending wallet"
           }
@@ -515,6 +547,7 @@
         "getWalletsByRootKey(address)": {
           "notice": "Returns all wallets linked to a root key"
         },
+<<<<<<< HEAD
         "linkCallerToRootKey((address,bytes,string),uint256)": {
           "notice": "Link caller wallet to a root wallet"
         },
@@ -522,6 +555,15 @@
           "notice": "Link a wallet to a root wallet"
         },
         "removeLink(address,(address,bytes,string),uint256)": {
+=======
+        "linkCallerToRootKey((string,address,bytes),uint256)": {
+          "notice": "Link caller wallet to a root wallet"
+        },
+        "linkWalletToRootKey((string,address,bytes),(string,address,bytes),uint256)": {
+          "notice": "Link a wallet to a root wallet"
+        },
+        "removeLink(address,(string,address,bytes),uint256)": {
+>>>>>>> tak/wallet-link-eip712-v2
           "notice": "Called via the rootkey signing a message to a remove a wallet from itself"
         }
       },
@@ -627,10 +669,17 @@
       "license": "MIT"
     },
     "contracts/src/factory/facets/wallet-link/IWalletLink.sol": {
+<<<<<<< HEAD
       "keccak256": "0x1c9084570c24d5297c09ae2ced5a7cc74b0d4525d82c50ab4837073d371492ee",
       "urls": [
         "bzz-raw://c5a554705b2dd0483babbb512ac97bdfc24dfc9c0bc5ea80c6781c056fd03df0",
         "dweb:/ipfs/QmNdURhnWUeSs5294Puz2FZq2bRikgPgfi4oNppd6pJSH5"
+=======
+      "keccak256": "0x9a07aca75e5314de5e8a7b1fe87558e086a9e21ad3a36ed4480653ccc2846fc4",
+      "urls": [
+        "bzz-raw://081ce6c95b2f139fdaf29ed3c3f30803e1a2400584f1bbea7fa84d849e710a7c",
+        "dweb:/ipfs/QmUgEBRCCPaYqeJzvE2fArbrFgfacmYCpq6Tgr8HCVgT8G"
+>>>>>>> tak/wallet-link-eip712-v2
       ],
       "license": "MIT"
     },
@@ -643,10 +692,17 @@
       "license": "MIT"
     },
     "contracts/src/factory/facets/wallet-link/WalletLinkBase.sol": {
+<<<<<<< HEAD
       "keccak256": "0xf7337660ec563b4efa2e696e4d3dc9d6f649add0c227e1683be26209bdd2923a",
       "urls": [
         "bzz-raw://2205c012cf98e4f1965b028269f6e949aa203b938208f8c962bda96845759508",
         "dweb:/ipfs/QmcKcz4BRmofobLWLdvUAjS5bsMbuNpcDVm8vz2iNKsujf"
+=======
+      "keccak256": "0x2376ece2520a12c0fb13307f04842bcfb5cbdebe416c895ec1b996c89a7c10c2",
+      "urls": [
+        "bzz-raw://9a6a6dc7d2f3680515cce53fd1fbd33c951f7bdfbd3b9290eeae215449cc9deb",
+        "dweb:/ipfs/QmZ2BVsq9VwRr8PDgbZd9FzDnbjK5ch86KY7qSpgTBhASP"
+>>>>>>> tak/wallet-link-eip712-v2
       ],
       "license": "MIT"
     },
