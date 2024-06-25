@@ -360,8 +360,8 @@ export async function createSpaceAndDefaultChannel(
     const spaceAddress = spaceDapp.getSpaceAddress(receipt)
     expect(spaceAddress).toBeDefined()
 
-    const spaceId = makeSpaceStreamId(spaceAddress)
-    const channelId = makeDefaultChannelStreamId(spaceAddress)
+    const spaceId = makeSpaceStreamId(spaceAddress!)
+    const channelId = makeDefaultChannelStreamId(spaceAddress!)
 
     await client.initializeUser({ spaceId })
     client.startSync()
@@ -473,7 +473,7 @@ export async function everyoneMembershipStruct(
             currency: ETH_ADDRESS,
             feeRecipient: client.userId,
             freeAllocation: 0,
-            pricingModule: dynamicPricingModule.module,
+            pricingModule: dynamicPricingModule!.module,
         },
         permissions: [Permission.Read, Permission.Write],
         requirements: {
