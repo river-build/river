@@ -21,7 +21,6 @@ contract MembershipJoinSpace is
   IEntitlementGatedBase,
   IWalletLinkBase
 {
-  string internal constant _LINKED_WALLET_MESSAGE = "Link your external wallet";
   bytes32 internal constant CHECK_REQUESTED =
     keccak256(
       "EntitlementCheckRequested(address,address,bytes32,uint256,address[])"
