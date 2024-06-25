@@ -7,28 +7,28 @@ import { Address } from '../ContractTypes'
  * https://github.com/ethereum/EIPs/blob/master/EIPS/eip-712.md
  * */
 interface LinkedWalletValue {
-    wallet: Address
+    userID: Address
     nonce: BigNumber
 }
 
 interface Eip712LinkedWalletArgs {
     domain: TypedDataDomain
     nonce: BigNumber
-    wallet: Address
+    userID: Address
 }
 
-export function createEip712LinkedWalletdData({ domain, wallet, nonce }: Eip712LinkedWalletArgs) {
+export function createEip712LinkedWalletdData({ domain, userID, nonce }: Eip712LinkedWalletArgs) {
     // should match the types and order of _LINKED_WALLET_TYPEHASH in
     // river/contracts/src/factory/facets/wallet-link/WalletLinkBase.sol
     const linkedWalletTypes: Record<string, TypedDataField[]> = {
         LinkedWallet: [
-            { name: 'wallet', type: 'address' },
+            { name: 'userID', type: 'address' },
             { name: 'nonce', type: 'uint256' },
         ],
     }
     const types = linkedWalletTypes
     const value: LinkedWalletValue = {
-        wallet,
+        userID,
         nonce,
     }
     return {
