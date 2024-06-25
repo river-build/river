@@ -91,22 +91,21 @@ export class BaseRegistry {
 
     public async getNodesWithOperators(): Promise<BaseNodeWithOperator[]> {
         const operators = await this.getOperators()
-        const nodePromises = operators.map((operator) =>
+        const nodesByOperatorPromises = operators.map((operator) =>
             this.entitlementChecker.read.getNodesByOperator(operator.operatorAddress),
         )
-        const nodes = await Promise.all(nodePromises)
-        const operatorsWitNodes = operators.map((operator, index) => ({
+        const nodesByOperator = await Promise.all(nodesByOperatorPromises)
+        const operatorsWithNodes = operators.map((operator, index) => ({
             operator,
-            nodes: nodes[index],
+            nodes: nodesByOperator[index],
         }))
 
-        const nodesWithOperators = operatorsWitNodes.reduce(
-            (acc: BaseNodeWithOperator[], { operator, nodes }) => {
-                const nodesWithOperator = nodes.map((node) => ({ node, operator }))
-                return acc.concat(nodesWithOperator)
-            },
-            [],
-        )
+        const nodesWithOperators: BaseNodeWithOperator[] = []
+        operatorsWithNodes.forEach(({ operator, nodes }) => {
+            nodes.forEach((node) => {
+                nodesWithOperators.push({ node, operator })
+            })
+        })
 
         return nodesWithOperators
     }
