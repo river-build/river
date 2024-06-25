@@ -976,7 +976,7 @@ func TestForwardingWithRetries(t *testing.T) {
 			// committing the stream's genesis miniblock to storage yet. We use the info request to force the making of
 			// a miniblock for this stream, but these streams are replicated and the debug make miniblock call only
 			// operates on a local node. This means that the GetStreamEx request may occasionally return an empty
-			// stream, so we retry until we get the expected result.
+			// stream on a node that hasn't caught up to the latest state, so we retry until we get the expected result.
 			require.Eventually(
 				t,
 				func() bool {
