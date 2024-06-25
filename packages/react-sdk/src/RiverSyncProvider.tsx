@@ -1,6 +1,6 @@
 'use client'
 import type { SyncAgent } from '@river-build/sdk'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { RiverSyncContext } from './internals/RiverSyncContext'
 
 type RiverSyncProviderProps = {
@@ -10,6 +10,13 @@ type RiverSyncProviderProps = {
 
 export const RiverSyncProvider = (props: RiverSyncProviderProps) => {
     const [syncAgent, setSyncAgent] = useState(() => props.syncAgent)
+
+    useEffect(() => {
+        if (syncAgent) {
+            syncAgent.start()
+        }
+    }, [syncAgent])
+
     return (
         <RiverSyncContext.Provider
             value={{
