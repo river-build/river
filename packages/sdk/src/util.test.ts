@@ -414,7 +414,7 @@ export async function createUserStreamAndSyncClient(
     const spaceAddress = spaceDapp.getSpaceAddress(receipt)
     expect(spaceAddress).toBeDefined()
 
-    const spaceId = makeSpaceStreamId(spaceAddress)
+    const spaceId = makeSpaceStreamId(spaceAddress!)
     await client.initializeUser({ spaceId })
 }
 
