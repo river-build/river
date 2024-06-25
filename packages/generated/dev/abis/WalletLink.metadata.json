@@ -332,6 +332,11 @@
                 "internalType": "bytes",
                 "name": "signature",
                 "type": "bytes"
+              },
+              {
+                "internalType": "string",
+                "name": "message",
+                "type": "string"
               }
             ]
           },
@@ -361,6 +366,11 @@
                 "internalType": "bytes",
                 "name": "signature",
                 "type": "bytes"
+              },
+              {
+                "internalType": "string",
+                "name": "message",
+                "type": "string"
               }
             ]
           },
@@ -378,6 +388,11 @@
                 "internalType": "bytes",
                 "name": "signature",
                 "type": "bytes"
+              },
+              {
+                "internalType": "string",
+                "name": "message",
+                "type": "string"
               }
             ]
           },
@@ -412,6 +427,11 @@
                 "internalType": "bytes",
                 "name": "signature",
                 "type": "bytes"
+              },
+              {
+                "internalType": "string",
+                "name": "message",
+                "type": "string"
               }
             ]
           },
@@ -459,20 +479,20 @@
             "wallets": "an array of ethereum wallets linked to this root key"
           }
         },
-        "linkCallerToRootKey((address,bytes),uint256)": {
+        "linkCallerToRootKey((address,bytes,string),uint256)": {
           "params": {
             "nonce": "a nonce used to prevent replay attacks, nonce must always be higher than previous nonce",
             "rootWallet": "the root wallet that the caller is linking to"
           }
         },
-        "linkWalletToRootKey((address,bytes),(address,bytes),uint256)": {
+        "linkWalletToRootKey((address,bytes,string),(address,bytes,string),uint256)": {
           "params": {
             "nonce": "a nonce used to prevent replay attacks, nonce must always be higher than previous nonce",
             "rootWallet": "the root wallet that the caller is linking to",
             "wallet": "the wallet being linked to the root wallet"
           }
         },
-        "removeLink(address,(address,bytes),uint256)": {
+        "removeLink(address,(address,bytes,string),uint256)": {
           "params": {
             "wallet": "the wallet being unlinked from the sending wallet"
           }
@@ -495,13 +515,13 @@
         "getWalletsByRootKey(address)": {
           "notice": "Returns all wallets linked to a root key"
         },
-        "linkCallerToRootKey((address,bytes),uint256)": {
+        "linkCallerToRootKey((address,bytes,string),uint256)": {
           "notice": "Link caller wallet to a root wallet"
         },
-        "linkWalletToRootKey((address,bytes),(address,bytes),uint256)": {
+        "linkWalletToRootKey((address,bytes,string),(address,bytes,string),uint256)": {
           "notice": "Link a wallet to a root wallet"
         },
-        "removeLink(address,(address,bytes),uint256)": {
+        "removeLink(address,(address,bytes,string),uint256)": {
           "notice": "Called via the rootkey signing a message to a remove a wallet from itself"
         }
       },
@@ -607,10 +627,10 @@
       "license": "MIT"
     },
     "contracts/src/factory/facets/wallet-link/IWalletLink.sol": {
-      "keccak256": "0xd5990654ce80ba51a4d30d170720113a7bd4a92ed6fc48f4698c8d15a5ea1eab",
+      "keccak256": "0x1c9084570c24d5297c09ae2ced5a7cc74b0d4525d82c50ab4837073d371492ee",
       "urls": [
-        "bzz-raw://0381e604f23647408ec878b6ef611028cb596950b1bda84b5737bace1d94fd20",
-        "dweb:/ipfs/QmcVvLxnUk2bS3ULrQthy8ZxdHM5KEmeEQf6NiS5dPL5VW"
+        "bzz-raw://c5a554705b2dd0483babbb512ac97bdfc24dfc9c0bc5ea80c6781c056fd03df0",
+        "dweb:/ipfs/QmNdURhnWUeSs5294Puz2FZq2bRikgPgfi4oNppd6pJSH5"
       ],
       "license": "MIT"
     },
@@ -623,10 +643,10 @@
       "license": "MIT"
     },
     "contracts/src/factory/facets/wallet-link/WalletLinkBase.sol": {
-      "keccak256": "0xb2cefba63959b91f6d5bc125a9dd51cb8edfcd26dce34ef23d7f0d2d5dcd96c1",
+      "keccak256": "0x8a191ce37128ae7a5fe3582b90b4085ea35a035b65ef453b27606e833460987e",
       "urls": [
-        "bzz-raw://3cf180893be4cc3aec398fc1107792a21d1ba81b94cfd4ebe57f63e400bc79cc",
-        "dweb:/ipfs/QmY7vA6bY8CFRSyp3vUEpunBzT4k1aApoEAhVwN5e7AbmQ"
+        "bzz-raw://a2ed5c50c7d0183f96b30867cb846d9e59f86cc0a4440ba4dcd339b025c699a8",
+        "dweb:/ipfs/QmYPxs4YL5KetAbEwVSDq1jdjRimLsx1wXvMUj8XCdB86p"
       ],
       "license": "MIT"
     },

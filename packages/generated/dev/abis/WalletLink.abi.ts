@@ -105,6 +105,11 @@ export default [
             "name": "signature",
             "type": "bytes",
             "internalType": "bytes"
+          },
+          {
+            "name": "message",
+            "type": "string",
+            "internalType": "string"
           }
         ]
       },
@@ -135,6 +140,11 @@ export default [
             "name": "signature",
             "type": "bytes",
             "internalType": "bytes"
+          },
+          {
+            "name": "message",
+            "type": "string",
+            "internalType": "string"
           }
         ]
       },
@@ -152,6 +162,11 @@ export default [
             "name": "signature",
             "type": "bytes",
             "internalType": "bytes"
+          },
+          {
+            "name": "message",
+            "type": "string",
+            "internalType": "string"
           }
         ]
       },
@@ -187,6 +202,11 @@ export default [
             "name": "signature",
             "type": "bytes",
             "internalType": "bytes"
+          },
+          {
+            "name": "message",
+            "type": "string",
+            "internalType": "string"
           }
         ]
       },
