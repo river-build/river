@@ -15,8 +15,10 @@ function getEnvironmentId(): string {
 }
 
 function getBaseRpcUrlForChain(chainId: number): string {
-    if (process?.env?.BASE_CHAIN_RPC_URL) {
-        return process.env.BASE_CHAIN_RPC_URL
+    if (typeof process === 'object') {
+        if (process?.env?.BASE_CHAIN_RPC_URL) {
+            return process.env.BASE_CHAIN_RPC_URL
+        }
     }
     switch (chainId) {
         case 31337:
@@ -29,8 +31,10 @@ function getBaseRpcUrlForChain(chainId: number): string {
 }
 
 function getRiverRpcUrlForChain(chainId: number): string {
-    if (process?.env?.RIVER_CHAIN_RPC_URL) {
-        return process.env.RIVER_CHAIN_RPC_URL
+    if (typeof process === 'object') {
+        if (process?.env?.RIVER_CHAIN_RPC_URL) {
+            return process.env.RIVER_CHAIN_RPC_URL
+        }
     }
     switch (chainId) {
         case 31338:
