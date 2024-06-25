@@ -115,9 +115,9 @@ export class WalletLink {
     }
 
     private async generateLinkWalletData(
+        message: string,
         rootKey: ethers.Signer,
         wallet: ethers.Signer,
-        message: string,
     ) {
         const { rootKeyAddress, walletAddress } = await this.assertNotAlreadyLinked(rootKey, wallet)
 
@@ -181,12 +181,11 @@ export class WalletLink {
     public async linkWalletToRootKey(
         rootKey: ethers.Signer,
         wallet: ethers.Signer,
-        message: string,
     ): Promise<ContractTransaction> {
         const { walletData, rootKeyData, nonce } = await this.generateLinkWalletData(
+            this._LINKED_WALLET_MESSAGE,
             rootKey,
             wallet,
-            message,
         )
         // msg.sender = root key
         return this.walletLinkShim
@@ -213,12 +212,11 @@ export class WalletLink {
     public async encodeLinkWalletToRootKey(
         rootKey: ethers.Signer,
         wallet: ethers.Signer,
-        message: string,
     ): Promise<string> {
         const { walletData, rootKeyData, nonce } = await this.generateLinkWalletData(
+            this._LINKED_WALLET_MESSAGE,
             rootKey,
             wallet,
-            message,
         )
 
         return this.walletLinkShim.interface.encodeFunctionData('linkWalletToRootKey', [
@@ -250,7 +248,7 @@ export class WalletLink {
         const nonce = await this.walletLinkShim.read.getLatestNonceForRootKey(rootKeyAddress)
         const { domain, types, value } = createEip712LinkedWalletdData({
             domain: this.eip712Domain,
-            message: this._LINKED_WALLET_MESSAGE,
+            message: 'Remove your external wallet link',
             nonce,
             userID: walletAddress as Address,
         })
@@ -270,6 +268,7 @@ export class WalletLink {
         return await this.walletLinkShim.write(rootKey).removeLink(
             walletAddress,
             {
+                message: this._LINKED_WALLET_MESSAGE,
                 addr: rootKeyAddress,
                 signature: rootKeySignature,
             },
@@ -286,6 +285,7 @@ export class WalletLink {
         return this.walletLinkShim.interface.encodeFunctionData('removeLink', [
             walletAddress,
             {
+                message: this._LINKED_WALLET_MESSAGE,
                 addr: rootKeyAddress,
                 signature: rootKeySignature,
             },
