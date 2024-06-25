@@ -21,7 +21,7 @@ abstract contract WalletLinkBase is IWalletLinkBase, EIP712Base, Nonces {
   // =============================================================
   /// @dev `keccak256("LinkedWallet(address userID,uint256 nonce)")`.
   bytes32 private constant _LINKED_WALLET_TYPEHASH =
-    0x55e2fd6157b2f0fb229c2e87aa7296cea45089c93e0d3363ffbc90872ee9efa6;
+    0x6bb89d031fcd292ecd4c0e6855878b7165cebc3a2f35bc6bbac48c088dd8325c;
 
   // =============================================================
   //                      External - Write
@@ -42,7 +42,7 @@ abstract contract WalletLinkBase is IWalletLinkBase, EIP712Base, Nonces {
     _verifyWallets(ds, newWallet, rootWallet.addr);
 
     bytes32 structHash = keccak256(
-      abi.encode(_LINKED_WALLET_TYPEHASH, newWallet, nonce)
+      abi.encode(_LINKED_WALLET_TYPEHASH, rootWallet.message, newWallet, nonce)
     );
 
     //Verify that the root wallet signature contains the correct nonce and the correct caller wallet
@@ -79,7 +79,7 @@ abstract contract WalletLinkBase is IWalletLinkBase, EIP712Base, Nonces {
     _verifyWallets(ds, wallet.addr, rootWallet.addr);
 
     bytes32 structHash = keccak256(
-      abi.encode(_LINKED_WALLET_TYPEHASH, wallet.addr, nonce)
+      abi.encode(_LINKED_WALLET_TYPEHASH, wallet.message, wallet.addr, nonce)
     );
 
     //Verify that the root wallet signature contains the correct nonce and the correct wallet
@@ -93,7 +93,7 @@ abstract contract WalletLinkBase is IWalletLinkBase, EIP712Base, Nonces {
     }
 
     structHash = keccak256(
-      abi.encode(_LINKED_WALLET_TYPEHASH, rootWallet.addr, nonce)
+      abi.encode(_LINKED_WALLET_TYPEHASH, rootWallet.message, rootWallet.addr, nonce)
     );
     bytes32 walletMessageHash = _hashTypedDataV4(structHash);
 
@@ -140,7 +140,7 @@ abstract contract WalletLinkBase is IWalletLinkBase, EIP712Base, Nonces {
 
     // Verify that the root wallet signature contains the correct nonce and the correct wallet
     bytes32 structHash = keccak256(
-      abi.encode(_LINKED_WALLET_TYPEHASH, walletToRemove, nonce)
+      abi.encode(_LINKED_WALLET_TYPEHASH, rootWallet.message, walletToRemove, nonce)
     );
     bytes32 rootKeyMessageHash = _hashTypedDataV4(structHash);
 
