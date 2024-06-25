@@ -11,14 +11,13 @@ import { isDefined } from './check'
 import { check } from '@river-build/dlog'
 
 function getEnvironmentId(): string {
-    // return process.env.RIVER_ENV || 'local_single'
-    return 'local_single'
+    return process?.env?.RIVER_ENV || 'local_single'
 }
 
 function getBaseRpcUrlForChain(chainId: number): string {
-    // if (process.env.BASE_CHAIN_RPC_URL) {
-    //     return process.env.BASE_CHAIN_RPC_URL
-    // }
+    if (process?.env?.BASE_CHAIN_RPC_URL) {
+        return process.env.BASE_CHAIN_RPC_URL
+    }
     switch (chainId) {
         case 31337:
             return 'http://localhost:8545'
@@ -30,9 +29,9 @@ function getBaseRpcUrlForChain(chainId: number): string {
 }
 
 function getRiverRpcUrlForChain(chainId: number): string {
-    // if (process.env.RIVER_CHAIN_RPC_URL) {
-    //     return process.env.RIVER_CHAIN_RPC_URL
-    // }
+    if (process?.env?.RIVER_CHAIN_RPC_URL) {
+        return process.env.RIVER_CHAIN_RPC_URL
+    }
     switch (chainId) {
         case 31338:
             return 'http://localhost:8546'
@@ -48,13 +47,13 @@ function makeWeb3Deployment(environmentId: string): Web3Deployment {
         return getWeb3Deployment(environmentId)
     }
     // Fallback to env vars
-    check(isDefined(process.env.BASE_CHAIN_ID), 'BASE_CHAIN_ID is not defined')
-    check(isDefined(process.env.BASE_CHAIN_RPC_URL), 'BASE_CHAIN_RPC_URL is not defined')
-    check(isDefined(process.env.SPACE_FACTORY_ADDRESS), 'SPACE_FACTORY_ADDRESS is not defined')
-    check(isDefined(process.env.SPACE_OWNER_ADDRESS), 'SPACE_OWNER_ADDRESS is not defined')
-    check(isDefined(process.env.RIVER_CHAIN_ID), 'RIVER_CHAIN_ID is not defined')
-    check(isDefined(process.env.RIVER_CHAIN_RPC_URL), 'RIVER_CHAIN_RPC_URL is not defined')
-    check(isDefined(process.env.RIVER_REGISTRY_ADDRESS), 'RIVER_REGISTRY_ADDRESS is not defined')
+    check(isDefined(process?.env?.BASE_CHAIN_ID), 'BASE_CHAIN_ID is not defined')
+    check(isDefined(process?.env?.BASE_CHAIN_RPC_URL), 'BASE_CHAIN_RPC_URL is not defined')
+    check(isDefined(process?.env?.SPACE_FACTORY_ADDRESS), 'SPACE_FACTORY_ADDRESS is not defined')
+    check(isDefined(process?.env?.SPACE_OWNER_ADDRESS), 'SPACE_OWNER_ADDRESS is not defined')
+    check(isDefined(process?.env?.RIVER_CHAIN_ID), 'RIVER_CHAIN_ID is not defined')
+    check(isDefined(process?.env?.RIVER_CHAIN_RPC_URL), 'RIVER_CHAIN_RPC_URL is not defined')
+    check(isDefined(process?.env?.RIVER_REGISTRY_ADDRESS), 'RIVER_REGISTRY_ADDRESS is not defined')
 
     return {
         base: {
