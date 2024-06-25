@@ -39,7 +39,7 @@ import {DeployBaseRegistry} from "contracts/scripts/deployments/DeployBaseRegist
  */
 contract BaseSetup is TestUtils, SpaceHelper {
   bytes32 private constant _LINKED_WALLET_TYPEHASH =
-    0x51d8ecdf4fb37974a239140321f33fccf24ac5d6bb77e21b08517f9d81acdc0a;
+    0x6bb89d031fcd292ecd4c0e6855878b7165cebc3a2f35bc6bbac48c088dd8325c;
   bytes32 private constant _TYPE_HASH =
     keccak256(
       "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"

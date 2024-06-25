@@ -102,7 +102,7 @@ export class WalletLink {
 
         const nonce = await this.walletLinkShim.read.getLatestNonceForRootKey(rootKeyAddress)
         const rootKeySignature = await rootKey.signMessage(
-            packAddressWithNonce(walletAddress, nonce),
+            packAddressWithNonce(message, walletAddress, nonce),
         )
 
         const rootKeyData = {
@@ -311,9 +311,12 @@ export class WalletLink {
     }
 }
 
-function packAddressWithNonce(address: string, nonce: BigNumber): Uint8Array {
+function packAddressWithNonce(message: string, address: string, nonce: BigNumber): Uint8Array {
     const abi = ethers.utils.defaultAbiCoder
-    const packed = abi.encode(['address', 'uint256'], [address, nonce.toNumber()])
+    const packed = abi.encode(
+        ['string', 'address', 'uint256'],
+        [message, address, nonce.toNumber()],
+    )
     const hash = ethers.utils.keccak256(packed)
     return arrayify(hash)
 }

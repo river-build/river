@@ -19,9 +19,9 @@ abstract contract WalletLinkBase is IWalletLinkBase, EIP712Base, Nonces {
   // =============================================================
   //                           Constants
   // =============================================================
-  /// @dev `keccak256("LinkedWallet(string message,address wallet,uint256 nonce)")`.
+  /// @dev `keccak256("LinkedWallet(string message,address userID,uint256 nonce)")`.
   bytes32 private constant _LINKED_WALLET_TYPEHASH =
-    0x51d8ecdf4fb37974a239140321f33fccf24ac5d6bb77e21b08517f9d81acdc0a;
+    0x6bb89d031fcd292ecd4c0e6855878b7165cebc3a2f35bc6bbac48c088dd8325c;
 
   // =============================================================
   //                      External - Write
