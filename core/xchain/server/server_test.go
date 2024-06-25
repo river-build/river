@@ -26,7 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	node_config "github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/base/test"
-	"github.com/river-build/river/core/node/crypto"
 	node_crypto "github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/stretchr/testify/require"
@@ -60,7 +59,7 @@ type serviceTester struct {
 	entitlementChecker *contracts.IEntitlementChecker
 	walletLink         *contracts.IWalletLink
 
-	decoder *crypto.EvmErrorDecoder
+	decoder *node_crypto.EvmErrorDecoder
 }
 
 // Disable color output for console testing.
