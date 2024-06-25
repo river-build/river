@@ -15,35 +15,31 @@ import {MembershipBase} from "contracts/src/spaces/facets/membership/MembershipB
 import {MembershipReferralBase} from "contracts/src/spaces/facets/membership/referral/MembershipReferralBase.sol";
 import {ERC721ABase} from "contracts/src/diamond/facets/token/ERC721A/ERC721ABase.sol";
 import {IntrospectionBase} from "contracts/src/diamond/facets/introspection/IntrospectionBase.sol";
-import {EntitlementGatedBase} from "contracts/src/spaces/facets/gated/EntitlementGatedBase.sol";
+import {SpaceProxyBase} from "contracts/src/spaces/facets/proxy/SpaceProxyBase.sol";
 import {Multicall} from "contracts/src/diamond/utils/multicall/Multicall.sol";
 
 contract SpaceProxy is
   IntrospectionBase,
-  ManagedProxyBase,
-  TokenOwnableBase,
+  SpaceProxyBase,
   ERC721ABase,
-  MembershipBase,
-  MembershipReferralBase,
-  EntitlementGatedBase,
-  Multicall
+  MembershipBase
 {
   constructor(
     address owner,
+    address entitlementChecker,
     ManagedProxy memory managedProxy,
     TokenOwnable memory tokenOwnable,
     Membership memory membership
   ) {
     __IntrospectionBase_init();
-    __ManagedProxyBase_init(managedProxy);
+    __ManagedProxyBase__init(managedProxy);
     __TokenOwnableBase_init(tokenOwnable);
+    __EntitlementChecker_init(entitlementChecker);
+
     __ERC721ABase_init(membership.name, membership.symbol);
     __MembershipBase_init(membership, managedProxy.manager);
-    __MembershipReferralBase_init();
 
     _safeMint(owner, 1);
-    _setFallbackEntitlementChecker();
-
     _setInterfaceIds();
   }
 
