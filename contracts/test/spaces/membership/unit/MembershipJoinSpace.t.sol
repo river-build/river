@@ -100,7 +100,7 @@ contract MembershipJoinSpace is
     vm.expectEmit(address(wl));
     emit LinkWalletToRootKey(daveWallet.addr, aliceWallet.addr);
     walletLink.linkCallerToRootKey(
-      LinkedWallet(aliceWallet.addr, signature),
+      LinkedWallet(aliceWallet.addr, signature, LINKED_WALLET_MESSAGE),
       nonce
     );
 
@@ -127,7 +127,7 @@ contract MembershipJoinSpace is
       emilyWallet.addr
     );
     walletLink.linkCallerToRootKey(
-      IWalletLinkBase.LinkedWallet(emilyWallet.addr, signature),
+      IWalletLinkBase.LinkedWallet(emilyWallet.addr, signature, LINKED_WALLET_MESSAGE),
       nonce
     );
     vm.stopPrank();

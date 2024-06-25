@@ -38,9 +38,9 @@ import {DeployBaseRegistry} from "contracts/scripts/deployments/DeployBaseRegist
  * @dev - This contract is inherited by all other test contracts, it will create one diamond contract which represent the factory contract that creates all spaces
  */
 contract BaseSetup is TestUtils, SpaceHelper {
+  string public constant LINKED_WALLET_MESSAGE = "Link your external wallet";
   bytes32 private constant _LINKED_WALLET_TYPEHASH =
     0x6bb89d031fcd292ecd4c0e6855878b7165cebc3a2f35bc6bbac48c088dd8325c;
-  string private constant _LINKED_WALLET_MESSAGE = "Link your external wallet";
   bytes32 private constant _TYPE_HASH =
     keccak256(
       "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
@@ -195,7 +195,7 @@ contract BaseSetup is TestUtils, SpaceHelper {
 
     bytes32 typeDataHash = MessageHashUtils.toTypedDataHash(
       _getDomainSeparator(name, version, chainId, verifyingContract),
-      keccak256(abi.encode(_LINKED_WALLET_TYPEHASH, _LINKED_WALLET_MESSAGE, newWallet, nonce))
+      keccak256(abi.encode(_LINKED_WALLET_TYPEHASH, LINKED_WALLET_MESSAGE, newWallet, nonce))
     );
 
     (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, typeDataHash);
