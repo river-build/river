@@ -13,6 +13,7 @@ interface IWalletLinkBase {
   // =============================================================
 
   struct LinkedWallet {
+    string message;
     address addr;
     bytes signature;
   }
