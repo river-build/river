@@ -127,7 +127,11 @@ contract MembershipJoinSpace is
       emilyWallet.addr
     );
     walletLink.linkCallerToRootKey(
-      IWalletLinkBase.LinkedWallet(emilyWallet.addr, signature, LINKED_WALLET_MESSAGE),
+      IWalletLinkBase.LinkedWallet(
+        emilyWallet.addr,
+        signature,
+        LINKED_WALLET_MESSAGE
+      ),
       nonce
     );
     vm.stopPrank();

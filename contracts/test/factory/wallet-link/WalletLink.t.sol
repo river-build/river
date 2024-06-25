@@ -106,7 +106,10 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
 
     vm.prank(wallet.addr);
     vm.expectRevert(WalletLink__InvalidAddress.selector);
-    walletLink.linkCallerToRootKey(LinkedWallet(address(0), signature, LINKED_WALLET_MESSAGE), nonce);
+    walletLink.linkCallerToRootKey(
+      LinkedWallet(address(0), signature, LINKED_WALLET_MESSAGE),
+      nonce
+    );
   }
 
   function test_revertWhen_linkCallerToRootKeyLinkToSelf()
@@ -166,7 +169,10 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
         rootWallet.addr
       )
     );
-    walletLink.linkCallerToRootKey(LinkedWallet(wallet.addr, "", LINKED_WALLET_MESSAGE), nonce);
+    walletLink.linkCallerToRootKey(
+      LinkedWallet(wallet.addr, "", LINKED_WALLET_MESSAGE),
+      nonce
+    );
   }
 
   function test_revertWhen_linkCallerToRootKeyLinkingToAnotherRootWallet()
@@ -186,7 +192,10 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
         root
       )
     );
-    walletLink.linkCallerToRootKey(LinkedWallet(root, signature, LINKED_WALLET_MESSAGE), nonce2);
+    walletLink.linkCallerToRootKey(
+      LinkedWallet(root, signature, LINKED_WALLET_MESSAGE),
+      nonce2
+    );
   }
 
   function test_revertWhen_linkCallerToRootKeyInvalidSignature() external {
@@ -423,7 +432,11 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
     emit RemoveLink(wallet.addr, smartAccount.addr);
     walletLink.removeLink({
       wallet: wallet.addr,
-      rootWallet: LinkedWallet(rootWallet.addr, signature, LINKED_WALLET_MESSAGE),
+      rootWallet: LinkedWallet(
+        rootWallet.addr,
+        signature,
+        LINKED_WALLET_MESSAGE
+      ),
       nonce: nonce
     });
     vm.stopPrank();
@@ -443,7 +456,11 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
     vm.expectRevert(WalletLink__InvalidAddress.selector);
     walletLink.removeLink({
       wallet: address(0),
-      rootWallet: LinkedWallet(rootWallet.addr, signature, LINKED_WALLET_MESSAGE),
+      rootWallet: LinkedWallet(
+        rootWallet.addr,
+        signature,
+        LINKED_WALLET_MESSAGE
+      ),
       nonce: nonce
     });
 
@@ -468,7 +485,11 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
     vm.expectRevert(WalletLink__CannotRemoveRootWallet.selector);
     walletLink.removeLink({
       wallet: rootWallet.addr,
-      rootWallet: LinkedWallet(rootWallet.addr, signature, LINKED_WALLET_MESSAGE),
+      rootWallet: LinkedWallet(
+        rootWallet.addr,
+        signature,
+        LINKED_WALLET_MESSAGE
+      ),
       nonce: nonce
     });
   }
@@ -491,7 +512,11 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
     );
     walletLink.removeLink({
       wallet: wallet.addr,
-      rootWallet: LinkedWallet(rootWallet.addr, signature, LINKED_WALLET_MESSAGE),
+      rootWallet: LinkedWallet(
+        rootWallet.addr,
+        signature,
+        LINKED_WALLET_MESSAGE
+      ),
       nonce: nonce
     });
   }
@@ -511,7 +536,11 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
     vm.expectRevert(WalletLink__InvalidSignature.selector);
     walletLink.removeLink({
       wallet: wallet.addr,
-      rootWallet: LinkedWallet(rootWallet.addr, signature, LINKED_WALLET_MESSAGE),
+      rootWallet: LinkedWallet(
+        rootWallet.addr,
+        signature,
+        LINKED_WALLET_MESSAGE
+      ),
       nonce: nonce
     });
   }
@@ -537,7 +566,11 @@ contract WalletLinkTest is IWalletLinkBase, BaseSetup {
     );
     walletLink.removeLink({
       wallet: wallet.addr,
-      rootWallet: LinkedWallet(rootWallet.addr, signature, LINKED_WALLET_MESSAGE),
+      rootWallet: LinkedWallet(
+        rootWallet.addr,
+        signature,
+        LINKED_WALLET_MESSAGE
+      ),
       nonce: nonce
     });
   }

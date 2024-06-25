@@ -193,7 +193,11 @@ contract BaseSetup is TestUtils, SpaceHelper {
 
     ) = eip712Facet.eip712Domain();
 
-    bytes32 linkedWalletHash = _getLinkedWalletTypedDataHash(LINKED_WALLET_MESSAGE, newWallet, nonce);
+    bytes32 linkedWalletHash = _getLinkedWalletTypedDataHash(
+      LINKED_WALLET_MESSAGE,
+      newWallet,
+      nonce
+    );
     bytes32 typeDataHash = MessageHashUtils.toTypedDataHash(
       _getDomainSeparator(name, version, chainId, verifyingContract),
       linkedWalletHash
@@ -226,14 +230,22 @@ contract BaseSetup is TestUtils, SpaceHelper {
       );
   }
 
-  function _getLinkedWalletTypedDataHash(string memory message, address addr, uint256 nonce) internal pure returns (bytes32) {
+  function _getLinkedWalletTypedDataHash(
+    string memory message,
+    address addr,
+    uint256 nonce
+  ) internal pure returns (bytes32) {
     // https://eips.ethereum.org/EIPS/eip-712
     // ATTENTION: "The dynamic values bytes and string are encoded as a keccak256 hash of their contents."
     // in this case, the message is a string, so it is keccak256 hashed
-    return keccak256(
-      abi.encode(
-        _LINKED_WALLET_TYPEHASH, keccak256(bytes(message)), addr, nonce
-      )
-    );
+    return
+      keccak256(
+        abi.encode(
+          _LINKED_WALLET_TYPEHASH,
+          keccak256(bytes(message)),
+          addr,
+          nonce
+        )
+      );
   }
 }
