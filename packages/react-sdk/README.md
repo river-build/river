@@ -42,8 +42,7 @@ const App = ({ children }: { children: React.ReactNode }) => {
 };
 
 const ConnectRiver = () => {
-  const { connect, isConnecting } = useConnectRiver();
-  const { isConnected } = useConnection();
+  const { connect, isConnecting, isConnected } = useConnectRiver();
   const signer = useEthersSigner();
 
   return (

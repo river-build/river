@@ -1,6 +1,6 @@
 import { useAccount, useConnect } from 'wagmi'
 import { makeRiverConfig } from '@river-build/sdk'
-import { useConnectRiver, useConnection, useSyncValue } from '@river-build/react-sdk'
+import { useRiverConnection, useSyncValue } from '@river-build/react-sdk'
 import { Button } from '@/components/ui/button'
 import { useEthersSigner } from '@/utils/viem-to-ethers'
 
@@ -41,8 +41,7 @@ const riverConfig = makeRiverConfig('gamma')
 
 const ConnectRiver = () => {
     const signer = useEthersSigner()
-    const { connect, disconnect, isConnecting } = useConnectRiver()
-    const { isConnected } = useConnection()
+    const { connect, disconnect, isConnecting, isConnected } = useRiverConnection()
 
     return (
         <>

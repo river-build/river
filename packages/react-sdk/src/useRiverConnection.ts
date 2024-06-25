@@ -1,10 +1,10 @@
 import type { AgentConfig } from '@river-build/sdk'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { ethers } from 'ethers'
 import { connectRiver } from './connectRiver'
 import { useRiverSync } from './internals/useRiverSync'
 
-export const useConnectRiver = () => {
+export const useRiverConnection = () => {
     const [isConnecting, setConnecting] = useState(false)
     const river = useRiverSync()
 
@@ -24,5 +24,7 @@ export const useConnectRiver = () => {
 
     const disconnect = useCallback(() => river?.setSyncAgent(undefined), [river])
 
-    return { connect, disconnect, isConnecting }
+    const isConnected = useMemo(() => !!river?.syncAgent, [river])
+
+    return { connect, disconnect, isConnecting, isConnected }
 }

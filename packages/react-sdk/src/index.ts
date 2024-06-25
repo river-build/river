@@ -3,9 +3,8 @@
  **************************************************************************/
 export * from './RiverSyncProvider'
 export * from './connectRiver'
-export * from './useConnectRiver'
-export * from './useConnected'
 export * from './useObservable'
+export * from './useRiverConnection'
 export * from './useSyncAgent'
 export * from './useSyncValue'
 export * from './utils'
