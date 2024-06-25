@@ -7,6 +7,7 @@ import { Address } from '../ContractTypes'
  * https://github.com/ethereum/EIPs/blob/master/EIPS/eip-712.md
  * */
 interface LinkedWalletValue {
+    message: string
     userID: Address
     nonce: BigNumber
 }
@@ -15,19 +16,22 @@ interface Eip712LinkedWalletArgs {
     domain: TypedDataDomain
     nonce: BigNumber
     userID: Address
+    message: string
 }
 
-export function createEip712LinkedWalletdData({ domain, userID, nonce }: Eip712LinkedWalletArgs) {
+export function createEip712LinkedWalletdData({ domain, userID, nonce, message }: Eip712LinkedWalletArgs) {
     // should match the types and order of _LINKED_WALLET_TYPEHASH in
     // river/contracts/src/factory/facets/wallet-link/WalletLinkBase.sol
     const linkedWalletTypes: Record<string, TypedDataField[]> = {
         LinkedWallet: [
+            { name: 'message', type: 'string' }
             { name: 'userID', type: 'address' },
             { name: 'nonce', type: 'uint256' },
         ],
     }
     const types = linkedWalletTypes
     const value: LinkedWalletValue = {
+        message,
         userID,
         nonce,
     }
@@ -63,8 +67,9 @@ export function toLinkedWalletHash(address: string, nonce: BigNumber): string {
     // this hash should match _LINKED_WALLET_TYPEHASH in
     // river/contracts/src/factory/facets/wallet-link/WalletLinkBase.sol
     const LINKED_WALLET_TYPE_HASH = keccak256(
-        toUtf8Bytes('LinkedWallet(address wallet,uint256 nonce)'),
+        toUtf8Bytes('LinkedWallet(string message,address userID,uint256 nonce)'),
     )
+    console.log('[tak] LINKED_WALLET_TYPE_HASH', LINKED_WALLET_TYPE_HASH)
     return keccak256(
         defaultAbiCoder.encode(
             ['bytes32', 'address', 'uint256'],
@@ -89,18 +94,4 @@ export function toTypedDataHash(domain: TypedDataDomain, structHash: string): st
         ['0x1901', domainSeparator, structHash],
     )
     return keccak256(encodedData)
-}
-
-export function toLinkedWalletTypedData({
-    domain,
-    address,
-    nonce,
-}: {
-    domain: TypedDataDomain
-    address: string
-    nonce: BigNumber
-}): string {
-    const linkedWalletHash = toLinkedWalletHash(address, nonce)
-    // Compute the typed data hash
-    return toTypedDataHash(domain, linkedWalletHash)
 }

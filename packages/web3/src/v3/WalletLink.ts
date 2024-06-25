@@ -5,11 +5,12 @@ import { Address } from '../ContractTypes'
 import { BaseChainConfig } from '../IStaticContractsInfo'
 import { IWalletLinkShim } from './WalletLinkShim'
 import { arrayify } from 'ethers/lib/utils'
-import { createEip712LinkedWalletdData } from './EIP-712'
+import { createEip712LinkedWalletdData, toLinkedWalletHash } from './EIP-712'
 
 export const INVALID_ADDRESS = '0x0000000000000000000000000000000000000000'
 
 export class WalletLink {
+    private readonly LINKED_WALLET_MESSAGE = 'Link your external wallet'
     private readonly walletLinkShim: IWalletLinkShim
     private readonly eip712Domain: ethers.TypedDataDomain
     public address: Address
@@ -65,8 +66,10 @@ export class WalletLink {
         walletAddress: Address
         rootKeyNonce: BigNumber
     }): Promise<string> {
+        toLinkedWalletHash(walletAddress, rootKeyNonce)
         const { domain, types, value } = createEip712LinkedWalletdData({
             domain: this.eip712Domain,
+            message: this.LINKED_WALLET_MESSAGE,
             nonce: rootKeyNonce,
             userID: walletAddress,
         })
@@ -84,6 +87,7 @@ export class WalletLink {
     }): Promise<string> {
         const { domain, types, value } = createEip712LinkedWalletdData({
             domain: this.eip712Domain,
+            message: this.LINKED_WALLET_MESSAGE,
             nonce: rootKeyNonce,
             userID: rootKeyAddress,
         })
@@ -221,6 +225,7 @@ export class WalletLink {
         const nonce = await this.walletLinkShim.read.getLatestNonceForRootKey(rootKeyAddress)
         const { domain, types, value } = createEip712LinkedWalletdData({
             domain: this.eip712Domain,
+            message: this.LINKED_WALLET_MESSAGE,
             nonce,
             userID: walletAddress as Address,
         })
