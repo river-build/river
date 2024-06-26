@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/river-build/river/core/config"
-	"github.com/river-build/river/core/node/contracts/base"
+	"github.com/river-build/river/core/contracts/base"
 	"github.com/river-build/river/core/node/dlog"
 	. "github.com/river-build/river/core/node/protocol"
 

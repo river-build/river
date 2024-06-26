@@ -1,4 +1,4 @@
-package contracts
+package river
 
 import "github.com/ethereum/go-ethereum/accounts/abi/bind"
 
