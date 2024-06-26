@@ -23,6 +23,7 @@ generate_go() {
         --out "${OUT_DIR}/${GO_NAME}.go"
 }
 
+# Base (and other) contracts interfaces
 generate_go base base IArchitect architect
 generate_go base base Channels channels
 generate_go base base IEntitlementsManager entitlements_manager
@@ -32,10 +33,27 @@ generate_go base base IPausable pausable
 generate_go base base IBanning banning
 generate_go base base IWalletLink wallet_link
 generate_go base base IRuleEntitlement rule_entitlement
+generate_go base base IEntitlementChecker i_entitlement_checker
+generate_go base base IEntitlementGated i_entitlement_gated
+generate_go base base IEntitlement i_entitlement
+generate_go base base ICustomEntitlement i_custom_entitlement
+
+# Full Base (and other) contracts for deployment from tests
+generate_go base/deploy deploy MockCustomEntitlement mock_custom_entitlement
+generate_go base/deploy deploy MockEntitlementGated mock_entitlement_gated
+generate_go base/deploy deploy MockEntitlementChecker mock_entitlement_checker
+generate_go base/deploy deploy EntitlementChecker entitlement_checker
+generate_go base/deploy deploy WalletLink wallet_link
+generate_go base/deploy deploy MockERC20 mock_erc20
+generate_go base/deploy deploy MockERC721 mock_erc721
+
+# River contracts interfaces
 generate_go river river INodeRegistry node_registry_v1
 generate_go river river IStreamRegistry stream_registry_v1
 generate_go river river IOperatorRegistry operator_registry_v1
 generate_go river river IRiverConfig river_config_v1
+
+# Full River contracts for deployment from tests
 generate_go river/deploy deploy MockRiverRegistry mock_river_registry
 
 # The follwing structs get included twice in the generated code, this utility removes them from a file
