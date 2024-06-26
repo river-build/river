@@ -10,7 +10,6 @@ import LocalhostAbi from '@river-build/generated/dev/abis/IRuleEntitlement.abi.j
 import { BaseContractShim } from './BaseContractShim'
 import { BigNumberish, ethers } from 'ethers'
 import { EntitlementModuleType, EntitlementModule } from '../ContractTypes'
-import { ContractVersion } from '../IStaticContractsInfo'
 import { dlogger } from '@river-build/dlog'
 const logger = dlogger('csb:SpaceDapp:debug')
 

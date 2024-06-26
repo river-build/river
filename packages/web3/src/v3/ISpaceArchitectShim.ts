@@ -9,7 +9,6 @@ import LocalhostAbi from '@river-build/generated/dev/abis/Architect.abi.json' as
 
 import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'
-import { ContractVersion } from '../IStaticContractsInfo'
 
 export type { LocalhostIMembershipBase as IMembershipBase }
 export type { LocalhostISpaceArchitectBase as IArchitectBase }

@@ -8,7 +8,6 @@ import LocalhostAbi from '@river-build/generated/dev/abis/Roles.abi.json' assert
 
 import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'
-import { ContractVersion } from '../IStaticContractsInfo'
 
 export type { LocalhostIRolesBase as IRolesBase }
 

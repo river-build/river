@@ -6,7 +6,6 @@ export type { IPricingModulesBase } from '@river-build/generated/dev/typings/IPr
 
 import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'
-import { ContractVersion } from '../IStaticContractsInfo'
 
 import LocalhostAbi from '@river-build/generated/dev/abis/IPricingModules.abi.json' assert { type: 'json' }
 

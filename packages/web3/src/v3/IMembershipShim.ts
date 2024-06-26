@@ -5,7 +5,6 @@ import {
 
 import { BigNumber, BigNumberish, ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'
-import { ContractVersion } from '../IStaticContractsInfo'
 
 import LocalhostAbi from '@river-build/generated/dev/abis/MembershipFacet.abi.json' assert { type: 'json' }
 import { dlogger } from '@river-build/dlog'

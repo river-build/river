@@ -8,7 +8,6 @@ import LocalhostAbi from '@river-build/generated/dev/abis/SpaceOwner.abi.json' a
 
 import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'
-import { ContractVersion } from '../IStaticContractsInfo'
 
 export type { LocalhostISpaceOwnerBase as ISpaceOwnerBase }
 

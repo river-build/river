@@ -7,7 +7,6 @@ import DevAbi from '@river-build/generated/dev/abis/NodeRegistry.abi.json' asser
 
 import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'
-import { ContractVersion } from '../IStaticContractsInfo'
 
 export class INodeRegistryShim extends BaseContractShim<DevContract, DevInterface> {
     constructor(address: string, provider: ethers.providers.Provider | undefined) {

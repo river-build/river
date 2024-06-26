@@ -7,7 +7,6 @@ import LocalhostAbi from '@river-build/generated/dev/abis/TokenPausableFacet.abi
 
 import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'
-import { ContractVersion } from '../IStaticContractsInfo'
 
 export class TokenPausableFacetShim extends BaseContractShim<
     LocalhostContract,

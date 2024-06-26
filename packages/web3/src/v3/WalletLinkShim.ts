@@ -7,7 +7,6 @@ import LocalhostAbi from '@river-build/generated/dev/abis/WalletLink.abi.json' a
 
 import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'
-import { ContractVersion } from '../IStaticContractsInfo'
 
 export class IWalletLinkShim extends BaseContractShim<LocalhostContract, LocalhostInterface> {
     constructor(address: string, provider: ethers.providers.Provider | undefined) {

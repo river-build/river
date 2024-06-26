@@ -1,6 +1,5 @@
 import { BytesLike, ethers } from 'ethers'
 import { dlogger } from '@river-build/dlog'
-import { ContractVersion } from '../IStaticContractsInfo'
 
 export type PromiseOrValue<T> = T | Promise<T>
 

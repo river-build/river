@@ -7,7 +7,6 @@ import DevAbi from '@river-build/generated/dev/abis/IEntitlementChecker.abi.json
 
 import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'
-import { ContractVersion } from '../IStaticContractsInfo'
 
 export class IEntitlementCheckerShim extends BaseContractShim<DevContract, DevInterface> {
     constructor(address: string, provider: ethers.providers.Provider | undefined) {
