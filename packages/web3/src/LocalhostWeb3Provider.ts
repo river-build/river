@@ -27,7 +27,7 @@ export class LocalhostWeb3Provider extends ethers.providers.JsonRpcProvider {
     public async fundWallet(walletToFund: ethers.Wallet | string = this.wallet) {
         const amountInWei = ethers.BigNumber.from(100).pow(18).toHexString()
         const address = typeof walletToFund === 'string' ? walletToFund : walletToFund.address
-        const result = await this.send('anvil_setBalance', [address, amountInWei])
+        const result = this.send('anvil_setBalance', [address, amountInWei])
         logger.log('fundWallet tx', result, amountInWei, address)
         const receipt = await result
         logger.log('fundWallet receipt', receipt)
