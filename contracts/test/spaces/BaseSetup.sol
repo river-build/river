@@ -38,8 +38,9 @@ import {DeployBaseRegistry} from "contracts/scripts/deployments/DeployBaseRegist
  * @dev - This contract is inherited by all other test contracts, it will create one diamond contract which represent the factory contract that creates all spaces
  */
 contract BaseSetup is TestUtils, SpaceHelper {
+  string public constant LINKED_WALLET_MESSAGE = "Link your external wallet";
   bytes32 private constant _LINKED_WALLET_TYPEHASH =
-    0x32d6e5648703e8835c24b277f7d517e9172988e7d5b3822be953e268608869e1;
+    0x6bb89d031fcd292ecd4c0e6855878b7165cebc3a2f35bc6bbac48c088dd8325c;
   bytes32 private constant _TYPE_HASH =
     keccak256(
       "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
@@ -192,9 +193,14 @@ contract BaseSetup is TestUtils, SpaceHelper {
 
     ) = eip712Facet.eip712Domain();
 
+    bytes32 linkedWalletHash = _getLinkedWalletTypedDataHash(
+      LINKED_WALLET_MESSAGE,
+      newWallet,
+      nonce
+    );
     bytes32 typeDataHash = MessageHashUtils.toTypedDataHash(
       _getDomainSeparator(name, version, chainId, verifyingContract),
-      keccak256(abi.encode(_LINKED_WALLET_TYPEHASH, newWallet, nonce))
+      linkedWalletHash
     );
 
     (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, typeDataHash);
@@ -220,6 +226,25 @@ contract BaseSetup is TestUtils, SpaceHelper {
           versionHash,
           chainId,
           verifyingContract
+        )
+      );
+  }
+
+  function _getLinkedWalletTypedDataHash(
+    string memory message,
+    address addr,
+    uint256 nonce
+  ) internal pure returns (bytes32) {
+    // https://eips.ethereum.org/EIPS/eip-712
+    // ATTENTION: "The dynamic values bytes and string are encoded as a keccak256 hash of their contents."
+    // in this case, the message is a string, so it is keccak256 hashed
+    return
+      keccak256(
+        abi.encode(
+          _LINKED_WALLET_TYPEHASH,
+          keccak256(bytes(message)),
+          addr,
+          nonce
         )
       );
   }
