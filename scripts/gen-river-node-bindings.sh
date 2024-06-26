@@ -67,3 +67,5 @@ mkdir -p bin
 go build -o bin/gen-bindings-remove-struct scripts/gen-bindings-remove-struct.go
 ./bin/gen-bindings-remove-struct core/contracts/base/architect.go IRuleEntitlementCheckOperation,IRuleEntitlementLogicalOperation,IRuleEntitlementOperation,IRuleEntitlementRuleData
 ./bin/gen-bindings-remove-struct core/contracts/base/entitlements_manager.go IRuleEntitlementCheckOperation,IRuleEntitlementLogicalOperation,IRuleEntitlementOperation,IRuleEntitlementRuleData
+./bin/gen-bindings-remove-struct core/contracts/base/rule_entitlement.go IRuleEntitlementCheckOperation,IRuleEntitlementLogicalOperation,IRuleEntitlementOperation,IRuleEntitlementRuleData
+
