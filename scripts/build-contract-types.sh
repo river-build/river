@@ -27,7 +27,6 @@ for file in $ABI_DIR/*.abi.json; do
 done
 
 ./scripts/gen-river-node-bindings.sh
-./scripts/gen-xchain-bindings.sh $VERSION
 
 DIFF_GLOB="$ABI_DIR/*.ts"
 

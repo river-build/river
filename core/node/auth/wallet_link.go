@@ -31,7 +31,7 @@ func NewWalletLink(ctx context.Context, cfg *config.ContractConfig, backend bind
 		return nil, WrapRiverError(
 			Err_CANNOT_CONNECT,
 			err,
-		).Tags("address", cfg.Address, "version", cfg.Version).
+		).Tags("address", cfg.Address).
 			Func("NewWalletLink").
 			Message("Failed to initialize contract")
 	}

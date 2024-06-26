@@ -108,15 +108,6 @@ func NewRiverRegistryContract(
 	blockchain *crypto.Blockchain,
 	cfg *config.ContractConfig,
 ) (*RiverRegistryContract, error) {
-	if cfg.Version != "" {
-		return nil, RiverError(
-			Err_BAD_CONFIG,
-			"Always binding to same interface, version should be empty",
-			"version",
-			cfg.Version,
-		).Func("NewRiverRegistryContract")
-	}
-
 	c := &RiverRegistryContract{
 		Blockchain: blockchain,
 		Address:    cfg.Address,
