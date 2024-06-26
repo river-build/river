@@ -148,6 +148,9 @@ export class SpaceDapp implements ISpaceDapp {
         const spaceInfo = {
             name: params.spaceName,
             uri: params.spaceMetadata,
+            // TODO: Add short and long description to params
+            shortDescription: '',
+            longDescription: '',
             membership: params.membership as any,
             channel: {
                 metadata: params.channelName || '',
@@ -291,6 +294,7 @@ export class SpaceDapp implements ISpaceDapp {
         }
     }
 
+    // TODO: add short and long description to params
     public async updateSpaceName(
         spaceId: string,
         name: string,
@@ -302,10 +306,20 @@ export class SpaceDapp implements ISpaceDapp {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
         }
         const spaceInfo = await space.getSpaceInfo()
-        // update the space name
         return wrapTransaction(
             () =>
-                space.SpaceOwner.write(signer).updateSpaceInfo(space.Address, name, spaceInfo.uri),
+                space.SpaceOwner.write(signer).updateSpaceInfo(
+                    // address
+                    space.Address,
+                    // name
+                    name,
+                    // uri
+                    spaceInfo.uri,
+                    // shortDescription
+                    spaceInfo.shortDescription,
+                    // longDescription
+                    spaceInfo.longDescription,
+                ),
             txnOpts,
         )
     }
