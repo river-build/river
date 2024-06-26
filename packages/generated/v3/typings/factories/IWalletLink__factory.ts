@@ -107,6 +107,11 @@ const _abi = [
             type: "bytes",
             internalType: "bytes",
           },
+          {
+            name: "message",
+            type: "string",
+            internalType: "string",
+          },
         ],
       },
       {
@@ -137,6 +142,11 @@ const _abi = [
             type: "bytes",
             internalType: "bytes",
           },
+          {
+            name: "message",
+            type: "string",
+            internalType: "string",
+          },
         ],
       },
       {
@@ -153,6 +163,11 @@ const _abi = [
             name: "signature",
             type: "bytes",
             internalType: "bytes",
+          },
+          {
+            name: "message",
+            type: "string",
+            internalType: "string",
           },
         ],
       },
@@ -188,6 +203,11 @@ const _abi = [
             name: "signature",
             type: "bytes",
             internalType: "bytes",
+          },
+          {
+            name: "message",
+            type: "string",
+            internalType: "string",
           },
         ],
       },
