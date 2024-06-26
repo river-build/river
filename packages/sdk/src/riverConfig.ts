@@ -61,8 +61,8 @@ function makeWeb3Deployment(environmentId: string): Web3Deployment {
     // Fallback to env vars
     check(isDefined(process.env.BASE_CHAIN_ID), 'BASE_CHAIN_ID is not defined')
     check(isDefined(process.env.BASE_CHAIN_RPC_URL), 'BASE_CHAIN_RPC_URL is not defined')
-    check(isDefined(process.env.SPACE_FACTORY_ADDRESS), 'SPACE_FACTORY_ADDRESS is not defined')
     check(isDefined(process.env.BASE_REGISTRY_ADDRESS), 'BASE_REGISTRY_ADDRESS is not defined')
+    check(isDefined(process.env.SPACE_FACTORY_ADDRESS), 'SPACE_FACTORY_ADDRESS is not defined')
     check(isDefined(process.env.SPACE_OWNER_ADDRESS), 'SPACE_OWNER_ADDRESS is not defined')
     check(isDefined(process.env.RIVER_CHAIN_ID), 'RIVER_CHAIN_ID is not defined')
     check(isDefined(process.env.RIVER_CHAIN_RPC_URL), 'RIVER_CHAIN_RPC_URL is not defined')
