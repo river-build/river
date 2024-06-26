@@ -1,4 +1,4 @@
-import type { AgentConfig } from '@river-build/sdk'
+import type { SyncAgentConfig } from '@river-build/sdk'
 import { useCallback, useMemo, useState } from 'react'
 import type { ethers } from 'ethers'
 import { connectRiver } from './connectRiver'
@@ -9,7 +9,7 @@ export const useRiverConnection = () => {
     const river = useRiverSync()
 
     const connect = useCallback(
-        async (signer: ethers.Signer, config: Omit<AgentConfig, 'context'>) => {
+        async (signer: ethers.Signer, config: Omit<SyncAgentConfig, 'context'>) => {
             if (river?.syncAgent) {
                 return
             }
