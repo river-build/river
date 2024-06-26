@@ -66,7 +66,7 @@ export class User extends PersistedObservable<UserModel> {
         super({ id, initialized: false }, store, LoadPriority.high)
         this.streams = {
             memberships: new UserMemberships(id, store, riverConnection),
-            inbox: new UserInbox(id, store),
+            inbox: new UserInbox(id, store, riverConnection),
             deviceKeys: new UserDeviceKeys(id, store),
             settings: new UserSettings(id, store),
         }
@@ -83,21 +83,21 @@ export class User extends PersistedObservable<UserModel> {
             await client.initializeUser(newUserMetadata)
             client.startSync()
         })
-        this.data = { ...this.data, initialized: true }
-        this.authStatus.value = AuthStatus.ConnectedToRiver
+        this.setData({ initialized: true })
+        this.authStatus.setValue(AuthStatus.ConnectedToRiver)
     }
 
     private onClientStarted = (client: Client) => {
-        this.authStatus.value = AuthStatus.EvaluatingCredentials
+        this.authStatus.setValue(AuthStatus.EvaluatingCredentials)
         const loginContext = new LoginContext(client, false)
         this.loginWithRetries(loginContext).catch((err) => {
             logger.error('login failed', err)
             this.loginError = err
-            this.authStatus.value = AuthStatus.Error
+            this.authStatus.setValue(AuthStatus.Error)
         })
         return () => {
             loginContext.cancelled = true
-            this.authStatus.value = AuthStatus.Disconnected
+            this.authStatus.setValue(AuthStatus.Disconnected)
         }
     }
 

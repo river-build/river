@@ -59,10 +59,10 @@ export class PersistedObservable<T extends Identifiable>
             this.data.id,
             this.loadPriority,
             (data?: T) => {
-                super.value = { status: 'loaded', data: data ?? this.data }
+                super.setValue({ status: 'loaded', data: data ?? this.data })
             },
             (error: Error) => {
-                super.value = { status: 'error', data: this.data, error }
+                super.setValue({ status: 'error', data: this.data, error })
             },
             async () => {
                 await this.onLoaded()
@@ -74,8 +74,8 @@ export class PersistedObservable<T extends Identifiable>
         return super.value
     }
 
-    override set value(newValue: PersistedModel<T>) {
-        throw new Error('use set data instead of set value')
+    override setValue(_newValue: PersistedModel<T>) {
+        throw new Error('use updateData instead of set value')
     }
 
     get data(): T {
@@ -83,20 +83,21 @@ export class PersistedObservable<T extends Identifiable>
     }
 
     // must be called in a store transaction
-    set data(newData: T) {
-        check(isDefined(newData), 'value is undefined')
+    setData(newDataPartial: Partial<T>) {
+        check(isDefined(newDataPartial), 'value is undefined')
+        const newData = { ...this.data, ...newDataPartial }
         check(newData.id === this.data.id, 'id mismatch')
-        super.value = { status: 'saving', data: newData }
+        super.setValue({ status: 'saving', data: newData })
         this.store
             .withTransaction(`update-${this.tableName}:${this.data.id}`, () => {
                 this.store.save(
                     this.tableName,
                     newData,
                     () => {
-                        super.value = { status: 'saved', data: newData }
+                        super.setValue({ status: 'saved', data: newData })
                     },
                     (e) => {
-                        super.value = { status: 'error', data: newData, error: e }
+                        super.setValue({ status: 'error', data: newData, error: e })
                     },
                     async () => {
                         await this.onSaved()
@@ -104,7 +105,7 @@ export class PersistedObservable<T extends Identifiable>
                 )
             })
             .catch((e) => {
-                super.value = { status: 'error', data: this.data, error: e }
+                super.setValue({ status: 'error', data: this.data, error: e })
             })
     }
 

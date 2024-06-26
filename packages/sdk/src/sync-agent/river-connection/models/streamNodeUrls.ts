@@ -41,7 +41,7 @@ export class StreamNodeUrls extends PersistedObservable<StreamNodeUrlsModel> {
             .getOperationalNodeUrls() // here we are fetching the node urls
             .then((urls) => {
                 if (urls !== this.data.urls) {
-                    this.data = { ...this.data, urls } // if the data is new, update our own state
+                    this.setData({ urls }) // if the data is new, update our own state
                 }
             })
             .catch((e) => {

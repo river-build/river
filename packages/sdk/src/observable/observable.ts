@@ -10,7 +10,7 @@ export class Observable<T> {
         return this._value
     }
 
-    set value(newValue: T) {
+    setValue(newValue: T) {
         this._value = newValue
         this.notify()
     }

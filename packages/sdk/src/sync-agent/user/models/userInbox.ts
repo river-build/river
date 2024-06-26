@@ -33,9 +33,12 @@ export class UserInbox extends PersistedObservable<UserInboxModel> {
 
     private onClientStarted = (client: Client) => {
         logger.log('onClientStarted')
-        const streamView = this.riverConnection.client.value?.stream(this.data.streamId)?.view
-        if (streamView) {
-            this.initialize(streamView)
+        const deviceId = this.riverConnection.client?.userDeviceKey().deviceKey
+        const streamView = this.riverConnection.client?.stream(this.data.streamId)?.view
+        if (streamView && deviceId) {
+            this.initialize(deviceId, streamView)
+        } else if (deviceId) {
+            this.setData({ deviceId })
         }
         client.addListener('userInboxDeviceSummaryUpdated', this.onUserInboxDeviceSummaryUpdated)
         client.addListener('streamInitialized', this.onStreamInitialized)
@@ -50,9 +53,11 @@ export class UserInbox extends PersistedObservable<UserInboxModel> {
 
     private onStreamInitialized = (streamId: string) => {
         if (streamId === this.data.streamId) {
-            const streamView = this.riverConnection.client.value?.stream(this.data.streamId)?.view
+            const streamView = this.riverConnection.client?.stream(this.data.streamId)?.view
+            const deviceId = this.riverConnection.client?.userDeviceKey().deviceKey
+            check(isDefined(deviceId), 'deviceId is not defined')
             check(isDefined(streamView), 'streamView is not defined')
-            this.initialize(streamView)
+            this.initialize(deviceId, streamView)
         }
     }
 
@@ -61,13 +66,14 @@ export class UserInbox extends PersistedObservable<UserInboxModel> {
         deviceSummary: UserInboxPayload_Snapshot_DeviceSummary,
     ) => {
         logger.log('onUserInboxDeviceSummaryUpdated', deviceId, deviceSummary)
-        //this.data.deviceId = deviceId
-        //this.data.deviceSummary = deviceSummary
+        this.setData({ deviceId, deviceSummary })
     }
 
-    private initialize(_streamView: StreamStateView) {
-        // this.data.initialized = true
-        // this.data.deviceId = streamView.deviceId
-        // this.data.deviceSummary = streamView.deviceSummary
+    private initialize(deviceId: string, streamView: StreamStateView) {
+        this.setData({
+            initialized: true,
+            deviceId,
+            deviceSummary: streamView.userInboxContent.deviceSummary[deviceId],
+        })
     }
 }

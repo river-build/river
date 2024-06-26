@@ -32,7 +32,7 @@ describe('RiverConnection.test.ts', () => {
 
         // check initial state
         expect(riverConnection.streamNodeUrls.data.urls).toBe('')
-        expect(riverConnection.client.value).toBeUndefined()
+        expect(riverConnection.client).toBeUndefined()
 
         // load
         await store.commitTransaction()
@@ -42,7 +42,7 @@ describe('RiverConnection.test.ts', () => {
             expect(riverConnection.streamNodeUrls.data.urls).not.toBe('')
         })
         await waitFor(() => {
-            expect(riverConnection.client.value).toBeDefined()
+            expect(riverConnection.client).toBeDefined()
         })
         await waitFor(() => {
             expect(riverConnection.streamNodeUrls.value.status).toBe('saved')
@@ -60,13 +60,13 @@ describe('RiverConnection.test.ts', () => {
 
         // check initial state
         expect(riverConnection.streamNodeUrls.data.urls).toBe('')
-        expect(riverConnection.client.value).toBeUndefined()
+        expect(riverConnection.client).toBeUndefined()
 
         // load
         await store.commitTransaction()
 
         // should still be defined before we even start!
         expect(riverConnection.streamNodeUrls.data.urls).not.toBe('')
-        expect(riverConnection.client.value).toBeDefined()
+        expect(riverConnection.client).toBeDefined()
     })
 })

@@ -26,7 +26,7 @@ export type OnStoppedFn = () => void
 export type onClientStartedFn = (client: Client) => OnStoppedFn
 
 export class RiverConnection {
-    client = new Observable<Client | undefined>(undefined)
+    client?: Client
     streamNodeUrls: StreamNodeUrls
     private riverRegistryDapp: RiverRegistry
     private clientParams: ClientParams
@@ -52,9 +52,8 @@ export class RiverConnection {
     }
 
     call<T>(fn: (client: Client) => Promise<T>) {
-        const client = this.client.value
-        if (client) {
-            return fn(client)
+        if (this.client) {
+            return fn(this.client)
         } else {
             // Enqueue the request if client is not available
             return this.clientQueue.enqueue(fn)
@@ -62,15 +61,15 @@ export class RiverConnection {
     }
 
     registerView(viewFn: onClientStartedFn) {
-        if (this.client.value) {
-            const onStopFn = viewFn(this.client.value)
+        if (this.client) {
+            const onStopFn = viewFn(this.client)
             this.onStoppedFns.push(onStopFn)
         }
         this.views.push(viewFn)
     }
 
     private onNodeUrlsChanged = (value: PersistedModel<StreamNodeUrlsModel>) => {
-        if (this.client.value !== undefined) {
+        if (this.client !== undefined) {
             logger.log('RiverConnection: rpc urls changed, client already set', value)
             return
         }
@@ -94,7 +93,7 @@ export class RiverConnection {
             this.clientParams.logNamespaceFilter,
             this.clientParams.highPriorityStreamIds,
         )
-        this.client.value = client
+        this.client = client
         this.clientQueue.flush(client) // New rpcClient is available, resolve all queued requests
         // initialize views
         this.views.forEach((viewFn) => {
