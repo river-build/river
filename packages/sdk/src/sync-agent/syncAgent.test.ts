@@ -9,6 +9,7 @@ import { AuthStatus } from './user/user'
 import { dlogger } from '@river-build/dlog'
 import { waitFor } from '../util.test'
 import { LocalhostWeb3Provider } from '@river-build/web3'
+import { MembershipOp } from '@river-build/proto'
 
 const logger = dlogger('csb:test:syncAgent')
 
@@ -25,16 +26,24 @@ describe('syncAgent.test.ts', () => {
         expect(syncAgent.user.value.status).toBe('loading')
         await syncAgent.start()
         expect(syncAgent.user.value.status).toBe('loaded')
-        expect(syncAgent.user.value.data.initialized).toBe(false)
+        expect(syncAgent.user.data.initialized).toBe(false)
         expect(syncAgent.user.authStatus.value).toBe(AuthStatus.None)
+        expect(Object.keys(syncAgent.user.streams.memberships.data.memberships).length).toBe(0)
         syncAgent.store.newTransactionGroup('createSpace')
-        const spaceId = await syncAgent.user.createSpace(
+        const { spaceId, defaultChannelId } = await syncAgent.user.createSpace(
             { spaceName: 'BlastOff' },
             web3Provider.signer,
         )
         logger.log('spaceId', spaceId)
+        expect(Object.keys(syncAgent.user.streams.memberships.data.memberships).length).toBe(2)
+        expect(syncAgent.user.streams.memberships.data.memberships[spaceId].op).toBe(
+            MembershipOp.SO_JOIN,
+        )
+        expect(syncAgent.user.streams.memberships.data.memberships[defaultChannelId].op).toBe(
+            MembershipOp.SO_JOIN,
+        )
         expect(syncAgent.user.authStatus.value).toBe(AuthStatus.ConnectedToRiver)
-        expect(syncAgent.user.value.data.initialized).toBe(true)
+        expect(syncAgent.user.data.initialized).toBe(true)
         expect(syncAgent.user.value.status).toBe('saving')
         await syncAgent.store.commitTransaction()
         expect(syncAgent.user.value.status).toBe('saved')
@@ -45,7 +54,7 @@ describe('syncAgent.test.ts', () => {
         expect(syncAgent.user.value.status).toBe('loading')
         await syncAgent.start()
         expect(syncAgent.user.value.status).toBe('loaded')
-        expect(syncAgent.user.value.data.initialized).toBe(true)
+        expect(syncAgent.user.data.initialized).toBe(true)
         expect(syncAgent.user.authStatus.value).toBe(AuthStatus.EvaluatingCredentials)
         await waitFor(() => {
             expect(syncAgent.user.authStatus.value).toBe(AuthStatus.ConnectedToRiver)

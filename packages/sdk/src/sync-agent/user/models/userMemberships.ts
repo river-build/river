@@ -19,6 +19,7 @@ export interface UserMembership {
 
 export interface UserMembershipsModel {
     id: string
+    streamId: string
     initialized: boolean
     memberships: Record<string, UserMembership>
 }
@@ -33,12 +34,14 @@ export type UserMembershipEvents = {
 @persistedObservable({ tableName: 'userMemberships' })
 export class UserMemberships extends PersistedObservable<UserMembershipsModel> {
     private riverConnection: RiverConnection
-    private streamId: string
 
     constructor(id: string, store: Store, riverConnection: RiverConnection) {
-        super({ id, initialized: false, memberships: {} }, store, LoadPriority.high)
+        super(
+            { id, streamId: makeUserStreamId(id), initialized: false, memberships: {} },
+            store,
+            LoadPriority.high,
+        )
         this.riverConnection = riverConnection
-        this.streamId = makeUserStreamId(id)
     }
 
     override async onLoaded() {
@@ -47,7 +50,7 @@ export class UserMemberships extends PersistedObservable<UserMembershipsModel> {
 
     private onClientStarted = (client: Client) => {
         logger.log('onClientStarted')
-        const streamView = this.riverConnection.client.value?.stream(this.streamId)?.view
+        const streamView = this.riverConnection.client.value?.stream(this.data.streamId)?.view
         if (streamView) {
             this.initialize(streamView)
         }
@@ -83,8 +86,8 @@ export class UserMemberships extends PersistedObservable<UserMembershipsModel> {
     }
 
     private onStreamInitialized = (streamId: string) => {
-        if (streamId === this.streamId) {
-            const streamView = this.riverConnection.client.value?.stream(this.streamId)?.view
+        if (streamId === this.data.streamId) {
+            const streamView = this.riverConnection.client.value?.stream(this.data.streamId)?.view
             check(isDefined(streamView), 'streamView is not defined')
             this.initialize(streamView)
         }

@@ -1,5 +1,5 @@
 /**
- * @group with-entitlements
+ * @group with-entitilements
  */
 
 import { providers } from 'ethers'
