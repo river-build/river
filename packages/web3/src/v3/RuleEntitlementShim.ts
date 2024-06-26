@@ -3,8 +3,6 @@ import {
     IRuleEntitlementInterface as LocalhostInterface,
 } from '@river-build/generated/dev/typings/IRuleEntitlement'
 
-type BaseSepoliaContract = LocalhostContract
-type BaseSepoliaInterface = LocalhostInterface
 import LocalhostAbi from '@river-build/generated/dev/abis/IRuleEntitlement.abi.json' assert { type: 'json' }
 
 import { BaseContractShim } from './BaseContractShim'
