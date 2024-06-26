@@ -1,4 +1,4 @@
-package contracts
+package crypto
 
 import (
 	"encoding/hex"

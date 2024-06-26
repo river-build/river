@@ -19,7 +19,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	go_eth_types "github.com/ethereum/go-ethereum/core/types"
 	. "github.com/river-build/river/core/node/base"
-	node_contracts "github.com/river-build/river/core/node/contracts"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
@@ -33,7 +32,7 @@ type (
 		checkerABI      *abi.ABI
 		checkerContract *bind.BoundContract
 		baseChain       *crypto.Blockchain
-		evmErrDecoder   *node_contracts.EvmErrorDecoder
+		evmErrDecoder   *crypto.EvmErrorDecoder
 		config          *config.Config
 		cancel          context.CancelFunc
 		evaluator       *entitlement.Evaluator
@@ -160,7 +159,7 @@ func New(
 		return nil, err
 	}
 
-	decoder, err := node_contracts.NewEVMErrorDecoder(
+	decoder, err := crypto.NewEVMErrorDecoder(
 		checker.GetMetadata(),
 		entitlementGatedMetaData.GetMetadata(),
 		walletLink.GetMetadata(),
