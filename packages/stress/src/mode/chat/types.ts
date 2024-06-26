@@ -14,6 +14,7 @@ export interface ChatConfig {
     announceChannelId: string
     channelIds: string[]
     allWallets: Wallet[]
+    randomClientsCount: number
     randomClients: StressClient[]
     localClients: {
         startIndex: number

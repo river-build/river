@@ -48,6 +48,9 @@ function getChatConfig(opts: { processIndex: number; rootWallet: Wallet }): Chat
 
     const allWallets = generateWalletsFromSeed(opts.rootWallet.mnemonic.phrase, 0, clientsCount)
     const wallets = allWallets.slice(clientStartIndex, clientEndIndex)
+    const randomClientsCount = process.env.RANDOM_CLIENTS_COUNT
+        ? parseInt(process.env.RANDOM_CLIENTS_COUNT)
+        : 5
     if (clientStartIndex >= clientEndIndex) {
         throw new Error('clientStartIndex >= clientEndIndex')
     }
@@ -64,6 +67,7 @@ function getChatConfig(opts: { processIndex: number; rootWallet: Wallet }): Chat
         announceChannelId,
         channelIds,
         allWallets,
+        randomClientsCount,
         randomClients: [],
         localClients: {
             startIndex: clientStartIndex,
@@ -73,7 +77,7 @@ function getChatConfig(opts: { processIndex: number; rootWallet: Wallet }): Chat
         startedAtMs,
         waitForSpaceMembershipTimeoutMs: Math.max(duration * 1000, 20000),
         waitForChannelDecryptionTimeoutMs: Math.max(duration * 1000, 20000),
-    }
+    } satisfies ChatConfig
 }
 
 /*
@@ -102,7 +106,11 @@ export async function startStressChat(opts: {
     )
 
     if (chatConfig.processIndex === 0) {
-        for (let i = chatConfig.clientsCount; i < chatConfig.clientsCount + 5; i++) {
+        for (
+            let i = chatConfig.clientsCount;
+            i < chatConfig.clientsCount + chatConfig.randomClientsCount;
+            i++
+        ) {
             const rc = await makeStressClient(opts.config, i, ethers.Wallet.createRandom())
             chatConfig.randomClients.push(rc)
         }
