@@ -3,7 +3,7 @@ import { isSet } from '../../utils/expect'
 import { ChatConfig } from './types'
 import { RiverConfig, makeDefaultChannelStreamId } from '@river-build/sdk'
 import { generateWalletsFromSeed } from '../../utils/wallets'
-import { Wallet } from 'ethers'
+import { Wallet, ethers } from 'ethers'
 import { makeStressClient } from '../../utils/stressClient'
 import { kickoffChat } from './kickoffChat'
 import { joinChat } from './joinChat'
@@ -64,6 +64,7 @@ function getChatConfig(opts: { processIndex: number; rootWallet: Wallet }): Chat
         announceChannelId,
         channelIds,
         allWallets,
+        randomClients: [],
         localClients: {
             startIndex: clientStartIndex,
             endIndex: clientEndIndex,
@@ -101,6 +102,11 @@ export async function startStressChat(opts: {
     )
 
     if (chatConfig.processIndex === 0) {
+        for (let i = chatConfig.clientsCount; i < chatConfig.clientsCount + 5; i++) {
+            const rc = await makeStressClient(opts.config, i, ethers.Wallet.createRandom())
+            chatConfig.randomClients.push(rc)
+        }
+
         await kickoffChat(clients[0], chatConfig)
     }
 
@@ -108,6 +114,8 @@ export async function startStressChat(opts: {
     const errors: unknown[] = []
 
     logger.log('kickoffChat')
+    clients.push(...chatConfig.randomClients)
+
     for (let i = 0; i < clients.length; i += PARALLEL_UPDATES) {
         const span = clients.slice(i, i + PARALLEL_UPDATES)
         const results = await Promise.allSettled(span.map((client) => joinChat(client, chatConfig)))
