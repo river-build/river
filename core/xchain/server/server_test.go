@@ -572,19 +572,19 @@ func TestErc721Entitlements(t *testing.T) {
 			expectEntitlementCheckResult(require, cs, ctx, cfg, erc721Check(ChainID, contractAddress, 2), false)
 
 			// Create a set of 3 linked wallets using client simulator address.
-			// _, wallet1, wallet2, _ := generateLinkedWallets(ctx, require, tc.sentByRootKeyWallet, st, cs.Wallet())
+			_, wallet1, wallet2, _ := generateLinkedWallets(ctx, require, tc.sentByRootKeyWallet, st, cs.Wallet())
 
 			// Sanity check: balance of 4 across all 3 wallets should fail
 			expectEntitlementCheckResult(require, cs, ctx, cfg, erc721Check(ChainID, contractAddress, 4), false)
 
 			// Mint 2 NFTs for wallet1.
-			// mintTokenForWallet(require, auth, st, erc721, wallet1, 2)
+			mintTokenForWallet(require, auth, st, erc721, wallet1, 2)
 
 			// Mint 1 NFT for wallet2.
-			// mintTokenForWallet(require, auth, st, erc721, wallet2, 1)
+			mintTokenForWallet(require, auth, st, erc721, wallet2, 1)
 
 			// Accumulated balance of 4 across all 3 wallets should now pass
-			// expectEntitlementCheckResult(require, cs, ctx, cfg, erc721Check(ChainID, contractAddress, 4), true)
+			expectEntitlementCheckResult(require, cs, ctx, cfg, erc721Check(ChainID, contractAddress, 4), true)
 		})
 	}
 }
