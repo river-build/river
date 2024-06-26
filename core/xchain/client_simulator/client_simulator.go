@@ -432,7 +432,7 @@ func (cs *clientSimulator) onEntitlementCheckResultPosted(
 		entitlementCheckResultPosted,
 	)
 
-	if err := cs.entitlementGatedContract.UnpackLog(entitlementCheckResultPosted.Raw, "EntitlementCheckResultPosted", event); err != nil {
+	if err := cs.entitlementGatedContract.UnpackLog(&entitlementCheckResultPosted, "EntitlementCheckResultPosted", event); err != nil {
 		log.Error("Failed to unpack EntitlementCheckResultPosted event", "err", err)
 		return
 	}
@@ -464,7 +464,7 @@ func (cs *clientSimulator) onEntitlementCheckRequested(
 		entitlementCheckRequest,
 	)
 
-	if err := cs.checkerContract.UnpackLog(entitlementCheckRequest.Raw, "EntitlementCheckRequested", event); err != nil {
+	if err := cs.checkerContract.UnpackLog(&entitlementCheckRequest, "EntitlementCheckRequested", event); err != nil {
 		log.Error("Failed to unpack EntitlementCheckRequested event", "err", err)
 		return
 	}

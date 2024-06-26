@@ -290,7 +290,7 @@ func (x *xchain) onEntitlementCheckRequested(
 	)
 
 	// try to decode the EntitlementCheckRequested event
-	if err := x.checkerContract.UnpackLog(entitlementCheckRequest.Raw, "EntitlementCheckRequested", event); err != nil {
+	if err := x.checkerContract.UnpackLog(&entitlementCheckRequest, "EntitlementCheckRequested", event); err != nil {
 		x.entitlementCheckRequested.IncFail()
 		log.Error("Unable to decode EntitlementCheckRequested event", "err", err)
 		return

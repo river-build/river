@@ -103,11 +103,6 @@ func (sc *SpaceContractV3) IsEntitledToSpace(
 	return isEntitled, err
 }
 
-var (
-	parsedABI abi.ABI
-	once      sync.Once
-)
-
 func (sc *SpaceContractV3) marshalEntitlements(
 	ctx context.Context,
 	entitlementData []base.IEntitlementDataQueryableBaseEntitlementData,
