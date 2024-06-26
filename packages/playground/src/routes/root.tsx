@@ -73,7 +73,7 @@ const ConnectRiver = () => {
 }
 
 const ConnectedContent = () => {
-    const { data: nodeUrls } = useSyncValue((s) => s.riverConnection.nodeUrls, {
+    const { data: nodeUrls } = useSyncValue((s) => s.riverStreamNodeUrls, {
         onUpdate: (data) => console.log('onUpdate', data),
         onError: (error) => console.error('onError', error),
         onSaved: (data) => console.log('onSaved', data),

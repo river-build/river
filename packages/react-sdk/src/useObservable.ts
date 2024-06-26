@@ -1,6 +1,6 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { type Identifiable, type PersistedModel, PersistedObservable } from '@river-build/sdk'
+import { type Observable, type PersistedModel } from '@river-build/sdk'
 
 export type ObservableConfig<T> = {
     fireImmediately?: boolean
@@ -9,7 +9,7 @@ export type ObservableConfig<T> = {
     onSaved?: (data: T) => void
 }
 
-type PersistedReturn<T> = {
+type ObservableReturn<T> = {
     data: T | undefined
     error: Error | undefined
     status: PersistedModel<T>['status']
@@ -20,15 +20,44 @@ type PersistedReturn<T> = {
     isLoaded: boolean
 }
 
-export function useObservable<T extends Identifiable>(
-    observable: PersistedObservable<T> | undefined,
+// Needed to treat Observable<T> and Observable<PersistedModel<T>> as the same
+const makeDataModel = <T>(value: T): PersistedModel<T> => ({
+    status: 'loaded',
+    data: value,
+})
+
+const isPersisted = <T>(value: unknown): value is PersistedModel<T> => {
+    if (typeof value !== 'object') {
+        return false
+    }
+    if (value === null) {
+        return false
+    }
+    return 'status' in value && 'data' in value
+}
+
+export function useObservable<T>(
+    observable: Observable<T> | undefined,
     config?: ObservableConfig<T>,
-): PersistedReturn<T> {
-    const [value, setValue] = useState<PersistedModel<T> | undefined>(observable?.value)
+): ObservableReturn<T> {
+    const [value, setValue] = useState<PersistedModel<T> | undefined>(
+        observable?.value
+            ? isPersisted<T>(observable.value)
+                ? observable?.value
+                : makeDataModel(observable.value)
+            : undefined,
+    )
+
     const opts = { fireImmediately: true, ...config } satisfies ObservableConfig<T>
 
     const onSubscribe = useCallback(
-        (value: PersistedModel<T>) => {
+        (newValue: PersistedModel<T> | T) => {
+            let value: PersistedModel<T> | undefined
+            if (isPersisted<T>(newValue)) {
+                value = newValue
+            } else {
+                value = makeDataModel(newValue)
+            }
             setValue(value)
             if (value.status === 'loaded') {
                 opts.onUpdate?.(value.data)
@@ -77,7 +106,7 @@ export function useObservable<T extends Identifiable>(
             isLoaded: status === 'loaded',
             isSaved: status === 'saved',
         }
-    }, [value]) satisfies PersistedReturn<T>
+    }, [value]) satisfies ObservableReturn<T>
 
     return data
 }
