@@ -7,36 +7,32 @@ import (
 	"strings"
 	"sync"
 
-	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/contracts/base"
-	"github.com/river-build/river/core/node/dlog"
-	. "github.com/river-build/river/core/node/protocol"
-
-	"github.com/river-build/river/core/config"
-	"github.com/river-build/river/core/node/shared"
-	"github.com/river-build/river/core/xchain/bindings/erc721"
-	"github.com/river-build/river/core/xchain/bindings/ierc5313"
-	"github.com/river-build/river/core/xchain/contracts"
-	v3 "github.com/river-build/river/core/xchain/contracts/v3"
-
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/river-build/river/core/config"
+	"github.com/river-build/river/core/contracts/base"
+	. "github.com/river-build/river/core/node/base"
+	"github.com/river-build/river/core/node/dlog"
+	. "github.com/river-build/river/core/node/protocol"
+	"github.com/river-build/river/core/node/shared"
+	"github.com/river-build/river/core/xchain/bindings/erc721"
+	"github.com/river-build/river/core/xchain/bindings/ierc5313"
 )
 
 type Space struct {
-	address      common.Address
-	entitlements Entitlements
-	banning      Banning
-	pausable     Pausable
-	channels     map[shared.StreamId]Channels
-	channelsLock sync.Mutex
+	address         common.Address
+	managerContract *base.EntitlementsManager
+	queryContract   *base.EntitlementDataQueryable
+	banning         Banning
+	pausable        *base.Pausable
+	channels        *base.Channels
 }
 
 type SpaceContractV3 struct {
-	architect  Architect
+	architect  *base.Architect
 	chainCfg   *config.ChainConfig
-	version    string
 	backend    bind.ContractBackend
 	spaces     map[shared.StreamId]*Space
 	spacesLock sync.Mutex
@@ -51,7 +47,7 @@ func NewSpaceContractV3(
 	backend bind.ContractBackend,
 	// walletLinkingCfg *config.ContractConfig,
 ) (SpaceContract, error) {
-	architect, err := NewArchitect(ctx, architectCfg, backend)
+	architect, err := base.NewArchitect(architectCfg.Address, backend)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +55,6 @@ func NewSpaceContractV3(
 	spaceContract := &SpaceContractV3{
 		architect: architect,
 		chainCfg:  chainCfg,
-		version:   architectCfg.Version,
 		backend:   backend,
 		spaces:    make(map[shared.StreamId]*Space),
 	}
@@ -73,7 +68,7 @@ func (sc *SpaceContractV3) IsMember(
 	user common.Address,
 ) (bool, error) {
 	space, err := sc.getSpace(ctx, spaceId)
-	if err != nil || space == nil {
+	if err != nil {
 		return false, err
 	}
 
@@ -97,28 +92,15 @@ func (sc *SpaceContractV3) IsEntitledToSpace(
 ) (bool, error) {
 	// get the space entitlements and check if user is entitled.
 	space, err := sc.getSpace(ctx, spaceId)
-	if err != nil || space == nil {
+	if err != nil {
 		return false, err
 	}
-	isEntitled, err := space.entitlements.IsEntitledToSpace(
-		nil,
+	isEntitled, err := space.managerContract.IsEntitledToSpace(
+		&bind.CallOpts{Context: ctx},
 		user,
 		permission.String(),
 	)
 	return isEntitled, err
-}
-
-var (
-	parsedABI abi.ABI
-	once      sync.Once
-)
-
-func getABI() (abi.ABI, error) {
-	var err error
-	once.Do(func() {
-		parsedABI, err = abi.JSON(strings.NewReader(v3.IEntitlementGatedMetaData.ABI))
-	})
-	return parsedABI, err
 }
 
 func (sc *SpaceContractV3) marshalEntitlements(
@@ -133,13 +115,13 @@ func (sc *SpaceContractV3) marshalEntitlements(
 			entitlements[i].entitlementType = entitlement.EntitlementType
 			log.Info("Entitlement data", "entitlement_data", entitlement.EntitlementData)
 			// Parse the ABI definition
-			parsedABI, err := getABI()
+			parsedABI, err := base.IEntitlementGatedMetaData.GetAbi()
 			if err != nil {
 				log.Error("Failed to parse ABI", "error", err)
 				return nil, err
 			}
 
-			var ruleData contracts.IRuleData
+			var ruleData base.IRuleEntitlementRuleData
 
 			unpackedData, err := parsedABI.Unpack("getRuleData", entitlement.EntitlementData)
 			if err != nil {
@@ -211,7 +193,7 @@ func (sc *SpaceContractV3) IsBanned(
 ) (bool, error) {
 	log := dlog.FromCtx(ctx).With("function", "SpaceContractV3.IsBanned")
 	space, err := sc.getSpace(ctx, spaceId)
-	if err != nil || space == nil {
+	if err != nil {
 		log.Warn("Failed to get space", "space_id", spaceId, "error", err)
 		return false, err
 	}
@@ -235,7 +217,7 @@ func (sc *SpaceContractV3) GetChannelEntitlementsForPermission(
 	log := dlog.FromCtx(ctx)
 	// get the channel entitlements and check if user is entitled.
 	space, err := sc.getSpace(ctx, spaceId)
-	if err != nil || space == nil {
+	if err != nil {
 		log.Warn("Failed to get space", "space_id", spaceId, "error", err)
 		return nil, EMPTY_ADDRESS, err
 	}
@@ -253,8 +235,8 @@ func (sc *SpaceContractV3) GetChannelEntitlementsForPermission(
 		return nil, EMPTY_ADDRESS, err
 	}
 
-	entitlementData, err := space.entitlements.GetChannelEntitlementDataByPermission(
-		nil,
+	entitlementData, err := space.queryContract.GetChannelEntitlementDataByPermission(
+		&bind.CallOpts{Context: ctx},
 		channelId,
 		permission.String(),
 	)
@@ -300,7 +282,7 @@ func (sc *SpaceContractV3) GetSpaceEntitlementsForPermission(
 	log := dlog.FromCtx(ctx)
 	// get the space entitlements and check if user is entitled.
 	space, err := sc.getSpace(ctx, spaceId)
-	if err != nil || space == nil {
+	if err != nil {
 		log.Warn("Failed to get space", "space_id", spaceId, "error", err)
 		return nil, EMPTY_ADDRESS, err
 	}
@@ -317,8 +299,8 @@ func (sc *SpaceContractV3) GetSpaceEntitlementsForPermission(
 		return nil, EMPTY_ADDRESS, err
 	}
 
-	entitlementData, err := space.entitlements.GetEntitlementDataByPermission(
-		nil,
+	entitlementData, err := space.queryContract.GetEntitlementDataByPermission(
+		&bind.CallOpts{Context: ctx},
 		permission.String(),
 	)
 	log.Info(
@@ -363,12 +345,12 @@ func (sc *SpaceContractV3) IsEntitledToChannel(
 ) (bool, error) {
 	// get the space entitlements and check if user is entitled to the channel
 	space, err := sc.getSpace(ctx, spaceId)
-	if err != nil || space == nil {
+	if err != nil {
 		return false, err
 	}
 	// channel entitlement check
-	isEntitled, err := space.entitlements.IsEntitledToChannel(
-		nil,
+	isEntitled, err := space.managerContract.IsEntitledToChannel(
+		&bind.CallOpts{Context: ctx},
 		channelId,
 		user,
 		permission.String(),
@@ -378,7 +360,7 @@ func (sc *SpaceContractV3) IsEntitledToChannel(
 
 func (sc *SpaceContractV3) IsSpaceDisabled(ctx context.Context, spaceId shared.StreamId) (bool, error) {
 	space, err := sc.getSpace(ctx, spaceId)
-	if err != nil || space == nil {
+	if err != nil {
 		return false, err
 	}
 
@@ -391,12 +373,20 @@ func (sc *SpaceContractV3) IsChannelDisabled(
 	spaceId shared.StreamId,
 	channelId shared.StreamId,
 ) (bool, error) {
-	channel, err := sc.getChannel(ctx, spaceId, channelId)
-	if err != nil || channel == nil {
+	space, err := sc.getSpace(ctx, spaceId)
+	if err != nil {
 		return false, err
 	}
-	isDisabled, err := channel.IsDisabled(nil, channelId)
-	return isDisabled, err
+
+	channel, err := space.channels.GetChannel(
+		&bind.CallOpts{Context: ctx},
+		channelId,
+	)
+	if err != nil {
+		return false, err
+	}
+
+	return channel.Disabled, nil
 }
 
 func (sc *SpaceContractV3) getSpace(ctx context.Context, spaceId shared.StreamId) (*Space, error) {
@@ -408,48 +398,36 @@ func (sc *SpaceContractV3) getSpace(ctx context.Context, spaceId shared.StreamId
 		if err != nil || address == EMPTY_ADDRESS {
 			return nil, err
 		}
-		entitlements, err := NewEntitlements(ctx, sc.version, address, sc.backend)
+		managerContract, err := base.NewEntitlementsManager(address, sc.backend)
 		if err != nil {
 			return nil, err
 		}
-		pausable, err := NewPausable(ctx, sc.version, address, sc.backend)
+		queryContract, err := base.NewEntitlementDataQueryable(address, sc.backend)
 		if err != nil {
 			return nil, err
 		}
-		banning, err := NewBanning(ctx, sc.chainCfg, sc.version, address, sc.backend)
+		pausable, err := base.NewPausable(address, sc.backend)
+		if err != nil {
+			return nil, err
+		}
+		banning, err := NewBanning(ctx, sc.chainCfg, address, sc.backend)
+		if err != nil {
+			return nil, err
+		}
+		channels, err := base.NewChannels(address, sc.backend)
 		if err != nil {
 			return nil, err
 		}
 
 		// cache the space
 		sc.spaces[spaceId] = &Space{
-			address:      address,
-			entitlements: entitlements,
-			banning:      banning,
-			pausable:     pausable,
-			channels:     make(map[shared.StreamId]Channels),
+			address:         address,
+			managerContract: managerContract,
+			queryContract:   queryContract,
+			banning:         banning,
+			pausable:        pausable,
+			channels:        channels,
 		}
 	}
 	return sc.spaces[spaceId], nil
-}
-
-func (sc *SpaceContractV3) getChannel(
-	ctx context.Context,
-	spaceId shared.StreamId,
-	channelId shared.StreamId,
-) (Channels, error) {
-	space, err := sc.getSpace(ctx, spaceId)
-	if err != nil || space == nil {
-		return nil, err
-	}
-	space.channelsLock.Lock()
-	defer space.channelsLock.Unlock()
-	if space.channels[channelId] == nil {
-		channel, err := NewChannels(ctx, sc.version, space.address, sc.backend)
-		if err != nil {
-			return nil, err
-		}
-		space.channels[channelId] = channel
-	}
-	return space.channels[channelId], nil
 }
