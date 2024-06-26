@@ -14,6 +14,8 @@ import { RiverDbManager } from '../riverDbManager'
 import { Entitlements } from './entitlements/entitlements'
 import { PersistedObservable } from '../observable/persistedObservable'
 import { Observable } from '../observable/observable'
+import { UserInbox, UserInboxModel } from './user/models/userInbox'
+import { SyncAgentStore } from './syncAgentStore'
 
 export interface SyncAgentConfig {
     context: SignerContext
@@ -41,7 +43,7 @@ export class SyncAgent {
         user: PersistedObservable<UserModel>
         userAuthStatus: Observable<AuthStatus>
         userMemberships: PersistedObservable<UserMembershipsModel>
-        // userInbox:
+        userInbox: PersistedObservable<UserInboxModel>
         // userDeviceKeys:
         // userSettings:
     }
@@ -53,11 +55,7 @@ export class SyncAgent {
         const river = config.riverConfig.river
         this.baseProvider = makeBaseProvider(config.riverConfig)
         this.riverProvider = makeRiverProvider(config.riverConfig)
-        this.store = new Store(`syncAgent-${this.userId}`, 1, [
-            StreamNodeUrls,
-            User,
-            UserMemberships,
-        ])
+        this.store = new SyncAgentStore(this.userId)
         this.store.newTransactionGroup('SyncAgent::initalization')
         this.spaceDapp = new SpaceDapp(base.chainConfig, this.baseProvider)
         this.riverRegistryDapp = new RiverRegistry(river.chainConfig, this.riverProvider)
@@ -78,7 +76,7 @@ export class SyncAgent {
             user: this.user,
             userAuthStatus: this.user.authStatus,
             userMemberships: this.user.streams.memberships,
-            // userInbox: this.store.observable(User).data.inbox,
+            userInbox: this.user.streams.inbox,
             // userDeviceKeys: this.store.observable(User).data.deviceKeys,
             // userSettings: this.store.observable(User).data.settings,
         }

@@ -24,13 +24,6 @@ export interface UserMembershipsModel {
     memberships: Record<string, UserMembership>
 }
 
-export type UserMembershipEvents = {
-    userJoinedStream: (streamId: string) => void
-    userInvitedToStream: (streamId: string) => void
-    userLeftStream: (streamId: string) => void
-    userStreamMembershipChanged: (streamId: string) => void
-}
-
 @persistedObservable({ tableName: 'userMemberships' })
 export class UserMemberships extends PersistedObservable<UserMembershipsModel> {
     private riverConnection: RiverConnection

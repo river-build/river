@@ -67,8 +67,8 @@ export class User extends PersistedObservable<UserModel> {
         this.streams = {
             memberships: new UserMemberships(id, store, riverConnection),
             inbox: new UserInbox(id, store, riverConnection),
-            deviceKeys: new UserDeviceKeys(id, store),
-            settings: new UserSettings(id, store),
+            deviceKeys: new UserDeviceKeys(id, store, riverConnection),
+            settings: new UserSettings(id, store, riverConnection),
         }
         this.riverConnection = riverConnection
         this.spaceDapp = spaceDapp

@@ -1,7 +1,7 @@
 import { check, dlogger } from '@river-build/dlog'
 import { Identifiable, LoadPriority, Store } from '../../../store/store'
 import { UserInboxPayload_Snapshot_DeviceSummary } from '@river-build/proto'
-import { PersistedObservable } from '../../../observable/persistedObservable'
+import { PersistedObservable, persistedObservable } from '../../../observable/persistedObservable'
 import { makeUserInboxStreamId } from '../../../id'
 import { RiverConnection } from '../../river-connection/riverConnection'
 import { Client } from '../../../client'
@@ -18,6 +18,7 @@ export interface UserInboxModel extends Identifiable {
     deviceSummary?: UserInboxPayload_Snapshot_DeviceSummary
 }
 
+@persistedObservable({ tableName: 'userInbox' })
 export class UserInbox extends PersistedObservable<UserInboxModel> {
     constructor(id: string, store: Store, private riverConnection: RiverConnection) {
         super(
@@ -33,12 +34,14 @@ export class UserInbox extends PersistedObservable<UserInboxModel> {
 
     private onClientStarted = (client: Client) => {
         logger.log('onClientStarted')
-        const deviceId = this.riverConnection.client?.userDeviceKey().deviceKey
-        const streamView = this.riverConnection.client?.stream(this.data.streamId)?.view
-        if (streamView && deviceId) {
-            this.initialize(deviceId, streamView)
-        } else if (deviceId) {
-            this.setData({ deviceId })
+        if (this.riverConnection.client?.cryptoInitialized) {
+            const deviceId = this.riverConnection.client.userDeviceKey().deviceKey
+            const streamView = this.riverConnection.client.stream(this.data.streamId)?.view
+            if (streamView && deviceId) {
+                this.initialize(deviceId, streamView)
+            } else if (deviceId) {
+                this.setData({ deviceId })
+            }
         }
         client.addListener('userInboxDeviceSummaryUpdated', this.onUserInboxDeviceSummaryUpdated)
         client.addListener('streamInitialized', this.onStreamInitialized)
@@ -62,11 +65,14 @@ export class UserInbox extends PersistedObservable<UserInboxModel> {
     }
 
     private onUserInboxDeviceSummaryUpdated = (
+        streamId: string,
         deviceId: string,
         deviceSummary: UserInboxPayload_Snapshot_DeviceSummary,
     ) => {
-        logger.log('onUserInboxDeviceSummaryUpdated', deviceId, deviceSummary)
-        this.setData({ deviceId, deviceSummary })
+        if (streamId === this.data.streamId) {
+            logger.log('onUserInboxDeviceSummaryUpdated', deviceId, deviceSummary)
+            this.setData({ deviceId, deviceSummary })
+        }
     }
 
     private initialize(deviceId: string, streamView: StreamStateView) {

@@ -47,6 +47,7 @@ describe('syncAgent.test.ts', () => {
         expect(syncAgent.user.value.status).toBe('saving')
         await syncAgent.store.commitTransaction()
         expect(syncAgent.user.value.status).toBe('saved')
+        await syncAgent.stop()
     })
     test('syncAgent loads again', async () => {
         const signerContext = await makeSignerContext(rootWallet, delegateWallet, { days: 1 })
@@ -59,5 +60,6 @@ describe('syncAgent.test.ts', () => {
         await waitFor(() => {
             expect(syncAgent.user.authStatus.value).toBe(AuthStatus.ConnectedToRiver)
         })
+        await syncAgent.stop()
     })
 })

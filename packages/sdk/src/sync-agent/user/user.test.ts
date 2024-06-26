@@ -15,6 +15,8 @@ import { User } from './user'
 import { UserMemberships } from './models/userMemberships'
 import { makeUserContextFromWallet } from '../../util.test'
 import { makeClientParams } from '../utils/syncAgentUtils.test'
+import { UserInbox } from './models/userInbox'
+import { SyncAgentStore } from '../syncAgentStore'
 
 const logger = dlogger('csb:test:user')
 
@@ -23,7 +25,7 @@ describe('User.test.ts', () => {
     const rootWallet = Wallet.createRandom()
     const userId = rootWallet.address
     const riverConfig = makeRiverConfig()
-    const store = new Store(genShortId(), 1, [StreamNodeUrls, UserMemberships, User])
+    const store = new SyncAgentStore(userId)
     store.newTransactionGroup('init')
     const river = riverConfig.river
     const riverProvider = new providers.StaticJsonRpcProvider(river.rpcUrl)
@@ -42,26 +44,27 @@ describe('User.test.ts', () => {
         expect(user.data.id).toBe(userId)
         expect(user.data.initialized).toBe(false)
         expect(user.streams.memberships.data.initialized).toBe(false)
-        //expect(user.streams.inbox.data.initialized).toBe(false)
-        //expect(user.streams.deviceKeys.data.initialized).toBe(false)
-        //expect(user.streams.settings.data.initialized).toBe(false)
+        expect(user.streams.inbox.data.initialized).toBe(false)
+        expect(user.streams.deviceKeys.data.initialized).toBe(false)
+        expect(user.streams.settings.data.initialized).toBe(false)
 
         await store.commitTransaction()
         expect(user.data.id).toBe(userId)
         expect(user.data.initialized).toBe(false)
         expect(user.streams.memberships.data.initialized).toBe(false)
-        //expect(user.streams.inbox.data.initialized).toBe(false)
-        //expect(user.streams.deviceKeys.data.initialized).toBe(false)
-        //expect(user.streams.settings.data.initialized).toBe(false)
+        expect(user.streams.inbox.data.initialized).toBe(false)
+        expect(user.streams.deviceKeys.data.initialized).toBe(false)
+        expect(user.streams.settings.data.initialized).toBe(false)
 
         const { spaceId } = await user.createSpace({ spaceName: 'bobs-space' }, web3Provider.signer)
         logger.log('created spaceId', spaceId)
 
         expect(user.data.initialized).toBe(true)
         expect(user.streams.memberships.data.initialized).toBe(true)
-        //expect(user.streams.inbox.data.initialized).toBe(false)
-        //expect(user.streams.deviceKeys.data.initialized).toBe(false)
-        //expect(user.streams.settings.data.initialized).toBe(false)
+        expect(user.streams.inbox.data.initialized).toBe(true)
+        expect(user.streams.deviceKeys.data.initialized).toBe(true)
+        expect(user.streams.settings.data.initialized).toBe(true)
+        await riverConnection.stop()
     })
     test('User loads from db', async () => {
         store.newTransactionGroup('init2')
@@ -75,5 +78,9 @@ describe('User.test.ts', () => {
         expect(user.value.status).toBe('loaded')
         expect(user.data.initialized).toBe(true)
         expect(user.streams.memberships.data.initialized).toBe(true)
+        expect(user.streams.inbox.data.initialized).toBe(true)
+        expect(user.streams.deviceKeys.data.initialized).toBe(true)
+        expect(user.streams.settings.data.initialized).toBe(true)
+        await riverConnection.stop()
     })
 })

@@ -47,6 +47,7 @@ describe('RiverConnection.test.ts', () => {
         await waitFor(() => {
             expect(riverConnection.streamNodeUrls.value.status).toBe('saved')
         })
+        await riverConnection.stop()
     })
     // test that a riverConnection will instantly be defined if data exists in local store
     test('riverConnection loads from db', async () => {
@@ -68,5 +69,6 @@ describe('RiverConnection.test.ts', () => {
         // should still be defined before we even start!
         expect(riverConnection.streamNodeUrls.data.urls).not.toBe('')
         expect(riverConnection.client).toBeDefined()
+        await riverConnection.stop()
     })
 })
