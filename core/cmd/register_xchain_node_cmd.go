@@ -12,7 +12,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
-	node_contracts "github.com/river-build/river/core/node/contracts"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/infra"
 	"github.com/spf13/cobra"
@@ -100,7 +99,7 @@ func registerImpl(operatorKeyfile string, userConfirmationMessage string, regist
 		return err
 	}
 
-	decoder, err := node_contracts.NewEVMErrorDecoder(checker.GetMetadata(), entitlementGatedMetaData.GetMetadata())
+	decoder, err := crypto.NewEVMErrorDecoder(checker.GetMetadata(), entitlementGatedMetaData.GetMetadata())
 	if err != nil {
 		return err
 	}

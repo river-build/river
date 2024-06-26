@@ -1,4 +1,4 @@
-package contracts_test
+package crypto_test
 
 import (
 	"errors"
@@ -12,7 +12,7 @@ import (
 	"github.com/jarcoal/httpmock"
 	"github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/base/test"
-	"github.com/river-build/river/core/node/contracts"
+	"github.com/river-build/river/core/node/crypto"
 )
 
 var (
@@ -29,7 +29,7 @@ func TestEVMCustomError(t *testing.T) {
 	defer httpmock.DeactivateAndReset()
 
 	var (
-		combinedABI, _           = contracts.NewEVMErrorDecoder(ABI1, ABI2)
+		combinedABI, _           = crypto.NewEVMErrorDecoder(ABI1, ABI2)
 		mockReplyWithCustomError = map[string]interface{}{
 			"jsonrpc": "2.0",
 			"id":      3,
@@ -92,7 +92,7 @@ func TestEVMStringError(t *testing.T) {
 	defer httpmock.DeactivateAndReset()
 
 	var (
-		combinedABI, _           = contracts.NewEVMErrorDecoder(ABI1, ABI2)
+		combinedABI, _           = crypto.NewEVMErrorDecoder(ABI1, ABI2)
 		mockReplyWithStringError = map[string]interface{}{
 			"jsonrpc": "2.0",
 			"id":      7,
@@ -141,7 +141,7 @@ func TestEVMUnexpectedError(t *testing.T) {
 	httpmock.Activate()
 	defer httpmock.DeactivateAndReset()
 
-	combinedABI, _ := contracts.NewEVMErrorDecoder(ABI1, ABI2)
+	combinedABI, _ := crypto.NewEVMErrorDecoder(ABI1, ABI2)
 
 	httpmock.RegisterResponder("POST", "http://localhost:8545",
 		func(req *http.Request) (*http.Response, error) {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/river-build/river/core/contracts/base"
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/contracts/base"
 	"github.com/river-build/river/core/node/dlog"
 	. "github.com/river-build/river/core/node/protocol"
 

@@ -26,8 +26,8 @@ for file in $ABI_DIR/*.abi.json; do
   echo "export default $(cat $file) as const" > $ABI_DIR/$filename.ts
 done
 
-# ./scripts/gen-river-node-bindings.sh $VERSION
-# ./scripts/gen-xchain-bindings.sh $VERSION
+./scripts/gen-river-node-bindings.sh
+./scripts/gen-xchain-bindings.sh $VERSION
 
 DIFF_GLOB="$ABI_DIR/*.ts"
 

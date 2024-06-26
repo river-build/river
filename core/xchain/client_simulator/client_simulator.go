@@ -13,7 +13,6 @@ import (
 	"github.com/river-build/river/core/xchain/entitlement"
 	"github.com/river-build/river/core/xchain/examples"
 
-	node_contracts "github.com/river-build/river/core/node/contracts"
 	node_crypto "github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 
@@ -188,7 +187,7 @@ type clientSimulator struct {
 
 	wallet *node_crypto.Wallet
 
-	decoder *node_contracts.EvmErrorDecoder
+	decoder *node_crypto.EvmErrorDecoder
 
 	entitlementGated         *contracts.MockEntitlementGated
 	entitlementGatedABI      *abi.ABI
@@ -258,7 +257,7 @@ func New(
 		)
 	}
 
-	decoder, err := node_contracts.NewEVMErrorDecoder(entitlementGated.GetMetadata(), checker.GetMetadata())
+	decoder, err := node_crypto.NewEVMErrorDecoder(entitlementGated.GetMetadata(), checker.GetMetadata())
 	if err != nil {
 		return nil, err
 	}
