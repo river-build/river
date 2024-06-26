@@ -42,10 +42,10 @@ export class UserMemberships extends PersistedObservable<UserMembershipsModel> {
     }
 
     override async onLoaded() {
-        this.riverConnection.registerView(this)
+        this.riverConnection.registerView(this.onClientStarted)
     }
 
-    onClientStarted(client: Client) {
+    private onClientStarted = (client: Client) => {
         logger.log('onClientStarted')
         const streamView = this.riverConnection.client.value?.stream(this.streamId)?.view
         if (streamView) {
@@ -79,7 +79,7 @@ export class UserMemberships extends PersistedObservable<UserMembershipsModel> {
             },
             {} as Record<string, UserMembership>,
         )
-        this.update({ ...this.data, memberships, initialized: true })
+        this.data = { ...this.data, memberships, initialized: true }
     }
 
     private onStreamInitialized = (streamId: string) => {
@@ -94,13 +94,13 @@ export class UserMemberships extends PersistedObservable<UserMembershipsModel> {
         streamId: string,
         payload: UserPayload_UserMembership,
     ) => {
-        this.update({
+        this.data = {
             ...this.data,
             memberships: {
                 ...this.data.memberships,
                 [streamId]: toUserMembership(payload),
             },
-        })
+        }
     }
 }
 

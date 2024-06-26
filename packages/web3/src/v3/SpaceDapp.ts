@@ -3,6 +3,7 @@ import {
     ChannelDetails,
     ChannelMetadata,
     EntitlementModuleType,
+    MembershipStruct,
     Permission,
     PricingModuleStruct,
     RoleDetails,
@@ -26,7 +27,12 @@ import { SpaceInfo } from '../types'
 import { IRuleEntitlement, UNKNOWN_ERROR, UserEntitlementShim } from './index'
 import { PricingModules } from './PricingModules'
 import { dlogger, isJest } from '@river-build/dlog'
-import { EVERYONE_ADDRESS, stringifyChannelMetadataJSON } from '../Utils'
+import {
+    EVERYONE_ADDRESS,
+    getDynamicPricingModule,
+    getFixedPricingModule,
+    stringifyChannelMetadataJSON,
+} from '../Utils'
 import { evaluateOperationsForEntitledWallet, ruleDataToOperations } from '../entitlement'
 import { RuleEntitlementShim } from './RuleEntitlementShim'
 import { PlatformRequirements } from './PlatformRequirements'

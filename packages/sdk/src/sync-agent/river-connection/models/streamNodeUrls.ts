@@ -8,7 +8,7 @@ import { dlogger } from '@river-build/dlog'
 const log = dlogger('csb:riverNodeUrls')
 
 // Define a data model, this is what will be stored in the database
-export interface RiverNodeUrlsModel {
+export interface StreamNodeUrlsModel {
     id: '0' // single data blobs need a fixed key
     urls: string // here's some data we're trying to keep track of
 }
@@ -17,7 +17,7 @@ export interface RiverNodeUrlsModel {
 @persistedObservable({
     tableName: 'riverNodeUrls', // this is the name of the table in the database
 })
-export class RiverNodeUrls extends PersistedObservable<RiverNodeUrlsModel> {
+export class StreamNodeUrls extends PersistedObservable<StreamNodeUrlsModel> {
     private riverRegistry: RiverRegistry // store any member variables required for logic
 
     // The constructor is where we set up the class, we pass in the store and any other dependencies
@@ -41,7 +41,7 @@ export class RiverNodeUrls extends PersistedObservable<RiverNodeUrlsModel> {
             .getOperationalNodeUrls() // here we are fetching the node urls
             .then((urls) => {
                 if (urls !== this.data.urls) {
-                    this.update({ ...this.data, urls }) // if the data is new, update our own state
+                    this.data = { ...this.data, urls } // if the data is new, update our own state
                 }
             })
             .catch((e) => {

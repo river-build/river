@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
 /**
- * @group main
+ * @group with-entitilements
  */
 
 import { dlogger } from '@river-build/dlog'
@@ -8,9 +8,9 @@ import { Store } from '../../store/store'
 import { makeRiverConfig } from '../../riverConfig'
 import { genShortId } from '../../id'
 import { Wallet, providers } from 'ethers'
-import { RiverNodeUrls } from '../river-connection/models/riverNodeUrls'
+import { StreamNodeUrls } from '../river-connection/models/streamNodeUrls'
 import { RiverConnection } from '../river-connection/riverConnection'
-import { RiverRegistry, SpaceDapp } from '@river-build/web3'
+import { LocalhostWeb3Provider, RiverRegistry, SpaceDapp } from '@river-build/web3'
 import { User } from './user'
 import { UserMemberships } from './models/userMemberships'
 import { makeUserContextFromWallet } from '../../util.test'
@@ -20,57 +20,60 @@ const logger = dlogger('csb:test:user')
 
 describe('User.test.ts', () => {
     logger.log('start')
+    const rootWallet = Wallet.createRandom()
+    const userId = rootWallet.address
     const riverConfig = makeRiverConfig()
-    const store = new Store(genShortId(), 1, [RiverNodeUrls, UserMemberships, User])
+    const store = new Store(genShortId(), 1, [StreamNodeUrls, UserMemberships, User])
     store.newTransactionGroup('init')
     const river = riverConfig.river
     const riverProvider = new providers.StaticJsonRpcProvider(river.rpcUrl)
     const base = riverConfig.base
     const baseProvider = new providers.StaticJsonRpcProvider(base.rpcUrl)
+    const web3Provider = new LocalhostWeb3Provider(riverConfig.base.rpcUrl, rootWallet)
     const riverRegistryDapp = new RiverRegistry(river.chainConfig, riverProvider)
     const spaceDapp = new SpaceDapp(base.chainConfig, baseProvider)
 
-    const userWallet = Wallet.createRandom()
-    const userId = userWallet.address
-
-    test('User initializes from empty', async () => {
-        const context = await makeUserContextFromWallet(userWallet)
+    test('User initializes', async () => {
+        await web3Provider.fundWallet()
+        const context = await makeUserContextFromWallet(rootWallet)
         const clientParams = makeClientParams({ context, riverConfig }, spaceDapp)
         const riverConnection = new RiverConnection(store, riverRegistryDapp, clientParams)
-        const user = new User(userId, store, riverConnection)
+        const user = new User(userId, store, riverConnection, spaceDapp)
         expect(user.data.id).toBe(userId)
         expect(user.data.initialized).toBe(false)
-        expect(user.memberships.data.initialized).toBe(false)
-        //expect(user.inbox.data.initialized).toBe(false)
-        //expect(user.deviceKeys.data.initialized).toBe(false)
-        //expect(user.settings.data.initialized).toBe(false)
+        expect(user.streams.memberships.data.initialized).toBe(false)
+        //expect(user.streams.inbox.data.initialized).toBe(false)
+        //expect(user.streams.deviceKeys.data.initialized).toBe(false)
+        //expect(user.streams.settings.data.initialized).toBe(false)
 
         await store.commitTransaction()
         expect(user.data.id).toBe(userId)
         expect(user.data.initialized).toBe(false)
-        expect(user.memberships.data.initialized).toBe(false)
-        //expect(user.inbox.data.initialized).toBe(false)
-        //expect(user.deviceKeys.data.initialized).toBe(false)
-        //expect(user.settings.data.initialized).toBe(false)
+        expect(user.streams.memberships.data.initialized).toBe(false)
+        //expect(user.streams.inbox.data.initialized).toBe(false)
+        //expect(user.streams.deviceKeys.data.initialized).toBe(false)
+        //expect(user.streams.settings.data.initialized).toBe(false)
 
-        await user.initialize() // if we run against non entitled backend, we don't need to pass spaceid
+        const { spaceId } = await user.createSpace({ spaceName: 'bobs-space' }, web3Provider.signer)
+        logger.log('created spaceId', spaceId)
+
         expect(user.data.initialized).toBe(true)
-        expect(user.memberships.data.initialized).toBe(true)
-        //expect(user.inbox.data.initialized).toBe(false)
-        //expect(user.deviceKeys.data.initialized).toBe(false)
-        //expect(user.settings.data.initialized).toBe(false)
+        expect(user.streams.memberships.data.initialized).toBe(true)
+        //expect(user.streams.inbox.data.initialized).toBe(false)
+        //expect(user.streams.deviceKeys.data.initialized).toBe(false)
+        //expect(user.streams.settings.data.initialized).toBe(false)
     })
     test('User loads from db', async () => {
         store.newTransactionGroup('init2')
-        const context = await makeUserContextFromWallet(userWallet)
+        const context = await makeUserContextFromWallet(rootWallet)
         const clientParams = makeClientParams({ context, riverConfig }, spaceDapp)
         const riverConnection = new RiverConnection(store, riverRegistryDapp, clientParams)
-        const user = new User(userId, store, riverConnection)
+        const user = new User(userId, store, riverConnection, spaceDapp)
         expect(user.value.status).toBe('loading')
 
         await store.commitTransaction()
         expect(user.value.status).toBe('loaded')
         expect(user.data.initialized).toBe(true)
-        expect(user.memberships.data.initialized).toBe(true)
+        expect(user.streams.memberships.data.initialized).toBe(true)
     })
 })
