@@ -4,18 +4,13 @@
  */
 
 import { dlogger } from '@river-build/dlog'
-import { Store } from '../../store/store'
 import { makeRiverConfig } from '../../riverConfig'
-import { genShortId } from '../../id'
 import { Wallet, providers } from 'ethers'
-import { StreamNodeUrls } from '../river-connection/models/streamNodeUrls'
 import { RiverConnection } from '../river-connection/riverConnection'
 import { LocalhostWeb3Provider, RiverRegistry, SpaceDapp } from '@river-build/web3'
 import { User } from './user'
-import { UserMemberships } from './models/userMemberships'
 import { makeUserContextFromWallet } from '../../util.test'
 import { makeClientParams } from '../utils/syncAgentUtils.test'
-import { UserInbox } from './models/userInbox'
 import { SyncAgentStore } from '../syncAgentStore'
 
 const logger = dlogger('csb:test:user')

@@ -8,15 +8,7 @@ import { UserDeviceKeys } from './models/userDeviceKeys'
 import { UserInbox } from './models/userInbox'
 import { UserMemberships } from './models/userMemberships'
 import { UserSettings } from './models/userSettings'
-import {
-    CreateSpaceParams,
-    ETH_ADDRESS,
-    MembershipStruct,
-    NoopRuleData,
-    Permission,
-    SpaceDapp,
-    getDynamicPricingModule,
-} from '@river-build/web3'
+import { CreateSpaceParams, SpaceDapp } from '@river-build/web3'
 import { ethers } from 'ethers'
 import { makeDefaultChannelStreamId, makeSpaceStreamId } from '../../id'
 import { makeDefaultMembershipInfo } from '../utils/spaceUtils'

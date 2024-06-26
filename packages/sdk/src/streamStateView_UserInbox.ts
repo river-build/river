@@ -132,6 +132,11 @@ export class StreamStateView_UserInbox extends StreamStateView_AbstractContent {
                 summary.lowerBound = content.miniblockNum + 1n
             }
         }
-        stateEmitter?.emit('userInboxDeviceSummaryUpdated', this.streamId, content.deviceKey, summary)
+        stateEmitter?.emit(
+            'userInboxDeviceSummaryUpdated',
+            this.streamId,
+            content.deviceKey,
+            summary,
+        )
     }
 }

@@ -6,16 +6,18 @@ import { RetryParams } from '../makeStreamRpcClient'
 import { Store } from '../store/store'
 import { SignerContext } from '../signerContext'
 import { userIdFromAddress } from '../id'
-import { StreamNodeUrls, StreamNodeUrlsModel } from './river-connection/models/streamNodeUrls'
+import { StreamNodeUrlsModel } from './river-connection/models/streamNodeUrls'
 import { AuthStatus, User, UserModel } from './user/user'
 import { makeBaseProvider, makeRiverProvider } from './utils/providers'
-import { UserMemberships, UserMembershipsModel } from './user/models/userMemberships'
+import { UserMembershipsModel } from './user/models/userMemberships'
 import { RiverDbManager } from '../riverDbManager'
 import { Entitlements } from './entitlements/entitlements'
 import { PersistedObservable } from '../observable/persistedObservable'
 import { Observable } from '../observable/observable'
-import { UserInbox, UserInboxModel } from './user/models/userInbox'
+import { UserInboxModel } from './user/models/userInbox'
 import { SyncAgentStore } from './syncAgentStore'
+import { UserDeviceKeysModel } from './user/models/userDeviceKeys'
+import { UserSettingsModel } from './user/models/userSettings'
 
 export interface SyncAgentConfig {
     context: SignerContext
@@ -44,8 +46,8 @@ export class SyncAgent {
         userAuthStatus: Observable<AuthStatus>
         userMemberships: PersistedObservable<UserMembershipsModel>
         userInbox: PersistedObservable<UserInboxModel>
-        // userDeviceKeys:
-        // userSettings:
+        userDeviceKeys: PersistedObservable<UserDeviceKeysModel>
+        userSettings: PersistedObservable<UserSettingsModel>
     }
 
     constructor(config: SyncAgentConfig) {
@@ -77,8 +79,8 @@ export class SyncAgent {
             userAuthStatus: this.user.authStatus,
             userMemberships: this.user.streams.memberships,
             userInbox: this.user.streams.inbox,
-            // userDeviceKeys: this.store.observable(User).data.deviceKeys,
-            // userSettings: this.store.observable(User).data.settings,
+            userDeviceKeys: this.user.streams.deviceKeys,
+            userSettings: this.user.streams.settings,
         }
     }
 

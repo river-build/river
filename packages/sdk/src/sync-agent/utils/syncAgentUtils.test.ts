@@ -1,14 +1,12 @@
 import { SyncAgentConfig } from '../syncAgent'
 import { ClientParams } from '../river-connection/riverConnection'
 import { makeRandomUserContext } from '../../util.test'
-import { RiverConfig, makeRiverConfig } from '../../riverConfig'
+import { makeRiverConfig } from '../../riverConfig'
 import { RiverDbManager } from '../../riverDbManager'
 import { userIdFromAddress } from '../../id'
 import { Entitlements } from '../entitlements/entitlements'
 import {
-    BaseChainConfig,
     ETH_ADDRESS,
-    LocalhostWeb3Provider,
     MembershipStruct,
     NoopRuleData,
     Permission,
@@ -16,7 +14,6 @@ import {
     getDynamicPricingModule,
     getFixedPricingModule,
 } from '@river-build/web3'
-import { ethers } from 'ethers'
 
 export async function makeRandomSyncAgentConfig(): Promise<SyncAgentConfig> {
     const context = await makeRandomUserContext()

@@ -1,6 +1,5 @@
 import { RiverRegistry } from '@river-build/web3'
 import { RetryParams, makeStreamRpcClient } from '../../makeStreamRpcClient'
-import { Observable } from '../../observable/observable'
 import { StreamNodeUrls, StreamNodeUrlsModel } from './models/streamNodeUrls'
 import { Store } from '../../store/store'
 import { dlogger } from '@river-build/dlog'
