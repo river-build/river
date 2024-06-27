@@ -42,6 +42,8 @@ interface IWalletLinkBase {
 }
 
 interface IWalletLink is IWalletLinkBase {
+  function sanityCheck() external;
+
   /**
    * @notice Link caller wallet to a root wallet
    * @param rootWallet the root wallet that the caller is linking to

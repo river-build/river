@@ -10,9 +10,15 @@ import {IWalletLink} from "./IWalletLink.sol";
 import {Facet} from "contracts/src/diamond/facets/Facet.sol";
 import {WalletLinkBase} from "./WalletLinkBase.sol";
 
+import "forge-std/console.sol";
+
 contract WalletLink is IWalletLink, WalletLinkBase, Facet {
   function __WalletLink_init() external onlyInitializing {
     _addInterface(type(IWalletLink).interfaceId);
+  }
+
+  function sanityCheck() external {
+    console.log("sanityCheck");
   }
 
   /// @inheritdoc IWalletLink
@@ -72,6 +78,7 @@ contract WalletLink is IWalletLink, WalletLinkBase, Facet {
   function getLatestNonceForRootKey(
     address rootKey
   ) external view returns (uint256) {
+    console.log("getLatestNonceForRootKey");
     return _latestNonce(rootKey);
   }
 }

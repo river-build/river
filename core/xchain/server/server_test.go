@@ -21,7 +21,6 @@ import (
 	"github.com/river-build/river/core/xchain/entitlement"
 	"github.com/river-build/river/core/xchain/server"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -30,6 +29,8 @@ import (
 	node_crypto "github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 )
 
 const (
@@ -150,10 +151,15 @@ func (st *serviceTester) deployXchainTestContracts() {
 	st.mockCustomEntitlementAddress = addr
 
 	// Deploy the wallet linking contract
-	addr, _, _, err = test_contracts.DeployWalletLink(auth, client)
+	anvilChainId, err := anvilClient.ChainID(st.ctx)
+	st.require.NoError(err)
+	anvilAuth, err := bind.NewKeyedTransactorWithChainID(anvilWallet.PrivateKeyStruct, anvilChainId)
+	st.require.NoError(err)
+
+	addr, _, _, err = test_contracts.DeployWalletLink(anvilAuth, anvilClient)
 	st.require.NoError(err)
 	st.walletLinkingAddress = addr
-	walletLink, err := base.NewWalletLink(addr, client)
+	walletLink, err := base.NewWalletLink(addr, anvilClient)
 	st.require.NoError(err)
 	st.walletLink = walletLink
 	st.eip712Domain = node_crypto.EIP712Domain{
@@ -549,6 +555,33 @@ func deployMockErc721Contract(
 	blockNum := xc_common.WaitForTransaction(anvilClient, txn)
 	require.NotNil(blockNum)
 	return auth, contractAddress, erc721
+}
+
+func TestLinkedWallets(t *testing.T) {
+	ctx, cancel := test.NewTestContext()
+	ctx = dlog.CtxWithLog(ctx, noColorLogger())
+	defer cancel()
+
+	require := require.New(t)
+	st := newServiceTester(5, require)
+	defer st.Close()
+	st.Start(t)
+
+	bc := st.ClientSimulatorBlockchain()
+	cfg := st.Config()
+	cs, err := client_simulator.New(ctx, cfg, bc, bc.Wallet)
+	require.NoError(err)
+	cs.Start(ctx)
+	defer cs.Stop()
+
+	auth, err := bind.NewKeyedTransactorWithChainID(anvilWallet.PrivateKeyStruct, big.NewInt(31337))
+	require.NoError(err)
+	nonce, err := anvilClient.PendingNonceAt(context.Background(), anvilWallet.Address)
+	require.NoError(err)
+	auth.Nonce = big.NewInt(int64(nonce))
+	txn, err := st.walletLink.SanityCheck(auth)
+	st.AssertNoEVMError(err)
+	require.NotNil(xc_common.WaitForTransaction(anvilClient, txn))
 }
 
 func TestErc721Entitlements(t *testing.T) {
