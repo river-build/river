@@ -33,8 +33,9 @@ import (
 )
 
 const (
-	ChainID         = 31337
-	BaseRpcEndpoint = "http://localhost:8545"
+	ChainID               = 31337
+	BaseRpcEndpoint       = "http://localhost:8545"
+	LINKED_WALLET_MESSAGE = "Link your external wallet" // can be any string. Use the same value as the client
 )
 
 type testNodeRecord struct {
@@ -317,6 +318,7 @@ func (st *serviceTester) linkWalletToRootWallet(
 	rootKeyWallet := base.IWalletLinkBaseLinkedWallet{
 		Addr:      rootWallet.Address,
 		Signature: rootKeySignature,
+		Message:   LINKED_WALLET_MESSAGE,
 	}
 
 	// Create Wallet IWalletLinkLinkedWallet
@@ -327,6 +329,7 @@ func (st *serviceTester) linkWalletToRootWallet(
 	nodeWallet := base.IWalletLinkBaseLinkedWallet{
 		Addr:      wallet.Address,
 		Signature: nodeWalletSignature,
+		Message:   LINKED_WALLET_MESSAGE,
 	}
 
 	pendingTx, err := st.ClientSimulatorBlockchain().TxPool.Submit(
