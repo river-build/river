@@ -120,7 +120,7 @@ interact-sepolia :;
 # ===========================
 deploy-any :;
 	@echo "Deploying $(contract)..."
-	@forge script scripts/deployments/$(if $(findstring facet,$(type)),facets/)${contract}.s.sol:${contract} --ffi --rpc-url ${rpc} --private-key ${TESTNET_PRIVATE_KEY} --broadcast --verifier-url ${verifier} --verify -vvvv
+	@forge script scripts/deployments/$(if $(findstring facet,$(type)),facets/)${contract}.s.sol:${contract} --ffi --rpc-url ${rpc} --private-key ${TESTNET_PRIVATE_KEY} --broadcast --verifier-url ${verifier} --etherscan-api-key ${etherscan} --verify -vvvv
 
 # ===========================
 # 				 	River
