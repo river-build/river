@@ -234,7 +234,7 @@ export class Client
         return this.syncedStreamsExtensions.initStatus
     }
 
-    get cryptoEnabled(): boolean {
+    get cryptoInitialized(): boolean {
         return this.cryptoBackend !== undefined
     }
 
@@ -389,6 +389,21 @@ export class Client
         } else {
             return undefined
         }
+    }
+
+    async userExists(userId: string): Promise<boolean> {
+        const userStreamId = makeUserStreamId(userId)
+        return this.streamExists(userStreamId)
+    }
+
+    async streamExists(streamId: string | Uint8Array): Promise<boolean> {
+        this.logCall('streamExists?', streamId)
+        const response = await this.rpcClient.getStream({
+            streamId: streamIdAsBytes(streamId),
+            optional: true,
+        })
+        this.logCall('streamExists=', streamId, response.stream)
+        return response.stream !== undefined
     }
 
     private async createUserStream(
