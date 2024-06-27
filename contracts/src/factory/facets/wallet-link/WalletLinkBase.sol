@@ -12,6 +12,7 @@ import {WalletLinkStorage} from "./WalletLinkStorage.sol";
 // contracts
 import {Nonces} from "contracts/src/diamond/utils/Nonces.sol";
 import {EIP712Base} from "contracts/src/diamond/utils/cryptography/signature/EIP712Base.sol";
+import {console} from "./../../../../../lib/forge-std/src/console.sol";
 
 abstract contract WalletLinkBase is IWalletLinkBase, EIP712Base, Nonces {
   using EnumerableSet for EnumerableSet.AddressSet;
@@ -35,6 +36,7 @@ abstract contract WalletLinkBase is IWalletLinkBase, EIP712Base, Nonces {
     LinkedWallet memory rootWallet,
     uint256 nonce
   ) internal {
+    console.log("_linkCallerToRootWallet");
     WalletLinkStorage.Layout storage ds = WalletLinkStorage.layout();
 
     // The caller is the wallet that is being linked to the root wallet
@@ -77,6 +79,7 @@ abstract contract WalletLinkBase is IWalletLinkBase, EIP712Base, Nonces {
     LinkedWallet memory rootWallet,
     uint256 nonce
   ) internal {
+    console.log("_linkWalletToRootWallet");
     WalletLinkStorage.Layout storage ds = WalletLinkStorage.layout();
 
     _verifyWallets(ds, wallet.addr, rootWallet.addr);
@@ -86,28 +89,44 @@ abstract contract WalletLinkBase is IWalletLinkBase, EIP712Base, Nonces {
       wallet.addr,
       nonce
     );
+    console.log("linked wallet hash");
+    console.logBytes32(structHash);
 
     //Verify that the root wallet signature contains the correct nonce and the correct wallet
     bytes32 rootKeyMessageHash = _hashTypedDataV4(structHash);
+    console.log("rootKeyMessageHash");
+    console.logBytes32(rootKeyMessageHash);
 
     // Verify the signature of the root wallet is correct for the nonce and wallet address
+    console.log("ECDSA.recover(rootKeyMessageHash)", ECDSA.recover(rootKeyMessageHash, rootWallet.signature));
+    console.log("rootWallet.addr", rootWallet.addr);
     if (
       ECDSA.recover(rootKeyMessageHash, rootWallet.signature) != rootWallet.addr
     ) {
+      console.log("rootKeyMessageHash invalid signature");
       revert WalletLink__InvalidSignature();
     }
+    console.log("rootKeyMessageHash signature verified");
 
     structHash = _getLinkedWalletTypedDataHash(
       rootWallet.message,
       rootWallet.addr,
       nonce
     );
+    console.log("root wallet hash");
+    console.logBytes32(structHash);
     bytes32 walletMessageHash = _hashTypedDataV4(structHash);
+    console.log("walletMessageHash");
+    console.logBytes32(walletMessageHash);
 
     // Verify the signature of the wallet is correct for the nonce and root wallet address
+    console.log("ECDSA.recover(walletMessageHash)", ECDSA.recover(walletMessageHash, wallet.signature));
+    console.log("wallet.addr", wallet.addr);
     if (ECDSA.recover(walletMessageHash, wallet.signature) != wallet.addr) {
+      console.log("walletMessageHash invalid signature");
       revert WalletLink__InvalidSignature();
     }
+    console.log("walletMessageHash signature verified");
 
     //Check that the nonce being used is higher than the last nonce used
     _useCheckedNonce(rootWallet.addr, nonce);
