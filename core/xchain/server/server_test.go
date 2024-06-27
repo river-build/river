@@ -160,7 +160,7 @@ func (st *serviceTester) deployXchainTestContracts() {
 		Name:              "SpaceFactory",
 		Version:           "1",
 		ChainId:           big.NewInt(31337), // anvil
-		VerifyingContract: addr.Hex(),
+		VerifyingContract: addr,
 	}
 
 	// Commit all deploys
@@ -321,7 +321,7 @@ func (st *serviceTester) linkWalletToRootWallet(
 	// Create RootKey IWalletLinkLinkedWallet and sign it
 	rootLinkedWallet := node_crypto.LinkedWallet{
 		Message: LINKED_WALLET_MESSAGE,
-		UserID:  wallet.Address.Hex(),
+		UserID:  wallet.Address,
 		Nonce:   rootKeyNonce,
 	}
 	rootTypedDataHash := node_crypto.CreateEip712LinkedWalletTypedData(st.eip712Domain, rootLinkedWallet)
@@ -337,7 +337,7 @@ func (st *serviceTester) linkWalletToRootWallet(
 	// Create Wallet IWalletLinkLinkedWallet and sign it
 	linkedWallet := node_crypto.LinkedWallet{
 		Message: LINKED_WALLET_MESSAGE,
-		UserID:  rootWallet.Address.Hex(),
+		UserID:  rootWallet.Address,
 		Nonce:   rootKeyNonce,
 	}
 	typedDataHash := node_crypto.CreateEip712LinkedWalletTypedData(st.eip712Domain, linkedWallet)

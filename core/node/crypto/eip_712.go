@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
@@ -12,13 +13,13 @@ type EIP712Domain struct {
 	Name              string
 	Version           string
 	ChainId           *big.Int
-	VerifyingContract string
+	VerifyingContract common.Address
 }
 
 // Define the LinkedWallet struct
 type LinkedWallet struct {
 	Message string
-	UserID  string
+	UserID  common.Address
 	Nonce   *big.Int
 }
 
@@ -51,7 +52,7 @@ func hashDomain(domain EIP712Domain) [32]byte {
 	chainIdBytes := make([]byte, 32)
 	domain.ChainId.FillBytes(chainIdBytes)
 	chainIdHash := crypto.Keccak256(chainIdBytes)
-	verifyingContractHash := crypto.Keccak256([]byte(domain.VerifyingContract))
+	verifyingContractHash := crypto.Keccak256(domain.VerifyingContract.Bytes())
 
 	return crypto.Keccak256Hash(
 		domainHash,
@@ -68,7 +69,8 @@ func hashLinkedWallet(wallet LinkedWallet) [32]byte {
 	walletHash := crypto.Keccak256([]byte(walletType))
 
 	messageHash := crypto.Keccak256([]byte(wallet.Message))
-	userIDHash := crypto.Keccak256([]byte(wallet.UserID))
+	userIDHash := crypto.Keccak256(wallet.UserID.Bytes())
+	//userIDHash := crypto.Keccak256([]byte(wallet.UserID))
 	nonceBytes := make([]byte, 32)
 	wallet.Nonce.FillBytes(nonceBytes)
 	nonceHash := crypto.Keccak256(nonceBytes)
