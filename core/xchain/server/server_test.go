@@ -61,6 +61,9 @@ type serviceTester struct {
 	entitlementChecker *base.IEntitlementChecker
 	walletLink         *base.WalletLink
 
+	// EIP-712
+	eip712Domain node_crypto.EIP712Domain
+
 	decoder *node_crypto.EvmErrorDecoder
 }
 
@@ -153,6 +156,12 @@ func (st *serviceTester) deployXchainTestContracts() {
 	walletLink, err := base.NewWalletLink(addr, client)
 	st.require.NoError(err)
 	st.walletLink = walletLink
+	st.eip712Domain = node_crypto.EIP712Domain{
+		Name:              "SpaceFactory",
+		Version:           "1",
+		ChainId:           big.NewInt(31337), // anvil
+		VerifyingContract: addr.Hex(),
+	}
 
 	// Commit all deploys
 	st.btc.Commit(st.ctx)
@@ -309,26 +318,35 @@ func (st *serviceTester) linkWalletToRootWallet(
 	rootKeyNonce, err := st.walletLink.GetLatestNonceForRootKey(nil, rootWallet.Address)
 	st.require.NoError(err)
 
-	// Create RootKey IWalletLinkLinkedWallet
-	hash, err := node_crypto.PackWithNonce(wallet.Address, rootKeyNonce.Uint64())
+	// Create RootKey IWalletLinkLinkedWallet and sign it
+	rootLinkedWallet := node_crypto.LinkedWallet{
+		Message: LINKED_WALLET_MESSAGE,
+		UserID:  wallet.Address.Hex(),
+		Nonce:   rootKeyNonce,
+	}
+	rootTypedDataHash := node_crypto.CreateEip712LinkedWalletTypedData(st.eip712Domain, rootLinkedWallet)
+	rootSignature, err := node_crypto.SignHash(rootTypedDataHash, rootWallet.PrivateKeyStruct)
 	st.require.NoError(err)
-	rootKeySignature, err := rootWallet.SignHash(node_crypto.ToEthMessageHash(hash))
-	rootKeySignature[64] += 27 // Transform V from 0/1 to 27/28
 
-	rootKeyWallet := base.IWalletLinkBaseLinkedWallet{
+	rootWalletArg := base.IWalletLinkBaseLinkedWallet{
 		Addr:      rootWallet.Address,
-		Signature: rootKeySignature,
+		Signature: rootSignature,
 		Message:   LINKED_WALLET_MESSAGE,
 	}
 
-	// Create Wallet IWalletLinkLinkedWallet
-	hash, err = node_crypto.PackWithNonce(rootWallet.Address, rootKeyNonce.Uint64())
+	// Create Wallet IWalletLinkLinkedWallet and sign it
+	linkedWallet := node_crypto.LinkedWallet{
+		Message: LINKED_WALLET_MESSAGE,
+		UserID:  rootWallet.Address.Hex(),
+		Nonce:   rootKeyNonce,
+	}
+	typedDataHash := node_crypto.CreateEip712LinkedWalletTypedData(st.eip712Domain, linkedWallet)
+	walletSignature, err := node_crypto.SignHash(typedDataHash, wallet.PrivateKeyStruct)
 	st.require.NoError(err)
-	nodeWalletSignature, err := wallet.SignHash(node_crypto.ToEthMessageHash(hash))
-	nodeWalletSignature[64] += 27 // Transform V from 0/1 to 27/28
-	nodeWallet := base.IWalletLinkBaseLinkedWallet{
+
+	linkedWalletArg := base.IWalletLinkBaseLinkedWallet{
 		Addr:      wallet.Address,
-		Signature: nodeWalletSignature,
+		Signature: walletSignature,
 		Message:   LINKED_WALLET_MESSAGE,
 	}
 
@@ -336,7 +354,7 @@ func (st *serviceTester) linkWalletToRootWallet(
 		ctx,
 		"LinkWalletToRootKey",
 		func(opts *bind.TransactOpts) (*types.Transaction, error) {
-			return st.walletLink.LinkWalletToRootKey(opts, nodeWallet, rootKeyWallet, rootKeyNonce)
+			return st.walletLink.LinkWalletToRootKey(opts, linkedWalletArg, rootWalletArg, rootKeyNonce)
 		},
 	)
 
@@ -609,7 +627,6 @@ func mintErc20TokensForWallet(
 
 func deployMockErc20Contract(
 	require *require.Assertions,
-	st *serviceTester,
 ) (*bind.TransactOpts, common.Address, *test_contracts.MockErc20) {
 	// Deploy mock ERC20 contract to anvil chain
 	nonce, err := anvilClient.PendingNonceAt(context.Background(), anvilWallet.Address)
@@ -651,7 +668,7 @@ func TestErc20Entitlements(t *testing.T) {
 			defer cs.Stop()
 
 			// Deploy mock ERC20 contract to anvil chain
-			auth, contractAddress, erc20 := deployMockErc20Contract(require, st)
+			auth, contractAddress, erc20 := deployMockErc20Contract(require)
 
 			// Check for balance of 1 should fail, as this wallet has no coins.
 			expectEntitlementCheckResult(require, cs, ctx, cfg, erc20Check(ChainID, contractAddress, 1), false)
@@ -703,7 +720,6 @@ func toggleEntitlement(
 
 func deployMockCustomEntitlement(
 	require *require.Assertions,
-	st *serviceTester,
 ) (*bind.TransactOpts, common.Address, *deploy.MockCustomEntitlement) {
 	// Deploy mock custom entitlement contract to anvil chain
 	nonce, err := anvilClient.PendingNonceAt(context.Background(), anvilWallet.Address)
@@ -751,7 +767,7 @@ func TestCustomEntitlements(t *testing.T) {
 			defer cs.Stop()
 
 			// Deploy mock custom entitlement contract to anvil chain
-			auth, contractAddress, customEntitlement := deployMockCustomEntitlement(require, st)
+			auth, contractAddress, customEntitlement := deployMockCustomEntitlement(require)
 			t.Log("Deployed custom entitlement contract", contractAddress.Hex(), ChainID)
 
 			// Initially the check should fail.
