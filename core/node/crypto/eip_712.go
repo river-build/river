@@ -27,6 +27,12 @@ func CreateEip712LinkedWalletTypedData(
 	domain EIP712Domain,
 	linkedWallet LinkedWallet,
 ) [32]byte {
+	/*
+		1. Create the domain separator hash
+		2. Create the data hash
+		3. Combine the domain separator hash and the data hash with the
+		EIP-712 prefix
+	*/
 	domainHash := hashDomain(domain)
 	walletHash := hashLinkedWallet(linkedWallet)
 	typedDataHash := hashTypedData(domainHash, walletHash)
@@ -35,6 +41,12 @@ func CreateEip712LinkedWalletTypedData(
 
 // Sign the hash using a private key
 func SignHash(hash [32]byte, privateKey *ecdsa.PrivateKey) ([]byte, error) {
+	/*
+		When signing an EIP-712 message, we do not need to prepend
+		"\x19Ethereum Signed Message:\n" to the hash before signing it.
+		The EIP-712 standard already defines a specific method for creating the hash
+		that includes the "\x19\x01" prefix, the domain separator, and the data hash.
+	*/
 	signature, err := crypto.Sign(hash[:], privateKey)
 	if err != nil {
 		return nil, err
@@ -70,7 +82,6 @@ func hashLinkedWallet(wallet LinkedWallet) [32]byte {
 
 	messageHash := crypto.Keccak256([]byte(wallet.Message))
 	userIDHash := crypto.Keccak256(wallet.UserID.Bytes())
-	//userIDHash := crypto.Keccak256([]byte(wallet.UserID))
 	nonceBytes := make([]byte, 32)
 	wallet.Nonce.FillBytes(nonceBytes)
 	nonceHash := crypto.Keccak256(nonceBytes)
@@ -83,11 +94,15 @@ func hashLinkedWallet(wallet LinkedWallet) [32]byte {
 	)
 }
 
-// Combine the domain separator and the struct hash into a single hash to be signed
-func hashTypedData(domainHash [32]byte, structHash [32]byte) [32]byte {
+// Combine the domain separator and the data hash into a single hash to be signed
+func hashTypedData(domainHash [32]byte, dataHash [32]byte) [32]byte {
+	/*
+		EIP-712 defines a specific method for creating the hash that includes the
+		"\x19\x01" prefix, the domain separator, and the data hash.
+	*/
 	return crypto.Keccak256Hash(
 		[]byte("\x19\x01"),
 		domainHash[:],
-		structHash[:],
+		dataHash[:],
 	)
 }
