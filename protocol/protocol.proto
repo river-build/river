@@ -260,7 +260,7 @@ message ChannelPayload {
     }
 
     message Pin { 
-        bytes hash = 1;
+        bytes event_id = 1;
         StreamEvent event = 2;
     }
 

@@ -1126,7 +1126,7 @@ func (ru *aeChannelPinRules) validChannelPin() (bool, error) {
 		return false, RiverError(Err_INVALID_ARGUMENT, "event is not a channel pin event")
 	}
 	// check the hash
-	if len(ru.pin.Hash) != 32 {
+	if len(ru.pin.EventId) != 32 {
 		return false, RiverError(Err_INVALID_ARGUMENT, "invalid message hash")
 	}
 
@@ -1137,7 +1137,7 @@ func (ru *aeChannelPinRules) validChannelPin() (bool, error) {
 	}
 	computedHash := crypto.RiverHash(eventBytes)
 
-	if !bytes.Equal(ru.pin.Hash, computedHash[:]) {
+	if !bytes.Equal(ru.pin.EventId, computedHash[:]) {
 		return false, RiverError(Err_INVALID_ARGUMENT, "invalid message hash")
 	}
 
@@ -1155,7 +1155,7 @@ func (ru *aeChannelPinRules) validChannelPin() (bool, error) {
 	}
 	// check if the hash is already pinned
 	for _, pin := range existingPins {
-		if bytes.Equal(pin.Hash, ru.pin.Hash) {
+		if bytes.Equal(pin.EventId, ru.pin.EventId) {
 			return false, RiverError(Err_DUPLICATE_EVENT, "message is already pinned")
 		}
 	}

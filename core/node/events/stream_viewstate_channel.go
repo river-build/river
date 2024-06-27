@@ -40,7 +40,7 @@ func (r *streamViewImpl) GetPinnedMessages() ([]*ChannelPayload_Pin, error) {
 				pins = append(pins, payload.Pin)
 			case *ChannelPayload_Unpin_:
 				for i, pin := range pins {
-					if bytes.Equal(pin.Hash, payload.Unpin.EventId) {
+					if bytes.Equal(pin.EventId, payload.Unpin.EventId) {
 						pins = append(pins[:i], pins[i+1:]...)
 						break
 					}

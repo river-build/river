@@ -305,7 +305,7 @@ export const make_ChannelPayload_Pin = (
         value: {
             content: {
                 case: 'pin',
-                value: { hash: eventHash, event: streamEvent },
+                value: { eventId: eventHash, event: streamEvent },
             },
         },
     }

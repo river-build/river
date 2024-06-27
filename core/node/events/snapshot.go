@@ -220,7 +220,7 @@ func update_Snapshot_Channel(iSnapshot *Snapshot, channelPayload *ChannelPayload
 	case *ChannelPayload_Unpin_:
 		snapPins := snapshot.ChannelContent.Pins
 		for i, pin := range snapPins {
-			if bytes.Equal(pin.Hash, content.Unpin.EventId) {
+			if bytes.Equal(pin.EventId, content.Unpin.EventId) {
 				snapPins = append(snapPins[:i], snapshot.ChannelContent.Pins[i+1:]...)
 				break
 			}

@@ -41,7 +41,7 @@ export class StreamStateView_Channel extends StreamStateView_AbstractContent {
         this.spaceId = streamIdFromBytes(content.inception?.spaceId ?? Uint8Array.from([]))
         content.pins.forEach((pin) => {
             if (pin.event) {
-                const parsedEvent = makeParsedEvent(pin.event, pin.hash)
+                const parsedEvent = makeParsedEvent(pin.event, pin.eventId)
                 const remoteEvent = makeRemoteTimelineEvent({ parsedEvent, eventNum: 0n })
                 const cleartext = cleartexts?.[remoteEvent.hashStr]
                 this.addPin(remoteEvent, cleartext, encryptionEmitter, undefined)
@@ -127,7 +127,7 @@ export class StreamStateView_Channel extends StreamStateView_AbstractContent {
                 {
                     const pin = payload.content.value
                     check(isDefined(pin.event), 'invalid pin event')
-                    const parsedEvent = makeParsedEvent(pin.event, pin.hash)
+                    const parsedEvent = makeParsedEvent(pin.event, pin.eventId)
                     const remoteEvent = makeRemoteTimelineEvent({ parsedEvent, eventNum: 0n })
                     this.addPin(remoteEvent, undefined, encryptionEmitter, stateEmitter)
                 }

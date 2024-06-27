@@ -1844,9 +1844,9 @@ export class ChannelPayload_Redaction extends Message<ChannelPayload_Redaction> 
  */
 export class ChannelPayload_Pin extends Message<ChannelPayload_Pin> {
   /**
-   * @generated from field: bytes hash = 1;
+   * @generated from field: bytes event_id = 1;
    */
-  hash = new Uint8Array(0);
+  eventId = new Uint8Array(0);
 
   /**
    * @generated from field: river.StreamEvent event = 2;
@@ -1861,7 +1861,7 @@ export class ChannelPayload_Pin extends Message<ChannelPayload_Pin> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "river.ChannelPayload.Pin";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "hash", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 1, name: "event_id", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
     { no: 2, name: "event", kind: "message", T: StreamEvent },
   ]);
 
