@@ -613,7 +613,7 @@ func (c *BlockchainTestContext) SetConfigValue(t *testing.T, ctx context.Context
 	require.EventuallyWithT(
 		t,
 		func(t *assert.CollectT) {
-			readValue := c.OnChainConfig.GetRawValue(key)
+			readValue := c.OnChainConfig.GetRawValueOnBlock(uint64(blockNum), key)
 			assert.Equal(t, value, readValue)
 		},
 		10*time.Second,
