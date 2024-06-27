@@ -11,12 +11,17 @@ import { isDefined } from './check'
 import { check } from '@river-build/dlog'
 
 function getEnvironmentId(): string {
-    return process.env.RIVER_ENV || 'local_single'
+    if (typeof process === 'object') {
+        return process.env.RIVER_ENV || 'local_single'
+    }
+    return 'local_single'
 }
 
 function getBaseRpcUrlForChain(chainId: number): string {
-    if (process.env.BASE_CHAIN_RPC_URL) {
-        return process.env.BASE_CHAIN_RPC_URL
+    if (typeof process === 'object') {
+        if (process.env.BASE_CHAIN_RPC_URL) {
+            return process.env.BASE_CHAIN_RPC_URL
+        }
     }
     switch (chainId) {
         case 31337:
@@ -29,8 +34,10 @@ function getBaseRpcUrlForChain(chainId: number): string {
 }
 
 function getRiverRpcUrlForChain(chainId: number): string {
-    if (process.env.RIVER_CHAIN_RPC_URL) {
-        return process.env.RIVER_CHAIN_RPC_URL
+    if (typeof process === 'object') {
+        if (process.env.RIVER_CHAIN_RPC_URL) {
+            return process.env.RIVER_CHAIN_RPC_URL
+        }
     }
     switch (chainId) {
         case 31338:
@@ -45,6 +52,11 @@ function getRiverRpcUrlForChain(chainId: number): string {
 function makeWeb3Deployment(environmentId: string): Web3Deployment {
     if (getWeb3Deployments().includes(environmentId)) {
         return getWeb3Deployment(environmentId)
+    }
+    if (!isDefined(process.env.BASE_CHAIN_ID)) {
+        throw new Error(
+            `Attempted to make local deployment ${environmentId}, which was not found in packages/generated/config/deployments.json AND individual chain ids and addresses were not defined in the process.env. Try configuring a local environment or updating the process.env`,
+        )
     }
     // Fallback to env vars
     check(isDefined(process.env.BASE_CHAIN_ID), 'BASE_CHAIN_ID is not defined')

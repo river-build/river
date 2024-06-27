@@ -10,6 +10,8 @@ export type BaseOperator = {
     status: number
 }
 
+export type BaseNodeWithOperator = { node: string; operator: BaseOperator }
+
 export class BaseRegistry {
     public readonly config: BaseChainConfig
     public readonly provider: ethers.providers.Provider
@@ -43,20 +45,12 @@ export class BaseRegistry {
         )
     }
 
-    private async ownerOf(tokenId: number) {
-        return this.erc721A.read.ownerOf(tokenId)
-    }
-
     private async getOperatorStatus(operator: string) {
         return this.nodeOperator.read.getOperatorStatus(operator)
     }
 
     async getOperators(): Promise<BaseOperator[]> {
-        const totalSupplyBigInt = await this.erc721A.read.totalSupply()
-        const totalSupply = Number(totalSupplyBigInt)
-        const zeroToTotalSupply = Array.from(Array(totalSupply).keys())
-        const operatorsPromises = zeroToTotalSupply.map((tokenId) => this.ownerOf(tokenId))
-        const operatorAddresses = await Promise.all(operatorsPromises)
+        const operatorAddresses = await this.nodeOperator.read.getOperators()
         const operatorStatusPromises = operatorAddresses.map((operatorAddress) =>
             this.getOperatorStatus(operatorAddress),
         )
@@ -85,5 +79,26 @@ export class BaseRegistry {
         const nodes = await Promise.all(nodeAtIndexPromises)
 
         return nodes
+    }
+
+    public async getNodesWithOperators(): Promise<BaseNodeWithOperator[]> {
+        const operators = await this.getOperators()
+        const nodesByOperatorPromises = operators.map((operator) =>
+            this.entitlementChecker.read.getNodesByOperator(operator.operatorAddress),
+        )
+        const nodesByOperator = await Promise.all(nodesByOperatorPromises)
+        const operatorsWithNodes = operators.map((operator, index) => ({
+            operator,
+            nodes: nodesByOperator[index],
+        }))
+
+        const nodesWithOperators: BaseNodeWithOperator[] = []
+        operatorsWithNodes.forEach(({ operator, nodes }) => {
+            nodes.forEach((node) => {
+                nodesWithOperators.push({ node, operator })
+            })
+        })
+
+        return nodesWithOperators
     }
 }
