@@ -1,15 +1,22 @@
-import { AccountRecord, GroupSessionRecord, UserDeviceRecord } from './storeTypes'
+import {
+    AccountRecord,
+    ExtendedInboundGroupSessionData,
+    GroupSessionRecord,
+    UserDeviceRecord,
+} from './storeTypes'
 import Dexie, { Table } from 'dexie'
 
 import { InboundGroupSessionData } from './encryptionDevice'
 import { UserDevice } from './olmLib'
 
-const DEFAULT_USER_DEVICE_EXPIRATION_TIME_MS = 15 * 60 * 1000 // 15 minutes todo increase to like 10 days or something https://github.com/HereNotThere/harmony/pull/4222#issuecomment-1822935596
+// TODO: Increase this time to 10 days or something.
+// Its 15 min right now so we can catch any issues with the expiration time.
+const DEFAULT_USER_DEVICE_EXPIRATION_TIME_MS = 15 * 60 * 1000
 
 export class CryptoStore extends Dexie {
     account!: Table<AccountRecord>
     outboundGroupSessions!: Table<GroupSessionRecord>
-    inboundGroupSessions!: Table<InboundGroupSessionData & { streamId: string; sessionId: string }>
+    inboundGroupSessions!: Table<ExtendedInboundGroupSessionData>
     devices!: Table<UserDeviceRecord>
     userId: string
 
@@ -73,6 +80,10 @@ export class CryptoStore extends Dexie {
         sessionId: string,
     ): Promise<InboundGroupSessionData | undefined> {
         return await this.inboundGroupSessions.get({ sessionId, streamId })
+    }
+
+    async getAllEndToEndInboundGroupSessions(): Promise<ExtendedInboundGroupSessionData[]> {
+        return await this.inboundGroupSessions.toArray()
     }
 
     async storeEndToEndInboundGroupSession(

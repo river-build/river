@@ -7,13 +7,12 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/river-build/river/core/node/config"
+	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/xchain/contracts"
 	"github.com/river-build/river/core/xchain/entitlement"
 	"github.com/river-build/river/core/xchain/examples"
 
-	node_contracts "github.com/river-build/river/core/node/contracts"
 	node_crypto "github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 
@@ -188,7 +187,7 @@ type clientSimulator struct {
 
 	wallet *node_crypto.Wallet
 
-	decoder *node_contracts.EvmErrorDecoder
+	decoder *node_crypto.EvmErrorDecoder
 
 	entitlementGated         *contracts.MockEntitlementGated
 	entitlementGatedABI      *abi.ABI
@@ -258,7 +257,7 @@ func New(
 		)
 	}
 
-	decoder, err := node_contracts.NewEVMErrorDecoder(entitlementGated.GetMetadata(), checker.GetMetadata())
+	decoder, err := node_crypto.NewEVMErrorDecoder(entitlementGated.GetMetadata(), checker.GetMetadata())
 	if err != nil {
 		return nil, err
 	}
@@ -286,6 +285,7 @@ func (cs *clientSimulator) Stop() {
 
 func (cs *clientSimulator) Start(ctx context.Context) {
 	cs.baseChain.ChainMonitor.OnContractWithTopicsEvent(
+		0,
 		cs.cfg.GetTestEntitlementContractAddress(),
 		[][]common.Hash{{cs.entitlementGatedABI.Events["EntitlementCheckResultPosted"].ID}},
 		func(ctx context.Context, event types.Log) {
@@ -298,6 +298,7 @@ func (cs *clientSimulator) Start(ctx context.Context) {
 		Info("check requested topics", "topics", cs.checkerABI.Events["EntitlementCheckRequested"].ID)
 
 	cs.baseChain.ChainMonitor.OnContractWithTopicsEvent(
+		0,
 		cs.cfg.GetEntitlementContractAddress(),
 		[][]common.Hash{{cs.checkerABI.Events["EntitlementCheckRequested"].ID}},
 		func(ctx context.Context, event types.Log) {

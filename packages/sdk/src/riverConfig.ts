@@ -46,9 +46,15 @@ function makeWeb3Deployment(environmentId: string): Web3Deployment {
     if (getWeb3Deployments().includes(environmentId)) {
         return getWeb3Deployment(environmentId)
     }
+    if (!isDefined(process.env.BASE_CHAIN_ID)) {
+        throw new Error(
+            `Attempted to make local deployment ${environmentId}, which was not found in packages/generated/config/deployments.json AND individual chain ids and addresses were not defined in the process.env. Try configuring a local environment or updating the process.env`,
+        )
+    }
     // Fallback to env vars
     check(isDefined(process.env.BASE_CHAIN_ID), 'BASE_CHAIN_ID is not defined')
     check(isDefined(process.env.BASE_CHAIN_RPC_URL), 'BASE_CHAIN_RPC_URL is not defined')
+    check(isDefined(process.env.BASE_REGISTRY_ADDRESS), 'BASE_REGISTRY_ADDRESS is not defined')
     check(isDefined(process.env.SPACE_FACTORY_ADDRESS), 'SPACE_FACTORY_ADDRESS is not defined')
     check(isDefined(process.env.SPACE_OWNER_ADDRESS), 'SPACE_OWNER_ADDRESS is not defined')
     check(isDefined(process.env.RIVER_CHAIN_ID), 'RIVER_CHAIN_ID is not defined')
@@ -60,6 +66,7 @@ function makeWeb3Deployment(environmentId: string): Web3Deployment {
             chainId: parseInt(process.env.BASE_CHAIN_ID!),
             contractVersion: (process.env.CONTRACT_VERSION ?? 'dev') as ContractVersion,
             addresses: {
+                baseRegistry: process.env.BASE_REGISTRY_ADDRESS! as Address,
                 spaceFactory: process.env.SPACE_FACTORY_ADDRESS! as Address,
                 spaceOwner: process.env.SPACE_OWNER_ADDRESS! as Address,
                 mockNFT: process.env.MOCK_NFT_ADDRESS as Address | undefined,

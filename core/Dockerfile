@@ -11,22 +11,16 @@ ARG VER_COMMIT=commit_unset
 
 # Prepare build environment
 WORKDIR /build
-COPY node node
-COPY xchain xchain
-COPY go.* .
+COPY . .
 RUN go mod download
 
-# Build stream_node
-WORKDIR /build/node
+# Build river_node
+WORKDIR /build
 RUN go build \
     -trimpath \
-    -o /bin/stream_node \
-    -ldflags="-X github.com/river-build/river/core/node/node/version.version=$VER_VERSION -X github.com/river-build/river/core/node/node/version.branch=$VER_BRANCH -X github.com/river-build/river/core/node/node/version.commit=$VER_COMMIT" \
-    ./node
-
-# Build xchain_node
-WORKDIR /build/xchain
-RUN go build -trimpath -o /bin/xchain_node ./node
+    -o /bin/river_node \
+    -ldflags="-X github.com/river-build/river/core/river_node/version.version=$VER_VERSION -X github.com/river-build/river/core/river_node/version.branch=$VER_BRANCH -X github.com/river-build/river/core/river_node/version.commit=$VER_COMMIT" \
+    ./river_node
 
 # Final stage
 FROM alpine:latest
@@ -39,14 +33,13 @@ LABEL org.opencontainers.image.title="River Node" \
 RUN apk add --no-cache libcap supervisor && \
     adduser -D riveruser
 
-COPY run.sh /etc/run.sh
-COPY full_node.supervisord.conf /etc/full_node.supervisord.conf
-COPY archive_node.supervisord.conf /etc/archive_node.supervisord.conf
-COPY --from=builder /bin/stream_node /usr/bin/stream_node
-COPY --from=builder /bin/xchain_node /usr/bin/xchain_node
+COPY docker/run.sh /etc/run.sh
+COPY docker/full_node.supervisord.conf /etc/full_node.supervisord.conf
+COPY docker/archive_node.supervisord.conf /etc/archive_node.supervisord.conf
+COPY --from=builder /bin/river_node /usr/bin/river_node
 
 # Use setcap to allow the web server binary to bind to privileged ports
-RUN setcap 'cap_net_bind_service=+ep' /usr/bin/stream_node
+RUN setcap 'cap_net_bind_service=+ep' /usr/bin/river_node
 
 COPY --from=builder /build/node/default_config.yaml /riveruser/stream_node/config/config.yaml
 COPY --from=builder /build/node/default_config.yaml /riveruser/xchain_node/config/config.yaml

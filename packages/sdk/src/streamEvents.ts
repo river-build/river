@@ -3,6 +3,7 @@ import {
     FullyReadMarker,
     UserInboxPayload_GroupEncryptionSessions,
     UserSettingsPayload_UserBlock,
+    UserPayload_UserMembership,
 } from '@river-build/proto'
 
 import {
@@ -43,6 +44,12 @@ export type StreamEncryptionEvents = {
     userDeviceKeyMessage: (streamId: string, userId: string, userDevice: UserDevice) => void
 }
 
+export type SyncedStreamEvents = {
+    streamSyncStateChange: (newState: SyncState) => void
+    streamRemovedFromSync: (streamId: string) => void
+    streamSyncActive: (active: boolean) => void
+}
+
 /// Stream state events, emitted after initialization
 export type StreamStateEvents = {
     clientInitStatusUpdated: (status: ClientInitStatus) => void
@@ -51,12 +58,10 @@ export type StreamStateEvents = {
     streamUserLeft: (streamId: string, userId: string) => void
     streamMembershipUpdated: (streamId: string, userId: string) => void
     streamPendingMembershipUpdated: (streamId: string, userId: string) => void
-    streamSyncActive: (active: boolean) => void
-    streamSyncStateChange: (newState: SyncState) => void
     userJoinedStream: (streamId: string) => void
     userInvitedToStream: (streamId: string) => void
     userLeftStream: (streamId: string) => void
-    userStreamMembershipChanged: (streamId: string) => void
+    userStreamMembershipChanged: (streamId: string, payload: UserPayload_UserMembership) => void
     spaceChannelCreated: (spaceId: string, channelId: string) => void
     spaceChannelUpdated: (spaceId: string, channelId: string) => void
     spaceChannelDeleted: (spaceId: string, channelId: string) => void
@@ -87,7 +92,6 @@ export type StreamStateEvents = {
     streamEnsAddressUpdated: (streamId: string, userId: string) => void
     streamNftUpdated: (streamId: string, userId: string) => void
     streamChannelPropertiesUpdated: (streamId: string) => void
-    streamRemovedFromSync: (streamId: string) => void
 }
 
-export type StreamEvents = StreamEncryptionEvents & StreamStateEvents
+export type StreamEvents = StreamEncryptionEvents & StreamStateEvents & SyncedStreamEvents

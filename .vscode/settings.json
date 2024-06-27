@@ -3,7 +3,6 @@
     "source.fixAll.eslint": "explicit"
   },
   "eslint.workingDirectories": [
-    "./packages/debug-app",
     "./packages/dlog",
     "./packages/encryption",
     "./packages/proto",
@@ -33,4 +32,9 @@
     "integration",
   ],
   "go.buildTags": "integration",
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "tailwindCSS.experimental.classRegex": [
+    ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+    ["cn\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+  ]
 }

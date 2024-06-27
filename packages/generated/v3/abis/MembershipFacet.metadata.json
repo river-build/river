@@ -255,6 +255,11 @@
       {
         "inputs": [],
         "type": "error",
+        "name": "Membership__InvalidPayment"
+      },
+      {
+        "inputs": [],
+        "type": "error",
         "name": "Membership__InvalidPrice"
       },
       {
@@ -347,6 +352,26 @@
         "inputs": [],
         "type": "error",
         "name": "Pausable__Paused"
+      },
+      {
+        "inputs": [],
+        "type": "error",
+        "name": "Prepay__InvalidAddress"
+      },
+      {
+        "inputs": [],
+        "type": "error",
+        "name": "Prepay__InvalidAmount"
+      },
+      {
+        "inputs": [],
+        "type": "error",
+        "name": "Prepay__InvalidMembership"
+      },
+      {
+        "inputs": [],
+        "type": "error",
+        "name": "Prepay__InvalidSupplyAmount"
       },
       {
         "inputs": [],
@@ -791,6 +816,19 @@
         ],
         "type": "event",
         "name": "Paused",
+        "anonymous": false
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "supply",
+            "type": "uint256",
+            "indexed": false
+          }
+        ],
+        "type": "event",
+        "name": "Prepay__Prepaid",
         "anonymous": false
       },
       {
@@ -1861,10 +1899,10 @@
   },
   "sources": {
     "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol": {
-      "keccak256": "0x5b5744a311db2a4bc87ce409be80404dacab62b24cbff4e18b9a19eb34b59cb8",
+      "keccak256": "0xbeb7bfa236f19172b29eac53be03a3b377de3524b2d836192b0c64ebe708c204",
       "urls": [
-        "bzz-raw://e020096c2cce7eacb226292588556e20f061de42577ffa07ef7566fa80c764f0",
-        "dweb:/ipfs/QmRgU2mqWYTjJMS8pKUnvaQMBCwTQTbSXXgByenuDJPTMZ"
+        "bzz-raw://3d5a103a2b7b6be1ffa6662db6081763bcd210216fefc25307b835c555e0cf4d",
+        "dweb:/ipfs/QmUCvhZdZpVnyJuZVgd2qGduTf11384TmmBJb2RaEBHxhh"
       ],
       "license": "MIT"
     },
@@ -2061,18 +2099,10 @@
       "license": "MIT"
     },
     "contracts/src/factory/facets/platform/requirements/IPlatformRequirements.sol": {
-      "keccak256": "0x56025c407721579ac96a4db2b7f429a9a7a8edb18c8de9548eb012d717951065",
+      "keccak256": "0xd1c61d42973382822d0b8256b5d308ad693dfa59240864cce0bec1bd4208e4c6",
       "urls": [
-        "bzz-raw://40fe6f856eb4e6b7cd01cbb164e328d0d83857bd2ce0a2b0474948688b33e953",
-        "dweb:/ipfs/QmPJJGEhrjsQpw4maBHkXXqCq5uAQTsAoifc58UrUXnCFV"
-      ],
-      "license": "MIT"
-    },
-    "contracts/src/factory/facets/prepay/IPrepay.sol": {
-      "keccak256": "0xc315a0e72aa54f3ac769a5d7b3c2f15af13f5627f46140311a14511fc169fff3",
-      "urls": [
-        "bzz-raw://351857fc5d154648e48b7afeda7efb20150f18faf1f4c74528bb091e9ecf2d97",
-        "dweb:/ipfs/QmVt9TweLhwZAv4ouydcW2jHLR9mZ2RcxPZ3RwfkCFEFiu"
+        "bzz-raw://bff6d50557810f7aa9de451f6ac2b279fe5983eefc0b38ef8be7ebb2ffde0f86",
+        "dweb:/ipfs/QmS6DXYXtPTfePgtrUxH1vmPycsVoumBQRJZugjGButowT"
       ],
       "license": "MIT"
     },
@@ -2101,10 +2131,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol": {
-      "keccak256": "0x795b58a2ed6205d814e01e58a4a5e88ff69401ee7540d01c4881b7b28f04cfcf",
+      "keccak256": "0x667a71b4ea5c072ed8039139345f73779f7f08820a09848f708cd159fd9f1b79",
       "urls": [
-        "bzz-raw://684e395bce3abedfb499ba8b2708a4f0ca9d1b1f73eb0ebc647d4cead0b8fdd1",
-        "dweb:/ipfs/QmWz2Eu8UGXYskoBFtFXLBuwDrxUfYDLeQuTCeApALdf97"
+        "bzz-raw://988f98a1147ecfa0480bf747fbed8202229aa0c37f43dd25a967ebca213b8050",
+        "dweb:/ipfs/QmWHdrRbCu48aHYKhhGt2UgukaQsQhuHV38c51Yk566Rse"
       ],
       "license": "MIT"
     },
@@ -2253,26 +2283,26 @@
       "license": "MIT"
     },
     "contracts/src/spaces/facets/membership/IMembership.sol": {
-      "keccak256": "0x677bd0b837a9122d28f0946009d241411c6243ab9ad3e193b82ec62b927db64b",
+      "keccak256": "0x6412840e6051b909892e0ac881214235a18a290a39394a5462b54e0e0ab09a46",
       "urls": [
-        "bzz-raw://6ff8653e498b99c98bd22144d6b4c02a251469532288bbc9e059a057fca6e3ab",
-        "dweb:/ipfs/QmURz989yqwEd8D9ogo1rqggn6zkfVf553JLUJ6n2T44QR"
+        "bzz-raw://0a9a2be307336fd760d84d2adddf25a8ea10398672fb1447a299118649a9a544",
+        "dweb:/ipfs/QmR9553MSLHUw7mSN6M5dEuLBVfUb5g6tGoY6Xv7sGWaRs"
       ],
       "license": "MIT"
     },
     "contracts/src/spaces/facets/membership/MembershipBase.sol": {
-      "keccak256": "0xe54260e2da7ae9d1bb2c1394fa09636f69a3989fd1e0a9dc2305f8ea5dbcbf5a",
+      "keccak256": "0x4f42c9176fb345d3da7825e0045e57707396d52bb8e208c81ed81e9d76bd90eb",
       "urls": [
-        "bzz-raw://b6e67fa15ea5c2976c6387e6c1d05c216c64cfb05bcb253c68d3b839ce8be447",
-        "dweb:/ipfs/QmaJpZbfeWYL4R7xRxNevTQbKpsV1sUGaVS5rAx99fT2Vq"
+        "bzz-raw://1fac0c230acd543d90c1b88174e3dcdc9a135e7217741a32580b250941ad30bf",
+        "dweb:/ipfs/QmXaLoyaFmomPPZCcJiY3dzsRjZiWoVkNdKtDa67vh16CR"
       ],
       "license": "MIT"
     },
     "contracts/src/spaces/facets/membership/MembershipFacet.sol": {
-      "keccak256": "0xbb976b603d2b07e81d528e6f18a3026f14e0806c12a974b91c0bb5c4575b14cd",
+      "keccak256": "0xf654b24b573378ed3ebf1b808e9969a368408a483a788cf99773d1be3b1fd1a8",
       "urls": [
-        "bzz-raw://a1a28a6872c9451d5779d25e4ec8a21c98d3a2259504200e87980203f1f7ef4f",
-        "dweb:/ipfs/Qmf2wmWg1xJTF3znrLVr9U1QAUb1iV68pGGPETi79btumc"
+        "bzz-raw://491ffbd1415218f8e0f25849f680a4e6dc6a4f5ead7e593402e1c4712f197eef",
+        "dweb:/ipfs/QmUyArxLWHTjmirRUYxWabzhpZG5q9kaxG59W9uKDc71Kj"
       ],
       "license": "MIT"
     },
@@ -2313,6 +2343,30 @@
       "urls": [
         "bzz-raw://2931b8e2d5c71d6c2cf59b55bb10a6b0874f000b5007cafddecf671d3e2a4e5f",
         "dweb:/ipfs/QmPUzBmxw6wRJXVFsUPpYQkseQQ2G1X8mbtGtrFPHbBjTu"
+      ],
+      "license": "MIT"
+    },
+    "contracts/src/spaces/facets/prepay/IPrepay.sol": {
+      "keccak256": "0x4cc23cd204f20bd4a094d9292aaa494f73478d27c8f59e646454cbba11d781fa",
+      "urls": [
+        "bzz-raw://4f54c224f56396ac03335c95c4808acbeec6366f0c475d29edb2461cd53bcd15",
+        "dweb:/ipfs/QmdDKUR8VVXJuR5Fj29SZxvR9GwxXeNQ6rtAT3TxX8VjwT"
+      ],
+      "license": "MIT"
+    },
+    "contracts/src/spaces/facets/prepay/PrepayBase.sol": {
+      "keccak256": "0x07fbb598088d52ff90a2dc5c3fea344823ae240f39b104f8db8a0b3953752ba3",
+      "urls": [
+        "bzz-raw://d34b9a5703ac33b27f91049a81f106bdf327ac57f4ac5886e21f3782104a5084",
+        "dweb:/ipfs/QmR8ds7bpXxSLZX6QNhVRVYY8Fk2xHVFNqcAD1fY38kERs"
+      ],
+      "license": "MIT"
+    },
+    "contracts/src/spaces/facets/prepay/PrepayStorage.sol": {
+      "keccak256": "0x5daebdd10dafc3bc3552064a2fecd4a2639226b1af240351dd2e005a7ab270b4",
+      "urls": [
+        "bzz-raw://06cf75e08e360a74822cd846728c5d9f8440698bb43d29a8bcab3c0cebbec336",
+        "dweb:/ipfs/QmZ4UfwTNqQg88A7mHmXM3ZExjTJQhPf3qvFLGzcVaGwwG"
       ],
       "license": "MIT"
     },

@@ -28,7 +28,7 @@ import { EntitlementsDelegate } from '@river-build/encryption'
 import { bin_fromHexString, check, dlog } from '@river-build/dlog'
 import { ethers, ContractTransaction } from 'ethers'
 import { RiverDbManager } from './riverDbManager'
-import { StreamRpcClientType, makeStreamRpcClient } from './makeStreamRpcClient'
+import { StreamRpcClient, makeStreamRpcClient } from './makeStreamRpcClient'
 import assert from 'assert'
 import _ from 'lodash'
 import { MockEntitlementsDelegate } from './utils'
@@ -121,6 +121,11 @@ export const TEST_ENCRYPTED_MESSAGE_PROPS: PlainMessage<EncryptedData> = {
     senderKey: '',
 }
 
+export const getXchainSupportedRpcUrlsForTesting = (): string[] => {
+    // TODO: generate this for test environment and read from it
+    return ['http://127.0.0.1:8545', 'http://127.0.0.1:8546']
+}
+
 /**
  * makeUniqueSpaceStreamId - space stream ids are derived from the contract
  * in tests without entitlements there are no contracts, so we use a random id
@@ -181,9 +186,10 @@ export async function setupWalletsAndContexts() {
         ethers.Wallet.createRandom(),
     ])
 
-    const [alicesContext, bobsContext] = await Promise.all([
+    const [alicesContext, bobsContext, carolsContext] = await Promise.all([
         makeUserContextFromWallet(alicesWallet),
         makeUserContextFromWallet(bobsWallet),
+        makeUserContextFromWallet(carolsWallet),
     ])
 
     const aliceProvider = new LocalhostWeb3Provider(baseConfig.rpcUrl, alicesWallet)
@@ -201,27 +207,30 @@ export async function setupWalletsAndContexts() {
     const carolSpaceDapp = createSpaceDapp(carolProvider, baseConfig.chainConfig)
 
     // create a user
-    const [alice, bob] = await Promise.all([
+    const [alice, bob, carol] = await Promise.all([
         makeTestClient({
             context: alicesContext,
+            deviceId: 'alice',
         }),
         makeTestClient({ context: bobsContext }),
+        makeTestClient({ context: carolsContext }),
     ])
 
     return {
         alice,
         bob,
+        carol,
         alicesWallet,
         bobsWallet,
+        carolsWallet,
         alicesContext,
         bobsContext,
+        carolsContext,
         aliceProvider,
         bobProvider,
+        carolProvider,
         aliceSpaceDapp,
         bobSpaceDapp,
-        // Return a third wallet / provider for wallet linking
-        carolsWallet,
-        carolProvider,
         carolSpaceDapp,
     }
 }
@@ -278,7 +287,7 @@ export const makeDonePromise = (): DonePromise => {
     return new DonePromise()
 }
 
-export const sendFlush = async (client: StreamRpcClientType): Promise<void> => {
+export const sendFlush = async (client: StreamRpcClient): Promise<void> => {
     const r = await client.info({ debug: ['flush_cache'] })
     assert(r.graffiti === 'cache flushed')
 }
@@ -419,6 +428,16 @@ export async function expectUserCanJoin(
     wallet: ethers.Wallet,
 ) {
     const joinStart = Date.now()
+
+    // Check that the local evaluation of the user's entitlements for joining the space
+    // passes.
+    const entitledWallet = await spaceDapp.getEntitledWalletForJoiningSpace(
+        spaceId,
+        address,
+        getXchainSupportedRpcUrlsForTesting(),
+    )
+    expect(entitledWallet).toBeDefined()
+
     const { issued } = await spaceDapp.joinSpace(spaceId, address, wallet)
     expect(issued).toBeTrue()
     log(`${name} joined space ${spaceId}`, Date.now() - joinStart)
@@ -640,7 +659,7 @@ export function isValidEthAddress(address: string): boolean {
     return ethAddressRegex.test(address)
 }
 
-export const TIERED_PRICING_ORACLE = 'TieredLogPricingOracle'
+export const TIERED_PRICING_ORACLE = 'TieredLogPricingOracleV2'
 export const FIXED_PRICING = 'FixedPricing'
 
 export const getDynamicPricingModule = (pricingModules: PricingModuleStruct[]) => {

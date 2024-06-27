@@ -15,8 +15,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/contracts"
 	"github.com/river-build/river/core/node/dlog"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"
@@ -147,7 +147,7 @@ type (
 		// activeBlock holds the current block on which the node is active
 		activeBlock atomic.Uint64
 		// contract interacts with the on-chain contract and provide metadata for decoding events
-		contract *contracts.RiverConfigV1Caller
+		contract *river.RiverConfigV1Caller
 	}
 
 	// Settings holds a list of setting values for each type of setting.
@@ -190,7 +190,7 @@ func NewOnChainConfig(
 	appliedBlockNum BlockNumber,
 	chainMonitor ChainMonitor,
 ) (*onChainConfiguration, error) {
-	caller, err := contracts.NewRiverConfigV1Caller(riverRegistry, riverClient)
+	caller, err := river.NewRiverConfigV1Caller(riverRegistry, riverClient)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +217,7 @@ func NewOnChainConfig(
 	// on block sets the current block number that is used to determine the active configuration setting.
 	chainMonitor.OnBlock(cfg.onBlock)
 
-	cfgABI, err := contracts.RiverConfigV1MetaData.GetAbi()
+	cfgABI, err := river.RiverConfigV1MetaData.GetAbi()
 	if err != nil {
 		panic(fmt.Sprintf("RiverConfigV1 ABI invalid: %v", err))
 	}
@@ -225,7 +225,7 @@ func NewOnChainConfig(
 	// each time configuration stored on chain changed the ConfigurationChanged event is raised.
 	// Register a callback that updates the in-memory configuration when this happens.
 	chainMonitor.OnContractWithTopicsEvent(
-		riverRegistry, [][]common.Hash{{cfgABI.Events["ConfigurationChanged"].ID}}, cfg.onConfigChanged)
+		appliedBlockNum+1, riverRegistry, [][]common.Hash{{cfgABI.Events["ConfigurationChanged"].ID}}, cfg.onConfigChanged)
 
 	return cfg, nil
 }
@@ -254,7 +254,7 @@ func (occ *onChainConfiguration) loadFromChain(ctx context.Context, activeBlock 
 		if err != nil {
 			return err
 		}
-		occ.settings.Set(key, setting.BlockNumber, value)
+		occ.settings.Set(ctx, key, setting.BlockNumber, value)
 	}
 
 	return nil
@@ -277,7 +277,7 @@ func (occ *onChainConfiguration) loadMissing(ctx context.Context, activeBlock ui
 			"activeBlock", activeBlock,
 		)
 
-		occ.settings.Set(key, activeBlock, key.defaultValue)
+		occ.settings.Set(ctx, key, activeBlock, key.defaultValue)
 	}
 }
 
@@ -292,7 +292,7 @@ func (occ *onChainConfiguration) ActiveBlock() uint64 {
 func (occ *onChainConfiguration) onConfigChanged(ctx context.Context, event types.Log) {
 	var (
 		log = dlog.FromCtx(ctx)
-		e   contracts.RiverConfigV1ConfigurationChanged
+		e   river.RiverConfigV1ConfigurationChanged
 	)
 	if err := occ.contract.BoundContract().UnpackLog(&e, "ConfigurationChanged", event); err != nil {
 		log.Error("OnChainConfiguration: unable to decode ConfigurationChanged event")
@@ -307,7 +307,7 @@ func (occ *onChainConfiguration) onConfigChanged(ctx context.Context, event type
 	}
 
 	if e.Deleted {
-		occ.settings.Remove(configKey, e.Block)
+		occ.settings.Remove(ctx, configKey, e.Block)
 	} else {
 		value, err := configKey.decode(e.Value)
 		if err != nil {
@@ -315,7 +315,7 @@ func (occ *onChainConfiguration) onConfigChanged(ctx context.Context, event type
 				"tx", event.TxHash, "key", configKey.name, "err", err)
 			return
 		}
-		occ.settings.Set(configKey, e.Block, value)
+		occ.settings.Set(ctx, configKey, e.Block, value)
 	}
 }
 
@@ -399,9 +399,9 @@ func (occ *onChainConfiguration) All() (*AllSettings, error) {
 	return &all, nil
 }
 
-func (ocs *onChainSettings) Remove(key chainKeyImpl, activeOnBlockNumber uint64) {
+func (ocs *onChainSettings) Remove(ctx context.Context, key chainKeyImpl, activeOnBlockNumber uint64) {
 	var (
-		log   = dlog.FromCtx(context.Background()) // lint:ignore context.Background() is fine here
+		log   = dlog.FromCtx(ctx)
 		keyID = key.ID()
 	)
 
@@ -420,9 +420,9 @@ func (ocs *onChainSettings) Remove(key chainKeyImpl, activeOnBlockNumber uint64)
 
 // Set the given value to the settings identified by the given key for the
 // given block number.
-func (ocs *onChainSettings) Set(key chainKeyImpl, activeOnBlockNumber uint64, value any) {
+func (ocs *onChainSettings) Set(ctx context.Context, key chainKeyImpl, activeOnBlockNumber uint64, value any) {
 	var (
-		log   = dlog.FromCtx(context.Background()) // lint:ignore context.Background() is fine here
+		log   = dlog.FromCtx(ctx)
 		keyID = key.ID()
 	)
 

@@ -1,8 +1,8 @@
 import { Err, SyncCookie, SyncOp, SyncStreamsResponse } from '@river-build/proto'
 import { DLogger, dlog, dlogError, shortenHexString } from '@river-build/dlog'
-import { StreamRpcClientType, errorContains } from './makeStreamRpcClient'
+import { StreamRpcClient, errorContains } from './makeStreamRpcClient'
 import { unpackStream, unpackStreamAndCookie } from './sign'
-import { StreamStateEvents } from './streamEvents'
+import { SyncedStreamEvents } from './streamEvents'
 import { SyncedStream } from './syncedStream'
 import TypedEmitter from 'typed-emitter'
 import { isDefined } from './check'
@@ -74,7 +74,7 @@ export class SyncedStreams {
     private readonly logSync: DLogger
     private readonly logError: DLogger
     // clientEmitter is used to proxy the events from the streams to the client
-    private readonly clientEmitter: TypedEmitter<StreamStateEvents>
+    private readonly clientEmitter: TypedEmitter<SyncedStreamEvents>
 
     // Starting the client creates the syncLoop
     // While a syncLoop exists, the client tried to keep the syncLoop connected, and if it reconnects, it
@@ -89,7 +89,7 @@ export class SyncedStreams {
     private syncId?: string
 
     // rpcClient is used to receive sync updates from the server
-    private rpcClient: StreamRpcClientType
+    private rpcClient: StreamRpcClient
     // syncState is used to track the current sync state
     private _syncState: SyncState = SyncState.NotSyncing
     // retry logic
@@ -111,8 +111,8 @@ export class SyncedStreams {
 
     constructor(
         userId: string,
-        rpcClient: StreamRpcClientType,
-        clientEmitter: TypedEmitter<StreamStateEvents>,
+        rpcClient: StreamRpcClient,
+        clientEmitter: TypedEmitter<SyncedStreamEvents>,
     ) {
         this.userId = userId
         this.rpcClient = rpcClient

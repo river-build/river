@@ -12,8 +12,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/river-build/river/core/config"
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/config"
 	"github.com/river-build/river/core/node/infra"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
@@ -1296,6 +1296,20 @@ func (s *PostgresEventStore) createSchemaTx(ctx context.Context, tx pgx.Tx) erro
 	return nil
 }
 
+func getSSLMode(dbURL string) string {
+	if strings.Contains(dbURL, "sslmode=") {
+		startIndex := strings.Index(dbURL, "sslmode=") + len("sslmode=")
+		endIndex := strings.Index(dbURL[startIndex:], "&")
+		if endIndex == -1 {
+			endIndex = len(dbURL)
+		} else {
+			endIndex += startIndex
+		}
+		return dbURL[startIndex:endIndex]
+	}
+	return "disable"
+}
+
 func (s *PostgresEventStore) runMigrations() error {
 	// Run migrations
 	iofsMigrationsDir, err := iofs.New(s.migrationDir, "migrations")
@@ -1304,7 +1318,8 @@ func (s *PostgresEventStore) runMigrations() error {
 	}
 
 	dbUrlWithSchema := strings.Split(s.dbUrl, "?")[0] + fmt.Sprintf(
-		"?sslmode=disable&search_path=%v,public",
+		"?sslmode=%s&search_path=%v,public",
+		getSSLMode(s.dbUrl),
 		s.schemaName,
 	)
 	migration, err := migrate.NewWithSourceInstance("iofs", iofsMigrationsDir, dbUrlWithSchema)

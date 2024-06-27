@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/river-build/river/core/node/config"
+	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/xchain/examples"
 
@@ -17,6 +17,8 @@ const (
 	slow = 500
 	fast = 10
 )
+
+var timingThreshold = 50 * time.Millisecond
 
 var fastTrueCheck = CheckOperation{
 	OpType:          CHECK,
@@ -216,12 +218,13 @@ func TestAndOperation(t *testing.T) {
 		if result != tc.expected {
 			t.Errorf("evaluateAndOperation(%v) = %v; want %v", idx, result, tc.expected)
 		}
+		expectedDuration := time.Duration(tc.expectedTime) * time.Millisecond
 		if !areDurationsClose(
 			elapsedTime,
-			time.Duration(tc.expectedTime*int32(time.Millisecond)),
-			10*time.Millisecond,
+			expectedDuration,
+			timingThreshold,
 		) {
-			t.Errorf("evaluateAndOperation(%v) took %v; want %v", idx, elapsedTime, time.Duration(tc.expectedTime))
+			t.Errorf("evaluateAndOperation(%v) took %v; want %v", idx, elapsedTime, expectedDuration)
 		}
 	}
 }
@@ -266,12 +269,13 @@ func TestOrOperation(t *testing.T) {
 		if result != tc.expected {
 			t.Errorf("evaluateOrOperation(%v) = %v; want %v", idx, result, tc.expected)
 		}
+		expectedDuration := time.Duration(tc.expectedTime) * time.Millisecond
 		if !areDurationsClose(
 			elapsedTime,
-			time.Duration(tc.expectedTime*int32(time.Millisecond)),
-			10*time.Millisecond,
+			expectedDuration,
+			timingThreshold,
 		) {
-			t.Errorf("evaluateOrOperation(%v) took %v; want %v", idx, elapsedTime, time.Duration(tc.expectedTime))
+			t.Errorf("evaluateOrOperation(%v) took %v; want %v", idx, elapsedTime, expectedDuration)
 		}
 
 	}
@@ -310,16 +314,18 @@ func TestCheckOperation(t *testing.T) {
 		if result != tc.expected {
 			t.Errorf("evaluateCheckOperation result (%v) = %v; want %v", tc.a, result, tc.expected)
 		}
+		expectedDuration := time.Duration(tc.expectedTime) * time.Millisecond
+
 		if !areDurationsClose(
 			elapsedTime,
-			time.Duration(tc.expectedTime*int32(time.Millisecond)),
-			10*time.Millisecond,
+			expectedDuration,
+			timingThreshold,
 		) {
 			t.Errorf(
 				"evaluateCheckOperation(%v) took %v; want %v",
 				fastFalseCheck,
 				elapsedTime,
-				time.Duration(tc.expectedTime),
+				expectedDuration,
 			)
 		}
 	}

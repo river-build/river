@@ -1,7 +1,6 @@
 {
-    "name": "@harmony/eslint-config",
-    "version": "1.0.0",
+    "name": "@river-build/eslint-config",
+    "version": "0.0.6",
     "license": "MIT",
-    "private": true,
     "main": "typescript.js"
 }

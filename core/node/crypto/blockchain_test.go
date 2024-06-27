@@ -5,14 +5,13 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/river-build/river/core/node/contracts"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/base/test"
 	. "github.com/river-build/river/core/node/protocol"
@@ -211,7 +210,7 @@ func TestBlockchainMultiMonitor(t *testing.T) {
 	require.NoError(err)
 	defer tc.Close()
 
-	abi, err := contracts.NodeRegistryV1MetaData.GetAbi()
+	abi, err := river.NodeRegistryV1MetaData.GetAbi()
 	require.NoError(err, "node registry abi")
 
 	var (
@@ -228,18 +227,18 @@ func TestBlockchainMultiMonitor(t *testing.T) {
 
 	// ensure that all chain monitor capture the node added event
 	deployer.ChainMonitor.OnContractWithTopicsEvent(
-		tc.RiverRegistryAddress, [][]common.Hash{{nodeAddedTopic}}, bindLogCallback)
+		0, tc.RiverRegistryAddress, [][]common.Hash{{nodeAddedTopic}}, bindLogCallback)
 	chain0.ChainMonitor.OnContractWithTopicsEvent(
-		tc.RiverRegistryAddress, [][]common.Hash{{nodeAddedTopic}}, bindLogCallback)
+		0, tc.RiverRegistryAddress, [][]common.Hash{{nodeAddedTopic}}, bindLogCallback)
 	chain1.ChainMonitor.OnContractWithTopicsEvent(
-		tc.RiverRegistryAddress, [][]common.Hash{{nodeAddedTopic}}, bindLogCallback)
+		0, tc.RiverRegistryAddress, [][]common.Hash{{nodeAddedTopic}}, bindLogCallback)
 
 	// register node that triggers the above registered callbacks
 	pendingTx, err := deployer.TxPool.Submit(ctx, "", func(opts *bind.TransactOpts) (*types.Transaction, error) {
 		return tc.NodeRegistry.RegisterNode(
 			opts, node.Wallet.Address,
 			"http://TestBlockchainMultiMonitor.test",
-			contracts.NodeStatus_NotInitialized)
+			river.NodeStatus_NotInitialized)
 	})
 
 	require.NoError(err, "submit RegisterNode tx")

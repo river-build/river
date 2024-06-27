@@ -48,7 +48,7 @@ import {
     UserDeviceCollection,
     makeSessionKeys,
 } from '@river-build/encryption'
-import { errorContains, getRpcErrorProperty, StreamRpcClientType } from './makeStreamRpcClient'
+import { errorContains, getRpcErrorProperty, StreamRpcClient } from './makeStreamRpcClient'
 import EventEmitter from 'events'
 import TypedEmitter from 'typed-emitter'
 import {
@@ -133,7 +133,7 @@ export class Client
     implements IGroupEncryptionClient
 {
     readonly signerContext: SignerContext
-    readonly rpcClient: StreamRpcClientType
+    readonly rpcClient: StreamRpcClient
     readonly userId: string
     readonly streams: SyncedStreams
 
@@ -165,7 +165,7 @@ export class Client
 
     constructor(
         signerContext: SignerContext,
-        rpcClient: StreamRpcClientType,
+        rpcClient: StreamRpcClient,
         cryptoStore: CryptoStore,
         entitlementsDelegate: EntitlementsDelegate,
         persistenceStoreName?: string,
@@ -389,6 +389,21 @@ export class Client
         } else {
             return undefined
         }
+    }
+
+    async userExists(userId: string): Promise<boolean> {
+        const userStreamId = makeUserStreamId(userId)
+        return this.streamExists(userStreamId)
+    }
+
+    async streamExists(streamId: string | Uint8Array): Promise<boolean> {
+        this.logCall('streamExists?', streamId)
+        const response = await this.rpcClient.getStream({
+            streamId: streamIdAsBytes(streamId),
+            optional: true,
+        })
+        this.logCall('streamExists=', streamId, response.stream)
+        return response.stream !== undefined
     }
 
     private async createUserStream(
