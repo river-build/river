@@ -51,6 +51,10 @@ func SignHash(hash [32]byte, privateKey *ecdsa.PrivateKey) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Modify the V value for compatibility with Ethereum
+	signature[64] += 27
+
 	return signature, nil
 }
 
