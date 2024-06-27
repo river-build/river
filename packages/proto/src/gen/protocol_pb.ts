@@ -1662,6 +1662,18 @@ export class ChannelPayload extends Message<ChannelPayload> {
      */
     value: ChannelPayload_Redaction;
     case: "redaction";
+  } | {
+    /**
+     * @generated from field: river.ChannelPayload.Pin pin = 4;
+     */
+    value: ChannelPayload_Pin;
+    case: "pin";
+  } | {
+    /**
+     * @generated from field: river.ChannelPayload.Unpin unpin = 5;
+     */
+    value: ChannelPayload_Unpin;
+    case: "unpin";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<ChannelPayload>) {
@@ -1675,6 +1687,8 @@ export class ChannelPayload extends Message<ChannelPayload> {
     { no: 1, name: "inception", kind: "message", T: ChannelPayload_Inception, oneof: "content" },
     { no: 2, name: "message", kind: "message", T: EncryptedData, oneof: "content" },
     { no: 3, name: "redaction", kind: "message", T: ChannelPayload_Redaction, oneof: "content" },
+    { no: 4, name: "pin", kind: "message", T: ChannelPayload_Pin, oneof: "content" },
+    { no: 5, name: "unpin", kind: "message", T: ChannelPayload_Unpin, oneof: "content" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChannelPayload {
@@ -1705,6 +1719,11 @@ export class ChannelPayload_Snapshot extends Message<ChannelPayload_Snapshot> {
    */
   inception?: ChannelPayload_Inception;
 
+  /**
+   * @generated from field: repeated river.ChannelPayload.Pin pins = 2;
+   */
+  pins: ChannelPayload_Pin[] = [];
+
   constructor(data?: PartialMessage<ChannelPayload_Snapshot>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1714,6 +1733,7 @@ export class ChannelPayload_Snapshot extends Message<ChannelPayload_Snapshot> {
   static readonly typeName = "river.ChannelPayload.Snapshot";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "inception", kind: "message", T: ChannelPayload_Inception },
+    { no: 2, name: "pins", kind: "message", T: ChannelPayload_Pin, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChannelPayload_Snapshot {
@@ -1816,6 +1836,86 @@ export class ChannelPayload_Redaction extends Message<ChannelPayload_Redaction> 
 
   static equals(a: ChannelPayload_Redaction | PlainMessage<ChannelPayload_Redaction> | undefined, b: ChannelPayload_Redaction | PlainMessage<ChannelPayload_Redaction> | undefined): boolean {
     return proto3.util.equals(ChannelPayload_Redaction, a, b);
+  }
+}
+
+/**
+ * @generated from message river.ChannelPayload.Pin
+ */
+export class ChannelPayload_Pin extends Message<ChannelPayload_Pin> {
+  /**
+   * @generated from field: bytes event_id = 1;
+   */
+  eventId = new Uint8Array(0);
+
+  /**
+   * @generated from field: river.StreamEvent event = 2;
+   */
+  event?: StreamEvent;
+
+  constructor(data?: PartialMessage<ChannelPayload_Pin>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "river.ChannelPayload.Pin";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "event_id", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 2, name: "event", kind: "message", T: StreamEvent },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChannelPayload_Pin {
+    return new ChannelPayload_Pin().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ChannelPayload_Pin {
+    return new ChannelPayload_Pin().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ChannelPayload_Pin {
+    return new ChannelPayload_Pin().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ChannelPayload_Pin | PlainMessage<ChannelPayload_Pin> | undefined, b: ChannelPayload_Pin | PlainMessage<ChannelPayload_Pin> | undefined): boolean {
+    return proto3.util.equals(ChannelPayload_Pin, a, b);
+  }
+}
+
+/**
+ * @generated from message river.ChannelPayload.Unpin
+ */
+export class ChannelPayload_Unpin extends Message<ChannelPayload_Unpin> {
+  /**
+   * @generated from field: bytes event_id = 1;
+   */
+  eventId = new Uint8Array(0);
+
+  constructor(data?: PartialMessage<ChannelPayload_Unpin>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "river.ChannelPayload.Unpin";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "event_id", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChannelPayload_Unpin {
+    return new ChannelPayload_Unpin().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ChannelPayload_Unpin {
+    return new ChannelPayload_Unpin().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ChannelPayload_Unpin {
+    return new ChannelPayload_Unpin().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ChannelPayload_Unpin | PlainMessage<ChannelPayload_Unpin> | undefined, b: ChannelPayload_Unpin | PlainMessage<ChannelPayload_Unpin> | undefined): boolean {
+    return proto3.util.equals(ChannelPayload_Unpin, a, b);
   }
 }
 
