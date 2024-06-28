@@ -31,6 +31,7 @@ import { evaluateOperationsForEntitledWallet, ruleDataToOperations } from '../en
 import { RuleEntitlementShim } from './RuleEntitlementShim'
 import { PlatformRequirements } from './PlatformRequirements'
 import { EntitlementDataStructOutput } from './IEntitlementDataQueryableShim'
+import { EntitlementCache, Keyable } from '../EntitlementCache'
 
 const logger = dlogger('csb:SpaceDapp:debug')
 
@@ -39,6 +40,53 @@ type EntitlementData = {
     ruleEntitlement: IRuleEntitlement.RuleDataStruct[] | undefined
     userEntitlement: string[] | undefined
 }
+
+class EntitlementRequest implements Keyable {
+    spaceId: string
+    channelId: string
+    userId: string
+    permission: Permission
+    constructor(spaceId: string, channelId: string, userId: string, permission: Permission) {
+        this.spaceId = spaceId
+        this.channelId = channelId
+        this.userId = userId
+        this.permission = permission
+    }
+    toKey(): string {
+        return `{spaceId:${this.spaceId},channelId:${this.channelId},permission:${this.permission}}`
+    }
+}
+
+function newSpaceEntitlementEvaluationRequest(
+    spaceId: string,
+    userId: string,
+    permission: Permission,
+): EntitlementRequest {
+    return new EntitlementRequest(spaceId, '', userId, permission)
+}
+
+function newChannelEntitlementEvaluationRequest(
+    spaceId: string,
+    channelId: string,
+    userId: string,
+    permission: Permission,
+): EntitlementRequest {
+    return new EntitlementRequest(spaceId, channelId, userId, permission)
+}
+
+function newSpaceEntitlementRequest(spaceId: string, permission: Permission): EntitlementRequest {
+    return new EntitlementRequest(spaceId, '', '', permission)
+}
+
+function newChannelEntitlementRequest(
+    spaceId: string,
+    channelId: string,
+    permission: Permission,
+): EntitlementRequest {
+    return new EntitlementRequest(spaceId, channelId, '', permission)
+}
+
+type EntitledWallet = string | undefined
 export class SpaceDapp implements ISpaceDapp {
     public readonly config: BaseChainConfig
     public readonly provider: ethers.providers.Provider
@@ -46,6 +94,10 @@ export class SpaceDapp implements ISpaceDapp {
     public readonly pricingModules: PricingModules
     public readonly walletLink: WalletLink
     public readonly platformRequirements: PlatformRequirements
+
+    public readonly entitlementCache: EntitlementCache<EntitlementRequest, EntitlementData[]>
+    public readonly entitledWalletCache: EntitlementCache<EntitlementRequest, EntitledWallet>
+    public readonly entitlementEvaluationCache: EntitlementCache<EntitlementRequest, boolean>
 
     constructor(config: BaseChainConfig, provider: ethers.providers.Provider) {
         this.config = config
@@ -64,6 +116,14 @@ export class SpaceDapp implements ISpaceDapp {
         if ('pollingInterval' in provider && typeof provider.pollingInterval === 'number') {
             provider.pollingInterval = 250
         }
+
+        const cacheOpts = {
+            positiveCacheTTLSeconds: isJest() ? 5 : 15 * 60,
+            negativeCacheTTLSeconds: 2,
+        }
+        this.entitlementCache = new EntitlementCache(cacheOpts)
+        this.entitledWalletCache = new EntitlementCache(cacheOpts)
+        this.entitlementEvaluationCache = new EntitlementCache(cacheOpts)
     }
 
     public async addRoleToChannel(
@@ -360,6 +420,23 @@ export class SpaceDapp implements ISpaceDapp {
         spaceId: string,
         permission: Permission,
     ): Promise<EntitlementData[]> {
+        const { value } = await this.entitlementCache.executeUsingCache(
+            newSpaceEntitlementRequest(spaceId, permission),
+            async (keyable) => {
+                const request = keyable as EntitlementRequest
+                return await this.getEntitlementsForPermissionUncached(
+                    request.spaceId,
+                    request.permission,
+                )
+            },
+        )
+        return value
+    }
+
+    private async getEntitlementsForPermissionUncached(
+        spaceId: string,
+        permission: Permission,
+    ): Promise<EntitlementData[]> {
         const space = this.getSpace(spaceId)
         if (!space) {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
@@ -376,6 +453,25 @@ export class SpaceDapp implements ISpaceDapp {
         channelId: string,
         permission: Permission,
     ): Promise<EntitlementData[]> {
+        const { value } = await this.entitlementCache.executeUsingCache(
+            newChannelEntitlementRequest(spaceId, channelId, permission),
+            async (keyable) => {
+                const request = keyable as EntitlementRequest
+                return await this.getChannelEntitlementsForPermissionUncached(
+                    request.spaceId,
+                    request.channelId,
+                    request.permission,
+                )
+            },
+        )
+        return value
+    }
+
+    private async getChannelEntitlementsForPermissionUncached(
+        spaceId: string,
+        channelId: string,
+        permission: Permission,
+    ): Promise<EntitlementData[]> {
         const space = this.getSpace(spaceId)
         if (!space) {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
@@ -386,7 +482,6 @@ export class SpaceDapp implements ISpaceDapp {
                 channelId,
                 permission,
             )
-
         return await this.decodeEntitlementData(space, entitlementData)
     }
 
@@ -408,7 +503,7 @@ export class SpaceDapp implements ISpaceDapp {
         allWallets: string[],
         entitlements: EntitlementData[],
         supportedXChainRpcUrls: string[],
-    ): Promise<string | undefined> {
+    ): Promise<EntitledWallet> {
         const isEveryOneSpace = entitlements.some((e) =>
             e.userEntitlement?.includes(EVERYONE_ADDRESS),
         )
@@ -462,7 +557,26 @@ export class SpaceDapp implements ISpaceDapp {
         spaceId: string,
         rootKey: string,
         supportedXChainRpcUrls: string[],
-    ): Promise<string | undefined> {
+    ): Promise<EntitledWallet> {
+        const { value } = await this.entitledWalletCache.executeUsingCache(
+            newSpaceEntitlementEvaluationRequest(spaceId, rootKey, Permission.JoinSpace),
+            async (keyable) => {
+                const request = keyable as EntitlementRequest
+                return await this.getEntitledWalletForJoiningSpaceUncached(
+                    request.spaceId,
+                    request.userId,
+                    supportedXChainRpcUrls,
+                )
+            },
+        )
+        return value
+    }
+
+    private async getEntitledWalletForJoiningSpaceUncached(
+        spaceId: string,
+        rootKey: string,
+        supportedXChainRpcUrls: string[],
+    ): Promise<EntitledWallet> {
         const allWallets = await this.getLinkedWallets(rootKey)
 
         const space = this.getSpace(spaceId)
@@ -498,6 +612,25 @@ export class SpaceDapp implements ISpaceDapp {
         user: string,
         permission: Permission,
     ): Promise<boolean> {
+        const { value } = await this.entitlementEvaluationCache.executeUsingCache(
+            newSpaceEntitlementEvaluationRequest(spaceId, user, permission),
+            async (keyable: Keyable) => {
+                const request = keyable as EntitlementRequest
+                return await this.isEntitledToSpaceUncached(
+                    request.spaceId,
+                    request.userId,
+                    request.permission,
+                )
+            },
+        )
+        return value
+    }
+
+    public async isEntitledToSpaceUncached(
+        spaceId: string,
+        user: string,
+        permission: Permission,
+    ): Promise<boolean> {
         const space = this.getSpace(spaceId)
         if (!space) {
             return false
@@ -510,6 +643,29 @@ export class SpaceDapp implements ISpaceDapp {
     }
 
     public async isEntitledToChannel(
+        spaceId: string,
+        channelNetworkId: string,
+        user: string,
+        permission: Permission,
+        supportedXChainRpcUrls: string[] = [],
+    ): Promise<boolean> {
+        const { value } = await this.entitlementEvaluationCache.executeUsingCache(
+            newChannelEntitlementEvaluationRequest(spaceId, channelNetworkId, user, permission),
+            async (keyable: Keyable) => {
+                const request = keyable as EntitlementRequest
+                return await this.isEntitledToChannelUncached(
+                    request.spaceId,
+                    request.channelId,
+                    request.userId,
+                    request.permission,
+                    supportedXChainRpcUrls,
+                )
+            },
+        )
+        return value
+    }
+
+    public async isEntitledToChannelUncached(
         spaceId: string,
         channelNetworkId: string,
         user: string,
