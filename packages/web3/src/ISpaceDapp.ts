@@ -25,6 +25,8 @@ export interface CreateSpaceParams {
     spaceMetadata: string
     channelName: string
     membership: MembershipStruct
+    shortDescription?: string
+    longDescription?: string
 }
 
 export interface UpdateChannelParams {
@@ -151,6 +153,15 @@ export interface ISpaceDapp {
     ) => Promise<TransactionType>
     updateRole: (
         params: UpdateRoleParams,
+        signer: SignerType,
+        txnOpts?: TransactionOpts,
+    ) => Promise<TransactionType>
+    updateSpaceInfo: (
+        spaceId: string,
+        name: string,
+        shortDescription: string,
+        longDescription: string,
+        uri: string,
         signer: SignerType,
         txnOpts?: TransactionOpts,
     ) => Promise<TransactionType>

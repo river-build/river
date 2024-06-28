@@ -151,6 +151,8 @@ export class SpaceDapp implements ISpaceDapp {
             channel: {
                 metadata: params.channelName || '',
             },
+            shortDescription: params.shortDescription ?? '',
+            longDescription: params.longDescription ?? '',
         }
         return wrapTransaction(
             () => this.spaceRegistrar.SpaceArchitect.write(signer).createSpace(spaceInfo),
@@ -287,6 +289,8 @@ export class SpaceDapp implements ISpaceDapp {
             name: (spaceInfo.name as string) ?? '',
             owner,
             disabled,
+            shortDescription: (spaceInfo.shortDescription as string) ?? '',
+            longDescription: (spaceInfo.longDescription as string) ?? '',
         }
     }
 
@@ -304,7 +308,39 @@ export class SpaceDapp implements ISpaceDapp {
         // update the space name
         return wrapTransaction(
             () =>
-                space.SpaceOwner.write(signer).updateSpaceInfo(space.Address, name, spaceInfo.uri),
+                space.SpaceOwner.write(signer).updateSpaceInfo(
+                    space.Address,
+                    name,
+                    spaceInfo.uri,
+                    spaceInfo.shortDescription,
+                    spaceInfo.longDescription,
+                ),
+            txnOpts,
+        )
+    }
+
+    public async updateSpaceInfo(
+        spaceId: string,
+        name: string,
+        uri: string,
+        shortDescription: string,
+        longDescription: string,
+        signer: ethers.Signer,
+        txnOpts?: TransactionOpts,
+    ): Promise<ContractTransaction> {
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+        return wrapTransaction(
+            () =>
+                space.SpaceOwner.write(signer).updateSpaceInfo(
+                    space.Address,
+                    name,
+                    uri,
+                    shortDescription,
+                    longDescription,
+                ),
             txnOpts,
         )
     }
