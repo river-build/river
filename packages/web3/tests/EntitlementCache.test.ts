@@ -2,7 +2,7 @@
  * @group main
  */
 
-import { EntitlementCache, Keyable } from '../src/EntitlementsCache'
+import { EntitlementCache, Keyable } from '../src/EntitlementCache'
 
 class Key implements Keyable {
     private readonly key: string
@@ -107,35 +107,37 @@ describe('EntitlementsCacheTests', () => {
             return Promise.resolve(true)
         }
 
-        const { value, cacheHit } = await cache.executeUsingCache(new Key('key'), onMiss)
+        var { value, cacheHit } = await cache.executeUsingCache(new Key('key'), onMiss)
         expect(value).toBe(true)
         expect(cacheHit).toBe(false)
 
-        setTimeout(async () => {
-            var { value, cacheHit } = await cache.executeUsingCache(new Key('key'), onMiss)
-            expect(value).toBe(true)
-            expect(cacheHit).toBe(false)
-        }, 1000)
+        // Wait 5 seconds for the positive auth cache to expire
+        await new Promise((f) => setTimeout(f, 5000))
+
+        var { value, cacheHit } = await cache.executeUsingCache(new Key('key'), onMiss)
+        expect(value).toBe(true)
+        expect(cacheHit).toBe(false)
     })
 
     test('negative cache values expire after ttl', async () => {
         const cache = new EntitlementCache<Key, Boolean>({
-            positiveCacheTTLSeconds: 1,
-            negativeCacheTTLSeconds: 10,
+            positiveCacheTTLSeconds: 10,
+            negativeCacheTTLSeconds: 1,
         })
 
         const onMiss = (key: Keyable): Promise<Boolean> => {
             return Promise.resolve(false)
         }
 
-        const { value, cacheHit } = await cache.executeUsingCache(new Key('key'), onMiss)
+        var { value, cacheHit } = await cache.executeUsingCache(new Key('key'), onMiss)
         expect(value).toBe(false)
         expect(cacheHit).toBe(false)
 
-        setTimeout(async () => {
-            var { value, cacheHit } = await cache.executeUsingCache(new Key('key'), onMiss)
-            expect(value).toBe(false)
-            expect(cacheHit).toBe(false)
-        }, 1000)
+        // Wait 5 seconds for the positive auth cache to expire
+        await new Promise((f) => setTimeout(f, 1000))
+
+        var { value, cacheHit } = await cache.executeUsingCache(new Key('key'), onMiss)
+        expect(value).toBe(false)
+        expect(cacheHit).toBe(false)
     })
 })
