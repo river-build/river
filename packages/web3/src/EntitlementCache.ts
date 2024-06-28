@@ -35,8 +35,8 @@ export class EntitlementCache<K extends Keyable, V> {
     }
 
     async executeUsingCache(
-        keyable: Keyable,
-        onCacheMiss: (k: Keyable) => Promise<V>,
+        keyable: K,
+        onCacheMiss: (k: K) => Promise<V>,
     ): Promise<CacheResult<V>> {
         const key = keyable.toKey()
         const negativeCacheResult = this.negativeCache.get(key)

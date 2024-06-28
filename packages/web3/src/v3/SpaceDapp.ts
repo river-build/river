@@ -422,8 +422,7 @@ export class SpaceDapp implements ISpaceDapp {
     ): Promise<EntitlementData[]> {
         const { value } = await this.entitlementCache.executeUsingCache(
             newSpaceEntitlementRequest(spaceId, permission),
-            async (keyable) => {
-                const request = keyable as EntitlementRequest
+            async (request) => {
                 return await this.getEntitlementsForPermissionUncached(
                     request.spaceId,
                     request.permission,
@@ -455,8 +454,7 @@ export class SpaceDapp implements ISpaceDapp {
     ): Promise<EntitlementData[]> {
         const { value } = await this.entitlementCache.executeUsingCache(
             newChannelEntitlementRequest(spaceId, channelId, permission),
-            async (keyable) => {
-                const request = keyable as EntitlementRequest
+            async (request) => {
                 return await this.getChannelEntitlementsForPermissionUncached(
                     request.spaceId,
                     request.channelId,
@@ -560,8 +558,7 @@ export class SpaceDapp implements ISpaceDapp {
     ): Promise<EntitledWallet> {
         const { value } = await this.entitledWalletCache.executeUsingCache(
             newSpaceEntitlementEvaluationRequest(spaceId, rootKey, Permission.JoinSpace),
-            async (keyable) => {
-                const request = keyable as EntitlementRequest
+            async (request) => {
                 return await this.getEntitledWalletForJoiningSpaceUncached(
                     request.spaceId,
                     request.userId,
@@ -614,8 +611,7 @@ export class SpaceDapp implements ISpaceDapp {
     ): Promise<boolean> {
         const { value } = await this.entitlementEvaluationCache.executeUsingCache(
             newSpaceEntitlementEvaluationRequest(spaceId, user, permission),
-            async (keyable: Keyable) => {
-                const request = keyable as EntitlementRequest
+            async (request) => {
                 return await this.isEntitledToSpaceUncached(
                     request.spaceId,
                     request.userId,
@@ -651,8 +647,7 @@ export class SpaceDapp implements ISpaceDapp {
     ): Promise<boolean> {
         const { value } = await this.entitlementEvaluationCache.executeUsingCache(
             newChannelEntitlementEvaluationRequest(spaceId, channelNetworkId, user, permission),
-            async (keyable: Keyable) => {
-                const request = keyable as EntitlementRequest
+            async (request) => {
                 return await this.isEntitledToChannelUncached(
                     request.spaceId,
                     request.channelId,
