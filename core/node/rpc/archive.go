@@ -51,14 +51,6 @@ func (s *Service) startArchiveMode(once bool) error {
 		return AsRiverError(err).Message("Failed to init archiver").LogError(s.defaultLogger)
 	}
 
-	go s.riverChain.ChainMonitor.RunWithBlockPeriod(
-		s.serverCtx,
-		s.riverChain.Client,
-		s.riverChain.InitialBlockNum,
-		time.Duration(s.riverChain.Config.BlockTimeMs)*time.Millisecond,
-		s.metrics,
-	)
-
 	s.registerDebugHandlers(s.config.EnableDebugEndpoints)
 
 	s.SetStatus("OK")

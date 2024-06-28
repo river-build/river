@@ -58,6 +58,7 @@ type (
 
 	chainMonitor struct {
 		mu        sync.Mutex
+		started   bool
 		builder   chainMonitorBuilder
 		fromBlock *big.Int
 	}
@@ -180,6 +181,13 @@ func (cm *chainMonitor) RunWithBlockPeriod(
 	blockPeriod time.Duration,
 	metrics infra.MetricsFactory,
 ) {
+	cm.mu.Lock()
+	if cm.started {
+		panic("chain monitor already started")
+	}
+	cm.started = true
+	cm.mu.Unlock()
+
 	var (
 		chainBaseFee = metrics.NewGaugeVecEx(
 			"chain_monitor_base_fee_wei", "Current EIP-1559 base fee as obtained from the block header",
