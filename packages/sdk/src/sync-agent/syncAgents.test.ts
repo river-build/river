@@ -8,6 +8,7 @@ import { TestUser } from './utils/testUser.test'
 const logger = dlogger('csb:test:syncAgents')
 
 describe('syncAgents.test.ts', () => {
+    logger.log('start')
     let bobUser: TestUser
     let aliceUser: TestUser
     let bob: SyncAgent
@@ -26,10 +27,12 @@ describe('syncAgents.test.ts', () => {
     })
 
     test('syncAgents', async () => {
-        logger.log('syncAgents')
         await Promise.all([bob.start(), alice.start()])
 
         const { spaceId } = await bob.user.createSpace({ spaceName: 'BlastOff' }, bobUser.signer)
-        expect(spaceId).toBeDefined()
+        expect(bob.user.streams.memberships.isJoined(spaceId)).toBe(true)
+
+        await alice.user.joinSpace(spaceId, aliceUser.signer)
+        expect(alice.user.streams.memberships.isJoined(spaceId)).toBe(true)
     })
 })
