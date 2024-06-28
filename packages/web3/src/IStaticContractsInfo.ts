@@ -2,14 +2,8 @@ import DeploymentsJson from '@river-build/generated/config/deployments.json' ass
 
 import { Address } from './ContractTypes'
 
-export enum ContractVersion {
-    v3 = 'v3',
-    dev = 'dev',
-}
-
 export interface BaseChainConfig {
     chainId: number
-    contractVersion: ContractVersion
     addresses: {
         spaceFactory: Address
         spaceOwner: Address
@@ -17,11 +11,11 @@ export interface BaseChainConfig {
         mockNFT?: Address // mockErc721aAddress
         member?: Address // testGatingTokenAddress - For tesing token gating scenarios
     }
+    executionClient?: 'geth_dev' | undefined
 }
 
 export interface RiverChainConfig {
     chainId: number
-    contractVersion: ContractVersion
     addresses: {
         riverRegistry: Address
     }

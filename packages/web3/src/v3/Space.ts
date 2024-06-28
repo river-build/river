@@ -31,7 +31,7 @@ import { IRuleEntitlement } from '.'
 import { IBanningShim } from './IBanningShim'
 import { IERC721AQueryableShim } from './IERC721AQueryableShim'
 import { IEntitlementDataQueryableShim } from './IEntitlementDataQueryableShim'
-import { BaseChainConfig, ContractVersion } from '../IStaticContractsInfo'
+import { BaseChainConfig } from '../IStaticContractsInfo'
 import { parseChannelMetadataJSON } from '../Utils'
 import { IPrepayShim } from './IPrepayShim'
 
@@ -43,7 +43,6 @@ export class Space {
     private readonly address: string
     private readonly addressToEntitlement: AddressToEntitlement = {}
     private readonly spaceId: string
-    private readonly version: ContractVersion
     public readonly provider: ethers.providers.Provider | undefined
     private readonly channel: IChannelShim
     private readonly entitlements: IEntitlementsShim
@@ -66,31 +65,22 @@ export class Space {
     ) {
         this.address = address
         this.spaceId = spaceId
-        this.version = config.contractVersion
         this.provider = provider
         //
         // If you add a new contract shim, make sure to add it in getAllShims()
         //
-        this.channel = new IChannelShim(address, config.contractVersion, provider)
-        this.entitlements = new IEntitlementsShim(address, config.contractVersion, provider)
-        this.multicall = new IMulticallShim(address, config.contractVersion, provider)
-        this.ownable = new OwnableFacetShim(address, config.contractVersion, provider)
-        this.pausable = new TokenPausableFacetShim(address, config.contractVersion, provider)
-        this.roles = new IRolesShim(address, config.contractVersion, provider)
-        this.spaceOwner = new ISpaceOwnerShim(
-            config.addresses.spaceOwner,
-            config.contractVersion,
-            provider,
-        )
-        this.membership = new IMembershipShim(address, config.contractVersion, provider)
-        this.banning = new IBanningShim(address, config.contractVersion, provider)
-        this.erc721AQueryable = new IERC721AQueryableShim(address, config.contractVersion, provider)
-        this.entitlementDataQueryable = new IEntitlementDataQueryableShim(
-            address,
-            config.contractVersion,
-            provider,
-        )
-        this.prepay = new IPrepayShim(address, config.contractVersion, provider)
+        this.channel = new IChannelShim(address, provider)
+        this.entitlements = new IEntitlementsShim(address, provider)
+        this.multicall = new IMulticallShim(address, provider)
+        this.ownable = new OwnableFacetShim(address, provider)
+        this.pausable = new TokenPausableFacetShim(address, provider)
+        this.roles = new IRolesShim(address, provider)
+        this.spaceOwner = new ISpaceOwnerShim(config.addresses.spaceOwner, provider)
+        this.membership = new IMembershipShim(address, provider)
+        this.banning = new IBanningShim(address, provider)
+        this.erc721AQueryable = new IERC721AQueryableShim(address, provider)
+        this.entitlementDataQueryable = new IEntitlementDataQueryableShim(address, provider)
+        this.prepay = new IPrepayShim(address, provider)
     }
 
     private getAllShims() {
@@ -319,14 +309,12 @@ export class Space {
                 case EntitlementModuleType.UserEntitlement:
                     this.addressToEntitlement[address] = new UserEntitlementShim(
                         address,
-                        this.version,
                         this.provider,
                     )
                     break
                 case EntitlementModuleType.RuleEntitlement:
                     this.addressToEntitlement[address] = new RuleEntitlementShim(
                         address,
-                        this.version,
                         this.provider,
                     )
                     break
