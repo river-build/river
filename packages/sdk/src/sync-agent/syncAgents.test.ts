@@ -63,7 +63,6 @@ describe('syncAgents.test.ts', () => {
         expect(channel.timeline.events.value.find((e) => e.text === 'Hello, World!')).toBeDefined()
 
         // sleep for a bit, then check if alice got the message
-        await new Promise((resolve) => setTimeout(resolve, 3000))
         const aliceChannel = alice.spaces.getSpace(spaceId).getChannel(channel.data.id)
         logger.log(aliceChannel.timeline.events.value)
         await waitFor(
@@ -71,7 +70,7 @@ describe('syncAgents.test.ts', () => {
                 expect(
                     aliceChannel.timeline.events.value.find((e) => e.text === 'Hello, World!'),
                 ).toBeDefined(),
-            { timeoutMS: 15000 },
+            { timeoutMS: 10000 },
         )
     })
 })

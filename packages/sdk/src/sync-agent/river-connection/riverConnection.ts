@@ -5,7 +5,7 @@ import { Identifiable, LoadPriority, Store } from '../../store/store'
 import { dlogger } from '@river-build/dlog'
 import { PromiseQueue } from '../utils/promiseQueue'
 import { CryptoStore, EntitlementsDelegate } from '@river-build/encryption'
-import { Client, ClientEvents } from '../../client'
+import { Client } from '../../client'
 import { SignerContext } from '../../signerContext'
 import {
     PersistedModel,
@@ -13,7 +13,6 @@ import {
     persistedObservable,
 } from '../../observable/persistedObservable'
 import { userIdFromAddress } from '../../id'
-import TypedEmitter from 'typed-emitter'
 import { TransactionalClient } from './models/transactionalClient'
 import { Observable } from '../../observable/observable'
 import { AuthStatus } from './models/authStatus'

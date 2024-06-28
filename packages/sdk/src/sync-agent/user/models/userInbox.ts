@@ -5,7 +5,7 @@ import { PersistedObservable, persistedObservable } from '../../../observable/pe
 import { makeUserInboxStreamId } from '../../../id'
 import { RiverConnection } from '../../river-connection/riverConnection'
 import { Client } from '../../../client'
-import { StreamStateView } from '../../../streamStateView'
+import { IStreamStateView } from '../../../streamStateView'
 import { isDefined } from '../../../check'
 
 const logger = dlogger('csb:userInbox')
@@ -72,7 +72,7 @@ export class UserInbox extends PersistedObservable<UserInboxModel> {
         }
     }
 
-    private initialize(deviceId: string, streamView: StreamStateView) {
+    private initialize(deviceId: string, streamView: IStreamStateView) {
         this.setData({
             initialized: true,
             deviceId,

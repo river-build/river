@@ -15,14 +15,14 @@ export class Timeline {
     }
 
     initialize(stream: Stream) {
-        // we don't remove these since they are needed for the lifetime of the stream
-        // and are removed internally if the stream is ever re-initialized
+        stream.off('streamUpdated', this.onStreamUpdated)
+        stream.off('streamLocalEventUpdated', this.onStreamLocalEventUpdated)
         stream.on('streamUpdated', this.onStreamUpdated)
         stream.on('streamLocalEventUpdated', this.onStreamLocalEventUpdated)
         const events = stream.view.timeline
             .map((event) => toEvent(event, this.userId))
             .filter((event) => this.filterFn(event, stream.view.contentKind))
-        this.appendEvents(events, this.userId)
+        this.events.setValue(events)
     }
 
     private onStreamUpdated = (_streamId: string, kind: SnapshotCaseType, change: StreamChange) => {

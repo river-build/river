@@ -25,12 +25,16 @@ export class Bot {
         return this.web3Provider.signer
     }
 
-    async makeSyncAgent() {
+    async makeSyncAgent(opts?: { deviceId?: string }) {
         await this.web3Provider.fundWallet()
         const signerContext = await makeSignerContext(this.rootWallet, this.delegateWallet, {
             days: 1,
         })
-        const syncAgent = new SyncAgent({ context: signerContext, riverConfig: this.riverConfig })
+        const syncAgent = new SyncAgent({
+            context: signerContext,
+            riverConfig: this.riverConfig,
+            deviceId: opts?.deviceId,
+        })
         return syncAgent
     }
 }

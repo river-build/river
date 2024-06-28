@@ -68,7 +68,7 @@ export class Store {
     }
 
     newTransactionGroup(name: string) {
-        log(`newTransactionGroup "${name}"`)
+        // log(`newTransactionGroup "${name}"`)
         check(
             this.transactionGroup === undefined,
             `transaction already in progress named: ${this.transactionGroup?.name}`,
@@ -85,7 +85,7 @@ export class Store {
         this.transactionGroup = undefined
         // if no ops, return
         if (!tGroup.hasOps) {
-            log(`commitTransaction "${tGroup.name}" skipped (empty)`)
+            // log(`commitTransaction "${tGroup.name}" skipped (empty)`)
             return
         }
         log(
