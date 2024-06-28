@@ -1,4 +1,4 @@
-import { Identifiable, Store } from '../../store/store'
+import { Identifiable, LoadPriority, Store } from '../../store/store'
 import {
     PersistedModel,
     PersistedObservable,
@@ -23,7 +23,7 @@ export class Spaces extends PersistedObservable<SpacesModel> {
     private riverConnection: RiverConnection
 
     constructor(riverConnection: RiverConnection, user: User, store: Store) {
-        super({ id: '0', spaceIds: [] }, store)
+        super({ id: '0', spaceIds: [] }, store, LoadPriority.high)
         this.riverConnection = riverConnection
         this.user = user
     }
@@ -45,16 +45,18 @@ export class Spaces extends PersistedObservable<SpacesModel> {
         if (userData.status === 'loading') {
             return
         }
-        const spaceIds = Object.values(userData.data.memberships)
-            .filter((m) => isSpaceStreamId(m.streamId) && m.op === MembershipOp.SO_JOIN)
-            .map((m) => m.streamId)
+        this.store.withTransaction('spaces::onUserDataChanged', () => {
+            const spaceIds = Object.values(userData.data.memberships)
+                .filter((m) => isSpaceStreamId(m.streamId) && m.op === MembershipOp.SO_JOIN)
+                .map((m) => m.streamId)
 
-        this.setData({ spaceIds })
+            this.setData({ spaceIds })
 
-        for (const spaceId of spaceIds) {
-            if (!this.spaces[spaceId]) {
-                this.spaces[spaceId] = new Space(spaceId, this.riverConnection, this.store)
+            for (const spaceId of spaceIds) {
+                if (!this.spaces[spaceId]) {
+                    this.spaces[spaceId] = new Space(spaceId, this.riverConnection, this.store)
+                }
             }
-        }
+        })
     }
 }

@@ -88,25 +88,21 @@ export class PersistedObservable<T extends Identifiable>
         const newData = { ...this.data, ...newDataPartial }
         check(newData.id === this.data.id, 'id mismatch')
         super.setValue({ status: 'saving', data: newData })
-        this.store
-            .withTransaction(`update-${this.tableName}:${this.data.id}`, () => {
-                this.store.save(
-                    this.tableName,
-                    newData,
-                    () => {
-                        super.setValue({ status: 'saved', data: newData })
-                    },
-                    (e) => {
-                        super.setValue({ status: 'error', data: newData, error: e })
-                    },
-                    async () => {
-                        await this.onSaved()
-                    },
-                )
-            })
-            .catch((e) => {
-                super.setValue({ status: 'error', data: this.data, error: e })
-            })
+        this.store.withTransaction(`update-${this.tableName}:${this.data.id}`, () => {
+            this.store.save(
+                this.tableName,
+                newData,
+                () => {
+                    super.setValue({ status: 'saved', data: newData })
+                },
+                (e) => {
+                    super.setValue({ status: 'error', data: newData, error: e })
+                },
+                async () => {
+                    await this.onSaved()
+                },
+            )
+        })
     }
 
     protected async onLoaded() {

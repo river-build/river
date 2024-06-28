@@ -111,13 +111,16 @@ export class Store {
         log(`commitTransaction "${tGroup.name}" done`, 'elapsedMs:', Date.now() - time)
     }
 
-    async withTransaction(name: string, fn: () => void) {
+    withTransaction(name: string, fn: () => void) {
         if (this.transactionGroup !== undefined) {
             fn()
         } else {
             this.newTransactionGroup(name)
             fn()
-            await this.commitTransaction()
+            this.commitTransaction().catch((e) => {
+                log(`uncaught commitTransaction error in groun ${name}`, e)
+                throw e
+            })
         }
     }
 
