@@ -13,10 +13,11 @@ import (
 	"time"
 
 	"github.com/river-build/river/core/config"
+	"github.com/river-build/river/core/contracts/base"
+	"github.com/river-build/river/core/contracts/base/deploy"
+	test_contracts "github.com/river-build/river/core/contracts/base/deploy"
 	"github.com/river-build/river/core/xchain/client_simulator"
 	xc_common "github.com/river-build/river/core/xchain/common"
-	"github.com/river-build/river/core/xchain/contracts"
-	test_contracts "github.com/river-build/river/core/xchain/contracts/test"
 	"github.com/river-build/river/core/xchain/entitlement"
 	"github.com/river-build/river/core/xchain/server"
 
@@ -56,8 +57,8 @@ type serviceTester struct {
 	walletLinkingAddress         common.Address
 
 	// Contracts
-	entitlementChecker *contracts.IEntitlementChecker
-	walletLink         *contracts.IWalletLink
+	entitlementChecker *base.IEntitlementChecker
+	walletLink         *base.WalletLink
 
 	decoder *node_crypto.EvmErrorDecoder
 }
@@ -118,39 +119,37 @@ func (st *serviceTester) deployXchainTestContracts() {
 	st.require.NoError(err)
 
 	// Deploy the mock entitlement checker
-	addr, _, _, err := contracts.DeployMockEntitlementChecker(
+	addr, _, _, err := test_contracts.DeployMockEntitlementChecker(
 		auth,
 		client,
 		approvedNodeOperators,
-		st.Config().GetContractVersion(),
 	)
 	st.require.NoError(err)
 
 	st.entitlementCheckerAddress = addr
-	iChecker, err := contracts.NewIEntitlementChecker(addr, client, st.Config().GetContractVersion())
+	iChecker, err := base.NewIEntitlementChecker(addr, client)
 	st.require.NoError(err)
 	st.entitlementChecker = iChecker
 
 	// Deploy the mock entitlement gated contract
-	addr, _, _, err = contracts.DeployMockEntitlementGated(
+	addr, _, _, err = test_contracts.DeployMockEntitlementGated(
 		auth,
 		client,
 		st.entitlementCheckerAddress,
-		st.Config().GetContractVersion(),
 	)
 	st.require.NoError(err)
 	st.mockEntitlementGatedAddress = addr
 
 	// Deploy the mock custom entitlement contract
-	addr, _, _, err = contracts.DeployMockCustomEntitlement(auth, client, st.Config().GetContractVersion())
+	addr, _, _, err = test_contracts.DeployMockCustomEntitlement(auth, client)
 	st.require.NoError(err)
 	st.mockCustomEntitlementAddress = addr
 
 	// Deploy the wallet linking contract
-	addr, _, _, err = contracts.DeployWalletLink(auth, client, st.Config().GetContractVersion())
+	addr, _, _, err = test_contracts.DeployWalletLink(auth, client)
 	st.require.NoError(err)
 	st.walletLinkingAddress = addr
-	walletLink, err := contracts.NewIWalletLink(addr, client, st.Config().GetContractVersion())
+	walletLink, err := base.NewWalletLink(addr, client)
 	st.require.NoError(err)
 	st.walletLink = walletLink
 
@@ -170,7 +169,7 @@ func (st *serviceTester) deployXchainTestContracts() {
 		st.walletLinkingAddress.Hex(),
 	)
 
-	decoder, err := node_crypto.NewEVMErrorDecoder(iChecker.GetMetadata(), walletLink.GetMetadata())
+	decoder, err := node_crypto.NewEVMErrorDecoder(base.IEntitlementCheckerMetaData, base.WalletLinkMetaData)
 	st.decoder = decoder
 }
 
@@ -315,7 +314,7 @@ func (st *serviceTester) linkWalletToRootWallet(
 	rootKeySignature, err := rootWallet.SignHash(node_crypto.ToEthMessageHash(hash))
 	rootKeySignature[64] += 27 // Transform V from 0/1 to 27/28
 
-	rootKeyWallet := contracts.IWalletLinkBaseLinkedWallet{
+	rootKeyWallet := base.IWalletLinkBaseLinkedWallet{
 		Addr:      rootWallet.Address,
 		Signature: rootKeySignature,
 	}
@@ -325,7 +324,7 @@ func (st *serviceTester) linkWalletToRootWallet(
 	st.require.NoError(err)
 	nodeWalletSignature, err := wallet.SignHash(node_crypto.ToEthMessageHash(hash))
 	nodeWalletSignature[64] += 27 // Transform V from 0/1 to 27/28
-	nodeWallet := contracts.IWalletLinkBaseLinkedWallet{
+	nodeWallet := base.IWalletLinkBaseLinkedWallet{
 		Addr:      wallet.Address,
 		Signature: nodeWalletSignature,
 	}
@@ -343,15 +342,15 @@ func (st *serviceTester) linkWalletToRootWallet(
 	st.require.Equal(uint64(1), receipt.Status)
 }
 
-func erc721Check(chainId uint64, contractAddress common.Address, threshold uint64) contracts.IRuleData {
-	return contracts.IRuleData{
-		Operations: []contracts.IRuleEntitlementOperation{
+func erc721Check(chainId uint64, contractAddress common.Address, threshold uint64) base.IRuleEntitlementRuleData {
+	return base.IRuleEntitlementRuleData{
+		Operations: []base.IRuleEntitlementOperation{
 			{
 				OpType: uint8(entitlement.CHECK),
 				Index:  0,
 			},
 		},
-		CheckOperations: []contracts.IRuleEntitlementCheckOperation{
+		CheckOperations: []base.IRuleEntitlementCheckOperation{
 			{
 				OpType:          uint8(entitlement.ERC721),
 				ChainId:         new(big.Int).SetUint64(chainId),
@@ -362,15 +361,15 @@ func erc721Check(chainId uint64, contractAddress common.Address, threshold uint6
 	}
 }
 
-func erc20Check(chainId uint64, contractAddress common.Address, threshold uint64) contracts.IRuleData {
-	return contracts.IRuleData{
-		Operations: []contracts.IRuleEntitlementOperation{
+func erc20Check(chainId uint64, contractAddress common.Address, threshold uint64) base.IRuleEntitlementRuleData {
+	return base.IRuleEntitlementRuleData{
+		Operations: []base.IRuleEntitlementOperation{
 			{
 				OpType: uint8(entitlement.CHECK),
 				Index:  0,
 			},
 		},
-		CheckOperations: []contracts.IRuleEntitlementCheckOperation{
+		CheckOperations: []base.IRuleEntitlementCheckOperation{
 			{
 				OpType:  uint8(entitlement.ERC20),
 				ChainId: new(big.Int).SetUint64(chainId),
@@ -382,15 +381,15 @@ func erc20Check(chainId uint64, contractAddress common.Address, threshold uint64
 	}
 }
 
-func customEntitlementCheck(chainId uint64, contractAddress common.Address) contracts.IRuleData {
-	return contracts.IRuleData{
-		Operations: []contracts.IRuleEntitlementOperation{
+func customEntitlementCheck(chainId uint64, contractAddress common.Address) base.IRuleEntitlementRuleData {
+	return base.IRuleEntitlementRuleData{
+		Operations: []base.IRuleEntitlementOperation{
 			{
 				OpType: uint8(entitlement.CHECK),
 				Index:  0,
 			},
 		},
-		CheckOperations: []contracts.IRuleEntitlementCheckOperation{
+		CheckOperations: []base.IRuleEntitlementCheckOperation{
 			{
 				OpType:          uint8(entitlement.ISENTITLED),
 				ChainId:         new(big.Int).SetUint64(chainId),
@@ -438,7 +437,7 @@ func TestNodeIsRegistered(t *testing.T) {
 	defer st.Close()
 	st.Start(t)
 
-	count, err := st.entitlementChecker.NodeCount(nil)
+	count, err := st.entitlementChecker.GetNodeCount(nil)
 	require.NoError(err)
 	require.Equal(5, int(count.Int64()))
 
@@ -470,7 +469,7 @@ func expectEntitlementCheckResult(
 	cs client_simulator.ClientSimulator,
 	ctx context.Context,
 	cfg *config.Config,
-	data contracts.IRuleData,
+	data base.IRuleEntitlementRuleData,
 	expected bool,
 ) {
 	result, err := cs.EvaluateRuleData(ctx, cfg, data)
@@ -683,7 +682,7 @@ func TestErc20Entitlements(t *testing.T) {
 func toggleEntitlement(
 	require *require.Assertions,
 	auth *bind.TransactOpts,
-	customEntitlement *contracts.MockCustomEntitlement,
+	customEntitlement *deploy.MockCustomEntitlement,
 	wallet *node_crypto.Wallet,
 	response bool,
 ) {
@@ -702,7 +701,7 @@ func toggleEntitlement(
 func deployMockCustomEntitlement(
 	require *require.Assertions,
 	st *serviceTester,
-) (*bind.TransactOpts, common.Address, *contracts.MockCustomEntitlement) {
+) (*bind.TransactOpts, common.Address, *deploy.MockCustomEntitlement) {
 	// Deploy mock custom entitlement contract to anvil chain
 	nonce, err := anvilClient.PendingNonceAt(context.Background(), anvilWallet.Address)
 	require.NoError(err)
@@ -712,10 +711,9 @@ func deployMockCustomEntitlement(
 	auth.Value = big.NewInt(0)         // in wei
 	auth.GasLimit = uint64(30_000_000) // in units
 
-	contractAddress, txn, customEntitlement, err := contracts.DeployMockCustomEntitlement(
+	contractAddress, txn, customEntitlement, err := deploy.DeployMockCustomEntitlement(
 		auth,
 		anvilClient,
-		st.Config().GetContractVersion(),
 	)
 	require.NoError(err)
 	require.NotNil(

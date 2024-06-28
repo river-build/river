@@ -1,7 +1,6 @@
 import {
     Address,
     BaseChainConfig,
-    ContractVersion,
     RiverChainConfig,
     Web3Deployment,
     getWeb3Deployment,
@@ -11,12 +10,17 @@ import { isDefined } from './check'
 import { check } from '@river-build/dlog'
 
 function getEnvironmentId(): string {
-    return process.env.RIVER_ENV || 'local_single'
+    if (typeof process === 'object') {
+        return process.env.RIVER_ENV || 'local_single'
+    }
+    return 'local_single'
 }
 
 function getBaseRpcUrlForChain(chainId: number): string {
-    if (process.env.BASE_CHAIN_RPC_URL) {
-        return process.env.BASE_CHAIN_RPC_URL
+    if (typeof process === 'object') {
+        if (process.env.BASE_CHAIN_RPC_URL) {
+            return process.env.BASE_CHAIN_RPC_URL
+        }
     }
     switch (chainId) {
         case 31337:
@@ -29,8 +33,10 @@ function getBaseRpcUrlForChain(chainId: number): string {
 }
 
 function getRiverRpcUrlForChain(chainId: number): string {
-    if (process.env.RIVER_CHAIN_RPC_URL) {
-        return process.env.RIVER_CHAIN_RPC_URL
+    if (typeof process === 'object') {
+        if (process.env.RIVER_CHAIN_RPC_URL) {
+            return process.env.RIVER_CHAIN_RPC_URL
+        }
     }
     switch (chainId) {
         case 31338:
@@ -64,7 +70,6 @@ function makeWeb3Deployment(environmentId: string): Web3Deployment {
     return {
         base: {
             chainId: parseInt(process.env.BASE_CHAIN_ID!),
-            contractVersion: (process.env.CONTRACT_VERSION ?? 'dev') as ContractVersion,
             addresses: {
                 baseRegistry: process.env.BASE_REGISTRY_ADDRESS! as Address,
                 spaceFactory: process.env.SPACE_FACTORY_ADDRESS! as Address,
@@ -75,7 +80,6 @@ function makeWeb3Deployment(environmentId: string): Web3Deployment {
         } satisfies BaseChainConfig,
         river: {
             chainId: parseInt(process.env.RIVER_CHAIN_ID!),
-            contractVersion: (process.env.CONTRACT_VERSION ?? 'dev') as ContractVersion,
             addresses: {
                 riverRegistry: process.env.RIVER_REGISTRY_ADDRESS! as Address,
             },

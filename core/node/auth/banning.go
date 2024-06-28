@@ -95,7 +95,6 @@ func (b *banning) IsBanned(ctx context.Context, wallets []common.Address) (bool,
 func NewBanning(
 	ctx context.Context,
 	cfg *config.ChainConfig,
-	version string,
 	spaceAddress common.Address,
 	backend bind.ContractBackend,
 ) (Banning, error) {
