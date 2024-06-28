@@ -53,6 +53,7 @@ export class RiverConnection {
             fn()
         }
         this.onStoppedFns = []
+        await this.client?.stop()
     }
 
     call<T>(fn: (client: Client) => Promise<T>) {
@@ -73,14 +74,17 @@ export class RiverConnection {
     }
 
     private onNodeUrlsChanged = (value: PersistedModel<StreamNodeUrlsModel>) => {
+        this.createClient(value.data.urls)
+    }
+
+    private createClient(urls?: string): void {
         if (this.client !== undefined) {
-            logger.log('RiverConnection: rpc urls changed, client already set', value)
+            logger.log('RiverConnection: rpc urls changed, client already set', urls)
             return
         }
         if (this.stopped) {
             return
         }
-        const urls = value.data.urls
         if (!urls) {
             return
         }
@@ -98,11 +102,12 @@ export class RiverConnection {
             this.clientParams.highPriorityStreamIds,
         )
         this.client = client
-        this.clientQueue.flush(client) // New rpcClient is available, resolve all queued requests
         // initialize views
         this.views.forEach((viewFn) => {
             const onStopFn = viewFn(client)
             this.onStoppedFns.push(onStopFn)
         })
+        // New rpcClient is available, resolve all queued requests
+        this.clientQueue.flush(client)
     }
 }
