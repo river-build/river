@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -9,13 +10,6 @@ import (
 
 	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/protocol"
-)
-
-type ContractVersion string
-
-const (
-	VersionDev ContractVersion = "dev"
-	VersionV3  ContractVersion = "v3"
 )
 
 func GetDefaultConfig() *Config {
@@ -143,10 +137,9 @@ type Config struct {
 	XChainBlockchains []uint64
 
 	// extra xChain configuration
-	EntitlementContract           ContractConfig  `mapstructure:"entitlement_contract"`
-	contractVersion               ContractVersion `mapstructure:"contract_version"`
-	TestEntitlementContract       ContractConfig  `mapstructure:"test_contract"`
-	TestCustomEntitlementContract ContractConfig  `mapstructure:"test_custom_entitlement_contract"`
+	EntitlementContract           ContractConfig `mapstructure:"entitlement_contract"`
+	TestEntitlementContract       ContractConfig `mapstructure:"test_contract"`
+	TestCustomEntitlementContract ContractConfig `mapstructure:"test_custom_entitlement_contract"`
 
 	// History indicates how far back xchain must look for entitlement check requests after start
 	History time.Duration
@@ -195,6 +188,22 @@ type DatabaseConfig struct {
 	// If StandByOnStart is true, it's recommended to set it to the double of Config.ShutdownTimeout.
 	// If set to 0, then default value is used. To disable the delay set to 1ms or less.
 	StartupDelay time.Duration
+}
+
+func (c DatabaseConfig) GetUrl() string {
+	if c.Host != "" {
+		return fmt.Sprintf(
+			"postgresql://%s:%s@%s:%d/%s%s",
+			c.User,
+			c.Password,
+			c.Host,
+			c.Port,
+			c.Database,
+			c.Extra,
+		)
+	}
+
+	return c.Url
 }
 
 // TransactionPoolConfig specifies when it is time for a replacement transaction and its gas fee costs.
@@ -248,8 +257,6 @@ type PerformanceTrackingConfig struct {
 type ContractConfig struct {
 	// Address of the contract
 	Address common.Address
-	// Version of the contract to use.
-	Version string
 }
 
 type ArchiveConfig struct {
@@ -353,14 +360,6 @@ func (c *Config) GetGraffiti() string {
 		return "River Node welcomes you!"
 	}
 	return c.Graffiti
-}
-
-func (c *Config) GetContractVersion() ContractVersion {
-	if c.contractVersion == VersionV3 {
-		return VersionV3
-	} else {
-		return VersionDev
-	}
 }
 
 func (c *Config) GetEntitlementContractAddress() common.Address {

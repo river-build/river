@@ -17,8 +17,6 @@ import {Architect} from "contracts/src/factory/facets/architect/Architect.sol";
 contract ForkCreateSpace is IArchitectBase, TestUtils, SpaceHelper {
   address spaceFactory = 0x968696BC59431Ef085441641f550C8e2Eaca8BEd;
 
-  function setUp() public onlyForked {}
-
   function test_createForkSpace() external onlyForked {
     address founder = _randomAddress();
 

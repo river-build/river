@@ -4,6 +4,7 @@ import {
     UserInboxPayload_GroupEncryptionSessions,
     UserSettingsPayload_UserBlock,
     UserPayload_UserMembership,
+    UserInboxPayload_Snapshot_DeviceSummary,
 } from '@river-build/proto'
 
 import {
@@ -17,6 +18,7 @@ import {
 import { KeySolicitationContent, UserDevice } from '@river-build/encryption'
 import { EncryptedContent } from './encryptedContentTypes'
 import { SyncState } from './syncedStreams'
+import { Pin } from './streamStateView_Channel'
 
 export type StreamChange = {
     prepended?: RemoteTimelineEvent[]
@@ -62,9 +64,18 @@ export type StreamStateEvents = {
     userInvitedToStream: (streamId: string) => void
     userLeftStream: (streamId: string) => void
     userStreamMembershipChanged: (streamId: string, payload: UserPayload_UserMembership) => void
+    userInboxDeviceSummaryUpdated: (
+        streamId: string,
+        deviceKey: string,
+        summary: UserInboxPayload_Snapshot_DeviceSummary,
+    ) => void
+    userDeviceKeysUpdated: (streamId: string, deviceKeys: UserDevice[]) => void
     spaceChannelCreated: (spaceId: string, channelId: string) => void
     spaceChannelUpdated: (spaceId: string, channelId: string) => void
     spaceChannelDeleted: (spaceId: string, channelId: string) => void
+    channelPinAdded: (channelId: string, pin: Pin) => void
+    channelPinRemoved: (channelId: string, pin: Pin, index: number) => void
+    channelPinDecrypted: (channelId: string, pin: Pin, index: number) => void
     fullyReadMarkersUpdated: (
         channelId: string,
         fullyReadMarkers: Record<string, FullyReadMarker>,
