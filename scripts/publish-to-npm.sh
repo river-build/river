@@ -1,12 +1,15 @@
 
-# if current branch is main, then exit
 
+function parse_git_branch() {
+    git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/'
+}
 
 function make_pr_description() {
     # Use git log to list commit messages not present on origin/main
     git log origin/main..HEAD
 }
 
+# if current branch is main, then exit
 if [[ "$(git status --porcelain)" != "" ]]; then
     echo "There are uncommitted changes. Please commit or stash them before running this script."
     exit 1
@@ -95,5 +98,8 @@ if [ $exit_status -ne 0 ]; then
     echo "Failed to merge pull request."
     exit $exit_status
 fi
+
+# Pull the changes to local main
+git pull --rebase
 
 npx lerna publish from-package --yes --no-private --force-publish
