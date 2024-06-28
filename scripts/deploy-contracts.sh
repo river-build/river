@@ -40,7 +40,7 @@ fi
 # make deploy-base-anvil type=contract contract=DeployAccountFactory
 RIVER_BLOCK_TIME="${RIVER_BLOCK_TIME:-1}"
 
-# Alternative nodes i.e. geth
+# Only anvil supports automine but this might be a local geth node
 if [ "${BASE_EXECUTION_CLIENT}" != "geth_dev" ]; then
     cast rpc evm_setAutomine true --rpc-url $BASE_ANVIL_RPC_URL
 fi
