@@ -53,7 +53,7 @@ class EntitlementRequest implements Keyable {
         this.permission = permission
     }
     toKey(): string {
-        return `{spaceId:${this.spaceId},channelId:${this.channelId},permission:${this.permission}}`
+        return `{spaceId:${this.spaceId},channelId:${this.channelId},userId:${this.userId},permission:${this.permission}}`
     }
 }
 
