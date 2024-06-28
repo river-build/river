@@ -69,7 +69,10 @@ export class Store {
 
     newTransactionGroup(name: string) {
         log(`newTransactionGroup "${name}"`)
-        check(this.transactionGroup === undefined, 'transaction already in progress')
+        check(
+            this.transactionGroup === undefined,
+            `transaction already in progress named: ${this.transactionGroup?.name}`,
+        )
         this.transactionGroup = new TransactionGroup(name)
     }
 
@@ -111,16 +114,17 @@ export class Store {
         log(`commitTransaction "${tGroup.name}" done`, 'elapsedMs:', Date.now() - time)
     }
 
-    withTransaction(name: string, fn: () => void) {
+    withTransaction<T>(name: string, fn: () => T): T {
         if (this.transactionGroup !== undefined) {
-            fn()
+            return fn()
         } else {
             this.newTransactionGroup(name)
-            fn()
+            const result = fn()
             this.commitTransaction().catch((e) => {
                 log(`uncaught commitTransaction error in groun ${name}`, e)
                 throw e
             })
+            return result
         }
     }
 

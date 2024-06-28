@@ -123,7 +123,7 @@ import { SyncedStream } from './syncedStream'
 import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
 
-type ClientEvents = StreamEvents & DecryptionEvents
+export type ClientEvents = StreamEvents & DecryptionEvents
 
 type SendChannelMessageOptions = {
     beforeSendEventHook?: Promise<void>
@@ -1178,7 +1178,7 @@ export class Client
     ): Promise<{ eventId: string }> {
         const stream = this.stream(streamId)
         check(stream !== undefined, 'stream not found')
-        const localId = stream.view.appendLocalEvent(payload, 'sending', this)
+        const localId = stream.appendLocalEvent(payload, 'sending')
         opts?.onLocalEventAppended?.(localId)
         if (opts?.beforeSendEventHook) {
             await opts?.beforeSendEventHook

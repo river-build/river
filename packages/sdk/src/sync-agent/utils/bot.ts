@@ -1,14 +1,21 @@
-import { makeRiverConfig } from '../../riverConfig'
+import { RiverConfig, makeRiverConfig } from '../../riverConfig'
 import { ethers } from 'ethers'
 import { LocalhostWeb3Provider } from '@river-build/web3'
 import { makeSignerContext } from '../../signerContext'
 import { SyncAgent } from '../syncAgent'
 
-export class TestUser {
-    riverConfig = makeRiverConfig()
-    rootWallet = ethers.Wallet.createRandom()
-    delegateWallet = ethers.Wallet.createRandom()
-    web3Provider = new LocalhostWeb3Provider(this.riverConfig.base.rpcUrl, this.rootWallet)
+export class Bot {
+    riverConfig: RiverConfig
+    rootWallet: ethers.Wallet
+    delegateWallet: ethers.Wallet
+    web3Provider: LocalhostWeb3Provider
+
+    constructor(rootWallet?: ethers.Wallet, riverConfig?: RiverConfig) {
+        this.riverConfig = riverConfig || makeRiverConfig()
+        this.rootWallet = rootWallet || ethers.Wallet.createRandom()
+        this.delegateWallet = ethers.Wallet.createRandom()
+        this.web3Provider = new LocalhostWeb3Provider(this.riverConfig.base.rpcUrl, this.rootWallet)
+    }
 
     get userId() {
         return this.rootWallet.address

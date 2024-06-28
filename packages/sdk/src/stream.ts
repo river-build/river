@@ -1,9 +1,9 @@
-import { MembershipOp, Snapshot, SyncCookie } from '@river-build/proto'
+import { ChannelMessage, MembershipOp, Snapshot, SyncCookie } from '@river-build/proto'
 import { DLogger } from '@river-build/dlog'
 import EventEmitter from 'events'
 import TypedEmitter from 'typed-emitter'
 import { StreamStateView } from './streamStateView'
-import { ParsedEvent, ParsedMiniblock, isLocalEvent } from './types'
+import { LocalEventStatus, ParsedEvent, ParsedMiniblock, isLocalEvent } from './types'
 import { StreamEvents } from './streamEvents'
 
 export class Stream extends (EventEmitter as new () => TypedEmitter<StreamEvents>) {
@@ -80,6 +80,10 @@ export class Stream extends (EventEmitter as new () => TypedEmitter<StreamEvents
         terminus: boolean,
     ) {
         this.view.prependEvents(miniblocks, cleartexts, terminus, this, this)
+    }
+
+    appendLocalEvent(channelMessage: ChannelMessage, status: LocalEventStatus) {
+        return this.view.appendLocalEvent(channelMessage, status, this)
     }
 
     emit<E extends keyof StreamEvents>(event: E, ...args: Parameters<StreamEvents[E]>): boolean {
