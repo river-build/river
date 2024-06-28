@@ -6,7 +6,6 @@ export type ObservableConfig<T> = {
     fireImmediately?: boolean
     onUpdate?: (data: T) => void
     onError?: (error: Error) => void
-    onSaved?: (data: T) => void
 }
 
 type ObservableReturn<T> = {
@@ -62,9 +61,6 @@ export function useObservable<T>(
             }
             if (value.status === 'error') {
                 opts.onError?.(value.error)
-            }
-            if (value.status === 'saved') {
-                opts.onSaved?.(value.data)
             }
         },
         [opts],
