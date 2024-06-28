@@ -15,9 +15,10 @@ import { Entitlements } from './entitlements/entitlements'
 import { PersistedObservable } from '../observable/persistedObservable'
 import { Observable } from '../observable/observable'
 import { UserInboxModel } from './user/models/userInbox'
-import { SyncAgentStore } from './syncAgentStore'
+import { DB_MODELS, DB_VERSION } from './db'
 import { UserDeviceKeysModel } from './user/models/userDeviceKeys'
 import { UserSettingsModel } from './user/models/userSettings'
+import { Spaces, SpacesModel } from './spaces/spaces'
 
 export interface SyncAgentConfig {
     context: SignerContext
@@ -37,11 +38,12 @@ export class SyncAgent {
     riverConnection: RiverConnection
     store: Store
     user: User
-    //spaces: Spaces
+    spaces: Spaces
 
     // flattened observables - just pointers to the observable objects in the models
     observables: {
         riverStreamNodeUrls: PersistedObservable<StreamNodeUrlsModel>
+        spaces: PersistedObservable<SpacesModel>
         user: PersistedObservable<UserModel>
         userAuthStatus: Observable<AuthStatus>
         userMemberships: PersistedObservable<UserMembershipsModel>
@@ -57,7 +59,7 @@ export class SyncAgent {
         const river = config.riverConfig.river
         this.baseProvider = makeBaseProvider(config.riverConfig)
         this.riverProvider = makeRiverProvider(config.riverConfig)
-        this.store = new SyncAgentStore(this.userId)
+        this.store = new Store(this.syncAgentDbName(), DB_VERSION, DB_MODELS)
         this.store.newTransactionGroup('SyncAgent::initalization')
         this.spaceDapp = new SpaceDapp(base.chainConfig, this.baseProvider)
         this.riverRegistryDapp = new RiverRegistry(river.chainConfig, this.riverProvider)
@@ -71,10 +73,12 @@ export class SyncAgent {
             rpcRetryParams: config.retryParams,
         })
         this.user = new User(this.userId, this.store, this.riverConnection, this.spaceDapp)
+        this.spaces = new Spaces(this.riverConnection, this.user, this.store)
 
         // flatten out the observables
         this.observables = {
             riverStreamNodeUrls: this.riverConnection.streamNodeUrls,
+            spaces: this.spaces,
             user: this.user,
             userAuthStatus: this.user.authStatus,
             userMemberships: this.user.streams.memberships,

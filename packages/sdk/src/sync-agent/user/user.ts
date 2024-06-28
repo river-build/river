@@ -38,7 +38,11 @@ export enum AuthStatus {
 }
 
 class LoginContext {
-    constructor(public client: Client, public cancelled: boolean) {}
+    constructor(
+        public client: Client,
+        public newUserMetadata?: { spaceId: Uint8Array | string },
+        public cancelled: boolean = false,
+    ) {}
 }
 
 @persistedObservable({ tableName: 'user' })
@@ -53,6 +57,7 @@ export class User extends PersistedObservable<UserModel> {
     loginError?: Error
     private riverConnection: RiverConnection
     private spaceDapp: SpaceDapp
+    private loginPromise?: { promise: Promise<void>; context: LoginContext }
 
     constructor(id: string, store: Store, riverConnection: RiverConnection, spaceDapp: SpaceDapp) {
         super({ id, initialized: false }, store, LoadPriority.high)
@@ -70,22 +75,10 @@ export class User extends PersistedObservable<UserModel> {
         this.riverConnection.registerView(this.onClientStarted)
     }
 
-    private async initialize(newUserMetadata?: { spaceId: Uint8Array | string }) {
-        await this.riverConnection.call(async (client) => {
-            await client.initializeUser(newUserMetadata)
-            client.startSync()
-        })
-        this.setData({ initialized: true })
-        this.authStatus.setValue(AuthStatus.ConnectedToRiver)
-    }
-
     private onClientStarted = (client: Client) => {
-        this.authStatus.setValue(AuthStatus.EvaluatingCredentials)
-        const loginContext = new LoginContext(client, false)
+        const loginContext = new LoginContext(client)
         this.loginWithRetries(loginContext).catch((err) => {
             logger.error('login failed', err)
-            this.loginError = err
-            this.authStatus.setValue(AuthStatus.Error)
         })
         return () => {
             loginContext.cancelled = true
@@ -99,11 +92,12 @@ export class User extends PersistedObservable<UserModel> {
     ) {
         const membershipInfo =
             params.membership ?? (await makeDefaultMembershipInfo(this.spaceDapp, this.data.id))
+        const channelName = params.channelName ?? 'general'
         const transaction = await this.spaceDapp.createSpace(
             {
                 spaceName: params.spaceName,
                 spaceMetadata: params.spaceMetadata ?? params.spaceName,
-                channelName: params.channelName ?? 'general',
+                channelName: channelName,
                 membership: membershipInfo,
             },
             signer,
@@ -118,43 +112,82 @@ export class User extends PersistedObservable<UserModel> {
         const spaceId = makeSpaceStreamId(spaceAddress)
         const defaultChannelId = makeDefaultChannelStreamId(spaceAddress)
         logger.log('spaceId, defaultChannelId', { spaceId, defaultChannelId })
-        await this.initialize({ spaceId })
-        await this.riverConnection.call((client) => client.createSpace(spaceId))
-        await this.riverConnection.call((client) =>
-            client.createChannel(spaceId, 'general', '', defaultChannelId),
-        )
+        await this.riverConnection.call(async (client) => {
+            logger.log('createSpace with client')
+            const context = new LoginContext(client, { spaceId })
+            await this.loginWithRetries(context)
+            await client.createSpace(spaceId)
+            await client.createChannel(spaceId, channelName, '', defaultChannelId)
+        })
         return { spaceId, defaultChannelId }
     }
 
+    async joinSpace(
+        spaceId: string,
+        signer: ethers.Signer,
+        opts?: { skipMintMembership?: boolean },
+    ) {
+        if (opts?.skipMintMembership !== true) {
+            const { issued } = await this.spaceDapp.joinSpace(spaceId, this.data.id, signer)
+            logger.log('joinSpace transaction', issued)
+        }
+        await this.riverConnection.call(async (client) => {
+            const context = new LoginContext(client, { spaceId })
+            await this.loginWithRetries(context)
+            await client.joinStream(spaceId)
+            await client.joinStream(makeDefaultChannelStreamId(spaceId))
+        })
+    }
+
     private async loginWithRetries(loginContext: LoginContext) {
-        let retryCount = 0
-        const MAX_RETRY_COUNT = 20
-        while (!loginContext.cancelled) {
-            try {
-                logger.log('logging in')
-                if (this.data.initialized) {
-                    await this.initialize()
-                } else {
-                    const canInitialize = await loginContext.client.userExists(this.data.id)
+        logger.log('login')
+        if (this.loginPromise) {
+            this.loginPromise.context.cancelled = true
+            await this.loginPromise.promise
+        }
+        if (this.authStatus.value === AuthStatus.ConnectedToRiver) {
+            return
+        }
+        this.authStatus.setValue(AuthStatus.EvaluatingCredentials)
+        const login = async () => {
+            let retryCount = 0
+            const MAX_RETRY_COUNT = 20
+            while (!loginContext.cancelled) {
+                try {
+                    logger.log('logging in')
+                    const canInitialize =
+                        this.data.initialized ||
+                        loginContext.newUserMetadata ||
+                        (await loginContext.client.userExists(this.data.id))
                     if (canInitialize) {
-                        await this.initialize()
+                        await loginContext.client.initializeUser(loginContext.newUserMetadata)
+                        loginContext.client.startSync()
+                        this.setData({ initialized: true })
+                        this.authStatus.setValue(AuthStatus.ConnectedToRiver)
+                    } else {
+                        this.authStatus.setValue(AuthStatus.Credentialed)
                     }
-                }
-                break
-            } catch (err) {
-                retryCount++
-                this.loginError = err as Error
-                logger.log('encountered exception while initializing', err)
-                if (retryCount >= MAX_RETRY_COUNT) {
-                    throw err
-                } else {
-                    const retryDelay = getRetryDelay(retryCount)
-                    logger.log('retrying', { retryDelay, retryCount })
-                    // sleep
-                    await new Promise((resolve) => setTimeout(resolve, retryDelay))
+                    break
+                } catch (err) {
+                    retryCount++
+                    this.loginError = err as Error
+                    logger.log('encountered exception while initializing', err)
+                    if (retryCount >= MAX_RETRY_COUNT) {
+                        this.authStatus.setValue(AuthStatus.Error)
+                        throw err
+                    } else {
+                        const retryDelay = getRetryDelay(retryCount)
+                        logger.log('retrying', { retryDelay, retryCount })
+                        // sleep
+                        await new Promise((resolve) => setTimeout(resolve, retryDelay))
+                    }
+                } finally {
+                    this.loginPromise = undefined
                 }
             }
         }
+        this.loginPromise = { promise: login(), context: loginContext }
+        return this.loginPromise.promise
     }
 }
 
