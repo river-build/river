@@ -58,9 +58,8 @@ func DisabledTestStreamMiniblockBatchProduction(t *testing.T) {
 
 func testStreamCacheViewEviction(t *testing.T, useBatchRegistration bool) {
 	var (
-		ctx, cancel  = test.NewTestContext()
-		require      = require.New(t)
-		chainMonitor = crypto.NewChainMonitor()
+		ctx, cancel = test.NewTestContext()
+		require     = require.New(t)
 	)
 	defer cancel()
 
@@ -68,9 +67,8 @@ func testStreamCacheViewEviction(t *testing.T, useBatchRegistration bool) {
 	require.NoError(err, "instantiating blockchain test context")
 	defer btc.Close()
 
-	go chainMonitor.RunWithBlockPeriod(ctx, btc.Client(), 0, 10*time.Millisecond, infra.NewMetrics("", ""))
-
 	node := btc.GetBlockchain(ctx, 0)
+	node.StartChainMonitor(ctx)
 
 	pendingTx, err := btc.DeployerBlockchain.TxPool.Submit(
 		ctx,
