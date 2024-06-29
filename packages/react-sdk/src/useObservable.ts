@@ -6,7 +6,6 @@ export type ObservableConfig<T> = {
     fireImmediately?: boolean
     onUpdate?: (data: T) => void
     onError?: (error: Error) => void
-    onSaved?: (data: T) => void
 }
 
 type ObservableReturn<T> = {
@@ -15,8 +14,6 @@ type ObservableReturn<T> = {
     status: PersistedModel<T>['status']
     isLoading: boolean
     isError: boolean
-    isSaving: boolean
-    isSaved: boolean
     isLoaded: boolean
 }
 
@@ -65,9 +62,6 @@ export function useObservable<T>(
             if (value.status === 'error') {
                 opts.onError?.(value.error)
             }
-            if (value.status === 'saved') {
-                opts.onSaved?.(value.data)
-            }
         },
         [opts],
     )
@@ -90,9 +84,7 @@ export function useObservable<T>(
                 status: 'loading',
                 isLoading: true,
                 isError: false,
-                isSaving: false,
                 isLoaded: false,
-                isSaved: false,
             }
         }
         const { data, status } = value
@@ -102,9 +94,7 @@ export function useObservable<T>(
             status,
             isLoading: status === 'loading',
             isError: status === 'error',
-            isSaving: status === 'saving',
             isLoaded: status === 'loaded',
-            isSaved: status === 'saved',
         }
     }, [value]) satisfies ObservableReturn<T>
 
