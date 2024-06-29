@@ -6,8 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -91,16 +89,8 @@ func testStreamCacheViewEviction(t *testing.T, useBatchRegistration bool) {
 	pg := storage.NewTestPgStore(ctx)
 	defer pg.Close()
 
-	// disable auto stream cache cleanup, do it manual
-	pendingTx, err = btc.DeployerBlockchain.TxPool.Submit(
-		ctx, "SetConfiguration", func(opts *bind.TransactOpts) (*types.Transaction, error) {
-			return btc.Configuration.
-				SetConfiguration(opts, crypto.StreamCacheExpirationPollIntervalMsConfigKey.ID(), 0,
-					hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000"))
-		})
-	require.NoError(err, "set configuration")
-	receipt = <-pendingTx.Wait()
-	require.Equal(crypto.TransactionResultSuccess, receipt.Status, "set configuration transaction failed")
+	// disable auto stream cache cleanup, do cleanup manually
+	btc.SetConfigValue(t, ctx, crypto.StreamCacheExpirationPollIntervalMsConfigKey, crypto.ABIEncodeUint64(0))
 
 	streamCache, err := NewStreamCache(ctx, &StreamCacheParams{
 		Storage:     pg.Storage,
@@ -258,16 +248,8 @@ func testCacheEvictionWithFilledMiniBlockPool(t *testing.T, useBatchRegistration
 	receipt := <-pendingTx.Wait()
 	require.Equal(crypto.TransactionResultSuccess, receipt.Status, "register node transaction failed")
 
-	// disable auto stream cache cleanup, do it manual
-	pendingTx, err = btc.DeployerBlockchain.TxPool.Submit(
-		ctx, "SetConfiguration", func(opts *bind.TransactOpts) (*types.Transaction, error) {
-			return btc.Configuration.
-				SetConfiguration(opts, crypto.StreamCacheExpirationPollIntervalMsConfigKey.ID(), 0,
-					hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000"))
-		})
-	require.NoError(err, "set configuration")
-	receipt = <-pendingTx.Wait()
-	require.Equal(crypto.TransactionResultSuccess, receipt.Status, "set configuration transaction failed")
+	// disable auto stream cache cleanup, do cleanup manually
+	btc.SetConfigValue(t, ctx, crypto.StreamCacheExpirationPollIntervalMsConfigKey, crypto.ABIEncodeUint64(0))
 
 	riverRegistry, err := registries.NewRiverRegistryContract(ctx, node, &config.ContractConfig{
 		Address: btc.RiverRegistryAddress,
@@ -415,16 +397,8 @@ func testStreamMiniblockBatchProduction(t *testing.T, useBatchRegistration bool)
 	receipt := <-pendingTx.Wait()
 	require.Equal(crypto.TransactionResultSuccess, receipt.Status, "register node transaction failed")
 
-	// disable auto stream cache cleanup, do it manual
-	pendingTx, err = btc.DeployerBlockchain.TxPool.Submit(
-		ctx, "SetConfiguration", func(opts *bind.TransactOpts) (*types.Transaction, error) {
-			return btc.Configuration.
-				SetConfiguration(opts, crypto.StreamCacheExpirationPollIntervalMsConfigKey.ID(), 0,
-					hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000"))
-		})
-	require.NoError(err, "set configuration")
-	receipt = <-pendingTx.Wait()
-	require.Equal(crypto.TransactionResultSuccess, receipt.Status, "set configuration transaction failed")
+	// disable auto stream cache cleanup, do cleanup manually
+	btc.SetConfigValue(t, ctx, crypto.StreamCacheExpirationPollIntervalMsConfigKey, crypto.ABIEncodeUint64(0))
 
 	riverRegistry, err := registries.NewRiverRegistryContract(ctx, node, &config.ContractConfig{
 		Address: btc.RiverRegistryAddress,
@@ -563,16 +537,8 @@ func TestStreamUnloadWithSubscribers(t *testing.T) {
 	receipt := <-pendingTx.Wait()
 	require.Equal(crypto.TransactionResultSuccess, receipt.Status, "register node transaction failed")
 
-	// disable auto stream cache cleanup, do it manual
-	pendingTx, err = btc.DeployerBlockchain.TxPool.Submit(
-		ctx, "SetConfiguration", func(opts *bind.TransactOpts) (*types.Transaction, error) {
-			return btc.Configuration.
-				SetConfiguration(opts, crypto.StreamCacheExpirationPollIntervalMsConfigKey.ID(), 0,
-					hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000"))
-		})
-	require.NoError(err, "set configuration")
-	receipt = <-pendingTx.Wait()
-	require.Equal(crypto.TransactionResultSuccess, receipt.Status, "set configuration transaction failed")
+	// disable auto stream cache cleanup, do cleanup manually
+	btc.SetConfigValue(t, ctx, crypto.StreamCacheExpirationPollIntervalMsConfigKey, crypto.ABIEncodeUint64(0))
 
 	riverRegistry, err := registries.NewRiverRegistryContract(ctx, node, &config.ContractConfig{
 		Address: btc.RiverRegistryAddress,
