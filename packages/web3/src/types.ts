@@ -4,4 +4,6 @@ export interface SpaceInfo {
     name: string
     owner: string
     disabled: boolean
+    shortDescription: string
+    longDescription: string
 }
