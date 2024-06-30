@@ -255,13 +255,7 @@ func New(
 		if err != nil {
 			return nil, err
 		}
-		go baseChain.ChainMonitor.RunWithBlockPeriod(
-			ctx,
-			baseChain.Client,
-			baseChain.InitialBlockNum,
-			time.Duration(cfg.BaseChain.BlockTimeMs)*time.Millisecond,
-			metrics,
-		)
+		baseChain.StartChainMonitor(ctx)
 	}
 
 	decoder, err := node_crypto.NewEVMErrorDecoder(deploy.MockEntitlementGatedMetaData, base.IEntitlementCheckerMetaData)

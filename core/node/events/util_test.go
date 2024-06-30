@@ -33,6 +33,8 @@ type testParams struct {
 	defaultMinEventsPerSnapshot   int
 }
 
+// makeTestStreamParams creates a test context with a blockchain and a stream registry for stream cahe tests.
+// It doesn't create a stream cache itself. Call initCache to create a stream cache.
 func makeTestStreamParams(t *testing.T, p testParams) (context.Context, *testContext) {
 	ctx, cancel := test.NewTestContext()
 	btc, err := crypto.NewBlockchainTestContext(ctx, 1, true)
@@ -46,6 +48,7 @@ func makeTestStreamParams(t *testing.T, p testParams) (context.Context, *testCon
 	}
 
 	bc := btc.GetBlockchain(ctx, 0)
+	bc.StartChainMonitor(ctx)
 
 	pg := storage.NewTestPgStore(ctx)
 
@@ -67,23 +70,20 @@ func makeTestStreamParams(t *testing.T, p testParams) (context.Context, *testCon
 	sr := NewStreamRegistry(bc.Wallet.Address, nr, registry, btc.OnChainConfig)
 
 	params := &StreamCacheParams{
-		Storage:     pg.Storage,
-		Wallet:      bc.Wallet,
-		RiverChain:  bc,
-		Registry:    registry,
-		ChainConfig: btc.OnChainConfig,
-	}
-
-	cache, err := NewStreamCache(ctx, params, blockNumber, bc.ChainMonitor, infra.NewMetrics("", ""))
-	if err != nil {
-		panic(err)
+		Storage:         pg.Storage,
+		Wallet:          bc.Wallet,
+		RiverChain:      bc,
+		Registry:        registry,
+		ChainConfig:     btc.OnChainConfig,
+		AppliedBlockNum: blockNumber,
+		ChainMonitor:    bc.ChainMonitor,
+		Metrics:         infra.NewMetrics("", ""),
 	}
 
 	return ctx,
 		&testContext{
 			bcTest:         btc,
 			params:         params,
-			cache:          cache,
 			streamRegistry: sr,
 			closer: func() {
 				btc.Close()
@@ -123,25 +123,28 @@ func setOnChainStreamConfig(t *testing.T, ctx context.Context, btc *crypto.Block
 	}
 }
 
-func makeTestStreamCache(t *testing.T, p testParams) (context.Context, *testContext) {
-	ctx, testContext := makeTestStreamParams(t, p)
-
-	bc := testContext.bcTest.GetBlockchain(ctx, 0)
-
-	blockNumber, err := bc.GetBlockNumber(ctx)
+func (tt *testContext) initCache(ctx context.Context) *streamCacheImpl {
+	streamCache, err := NewStreamCache(ctx, tt.params)
 	if err != nil {
-		testContext.closer()
 		panic(err)
 	}
+	tt.cache = streamCache
+	return streamCache
+}
 
-	streamCache, err := NewStreamCache(ctx, testContext.params, blockNumber, bc.ChainMonitor, infra.NewMetrics("", ""))
+func (tt *testContext) createStreamNoCache(
+	ctx context.Context,
+	streamId StreamId,
+	genesisMiniblock *Miniblock,
+) error {
+	mbBytes, err := proto.Marshal(genesisMiniblock)
 	if err != nil {
-		testContext.closer()
-		panic(err)
+		return err
 	}
-	testContext.cache = streamCache
 
-	return ctx, testContext
+	_, err = tt.streamRegistry.AllocateStream(ctx, streamId, common.BytesToHash(
+		genesisMiniblock.Header.Hash), mbBytes)
+	return err
 }
 
 func (tt *testContext) createStream(
@@ -149,16 +152,13 @@ func (tt *testContext) createStream(
 	streamId StreamId,
 	genesisMiniblock *Miniblock,
 ) (SyncStream, StreamView, error) {
-	mbBytes, err := proto.Marshal(genesisMiniblock)
+	err := tt.createStreamNoCache(ctx, streamId, genesisMiniblock)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	_, err = tt.streamRegistry.AllocateStream(ctx, streamId, common.BytesToHash(
-		genesisMiniblock.Header.Hash), mbBytes)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	return tt.cache.CreateStream(ctx, streamId)
+}
+
+func (tt *testContext) getBC() *crypto.Blockchain {
+	return tt.params.RiverChain
 }
