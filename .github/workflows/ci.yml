@@ -119,7 +119,7 @@ jobs:
               with:
                   version: latest
                   working-directory: core
-                  args: --timeout=10m --config=core/.golangci.yml
+                  args: --timeout=10m --config=.golangci.yml
 
             - name: Linting River Node W/ Custom Rules
               run: |
