@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"math/big"
-	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/river-build/river/core/config"
@@ -145,13 +144,7 @@ func New(
 		}
 
 		log.Info("Start processing entitlement check requests", "startBlock", baseChain.InitialBlockNum)
-		go baseChain.ChainMonitor.RunWithBlockPeriod(
-			ctx,
-			baseChain.Client,
-			baseChain.InitialBlockNum,
-			time.Duration(cfg.BaseChain.BlockTimeMs)*time.Millisecond,
-			metrics,
-		)
+		baseChain.StartChainMonitor(ctx)
 	}
 
 	decoder, err := crypto.NewEVMErrorDecoder(
