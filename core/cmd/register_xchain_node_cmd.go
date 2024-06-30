@@ -156,7 +156,7 @@ func askUserConfirmation() bool {
 
 	char, _, err := reader.ReadRune()
 	if err != nil {
-		panic(fmt.Sprintf("unable to ask user for confirmation"))
+		panic("unable to ask user for confirmation")
 	}
 	return char == 'y' || char == 'Y'
 }
