@@ -95,13 +95,28 @@ func makeTestStreamParams(t *testing.T, p testParams) (context.Context, *testCon
 
 func setOnChainStreamConfig(t *testing.T, ctx context.Context, btc *crypto.BlockchainTestContext, p testParams) {
 	if p.replFactor != 0 {
-		btc.SetConfigValue(t, ctx, crypto.StreamReplicationFactorConfigKey, crypto.ABIEncodeUint64(uint64(p.replFactor)))
+		btc.SetConfigValue(
+			t,
+			ctx,
+			crypto.StreamReplicationFactorConfigKey,
+			crypto.ABIEncodeUint64(uint64(p.replFactor)),
+		)
 	}
 	if p.mediaMaxChunkCount != 0 {
-		btc.SetConfigValue(t, ctx, crypto.StreamMediaMaxChunkCountConfigKey, crypto.ABIEncodeUint64(uint64(p.mediaMaxChunkCount)))
+		btc.SetConfigValue(
+			t,
+			ctx,
+			crypto.StreamMediaMaxChunkCountConfigKey,
+			crypto.ABIEncodeUint64(uint64(p.mediaMaxChunkCount)),
+		)
 	}
 	if p.mediaMaxChunkSize != 0 {
-		btc.SetConfigValue(t, ctx, crypto.StreamMediaMaxChunkSizeConfigKey, crypto.ABIEncodeUint64(uint64(p.mediaMaxChunkSize)))
+		btc.SetConfigValue(
+			t,
+			ctx,
+			crypto.StreamMediaMaxChunkSizeConfigKey,
+			crypto.ABIEncodeUint64(uint64(p.mediaMaxChunkSize)),
+		)
 	}
 	if p.recencyConstraintsGenerations != 0 {
 		btc.SetConfigValue(t, ctx,

@@ -72,7 +72,6 @@ var _ StreamCache = (*streamCacheImpl)(nil)
 func NewStreamCache(
 	ctx context.Context,
 	params *StreamCacheParams,
-
 ) (*streamCacheImpl, error) {
 	s := &streamCacheImpl{
 		params:                    params,
