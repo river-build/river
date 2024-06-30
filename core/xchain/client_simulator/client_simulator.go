@@ -620,7 +620,7 @@ func ToggleEntitlement(ctx context.Context, cfg *config.Config, wallet *node_cry
 	var result interface{}
 	err = client.Client().CallContext(bc, &result, "anvil_setBalance", fromAddress, 1_000_000_000_000_000_000)
 	if err != nil {
-		log.Info("Failed call anvil_setBalance %v", err)
+		log.Info("Failed call anvil_setBalance", "error=", err)
 		return
 	}
 	log.Info("ClientSimulator add funds on anvil to wallet address", "result", result)

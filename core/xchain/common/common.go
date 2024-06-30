@@ -139,7 +139,7 @@ func WaitForTransaction(client *ethclient.Client, tx *types.Transaction) *big.In
 
 				err = rpcClient.Call(&result, "debug_traceTransaction", tx.Hash(), map[string]interface{}{})
 				if err != nil {
-					log.Error("Failed to execute debug_traceTransaction: %v", err)
+					log.Error("Failed to execute debug_traceTransaction", "error=", err)
 				}
 				log.Error(
 					"Transaction failed with status but no logs were emitted.",
