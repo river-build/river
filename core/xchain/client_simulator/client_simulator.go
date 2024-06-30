@@ -258,7 +258,10 @@ func New(
 		baseChain.StartChainMonitor(ctx)
 	}
 
-	decoder, err := node_crypto.NewEVMErrorDecoder(deploy.MockEntitlementGatedMetaData, base.IEntitlementCheckerMetaData)
+	decoder, err := node_crypto.NewEVMErrorDecoder(
+		deploy.MockEntitlementGatedMetaData,
+		base.IEntitlementCheckerMetaData,
+	)
 	if err != nil {
 		return nil, err
 	}
