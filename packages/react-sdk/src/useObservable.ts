@@ -2,6 +2,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { type Observable, type PersistedModel } from '@river-build/sdk'
 
+// TODO: Some util props:
+// - select: select a subset of the data, or transform it
+// - remove onError is is not a persisted model data
 export type ObservableConfig<Data> = Data extends PersistedModel<infer UnwrappedData>
     ? {
           fireImmediately?: boolean

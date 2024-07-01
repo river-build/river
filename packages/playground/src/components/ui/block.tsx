@@ -1,16 +1,13 @@
 import { cva } from 'class-variance-authority'
 
-export const Block = ({
-    children,
-    title,
-    variant = 'primary',
-    className,
-}: {
-    children: React.ReactNode
+export type BlockProps = {
+    children?: React.ReactNode
     title?: string
     variant?: 'primary' | 'secondary'
     className?: string
-}) => {
+}
+
+export const Block = ({ children, title, variant = 'primary', className }: BlockProps) => {
     return (
         <div className={blockVariants({ variant, className })}>
             {title && <h2 className="text-sm font-semibold text-primary text-zinc-700">{title}</h2>}
