@@ -7,13 +7,11 @@ export type ObservableConfig<Data> = Data extends PersistedModel<infer Unwrapped
           fireImmediately?: boolean
           onUpdate?: (data: UnwrappedData) => void
           onError?: (error: Error) => void
-          onSaved?: (data: UnwrappedData) => void
       }
     : {
           fireImmediately?: boolean
           onUpdate?: (data: Data) => void
           onError?: (error: Error) => void
-          onSaved?: (data: Data) => void
       }
 
 type ObservableValue<Data> = Data extends PersistedModel<infer UnwrappedData>
@@ -24,8 +22,6 @@ type ObservableValue<Data> = Data extends PersistedModel<infer UnwrappedData>
           status: PersistedModel<Data>['status']
           isLoading: boolean
           isError: boolean
-          isSaving: boolean
-          isSaved: boolean
           isLoaded: boolean
       }
     : {
@@ -35,8 +31,6 @@ type ObservableValue<Data> = Data extends PersistedModel<infer UnwrappedData>
           status: 'loaded'
           isLoading: false
           isError: false
-          isSaving: false
-          isSaved: false
           isLoaded: true
       }
 
@@ -74,9 +68,6 @@ export function useObservable<T>(
                 if (newValue.status === 'error') {
                     opts.onError?.(newValue.error)
                 }
-                if (newValue.status === 'saved') {
-                    opts.onSaved?.(newValue.data)
-                }
             } else {
                 value = newValue
                 opts.onUpdate?.(newValue)
@@ -105,9 +96,7 @@ export function useObservable<T>(
                 status,
                 isLoading: status === 'loading',
                 isError: status === 'error',
-                isSaving: status === 'saving',
                 isLoaded: status === 'loaded',
-                isSaved: status === 'saved',
             }
         } else {
             return {
@@ -116,9 +105,7 @@ export function useObservable<T>(
                 status: 'loaded',
                 isLoading: false,
                 isError: false,
-                isSaving: false,
                 isLoaded: true,
-                isSaved: false,
             }
         }
     }, [value]) as ObservableValue<T>

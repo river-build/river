@@ -76,7 +76,6 @@ const ConnectedContent = () => {
     const { data: nodeUrls } = useRiver((s) => s.riverStreamNodeUrls, {
         onUpdate: (data) => console.log('onUpdate', data),
         onError: (error) => console.error('onError', error),
-        onSaved: (data) => console.log('onSaved', data),
     })
     return (
         <div className="max-w-xl rounded-sm border border-zinc-200 bg-zinc-100 p-2">
