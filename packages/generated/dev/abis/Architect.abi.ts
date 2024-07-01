@@ -42,6 +42,16 @@ export default [
             "internalType": "string"
           },
           {
+            "name": "shortDescription",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "longDescription",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
             "name": "membership",
             "type": "tuple",
             "internalType": "struct IArchitectBase.Membership",

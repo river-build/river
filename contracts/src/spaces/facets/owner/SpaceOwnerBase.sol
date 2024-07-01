@@ -43,7 +43,9 @@ abstract contract SpaceOwnerBase is ISpaceOwnerBase {
     string memory name,
     string memory uri,
     uint256 tokenId,
-    address space
+    address space,
+    string memory shortDescription,
+    string memory longDescription
   ) internal {
     Validator.checkLength(name, 2);
     Validator.checkLength(uri, 0);
@@ -56,14 +58,18 @@ abstract contract SpaceOwnerBase is ISpaceOwnerBase {
       name: name,
       uri: uri,
       tokenId: tokenId,
-      createdAt: block.timestamp
+      createdAt: block.timestamp,
+      shortDescription: shortDescription,
+      longDescription: longDescription
     });
   }
 
   function _updateSpace(
     address space,
     string memory name,
-    string memory uri
+    string memory uri,
+    string memory shortDescription,
+    string memory longDescription
   ) internal {
     Validator.checkLength(name, 2);
     Validator.checkLength(uri, 1);
@@ -73,6 +79,8 @@ abstract contract SpaceOwnerBase is ISpaceOwnerBase {
     Space storage spaceInfo = ds.spaceByAddress[space];
     spaceInfo.name = name;
     spaceInfo.uri = uri;
+    spaceInfo.shortDescription = shortDescription;
+    spaceInfo.longDescription = longDescription;
 
     emit SpaceOwner__UpdateSpace(space);
   }
