@@ -1,10 +1,12 @@
 import { useAccount, useConnect } from 'wagmi'
 import { makeRiverConfig } from '@river-build/sdk'
-import { useRiverConnection } from '@river-build/react-sdk'
+import { SpaceProvider, useRiverConnection } from '@river-build/react-sdk'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useEthersSigner } from '@/utils/viem-to-ethers'
 import { UserAuthStatusBlock } from '@/components/blocks/auth-block'
 import { ConnectionBlock } from '@/components/blocks/connection-block'
+import { SpacesBlock } from '@/components/blocks/spaces'
 
 export const ConnectRoute = () => {
     const { isConnected } = useAccount()
@@ -73,10 +75,16 @@ const ConnectRiver = () => {
 }
 
 const ConnectedContent = () => {
+    const [currentSpaceId, setCurrentSpaceId] = useState<string>()
+    // const [currentChannelId, setCurrentChannelId] = useState<string>()
+
     return (
         <div className="grid grid-cols-4 gap-4">
             <ConnectionBlock />
             <UserAuthStatusBlock />
+            <SpaceProvider spaceId={currentSpaceId}>
+                <SpacesBlock setCurrentSpaceId={setCurrentSpaceId} />
+            </SpaceProvider>
         </div>
     )
 }
