@@ -2,7 +2,7 @@
  * @group main
  */
 
-import { EntitlementCache, Keyable } from '../src/EntitlementCache'
+import { EntitlementCache, Keyable, CacheResult } from '../src/EntitlementCache'
 
 class Key implements Keyable {
     private readonly key: string
@@ -14,15 +14,35 @@ class Key implements Keyable {
     }
 }
 
+class BooleanCacheResult implements CacheResult<boolean> {
+    value: boolean
+    cacheHit: boolean
+    isPositive: () => boolean = () => this.value
+    constructor(value: boolean) {
+        this.value = value
+        this.cacheHit = false
+    }
+}
+
+class StringCacheResult implements CacheResult<string> {
+    value: string
+    cacheHit: boolean
+    isPositive: () => boolean = () => this.value !== ''
+    constructor(value: string) {
+        this.value = value
+        this.cacheHit = false
+    }
+}
+
 describe('EntitlementsCacheTests', () => {
-    test('caches repeat positive keys', async () => {
+    test('caches repeat positive values', async () => {
         const cache = new EntitlementCache<Key, Boolean>({
             positiveCacheTTLSeconds: 10,
             negativeCacheTTLSeconds: 10,
         })
 
-        const onMiss = (key: Keyable): Promise<Boolean> => {
-            return Promise.resolve(true)
+        const onMiss = (key: Keyable): Promise<CacheResult<boolean>> => {
+            return Promise.resolve(new BooleanCacheResult(true))
         }
 
         var { value, cacheHit } = await cache.executeUsingCache(new Key('key'), onMiss)
@@ -34,14 +54,14 @@ describe('EntitlementsCacheTests', () => {
         expect(cacheHit).toBe(true)
     })
 
-    test('caches repeat negative keys', async () => {
+    test('caches repeat negative values', async () => {
         const cache = new EntitlementCache<Key, Boolean>({
             positiveCacheTTLSeconds: 10,
             negativeCacheTTLSeconds: 10,
         })
 
-        const onMiss = (key: Keyable): Promise<Boolean> => {
-            return Promise.resolve(false)
+        const onMiss = (key: Keyable): Promise<CacheResult<boolean>> => {
+            return Promise.resolve(new BooleanCacheResult(false))
         }
 
         var { value: value, cacheHit: cacheHit } = await cache.executeUsingCache(
@@ -59,14 +79,14 @@ describe('EntitlementsCacheTests', () => {
         expect(cacheHit).toBe(true)
     })
 
-    test('caches non-boolean truthy keys', async () => {
+    test('caches non-boolean positive values', async () => {
         const cache = new EntitlementCache<Key, string>({
             positiveCacheTTLSeconds: 10,
             negativeCacheTTLSeconds: 10,
         })
 
-        const onMiss = (key: Keyable): Promise<string> => {
-            return Promise.resolve('value')
+        const onMiss = (key: Keyable): Promise<CacheResult<string>> => {
+            return Promise.resolve(new StringCacheResult('value'))
         }
 
         var { value, cacheHit } = await cache.executeUsingCache(new Key('key'), onMiss)
@@ -84,8 +104,8 @@ describe('EntitlementsCacheTests', () => {
             negativeCacheTTLSeconds: 10,
         })
 
-        const onMiss = (key: Keyable): Promise<string> => {
-            return Promise.resolve('')
+        const onMiss = (key: Keyable): Promise<CacheResult<string>> => {
+            return Promise.resolve(new StringCacheResult(''))
         }
 
         var { value, cacheHit } = await cache.executeUsingCache(new Key('key'), onMiss)
@@ -103,8 +123,8 @@ describe('EntitlementsCacheTests', () => {
             negativeCacheTTLSeconds: 10,
         })
 
-        const onMiss = (key: Keyable): Promise<Boolean> => {
-            return Promise.resolve(true)
+        const onMiss = (key: Keyable): Promise<CacheResult<boolean>> => {
+            return Promise.resolve(new BooleanCacheResult(true))
         }
 
         var { value, cacheHit } = await cache.executeUsingCache(new Key('key'), onMiss)
@@ -125,8 +145,8 @@ describe('EntitlementsCacheTests', () => {
             negativeCacheTTLSeconds: 1,
         })
 
-        const onMiss = (key: Keyable): Promise<Boolean> => {
-            return Promise.resolve(false)
+        const onMiss = (key: Keyable): Promise<CacheResult<boolean>> => {
+            return Promise.resolve(new BooleanCacheResult(false))
         }
 
         var { value, cacheHit } = await cache.executeUsingCache(new Key('key'), onMiss)

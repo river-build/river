@@ -31,7 +31,7 @@ import { evaluateOperationsForEntitledWallet, ruleDataToOperations } from '../en
 import { RuleEntitlementShim } from './RuleEntitlementShim'
 import { PlatformRequirements } from './PlatformRequirements'
 import { EntitlementDataStructOutput } from './IEntitlementDataQueryableShim'
-import { EntitlementCache, Keyable } from '../EntitlementCache'
+import { CacheResult, EntitlementCache, Keyable } from '../EntitlementCache'
 
 const logger = dlogger('csb:SpaceDapp:debug')
 
@@ -39,6 +39,36 @@ type EntitlementData = {
     entitlementType: EntitlementModuleType
     ruleEntitlement: IRuleEntitlement.RuleDataStruct[] | undefined
     userEntitlement: string[] | undefined
+}
+
+class EntitlementDataCacheResult implements CacheResult<EntitlementData[]> {
+    value: EntitlementData[]
+    cacheHit: boolean
+    isPositive: () => boolean = () => true
+    constructor(value: EntitlementData[]) {
+        this.value = value
+        this.cacheHit = false
+    }
+}
+
+class EntitledWalletCacheResult implements CacheResult<EntitledWallet> {
+    value: EntitledWallet
+    cacheHit: boolean
+    isPositive: () => boolean = () => this.value !== undefined
+    constructor(value: EntitledWallet) {
+        this.value = value
+        this.cacheHit = false
+    }
+}
+
+class BooleanCacheResult implements CacheResult<boolean> {
+    value: boolean
+    cacheHit: boolean
+    isPositive: () => boolean = () => this.value
+    constructor(value: boolean) {
+        this.value = value
+        this.cacheHit = false
+    }
 }
 
 class EntitlementRequest implements Keyable {
@@ -423,10 +453,11 @@ export class SpaceDapp implements ISpaceDapp {
         const { value } = await this.entitlementCache.executeUsingCache(
             newSpaceEntitlementRequest(spaceId, permission),
             async (request) => {
-                return await this.getEntitlementsForPermissionUncached(
+                const entitlementData = await this.getEntitlementsForPermissionUncached(
                     request.spaceId,
                     request.permission,
                 )
+                return new EntitlementDataCacheResult(entitlementData)
             },
         )
         return value
@@ -455,11 +486,12 @@ export class SpaceDapp implements ISpaceDapp {
         const { value } = await this.entitlementCache.executeUsingCache(
             newChannelEntitlementRequest(spaceId, channelId, permission),
             async (request) => {
-                return await this.getChannelEntitlementsForPermissionUncached(
+                const entitlementData = await this.getChannelEntitlementsForPermissionUncached(
                     request.spaceId,
                     request.channelId,
                     request.permission,
                 )
+                return new EntitlementDataCacheResult(entitlementData)
             },
         )
         return value
@@ -559,11 +591,12 @@ export class SpaceDapp implements ISpaceDapp {
         const { value } = await this.entitledWalletCache.executeUsingCache(
             newSpaceEntitlementEvaluationRequest(spaceId, rootKey, Permission.JoinSpace),
             async (request) => {
-                return await this.getEntitledWalletForJoiningSpaceUncached(
+                const entitledWallet = await this.getEntitledWalletForJoiningSpaceUncached(
                     request.spaceId,
                     request.userId,
                     supportedXChainRpcUrls,
                 )
+                return new EntitledWalletCacheResult(entitledWallet)
             },
         )
         return value
@@ -612,11 +645,12 @@ export class SpaceDapp implements ISpaceDapp {
         const { value } = await this.entitlementEvaluationCache.executeUsingCache(
             newSpaceEntitlementEvaluationRequest(spaceId, user, permission),
             async (request) => {
-                return await this.isEntitledToSpaceUncached(
+                const isEntitled = await this.isEntitledToSpaceUncached(
                     request.spaceId,
                     request.userId,
                     request.permission,
                 )
+                return new BooleanCacheResult(isEntitled)
             },
         )
         return value
@@ -648,13 +682,14 @@ export class SpaceDapp implements ISpaceDapp {
         const { value } = await this.entitlementEvaluationCache.executeUsingCache(
             newChannelEntitlementEvaluationRequest(spaceId, channelNetworkId, user, permission),
             async (request) => {
-                return await this.isEntitledToChannelUncached(
+                const isEntitled = await this.isEntitledToChannelUncached(
                     request.spaceId,
                     request.channelId,
                     request.userId,
                     request.permission,
                     supportedXChainRpcUrls,
                 )
+                return new BooleanCacheResult(isEntitled)
             },
         )
         return value

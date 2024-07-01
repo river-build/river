@@ -4,14 +4,15 @@ export interface Keyable {
     toKey(): string
 }
 
-export type CacheResult<V> = {
+export interface CacheResult<V> {
     value: V
     cacheHit: boolean
+    isPositive: () => boolean
 }
 
 export class EntitlementCache<K extends Keyable, V> {
-    private readonly negativeCache: TTLCache<string, V>
-    private readonly positiveCache: TTLCache<string, V>
+    private readonly negativeCache: TTLCache<string, CacheResult<V>>
+    private readonly positiveCache: TTLCache<string, CacheResult<V>>
 
     constructor(options?: {
         positiveCacheTTLSeconds: number
@@ -36,26 +37,28 @@ export class EntitlementCache<K extends Keyable, V> {
 
     async executeUsingCache(
         keyable: K,
-        onCacheMiss: (k: K) => Promise<V>,
+        onCacheMiss: (k: K) => Promise<CacheResult<V>>,
     ): Promise<CacheResult<V>> {
         const key = keyable.toKey()
         const negativeCacheResult = this.negativeCache.get(key)
         if (negativeCacheResult !== undefined) {
-            return { value: negativeCacheResult, cacheHit: true }
+            negativeCacheResult.cacheHit = true
+            return negativeCacheResult
         }
 
         const positiveCacheResult = this.positiveCache.get(key)
         if (positiveCacheResult !== undefined) {
-            return { value: positiveCacheResult, cacheHit: true }
+            positiveCacheResult.cacheHit = true
+            return positiveCacheResult
         }
 
-        const value = await onCacheMiss(keyable)
-        if (!!value == false) {
-            this.negativeCache.set(key, value)
+        const result = await onCacheMiss(keyable)
+        if (result.isPositive()) {
+            this.positiveCache.set(key, result)
         } else {
-            this.positiveCache.set(key, value)
+            this.negativeCache.set(key, result)
         }
 
-        return { value, cacheHit: false }
+        return result
     }
 }
