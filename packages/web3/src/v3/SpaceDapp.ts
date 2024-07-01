@@ -15,7 +15,7 @@ import {
     UpdateChannelParams,
     UpdateRoleParams,
 } from '../ISpaceDapp'
-import { LOCALHOST_CHAIN_ID } from '@river-build/web3'
+import { LOCALHOST_CHAIN_ID } from '../Web3Constants'
 import { IRolesBase } from './IRolesShim'
 import { Space } from './Space'
 import { SpaceRegistrar } from './SpaceRegistrar'
