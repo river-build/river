@@ -15,7 +15,7 @@ import {
     UpdateChannelParams,
     UpdateRoleParams,
 } from '../ISpaceDapp'
-
+import { LOCALHOST_CHAIN_ID } from '@river-build/web3'
 import { IRolesBase } from './IRolesShim'
 import { Space } from './Space'
 import { SpaceRegistrar } from './SpaceRegistrar'
@@ -147,8 +147,9 @@ export class SpaceDapp implements ISpaceDapp {
             provider.pollingInterval = 250
         }
 
+        const isLocalDev = isJest() || config.chainId === LOCALHOST_CHAIN_ID
         const cacheOpts = {
-            positiveCacheTTLSeconds: isJest() ? 5 : 15 * 60,
+            positiveCacheTTLSeconds: isLocalDev ? 5 : 15 * 60,
             negativeCacheTTLSeconds: 2,
         }
         this.entitlementCache = new EntitlementCache(cacheOpts)
