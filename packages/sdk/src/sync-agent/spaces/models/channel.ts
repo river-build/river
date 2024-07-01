@@ -71,7 +71,7 @@ export class Channel extends PersistedObservable<ChannelModel> {
                 content: {
                     body: message,
                     mentions: options?.mentions ?? [],
-                    attachments: [],
+                    attachments: options?.attachments ?? [],
                 },
             }),
         )

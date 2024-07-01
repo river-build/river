@@ -1,8 +1,12 @@
 import { useAccount, useConnect } from 'wagmi'
 import { makeRiverConfig } from '@river-build/sdk'
-import { useRiver, useRiverConnection } from '@river-build/react-sdk'
+import { SpaceProvider, useRiverConnection } from '@river-build/react-sdk'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useEthersSigner } from '@/utils/viem-to-ethers'
+import { UserAuthStatusBlock } from '@/components/blocks/auth-block'
+import { ConnectionBlock } from '@/components/blocks/connection-block'
+import { SpacesBlock } from '@/components/blocks/spaces'
 
 export const ConnectRoute = () => {
     const { isConnected } = useAccount()
@@ -60,28 +64,27 @@ const ConnectRiver = () => {
                     {isConnected ? 'Disconnect' : isConnecting ? 'Connecting...' : 'Connect'}
                 </Button>
             </div>
-            {isConnected ? (
+            {isConnected && (
                 <>
                     <h2 className="text-lg font-semibold">Connected to Sync Agent</h2>
                     <ConnectedContent />
                 </>
-            ) : (
-                <h2 className="text-lg font-semibold">Not Connected</h2>
             )}
         </>
     )
 }
 
 const ConnectedContent = () => {
-    const { data: nodeUrls } = useRiver((s) => s.riverStreamNodeUrls, {
-        onUpdate: (data) => console.log('onUpdate', data),
-        onError: (error) => console.error('onError', error),
-    })
+    const [currentSpaceId, setCurrentSpaceId] = useState<string>()
+    // const [currentChannelId, setCurrentChannelId] = useState<string>()
+
     return (
-        <div className="max-w-xl rounded-sm border border-zinc-200 bg-zinc-100 p-2">
-            <pre className="overflow-auto whitespace-pre-wrap">
-                {JSON.stringify(nodeUrls, null, 2)}
-            </pre>
+        <div className="grid grid-cols-4 gap-4">
+            <ConnectionBlock />
+            <UserAuthStatusBlock />
+            <SpaceProvider spaceId={currentSpaceId}>
+                <SpacesBlock setCurrentSpaceId={setCurrentSpaceId} />
+            </SpaceProvider>
         </div>
     )
 }
