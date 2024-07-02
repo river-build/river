@@ -1,4 +1,4 @@
-import { useCreateSpace, useSpace, useSpaceList } from '@river-build/react-sdk'
+import { useAllSpaces, useCreateSpace, useSpace } from '@river-build/react-sdk'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -25,7 +25,7 @@ const formSchema = z.object({
 })
 
 export const SpacesBlock = (props: SpacesBlockProps) => {
-    const { spaceIds } = useSpaceList()
+    const { spaceIds } = useAllSpaces()
     return (
         <Block title="Spaces">
             <CreateSpace setCurrentSpaceId={props.setCurrentSpaceId} variant="secondary" />
