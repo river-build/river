@@ -246,7 +246,7 @@ func NewBlockchainTestContext(ctx context.Context, numKeys int, mineOnTx bool) (
 					select {
 					case <-ctx.Done():
 						return
-					case <-time.After(50 * time.Millisecond):
+					case <-time.After(1000 * time.Millisecond):
 						_ = btc.mineBlock(ctx)
 					}
 				}
