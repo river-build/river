@@ -1,16 +1,21 @@
 'use client'
 
 import { useContext, useMemo } from 'react'
-import { useCurrentSpaceId, useSpace } from './useSpace'
+import { useCurrentSpaceId } from './useSpace'
 import { ChannelContext } from './internals/ChannelContext'
+import { useSyncAgent } from './useSyncAgent'
+import { useObservable } from './useObservable'
 
 /**
  *  Views a channel by its channelId and spaceId.
  */
 export const useChannel = (channelId: string, spaceId: string) => {
-    const space = useSpace(spaceId)
-    const channel = useMemo(() => space.getChannel(channelId), [space, channelId])
-    return channel
+    const sync = useSyncAgent()
+    const channel = useMemo(
+        () => sync.spaces.getSpace(spaceId).getChannel(channelId),
+        [sync.spaces, spaceId, channelId],
+    )
+    return useObservable(channel)
 }
 
 /**
@@ -32,7 +37,5 @@ export const useCurrentChannelId = () => {
 export const useCurrentChannel = () => {
     const spaceId = useCurrentSpaceId()
     const channelId = useCurrentChannelId()
-
-    // TODO: return the Channel object or the ChannelModel object?
     return useChannel(spaceId, channelId)
 }

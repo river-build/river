@@ -42,13 +42,13 @@ export const SpacesBlock = (props: SpacesBlockProps) => {
 }
 
 const SpaceInfo = ({ spaceId }: { spaceId: string }) => {
-    const space = useSpace(spaceId)
+    const { data: space } = useSpace(spaceId)
     return <div>{JSON.stringify(space, null, 2)}</div>
 }
 
 export const CreateSpace = (props: SpacesBlockProps & BlockProps) => {
     const { setCurrentSpaceId, ...rest } = props
-    const { createSpace, isLoading } = useCreateSpace()
+    const { createSpace, isPending } = useCreateSpace()
     const signer = useEthersSigner()
 
     const form = useForm<z.infer<typeof formSchema>>({
@@ -85,7 +85,7 @@ export const CreateSpace = (props: SpacesBlockProps & BlockProps) => {
                             </FormItem>
                         )}
                     />
-                    <Button type="submit">{isLoading ? 'Creating...' : 'Create'}</Button>
+                    <Button type="submit">{isPending ? 'Creating...' : 'Create'}</Button>
                 </form>
             </Form>
         </Block>

@@ -3,11 +3,12 @@
 import { useContext, useMemo } from 'react'
 import { useSyncAgent } from './useSyncAgent'
 import { SpaceContext } from './internals/SpaceContext'
+import { useObservable } from './useObservable'
 
 export const useSpace = (spaceId: string) => {
     const sync = useSyncAgent()
-    const space = useMemo(() => sync.spaces.getSpace(spaceId), [sync, spaceId])
-    return space
+    const observable = useMemo(() => sync.spaces.getSpace(spaceId), [sync, spaceId])
+    return useObservable(observable)
 }
 
 // Maybe this should be moved to the internals folder?
@@ -25,7 +26,5 @@ export const useCurrentSpaceId = () => {
 
 export const useCurrentSpace = () => {
     const spaceId = useCurrentSpaceId()
-
-    // TODO: return the Space object or the SpaceModel object?
     return useSpace(spaceId)
 }
