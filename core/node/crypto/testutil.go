@@ -41,6 +41,7 @@ type autoMiningClientWrapper struct {
 }
 
 func (w *autoMiningClientWrapper) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+	fmt.Println("Sending tx", tx.Hash().Hex())
 	err := w.BlockchainClient.SendTransaction(ctx, tx)
 	if err != nil {
 		return err
@@ -48,7 +49,9 @@ func (w *autoMiningClientWrapper) SendTransaction(ctx context.Context, tx *types
 	if w.onTx == nil {
 		return nil
 	} else {
-		return w.onTx(ctx, tx)
+		err = w.onTx(ctx, tx)
+		fmt.Println("Tx mined", tx.Hash().Hex())
+		return err
 	}
 }
 
@@ -223,12 +226,14 @@ func NewBlockchainTestContext(ctx context.Context, numKeys int, mineOnTx bool) (
 		client = &autoMiningClientWrapper{
 			BlockchainClient: client,
 			onTx: func(ctx context.Context, tx *types.Transaction) error {
-				for range 20 {
+				for i := range 20 {
+					fmt.Println("Auto mining", i, tx.Hash().Hex())
 					if err := btc.mineBlock(ctx); err != nil {
 						return err
 					}
 					receipt, err := client.TransactionReceipt(ctx, tx.Hash())
 					if receipt != nil {
+						fmt.Println("Tx included in block", tx.Hash().Hex(), "err=", err)
 						return nil
 					}
 					if !errors.Is(err, ethereum.NotFound) {
