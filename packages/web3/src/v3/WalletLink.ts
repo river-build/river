@@ -4,7 +4,6 @@ import { WalletAlreadyLinkedError, WalletNotLinkedError } from '../error-types'
 import { Address } from '../ContractTypes'
 import { BaseChainConfig } from '../IStaticContractsInfo'
 import { IWalletLinkShim } from './WalletLinkShim'
-import { arrayify } from 'ethers/lib/utils'
 import { createEip712LinkedWalletdData } from './EIP-712'
 
 export const INVALID_ADDRESS = '0x0000000000000000000000000000000000000000'
@@ -89,6 +88,24 @@ export class WalletLink {
         return this.signTypedData(wallet, domain, types, value)
     }
 
+    private generateRootKeySignatureForCallerData({
+        rootKey,
+        walletAddress,
+        rootKeyNonce,
+    }: {
+        rootKey: ethers.Signer
+        walletAddress: Address
+        rootKeyNonce: BigNumber
+    }): Promise<string> {
+        const { domain, types, value } = createEip712LinkedWalletdData({
+            domain: this.eip712Domain,
+            message: this.LINKED_WALLET_MESSAGE,
+            nonce: rootKeyNonce,
+            userID: walletAddress,
+        })
+        return this.signTypedData(rootKey, domain, types, value)
+    }
+
     private async generateLinkCallerData(
         message: string,
         rootKey: ethers.Signer,
@@ -97,9 +114,11 @@ export class WalletLink {
         const { rootKeyAddress, walletAddress } = await this.assertNotAlreadyLinked(rootKey, wallet)
 
         const nonce = await this.walletLinkShim.read.getLatestNonceForRootKey(rootKeyAddress)
-        const rootKeySignature = await rootKey.signMessage(
-            packAddressWithNonce(message, walletAddress, nonce),
-        )
+        const rootKeySignature = await this.generateRootKeySignatureForCallerData({
+            rootKey,
+            walletAddress: walletAddress as Address,
+            rootKeyNonce: nonce,
+        })
 
         const rootKeyData = {
             addr: rootKeyAddress,
@@ -305,14 +324,4 @@ export class WalletLink {
     public getInterface() {
         return this.walletLinkShim.interface
     }
-}
-
-function packAddressWithNonce(message: string, address: string, nonce: BigNumber): Uint8Array {
-    const abi = ethers.utils.defaultAbiCoder
-    const packed = abi.encode(
-        ['string', 'address', 'uint256'],
-        [message, address, nonce.toNumber()],
-    )
-    const hash = ethers.utils.keccak256(packed)
-    return arrayify(hash)
 }
