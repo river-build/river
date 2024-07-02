@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"math/big"
+	"reflect"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -228,12 +229,45 @@ func NewTransactionPoolWithPolicies(
 		walletBalance:                walletBalance.With(curryLabels),
 	}
 
+	// when CheckPendingTransactions is already in progress it returns immediately when called. In tests it is possible
+	// that a tx is submitted, a mineBlock/commit is called to included it in the chain and the chain monitor calls
+	// CheckPendingTransactions for the new block. If CheckPendingTransactions is still in progress from the previous
+	// block and operates still on the previous header it can miss that this tx is now included in the chain.
+	// If the test waits for the tx to be included and doesn't create a new block the tx pool will never check
+	// the status of this tx and therefore the test will timeout. For simulated backends add a poll loop that ensures
+	// that the tx pool periodically checks the pending tx status and overcomes the deadlock.
+	if isSimulatedBackend(client) {
+		go func() {
+			for {
+				select {
+				case <-time.After(time.Second):
+					if head, err := client.HeaderByNumber(ctx, nil); err == nil {
+						go txPool.CheckPendingTransactions(ctx, head)
+					}
+				case <-ctx.Done():
+					return
+				}
+			}
+		}()
+	}
+
 	chainMonitor.OnHeader(func(ctx context.Context, head *types.Header) {
 		go txPool.CheckPendingTransactions(ctx, head)
 	})
+
 	chainMonitor.OnHeader(txPool.Balance)
 
 	return txPool, nil
+}
+
+func isSimulatedBackend(client BlockchainClient) bool {
+	// When using a simulated backend
+	clientType := reflect.TypeOf(client)
+	isSimulated := false
+	if inner, ok := client.(*autoMiningClientWrapper); ok {
+		isSimulated = reflect.TypeOf(inner.BlockchainClient).String() == "simulated.simClient"
+	}
+	return isSimulated || clientType.String() == "simulated.simClient"
 }
 
 func (tx *txPoolPendingTransaction) Wait() <-chan *types.Receipt {
