@@ -1,6 +1,6 @@
-import { NodeStructOutput } from '@river-build/generated/dev/typings/INodeRegistry'
+import type { NodeStructOutput } from '@river-build/generated/dev/typings/INodeRegistry'
 import { RiverRegistry, getWeb3Deployment } from '@river-build/web3'
-import ethers from 'ethers'
+import { ethers } from 'ethers'
 
 const NODE_STATUS = {
     ACTIVE: 2,
@@ -27,7 +27,7 @@ export class MetricsDiscovery {
     private async getTargetNodes() {
         console.info('Getting target nodes')
         const allNodes = await this.riverRegistry.nodeRegistry.read.getAllNodes()
-        return allNodes.filter(MetricsDiscovery.isTargeted)
+        return allNodes.filter((node) => MetricsDiscovery.isTargeted(node))
     }
 
     public nodeToTargetEntry(node: NodeStructOutput) {

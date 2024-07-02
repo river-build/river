@@ -13,7 +13,7 @@ const run = async () => {
         env: envVars.ENV,
     })
 
-    while (true) {
+    for (;;) {
         console.info('Getting prometheus targets...')
         const targets = await metricsDiscovery.getPrometheusTargets()
         console.info('Writing prometheus targets...', targets)
@@ -24,4 +24,4 @@ const run = async () => {
     }
 }
 
-run()
+run().catch(console.error)
