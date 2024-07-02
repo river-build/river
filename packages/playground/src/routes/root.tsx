@@ -1,6 +1,6 @@
 import { useAccount, useConnect } from 'wagmi'
 import { makeRiverConfig } from '@river-build/sdk'
-import { useRiverConnection, useSyncValue } from '@river-build/react-sdk'
+import { useRiver, useRiverConnection } from '@river-build/react-sdk'
 import { Button } from '@/components/ui/button'
 import { useEthersSigner } from '@/utils/viem-to-ethers'
 
@@ -73,7 +73,7 @@ const ConnectRiver = () => {
 }
 
 const ConnectedContent = () => {
-    const { data: nodeUrls } = useSyncValue((s) => s.riverStreamNodeUrls, {
+    const { data: nodeUrls } = useRiver((s) => s.riverStreamNodeUrls, {
         onUpdate: (data) => console.log('onUpdate', data),
         onError: (error) => console.error('onError', error),
     })
