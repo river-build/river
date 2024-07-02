@@ -1,18 +1,17 @@
 'use client'
 
-import { useCallback, useState } from 'react'
-import { useCurrentChannel } from './useChannel'
+import { useCurrentChannelId } from './useChannel'
+import { useCurrentSpaceId } from './useSpace'
+import { type ActionConfig, useAction } from './internals/useAction'
 
-export const useSendMessage = () => {
-    const channel = useCurrentChannel()
-    const [isSending, setSending] = useState(false)
-    const send = useCallback(
-        async (message: string) => {
-            setSending(true)
-            return channel.sendMessage(message).finally(() => setSending(false))
-        },
-        [channel],
+export const useSendMessage = (config: ActionConfig = {}) => {
+    const spaceId = useCurrentSpaceId()
+    const channelId = useCurrentChannelId()
+
+    const { action, ...rest } = useAction(
+        (sync) => sync.spaces.getSpace(spaceId).getChannel(channelId).sendMessage,
+        config,
     )
 
-    return { send, isSending }
+    return { sendMessage: action, ...rest }
 }

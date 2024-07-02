@@ -1,19 +1,8 @@
 'use client'
 
-import { useCallback, useState } from 'react'
-import type { Spaces } from '@river-build/sdk'
-import { useSyncAgent } from './useSyncAgent'
+import { type ActionConfig, useAction } from './internals/useAction'
 
-export const useCreateSpace = () => {
-    const sync = useSyncAgent()
-    const [isLoading, setIsLoading] = useState(false)
-
-    const createSpace: Spaces['createSpace'] = useCallback(
-        async (config, signer) => {
-            setIsLoading(true)
-            return sync.spaces.createSpace(config, signer).finally(() => setIsLoading(false))
-        },
-        [sync],
-    )
-    return { createSpace, isLoading }
+export const useCreateSpace = (config: ActionConfig = {}) => {
+    const { action, ...rest } = useAction((sync) => sync.spaces.createSpace, config)
+    return { createSpace: action, ...rest }
 }
