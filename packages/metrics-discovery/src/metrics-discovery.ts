@@ -4,6 +4,7 @@ import { ethers } from 'ethers'
 
 const NODE_STATUS = {
     ACTIVE: 2,
+    FAILED: 3,
     DEPARTING: 4,
 }
 
@@ -21,7 +22,11 @@ export class MetricsDiscovery {
     }
 
     public static isTargeted(node: NodeStructOutput) {
-        return node.status === NODE_STATUS.ACTIVE || node.status === NODE_STATUS.DEPARTING
+        return (
+            node.status === NODE_STATUS.ACTIVE ||
+            node.status === NODE_STATUS.DEPARTING ||
+            node.status === NODE_STATUS.FAILED
+        )
     }
 
     private async getTargetNodes() {
