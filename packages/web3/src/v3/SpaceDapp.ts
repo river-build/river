@@ -44,30 +44,33 @@ type EntitlementData = {
 class EntitlementDataCacheResult implements CacheResult<EntitlementData[]> {
     value: EntitlementData[]
     cacheHit: boolean
-    isPositive: () => boolean = () => true
+    isPositive: boolean
     constructor(value: EntitlementData[]) {
         this.value = value
         this.cacheHit = false
+        this.isPositive = true
     }
 }
 
 class EntitledWalletCacheResult implements CacheResult<EntitledWallet> {
     value: EntitledWallet
     cacheHit: boolean
-    isPositive: () => boolean = () => this.value !== undefined
+    isPositive: boolean
     constructor(value: EntitledWallet) {
         this.value = value
         this.cacheHit = false
+        this.isPositive = value !== undefined
     }
 }
 
 class BooleanCacheResult implements CacheResult<boolean> {
     value: boolean
     cacheHit: boolean
-    isPositive: () => boolean = () => this.value
+    isPositive: boolean
     constructor(value: boolean) {
         this.value = value
         this.cacheHit = false
+        this.isPositive = value
     }
 }
 

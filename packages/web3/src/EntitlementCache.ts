@@ -7,7 +7,7 @@ export interface Keyable {
 export interface CacheResult<V> {
     value: V
     cacheHit: boolean
-    isPositive: () => boolean
+    isPositive: boolean
 }
 
 export class EntitlementCache<K extends Keyable, V> {
@@ -53,7 +53,7 @@ export class EntitlementCache<K extends Keyable, V> {
         }
 
         const result = await onCacheMiss(keyable)
-        if (result.isPositive()) {
+        if (result.isPositive) {
             this.positiveCache.set(key, result)
         } else {
             this.negativeCache.set(key, result)

@@ -17,20 +17,22 @@ class Key implements Keyable {
 class BooleanCacheResult implements CacheResult<boolean> {
     value: boolean
     cacheHit: boolean
-    isPositive: () => boolean = () => this.value
+    isPositive: boolean
     constructor(value: boolean) {
         this.value = value
         this.cacheHit = false
+        this.isPositive = value
     }
 }
 
 class StringCacheResult implements CacheResult<string> {
     value: string
     cacheHit: boolean
-    isPositive: () => boolean = () => this.value !== ''
+    isPositive: boolean
     constructor(value: string) {
         this.value = value
         this.cacheHit = false
+        this.isPositive = value !== ''
     }
 }
 
