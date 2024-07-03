@@ -159,15 +159,9 @@ export interface ISpaceDapp {
     updateSpaceInfo: (
         spaceId: string,
         name: string,
+        uri: string,
         shortDescription: string,
         longDescription: string,
-        uri: string,
-        signer: SignerType,
-        txnOpts?: TransactionOpts,
-    ) => Promise<TransactionType>
-    updateSpaceName: (
-        spaceId: string,
-        name: string,
         signer: SignerType,
         txnOpts?: TransactionOpts,
     ) => Promise<TransactionType>

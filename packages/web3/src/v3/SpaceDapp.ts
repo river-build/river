@@ -294,31 +294,6 @@ export class SpaceDapp implements ISpaceDapp {
         }
     }
 
-    public async updateSpaceName(
-        spaceId: string,
-        name: string,
-        signer: ethers.Signer,
-        txnOpts?: TransactionOpts,
-    ): Promise<ContractTransaction> {
-        const space = this.getSpace(spaceId)
-        if (!space) {
-            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
-        }
-        const spaceInfo = await space.getSpaceInfo()
-        // update the space name
-        return wrapTransaction(
-            () =>
-                space.SpaceOwner.write(signer).updateSpaceInfo(
-                    space.Address,
-                    name,
-                    spaceInfo.uri,
-                    spaceInfo.shortDescription,
-                    spaceInfo.longDescription,
-                ),
-            txnOpts,
-        )
-    }
-
     public async updateSpaceInfo(
         spaceId: string,
         name: string,
