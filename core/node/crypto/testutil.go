@@ -239,6 +239,19 @@ func NewBlockchainTestContext(ctx context.Context, numKeys int, mineOnTx bool) (
 				return RiverError(Err_INTERNAL, "auto mining failed to include tx in block", "tx", tx.Hash())
 			},
 		}
+
+		if btc.Backend != nil {
+			go func() {
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case <-time.After(50 * time.Millisecond):
+						_ = btc.mineBlock(ctx)
+					}
+				}
+			}()
+		}
 	}
 	btc.BcClient = client
 
@@ -637,3 +650,22 @@ func GetTestAddress() common.Address {
 	}
 	return address
 }
+
+type NoopChainMonitor struct{}
+
+func (NoopChainMonitor) RunWithBlockPeriod(
+	context.Context,
+	BlockchainClient,
+	BlockNumber,
+	time.Duration,
+	infra.MetricsFactory,
+) {
+}
+
+func (NoopChainMonitor) OnHeader(OnChainNewHeader)                                         {}
+func (NoopChainMonitor) OnBlock(OnChainNewBlock)                                           {}
+func (NoopChainMonitor) OnAllEvents(BlockNumber, OnChainEventCallback)                     {}
+func (NoopChainMonitor) OnContractEvent(BlockNumber, common.Address, OnChainEventCallback) {}
+func (NoopChainMonitor) OnContractWithTopicsEvent(BlockNumber, common.Address, [][]common.Hash, OnChainEventCallback) {
+}
+func (NoopChainMonitor) OnStopped(OnChainMonitorStoppedCallback) {}
