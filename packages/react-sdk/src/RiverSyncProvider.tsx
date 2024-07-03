@@ -15,6 +15,11 @@ export const RiverSyncProvider = (props: RiverSyncProviderProps) => {
         if (syncAgent) {
             syncAgent.start()
         }
+        return () => {
+            if (syncAgent) {
+                syncAgent.stop()
+            }
+        }
     }, [syncAgent])
 
     return (
