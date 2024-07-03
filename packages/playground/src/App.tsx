@@ -1,26 +1,23 @@
 import { RouterProvider } from 'react-router-dom'
-import { WagmiConfig, configureChains, createConfig, mainnet } from 'wagmi'
-import { publicProvider } from 'wagmi/providers/public'
-import { InjectedConnector } from 'wagmi/connectors/injected'
+import { WagmiProvider } from 'wagmi'
+
 import { RiverSyncProvider } from '@river-build/react-sdk'
+
+import { useState } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { router } from './routes'
-
-const { publicClient, webSocketPublicClient } = configureChains([mainnet], [publicProvider()])
-
-const config = createConfig({
-    autoConnect: true,
-    publicClient,
-    webSocketPublicClient,
-    connectors: [new InjectedConnector()],
-})
+import { config } from './config/wagmi'
 
 function App() {
+    const [queryClient] = useState(() => new QueryClient())
     return (
-        <WagmiConfig config={config}>
-            <RiverSyncProvider>
-                <RouterProvider router={router} />
-            </RiverSyncProvider>
-        </WagmiConfig>
+        <WagmiProvider config={config}>
+            <QueryClientProvider client={queryClient}>
+                <RiverSyncProvider>
+                    <RouterProvider router={router} />
+                </RiverSyncProvider>
+            </QueryClientProvider>
+        </WagmiProvider>
     )
 }
 

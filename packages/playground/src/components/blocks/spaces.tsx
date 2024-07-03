@@ -1,8 +1,9 @@
-import { useAllSpaces, useCreateSpace, useSpace } from '@river-build/react-sdk'
+import { useCreateSpace, useSpace, useUserSpaces } from '@river-build/react-sdk'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { useEthersSigner } from '@/utils/viem-to-ethers'
+import { getEthersSigner } from '@/utils/viem-to-ethers'
+import { config } from '@/config/wagmi'
 import {
     Form,
     FormControl,
@@ -25,7 +26,7 @@ const formSchema = z.object({
 })
 
 export const SpacesBlock = (props: SpacesBlockProps) => {
-    const { spaceIds } = useAllSpaces()
+    const { spaceIds } = useUserSpaces()
     return (
         <Block title="Spaces">
             <CreateSpace setCurrentSpaceId={props.setCurrentSpaceId} variant="secondary" />
@@ -49,7 +50,6 @@ const SpaceInfo = ({ spaceId }: { spaceId: string }) => {
 export const CreateSpace = (props: SpacesBlockProps & BlockProps) => {
     const { setCurrentSpaceId, ...rest } = props
     const { createSpace, isPending } = useCreateSpace()
-    const signer = useEthersSigner()
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -62,9 +62,7 @@ export const CreateSpace = (props: SpacesBlockProps & BlockProps) => {
                 <form
                     className="space-y-8"
                     onSubmit={form.handleSubmit(async ({ spaceName }) => {
-                        if (!signer) {
-                            throw new Error('No signer set')
-                        }
+                        const signer = await getEthersSigner(config)
                         const { spaceId } = await createSpace({ spaceName }, signer)
                         setCurrentSpaceId(spaceId)
                     })}
@@ -85,7 +83,7 @@ export const CreateSpace = (props: SpacesBlockProps & BlockProps) => {
                             </FormItem>
                         )}
                     />
-                    <Button type="submit">{isPending ? 'Creating...' : 'Create'}</Button>
+                    <Button type="submit"> {isPending ? 'Creating...' : 'Create'}</Button>
                 </form>
             </Form>
         </Block>

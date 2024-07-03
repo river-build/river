@@ -3,10 +3,11 @@ import { makeRiverConfig } from '@river-build/sdk'
 import { SpaceProvider, useRiverConnection } from '@river-build/react-sdk'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { useEthersSigner } from '@/utils/viem-to-ethers'
+import { getEthersSigner } from '@/utils/viem-to-ethers'
 import { UserAuthStatusBlock } from '@/components/blocks/auth-block'
 import { ConnectionBlock } from '@/components/blocks/connection-block'
 import { SpacesBlock } from '@/components/blocks/spaces'
+import { config } from '@/config/wagmi'
 
 export const ConnectRoute = () => {
     const { isConnected } = useAccount()
@@ -20,20 +21,20 @@ export const ConnectRoute = () => {
 
 const ChainConnectButton = () => {
     const { connector: activeConnector } = useAccount()
-    const { connect, connectors, error, isLoading, pendingConnector } = useConnect()
+    const { connectors, connect, error, isPending } = useConnect()
 
     return (
         <div>
             {connectors.map((connector) => (
                 <Button
                     disabled={!connector.ready}
-                    key={connector.id}
+                    key={connector.uid}
                     onClick={() => connect({ connector })}
                 >
                     {activeConnector?.id === connector.id
                         ? `Connected - ${connector.name}`
                         : connector.name}
-                    {isLoading && pendingConnector?.id === connector.id && ' (connecting)'}
+                    {isPending && ' (connecting)'}
                 </Button>
             ))}
             {error && <div>{error.message}</div>}
@@ -44,20 +45,18 @@ const ChainConnectButton = () => {
 const riverConfig = makeRiverConfig('gamma')
 
 const ConnectRiver = () => {
-    const signer = useEthersSigner()
     const { connect, disconnect, isConnecting, isConnected } = useRiverConnection()
 
     return (
         <>
             <div>
                 <Button
-                    onClick={() => {
+                    onClick={async () => {
                         if (isConnected) {
                             disconnect()
                         } else {
-                            if (signer) {
-                                connect(signer, { riverConfig })
-                            }
+                            const signer = await getEthersSigner(config)
+                            connect(signer, { riverConfig })
                         }
                     }}
                 >
