@@ -16,7 +16,6 @@ import (
 var (
 	// stringErrorFuncSelector = keccack256("Revert reason")[4]
 	stringErrorFuncSelector = [4]byte{0x08, 0xc3, 0x79, 0xa0}
-	stringType, _           = abi.NewType("string", "string", nil)
 )
 
 type EvmErrorDecoder struct {
