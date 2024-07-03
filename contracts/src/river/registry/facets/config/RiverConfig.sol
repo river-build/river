@@ -78,7 +78,7 @@ contract RiverConfig is IRiverConfig, RegistryModifiers, OwnableBase, Facet {
 
     ds.configurationKeys.remove(key);
 
-    emit ConfigurationChanged(key, 0, "", true);
+    emit ConfigurationChanged(key, 0, "ALL", true);
   }
 
   /// Deletes the setting for the given key at the given block
