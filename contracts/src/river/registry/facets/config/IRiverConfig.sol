@@ -11,6 +11,7 @@ interface IRiverConfigBase {
 
   /**
    * @notice Emitted when a setting is changed
+   * @dev if deleted is true and block is max value of uint64, the setting is deleted on all blocks
    * @param key The setting key that is changed
    * @param block The block number on which the setting becomes active
    * @param value The new setting value
@@ -62,7 +63,7 @@ interface IRiverConfig is IRiverConfigBase {
   ) external;
 
   /**
-   * @notice Deletes the setting for the given key on all blocks.
+   * @notice Deletes the setting for the given key on all blocks
    * @dev Emits ConfigurationChanged event with deleted flag set to true and block number set to max value of uint64
    * @param key The setting key
    */
