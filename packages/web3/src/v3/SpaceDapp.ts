@@ -714,7 +714,11 @@ export class SpaceDapp implements ISpaceDapp {
             ? channelNetworkId
             : `0x${channelNetworkId}`
 
-        if (permission === Permission.Read || permission === Permission.Write) {
+        if (
+            permission === Permission.Read ||
+            permission === Permission.Write ||
+            permission === Permission.ReactReply
+        ) {
             const linkedWallets = await this.getLinkedWallets(user)
 
             const owner = await space.Ownable.read.owner()
