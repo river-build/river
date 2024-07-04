@@ -50,9 +50,10 @@ interface IRiverConfig is IRiverConfigBase {
 
   /**
    * @notice Set a bytes setting for the given key
+   * @dev Emits ConfigurationChanged event
    * @param key The setting key
-   * @param blockNumber The block number on which the setting becomes active
-   * @param value The setting value (value must be its ABI representation)
+   * @param blockNumber The block number on which the setting becomes active, can't be max value of uint64
+   * @param value The setting value (value must be its ABI representation), can't be empty
    */
   function setConfiguration(
     bytes32 key,
@@ -61,13 +62,15 @@ interface IRiverConfig is IRiverConfigBase {
   ) external;
 
   /**
-   * @notice Deletes the setting for the given key on all blocks
+   * @notice Deletes the setting for the given key on all blocks.
+   * @dev Emits ConfigurationChanged event with deleted flag set to true and block number set to max value of uint64
    * @param key The setting key
    */
   function deleteConfiguration(bytes32 key) external;
 
   /**
    * @notice Deletes the setting for the given key at the given block
+   * @dev Emits ConfigurationChanged event with deleted flag set to true
    * @param key The setting key
    * @param blockNumber The block number on which the setting becomes active
    */
