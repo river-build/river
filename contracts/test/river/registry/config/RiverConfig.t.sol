@@ -136,7 +136,7 @@ contract RiverConfigTest is
 
     vm.prank(deployer);
     vm.expectEmit(address(riverConfig));
-    emit ConfigurationChanged(key, 0, "", true);
+    emit ConfigurationChanged(key, type(uint64).max, "", true);
 
     riverConfig.deleteConfiguration(key);
   }
