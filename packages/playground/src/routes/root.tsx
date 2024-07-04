@@ -1,20 +1,18 @@
 import { useAccount, useConnect } from 'wagmi'
-import { makeRiverConfig } from '@river-build/sdk'
 import { SpaceProvider, useRiverConnection } from '@river-build/react-sdk'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { getEthersSigner } from '@/utils/viem-to-ethers'
 import { UserAuthStatusBlock } from '@/components/blocks/auth-block'
 import { ConnectionBlock } from '@/components/blocks/connection-block'
 import { SpacesBlock } from '@/components/blocks/spaces'
-import { config } from '@/config/wagmi'
+import { type Env, RiverEnvSwitcher } from '@/components/dialog/env-switcher'
 
 export const ConnectRoute = () => {
-    const { isConnected } = useAccount()
+    const { isConnected: isWalletConnected } = useAccount()
 
     return (
         <div className="flex flex-col gap-6">
-            {isConnected ? <ConnectRiver /> : <ChainConnectButton />}
+            {isWalletConnected ? <ConnectRiver /> : <ChainConnectButton />}
         </div>
     )
 }
@@ -27,7 +25,7 @@ const ChainConnectButton = () => {
         <div>
             {connectors.map((connector) => (
                 <Button
-                    disabled={!connector.ready}
+                    // disabled={!connector.ready}
                     key={connector.uid}
                     onClick={() => connect({ connector })}
                 >
@@ -42,32 +40,24 @@ const ChainConnectButton = () => {
     )
 }
 
-const riverConfig = makeRiverConfig('gamma')
-
 const ConnectRiver = () => {
-    const { connect, disconnect, isConnecting, isConnected } = useRiverConnection()
+    const [envId, setEnv] = useState<Env['id']>('gamma')
+    const { isConnected } = useRiverConnection()
 
     return (
         <>
-            <div>
-                <Button
-                    onClick={async () => {
-                        if (isConnected) {
-                            disconnect()
-                        } else {
-                            const signer = await getEthersSigner(config)
-                            connect(signer, { riverConfig })
-                        }
-                    }}
-                >
-                    {isConnected ? 'Disconnect' : isConnecting ? 'Connecting...' : 'Connect'}
-                </Button>
-            </div>
-            {isConnected && (
+            {isConnected ? (
                 <>
-                    <h2 className="text-lg font-semibold">Connected to Sync Agent</h2>
+                    <div className="flex items-center justify-between gap-2">
+                        <h2 className="text-lg font-semibold">Connected to Sync Agent</h2>
+                        <RiverEnvSwitcher currentEnv={envId} setEnv={setEnv} />
+                    </div>
                     <ConnectedContent />
                 </>
+            ) : (
+                <div className="max-w-lg">
+                    <RiverEnvSwitcher currentEnv={envId} setEnv={setEnv} />
+                </div>
             )}
         </>
     )
