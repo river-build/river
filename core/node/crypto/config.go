@@ -147,45 +147,69 @@ type OnChainConfiguration interface {
 }
 
 type configEntry struct {
-	key     common.Hash
-	value   []byte
-	deleted bool
+	name  string
+	value []byte
 }
 
 // This datastructure mimics the on-chain configuration storage so updates
 // from events can be applied consistently.
-type rawSettingsMap map[common.Hash]map[BlockNumber][]byte
+type rawSettingsMap map[string]map[BlockNumber][]byte
 
-func (r rawSettingsMap) fill(ctx context.Context, retrievedSettings []river.Setting) {
+func (r rawSettingsMap) init(
+	ctx context.Context,
+	keyHashToName map[common.Hash]string,
+	retrievedSettings []river.Setting,
+) {
 	for _, setting := range retrievedSettings {
 		if setting.BlockNumber == math.MaxUint64 {
 			dlog.FromCtx(ctx).
 				Warn("Invalid block number, ignoring", "key", setting.Key, "value", setting.Value)
 			continue
 		}
-		if _, ok := r[setting.Key]; !ok {
-			r[setting.Key] = make(map[BlockNumber][]byte)
-		}
-		if _, ok := r[setting.Key][BlockNumber(setting.BlockNumber)]; ok {
+		name, ok := keyHashToName[setting.Key]
+		if !ok {
 			dlog.FromCtx(ctx).
-				Warn("Duplicate setting", "key", setting.Key, "block", setting.BlockNumber, "oldValue",
-					r[setting.Key][BlockNumber(setting.BlockNumber)], "newValue", setting.Value)
+				Info("Skipping unknown setting key", "key", setting.Key, "value", setting.Value, "block", setting.BlockNumber)
+			continue
 		}
-		r[setting.Key][BlockNumber(setting.BlockNumber)] = setting.Value
+		blockMap, ok := r[name]
+		if !ok {
+			blockMap = make(map[BlockNumber][]byte)
+			r[name] = blockMap
+		}
+		blockNum := BlockNumber(setting.BlockNumber)
+		oldVal, ok := blockMap[blockNum]
+		if ok {
+			dlog.FromCtx(ctx).
+				Warn("Duplicate setting", "key", setting.Key, "block", blockNum, "oldValue",
+					oldVal, "newValue", setting.Value)
+		}
+		blockMap[blockNum] = setting.Value
 	}
 }
 
-func (r rawSettingsMap) apply(ctx context.Context, event *river.RiverConfigV1ConfigurationChanged) {
+func (r rawSettingsMap) apply(
+	ctx context.Context,
+	keyHashToName map[common.Hash]string,
+	event *river.RiverConfigV1ConfigurationChanged,
+) {
+	name, ok := keyHashToName[event.Key]
+	if !ok {
+		dlog.FromCtx(ctx).
+			Info("Skipping unknown setting key", "key", event.Key, "value", event.Value, "block", event.Block, "deleted", event.Deleted)
+		return
+	}
 	if event.Deleted {
-		if _, ok := r[event.Key]; ok {
+		if blockMap, ok := r[name]; ok {
 			// block number == max uint64 means delete all settings for this key
 			if event.Block == math.MaxUint64 {
-				delete(r, event.Key)
+				delete(r, name)
 			} else {
-				if _, ok := r[event.Key][BlockNumber(event.Block)]; ok {
-					delete(r[event.Key], BlockNumber(event.Block))
-					if len(r[event.Key]) == 0 {
-						delete(r, event.Key)
+				blockNum := BlockNumber(event.Block)
+				if _, ok := blockMap[blockNum]; ok {
+					delete(blockMap, blockNum)
+					if len(blockMap) == 0 {
+						delete(r, name)
 					}
 				} else {
 					dlog.FromCtx(ctx).
@@ -197,14 +221,33 @@ func (r rawSettingsMap) apply(ctx context.Context, event *river.RiverConfigV1Con
 				Warn("Got delete event for non-existing setting", "key", event.Key, "block", event.Block)
 		}
 	} else {
-		if _, ok := r[event.Key]; !ok {
-			r[event.Key] = make(map[BlockNumber][]byte)
+		if _, ok := r[name]; !ok {
+			r[name] = make(map[BlockNumber][]byte)
 		}
-		r[event.Key][BlockNumber(event.Block)] = event.Value
+		r[name][BlockNumber(event.Block)] = event.Value
 	}
 }
 
-// type configByBlockMap map[BlockNumber][]*configEntry
+func (r rawSettingsMap) transform() (map[BlockNumber][]*configEntry, []BlockNumber) {
+	result := make(map[BlockNumber][]*configEntry)
+	for name, blockMap := range r {
+		for block, value := range blockMap {
+			result[block] = append(result[block], &configEntry{
+				name:  name,
+				value: value,
+			})
+		}
+	}
+
+	var blockNums []BlockNumber
+	for key := range result {
+		blockNums = append(blockNums, key)
+	}
+	slices.Sort(blockNums)
+
+	return result, blockNums
+}
+
 type onChainConfiguration struct {
 	// contract interacts with the on-chain contract and provide metadata for decoding events
 	contract      *river.RiverConfigV1Caller
@@ -259,29 +302,17 @@ func (occ *onChainConfiguration) processRawSettings(
 ) {
 	log := dlog.FromCtx(ctx)
 
-	var blockNums []BlockNumber
-	for key := range occ.loadedSettingMap {
-		blockNums = append(blockNums, key)
-	}
-	slices.Sort(blockNums)
+	byBlockNum, blockNums := occ.loadedSettingMap.transform()
 
 	// First settings are the default settings
 	settings := []*OnChainSettings{DefaultOnChainSettings()}
 
 	decodeHook := abiBytesToTypeDecoder(ctx)
-	input := make(map[string]any)
 	for _, blockNum := range blockNums {
-		for _, v := range occ.loadedSettingMap[blockNum] {
-			name, ok := occ.keyHashToName[v.key]
-			if !ok {
-				log.Warn("Unknown setting key", "key", v.key, "value", v.value, "block", blockNum)
-				continue
-			}
-			if v.deleted {
-				input[name] = occ.defaultsMap[name]
-			} else {
-				input[name] = v.value
-			}
+		input := make(map[string]any)
+
+		for _, v := range byBlockNum[blockNum] {
+			input[v.name] = v.value
 		}
 
 		// Copy values from the previous block
@@ -363,17 +394,6 @@ func makeOnChainConfig(
 ) (*onChainConfiguration, error) {
 	log := dlog.FromCtx(ctx)
 
-	rawSettings := make(rawSettingsMap)
-	for _, setting := range retrievedSettings {
-		rawSettings[BlockNumber(setting.BlockNumber)] = append(
-			rawSettings[BlockNumber(setting.BlockNumber)],
-			&configEntry{
-				key:   setting.Key,
-				value: setting.Value,
-			},
-		)
-	}
-
 	// Get defaults to use if the setting is deleted
 	defaultsMap := make(map[string]interface{})
 	err := mapstructure.Decode(DefaultOnChainSettings(), &defaultsMap)
@@ -387,6 +407,9 @@ func makeOnChainConfig(
 		log.Debug("OnChainConfig monitoring key", "key", key, "hash", hash, "default", value)
 		keyHashToName[hash] = key
 	}
+
+	rawSettings := make(rawSettingsMap)
+	rawSettings.init(ctx, keyHashToName, retrievedSettings)
 
 	cfg := &onChainConfiguration{
 		contract:         contract,
@@ -413,24 +436,14 @@ func (occ *onChainConfiguration) onConfigChanged(ctx context.Context, event type
 		dlog.FromCtx(ctx).Error("OnChainConfiguration: unable to decode ConfigurationChanged event")
 		return
 	}
-
-	occ.applyConfigEntry(
-		ctx,
-		BlockNumber(e.Block),
-		&configEntry{
-			key:     e.Key,
-			value:   e.Value,
-			deleted: e.Deleted,
-		})
+	occ.applyEvent(ctx, &e)
 	occ.lastAppliedEvent.Store(&e)
 }
 
-func (occ *onChainConfiguration) applyConfigEntry(ctx context.Context, block BlockNumber, entry *configEntry) {
+func (occ *onChainConfiguration) applyEvent(ctx context.Context, event *river.RiverConfigV1ConfigurationChanged) {
 	occ.mu.Lock()
 	defer occ.mu.Unlock()
-
-	occ.loadedSettingMap[block] = append(occ.loadedSettingMap[block], entry)
-
+	occ.loadedSettingMap.apply(ctx, occ.keyHashToName, event)
 	occ.processRawSettings(ctx)
 }
 

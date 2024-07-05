@@ -1,12 +1,14 @@
 package crypto
 
 import (
+	"math"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/mitchellh/mapstructure"
+	"github.com/river-build/river/core/contracts/river"
 	"github.com/river-build/river/core/node/base/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,29 +24,25 @@ func TestOnChainConfigSettingMultipleActiveBlockValues(t *testing.T) {
 	require.NoError(err)
 
 	keyId := HashSettingName(StreamReplicationFactorConfigKey)
-	settings.applyConfigEntry(ctx, 20, &configEntry{
-		key:   keyId,
-		value: ABIEncodeUint64(3),
+	settings.applyEvent(ctx, &river.RiverConfigV1ConfigurationChanged{
+		Key:   keyId,
+		Block: 20,
+		Value: ABIEncodeUint64(3),
 	})
-	settings.applyConfigEntry(ctx, 5, &configEntry{
-		key:   keyId,
-		value: ABIEncodeUint64(2),
+	settings.applyEvent(ctx, &river.RiverConfigV1ConfigurationChanged{
+		Key:   keyId,
+		Block: 5,
+		Value: ABIEncodeUint64(2),
 	})
-	settings.applyConfigEntry(ctx, 10, &configEntry{
-		key:   keyId,
-		value: ABIEncodeUint64(5),
+	settings.applyEvent(ctx, &river.RiverConfigV1ConfigurationChanged{
+		Key:   keyId,
+		Block: 10,
+		Value: ABIEncodeUint64(5),
 	})
-	settings.applyConfigEntry(ctx, 25, &configEntry{
-		key:     keyId,
-		deleted: true,
-	})
-	settings.applyConfigEntry(ctx, 30, &configEntry{
-		key:   keyId,
-		value: ABIEncodeUint64(100),
-	})
-	settings.applyConfigEntry(ctx, 35, &configEntry{
-		key:     keyId,
-		deleted: true,
+	settings.applyEvent(ctx, &river.RiverConfigV1ConfigurationChanged{
+		Key:   keyId,
+		Block: 30,
+		Value: ABIEncodeUint64(100),
 	})
 
 	for _, tt := range []struct {
@@ -58,12 +56,58 @@ func TestOnChainConfigSettingMultipleActiveBlockValues(t *testing.T) {
 		{10, 5},
 		{19, 5},
 		{20, 3},
-		{24, 3},
-		{25, 1},
-		{29, 1},
+		{29, 3},
 		{30, 100},
-		{34, 100},
-		{35, 1},
+		{1000, 100},
+	} {
+		cfg := settings.GetOnBlock(tt.block)
+		assert.Equal(tt.value, cfg.ReplicationFactor, "unexpected value at block %d", tt.block)
+	}
+
+	settings.applyEvent(ctx, &river.RiverConfigV1ConfigurationChanged{
+		Key:     keyId,
+		Block:   20,
+		Deleted: true,
+	})
+
+	for _, tt := range []struct {
+		block BlockNumber
+		value uint64
+	}{
+		{0, 1},
+		{4, 1},
+		{5, 2},
+		{9, 2},
+		{10, 5},
+		{19, 5},
+		{20, 5},
+		{29, 5},
+		{30, 100},
+		{1000, 100},
+	} {
+		cfg := settings.GetOnBlock(tt.block)
+		assert.Equal(tt.value, cfg.ReplicationFactor, "unexpected value at block %d", tt.block)
+	}
+
+	settings.applyEvent(ctx, &river.RiverConfigV1ConfigurationChanged{
+		Key:     keyId,
+		Block:   math.MaxUint64,
+		Deleted: true,
+	})
+
+	for _, tt := range []struct {
+		block BlockNumber
+		value uint64
+	}{
+		{0, 1},
+		{4, 1},
+		{5, 1},
+		{9, 1},
+		{10, 1},
+		{19, 1},
+		{20, 1},
+		{29, 1},
+		{30, 1},
 		{1000, 1},
 	} {
 		cfg := settings.GetOnBlock(tt.block)
