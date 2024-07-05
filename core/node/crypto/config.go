@@ -510,9 +510,9 @@ func abiBytesToTypeDecoder(ctx context.Context) mapstructure.DecodeHookFuncValue
 					sec := strings.HasSuffix(key, "Seconds")
 					bb, ok := value.([]byte)
 					if (ms || sec) && ok {
-						vv, err := ABIDecodeUint64(bb)
+						vv, err := ABIDecodeInt64(bb)
 						if err != nil {
-							log.Error("failed to decode uint64", "key", key, "err", err, "bytes", bb)
+							log.Error("failed to decode int64", "key", key, "err", err, "bytes", bb)
 							badKeys = append(badKeys, key)
 							continue
 						}
@@ -536,7 +536,7 @@ func abiBytesToTypeDecoder(ctx context.Context) mapstructure.DecodeHookFuncValue
 					return v, nil
 				}
 				log.Error("failed to decode int64", "err", err, "bytes", from.Bytes())
-			} else if to.Kind() == reflect.Uint64 {
+			} else if to.Kind() == reflect.Uint64 || to.Kind() == reflect.Uint {
 				v, err := ABIDecodeUint64(from.Bytes())
 				if err == nil {
 					return v, nil
