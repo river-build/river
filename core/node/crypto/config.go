@@ -3,6 +3,7 @@ package crypto
 import (
 	"context"
 	"fmt"
+	"math"
 	"reflect"
 	"slices"
 	"strings"
@@ -151,8 +152,59 @@ type configEntry struct {
 	deleted bool
 }
 
-type rawSettingsMap map[BlockNumber][]*configEntry
+// This datastructure mimics the on-chain configuration storage so updates
+// from events can be applied consistently.
+type rawSettingsMap map[common.Hash]map[BlockNumber][]byte
 
+func (r rawSettingsMap) fill(ctx context.Context, retrievedSettings []river.Setting) {
+	for _, setting := range retrievedSettings {
+		if setting.BlockNumber == math.MaxUint64 {
+			dlog.FromCtx(ctx).
+				Warn("Invalid block number, ignoring", "key", setting.Key, "value", setting.Value)
+			continue
+		}
+		if _, ok := r[setting.Key]; !ok {
+			r[setting.Key] = make(map[BlockNumber][]byte)
+		}
+		if _, ok := r[setting.Key][BlockNumber(setting.BlockNumber)]; ok {
+			dlog.FromCtx(ctx).
+				Warn("Duplicate setting", "key", setting.Key, "block", setting.BlockNumber, "oldValue",
+					r[setting.Key][BlockNumber(setting.BlockNumber)], "newValue", setting.Value)
+		}
+		r[setting.Key][BlockNumber(setting.BlockNumber)] = setting.Value
+	}
+}
+
+func (r rawSettingsMap) apply(ctx context.Context, event *river.RiverConfigV1ConfigurationChanged) {
+	if event.Deleted {
+		if _, ok := r[event.Key]; ok {
+			// block number == max uint64 means delete all settings for this key
+			if event.Block == math.MaxUint64 {
+				delete(r, event.Key)
+			} else {
+				if _, ok := r[event.Key][BlockNumber(event.Block)]; ok {
+					delete(r[event.Key], BlockNumber(event.Block))
+					if len(r[event.Key]) == 0 {
+						delete(r, event.Key)
+					}
+				} else {
+					dlog.FromCtx(ctx).
+						Warn("Got delete event for non-existing block", "key", event.Key, "block", event.Block)
+				}
+			}
+		} else {
+			dlog.FromCtx(ctx).
+				Warn("Got delete event for non-existing setting", "key", event.Key, "block", event.Block)
+		}
+	} else {
+		if _, ok := r[event.Key]; !ok {
+			r[event.Key] = make(map[BlockNumber][]byte)
+		}
+		r[event.Key][BlockNumber(event.Block)] = event.Value
+	}
+}
+
+// type configByBlockMap map[BlockNumber][]*configEntry
 type onChainConfiguration struct {
 	// contract interacts with the on-chain contract and provide metadata for decoding events
 	contract      *river.RiverConfigV1Caller
