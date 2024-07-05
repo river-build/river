@@ -2021,10 +2021,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol": {
-      "keccak256": "0xd7242792a3e300815591850768abf6f4cce3ca8662000bdda03c1e093cbe9fc8",
+      "keccak256": "0x28650d058077713dfc28d5c613998d9f1e895a6f5f6b0d93467d25455fc3ea1d",
       "urls": [
-        "bzz-raw://f81068939a093cf34fb80f63337c362a385b0f51f0a05633cc33445e203b266b",
-        "dweb:/ipfs/QmbqnimU8sDp65L7wZuUCNzPSjATfjhStmA8e4Eeg3BjAV"
+        "bzz-raw://e2446b7958f8b5f2713860e2826acf1b123c6b24719f844c7811d1e3f5a87c86",
+        "dweb:/ipfs/Qmesso9ftmVUCHi6w2gkJs9tEjGG5ZZgqhAenkyTDgFPC2"
       ],
       "license": "MIT"
     },
