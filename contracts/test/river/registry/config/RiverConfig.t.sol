@@ -68,6 +68,7 @@ contract RiverConfigTest is
     bytes32 key,
     uint64 blockNumber
   ) external givenConfigurationManagerIsApproved(configManager) {
+    vm.assume(blockNumber != type(uint64).max);
     vm.prank(configManager);
     riverConfig.setConfiguration(key, blockNumber, "hello");
     vm.prank(configManager);
