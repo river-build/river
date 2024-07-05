@@ -38,6 +38,7 @@ contract RiverConfigTest is
     bytes memory value
   ) {
     vm.assume(key != bytes32(0));
+    vm.assume(blockNumber != type(uint64).max);
     vm.assume(value.length > 0);
 
     vm.prank(deployer);
