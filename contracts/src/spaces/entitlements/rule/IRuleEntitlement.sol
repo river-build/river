@@ -64,6 +64,10 @@ interface IRuleEntitlement is IEntitlement {
     LogicalOperation[] logicalOperations;
   }
 
+  function encodeRuleData(
+    RuleData memory data
+  ) external pure returns (bytes memory);
+
   function getRuleData(
     uint256 roleId
   ) external view returns (RuleData memory data);

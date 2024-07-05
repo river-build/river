@@ -175,6 +175,19 @@ export const getOperationTree = async (address: Address, roleId: bigint): Promis
     return postOrderArrayToTree(operations)
 }
 
+const encodeRuleDataInputs: readonly AbiParameter[] | undefined = (
+    Object.values(IRuleEntitlementAbi).find((abi) => abi.name === 'encodeRuleData') as
+        | AbiFunction
+        | undefined
+)?.inputs
+
+export function encodeEntitlementData(ruleData: IRuleEntitlement.RuleDataStruct): Address {
+    if (!encodeRuleDataInputs) {
+        throw new Error('setRuleDataInputs not found')
+    }
+    return encodeAbiParameters(encodeRuleDataInputs, [ruleData])
+}
+
 const getRuleDataOutputs: readonly AbiParameter[] | undefined = (
     Object.values(IRuleEntitlementAbi).find((abi) => abi.name === 'getRuleData') as
         | AbiFunction

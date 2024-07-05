@@ -203,6 +203,12 @@ contract RuleEntitlement is
     return abi.encode(entitlement.data);
   }
 
+  function encodeRuleData(
+    RuleData calldata data
+  ) external pure returns (bytes memory) {
+    return abi.encode(data);
+  }
+
   function getRuleData(
     uint256 roleId
   ) external view returns (RuleData memory data) {

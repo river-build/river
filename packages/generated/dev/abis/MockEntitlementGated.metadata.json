@@ -569,10 +569,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol": {
-      "keccak256": "0xaaf44da8735de5dfb46307db91febdd4719ba979c5bcffa2c62ce9b052b393bc",
+      "keccak256": "0xd7242792a3e300815591850768abf6f4cce3ca8662000bdda03c1e093cbe9fc8",
       "urls": [
-        "bzz-raw://d11d0fc2a08e0e05ce87ad32c0cbcf2a790683e2896735a5d25ac2d9f418e086",
-        "dweb:/ipfs/QmZGrjh3f6ixYQRGXWvP47jMbpRZjBq8znCwYBuQC8NEUB"
+        "bzz-raw://f81068939a093cf34fb80f63337c362a385b0f51f0a05633cc33445e203b266b",
+        "dweb:/ipfs/QmbqnimU8sDp65L7wZuUCNzPSjATfjhStmA8e4Eeg3BjAV"
       ],
       "license": "MIT"
     },
