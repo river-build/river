@@ -64,25 +64,9 @@ interface IRuleEntitlement is IEntitlement {
     LogicalOperation[] logicalOperations;
   }
 
-  function encodeRuleData(
-    RuleData memory data
-  ) external pure returns (bytes memory);
-
   function getRuleData(
     uint256 roleId
   ) external view returns (RuleData memory data);
-
-  function getOperations(
-    uint256 roleId
-  ) external view returns (Operation[] memory);
-
-  function getLogicalOperations(
-    uint256 roleId
-  ) external view returns (LogicalOperation[] memory);
-
-  function getCheckOperations(
-    uint256 roleId
-  ) external view returns (CheckOperation[] memory);
 
   error CheckOperationsLimitReaced(uint256 limit);
   error OperationsLimitReached(uint256 limit);

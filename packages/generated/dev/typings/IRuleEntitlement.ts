@@ -85,11 +85,7 @@ export declare namespace IRuleEntitlement {
 export interface IRuleEntitlementInterface extends utils.Interface {
   functions: {
     "description()": FunctionFragment;
-    "encodeRuleData(((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[]))": FunctionFragment;
-    "getCheckOperations(uint256)": FunctionFragment;
     "getEntitlementDataByRoleId(uint256)": FunctionFragment;
-    "getLogicalOperations(uint256)": FunctionFragment;
-    "getOperations(uint256)": FunctionFragment;
     "getRuleData(uint256)": FunctionFragment;
     "initialize(address)": FunctionFragment;
     "isCrosschain()": FunctionFragment;
@@ -103,11 +99,7 @@ export interface IRuleEntitlementInterface extends utils.Interface {
   getFunction(
     nameOrSignatureOrTopic:
       | "description"
-      | "encodeRuleData"
-      | "getCheckOperations"
       | "getEntitlementDataByRoleId"
-      | "getLogicalOperations"
-      | "getOperations"
       | "getRuleData"
       | "initialize"
       | "isCrosschain"
@@ -123,23 +115,7 @@ export interface IRuleEntitlementInterface extends utils.Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "encodeRuleData",
-    values: [IRuleEntitlement.RuleDataStruct]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getCheckOperations",
-    values: [PromiseOrValue<BigNumberish>]
-  ): string;
-  encodeFunctionData(
     functionFragment: "getEntitlementDataByRoleId",
-    values: [PromiseOrValue<BigNumberish>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getLogicalOperations",
-    values: [PromiseOrValue<BigNumberish>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getOperations",
     values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
@@ -181,23 +157,7 @@ export interface IRuleEntitlementInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "encodeRuleData",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getCheckOperations",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "getEntitlementDataByRoleId",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getLogicalOperations",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getOperations",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -253,30 +213,10 @@ export interface IRuleEntitlement extends BaseContract {
   functions: {
     description(overrides?: CallOverrides): Promise<[string]>;
 
-    encodeRuleData(
-      data: IRuleEntitlement.RuleDataStruct,
-      overrides?: CallOverrides
-    ): Promise<[string]>;
-
-    getCheckOperations(
-      roleId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<[IRuleEntitlement.CheckOperationStructOutput[]]>;
-
     getEntitlementDataByRoleId(
       roleId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<[string]>;
-
-    getLogicalOperations(
-      roleId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<[IRuleEntitlement.LogicalOperationStructOutput[]]>;
-
-    getOperations(
-      roleId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<[IRuleEntitlement.OperationStructOutput[]]>;
 
     getRuleData(
       roleId: PromiseOrValue<BigNumberish>,
@@ -319,30 +259,10 @@ export interface IRuleEntitlement extends BaseContract {
 
   description(overrides?: CallOverrides): Promise<string>;
 
-  encodeRuleData(
-    data: IRuleEntitlement.RuleDataStruct,
-    overrides?: CallOverrides
-  ): Promise<string>;
-
-  getCheckOperations(
-    roleId: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
-  ): Promise<IRuleEntitlement.CheckOperationStructOutput[]>;
-
   getEntitlementDataByRoleId(
     roleId: PromiseOrValue<BigNumberish>,
     overrides?: CallOverrides
   ): Promise<string>;
-
-  getLogicalOperations(
-    roleId: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
-  ): Promise<IRuleEntitlement.LogicalOperationStructOutput[]>;
-
-  getOperations(
-    roleId: PromiseOrValue<BigNumberish>,
-    overrides?: CallOverrides
-  ): Promise<IRuleEntitlement.OperationStructOutput[]>;
 
   getRuleData(
     roleId: PromiseOrValue<BigNumberish>,
@@ -381,30 +301,10 @@ export interface IRuleEntitlement extends BaseContract {
   callStatic: {
     description(overrides?: CallOverrides): Promise<string>;
 
-    encodeRuleData(
-      data: IRuleEntitlement.RuleDataStruct,
-      overrides?: CallOverrides
-    ): Promise<string>;
-
-    getCheckOperations(
-      roleId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<IRuleEntitlement.CheckOperationStructOutput[]>;
-
     getEntitlementDataByRoleId(
       roleId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<string>;
-
-    getLogicalOperations(
-      roleId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<IRuleEntitlement.LogicalOperationStructOutput[]>;
-
-    getOperations(
-      roleId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<IRuleEntitlement.OperationStructOutput[]>;
 
     getRuleData(
       roleId: PromiseOrValue<BigNumberish>,
@@ -446,27 +346,7 @@ export interface IRuleEntitlement extends BaseContract {
   estimateGas: {
     description(overrides?: CallOverrides): Promise<BigNumber>;
 
-    encodeRuleData(
-      data: IRuleEntitlement.RuleDataStruct,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    getCheckOperations(
-      roleId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
     getEntitlementDataByRoleId(
-      roleId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    getLogicalOperations(
-      roleId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    getOperations(
       roleId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
@@ -509,27 +389,7 @@ export interface IRuleEntitlement extends BaseContract {
   populateTransaction: {
     description(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
-    encodeRuleData(
-      data: IRuleEntitlement.RuleDataStruct,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    getCheckOperations(
-      roleId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
     getEntitlementDataByRoleId(
-      roleId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    getLogicalOperations(
-      roleId: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    getOperations(
       roleId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
