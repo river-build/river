@@ -54,10 +54,9 @@ export const RiverEnvSwitcher = (props: RiverEnvSwitcherProps) => {
                 </DialogHeader>
                 <div className="flex flex-col gap-2">
                     {environments.map(({ id, name, chainId }) => (
-                        <DialogClose asChild>
+                        <DialogClose asChild key={id}>
                             <Button
                                 variant="outline"
-                                key={id}
                                 disabled={currentEnv === id && isConnected}
                                 onClick={async () => {
                                     switchChain({ chainId })
