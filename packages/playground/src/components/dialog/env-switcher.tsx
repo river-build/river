@@ -1,7 +1,16 @@
-import { useDisconnect, useSwitchChain } from 'wagmi'
+import {
+    useAccount,
+    useDisconnect,
+    useSendTransaction,
+    useSwitchChain,
+    useWaitForTransactionReceipt,
+} from 'wagmi'
+
 import { base, baseSepolia, foundry } from 'viem/chains'
 import { useRiverConnection } from '@river-build/react-sdk'
 import { makeRiverConfig } from '@river-build/sdk'
+import { privateKeyToAccount } from 'viem/accounts'
+import { parseEther } from 'viem'
 import { config } from '@/config/wagmi'
 import { getEthersSigner } from '@/utils/viem-to-ethers'
 import { Button } from '../ui/button'
@@ -29,9 +38,8 @@ type RiverEnvSwitcherProps = {
 }
 export const RiverEnvSwitcher = (props: RiverEnvSwitcherProps) => {
     const { currentEnv, setEnv } = props
-    const { switchChain } = useSwitchChain({ config })
-
     const { connect, disconnect, isConnected } = useRiverConnection()
+    const { switchChain } = useSwitchChain({ config })
     const { disconnect: disconnectWallet } = useDisconnect()
 
     return (
@@ -70,6 +78,7 @@ export const RiverEnvSwitcher = (props: RiverEnvSwitcherProps) => {
                             </Button>
                         </DialogClose>
                     ))}
+                    {currentEnv === 'local_single' && <FundWallet />}
                     {isConnected && (
                         <Button
                             variant="destructive"
@@ -84,5 +93,36 @@ export const RiverEnvSwitcher = (props: RiverEnvSwitcherProps) => {
                 </div>
             </DialogContent>
         </Dialog>
+    )
+}
+
+// Anvil default funded address with balance
+const AnvilAccount = privateKeyToAccount(
+    '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+)
+
+const FundWallet = () => {
+    const { address } = useAccount({ config })
+
+    const { sendTransaction, data: txHash, isPending } = useSendTransaction()
+    const { isSuccess, isLoading: isTxPending } = useWaitForTransactionReceipt({ hash: txHash })
+
+    return (
+        <>
+            <Button
+                variant="outline"
+                disabled={isPending || isTxPending}
+                onClick={() =>
+                    sendTransaction({
+                        account: AnvilAccount,
+                        chainId: foundry.id,
+                        value: parseEther('0.1'),
+                        to: address,
+                    })
+                }
+            >
+                Fund Local Wallet {isSuccess && '✅'} {(isPending || isTxPending) && '⏳'}
+            </Button>
+        </>
     )
 }
