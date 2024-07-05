@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -64,7 +65,7 @@ func (s *Service) addParsedEvent(
 		return err
 	}
 
-	canAddEvent, chainAuthArgs, sideEffects, err := rules.CanAddEvent(
+	canAddEvent, chainAuthArgsList, sideEffects, err := rules.CanAddEvent(
 		ctx,
 		s.chainConfig,
 		s.nodeRegistry.GetValidNodeAddresses(),
@@ -77,10 +78,17 @@ func (s *Service) addParsedEvent(
 		return err
 	}
 
-	if chainAuthArgs != nil {
-		isEntitled, err := s.chainAuth.IsEntitled(ctx, s.config, chainAuthArgs)
-		if err != nil {
-			return err
+	if chainAuthArgsList != nil {
+		var isEntitled bool
+		var err error
+		for _, chainAuthArgs := range chainAuthArgsList {
+			isEntitled, err = s.chainAuth.IsEntitled(ctx, s.config, chainAuthArgs)
+			if err != nil {
+				return err
+			}
+			if isEntitled {
+				break
+			}
 		}
 		if !isEntitled {
 			if sideEffects.OnChainAuthFailure != nil {
@@ -93,11 +101,19 @@ func (s *Service) addParsedEvent(
 					return err
 				}
 			}
+			var chainAuthArgsListStringBuilder strings.Builder
+			chainAuthArgsListStringBuilder.WriteString("[\n")
+			for _, chainAuthArgs := range chainAuthArgsList {
+				chainAuthArgsListStringBuilder.WriteString("  ")
+				chainAuthArgsListStringBuilder.WriteString(chainAuthArgs.String())
+				chainAuthArgsListStringBuilder.WriteString(",\n")
+			}
+			chainAuthArgsListStringBuilder.WriteString("]")
 			return RiverError(
 				Err_PERMISSION_DENIED,
 				"IsEntitled failed",
-				"chainAuthArgs",
-				chainAuthArgs.String(),
+				"chainAuthArgsList",
+				chainAuthArgsListStringBuilder.String(),
 			).Func("addParsedEvent")
 		}
 	}
