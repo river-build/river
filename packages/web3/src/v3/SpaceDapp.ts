@@ -1040,6 +1040,19 @@ export class SpaceDapp implements ISpaceDapp {
         return space.Membership.address
     }
 
+    public async getJoinSpacePrice(spaceId: string): Promise<ethers.BigNumber> {
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+        const prepaidSupply = await space.Prepay.read.prepaidMembershipSupply()
+
+        if (prepaidSupply.gt(0)) {
+            return ethers.BigNumber.from(0)
+        }
+        return space.Membership.read.getMembershipPrice()
+    }
+
     public async joinSpace(
         spaceId: string,
         recipient: string,
