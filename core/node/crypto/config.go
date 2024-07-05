@@ -435,13 +435,18 @@ func (ocs *onChainSettings) Remove(ctx context.Context, key chainKeyImpl, active
 	ocs.mu.Lock()
 	defer ocs.mu.Unlock()
 
-	for i, v := range ocs.s[keyID] {
-		if v.ActiveFromBlockNumber == activeOnBlockNumber {
-			ocs.s[keyID][len(ocs.s[keyID])-1], ocs.s[keyID][i] = ocs.s[keyID][i], ocs.s[keyID][len(ocs.s[keyID])-1]
-			ocs.s[keyID] = ocs.s[keyID][:len(ocs.s[keyID])-1]
-			log.Info("dropped chain config", "key", key.Name(), "activationBlock", activeOnBlockNumber)
-			return
+	if activeOnBlockNumber != math.MaxUint64 {
+		for i, v := range ocs.s[keyID] {
+			if v.ActiveFromBlockNumber == activeOnBlockNumber {
+				ocs.s[keyID][len(ocs.s[keyID])-1], ocs.s[keyID][i] = ocs.s[keyID][i], ocs.s[keyID][len(ocs.s[keyID])-1]
+				ocs.s[keyID] = ocs.s[keyID][:len(ocs.s[keyID])-1]
+				log.Info("dropped chain config", "key", key.Name(), "activationBlock", activeOnBlockNumber)
+				return
+			}
 		}
+	} else {
+		delete(ocs.s, keyID)
+		log.Info("dropped chain config for all blocks", "key", key.Name())
 	}
 }
 
