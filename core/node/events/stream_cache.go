@@ -2,7 +2,6 @@ package events
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"time"
 
@@ -124,11 +123,14 @@ func (s *streamCacheImpl) runCacheCleanup(ctx context.Context) {
 	log := dlog.FromCtx(ctx)
 
 	for {
-		expirationEnabled, pollInterval := s.cleanupPollInterval(ctx)
+		pollInterval := s.params.ChainConfig.Get().StreamCachePollIntterval
+		expirationEnabled := false
+		if pollInterval > 0 {
+			expirationEnabled = true
+		}
 		select {
 		case <-time.After(pollInterval):
-			expiration := s.cleanupStreamExpirationInterval(ctx)
-			s.cacheCleanup(ctx, expirationEnabled, expiration)
+			s.cacheCleanup(ctx, expirationEnabled, s.params.ChainConfig.Get().StreamCacheExpiration)
 		case <-ctx.Done():
 			log.Debug("stream cache cache cleanup shutdown")
 			return
@@ -480,61 +482,4 @@ func (s *streamCacheImpl) processMiniblockProposalBatch(
 			log.Error("processMiniblockProposalBatch: Error applying miniblock", "streamId", streamId, "err", err)
 		}
 	}
-}
-
-func (s *streamCacheImpl) cleanupPollInterval(ctx context.Context) (bool, time.Duration) {
-	var (
-		log          = dlog.FromCtx(ctx)
-		rivErr       *RiverErrorImpl
-		defaultValue = time.Duration(
-			crypto.StreamCacheExpirationPollIntervalMsConfigKey.DefaultAsInt64()) * time.Millisecond
-	)
-
-	if s.chainConfig == nil {
-		return true, defaultValue
-	}
-
-	pollMs, err := s.chainConfig.GetInt64(crypto.StreamCacheExpirationPollIntervalMsConfigKey)
-	if err == nil && pollMs > 0 {
-		return true, time.Duration(pollMs) * time.Millisecond
-	}
-	if err == nil { // disabled by configuration, poll every minute to get configuration changes
-		log.Debug("stream cache cleanup disabled")
-		return false, time.Minute
-	}
-
-	if errors.As(err, &rivErr) && rivErr.Code == Err_NOT_FOUND {
-		log.Debug("stream cache poll interval not configured, use default")
-		return true, defaultValue
-	}
-
-	log.Debug("unable to retrieve stream cache poll interval, use default", "err", err)
-	return true, defaultValue
-}
-
-func (s *streamCacheImpl) cleanupStreamExpirationInterval(ctx context.Context) time.Duration {
-	var (
-		log          = dlog.FromCtx(ctx)
-		rivErr       *RiverErrorImpl
-		defaultValue = time.Duration(crypto.StreamCacheExpirationMsConfigKey.DefaultAsInt64()) * time.Millisecond
-	)
-
-	if s.chainConfig == nil {
-		return defaultValue
-	}
-
-	expirationMs, err := s.chainConfig.GetUint64(crypto.StreamCacheExpirationMsConfigKey)
-	if err == nil && expirationMs > 0 {
-		return time.Duration(expirationMs) * time.Millisecond
-	} else if err == nil { // disabled by using a very high expiration interval
-		return 5 * 365 * 24 * time.Hour
-	}
-
-	if errors.As(err, &rivErr) && rivErr.Code == Err_NOT_FOUND {
-		log.Debug("stream cache expiration not configured, use default")
-		return defaultValue
-	}
-
-	log.Error("unable to retrieve stream cache expiration, use default", "err", err)
-	return defaultValue
 }
