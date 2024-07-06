@@ -119,15 +119,15 @@ func TestLoad(t *testing.T) {
 	require.NoError(t, err)
 
 	// check for invalid config
-	num, err := btc.OnChainConfig.GetMinEventsPerSnapshot(0x00)
-	require.NoError(t, err)
-	assert.Equal(t, num, 100) // hard coded default
+	num := btc.OnChainConfig.Get().MinSnapshotEvents.ForType(0)
+	assert.EqualValues(t, num, 100) // hard coded default
 
 	// check snapshot generation
 	assert.Equal(t, false, view.shouldSnapshot(ctx, btc.OnChainConfig))
 
 	// check per stream snapshot generation
-	btc.SetConfigValue(t, ctx, crypto.StreamMinEventsPerSnapshotUserConfigKey, crypto.ABIEncodeInt64(2))
+	btc.SetConfigValue(t, ctx, crypto.StreamMinEventsPerSnapshotUserConfigKey, crypto.ABIEncodeUint64(2))
+	assert.EqualValues(t, 2, btc.OnChainConfig.Get().MinSnapshotEvents.ForType(STREAM_USER_BIN))
 	assert.Equal(t, false, view.shouldSnapshot(ctx, btc.OnChainConfig))
 
 	blockHash := view.LastBlock().Hash
