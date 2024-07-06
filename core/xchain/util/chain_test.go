@@ -7,9 +7,10 @@ import (
 	"github.com/river-build/river/core/xchain/util"
 
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/stretchr/testify/require"
+
 	"github.com/river-build/river/core/node/base/test"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/stretchr/testify/require"
 )
 
 // TestStartBlockNumberRange ensures that utils.StartBlockNumber ensures that the duration to go back falls within an
