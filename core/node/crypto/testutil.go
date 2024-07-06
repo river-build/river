@@ -590,10 +590,11 @@ func (c *BlockchainTestContext) SetConfigValue(t *testing.T, ctx context.Context
 		t,
 		func(t *assert.CollectT) {
 			e := c.OnChainConfig.LastAppliedEvent()
-			assert.NotNil(t, e)
-			assert.EqualValues(t, keyHash, e.Key)
-			assert.EqualValues(t, blockNum, e.Block)
-			assert.EqualValues(t, value, e.Value)
+			if assert.NotNil(t, e) {
+				assert.EqualValues(t, keyHash, e.Key)
+				assert.EqualValues(t, blockNum, e.Block)
+				assert.EqualValues(t, value, e.Value)
+			}
 		},
 		10*time.Second,
 		50*time.Millisecond,
