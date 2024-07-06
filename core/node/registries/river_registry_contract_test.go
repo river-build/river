@@ -22,7 +22,7 @@ func TestNodeEvents(t *testing.T) {
 	require := require.New(t)
 	ctx, cancel := test.NewTestContext()
 	defer cancel()
-	tt, err := crypto.NewBlockchainTestContext(ctx, 1, false)
+	tt, err := crypto.NewBlockchainTestContext(ctx, crypto.TestParams{NumKeys: 1})
 	require.NoError(err)
 
 	owner := tt.DeployerBlockchain
@@ -185,7 +185,7 @@ func TestStreamEvents(t *testing.T) {
 	defer cancel()
 	require := require.New(t)
 
-	tc, err := crypto.NewBlockchainTestContext(ctx, 2, true)
+	tc, err := crypto.NewBlockchainTestContext(ctx, crypto.TestParams{NumKeys: 2, MineOnTx: true, AutoMine: true})
 	require.NoError(err)
 	defer tc.Close()
 
