@@ -37,7 +37,7 @@ type testParams struct {
 // It doesn't create a stream cache itself. Call initCache to create a stream cache.
 func makeTestStreamParams(t *testing.T, p testParams) (context.Context, *testContext) {
 	ctx, cancel := test.NewTestContext()
-	btc, err := crypto.NewBlockchainTestContext(ctx, 1, true)
+	btc, err := crypto.NewBlockchainTestContext(ctx, crypto.TestParams{NumKeys: 1, MineOnTx: true, AutoMine: true})
 	if err != nil {
 		panic(err)
 	}

@@ -88,7 +88,10 @@ func newServiceTester(t *testing.T, opts serviceTesterOpts) *serviceTester {
 		opts:    opts,
 	}
 
-	btc, err := crypto.NewBlockchainTestContext(st.ctx, opts.numNodes, true)
+	btc, err := crypto.NewBlockchainTestContext(
+		st.ctx,
+		crypto.TestParams{NumKeys: opts.numNodes, MineOnTx: true, AutoMine: true},
+	)
 	require.NoError(err)
 	st.btc = btc
 	t.Cleanup(st.btc.Close)
