@@ -9,7 +9,6 @@ import {IDiamondFactory} from "contracts/src/diamond/facets/factory/IDiamondFact
 // contracts
 import {Diamond} from "contracts/src/diamond/Diamond.sol";
 import {DiamondFactoryBase} from "contracts/src/diamond/facets/factory/DiamondFactoryBase.sol";
-import {Factory} from "contracts/src/utils/Factory.sol";
 import {Facet} from "contracts/src/diamond/facets/Facet.sol";
 
 contract DiamondFactory is IDiamondFactory, DiamondFactoryBase, Facet {
