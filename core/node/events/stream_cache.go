@@ -55,11 +55,6 @@ type streamCacheImpl struct {
 	// New miniblock production in triggered when there is new block on River chain.
 	onNewBlockMutex sync.Mutex
 
-	// registerMiniBlocksBatched is a feature gate that when set to true new mini-blocks are registered with a batched
-	// transaction instead of one by one. This can be deleted once the StreamRegistry facet is updated to allow for
-	// batch registrations.
-	registerMiniBlocksBatched bool
-
 	chainConfig crypto.OnChainConfiguration
 
 	streamCacheSizeGauge     prometheus.Gauge
@@ -73,8 +68,7 @@ func NewStreamCache(
 	params *StreamCacheParams,
 ) (*streamCacheImpl, error) {
 	s := &streamCacheImpl{
-		params:                    params,
-		registerMiniBlocksBatched: true,
+		params: params,
 		streamCacheSizeGauge: params.Metrics.NewGaugeVecEx(
 			"stream_cache_size", "Number of streams in stream cache",
 			"chain_id", "address",
@@ -337,28 +331,11 @@ func (s *streamCacheImpl) OnNewBlock(ctx context.Context) {
 	go func() {
 		defer s.onNewBlockMutex.Unlock()
 
-		// switch over to batch commits when StreamRegistry facet is updated to allow batch sets
-		if s.registerMiniBlocksBatched {
-			s.onNewBlockBatch(ctx)
-		} else {
-			s.onNewBlockSingle(ctx)
-		}
+		s.onNewBlockBatch(ctx)
 
 		// Log at level below debug, otherwise it's too chatty.
 		log.Log(ctx, -8, "onNewBlock: EXIT produced new miniblocks")
 	}()
-}
-
-// s.onNewBlockMutex must be claimed
-func (s *streamCacheImpl) onNewBlockSingle(ctx context.Context) {
-	s.cache.Range(func(key, value interface{}) bool {
-		stream := value.(*streamImpl)
-		if stream.canCreateMiniblock() {
-			// TODO: use worker pool here?
-			go stream.MakeMiniblock(ctx)
-		}
-		return true
-	})
 }
 
 // s.onNewBlockMutex must be claimed
