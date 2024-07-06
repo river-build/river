@@ -1,31 +1,10 @@
-package rpc_test
+package rpc
 
 import (
-	"context"
-	"crypto/tls"
-	"fmt"
-	"net"
-	"net/http"
-	"os"
-	"strconv"
 	"testing"
 
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/dlog"
-	"github.com/river-build/river/core/node/events"
-	"github.com/river-build/river/core/node/nodes"
 	"github.com/river-build/river/core/node/protocol"
-	"github.com/river-build/river/core/node/protocol/protocolconnect"
-	. "github.com/river-build/river/core/node/shared"
-	"github.com/river-build/river/core/node/testutils"
-	"golang.org/x/net/http2"
-
-	"connectrpc.com/connect"
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/common"
-	eth_crypto "github.com/ethereum/go-ethereum/crypto"
-	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/proto"
 )
 
 func TestReplCreate(t *testing.T) {
@@ -45,11 +24,53 @@ func TestReplCreate(t *testing.T) {
 	)
 	require.NoError(err)
 
-	// Get the stream from each node.
-	for i := 0; i < 5; i++ {
-		node := tt.nodes[i]
-		stream, err := node.GetStream(ctx, streamId)
+	// Read mb 0 from storage.
+	mbs, err := tt.nodes[4].service.storage.ReadMiniblocks(ctx, streamId, 0, 100)
+	require.NoError(err)
+	require.Len(mbs, 1)
+	mb := mbs[0]
+
+	// Check all other nodes have the same mb.
+	for i := range 4 {
+		mbs, err := tt.nodes[i].service.storage.ReadMiniblocks(ctx, streamId, 0, 100)
 		require.NoError(err)
-		require.NotNil(stream)
+		require.Len(mbs, 1)
+		require.Equal(mb, mbs[0])
+	}
+}
+
+func TestReplAdd(t *testing.T) {
+	tt := newServiceTester(t, serviceTesterOpts{numNodes: 5, replicationFactor: 5, start: true})
+	ctx := tt.ctx
+	require := tt.require
+
+	client := tt.testClient(2)
+
+	wallet, err := crypto.NewWallet(ctx)
+	require.NoError(err)
+	streamId, cookie, _, err := createUserSettingsStream(
+		ctx,
+		wallet,
+		client,
+		&protocol.StreamSettings{
+			DisableMiniblockCreation: true,
+		},
+	)
+	require.NoError(err)
+
+	require.NoError(addUserBlockedFillerEvent(ctx, wallet, client, streamId, cookie.PrevMiniblockHash))
+
+	// Read data from storage.
+	data, err := tt.nodes[4].service.storage.ReadStreamFromLastSnapshot(ctx, streamId, 0)
+	require.NoError(err)
+	require.Zero(data.StartMiniblockNumber)
+	require.Len(data.Miniblocks, 1)
+	require.Len(data.MinipoolEnvelopes, 1)
+
+	// Check all other nodes have the same mb.
+	for i := range 4 {
+		data2, err := tt.nodes[i].service.storage.ReadStreamFromLastSnapshot(ctx, streamId, 0)
+		require.NoError(err)
+		require.Equal(data, data2)
 	}
 }
