@@ -31,13 +31,17 @@ type testParams struct {
 	recencyConstraintsGenerations int
 	recencyConstraintsAgeSec      int
 	defaultMinEventsPerSnapshot   int
+
+	disableMineOnTx bool
 }
 
 // makeTestStreamParams creates a test context with a blockchain and a stream registry for stream cahe tests.
 // It doesn't create a stream cache itself. Call initCache to create a stream cache.
 func makeTestStreamParams(t *testing.T, p testParams) (context.Context, *testContext) {
+	t.Parallel()
+
 	ctx, cancel := test.NewTestContext()
-	btc, err := crypto.NewBlockchainTestContext(ctx, 1, true)
+	btc, err := crypto.NewBlockchainTestContext(ctx, 1, !p.disableMineOnTx)
 	if err != nil {
 		panic(err)
 	}

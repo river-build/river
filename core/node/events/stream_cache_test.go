@@ -15,38 +15,6 @@ import (
 )
 
 func TestStreamCacheViewEviction(t *testing.T) {
-	t.Run("SingleBlockRegistration", func(t *testing.T) {
-		testStreamCacheViewEviction(t, false)
-	})
-
-	t.Run("BatchBlockRegistration", func(t *testing.T) {
-		testStreamCacheViewEviction(t, true)
-	})
-}
-
-func TestCacheEvictionWithFilledMiniBlockPool(t *testing.T) {
-	t.Run("SingleBlockRegistration", func(t *testing.T) {
-		testCacheEvictionWithFilledMiniBlockPool(t, false)
-	})
-
-	t.Run("BatchBlockRegistration", func(t *testing.T) {
-		testCacheEvictionWithFilledMiniBlockPool(t, true)
-	})
-}
-
-// TestStreamMiniblockBatchProduction ensures that all mini-blocks are registered when mini-blocks are registered in
-// batches.
-func DisabledTestStreamMiniblockBatchProduction(t *testing.T) {
-	t.Run("SingleBlockRegistration", func(t *testing.T) {
-		testStreamMiniblockBatchProduction(t, false)
-	})
-
-	t.Run("BatchBlockRegistration", func(t *testing.T) {
-		testStreamMiniblockBatchProduction(t, true)
-	})
-}
-
-func testStreamCacheViewEviction(t *testing.T, useBatchRegistration bool) {
 	require := require.New(t)
 	ctx, tc := makeTestStreamParams(t, testParams{})
 	defer tc.closer()
@@ -55,7 +23,6 @@ func testStreamCacheViewEviction(t *testing.T, useBatchRegistration bool) {
 	tc.bcTest.SetConfigValue(t, ctx, crypto.StreamCacheExpirationPollIntervalMsConfigKey, crypto.ABIEncodeUint64(0))
 
 	streamCache := tc.initCache(ctx)
-	streamCache.registerMiniBlocksBatched = useBatchRegistration
 
 	streamCache.cache.Range(func(key, value any) bool {
 		require.Fail("stream cache must be empty")
@@ -154,7 +121,7 @@ func testStreamCacheViewEviction(t *testing.T, useBatchRegistration bool) {
 	require.Equal(1, streamWithLoadedViewCount, "stream cache must have 1 loaded stream")
 }
 
-func testCacheEvictionWithFilledMiniBlockPool(t *testing.T, useBatchRegistration bool) {
+func TestCacheEvictionWithFilledMiniBlockPool(t *testing.T) {
 	require := require.New(t)
 	ctx, tc := makeTestStreamParams(t, testParams{})
 	defer tc.closer()
@@ -163,7 +130,6 @@ func testCacheEvictionWithFilledMiniBlockPool(t *testing.T, useBatchRegistration
 	tc.bcTest.SetConfigValue(t, ctx, crypto.StreamCacheExpirationPollIntervalMsConfigKey, crypto.ABIEncodeUint64(0))
 
 	streamCache := tc.initCache(ctx)
-	streamCache.registerMiniBlocksBatched = useBatchRegistration
 
 	streamCache.cache.Range(func(key, value any) bool {
 		require.Fail("stream cache must be empty")
@@ -245,9 +211,10 @@ func (sub *testStreamCacheViewEvictionSub) OnSyncError(err error) {
 	sub.receivedErrors = append(sub.receivedErrors, err)
 }
 
-func testStreamMiniblockBatchProduction(t *testing.T, useBatchRegistration bool) {
+// TODO: it seems this test takes at least 60 seconds, why?
+func TestStreamMiniblockBatchProduction(t *testing.T) {
 	require := require.New(t)
-	ctx, tc := makeTestStreamParams(t, testParams{})
+	ctx, tc := makeTestStreamParams(t, testParams{disableMineOnTx: true})
 	defer tc.closer()
 	btc := tc.bcTest
 
@@ -255,7 +222,6 @@ func testStreamMiniblockBatchProduction(t *testing.T, useBatchRegistration bool)
 	tc.bcTest.SetConfigValue(t, ctx, crypto.StreamCacheExpirationPollIntervalMsConfigKey, crypto.ABIEncodeUint64(0))
 
 	streamCache := tc.initCache(ctx)
-	streamCache.registerMiniBlocksBatched = useBatchRegistration
 
 	streamCache.cache.Range(func(key, value any) bool {
 		require.Fail("stream cache must be empty")
@@ -264,11 +230,14 @@ func testStreamMiniblockBatchProduction(t *testing.T, useBatchRegistration bool)
 
 	// the stream cache uses the chain block production as a ticker to create new mini-blocks.
 	// after initialization take back control when to create new chain blocks.
-	// TODO: this handler is gone, refactor
-	// btc.DeployerBlockchain.TxPool.SetOnSubmitHandler(nil)
 	streamsCount := 10*MiniblockCandidateBatchSize - 1
+
+	start := time.Now()
+	fmt.Println("allocating streams", streamsCount)
 	genesisBlocks := allocateStreams(t, ctx, tc, streamsCount)
 	streamsWithEvents := make(map[shared.StreamId]int)
+
+	fmt.Println("adding events to streams", time.Since(start))
 
 	// add events to ~50% of the streams
 	for streamID, genesis := range genesisBlocks {
@@ -294,43 +263,47 @@ func testStreamMiniblockBatchProduction(t *testing.T, useBatchRegistration bool)
 		streamsWithEvents[streamID] = 1 + int(streamID[3]%50)
 	}
 
-	for {
-		// on block makes the stream cache to walk over streams and create miniblocks for those that are eligible
-		btc.Commit(ctx)
+	fmt.Println("waiting for miniblocks to be produced", time.Since(start))
 
-		// quit loop when all added events are included in mini-blocks
-		miniblocksProduced := 0
-		for streamID := range genesisBlocks {
-			stream, view, err := streamCache.GetStream(ctx, streamID)
-			require.NoError(err, "get stream")
+	require.Eventually(
+		func() bool {
+			// on block makes the stream cache to walk over streams and create miniblocks for those that are eligible
+			btc.Commit(ctx)
 
-			var (
-				expStreamEventsCount = len(genesisBlocks[streamID].Events) + streamsWithEvents[streamID]
-				gotStreamEventsCount = 0
-			)
+			// quit loop when all added events are included in mini-blocks
+			miniblocksProduced := 0
+			for streamID := range genesisBlocks {
+				stream, view, err := streamCache.GetStream(ctx, streamID)
+				require.NoError(err, "get stream")
 
-			syncCookie := view.SyncCookie(tc.getBC().Wallet.Address)
-			require.NotNil(syncCookie, "sync cookie")
+				var (
+					expStreamEventsCount = len(genesisBlocks[streamID].Events) + streamsWithEvents[streamID]
+					gotStreamEventsCount = 0
+				)
 
-			miniblocks, _, err := stream.GetMiniblocks(ctx, 0, syncCookie.MinipoolGen)
-			require.NoError(err, "get miniblocks")
+				syncCookie := view.SyncCookie(tc.getBC().Wallet.Address)
+				require.NotNil(syncCookie, "sync cookie")
 
-			for _, mb := range miniblocks {
-				gotStreamEventsCount += len(mb.Events)
+				miniblocks, _, err := stream.GetMiniblocks(ctx, 0, syncCookie.MinipoolGen)
+				require.NoError(err, "get miniblocks")
+
+				for _, mb := range miniblocks {
+					gotStreamEventsCount += len(mb.Events)
+				}
+
+				if expStreamEventsCount == gotStreamEventsCount {
+					miniblocksProduced++
+				}
 			}
 
-			if expStreamEventsCount == gotStreamEventsCount {
-				miniblocksProduced++
-			}
-		}
+			// all streams with events added have a new block after genesis
+			return miniblocksProduced == len(genesisBlocks)
+		},
+		240*time.Second,
+		100*time.Millisecond,
+	)
 
-		// all streams with events added have a new block after genesis
-		if miniblocksProduced == len(genesisBlocks) {
-			break
-		}
-
-		<-time.After(time.Second)
-	}
+	fmt.Println("all miniblocks produced", time.Since(start))
 }
 
 func TestStreamUnloadWithSubscribers(t *testing.T) {
@@ -347,7 +320,6 @@ func TestStreamUnloadWithSubscribers(t *testing.T) {
 	tc.params.ChainMonitor = crypto.NoopChainMonitor{}
 
 	streamCache := tc.initCache(ctx)
-	streamCache.registerMiniBlocksBatched = true
 
 	streamCache.cache.Range(func(key, value any) bool {
 		require.Fail("stream cache must be empty")
@@ -407,7 +379,6 @@ func TestStreamUnloadWithSubscribers(t *testing.T) {
 	// create fresh stream cache and subscribe
 	streamCache, err = NewStreamCache(ctx, tc.params)
 	require.NoError(err, "instantiating stream cache")
-	streamCache.registerMiniBlocksBatched = true
 
 	for streamID, syncCookie := range syncCookies {
 		streamSync, err := streamCache.GetSyncStream(ctx, streamID)
@@ -476,12 +447,14 @@ func allocateStreams(
 		genesisBlocks = make(map[shared.StreamId]*protocol.Miniblock)
 	)
 
+	start := time.Now()
 	for i := 0; i < count; i++ {
 		streamID := testutils.FakeStreamId(shared.STREAM_SPACE_BIN)
 		mb := MakeGenesisMiniblockForSpaceStream(t, tt.getBC().Wallet, streamID)
 		err := tt.createStreamNoCache(ctx, streamID, mb)
 		require.NoError(err, "create stream")
 		genesisBlocks[streamID] = mb
+		fmt.Println("stream", streamID, "created", time.Since(start))
 	}
 
 	return genesisBlocks
