@@ -7,12 +7,11 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/stretchr/testify/require"
-
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/testutils"
+	"github.com/stretchr/testify/require"
 )
 
 func TestStreamCacheViewEviction(t *testing.T) {

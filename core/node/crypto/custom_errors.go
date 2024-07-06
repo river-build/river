@@ -9,13 +9,14 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-
 	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/protocol"
 )
 
-// stringErrorFuncSelector = keccack256("Revert reason")[4]
-var stringErrorFuncSelector = [4]byte{0x08, 0xc3, 0x79, 0xa0}
+var (
+	// stringErrorFuncSelector = keccack256("Revert reason")[4]
+	stringErrorFuncSelector = [4]byte{0x08, 0xc3, 0x79, 0xa0}
+)
 
 type EvmErrorDecoder struct {
 	abis []*abi.ABI

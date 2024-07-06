@@ -3,9 +3,8 @@ package crypto
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/river-build/river/core/node/base/test"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSign(t *testing.T) {
