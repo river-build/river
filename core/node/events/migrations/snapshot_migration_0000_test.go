@@ -3,9 +3,8 @@ package migrations
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	. "github.com/river-build/river/core/node/protocol"
+	"github.com/stretchr/testify/require"
 )
 
 // a no-op migration test for the initial snapshot, use as a template for new migrations

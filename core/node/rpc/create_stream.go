@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"google.golang.org/protobuf/proto"
-
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
 	. "github.com/river-build/river/core/node/events"
@@ -15,6 +13,7 @@ import (
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/rules"
 	. "github.com/river-build/river/core/node/shared"
+	"google.golang.org/protobuf/proto"
 
 	"connectrpc.com/connect"
 )

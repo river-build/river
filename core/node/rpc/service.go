@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/auth"
 	"github.com/river-build/river/core/node/crypto"

@@ -7,12 +7,10 @@ import (
 	"slices"
 	"time"
 
+	"github.com/river-build/river/core/node/crypto"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/river-build/river/core/node/crypto"
-
 	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/river-build/river/core/node/auth"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"

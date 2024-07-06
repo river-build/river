@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/prometheus/client_golang/prometheus"
-
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/infra"
 )

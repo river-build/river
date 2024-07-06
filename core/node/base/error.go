@@ -15,7 +15,6 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
-
 	"github.com/river-build/river/core/node/protocol"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"

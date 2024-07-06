@@ -4,10 +4,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/testutils"
+	"github.com/stretchr/testify/require"
 )
 
 func TestJsonLoggerLogsSaneProtoBinaryStrings(t *testing.T) {
