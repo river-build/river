@@ -139,21 +139,13 @@ func CanAddEvent(
 		return false, nil, nil, err
 	}
 
-	mediaMaxChunkSize, err := chainConfig.GetInt(crypto.StreamMediaMaxChunkSizeConfigKey)
-	if err != nil {
-		return false, nil, nil, err
-	}
-
-	streamMembershipLimit, err := chainConfig.GetStreamMembershipLimit(streamView.StreamId().Type())
-	if err != nil {
-		return false, nil, nil, err
-	}
+	settings := chainConfig.Get()
 
 	ru := &aeParams{
 		ctx:                   ctx,
 		cfg:                   chainConfig,
-		mediaMaxChunkSize:     mediaMaxChunkSize,
-		streamMembershipLimit: streamMembershipLimit,
+		mediaMaxChunkSize:     int(settings.MediaMaxChunkSize),
+		streamMembershipLimit: int(settings.MembershipLimits.ForType(streamView.StreamId().Type())),
 		validNodeAddresses:    validNodeAddresses,
 		currentTime:           currentTime,
 		parsedEvent:           parsedEvent,

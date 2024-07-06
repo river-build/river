@@ -294,10 +294,6 @@ func NewBlockchainTestContext(ctx context.Context, numKeys int, mineOnTx bool) (
 		}
 	}
 
-	if err = setDefaultOnChainConfig(ctx, btc); err != nil {
-		return nil, err
-	}
-
 	blockNum := btc.BlockNum(ctx)
 	btc.OnChainConfig, err = NewOnChainConfig(
 		ctx, btc.Client(), btc.RiverRegistryAddress, blockNum, btc.DeployerBlockchain.ChainMonitor)
@@ -333,47 +329,6 @@ func initChainContext(
 	}
 
 	return wallets, backend, nil, false, nil
-}
-
-func setDefaultOnChainConfig(ctx context.Context, btc *BlockchainTestContext) error {
-	var pendingTransactions []TransactionPoolPendingTransaction
-	for _, key := range configKeyIDToKey {
-		pendingTx, err := btc.DeployerBlockchain.TxPool.Submit(ctx, "SetConfiguration",
-			func(opts *bind.TransactOpts) (*types.Transaction, error) {
-				return btc.Configuration.SetConfiguration(
-					opts, key.ID(), 0, ABIEncodeInt64(int64(key.defaultValue.(int))))
-			},
-		)
-		if err != nil {
-			return err
-		}
-		pendingTransactions = append(pendingTransactions, pendingTx)
-	}
-
-	if err := btc.mineBlock(ctx); err != nil {
-		return err
-	}
-
-	for len(pendingTransactions) > 0 {
-		ptx := pendingTransactions[0]
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(time.Second):
-			if err := btc.mineBlock(ctx); err != nil {
-				return err
-			}
-			continue
-		case receipt := <-ptx.Wait():
-			pendingTransactions = pendingTransactions[1:]
-			if receipt.Status != TransactionResultSuccess {
-				return RiverError(Err_CANNOT_CALL_CONTRACT, "set configuration transaction failed").
-					Tag("tx", ptx.TransactionHash())
-			}
-		}
-	}
-
-	return nil
 }
 
 // SetNextBlockBaseFee sets the base fee of the next blocks. Only supported for Anvil chains!
@@ -611,16 +566,17 @@ func (c *BlockchainTestContext) BlockNum(ctx context.Context) BlockNumber {
 	return BlockNumber(blockNum)
 }
 
-func (c *BlockchainTestContext) SetConfigValue(t *testing.T, ctx context.Context, key ChainKey, value []byte) {
+func (c *BlockchainTestContext) SetConfigValue(t *testing.T, ctx context.Context, key string, value []byte) {
 	blockNum := c.BlockNum(ctx)
 
+	keyHash := HashSettingName(key)
 	pendingTx, err := c.DeployerBlockchain.TxPool.Submit(
 		ctx,
 		"SetConfiguration",
 		func(opts *bind.TransactOpts) (*types.Transaction, error) {
 			return c.Configuration.SetConfiguration(
 				opts,
-				key.ID(),
+				keyHash,
 				blockNum.AsUint64(),
 				value,
 			)
@@ -633,8 +589,11 @@ func (c *BlockchainTestContext) SetConfigValue(t *testing.T, ctx context.Context
 	require.EventuallyWithT(
 		t,
 		func(t *assert.CollectT) {
-			readValue := c.OnChainConfig.GetRawValueOnBlock(uint64(blockNum), key)
-			assert.Equal(t, value, readValue)
+			e := c.OnChainConfig.LastAppliedEvent()
+			assert.NotNil(t, e)
+			assert.EqualValues(t, keyHash, e.Key)
+			assert.EqualValues(t, blockNum, e.Block)
+			assert.EqualValues(t, value, e.Value)
 		},
 		10*time.Second,
 		50*time.Millisecond,
