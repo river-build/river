@@ -67,7 +67,7 @@ func TestReplAdd(t *testing.T) {
 	require.Len(data.Miniblocks, 1)
 	require.Len(data.MinipoolEnvelopes, 1)
 
-	// Check all other nodes have the same mb.
+	// Check all other nodes have the same data.
 	for i := range 4 {
 		data2, err := tt.nodes[i].service.storage.ReadStreamFromLastSnapshot(ctx, streamId, 0)
 		require.NoError(err)
