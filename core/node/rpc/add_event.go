@@ -78,9 +78,9 @@ func (s *Service) addParsedEvent(
 		return err
 	}
 
-	if chainAuthArgsList != nil {
-		var isEntitled bool
-		var err error
+	if len(chainAuthArgsList) > 0 {
+		var isEntitled bool = false
+		var err error = nil
 		for _, chainAuthArgs := range chainAuthArgsList {
 			isEntitled, err = s.chainAuth.IsEntitled(ctx, s.config, chainAuthArgs)
 			if err != nil {
