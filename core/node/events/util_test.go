@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/river-build/river/core/node/base/test"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/infra"
@@ -13,7 +15,6 @@ import (
 	"github.com/river-build/river/core/node/registries"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
-	"google.golang.org/protobuf/proto"
 )
 
 type testContext struct {

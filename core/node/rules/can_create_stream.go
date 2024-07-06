@@ -10,6 +10,7 @@ import (
 	"github.com/river-build/river/core/node/crypto"
 
 	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/auth"
 	. "github.com/river-build/river/core/node/base"

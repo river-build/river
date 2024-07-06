@@ -8,8 +8,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/river-build/river/core/node/dlog"
 	"golang.org/x/net/http2"
+
+	"github.com/river-build/river/core/node/dlog"
 )
 
 // getTLSConfig returns a tls.Config with the system cert pool
