@@ -1,4 +1,4 @@
-package rpc_test
+package rpc
 
 import (
 	"context"
@@ -20,7 +20,6 @@ import (
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/registries"
-	"github.com/river-build/river/core/node/rpc"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/node/testutils/dbtestutils"
@@ -259,7 +258,7 @@ func TestArchiveOneStream(t *testing.T) {
 	)
 	require.NoError(err)
 
-	arch := rpc.NewArchiver(&archiveCfg.Archive, registryContract, nodeRegistry, streamStorage)
+	arch := NewArchiver(&archiveCfg.Archive, registryContract, nodeRegistry, streamStorage)
 
 	callOpts := &bind.CallOpts{
 		Context: ctx,
@@ -271,7 +270,7 @@ func TestArchiveOneStream(t *testing.T) {
 
 	err = arch.ArchiveStream(
 		ctx,
-		rpc.NewArchiveStream(streamId, &streamRecord.Nodes, streamRecord.LastMiniblockNum),
+		NewArchiveStream(streamId, &streamRecord.Nodes, streamRecord.LastMiniblockNum),
 	)
 	require.NoError(err)
 
@@ -292,7 +291,7 @@ func TestArchiveOneStream(t *testing.T) {
 
 	err = arch.ArchiveStream(
 		ctx,
-		rpc.NewArchiveStream(streamId, &streamRecord.Nodes, streamRecord.LastMiniblockNum),
+		NewArchiveStream(streamId, &streamRecord.Nodes, streamRecord.LastMiniblockNum),
 	)
 	require.NoError(err)
 
@@ -310,7 +309,7 @@ func TestArchiveOneStream(t *testing.T) {
 
 	err = arch.ArchiveStream(
 		ctx,
-		rpc.NewArchiveStream(streamId, &streamRecord.Nodes, streamRecord.LastMiniblockNum),
+		NewArchiveStream(streamId, &streamRecord.Nodes, streamRecord.LastMiniblockNum),
 	)
 	require.NoError(err)
 
@@ -342,7 +341,7 @@ func TestArchive100Streams(t *testing.T) {
 
 	archiverBC := tester.btc.NewWalletAndBlockchain(ctx)
 	serverCtx, serverCancel := context.WithCancel(ctx)
-	arch, err := rpc.StartServerInArchiveMode(serverCtx, archiveCfg, archiverBC, listener, true)
+	arch, err := StartServerInArchiveMode(serverCtx, archiveCfg, archiverBC, listener, true)
 	require.NoError(err)
 
 	arch.Archiver.WaitForStart()
@@ -378,7 +377,7 @@ func TestArchive100StreamsWithData(t *testing.T) {
 
 	archiverBC := tester.btc.NewWalletAndBlockchain(ctx)
 	serverCtx, serverCancel := context.WithCancel(ctx)
-	arch, err := rpc.StartServerInArchiveMode(serverCtx, archiveCfg, archiverBC, listener, true)
+	arch, err := StartServerInArchiveMode(serverCtx, archiveCfg, archiverBC, listener, true)
 	require.NoError(err)
 
 	arch.Archiver.WaitForStart()
@@ -431,7 +430,7 @@ func TestArchiveContinuous(t *testing.T) {
 
 	archiverBC := tester.btc.NewWalletAndBlockchain(ctx)
 	serverCtx, serverCancel := context.WithCancel(ctx)
-	arch, err := rpc.StartServerInArchiveMode(serverCtx, archiveCfg, archiverBC, listener, false)
+	arch, err := StartServerInArchiveMode(serverCtx, archiveCfg, archiverBC, listener, false)
 	require.NoError(err)
 
 	arch.Archiver.WaitForStart()

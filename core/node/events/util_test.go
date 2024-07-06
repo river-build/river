@@ -41,7 +41,10 @@ func makeTestStreamParams(t *testing.T, p testParams) (context.Context, *testCon
 	t.Parallel()
 
 	ctx, cancel := test.NewTestContext()
-	btc, err := crypto.NewBlockchainTestContext(ctx, 1, !p.disableMineOnTx)
+	btc, err := crypto.NewBlockchainTestContext(
+		ctx,
+		crypto.TestParams{NumKeys: 1, MineOnTx: !p.disableMineOnTx, AutoMine: true},
+	)
 	if err != nil {
 		panic(err)
 	}
