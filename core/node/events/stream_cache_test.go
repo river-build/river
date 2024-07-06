@@ -3,6 +3,7 @@ package events
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -231,39 +232,44 @@ func TestStreamMiniblockBatchProduction(t *testing.T) {
 	// the stream cache uses the chain block production as a ticker to create new mini-blocks.
 	// after initialization take back control when to create new chain blocks.
 	streamsCount := 10*MiniblockCandidateBatchSize - 1
-
-	start := time.Now()
-	fmt.Println("allocating streams", streamsCount)
 	genesisBlocks := allocateStreams(t, ctx, tc, streamsCount)
-	streamsWithEvents := make(map[shared.StreamId]int)
-
-	fmt.Println("adding events to streams", time.Since(start))
 
 	// add events to ~50% of the streams
+	streamsWithEvents := make(map[shared.StreamId]int)
+	var mu sync.Mutex
+	var wg sync.WaitGroup
 	for streamID, genesis := range genesisBlocks {
-		streamSync, err := streamCache.GetSyncStream(ctx, streamID)
-		require.NoError(err, "get stream")
+		wg.Add(1)
+		go func(streamID shared.StreamId, genesis *protocol.Miniblock) {
+			defer wg.Done()
 
-		// unload view for half of the streams
-		if streamID[1]%2 == 1 {
-			ss := streamSync.(*streamImpl)
-			ss.tryCleanup(time.Duration(0))
-		}
+			streamSync, err := streamCache.GetSyncStream(ctx, streamID)
+			require.NoError(err, "get stream")
 
-		// only add events to half of the streams
-		if streamID[2]%2 == 1 {
-			continue
-		}
+			// unload view for half of the streams
+			if streamID[1]%2 == 1 {
+				ss := streamSync.(*streamImpl)
+				ss.tryCleanup(time.Duration(0))
+			}
 
-		// add several events to the stream
-		for i := 0; i < 1+int(streamID[3]%50); i++ {
-			addEvent(t, ctx, streamCache.params, streamSync,
-				fmt.Sprintf("msg# %d", i), common.BytesToHash(genesis.Header.Hash))
-		}
-		streamsWithEvents[streamID] = 1 + int(streamID[3]%50)
+			// only add events to half of the streams
+			if streamID[2]%2 == 1 {
+				return
+			}
+
+			// add several events to the stream
+			numToAdd := 1 + int(streamID[3]%50)
+			for i := range numToAdd {
+				addEvent(t, ctx, streamCache.params, streamSync,
+					fmt.Sprintf("msg# %d", i), common.BytesToHash(genesis.Header.Hash))
+			}
+
+			mu.Lock()
+			defer mu.Unlock()
+			streamsWithEvents[streamID] = numToAdd
+		}(streamID, genesis)
 	}
-
-	fmt.Println("waiting for miniblocks to be produced", time.Since(start))
+	wg.Wait()
 
 	require.Eventually(
 		func() bool {
@@ -302,13 +308,9 @@ func TestStreamMiniblockBatchProduction(t *testing.T) {
 		240*time.Second,
 		100*time.Millisecond,
 	)
-
-	fmt.Println("all miniblocks produced", time.Since(start))
 }
 
 func TestStreamUnloadWithSubscribers(t *testing.T) {
-	t.Parallel()
-
 	require := require.New(t)
 	ctx, tc := makeTestStreamParams(t, testParams{})
 	defer tc.closer()
@@ -445,17 +447,25 @@ func allocateStreams(
 	var (
 		require       = require.New(t)
 		genesisBlocks = make(map[shared.StreamId]*protocol.Miniblock)
+		mu            sync.Mutex
 	)
 
-	start := time.Now()
-	for i := 0; i < count; i++ {
-		streamID := testutils.FakeStreamId(shared.STREAM_SPACE_BIN)
-		mb := MakeGenesisMiniblockForSpaceStream(t, tt.getBC().Wallet, streamID)
-		err := tt.createStreamNoCache(ctx, streamID, mb)
-		require.NoError(err, "create stream")
-		genesisBlocks[streamID] = mb
-		fmt.Println("stream", streamID, "created", time.Since(start))
-	}
+	var wg sync.WaitGroup
+	wg.Add(count)
+	for range count {
+		go func() {
+			defer wg.Done()
 
+			streamID := testutils.FakeStreamId(shared.STREAM_SPACE_BIN)
+			mb := MakeGenesisMiniblockForSpaceStream(t, tt.getBC().Wallet, streamID)
+			err := tt.createStreamNoCache(ctx, streamID, mb)
+			require.NoError(err, "create stream")
+
+			mu.Lock()
+			defer mu.Unlock()
+			genesisBlocks[streamID] = mb
+		}()
+	}
+	wg.Wait()
 	return genesisBlocks
 }
