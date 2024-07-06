@@ -40,13 +40,9 @@ type (
 
 func aeBuilder() ruleBuilderAE {
 	return &ruleBuilderAEImpl{
-		failErr: nil,
-		checks:  nil,
-		chainAuths: []chainAuthFunc{
-			func() (*auth.ChainAuthArgs, error) {
-				return nil, nil
-			},
-		},
+		failErr:    nil,
+		checks:     nil,
+		chainAuths: []chainAuthFunc{},
 		parentEvent: func() (*DerivedEvent, error) {
 			return nil, nil
 		},
