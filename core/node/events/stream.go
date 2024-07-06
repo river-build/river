@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/storage"
 
