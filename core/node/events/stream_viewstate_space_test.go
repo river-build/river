@@ -195,7 +195,7 @@ func TestSpaceViewState(t *testing.T) {
 		defaultMinEventsPerSnapshot: 2,
 	})
 	defer tt.closer()
-	_ = tt.initCache(ctx)
+	_ = tt.initCache(ctx, nil)
 
 	user1Wallet, _ := crypto.NewWallet(ctx)
 	user2Wallet, _ := crypto.NewWallet(ctx)
@@ -285,7 +285,7 @@ func TestChannelViewState_JoinedMembers(t *testing.T) {
 		defaultMinEventsPerSnapshot: 2,
 	})
 	defer tt.closer()
-	_ = tt.initCache(ctx)
+	_ = tt.initCache(ctx, nil)
 
 	userWallet, _ := crypto.NewWallet(ctx)
 	aliceWallet, _ := crypto.NewWallet(ctx)
@@ -345,7 +345,7 @@ func TestChannelViewState_RemainingMembers(t *testing.T) {
 		defaultMinEventsPerSnapshot: 2,
 	})
 	defer tt.closer()
-	_ = tt.initCache(ctx)
+	_ = tt.initCache(ctx, nil)
 
 	userWallet, _ := crypto.NewWallet(ctx)
 	aliceWallet, _ := crypto.NewWallet(ctx)

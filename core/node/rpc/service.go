@@ -43,6 +43,7 @@ type Service struct {
 
 	// Streams
 	cache       events.StreamCache
+	mbProducer  events.MiniblockProducer
 	syncHandler SyncHandler
 
 	// River chain
