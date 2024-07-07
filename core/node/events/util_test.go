@@ -21,6 +21,7 @@ type testContext struct {
 	bcTest         *crypto.BlockchainTestContext
 	params         *StreamCacheParams
 	cache          StreamCache
+	mbProducer     MiniblockProducer
 	streamRegistry StreamRegistry
 	closer         func()
 }
@@ -146,12 +147,14 @@ func setOnChainStreamConfig(t *testing.T, ctx context.Context, btc *crypto.Block
 	}
 }
 
-func (tt *testContext) initCache(ctx context.Context) *streamCacheImpl {
+func (tt *testContext) initCache(ctx context.Context, opts *MiniblockProducerOpts) *streamCacheImpl {
 	streamCache, err := NewStreamCache(ctx, tt.params)
 	if err != nil {
 		panic(err)
 	}
 	tt.cache = streamCache
+	p := NewMiniblockProducer(ctx, tt.cache, opts)
+	tt.mbProducer = p
 	return streamCache
 }
 

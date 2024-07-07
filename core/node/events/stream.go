@@ -681,9 +681,32 @@ func (s *streamImpl) canCreateMiniblock() bool {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	// Loaded, has events in minipool, fake leader and periodic miniblock creation is not disabled in test settings.
+	// Loaded, has events in minipool, and periodic miniblock creation is not disabled in test settings.
 	return s.view != nil &&
 		s.view.minipool.events.Len() > 0 &&
-		s.nodes.LocalIsLeader() &&
 		!s.view.snapshot.GetInceptionPayload().GetSettings().GetDisableMiniblockCreation()
+}
+
+type streamImplStatus struct {
+	loaded            bool
+	numMinipoolEvents int
+	numSubscribers    int
+	lastAccess        time.Time
+}
+
+func (s *streamImpl) getStatus() *streamImplStatus {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	ret := &streamImplStatus{
+		numSubscribers: s.receivers.Cardinality(),
+		lastAccess:     s.lastAccessedTime,
+	}
+
+	if s.view != nil {
+		ret.loaded = true
+		ret.numMinipoolEvents = s.view.minipool.events.Len()
+	}
+
+	return ret
 }

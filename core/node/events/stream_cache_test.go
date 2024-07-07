@@ -24,7 +24,7 @@ func TestStreamCacheViewEviction(t *testing.T) {
 	// disable auto stream cache cleanup, do cleanup manually
 	tc.bcTest.SetConfigValue(t, ctx, crypto.StreamCacheExpirationPollIntervalMsConfigKey, crypto.ABIEncodeUint64(0))
 
-	streamCache := tc.initCache(ctx)
+	streamCache := tc.initCache(ctx, nil)
 
 	streamCache.cache.Range(func(key, value any) bool {
 		require.Fail("stream cache must be empty")
@@ -131,7 +131,7 @@ func TestCacheEvictionWithFilledMiniBlockPool(t *testing.T) {
 	// disable auto stream cache cleanup, do cleanup manually
 	tc.bcTest.SetConfigValue(t, ctx, crypto.StreamCacheExpirationPollIntervalMsConfigKey, crypto.ABIEncodeUint64(0))
 
-	streamCache := tc.initCache(ctx)
+	streamCache := tc.initCache(ctx, nil)
 
 	streamCache.cache.Range(func(key, value any) bool {
 		require.Fail("stream cache must be empty")
@@ -213,6 +213,14 @@ func (sub *testStreamCacheViewEvictionSub) OnSyncError(err error) {
 	sub.receivedErrors = append(sub.receivedErrors, err)
 }
 
+func (sub *testStreamCacheViewEvictionSub) eventsReceived() int {
+	count := 0
+	for _, sac := range sub.receivedStreamAndCookies {
+		count += len(sac.Events)
+	}
+	return count
+}
+
 // TODO: it seems this test takes at least 60 seconds, why?
 func TestStreamMiniblockBatchProduction(t *testing.T) {
 	require := require.New(t)
@@ -223,7 +231,7 @@ func TestStreamMiniblockBatchProduction(t *testing.T) {
 	// disable auto stream cache cleanup, do cleanup manually
 	tc.bcTest.SetConfigValue(t, ctx, crypto.StreamCacheExpirationPollIntervalMsConfigKey, crypto.ABIEncodeUint64(0))
 
-	streamCache := tc.initCache(ctx)
+	streamCache := tc.initCache(ctx, nil)
 
 	streamCache.cache.Range(func(key, value any) bool {
 		require.Fail("stream cache must be empty")
@@ -311,6 +319,34 @@ func TestStreamMiniblockBatchProduction(t *testing.T) {
 	)
 }
 
+func isCacheEmpty(streamCache *streamCacheImpl) bool {
+	empty := true
+	streamCache.cache.Range(func(key, value any) bool {
+		empty = false
+		return false
+	})
+	return empty
+}
+
+func cleanUpCache(streamCache *streamCacheImpl) bool {
+	cleanedUp := true
+	streamCache.cache.Range(func(key, streamVal any) bool {
+		cleanedUp = cleanedUp && streamVal.(*streamImpl).tryCleanup(0)
+		return true
+	})
+	return cleanedUp
+}
+
+func areAllViewsDropped(streamCache *streamCacheImpl) bool {
+	allDropped := true
+	streamCache.cache.Range(func(key, streamVal any) bool {
+		st := streamVal.(*streamImpl).getStatus()
+		allDropped = allDropped && !st.loaded
+		return true
+	})
+	return allDropped
+}
+
 func TestStreamUnloadWithSubscribers(t *testing.T) {
 	require := require.New(t)
 	ctx, tc := makeTestStreamParams(t, testParams{})
@@ -322,49 +358,17 @@ func TestStreamUnloadWithSubscribers(t *testing.T) {
 	// replace the default chain monitor to disable automatic mini-block production on new blocks in the stream cache
 	tc.params.ChainMonitor = crypto.NoopChainMonitor{}
 
-	streamCache := tc.initCache(ctx)
+	streamCache := tc.initCache(ctx, nil)
 
-	streamCache.cache.Range(func(key, value any) bool {
-		require.Fail("stream cache must be empty")
-		return true
-	})
+	require.True(isCacheEmpty(streamCache), "stream cache must be empty")
 
-	var (
-		streamsCount = 5
-		cleanUpCache = func(streamCache *streamCacheImpl, expOutcome bool) {
-			streamCache.cache.Range(func(key, streamVal any) bool {
-				stream := streamVal.(*streamImpl)
-				require.Equal(expOutcome, stream.tryCleanup(0), "stream cleanup")
-				return true
-			})
-		}
-		ensureAllViewsAreDropped = func(streamCache *streamCacheImpl) {
-			// make sure that for no view is loaded for any of the streams
-			streamCache.cache.Range(func(key, value any) bool {
-				stream := value.(*streamImpl)
-				require.Nil(stream.view, "stream view loaded")
-				return true
-			})
-		}
-	)
-
-	// the stream cache uses the chain block production as a ticker to create new mini-blocks.
-	// after initialization take back control when to create new chain blocks.
-	// TODO: this handler is gone, refactor
-	// btc.DeployerBlockchain.TxPool.SetOnSubmitHandler(nil)
+	const streamsCount = 5
 
 	var (
 		node                  = tc.getBC()
 		genesisBlocks         = allocateStreams(t, ctx, tc, streamsCount)
 		syncCookies           = make(map[shared.StreamId]*protocol.SyncCookie)
 		subscriptionReceivers = make(map[shared.StreamId]*testStreamCacheViewEvictionSub)
-		eventsReceived        = func(sub *testStreamCacheViewEvictionSub) int {
-			count := 0
-			for _, sac := range sub.receivedStreamAndCookies {
-				count += len(sac.Events)
-			}
-			return count
-		}
 	)
 
 	// obtain sync cookies for allocated streams
@@ -382,6 +386,7 @@ func TestStreamUnloadWithSubscribers(t *testing.T) {
 	// create fresh stream cache and subscribe
 	streamCache, err = NewStreamCache(ctx, tc.params)
 	require.NoError(err, "instantiating stream cache")
+	mpProducer := NewMiniblockProducer(ctx, streamCache, &MiniblockProducerOpts{TestDisableMbProdcutionOnBlock: true})
 
 	for streamID, syncCookie := range syncCookies {
 		streamSync, err := streamCache.GetSyncStream(ctx, streamID)
@@ -392,8 +397,8 @@ func TestStreamUnloadWithSubscribers(t *testing.T) {
 	}
 
 	// when subscribing to a stream the view is loaded to validate the request. It can be dropped afterward.
-	cleanUpCache(streamCache, true)
-	ensureAllViewsAreDropped(streamCache)
+	require.True(cleanUpCache(streamCache))
+	require.True(areAllViewsDropped(streamCache))
 
 	// add events to the first 2 streams and ensure that the receiver is notified even when the stream view is dropped.
 	var (
@@ -420,23 +425,19 @@ func TestStreamUnloadWithSubscribers(t *testing.T) {
 	// ensure that subscribers received events even when their view is dropped
 	for streamID, expectedEventCount := range streamsWithEvents {
 		subscriber := subscriptionReceivers[streamID]
-		gotEventCount := eventsReceived(subscriber)
+		gotEventCount := subscriber.eventsReceived()
 		require.Nilf(subscriber.receivedErrors, "subscriber received error: %s", subscriber.receivedErrors)
 		require.Equal(expectedEventCount, gotEventCount, "subscriber unexpected event count")
 	}
 
 	// make all mini-blocks to process all events in minipool
-	streamCache.onNewBlockBatch(ctx)
+	mpProducer.Run(ctx)
 
 	// ensure that streams can be dropped again
-	streamCache.cache.Range(func(streamID, streamVal any) bool {
-		stream := streamVal.(*streamImpl)
-		stream.tryCleanup(0)
-		return true
-	})
+	require.True(cleanUpCache(streamCache))
 
 	// make sure that all views are dropped
-	ensureAllViewsAreDropped(streamCache)
+	require.True(areAllViewsDropped(streamCache))
 }
 
 func allocateStreams(
