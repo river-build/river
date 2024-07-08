@@ -2,6 +2,7 @@ package events
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -16,10 +17,12 @@ import (
 	"github.com/river-build/river/core/node/registries"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
+	"github.com/river-build/river/core/node/testutils"
 )
 
 type cacheTestContext struct {
 	testParams testParams
+	t          *testing.T
 	ctx        context.Context
 	require    *require.Assertions
 	btc        *crypto.BlockchainTestContext
@@ -60,6 +63,7 @@ func makeCacheTestContext(t *testing.T, p testParams) (context.Context, *cacheTe
 
 	ctc := &cacheTestContext{
 		testParams: p,
+		t:          t,
 		ctx:        ctx,
 		require:    require.New(t),
 	}
@@ -150,6 +154,29 @@ func (ctc *cacheTestContext) createStream(
 
 func (ctc *cacheTestContext) getBC() *crypto.Blockchain {
 	return ctc.instances[0].params.RiverChain
+}
+
+func (ctc *cacheTestContext) allocateStreams(count int) map[StreamId]*Miniblock {
+	genesisBlocks := make(map[StreamId]*Miniblock)
+	var mu sync.Mutex
+
+	var wg sync.WaitGroup
+	wg.Add(count)
+	for range count {
+		go func() {
+			defer wg.Done()
+
+			streamID := testutils.FakeStreamId(STREAM_SPACE_BIN)
+			mb := MakeGenesisMiniblockForSpaceStream(ctc.t, ctc.getBC().Wallet, streamID)
+			ctc.createStreamNoCache(streamID, mb)
+
+			mu.Lock()
+			defer mu.Unlock()
+			genesisBlocks[streamID] = mb
+		}()
+	}
+	wg.Wait()
+	return genesisBlocks
 }
 
 func setOnChainStreamConfig(t *testing.T, ctx context.Context, btc *crypto.BlockchainTestContext, p testParams) {

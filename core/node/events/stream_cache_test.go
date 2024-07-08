@@ -238,7 +238,7 @@ func TestStreamMiniblockBatchProduction(t *testing.T) {
 	// the stream cache uses the chain block production as a ticker to create new mini-blocks.
 	// after initialization take back control when to create new chain blocks.
 	streamsCount := 10*MiniblockCandidateBatchSize - 1
-	genesisBlocks := allocateStreams(t, ctx, tc, streamsCount)
+	genesisBlocks := tc.allocateStreams(streamsCount)
 
 	// add events to ~50% of the streams
 	streamsWithEvents := make(map[shared.StreamId]int)
@@ -362,7 +362,7 @@ func TestStreamUnloadWithSubscribers(t *testing.T) {
 
 	var (
 		node                  = tc.getBC()
-		genesisBlocks         = allocateStreams(t, ctx, tc, streamsCount)
+		genesisBlocks         = tc.allocateStreams(streamsCount)
 		syncCookies           = make(map[shared.StreamId]*protocol.SyncCookie)
 		subscriptionReceivers = make(map[shared.StreamId]*testStreamCacheViewEvictionSub)
 	)
@@ -439,34 +439,4 @@ func TestStreamUnloadWithSubscribers(t *testing.T) {
 
 	// make sure that all views are dropped
 	require.True(areAllViewsDropped(streamCache))
-}
-
-func allocateStreams(
-	t *testing.T,
-	ctx context.Context,
-	tt *cacheTestContext,
-	count int,
-) map[shared.StreamId]*protocol.Miniblock {
-	var (
-		genesisBlocks = make(map[shared.StreamId]*protocol.Miniblock)
-		mu            sync.Mutex
-	)
-
-	var wg sync.WaitGroup
-	wg.Add(count)
-	for range count {
-		go func() {
-			defer wg.Done()
-
-			streamID := testutils.FakeStreamId(shared.STREAM_SPACE_BIN)
-			mb := MakeGenesisMiniblockForSpaceStream(t, tt.getBC().Wallet, streamID)
-			tt.createStreamNoCache(streamID, mb)
-
-			mu.Lock()
-			defer mu.Unlock()
-			genesisBlocks[streamID] = mb
-		}()
-	}
-	wg.Wait()
-	return genesisBlocks
 }
