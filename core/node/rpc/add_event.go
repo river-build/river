@@ -93,7 +93,7 @@ func (s *Service) addParsedEvent(
 		// If no chainAuthArgs grant entitlement, execute the OnChainAuthFailure side effect.
 		if !isEntitled {
 			if sideEffects.OnChainAuthFailure != nil {
-				err = s.addEventPayload(
+				err := s.addEventPayload(
 					ctx,
 					sideEffects.OnChainAuthFailure.StreamId,
 					sideEffects.OnChainAuthFailure.Payload,
