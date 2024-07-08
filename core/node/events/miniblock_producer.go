@@ -184,16 +184,16 @@ func (p *miniblockProducer) TestMakeMiniblock(
 		return common.Hash{}, -1, err
 	}
 
-	j := &mbJob{
+	job := &mbJob{
 		stream: stream.(*streamImpl),
 	}
 
 	// Spin until we manage to insert our job into the jobs map.
 	// This is test-only code, so we don't care about the performance.
 	for {
-		_, prevLoaded := p.jobs.LoadOrStore(streamId, j)
-		if !prevLoaded {
-			go p.jobStart(ctx, j, forceSnapshot)
+		actual, _ := p.jobs.LoadOrStore(streamId, job)
+		if actual == job {
+			go p.jobStart(ctx, job, forceSnapshot)
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
@@ -201,7 +201,7 @@ func (p *miniblockProducer) TestMakeMiniblock(
 
 	// Wait for the job to finish.
 	for {
-		if _, loaded := p.jobs.Load(streamId); !loaded {
+		if current, _ := p.jobs.Load(streamId); current != job {
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
@@ -221,7 +221,7 @@ func (p *miniblockProducer) jobStart(ctx context.Context, j *mbJob, forceSnapsho
 		return
 	}
 
-	proposal, err := j.stream.ProposeNextMiniblock(ctx, false)
+	proposal, err := j.stream.ProposeNextMiniblock(ctx, forceSnapshot)
 	if err != nil {
 		dlog.FromCtx(ctx).
 			Error("MiniblockProducer: jobStart: Error creating new miniblock proposal", "streamId", j.stream.streamId, "err", err)
