@@ -4,6 +4,7 @@ import (
 	"context"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/river-build/river/core/contracts/river"
 	"github.com/river-build/river/core/node/crypto"
@@ -18,7 +19,8 @@ const (
 )
 
 type MiniblockProducer interface {
-	Run(ctx context.Context)
+	scheduleCandidates(ctx context.Context) []*mbJob
+	testCheckAllDone(jobs []*mbJob) bool
 }
 
 type MiniblockProducerOpts struct {
@@ -48,10 +50,63 @@ type miniblockProducer struct {
 	streamCache StreamCache
 	opts        MiniblockProducerOpts
 
+	// jobs is a maps of streamId to *mbJob
+	jobs sync.Map
+
+	proposals proposalTracker
+
 	onNewBlockMutex sync.Mutex
 }
 
 var _ MiniblockProducer = (*miniblockProducer)(nil)
+
+// mbJos tracks single miniblock production attempt for a single stream.
+type mbJob struct {
+	stream   *streamImpl
+	proposal *MiniblockInfo
+}
+
+// proposalTracker is a helper struct to accumulate proposals and call SetStreamLastMiniblockBatch.
+// Logically this is just a part of the miniblockProducer, but encapsulating logic here makes
+// the code more readable.
+type proposalTracker struct {
+	mu        sync.Mutex
+	proposals []*mbJob
+	timer     *time.Timer
+}
+
+func (p *proposalTracker) add(ctx context.Context, mp *miniblockProducer, j *mbJob) {
+	var readyProposals []*mbJob
+	p.mu.Lock()
+	p.proposals = append(p.proposals, j)
+	if len(p.proposals) >= MiniblockCandidateBatchSize {
+		if p.timer != nil {
+			p.timer.Stop()
+			p.timer = nil
+		}
+		readyProposals = p.proposals
+		p.proposals = nil
+	} else if len(p.proposals) == 1 {
+		// Wait quarter of a block time before submitting the batch.
+		p.timer = time.AfterFunc(
+			mp.streamCache.Params().RiverChain.Config.BlockTime()/4,
+			func() {
+				p.mu.Lock()
+				p.timer = nil
+				readyProposals := p.proposals
+				p.proposals = nil
+				p.mu.Unlock()
+				if len(readyProposals) > 0 {
+					mp.submitProposalBatch(ctx, readyProposals)
+				}
+			},
+		)
+	}
+	p.mu.Unlock()
+	if len(readyProposals) > 0 {
+		mp.submitProposalBatch(ctx, readyProposals)
+	}
+}
 
 // OnNewBlock loops over streams and determines if it needs to produce a new mini block.
 // For every stream that is eligible to produce a new mini block it creates a new mini block candidate.
@@ -68,132 +123,133 @@ func (p *miniblockProducer) OnNewBlock(ctx context.Context, _ crypto.BlockNumber
 	// don't block the chain monitor
 	go func() {
 		defer p.onNewBlockMutex.Unlock()
-		p.Run(ctx)
+		_ = p.scheduleCandidates(ctx)
 	}()
 }
 
-func (p *miniblockProducer) Run(ctx context.Context) {
-	log := dlog.FromCtx(ctx)
-
+func (p *miniblockProducer) scheduleCandidates(ctx context.Context) []*mbJob {
 	candidates := p.streamCache.GetMbCandidateStreams(ctx)
 
-	preFilteredLen := len(candidates)
+	var scheduled []*mbJob
 
-	// Drop streams that we are not the current leader for.
-	candidates = slices.DeleteFunc(candidates, func(s *streamImpl) bool {
-		// TODO: actual logic
-		return !s.nodes.LocalIsLeader()
-	})
-
-	log.Debug(
-		"MiniblockProducer: processing miniblock candidates",
-		"preFilteredLen",
-		preFilteredLen,
-		"filteredLen",
-		len(candidates),
-	)
-
-	if len(candidates) == 0 {
-		return
+	for _, c := range candidates {
+		if !c.nodes.LocalIsLeader() {
+			continue
+		}
+		j := &mbJob{
+			stream: c,
+		}
+		_, prevLoaded := p.jobs.LoadOrStore(c.streamId, j)
+		if !prevLoaded {
+			scheduled = append(scheduled, j)
+			go p.jobStart(ctx, j)
+		}
 	}
 
-	var wg sync.WaitGroup
-	for i := 0; i < len(candidates); i += MiniblockCandidateBatchSize {
-		wg.Add(1)
-		end := min(i+MiniblockCandidateBatchSize, len(candidates))
-		go p.processCandidateBatch(ctx, candidates[i:end], wg.Done)
-	}
-	wg.Wait()
+	return scheduled
 }
 
-func (p *miniblockProducer) processCandidateBatch(
-	ctx context.Context,
-	candidates []*streamImpl,
-	onDone func(),
-) {
-	if onDone != nil {
-		defer onDone()
+func (p *miniblockProducer) testCheckAllDone(jobs []*mbJob) bool {
+	for _, j := range jobs {
+		if _, loaded := p.jobs.Load(j.stream.streamId); loaded {
+			return false
+		}
 	}
-	if len(candidates) == 0 {
+	return true
+}
+
+func (p *miniblockProducer) jobStart(ctx context.Context, j *mbJob) {
+	if ctx.Err() != nil {
+		p.jobDone(ctx, j)
 		return
 	}
 
-	log := dlog.FromCtx(ctx)
-	var err error
-
-	miniblocks := make([]river.SetMiniblock, 0, len(candidates))
-	proposals := map[StreamId]*MiniblockInfo{}
-	streams := map[StreamId]*streamImpl{}
-	for _, c := range candidates {
-		// Test also creates miniblocks on demand.
-		// Miniblock production code is going to be hardened to be able to handle multiple concurrent calls.
-		// But this is not the case yet, to make tests stable do not attempt to create miniblock if
-		// another one is already in progress.
-		if !c.makeMiniblockMutex.TryLock() {
-			continue
-		}
-		defer c.makeMiniblockMutex.Unlock()
-
-		proposal, err := c.ProposeNextMiniblock(ctx, false)
-		if err != nil {
-			log.Error(
-				"processMiniblockProposalBatch: Error creating new miniblock proposal",
-				"streamId",
-				c.streamId,
-				"err",
-				err,
-			)
-			continue
-		}
-		if proposal == nil {
-			log.Debug("processMiniblockProposalBatch: No miniblock to produce", "streamId", c.streamId)
-			continue
-		}
-		miniblocks = append(
-			miniblocks,
-			river.SetMiniblock{
-				StreamId:          c.streamId,
-				PrevMiniBlockHash: *proposal.headerEvent.PrevMiniblockHash,
-				LastMiniblockHash: proposal.headerEvent.Hash,
-				LastMiniblockNum:  uint64(proposal.Num),
-				IsSealed:          false,
-			},
-		)
-		proposals[c.streamId] = proposal
-		streams[c.streamId] = c
+	proposal, err := j.stream.ProposeNextMiniblock(ctx, false)
+	if err != nil {
+		dlog.FromCtx(ctx).
+			Error("MiniblockProducer: jobStart: Error creating new miniblock proposal", "streamId", j.stream.streamId, "err", err)
+		p.jobDone(ctx, j)
+		return
+	}
+	if proposal == nil {
+		p.jobDone(ctx, j)
+		return
 	}
 
-	if len(miniblocks) == 0 {
+	j.proposal = proposal
+	p.proposals.add(ctx, p, j)
+}
+
+func (p *miniblockProducer) jobDone(ctx context.Context, j *mbJob) {
+	if !p.jobs.CompareAndDelete(j.stream.streamId, j) {
+		dlog.FromCtx(ctx).Error("MiniblockProducer: jobDone: job not found in jobs map", "streamId", j.stream.streamId)
+	}
+}
+
+func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals []*mbJob) {
+	log := dlog.FromCtx(ctx)
+
+	if len(proposals) == 0 {
 		return
 	}
 
 	var success []StreamId
-	// SetStreamLastMiniblock is more efficient when registering a single block
-	if len(miniblocks) == 1 {
-		mb := miniblocks[0]
-		err = p.streamCache.Params().Registry.SetStreamLastMiniblock(
-			ctx, mb.StreamId, mb.PrevMiniBlockHash, mb.LastMiniblockHash, mb.LastMiniblockNum, false)
+	if len(proposals) == 1 {
+		job := proposals[0]
+
+		err := p.streamCache.Params().Registry.SetStreamLastMiniblock(
+			ctx,
+			job.stream.streamId,
+			*job.proposal.headerEvent.PrevMiniblockHash,
+			job.proposal.headerEvent.Hash,
+			uint64(job.proposal.Num),
+			false,
+		)
 		if err != nil {
-			log.Error("processMiniblockProposalBatch: Error registering miniblock", "streamId", mb.StreamId, "err", err)
-			return
+			log.Error("submitProposalBatch: Error registering miniblock", "streamId", job.stream.streamId, "err", err)
+		} else {
+			success = append(success, job.stream.streamId)
 		}
-		success = append(success, mb.StreamId)
 	} else {
+		var mbs []river.SetMiniblock
+		for _, job := range proposals {
+			mbs = append(
+				mbs,
+				river.SetMiniblock{
+					StreamId:          job.stream.streamId,
+					PrevMiniBlockHash: *job.proposal.headerEvent.PrevMiniblockHash,
+					LastMiniblockHash: job.proposal.headerEvent.Hash,
+					LastMiniblockNum:  uint64(job.proposal.Num),
+					IsSealed:          false,
+				},
+			)
+		}
+
 		var failed []StreamId
-		success, failed, err = p.streamCache.Params().Registry.SetStreamLastMiniblockBatch(ctx, miniblocks)
+		var err error
+		success, failed, err = p.streamCache.Params().Registry.SetStreamLastMiniblockBatch(ctx, mbs)
 		if err != nil {
 			log.Error("processMiniblockProposalBatch: Error registering miniblock batch", "err", err)
-			return
-		}
-		if len(failed) > 0 {
-			log.Error("processMiniblockProposalBatch: Failed to register some miniblocks", "failed", failed)
+		} else {
+			if len(failed) > 0 {
+				log.Error("processMiniblockProposalBatch: Failed to register some miniblocks", "failed", failed)
+			}
 		}
 	}
 
-	for _, streamId := range success {
-		err = streams[streamId].ApplyMiniblock(ctx, proposals[streamId])
-		if err != nil {
-			log.Error("processMiniblockProposalBatch: Error applying miniblock", "streamId", streamId, "err", err)
+	for _, job := range proposals {
+		if slices.Contains(success, job.stream.streamId) {
+			err := job.stream.ApplyMiniblock(ctx, job.proposal)
+			if err != nil {
+				log.Error(
+					"processMiniblockProposalBatch: Error applying miniblock",
+					"streamId",
+					job.stream.streamId,
+					"err",
+					err,
+				)
+			}
 		}
+		p.jobDone(ctx, job)
 	}
 }
