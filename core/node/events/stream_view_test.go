@@ -5,14 +5,15 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/river-build/river/core/node/base/test"
 	"github.com/river-build/river/core/node/crypto"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/proto"
 )
 
 func parsedEvent(t *testing.T, envelope *Envelope) *ParsedEvent {
@@ -115,7 +116,7 @@ func TestLoad(t *testing.T) {
 	// Check minipool, should be empty
 	assert.Equal(t, 0, len(view.minipool.events.Values))
 
-	btc, err := crypto.NewBlockchainTestContext(ctx, 0, true)
+	btc, err := crypto.NewBlockchainTestContext(ctx, crypto.TestParams{MineOnTx: true, AutoMine: true})
 	require.NoError(t, err)
 
 	// check for invalid config

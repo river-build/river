@@ -8,10 +8,11 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/mitchellh/mapstructure"
-	"github.com/river-build/river/core/contracts/river"
-	"github.com/river-build/river/core/node/base/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/river-build/river/core/contracts/river"
+	"github.com/river-build/river/core/node/base/test"
 )
 
 func TestOnChainConfigSettingMultipleActiveBlockValues(t *testing.T) {
@@ -121,7 +122,7 @@ func TestSetOnChain(t *testing.T) {
 	ctx, cancel := test.NewTestContext()
 	defer cancel()
 
-	btc, err := NewBlockchainTestContext(ctx, 0, true)
+	btc, err := NewBlockchainTestContext(ctx, TestParams{MineOnTx: true, AutoMine: true})
 	require.NoError(err)
 	defer btc.Close()
 
@@ -149,7 +150,7 @@ func TestDefaultAvailable(t *testing.T) {
 	ctx, cancel := test.NewTestContext()
 	defer cancel()
 
-	btc, err := NewBlockchainTestContext(ctx, 0, true)
+	btc, err := NewBlockchainTestContext(ctx, TestParams{MineOnTx: true, AutoMine: true})
 	require.NoError(err)
 	defer btc.Close()
 
@@ -164,7 +165,7 @@ func TestConfigSwitchAfterNewBlock(t *testing.T) {
 	var (
 		ctx, cancel = test.NewTestContext()
 		require     = require.New(t)
-		tc, errTC   = NewBlockchainTestContext(ctx, 1, false)
+		tc, errTC   = NewBlockchainTestContext(ctx, TestParams{NumKeys: 1, MineOnTx: true, AutoMine: true})
 
 		currentBlockNum = tc.BlockNum(ctx)
 		activeBlockNum  = currentBlockNum + 5
@@ -212,7 +213,7 @@ func TestConfigDefaultValue(t *testing.T) {
 	var (
 		ctx, cancel = test.NewTestContext()
 		require     = require.New(t)
-		tc, errTC   = NewBlockchainTestContext(ctx, 1, false)
+		tc, errTC   = NewBlockchainTestContext(ctx, TestParams{NumKeys: 1})
 		newIntVal   = int64(239398893)
 		newValue    = ABIEncodeInt64(newIntVal)
 	)

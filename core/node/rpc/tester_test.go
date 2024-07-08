@@ -1,4 +1,4 @@
-package rpc_test
+package rpc
 
 import (
 	"context"
@@ -21,7 +21,6 @@ import (
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/nodes"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
-	"github.com/river-build/river/core/node/rpc"
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/node/testutils/dbtestutils"
 )
@@ -29,7 +28,7 @@ import (
 type testNodeRecord struct {
 	listener net.Listener
 	url      string
-	service  *rpc.Service
+	service  *Service
 	address  common.Address
 }
 
@@ -88,7 +87,10 @@ func newServiceTester(t *testing.T, opts serviceTesterOpts) *serviceTester {
 		opts:    opts,
 	}
 
-	btc, err := crypto.NewBlockchainTestContext(st.ctx, opts.numNodes, true)
+	btc, err := crypto.NewBlockchainTestContext(
+		st.ctx,
+		crypto.TestParams{NumKeys: opts.numNodes, MineOnTx: true, AutoMine: true},
+	)
 	require.NoError(err)
 	st.btc = btc
 	t.Cleanup(st.btc.Close)
@@ -244,7 +246,7 @@ func (st *serviceTester) startSingle(i int, opts ...startOpts) error {
 	}
 
 	bc := st.btc.GetBlockchain(st.ctx, i)
-	service, err := rpc.StartServer(st.ctx, cfg, bc, listener)
+	service, err := StartServer(st.ctx, cfg, bc, listener)
 	if err != nil {
 		if service != nil {
 			// Sanity check
