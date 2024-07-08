@@ -80,7 +80,7 @@ func (s *Service) addParsedEvent(
 
 	if len(chainAuthArgsList) > 0 {
 		var isEntitled bool = false
-		var err error = nil
+		var err error
 		// Determine if any chainAuthArgs grant entitlement
 		for _, chainAuthArgs := range chainAuthArgsList {
 			isEntitled, err = s.chainAuth.IsEntitled(ctx, s.config, chainAuthArgs)
