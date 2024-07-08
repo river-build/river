@@ -124,7 +124,9 @@ func (re *ruleBuilderAEImpl) run() (bool, []*auth.ChainAuthArgs, *AddEventSideEf
 		if err != nil {
 			return false, nil, nil, err
 		}
-		chainAuthArgsList = append(chainAuthArgsList, chainAuthArgs)
+		if chainAuthArgs != nil {
+			chainAuthArgsList = append(chainAuthArgsList, chainAuthArgs)
+		}
 	}
 	requiredParentEvent, err := re.parentEvent()
 	if err != nil {
