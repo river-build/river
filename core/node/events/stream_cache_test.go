@@ -431,7 +431,12 @@ func TestStreamUnloadWithSubscribers(t *testing.T) {
 	}
 
 	// make all mini-blocks to process all events in minipool
-	mpProducer.Run(ctx)
+	jobs := mpProducer.scheduleCandidates(ctx)
+	require.Eventually(
+		func() bool { return mpProducer.testCheckAllDone(jobs) },
+		240*time.Second,
+		10*time.Millisecond,
+	)
 
 	// ensure that streams can be dropped again
 	require.True(cleanUpCache(streamCache))
