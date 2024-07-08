@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -79,7 +78,7 @@ func (s *Service) addParsedEvent(
 	}
 
 	if len(chainAuthArgsList) > 0 {
-		var isEntitled bool = false
+		isEntitled := false
 		var err error
 		// Determine if any chainAuthArgs grant entitlement
 		for _, chainAuthArgs := range chainAuthArgsList {
@@ -103,19 +102,11 @@ func (s *Service) addParsedEvent(
 					return err
 				}
 			}
-			var chainAuthArgsListStringBuilder strings.Builder
-			chainAuthArgsListStringBuilder.WriteString("[\n")
-			for _, chainAuthArgs := range chainAuthArgsList {
-				chainAuthArgsListStringBuilder.WriteString("  ")
-				chainAuthArgsListStringBuilder.WriteString(chainAuthArgs.String())
-				chainAuthArgsListStringBuilder.WriteString(",\n")
-			}
-			chainAuthArgsListStringBuilder.WriteString("]")
 			return RiverError(
 				Err_PERMISSION_DENIED,
 				"IsEntitled failed",
 				"chainAuthArgsList",
-				chainAuthArgsListStringBuilder.String(),
+				chainAuthArgsList,
 			).Func("addParsedEvent")
 		}
 	}
