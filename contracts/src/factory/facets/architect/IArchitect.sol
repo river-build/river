@@ -33,10 +33,10 @@ interface IArchitectBase {
   struct SpaceInfo {
     string name;
     string uri;
-    string shortDescription;
-    string longDescription;
     Membership membership;
     ChannelInfo channel;
+    string shortDescription;
+    string longDescription;
   }
 
   // =============================================================

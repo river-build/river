@@ -54,11 +54,13 @@ abstract contract SpaceOwnerBase is ISpaceOwnerBase {
     SpaceOwnerStorage.Layout storage ds = SpaceOwnerStorage.layout();
 
     ds.spaceByTokenId[tokenId] = space;
-    ds.spaceByAddress[space] = Space({
+    ds.spaceByAddress[space] = SpaceOwnerStorage.Space({
       name: name,
       uri: uri,
       tokenId: tokenId,
-      createdAt: block.timestamp,
+      createdAt: block.timestamp
+    });
+    ds.spaceMetadata[space] = SpaceOwnerStorage.SpaceMetadata({
       shortDescription: shortDescription,
       longDescription: longDescription
     });
@@ -76,17 +78,34 @@ abstract contract SpaceOwnerBase is ISpaceOwnerBase {
 
     SpaceOwnerStorage.Layout storage ds = SpaceOwnerStorage.layout();
 
-    Space storage spaceInfo = ds.spaceByAddress[space];
+    SpaceOwnerStorage.Space storage spaceInfo = ds.spaceByAddress[space];
     spaceInfo.name = name;
     spaceInfo.uri = uri;
-    spaceInfo.shortDescription = shortDescription;
-    spaceInfo.longDescription = longDescription;
+
+    SpaceOwnerStorage.SpaceMetadata storage metadata = ds.spaceMetadata[space];
+    metadata.shortDescription = shortDescription;
+    metadata.longDescription = longDescription;
 
     emit SpaceOwner__UpdateSpace(space);
   }
 
   function _getSpace(address space) internal view returns (Space memory) {
-    SpaceOwnerStorage.Layout storage ds = SpaceOwnerStorage.layout();
-    return ds.spaceByAddress[space];
+    SpaceOwnerStorage.Space storage spaceInfo = SpaceOwnerStorage
+      .layout()
+      .spaceByAddress[space];
+
+    SpaceOwnerStorage.SpaceMetadata storage metadata = SpaceOwnerStorage
+      .layout()
+      .spaceMetadata[space];
+
+    return
+      Space({
+        name: spaceInfo.name,
+        uri: spaceInfo.uri,
+        tokenId: spaceInfo.tokenId,
+        createdAt: spaceInfo.createdAt,
+        shortDescription: metadata.shortDescription,
+        longDescription: metadata.longDescription
+      });
   }
 }
