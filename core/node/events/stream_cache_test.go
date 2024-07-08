@@ -18,13 +18,12 @@ import (
 
 func TestStreamCacheViewEviction(t *testing.T) {
 	require := require.New(t)
-	ctx, tc := makeTestStreamParams(t, testParams{})
-	defer tc.closer()
+	ctx, tc := makeCacheTestContext(t, testParams{})
 
 	// disable auto stream cache cleanup, do cleanup manually
-	tc.bcTest.SetConfigValue(t, ctx, crypto.StreamCacheExpirationPollIntervalMsConfigKey, crypto.ABIEncodeUint64(0))
+	tc.btc.SetConfigValue(t, ctx, crypto.StreamCacheExpirationPollIntervalMsConfigKey, crypto.ABIEncodeUint64(0))
 
-	streamCache := tc.initCache(ctx, nil)
+	streamCache := tc.initCache(0, nil)
 
 	streamCache.cache.Range(func(key, value any) bool {
 		require.Fail("stream cache must be empty")
@@ -35,7 +34,7 @@ func TestStreamCacheViewEviction(t *testing.T) {
 	streamID := testutils.FakeStreamId(shared.STREAM_SPACE_BIN)
 	_, genesisMiniblock := makeTestSpaceStream(t, node.Wallet, streamID, nil)
 
-	require.NoError(tc.createStreamNoCache(ctx, streamID, genesisMiniblock))
+	tc.createStreamNoCache(streamID, genesisMiniblock)
 
 	streamSync, streamView, err := streamCache.GetStream(ctx, streamID)
 	require.NoError(err, "loading stream record")
@@ -125,13 +124,12 @@ func TestStreamCacheViewEviction(t *testing.T) {
 
 func TestCacheEvictionWithFilledMiniBlockPool(t *testing.T) {
 	require := require.New(t)
-	ctx, tc := makeTestStreamParams(t, testParams{})
-	defer tc.closer()
+	ctx, tc := makeCacheTestContext(t, testParams{})
 
 	// disable auto stream cache cleanup, do cleanup manually
-	tc.bcTest.SetConfigValue(t, ctx, crypto.StreamCacheExpirationPollIntervalMsConfigKey, crypto.ABIEncodeUint64(0))
+	tc.btc.SetConfigValue(t, ctx, crypto.StreamCacheExpirationPollIntervalMsConfigKey, crypto.ABIEncodeUint64(0))
 
-	streamCache := tc.initCache(ctx, nil)
+	streamCache := tc.initCache(0, nil)
 
 	streamCache.cache.Range(func(key, value any) bool {
 		require.Fail("stream cache must be empty")
@@ -142,7 +140,7 @@ func TestCacheEvictionWithFilledMiniBlockPool(t *testing.T) {
 	streamID := testutils.FakeStreamId(shared.STREAM_SPACE_BIN)
 	_, genesisMiniblock := makeTestSpaceStream(t, node.Wallet, streamID, nil)
 
-	require.NoError(tc.createStreamNoCache(ctx, streamID, genesisMiniblock))
+	tc.createStreamNoCache(streamID, genesisMiniblock)
 
 	streamSync, _, err := streamCache.GetStream(ctx, streamID)
 	require.NoError(err, "loading stream record")
@@ -175,7 +173,7 @@ func TestCacheEvictionWithFilledMiniBlockPool(t *testing.T) {
 	require.NoError(err, "make miniblock")
 
 	// add event to stream with unloaded view, view should be loaded in cache and minipool must contain event
-	addEvent(t, ctx, tc.params, streamSync, "payload", common.BytesToHash(genesisMiniblock.Header.Hash))
+	addEvent(t, ctx, tc.instances[0].params, streamSync, "payload", common.BytesToHash(genesisMiniblock.Header.Hash))
 
 	// with event in minipool ensure that view isn't evicted from cache
 	time.Sleep(10 * time.Millisecond) // make sure we hit the cache expiration of 1 ms
@@ -224,14 +222,13 @@ func (sub *testStreamCacheViewEvictionSub) eventsReceived() int {
 // TODO: it seems this test takes at least 60 seconds, why?
 func TestStreamMiniblockBatchProduction(t *testing.T) {
 	require := require.New(t)
-	ctx, tc := makeTestStreamParams(t, testParams{disableMineOnTx: true})
-	defer tc.closer()
-	btc := tc.bcTest
+	ctx, tc := makeCacheTestContext(t, testParams{disableMineOnTx: true})
+	btc := tc.btc
 
 	// disable auto stream cache cleanup, do cleanup manually
-	tc.bcTest.SetConfigValue(t, ctx, crypto.StreamCacheExpirationPollIntervalMsConfigKey, crypto.ABIEncodeUint64(0))
+	tc.btc.SetConfigValue(t, ctx, crypto.StreamCacheExpirationPollIntervalMsConfigKey, crypto.ABIEncodeUint64(0))
 
-	streamCache := tc.initCache(ctx, nil)
+	streamCache := tc.initCache(0, nil)
 
 	streamCache.cache.Range(func(key, value any) bool {
 		require.Fail("stream cache must be empty")
@@ -241,7 +238,7 @@ func TestStreamMiniblockBatchProduction(t *testing.T) {
 	// the stream cache uses the chain block production as a ticker to create new mini-blocks.
 	// after initialization take back control when to create new chain blocks.
 	streamsCount := 10*MiniblockCandidateBatchSize - 1
-	genesisBlocks := allocateStreams(t, ctx, tc, streamsCount)
+	genesisBlocks := tc.allocateStreams(streamsCount)
 
 	// add events to ~50% of the streams
 	streamsWithEvents := make(map[shared.StreamId]int)
@@ -349,16 +346,15 @@ func areAllViewsDropped(streamCache *streamCacheImpl) bool {
 
 func TestStreamUnloadWithSubscribers(t *testing.T) {
 	require := require.New(t)
-	ctx, tc := makeTestStreamParams(t, testParams{})
-	defer tc.closer()
+	ctx, tc := makeCacheTestContext(t, testParams{})
 
 	// disable auto stream cache cleanup, do cleanup manually
-	tc.bcTest.SetConfigValue(t, ctx, crypto.StreamCacheExpirationPollIntervalMsConfigKey, crypto.ABIEncodeUint64(0))
+	tc.btc.SetConfigValue(t, ctx, crypto.StreamCacheExpirationPollIntervalMsConfigKey, crypto.ABIEncodeUint64(0))
 
 	// replace the default chain monitor to disable automatic mini-block production on new blocks in the stream cache
-	tc.params.ChainMonitor = crypto.NoopChainMonitor{}
+	tc.instances[0].params.ChainMonitor = crypto.NoopChainMonitor{}
 
-	streamCache := tc.initCache(ctx, nil)
+	streamCache := tc.initCache(0, nil)
 
 	require.True(isCacheEmpty(streamCache), "stream cache must be empty")
 
@@ -366,7 +362,7 @@ func TestStreamUnloadWithSubscribers(t *testing.T) {
 
 	var (
 		node                  = tc.getBC()
-		genesisBlocks         = allocateStreams(t, ctx, tc, streamsCount)
+		genesisBlocks         = tc.allocateStreams(streamsCount)
 		syncCookies           = make(map[shared.StreamId]*protocol.SyncCookie)
 		subscriptionReceivers = make(map[shared.StreamId]*testStreamCacheViewEvictionSub)
 	)
@@ -381,10 +377,10 @@ func TestStreamUnloadWithSubscribers(t *testing.T) {
 
 	blockNum, err := node.GetBlockNumber(ctx)
 	require.NoError(err, "get block number")
-	tc.params.AppliedBlockNum = blockNum
+	tc.instances[0].params.AppliedBlockNum = blockNum
 
 	// create fresh stream cache and subscribe
-	streamCache, err = NewStreamCache(ctx, tc.params)
+	streamCache, err = NewStreamCache(ctx, tc.instances[0].params)
 	require.NoError(err, "instantiating stream cache")
 	mpProducer := NewMiniblockProducer(ctx, streamCache, &MiniblockProducerOpts{TestDisableMbProdcutionOnBlock: true})
 
@@ -443,36 +439,4 @@ func TestStreamUnloadWithSubscribers(t *testing.T) {
 
 	// make sure that all views are dropped
 	require.True(areAllViewsDropped(streamCache))
-}
-
-func allocateStreams(
-	t *testing.T,
-	ctx context.Context,
-	tt *testContext,
-	count int,
-) map[shared.StreamId]*protocol.Miniblock {
-	var (
-		require       = require.New(t)
-		genesisBlocks = make(map[shared.StreamId]*protocol.Miniblock)
-		mu            sync.Mutex
-	)
-
-	var wg sync.WaitGroup
-	wg.Add(count)
-	for range count {
-		go func() {
-			defer wg.Done()
-
-			streamID := testutils.FakeStreamId(shared.STREAM_SPACE_BIN)
-			mb := MakeGenesisMiniblockForSpaceStream(t, tt.getBC().Wallet, streamID)
-			err := tt.createStreamNoCache(ctx, streamID, mb)
-			require.NoError(err, "create stream")
-
-			mu.Lock()
-			defer mu.Unlock()
-			genesisBlocks[streamID] = mb
-		}()
-	}
-	wg.Wait()
-	return genesisBlocks
 }
