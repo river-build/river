@@ -218,18 +218,22 @@ func GetRiverNetworkStatus(
 	if err != nil {
 		return nil, err
 	}
+	defer http11client.CloseIdleConnections()
 	http11client.Timeout = cfg.Network.GetHttpRequestTimeout()
+
 
 	http20client, err := http_client.GetHttpClient(ctx)
 	if err != nil {
 		return nil, err
 	}
+	defer http20client.CloseIdleConnections()
 	http20client.Timeout = cfg.Network.GetHttpRequestTimeout()
 
 	grpcHttpClient, err := http_client.GetHttpClient(ctx)
 	if err != nil {
 		return nil, err
 	}
+	defer grpcHttpClient.CloseIdleConnections()
 	grpcHttpClient.Timeout = cfg.Network.GetHttpRequestTimeout()
 
 	data := &statusinfo.RiverStatus{
