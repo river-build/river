@@ -191,11 +191,10 @@ func leaveChannel_T(
 }
 
 func TestSpaceViewState(t *testing.T) {
-	ctx, tt := makeTestStreamParams(t, testParams{
+	ctx, tt := makeCacheTestContext(t, testParams{
 		defaultMinEventsPerSnapshot: 2,
 	})
-	defer tt.closer()
-	_ = tt.initCache(ctx, nil)
+	_ = tt.initCache(0, nil)
 
 	user1Wallet, _ := crypto.NewWallet(ctx)
 	user2Wallet, _ := crypto.NewWallet(ctx)
@@ -209,8 +208,7 @@ func TestSpaceViewState(t *testing.T) {
 	require.NoError(t, err)
 
 	_, mb := makeTestSpaceStream(t, user1Wallet, spaceStreamId, nil)
-	s, _, err := tt.createStream(ctx, spaceStreamId, mb)
-	require.NoError(t, err)
+	s, _ := tt.createStream(spaceStreamId, mb)
 	stream := s.(*streamImpl)
 	require.NotNil(t, stream)
 	// refresh view
@@ -280,12 +278,11 @@ func spaceViewStateTest_CheckUserJoined(
 }
 
 func TestChannelViewState_JoinedMembers(t *testing.T) {
-	ctx, tt := makeTestStreamParams(t, testParams{
+	ctx, tt := makeCacheTestContext(t, testParams{
 		replFactor:                  1,
 		defaultMinEventsPerSnapshot: 2,
 	})
-	defer tt.closer()
-	_ = tt.initCache(ctx, nil)
+	_ = tt.initCache(0, nil)
 
 	userWallet, _ := crypto.NewWallet(ctx)
 	aliceWallet, _ := crypto.NewWallet(ctx)
@@ -302,13 +299,12 @@ func TestChannelViewState_JoinedMembers(t *testing.T) {
 
 	// create a space stream and add the members
 	_, mb := makeTestSpaceStream(t, userWallet, spaceStreamId, nil)
-	sStream, _, err := tt.createStream(ctx, spaceStreamId, mb)
-	require.NoError(t, err)
+	sStream, _ := tt.createStream(spaceStreamId, mb)
 	spaceStream := sStream.(*streamImpl)
 	joinSpace_T(t, userWallet, ctx, spaceStream, []string{bob, carol})
 	// create a channel stream and add the members
 	_, mb = makeTestChannelStream(t, userWallet, alice, channelStreamId, spaceStreamId, nil)
-	cStream, _, _ := tt.createStream(ctx, channelStreamId, mb)
+	cStream, _ := tt.createStream(channelStreamId, mb)
 	channelStream := cStream.(*streamImpl)
 	joinChannel_T(t, userWallet, ctx, channelStream, []string{alice, bob, carol})
 	// make a miniblock
@@ -340,12 +336,11 @@ func TestChannelViewState_JoinedMembers(t *testing.T) {
 }
 
 func TestChannelViewState_RemainingMembers(t *testing.T) {
-	ctx, tt := makeTestStreamParams(t, testParams{
+	ctx, tt := makeCacheTestContext(t, testParams{
 		replFactor:                  1,
 		defaultMinEventsPerSnapshot: 2,
 	})
-	defer tt.closer()
-	_ = tt.initCache(ctx, nil)
+	_ = tt.initCache(0, nil)
 
 	userWallet, _ := crypto.NewWallet(ctx)
 	aliceWallet, _ := crypto.NewWallet(ctx)
@@ -362,14 +357,12 @@ func TestChannelViewState_RemainingMembers(t *testing.T) {
 
 	// create a space stream and add the members
 	_, mb := makeTestSpaceStream(t, userWallet, spaceStreamId, nil)
-	sStream, _, err := tt.createStream(ctx, spaceStreamId, mb)
-	require.NoError(t, err)
+	sStream, _ := tt.createStream(spaceStreamId, mb)
 	spaceStream := sStream.(*streamImpl)
 	joinSpace_T(t, userWallet, ctx, spaceStream, []string{bob, carol})
 	// create a channel stream and add the members
 	_, mb = makeTestChannelStream(t, userWallet, alice, channelStreamId, spaceStreamId, nil)
-	cStream, _, err := tt.createStream(ctx, channelStreamId, mb)
-	require.NoError(t, err)
+	cStream, _ := tt.createStream(channelStreamId, mb)
 	channelStream := cStream.(*streamImpl)
 	joinChannel_T(t, userWallet, ctx, channelStream, []string{alice, bob, carol})
 	// bob leaves the channel
