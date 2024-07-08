@@ -218,7 +218,6 @@ func GetRiverNetworkStatus(
 	if err != nil {
 		return nil, err
 	}
-	defer http11client.CloseIdleConnections()
 	http11client.Timeout = cfg.Network.GetHttpRequestTimeout()
 
 
@@ -261,6 +260,7 @@ func GetRiverNetworkStatus(
 	}
 
 	wg.Wait()
+
 	data.Elapsed = formatDurationToMs(time.Since(startTime))
 	return data, nil
 }
