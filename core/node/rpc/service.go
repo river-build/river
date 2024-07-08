@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	river_sync "github.com/river-build/river/core/node/rpc/sync"
 	"log/slog"
 	"net"
 	"net/http"
@@ -46,7 +47,7 @@ type Service struct {
 	// Streams
 	cache       events.StreamCache
 	mbProducer  events.MiniblockProducer
-	syncHandler SyncHandler
+	syncHandler river_sync.Handler
 
 	// River chain
 	riverChain       *crypto.Blockchain

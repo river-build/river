@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/river-build/river/core/node/rpc/sync"
 	"log/slog"
 	"strconv"
 
@@ -45,6 +46,7 @@ func (s *Service) info(
 ) (*connect.Response[InfoResponse], error) {
 	if len(request.Msg.Debug) > 0 {
 		debug := request.Msg.Debug[0]
+
 		if debug == "error" {
 			return nil, RiverError(Err_DEBUG_ERROR, "Error requested through Info request")
 		} else if debug == "network_error" {
@@ -54,6 +56,8 @@ func (s *Service) info(
 			return nil, errors.New("error requested through Info request")
 		} else if debug == "make_miniblock" {
 			return s.debugInfoMakeMiniblock(ctx, request)
+		} else if debug == "drop_stream" {
+			return s.debugDropStream(ctx, request)
 		}
 
 		if s.config.EnableTestAPIs {
@@ -81,6 +85,32 @@ func (s *Service) info(
 		StartTime: timestamppb.New(s.startTime),
 		Version:   version.GetFullVersion(),
 	}), nil
+}
+
+func (s *Service) debugDropStream(
+	ctx context.Context,
+	request *connect.Request[InfoRequest],
+) (*connect.Response[InfoResponse], error) {
+	if len(request.Msg.GetDebug()) < 3 {
+		return nil, RiverError(Err_DEBUG_ERROR, "drop_stream requires a sync id and stream id")
+	}
+
+	syncID := request.Msg.Debug[1]
+	streamID, err := shared.StreamIdFromString(request.Msg.Debug[2])
+	if err != nil {
+		return nil, err
+	}
+
+	dbgHandler, ok := s.syncHandler.(sync.DebugHandler)
+	if !ok {
+		return nil, RiverError(Err_UNAVAILABLE, "Drop stream not supported")
+	}
+
+	if err = dbgHandler.DebugDropStream(ctx, syncID, streamID); err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(&InfoResponse{}), nil
 }
 
 func (s *Service) debugInfoMakeMiniblock(

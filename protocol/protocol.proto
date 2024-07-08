@@ -700,6 +700,7 @@ message SyncStreamsResponse {
     SyncOp sync_op = 2;
     StreamAndCookie stream = 3;
     string pong_nonce = 4;
+    bytes stream_id = 5;
 }
 
 message AddStreamToSyncRequest {
@@ -760,6 +761,7 @@ enum SyncOp {
     SYNC_CLOSE = 2; // close the sync
     SYNC_UPDATE = 3; // update from server
     SYNC_PONG = 4; // respond to the ping message from the client.
+    SYNC_DOWN = 5; // indication that stream updates could (temporarily) not be provided
 }
 
 enum MembershipOp {
