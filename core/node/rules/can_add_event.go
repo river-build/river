@@ -7,10 +7,12 @@ import (
 	"slices"
 	"time"
 
-	"github.com/river-build/river/core/node/crypto"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/river-build/river/core/node/crypto"
+
 	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/river-build/river/core/node/auth"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
@@ -111,7 +113,7 @@ func CanAddEvent(
 	currentTime time.Time,
 	parsedEvent *events.ParsedEvent,
 	streamView events.StreamView,
-) (bool, *auth.ChainAuthArgs, *AddEventSideEffects, error) {
+) (bool, []*auth.ChainAuthArgs, *AddEventSideEffects, error) {
 	if parsedEvent.Event.DelegateExpiryEpochMs > 0 &&
 		isPastExpiry(currentTime, parsedEvent.Event.DelegateExpiryEpochMs) {
 		return false, nil, nil, RiverError(
@@ -139,21 +141,13 @@ func CanAddEvent(
 		return false, nil, nil, err
 	}
 
-	mediaMaxChunkSize, err := chainConfig.GetInt(crypto.StreamMediaMaxChunkSizeConfigKey)
-	if err != nil {
-		return false, nil, nil, err
-	}
-
-	streamMembershipLimit, err := chainConfig.GetStreamMembershipLimit(streamView.StreamId().Type())
-	if err != nil {
-		return false, nil, nil, err
-	}
+	settings := chainConfig.Get()
 
 	ru := &aeParams{
 		ctx:                   ctx,
 		cfg:                   chainConfig,
-		mediaMaxChunkSize:     mediaMaxChunkSize,
-		streamMembershipLimit: streamMembershipLimit,
+		mediaMaxChunkSize:     int(settings.MediaMaxChunkSize),
+		streamMembershipLimit: int(settings.MembershipLimits.ForType(streamView.StreamId().Type())),
 		validNodeAddresses:    validNodeAddresses,
 		currentTime:           currentTime,
 		parsedEvent:           parsedEvent,
@@ -202,6 +196,7 @@ func (params *aeParams) canAddChannelPayload(payload *StreamEvent_ChannelPayload
 		return aeBuilder().
 			check(params.creatorIsMember).
 			requireChainAuth(params.channelMessageWriteEntitlements).
+			requireChainAuth(params.channelMessageReactReplyEntitlements).
 			onChainAuthFailure(params.onEntitlementFailureForUserEvent)
 	case *ChannelPayload_Redaction_:
 		return aeBuilder().
@@ -973,6 +968,32 @@ func (params *aeParams) channelMessageReadEntitlements() (*auth.ChainAuthArgs, e
 		*params.streamView.StreamId(),
 		userId,
 		auth.PermissionRead,
+	)
+
+	return chainAuthArgs, nil
+}
+
+func (params *aeParams) channelMessageReactReplyEntitlements() (*auth.ChainAuthArgs, error) {
+	userId, err := shared.AddressHex(params.parsedEvent.Event.CreatorAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	inception, err := params.streamView.(events.ChannelStreamView).GetChannelInception()
+	if err != nil {
+		return nil, err
+	}
+
+	spaceId, err := shared.StreamIdFromBytes(inception.SpaceId)
+	if err != nil {
+		return nil, err
+	}
+
+	chainAuthArgs := auth.NewChainAuthArgsForChannel(
+		spaceId,
+		*params.streamView.StreamId(),
+		userId,
+		auth.PermissionReactReply,
 	)
 
 	return chainAuthArgs, nil

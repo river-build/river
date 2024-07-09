@@ -1,6 +1,6 @@
 {
     "name": "@river-build/web3",
-    "version": "0.0.8",
+    "version": "0.0.10",
     "packageManager": "yarn@3.8.0",
     "type": "module",
     "main": "dist/index.js",
@@ -18,6 +18,7 @@
         "watch": "tsc --watch"
     },
     "dependencies": {
+        "@isaacs/ttlcache": "^1.4.1",
         "@river-build/dlog": "workspace:^",
         "@river-build/generated": "workspace:^",
         "abitype": "^0.9.10",
