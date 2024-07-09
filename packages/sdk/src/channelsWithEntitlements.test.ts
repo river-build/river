@@ -234,9 +234,8 @@ describe('channelsWithEntitlements', () => {
                 Permission.ReactReply,
             ])
 
-        console.log('alice', alice.userId, alicesWallet.address),
-            // Validate alice can join the channel
-            await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
+        // Validate alice can join the channel
+        await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
 
         const { eventId: refEventId } = await bob.sendMessage(channelId!, 'Hello, world!')
         // Reacting to Bob's message should be allowed.

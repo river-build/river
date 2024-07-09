@@ -10,10 +10,11 @@ import {
     SyncStreamsResponse,
     SyncOp,
 } from '@river-build/proto'
+import { Entitlements } from './sync-agent/entitlements/entitlements'
 import { PlainMessage } from '@bufbuild/protobuf'
 import { IStreamStateView } from './streamStateView'
 import { Client } from './client'
-import { makeBaseChainConfig, makeRiverChainConfig } from './riverConfig'
+import { makeBaseChainConfig, makeRiverChainConfig, makeRiverConfig } from './riverConfig'
 import {
     genId,
     makeSpaceStreamId,
@@ -51,6 +52,7 @@ import {
     Operation,
     OperationType,
     treeToRuleData,
+    SpaceDapp,
 } from '@river-build/web3'
 
 const log = dlog('csb:test:util')
@@ -206,43 +208,21 @@ export async function setupWalletsAndContexts() {
     const aliceSpaceDapp = createSpaceDapp(aliceProvider, baseConfig.chainConfig)
     const carolSpaceDapp = createSpaceDapp(carolProvider, baseConfig.chainConfig)
 
-    // Use this wrapper around the space dapp to help the client correctly evaluate
-    // on-chain entitlements for channel operations.
-    class SpaceDappChannelEntitlementsDelegate {
-        private readonly spaceDapp: ISpaceDapp
-        constructor(spaceDapp: ISpaceDapp) {
-            this.spaceDapp = spaceDapp
-        }
-        async isEntitled(
-            userId: string,
-            spaceId: string,
-            channelId: string,
-            permission: Permission,
-        ): Promise<boolean> {
-            return await this.spaceDapp.isEntitledToChannel(
-                userId,
-                spaceId,
-                channelId,
-                permission,
-                getXchainSupportedRpcUrlsForTesting(),
-            )
-        }
-    }
-
     // create a user
+    const riverConfig = makeRiverConfig()
     const [alice, bob, carol] = await Promise.all([
         makeTestClient({
             context: alicesContext,
             deviceId: 'alice',
-            entitlementsDelegate: new SpaceDappChannelEntitlementsDelegate(aliceSpaceDapp),
+            entitlementsDelegate: new Entitlements(riverConfig, aliceSpaceDapp as SpaceDapp),
         }),
         makeTestClient({
             context: bobsContext,
-            entitlementsDelegate: new SpaceDappChannelEntitlementsDelegate(bobSpaceDapp),
+            entitlementsDelegate: new Entitlements(riverConfig, bobSpaceDapp as SpaceDapp),
         }),
         makeTestClient({
             context: carolsContext,
-            entitlementsDelegate: new SpaceDappChannelEntitlementsDelegate(carolSpaceDapp),
+            entitlementsDelegate: new Entitlements(riverConfig, carolSpaceDapp as SpaceDapp),
         }),
     ])
 

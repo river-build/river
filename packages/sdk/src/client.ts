@@ -1202,7 +1202,7 @@ export class Client
 
         // For top level channel posts, channel message replies, and reactions, the client
         // checks for entitlements before sending the message.
-        var expectedPermissions: Permission[] = []
+        let expectedPermissions: Permission[] = []
         if (payload.payload.case === 'reaction') {
             expectedPermissions = [Permission.ReactReply, Permission.Write]
         } else if (payload.payload.case === 'post') {
@@ -1212,7 +1212,7 @@ export class Client
             }
         }
         if (expectedPermissions.length > 0) {
-            var isEntitled: boolean = false
+            let isEntitled = false
             for (const permission of expectedPermissions) {
                 isEntitled = await this.entitlementsDelegate.isEntitled(
                     stream.view.channelContent.spaceId,
@@ -1226,9 +1226,9 @@ export class Client
             }
             if (!isEntitled) {
                 throw new Error(
-                    'user is not entitled to add message to channel (expected one of ' +
-                        expectedPermissions +
-                        ')',
+                    `user is not entitled to add message to channel (expected one of [${expectedPermissions.join(
+                        ',',
+                    )}])`,
                 )
             }
         }
