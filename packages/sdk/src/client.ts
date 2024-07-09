@@ -1,5 +1,6 @@
 import { Message, PlainMessage } from '@bufbuild/protobuf'
 import { datadogRum } from '@datadog/browser-rum'
+import { Permission } from '@river-build/web3'
 import {
     MembershipOp,
     ChannelOp,
@@ -1177,6 +1178,7 @@ export class Client
         opts?: SendChannelMessageOptions,
     ): Promise<{ eventId: string }> {
         const stream = this.stream(streamId)
+
         check(stream !== undefined, 'stream not found')
         const localId = stream.appendLocalEvent(payload, 'sending')
         opts?.onLocalEventAppended?.(localId)
@@ -1193,6 +1195,44 @@ export class Client
     ) {
         const stream = this.stream(streamId)
         check(isDefined(stream), 'stream not found')
+        check(
+            isDefined(stream?.view.channelContent.spaceId),
+            'synced channel stream not initialized',
+        )
+
+        // For top level channel posts, channel message replies, and reactions, the client
+        // checks for entitlements before sending the message.
+        var expectedPermissions: Permission[] = []
+        if (payload.payload.case === 'reaction') {
+            expectedPermissions = [Permission.ReactReply, Permission.Write]
+        } else if (payload.payload.case === 'post') {
+            expectedPermissions = [Permission.Write]
+            if (payload.payload.value.threadId !== undefined) {
+                expectedPermissions.push(Permission.ReactReply)
+            }
+        }
+        if (expectedPermissions.length > 0) {
+            var isEntitled: boolean = false
+            for (const permission of expectedPermissions) {
+                isEntitled = await this.entitlementsDelegate.isEntitled(
+                    stream.view.channelContent.spaceId,
+                    streamId,
+                    this.userId,
+                    permission,
+                )
+                if (isEntitled) {
+                    break
+                }
+            }
+            if (!isEntitled) {
+                throw new Error(
+                    'user is not entitled to add message to channel (expected one of ' +
+                        expectedPermissions +
+                        ')',
+                )
+            }
+        }
+
         const cleartext = payload.toJsonString()
         const message = await this.encryptGroupEvent(payload, streamId)
         message.refEventId = getRefEventIdFromChannelMessage(payload)

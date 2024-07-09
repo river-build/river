@@ -206,14 +206,44 @@ export async function setupWalletsAndContexts() {
     const aliceSpaceDapp = createSpaceDapp(aliceProvider, baseConfig.chainConfig)
     const carolSpaceDapp = createSpaceDapp(carolProvider, baseConfig.chainConfig)
 
+    // Use this wrapper around the space dapp to help the client correctly evaluate
+    // on-chain entitlements for channel operations.
+    class SpaceDappChannelEntitlementsDelegate {
+        private readonly spaceDapp: ISpaceDapp
+        constructor(spaceDapp: ISpaceDapp) {
+            this.spaceDapp = spaceDapp
+        }
+        async isEntitled(
+            userId: string,
+            spaceId: string,
+            channelId: string,
+            permission: Permission,
+        ): Promise<boolean> {
+            return await this.spaceDapp.isEntitledToChannel(
+                userId,
+                spaceId,
+                channelId,
+                permission,
+                getXchainSupportedRpcUrlsForTesting(),
+            )
+        }
+    }
+
     // create a user
     const [alice, bob, carol] = await Promise.all([
         makeTestClient({
             context: alicesContext,
             deviceId: 'alice',
+            entitlementsDelegate: new SpaceDappChannelEntitlementsDelegate(aliceSpaceDapp),
         }),
-        makeTestClient({ context: bobsContext }),
-        makeTestClient({ context: carolsContext }),
+        makeTestClient({
+            context: bobsContext,
+            entitlementsDelegate: new SpaceDappChannelEntitlementsDelegate(bobSpaceDapp),
+        }),
+        makeTestClient({
+            context: carolsContext,
+            entitlementsDelegate: new SpaceDappChannelEntitlementsDelegate(carolSpaceDapp),
+        }),
     ])
 
     return {

@@ -80,7 +80,7 @@ async function setupChannelWithCustomRole(
         bobSpaceDapp,
         bobProvider,
         spaceId,
-        'nft-gated read role',
+        'gated role',
         permissions,
         users,
         ruleData,
@@ -203,7 +203,7 @@ describe('channelsWithEntitlements', () => {
         // React to Bob's message not allowed.
         await expect(
             alice.sendChannelMessage_Reaction(channelId!, { reaction: '👍', refEventId }),
-        ).rejects.toThrow(/*PERMISSION_DENIED*/)
+        ).rejects.toThrow(/*not entitled to add message to channel*/)
         // Reply to Bob's message not allowed.
         await expect(
             alice.sendChannelMessage_Text(channelId!, {
@@ -214,11 +214,11 @@ describe('channelsWithEntitlements', () => {
                 },
                 threadId: refEventId, // reply to Bob's message
             }),
-        ).rejects.toThrow(/*PERMISSION_DENIED*/)
+        ).rejects.toThrow(/*not entitled to add message to channel*/)
         // Top-level post not allowed.
         await expect(
             alice.sendMessage(channelId!, 'Hello, world!'),
-        ).rejects.toThrow(/*PERMISSION_DENIED*/)
+        ).rejects.toThrow(/*not entitled to add message to channel*/)
 
         const doneStart = Date.now()
         // kill the clients
@@ -227,15 +227,16 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('REACT-REPLY user can react, reply, write', async () => {
-        const { alice, bob, aliceSpaceDapp, spaceId, channelId } = await setupChannelWithCustomRole(
-            ['alice'],
-            NoopRuleData,
-            [Permission.Read, Permission.ReactReply],
-        )
+    test('REACT-REPLY user can react, reply, cannot write', async () => {
+        const { alice, alicesWallet, bob, aliceSpaceDapp, spaceId, channelId } =
+            await setupChannelWithCustomRole(['alice'], NoopRuleData, [
+                Permission.Read,
+                Permission.ReactReply,
+            ])
 
-        // Validate alice can join the channel
-        await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
+        console.log('alice', alice.userId, alicesWallet.address),
+            // Validate alice can join the channel
+            await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
 
         const { eventId: refEventId } = await bob.sendMessage(channelId!, 'Hello, world!')
         // Reacting to Bob's message should be allowed.
@@ -256,7 +257,9 @@ describe('channelsWithEntitlements', () => {
 
         // Top-level post currently allowed.
         // TODO: after client is updated to reject unpermitted self-posts, this should reject.
-        await expect(alice.sendMessage(channelId!, 'Hello, world!')).toResolve()
+        await expect(
+            alice.sendMessage(channelId!, 'Hello, world!'),
+        ).rejects.toThrow(/*not entitled to add message to channel*/)
 
         const doneStart = Date.now()
         // kill the clients
