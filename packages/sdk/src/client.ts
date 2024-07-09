@@ -1210,7 +1210,7 @@ export class Client
             // is a reply, a reaction, a self-redaction or an edit, it may have Write or ReactReply
             // permissions - any change to an existing message authored by the user is implicitly
             // permitted.
-            let expectedPermissions: Permission[] = [Permission.Write]
+            const expectedPermissions: Permission[] = [Permission.Write]
             if (payload.payload.case !== 'post' || payload.payload.value.threadId !== undefined) {
                 expectedPermissions.push(Permission.ReactReply)
             }

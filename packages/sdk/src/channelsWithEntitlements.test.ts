@@ -228,11 +228,11 @@ describe('channelsWithEntitlements', () => {
     })
 
     test('REACT-REPLY user can react, reply, cannot write', async () => {
-        const { alice, alicesWallet, bob, aliceSpaceDapp, spaceId, channelId } =
-            await setupChannelWithCustomRole(['alice'], NoopRuleData, [
-                Permission.Read,
-                Permission.ReactReply,
-            ])
+        const { alice, bob, aliceSpaceDapp, spaceId, channelId } = await setupChannelWithCustomRole(
+            ['alice'],
+            NoopRuleData,
+            [Permission.Read, Permission.ReactReply],
+        )
 
         // Validate alice can join the channel
         await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
