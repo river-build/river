@@ -1197,42 +1197,41 @@ export class Client
         check(isDefined(stream), 'stream not found')
 
         if (isChannelStreamId(streamId)) {
+            // All channel messages sent via client API make their way to this method.
+            // The client checks for it's own entitlement to send messages to a channel
+            // before sending.
             check(
                 isDefined(stream?.view.channelContent.spaceId),
                 'synced channel stream not initialized',
             )
 
-            // For top level channel posts, channel message replies, and reactions, the client
-            // checks for entitlements before sending the message.
-            let expectedPermissions: Permission[] = []
-            if (payload.payload.case === 'reaction') {
-                expectedPermissions = [Permission.ReactReply, Permission.Write]
-            } else if (payload.payload.case === 'post') {
-                expectedPermissions = [Permission.Write]
-                if (payload.payload.value.threadId !== undefined) {
-                    expectedPermissions.push(Permission.ReactReply)
+            // We check entitlements on the client side for writes to channels. A top-level
+            // message post is only permitted if the user has write permissions. If the message
+            // is a reply, a reaction, a self-redaction or an edit, it may have Write or ReactReply
+            // permissions - any change to an existing message authored by the user is implicitly
+            // permitted.
+            let expectedPermissions: Permission[] = [Permission.Write]
+            if (payload.payload.case !== 'post' || payload.payload.value.threadId !== undefined) {
+                expectedPermissions.push(Permission.ReactReply)
+            }
+            let isEntitled = false
+            for (const permission of expectedPermissions) {
+                isEntitled = await this.entitlementsDelegate.isEntitled(
+                    stream.view.channelContent.spaceId,
+                    streamId,
+                    this.userId,
+                    permission,
+                )
+                if (isEntitled) {
+                    break
                 }
             }
-            if (expectedPermissions.length > 0) {
-                let isEntitled = false
-                for (const permission of expectedPermissions) {
-                    isEntitled = await this.entitlementsDelegate.isEntitled(
-                        stream.view.channelContent.spaceId,
-                        streamId,
-                        this.userId,
-                        permission,
-                    )
-                    if (isEntitled) {
-                        break
-                    }
-                }
-                if (!isEntitled) {
-                    throw new Error(
-                        `user is not entitled to add message to channel (expected one of [${expectedPermissions.join(
-                            ',',
-                        )}])`,
-                    )
-                }
+            if (!isEntitled) {
+                throw new Error(
+                    `user is not entitled to add message to channel (expected one of [${expectedPermissions.join(
+                        ',',
+                    )}])`,
+                )
             }
         }
 
