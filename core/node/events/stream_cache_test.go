@@ -169,8 +169,7 @@ func TestCacheEvictionWithFilledMiniBlockPool(t *testing.T) {
 	require.Nil(loadedStream.(*streamImpl).view, "view not unloaded")
 
 	// try to create a miniblock, pool is empty so it should not fail but also should not create a miniblock
-	_, _, err = streamSync.TestMakeMiniblock(ctx, false, -1)
-	require.NoError(err, "make miniblock")
+	_, _ = tc.makeMiniblock(0, streamID, false)
 
 	// add event to stream with unloaded view, view should be loaded in cache and minipool must contain event
 	addEvent(t, ctx, tc.instances[0].params, streamSync, "payload", common.BytesToHash(genesisMiniblock.Header.Hash))
@@ -184,8 +183,7 @@ func TestCacheEvictionWithFilledMiniBlockPool(t *testing.T) {
 	require.NotNil(loadedStream.(*streamImpl).view, "view unloaded")
 
 	// now it should be possible to create a miniblock
-	blockHash, blockNum, err := streamSync.TestMakeMiniblock(ctx, false, -1)
-	require.NoError(err)
+	blockHash, blockNum := tc.makeMiniblock(0, streamID, false)
 	require.NotEqual(common.Hash{}, blockHash)
 	require.Greater(blockNum, int64(0))
 

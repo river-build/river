@@ -125,13 +125,12 @@ func (s *Service) debugInfoMakeMiniblock(
 		return nil, err
 	}
 	if nodes.IsLocal() {
-		stream, err := s.cache.GetSyncStream(ctx, streamId)
+		hash, num, err := s.mbProducer.TestMakeMiniblock(ctx, streamId, forceSnapshot)
 		if err != nil {
 			return nil, err
 		}
-		hash, num, err := stream.TestMakeMiniblock(ctx, forceSnapshot, lastKnownMiniblockNum)
-		if err != nil {
-			return nil, err
+		if lastKnownMiniblockNum >= 0 && num <= lastKnownMiniblockNum {
+			return nil, RiverError(Err_DEBUG_ERROR, "miniblock not created")
 		}
 		g := ""
 		if (hash != common.Hash{}) {

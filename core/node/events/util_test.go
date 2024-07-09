@@ -179,6 +179,12 @@ func (ctc *cacheTestContext) allocateStreams(count int) map[StreamId]*Miniblock 
 	return genesisBlocks
 }
 
+func (ctc *cacheTestContext) makeMiniblock(inst int, streamId StreamId, forceSnapshot bool) (common.Hash, int64) {
+	h, n, err := ctc.instances[inst].mbProducer.TestMakeMiniblock(ctc.ctx, streamId, forceSnapshot)
+	ctc.require.NoError(err)
+	return h, n
+}
+
 func setOnChainStreamConfig(t *testing.T, ctx context.Context, btc *crypto.BlockchainTestContext, p testParams) {
 	if p.replFactor != 0 {
 		btc.SetConfigValue(

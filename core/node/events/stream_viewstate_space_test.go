@@ -233,8 +233,7 @@ func TestSpaceViewState(t *testing.T) {
 	require.Equal(t, 1, len(stream.view.blocks))
 
 	// make a miniblock
-	_, _, err = stream.TestMakeMiniblock(ctx, false, -1)
-	require.NoError(t, err)
+	_, _ = tt.makeMiniblock(0, spaceStreamId, false)
 	// check that we have 2 blocks
 	require.Equal(t, 2, len(stream.view.blocks))
 	// refresh view
@@ -308,8 +307,7 @@ func TestChannelViewState_JoinedMembers(t *testing.T) {
 	channelStream := cStream.(*streamImpl)
 	joinChannel_T(t, userWallet, ctx, channelStream, []string{alice, bob, carol})
 	// make a miniblock
-	_, _, err = channelStream.TestMakeMiniblock(ctx, false, -1)
-	require.NoError(t, err)
+	_, _ = tt.makeMiniblock(0, channelStreamId, false)
 	// get the miniblock's last snapshot and convert it into bytes
 	miniblocks := channelStream.view.MiniblocksFromLastSnapshot()
 	miniblock := miniblocks[0]
@@ -368,8 +366,7 @@ func TestChannelViewState_RemainingMembers(t *testing.T) {
 	// bob leaves the channel
 	leaveChannel_T(t, userWallet, ctx, channelStream, []string{bob})
 	// make a miniblock
-	_, _, err = channelStream.TestMakeMiniblock(ctx, false, -1)
-	require.NoError(t, err)
+	_, _ = tt.makeMiniblock(0, channelStreamId, false)
 	// get the miniblock's last snapshot and convert it into bytes
 	miniblocks := channelStream.view.MiniblocksFromLastSnapshot()
 	miniblock := miniblocks[0]

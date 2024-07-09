@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/river-build/river/core/contracts/river"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
@@ -21,6 +23,20 @@ const (
 type MiniblockProducer interface {
 	scheduleCandidates(ctx context.Context) []*mbJob
 	testCheckAllDone(jobs []*mbJob) bool
+
+	// TestMakeMiniblock is a debug function that creates a miniblock proposal, stores it in the registry, and applies it to the stream.
+	// It is intended to be called manually from the test code.
+	// TestMakeMiniblock always creates a miniblock if there are events in the minipool.
+	// TestMakeMiniblock always creates a miniblock if forceSnapshot is true. This miniblock will have a snapshot.
+	//
+	// If there are no events in the minipool and forceSnapshot is false, TestMakeMiniblock does nothing and succeeds.
+	//
+	// Returns the hash and number of the last know block.
+	TestMakeMiniblock(
+		ctx context.Context,
+		streamId StreamId,
+		forceSnapshot bool,
+	) (common.Hash, int64, error)
 }
 
 type MiniblockProducerOpts struct {
@@ -142,7 +158,7 @@ func (p *miniblockProducer) scheduleCandidates(ctx context.Context) []*mbJob {
 		_, prevLoaded := p.jobs.LoadOrStore(c.streamId, j)
 		if !prevLoaded {
 			scheduled = append(scheduled, j)
-			go p.jobStart(ctx, j)
+			go p.jobStart(ctx, j, false)
 		}
 	}
 
@@ -158,13 +174,54 @@ func (p *miniblockProducer) testCheckAllDone(jobs []*mbJob) bool {
 	return true
 }
 
-func (p *miniblockProducer) jobStart(ctx context.Context, j *mbJob) {
+func (p *miniblockProducer) TestMakeMiniblock(
+	ctx context.Context,
+	streamId StreamId,
+	forceSnapshot bool,
+) (common.Hash, int64, error) {
+	stream, err := p.streamCache.GetSyncStream(ctx, streamId)
+	if err != nil {
+		return common.Hash{}, -1, err
+	}
+
+	job := &mbJob{
+		stream: stream.(*streamImpl),
+	}
+
+	// Spin until we manage to insert our job into the jobs map.
+	// This is test-only code, so we don't care about the performance.
+	for {
+		actual, _ := p.jobs.LoadOrStore(streamId, job)
+		if actual == job {
+			go p.jobStart(ctx, job, forceSnapshot)
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	// Wait for the job to finish.
+	for {
+		if current, _ := p.jobs.Load(streamId); current != job {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	view, err := stream.GetView(ctx)
+	if err != nil {
+		return common.Hash{}, -1, err
+	}
+
+	return view.LastBlock().Hash, view.LastBlock().Num, nil
+}
+
+func (p *miniblockProducer) jobStart(ctx context.Context, j *mbJob, forceSnapshot bool) {
 	if ctx.Err() != nil {
 		p.jobDone(ctx, j)
 		return
 	}
 
-	proposal, err := j.stream.ProposeNextMiniblock(ctx, false)
+	proposal, err := j.stream.ProposeNextMiniblock(ctx, forceSnapshot)
 	if err != nil {
 		dlog.FromCtx(ctx).
 			Error("MiniblockProducer: jobStart: Error creating new miniblock proposal", "streamId", j.stream.streamId, "err", err)
