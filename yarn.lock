@@ -3531,6 +3531,21 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@river-build/metrics-discovery@workspace:packages/metrics-discovery":
+  version: 0.0.0-use.local
+  resolution: "@river-build/metrics-discovery@workspace:packages/metrics-discovery"
+  dependencies:
+    "@river-build/generated": "workspace:^"
+    "@river-build/web3": "workspace:^"
+    esbuild: ^0.21.5
+    eslint: ^8.53.0
+    ethers: ^5.7.2
+    prettier: ^2.8.8
+    typescript: ^5.1.6
+    zod: ^3.21.4
+  languageName: unknown
+  linkType: soft
+
 "@river-build/playground@workspace:packages/playground":
   version: 0.0.0-use.local
   resolution: "@river-build/playground@workspace:packages/playground"
@@ -8590,7 +8605,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"esbuild@npm:^0.21.3":
+"esbuild@npm:^0.21.3, esbuild@npm:^0.21.5":
   version: 0.21.5
   resolution: "esbuild@npm:0.21.5"
   dependencies:
