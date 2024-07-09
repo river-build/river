@@ -113,7 +113,7 @@ func CanAddEvent(
 	currentTime time.Time,
 	parsedEvent *events.ParsedEvent,
 	streamView events.StreamView,
-) (bool, *auth.ChainAuthArgs, *AddEventSideEffects, error) {
+) (bool, []*auth.ChainAuthArgs, *AddEventSideEffects, error) {
 	if parsedEvent.Event.DelegateExpiryEpochMs > 0 &&
 		isPastExpiry(currentTime, parsedEvent.Event.DelegateExpiryEpochMs) {
 		return false, nil, nil, RiverError(
