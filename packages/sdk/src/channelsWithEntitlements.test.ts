@@ -566,7 +566,7 @@ describe('channelsWithEntitlements', () => {
         await alice.stopSync()
     })
 
-    test('user booted on message post after entitlement loss', async () => {
+    test('user cannot post after entitlement loss', async () => {
         const testNftAddress = await getContractAddress('TestNFT')
         const { alice, alicesWallet, aliceSpaceDapp, bob, spaceId, channelId } =
             await setupChannelWithCustomRole([], getNftRuleData(testNftAddress), [
@@ -594,26 +594,13 @@ describe('channelsWithEntitlements', () => {
         // Wait 5 seconds for the positive auth cache to expire
         await new Promise((f) => setTimeout(f, 5000))
 
+        // Alice should not be able to post to the channel after losing entitlements.
+        // However she remains a member of the stream because this message is never sent by the
+        // client.
         await expect(
             alice.sendMessage(channelId!, 'Message after entitlement loss'),
         ).rejects.toThrow(/*not entitled to add message to channel*/)
 
-        // Alice's user stream should reflect that she is no longer a member of the channel.
-        // TODO why no linter complain with no await here?
-        const aliceUserStream = await alice.waitForStream(alice.userStreamId!)
-        await waitFor(() =>
-            expect(
-                aliceUserStream.view.userContent.isMember(channelId!, MembershipOp.SO_LEAVE),
-            ).toBeTruthy(),
-        )
-        await waitFor(() =>
-            expect(
-                channelStream.view.membershipContent.isMember(MembershipOp.SO_LEAVE, alice.userId),
-            ).toBeTruthy(),
-        )
-
-        // Alice cannot rejoin the stream.
-        await expectUserCannotJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
 
         await bob.stopSync()
         await alice.stopSync()
