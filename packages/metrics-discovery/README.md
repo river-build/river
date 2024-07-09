@@ -8,11 +8,7 @@ This is a dockerized workflow that combines:
 
 ## Instructions
 
-For local development, create a .envrc file under package root and add the following:
-
-```sh
-export DD_API_KEY=
-```
+For local development, use the .env.example file to create a .env file.
 
 Then run:
 
