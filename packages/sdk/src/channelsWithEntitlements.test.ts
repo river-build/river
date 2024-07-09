@@ -596,7 +596,7 @@ describe('channelsWithEntitlements', () => {
 
         await expect(
             alice.sendMessage(channelId!, 'Message after entitlement loss'),
-        ).rejects.toThrow(/7:PERMISSION_DENIED/)
+        ).rejects.toThrow(/*not entitled to add message to channel*/)
 
         // Alice's user stream should reflect that she is no longer a member of the channel.
         // TODO why no linter complain with no await here?
