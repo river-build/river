@@ -31,7 +31,7 @@ type MiniblockProducer interface {
 	//
 	// If there are no events in the minipool and forceSnapshot is false, TestMakeMiniblock does nothing and succeeds.
 	//
-	// Returns the hash and number of the last know block.
+	// Returns the hash and number of the last know miniblock.
 	TestMakeMiniblock(
 		ctx context.Context,
 		streamId StreamId,
