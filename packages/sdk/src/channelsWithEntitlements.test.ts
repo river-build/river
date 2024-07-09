@@ -601,7 +601,6 @@ describe('channelsWithEntitlements', () => {
             alice.sendMessage(channelId!, 'Message after entitlement loss'),
         ).rejects.toThrow(/*not entitled to add message to channel*/)
 
-
         await bob.stopSync()
         await alice.stopSync()
     })
