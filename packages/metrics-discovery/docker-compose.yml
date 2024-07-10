@@ -18,6 +18,7 @@ services:
         depends_on:
             - river-metrics-discovery
         container_name: prometheus
+        restart: always
         image: prom/prometheus:latest
         user: root
         labels:
@@ -29,7 +30,7 @@ services:
             - ./prometheus/etc:/prometheus/etc
             - prometheus_data:/prometheus
         command:
-            - --config.file=/prometheus/etc/config/prometheus-config.yaml
+            - --config.file=/prometheus/etc/config/prometheus-config.yml
             - --log.level=debug
         ports:
             - '9090:9090'
