@@ -12,7 +12,8 @@ import {FacetHelper} from "contracts/test/diamond/Facet.t.sol";
 
 contract DeployFacetRegistry is FacetHelper, Deployer {
   constructor() {
-    addSelector(FacetRegistry.addFacet.selector);
+    addSelector(bytes4(keccak256("addFacet(address,bytes4[])"))); // add facet with selectors
+    addSelector(bytes4(keccak256("addFacet(address,bytes4[],bytes4)"))); // add facet with selectors and initializer
     addSelector(FacetRegistry.removeFacet.selector);
     addSelector(FacetRegistry.facets.selector);
     addSelector(FacetRegistry.facetSelectors.selector);
@@ -20,6 +21,9 @@ contract DeployFacetRegistry is FacetHelper, Deployer {
     addSelector(FacetRegistry.createFacet.selector);
     addSelector(FacetRegistry.createFacetCut.selector);
     addSelector(FacetRegistry.computeFacetAddress.selector);
+    addSelector(FacetRegistry.addInitializer.selector);
+    addSelector(FacetRegistry.removeInitializer.selector);
+    addSelector(FacetRegistry.facetInitializer.selector);
   }
 
   function initializer() public pure override returns (bytes4) {

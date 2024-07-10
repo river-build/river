@@ -10,19 +10,24 @@ import {DiamondFactory} from "contracts/src/diamond/facets/factory/DiamondFactor
 // contracts
 import {FacetTest} from "contracts/test/diamond/Facet.t.sol";
 import {DeployDiamondFactory} from "contracts/scripts/deployments/facets/DeployDiamondFactory.s.sol";
-
-// helpers
-import {MultiInit} from "contracts/src/diamond/initializers/MultiInit.sol";
+import {DeployFacetRegistry, FacetRegistry} from "contracts/scripts/deployments/facets/DeployFacetRegistry.s.sol";
+import {DeployOwnable} from "contracts/scripts/deployments/facets/DeployOwnable.s.sol";
+import {DeployMultiInit, MultiInit} from "contracts/scripts/deployments/DeployMultiInit.s.sol";
 
 contract DiamondFactorySetup is FacetTest {
-  DeployDiamondFactory factoryHelper = new DeployDiamondFactory();
+  DeployFacetRegistry internal registryHelper = new DeployFacetRegistry();
+  DeployDiamondFactory internal factoryHelper = new DeployDiamondFactory();
+  DeployOwnable internal ownableHelper = new DeployOwnable();
+  DeployMultiInit internal multiInitHelper = new DeployMultiInit();
 
   DiamondFactory internal factory;
+  FacetRegistry internal registry;
 
   function setUp() public virtual override {
     super.setUp();
 
     factory = DiamondFactory(diamond);
+    registry = FacetRegistry(diamond);
   }
 
   function diamondInitParams()
@@ -30,20 +35,33 @@ contract DiamondFactorySetup is FacetTest {
     override
     returns (Diamond.InitParams memory)
   {
-    MultiInit multiInit = new MultiInit();
-
+    address multiInit = address(new MultiInit());
+    address facetRegistry = registryHelper.deploy();
     address diamondFactory = factoryHelper.deploy();
+    address ownablePendingFacet = ownableHelper.deploy();
+
+    addFacet(
+      registryHelper.makeCut(facetRegistry, IDiamond.FacetCutAction.Add),
+      facetRegistry,
+      registryHelper.makeInitData("")
+    );
 
     addFacet(
       factoryHelper.makeCut(diamondFactory, IDiamond.FacetCutAction.Add),
       diamondFactory,
-      factoryHelper.makeInitData("")
+      factoryHelper.makeInitData(multiInit)
+    );
+
+    addFacet(
+      ownableHelper.makeCut(ownablePendingFacet, IDiamond.FacetCutAction.Add),
+      ownablePendingFacet,
+      ownableHelper.makeInitData(deployer)
     );
 
     return
       Diamond.InitParams({
         baseFacets: baseFacets(),
-        init: address(multiInit),
+        init: multiInit,
         initData: abi.encodeWithSelector(
           MultiInit.multiInit.selector,
           _initAddresses,

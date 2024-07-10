@@ -10,19 +10,42 @@ import {IDiamond} from "contracts/src/diamond/IDiamond.sol";
 // contracts
 import {FacetRegistryBase} from "./FacetRegistryBase.sol";
 import {Facet} from "contracts/src/diamond/facets/Facet.sol";
+import {OwnableBase} from "contracts/src/diamond/facets/ownable/OwnableBase.sol";
 
-contract FacetRegistry is IFacetRegistry, FacetRegistryBase, Facet {
+contract FacetRegistry is
+  IFacetRegistry,
+  FacetRegistryBase,
+  OwnableBase,
+  Facet
+{
   function __FacetRegistry_init() external initializer {
     _addInterface(type(IFacetRegistry).interfaceId);
   }
 
+  // =============================================================
+  //                           Registry
+  // =============================================================
+
   /// @inheritdoc IFacetRegistry
-  function addFacet(address facet, bytes4[] calldata selectors) external {
+  function addFacet(
+    address facet,
+    bytes4[] calldata selectors
+  ) external onlyOwner {
     _addFacet(facet, selectors);
   }
 
   /// @inheritdoc IFacetRegistry
-  function removeFacet(address facet) external {
+  function addFacet(
+    address facet,
+    bytes4[] calldata selectors,
+    bytes4 initializer
+  ) external onlyOwner {
+    _addFacet(facet, selectors);
+    _addInitializer(facet, initializer);
+  }
+
+  /// @inheritdoc IFacetRegistry
+  function removeFacet(address facet) external onlyOwner {
     _removeFacet(facet);
   }
 
@@ -48,9 +71,21 @@ contract FacetRegistry is IFacetRegistry, FacetRegistryBase, Facet {
     bytes32 salt,
     bytes calldata creationCode,
     bytes4[] calldata selectors
-  ) external returns (address facet) {
+  ) external onlyOwner returns (address facet) {
     facet = _createFacet(salt, creationCode, selectors);
   }
+
+  /// @inheritdoc IFacetRegistry
+  function computeFacetAddress(
+    bytes32 salt,
+    bytes calldata creationCode
+  ) external view returns (address facet) {
+    facet = _computeFacetAddress(salt, creationCode);
+  }
+
+  // =============================================================
+  //                           Cuts
+  // =============================================================
 
   /// @inheritdoc IFacetRegistry
   function createFacetCut(
@@ -60,11 +95,21 @@ contract FacetRegistry is IFacetRegistry, FacetRegistryBase, Facet {
     return _createFacetCut(facet, action);
   }
 
-  /// @inheritdoc IFacetRegistry
-  function computeFacetAddress(
-    bytes32 salt,
-    bytes calldata creationCode
-  ) external view returns (address facet) {
-    facet = _computeFacetAddress(salt, creationCode);
+  // =============================================================
+  //                           Initializers
+  // =============================================================
+  function addInitializer(
+    address facet,
+    bytes4 initializer
+  ) external onlyOwner {
+    _addInitializer(facet, initializer);
+  }
+
+  function removeInitializer(address facet) external onlyOwner {
+    _removeInitializer(facet);
+  }
+
+  function facetInitializer(address facet) external view returns (bytes4) {
+    return _facetInitializer(facet);
   }
 }

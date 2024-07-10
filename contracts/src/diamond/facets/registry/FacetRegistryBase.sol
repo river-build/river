@@ -46,6 +46,11 @@ abstract contract FacetRegistryBase is IFacetRegistryBase, Factory {
       layout.facetSelectors[facet].remove(layout.facetSelectors[facet].at(i));
     }
 
+    if (layout.facetInitializer[facet] != bytes4(0)) {
+      layout.facetInitializer[facet] = bytes4(0);
+      emit FacetInitializerUnregistered(facet);
+    }
+
     emit FacetUnregistered(facet);
   }
 
@@ -94,6 +99,35 @@ abstract contract FacetRegistryBase is IFacetRegistryBase, Factory {
         action: action,
         functionSelectors: _facetSelectors(facet)
       });
+  }
+
+  function _addInitializer(address facet, bytes4 initializer) internal {
+    FacetRegistryStorage.Layout storage layout = FacetRegistryStorage.layout();
+
+    if (!layout.facets.contains(facet))
+      revert FacetRegistry_FacetNotRegistered();
+
+    if (layout.facetInitializer[facet] != bytes4(0))
+      revert FacetRegistry_InitializerAlreadyRegistered();
+
+    layout.facetInitializer[facet] = initializer;
+
+    emit FacetInitializerRegistered(facet, initializer);
+  }
+
+  function _removeInitializer(address facet) internal {
+    FacetRegistryStorage.Layout storage layout = FacetRegistryStorage.layout();
+
+    if (layout.facetInitializer[facet] == bytes4(0))
+      revert FacetRegistry_InitializerNotRegistered();
+
+    layout.facetInitializer[facet] = bytes4(0);
+
+    emit FacetInitializerUnregistered(facet);
+  }
+
+  function _facetInitializer(address facet) internal view returns (bytes4) {
+    return FacetRegistryStorage.layout().facetInitializer[facet];
   }
 
   function _computeFacetAddress(

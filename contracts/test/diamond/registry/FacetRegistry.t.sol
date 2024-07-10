@@ -8,6 +8,7 @@ import {FacetRegistrySetup} from "contracts/test/diamond/registry/FacetRegistryS
 import {Diamond} from "contracts/src/diamond/Diamond.sol";
 import {IFacetRegistryBase} from "contracts/src/diamond/facets/registry/IFacetRegistry.sol";
 import {IDiamondLoupe} from "contracts/src/diamond/facets/loupe/IDiamondLoupe.sol";
+import {IDiamondCut} from "contracts/src/diamond/facets/cut/IDiamondCut.sol";
 import {IERC165} from "contracts/src/diamond/facets/introspection/IERC165.sol";
 
 //libraries
@@ -37,28 +38,33 @@ contract FacetRegistryTest is IFacetRegistryBase, FacetRegistrySetup {
     multiInit = address(new MultiInit());
   }
 
-  modifier givenFacetIsAdded(address facet, bytes4[] memory selectors) {
+  modifier givenFacetIsAdded(
+    address facet,
+    bytes4[] memory selectors,
+    bytes4 initializer
+  ) {
     vm.prank(deployer);
     vm.expectEmit(diamond);
     emit FacetRegistered(facet, selectors);
-    registry.addFacet(facet, selectors);
+    registry.addFacet(facet, selectors, initializer);
     _;
   }
 
   function test_addFacet()
     external
-    givenFacetIsAdded(cut, cutHelper.selectors())
+    givenFacetIsAdded(cut, cutHelper.selectors(), cutHelper.initializer())
   {
     assertTrue(registry.hasFacet(cut));
     assertTrue(registry.facets().length == 1);
     assertTrue(
       registry.facetSelectors(cut).length == cutHelper.selectors().length
     );
+    assertEq(registry.facetInitializer(cut), cutHelper.initializer());
   }
 
   function test_removeFacet()
     external
-    givenFacetIsAdded(cut, cutHelper.selectors())
+    givenFacetIsAdded(cut, cutHelper.selectors(), cutHelper.initializer())
   {
     vm.prank(deployer);
     vm.expectEmit(diamond);
@@ -85,12 +91,15 @@ contract FacetRegistryTest is IFacetRegistryBase, FacetRegistrySetup {
 
   function test_deployDiamond()
     external
-    givenFacetIsAdded(cut, cutHelper.selectors())
-    givenFacetIsAdded(loupe, loupeHelper.selectors())
-    givenFacetIsAdded(introspection, introspectionHelper.selectors())
+    givenFacetIsAdded(cut, cutHelper.selectors(), cutHelper.initializer())
+    givenFacetIsAdded(loupe, loupeHelper.selectors(), loupeHelper.initializer())
+    givenFacetIsAdded(
+      introspection,
+      introspectionHelper.selectors(),
+      introspectionHelper.initializer()
+    )
   {
     FacetCut[] memory cuts = new FacetCut[](3);
-
     cuts[0] = registry.createFacetCut(cut, FacetCutAction.Add);
     cuts[1] = registry.createFacetCut(loupe, FacetCutAction.Add);
     cuts[2] = registry.createFacetCut(introspection, FacetCutAction.Add);
@@ -102,9 +111,9 @@ contract FacetRegistryTest is IFacetRegistryBase, FacetRegistrySetup {
     addresses[1] = loupe;
     addresses[2] = introspection;
 
-    datas[0] = cutHelper.makeInitData("");
-    datas[1] = loupeHelper.makeInitData("");
-    datas[2] = introspectionHelper.makeInitData("");
+    datas[0] = abi.encode(registry.facetInitializer(cut));
+    datas[1] = abi.encode(registry.facetInitializer(loupe));
+    datas[2] = abi.encode(registry.facetInitializer(introspection));
 
     Diamond.InitParams memory params = Diamond.InitParams({
       baseFacets: cuts,
@@ -121,6 +130,12 @@ contract FacetRegistryTest is IFacetRegistryBase, FacetRegistrySetup {
 
     assertTrue(
       IERC165(newDiamond).supportsInterface(type(IDiamondLoupe).interfaceId)
+    );
+    assertTrue(
+      IERC165(newDiamond).supportsInterface(type(IDiamondCut).interfaceId)
+    );
+    assertTrue(
+      IERC165(newDiamond).supportsInterface(type(IERC165).interfaceId)
     );
   }
 }

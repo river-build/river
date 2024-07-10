@@ -13,6 +13,10 @@ import {FacetHelper} from "contracts/test/diamond/Facet.t.sol";
 contract DeployDiamondFactory is FacetHelper, Deployer {
   constructor() {
     addSelector(DiamondFactory.createDiamond.selector);
+    addSelector(DiamondFactory.createOfficialDiamond.selector);
+    addSelector(DiamondFactory.addDefaultFacet.selector);
+    addSelector(DiamondFactory.removeDefaultFacet.selector);
+    addSelector(DiamondFactory.setMultiInit.selector);
   }
 
   function initializer() public pure override returns (bytes4) {
@@ -21,6 +25,14 @@ contract DeployDiamondFactory is FacetHelper, Deployer {
 
   function versionName() public pure override returns (string memory) {
     return "diamondFactory";
+  }
+
+  function makeInitData(address multiInit) public pure returns (bytes memory) {
+    return
+      abi.encodeWithSelector(
+        DiamondFactory.__DiamondFactory_init.selector,
+        multiInit
+      );
   }
 
   function __deploy(address deployer) public override returns (address) {

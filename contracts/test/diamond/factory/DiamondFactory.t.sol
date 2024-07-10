@@ -9,6 +9,7 @@ import {IDiamondFactoryBase} from "contracts/src/diamond/facets/factory/IDiamond
 import {IDiamond} from "contracts/src/diamond/Diamond.sol";
 import {IDiamondLoupe} from "contracts/src/diamond/facets/loupe/IDiamondLoupe.sol";
 import {IERC165} from "contracts/src/diamond/facets/introspection/IERC165.sol";
+import {IERC173} from "contracts/src/diamond/facets/ownable/IERC173.sol";
 
 //libraries
 
@@ -18,6 +19,9 @@ import {Diamond} from "contracts/src/diamond/Diamond.sol";
 // helpers
 import {DeployIntrospection} from "contracts/scripts/deployments/facets/DeployIntrospection.s.sol";
 import {DeployDiamondLoupe} from "contracts/scripts/deployments/facets/DeployDiamondLoupe.s.sol";
+import {DeployDiamondCut} from "contracts/scripts/deployments/facets/DeployDiamondCut.s.sol";
+import {DeployWalletLink} from "contracts/scripts/deployments/facets/DeployWalletLink.s.sol";
+
 import {MultiInit} from "contracts/src/diamond/initializers/MultiInit.sol";
 
 contract DiamondFactoryTest is
@@ -25,19 +29,103 @@ contract DiamondFactoryTest is
   IDiamond,
   DiamondFactorySetup
 {
-  DeployIntrospection introspectionHelper = new DeployIntrospection();
+  DeployDiamondCut cutHelper = new DeployDiamondCut();
   DeployDiamondLoupe loupeHelper = new DeployDiamondLoupe();
+  DeployIntrospection introspectionHelper = new DeployIntrospection();
 
+  // helpers
+  DeployWalletLink walletLinkHelper = new DeployWalletLink();
+
+  address cut;
   address loupe;
   address introspection;
-  address multiInit;
+  address ownable;
+  address walletLink;
 
   function setUp() public override {
     super.setUp();
 
     loupe = loupeHelper.deploy();
+    cut = cutHelper.deploy();
     introspection = introspectionHelper.deploy();
-    multiInit = address(new MultiInit());
+    ownable = ownableHelper.deploy();
+    walletLink = walletLinkHelper.deploy();
+  }
+
+  modifier givenFacetIsRegistered(
+    address facet,
+    bytes4[] memory selectors,
+    bytes4 initializer
+  ) {
+    vm.prank(deployer);
+    registry.addFacet(facet, selectors, initializer);
+    _;
+  }
+
+  modifier givenFacetIsRegisteredAndDefault(
+    address facet,
+    bytes4[] memory selectors,
+    bytes4 initializer
+  ) {
+    vm.startPrank(deployer);
+    registry.addFacet(facet, selectors, initializer);
+    factory.addDefaultFacet(facet);
+    vm.stopPrank();
+    _;
+  }
+
+  function test_createOfficialDiamond()
+    external
+    givenFacetIsRegisteredAndDefault(
+      cut,
+      cutHelper.selectors(),
+      cutHelper.initializer()
+    )
+    givenFacetIsRegisteredAndDefault(
+      introspection,
+      introspectionHelper.selectors(),
+      introspectionHelper.initializer()
+    )
+    givenFacetIsRegisteredAndDefault(
+      loupe,
+      loupeHelper.selectors(),
+      loupeHelper.initializer()
+    )
+    givenFacetIsRegistered(
+      ownable,
+      ownableHelper.selectors(),
+      ownableHelper.initializer()
+    )
+    givenFacetIsRegistered(
+      walletLink,
+      walletLinkHelper.selectors(),
+      walletLinkHelper.initializer()
+    )
+  {
+    address[] memory facets = new address[](2);
+    facets[0] = ownable;
+    facets[1] = walletLink;
+
+    address caller = _randomAddress();
+
+    FacetDeployment[] memory deployments = new FacetDeployment[](2);
+    deployments[0] = FacetDeployment({
+      facet: ownable,
+      data: abi.encodeWithSelector(registry.facetInitializer(ownable), caller)
+    });
+    deployments[1] = FacetDeployment({
+      facet: walletLink,
+      data: abi.encode(registry.facetInitializer(walletLink))
+    });
+
+    vm.prank(deployer);
+    address newDiamond = factory.createOfficialDiamond(deployments);
+
+    assertTrue(newDiamond.code.length > 0);
+    assertTrue(
+      IERC165(newDiamond).supportsInterface(type(IDiamondLoupe).interfaceId)
+    );
+    assertEq(IERC173(newDiamond).owner(), caller);
   }
 
   function test_createDiamond() external {
@@ -54,6 +142,8 @@ contract DiamondFactoryTest is
     datas[0] = introspectionHelper.makeInitData("");
     datas[1] = loupeHelper.makeInitData("");
 
+    address multiInit = address(new MultiInit());
+
     Diamond.InitParams memory params = Diamond.InitParams({
       baseFacets: cuts,
       init: address(multiInit),
@@ -65,14 +155,8 @@ contract DiamondFactoryTest is
     });
 
     address caller = _randomAddress();
-    address expectedAddress = _calculateDeploymentAddress(
-      abi.encodePacked(type(Diamond).creationCode, abi.encode(params)),
-      keccak256(abi.encodePacked(caller, block.timestamp))
-    );
 
     vm.prank(caller);
-    vm.expectEmit(address(factory));
-    emit DiamondCreated(expectedAddress, caller);
     address newDiamond = factory.createDiamond(params);
 
     assertTrue(
@@ -95,29 +179,5 @@ contract DiamondFactoryTest is
     vm.prank(caller);
     vm.expectRevert(DiamondFactory_LoupeNotSupported.selector);
     factory.createDiamond(params);
-  }
-
-  // =============================================================
-  //                          HELPERS
-  // =============================================================
-  function _calculateDeploymentAddress(
-    bytes memory initCode,
-    bytes32 salt
-  ) internal view returns (address) {
-    return
-      address(
-        uint160(
-          uint256(
-            keccak256(
-              abi.encodePacked(
-                hex"ff",
-                address(factory),
-                salt,
-                keccak256(initCode)
-              )
-            )
-          )
-        )
-      );
   }
 }

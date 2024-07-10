@@ -24,6 +24,12 @@ interface IFacetRegistryBase {
   /// @notice Reverts when facet is not registered.
   error FacetRegistry_FacetNotRegistered();
 
+  /// @notice Reverts when facet initializer is already registered.
+  error FacetRegistry_InitializerAlreadyRegistered();
+
+  /// @notice Reverts when facet initializer is not registered.
+  error FacetRegistry_InitializerNotRegistered();
+
   /**
    * @notice Emitted when a facet is registered.
    * @param facet Address of the registered facet.
@@ -36,6 +42,22 @@ interface IFacetRegistryBase {
    * @param facet Address of the unregistered facet.
    */
   event FacetUnregistered(address indexed facet);
+
+  /**
+   * @notice Emitted when a facet initializer is registered.
+   * @param facet Address of the facet.
+   * @param initializer Function selector of the initializer.
+   */
+  event FacetInitializerRegistered(
+    address indexed facet,
+    bytes4 indexed initializer
+  );
+
+  /**
+   * @notice Emitted when a facet initializer is unregistered.
+   * @param facet Address of the facet.
+   */
+  event FacetInitializerUnregistered(address indexed facet);
 }
 
 interface IFacetRegistry is IFacetRegistryBase {
@@ -45,6 +67,18 @@ interface IFacetRegistry is IFacetRegistryBase {
    * @param selectors Array of function selectors to add
    */
   function addFacet(address facet, bytes4[] calldata selectors) external;
+
+  /**
+   * @notice Adds a new facet to the registry with an initializer
+   * @param facet Address of the facet to add
+   * @param selectors Array of function selectors to add
+   * @param initializer Function selector of the initializer
+   */
+  function addFacet(
+    address facet,
+    bytes4[] calldata selectors,
+    bytes4 initializer
+  ) external;
 
   /**
    * @notice Removes a facet from the registry

@@ -16,6 +16,7 @@ library FacetRegistryStorage {
   struct Layout {
     EnumerableSet.AddressSet facets;
     mapping(address facet => EnumerableSet.Bytes32Set selectors) facetSelectors;
+    mapping(address facet => bytes4 initializer) facetInitializer;
   }
 
   function layout() internal pure returns (Layout storage l) {

@@ -12,6 +12,7 @@ import {FacetRegistry} from "contracts/src/diamond/facets/registry/FacetRegistry
 import {FacetTest} from "contracts/test/diamond/Facet.t.sol";
 import {DeployDiamondFactory} from "contracts/scripts/deployments/facets/DeployDiamondFactory.s.sol";
 import {DeployFacetRegistry} from "contracts/scripts/deployments/facets/DeployFacetRegistry.s.sol";
+import {DeployOwnable} from "contracts/scripts/deployments/facets/DeployOwnable.s.sol";
 
 // helpers
 import {MultiInit} from "contracts/src/diamond/initializers/MultiInit.sol";
@@ -19,6 +20,7 @@ import {MultiInit} from "contracts/src/diamond/initializers/MultiInit.sol";
 contract FacetRegistrySetup is FacetTest {
   DeployDiamondFactory factoryHelper = new DeployDiamondFactory();
   DeployFacetRegistry registryHelper = new DeployFacetRegistry();
+  DeployOwnable ownableHelper = new DeployOwnable();
 
   DiamondFactory internal factory;
   FacetRegistry internal registry;
@@ -39,11 +41,18 @@ contract FacetRegistrySetup is FacetTest {
 
     address diamondFactory = factoryHelper.deploy();
     address facetRegistry = registryHelper.deploy();
+    address ownablePendingFacet = ownableHelper.deploy();
+
+    addFacet(
+      ownableHelper.makeCut(ownablePendingFacet, IDiamond.FacetCutAction.Add),
+      ownablePendingFacet,
+      ownableHelper.makeInitData(deployer)
+    );
 
     addFacet(
       factoryHelper.makeCut(diamondFactory, IDiamond.FacetCutAction.Add),
       diamondFactory,
-      factoryHelper.makeInitData("")
+      factoryHelper.makeInitData(address(multiInit))
     );
 
     addFacet(
