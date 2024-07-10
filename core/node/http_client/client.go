@@ -67,6 +67,7 @@ func GetHttpClient(ctx context.Context) (*http.Client, error) {
 func GetHttp11Client(ctx context.Context) (*http.Client, error) {
 	return &http.Client{
 		Transport: &http.Transport{
+			DisableKeepAlives:    true,
 			TLSClientConfig:   getTLSConfig(ctx),
 			ForceAttemptHTTP2: false,
 			TLSNextProto:      map[string]func(authority string, c *tls.Conn) http.RoundTripper{},

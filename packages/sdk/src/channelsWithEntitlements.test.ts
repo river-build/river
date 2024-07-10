@@ -80,7 +80,7 @@ async function setupChannelWithCustomRole(
         bobSpaceDapp,
         bobProvider,
         spaceId,
-        'nft-gated read role',
+        'gated role',
         permissions,
         users,
         ruleData,
@@ -190,6 +190,121 @@ async function expectUserCannotJoinChannel(
 }
 
 describe('channelsWithEntitlements', () => {
+    test("READ-only user cannot write, react or reply to a channel's messages", async () => {
+        const { alice, bob, aliceSpaceDapp, spaceId, channelId } = await setupChannelWithCustomRole(
+            ['alice'],
+            NoopRuleData,
+        )
+
+        // Validate alice can join the channel
+        await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
+
+        const { eventId: refEventId } = await bob.sendMessage(channelId!, 'Hello, world!')
+        // React to Bob's message not allowed.
+        await expect(
+            alice.sendChannelMessage_Reaction(channelId!, { reaction: '👍', refEventId }),
+        ).rejects.toThrow(/*not entitled to add message to channel*/)
+        // Reply to Bob's message not allowed.
+        await expect(
+            alice.sendChannelMessage_Text(channelId!, {
+                content: {
+                    body: 'Hello, world!',
+                    mentions: [],
+                    attachments: [],
+                },
+                threadId: refEventId, // reply to Bob's message
+            }),
+        ).rejects.toThrow(/*not entitled to add message to channel*/)
+        // Top-level post not allowed.
+        await expect(
+            alice.sendMessage(channelId!, 'Hello, world!'),
+        ).rejects.toThrow(/*not entitled to add message to channel*/)
+
+        const doneStart = Date.now()
+        // kill the clients
+        await bob.stopSync()
+        await alice.stopSync()
+        log('Done', Date.now() - doneStart)
+    })
+
+    test('REACT-REPLY user can react, reply, cannot write', async () => {
+        const { alice, bob, aliceSpaceDapp, spaceId, channelId } = await setupChannelWithCustomRole(
+            ['alice'],
+            NoopRuleData,
+            [Permission.Read, Permission.ReactReply],
+        )
+
+        // Validate alice can join the channel
+        await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
+
+        const { eventId: refEventId } = await bob.sendMessage(channelId!, 'Hello, world!')
+        // Reacting to Bob's message should be allowed.
+        await expect(
+            alice.sendChannelMessage_Reaction(channelId!, { reaction: '👍', refEventId }),
+        ).toResolve()
+        // Replying to Bob's message should be allowed.
+        await expect(
+            alice.sendChannelMessage_Text(channelId!, {
+                content: {
+                    body: 'Hello, world!',
+                    mentions: [],
+                    attachments: [],
+                },
+                threadId: refEventId, // reply to Bob's message
+            }),
+        ).toResolve()
+
+        // Top-level post currently allowed.
+        // TODO: after client is updated to reject unpermitted self-posts, this should reject.
+        await expect(
+            alice.sendMessage(channelId!, 'Hello, world!'),
+        ).rejects.toThrow(/*not entitled to add message to channel*/)
+
+        const doneStart = Date.now()
+        // kill the clients
+        await bob.stopSync()
+        await alice.stopSync()
+        log('Done', Date.now() - doneStart)
+    })
+
+    test('WRITE user can react, reply, write', async () => {
+        const { alice, bob, aliceSpaceDapp, spaceId, channelId } = await setupChannelWithCustomRole(
+            ['alice'],
+            NoopRuleData,
+            [Permission.Read, Permission.Write],
+        )
+
+        // Validate alice can join the channel
+        await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
+
+        const { eventId: refEventId } = await bob.sendMessage(channelId!, 'Hello, world!')
+        // Reacting to Bob's message should be allowed.
+        await expect(
+            alice.sendChannelMessage_Reaction(channelId!, { reaction: '👍', refEventId }),
+        ).toResolve()
+        // Replying to Bob's message should be allowed.
+        await expect(
+            alice.sendChannelMessage_Text(channelId!, {
+                content: {
+                    body: 'Hello, world!',
+                    mentions: [],
+                    attachments: [],
+                },
+                threadId: refEventId, // reply to Bob's message
+            }),
+        ).toResolve()
+
+        // Top-level post currently allowed.
+        // TODO: after client is updated to reject unpermitted self-posts, this should reject.
+        await expect(alice.sendMessage(channelId!, 'Hello, world!')).toResolve()
+
+        const doneStart = Date.now()
+        // kill the clients
+        await bob.stopSync()
+        await alice.stopSync()
+        log('Done', Date.now() - doneStart)
+    })
+
     test('userEntitlementPass', async () => {
         const { alice, bob, aliceSpaceDapp, spaceId, channelId } = await setupChannelWithCustomRole(
             ['alice'],
@@ -451,7 +566,7 @@ describe('channelsWithEntitlements', () => {
         await alice.stopSync()
     })
 
-    test('user booted on message post after entitlement loss', async () => {
+    test('user cannot post after entitlement loss', async () => {
         const testNftAddress = await getContractAddress('TestNFT')
         const { alice, alicesWallet, aliceSpaceDapp, bob, spaceId, channelId } =
             await setupChannelWithCustomRole([], getNftRuleData(testNftAddress), [
@@ -479,26 +594,12 @@ describe('channelsWithEntitlements', () => {
         // Wait 5 seconds for the positive auth cache to expire
         await new Promise((f) => setTimeout(f, 5000))
 
+        // Alice should not be able to post to the channel after losing entitlements.
+        // However she remains a member of the stream because this message is never sent by the
+        // client.
         await expect(
             alice.sendMessage(channelId!, 'Message after entitlement loss'),
-        ).rejects.toThrow(/7:PERMISSION_DENIED/)
-
-        // Alice's user stream should reflect that she is no longer a member of the channel.
-        // TODO why no linter complain with no await here?
-        const aliceUserStream = await alice.waitForStream(alice.userStreamId!)
-        await waitFor(() =>
-            expect(
-                aliceUserStream.view.userContent.isMember(channelId!, MembershipOp.SO_LEAVE),
-            ).toBeTruthy(),
-        )
-        await waitFor(() =>
-            expect(
-                channelStream.view.membershipContent.isMember(MembershipOp.SO_LEAVE, alice.userId),
-            ).toBeTruthy(),
-        )
-
-        // Alice cannot rejoin the stream.
-        await expectUserCannotJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
+        ).rejects.toThrow(/*not entitled to add message to channel*/)
 
         await bob.stopSync()
         await alice.stopSync()
