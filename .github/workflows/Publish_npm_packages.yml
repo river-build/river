@@ -1,0 +1,25 @@
+name: Check npm Login
+
+on:
+    workflow_dispatch: # Allows manual triggering
+
+jobs:
+    check-npm-login:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v2
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v3
+              with:
+                  node-version: '16'
+                  cache: 'npm'
+
+            - name: Authenticate to npm
+              run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+
+            - name: Check npm login
+              run: |
+                  npm whoami || (echo "Not logged in to npm registry" && exit 1)
