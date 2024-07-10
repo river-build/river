@@ -1,0 +1,9 @@
+services:
+    server:
+        platform: linux/amd64
+        build: .
+        env_file:
+            - .env
+        volumes:
+            - ./src/:/app/src/
+        command: ./scripts/run.sh dev
