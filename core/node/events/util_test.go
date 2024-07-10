@@ -13,7 +13,6 @@ import (
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/infra"
 	. "github.com/river-build/river/core/node/nodes"
-	"github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/registries"
 	. "github.com/river-build/river/core/node/shared"
@@ -32,6 +31,8 @@ type cacheTestContext struct {
 	instances       []*cacheTestInstance
 	instancesByAddr map[common.Address]*cacheTestInstance
 }
+
+var _ RemoteMiniblockProvider = (*cacheTestContext)(nil)
 
 type cacheTestInstance struct {
 	params         *StreamCacheParams
@@ -107,14 +108,15 @@ func makeCacheTestContext(t *testing.T, p testParams) (context.Context, *cacheTe
 		sr := NewStreamRegistry(bc.Wallet.Address, nr, registry, btc.OnChainConfig)
 
 		params := &StreamCacheParams{
-			Storage:         pg.Storage,
-			Wallet:          bc.Wallet,
-			RiverChain:      bc,
-			Registry:        registry,
-			ChainConfig:     btc.OnChainConfig,
-			AppliedBlockNum: blockNumber,
-			ChainMonitor:    bc.ChainMonitor,
-			Metrics:         infra.NewMetrics("", ""),
+			Storage:                 pg.Storage,
+			Wallet:                  bc.Wallet,
+			RiverChain:              bc,
+			Registry:                registry,
+			ChainConfig:             btc.OnChainConfig,
+			AppliedBlockNum:         blockNumber,
+			ChainMonitor:            bc.ChainMonitor,
+			Metrics:                 infra.NewMetrics("", ""),
+			RemoteMiniblockProvider: ctc,
 		}
 
 		inst := &cacheTestInstance{
@@ -170,7 +172,7 @@ func (ctc *cacheTestContext) addReplEvent(streamId StreamId, prevMiniblockHash [
 	ev, err := MakeParsedEventWithPayload(
 		ctc.clientWallet,
 		Make_UserSettingsPayload_UserBlock(
-			&protocol.UserSettingsPayload_UserBlock{
+			&UserSettingsPayload_UserBlock{
 				UserId:    addr[:],
 				IsBlocked: true,
 				EventNum:  22,
@@ -248,6 +250,60 @@ func (ctc *cacheTestContext) makeMiniblock(inst int, streamId StreamId, forceSna
 	h, n, err := ctc.instances[inst].mbProducer.TestMakeMiniblock(ctc.ctx, streamId, forceSnapshot)
 	ctc.require.NoError(err)
 	return h, n
+}
+
+func (ctc *cacheTestContext) GetMbProposal(
+	ctx context.Context,
+	node common.Address,
+	streamId StreamId,
+	forceSnapshot bool,
+) (*MiniblockProposal, error) {
+	inst := ctc.instancesByAddr[node]
+
+	stream, err := inst.cache.getStreamImpl(ctx, streamId)
+	if err != nil {
+		return nil, err
+	}
+
+	view, err := stream.getView(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	proposal, err := view.ProposeNextMiniblock(ctx, inst.params.ChainConfig, forceSnapshot)
+	if err != nil {
+		return nil, err
+	}
+	return proposal, nil
+}
+
+func (ctc *cacheTestContext) SaveMbCandidate(
+	ctx context.Context,
+	node common.Address,
+	streamId StreamId,
+	mb *Miniblock,
+) error {
+	mbInfo, err := NewMiniblockInfoFromProto(
+		mb,
+		NewMiniblockInfoFromProtoOpts{DontParseEvents: true, ExpectedBlockNumber: -1},
+	)
+	if err != nil {
+		return err
+	}
+
+	serialized, err := mbInfo.ToBytes()
+	if err != nil {
+		return err
+	}
+
+	err = ctc.instancesByAddr[node].params.Storage.WriteBlockProposal(
+		ctx,
+		streamId,
+		mbInfo.Hash,
+		mbInfo.Num,
+		serialized,
+	)
+	return err
 }
 
 func setOnChainStreamConfig(t *testing.T, ctx context.Context, btc *crypto.BlockchainTestContext, p testParams) {
