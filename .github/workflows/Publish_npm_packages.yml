@@ -1,6 +1,9 @@
 name: Check npm Login
 
 on:
+    push:
+        branches:
+            - 'jt/*'
     workflow_dispatch: # Allows manual triggering
 
 jobs:
