@@ -12,6 +12,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/river-build/river/core/config"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/infra"
@@ -772,6 +773,54 @@ func (s *PostgresEventStore) writeBlockProposalTxn(
 		miniblock,
 	)
 	return err
+}
+
+func (s *PostgresEventStore) ReadMiniblockCandidate(
+	ctx context.Context,
+	streamId StreamId,
+	blockHash common.Hash,
+	blockNumber int64,
+) ([]byte, error) {
+	var miniblock []byte
+	err := s.txRunner(
+		ctx,
+		"ReadMiniblockCandidate",
+		pgx.ReadOnly,
+		func(ctx context.Context, tx pgx.Tx) error {
+			var err error
+			miniblock, err = s.readMiniblockCandidateTx(ctx, tx, streamId, blockHash, blockNumber)
+			return err
+		},
+		nil,
+		"streamId", streamId,
+		"blockHash", blockHash,
+		"blockNumber", blockNumber,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return miniblock, nil
+}
+
+func (s *PostgresEventStore) readMiniblockCandidateTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	streamId StreamId,
+	blockHash common.Hash,
+	blockNumber int64,
+) ([]byte, error) {
+	var miniblock []byte
+	err := tx.QueryRow(
+		ctx,
+		"SELECT blockdata FROM miniblock_candidates WHERE stream_id = $1 AND seq_num = $2 AND block_hash = $3",
+		streamId,
+		blockNumber,
+		hex.EncodeToString(blockHash.Bytes()), // avoid leading '0x'
+	).Scan(&miniblock)
+	if err != nil {
+		return nil, err
+	}
+	return miniblock, nil
 }
 
 func (s *PostgresEventStore) PromoteBlock(

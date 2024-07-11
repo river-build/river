@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/ethereum/go-ethereum/common"
+
 	. "github.com/river-build/river/core/node/shared"
 )
 
@@ -45,6 +46,7 @@ type StreamStorage interface {
 	) error
 
 	// WriteBlockProposal adds a proposal candidate for future
+	// TODO: rename to WriteMiniblockCandidate
 	WriteBlockProposal(
 		ctx context.Context,
 		streamId StreamId,
@@ -53,12 +55,20 @@ type StreamStorage interface {
 		miniblock []byte,
 	) error
 
+	ReadMiniblockCandidate(
+		ctx context.Context,
+		streamId StreamId,
+		blockHash common.Hash,
+		blockNumber int64,
+	) ([]byte, error)
+
 	// Promote block candidate to miniblock
 	// Deletes current minipool at minipoolGeneration,
 	// creates new minipool at minipoolGeneration + 1,
 	// stores miniblock proposal with given hash at minipoolGeneration index and wipes all candidates for stream.
 	// If snapshotMiniblock is true, stores minipoolGeneration as last snapshot miniblock index,
 	// stores envelopes in the new minipool in slots starting with 0.
+	// TODO: rename to PromoteMiniblockCandidate
 	PromoteBlock(
 		ctx context.Context,
 		streamId StreamId,

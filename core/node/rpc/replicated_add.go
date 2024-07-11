@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/ethereum/go-ethereum/common"
+
 	. "github.com/river-build/river/core/node/events"
 	. "github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
@@ -28,7 +29,7 @@ func (r *replicatedStream) AddEvent(ctx context.Context, event *ParsedEvent) err
 		return r.localStream.AddEvent(ctx, event)
 	}
 
-	sender := newQuorumPool(numRemotes)
+	sender := NewQuorumPool(numRemotes)
 
 	sender.GoLocal(func() error {
 		return r.localStream.AddEvent(ctx, event)
