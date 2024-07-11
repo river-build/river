@@ -6,6 +6,7 @@ import { makeTestClient, makeUniqueSpaceStreamId } from './util.test'
 import { Client } from './client'
 import { makeUniqueChannelStreamId, makeDMStreamId } from './id'
 import { InfoRequest } from '@river-build/proto'
+import { log } from 'console'
 
 describe('mediaTests', () => {
     let bobsClient: Client
@@ -50,11 +51,27 @@ describe('mediaTests', () => {
 
     async function bobCreateSpaceMediaStream(
         chunkCount: number,
-    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array }> {
+    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array, publicContentKey: string }> {
         const spaceId = makeUniqueSpaceStreamId()
         await expect(bobsClient.createSpace(spaceId)).toResolve()
+        return bobsClient.createSpaceMediaStream(spaceId, chunkCount)
+    }
 
-        return await bobsClient.createSpaceMediaStream(spaceId, chunkCount)
+    async function bobSendSpaceMediaPayloads(
+        streamId: string,
+        chunks: number,
+        prevMiniblockHash: Uint8Array,
+        publicContentKey: string,
+    ): Promise<Uint8Array> {
+        let prevHash = prevMiniblockHash
+        for (let i = 0; i < chunks; i++) {
+            const chunk = new Uint8Array(100)
+            // Create novel chunk content for testing purposes
+            chunk.fill(i, 0, 100)
+            const result = await bobsClient.sendSpacePublicMediaPayload(streamId, publicContentKey, chunk, i, prevHash)
+            prevHash = result.prevMiniblockHash
+        }
+        return prevHash
     }
 
     test('clientCanCreateMediaStream', async () => {
@@ -65,9 +82,19 @@ describe('mediaTests', () => {
         await expect(bobCreateSpaceMediaStream(10)).toResolve()
     })
 
-    test('clientCanSendMediaPayload', async () => {
+    test.only('clientCanSendMediaPayload', async () => {
         const mediaStreamInfo = await bobCreateMediaStream(10)
         await bobSendMediaPayloads(mediaStreamInfo.streamId, 10, mediaStreamInfo.prevMiniblockHash)
+    })
+
+    test.only('clienCanSendSpaceMediaPayload', async () => {
+        const mediaStreamInfo = await bobCreateSpaceMediaStream(10)
+        await bobSendSpaceMediaPayloads(
+            mediaStreamInfo.streamId,
+            10,
+            mediaStreamInfo.prevMiniblockHash,
+            mediaStreamInfo.publicContentKey,
+        )
     })
 
     test('chunkIndexNeedsToBeWithinBounds', async () => {
