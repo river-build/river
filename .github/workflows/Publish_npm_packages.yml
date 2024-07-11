@@ -18,6 +18,8 @@ jobs:
 
             - name: Checkout code
               uses: actions/checkout@v4
+              with:
+                  ref: main
 
             - uses: actions/setup-node@v4
               with:
@@ -49,12 +51,8 @@ jobs:
                   if [[ "$(git status --porcelain)" != "" ]]; then
                       echo "There are uncommitted changes. Please commit or stash them before running this script."
                       exit 1
-                  elif [[ "$(parse_git_branch)" != "main" ]]; then
-                      echo "You must be on the main branch to run this script."
-                      exit 1
                   fi
 
-                  DATE=$(date +%Y-%m-%d)
                   COMMIT_HASH=$(git rev-parse --short HEAD)
                   BRANCH_NAME="release-sdk/${COMMIT_HASH}"
                   PR_TITLE="Release SDK ${COMMIT_HASH}"
