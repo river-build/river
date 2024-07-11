@@ -24,6 +24,7 @@ import {
     MemberPayload_Nft,
     CreateStreamRequest,
     AddEventResponse_Error,
+    PublicScope,
 } from '@river-build/proto'
 import {
     bin_fromHexString,
@@ -70,6 +71,7 @@ import {
     streamIdAsString,
     makeSpaceStreamId,
     STREAM_ID_STRING_LENGTH,
+    makeMediaStreamIdFromSpaceId,
 } from './id'
 import { makeEvent, unpackMiniblock, unpackStream, unpackStreamEx } from './sign'
 import { StreamEvents } from './streamEvents'
@@ -123,6 +125,7 @@ import { SyncState, SyncedStreams } from './syncedStreams'
 import { SyncedStream } from './syncedStream'
 import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
+import { ethers } from 'ethers'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
@@ -707,6 +710,57 @@ export class Client
         const response = await this.rpcClient.createStream({
             events: [inceptionEvent],
             streamId: streamIdAsBytes(streamId),
+        })
+
+        const unpackedResponse = await unpackStream(response.stream)
+        const streamView = new StreamStateView(this.userId, streamId)
+        streamView.initialize(
+            unpackedResponse.streamAndCookie.nextSyncCookie,
+            unpackedResponse.streamAndCookie.events,
+            unpackedResponse.snapshot,
+            unpackedResponse.streamAndCookie.miniblocks,
+            [],
+            unpackedResponse.prevSnapshotMiniblockNum,
+            undefined,
+            [],
+            undefined,
+        )
+
+        check(isDefined(streamView.prevMiniblockHash), 'prevMiniblockHash must be defined')
+
+        return { streamId: streamId, prevMiniblockHash: streamView.prevMiniblockHash }
+    }
+
+    async createSpaceMediaStream(
+        spaceId: string | undefined,
+        chunkCount: number,
+        streamSettings?: PlainMessage<StreamSettings>,
+    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array }> {
+        assert(spaceId !== undefined, 'userStreamId must be set')
+        assert(this.userStreamId !== undefined, 'userStreamId must be set')
+        assert(isSpaceStreamId(spaceId), 'spaceId must be a valid streamId')
+
+        const streamId = makeMediaStreamIdFromSpaceId(spaceId)
+        const streamIdBytes = streamIdAsBytes(streamId)
+        const spaceIdBytes = streamIdAsBytes(spaceId)
+
+        this.logCall('createSpaceMediaStream', streamId)
+
+        const inceptionEvent = await makeEvent(
+            this.signerContext,
+            make_MediaPayload_Inception({
+                streamId: streamIdBytes,
+                spaceId: spaceIdBytes,
+                channelId: spaceIdBytes,
+                chunkCount,
+                settings: streamSettings,
+                publicScope: PublicScope.PS_SPACE,
+            }),
+        )
+
+        const response = await this.rpcClient.createStream({
+            events: [inceptionEvent],
+            streamId: streamIdBytes,
         })
 
         const unpackedResponse = await unpackStream(response.stream)
