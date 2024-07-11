@@ -125,6 +125,7 @@ import { SyncState, SyncedStreams } from './syncedStreams'
 import { SyncedStream } from './syncedStream'
 import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
+import { ethers } from 'ethers'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
@@ -734,7 +735,7 @@ export class Client
         spaceId: string | undefined,
         chunkCount: number,
         streamSettings?: PlainMessage<StreamSettings>,
-    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array }> {
+    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array, publicContentKey: string }> {
         assert(spaceId !== undefined, 'userStreamId must be set')
         assert(this.userStreamId !== undefined, 'userStreamId must be set')
         assert(isSpaceStreamId(spaceId), 'spaceId must be a valid streamId')
@@ -745,6 +746,12 @@ export class Client
 
         this.logCall('createSpaceMediaStream', streamId)
 
+        // create a publicly scoped stream
+        // include a key to decrypt the public content
+        // not an issue that the key is public. by design
+        const publicWallet = ethers.Wallet.createRandom()
+        const publicContentKey = publicWallet.privateKey
+
         const inceptionEvent = await makeEvent(
             this.signerContext,
             make_MediaPayload_Inception({
@@ -754,6 +761,7 @@ export class Client
                 chunkCount,
                 settings: streamSettings,
                 publicScope: PublicScope.PS_SPACE,
+                publicContentKey,
             }),
         )
 
@@ -778,7 +786,7 @@ export class Client
 
         check(isDefined(streamView.prevMiniblockHash), 'prevMiniblockHash must be defined')
 
-        return { streamId: streamId, prevMiniblockHash: streamView.prevMiniblockHash }
+        return { streamId: streamId, prevMiniblockHash: streamView.prevMiniblockHash, publicContentKey }
     }
 
     async updateChannel(
@@ -1408,6 +1416,21 @@ export class Client
         })
         return this.makeEventWithHashAndAddToStream(streamId, payload, prevMiniblockHash)
     }
+
+    async sendSpacePublicMediaPayload(
+        streamId: string,
+        publicContentKey: string,
+        data: Uint8Array,
+        chunkIndex: number,
+        prevMiniblockHash: Uint8Array,
+    ): Promise<{ prevMiniblockHash: Uint8Array }> {
+        const payload = make_MediaPayload_Chunk({
+            data: data,
+            chunkIndex: chunkIndex,
+        })
+        return this.makeEventWithHashAndAddToStream(streamId, payload, prevMiniblockHash)
+    }
+
 
     async sendChannelMessage_Reaction(
         streamId: string,
