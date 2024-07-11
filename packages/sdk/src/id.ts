@@ -147,7 +147,13 @@ export const isDefaultChannelId = (streamId: string): boolean => {
 
 export const makeUniqueGDMChannelStreamId = (): string => makeStreamId(StreamPrefix.GDM, genId())
 export const makeUniqueMediaStreamId = (): string => makeStreamId(StreamPrefix.Media, genId())
-
+export const makeMediaStreamIdFromSpaceId = (spaceContractAddressOrId: string): string => {
+    if (spaceContractAddressOrId.startsWith(StreamPrefix.Space)) {
+        return StreamPrefix.Media + spaceContractAddressOrId.slice(2)
+    }
+    // matches code in the smart contract
+    return makeStreamId(StreamPrefix.Media, spaceContractAddressOrId + '0'.repeat(22))
+}
 export const makeDMStreamId = (userIdA: string, userIdB: string): string => {
     const concatenated = [userIdA, userIdB]
         .map((id) => id.toLowerCase())
