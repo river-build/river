@@ -125,7 +125,6 @@ import { SyncState, SyncedStreams } from './syncedStreams'
 import { SyncedStream } from './syncedStream'
 import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
-import { ethers } from 'ethers'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
