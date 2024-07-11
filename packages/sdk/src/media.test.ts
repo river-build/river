@@ -57,11 +57,11 @@ describe('mediaTests', () => {
         return await bobsClient.createSpaceMediaStream(spaceId, chunkCount)
     }
 
-    test.only('clientCanCreateMediaStream', async () => {
+    test('clientCanCreateMediaStream', async () => {
         await expect(bobCreateMediaStream(10)).toResolve()
     })
 
-    test.only('clientCanCreateSpaceMediaStream', async () => {
+    test('clientCanCreateSpaceMediaStream', async () => {
         await expect(bobCreateSpaceMediaStream(10)).toResolve()
     })
 
