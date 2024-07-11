@@ -22,7 +22,7 @@ import {MockMessenger} from "contracts/test/mocks/MockMessenger.sol";
 // deployments
 import {Architect} from "contracts/src/factory/facets/architect/Architect.sol";
 import {SpaceHelper} from "contracts/test/spaces/SpaceHelper.sol";
-import {RuleEntitlement} from "contracts/src/spaces/entitlements/rule/RuleEntitlement.sol";
+import {RuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/RuleEntitlementV2.sol";
 
 import {SpaceOwner} from "contracts/src/spaces/facets/owner/SpaceOwner.sol";
 import {ISpaceDelegation} from "contracts/src/base/registry/facets/delegation/ISpaceDelegation.sol";

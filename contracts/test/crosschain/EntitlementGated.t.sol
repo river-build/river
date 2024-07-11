@@ -7,32 +7,32 @@ import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 //interfaces
 import {IEntitlementChecker} from "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol";
 import {IEntitlementCheckerBase} from "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol";
-import {IEntitlementGated} from "contracts/src/spaces/facets/gated/IEntitlementGated.sol";
-import {IEntitlementGatedBase} from "contracts/src/spaces/facets/gated/IEntitlementGated.sol";
-import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
+import {IEntitlementGatedV2} from "contracts/src/spaces/facets/gated/IEntitlementGatedV2.sol";
+import {IEntitlementGatedBaseV2} from "contracts/src/spaces/facets/gated/IEntitlementGatedV2.sol";
+import {IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlementV2.sol";
 
 //libraries
 import {RuleEntitlementUtil} from "./RuleEntitlementUtil.sol";
 
 //contracts
 import {EntitlementChecker} from "contracts/src/base/registry/facets/checker/EntitlementChecker.sol";
-import {MockEntitlementGated} from "contracts/test/mocks/MockEntitlementGated.sol";
+import {MockEntitlementGatedV2} from "contracts/test/mocks/MockEntitlementGatedV2.sol";
 
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 
 contract EntitlementGatedTest is
   BaseSetup,
-  IEntitlementGatedBase,
+  IEntitlementGatedBaseV2,
   IEntitlementCheckerBase
 {
-  MockEntitlementGated public gated;
+  MockEntitlementGatedV2 public gated;
 
   function setUp() public override {
     super.setUp();
     _registerOperators();
     _registerNodes();
 
-    gated = new MockEntitlementGated(entitlementChecker);
+    gated = new MockEntitlementGatedV2(entitlementChecker);
   }
 
   // =============================================================
@@ -149,9 +149,9 @@ contract EntitlementGatedTest is
   // =============================================================
 
   function assertRuleDatasEqual(
-    IRuleEntitlement.RuleData memory actual,
-    IRuleEntitlement.RuleData memory expected
-  ) internal pure {
+    IRuleEntitlementV2.RuleData memory actual,
+    IRuleEntitlementV2.RuleData memory expected
+  ) internal {
     assert(actual.checkOperations.length == expected.checkOperations.length);
     assert(
       actual.logicalOperations.length == expected.logicalOperations.length
@@ -169,9 +169,9 @@ contract EntitlementGatedTest is
         actual.checkOperations[i].contractAddress ==
           expected.checkOperations[i].contractAddress
       );
-      assert(
-        actual.checkOperations[i].threshold ==
-          expected.checkOperations[i].threshold
+      assertEq(
+        actual.checkOperations[i].params,
+        expected.checkOperations[i].params
       );
     }
 
@@ -201,7 +201,10 @@ contract EntitlementGatedTest is
       0,
       RuleEntitlementUtil.getMockERC721RuleData()
     );
-    IRuleEntitlement.RuleData memory ruleData = gated.getRuleData(requestId, 0);
+    IRuleEntitlementV2.RuleData memory ruleData = gated.getRuleData(
+      requestId,
+      0
+    );
     assertRuleDatasEqual(ruleData, RuleEntitlementUtil.getMockERC721RuleData());
   }
 

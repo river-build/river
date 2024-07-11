@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
+import {IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlementV2.sol";
 
 library RuleEntitlementUtil {
   function getNoopRuleData()
     internal
     pure
-    returns (IRuleEntitlement.RuleData memory data)
+    returns (IRuleEntitlementV2.RuleData memory data)
   {
-    data = IRuleEntitlement.RuleData({
-      operations: new IRuleEntitlement.Operation[](1),
-      checkOperations: new IRuleEntitlement.CheckOperation[](0),
-      logicalOperations: new IRuleEntitlement.LogicalOperation[](0)
+    data = IRuleEntitlementV2.RuleData({
+      operations: new IRuleEntitlementV2.Operation[](1),
+      checkOperations: new IRuleEntitlementV2.CheckOperation[](0),
+      logicalOperations: new IRuleEntitlementV2.LogicalOperation[](0)
     });
-    IRuleEntitlement.Operation memory noop = IRuleEntitlement.Operation({
-      opType: IRuleEntitlement.CombinedOperationType.NONE,
+    IRuleEntitlementV2.Operation memory noop = IRuleEntitlementV2.Operation({
+      opType: IRuleEntitlementV2.CombinedOperationType.NONE,
       index: 0
     });
 
@@ -25,22 +25,22 @@ library RuleEntitlementUtil {
   function getMockERC721RuleData()
     internal
     pure
-    returns (IRuleEntitlement.RuleData memory data)
+    returns (IRuleEntitlementV2.RuleData memory data)
   {
-    data = IRuleEntitlement.RuleData({
-      operations: new IRuleEntitlement.Operation[](1),
-      checkOperations: new IRuleEntitlement.CheckOperation[](1),
-      logicalOperations: new IRuleEntitlement.LogicalOperation[](0)
+    data = IRuleEntitlementV2.RuleData({
+      operations: new IRuleEntitlementV2.Operation[](1),
+      checkOperations: new IRuleEntitlementV2.CheckOperation[](1),
+      logicalOperations: new IRuleEntitlementV2.LogicalOperation[](0)
     });
-    IRuleEntitlement.CheckOperation memory checkOp = IRuleEntitlement
+    IRuleEntitlementV2.CheckOperation memory checkOp = IRuleEntitlementV2
       .CheckOperation({
-        opType: IRuleEntitlement.CheckOperationType.ERC721,
+        opType: IRuleEntitlementV2.CheckOperationType.ERC721,
         chainId: 11155111,
         contractAddress: address(0xb088b3f2b35511A611bF2aaC13fE605d491D6C19),
-        threshold: 1
+        params: abi.encode(IRuleEntitlementV2.ERC721Params({threshold: 1}))
       });
-    IRuleEntitlement.Operation memory op = IRuleEntitlement.Operation({
-      opType: IRuleEntitlement.CombinedOperationType.CHECK,
+    IRuleEntitlementV2.Operation memory op = IRuleEntitlementV2.Operation({
+      opType: IRuleEntitlementV2.CombinedOperationType.CHECK,
       index: 0
     });
 
@@ -51,22 +51,22 @@ library RuleEntitlementUtil {
   function getMockERC20RuleData()
     internal
     pure
-    returns (IRuleEntitlement.RuleData memory data)
+    returns (IRuleEntitlementV2.RuleData memory data)
   {
-    data = IRuleEntitlement.RuleData({
-      operations: new IRuleEntitlement.Operation[](1),
-      checkOperations: new IRuleEntitlement.CheckOperation[](1),
-      logicalOperations: new IRuleEntitlement.LogicalOperation[](0)
+    data = IRuleEntitlementV2.RuleData({
+      operations: new IRuleEntitlementV2.Operation[](1),
+      checkOperations: new IRuleEntitlementV2.CheckOperation[](1),
+      logicalOperations: new IRuleEntitlementV2.LogicalOperation[](0)
     });
-    IRuleEntitlement.CheckOperation memory checkOp = IRuleEntitlement
+    IRuleEntitlementV2.CheckOperation memory checkOp = IRuleEntitlementV2
       .CheckOperation({
-        opType: IRuleEntitlement.CheckOperationType.ERC20,
+        opType: IRuleEntitlementV2.CheckOperationType.ERC20,
         chainId: 31337,
         contractAddress: address(0x11),
-        threshold: 100
+        params: abi.encode(IRuleEntitlementV2.ERC20Params({threshold: 100}))
       });
-    IRuleEntitlement.Operation memory op = IRuleEntitlement.Operation({
-      opType: IRuleEntitlement.CombinedOperationType.CHECK,
+    IRuleEntitlementV2.Operation memory op = IRuleEntitlementV2.Operation({
+      opType: IRuleEntitlementV2.CombinedOperationType.CHECK,
       index: 0
     });
     data.operations[0] = op;
@@ -76,22 +76,24 @@ library RuleEntitlementUtil {
   function getMockERC1155RuleData()
     internal
     pure
-    returns (IRuleEntitlement.RuleData memory data)
+    returns (IRuleEntitlementV2.RuleData memory data)
   {
-    data = IRuleEntitlement.RuleData({
-      operations: new IRuleEntitlement.Operation[](1),
-      checkOperations: new IRuleEntitlement.CheckOperation[](1),
-      logicalOperations: new IRuleEntitlement.LogicalOperation[](0)
+    data = IRuleEntitlementV2.RuleData({
+      operations: new IRuleEntitlementV2.Operation[](1),
+      checkOperations: new IRuleEntitlementV2.CheckOperation[](1),
+      logicalOperations: new IRuleEntitlementV2.LogicalOperation[](0)
     });
-    IRuleEntitlement.CheckOperation memory checkOp = IRuleEntitlement
+    IRuleEntitlementV2.CheckOperation memory checkOp = IRuleEntitlementV2
       .CheckOperation({
-        opType: IRuleEntitlement.CheckOperationType.ERC1155,
+        opType: IRuleEntitlementV2.CheckOperationType.ERC1155,
         chainId: 31341,
         contractAddress: address(0x55),
-        threshold: 500
+        params: abi.encode(
+          IRuleEntitlementV2.ERC1155Params({tokenId: 1, threshold: 500})
+        )
       });
-    IRuleEntitlement.Operation memory op = IRuleEntitlement.Operation({
-      opType: IRuleEntitlement.CombinedOperationType.CHECK,
+    IRuleEntitlementV2.Operation memory op = IRuleEntitlementV2.Operation({
+      opType: IRuleEntitlementV2.CombinedOperationType.CHECK,
       index: 0
     });
     data.operations[0] = op;

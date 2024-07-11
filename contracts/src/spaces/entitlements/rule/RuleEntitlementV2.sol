@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 
 /**
- * @title EntitlementRule
- * @dev This contract manages entitlement rules based on blockchain operations.
+ * @title RuleEntitlementV2
+ * @dev This contract manages entitlement rules based on blockchain operations. It is the V2
+ * version of the RuleEntitlement contract with support for extensible parameters for check operations.
+ *
  * The contract maintains a tree-like data structure to combine various types of operations.
  * The tree is implemented as a dynamic array of 'Operation' structs, and is built in post-order fashion.
  *
@@ -25,14 +27,14 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 
 // interfaces
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
-import {IRuleEntitlement} from "./IRuleEntitlement.sol";
+import {IRuleEntitlementV2} from "./IRuleEntitlementV2.sol";
 
-contract RuleEntitlement is
+contract RuleEntitlementV2 is
   Initializable,
   ERC165Upgradeable,
   ContextUpgradeable,
   UUPSUpgradeable,
-  IRuleEntitlement
+  IRuleEntitlementV2
 {
   using EnumerableSet for EnumerableSet.Bytes32Set;
 
@@ -46,9 +48,9 @@ contract RuleEntitlement is
 
   address public SPACE_ADDRESS;
 
-  string public constant name = "Rule Entitlement";
+  string public constant name = "Rule Entitlement V2";
   string public constant description = "Entitlement for crosschain rules";
-  string public constant moduleType = "RuleEntitlement";
+  string public constant moduleType = "RuleEntitlementV2";
 
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
