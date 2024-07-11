@@ -16,6 +16,10 @@ library MainnetDelegationStorage {
   bytes32 internal constant STORAGE_SLOT =
     0x264df150e9e008a39dd109254e3af3cdadbfbd33261903d1163f43eaee68e700;
 
+  struct Delegator {
+    uint256 uid;
+  }
+
   struct Layout {
     mapping(address operator => EnumerableSet.AddressSet) delegatorsByOperator;
     mapping(address delegator => IMainnetDelegationBase.Delegation delegation) delegationByDelegator;
@@ -24,6 +28,7 @@ library MainnetDelegationStorage {
     ICrossDomainMessenger messenger;
     mapping(address claimer => EnumerableSet.AddressSet delegators) delegatorsByAuthorizedClaimer;
     address proxyDelegation;
+    EnumerableSet.AddressSet delegators;
   }
 
   function layout() internal pure returns (Layout storage s) {
