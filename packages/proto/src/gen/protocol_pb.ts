@@ -117,6 +117,32 @@ proto3.util.setEnumType(ChannelOp, "river.ChannelOp", [
 ]);
 
 /**
+ * @generated from enum river.PublicScope
+ */
+export enum PublicScope {
+  /**
+   * @generated from enum value: PS_UNSPECIFIED = 0;
+   */
+  PS_UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: PS_SPACE = 1;
+   */
+  PS_SPACE = 1,
+
+  /**
+   * @generated from enum value: PS_USER = 2;
+   */
+  PS_USER = 2,
+}
+// Retrieve enum metadata with: proto3.getEnumType(PublicScope)
+proto3.util.setEnumType(PublicScope, "river.PublicScope", [
+  { no: 0, name: "PS_UNSPECIFIED" },
+  { no: 1, name: "PS_SPACE" },
+  { no: 2, name: "PS_USER" },
+]);
+
+/**
  * Codes from 1 to 16 match gRPC/Connect codes.
  *
  * @generated from enum river.Err
@@ -3456,6 +3482,11 @@ export class MediaPayload_Inception extends Message<MediaPayload_Inception> {
    */
   spaceId?: Uint8Array;
 
+  /**
+   * @generated from field: optional river.PublicScope public_scope = 6;
+   */
+  publicScope?: PublicScope;
+
   constructor(data?: PartialMessage<MediaPayload_Inception>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3469,6 +3500,7 @@ export class MediaPayload_Inception extends Message<MediaPayload_Inception> {
     { no: 3, name: "chunk_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 4, name: "settings", kind: "message", T: StreamSettings },
     { no: 5, name: "space_id", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
+    { no: 6, name: "public_scope", kind: "enum", T: proto3.getEnumType(PublicScope), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MediaPayload_Inception {

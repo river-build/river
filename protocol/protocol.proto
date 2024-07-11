@@ -497,6 +497,7 @@ message MediaPayload {
         int32 chunk_count = 3;
         StreamSettings settings = 4;
         optional bytes space_id = 5;
+        optional PublicScope public_scope = 6;
     }
 
     message Chunk {
@@ -768,6 +769,12 @@ enum ChannelOp {
     CO_CREATED = 1;
     CO_DELETED = 2;
     CO_UPDATED = 4;
+}
+
+enum PublicScope {
+    PS_UNSPECIFIED = 0;
+    PS_SPACE = 1;
+    PS_USER = 2;
 }
 
 // Codes from 1 to 16 match gRPC/Connect codes.
