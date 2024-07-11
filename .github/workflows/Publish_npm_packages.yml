@@ -3,9 +3,6 @@ name: Nightly npm package publish
 on:
     schedule:
         - cron: '0 0 * * *' # Runs every night at midnight
-    push: # todo: remove this prior to merging
-        branches:
-            - 'jt/*'
     workflow_dispatch: # Allows manual triggering
 
 jobs:
