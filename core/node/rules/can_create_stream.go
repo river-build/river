@@ -520,14 +520,34 @@ func (ru *csParams) derivedMembershipEvent() (*DerivedEvent, error) {
 }
 
 func (ru *csMediaRules) checkMediaInceptionPayload() error {
-	if len(ru.inception.ChannelId) == 0 {
-		return RiverError(Err_BAD_STREAM_CREATION_PARAMS, "channel id must not be empty for media stream")
-	}
 	if ru.inception.ChunkCount > int32(ru.params.maxChunkCount) {
 		return RiverError(
 			Err_BAD_STREAM_CREATION_PARAMS,
 			fmt.Sprintf("chunk count must be less than or equal to %d", ru.params.maxChunkCount),
 		)
+	}
+
+	log := ru.params.log()
+	// checks for space media stream
+	if ru.inception.PublicScope != nil && *ru.inception.PublicScope == PublicScope_PS_SPACE {
+		log.Info("is public space media stream")
+		if ru.inception.SpaceId == nil || len(ru.inception.SpaceId) == 0 {
+			return RiverError(
+				Err_BAD_STREAM_CREATION_PARAMS,
+				"space id must not be nil or empty for space media stream",
+			)
+		}
+
+		if shared.ValidSpaceStreamIdBytes(ru.inception.SpaceId) {
+			return nil
+		} else {
+			return RiverError(Err_BAD_STREAM_CREATION_PARAMS, "invalid space id")
+		}
+	}
+
+	// checks for channel media stream
+	if len(ru.inception.ChannelId) == 0 {
+		return RiverError(Err_BAD_STREAM_CREATION_PARAMS, "channel id must not be empty for media stream")
 	}
 
 	if shared.ValidChannelStreamIdBytes(ru.inception.ChannelId) {
