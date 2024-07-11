@@ -3,9 +3,6 @@ name: Nightly npm package publish
 on:
     schedule:
         - cron: '0 0 * * *' # Runs every night at midnight
-    push:
-        branches:
-            - 'jt/*' # for testing only, remove this line
     workflow_dispatch: # Allows manual triggering
 
 jobs:
@@ -64,9 +61,8 @@ jobs:
 
                   git checkout -b "${BRANCH_NAME}"
 
-                  DATE=$(date +%Y-%m-%d)
                   COMMIT_HASH=$(git rev-parse --short HEAD)
-                  VERSION_PREFIX="${DATE}-${COMMIT_HASH}"
+                  VERSION_PREFIX="${COMMIT_HASH}"
 
                   ./scripts/yarn-clean.sh
                   yarn install
@@ -99,7 +95,6 @@ jobs:
                           break
                       fi
                       done
-
 
                       gh pr checks "${BRANCH_NAME}" --fail-fast --interval 2 --watch
                       exit_status=$?
@@ -136,4 +131,4 @@ jobs:
                   # Pull the changes to local main
                   git pull --rebase
 
-                  npx lerna publish from-package --yes --no-private --force-publish --dist-tag nightly
+                  npx lerna publish from-package --yes --no-private --force-publish --dist-tag nightly --tag-version-prefix "${VERSION_PREFIX}-"
