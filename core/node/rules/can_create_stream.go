@@ -527,10 +527,8 @@ func (ru *csMediaRules) checkMediaInceptionPayload() error {
 		)
 	}
 
-	log := ru.params.log()
 	// checks for space media stream
 	if ru.inception.PublicScope != nil && *ru.inception.PublicScope == PublicScope_PS_SPACE {
-		log.Info("is public space media stream")
 		if ru.inception.SpaceId == nil || len(ru.inception.SpaceId) == 0 {
 			return RiverError(
 				Err_BAD_STREAM_CREATION_PARAMS,
