@@ -102,18 +102,21 @@ contract DiamondFactoryTest is
       walletLinkHelper.initializer()
     )
   {
+    uint256 index;
+
     address[] memory facets = new address[](2);
-    facets[0] = ownable;
-    facets[1] = walletLink;
+    facets[index++] = ownable;
+    facets[index++] = walletLink;
 
+    index = 0;
     address caller = _randomAddress();
-
     FacetDeployment[] memory deployments = new FacetDeployment[](2);
-    deployments[0] = FacetDeployment({
+
+    deployments[index++] = FacetDeployment({
       facet: ownable,
       data: abi.encodeWithSelector(registry.facetInitializer(ownable), caller)
     });
-    deployments[1] = FacetDeployment({
+    deployments[index++] = FacetDeployment({
       facet: walletLink,
       data: abi.encode(registry.facetInitializer(walletLink))
     });
