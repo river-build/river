@@ -48,8 +48,21 @@ describe('mediaTests', () => {
         return prevHash
     }
 
-    test('clientCanCreateMediaStream', async () => {
+    async function bobCreateSpaceMediaStream(
+        chunkCount: number,
+    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array }> {
+        const spaceId = makeUniqueSpaceStreamId()
+        await expect(bobsClient.createSpace(spaceId)).toResolve()
+
+        return await bobsClient.createSpaceMediaStream(spaceId, chunkCount)
+    }
+
+    test.only('clientCanCreateMediaStream', async () => {
         await expect(bobCreateMediaStream(10)).toResolve()
+    })
+
+    test.only('clientCanCreateSpaceMediaStream', async () => {
+        await expect(bobCreateSpaceMediaStream(10)).toResolve()
     })
 
     test('clientCanSendMediaPayload', async () => {
