@@ -35,6 +35,9 @@ jobs:
               run: |
                   npm whoami || (echo "Not logged in to npm registry" && exit 1)
 
+            - name: Make script executable
+              run: chmod +x ./scripts/publish-to-npm.sh
+
             - name: Run Nightly Script
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
