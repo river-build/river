@@ -24,7 +24,7 @@ func TestReplCreate(t *testing.T) {
 	)
 	require.NoError(err)
 
-	tt.compareStreamDataInStorage(t, streamId, 1, 0)
+	tt.eventuallyCompareStreamDataInStorage(streamId, 1, 0)
 }
 
 func TestReplAdd(t *testing.T) {
@@ -48,7 +48,7 @@ func TestReplAdd(t *testing.T) {
 
 	require.NoError(addUserBlockedFillerEvent(ctx, wallet, client, streamId, cookie.PrevMiniblockHash))
 
-	tt.compareStreamDataInStorage(t, streamId, 1, 1)
+	tt.eventuallyCompareStreamDataInStorage(streamId, 1, 1)
 }
 
 func TestReplMiniblock(t *testing.T) {
@@ -74,7 +74,7 @@ func TestReplMiniblock(t *testing.T) {
 		require.NoError(addUserBlockedFillerEvent(ctx, wallet, client, streamId, cookie.PrevMiniblockHash))
 	}
 
-	tt.compareStreamDataInStorage(t, streamId, 1, 100)
+	tt.eventuallyCompareStreamDataInStorage(streamId, 1, 100)
 
 	_, mbNum, err := tt.nodes[0].service.mbProducer.TestMakeMiniblock(ctx, streamId, false)
 	require.NoError(err)
