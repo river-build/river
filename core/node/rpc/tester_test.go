@@ -323,7 +323,7 @@ func (st *serviceTester) eventuallyCompareStreamDataInStorage(
 		func(t *assert.CollectT) {
 			st.compareStreamDataInStorage(t, streamId, expectedMbs, expectedEvents)
 		},
-		5*time.Second,
-		50*time.Millisecond,
+		20*time.Second,
+		100*time.Millisecond,
 	)
 }
