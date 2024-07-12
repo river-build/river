@@ -125,7 +125,7 @@ import { SyncState, SyncedStreams } from './syncedStreams'
 import { SyncedStream } from './syncedStream'
 import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
-import { ethers } from 'ethers'
+import { ethers, Signer } from 'ethers'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
@@ -736,7 +736,7 @@ export class Client
         chunkCount: number,
         streamSettings?: PlainMessage<StreamSettings>,
     ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array, publicContentKey: string }> {
-        assert(spaceId !== undefined, 'userStreamId must be set')
+        assert(spaceId !== undefined, 'spaceId must be set')
         assert(this.userStreamId !== undefined, 'userStreamId must be set')
         assert(isSpaceStreamId(spaceId), 'spaceId must be a valid streamId')
 
@@ -1428,6 +1428,7 @@ export class Client
             data: data,
             chunkIndex: chunkIndex,
         })
+        const signerContext: SignerContext = {}
         return this.makeEventWithHashAndAddToStream(streamId, payload, prevMiniblockHash)
     }
 
@@ -1907,8 +1908,10 @@ export class Client
         localId?: string,
         cleartext?: string,
         retryCount?: number,
+        signerContext?: SignerContext,
     ): Promise<{ prevMiniblockHash: Uint8Array; eventId: string; error?: AddEventResponse_Error }> {
-        const event = await makeEvent(this.signerContext, payload, prevMiniblockHash)
+        signerContext = signerContext ?? this.signerContext
+        const event = await makeEvent(signerContext, payload, prevMiniblockHash)
         const eventId = bin_toHexString(event.hash)
         if (localId) {
             // when we have a localId, we need to update the local event with the eventId
