@@ -22,10 +22,29 @@ jobs:
               with:
                   ref: main
 
+            - name: Install GPG
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y gnupg
+
+            - name: Import GPG key
+              env:
+                  GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+              run: |
+                  mkdir -p ~/.gnupg
+                  chmod 700 ~/.gnupg
+                  echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+                  KEY_ID=$(gpg --list-secret-keys --keyid-format LONG | grep sec | awk '{print $2}' | awk -F '/' '{print $2}')
+                  echo "default-key $KEY_ID" >> ~/.gnupg/gpg.conf
+                  echo "use-agent" >> ~/.gnupg/gpg.conf
+                  echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+
             - name: Set up Git user locally
               run: |
                   git config user.name "GitHub Action Bot"
-                  git config user.email "action@github.com"
+                  git config user.email "john+bot@river.build"
+                  git config commit.gpgSign true
+                  git config user.signingkey $KEY_ID
 
             - name: Setup Node
               uses: actions/setup-node@v4
