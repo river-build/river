@@ -38,10 +38,6 @@ jobs:
               with:
                   registry-type: 'public'
 
-            # TODO: remove after debugging
-            - name: Setup tmate session
-              uses: mxschmitt/action-tmate@v3
-
             - name: Build and push docker image to Amazon ECR
               env:
                   ECR_REGISTRY: ${{ steps.login-aws-ecr.outputs.registry }}
