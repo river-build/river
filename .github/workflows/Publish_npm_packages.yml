@@ -21,12 +21,11 @@ jobs:
               with:
                   ref: main
 
-            - uses: actions/setup-node@v4
+            - name: Setup Node
+              uses: actions/setup-node@v4
               with:
                   node-version: '20'
                   cache: 'yarn'
-            - name: Install node dependencies
-              run: yarn install --immutable
 
             - name: Authenticate to npm
               run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
@@ -34,9 +33,6 @@ jobs:
             - name: Check npm login
               run: |
                   npm whoami || (echo "Not logged in to npm registry" && exit 1)
-
-            - name: Make script executable
-              run: chmod +x ./scripts/publish-to-npm.sh
 
             - name: Run Nightly Script
               env:
