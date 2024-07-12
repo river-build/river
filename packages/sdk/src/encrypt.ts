@@ -39,7 +39,7 @@ export function aes256GcmDecrypt(
  * @param result - The EncryptionResult object to serialize
  * @returns The serialized Uint8Array
  */
-export function serializeEncryptionResult(result: Aes256GcmEncryptionResult): Uint8Array {
+export function serializeAes256GcmEncryptionResult(result: Aes256GcmEncryptionResult): Uint8Array {
     const ivLength = result.iv.length
     const encryptedDataLength = result.encryptedData.length
     const authTagLength = result.authTag.length
@@ -71,7 +71,9 @@ export function serializeEncryptionResult(result: Aes256GcmEncryptionResult): Ui
  * @param buffer - The Uint8Array to deserialize
  * @returns The deserialized EncryptionResult object
  */
-export function deserializeEncryptionResult(buffer: Uint8Array): Aes256GcmEncryptionResult {
+export function deserializeAes256GcmEncryptionResult(
+    buffer: Uint8Array,
+): Aes256GcmEncryptionResult {
     let offset = 0
 
     const ivLength = new Uint32Array(buffer.slice(offset, offset + 4).buffer)[0]
