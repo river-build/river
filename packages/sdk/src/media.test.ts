@@ -5,7 +5,7 @@
 import { makeTestClient, makeUniqueSpaceStreamId } from './util.test'
 import { Client } from './client'
 import { makeUniqueChannelStreamId, makeDMStreamId } from './id'
-import { InfoRequest } from '@river-build/proto'
+import { InfoRequest, PublicScope } from '@river-build/proto'
 
 describe('mediaTests', () => {
     let bobsClient: Client
@@ -54,7 +54,7 @@ describe('mediaTests', () => {
         const spaceId = makeUniqueSpaceStreamId()
         await expect(bobsClient.createSpace(spaceId)).toResolve()
 
-        return await bobsClient.createSpaceMediaStream(spaceId, chunkCount)
+        return await bobsClient.createMediaStream(spaceId, spaceId, chunkCount, undefined, PublicScope.PS_SPACE)
     }
 
     test('clientCanCreateMediaStream', async () => {
