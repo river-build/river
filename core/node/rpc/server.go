@@ -485,14 +485,15 @@ func (s *Service) initCacheAndSync() error {
 	s.cache, err = events.NewStreamCache(
 		s.serverCtx,
 		&events.StreamCacheParams{
-			Storage:         s.storage,
-			Wallet:          s.wallet,
-			RiverChain:      s.riverChain,
-			Registry:        s.registryContract,
-			ChainConfig:     s.chainConfig,
-			AppliedBlockNum: s.riverChain.InitialBlockNum,
-			ChainMonitor:    s.riverChain.ChainMonitor,
-			Metrics:         s.metrics,
+			Storage:                 s.storage,
+			Wallet:                  s.wallet,
+			RiverChain:              s.riverChain,
+			Registry:                s.registryContract,
+			ChainConfig:             s.chainConfig,
+			AppliedBlockNum:         s.riverChain.InitialBlockNum,
+			ChainMonitor:            s.riverChain.ChainMonitor,
+			Metrics:                 s.metrics,
+			RemoteMiniblockProvider: s,
 		},
 	)
 	if err != nil {

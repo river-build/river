@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/river-build/river/core/config"
@@ -21,6 +22,7 @@ import (
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/nodes"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
+	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/node/testutils/dbtestutils"
 )
@@ -270,4 +272,58 @@ func (st *serviceTester) testClient(i int) protocolconnect.StreamServiceClient {
 
 func testClient(url string) protocolconnect.StreamServiceClient {
 	return protocolconnect.NewStreamServiceClient(nodes.TestHttpClientMaker(), url, connect.WithGRPCWeb())
+}
+
+func (st *serviceTester) compareStreamDataInStorage(
+	t assert.TestingT,
+	streamId StreamId,
+	expectedMbs int,
+	expectedEvents int,
+) {
+	// Read data from storage.
+	var data []*storage.DebugReadStreamDataResult
+	for _, n := range st.nodes {
+		d, err := n.service.storage.DebugReadStreamData(st.ctx, streamId)
+		if !assert.NoError(t, err) {
+			return
+		}
+		data = append(data, d)
+	}
+
+	for i, d := range data {
+		failed := false
+		failed = !assert.Equal(t, expectedMbs, len(d.Miniblocks), "Miniblocks, node %d", i) || failed
+
+		eventsLen := 0
+		// Do not count slot -1 db marker events
+		for _, e := range d.Events {
+			if e.Slot != -1 {
+				eventsLen++
+			}
+		}
+		failed = !assert.Equal(t, expectedEvents, eventsLen, "Events, node %d", i) || failed
+
+		if !failed && i > 0 {
+			assert.EqualValues(t, data[0].Miniblocks, d.Miniblocks, "Bad mbs in node %d", i)
+			assert.EqualValues(t, data[0].Events, d.Events, "Bad events in node %d", i)
+		}
+
+		if failed {
+			t.Errorf("Data for node %d: %v", i, d)
+		}
+	}
+}
+
+func (st *serviceTester) eventuallyCompareStreamDataInStorage(
+	streamId StreamId,
+	expectedMbs int,
+	expectedEvents int,
+) {
+	st.require.EventuallyWithT(
+		func(t *assert.CollectT) {
+			st.compareStreamDataInStorage(t, streamId, expectedMbs, expectedEvents)
+		},
+		5*time.Second,
+		50*time.Millisecond,
+	)
 }
