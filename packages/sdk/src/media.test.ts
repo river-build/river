@@ -51,7 +51,7 @@ describe('mediaTests', () => {
 
     async function bobCreateSpaceMediaStream(
         chunkCount: number,
-    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array, publicContentKey: string }> {
+    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array, publicContentKey: Uint8Array }> {
         const spaceId = makeUniqueSpaceStreamId()
         await expect(bobsClient.createSpace(spaceId)).toResolve()
         const {
@@ -67,14 +67,14 @@ describe('mediaTests', () => {
         streamId: string,
         chunks: number,
         prevMiniblockHash: Uint8Array,
-        publicContentKey: string,
+        publicContentKey: Uint8Array,
     ): Promise<Uint8Array> {
         let prevHash = prevMiniblockHash
         for (let i = 0; i < chunks; i++) {
             const chunk = new Uint8Array(100)
             // Create novel chunk content for testing purposes
             chunk.fill(i, 0, 100)
-            const result = await bobsClient.sendSpacePublicMediaPayload(streamId, publicContentKey, chunk, i, prevHash)
+            const result = await bobsClient.sendPublicMediaPayload(streamId, publicContentKey, chunk, i, prevHash)
             prevHash = result.prevMiniblockHash
         }
         return prevHash

@@ -685,7 +685,7 @@ export class Client
         chunkCount: number,
         streamSettings?: PlainMessage<StreamSettings>,
         publicScope?: PublicScope,
-    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array, publicContentKey?: U }> {
+    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array, publicContentKey?: Uint8Array }> {
         const isPublicScopeSpace = publicScope === PublicScope.PS_SPACE
 
         assert(this.userStreamId !== undefined, 'userStreamId must be set')
@@ -706,7 +706,7 @@ export class Client
         this.logCall('createMedia', channelId, streamId)
 
         let inceptionEvent: Envelope
-        let publicContentKey: string | undefined
+        let publicContentKey: Uint8Array | undefined
         if (isPublicScopeSpace && spaceId) {
             const streamIdBytes = streamIdAsBytes(streamId)
             const spaceIdBytes = streamIdAsBytes(spaceId)
@@ -714,7 +714,7 @@ export class Client
             // create a publicly scoped stream
             // include a key to decrypt the public content
             // not an issue that the key is public. by design
-            const publicContentKey = crypto.randomBytes(32); // 256-bit key for AES-256-GCM
+            publicContentKey = crypto.randomBytes(32); // 256-bit key for AES-256-GCM
 
             inceptionEvent = await makeEvent(
                 this.signerContext,
@@ -1393,9 +1393,9 @@ export class Client
         return this.makeEventWithHashAndAddToStream(streamId, payload, prevMiniblockHash)
     }
 
-    async sendSpacePublicMediaPayload(
+    async sendPublicMediaPayload(
         streamId: string,
-        publicContentKey: string,
+        publicContentKey: Uint8Array,
         data: Uint8Array,
         chunkIndex: number,
         prevMiniblockHash: Uint8Array,
