@@ -125,7 +125,6 @@ import { SyncState, SyncedStreams } from './syncedStreams'
 import { SyncedStream } from './syncedStream'
 import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
-import * as crypto from 'crypto'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
@@ -685,7 +684,8 @@ export class Client
         chunkCount: number,
         streamSettings?: PlainMessage<StreamSettings>,
         publicScope?: PublicScope,
-    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array, publicContentKey?: Uint8Array }> {
+        publicContentKey?: Uint8Array,
+    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array }> {
         const isPublicScopeSpace = publicScope === PublicScope.PS_SPACE
 
         assert(this.userStreamId !== undefined, 'userStreamId must be set')
@@ -706,15 +706,9 @@ export class Client
         this.logCall('createMedia', channelId, streamId)
 
         let inceptionEvent: Envelope
-        let publicContentKey: Uint8Array | undefined
         if (isPublicScopeSpace && spaceId) {
             const streamIdBytes = streamIdAsBytes(streamId)
             const spaceIdBytes = streamIdAsBytes(spaceId)
-
-            // create a publicly scoped stream
-            // include a key to decrypt the public content
-            // not an issue that the key is public. by design
-            publicContentKey = crypto.randomBytes(32); // 256-bit key for AES-256-GCM
 
             inceptionEvent = await makeEvent(
                 this.signerContext,
@@ -724,6 +718,9 @@ export class Client
                     channelId: spaceIdBytes,
                     chunkCount,
                     settings: streamSettings,
+                    // create a publicly scoped stream
+                    // include a key to decrypt the public content
+                    // not an issue that the key is public. by design
                     publicScope: PublicScope.PS_SPACE,
                     publicContentKey,
                 }),
@@ -762,7 +759,7 @@ export class Client
 
         check(isDefined(streamView.prevMiniblockHash), 'prevMiniblockHash must be defined')
 
-        return { streamId: streamId, prevMiniblockHash: streamView.prevMiniblockHash, publicContentKey }
+        return { streamId: streamId, prevMiniblockHash: streamView.prevMiniblockHash }
     }
 
     async updateChannel(
@@ -1393,22 +1390,6 @@ export class Client
         return this.makeEventWithHashAndAddToStream(streamId, payload, prevMiniblockHash)
     }
 
-    async sendPublicMediaPayload(
-        streamId: string,
-        publicContentKey: Uint8Array,
-        data: Uint8Array,
-        chunkIndex: number,
-        prevMiniblockHash: Uint8Array,
-    ): Promise<{ prevMiniblockHash: Uint8Array }> {
-        const payload = make_MediaPayload_Chunk({
-            data: data,
-            chunkIndex: chunkIndex,
-        })
-        //const signerContext: SignerContext = {}
-        return this.makeEventWithHashAndAddToStream(streamId, payload, prevMiniblockHash)
-    }
-
-
     async sendChannelMessage_Reaction(
         streamId: string,
         payload: PlainMessage<ChannelMessage_Reaction>,
@@ -1884,10 +1865,8 @@ export class Client
         localId?: string,
         cleartext?: string,
         retryCount?: number,
-        signerContext?: SignerContext,
     ): Promise<{ prevMiniblockHash: Uint8Array; eventId: string; error?: AddEventResponse_Error }> {
-        signerContext = signerContext ?? this.signerContext
-        const event = await makeEvent(signerContext, payload, prevMiniblockHash)
+        const event = await makeEvent(this.signerContext, payload, prevMiniblockHash)
         const eventId = bin_toHexString(event.hash)
         if (localId) {
             // when we have a localId, we need to update the local event with the eventId
