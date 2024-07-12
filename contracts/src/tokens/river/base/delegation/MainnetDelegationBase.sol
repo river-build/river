@@ -20,11 +20,15 @@ abstract contract MainnetDelegationBase is IMainnetDelegationBase {
 
     for (uint256 i = 0; i < delegators.length; i++) {
       address delegator = delegators[i];
+      address operator = ds.delegationByDelegator[delegator].operator;
+
+      ds.delegatorsByOperator[operator].remove(delegator);
       delete ds.delegationByDelegator[delegator];
       delete ds.delegationByDelegator[delegator].operator;
       delete ds.delegationByDelegator[delegator].quantity;
       delete ds.delegationByDelegator[delegator].delegationTime;
       delete ds.delegationByDelegator[delegator].delegator;
+
       ds.delegators.remove(delegator);
     }
   }
