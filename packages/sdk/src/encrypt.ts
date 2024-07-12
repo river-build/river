@@ -1,6 +1,6 @@
 import * as crypto from 'crypto'
 
-export type Aes256GcmEncryptionResult = {
+export interface Aes256GcmEncryptionResult {
     iv: Uint8Array
     encryptedData: Uint8Array
     authTag: Uint8Array
