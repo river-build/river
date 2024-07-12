@@ -45,6 +45,8 @@ contract ForkMainnetDelegationTest is TestUtils, IMainnetDelegationBase {
       hex"012ad9da00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000002000000000000000000000000204f1aa5b666d0eac07228d3065a461e92ac399c0000000000000000000000003541f646d321cacbc0ff4a7cccb583e8b6e413da"
     );
 
+    assertTrue(success);
+
     delegator = mainnetDelegation.getDelegationByDelegator(delegatorAddress);
 
     assertEq(delegator.operator, address(0));
