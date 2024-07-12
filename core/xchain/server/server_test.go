@@ -136,7 +136,7 @@ func (st *serviceTester) deployXchainTestContracts() {
 	st.entitlementChecker = iChecker
 
 	// Deploy the mock entitlement gated contract
-	addr, _, _, err = test_contracts.DeployMockEntitlementGated(
+	addr, _, _, err = test_contracts.DeployMockEntitlementGatedV2(
 		auth,
 		client,
 		st.entitlementCheckerAddress,
