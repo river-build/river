@@ -4,6 +4,9 @@ pragma solidity ^0.8.23;
 import {IEntitlementChecker} from "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol";
 import {EntitlementGated} from "contracts/src/spaces/facets/gated/EntitlementGated.sol";
 import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
+import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
+
+import {RuleDataUtil} from "contracts/src/spaces/entitlements/rule/RuleDataUtil.sol";
 
 contract MockEntitlementGated is EntitlementGated {
   mapping(uint256 => IRuleEntitlement.RuleData) ruleDatasByRoleId;

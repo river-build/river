@@ -18,20 +18,48 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var (
-	_	= errors.New
-	_	= big.NewInt
-	_	= strings.NewReader
-	_	= ethereum.NotFound
-	_	= bind.Bind
-	_	= common.Big1
-	_	= types.BloomLookup
-	_	= event.NewSubscription
-	_	= abi.ConvertType
+	_ = errors.New
+	_ = big.NewInt
+	_ = strings.NewReader
+	_ = ethereum.NotFound
+	_ = bind.Bind
+	_ = common.Big1
+	_ = types.BloomLookup
+	_ = event.NewSubscription
+	_ = abi.ConvertType
 )
+
+// IRuleEntitlementCheckOperation is an auto generated low-level Go binding around an user-defined struct.
+type IRuleEntitlementCheckOperation struct {
+	OpType          uint8
+	ChainId         *big.Int
+	ContractAddress common.Address
+	Threshold       *big.Int
+}
+
+// IRuleEntitlementLogicalOperation is an auto generated low-level Go binding around an user-defined struct.
+type IRuleEntitlementLogicalOperation struct {
+	LogOpType           uint8
+	LeftOperationIndex  uint8
+	RightOperationIndex uint8
+}
+
+// IRuleEntitlementOperation is an auto generated low-level Go binding around an user-defined struct.
+type IRuleEntitlementOperation struct {
+	OpType uint8
+	Index  uint8
+}
+
+// IRuleEntitlementRuleData is an auto generated low-level Go binding around an user-defined struct.
+type IRuleEntitlementRuleData struct {
+	Operations        []IRuleEntitlementOperation
+	CheckOperations   []IRuleEntitlementCheckOperation
+	LogicalOperations []IRuleEntitlementLogicalOperation
+}
 
 // RuleEntitlementMetaData contains all meta data concerning the RuleEntitlement contract.
 var RuleEntitlementMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"function\",\"name\":\"description\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"string\",\"internalType\":\"string\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"encodeRuleData\",\"inputs\":[{\"name\":\"data\",\"type\":\"tuple\",\"internalType\":\"structIRuleEntitlement.RuleData\",\"components\":[{\"name\":\"operations\",\"type\":\"tuple[]\",\"internalType\":\"structIRuleEntitlement.Operation[]\",\"components\":[{\"name\":\"opType\",\"type\":\"uint8\",\"internalType\":\"enumIRuleEntitlement.CombinedOperationType\"},{\"name\":\"index\",\"type\":\"uint8\",\"internalType\":\"uint8\"}]},{\"name\":\"checkOperations\",\"type\":\"tuple[]\",\"internalType\":\"structIRuleEntitlement.CheckOperation[]\",\"components\":[{\"name\":\"opType\",\"type\":\"uint8\",\"internalType\":\"enumIRuleEntitlement.CheckOperationType\"},{\"name\":\"chainId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"contractAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"threshold\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"name\":\"logicalOperations\",\"type\":\"tuple[]\",\"internalType\":\"structIRuleEntitlement.LogicalOperation[]\",\"components\":[{\"name\":\"logOpType\",\"type\":\"uint8\",\"internalType\":\"enumIRuleEntitlement.LogicalOperationType\"},{\"name\":\"leftOperationIndex\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"rightOperationIndex\",\"type\":\"uint8\",\"internalType\":\"uint8\"}]}]}],\"outputs\":[{\"name\":\"\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"stateMutability\":\"pure\"},{\"type\":\"function\",\"name\":\"getEntitlementDataByRoleId\",\"inputs\":[{\"name\":\"roleId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRuleData\",\"inputs\":[{\"name\":\"roleId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"data\",\"type\":\"tuple\",\"internalType\":\"structIRuleEntitlement.RuleData\",\"components\":[{\"name\":\"operations\",\"type\":\"tuple[]\",\"internalType\":\"structIRuleEntitlement.Operation[]\",\"components\":[{\"name\":\"opType\",\"type\":\"uint8\",\"internalType\":\"enumIRuleEntitlement.CombinedOperationType\"},{\"name\":\"index\",\"type\":\"uint8\",\"internalType\":\"uint8\"}]},{\"name\":\"checkOperations\",\"type\":\"tuple[]\",\"internalType\":\"structIRuleEntitlement.CheckOperation[]\",\"components\":[{\"name\":\"opType\",\"type\":\"uint8\",\"internalType\":\"enumIRuleEntitlement.CheckOperationType\"},{\"name\":\"chainId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"contractAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"threshold\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"name\":\"logicalOperations\",\"type\":\"tuple[]\",\"internalType\":\"structIRuleEntitlement.LogicalOperation[]\",\"components\":[{\"name\":\"logOpType\",\"type\":\"uint8\",\"internalType\":\"enumIRuleEntitlement.LogicalOperationType\"},{\"name\":\"leftOperationIndex\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"rightOperationIndex\",\"type\":\"uint8\",\"internalType\":\"uint8\"}]}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"initialize\",\"inputs\":[{\"name\":\"space\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"isCrosschain\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"isEntitled\",\"inputs\":[{\"name\":\"channelId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"user\",\"type\":\"address[]\",\"internalType\":\"address[]\"},{\"name\":\"permission\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"moduleType\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"string\",\"internalType\":\"string\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"name\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"string\",\"internalType\":\"string\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"removeEntitlement\",\"inputs\":[{\"name\":\"roleId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setEntitlement\",\"inputs\":[{\"name\":\"roleId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"entitlementData\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"error\",\"name\":\"CheckOperationsLimitReaced\",\"inputs\":[{\"name\":\"limit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"Entitlement__InvalidValue\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Entitlement__NotAllowed\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Entitlement__NotMember\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Entitlement__ValueAlreadyExists\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidCheckOperationIndex\",\"inputs\":[{\"name\":\"operationIndex\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"checkOperationsLength\",\"type\":\"uint8\",\"internalType\":\"uint8\"}]},{\"type\":\"error\",\"name\":\"InvalidLeftOperationIndex\",\"inputs\":[{\"name\":\"leftOperationIndex\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"currentOperationIndex\",\"type\":\"uint8\",\"internalType\":\"uint8\"}]},{\"type\":\"error\",\"name\":\"InvalidLogicalOperationIndex\",\"inputs\":[{\"name\":\"operationIndex\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"logicalOperationsLength\",\"type\":\"uint8\",\"internalType\":\"uint8\"}]},{\"type\":\"error\",\"name\":\"InvalidOperationType\",\"inputs\":[{\"name\":\"opType\",\"type\":\"uint8\",\"internalType\":\"enumIRuleEntitlement.CombinedOperationType\"}]},{\"type\":\"error\",\"name\":\"InvalidRightOperationIndex\",\"inputs\":[{\"name\":\"rightOperationIndex\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"currentOperationIndex\",\"type\":\"uint8\",\"internalType\":\"uint8\"}]},{\"type\":\"error\",\"name\":\"LogicalOperationLimitReached\",\"inputs\":[{\"name\":\"limit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"OperationsLimitReached\",\"inputs\":[{\"name\":\"limit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}]",
+	ABI: "[{\"type\":\"function\",\"name\":\"description\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"string\",\"internalType\":\"string\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"encodeRuleData\",\"inputs\":[{\"name\":\"data\",\"type\":\"tuple\",\"internalType\":\"structIRuleEntitlement.RuleData\",\"components\":[{\"name\":\"operations\",\"type\":\"tuple[]\",\"internalType\":\"structIRuleEntitlement.Operation[]\",\"components\":[{\"name\":\"opType\",\"type\":\"uint8\",\"internalType\":\"enumIRuleEntitlement.CombinedOperationType\"},{\"name\":\"index\",\"type\":\"uint8\",\"internalType\":\"uint8\"}]},{\"name\":\"checkOperations\",\"type\":\"tuple[]\",\"internalType\":\"structIRuleEntitlement.CheckOperation[]\",\"components\":[{\"name\":\"opType\",\"type\":\"uint8\",\"internalType\":\"enumIRuleEntitlement.CheckOperationType\"},{\"name\":\"chainId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"contractAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"threshold\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"name\":\"logicalOperations\",\"type\":\"tuple[]\",\"internalType\":\"structIRuleEntitlement.LogicalOperation[]\",\"components\":[{\"name\":\"logOpType\",\"type\":\"uint8\",\"internalType\":\"enumIRuleEntitlement.LogicalOperationType\"},{\"name\":\"leftOperationIndex\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"rightOperationIndex\",\"type\":\"uint8\",\"internalType\":\"uint8\"}]}]}],\"outputs\":[{\"name\":\"\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"stateMutability\":\"pure\"},{\"type\":\"function\",\"name\":\"getEntitlementDataByRoleId\",\"inputs\":[{\"name\":\"roleId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRuleData\",\"inputs\":[{\"name\":\"roleId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[{\"name\":\"data\",\"type\":\"tuple\",\"internalType\":\"structIRuleEntitlement.RuleData\",\"components\":[{\"name\":\"operations\",\"type\":\"tuple[]\",\"internalType\":\"structIRuleEntitlement.Operation[]\",\"components\":[{\"name\":\"opType\",\"type\":\"uint8\",\"internalType\":\"enumIRuleEntitlement.CombinedOperationType\"},{\"name\":\"index\",\"type\":\"uint8\",\"internalType\":\"uint8\"}]},{\"name\":\"checkOperations\",\"type\":\"tuple[]\",\"internalType\":\"structIRuleEntitlement.CheckOperation[]\",\"components\":[{\"name\":\"opType\",\"type\":\"uint8\",\"internalType\":\"enumIRuleEntitlement.CheckOperationType\"},{\"name\":\"chainId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"contractAddress\",\"type\":\"address\",\"internalType\":\"address\"},{\"name\":\"threshold\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"name\":\"logicalOperations\",\"type\":\"tuple[]\",\"internalType\":\"structIRuleEntitlement.LogicalOperation[]\",\"components\":[{\"name\":\"logOpType\",\"type\":\"uint8\",\"internalType\":\"enumIRuleEntitlement.LogicalOperationType\"},{\"name\":\"leftOperationIndex\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"rightOperationIndex\",\"type\":\"uint8\",\"internalType\":\"uint8\"}]}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"initialize\",\"inputs\":[{\"name\":\"space\",\"type\":\"address\",\"internalType\":\"address\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"isCrosschain\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"isEntitled\",\"inputs\":[{\"name\":\"channelId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"user\",\"type\":\"address[]\",\"internalType\":\"address[]\"},{\"name\":\"permission\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"moduleType\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"string\",\"internalType\":\"string\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"name\",\"inputs\":[],\"outputs\":[{\"name\":\"\",\"type\":\"string\",\"internalType\":\"string\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"removeEntitlement\",\"inputs\":[{\"name\":\"roleId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"setEntitlement\",\"inputs\":[{\"name\":\"roleId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"entitlementData\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"error\",\"name\":\"CheckOperationsLimitReached\",\"inputs\":[{\"name\":\"limit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"Entitlement__InvalidValue\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Entitlement__NotAllowed\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Entitlement__NotMember\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Entitlement__ValueAlreadyExists\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"InvalidCheckOperationIndex\",\"inputs\":[{\"name\":\"operationIndex\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"checkOperationsLength\",\"type\":\"uint8\",\"internalType\":\"uint8\"}]},{\"type\":\"error\",\"name\":\"InvalidLeftOperationIndex\",\"inputs\":[{\"name\":\"leftOperationIndex\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"currentOperationIndex\",\"type\":\"uint8\",\"internalType\":\"uint8\"}]},{\"type\":\"error\",\"name\":\"InvalidLogicalOperationIndex\",\"inputs\":[{\"name\":\"operationIndex\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"logicalOperationsLength\",\"type\":\"uint8\",\"internalType\":\"uint8\"}]},{\"type\":\"error\",\"name\":\"InvalidOperationType\",\"inputs\":[{\"name\":\"opType\",\"type\":\"uint8\",\"internalType\":\"enumIRuleEntitlement.CombinedOperationType\"}]},{\"type\":\"error\",\"name\":\"InvalidRightOperationIndex\",\"inputs\":[{\"name\":\"rightOperationIndex\",\"type\":\"uint8\",\"internalType\":\"uint8\"},{\"name\":\"currentOperationIndex\",\"type\":\"uint8\",\"internalType\":\"uint8\"}]},{\"type\":\"error\",\"name\":\"LogicalOperationLimitReached\",\"inputs\":[{\"name\":\"limit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"OperationsLimitReached\",\"inputs\":[{\"name\":\"limit\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]}]",
 }
 
 // RuleEntitlementABI is the input ABI used to generate the binding from.
@@ -40,61 +68,61 @@ var RuleEntitlementABI = RuleEntitlementMetaData.ABI
 
 // RuleEntitlement is an auto generated Go binding around an Ethereum contract.
 type RuleEntitlement struct {
-	RuleEntitlementCaller		// Read-only binding to the contract
-	RuleEntitlementTransactor	// Write-only binding to the contract
-	RuleEntitlementFilterer		// Log filterer for contract events
+	RuleEntitlementCaller     // Read-only binding to the contract
+	RuleEntitlementTransactor // Write-only binding to the contract
+	RuleEntitlementFilterer   // Log filterer for contract events
 }
 
 // RuleEntitlementCaller is an auto generated read-only Go binding around an Ethereum contract.
 type RuleEntitlementCaller struct {
-	contract *bind.BoundContract	// Generic contract wrapper for the low level calls
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
 // RuleEntitlementTransactor is an auto generated write-only Go binding around an Ethereum contract.
 type RuleEntitlementTransactor struct {
-	contract *bind.BoundContract	// Generic contract wrapper for the low level calls
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
 // RuleEntitlementFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
 type RuleEntitlementFilterer struct {
-	contract *bind.BoundContract	// Generic contract wrapper for the low level calls
+	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
 // RuleEntitlementSession is an auto generated Go binding around an Ethereum contract,
 // with pre-set call and transact options.
 type RuleEntitlementSession struct {
-	Contract	*RuleEntitlement	// Generic contract binding to set the session for
-	CallOpts	bind.CallOpts		// Call options to use throughout this session
-	TransactOpts	bind.TransactOpts	// Transaction auth options to use throughout this session
+	Contract     *RuleEntitlement  // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts     // Call options to use throughout this session
+	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
 // RuleEntitlementCallerSession is an auto generated read-only Go binding around an Ethereum contract,
 // with pre-set call options.
 type RuleEntitlementCallerSession struct {
-	Contract	*RuleEntitlementCaller	// Generic contract caller binding to set the session for
-	CallOpts	bind.CallOpts		// Call options to use throughout this session
+	Contract *RuleEntitlementCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts          // Call options to use throughout this session
 }
 
 // RuleEntitlementTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
 // with pre-set transact options.
 type RuleEntitlementTransactorSession struct {
-	Contract	*RuleEntitlementTransactor	// Generic contract transactor binding to set the session for
-	TransactOpts	bind.TransactOpts		// Transaction auth options to use throughout this session
+	Contract     *RuleEntitlementTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts          // Transaction auth options to use throughout this session
 }
 
 // RuleEntitlementRaw is an auto generated low-level Go binding around an Ethereum contract.
 type RuleEntitlementRaw struct {
-	Contract *RuleEntitlement	// Generic contract binding to access the raw methods on
+	Contract *RuleEntitlement // Generic contract binding to access the raw methods on
 }
 
 // RuleEntitlementCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
 type RuleEntitlementCallerRaw struct {
-	Contract *RuleEntitlementCaller	// Generic read-only contract binding to access the raw methods on
+	Contract *RuleEntitlementCaller // Generic read-only contract binding to access the raw methods on
 }
 
 // RuleEntitlementTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
 type RuleEntitlementTransactorRaw struct {
-	Contract *RuleEntitlementTransactor	// Generic write-only contract binding to access the raw methods on
+	Contract *RuleEntitlementTransactor // Generic write-only contract binding to access the raw methods on
 }
 
 // NewRuleEntitlement creates a new instance of RuleEntitlement, bound to a specific deployed contract.

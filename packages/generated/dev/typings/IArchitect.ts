@@ -63,7 +63,7 @@ export declare namespace IMembershipBase {
   };
 }
 
-export declare namespace IRuleEntitlement {
+export declare namespace IRuleEntitlementV2 {
   export type OperationStruct = {
     opType: PromiseOrValue<BigNumberish>;
     index: PromiseOrValue<BigNumberish>;
@@ -78,19 +78,19 @@ export declare namespace IRuleEntitlement {
     opType: PromiseOrValue<BigNumberish>;
     chainId: PromiseOrValue<BigNumberish>;
     contractAddress: PromiseOrValue<string>;
-    threshold: PromiseOrValue<BigNumberish>;
+    params: PromiseOrValue<BytesLike>;
   };
 
   export type CheckOperationStructOutput = [
     number,
     BigNumber,
     string,
-    BigNumber
+    string
   ] & {
     opType: number;
     chainId: BigNumber;
     contractAddress: string;
-    threshold: BigNumber;
+    params: string;
   };
 
   export type LogicalOperationStruct = {
@@ -106,19 +106,19 @@ export declare namespace IRuleEntitlement {
   };
 
   export type RuleDataStruct = {
-    operations: IRuleEntitlement.OperationStruct[];
-    checkOperations: IRuleEntitlement.CheckOperationStruct[];
-    logicalOperations: IRuleEntitlement.LogicalOperationStruct[];
+    operations: IRuleEntitlementV2.OperationStruct[];
+    checkOperations: IRuleEntitlementV2.CheckOperationStruct[];
+    logicalOperations: IRuleEntitlementV2.LogicalOperationStruct[];
   };
 
   export type RuleDataStructOutput = [
-    IRuleEntitlement.OperationStructOutput[],
-    IRuleEntitlement.CheckOperationStructOutput[],
-    IRuleEntitlement.LogicalOperationStructOutput[]
+    IRuleEntitlementV2.OperationStructOutput[],
+    IRuleEntitlementV2.CheckOperationStructOutput[],
+    IRuleEntitlementV2.LogicalOperationStructOutput[]
   ] & {
-    operations: IRuleEntitlement.OperationStructOutput[];
-    checkOperations: IRuleEntitlement.CheckOperationStructOutput[];
-    logicalOperations: IRuleEntitlement.LogicalOperationStructOutput[];
+    operations: IRuleEntitlementV2.OperationStructOutput[];
+    checkOperations: IRuleEntitlementV2.CheckOperationStructOutput[];
+    logicalOperations: IRuleEntitlementV2.LogicalOperationStructOutput[];
   };
 }
 
@@ -126,17 +126,17 @@ export declare namespace IArchitectBase {
   export type MembershipRequirementsStruct = {
     everyone: PromiseOrValue<boolean>;
     users: PromiseOrValue<string>[];
-    ruleData: IRuleEntitlement.RuleDataStruct;
+    ruleData: IRuleEntitlementV2.RuleDataStruct;
   };
 
   export type MembershipRequirementsStructOutput = [
     boolean,
     string[],
-    IRuleEntitlement.RuleDataStructOutput
+    IRuleEntitlementV2.RuleDataStructOutput
   ] & {
     everyone: boolean;
     users: string[];
-    ruleData: IRuleEntitlement.RuleDataStructOutput;
+    ruleData: IRuleEntitlementV2.RuleDataStructOutput;
   };
 
   export type MembershipStruct = {
@@ -187,7 +187,7 @@ export declare namespace IArchitectBase {
 
 export interface IArchitectInterface extends utils.Interface {
   functions: {
-    "createSpace((string,string,((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[])),string[]),(string),string,string))": FunctionFragment;
+    "createSpace((string,string,((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],((uint8,uint8)[],(uint8,uint256,address,bytes)[],(uint8,uint8,uint8)[])),string[]),(string),string,string))": FunctionFragment;
     "getSpaceArchitectImplementations()": FunctionFragment;
     "getSpaceByTokenId(uint256)": FunctionFragment;
     "getTokenIdBySpace(address)": FunctionFragment;

@@ -24,9 +24,11 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 
 // libraries
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {RuleDataUtil} from "contracts/src/spaces/entitlements/rule/RuleDataUtil.sol";
 
 // interfaces
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
+import {IRuleEntitlement} from "./IRuleEntitlement.sol";
 import {IRuleEntitlementV2} from "./IRuleEntitlementV2.sol";
 
 contract RuleEntitlementV2 is
@@ -198,15 +200,41 @@ contract RuleEntitlementV2 is
     return abi.encode(entitlement.data);
   }
 
-  function encodeRuleData(
+  function encodeRuleDataV2(
     RuleData calldata data
   ) external pure returns (bytes memory) {
     return abi.encode(data);
   }
 
-  function getRuleData(
+  function getRuleDataV2(
     uint256 roleId
   ) external view returns (RuleData memory data) {
     return entitlementsByRoleId[roleId].data;
+  }
+
+  // =============================================================
+  //        IRuleEntitlement V1 Compatibility Functions
+  // =============================================================
+  // The following methods cause the RuleEntitlementV2 contract to conform to the
+  // IRuleEntitlement (V1) interface.
+
+  // This method should encode the V1 rule data into bytes representation of
+  // the V2 format. This allows V1 clients and nodes to be compatible with V2 spaces.
+  function encodeRuleData(
+    IRuleEntitlement.RuleData memory data
+  ) external pure returns (bytes memory) {
+    IRuleEntitlementV2.RuleData memory v2Data = RuleDataUtil
+      .convertV1ToV2RuleData(data);
+    return abi.encode(v2Data);
+  }
+
+  // Retrieve internal V2 RuleData struct and convert it to V1 RuleData struct for
+  // V1 clients and nodes to be compatible with V2 spaces.
+  function getRuleData(
+    uint256 roleId
+  ) external view returns (IRuleEntitlement.RuleData memory data) {
+    IRuleEntitlementV2.RuleData memory v2Data = entitlementsByRoleId[roleId]
+      .data;
+    return RuleDataUtil.convertV2ToV1RuleData(v2Data);
   }
 }

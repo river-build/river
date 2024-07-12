@@ -330,7 +330,7 @@ const _abi = [
   },
   {
     type: "error",
-    name: "CheckOperationsLimitReaced",
+    name: "CheckOperationsLimitReached",
     inputs: [
       {
         name: "limit",

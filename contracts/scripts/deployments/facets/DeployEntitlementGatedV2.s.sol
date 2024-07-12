@@ -8,25 +8,26 @@ pragma solidity ^0.8.23;
 //contracts
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 import {FacetHelper} from "contracts/test/diamond/Facet.t.sol";
-import {EntitlementGated} from "contracts/src/spaces/facets/gated/EntitlementGated.sol";
+import {EntitlementGatedV2} from "contracts/src/spaces/facets/gated/EntitlementGatedV2.sol";
 
-contract DeployEntitlementGated is FacetHelper, Deployer {
+contract DeployEntitlementGatedV2 is FacetHelper, Deployer {
   constructor() {
-    addSelector(EntitlementGated.postEntitlementCheckResult.selector);
-    addSelector(EntitlementGated.getRuleData.selector);
+    addSelector(EntitlementGatedV2.postEntitlementCheckResult.selector);
+    addSelector(EntitlementGatedV2.getRuleDataV2.selector);
+    addSelector(EntitlementGatedV2.getRuleData.selector);
   }
 
   function initializer() public pure override returns (bytes4) {
-    return EntitlementGated.__EntitlementGated_init.selector;
+    return EntitlementGatedV2.__EntitlementGatedV2_init.selector;
   }
 
   function versionName() public pure override returns (string memory) {
-    return "entitlementGated";
+    return "entitlementGatedV2";
   }
 
   function __deploy(address deployer) public override returns (address) {
     vm.startBroadcast(deployer);
-    EntitlementGated facet = new EntitlementGated();
+    EntitlementGatedV2 facet = new EntitlementGatedV2();
     vm.stopBroadcast();
     return address(facet);
   }

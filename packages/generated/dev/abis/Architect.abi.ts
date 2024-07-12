@@ -16,7 +16,7 @@ export default [
       {
         "name": "ruleEntitlementImplementation",
         "type": "address",
-        "internalType": "contract IRuleEntitlement"
+        "internalType": "contract IRuleEntitlementV2"
       }
     ],
     "outputs": [],
@@ -116,17 +116,17 @@ export default [
                   {
                     "name": "ruleData",
                     "type": "tuple",
-                    "internalType": "struct IRuleEntitlement.RuleData",
+                    "internalType": "struct IRuleEntitlementV2.RuleData",
                     "components": [
                       {
                         "name": "operations",
                         "type": "tuple[]",
-                        "internalType": "struct IRuleEntitlement.Operation[]",
+                        "internalType": "struct IRuleEntitlementV2.Operation[]",
                         "components": [
                           {
                             "name": "opType",
                             "type": "uint8",
-                            "internalType": "enum IRuleEntitlement.CombinedOperationType"
+                            "internalType": "enum IRuleEntitlementV2.CombinedOperationType"
                           },
                           {
                             "name": "index",
@@ -138,12 +138,12 @@ export default [
                       {
                         "name": "checkOperations",
                         "type": "tuple[]",
-                        "internalType": "struct IRuleEntitlement.CheckOperation[]",
+                        "internalType": "struct IRuleEntitlementV2.CheckOperation[]",
                         "components": [
                           {
                             "name": "opType",
                             "type": "uint8",
-                            "internalType": "enum IRuleEntitlement.CheckOperationType"
+                            "internalType": "enum IRuleEntitlementV2.CheckOperationType"
                           },
                           {
                             "name": "chainId",
@@ -156,21 +156,21 @@ export default [
                             "internalType": "address"
                           },
                           {
-                            "name": "threshold",
-                            "type": "uint256",
-                            "internalType": "uint256"
+                            "name": "params",
+                            "type": "bytes",
+                            "internalType": "bytes"
                           }
                         ]
                       },
                       {
                         "name": "logicalOperations",
                         "type": "tuple[]",
-                        "internalType": "struct IRuleEntitlement.LogicalOperation[]",
+                        "internalType": "struct IRuleEntitlementV2.LogicalOperation[]",
                         "components": [
                           {
                             "name": "logOpType",
                             "type": "uint8",
-                            "internalType": "enum IRuleEntitlement.LogicalOperationType"
+                            "internalType": "enum IRuleEntitlementV2.LogicalOperationType"
                           },
                           {
                             "name": "leftOperationIndex",
@@ -247,7 +247,7 @@ export default [
       {
         "name": "ruleEntitlementImplementation",
         "type": "address",
-        "internalType": "contract IRuleEntitlement"
+        "internalType": "contract IRuleEntitlementV2"
       }
     ],
     "stateMutability": "view"
@@ -307,7 +307,7 @@ export default [
       {
         "name": "ruleEntitlementImplementation",
         "type": "address",
-        "internalType": "contract IRuleEntitlement"
+        "internalType": "contract IRuleEntitlementV2"
       }
     ],
     "outputs": [],

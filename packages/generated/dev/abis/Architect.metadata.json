@@ -208,7 +208,7 @@
             "type": "address"
           },
           {
-            "internalType": "contract IRuleEntitlement",
+            "internalType": "contract IRuleEntitlementV2",
             "name": "ruleEntitlementImplementation",
             "type": "address"
           }
@@ -307,17 +307,17 @@
                         "type": "address[]"
                       },
                       {
-                        "internalType": "struct IRuleEntitlement.RuleData",
+                        "internalType": "struct IRuleEntitlementV2.RuleData",
                         "name": "ruleData",
                         "type": "tuple",
                         "components": [
                           {
-                            "internalType": "struct IRuleEntitlement.Operation[]",
+                            "internalType": "struct IRuleEntitlementV2.Operation[]",
                             "name": "operations",
                             "type": "tuple[]",
                             "components": [
                               {
-                                "internalType": "enum IRuleEntitlement.CombinedOperationType",
+                                "internalType": "enum IRuleEntitlementV2.CombinedOperationType",
                                 "name": "opType",
                                 "type": "uint8"
                               },
@@ -329,12 +329,12 @@
                             ]
                           },
                           {
-                            "internalType": "struct IRuleEntitlement.CheckOperation[]",
+                            "internalType": "struct IRuleEntitlementV2.CheckOperation[]",
                             "name": "checkOperations",
                             "type": "tuple[]",
                             "components": [
                               {
-                                "internalType": "enum IRuleEntitlement.CheckOperationType",
+                                "internalType": "enum IRuleEntitlementV2.CheckOperationType",
                                 "name": "opType",
                                 "type": "uint8"
                               },
@@ -349,19 +349,19 @@
                                 "type": "address"
                               },
                               {
-                                "internalType": "uint256",
-                                "name": "threshold",
-                                "type": "uint256"
+                                "internalType": "bytes",
+                                "name": "params",
+                                "type": "bytes"
                               }
                             ]
                           },
                           {
-                            "internalType": "struct IRuleEntitlement.LogicalOperation[]",
+                            "internalType": "struct IRuleEntitlementV2.LogicalOperation[]",
                             "name": "logicalOperations",
                             "type": "tuple[]",
                             "components": [
                               {
-                                "internalType": "enum IRuleEntitlement.LogicalOperationType",
+                                "internalType": "enum IRuleEntitlementV2.LogicalOperationType",
                                 "name": "logOpType",
                                 "type": "uint8"
                               },
@@ -441,7 +441,7 @@
             "type": "address"
           },
           {
-            "internalType": "contract IRuleEntitlement",
+            "internalType": "contract IRuleEntitlementV2",
             "name": "ruleEntitlementImplementation",
             "type": "address"
           }
@@ -498,7 +498,7 @@
             "type": "address"
           },
           {
-            "internalType": "contract IRuleEntitlement",
+            "internalType": "contract IRuleEntitlementV2",
             "name": "ruleEntitlementImplementation",
             "type": "address"
           }
@@ -794,18 +794,18 @@
       "license": "MIT"
     },
     "contracts/src/factory/facets/architect/Architect.sol": {
-      "keccak256": "0x546e407119ca047d99f622d77fe017f893e4148a0ab1b32938113815083204af",
+      "keccak256": "0xe204b93d7e56edf66d11e66434e030c762977c15ce1f65869a4fac5220b54caa",
       "urls": [
-        "bzz-raw://f32d3dbaa7f2317db849eae44be1a1408abbb461e667ad08087ee220ac577888",
-        "dweb:/ipfs/Qmf4cmkXNY4Wh8vrk1S39LGr35JkHTR7Mdr4MXXETqt7fW"
+        "bzz-raw://835bb26ae0efd8c89cc45e7ef0601b624e13301b96373067900295035cbdf9aa",
+        "dweb:/ipfs/QmX2zA7xWfpgwj1Go6fKZVXjzYXvUyN4gjNbbxjPXvtSso"
       ],
       "license": "MIT"
     },
     "contracts/src/factory/facets/architect/ArchitectBase.sol": {
-      "keccak256": "0x4676216deb8678864044c22050d05c0860a6b0a9e324aa232167f88dbe79c0ad",
+      "keccak256": "0x6ddb513e53d0603bed5f78bc407b741538e1148a76e839c2794c8364edfc7208",
       "urls": [
-        "bzz-raw://e16ca2c87ccf1fb7761694353586b1f712e29b2def92edbb2eb429792b08bfe4",
-        "dweb:/ipfs/QmbfsL35mBjHuq9bwMnhB9UdZ2dqpuopPNSDBYRf2ATkhP"
+        "bzz-raw://1a29d1559bba2bdc3d386a88851784a6e5b4b1cc468766fe857990a803a941cf",
+        "dweb:/ipfs/QmaKdkM8GQAoh2NdaBXcfXnUJfGMjmiin2w2GEQVncwkGq"
       ],
       "license": "MIT"
     },
@@ -818,18 +818,18 @@
       "license": "MIT"
     },
     "contracts/src/factory/facets/architect/IArchitect.sol": {
-      "keccak256": "0xdc01eb58a1778852dc48091aa5e2155f13be6089a337ac4e5196a378ffbce195",
+      "keccak256": "0xe52dda32f7a811c3e74478c3a03e212e88884f0fc9a1e3c6aedacc674f774477",
       "urls": [
-        "bzz-raw://31fc4dc1923f3484729151de58f0a43839ce4b65d846b0aa2dd8f4416914e714",
-        "dweb:/ipfs/QmNb5NiKSHwkmHb6hWNhu9GnPaEFJGdUMy4Tzv4KDmap1u"
+        "bzz-raw://de5afee528dbb9686ff398469f536df69706d6ab665c8f520a6c9e9532dba337",
+        "dweb:/ipfs/QmcByAEirBuJ9ZWmTMUpfJKP37PufeFGKAgNS7F7DFhvpT"
       ],
       "license": "MIT"
     },
     "contracts/src/factory/facets/architect/ImplementationStorage.sol": {
-      "keccak256": "0x539f0fc6ea9638bf9db3ec27511ee3775671ac0a538ff341563e3518468a8907",
+      "keccak256": "0x147cb6a7de4b5030b2037d7ef014fb404713ee508b0c6a796331cfe037e61205",
       "urls": [
-        "bzz-raw://5b904a1779579e3facc6d9b27a007deb35dce71403ca6d27d63a3d3906fcf9de",
-        "dweb:/ipfs/Qmab9yzwbmRy5znzDVZ5kTT98j4EkkaZ8bRoFizdwiHy4S"
+        "bzz-raw://f6cc73fab275c974be477a286eda337b74cdceb0032977d3a43ab70be034ab76",
+        "dweb:/ipfs/QmWkn786TuNdzrhywLu39Wwrhx9UgeQCS15aGh8tTAuMrN"
       ],
       "license": "MIT"
     },
@@ -874,10 +874,18 @@
       "license": "MIT"
     },
     "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol": {
-      "keccak256": "0x28650d058077713dfc28d5c613998d9f1e895a6f5f6b0d93467d25455fc3ea1d",
+      "keccak256": "0x43daaddd159f934f7a683c43bb9269cda8a28ce76ffac204928899e09d74a9da",
       "urls": [
-        "bzz-raw://e2446b7958f8b5f2713860e2826acf1b123c6b24719f844c7811d1e3f5a87c86",
-        "dweb:/ipfs/Qmesso9ftmVUCHi6w2gkJs9tEjGG5ZZgqhAenkyTDgFPC2"
+        "bzz-raw://f387d50c7a38300e081147b8058582cdb01b446806d9d521289fc654c4e31b95",
+        "dweb:/ipfs/QmSqYaC9Btpg1T6Z5uLKPc5BbvCxRnP6NCtF1soJJVZaVu"
+      ],
+      "license": "MIT"
+    },
+    "contracts/src/spaces/entitlements/rule/IRuleEntitlementV2.sol": {
+      "keccak256": "0x65f16c05c08209d55e899f3397a21722336a28bbc956e12fb93ba43ba96ebb3b",
+      "urls": [
+        "bzz-raw://7c96550fd9baf1a07956b73a2ee6a3bbe38c3f9bfe2594982a69c0ffb6db22d2",
+        "dweb:/ipfs/QmZzfPt7qokm2uS3PQ8bMShG1G2uccTouDkz8FHStg7gyb"
       ],
       "license": "MIT"
     },

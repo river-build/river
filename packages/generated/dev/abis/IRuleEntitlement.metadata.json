@@ -14,7 +14,7 @@
           }
         ],
         "type": "error",
-        "name": "CheckOperationsLimitReaced"
+        "name": "CheckOperationsLimitReached"
       },
       {
         "inputs": [],
@@ -580,10 +580,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol": {
-      "keccak256": "0x28650d058077713dfc28d5c613998d9f1e895a6f5f6b0d93467d25455fc3ea1d",
+      "keccak256": "0x43daaddd159f934f7a683c43bb9269cda8a28ce76ffac204928899e09d74a9da",
       "urls": [
-        "bzz-raw://e2446b7958f8b5f2713860e2826acf1b123c6b24719f844c7811d1e3f5a87c86",
-        "dweb:/ipfs/Qmesso9ftmVUCHi6w2gkJs9tEjGG5ZZgqhAenkyTDgFPC2"
+        "bzz-raw://f387d50c7a38300e081147b8058582cdb01b446806d9d521289fc654c4e31b95",
+        "dweb:/ipfs/QmSqYaC9Btpg1T6Z5uLKPc5BbvCxRnP6NCtF1soJJVZaVu"
       ],
       "license": "MIT"
     }

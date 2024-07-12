@@ -158,7 +158,7 @@ abstract contract EntitlementGatedBaseV2 is IEntitlementGatedBaseV2 {
     IRuleEntitlementV2 re = IRuleEntitlementV2(
       address(transaction.entitlement)
     );
-    IRuleEntitlementV2.RuleData memory ruleData = re.getRuleData(roleId);
+    IRuleEntitlementV2.RuleData memory ruleData = re.getRuleDataV2(roleId);
 
     return ruleData;
   }

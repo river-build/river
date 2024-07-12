@@ -201,7 +201,7 @@ contract EntitlementGatedTest is
       0,
       RuleEntitlementUtil.getMockERC721RuleData()
     );
-    IRuleEntitlementV2.RuleData memory ruleData = gated.getRuleData(
+    IRuleEntitlementV2.RuleData memory ruleData = gated.getRuleDataV2(
       requestId,
       0
     );

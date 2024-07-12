@@ -3,6 +3,7 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlementV2.sol";
+import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 
 interface IEntitlementGatedBaseV2 {
   enum NodeVoteStatus {
@@ -45,8 +46,16 @@ interface IEntitlementGatedV2 is IEntitlementGatedBaseV2 {
     NodeVoteStatus result
   ) external;
 
-  function getRuleData(
+  function getRuleDataV2(
     bytes32 transactionId,
     uint256 roleId
   ) external view returns (IRuleEntitlementV2.RuleData memory);
+
+  // =============================================================
+  //        IEntitlementGated V1 Compatibility Functions
+  // =============================================================
+  function getRuleData(
+    bytes32 transactionId,
+    uint256 roleId
+  ) external view returns (IRuleEntitlement.RuleData memory);
 }

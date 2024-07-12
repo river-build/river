@@ -22,7 +22,7 @@ import {MultiInit} from "contracts/src/diamond/initializers/MultiInit.sol";
 import {DeployDiamondCut} from "contracts/scripts/deployments/facets/DeployDiamondCut.s.sol";
 import {DeployDiamondLoupe} from "contracts/scripts/deployments/facets/DeployDiamondLoupe.s.sol";
 import {DeployIntrospection} from "contracts/scripts/deployments/facets/DeployIntrospection.s.sol";
-import {DeployEntitlementGated} from "contracts/scripts/deployments/facets/DeployEntitlementGated.s.sol";
+import {DeployEntitlementGatedV2} from "contracts/scripts/deployments/facets/DeployEntitlementGatedV2.s.sol";
 import {DeployERC721AQueryable} from "./facets/DeployERC721AQueryable.s.sol";
 import {DeployBanning} from "contracts/scripts/deployments/facets/DeployBanning.s.sol";
 import {DeployMembershipMetadata} from "contracts/scripts/deployments/facets/DeployMembershipMetadata.s.sol";
@@ -44,7 +44,7 @@ contract DeploySpace is DiamondDeployer {
   DeployDiamondCut diamondCutHelper = new DeployDiamondCut();
   DeployDiamondLoupe diamondLoupeHelper = new DeployDiamondLoupe();
   DeployIntrospection introspectionHelper = new DeployIntrospection();
-  DeployEntitlementGated entitlementGatedHelper = new DeployEntitlementGated();
+  DeployEntitlementGatedV2 entitlementGatedV2Helper = new DeployEntitlementGatedV2();
   DeployERC721AQueryable erc721aQueryableHelper = new DeployERC721AQueryable();
   DeployBanning banningHelper = new DeployBanning();
   DeployMembership membershipHelper = new DeployMembership();
@@ -78,7 +78,7 @@ contract DeploySpace is DiamondDeployer {
   address membership;
   address membershipReferral;
   address banning;
-  address entitlementGated;
+  address entitlementGatedV2;
   address erc721aQueryable;
   address membershipMetadata;
   address entitlementDataQueryable;
@@ -100,6 +100,7 @@ contract DeploySpace is DiamondDeployer {
     banning = banningHelper.deploy();
     membership = membershipHelper.deploy();
     membershipMetadata = membershipMetadataHelper.deploy();
+    entitlementGatedV2 = entitlementGatedV2Helper.deploy();
     entitlementDataQueryable = entitlementDataQueryableHelper.deploy();
     ownablePending = ownablePendingHelper.deploy();
     tokenOwnable = tokenOwnableHelper.deploy();
@@ -143,7 +144,7 @@ contract DeploySpace is DiamondDeployer {
       )
     );
     addCut(
-      entitlementGatedHelper.makeCut(membership, IDiamond.FacetCutAction.Add)
+      entitlementGatedV2Helper.makeCut(membership, IDiamond.FacetCutAction.Add)
     );
     addCut(
       erc721aQueryableHelper.makeCut(

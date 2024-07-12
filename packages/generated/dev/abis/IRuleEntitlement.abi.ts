@@ -319,7 +319,7 @@ export default [
   },
   {
     "type": "error",
-    "name": "CheckOperationsLimitReaced",
+    "name": "CheckOperationsLimitReached",
     "inputs": [
       {
         "name": "limit",

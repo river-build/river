@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 // interfaces
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
+import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 
 /**
  * @title IRuleEntitlementV2
@@ -22,7 +23,7 @@ interface IRuleEntitlementV2 is IEntitlement {
   // =============================================================
   //                           Errors
   // =============================================================
-  error CheckOperationsLimitReaced(uint256 limit);
+  error CheckOperationsLimitReached(uint256 limit);
   error OperationsLimitReached(uint256 limit);
   error LogicalOperationLimitReached(uint256 limit);
   error InvalidCheckOperationIndex(
@@ -119,8 +120,31 @@ interface IRuleEntitlementV2 is IEntitlement {
    * @param data RuleData struct to encode
    * @return Encoded bytes of the RuleData struct
    */
-  function encodeRuleData(
+  function encodeRuleDataV2(
     RuleData memory data
+  ) external pure returns (bytes memory);
+
+  /**
+   * @notice Decodes the RuleData struct from bytes
+   * @param roleId Role ID
+   * @return data RuleData struct
+   */
+  function getRuleDataV2(
+    uint256 roleId
+  ) external view returns (RuleData memory data);
+
+  // =============================================================
+  //        IRuleEntitlement V1 Compatibility Functions
+  // =============================================================
+  // The following methods cause the RuleEntitlementV2 contract to conform to the
+  // IRuleEntitlement (V1) interface.
+  /**
+   * @notice Encodes the RuleData struct into bytes
+   * @param data RuleData struct to encode
+   * @return Encoded bytes of the RuleData struct
+   */
+  function encodeRuleData(
+    IRuleEntitlement.RuleData memory data
   ) external pure returns (bytes memory);
 
   /**
@@ -130,5 +154,5 @@ interface IRuleEntitlementV2 is IEntitlement {
    */
   function getRuleData(
     uint256 roleId
-  ) external view returns (RuleData memory data);
+  ) external view returns (IRuleEntitlement.RuleData memory data);
 }

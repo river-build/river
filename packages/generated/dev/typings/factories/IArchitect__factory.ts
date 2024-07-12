@@ -101,18 +101,18 @@ const _abi = [
                   {
                     name: "ruleData",
                     type: "tuple",
-                    internalType: "struct IRuleEntitlement.RuleData",
+                    internalType: "struct IRuleEntitlementV2.RuleData",
                     components: [
                       {
                         name: "operations",
                         type: "tuple[]",
-                        internalType: "struct IRuleEntitlement.Operation[]",
+                        internalType: "struct IRuleEntitlementV2.Operation[]",
                         components: [
                           {
                             name: "opType",
                             type: "uint8",
                             internalType:
-                              "enum IRuleEntitlement.CombinedOperationType",
+                              "enum IRuleEntitlementV2.CombinedOperationType",
                           },
                           {
                             name: "index",
@@ -125,13 +125,13 @@ const _abi = [
                         name: "checkOperations",
                         type: "tuple[]",
                         internalType:
-                          "struct IRuleEntitlement.CheckOperation[]",
+                          "struct IRuleEntitlementV2.CheckOperation[]",
                         components: [
                           {
                             name: "opType",
                             type: "uint8",
                             internalType:
-                              "enum IRuleEntitlement.CheckOperationType",
+                              "enum IRuleEntitlementV2.CheckOperationType",
                           },
                           {
                             name: "chainId",
@@ -144,9 +144,9 @@ const _abi = [
                             internalType: "address",
                           },
                           {
-                            name: "threshold",
-                            type: "uint256",
-                            internalType: "uint256",
+                            name: "params",
+                            type: "bytes",
+                            internalType: "bytes",
                           },
                         ],
                       },
@@ -154,13 +154,13 @@ const _abi = [
                         name: "logicalOperations",
                         type: "tuple[]",
                         internalType:
-                          "struct IRuleEntitlement.LogicalOperation[]",
+                          "struct IRuleEntitlementV2.LogicalOperation[]",
                         components: [
                           {
                             name: "logOpType",
                             type: "uint8",
                             internalType:
-                              "enum IRuleEntitlement.LogicalOperationType",
+                              "enum IRuleEntitlementV2.LogicalOperationType",
                           },
                           {
                             name: "leftOperationIndex",
@@ -237,7 +237,7 @@ const _abi = [
       {
         name: "ruleEntitlementImplementation",
         type: "address",
-        internalType: "contract IRuleEntitlement",
+        internalType: "contract IRuleEntitlementV2",
       },
     ],
     stateMutability: "view",
@@ -297,7 +297,7 @@ const _abi = [
       {
         name: "ruleEntitlementImplementation",
         type: "address",
-        internalType: "contract IRuleEntitlement",
+        internalType: "contract IRuleEntitlementV2",
       },
     ],
     outputs: [],

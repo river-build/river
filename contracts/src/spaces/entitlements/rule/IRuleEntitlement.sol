@@ -20,7 +20,7 @@ interface IRuleEntitlement is IEntitlement {
   // =============================================================
   //                           Errors
   // =============================================================
-  error CheckOperationsLimitReaced(uint256 limit);
+  error CheckOperationsLimitReached(uint256 limit);
   error OperationsLimitReached(uint256 limit);
   error LogicalOperationLimitReached(uint256 limit);
   error InvalidCheckOperationIndex(

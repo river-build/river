@@ -569,10 +569,26 @@
       "license": "MIT"
     },
     "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol": {
-      "keccak256": "0x28650d058077713dfc28d5c613998d9f1e895a6f5f6b0d93467d25455fc3ea1d",
+      "keccak256": "0x43daaddd159f934f7a683c43bb9269cda8a28ce76ffac204928899e09d74a9da",
       "urls": [
-        "bzz-raw://e2446b7958f8b5f2713860e2826acf1b123c6b24719f844c7811d1e3f5a87c86",
-        "dweb:/ipfs/Qmesso9ftmVUCHi6w2gkJs9tEjGG5ZZgqhAenkyTDgFPC2"
+        "bzz-raw://f387d50c7a38300e081147b8058582cdb01b446806d9d521289fc654c4e31b95",
+        "dweb:/ipfs/QmSqYaC9Btpg1T6Z5uLKPc5BbvCxRnP6NCtF1soJJVZaVu"
+      ],
+      "license": "MIT"
+    },
+    "contracts/src/spaces/entitlements/rule/IRuleEntitlementV2.sol": {
+      "keccak256": "0x65f16c05c08209d55e899f3397a21722336a28bbc956e12fb93ba43ba96ebb3b",
+      "urls": [
+        "bzz-raw://7c96550fd9baf1a07956b73a2ee6a3bbe38c3f9bfe2594982a69c0ffb6db22d2",
+        "dweb:/ipfs/QmZzfPt7qokm2uS3PQ8bMShG1G2uccTouDkz8FHStg7gyb"
+      ],
+      "license": "MIT"
+    },
+    "contracts/src/spaces/entitlements/rule/RuleDataUtil.sol": {
+      "keccak256": "0x67368fc93facdee46b9e3e21db12ea17e9775d5d7c4bcc2b3af2b9d4ac933a21",
+      "urls": [
+        "bzz-raw://88f6275a45a5e9e2316af474133d728956ac65d269f0d62daed4df8ac1d2e23e",
+        "dweb:/ipfs/QmZmwaxcPhzv1J6C36nLhFveUGP6EyG7hZHfgBjnP7r3sr"
       ],
       "license": "MIT"
     },
@@ -617,10 +633,10 @@
       "license": "MIT"
     },
     "contracts/test/mocks/MockEntitlementGated.sol": {
-      "keccak256": "0xc6ddf45d5ece26e1f5e692fc94c5aa7753812fceb53233868b0a9fe4f0748f28",
+      "keccak256": "0x6f75e62b786c12b6da004c0259330160469a0e5a9d1aaf06d83fae140ad5b4ac",
       "urls": [
-        "bzz-raw://5c907bb53f65dc97bc0e4a7b8feffbb85691d2be92c00c45241001a2cd1aeea9",
-        "dweb:/ipfs/QmW9PPy7LkhvZBT2pvE1ucCsmSiYqsRLUkesiZt94kdN33"
+        "bzz-raw://3ade158cfe40e8875baab03c09ffea1db6b98f2d09e2050a475a282713574295",
+        "dweb:/ipfs/QmSvaLqietHQC1Z7Y926U4wiiAWRd14MWGdESLcR2JPsPZ"
       ],
       "license": "MIT"
     },

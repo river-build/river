@@ -102,7 +102,7 @@ contract ArchitectTest is
     // ruleData for minter role
     IRuleEntitlementV2.RuleData memory ruleData = IRuleEntitlementV2(
       ruleEntitlementAddress
-    ).getRuleData(minterRoleId);
+    ).getRuleDataV2(minterRoleId);
 
     assertEq(
       ruleData.checkOperations[0].contractAddress,

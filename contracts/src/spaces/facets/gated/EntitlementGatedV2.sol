@@ -4,9 +4,11 @@ pragma solidity ^0.8.23;
 // interfaces
 import {IEntitlementGatedV2} from "./IEntitlementGatedV2.sol";
 import {IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlementV2.sol";
+import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {IEntitlementChecker} from "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol";
 
 // libraries
+import {RuleDataUtil} from "contracts/src/spaces/entitlements/rule/RuleDataUtil.sol";
 
 // contracts
 import {EntitlementGatedBaseV2} from "./EntitlementGatedBaseV2.sol";
@@ -19,13 +21,13 @@ contract EntitlementGatedV2 is
   ReentrancyGuard,
   Facet
 {
-  function __EntitlementGated_init(
+  function __EntitlementGatedV2_init(
     IEntitlementChecker entitlementChecker
   ) external onlyInitializing {
-    __EntitlementGated_init_unchained(entitlementChecker);
+    __EntitlementGatedV2_init_unchained(entitlementChecker);
   }
 
-  function __EntitlementGated_init_unchained(
+  function __EntitlementGatedV2_init_unchained(
     IEntitlementChecker entitlementChecker
   ) internal {
     _addInterface(type(IEntitlementGatedV2).interfaceId);
@@ -42,10 +44,27 @@ contract EntitlementGatedV2 is
     _postEntitlementCheckResult(transactionId, roleId, result);
   }
 
-  function getRuleData(
+  function getRuleDataV2(
     bytes32 transactionId,
     uint256 roleId
   ) external view returns (IRuleEntitlementV2.RuleData memory) {
     return _getRuleData(transactionId, roleId);
+  }
+
+  // =============================================================
+  //        IEntitlementGated V1 Compatibility Functions
+  // =============================================================
+  // The following methods cause the EntitlementGatedV2 contract to conform to the
+  // IEntitlementGated (V1) interface.
+
+  function getRuleData(
+    bytes32 transactionId,
+    uint256 roleId
+  ) external view returns (IRuleEntitlement.RuleData memory) {
+    IRuleEntitlementV2.RuleData memory ruleDataV2 = _getRuleData(
+      transactionId,
+      roleId
+    );
+    return RuleDataUtil.convertV2ToV1RuleData(ruleDataV2);
   }
 }
