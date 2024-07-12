@@ -94,12 +94,12 @@ describe('mediaTests', () => {
         await expect(bobCreateSpaceMediaStream(10)).toResolve()
     })
 
-    test.only('clientCanSendMediaPayload', async () => {
+    test('clientCanSendMediaPayload', async () => {
         const mediaStreamInfo = await bobCreateMediaStream(10)
         await bobSendMediaPayloads(mediaStreamInfo.streamId, 10, mediaStreamInfo.prevMiniblockHash)
     })
 
-    test.only('clienCanSendSpaceMediaPayload', async () => {
+    test('clienCanSendSpaceMediaPayload', async () => {
         const mediaStreamInfo = await bobCreateSpaceMediaStream(10)
         await bobSendSpaceMediaPayloads(
             mediaStreamInfo.streamId,
