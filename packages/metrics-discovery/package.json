@@ -4,6 +4,7 @@
     "version": "0.0.15",
     "packageManager": "yarn@3.8.0",
     "author": "",
+    "private": true,
     "license": "ISC",
     "type": "module",
     "main": "index.js",
