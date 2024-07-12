@@ -15,19 +15,30 @@ services:
             - ./.env
 
     prometheus:
+        depends_on:
+            - river-metrics-discovery
         container_name: prometheus
+        restart: always
         image: prom/prometheus:latest
         user: root
+        labels:
+            com.datadoghq.ad.check_names: '["prometheus"]'
+            com.datadoghq.ad.init_configs: '[{}]'
+            com.datadoghq.ad.instances: '[{"prometheus_url": "http://prometheus:9090/federate?match%5B%5D=%7Bjob%3D%22river-node%22%7D", "namespace": "river-node", "metrics": ["river*"], "type_overrides": {"*": "gauge"}, "max_returned_metrics": 999999999999}]'
+            # collect_counters_with_distributions
         volumes:
             - ./prometheus/etc:/prometheus/etc
             - prometheus_data:/prometheus
         command:
-            - --config.file=/prometheus/etc/config/prometheus-config.yaml
+            - --config.file=/prometheus/etc/config/prometheus-config.yml
             - --log.level=debug
         ports:
             - '9090:9090'
 
     datadog:
+        depends_on:
+            - prometheus
+            - river-metrics-discovery
         container_name: datadog
         image: datadog/agent:7
         ports:
@@ -37,6 +48,5 @@ services:
             - /var/run/docker.sock:/var/run/docker.sock
             - /proc/:/host/proc/:ro
             - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
-            - ./datadog/prometheus.d:/conf.d/prometheus.d:ro
         env_file:
             - ./.env
