@@ -5,8 +5,8 @@
 import { makeTestClient, makeUniqueSpaceStreamId } from './util.test'
 import { Client } from './client'
 import { makeUniqueChannelStreamId, makeDMStreamId } from './id'
-import { InfoRequest } from '@river-build/proto'
-import { log } from 'console'
+import { InfoRequest, PublicScope } from '@river-build/proto'
+import assert from 'assert'
 
 describe('mediaTests', () => {
     let bobsClient: Client
@@ -54,7 +54,13 @@ describe('mediaTests', () => {
     ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array, publicContentKey: string }> {
         const spaceId = makeUniqueSpaceStreamId()
         await expect(bobsClient.createSpace(spaceId)).toResolve()
-        return bobsClient.createSpaceMediaStream(spaceId, chunkCount)
+        const {
+            streamId,
+            prevMiniblockHash,
+            publicContentKey,
+        } = await bobsClient.createMediaStream(spaceId, spaceId, chunkCount, undefined, PublicScope.PS_SPACE)
+        assert(publicContentKey !== undefined, 'publicContentKey is undefined')
+        return { streamId, prevMiniblockHash, publicContentKey }
     }
 
     async function bobSendSpaceMediaPayloads(

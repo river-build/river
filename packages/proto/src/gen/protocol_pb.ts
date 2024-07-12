@@ -3488,9 +3488,11 @@ export class MediaPayload_Inception extends Message<MediaPayload_Inception> {
   publicScope?: PublicScope;
 
   /**
-   * @generated from field: optional string public_content_key = 7;
+   * key to decrypt public content
+   *
+   * @generated from field: optional bytes public_content_key = 7;
    */
-  publicContentKey?: string;
+  publicContentKey?: Uint8Array;
 
   constructor(data?: PartialMessage<MediaPayload_Inception>) {
     super();
@@ -3506,7 +3508,7 @@ export class MediaPayload_Inception extends Message<MediaPayload_Inception> {
     { no: 4, name: "settings", kind: "message", T: StreamSettings },
     { no: 5, name: "space_id", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
     { no: 6, name: "public_scope", kind: "enum", T: proto3.getEnumType(PublicScope), opt: true },
-    { no: 7, name: "public_content_key", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 7, name: "public_content_key", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MediaPayload_Inception {

@@ -498,7 +498,7 @@ message MediaPayload {
         StreamSettings settings = 4;
         optional bytes space_id = 5;
         optional PublicScope public_scope = 6;
-        optional string public_content_key = 7;
+        optional bytes public_content_key = 7; // key to decrypt public content
     }
 
     message Chunk {

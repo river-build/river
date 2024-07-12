@@ -125,7 +125,7 @@ import { SyncState, SyncedStreams } from './syncedStreams'
 import { SyncedStream } from './syncedStream'
 import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
-import { ethers, Signer } from 'ethers'
+import * as crypto from 'crypto'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
@@ -684,90 +684,66 @@ export class Client
         spaceId: string | Uint8Array | undefined,
         chunkCount: number,
         streamSettings?: PlainMessage<StreamSettings>,
-    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array }> {
-        const streamId = makeUniqueMediaStreamId()
+        publicScope?: PublicScope,
+    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array, publicContentKey?: U }> {
+        const isPublicScopeSpace = publicScope === PublicScope.PS_SPACE
+
+        assert(this.userStreamId !== undefined, 'userStreamId must be set')
+        if (isPublicScopeSpace) {
+            assert(spaceId !== undefined, 'spaceId must be set')
+            assert(isSpaceStreamId(spaceId), 'spaceId must be a valid streamId')                
+        } else {
+            assert(
+                isChannelStreamId(channelId) ||
+                    isDMChannelStreamId(channelId) ||
+                    isGDMChannelStreamId(channelId),
+                'channelId must be a valid streamId',
+            )
+        }
+
+        const streamId = (isPublicScopeSpace && spaceId) ? makeMediaStreamIdFromSpaceId(spaceId) : makeUniqueMediaStreamId()
 
         this.logCall('createMedia', channelId, streamId)
-        assert(this.userStreamId !== undefined, 'userStreamId must be set')
-        assert(
-            isChannelStreamId(channelId) ||
-                isDMChannelStreamId(channelId) ||
-                isGDMChannelStreamId(channelId),
-            'channelId must be a valid streamId',
-        )
 
-        const inceptionEvent = await makeEvent(
-            this.signerContext,
-            make_MediaPayload_Inception({
-                streamId: streamIdAsBytes(streamId),
-                channelId: streamIdAsBytes(channelId),
-                spaceId: spaceId ? streamIdAsBytes(spaceId) : undefined,
-                chunkCount,
-                settings: streamSettings,
-            }),
-        )
+        let inceptionEvent: Envelope
+        let publicContentKey: string | undefined
+        if (isPublicScopeSpace && spaceId) {
+            const streamIdBytes = streamIdAsBytes(streamId)
+            const spaceIdBytes = streamIdAsBytes(spaceId)
+
+            // create a publicly scoped stream
+            // include a key to decrypt the public content
+            // not an issue that the key is public. by design
+            const publicContentKey = crypto.randomBytes(32); // 256-bit key for AES-256-GCM
+
+            inceptionEvent = await makeEvent(
+                this.signerContext,
+                make_MediaPayload_Inception({
+                    streamId: streamIdBytes,
+                    spaceId: spaceIdBytes,
+                    channelId: spaceIdBytes,
+                    chunkCount,
+                    settings: streamSettings,
+                    publicScope: PublicScope.PS_SPACE,
+                    publicContentKey,
+                }),
+            )
+        } else {
+            inceptionEvent = await makeEvent(
+                this.signerContext,
+                make_MediaPayload_Inception({
+                    streamId: streamIdAsBytes(streamId),
+                    channelId: streamIdAsBytes(channelId),
+                    spaceId: spaceId ? streamIdAsBytes(spaceId) : undefined,
+                    chunkCount,
+                    settings: streamSettings,
+                }),
+            )
+        }
 
         const response = await this.rpcClient.createStream({
             events: [inceptionEvent],
             streamId: streamIdAsBytes(streamId),
-        })
-
-        const unpackedResponse = await unpackStream(response.stream)
-        const streamView = new StreamStateView(this.userId, streamId)
-        streamView.initialize(
-            unpackedResponse.streamAndCookie.nextSyncCookie,
-            unpackedResponse.streamAndCookie.events,
-            unpackedResponse.snapshot,
-            unpackedResponse.streamAndCookie.miniblocks,
-            [],
-            unpackedResponse.prevSnapshotMiniblockNum,
-            undefined,
-            [],
-            undefined,
-        )
-
-        check(isDefined(streamView.prevMiniblockHash), 'prevMiniblockHash must be defined')
-
-        return { streamId: streamId, prevMiniblockHash: streamView.prevMiniblockHash }
-    }
-
-    async createSpaceMediaStream(
-        spaceId: string | undefined,
-        chunkCount: number,
-        streamSettings?: PlainMessage<StreamSettings>,
-    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array, publicContentKey: string }> {
-        assert(spaceId !== undefined, 'spaceId must be set')
-        assert(this.userStreamId !== undefined, 'userStreamId must be set')
-        assert(isSpaceStreamId(spaceId), 'spaceId must be a valid streamId')
-
-        const streamId = makeMediaStreamIdFromSpaceId(spaceId)
-        const streamIdBytes = streamIdAsBytes(streamId)
-        const spaceIdBytes = streamIdAsBytes(spaceId)
-
-        this.logCall('createSpaceMediaStream', streamId)
-
-        // create a publicly scoped stream
-        // include a key to decrypt the public content
-        // not an issue that the key is public. by design
-        const publicWallet = ethers.Wallet.createRandom()
-        const publicContentKey = publicWallet.privateKey
-
-        const inceptionEvent = await makeEvent(
-            this.signerContext,
-            make_MediaPayload_Inception({
-                streamId: streamIdBytes,
-                spaceId: spaceIdBytes,
-                channelId: spaceIdBytes,
-                chunkCount,
-                settings: streamSettings,
-                publicScope: PublicScope.PS_SPACE,
-                publicContentKey,
-            }),
-        )
-
-        const response = await this.rpcClient.createStream({
-            events: [inceptionEvent],
-            streamId: streamIdBytes,
         })
 
         const unpackedResponse = await unpackStream(response.stream)
@@ -1428,7 +1404,7 @@ export class Client
             data: data,
             chunkIndex: chunkIndex,
         })
-        const signerContext: SignerContext = {}
+        //const signerContext: SignerContext = {}
         return this.makeEventWithHashAndAddToStream(streamId, payload, prevMiniblockHash)
     }
 
