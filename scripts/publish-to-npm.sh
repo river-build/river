@@ -29,7 +29,7 @@ VERSION_PREFIX="${COMMIT_HASH}-"
 git checkout -b "${BRANCH_NAME}"
 
 ./scripts/yarn-clean.sh
-yarn install
+yarn install --immutable
 exit_status_yarn=$?
 
 if [ $exit_status_yarn -ne 0 ]; then
