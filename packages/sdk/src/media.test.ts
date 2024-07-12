@@ -5,7 +5,7 @@
 import { makeTestClient, makeUniqueSpaceStreamId } from './util.test'
 import { Client } from './client'
 import { makeUniqueChannelStreamId, makeDMStreamId } from './id'
-import { InfoRequest, PublicScope } from '@river-build/proto'ß
+import { InfoRequest, PublicScope } from '@river-build/proto'
 import { aes256GcmEncrypt, serializeAes256GcmEncryptionResult } from './encrypt'
 import * as crypto from 'crypto'
 
