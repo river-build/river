@@ -123,10 +123,69 @@ export declare namespace IRuleEntitlement {
   };
 }
 
+export declare namespace IRuleEntitlementV2 {
+  export type OperationStruct = {
+    opType: PromiseOrValue<BigNumberish>;
+    index: PromiseOrValue<BigNumberish>;
+  };
+
+  export type OperationStructOutput = [number, number] & {
+    opType: number;
+    index: number;
+  };
+
+  export type CheckOperationStruct = {
+    opType: PromiseOrValue<BigNumberish>;
+    chainId: PromiseOrValue<BigNumberish>;
+    contractAddress: PromiseOrValue<string>;
+    params: PromiseOrValue<BytesLike>;
+  };
+
+  export type CheckOperationStructOutput = [
+    number,
+    BigNumber,
+    string,
+    string
+  ] & {
+    opType: number;
+    chainId: BigNumber;
+    contractAddress: string;
+    params: string;
+  };
+
+  export type LogicalOperationStruct = {
+    logOpType: PromiseOrValue<BigNumberish>;
+    leftOperationIndex: PromiseOrValue<BigNumberish>;
+    rightOperationIndex: PromiseOrValue<BigNumberish>;
+  };
+
+  export type LogicalOperationStructOutput = [number, number, number] & {
+    logOpType: number;
+    leftOperationIndex: number;
+    rightOperationIndex: number;
+  };
+
+  export type RuleDataStruct = {
+    operations: IRuleEntitlementV2.OperationStruct[];
+    checkOperations: IRuleEntitlementV2.CheckOperationStruct[];
+    logicalOperations: IRuleEntitlementV2.LogicalOperationStruct[];
+  };
+
+  export type RuleDataStructOutput = [
+    IRuleEntitlementV2.OperationStructOutput[],
+    IRuleEntitlementV2.CheckOperationStructOutput[],
+    IRuleEntitlementV2.LogicalOperationStructOutput[]
+  ] & {
+    operations: IRuleEntitlementV2.OperationStructOutput[];
+    checkOperations: IRuleEntitlementV2.CheckOperationStructOutput[];
+    logicalOperations: IRuleEntitlementV2.LogicalOperationStructOutput[];
+  };
+}
+
 export interface MembershipFacetInterface extends utils.Interface {
   functions: {
     "__ERC721A_init(string,string)": FunctionFragment;
-    "__EntitlementGated_init(address)": FunctionFragment;
+    "__EntitlementGatedV2_init(address)": FunctionFragment;
     "__Membership_init((string,string,uint256,uint256,uint64,address,address,uint256,address),address)": FunctionFragment;
     "approve(address,uint256)": FunctionFragment;
     "balanceOf(address)": FunctionFragment;
@@ -141,6 +200,7 @@ export interface MembershipFacetInterface extends utils.Interface {
     "getMembershipPricingModule()": FunctionFragment;
     "getMembershipRenewalPrice(uint256)": FunctionFragment;
     "getRuleData(bytes32,uint256)": FunctionFragment;
+    "getRuleDataV2(bytes32,uint256)": FunctionFragment;
     "getSpaceFactory()": FunctionFragment;
     "isApprovedForAll(address,address)": FunctionFragment;
     "joinSpace(address)": FunctionFragment;
@@ -166,7 +226,7 @@ export interface MembershipFacetInterface extends utils.Interface {
   getFunction(
     nameOrSignatureOrTopic:
       | "__ERC721A_init"
-      | "__EntitlementGated_init"
+      | "__EntitlementGatedV2_init"
       | "__Membership_init"
       | "approve"
       | "balanceOf"
@@ -181,6 +241,7 @@ export interface MembershipFacetInterface extends utils.Interface {
       | "getMembershipPricingModule"
       | "getMembershipRenewalPrice"
       | "getRuleData"
+      | "getRuleDataV2"
       | "getSpaceFactory"
       | "isApprovedForAll"
       | "joinSpace"
@@ -208,7 +269,7 @@ export interface MembershipFacetInterface extends utils.Interface {
     values: [PromiseOrValue<string>, PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
-    functionFragment: "__EntitlementGated_init",
+    functionFragment: "__EntitlementGatedV2_init",
     values: [PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
@@ -265,6 +326,10 @@ export interface MembershipFacetInterface extends utils.Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "getRuleData",
+    values: [PromiseOrValue<BytesLike>, PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getRuleDataV2",
     values: [PromiseOrValue<BytesLike>, PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
@@ -364,7 +429,7 @@ export interface MembershipFacetInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "__EntitlementGated_init",
+    functionFragment: "__EntitlementGatedV2_init",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -412,6 +477,10 @@ export interface MembershipFacetInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "getRuleData",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getRuleDataV2",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -853,7 +922,7 @@ export interface MembershipFacet extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
-    __EntitlementGated_init(
+    __EntitlementGatedV2_init(
       entitlementChecker: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
@@ -911,6 +980,12 @@ export interface MembershipFacet extends BaseContract {
       roleId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<[IRuleEntitlement.RuleDataStructOutput]>;
+
+    getRuleDataV2(
+      transactionId: PromiseOrValue<BytesLike>,
+      roleId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<[IRuleEntitlementV2.RuleDataStructOutput]>;
 
     getSpaceFactory(overrides?: CallOverrides): Promise<[string]>;
 
@@ -1018,7 +1093,7 @@ export interface MembershipFacet extends BaseContract {
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
-  __EntitlementGated_init(
+  __EntitlementGatedV2_init(
     entitlementChecker: PromiseOrValue<string>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
@@ -1074,6 +1149,12 @@ export interface MembershipFacet extends BaseContract {
     roleId: PromiseOrValue<BigNumberish>,
     overrides?: CallOverrides
   ): Promise<IRuleEntitlement.RuleDataStructOutput>;
+
+  getRuleDataV2(
+    transactionId: PromiseOrValue<BytesLike>,
+    roleId: PromiseOrValue<BigNumberish>,
+    overrides?: CallOverrides
+  ): Promise<IRuleEntitlementV2.RuleDataStructOutput>;
 
   getSpaceFactory(overrides?: CallOverrides): Promise<string>;
 
@@ -1181,7 +1262,7 @@ export interface MembershipFacet extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>;
 
-    __EntitlementGated_init(
+    __EntitlementGatedV2_init(
       entitlementChecker: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<void>;
@@ -1237,6 +1318,12 @@ export interface MembershipFacet extends BaseContract {
       roleId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<IRuleEntitlement.RuleDataStructOutput>;
+
+    getRuleDataV2(
+      transactionId: PromiseOrValue<BytesLike>,
+      roleId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<IRuleEntitlementV2.RuleDataStructOutput>;
 
     getSpaceFactory(overrides?: CallOverrides): Promise<string>;
 
@@ -1551,7 +1638,7 @@ export interface MembershipFacet extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
-    __EntitlementGated_init(
+    __EntitlementGatedV2_init(
       entitlementChecker: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
@@ -1603,6 +1690,12 @@ export interface MembershipFacet extends BaseContract {
     ): Promise<BigNumber>;
 
     getRuleData(
+      transactionId: PromiseOrValue<BytesLike>,
+      roleId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    getRuleDataV2(
       transactionId: PromiseOrValue<BytesLike>,
       roleId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
@@ -1715,7 +1808,7 @@ export interface MembershipFacet extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
-    __EntitlementGated_init(
+    __EntitlementGatedV2_init(
       entitlementChecker: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
@@ -1781,6 +1874,12 @@ export interface MembershipFacet extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     getRuleData(
+      transactionId: PromiseOrValue<BytesLike>,
+      roleId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getRuleDataV2(
       transactionId: PromiseOrValue<BytesLike>,
       roleId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides

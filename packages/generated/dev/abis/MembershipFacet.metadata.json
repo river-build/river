@@ -185,6 +185,11 @@
       {
         "inputs": [],
         "type": "error",
+        "name": "IncompatibleRuleData"
+      },
+      {
+        "inputs": [],
+        "type": "error",
         "name": "Initializable_InInitializingState"
       },
       {
@@ -201,6 +206,11 @@
         "inputs": [],
         "type": "error",
         "name": "Introspection_NotSupported"
+      },
+      {
+        "inputs": [],
+        "type": "error",
+        "name": "InvalidRuleData"
       },
       {
         "inputs": [],
@@ -543,7 +553,7 @@
             "indexed": true
           },
           {
-            "internalType": "enum IEntitlementGatedBase.NodeVoteStatus",
+            "internalType": "enum IEntitlementGatedBaseV2.NodeVoteStatus",
             "name": "result",
             "type": "uint8",
             "indexed": false
@@ -913,7 +923,7 @@
         ],
         "stateMutability": "nonpayable",
         "type": "function",
-        "name": "__EntitlementGated_init"
+        "name": "__EntitlementGatedV2_init"
       },
       {
         "inputs": [
@@ -1256,6 +1266,98 @@
         ]
       },
       {
+        "inputs": [
+          {
+            "internalType": "bytes32",
+            "name": "transactionId",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "uint256",
+            "name": "roleId",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+        "name": "getRuleDataV2",
+        "outputs": [
+          {
+            "internalType": "struct IRuleEntitlementV2.RuleData",
+            "name": "",
+            "type": "tuple",
+            "components": [
+              {
+                "internalType": "struct IRuleEntitlementV2.Operation[]",
+                "name": "operations",
+                "type": "tuple[]",
+                "components": [
+                  {
+                    "internalType": "enum IRuleEntitlementV2.CombinedOperationType",
+                    "name": "opType",
+                    "type": "uint8"
+                  },
+                  {
+                    "internalType": "uint8",
+                    "name": "index",
+                    "type": "uint8"
+                  }
+                ]
+              },
+              {
+                "internalType": "struct IRuleEntitlementV2.CheckOperation[]",
+                "name": "checkOperations",
+                "type": "tuple[]",
+                "components": [
+                  {
+                    "internalType": "enum IRuleEntitlementV2.CheckOperationType",
+                    "name": "opType",
+                    "type": "uint8"
+                  },
+                  {
+                    "internalType": "uint256",
+                    "name": "chainId",
+                    "type": "uint256"
+                  },
+                  {
+                    "internalType": "address",
+                    "name": "contractAddress",
+                    "type": "address"
+                  },
+                  {
+                    "internalType": "bytes",
+                    "name": "params",
+                    "type": "bytes"
+                  }
+                ]
+              },
+              {
+                "internalType": "struct IRuleEntitlementV2.LogicalOperation[]",
+                "name": "logicalOperations",
+                "type": "tuple[]",
+                "components": [
+                  {
+                    "internalType": "enum IRuleEntitlementV2.LogicalOperationType",
+                    "name": "logOpType",
+                    "type": "uint8"
+                  },
+                  {
+                    "internalType": "uint8",
+                    "name": "leftOperationIndex",
+                    "type": "uint8"
+                  },
+                  {
+                    "internalType": "uint8",
+                    "name": "rightOperationIndex",
+                    "type": "uint8"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
         "inputs": [],
         "stateMutability": "view",
         "type": "function",
@@ -1349,7 +1451,7 @@
             "type": "uint256"
           },
           {
-            "internalType": "enum IEntitlementGatedBase.NodeVoteStatus",
+            "internalType": "enum IEntitlementGatedBaseV2.NodeVoteStatus",
             "name": "result",
             "type": "uint8"
           }
@@ -2028,6 +2130,22 @@
       ],
       "license": "MIT"
     },
+    "contracts/src/spaces/entitlements/rule/IRuleEntitlementV2.sol": {
+      "keccak256": "0x3fc95b52dc0d77983f2927283b08ee0f861fee54dea51583f5a491be5193e874",
+      "urls": [
+        "bzz-raw://d11ec1245c2cdf6de45d1455d2cc1f1f32b21500f2bf54cfe32ffcf5795ccc07",
+        "dweb:/ipfs/QmPCENoksPgzqgxEfizgMrEvjzU7jDzM95r9YtknSW73P5"
+      ],
+      "license": "MIT"
+    },
+    "contracts/src/spaces/entitlements/rule/RuleDataUtil.sol": {
+      "keccak256": "0xa17529aad83b624a2c0bee1fa6dcbdaad8bf4eef3906fd9945c646a0e387e45a",
+      "urls": [
+        "bzz-raw://5c49582cbf086405363496e1ece8560aabdcb5a5b39bfc8e97e569234cee176a",
+        "dweb:/ipfs/QmU8h98kZCsmhEvF6k3v4WLTsRDfPAS1Du5uRtfqo6FzGa"
+      ],
+      "license": "MIT"
+    },
     "contracts/src/spaces/facets/Entitled.sol": {
       "keccak256": "0x90204085688bf4dd1e1b6ca30684ee37db79210070c405406898c8a77d50bfce",
       "urls": [
@@ -2140,35 +2258,35 @@
       ],
       "license": "MIT"
     },
-    "contracts/src/spaces/facets/gated/EntitlementGated.sol": {
-      "keccak256": "0xd705dfd2d3124f62b5ca11cd2b0e0432da535ced6d8012f55799897a30480ba5",
+    "contracts/src/spaces/facets/gated/EntitlementGatedBaseV2.sol": {
+      "keccak256": "0x05b42731fb1a91f7085f35903b3210c832972871931bd54d47bd50dedd201b8c",
       "urls": [
-        "bzz-raw://cdb855f903687fca333ac8be6e4545b99dc654a41d3878f6ad8f847500efd15b",
-        "dweb:/ipfs/QmZixZFxv5QBuCVrGXnB9PJknKZknXiXBepi2mG83Jpiza"
+        "bzz-raw://0d5f1a622b8c27de64e3b98f7a55e20f2e41c550113fb8461d0130377e023c15",
+        "dweb:/ipfs/QmV6HqrA5sDfdkBrDwUa4YyVuHYQkbgctNiGJfH2wKL9P2"
       ],
       "license": "MIT"
     },
-    "contracts/src/spaces/facets/gated/EntitlementGatedBase.sol": {
-      "keccak256": "0xcefa5c3c81c73fefaa7da433ddd5c419dc4c31cd86e8c31f47894663ca7269e8",
+    "contracts/src/spaces/facets/gated/EntitlementGatedStorageV2.sol": {
+      "keccak256": "0xe65c91c0ec93eb9b73dd73462c4829379c179d87284043d182f43ae0185ba522",
       "urls": [
-        "bzz-raw://27fe60a48a69d5be67fdf17f5aac1e90ef0234da564ec4f6e2cbfe53fbb9ba0c",
-        "dweb:/ipfs/QmPemsjAUmjjjyLWbHzVmqLxyBAN7CFi6DViy9uQEM3wjt"
+        "bzz-raw://a3e1451aa1daae029f11c12d9d95076c94f3d16884d4874e96b4cb8cdf93153e",
+        "dweb:/ipfs/QmUUqTV7h5jgHB7o3kfMXm47DaPnpwir3AaLNb781mtpbu"
       ],
       "license": "MIT"
     },
-    "contracts/src/spaces/facets/gated/EntitlementGatedStorage.sol": {
-      "keccak256": "0xb058672a61d2742e8232232cc66f052443d82beb8b2cdc681f10c23a49351b84",
+    "contracts/src/spaces/facets/gated/EntitlementGatedV2.sol": {
+      "keccak256": "0x41c3a1d40d50081219100653cad0298845b3fc79a687e40b14416f108fc495fe",
       "urls": [
-        "bzz-raw://f39d39a3bd3e39c2f6a5b21b82a7339176c163d82335f901a64c57dd73ffa5a3",
-        "dweb:/ipfs/QmP8RmYv79xX8hLmrvjfceW9mdRYCYxMaxpywRpR281tMo"
+        "bzz-raw://71816a60ba16c411e1a31bd01b8b66a2ce01b446ccfd3252680cff2ef9a9293a",
+        "dweb:/ipfs/QmWzc1iwNJJrkoPrHtfgqXrUSaZcyWrbFi7oPottuCyq7W"
       ],
       "license": "MIT"
     },
-    "contracts/src/spaces/facets/gated/IEntitlementGated.sol": {
-      "keccak256": "0x948de1018f7f78366263a40e0f8269e10941216bd03a9996edb24a6230959e74",
+    "contracts/src/spaces/facets/gated/IEntitlementGatedV2.sol": {
+      "keccak256": "0x4667133d3fa09ebe416806203f05a6cf8e5bfbc3403c61a28e9d5d48526fdf72",
       "urls": [
-        "bzz-raw://dc985539ce639f39fd68723acca6424a78deac6cec3693c9d8e1084a487c83ec",
-        "dweb:/ipfs/QmQujX5rmDwhJZurp11FTiPLb7ev9swLTtdkagA8wydZiT"
+        "bzz-raw://edceb965c87488828f8f7a4ced61ac0cc59c4c8016f97c7fde5fe05a241a3f7b",
+        "dweb:/ipfs/QmZnq4bxksDMF4sD4HW1aWUZJRuLKevzvkR3AB3xxqDTcu"
       ],
       "license": "MIT"
     },
@@ -2189,10 +2307,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/facets/membership/MembershipFacet.sol": {
-      "keccak256": "0xb33ce51656ccc56703419a274bbbd05dc3aa285434f851ca6cf53c40280c87b0",
+      "keccak256": "0x4e5959209c6cea97c7cc33edc5c98a071bce71ca3b804591259002805f1a4800",
       "urls": [
-        "bzz-raw://8bea49ffb82f8b54f41cba1fdb51345f618a80e3e5a9c79f5306c5244575c9e0",
-        "dweb:/ipfs/QmeCN8nKYsJakVLiuWuwYPjcYjpTsUhwhcnxKLHD6ktYPq"
+        "bzz-raw://00596261f48e88a012d9a7010404fe353a19f9985c08c85c09a362badcb4422a",
+        "dweb:/ipfs/QmNyvP7vQnfCz8DYqLovBLxqYeruXBfyj7Kqa6tcG9qVCg"
       ],
       "license": "MIT"
     },

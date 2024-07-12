@@ -5,8 +5,8 @@ pragma solidity ^0.8.23;
 import {IMembership} from "./IMembership.sol";
 import {IMembershipPricing} from "./pricing/IMembershipPricing.sol";
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
-import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
-import {IEntitlementGatedBase} from "contracts/src/spaces/facets/gated/IEntitlementGated.sol";
+import {IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlementV2.sol";
+import {IEntitlementGatedBaseV2} from "contracts/src/spaces/facets/gated/IEntitlementGatedV2.sol";
 import {IRolesBase} from "contracts/src/spaces/facets/roles/IRoles.sol";
 
 // libraries
@@ -23,7 +23,7 @@ import {RolesBase} from "contracts/src/spaces/facets/roles/RolesBase.sol";
 import {DispatcherBase} from "contracts/src/spaces/facets/dispatcher/DispatcherBase.sol";
 import {PrepayBase} from "contracts/src/spaces/facets/prepay/PrepayBase.sol";
 
-import {EntitlementGated} from "contracts/src/spaces/facets/gated/EntitlementGated.sol";
+import {EntitlementGatedV2} from "contracts/src/spaces/facets/gated/EntitlementGatedV2.sol";
 
 contract MembershipFacet is
   IMembership,
@@ -35,7 +35,7 @@ contract MembershipFacet is
   RolesBase,
   DispatcherBase,
   PrepayBase,
-  EntitlementGated
+  EntitlementGatedV2
 {
   bytes32 constant JOIN_SPACE =
     bytes32(abi.encodePacked(Permissions.JoinSpace));
@@ -123,7 +123,7 @@ contract MembershipFacet is
           } else {
             _requestEntitlementCheck(
               transactionId,
-              IRuleEntitlement(address(entitlement)),
+              IRuleEntitlementV2(address(entitlement)),
               role.id
             );
             shouldRefund = false;
@@ -351,7 +351,7 @@ contract MembershipFacet is
   /// @dev Hook called after a node has posted the result of an entitlement check
   function _onEntitlementCheckResultPosted(
     bytes32 transactionId,
-    IEntitlementGatedBase.NodeVoteStatus result
+    IEntitlementGatedBaseV2.NodeVoteStatus result
   ) internal override {
     if (result == NodeVoteStatus.PASSED) {
       _issueToken(transactionId);

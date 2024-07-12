@@ -19,7 +19,7 @@
   },
   {
     "type": "function",
-    "name": "__EntitlementGated_init",
+    "name": "__EntitlementGatedV2_init",
     "inputs": [
       {
         "name": "entitlementChecker",
@@ -374,6 +374,98 @@
   },
   {
     "type": "function",
+    "name": "getRuleDataV2",
+    "inputs": [
+      {
+        "name": "transactionId",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "roleId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct IRuleEntitlementV2.RuleData",
+        "components": [
+          {
+            "name": "operations",
+            "type": "tuple[]",
+            "internalType": "struct IRuleEntitlementV2.Operation[]",
+            "components": [
+              {
+                "name": "opType",
+                "type": "uint8",
+                "internalType": "enum IRuleEntitlementV2.CombinedOperationType"
+              },
+              {
+                "name": "index",
+                "type": "uint8",
+                "internalType": "uint8"
+              }
+            ]
+          },
+          {
+            "name": "checkOperations",
+            "type": "tuple[]",
+            "internalType": "struct IRuleEntitlementV2.CheckOperation[]",
+            "components": [
+              {
+                "name": "opType",
+                "type": "uint8",
+                "internalType": "enum IRuleEntitlementV2.CheckOperationType"
+              },
+              {
+                "name": "chainId",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "contractAddress",
+                "type": "address",
+                "internalType": "address"
+              },
+              {
+                "name": "params",
+                "type": "bytes",
+                "internalType": "bytes"
+              }
+            ]
+          },
+          {
+            "name": "logicalOperations",
+            "type": "tuple[]",
+            "internalType": "struct IRuleEntitlementV2.LogicalOperation[]",
+            "components": [
+              {
+                "name": "logOpType",
+                "type": "uint8",
+                "internalType": "enum IRuleEntitlementV2.LogicalOperationType"
+              },
+              {
+                "name": "leftOperationIndex",
+                "type": "uint8",
+                "internalType": "uint8"
+              },
+              {
+                "name": "rightOperationIndex",
+                "type": "uint8",
+                "internalType": "uint8"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getSpaceFactory",
     "inputs": [],
     "outputs": [
@@ -471,7 +563,7 @@
       {
         "name": "result",
         "type": "uint8",
-        "internalType": "enum IEntitlementGatedBase.NodeVoteStatus"
+        "internalType": "enum IEntitlementGatedBaseV2.NodeVoteStatus"
       }
     ],
     "outputs": [],
@@ -819,7 +911,7 @@
         "name": "result",
         "type": "uint8",
         "indexed": false,
-        "internalType": "enum IEntitlementGatedBase.NodeVoteStatus"
+        "internalType": "enum IEntitlementGatedBaseV2.NodeVoteStatus"
       }
     ],
     "anonymous": false
@@ -1336,6 +1428,11 @@
   },
   {
     "type": "error",
+    "name": "IncompatibleRuleData",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "Initializable_InInitializingState",
     "inputs": []
   },
@@ -1352,6 +1449,11 @@
   {
     "type": "error",
     "name": "Introspection_NotSupported",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidRuleData",
     "inputs": []
   },
   {
