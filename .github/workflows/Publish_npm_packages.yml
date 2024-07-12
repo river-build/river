@@ -1,5 +1,6 @@
 name: Nightly npm package publish
-
+env:
+    FOUNDRY_VERSION: nightly
 on:
     schedule:
         - cron: '0 0 * * *' # Runs every night at midnight
@@ -26,6 +27,14 @@ jobs:
               with:
                   node-version: '20'
                   cache: 'yarn'
+
+            - name: Install Foundry
+              uses: foundry-rs/foundry-toolchain@v1
+              with:
+                  version: ${{ env.FOUNDRY_VERSION }}
+
+            - name: Print versions
+              run: ./scripts/print-versions.sh
 
             - name: Authenticate to npm
               run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
