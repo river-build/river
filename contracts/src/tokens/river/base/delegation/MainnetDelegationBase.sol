@@ -71,8 +71,6 @@ abstract contract MainnetDelegationBase is IMainnetDelegationBase {
     delegation.quantity = quantity;
     delegation.delegator = delegator;
 
-    if (delegation.delegationTime == 0) {}
-
     // Update the claimer if it has changed
     if (claimer != currentClaimer) {
       if (currentClaimer != address(0)) {

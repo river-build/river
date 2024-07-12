@@ -22,6 +22,21 @@ contract ForkMainnetDelegationTest is TestUtils {
     mainnetDelegation = MainnetDelegation(baseRegistry);
   }
 
+  function test_removeDelegators() external onlyForked {
+    address getMessenger = mainnetDelegation.getMessenger();
+    address getProxyDelegation = mainnetDelegation.getProxyDelegation();
+
+    MockMessenger mockMessenger = new MockMessenger();
+    vm.etch(getMessenger, address(mockMessenger).code);
+    MockMessenger(getMessenger).setXDomainMessageSender(getProxyDelegation);
+
+    vm.prank(address(getMessenger));
+    (bool success, ) = baseRegistry.call{gas: 200_000}(
+      // solhint-disable-next-line max-line-length
+      hex"012ad9da00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000002000000000000000000000000204f1aa5b666d0eac07228d3065a461e92ac399c0000000000000000000000003541f646d321cacbc0ff4a7cccb583e8b6e413da"
+    );
+  }
+
   function test_setBatchAuthorizedClaimers() external onlyForked {
     address getMessenger = mainnetDelegation.getMessenger();
     address getProxyDelegation = mainnetDelegation.getProxyDelegation();
