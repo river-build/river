@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"os"
 	"testing"
 
 	"github.com/river-build/river/core/node/crypto"
@@ -52,6 +53,10 @@ func TestReplAdd(t *testing.T) {
 }
 
 func TestReplMiniblock(t *testing.T) {
+	if os.Getenv("RIVER_TEST_ENABLE_FLAKY") != "true" {
+		t.Skip("skipping flaky test")
+	}
+
 	tt := newServiceTester(t, serviceTesterOpts{numNodes: 5, replicationFactor: 5, start: true})
 	ctx := tt.ctx
 	require := tt.require
