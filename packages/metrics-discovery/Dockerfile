@@ -9,4 +9,4 @@ RUN yarn build:metrics-discovery
 
 WORKDIR /river/packages/metrics-discovery
 
-CMD [ "yarn", "start"]
+CMD ["sleep", "infinity"]
