@@ -8,7 +8,7 @@ services:
             context: ../../
             dockerfile: ./packages/metrics-discovery/Dockerfile
         volumes:
-            - ./prometheus/etc/config:/river/packages/metrics-discovery/prometheus/etc/config:rw
+            - ./prometheus/etc/:/river/packages/metrics-discovery/prometheus/etc:rw
         env_file:
             - ./.env
 
@@ -28,7 +28,7 @@ services:
             - ./prometheus/etc:/prometheus/etc
             - prometheus_data:/prometheus
         command:
-            - --config.file=/prometheus/etc/config/prometheus-config.yml
+            - --config.file=/prometheus/etc/prometheus.yml
             - --log.level=debug
         ports:
             - '9090:9090'
