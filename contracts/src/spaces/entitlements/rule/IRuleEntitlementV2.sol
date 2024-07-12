@@ -94,6 +94,10 @@ interface IRuleEntitlementV2 is IEntitlement {
     uint256 threshold;
   }
 
+  struct MockParams {
+    uint256 threshold;
+  }
+
   struct LogicalOperation {
     LogicalOperationType logOpType;
     uint8 leftOperationIndex;

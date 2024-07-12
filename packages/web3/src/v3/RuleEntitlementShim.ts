@@ -1,9 +1,9 @@
 import {
-    IRuleEntitlement as LocalhostContract,
-    IRuleEntitlementInterface as LocalhostInterface,
-} from '@river-build/generated/dev/typings/IRuleEntitlement'
+    IRuleEntitlementV2 as LocalhostContract,
+    IRuleEntitlementV2Interface as LocalhostInterface,
+} from '@river-build/generated/dev/typings/IRuleEntitlementV2'
 
-import LocalhostAbi from '@river-build/generated/dev/abis/IRuleEntitlement.abi.json' assert { type: 'json' }
+import LocalhostAbi from '@river-build/generated/dev/abis/IRuleEntitlementV2.abi.json' assert { type: 'json' }
 
 import { BaseContractShim } from './BaseContractShim'
 import { BigNumberish, ethers } from 'ethers'
@@ -33,7 +33,7 @@ export class RuleEntitlementShim
                 logicalOperations: [],
             }
         }
-        return this.read.getRuleData(roleId)
+        return this.read.getRuleDataV2(roleId)
     }
 
     public decodeGetRuleData(

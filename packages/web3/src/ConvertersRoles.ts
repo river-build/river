@@ -2,12 +2,12 @@ import { EntitlementModuleType, Permission, EntitlementStruct } from './Contract
 import { createRuleEntitlementStruct, createUserEntitlementStruct } from './ConvertersEntitlements'
 
 import { Space as SpaceV3 } from './v3/Space'
-import { IRuleEntitlement } from './v3'
+import { IRuleEntitlementV2 } from './v3'
 
 export async function createEntitlementStruct<Space extends SpaceV3>(
     spaceIn: Space,
     users: string[],
-    ruleData: IRuleEntitlement.RuleDataStruct,
+    ruleData: IRuleEntitlementV2.RuleDataStruct,
 ): Promise<EntitlementStruct[]> {
     const space = spaceIn as SpaceV3
     // figure out the addresses for each entitlement module

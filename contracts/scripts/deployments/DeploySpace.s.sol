@@ -44,7 +44,8 @@ contract DeploySpace is DiamondDeployer {
   DeployDiamondCut diamondCutHelper = new DeployDiamondCut();
   DeployDiamondLoupe diamondLoupeHelper = new DeployDiamondLoupe();
   DeployIntrospection introspectionHelper = new DeployIntrospection();
-  DeployEntitlementGatedV2 entitlementGatedV2Helper = new DeployEntitlementGatedV2();
+  DeployEntitlementGatedV2 entitlementGatedV2Helper =
+    new DeployEntitlementGatedV2();
   DeployERC721AQueryable erc721aQueryableHelper = new DeployERC721AQueryable();
   DeployBanning banningHelper = new DeployBanning();
   DeployMembership membershipHelper = new DeployMembership();

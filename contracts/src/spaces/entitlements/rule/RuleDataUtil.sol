@@ -138,6 +138,14 @@ library RuleDataUtil {
         );
         v1CheckOp.threshold = v2Params.threshold;
       } else if (
+        v2CheckOp.opType == IRuleEntitlementV2.CheckOperationType.MOCK
+      ) {
+        IRuleEntitlementV2.MockParams memory v2Params = abi.decode(
+          v2CheckOp.params,
+          (IRuleEntitlementV2.MockParams)
+        );
+        v1CheckOp.threshold = v2Params.threshold;
+      } else if (
         v2CheckOp.opType == IRuleEntitlementV2.CheckOperationType.ERC1155
       ) {
         // 1155s are not supported in v1
@@ -200,6 +208,10 @@ library RuleDataUtil {
         v1CheckOp.opType == IRuleEntitlement.CheckOperationType.ERC20
       ) {
         IRuleEntitlementV2.ERC20Params memory v2Params;
+        v2Params.threshold = v1CheckOp.threshold;
+        v2CheckOp.params = abi.encode(v2Params);
+      } else if (v1CheckOp.opType == IRuleEntitlement.CheckOperationType.MOCK) {
+        IRuleEntitlementV2.MockParams memory v2Params;
         v2Params.threshold = v1CheckOp.threshold;
         v2CheckOp.params = abi.encode(v2Params);
       } else if (
