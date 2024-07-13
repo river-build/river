@@ -41,7 +41,7 @@ export class RuleEntitlementShim
     ): LocalhostContract.RuleDataStruct[] | undefined {
         try {
             const decoded = this.decodeFunctionResult(
-                'getRuleData',
+                'getRuleDataV2',
                 entitlmentData,
             ) as unknown as LocalhostContract.RuleDataStruct[]
 
