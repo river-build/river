@@ -3,7 +3,7 @@ import { MetricsDiscovery } from './metrics-discovery'
 import { envVarsSchema } from './env-vars'
 import { sleep } from './utils'
 import { createPrometheusConfig } from './create-prometheus-config'
-import http from 'node:http';
+import http from 'node:http'
 
 const PROMETHEUS_TARGETS_FILE = './prometheus/etc/targets.json'
 const SLEEP_DURATION_MS = 1000 * 60 * 5 // 5 minutes
@@ -24,18 +24,18 @@ const run = async () => {
 
     const server = http.createServer((req, res) => {
         if (numWrites === 0) {
-            res.writeHead(500, { 'Content-Type': 'text/plain' });
-            res.end('No prometheus targets written yet\n');
+            res.writeHead(500, { 'Content-Type': 'text/plain' })
+            res.end('No prometheus targets written yet\n')
             return
         } else {
-            res.writeHead(200, { 'Content-Type': 'text/plain' });
-            res.end('Healthy\n');
+            res.writeHead(200, { 'Content-Type': 'text/plain' })
+            res.end('Healthy\n')
         }
-    });
-    
+    })
+
     server.listen(PORT, () => {
-        console.log(`Server running at http://localhost:${PORT}/`);
-    });
+        console.log(`Server running at http://localhost:${PORT}/`)
+    })
 
     for (;;) {
         console.info('Getting prometheus targets...')
