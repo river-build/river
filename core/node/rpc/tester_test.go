@@ -3,9 +3,11 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"hash/fnv"
 	"log"
 	"math/big"
 	"net"
+	"slices"
 	"testing"
 	"time"
 
@@ -274,6 +276,12 @@ func testClient(url string) protocolconnect.StreamServiceClient {
 	return protocolconnect.NewStreamServiceClient(nodes.TestHttpClientMaker(), url, connect.WithGRPCWeb())
 }
 
+func bytesHash(b []byte) uint64 {
+	h := fnv.New64a()
+	_, _ = h.Write(b)
+	return h.Sum64()
+}
+
 func (st *serviceTester) compareStreamDataInStorage(
 	t assert.TestingT,
 	streamId StreamId,
@@ -290,8 +298,12 @@ func (st *serviceTester) compareStreamDataInStorage(
 		data = append(data, d)
 	}
 
+	var evHashes0 []uint64
 	for i, d := range data {
 		failed := false
+
+		failed = !assert.Equal(t, streamId, d.StreamId, "StreamId, node %d", i) || failed
+
 		failed = !assert.Equal(t, expectedMbs, len(d.Miniblocks), "Miniblocks, node %d", i) || failed
 
 		eventsLen := 0
@@ -303,9 +315,58 @@ func (st *serviceTester) compareStreamDataInStorage(
 		}
 		failed = !assert.Equal(t, expectedEvents, eventsLen, "Events, node %d", i) || failed
 
-		if !failed && i > 0 {
-			assert.EqualValues(t, data[0].Miniblocks, d.Miniblocks, "Bad mbs in node %d", i)
-			assert.EqualValues(t, data[0].Events, d.Events, "Bad events in node %d", i)
+		if !failed {
+			// All events should have the same generation and consecutive slots
+			// starting with -1 (marker slot for in database table)
+			if len(d.Events) > 1 {
+				gen := d.Events[0].Generation
+				for j, e := range d.Events {
+					if !assert.Equal(t, gen, e.Generation, "Mismatching event generation") ||
+						!assert.EqualValues(t, j-1, e.Slot, "Mismatching event slot") {
+						failed = true
+						break
+					}
+				}
+			}
+		}
+
+		// Events in minipools might be in different order
+		evHashes := []uint64{}
+		for _, e := range d.Events {
+			evHashes = append(evHashes, bytesHash(e.Data))
+		}
+		slices.Sort(evHashes)
+
+		if i > 0 {
+			if !failed {
+				// Compare fields separately to get better error messages
+				assert.Equal(
+					t,
+					data[0].LatestSnapshotMiniblockNum,
+					d.LatestSnapshotMiniblockNum,
+					"Bad snapshot num in node %d",
+					i,
+				)
+				for j, mb := range data[i].Miniblocks {
+					exp := data[0].Miniblocks[j]
+					_ = assert.EqualValues(t, exp.MiniblockNumber, mb.MiniblockNumber, "Bad mb num in node %d", i) &&
+						assert.EqualValues(t, exp.Hash, mb.Hash, "Bad mb hash in node %d", i) &&
+						assert.Equal(
+							t,
+							bytesHash(exp.Data),
+							bytesHash(mb.Data),
+							"Bad mb data in node %d, mb %d",
+							i,
+							j,
+						)
+				}
+
+				if !slices.Equal(evHashes0, evHashes) {
+					assert.Fail(t, "Events mismatch", "node %d", i)
+				}
+			}
+		} else {
+			evHashes0 = evHashes
 		}
 
 		if failed {
