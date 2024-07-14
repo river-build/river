@@ -8,10 +8,13 @@ services:
             - ./prometheus/etc/:/river/packages/metrics-discovery/prometheus/etc:rw
         env_file:
             - ./.env
+        ports:
+          - "8080:8080"
 
     prometheus:
         depends_on:
-            - river-metrics-discovery
+            river-metrics-discovery:
+                condition: service_healthy
         container_name: prometheus
         image: prom/prometheus:latest
         user: root
@@ -30,8 +33,8 @@ services:
 
     datadog:
         depends_on:
-            - prometheus
-            - river-metrics-discovery
+            river-metrics-discovery:
+                condition: service_healthy
         container_name: datadog
         image: datadog/agent:7
         ports:
