@@ -1,6 +1,3 @@
-volumes:
-    prometheus_data: {}
-
 services:
     river-metrics-discovery:
         container_name: river-metrics-discovery
@@ -16,7 +13,6 @@ services:
         depends_on:
             - river-metrics-discovery
         container_name: prometheus
-        restart: always
         image: prom/prometheus:latest
         user: root
         labels:
@@ -26,7 +22,6 @@ services:
             # collect_counters_with_distributions
         volumes:
             - ./prometheus/etc:/prometheus/etc
-            - prometheus_data:/prometheus
         command:
             - --config.file=/prometheus/etc/prometheus.yml
             - --log.level=debug
