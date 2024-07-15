@@ -260,7 +260,7 @@ export function decodeCheckOperation(
     let threshold: bigint | undefined = undefined
     let tokenId: bigint | undefined = undefined
 
-    let typedCheckOp = checkOperation as {
+    const typedCheckOp = checkOperation as {
         opType: number
         chainId: bigint
         contractAddress: `0x${string}`
