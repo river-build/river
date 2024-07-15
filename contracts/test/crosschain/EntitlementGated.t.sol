@@ -9,10 +9,12 @@ import {IEntitlementChecker} from "contracts/src/base/registry/facets/checker/IE
 import {IEntitlementCheckerBase} from "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol";
 import {IEntitlementGatedV2} from "contracts/src/spaces/facets/gated/IEntitlementGatedV2.sol";
 import {IEntitlementGatedBaseV2} from "contracts/src/spaces/facets/gated/IEntitlementGatedV2.sol";
+import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlementV2.sol";
 
 //libraries
 import {RuleEntitlementUtil} from "./RuleEntitlementUtil.sol";
+import {RuleDataUtil} from "contracts/src/spaces/entitlements/rule/RuleDataUtil.sol";
 
 //contracts
 import {EntitlementChecker} from "contracts/src/base/registry/facets/checker/EntitlementChecker.sol";
@@ -206,6 +208,18 @@ contract EntitlementGatedTest is
       0
     );
     assertRuleDatasEqual(ruleData, RuleEntitlementUtil.getMockERC721RuleData());
+  }
+
+  function test_getEncodedRuleData_Legacy() external {
+    bytes32 requestId = gated.requestEntitlementCheckV2(
+      0,
+      RuleEntitlementUtil.getMockERC721RuleData()
+    );
+    IRuleEntitlement.RuleData memory ruleData = gated.getRuleData(requestId, 0);
+    assertRuleDatasEqual(
+      RuleDataUtil.convertV1ToV2RuleData(ruleData),
+      RuleEntitlementUtil.getMockERC721RuleData()
+    );
   }
 
   // =============================================================
