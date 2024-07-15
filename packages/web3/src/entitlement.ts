@@ -254,6 +254,56 @@ function decode1155Params(params: Address): ERC1155Params {
     }
 }
 
+export function decodeCheckOperation(
+    checkOperation: IRuleEntitlementV2.CheckOperationStruct,
+): CheckOperation {
+    let threshold: bigint | undefined = undefined
+    let tokenId: bigint | undefined = undefined
+
+    let typedCheckOp = checkOperation as {
+        opType: number
+        chainId: bigint
+        contractAddress: `0x${string}`
+        params: `0x${string}`
+    }
+
+    switch (checkOperation.opType) {
+        case CheckOperationType.ERC20: {
+            const decodedParams = decodeERC20Params(typedCheckOp.params)
+            threshold = decodedParams.threshold
+            break
+        }
+        case CheckOperationType.ERC721: {
+            const decodedParams = decodeERC721Params(typedCheckOp.params)
+            threshold = decodedParams.threshold
+            break
+        }
+        case CheckOperationType.MOCK: {
+            const decodedParams = decodeMockParams(typedCheckOp.params)
+            threshold = decodedParams.threshold
+            break
+        }
+        case CheckOperationType.ERC1155: {
+            const decodedParams = decode1155Params(typedCheckOp.params)
+            threshold = decodedParams.threshold
+            tokenId = decodedParams.tokenId
+            break
+        }
+
+        default:
+            break
+    }
+
+    return {
+        opType: OperationType.CHECK,
+        checkType: typedCheckOp.opType,
+        chainId: typedCheckOp.chainId,
+        contractAddress: typedCheckOp.contractAddress,
+        threshold: threshold,
+        tokenId: tokenId,
+    }
+}
+
 export function ruleDataToOperations(data: IRuleEntitlementV2.RuleDataStruct[]): Operation[] {
     if (data.length === 0) {
         return []
