@@ -13,7 +13,7 @@ export type { IERC5267 } from "./IERC5267";
 export type { IERC721A } from "./IERC721A";
 export type { IERC721AQueryable } from "./IERC721AQueryable";
 export type { IEntitlementChecker } from "./IEntitlementChecker";
-export type { IEntitlementDataQueryable } from "./IEntitlementDataQueryable";
+export type { IEntitlementDataQueryableV2 } from "./IEntitlementDataQueryableV2";
 export type { IEntitlementsManager } from "./IEntitlementsManager";
 export type { IMulticall } from "./IMulticall";
 export type { INodeOperator } from "./INodeOperator";
@@ -47,7 +47,7 @@ export { ICustomEntitlement__factory } from "./factories/ICustomEntitlement__fac
 export { IDiamond__factory } from "./factories/IDiamond__factory";
 export { IDiamondCut__factory } from "./factories/IDiamondCut__factory";
 export { IEntitlementChecker__factory } from "./factories/IEntitlementChecker__factory";
-export { IEntitlementDataQueryable__factory } from "./factories/IEntitlementDataQueryable__factory";
+export { IEntitlementDataQueryableV2__factory } from "./factories/IEntitlementDataQueryableV2__factory";
 export { IEntitlementsManager__factory } from "./factories/IEntitlementsManager__factory";
 export { IERC721A__factory } from "./factories/IERC721A__factory";
 export { IERC721AQueryable__factory } from "./factories/IERC721AQueryable__factory";

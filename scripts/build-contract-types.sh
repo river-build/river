@@ -9,11 +9,11 @@ ABI_DIR="packages/generated/dev/abis"
 
 forge build
 
-CONTRACT_INTERFACES="(IDiamond|IDiamondCut|IArchitect|IProxyManager|IPausable|IEntitlementsManager|IChannel|IRoles|IMulticall|IRuleEntitlementV2|IWalletLink|INodeRegistry|IOperatorRegistry|IStreamRegistry|OwnableFacet|TokenPausableFacet|UserEntitlement|ISpaceOwner|MockERC721A|MembershipFacet|Member|IBanning|IPricingModules|ICustomEntitlement|MockEntitlementGatedV2|PrepayFacet|IERC721AQueryable|IEntitlementDataQueryable|PlatformRequirementsFacet|IERC721A|INodeOperator|ISpaceDelegation|IEntitlementChecker|IERC5267)"
+CONTRACT_INTERFACES="(IDiamond|IDiamondCut|IArchitect|IProxyManager|IPausable|IEntitlementsManager|IChannel|IRoles|IMulticall|IRuleEntitlementV2|IWalletLink|INodeRegistry|IOperatorRegistry|IStreamRegistry|OwnableFacet|TokenPausableFacet|UserEntitlement|ISpaceOwner|MockERC721A|MembershipFacet|Member|IBanning|IPricingModules|ICustomEntitlement|MockEntitlementGatedV2|PrepayFacet|IERC721AQueryable|IEntitlementDataQueryableV2|PlatformRequirementsFacet|IERC721A|INodeOperator|ISpaceDelegation|IEntitlementChecker|IERC5267)"
 
 yarn typechain --target=ethers-v5 "contracts/out/**/?${CONTRACT_INTERFACES}.json" --out-dir "packages/generated/dev/typings"
 
-mkdir -p $ABI_DIR && cp -a contracts/out/{Diamond,DiamondCutFacet,Architect,ProxyManager,IPausable,EntitlementsManager,Channels,Roles,IMulticall,OwnableFacet,WalletLink,MockWalletLink,NodeRegistry,OperatorRegistry,StreamRegistry,TokenPausableFacet,IRuleEntitlementV2,UserEntitlement,SpaceOwner,MockERC721A,MembershipFacet,Member,MockRiverRegistry,IBanning,IPricingModules,ICustomEntitlement,MockCustomEntitlement,MockEntitlementGatedV2,PrepayFacet,IERC721AQueryable,IEntitlementDataQueryable,PlatformRequirementsFacet,IERC721A,INodeOperator,ISpaceDelegation,IEntitlementChecker,IERC5267}.sol/* "$ABI_DIR"
+mkdir -p $ABI_DIR && cp -a contracts/out/{Diamond,DiamondCutFacet,Architect,ProxyManager,IPausable,EntitlementsManager,Channels,Roles,IMulticall,OwnableFacet,WalletLink,MockWalletLink,NodeRegistry,OperatorRegistry,StreamRegistry,TokenPausableFacet,IRuleEntitlementV2,UserEntitlement,SpaceOwner,MockERC721A,MembershipFacet,Member,MockRiverRegistry,IBanning,IPricingModules,ICustomEntitlement,MockCustomEntitlement,MockEntitlementGatedV2,PrepayFacet,IERC721AQueryable,IEntitlementDataQueryableV2,PlatformRequirementsFacet,IERC721A,INodeOperator,ISpaceDelegation,IEntitlementChecker,IERC5267}.sol/* "$ABI_DIR"
 
 # Copy the json abis to TS files for type inference
 for file in $ABI_DIR/*.abi.json; do

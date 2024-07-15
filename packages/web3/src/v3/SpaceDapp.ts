@@ -491,7 +491,7 @@ export class SpaceDapp implements ISpaceDapp {
         }
 
         const entitlementData =
-            await space.EntitlementDataQueryable.read.getEntitlementDataByPermission(permission)
+            await space.EntitlementDataQueryable.read.getEntitlementDataByPermissionV2(permission)
 
         return await this.decodeEntitlementData(space, entitlementData)
     }
@@ -526,7 +526,7 @@ export class SpaceDapp implements ISpaceDapp {
         }
 
         const entitlementData =
-            await space.EntitlementDataQueryable.read.getChannelEntitlementDataByPermission(
+            await space.EntitlementDataQueryable.read.getChannelEntitlementDataByPermissionV2(
                 channelId,
                 permission,
             )

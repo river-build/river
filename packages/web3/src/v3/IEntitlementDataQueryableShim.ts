@@ -1,8 +1,8 @@
 import {
-    IEntitlementDataQueryable as LocalhostContract,
-    IEntitlementDataQueryableInterface as LocalhostInterface,
-    IEntitlementDataQueryableBase as LocalhostBase,
-} from '@river-build/generated/dev/typings/IEntitlementDataQueryable'
+    IEntitlementDataQueryableV2 as LocalhostContract,
+    IEntitlementDataQueryableV2Interface as LocalhostInterface,
+    IEntitlementDataQueryableBaseV2 as LocalhostBase,
+} from '@river-build/generated/dev/typings/IEntitlementDataQueryableV2'
 
 import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'
