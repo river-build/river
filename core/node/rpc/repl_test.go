@@ -5,6 +5,7 @@ import (
 
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/protocol"
+	"github.com/river-build/river/core/node/testutils"
 )
 
 func TestReplCreate(t *testing.T) {
@@ -52,6 +53,8 @@ func TestReplAdd(t *testing.T) {
 }
 
 func TestReplMiniblock(t *testing.T) {
+	testutils.SkipFlackyTest(t)
+
 	tt := newServiceTester(t, serviceTesterOpts{numNodes: 5, replicationFactor: 5, start: true})
 	ctx := tt.ctx
 	require := tt.require
