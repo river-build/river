@@ -30,7 +30,7 @@ import {DeployUserEntitlement} from "contracts/scripts/deployments/DeployUserEnt
 import {DeployMultiInit} from "contracts/scripts/deployments/DeployMultiInit.s.sol";
 import {DeploySpace} from "contracts/scripts/deployments/DeploySpace.s.sol";
 import {DeploySpaceOwner} from "contracts/scripts/deployments/DeploySpaceOwner.s.sol";
-import {DeployRuleEntitlement} from "contracts/scripts/deployments/DeployRuleEntitlement.s.sol";
+import {DeployRuleEntitlementV2} from "contracts/scripts/deployments/DeployRuleEntitlementV2.s.sol";
 import {DeployWalletLink} from "contracts/scripts/deployments/facets/DeployWalletLink.s.sol";
 import {DeployTieredLogPricing} from "contracts/scripts/deployments/DeployTieredLogPricing.s.sol";
 import {DeployFixedPricing} from "contracts/scripts/deployments/DeployFixedPricing.s.sol";
@@ -61,7 +61,8 @@ contract DeploySpaceFactory is DiamondDeployer {
   DeploySpace deploySpace = new DeploySpace();
   DeploySpaceOwner deploySpaceOwner = new DeploySpaceOwner();
   DeployUserEntitlement deployUserEntitlement = new DeployUserEntitlement();
-  DeployRuleEntitlement deployRuleEntitlement = new DeployRuleEntitlement();
+  DeployRuleEntitlementV2 deployRuleEntitlementV2 =
+    new DeployRuleEntitlementV2();
   DeployTieredLogPricing deployTieredLogPricing = new DeployTieredLogPricing();
   DeployFixedPricing deployFixedPricing = new DeployFixedPricing();
   DeployPlatformRequirements platformReqsHelper =
@@ -109,7 +110,7 @@ contract DeploySpaceFactory is DiamondDeployer {
 
     // entitlement modules
     userEntitlement = deployUserEntitlement.deploy();
-    ruleEntitlement = deployRuleEntitlement.deploy();
+    ruleEntitlement = deployRuleEntitlementV2.deploy();
 
     // pricing modules
     tieredLogPricing = deployTieredLogPricing.deploy();
