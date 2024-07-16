@@ -1,6 +1,6 @@
 import { Message, PlainMessage } from '@bufbuild/protobuf'
 import { datadogRum } from '@datadog/browser-rum'
-import { isPublicClient, Permission } from '@river-build/web3'
+import { Permission } from '@river-build/web3'
 import {
     MembershipOp,
     ChannelOp,
@@ -690,7 +690,7 @@ export class Client
         assert(this.userStreamId !== undefined, 'userStreamId must be set')
         if (isPublicScopeSpace) {
             assert(spaceId !== undefined, 'spaceId must be set')
-            assert(isSpaceStreamId(spaceId), 'spaceId must be a valid streamId')                
+            assert(isSpaceStreamId(spaceId), 'spaceId must be a valid streamId')
         } else {
             assert(
                 isChannelStreamId(channelId) ||
@@ -700,7 +700,10 @@ export class Client
             )
         }
 
-        const streamId = (isPublicScopeSpace && spaceId) ? makeMediaStreamIdFromSpaceId(spaceId) : makeUniqueMediaStreamId()
+        const streamId =
+            isPublicScopeSpace && spaceId
+                ? makeMediaStreamIdFromSpaceId(spaceId)
+                : makeUniqueMediaStreamId()
 
         this.logCall('createMedia', channelId, streamId)
 
