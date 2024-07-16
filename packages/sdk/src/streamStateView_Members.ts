@@ -7,15 +7,22 @@ import {
 } from '@river-build/proto'
 import TypedEmitter from 'typed-emitter'
 import { StreamEncryptionEvents, StreamStateEvents } from './streamEvents'
-import { ConfirmedTimelineEvent, RemoteTimelineEvent } from './types'
+import {
+    ConfirmedTimelineEvent,
+    RemoteTimelineEvent,
+    StreamTimelineEvent,
+    makeRemoteTimelineEvent,
+} from './types'
 import { isDefined, logNever } from './check'
 import { userIdFromAddress } from './id'
 import { StreamStateView_Members_Membership } from './streamStateView_Members_Membership'
 import { StreamStateView_Members_Solicitations } from './streamStateView_Members_Solicitations'
-import { check } from '@river-build/dlog'
+import { bin_toHexString, check } from '@river-build/dlog'
 import { DecryptedContent } from './encryptedContentTypes'
 import { StreamStateView_UserMetadata } from './streamStateView_UserMetadata'
 import { KeySolicitationContent } from '@river-build/encryption'
+import { makeParsedEvent } from './sign'
+import { StreamStateView_AbstractContent } from './streamStateView_AbstractContent'
 
 export type StreamMember = {
     userId: string
@@ -29,14 +36,20 @@ export type StreamMember = {
     nft?: MemberPayload_Nft
 }
 
-export class StreamStateView_Members {
+export interface Pin {
+    event: StreamTimelineEvent
+}
+
+export class StreamStateView_Members extends StreamStateView_AbstractContent {
     readonly streamId: string
     readonly joined = new Map<string, StreamMember>()
     readonly membership: StreamStateView_Members_Membership
     readonly solicitHelper: StreamStateView_Members_Solicitations
     readonly userMetadata: StreamStateView_UserMetadata
+    readonly pins: Pin[] = []
 
     constructor(streamId: string) {
+        super()
         this.streamId = streamId
         this.membership = new StreamStateView_Members_Membership(streamId)
         this.solicitHelper = new StreamStateView_Members_Solicitations(streamId)
@@ -115,15 +128,24 @@ export class StreamStateView_Members {
             encryptionEmitter,
         )
         this.solicitHelper.initSolicitations(Array.from(this.joined.values()), encryptionEmitter)
+
+        snapshot.members?.pins.forEach((pin) => {
+            if (pin.event) {
+                const parsedEvent = makeParsedEvent(pin.event, pin.eventId)
+                const remoteEvent = makeRemoteTimelineEvent({ parsedEvent, eventNum: 0n })
+                const cleartext = cleartexts?.[remoteEvent.hashStr]
+                this.addPin(remoteEvent, cleartext, encryptionEmitter, undefined)
+            }
+        })
     }
 
     prependEvent(
         _event: RemoteTimelineEvent,
-        _payload: MemberPayload,
+        _cleartext: string | undefined,
         _encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
         _stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
     ): void {
-        // noop, everything relevant was in the snapshot
+        //
     }
 
     /**
@@ -132,10 +154,11 @@ export class StreamStateView_Members {
     appendEvent(
         event: RemoteTimelineEvent,
         cleartext: string | undefined,
-        payload: MemberPayload,
         encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
         stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
     ): void {
+        check(event.remoteEvent.event.payload.case === 'memberPayload')
+        const payload: MemberPayload = event.remoteEvent.event.payload.value
         switch (payload.content.case) {
             case 'membership':
                 {
@@ -247,6 +270,21 @@ export class StreamStateView_Members {
                 )
                 break
             }
+            case 'pin':
+                {
+                    const pin = payload.content.value
+                    check(isDefined(pin.event), 'invalid pin event')
+                    const parsedEvent = makeParsedEvent(pin.event, pin.eventId)
+                    const remoteEvent = makeRemoteTimelineEvent({ parsedEvent, eventNum: 0n })
+                    this.addPin(remoteEvent, undefined, encryptionEmitter, stateEmitter)
+                }
+                break
+            case 'unpin':
+                {
+                    const eventId = payload.content.value.eventId
+                    this.removePin(eventId, stateEmitter)
+                }
+                break
             case undefined:
                 break
             default:
@@ -256,10 +294,10 @@ export class StreamStateView_Members {
 
     onConfirmedEvent(
         event: ConfirmedTimelineEvent,
-        payload: MemberPayload,
-        _encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
         stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
     ): void {
+        check(event.remoteEvent.event.payload.case === 'memberPayload')
+        const payload: MemberPayload = event.remoteEvent.event.payload.value
         switch (payload.content.case) {
             case 'membership':
                 {
@@ -292,6 +330,10 @@ export class StreamStateView_Members {
             case 'nft':
                 this.userMetadata.onConfirmedEvent(event, stateEmitter)
                 break
+            case 'pin':
+                break
+            case 'unpin':
+                break
             case undefined:
                 break
             default:
@@ -306,6 +348,11 @@ export class StreamStateView_Members {
     ): void {
         if (content.kind === 'text') {
             this.userMetadata.onDecryptedContent(eventId, content.content, stateEmitter)
+        }
+        const pinIndex = this.pins.findIndex((pin) => pin.event.hashStr === eventId)
+        if (pinIndex !== -1) {
+            this.pins[pinIndex].event.decryptedContent = content
+            stateEmitter?.emit('channelPinDecrypted', this.streamId, this.pins[pinIndex], pinIndex)
         }
     }
 
@@ -327,5 +374,40 @@ export class StreamStateView_Members {
 
     joinedOrInvitedParticipants(): Set<string> {
         return this.membership.joinedOrInvitedParticipants()
+    }
+
+    private addPin(
+        event: RemoteTimelineEvent,
+        cleartext: string | undefined,
+        encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
+        stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
+    ) {
+        const newPin = { event }
+        this.pins.push(newPin)
+        if (
+            event.remoteEvent.event.payload.case === 'channelPayload' &&
+            event.remoteEvent.event.payload.value.content.case === 'message'
+        ) {
+            this.decryptEvent(
+                'channelMessage',
+                event,
+                event.remoteEvent.event.payload.value.content.value,
+                cleartext,
+                encryptionEmitter,
+            )
+        }
+        stateEmitter?.emit('channelPinAdded', this.streamId, newPin)
+    }
+
+    private removePin(
+        eventId: Uint8Array,
+        stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
+    ) {
+        const eventIdStr = bin_toHexString(eventId)
+        const index = this.pins.findIndex((pin) => pin.event.hashStr === eventIdStr)
+        if (index !== -1) {
+            const pin = this.pins.splice(index, 1)[0]
+            stateEmitter?.emit('channelPinRemoved', this.streamId, pin, index)
+        }
     }
 }
