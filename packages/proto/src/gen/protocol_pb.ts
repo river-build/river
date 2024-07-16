@@ -2244,6 +2244,12 @@ export class UserPayload extends Message<UserPayload> {
      */
     value: UserPayload_UserMembershipAction;
     case: "userMembershipAction";
+  } | {
+    /**
+     * @generated from field: river.EncryptedData profile_media = 4;
+     */
+    value: EncryptedData;
+    case: "profileMedia";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<UserPayload>) {
@@ -2257,6 +2263,7 @@ export class UserPayload extends Message<UserPayload> {
     { no: 1, name: "inception", kind: "message", T: UserPayload_Inception, oneof: "content" },
     { no: 2, name: "user_membership", kind: "message", T: UserPayload_UserMembership, oneof: "content" },
     { no: 3, name: "user_membership_action", kind: "message", T: UserPayload_UserMembershipAction, oneof: "content" },
+    { no: 4, name: "profile_media", kind: "message", T: EncryptedData, oneof: "content" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UserPayload {
@@ -2294,6 +2301,11 @@ export class UserPayload_Snapshot extends Message<UserPayload_Snapshot> {
    */
   memberships: UserPayload_UserMembership[] = [];
 
+  /**
+   * @generated from field: river.WrappedEncryptedData profile_media = 3;
+   */
+  profileMedia?: WrappedEncryptedData;
+
   constructor(data?: PartialMessage<UserPayload_Snapshot>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2304,6 +2316,7 @@ export class UserPayload_Snapshot extends Message<UserPayload_Snapshot> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "inception", kind: "message", T: UserPayload_Inception },
     { no: 2, name: "memberships", kind: "message", T: UserPayload_UserMembership, repeated: true },
+    { no: 3, name: "profile_media", kind: "message", T: WrappedEncryptedData },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UserPayload_Snapshot {
@@ -3437,9 +3450,9 @@ export class MediaPayload_Inception extends Message<MediaPayload_Inception> {
   streamId = new Uint8Array(0);
 
   /**
-   * @generated from field: bytes channel_id = 2;
+   * @generated from field: optional bytes channel_id = 2;
    */
-  channelId = new Uint8Array(0);
+  channelId?: Uint8Array;
 
   /**
    * @generated from field: int32 chunk_count = 3;
@@ -3456,6 +3469,11 @@ export class MediaPayload_Inception extends Message<MediaPayload_Inception> {
    */
   spaceId?: Uint8Array;
 
+  /**
+   * @generated from field: optional bytes user_id = 6;
+   */
+  userId?: Uint8Array;
+
   constructor(data?: PartialMessage<MediaPayload_Inception>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3465,10 +3483,11 @@ export class MediaPayload_Inception extends Message<MediaPayload_Inception> {
   static readonly typeName = "river.MediaPayload.Inception";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "stream_id", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
-    { no: 2, name: "channel_id", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 2, name: "channel_id", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
     { no: 3, name: "chunk_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 4, name: "settings", kind: "message", T: StreamSettings },
     { no: 5, name: "space_id", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
+    { no: 6, name: "user_id", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MediaPayload_Inception {

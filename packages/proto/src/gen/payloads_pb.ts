@@ -394,15 +394,15 @@ export class ChannelMessage_Post_Attachment extends Message<ChannelMessage_Post_
     case: "image";
   } | {
     /**
-     * @generated from field: river.ChannelMessage.Post.Content.EmbeddedMedia embeddedMedia = 102;
+     * @generated from field: river.EmbeddedMedia embeddedMedia = 102;
      */
-    value: ChannelMessage_Post_Content_EmbeddedMedia;
+    value: EmbeddedMedia;
     case: "embeddedMedia";
   } | {
     /**
-     * @generated from field: river.ChannelMessage.Post.Content.ChunkedMedia chunkedMedia = 103;
+     * @generated from field: river.ChunkedMedia chunkedMedia = 103;
      */
-    value: ChannelMessage_Post_Content_ChunkedMedia;
+    value: ChunkedMedia;
     case: "chunkedMedia";
   } | {
     /**
@@ -427,8 +427,8 @@ export class ChannelMessage_Post_Attachment extends Message<ChannelMessage_Post_
   static readonly typeName = "river.ChannelMessage.Post.Attachment";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 101, name: "image", kind: "message", T: ChannelMessage_Post_Content_Image, oneof: "content" },
-    { no: 102, name: "embeddedMedia", kind: "message", T: ChannelMessage_Post_Content_EmbeddedMedia, oneof: "content" },
-    { no: 103, name: "chunkedMedia", kind: "message", T: ChannelMessage_Post_Content_ChunkedMedia, oneof: "content" },
+    { no: 102, name: "embeddedMedia", kind: "message", T: EmbeddedMedia, oneof: "content" },
+    { no: 103, name: "chunkedMedia", kind: "message", T: ChunkedMedia, oneof: "content" },
     { no: 104, name: "embeddedMessage", kind: "message", T: ChannelMessage_Post_Content_EmbeddedMessage, oneof: "content" },
     { no: 105, name: "unfurledUrl", kind: "message", T: ChannelMessage_Post_Content_UnfurledURL, oneof: "content" },
   ]);
@@ -680,214 +680,6 @@ export class ChannelMessage_Post_Content_GM extends Message<ChannelMessage_Post_
 
   static equals(a: ChannelMessage_Post_Content_GM | PlainMessage<ChannelMessage_Post_Content_GM> | undefined, b: ChannelMessage_Post_Content_GM | PlainMessage<ChannelMessage_Post_Content_GM> | undefined): boolean {
     return proto3.util.equals(ChannelMessage_Post_Content_GM, a, b);
-  }
-}
-
-/**
- * @generated from message river.ChannelMessage.Post.Content.MediaInfo
- */
-export class ChannelMessage_Post_Content_MediaInfo extends Message<ChannelMessage_Post_Content_MediaInfo> {
-  /**
-   * @generated from field: string mimetype = 1;
-   */
-  mimetype = "";
-
-  /**
-   * @generated from field: int64 sizeBytes = 2;
-   */
-  sizeBytes = protoInt64.zero;
-
-  /**
-   * @generated from field: int32 widthPixels = 3;
-   */
-  widthPixels = 0;
-
-  /**
-   * @generated from field: int32 heightPixels = 4;
-   */
-  heightPixels = 0;
-
-  /**
-   * @generated from field: string filename = 5;
-   */
-  filename = "";
-
-  constructor(data?: PartialMessage<ChannelMessage_Post_Content_MediaInfo>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "river.ChannelMessage.Post.Content.MediaInfo";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "mimetype", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "sizeBytes", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 3, name: "widthPixels", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 4, name: "heightPixels", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
-    { no: 5, name: "filename", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChannelMessage_Post_Content_MediaInfo {
-    return new ChannelMessage_Post_Content_MediaInfo().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ChannelMessage_Post_Content_MediaInfo {
-    return new ChannelMessage_Post_Content_MediaInfo().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ChannelMessage_Post_Content_MediaInfo {
-    return new ChannelMessage_Post_Content_MediaInfo().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ChannelMessage_Post_Content_MediaInfo | PlainMessage<ChannelMessage_Post_Content_MediaInfo> | undefined, b: ChannelMessage_Post_Content_MediaInfo | PlainMessage<ChannelMessage_Post_Content_MediaInfo> | undefined): boolean {
-    return proto3.util.equals(ChannelMessage_Post_Content_MediaInfo, a, b);
-  }
-}
-
-/**
- * @generated from message river.ChannelMessage.Post.Content.EmbeddedMedia
- */
-export class ChannelMessage_Post_Content_EmbeddedMedia extends Message<ChannelMessage_Post_Content_EmbeddedMedia> {
-  /**
-   * @generated from field: river.ChannelMessage.Post.Content.MediaInfo info = 1;
-   */
-  info?: ChannelMessage_Post_Content_MediaInfo;
-
-  /**
-   * @generated from field: bytes content = 2;
-   */
-  content = new Uint8Array(0);
-
-  constructor(data?: PartialMessage<ChannelMessage_Post_Content_EmbeddedMedia>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "river.ChannelMessage.Post.Content.EmbeddedMedia";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "info", kind: "message", T: ChannelMessage_Post_Content_MediaInfo },
-    { no: 2, name: "content", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChannelMessage_Post_Content_EmbeddedMedia {
-    return new ChannelMessage_Post_Content_EmbeddedMedia().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ChannelMessage_Post_Content_EmbeddedMedia {
-    return new ChannelMessage_Post_Content_EmbeddedMedia().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ChannelMessage_Post_Content_EmbeddedMedia {
-    return new ChannelMessage_Post_Content_EmbeddedMedia().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ChannelMessage_Post_Content_EmbeddedMedia | PlainMessage<ChannelMessage_Post_Content_EmbeddedMedia> | undefined, b: ChannelMessage_Post_Content_EmbeddedMedia | PlainMessage<ChannelMessage_Post_Content_EmbeddedMedia> | undefined): boolean {
-    return proto3.util.equals(ChannelMessage_Post_Content_EmbeddedMedia, a, b);
-  }
-}
-
-/**
- * @generated from message river.ChannelMessage.Post.Content.ChunkedMedia
- */
-export class ChannelMessage_Post_Content_ChunkedMedia extends Message<ChannelMessage_Post_Content_ChunkedMedia> {
-  /**
-   * @generated from field: river.ChannelMessage.Post.Content.MediaInfo info = 1;
-   */
-  info?: ChannelMessage_Post_Content_MediaInfo;
-
-  /**
-   * @generated from field: string streamId = 2;
-   */
-  streamId = "";
-
-  /**
-   * @generated from field: river.ChannelMessage.Post.Content.EmbeddedMedia thumbnail = 3;
-   */
-  thumbnail?: ChannelMessage_Post_Content_EmbeddedMedia;
-
-  /**
-   * @generated from oneof river.ChannelMessage.Post.Content.ChunkedMedia.encryption
-   */
-  encryption: {
-    /**
-     * @generated from field: river.ChannelMessage.Post.Content.ChunkedMedia.AESGCM aesgcm = 101;
-     */
-    value: ChannelMessage_Post_Content_ChunkedMedia_AESGCM;
-    case: "aesgcm";
-  } | { case: undefined; value?: undefined } = { case: undefined };
-
-  constructor(data?: PartialMessage<ChannelMessage_Post_Content_ChunkedMedia>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "river.ChannelMessage.Post.Content.ChunkedMedia";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "info", kind: "message", T: ChannelMessage_Post_Content_MediaInfo },
-    { no: 2, name: "streamId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "thumbnail", kind: "message", T: ChannelMessage_Post_Content_EmbeddedMedia },
-    { no: 101, name: "aesgcm", kind: "message", T: ChannelMessage_Post_Content_ChunkedMedia_AESGCM, oneof: "encryption" },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChannelMessage_Post_Content_ChunkedMedia {
-    return new ChannelMessage_Post_Content_ChunkedMedia().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ChannelMessage_Post_Content_ChunkedMedia {
-    return new ChannelMessage_Post_Content_ChunkedMedia().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ChannelMessage_Post_Content_ChunkedMedia {
-    return new ChannelMessage_Post_Content_ChunkedMedia().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ChannelMessage_Post_Content_ChunkedMedia | PlainMessage<ChannelMessage_Post_Content_ChunkedMedia> | undefined, b: ChannelMessage_Post_Content_ChunkedMedia | PlainMessage<ChannelMessage_Post_Content_ChunkedMedia> | undefined): boolean {
-    return proto3.util.equals(ChannelMessage_Post_Content_ChunkedMedia, a, b);
-  }
-}
-
-/**
- * @generated from message river.ChannelMessage.Post.Content.ChunkedMedia.AESGCM
- */
-export class ChannelMessage_Post_Content_ChunkedMedia_AESGCM extends Message<ChannelMessage_Post_Content_ChunkedMedia_AESGCM> {
-  /**
-   * @generated from field: bytes iv = 1;
-   */
-  iv = new Uint8Array(0);
-
-  /**
-   * @generated from field: bytes secretKey = 2;
-   */
-  secretKey = new Uint8Array(0);
-
-  constructor(data?: PartialMessage<ChannelMessage_Post_Content_ChunkedMedia_AESGCM>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "river.ChannelMessage.Post.Content.ChunkedMedia.AESGCM";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "iv", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
-    { no: 2, name: "secretKey", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChannelMessage_Post_Content_ChunkedMedia_AESGCM {
-    return new ChannelMessage_Post_Content_ChunkedMedia_AESGCM().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ChannelMessage_Post_Content_ChunkedMedia_AESGCM {
-    return new ChannelMessage_Post_Content_ChunkedMedia_AESGCM().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ChannelMessage_Post_Content_ChunkedMedia_AESGCM {
-    return new ChannelMessage_Post_Content_ChunkedMedia_AESGCM().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: ChannelMessage_Post_Content_ChunkedMedia_AESGCM | PlainMessage<ChannelMessage_Post_Content_ChunkedMedia_AESGCM> | undefined, b: ChannelMessage_Post_Content_ChunkedMedia_AESGCM | PlainMessage<ChannelMessage_Post_Content_ChunkedMedia_AESGCM> | undefined): boolean {
-    return proto3.util.equals(ChannelMessage_Post_Content_ChunkedMedia_AESGCM, a, b);
   }
 }
 
@@ -1169,6 +961,214 @@ export class ChannelMessage_Post_Content_UnfurledURL_Image extends Message<Chann
 
   static equals(a: ChannelMessage_Post_Content_UnfurledURL_Image | PlainMessage<ChannelMessage_Post_Content_UnfurledURL_Image> | undefined, b: ChannelMessage_Post_Content_UnfurledURL_Image | PlainMessage<ChannelMessage_Post_Content_UnfurledURL_Image> | undefined): boolean {
     return proto3.util.equals(ChannelMessage_Post_Content_UnfurledURL_Image, a, b);
+  }
+}
+
+/**
+ * @generated from message river.EmbeddedMedia
+ */
+export class EmbeddedMedia extends Message<EmbeddedMedia> {
+  /**
+   * @generated from field: river.MediaInfo info = 1;
+   */
+  info?: MediaInfo;
+
+  /**
+   * @generated from field: bytes content = 2;
+   */
+  content = new Uint8Array(0);
+
+  constructor(data?: PartialMessage<EmbeddedMedia>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "river.EmbeddedMedia";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "info", kind: "message", T: MediaInfo },
+    { no: 2, name: "content", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EmbeddedMedia {
+    return new EmbeddedMedia().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): EmbeddedMedia {
+    return new EmbeddedMedia().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): EmbeddedMedia {
+    return new EmbeddedMedia().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: EmbeddedMedia | PlainMessage<EmbeddedMedia> | undefined, b: EmbeddedMedia | PlainMessage<EmbeddedMedia> | undefined): boolean {
+    return proto3.util.equals(EmbeddedMedia, a, b);
+  }
+}
+
+/**
+ * @generated from message river.MediaInfo
+ */
+export class MediaInfo extends Message<MediaInfo> {
+  /**
+   * @generated from field: string mimetype = 1;
+   */
+  mimetype = "";
+
+  /**
+   * @generated from field: int64 sizeBytes = 2;
+   */
+  sizeBytes = protoInt64.zero;
+
+  /**
+   * @generated from field: int32 widthPixels = 3;
+   */
+  widthPixels = 0;
+
+  /**
+   * @generated from field: int32 heightPixels = 4;
+   */
+  heightPixels = 0;
+
+  /**
+   * @generated from field: string filename = 5;
+   */
+  filename = "";
+
+  constructor(data?: PartialMessage<MediaInfo>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "river.MediaInfo";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "mimetype", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "sizeBytes", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
+    { no: 3, name: "widthPixels", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "heightPixels", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "filename", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MediaInfo {
+    return new MediaInfo().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MediaInfo {
+    return new MediaInfo().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MediaInfo {
+    return new MediaInfo().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MediaInfo | PlainMessage<MediaInfo> | undefined, b: MediaInfo | PlainMessage<MediaInfo> | undefined): boolean {
+    return proto3.util.equals(MediaInfo, a, b);
+  }
+}
+
+/**
+ * @generated from message river.ChunkedMedia
+ */
+export class ChunkedMedia extends Message<ChunkedMedia> {
+  /**
+   * @generated from field: river.MediaInfo info = 1;
+   */
+  info?: MediaInfo;
+
+  /**
+   * @generated from field: string streamId = 2;
+   */
+  streamId = "";
+
+  /**
+   * @generated from field: river.EmbeddedMedia thumbnail = 3;
+   */
+  thumbnail?: EmbeddedMedia;
+
+  /**
+   * @generated from oneof river.ChunkedMedia.encryption
+   */
+  encryption: {
+    /**
+     * @generated from field: river.ChunkedMedia.AESGCM aesgcm = 101;
+     */
+    value: ChunkedMedia_AESGCM;
+    case: "aesgcm";
+  } | { case: undefined; value?: undefined } = { case: undefined };
+
+  constructor(data?: PartialMessage<ChunkedMedia>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "river.ChunkedMedia";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "info", kind: "message", T: MediaInfo },
+    { no: 2, name: "streamId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "thumbnail", kind: "message", T: EmbeddedMedia },
+    { no: 101, name: "aesgcm", kind: "message", T: ChunkedMedia_AESGCM, oneof: "encryption" },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChunkedMedia {
+    return new ChunkedMedia().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ChunkedMedia {
+    return new ChunkedMedia().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ChunkedMedia {
+    return new ChunkedMedia().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ChunkedMedia | PlainMessage<ChunkedMedia> | undefined, b: ChunkedMedia | PlainMessage<ChunkedMedia> | undefined): boolean {
+    return proto3.util.equals(ChunkedMedia, a, b);
+  }
+}
+
+/**
+ * @generated from message river.ChunkedMedia.AESGCM
+ */
+export class ChunkedMedia_AESGCM extends Message<ChunkedMedia_AESGCM> {
+  /**
+   * @generated from field: bytes iv = 1;
+   */
+  iv = new Uint8Array(0);
+
+  /**
+   * @generated from field: bytes secretKey = 2;
+   */
+  secretKey = new Uint8Array(0);
+
+  constructor(data?: PartialMessage<ChunkedMedia_AESGCM>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "river.ChunkedMedia.AESGCM";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "iv", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 2, name: "secretKey", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChunkedMedia_AESGCM {
+    return new ChunkedMedia_AESGCM().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): ChunkedMedia_AESGCM {
+    return new ChunkedMedia_AESGCM().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): ChunkedMedia_AESGCM {
+    return new ChunkedMedia_AESGCM().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: ChunkedMedia_AESGCM | PlainMessage<ChunkedMedia_AESGCM> | undefined, b: ChunkedMedia_AESGCM | PlainMessage<ChunkedMedia_AESGCM> | undefined): boolean {
+    return proto3.util.equals(ChunkedMedia_AESGCM, a, b);
   }
 }
 

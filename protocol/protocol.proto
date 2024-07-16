@@ -329,6 +329,7 @@ message UserPayload {
         Inception inception = 1;
         // memberships, sorted by stream_id
         repeated UserMembership memberships = 2;
+        WrappedEncryptedData profile_media = 3;
     }
 
     message Inception {
@@ -356,6 +357,7 @@ message UserPayload {
         Inception inception = 1;
         UserMembership user_membership = 2;
         UserMembershipAction user_membership_action = 3;
+        EncryptedData profile_media = 4;
     }
 }
 
@@ -493,10 +495,11 @@ message MediaPayload {
     
     message Inception {
         bytes stream_id = 1;
-        bytes channel_id = 2;
+        optional bytes channel_id = 2;
         int32 chunk_count = 3;
         StreamSettings settings = 4;
         optional bytes space_id = 5;
+        optional bytes user_id = 6;
     }
 
     message Chunk {

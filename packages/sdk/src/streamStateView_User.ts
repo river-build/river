@@ -49,6 +49,8 @@ export class StreamStateView_User extends StreamStateView_AbstractContent {
                 break
             case 'userMembershipAction':
                 break
+            case 'profileMedia':
+                break
             case undefined:
                 break
             default:
@@ -71,6 +73,9 @@ export class StreamStateView_User extends StreamStateView_AbstractContent {
                 this.addUserPayload_userMembership(payload.content.value, stateEmitter)
                 break
             case 'userMembershipAction':
+                break
+            case 'profileMedia':
+                // todo
                 break
             case undefined:
                 break
