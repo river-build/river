@@ -24,17 +24,9 @@ contract DeployArchitect is FacetHelper, Deployer {
   }
 
   function makeInitData(
-    address _spaceOwnerToken,
-    address _userEntitlement,
-    address _ruleEntitlement
+    address _spaceOwnerToken
   ) public pure returns (bytes memory) {
-    return
-      abi.encodeWithSelector(
-        initializer(),
-        _spaceOwnerToken,
-        _userEntitlement,
-        _ruleEntitlement
-      );
+    return abi.encodeWithSelector(initializer(), _spaceOwnerToken);
   }
 
   function versionName() public pure override returns (string memory) {

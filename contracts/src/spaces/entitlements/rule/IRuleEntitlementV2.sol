@@ -19,6 +19,7 @@ import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEnti
  * As new LogicalOperation nodes are added, they can only reference existing nodes in the 'operations' array,
  * ensuring a valid post-order tree structure.
  */
+
 interface IRuleEntitlementV2 is IEntitlement {
   // =============================================================
   //                           Errors
@@ -34,7 +35,7 @@ interface IRuleEntitlementV2 is IEntitlement {
     uint8 operationIndex,
     uint8 logicalOperationsLength
   );
-  error InvalidOperationType(IRuleEntitlementV2.CombinedOperationType opType);
+  error InvalidOperationType(CombinedOperationType opType);
   error InvalidLeftOperationIndex(
     uint8 leftOperationIndex,
     uint8 currentOperationIndex
@@ -73,7 +74,6 @@ interface IRuleEntitlementV2 is IEntitlement {
   // =============================================================
   //                           Structs
   // =============================================================
-
   struct CheckOperation {
     CheckOperationType opType;
     uint256 chainId;

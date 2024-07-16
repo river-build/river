@@ -26,11 +26,9 @@ import {DeployMetadata} from "contracts/scripts/deployments/facets/DeployMetadat
 import {DeployArchitect} from "contracts/scripts/deployments/facets/DeployArchitect.s.sol";
 import {DeployProxyManager} from "contracts/scripts/deployments/facets/DeployProxyManager.s.sol";
 
-import {DeployUserEntitlement} from "contracts/scripts/deployments/DeployUserEntitlement.s.sol";
 import {DeployMultiInit} from "contracts/scripts/deployments/DeployMultiInit.s.sol";
 import {DeploySpace} from "contracts/scripts/deployments/DeploySpace.s.sol";
 import {DeploySpaceOwner} from "contracts/scripts/deployments/DeploySpaceOwner.s.sol";
-import {DeployRuleEntitlementV2} from "contracts/scripts/deployments/DeployRuleEntitlementV2.s.sol";
 import {DeployWalletLink} from "contracts/scripts/deployments/facets/DeployWalletLink.s.sol";
 import {DeployTieredLogPricing} from "contracts/scripts/deployments/DeployTieredLogPricing.s.sol";
 import {DeployFixedPricing} from "contracts/scripts/deployments/DeployFixedPricing.s.sol";
@@ -60,9 +58,7 @@ contract DeploySpaceFactory is DiamondDeployer {
   // dependencies
   DeploySpace deploySpace = new DeploySpace();
   DeploySpaceOwner deploySpaceOwner = new DeploySpaceOwner();
-  DeployUserEntitlement deployUserEntitlement = new DeployUserEntitlement();
-  DeployRuleEntitlementV2 deployRuleEntitlementV2 =
-    new DeployRuleEntitlementV2();
+
   DeployTieredLogPricing deployTieredLogPricing = new DeployTieredLogPricing();
   DeployFixedPricing deployFixedPricing = new DeployFixedPricing();
   DeployPlatformRequirements platformReqsHelper =
@@ -107,10 +103,6 @@ contract DeploySpaceFactory is DiamondDeployer {
 
     address space = deploySpace.deploy();
     spaceOwner = deploySpaceOwner.deploy();
-
-    // entitlement modules
-    userEntitlement = deployUserEntitlement.deploy();
-    ruleEntitlement = deployRuleEntitlementV2.deploy();
 
     // pricing modules
     tieredLogPricing = deployTieredLogPricing.deploy();
@@ -168,9 +160,7 @@ contract DeploySpaceFactory is DiamondDeployer {
       architectHelper.makeCut(architect, IDiamond.FacetCutAction.Add),
       architect,
       architectHelper.makeInitData(
-        spaceOwner, // spaceOwner
-        userEntitlement, // userEntitlement
-        ruleEntitlement // ruleEntitlement
+        spaceOwner // spaceOwner
       )
     );
     addFacet(

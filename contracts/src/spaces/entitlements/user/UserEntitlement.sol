@@ -8,73 +8,39 @@ import {IChannel} from "contracts/src/spaces/facets/channels/IChannel.sol";
 
 // libraries
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {UserEntitlementStorage} from "./UserEntitlementStorage.sol";
 
 // contracts
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
-import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {IntrospectionFacet} from "contracts/src/diamond/facets/introspection/IntrospectionFacet.sol";
+import {Context} from "contracts/src/diamond/utils/Context.sol";
 import {IUserEntitlement} from "./IUserEntitlement.sol";
 
-contract UserEntitlement is
-  Initializable,
-  ERC165Upgradeable,
-  ContextUpgradeable,
-  UUPSUpgradeable,
-  IUserEntitlement
-{
+contract UserEntitlement is Context, IntrospectionFacet, IUserEntitlement {
   using EnumerableSet for EnumerableSet.UintSet;
 
   address constant EVERYONE_ADDRESS = address(1);
-  address public SPACE_ADDRESS;
-
-  struct Entitlement {
-    address grantedBy;
-    uint256 grantedTime;
-    address[] users;
-  }
-
-  /// @notice mapping holding all the entitlements by RoleId added to Entitlement
-  mapping(uint256 => Entitlement) internal entitlementsByRoleId;
-  mapping(address => uint256[]) internal roleIdsByUser;
-  EnumerableSet.UintSet allEntitlementRoleIds;
-
   string public constant name = "User Entitlement";
   string public constant description = "Entitlement for users";
   string public constant moduleType = "UserEntitlement";
 
   modifier onlySpace() {
-    if (_msgSender() != SPACE_ADDRESS) {
+    if (_msgSender() != SPACE_ADDRESS()) {
       revert Entitlement__NotAllowed();
     }
     _;
   }
 
-  /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() {
-    _disableInitializers();
+  constructor(address space) {
+    __IntrospectionBase_init();
+    _addInterface(type(IUserEntitlement).interfaceId);
+    _addInterface(type(IEntitlement).interfaceId);
+
+    UserEntitlementStorage.Layout storage l = UserEntitlementStorage.layout();
+    l.space = space;
   }
 
-  function initialize(address _space) public initializer {
-    __UUPSUpgradeable_init();
-    __ERC165_init();
-    __Context_init();
-
-    SPACE_ADDRESS = _space;
-  }
-
-  /// @notice allow the contract to be upgraded while retaining state
-  /// @param newImplementation address of the new implementation
-  function _authorizeUpgrade(
-    address newImplementation
-  ) internal override onlySpace {}
-
-  function supportsInterface(
-    bytes4 interfaceId
-  ) public view virtual override returns (bool) {
-    return
-      interfaceId == type(IEntitlement).interfaceId ||
-      super.supportsInterface(interfaceId);
+  function SPACE_ADDRESS() internal view returns (address) {
+    return UserEntitlementStorage.layout().space;
   }
 
   // @inheritdoc IEntitlement
@@ -110,49 +76,59 @@ contract UserEntitlement is
       }
     }
 
+    UserEntitlementStorage.Layout storage ds = UserEntitlementStorage.layout();
+
     // First remove any prior values
-    while (entitlementsByRoleId[roleId].users.length > 0) {
-      address user = entitlementsByRoleId[roleId].users[
-        entitlementsByRoleId[roleId].users.length - 1
+    while (ds.entitlementsByRoleId[roleId].users.length > 0) {
+      address user = ds.entitlementsByRoleId[roleId].users[
+        ds.entitlementsByRoleId[roleId].users.length - 1
       ];
       _removeRoleIdFromUser(user, roleId);
-      entitlementsByRoleId[roleId].users.pop();
+      ds.entitlementsByRoleId[roleId].users.pop();
     }
-    delete entitlementsByRoleId[roleId];
+    delete ds.entitlementsByRoleId[roleId];
 
-    entitlementsByRoleId[roleId] = Entitlement({
+    ds.entitlementsByRoleId[roleId] = UserEntitlementStorage.Entitlement({
       grantedBy: _msgSender(),
       grantedTime: block.timestamp,
       users: users
     });
+
     for (uint256 i = 0; i < users.length; i++) {
-      roleIdsByUser[users[i]].push(roleId);
+      ds.roleIdsByUser[users[i]].push(roleId);
     }
   }
 
   // @inheritdoc IEntitlement
   function removeEntitlement(uint256 roleId) external onlySpace {
-    if (entitlementsByRoleId[roleId].grantedBy == address(0)) {
+    UserEntitlementStorage.Layout storage ds = UserEntitlementStorage.layout();
+
+    if (ds.entitlementsByRoleId[roleId].grantedBy == address(0)) {
       revert Entitlement__InvalidValue();
     }
 
     // First remove any prior values
-    while (entitlementsByRoleId[roleId].users.length > 0) {
-      address user = entitlementsByRoleId[roleId].users[
-        entitlementsByRoleId[roleId].users.length - 1
+    while (ds.entitlementsByRoleId[roleId].users.length > 0) {
+      address user = ds.entitlementsByRoleId[roleId].users[
+        ds.entitlementsByRoleId[roleId].users.length - 1
       ];
       _removeRoleIdFromUser(user, roleId);
-      entitlementsByRoleId[roleId].users.pop();
+      ds.entitlementsByRoleId[roleId].users.pop();
     }
-    delete entitlementsByRoleId[roleId];
+    delete ds.entitlementsByRoleId[roleId];
   }
 
   // @inheritdoc IEntitlement
   function getEntitlementDataByRoleId(
     uint256 roleId
   ) external view returns (bytes memory) {
-    return abi.encode(entitlementsByRoleId[roleId].users);
+    UserEntitlementStorage.Layout storage ds = UserEntitlementStorage.layout();
+    return abi.encode(ds.entitlementsByRoleId[roleId].users);
   }
+
+  // =============================================================
+  //                           Internal
+  // =============================================================
 
   /// @notice checks is a user is entitled to a specific channel
   /// @param channelId the channel id
@@ -164,7 +140,7 @@ contract UserEntitlement is
     address[] memory wallets,
     bytes32 permission
   ) internal view returns (bool _entitled) {
-    IChannel.Channel memory channel = IChannel(SPACE_ADDRESS).getChannel(
+    IChannel.Channel memory channel = IChannel(SPACE_ADDRESS()).getChannel(
       channelId
     );
 
@@ -198,12 +174,14 @@ contract UserEntitlement is
   ) internal view returns (uint256[] memory) {
     uint256 totalLength = 0;
 
+    UserEntitlementStorage.Layout storage ds = UserEntitlementStorage.layout();
+
     // Calculate total length
     for (uint256 i = 0; i < wallets.length; i++) {
-      totalLength += roleIdsByUser[wallets[i]].length;
+      totalLength += ds.roleIdsByUser[wallets[i]].length;
     }
 
-    totalLength += roleIdsByUser[EVERYONE_ADDRESS].length;
+    totalLength += ds.roleIdsByUser[EVERYONE_ADDRESS].length;
 
     // Create an array to hold all roles
     uint256[] memory roles = new uint256[](totalLength);
@@ -211,13 +189,13 @@ contract UserEntitlement is
 
     // Populate the roles array
     for (uint256 i = 0; i < wallets.length; i++) {
-      uint256[] memory rolesForWallet = roleIdsByUser[wallets[i]];
+      uint256[] memory rolesForWallet = ds.roleIdsByUser[wallets[i]];
       for (uint256 j = 0; j < rolesForWallet.length; j++) {
         roles[currentIndex++] = rolesForWallet[j];
       }
     }
 
-    uint256[] memory rolesForEveryone = roleIdsByUser[EVERYONE_ADDRESS];
+    uint256[] memory rolesForEveryone = ds.roleIdsByUser[EVERYONE_ADDRESS];
     for (uint256 j = 0; j < rolesForEveryone.length; j++) {
       roles[currentIndex++] = rolesForEveryone[j];
     }
@@ -253,9 +231,8 @@ contract UserEntitlement is
     uint256 roleId,
     bytes32 permission
   ) internal view returns (bool) {
-    string[] memory permissions = IRoles(SPACE_ADDRESS).getPermissionsByRoleId(
-      roleId
-    );
+    string[] memory permissions = IRoles(SPACE_ADDRESS())
+      .getPermissionsByRoleId(roleId);
     uint256 permissionLen = permissions.length;
 
     for (uint256 i = 0; i < permissionLen; i++) {
@@ -268,28 +245,10 @@ contract UserEntitlement is
     return false;
   }
 
-  /// @notice utility to concat two arrays
-  /// @param a the first array
-  /// @param b the second array
-  /// @return c the combined array
-  function concatArrays(
-    Entitlement[] memory a,
-    Entitlement[] memory b
-  ) internal pure returns (Entitlement[] memory) {
-    Entitlement[] memory c = new Entitlement[](a.length + b.length);
-    uint256 i = 0;
-    for (; i < a.length; i++) {
-      c[i] = a[i];
-    }
-    uint256 j = 0;
-    while (j < b.length) {
-      c[i++] = b[j++];
-    }
-    return c;
-  }
-
   function _removeRoleIdFromUser(address user, uint256 roleId) internal {
-    uint256[] storage roles = roleIdsByUser[user];
+    UserEntitlementStorage.Layout storage ds = UserEntitlementStorage.layout();
+
+    uint256[] storage roles = ds.roleIdsByUser[user];
     for (uint256 i = 0; i < roles.length; i++) {
       if (roles[i] == roleId) {
         roles[i] = roles[roles.length - 1];
@@ -301,10 +260,4 @@ contract UserEntitlement is
     // Optional: Revert if the roleId is not found
     revert("Role ID not found for the user");
   }
-
-  /**
-   * @dev Added to allow future versions to add new variables in case this contract becomes
-   *      inherited. See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-   */
-  uint256[49] private __gap;
 }

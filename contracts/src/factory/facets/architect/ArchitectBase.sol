@@ -28,6 +28,8 @@ import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
 // contracts
 import {Factory} from "contracts/src/utils/Factory.sol";
 import {SpaceProxy} from "contracts/src/spaces/facets/proxy/SpaceProxy.sol";
+import {UserEntitlement} from "contracts/src/spaces/entitlements/user/UserEntitlement.sol";
+import {RuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/RuleEntitlementV2.sol";
 
 // modules
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
@@ -80,14 +82,10 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
     );
 
     // deploy user entitlement
-    IUserEntitlement userEntitlement = IUserEntitlement(
-      _deployEntitlement(ims.userEntitlement, spaceAddress)
-    );
+    UserEntitlement userEntitlement = new UserEntitlement(spaceAddress);
 
     // deploy token entitlement
-    IRuleEntitlementV2 ruleEntitlement = IRuleEntitlementV2(
-      _deployEntitlement(ims.ruleEntitlement, spaceAddress)
-    );
+    RuleEntitlementV2 ruleEntitlement = new RuleEntitlementV2(spaceAddress);
 
     address[] memory entitlements = new address[](2);
     entitlements[0] = address(userEntitlement);
@@ -130,21 +128,11 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
   //                           Implementations
   // =============================================================
 
-  function _setImplementations(
-    ISpaceOwner spaceToken,
-    IUserEntitlement userEntitlement,
-    IRuleEntitlementV2 ruleEntitlement
-  ) internal {
+  function _setImplementations(ISpaceOwner spaceToken) internal {
     if (address(spaceToken).code.length == 0) revert Architect__NotContract();
-    if (address(userEntitlement).code.length == 0)
-      revert Architect__NotContract();
-    if (address(ruleEntitlement).code.length == 0)
-      revert Architect__NotContract();
 
     ImplementationStorage.Layout storage ds = ImplementationStorage.layout();
     ds.spaceToken = spaceToken;
-    ds.userEntitlement = userEntitlement;
-    ds.ruleEntitlement = ruleEntitlement;
   }
 
   function _getImplementations()
@@ -281,22 +269,6 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
       membership
     );
     return _deploy(initCode, salt);
-  }
-
-  function _deployEntitlement(
-    IEntitlement entitlement,
-    address spaceAddress
-  ) internal returns (address) {
-    // calculate init code
-    bytes memory initCode = abi.encodePacked(
-      type(ERC1967Proxy).creationCode,
-      abi.encode(
-        entitlement,
-        abi.encodeCall(IEntitlement.initialize, (spaceAddress))
-      )
-    );
-
-    return _deploy(initCode);
   }
 
   function _getSpaceDeploymentInfo(

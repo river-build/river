@@ -16,6 +16,7 @@ import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
  * As new LogicalOperation nodes are added, they can only reference existing nodes in the 'operations' array,
  * ensuring a valid post-order tree structure.
  */
+
 interface IRuleEntitlement is IEntitlement {
   // =============================================================
   //                           Errors

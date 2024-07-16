@@ -25,15 +25,9 @@ contract Architect is
   Facet
 {
   function __Architect_init(
-    ISpaceOwner ownerImplementation,
-    IUserEntitlement userEntitlementImplementation,
-    IRuleEntitlementV2 ruleEntitlementImplementation
+    ISpaceOwner ownerImplementation
   ) external onlyInitializing {
-    _setImplementations(
-      ownerImplementation,
-      userEntitlementImplementation,
-      ruleEntitlementImplementation
-    );
+    _setImplementations(ownerImplementation);
   }
 
   // =============================================================
@@ -58,15 +52,9 @@ contract Architect is
   // =============================================================
 
   function setSpaceArchitectImplementations(
-    ISpaceOwner spaceToken,
-    IUserEntitlement userEntitlementImplementation,
-    IRuleEntitlementV2 ruleEntitlementImplementation
+    ISpaceOwner spaceToken
   ) external onlyOwner {
-    _setImplementations(
-      spaceToken,
-      userEntitlementImplementation,
-      ruleEntitlementImplementation
-    );
+    _setImplementations(spaceToken);
   }
 
   function getSpaceArchitectImplementations()

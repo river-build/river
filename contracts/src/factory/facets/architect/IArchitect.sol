@@ -77,9 +77,7 @@ interface IArchitect is IArchitectBase {
   // =============================================================
 
   function setSpaceArchitectImplementations(
-    ISpaceOwner ownerTokenImplementation,
-    IUserEntitlement userEntitlementImplementation,
-    IRuleEntitlementV2 ruleEntitlementImplementation
+    ISpaceOwner ownerTokenImplementation
   ) external;
 
   function getSpaceArchitectImplementations()

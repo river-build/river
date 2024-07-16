@@ -4,11 +4,6 @@ pragma solidity ^0.8.24;
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 
 interface IUserEntitlement is IEntitlement {
-  // Constructor is not included in interfaces
-
-  // Initialize function, if it's intended to be called externally
-  function initialize(address _space) external;
-
   // Any other external or public functions
   function isEntitled(
     bytes32 channelId,

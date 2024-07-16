@@ -7,13 +7,10 @@ import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 import {RuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/RuleEntitlementV2.sol";
 import {IEntitlementBase} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 import {IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlementV2.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract RuleEntitlementTest is TestUtils, IEntitlementBase {
-  RuleEntitlementV2 internal implementation;
   RuleEntitlementV2 internal ruleEntitlement;
 
-  address internal entitlement;
   address internal deployer;
   address internal space;
 
@@ -24,16 +21,8 @@ contract RuleEntitlementTest is TestUtils, IEntitlementBase {
     space = _randomAddress();
 
     vm.startPrank(deployer);
-    implementation = new RuleEntitlementV2();
-    entitlement = address(
-      new ERC1967Proxy(
-        address(implementation),
-        abi.encodeCall(RuleEntitlementV2.initialize, (space))
-      )
-    );
+    ruleEntitlement = new RuleEntitlementV2(space);
     vm.stopPrank();
-
-    ruleEntitlement = RuleEntitlementV2(entitlement);
   }
 
   modifier givenRuleEntitlementIsSet() {

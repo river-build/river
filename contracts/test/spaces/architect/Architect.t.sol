@@ -127,35 +127,15 @@ contract ArchitectTest is
 
   function test_setImplementations() external {
     ISpaceOwner newSpaceToken = ISpaceOwner(address(new MockERC721()));
-    IUserEntitlement newUserEntitlement = new UserEntitlement();
-    IRuleEntitlementV2 newRuleEntitlement = new RuleEntitlementV2();
 
     address user = _randomAddress();
 
     vm.prank(user);
     vm.expectRevert(abi.encodeWithSelector(Ownable__NotOwner.selector, user));
-    spaceArchitect.setSpaceArchitectImplementations(
-      newSpaceToken,
-      newUserEntitlement,
-      newRuleEntitlement
-    );
+    spaceArchitect.setSpaceArchitectImplementations(newSpaceToken);
 
     vm.prank(deployer);
-    spaceArchitect.setSpaceArchitectImplementations(
-      newSpaceToken,
-      newUserEntitlement,
-      newRuleEntitlement
-    );
-
-    (
-      ISpaceOwner spaceTokenAddress,
-      IUserEntitlement userEntitlementAddress,
-      IRuleEntitlementV2 tokenEntitlementAddress
-    ) = spaceArchitect.getSpaceArchitectImplementations();
-
-    assertEq(address(newSpaceToken), address(spaceTokenAddress));
-    assertEq(address(newUserEntitlement), address(userEntitlementAddress));
-    assertEq(address(newRuleEntitlement), address(tokenEntitlementAddress));
+    spaceArchitect.setSpaceArchitectImplementations(newSpaceToken);
   }
 
   function test_transfer_space_ownership(string memory spaceName) external {

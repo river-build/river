@@ -11,10 +11,8 @@ import {IEntitlementBase} from "contracts/src/spaces/entitlements/IEntitlement.s
 
 //contracts
 import {UserEntitlement} from "contracts/src/spaces/entitlements/user/UserEntitlement.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract UserEntitlementTest is TestUtils, IEntitlementBase {
-  UserEntitlement internal implementation;
   UserEntitlement internal userEntitlement;
 
   address internal entitlement;
@@ -26,15 +24,7 @@ contract UserEntitlementTest is TestUtils, IEntitlementBase {
     space = _randomAddress();
 
     vm.startPrank(deployer);
-    implementation = new UserEntitlement();
-    entitlement = address(
-      new ERC1967Proxy(
-        address(implementation),
-        abi.encodeCall(UserEntitlement.initialize, (space))
-      )
-    );
-
-    userEntitlement = UserEntitlement(entitlement);
+    userEntitlement = new UserEntitlement(space);
     vm.stopPrank();
   }
 

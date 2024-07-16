@@ -16,9 +16,6 @@ interface IEntitlementBase {
 }
 
 interface IEntitlement is IEntitlementBase {
-  /// @notice initializes the entitlement module
-  function initialize(address space) external;
-
   /// @notice The name of the entitlement module
   function name() external view returns (string memory);
 

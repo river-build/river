@@ -17,75 +17,47 @@
 pragma solidity ^0.8.0;
 
 // contracts
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
-import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 // libraries
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {RuleDataUtil} from "contracts/src/spaces/entitlements/rule/RuleDataUtil.sol";
+import {RuleEntitlementStorage} from "contracts/src/spaces/entitlements/rule/RuleEntitlementStorage.sol";
 
 // interfaces
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 import {IRuleEntitlement} from "./IRuleEntitlement.sol";
 import {IRuleEntitlementV2} from "./IRuleEntitlementV2.sol";
 
-contract RuleEntitlementV2 is
-  Initializable,
-  ERC165Upgradeable,
-  ContextUpgradeable,
-  UUPSUpgradeable,
-  IRuleEntitlementV2
-{
+// contracts
+import {IntrospectionFacet} from "contracts/src/diamond/facets/introspection/IntrospectionFacet.sol";
+
+contract RuleEntitlementV2 is IntrospectionFacet, IRuleEntitlementV2 {
   using EnumerableSet for EnumerableSet.Bytes32Set;
-
-  struct Entitlement {
-    address grantedBy;
-    uint256 grantedTime;
-    RuleData data;
-  }
-
-  mapping(uint256 => Entitlement) internal entitlementsByRoleId;
-
-  address public SPACE_ADDRESS;
 
   string public constant name = "Rule Entitlement V2";
   string public constant description = "Entitlement for crosschain rules";
   string public constant moduleType = "RuleEntitlementV2";
 
-  /// @custom:oz-upgrades-unsafe-allow constructor
-  constructor() {
-    _disableInitializers();
-  }
+  constructor(address _space) {
+    __IntrospectionBase_init();
+    _addInterface(type(IRuleEntitlementV2).interfaceId);
+    _addInterface(type(IEntitlement).interfaceId);
 
-  function initialize(address _space) public initializer {
-    __UUPSUpgradeable_init();
-    __ERC165_init();
-    __Context_init();
-
-    SPACE_ADDRESS = _space;
+    RuleEntitlementStorage.layout().space = _space;
   }
 
   modifier onlySpace() {
-    if (_msgSender() != SPACE_ADDRESS) {
+    if (msg.sender != SPACE_ADDRESS()) {
       revert Entitlement__NotAllowed();
     }
     _;
   }
 
-  /// @notice allow the contract to be upgraded while retaining state
-  /// @param newImplementation address of the new implementation
-  function _authorizeUpgrade(
-    address newImplementation
-  ) internal override onlySpace {}
-
-  function supportsInterface(
-    bytes4 interfaceId
-  ) public view virtual override returns (bool) {
-    return
-      interfaceId == type(IEntitlement).interfaceId ||
-      super.supportsInterface(interfaceId);
+  // =============================================================
+  //                           External
+  // =============================================================
+  function SPACE_ADDRESS() public view returns (address) {
+    return RuleEntitlementStorage.layout().space;
   }
 
   // @inheritdoc IEntitlement
@@ -117,7 +89,7 @@ contract RuleEntitlementV2 is
     }
 
     // Cache sender and currentTime
-    address sender = _msgSender();
+    address sender = msg.sender;
     uint256 currentTime = block.timestamp;
 
     // Cache lengths of operations arrays to reduce state access cost
@@ -162,7 +134,10 @@ contract RuleEntitlementV2 is
       }
     }
 
-    Entitlement storage entitlement = entitlementsByRoleId[roleId];
+    RuleEntitlementStorage.Layout storage ds = RuleEntitlementStorage.layout();
+
+    RuleEntitlementStorage.Entitlement storage entitlement = ds
+      .entitlementsByRoleId[roleId];
 
     entitlement.grantedBy = sender;
     entitlement.grantedTime = currentTime;
@@ -184,20 +159,24 @@ contract RuleEntitlementV2 is
 
   // @inheritdoc IEntitlement
   function removeEntitlement(uint256 roleId) external onlySpace {
-    Entitlement memory entitlement = entitlementsByRoleId[roleId];
+    RuleEntitlementStorage.Layout storage ds = RuleEntitlementStorage.layout();
+
+    RuleEntitlementStorage.Entitlement memory entitlement = ds
+      .entitlementsByRoleId[roleId];
     if (entitlement.grantedBy == address(0)) {
       revert Entitlement__InvalidValue();
     }
 
-    delete entitlementsByRoleId[roleId];
+    delete ds.entitlementsByRoleId[roleId];
   }
 
   // @inheritdoc IEntitlement
   function getEntitlementDataByRoleId(
     uint256 roleId
   ) external view returns (bytes memory) {
-    Entitlement storage entitlement = entitlementsByRoleId[roleId];
-    return abi.encode(entitlement.data);
+    RuleEntitlementStorage.Layout storage ds = RuleEntitlementStorage.layout();
+
+    return abi.encode(ds.entitlementsByRoleId[roleId].data);
   }
 
   function encodeRuleDataV2(
@@ -209,7 +188,7 @@ contract RuleEntitlementV2 is
   function getRuleDataV2(
     uint256 roleId
   ) external view returns (RuleData memory data) {
-    return entitlementsByRoleId[roleId].data;
+    return RuleEntitlementStorage.layout().entitlementsByRoleId[roleId].data;
   }
 
   // =============================================================
@@ -233,8 +212,12 @@ contract RuleEntitlementV2 is
   function getRuleData(
     uint256 roleId
   ) external view returns (IRuleEntitlement.RuleData memory data) {
-    IRuleEntitlementV2.RuleData memory v2Data = entitlementsByRoleId[roleId]
+    RuleEntitlementStorage.Layout storage ds = RuleEntitlementStorage.layout();
+
+    IRuleEntitlementV2.RuleData memory v2Data = ds
+      .entitlementsByRoleId[roleId]
       .data;
+
     return RuleDataUtil.convertV2ToV1RuleData(v2Data);
   }
 }
