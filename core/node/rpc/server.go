@@ -109,6 +109,8 @@ func (s *Service) start() error {
 		return AsRiverError(err).Message("Failed to init river chain").LogError(s.defaultLogger)
 	}
 
+	s.initEthBalanceMetrics()
+
 	err = s.prepareStore()
 	if err != nil {
 		return AsRiverError(err).Message("Failed to prepare store").LogError(s.defaultLogger)
