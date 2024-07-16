@@ -6,6 +6,8 @@ import { makeTestClient, makeUniqueSpaceStreamId } from './util.test'
 import { Client } from './client'
 import { makeUniqueChannelStreamId, makeDMStreamId } from './id'
 import { InfoRequest, PublicScope } from '@river-build/proto'
+import { aes256GcmEncrypt, serializeAes256GcmEncryptionResult } from './encrypt'
+import * as crypto from 'crypto'
 
 describe('mediaTests', () => {
     let bobsClient: Client
@@ -50,11 +52,50 @@ describe('mediaTests', () => {
 
     async function bobCreateSpaceMediaStream(
         chunkCount: number,
-    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array }> {
+    ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array; publicMediaKey: Uint8Array }> {
         const spaceId = makeUniqueSpaceStreamId()
         await expect(bobsClient.createSpace(spaceId)).toResolve()
+        // create a publicly scoped stream
+        // include a key to decrypt the public content in the stream
+        const publicMediaKey = crypto.randomBytes(32) // 256-bit key
+        const mediaInfo = await bobsClient.createMediaStream(
+            spaceId,
+            spaceId,
+            chunkCount,
+            undefined,
+            PublicScope.PS_SPACE,
+            publicMediaKey,
+        )
+        return {
+            ...mediaInfo,
+            publicMediaKey,
+        }
+    }
 
-        return await bobsClient.createMediaStream(spaceId, spaceId, chunkCount, undefined, PublicScope.PS_SPACE)
+    async function bobSendSpaceMediaPayloads(
+        streamId: string,
+        chunks: number,
+        prevMiniblockHash: Uint8Array,
+        publicMediaKey: Uint8Array,
+    ): Promise<Uint8Array> {
+        let prevHash = prevMiniblockHash
+        for (let i = 0; i < chunks; i++) {
+            const chunk = new Uint8Array(100)
+            // Create novel chunk content for testing purposes
+            chunk.fill(i, 0, 100)
+            // use the public media key to encrypt the data.
+            // convert the encryption result into an Uint8Array to be sent as the payload
+            const encryptionResult = aes256GcmEncrypt(chunk, publicMediaKey)
+            const serializedContent = serializeAes256GcmEncryptionResult(encryptionResult)
+            const result = await bobsClient.sendMediaPayload(
+                streamId,
+                serializedContent,
+                i,
+                prevHash,
+            )
+            prevHash = result.prevMiniblockHash
+        }
+        return prevHash
     }
 
     test('clientCanCreateMediaStream', async () => {
@@ -68,6 +109,16 @@ describe('mediaTests', () => {
     test('clientCanSendMediaPayload', async () => {
         const mediaStreamInfo = await bobCreateMediaStream(10)
         await bobSendMediaPayloads(mediaStreamInfo.streamId, 10, mediaStreamInfo.prevMiniblockHash)
+    })
+
+    test('clienCanSendSpaceMediaPayload', async () => {
+        const mediaStreamInfo = await bobCreateSpaceMediaStream(10)
+        await bobSendSpaceMediaPayloads(
+            mediaStreamInfo.streamId,
+            10,
+            mediaStreamInfo.prevMiniblockHash,
+            mediaStreamInfo.publicMediaKey,
+        )
     })
 
     test('chunkIndexNeedsToBeWithinBounds', async () => {
@@ -103,6 +154,20 @@ describe('mediaTests', () => {
 
     test('clientCanOnlyPostToTheirOwnMediaStream', async () => {
         const result = await bobCreateMediaStream(10)
+        const chunk = new Uint8Array(100)
+
+        const alicesClient = await makeTestClient()
+        await alicesClient.initializeUser()
+        alicesClient.startSync()
+
+        await expect(
+            alicesClient.sendMediaPayload(result.streamId, chunk, 5, result.prevMiniblockHash),
+        ).toReject()
+        await alicesClient.stop()
+    })
+
+    test('clientCanOnlyPostToTheirOwnPublicMediaStream', async () => {
+        const result = await bobCreateSpaceMediaStream(10)
         const chunk = new Uint8Array(100)
 
         const alicesClient = await makeTestClient()
