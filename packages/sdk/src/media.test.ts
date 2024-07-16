@@ -166,6 +166,20 @@ describe('mediaTests', () => {
         await alicesClient.stop()
     })
 
+    test('clientCanOnlyPostToTheirOwnPublicMediaStream', async () => {
+        const result = await bobCreateSpaceMediaStream(10)
+        const chunk = new Uint8Array(100)
+
+        const alicesClient = await makeTestClient()
+        await alicesClient.initializeUser()
+        alicesClient.startSync()
+
+        await expect(
+            alicesClient.sendMediaPayload(result.streamId, chunk, 5, result.prevMiniblockHash),
+        ).toReject()
+        await alicesClient.stop()
+    })
+
     test('channelNeedsToExistBeforeCreatingMediaStream', async () => {
         const nonExistentSpaceId = makeUniqueSpaceStreamId()
         const nonExistentChannelId = makeUniqueChannelStreamId(nonExistentSpaceId)
