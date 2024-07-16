@@ -283,27 +283,14 @@ func (ctc *cacheTestContext) SaveMbCandidate(
 	streamId StreamId,
 	mb *Miniblock,
 ) error {
-	mbInfo, err := NewMiniblockInfoFromProto(
-		mb,
-		NewMiniblockInfoFromProtoOpts{DontParseEvents: true, ExpectedBlockNumber: -1},
-	)
+	inst := ctc.instancesByAddr[node]
+
+	stream, err := inst.cache.getStreamImpl(ctx, streamId)
 	if err != nil {
 		return err
 	}
 
-	serialized, err := mbInfo.ToBytes()
-	if err != nil {
-		return err
-	}
-
-	err = ctc.instancesByAddr[node].params.Storage.WriteBlockProposal(
-		ctx,
-		streamId,
-		mbInfo.Hash,
-		mbInfo.Num,
-		serialized,
-	)
-	return err
+	return stream.SaveMiniblockCandidate(ctx, mb)
 }
 
 func setOnChainStreamConfig(t *testing.T, ctx context.Context, btc *crypto.BlockchainTestContext, p testParams) {

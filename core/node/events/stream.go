@@ -48,6 +48,10 @@ type SyncStream interface {
 
 	ApplyMiniblock(ctx context.Context, miniblock *MiniblockInfo) error
 	PromoteCandidate(ctx context.Context, mbHash common.Hash, mbNum int64) error
+	SaveMiniblockCandidate(
+		ctx context.Context,
+		mb *Miniblock,
+	) error
 }
 
 func SyncStreamsResponseFromStreamAndCookie(result *StreamAndCookie) *SyncStreamsResponse {
@@ -129,6 +133,9 @@ func (s *streamImpl) applyMiniblockImplNoLock(ctx context.Context, miniblock *Mi
 	if miniblock.Num <= s.view.LastBlock().Num {
 		return nil
 	}
+
+	// TODO: strict check here.
+	// TODO: tests for this.
 
 	// Lets see if this miniblock can be applied.
 	newSV, err := s.view.copyAndApplyBlock(miniblock, s.params.ChainConfig)
@@ -543,4 +550,46 @@ func (s *streamImpl) getStatus() *streamImplStatus {
 	}
 
 	return ret
+}
+
+func (s *streamImpl) SaveMiniblockCandidate(ctx context.Context, mb *Miniblock) error {
+	mbInfo, err := NewMiniblockInfoFromProto(
+		mb,
+		NewMiniblockInfoFromProtoOpts{DontParseEvents: true, ExpectedBlockNumber: -1},
+	)
+	if err != nil {
+		return err
+	}
+
+	serialized, err := mbInfo.ToBytes()
+	if err != nil {
+		return err
+	}
+
+	view, err := s.getView(ctx)
+	if err != nil {
+		return err
+	}
+
+	if mbInfo.Num <= view.LastBlock().Num {
+		// TODO: better error code.
+		return RiverError(
+			Err_INTERNAL,
+			"Miniblock is too old",
+			"candidate.Num",
+			mbInfo.Num,
+			"lastBlock.Num",
+			view.LastBlock().Num,
+			"streamId",
+			s.streamId,
+		)
+	}
+
+	return s.params.Storage.WriteBlockProposal(
+		ctx,
+		s.streamId,
+		mbInfo.Hash,
+		mbInfo.Num,
+		serialized,
+	)
 }

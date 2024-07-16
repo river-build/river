@@ -25,6 +25,7 @@ type StreamStorage interface {
 	CreateStreamStorage(ctx context.Context, streamId StreamId, genesisMiniblock []byte) error
 
 	// Returns all stream blocks starting from last snapshot miniblock index and all envelopes in the given minipool.
+	// TODO: tests with precedingBlockCount > 0
 	ReadStreamFromLastSnapshot(
 		ctx context.Context,
 		streamId StreamId,
@@ -99,5 +100,30 @@ type StreamStorage interface {
 		miniblocks [][]byte,
 	) error
 
+	DebugReadStreamData(
+		ctx context.Context,
+		streamId StreamId,
+	) (*DebugReadStreamDataResult, error)
+
 	Close(ctx context.Context)
+}
+
+type MiniblockDescriptor struct {
+	MiniblockNumber int64
+	Data            []byte
+	Hash            common.Hash // Only set for miniblock candidates
+}
+
+type EventDescriptor struct {
+	Generation int64
+	Slot       int64
+	Data       []byte
+}
+
+type DebugReadStreamDataResult struct {
+	StreamId                   StreamId
+	LatestSnapshotMiniblockNum int64
+	Miniblocks                 []MiniblockDescriptor
+	Events                     []EventDescriptor
+	MbCandidates               []MiniblockDescriptor
 }

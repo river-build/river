@@ -4,7 +4,7 @@ import { envVarsSchema } from './env-vars'
 import { sleep } from './utils'
 import { createPrometheusConfig } from './create-prometheus-config'
 
-const PROMETHEUS_TARGETS_FILE = './prometheus/etc/config/targets.json'
+const PROMETHEUS_TARGETS_FILE = './prometheus/etc/targets.json'
 const SLEEP_DURATION_MS = 1000 * 60 * 5 // 5 minutes
 
 const run = async () => {
