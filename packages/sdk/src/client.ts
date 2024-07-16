@@ -684,6 +684,7 @@ export class Client
         chunkCount: number,
         streamSettings?: PlainMessage<StreamSettings>,
         publicScope?: PublicScope,
+        publicMediaKey?: Uint8Array,
     ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array }> {
         const isPublicScopeSpace = publicScope === PublicScope.PS_SPACE
 
@@ -719,7 +720,11 @@ export class Client
                     channelId: spaceIdBytes,
                     chunkCount,
                     settings: streamSettings,
+                    // create a publicly scoped stream.
+                    // include a key to decrypt the public content.
+                    // not an issue that the key is public. by design.
                     publicScope: PublicScope.PS_SPACE,
+                    publicMediaKey,
                 }),
             )
         } else {

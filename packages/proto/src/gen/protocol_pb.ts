@@ -3487,6 +3487,11 @@ export class MediaPayload_Inception extends Message<MediaPayload_Inception> {
    */
   publicScope?: PublicScope;
 
+  /**
+   * @generated from field: optional bytes public_media_key = 7;
+   */
+  publicMediaKey?: Uint8Array;
+
   constructor(data?: PartialMessage<MediaPayload_Inception>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3501,6 +3506,7 @@ export class MediaPayload_Inception extends Message<MediaPayload_Inception> {
     { no: 4, name: "settings", kind: "message", T: StreamSettings },
     { no: 5, name: "space_id", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
     { no: 6, name: "public_scope", kind: "enum", T: proto3.getEnumType(PublicScope), opt: true },
+    { no: 7, name: "public_media_key", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MediaPayload_Inception {

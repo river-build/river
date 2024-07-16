@@ -498,6 +498,7 @@ message MediaPayload {
         StreamSettings settings = 4;
         optional bytes space_id = 5;
         optional PublicScope public_scope = 6;
+        optional bytes public_media_key = 7;
     }
 
     message Chunk {
