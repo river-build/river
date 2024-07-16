@@ -1,7 +1,7 @@
 import fs from 'fs'
 
-const PROMETHEUS_CONFIG_FILE_SOURCE = './prometheus-config.yml'
-const PROMETHEUS_CONFIG_FILE_DESTINATION = './prometheus/etc/config/prometheus-config.yml'
+const PROMETHEUS_CONFIG_FILE_SOURCE = './prometheus.yml'
+const PROMETHEUS_CONFIG_FILE_DESTINATION = './prometheus/etc/prometheus.yml'
 
 export const createPrometheusConfig = async () => {
     console.info('Creating prometheus config...')

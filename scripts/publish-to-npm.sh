@@ -24,7 +24,7 @@ fi
 COMMIT_HASH=$(git rev-parse --short HEAD)
 BRANCH_NAME="release-sdk/${COMMIT_HASH}"
 PR_TITLE="Release SDK ${COMMIT_HASH}"
-VERSION_PREFIX="${COMMIT_HASH}-"
+VERSION_PREFIX="sdk-${COMMIT_HASH}-"
 
 git checkout -b "${BRANCH_NAME}"
 

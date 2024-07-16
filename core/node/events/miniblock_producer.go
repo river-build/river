@@ -229,7 +229,11 @@ func (p *miniblockProducer) TestMakeMiniblock(
 			go p.jobStart(ctx, job, forceSnapshot)
 			break
 		}
-		time.Sleep(10 * time.Millisecond)
+
+		err = SleepWithContext(ctx, 10*time.Millisecond)
+		if err != nil {
+			return common.Hash{}, -1, err
+		}
 	}
 
 	// Wait for the job to finish.
@@ -237,7 +241,11 @@ func (p *miniblockProducer) TestMakeMiniblock(
 		if current, _ := p.jobs.Load(streamId); current != job {
 			break
 		}
-		time.Sleep(10 * time.Millisecond)
+
+		err = SleepWithContext(ctx, 10*time.Millisecond)
+		if err != nil {
+			return common.Hash{}, -1, err
+		}
 	}
 
 	view, err := stream.GetView(ctx)
