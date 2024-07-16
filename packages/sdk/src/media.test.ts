@@ -57,8 +57,15 @@ describe('mediaTests', () => {
         await expect(bobsClient.createSpace(spaceId)).toResolve()
         // create a publicly scoped stream
         // include a key to decrypt the public content in the stream
-        const publicContentKey = crypto.randomBytes(32); // 256-bit key
-        const mediaInfo = await bobsClient.createMediaStream(spaceId, spaceId, chunkCount, undefined, PublicScope.PS_SPACE, publicContentKey)
+        const publicContentKey = crypto.randomBytes(32) // 256-bit key
+        const mediaInfo = await bobsClient.createMediaStream(
+            spaceId,
+            spaceId,
+            chunkCount,
+            undefined,
+            PublicScope.PS_SPACE,
+            publicContentKey,
+        )
         return {
             ...mediaInfo,
             publicContentKey,
@@ -80,7 +87,12 @@ describe('mediaTests', () => {
             // convert the encryption result into an Uint8Array to be sent as the payload
             const encryptionResult = aes256GcmEncrypt(chunk, publicContentKey)
             const serializedContent = serializeAes256GcmEncryptionResult(encryptionResult)
-            const result = await bobsClient.sendMediaPayload(streamId, serializedContent, i, prevHash)
+            const result = await bobsClient.sendMediaPayload(
+                streamId,
+                serializedContent,
+                i,
+                prevHash,
+            )
             prevHash = result.prevMiniblockHash
         }
         return prevHash
