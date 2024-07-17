@@ -57,6 +57,7 @@ contract RuleEntitlementTest is TestUtils, IEntitlementBase {
     // for the first check operation, we are checking ERC20 balance of 100 on chain 31337
     IRuleEntitlementV2.ERC20Params memory erc20Params = IRuleEntitlementV2
       .ERC20Params(threshold);
+
     checkOperations[0] = IRuleEntitlementV2.CheckOperation(
       IRuleEntitlementV2.CheckOperationType.ERC20,
       chainId,
@@ -123,10 +124,12 @@ contract RuleEntitlementTest is TestUtils, IEntitlementBase {
   function test_removeRuleEntitlement() external givenRuleEntitlementIsSet {
     vm.prank(space);
     ruleEntitlement.removeEntitlement(roleId);
-    IRuleEntitlementV2.Operation[] memory ruleOperations = ruleEntitlement
-      .getRuleDataV2(roleId)
-      .operations;
-    assertEq(ruleOperations.length, 0);
+
+    IRuleEntitlementV2.RuleData memory ruleData = ruleEntitlement.getRuleDataV2(
+      roleId
+    );
+
+    assertEq(ruleData.operations.length, 0);
   }
 
   function test_revertWhenNotAllowedToRemove()

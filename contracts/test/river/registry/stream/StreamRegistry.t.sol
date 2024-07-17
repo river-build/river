@@ -12,14 +12,15 @@ contract StreamRegistryTest is RiverRegistryBaseSetup, IOwnableBase {
   string url1 = "https://node1.com";
   string url2 = "https://node2.com";
 
+  address node1 = address(1);
+  address node2 = address(2);
+
   // =============================================================
   //                        allocateStream
   // =============================================================
 
   function test_streamCount(
-    address nodeOperator,
-    address node1,
-    address node2
+    address nodeOperator
   )
     external
     givenNodeOperatorIsApproved(nodeOperator)
@@ -28,9 +29,10 @@ contract StreamRegistryTest is RiverRegistryBaseSetup, IOwnableBase {
   {
     address[] memory nodes = new address[](1);
     nodes[0] = node1;
+
     bytes memory genesisMiniblock = abi.encodePacked("genesisMiniblock");
-    bytes32 streamIdOne = 0x0000000000000000000000000000000000000000000000000000000000000001;
-    bytes32 streamIdTwo = 0x0000000000000000000000000000000000000000000000000000000000000002;
+    bytes32 streamIdOne = _randomBytes32();
+    bytes32 streamIdTwo = _randomBytes32();
     bytes32 genesisMiniblockHash = 0;
 
     assertEq(streamRegistry.getStreamCount(), 0);

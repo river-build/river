@@ -8,7 +8,7 @@ import {RuleDataUtil} from "contracts/src/spaces/entitlements/rule/RuleDataUtil.
 import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlementV2.sol";
 
-contract TestRuleDataUtil is TestUtils {
+contract RuleDataUtilTest is TestUtils {
   address erc20Contract;
   address erc721Contract;
 

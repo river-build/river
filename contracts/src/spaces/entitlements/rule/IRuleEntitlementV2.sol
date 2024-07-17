@@ -73,7 +73,6 @@ interface IRuleEntitlementV2 is IEntitlement {
   // =============================================================
   //                           Structs
   // =============================================================
-
   struct CheckOperation {
     CheckOperationType opType;
     uint256 chainId;

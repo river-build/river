@@ -43,7 +43,7 @@ contract RuleEntitlementV2 is
   struct Entitlement {
     address grantedBy;
     uint256 grantedTime;
-    RuleData data;
+    bytes data;
   }
 
   mapping(uint256 => Entitlement) internal entitlementsByRoleId;
@@ -166,20 +166,21 @@ contract RuleEntitlementV2 is
 
     entitlement.grantedBy = sender;
     entitlement.grantedTime = currentTime;
+    entitlement.data = abi.encode(data);
 
     // All checks passed; initialize state variables
     // Manually copy _checkOperations to checkOperations
-    for (uint256 i = 0; i < checkOperationsLength; i++) {
-      entitlement.data.checkOperations.push(data.checkOperations[i]);
-    }
+    // for (uint256 i = 0; i < checkOperationsLength; i++) {
+    //   entitlement.data.checkOperations.push(data.checkOperations[i]);
+    // }
 
-    for (uint256 i = 0; i < logicalOperationsLength; i++) {
-      entitlement.data.logicalOperations.push(data.logicalOperations[i]);
-    }
+    // for (uint256 i = 0; i < logicalOperationsLength; i++) {
+    //   entitlement.data.logicalOperations.push(data.logicalOperations[i]);
+    // }
 
-    for (uint256 i = 0; i < operationsLength; i++) {
-      entitlement.data.operations.push(data.operations[i]);
-    }
+    // for (uint256 i = 0; i < operationsLength; i++) {
+    //   entitlement.data.operations.push(data.operations[i]);
+    // }
   }
 
   // @inheritdoc IEntitlement
@@ -190,6 +191,8 @@ contract RuleEntitlementV2 is
     }
 
     delete entitlementsByRoleId[roleId];
+    delete entitlementsByRoleId[roleId].grantedBy;
+    delete entitlementsByRoleId[roleId].data;
   }
 
   // @inheritdoc IEntitlement
@@ -209,7 +212,18 @@ contract RuleEntitlementV2 is
   function getRuleDataV2(
     uint256 roleId
   ) external view returns (RuleData memory data) {
-    return entitlementsByRoleId[roleId].data;
+    bytes memory ruleData = entitlementsByRoleId[roleId].data;
+
+    if (ruleData.length == 0) {
+      return
+        RuleData(
+          new Operation[](0),
+          new CheckOperation[](0),
+          new LogicalOperation[](0)
+        );
+    }
+
+    return abi.decode(ruleData, (IRuleEntitlementV2.RuleData));
   }
 
   // =============================================================
@@ -233,8 +247,10 @@ contract RuleEntitlementV2 is
   function getRuleData(
     uint256 roleId
   ) external view returns (IRuleEntitlement.RuleData memory data) {
-    IRuleEntitlementV2.RuleData memory v2Data = entitlementsByRoleId[roleId]
-      .data;
+    RuleData memory v2Data = abi.decode(
+      entitlementsByRoleId[roleId].data,
+      (RuleData)
+    );
     return RuleDataUtil.convertV2ToV1RuleData(v2Data);
   }
 }
