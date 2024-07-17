@@ -34,7 +34,10 @@ abstract contract EntitlementGatedBaseV2 is IEntitlementGatedBaseV2 {
       transactionId
     ];
 
-    if (transaction.registered && transaction.roleIds.contains(roleId)) {
+    EntitlementGatedStorageV2.TransactionRole storage transactionRole = ds
+      .transactionRoles[transactionId];
+
+    if (transaction.registered && transactionRole.roleIds.contains(roleId)) {
       revert EntitlementGated_TransactionCheckAlreadyRegistered();
     }
 
@@ -51,12 +54,10 @@ abstract contract EntitlementGatedBaseV2 is IEntitlementGatedBaseV2 {
       transaction.client = msg.sender;
     }
 
-    transaction.roleIds.add(roleId);
+    transactionRole.roleIds.add(roleId);
 
-    for (uint256 i = 0; i < selectedNodes.length; i++) {
-      transaction.nodesByRoleId[roleId].add(selectedNodes[i]);
-      transaction.voteByNodeByRoleId[roleId][selectedNodes[i]] = NodeVoteStatus
-        .NOT_VOTED;
+    for (uint256 i; i < selectedNodes.length; i++) {
+      transactionRole.nodesByRoleId[roleId].add(selectedNodes[i]);
     }
 
     ds.entitlementChecker.requestEntitlementCheck(
@@ -74,6 +75,7 @@ abstract contract EntitlementGatedBaseV2 is IEntitlementGatedBaseV2 {
   ) internal {
     EntitlementGatedStorageV2.Layout storage ds = EntitlementGatedStorageV2
       .layout();
+
     EntitlementGatedStorageV2.Transaction storage transaction = ds.transactions[
       transactionId
     ];
@@ -82,7 +84,10 @@ abstract contract EntitlementGatedBaseV2 is IEntitlementGatedBaseV2 {
       revert EntitlementGated_TransactionNotRegistered();
     }
 
-    if (transaction.isCompleted[roleId]) {
+    EntitlementGatedStorageV2.TransactionRole storage transactionRole = ds
+      .transactionRoles[transactionId];
+
+    if (transactionRole.isCompleted[roleId]) {
       revert EntitlementGated_TransactionCheckAlreadyCompleted();
     }
 
@@ -93,22 +98,27 @@ abstract contract EntitlementGatedBaseV2 is IEntitlementGatedBaseV2 {
     uint256 passed = 0;
     uint256 failed = 0;
 
-    uint256 transactionNodesLength = transaction.nodesByRoleId[roleId].length();
+    uint256 transactionNodesLength = transactionRole
+      .nodesByRoleId[roleId]
+      .length();
 
-    for (uint256 i = 0; i < transactionNodesLength; i++) {
-      address node = transaction.nodesByRoleId[roleId].at(i);
-      NodeVoteStatus txNodeVoteStatus = transaction.voteByNodeByRoleId[roleId][
-        node
-      ];
+    for (uint256 i; i < transactionNodesLength; i++) {
+      address node = transactionRole.nodesByRoleId[roleId].at(i);
+
+      NodeVoteStatus txNodeVoteStatus = transactionRole.voteByNodeByRoleId[
+        roleId
+      ][node];
 
       // Update vote if not yet voted
       if (node == msg.sender) {
         if (txNodeVoteStatus != NodeVoteStatus.NOT_VOTED) {
           revert EntitlementGated_NodeAlreadyVoted();
         }
-        txNodeVoteStatus = result;
+        transactionRole.voteByNodeByRoleId[roleId][node] = result;
         found = true;
       }
+
+      txNodeVoteStatus = transactionRole.voteByNodeByRoleId[roleId][node];
 
       // Count votes
       if (txNodeVoteStatus == NodeVoteStatus.PASSED) {
@@ -125,7 +135,7 @@ abstract contract EntitlementGatedBaseV2 is IEntitlementGatedBaseV2 {
     if (
       passed > transactionNodesLength / 2 || failed > transactionNodesLength / 2
     ) {
-      transaction.isCompleted[roleId] = true;
+      transactionRole.isCompleted[roleId] = true;
       NodeVoteStatus finalStatus = passed > failed
         ? NodeVoteStatus.PASSED
         : NodeVoteStatus.FAILED;
@@ -139,24 +149,31 @@ abstract contract EntitlementGatedBaseV2 is IEntitlementGatedBaseV2 {
     EntitlementGatedStorageV2.Layout storage ds = EntitlementGatedStorageV2
       .layout();
 
-    EntitlementGatedStorageV2.Transaction storage transaction = ds.transactions[
-      transactionId
-    ];
+    EntitlementGatedStorageV2.TransactionRole storage transactionRole = ds
+      .transactionRoles[transactionId];
 
     // remove nodes from nodesByRoleId
-    for (uint256 i = 0; i < transaction.roleIds.length(); i++) {
-      uint256 roleId = transaction.roleIds.at(i);
-      transaction.roleIds.remove(roleId);
+    for (uint256 i = 0; i < transactionRole.roleIds.length(); i++) {
+      uint256 roleId = transactionRole.roleIds.at(i);
 
-      for (uint256 j = 0; j < transaction.nodesByRoleId[roleId].length(); j++) {
-        address node = transaction.nodesByRoleId[roleId].at(j);
-        delete transaction.voteByNodeByRoleId[roleId][node];
+      transactionRole.roleIds.remove(roleId);
+
+      for (
+        uint256 j = 0;
+        j < transactionRole.nodesByRoleId[roleId].length();
+        j++
+      ) {
+        delete transactionRole.voteByNodeByRoleId[roleId][
+          transactionRole.nodesByRoleId[roleId].at(j)
+        ];
       }
 
-      delete transaction.nodesByRoleId[roleId];
+      delete transactionRole.nodesByRoleId[roleId];
     }
 
-    delete ds.transactions[transactionId];
+    ds.transactions[transactionId].registered = false;
+    ds.transactions[transactionId].client = address(0);
+    delete ds.transactions[transactionId].entitlement;
   }
 
   function _getRuleData(
@@ -174,9 +191,7 @@ abstract contract EntitlementGatedBaseV2 is IEntitlementGatedBaseV2 {
       revert EntitlementGated_TransactionNotRegistered();
     }
 
-    IRuleEntitlementV2 re = IRuleEntitlementV2(
-      address(transaction.entitlement)
-    );
+    IRuleEntitlementV2 re = transaction.entitlement;
     IRuleEntitlementV2.RuleData memory ruleData = re.getRuleDataV2(roleId);
 
     return ruleData;
