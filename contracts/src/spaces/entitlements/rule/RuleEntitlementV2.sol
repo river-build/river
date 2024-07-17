@@ -23,7 +23,6 @@ import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Cont
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 // libraries
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {RuleDataUtil} from "contracts/src/spaces/entitlements/rule/RuleDataUtil.sol";
 
 // interfaces
@@ -38,7 +37,9 @@ contract RuleEntitlementV2 is
   UUPSUpgradeable,
   IRuleEntitlementV2
 {
-  using EnumerableSet for EnumerableSet.Bytes32Set;
+  // keccak256(abi.encode(uint256(keccak256("spaces.entitlements.rule.storage.v2")) - 1)) & ~bytes32(uint256(0xff))
+  bytes32 private constant STORAGE_SLOT =
+    0x858b72ffb9b2fa0fc89266b0dd2710729cbe0194d0dc7ad7f830ebf836219000;
 
   struct Entitlement {
     address grantedBy;
@@ -46,10 +47,11 @@ contract RuleEntitlementV2 is
     bytes data;
   }
 
-  mapping(uint256 => Entitlement) internal entitlementsByRoleId;
+  struct Layout {
+    mapping(uint256 => Entitlement) entitlementsByRoleId;
+  }
 
   address public SPACE_ADDRESS;
-
   string public constant name = "Rule Entitlement V2";
   string public constant description = "Entitlement for crosschain rules";
   string public constant moduleType = "RuleEntitlementV2";
@@ -162,45 +164,33 @@ contract RuleEntitlementV2 is
       }
     }
 
-    Entitlement storage entitlement = entitlementsByRoleId[roleId];
+    Entitlement storage entitlement = layout().entitlementsByRoleId[roleId];
 
     entitlement.grantedBy = sender;
     entitlement.grantedTime = currentTime;
     entitlement.data = abi.encode(data);
-
-    // All checks passed; initialize state variables
-    // Manually copy _checkOperations to checkOperations
-    // for (uint256 i = 0; i < checkOperationsLength; i++) {
-    //   entitlement.data.checkOperations.push(data.checkOperations[i]);
-    // }
-
-    // for (uint256 i = 0; i < logicalOperationsLength; i++) {
-    //   entitlement.data.logicalOperations.push(data.logicalOperations[i]);
-    // }
-
-    // for (uint256 i = 0; i < operationsLength; i++) {
-    //   entitlement.data.operations.push(data.operations[i]);
-    // }
   }
 
   // @inheritdoc IEntitlement
   function removeEntitlement(uint256 roleId) external onlySpace {
-    Entitlement memory entitlement = entitlementsByRoleId[roleId];
+    Layout storage ds = layout();
+
+    Entitlement memory entitlement = ds.entitlementsByRoleId[roleId];
     if (entitlement.grantedBy == address(0)) {
       revert Entitlement__InvalidValue();
     }
 
-    delete entitlementsByRoleId[roleId].grantedBy;
-    delete entitlementsByRoleId[roleId].grantedTime;
-    delete entitlementsByRoleId[roleId].data;
-    delete entitlementsByRoleId[roleId];
+    delete ds.entitlementsByRoleId[roleId].grantedBy;
+    delete ds.entitlementsByRoleId[roleId].grantedTime;
+    delete ds.entitlementsByRoleId[roleId].data;
+    delete ds.entitlementsByRoleId[roleId];
   }
 
   // @inheritdoc IEntitlement
   function getEntitlementDataByRoleId(
     uint256 roleId
   ) external view returns (bytes memory) {
-    Entitlement storage entitlement = entitlementsByRoleId[roleId];
+    Entitlement storage entitlement = layout().entitlementsByRoleId[roleId];
     return abi.encode(entitlement.data);
   }
 
@@ -213,7 +203,7 @@ contract RuleEntitlementV2 is
   function getRuleDataV2(
     uint256 roleId
   ) external view returns (RuleData memory data) {
-    bytes memory ruleData = entitlementsByRoleId[roleId].data;
+    bytes memory ruleData = layout().entitlementsByRoleId[roleId].data;
 
     if (ruleData.length == 0) {
       return
@@ -249,9 +239,16 @@ contract RuleEntitlementV2 is
     uint256 roleId
   ) external view returns (IRuleEntitlement.RuleData memory data) {
     RuleData memory v2Data = abi.decode(
-      entitlementsByRoleId[roleId].data,
+      layout().entitlementsByRoleId[roleId].data,
       (RuleData)
     );
     return RuleDataUtil.convertV2ToV1RuleData(v2Data);
+  }
+
+  function layout() internal pure returns (Layout storage ds) {
+    bytes32 slot = STORAGE_SLOT;
+    assembly {
+      ds.slot := slot
+    }
   }
 }
