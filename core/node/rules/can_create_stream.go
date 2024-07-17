@@ -528,7 +528,7 @@ func (ru *csMediaRules) checkMediaInceptionPayload() error {
 		)
 	}
 
-	// checks for channel media stream
+	// checks for space or channel media stream
 	if ru.inception.ChannelId == nil || len(ru.inception.ChannelId) == 0 {
 		if ru.inception.SpaceId == nil || len(ru.inception.SpaceId) == 0 {
 			return RiverError(
