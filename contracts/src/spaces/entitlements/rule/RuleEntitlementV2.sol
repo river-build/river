@@ -48,10 +48,10 @@ contract RuleEntitlementV2 is
   }
 
   struct Layout {
+    address spaceAddress;
     mapping(uint256 => Entitlement) entitlementsByRoleId;
   }
 
-  address public SPACE_ADDRESS;
   string public constant name = "Rule Entitlement V2";
   string public constant description = "Entitlement for crosschain rules";
   string public constant moduleType = "RuleEntitlementV2";
@@ -66,21 +66,19 @@ contract RuleEntitlementV2 is
     __ERC165_init();
     __Context_init();
 
-    SPACE_ADDRESS = _space;
+    layout().spaceAddress = _space;
   }
 
   modifier onlySpace() {
-    if (_msgSender() != SPACE_ADDRESS) {
+    if (_msgSender() != layout().spaceAddress) {
       revert Entitlement__NotAllowed();
     }
     _;
   }
 
-  /// @notice allow the contract to be upgraded while retaining state
-  /// @param newImplementation address of the new implementation
-  function _authorizeUpgrade(
-    address newImplementation
-  ) internal override onlySpace {}
+  function SPACE_ADDRESS() external view returns (address) {
+    return layout().spaceAddress;
+  }
 
   function supportsInterface(
     bytes4 interfaceId
@@ -251,4 +249,14 @@ contract RuleEntitlementV2 is
       ds.slot := slot
     }
   }
+
+  // =============================================================
+  //                           Internal
+  // =============================================================
+
+  /// @notice allow the contract to be upgraded while retaining state
+  /// @param newImplementation address of the new implementation
+  function _authorizeUpgrade(
+    address newImplementation
+  ) internal override onlySpace {}
 }
