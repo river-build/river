@@ -242,6 +242,7 @@ func (ru *csParams) canCreateStream() ruleBuilderCS {
 			).
 			requireMembership(
 				inception.ChannelId,
+				inception.SpaceId,
 			).
 			requireChainAuth(ru.getChainAuthForMediaStream)
 
@@ -527,12 +528,12 @@ func (ru *csMediaRules) checkMediaInceptionPayload() error {
 		)
 	}
 
-	// checks for space media stream
-	if ru.inception.PublicScope != nil && *ru.inception.PublicScope == PublicScope_PS_SPACE {
+	// checks for channel media stream
+	if ru.inception.ChannelId == nil || len(ru.inception.ChannelId) == 0 {
 		if ru.inception.SpaceId == nil || len(ru.inception.SpaceId) == 0 {
 			return RiverError(
 				Err_BAD_STREAM_CREATION_PARAMS,
-				"space id must not be nil or empty for space media stream",
+				"both space id and channel id must not be nil or empty for media stream",
 			)
 		}
 
@@ -541,11 +542,6 @@ func (ru *csMediaRules) checkMediaInceptionPayload() error {
 		} else {
 			return RiverError(Err_BAD_STREAM_CREATION_PARAMS, "invalid space id")
 		}
-	}
-
-	// checks for channel media stream
-	if len(ru.inception.ChannelId) == 0 {
-		return RiverError(Err_BAD_STREAM_CREATION_PARAMS, "channel id must not be empty for media stream")
 	}
 
 	if shared.ValidChannelStreamIdBytes(ru.inception.ChannelId) {
