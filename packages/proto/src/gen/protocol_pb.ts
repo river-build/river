@@ -3463,9 +3463,9 @@ export class MediaPayload_Inception extends Message<MediaPayload_Inception> {
   streamId = new Uint8Array(0);
 
   /**
-   * @generated from field: bytes channel_id = 2;
+   * @generated from field: optional bytes channel_id = 2;
    */
-  channelId = new Uint8Array(0);
+  channelId?: Uint8Array;
 
   /**
    * @generated from field: int32 chunk_count = 3;
@@ -3483,14 +3483,9 @@ export class MediaPayload_Inception extends Message<MediaPayload_Inception> {
   spaceId?: Uint8Array;
 
   /**
-   * @generated from field: optional river.PublicScope public_scope = 6;
+   * @generated from field: optional bytes user_id = 6;
    */
-  publicScope?: PublicScope;
-
-  /**
-   * @generated from field: optional bytes public_media_key = 7;
-   */
-  publicMediaKey?: Uint8Array;
+  userId?: Uint8Array;
 
   constructor(data?: PartialMessage<MediaPayload_Inception>) {
     super();
@@ -3501,12 +3496,11 @@ export class MediaPayload_Inception extends Message<MediaPayload_Inception> {
   static readonly typeName = "river.MediaPayload.Inception";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "stream_id", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
-    { no: 2, name: "channel_id", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 2, name: "channel_id", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
     { no: 3, name: "chunk_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 4, name: "settings", kind: "message", T: StreamSettings },
     { no: 5, name: "space_id", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
-    { no: 6, name: "public_scope", kind: "enum", T: proto3.getEnumType(PublicScope), opt: true },
-    { no: 7, name: "public_media_key", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
+    { no: 6, name: "user_id", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MediaPayload_Inception {
