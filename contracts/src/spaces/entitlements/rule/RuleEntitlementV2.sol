@@ -190,9 +190,10 @@ contract RuleEntitlementV2 is
       revert Entitlement__InvalidValue();
     }
 
-    delete entitlementsByRoleId[roleId];
     delete entitlementsByRoleId[roleId].grantedBy;
+    delete entitlementsByRoleId[roleId].grantedTime;
     delete entitlementsByRoleId[roleId].data;
+    delete entitlementsByRoleId[roleId];
   }
 
   // @inheritdoc IEntitlement
