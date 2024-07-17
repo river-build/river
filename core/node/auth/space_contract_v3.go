@@ -24,7 +24,7 @@ import (
 type Space struct {
 	address         common.Address
 	managerContract *base.EntitlementsManager
-	queryContract   *base.EntitlementDataQueryable
+	queryContract   *base.EntitlementDataQueryableV2
 	banning         Banning
 	pausable        *base.Pausable
 	channels        *base.Channels
@@ -105,25 +105,25 @@ func (sc *SpaceContractV3) IsEntitledToSpace(
 
 func (sc *SpaceContractV3) marshalEntitlements(
 	ctx context.Context,
-	entitlementData []base.IEntitlementDataQueryableBaseEntitlementData,
+	entitlementData []base.IEntitlementDataQueryableBaseV2EntitlementData,
 ) ([]Entitlement, error) {
 	log := dlog.FromCtx(ctx)
 	entitlements := make([]Entitlement, len(entitlementData))
 
 	for i, entitlement := range entitlementData {
-		if entitlement.EntitlementType == "RuleEntitlement" {
+		if entitlement.EntitlementType == "RuleEntitlementV2" {
 			entitlements[i].entitlementType = entitlement.EntitlementType
 			log.Info("Entitlement data", "entitlement_data", entitlement.EntitlementData)
 			// Parse the ABI definition
-			parsedABI, err := base.IEntitlementGatedMetaData.GetAbi()
+			parsedABI, err := base.IEntitlementGatedV2MetaData.GetAbi()
 			if err != nil {
 				log.Error("Failed to parse ABI", "error", err)
 				return nil, err
 			}
 
-			var ruleData base.IRuleEntitlementRuleData
+			var ruleData base.IRuleEntitlementV2RuleData
 
-			unpackedData, err := parsedABI.Unpack("getRuleData", entitlement.EntitlementData)
+			unpackedData, err := parsedABI.Unpack("getRuleDataV2", entitlement.EntitlementData)
 			if err != nil {
 				log.Warn(
 					"Failed to unpack rule data",
@@ -235,7 +235,7 @@ func (sc *SpaceContractV3) GetChannelEntitlementsForPermission(
 		return nil, EMPTY_ADDRESS, err
 	}
 
-	entitlementData, err := space.queryContract.GetChannelEntitlementDataByPermission(
+	entitlementData, err := space.queryContract.GetChannelEntitlementDataByPermissionV2(
 		&bind.CallOpts{Context: ctx},
 		channelId,
 		permission.String(),
@@ -299,7 +299,7 @@ func (sc *SpaceContractV3) GetSpaceEntitlementsForPermission(
 		return nil, EMPTY_ADDRESS, err
 	}
 
-	entitlementData, err := space.queryContract.GetEntitlementDataByPermission(
+	entitlementData, err := space.queryContract.GetEntitlementDataByPermissionV2(
 		&bind.CallOpts{Context: ctx},
 		permission.String(),
 	)
@@ -402,7 +402,7 @@ func (sc *SpaceContractV3) getSpace(ctx context.Context, spaceId shared.StreamId
 		if err != nil {
 			return nil, err
 		}
-		queryContract, err := base.NewEntitlementDataQueryable(address, sc.backend)
+		queryContract, err := base.NewEntitlementDataQueryableV2(address, sc.backend)
 		if err != nil {
 			return nil, err
 		}

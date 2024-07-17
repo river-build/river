@@ -418,7 +418,7 @@ func (cs *clientSimulator) onEntitlementCheckResultPosted(
 	event types.Log,
 	postedResults chan postResult,
 ) {
-	entitlementCheckResultPosted := base.IEntitlementGatedEntitlementCheckResultPosted{}
+	entitlementCheckResultPosted := base.IEntitlementGatedV2EntitlementCheckResultPosted{}
 	log := dlog.FromCtx(ctx).With("application", "clientSimulator").With("function", "onEntitlementCheckResultPosted")
 
 	log.Info(

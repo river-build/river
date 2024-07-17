@@ -488,7 +488,7 @@ func (ca *chainAuth) evaluateEntitlementData(
 
 	wallets := deserializeWallets(args.linkedWallets)
 	for _, ent := range entitlements {
-		if ent.entitlementType == "RuleEntitlement" {
+		if ent.entitlementType == "RuleEntitlementV2" {
 			re := ent.ruleEntitlement
 			log.Debug("RuleEntitlement", "ruleEntitlement", re)
 			result, err := ca.evaluator.EvaluateRuleData(ctx, wallets, re)

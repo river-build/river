@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/river-build/river/core/contracts/base"
@@ -16,7 +18,7 @@ import (
 func (e *Evaluator) EvaluateRuleData(
 	ctx context.Context,
 	linkedWallets []common.Address,
-	ruleData *base.IRuleEntitlementRuleData,
+	ruleData *base.IRuleEntitlementV2RuleData,
 ) (bool, error) {
 	log := dlog.FromCtx(ctx)
 	log.Info("Evaluating rule data", "ruleData", ruleData)
@@ -87,6 +89,7 @@ type CheckOperation struct {
 	ChainID         *big.Int
 	ContractAddress common.Address
 	Threshold       *big.Int
+	TokenId         *big.Int
 	ChannelId       [32]byte
 	Permission      string
 }
@@ -168,21 +171,70 @@ func (a *AndOperation) SetRightOperation(right Operation) {
 	a.RightOperation = right
 }
 
+const (
+	paramsDef = `[` +
+		`{"name":"getERC721Params","outputs":[{"type":"uint256","name":"threshold"}],"stateMutability":"view","type":"function"},` +
+		`{"name":"getERC20Params","outputs":[{"type":"uint256","name":"threshold"}],"stateMutability":"view","type":"function"}` +
+		`]`
+)
+
 func getOperationTree(ctx context.Context,
-	ruleData *base.IRuleEntitlementRuleData,
+	ruleData *base.IRuleEntitlementV2RuleData,
 ) (Operation, error) {
 	log := dlog.FromCtx(ctx)
 	decodedOperations := []Operation{}
-	log.Debug("Decoding operations", "ruleData", ruleData)
+	log.Info("Decoding operations", "ruleData", ruleData)
 	for _, operation := range ruleData.Operations {
 		if OperationType(operation.OpType) == CHECK {
+			log.Info("Decoding check operation", "operation", operation)
 			checkOperation := ruleData.CheckOperations[operation.Index]
+			var threshold *big.Int
+			var tokenId *big.Int
+
+			parsedAbi, err := abi.JSON(strings.NewReader(paramsDef))
+			if err != nil {
+				return nil, err
+			}
+			switch CheckOperationType(checkOperation.OpType) {
+			case ERC721:
+				output := map[string]interface{}{}
+				err = parsedAbi.UnpackIntoMap(output, "getERC721Params", checkOperation.Params)
+				if unpacked, ok := output["threshold"]; ok {
+					threshold = unpacked.(*big.Int)
+				} else {
+					log.Error("Unable to unpack ERC721Params", "output", output, "err", err)
+					return nil, errors.New("unable to unpack ERC721Params")
+				}
+				if err != nil {
+					return nil, err
+				}
+			case ERC20:
+				output := map[string]interface{}{}
+				err = parsedAbi.UnpackIntoMap(output, "getERC20Params", checkOperation.Params)
+				if unpacked, ok := output["threshold"]; ok {
+					threshold = unpacked.(*big.Int)
+				} else {
+					log.Error("Unable to unpack ERC20Params", "output", output, "err", err)
+					return nil, errors.New("unable to unpack ERC20Params")
+				}
+				if err != nil {
+					return nil, err
+				}
+			case ERC1155:
+				// TODO: Implement ERC1155
+
+			case CheckNONE:
+			case MOCK:
+			case ISENTITLED:
+			}
+
 			decodedOperations = append(decodedOperations, &CheckOperation{
 				OpType:          CHECK,
 				CheckType:       CheckOperationType(checkOperation.OpType),
 				ChainID:         checkOperation.ChainId,
 				ContractAddress: checkOperation.ContractAddress,
-				Threshold:       checkOperation.Threshold,
+				Threshold:       threshold,
+				TokenId:         tokenId,
 			})
 		} else if OperationType(operation.OpType) == LOGICAL {
 			logicalOperation := ruleData.LogicalOperations[operation.Index]

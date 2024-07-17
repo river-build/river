@@ -150,7 +150,7 @@ func New(
 
 	decoder, err := crypto.NewEVMErrorDecoder(
 		base.IEntitlementCheckerMetaData,
-		base.IEntitlementGatedMetaData,
+		base.IEntitlementGatedV2MetaData,
 		base.WalletLinkMetaData,
 	)
 	if err != nil {
@@ -370,7 +370,7 @@ func (x *xchain) writeEntitlementCheckResults(ctx context.Context, checkResults 
 				}
 
 				createPostResultTx := func(opts *bind.TransactOpts) (*types.Transaction, error) {
-					gated, err := base.NewIEntitlementGated(
+					gated, err := base.NewIEntitlementGatedV2(
 						receipt.Event.ContractAddress,
 						x.baseChain.Client,
 					)
@@ -507,16 +507,16 @@ func (x *xchain) getRuleData(
 	roleId *big.Int,
 	contractAddress common.Address,
 	client crypto.BlockchainClient,
-) (*base.IRuleEntitlementRuleData, error) {
+) (*base.IRuleEntitlementV2RuleData, error) {
 	log := x.Log(ctx).With("function", "getRuleData", "req.txid", transactionId)
-	gater, err := base.NewIEntitlementGated(contractAddress, client)
+	gater, err := base.NewIEntitlementGatedV2(contractAddress, client)
 	if err != nil {
-		return nil, x.handleContractError(log, err, "Failed to create NewEntitlementGated")
+		return nil, x.handleContractError(log, err, "Failed to create NewEntitlementGatedV2")
 	}
 
-	defer prometheus.NewTimer(x.callDurations.WithLabelValues("GetRuleData")).ObserveDuration()
+	defer prometheus.NewTimer(x.callDurations.WithLabelValues("GetRuleDataV2")).ObserveDuration()
 
-	ruleData, err := gater.GetRuleData(&bind.CallOpts{Context: ctx}, transactionId, roleId)
+	ruleData, err := gater.GetRuleDataV2(&bind.CallOpts{Context: ctx}, transactionId, roleId)
 	if err != nil {
 		x.getRuleDataCalls.IncFail()
 		return nil, x.handleContractError(log, err, "Failed to GetEncodedRuleData")

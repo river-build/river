@@ -91,7 +91,7 @@ func registerImpl(operatorKeyfile string, userConfirmationMessage string, regist
 		return err
 	}
 
-	decoder, err := crypto.NewEVMErrorDecoder(base.IEntitlementCheckerMetaData, base.IEntitlementGatedMetaData)
+	decoder, err := crypto.NewEVMErrorDecoder(base.IEntitlementCheckerMetaData, base.IEntitlementGatedV2MetaData)
 	if err != nil {
 		return err
 	}

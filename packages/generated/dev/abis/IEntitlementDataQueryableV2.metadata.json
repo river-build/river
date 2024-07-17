@@ -186,10 +186,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/facets/entitlements/extensions/IEntitlementDataQueryableV2.sol": {
-      "keccak256": "0xce2b01d79c4282be6b4afb2981e486f3eabdbc601b631d107e2e31a37f7a7509",
+      "keccak256": "0x4c7f630f1c24178b0e0c0e09c8645d04754e51c4ebf3a1704e11a7155fbdc1ea",
       "urls": [
-        "bzz-raw://fb9fef20178f93b7631dadab809326583780e9a67cb844089215a7131289d159",
-        "dweb:/ipfs/QmccuK1gyEd7m1aTyLkRrRsCyDLcFXsiJfnzaaooHs8B7M"
+        "bzz-raw://bfbe1e5028d3e6887a85f5511b7f6b9bcc0afaeaaff45c3de1689a582e6388c1",
+        "dweb:/ipfs/QmVzetJgMKe4CHfMMnwHjztSu72HtsTdme3Rb6UWvE2rDM"
       ],
       "license": "MIT"
     }
