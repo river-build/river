@@ -60,6 +60,8 @@ make deploy-base-anvil type=facet contract=DeployNodeOperator
 make deploy-base-anvil type=facet contract=DeploySpaceDelegation
 make deploy-base-anvil type=facet contract=DeployRewardsDistribution
 make deploy-base-anvil type=facet contract=DeployMockMessenger
+
+
 make deploy-base-anvil type=contract contract=DeployBaseRegistry
 make deploy-base-anvil type=contract contract=DeployProxyBatchDelegation
 make deploy-base-anvil type=contract contract=DeployRiverBase

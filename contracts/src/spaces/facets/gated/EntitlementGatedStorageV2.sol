@@ -4,8 +4,10 @@ pragma solidity ^0.8.23;
 // interfaces
 import {IEntitlementGatedBaseV2} from "./IEntitlementGatedV2.sol";
 import {IEntitlementChecker} from "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol";
+import {IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlementV2.sol";
 
 // libraries
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 // contracts
 
@@ -14,9 +16,28 @@ library EntitlementGatedStorageV2 {
   bytes32 internal constant STORAGE_SLOT =
     0xc9f85609eb60ac71988cfb4c314695ea9c394b99f001405aaba56d724f4cf800;
 
+  struct NodeVote {
+    address node;
+    IEntitlementGatedBaseV2.NodeVoteStatus vote;
+  }
+
+  struct Transaction {
+    bool registered;
+    address client;
+    IRuleEntitlementV2 entitlement;
+  }
+
+  struct TransactionRole {
+    mapping(uint256 roleId => EnumerableSet.AddressSet) nodesByRoleId;
+    mapping(uint256 roleId => mapping(address node => IEntitlementGatedBaseV2.NodeVoteStatus)) voteByNodeByRoleId;
+    mapping(uint256 roleId => bool) isCompleted;
+    EnumerableSet.UintSet roleIds;
+  }
+
   struct Layout {
     IEntitlementChecker entitlementChecker;
-    mapping(bytes32 => IEntitlementGatedBaseV2.Transaction) transactions;
+    mapping(bytes32 transactionId => Transaction) transactions;
+    mapping(bytes32 transactionId => TransactionRole) transactionRoles;
   }
 
   function layout() internal pure returns (Layout storage l) {

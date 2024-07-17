@@ -17,15 +17,6 @@ interface IEntitlementGatedBaseV2 {
     NodeVoteStatus vote;
   }
 
-  struct Transaction {
-    bool hasBenSet;
-    address clientAddress;
-    mapping(uint256 => NodeVote[]) nodeVotesArray;
-    mapping(uint256 => bool) isCompleted;
-    IRuleEntitlementV2 entitlement;
-    uint256[] roleIds;
-  }
-
   error EntitlementGated_InvalidAddress();
   error EntitlementGated_TransactionCheckAlreadyRegistered();
   error EntitlementGated_TransactionCheckAlreadyCompleted();

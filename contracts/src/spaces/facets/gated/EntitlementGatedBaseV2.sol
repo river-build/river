@@ -10,8 +10,12 @@ import {IImplementationRegistry} from "contracts/src/factory/facets/registry/IIm
 // libraries
 import {EntitlementGatedStorageV2} from "./EntitlementGatedStorageV2.sol";
 import {MembershipStorage} from "contracts/src/spaces/facets/membership/MembershipStorage.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 abstract contract EntitlementGatedBaseV2 is IEntitlementGatedBaseV2 {
+  using EnumerableSet for EnumerableSet.AddressSet;
+  using EnumerableSet for EnumerableSet.UintSet;
+
   function _setEntitlementChecker(
     IEntitlementChecker entitlementChecker
   ) internal {
@@ -26,14 +30,12 @@ abstract contract EntitlementGatedBaseV2 is IEntitlementGatedBaseV2 {
     EntitlementGatedStorageV2.Layout storage ds = EntitlementGatedStorageV2
       .layout();
 
-    Transaction storage transaction = ds.transactions[transactionId];
+    EntitlementGatedStorageV2.Transaction storage transaction = ds.transactions[
+      transactionId
+    ];
 
-    if (transaction.hasBenSet == true) {
-      for (uint256 i = 0; i < transaction.roleIds.length; i++) {
-        if (transaction.roleIds[i] == roleId) {
-          revert EntitlementGated_TransactionCheckAlreadyRegistered();
-        }
-      }
+    if (transaction.registered && transaction.roleIds.contains(roleId)) {
+      revert EntitlementGated_TransactionCheckAlreadyRegistered();
     }
 
     // if the entitlement checker has not been set, set it
@@ -43,18 +45,18 @@ abstract contract EntitlementGatedBaseV2 is IEntitlementGatedBaseV2 {
 
     address[] memory selectedNodes = ds.entitlementChecker.getRandomNodes(5);
 
-    if (!transaction.hasBenSet) {
-      transaction.hasBenSet = true;
+    if (!transaction.registered) {
+      transaction.registered = true;
       transaction.entitlement = entitlement;
-      transaction.clientAddress = msg.sender;
+      transaction.client = msg.sender;
     }
 
-    transaction.roleIds.push(roleId);
+    transaction.roleIds.add(roleId);
 
     for (uint256 i = 0; i < selectedNodes.length; i++) {
-      transaction.nodeVotesArray[roleId].push(
-        NodeVote({node: selectedNodes[i], vote: NodeVoteStatus.NOT_VOTED})
-      );
+      transaction.nodesByRoleId[roleId].add(selectedNodes[i]);
+      transaction.voteByNodeByRoleId[roleId][selectedNodes[i]] = NodeVoteStatus
+        .NOT_VOTED;
     }
 
     ds.entitlementChecker.requestEntitlementCheck(
@@ -72,11 +74,11 @@ abstract contract EntitlementGatedBaseV2 is IEntitlementGatedBaseV2 {
   ) internal {
     EntitlementGatedStorageV2.Layout storage ds = EntitlementGatedStorageV2
       .layout();
-    Transaction storage transaction = ds.transactions[transactionId];
+    EntitlementGatedStorageV2.Transaction storage transaction = ds.transactions[
+      transactionId
+    ];
 
-    if (
-      transaction.clientAddress == address(0) || transaction.hasBenSet == false
-    ) {
+    if (transaction.client == address(0) || transaction.registered == false) {
       revert EntitlementGated_TransactionNotRegistered();
     }
 
@@ -91,24 +93,27 @@ abstract contract EntitlementGatedBaseV2 is IEntitlementGatedBaseV2 {
     uint256 passed = 0;
     uint256 failed = 0;
 
-    uint256 transactionNodesLength = transaction.nodeVotesArray[roleId].length;
+    uint256 transactionNodesLength = transaction.nodesByRoleId[roleId].length();
 
     for (uint256 i = 0; i < transactionNodesLength; i++) {
-      NodeVote storage tempVote = transaction.nodeVotesArray[roleId][i];
+      address node = transaction.nodesByRoleId[roleId].at(i);
+      NodeVoteStatus txNodeVoteStatus = transaction.voteByNodeByRoleId[roleId][
+        node
+      ];
 
       // Update vote if not yet voted
-      if (tempVote.node == msg.sender) {
-        if (tempVote.vote != NodeVoteStatus.NOT_VOTED) {
+      if (node == msg.sender) {
+        if (txNodeVoteStatus != NodeVoteStatus.NOT_VOTED) {
           revert EntitlementGated_NodeAlreadyVoted();
         }
-        tempVote.vote = result;
+        txNodeVoteStatus = result;
         found = true;
       }
 
       // Count votes
-      if (tempVote.vote == NodeVoteStatus.PASSED) {
+      if (txNodeVoteStatus == NodeVoteStatus.PASSED) {
         passed++;
-      } else if (tempVote.vote == NodeVoteStatus.FAILED) {
+      } else if (txNodeVoteStatus == NodeVoteStatus.FAILED) {
         failed++;
       }
     }
@@ -134,11 +139,23 @@ abstract contract EntitlementGatedBaseV2 is IEntitlementGatedBaseV2 {
     EntitlementGatedStorageV2.Layout storage ds = EntitlementGatedStorageV2
       .layout();
 
-    Transaction storage transaction = ds.transactions[transactionId];
-    for (uint256 i = 0; i < transaction.roleIds.length; i++) {
-      delete transaction.nodeVotesArray[transaction.roleIds[i]];
+    EntitlementGatedStorageV2.Transaction storage transaction = ds.transactions[
+      transactionId
+    ];
+
+    // remove nodes from nodesByRoleId
+    for (uint256 i = 0; i < transaction.roleIds.length(); i++) {
+      uint256 roleId = transaction.roleIds.at(i);
+      transaction.roleIds.remove(roleId);
+
+      for (uint256 j = 0; j < transaction.nodesByRoleId[roleId].length(); j++) {
+        address node = transaction.nodesByRoleId[roleId].at(j);
+        delete transaction.voteByNodeByRoleId[roleId][node];
+      }
+
+      delete transaction.nodesByRoleId[roleId];
     }
-    delete transaction.roleIds;
+
     delete ds.transactions[transactionId];
   }
 
@@ -149,9 +166,11 @@ abstract contract EntitlementGatedBaseV2 is IEntitlementGatedBaseV2 {
     EntitlementGatedStorageV2.Layout storage ds = EntitlementGatedStorageV2
       .layout();
 
-    Transaction storage transaction = ds.transactions[transactionId];
+    EntitlementGatedStorageV2.Transaction storage transaction = ds.transactions[
+      transactionId
+    ];
 
-    if (transaction.hasBenSet == false) {
+    if (transaction.registered == false) {
       revert EntitlementGated_TransactionNotRegistered();
     }
 
