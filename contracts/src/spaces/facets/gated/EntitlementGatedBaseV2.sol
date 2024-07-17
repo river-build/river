@@ -26,7 +26,9 @@ abstract contract EntitlementGatedBaseV2 is IEntitlementGatedBaseV2 {
     EntitlementGatedStorageV2.Layout storage ds = EntitlementGatedStorageV2
       .layout();
 
-    Transaction storage transaction = ds.transactions[transactionId];
+    EntitlementGatedStorageV2.Transaction storage transaction = ds.transactions[
+      transactionId
+    ];
 
     if (transaction.hasBenSet == true) {
       for (uint256 i = 0; i < transaction.roleIds.length; i++) {
@@ -72,7 +74,9 @@ abstract contract EntitlementGatedBaseV2 is IEntitlementGatedBaseV2 {
   ) internal {
     EntitlementGatedStorageV2.Layout storage ds = EntitlementGatedStorageV2
       .layout();
-    Transaction storage transaction = ds.transactions[transactionId];
+    EntitlementGatedStorageV2.Transaction storage transaction = ds.transactions[
+      transactionId
+    ];
 
     if (
       transaction.clientAddress == address(0) || transaction.hasBenSet == false
@@ -134,7 +138,9 @@ abstract contract EntitlementGatedBaseV2 is IEntitlementGatedBaseV2 {
     EntitlementGatedStorageV2.Layout storage ds = EntitlementGatedStorageV2
       .layout();
 
-    Transaction storage transaction = ds.transactions[transactionId];
+    EntitlementGatedStorageV2.Transaction storage transaction = ds.transactions[
+      transactionId
+    ];
     for (uint256 i = 0; i < transaction.roleIds.length; i++) {
       delete transaction.nodeVotesArray[transaction.roleIds[i]];
     }
@@ -149,7 +155,9 @@ abstract contract EntitlementGatedBaseV2 is IEntitlementGatedBaseV2 {
     EntitlementGatedStorageV2.Layout storage ds = EntitlementGatedStorageV2
       .layout();
 
-    Transaction storage transaction = ds.transactions[transactionId];
+    EntitlementGatedStorageV2.Transaction storage transaction = ds.transactions[
+      transactionId
+    ];
 
     if (transaction.hasBenSet == false) {
       revert EntitlementGated_TransactionNotRegistered();
