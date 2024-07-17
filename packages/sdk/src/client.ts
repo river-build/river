@@ -24,7 +24,6 @@ import {
     MemberPayload_Nft,
     CreateStreamRequest,
     AddEventResponse_Error,
-    PublicScope,
 } from '@river-build/proto'
 import {
     bin_fromHexString,
@@ -679,17 +678,13 @@ export class Client
     }
 
     async createMediaStream(
-        channelId: string | Uint8Array,
+        channelId: string | Uint8Array | undefined,
         spaceId: string | Uint8Array | undefined,
         chunkCount: number,
         streamSettings?: PlainMessage<StreamSettings>,
-        publicScope?: PublicScope,
-        publicMediaKey?: Uint8Array,
     ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array }> {
-        const isPublicScopeSpace = publicScope === PublicScope.PS_SPACE
-
         assert(this.userStreamId !== undefined, 'userStreamId must be set')
-        if (isPublicScopeSpace) {
+        if (!channelId) {
             assert(spaceId !== undefined, 'spaceId must be set')
             assert(isSpaceStreamId(spaceId), 'spaceId must be a valid streamId')
         } else {
@@ -702,43 +697,22 @@ export class Client
         }
 
         const streamId =
-            isPublicScopeSpace && spaceId
+            !channelId && spaceId
                 ? makeMediaStreamIdFromSpaceId(spaceId)
                 : makeUniqueMediaStreamId()
 
-        this.logCall('createMedia', channelId, streamId)
+        this.logCall('createMedia', channelId ?? spaceId, streamId)
 
-        let inceptionEvent: Envelope
-        if (isPublicScopeSpace && spaceId) {
-            const streamIdBytes = streamIdAsBytes(streamId)
-            const spaceIdBytes = streamIdAsBytes(spaceId)
-            inceptionEvent = await makeEvent(
-                this.signerContext,
-                make_MediaPayload_Inception({
-                    streamId: streamIdBytes,
-                    spaceId: spaceIdBytes,
-                    channelId: spaceIdBytes,
-                    chunkCount,
-                    settings: streamSettings,
-                    // create a publicly scoped stream.
-                    // include a key to decrypt the public content.
-                    // not an issue that the key is public. by design.
-                    publicScope: PublicScope.PS_SPACE,
-                    publicMediaKey,
-                }),
-            )
-        } else {
-            inceptionEvent = await makeEvent(
-                this.signerContext,
-                make_MediaPayload_Inception({
-                    streamId: streamIdAsBytes(streamId),
-                    channelId: streamIdAsBytes(channelId),
-                    spaceId: spaceId ? streamIdAsBytes(spaceId) : undefined,
-                    chunkCount,
-                    settings: streamSettings,
-                }),
-            )
-        }
+        const inceptionEvent = await makeEvent(
+            this.signerContext,
+            make_MediaPayload_Inception({
+                streamId: streamIdAsBytes(streamId),
+                channelId: channelId ? streamIdAsBytes(channelId) : undefined,
+                spaceId: spaceId ? streamIdAsBytes(spaceId) : undefined,
+                chunkCount,
+                settings: streamSettings,
+            }),
+        )
 
         const response = await this.rpcClient.createStream({
             events: [inceptionEvent],
@@ -1384,7 +1358,7 @@ export class Client
         data: Uint8Array,
         chunkIndex: number,
         prevMiniblockHash: Uint8Array,
-    ): Promise<{ prevMiniblockHash: Uint8Array }> {
+    ): Promise<{ prevMiniblockHash: Uint8Array; eventId: string }> {
         const payload = make_MediaPayload_Chunk({
             data: data,
             chunkIndex: chunkIndex,
