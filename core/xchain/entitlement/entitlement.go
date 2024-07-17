@@ -198,30 +198,47 @@ func getOperationTree(ctx context.Context,
 			switch CheckOperationType(checkOperation.OpType) {
 			case ERC721:
 				output := map[string]interface{}{}
-				err = parsedAbi.UnpackIntoMap(output, "getERC721Params", checkOperation.Params)
+				if err = parsedAbi.UnpackIntoMap(output, "getERC721Params", checkOperation.Params); err != nil {
+					return nil, err
+				}
+
 				if unpacked, ok := output["threshold"]; ok {
 					threshold = unpacked.(*big.Int)
 				} else {
 					log.Error("Unable to unpack ERC721Params", "output", output, "err", err)
 					return nil, errors.New("unable to unpack ERC721Params")
 				}
-				if err != nil {
-					return nil, err
-				}
+
 			case ERC20:
 				output := map[string]interface{}{}
-				err = parsedAbi.UnpackIntoMap(output, "getERC20Params", checkOperation.Params)
+				if err = parsedAbi.UnpackIntoMap(output, "getERC20Params", checkOperation.Params); err != nil {
+					return nil, err
+				}
+
 				if unpacked, ok := output["threshold"]; ok {
 					threshold = unpacked.(*big.Int)
 				} else {
 					log.Error("Unable to unpack ERC20Params", "output", output, "err", err)
 					return nil, errors.New("unable to unpack ERC20Params")
 				}
-				if err != nil {
+
+			case ERC1155:
+				output := map[string]interface{}{}
+				if err = parsedAbi.UnpackIntoMap(output, "getERC1155Params", checkOperation.Params); err != nil {
 					return nil, err
 				}
-			case ERC1155:
-				// TODO: Implement ERC1155
+				if unpacked, ok := output["threshold"]; ok {
+					threshold = unpacked.(*big.Int)
+				} else {
+					log.Error("Unable to unpack ERC1155Params", "output", output, "err", err)
+					return nil, errors.New("unable to unpack ERC1155Params")
+				}
+				if unpacked, ok := output["tokenId"]; ok {
+					tokenId = unpacked.(*big.Int)
+				} else {
+					log.Error("Unable to unpack ERC1155Params", "output", output, "err", err)
+					return nil, errors.New("unable to unpack ERC1155Params")
+				}
 
 			case CheckNONE:
 			case MOCK:
