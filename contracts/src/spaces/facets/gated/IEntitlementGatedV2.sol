@@ -12,11 +12,6 @@ interface IEntitlementGatedBaseV2 {
     FAILED
   }
 
-  struct NodeVote {
-    address node;
-    NodeVoteStatus vote;
-  }
-
   error EntitlementGated_InvalidAddress();
   error EntitlementGated_TransactionCheckAlreadyRegistered();
   error EntitlementGated_TransactionCheckAlreadyCompleted();

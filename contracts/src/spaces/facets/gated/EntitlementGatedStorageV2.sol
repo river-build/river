@@ -13,10 +13,15 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 
 library EntitlementGatedStorageV2 {
   using EnumerableSet for EnumerableSet.UintSet;
+  struct NodeVote {
+    address node;
+    NodeVoteStatus vote;
+  }
+
   struct Transaction {
     bool hasBenSet;
     address clientAddress;
-    mapping(uint256 => EnumerableSet) nodeVotesArray;
+    mapping(uint256 => NodeVote[]) nodeVotesArray;
     mapping(uint256 => bool) isCompleted;
     IRuleEntitlementV2 entitlement;
     uint256[] roleIds;
