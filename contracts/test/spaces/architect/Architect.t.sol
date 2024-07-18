@@ -10,8 +10,8 @@ import {IERC173} from "contracts/src/diamond/facets/ownable/IERC173.sol";
 import {IPausableBase, IPausable} from "contracts/src/diamond/facets/pausable/IPausable.sol";
 import {IGuardian} from "contracts/src/spaces/facets/guardian/IGuardian.sol";
 import {IUserEntitlement} from "contracts/src/spaces/entitlements/user/IUserEntitlement.sol";
-import {IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlementV2.sol";
-import {RuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/RuleEntitlementV2.sol";
+import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
+import {RuleEntitlement} from "contracts/src/spaces/entitlements/rule/RuleEntitlement.sol";
 import {IRoles} from "contracts/src/spaces/facets/roles/IRoles.sol";
 import {IMembership} from "contracts/src/spaces/facets/membership/IMembership.sol";
 import {IWalletLink} from "contracts/src/factory/facets/wallet-link/IWalletLink.sol";
@@ -91,7 +91,7 @@ contract ArchitectTest is
     for (uint256 i = 0; i < entitlements.length; i++) {
       if (
         keccak256(abi.encodePacked(entitlements[i].moduleType)) ==
-        keccak256(abi.encodePacked("RuleEntitlementV2"))
+        keccak256(abi.encodePacked("RuleEntitlement"))
       ) {
         ruleEntitlementAddress = entitlements[i].moduleAddress;
         break;
@@ -100,9 +100,9 @@ contract ArchitectTest is
 
     uint256 minterRoleId = 1;
     // ruleData for minter role
-    IRuleEntitlementV2.RuleData memory ruleData = IRuleEntitlementV2(
+    IRuleEntitlement.RuleData memory ruleData = IRuleEntitlement(
       ruleEntitlementAddress
-    ).getRuleDataV2(minterRoleId);
+    ).getRuleData(minterRoleId);
 
     assertEq(
       ruleData.checkOperations[0].contractAddress,
@@ -117,7 +117,7 @@ contract ArchitectTest is
     (
       ISpaceOwner spaceTokenAddress,
       IUserEntitlement userEntitlementAddress,
-      IRuleEntitlementV2 ruleEntitlementAddress
+      IRuleEntitlement ruleEntitlementAddress
     ) = spaceArchitect.getSpaceArchitectImplementations();
 
     assertEq(spaceOwner, address(spaceTokenAddress));
@@ -128,7 +128,7 @@ contract ArchitectTest is
   function test_setImplementations() external {
     ISpaceOwner newSpaceToken = ISpaceOwner(address(new MockERC721()));
     IUserEntitlement newUserEntitlement = new UserEntitlement();
-    IRuleEntitlementV2 newRuleEntitlement = new RuleEntitlementV2();
+    IRuleEntitlement newRuleEntitlement = new RuleEntitlement();
 
     address user = _randomAddress();
 
@@ -150,7 +150,7 @@ contract ArchitectTest is
     (
       ISpaceOwner spaceTokenAddress,
       IUserEntitlement userEntitlementAddress,
-      IRuleEntitlementV2 tokenEntitlementAddress
+      IRuleEntitlement tokenEntitlementAddress
     ) = spaceArchitect.getSpaceArchitectImplementations();
 
     assertEq(address(newSpaceToken), address(spaceTokenAddress));

@@ -5,7 +5,7 @@ pragma solidity ^0.8.23;
 import {IArchitectBase} from "./IArchitect.sol";
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 import {IUserEntitlement} from "contracts/src/spaces/entitlements/user/IUserEntitlement.sol";
-import {IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlementV2.sol";
+import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlementV2.sol";
 import {IRoles, IRolesBase} from "contracts/src/spaces/facets/roles/IRoles.sol";
 import {IChannel} from "contracts/src/spaces/facets/channels/IChannel.sol";
 import {IEntitlementsManager} from "contracts/src/spaces/facets/entitlements/IEntitlementsManager.sol";
@@ -84,8 +84,8 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
       _deployEntitlement(ims.userEntitlement, spaceAddress)
     );
 
-    // deploy token entitlement
-    IRuleEntitlementV2 ruleEntitlement = IRuleEntitlementV2(
+    // deploy rule entitlement
+    IRuleEntitlement ruleEntitlement = IRuleEntitlement(
       _deployEntitlement(ims.ruleEntitlement, spaceAddress)
     );
 
@@ -133,7 +133,7 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
   function _setImplementations(
     ISpaceOwner spaceToken,
     IUserEntitlement userEntitlement,
-    IRuleEntitlementV2 ruleEntitlement
+    IRuleEntitlement ruleEntitlement
   ) internal {
     if (address(spaceToken).code.length == 0) revert Architect__NotContract();
     if (address(userEntitlement).code.length == 0)
@@ -153,7 +153,7 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
     returns (
       ISpaceOwner spaceToken,
       IUserEntitlement userEntitlementImplementation,
-      IRuleEntitlementV2 ruleEntitlementImplementation
+      IRuleEntitlement ruleEntitlementImplementation
     )
   {
     ImplementationStorage.Layout storage ds = ImplementationStorage.layout();
@@ -191,7 +191,7 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
   function _createMinterEntitlement(
     address spaceAddress,
     IUserEntitlement userEntitlement,
-    IRuleEntitlementV2 ruleEntitlement,
+    IRuleEntitlement ruleEntitlement,
     MembershipRequirements memory requirements
   ) internal returns (uint256 roleId) {
     string[] memory joinPermissions = new string[](1);

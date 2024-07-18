@@ -3,7 +3,7 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {IArchitect} from "contracts/src/factory/facets/architect/IArchitect.sol";
-import {IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlementV2.sol";
+import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {ISpaceOwner} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
 import {IUserEntitlement} from "contracts/src/spaces/entitlements/user/IUserEntitlement.sol";
 
@@ -60,7 +60,7 @@ contract Architect is
   function setSpaceArchitectImplementations(
     ISpaceOwner spaceToken,
     IUserEntitlement userEntitlementImplementation,
-    IRuleEntitlementV2 ruleEntitlementImplementation
+    IRuleEntitlement ruleEntitlementImplementation
   ) external onlyOwner {
     _setImplementations(
       spaceToken,
@@ -75,7 +75,7 @@ contract Architect is
     returns (
       ISpaceOwner spaceToken,
       IUserEntitlement userEntitlementImplementation,
-      IRuleEntitlementV2 ruleEntitlementImplementation
+      IRuleEntitlement ruleEntitlementImplementation
     )
   {
     return _getImplementations();
