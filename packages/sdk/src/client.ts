@@ -1210,12 +1210,12 @@ export class Client
             // is a reply, a reaction, a self-redaction or an edit, it may have Write or ReactReply
             // permissions - any change to an existing message authored by the user is implicitly
             // permitted.
-            const expectedPermission: Permission[] =
+            const expectedPermissions: Permission[] =
                 payload.payload.case === 'reaction'
                     ? [Permission.React, Permission.Write]
                     : [Permission.Write]
             let isEntitled = false
-            for (const permission of expectedPermission) {
+            for (const permission of expectedPermissions) {
                 isEntitled = await this.entitlementsDelegate.isEntitled(
                     stream.view.channelContent.spaceId,
                     streamId,
@@ -1228,7 +1228,9 @@ export class Client
             }
             if (!isEntitled) {
                 throw new Error(
-                    `user is not entitled to add message to channel (requires '${expectedPermission}' permission)`,
+                    `user is not entitled to add message to channel (requires [${expectedPermissions.join(
+                        ',',
+                    )}] permission)`,
                 )
             }
         }
