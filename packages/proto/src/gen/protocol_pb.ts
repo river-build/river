@@ -117,32 +117,6 @@ proto3.util.setEnumType(ChannelOp, "river.ChannelOp", [
 ]);
 
 /**
- * @generated from enum river.PublicScope
- */
-export enum PublicScope {
-  /**
-   * @generated from enum value: PS_UNSPECIFIED = 0;
-   */
-  PS_UNSPECIFIED = 0,
-
-  /**
-   * @generated from enum value: PS_SPACE = 1;
-   */
-  PS_SPACE = 1,
-
-  /**
-   * @generated from enum value: PS_USER = 2;
-   */
-  PS_USER = 2,
-}
-// Retrieve enum metadata with: proto3.getEnumType(PublicScope)
-proto3.util.setEnumType(PublicScope, "river.PublicScope", [
-  { no: 0, name: "PS_UNSPECIFIED" },
-  { no: 1, name: "PS_SPACE" },
-  { no: 2, name: "PS_USER" },
-]);
-
-/**
  * Codes from 1 to 16 match gRPC/Connect codes.
  *
  * @generated from enum river.Err

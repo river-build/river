@@ -771,12 +771,6 @@ enum ChannelOp {
     CO_UPDATED = 4;
 }
 
-enum PublicScope {
-    PS_UNSPECIFIED = 0;
-    PS_SPACE = 1;
-    PS_USER = 2;
-}
-
 // Codes from 1 to 16 match gRPC/Connect codes.
 enum Err {
     ERR_UNSPECIFIED = 0;
