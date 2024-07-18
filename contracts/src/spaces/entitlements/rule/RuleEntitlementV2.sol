@@ -14,7 +14,7 @@
  * As new LogicalOperation nodes are added, they can only reference existing nodes in the 'operations' array,
  * ensuring a valid post-order tree structure.
  */
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.23;
 
 // contracts
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -47,6 +47,7 @@ contract RuleEntitlementV2 is
     bytes data;
   }
 
+  // @custom:storage-location erc7201:spaces.entitlements.rule.storage.v2
   struct Layout {
     address spaceAddress;
     mapping(uint256 => Entitlement) entitlementsByRoleId;
