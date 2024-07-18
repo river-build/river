@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/river-build/river/core/node/rpc/sync"
+	"github.com/river-build/river/core/node/utils"
 	"log/slog"
 	"strconv"
 
@@ -25,7 +26,7 @@ func (s *Service) Info(
 	ctx context.Context,
 	req *connect.Request[InfoRequest],
 ) (*connect.Response[InfoResponse], error) {
-	ctx, log := ctxAndLogForRequest(ctx, req)
+	ctx, log := utils.CtxAndLogForRequest(ctx, req)
 
 	log.Debug("Info ENTER", "request", req.Msg)
 

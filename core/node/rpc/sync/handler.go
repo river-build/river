@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"github.com/river-build/river/core/node/utils"
 	"sync"
 
 	"connectrpc.com/connect"
@@ -83,7 +84,7 @@ func (h *handlerImpl) SyncStreams(
 	req *connect.Request[SyncStreamsRequest],
 	res *connect.ServerStream[SyncStreamsResponse],
 ) error {
-	ctx, log := ctxAndLogForRequest(ctx, req)
+	ctx, log := utils.CtxAndLogForRequest(ctx, req)
 
 	op, err := NewStreamsSyncOperation(ctx, h.nodeAddr, h.streamCache, h.nodeRegistry)
 	if err != nil {
