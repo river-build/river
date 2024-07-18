@@ -617,6 +617,17 @@ func (ru *csMediaRules) getChainAuthForMediaStream() (*auth.ChainAuthArgs, error
 			userId,
 			auth.PermissionWrite,
 		), nil
+	} else if shared.ValidSpaceStreamIdBytes(ru.inception.SpaceId) {
+		spaceId, err := shared.StreamIdFromBytes(ru.inception.SpaceId)
+		if err != nil {
+			return nil, err
+		}
+
+		return auth.NewChainAuthArgsForSpace(
+			spaceId,
+			userId,
+			auth.PermissionModifySpaceSettings, // todo should it be isOwner?
+		), nil
 	} else {
 		return nil, nil
 	}
