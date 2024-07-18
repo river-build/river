@@ -130,15 +130,8 @@ func NewSyncers(
 
 func (ss *SyncerSet) Run() {
 	ss.muSyncers.Lock()
-	ss.syncerTasks.Add(len(ss.syncers))
-	for syncerAddr, syncer := range ss.syncers {
-		go func() {
-			syncer.Run()
-			ss.muSyncers.Lock()
-			delete(ss.syncers, syncerAddr)
-			ss.muSyncers.Unlock()
-			ss.syncerTasks.Done()
-		}()
+	for _, syncer := range ss.syncers {
+		ss.startSyncer(syncer)
 	}
 	ss.muSyncers.Unlock()
 
@@ -185,17 +178,21 @@ func (ss *SyncerSet) AddStream(ctx context.Context, nodeAddress common.Address, 
 
 	ss.syncers[nodeAddress] = syncer
 	ss.streamID2Syncer[streamID] = syncer
+	ss.startSyncer(syncer)
 
+	return nil
+}
+
+// caller must have ss.muSyncers claimed
+func (ss *SyncerSet) startSyncer(syncer StreamsSyncer) {
 	ss.syncerTasks.Add(1)
 	go func() {
-		ss.syncers[nodeAddress].Run()
+		syncer.Run()
 		ss.muSyncers.Lock()
-		delete(ss.syncers, nodeAddress)
+		delete(ss.syncers, syncer.Address())
 		ss.muSyncers.Unlock()
 		ss.syncerTasks.Done()
 	}()
-
-	return nil
 }
 
 func (ss *SyncerSet) RemoveStream(ctx context.Context, streamID StreamId) error {
