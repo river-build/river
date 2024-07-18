@@ -39,9 +39,16 @@ type (
 		AddStreamReq    *connect.Request[AddStreamToSyncRequest]
 		PingReq         *connect.Request[PingSyncRequest]
 		DebugDropStream shared.StreamId
-		ReplyErr        chan error
+		reply           chan error
 	}
 )
+
+func (cmd *subCommand) Reply(err error) {
+	if err != nil {
+		cmd.reply <- err
+	}
+	close(cmd.reply)
+}
 
 // NewStreamsSyncOperation initialises a new sync stream operation. It groups the given syncCookies per stream node
 // by its address and subscribes on the internal stream streamCache for local streams.
@@ -98,7 +105,7 @@ func (syncOp *StreamSyncOperation) Run(
 
 			// use the syncID as used between client and subscription node
 			msg.SyncId = syncOp.SyncID
-			if err := res.Send(msg); err != nil {
+			if err = res.Send(msg); err != nil {
 				syncOp.cancel()
 				return err
 			}
@@ -108,31 +115,26 @@ func (syncOp *StreamSyncOperation) Run(
 				nodeAddress := common.BytesToAddress(cmd.AddStreamReq.Msg.GetSyncPos().GetNodeAddress())
 				streamID, err := shared.StreamIdFromBytes(cmd.AddStreamReq.Msg.GetSyncPos().GetStreamId())
 				if err != nil {
-					cmd.ReplyErr <- err
-					close(cmd.ReplyErr)
+					cmd.Reply(err)
 					continue
 				}
-				cmd.ReplyErr <- syncers.AddStream(cmd.Ctx, nodeAddress, streamID, cmd.AddStreamReq.Msg.GetSyncPos())
-				close(cmd.ReplyErr)
+				cmd.Reply(syncers.AddStream(cmd.Ctx, nodeAddress, streamID, cmd.AddStreamReq.Msg.GetSyncPos()))
 			} else if cmd.RmStreamReq != nil {
 				streamID, err := shared.StreamIdFromBytes(cmd.RmStreamReq.Msg.GetStreamId())
 				if err != nil {
-					cmd.ReplyErr <- err
-					close(cmd.ReplyErr)
+					cmd.Reply(err)
 					continue
 				}
-				cmd.ReplyErr <- syncers.RemoveStream(cmd.Ctx, streamID)
-				close(cmd.ReplyErr)
+				cmd.Reply(syncers.RemoveStream(cmd.Ctx, streamID))
 			} else if cmd.PingReq != nil {
-				_ = res.Send(&SyncStreamsResponse{
+				err = res.Send(&SyncStreamsResponse{
 					SyncId:    syncOp.SyncID,
 					SyncOp:    SyncOp_SYNC_PONG,
 					PongNonce: cmd.PingReq.Msg.GetNonce(),
 				})
-				close(cmd.ReplyErr)
+				cmd.Reply(err)
 			} else if cmd.DebugDropStream != (shared.StreamId{}) {
-				cmd.ReplyErr <- syncers.DebugDropStream(cmd.Ctx, cmd.DebugDropStream)
-				close(cmd.ReplyErr)
+				cmd.Reply(syncers.DebugDropStream(cmd.Ctx, cmd.DebugDropStream))
 			}
 		}
 	}
@@ -149,12 +151,12 @@ func (syncOp *StreamSyncOperation) AddStreamToSync(
 	op := &subCommand{
 		Ctx:          ctx,
 		AddStreamReq: req,
-		ReplyErr:     make(chan error, 1),
+		reply:        make(chan error, 1),
 	}
 
 	if syncOp.sendMsg(op) {
 		select {
-		case err := <-op.ReplyErr:
+		case err := <-op.reply:
 			if err == nil {
 				return &connect.Response[AddStreamToSyncResponse]{}, nil
 			}
@@ -178,12 +180,12 @@ func (syncOp *StreamSyncOperation) RemoveStreamFromSync(
 	op := &subCommand{
 		Ctx:         ctx,
 		RmStreamReq: req,
-		ReplyErr:    make(chan error, 1),
+		reply:       make(chan error, 1),
 	}
 
 	if syncOp.sendMsg(op) {
 		select {
-		case err := <-op.ReplyErr:
+		case err := <-op.reply:
 			if err == nil {
 				return &connect.Response[RemoveStreamFromSyncResponse]{}, nil
 			}
@@ -220,14 +222,14 @@ func (syncOp *StreamSyncOperation) PingSync(
 	}
 
 	op := &subCommand{
-		Ctx:      ctx,
-		PingReq:  req,
-		ReplyErr: make(chan error, 1),
+		Ctx:     ctx,
+		PingReq: req,
+		reply:   make(chan error, 1),
 	}
 
 	if syncOp.sendMsg(op) {
 		select {
-		case err := <-op.ReplyErr:
+		case err := <-op.reply:
 			if err == nil {
 				return &connect.Response[PingSyncResponse]{}, nil
 			}
@@ -244,12 +246,12 @@ func (syncOp *StreamSyncOperation) debugDropStream(ctx context.Context, streamID
 	op := &subCommand{
 		Ctx:             ctx,
 		DebugDropStream: streamID,
-		ReplyErr:        make(chan error, 1),
+		reply:           make(chan error, 1),
 	}
 
 	if syncOp.sendMsg(op) {
 		select {
-		case err := <-op.ReplyErr:
+		case err := <-op.reply:
 			return err
 		case <-syncOp.ctx.Done():
 			return RiverError(Err_CANCELED, "sync operation cancelled").Tags("syncId", syncOp.SyncID)
