@@ -91,7 +91,7 @@ type aeKeyFulfillmentRules struct {
 
   - @return canAddEvent bool // true if the event can be added to the stream, will be false in case of duplictate state
 
-  - @return chainAuthArgs *auth.ChainAuthArgs // on chain requirements for adding an event to the stream
+  - @return chainAuthArgsList *auth.ChainAuthArgs[] // a list of on chain requirements, such that, if defined, at least one must be satisfied in order to add the event to the stream
 
   - @return sideEffects *AddEventSideEffects // side effects that need to be executed before adding the event to the stream or on failures
 
@@ -195,8 +195,7 @@ func (params *aeParams) canAddChannelPayload(payload *StreamEvent_ChannelPayload
 	case *ChannelPayload_Message:
 		return aeBuilder().
 			check(params.creatorIsMember).
-			requireChainAuth(params.channelMessageWriteEntitlements).
-			requireChainAuth(params.channelMessageReactReplyEntitlements)
+			requireOneOfChainAuths(params.channelMessageWriteEntitlements, params.channelMessageReactReplyEntitlements)
 	case *ChannelPayload_Redaction_:
 		return aeBuilder().
 			check(params.creatorIsMember).
