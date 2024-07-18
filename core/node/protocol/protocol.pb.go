@@ -3371,11 +3371,13 @@ func (x *AddEventResponse) GetError() *AddEventResponse_Error {
 	return nil
 }
 
+// SyncStreamsRequest is a request to start a streams sync session.
 type SyncStreamsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// sync_pos is the list of streams and positions in those streams to receive updates from.
 	SyncPos []*SyncCookie `protobuf:"bytes,1,rep,name=sync_pos,json=syncPos,proto3" json:"sync_pos,omitempty"`
 }
 
@@ -3418,16 +3420,26 @@ func (x *SyncStreamsRequest) GetSyncPos() []*SyncCookie {
 	return nil
 }
 
+// SyncStreamsResponse is a stream of updates that the client receives for streams it subscribed to within a streams
+// sync session.
 type SyncStreamsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	SyncId    string           `protobuf:"bytes,1,opt,name=sync_id,json=syncId,proto3" json:"sync_id,omitempty"`
-	SyncOp    SyncOp           `protobuf:"varint,2,opt,name=sync_op,json=syncOp,proto3,enum=river.SyncOp" json:"sync_op,omitempty"`
-	Stream    *StreamAndCookie `protobuf:"bytes,3,opt,name=stream,proto3" json:"stream,omitempty"`
-	PongNonce string           `protobuf:"bytes,4,opt,name=pong_nonce,json=pongNonce,proto3" json:"pong_nonce,omitempty"`
-	StreamId  []byte           `protobuf:"bytes,5,opt,name=stream_id,json=streamId,proto3" json:"stream_id,omitempty"`
+	// sync_id is the id of the sync session.
+	SyncId string `protobuf:"bytes,1,opt,name=sync_id,json=syncId,proto3" json:"sync_id,omitempty"`
+	// sync_op marks the type of update.
+	SyncOp SyncOp `protobuf:"varint,2,opt,name=sync_op,json=syncOp,proto3,enum=river.SyncOp" json:"sync_op,omitempty"`
+	// stream indicates an update of a stream.
+	// only set when sync_op = SYNC_UPDATE
+	Stream *StreamAndCookie `protobuf:"bytes,3,opt,name=stream,proto3" json:"stream,omitempty"`
+	// pong_nonce is returned after a ping request was made to the sync session through PingSync.
+	// Set with the ping value from the PingSync request when sync_op = SYNC_PONG
+	PongNonce string `protobuf:"bytes,4,opt,name=pong_nonce,json=pongNonce,proto3" json:"pong_nonce,omitempty"`
+	// stream_id is set when sync_op = SYNC_DOWN and indicates it will not receive updates anymore for this stream.
+	// If the client is still is interested in updates for this stream it must re-add the stream to the sync session.
+	StreamId []byte `protobuf:"bytes,5,opt,name=stream_id,json=streamId,proto3" json:"stream_id,omitempty"`
 }
 
 func (x *SyncStreamsResponse) Reset() {
@@ -3497,12 +3509,15 @@ func (x *SyncStreamsResponse) GetStreamId() []byte {
 	return nil
 }
 
+// AddStreamToSyncRequest is a request to add a stream to an existing streams sync session.
 type AddStreamToSyncRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	SyncId  string      `protobuf:"bytes,1,opt,name=sync_id,json=syncId,proto3" json:"sync_id,omitempty"`
+	// sync_id is the id of the sync session.
+	SyncId string `protobuf:"bytes,1,opt,name=sync_id,json=syncId,proto3" json:"sync_id,omitempty"`
+	// sync_pos identifies the stream and position in the stream to receive updates from.
 	SyncPos *SyncCookie `protobuf:"bytes,2,opt,name=sync_pos,json=syncPos,proto3" json:"sync_pos,omitempty"`
 }
 
@@ -3590,6 +3605,9 @@ func (*AddStreamToSyncResponse) Descriptor() ([]byte, []int) {
 	return file_protocol_proto_rawDescGZIP(), []int{37}
 }
 
+// RemoveStreamFromSyncRequest stops the client to receive updates from this stream in the sync session.
+// Note that due to buffering in the stream it is possible still receives several updates for this stream after it was
+// removed.
 type RemoveStreamFromSyncRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3683,11 +3701,13 @@ func (*RemoveStreamFromSyncResponse) Descriptor() ([]byte, []int) {
 	return file_protocol_proto_rawDescGZIP(), []int{39}
 }
 
+// CancelSyncRequest cancels the sync session.
 type CancelSyncRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// sync_id is the unique id of the sync session.
 	SyncId string `protobuf:"bytes,1,opt,name=sync_id,json=syncId,proto3" json:"sync_id,omitempty"`
 }
 
@@ -3768,13 +3788,16 @@ func (*CancelSyncResponse) Descriptor() ([]byte, []int) {
 	return file_protocol_proto_rawDescGZIP(), []int{41}
 }
 
+// PingSyncRequest is a request to receive a pong in the sync session stream.
 type PingSyncRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// sync_id is the unique id of the sync session.
 	SyncId string `protobuf:"bytes,1,opt,name=sync_id,json=syncId,proto3" json:"sync_id,omitempty"`
-	Nonce  string `protobuf:"bytes,2,opt,name=nonce,proto3" json:"nonce,omitempty"`
+	// nonce is the pong to return in the sync session stream.
+	Nonce string `protobuf:"bytes,2,opt,name=nonce,proto3" json:"nonce,omitempty"`
 }
 
 func (x *PingSyncRequest) Reset() {

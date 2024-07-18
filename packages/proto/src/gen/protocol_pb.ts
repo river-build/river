@@ -4674,10 +4674,14 @@ export class AddEventResponse_Error extends Message<AddEventResponse_Error> {
 }
 
 /**
+ * SyncStreamsRequest is a request to start a streams sync session.
+ *
  * @generated from message river.SyncStreamsRequest
  */
 export class SyncStreamsRequest extends Message<SyncStreamsRequest> {
   /**
+   * sync_pos is the list of streams and positions in those streams to receive updates from.
+   *
    * @generated from field: repeated river.SyncCookie sync_pos = 1;
    */
   syncPos: SyncCookie[] = [];
@@ -4711,30 +4715,46 @@ export class SyncStreamsRequest extends Message<SyncStreamsRequest> {
 }
 
 /**
+ * SyncStreamsResponse is a stream of updates that the client receives for streams it subscribed to within a streams
+ * sync session.
+ *
  * @generated from message river.SyncStreamsResponse
  */
 export class SyncStreamsResponse extends Message<SyncStreamsResponse> {
   /**
+   * sync_id is the id of the sync session.
+   *
    * @generated from field: string sync_id = 1;
    */
   syncId = "";
 
   /**
+   * sync_op marks the type of update.
+   *
    * @generated from field: river.SyncOp sync_op = 2;
    */
   syncOp = SyncOp.SYNC_UNSPECIFIED;
 
   /**
+   * stream indicates an update of a stream.
+   * only set when sync_op = SYNC_UPDATE
+   *
    * @generated from field: river.StreamAndCookie stream = 3;
    */
   stream?: StreamAndCookie;
 
   /**
+   * pong_nonce is returned after a ping request was made to the sync session through PingSync.
+   * Set with the ping value from the PingSync request when sync_op = SYNC_PONG
+   *
    * @generated from field: string pong_nonce = 4;
    */
   pongNonce = "";
 
   /**
+   * stream_id is set when sync_op = SYNC_DOWN and indicates it will not receive updates anymore for this stream.
+   * If the client is still is interested in updates for this stream it must re-add the stream to the sync session.
+   *
    * @generated from field: bytes stream_id = 5;
    */
   streamId = new Uint8Array(0);
@@ -4772,15 +4792,21 @@ export class SyncStreamsResponse extends Message<SyncStreamsResponse> {
 }
 
 /**
+ * AddStreamToSyncRequest is a request to add a stream to an existing streams sync session.
+ *
  * @generated from message river.AddStreamToSyncRequest
  */
 export class AddStreamToSyncRequest extends Message<AddStreamToSyncRequest> {
   /**
+   * sync_id is the id of the sync session.
+   *
    * @generated from field: string sync_id = 1;
    */
   syncId = "";
 
   /**
+   * sync_pos identifies the stream and position in the stream to receive updates from.
+   *
    * @generated from field: river.SyncCookie sync_pos = 2;
    */
   syncPos?: SyncCookie;
@@ -4846,6 +4872,10 @@ export class AddStreamToSyncResponse extends Message<AddStreamToSyncResponse> {
 }
 
 /**
+ * RemoveStreamFromSyncRequest stops the client to receive updates from this stream in the sync session.
+ * Note that due to buffering in the stream it is possible still receives several updates for this stream after it was
+ * removed.
+ *
  * @generated from message river.RemoveStreamFromSyncRequest
  */
 export class RemoveStreamFromSyncRequest extends Message<RemoveStreamFromSyncRequest> {
@@ -4920,10 +4950,14 @@ export class RemoveStreamFromSyncResponse extends Message<RemoveStreamFromSyncRe
 }
 
 /**
+ * CancelSyncRequest cancels the sync session.
+ *
  * @generated from message river.CancelSyncRequest
  */
 export class CancelSyncRequest extends Message<CancelSyncRequest> {
   /**
+   * sync_id is the unique id of the sync session.
+   *
    * @generated from field: string sync_id = 1;
    */
   syncId = "";
@@ -4988,15 +5022,21 @@ export class CancelSyncResponse extends Message<CancelSyncResponse> {
 }
 
 /**
+ * PingSyncRequest is a request to receive a pong in the sync session stream.
+ *
  * @generated from message river.PingSyncRequest
  */
 export class PingSyncRequest extends Message<PingSyncRequest> {
   /**
+   * sync_id is the unique id of the sync session.
+   *
    * @generated from field: string sync_id = 1;
    */
   syncId = "";
 
   /**
+   * nonce is the pong to return in the sync session stream.
+   *
    * @generated from field: string nonce = 2;
    */
   nonce = "";
