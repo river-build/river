@@ -130,8 +130,6 @@ func (s *remoteSyncer) Run() {
 
 			case <-s.syncStreamCtx.Done():
 				return
-			case <-s.syncStreamCtx.Done():
-				return
 			}
 		}
 	}()
