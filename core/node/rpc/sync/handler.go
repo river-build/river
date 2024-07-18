@@ -44,7 +44,9 @@ type (
 		) (*connect.Response[PingSyncResponse], error)
 	}
 
+	// DebugHandler defines the external grpc interface that clients can call for debugging purposes.
 	DebugHandler interface {
+		// DebugDropStream drops the stream from the sync session and sends the stream down message to the client.
 		DebugDropStream(
 			ctx context.Context,
 			syncID string,
@@ -62,6 +64,11 @@ type (
 		// activeSyncOperations keeps a mapping from SyncID -> *StreamSyncOperation
 		activeSyncOperations sync.Map
 	}
+)
+
+var (
+	_ Handler      = (*handlerImpl)(nil)
+	_ DebugHandler = (*handlerImpl)(nil)
 )
 
 // NewHandler returns a structure that implements the Handler interface.
