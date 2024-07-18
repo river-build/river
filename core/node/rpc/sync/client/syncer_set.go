@@ -54,6 +54,14 @@ type (
 	StreamCookieSetGroupedByNodeAddress map[common.Address]SyncCookieSet
 )
 
+var (
+	_ StreamsSyncer      = (*localSyncer)(nil)
+	_ DebugStreamsSyncer = (*localSyncer)(nil)
+
+	_ StreamsSyncer      = (*remoteSyncer)(nil)
+	_ DebugStreamsSyncer = (*remoteSyncer)(nil)
+)
+
 func (cs SyncCookieSet) AsSlice() []*SyncCookie {
 	cookies := make([]*SyncCookie, 0, len(cs))
 	for _, cookie := range cs {
