@@ -69,7 +69,7 @@ func NewStreamsSyncOperation(
 		cancel:          cancel,
 		SyncID:          GenNanoid(),
 		thisNodeAddress: node,
-		commands:        make(chan *subCommand, 10),
+		commands:        make(chan *subCommand),
 		streamCache:     streamCache,
 		nodeRegistry:    nodeRegistry,
 	}, nil
@@ -149,25 +149,17 @@ func (syncOp *StreamSyncOperation) AddStreamToSync(
 		return nil, err
 	}
 
-	op := &subCommand{
+	cmd := &subCommand{
 		Ctx:          ctx,
 		AddStreamReq: req,
 		reply:        make(chan error, 1),
 	}
 
-	if syncOp.sendMsg(op) {
-		select {
-		case err := <-op.reply:
-			if err == nil {
-				return connect.NewResponse(&AddStreamToSyncResponse{}), nil
-			}
-			return nil, err
-		case <-syncOp.ctx.Done():
-			return nil, RiverError(Err_CANCELED, "sync operation cancelled").Tags("syncId", syncOp.SyncID)
-		}
+	if err := syncOp.process(cmd); err != nil {
+		return nil, err
 	}
 
-	return nil, RiverError(Err_CANCELED, "sync operation cancelled").Tags("syncId", syncOp.SyncID)
+	return connect.NewResponse(&AddStreamToSyncResponse{}), nil
 }
 
 func (syncOp *StreamSyncOperation) RemoveStreamFromSync(
@@ -178,25 +170,17 @@ func (syncOp *StreamSyncOperation) RemoveStreamFromSync(
 		return nil, RiverError(Err_INVALID_ARGUMENT, "invalid syncId").Tag("syncId", req.Msg.GetSyncId())
 	}
 
-	op := &subCommand{
+	cmd := &subCommand{
 		Ctx:         ctx,
 		RmStreamReq: req,
 		reply:       make(chan error, 1),
 	}
 
-	if syncOp.sendMsg(op) {
-		select {
-		case err := <-op.reply:
-			if err == nil {
-				return connect.NewResponse(&RemoveStreamFromSyncResponse{}), nil
-			}
-			return nil, err
-		case <-syncOp.ctx.Done():
-			return nil, RiverError(Err_CANCELED, "sync operation cancelled").Tags("syncId", syncOp.SyncID)
-		}
+	if err := syncOp.process(cmd); err != nil {
+		return nil, err
 	}
 
-	return nil, RiverError(Err_CANCELED, "sync operation cancelled").Tags("syncId", syncOp.SyncID)
+	return connect.NewResponse(&RemoveStreamFromSyncResponse{}), nil
 }
 
 func (syncOp *StreamSyncOperation) CancelSync(
@@ -220,51 +204,39 @@ func (syncOp *StreamSyncOperation) PingSync(
 		return nil, RiverError(Err_INVALID_ARGUMENT, "invalid syncId").Tag("syncId", req.Msg.GetSyncId())
 	}
 
-	op := &subCommand{
+	cmd := &subCommand{
 		Ctx:     ctx,
 		PingReq: req,
 		reply:   make(chan error, 1),
 	}
 
-	if syncOp.sendMsg(op) {
-		select {
-		case err := <-op.reply:
-			if err == nil {
-				return connect.NewResponse(&PingSyncResponse{}), nil
-			}
-			return nil, err
-		case <-syncOp.ctx.Done():
-			return nil, RiverError(Err_CANCELED, "sync operation cancelled").Tags("syncId", syncOp.SyncID)
-		}
+	if err := syncOp.process(cmd); err != nil {
+		return nil, err
 	}
 
-	return nil, RiverError(Err_CANCELED, "sync operation cancelled").Tags("syncId", syncOp.SyncID)
+	return connect.NewResponse(&PingSyncResponse{}), nil
 }
 
 func (syncOp *StreamSyncOperation) debugDropStream(ctx context.Context, streamID shared.StreamId) error {
-	op := &subCommand{
+	cmd := &subCommand{
 		Ctx:             ctx,
 		DebugDropStream: streamID,
 		reply:           make(chan error, 1),
 	}
 
-	if syncOp.sendMsg(op) {
+	return syncOp.process(cmd)
+}
+
+func (syncOp *StreamSyncOperation) process(cmd *subCommand) error {
+	select {
+	case syncOp.commands <- cmd:
 		select {
-		case err := <-op.reply:
+		case err := <-cmd.reply:
 			return err
 		case <-syncOp.ctx.Done():
 			return RiverError(Err_CANCELED, "sync operation cancelled").Tags("syncId", syncOp.SyncID)
 		}
-	}
-
-	return RiverError(Err_CANCELED, "sync operation cancelled").Tags("syncId", syncOp.SyncID)
-}
-
-func (syncOp *StreamSyncOperation) sendMsg(cmd *subCommand) bool {
-	select {
-	case syncOp.commands <- cmd:
-		return true
 	case <-syncOp.ctx.Done():
-		return false
+		return RiverError(Err_CANCELED, "sync operation cancelled").Tags("syncId", syncOp.SyncID)
 	}
 }
