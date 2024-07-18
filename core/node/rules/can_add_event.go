@@ -196,7 +196,7 @@ func (params *aeParams) canAddChannelPayload(payload *StreamEvent_ChannelPayload
 		return aeBuilder().
 			check(params.creatorIsMember).
 			requireChainAuth(params.channelMessageWriteEntitlements).
-			requireChainAuth(params.channelMessageReactReplyEntitlements)
+			requireChainAuth(params.channelMessageReactEntitlements)
 	case *ChannelPayload_Redaction_:
 		return aeBuilder().
 			check(params.creatorIsMember).
@@ -972,7 +972,7 @@ func (params *aeParams) channelMessageReadEntitlements() (*auth.ChainAuthArgs, e
 	return chainAuthArgs, nil
 }
 
-func (params *aeParams) channelMessageReactReplyEntitlements() (*auth.ChainAuthArgs, error) {
+func (params *aeParams) channelMessageReactEntitlements() (*auth.ChainAuthArgs, error) {
 	userId, err := shared.AddressHex(params.parsedEvent.Event.CreatorAddress)
 	if err != nil {
 		return nil, err
@@ -992,7 +992,7 @@ func (params *aeParams) channelMessageReactReplyEntitlements() (*auth.ChainAuthA
 		spaceId,
 		*params.streamView.StreamId(),
 		userId,
-		auth.PermissionReactReply,
+		auth.PermissionReact,
 	)
 
 	return chainAuthArgs, nil
