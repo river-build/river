@@ -80,6 +80,8 @@ func (syncOp *StreamSyncOperation) Run(
 	req *connect.Request[SyncStreamsRequest],
 	res *connect.ServerStream[SyncStreamsResponse],
 ) error {
+	defer syncOp.cancel()
+
 	cookies, err := client.ValidateAndGroupSyncCookies(req.Msg.GetSyncPos())
 	if err != nil {
 		return err
@@ -107,7 +109,6 @@ func (syncOp *StreamSyncOperation) Run(
 			// use the syncID as used between client and subscription node
 			msg.SyncId = syncOp.SyncID
 			if err = res.Send(msg); err != nil {
-				syncOp.cancel()
 				return err
 			}
 
