@@ -37,6 +37,7 @@ export type StreamMember = {
 }
 
 export interface Pin {
+    creatorUserId: string
     event: StreamTimelineEvent
 }
 
@@ -129,12 +130,18 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
         )
         this.solicitHelper.initSolicitations(Array.from(this.joined.values()), encryptionEmitter)
 
-        snapshot.members?.pins.forEach((pin) => {
-            if (pin.event) {
-                const parsedEvent = makeParsedEvent(pin.event, pin.eventId)
+        snapshot.members?.pins.forEach((snappedPin) => {
+            if (snappedPin.pin?.event) {
+                const parsedEvent = makeParsedEvent(snappedPin.pin.event, snappedPin.pin.eventId)
                 const remoteEvent = makeRemoteTimelineEvent({ parsedEvent, eventNum: 0n })
                 const cleartext = cleartexts?.[remoteEvent.hashStr]
-                this.addPin(remoteEvent, cleartext, encryptionEmitter, undefined)
+                this.addPin(
+                    userIdFromAddress(snappedPin.creatorAddress),
+                    remoteEvent,
+                    cleartext,
+                    encryptionEmitter,
+                    undefined,
+                )
             }
         })
     }
@@ -276,7 +283,13 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
                     check(isDefined(pin.event), 'invalid pin event')
                     const parsedEvent = makeParsedEvent(pin.event, pin.eventId)
                     const remoteEvent = makeRemoteTimelineEvent({ parsedEvent, eventNum: 0n })
-                    this.addPin(remoteEvent, undefined, encryptionEmitter, stateEmitter)
+                    this.addPin(
+                        event.creatorUserId,
+                        remoteEvent,
+                        undefined,
+                        encryptionEmitter,
+                        stateEmitter,
+                    )
                 }
                 break
             case 'unpin':
@@ -377,12 +390,13 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
     }
 
     private addPin(
+        creatorUserId: string,
         event: RemoteTimelineEvent,
         cleartext: string | undefined,
         encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
         stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
     ) {
-        const newPin = { event }
+        const newPin = { creatorUserId, event } satisfies Pin
         this.pins.push(newPin)
         if (
             event.remoteEvent.event.payload.case === 'channelPayload' &&

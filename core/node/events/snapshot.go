@@ -474,12 +474,13 @@ func update_Snapshot_Member(
 		member.Nft = content.Nft
 		return nil
 	case *MemberPayload_Pin_:
-		snapshot.Pins = append(snapshot.Pins, content.Pin)
+		snappedPin := &MemberPayload_SnappedPin{Pin: content.Pin, CreatorAddress: creatorAddress}
+		snapshot.Pins = append(snapshot.Pins, snappedPin)
 		return nil
 	case *MemberPayload_Unpin_:
 		snapPins := snapshot.Pins
-		for i, pin := range snapPins {
-			if bytes.Equal(pin.EventId, content.Unpin.EventId) {
+		for i, snappedPin := range snapPins {
+			if bytes.Equal(snappedPin.Pin.EventId, content.Unpin.EventId) {
 				snapPins = append(snapPins[:i], snapshot.Pins[i+1:]...)
 				break
 			}

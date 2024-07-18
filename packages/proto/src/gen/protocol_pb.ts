@@ -1081,9 +1081,9 @@ export class MemberPayload_Snapshot extends Message<MemberPayload_Snapshot> {
   joined: MemberPayload_Snapshot_Member[] = [];
 
   /**
-   * @generated from field: repeated river.MemberPayload.Pin pins = 2;
+   * @generated from field: repeated river.MemberPayload.SnappedPin pins = 2;
    */
-  pins: MemberPayload_Pin[] = [];
+  pins: MemberPayload_SnappedPin[] = [];
 
   constructor(data?: PartialMessage<MemberPayload_Snapshot>) {
     super();
@@ -1094,7 +1094,7 @@ export class MemberPayload_Snapshot extends Message<MemberPayload_Snapshot> {
   static readonly typeName = "river.MemberPayload.Snapshot";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "joined", kind: "message", T: MemberPayload_Snapshot_Member, repeated: true },
-    { no: 2, name: "pins", kind: "message", T: MemberPayload_Pin, repeated: true },
+    { no: 2, name: "pins", kind: "message", T: MemberPayload_SnappedPin, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MemberPayload_Snapshot {
@@ -1404,6 +1404,49 @@ export class MemberPayload_Nft extends Message<MemberPayload_Nft> {
 
   static equals(a: MemberPayload_Nft | PlainMessage<MemberPayload_Nft> | undefined, b: MemberPayload_Nft | PlainMessage<MemberPayload_Nft> | undefined): boolean {
     return proto3.util.equals(MemberPayload_Nft, a, b);
+  }
+}
+
+/**
+ * @generated from message river.MemberPayload.SnappedPin
+ */
+export class MemberPayload_SnappedPin extends Message<MemberPayload_SnappedPin> {
+  /**
+   * @generated from field: bytes creator_address = 1;
+   */
+  creatorAddress = new Uint8Array(0);
+
+  /**
+   * @generated from field: river.MemberPayload.Pin pin = 2;
+   */
+  pin?: MemberPayload_Pin;
+
+  constructor(data?: PartialMessage<MemberPayload_SnappedPin>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "river.MemberPayload.SnappedPin";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "creator_address", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 2, name: "pin", kind: "message", T: MemberPayload_Pin },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MemberPayload_SnappedPin {
+    return new MemberPayload_SnappedPin().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MemberPayload_SnappedPin {
+    return new MemberPayload_SnappedPin().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MemberPayload_SnappedPin {
+    return new MemberPayload_SnappedPin().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MemberPayload_SnappedPin | PlainMessage<MemberPayload_SnappedPin> | undefined, b: MemberPayload_SnappedPin | PlainMessage<MemberPayload_SnappedPin> | undefined): boolean {
+    return proto3.util.equals(MemberPayload_SnappedPin, a, b);
   }
 }
 

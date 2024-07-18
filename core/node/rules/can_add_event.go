@@ -1226,8 +1226,8 @@ func (ru *aePinRules) validPin() (bool, error) {
 		return false, RiverError(Err_INVALID_ARGUMENT, "channel has too many pins")
 	}
 	// check if the hash is already pinned
-	for _, pin := range existingPins {
-		if bytes.Equal(pin.EventId, ru.pin.EventId) {
+	for _, snappedPin := range existingPins {
+		if bytes.Equal(snappedPin.Pin.EventId, ru.pin.EventId) {
 			return false, RiverError(Err_DUPLICATE_EVENT, "message is already pinned")
 		}
 	}
@@ -1250,8 +1250,8 @@ func (ru *aeUnpinRules) validUnpin() (bool, error) {
 		return false, err
 	}
 	// check if the hash is already pinned
-	for _, pin := range existingPins {
-		if bytes.Equal(pin.EventId, ru.unpin.EventId) {
+	for _, snappedPin := range existingPins {
+		if bytes.Equal(snappedPin.Pin.EventId, ru.unpin.EventId) {
 			return true, nil
 		}
 	}

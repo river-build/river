@@ -162,7 +162,7 @@ message MemberPayload {
         }
         
         repeated Member joined = 1;
-        repeated Pin pins = 2;
+        repeated SnappedPin pins = 2;
     }
 
     message Membership {
@@ -189,6 +189,11 @@ message MemberPayload {
         int32 chain_id = 1;
         bytes contract_address = 2;
         bytes token_id = 3;
+    }
+
+    message SnappedPin {
+        bytes creator_address = 1;
+        Pin pin = 2;
     }
 
     message Pin { 
