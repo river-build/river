@@ -3428,7 +3428,6 @@ type SyncStreamsResponse struct {
 	unknownFields protoimpl.UnknownFields
 
 	// sync_id is the id of the sync session.
-	// only set when sync_op = SYNC_NEW or SYNC_CLOSE
 	SyncId string `protobuf:"bytes,1,opt,name=sync_id,json=syncId,proto3" json:"sync_id,omitempty"`
 	// sync_op marks the type of update.
 	SyncOp SyncOp `protobuf:"varint,2,opt,name=sync_op,json=syncOp,proto3,enum=river.SyncOp" json:"sync_op,omitempty"`

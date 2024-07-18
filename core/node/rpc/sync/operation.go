@@ -106,6 +106,7 @@ func (syncOp *StreamSyncOperation) Run(
 				return nil
 			}
 
+			msg.SyncId = syncOp.SyncID
 			if err = res.Send(msg); err != nil {
 				return err
 			}
