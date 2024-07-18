@@ -272,7 +272,7 @@ describe('channelsWithEntitlements', () => {
 
     // In practice we would never have a user with only write permissions, but this is a good test
     // to make sure our permissions are non-overlapping.
-    test('WRITE user can write (top-level plus reply), cannot react', async () => {
+    test('WRITE user can write (top-level plus reply), react', async () => {
         const { alice, bob, aliceSpaceDapp, spaceId, channelId } = await setupChannelWithCustomRole(
             ['alice'],
             NoopRuleData,
@@ -283,10 +283,10 @@ describe('channelsWithEntitlements', () => {
         await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
 
         const { eventId: refEventId } = await bob.sendMessage(channelId!, 'Hello, world!')
-        // Reacting to Bob's message should be disallowed.
+        // Reacting to Bob's message should be allowed.
         await expect(
             alice.sendChannelMessage_Reaction(channelId!, { reaction: '👍', refEventId }),
-        ).rejects.toThrow(/*not entitled to add message to channel*/)
+        ).toResolve()
 
         // Replying to Bob's message should be allowed.
         await expect(
@@ -310,7 +310,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('REACT + WRITE user can write (top-level plus reply), react', async () => {
+    test('REACT + WRITE user can do all WRITE user can do', async () => {
         const { alice, bob, aliceSpaceDapp, spaceId, channelId } = await setupChannelWithCustomRole(
             ['alice'],
             NoopRuleData,
