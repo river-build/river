@@ -1,8 +1,9 @@
 package sync
 
 import (
-	"connectrpc.com/connect"
 	"context"
+
+	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/events"
@@ -158,7 +159,7 @@ func (syncOp *StreamSyncOperation) AddStreamToSync(
 		select {
 		case err := <-op.reply:
 			if err == nil {
-				return &connect.Response[AddStreamToSyncResponse]{}, nil
+				return connect.NewResponse(&AddStreamToSyncResponse{}), nil
 			}
 			return nil, err
 		case <-syncOp.ctx.Done():
@@ -187,7 +188,7 @@ func (syncOp *StreamSyncOperation) RemoveStreamFromSync(
 		select {
 		case err := <-op.reply:
 			if err == nil {
-				return &connect.Response[RemoveStreamFromSyncResponse]{}, nil
+				return connect.NewResponse(&RemoveStreamFromSyncResponse{}), nil
 			}
 			return nil, err
 		case <-syncOp.ctx.Done():
@@ -208,9 +209,7 @@ func (syncOp *StreamSyncOperation) CancelSync(
 
 	syncOp.cancel()
 
-	return &connect.Response[CancelSyncResponse]{
-		Msg: &CancelSyncResponse{},
-	}, nil
+	return connect.NewResponse(&CancelSyncResponse{}), nil
 }
 
 func (syncOp *StreamSyncOperation) PingSync(
@@ -231,7 +230,7 @@ func (syncOp *StreamSyncOperation) PingSync(
 		select {
 		case err := <-op.reply:
 			if err == nil {
-				return &connect.Response[PingSyncResponse]{}, nil
+				return connect.NewResponse(&PingSyncResponse{}), nil
 			}
 			return nil, err
 		case <-syncOp.ctx.Done():
