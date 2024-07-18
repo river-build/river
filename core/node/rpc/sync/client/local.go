@@ -12,8 +12,7 @@ import (
 )
 
 type localSyncer struct {
-	syncStreamCtx    context.Context
-	syncStreamCancel context.CancelFunc
+	syncStreamCtx context.Context
 
 	streamCache events.StreamCache
 	cookies     []*SyncCookie
@@ -31,15 +30,13 @@ func newLocalSyncer(
 	cookies []*SyncCookie,
 	messages chan<- *SyncStreamsResponse,
 ) (*localSyncer, error) {
-	syncStreamCtx, syncStreamCancel := context.WithCancel(ctx)
 	return &localSyncer{
-		syncStreamCtx:    syncStreamCtx,
-		syncStreamCancel: syncStreamCancel,
-		streamCache:      streamCache,
-		localAddr:        localAddr,
-		cookies:          cookies,
-		messages:         messages,
-		activeStreams:    make(map[StreamId]events.SyncStream),
+		syncStreamCtx: ctx,
+		streamCache:   streamCache,
+		localAddr:     localAddr,
+		cookies:       cookies,
+		messages:      messages,
+		activeStreams: make(map[StreamId]events.SyncStream),
 	}, nil
 }
 
