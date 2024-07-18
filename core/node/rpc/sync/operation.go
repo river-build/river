@@ -106,8 +106,6 @@ func (syncOp *StreamSyncOperation) Run(
 				return nil
 			}
 
-			// use the syncID as used between client and subscription node
-			msg.SyncId = syncOp.SyncID
 			if err = res.Send(msg); err != nil {
 				return err
 			}

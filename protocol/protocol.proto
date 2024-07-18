@@ -701,6 +701,7 @@ message SyncStreamsRequest {
 // sync session.
 message SyncStreamsResponse {
     // sync_id is the id of the sync session.
+    // only set when sync_op = SYNC_NEW or SYNC_CLOSE
     string sync_id = 1;
     // sync_op marks the type of update.
     SyncOp sync_op = 2;
