@@ -19,7 +19,7 @@ import (
 type remoteSyncer struct {
 	syncStreamCtx    context.Context
 	syncStreamCancel context.CancelFunc
-	syncID           atomic.Value
+	syncID           string
 	forwarderSyncID  string
 	remoteAddr       common.Address
 	client           protocolconnect.StreamServiceClient
@@ -57,7 +57,7 @@ func newRemoteSyncer(
 
 	log := dlog.FromCtx(ctx)
 
-	if responseStream.Msg().SyncOp != SyncOp_SYNC_NEW || responseStream.Msg().SyncId == "" {
+	if responseStream.Msg().GetSyncOp() != SyncOp_SYNC_NEW || responseStream.Msg().GetSyncId() == "" {
 		log.Error("Received unexpected sync stream message",
 			"syncOp", responseStream.Msg().SyncOp,
 			"syncId", responseStream.Msg().SyncId)
@@ -76,7 +76,7 @@ func newRemoteSyncer(
 		remoteAddr:       remoteAddr,
 	}
 
-	s.syncID.Store(responseStream.Msg().SyncId)
+	s.syncID = responseStream.Msg().GetSyncId()
 
 	for _, cookie := range s.cookies {
 		streamID, _ := StreamIdFromBytes(cookie.GetStreamId())
@@ -119,16 +119,15 @@ func (s *remoteSyncer) Run() {
 				}
 
 				// send ping to remote to generate activity to check if remote is still alive
-				if syncID := s.syncID.Load().(string); syncID != "" {
-					if _, err := s.client.PingSync(s.syncStreamCtx, connect.NewRequest(&PingSyncRequest{
-						SyncId: syncID,
-						Nonce:  fmt.Sprintf("%d", now.Unix()),
-					})); err != nil {
-						s.syncStreamCancel()
-						return
-					}
+				if _, err := s.client.PingSync(s.syncStreamCtx, connect.NewRequest(&PingSyncRequest{
+					SyncId: s.syncID,
+					Nonce:  fmt.Sprintf("%d", now.Unix()),
+				})); err != nil {
+					s.syncStreamCancel()
 					return
 				}
+				return
+
 			case <-s.syncStreamCtx.Done():
 				return
 			case <-s.syncStreamCtx.Done():
@@ -179,18 +178,13 @@ func (s *remoteSyncer) Address() common.Address {
 }
 
 func (s *remoteSyncer) AddStream(ctx context.Context, cookie *SyncCookie) error {
-	syncID := s.syncID.Load().(string)
-	if syncID == "" {
-		return RiverError(Err_UNAVAILABLE, "sync not started")
-	}
-
 	streamID, err := StreamIdFromBytes(cookie.GetStreamId())
 	if err != nil {
 		return err
 	}
 
 	_, err = s.client.AddStreamToSync(ctx, connect.NewRequest(&AddStreamToSyncRequest{
-		SyncId:  syncID,
+		SyncId:  s.syncID,
 		SyncPos: cookie,
 	}))
 
@@ -202,13 +196,8 @@ func (s *remoteSyncer) AddStream(ctx context.Context, cookie *SyncCookie) error 
 }
 
 func (s *remoteSyncer) RemoveStream(ctx context.Context, streamID StreamId) (bool, error) {
-	syncID := s.syncID.Load().(string)
-	if syncID == "" {
-		return false, RiverError(Err_UNAVAILABLE, "sync not started")
-	}
-
 	_, err := s.client.RemoveStreamFromSync(ctx, connect.NewRequest(&RemoveStreamFromSyncRequest{
-		SyncId:   syncID,
+		SyncId:   s.syncID,
 		StreamId: streamID[:],
 	}))
 
@@ -230,14 +219,9 @@ func (s *remoteSyncer) RemoveStream(ctx context.Context, streamID StreamId) (boo
 }
 
 func (s *remoteSyncer) DebugDropStream(ctx context.Context, streamID StreamId) (bool, error) {
-	syncID := s.syncID.Load().(string)
-	if syncID == "" {
-		return false, RiverError(Err_UNAVAILABLE, "stream sync with remote not started")
-	}
-
 	if _, err := s.client.Info(ctx, connect.NewRequest(&InfoRequest{Debug: []string{
 		"drop_stream",
-		syncID,
+		s.syncID,
 		streamID.String(),
 	}})); err != nil {
 		return false, AsRiverError(err)
