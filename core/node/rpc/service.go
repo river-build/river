@@ -74,6 +74,9 @@ type Service struct {
 	// Metrics
 	metrics     *infra.Metrics
 	rpcDuration *prometheus.HistogramVec
+
+	// onCloseFuncs are called in reverse order from Service.Close()
+	onCloseFuncs []func()
 }
 
 var (

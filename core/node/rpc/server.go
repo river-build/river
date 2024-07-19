@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -42,46 +43,59 @@ const (
 	ServerModeArchive = "archive"
 )
 
-func (s *Service) Close() {
-	if s.httpServer != nil {
-		timeout := s.config.ShutdownTimeout
-		if timeout == 0 {
-			timeout = time.Second
-		} else if timeout <= time.Millisecond {
-			timeout = 0
+func (s *Service) httpServerClose() {
+	timeout := s.config.ShutdownTimeout
+	if timeout == 0 {
+		timeout = time.Second
+	} else if timeout <= time.Millisecond {
+		timeout = 0
+	}
+	ctx := s.serverCtx
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(s.serverCtx, timeout)
+		defer cancel()
+	}
+	s.defaultLogger.Info("Shutting down http server", "timeout", timeout)
+	err := s.httpServer.Shutdown(ctx)
+	if err != nil {
+		if err != context.DeadlineExceeded {
+			s.defaultLogger.Error("failed to shutdown http server", "error", err)
 		}
-		ctx := s.serverCtx
-		if timeout > 0 {
-			var cancel context.CancelFunc
-			ctx, cancel = context.WithTimeout(s.serverCtx, timeout)
-			defer cancel()
-		}
-		s.defaultLogger.Info("Shutting down http server", "timeout", timeout)
-		err := s.httpServer.Shutdown(ctx)
+		s.defaultLogger.Warn("forcing http server close")
+		err = s.httpServer.Close()
 		if err != nil {
-			if err != context.DeadlineExceeded {
-				s.defaultLogger.Error("failed to shutdown http server", "error", err)
-			}
-			s.defaultLogger.Warn("forcing http server close")
-			err = s.httpServer.Close()
-			if err != nil {
-				s.defaultLogger.Error("failed to close http server", "error", err)
-			}
-		} else {
-			s.defaultLogger.Info("http server shutdown")
+			s.defaultLogger.Error("failed to close http server", "error", err)
 		}
+	} else {
+		s.defaultLogger.Info("http server shutdown")
 	}
+}
 
-	// Try closing listener just in case: maybe httpServer was not started
-	if s.listener != nil {
-		s.listener.Close()
-	}
-
-	if s.storage != nil {
-		s.storage.Close(s.serverCtx)
+func (s *Service) Close() {
+	onClose := s.onCloseFuncs
+	slices.Reverse(onClose)
+	for _, f := range onClose {
+		f()
 	}
 
 	s.defaultLogger.Info("Server closed")
+}
+
+func (s *Service) onClose(f func()) {
+	s.onCloseFuncs = append(s.onCloseFuncs, f)
+}
+
+func (s *Service) onCloseWithError(f func() error) {
+	s.onCloseFuncs = append(s.onCloseFuncs, func() {
+		_ = f()
+	})
+}
+
+func (s *Service) onCloseWithContext(f func(context.Context)) {
+	s.onClose(func() {
+		f(s.serverCtx)
+	})
 }
 
 func (s *Service) start() error {
@@ -346,6 +360,7 @@ func (s *Service) runHttpServer() error {
 			log.Warn("Port is ignored when listener is provided")
 		}
 	}
+	s.onCloseWithError(s.listener.Close)
 
 	mux := httptrace.NewServeMux(
 		httptrace.WithResourceNamer(
@@ -409,8 +424,6 @@ func (s *Service) runHttpServer() error {
 		}
 
 		go s.serveTLS()
-
-		return nil
 	} else {
 		log.Info("Using H2C server")
 		s.httpServer, err = createH2CServer(ctx, address, corsMiddleware.Handler(mux))
@@ -419,9 +432,10 @@ func (s *Service) runHttpServer() error {
 		}
 
 		go s.serveH2C()
-
-		return nil
 	}
+
+	s.onClose(s.httpServerClose)
+	return nil
 }
 
 func (s *Service) serveTLS() {
@@ -464,6 +478,7 @@ func (s *Service) initStore() error {
 			return err
 		}
 		s.storage = store
+		s.onCloseWithContext(store.Close)
 
 		streamsCount, err := store.GetStreamsNumber(ctx)
 		if err != nil {
