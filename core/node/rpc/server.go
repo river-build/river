@@ -537,11 +537,16 @@ func (s *Service) initCacheAndSync() error {
 }
 
 func (s *Service) initTracing() { // Create a file to save the trace output
+	if !s.config.PerformanceTracking.TracingEnabled {
+		return
+	}
+
 	f, err := os.Create("traces.txt")
 	if err != nil {
-		log.Fatalf("failed to create trace file: %v", err)
+		s.defaultLogger.Error("failed to create trace file", "error", err)
+		return
 	}
-	defer f.Close()
+	s.onClose(f.Close)
 
 	// Create a new stdout trace exporter
 	exporter, err := stdouttrace.New(
