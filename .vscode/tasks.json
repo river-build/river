@@ -257,7 +257,7 @@
     {
       "label": "CasablancaConfigureNodes",
       "type": "shell",
-      "command": "cd ./core && just RUN_ENV=multi config build && just RUN_ENV=multi_ne config build",
+      "command": "RIVER_BLOCK_TIME=2 cd ./core && just RUN_ENV=multi config build && just RUN_ENV=multi_ne config build",
       "isBackground": true,
       "problemMatcher": [],
       "presentation": {
@@ -269,7 +269,7 @@
     {
       "label": "BaseChain",
       "type": "shell",
-      "command": "RIVER_BLOCK_TIME=1 ./scripts/start-local-basechain.sh",
+      "command": "RIVER_BLOCK_TIME=2 ./scripts/start-local-basechain.sh",
       "isBackground": true,
       "problemMatcher": [],
       "presentation": {
@@ -279,7 +279,7 @@
     {
       "label": "RiverChain",
       "type": "shell",
-      "command": "RIVER_BLOCK_TIME=1 ./scripts/start-local-riverchain.sh",
+      "command": "RIVER_BLOCK_TIME=2 ./scripts/start-local-riverchain.sh",
       "isBackground": true,
       "problemMatcher": [],
       "presentation": {

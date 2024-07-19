@@ -9,6 +9,7 @@
         "demo": "node --enable-source-maps ./dist/demo.cjs",
         "lint": "eslint . --ext .ts",
         "my-jest": "NODE_EXTRA_CA_CERTS=${HOME}/river-ca-cert.pem NODE_TLS_REJECT_UNAUTHORIZED=0 yarn node -r ../../scripts/node-no-warn.js --experimental-vm-modules $(yarn bin jest)",
+        "profile": "node --enable-source-maps ./dist/profile.cjs",
         "start": "node --enable-source-maps ./dist/start.cjs",
         "test:ci:with-entitlements": "RIVER_ENV=local_multi DEBUG='stress:*,csb:enc*,csb:dec*' DEBUG_DEPTH='10' yarn my-jest",
         "typecheck": "tsc --noEmit",

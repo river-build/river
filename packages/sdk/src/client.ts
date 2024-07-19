@@ -149,6 +149,7 @@ import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
 import { decryptAESGCM, deriveKeyAndIV, encryptAESGCM, uint8ArrayToBase64 } from './crypto_utils'
 import { makeTags } from './tags'
+import { Analytics } from './analytics'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
@@ -474,11 +475,13 @@ export class Client
                 }),
             ),
         ]
+        const m0 = Analytics.measure('createUserStream')
         const response = await this.rpcClient.createStream({
             events: userEvents,
             streamId: streamIdAsBytes(userStreamId),
             metadata: metadata,
         })
+        m0()
         return unpackStream(response.stream, this.unpackEnvelopeOpts)
     }
 
@@ -494,13 +497,17 @@ export class Client
                 }),
             ),
         ]
-
+        const m0 = Analytics.measure('createUserDeviceKeyStream')
         const response = await this.rpcClient.createStream({
             events: userDeviceKeyEvents,
             streamId: streamIdAsBytes(userMetadataStreamId),
             metadata: metadata,
         })
-        return unpackStream(response.stream, this.unpackEnvelopeOpts)
+        m0()
+        const m1 = Analytics.measure('unpackUserDeviceKeyStream')
+        const unpacked = await unpackStream(response.stream, this.unpackEnvelopeOpts)
+        m1()
+        return unpacked
     }
 
     private async createUserInboxStream(
@@ -551,11 +558,14 @@ export class Client
             metadata?: Record<string, Uint8Array>
         },
     ): Promise<{ streamId: string }> {
+        const m0 = Analytics.measure('createStreamAndSync')
         request.metadata = request.metadata ?? {}
         const streamId = streamIdAsString(request.streamId)
         try {
             this.creatingStreamIds.add(streamId)
+            const m1 = Analytics.measure('createStreamAndSync::rpc')
             let response = await this.rpcClient.createStream(request)
+            m1()
             const stream = this.createSyncedStream(streamId)
             if (!response.stream) {
                 // if a stream alread exists it will return a nil stream in the response, but no error
@@ -565,7 +575,9 @@ export class Client
             const unpacked = await unpackStream(response.stream, this.unpackEnvelopeOpts)
             await stream.initializeFromResponse(unpacked)
             if (stream.view.syncCookie) {
+                const m2 = Analytics.measure('createStreamAndSync::addStreamToSync')
                 await this.streams.addStreamToSync(stream.view.syncCookie)
+                m2()
             }
         } catch (err) {
             this.logError('Failed to create stream', streamId)
@@ -573,12 +585,14 @@ export class Client
             this.creatingStreamIds.delete(streamId)
             throw err
         }
+        m0()
         return { streamId: streamId }
     }
 
     // createSpace
     // param spaceAddress: address of the space contract, or address made with makeSpaceStreamId
     async createSpace(spaceAddressOrId: string): Promise<{ streamId: string }> {
+        const m0 = Analytics.measure('createSpace')
         const oSpaceId =
             spaceAddressOrId.length === STREAM_ID_STRING_LENGTH
                 ? spaceAddressOrId
@@ -603,10 +617,15 @@ export class Client
                 initiatorId: this.userId,
             }),
         )
-        return this.createStreamAndSync({
+        const m1 = Analytics.measure('createSpaceAndSync')
+        const response = await this.createStreamAndSync({
             events: [inceptionEvent, joinEvent],
             streamId: spaceId,
         })
+        m1()
+
+        m0()
+        return response
     }
 
     async createChannel(
@@ -617,6 +636,7 @@ export class Client
         streamSettings?: PlainMessage<StreamSettings>,
         channelSettings?: PlainMessage<SpacePayload_ChannelSettings>,
     ): Promise<{ streamId: string }> {
+        const m0 = Analytics.measure('createChannel')
         const oChannelId = inChannelId
         const channelId = streamIdAsBytes(oChannelId)
         this.logCall('createChannel', channelId, spaceId)
@@ -641,10 +661,12 @@ export class Client
                 initiatorId: this.userId,
             }),
         )
-        return this.createStreamAndSync({
+        const resp = this.createStreamAndSync({
             events: [inceptionEvent, joinEvent],
             streamId: channelId,
         })
+        m0()
+        return resp
     }
 
     async createDMChannel(
@@ -1745,6 +1767,7 @@ export class Client
         },
     ): Promise<Stream> {
         this.logCall('joinStream', streamId)
+        const m0 = Analytics.measure('joinStream')
         check(isDefined(this.userStreamId))
         const userStream = this.stream(this.userStreamId)
         check(isDefined(userStream), 'userStream not found')
@@ -1756,6 +1779,7 @@ export class Client
             return stream
         }
         // add event to user stream, this triggers events in the target stream
+        const m1 = Analytics.measure('joinStream:addEvent')
         await this.makeEventAndAddToStream(
             this.userStreamId,
             make_UserPayload_UserMembership({
@@ -1765,6 +1789,7 @@ export class Client
             }),
             { method: 'joinStream' },
         )
+        m1()
 
         if (opts?.skipWaitForMiniblockConfirmation !== true) {
             await stream.waitForMembership(MembershipOp.SO_JOIN)
@@ -1777,7 +1802,7 @@ export class Client
                 )
             }
         }
-
+        m0()
         return stream
     }
 

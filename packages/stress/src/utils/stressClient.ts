@@ -4,6 +4,7 @@ import {
     Bot,
     SyncAgent,
     spaceIdFromChannelId,
+    Analytics,
 } from '@river-build/sdk'
 import { type ExportedDevice } from '@river-build/encryption'
 import { LocalhostWeb3Provider, SpaceDapp } from '@river-build/web3'
@@ -159,8 +160,11 @@ export class StressClient {
     }
 
     async joinSpace(spaceId: string, opts?: { skipMintMembership?: boolean }) {
+        const m0 = Analytics.measure('joinSpace')
         const space = this.agent.spaces.getSpace(spaceId)
-        return space.join(this.bot.signer, opts)
+        const result = space.join(this.bot.signer, opts)
+        m0()
+        return result
     }
 
     async stop() {
