@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
-	"log"
 	"log/slog"
 	"net"
 	"net/http"
@@ -21,7 +20,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/cors"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
-	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -541,31 +539,31 @@ func (s *Service) initCacheAndSync() error {
 	return nil
 }
 
-func (s *Service) initTracing() { // Create a file to save the trace output
+func (s *Service) initTracing() {
 	if !s.config.PerformanceTracking.TracingEnabled {
 		return
 	}
 
 	f, err := os.Create("traces.txt")
 	if err != nil {
-		s.defaultLogger.Error("failed to create trace file", "error", err)
+		s.defaultLogger.Error("initTracing: failed to create trace file", "error", err)
 		return
 	}
 	s.onClose(f.Close)
 
-	// Create a new stdout trace exporter
 	exporter, err := stdouttrace.New(
 		stdouttrace.WithWriter(f),
 		stdouttrace.WithPrettyPrint(),
 	)
 	if err != nil {
-		log.Fatalf("failed to create stdout exporter: %v", err)
+		s.defaultLogger.Error("initTracing: failed to create stdout exporter", "error", err)
+		return
 	}
+	s.onClose(exporter.Shutdown)
 
 	// Create a new tracer provider with the exporter
-	tp := trace.NewTracerProvider(
+	s.traceProvider = trace.NewTracerProvider(
 		trace.WithBatcher(exporter),
-		trace.WithResource(resource.NewWithAttributes()),
 	)
 }
 
@@ -573,6 +571,7 @@ func (s *Service) initHandlers() {
 	ii := []connect.Interceptor{}
 	if s.config.PerformanceTracking.TracingEnabled {
 		otel, err := otelconnect.NewInterceptor(
+			otelconnect.WithTracerProvider(s.traceProvider),
 			otelconnect.WithoutMetrics(),
 			otelconnect.WithTrustRemote(),
 		)

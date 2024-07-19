@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/auth"
@@ -72,8 +73,9 @@ type Service struct {
 	Archiver *Archiver
 
 	// Metrics
-	metrics     *infra.Metrics
-	rpcDuration *prometheus.HistogramVec
+	metrics       *infra.Metrics
+	rpcDuration   *prometheus.HistogramVec
+	traceProvider trace.TracerProvider
 
 	// onCloseFuncs are called in reverse order from Service.Close()
 	onCloseFuncs []func()
