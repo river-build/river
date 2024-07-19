@@ -51,29 +51,40 @@ func traceCtxForTimeline(
 	ctx context.Context,
 	start time.Time,
 	timeline *statusinfo.Timeline,
+	timelineMu *sync.Mutex,
 	dnsAddrs *[]string,
 	usedAddr *string,
 ) context.Context {
 	return httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
 		GotConn: func(connInfo httptrace.GotConnInfo) {
+			timelineMu.Lock()
+			defer timelineMu.Unlock()
 			*usedAddr = connInfo.Conn.RemoteAddr().String()
 			// TLSHandshakeDone is not called for HTTP/2 connections,
 			// but GotConn is called right after.
 			timeline.TLSHandshakeDone = formatDurationToMs(time.Since(start))
 		},
 		GotFirstResponseByte: func() {
+			timelineMu.Lock()
+			defer timelineMu.Unlock()
 			timeline.GotFirstResponseByte = formatDurationToMs(time.Since(start))
 		},
 		DNSDone: func(dnsInfo httptrace.DNSDoneInfo) {
+			timelineMu.Lock()
+			defer timelineMu.Unlock()
 			for _, addr := range dnsInfo.Addrs {
 				*dnsAddrs = append(*dnsAddrs, addr.String())
 			}
 			timeline.DNSDone = formatDurationToMs(time.Since(start))
 		},
 		ConnectDone: func(network, addr string, err error) {
+			timelineMu.Lock()
+			defer timelineMu.Unlock()
 			timeline.ConnectDone = formatDurationToMs(time.Since(start))
 		},
 		WroteRequest: func(wroteRequestInfo httptrace.WroteRequestInfo) {
+			timelineMu.Lock()
+			defer timelineMu.Unlock()
 			timeline.WroteRequest = formatDurationToMs(time.Since(start))
 		},
 	})
@@ -93,9 +104,10 @@ func getHttpStatus(
 	dnsAddrs := []string{}
 	var usedAddr string
 	var timeline statusinfo.Timeline
+	var timelineMu sync.Mutex
 	url := baseUrl + "/status?blockchain=1"
 	req, err := http.NewRequestWithContext(
-		traceCtxForTimeline(ctx, start, &timeline, &dnsAddrs, &usedAddr),
+		traceCtxForTimeline(ctx, start, &timeline, &timelineMu, &dnsAddrs, &usedAddr),
 		"GET", url, nil)
 	req.Header.Set("Accept", "application/json")
 	if err != nil {
@@ -104,40 +116,42 @@ func getHttpStatus(
 		return
 	}
 	resp, err := client.Do(req)
+	if err == nil {
+		if resp != nil {
+			defer resp.Body.Close()
+			result.Success = resp.StatusCode == 200
+			result.Status = resp.StatusCode
+			result.StatusText = resp.Status
+			result.Protocol = resp.Proto
+			result.UsedTLS = resp.TLS != nil
+			if resp.StatusCode == 200 {
+				statusJson, err := io.ReadAll(resp.Body)
+				if err == nil {
+					st, err := statusinfo.StatusResponseFromJson(statusJson)
+					if err == nil {
+						result.Response = st
+					} else {
+						result.Response.Status = "Error decoding response: " + err.Error()
+					}
+				} else {
+					result.Response.Status = "Error reading response: " + err.Error()
+				}
+			}
+		} else {
+			result.StatusText = "No response"
+		}
+	} else {
+		log.Error("Error fetching URL", "err", err, "url", url)
+		result.StatusText = err.Error()
+	}
+
+	timelineMu.Lock()
+	defer timelineMu.Unlock()
 	timeline.Total = formatDurationToMs(time.Since(start))
 	result.DNSAddresses = dnsAddrs
 	result.RemoteAddress = usedAddr
-	if err != nil {
-		log.Error("Error fetching URL", "err", err, "url", url)
-		result.StatusText = err.Error()
-		return
-	}
-
-	if resp != nil {
-		defer resp.Body.Close()
-		result.Success = resp.StatusCode == 200
-		result.Status = resp.StatusCode
-		result.StatusText = resp.Status
-		result.Elapsed = timeline.Total
-		result.Timeline = timeline
-		result.Protocol = resp.Proto
-		result.UsedTLS = resp.TLS != nil
-		if resp.StatusCode == 200 {
-			statusJson, err := io.ReadAll(resp.Body)
-			if err == nil {
-				st, err := statusinfo.StatusResponseFromJson(statusJson)
-				if err == nil {
-					result.Response = st
-				} else {
-					result.Response.Status = "Error decoding response: " + err.Error()
-				}
-			} else {
-				result.Response.Status = "Error reading response: " + err.Error()
-			}
-		}
-	} else {
-		result.StatusText = "No response"
-	}
+	result.Elapsed = timeline.Total
+	result.Timeline = timeline
 }
 
 func getGrpcStatus(
@@ -153,13 +167,20 @@ func getGrpcStatus(
 	dnsAddrs := []string{}
 	var usedAddr string
 	var timeline statusinfo.Timeline
+	var timelineMu sync.Mutex
 	req := connect.NewRequest(&InfoRequest{})
 	resp, err := client.Info(
-		traceCtxForTimeline(ctx, start, &timeline, &dnsAddrs, &usedAddr),
+		traceCtxForTimeline(ctx, start, &timeline, &timelineMu, &dnsAddrs, &usedAddr),
 		req)
+
+	timelineMu.Lock()
+	defer timelineMu.Unlock()
 	timeline.Total = formatDurationToMs(time.Since(start))
 	record.Grpc.DNSAddresses = dnsAddrs
 	record.Grpc.RemoteAddress = usedAddr
+	record.Grpc.Elapsed = timeline.Total
+	record.Grpc.Timeline = timeline
+
 	if err != nil {
 		log.Error("Error fetching Info", "err", err, "url", record.Record.Url)
 		record.Grpc.StatusText = err.Error()
@@ -170,8 +191,6 @@ func getGrpcStatus(
 
 	record.Grpc.Success = true
 	record.Grpc.StatusText = "OK"
-	record.Grpc.Elapsed = timeline.Total
-	record.Grpc.Timeline = timeline
 	record.Grpc.Version = resp.Msg.Version
 	record.Grpc.StartTime = startTime.UTC().Format(time.RFC3339)
 	record.Grpc.Uptime = formatDurationToSeconds(time.Since(startTime))
