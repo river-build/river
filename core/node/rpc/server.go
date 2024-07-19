@@ -5,18 +5,24 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
+	"log"
 	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
 
 	"connectrpc.com/connect"
+	"connectrpc.com/otelconnect"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/cors"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
@@ -81,7 +87,17 @@ func (s *Service) Close() {
 		s.storage.Close(s.serverCtx)
 	}
 
+	onClose := s.onCloseFuncs
+	slices.Reverse(onClose)
+	for _, c := range onClose {
+		c()
+	}
+
 	s.defaultLogger.Info("Server closed")
+}
+
+func (s *Service) onClose(f func()) {
+	s.onCloseFuncs = append(s.onCloseFuncs, f)
 }
 
 func (s *Service) start() error {
@@ -139,6 +155,8 @@ func (s *Service) start() error {
 	}
 
 	s.riverChain.StartChainMonitor(s.serverCtx)
+
+	s.initTracing()
 
 	s.initHandlers()
 
@@ -514,11 +532,46 @@ func (s *Service) initCacheAndSync() error {
 	return nil
 }
 
-func (s *Service) initHandlers() {
-	interceptors := connect.WithInterceptors(
-		s.NewMetricsInterceptor(),
-		NewTimeoutInterceptor(s.config.Network.RequestTimeout),
+func (s *Service) initTracing() { // Create a file to save the trace output
+	f, err := os.Create("traces.txt")
+	if err != nil {
+		log.Fatalf("failed to create trace file: %v", err)
+	}
+	defer f.Close()
+
+	// Create a new stdout trace exporter
+	exporter, err := stdouttrace.New(
+		stdouttrace.WithWriter(f),
+		stdouttrace.WithPrettyPrint(),
 	)
+	if err != nil {
+		log.Fatalf("failed to create stdout exporter: %v", err)
+	}
+
+	// Create a new tracer provider with the exporter
+	tp := trace.NewTracerProvider(
+		trace.WithBatcher(exporter),
+		trace.WithResource(resource.NewWithAttributes()),
+	)
+}
+
+func (s *Service) initHandlers() {
+	ii := []connect.Interceptor{}
+	if s.config.PerformanceTracking.TracingEnabled {
+		otel, err := otelconnect.NewInterceptor(
+			otelconnect.WithoutMetrics(),
+			otelconnect.WithTrustRemote(),
+		)
+		if err == nil {
+			ii = append(ii, otel)
+		} else {
+			s.defaultLogger.Error("Failed to create otel interceptor", "error", err)
+		}
+	}
+	ii = append(ii, s.NewMetricsInterceptor())
+	ii = append(ii, NewTimeoutInterceptor(s.config.Network.RequestTimeout))
+
+	interceptors := connect.WithInterceptors(ii...)
 	streamServicePattern, streamServiceHandler := protocolconnect.NewStreamServiceHandler(s, interceptors)
 	s.mux.Handle(streamServicePattern, newHttpHandler(streamServiceHandler, s.defaultLogger, s.metrics))
 
