@@ -37,6 +37,7 @@ type nodeRegistryImpl struct {
 	contract         *registries.RiverRegistryContract
 	localNodeAddress common.Address
 	httpClient       *http.Client
+	connectOpts      []connect.ClientOption
 
 	mu              sync.Mutex
 	nodes           map[common.Address]*NodeRecord
@@ -74,12 +75,15 @@ func LoadNodeRegistry(
 		return nil, err
 	}
 
+	connectOpts := []connect.ClientOption{connect.WithGRPC()}
+
 	ret := &nodeRegistryImpl{
 		contract:         contract,
 		localNodeAddress: localNodeAddress,
 		httpClient:       client,
 		nodes:            make(map[common.Address]*NodeRecord, len(nodes)),
 		appliedBlockNum:  appliedBlockNum,
+		connectOpts:      connectOpts,
 	}
 
 	chainMonitor.OnContractWithTopicsEvent(
@@ -148,8 +152,8 @@ func (n *nodeRegistryImpl) addNode(addr common.Address, url string, status uint8
 	if addr == n.localNodeAddress {
 		nn.local = true
 	} else {
-		nn.streamServiceClient = NewStreamServiceClient(n.httpClient, url, connect.WithGRPC())
-		nn.nodeToNodeClient = NewNodeToNodeClient(n.httpClient, url, connect.WithGRPC())
+		nn.streamServiceClient = NewStreamServiceClient(n.httpClient, url, n.connectOpts...)
+		nn.nodeToNodeClient = NewNodeToNodeClient(n.httpClient, url, n.connectOpts...)
 	}
 	n.nodes[addr] = nn
 	return nn
@@ -241,8 +245,8 @@ func (n *nodeRegistryImpl) OnNodeUrlUpdated(ctx context.Context, event types.Log
 		newNode := *nn
 		newNode.url = e.Url
 		if !nn.local {
-			newNode.streamServiceClient = NewStreamServiceClient(n.httpClient, e.Url, connect.WithGRPC())
-			newNode.nodeToNodeClient = NewNodeToNodeClient(n.httpClient, e.Url, connect.WithGRPC())
+			newNode.streamServiceClient = NewStreamServiceClient(n.httpClient, e.Url, n.connectOpts...)
+			newNode.nodeToNodeClient = NewNodeToNodeClient(n.httpClient, e.Url, n.connectOpts...)
 		}
 		n.nodes[e.NodeAddress] = &newNode
 		log.Info("NodeRegistry: NodeUrlUpdated", "blockNum", event.BlockNumber, "node", nn)
