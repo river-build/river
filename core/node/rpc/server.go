@@ -87,20 +87,25 @@ func (s *Service) Close() {
 	s.defaultLogger.Info("Server closed")
 }
 
-func (s *Service) onClose(f func()) {
-	s.onCloseFuncs = append(s.onCloseFuncs, f)
-}
-
-func (s *Service) onCloseWithError(f func() error) {
-	s.onCloseFuncs = append(s.onCloseFuncs, func() {
-		_ = f()
-	})
-}
-
-func (s *Service) onCloseWithContext(f func(context.Context)) {
-	s.onClose(func() {
-		f(s.serverCtx)
-	})
+func (s *Service) onClose(f any) {
+	switch f := f.(type) {
+	case func():
+		s.onCloseFuncs = append(s.onCloseFuncs, f)
+	case func() error:
+		s.onCloseFuncs = append(s.onCloseFuncs, func() {
+			_ = f()
+		})
+	case func(context.Context):
+		s.onCloseFuncs = append(s.onCloseFuncs, func() {
+			f(s.serverCtx)
+		})
+	case func(context.Context) error:
+		s.onCloseFuncs = append(s.onCloseFuncs, func() {
+			_ = f(s.serverCtx)
+		})
+	default:
+		panic("unsupported onClose type")
+	}
 }
 
 func (s *Service) start() error {
@@ -367,7 +372,7 @@ func (s *Service) runHttpServer() error {
 			log.Warn("Port is ignored when listener is provided")
 		}
 	}
-	s.onCloseWithError(s.listener.Close)
+	s.onClose(s.listener.Close)
 
 	mux := httptrace.NewServeMux(
 		httptrace.WithResourceNamer(
@@ -485,7 +490,7 @@ func (s *Service) initStore() error {
 			return err
 		}
 		s.storage = store
-		s.onCloseWithContext(store.Close)
+		s.onClose(store.Close)
 
 		streamsCount, err := store.GetStreamsNumber(ctx)
 		if err != nil {
