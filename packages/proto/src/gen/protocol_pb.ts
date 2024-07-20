@@ -1021,6 +1021,18 @@ export class MemberPayload extends Message<MemberPayload> {
      */
     value: MemberPayload_Nft;
     case: "nft";
+  } | {
+    /**
+     * @generated from field: river.MemberPayload.Pin pin = 8;
+     */
+    value: MemberPayload_Pin;
+    case: "pin";
+  } | {
+    /**
+     * @generated from field: river.MemberPayload.Unpin unpin = 9;
+     */
+    value: MemberPayload_Unpin;
+    case: "unpin";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<MemberPayload>) {
@@ -1038,6 +1050,8 @@ export class MemberPayload extends Message<MemberPayload> {
     { no: 5, name: "display_name", kind: "message", T: EncryptedData, oneof: "content" },
     { no: 6, name: "ens_address", kind: "scalar", T: 12 /* ScalarType.BYTES */, oneof: "content" },
     { no: 7, name: "nft", kind: "message", T: MemberPayload_Nft, oneof: "content" },
+    { no: 8, name: "pin", kind: "message", T: MemberPayload_Pin, oneof: "content" },
+    { no: 9, name: "unpin", kind: "message", T: MemberPayload_Unpin, oneof: "content" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MemberPayload {
@@ -1066,6 +1080,11 @@ export class MemberPayload_Snapshot extends Message<MemberPayload_Snapshot> {
    */
   joined: MemberPayload_Snapshot_Member[] = [];
 
+  /**
+   * @generated from field: repeated river.MemberPayload.SnappedPin pins = 2;
+   */
+  pins: MemberPayload_SnappedPin[] = [];
+
   constructor(data?: PartialMessage<MemberPayload_Snapshot>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1075,6 +1094,7 @@ export class MemberPayload_Snapshot extends Message<MemberPayload_Snapshot> {
   static readonly typeName = "river.MemberPayload.Snapshot";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "joined", kind: "message", T: MemberPayload_Snapshot_Member, repeated: true },
+    { no: 2, name: "pins", kind: "message", T: MemberPayload_SnappedPin, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MemberPayload_Snapshot {
@@ -1384,6 +1404,129 @@ export class MemberPayload_Nft extends Message<MemberPayload_Nft> {
 
   static equals(a: MemberPayload_Nft | PlainMessage<MemberPayload_Nft> | undefined, b: MemberPayload_Nft | PlainMessage<MemberPayload_Nft> | undefined): boolean {
     return proto3.util.equals(MemberPayload_Nft, a, b);
+  }
+}
+
+/**
+ * @generated from message river.MemberPayload.SnappedPin
+ */
+export class MemberPayload_SnappedPin extends Message<MemberPayload_SnappedPin> {
+  /**
+   * @generated from field: bytes creator_address = 1;
+   */
+  creatorAddress = new Uint8Array(0);
+
+  /**
+   * @generated from field: river.MemberPayload.Pin pin = 2;
+   */
+  pin?: MemberPayload_Pin;
+
+  constructor(data?: PartialMessage<MemberPayload_SnappedPin>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "river.MemberPayload.SnappedPin";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "creator_address", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 2, name: "pin", kind: "message", T: MemberPayload_Pin },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MemberPayload_SnappedPin {
+    return new MemberPayload_SnappedPin().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MemberPayload_SnappedPin {
+    return new MemberPayload_SnappedPin().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MemberPayload_SnappedPin {
+    return new MemberPayload_SnappedPin().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MemberPayload_SnappedPin | PlainMessage<MemberPayload_SnappedPin> | undefined, b: MemberPayload_SnappedPin | PlainMessage<MemberPayload_SnappedPin> | undefined): boolean {
+    return proto3.util.equals(MemberPayload_SnappedPin, a, b);
+  }
+}
+
+/**
+ * @generated from message river.MemberPayload.Pin
+ */
+export class MemberPayload_Pin extends Message<MemberPayload_Pin> {
+  /**
+   * @generated from field: bytes event_id = 1;
+   */
+  eventId = new Uint8Array(0);
+
+  /**
+   * @generated from field: river.StreamEvent event = 2;
+   */
+  event?: StreamEvent;
+
+  constructor(data?: PartialMessage<MemberPayload_Pin>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "river.MemberPayload.Pin";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "event_id", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 2, name: "event", kind: "message", T: StreamEvent },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MemberPayload_Pin {
+    return new MemberPayload_Pin().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MemberPayload_Pin {
+    return new MemberPayload_Pin().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MemberPayload_Pin {
+    return new MemberPayload_Pin().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MemberPayload_Pin | PlainMessage<MemberPayload_Pin> | undefined, b: MemberPayload_Pin | PlainMessage<MemberPayload_Pin> | undefined): boolean {
+    return proto3.util.equals(MemberPayload_Pin, a, b);
+  }
+}
+
+/**
+ * @generated from message river.MemberPayload.Unpin
+ */
+export class MemberPayload_Unpin extends Message<MemberPayload_Unpin> {
+  /**
+   * @generated from field: bytes event_id = 1;
+   */
+  eventId = new Uint8Array(0);
+
+  constructor(data?: PartialMessage<MemberPayload_Unpin>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "river.MemberPayload.Unpin";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "event_id", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MemberPayload_Unpin {
+    return new MemberPayload_Unpin().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): MemberPayload_Unpin {
+    return new MemberPayload_Unpin().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): MemberPayload_Unpin {
+    return new MemberPayload_Unpin().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: MemberPayload_Unpin | PlainMessage<MemberPayload_Unpin> | undefined, b: MemberPayload_Unpin | PlainMessage<MemberPayload_Unpin> | undefined): boolean {
+    return proto3.util.equals(MemberPayload_Unpin, a, b);
   }
 }
 
@@ -3337,9 +3480,9 @@ export class MediaPayload_Inception extends Message<MediaPayload_Inception> {
   streamId = new Uint8Array(0);
 
   /**
-   * @generated from field: bytes channel_id = 2;
+   * @generated from field: optional bytes channel_id = 2;
    */
-  channelId = new Uint8Array(0);
+  channelId?: Uint8Array;
 
   /**
    * @generated from field: int32 chunk_count = 3;
@@ -3356,6 +3499,11 @@ export class MediaPayload_Inception extends Message<MediaPayload_Inception> {
    */
   spaceId?: Uint8Array;
 
+  /**
+   * @generated from field: optional bytes user_id = 6;
+   */
+  userId?: Uint8Array;
+
   constructor(data?: PartialMessage<MediaPayload_Inception>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3365,10 +3513,11 @@ export class MediaPayload_Inception extends Message<MediaPayload_Inception> {
   static readonly typeName = "river.MediaPayload.Inception";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "stream_id", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
-    { no: 2, name: "channel_id", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 2, name: "channel_id", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
     { no: 3, name: "chunk_count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 4, name: "settings", kind: "message", T: StreamSettings },
     { no: 5, name: "space_id", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
+    { no: 6, name: "user_id", kind: "scalar", T: 12 /* ScalarType.BYTES */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): MediaPayload_Inception {
