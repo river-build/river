@@ -295,7 +295,9 @@ func (s *Service) handleDebugMulti(w http.ResponseWriter, r *http.Request) {
 	status, err := GetRiverNetworkStatus(r.Context(), s.config, s.nodeRegistry, s.riverChain)
 	if err == nil {
 		err = render.ExecuteAndWrite(&render.DebugMultiData{Status: status}, w)
-		log.Info("River Network Status", "data", status)
+		if !s.config.Log.Simplify {
+			log.Info("River Network Status", "data", status)
+		}
 	}
 	if err != nil {
 		log.Error("Error getting data or rendering template for debug/multi", "err", err)
@@ -311,7 +313,9 @@ func (s *Service) handleDebugMultiJson(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		// Write status as json
 		err = json.NewEncoder(w).Encode(status)
-		log.Info("River Network Status", "data", status)
+		if !s.config.Log.Simplify {
+			log.Info("River Network Status", "data", status)
+		}
 	}
 	if err != nil {
 		log.Error("Error getting data or writing json for debug/multi/json", "err", err)
