@@ -16,11 +16,8 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"connectrpc.com/otelconnect"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/cors"
-	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
-	"go.opentelemetry.io/otel/sdk/trace"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
@@ -574,49 +571,6 @@ func (s *Service) initCacheAndSync() error {
 	)
 
 	return nil
-}
-
-func (s *Service) initTracing() {
-	if !s.config.PerformanceTracking.TracingEnabled {
-		return
-	}
-
-	f, err := os.Create("logs/trace.jsonl")
-	if err != nil {
-		s.defaultLogger.Error("initTracing: failed to create trace file", "error", err)
-		return
-	}
-	s.onClose(f.Close)
-
-	exporter, err := stdouttrace.New(
-		stdouttrace.WithWriter(f),
-		// stdouttrace.WithPrettyPrint(),
-	)
-	if err != nil {
-		s.defaultLogger.Error("initTracing: failed to create stdout exporter", "error", err)
-		return
-	}
-	s.onClose(exporter.Shutdown)
-
-	// Create a new tracer provider with the exporter
-	traceProvider := trace.NewTracerProvider(
-		trace.WithBatcher(exporter),
-	)
-	s.onClose(traceProvider.Shutdown)
-	s.otelTraceProvider = traceProvider
-
-	s.otelTracer = s.otelTraceProvider.Tracer("")
-
-	s.otelConnectIterceptor, err = otelconnect.NewInterceptor(
-		otelconnect.WithTracerProvider(traceProvider),
-		otelconnect.WithoutMetrics(),
-		otelconnect.WithTrustRemote(),
-		otelconnect.WithoutServerPeerAttributes(),
-	)
-	if err != nil {
-		s.defaultLogger.Error("Failed to create otel interceptor", "error", err)
-		return
-	}
 }
 
 func (s *Service) initHandlers() {

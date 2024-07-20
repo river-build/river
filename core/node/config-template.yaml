@@ -65,6 +65,7 @@ metrics:
 performanceTracking:
     profilingEnabled: false
     tracingEnabled: true
+    file: logs/trace.jsonl
 
 # Stream settings
 stream:
