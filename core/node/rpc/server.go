@@ -119,6 +119,8 @@ func (s *Service) start() error {
 		return AsRiverError(err).Message("Failed to init wallet").LogError(s.defaultLogger)
 	}
 
+	s.initTracing()
+
 	err = s.initEntitlements()
 	if err != nil {
 		return AsRiverError(err).Message("Failed to init entitlements").LogError(s.defaultLogger)
@@ -305,7 +307,13 @@ func (s *Service) initRiverChain() error {
 		walletAddress = s.wallet.Address
 	}
 	s.nodeRegistry, err = nodes.LoadNodeRegistry(
-		ctx, s.registryContract, walletAddress, s.riverChain.InitialBlockNum, s.riverChain.ChainMonitor)
+		ctx,
+		s.registryContract,
+		walletAddress,
+		s.riverChain.InitialBlockNum,
+		s.riverChain.ChainMonitor,
+		s.otelConnectIterceptor,
+	)
 	if err != nil {
 		return err
 	}
@@ -566,10 +574,14 @@ func (s *Service) initCacheAndSync() error {
 }
 
 func (s *Service) initHandlers() {
-	interceptors := connect.WithInterceptors(
-		s.NewMetricsInterceptor(),
-		NewTimeoutInterceptor(s.config.Network.RequestTimeout),
-	)
+	ii := []connect.Interceptor{}
+	if s.otelConnectIterceptor != nil {
+		ii = append(ii, s.otelConnectIterceptor)
+	}
+	ii = append(ii, s.NewMetricsInterceptor())
+	ii = append(ii, NewTimeoutInterceptor(s.config.Network.RequestTimeout))
+
+	interceptors := connect.WithInterceptors(ii...)
 	streamServicePattern, streamServiceHandler := protocolconnect.NewStreamServiceHandler(s, interceptors)
 	s.mux.Handle(streamServicePattern, newHttpHandler(streamServiceHandler, s.defaultLogger, s.metrics))
 

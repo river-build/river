@@ -257,7 +257,19 @@ func (c ChainConfig) BlockTime() time.Duration {
 
 type PerformanceTrackingConfig struct {
 	ProfilingEnabled bool
-	TracingEnabled   bool
+
+	// If true, write trace data to one of the exporters configured below
+	TracingEnabled bool
+	// If set, write trace data to this jsonl file
+	File string
+	// If set, send trace data to using OTLP HTTP
+	// Exporter is configured with OTLP env variables as described here:
+	// go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp
+	EnableHttp bool
+	// If set, send trace data to using OTLP gRRC
+	// Exporter is configured with OTLP env variables as described here:
+	// go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc
+	EnableGrpc bool
 }
 
 type ContractConfig struct {

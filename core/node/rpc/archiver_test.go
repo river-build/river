@@ -240,6 +240,7 @@ func TestArchiveOneStream(t *testing.T) {
 		common.Address{},
 		bc.InitialBlockNum,
 		bc.ChainMonitor,
+		nil,
 	)
 	require.NoError(err)
 
