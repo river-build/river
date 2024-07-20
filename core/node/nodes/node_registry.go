@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
+	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
@@ -124,15 +125,17 @@ func LoadNodeRegistry(
 		).LogError(log)
 	}
 
-	log.Info(
-		"Node Registry Loaded from contract",
-		"blockNum",
-		appliedBlockNum,
-		"Nodes",
-		ret.nodes,
-		"localAddress",
-		localNodeAddress,
-	)
+	if config.UseDetailedLog(ctx) {
+		log.Info(
+			"Node Registry Loaded from contract",
+			"blockNum",
+			appliedBlockNum,
+			"Nodes",
+			ret.nodes,
+			"localAddress",
+			localNodeAddress,
+		)
+	}
 
 	return ret, nil
 }

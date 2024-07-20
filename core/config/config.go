@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -291,6 +292,10 @@ type LogConfig struct {
 	ConsoleLevel string // If not set, use Level
 	NoColor      bool   // If true, disable color text output to console
 	Format       string // "json" or "text"
+
+	// Intended for dev use with text logs, do not output instance attributes with each log entry,
+	// drop some large messages.
+	Simplify bool
 }
 
 type MetricsConfig struct {
@@ -464,4 +469,28 @@ func (c *Config) parseChains() error {
 		}
 	}
 	return nil
+}
+
+type confifCtxKeyType struct{}
+
+var configCtxKey = confifCtxKeyType{}
+
+func CtxWithConfig(ctx context.Context, c *Config) context.Context {
+	return context.WithValue(ctx, configCtxKey, c)
+}
+
+func FromCtx(ctx context.Context) *Config {
+	if c, ok := ctx.Value(configCtxKey).(*Config); ok {
+		return c
+	}
+	return nil
+}
+
+func UseDetailedLog(ctx context.Context) bool {
+	c := FromCtx(ctx)
+	if c != nil {
+		return !c.Log.Simplify
+	} else {
+		return true
+	}
 }
