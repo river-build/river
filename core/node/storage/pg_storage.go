@@ -1324,7 +1324,9 @@ func (s *PostgresEventStore) createSchemaTx(ctx context.Context, tx pgx.Tx) erro
 		}
 		log.Info("DB Schema created", "schema", s.schemaName)
 	} else {
-		log.Info("DB Schema already exists", "schema", s.schemaName)
+		if config.UseDetailedLog(ctx) {
+			log.Info("DB Schema already exists", "schema", s.schemaName)
+		}
 	}
 	return nil
 }
