@@ -299,9 +299,12 @@ func GetRiverNetworkStatus(
 }
 
 func (s *Service) handleDebugMulti(w http.ResponseWriter, r *http.Request) {
+	ctx, span := s.otelTracer.Start(r.Context(), "handleDebugMulti")
+	defer span.End()
+
 	log := s.defaultLogger
 
-	status, err := GetRiverNetworkStatus(r.Context(), s.config, s.nodeRegistry, s.riverChain, s.connectOtelIterceptor)
+	status, err := GetRiverNetworkStatus(ctx, s.config, s.nodeRegistry, s.riverChain, s.otelConnectIterceptor)
 	if err == nil {
 		err = render.ExecuteAndWrite(&render.DebugMultiData{Status: status}, w)
 		log.Info("River Network Status", "data", status)
@@ -313,10 +316,13 @@ func (s *Service) handleDebugMulti(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) handleDebugMultiJson(w http.ResponseWriter, r *http.Request) {
+	ctx, span := s.otelTracer.Start(r.Context(), "handleDebugMultiJson")
+	defer span.End()
+
 	log := s.defaultLogger
 
 	w.Header().Set("Content-Type", "application/json")
-	status, err := GetRiverNetworkStatus(r.Context(), s.config, s.nodeRegistry, s.riverChain, s.connectOtelIterceptor)
+	status, err := GetRiverNetworkStatus(ctx, s.config, s.nodeRegistry, s.riverChain, s.otelConnectIterceptor)
 	if err == nil {
 		// Write status as json
 		err = json.NewEncoder(w).Encode(status)

@@ -298,7 +298,7 @@ func (s *Service) initRiverChain() error {
 		walletAddress,
 		s.riverChain.InitialBlockNum,
 		s.riverChain.ChainMonitor,
-		s.connectOtelIterceptor,
+		s.otelConnectIterceptor,
 	)
 	if err != nil {
 		return err
@@ -550,7 +550,7 @@ func (s *Service) initTracing() {
 		return
 	}
 
-	f, err := os.Create("logs/trace.json")
+	f, err := os.Create("logs/trace.jsonl")
 	if err != nil {
 		s.defaultLogger.Error("initTracing: failed to create trace file", "error", err)
 		return
@@ -559,7 +559,7 @@ func (s *Service) initTracing() {
 
 	exporter, err := stdouttrace.New(
 		stdouttrace.WithWriter(f),
-		stdouttrace.WithPrettyPrint(),
+		// stdouttrace.WithPrettyPrint(),
 	)
 	if err != nil {
 		s.defaultLogger.Error("initTracing: failed to create stdout exporter", "error", err)
@@ -571,8 +571,12 @@ func (s *Service) initTracing() {
 	traceProvider := trace.NewTracerProvider(
 		trace.WithBatcher(exporter),
 	)
+	s.onClose(traceProvider.Shutdown)
+	s.otelTraceProvider = traceProvider
 
-	s.connectOtelIterceptor, err = otelconnect.NewInterceptor(
+	s.otelTracer = s.otelTraceProvider.Tracer("")
+
+	s.otelConnectIterceptor, err = otelconnect.NewInterceptor(
 		otelconnect.WithTracerProvider(traceProvider),
 		otelconnect.WithoutMetrics(),
 		otelconnect.WithTrustRemote(),
@@ -586,8 +590,8 @@ func (s *Service) initTracing() {
 
 func (s *Service) initHandlers() {
 	ii := []connect.Interceptor{}
-	if s.connectOtelIterceptor != nil {
-		ii = append(ii, s.connectOtelIterceptor)
+	if s.otelConnectIterceptor != nil {
+		ii = append(ii, s.otelConnectIterceptor)
 	}
 	ii = append(ii, s.NewMetricsInterceptor())
 	ii = append(ii, NewTimeoutInterceptor(s.config.Network.RequestTimeout))
