@@ -8,8 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"connectrpc.com/otelconnect"
 	"github.com/prometheus/client_golang/prometheus"
-	"go.opentelemetry.io/otel/trace"
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/auth"
@@ -73,9 +73,9 @@ type Service struct {
 	Archiver *Archiver
 
 	// Metrics
-	metrics       *infra.Metrics
-	rpcDuration   *prometheus.HistogramVec
-	traceProvider trace.TracerProvider
+	metrics               *infra.Metrics
+	rpcDuration           *prometheus.HistogramVec
+	connectOtelIterceptor *otelconnect.Interceptor
 
 	// onCloseFuncs are called in reverse order from Service.Close()
 	onCloseFuncs []func()

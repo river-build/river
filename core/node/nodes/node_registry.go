@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"connectrpc.com/connect"
+	"connectrpc.com/otelconnect"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
@@ -52,6 +53,7 @@ func LoadNodeRegistry(
 	localNodeAddress common.Address,
 	appliedBlockNum crypto.BlockNumber,
 	chainMonitor crypto.ChainMonitor,
+	connectOtelIterceptor *otelconnect.Interceptor,
 ) (*nodeRegistryImpl, error) {
 	log := dlog.FromCtx(ctx)
 
@@ -76,6 +78,9 @@ func LoadNodeRegistry(
 	}
 
 	connectOpts := []connect.ClientOption{connect.WithGRPC()}
+	if connectOtelIterceptor != nil {
+		connectOpts = append(connectOpts, connect.WithInterceptors(connectOtelIterceptor))
+	}
 
 	ret := &nodeRegistryImpl{
 		contract:         contract,

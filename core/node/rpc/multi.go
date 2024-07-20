@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"connectrpc.com/otelconnect"
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/river-build/river/core/config"
@@ -209,6 +210,7 @@ func GetRiverNetworkStatus(
 	cfg *config.Config,
 	nodeRegistry nodes.NodeRegistry,
 	riverChain *crypto.Blockchain,
+	connectOtelIterceptor *otelconnect.Interceptor,
 ) (*statusinfo.RiverStatus, error) {
 	startTime := time.Now()
 
@@ -257,10 +259,17 @@ func GetRiverNetworkStatus(
 		}
 		data.Nodes = append(data.Nodes, r)
 
+		connectOpts := []connect.ClientOption{connect.WithGRPC()}
+		if connectOtelIterceptor != nil {
+			connectOpts = append(connectOpts, connect.WithInterceptors(connectOtelIterceptor))
+		} else {
+			dlog.FromCtx(ctx).Error("No OpenTelemetry interceptor for gRPC client")
+		}
+
 		wg.Add(4)
 		go getHttpStatus(ctx, n.Url(), &r.Http11, http11client, &wg)
 		go getHttpStatus(ctx, n.Url(), &r.Http20, http20client, &wg)
-		go getGrpcStatus(ctx, r, NewStreamServiceClient(grpcHttpClient, n.Url(), connect.WithGRPC()), &wg)
+		go getGrpcStatus(ctx, r, NewStreamServiceClient(grpcHttpClient, n.Url(), connectOpts...), &wg)
 		go getEthBalance(ctx, &r.RiverEthBalance, riverChain, n.Address(), &wg)
 	}
 
@@ -273,7 +282,7 @@ func GetRiverNetworkStatus(
 func (s *Service) handleDebugMulti(w http.ResponseWriter, r *http.Request) {
 	log := s.defaultLogger
 
-	status, err := GetRiverNetworkStatus(r.Context(), s.config, s.nodeRegistry, s.riverChain)
+	status, err := GetRiverNetworkStatus(r.Context(), s.config, s.nodeRegistry, s.riverChain, s.connectOtelIterceptor)
 	if err == nil {
 		err = render.ExecuteAndWrite(&render.DebugMultiData{Status: status}, w)
 		log.Info("River Network Status", "data", status)
@@ -288,7 +297,7 @@ func (s *Service) handleDebugMultiJson(w http.ResponseWriter, r *http.Request) {
 	log := s.defaultLogger
 
 	w.Header().Set("Content-Type", "application/json")
-	status, err := GetRiverNetworkStatus(r.Context(), s.config, s.nodeRegistry, s.riverChain)
+	status, err := GetRiverNetworkStatus(r.Context(), s.config, s.nodeRegistry, s.riverChain, s.connectOtelIterceptor)
 	if err == nil {
 		// Write status as json
 		err = json.NewEncoder(w).Encode(status)

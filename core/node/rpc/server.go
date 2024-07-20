@@ -116,6 +116,8 @@ func (s *Service) start() error {
 		return AsRiverError(err).Message("Failed to init wallet").LogError(s.defaultLogger)
 	}
 
+	s.initTracing()
+
 	err = s.initEntitlements()
 	if err != nil {
 		return AsRiverError(err).Message("Failed to init entitlements").LogError(s.defaultLogger)
@@ -161,8 +163,6 @@ func (s *Service) start() error {
 	}
 
 	s.riverChain.StartChainMonitor(s.serverCtx)
-
-	s.initTracing()
 
 	s.initHandlers()
 
@@ -293,7 +293,13 @@ func (s *Service) initRiverChain() error {
 		walletAddress = s.wallet.Address
 	}
 	s.nodeRegistry, err = nodes.LoadNodeRegistry(
-		ctx, s.registryContract, walletAddress, s.riverChain.InitialBlockNum, s.riverChain.ChainMonitor)
+		ctx,
+		s.registryContract,
+		walletAddress,
+		s.riverChain.InitialBlockNum,
+		s.riverChain.ChainMonitor,
+		s.connectOtelIterceptor,
+	)
 	if err != nil {
 		return err
 	}
@@ -544,7 +550,7 @@ func (s *Service) initTracing() {
 		return
 	}
 
-	f, err := os.Create("traces.txt")
+	f, err := os.Create("logs/trace.json")
 	if err != nil {
 		s.defaultLogger.Error("initTracing: failed to create trace file", "error", err)
 		return
@@ -562,24 +568,26 @@ func (s *Service) initTracing() {
 	s.onClose(exporter.Shutdown)
 
 	// Create a new tracer provider with the exporter
-	s.traceProvider = trace.NewTracerProvider(
+	traceProvider := trace.NewTracerProvider(
 		trace.WithBatcher(exporter),
 	)
+
+	s.connectOtelIterceptor, err = otelconnect.NewInterceptor(
+		otelconnect.WithTracerProvider(traceProvider),
+		otelconnect.WithoutMetrics(),
+		otelconnect.WithTrustRemote(),
+		otelconnect.WithoutServerPeerAttributes(),
+	)
+	if err != nil {
+		s.defaultLogger.Error("Failed to create otel interceptor", "error", err)
+		return
+	}
 }
 
 func (s *Service) initHandlers() {
 	ii := []connect.Interceptor{}
-	if s.config.PerformanceTracking.TracingEnabled {
-		otel, err := otelconnect.NewInterceptor(
-			otelconnect.WithTracerProvider(s.traceProvider),
-			otelconnect.WithoutMetrics(),
-			otelconnect.WithTrustRemote(),
-		)
-		if err == nil {
-			ii = append(ii, otel)
-		} else {
-			s.defaultLogger.Error("Failed to create otel interceptor", "error", err)
-		}
+	if s.connectOtelIterceptor != nil {
+		ii = append(ii, s.connectOtelIterceptor)
 	}
 	ii = append(ii, s.NewMetricsInterceptor())
 	ii = append(ii, NewTimeoutInterceptor(s.config.Network.RequestTimeout))
