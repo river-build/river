@@ -261,15 +261,21 @@ type PerformanceTrackingConfig struct {
 	// If true, write trace data to one of the exporters configured below
 	TracingEnabled bool
 	// If set, write trace data to this jsonl file
-	File string
+	OtlpFile string
 	// If set, send trace data to using OTLP HTTP
 	// Exporter is configured with OTLP env variables as described here:
 	// go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp
-	EnableHttp bool
+	OtlpEnableHttp bool
 	// If set, send trace data to using OTLP gRRC
 	// Exporter is configured with OTLP env variables as described here:
 	// go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc
-	EnableGrpc bool
+	OtlpEnableGrpc bool
+	// If set, connet to OTLP endpoint using http instead of https
+	// Also can be configured by env var from the links above
+	OtlpInsecure bool
+
+	// If set, send trace spans to this Zipkin endpoint
+	ZipkinUrl string
 }
 
 type ContractConfig struct {

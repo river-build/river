@@ -20,7 +20,6 @@ import (
 	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
-	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/auth"
@@ -394,13 +393,7 @@ func (s *Service) runHttpServer() error {
 	}
 	s.onClose(s.listener.Close)
 
-	mux := httptrace.NewServeMux(
-		httptrace.WithResourceNamer(
-			func(r *http.Request) string {
-				return r.Method + " " + r.URL.Path
-			},
-		),
-	)
+	mux := http.NewServeMux()
 	s.mux = mux
 
 	mux.HandleFunc("/info", s.handleInfo)
