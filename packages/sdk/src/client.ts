@@ -1,5 +1,6 @@
 import { Message, PlainMessage } from '@bufbuild/protobuf'
 import { datadogRum } from '@datadog/browser-rum'
+import { Permission } from '@river-build/web3'
 import {
     MembershipOp,
     ChannelOp,
@@ -69,6 +70,7 @@ import {
     streamIdAsString,
     makeSpaceStreamId,
     STREAM_ID_STRING_LENGTH,
+    makeMediaStreamIdFromSpaceId,
 } from './id'
 import { makeEvent, unpackMiniblock, unpackStream, unpackStreamEx } from './sign'
 import { StreamEvents } from './streamEvents'
@@ -108,8 +110,8 @@ import {
     make_ChannelPayload_Redaction,
     make_MemberPayload_EnsAddress,
     make_MemberPayload_Nft,
-    make_ChannelPayload_Pin,
-    make_ChannelPayload_Unpin,
+    make_MemberPayload_Pin,
+    make_MemberPayload_Unpin,
 } from './types'
 
 import debug from 'debug'
@@ -676,27 +678,36 @@ export class Client
     }
 
     async createMediaStream(
-        channelId: string | Uint8Array,
+        channelId: string | Uint8Array | undefined,
         spaceId: string | Uint8Array | undefined,
         chunkCount: number,
         streamSettings?: PlainMessage<StreamSettings>,
     ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array }> {
-        const streamId = makeUniqueMediaStreamId()
-
-        this.logCall('createMedia', channelId, streamId)
         assert(this.userStreamId !== undefined, 'userStreamId must be set')
-        assert(
-            isChannelStreamId(channelId) ||
-                isDMChannelStreamId(channelId) ||
-                isGDMChannelStreamId(channelId),
-            'channelId must be a valid streamId',
-        )
+        if (!channelId) {
+            assert(spaceId !== undefined, 'spaceId must be set')
+            assert(isSpaceStreamId(spaceId), 'spaceId must be a valid streamId')
+        } else {
+            assert(
+                isChannelStreamId(channelId) ||
+                    isDMChannelStreamId(channelId) ||
+                    isGDMChannelStreamId(channelId),
+                'channelId must be a valid streamId',
+            )
+        }
+
+        const streamId =
+            !channelId && spaceId
+                ? makeMediaStreamIdFromSpaceId(spaceId)
+                : makeUniqueMediaStreamId()
+
+        this.logCall('createMedia', channelId ?? spaceId, streamId)
 
         const inceptionEvent = await makeEvent(
             this.signerContext,
             make_MediaPayload_Inception({
                 streamId: streamIdAsBytes(streamId),
-                channelId: streamIdAsBytes(channelId),
+                channelId: channelId ? streamIdAsBytes(channelId) : undefined,
                 spaceId: spaceId ? streamIdAsBytes(spaceId) : undefined,
                 chunkCount,
                 settings: streamSettings,
@@ -874,7 +885,6 @@ export class Client
     }
 
     async pin(streamId: string, eventId: string) {
-        check(isChannelStreamId(streamId), 'streamId must be a valid channel streamId')
         const stream = this.streams.get(streamId)
         check(isDefined(stream), 'stream not found')
         const event = stream.view.events.get(eventId)
@@ -883,7 +893,7 @@ export class Client
         check(isDefined(remoteEvent), 'remoteEvent not found')
         await this.makeEventAndAddToStream(
             streamId,
-            make_ChannelPayload_Pin(remoteEvent.hash, remoteEvent.event),
+            make_MemberPayload_Pin(remoteEvent.hash, remoteEvent.event),
             {
                 method: 'pin',
             },
@@ -891,15 +901,14 @@ export class Client
     }
 
     async unpin(streamId: string, eventId: string) {
-        check(isChannelStreamId(streamId), 'streamId must be a valid channel streamId')
         const stream = this.streams.get(streamId)
         check(isDefined(stream), 'stream not found')
-        const pin = stream.view.channelContent.pins.find((x) => x.event.hashStr === eventId)
+        const pin = stream.view.membershipContent.pins.find((x) => x.event.hashStr === eventId)
         check(isDefined(pin), 'pin not found')
         check(isDefined(pin.event.remoteEvent), 'remoteEvent not found')
         await this.makeEventAndAddToStream(
             streamId,
-            make_ChannelPayload_Unpin(pin.event.remoteEvent.hash),
+            make_MemberPayload_Unpin(pin.event.remoteEvent.hash),
             {
                 method: 'unpin',
             },
@@ -1177,6 +1186,7 @@ export class Client
         opts?: SendChannelMessageOptions,
     ): Promise<{ eventId: string }> {
         const stream = this.stream(streamId)
+
         check(stream !== undefined, 'stream not found')
         const localId = stream.appendLocalEvent(payload, 'sending')
         opts?.onLocalEventAppended?.(localId)
@@ -1193,6 +1203,46 @@ export class Client
     ) {
         const stream = this.stream(streamId)
         check(isDefined(stream), 'stream not found')
+
+        if (isChannelStreamId(streamId)) {
+            // All channel messages sent via client API make their way to this method.
+            // The client checks for it's own entitlement to send messages to a channel
+            // before sending.
+            check(
+                isDefined(stream?.view.channelContent.spaceId),
+                'synced channel stream not initialized',
+            )
+
+            // We check entitlements on the client side for writes to channels. A top-level
+            // message post is only permitted if the user has write permissions. If the message
+            // is a reply, a reaction, a self-redaction or an edit, it may have Write or ReactReply
+            // permissions - any change to an existing message authored by the user is implicitly
+            // permitted.
+            const expectedPermissions: Permission[] = [Permission.Write]
+            if (payload.payload.case !== 'post' || payload.payload.value.threadId !== undefined) {
+                expectedPermissions.push(Permission.ReactReply)
+            }
+            let isEntitled = false
+            for (const permission of expectedPermissions) {
+                isEntitled = await this.entitlementsDelegate.isEntitled(
+                    stream.view.channelContent.spaceId,
+                    streamId,
+                    this.userId,
+                    permission,
+                )
+                if (isEntitled) {
+                    break
+                }
+            }
+            if (!isEntitled) {
+                throw new Error(
+                    `user is not entitled to add message to channel (expected one of [${expectedPermissions.join(
+                        ',',
+                    )}])`,
+                )
+            }
+        }
+
         const cleartext = payload.toJsonString()
         const message = await this.encryptGroupEvent(payload, streamId)
         message.refEventId = getRefEventIdFromChannelMessage(payload)
@@ -1306,7 +1356,7 @@ export class Client
         data: Uint8Array,
         chunkIndex: number,
         prevMiniblockHash: Uint8Array,
-    ): Promise<{ prevMiniblockHash: Uint8Array }> {
+    ): Promise<{ prevMiniblockHash: Uint8Array; eventId: string }> {
         const payload = make_MediaPayload_Chunk({
             data: data,
             chunkIndex: chunkIndex,

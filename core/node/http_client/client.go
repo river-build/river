@@ -8,8 +8,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/river-build/river/core/node/dlog"
 	"golang.org/x/net/http2"
+
+	"github.com/river-build/river/core/node/dlog"
 )
 
 // getTLSConfig returns a tls.Config with the system cert pool
@@ -36,7 +37,7 @@ func getTLSConfig(ctx context.Context) *tls.Config {
 		return nil
 	}
 
-	log.Warn("getTLSConfig using river CA cert file for development only", "err", err)
+	log.Warn("getTLSConfig using river CA cert file for development only")
 
 	// Append river CA cert to the system cert pool
 	if ok := sysCerts.AppendCertsFromPEM(riverCaCertPEM); !ok {
@@ -66,6 +67,7 @@ func GetHttpClient(ctx context.Context) (*http.Client, error) {
 func GetHttp11Client(ctx context.Context) (*http.Client, error) {
 	return &http.Client{
 		Transport: &http.Transport{
+			DisableKeepAlives: true,
 			TLSClientConfig:   getTLSConfig(ctx),
 			ForceAttemptHTTP2: false,
 			TLSNextProto:      map[string]func(authority string, c *tls.Conn) http.RoundTripper{},

@@ -10,12 +10,17 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/rs/cors"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/auth"
 	. "github.com/river-build/river/core/node/base"
@@ -29,10 +34,6 @@ import (
 	"github.com/river-build/river/core/node/registries"
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/xchain/entitlement"
-	"github.com/rs/cors"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
-	httptrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/net/http"
 )
 
 const (
@@ -41,46 +42,70 @@ const (
 	ServerModeArchive = "archive"
 )
 
-func (s *Service) Close() {
-	if s.httpServer != nil {
-		timeout := s.config.ShutdownTimeout
-		if timeout == 0 {
-			timeout = time.Second
-		} else if timeout <= time.Millisecond {
-			timeout = 0
-		}
-		ctx := s.serverCtx
-		if timeout > 0 {
-			var cancel context.CancelFunc
-			ctx, cancel = context.WithTimeout(s.serverCtx, timeout)
-			defer cancel()
-		}
+func (s *Service) httpServerClose() {
+	timeout := s.config.ShutdownTimeout
+	if timeout == 0 {
+		timeout = time.Second
+	} else if timeout <= time.Millisecond {
+		timeout = 0
+	}
+	ctx := s.serverCtx
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(s.serverCtx, timeout)
+		defer cancel()
+	}
+	if !s.config.Log.Simplify {
 		s.defaultLogger.Info("Shutting down http server", "timeout", timeout)
-		err := s.httpServer.Shutdown(ctx)
+	}
+	err := s.httpServer.Shutdown(ctx)
+	if err != nil {
+		if err != context.DeadlineExceeded {
+			s.defaultLogger.Error("failed to shutdown http server", "error", err)
+		}
+		s.defaultLogger.Warn("forcing http server close")
+		err = s.httpServer.Close()
 		if err != nil {
-			if err != context.DeadlineExceeded {
-				s.defaultLogger.Error("failed to shutdown http server", "error", err)
-			}
-			s.defaultLogger.Warn("forcing http server close")
-			err = s.httpServer.Close()
-			if err != nil {
-				s.defaultLogger.Error("failed to close http server", "error", err)
-			}
-		} else {
+			s.defaultLogger.Error("failed to close http server", "error", err)
+		}
+	} else {
+		if !s.config.Log.Simplify {
 			s.defaultLogger.Info("http server shutdown")
 		}
 	}
+}
 
-	// Try closing listener just in case: maybe httpServer was not started
-	if s.listener != nil {
-		s.listener.Close()
+func (s *Service) Close() {
+	onClose := s.onCloseFuncs
+	slices.Reverse(onClose)
+	for _, f := range onClose {
+		f()
 	}
 
-	if s.storage != nil {
-		s.storage.Close(s.serverCtx)
+	if !s.config.Log.Simplify {
+		s.defaultLogger.Info("Server closed")
 	}
+}
 
-	s.defaultLogger.Info("Server closed")
+func (s *Service) onClose(f any) {
+	switch f := f.(type) {
+	case func():
+		s.onCloseFuncs = append(s.onCloseFuncs, f)
+	case func() error:
+		s.onCloseFuncs = append(s.onCloseFuncs, func() {
+			_ = f()
+		})
+	case func(context.Context):
+		s.onCloseFuncs = append(s.onCloseFuncs, func() {
+			f(s.serverCtx)
+		})
+	case func(context.Context) error:
+		s.onCloseFuncs = append(s.onCloseFuncs, func() {
+			_ = f(s.serverCtx)
+		})
+	default:
+		panic("unsupported onClose type")
+	}
 }
 
 func (s *Service) start() error {
@@ -92,6 +117,8 @@ func (s *Service) start() error {
 	if err != nil {
 		return AsRiverError(err).Message("Failed to init wallet").LogError(s.defaultLogger)
 	}
+
+	s.initTracing()
 
 	err = s.initEntitlements()
 	if err != nil {
@@ -107,6 +134,8 @@ func (s *Service) start() error {
 	if err != nil {
 		return AsRiverError(err).Message("Failed to init river chain").LogError(s.defaultLogger)
 	}
+
+	s.initEthBalanceMetrics()
 
 	err = s.prepareStore()
 	if err != nil {
@@ -141,12 +170,16 @@ func (s *Service) start() error {
 
 	s.SetStatus("OK")
 
-	// Retrieve the TCP address of the listener
-	tcpAddr := s.listener.Addr().(*net.TCPAddr)
-
-	// Get the port as an integer
-	port := tcpAddr.Port
-	s.defaultLogger.Info("Server started", "port", port, "https", s.config.UseHttps)
+	addr := s.listener.Addr().String()
+	if strings.HasPrefix(addr, "[::]") {
+		addr = "localhost" + addr[4:]
+	}
+	if s.config.UseHttps {
+		addr = "https://" + addr
+	} else {
+		addr = "http://" + addr
+	}
+	s.defaultLogger.Info("Server started", "addr", addr+"/debug/multi")
 	return nil
 }
 
@@ -160,12 +193,17 @@ func (s *Service) initInstance(mode string) {
 			port = addr.Port
 		}
 	}
-	s.defaultLogger = dlog.FromCtx(s.serverCtx).With(
-		"port", port,
-		"instanceId", s.instanceId,
-		"nodeType", "stream",
-		"mode", mode,
-	)
+	if !s.config.Log.Simplify {
+		s.defaultLogger = dlog.FromCtx(s.serverCtx).With(
+			"instanceId", s.instanceId,
+			"nodeType", "stream",
+			"mode", mode,
+		)
+	} else {
+		s.defaultLogger = dlog.FromCtx(s.serverCtx).With(
+			"port", port,
+		)
+	}
 	s.serverCtx = dlog.CtxWithLog(s.serverCtx, s.defaultLogger)
 	s.defaultLogger.Info("Starting server", "config", s.config, "mode", mode)
 
@@ -207,9 +245,11 @@ func (s *Service) initWallet() error {
 	s.wallet = wallet
 
 	// Add node address info to the logger
-	s.defaultLogger = s.defaultLogger.With("nodeAddress", wallet.Address.Hex())
-	s.serverCtx = dlog.CtxWithLog(ctx, s.defaultLogger)
-	slog.SetDefault(s.defaultLogger)
+	if !s.config.Log.Simplify {
+		s.defaultLogger = s.defaultLogger.With("nodeAddress", wallet.Address.Hex())
+		s.serverCtx = dlog.CtxWithLog(ctx, s.defaultLogger)
+		slog.SetDefault(s.defaultLogger)
+	}
 
 	return nil
 }
@@ -266,7 +306,13 @@ func (s *Service) initRiverChain() error {
 		walletAddress = s.wallet.Address
 	}
 	s.nodeRegistry, err = nodes.LoadNodeRegistry(
-		ctx, s.registryContract, walletAddress, s.riverChain.InitialBlockNum, s.riverChain.ChainMonitor)
+		ctx,
+		s.registryContract,
+		walletAddress,
+		s.riverChain.InitialBlockNum,
+		s.riverChain.ChainMonitor,
+		s.otelConnectIterceptor,
+	)
 	if err != nil {
 		return err
 	}
@@ -337,20 +383,17 @@ func (s *Service) runHttpServer() error {
 		if err != nil {
 			return err
 		}
-		log.Info("Listening", "addr", address)
+		if !cfg.Log.Simplify {
+			log.Info("Listening", "addr", address)
+		}
 	} else {
 		if cfg.Port != 0 {
 			log.Warn("Port is ignored when listener is provided")
 		}
 	}
+	s.onClose(s.listener.Close)
 
-	mux := httptrace.NewServeMux(
-		httptrace.WithResourceNamer(
-			func(r *http.Request) string {
-				return r.Method + " " + r.URL.Path
-			},
-		),
-	)
+	mux := http.NewServeMux()
 	s.mux = mux
 
 	mux.HandleFunc("/info", s.handleInfo)
@@ -381,7 +424,9 @@ func (s *Service) runHttpServer() error {
 
 	address := fmt.Sprintf("%s:%d", cfg.Address, cfg.Port)
 	if cfg.UseHttps {
-		log.Info("Using TLS server")
+		if !s.config.Log.Simplify {
+			log.Info("Using TLS server")
+		}
 		if (cfg.TLSConfig.Cert == "") || (cfg.TLSConfig.Key == "") {
 			return RiverError(Err_BAD_CONFIG, "TLSConfig.Cert and TLSConfig.Key must be set if UseHttps is true")
 		}
@@ -406,8 +451,6 @@ func (s *Service) runHttpServer() error {
 		}
 
 		go s.serveTLS()
-
-		return nil
 	} else {
 		log.Info("Using H2C server")
 		s.httpServer, err = createH2CServer(ctx, address, corsMiddleware.Handler(mux))
@@ -416,9 +459,10 @@ func (s *Service) runHttpServer() error {
 		}
 
 		go s.serveH2C()
-
-		return nil
 	}
+
+	s.onClose(s.httpServerClose)
+	return nil
 }
 
 func (s *Service) serveTLS() {
@@ -427,7 +471,9 @@ func (s *Service) serveTLS() {
 	if err != nil && err != http.ErrServerClosed {
 		s.defaultLogger.Error("ServeTLS failed", "err", err)
 	} else {
-		s.defaultLogger.Info("ServeTLS stopped")
+		if !s.config.Log.Simplify {
+			s.defaultLogger.Info("ServeTLS stopped")
+		}
 	}
 }
 
@@ -461,13 +507,22 @@ func (s *Service) initStore() error {
 			return err
 		}
 		s.storage = store
+		s.onClose(store.Close)
 
 		streamsCount, err := store.GetStreamsNumber(ctx)
 		if err != nil {
 			return err
 		}
 
-		log.Info("Created postgres event store", "schema", s.storagePoolInfo.Schema, "totalStreamsCount", streamsCount)
+		if !s.config.Log.Simplify {
+			log.Info(
+				"Created postgres event store",
+				"schema",
+				s.storagePoolInfo.Schema,
+				"totalStreamsCount",
+				streamsCount,
+			)
+		}
 		return nil
 	default:
 		return RiverError(
@@ -484,19 +539,22 @@ func (s *Service) initCacheAndSync() error {
 	s.cache, err = events.NewStreamCache(
 		s.serverCtx,
 		&events.StreamCacheParams{
-			Storage:         s.storage,
-			Wallet:          s.wallet,
-			RiverChain:      s.riverChain,
-			Registry:        s.registryContract,
-			ChainConfig:     s.chainConfig,
-			AppliedBlockNum: s.riverChain.InitialBlockNum,
-			ChainMonitor:    s.riverChain.ChainMonitor,
-			Metrics:         s.metrics,
+			Storage:                 s.storage,
+			Wallet:                  s.wallet,
+			RiverChain:              s.riverChain,
+			Registry:                s.registryContract,
+			ChainConfig:             s.chainConfig,
+			AppliedBlockNum:         s.riverChain.InitialBlockNum,
+			ChainMonitor:            s.riverChain.ChainMonitor,
+			Metrics:                 s.metrics,
+			RemoteMiniblockProvider: s,
 		},
 	)
 	if err != nil {
 		return err
 	}
+
+	s.mbProducer = events.NewMiniblockProducer(s.serverCtx, s.cache, nil)
 
 	s.syncHandler = NewSyncHandler(
 		s.wallet,
@@ -509,10 +567,14 @@ func (s *Service) initCacheAndSync() error {
 }
 
 func (s *Service) initHandlers() {
-	interceptors := connect.WithInterceptors(
-		s.NewMetricsInterceptor(),
-		NewTimeoutInterceptor(s.config.Network.RequestTimeout),
-	)
+	ii := []connect.Interceptor{}
+	if s.otelConnectIterceptor != nil {
+		ii = append(ii, s.otelConnectIterceptor)
+	}
+	ii = append(ii, s.NewMetricsInterceptor())
+	ii = append(ii, NewTimeoutInterceptor(s.config.Network.RequestTimeout))
+
+	interceptors := connect.WithInterceptors(ii...)
 	streamServicePattern, streamServiceHandler := protocolconnect.NewStreamServiceHandler(s, interceptors)
 	s.mux.Handle(streamServicePattern, newHttpHandler(streamServiceHandler, s.defaultLogger, s.metrics))
 
@@ -534,6 +596,8 @@ func StartServer(
 	riverChain *crypto.Blockchain,
 	listener net.Listener,
 ) (*Service, error) {
+	ctx = config.CtxWithConfig(ctx, cfg)
+
 	streamService := &Service{
 		serverCtx:  ctx,
 		config:     cfg,
@@ -648,7 +712,9 @@ func RunServer(ctx context.Context, cfg *config.Config) error {
 	signal.Notify(osSignal, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		sig := <-osSignal
-		log.Info("Got OS signal", "signal", sig.String())
+		if !cfg.Log.Simplify {
+			log.Info("Got OS signal", "signal", sig.String())
+		}
 		service.exitSignal <- nil
 	}()
 

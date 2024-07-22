@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"connectrpc.com/otelconnect"
 	"github.com/ethereum/go-ethereum/common"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/river"
@@ -47,6 +49,49 @@ func formatDurationToSeconds(d time.Duration) string {
 	}
 }
 
+func traceCtxForTimeline(
+	ctx context.Context,
+	start time.Time,
+	timeline *statusinfo.Timeline,
+	timelineMu *sync.Mutex,
+	dnsAddrs *[]string,
+	usedAddr *string,
+) context.Context {
+	return httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
+		GotConn: func(connInfo httptrace.GotConnInfo) {
+			timelineMu.Lock()
+			defer timelineMu.Unlock()
+			*usedAddr = connInfo.Conn.RemoteAddr().String()
+			// TLSHandshakeDone is not called for HTTP/2 connections,
+			// but GotConn is called right after.
+			timeline.TLSHandshakeDone = formatDurationToMs(time.Since(start))
+		},
+		GotFirstResponseByte: func() {
+			timelineMu.Lock()
+			defer timelineMu.Unlock()
+			timeline.GotFirstResponseByte = formatDurationToMs(time.Since(start))
+		},
+		DNSDone: func(dnsInfo httptrace.DNSDoneInfo) {
+			timelineMu.Lock()
+			defer timelineMu.Unlock()
+			for _, addr := range dnsInfo.Addrs {
+				*dnsAddrs = append(*dnsAddrs, addr.String())
+			}
+			timeline.DNSDone = formatDurationToMs(time.Since(start))
+		},
+		ConnectDone: func(network, addr string, err error) {
+			timelineMu.Lock()
+			defer timelineMu.Unlock()
+			timeline.ConnectDone = formatDurationToMs(time.Since(start))
+		},
+		WroteRequest: func(wroteRequestInfo httptrace.WroteRequestInfo) {
+			timelineMu.Lock()
+			defer timelineMu.Unlock()
+			timeline.WroteRequest = formatDurationToMs(time.Since(start))
+		},
+	})
+}
+
 func getHttpStatus(
 	ctx context.Context,
 	baseUrl string,
@@ -58,25 +103,14 @@ func getHttpStatus(
 	defer wg.Done()
 
 	start := time.Now()
-	dnsResolved := start
-	connectionEstablished := start
 	dnsAddrs := []string{}
 	var usedAddr string
-	traceCtx := httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
-		DNSDone: func(dnsInfo httptrace.DNSDoneInfo) {
-			for _, addr := range dnsInfo.Addrs {
-				dnsAddrs = append(dnsAddrs, addr.String())
-			}
-			dnsResolved = time.Now()
-		},
-		GotConn: func(connInfo httptrace.GotConnInfo) {
-			usedAddr = connInfo.Conn.RemoteAddr().String()
-			connectionEstablished = time.Now()
-		},
-	})
-
+	var timeline statusinfo.Timeline
+	var timelineMu sync.Mutex
 	url := baseUrl + "/status?blockchain=1"
-	req, err := http.NewRequestWithContext(traceCtx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(
+		traceCtxForTimeline(ctx, start, &timeline, &timelineMu, &dnsAddrs, &usedAddr),
+		"GET", url, nil)
 	req.Header.Set("Accept", "application/json")
 	if err != nil {
 		log.Error("Error creating request", "err", err, "url", url)
@@ -84,41 +118,42 @@ func getHttpStatus(
 		return
 	}
 	resp, err := client.Do(req)
-	end := time.Now()
-	result.DNSAddresses = dnsAddrs
-	result.RemoteAddress = usedAddr
-	if err != nil {
-		log.Error("Error fetching URL", "err", err, "url", url)
-		result.StatusText = err.Error()
-		return
-	}
-
-	if resp != nil {
-		defer resp.Body.Close()
-		result.Success = resp.StatusCode == 200
-		result.Status = resp.StatusCode
-		result.StatusText = resp.Status
-		result.Elapsed = formatDurationToMs(end.Sub(start))
-		result.ElapsedAfterDNS = formatDurationToMs(end.Sub(dnsResolved))
-		result.ElapsedAfterConn = formatDurationToMs(end.Sub(connectionEstablished))
-		result.Protocol = resp.Proto
-		result.UsedTLS = resp.TLS != nil
-		if resp.StatusCode == 200 {
-			statusJson, err := io.ReadAll(resp.Body)
-			if err == nil {
-				st, err := statusinfo.StatusResponseFromJson(statusJson)
+	if err == nil {
+		if resp != nil {
+			defer resp.Body.Close()
+			result.Success = resp.StatusCode == 200
+			result.Status = resp.StatusCode
+			result.StatusText = resp.Status
+			result.Protocol = resp.Proto
+			result.UsedTLS = resp.TLS != nil
+			if resp.StatusCode == 200 {
+				statusJson, err := io.ReadAll(resp.Body)
 				if err == nil {
-					result.Response = st
+					st, err := statusinfo.StatusResponseFromJson(statusJson)
+					if err == nil {
+						result.Response = st
+					} else {
+						result.Response.Status = "Error decoding response: " + err.Error()
+					}
 				} else {
-					result.Response.Status = "Error decoding response: " + err.Error()
+					result.Response.Status = "Error reading response: " + err.Error()
 				}
-			} else {
-				result.Response.Status = "Error reading response: " + err.Error()
 			}
+		} else {
+			result.StatusText = "No response"
 		}
 	} else {
-		result.StatusText = "No response"
+		log.Error("Error fetching URL", "err", err, "url", url)
+		result.StatusText = err.Error()
 	}
+
+	timelineMu.Lock()
+	defer timelineMu.Unlock()
+	timeline.Total = formatDurationToMs(time.Since(start))
+	result.DNSAddresses = dnsAddrs
+	result.RemoteAddress = usedAddr
+	result.Elapsed = timeline.Total
+	result.Timeline = timeline
 }
 
 func getGrpcStatus(
@@ -131,28 +166,23 @@ func getGrpcStatus(
 	defer wg.Done()
 
 	start := time.Now()
-	dnsResolved := start
-	connectionEstablished := start
 	dnsAddrs := []string{}
 	var usedAddr string
-	traceCtx := httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
-		DNSDone: func(dnsInfo httptrace.DNSDoneInfo) {
-			for _, addr := range dnsInfo.Addrs {
-				dnsAddrs = append(dnsAddrs, addr.String())
-			}
-			dnsResolved = time.Now()
-		},
-		GotConn: func(connInfo httptrace.GotConnInfo) {
-			usedAddr = connInfo.Conn.RemoteAddr().String()
-			connectionEstablished = time.Now()
-		},
-	})
-
+	var timeline statusinfo.Timeline
+	var timelineMu sync.Mutex
 	req := connect.NewRequest(&InfoRequest{})
-	resp, err := client.Info(traceCtx, req)
-	end := time.Now()
+	resp, err := client.Info(
+		traceCtxForTimeline(ctx, start, &timeline, &timelineMu, &dnsAddrs, &usedAddr),
+		req)
+
+	timelineMu.Lock()
+	defer timelineMu.Unlock()
+	timeline.Total = formatDurationToMs(time.Since(start))
 	record.Grpc.DNSAddresses = dnsAddrs
 	record.Grpc.RemoteAddress = usedAddr
+	record.Grpc.Elapsed = timeline.Total
+	record.Grpc.Timeline = timeline
+
 	if err != nil {
 		log.Error("Error fetching Info", "err", err, "url", record.Record.Url)
 		record.Grpc.StatusText = err.Error()
@@ -163,9 +193,6 @@ func getGrpcStatus(
 
 	record.Grpc.Success = true
 	record.Grpc.StatusText = "OK"
-	record.Grpc.Elapsed = formatDurationToMs(end.Sub(start))
-	record.Grpc.ElapsedAfterDNS = formatDurationToMs(end.Sub(dnsResolved))
-	record.Grpc.ElapsedAfterConn = formatDurationToMs(end.Sub(connectionEstablished))
 	record.Grpc.Version = resp.Msg.Version
 	record.Grpc.StartTime = startTime.UTC().Format(time.RFC3339)
 	record.Grpc.Uptime = formatDurationToSeconds(time.Since(startTime))
@@ -203,6 +230,7 @@ func GetRiverNetworkStatus(
 	cfg *config.Config,
 	nodeRegistry nodes.NodeRegistry,
 	riverChain *crypto.Blockchain,
+	connectOtelIterceptor *otelconnect.Interceptor,
 ) (*statusinfo.RiverStatus, error) {
 	startTime := time.Now()
 
@@ -224,12 +252,14 @@ func GetRiverNetworkStatus(
 	if err != nil {
 		return nil, err
 	}
+	defer http20client.CloseIdleConnections()
 	http20client.Timeout = cfg.Network.GetHttpRequestTimeout()
 
 	grpcHttpClient, err := http_client.GetHttpClient(ctx)
 	if err != nil {
 		return nil, err
 	}
+	defer grpcHttpClient.CloseIdleConnections()
 	grpcHttpClient.Timeout = cfg.Network.GetHttpRequestTimeout()
 
 	data := &statusinfo.RiverStatus{
@@ -249,25 +279,42 @@ func GetRiverNetworkStatus(
 		}
 		data.Nodes = append(data.Nodes, r)
 
+		connectOpts := []connect.ClientOption{connect.WithGRPC()}
+		if connectOtelIterceptor != nil {
+			connectOpts = append(connectOpts, connect.WithInterceptors(connectOtelIterceptor))
+		} else {
+			dlog.FromCtx(ctx).Error("No OpenTelemetry interceptor for gRPC client")
+		}
+
 		wg.Add(4)
 		go getHttpStatus(ctx, n.Url(), &r.Http11, http11client, &wg)
 		go getHttpStatus(ctx, n.Url(), &r.Http20, http20client, &wg)
-		go getGrpcStatus(ctx, r, NewStreamServiceClient(grpcHttpClient, n.Url(), connect.WithGRPC()), &wg)
+		go getGrpcStatus(ctx, r, NewStreamServiceClient(grpcHttpClient, n.Url(), connectOpts...), &wg)
 		go getEthBalance(ctx, &r.RiverEthBalance, riverChain, n.Address(), &wg)
 	}
 
 	wg.Wait()
+
 	data.Elapsed = formatDurationToMs(time.Since(startTime))
 	return data, nil
 }
 
 func (s *Service) handleDebugMulti(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if s.otelTracer != nil {
+		var span trace.Span
+		ctx, span = s.otelTracer.Start(r.Context(), "handleDebugMulti")
+		defer span.End()
+	}
+
 	log := s.defaultLogger
 
-	status, err := GetRiverNetworkStatus(r.Context(), s.config, s.nodeRegistry, s.riverChain)
+	status, err := GetRiverNetworkStatus(ctx, s.config, s.nodeRegistry, s.riverChain, s.otelConnectIterceptor)
 	if err == nil {
 		err = render.ExecuteAndWrite(&render.DebugMultiData{Status: status}, w)
-		log.Info("River Network Status", "data", status)
+		if !s.config.Log.Simplify {
+			log.Info("River Network Status", "data", status)
+		}
 	}
 	if err != nil {
 		log.Error("Error getting data or rendering template for debug/multi", "err", err)
@@ -276,14 +323,23 @@ func (s *Service) handleDebugMulti(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) handleDebugMultiJson(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	if s.otelTracer != nil {
+		var span trace.Span
+		ctx, span = s.otelTracer.Start(r.Context(), "handleDebugMulti")
+		defer span.End()
+	}
+
 	log := s.defaultLogger
 
 	w.Header().Set("Content-Type", "application/json")
-	status, err := GetRiverNetworkStatus(r.Context(), s.config, s.nodeRegistry, s.riverChain)
+	status, err := GetRiverNetworkStatus(ctx, s.config, s.nodeRegistry, s.riverChain, s.otelConnectIterceptor)
 	if err == nil {
 		// Write status as json
 		err = json.NewEncoder(w).Encode(status)
-		log.Info("River Network Status", "data", status)
+		if !s.config.Log.Simplify {
+			log.Info("River Network Status", "data", status)
+		}
 	}
 	if err != nil {
 		log.Error("Error getting data or writing json for debug/multi/json", "err", err)

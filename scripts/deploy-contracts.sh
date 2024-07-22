@@ -59,7 +59,8 @@ make deploy-base-anvil type=facet contract=DeployMetadata
 make deploy-base-anvil type=facet contract=DeployNodeOperator
 make deploy-base-anvil type=facet contract=DeploySpaceDelegation
 make deploy-base-anvil type=facet contract=DeployRewardsDistribution
-make deploy-base-anvil type=facet contract=DeployMockMessenger
+make deploy-base-anvil type=facet contract=DeployMockMessenger # util
+make deploy-base-anvil type=facet contract=DeployERC721ANonTransferable
 make deploy-base-anvil type=contract contract=DeployBaseRegistry
 make deploy-base-anvil type=contract contract=DeployProxyBatchDelegation
 make deploy-base-anvil type=contract contract=DeployRiverBase
@@ -103,4 +104,6 @@ copy_addresses $BASE_ANVIL_SOURCE_DIR "base" "${BASE_CHAIN_ID}"
 copy_addresses $RIVER_ANVIL_SOURCE_DIR "river" "${RIVER_CHAIN_ID}"
 
 # Update the config
-./packages/generated/scripts/make-config.sh
+pushd ./packages/generated
+    yarn make-config
+popd

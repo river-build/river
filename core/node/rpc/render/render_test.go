@@ -3,9 +3,10 @@ package render_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/river-build/river/core/node/rpc/render"
 	"github.com/river-build/river/core/node/rpc/statusinfo"
-	"github.com/stretchr/testify/require"
 )
 
 // implicitly calls render.init that loads and parses all templates
@@ -73,10 +74,13 @@ func TestRenderDebugMulti(t *testing.T) {
 						Success:    true,
 						StatusText: "OK",
 						Elapsed:    dd,
-						Version:    "1.2.3",
-						StartTime:  tt,
-						Uptime:     dd,
-						Graffiti:   "graffiti",
+						Timeline: statusinfo.Timeline{
+							Total: dd,
+						},
+						Version:   "1.2.3",
+						StartTime: tt,
+						Uptime:    dd,
+						Graffiti:  "graffiti",
 					},
 				},
 			},

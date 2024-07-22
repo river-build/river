@@ -2,6 +2,7 @@ package events
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	. "github.com/river-build/river/core/node/protocol"
@@ -167,6 +168,7 @@ func NewMiniblockInfoFromProto(pb *Miniblock, opts NewMiniblockInfoFromProtoOpts
 	if opts.ExpectedBlockNumber >= 0 && blockHeader.MiniblockNum != int64(opts.ExpectedBlockNumber) {
 		return nil, RiverError(
 			Err_BAD_EVENT,
+			"block number mismatch",
 			"expected",
 			opts.ExpectedBlockNumber,
 			"actual",
@@ -213,6 +215,23 @@ func NewMiniblockInfoFromParsed(headerEvent *ParsedEvent, events []*ParsedEvent)
 			Events: envelopes,
 		},
 	}, nil
+}
+
+func NewMiniblockInfoFromHeaderAndParsed(
+	wallet *crypto.Wallet,
+	header *MiniblockHeader,
+	events []*ParsedEvent,
+) (*MiniblockInfo, error) {
+	headerEvent, err := MakeParsedEventWithPayload(
+		wallet,
+		Make_MiniblockHeader(header),
+		header.PrevMiniblockHash,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewMiniblockInfoFromParsed(headerEvent, events)
 }
 
 func (b *MiniblockInfo) ToBytes() ([]byte, error) {

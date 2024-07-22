@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+
 	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/protocol"
 )
@@ -133,6 +134,14 @@ func CheckUserStreamIdForPrefix(streamId string, creatorUserId []byte, expectedP
 
 func ValidSpaceStreamId(streamId *StreamId) bool {
 	return streamId.Type() == STREAM_SPACE_BIN
+}
+
+func ValidSpaceStreamIdBytes(streamId []byte) bool {
+	id, err := StreamIdFromBytes(streamId)
+	if err != nil {
+		return false
+	}
+	return ValidSpaceStreamId(&id)
 }
 
 func ValidChannelStreamIdBytes(streamId []byte) bool {

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/river-build/river/core/node/crypto"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
@@ -17,30 +18,37 @@ import (
 func MakeGenesisMiniblockForSpaceStream(
 	t *testing.T,
 	wallet *crypto.Wallet,
-	spaceStreamId StreamId,
+	streamId StreamId,
 ) *Miniblock {
-	inception, err := MakeEnvelopeWithPayload(
+	inception, err := MakeParsedEventWithPayload(
 		wallet,
-		Make_SpacePayload_Inception(spaceStreamId, nil),
+		Make_SpacePayload_Inception(streamId, nil),
 		nil,
 	)
 	require.NoError(t, err)
 
-	miniblockHeader, err := Make_GenesisMiniblockHeader([]*ParsedEvent{parsedEvent(t, inception)})
+	mb, err := MakeGenesisMiniblock(wallet, []*ParsedEvent{inception})
 	require.NoError(t, err)
-	miniblockHeaderProto, err := MakeEnvelopeWithPayload(
+
+	return mb
+}
+
+func MakeGenesisMiniblockForUserSettingsStream(
+	t *testing.T,
+	wallet *crypto.Wallet,
+	streamId StreamId,
+) *Miniblock {
+	inception, err := MakeParsedEventWithPayload(
 		wallet,
-		Make_MiniblockHeader(miniblockHeader),
+		Make_UserSettingsPayload_Inception(streamId, nil),
 		nil,
 	)
 	require.NoError(t, err)
 
-	miniblockProto := &Miniblock{
-		Header: miniblockHeaderProto,
-		Events: []*Envelope{inception},
-	}
+	mb, err := MakeGenesisMiniblock(wallet, []*ParsedEvent{inception})
+	require.NoError(t, err)
 
-	return miniblockProto
+	return mb
 }
 
 func MakeEvent(
@@ -83,21 +91,19 @@ func mbTest(
 	t *testing.T,
 	params mbTestParams,
 ) {
-	ctx, tt := makeTestStreamParams(t, testParams{replFactor: 1})
-	defer tt.closer()
-	_ = tt.initCache(ctx)
+	ctx, tt := makeCacheTestContext(t, testParams{replFactor: 1})
+	_ = tt.initCache(0, nil)
 	require := require.New(t)
 
 	spaceStreamId := testutils.FakeStreamId(STREAM_SPACE_BIN)
-	miniblockProto := MakeGenesisMiniblockForSpaceStream(t, tt.params.Wallet, spaceStreamId)
+	miniblockProto := MakeGenesisMiniblockForSpaceStream(t, tt.instances[0].params.Wallet, spaceStreamId)
 
-	stream, view, err := tt.createStream(ctx, spaceStreamId, miniblockProto)
-	require.NoError(err)
+	stream, view := tt.createStream(spaceStreamId, miniblockProto)
 
-	addEvent(t, ctx, tt.params, stream, "1", view.LastBlock().Hash)
-	addEvent(t, ctx, tt.params, stream, "2", view.LastBlock().Hash)
+	addEvent(t, ctx, tt.instances[0].params, stream, "1", view.LastBlock().Hash)
+	addEvent(t, ctx, tt.instances[0].params, stream, "2", view.LastBlock().Hash)
 
-	proposal, err := stream.ProposeNextMiniblock(ctx, false)
+	proposal, err := mbProduceCandiate(ctx, tt.instances[0].params, stream.(*streamImpl), false)
 	mb := proposal.headerEvent.Event.GetMiniblockHeader()
 	events := proposal.events
 	require.NoError(err)
@@ -107,7 +113,7 @@ func mbTest(
 	require.Equal(int64(1), mb.MiniblockNum)
 
 	if params.addAfterProposal {
-		addEvent(t, ctx, tt.params, stream, "3", view.LastBlock().Hash)
+		addEvent(t, ctx, tt.instances[0].params, stream, "3", view.LastBlock().Hash)
 	}
 
 	require.NoError(err)
@@ -121,7 +127,7 @@ func mbTest(
 	require.NoError(err)
 	stats := view2.GetStats()
 	require.Equal(params.eventsInMinipool, stats.EventsInMinipool)
-	addEvent(t, ctx, tt.params, stream, "4", view2.LastBlock().Hash)
+	addEvent(t, ctx, tt.instances[0].params, stream, "4", view2.LastBlock().Hash)
 
 	view2, err = stream.GetView(ctx)
 	require.NoError(err)

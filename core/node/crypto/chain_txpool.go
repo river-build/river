@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/river-build/river/core/node/infra"
 
 	"github.com/ethereum/go-ethereum"
@@ -17,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/river-build/river/core/config"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
@@ -125,7 +127,7 @@ func NewTransactionPoolWithPoliciesFromConfig(
 ) (*transactionPool, error) {
 	if cfg.BlockTimeMs <= 0 {
 		return nil, RiverError(Err_BAD_CONFIG, "BlockTimeMs must be set").
-			Func("NewBlockchainWithClient")
+			Func("NewTransactionPoolWithPoliciesFromConfig")
 	}
 	// if pending tx timeout is not specified use a default of 3*chain.BlockPeriod
 	txTimeout := cfg.TransactionPool.TransactionTimeout

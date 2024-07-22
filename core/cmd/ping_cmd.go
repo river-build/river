@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/infra"
@@ -29,12 +30,12 @@ func runPing(cfg *config.Config) error {
 	}
 
 	nodeRegistry, err := nodes.LoadNodeRegistry(
-		ctx, registryContract, common.Address{}, blockchain.InitialBlockNum, blockchain.ChainMonitor)
+		ctx, registryContract, common.Address{}, blockchain.InitialBlockNum, blockchain.ChainMonitor, nil)
 	if err != nil {
 		return err
 	}
 
-	result, err := rpc.GetRiverNetworkStatus(ctx, cfg, nodeRegistry, blockchain)
+	result, err := rpc.GetRiverNetworkStatus(ctx, cfg, nodeRegistry, blockchain, nil)
 	if err != nil {
 		return err
 	}

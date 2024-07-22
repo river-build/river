@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -37,9 +38,10 @@ func GetDefaultConfig() *Config {
 		// TODO: ArchitectContract: ContractConfig{},
 		// TODO: RegistryContract:  ContractConfig{},
 		Log: LogConfig{
-			Level:   "info",
-			Console: true,
-			NoColor: true,
+			Level:   "info", // NOTE: this default is replaced by flag value
+			Console: true,   // NOTE: this default is replaced by flag value
+			File:    "",     // NOTE: this default is replaced by flag value
+			NoColor: false,  // NOTE: this default is replaced by flag value
 			Format:  "json",
 		},
 		Metrics: MetricsConfig{
@@ -249,9 +251,31 @@ type ChainConfig struct {
 	NegativeEntitlementManagerCacheTTLSeconds int
 }
 
+func (c ChainConfig) BlockTime() time.Duration {
+	return time.Duration(c.BlockTimeMs) * time.Millisecond
+}
+
 type PerformanceTrackingConfig struct {
 	ProfilingEnabled bool
-	TracingEnabled   bool
+
+	// If true, write trace data to one of the exporters configured below
+	TracingEnabled bool
+	// If set, write trace data to this jsonl file
+	OtlpFile string
+	// If set, send trace data to using OTLP HTTP
+	// Exporter is configured with OTLP env variables as described here:
+	// go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp
+	OtlpEnableHttp bool
+	// If set, send trace data to using OTLP gRRC
+	// Exporter is configured with OTLP env variables as described here:
+	// go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc
+	OtlpEnableGrpc bool
+	// If set, connet to OTLP endpoint using http instead of https
+	// Also can be configured by env var from the links above
+	OtlpInsecure bool
+
+	// If set, send trace spans to this Zipkin endpoint
+	ZipkinUrl string
 }
 
 type ContractConfig struct {
@@ -282,10 +306,14 @@ type LogConfig struct {
 	Level        string // Used for both file and console if their levels not set explicitly
 	File         string // Path to log file
 	FileLevel    string // If not set, use Level
-	Console      bool   // Log to sederr if true
+	Console      bool   // Log to console if true
 	ConsoleLevel string // If not set, use Level
-	NoColor      bool
+	NoColor      bool   // If true, disable color text output to console
 	Format       string // "json" or "text"
+
+	// Intended for dev use with text logs, do not output instance attributes with each log entry,
+	// drop some large messages.
+	Simplify bool
 }
 
 type MetricsConfig struct {
@@ -459,4 +487,28 @@ func (c *Config) parseChains() error {
 		}
 	}
 	return nil
+}
+
+type confifCtxKeyType struct{}
+
+var configCtxKey = confifCtxKeyType{}
+
+func CtxWithConfig(ctx context.Context, c *Config) context.Context {
+	return context.WithValue(ctx, configCtxKey, c)
+}
+
+func FromCtx(ctx context.Context) *Config {
+	if c, ok := ctx.Value(configCtxKey).(*Config); ok {
+		return c
+	}
+	return nil
+}
+
+func UseDetailedLog(ctx context.Context) bool {
+	c := FromCtx(ctx)
+	if c != nil {
+		return !c.Log.Simplify
+	} else {
+		return true
+	}
 }
