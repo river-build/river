@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"log/slog"
 	"os"
 
 	"connectrpc.com/otelconnect"
@@ -8,6 +9,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/exporters/zipkin"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -23,8 +25,8 @@ func (s *Service) initTracing() {
 
 	var exporters []trace.TracerProviderOption
 
-	if s.config.PerformanceTracking.File != "" {
-		f, err := os.OpenFile(s.config.PerformanceTracking.File, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if s.config.PerformanceTracking.OtlpFile != "" {
+		f, err := os.OpenFile(s.config.PerformanceTracking.OtlpFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			s.defaultLogger.Error("initTracing: failed to create trace file", "error", err)
 		} else {
@@ -43,10 +45,14 @@ func (s *Service) initTracing() {
 		}
 	}
 
-	if s.config.PerformanceTracking.EnableHttp {
+	if s.config.PerformanceTracking.OtlpEnableHttp {
 		// Exporter is configured with OTLP env variables as described here:
 		// go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp
-		exp, err := otlptracehttp.New(s.serverCtx)
+		opts := []otlptracehttp.Option{}
+		if s.config.PerformanceTracking.OtlpInsecure {
+			opts = append(opts, otlptracehttp.WithInsecure())
+		}
+		exp, err := otlptracehttp.New(s.serverCtx, opts...)
 		if err == nil {
 			s.onClose(exp.Shutdown)
 			exporters = append(exporters, trace.WithBatcher(exp))
@@ -55,15 +61,32 @@ func (s *Service) initTracing() {
 		}
 	}
 
-	if s.config.PerformanceTracking.EnableGrpc {
+	if s.config.PerformanceTracking.OtlpEnableGrpc {
 		// Exporter is configured with OTLP env variables as described here:
 		// go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc
-		exp, err := otlptracegrpc.New(s.serverCtx)
+		opts := []otlptracegrpc.Option{}
+		if s.config.PerformanceTracking.OtlpInsecure {
+			opts = append(opts, otlptracegrpc.WithInsecure())
+		}
+		exp, err := otlptracegrpc.New(s.serverCtx, opts...)
 		if err == nil {
 			s.onClose(exp.Shutdown)
 			exporters = append(exporters, trace.WithBatcher(exp))
 		} else {
 			s.defaultLogger.Error("Failed to create grpc OTLP exporter", "error", err)
+		}
+	}
+
+	if s.config.PerformanceTracking.ZipkinUrl != "" {
+		exp, err := zipkin.New(
+			s.config.PerformanceTracking.ZipkinUrl+"/api/v2/spans",
+			zipkin.WithLogger(slog.NewLogLogger(s.defaultLogger.Handler(), slog.LevelWarn)),
+		)
+		if err == nil {
+			s.onClose(exp.Shutdown)
+			exporters = append(exporters, trace.WithBatcher(exp))
+		} else {
+			s.defaultLogger.Error("Failed to create zipkin exporter", "error", err)
 		}
 	}
 
@@ -75,8 +98,9 @@ func (s *Service) initTracing() {
 	res, err := resource.New(
 		s.serverCtx,
 		resource.WithAttributes(
-			semconv.ServiceNameKey.String("river-stream"),
-			semconv.ServiceVersionKey.String(version.GetFullVersion()),
+			semconv.ServiceName("river-stream"),
+			semconv.ServiceInstanceID(s.wallet.String()),
+			semconv.ServiceVersion(version.GetFullVersion()),
 		),
 	)
 	if err != nil {

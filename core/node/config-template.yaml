@@ -64,8 +64,12 @@ metrics:
     enabled: <METRICS_ENABLED>
 performanceTracking:
     profilingEnabled: false
-    tracingEnabled: true
-    file: logs/trace.jsonl
+
+    # NOTE: Uncomment below to enable tracing with Jaeger (via OTLP) or Zipkin
+    # tracingEnabled: true
+    # otlpEnableGrpc: true
+    # otlpInsecure: true
+    # zipkinUrl: http://localhost:9411
 
 # Stream settings
 stream:
