@@ -30,9 +30,15 @@ export const SpacesBlock = (props: SpacesBlockProps) => {
     return (
         <Block title="Spaces">
             <CreateSpace setCurrentSpaceId={props.setCurrentSpaceId} variant="secondary" />
-            {spaceIds.map((spaceId) => (
-                <SpaceInfo spaceId={spaceId} />
-            ))}
+            <div className="divide-y-2 divide-neutral-200">
+                {spaceIds.map((spaceId) => (
+                    <SpaceInfo
+                        key={spaceId}
+                        spaceId={spaceId}
+                        setCurrentSpaceId={props.setCurrentSpaceId}
+                    />
+                ))}
+            </div>
             {spaceIds.length === 0 && (
                 <p className="pt-4 text-center text-sm text-secondary-foreground">
                     You're not in any spaces yet.
@@ -42,9 +48,21 @@ export const SpacesBlock = (props: SpacesBlockProps) => {
     )
 }
 
-const SpaceInfo = ({ spaceId }: { spaceId: string }) => {
+const SpaceInfo = ({
+    spaceId,
+    setCurrentSpaceId,
+}: {
+    spaceId: string
+    setCurrentSpaceId: (spaceId: string) => void
+}) => {
     const { data: space } = useSpace(spaceId)
-    return <div>{JSON.stringify(space, null, 2)}</div>
+    return (
+        <div className="px-4 py-2">
+            <button onClick={() => setCurrentSpaceId(space.id)}>
+                {space.metadata?.name || 'Unnamed Space'}
+            </button>
+        </div>
+    )
 }
 
 export const CreateSpace = (props: SpacesBlockProps & BlockProps) => {
