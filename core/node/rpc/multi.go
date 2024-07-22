@@ -15,6 +15,7 @@ import (
 	"connectrpc.com/connect"
 	"connectrpc.com/otelconnect"
 	"github.com/ethereum/go-ethereum/common"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/river"
@@ -299,8 +300,12 @@ func GetRiverNetworkStatus(
 }
 
 func (s *Service) handleDebugMulti(w http.ResponseWriter, r *http.Request) {
-	ctx, span := s.otelTracer.Start(r.Context(), "handleDebugMulti")
-	defer span.End()
+	ctx := r.Context()
+	if s.otelTracer != nil {
+		var span trace.Span
+		ctx, span = s.otelTracer.Start(r.Context(), "handleDebugMulti")
+		defer span.End()
+	}
 
 	log := s.defaultLogger
 
@@ -318,8 +323,12 @@ func (s *Service) handleDebugMulti(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) handleDebugMultiJson(w http.ResponseWriter, r *http.Request) {
-	ctx, span := s.otelTracer.Start(r.Context(), "handleDebugMultiJson")
-	defer span.End()
+	ctx := r.Context()
+	if s.otelTracer != nil {
+		var span trace.Span
+		ctx, span = s.otelTracer.Start(r.Context(), "handleDebugMulti")
+		defer span.End()
+	}
 
 	log := s.defaultLogger
 
