@@ -351,7 +351,7 @@ func (s *Service) prepareStore() error {
 			).Func("prepareStore")
 		}
 
-		pool, err := storage.CreateAndValidatePgxPool(s.serverCtx, &s.config.Database, schema)
+		pool, err := storage.CreateAndValidatePgxPool(s.serverCtx, &s.config.Database, schema, s.otelTraceProvider)
 		if err != nil {
 			return err
 		}
@@ -502,7 +502,13 @@ func (s *Service) initStore() error {
 
 	switch s.config.StorageType {
 	case storage.StreamStorageTypePostgres:
-		store, err := storage.NewPostgresEventStore(ctx, s.storagePoolInfo, s.instanceId, s.exitSignal, s.metrics)
+		store, err := storage.NewPostgresEventStore(
+			ctx,
+			s.storagePoolInfo,
+			s.instanceId,
+			s.exitSignal,
+			s.metrics,
+		)
 		if err != nil {
 			return err
 		}
