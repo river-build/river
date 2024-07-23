@@ -284,7 +284,9 @@ jobs:
                   echo "SSL_CERT_DIR=$SSL_CERT_DIR"
 
             - name: Run node (without entitlements)
-              run: ./core/node/run_single.sh --de -c -r &
+              run: |
+                  ./core/node/run_single.sh --de -c
+                  ./core/node/run_single.sh --de -r &
 
             - name: Wait for (without entitlements) node to be up
               run: yarn csb:wait:no-entitlements
@@ -544,7 +546,9 @@ jobs:
               working-directory: core
 
             - name: Start node with entitlements
-              run: ./core/node/run_single.sh -c -r &
+              run: |
+                  ./core/node/run_single.sh -c
+                  ./core/node/run_single.sh -r &
 
             - name: Wait for (with entitlements) node to be up
               run: yarn csb:wait:entitlements
