@@ -16,6 +16,7 @@ import {
 import { Block, type BlockProps } from '../ui/block'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
+import { JsonHover } from '../utils/json-hover'
 
 type SpacesBlockProps = {
     setCurrentSpaceId: (spaceId: string) => void
@@ -30,7 +31,8 @@ export const SpacesBlock = (props: SpacesBlockProps) => {
     return (
         <Block title="Spaces">
             <CreateSpace setCurrentSpaceId={props.setCurrentSpaceId} variant="secondary" />
-            <div className="divide-y-2 divide-neutral-200">
+            <span className="text-xs">Select a space to start messaging</span>
+            <div className="flex flex-col gap-1">
                 {spaceIds.map((spaceId) => (
                     <SpaceInfo
                         key={spaceId}
@@ -57,11 +59,13 @@ const SpaceInfo = ({
 }) => {
     const { data: space } = useSpace(spaceId)
     return (
-        <div className="px-4 py-2">
-            <button onClick={() => setCurrentSpaceId(space.id)}>
-                {space.metadata?.name || 'Unnamed Space'}
-            </button>
-        </div>
+        <JsonHover data={space}>
+            <div>
+                <Button variant="outline" onClick={() => setCurrentSpaceId(space.id)}>
+                    {space.metadata?.name || 'Unnamed Space'}
+                </Button>
+            </div>
+        </JsonHover>
     )
 }
 

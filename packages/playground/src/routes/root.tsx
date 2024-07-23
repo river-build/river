@@ -75,10 +75,10 @@ const ConnectedContent = () => {
         <div className="grid grid-cols-4 gap-4">
             <ConnectionBlock />
             <UserAuthStatusBlock />
+            <SpacesBlock setCurrentSpaceId={setCurrentSpaceId} />
             <SpaceProvider spaceId={currentSpaceId}>
-                <SpacesBlock setCurrentSpaceId={setCurrentSpaceId} />
+                <ChannelsBlock setCurrentChannelId={setCurrentChannelId} />
                 <ChannelProvider channelId={currentChannelId}>
-                    <ChannelsBlock setCurrentChannelId={setCurrentChannelId} />
                     <TimelineBlock />
                 </ChannelProvider>
             </SpaceProvider>

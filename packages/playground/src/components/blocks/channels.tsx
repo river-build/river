@@ -1,9 +1,10 @@
-import { useCreateChannel, useCurrentSpaceId, useSpace } from '@river-build/react-sdk'
+import { useChannel, useCreateChannel, useSpace } from '@river-build/react-sdk'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { getEthersSigner } from '@/utils/viem-to-ethers'
 import { config } from '@/config/wagmi'
+import { useCurrentSpaceId } from '@/hooks/current-space'
 import {
     Form,
     FormControl,
@@ -16,6 +17,7 @@ import {
 import { Block, type BlockProps } from '../ui/block'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
+import { JsonHover } from '../utils/json-hover'
 
 type ChannelsBlockProps = {
     setCurrentChannelId: (channelId: string) => void
@@ -30,12 +32,13 @@ export const ChannelsBlock = (props: ChannelsBlockProps) => {
     const { data: space } = useSpace(spaceId)
 
     return (
-        <Block title="Channels">
+        <Block title={`Channels in ${space.metadata?.name || 'Unnamed Space'}`}>
             <CreateChannel setCurrentChannelId={props.setCurrentChannelId} variant="secondary" />
-            <div className="divide-y-2 divide-neutral-200">
+            <div className="flex flex-col gap-1">
+                <span className="text-xs">Select a channel to start messaging</span>
                 {space.channelIds.map((channelId) => (
                     <ChannelInfo
-                        key={channelId}
+                        key={`${spaceId}-${channelId}`}
                         channelId={channelId}
                         setCurrentChannelId={props.setCurrentChannelId}
                     />
@@ -57,13 +60,16 @@ const ChannelInfo = ({
     channelId: string
     setCurrentChannelId: (channelId: string) => void
 }) => {
-    const { data: space } = useSpace(channelId)
+    const spaceId = useCurrentSpaceId()
+    const { data: channel } = useChannel(spaceId, channelId)
     return (
-        <div className="px-4 py-2">
-            <button onClick={() => setCurrentChannelId(channelId)}>
-                {space.metadata?.name || 'Unnamed Channel'}
-            </button>
-        </div>
+        <JsonHover data={channel}>
+            <div>
+                <Button variant="outline" onClick={() => setCurrentChannelId(channelId)}>
+                    {channel.metadata?.name || 'Unnamed Channel'}
+                </Button>
+            </div>
+        </JsonHover>
     )
 }
 
