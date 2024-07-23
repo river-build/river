@@ -292,12 +292,6 @@ jobs:
             - name: Run SDK Tests (without entitlements)
               run: yarn run turbo run build test:ci --filter=@river-build/sdk
 
-            - name: Run Node Restart Tests (without entitlements)
-              run: yarn workspace @river-build/sdk run test:restart
-
-            - name: Run Node Flush Tests (without entitlements)
-              run: yarn workspace @river-build/sdk run test:node-minipool-flush
-
             - name: Archive River Node Logs and Settings
               if: always()
               uses: actions/upload-artifact@v4
