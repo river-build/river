@@ -4,23 +4,11 @@ pragma solidity ^0.8.24;
 // interfaces
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 
-/**
- * @title RuleEntitlement
- * @dev This contract manages entitlement rules based on blockchain operations.
- * The contract maintains a tree-like data structure to combine various types of operations.
- * The tree is implemented as a dynamic array of 'Operation' structs, and is built in post-order fashion.
- *
- * Post-order Tree Structure:
- * In a post-order binary tree, children nodes must be added before their respective parent nodes.
- * The 'LogicalOperation' nodes refer to their child nodes via indices in the 'operations' array.
- * As new LogicalOperation nodes are added, they can only reference existing nodes in the 'operations' array,
- * ensuring a valid post-order tree structure.
- */
-interface IRuleEntitlement is IEntitlement {
+interface IRuleEntitlementBase {
   // =============================================================
   //                           Errors
   // =============================================================
-  error CheckOperationsLimitReaced(uint256 limit);
+  error CheckOperationsLimitReached(uint256 limit);
   error OperationsLimitReached(uint256 limit);
   error LogicalOperationLimitReached(uint256 limit);
   error InvalidCheckOperationIndex(
@@ -31,7 +19,7 @@ interface IRuleEntitlement is IEntitlement {
     uint8 operationIndex,
     uint8 logicalOperationsLength
   );
-  error InvalidOperationType(IRuleEntitlement.CombinedOperationType opType);
+  error InvalidOperationType(IRuleEntitlementBase.CombinedOperationType opType);
   error InvalidLeftOperationIndex(
     uint8 leftOperationIndex,
     uint8 currentOperationIndex
@@ -94,7 +82,21 @@ interface IRuleEntitlement is IEntitlement {
     CheckOperation[] checkOperations;
     LogicalOperation[] logicalOperations;
   }
+}
 
+/**
+ * @title RuleEntitlement
+ * @dev This contract manages entitlement rules based on blockchain operations.
+ * The contract maintains a tree-like data structure to combine various types of operations.
+ * The tree is implemented as a dynamic array of 'Operation' structs, and is built in post-order fashion.
+ *
+ * Post-order Tree Structure:
+ * In a post-order binary tree, children nodes must be added before their respective parent nodes.
+ * The 'LogicalOperation' nodes refer to their child nodes via indices in the 'operations' array.
+ * As new LogicalOperation nodes are added, they can only reference existing nodes in the 'operations' array,
+ * ensuring a valid post-order tree structure.
+ */
+interface IRuleEntitlement is IEntitlement, IRuleEntitlementBase {
   // =============================================================
   //                           Functions
   // =============================================================

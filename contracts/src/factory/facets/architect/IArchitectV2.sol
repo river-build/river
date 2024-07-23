@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {IArchitect,IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.sol";
+import {IArchitect, IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.sol";
 
 // libraries
 import {IMembershipBase} from "contracts/src/spaces/facets/membership/IMembership.sol";
@@ -40,5 +40,7 @@ interface IArchitectBaseV2 is IArchitectBase {
 interface IArchitectV2 is IArchitect, IArchitectBaseV2 {
   /// @notice Creates a new space with V2 Entitlements
   /// @param SpaceInfo Space information
-  function createSpaceV2(SpaceInfoV2 memory SpaceInfo) external returns (address);
+  function createSpaceV2(
+    SpaceInfoV2 memory SpaceInfo
+  ) external returns (address);
 }

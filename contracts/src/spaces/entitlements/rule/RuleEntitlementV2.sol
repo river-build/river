@@ -1,18 +1,5 @@
 // SPDX-License-Identifier: MIT
-
-/**
- * @title EntitlementRule
- * @dev This contract manages entitlement rules based on blockchain operations.
- * The contract maintains a tree-like data structure to combine various types of operations.
- * The tree is implemented as a dynamic array of 'Operation' structs, and is built in post-order fashion.
- *
- * Post-order Tree Structure:
- * In a post-order binary tree, children nodes must be added before their respective parent nodes.
- * The 'LogicalOperation' nodes refer to their child nodes via indices in the 'operations' array.
- * As new LogicalOperation nodes are added, they can only reference existing nodes in the 'operations' array,
- * ensuring a valid post-order tree structure.
- */
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.24;
 
 // contracts
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -25,30 +12,29 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 
 // interfaces
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
-import {IRuleEntitlement} from "./IRuleEntitlement.sol";
+import {IRuleEntitlementV2} from "./IRuleEntitlementV2.sol";
 
-contract RuleEntitlement is
+contract RuleEntitlementV2 is
   Initializable,
-  ERC165Upgradeable,
-  ContextUpgradeable,
-  UUPSUpgradeable,
-  IRuleEntitlement
+  ERC165Upgradable,
+  ContextUpgradable,
+  UUPSUpgradable,
+  IRuleEntitlementV2
 {
   using EnumerableSet for EnumerableSet.Bytes32Set;
 
   struct Entitlement {
     address grantedBy;
     uint256 grantedTime;
-    RuleData data;
+    RuleDataV2 data;
   }
-
   mapping(uint256 => Entitlement) internal entitlementsByRoleId;
 
   address public SPACE_ADDRESS;
 
-  string public constant name = "Rule Entitlement";
-  string public constant description = "Entitlement for crosschain rules";
-  string public constant moduleType = "RuleEntitlement";
+  string public constant name = "Rule Entitlement V2";
+  string public constant description = "Entitlement for crosschain rules, V2";
+  string public constant moduleType = "RuleEntitlementV2";
 
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
@@ -86,7 +72,6 @@ contract RuleEntitlement is
 
   // @inheritdoc IEntitlement
   function isCrosschain() external pure override returns (bool) {
-    // TODO possible optimization: return false if no crosschain operations
     return true;
   }
 
@@ -96,7 +81,6 @@ contract RuleEntitlement is
     address[] memory, //user,
     bytes32 //permission
   ) external pure returns (bool) {
-    // TODO possible optimization: if there are no crosschain operations, evaluate locally
     return false;
   }
 
@@ -106,7 +90,7 @@ contract RuleEntitlement is
     bytes calldata entitlementData
   ) external onlySpace {
     // Decode the data
-    RuleData memory data = abi.decode(entitlementData, (RuleData));
+    RuleDataV2 memory data = abi.decode(entitlementData, (RuleDataV2));
 
     if (entitlementData.length == 0 || data.operations.length == 0) {
       return;
@@ -121,7 +105,7 @@ contract RuleEntitlement is
     uint256 checkOperationsLength = data.checkOperations.length;
     uint256 logicalOperationsLength = data.logicalOperations.length;
 
-    // Step 1: Validate Operation against CheckOperation and LogicalOperation
+    // Step 1: Validate Operation against CheckOperationV2 and LogicalOperation
     for (uint256 i = 0; i < operationsLength; i++) {
       CombinedOperationType opType = data.operations[i].opType; // cache the operation type
       uint8 index = data.operations[i].index; // cache the operation index
@@ -197,14 +181,14 @@ contract RuleEntitlement is
   }
 
   function encodeRuleData(
-    RuleData calldata data
+    RuleDataV2 calldata data
   ) external pure returns (bytes memory) {
     return abi.encode(data);
   }
 
   function getRuleData(
     uint256 roleId
-  ) external view returns (RuleData memory data) {
+  ) external view returns (RuleDataV2 memory data) {
     return entitlementsByRoleId[roleId].data;
   }
 }

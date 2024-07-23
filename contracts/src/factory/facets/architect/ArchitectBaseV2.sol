@@ -3,8 +3,13 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {IArchitectBaseV2} from "./IArchitectV2.sol";
+import {ArchitectBase} from "./ArchitectBase.sol";
 
-abstract contract ArchitectBaseV2 is Factory, IArchitectBaseV2 {
+// libraries
+import {ArchitectStorage} from "./ArchitectStorage.sol";
+import {ImplementationStorage} from "./ImplementationStorage.sol";
+
+abstract contract ArchitectBaseV2 is ArchitectBase, IArchitectBaseV2 {
   function _createSpaceV2(
     SpaceInfoV2 memory spaceInfo
   ) internal returns (address spaceAddress) {
@@ -79,5 +84,4 @@ abstract contract ArchitectBaseV2 is Factory, IArchitectBaseV2 {
     // emit event
     emit SpaceCreated(msg.sender, spaceTokenId, spaceAddress);
   }
-
 }
