@@ -148,10 +148,7 @@ fi
 if [ "$RUN" == "true" ]; then
     pushd ${RUN_BASE}
     while read -r INSTANCE; do
-
         if [ ! -f $INSTANCE/config/config.env ]; then
-            echo "Skipping directory '$INSTANCE' because it does not have a config.yaml file"
-
             continue
         fi
 
