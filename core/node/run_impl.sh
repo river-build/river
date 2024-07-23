@@ -129,28 +129,8 @@ if [ "$RUN" == "true" ]; then
         echo "Running instance '$INSTANCE' with extra aguments: '${args[@]:-}'"
         cast rpc -r http://127.0.0.1:8546 anvil_setBalance `cat ./wallet/node_address` 10000000000000000000
 
-        # if NUM_INSTANCES in not one, run in background, otherwise run with optional restart
-        if [ "$NUM_INSTANCES" -ne 1 ]; then
-            echo "Running instance in background"
-            ../bin/river_node run stream --config config/config.yaml "${args[@]:-}" &
-        else
-            echo "Running single $INSTANCE in the retry loop"
-            while true; do
-                # Run the built executable
-                ../bin/river_node run stream "${args[@]:-}" &
-                job_pid=$!
-
-                # Wait for the job to finish and capture its exit status
-                wait $job_pid
-                exit_status=$?
-
-                if [ "${exit_status:-0}" -ne 22 ]; then
-                    break
-                fi
-
-                echo "RESTARTING"
-            done
-        fi
+        echo "Running instance in background"
+        ../bin/river_node run stream --config config/config.yaml "${args[@]:-}" &
 
         popd
     done < <(find . -type d -mindepth 1 -maxdepth 1 | sort)
