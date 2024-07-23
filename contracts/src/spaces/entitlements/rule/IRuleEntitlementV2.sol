@@ -2,13 +2,11 @@
 pragma solidity ^0.8.24;
 
 // interfaces
-import {IRuleEntitlementBase} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
+import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 
-// IRuleEntitlementV2 is not an IRuleEntitlement, because it does not support interface methods for the V1 RuleData struct
-// for defining rules. This is because the V1 RuleData struct is not extensible to support ERC1155 or other future check types,
-// so we cannot convert between V1 and V2 RuleDatas. These are entirely different contracts.
-interface IRuleEntitlementV2 is IEntitlement, IRuleEntitlementBase {
+
+interface IRuleEntitlementV2 is IEntitlement, IRuleEntitlement {
   // Repeated here to be extensible in V2 separately from V1, where future checktypes will not be supported.
   enum CheckOperationV2Type {
     NONE,
@@ -50,11 +48,11 @@ interface IRuleEntitlementV2 is IEntitlement, IRuleEntitlementBase {
     LogicalOperation[] logicalOperations;
   }
 
-  function encodeRuleData(
+  function encodeRuleDataV2(
     RuleDataV2 memory data
   ) external pure returns (bytes memory);
 
-  function getRuleData(
+  function getRuleDataV2(
     uint256 roleId
   ) external view returns (RuleDataV2 memory);
 }

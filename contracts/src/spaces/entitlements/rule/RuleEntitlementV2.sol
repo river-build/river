@@ -2,10 +2,6 @@
 pragma solidity ^0.8.24;
 
 // contracts
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {ERC165Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
-import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 // libraries
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
@@ -180,15 +176,27 @@ contract RuleEntitlementV2 is
     return abi.encode(entitlement.data);
   }
 
-  function encodeRuleData(
+  function encodeRuleDataV2(
     RuleDataV2 calldata data
   ) external pure returns (bytes memory) {
     return abi.encode(data);
   }
 
-  function getRuleData(
+  function getRuleDataV2(
     uint256 roleId
   ) external view returns (RuleDataV2 memory data) {
     return entitlementsByRoleId[roleId].data;
   }
+
+  function encodeRuleData(
+    RuleData calldata data
+  ) external pure override returns (bytes memory) {
+    revert("RuleEntitlementV2: encodeRuleData not supported in V2");
+  }
+
+    function getRuleData(
+      uint256 roleId
+    ) external view override returns (RuleData memory data) {
+        revert("RuleEntitlementV2: getRuleData not supported in V2");
+    }
 }

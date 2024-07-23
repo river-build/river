@@ -4,6 +4,7 @@ pragma solidity ^0.8.23;
 // interfaces
 import {IArchitectBaseV2} from "./IArchitectV2.sol";
 import {ArchitectBase} from "./ArchitectBase.sol";
+import {IUserEntitlement} from "../../spaces/entitlements/user/IUserEntitlement.sol";
 
 // libraries
 import {ArchitectStorage} from "./ArchitectStorage.sol";
