@@ -139,7 +139,10 @@ export class Store {
         log('+enqueue load', tableName, id, loadPriority)
         this.checkTableName(tableName)
         check(this.transactionGroup !== undefined, 'transaction not started')
-        check(!this.isLoaded(tableName, id), `model already loaded table: ${tableName} id: ${id}`)
+        if (this.isLoaded(tableName, id)) {
+            log(`model already loaded table: ${tableName} id: ${id}`)
+            return
+        }
         this.setIsLoaded(tableName, id)
         const bundler = this.transactionGroup[loadPriority]
         bundler.tableNames.push(tableName)
