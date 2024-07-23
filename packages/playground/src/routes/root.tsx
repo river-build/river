@@ -1,5 +1,5 @@
 import { useAccount, useConnect } from 'wagmi'
-import { ChannelProvider, SpaceProvider, useRiverConnection } from '@river-build/react-sdk'
+import { useRiverConnection } from '@river-build/react-sdk'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { UserAuthStatusBlock } from '@/components/blocks/auth-block'
@@ -8,6 +8,8 @@ import { SpacesBlock } from '@/components/blocks/spaces'
 import { type Env, RiverEnvSwitcher } from '@/components/dialog/env-switcher'
 import { TimelineBlock } from '@/components/blocks/timeline'
 import { ChannelsBlock } from '@/components/blocks/channels'
+import { ChannelProvider } from '@/hooks/current-channel'
+import { SpaceProvider } from '@/hooks/current-space'
 
 export const ConnectRoute = () => {
     const { isConnected: isWalletConnected } = useAccount()
