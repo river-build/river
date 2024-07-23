@@ -13,6 +13,7 @@ import { privateKeyToAccount } from 'viem/accounts'
 import { parseEther } from 'viem'
 import { config } from '@/config/wagmi'
 import { getEthersSigner } from '@/utils/viem-to-ethers'
+import { deleteAuth, storeAuth } from '@/utils/persist-auth'
 import { Button } from '../ui/button'
 import {
     Dialog,
@@ -36,6 +37,7 @@ type RiverEnvSwitcherProps = {
     currentEnv: Env['id']
     setEnv: (envId: Env['id']) => void
 }
+
 export const RiverEnvSwitcher = (props: RiverEnvSwitcherProps) => {
     const { currentEnv, setEnv } = props
     const { connect, disconnect, isConnected } = useRiverConnection()
@@ -71,7 +73,14 @@ export const RiverEnvSwitcher = (props: RiverEnvSwitcherProps) => {
                                     setEnv(id)
 
                                     const signer = await getEthersSigner(config)
-                                    await connect(signer, { riverConfig: makeRiverConfig(id) })
+                                    const riverConfig = makeRiverConfig(id)
+                                    await connect(signer, {
+                                        riverConfig,
+                                    }).then((sync) => {
+                                        if (sync?.config.context) {
+                                            storeAuth(sync?.config.context, riverConfig)
+                                        }
+                                    })
                                 }}
                             >
                                 {name} {isConnected && currentEnv === id && '(connected)'}
@@ -85,6 +94,7 @@ export const RiverEnvSwitcher = (props: RiverEnvSwitcherProps) => {
                             onClick={() => {
                                 disconnect()
                                 disconnectWallet()
+                                deleteAuth()
                             }}
                         >
                             Disconnect

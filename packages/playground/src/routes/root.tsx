@@ -28,11 +28,7 @@ const ChainConnectButton = () => {
     return (
         <div>
             {connectors.map((connector) => (
-                <Button
-                    // disabled={!connector.ready}
-                    key={connector.uid}
-                    onClick={() => connect({ connector })}
-                >
+                <Button key={connector.uid} onClick={() => connect({ connector })}>
                     {activeConnector?.id === connector.id
                         ? `Connected - ${connector.name}`
                         : connector.name}
