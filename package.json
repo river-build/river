@@ -24,7 +24,6 @@
         "csb:list:include": "yarn csb:list | xargs -I arg echo -n \"--include arg \"",
         "csb:multi": "./core/scripts/launch_multi.sh",
         "csb:multi:no-entitlements": "./core/scripts/launch_multi.sh --disable_entitlements",
-        "csb:node": "./core/scripts/start_node.sh",
         "csb:prettier:check": "prettier --check ./packages",
         "csb:prettier:fix": "prettier --write ./packages",
         "csb:start": "yarn csb:start:entitlements",
