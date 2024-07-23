@@ -248,7 +248,11 @@ describe('channelsWithEntitlements', () => {
             refEventId,
         })
         expect(eventId).toBeDefined()
-        await expect(alice.redactMessage(channelId!, eventId)).toResolve()
+        await expect(
+            alice.sendChannelMessage_Redaction(channelId!, {
+                refEventId: eventId,
+            }),
+        ).toResolve()
 
         // Replying to Bob's message should not be allowed.
         await expect(
@@ -294,7 +298,11 @@ describe('channelsWithEntitlements', () => {
             refEventId,
         })
         expect(eventId).toBeDefined()
-        await expect(alice.redactMessage(channelId!, eventId)).toResolve()
+        await expect(
+            alice.sendChannelMessage_Redaction(channelId!, {
+                refEventId: eventId,
+            }),
+        ).toResolve()
 
         // Replying to Bob's message should be allowed.
         await expect(
@@ -336,7 +344,11 @@ describe('channelsWithEntitlements', () => {
             refEventId,
         })
         expect(eventId).toBeDefined()
-        await expect(alice.redactMessage(channelId!, eventId)).toResolve()
+        await expect(
+            alice.sendChannelMessage_Redaction(channelId!, {
+                refEventId: eventId,
+            }),
+        ).toResolve()
 
         // Replying to Bob's message should be allowed.
         await expect(
