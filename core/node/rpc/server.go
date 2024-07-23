@@ -260,7 +260,7 @@ func (s *Service) initBaseChain() error {
 
 	if !s.config.DisableBaseChain {
 		var err error
-		s.baseChain, err = crypto.NewBlockchain(ctx, &s.config.BaseChain, nil, s.metrics)
+		s.baseChain, err = crypto.NewBlockchain(ctx, &s.config.BaseChain, nil, s.metrics, s.otelTracer)
 		if err != nil {
 			return err
 		}
@@ -290,7 +290,7 @@ func (s *Service) initRiverChain() error {
 	ctx := s.serverCtx
 	var err error
 	if s.riverChain == nil {
-		s.riverChain, err = crypto.NewBlockchain(ctx, &s.config.RiverChain, s.wallet, s.metrics)
+		s.riverChain, err = crypto.NewBlockchain(ctx, &s.config.RiverChain, s.wallet, s.metrics, s.otelTracer)
 		if err != nil {
 			return err
 		}
