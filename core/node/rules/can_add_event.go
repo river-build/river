@@ -204,7 +204,7 @@ func (params *aeParams) canAddChannelPayload(payload *StreamEvent_ChannelPayload
 	case *ChannelPayload_Redaction_:
 		return aeBuilder().
 			check(params.creatorIsMember).
-			requireChainAuth(params.channelMessageWriteEntitlements)
+			requireChainAuth(params.redactChannelMessageEntitlements)
 	default:
 		return aeBuilder().
 			fail(unknownContentType(content))
