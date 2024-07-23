@@ -7,6 +7,7 @@ require (
 	connectrpc.com/otelconnect v0.7.0
 	github.com/deckarep/golang-set/v2 v2.6.0
 	github.com/ethereum/go-ethereum v1.14.5
+	github.com/exaring/otelpgx v0.6.2
 	github.com/golang-migrate/migrate/v4 v4.17.0
 	github.com/hashicorp/golang-lru/arc/v2 v2.0.7
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
