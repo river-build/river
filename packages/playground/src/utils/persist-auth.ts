@@ -4,7 +4,7 @@ import superjson from 'superjson'
 export const storeAuth = (signerContext: SignerContext, riverConfig: RiverConfig) => {
     const fixedContext = {
         ...signerContext,
-        signerPrivateKey: () => signerContext.signerPrivateKey,
+        signerPrivateKey: signerContext.signerPrivateKey(),
     }
     const signerContextString = superjson.stringify(fixedContext)
     const riverConfigString = superjson.stringify(riverConfig)
