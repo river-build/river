@@ -5,7 +5,7 @@ export function JsonHover<T>({ children, data }: { children: React.ReactNode; da
     return (
         <HoverCard openDelay={1500}>
             <HoverCardTrigger asChild>{children}</HoverCardTrigger>
-            <HoverCardContent className="w-full text-zinc-800">
+            <HoverCardContent className="max-h-72 w-full overflow-auto text-zinc-800">
                 <pre className="text-sm">{jsonStringify(data, 2)}</pre>
             </HoverCardContent>
         </HoverCard>

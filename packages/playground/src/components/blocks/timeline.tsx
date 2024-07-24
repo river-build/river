@@ -8,6 +8,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from '../ui/form'
 import { Button } from '../ui/button'
 import { Block } from '../ui/block'
 import { JsonHover } from '../utils/json-hover'
+import { Input } from '../ui/input'
 
 export const TimelineBlock = () => {
     const spaceId = useCurrentSpaceId()
@@ -15,7 +16,7 @@ export const TimelineBlock = () => {
     const { data: channel } = useChannel(spaceId, channelId)
     const { data: timeline } = useTimeline(spaceId, channelId)
     return (
-        <Block title={`#${channel.metadata?.name} Timeline`}>
+        <Block title={`#${channel.metadata?.name} timeline`} className="w-full">
             <SendMessage />
             <div className="flex flex-col gap-1">
                 {timeline.map((event) => (
@@ -44,6 +45,7 @@ export const SendMessage = () => {
     return (
         <Form {...form}>
             <form
+                className="grid grid-cols-[1fr,auto] gap-2"
                 onSubmit={form.handleSubmit(async ({ message }) => {
                     sendMessage(message)
                 })}
@@ -54,7 +56,7 @@ export const SendMessage = () => {
                     render={({ field }) => (
                         <FormItem>
                             <FormControl>
-                                <textarea {...field} />
+                                <Input placeholder="Type a message" {...field} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
