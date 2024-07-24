@@ -182,7 +182,7 @@ contract RuleEntitlement is
     Entitlement storage entitlement = layout().entitlementsByRoleId[roleId];
     entitlement.grantedBy = sender;
     entitlement.grantedTime = currentTime;
-    entitlement.data = abi.encode(data);
+    entitlement.data = entitlementData;
   }
 
   // @inheritdoc IEntitlement
