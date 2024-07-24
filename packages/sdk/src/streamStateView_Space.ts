@@ -8,6 +8,7 @@ import {
     SpacePayload_ChannelUpdate,
     SpacePayload_ChannelMetadata,
     SpacePayload_Snapshot,
+    ChunkedMedia,
 } from '@river-build/proto'
 import { StreamEncryptionEvents, StreamEvents, StreamStateEvents } from './streamEvents'
 import { StreamStateView_AbstractContent } from './streamStateView_AbstractContent'
@@ -24,10 +25,19 @@ export type ParsedChannelProperties = {
 export class StreamStateView_Space extends StreamStateView_AbstractContent {
     readonly streamId: string
     readonly spaceChannelsMetadata = new Map<string, ParsedChannelProperties>()
+    private _spaceImage: ChunkedMedia | undefined
 
     constructor(streamId: string) {
         super()
         this.streamId = streamId
+    }
+
+    get spaceImage(): ChunkedMedia | undefined {
+        return this._spaceImage
+    }
+
+    private set spaceImage(value: ChunkedMedia | undefined) {
+        this._spaceImage = value
     }
 
     applySnapshot(
@@ -41,6 +51,7 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
         for (const payload of content.channels) {
             this.addSpacePayload_Channel(eventHash, payload, payload.updatedAtEventNum, undefined)
         }
+        this.spaceImage = content.spaceMedia?.spaceImage
     }
 
     onConfirmedEvent(
@@ -63,6 +74,9 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
                 break
             case 'channel':
                 // nothing to do, channel data was conveyed in the snapshot
+                break
+            case 'spaceImage':
+                // nothing to do, spaceImage is set in the snapshot
                 break
             case undefined:
                 break
@@ -89,6 +103,9 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
                     event.eventNum,
                     stateEmitter,
                 )
+                break
+            case 'spaceImage':
+                this.spaceImage = payload.content.value
                 break
             case undefined:
                 break
