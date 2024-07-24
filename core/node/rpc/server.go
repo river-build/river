@@ -9,10 +9,8 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/signal"
 	"slices"
 	"strings"
-	"syscall"
 	"time"
 
 	"connectrpc.com/connect"
@@ -702,30 +700,4 @@ func createH2CServer(ctx context.Context, address string, handler http.Handler) 
 type CertKey struct {
 	Cert string `json:"cert"`
 	Key  string `json:"key"`
-}
-
-func RunServer(ctx context.Context, cfg *config.Config) error {
-	log := dlog.FromCtx(ctx)
-
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	service, error := StartServer(ctx, cfg, nil, nil)
-	if error != nil {
-		log.Error("Failed to start server", "error", error)
-		return error
-	}
-	defer service.Close()
-
-	osSignal := make(chan os.Signal, 1)
-	signal.Notify(osSignal, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		sig := <-osSignal
-		if !cfg.Log.Simplify {
-			log.Info("Got OS signal", "signal", sig.String())
-		}
-		service.exitSignal <- nil
-	}()
-
-	return <-service.exitSignal
 }

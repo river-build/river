@@ -109,3 +109,7 @@ func (s *Service) GetStatus() string {
 func (s *Service) Storage() storage.StreamStorage {
 	return s.storage
 }
+
+func (s *Service) MetricsRegistry() *prometheus.Registry {
+	return s.metrics.Registry()
+}
