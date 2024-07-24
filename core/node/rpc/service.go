@@ -74,7 +74,8 @@ type Service struct {
 	Archiver *Archiver
 
 	// Metrics
-	metrics               *infra.Metrics
+	metrics               infra.MetricsFactory
+	metricsPublisher      *infra.MetricsPublisher
 	rpcDuration           *prometheus.HistogramVec
 	otelTraceProvider     trace.TracerProvider
 	otelTracer            trace.Tracer
