@@ -227,6 +227,12 @@ message SpacePayload {
         Inception inception = 1;
         // channels: sorted by channel_id
         repeated ChannelMetadata channels = 2;
+        SnappedSpaceMedia space_media = 3;
+    }
+
+    message SnappedSpaceMedia {
+        bytes creator_address = 1;
+        ChunkedMedia space_image = 2;
     }
     
     message Inception {
@@ -252,6 +258,38 @@ message SpacePayload {
     oneof content {
         Inception inception = 1;
         ChannelUpdate channel = 2;
+        ChunkedMedia space_image = 3;
+    }
+}
+
+message MediaInfo {
+    string mimetype = 1;
+    int64 sizeBytes = 2;
+    int32 widthPixels = 3;
+    int32 heightPixels = 4;
+    string filename = 5;
+}
+
+message EmbeddedMedia {
+    MediaInfo info = 1;
+    bytes content = 2;
+}
+                
+message ChunkedMedia {
+
+    message AESGCM {
+        bytes iv = 1;
+        bytes secretKey = 2;
+    }
+
+    message DerivedAESGCM {}
+
+    MediaInfo info = 1;
+    string streamId = 2;
+    EmbeddedMedia thumbnail = 3;
+    oneof encryption {
+        AESGCM aesgcm = 101;
+        DerivedAESGCM derived = 102;
     }
 }
 

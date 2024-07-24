@@ -6,6 +6,7 @@ type IsStreamEvent_Payload = isStreamEvent_Payload
 type IsMiniblockHeader_Content = isMiniblockHeader_Content
 type IsMemberPayload_Content = isMemberPayload_Content
 type IsSpacePayload_Content = isSpacePayload_Content
+type IsChunkedMedia_Encryption = isChunkedMedia_Encryption
 type IsChannelPayload_Content = isChannelPayload_Content
 type IsDmChannelPayload_Content = isDmChannelPayload_Content
 type IsGdmChannelPayload_Content = isGdmChannelPayload_Content
