@@ -16,65 +16,6 @@ import (
 	"github.com/river-build/river/core/xchain/server"
 )
 
-func RunServer(ctx context.Context, cfg *config.Config) error {
-	log := dlog.FromCtx(ctx)
-
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	service, error := rpc.StartServer(ctx, cfg, nil, nil)
-	if error != nil {
-		log.Error("Failed to start server", "error", error)
-		return error
-	}
-	defer service.Close()
-
-	osSignal := make(chan os.Signal, 1)
-	signal.Notify(osSignal, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		sig := <-osSignal
-		if !cfg.Log.Simplify {
-			log.Info("Got OS signal", "signal", sig.String())
-		}
-		service.ExitSignal() <- nil
-	}()
-
-	return <-service.ExitSignal()
-}
-
-func runXChain() error {
-	var (
-		ctx   = context.Background()
-		tasks sync.WaitGroup
-	)
-
-	// create xchain instance
-	srv, err := server.New(ctx, cmdConfig, nil, 1, nil)
-	if err != nil {
-		return err
-	}
-
-	// run server in background
-	tasks.Add(1)
-	go func() {
-		srv.Run(ctx)
-		tasks.Done()
-	}()
-
-	// wait for signal to shut down
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-	<-interrupt
-
-	// order background task to stop
-	srv.Stop()
-
-	// wait for background tasks to finish
-	tasks.Wait()
-
-	return nil
-}
-
 func runServices(ctx context.Context, cfg *config.Config, stream bool, xchain bool) error {
 	err := setupProfiler(ctx, cfg)
 	if err != nil {
@@ -98,6 +39,7 @@ func runServices(ctx context.Context, cfg *config.Config, stream bool, xchain bo
 		metricsRegistry = streamService.MetricsRegistry()
 	}
 
+	// TODO: wire blockchain and tracer to xchain
 	var xchainService server.XChain
 	var wg sync.WaitGroup
 	if xchain {
