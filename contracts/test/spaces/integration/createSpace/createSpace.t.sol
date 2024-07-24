@@ -10,7 +10,7 @@ import {IRolesBase} from "contracts/src/spaces/facets/roles/IRoles.sol";
 import {IArchitect} from "contracts/src/factory/facets/architect/IArchitect.sol";
 import {IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.sol";
 import {IMembership} from "contracts/src/spaces/facets/membership/IMembership.sol";
-import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
+import {IRuleEntitlement,IRuleEntitlementBase} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 import {IEntitlementChecker} from "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol";
 // libraries
@@ -94,29 +94,29 @@ contract Integration_CreateSpace is BaseSetup, IRolesBase, IArchitectBase {
     address mock = address(new MockERC721());
 
     // We first define how many operations we want to have
-    IRuleEntitlement.Operation[]
-      memory operations = new IRuleEntitlement.Operation[](1);
-    operations[0] = IRuleEntitlement.Operation({
-      opType: IRuleEntitlement.CombinedOperationType.CHECK,
+    IRuleEntitlementBase.Operation[]
+      memory operations = new IRuleEntitlementBase.Operation[](1);
+    operations[0] = IRuleEntitlementBase.Operation({
+      opType: IRuleEntitlementBase.CombinedOperationType.CHECK,
       index: 0
     });
 
     // We then define the type of operations we want to have
-    IRuleEntitlement.CheckOperation[]
-      memory checkOperations = new IRuleEntitlement.CheckOperation[](1);
-    checkOperations[0] = IRuleEntitlement.CheckOperation({
-      opType: IRuleEntitlement.CheckOperationType.ERC721,
+    IRuleEntitlementBase.CheckOperation[]
+      memory checkOperations = new IRuleEntitlementBase.CheckOperation[](1);
+    checkOperations[0] = IRuleEntitlementBase.CheckOperation({
+      opType: IRuleEntitlementBase.CheckOperationType.ERC721,
       chainId: block.chainid,
       contractAddress: mock,
       threshold: 1
     });
 
     // We then define the logical operations we want to have
-    IRuleEntitlement.LogicalOperation[]
-      memory logicalOperations = new IRuleEntitlement.LogicalOperation[](0);
+    IRuleEntitlementBase.LogicalOperation[]
+      memory logicalOperations = new IRuleEntitlementBase.LogicalOperation[](0);
 
     // We then define the rule data
-    IRuleEntitlement.RuleData memory ruleData = IRuleEntitlement.RuleData({
+    IRuleEntitlementBase.RuleData memory ruleData = IRuleEntitlementBase.RuleData({
       operations: operations,
       checkOperations: checkOperations,
       logicalOperations: logicalOperations

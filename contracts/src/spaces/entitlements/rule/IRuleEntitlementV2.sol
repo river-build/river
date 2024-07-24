@@ -2,11 +2,11 @@
 pragma solidity ^0.8.24;
 
 // interfaces
-import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
+import {IRuleEntitlementBase} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 
 
-interface IRuleEntitlementV2 is IEntitlement, IRuleEntitlement {
+interface IRuleEntitlementV2 is IEntitlement, IRuleEntitlementBase {
   // Repeated here to be extensible in V2 separately from V1, where future checktypes will not be supported.
   enum CheckOperationV2Type {
     NONE,

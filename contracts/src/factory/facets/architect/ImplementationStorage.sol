@@ -3,6 +3,7 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
+import {IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlementV2.sol";
 import {IUserEntitlement} from "contracts/src/spaces/entitlements/user/IUserEntitlement.sol";
 import {IWalletLink} from "contracts/src/factory/facets/wallet-link/IWalletLink.sol";
 import {ISpaceOwner} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
@@ -23,6 +24,7 @@ library ImplementationStorage {
     IRuleEntitlement ruleEntitlement;
     IWalletLink walletLink;
     IEntitlementChecker entitlementChecker;
+    IRuleEntitlementV2 ruleEntitlementV2;
   }
 
   function layout() internal pure returns (Layout storage ds) {

@@ -18,7 +18,7 @@ interface IArchitectBaseV2 is IArchitectBase {
   struct MembershipRequirementsV2 {
     bool everyone;
     address[] users;
-    IRuleEntitlementV2.RuleData ruleData;
+    IRuleEntitlementV2.RuleDataV2 ruleDataV2;
   }
 
   struct MembershipV2 {
@@ -30,7 +30,7 @@ interface IArchitectBaseV2 is IArchitectBase {
   struct SpaceInfoV2 {
     string name;
     string uri;
-    Membership membership;
+    MembershipV2 membership;
     ChannelInfo channel;
     string shortDescription;
     string longDescription;
@@ -43,4 +43,19 @@ interface IArchitectV2 is IArchitect, IArchitectBaseV2 {
   function createSpaceV2(
     SpaceInfoV2 memory SpaceInfo
   ) external returns (address);
+
+  function setSpaceArchitectV2Implementations(
+    ISpaceOwner ownerTokenImplementation,
+    IUserEntitlement userEntitlementImplementation,
+    IRuleEntitlementV2 ruleEntitlementImplementation
+  ) external;
+
+  function getSpaceArchitectV2Implementations()
+    external
+    view
+    returns (
+      ISpaceOwner ownerTokenImplementation,
+      IUserEntitlement userEntitlementImplementation,
+      IRuleEntitlementV2 ruleEntitlementImplementation
+    );
 }

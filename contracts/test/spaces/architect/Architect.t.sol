@@ -23,7 +23,7 @@ import {RuleEntitlementUtil} from "contracts/test/crosschain/RuleEntitlementUtil
 
 // contracts
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
-import {ArchitectV2} from "contracts/src/factory/facets/architect/ArchitectV2.sol";
+import {Architect} from "contracts/src/factory/facets/architect/Architect.sol";
 import {MockERC721} from "contracts/test/mocks/MockERC721.sol";
 import {UserEntitlement} from "contracts/src/spaces/entitlements/user/UserEntitlement.sol";
 import {WalletLink} from "contracts/src/factory/facets/wallet-link/WalletLink.sol";
@@ -38,7 +38,7 @@ contract ArchitectTest is
   IOwnableBase,
   IPausableBase
 {
-  ArchitectV2 public spaceArchitect;
+  Architect public spaceArchitect;
 
   function setUp() public override {
     super.setUp();

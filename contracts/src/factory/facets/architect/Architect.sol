@@ -4,6 +4,7 @@ pragma solidity ^0.8.23;
 // interfaces
 import {IArchitectV2} from "contracts/src/factory/facets/architect/IArchitectV2.sol";
 import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
+import {IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlementV2.sol";
 import {ISpaceOwner} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
 import {IUserEntitlement} from "contracts/src/spaces/entitlements/user/IUserEntitlement.sol";
 
@@ -86,4 +87,27 @@ contract Architect is
   {
     return _getImplementations();
   }
+
+  function setSpaceArchitectV2Implementations(
+    ISpaceOwner ownerTokenImplementation,
+    IUserEntitlement userEntitlementImplementation,
+    IRuleEntitlementV2 ruleEntitlementV2Implementation
+  ) external {
+    return _setV2Implementations(
+      ownerTokenImplementation,
+      userEntitlementImplementation,
+      ruleEntitlementV2Implementation
+    );
+  }
+
+  function getSpaceArchitectV2Implementations()
+    external
+    view
+    returns (
+      ISpaceOwner ownerTokenImplementation,
+      IUserEntitlement userEntitlementImplementation,
+      IRuleEntitlementV2 ruleEntitlementV2Implementation
+    ) {
+    return _getV2Implementations();
+    }
 }
