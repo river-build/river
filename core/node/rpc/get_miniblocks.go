@@ -1,9 +1,8 @@
 package rpc
 
 import (
-	"context"
-
 	"connectrpc.com/connect"
+	"context"
 
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"

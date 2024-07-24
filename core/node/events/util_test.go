@@ -6,9 +6,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/proto"
-
+	"github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/base/test"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/infra"
@@ -18,6 +16,8 @@ import (
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/node/testutils"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/proto"
 )
 
 type cacheTestContext struct {
@@ -291,6 +291,48 @@ func (ctc *cacheTestContext) SaveMbCandidate(
 	}
 
 	return stream.SaveMiniblockCandidate(ctx, mb)
+}
+
+// GetMiniBlocksStreamed returns a range of miniblocks from the given stream.
+func (ctc *cacheTestContext) GetMiniBlocksStreamed(
+	ctx context.Context,
+	node common.Address,
+	streamId StreamId,
+	fromInclusive uint64, // inclusive
+	toExclusive uint64, // exclusive
+) (<-chan *Miniblock, <-chan error) {
+	var (
+		mbChan  = make(chan *Miniblock)
+		errChan = make(chan error, 1)
+	)
+
+	go func() {
+		defer close(mbChan)
+		defer close(errChan)
+
+		for _, instance := range ctc.instances {
+			if node == instance.params.Wallet.Address {
+				streamAny, ok := instance.cache.cache.Load(streamId)
+				if !ok {
+					errChan <- base.RiverError(Err_NOT_FOUND, "cacheTestContext::GetMiniBlocksStreamed stream not found")
+					return
+				}
+				stream := streamAny.(*streamImpl)
+
+				miniBlocks, _, err := stream.GetMiniblocks(ctx, int64(fromInclusive), int64(toExclusive))
+				if err != nil {
+					errChan <- err
+					return
+				}
+
+				for _, miniBlock := range miniBlocks {
+					mbChan <- miniBlock
+				}
+			}
+		}
+	}()
+
+	return mbChan, errChan
 }
 
 func setOnChainStreamConfig(t *testing.T, ctx context.Context, btc *crypto.BlockchainTestContext, p testParams) {

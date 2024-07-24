@@ -278,42 +278,120 @@ func (c *RiverRegistryContract) GetStreamCount(ctx context.Context, blockNum cry
 
 var ZeroBytes32 = [32]byte{}
 
+func (c *RiverRegistryContract) getAllStreamsInPage(
+	ctx context.Context,
+	blockNum crypto.BlockNumber,
+	pageNumber int,
+	pageSize int,
+) (map[StreamId]*GetStreamResult, bool, error) {
+	var (
+		callOpts = c.callOptsWithBlockNum(ctx, blockNum)
+		streams  = make(map[StreamId]*GetStreamResult)
+		from     = big.NewInt(int64(pageNumber * pageSize))
+		to       = new(big.Int).Add(from, big.NewInt(int64(pageSize)))
+	)
+
+	paginatedStreams, lastPage, err := c.StreamRegistry.GetPaginatedStreams(callOpts, from, to)
+	if err != nil {
+		return nil, false, WrapRiverError(Err_CANNOT_CALL_CONTRACT, err).
+			Func("getAllStreamsInPage").
+			Message("Smart contract call failed")
+	}
+
+	for _, stream := range paginatedStreams {
+		if stream.Id == ZeroBytes32 {
+			continue
+		}
+
+		streamID, err := StreamIdFromHash(stream.Id)
+		if err != nil {
+			return nil, false, err
+		}
+
+		streams[streamID] = makeGetStreamResult(streamID, &stream.Stream)
+	}
+
+	return streams, lastPage, nil
+}
+
+type GetStreamResultErr struct {
+	Streams map[StreamId]*GetStreamResult
+	Err     error
+}
+
+// GetAllStreams returns sets of streams in a channel. Each set contains up to 5000 streams.
+// The channel is closed when all sets of streams are written to the channel.
+// This allows for parallel streams fetching and updating local state.
 func (c *RiverRegistryContract) GetAllStreams(
 	ctx context.Context,
 	blockNum crypto.BlockNumber,
-) ([]*GetStreamResult, error) {
-	// TODO: setting
-	const pageSize = int64(5000)
+) <-chan *GetStreamResultErr {
+	results := make(chan *GetStreamResultErr, 10)
 
-	ret := make([]*GetStreamResult, 0, 5000)
+	go func() {
+		defer close(results)
 
-	lastPage := false
-	var err error
-	var streams []river.StreamWithId
-	for i := int64(0); !lastPage; i += pageSize {
-		callOpts := c.callOptsWithBlockNum(ctx, blockNum)
-		streams, lastPage, err = c.StreamRegistry.GetPaginatedStreams(callOpts, big.NewInt(i), big.NewInt(i+pageSize))
-		if err != nil {
-			return nil, WrapRiverError(
-				Err_CANNOT_CALL_CONTRACT,
-				err,
-			).Func("GetStreamByIndex").
-				Message("Smart contract call failed")
-		}
-		for _, stream := range streams {
-			if stream.Id == ZeroBytes32 {
-				continue
-			}
-			streamId, err := StreamIdFromHash(stream.Id)
+		var (
+			pageSize = 500 // TODO: setting
+			lastPage = false
+		)
+
+		for pageIndex := 0; !lastPage; pageIndex++ {
+			var (
+				streams map[StreamId]*GetStreamResult
+				err     error
+			)
+
+			streams, lastPage, err = c.getAllStreamsInPage(ctx, blockNum, pageIndex, pageSize)
 			if err != nil {
-				return nil, err
+				results <- &GetStreamResultErr{Err: err}
+				return
 			}
-			ret = append(ret, makeGetStreamResult(streamId, &stream.Stream))
-		}
-	}
 
-	return ret, nil
+			results <- &GetStreamResultErr{Streams: streams}
+		}
+	}()
+
+	return results
 }
+
+//func (c *RiverRegistryContract) GetAllStreams(
+//	ctx context.Context,
+//	blockNum crypto.BlockNumber,
+//) ([]*GetStreamResult, error) {
+//	// TODO: setting
+//	const pageSize = 5000
+//
+//	ret := make([]*GetStreamResult, 0, 5000)
+//
+//	lastPage := false
+//	var err error
+//	var streams []river.StreamWithId
+//	for i := 0; !lastPage; i += pageSize {
+//		c.getAllStreamsInPage(ctx, blockNum, i, pageSize)
+//		//callOpts := c.callOptsWithBlockNum(ctx, blockNum)
+//		//streams, lastPage, err = c.StreamRegistry.GetPaginatedStreams(callOpts, big.NewInt(i), big.NewInt(i+pageSize))
+//		//if err != nil {
+//		//	return nil, WrapRiverError(
+//		//		Err_CANNOT_CALL_CONTRACT,
+//		//		err,
+//		//	).Func("GetStreamByIndex").
+//		//		Message("Smart contract call failed")
+//		//}
+//		//for _, stream := range streams {
+//		//	if stream.Id == ZeroBytes32 {
+//		//		continue
+//		//	}
+//		//	streamId, err := StreamIdFromHash(stream.Id)
+//		//	if err != nil {
+//		//		return nil, err
+//		//	}
+//		//	ret = append(ret, makeGetStreamResult(streamId, &stream.Stream))
+//		//}
+//	}
+//
+//	return ret, nil
+//}
 
 // SetStreamLastMiniblockBatch sets the given block proposal in the RiverRegistry#StreamRegistry facet as the new
 // latest block. It returns the streamId's for which the proposed block was set successful as the latest block, failed

@@ -43,27 +43,33 @@ func srStreamDump(cfg *config.Config, countOnly bool) error {
 		return nil
 	}
 
-	streams, err := registryContract.GetAllStreams(ctx, blockchain.InitialBlockNum)
-	if err != nil {
-		return err
-	}
+	streamResults := registryContract.GetAllStreams(ctx, blockchain.InitialBlockNum)
+	streamsCount := 0
 
-	for i, strm := range streams {
-		s := fmt.Sprintf("%4d %s", i, strm.StreamId.String())
-		fmt.Printf("%-69s %4d, %s\n", s, strm.LastMiniblockNum, strm.LastMiniblockHash.Hex())
-		for _, node := range strm.Nodes {
-			fmt.Printf("        %s\n", node.Hex())
+	for streamResult := range streamResults {
+		if streamResult.Err != nil {
+			return streamResult.Err
+		}
+
+		streamsCount += len(streamResult.Streams)
+
+		for i, strm := range streamResult.Streams {
+			s := fmt.Sprintf("%4d %s", i, strm.StreamId.String())
+			fmt.Printf("%-69s %4d, %s\n", s, strm.LastMiniblockNum, strm.LastMiniblockHash.Hex())
+			for _, node := range strm.Nodes {
+				fmt.Printf("        %s\n", node.Hex())
+			}
 		}
 	}
 
-	if streamNum != int64(len(streams)) {
+	if streamNum != int64(streamsCount) {
 		return RiverError(
 			Err_INTERNAL,
 			"Stream count mismatch",
 			"GetStreamCount",
 			streamNum,
 			"GetAllStreams",
-			len(streams),
+			streamsCount,
 		)
 	}
 
