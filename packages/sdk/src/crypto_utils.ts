@@ -14,7 +14,7 @@ function uint8ArrayToBuffer(uint8Array: Uint8Array): Buffer {
 }
 
 // Generate fixed salt
-export async function generateFixedSalt(seedPhrase: string): Promise<Uint8Array> {
+async function generateFixedSalt(seedPhrase: string): Promise<Uint8Array> {
     const encoder = new TextEncoder()
     const seedBuffer = encoder.encode(seedPhrase)
 
@@ -99,7 +99,7 @@ export async function decryptAesGcm(
     encrypted: Uint8Array,
     key: Uint8Array,
     iv: Uint8Array,
-): Promise<string> {
+): Promise<Uint8Array> {
     return new Promise((resolve, reject) => {
         try {
             const decipher = crypto.createDecipheriv(
@@ -111,7 +111,7 @@ export async function decryptAesGcm(
                 decipher.update(uint8ArrayToBuffer(encrypted)),
                 decipher.final(),
             ])
-            resolve(new TextDecoder().decode(bufferToUint8Array(decrypted)))
+            resolve(bufferToUint8Array(decrypted))
         } catch (err) {
             reject(err)
         }
@@ -120,7 +120,7 @@ export async function decryptAesGcm(
 
 // Digest function
 async function digest(algorithm: string, data: Uint8Array): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         const hash = crypto.createHash(algorithm)
         hash.update(uint8ArrayToBuffer(data))
         resolve(hash.digest())
