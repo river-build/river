@@ -17,6 +17,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -211,8 +212,10 @@ func (s *Service) initInstance(mode string) {
 	if mode == ServerModeFull {
 		subsystem = "stream"
 	}
-	s.metrics = infra.NewMetrics("river", subsystem)
-	s.metrics.StartMetricsServer(s.serverCtx, s.config.Metrics)
+	metricsRegistry := prometheus.NewRegistry()
+	s.metrics = infra.NewMetricsFactory(metricsRegistry, "river", subsystem)
+	s.metricsPublisher = infra.NewMetricsPublisher(metricsRegistry)
+	s.metricsPublisher.StartMetricsServer(s.serverCtx, s.config.Metrics)
 	s.rpcDuration = s.metrics.NewHistogramVecEx(
 		"rpc_duration_seconds",
 		"RPC duration in seconds",
@@ -400,7 +403,7 @@ func (s *Service) runHttpServer() error {
 	mux.HandleFunc("/status", s.handleStatus)
 
 	if cfg.Metrics.Enabled && !cfg.Metrics.DisablePublic {
-		mux.Handle("/metrics", s.metrics.CreateHandler())
+		mux.Handle("/metrics", s.metricsPublisher.CreateHandler())
 	}
 
 	corsMiddleware := cors.New(cors.Options{

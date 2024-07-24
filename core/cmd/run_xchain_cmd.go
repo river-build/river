@@ -24,7 +24,7 @@ func runXChain() error {
 	)
 
 	// create xchain instance
-	srv, err := server.New(ctx, cmdConfig, nil, 1)
+	srv, err := server.New(ctx, cmdConfig, nil, 1, nil)
 	if err != nil {
 		return err
 	}
