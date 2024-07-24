@@ -23,16 +23,16 @@ export const ConnectRoute = () => {
 
 const ChainConnectButton = () => {
     const { connector: activeConnector } = useAccount()
-    const { connectors, connect, error, isPending } = useConnect()
+    const { connectors, connect, error, isLoading } = useConnect()
 
     return (
         <div>
             {connectors.map((connector) => (
-                <Button key={connector.uid} onClick={() => connect({ connector })}>
+                <Button key={connector.id} onClick={() => connect({ connector })}>
                     {activeConnector?.id === connector.id
                         ? `Connected - ${connector.name}`
                         : connector.name}
-                    {isPending && ' (connecting)'}
+                    {isLoading && ' (connecting)'}
                 </Button>
             ))}
             {error && <div>{error.message}</div>}

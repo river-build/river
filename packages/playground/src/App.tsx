@@ -1,5 +1,5 @@
 import { RouterProvider } from 'react-router-dom'
-import { WagmiProvider } from 'wagmi'
+import { WagmiConfig } from 'wagmi'
 
 import { RiverSyncProvider, connectRiver } from '@river-build/react-sdk'
 
@@ -24,13 +24,13 @@ function App() {
     }, [])
 
     return (
-        <WagmiProvider config={config}>
+        <WagmiConfig config={config}>
             <QueryClientProvider client={queryClient}>
                 <RiverSyncProvider syncAgent={syncAgent}>
                     <RouterProvider router={router} />
                 </RiverSyncProvider>
             </QueryClientProvider>
-        </WagmiProvider>
+        </WagmiConfig>
     )
 }
 

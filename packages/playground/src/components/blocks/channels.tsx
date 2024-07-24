@@ -2,9 +2,8 @@ import { useChannel, useCreateChannel, useSpace } from '@river-build/react-sdk'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { getEthersSigner } from '@/utils/viem-to-ethers'
-import { config } from '@/config/wagmi'
 import { useCurrentSpaceId } from '@/hooks/current-space'
+import { useEthersSigner } from '@/utils/viem-to-ethers'
 import {
     Form,
     FormControl,
@@ -81,7 +80,7 @@ export const CreateChannel = (
     const { setCurrentChannelId, ...rest } = props
     const spaceId = useCurrentSpaceId()
     const { createChannel, isPending } = useCreateChannel(spaceId)
-
+    const signer = useEthersSigner()
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: { channelName: '' },
@@ -94,7 +93,9 @@ export const CreateChannel = (
                 <form
                     className="space-y-8"
                     onSubmit={form.handleSubmit(async ({ channelName }) => {
-                        const signer = await getEthersSigner(config)
+                        if (!signer) {
+                            return
+                        }
                         const channelId = await createChannel(channelName, signer)
                         setCurrentChannelId(channelId)
                     })}

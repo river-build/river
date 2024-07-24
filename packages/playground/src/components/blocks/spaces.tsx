@@ -2,8 +2,7 @@ import { useCreateSpace, useSpace, useUserSpaces } from '@river-build/react-sdk'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { getEthersSigner } from '@/utils/viem-to-ethers'
-import { config } from '@/config/wagmi'
+import { useEthersSigner } from '@/utils/viem-to-ethers'
 import {
     Form,
     FormControl,
@@ -72,6 +71,7 @@ const SpaceInfo = ({
 export const CreateSpace = (props: SpacesBlockProps & BlockProps) => {
     const { setCurrentSpaceId, ...rest } = props
     const { createSpace, isPending } = useCreateSpace()
+    const signer = useEthersSigner()
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -84,7 +84,9 @@ export const CreateSpace = (props: SpacesBlockProps & BlockProps) => {
                 <form
                     className="space-y-8"
                     onSubmit={form.handleSubmit(async ({ spaceName }) => {
-                        const signer = await getEthersSigner(config)
+                        if (!signer) {
+                            return
+                        }
                         const { spaceId } = await createSpace({ spaceName }, signer)
                         setCurrentSpaceId(spaceId)
                     })}

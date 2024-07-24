@@ -2,8 +2,8 @@ import {
     useAccount,
     useDisconnect,
     useSendTransaction,
-    useSwitchChain,
-    useWaitForTransactionReceipt,
+    useSwitchNetwork,
+    useWaitForTransaction,
 } from 'wagmi'
 
 import { base, baseSepolia, foundry } from 'viem/chains'
@@ -11,9 +11,8 @@ import { useRiverConnection } from '@river-build/react-sdk'
 import { makeRiverConfig } from '@river-build/sdk'
 import { privateKeyToAccount } from 'viem/accounts'
 import { parseEther } from 'viem'
-import { config } from '@/config/wagmi'
-import { getEthersSigner } from '@/utils/viem-to-ethers'
 import { deleteAuth, storeAuth } from '@/utils/persist-auth'
+import { useEthersSigner } from '@/utils/viem-to-ethers'
 import { Button } from '../ui/button'
 import {
     Dialog,
@@ -41,8 +40,9 @@ type RiverEnvSwitcherProps = {
 export const RiverEnvSwitcher = (props: RiverEnvSwitcherProps) => {
     const { currentEnv, setEnv } = props
     const { connect, disconnect, isConnected } = useRiverConnection()
-    const { switchChain } = useSwitchChain({ config })
+    const { switchNetwork } = useSwitchNetwork()
     const { disconnect: disconnectWallet } = useDisconnect()
+    const signer = useEthersSigner()
 
     return (
         <Dialog>
@@ -69,10 +69,12 @@ export const RiverEnvSwitcher = (props: RiverEnvSwitcherProps) => {
                                 variant="outline"
                                 disabled={currentEnv === id && isConnected}
                                 onClick={async () => {
-                                    switchChain({ chainId })
+                                    if (!signer) {
+                                        console.log('No signer')
+                                        return
+                                    }
+                                    switchNetwork?.(chainId)
                                     setEnv(id)
-
-                                    const signer = await getEthersSigner(config)
                                     const riverConfig = makeRiverConfig(id)
                                     await connect(signer, {
                                         riverConfig,
@@ -112,26 +114,26 @@ const AnvilAccount = privateKeyToAccount(
 )
 
 const FundWallet = () => {
-    const { address } = useAccount({ config })
+    const { address } = useAccount()
 
-    const { sendTransaction, data: txHash, isPending } = useSendTransaction()
-    const { isSuccess, isLoading: isTxPending } = useWaitForTransactionReceipt({ hash: txHash })
+    const { sendTransaction, data: tx, isLoading } = useSendTransaction()
+    const { isSuccess, isLoading: isTxPending } = useWaitForTransaction({ hash: tx?.hash })
 
     return (
         <>
             <Button
                 variant="outline"
-                disabled={isPending || isTxPending}
+                disabled={isLoading || isTxPending}
                 onClick={() =>
                     sendTransaction({
                         account: AnvilAccount,
                         chainId: foundry.id,
                         value: parseEther('0.1'),
-                        to: address,
+                        to: address as `0x${string}`,
                     })
                 }
             >
-                Fund Local Wallet {isSuccess && '✅'} {(isPending || isTxPending) && '⏳'}
+                Fund Local Wallet {isSuccess && '✅'} {(isLoading || isTxPending) && '⏳'}
             </Button>
         </>
     )

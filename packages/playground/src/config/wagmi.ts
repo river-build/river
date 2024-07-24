@@ -1,14 +1,18 @@
-import { http } from 'viem'
 import { base, baseSepolia, foundry } from 'viem/chains'
-import { createConfig } from 'wagmi'
+import { configureChains, createConfig } from 'wagmi'
+import { publicProvider } from '@wagmi/core/providers/public'
+import { InjectedConnector } from 'wagmi/connectors/injected'
+
+const { chains, publicClient, webSocketPublicClient } = configureChains(
+    [base, baseSepolia, foundry],
+    [publicProvider()],
+)
 
 /// If you're using Foundry, run yarn anvil to get the test accounts private keys.
 /// This way you can interact with the foundry chain.
 export const config = createConfig({
-    chains: [base, baseSepolia, foundry],
-    transports: {
-        [foundry.id]: http(),
-        [base.id]: http(),
-        [baseSepolia.id]: http(),
-    },
+    autoConnect: true,
+    publicClient,
+    webSocketPublicClient,
+    connectors: [new InjectedConnector({ chains })],
 })

@@ -31,9 +31,9 @@
         "superjson": "^2.2.1",
         "tailwind-merge": "^2.3.0",
         "tailwindcss-animate": "^1.0.7",
-        "viem": "2.x",
+        "viem": "^1.18.2",
         "vite-plugin-node-polyfills": "^0.22.0",
-        "wagmi": "^2.10.9",
+        "wagmi": "^1.4.12",
         "zod": "^3.21.4"
     },
     "devDependencies": {
