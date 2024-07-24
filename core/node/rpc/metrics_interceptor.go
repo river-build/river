@@ -5,10 +5,9 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/river-build/river/core/node/shared"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-
-	"github.com/river-build/river/core/node/shared"
 )
 
 type streamIdProvider interface {
@@ -46,7 +45,7 @@ func (i *metricsInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc
 			m.Dec()
 			prometheus.NewTimer(i.rpcDuration.WithLabelValues(proc)).ObserveDuration()
 		}()
-
+		
 		// add streamId to tracing span
 		r, ok := req.Any().(streamIdProvider)
 		if ok {

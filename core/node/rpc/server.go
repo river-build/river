@@ -16,10 +16,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/rs/cors"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
-
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/auth"
 	. "github.com/river-build/river/core/node/base"
@@ -31,8 +27,12 @@ import (
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/registries"
+	"github.com/river-build/river/core/node/rpc/sync"
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/xchain/entitlement"
+	"github.com/rs/cors"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 )
 
 const (
@@ -563,11 +563,10 @@ func (s *Service) initCacheAndSync() error {
 
 	s.mbProducer = events.NewMiniblockProducer(s.serverCtx, s.cache, nil)
 
-	s.syncHandler = NewSyncHandler(
-		s.wallet,
+	s.syncHandler = sync.NewHandler(
+		s.wallet.Address,
 		s.cache,
 		s.nodeRegistry,
-		s.streamRegistry,
 	)
 
 	return nil
