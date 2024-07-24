@@ -24,7 +24,7 @@ export const useAction = <Namespace, Key extends keyof Namespace, Fn extends Nam
     const [data, setData] = useState<ReturnOf<Fn> | undefined>()
 
     const action = useCallback(
-        async (...args: MultipleParams<ParamsOf<Fn>>) => {
+        async (...args: MultipleParams<ParamsOf<Fn>>): Promise<ReturnOf<Fn>> => {
             const fn = namespace[fnName] as ActionFn<Fn>
             if (typeof fn !== 'function') {
                 throw new Error(`useAction: fn ${fnName} is not a function`)
