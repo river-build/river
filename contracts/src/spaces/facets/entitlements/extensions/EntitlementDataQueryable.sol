@@ -7,9 +7,11 @@ import {IRolesBase} from "contracts/src/spaces/facets/roles/IRoles.sol";
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {IUserEntitlement} from "contracts/src/spaces/entitlements/user/IUserEntitlement.sol";
+import {IEntitlementGatedBase} from "contracts/src/spaces/facets/gated/IEntitlementGated.sol";
 
 // libraries
 import {ChannelService} from "contracts/src/spaces/facets/channels/ChannelService.sol";
+import {EntitlementGatedStorage} from "contracts/src/spaces/facets/gated/EntitlementGatedStorage.sol";
 
 // contracts
 import {RolesBase} from "contracts/src/spaces/facets/roles/RolesBase.sol";
@@ -18,6 +20,7 @@ import {Facet} from "contracts/src/diamond/facets/Facet.sol";
 contract EntitlementDataQueryable is
   IRolesBase,
   IEntitlementDataQueryable,
+  IEntitlementGatedBase,
   RolesBase,
   Facet
 {
@@ -34,6 +37,25 @@ contract EntitlementDataQueryable is
   ) external view returns (EntitlementData[] memory) {
     Role[] memory roles = _getChannelRolesWithPermission(channelId, permission);
     return _getEntitlements(roles);
+  }
+
+  function getCrossChainEntitlementData(
+    bytes32 transactionId,
+    uint256 roleId
+  ) external view returns (EntitlementData memory) {
+    EntitlementGatedStorage.Layout storage ds = EntitlementGatedStorage
+      .layout();
+
+    Transaction storage transaction = ds.transactions[transactionId];
+
+    if (transaction.hasBenSet == false) {
+      revert EntitlementGated_TransactionNotRegistered();
+    }
+
+    IRuleEntitlement re = IRuleEntitlement(transaction.entitlement);
+
+    return
+      EntitlementData(re.moduleType(), re.getEntitlementDataByRoleId(roleId));
   }
 
   // =============================================================

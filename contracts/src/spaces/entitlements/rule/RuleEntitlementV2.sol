@@ -59,7 +59,8 @@ contract RuleEntitlementV2 is
 
   string public constant name = "Rule Entitlement V2";
   string public constant description = "Entitlement for crosschain rules";
-  string public constant moduleType = "RuleEntitlement";
+  string public constant moduleType = "RuleEntitlementV2";
+  bool public constant isCrosschain = true;
 
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
@@ -108,13 +109,8 @@ contract RuleEntitlementV2 is
   ) public view override returns (bool) {
     return
       interfaceId == type(IEntitlement).interfaceId ||
+      interfaceId == type(IRuleEntitlementV2).interfaceId ||
       super.supportsInterface(interfaceId);
-  }
-
-  // @inheritdoc IEntitlement
-  function isCrosschain() external pure override returns (bool) {
-    // TODO possible optimization: return false if no crosschain operations
-    return true;
   }
 
   // @inheritdoc IEntitlement
@@ -131,6 +127,8 @@ contract RuleEntitlementV2 is
     uint256 roleId,
     bytes calldata entitlementData
   ) external onlySpace {
+    _removeRuleDataV1(roleId);
+
     // Decode the data
     RuleDataV2 memory data = abi.decode(entitlementData, (RuleDataV2));
 
@@ -211,7 +209,7 @@ contract RuleEntitlementV2 is
     uint256 roleId
   ) external view returns (bytes memory) {
     EntitlementV2 storage entitlement = layout().entitlementsByRoleIdV2[roleId];
-    return abi.encode(entitlement.data);
+    return entitlement.data;
   }
 
   function encodeRuleData(
@@ -241,5 +239,16 @@ contract RuleEntitlementV2 is
     }
 
     return abi.decode(ruleData, (RuleDataV2));
+  }
+
+  // =============================================================
+  //                           Internal
+  // =============================================================
+  function _removeRuleDataV1(uint256 roleId) internal {
+    if (entitlementsByRoleId[roleId].grantedBy != address(0)) {
+      delete entitlementsByRoleId[roleId];
+      delete entitlementsByRoleId[roleId].grantedBy;
+      delete entitlementsByRoleId[roleId].grantedTime;
+    }
   }
 }

@@ -174,6 +174,7 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
     }
 
     IRuleEntitlement re = IRuleEntitlement(address(transaction.entitlement));
+
     IRuleEntitlement.RuleData memory ruleData = re.getRuleData(roleId);
 
     return ruleData;
