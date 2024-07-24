@@ -21,21 +21,18 @@ import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Cont
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 // libraries
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 // interfaces
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
-import {IRuleEntitlement} from "./IRuleEntitlement.sol";
+import {IRuleEntitlementV2} from "./IRuleEntitlement.sol";
 
-contract RuleEntitlement is
+contract RuleEntitlementV2 is
   Initializable,
   ERC165Upgradeable,
   ContextUpgradeable,
   UUPSUpgradeable,
-  IRuleEntitlement
+  IRuleEntitlementV2
 {
-  using EnumerableSet for EnumerableSet.Bytes32Set;
-
   struct Entitlement {
     address grantedBy;
     uint256 grantedTime;
@@ -43,19 +40,26 @@ contract RuleEntitlement is
   }
 
   mapping(uint256 => Entitlement) internal entitlementsByRoleId;
-
   address public SPACE_ADDRESS;
 
-  string public constant name = "Rule Entitlement";
+  // keccak256(abi.encode(uint256(keccak256("spaces.entitlements.rule.storage")) - 1)) & ~bytes32(uint256(0xff))
+  bytes32 private constant STORAGE_SLOT =
+    0xa7ba26993e5aed586ba0b4d511980a49b23ea33e13d5f0920b7e42ae1a27cc00;
+
+  struct EntitlementV2 {
+    address grantedBy;
+    uint256 grantedTime;
+    bytes data;
+  }
+
+  // @custom:storage-location erc7201:spaces.entitlements.rule.storage
+  struct Layout {
+    mapping(uint256 => EntitlementV2) entitlementsByRoleIdV2;
+  }
+
+  string public constant name = "Rule Entitlement V2";
   string public constant description = "Entitlement for crosschain rules";
   string public constant moduleType = "RuleEntitlement";
-
-  // Separate storage arrays for CheckOperation and LogicalOperation
-  //CheckOperation[] private checkOperations;
-  //LogicalOperation[] private logicalOperations;
-
-  // Dynamic array to store Operation instances
-  //Operation[] private operations;
 
   /// @custom:oz-upgrades-unsafe-allow constructor
   constructor() {
@@ -66,7 +70,6 @@ contract RuleEntitlement is
     __UUPSUpgradeable_init();
     __ERC165_init();
     __Context_init();
-
     SPACE_ADDRESS = _space;
   }
 
@@ -77,15 +80,32 @@ contract RuleEntitlement is
     _;
   }
 
+  // =============================================================
+  //                           Admin
+  // =============================================================
+
   /// @notice allow the contract to be upgraded while retaining state
   /// @param newImplementation address of the new implementation
   function _authorizeUpgrade(
     address newImplementation
   ) internal override onlySpace {}
 
+  /// @notice get the storage slot for the contract
+  /// @return ds storage slot
+  function layout() internal pure returns (Layout storage ds) {
+    bytes32 slot = STORAGE_SLOT;
+    assembly {
+      ds.slot := slot
+    }
+  }
+
+  // =============================================================
+  //                           External
+  // =============================================================
+
   function supportsInterface(
     bytes4 interfaceId
-  ) public view virtual override returns (bool) {
+  ) public view override returns (bool) {
     return
       interfaceId == type(IEntitlement).interfaceId ||
       super.supportsInterface(interfaceId);
@@ -99,11 +119,10 @@ contract RuleEntitlement is
 
   // @inheritdoc IEntitlement
   function isEntitled(
-    bytes32, //channelId,
-    address[] memory, //user,
-    bytes32 //permission
+    bytes32,
+    address[] memory,
+    bytes32
   ) external pure returns (bool) {
-    // TODO possible optimization: if there are no crosschain operations, evaluate locally
     return false;
   }
 
@@ -113,7 +132,7 @@ contract RuleEntitlement is
     bytes calldata entitlementData
   ) external onlySpace {
     // Decode the data
-    RuleData memory data = abi.decode(entitlementData, (RuleData));
+    RuleDataV2 memory data = abi.decode(entitlementData, (RuleDataV2));
 
     if (entitlementData.length == 0 || data.operations.length == 0) {
       return;
@@ -165,46 +184,38 @@ contract RuleEntitlement is
       }
     }
 
-    Entitlement storage entitlement = entitlementsByRoleId[roleId];
-
+    EntitlementV2 storage entitlement = layout().entitlementsByRoleIdV2[roleId];
     entitlement.grantedBy = sender;
     entitlement.grantedTime = currentTime;
-
-    // All checks passed; initialize state variables
-    // Manually copy _checkOperations to checkOperations
-    for (uint256 i = 0; i < checkOperationsLength; i++) {
-      entitlement.data.checkOperations.push(data.checkOperations[i]);
-    }
-
-    for (uint256 i = 0; i < logicalOperationsLength; i++) {
-      entitlement.data.logicalOperations.push(data.logicalOperations[i]);
-    }
-
-    for (uint256 i = 0; i < operationsLength; i++) {
-      entitlement.data.operations.push(data.operations[i]);
-    }
+    entitlement.data = entitlementData;
   }
 
   // @inheritdoc IEntitlement
   function removeEntitlement(uint256 roleId) external onlySpace {
-    Entitlement memory entitlement = entitlementsByRoleId[roleId];
+    Layout storage ds = layout();
+
+    EntitlementV2 memory entitlement = ds.entitlementsByRoleIdV2[roleId];
+
     if (entitlement.grantedBy == address(0)) {
       revert Entitlement__InvalidValue();
     }
 
-    delete entitlementsByRoleId[roleId];
+    delete ds.entitlementsByRoleIdV2[roleId].grantedBy;
+    delete ds.entitlementsByRoleIdV2[roleId].grantedTime;
+    delete ds.entitlementsByRoleIdV2[roleId].data;
+    delete ds.entitlementsByRoleIdV2[roleId];
   }
 
   // @inheritdoc IEntitlement
   function getEntitlementDataByRoleId(
     uint256 roleId
   ) external view returns (bytes memory) {
-    Entitlement storage entitlement = entitlementsByRoleId[roleId];
+    EntitlementV2 storage entitlement = layout().entitlementsByRoleIdV2[roleId];
     return abi.encode(entitlement.data);
   }
 
   function encodeRuleData(
-    RuleData calldata data
+    RuleDataV2 calldata data
   ) external pure returns (bytes memory) {
     return abi.encode(data);
   }
@@ -213,5 +224,22 @@ contract RuleEntitlement is
     uint256 roleId
   ) external view returns (RuleData memory data) {
     return entitlementsByRoleId[roleId].data;
+  }
+
+  function getRuleDataV2(
+    uint256 roleId
+  ) external view returns (RuleDataV2 memory data) {
+    bytes memory ruleData = layout().entitlementsByRoleIdV2[roleId].data;
+
+    if (ruleData.length == 0) {
+      return
+        RuleDataV2(
+          new Operation[](0),
+          new CheckOperationV2[](0),
+          new LogicalOperation[](0)
+        );
+    }
+
+    return abi.decode(ruleData, (RuleDataV2));
   }
 }

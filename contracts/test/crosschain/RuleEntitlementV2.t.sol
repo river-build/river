@@ -5,17 +5,24 @@ pragma solidity ^0.8.24;
 import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 
 import {RuleEntitlement} from "contracts/src/spaces/entitlements/rule/RuleEntitlement.sol";
+import {RuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/RuleEntitlementV2.sol";
+
 import {IEntitlementBase} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 import {IRuleEntitlementBase} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-contract RuleEntitlementTest is
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
+contract RuleEntitlementV2Test is
   TestUtils,
   IEntitlementBase,
   IRuleEntitlementBase
 {
   RuleEntitlement internal implementation;
   RuleEntitlement internal ruleEntitlement;
+
+  RuleEntitlementV2 internal implementationV2;
+  RuleEntitlementV2 internal ruleEntitlementV2;
 
   address internal entitlement;
   address internal deployer;
@@ -96,76 +103,24 @@ contract RuleEntitlementTest is
     _;
   }
 
-  function test_setRuleEntitlement() external givenRuleEntitlementIsSet {
-    Operation[] memory ruleOperations = ruleEntitlement
-      .getRuleData(roleId)
-      .operations;
-    assertEq(ruleOperations.length, 3);
-  }
+  function test_upgradeToRuleV2() external givenRuleEntitlementIsSet {
+    ruleEntitlement.getRuleData(roleId);
 
-  function test_removeRuleEntitlement() external givenRuleEntitlementIsSet {
-    vm.prank(space);
-    ruleEntitlement.removeEntitlement(roleId);
-
-    RuleData memory ruleData = ruleEntitlement.getRuleData(roleId);
-
-    assertEq(ruleData.operations.length, 0);
-  }
-
-  function test_revertWhenNotAllowedToRemove()
-    external
-    givenRuleEntitlementIsSet
-  {
-    vm.expectRevert(Entitlement__NotAllowed.selector);
-    vm.prank(_randomAddress());
-    ruleEntitlement.removeEntitlement(roleId);
-  }
-
-  // =============================================================
-  //                  Request Entitlement Check
-  // =============================================================
-  function test_revertOnDirectionFailureEntitlementRule() external {
-    Operation[] memory operations = new Operation[](4);
-    CheckOperation[] memory checkOperations = new CheckOperation[](2);
-    LogicalOperation[] memory logicalOperations = new LogicalOperation[](2);
-    checkOperations[0] = CheckOperation(
-      CheckOperationType.ERC20,
-      31337,
-      address(0x12),
-      100
-    );
-    checkOperations[1] = CheckOperation(
-      CheckOperationType.ERC721,
-      31337,
-      address(0x21),
-      100
-    );
-    // This operation is referring to a parent so will revert
-    logicalOperations[0] = LogicalOperation(LogicalOperationType.AND, 0, 3);
-    logicalOperations[1] = LogicalOperation(LogicalOperationType.AND, 0, 1);
-    operations[0] = Operation(CombinedOperationType.CHECK, 0);
-    operations[1] = Operation(CombinedOperationType.CHECK, 1);
-    operations[2] = Operation(CombinedOperationType.LOGICAL, 0);
-    operations[3] = Operation(CombinedOperationType.LOGICAL, 1);
-
-    RuleData memory ruleData = RuleData(
-      operations,
-      checkOperations,
-      logicalOperations
-    );
-
-    bytes memory encodedData = abi.encode(ruleData);
-
-    vm.expectRevert(
-      abi.encodeWithSelector(InvalidRightOperationIndex.selector, 3, 2)
-    );
+    vm.startPrank(deployer);
+    implementationV2 = new RuleEntitlementV2();
+    vm.stopPrank();
 
     vm.prank(space);
-    ruleEntitlement.setEntitlement(0, encodedData);
+    UUPSUpgradeable(entitlement).upgradeToAndCall(
+      address(implementationV2),
+      ""
+    );
 
-    Operation[] memory ruleOperations = ruleEntitlement
-      .getRuleData(uint256(0))
-      .operations;
-    assertEq(ruleOperations.length, 0);
+    ruleEntitlementV2 = RuleEntitlementV2(entitlement);
+    RuleData memory ruleData = ruleEntitlementV2.getRuleData(roleId);
+    assertTrue(ruleData.operations.length > 0);
+
+    RuleDataV2 memory ruleDataV2 = ruleEntitlementV2.getRuleDataV2(roleId);
+    assertTrue(ruleDataV2.operations.length == 0);
   }
 }
