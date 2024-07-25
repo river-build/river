@@ -1,6 +1,8 @@
 package events
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"testing"
 
 	"github.com/river-build/river/core/node/base/test"
@@ -75,6 +77,36 @@ func make_Space_Membership(
 			membershipOp,
 			userId,
 			userId,
+		),
+		prevMiniblockHash,
+	)
+	assert.NoError(t, err)
+	parsed, err := ParseEvent(envelope)
+	assert.NoError(t, err)
+	return parsed
+}
+
+func make_media_stream_id() (string, error) {
+	bytes := make([]byte, 32)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	bytes[0] = STREAM_MEDIA_BIN
+	return hex.EncodeToString(bytes), nil
+}
+
+func make_Space_Image(
+	wallet *crypto.Wallet,
+	mediaInfo *MediaInfo,
+	streamId string,
+	prevMiniblockHash []byte,
+	t *testing.T,
+) *ParsedEvent {
+	envelope, err := MakeEnvelopeWithPayload(
+		wallet,
+		Make_SpacePayload_SpaceImage(
+			mediaInfo,
+			streamId,
 		),
 		prevMiniblockHash,
 	)
@@ -186,6 +218,8 @@ func TestCloneAndUpdateSpaceSnapshot(t *testing.T) {
 	defer cancel()
 	wallet, _ := crypto.NewWallet(ctx)
 	streamId := UserStreamIdFromAddr(wallet.Address)
+	mediaStreamId, err := make_media_stream_id()
+	assert.NoError(t, err)
 	inception := make_Space_Inception(wallet, streamId, t)
 	snapshot1, err := Make_GenisisSnapshot([]*ParsedEvent{inception})
 	assert.NoError(t, err)
@@ -197,7 +231,8 @@ func TestCloneAndUpdateSpaceSnapshot(t *testing.T) {
 	membership := make_Space_Membership(wallet, MembershipOp_SO_JOIN, userId, nil, t)
 	username := make_Space_Username(wallet, "bob", nil, t)
 	displayName := make_Space_DisplayName(wallet, "bobIsTheGreatest", nil, t)
-	events := []*ParsedEvent{membership, username, displayName}
+	image := make_Space_Image(wallet, &MediaInfo{}, mediaStreamId, nil, t)
+	events := []*ParsedEvent{membership, username, displayName, image}
 	for i, event := range events[:] {
 		err = Update_Snapshot(snapshot, event, 1, int64(3+i))
 		assert.NoError(t, err)

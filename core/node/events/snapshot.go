@@ -205,8 +205,22 @@ func update_Snapshot_Space(
 		snapshot.SpaceContent.Channels = insertChannel(snapshot.SpaceContent.Channels, channel)
 		return nil
 	case *SpacePayload_SpaceImage:
-		snapshot.SpaceContent.SpaceMedia.SpaceImage = content.SpaceImage
-		snapshot.SpaceContent.SpaceMedia.CreatorAddress = creatorAddress
+		copyAddr := make([]byte, len(creatorAddress))
+		copy(copyAddr, creatorAddress)
+		snapshot.SpaceContent.SpaceMedia = &SpacePayload_SnappedSpaceMedia{
+			SpaceImage: &ChunkedMedia{
+				StreamId: content.SpaceImage.StreamId,
+				Info: &MediaInfo{
+					Mimetype:     content.SpaceImage.Info.Mimetype,
+					SizeBytes:    content.SpaceImage.Info.SizeBytes,
+					WidthPixels:  content.SpaceImage.Info.WidthPixels,
+					HeightPixels: content.SpaceImage.Info.HeightPixels,
+					Filename:     content.SpaceImage.Info.Filename,
+				},
+				Encryption: &ChunkedMedia_Derived{},
+			},
+			CreatorAddress: copyAddr,
+		}
 		return nil
 	default:
 		return RiverError(Err_INVALID_ARGUMENT, "unknown space payload type %T", spacePayload.Content)

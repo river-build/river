@@ -281,6 +281,41 @@ func Make_SpacePayload_Membership(op MembershipOp, userId string, initiatorId st
 	return Make_MemberPayload_Membership(op, userAddress, initiatorAddress, nil)
 }
 
+func Make_SpacePayload_SpaceImage(mediaInfo *MediaInfo, streamId string) *StreamEvent_SpacePayload {
+	return &StreamEvent_SpacePayload{
+		SpacePayload: &SpacePayload{
+			Content: &SpacePayload_SpaceImage{
+				SpaceImage: &ChunkedMedia{
+					Info: &MediaInfo{
+						Mimetype:     mediaInfo.Mimetype,
+						SizeBytes:    mediaInfo.SizeBytes,
+						WidthPixels:  mediaInfo.WidthPixels,
+						HeightPixels: mediaInfo.HeightPixels,
+						Filename:     mediaInfo.Filename,
+					},
+					StreamId:   streamId,
+					Encryption: &ChunkedMedia_Derived{},
+				},
+			},
+		},
+	}
+}
+
+func Make_SpacePayload_SpaceImage_Media(info *MediaInfo, streamId string) *ChunkedMedia {
+	media := &ChunkedMedia{
+		StreamId: streamId,
+		Info: &MediaInfo{
+			Mimetype:     info.Mimetype,
+			SizeBytes:    info.SizeBytes,
+			WidthPixels:  info.WidthPixels,
+			HeightPixels: info.HeightPixels,
+			Filename:     info.Filename,
+		},
+		Encryption: &ChunkedMedia_Derived{},
+	}
+	return media
+}
+
 func Make_SpacePayload_ChannelUpdate(
 	op ChannelOp,
 	channelId StreamId,
