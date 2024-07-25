@@ -10,7 +10,7 @@ export const ChannelProvider = ({
     channelId,
     children,
 }: {
-    channelId?: string
+    channelId: string | undefined
     children: React.ReactNode
 }) => {
     return (

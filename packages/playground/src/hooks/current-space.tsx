@@ -11,7 +11,7 @@ export const SpaceProvider = ({
     spaceId,
     children,
 }: {
-    spaceId?: string
+    spaceId: string | undefined
     children: React.ReactNode
 }) => {
     return (

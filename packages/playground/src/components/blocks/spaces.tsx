@@ -18,26 +18,22 @@ import { Input } from '../ui/input'
 import { JsonHover } from '../utils/json-hover'
 
 type SpacesBlockProps = {
-    setCurrentSpaceId: (spaceId: string) => void
+    changeSpace: (spaceId: string) => void
 }
 
 const formSchema = z.object({
     spaceName: z.string().min(1, { message: 'Space name is required' }),
 })
 
-export const SpacesBlock = (props: SpacesBlockProps) => {
+export const SpacesBlock = ({ changeSpace }: SpacesBlockProps) => {
     const { spaceIds } = useUserSpaces()
     return (
         <Block title="Spaces">
-            <CreateSpace setCurrentSpaceId={props.setCurrentSpaceId} variant="secondary" />
+            <CreateSpace variant="secondary" onCreateSpace={changeSpace} />
             <span className="text-xs">Select a space to start messaging</span>
             <div className="flex flex-col gap-1">
                 {spaceIds.map((spaceId) => (
-                    <SpaceInfo
-                        key={spaceId}
-                        spaceId={spaceId}
-                        setCurrentSpaceId={props.setCurrentSpaceId}
-                    />
+                    <SpaceInfo key={spaceId} spaceId={spaceId} changeSpace={changeSpace} />
                 ))}
             </div>
             {spaceIds.length === 0 && (
@@ -51,16 +47,16 @@ export const SpacesBlock = (props: SpacesBlockProps) => {
 
 const SpaceInfo = ({
     spaceId,
-    setCurrentSpaceId,
+    changeSpace,
 }: {
     spaceId: string
-    setCurrentSpaceId: (spaceId: string) => void
+    changeSpace: (spaceId: string) => void
 }) => {
     const { data: space } = useSpace(spaceId)
     return (
         <JsonHover data={space}>
             <div>
-                <Button variant="outline" onClick={() => setCurrentSpaceId(space.id)}>
+                <Button variant="outline" onClick={() => changeSpace(space.id)}>
                     {space.metadata?.name || 'Unnamed Space'}
                 </Button>
             </div>
@@ -68,8 +64,8 @@ const SpaceInfo = ({
     )
 }
 
-export const CreateSpace = (props: SpacesBlockProps & BlockProps) => {
-    const { setCurrentSpaceId, ...rest } = props
+export const CreateSpace = (props: { onCreateSpace: (spaceId: string) => void } & BlockProps) => {
+    const { onCreateSpace, ...rest } = props
     const { createSpace, isPending } = useCreateSpace()
     const signer = useEthersSigner()
 
@@ -88,7 +84,7 @@ export const CreateSpace = (props: SpacesBlockProps & BlockProps) => {
                             return
                         }
                         const { spaceId } = await createSpace({ spaceName }, signer)
-                        setCurrentSpaceId(spaceId)
+                        onCreateSpace(spaceId)
                     })}
                 >
                     <FormField

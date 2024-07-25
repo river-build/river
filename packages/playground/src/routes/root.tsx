@@ -8,8 +8,8 @@ import { SpacesBlock } from '@/components/blocks/spaces'
 import { type Env, RiverEnvSwitcher } from '@/components/dialog/env-switcher'
 import { TimelineBlock } from '@/components/blocks/timeline'
 import { ChannelsBlock } from '@/components/blocks/channels'
-import { ChannelProvider } from '@/hooks/current-channel'
 import { SpaceProvider } from '@/hooks/current-space'
+import { ChannelProvider } from '@/hooks/current-channel'
 
 export const ConnectRoute = () => {
     const { isConnected: isWalletConnected } = useAccount()
@@ -64,17 +64,23 @@ const ConnectRiver = () => {
 }
 
 const ConnectedContent = () => {
-    const [currentSpaceId, setCurrentSpaceId] = useState<string>()
-    const [currentChannelId, setCurrentChannelId] = useState<string>()
+    const [spaceId, setSpaceId] = useState<string>()
+    const [channelId, setChannelId] = useState<string>()
+
+    const changeSpace = (spaceId: string) => {
+        setSpaceId(spaceId)
+        setChannelId(undefined)
+    }
+    const changeChannel = (channelId: string) => setChannelId(channelId)
 
     return (
         <div className="grid grid-cols-4 gap-4">
             <ConnectionBlock />
             <UserAuthStatusBlock />
-            <SpacesBlock setCurrentSpaceId={setCurrentSpaceId} />
-            <SpaceProvider spaceId={currentSpaceId}>
-                <ChannelsBlock setCurrentChannelId={setCurrentChannelId} />
-                <ChannelProvider channelId={currentChannelId}>
+            <SpacesBlock changeSpace={changeSpace} />
+            <SpaceProvider spaceId={spaceId}>
+                <ChannelsBlock changeChannel={changeChannel} />
+                <ChannelProvider channelId={channelId}>
                     <TimelineBlock />
                 </ChannelProvider>
             </SpaceProvider>

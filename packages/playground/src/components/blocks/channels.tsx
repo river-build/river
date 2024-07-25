@@ -2,8 +2,8 @@ import { useChannel, useCreateChannel, useSpace } from '@river-build/react-sdk'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
-import { useCurrentSpaceId } from '@/hooks/current-space'
 import { useEthersSigner } from '@/utils/viem-to-ethers'
+import { useCurrentSpaceId } from '@/hooks/current-space'
 import {
     Form,
     FormControl,
@@ -19,27 +19,28 @@ import { Input } from '../ui/input'
 import { JsonHover } from '../utils/json-hover'
 
 type ChannelsBlockProps = {
-    setCurrentChannelId: (channelId: string) => void
+    changeChannel: (channelId: string) => void
 }
 
 const formSchema = z.object({
     channelName: z.string().min(1, { message: 'Space name is required' }),
 })
 
-export const ChannelsBlock = (props: ChannelsBlockProps) => {
+export const ChannelsBlock = ({ changeChannel }: ChannelsBlockProps) => {
     const spaceId = useCurrentSpaceId()
     const { data: space } = useSpace(spaceId)
 
     return (
         <Block title={`Channels in ${space.metadata?.name || 'Unnamed Space'}`}>
-            <CreateChannel setCurrentChannelId={props.setCurrentChannelId} variant="secondary" />
+            <CreateChannel variant="secondary" spaceId={spaceId} onChannelCreated={changeChannel} />
             <div className="flex flex-col gap-1">
                 <span className="text-xs">Select a channel to start messaging</span>
                 {space.channelIds.map((channelId) => (
                     <ChannelInfo
                         key={`${spaceId}-${channelId}`}
+                        spaceId={space.id}
                         channelId={channelId}
-                        setCurrentChannelId={props.setCurrentChannelId}
+                        changeChannel={changeChannel}
                     />
                 ))}
             </div>
@@ -53,18 +54,20 @@ export const ChannelsBlock = (props: ChannelsBlockProps) => {
 }
 
 const ChannelInfo = ({
+    spaceId,
     channelId,
-    setCurrentChannelId,
+    changeChannel,
 }: {
+    spaceId: string
     channelId: string
-    setCurrentChannelId: (channelId: string) => void
+    changeChannel: (channelId: string) => void
 }) => {
-    const spaceId = useCurrentSpaceId()
     const { data: channel } = useChannel(spaceId, channelId)
+
     return (
         <JsonHover data={channel}>
             <div>
-                <Button variant="outline" onClick={() => setCurrentChannelId(channelId)}>
+                <Button variant="outline" onClick={() => changeChannel(channelId)}>
                     {channel.metadata?.name || 'Unnamed Channel'}
                 </Button>
             </div>
@@ -74,11 +77,11 @@ const ChannelInfo = ({
 
 export const CreateChannel = (
     props: {
-        setCurrentChannelId: (channelId: string) => void
+        spaceId: string
+        onChannelCreated: (channelId: string) => void
     } & BlockProps,
 ) => {
-    const { setCurrentChannelId, ...rest } = props
-    const spaceId = useCurrentSpaceId()
+    const { onChannelCreated, spaceId, ...rest } = props
     const { createChannel, isPending } = useCreateChannel(spaceId)
     const signer = useEthersSigner()
     const form = useForm<z.infer<typeof formSchema>>({
@@ -97,7 +100,7 @@ export const CreateChannel = (
                             return
                         }
                         const channelId = await createChannel(channelName, signer)
-                        setCurrentChannelId(channelId)
+                        onChannelCreated(channelId)
                     })}
                 >
                     <FormField
