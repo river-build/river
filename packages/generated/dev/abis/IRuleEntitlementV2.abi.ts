@@ -19,7 +19,7 @@ export default [
       {
         "name": "data",
         "type": "tuple",
-        "internalType": "struct IRuleEntitlementBase.RuleData",
+        "internalType": "struct IRuleEntitlementBase.RuleDataV2",
         "components": [
           {
             "name": "operations",
@@ -41,7 +41,7 @@ export default [
           {
             "name": "checkOperations",
             "type": "tuple[]",
-            "internalType": "struct IRuleEntitlementBase.CheckOperation[]",
+            "internalType": "struct IRuleEntitlementBase.CheckOperationV2[]",
             "components": [
               {
                 "name": "opType",
@@ -59,9 +59,9 @@ export default [
                 "internalType": "address"
               },
               {
-                "name": "threshold",
-                "type": "uint256",
-                "internalType": "uint256"
+                "name": "params",
+                "type": "bytes",
+                "internalType": "bytes"
               }
             ]
           },
@@ -120,7 +120,7 @@ export default [
   },
   {
     "type": "function",
-    "name": "getRuleData",
+    "name": "getRuleDataV2",
     "inputs": [
       {
         "name": "roleId",
@@ -132,7 +132,7 @@ export default [
       {
         "name": "data",
         "type": "tuple",
-        "internalType": "struct IRuleEntitlementBase.RuleData",
+        "internalType": "struct IRuleEntitlementBase.RuleDataV2",
         "components": [
           {
             "name": "operations",
@@ -154,7 +154,7 @@ export default [
           {
             "name": "checkOperations",
             "type": "tuple[]",
-            "internalType": "struct IRuleEntitlementBase.CheckOperation[]",
+            "internalType": "struct IRuleEntitlementBase.CheckOperationV2[]",
             "components": [
               {
                 "name": "opType",
@@ -172,9 +172,9 @@ export default [
                 "internalType": "address"
               },
               {
-                "name": "threshold",
-                "type": "uint256",
-                "internalType": "uint256"
+                "name": "params",
+                "type": "bytes",
+                "internalType": "bytes"
               }
             ]
           },

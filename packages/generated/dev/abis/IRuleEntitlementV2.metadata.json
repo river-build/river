@@ -149,7 +149,7 @@
       {
         "inputs": [
           {
-            "internalType": "struct IRuleEntitlementBase.RuleData",
+            "internalType": "struct IRuleEntitlementBase.RuleDataV2",
             "name": "data",
             "type": "tuple",
             "components": [
@@ -171,7 +171,7 @@
                 ]
               },
               {
-                "internalType": "struct IRuleEntitlementBase.CheckOperation[]",
+                "internalType": "struct IRuleEntitlementBase.CheckOperationV2[]",
                 "name": "checkOperations",
                 "type": "tuple[]",
                 "components": [
@@ -191,9 +191,9 @@
                     "type": "address"
                   },
                   {
-                    "internalType": "uint256",
-                    "name": "threshold",
-                    "type": "uint256"
+                    "internalType": "bytes",
+                    "name": "params",
+                    "type": "bytes"
                   }
                 ]
               },
@@ -262,10 +262,10 @@
         ],
         "stateMutability": "view",
         "type": "function",
-        "name": "getRuleData",
+        "name": "getRuleDataV2",
         "outputs": [
           {
-            "internalType": "struct IRuleEntitlementBase.RuleData",
+            "internalType": "struct IRuleEntitlementBase.RuleDataV2",
             "name": "data",
             "type": "tuple",
             "components": [
@@ -287,7 +287,7 @@
                 ]
               },
               {
-                "internalType": "struct IRuleEntitlementBase.CheckOperation[]",
+                "internalType": "struct IRuleEntitlementBase.CheckOperationV2[]",
                 "name": "checkOperations",
                 "type": "tuple[]",
                 "components": [
@@ -307,9 +307,9 @@
                     "type": "address"
                   },
                   {
-                    "internalType": "uint256",
-                    "name": "threshold",
-                    "type": "uint256"
+                    "internalType": "bytes",
+                    "name": "params",
+                    "type": "bytes"
                   }
                 ]
               },
@@ -452,7 +452,7 @@
     "devdoc": {
       "kind": "dev",
       "methods": {
-        "encodeRuleData(((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[]))": {
+        "encodeRuleData(((uint8,uint8)[],(uint8,uint256,address,bytes)[],(uint8,uint8,uint8)[]))": {
           "params": {
             "data": "RuleData struct to encode"
           },
@@ -468,12 +468,12 @@
             "_0": "entitlementData array for the role"
           }
         },
-        "getRuleData(uint256)": {
+        "getRuleDataV2(uint256)": {
           "params": {
             "roleId": "Role ID"
           },
           "returns": {
-            "data": "RuleData struct"
+            "data": "RuleDataV2 struct"
           }
         },
         "isCrosschain()": {
@@ -511,14 +511,14 @@
         "description()": {
           "notice": "The description of the entitlement module"
         },
-        "encodeRuleData(((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[]))": {
+        "encodeRuleData(((uint8,uint8)[],(uint8,uint256,address,bytes)[],(uint8,uint8,uint8)[]))": {
           "notice": "Encodes the RuleData struct into bytes"
         },
         "getEntitlementDataByRoleId(uint256)": {
           "notice": "fetches the entitlement data for a roleId"
         },
-        "getRuleData(uint256)": {
-          "notice": "Decodes the RuleData struct from bytes"
+        "getRuleDataV2(uint256)": {
+          "notice": "Decodes the RuleDataV2 struct from bytes"
         },
         "initialize(address)": {
           "notice": "initializes the entitlement module"
@@ -565,7 +565,7 @@
       "appendCBOR": false
     },
     "compilationTarget": {
-      "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol": "IRuleEntitlement"
+      "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol": "IRuleEntitlementV2"
     },
     "evmVersion": "paris",
     "libraries": {}
