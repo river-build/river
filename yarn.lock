@@ -3701,7 +3701,7 @@ __metadata:
     nanoid: ^4.0.0
     p-limit: ^5.0.0
     seedrandom: ^3.0.5
-    supports-color: ^9.2.3
+    supports-color: ^9.4.0
     ts-jest: ^29.1.1
     ts-node: ^10.9.1
     typed-emitter: ^2.1.0
@@ -17177,10 +17177,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"supports-color@npm:^9.2.3":
-  version: 9.3.1
-  resolution: "supports-color@npm:9.3.1"
-  checksum: 00c4d1082a7ba0ee21cba1d4e4a466642635412e40476777b530aa5110d035e99a420cd048e1fb6811f2254c0946095fbb87a1eccf1af1d1ca45ab0a4535db93
+"supports-color@npm:^9.4.0":
+  version: 9.4.0
+  resolution: "supports-color@npm:9.4.0"
+  checksum: cb8ff8daeaf1db642156f69a9aa545b6c01dd9c4def4f90a49f46cbf24be0c245d392fcf37acd119cd1819b99dad2cc9b7e3260813f64bcfd7f5b18b5a1eefb8
   languageName: node
   linkType: hard
 
