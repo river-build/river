@@ -124,6 +124,7 @@ import { SyncState, SyncedStreams } from './syncedStreams'
 import { SyncedStream } from './syncedStream'
 import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
+import { decryptAesGcm } from './crypto_utils'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
@@ -696,10 +697,7 @@ export class Client
             )
         }
 
-        const streamId =
-            !channelId && spaceId
-                ? makeMediaStreamIdFromSpaceId(spaceId)
-                : makeUniqueMediaStreamId()
+        const streamId = makeUniqueMediaStreamId()
 
         this.logCall('createMedia', channelId ?? spaceId, streamId)
 
@@ -1362,6 +1360,23 @@ export class Client
             chunkIndex: chunkIndex,
         })
         return this.makeEventWithHashAndAddToStream(streamId, payload, prevMiniblockHash)
+    }
+
+    async getMediaPayload(
+        streamId: string,
+        secretKey: Uint8Array,
+        iv: Uint8Array,
+    ): Promise<Uint8Array | undefined> {
+        const stream = await this.getStream(streamId)
+        const mediaInfo = stream.mediaContent.info
+        if (!mediaInfo) {
+            return undefined
+        }
+        const data = mediaInfo.chunks.reduce((acc, chunk) => {
+            return new Uint8Array([...acc, ...chunk])
+        }, new Uint8Array())
+
+        return decryptAesGcm(data, secretKey, iv)
     }
 
     async sendChannelMessage_Reaction(
