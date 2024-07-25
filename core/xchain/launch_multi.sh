@@ -20,6 +20,32 @@ echo $$ > "$SCRIPT_PID_FILE"
 
 make build
 
+# Register operator
+source ../../contracts/.env.localhost
+OPERATOR_ADDRESS=$(cast wallet addr $LOCAL_PRIVATE_KEY)
+
+echo "Registration of operator $OPERATOR_ADDRESS in base registry at address $BASE_REGISTRY_ADDRESS"
+
+# register operator
+cast send \
+    --rpc-url http://127.0.0.1:8545 \
+    --private-key $LOCAL_PRIVATE_KEY \
+    $BASE_REGISTRY_ADDRESS \
+    "registerOperator(address)" \
+    $OPERATOR_ADDRESS \
+    2 > /dev/null
+
+# set operator to approved
+cast send \
+    --rpc-url http://127.0.0.1:8545 \
+    --private-key $TESTNET_PRIVATE_KEY \
+    $BASE_REGISTRY_ADDRESS \
+    "setOperatorStatus(address,uint8)" \
+    $OPERATOR_ADDRESS \
+    2 \
+    2 > /dev/null
+
+
 # Get number of instances by counting instance directories
 N=$(ls -d ${BASE_DIR}/instance_* 2>/dev/null | wc -l)
 
@@ -62,6 +88,16 @@ do
   INSTANCE_DIR="${BASE_DIR}/instance_${i}"
   cp ../run_files/bin/river_node "${INSTANCE_DIR}/bin/river_node"
   pushd "${INSTANCE_DIR}"
+
+      NODE_ADDRESS=$(cat wallet/node_address)
+      echo "Registration of node $NODE_ADDRESS in base registry at address $BASE_REGISTRY_ADDRESS"
+      cast send \
+        --rpc-url http://127.0.0.1:8545 \
+        --private-key $LOCAL_PRIVATE_KEY \
+        $BASE_REGISTRY_ADDRESS \
+        "registerNode(address)" \
+        $NODE_ADDRESS \
+        2 > /dev/null
 
   "./bin/river_node" run xchain &
   node_pid=$!
