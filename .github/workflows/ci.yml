@@ -299,10 +299,7 @@ jobs:
               uses: actions/upload-artifact@v4
               with:
                   name: 'river-node-${{ github.job }}'
-                  path: |
-                      ./core/node/run_files/
-                      ./core/xchain/run_files/
-                      !./core/**/bin/**
+                  path: ./core/run_files/
 
     Multinode:
         permissions: write-all
@@ -433,10 +430,7 @@ jobs:
               uses: actions/upload-artifact@v4
               with:
                   name: 'river-node-${{ github.job }}'
-                  path: |
-                      ./core/node/run_files/
-                      ./core/xchain/run_files/
-                      !./core/**/bin/**
+                  path: ./core/run_files/
 
     Client_Entitlements:
         permissions: write-all
@@ -573,10 +567,7 @@ jobs:
               uses: actions/upload-artifact@v4
               with:
                   name: 'river-node-${{ github.job }}'
-                  path: |
-                      ./core/node/run_files/
-                      ./core/xchain/run_files/
-                      !./core/**/bin/**
+                  path: ./core/run_files/
 
     Multinode_Ent:
         permissions: write-all
@@ -710,10 +701,7 @@ jobs:
               uses: actions/upload-artifact@v4
               with:
                   name: 'river-node-${{ github.job }}'
-                  path: |
-                      ./core/node/run_files/
-                      ./core/xchain/run_files/
-                      !./core/**/bin/**
+                  path: ./core/run_files/
 
     Go_Tests:
         permissions: write-all
