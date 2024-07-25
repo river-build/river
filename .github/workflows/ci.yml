@@ -300,8 +300,7 @@ jobs:
               with:
                   name: 'river-node-${{ github.job }}'
                   path: |
-                      ./core/node/run_files/
-                      ./core/xchain/run_files/
+                      ./core/run_files/
                       !./core/**/bin/**
 
     Multinode:
@@ -434,8 +433,7 @@ jobs:
               with:
                   name: 'river-node-${{ github.job }}'
                   path: |
-                      ./core/node/run_files/
-                      ./core/xchain/run_files/
+                      ./core/run_files/
                       !./core/**/bin/**
 
     Client_Entitlements:
@@ -574,8 +572,7 @@ jobs:
               with:
                   name: 'river-node-${{ github.job }}'
                   path: |
-                      ./core/node/run_files/
-                      ./core/xchain/run_files/
+                      ./core/run_files/
                       !./core/**/bin/**
 
     Multinode_Ent:
@@ -711,10 +708,8 @@ jobs:
               with:
                   name: 'river-node-${{ github.job }}'
                   path: |
-                      ./core/node/run_files/
-                      ./core/xchain/run_files/
+                      ./core/run_files/
                       !./core/**/bin/**
-
     Go_Tests:
         permissions: write-all
         if: github.event_name != 'workflow_dispatch' || !inputs.skip_go
