@@ -299,7 +299,9 @@ jobs:
               uses: actions/upload-artifact@v4
               with:
                   name: 'river-node-${{ github.job }}'
-                  path: ./core/run_files/
+                  path: |
+                      ./core/run_files/
+                      !./core/**/bin/**
 
     Multinode:
         permissions: write-all
@@ -430,7 +432,9 @@ jobs:
               uses: actions/upload-artifact@v4
               with:
                   name: 'river-node-${{ github.job }}'
-                  path: ./core/run_files/
+                  path: |
+                      ./core/run_files/
+                      !./core/**/bin/**
 
     Client_Entitlements:
         permissions: write-all
@@ -567,7 +571,9 @@ jobs:
               uses: actions/upload-artifact@v4
               with:
                   name: 'river-node-${{ github.job }}'
-                  path: ./core/run_files/
+                  path: |
+                      ./core/run_files/
+                      !./core/**/bin/**
 
     Multinode_Ent:
         permissions: write-all
@@ -701,8 +707,9 @@ jobs:
               uses: actions/upload-artifact@v4
               with:
                   name: 'river-node-${{ github.job }}'
-                  path: ./core/run_files/
-
+                  path: |
+                      ./core/run_files/
+                      !./core/**/bin/**
     Go_Tests:
         permissions: write-all
         if: github.event_name != 'workflow_dispatch' || !inputs.skip_go
