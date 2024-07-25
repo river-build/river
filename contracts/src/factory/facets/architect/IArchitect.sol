@@ -56,6 +56,33 @@ interface IArchitectBase {
   error Architect__InvalidNetworkId();
   error Architect__InvalidAddress();
   error Architect__NotContract();
+  error Architect__InvalidEntitlementVersion();
+}
+
+interface IArchitectBaseV2 is IArchitectBase {
+  // =============================================================
+  //                           STRUCTS
+  // =============================================================
+  struct MembershipRequirementsV2 {
+    bool everyone;
+    address[] users;
+    bytes ruleDataV2;
+  }
+
+  struct MembershipV2 {
+    IMembershipBase.Membership settings;
+    MembershipRequirementsV2 requirements;
+    string[] permissions;
+  }
+
+  struct SpaceInfoV2 {
+    string name;
+    string uri;
+    MembershipV2 membership;
+    ChannelInfo channel;
+    string shortDescription;
+    string longDescription;
+  }
 }
 
 interface IArchitect is IArchitectBase {
@@ -90,4 +117,12 @@ interface IArchitect is IArchitectBase {
       IUserEntitlement userEntitlementImplementation,
       IRuleEntitlement ruleEntitlementImplementation
     );
+}
+
+interface IArchitectV2 is IArchitect, IArchitectBaseV2 {
+  /// @notice Creates a new space with V2 Entitlements
+  /// @param SpaceInfo Space information
+  function createSpaceV2(
+    SpaceInfoV2 memory SpaceInfo
+  ) external returns (address);
 }

@@ -2,10 +2,10 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {IArchitectBase} from "./IArchitect.sol";
+import {IArchitectBase, IArchitectBaseV2} from "./IArchitect.sol";
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 import {IUserEntitlement} from "contracts/src/spaces/entitlements/user/IUserEntitlement.sol";
-import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
+import {IRuleEntitlement, IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {IRoles, IRolesBase} from "contracts/src/spaces/facets/roles/IRoles.sol";
 import {IChannel} from "contracts/src/spaces/facets/channels/IChannel.sol";
 import {IEntitlementsManager} from "contracts/src/spaces/facets/entitlements/IEntitlementsManager.sol";
@@ -88,6 +88,14 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
     IRuleEntitlement ruleEntitlement = IRuleEntitlement(
       _deployEntitlement(ims.ruleEntitlement, spaceAddress)
     );
+
+    // Confirm that deployed RuleEntitlement is expected version.
+    if (
+      keccak256(abi.encodePacked(ruleEntitlement.moduleType())) !=
+      keccak256(abi.encodePacked("RuleEntitlement"))
+    ) {
+      revert Architect__InvalidEntitlementVersion();
+    }
 
     address[] memory entitlements = new address[](2);
     entitlements[0] = address(userEntitlement);
@@ -302,6 +310,198 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
   function _getSpaceDeploymentInfo(
     uint256 spaceTokenId,
     Membership memory membership
+  ) internal view returns (bytes memory initCode, bytes32 salt) {
+    ImplementationStorage.Layout storage ds = ImplementationStorage.layout();
+
+    // calculate salt
+    salt = keccak256(abi.encode(msg.sender, spaceTokenId, block.timestamp));
+
+    // calculate init code
+    initCode = abi.encodePacked(
+      type(SpaceProxy).creationCode,
+      abi.encode(
+        msg.sender,
+        IManagedProxyBase.ManagedProxy({
+          managerSelector: IProxyManager.getImplementation.selector,
+          manager: address(this)
+        }),
+        ITokenOwnableBase.TokenOwnable({
+          collection: address(ds.spaceToken),
+          tokenId: spaceTokenId
+        }),
+        IMembershipBase.Membership({
+          name: membership.settings.name,
+          symbol: membership.settings.symbol,
+          price: membership.settings.price,
+          maxSupply: membership.settings.maxSupply,
+          duration: membership.settings.duration,
+          currency: membership.settings.currency,
+          feeRecipient: membership.settings.feeRecipient == address(0)
+            ? msg.sender
+            : membership.settings.feeRecipient,
+          freeAllocation: membership.settings.freeAllocation,
+          pricingModule: membership.settings.pricingModule
+        })
+      )
+    );
+  }
+}
+
+abstract contract ArchitectBaseV2 is ArchitectBase, IArchitectBaseV2 {
+  function _createSpaceV2(
+    SpaceInfoV2 memory spaceInfo
+  ) internal returns (address spaceAddress) {
+    ArchitectStorage.Layout storage ds = ArchitectStorage.layout();
+    ImplementationStorage.Layout storage ims = ImplementationStorage.layout();
+
+    // get the token id of the next space
+    uint256 spaceTokenId = ims.spaceToken.nextTokenId();
+
+    // deploy space
+    spaceAddress = _deploySpaceV2(spaceTokenId, spaceInfo.membership);
+
+    // save space info to storage
+    ds.spaceCount++;
+
+    // save to mappings
+    ds.spaceByTokenId[spaceTokenId] = spaceAddress;
+    ds.tokenIdBySpace[spaceAddress] = spaceTokenId;
+
+    // mint token to and transfer to Architect
+    ims.spaceToken.mintSpace(
+      spaceInfo.name,
+      spaceInfo.uri,
+      spaceAddress,
+      spaceInfo.shortDescription,
+      spaceInfo.longDescription
+    );
+
+    // deploy user entitlement
+    IUserEntitlement userEntitlement = IUserEntitlement(
+      _deployEntitlement(ims.userEntitlement, spaceAddress)
+    );
+
+    // deploy token entitlement (Assume the implementation is an IRuleEntitlementV2)
+    IRuleEntitlementV2 ruleEntitlementV2 = IRuleEntitlementV2(
+      _deployEntitlement(ims.ruleEntitlement, spaceAddress)
+    );
+
+    if (
+      keccak256(abi.encodePacked(ruleEntitlementV2.moduleType())) !=
+      keccak256(abi.encodePacked("RuleEntitlementV2"))
+    ) {
+      revert Architect__InvalidEntitlementVersion();
+    }
+
+    address[] memory entitlements = new address[](2);
+    entitlements[0] = address(userEntitlement);
+    entitlements[1] = address(ruleEntitlementV2);
+
+    // set entitlements as immutable
+    IEntitlementsManager(spaceAddress).addImmutableEntitlements(entitlements);
+
+    // create minter role with requirements
+    _createMinterEntitlementV2(
+      spaceAddress,
+      userEntitlement,
+      ruleEntitlementV2,
+      spaceInfo.membership.requirements
+    );
+
+    // create member role with membership as the requirement
+    uint256 memberRoleId = _createMemberEntitlement(
+      spaceAddress,
+      spaceInfo.membership.settings.name,
+      spaceInfo.membership.permissions,
+      userEntitlement
+    );
+
+    // create default channel
+    _createDefaultChannel(spaceAddress, memberRoleId, spaceInfo.channel);
+
+    // transfer nft to sender
+    IERC721A(address(ims.spaceToken)).safeTransferFrom(
+      address(this),
+      msg.sender,
+      spaceTokenId
+    );
+
+    // emit event
+    emit SpaceCreated(msg.sender, spaceTokenId, spaceAddress);
+  }
+
+  function _createMinterEntitlementV2(
+    address spaceAddress,
+    IUserEntitlement userEntitlement,
+    IRuleEntitlementV2 ruleEntitlementV2,
+    MembershipRequirementsV2 memory requirements
+  ) internal returns (uint256 roleId) {
+    string[] memory joinPermissions = new string[](1);
+    joinPermissions[0] = Permissions.JoinSpace;
+
+    roleId = IRoles(spaceAddress).createRole(
+      MINTER_ROLE,
+      joinPermissions,
+      new IRolesBase.CreateEntitlement[](0)
+    );
+
+    if (requirements.everyone) {
+      address[] memory users = new address[](1);
+      users[0] = EVERYONE_ADDRESS;
+
+      IRoles(spaceAddress).addRoleToEntitlement(
+        roleId,
+        IRolesBase.CreateEntitlement({
+          module: userEntitlement,
+          data: abi.encode(users)
+        })
+      );
+    } else {
+      if (requirements.users.length != 0) {
+        // validate users
+        for (uint256 i = 0; i < requirements.users.length; ) {
+          Validator.checkAddress(requirements.users[i]);
+          unchecked {
+            i++;
+          }
+        }
+
+        IRoles(spaceAddress).addRoleToEntitlement(
+          roleId,
+          IRolesBase.CreateEntitlement({
+            module: userEntitlement,
+            data: abi.encode(requirements.users)
+          })
+        );
+      }
+
+      IRoles(spaceAddress).addRoleToEntitlement(
+        roleId,
+        IRolesBase.CreateEntitlement({
+          module: ruleEntitlementV2,
+          data: requirements.ruleDataV2
+        })
+      );
+    }
+
+    return roleId;
+  }
+
+  function _deploySpaceV2(
+    uint256 spaceTokenId,
+    MembershipV2 memory membership
+  ) internal returns (address space) {
+    // get deployment info
+    (bytes memory initCode, bytes32 salt) = _getSpaceDeploymentV2Info(
+      spaceTokenId,
+      membership
+    );
+    return _deploy(initCode, salt);
+  }
+
+  function _getSpaceDeploymentV2Info(
+    uint256 spaceTokenId,
+    MembershipV2 memory membership
   ) internal view returns (bytes memory initCode, bytes32 salt) {
     ImplementationStorage.Layout storage ds = ImplementationStorage.layout();
 

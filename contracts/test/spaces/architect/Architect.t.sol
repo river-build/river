@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.sol";
+import {IArchitectBase, IArchitectBaseV2} from "contracts/src/factory/facets/architect/IArchitect.sol";
 import {IEntitlementsManager} from "contracts/src/spaces/facets/entitlements/IEntitlementsManager.sol";
 import {IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -35,6 +35,7 @@ import {Validator__InvalidStringLength} from "contracts/src/utils/Validator.sol"
 contract ArchitectTest is
   BaseSetup,
   IArchitectBase,
+  IArchitectBaseV2,
   IOwnableBase,
   IPausableBase
 {
