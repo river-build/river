@@ -9,7 +9,10 @@ import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEnti
 import {IUserEntitlement} from "contracts/src/spaces/entitlements/user/IUserEntitlement.sol";
 
 // libraries
+import {StringSet} from "contracts/src/utils/StringSet.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {ChannelService} from "contracts/src/spaces/facets/channels/ChannelService.sol";
+import {RolesStorage} from "contracts/src/spaces/facets/roles/RolesStorage.sol";
 
 // contracts
 import {RolesBase} from "contracts/src/spaces/facets/roles/RolesBase.sol";
@@ -21,6 +24,9 @@ contract EntitlementDataQueryable is
   RolesBase,
   Facet
 {
+  using StringSet for StringSet.Set;
+  using EnumerableSet for EnumerableSet.Bytes32Set;
+
   function getEntitlementDataByPermission(
     string calldata permission
   ) external view returns (EntitlementData[] memory) {
@@ -45,23 +51,38 @@ contract EntitlementDataQueryable is
   ) internal view returns (Role[] memory) {
     uint256[] memory channelRoles = ChannelService.getRolesByChannel(channelId);
 
-    uint256 roleCount = 0;
-    uint256[] memory matchedRoleIds = new uint256[](channelRoles.length);
+    uint256 channelRolesLength = channelRoles.length;
 
-    bytes32 requestedPermission = keccak256(abi.encodePacked(permission));
+    uint256 roleCount = 0;
+    uint256[] memory matchedRoleIds = new uint256[](channelRolesLength);
+
+    RolesStorage.Layout storage rs = RolesStorage.layout();
 
     // Count the number of roles that have the requested permission and record their ids.
-    for (uint256 i = 0; i < channelRoles.length; i++) {
-      Role memory role = _getRoleById(channelRoles[i]);
-      if (role.disabled) {
+    for (uint256 i = 0; i < channelRolesLength; i++) {
+      uint256 roleId = channelRoles[i];
+
+      RolesStorage.Role storage role = rs.roleById[channelRoles[i]];
+
+      if (role.isImmutable) {
         continue;
       }
-      // Check if the role has the requested permission.
-      for (uint256 j = 0; j < role.permissions.length; j++) {
-        if (keccak256(bytes(role.permissions[j])) == requestedPermission) {
-          matchedRoleIds[roleCount] = role.id;
+
+      // Get the role's channels channelsByRole and get permissionByChannelIdByRoleId
+      if (rs.channelsByRole[roleId].contains(channelId)) {
+        if (
+          rs.permissionByChannelIdByRoleId[roleId][channelId].contains(
+            permission
+          )
+        ) {
+          matchedRoleIds[roleCount] = roleId;
           roleCount++;
-          break;
+        }
+      } else {
+        // Check if the role has the requested permission.
+        if (rs.roleById[roleId].permissions.contains(permission)) {
+          matchedRoleIds[roleCount] = roleId;
+          roleCount++;
         }
       }
     }

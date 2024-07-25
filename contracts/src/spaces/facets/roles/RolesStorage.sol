@@ -25,6 +25,9 @@ library RolesStorage {
     uint256 roleCount;
     EnumerableSet.UintSet roles;
     mapping(uint256 roleId => Role) roleById;
+    // Overwrite permissions at a channel level given a role has been assigned to it
+    mapping(uint256 roleId => EnumerableSet.Bytes32Set) channelsByRole;
+    mapping(uint256 roleId => mapping(bytes32 channelId => StringSet.Set)) permissionByChannelIdByRoleId;
   }
 
   function layout() internal pure returns (Layout storage ds) {
