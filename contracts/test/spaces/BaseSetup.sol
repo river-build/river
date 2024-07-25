@@ -28,7 +28,7 @@ import {SpaceOwner} from "contracts/src/spaces/facets/owner/SpaceOwner.sol";
 import {ISpaceDelegation} from "contracts/src/base/registry/facets/delegation/ISpaceDelegation.sol";
 
 // deployments
-import {DeploySpaceFactory} from "contracts/scripts/deployments/DeploySpaceFactory.s.sol";
+import {DeploySpaceFactory,DeploySpaceFactoryV2} from "contracts/scripts/deployments/DeploySpaceFactory.s.sol";
 import {DeployRiverBase} from "contracts/scripts/deployments/DeployRiverBase.s.sol";
 import {DeployProxyBatchDelegation} from "contracts/scripts/deployments/DeployProxyBatchDelegation.s.sol";
 import {DeployBaseRegistry} from "contracts/scripts/deployments/DeployBaseRegistry.s.sol";
@@ -86,9 +86,7 @@ contract BaseSetup is TestUtils, SpaceHelper {
 
   MockMessenger internal messenger;
 
-  // @notice - This function is called before each test function
-  // @dev - It will create a new diamond contract and set the spaceFactory variable to the address of the "diamond" variable
-  function setUp() public virtual {
+  function commonSetup(DeploySpaceFactory versionedDeploySpaceFactory) public {
     deployer = getDeployer();
 
     operators = _createAccounts(10);
@@ -110,12 +108,12 @@ contract BaseSetup is TestUtils, SpaceHelper {
     claimers = deployProxyBatchDelegation.claimers();
 
     // Space Factory Diamond
-    spaceFactory = deploySpaceFactory.deploy();
-    userEntitlement = deploySpaceFactory.userEntitlement();
-    ruleEntitlement = deploySpaceFactory.ruleEntitlement();
-    spaceOwner = deploySpaceFactory.spaceOwner();
-    pricingModule = deploySpaceFactory.tieredLogPricing();
-    fixedPricingModule = deploySpaceFactory.fixedPricing();
+    spaceFactory = versionedDeploySpaceFactory.deploy();
+    userEntitlement = versionedDeploySpaceFactory.userEntitlement();
+    ruleEntitlement = versionedDeploySpaceFactory.ruleEntitlement();
+    spaceOwner = versionedDeploySpaceFactory.spaceOwner();
+    pricingModule = versionedDeploySpaceFactory.tieredLogPricing();
+    fixedPricingModule = versionedDeploySpaceFactory.fixedPricing();
     walletLink = IWalletLink(spaceFactory);
     implementationRegistry = IImplementationRegistry(spaceFactory);
     eip712Facet = EIP712Facet(spaceFactory);
@@ -137,6 +135,18 @@ contract BaseSetup is TestUtils, SpaceHelper {
     // create a new space
     founder = _randomAddress();
 
+    // POST DEPLOY
+    vm.startPrank(deployer);
+    ISpaceOwner(spaceOwner).setFactory(spaceFactory);
+    IImplementationRegistry(spaceFactory).addImplementation(baseRegistry);
+    ISpaceDelegation(baseRegistry).setRiverToken(riverToken);
+    ISpaceDelegation(baseRegistry).setMainnetDelegation(baseRegistry);
+    IMainnetDelegation(baseRegistry).setProxyDelegation(mainnetProxyDelegation);
+    MockMessenger(messenger).setXDomainMessageSender(mainnetProxyDelegation);
+    vm.stopPrank();
+  }
+
+  function createV1Spaces() public {
     // Create the arguments necessary for creating a space
     IArchitectBase.SpaceInfo memory spaceInfo = _createSpaceInfo(
       "BaseSetupSpace"
@@ -156,7 +166,15 @@ contract BaseSetup is TestUtils, SpaceHelper {
 
     // _registerOperators();
     // _registerNodes();
+
   }
+  
+  // @notice - This function is called before each test function
+  // @dev - It will create a new diamond contract and set the spaceFactory variable to the address of the "diamond" variable
+  function setUp() public virtual {
+    commonSetup(deploySpaceFactory);
+    createV1Spaces();
+  } 
 
   function _registerOperators() internal {
     for (uint256 i = 0; i < operators.length; i++) {
@@ -247,5 +265,13 @@ contract BaseSetup is TestUtils, SpaceHelper {
           nonce
         )
       );
+  }
+}
+
+contract BaseSetupV2 is BaseSetup {
+  function setUp() public override {
+    deploySpaceFactory = DeploySpaceFactoryV2();
+    commonSetup(deploySpaceFactory);
+    createV2Spaces();
   }
 }

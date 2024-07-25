@@ -23,14 +23,14 @@ import {DeployDiamondCut} from "contracts/scripts/deployments/facets/DeployDiamo
 import {DeployDiamondLoupe} from "contracts/scripts/deployments/facets/DeployDiamondLoupe.s.sol";
 import {DeployIntrospection} from "contracts/scripts/deployments/facets/DeployIntrospection.s.sol";
 import {DeployMetadata} from "contracts/scripts/deployments/facets/DeployMetadata.s.sol";
-import {DeployArchitect} from "contracts/scripts/deployments/facets/DeployArchitect.s.sol";
+import {DeployArchitect,DeployArchitectV2} from "contracts/scripts/deployments/facets/DeployArchitect.s.sol";
 import {DeployProxyManager} from "contracts/scripts/deployments/facets/DeployProxyManager.s.sol";
 
 import {DeployUserEntitlement} from "contracts/scripts/deployments/DeployUserEntitlement.s.sol";
 import {DeployMultiInit} from "contracts/scripts/deployments/DeployMultiInit.s.sol";
 import {DeploySpace} from "contracts/scripts/deployments/DeploySpace.s.sol";
 import {DeploySpaceOwner} from "contracts/scripts/deployments/DeploySpaceOwner.s.sol";
-import {DeployRuleEntitlement} from "contracts/scripts/deployments/DeployRuleEntitlement.s.sol";
+import {DeployRuleEntitlement,DeployRuleEntitlementV2} from "contracts/scripts/deployments/DeployRuleEntitlement.s.sol";
 import {DeployWalletLink} from "contracts/scripts/deployments/facets/DeployWalletLink.s.sol";
 import {DeployTieredLogPricing} from "contracts/scripts/deployments/DeployTieredLogPricing.s.sol";
 import {DeployFixedPricing} from "contracts/scripts/deployments/DeployFixedPricing.s.sol";
@@ -99,17 +99,13 @@ contract DeploySpaceFactory is DiamondDeployer {
     return "spaceFactory";
   }
 
-  function diamondInitParams(
-    address deployer
+  function deployCommon(
+    address deployer,
+    address multiInit,
+    address space
   ) public override returns (Diamond.InitParams memory) {
-    address multiInit = deployMultiInit.deploy();
-
-    address space = deploySpace.deploy();
     spaceOwner = deploySpaceOwner.deploy();
-
-    // entitlement modules
     userEntitlement = deployUserEntitlement.deploy();
-    ruleEntitlement = deployRuleEntitlement.deploy();
 
     // pricing modules
     tieredLogPricing = deployTieredLogPricing.deploy();
@@ -128,7 +124,6 @@ contract DeploySpaceFactory is DiamondDeployer {
     introspection = introspectionHelper.deploy();
     metadata = metadataHelper.deploy();
 
-    architect = architectHelper.deploy();
     registry = registryHelper.deploy();
     walletLink = walletLinkHelper.deploy();
     proxyManager = proxyManagerHelper.deploy();
@@ -163,15 +158,7 @@ contract DeploySpaceFactory is DiamondDeployer {
       ownable,
       ownableHelper.makeInitData(deployer)
     );
-    addFacet(
-      architectHelper.makeCut(architect, IDiamond.FacetCutAction.Add),
-      architect,
-      architectHelper.makeInitData(
-        spaceOwner, // spaceOwner
-        userEntitlement, // userEntitlement
-        ruleEntitlement // ruleEntitlement
-      )
-    );
+   
     addFacet(
       proxyManagerHelper.makeCut(proxyManager, IDiamond.FacetCutAction.Add),
       proxyManager,
@@ -216,6 +203,37 @@ contract DeploySpaceFactory is DiamondDeployer {
       eip712,
       eip712Helper.makeInitData("SpaceFactory", "1")
     );
+  }
+
+  function deployV1(
+    address deployer,
+    address multiInit,
+    address space
+  ) public override returns (Diamond.InitParams memory) {
+    ruleEntitlement = deployRuleEntitlement.deploy();
+    architect = architectHelper.deploy();
+
+    addFacet(
+      architectHelper.makeCut(architect, IDiamond.FacetCutAction.Add),
+      architect,
+      architectHelper.makeInitData(
+        spaceOwner, // spaceOwner
+        userEntitlement, // userEntitlement
+        ruleEntitlement // ruleEntitlement
+      )
+    );
+  }
+
+  function diamondInitParams(
+    address deployer
+  ) public override returns (Diamond.InitParams memory) {
+    address multiInit = deployMultiInit.deploy();
+
+    address space = deploySpace.deploy();
+    spaceOwner = deploySpaceOwner.deploy();
+
+    deployCommon(deployer, multiInit, space);
+    deployV1(deployer, multiInit, space);
 
     return
       Diamond.InitParams({
@@ -234,4 +252,57 @@ contract DeploySpaceFactory is DiamondDeployer {
   //   ISpaceOwner(spaceOwner).setFactory(spaceFactory);
   //   vm.stopBroadcast();
   // }
+}
+
+contract DeploySpaceFactoryV2 is DeploySpaceFactory {
+  DeployArchitectV2 architectHelperV2 = new DeployArchitectV2();
+  DeployRuleEntitlementV2 ruleEntitlementHelperV2 = new DeployRuleEntitlementV2();
+
+  function versionName() public pure override returns (string memory) {
+    return "spaceFactoryV2";
+  }
+
+  function deployV2(
+    address deployer,
+    address multiInit,
+    address space
+  ) public override returns (Diamond.InitParams memory) {
+    ruleEntitlement = deployRuleEntitlementV2.deploy();
+    architect = architectHelperV2.deploy();
+
+    addFacet(
+      architectHelper.makeCut(architect, IDiamond.FacetCutAction.Add),
+      architect,
+      architectHelper.makeInitData(
+        spaceOwner, // spaceOwner
+        userEntitlement, // userEntitlement
+        ruleEntitlement // ruleEntitlement
+      )
+    );
+
+  }
+
+  function diamondInitParams(
+    address deployer
+  ) public override returns (Diamond.InitParams memory) {
+    address multiInit = deployMultiInit.deploy();
+
+    address space = deploySpace.deploy();
+    spaceOwner = deploySpaceOwner.deploy();
+
+    deployCommon(deployer, multiInit, space);
+    deployV2(deployer, multiInit, space);
+
+    return
+      Diamond.InitParams({
+        baseFacets: baseFacets(),
+        init: multiInit,
+        initData: abi.encodeWithSelector(
+          MultiInit.multiInit.selector,
+          _initAddresses,
+          _initDatas
+        )
+      });
+  }
+
 }
