@@ -6,19 +6,14 @@
 import { makeEvent, unpackStream } from './sign'
 import { SyncState, SyncedStreams, stateConstraints } from './syncedStreams'
 import { makeDonePromise, makeRandomUserContext, makeTestRpcClient, waitFor } from './util.test'
-import { makeUserInboxStreamId, makeUserStreamId, streamIdToBytes, userIdFromAddress } from './id'
-import {
-    make_UserInboxPayload_Ack,
-    make_UserInboxPayload_Inception,
-    make_UserPayload_Inception,
-} from './types'
+import { makeUserInboxStreamId, streamIdToBytes, userIdFromAddress } from './id'
+import { make_UserInboxPayload_Ack, make_UserInboxPayload_Inception } from './types'
 import { dlog } from '@river-build/dlog'
 import TypedEmitter from 'typed-emitter'
 import EventEmitter from 'events'
 import { StreamEvents } from './streamEvents'
 import { SyncedStream } from './syncedStream'
 import { StubPersistenceStore } from './persistenceStore'
-import { StreamRpcClient } from './makeStreamRpcClient'
 import { PartialMessage, PlainMessage } from '@bufbuild/protobuf'
 import { Envelope, StreamEvent } from '@river-build/proto'
 
