@@ -4,7 +4,6 @@
 
 import crypto from 'crypto'
 
-// Utility functions
 function bufferToUint8Array(buffer: Buffer): Uint8Array {
     return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength)
 }
@@ -13,61 +12,38 @@ function uint8ArrayToBuffer(uint8Array: Uint8Array): Buffer {
     return Buffer.from(uint8Array.buffer, uint8Array.byteOffset, uint8Array.byteLength)
 }
 
-// Generate fixed salt
-async function generateFixedSalt(seedPhrase: string): Promise<Uint8Array> {
-    const encoder = new TextEncoder()
-    const seedBuffer = encoder.encode(seedPhrase)
+// Helper function to produce enough key material
+function getExtendedKeyMaterial(seedBuffer: Uint8Array, length: number): Uint8Array {
+    const hash = crypto.createHash('sha256')
+    hash.update(uint8ArrayToBuffer(seedBuffer))
+    let keyMaterial = bufferToUint8Array(hash.digest())
 
-    const hashBuffer = await digest('SHA-256', seedBuffer)
-    return new Uint8Array(hashBuffer).slice(0, 16) // Use the first 16 bytes as the salt
+    while (keyMaterial.length < length) {
+        const newHash = crypto.createHash('sha256')
+        newHash.update(uint8ArrayToBuffer(keyMaterial))
+        keyMaterial = new Uint8Array([...keyMaterial, ...bufferToUint8Array(newHash.digest())])
+    }
+
+    return keyMaterial.slice(0, length)
 }
 
-// Derive key and IV
-export async function deriveKeyAndIV(
-    seedPhrase: string,
-): Promise<{ key: Uint8Array; iv: Uint8Array }> {
+// Derive key and IV from seed phrase
+export function deriveKeyAndIV(seedPhrase: string): { key: Uint8Array; iv: Uint8Array } {
     const encoder = new TextEncoder()
     const seedBuffer = encoder.encode(seedPhrase)
 
-    const salt = await generateFixedSalt(seedPhrase)
-    const keyMaterialBuffer = await pbkdf2(seedBuffer, salt, 100000, 44) // Derive 44 bytes of key material
+    const keyMaterial = getExtendedKeyMaterial(seedBuffer, 32 + 12) // 32 bytes for key, 12 bytes for IV
 
-    if (keyMaterialBuffer.length < 44) {
+    if (keyMaterial.length < 32 + 12) {
         throw new Error(
             'Key material is too short. Ensure the digest function produces enough bytes.',
         )
     }
 
-    const key = keyMaterialBuffer.slice(0, 32) // AES-256 key
-    const iv = keyMaterialBuffer.slice(32, 44) // Next 12 bytes as IV
+    const key = keyMaterial.slice(0, 32) // AES-256 key
+    const iv = keyMaterial.slice(32, 32 + 12) // AES-GCM IV
 
-    if (iv.length !== 12) throw new Error('Derived IV is not 12 bytes long.')
     return { key, iv }
-}
-
-// PBKDF2 function
-async function pbkdf2(
-    password: Uint8Array,
-    salt: Uint8Array,
-    iterations: number,
-    keyLength: number,
-): Promise<Uint8Array> {
-    return new Promise((resolve, reject) => {
-        crypto.pbkdf2(
-            uint8ArrayToBuffer(password),
-            uint8ArrayToBuffer(salt),
-            iterations,
-            keyLength,
-            'sha256',
-            (err, derivedKey) => {
-                if (err) {
-                    reject(err)
-                } else {
-                    resolve(bufferToUint8Array(derivedKey))
-                }
-            },
-        )
-    })
 }
 
 // Encrypt function
@@ -78,6 +54,14 @@ export async function encryptAesGcm(
 ): Promise<Uint8Array> {
     return new Promise((resolve, reject) => {
         try {
+            if (key.length !== 32) {
+                throw new Error('Invalid key length. AES-256-GCM requires a 32-byte key.')
+            }
+
+            if (iv.length !== 12) {
+                throw new Error('Invalid IV length. AES-256-GCM requires a 12-byte IV.')
+            }
+
             const cipher = crypto.createCipheriv(
                 'aes-256-gcm',
                 uint8ArrayToBuffer(key),
@@ -87,7 +71,12 @@ export async function encryptAesGcm(
                 cipher.update(uint8ArrayToBuffer(data)),
                 cipher.final(),
             ])
-            resolve(bufferToUint8Array(encrypted))
+
+            // Ensure authentication tag is included
+            const authTag = cipher.getAuthTag()
+            const encryptedWithTag = Buffer.concat([encrypted, authTag])
+
+            resolve(bufferToUint8Array(encryptedWithTag))
         } catch (err) {
             reject(err)
         }
@@ -102,27 +91,31 @@ export async function decryptAesGcm(
 ): Promise<Uint8Array> {
     return new Promise((resolve, reject) => {
         try {
+            if (key.length !== 32) {
+                throw new Error('Invalid key length. AES-256-GCM requires a 32-byte key.')
+            }
+
+            if (iv.length !== 12) {
+                throw new Error('Invalid IV length. AES-256-GCM requires a 12-byte IV.')
+            }
+
+            const encryptedBuffer = uint8ArrayToBuffer(encrypted)
+            const authTag = uint8ArrayToBuffer(encryptedBuffer.slice(encryptedBuffer.length - 16))
+            const encryptedContent = uint8ArrayToBuffer(
+                encryptedBuffer.slice(0, encryptedBuffer.length - 16),
+            )
+
             const decipher = crypto.createDecipheriv(
                 'aes-256-gcm',
                 uint8ArrayToBuffer(key),
                 uint8ArrayToBuffer(iv),
             )
-            const decrypted = Buffer.concat([
-                decipher.update(uint8ArrayToBuffer(encrypted)),
-                decipher.final(),
-            ])
+            decipher.setAuthTag(authTag)
+
+            const decrypted = Buffer.concat([decipher.update(encryptedContent), decipher.final()])
             resolve(bufferToUint8Array(decrypted))
         } catch (err) {
             reject(err)
         }
-    })
-}
-
-// Digest function
-async function digest(algorithm: string, data: Uint8Array): Promise<Buffer> {
-    return new Promise((resolve) => {
-        const hash = crypto.createHash(algorithm)
-        hash.update(uint8ArrayToBuffer(data))
-        resolve(hash.digest())
     })
 }
