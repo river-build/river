@@ -349,7 +349,7 @@ func (x *xchain) handleEntitlementCheckRequest(
 			}, nil
 		}
 	}
-	log.Debug(
+	log.Info(
 		"EntitlementCheckRequested not for this xchain instance",
 		"selectedNodes", request.SelectedNodes,
 		"nodeAddress", x.baseChain.Wallet.Address.Hex(),
