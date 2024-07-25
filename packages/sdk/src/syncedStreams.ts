@@ -147,6 +147,10 @@ export class SyncedStreams {
         return this.streams.size
     }
 
+    public getSyncId(): string | undefined {
+        return this.syncId
+    }
+
     public getStreams(): SyncedStream[] {
         return Array.from(this.streams.values())
     }
@@ -593,7 +597,16 @@ export class SyncedStreams {
         }
     }
 
-    private syncDown(streamId: Uint8Array): void {
+    private syncDown(
+        streamId: Uint8Array,
+        retryParams?: { syncId: string; retryCount: number },
+    ): void {
+        if (this.syncId === undefined) {
+            return
+        }
+        if (retryParams !== undefined && retryParams.syncId !== this.syncId) {
+            return
+        }
         if (streamId === undefined || streamId.length === 0) {
             this.logError('syncDown: streamId is empty')
             return
@@ -612,8 +625,24 @@ export class SyncedStreams {
             this.logError('syncDown: syncCookie not found', streamIdAsString(streamId))
             return
         }
+        const syncId = this.syncId
+        const retryCount = retryParams?.retryCount ?? 0
         this.addStreamToSync(cookie).catch((err) => {
-            this.logError('syncDown: addStreamToSync error', err)
+            const retryDelay = Math.min(1000 * Math.pow(2, retryCount), 60000)
+            this.logError(
+                'syncDown: addStreamToSync error',
+                err,
+                'retryParams',
+                retryParams,
+                'retryDelay',
+                retryDelay,
+            )
+            setTimeout(() => {
+                this.syncDown(streamId, {
+                    syncId,
+                    retryCount: retryCount + 1,
+                })
+            }, retryDelay)
         })
     }
 
