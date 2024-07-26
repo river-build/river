@@ -108,6 +108,7 @@ export class Space extends PersistedObservable<SpaceModel> {
     }
 
     getChannel(channelId: string): Channel {
+        console.log('!!getChannel', this.data.id, channelId)
         if (!this.channels[channelId]) {
             this.channels[channelId] = new Channel(
                 channelId,

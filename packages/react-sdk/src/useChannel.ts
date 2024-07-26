@@ -8,6 +8,7 @@ import { useObservable } from './useObservable'
  *  Views a channel by its channelId and spaceId.
  */
 export const useChannel = (spaceId: string, channelId: string) => {
+    console.log('useChannel', spaceId, channelId)
     const sync = useSyncAgent()
     const channel = useMemo(
         () => sync.spaces.getSpace(spaceId).getChannel(channelId),

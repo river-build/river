@@ -29,7 +29,7 @@ const formSchema = z.object({
 export const ChannelsBlock = (props: ChannelsBlockProps) => {
     const spaceId = useCurrentSpaceId()
     const { data: space } = useSpace(spaceId)
-
+    console.log('ChannelsBlock', spaceId, space.id, space.channelIds)
     return (
         <Block title={`Channels in ${space.metadata?.name || 'Unnamed Space'}`}>
             <CreateChannel setCurrentChannelId={props.setCurrentChannelId} variant="secondary" />
@@ -38,6 +38,7 @@ export const ChannelsBlock = (props: ChannelsBlockProps) => {
                 {space.channelIds.map((channelId) => (
                     <ChannelInfo
                         key={`${spaceId}-${channelId}`}
+                        spaceId={spaceId}
                         channelId={channelId}
                         setCurrentChannelId={props.setCurrentChannelId}
                     />
@@ -53,13 +54,15 @@ export const ChannelsBlock = (props: ChannelsBlockProps) => {
 }
 
 const ChannelInfo = ({
+    spaceId,
     channelId,
     setCurrentChannelId,
 }: {
+    spaceId: string
     channelId: string
     setCurrentChannelId: (channelId: string) => void
 }) => {
-    const spaceId = useCurrentSpaceId()
+    console.log('ChannelInfo', spaceId, channelId)
     const { data: channel } = useChannel(spaceId, channelId)
     return (
         <JsonHover data={channel}>

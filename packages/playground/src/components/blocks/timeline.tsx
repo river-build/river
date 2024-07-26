@@ -13,6 +13,7 @@ import { Input } from '../ui/input'
 export const TimelineBlock = () => {
     const spaceId = useCurrentSpaceId()
     const channelId = useCurrentChannelId()
+    console.log('TimelineBlock', spaceId, channelId)
     const { data: channel } = useChannel(spaceId, channelId)
     const { data: timeline } = useTimeline(spaceId, channelId)
     return (

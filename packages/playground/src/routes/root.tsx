@@ -1,6 +1,7 @@
 import { useAccount, useConnect } from 'wagmi'
 import { useRiverConnection } from '@river-build/react-sdk'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
+import { makeDefaultChannelStreamId } from '@river-build/sdk'
 import { Button } from '@/components/ui/button'
 import { UserAuthStatusBlock } from '@/components/blocks/auth-block'
 import { ConnectionBlock } from '@/components/blocks/connection-block'
@@ -64,17 +65,29 @@ const ConnectRiver = () => {
 }
 
 const ConnectedContent = () => {
-    const [currentSpaceId, setCurrentSpaceId] = useState<string>()
-    const [currentChannelId, setCurrentChannelId] = useState<string>()
-
+    const [currentIds, setCurrentIds] = useState<{ channelId: string; spaceId: string }>()
+    console.log('!!!! conected contenct', currentIds)
+    const setCurrentSpaceId = useCallback((spaceId: string) => {
+        console.log('!!!! wrappedSetCurrentSpaceId', { spaceId })
+        setCurrentIds({ spaceId, channelId: makeDefaultChannelStreamId(spaceId) })
+    }, [])
+    const setCurrentChannelId = useCallback((channelId: string) => {
+        console.log('!!!! wrappedSetCurrentChannelId', { channelId })
+        setCurrentIds((ids) => {
+            if (!ids) {
+                return undefined
+            }
+            return { ...ids, channelId }
+        })
+    }, [])
     return (
         <div className="grid grid-cols-4 gap-4">
             <ConnectionBlock />
             <UserAuthStatusBlock />
             <SpacesBlock setCurrentSpaceId={setCurrentSpaceId} />
-            <SpaceProvider spaceId={currentSpaceId}>
+            <SpaceProvider spaceId={currentIds?.spaceId}>
                 <ChannelsBlock setCurrentChannelId={setCurrentChannelId} />
-                <ChannelProvider channelId={currentChannelId}>
+                <ChannelProvider channelId={currentIds?.channelId}>
                     <TimelineBlock />
                 </ChannelProvider>
             </SpaceProvider>

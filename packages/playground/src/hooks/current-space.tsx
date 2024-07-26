@@ -14,6 +14,7 @@ export const SpaceProvider = ({
     spaceId?: string
     children: React.ReactNode
 }) => {
+    console.log('SpaceProvider', spaceId)
     return (
         <SpaceContext.Provider value={{ spaceId }}>
             {spaceId ? children : null}

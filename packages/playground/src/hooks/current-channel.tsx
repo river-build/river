@@ -13,6 +13,7 @@ export const ChannelProvider = ({
     channelId?: string
     children: React.ReactNode
 }) => {
+    console.log('ChannelProvider', channelId)
     return (
         <ChannelContext.Provider value={{ channelId }}>
             {channelId ? children : null}

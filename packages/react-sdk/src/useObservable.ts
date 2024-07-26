@@ -17,7 +17,7 @@ export type ObservableConfig<Data> = Data extends PersistedModel<infer Unwrapped
           onError?: (error: Error) => void
       }
 
-type ObservableValue<Data> = Data extends PersistedModel<infer UnwrappedData>
+export type ObservableValue<Data> = Data extends PersistedModel<infer UnwrappedData>
     ? {
           // Its a persisted object - PersistedObservable<T>
           data: UnwrappedData
@@ -55,6 +55,7 @@ export function useObservable<T>(
         isPersisted<T>(observable.value) ? observable.value.data : observable.value,
     )
 
+    console.log('useObservable1', { ob: observable.value, value })
     const opts = useMemo(
         () => ({ fireImmediately: true, ...config }),
         [config],
@@ -112,6 +113,6 @@ export function useObservable<T>(
             }
         }
     }, [value]) as ObservableValue<T>
-
+    console.log('useObservable2', { ob: observable.value, data })
     return data
 }
