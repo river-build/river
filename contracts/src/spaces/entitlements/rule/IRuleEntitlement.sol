@@ -107,6 +107,12 @@ interface IRuleEntitlementBase {
     LogicalOperation[] logicalOperations;
   }
 
+  // Mock check events sometimes utilize the 'threshold' field
+  // as a way to branch the evaluation result for testing.
+  struct MockParams {
+    uint256 threshold;
+  }
+
   struct ERC721Params {
     uint256 threshold;
   }
