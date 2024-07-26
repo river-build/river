@@ -23,6 +23,24 @@ generate_go() {
         --out "${OUT_DIR}/${GO_NAME}.go"
 }
 
+generate_go_nested() {
+    local DIR=$1
+    local PACKAGE=$2
+    local SOURCE_FILE=$3
+    local CONTRACT=$4
+    local GO_NAME=$5
+
+    local OUT_DIR="core/contracts/${DIR}"
+    mkdir -p "${OUT_DIR}"
+
+    go run github.com/ethereum/go-ethereum/cmd/abigen@${ABIGEN_VERSION} \
+        --abi contracts/out/${SOURCE_FILE}.sol/${CONTRACT}.abi.json \
+        --bin contracts/out/${SOURCE_FILE}.sol/${CONTRACT}.bin \
+        --pkg "${PACKAGE}" \
+        --type "${GO_NAME}" \
+        --out "${OUT_DIR}/${GO_NAME}.go"
+}
+
 # Base (and other) contracts interfaces
 generate_go base base IArchitect architect
 generate_go base base Channels channels
@@ -37,6 +55,7 @@ generate_go base base IEntitlementChecker i_entitlement_checker
 generate_go base base IEntitlementGated i_entitlement_gated
 generate_go base base IEntitlement i_entitlement
 generate_go base base ICustomEntitlement i_custom_entitlement
+generate_go_nested base base MockEventEmitter IEventEmitter i_event_emitter
 
 # Full Base (and other) contracts for deployment from tests
 generate_go base/deploy deploy MockCustomEntitlement mock_custom_entitlement
