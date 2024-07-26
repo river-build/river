@@ -24,6 +24,7 @@ import {
     MemberPayload_Nft,
     CreateStreamRequest,
     AddEventResponse_Error,
+    MediaInfo,
 } from '@river-build/proto'
 import {
     bin_fromHexString,
@@ -112,6 +113,7 @@ import {
     make_MemberPayload_Nft,
     make_MemberPayload_Pin,
     make_MemberPayload_Unpin,
+    make_SpacePayload_SpaceImage,
 } from './types'
 
 import debug from 'debug'
@@ -825,6 +827,21 @@ export class Client
             }),
             { method: 'updateUserBlock' },
         )
+    }
+
+    async setSpaceImage(spaceId: string, mediaStreamId: string, info: MediaInfo) {
+        this.logCall('setSpaceImage', spaceId, mediaStreamId, info)
+
+        const event = make_SpacePayload_SpaceImage({
+            info,
+            streamId: mediaStreamId,
+            encryption: {
+                case: 'derived',
+                value: {},
+            },
+        })
+
+        return this.makeEventAndAddToStream(spaceId, event, { method: 'setSpaceImage' })
     }
 
     async setDisplayName(streamId: string, displayName: string) {
