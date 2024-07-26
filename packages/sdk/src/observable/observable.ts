@@ -18,10 +18,6 @@ export class Observable<T> {
         return this._value
     }
 
-    getValue(): T {
-        return this.value
-    }
-
     setValue(newValue: T) {
         this._value = newValue
         this.notify()
