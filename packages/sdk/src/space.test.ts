@@ -5,8 +5,14 @@
 import { makeTestClient, makeUniqueSpaceStreamId, waitFor } from './util.test'
 import { Client } from './client'
 import { dlog } from '@river-build/dlog'
-import { makeUniqueChannelStreamId } from './id'
-import { MembershipOp } from '@river-build/proto'
+import { makeUniqueChannelStreamId, makeUniqueMediaStreamId } from './id'
+import {
+    ChunkedMedia,
+    ChunkedMedia_DerivedAESGCM,
+    MediaInfo,
+    MembershipOp,
+} from '@river-build/proto'
+import { protoInt64 } from '@bufbuild/protobuf'
 
 const log = dlog('csb:test')
 
@@ -122,6 +128,85 @@ describe('spaceTests', () => {
                     spaceStream.view.snapshot.content.value.channels.length === 1 &&
                     spaceStream.view.snapshot.content.value.channels[0].updatedAtEventNum >
                         prevUpdatedAt,
+            ).toBe(true)
+        })
+    })
+
+    test('spaceImage', async () => {
+        const spaceId = makeUniqueSpaceStreamId()
+        await expect(bobsClient.createSpace(spaceId)).toResolve()
+        const spaceStream = await bobsClient.waitForStream(spaceId)
+
+        // assert assumptions
+        expect(spaceStream).toBeDefined()
+        expect(
+            spaceStream.view.snapshot?.content.case === 'spaceContent' &&
+                spaceStream.view.snapshot?.content.value.spaceMedia === undefined,
+        ).toBe(true)
+
+        // make a space image event
+        const mediaStreamId = makeUniqueMediaStreamId()
+        const image = new MediaInfo({
+            mimetype: 'image/png',
+            filename: 'bob-1.png',
+        })
+
+        await bobsClient.setSpaceImage(spaceId, mediaStreamId, image)
+
+        // make a snapshot
+        await bobsClient.debugForceMakeMiniblock(spaceId, { forceSnapshot: true })
+
+        // see the space image in the snapshot
+        await waitFor(() => {
+            expect(
+                spaceStream.view.snapshot?.content.case === 'spaceContent' &&
+                    spaceStream.view.snapshot.content.value.spaceMedia !== undefined &&
+                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage !== undefined &&
+                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.streamId ===
+                        mediaStreamId &&
+                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.info !==
+                        undefined &&
+                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.info.mimetype ===
+                        'image/png' &&
+                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.info.filename ===
+                        'bob-1.png' &&
+                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.encryption
+                        ?.case === 'derived' &&
+                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.encryption
+                        .value !== undefined,
+            ).toBe(true)
+        })
+
+        // make another space image event
+        const mediaStreamId2 = makeUniqueMediaStreamId()
+        const image2 = new MediaInfo({
+            mimetype: 'image/jpg',
+            filename: 'bob-2.jpg',
+        })
+
+        await bobsClient.setSpaceImage(spaceId, mediaStreamId2, image2)
+
+        // make a snapshot
+        await bobsClient.debugForceMakeMiniblock(spaceId, { forceSnapshot: true })
+
+        // see the space image in the snapshot
+        await waitFor(() => {
+            expect(
+                spaceStream.view.snapshot?.content.case === 'spaceContent' &&
+                    spaceStream.view.snapshot.content.value.spaceMedia !== undefined &&
+                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage !== undefined &&
+                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.streamId ===
+                        mediaStreamId2 &&
+                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.info !==
+                        undefined &&
+                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.info.mimetype ===
+                        'image/jpg' &&
+                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.info.filename ===
+                        'bob-2.jpg' &&
+                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.encryption
+                        ?.case === 'derived' &&
+                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.encryption
+                        .value !== undefined,
             ).toBe(true)
         })
     })
