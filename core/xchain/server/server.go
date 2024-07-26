@@ -336,7 +336,11 @@ func (x *xchain) handleEntitlementCheckRequest(
 
 	for _, selectedNodeAddress := range request.SelectedNodes {
 		if selectedNodeAddress == x.baseChain.Wallet.Address {
-			log.Info("Processing EntitlementCheckRequested")
+			log.Info(
+				"Processing EntitlementCheckRequested",
+				"selectedNodes",
+				request.SelectedNodes,
+			)
 			outcome, err := x.process(ctx, request, x.baseChain.Client, request.CallerAddress)
 			if err != nil {
 				return nil, err
