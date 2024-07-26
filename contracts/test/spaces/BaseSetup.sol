@@ -20,7 +20,7 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 import {MockMessenger} from "contracts/test/mocks/MockMessenger.sol";
 
 // deployments
-import {Architect} from "contracts/src/factory/facets/architect/Architect.sol";
+import {Architect, ArchitectV2} from "contracts/src/factory/facets/architect/Architect.sol";
 import {SpaceHelper} from "contracts/test/spaces/SpaceHelper.sol";
 import {RuleEntitlement} from "contracts/src/spaces/entitlements/rule/RuleEntitlement.sol";
 
@@ -28,10 +28,10 @@ import {SpaceOwner} from "contracts/src/spaces/facets/owner/SpaceOwner.sol";
 import {ISpaceDelegation} from "contracts/src/base/registry/facets/delegation/ISpaceDelegation.sol";
 
 // deployments
-import {DeploySpaceFactory,DeploySpaceFactoryV2} from "contracts/scripts/deployments/DeploySpaceFactory.s.sol";
 import {DeployRiverBase} from "contracts/scripts/deployments/DeployRiverBase.s.sol";
 import {DeployProxyBatchDelegation} from "contracts/scripts/deployments/DeployProxyBatchDelegation.s.sol";
 import {DeployBaseRegistry} from "contracts/scripts/deployments/DeployBaseRegistry.s.sol";
+import {DeploySpaceFactory, DeploySpaceFactoryV2} from "contracts/scripts/deployments/DeploySpaceFactory.s.sol";
 
 /*
  * @notice - This is the base setup to start testing the entire suite of contracts
@@ -134,16 +134,6 @@ contract BaseSetup is TestUtils, SpaceHelper {
 
     // create a new space
     founder = _randomAddress();
-
-    // POST DEPLOY
-    vm.startPrank(deployer);
-    ISpaceOwner(spaceOwner).setFactory(spaceFactory);
-    IImplementationRegistry(spaceFactory).addImplementation(baseRegistry);
-    ISpaceDelegation(baseRegistry).setRiverToken(riverToken);
-    ISpaceDelegation(baseRegistry).setMainnetDelegation(baseRegistry);
-    IMainnetDelegation(baseRegistry).setProxyDelegation(mainnetProxyDelegation);
-    MockMessenger(messenger).setXDomainMessageSender(mainnetProxyDelegation);
-    vm.stopPrank();
   }
 
   function createV1Spaces() public {
@@ -166,15 +156,14 @@ contract BaseSetup is TestUtils, SpaceHelper {
 
     // _registerOperators();
     // _registerNodes();
-
   }
-  
+
   // @notice - This function is called before each test function
   // @dev - It will create a new diamond contract and set the spaceFactory variable to the address of the "diamond" variable
   function setUp() public virtual {
     commonSetup(deploySpaceFactory);
     createV1Spaces();
-  } 
+  }
 
   function _registerOperators() internal {
     for (uint256 i = 0; i < operators.length; i++) {
@@ -269,8 +258,27 @@ contract BaseSetup is TestUtils, SpaceHelper {
 }
 
 contract BaseSetupV2 is BaseSetup {
-  function setUp() public override {
-    deploySpaceFactory = DeploySpaceFactoryV2();
+  function createV2Spaces() public {
+    // Create the arguments necessary for creating a space
+    IArchitectBase.SpaceInfoV2 memory spaceInfo = _createSpaceInfoV2(
+      "BaseSetupSpace"
+    );
+    spaceInfo.membership.settings.pricingModule = pricingModule;
+
+    IArchitectBase.SpaceInfoV2
+      memory everyoneSpaceInfo = _createEveryoneSpaceInfoV2(
+        "BaseSetupEveryoneSpace"
+      );
+    everyoneSpaceInfo.membership.settings.pricingModule = fixedPricingModule;
+
+    vm.startPrank(founder);
+    space = ArchitectV2(spaceFactory).createSpaceV2(spaceInfo);
+    everyoneSpace = ArchitectV2(spaceFactory).createSpaceV2(everyoneSpaceInfo);
+    vm.stopPrank();
+  }
+
+  function setUp() public virtual override {
+    deploySpaceFactory = new DeploySpaceFactoryV2();
     commonSetup(deploySpaceFactory);
     createV2Spaces();
   }

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {IArchitectBase, IArchitectBaseV2} from "./IArchitect.sol";
+import {IArchitectBase} from "./IArchitect.sol";
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 import {IUserEntitlement} from "contracts/src/spaces/entitlements/user/IUserEntitlement.sol";
 import {IRuleEntitlement, IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
@@ -347,7 +347,7 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
   }
 }
 
-abstract contract ArchitectBaseV2 is ArchitectBase, IArchitectBaseV2 {
+abstract contract ArchitectBaseV2 is ArchitectBase {
   function _createSpaceV2(
     SpaceInfoV2 memory spaceInfo
   ) internal returns (address spaceAddress) {

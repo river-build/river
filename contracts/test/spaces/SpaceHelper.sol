@@ -45,6 +45,41 @@ abstract contract SpaceHelper {
       });
   }
 
+  function _createUserSpaceInfoV2(
+    string memory spaceId,
+    address[] memory users
+  ) internal pure returns (IArchitectBase.SpaceInfoV2 memory) {
+    return
+      IArchitectBase.SpaceInfoV2({
+        name: spaceId,
+        uri: "ipfs://test",
+        shortDescription: "short description",
+        longDescription: "long description",
+        membership: IArchitectBase.MembershipV2({
+          settings: IMembershipBase.Membership({
+            name: "Member",
+            symbol: "MEM",
+            price: 0,
+            maxSupply: 0,
+            duration: 0,
+            currency: address(0),
+            feeRecipient: address(0),
+            freeAllocation: 0,
+            pricingModule: address(0)
+          }),
+          requirements: IArchitectBase.MembershipRequirementsV2({
+            everyone: false,
+            users: users,
+            ruleDataV2: abi.encode(
+              RuleEntitlementUtil.getMockERC721RuleDataV2()
+            )
+          }),
+          permissions: new string[](0)
+        }),
+        channel: IArchitectBase.ChannelInfo({metadata: "ipfs://test"})
+      });
+  }
+
   function _createSpaceInfo(
     string memory spaceId
   ) internal pure returns (IArchitectBase.SpaceInfo memory) {
@@ -70,6 +105,38 @@ abstract contract SpaceHelper {
             everyone: false,
             users: new address[](0),
             ruleData: RuleEntitlementUtil.getNoopRuleData()
+          }),
+          permissions: new string[](0)
+        }),
+        channel: IArchitectBase.ChannelInfo({metadata: "ipfs://test"})
+      });
+  }
+
+  function _createSpaceInfoV2(
+    string memory spaceId
+  ) internal pure returns (IArchitectBase.SpaceInfoV2 memory) {
+    return
+      IArchitectBase.SpaceInfoV2({
+        name: spaceId,
+        uri: "ipfs://test",
+        shortDescription: "short description",
+        longDescription: "long description",
+        membership: IArchitectBase.MembershipV2({
+          settings: IMembershipBase.Membership({
+            name: "Member",
+            symbol: "MEM",
+            price: 0,
+            maxSupply: 0,
+            duration: 0,
+            currency: address(0),
+            feeRecipient: address(0),
+            freeAllocation: 0,
+            pricingModule: address(0)
+          }),
+          requirements: IArchitectBase.MembershipRequirementsV2({
+            everyone: false,
+            users: new address[](0),
+            ruleDataV2: abi.encode(RuleEntitlementUtil.getNoopRuleDataV2())
           }),
           permissions: new string[](0)
         }),
@@ -113,6 +180,42 @@ abstract contract SpaceHelper {
       });
   }
 
+  function _createEveryoneSpaceInfoV2(
+    string memory spaceId
+  ) internal pure returns (IArchitectBase.SpaceInfoV2 memory) {
+    string[] memory permissions = new string[](2);
+    permissions[0] = Permissions.Read;
+    permissions[1] = Permissions.Write;
+
+    return
+      IArchitectBase.SpaceInfoV2({
+        name: spaceId,
+        uri: "ipfs://test",
+        shortDescription: "short description",
+        longDescription: "long description",
+        membership: IArchitectBase.MembershipV2({
+          settings: IMembershipBase.Membership({
+            name: "Member",
+            symbol: "MEM",
+            price: 0,
+            maxSupply: 0,
+            duration: 0,
+            currency: address(0),
+            feeRecipient: address(0),
+            freeAllocation: 0,
+            pricingModule: address(0)
+          }),
+          requirements: IArchitectBase.MembershipRequirementsV2({
+            everyone: true,
+            users: new address[](0),
+            ruleDataV2: abi.encode(RuleEntitlementUtil.getNoopRuleDataV2())
+          }),
+          permissions: permissions
+        }),
+        channel: IArchitectBase.ChannelInfo({metadata: "ipfs://test"})
+      });
+  }
+
   function _createGatedSpaceInfo(
     string memory townId
   ) internal pure returns (IArchitectBase.SpaceInfo memory) {
@@ -142,6 +245,44 @@ abstract contract SpaceHelper {
             everyone: false,
             users: new address[](0),
             ruleData: RuleEntitlementUtil.getMockERC721RuleData()
+          }),
+          permissions: permissions
+        }),
+        channel: IArchitectBase.ChannelInfo({metadata: "ipfs://test"})
+      });
+  }
+
+  function _createGatedSpaceInfoV2(
+    string memory townId
+  ) internal pure returns (IArchitectBase.SpaceInfoV2 memory) {
+    string[] memory permissions = new string[](2);
+    permissions[0] = Permissions.Read;
+    permissions[1] = Permissions.Write;
+
+    return
+      IArchitectBase.SpaceInfoV2({
+        name: townId,
+        uri: "ipfs://test",
+        shortDescription: "short description",
+        longDescription: "long description",
+        membership: IArchitectBase.MembershipV2({
+          settings: IMembershipBase.Membership({
+            name: "Member",
+            symbol: "MEM",
+            price: 0,
+            maxSupply: 0,
+            duration: 0,
+            currency: address(0),
+            feeRecipient: address(0),
+            freeAllocation: 0,
+            pricingModule: address(0)
+          }),
+          requirements: IArchitectBase.MembershipRequirementsV2({
+            everyone: false,
+            users: new address[](0),
+            ruleDataV2: abi.encode(
+              RuleEntitlementUtil.getMockERC721RuleDataV2()
+            )
           }),
           permissions: permissions
         }),

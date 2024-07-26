@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {IArchitectBase,IArchitectBaseV2} from "contracts/src/factory/facets/architect/IArchitect.sol";
+import {IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.sol";
 import {IEntitlementsManager} from "contracts/src/spaces/facets/entitlements/IEntitlementsManager.sol";
 import {IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
@@ -10,7 +10,7 @@ import {IERC173} from "contracts/src/diamond/facets/ownable/IERC173.sol";
 import {IPausableBase, IPausable} from "contracts/src/diamond/facets/pausable/IPausable.sol";
 import {IGuardian} from "contracts/src/spaces/facets/guardian/IGuardian.sol";
 import {IUserEntitlement} from "contracts/src/spaces/entitlements/user/IUserEntitlement.sol";
-import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
+import {IRuleEntitlement, IRuleEntitlementV2, IRuleEntitlementBase} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {RuleEntitlement} from "contracts/src/spaces/entitlements/rule/RuleEntitlement.sol";
 import {IRoles} from "contracts/src/spaces/facets/roles/IRoles.sol";
 import {IMembership} from "contracts/src/spaces/facets/membership/IMembership.sol";
@@ -22,8 +22,8 @@ import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
 import {RuleEntitlementUtil} from "contracts/test/crosschain/RuleEntitlementUtil.sol";
 
 // contracts
-import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
-import {Architect} from "contracts/src/factory/facets/architect/Architect.sol";
+import {BaseSetup, BaseSetupV2} from "contracts/test/spaces/BaseSetup.sol";
+import {Architect, ArchitectV2} from "contracts/src/factory/facets/architect/Architect.sol";
 import {MockERC721} from "contracts/test/mocks/MockERC721.sol";
 import {UserEntitlement} from "contracts/src/spaces/entitlements/user/UserEntitlement.sol";
 import {WalletLink} from "contracts/src/factory/facets/wallet-link/WalletLink.sol";
@@ -312,6 +312,88 @@ contract ArchitectTest is
         user,
         Permissions.ModifyChannels
       )
+    );
+  }
+}
+
+contract ArchitectV2Test is
+  BaseSetupV2,
+  IArchitectBase,
+  IOwnableBase,
+  IPausableBase
+{
+  ArchitectV2 public spaceArchitect;
+
+  function setUp() public override {
+    super.setUp();
+    spaceArchitect = ArchitectV2(spaceFactory);
+  }
+
+  function test_createSpaceV2() external {
+    string memory name = "Test";
+    address founder = _randomAddress();
+
+    SpaceInfoV2 memory spaceInfo = _createSpaceInfoV2(name);
+    spaceInfo.membership.settings.pricingModule = pricingModule;
+
+    vm.prank(founder);
+    address spaceAddress = spaceArchitect.createSpaceV2(spaceInfo);
+
+    // expect owner to be founder
+    assertTrue(
+      IEntitlementsManager(spaceAddress).isEntitledToSpace(
+        founder,
+        Permissions.Read
+      )
+    );
+
+    // expect no one to be entitled
+    assertFalse(
+      IEntitlementsManager(spaceAddress).isEntitledToSpace(
+        _randomAddress(),
+        Permissions.Read
+      )
+    );
+  }
+
+  function test_minter_role_entitlments() external {
+    string memory name = "Test";
+
+    address founder = _randomAddress();
+
+    vm.prank(founder);
+    IArchitectBase.SpaceInfoV2 memory spaceInfo = _createGatedSpaceInfoV2(name);
+    spaceInfo.membership.settings.pricingModule = pricingModule;
+    address spaceAddress = spaceArchitect.createSpaceV2(spaceInfo);
+
+    IEntitlementsManager.Entitlement[]
+      memory entitlements = IEntitlementsManager(spaceAddress)
+        .getEntitlements();
+
+    address ruleEntitlementAddress;
+
+    for (uint256 i = 0; i < entitlements.length; i++) {
+      if (
+        keccak256(abi.encodePacked(entitlements[i].moduleType)) ==
+        keccak256(abi.encodePacked("RuleEntitlementV2"))
+      ) {
+        ruleEntitlementAddress = entitlements[i].moduleAddress;
+        break;
+      }
+    }
+
+    uint256 minterRoleId = 1;
+    // ruleData for minter role
+    IRuleEntitlementBase.RuleDataV2 memory ruleData = IRuleEntitlementV2(
+      ruleEntitlementAddress
+    ).getRuleDataV2(minterRoleId);
+
+    assertEq(
+      ruleData.checkOperations[0].contractAddress,
+      RuleEntitlementUtil
+        .getMockERC721RuleDataV2()
+        .checkOperations[0]
+        .contractAddress
     );
   }
 }

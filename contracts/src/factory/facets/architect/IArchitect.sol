@@ -39,30 +39,6 @@ interface IArchitectBase {
     string longDescription;
   }
 
-  // =============================================================
-  //                           EVENTS
-  // =============================================================
-  event SpaceCreated(
-    address indexed owner,
-    uint256 indexed tokenId,
-    address indexed space
-  );
-
-  // =============================================================
-  //                           ERRORS
-  // =============================================================
-
-  error Architect__InvalidStringLength();
-  error Architect__InvalidNetworkId();
-  error Architect__InvalidAddress();
-  error Architect__NotContract();
-  error Architect__InvalidEntitlementVersion();
-}
-
-interface IArchitectBaseV2 is IArchitectBase {
-  // =============================================================
-  //                           STRUCTS
-  // =============================================================
   struct MembershipRequirementsV2 {
     bool everyone;
     address[] users;
@@ -83,6 +59,25 @@ interface IArchitectBaseV2 is IArchitectBase {
     string shortDescription;
     string longDescription;
   }
+
+  // =============================================================
+  //                           EVENTS
+  // =============================================================
+  event SpaceCreated(
+    address indexed owner,
+    uint256 indexed tokenId,
+    address indexed space
+  );
+
+  // =============================================================
+  //                           ERRORS
+  // =============================================================
+
+  error Architect__InvalidStringLength();
+  error Architect__InvalidNetworkId();
+  error Architect__InvalidAddress();
+  error Architect__NotContract();
+  error Architect__InvalidEntitlementVersion();
 }
 
 interface IArchitect is IArchitectBase {
@@ -119,7 +114,7 @@ interface IArchitect is IArchitectBase {
     );
 }
 
-interface IArchitectV2 is IArchitect, IArchitectBaseV2 {
+interface IArchitectV2 is IArchitect {
   /// @notice Creates a new space with V2 Entitlements
   /// @param SpaceInfo Space information
   function createSpaceV2(

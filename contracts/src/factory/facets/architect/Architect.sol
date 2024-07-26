@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {IArchitect} from "contracts/src/factory/facets/architect/IArchitect.sol";
+import {IArchitect, IArchitectV2} from "contracts/src/factory/facets/architect/IArchitect.sol";
 import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {ISpaceOwner} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
 import {IUserEntitlement} from "contracts/src/spaces/entitlements/user/IUserEntitlement.sol";
@@ -10,7 +10,7 @@ import {IUserEntitlement} from "contracts/src/spaces/entitlements/user/IUserEnti
 // libraries
 
 // contracts
-import {ArchitectBase} from "./ArchitectBase.sol";
+import {ArchitectBase, ArchitectBaseV2} from "./ArchitectBase.sol";
 import {OwnableBase} from "contracts/src/diamond/facets/ownable/OwnableBase.sol";
 import {ReentrancyGuard} from "contracts/src/diamond/facets/reentrancy/ReentrancyGuard.sol";
 import {PausableBase} from "contracts/src/diamond/facets/pausable/PausableBase.sol";
@@ -79,5 +79,13 @@ contract Architect is
     )
   {
     return _getImplementations();
+  }
+}
+
+contract ArchitectV2 is Architect, IArchitectV2, ArchitectBaseV2 {
+  function createSpaceV2(
+    SpaceInfoV2 memory spaceInfo
+  ) external override nonReentrant whenNotPaused returns (address) {
+    return _createSpaceV2(spaceInfo);
   }
 }

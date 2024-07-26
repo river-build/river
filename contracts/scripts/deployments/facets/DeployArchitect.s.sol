@@ -7,7 +7,7 @@ pragma solidity ^0.8.23;
 
 //contracts
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
-import {Architect,ArchitectV2} from "contracts/src/factory/facets/architect/Architect.sol";
+import {Architect, ArchitectV2} from "contracts/src/factory/facets/architect/Architect.sol";
 import {FacetHelper} from "contracts/test/diamond/Facet.t.sol";
 
 contract DeployArchitect is FacetHelper, Deployer {
@@ -19,7 +19,7 @@ contract DeployArchitect is FacetHelper, Deployer {
     addSelector(Architect.getSpaceArchitectImplementations.selector);
   }
 
-  function initializer() public pure override returns (bytes4) {
+  function initializer() public pure virtual override returns (bytes4) {
     return Architect.__Architect_init.selector;
   }
 
@@ -37,11 +37,13 @@ contract DeployArchitect is FacetHelper, Deployer {
       );
   }
 
-  function versionName() public pure override returns (string memory) {
+  function versionName() public pure virtual override returns (string memory) {
     return "architectFacet";
   }
 
-  function __deploy(address deployer) public override returns (address) {
+  function __deploy(
+    address deployer
+  ) public virtual override returns (address) {
     vm.startBroadcast(deployer);
     Architect architect = new Architect();
     vm.stopBroadcast();
@@ -50,13 +52,8 @@ contract DeployArchitect is FacetHelper, Deployer {
 }
 
 contract DeployArchitectV2 is DeployArchitect {
-  constructor() {
-    super();
-    addSelector(ArchictectV2.createSpaceV2.selector);
-  }
-
-  function initializer() public pure override returns (bytes4) {
-    return ArchitectV2.__Architect_init.selector;
+  constructor() DeployArchitect() {
+    addSelector(ArchitectV2.createSpaceV2.selector);
   }
 
   function versionName() public pure override returns (string memory) {

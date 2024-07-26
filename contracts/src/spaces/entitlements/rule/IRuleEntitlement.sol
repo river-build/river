@@ -106,6 +106,18 @@ interface IRuleEntitlementBase {
     CheckOperationV2[] checkOperations;
     LogicalOperation[] logicalOperations;
   }
+
+  struct ERC721Params {
+    uint256 threshold;
+  }
+
+  struct ERC20Params {
+    uint256 threshold;
+  }
+
+  struct ERC1155Params {
+    uint256 threshold;
+  }
 }
 
 interface IRuleEntitlementV2 is IRuleEntitlementBase, IEntitlement {
