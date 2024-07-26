@@ -54,10 +54,10 @@ export class Space extends PersistedObservable<SpaceModel> {
             client.on('spaceChannelDeleted', this.onSpaceChannelDeleted)
             client.on('spaceChannelUpdated', this.onSpaceChannelUpdated)
             return () => {
+                client.off('streamInitialized', this.onStreamInitialized)
                 client.off('spaceChannelCreated', this.onSpaceChannelCreated)
                 client.off('spaceChannelDeleted', this.onSpaceChannelDeleted)
                 client.off('spaceChannelUpdated', this.onSpaceChannelUpdated)
-                client.off('streamInitialized', this.onStreamInitialized)
             }
         })
     }
@@ -143,8 +143,8 @@ export class Space extends PersistedObservable<SpaceModel> {
                     this.riverConnection,
                     this.store,
                 )
+                this.setData({ channelIds: [...this.data.channelIds, channelId] })
             }
-            this.setData({ channelIds: [...this.data.channelIds, channelId] })
         }
     }
 
