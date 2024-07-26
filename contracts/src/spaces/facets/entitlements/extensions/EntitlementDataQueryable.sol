@@ -49,51 +49,56 @@ contract EntitlementDataQueryable is
     bytes32 channelId,
     string calldata permission
   ) internal view returns (Role[] memory) {
+    // retrive the roles associated with the channel
     uint256[] memory channelRoles = ChannelService.getRolesByChannel(channelId);
-
     uint256 channelRolesLength = channelRoles.length;
 
-    uint256 roleCount = 0;
+    // initialize arrays to store the matching role IDs
     uint256[] memory matchedRoleIds = new uint256[](channelRolesLength);
+    uint256 matchedRoleCount = 0;
 
+    // access roles storage layout
     RolesStorage.Layout storage rs = RolesStorage.layout();
 
-    // Count the number of roles that have the requested permission and record their ids.
+    // iterate through channel roles and check for the requested permission
     for (uint256 i = 0; i < channelRolesLength; i++) {
       uint256 roleId = channelRoles[i];
 
       RolesStorage.Role storage role = rs.roleById[channelRoles[i]];
 
+      // skip immutable roles
       if (role.isImmutable) {
         continue;
       }
 
-      // Get the role's channels channelsByRole and get permissionByChannelIdByRoleId
+      bool hasPermission = false;
+
+      // check if role is associated with the channel and has the requested permission
       if (rs.channelsByRole[roleId].contains(channelId)) {
-        if (
-          rs.permissionByChannelIdByRoleId[roleId][channelId].contains(
-            permission
-          )
-        ) {
-          matchedRoleIds[roleCount] = roleId;
-          roleCount++;
-        }
-      } else {
-        // Check if the role has the requested permission.
-        if (rs.roleById[roleId].permissions.contains(permission)) {
-          matchedRoleIds[roleCount] = roleId;
-          roleCount++;
-        }
+        StringSet.Set storage permissions = rs.permissionByChannelIdByRoleId[
+          roleId
+        ][channelId];
+        hasPermission = permissions.contains(permission);
+      }
+      // check global permissions if role is not channel-specific
+      else if (role.permissions.contains(permission)) {
+        hasPermission = true;
+      }
+
+      // store the role ID if it has the requested permission
+      if (hasPermission) {
+        matchedRoleIds[matchedRoleCount] = roleId;
+        matchedRoleCount++;
       }
     }
 
-    // Assemble the roles that have the requested permission for the specified channel.
-    Role[] memory roles = new Role[](roleCount);
-    for (uint256 i = 0; i < roleCount; i++) {
-      roles[i] = _getRoleById(matchedRoleIds[i]);
+    // create an array of roles with the matching IDs
+    Role[] memory rolesWithPermission = new Role[](matchedRoleCount);
+    for (uint256 i = 0; i < matchedRoleCount; i++) {
+      rolesWithPermission[i] = _getRoleById(matchedRoleIds[i]);
     }
 
-    return roles;
+    return rolesWithPermission;
   }
 
   function _getEntitlements(
