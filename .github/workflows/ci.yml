@@ -813,6 +813,7 @@ jobs:
 
             - name: Run node anvil tests
               run: RIVER_TEST_ANVIL_URL="http://localhost:8545" RIVER_TEST_LOG=info go test -timeout 1m ./... -tags integration
+              working-directory: core
 
     XChain_Integration:
         permissions: write-all
