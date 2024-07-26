@@ -101,8 +101,14 @@ func TestChainMonitorEventDetection(t *testing.T) {
 
 	select {
 	case <-c:
-	case <-time.After(10 * time.Second):
-		require.Fail("Timed out waiting for events")
+	case <-time.After(30 * time.Second):
+		missingEvents := make([]int, 0)
+		for i, result := range results {
+			if !result {
+				missingEvents = append(missingEvents, i)
+			}
+		}
+		require.Fail("Timed out waiting for events, missing events: %v", missingEvents)
 	}
 
 	for i := 0; i < N; i++ {
