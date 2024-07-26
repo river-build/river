@@ -34,6 +34,7 @@ import {
     MemberPayload_KeySolicitation,
     MemberPayload,
     MemberPayload_Nft,
+    ChunkedMedia,
 } from '@river-build/proto'
 import { keccak256 } from 'ethereum-cryptography/keccak'
 import { bin_toHexString } from '@river-build/dlog'
@@ -612,6 +613,20 @@ export const make_SpacePayload_ChannelUpdate = (
         value: {
             content: {
                 case: 'channel',
+                value,
+            },
+        },
+    }
+}
+
+export const make_SpacePayload_SpaceImage = (
+    value: PlainMessage<ChunkedMedia>,
+): PlainMessage<StreamEvent>['payload'] => {
+    return {
+        case: 'spacePayload',
+        value: {
+            content: {
+                case: 'spaceImage',
                 value,
             },
         },
