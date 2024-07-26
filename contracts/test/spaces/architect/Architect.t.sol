@@ -29,6 +29,9 @@ import {UserEntitlement} from "contracts/src/spaces/entitlements/user/UserEntitl
 import {WalletLink} from "contracts/src/factory/facets/wallet-link/WalletLink.sol";
 import {Factory} from "contracts/src/utils/Factory.sol";
 
+// deployments
+import {DeployRuleEntitlement, DeployRuleEntitlementV2} from "contracts/scripts/deployments/DeployRuleEntitlement.s.sol";
+
 // errors
 import {Validator__InvalidStringLength} from "contracts/src/utils/Validator.sol";
 
@@ -72,7 +75,7 @@ contract ArchitectTest is
     );
   }
 
-  function test_minter_role_entitlments() external {
+  function test_minter_role_entitlements() external {
     string memory name = "Test";
 
     address founder = _randomAddress();
@@ -199,6 +202,33 @@ contract ArchitectTest is
     assertTrue(
       IEntitlementsManager(newSpace).isEntitledToSpace(buyer, Permissions.Read)
     );
+  }
+
+  function test_createSpace_revertWhen_ruleEntitlementV2Set(
+    string memory spaceName
+  ) external {
+    vm.assume(bytes(spaceName).length > 2);
+    DeployRuleEntitlementV2 deployRuleEntitlementV2 = new DeployRuleEntitlementV2();
+    address ruleEntitlementV2 = deployRuleEntitlementV2.deploy();
+
+    vm.prank(deployer);
+    spaceArchitect.setSpaceArchitectImplementations(
+      ISpaceOwner(spaceOwner),
+      IUserEntitlement(userEntitlement),
+      IRuleEntitlement(ruleEntitlementV2)
+    );
+    vm.stopPrank();
+
+    address founder = _randomAddress();
+
+    SpaceInfo memory spaceInfo = _createSpaceInfo(spaceName);
+    spaceInfo.membership.settings.pricingModule = pricingModule;
+
+    vm.prank(founder);
+    vm.expectRevert(
+      IArchitectBase.Architect__InvalidEntitlementVersion.selector
+    );
+    spaceArchitect.createSpace(spaceInfo);
   }
 
   function test_revertWhen_createSpaceAndPaused(
@@ -356,7 +386,7 @@ contract ArchitectV2Test is
     );
   }
 
-  function test_minter_role_entitlments() external {
+  function test_minter_role_entitlements() external {
     string memory name = "Test";
 
     address founder = _randomAddress();
@@ -394,6 +424,147 @@ contract ArchitectV2Test is
         .getMockERC721RuleDataV2()
         .checkOperations[0]
         .contractAddress
+    );
+  }
+
+  function test_createSpaceV2_revertWhen_ruleEntitlementV1Set(
+    string memory spaceName
+  ) external {
+    vm.assume(bytes(spaceName).length > 2);
+    DeployRuleEntitlement deployRuleEntitlement = new DeployRuleEntitlement();
+    address ruleEntitlement = deployRuleEntitlement.deploy();
+
+    vm.prank(deployer);
+    spaceArchitect.setSpaceArchitectImplementations(
+      ISpaceOwner(spaceOwner),
+      IUserEntitlement(userEntitlement),
+      IRuleEntitlement(ruleEntitlement)
+    );
+    vm.stopPrank();
+
+    address founder = _randomAddress();
+
+    SpaceInfoV2 memory spaceInfo = _createSpaceInfoV2(spaceName);
+    spaceInfo.membership.settings.pricingModule = pricingModule;
+
+    vm.prank(founder);
+    vm.expectRevert(
+      IArchitectBase.Architect__InvalidEntitlementVersion.selector
+    );
+    spaceArchitect.createSpaceV2(spaceInfo);
+  }
+
+  function test_revertWhen_createSpaceV2AndPaused(
+    string memory spaceName
+  ) external {
+    vm.assume(bytes(spaceName).length > 2);
+
+    vm.prank(deployer);
+    IPausable(address(spaceArchitect)).pause();
+
+    address founder = _randomAddress();
+
+    SpaceInfoV2 memory spaceInfo = _createSpaceInfoV2(spaceName);
+    spaceInfo.membership.settings.pricingModule = pricingModule;
+
+    vm.prank(founder);
+    vm.expectRevert(Pausable__Paused.selector);
+    spaceArchitect.createSpaceV2(spaceInfo);
+
+    vm.prank(deployer);
+    IPausable(address(spaceArchitect)).unpause();
+
+    vm.prank(founder);
+    spaceArchitect.createSpaceV2(spaceInfo);
+  }
+
+  function test_revertIfInvalidSpaceId() external {
+    address founder = _randomAddress();
+
+    vm.expectRevert(Validator__InvalidStringLength.selector);
+
+    SpaceInfoV2 memory spaceInfo = _createSpaceInfoV2("");
+    spaceInfo.membership.settings.pricingModule = pricingModule;
+
+    vm.prank(founder);
+    spaceArchitect.createSpaceV2(spaceInfo);
+  }
+
+  function test_revertIfNotProperReceiver(string memory spaceName) external {
+    vm.assume(bytes(spaceName).length > 2);
+
+    SpaceInfoV2 memory spaceInfo = _createSpaceInfoV2(spaceName);
+    spaceInfo.membership.settings.pricingModule = pricingModule;
+
+    vm.expectRevert(Factory.Factory__FailedDeployment.selector);
+
+    vm.prank(address(this));
+    spaceArchitect.createSpaceV2(spaceInfo);
+  }
+
+  function test_createSpace_updateMemberPermissions(
+    string memory spaceName
+  ) external {
+    vm.assume(bytes(spaceName).length > 2);
+
+    address founder = _randomAddress();
+    address user = _randomAddress();
+
+    SpaceInfoV2 memory spaceInfo = _createEveryoneSpaceInfoV2(spaceName);
+    spaceInfo.membership.settings.pricingModule = pricingModule;
+
+    vm.prank(founder);
+    address spaceInstance = spaceArchitect.createSpaceV2(spaceInfo);
+
+    // have another user join the space
+    vm.prank(user);
+    IMembership(spaceInstance).joinSpace(user);
+
+    // assert that he cannot modify channels
+    assertFalse(
+      IEntitlementsManager(spaceInstance).isEntitledToSpace(
+        user,
+        Permissions.ModifyChannels
+      )
+    );
+
+    // get the current member role
+    IRoles.Role[] memory roles = IRoles(spaceInstance).getRoles();
+    IRoles.Role memory memberRole;
+
+    for (uint256 i = 0; i < roles.length; i++) {
+      if (keccak256(abi.encodePacked(roles[i].name)) == keccak256("Member")) {
+        memberRole = roles[i];
+        break;
+      }
+    }
+
+    // update the permissions of the member role
+    // string[] memory permissions = new string[](3);
+    // permissions[0] = Permissions.Read;
+    // permissions[1] = Permissions.Write;
+    // permissions[2] = Permissions.ModifyChannels;
+    // IRoles.CreateEntitlement[]
+    //   memory entitlements = new IRoles.CreateEntitlement[](0);
+    // vm.prank(founder);
+    // IRoles(spaceInstance).updateRole(
+    //   memberRole.id,
+    //   memberRole.name,
+    //   permissions,
+    //   entitlements
+    // );
+
+    string[] memory permissions = new string[](1);
+    permissions[0] = Permissions.ModifyChannels;
+
+    vm.prank(founder);
+    IRoles(spaceInstance).addPermissionsToRole(memberRole.id, permissions);
+
+    assertTrue(
+      IEntitlementsManager(spaceInstance).isEntitledToSpace(
+        user,
+        Permissions.ModifyChannels
+      )
     );
   }
 }
