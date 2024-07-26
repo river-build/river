@@ -6,19 +6,15 @@ import { Identifiable, Store } from '../../../store/store'
 import { RiverConnection } from '../../river-connection/riverConnection'
 import { Channel } from './channel'
 import { ethers } from 'ethers'
-import { SpaceDapp } from '@river-build/web3'
+import { SpaceDapp, SpaceInfo } from '@river-build/web3'
 
 const logger = dlogger('csb:space')
-
-export interface SpaceMetadata {
-    name: string
-}
 
 export interface SpaceModel extends Identifiable {
     id: string
     initialized: boolean
     channelIds: string[]
-    metadata?: SpaceMetadata
+    metadata?: SpaceInfo
 }
 
 @persistedObservable({ tableName: 'space' })
@@ -36,6 +32,7 @@ export class Space extends PersistedObservable<SpaceModel> {
                 makeDefaultChannelStreamId(id),
                 id,
                 riverConnection,
+                spaceDapp,
                 store,
             ),
         }
@@ -54,12 +51,23 @@ export class Space extends PersistedObservable<SpaceModel> {
             client.on('spaceChannelDeleted', this.onSpaceChannelDeleted)
             client.on('spaceChannelUpdated', this.onSpaceChannelUpdated)
             return () => {
+                client.off('streamInitialized', this.onStreamInitialized)
                 client.off('spaceChannelCreated', this.onSpaceChannelCreated)
                 client.off('spaceChannelDeleted', this.onSpaceChannelDeleted)
                 client.off('spaceChannelUpdated', this.onSpaceChannelUpdated)
-                client.off('streamInitialized', this.onStreamInitialized)
             }
         })
+        if (!this.data.metadata) {
+            // todo aellis this needs retries and batching
+            this.spaceDapp
+                .getSpaceInfo(this.data.id)
+                .then((spaceInfo) => {
+                    this.setData({ metadata: spaceInfo })
+                })
+                .catch((error) => {
+                    logger.error('getSpaceInfo error', error)
+                })
+        }
     }
 
     async join(signer: ethers.Signer, opts?: { skipMintMembership?: boolean }) {
@@ -105,6 +113,7 @@ export class Space extends PersistedObservable<SpaceModel> {
                 channelId,
                 this.data.id,
                 this.riverConnection,
+                this.spaceDapp,
                 this.store,
             )
         }
@@ -126,6 +135,7 @@ export class Space extends PersistedObservable<SpaceModel> {
                         channelId,
                         this.data.id,
                         this.riverConnection,
+                        this.spaceDapp,
                         this.store,
                     )
                 }
@@ -141,10 +151,11 @@ export class Space extends PersistedObservable<SpaceModel> {
                     channelId,
                     this.data.id,
                     this.riverConnection,
+                    this.spaceDapp,
                     this.store,
                 )
+                this.setData({ channelIds: [...this.data.channelIds, channelId] })
             }
-            this.setData({ channelIds: [...this.data.channelIds, channelId] })
         }
     }
 
