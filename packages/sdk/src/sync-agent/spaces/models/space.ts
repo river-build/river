@@ -119,7 +119,7 @@ export class Space extends PersistedObservable<SpaceModel> {
         if (this.data.id === streamId) {
             const stream = this.riverConnection.client?.stream(streamId)
             check(isDefined(stream), 'stream is not defined')
-            const channelIds = stream.view.spaceContent.spaceChannelsMetadata.keys()
+            const channelIds = [...stream.view.spaceContent.spaceChannelsMetadata.keys()]
             for (const channelId of channelIds) {
                 if (!this.channels[channelId]) {
                     this.channels[channelId] = new Channel(
@@ -130,7 +130,7 @@ export class Space extends PersistedObservable<SpaceModel> {
                     )
                 }
             }
-            this.setData({ initialized: true })
+            this.setData({ initialized: true, channelIds: channelIds })
         }
     }
 
