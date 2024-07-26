@@ -79,7 +79,7 @@ generate_go river river IRiverConfig river_config_v1
 generate_go river/deploy deploy MockRiverRegistry mock_river_registry
 
 # Each contract will contain a definition of all types it uses as parameters or return types
-# of methods, even if that struct was defined in another contract. This results in duplicate
+# of methods, even if that struct was defined in another contract, and this sometimes results in duplicate
 # struct declarations. Here, we remove the duplicate struct declarations from the generated
 # files.
 
