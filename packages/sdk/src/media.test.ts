@@ -49,7 +49,7 @@ describe('mediaTests', () => {
         return prevHash
     }
 
-    async function bobSendEncryptedMediaPayloads(
+    async function bobSendEncryptedMediaPayload(
         streamId: string,
         data: Uint8Array,
         key: Uint8Array,
@@ -115,7 +115,7 @@ describe('mediaTests', () => {
         const { iv, key } = deriveKeyAndIV(spaceId)
         const data = createTestMediaChunks(2)
         await expect(
-            bobSendEncryptedMediaPayloads(
+            bobSendEncryptedMediaPayload(
                 mediaStreamInfo.streamId,
                 data,
                 key,
@@ -130,7 +130,7 @@ describe('mediaTests', () => {
         const mediaStreamInfo = await bobCreateSpaceMediaStream(spaceId, 2)
         const { iv, key } = deriveKeyAndIV(spaceId)
         const data = createTestMediaChunks(2)
-        await bobSendEncryptedMediaPayloads(
+        await bobSendEncryptedMediaPayload(
             mediaStreamInfo.streamId,
             data,
             key,
