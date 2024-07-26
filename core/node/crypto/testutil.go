@@ -25,6 +25,7 @@ import (
 	"github.com/river-build/river/core/contracts/river"
 	"github.com/river-build/river/core/contracts/river/deploy"
 	. "github.com/river-build/river/core/node/base"
+	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
 	. "github.com/river-build/river/core/node/protocol"
 )
@@ -324,14 +325,18 @@ func initChainContext(
 		remoteNode        = remoteNodeURL != "" && remoteFundAccount != ""
 	)
 
+	log := dlog.FromCtx(ctx)
 	if remoteNode {
+		log.Info("ChainContext: Using remote node", "url", remoteNodeURL)
 		wallets, client, err := initRemoteNode(ctx, remoteNodeURL, remoteFundAccount, numKeys)
 		return wallets, nil, client, true, err
 	} else if anvilUrl != "" {
+		log.Info("ChainContext: Using Anvil", "url", anvilUrl)
 		wallets, client, err := initAnvil(ctx, anvilUrl, numKeys)
 		return wallets, nil, client, false, err
 	}
 
+	log.Info("ChainContext: Using simulated backend")
 	wallets, backend, err := initSimulated(ctx, numKeys)
 	if err != nil {
 		return nil, nil, nil, false, err
