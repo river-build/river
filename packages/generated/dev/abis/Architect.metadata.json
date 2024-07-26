@@ -914,10 +914,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/facets/gated/EntitlementGatedBase.sol": {
-      "keccak256": "0x7692fe0e871e6d0ba20cb908083044c0a2fd29573becaaf4c56de04bbfc01377",
+      "keccak256": "0xcefa5c3c81c73fefaa7da433ddd5c419dc4c31cd86e8c31f47894663ca7269e8",
       "urls": [
-        "bzz-raw://211dc5a562224c8e223c0501a24409424cf80d9f8ff0129c77bc5148d48a2502",
-        "dweb:/ipfs/QmZnsWzZPG6m1wevVCR7qSKF29ST6XTA7h2DkFEaLE1At5"
+        "bzz-raw://27fe60a48a69d5be67fdf17f5aac1e90ef0234da564ec4f6e2cbfe53fbb9ba0c",
+        "dweb:/ipfs/QmPemsjAUmjjjyLWbHzVmqLxyBAN7CFi6DViy9uQEM3wjt"
       ],
       "license": "MIT"
     },
