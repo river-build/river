@@ -4,7 +4,10 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { IArchitect, IArchitectInterface } from "../IArchitect";
+import type {
+  IArchitect,
+  IArchitectInterface,
+} from "../../IArchitect.sol/IArchitect";
 
 const _abi = [
   {

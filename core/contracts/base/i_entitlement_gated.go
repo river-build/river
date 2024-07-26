@@ -18,44 +18,16 @@ import (
 
 // Reference imports to suppress errors if they are not otherwise used.
 var (
-	_ = errors.New
-	_ = big.NewInt
-	_ = strings.NewReader
-	_ = ethereum.NotFound
-	_ = bind.Bind
-	_ = common.Big1
-	_ = types.BloomLookup
-	_ = event.NewSubscription
-	_ = abi.ConvertType
+	_	= errors.New
+	_	= big.NewInt
+	_	= strings.NewReader
+	_	= ethereum.NotFound
+	_	= bind.Bind
+	_	= common.Big1
+	_	= types.BloomLookup
+	_	= event.NewSubscription
+	_	= abi.ConvertType
 )
-
-// IRuleEntitlementBaseCheckOperation is an auto generated low-level Go binding around an user-defined struct.
-type IRuleEntitlementBaseCheckOperation struct {
-	OpType          uint8
-	ChainId         *big.Int
-	ContractAddress common.Address
-	Threshold       *big.Int
-}
-
-// IRuleEntitlementBaseLogicalOperation is an auto generated low-level Go binding around an user-defined struct.
-type IRuleEntitlementBaseLogicalOperation struct {
-	LogOpType           uint8
-	LeftOperationIndex  uint8
-	RightOperationIndex uint8
-}
-
-// IRuleEntitlementBaseOperation is an auto generated low-level Go binding around an user-defined struct.
-type IRuleEntitlementBaseOperation struct {
-	OpType uint8
-	Index  uint8
-}
-
-// IRuleEntitlementBaseRuleData is an auto generated low-level Go binding around an user-defined struct.
-type IRuleEntitlementBaseRuleData struct {
-	Operations        []IRuleEntitlementBaseOperation
-	CheckOperations   []IRuleEntitlementBaseCheckOperation
-	LogicalOperations []IRuleEntitlementBaseLogicalOperation
-}
 
 // IEntitlementGatedMetaData contains all meta data concerning the IEntitlementGated contract.
 var IEntitlementGatedMetaData = &bind.MetaData{
@@ -68,61 +40,61 @@ var IEntitlementGatedABI = IEntitlementGatedMetaData.ABI
 
 // IEntitlementGated is an auto generated Go binding around an Ethereum contract.
 type IEntitlementGated struct {
-	IEntitlementGatedCaller     // Read-only binding to the contract
-	IEntitlementGatedTransactor // Write-only binding to the contract
-	IEntitlementGatedFilterer   // Log filterer for contract events
+	IEntitlementGatedCaller		// Read-only binding to the contract
+	IEntitlementGatedTransactor	// Write-only binding to the contract
+	IEntitlementGatedFilterer	// Log filterer for contract events
 }
 
 // IEntitlementGatedCaller is an auto generated read-only Go binding around an Ethereum contract.
 type IEntitlementGatedCaller struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+	contract *bind.BoundContract	// Generic contract wrapper for the low level calls
 }
 
 // IEntitlementGatedTransactor is an auto generated write-only Go binding around an Ethereum contract.
 type IEntitlementGatedTransactor struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+	contract *bind.BoundContract	// Generic contract wrapper for the low level calls
 }
 
 // IEntitlementGatedFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
 type IEntitlementGatedFilterer struct {
-	contract *bind.BoundContract // Generic contract wrapper for the low level calls
+	contract *bind.BoundContract	// Generic contract wrapper for the low level calls
 }
 
 // IEntitlementGatedSession is an auto generated Go binding around an Ethereum contract,
 // with pre-set call and transact options.
 type IEntitlementGatedSession struct {
-	Contract     *IEntitlementGated // Generic contract binding to set the session for
-	CallOpts     bind.CallOpts      // Call options to use throughout this session
-	TransactOpts bind.TransactOpts  // Transaction auth options to use throughout this session
+	Contract	*IEntitlementGated	// Generic contract binding to set the session for
+	CallOpts	bind.CallOpts		// Call options to use throughout this session
+	TransactOpts	bind.TransactOpts	// Transaction auth options to use throughout this session
 }
 
 // IEntitlementGatedCallerSession is an auto generated read-only Go binding around an Ethereum contract,
 // with pre-set call options.
 type IEntitlementGatedCallerSession struct {
-	Contract *IEntitlementGatedCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts            // Call options to use throughout this session
+	Contract	*IEntitlementGatedCaller	// Generic contract caller binding to set the session for
+	CallOpts	bind.CallOpts			// Call options to use throughout this session
 }
 
 // IEntitlementGatedTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
 // with pre-set transact options.
 type IEntitlementGatedTransactorSession struct {
-	Contract     *IEntitlementGatedTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts            // Transaction auth options to use throughout this session
+	Contract	*IEntitlementGatedTransactor	// Generic contract transactor binding to set the session for
+	TransactOpts	bind.TransactOpts		// Transaction auth options to use throughout this session
 }
 
 // IEntitlementGatedRaw is an auto generated low-level Go binding around an Ethereum contract.
 type IEntitlementGatedRaw struct {
-	Contract *IEntitlementGated // Generic contract binding to access the raw methods on
+	Contract *IEntitlementGated	// Generic contract binding to access the raw methods on
 }
 
 // IEntitlementGatedCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
 type IEntitlementGatedCallerRaw struct {
-	Contract *IEntitlementGatedCaller // Generic read-only contract binding to access the raw methods on
+	Contract *IEntitlementGatedCaller	// Generic read-only contract binding to access the raw methods on
 }
 
 // IEntitlementGatedTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
 type IEntitlementGatedTransactorRaw struct {
-	Contract *IEntitlementGatedTransactor // Generic write-only contract binding to access the raw methods on
+	Contract *IEntitlementGatedTransactor	// Generic write-only contract binding to access the raw methods on
 }
 
 // NewIEntitlementGated creates a new instance of IEntitlementGated, bound to a specific deployed contract.
@@ -262,15 +234,15 @@ func (_IEntitlementGated *IEntitlementGatedTransactorSession) PostEntitlementChe
 
 // IEntitlementGatedEntitlementCheckResultPostedIterator is returned from FilterEntitlementCheckResultPosted and is used to iterate over the raw logs and unpacked data for EntitlementCheckResultPosted events raised by the IEntitlementGated contract.
 type IEntitlementGatedEntitlementCheckResultPostedIterator struct {
-	Event *IEntitlementGatedEntitlementCheckResultPosted // Event containing the contract specifics and raw log
+	Event	*IEntitlementGatedEntitlementCheckResultPosted	// Event containing the contract specifics and raw log
 
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
+	contract	*bind.BoundContract	// Generic contract to use for unpacking event data
+	event		string			// Event name to use for unpacking event data
 
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
+	logs	chan types.Log		// Log channel receiving the found contract events
+	sub	ethereum.Subscription	// Subscription for errors, completion and termination
+	done	bool			// Whether the subscription completed delivering logs
+	fail	error			// Occurred error to stop iteration
 }
 
 // Next advances the iterator to the subsequent event, returning whether there
@@ -329,9 +301,9 @@ func (it *IEntitlementGatedEntitlementCheckResultPostedIterator) Close() error {
 
 // IEntitlementGatedEntitlementCheckResultPosted represents a EntitlementCheckResultPosted event raised by the IEntitlementGated contract.
 type IEntitlementGatedEntitlementCheckResultPosted struct {
-	TransactionId [32]byte
-	Result        uint8
-	Raw           types.Log // Blockchain specific contextual infos
+	TransactionId	[32]byte
+	Result		uint8
+	Raw		types.Log	// Blockchain specific contextual infos
 }
 
 // FilterEntitlementCheckResultPosted is a free log retrieval operation binding the contract event 0xb9d6ce397e562841871d119aaf77469c60a3b5bf8b99a5d9851656015015c633.

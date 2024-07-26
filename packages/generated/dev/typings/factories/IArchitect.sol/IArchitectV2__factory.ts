@@ -4,7 +4,10 @@
 
 import { Contract, Signer, utils } from "ethers";
 import type { Provider } from "@ethersproject/providers";
-import type { IArchitect, IArchitectInterface } from "../IArchitect";
+import type {
+  IArchitectV2,
+  IArchitectV2Interface,
+} from "../../IArchitect.sol/IArchitectV2";
 
 const _abi = [
   {
@@ -221,6 +224,145 @@ const _abi = [
   },
   {
     type: "function",
+    name: "createSpaceV2",
+    inputs: [
+      {
+        name: "SpaceInfo",
+        type: "tuple",
+        internalType: "struct IArchitectBase.SpaceInfoV2",
+        components: [
+          {
+            name: "name",
+            type: "string",
+            internalType: "string",
+          },
+          {
+            name: "uri",
+            type: "string",
+            internalType: "string",
+          },
+          {
+            name: "membership",
+            type: "tuple",
+            internalType: "struct IArchitectBase.MembershipV2",
+            components: [
+              {
+                name: "settings",
+                type: "tuple",
+                internalType: "struct IMembershipBase.Membership",
+                components: [
+                  {
+                    name: "name",
+                    type: "string",
+                    internalType: "string",
+                  },
+                  {
+                    name: "symbol",
+                    type: "string",
+                    internalType: "string",
+                  },
+                  {
+                    name: "price",
+                    type: "uint256",
+                    internalType: "uint256",
+                  },
+                  {
+                    name: "maxSupply",
+                    type: "uint256",
+                    internalType: "uint256",
+                  },
+                  {
+                    name: "duration",
+                    type: "uint64",
+                    internalType: "uint64",
+                  },
+                  {
+                    name: "currency",
+                    type: "address",
+                    internalType: "address",
+                  },
+                  {
+                    name: "feeRecipient",
+                    type: "address",
+                    internalType: "address",
+                  },
+                  {
+                    name: "freeAllocation",
+                    type: "uint256",
+                    internalType: "uint256",
+                  },
+                  {
+                    name: "pricingModule",
+                    type: "address",
+                    internalType: "address",
+                  },
+                ],
+              },
+              {
+                name: "requirements",
+                type: "tuple",
+                internalType: "struct IArchitectBase.MembershipRequirementsV2",
+                components: [
+                  {
+                    name: "everyone",
+                    type: "bool",
+                    internalType: "bool",
+                  },
+                  {
+                    name: "users",
+                    type: "address[]",
+                    internalType: "address[]",
+                  },
+                  {
+                    name: "ruleDataV2",
+                    type: "bytes",
+                    internalType: "bytes",
+                  },
+                ],
+              },
+              {
+                name: "permissions",
+                type: "string[]",
+                internalType: "string[]",
+              },
+            ],
+          },
+          {
+            name: "channel",
+            type: "tuple",
+            internalType: "struct IArchitectBase.ChannelInfo",
+            components: [
+              {
+                name: "metadata",
+                type: "string",
+                internalType: "string",
+              },
+            ],
+          },
+          {
+            name: "shortDescription",
+            type: "string",
+            internalType: "string",
+          },
+          {
+            name: "longDescription",
+            type: "string",
+            internalType: "string",
+          },
+        ],
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "getSpaceArchitectImplementations",
     inputs: [],
     outputs: [
@@ -355,15 +497,15 @@ const _abi = [
   },
 ] as const;
 
-export class IArchitect__factory {
+export class IArchitectV2__factory {
   static readonly abi = _abi;
-  static createInterface(): IArchitectInterface {
-    return new utils.Interface(_abi) as IArchitectInterface;
+  static createInterface(): IArchitectV2Interface {
+    return new utils.Interface(_abi) as IArchitectV2Interface;
   }
   static connect(
     address: string,
     signerOrProvider: Signer | Provider
-  ): IArchitect {
-    return new Contract(address, _abi, signerOrProvider) as IArchitect;
+  ): IArchitectV2 {
+    return new Contract(address, _abi, signerOrProvider) as IArchitectV2;
   }
 }

@@ -1,4 +1,4 @@
-export default [
+[
   {
     "type": "function",
     "name": "__Architect_init",
@@ -185,6 +185,145 @@ export default [
                         ]
                       }
                     ]
+                  }
+                ]
+              },
+              {
+                "name": "permissions",
+                "type": "string[]",
+                "internalType": "string[]"
+              }
+            ]
+          },
+          {
+            "name": "channel",
+            "type": "tuple",
+            "internalType": "struct IArchitectBase.ChannelInfo",
+            "components": [
+              {
+                "name": "metadata",
+                "type": "string",
+                "internalType": "string"
+              }
+            ]
+          },
+          {
+            "name": "shortDescription",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "longDescription",
+            "type": "string",
+            "internalType": "string"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "createSpaceV2",
+    "inputs": [
+      {
+        "name": "spaceInfo",
+        "type": "tuple",
+        "internalType": "struct IArchitectBase.SpaceInfoV2",
+        "components": [
+          {
+            "name": "name",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "uri",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "membership",
+            "type": "tuple",
+            "internalType": "struct IArchitectBase.MembershipV2",
+            "components": [
+              {
+                "name": "settings",
+                "type": "tuple",
+                "internalType": "struct IMembershipBase.Membership",
+                "components": [
+                  {
+                    "name": "name",
+                    "type": "string",
+                    "internalType": "string"
+                  },
+                  {
+                    "name": "symbol",
+                    "type": "string",
+                    "internalType": "string"
+                  },
+                  {
+                    "name": "price",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                  },
+                  {
+                    "name": "maxSupply",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                  },
+                  {
+                    "name": "duration",
+                    "type": "uint64",
+                    "internalType": "uint64"
+                  },
+                  {
+                    "name": "currency",
+                    "type": "address",
+                    "internalType": "address"
+                  },
+                  {
+                    "name": "feeRecipient",
+                    "type": "address",
+                    "internalType": "address"
+                  },
+                  {
+                    "name": "freeAllocation",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                  },
+                  {
+                    "name": "pricingModule",
+                    "type": "address",
+                    "internalType": "address"
+                  }
+                ]
+              },
+              {
+                "name": "requirements",
+                "type": "tuple",
+                "internalType": "struct IArchitectBase.MembershipRequirementsV2",
+                "components": [
+                  {
+                    "name": "everyone",
+                    "type": "bool",
+                    "internalType": "bool"
+                  },
+                  {
+                    "name": "users",
+                    "type": "address[]",
+                    "internalType": "address[]"
+                  },
+                  {
+                    "name": "ruleDataV2",
+                    "type": "bytes",
+                    "internalType": "bytes"
                   }
                 ]
               },
@@ -508,4 +647,4 @@ export default [
     "name": "Validator__InvalidAddress",
     "inputs": []
   }
-] as const
+]

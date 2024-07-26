@@ -430,6 +430,145 @@
         ]
       },
       {
+        "inputs": [
+          {
+            "internalType": "struct IArchitectBase.SpaceInfoV2",
+            "name": "spaceInfo",
+            "type": "tuple",
+            "components": [
+              {
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "uri",
+                "type": "string"
+              },
+              {
+                "internalType": "struct IArchitectBase.MembershipV2",
+                "name": "membership",
+                "type": "tuple",
+                "components": [
+                  {
+                    "internalType": "struct IMembershipBase.Membership",
+                    "name": "settings",
+                    "type": "tuple",
+                    "components": [
+                      {
+                        "internalType": "string",
+                        "name": "name",
+                        "type": "string"
+                      },
+                      {
+                        "internalType": "string",
+                        "name": "symbol",
+                        "type": "string"
+                      },
+                      {
+                        "internalType": "uint256",
+                        "name": "price",
+                        "type": "uint256"
+                      },
+                      {
+                        "internalType": "uint256",
+                        "name": "maxSupply",
+                        "type": "uint256"
+                      },
+                      {
+                        "internalType": "uint64",
+                        "name": "duration",
+                        "type": "uint64"
+                      },
+                      {
+                        "internalType": "address",
+                        "name": "currency",
+                        "type": "address"
+                      },
+                      {
+                        "internalType": "address",
+                        "name": "feeRecipient",
+                        "type": "address"
+                      },
+                      {
+                        "internalType": "uint256",
+                        "name": "freeAllocation",
+                        "type": "uint256"
+                      },
+                      {
+                        "internalType": "address",
+                        "name": "pricingModule",
+                        "type": "address"
+                      }
+                    ]
+                  },
+                  {
+                    "internalType": "struct IArchitectBase.MembershipRequirementsV2",
+                    "name": "requirements",
+                    "type": "tuple",
+                    "components": [
+                      {
+                        "internalType": "bool",
+                        "name": "everyone",
+                        "type": "bool"
+                      },
+                      {
+                        "internalType": "address[]",
+                        "name": "users",
+                        "type": "address[]"
+                      },
+                      {
+                        "internalType": "bytes",
+                        "name": "ruleDataV2",
+                        "type": "bytes"
+                      }
+                    ]
+                  },
+                  {
+                    "internalType": "string[]",
+                    "name": "permissions",
+                    "type": "string[]"
+                  }
+                ]
+              },
+              {
+                "internalType": "struct IArchitectBase.ChannelInfo",
+                "name": "channel",
+                "type": "tuple",
+                "components": [
+                  {
+                    "internalType": "string",
+                    "name": "metadata",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "internalType": "string",
+                "name": "shortDescription",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "longDescription",
+                "type": "string"
+              }
+            ]
+          }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function",
+        "name": "createSpaceV2",
+        "outputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ]
+      },
+      {
         "inputs": [],
         "stateMutability": "view",
         "type": "function",
@@ -544,7 +683,7 @@
       "appendCBOR": false
     },
     "compilationTarget": {
-      "contracts/src/factory/facets/architect/Architect.sol": "Architect"
+      "contracts/src/factory/facets/architect/Architect.sol": "ArchitectV2"
     },
     "evmVersion": "paris",
     "libraries": {}

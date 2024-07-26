@@ -429,6 +429,11 @@
   },
   {
     "type": "error",
+    "name": "Architect__InvalidEntitlementVersion",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "Architect__InvalidNetworkId",
     "inputs": []
   },
