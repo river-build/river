@@ -6,13 +6,7 @@ import { makeTestClient, makeUniqueSpaceStreamId, waitFor } from './util.test'
 import { Client } from './client'
 import { dlog } from '@river-build/dlog'
 import { makeUniqueChannelStreamId, makeUniqueMediaStreamId } from './id'
-import {
-    ChunkedMedia,
-    ChunkedMedia_DerivedAESGCM,
-    MediaInfo,
-    MembershipOp,
-} from '@river-build/proto'
-import { protoInt64 } from '@bufbuild/protobuf'
+import { MediaInfo, MembershipOp } from '@river-build/proto'
 
 const log = dlog('csb:test')
 
