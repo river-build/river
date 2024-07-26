@@ -710,6 +710,7 @@ jobs:
                   path: |
                       ./core/run_files/
                       !./core/**/bin/**
+
     Go_Tests:
         permissions: write-all
         if: github.event_name != 'workflow_dispatch' || !inputs.skip_go

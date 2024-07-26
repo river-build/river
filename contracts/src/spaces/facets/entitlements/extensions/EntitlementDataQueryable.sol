@@ -5,14 +5,15 @@ pragma solidity ^0.8.23;
 import {IEntitlementDataQueryable} from "contracts/src/spaces/facets/entitlements/extensions/IEntitlementDataQueryable.sol";
 import {IRolesBase} from "contracts/src/spaces/facets/roles/IRoles.sol";
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
-import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
-import {IUserEntitlement} from "contracts/src/spaces/entitlements/user/IUserEntitlement.sol";
+import {IEntitlementGatedBase} from "contracts/src/spaces/facets/gated/IEntitlementGated.sol";
 
 // libraries
 import {StringSet} from "contracts/src/utils/StringSet.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {ChannelService} from "contracts/src/spaces/facets/channels/ChannelService.sol";
+import {EntitlementGatedStorage} from "contracts/src/spaces/facets/gated/EntitlementGatedStorage.sol";
 import {RolesStorage} from "contracts/src/spaces/facets/roles/RolesStorage.sol";
+import {StringSet} from "contracts/src/utils/StringSet.sol";
 
 // contracts
 import {RolesBase} from "contracts/src/spaces/facets/roles/RolesBase.sol";
@@ -21,6 +22,7 @@ import {Facet} from "contracts/src/diamond/facets/Facet.sol";
 contract EntitlementDataQueryable is
   IRolesBase,
   IEntitlementDataQueryable,
+  IEntitlementGatedBase,
   RolesBase,
   Facet
 {
@@ -40,6 +42,25 @@ contract EntitlementDataQueryable is
   ) external view returns (EntitlementData[] memory) {
     Role[] memory roles = _getChannelRolesWithPermission(channelId, permission);
     return _getEntitlements(roles);
+  }
+
+  function getCrossChainEntitlementData(
+    bytes32 transactionId,
+    uint256 roleId
+  ) external view returns (EntitlementData memory) {
+    EntitlementGatedStorage.Layout storage ds = EntitlementGatedStorage
+      .layout();
+
+    Transaction storage transaction = ds.transactions[transactionId];
+
+    if (transaction.hasBenSet == false) {
+      revert EntitlementGated_TransactionNotRegistered();
+    }
+
+    IEntitlement re = IEntitlement(transaction.entitlement);
+
+    return
+      EntitlementData(re.moduleType(), re.getEntitlementDataByRoleId(roleId));
   }
 
   // =============================================================
@@ -104,11 +125,12 @@ contract EntitlementDataQueryable is
   function _getEntitlements(
     Role[] memory roles
   ) internal view returns (EntitlementData[] memory) {
-    uint256 entitlementCount = 0;
-    for (uint256 i = 0; i < roles.length; i++) {
-      Role memory role = roles[i];
-      if (!role.disabled) {
-        entitlementCount += role.entitlements.length;
+    uint256 entitlementCount;
+    uint256 rolesLength = roles.length;
+
+    for (uint256 i = 0; i < rolesLength; i++) {
+      if (!roles[i].disabled) {
+        entitlementCount += roles[i].entitlements.length;
       }
     }
 
@@ -116,30 +138,23 @@ contract EntitlementDataQueryable is
       entitlementCount
     );
 
-    entitlementCount = 0;
+    uint256 currentIndex = 0;
 
-    for (uint256 i = 0; i < roles.length; i++) {
-      Role memory role = roles[i];
-      if (!role.disabled) {
-        for (uint256 j = 0; j < role.entitlements.length; j++) {
-          IEntitlement entitlement = IEntitlement(role.entitlements[j]);
-          if (!entitlement.isCrosschain()) {
-            IUserEntitlement ue = IUserEntitlement(address(entitlement));
-            entitlementData[entitlementCount] = EntitlementData(
-              ue.moduleType(),
-              ue.getEntitlementDataByRoleId(role.id)
-            );
-          } else {
-            IRuleEntitlement re = IRuleEntitlement(address(entitlement));
-            entitlementData[entitlementCount] = EntitlementData(
-              re.moduleType(),
-              re.getEntitlementDataByRoleId(role.id)
-            );
-          }
-          entitlementCount++;
+    for (uint256 i; i < rolesLength; i++) {
+      if (!roles[i].disabled) {
+        for (uint256 j; j < roles[i].entitlements.length; j++) {
+          IEntitlement entitlement = IEntitlement(roles[i].entitlements[j]);
+
+          entitlementData[currentIndex] = EntitlementData(
+            entitlement.moduleType(),
+            entitlement.getEntitlementDataByRoleId(roles[i].id)
+          );
+
+          currentIndex++;
         }
       }
     }
+
     return entitlementData;
   }
 }
