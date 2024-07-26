@@ -282,7 +282,9 @@ message ChunkedMedia {
         bytes secretKey = 2;
     }
 
-    message DerivedAESGCM {}
+    message DerivedAESGCM {
+        bytes seed_phrase = 1;
+    }
 
     MediaInfo info = 1;
     string streamId = 2;

@@ -266,6 +266,12 @@ func TestCloneAndUpdateSpaceSnapshot(t *testing.T) {
 		int64(5),
 		member.DisplayName.EventNum,
 	)
+
+	assert.Equal(
+		t,
+		mediaStreamId,
+		snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceMedia.SpaceImage.StreamId,
+	)
 }
 
 func TestUpdateSnapshotFailsIfInception(t *testing.T) {

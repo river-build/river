@@ -207,6 +207,12 @@ func update_Snapshot_Space(
 	case *SpacePayload_SpaceImage:
 		copyAddr := make([]byte, len(creatorAddress))
 		copy(copyAddr, creatorAddress)
+		inceptionPayload := iSnapshot.GetInceptionPayload()
+		derived := &ChunkedMedia_DerivedAESGCM{}
+		if inceptionPayload != nil {
+			// the seed phrase is the space id
+			derived.SeedPhrase = inceptionPayload.GetStreamId()
+		}
 		snapshot.SpaceContent.SpaceMedia = &SpacePayload_SnappedSpaceMedia{
 			SpaceImage: &ChunkedMedia{
 				StreamId: content.SpaceImage.StreamId,
@@ -217,7 +223,9 @@ func update_Snapshot_Space(
 					HeightPixels: content.SpaceImage.Info.HeightPixels,
 					Filename:     content.SpaceImage.Info.Filename,
 				},
-				Encryption: &ChunkedMedia_Derived{},
+				Encryption: &ChunkedMedia_Derived{
+					Derived: derived,
+				},
 			},
 			CreatorAddress: copyAddr,
 		}

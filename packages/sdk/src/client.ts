@@ -829,19 +829,21 @@ export class Client
         )
     }
 
-    async setSpaceImage(spaceId: string, mediaStreamId: string, info: MediaInfo) {
-        this.logCall('setSpaceImage', spaceId, mediaStreamId, info)
+    async setSpaceImage(spaceStreamId: string, mediaStreamId: string, info: MediaInfo) {
+        this.logCall('setSpaceImage', spaceStreamId, mediaStreamId, info)
 
         const event = make_SpacePayload_SpaceImage({
             info,
             streamId: mediaStreamId,
             encryption: {
                 case: 'derived',
-                value: {},
+                value: {
+                    seedPhrase: streamIdAsBytes(spaceStreamId),
+                },
             },
         })
 
-        return this.makeEventAndAddToStream(spaceId, event, { method: 'setSpaceImage' })
+        return this.makeEventAndAddToStream(spaceStreamId, event, { method: 'setSpaceImage' })
     }
 
     async setDisplayName(streamId: string, displayName: string) {
