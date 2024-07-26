@@ -117,6 +117,7 @@ interface IRuleEntitlementBase {
 
   struct ERC1155Params {
     uint256 threshold;
+    uint256 tokenId;
   }
 }
 
