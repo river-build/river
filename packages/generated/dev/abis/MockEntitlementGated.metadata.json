@@ -573,10 +573,17 @@
       "license": "MIT"
     },
     "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol": {
+<<<<<<< HEAD
       "keccak256": "0xe9064657d4d2e16446db34ca31b8a5dfdb0ba0d268fe99a181fd9cb12009a50f",
       "urls": [
         "bzz-raw://74c57ba7bf2af406d19a8eebda93059364fbf0bdb660185456b1f2baac857e70",
         "dweb:/ipfs/QmWsA4wrtP8pyHWPefW7r7wdsTc6gjgdjRUKX5bbGQSXTM"
+=======
+      "keccak256": "0x2ad8c7e10beb26f80dde5445b9aa8fcb2fcbcb149c38d94e4434982924b6eb27",
+      "urls": [
+        "bzz-raw://de00bf4a319a6c4c8a227039e9ac39f01ddc21f5c61186d7067614d686d010fd",
+        "dweb:/ipfs/QmWseV2PXggxynEEDXq8HkLQstC9e8BFYVQFhrfxVaVH6j"
+>>>>>>> main
       ],
       "license": "MIT"
     },
