@@ -164,6 +164,9 @@ abstract contract RolesBase is IRolesBase {
     string[] memory permissions,
     CreateEntitlement[] memory entitlements
   ) internal {
+    // check role exists
+    _checkRoleExists(roleId);
+
     // get current entitlements before updating them
     IEntitlement[] memory currentEntitlements = _getEntitlementsByRole(roleId);
     uint256 currentEntitlementsLen = currentEntitlements.length;
@@ -259,6 +262,9 @@ abstract contract RolesBase is IRolesBase {
   }
 
   function _removeRole(uint256 roleId) internal {
+    // check role exists
+    _checkRoleExists(roleId);
+
     // get current entitlements
     IEntitlement[] memory currentEntitlements = _getEntitlementsByRole(roleId);
     uint256 currentEntitlementsLen = currentEntitlements.length;
@@ -316,6 +322,118 @@ abstract contract RolesBase is IRolesBase {
     }
 
     emit RoleRemoved(msg.sender, roleId);
+  }
+
+  // =============================================================
+  // Channel Permissions
+  // =============================================================
+  function _getCustomChannelPermissions(
+    uint256 roleId,
+    bytes32 channelId
+  ) internal view returns (string[] memory permissions) {
+    // check role exists
+    _checkRoleExists(roleId);
+
+    // check channel exists
+    ChannelService.checkChannelExists(channelId);
+
+    return
+      RolesStorage
+      .layout()
+      .permissionByChannelIdByRoleId[roleId][channelId].values();
+  }
+
+  function _createCustomChannelPermissions(
+    uint256 roleId,
+    bytes32 channelId,
+    string[] memory permissions
+  ) internal {
+    ChannelService.checkChannelExists(channelId);
+
+    // check role exists
+    _checkRoleExists(roleId);
+
+    RolesStorage.Layout storage rs = RolesStorage.layout();
+
+    rs.channelsByRole[roleId].add(channelId);
+
+    // check permissions is not empty
+    uint256 permissionsLen = permissions.length;
+    for (uint256 i = 0; i < permissionsLen; i++) {
+      _checkEmptyString(permissions[i]);
+      if (rs.roleById[roleId].permissions.contains(permissions[i])) {
+        revert Roles__PermissionAlreadyExists();
+      }
+      rs.permissionByChannelIdByRoleId[roleId][channelId].add(permissions[i]);
+    }
+
+    emit PermissionsAddedToChannelRole(msg.sender, roleId, channelId);
+  }
+
+  function _updateCustomChannelPermissions(
+    uint256 roleId,
+    bytes32 channelId,
+    string[] memory permissions
+  ) internal {
+    // check role exists
+    _checkRoleExists(roleId);
+
+    // check channel exists
+    ChannelService.checkChannelExists(channelId);
+
+    RolesStorage.Layout storage rs = RolesStorage.layout();
+
+    // update old permissions with the new ones
+    string[] memory currentPermissions = rs
+    .permissionByChannelIdByRoleId[roleId][channelId].values();
+    uint256 currentPermissionsLen = currentPermissions.length;
+
+    for (uint256 i = 0; i < currentPermissionsLen; i++) {
+      rs.permissionByChannelIdByRoleId[roleId][channelId].remove(
+        currentPermissions[i]
+      );
+    }
+
+    uint256 permissionsLen = permissions.length;
+    for (uint256 i = 0; i < permissionsLen; i++) {
+      _checkEmptyString(permissions[i]);
+      if (rs.roleById[roleId].permissions.contains(permissions[i])) {
+        revert Roles__PermissionAlreadyExists();
+      }
+      rs.permissionByChannelIdByRoleId[roleId][channelId].add(permissions[i]);
+    }
+
+    emit PermissionsUpdatedForChannelRole(msg.sender, roleId, channelId);
+  }
+
+  function _removeCustomChannelPermissions(
+    uint256 roleId,
+    bytes32 channelId,
+    string[] memory permissions
+  ) internal {
+    // check role exists
+    _checkRoleExists(roleId);
+
+    // check channel exists
+    ChannelService.checkChannelExists(channelId);
+
+    RolesStorage.Layout storage rs = RolesStorage.layout();
+    StringSet.Set storage permissionsSet = rs.permissionByChannelIdByRoleId[
+      roleId
+    ][channelId];
+
+    // get current permissions
+    uint256 permissionsLen = permissions.length;
+
+    for (uint256 i = 0; i < permissionsLen; i++) {
+      _checkEmptyString(permissions[i]);
+      if (!permissionsSet.contains(permissions[i])) {
+        revert Roles__PermissionDoesNotExist();
+      }
+      permissionsSet.remove(permissions[i]);
+    }
+
+    emit PermissionsRemovedFromChannelRole(msg.sender, roleId, channelId);
   }
 
   // =============================================================
@@ -413,6 +531,9 @@ abstract contract RolesBase is IRolesBase {
     uint256 roleId,
     string[] memory permissions
   ) internal {
+    // check role exists
+    _checkRoleExists(roleId);
+
     RolesStorage.Layout storage rs = RolesStorage.layout();
 
     uint256 permissionLen = permissions.length;
@@ -438,6 +559,9 @@ abstract contract RolesBase is IRolesBase {
     uint256 roleId,
     string[] memory permissions
   ) internal {
+    // check role exists
+    _checkRoleExists(roleId);
+
     // check permissions
     RolesStorage.Layout storage rs = RolesStorage.layout();
 
@@ -496,6 +620,9 @@ abstract contract RolesBase is IRolesBase {
     uint256 roleId,
     CreateEntitlement memory entitlement
   ) internal {
+    // check role exists
+    _checkRoleExists(roleId);
+
     // check entitlements exists
     EntitlementsManagerService.checkEntitlement(address(entitlement.module));
 

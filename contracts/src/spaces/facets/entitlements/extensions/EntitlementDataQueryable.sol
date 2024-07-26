@@ -82,7 +82,7 @@ contract EntitlementDataQueryable is
     RolesStorage.Layout storage rs = RolesStorage.layout();
 
     // iterate through channel roles and check for the requested permission
-    for (uint256 i = 0; i < channelRolesLength; i++) {
+    for (uint256 i; i < channelRolesLength; i++) {
       uint256 roleId = channelRoles[i];
 
       RolesStorage.Role storage role = rs.roleById[channelRoles[i]];
@@ -115,7 +115,7 @@ contract EntitlementDataQueryable is
 
     // create an array of roles with the matching IDs
     Role[] memory rolesWithPermission = new Role[](matchedRoleCount);
-    for (uint256 i = 0; i < matchedRoleCount; i++) {
+    for (uint256 i; i < matchedRoleCount; i++) {
       rolesWithPermission[i] = _getRoleById(matchedRoleIds[i]);
     }
 
@@ -128,7 +128,7 @@ contract EntitlementDataQueryable is
     uint256 entitlementCount;
     uint256 rolesLength = roles.length;
 
-    for (uint256 i = 0; i < rolesLength; i++) {
+    for (uint256 i; i < rolesLength; i++) {
       if (!roles[i].disabled) {
         entitlementCount += roles[i].entitlements.length;
       }

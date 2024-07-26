@@ -27,18 +27,11 @@ import {Validator__InvalidStringLength, Validator__InvalidByteLength} from "cont
 import {MockUserEntitlement} from "contracts/test/mocks/MockUserEntitlement.sol";
 
 contract RolesTest is BaseSetup, IRolesBase, IEntitlementBase {
-  function getRandomAddresses(
-    uint256 N
-  ) internal view returns (address[] memory) {
-    address[] memory data = new address[](N);
-    for (uint256 i = 0; i < N; i++) {
-      data[i] = _randomAddress();
-    }
-    return data;
-  }
-
   MockUserEntitlement internal mockEntitlement;
   Roles internal roles;
+
+  bytes32 CHANNEL_ID = "channel1";
+  uint256 ROLE_ID;
 
   function setUp() public override {
     super.setUp();
@@ -49,10 +42,35 @@ contract RolesTest is BaseSetup, IRolesBase, IEntitlementBase {
     roles = Roles(everyoneSpace);
   }
 
+  modifier givenRoleExists() {
+    string memory roleName = "role1";
+
+    // create a role
+    vm.prank(founder);
+    ROLE_ID = roles.createRole(
+      roleName,
+      new string[](0),
+      new IRoles.CreateEntitlement[](0)
+    );
+
+    _;
+  }
+
+  modifier givenRoleIsInChannel() {
+    // create a channel
+    uint256[] memory roleIds = new uint256[](1);
+    roleIds[0] = ROLE_ID;
+
+    vm.prank(founder);
+    IChannel(everyoneSpace).createChannel(CHANNEL_ID, "ipfs://test", roleIds);
+
+    _;
+  }
+
   function test_createRole_only(string memory roleName) external {
     vm.assume(bytes(roleName).length > 2);
 
-    address[] memory data = getRandomAddresses(4);
+    address[] memory data = _createAccounts(4);
 
     string[] memory permissions = new string[](1);
     permissions[0] = Permissions.Read;
@@ -522,21 +540,16 @@ contract RolesTest is BaseSetup, IRolesBase, IEntitlementBase {
     roles.removeRole(0);
   }
 
-  function test_removeRole_with_channels_already_created() external {
-    string memory roleName1 = "role1";
+  function test_removeRole_with_channels_already_created()
+    external
+    givenRoleExists
+  {
     bytes32 channelId1 = "channel1";
     bytes32 channelId2 = "channel2";
 
-    vm.prank(founder);
-    uint256 roleId = roles.createRole(
-      roleName1,
-      new string[](0),
-      new IRoles.CreateEntitlement[](0)
-    );
-
     // create a channel
     uint256[] memory roleIds = new uint256[](1);
-    roleIds[0] = roleId;
+    roleIds[0] = ROLE_ID;
 
     vm.startPrank(founder);
     IChannel(everyoneSpace).createChannel(
@@ -548,7 +561,7 @@ contract RolesTest is BaseSetup, IRolesBase, IEntitlementBase {
     vm.stopPrank();
 
     vm.prank(founder);
-    roles.removeRole(roleId);
+    roles.removeRole(ROLE_ID);
 
     // verify that role was removed from channel
     IChannel.Channel memory channel = IChannel(everyoneSpace).getChannel(
@@ -1015,5 +1028,92 @@ contract RolesTest is BaseSetup, IRolesBase, IEntitlementBase {
     vm.prank(founder);
     vm.expectRevert(Roles__EntitlementDoesNotExist.selector);
     roles.removeRoleFromEntitlement(roleId, entitlement);
+  }
+
+  // =============================================================
+  // Channel Permissions
+  // =============================================================
+  function test_createCustomChannelPermissions()
+    external
+    givenRoleExists
+    givenRoleIsInChannel
+  {
+    string[] memory permissions = new string[](1);
+    permissions[0] = Permissions.Read;
+
+    vm.prank(founder);
+    roles.createCustomChannelPermissions(ROLE_ID, CHANNEL_ID, permissions);
+
+    // get the channel permissions
+    string[] memory channelPermissions = roles.getCustomChannelPermissions(
+      ROLE_ID,
+      CHANNEL_ID
+    );
+
+    assertEq(channelPermissions.length, 1);
+    assertEq(channelPermissions[0], permissions[0]);
+  }
+
+  function test_updateCustomChannelPermissions()
+    external
+    givenRoleExists
+    givenRoleIsInChannel
+  {
+    string[] memory permissions = new string[](1);
+    permissions[0] = Permissions.Read;
+
+    vm.prank(founder);
+    roles.createCustomChannelPermissions(ROLE_ID, CHANNEL_ID, permissions);
+
+    // get the channel permissions
+    string[] memory channelPermissions = roles.getCustomChannelPermissions(
+      ROLE_ID,
+      CHANNEL_ID
+    );
+
+    assertEq(channelPermissions.length, 1);
+    assertEq(channelPermissions[0], permissions[0]);
+
+    permissions[0] = Permissions.Write;
+
+    // update the channel permissions
+    vm.prank(founder);
+    roles.updateCustomChannelPermissions(ROLE_ID, CHANNEL_ID, permissions);
+
+    // get the channel permissions
+    channelPermissions = roles.getCustomChannelPermissions(ROLE_ID, CHANNEL_ID);
+
+    assertEq(channelPermissions.length, 1);
+    assertEq(channelPermissions[0], permissions[0]);
+  }
+
+  function test_removeCustomChannelPermissions()
+    external
+    givenRoleExists
+    givenRoleIsInChannel
+  {
+    string[] memory permissions = new string[](1);
+    permissions[0] = Permissions.Read;
+
+    vm.prank(founder);
+    roles.createCustomChannelPermissions(ROLE_ID, CHANNEL_ID, permissions);
+
+    // get the channel permissions
+    string[] memory channelPermissions = roles.getCustomChannelPermissions(
+      ROLE_ID,
+      CHANNEL_ID
+    );
+
+    assertEq(channelPermissions.length, 1);
+    assertEq(channelPermissions[0], permissions[0]);
+
+    // remove the channel permissions
+    vm.prank(founder);
+    roles.removeCustomChannelPermissions(ROLE_ID, CHANNEL_ID, permissions);
+
+    // get the channel permissions
+    channelPermissions = roles.getCustomChannelPermissions(ROLE_ID, CHANNEL_ID);
+
+    assertEq(channelPermissions.length, 0);
   }
 }
