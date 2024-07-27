@@ -812,7 +812,7 @@ jobs:
             #   working-directory: core
 
             - name: Run node anvil tests
-              run: RIVER_TEST_ANVIL_URL="http://localhost:8545" RIVER_TEST_LOG=info go test -run TestWithAnvil -timeout 1m ./... -tags integration
+              run: RIVER_TEST_ANVIL_URL="http://localhost:8545" RIVER_TEST_LOG=info go test -run TestWithAnvil -timeout 1m ./... -v -tags integration
               working-directory: core
 
     XChain_Integration:
