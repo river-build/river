@@ -31,6 +31,7 @@ import (
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/registries"
+	"github.com/river-build/river/core/node/rpc/sync"
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/xchain/entitlement"
 )
@@ -214,12 +215,6 @@ func (s *Service) initInstance(mode string) {
 	s.metrics = infra.NewMetricsFactory(metricsRegistry, "river", subsystem)
 	s.metricsPublisher = infra.NewMetricsPublisher(metricsRegistry)
 	s.metricsPublisher.StartMetricsServer(s.serverCtx, s.config.Metrics)
-	s.rpcDuration = s.metrics.NewHistogramVecEx(
-		"rpc_duration_seconds",
-		"RPC duration in seconds",
-		infra.DefaultDurationBucketsSeconds,
-		"method",
-	)
 }
 
 func (s *Service) initWallet() error {
@@ -563,11 +558,10 @@ func (s *Service) initCacheAndSync() error {
 
 	s.mbProducer = events.NewMiniblockProducer(s.serverCtx, s.cache, nil)
 
-	s.syncHandler = NewSyncHandler(
-		s.wallet,
+	s.syncHandler = sync.NewHandler(
+		s.wallet.Address,
 		s.cache,
 		s.nodeRegistry,
-		s.streamRegistry,
 	)
 
 	return nil
@@ -583,10 +577,10 @@ func (s *Service) initHandlers() {
 
 	interceptors := connect.WithInterceptors(ii...)
 	streamServicePattern, streamServiceHandler := protocolconnect.NewStreamServiceHandler(s, interceptors)
-	s.mux.Handle(streamServicePattern, newHttpHandler(streamServiceHandler, s.defaultLogger, s.metrics))
+	s.mux.Handle(streamServicePattern, newHttpHandler(streamServiceHandler, s.defaultLogger))
 
 	nodeServicePattern, nodeServiceHandler := protocolconnect.NewNodeToNodeHandler(s, interceptors)
-	s.mux.Handle(nodeServicePattern, newHttpHandler(nodeServiceHandler, s.defaultLogger, s.metrics))
+	s.mux.Handle(nodeServicePattern, newHttpHandler(nodeServiceHandler, s.defaultLogger))
 
 	s.registerDebugHandlers(s.config.EnableDebugEndpoints)
 }
@@ -610,7 +604,7 @@ func StartServer(
 		config:     cfg,
 		riverChain: riverChain,
 		listener:   listener,
-		exitSignal: make(chan error, 1),
+		exitSignal: make(chan error, 16),
 	}
 
 	err := streamService.start()
