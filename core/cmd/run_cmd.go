@@ -17,9 +17,12 @@ import (
 )
 
 func runServices(ctx context.Context, cfg *config.Config, stream bool, xchain bool) error {
-	err := setupProfiler(ctx, cfg)
-	if err != nil {
-		return err
+	var err error
+	if stream {
+		err = setupProfiler(ctx, cfg)
+		if err != nil {
+			return err
+		}
 	}
 
 	log := dlog.FromCtx(ctx)
