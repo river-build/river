@@ -5,6 +5,82 @@ __metadata:
   version: 6
   cacheKey: 8
 
+"@0xsequence/abi@npm:1.10.3":
+  version: 1.10.3
+  resolution: "@0xsequence/abi@npm:1.10.3"
+  checksum: efc1df1d2d2ae9b67755db8c7ce1b2a4d159aff1ef1786fed514562c368838681f8c6f6a38a4e075aaed17bee9040208d25a8f9ab2fb677c85edfc0b67a2d0e7
+  languageName: node
+  linkType: hard
+
+"@0xsequence/core@npm:1.10.3":
+  version: 1.10.3
+  resolution: "@0xsequence/core@npm:1.10.3"
+  dependencies:
+    "@0xsequence/abi": 1.10.3
+  peerDependencies:
+    ethers: ">=5.5"
+  checksum: 66f307644c44d48b51953bcda3a6603074e51da07caf312fb0936041c270c1f0442c03db01f05fa63832a3c5bda529cf3a43d877ce21db777e80ee3c020d4827
+  languageName: node
+  linkType: hard
+
+"@0xsequence/indexer@npm:1.10.3":
+  version: 1.10.3
+  resolution: "@0xsequence/indexer@npm:1.10.3"
+  checksum: 3421237536c5be92f2437c7d000816a557ccb90a01bf172658989b5dfc3e9315e1e2f44a07866d099f46611fb510cf5c0c9ba6fa6060eaf393e7e26edf3801d0
+  languageName: node
+  linkType: hard
+
+"@0xsequence/multicall@npm:^1.10.3":
+  version: 1.10.3
+  resolution: "@0xsequence/multicall@npm:1.10.3"
+  dependencies:
+    "@0xsequence/abi": 1.10.3
+    "@0xsequence/network": 1.10.3
+    "@0xsequence/utils": 1.10.3
+  peerDependencies:
+    ethers: ">=5.5 < 6"
+  checksum: 2d4ce599f434cbc481355fef92b24282537a3a44e174ae67545a23192071c823e604107e3171ca119bac114dccce99a9f68f412910a644b928bea087367ffb69
+  languageName: node
+  linkType: hard
+
+"@0xsequence/network@npm:1.10.3":
+  version: 1.10.3
+  resolution: "@0xsequence/network@npm:1.10.3"
+  dependencies:
+    "@0xsequence/core": 1.10.3
+    "@0xsequence/indexer": 1.10.3
+    "@0xsequence/relayer": 1.10.3
+    "@0xsequence/utils": 1.10.3
+  peerDependencies:
+    ethers: ">=5.5 < 6"
+  checksum: be74805391fe88f615c1d591ae2ddb686c4b0a26d696386e74ad9470e010e7191240d1a0a9ccc1ad89470e1b8bf9cd727e4fd75d8873d1a1161f41491785d8af
+  languageName: node
+  linkType: hard
+
+"@0xsequence/relayer@npm:1.10.3":
+  version: 1.10.3
+  resolution: "@0xsequence/relayer@npm:1.10.3"
+  dependencies:
+    "@0xsequence/abi": 1.10.3
+    "@0xsequence/core": 1.10.3
+    "@0xsequence/utils": 1.10.3
+  peerDependencies:
+    ethers: ">=5.5 < 6"
+  checksum: ac025987125eb39e560df8f4d11aa47a3d8a2f5dccf6eb159cd990149dac88dbc690e4a0fc5c0faa959f4769eb70aed20fb41f2bb5ed7ceb0431856bf8104712
+  languageName: node
+  linkType: hard
+
+"@0xsequence/utils@npm:1.10.3":
+  version: 1.10.3
+  resolution: "@0xsequence/utils@npm:1.10.3"
+  dependencies:
+    js-base64: ^3.7.2
+  peerDependencies:
+    ethers: ">=5.5 < 6"
+  checksum: e384e216b21d6b8f40e0b538166437624e352d18531ff1d11ea1473cf0451548d5711691844eb1da17e9acd4ca43668cc34be78a29aaaf1f9d38d7de700d4c7c
+  languageName: node
+  linkType: hard
+
 "@aashutoshrathi/word-wrap@npm:^1.2.3":
   version: 1.2.6
   resolution: "@aashutoshrathi/word-wrap@npm:1.2.6"
@@ -3690,6 +3766,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@river-build/sdk@workspace:packages/sdk"
   dependencies:
+    "@0xsequence/multicall": ^1.10.3
     "@bufbuild/protobuf": ^1.9.0
     "@connectrpc/connect": ^1.4.0
     "@connectrpc/connect-web": ^1.4.0
@@ -12411,6 +12488,13 @@ __metadata:
     "@sideway/formula": ^3.0.1
     "@sideway/pinpoint": ^2.0.0
   checksum: 8c3709849293411c524e5a679dba7b42598a29a663478941767b8d5b06288611dece58803c468a2c7320cc2429a3e71e3d94337fe47aefcf6c22174dbd90b601
+  languageName: node
+  linkType: hard
+
+"js-base64@npm:^3.7.2":
+  version: 3.7.7
+  resolution: "js-base64@npm:3.7.7"
+  checksum: d1b02971db9dc0fd35baecfaf6ba499731fb44fe3373e7e1d6681fbd3ba665f29e8d9d17910254ef8104e2cb8b44117fe4202d3dc54c7cafe9ba300fe5433358
   languageName: node
   linkType: hard
 
