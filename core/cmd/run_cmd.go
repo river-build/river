@@ -18,11 +18,9 @@ import (
 
 func runServices(ctx context.Context, cfg *config.Config, stream bool, xchain bool) error {
 	var err error
-	if stream {
-		err = setupProfiler(ctx, cfg)
-		if err != nil {
-			return err
-		}
+	err = setupProfiler(ctx, cfg)
+	if err != nil {
+		return err
 	}
 
 	log := dlog.FromCtx(ctx)
@@ -59,23 +57,25 @@ func runServices(ctx context.Context, cfg *config.Config, stream bool, xchain bo
 
 	osSignal := make(chan os.Signal, 1)
 	signal.Notify(osSignal, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		sig := <-osSignal
-		if !cfg.Log.Simplify {
-			log.Info("Got OS signal", "signal", sig.String())
+	var signal os.Signal
+	err = nil
+	if streamService != nil {
+		select {
+		case signal = <-osSignal:
+		case err = <-streamService.ExitSignal():
 		}
-		if streamService != nil {
-			streamService.ExitSignal() <- nil
-		}
-	}()
+	} else {
+		signal = <-osSignal
+	}
+
+	if err == nil {
+		log.Info("Got OS signal", "signal", signal.String())
+	} else {
+		log.Error("Exiting with error", "error", err)
+	}
 
 	if xchainService != nil {
 		xchainService.Stop()
-	}
-
-	err = nil
-	if streamService != nil {
-		err = <-streamService.ExitSignal()
 	}
 
 	wg.Wait()
