@@ -1,7 +1,7 @@
 ---
 name: Ask a question
 about: Something is not clear
-title: ""
+title: "[Q]: "
 labels: "question"
 assignees: ""
 ---
