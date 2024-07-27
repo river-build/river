@@ -21,7 +21,7 @@ import (
 	"github.com/river-build/river/core/node/crypto"
 )
 
-func TestChainMonitorEventDetection(t *testing.T) {
+func TestWithAnvil_ChainMonitorEventDetection(t *testing.T) {
 	ctx, cancel := test.NewTestContext()
 	defer cancel()
 
