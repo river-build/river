@@ -281,7 +281,14 @@ func Make_SpacePayload_Membership(op MembershipOp, userId string, initiatorId st
 	return Make_MemberPayload_Membership(op, userAddress, initiatorAddress, nil)
 }
 
-func Make_SpacePayload_SpaceImage(mediaInfo *MediaInfo, streamId string) *StreamEvent_SpacePayload {
+func Make_SpacePayload_SpaceImage(
+	mediaInfo *MediaInfo,
+	streamId string,
+	seedPhrase string,
+) *StreamEvent_SpacePayload {
+	encryption := &ChunkedMedia_DerivedAESGCM{
+		SeedPhrase: seedPhrase,
+	}
 	return &StreamEvent_SpacePayload{
 		SpacePayload: &SpacePayload{
 			Content: &SpacePayload_SpaceImage{
@@ -293,8 +300,10 @@ func Make_SpacePayload_SpaceImage(mediaInfo *MediaInfo, streamId string) *Stream
 						HeightPixels: mediaInfo.HeightPixels,
 						Filename:     mediaInfo.Filename,
 					},
-					StreamId:   streamId,
-					Encryption: &ChunkedMedia_Derived{},
+					StreamId: streamId,
+					Encryption: &ChunkedMedia_Derived{
+						Derived: encryption,
+					},
 				},
 			},
 		},

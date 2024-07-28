@@ -42,6 +42,11 @@ export const isUserId = (userId: string | Uint8Array): boolean => {
     return false
 }
 
+export const contractAddressFromSpaceId = (spaceId: string): string => {
+    check(isSpaceStreamId(spaceId), 'Invalid space id: ' + spaceId)
+    return '0x' + spaceId.slice(2, 42)
+}
+
 // reason about data in logs, tests, etc.
 export enum StreamPrefix {
     Channel = '20',

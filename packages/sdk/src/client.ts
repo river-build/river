@@ -71,7 +71,7 @@ import {
     streamIdAsString,
     makeSpaceStreamId,
     STREAM_ID_STRING_LENGTH,
-    makeMediaStreamIdFromSpaceId,
+    contractAddressFromSpaceId,
 } from './id'
 import { makeEvent, unpackMiniblock, unpackStream, unpackStreamEx } from './sign'
 import { StreamEvents } from './streamEvents'
@@ -838,7 +838,7 @@ export class Client
             encryption: {
                 case: 'derived',
                 value: {
-                    seedPhrase: streamIdAsBytes(spaceStreamId),
+                    seedPhrase: contractAddressFromSpaceId(spaceStreamId),
                 },
             },
         })

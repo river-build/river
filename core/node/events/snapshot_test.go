@@ -97,8 +97,9 @@ func make_media_stream_id() (string, error) {
 
 func make_Space_Image(
 	wallet *crypto.Wallet,
+	spaceId string,
 	mediaInfo *MediaInfo,
-	streamId string,
+	mediaStreamId string,
 	prevMiniblockHash []byte,
 	t *testing.T,
 ) *ParsedEvent {
@@ -106,7 +107,8 @@ func make_Space_Image(
 		wallet,
 		Make_SpacePayload_SpaceImage(
 			mediaInfo,
-			streamId,
+			mediaStreamId,
+			spaceId,
 		),
 		prevMiniblockHash,
 	)
@@ -231,7 +233,7 @@ func TestCloneAndUpdateSpaceSnapshot(t *testing.T) {
 	membership := make_Space_Membership(wallet, MembershipOp_SO_JOIN, userId, nil, t)
 	username := make_Space_Username(wallet, "bob", nil, t)
 	displayName := make_Space_DisplayName(wallet, "bobIsTheGreatest", nil, t)
-	image := make_Space_Image(wallet, &MediaInfo{}, mediaStreamId, nil, t)
+	image := make_Space_Image(wallet, streamId.String(), &MediaInfo{}, mediaStreamId, nil, t)
 	events := []*ParsedEvent{membership, username, displayName, image}
 	for i, event := range events[:] {
 		err = Update_Snapshot(snapshot, event, 1, int64(3+i))
@@ -272,6 +274,17 @@ func TestCloneAndUpdateSpaceSnapshot(t *testing.T) {
 		mediaStreamId,
 		snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceMedia.SpaceImage.StreamId,
 	)
+	encryption := snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceMedia.SpaceImage.GetEncryption()
+	if derived, ok := encryption.(*ChunkedMedia_Derived); ok {
+		seedPhrase := derived.Derived.SeedPhrase
+		assert.Equal(
+			t,
+			streamId.String(),
+			seedPhrase,
+		)
+	} else {
+		assert.Fail(t, "expected derived encryption")
+	}
 }
 
 func TestUpdateSnapshotFailsIfInception(t *testing.T) {
