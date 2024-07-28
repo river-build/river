@@ -283,7 +283,7 @@ message ChunkedMedia {
     }
 
     message DerivedAESGCM {
-        bytes seed_phrase = 1;
+        string seed_phrase = 1;
     }
 
     MediaInfo info = 1;
