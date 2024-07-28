@@ -27,10 +27,16 @@ async function getExtendedKeyMaterial(seedBuffer: Uint8Array, length: number): P
 }
 
 export async function deriveKeyAndIV(
-    seedPhrase: string,
+    seedPhrase: string | Uint8Array,
 ): Promise<{ key: Uint8Array; iv: Uint8Array }> {
-    const encoder = new TextEncoder()
-    const seedBuffer = encoder.encode(seedPhrase)
+    let seedBuffer: Uint8Array
+
+    if (typeof seedPhrase === 'string') {
+        const encoder = new TextEncoder()
+        seedBuffer = encoder.encode(seedPhrase)
+    } else {
+        seedBuffer = seedPhrase
+    }
 
     const keyMaterial = await getExtendedKeyMaterial(seedBuffer, 32 + 12) // 32 bytes for key, 12 bytes for IV
 

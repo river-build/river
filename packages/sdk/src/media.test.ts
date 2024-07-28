@@ -6,7 +6,7 @@ import { makeTestClient, makeUniqueSpaceStreamId } from './util.test'
 import { Client } from './client'
 import { makeUniqueChannelStreamId, makeDMStreamId } from './id'
 import { InfoRequest } from '@river-build/proto'
-import { decryptAesGcm, deriveKeyAndIV, encryptAesGcm } from './crypto_utils'
+import { deriveKeyAndIV, encryptAesGcm } from './crypto_utils'
 
 describe('mediaTests', () => {
     let bobsClient: Client
@@ -57,8 +57,8 @@ describe('mediaTests', () => {
         prevMiniblockHash: Uint8Array,
     ): Promise<Uint8Array> {
         let prevHash = prevMiniblockHash
-        const encrypted = await encryptAesGcm(data, key, iv)
-        const result = await bobsClient.sendMediaPayload(streamId, encrypted, 0, prevHash)
+        const { ciphertext } = await encryptAesGcm(data, key, iv)
+        const result = await bobsClient.sendMediaPayload(streamId, ciphertext, 0, prevHash)
         prevHash = result.prevMiniblockHash
         return prevHash
     }
@@ -112,7 +112,7 @@ describe('mediaTests', () => {
     test('clientCanSendEncryptedDerivedAesGmPayload', async () => {
         const spaceId = makeUniqueSpaceStreamId()
         const mediaStreamInfo = await bobCreateSpaceMediaStream(spaceId, 3)
-        const { iv, key } = deriveKeyAndIV(spaceId)
+        const { iv, key } = await deriveKeyAndIV(spaceId)
         const data = createTestMediaChunks(2)
         await expect(
             bobSendEncryptedMediaPayload(
@@ -128,7 +128,7 @@ describe('mediaTests', () => {
     test('clientCanDownloadEncryptedDerivedAesGmPayload', async () => {
         const spaceId = makeUniqueSpaceStreamId()
         const mediaStreamInfo = await bobCreateSpaceMediaStream(spaceId, 2)
-        const { iv, key } = deriveKeyAndIV(spaceId)
+        const { iv, key } = await deriveKeyAndIV(spaceId)
         const data = createTestMediaChunks(2)
         await bobSendEncryptedMediaPayload(
             mediaStreamInfo.streamId,
