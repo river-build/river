@@ -361,10 +361,11 @@ abstract contract RolesBase is IRolesBase {
     uint256 permissionsLen = permissions.length;
     for (uint256 i = 0; i < permissionsLen; i++) {
       _checkEmptyString(permissions[i]);
-      if (rs.roleById[roleId].permissions.contains(permissions[i])) {
+      if (
+        !rs.permissionByChannelIdByRoleId[roleId][channelId].add(permissions[i])
+      ) {
         revert Roles__PermissionAlreadyExists();
       }
-      rs.permissionByChannelIdByRoleId[roleId][channelId].add(permissions[i]);
     }
 
     emit PermissionsAddedToChannelRole(msg.sender, roleId, channelId);
@@ -397,10 +398,11 @@ abstract contract RolesBase is IRolesBase {
     uint256 permissionsLen = permissions.length;
     for (uint256 i = 0; i < permissionsLen; i++) {
       _checkEmptyString(permissions[i]);
-      if (rs.roleById[roleId].permissions.contains(permissions[i])) {
+      if (
+        !rs.permissionByChannelIdByRoleId[roleId][channelId].add(permissions[i])
+      ) {
         revert Roles__PermissionAlreadyExists();
       }
-      rs.permissionByChannelIdByRoleId[roleId][channelId].add(permissions[i]);
     }
 
     emit PermissionsUpdatedForChannelRole(msg.sender, roleId, channelId);
@@ -431,6 +433,10 @@ abstract contract RolesBase is IRolesBase {
         revert Roles__PermissionDoesNotExist();
       }
       permissionsSet.remove(permissions[i]);
+    }
+
+    if (permissionsSet.length() == 0) {
+      rs.channelsByRole[roleId].remove(channelId);
     }
 
     emit PermissionsRemovedFromChannelRole(msg.sender, roleId, channelId);

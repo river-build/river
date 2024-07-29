@@ -101,7 +101,7 @@ contract EntitlementDataQueryable is
         ][channelId];
         hasPermission = permissions.contains(permission);
       }
-      // check global permissions if role is not channel-specific
+      // check the default permissions if this role didn't have a channel override.
       else if (role.permissions.contains(permission)) {
         hasPermission = true;
       }
