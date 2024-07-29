@@ -273,10 +273,8 @@ const ethSepoliaChainLinkContract: Address = '0x779877A7B0D9E8603169DdbD7836e478
 // Some wallet addresses are duplicated for the sake of self-documenting variable names.
 const sepoliaChainLinkWallet_50Link: Address = '0x4BCfC6962Ab0297aF801da21216014F53B46E991'
 const sepoliaChainLinkWallet_25Link: Address = '0xa4D440AeA5F555feEB5AEa0ddcED6e1B9FaD6A9C'
-const baseSepoliaChainLinkWallet_50Link: Address =
-    '0x4BCfC6962Ab0297aF801da21216014F53B46E991'
-const baseSepoliaChainLinkWallet_25Link: Address =
-    '0xa4D440AeA5F555feEB5AEa0ddcED6e1B9FaD6A9C'
+const baseSepoliaChainLinkWallet_50Link: Address = '0x4BCfC6962Ab0297aF801da21216014F53B46E991'
+const baseSepoliaChainLinkWallet_25Link: Address = '0xa4D440AeA5F555feEB5AEa0ddcED6e1B9FaD6A9C'
 const testEmptyAccount: Address = '0xb227905F186095083869928BAb49cA9CE9546817'
 
 const chainlinkExp = BigInt(10) ** BigInt(18)
