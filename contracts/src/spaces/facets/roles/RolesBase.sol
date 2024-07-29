@@ -340,7 +340,7 @@ abstract contract RolesBase is IRolesBase {
     return
       RolesStorage
       .layout()
-      .permissionByChannelIdByRoleId[roleId][channelId].values();
+      .permissionOverridesByRole[roleId][channelId].values();
   }
 
   function _setChannelPermissionOverrides(
@@ -355,11 +355,11 @@ abstract contract RolesBase is IRolesBase {
 
     RolesStorage.Layout storage rs = RolesStorage.layout();
 
-    rs.channelsByRole[roleId].add(channelId);
+    rs.channelOverridesByRole[roleId].add(channelId);
 
-    StringSet.Set storage permissionsSet = rs.permissionByChannelIdByRoleId[
-      roleId
-    ][channelId];
+    StringSet.Set storage permissionsSet = rs.permissionOverridesByRole[roleId][
+      channelId
+    ];
 
     // remove current channel permissions if any
     if (permissionsSet.length() > 0) {
@@ -393,9 +393,9 @@ abstract contract RolesBase is IRolesBase {
     ChannelService.checkChannelExists(channelId);
 
     RolesStorage.Layout storage rs = RolesStorage.layout();
-    StringSet.Set storage permissionsSet = rs.permissionByChannelIdByRoleId[
-      roleId
-    ][channelId];
+    StringSet.Set storage permissionsSet = rs.permissionOverridesByRole[roleId][
+      channelId
+    ];
 
     // get current permissions
     string[] memory currentPermissions = permissionsSet.values();
@@ -404,7 +404,7 @@ abstract contract RolesBase is IRolesBase {
       permissionsSet.remove(currentPermissions[i]);
     }
 
-    rs.channelsByRole[roleId].remove(channelId);
+    rs.channelOverridesByRole[roleId].remove(channelId);
 
     emit PermissionsRemovedFromChannelRole(msg.sender, roleId, channelId);
   }

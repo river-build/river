@@ -87,16 +87,11 @@ contract EntitlementDataQueryable is
 
       RolesStorage.Role storage role = rs.roleById[channelRoles[i]];
 
-      // skip immutable roles
-      if (role.isImmutable) {
-        continue;
-      }
-
       bool hasPermission = false;
 
       // check if role is associated with the channel and has the requested permission
-      if (rs.channelsByRole[roleId].contains(channelId)) {
-        StringSet.Set storage permissions = rs.permissionByChannelIdByRoleId[
+      if (rs.channelOverridesByRole[roleId].contains(channelId)) {
+        StringSet.Set storage permissions = rs.permissionOverridesByRole[
           roleId
         ][channelId];
         hasPermission = permissions.contains(permission);
