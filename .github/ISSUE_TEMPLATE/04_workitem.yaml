@@ -6,6 +6,6 @@ body:
     - type: textarea
       attributes:
           label: Description
-          description: Workitem details (supports markdown)
+          description: Workitem details
       validations:
           required: false
