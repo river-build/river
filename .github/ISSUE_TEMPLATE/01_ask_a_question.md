@@ -1,8 +1,8 @@
 ---
 name: Ask a question
 about: Something is not clear
-title: "[Q]: "
-labels: "question"
+title: ""
+labels: question
 assignees: ""
 ---
 
