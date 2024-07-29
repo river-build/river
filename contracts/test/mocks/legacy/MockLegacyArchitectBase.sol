@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {IArchitectBase} from "./IArchitect.sol";
+import {ILegacyArchitectBase} from "./IMockLegacyArchitect.sol";
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 import {IUserEntitlement} from "contracts/src/spaces/entitlements/user/IUserEntitlement.sol";
 import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
@@ -21,8 +21,8 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {StringSet} from "contracts/src/utils/StringSet.sol";
 import {Validator} from "contracts/src/utils/Validator.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {ArchitectStorage} from "./ArchitectStorage.sol";
-import {ImplementationStorage} from "./ImplementationStorage.sol";
+import {ArchitectStorage} from "contracts/src/factory/facets/architect/ArchitectStorage.sol";
+import {ImplementationStorage} from "contracts/src/factory/facets/architect/ImplementationStorage.sol";
 import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
 
 // contracts
@@ -32,7 +32,7 @@ import {SpaceProxy} from "contracts/src/spaces/facets/proxy/SpaceProxy.sol";
 // modules
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-abstract contract ArchitectBase is Factory, IArchitectBase {
+abstract contract LegacyArchitectBase is Factory, ILegacyArchitectBase {
   using StringSet for StringSet.Set;
   using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -86,7 +86,7 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
 
     // deploy token entitlement
     IRuleEntitlement ruleEntitlement = IRuleEntitlement(
-      _deployEntitlement(ims.ruleEntitlement, spaceAddress)
+      _deployEntitlement(ims.legacyRuleEntitlement, spaceAddress)
     );
 
     address[] memory entitlements = new address[](2);
@@ -129,6 +129,11 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
   // =============================================================
   //                           Implementations
   // =============================================================
+
+  function _setLegacyRuleEntitlement(IRuleEntitlement entitlement) internal {
+    ImplementationStorage.Layout storage ds = ImplementationStorage.layout();
+    ds.legacyRuleEntitlement = entitlement;
+  }
 
   function _setImplementations(
     ISpaceOwner spaceToken,
@@ -233,12 +238,12 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
         );
       }
 
-      if (requirements.ruleData.length > 0) {
+      if (requirements.ruleData.operations.length > 0) {
         IRoles(spaceAddress).addRoleToEntitlement(
           roleId,
           IRolesBase.CreateEntitlement({
             module: ruleEntitlement,
-            data: requirements.ruleData
+            data: abi.encode(requirements.ruleData)
           })
         );
       }

@@ -10,7 +10,7 @@ import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEnti
 import {ISpaceOwner} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
 
 // contracts
-interface IArchitectBase {
+interface ILegacyArchitectBase {
   // =============================================================
   //                           STRUCTS
   // =============================================================
@@ -19,7 +19,7 @@ interface IArchitectBase {
   struct MembershipRequirements {
     bool everyone;
     address[] users;
-    bytes ruleData;
+    IRuleEntitlement.RuleData ruleData;
   }
 
   struct Membership {
@@ -60,7 +60,7 @@ interface IArchitectBase {
   error Architect__NotContract();
 }
 
-interface IArchitect is IArchitectBase {
+interface ILegacyArchitect is ILegacyArchitectBase {
   // =============================================================
   //                            Registry
   // =============================================================

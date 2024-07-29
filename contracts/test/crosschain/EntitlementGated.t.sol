@@ -2,7 +2,6 @@
 pragma solidity ^0.8.23;
 
 // utils
-import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 
 //interfaces
 import {IEntitlementChecker} from "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol";
@@ -149,8 +148,8 @@ contract EntitlementGatedTest is
   // =============================================================
 
   function assertRuleDatasEqual(
-    IRuleEntitlement.RuleData memory actual,
-    IRuleEntitlement.RuleData memory expected
+    IRuleEntitlement.RuleDataV2 memory actual,
+    IRuleEntitlement.RuleDataV2 memory expected
   ) internal pure {
     assert(actual.checkOperations.length == expected.checkOperations.length);
     assert(
@@ -170,8 +169,8 @@ contract EntitlementGatedTest is
           expected.checkOperations[i].contractAddress
       );
       assert(
-        actual.checkOperations[i].threshold ==
-          expected.checkOperations[i].threshold
+        keccak256(actual.checkOperations[i].params) ==
+          keccak256(expected.checkOperations[i].params)
       );
     }
 
@@ -201,7 +200,7 @@ contract EntitlementGatedTest is
       0,
       RuleEntitlementUtil.getMockERC721RuleData()
     );
-    IRuleEntitlement.RuleData memory ruleData = gated.getRuleData(requestId, 0);
+    IRuleEntitlement.RuleDataV2 memory ruleData = gated.getRuleDataV2(0);
     assertRuleDatasEqual(ruleData, RuleEntitlementUtil.getMockERC721RuleData());
   }
 

@@ -103,26 +103,26 @@ contract Integration_CreateSpace is
     operations[0] = Operation({opType: CombinedOperationType.CHECK, index: 0});
 
     // We then define the type of operations we want to have
-    CheckOperation[] memory checkOperations = new CheckOperation[](1);
-    checkOperations[0] = CheckOperation({
+    CheckOperationV2[] memory checkOperations = new CheckOperationV2[](1);
+    checkOperations[0] = CheckOperationV2({
       opType: CheckOperationType.ERC721,
       chainId: block.chainid,
       contractAddress: mock,
-      threshold: 1
+      params: abi.encode(uint256(1))
     });
 
     // We then define the logical operations we want to have
     LogicalOperation[] memory logicalOperations = new LogicalOperation[](0);
 
     // We then define the rule data
-    RuleData memory ruleData = RuleData({
+    RuleDataV2 memory ruleData = RuleDataV2({
       operations: operations,
       checkOperations: checkOperations,
       logicalOperations: logicalOperations
     });
 
     SpaceInfo memory spaceInfo = _createSpaceInfo(spaceId);
-    spaceInfo.membership.requirements.ruleData = ruleData;
+    spaceInfo.membership.requirements.ruleData = abi.encode(ruleData);
     spaceInfo.membership.settings.pricingModule = pricingModule;
 
     vm.prank(founder);

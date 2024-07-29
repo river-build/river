@@ -10,7 +10,7 @@ import {IERC173} from "contracts/src/diamond/facets/ownable/IERC173.sol";
 import {IPausableBase, IPausable} from "contracts/src/diamond/facets/pausable/IPausable.sol";
 import {IGuardian} from "contracts/src/spaces/facets/guardian/IGuardian.sol";
 import {IUserEntitlement} from "contracts/src/spaces/entitlements/user/IUserEntitlement.sol";
-import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
+import {IRuleEntitlement, IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {RuleEntitlement} from "contracts/src/spaces/entitlements/rule/RuleEntitlement.sol";
 import {IRoles} from "contracts/src/spaces/facets/roles/IRoles.sol";
 import {IMembership} from "contracts/src/spaces/facets/membership/IMembership.sol";
@@ -72,7 +72,7 @@ contract ArchitectTest is
     );
   }
 
-  function test_minter_role_entitlments() external {
+  function test_minterRoleEntitlementExists() external {
     string memory name = "Test";
 
     address founder = _randomAddress();
@@ -91,7 +91,7 @@ contract ArchitectTest is
     for (uint256 i = 0; i < entitlements.length; i++) {
       if (
         keccak256(abi.encodePacked(entitlements[i].moduleType)) ==
-        keccak256(abi.encodePacked("RuleEntitlement"))
+        keccak256(abi.encodePacked("RuleEntitlementV2"))
       ) {
         ruleEntitlementAddress = entitlements[i].moduleAddress;
         break;
@@ -100,9 +100,9 @@ contract ArchitectTest is
 
     uint256 minterRoleId = 1;
     // ruleData for minter role
-    IRuleEntitlement.RuleData memory ruleData = IRuleEntitlement(
+    IRuleEntitlement.RuleDataV2 memory ruleData = IRuleEntitlementV2(
       ruleEntitlementAddress
-    ).getRuleData(minterRoleId);
+    ).getRuleDataV2(minterRoleId);
 
     assertEq(
       ruleData.checkOperations[0].contractAddress,
