@@ -837,9 +837,7 @@ export class Client
             streamId: mediaStreamId,
             encryption: {
                 case: 'derived',
-                value: {
-                    seedPhrase: contractAddressFromSpaceId(spaceStreamId),
-                },
+                value: {},
             },
         })
 

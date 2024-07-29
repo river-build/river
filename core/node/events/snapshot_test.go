@@ -108,7 +108,6 @@ func make_Space_Image(
 		Make_SpacePayload_SpaceImage(
 			mediaInfo,
 			mediaStreamId,
-			spaceId,
 		),
 		prevMiniblockHash,
 	)
@@ -276,11 +275,9 @@ func TestCloneAndUpdateSpaceSnapshot(t *testing.T) {
 	)
 	encryption := snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceMedia.SpaceImage.GetEncryption()
 	if derived, ok := encryption.(*ChunkedMedia_Derived); ok {
-		seedPhrase := derived.Derived.SeedPhrase
-		assert.Equal(
+		assert.NotNil(
 			t,
-			streamId.String(),
-			seedPhrase,
+			derived.Derived,
 		)
 	} else {
 		assert.Fail(t, "expected derived encryption")

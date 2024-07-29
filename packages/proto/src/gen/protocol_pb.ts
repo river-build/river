@@ -2060,11 +2060,6 @@ export class ChunkedMedia_AESGCM extends Message<ChunkedMedia_AESGCM> {
  * @generated from message river.ChunkedMedia.DerivedAESGCM
  */
 export class ChunkedMedia_DerivedAESGCM extends Message<ChunkedMedia_DerivedAESGCM> {
-  /**
-   * @generated from field: string seed_phrase = 1;
-   */
-  seedPhrase = "";
-
   constructor(data?: PartialMessage<ChunkedMedia_DerivedAESGCM>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2073,7 +2068,6 @@ export class ChunkedMedia_DerivedAESGCM extends Message<ChunkedMedia_DerivedAESG
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "river.ChunkedMedia.DerivedAESGCM";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "seed_phrase", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChunkedMedia_DerivedAESGCM {

@@ -207,14 +207,6 @@ func update_Snapshot_Space(
 	case *SpacePayload_SpaceImage:
 		copyAddr := make([]byte, len(creatorAddress))
 		copy(copyAddr, creatorAddress)
-		// get the seed phrase
-		derivedEncryption := content.SpaceImage.GetDerived()
-		if derivedEncryption == nil {
-			return RiverError(Err_INVALID_ARGUMENT, "space image derived encryption is nil")
-		}
-		derived := &ChunkedMedia_DerivedAESGCM{
-			SeedPhrase: derivedEncryption.SeedPhrase,
-		}
 		snapshot.SpaceContent.SpaceMedia = &SpacePayload_SnappedSpaceMedia{
 			SpaceImage: &ChunkedMedia{
 				StreamId: content.SpaceImage.StreamId,
@@ -226,7 +218,7 @@ func update_Snapshot_Space(
 					Filename:     content.SpaceImage.Info.Filename,
 				},
 				Encryption: &ChunkedMedia_Derived{
-					Derived: derived,
+					Derived: &ChunkedMedia_DerivedAESGCM{},
 				},
 			},
 			CreatorAddress: copyAddr,
