@@ -16,7 +16,7 @@ import {
 } from '../src/entitlement'
 import { MOCK_ADDRESS } from '../src/Utils'
 import { zeroAddress } from 'viem'
-import { base } from 'viem/chains'
+import { Address } from '../src/ContractTypes'
 
 function makeRandomOperation(depth: number): Operation {
     const rand = Math.random()
@@ -54,8 +54,8 @@ test('random', async () => {
     expect(result).toBeDefined()
 })
 
-function generateRandomEthAddress(): `0x${string}` {
-    let address: `0x${string}` = '0x'
+function generateRandomEthAddress(): Address {
+    let address: Address = '0x'
     const characters = '0123456789abcdef'
     for (let i = 0; i < 40; i++) {
         address += characters.charAt(Math.floor(Math.random() * characters.length))
@@ -103,10 +103,10 @@ const slowTrueCheck: CheckOperation = {
 // reproduce the same unit tests here to ensure parity between evaluation in xchain and the
 // client.
 // Contract addresses for the test NFT contracts.
-const SepoliaTestNftContract: `0x${string}` = '0xb088b3f2b35511A611bF2aaC13fE605d491D6C19'
-const SepoliaTestNftWallet_1Token: `0x${string}` = '0x1FDBA84c2153568bc22686B88B617CF64cdb0637'
-const SepoliaTestNftWallet_3Tokens: `0x${string}` = '0xB79Af997239A334355F60DBeD75bEDf30AcD37bD'
-const SepoliaTestNftWallet_2Tokens: `0x${string}` = '0x8cECcB1e5537040Fc63A06C88b4c1dE61880dA4d'
+const SepoliaTestNftContract: Address = '0xb088b3f2b35511A611bF2aaC13fE605d491D6C19'
+const SepoliaTestNftWallet_1Token: Address = '0x1FDBA84c2153568bc22686B88B617CF64cdb0637'
+const SepoliaTestNftWallet_3Tokens: Address = '0xB79Af997239A334355F60DBeD75bEDf30AcD37bD'
+const SepoliaTestNftWallet_2Tokens: Address = '0x8cECcB1e5537040Fc63A06C88b4c1dE61880dA4d'
 
 const ethereumSepoliaChainId = 11155111n
 const baseSepoliaChainId = 84532n
@@ -266,18 +266,18 @@ test.each(nftCases)('erc721Check - $desc', async (props) => {
 })
 
 // These are the addresses of the chain link test contract on base sepolia and ethereum sepolia.
-const baseSepoliaChainLinkContract: `0x${string}` = '0xE4aB69C077896252FAFBD49EFD26B5D171A32410'
-const ethSepoliaChainLinkContract: `0x${string}` = '0x779877A7B0D9E8603169DdbD7836e478b4624789'
+const baseSepoliaChainLinkContract: Address = '0xE4aB69C077896252FAFBD49EFD26B5D171A32410'
+const ethSepoliaChainLinkContract: Address = '0x779877A7B0D9E8603169DdbD7836e478b4624789'
 
 // The following are the addresses of the wallets that hold the chain link tokens for testing.
 // Some wallet addresses are duplicated for the sake of self-documenting variable names.
-const sepoliaChainLinkWallet_50Link: `0x${string}` = '0x4BCfC6962Ab0297aF801da21216014F53B46E991'
-const sepoliaChainLinkWallet_25Link: `0x${string}` = '0xa4D440AeA5F555feEB5AEa0ddcED6e1B9FaD6A9C'
-const baseSepoliaChainLinkWallet_50Link: `0x${string}` =
+const sepoliaChainLinkWallet_50Link: Address = '0x4BCfC6962Ab0297aF801da21216014F53B46E991'
+const sepoliaChainLinkWallet_25Link: Address = '0xa4D440AeA5F555feEB5AEa0ddcED6e1B9FaD6A9C'
+const baseSepoliaChainLinkWallet_50Link: Address =
     '0x4BCfC6962Ab0297aF801da21216014F53B46E991'
-const baseSepoliaChainLinkWallet_25Link: `0x${string}` =
+const baseSepoliaChainLinkWallet_25Link: Address =
     '0xa4D440AeA5F555feEB5AEa0ddcED6e1B9FaD6A9C'
-const testEmptyAccount: `0x${string}` = '0xb227905F186095083869928BAb49cA9CE9546817'
+const testEmptyAccount: Address = '0xb227905F186095083869928BAb49cA9CE9546817'
 
 const chainlinkExp = BigInt(10) ** BigInt(18)
 
