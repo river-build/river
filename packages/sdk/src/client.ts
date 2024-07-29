@@ -2161,4 +2161,8 @@ export class Client
         const jsonStr = event.toJsonString()
         await this.rpcClient.info({ debug: ['add_event', streamId, jsonStr] })
     }
+
+    public async debugDropStream(syncId: string, streamId: string): Promise<void> {
+        await this.rpcClient.info({ debug: ['drop_stream', syncId, streamId] })
+    }
 }
