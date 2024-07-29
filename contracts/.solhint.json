@@ -1,7 +1,0 @@
-{
-    "extends": "solhint:default",
-    "rules": {
-        "max-line-length": "off",
-        "no-console": "warn"
-    }
-}
