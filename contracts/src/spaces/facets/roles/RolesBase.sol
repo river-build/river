@@ -327,7 +327,7 @@ abstract contract RolesBase is IRolesBase {
   // =============================================================
   // Channel Permissions
   // =============================================================
-  function _getCustomChannelPermissions(
+  function _getChannelPermissionOverrides(
     uint256 roleId,
     bytes32 channelId
   ) internal view returns (string[] memory permissions) {
@@ -343,7 +343,7 @@ abstract contract RolesBase is IRolesBase {
       .permissionByChannelIdByRoleId[roleId][channelId].values();
   }
 
-  function _createCustomChannelPermissions(
+  function _setChannelPermissionOverrides(
     uint256 roleId,
     bytes32 channelId,
     string[] memory permissions
@@ -357,13 +357,24 @@ abstract contract RolesBase is IRolesBase {
 
     rs.channelsByRole[roleId].add(channelId);
 
-    // check permissions is not empty
+    StringSet.Set storage permissionsSet = rs.permissionByChannelIdByRoleId[
+      roleId
+    ][channelId];
+
+    // remove current channel permissions if any
+    if (permissionsSet.length() > 0) {
+      string[] memory currentPermissions = permissionsSet.values();
+      uint256 currentPermissionsLen = currentPermissions.length;
+      for (uint256 i = 0; i < currentPermissionsLen; i++) {
+        permissionsSet.remove(currentPermissions[i]);
+      }
+    }
+
+    // check if new permissions are not empty then add them
     uint256 permissionsLen = permissions.length;
     for (uint256 i = 0; i < permissionsLen; i++) {
       _checkEmptyString(permissions[i]);
-      if (
-        !rs.permissionByChannelIdByRoleId[roleId][channelId].add(permissions[i])
-      ) {
+      if (!permissionsSet.add(permissions[i])) {
         revert Roles__PermissionAlreadyExists();
       }
     }
@@ -371,47 +382,9 @@ abstract contract RolesBase is IRolesBase {
     emit PermissionsAddedToChannelRole(msg.sender, roleId, channelId);
   }
 
-  function _updateCustomChannelPermissions(
+  function _clearChannelPermissionOverrides(
     uint256 roleId,
-    bytes32 channelId,
-    string[] memory permissions
-  ) internal {
-    // check role exists
-    _checkRoleExists(roleId);
-
-    // check channel exists
-    ChannelService.checkChannelExists(channelId);
-
-    RolesStorage.Layout storage rs = RolesStorage.layout();
-
-    // update old permissions with the new ones
-    string[] memory currentPermissions = rs
-    .permissionByChannelIdByRoleId[roleId][channelId].values();
-    uint256 currentPermissionsLen = currentPermissions.length;
-
-    for (uint256 i = 0; i < currentPermissionsLen; i++) {
-      rs.permissionByChannelIdByRoleId[roleId][channelId].remove(
-        currentPermissions[i]
-      );
-    }
-
-    uint256 permissionsLen = permissions.length;
-    for (uint256 i = 0; i < permissionsLen; i++) {
-      _checkEmptyString(permissions[i]);
-      if (
-        !rs.permissionByChannelIdByRoleId[roleId][channelId].add(permissions[i])
-      ) {
-        revert Roles__PermissionAlreadyExists();
-      }
-    }
-
-    emit PermissionsUpdatedForChannelRole(msg.sender, roleId, channelId);
-  }
-
-  function _removeCustomChannelPermissions(
-    uint256 roleId,
-    bytes32 channelId,
-    string[] memory permissions
+    bytes32 channelId
   ) internal {
     // check role exists
     _checkRoleExists(roleId);
@@ -425,19 +398,13 @@ abstract contract RolesBase is IRolesBase {
     ][channelId];
 
     // get current permissions
-    uint256 permissionsLen = permissions.length;
-
-    for (uint256 i = 0; i < permissionsLen; i++) {
-      _checkEmptyString(permissions[i]);
-      if (!permissionsSet.contains(permissions[i])) {
-        revert Roles__PermissionDoesNotExist();
-      }
-      permissionsSet.remove(permissions[i]);
+    string[] memory currentPermissions = permissionsSet.values();
+    uint256 currentPermissionsLen = currentPermissions.length;
+    for (uint256 i = 0; i < currentPermissionsLen; i++) {
+      permissionsSet.remove(currentPermissions[i]);
     }
 
-    if (permissionsSet.length() == 0) {
-      rs.channelsByRole[roleId].remove(channelId);
-    }
+    rs.channelsByRole[roleId].remove(channelId);
 
     emit PermissionsRemovedFromChannelRole(msg.sender, roleId, channelId);
   }

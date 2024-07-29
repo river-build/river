@@ -1033,7 +1033,7 @@ contract RolesTest is BaseSetup, IRolesBase, IEntitlementBase {
   // =============================================================
   // Channel Permissions
   // =============================================================
-  function test_createCustomChannelPermissions()
+  function test_setChannelPermissionOverrides()
     external
     givenRoleExists
     givenRoleIsInChannel
@@ -1042,10 +1042,10 @@ contract RolesTest is BaseSetup, IRolesBase, IEntitlementBase {
     permissions[0] = Permissions.Read;
 
     vm.prank(founder);
-    roles.createCustomChannelPermissions(ROLE_ID, CHANNEL_ID, permissions);
+    roles.setChannelPermissionOverrides(ROLE_ID, CHANNEL_ID, permissions);
 
     // get the channel permissions
-    string[] memory channelPermissions = roles.getCustomChannelPermissions(
+    string[] memory channelPermissions = roles.getChannelPermissionOverrides(
       ROLE_ID,
       CHANNEL_ID
     );
@@ -1054,7 +1054,7 @@ contract RolesTest is BaseSetup, IRolesBase, IEntitlementBase {
     assertEq(channelPermissions[0], permissions[0]);
   }
 
-  function test_updateCustomChannelPermissions()
+  function test_updateChannelPermissionOverrides()
     external
     givenRoleExists
     givenRoleIsInChannel
@@ -1063,10 +1063,10 @@ contract RolesTest is BaseSetup, IRolesBase, IEntitlementBase {
     permissions[0] = Permissions.Read;
 
     vm.prank(founder);
-    roles.createCustomChannelPermissions(ROLE_ID, CHANNEL_ID, permissions);
+    roles.setChannelPermissionOverrides(ROLE_ID, CHANNEL_ID, permissions);
 
     // get the channel permissions
-    string[] memory channelPermissions = roles.getCustomChannelPermissions(
+    string[] memory channelPermissions = roles.getChannelPermissionOverrides(
       ROLE_ID,
       CHANNEL_ID
     );
@@ -1078,16 +1078,19 @@ contract RolesTest is BaseSetup, IRolesBase, IEntitlementBase {
 
     // update the channel permissions
     vm.prank(founder);
-    roles.updateCustomChannelPermissions(ROLE_ID, CHANNEL_ID, permissions);
+    roles.setChannelPermissionOverrides(ROLE_ID, CHANNEL_ID, permissions);
 
     // get the channel permissions
-    channelPermissions = roles.getCustomChannelPermissions(ROLE_ID, CHANNEL_ID);
+    channelPermissions = roles.getChannelPermissionOverrides(
+      ROLE_ID,
+      CHANNEL_ID
+    );
 
     assertEq(channelPermissions.length, 1);
     assertEq(channelPermissions[0], permissions[0]);
   }
 
-  function test_removeCustomChannelPermissions()
+  function test_clearChannelPermissionOverrides()
     external
     givenRoleExists
     givenRoleIsInChannel
@@ -1096,10 +1099,10 @@ contract RolesTest is BaseSetup, IRolesBase, IEntitlementBase {
     permissions[0] = Permissions.Read;
 
     vm.prank(founder);
-    roles.createCustomChannelPermissions(ROLE_ID, CHANNEL_ID, permissions);
+    roles.setChannelPermissionOverrides(ROLE_ID, CHANNEL_ID, permissions);
 
     // get the channel permissions
-    string[] memory channelPermissions = roles.getCustomChannelPermissions(
+    string[] memory channelPermissions = roles.getChannelPermissionOverrides(
       ROLE_ID,
       CHANNEL_ID
     );
@@ -1109,10 +1112,13 @@ contract RolesTest is BaseSetup, IRolesBase, IEntitlementBase {
 
     // remove the channel permissions
     vm.prank(founder);
-    roles.removeCustomChannelPermissions(ROLE_ID, CHANNEL_ID, permissions);
+    roles.clearChannelPermissionOverrides(ROLE_ID, CHANNEL_ID);
 
     // get the channel permissions
-    channelPermissions = roles.getCustomChannelPermissions(ROLE_ID, CHANNEL_ID);
+    channelPermissions = roles.getChannelPermissionOverrides(
+      ROLE_ID,
+      CHANNEL_ID
+    );
 
     assertEq(channelPermissions.length, 0);
   }

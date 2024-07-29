@@ -87,38 +87,28 @@ contract Roles is IRoles, RolesBase, Entitled {
     _removeRoleFromEntitlement(roleId, entitlement);
   }
 
-  // custom channel permissions
-  function createCustomChannelPermissions(
+  // custom channel permission overrides
+  function setChannelPermissionOverrides(
     uint256 roleId,
     bytes32 channelId,
     string[] memory permissions
   ) external {
     _validatePermission(Permissions.ModifyRoles);
-    _createCustomChannelPermissions(roleId, channelId, permissions);
+    _setChannelPermissionOverrides(roleId, channelId, permissions);
   }
 
-  function getCustomChannelPermissions(
+  function getChannelPermissionOverrides(
     uint256 roleId,
     bytes32 channelId
   ) external view returns (string[] memory permissions) {
-    return _getCustomChannelPermissions(roleId, channelId);
+    return _getChannelPermissionOverrides(roleId, channelId);
   }
 
-  function updateCustomChannelPermissions(
+  function clearChannelPermissionOverrides(
     uint256 roleId,
-    bytes32 channelId,
-    string[] memory permissions
+    bytes32 channelId
   ) external {
     _validatePermission(Permissions.ModifyRoles);
-    _updateCustomChannelPermissions(roleId, channelId, permissions);
-  }
-
-  function removeCustomChannelPermissions(
-    uint256 roleId,
-    bytes32 channelId,
-    string[] memory permissions
-  ) external {
-    _validatePermission(Permissions.ModifyRoles);
-    _removeCustomChannelPermissions(roleId, channelId, permissions);
+    _clearChannelPermissionOverrides(roleId, channelId);
   }
 }

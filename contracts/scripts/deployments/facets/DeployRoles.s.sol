@@ -24,10 +24,9 @@ contract DeployRoles is FacetHelper, Deployer {
     addSelector(Roles.removeRoleFromEntitlement.selector);
 
     // channel permission overrides
-    addSelector(Roles.createCustomChannelPermissions.selector);
-    addSelector(Roles.getCustomChannelPermissions.selector);
-    addSelector(Roles.updateCustomChannelPermissions.selector);
-    addSelector(Roles.removeCustomChannelPermissions.selector);
+    addSelector(Roles.setChannelPermissionOverrides.selector);
+    addSelector(Roles.getChannelPermissionOverrides.selector);
+    addSelector(Roles.clearChannelPermissionOverrides.selector);
   }
 
   function versionName() public pure override returns (string memory) {
