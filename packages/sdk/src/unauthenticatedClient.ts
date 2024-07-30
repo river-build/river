@@ -86,8 +86,15 @@ export class UnauthenticatedClient {
         }
     }
 
+    /** 
+     * @deprecated please use scrollbackByMs() 
+     **/
     async scrollbackToDate(streamView: StreamStateView, toDate: number): Promise<void> {
-        this.logCall('scrollbackToDate', { streamId: streamView.streamId, toDate })
+        return this.scrollbackByMs(streamView, toDate)
+    }
+
+    async scrollbackByMs(streamView: StreamStateView, ms: number): Promise<void> {
+        this.logCall('scrollbackToDate', { streamId: streamView.streamId, ms })
         // scrollback to get events till max scrollback, toDate or till no events are left
         for (let i = 0; i < SCROLLBACK_MAX_COUNT; i++) {
             const result = await this.scrollback(streamView)
@@ -95,12 +102,12 @@ export class UnauthenticatedClient {
                 break
             }
             const currentOldestEvent = result.firstEvent
-            this.logCall('scrollbackToDate result', {
-                oldest: currentOldestEvent?.createdAtEpochMs,
-                toDate,
+            this.logCall('scrollbackToDate result', { 
+                oldest: currentOldestEvent?.createdAtEpochMs, 
+                ms, 
             })
             if (currentOldestEvent) {
-                if (!this.isWithin(currentOldestEvent.createdAtEpochMs, toDate)) {
+                if (!this.isWithin(currentOldestEvent.createdAtEpochMs, ms)) {
                     break
                 }
             }
