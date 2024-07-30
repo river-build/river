@@ -37,19 +37,20 @@ abstract contract SpaceOwnerUriBase is ISpaceOwnerBase {
     if (spaceAddress == address(0)) revert SpaceOwner__SpaceNotFound();
 
     SpaceOwnerStorage.Space storage space = ds.spaceByAddress[spaceAddress];
-    string memory spaceUri = space.uri;
-    if (bytes(spaceUri).length == 0) spaceUri = ds.defaultUri;
+    string memory uri = bytes(space.uri).length == 0
+      ? ds.defaultUri
+      : space.uri;
 
-    uint256 length = bytes(spaceUri).length;
+    uint256 length = bytes(uri).length;
     if (length == 0) revert SpaceOwner__DefaultUriNotSet();
 
     unchecked {
       // the ASCII code for "/" is 0x2f
-      if (bytes(spaceUri)[length - 1] != 0x2f) {
-        spaceUri = string.concat(spaceUri, "/");
+      if (bytes(uri)[length - 1] != 0x2f) {
+        return string.concat(uri, "/", Strings.toHexString(spaceAddress));
+      } else {
+        return string.concat(uri, Strings.toHexString(spaceAddress));
       }
     }
-
-    return string.concat(spaceUri, Strings.toHexString(spaceAddress));
   }
 }
