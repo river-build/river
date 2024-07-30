@@ -1,8 +1,6 @@
 package events
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"testing"
 
 	"github.com/river-build/river/core/node/base/test"
@@ -84,15 +82,6 @@ func make_Space_Membership(
 	parsed, err := ParseEvent(envelope)
 	assert.NoError(t, err)
 	return parsed
-}
-
-func make_media_stream_id() (string, error) {
-	bytes := make([]byte, 32)
-	if _, err := rand.Read(bytes); err != nil {
-		return "", err
-	}
-	bytes[0] = STREAM_MEDIA_BIN
-	return hex.EncodeToString(bytes), nil
 }
 
 func make_Space_Image(
