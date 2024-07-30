@@ -62,6 +62,16 @@ type aeUnpinRules struct {
 	unpin  *MemberPayload_Unpin
 }
 
+type aeUpdateAutojoinRules struct {
+	params         *aeParams
+	updateAutojoin *SpacePayload_UpdateChannelAutojoin
+}
+
+type aeUpdateChannelShowUserJoinLeaveEventsRules struct {
+	params *aeParams
+	update *SpacePayload_UpdateChannelShowUserJoinLeaveEvents
+}
+
 type aeMediaPayloadChunkRules struct {
 	params *aeParams
 	chunk  *MediaPayload_Chunk
@@ -261,6 +271,15 @@ func (params *aeParams) canAddSpacePayload(payload *StreamEvent_SpacePayload) ru
 				check(params.creatorIsValidNode).
 				check(ru.validSpaceChannelOp)
 		}
+	case *SpacePayload_UpdateChannelAutojoin_:
+		ru := &aeUpdateAutojoinRules{
+			params:         params,
+			updateAutojoin: content.UpdateChannelAutojoin,
+		}
+		return aeBuilder().
+			check(ru.validUpdateAutojoin).
+			requireChainAuth(params.updateAutojoinMessageChannelModifyRequirements)
+
 	default:
 		return aeBuilder().
 			fail(unknownContentType(content))
@@ -464,24 +483,24 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 				check(pinRuls.validPin)
 		}
 	case *MemberPayload_Unpin_:
-		unpinRuls := &aeUnpinRules{
+		unpinRules := &aeUnpinRules{
 			params: params,
 			unpin:  content.Unpin,
 		}
 		if shared.ValidSpaceStreamId(params.streamView.StreamId()) {
 			return aeBuilder().
 				check(params.creatorIsMember).
-				check(unpinRuls.validUnpin).
+				check(unpinRules.validUnpin).
 				requireChainAuth(params.spaceWriteEntitlements)
 		} else if shared.ValidChannelStreamId(params.streamView.StreamId()) {
 			return aeBuilder().
 				check(params.creatorIsMember).
-				check(unpinRuls.validUnpin).
+				check(unpinRules.validUnpin).
 				requireChainAuth(params.channelMessageWriteEntitlements)
 		} else {
 			return aeBuilder().
 				check(params.creatorIsMember).
-				check(unpinRuls.validUnpin)
+				check(unpinRules.validUnpin)
 		}
 	default:
 		return aeBuilder().
@@ -1048,6 +1067,38 @@ func (params *aeParams) channelMessageReactEntitlements() (*auth.ChainAuthArgs, 
 	return chainAuthArgs, nil
 }
 
+func (params *aeParams) updateAutojoinMessageChannelModifyRequirements() (*auth.ChainAuthArgs, error) {
+	userId, err := shared.AddressHex(params.parsedEvent.Event.CreatorAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	inception, err := params.streamView.(events.SpaceStreamView).GetSpaceInception()
+	if err != nil {
+		return nil, err
+	}
+
+	spaceId, err := shared.StreamIdFromBytes(inception.StreamId)
+	if err != nil {
+		return nil, err
+	}
+
+	channelIdBytes := params.parsedEvent.Event.Payload.(*StreamEvent_SpacePayload).SpacePayload.Content.(*SpacePayload_UpdateChannelAutojoin_).UpdateChannelAutojoin.ChannelId
+	channelId, err := shared.StreamIdFromBytes(channelIdBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	chainAuthArgs := auth.NewChainAuthArgsForChannel(
+		spaceId,
+		channelId,
+		userId,
+		auth.PermissionAddRemoveChannels, // TODO: is this right?
+	)
+
+	return chainAuthArgs, nil
+}
+
 func (params *aeParams) onEntitlementFailureForUserEvent() (*DerivedEvent, error) {
 	userId, err := shared.AddressHex(params.parsedEvent.Event.CreatorAddress)
 	if err != nil {
@@ -1254,6 +1305,25 @@ func (ru *aeUnpinRules) validUnpin() (bool, error) {
 		}
 	}
 	return false, RiverError(Err_INVALID_ARGUMENT, "message is not pinned")
+}
+
+func (ru *aeUpdateAutojoinRules) validUpdateAutojoin() (bool, error) {
+	if ru.updateAutojoin == nil {
+		return false, RiverError(Err_INVALID_ARGUMENT, "event is not an update autojoin event")
+	}
+	view := ru.params.streamView.(events.SpaceStreamView)
+	channelId, err := shared.StreamIdFromBytes(ru.updateAutojoin.ChannelId)
+	if err != nil {
+		return false, err
+	}
+
+	// check if the channel exists
+	_, err = view.GetChannelInfo(channelId)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 func (ru *aeSpaceChannelRules) validSpaceChannelOp() (bool, error) {

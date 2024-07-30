@@ -72,6 +72,12 @@ export type StreamStateEvents = {
     userDeviceKeysUpdated: (streamId: string, deviceKeys: UserDevice[]) => void
     spaceChannelCreated: (spaceId: string, channelId: string) => void
     spaceChannelUpdated: (spaceId: string, channelId: string, updatedAtEventNum: bigint) => void
+    spaceChannelAutojoinUpdated: (spaceId: string, channelId: string, autojoin: boolean) => void
+    spaceChannelShowUserJoinLeaveEventsUpdated: (
+        spaceId: string,
+        channelId: string,
+        showUserJoinLeaveEvents: boolean,
+    ) => void
     spaceChannelDeleted: (spaceId: string, channelId: string) => void
     channelPinAdded: (channelId: string, pin: Pin) => void
     channelPinRemoved: (channelId: string, pin: Pin, index: number) => void

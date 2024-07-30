@@ -299,6 +299,38 @@ func Make_SpacePayload_ChannelUpdate(
 	}
 }
 
+func Make_SpacePayload_UpdateChannelAutojoin(
+	channelId StreamId,
+	autojoin bool,
+) *StreamEvent_SpacePayload {
+	return &StreamEvent_SpacePayload{
+		SpacePayload: &SpacePayload{
+			Content: &SpacePayload_UpdateChannelAutojoin_{
+				UpdateChannelAutojoin: &SpacePayload_UpdateChannelAutojoin{
+					ChannelId: channelId[:],
+					Autojoin:  autojoin,
+				},
+			},
+		},
+	}
+}
+
+func Make_SpacePayload_UpdateChannelShowUserJoinLeaveEvents(
+	channelId StreamId,
+	showUserJoinLeaveEvents bool,
+) *StreamEvent_SpacePayload {
+	return &StreamEvent_SpacePayload{
+		SpacePayload: &SpacePayload{
+			Content: &SpacePayload_UpdateChannelShowUserJoinLeaveEvents_{
+				UpdateChannelShowUserJoinLeaveEvents: &SpacePayload_UpdateChannelShowUserJoinLeaveEvents{
+					ChannelId:               channelId[:],
+					ShowUserJoinLeaveEvents: showUserJoinLeaveEvents,
+				},
+			},
+		},
+	}
+}
+
 func Make_UserPayload_Inception(streamId StreamId, settings *StreamSettings) *StreamEvent_UserPayload {
 	return &StreamEvent_UserPayload{
 		UserPayload: &UserPayload{

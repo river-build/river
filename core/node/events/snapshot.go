@@ -12,7 +12,7 @@ import (
 	"github.com/river-build/river/core/node/shared"
 )
 
-func Make_GenisisSnapshot(events []*ParsedEvent) (*Snapshot, error) {
+func Make_GenesisSnapshot(events []*ParsedEvent) (*Snapshot, error) {
 	if len(events) == 0 {
 		return nil, RiverError(Err_INVALID_ARGUMENT, "no events to make snapshot from")
 	}
@@ -196,8 +196,35 @@ func update_Snapshot_Space(iSnapshot *Snapshot, spacePayload *SpacePayload, even
 			Op:                content.Channel.Op,
 			OriginEvent:       content.Channel.OriginEvent,
 			UpdatedAtEventNum: eventNum,
+			Autojoin:          false,
 		}
 		snapshot.SpaceContent.Channels = insertChannel(snapshot.SpaceContent.Channels, channel)
+		return nil
+	case *SpacePayload_UpdateChannelAutojoin_:
+		var channel *SpacePayload_ChannelMetadata = nil
+		for _, c := range snapshot.SpaceContent.Channels {
+			if bytes.Equal(c.ChannelId, content.UpdateChannelAutojoin.ChannelId) {
+				channel = c
+				break
+			}
+		}
+		if channel == nil {
+			return RiverError(Err_INVALID_ARGUMENT, "channel metadata not found")
+		}
+		channel.Autojoin = content.UpdateChannelAutojoin.Autojoin
+		return nil
+	case *SpacePayload_UpdateChannelShowUserJoinLeaveEvents_:
+		var channel *SpacePayload_ChannelMetadata = nil
+		for _, c := range snapshot.SpaceContent.Channels {
+			if bytes.Equal(c.ChannelId, content.UpdateChannelShowUserJoinLeaveEvents.ChannelId) {
+				channel = c
+				break
+			}
+		}
+		if channel == nil {
+			return RiverError(Err_INVALID_ARGUMENT, "channel metadata not found")
+		}
+		channel.ShowUserJoinLeaveEvents = content.UpdateChannelShowUserJoinLeaveEvents.ShowUserJoinLeaveEvents
 		return nil
 	default:
 		return RiverError(Err_INVALID_ARGUMENT, "unknown space payload type %T", spacePayload.Content)
@@ -487,7 +514,7 @@ func update_Snapshot_Member(
 		}
 		snapshot.Pins = snapPins
 		return nil
-	
+
 	default:
 		return RiverError(Err_INVALID_ARGUMENT, "unknown membership payload type %T", memberPayload.Content)
 	}

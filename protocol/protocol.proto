@@ -240,6 +240,8 @@ message SpacePayload {
         bytes channel_id = 2;
         EventRef origin_event = 3;
         int64 updated_at_event_num = 6;
+        bool autojoin = 7;
+        bool show_user_join_leave_events = 8;
     }
 
     message ChannelUpdate {
@@ -249,9 +251,21 @@ message SpacePayload {
         EventRef origin_event = 3;
     }
 
+    message UpdateChannelAutojoin {
+        bytes channel_id = 1;
+        bool autojoin = 2;
+    }
+
+    message UpdateChannelShowUserJoinLeaveEvents {
+        bytes channel_id = 1;
+        bool show_user_join_leave_events = 2;
+    }
+
     oneof content {
         Inception inception = 1;
         ChannelUpdate channel = 2;
+        UpdateChannelAutojoin update_channel_autojoin = 3;
+        UpdateChannelShowUserJoinLeaveEvents update_channel_show_user_join_leave_events = 4;
     }
 }
 
