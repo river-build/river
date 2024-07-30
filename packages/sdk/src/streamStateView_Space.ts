@@ -9,13 +9,15 @@ import {
     SpacePayload_ChannelMetadata,
     SpacePayload_Snapshot,
     ChunkedMedia,
+    EncryptedData,
 } from '@river-build/proto'
 import { StreamEncryptionEvents, StreamEvents, StreamStateEvents } from './streamEvents'
 import { StreamStateView_AbstractContent } from './streamStateView_AbstractContent'
 import { DecryptedContent } from './encryptedContentTypes'
 import { check, throwWithCode } from '@river-build/dlog'
 import { logNever } from './check'
-import { isDefaultChannelId, streamIdAsString } from './id'
+import { contractAddressFromSpaceId, isDefaultChannelId, streamIdAsString } from './id'
+import { decryptAesGcmDerived } from './crypto_utils'
 
 export type ParsedChannelProperties = {
     isDefault: boolean
@@ -51,7 +53,16 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
         for (const payload of content.channels) {
             this.addSpacePayload_Channel(eventHash, payload, payload.updatedAtEventNum, undefined)
         }
-        this.spaceImage = content.spaceMedia?.spaceImage
+
+        if (content.spaceMedia?.spaceImage?.data) {
+            this.decryptSpaceImage(content.spaceMedia.spaceImage.data)
+                .then((media) => {
+                    this.spaceImage = media
+                })
+                .catch((err) => {
+                    throw err
+                })
+        }
     }
 
     onConfirmedEvent(
@@ -105,13 +116,25 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
                 )
                 break
             case 'spaceImage':
-                this.spaceImage = payload.content.value
+                this.decryptSpaceImage(payload.content.value)
+                    .then((media) => {
+                        this.spaceImage = media
+                    })
+                    .catch((err) => {
+                        throw err
+                    })
                 break
             case undefined:
                 break
             default:
                 logNever(payload.content)
         }
+    }
+
+    private async decryptSpaceImage(encryptedImage: EncryptedData): Promise<ChunkedMedia> {
+        const keyPhrase = contractAddressFromSpaceId(this.streamId)
+        const plaintext = await decryptAesGcmDerived(keyPhrase, encryptedImage)
+        return ChunkedMedia.fromBinary(plaintext)
     }
 
     private addSpacePayload_Channel(

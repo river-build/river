@@ -25,6 +25,8 @@ import {
     CreateStreamRequest,
     AddEventResponse_Error,
     MediaInfo,
+    ChunkedMedia,
+    EmbeddedMedia,
 } from '@river-build/proto'
 import {
     bin_fromHexString,
@@ -126,7 +128,14 @@ import { SyncState, SyncedStreams } from './syncedStreams'
 import { SyncedStream } from './syncedStream'
 import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
-import { decryptAesGcm } from './crypto_utils'
+import {
+    AES_GCM_DERIVED_ALGORITHM,
+    decryptAesGcm,
+    decryptAesGcmDerived,
+    deriveKeyAndIV,
+    encryptAesGcm,
+    uint8ArrayToBase64,
+} from './crypto_utils'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
@@ -829,18 +838,44 @@ export class Client
         )
     }
 
-    async setSpaceImage(spaceStreamId: string, mediaStreamId: string, info: MediaInfo) {
+    async decryptSpaceImage(spaceId: string, encryptedData: EncryptedData): Promise<ChunkedMedia> {
+        this.logCall('getDecryptedSpaceImage', spaceId)
+
+        const keyPhrase = contractAddressFromSpaceId(spaceId)
+        const plaintext = await decryptAesGcmDerived(keyPhrase, encryptedData)
+        return ChunkedMedia.fromBinary(plaintext)
+    }
+
+    async setSpaceImage(
+        spaceStreamId: string,
+        mediaStreamId: string,
+        info: MediaInfo,
+        thumbnail?: EmbeddedMedia,
+    ) {
         this.logCall('setSpaceImage', spaceStreamId, mediaStreamId, info)
 
-        const event = make_SpacePayload_SpaceImage({
+        // create the chunked media to be added
+        const chunkedMedia = new ChunkedMedia({
             info,
             streamId: mediaStreamId,
+            thumbnail,
             encryption: {
                 case: 'derived',
                 value: {},
             },
         })
 
+        // encrypt the chunked media
+        const spaceId = contractAddressFromSpaceId(spaceStreamId)
+        const { key, iv } = await deriveKeyAndIV(spaceId)
+        const { ciphertext } = await encryptAesGcm(chunkedMedia.toBinary(), key, iv)
+        const encryptedData = new EncryptedData({
+            ciphertext: uint8ArrayToBase64(ciphertext),
+            algorithm: AES_GCM_DERIVED_ALGORITHM,
+        })
+
+        // add the event to the stream
+        const event = make_SpacePayload_SpaceImage(encryptedData)
         return this.makeEventAndAddToStream(spaceStreamId, event, { method: 'setSpaceImage' })
     }
 

@@ -232,7 +232,7 @@ message SpacePayload {
 
     message SnappedSpaceMedia {
         bytes creator_address = 1;
-        ChunkedMedia space_image = 2;
+        WrappedEncryptedData space_image = 2;
     }
     
     message Inception {
@@ -258,7 +258,7 @@ message SpacePayload {
     oneof content {
         Inception inception = 1;
         ChannelUpdate channel = 2;
-        ChunkedMedia space_image = 3;
+        EncryptedData space_image = 3;
     }
 }
 

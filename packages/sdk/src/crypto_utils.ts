@@ -2,7 +2,20 @@
 // The same IV and key are generated from the seed phrase each time.
 // Not intended for protecting sensitive data, but rather for obfuscating content.
 
+import { throwWithCode } from '@river-build/dlog'
+import { EncryptedData, Err } from '@river-build/proto'
 import crypto from 'crypto'
+
+export const AES_GCM_DERIVED_ALGORITHM = 'r.aes-256-gcm.derived'
+
+export function uint8ArrayToBase64(uint8Array: Uint8Array): string {
+    return Buffer.from(uint8Array).toString('base64')
+}
+
+export function base64ToUint8Array(base64: string): Uint8Array {
+    const buffer = Buffer.from(base64, 'base64')
+    return new Uint8Array(buffer)
+}
 
 function bufferToUint8Array(buffer: Buffer): Uint8Array {
     return new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength)
@@ -80,7 +93,7 @@ export async function encryptAesGcm(
 }
 
 export async function decryptAesGcm(
-    data: Uint8Array,
+    data: Uint8Array | string,
     key: Uint8Array,
     iv: Uint8Array,
 ): Promise<Uint8Array> {
@@ -92,19 +105,47 @@ export async function decryptAesGcm(
         throw new Error('Invalid IV length. AES-256-GCM requires a 12-byte IV.')
     }
 
-    const encryptedBuffer = uint8ArrayToBuffer(data)
-    const authTag = uint8ArrayToBuffer(encryptedBuffer.slice(encryptedBuffer.length - 16))
-    const encryptedContent = uint8ArrayToBuffer(
-        encryptedBuffer.slice(0, encryptedBuffer.length - 16),
+    // Convert data to Uint8Array if it is a string
+    let dataBuffer: Uint8Array
+    if (typeof data === 'string') {
+        dataBuffer = Buffer.from(data, 'base64')
+    } else {
+        dataBuffer = data
+    }
+
+    const encryptedBuffer = Buffer.from(
+        dataBuffer.buffer,
+        dataBuffer.byteOffset,
+        dataBuffer.byteLength,
+    )
+    const authTag = new Uint8Array(
+        encryptedBuffer.buffer.slice(
+            encryptedBuffer.byteOffset + encryptedBuffer.length - 16,
+            encryptedBuffer.byteOffset + encryptedBuffer.length,
+        ),
+    )
+    const encryptedContent = new Uint8Array(
+        encryptedBuffer.buffer.slice(
+            encryptedBuffer.byteOffset,
+            encryptedBuffer.byteOffset + encryptedBuffer.length - 16,
+        ),
     )
 
-    const decipher = crypto.createDecipheriv(
-        'aes-256-gcm',
-        uint8ArrayToBuffer(key),
-        uint8ArrayToBuffer(iv),
-    )
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv)
     decipher.setAuthTag(authTag)
 
     const decrypted = Buffer.concat([decipher.update(encryptedContent), decipher.final()])
-    return bufferToUint8Array(decrypted)
+    return new Uint8Array(decrypted.buffer, decrypted.byteOffset, decrypted.byteLength)
+}
+
+export async function decryptAesGcmDerived(
+    keyPhrase: string,
+    encryptedData: EncryptedData,
+): Promise<Uint8Array> {
+    if (encryptedData.algorithm !== AES_GCM_DERIVED_ALGORITHM) {
+        throwWithCode(`${encryptedData.algorithm}" algorithm not implemented`, Err.UNIMPLEMENTED)
+    }
+    const { key, iv } = await deriveKeyAndIV(keyPhrase)
+    const ciphertext = base64ToUint8Array(encryptedData.ciphertext)
+    return decryptAesGcm(ciphertext, key, iv)
 }

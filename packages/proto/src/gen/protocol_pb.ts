@@ -1562,9 +1562,9 @@ export class SpacePayload extends Message<SpacePayload> {
     case: "channel";
   } | {
     /**
-     * @generated from field: river.ChunkedMedia space_image = 3;
+     * @generated from field: river.EncryptedData space_image = 3;
      */
-    value: ChunkedMedia;
+    value: EncryptedData;
     case: "spaceImage";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
@@ -1578,7 +1578,7 @@ export class SpacePayload extends Message<SpacePayload> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "inception", kind: "message", T: SpacePayload_Inception, oneof: "content" },
     { no: 2, name: "channel", kind: "message", T: SpacePayload_ChannelUpdate, oneof: "content" },
-    { no: 3, name: "space_image", kind: "message", T: ChunkedMedia, oneof: "content" },
+    { no: 3, name: "space_image", kind: "message", T: EncryptedData, oneof: "content" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SpacePayload {
@@ -1661,9 +1661,9 @@ export class SpacePayload_SnappedSpaceMedia extends Message<SpacePayload_Snapped
   creatorAddress = new Uint8Array(0);
 
   /**
-   * @generated from field: river.ChunkedMedia space_image = 2;
+   * @generated from field: river.WrappedEncryptedData space_image = 2;
    */
-  spaceImage?: ChunkedMedia;
+  spaceImage?: WrappedEncryptedData;
 
   constructor(data?: PartialMessage<SpacePayload_SnappedSpaceMedia>) {
     super();
@@ -1674,7 +1674,7 @@ export class SpacePayload_SnappedSpaceMedia extends Message<SpacePayload_Snapped
   static readonly typeName = "river.SpacePayload.SnappedSpaceMedia";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "creator_address", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
-    { no: 2, name: "space_image", kind: "message", T: ChunkedMedia },
+    { no: 2, name: "space_image", kind: "message", T: WrappedEncryptedData },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SpacePayload_SnappedSpaceMedia {

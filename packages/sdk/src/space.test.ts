@@ -7,6 +7,9 @@ import { Client } from './client'
 import { dlog } from '@river-build/dlog'
 import { makeUniqueChannelStreamId, makeUniqueMediaStreamId } from './id'
 import { MediaInfo, MembershipOp } from '@river-build/proto'
+import { isEncryptedData } from './encryptedContentTypes'
+import { AES_GCM_DERIVED_ALGORITHM } from './crypto_utils'
+import { assert } from 'console'
 
 const log = dlog('csb:test')
 
@@ -155,21 +158,29 @@ describe('spaceTests', () => {
             expect(
                 spaceStream.view.snapshot?.content.case === 'spaceContent' &&
                     spaceStream.view.snapshot.content.value.spaceMedia !== undefined &&
-                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage !== undefined &&
-                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.streamId ===
-                        mediaStreamId &&
-                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.info !==
-                        undefined &&
-                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.info.mimetype ===
-                        'image/png' &&
-                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.info.filename ===
-                        'bob-1.png' &&
-                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.encryption
-                        ?.case === 'derived' &&
-                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.encryption
-                        .value !== undefined,
+                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage?.data !==
+                        undefined,
             ).toBe(true)
         })
+
+        // decrypt the snapshot and assert the image values
+        let encryptedData =
+            spaceStream.view.snapshot?.content.case === 'spaceContent'
+                ? spaceStream.view.snapshot.content.value.spaceMedia?.spaceImage?.data
+                : undefined
+        expect(
+            encryptedData !== undefined &&
+                isEncryptedData(encryptedData) &&
+                encryptedData.algorithm === AES_GCM_DERIVED_ALGORITHM,
+        ).toBe(true)
+        let decrypted = encryptedData
+            ? await bobsClient.decryptSpaceImage(spaceId, encryptedData)
+            : undefined
+        expect(
+            decrypted !== undefined &&
+                decrypted?.info?.mimetype === image.mimetype &&
+                decrypted?.info?.filename === image.filename,
+        ).toBe(true)
 
         // make another space image event
         const mediaStreamId2 = makeUniqueMediaStreamId()
@@ -188,20 +199,28 @@ describe('spaceTests', () => {
             expect(
                 spaceStream.view.snapshot?.content.case === 'spaceContent' &&
                     spaceStream.view.snapshot.content.value.spaceMedia !== undefined &&
-                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage !== undefined &&
-                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.streamId ===
-                        mediaStreamId2 &&
-                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.info !==
-                        undefined &&
-                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.info.mimetype ===
-                        'image/jpg' &&
-                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.info.filename ===
-                        'bob-2.jpg' &&
-                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.encryption
-                        ?.case === 'derived' &&
-                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage.encryption
-                        .value !== undefined,
+                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage?.data !==
+                        undefined,
             ).toBe(true)
         })
+
+        // decrypt the snapshot and assert the image values
+        encryptedData =
+            spaceStream.view.snapshot?.content.case === 'spaceContent'
+                ? spaceStream.view.snapshot.content.value.spaceMedia?.spaceImage?.data
+                : undefined
+        expect(
+            encryptedData !== undefined &&
+                isEncryptedData(encryptedData) &&
+                encryptedData.algorithm === AES_GCM_DERIVED_ALGORITHM,
+        ).toBe(true)
+        decrypted = encryptedData
+            ? await bobsClient.decryptSpaceImage(spaceId, encryptedData)
+            : undefined
+        expect(
+            decrypted !== undefined &&
+                decrypted?.info?.mimetype === image2.mimetype &&
+                decrypted?.info?.filename === image2.filename,
+        ).toBe(true)
     })
 })

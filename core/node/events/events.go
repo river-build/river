@@ -282,25 +282,16 @@ func Make_SpacePayload_Membership(op MembershipOp, userId string, initiatorId st
 }
 
 func Make_SpacePayload_SpaceImage(
-	mediaInfo *MediaInfo,
-	streamId string,
+	ciphertext string,
 ) *StreamEvent_SpacePayload {
+	encryptedData := &EncryptedData{
+		Ciphertext: ciphertext,
+		Algorithm:  crypto.AES_GCM_DERIVED_ALGORITHM,
+	}
 	return &StreamEvent_SpacePayload{
 		SpacePayload: &SpacePayload{
 			Content: &SpacePayload_SpaceImage{
-				SpaceImage: &ChunkedMedia{
-					Info: &MediaInfo{
-						Mimetype:     mediaInfo.Mimetype,
-						SizeBytes:    mediaInfo.SizeBytes,
-						WidthPixels:  mediaInfo.WidthPixels,
-						HeightPixels: mediaInfo.HeightPixels,
-						Filename:     mediaInfo.Filename,
-					},
-					StreamId: streamId,
-					Encryption: &ChunkedMedia_Derived{
-						Derived: &ChunkedMedia_DerivedAESGCM{},
-					},
-				},
+				SpaceImage: encryptedData,
 			},
 		},
 	}

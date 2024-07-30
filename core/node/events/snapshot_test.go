@@ -97,16 +97,14 @@ func make_media_stream_id() (string, error) {
 
 func make_Space_Image(
 	wallet *crypto.Wallet,
-	mediaInfo *MediaInfo,
-	mediaStreamId string,
+	ciphertext string,
 	prevMiniblockHash []byte,
 	t *testing.T,
 ) *ParsedEvent {
 	envelope, err := MakeEnvelopeWithPayload(
 		wallet,
 		Make_SpacePayload_SpaceImage(
-			mediaInfo,
-			mediaStreamId,
+			ciphertext,
 		),
 		prevMiniblockHash,
 	)
@@ -218,8 +216,6 @@ func TestCloneAndUpdateSpaceSnapshot(t *testing.T) {
 	defer cancel()
 	wallet, _ := crypto.NewWallet(ctx)
 	streamId := UserStreamIdFromAddr(wallet.Address)
-	mediaStreamId, err := make_media_stream_id()
-	assert.NoError(t, err)
 	inception := make_Space_Inception(wallet, streamId, t)
 	snapshot1, err := Make_GenisisSnapshot([]*ParsedEvent{inception})
 	assert.NoError(t, err)
@@ -231,7 +227,8 @@ func TestCloneAndUpdateSpaceSnapshot(t *testing.T) {
 	membership := make_Space_Membership(wallet, MembershipOp_SO_JOIN, userId, nil, t)
 	username := make_Space_Username(wallet, "bob", nil, t)
 	displayName := make_Space_DisplayName(wallet, "bobIsTheGreatest", nil, t)
-	image := make_Space_Image(wallet, &MediaInfo{}, mediaStreamId, nil, t)
+	imageCipertext := "space_image_ciphertext"
+	image := make_Space_Image(wallet, imageCipertext, nil, t)
 	events := []*ParsedEvent{membership, username, displayName, image}
 	for i, event := range events[:] {
 		err = Update_Snapshot(snapshot, event, 1, int64(3+i))
@@ -269,18 +266,14 @@ func TestCloneAndUpdateSpaceSnapshot(t *testing.T) {
 
 	assert.Equal(
 		t,
-		mediaStreamId,
-		snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceMedia.SpaceImage.StreamId,
+		imageCipertext,
+		snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceMedia.SpaceImage.Data.Ciphertext,
 	)
-	encryption := snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceMedia.SpaceImage.GetEncryption()
-	if derived, ok := encryption.(*ChunkedMedia_Derived); ok {
-		assert.NotNil(
-			t,
-			derived.Derived,
-		)
-	} else {
-		assert.Fail(t, "expected derived encryption")
-	}
+	assert.Equal(
+		t,
+		crypto.AES_GCM_DERIVED_ALGORITHM,
+		snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceMedia.SpaceImage.Data.Algorithm,
+	)
 }
 
 func TestUpdateSnapshotFailsIfInception(t *testing.T) {

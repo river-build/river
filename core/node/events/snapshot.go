@@ -158,7 +158,7 @@ func Update_Snapshot(iSnapshot *Snapshot, event *ParsedEvent, miniblockNum int64
 	iSnapshot = migrations.MigrateSnapshot(iSnapshot)
 	switch payload := event.Event.Payload.(type) {
 	case *StreamEvent_SpacePayload:
-		return update_Snapshot_Space(iSnapshot, payload.SpacePayload, event.Event.CreatorAddress, eventNum)
+		return update_Snapshot_Space(iSnapshot, payload.SpacePayload, event.Event.CreatorAddress, eventNum, event.Hash.Bytes())
 	case *StreamEvent_ChannelPayload:
 		return update_Snapshot_Channel(iSnapshot, payload.ChannelPayload)
 	case *StreamEvent_DmChannelPayload:
@@ -187,6 +187,7 @@ func update_Snapshot_Space(
 	spacePayload *SpacePayload,
 	creatorAddress []byte,
 	eventNum int64,
+	eventHash []byte,
 ) error {
 	snapshot := iSnapshot.Content.(*Snapshot_SpaceContent)
 	if snapshot == nil {
@@ -208,19 +209,7 @@ func update_Snapshot_Space(
 		copyAddr := make([]byte, len(creatorAddress))
 		copy(copyAddr, creatorAddress)
 		snapshot.SpaceContent.SpaceMedia = &SpacePayload_SnappedSpaceMedia{
-			SpaceImage: &ChunkedMedia{
-				StreamId: content.SpaceImage.StreamId,
-				Info: &MediaInfo{
-					Mimetype:     content.SpaceImage.Info.Mimetype,
-					SizeBytes:    content.SpaceImage.Info.SizeBytes,
-					WidthPixels:  content.SpaceImage.Info.WidthPixels,
-					HeightPixels: content.SpaceImage.Info.HeightPixels,
-					Filename:     content.SpaceImage.Info.Filename,
-				},
-				Encryption: &ChunkedMedia_Derived{
-					Derived: &ChunkedMedia_DerivedAESGCM{},
-				},
-			},
+			SpaceImage:     &WrappedEncryptedData{Data: content.SpaceImage, EventNum: eventNum, EventHash: eventHash},
 			CreatorAddress: copyAddr,
 		}
 		return nil
