@@ -88,6 +88,11 @@ export class UnauthenticatedClient {
 
     async scrollbackToDate(streamView: StreamStateView, toDate: number): Promise<void> {
         this.logCall('scrollbackToDate', { streamId: streamView.streamId, toDate })
+        const firstEvent = streamView.timeline.at(0)
+        // skip scrollback if limit is already reached
+        if (firstEvent?.createdAtEpochMs && !this.isWithin(firstEvent?.createdAtEpochMs, toDate)) {
+            return
+        }
         // scrollback to get events till max scrollback, toDate or till no events are left
         for (let i = 0; i < SCROLLBACK_MAX_COUNT; i++) {
             const result = await this.scrollback(streamView)
