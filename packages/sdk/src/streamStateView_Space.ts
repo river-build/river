@@ -17,7 +17,7 @@ import { DecryptedContent } from './encryptedContentTypes'
 import { check, throwWithCode } from '@river-build/dlog'
 import { logNever } from './check'
 import { contractAddressFromSpaceId, isDefaultChannelId, streamIdAsString } from './id'
-import { decryptAesGcmDerived } from './crypto_utils'
+import { decryptDerivedAESGCM } from './crypto_utils'
 
 export type ParsedChannelProperties = {
     isDefault: boolean
@@ -54,8 +54,8 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
             this.addSpacePayload_Channel(eventHash, payload, payload.updatedAtEventNum, undefined)
         }
 
-        if (content.spaceMedia?.spaceImage?.data) {
-            this.decryptSpaceImage(content.spaceMedia.spaceImage.data)
+        if (content.spaceMedia?.spaceImage) {
+            this.decryptSpaceImage(content.spaceMedia.spaceImage)
                 .then((media) => {
                     this.spaceImage = media
                 })
@@ -133,7 +133,7 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
 
     private async decryptSpaceImage(encryptedImage: EncryptedData): Promise<ChunkedMedia> {
         const keyPhrase = contractAddressFromSpaceId(this.streamId)
-        const plaintext = await decryptAesGcmDerived(keyPhrase, encryptedImage)
+        const plaintext = await decryptDerivedAESGCM(keyPhrase, encryptedImage)
         return ChunkedMedia.fromBinary(plaintext)
     }
 

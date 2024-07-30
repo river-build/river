@@ -4,9 +4,8 @@
 
 import { throwWithCode } from '@river-build/dlog'
 import { EncryptedData, Err } from '@river-build/proto'
+import { AES_GCM_DERIVED_ALGORITHM } from '@river-build/encryption'
 import crypto from 'crypto'
-
-export const AES_GCM_DERIVED_ALGORITHM = 'r.aes-256-gcm.derived'
 
 export function uint8ArrayToBase64(uint8Array: Uint8Array): string {
     return Buffer.from(uint8Array).toString('base64')
@@ -59,7 +58,7 @@ export async function deriveKeyAndIV(
     return { key, iv }
 }
 
-export async function encryptAesGcm(
+export async function encryptAESGCM(
     data: Uint8Array,
     key?: Uint8Array,
     iv?: Uint8Array,
@@ -92,7 +91,7 @@ export async function encryptAesGcm(
     return { ciphertext: bufferToUint8Array(ciphertext), iv, secretKey: key }
 }
 
-export async function decryptAesGcm(
+export async function decryptAESGCM(
     data: Uint8Array | string,
     key: Uint8Array,
     iv: Uint8Array,
@@ -138,7 +137,7 @@ export async function decryptAesGcm(
     return new Uint8Array(decrypted.buffer, decrypted.byteOffset, decrypted.byteLength)
 }
 
-export async function decryptAesGcmDerived(
+export async function decryptDerivedAESGCM(
     keyPhrase: string,
     encryptedData: EncryptedData,
 ): Promise<Uint8Array> {
@@ -147,5 +146,5 @@ export async function decryptAesGcmDerived(
     }
     const { key, iv } = await deriveKeyAndIV(keyPhrase)
     const ciphertext = base64ToUint8Array(encryptedData.ciphertext)
-    return decryptAesGcm(ciphertext, key, iv)
+    return decryptAESGCM(ciphertext, key, iv)
 }

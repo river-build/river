@@ -267,12 +267,12 @@ func TestCloneAndUpdateSpaceSnapshot(t *testing.T) {
 	assert.Equal(
 		t,
 		imageCipertext,
-		snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceMedia.SpaceImage.Data.Ciphertext,
+		snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceMedia.SpaceImage.Ciphertext,
 	)
 	assert.Equal(
 		t,
 		crypto.AES_GCM_DERIVED_ALGORITHM,
-		snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceMedia.SpaceImage.Data.Algorithm,
+		snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceMedia.SpaceImage.Algorithm,
 	)
 }
 

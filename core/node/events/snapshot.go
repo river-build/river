@@ -206,11 +206,9 @@ func update_Snapshot_Space(
 		snapshot.SpaceContent.Channels = insertChannel(snapshot.SpaceContent.Channels, channel)
 		return nil
 	case *SpacePayload_SpaceImage:
-		copyAddr := make([]byte, len(creatorAddress))
-		copy(copyAddr, creatorAddress)
 		snapshot.SpaceContent.SpaceMedia = &SpacePayload_SnappedSpaceMedia{
-			SpaceImage:     &WrappedEncryptedData{Data: content.SpaceImage, EventNum: eventNum, EventHash: eventHash},
-			CreatorAddress: copyAddr,
+			SpaceImage:     content.SpaceImage,
+			CreatorAddress: creatorAddress,
 		}
 		return nil
 	default:

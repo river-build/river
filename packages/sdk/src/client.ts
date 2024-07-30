@@ -38,8 +38,8 @@ import {
     dlogError,
     bin_fromString,
 } from '@river-build/dlog'
-import { assert, isDefined } from './check'
 import {
+    AES_GCM_DERIVED_ALGORITHM,
     BaseDecryptionExtensions,
     CryptoStore,
     DecryptionEvents,
@@ -52,6 +52,7 @@ import {
     UserDeviceCollection,
     makeSessionKeys,
 } from '@river-build/encryption'
+import { assert, isDefined } from './check'
 import { errorContains, getRpcErrorProperty, StreamRpcClient } from './makeStreamRpcClient'
 import EventEmitter from 'events'
 import TypedEmitter from 'typed-emitter'
@@ -129,11 +130,10 @@ import { SyncedStream } from './syncedStream'
 import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
 import {
-    AES_GCM_DERIVED_ALGORITHM,
-    decryptAesGcm,
-    decryptAesGcmDerived,
+    decryptAESGCM,
+    decryptDerivedAESGCM,
     deriveKeyAndIV,
-    encryptAesGcm,
+    encryptAESGCM,
     uint8ArrayToBase64,
 } from './crypto_utils'
 
@@ -842,7 +842,7 @@ export class Client
         this.logCall('getDecryptedSpaceImage', spaceId)
 
         const keyPhrase = contractAddressFromSpaceId(spaceId)
-        const plaintext = await decryptAesGcmDerived(keyPhrase, encryptedData)
+        const plaintext = await decryptDerivedAESGCM(keyPhrase, encryptedData)
         return ChunkedMedia.fromBinary(plaintext)
     }
 
@@ -855,20 +855,22 @@ export class Client
         this.logCall('setSpaceImage', spaceStreamId, mediaStreamId, info)
 
         // create the chunked media to be added
+        const spaceId = contractAddressFromSpaceId(spaceStreamId)
         const chunkedMedia = new ChunkedMedia({
             info,
             streamId: mediaStreamId,
             thumbnail,
             encryption: {
                 case: 'derived',
-                value: {},
+                value: {
+                    context: spaceId,
+                },
             },
         })
 
         // encrypt the chunked media
-        const spaceId = contractAddressFromSpaceId(spaceStreamId)
         const { key, iv } = await deriveKeyAndIV(spaceId)
-        const { ciphertext } = await encryptAesGcm(chunkedMedia.toBinary(), key, iv)
+        const { ciphertext } = await encryptAESGCM(chunkedMedia.toBinary(), key, iv)
         const encryptedData = new EncryptedData({
             ciphertext: uint8ArrayToBase64(ciphertext),
             algorithm: AES_GCM_DERIVED_ALGORITHM,
@@ -1429,7 +1431,7 @@ export class Client
             return new Uint8Array([...acc, ...chunk])
         }, new Uint8Array())
 
-        return decryptAesGcm(data, secretKey, iv)
+        return decryptAESGCM(data, secretKey, iv)
     }
 
     async sendChannelMessage_Reaction(

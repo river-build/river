@@ -5,11 +5,14 @@
 import { makeTestClient, makeUniqueSpaceStreamId, waitFor } from './util.test'
 import { Client } from './client'
 import { dlog } from '@river-build/dlog'
-import { makeUniqueChannelStreamId, makeUniqueMediaStreamId } from './id'
+import { AES_GCM_DERIVED_ALGORITHM } from '@river-build/encryption'
+import {
+    contractAddressFromSpaceId,
+    makeUniqueChannelStreamId,
+    makeUniqueMediaStreamId,
+} from './id'
 import { MediaInfo, MembershipOp } from '@river-build/proto'
 import { isEncryptedData } from './encryptedContentTypes'
-import { AES_GCM_DERIVED_ALGORITHM } from './crypto_utils'
-import { assert } from 'console'
 
 const log = dlog('csb:test')
 
@@ -131,6 +134,7 @@ describe('spaceTests', () => {
 
     test('spaceImage', async () => {
         const spaceId = makeUniqueSpaceStreamId()
+        const spaceContractAddress = contractAddressFromSpaceId(spaceId)
         await expect(bobsClient.createSpace(spaceId)).toResolve()
         const spaceStream = await bobsClient.waitForStream(spaceId)
 
@@ -158,15 +162,14 @@ describe('spaceTests', () => {
             expect(
                 spaceStream.view.snapshot?.content.case === 'spaceContent' &&
                     spaceStream.view.snapshot.content.value.spaceMedia !== undefined &&
-                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage?.data !==
-                        undefined,
+                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage !== undefined,
             ).toBe(true)
         })
 
         // decrypt the snapshot and assert the image values
         let encryptedData =
             spaceStream.view.snapshot?.content.case === 'spaceContent'
-                ? spaceStream.view.snapshot.content.value.spaceMedia?.spaceImage?.data
+                ? spaceStream.view.snapshot.content.value.spaceMedia?.spaceImage
                 : undefined
         expect(
             encryptedData !== undefined &&
@@ -178,8 +181,10 @@ describe('spaceTests', () => {
             : undefined
         expect(
             decrypted !== undefined &&
-                decrypted?.info?.mimetype === image.mimetype &&
-                decrypted?.info?.filename === image.filename,
+                decrypted.info?.mimetype === image.mimetype &&
+                decrypted.info?.filename === image.filename &&
+                decrypted.encryption.case === 'derived' &&
+                decrypted.encryption.value.context === spaceContractAddress,
         ).toBe(true)
 
         // make another space image event
@@ -199,15 +204,14 @@ describe('spaceTests', () => {
             expect(
                 spaceStream.view.snapshot?.content.case === 'spaceContent' &&
                     spaceStream.view.snapshot.content.value.spaceMedia !== undefined &&
-                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage?.data !==
-                        undefined,
+                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage !== undefined,
             ).toBe(true)
         })
 
         // decrypt the snapshot and assert the image values
         encryptedData =
             spaceStream.view.snapshot?.content.case === 'spaceContent'
-                ? spaceStream.view.snapshot.content.value.spaceMedia?.spaceImage?.data
+                ? spaceStream.view.snapshot.content.value.spaceMedia?.spaceImage
                 : undefined
         expect(
             encryptedData !== undefined &&
@@ -220,7 +224,9 @@ describe('spaceTests', () => {
         expect(
             decrypted !== undefined &&
                 decrypted?.info?.mimetype === image2.mimetype &&
-                decrypted?.info?.filename === image2.filename,
+                decrypted?.info?.filename === image2.filename &&
+                decrypted.encryption.case === 'derived' &&
+                decrypted.encryption.value.context === spaceContractAddress,
         ).toBe(true)
     })
 })

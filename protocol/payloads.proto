@@ -126,6 +126,39 @@ message ChannelMessage {
     }
 }
 
+message MediaInfo {
+    string mimetype = 1;
+    int64 sizeBytes = 2;
+    int32 widthPixels = 3;
+    int32 heightPixels = 4;
+    string filename = 5;
+}
+
+message EmbeddedMedia {
+    MediaInfo info = 1;
+    bytes content = 2;
+}
+                
+message ChunkedMedia {
+
+    message AESGCM {
+        bytes iv = 1;
+        bytes secretKey = 2;
+    }
+
+    message DerivedAESGCM {
+        string context = 1;
+    }
+
+    MediaInfo info = 1;
+    string streamId = 2;
+    EmbeddedMedia thumbnail = 3;
+    oneof encryption {
+        AESGCM aesgcm = 101;
+        DerivedAESGCM derived = 102;
+    }
+}
+
 message ChannelProperties {
     string name = 1;
     string topic = 2;

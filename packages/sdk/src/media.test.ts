@@ -6,7 +6,7 @@ import { makeTestClient, makeUniqueSpaceStreamId } from './util.test'
 import { Client } from './client'
 import { makeUniqueChannelStreamId, makeDMStreamId } from './id'
 import { InfoRequest } from '@river-build/proto'
-import { deriveKeyAndIV, encryptAesGcm } from './crypto_utils'
+import { deriveKeyAndIV, encryptAESGCM } from './crypto_utils'
 
 describe('mediaTests', () => {
     let bobsClient: Client
@@ -57,7 +57,7 @@ describe('mediaTests', () => {
         prevMiniblockHash: Uint8Array,
     ): Promise<Uint8Array> {
         let prevHash = prevMiniblockHash
-        const { ciphertext } = await encryptAesGcm(data, key, iv)
+        const { ciphertext } = await encryptAESGCM(data, key, iv)
         const result = await bobsClient.sendMediaPayload(streamId, ciphertext, 0, prevHash)
         prevHash = result.prevMiniblockHash
         return prevHash
