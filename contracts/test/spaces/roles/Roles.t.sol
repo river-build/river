@@ -2,10 +2,9 @@
 pragma solidity ^0.8.23;
 
 //interfaces
-import {IRoles, IRolesBase} from "contracts/src/spaces/facets/roles/IRoles.sol";
+import {IRoles} from "contracts/src/spaces/facets/roles/IRoles.sol";
 import {IChannel} from "contracts/src/spaces/facets/channels/IChannel.sol";
 import {IEntitlementsManager} from "contracts/src/spaces/facets/entitlements/IEntitlementsManager.sol";
-import {IEntitlementBase} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 
 // libraries
@@ -13,7 +12,7 @@ import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
 
 // contracts
-import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
+import {RolesBaseSetup} from "contracts/test/spaces/roles/RolesBaseSetup.sol";
 import {Roles} from "contracts/src/spaces/facets/roles/Roles.sol";
 
 // errors
@@ -26,47 +25,7 @@ import {Validator__InvalidStringLength, Validator__InvalidByteLength} from "cont
 // mocks
 import {MockUserEntitlement} from "contracts/test/mocks/MockUserEntitlement.sol";
 
-contract RolesTest is BaseSetup, IRolesBase, IEntitlementBase {
-  MockUserEntitlement internal mockEntitlement;
-  Roles internal roles;
-
-  bytes32 CHANNEL_ID = "channel1";
-  uint256 ROLE_ID;
-
-  function setUp() public override {
-    super.setUp();
-
-    mockEntitlement = new MockUserEntitlement();
-    mockEntitlement.initialize(everyoneSpace);
-
-    roles = Roles(everyoneSpace);
-  }
-
-  modifier givenRoleExists() {
-    string memory roleName = "role1";
-
-    // create a role
-    vm.prank(founder);
-    ROLE_ID = roles.createRole(
-      roleName,
-      new string[](0),
-      new IRoles.CreateEntitlement[](0)
-    );
-
-    _;
-  }
-
-  modifier givenRoleIsInChannel() {
-    // create a channel
-    uint256[] memory roleIds = new uint256[](1);
-    roleIds[0] = ROLE_ID;
-
-    vm.prank(founder);
-    IChannel(everyoneSpace).createChannel(CHANNEL_ID, "ipfs://test", roleIds);
-
-    _;
-  }
-
+contract RolesTest is RolesBaseSetup {
   function test_createRole_only(string memory roleName) external {
     vm.assume(bytes(roleName).length > 2);
 
@@ -1033,26 +992,6 @@ contract RolesTest is BaseSetup, IRolesBase, IEntitlementBase {
   // =============================================================
   // Channel Permissions
   // =============================================================
-  function test_setChannelPermissionOverrides()
-    external
-    givenRoleExists
-    givenRoleIsInChannel
-  {
-    string[] memory permissions = new string[](1);
-    permissions[0] = Permissions.Read;
-
-    vm.prank(founder);
-    roles.setChannelPermissionOverrides(ROLE_ID, CHANNEL_ID, permissions);
-
-    // get the channel permissions
-    string[] memory channelPermissions = roles.getChannelPermissionOverrides(
-      ROLE_ID,
-      CHANNEL_ID
-    );
-
-    assertEq(channelPermissions.length, 1);
-    assertEq(channelPermissions[0], permissions[0]);
-  }
 
   function test_updateChannelPermissionOverrides()
     external
