@@ -86,8 +86,8 @@ export class UnauthenticatedClient {
         }
     }
 
-    /** 
-     * @deprecated please use scrollbackByMs() 
+    /**
+     * @deprecated please use scrollbackByMs()
      **/
     async scrollbackToDate(streamView: StreamStateView, toDate: number): Promise<void> {
         return this.scrollbackByMs(streamView, toDate)
@@ -107,9 +107,9 @@ export class UnauthenticatedClient {
                 break
             }
             const currentOldestEvent = result.firstEvent
-            this.logCall('scrollbackToDate result', { 
-                oldest: currentOldestEvent?.createdAtEpochMs, 
-                ms, 
+            this.logCall('scrollbackToDate result', {
+                oldest: currentOldestEvent?.createdAtEpochMs,
+                ms,
             })
             if (currentOldestEvent) {
                 if (!this.isWithin(currentOldestEvent.createdAtEpochMs, ms)) {
