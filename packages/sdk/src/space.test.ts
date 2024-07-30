@@ -2,7 +2,7 @@
  * @group main
  */
 
-import { makeTestClient, makeUniqueSpaceStreamId, waitFor } from './util.test'
+import { isEncryptedData, makeTestClient, makeUniqueSpaceStreamId, waitFor } from './util.test'
 import { Client } from './client'
 import { dlog } from '@river-build/dlog'
 import { AES_GCM_DERIVED_ALGORITHM } from '@river-build/encryption'
@@ -12,7 +12,6 @@ import {
     makeUniqueMediaStreamId,
 } from './id'
 import { MediaInfo, MembershipOp } from '@river-build/proto'
-import { isEncryptedData } from './encryptedContentTypes'
 
 const log = dlog('csb:test')
 
