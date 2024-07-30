@@ -5,20 +5,20 @@ useHttps: false
 # Blockchain configuration
 baseChain:
     chainId: 84532
-    networkUrl: 'https://mainnet.base.org'
+    networkUrl: 'https://sepolia.base.org'
     blockTimeMs: 2000
 riverChain:
-    chainId: 550
-    networkUrl: 'https://mainnet.rpc.river.build'
+    chainId: 6524490
+    networkUrl: 'https://devnet.rpc.river.build'
     blockTimeMs: 2000
 
-# Base contracts TODO: not set yet
+# Base contracts
 architectContract:
-    address: '0x9978c826d93883701522d2CA645d5436e5654252'
+    address: '0x8B7f2CA1f83b8318b0e7ad951af143f9DE90384F'
 
 # River contracts
 registryContract:
-    address: '0x1298c03Fde548dc433a452573E36A713b38A0404'
+    address: '0xD85bB9e2CEcdA2b8Bf39aBcb514C222046029951'
 
 # Disable logging
 log:
