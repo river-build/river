@@ -1,5 +1,5 @@
 // This function is a helper for encrypting and decrypting public content.
-// The same IV and key are generated from the seed phrase each time.
+// The same IV and key are generated from the key phrase each time.
 // Not intended for protecting sensitive data, but rather for obfuscating content.
 
 import { throwWithCode } from '@river-build/dlog'
