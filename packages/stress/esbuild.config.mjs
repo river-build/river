@@ -9,6 +9,7 @@ build({
   target: "node20",
   format: "cjs",
   outdir: "dist",
+  outExtension: { ".js": ".cjs" },
   plugins: [wasmLoader()],
   ignoreAnnotations: true,
   loader: {

@@ -12,3 +12,7 @@ node: 119.62s user 17.02s system 779% cpu 17.533 total // 7x speedup!!!
 # Directions
 
 Use files in scripts dir to launch load tests
+
+# Hasks
+
+the wasm generator generates olm.wask with a build artifact in the name, we rename it in the build step so the code can import it. Embedding the wasm either didn't work or didn't make a difference.
