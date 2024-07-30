@@ -448,7 +448,7 @@ async function evaluateCheckOperation(
         }
         case CheckOperationType.ISENTITLED:
             throw new Error(`CheckOperationType.ISENTITLED not implemented`)
-        case CheckOperationType.ERC20:
+        case CheckOperationType.ERC20: {
             await Promise.all(providers.map((p) => p.ready))
             const provider = findProviderFromChainId(providers, operation.chainId)
 
@@ -457,7 +457,7 @@ async function evaluateCheckOperation(
                 return zeroAddress
             }
             return evaluateERC20Operation(operation, controller, provider, linkedWallets)
-
+        }
         case CheckOperationType.ERC721: {
             await Promise.all(providers.map((p) => p.ready))
             const provider = findProviderFromChainId(providers, operation.chainId)
