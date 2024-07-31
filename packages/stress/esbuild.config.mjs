@@ -12,6 +12,7 @@ build({
   outExtension: { ".js": ".cjs" },
   plugins: [wasmLoader()],
   ignoreAnnotations: true,
+  assetNames: "[name]",
   loader: {
     ".ts": "ts",
     ".wasm": "file",

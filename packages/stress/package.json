@@ -4,7 +4,7 @@
     "private": true,
     "packageManager": "yarn@3.8.0",
     "scripts": {
-        "build": "./scripts/dist_prepare.sh && yarn typecheck && yarn build-esbuild && ./scripts/dist_fixup.sh",
+        "build": "yarn typecheck && yarn build-esbuild",
         "typecheck": "tsc --noEmit",
         "build-esbuild": "node esbuild.config.mjs",
         "lint": "eslint . --ext .ts",
