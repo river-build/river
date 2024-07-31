@@ -27,18 +27,9 @@ export async function joinChat(client: StressClient, cfg: ChatConfig) {
 
     const announceChannelId = cfg.announceChannelId
     // start up the client
-    await startFollowerClient(client, cfg.spaceId, announceChannelId).catch((e) =>
-        logger.error('startFollowerClient', e),
-    )
+    await startFollowerClient(client, cfg.spaceId, announceChannelId)
 
-    const announceChannel = await client.streamsClient
-        .waitForStream(announceChannelId)
-        .catch((e) => logger.error('waitForStream announceChannel', e))
-
-    if (!announceChannel) {
-        throw new Error('announceChannel not found')
-    }
-
+    const announceChannel = await client.streamsClient.waitForStream(announceChannelId)
     let count = 0
     const message = await client.waitFor(
         () => {
