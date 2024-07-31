@@ -13,8 +13,6 @@ type AddEventSideEffects struct {
 	RequiredParentEvent *DerivedEvent
 	// OnChainAuthFailure: event that should be added to the stream if the chain auth check fails entitlement checks
 	OnChainAuthFailure *DerivedEvent
-	// RequiredChildEvents: events that must exist in the stream after the event is added
-	RequiredChildEvents []*DerivedEvent
 }
 
 type (
