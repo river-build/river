@@ -1,8 +1,6 @@
 package migrations
 
 import (
-	"bytes"
-
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"
 )
@@ -10,16 +8,12 @@ import (
 func snapshot_migration_0002(iSnapshot *Snapshot) *Snapshot {
 	switch snapshot := iSnapshot.Content.(type) {
 	case *Snapshot_SpaceContent:
-		spaceStreamId, err := shared.StreamIdFromBytes(snapshot.SpaceContent.Inception.StreamId)
-		if err != nil {
-			panic(err)
-		}
-		defaultChannelId, err := shared.MakeDefaultChannelId(spaceStreamId)
-		if err != nil {
-			panic(err)
-		}
 		for _, channel := range snapshot.SpaceContent.Channels {
-			if bytes.Equal(channel.ChannelId, defaultChannelId[:]) {
+			channelId, err := shared.StreamIdFromBytes(channel.ChannelId)
+			if err != nil {
+				panic(err)
+			}
+			if shared.IsDefaultChannelId(channelId) {
 				channel.Autojoin = true
 			} else {
 				channel.Autojoin = false

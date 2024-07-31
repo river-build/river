@@ -14,6 +14,7 @@ type CreateStreamRules struct {
 	RequiredMemberships [][]byte
 	ChainAuth           *auth.ChainAuthArgs
 	DerivedEvents       []*DerivedEvent
+	ChildEvents         []*DerivedEvent
 }
 
 type ruleBuilderCS interface {
@@ -167,6 +168,7 @@ func (re *ruleBuilderCSImpl) run() (*CreateStreamRules, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if len(re.checks) == 0 && chainAuthArgs == nil && derivedEvents == nil {
 		return nil, RiverError(Err_INTERNAL, "no checks or requirements")
 	}

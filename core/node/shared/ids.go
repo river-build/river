@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -87,6 +88,13 @@ func MakeDefaultChannelId(spaceId StreamId) (StreamId, error) {
 		return StreamId{}, err
 	}
 	return StreamIdFromBytes(bytes[:])
+}
+
+func IsDefaultChannelId(channelId StreamId) bool {
+	if channelId.Type() != STREAM_CHANNEL_BIN {
+		return false
+	}
+	return bytes.Equal(channelId[21:], make([]byte, 11))
 }
 
 func UserStreamIdFromBytes(addr []byte) (StreamId, error) {
