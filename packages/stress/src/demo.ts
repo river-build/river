@@ -128,6 +128,7 @@ const run = async () => {
     process.exit(0)
 }
 
-run().catch(() => {
+run().catch((e) => {
+    logger.error('unhandled error:', e)
     process.exit(1)
 })
