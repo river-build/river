@@ -175,7 +175,7 @@ const makeDlog = (d: Debugger, opts?: DLogOpts): DLogger => {
                     newArgs.push(cloneAndFormat(c, { shortenHex: true }))
                 }
             } else {
-                isDev ? fmt.push('%O\n') : fmt.push('%o\n')
+                isDev ? fmt.push('%O ') : fmt.push('%o ')
                 newArgs.push(c)
             }
         }
