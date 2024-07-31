@@ -58,10 +58,10 @@ if [ "$CONFIG" == "true" ]; then
     export ENTITLEMENT_TEST_ADDRESS=$(jq -r '.address' ../../packages/generated/deployments/${RIVER_ENV}/base/addresses/entitlementGatedExample.json)
 
     echo "" > ${RUN_BASE}/contracts.env
-    echo "RIVER_architectContract_address=${SPACE_FACTORY_ADDRESS}" >> ${RUN_BASE}/contracts.env
-    echo "RIVER_entitlement_contract_address=${BASE_REGISTRY_ADDRESS}" >> ${RUN_BASE}/contracts.env
-    echo "RIVER_registryContract_address=${RIVER_REGISTRY_ADDRESS}" >> ${RUN_BASE}/contracts.env
-    echo "RIVER_test_contract_address=${ENTITLEMENT_TEST_ADDRESS}" >> ${RUN_BASE}/contracts.env
+    echo "RIVER_ARCHITECTCONTRACT_ADDRESS=${SPACE_FACTORY_ADDRESS}" >> ${RUN_BASE}/contracts.env
+    echo "RIVER_ENTITLEMENT_CONTRACT_ADDRESS=${BASE_REGISTRY_ADDRESS}" >> ${RUN_BASE}/contracts.env
+    echo "RIVER_REGISTRYCONTRACT_ADDRESS=${RIVER_REGISTRY_ADDRESS}" >> ${RUN_BASE}/contracts.env
+    echo "RIVER_TEST_CONTRACT_ADDRESS=${ENTITLEMENT_TEST_ADDRESS}" >> ${RUN_BASE}/contracts.env
 
     source ../../contracts/.env.localhost
 
