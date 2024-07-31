@@ -222,28 +222,9 @@ contract SpaceOwnerTest is ISpaceOwnerBase, IOwnableBase, BaseSetup {
     address spaceAddress = _randomAddress();
 
     uint256 tokenId = mintSpace(uri, spaceAddress);
-
     string memory tokenUri = spaceOwnerToken.tokenURI(tokenId);
-    string memory expectedUri = string.concat(
-      uri,
-      "/",
-      Strings.toHexString(spaceAddress)
-    );
-    assertEq(tokenUri, expectedUri);
-  }
 
-  function test_tokenURI_withSlash() external {
-    address spaceAddress = _randomAddress();
-
-    string memory uriWithSlash = "ipfs://space-name/";
-    uint256 tokenId = mintSpace(uriWithSlash, spaceAddress);
-
-    string memory tokenUri = spaceOwnerToken.tokenURI(tokenId);
-    string memory expectedUri = string.concat(
-      uriWithSlash,
-      Strings.toHexString(spaceAddress)
-    );
-    assertEq(tokenUri, expectedUri);
+    assertEq(tokenUri, uri);
   }
 
   function test_tokenURI_revert_nonexistentToken() external {
@@ -254,8 +235,8 @@ contract SpaceOwnerTest is ISpaceOwnerBase, IOwnableBase, BaseSetup {
 
   function test_tokenURI_withDefaultUri() external {
     address spaceAddress = _randomAddress();
-
     string memory defaultUri = "ipfs://default-uri";
+
     vm.prank(deployer);
     spaceOwnerToken.setDefaultUri(defaultUri);
 
@@ -265,6 +246,23 @@ contract SpaceOwnerTest is ISpaceOwnerBase, IOwnableBase, BaseSetup {
     string memory expectedUri = string.concat(
       defaultUri,
       "/",
+      Strings.toHexString(spaceAddress)
+    );
+    assertEq(tokenUri, expectedUri);
+  }
+
+  function test_tokenURI_withSlash() external {
+    address spaceAddress = _randomAddress();
+    string memory uriWithSlash = "ipfs://default-uri/";
+
+    vm.prank(deployer);
+    spaceOwnerToken.setDefaultUri(uriWithSlash);
+
+    uint256 tokenId = mintSpace("", spaceAddress);
+
+    string memory tokenUri = spaceOwnerToken.tokenURI(tokenId);
+    string memory expectedUri = string.concat(
+      uriWithSlash,
       Strings.toHexString(spaceAddress)
     );
     assertEq(tokenUri, expectedUri);

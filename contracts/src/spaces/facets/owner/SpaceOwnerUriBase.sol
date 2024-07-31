@@ -24,8 +24,7 @@ abstract contract SpaceOwnerUriBase is ISpaceOwnerBase {
     return SpaceOwnerStorage.layout().defaultUri;
   }
 
-  /// @notice Returns `${space.uri}/${spaceAddress}`
-  /// @dev Use default URI if space URI is not set
+  /// @dev Returns `${space.uri}` or `${defaultUri}/${spaceAddress}`
   function _render(
     uint256 tokenId
   ) internal view virtual returns (string memory) {
@@ -35,19 +34,22 @@ abstract contract SpaceOwnerUriBase is ISpaceOwnerBase {
     if (spaceAddress == address(0)) revert SpaceOwner__SpaceNotFound();
 
     SpaceOwnerStorage.Space storage space = ds.spaceByAddress[spaceAddress];
-    string memory uri = bytes(space.uri).length == 0
-      ? ds.defaultUri
-      : space.uri;
 
-    uint256 length = bytes(uri).length;
+    // if the space has set a uri, return it
+    if (bytes(space.uri).length != 0) return space.uri;
+
+    string memory defaultUri = ds.defaultUri;
+
+    uint256 length = bytes(defaultUri).length;
     if (length == 0) revert SpaceOwner__DefaultUriNotSet();
 
     unchecked {
       // the ASCII code for "/" is 0x2f
-      if (bytes(uri)[length - 1] != 0x2f) {
-        return string.concat(uri, "/", Strings.toHexString(spaceAddress));
+      if (bytes(defaultUri)[length - 1] != 0x2f) {
+        return
+          string.concat(defaultUri, "/", Strings.toHexString(spaceAddress));
       } else {
-        return string.concat(uri, Strings.toHexString(spaceAddress));
+        return string.concat(defaultUri, Strings.toHexString(spaceAddress));
       }
     }
   }
