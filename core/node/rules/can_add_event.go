@@ -280,6 +280,15 @@ func (params *aeParams) canAddSpacePayload(payload *StreamEvent_SpacePayload) ru
 			check(ru.validUpdateAutojoin).
 			requireChainAuth(params.updateAutojoinMessageChannelModifyRequirements)
 
+	case *SpacePayload_UpdateChannelShowUserJoinLeaveEvents_:
+		ru := &aeUpdateChannelShowUserJoinLeaveEventsRules{
+			params: params,
+			update: content.UpdateChannelShowUserJoinLeaveEvents,
+		}
+		return aeBuilder().
+			check(ru.validUpdateChannelShowUserJoinLeaveEvents).
+			requireChainAuth(params.updateChannelShowUserJoinLeaveEventsRequirements)
+
 	default:
 		return aeBuilder().
 			fail(unknownContentType(content))
@@ -1093,7 +1102,39 @@ func (params *aeParams) updateAutojoinMessageChannelModifyRequirements() (*auth.
 		spaceId,
 		channelId,
 		userId,
-		auth.PermissionAddRemoveChannels, // TODO: is this right?
+		auth.PermissionAddRemoveChannels,
+	)
+
+	return chainAuthArgs, nil
+}
+
+func (params *aeParams) updateChannelShowUserJoinLeaveEventsRequirements() (*auth.ChainAuthArgs, error) {
+	userId, err := shared.AddressHex(params.parsedEvent.Event.CreatorAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	inception, err := params.streamView.(events.SpaceStreamView).GetSpaceInception()
+	if err != nil {
+		return nil, err
+	}
+
+	spaceId, err := shared.StreamIdFromBytes(inception.StreamId)
+	if err != nil {
+		return nil, err
+	}
+
+	channelIdBytes := params.parsedEvent.Event.Payload.(*StreamEvent_SpacePayload).SpacePayload.Content.(*SpacePayload_UpdateChannelShowUserJoinLeaveEvents_).UpdateChannelShowUserJoinLeaveEvents.ChannelId
+	channelId, err := shared.StreamIdFromBytes(channelIdBytes)
+	if err != nil {
+		return nil, err
+	}
+
+	chainAuthArgs := auth.NewChainAuthArgsForChannel(
+		spaceId,
+		channelId,
+		userId,
+		auth.PermissionAddRemoveChannels,
 	)
 
 	return chainAuthArgs, nil
@@ -1313,6 +1354,29 @@ func (ru *aeUpdateAutojoinRules) validUpdateAutojoin() (bool, error) {
 	}
 	view := ru.params.streamView.(events.SpaceStreamView)
 	channelId, err := shared.StreamIdFromBytes(ru.updateAutojoin.ChannelId)
+	if err != nil {
+		return false, err
+	}
+
+	// check if the channel exists
+	_, err = view.GetChannelInfo(channelId)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (ru *aeUpdateChannelShowUserJoinLeaveEventsRules) validUpdateChannelShowUserJoinLeaveEvents() (bool, error) {
+	if ru.update == nil {
+		return false, RiverError(
+			Err_INVALID_ARGUMENT,
+			"event is not an update channel show user join leave events event",
+		)
+	}
+	view := ru.params.streamView.(events.SpaceStreamView)
+
+	channelId, err := shared.StreamIdFromBytes(ru.update.ChannelId)
 	if err != nil {
 		return false, err
 	}

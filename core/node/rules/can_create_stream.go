@@ -226,8 +226,6 @@ func (ru *csParams) canCreateStream() ruleBuilderCS {
 			requireChainAuth(ru.getCreateChannelChainAuth).
 			requireDerivedEvent(
 				ru.derivedChannelSpaceParentEvent,
-				ru.derivedChannelSpaceSetAutojoinEvent,
-				ru.derivedChannelSpaceSetShowUserJoinLeaveEventsEvent,
 				ru.params.derivedMembershipEvent,
 			)
 
@@ -495,48 +493,6 @@ func (ru *csChannelRules) derivedChannelSpaceParentEvent() (*DerivedEvent, error
 		},
 	)
 
-	return &DerivedEvent{
-		StreamId: spaceId,
-		Payload:  payload,
-	}, nil
-}
-
-func (ru *csChannelRules) derivedChannelSpaceSetAutojoinEvent() (*DerivedEvent, error) {
-	channelId, err := shared.StreamIdFromBytes(ru.inception.StreamId)
-	if err != nil {
-		return nil, err
-	}
-	spaceId, err := shared.StreamIdFromBytes(ru.inception.SpaceId)
-	if err != nil {
-		return nil, err
-	}
-
-	isAutojoin := shared.IsDefaultChannelId(channelId)
-	payload := events.Make_SpacePayload_UpdateChannelAutojoin(
-		channelId,
-		isAutojoin,
-	)
-
-	return &DerivedEvent{
-		StreamId: spaceId,
-		Payload:  payload,
-	}, nil
-}
-
-func (ru *csChannelRules) derivedChannelSpaceSetShowUserJoinLeaveEventsEvent() (*DerivedEvent, error) {
-	channelId, err := shared.StreamIdFromBytes(ru.inception.StreamId)
-	if err != nil {
-		return nil, err
-	}
-	spaceId, err := shared.StreamIdFromBytes(ru.inception.SpaceId)
-	if err != nil {
-		return nil, err
-	}
-
-	payload := events.Make_SpacePayload_UpdateChannelShowUserJoinLeaveEvents(
-		channelId,
-		true,
-	)
 	return &DerivedEvent{
 		StreamId: spaceId,
 		Payload:  payload,

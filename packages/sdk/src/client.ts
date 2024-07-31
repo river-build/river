@@ -112,6 +112,8 @@ import {
     make_MemberPayload_Nft,
     make_MemberPayload_Pin,
     make_MemberPayload_Unpin,
+    make_SpacePayload_UpdateChannelAutojoin,
+    make_SpacePayload_UpdateChannelShowUserJoinLeaveEvents,
 } from './types'
 
 import debug from 'debug'
@@ -755,6 +757,44 @@ export class Client
                 channelId: streamIdAsBytes(channelId),
             }),
             { method: 'updateChannel' },
+        )
+    }
+
+    async updateChannelAutojoin(
+        spaceId: string | Uint8Array,
+        channelId: string | Uint8Array,
+        autojoin: boolean,
+    ) {
+        this.logCall('updateChannelAutojoin', channelId, spaceId, autojoin)
+        assert(isSpaceStreamId(spaceId), 'spaceId must be a valid streamId')
+        assert(isChannelStreamId(channelId), 'channelId must be a valid streamId')
+
+        return this.makeEventAndAddToStream(
+            spaceId, // we send events to the stream of the space where updated channel belongs to
+            make_SpacePayload_UpdateChannelAutojoin({
+                channelId: streamIdAsBytes(channelId),
+                autojoin: autojoin,
+            }),
+            { method: 'updateChannelAutojoin' },
+        )
+    }
+
+    async updateChannelShowUserJoinLeaveEvents(
+        spaceId: string | Uint8Array,
+        channelId: string | Uint8Array,
+        showUserJoinLeaveEvents: boolean,
+    ) {
+        this.logCall('updateChannelShowUserJoinLeaveEvents', channelId, spaceId, showUserJoinLeaveEvents)
+        assert(isSpaceStreamId(spaceId), 'spaceId must be a valid streamId')
+        assert(isChannelStreamId(channelId), 'channelId must be a valid streamId')
+
+        return this.makeEventAndAddToStream(
+            spaceId, // we send events to the stream of the space where updated channel belongs to
+            make_SpacePayload_UpdateChannelShowUserJoinLeaveEvents({
+                channelId: streamIdAsBytes(channelId),
+                showUserJoinLeaveEvents: showUserJoinLeaveEvents,
+            }),
+            { method: 'updateChannelShowUserJoinLeaveEvents' }
         )
     }
 
