@@ -366,24 +366,30 @@ export async function createSpaceAndDefaultChannel(
         },
         wallet,
     )
+    console.log("bob created space, waiting for txn to execute")
     const receipt = await transaction.wait()
     expect(receipt.status).toEqual(1)
     const spaceAddress = spaceDapp.getSpaceAddress(receipt)
     expect(spaceAddress).toBeDefined()
+    console.log("bob space created")
 
     const spaceId = makeSpaceStreamId(spaceAddress!)
     const channelId = makeDefaultChannelStreamId(spaceAddress!)
 
     await client.initializeUser({ spaceId })
     client.startSync()
+    console.log("initialized user")
 
     const userStreamId = makeUserStreamId(client.userId)
     const userStreamView = client.stream(userStreamId)!.view
     expect(userStreamView).toBeDefined()
+    console.log("got user stream view for bob")
 
     const returnVal = await client.createSpace(spaceId)
     expect(returnVal.streamId).toEqual(spaceId)
     expect(userStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN)).toBeTrue()
+    console.log("bob created and joined space on client, creating default channel on stream node")
+
 
     const channelReturnVal = await client.createChannel(
         spaceId,
