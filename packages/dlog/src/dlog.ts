@@ -140,17 +140,7 @@ export interface DLogOpts {
 
 const allDlogs: Map<string, DLogger> = new Map()
 
-const pushFmt = (fmt: string[], ifDev: string, ifProd: string) => {
-    if (typeof process !== 'undefined') {
-        if (process.env.NODE_ENV === 'development') {
-            fmt.push(ifDev)
-        } else {
-            fmt.push(ifProd)
-        }
-    } else {
-        fmt.push(ifProd)
-    }
-}
+const isDev = typeof process !== 'undefined' && process.env.NODE_ENV === 'development'
 
 const makeDlog = (d: Debugger, opts?: DLogOpts): DLogger => {
     if (opts?.printStack) {
@@ -171,22 +161,21 @@ const makeDlog = (d: Debugger, opts?: DLogOpts): DLogger => {
             let c = args[i]
 
             if (typeof c === 'string') {
-                pushFmt(fmt, '%O', '%o')
+                fmt.push('%s ')
                 if (isHexString(c)) {
                     c = shortenHexString(c)
                 }
                 newArgs.push(c)
             } else if (typeof c === 'object' && c !== null) {
                 if (c instanceof Error) {
-                    pushFmt(fmt, '%O\n', '%o\n')
-                    tailArgs.push('\n')
+                    isDev ? fmt.push('%O\n') : fmt.push('%o\n')
                     tailArgs.push(c)
                 } else {
-                    pushFmt(fmt, '%O\n', '%o\n')
+                    isDev ? fmt.push('%O\n') : fmt.push('%o\n')
                     newArgs.push(cloneAndFormat(c, { shortenHex: true }))
                 }
             } else {
-                pushFmt(fmt, '%O\n', '%o\n')
+                isDev ? fmt.push('%O\n') : fmt.push('%o\n')
                 newArgs.push(c)
             }
         }

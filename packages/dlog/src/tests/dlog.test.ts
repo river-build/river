@@ -216,7 +216,7 @@ describe('dlogTest', () => {
 
     test('handle error', () => {
         const e = new CodeException('test', Err.ERR_UNSPECIFIED)
-        const log = dlog('test:dlog')
+        const log = dlogError('test:dlog')
         log.enabled = true
 
         let output: string = ''
@@ -226,7 +226,7 @@ describe('dlogTest', () => {
             }
         }
 
-        log('throwWithCode', e.message, e.stack)
-        expect(output).toContain('Error: test\\n')
+        log('throwWithCode', e)
+        expect(output).toContain('CodeException [Error]: test at Object.<anonymous>')
     })
 })
