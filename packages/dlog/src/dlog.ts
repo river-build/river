@@ -169,11 +169,23 @@ const makeDlog = (d: Debugger, opts?: DLogOpts): DLogger => {
                     tailArgs.push('\n')
                     tailArgs.push(c)
                 } else {
-                    fmt.push('%O\n')
+                    if (typeof process !== 'undefined') {
+                        if (process.env.NODE_ENV === 'development') {
+                            fmt.push('%O\n')
+                        }
+                    } else {
+                        fmt.push('%o\n')
+                    }
                     newArgs.push(cloneAndFormat(c, { shortenHex: true }))
                 }
             } else {
-                fmt.push('%O ')
+                if (typeof process !== 'undefined') {
+                    if (process.env.NODE_ENV === 'development') {
+                        fmt.push('%O\n')
+                    }
+                } else {
+                    fmt.push('%o\n')
+                }
                 newArgs.push(c)
             }
         }
