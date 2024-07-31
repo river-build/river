@@ -167,7 +167,6 @@ func (re *ruleBuilderCSImpl) run() (*CreateStreamRules, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	if len(re.checks) == 0 && chainAuthArgs == nil && derivedEvents == nil {
 		return nil, RiverError(Err_INTERNAL, "no checks or requirements")
 	}
