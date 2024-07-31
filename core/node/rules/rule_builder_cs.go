@@ -14,7 +14,6 @@ type CreateStreamRules struct {
 	RequiredMemberships [][]byte
 	ChainAuth           *auth.ChainAuthArgs
 	DerivedEvents       []*DerivedEvent
-	ChildEvents         []*DerivedEvent
 }
 
 type ruleBuilderCS interface {
