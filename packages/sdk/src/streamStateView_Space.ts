@@ -54,8 +54,8 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
             this.addSpacePayload_Channel(eventHash, payload, payload.updatedAtEventNum, undefined)
         }
 
-        if (content.spaceMedia?.data) {
-            this.decryptSpaceImage(content.spaceMedia.data)
+        if (content.spaceImage?.data) {
+            this.decryptSpaceImage(content.spaceImage.data)
                 .then((media) => {
                     this.spaceImage = media
                 })

@@ -283,10 +283,11 @@ func Make_SpacePayload_Membership(op MembershipOp, userId string, initiatorId st
 
 func Make_SpacePayload_SpaceImage(
 	ciphertext string,
+	algorithm string,
 ) *StreamEvent_SpacePayload {
 	encryptedData := &EncryptedData{
 		Ciphertext: ciphertext,
-		Algorithm:  crypto.AES_GCM_DERIVED_ALGORITHM,
+		Algorithm:  algorithm,
 	}
 	return &StreamEvent_SpacePayload{
 		SpacePayload: &SpacePayload{

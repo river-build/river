@@ -141,7 +141,7 @@ describe('spaceTests', () => {
         expect(spaceStream).toBeDefined()
         expect(
             spaceStream.view.snapshot?.content.case === 'spaceContent' &&
-                spaceStream.view.snapshot?.content.value.spaceMedia === undefined,
+                spaceStream.view.snapshot?.content.value.spaceImage === undefined,
         ).toBe(true)
 
         // make a space image event
@@ -160,15 +160,15 @@ describe('spaceTests', () => {
         await waitFor(() => {
             expect(
                 spaceStream.view.snapshot?.content.case === 'spaceContent' &&
-                    spaceStream.view.snapshot.content.value.spaceMedia !== undefined &&
-                    spaceStream.view.snapshot.content.value.spaceMedia.data !== undefined,
+                    spaceStream.view.snapshot.content.value.spaceImage !== undefined &&
+                    spaceStream.view.snapshot.content.value.spaceImage.data !== undefined,
             ).toBe(true)
         })
 
         // decrypt the snapshot and assert the image values
         let encryptedData =
             spaceStream.view.snapshot?.content.case === 'spaceContent'
-                ? spaceStream.view.snapshot.content.value.spaceMedia?.data
+                ? spaceStream.view.snapshot.content.value.spaceImage?.data
                 : undefined
         expect(
             encryptedData !== undefined &&
@@ -202,15 +202,15 @@ describe('spaceTests', () => {
         await waitFor(() => {
             expect(
                 spaceStream.view.snapshot?.content.case === 'spaceContent' &&
-                    spaceStream.view.snapshot.content.value.spaceMedia !== undefined &&
-                    spaceStream.view.snapshot.content.value.spaceMedia.data !== undefined,
+                    spaceStream.view.snapshot.content.value.spaceImage !== undefined &&
+                    spaceStream.view.snapshot.content.value.spaceImage.data !== undefined,
             ).toBe(true)
         })
 
         // decrypt the snapshot and assert the image values
         encryptedData =
             spaceStream.view.snapshot?.content.case === 'spaceContent'
-                ? spaceStream.view.snapshot.content.value.spaceMedia?.data
+                ? spaceStream.view.snapshot.content.value.spaceImage?.data
                 : undefined
         expect(
             encryptedData !== undefined &&

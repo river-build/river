@@ -227,10 +227,10 @@ message SpacePayload {
         Inception inception = 1;
         // channels: sorted by channel_id
         repeated ChannelMetadata channels = 2;
-        SnappedSpaceMedia space_media = 3;
+        SnappedSpaceImage space_image = 3;
     }
 
-    message SnappedSpaceMedia {
+    message SnappedSpaceImage {
         bytes creator_address = 1;
         EncryptedData data = 2;
     }

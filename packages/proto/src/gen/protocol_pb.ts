@@ -1617,9 +1617,9 @@ export class SpacePayload_Snapshot extends Message<SpacePayload_Snapshot> {
   channels: SpacePayload_ChannelMetadata[] = [];
 
   /**
-   * @generated from field: river.SpacePayload.SnappedSpaceMedia space_media = 3;
+   * @generated from field: river.SpacePayload.SnappedSpaceImage space_image = 3;
    */
-  spaceMedia?: SpacePayload_SnappedSpaceMedia;
+  spaceImage?: SpacePayload_SnappedSpaceImage;
 
   constructor(data?: PartialMessage<SpacePayload_Snapshot>) {
     super();
@@ -1631,7 +1631,7 @@ export class SpacePayload_Snapshot extends Message<SpacePayload_Snapshot> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "inception", kind: "message", T: SpacePayload_Inception },
     { no: 2, name: "channels", kind: "message", T: SpacePayload_ChannelMetadata, repeated: true },
-    { no: 3, name: "space_media", kind: "message", T: SpacePayload_SnappedSpaceMedia },
+    { no: 3, name: "space_image", kind: "message", T: SpacePayload_SnappedSpaceImage },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SpacePayload_Snapshot {
@@ -1652,9 +1652,9 @@ export class SpacePayload_Snapshot extends Message<SpacePayload_Snapshot> {
 }
 
 /**
- * @generated from message river.SpacePayload.SnappedSpaceMedia
+ * @generated from message river.SpacePayload.SnappedSpaceImage
  */
-export class SpacePayload_SnappedSpaceMedia extends Message<SpacePayload_SnappedSpaceMedia> {
+export class SpacePayload_SnappedSpaceImage extends Message<SpacePayload_SnappedSpaceImage> {
   /**
    * @generated from field: bytes creator_address = 1;
    */
@@ -1665,32 +1665,32 @@ export class SpacePayload_SnappedSpaceMedia extends Message<SpacePayload_Snapped
    */
   data?: EncryptedData;
 
-  constructor(data?: PartialMessage<SpacePayload_SnappedSpaceMedia>) {
+  constructor(data?: PartialMessage<SpacePayload_SnappedSpaceImage>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "river.SpacePayload.SnappedSpaceMedia";
+  static readonly typeName = "river.SpacePayload.SnappedSpaceImage";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "creator_address", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
     { no: 2, name: "data", kind: "message", T: EncryptedData },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SpacePayload_SnappedSpaceMedia {
-    return new SpacePayload_SnappedSpaceMedia().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SpacePayload_SnappedSpaceImage {
+    return new SpacePayload_SnappedSpaceImage().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SpacePayload_SnappedSpaceMedia {
-    return new SpacePayload_SnappedSpaceMedia().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SpacePayload_SnappedSpaceImage {
+    return new SpacePayload_SnappedSpaceImage().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SpacePayload_SnappedSpaceMedia {
-    return new SpacePayload_SnappedSpaceMedia().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SpacePayload_SnappedSpaceImage {
+    return new SpacePayload_SnappedSpaceImage().fromJsonString(jsonString, options);
   }
 
-  static equals(a: SpacePayload_SnappedSpaceMedia | PlainMessage<SpacePayload_SnappedSpaceMedia> | undefined, b: SpacePayload_SnappedSpaceMedia | PlainMessage<SpacePayload_SnappedSpaceMedia> | undefined): boolean {
-    return proto3.util.equals(SpacePayload_SnappedSpaceMedia, a, b);
+  static equals(a: SpacePayload_SnappedSpaceImage | PlainMessage<SpacePayload_SnappedSpaceImage> | undefined, b: SpacePayload_SnappedSpaceImage | PlainMessage<SpacePayload_SnappedSpaceImage> | undefined): boolean {
+    return proto3.util.equals(SpacePayload_SnappedSpaceImage, a, b);
   }
 }
 

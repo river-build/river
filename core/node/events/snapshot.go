@@ -205,7 +205,7 @@ func update_Snapshot_Space(
 		snapshot.SpaceContent.Channels = insertChannel(snapshot.SpaceContent.Channels, channel)
 		return nil
 	case *SpacePayload_SpaceImage:
-		snapshot.SpaceContent.SpaceMedia = &SpacePayload_SnappedSpaceMedia{
+		snapshot.SpaceContent.SpaceImage = &SpacePayload_SnappedSpaceImage{
 			Data:           content.SpaceImage,
 			CreatorAddress: creatorAddress,
 		}

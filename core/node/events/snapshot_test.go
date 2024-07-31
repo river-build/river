@@ -13,6 +13,10 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+const (
+	AES_GCM_DERIVED_ALGORITHM = "r.aes-256-gcm.derived"
+)
+
 func make_User_Inception(wallet *crypto.Wallet, streamId StreamId, t *testing.T) *ParsedEvent {
 	envelope, err := MakeEnvelopeWithPayload(
 		wallet,
@@ -94,6 +98,7 @@ func make_Space_Image(
 		wallet,
 		Make_SpacePayload_SpaceImage(
 			ciphertext,
+			AES_GCM_DERIVED_ALGORITHM,
 		),
 		prevMiniblockHash,
 	)
@@ -256,12 +261,12 @@ func TestCloneAndUpdateSpaceSnapshot(t *testing.T) {
 	assert.Equal(
 		t,
 		imageCipertext,
-		snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceMedia.Data.Ciphertext,
+		snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceImage.Data.Ciphertext,
 	)
 	assert.Equal(
 		t,
-		crypto.AES_GCM_DERIVED_ALGORITHM,
-		snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceMedia.Data.Algorithm,
+		AES_GCM_DERIVED_ALGORITHM,
+		snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceImage.Data.Algorithm,
 	)
 }
 

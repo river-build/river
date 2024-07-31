@@ -4600,7 +4600,7 @@ type SpacePayload_Snapshot struct {
 	Inception *SpacePayload_Inception `protobuf:"bytes,1,opt,name=inception,proto3" json:"inception,omitempty"`
 	// channels: sorted by channel_id
 	Channels   []*SpacePayload_ChannelMetadata `protobuf:"bytes,2,rep,name=channels,proto3" json:"channels,omitempty"`
-	SpaceMedia *SpacePayload_SnappedSpaceMedia `protobuf:"bytes,3,opt,name=space_media,json=spaceMedia,proto3" json:"space_media,omitempty"`
+	SpaceImage *SpacePayload_SnappedSpaceImage `protobuf:"bytes,3,opt,name=space_image,json=spaceImage,proto3" json:"space_image,omitempty"`
 }
 
 func (x *SpacePayload_Snapshot) Reset() {
@@ -4649,14 +4649,14 @@ func (x *SpacePayload_Snapshot) GetChannels() []*SpacePayload_ChannelMetadata {
 	return nil
 }
 
-func (x *SpacePayload_Snapshot) GetSpaceMedia() *SpacePayload_SnappedSpaceMedia {
+func (x *SpacePayload_Snapshot) GetSpaceImage() *SpacePayload_SnappedSpaceImage {
 	if x != nil {
-		return x.SpaceMedia
+		return x.SpaceImage
 	}
 	return nil
 }
 
-type SpacePayload_SnappedSpaceMedia struct {
+type SpacePayload_SnappedSpaceImage struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -4665,8 +4665,8 @@ type SpacePayload_SnappedSpaceMedia struct {
 	Data           *EncryptedData `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
 }
 
-func (x *SpacePayload_SnappedSpaceMedia) Reset() {
-	*x = SpacePayload_SnappedSpaceMedia{}
+func (x *SpacePayload_SnappedSpaceImage) Reset() {
+	*x = SpacePayload_SnappedSpaceImage{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_protocol_proto_msgTypes[56]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -4674,13 +4674,13 @@ func (x *SpacePayload_SnappedSpaceMedia) Reset() {
 	}
 }
 
-func (x *SpacePayload_SnappedSpaceMedia) String() string {
+func (x *SpacePayload_SnappedSpaceImage) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*SpacePayload_SnappedSpaceMedia) ProtoMessage() {}
+func (*SpacePayload_SnappedSpaceImage) ProtoMessage() {}
 
-func (x *SpacePayload_SnappedSpaceMedia) ProtoReflect() protoreflect.Message {
+func (x *SpacePayload_SnappedSpaceImage) ProtoReflect() protoreflect.Message {
 	mi := &file_protocol_proto_msgTypes[56]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -4692,19 +4692,19 @@ func (x *SpacePayload_SnappedSpaceMedia) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use SpacePayload_SnappedSpaceMedia.ProtoReflect.Descriptor instead.
-func (*SpacePayload_SnappedSpaceMedia) Descriptor() ([]byte, []int) {
+// Deprecated: Use SpacePayload_SnappedSpaceImage.ProtoReflect.Descriptor instead.
+func (*SpacePayload_SnappedSpaceImage) Descriptor() ([]byte, []int) {
 	return file_protocol_proto_rawDescGZIP(), []int{5, 1}
 }
 
-func (x *SpacePayload_SnappedSpaceMedia) GetCreatorAddress() []byte {
+func (x *SpacePayload_SnappedSpaceImage) GetCreatorAddress() []byte {
 	if x != nil {
 		return x.CreatorAddress
 	}
 	return nil
 }
 
-func (x *SpacePayload_SnappedSpaceMedia) GetData() *EncryptedData {
+func (x *SpacePayload_SnappedSpaceImage) GetData() *EncryptedData {
 	if x != nil {
 		return x.Data
 	}
@@ -6913,12 +6913,12 @@ var file_protocol_proto_rawDesc = []byte{
 	0x65, 0x72, 0x2e, 0x53, 0x70, 0x61, 0x63, 0x65, 0x50, 0x61, 0x79, 0x6c, 0x6f, 0x61, 0x64, 0x2e,
 	0x43, 0x68, 0x61, 0x6e, 0x6e, 0x65, 0x6c, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0x52,
 	0x08, 0x63, 0x68, 0x61, 0x6e, 0x6e, 0x65, 0x6c, 0x73, 0x12, 0x46, 0x0a, 0x0b, 0x73, 0x70, 0x61,
-	0x63, 0x65, 0x5f, 0x6d, 0x65, 0x64, 0x69, 0x61, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x25,
+	0x63, 0x65, 0x5f, 0x69, 0x6d, 0x61, 0x67, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x25,
 	0x2e, 0x72, 0x69, 0x76, 0x65, 0x72, 0x2e, 0x53, 0x70, 0x61, 0x63, 0x65, 0x50, 0x61, 0x79, 0x6c,
 	0x6f, 0x61, 0x64, 0x2e, 0x53, 0x6e, 0x61, 0x70, 0x70, 0x65, 0x64, 0x53, 0x70, 0x61, 0x63, 0x65,
-	0x4d, 0x65, 0x64, 0x69, 0x61, 0x52, 0x0a, 0x73, 0x70, 0x61, 0x63, 0x65, 0x4d, 0x65, 0x64, 0x69,
-	0x61, 0x1a, 0x66, 0x0a, 0x11, 0x53, 0x6e, 0x61, 0x70, 0x70, 0x65, 0x64, 0x53, 0x70, 0x61, 0x63,
-	0x65, 0x4d, 0x65, 0x64, 0x69, 0x61, 0x12, 0x27, 0x0a, 0x0f, 0x63, 0x72, 0x65, 0x61, 0x74, 0x6f,
+	0x49, 0x6d, 0x61, 0x67, 0x65, 0x52, 0x0a, 0x73, 0x70, 0x61, 0x63, 0x65, 0x49, 0x6d, 0x61, 0x67,
+	0x65, 0x1a, 0x66, 0x0a, 0x11, 0x53, 0x6e, 0x61, 0x70, 0x70, 0x65, 0x64, 0x53, 0x70, 0x61, 0x63,
+	0x65, 0x49, 0x6d, 0x61, 0x67, 0x65, 0x12, 0x27, 0x0a, 0x0f, 0x63, 0x72, 0x65, 0x61, 0x74, 0x6f,
 	0x72, 0x5f, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52,
 	0x0e, 0x63, 0x72, 0x65, 0x61, 0x74, 0x6f, 0x72, 0x41, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x12,
 	0x28, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x14, 0x2e,
@@ -7782,7 +7782,7 @@ var file_protocol_proto_goTypes = []interface{}{
 	(*MemberPayload_Unpin)(nil),                      // 57: river.MemberPayload.Unpin
 	(*MemberPayload_Snapshot_Member)(nil),            // 58: river.MemberPayload.Snapshot.Member
 	(*SpacePayload_Snapshot)(nil),                    // 59: river.SpacePayload.Snapshot
-	(*SpacePayload_SnappedSpaceMedia)(nil),           // 60: river.SpacePayload.SnappedSpaceMedia
+	(*SpacePayload_SnappedSpaceImage)(nil),           // 60: river.SpacePayload.SnappedSpaceImage
 	(*SpacePayload_Inception)(nil),                   // 61: river.SpacePayload.Inception
 	(*SpacePayload_ChannelMetadata)(nil),             // 62: river.SpacePayload.ChannelMetadata
 	(*SpacePayload_ChannelUpdate)(nil),               // 63: river.SpacePayload.ChannelUpdate
@@ -7911,8 +7911,8 @@ var file_protocol_proto_depIdxs = []int32{
 	54,  // 85: river.MemberPayload.Snapshot.Member.nft:type_name -> river.MemberPayload.Nft
 	61,  // 86: river.SpacePayload.Snapshot.inception:type_name -> river.SpacePayload.Inception
 	62,  // 87: river.SpacePayload.Snapshot.channels:type_name -> river.SpacePayload.ChannelMetadata
-	60,  // 88: river.SpacePayload.Snapshot.space_media:type_name -> river.SpacePayload.SnappedSpaceMedia
-	21,  // 89: river.SpacePayload.SnappedSpaceMedia.data:type_name -> river.EncryptedData
+	60,  // 88: river.SpacePayload.Snapshot.space_image:type_name -> river.SpacePayload.SnappedSpaceImage
+	21,  // 89: river.SpacePayload.SnappedSpaceImage.data:type_name -> river.EncryptedData
 	20,  // 90: river.SpacePayload.Inception.settings:type_name -> river.StreamSettings
 	2,   // 91: river.SpacePayload.ChannelMetadata.op:type_name -> river.ChannelOp
 	19,  // 92: river.SpacePayload.ChannelMetadata.origin_event:type_name -> river.EventRef
@@ -8658,7 +8658,7 @@ func file_protocol_proto_init() {
 			}
 		}
 		file_protocol_proto_msgTypes[56].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SpacePayload_SnappedSpaceMedia); i {
+			switch v := v.(*SpacePayload_SnappedSpaceImage); i {
 			case 0:
 				return &v.state
 			case 1:
