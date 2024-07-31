@@ -206,7 +206,7 @@ func update_Snapshot_Space(
 		return nil
 	case *SpacePayload_SpaceImage:
 		snapshot.SpaceContent.SpaceMedia = &SpacePayload_SnappedSpaceMedia{
-			SpaceImage:     content.SpaceImage,
+			Data:           content.SpaceImage,
 			CreatorAddress: creatorAddress,
 		}
 		return nil

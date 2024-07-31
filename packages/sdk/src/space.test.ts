@@ -161,14 +161,14 @@ describe('spaceTests', () => {
             expect(
                 spaceStream.view.snapshot?.content.case === 'spaceContent' &&
                     spaceStream.view.snapshot.content.value.spaceMedia !== undefined &&
-                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage !== undefined,
+                    spaceStream.view.snapshot.content.value.spaceMedia.data !== undefined,
             ).toBe(true)
         })
 
         // decrypt the snapshot and assert the image values
         let encryptedData =
             spaceStream.view.snapshot?.content.case === 'spaceContent'
-                ? spaceStream.view.snapshot.content.value.spaceMedia?.spaceImage
+                ? spaceStream.view.snapshot.content.value.spaceMedia?.data
                 : undefined
         expect(
             encryptedData !== undefined &&
@@ -203,14 +203,14 @@ describe('spaceTests', () => {
             expect(
                 spaceStream.view.snapshot?.content.case === 'spaceContent' &&
                     spaceStream.view.snapshot.content.value.spaceMedia !== undefined &&
-                    spaceStream.view.snapshot.content.value.spaceMedia.spaceImage !== undefined,
+                    spaceStream.view.snapshot.content.value.spaceMedia.data !== undefined,
             ).toBe(true)
         })
 
         // decrypt the snapshot and assert the image values
         encryptedData =
             spaceStream.view.snapshot?.content.case === 'spaceContent'
-                ? spaceStream.view.snapshot.content.value.spaceMedia?.spaceImage
+                ? spaceStream.view.snapshot.content.value.spaceMedia?.data
                 : undefined
         expect(
             encryptedData !== undefined &&

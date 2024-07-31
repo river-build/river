@@ -232,7 +232,7 @@ message SpacePayload {
 
     message SnappedSpaceMedia {
         bytes creator_address = 1;
-        EncryptedData space_image = 2;
+        EncryptedData data = 2;
     }
     
     message Inception {

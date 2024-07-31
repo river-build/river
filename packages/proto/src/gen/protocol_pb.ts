@@ -1661,9 +1661,9 @@ export class SpacePayload_SnappedSpaceMedia extends Message<SpacePayload_Snapped
   creatorAddress = new Uint8Array(0);
 
   /**
-   * @generated from field: river.EncryptedData space_image = 2;
+   * @generated from field: river.EncryptedData data = 2;
    */
-  spaceImage?: EncryptedData;
+  data?: EncryptedData;
 
   constructor(data?: PartialMessage<SpacePayload_SnappedSpaceMedia>) {
     super();
@@ -1674,7 +1674,7 @@ export class SpacePayload_SnappedSpaceMedia extends Message<SpacePayload_Snapped
   static readonly typeName = "river.SpacePayload.SnappedSpaceMedia";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "creator_address", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
-    { no: 2, name: "space_image", kind: "message", T: EncryptedData },
+    { no: 2, name: "data", kind: "message", T: EncryptedData },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SpacePayload_SnappedSpaceMedia {
