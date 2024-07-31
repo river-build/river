@@ -61,7 +61,7 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
         _stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
     ): void {
         check(event.remoteEvent.event.payload.case === 'spacePayload')
-        const payload: SpacePayload = event.remoteEvent.event.payload.value as SpacePayload
+        const payload: SpacePayload = event.remoteEvent.event.payload.value
         switch (payload.content.case) {
             case 'inception':
                 break
@@ -88,7 +88,7 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
         stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
     ): void {
         check(event.remoteEvent.event.payload.case === 'spacePayload')
-        const payload: SpacePayload = event.remoteEvent.event.payload.value as SpacePayload
+        const payload: SpacePayload = event.remoteEvent.event.payload.value
         switch (payload.content.case) {
             case 'inception':
                 break
@@ -104,7 +104,10 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
                 this.addSpacePayload_UpdateChannelAutojoin(payload.content.value, stateEmitter)
                 break
             case 'updateChannelShowUserJoinLeaveEvents':
-                this.addSpacePayload_UpdateChannelShowUserJoinLeaveEvents(payload.content.value, stateEmitter)
+                this.addSpacePayload_UpdateChannelShowUserJoinLeaveEvents(
+                    payload.content.value,
+                    stateEmitter,
+                )
                 break
             case undefined:
                 break

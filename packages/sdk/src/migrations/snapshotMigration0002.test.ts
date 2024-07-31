@@ -5,7 +5,12 @@
 import { Snapshot } from '@river-build/proto'
 import { snapshotMigration0002 } from './snapshotMigration0002'
 import { makeUniqueSpaceStreamId } from '../util.test'
-import { makeDefaultChannelStreamId, makeUniqueChannelStreamId, streamIdAsBytes, isDefaultChannelId } from '../id'
+import {
+    makeDefaultChannelStreamId,
+    makeUniqueChannelStreamId,
+    streamIdAsBytes,
+    isDefaultChannelId,
+} from '../id'
 import { check } from '@river-build/dlog'
 
 describe('snapshotMigration0002', () => {
