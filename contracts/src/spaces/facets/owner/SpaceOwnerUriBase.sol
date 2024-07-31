@@ -16,14 +16,12 @@ abstract contract SpaceOwnerUriBase is ISpaceOwnerBase {
   function _setDefaultUri(string memory uri) internal {
     Validator.checkLength(uri, 1);
 
-    SpaceOwnerStorage.Layout storage ds = SpaceOwnerStorage.layout();
-    ds.defaultUri = uri;
+    SpaceOwnerStorage.layout().defaultUri = uri;
     emit SpaceOwner__SetDefaultUri(uri);
   }
 
   function _getDefaultUri() internal view returns (string memory) {
-    SpaceOwnerStorage.Layout storage ds = SpaceOwnerStorage.layout();
-    return ds.defaultUri;
+    return SpaceOwnerStorage.layout().defaultUri;
   }
 
   /// @notice Returns `${space.uri}/${spaceAddress}`
