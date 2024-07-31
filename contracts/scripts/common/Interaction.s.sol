@@ -6,7 +6,7 @@ pragma solidity ^0.8.0;
 //libraries
 
 //contracts
-import "forge-std/Script.sol";
+import {Script} from "forge-std/Script.sol";
 import {DeployBase} from "./DeployBase.s.sol";
 
 abstract contract Interaction is Script, DeployBase {
@@ -28,9 +28,11 @@ abstract contract Interaction is Script, DeployBase {
       : vm.envUint("TESTNET_PRIVATE_KEY");
 
     address potential = vm.addr(pk);
-    address deployer = isAnvil() ? potential : msg.sender != potential
-      ? msg.sender
-      : potential;
+    address deployer = isAnvil()
+      ? potential
+      : msg.sender != potential
+        ? msg.sender
+        : potential;
 
     info(
       string.concat(

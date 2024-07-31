@@ -18,7 +18,7 @@ snapshot :; forge snapshot
 
 format :; yarn prettier --write .
 
-lint :; yarn solhint "{scripts,src,test/**/*.sol}"
+lint :; yarn solhint "{scripts,src,test}/**/*.sol"
 
 anvil :; anvil -m 'test test test test test test test test test test test junk'
 
@@ -84,6 +84,10 @@ deploy-ledger-base-sepolia :;
 interact-base-sepolia :;
 	@echo "Interacting through $(contract)..."
 	@SAVE_DEPLOYMENTS=1 OVERRIDE_DEPLOYMENTS=1 forge script scripts/interactions/${contract}.s.sol:${contract} --ffi --rpc-url base_sepolia --private-key ${TESTNET_PRIVATE_KEY} --broadcast --verify --verifier-url ${BASESCAN_SEPOLIA_URL} --etherscan-api-key ${BASESCAN_API_KEY}
+
+interact-alpha-base-sepolia :;
+	@echo "Interacting through $(contract)..."
+	@SAVE_DEPLOYMENTS=1 DEPLOYMENT_CONTEXT=alpha forge script scripts/interactions/${contract}.s.sol:${contract} --ffi --rpc-url base_sepolia --private-key ${TESTNET_PRIVATE_KEY} --broadcast
 
 test-base-sepolia :;
 	@echo "Testing $(contract)..."

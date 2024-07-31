@@ -118,11 +118,16 @@ async function encryptDecrypt() {
 
 printSystemInfo(logger)
 
-logger.log('==========================spamInfo==========================')
-await spamInfo(1)
-logger.log('=======================encryptDecrypt=======================')
-await encryptDecrypt()
-logger.log('========================sendAMessage========================')
-await sendAMessage()
+const run = async () => {
+    logger.log('==========================spamInfo==========================')
+    await spamInfo(1)
+    logger.log('=======================encryptDecrypt=======================')
+    await encryptDecrypt()
+    logger.log('========================sendAMessage========================')
+    await sendAMessage()
+    process.exit(0)
+}
 
-process.exit(0)
+run().catch(() => {
+    process.exit(1)
+})
