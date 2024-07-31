@@ -138,6 +138,18 @@ export interface DLogOpts {
 
 const allDlogs: Map<string, DLogger> = new Map()
 
+const pushFmt = (fmt: string[], ifDev: string, ifProd: string) => {
+    if (typeof process !== 'undefined') {
+        if (process.env.NODE_ENV === 'development') {
+            fmt.push(ifDev)
+        } else {
+            fmt.push(ifProd)
+        }
+    } else {
+        fmt.push(ifProd)
+    }
+}
+
 const makeDlog = (d: Debugger, opts?: DLogOpts): DLogger => {
     if (opts?.printStack) {
         // eslint-disable-next-line no-console
@@ -157,33 +169,22 @@ const makeDlog = (d: Debugger, opts?: DLogOpts): DLogger => {
             let c = args[i]
 
             if (typeof c === 'string') {
-                fmt.push('%s ')
+                pushFmt(fmt, '%O', '%o')
                 if (isHexString(c)) {
                     c = shortenHexString(c)
                 }
                 newArgs.push(c)
             } else if (typeof c === 'object' && c !== null) {
                 if (c instanceof Error) {
+                    pushFmt(fmt, '%O\n', '%o\n')
                     tailArgs.push('\n')
                     tailArgs.push(c)
                 } else {
-                    if (typeof process !== 'undefined') {
-                        if (process.env.NODE_ENV === 'development') {
-                            fmt.push('%O\n')
-                        }
-                    } else {
-                        fmt.push('%o\n')
-                    }
+                    pushFmt(fmt, '%O\n', '%o\n')
                     newArgs.push(cloneAndFormat(c, { shortenHex: true }))
                 }
             } else {
-                if (typeof process !== 'undefined') {
-                    if (process.env.NODE_ENV === 'development') {
-                        fmt.push('%O\n')
-                    }
-                } else {
-                    fmt.push('%o\n')
-                }
+                pushFmt(fmt, '%O\n', '%o\n')
                 newArgs.push(c)
             }
         }
