@@ -55,16 +55,9 @@ const _cloneAndFormat = (
     depth: number,
     seen: WeakSet<object>,
     shorten: boolean,
-): unknown => {
+): string => {
     if (depth > MAX_CALL_STACK_SZ) {
         return 'MAX_CALL_STACK_SZ exceeded'
-    }
-
-    if (typeof obj === 'object' && obj !== null) {
-        if (seen.has(obj)) {
-            return '[circular reference]'
-        }
-        seen.add(obj)
     }
 
     if (typeof obj === 'string') {
@@ -80,10 +73,15 @@ const _cloneAndFormat = (
     }
 
     if (Array.isArray(obj)) {
-        return obj.map((e) => _cloneAndFormat(e, depth + 1, seen, shorten))
+        return obj.map((e) => _cloneAndFormat(e, depth + 1, seen, shorten)).join(', ')
     }
 
     if (typeof obj === 'object' && obj !== null) {
+        if (seen.has(obj)) {
+            return '[circular reference]'
+        }
+        seen.add(obj)
+
         if (obj instanceof Error) {
             return obj.stack || obj.message
         }
@@ -94,7 +92,7 @@ const _cloneAndFormat = (
             for (const e of obj as any) {
                 newObj.push(_cloneAndFormat(e, depth + 1, seen, shorten))
             }
-            return newObj
+            return JSON.stringify(newObj)
         }
 
         const newObj: Record<PropertyKey, unknown> = {}
@@ -111,10 +109,10 @@ const _cloneAndFormat = (
                 }
             }
         }
-        return newObj
+        return JSON.stringify(newObj)
     }
 
-    return obj
+    return JSON.stringify(obj)
 }
 
 export interface DLogger {
