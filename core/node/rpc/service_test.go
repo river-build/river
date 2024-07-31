@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/river-build/river/core/contracts/river"
 	"math/rand"
 	"net"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"slices"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -1562,4 +1564,137 @@ func TestStreamSyncPingPong(t *testing.T) {
 		defer mu.Unlock()
 		return slices.Equal(pings, pongs)
 	}, 20*time.Second, 100*time.Millisecond, "didn't receive all pongs in reasonable time or out of order")
+}
+
+// TestSyncAndLoadStreamForStreamsCreatedDuringNodeDown ensures that a node is able to sync streams during boot-up that
+// are created when the node was down (e.g. sync from genesis).
+func TestSyncAndLoadStreamForStreamsCreatedDuringNodeDown(t *testing.T) {
+	var (
+		opts = serviceTesterOpts{numNodes: 5, replicationFactor: 5, start: false}
+		st   = newServiceTester(t, opts)
+		req  = st.require
+	)
+
+	// register nodes in registry
+	st.initNodeRecords(0, opts.numNodes, river.NodeStatus_Operational)
+	// start all apart the last node
+	st.startNodes(0, opts.numNodes-1)
+
+	var (
+		client = st.testClient(0)
+		wallet = st.nodes[0].service.wallet
+	)
+
+	// create a stream that is local to the last node that is not yet started
+	streamId, _, _, err := createUserSettingsStream(
+		st.ctx,
+		wallet,
+		client,
+		&protocol.StreamSettings{DisableMiniblockCreation: false},
+	)
+	req.NoError(err, "createUserSettingsStream")
+
+	// start last node and make sure that the nodes catches up with the stream
+	req.NoError(st.startSingle(opts.numNodes-1), "unable to start last node")
+
+	// wait for the node to start up and imported the mini-blocks from the stream into its local storage.
+	req.Eventuallyf(func() bool {
+		miniBlocks, err := st.nodes[opts.numNodes-1].service.storage.ReadMiniblocks(st.ctx, streamId, 0, 1)
+		req.NoError(err, "ReadMiniblocks")
+		return len(miniBlocks) == 1
+	}, 20*time.Second, 100*time.Millisecond, "expected to read genesis mini blocks")
+
+	// make sure last node is able to provide all expected events
+	lastClient := st.testClient(opts.numNodes - 1)
+
+	stream, err := lastClient.GetStream(st.ctx, connect.NewRequest(&protocol.GetStreamRequest{
+		StreamId: streamId[:],
+	}))
+
+	req.NoError(err, "GetStream")
+
+	req.Equal(int64(1), stream.Msg.GetStream().GetNextSyncCookie().GetMinipoolGen())
+	req.Equal(int64(0), stream.Msg.GetStream().GetNextSyncCookie().GetMinipoolSlot())
+}
+
+// TestSyncAndLoadStreamForStreamsCreatedWithEventsDuringNodeDown ensures that a node is able to sync streams during
+// boot-up that are created and got mini-blocks when the node was down (e.g. sync from genesis).
+func TestSyncAndLoadStreamForStreamsCreatedWithEventsDuringNodeDown(t *testing.T) {
+	var (
+		opts = serviceTesterOpts{numNodes: 5, replicationFactor: 5, start: false}
+		st   = newServiceTester(t, opts)
+		req  = st.require
+	)
+
+	// register nodes in registry
+	st.initNodeRecords(0, opts.numNodes, river.NodeStatus_Operational)
+	// start all apart the last node
+	st.startNodes(0, opts.numNodes-1)
+
+	var (
+		client         = st.testClient(0)
+		wallet         = st.nodes[0].service.wallet
+		numMBs         = 5
+		numEventsPerMB = 10
+	)
+
+	// create a stream that is local to the last node that is not yet started
+	streamId, startSyncCookie, _, err := createUserSettingsStream(
+		st.ctx,
+		wallet,
+		client,
+		&protocol.StreamSettings{DisableMiniblockCreation: true},
+	)
+	req.NoError(err, "createUserSettingsStream")
+
+	// make some mini-blocks that the last node needs to catch up when it starts
+	_, lastMbNum, err := fillUserSettingsStreamWithData(st.ctx, streamId, wallet, client, numMBs, numEventsPerMB, nil)
+	req.NoError(err, "fillUserSettingsStreamWithData")
+
+	// make sure the last mini-block is registered in the stream registry contract before starting the last node
+	req.Eventuallyf(func() bool {
+		registryStreamInfo, err := st.nodes[0].service.registryContract.GetStream(st.ctx, streamId)
+		req.NoError(err, "GetStreamInfo")
+		return uint64(lastMbNum) == registryStreamInfo.LastMiniblockNum
+	}, 20*time.Second, 100*time.Millisecond, "expected to receive all mini blocks")
+
+	// start last node and make sure that the nodes catches up with the stream
+	req.NoError(st.startSingle(opts.numNodes-1), "unable to start last node")
+
+	// wait for the node to start up and imported the mini-blocks from the stream into its local storage.
+	req.Eventuallyf(func() bool {
+		miniBlocks, err := st.nodes[opts.numNodes-1].service.storage.ReadMiniblocks(st.ctx, streamId, 0, lastMbNum)
+		req.NoError(err, "ReadMiniblocks")
+		return int64(len(miniBlocks)) == lastMbNum
+	}, 20*time.Second, 100*time.Millisecond, "expected to read all mini blocks")
+
+	// make sure last node is able to provide all expected events
+	last := st.testClient(opts.numNodes - 1)
+	syncCtx, syncCancel := context.WithCancel(st.ctx)
+	defer syncCancel()
+
+	syncRes, err := last.SyncStreams(syncCtx, connect.NewRequest(&protocol.SyncStreamsRequest{
+		SyncPos: []*protocol.SyncCookie{startSyncCookie},
+	}))
+
+	req.NoError(err, "SyncStreams)")
+	req.True(syncRes.Receive(), "sync not started")
+	req.NotEmpty(syncRes.Msg().GetSyncId(), "expected non-empty sync id")
+
+	var msgReceived atomic.Int64
+	msgReceived.Store(0)
+	expectedEventsCount := numMBs * numEventsPerMB
+
+	go func() {
+		for i := 0; i < expectedEventsCount; i++ {
+			if !syncRes.Receive() {
+				return
+			}
+			msgReceived.Add(int64(len(syncRes.Msg().GetStream().GetEvents())))
+		}
+	}()
+
+	req.Eventuallyf(func() bool {
+		return msgReceived.Load() >= int64(expectedEventsCount)
+	}, 10*time.Second, 100*time.Millisecond, "didn't receive all events in reasonable time")
 }

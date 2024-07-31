@@ -67,7 +67,7 @@ if err != nil {
 
 It's ok to use `AsRiverError` on other types of errors: in this case it auto-wraps with unknown error code.
 
-River errors can be agumented with extra information without the need to create a new error:
+River errors can be augmented with extra information without the need to create a new error:
 
 ```go
 return AsRiverError(err).
@@ -105,8 +105,8 @@ return WrapRiverError(Err_BAD_LINK_WALLET_BAD_SIGNATURE, err).
     LogWarn(log)
 ```
 
-This can functionality can be used as necessary, but since all request errors are logged on RPC level, for requrest processing
-the default should be to augument passing error and let RPC layer do the logging once.
+This can functionality can be used as necessary, but since all request errors are logged on RPC level, for request processing
+the default should be to augment passing error and let RPC layer do the logging once.
 
 ## . imports
 

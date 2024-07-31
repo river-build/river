@@ -1671,3 +1671,81 @@ func (s *PostgresEventStore) debugReadStreamData(
 
 	return result, nil
 }
+
+func (s *PostgresEventStore) StreamLastMiniBlocks(
+	ctx context.Context,
+	streamIDs []StreamId,
+) (map[StreamId]*LatestMiniBlock, error) {
+	var ret map[StreamId]*LatestMiniBlock
+	err := s.txRunner(
+		ctx,
+		"StreamLastMiniBlocks",
+		pgx.ReadOnly,
+		func(ctx context.Context, tx pgx.Tx) error {
+			var err error
+			ret, err = s.lastMiniBlockForStreams(ctx, tx, streamIDs)
+			return err
+		},
+		nil,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return ret, nil
+}
+
+type LatestMiniBlock struct {
+	Number        int64
+	MiniBlockInfo []byte
+}
+
+func (s *PostgresEventStore) lastMiniBlockForStreams(
+	ctx context.Context,
+	tx pgx.Tx,
+	streamIDs []StreamId,
+) (map[StreamId]*LatestMiniBlock, error) {
+	result := make(map[StreamId]*LatestMiniBlock)
+	ids := make([]string, 0, len(streamIDs))
+	if len(streamIDs) == 0 {
+		return result, nil
+	}
+
+	for _, id := range streamIDs {
+		ids = append(ids, id.String())
+	}
+
+	miniblockNumsRow, err := tx.Query(
+		ctx,
+		`select o.stream_id, o.seq_num, o.blockdata from miniblocks o inner join (
+			select stream_id, max(seq_num) as max_seq_num from miniblocks
+				WHERE stream_id = any ($1) group by stream_id
+			) i on o.stream_id = i.stream_id and o.seq_num = i.max_seq_num`,
+		ids,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer miniblockNumsRow.Close()
+
+	for miniblockNumsRow.Next() {
+		var (
+			streamId  StreamId
+			maxSeqNum int64
+			blockData []byte
+		)
+
+		err = miniblockNumsRow.Scan(&streamId, &maxSeqNum, &blockData)
+		if err != nil {
+			return nil, err
+		}
+
+		result[streamId] = &LatestMiniBlock{
+			Number:        maxSeqNum,
+			MiniBlockInfo: blockData,
+		}
+	}
+
+	return result, nil
+}

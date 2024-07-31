@@ -19,6 +19,10 @@ type ReadStreamFromLastSnapshotResult struct {
 }
 
 type StreamStorage interface {
+	// StreamLastMiniBlocks returns the last miniblock numbers for the given streams from storage.
+	// If the stream could not be found in storage it is missing in the returned map.
+	StreamLastMiniBlocks(ctx context.Context, streamID []StreamId) (map[StreamId]*LatestMiniBlock, error)
+
 	// CreateStreamStorage creates a new stream with the given genesis miniblock at index 0.
 	// Last snapshot minblock index is set to 0.
 	// Minipool is set to generation number 1 (i.e. number of miniblock that is going to be produced next) and is empty.

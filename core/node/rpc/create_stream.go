@@ -160,6 +160,8 @@ func (s *Service) createReplicatedStream(
 		return nil, err
 	}
 
+	// determine which nodes are responsible for managing the stream and allocate the stream in the smart contract by
+	// writing its genesis miniblock
 	nodesList, err := s.streamRegistry.AllocateStream(ctx, streamId, common.BytesToHash(mb.Header.Hash), mbBytes)
 	if err != nil {
 		return nil, err
@@ -171,6 +173,7 @@ func (s *Service) createReplicatedStream(
 	var localSyncCookie *SyncCookie
 	if nodes.IsLocal() {
 		sender.GoLocal(func() error {
+			// write stream data to database and load in-memory stream cache
 			_, sv, err := s.cache.CreateStream(ctx, streamId)
 			if err != nil {
 				return err

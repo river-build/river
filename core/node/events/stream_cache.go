@@ -1,12 +1,14 @@
 package events
 
 import (
+	"bytes"
 	"context"
+	"math/rand"
+	"runtime"
 	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-
 	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
@@ -17,6 +19,7 @@ import (
 	"github.com/river-build/river/core/node/registries"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
+	"golang.org/x/sync/semaphore"
 )
 
 type StreamCacheParams struct {
@@ -80,38 +83,334 @@ func NewStreamCache(
 		chainConfig: params.ChainConfig,
 	}
 
-	streams, err := params.Registry.GetAllStreams(ctx, params.AppliedBlockNum)
-	if err != nil {
+	var (
+		syncAndLoadCtx, cancelSyncAndLoad = context.WithCancel(ctx)
+		streamFetchResultsChan            = params.Registry.GetAllStreams(syncAndLoadCtx, params.AppliedBlockNum)
+		taskPoolSize                      = min(int64(runtime.NumCPU()), 32)
+		taskPool                          = semaphore.NewWeighted(taskPoolSize)
+		loadErrors                        = make(chan error, 1)
+	)
+
+	defer cancelSyncAndLoad()
+
+	// sync and load streams in cache in parallel for faster startup.
+	for streamsFetchResult := range streamFetchResultsChan {
+		if streamsFetchResult.Err != nil {
+			return nil, streamsFetchResult.Err
+		}
+
+		if err := taskPool.Acquire(syncAndLoadCtx, 1); err != nil {
+			return nil, AsRiverError(err, Err_INTERNAL).
+				Message("failed to acquire semaphore").
+				Func("NewStreamCache")
+		}
+
+		go func() {
+			defer taskPool.Release(1)
+
+			if err := s.syncAndLoadStreams(syncAndLoadCtx, streamsFetchResult.Streams); err != nil {
+				cancelSyncAndLoad()
+				select {
+				case loadErrors <- err:
+				default: // prevent blocking
+				}
+			}
+		}()
+	}
+
+	// wait till all stream loaders are done and close the loadErrors channel as indication all streams are loaded.
+	if err := taskPool.Acquire(ctx, taskPoolSize); err != nil {
+		loadErrors <- AsRiverError(err, Err_INTERNAL).
+			Message("failed to acquire semaphore").
+			Func("NewStreamCache")
+	}
+	taskPool.Release(taskPoolSize)
+	close(loadErrors)
+
+	// return err in case one of the loaders was unsuccessful.
+	if err, ok := <-loadErrors; ok {
 		return nil, err
 	}
 
-	// TODO: read stream state from storage and schedule required reconciliations.
-
-	for _, stream := range streams {
-		nodes := NewStreamNodes(stream.Nodes, params.Wallet.Address)
-		if nodes.IsLocal() {
-			s.cache.Store(stream.StreamId, &streamImpl{
-				params:   params,
-				streamId: stream.StreamId,
-				nodes:    nodes,
-			})
-		}
-	}
-
-	err = params.Registry.OnStreamEvent(
+	// register callbacks that are called on state changes in stream registry.
+	if err := params.Registry.OnStreamEvent(
 		ctx,
 		params.AppliedBlockNum+1,
 		s.onStreamAllocated,
 		s.onStreamLastMiniblockUpdated,
 		s.onStreamPlacementUpdated,
-	)
-	if err != nil {
+	); err != nil {
 		return nil, err
 	}
 
 	go s.runCacheCleanup(ctx)
 
 	return s, nil
+}
+
+// syncAndLoadStreams loads streams from the registry into the cache. If the database is behind the river stream
+// registry contract missing mini-blocks will be fetched from remote and written to the database before the stream is
+// loaded into the cache.
+func (s *streamCacheImpl) syncAndLoadStreams(
+	ctx context.Context,
+	streamsLoadedFromRegistry map[StreamId]*registries.GetStreamResult,
+) error {
+	// only load streams that are local to this node.
+	var localStreamIds []StreamId
+	for _, stream := range streamsLoadedFromRegistry {
+		nodes := NewStreamNodes(stream.Nodes, s.params.Wallet.Address)
+		if nodes.IsLocal() {
+			localStreamIds = append(localStreamIds, stream.StreamId)
+		}
+	}
+
+	if len(localStreamIds) == 0 {
+		return nil
+	}
+
+	// load the last mini-block that the database has for each stream to determine if the stream needs to be synced
+	// with a remote.
+	streamLastMiniBlocksInDB, err := s.params.Storage.StreamLastMiniBlocks(ctx, localStreamIds)
+	if err != nil {
+		return err
+	}
+
+	log := dlog.FromCtx(ctx)
+
+	// load the streams in the cache that this node is participating in.
+	for _, streamID := range localStreamIds {
+		streamAsInRegistry := streamsLoadedFromRegistry[streamID]
+		streamAsInDB, ok := streamLastMiniBlocksInDB[streamID]
+
+		if !ok { // stream not in database, sync stream from genesis with remote first
+			if err := s.syncStream(ctx, streamAsInRegistry, nil); err != nil {
+				// TODO: retry to sync stream periodically or as part of onStreamLastMiniblockUpdated processing?
+				log.Error("Unable to sync stream", "err", err)
+				continue
+			}
+
+			s.cache.Store(streamID, &streamImpl{
+				params:   s.params,
+				streamId: streamID,
+				nodes:    NewStreamNodes(streamAsInRegistry.Nodes, s.params.Wallet.Address),
+			})
+
+		} else if streamAsInRegistry.LastMiniblockNum == uint64(streamAsInDB.Number) { // stream up to date, no sync needed
+			s.cache.Store(streamID, &streamImpl{
+				params:   s.params,
+				streamId: streamID,
+				nodes:    NewStreamNodes(streamAsInRegistry.Nodes, s.params.Wallet.Address),
+			})
+
+		} else if streamAsInRegistry.LastMiniblockNum > uint64(streamAsInDB.Number) { // stream out of sync, sync from remote
+			if err := s.syncStream(ctx, streamAsInRegistry, streamAsInDB); err != nil {
+				// TODO: retry to sync stream periodically or as part of onStreamLastMiniblockUpdated processing?
+				log.Error("Unable to sync stream", "err", err)
+				continue
+			}
+
+			s.cache.Store(streamID, &streamImpl{
+				params:   s.params,
+				streamId: streamID,
+				nodes:    NewStreamNodes(streamAsInRegistry.Nodes, s.params.Wallet.Address),
+			})
+
+		} else {
+			// database is ahead of smart contract, either the database is corrupt or the river chain RPC node is
+			// lagging behind. TODO: determine what should be done in this case (for now ignore the stream).
+			log.Error(
+				"Stream in smart contract is behind local database",
+				"streamId", streamID,
+				"contract.num", streamAsInRegistry.LastMiniblockNum,
+				"contract.hash", streamAsInRegistry.LastMiniblockHash,
+				"db.num", streamAsInDB.Number,
+			)
+		}
+	}
+
+	return nil
+}
+
+// syncStream retrieves mini-blocks from another node participating in the stream and imports them into the database
+// bringing the stream registry and database in sync.
+func (s *streamCacheImpl) syncStream(
+	ctx context.Context,
+	stream *registries.GetStreamResult,
+	latestStreamMiniBlockInDB *storage.LatestMiniBlock,
+) error {
+	var (
+		log             = dlog.FromCtx(ctx)
+		from            = uint64(0)                      // default sync from scratch
+		to              = stream.LastMiniblockNum + 1    // API to is exclusive
+		chain           = make(map[int64]*MiniblockInfo) // mini-block.num => mini-block
+		syncFromGenesis = latestStreamMiniBlockInDB == nil
+	)
+
+	if !syncFromGenesis {
+		miniBlockInfo, err := NewMiniblockInfoFromBytes(
+			latestStreamMiniBlockInDB.MiniBlockInfo,
+			latestStreamMiniBlockInDB.Number)
+
+		if err != nil {
+			return err
+		}
+
+		from = uint64(latestStreamMiniBlockInDB.Number) + 1
+		chain[miniBlockInfo.Num] = miniBlockInfo // needed to verify that first fetched mini-block is built on top
+	}
+
+	// try nodes in random order until all required mini-blocks are fetched. Aggregated received mini-blocks from all
+	// nodes in chain to allow for partial fetching if some nodes are not able to provide all blocks.
+	rand.Shuffle(len(stream.Nodes), func(i, j int) {
+		stream.Nodes[i], stream.Nodes[j] = stream.Nodes[j], stream.Nodes[i]
+	})
+
+	syncCtx, syncCancel := context.WithCancel(ctx)
+	defer syncCancel()
+
+nodeLoop:
+	for _, node := range stream.Nodes {
+		if node == s.params.Wallet.Address {
+			continue // only fetch from remote
+		}
+
+		var (
+			miniBlockStream, errors  = s.params.RemoteMiniblockProvider.GetMiniBlocksStreamed(syncCtx, node, stream.StreamId, from, to)
+			expBlockNum              = int64(from)
+			blockRangeSize           = int(to - from)
+			remoteMiniBlocksReceived = 0
+		)
+
+	blockLoop:
+		for {
+			select {
+			case miniBlock, ok := <-miniBlockStream:
+				if !ok {
+					break blockLoop // starts received mini-block chain verification and if valid imports it in db
+				}
+
+				remoteMiniBlocksReceived++
+
+				if blockRangeSize < len(chain) || remoteMiniBlocksReceived > blockRangeSize {
+					// got corrupt local chain, drop fetched mini-block chain and re-sync from scratch from next node
+					chain = make(map[int64]*MiniblockInfo)
+					continue nodeLoop
+				}
+
+				miniBlockInfo, err := NewMiniblockInfoFromProto(miniBlock, NewMiniblockInfoFromProtoOpts{
+					ExpectedBlockNumber: expBlockNum,
+					DontParseEvents:     true, // received mini-blocks are verified if part of canonical chain
+				})
+
+				// received corrupt block from node, continue from next node because gathered chain could not be trusted
+				if err != nil {
+					chain = make(map[int64]*MiniblockInfo)
+					continue nodeLoop
+				}
+
+				if miniBlockInfo.headerEvent.PrevMiniblockHash != nil &&
+					miniBlockInfo.Num >= int64(from) && miniBlockInfo.Num < int64(to) {
+					chain[miniBlockInfo.Num] = miniBlockInfo
+				} else if syncFromGenesis && miniBlockInfo.Num == 0 && miniBlockInfo.headerEvent.PrevMiniblockHash == nil {
+					chain[miniBlockInfo.Num] = miniBlockInfo
+				}
+
+				expBlockNum++
+
+			case err, ok := <-errors:
+				if ok {
+					return err
+				}
+			}
+		}
+
+		// check that the entire mini-block chain is received
+
+		// make sure received chain is built on top of the latest mini-block in the database.
+		// or if genesis isn't available is started from the genesis block
+		if syncFromGenesis {
+			_, ok := chain[0]
+			if !ok {
+				continue nodeLoop
+			}
+		} else {
+			miniBlockInDB, ok := chain[latestStreamMiniBlockInDB.Number]
+			if !ok {
+				continue nodeLoop
+			}
+
+			firstFetchedBlock, ok := chain[latestStreamMiniBlockInDB.Number+1]
+			if !ok {
+				continue nodeLoop
+			}
+
+			if miniBlockInDB.Hash != *firstFetchedBlock.headerEvent.PrevMiniblockHash {
+				continue nodeLoop
+			}
+		}
+
+		// make sure that last received block is the block as the stream registry contains
+		lastBlock, ok := chain[int64(stream.LastMiniblockNum)]
+		if !ok {
+			continue nodeLoop
+		}
+		if stream.LastMiniblockHash != lastBlock.Hash {
+			continue nodeLoop
+		}
+
+		// ensure that chain is canonical, if some blocks are missing, query the next node to fetch missing blocks
+		for n := int64(from); n < int64(to-1); n++ {
+			parent, ok := chain[n]
+			if !ok {
+				continue nodeLoop
+			}
+
+			child, ok := chain[n+1]
+			if !ok {
+				continue nodeLoop
+			}
+
+			if !bytes.Equal(parent.Hash[:], child.headerEvent.PrevMiniblockHash.Bytes()) {
+				continue nodeLoop
+			}
+		}
+
+		// store retrieved stream mini-blocks in database
+		var serializedMiniBlocks [][]byte
+		serializedMiniBlocksFirstNum := int64(0)
+		for n := int64(from); n < int64(to); n++ {
+			block := chain[n]
+			serialized, err := block.ToBytes()
+			if err != nil {
+				return err
+			}
+
+			if block.Num == 0 {
+				err = s.params.Storage.CreateStreamStorage(ctx, stream.StreamId, serialized)
+				if err != nil {
+					return err
+				}
+				from = 1
+			} else {
+				serializedMiniBlocksFirstNum = min(serializedMiniBlocksFirstNum, block.Num)
+				serializedMiniBlocks = append(serializedMiniBlocks, serialized)
+			}
+		}
+
+		if len(serializedMiniBlocks) > 0 {
+			err := s.params.Storage.WriteArchiveMiniblocks(
+				ctx, stream.StreamId, int64(from), serializedMiniBlocks)
+			if err != nil {
+				return err
+			}
+		}
+
+		log.Debug("Synced stream", "streamId", stream.StreamId, "node", node, "from", from, "to", to)
+
+		return nil
+	}
+
+	return RiverError(Err_BAD_BLOCK_NUMBER, "Unable to fetch mini-blocks for st4ream", "stream", stream.StreamId)
 }
 
 func (s *streamCacheImpl) onStreamAllocated(ctx context.Context, event *river.StreamRegistryV1StreamAllocated) {
