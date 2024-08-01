@@ -23,7 +23,7 @@ export async function makeConnection(config: RiverConfig, wallet?: ethers.Wallet
     const riverRegistry = createRiverRegistry(riverProvider, config.river.chainConfig)
     const urls = await riverRegistry.getOperationalNodeUrls()
     const selectedUrl = randomUrlSelector(urls)
-    const rpcClient = makeStreamRpcClient(selectedUrl)
+    const rpcClient = makeStreamRpcClient(selectedUrl, () => riverRegistry.getOperationalNodeUrls())
     return {
         userId,
         delegateWallet,
