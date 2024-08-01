@@ -10,6 +10,7 @@ import {IERC721ABase} from "contracts/src/diamond/facets/token/ERC721A/IERC721A.
 
 // libraries
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {LibString} from "solady/utils/LibString.sol";
 
 // contracts
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
@@ -248,7 +249,7 @@ contract SpaceOwnerTest is ISpaceOwnerBase, IOwnableBase, BaseSetup {
       "/",
       Strings.toHexString(spaceAddress)
     );
-    assertEq(tokenUri, expectedUri);
+    assertEq(LibString.toCase(tokenUri, false), expectedUri);
   }
 
   function test_tokenURI_withSlash() external {
@@ -265,7 +266,7 @@ contract SpaceOwnerTest is ISpaceOwnerBase, IOwnableBase, BaseSetup {
       uriWithSlash,
       Strings.toHexString(spaceAddress)
     );
-    assertEq(tokenUri, expectedUri);
+    assertEq(LibString.toCase(tokenUri, false), expectedUri);
   }
 
   function test_getVotes() external {

@@ -6,13 +6,15 @@ import {ISpaceOwnerBase} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol
 
 // libraries
 import {Base64} from "base64/base64.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
+import {LibString} from "solady/utils/LibString.sol";
 import {Validator} from "contracts/src/utils/Validator.sol";
 
 // contracts
 import {SpaceOwnerStorage} from "contracts/src/spaces/facets/owner/SpaceOwnerStorage.sol";
 
 abstract contract SpaceOwnerUriBase is ISpaceOwnerBase {
+  using LibString for address;
+
   function _setDefaultUri(string memory uri) internal {
     Validator.checkLength(uri, 1);
 
@@ -47,9 +49,9 @@ abstract contract SpaceOwnerUriBase is ISpaceOwnerBase {
       // the ASCII code for "/" is 0x2f
       if (bytes(defaultUri)[length - 1] != 0x2f) {
         return
-          string.concat(defaultUri, "/", Strings.toHexString(spaceAddress));
+          string.concat(defaultUri, "/", spaceAddress.toHexStringChecksummed());
       } else {
-        return string.concat(defaultUri, Strings.toHexString(spaceAddress));
+        return string.concat(defaultUri, spaceAddress.toHexStringChecksummed());
       }
     }
   }
