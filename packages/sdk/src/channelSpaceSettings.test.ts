@@ -1,5 +1,5 @@
 /**
- * @group main
+ * @group with-entitilements
  */
 
 import {
