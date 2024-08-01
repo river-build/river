@@ -49,7 +49,8 @@ import {
     UserDeviceCollection,
     makeSessionKeys,
 } from '@river-build/encryption'
-import { errorContains, getRpcErrorProperty, StreamRpcClient } from './makeStreamRpcClient'
+import { StreamRpcClient } from './makeStreamRpcClient'
+import { errorContains, getRpcErrorProperty } from './rpcInterceptors'
 import EventEmitter from 'events'
 import TypedEmitter from 'typed-emitter'
 import {
