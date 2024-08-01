@@ -103,7 +103,7 @@ echo "STARTED ALL CHAINS AND BUILT ALL CONTRACTS"
 # Now generate the core server config
 ./scripts/configure-nodes.sh --single
 ./scripts/configure-nodes.sh --single_ne
-#./scripts/configure-nodes.sh --multi
+./scripts/configure-nodes.sh --multi
 #./scripts/configure-nodes.sh --multi_ne
 
 # Continue with rest of the script
@@ -121,10 +121,10 @@ commands=(
     "watch_go:cd protocol && yarn watch:go"
     "core_single:./core/node/run_single.sh -r"
     "core_single_ne:./core/node/run_single.sh -r --de"
-    #"core_multi:./core/node/run_multi.sh -r"
+    "core_multi:./core/node/run_multi.sh -r"
     #"core_multi_ne:./core/node/run_multi.sh -r --de"
-    #"xchain_single:RUN_ENV=single ./core/xchain/launch_multi.sh"
-    #"xchain_multi:RUN_ENV=multi ./core/xchain/launch_multi.sh"
+    "xchain_single:RUN_ENV=single ./core/xchain/launch_multi.sh"
+    "xchain_multi:RUN_ENV=multi ./core/xchain/launch_multi.sh"
 )
 
 # Create a Tmux window for each command
