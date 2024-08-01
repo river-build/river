@@ -54,8 +54,8 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
             this.addSpacePayload_Channel(eventHash, payload, payload.updatedAtEventNum, undefined)
         }
 
-        if (content.spaceImage?.data) {
-            this.decryptSpaceImage(content.spaceImage.data)
+        if (content.spaceMetadata?.data?.spaceImage) {
+            this.decryptSpaceImage(content.spaceMetadata.data.spaceImage)
                 .then((media) => {
                     this.spaceImage = media
                 })
@@ -87,7 +87,10 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
                 // nothing to do, channel data was conveyed in the snapshot
                 break
             case 'spaceImage':
-                // nothing to do, spaceImage is set in the snapshot
+                // deprecated
+                break
+            case 'spaceMetadata':
+                // nothing to do, metadata was conveyed in the snapshot
                 break
             case undefined:
                 break
@@ -116,13 +119,18 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
                 )
                 break
             case 'spaceImage':
-                this.decryptSpaceImage(payload.content.value)
-                    .then((media) => {
-                        this.spaceImage = media
-                    })
-                    .catch((err) => {
-                        throw err
-                    })
+                // deprecated
+                break
+            case 'spaceMetadata':
+                if (payload.content.value.spaceImage) {
+                    this.decryptSpaceImage(payload.content.value.spaceImage)
+                        .then((media) => {
+                            this.spaceImage = media
+                        })
+                        .catch((err) => {
+                            throw err
+                        })
+                }
                 break
             case undefined:
                 break

@@ -27,6 +27,7 @@ import {
     MediaInfo,
     ChunkedMedia,
     EmbeddedMedia,
+    SpacePayload_SpaceMetadata,
 } from '@river-build/proto'
 import {
     bin_fromHexString,
@@ -75,6 +76,7 @@ import {
     makeSpaceStreamId,
     STREAM_ID_STRING_LENGTH,
     contractAddressFromSpaceId,
+    streamIdToBytes,
 } from './id'
 import { makeEvent, unpackMiniblock, unpackStream, unpackStreamEx } from './sign'
 import { StreamEvents } from './streamEvents'
@@ -116,7 +118,7 @@ import {
     make_MemberPayload_Nft,
     make_MemberPayload_Pin,
     make_MemberPayload_Unpin,
-    make_SpacePayload_SpaceImage,
+    make_SpacePayload_SpaceImage as make_SpacePayload_SpaceMetadata,
 } from './types'
 
 import debug from 'debug'
@@ -875,9 +877,13 @@ export class Client
             ciphertext: uint8ArrayToBase64(ciphertext),
             algorithm: AES_GCM_DERIVED_ALGORITHM,
         })
+        const spaceMetadata = new SpacePayload_SpaceMetadata({
+            spaceId: streamIdToBytes(spaceStreamId),
+            spaceImage: encryptedData,
+        })
 
         // add the event to the stream
-        const event = make_SpacePayload_SpaceImage(encryptedData)
+        const event = make_SpacePayload_SpaceMetadata(spaceMetadata)
         return this.makeEventAndAddToStream(spaceStreamId, event, { method: 'setSpaceImage' })
     }
 
