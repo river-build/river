@@ -1205,7 +1205,7 @@ type SpacePayload struct {
 	// Types that are assignable to Content:
 	//
 	//	*SpacePayload_Inception_
-	//	*SpacePayload_Channelx
+	//	*SpacePayload_Channel
 	//	*SpacePayload_SpaceImage
 	//	*SpacePayload_SpaceMetadata_
 	Content isSpacePayload_Content `protobuf_oneof:"content"`
