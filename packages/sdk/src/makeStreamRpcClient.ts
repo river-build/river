@@ -14,7 +14,7 @@ import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/con
 import { Err, StreamService } from '@river-build/proto'
 import { check, dlog, dlogError } from '@river-build/dlog'
 import { genShortId, streamIdAsString } from './id'
-import { getEnvVar, isBaseUrlIncluded, isIConnectError } from './utils'
+import { getEnvVar, isBaseUrlIncluded, isIConnectError, randomUrlSelector } from './utils'
 
 const logInfo = dlog('csb:rpc:info')
 const logCallsHistogram = dlog('csb:rpc:histogram')
@@ -290,17 +290,6 @@ export function getRpcErrorProperty(err: unknown, prop: string): string | undefi
         }
     }
     return undefined
-}
-
-const randomUrlSelector = (urls: string) => {
-    const u = urls.split(',')
-    if (u.length === 0) {
-        throw new Error('No urls for backend provided')
-    } else if (u.length === 1) {
-        return u[0]
-    } else {
-        return u[Math.floor(Math.random() * u.length)]
-    }
 }
 
 function getRetryDelay(error: unknown, attempts: number, retryParams: RetryParams): number {
