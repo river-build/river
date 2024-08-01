@@ -192,22 +192,6 @@
         "name": "SpaceOwner__SpaceNotFound"
       },
       {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "value",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "length",
-            "type": "uint256"
-          }
-        ],
-        "type": "error",
-        "name": "StringsInsufficientHexLength"
-      },
-      {
         "inputs": [],
         "type": "error",
         "name": "TransferCallerNotOwnerNorApproved"
@@ -1375,7 +1359,8 @@
       "base64/=lib/base64/",
       "ds-test/=lib/ds-test/src/",
       "forge-std/=lib/forge-std/src/",
-      "hardhat-deploy/=lib/hardhat-deploy/"
+      "hardhat-deploy/=lib/hardhat-deploy/",
+      "solady/=lib/solady/src/"
     ],
     "optimizer": {
       "enabled": true,
@@ -1641,10 +1626,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/facets/owner/SpaceOwnerUriBase.sol": {
-      "keccak256": "0x89b7e9fe01037f436d6d3c34b5d9965cded03b0c44e5b87d19575eac7bf4569a",
+      "keccak256": "0x33836143f0920869898e15cf3c757d749a374689bab39f49931965169ea96c18",
       "urls": [
-        "bzz-raw://74ba5e3fd4d020e0c28ef67302037c4e374efc476ec88f4d7ff22fc4cb0025cd",
-        "dweb:/ipfs/QmSmcSuBxDHKCXMAHSCf61ZXLCzZfDLya22CxFSjJ4rLfG"
+        "bzz-raw://105995675fa7ed7a6032743e85166fa4d35efb2e214fdd5277b403b440507fdf",
+        "dweb:/ipfs/QmQnJpp7Juz35RPAYWBiMUPh7CnTEUDwoHA2x7vx5vkcPL"
       ],
       "license": "MIT"
     },
@@ -1725,6 +1710,14 @@
       "urls": [
         "bzz-raw://17c12e16d8d66f3af15d8787920bd41ca6c1e7517a212a6b9cebd4b6d38f36fe",
         "dweb:/ipfs/QmcXMnZUXEz6LRKsm3CSvqdPboAzmezavi8bTg2dRxM2yE"
+      ],
+      "license": "MIT"
+    },
+    "lib/solady/src/utils/LibString.sol": {
+      "keccak256": "0xbb90caa572b7f65689b74867ec211fed8cde92714314101f4287d00a40d95ab2",
+      "urls": [
+        "bzz-raw://93d2fa323793f3a2044a58789ea73c82595bb181a449b507637d8a537f9d8a16",
+        "dweb:/ipfs/Qmf4eAuQZTjARJMq2e2fXktpM2MSBow1JuMUPJbisEgZke"
       ],
       "license": "MIT"
     }
