@@ -90,6 +90,7 @@ func make_Space_Membership(
 
 func make_Space_Image(
 	wallet *crypto.Wallet,
+	streamId StreamId,
 	ciphertext string,
 	prevMiniblockHash []byte,
 	t *testing.T,
@@ -97,6 +98,7 @@ func make_Space_Image(
 	envelope, err := MakeEnvelopeWithPayload(
 		wallet,
 		Make_SpacePayload_SpaceImage(
+			toBytes(streamId),
 			ciphertext,
 			AES_GCM_DERIVED_ALGORITHM,
 		),
@@ -139,6 +141,10 @@ func make_Space_DisplayName(
 	parsed, err := ParseEvent(envelope)
 	assert.NoError(t, err)
 	return parsed
+}
+
+func toBytes(id StreamId) []byte {
+	return id[:]
 }
 
 func TestMakeSnapshot(t *testing.T) {
@@ -222,7 +228,7 @@ func TestCloneAndUpdateSpaceSnapshot(t *testing.T) {
 	username := make_Space_Username(wallet, "bob", nil, t)
 	displayName := make_Space_DisplayName(wallet, "bobIsTheGreatest", nil, t)
 	imageCipertext := "space_image_ciphertext"
-	image := make_Space_Image(wallet, imageCipertext, nil, t)
+	image := make_Space_Image(wallet, streamId, imageCipertext, nil, t)
 	events := []*ParsedEvent{membership, username, displayName, image}
 	for i, event := range events[:] {
 		err = Update_Snapshot(snapshot, event, 1, int64(3+i))
@@ -260,13 +266,18 @@ func TestCloneAndUpdateSpaceSnapshot(t *testing.T) {
 
 	assert.Equal(
 		t,
+		toBytes(streamId),
+		snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceMetadata.Data.SpaceId,
+	)
+	assert.Equal(
+		t,
 		imageCipertext,
-		snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceImage.Data.Ciphertext,
+		snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceMetadata.Data.SpaceImage.Ciphertext,
 	)
 	assert.Equal(
 		t,
 		AES_GCM_DERIVED_ALGORITHM,
-		snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceImage.Data.Algorithm,
+		snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceMetadata.Data.SpaceImage.Algorithm,
 	)
 }
 

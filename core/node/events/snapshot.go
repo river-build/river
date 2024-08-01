@@ -205,9 +205,16 @@ func update_Snapshot_Space(
 		snapshot.SpaceContent.Channels = insertChannel(snapshot.SpaceContent.Channels, channel)
 		return nil
 	case *SpacePayload_SpaceImage:
-		snapshot.SpaceContent.SpaceImage = &SpacePayload_SnappedSpaceImage{
-			Data:           content.SpaceImage,
+		// deprecated
+		return nil
+	case *SpacePayload_SpaceMetadata_:
+		streamId := iSnapshot.GetInceptionPayload().GetStreamId()
+		snapshot.SpaceContent.SpaceMetadata = &SpacePayload_SnappedSpaceMetadata{
 			CreatorAddress: creatorAddress,
+			Data: &SpacePayload_SpaceMetadata{
+				SpaceId:    streamId,
+				SpaceImage: content.SpaceMetadata.SpaceImage,
+			},
 		}
 		return nil
 	default:
