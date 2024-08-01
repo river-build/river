@@ -227,12 +227,14 @@ message SpacePayload {
         Inception inception = 1;
         // channels: sorted by channel_id
         repeated ChannelMetadata channels = 2;
-        SnappedSpaceImage space_image = 3;
+        reserved 3;
+        SnappedSpaceMetadata space_metadata = 4;
     }
 
-    message SnappedSpaceImage {
+    message SnappedSpaceMetadata {
         bytes creator_address = 1;
-        EncryptedData data = 2;
+        reserved 2;
+        SpaceMetadata data = 3;
     }
     
     message Inception {
@@ -255,10 +257,16 @@ message SpacePayload {
         EventRef origin_event = 3;
     }
 
+    message SpaceMetadata {
+        bytes space_id = 1;
+        EncryptedData space_image = 2;
+    }
+
     oneof content {
         Inception inception = 1;
         ChannelUpdate channel = 2;
-        EncryptedData space_image = 3;
+        EncryptedData space_image = 3 [deprecated=true];
+        SpaceMetadata space_metadata = 4;
     }
 }
 

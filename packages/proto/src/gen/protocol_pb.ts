@@ -1562,10 +1562,17 @@ export class SpacePayload extends Message<SpacePayload> {
     case: "channel";
   } | {
     /**
-     * @generated from field: river.EncryptedData space_image = 3;
+     * @generated from field: river.EncryptedData space_image = 3 [deprecated = true];
+     * @deprecated
      */
     value: EncryptedData;
     case: "spaceImage";
+  } | {
+    /**
+     * @generated from field: river.SpacePayload.SpaceMetadata space_metadata = 4;
+     */
+    value: SpacePayload_SpaceMetadata;
+    case: "spaceMetadata";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<SpacePayload>) {
@@ -1579,6 +1586,7 @@ export class SpacePayload extends Message<SpacePayload> {
     { no: 1, name: "inception", kind: "message", T: SpacePayload_Inception, oneof: "content" },
     { no: 2, name: "channel", kind: "message", T: SpacePayload_ChannelUpdate, oneof: "content" },
     { no: 3, name: "space_image", kind: "message", T: EncryptedData, oneof: "content" },
+    { no: 4, name: "space_metadata", kind: "message", T: SpacePayload_SpaceMetadata, oneof: "content" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SpacePayload {
@@ -1617,9 +1625,9 @@ export class SpacePayload_Snapshot extends Message<SpacePayload_Snapshot> {
   channels: SpacePayload_ChannelMetadata[] = [];
 
   /**
-   * @generated from field: river.SpacePayload.SnappedSpaceImage space_image = 3;
+   * @generated from field: river.SpacePayload.SnappedSpaceMetadata space_metadata = 4;
    */
-  spaceImage?: SpacePayload_SnappedSpaceImage;
+  spaceMetadata?: SpacePayload_SnappedSpaceMetadata;
 
   constructor(data?: PartialMessage<SpacePayload_Snapshot>) {
     super();
@@ -1631,7 +1639,7 @@ export class SpacePayload_Snapshot extends Message<SpacePayload_Snapshot> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "inception", kind: "message", T: SpacePayload_Inception },
     { no: 2, name: "channels", kind: "message", T: SpacePayload_ChannelMetadata, repeated: true },
-    { no: 3, name: "space_image", kind: "message", T: SpacePayload_SnappedSpaceImage },
+    { no: 4, name: "space_metadata", kind: "message", T: SpacePayload_SnappedSpaceMetadata },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SpacePayload_Snapshot {
@@ -1652,45 +1660,45 @@ export class SpacePayload_Snapshot extends Message<SpacePayload_Snapshot> {
 }
 
 /**
- * @generated from message river.SpacePayload.SnappedSpaceImage
+ * @generated from message river.SpacePayload.SnappedSpaceMetadata
  */
-export class SpacePayload_SnappedSpaceImage extends Message<SpacePayload_SnappedSpaceImage> {
+export class SpacePayload_SnappedSpaceMetadata extends Message<SpacePayload_SnappedSpaceMetadata> {
   /**
    * @generated from field: bytes creator_address = 1;
    */
   creatorAddress = new Uint8Array(0);
 
   /**
-   * @generated from field: river.EncryptedData data = 2;
+   * @generated from field: river.SpacePayload.SpaceMetadata data = 3;
    */
-  data?: EncryptedData;
+  data?: SpacePayload_SpaceMetadata;
 
-  constructor(data?: PartialMessage<SpacePayload_SnappedSpaceImage>) {
+  constructor(data?: PartialMessage<SpacePayload_SnappedSpaceMetadata>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "river.SpacePayload.SnappedSpaceImage";
+  static readonly typeName = "river.SpacePayload.SnappedSpaceMetadata";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "creator_address", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
-    { no: 2, name: "data", kind: "message", T: EncryptedData },
+    { no: 3, name: "data", kind: "message", T: SpacePayload_SpaceMetadata },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SpacePayload_SnappedSpaceImage {
-    return new SpacePayload_SnappedSpaceImage().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SpacePayload_SnappedSpaceMetadata {
+    return new SpacePayload_SnappedSpaceMetadata().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SpacePayload_SnappedSpaceImage {
-    return new SpacePayload_SnappedSpaceImage().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SpacePayload_SnappedSpaceMetadata {
+    return new SpacePayload_SnappedSpaceMetadata().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SpacePayload_SnappedSpaceImage {
-    return new SpacePayload_SnappedSpaceImage().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SpacePayload_SnappedSpaceMetadata {
+    return new SpacePayload_SnappedSpaceMetadata().fromJsonString(jsonString, options);
   }
 
-  static equals(a: SpacePayload_SnappedSpaceImage | PlainMessage<SpacePayload_SnappedSpaceImage> | undefined, b: SpacePayload_SnappedSpaceImage | PlainMessage<SpacePayload_SnappedSpaceImage> | undefined): boolean {
-    return proto3.util.equals(SpacePayload_SnappedSpaceImage, a, b);
+  static equals(a: SpacePayload_SnappedSpaceMetadata | PlainMessage<SpacePayload_SnappedSpaceMetadata> | undefined, b: SpacePayload_SnappedSpaceMetadata | PlainMessage<SpacePayload_SnappedSpaceMetadata> | undefined): boolean {
+    return proto3.util.equals(SpacePayload_SnappedSpaceMetadata, a, b);
   }
 }
 
@@ -1838,6 +1846,49 @@ export class SpacePayload_ChannelUpdate extends Message<SpacePayload_ChannelUpda
 
   static equals(a: SpacePayload_ChannelUpdate | PlainMessage<SpacePayload_ChannelUpdate> | undefined, b: SpacePayload_ChannelUpdate | PlainMessage<SpacePayload_ChannelUpdate> | undefined): boolean {
     return proto3.util.equals(SpacePayload_ChannelUpdate, a, b);
+  }
+}
+
+/**
+ * @generated from message river.SpacePayload.SpaceMetadata
+ */
+export class SpacePayload_SpaceMetadata extends Message<SpacePayload_SpaceMetadata> {
+  /**
+   * @generated from field: bytes space_id = 1;
+   */
+  spaceId = new Uint8Array(0);
+
+  /**
+   * @generated from field: river.EncryptedData space_image = 2;
+   */
+  spaceImage?: EncryptedData;
+
+  constructor(data?: PartialMessage<SpacePayload_SpaceMetadata>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "river.SpacePayload.SpaceMetadata";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "space_id", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
+    { no: 2, name: "space_image", kind: "message", T: EncryptedData },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SpacePayload_SpaceMetadata {
+    return new SpacePayload_SpaceMetadata().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SpacePayload_SpaceMetadata {
+    return new SpacePayload_SpaceMetadata().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SpacePayload_SpaceMetadata {
+    return new SpacePayload_SpaceMetadata().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SpacePayload_SpaceMetadata | PlainMessage<SpacePayload_SpaceMetadata> | undefined, b: SpacePayload_SpaceMetadata | PlainMessage<SpacePayload_SpaceMetadata> | undefined): boolean {
+    return proto3.util.equals(SpacePayload_SpaceMetadata, a, b);
   }
 }
 
