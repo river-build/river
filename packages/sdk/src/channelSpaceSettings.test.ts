@@ -111,6 +111,8 @@ describe('channelSpaceSettingsTests', () => {
             everyoneMembership,
         )
 
+        // Unpermitted user alice should not be able to update autojoin.
+        // First, add alice to the space.
         await expectUserCanJoin(
             spaceId,
             defaultChannelId,
@@ -149,6 +151,7 @@ describe('channelSpaceSettingsTests', () => {
             carolProvider.wallet,
         )
 
+        // Carol's update should succeed
         await expect(carol.updateChannelAutojoin(spaceId, defaultChannelId, false)).toResolve()
 
         // Validate autojoin event was applied on client
@@ -238,7 +241,7 @@ describe('channelSpaceSettingsTests', () => {
         })
     })
 
-    test('unpermitted user cannot update channel showuserjoinleaveevents', async () => {
+    test('unpermitted user cannot update channel showUserJoinLeaveEvents', async () => {
         const {
             bob,
             bobProvider,
@@ -261,6 +264,8 @@ describe('channelSpaceSettingsTests', () => {
             everyoneMembership,
         )
 
+        // Unpermitted user alice should not be able to update showUserJoinLeaveEvents.
+        // First, add alice to the space.
         await expectUserCanJoin(
             spaceId,
             defaultChannelId,
@@ -300,6 +305,7 @@ describe('channelSpaceSettingsTests', () => {
             carolProvider.wallet,
         )
 
+        // Carol's update should succeed
         await expect(
             carol.updateChannelShowUserJoinLeaveEvents(spaceId, defaultChannelId, false),
         ).toResolve()
