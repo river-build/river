@@ -1067,23 +1067,11 @@ func (params *aeParams) spacePayloadChannelModifyRequirements() (*auth.ChainAuth
 	if err != nil {
 		return nil, err
 	}
-
-	inception, err := params.streamView.(events.SpaceStreamView).GetSpaceInception()
-	if err != nil {
-		return nil, err
-	}
-
-	spaceId, err := shared.StreamIdFromBytes(inception.StreamId)
-	if err != nil {
-		return nil, err
-	}
-
 	chainAuthArgs := auth.NewChainAuthArgsForSpace(
-		spaceId,
+		*params.streamView.StreamId(),
 		userId,
 		auth.PermissionAddRemoveChannels,
 	)
-
 	return chainAuthArgs, nil
 }
 
