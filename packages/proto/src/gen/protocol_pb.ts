@@ -1568,10 +1568,10 @@ export class SpacePayload extends Message<SpacePayload> {
     case: "updateChannelAutojoin";
   } | {
     /**
-     * @generated from field: river.SpacePayload.UpdateChannelShowUserJoinLeaveEvents update_channel_show_user_join_leave_events = 4;
+     * @generated from field: river.SpacePayload.UpdateChannelHideUserJoinLeaveEvents update_channel_hide_user_join_leave_events = 4;
      */
-    value: SpacePayload_UpdateChannelShowUserJoinLeaveEvents;
-    case: "updateChannelShowUserJoinLeaveEvents";
+    value: SpacePayload_UpdateChannelHideUserJoinLeaveEvents;
+    case: "updateChannelHideUserJoinLeaveEvents";
   } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<SpacePayload>) {
@@ -1585,7 +1585,7 @@ export class SpacePayload extends Message<SpacePayload> {
     { no: 1, name: "inception", kind: "message", T: SpacePayload_Inception, oneof: "content" },
     { no: 2, name: "channel", kind: "message", T: SpacePayload_ChannelUpdate, oneof: "content" },
     { no: 3, name: "update_channel_autojoin", kind: "message", T: SpacePayload_UpdateChannelAutojoin, oneof: "content" },
-    { no: 4, name: "update_channel_show_user_join_leave_events", kind: "message", T: SpacePayload_UpdateChannelShowUserJoinLeaveEvents, oneof: "content" },
+    { no: 4, name: "update_channel_hide_user_join_leave_events", kind: "message", T: SpacePayload_UpdateChannelHideUserJoinLeaveEvents, oneof: "content" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SpacePayload {
@@ -1696,6 +1696,49 @@ export class SpacePayload_Inception extends Message<SpacePayload_Inception> {
 }
 
 /**
+ * @generated from message river.SpacePayload.ChannelSettings
+ */
+export class SpacePayload_ChannelSettings extends Message<SpacePayload_ChannelSettings> {
+  /**
+   * @generated from field: bool autojoin = 1;
+   */
+  autojoin = false;
+
+  /**
+   * @generated from field: bool hide_user_join_leave_events = 2;
+   */
+  hideUserJoinLeaveEvents = false;
+
+  constructor(data?: PartialMessage<SpacePayload_ChannelSettings>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "river.SpacePayload.ChannelSettings";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "autojoin", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 2, name: "hide_user_join_leave_events", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SpacePayload_ChannelSettings {
+    return new SpacePayload_ChannelSettings().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SpacePayload_ChannelSettings {
+    return new SpacePayload_ChannelSettings().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SpacePayload_ChannelSettings {
+    return new SpacePayload_ChannelSettings().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SpacePayload_ChannelSettings | PlainMessage<SpacePayload_ChannelSettings> | undefined, b: SpacePayload_ChannelSettings | PlainMessage<SpacePayload_ChannelSettings> | undefined): boolean {
+    return proto3.util.equals(SpacePayload_ChannelSettings, a, b);
+  }
+}
+
+/**
  * @generated from message river.SpacePayload.ChannelMetadata
  */
 export class SpacePayload_ChannelMetadata extends Message<SpacePayload_ChannelMetadata> {
@@ -1720,14 +1763,9 @@ export class SpacePayload_ChannelMetadata extends Message<SpacePayload_ChannelMe
   updatedAtEventNum = protoInt64.zero;
 
   /**
-   * @generated from field: bool autojoin = 7;
+   * @generated from field: river.SpacePayload.ChannelSettings settings = 7;
    */
-  autojoin = false;
-
-  /**
-   * @generated from field: bool show_user_join_leave_events = 8;
-   */
-  showUserJoinLeaveEvents = false;
+  settings?: SpacePayload_ChannelSettings;
 
   constructor(data?: PartialMessage<SpacePayload_ChannelMetadata>) {
     super();
@@ -1741,8 +1779,7 @@ export class SpacePayload_ChannelMetadata extends Message<SpacePayload_ChannelMe
     { no: 2, name: "channel_id", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
     { no: 3, name: "origin_event", kind: "message", T: EventRef },
     { no: 6, name: "updated_at_event_num", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 7, name: "autojoin", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 8, name: "show_user_join_leave_events", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 7, name: "settings", kind: "message", T: SpacePayload_ChannelSettings },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SpacePayload_ChannelMetadata {
@@ -1781,6 +1818,11 @@ export class SpacePayload_ChannelUpdate extends Message<SpacePayload_ChannelUpda
    */
   originEvent?: EventRef;
 
+  /**
+   * @generated from field: river.SpacePayload.ChannelSettings settings = 6;
+   */
+  settings?: SpacePayload_ChannelSettings;
+
   constructor(data?: PartialMessage<SpacePayload_ChannelUpdate>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1792,6 +1834,7 @@ export class SpacePayload_ChannelUpdate extends Message<SpacePayload_ChannelUpda
     { no: 1, name: "op", kind: "enum", T: proto3.getEnumType(ChannelOp) },
     { no: 2, name: "channel_id", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
     { no: 3, name: "origin_event", kind: "message", T: EventRef },
+    { no: 6, name: "settings", kind: "message", T: SpacePayload_ChannelSettings },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SpacePayload_ChannelUpdate {
@@ -1855,45 +1898,45 @@ export class SpacePayload_UpdateChannelAutojoin extends Message<SpacePayload_Upd
 }
 
 /**
- * @generated from message river.SpacePayload.UpdateChannelShowUserJoinLeaveEvents
+ * @generated from message river.SpacePayload.UpdateChannelHideUserJoinLeaveEvents
  */
-export class SpacePayload_UpdateChannelShowUserJoinLeaveEvents extends Message<SpacePayload_UpdateChannelShowUserJoinLeaveEvents> {
+export class SpacePayload_UpdateChannelHideUserJoinLeaveEvents extends Message<SpacePayload_UpdateChannelHideUserJoinLeaveEvents> {
   /**
    * @generated from field: bytes channel_id = 1;
    */
   channelId = new Uint8Array(0);
 
   /**
-   * @generated from field: bool show_user_join_leave_events = 2;
+   * @generated from field: bool hide_user_join_leave_events = 2;
    */
-  showUserJoinLeaveEvents = false;
+  hideUserJoinLeaveEvents = false;
 
-  constructor(data?: PartialMessage<SpacePayload_UpdateChannelShowUserJoinLeaveEvents>) {
+  constructor(data?: PartialMessage<SpacePayload_UpdateChannelHideUserJoinLeaveEvents>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "river.SpacePayload.UpdateChannelShowUserJoinLeaveEvents";
+  static readonly typeName = "river.SpacePayload.UpdateChannelHideUserJoinLeaveEvents";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "channel_id", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
-    { no: 2, name: "show_user_join_leave_events", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 2, name: "hide_user_join_leave_events", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SpacePayload_UpdateChannelShowUserJoinLeaveEvents {
-    return new SpacePayload_UpdateChannelShowUserJoinLeaveEvents().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SpacePayload_UpdateChannelHideUserJoinLeaveEvents {
+    return new SpacePayload_UpdateChannelHideUserJoinLeaveEvents().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SpacePayload_UpdateChannelShowUserJoinLeaveEvents {
-    return new SpacePayload_UpdateChannelShowUserJoinLeaveEvents().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SpacePayload_UpdateChannelHideUserJoinLeaveEvents {
+    return new SpacePayload_UpdateChannelHideUserJoinLeaveEvents().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SpacePayload_UpdateChannelShowUserJoinLeaveEvents {
-    return new SpacePayload_UpdateChannelShowUserJoinLeaveEvents().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SpacePayload_UpdateChannelHideUserJoinLeaveEvents {
+    return new SpacePayload_UpdateChannelHideUserJoinLeaveEvents().fromJsonString(jsonString, options);
   }
 
-  static equals(a: SpacePayload_UpdateChannelShowUserJoinLeaveEvents | PlainMessage<SpacePayload_UpdateChannelShowUserJoinLeaveEvents> | undefined, b: SpacePayload_UpdateChannelShowUserJoinLeaveEvents | PlainMessage<SpacePayload_UpdateChannelShowUserJoinLeaveEvents> | undefined): boolean {
-    return proto3.util.equals(SpacePayload_UpdateChannelShowUserJoinLeaveEvents, a, b);
+  static equals(a: SpacePayload_UpdateChannelHideUserJoinLeaveEvents | PlainMessage<SpacePayload_UpdateChannelHideUserJoinLeaveEvents> | undefined, b: SpacePayload_UpdateChannelHideUserJoinLeaveEvents | PlainMessage<SpacePayload_UpdateChannelHideUserJoinLeaveEvents> | undefined): boolean {
+    return proto3.util.equals(SpacePayload_UpdateChannelHideUserJoinLeaveEvents, a, b);
   }
 }
 
@@ -2015,6 +2058,11 @@ export class ChannelPayload_Inception extends Message<ChannelPayload_Inception> 
    */
   settings?: StreamSettings;
 
+  /**
+   * @generated from field: river.SpacePayload.ChannelSettings channel_settings = 7;
+   */
+  channelSettings?: SpacePayload_ChannelSettings;
+
   constructor(data?: PartialMessage<ChannelPayload_Inception>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2026,6 +2074,7 @@ export class ChannelPayload_Inception extends Message<ChannelPayload_Inception> 
     { no: 1, name: "stream_id", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
     { no: 3, name: "space_id", kind: "scalar", T: 12 /* ScalarType.BYTES */ },
     { no: 5, name: "settings", kind: "message", T: StreamSettings },
+    { no: 7, name: "channel_settings", kind: "message", T: SpacePayload_ChannelSettings },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): ChannelPayload_Inception {

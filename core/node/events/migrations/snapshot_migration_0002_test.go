@@ -46,9 +46,9 @@ func TestSnapshotMigration0002(t *testing.T) {
 	require.True(t, bytes.Equal(migratedSnapshot.GetSpaceContent().Channels[0].ChannelId, defaultChannelId[:]))
 	require.True(t, bytes.Equal(migratedSnapshot.GetSpaceContent().Channels[1].ChannelId, channelId1[:]))
 
-	require.True(t, migratedSnapshot.GetSpaceContent().Channels[0].Autojoin)
-	require.False(t, migratedSnapshot.GetSpaceContent().Channels[1].Autojoin)
+	require.True(t, migratedSnapshot.GetSpaceContent().Channels[0].Settings.Autojoin)
+	require.False(t, migratedSnapshot.GetSpaceContent().Channels[1].Settings.Autojoin)
 
-	require.True(t, migratedSnapshot.GetSpaceContent().Channels[0].ShowUserJoinLeaveEvents)
-	require.True(t, migratedSnapshot.GetSpaceContent().Channels[1].ShowUserJoinLeaveEvents)
+	require.False(t, migratedSnapshot.GetSpaceContent().Channels[0].Settings.HideUserJoinLeaveEvents)
+	require.False(t, migratedSnapshot.GetSpaceContent().Channels[1].Settings.HideUserJoinLeaveEvents)
 }

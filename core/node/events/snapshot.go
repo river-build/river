@@ -191,50 +191,42 @@ func update_Snapshot_Space(iSnapshot *Snapshot, spacePayload *SpacePayload, even
 	case *SpacePayload_Inception_:
 		return RiverError(Err_INVALID_ARGUMENT, "cannot update blockheader with inception event")
 	case *SpacePayload_Channel:
-		channelStreamId, err := shared.StreamIdFromBytes(content.Channel.ChannelId)
-		if err != nil {
-			return RiverError(Err_INVALID_ARGUMENT, "invalid channel id").
-				Tag("channelId", content.Channel.ChannelId)
-		}
 		channel := &SpacePayload_ChannelMetadata{
 			ChannelId:         content.Channel.ChannelId,
 			Op:                content.Channel.Op,
 			OriginEvent:       content.Channel.OriginEvent,
 			UpdatedAtEventNum: eventNum,
+			Settings:          content.Channel.Settings,
 		}
-		// Apply default channel settings on creation
-		if channel.Op == ChannelOp_CO_CREATED {
-			channel.Autojoin = shared.IsDefaultChannelId(channelStreamId)
-			channel.ShowUserJoinLeaveEvents = true
+		if channel.Settings == nil {
+			if channel.Op == ChannelOp_CO_CREATED {
+				// Apply default channel settings for new channels when settings are not provided.
+				// Invariant: channel.Settings is defined for all channels in the snapshot.
+				channel.Settings = &SpacePayload_ChannelSettings{}
+			} else if channel.Op == ChannelOp_CO_UPDATED {
+				// Find the existing channel and copy over the settings if new ones are not provided.
+				existingChannel, err := findChannel(snapshot.SpaceContent.Channels, content.Channel.ChannelId)
+				if err != nil {
+					return err
+				}
+				channel.Settings = existingChannel.Settings
+			}
 		}
-
 		snapshot.SpaceContent.Channels = insertChannel(snapshot.SpaceContent.Channels, channel)
 		return nil
 	case *SpacePayload_UpdateChannelAutojoin_:
-		var channel *SpacePayload_ChannelMetadata = nil
-		for _, c := range snapshot.SpaceContent.Channels {
-			if bytes.Equal(c.ChannelId, content.UpdateChannelAutojoin.ChannelId) {
-				channel = c
-				break
-			}
+		channel, err := findChannel(snapshot.SpaceContent.Channels, content.UpdateChannelAutojoin.ChannelId)
+		if err != nil {
+			return err
 		}
-		if channel == nil {
-			return RiverError(Err_INVALID_ARGUMENT, "channel metadata not found")
-		}
-		channel.Autojoin = content.UpdateChannelAutojoin.Autojoin
+		channel.Settings.Autojoin = content.UpdateChannelAutojoin.Autojoin
 		return nil
-	case *SpacePayload_UpdateChannelShowUserJoinLeaveEvents_:
-		var channel *SpacePayload_ChannelMetadata = nil
-		for _, c := range snapshot.SpaceContent.Channels {
-			if bytes.Equal(c.ChannelId, content.UpdateChannelShowUserJoinLeaveEvents.ChannelId) {
-				channel = c
-				break
-			}
+	case *SpacePayload_UpdateChannelHideUserJoinLeaveEvents_:
+		channel, err := findChannel(snapshot.SpaceContent.Channels, content.UpdateChannelHideUserJoinLeaveEvents.ChannelId)
+		if err != nil {
+			return err
 		}
-		if channel == nil {
-			return RiverError(Err_INVALID_ARGUMENT, "channel metadata not found")
-		}
-		channel.ShowUserJoinLeaveEvents = content.UpdateChannelShowUserJoinLeaveEvents.ShowUserJoinLeaveEvents
+		channel.Settings.HideUserJoinLeaveEvents = content.UpdateChannelHideUserJoinLeaveEvents.HideUserJoinLeaveEvents
 		return nil
 	default:
 		return RiverError(Err_INVALID_ARGUMENT, "unknown space payload type %T", spacePayload.Content)

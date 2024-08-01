@@ -62,16 +62,6 @@ type aeUnpinRules struct {
 	unpin  *MemberPayload_Unpin
 }
 
-type aeUpdateAutojoinRules struct {
-	params         *aeParams
-	updateAutojoin *SpacePayload_UpdateChannelAutojoin
-}
-
-type aeUpdateChannelShowUserJoinLeaveEventsRules struct {
-	params *aeParams
-	update *SpacePayload_UpdateChannelShowUserJoinLeaveEvents
-}
-
 type aeMediaPayloadChunkRules struct {
 	params *aeParams
 	chunk  *MediaPayload_Chunk
@@ -272,22 +262,20 @@ func (params *aeParams) canAddSpacePayload(payload *StreamEvent_SpacePayload) ru
 				check(ru.validSpaceChannelOp)
 		}
 	case *SpacePayload_UpdateChannelAutojoin_:
-		ru := &aeUpdateAutojoinRules{
-			params:         params,
-			updateAutojoin: content.UpdateChannelAutojoin,
-		}
 		return aeBuilder().
-			check(ru.validUpdateAutojoin).
-			requireChainAuth(params.updateAutojoinMessageChannelModifyRequirements)
+			check(params.creatorIsMember).
+			check(params.spacePayloadHasValidChannel(&autojoinWrapper{content.UpdateChannelAutojoin})).
+			requireChainAuth(params.spacePayloadChannelModifyRequirements)
 
-	case *SpacePayload_UpdateChannelShowUserJoinLeaveEvents_:
-		ru := &aeUpdateChannelShowUserJoinLeaveEventsRules{
-			params: params,
-			update: content.UpdateChannelShowUserJoinLeaveEvents,
-		}
+	case *SpacePayload_UpdateChannelHideUserJoinLeaveEvents_:
 		return aeBuilder().
-			check(ru.validUpdateChannelShowUserJoinLeaveEvents).
-			requireChainAuth(params.updateChannelShowUserJoinLeaveEventsRequirements)
+			check(params.creatorIsMember).
+			check(params.spacePayloadHasValidChannel(
+				&hideUserJoinLeaveEventsWrapper{
+					content.UpdateChannelHideUserJoinLeaveEvents,
+				},
+			)).
+			requireChainAuth(params.spacePayloadChannelModifyRequirements)
 
 	default:
 		return aeBuilder().
@@ -1076,7 +1064,7 @@ func (params *aeParams) channelMessageReactEntitlements() (*auth.ChainAuthArgs, 
 	return chainAuthArgs, nil
 }
 
-func (params *aeParams) updateAutojoinMessageChannelModifyRequirements() (*auth.ChainAuthArgs, error) {
+func (params *aeParams) spacePayloadChannelModifyRequirements() (*auth.ChainAuthArgs, error) {
 	userId, err := shared.AddressHex(params.parsedEvent.Event.CreatorAddress)
 	if err != nil {
 		return nil, err
@@ -1334,46 +1322,52 @@ func (ru *aeUnpinRules) validUnpin() (bool, error) {
 	return false, RiverError(Err_INVALID_ARGUMENT, "message is not pinned")
 }
 
-func (ru *aeUpdateAutojoinRules) validUpdateAutojoin() (bool, error) {
-	if ru.updateAutojoin == nil {
-		return false, RiverError(Err_INVALID_ARGUMENT, "event is not an update autojoin event")
-	}
-	view := ru.params.streamView.(events.SpaceStreamView)
-	channelId, err := shared.StreamIdFromBytes(ru.updateAutojoin.ChannelId)
-	if err != nil {
-		return false, err
-	}
-
-	// check if the channel exists
-	_, err = view.GetChannelInfo(channelId)
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
+type HasChannelIdBytes interface {
+	ChannelIdBytes() ([]byte, error)
 }
 
-func (ru *aeUpdateChannelShowUserJoinLeaveEventsRules) validUpdateChannelShowUserJoinLeaveEvents() (bool, error) {
-	if ru.update == nil {
-		return false, RiverError(
-			Err_INVALID_ARGUMENT,
-			"event is not an update channel show user join leave events event",
-		)
-	}
-	view := ru.params.streamView.(events.SpaceStreamView)
+type autojoinWrapper struct {
+	update *SpacePayload_UpdateChannelAutojoin
+}
 
-	channelId, err := shared.StreamIdFromBytes(ru.update.ChannelId)
-	if err != nil {
-		return false, err
+func (w *autojoinWrapper) ChannelIdBytes() ([]byte, error) {
+	if w.update == nil {
+		return nil, RiverError(Err_INVALID_ARGUMENT, "event is not an update autojoin event")
 	}
+	return w.update.ChannelId, nil
+}
 
-	// check if the channel exists
-	_, err = view.GetChannelInfo(channelId)
-	if err != nil {
-		return false, err
+type hideUserJoinLeaveEventsWrapper struct {
+	update *SpacePayload_UpdateChannelHideUserJoinLeaveEvents
+}
+
+func (w *hideUserJoinLeaveEventsWrapper) ChannelIdBytes() ([]byte, error) {
+	if w.update == nil {
+		return nil, RiverError(Err_INVALID_ARGUMENT, "event is not an update channel hide user join leave events event")
 	}
+	return w.update.ChannelId, nil
+}
 
-	return true, nil
+func (params *aeParams) spacePayloadHasValidChannel(spaceChannelPayload HasChannelIdBytes) func() (bool, error) {
+	return func() (bool, error) {
+		channelIdBytes, err := spaceChannelPayload.ChannelIdBytes()
+		if err != nil {
+			return false, err
+		}
+		channelId, err := shared.StreamIdFromBytes(channelIdBytes)
+		if err != nil {
+			return false, err
+		}
+
+		view := params.streamView.(events.SpaceStreamView)
+		// check if the channel exists
+		_, err = view.GetChannelInfo(channelId)
+		if err != nil {
+			return false, err
+		}
+
+		return true, nil
+	}
 }
 
 func (ru *aeSpaceChannelRules) validSpaceChannelOp() (bool, error) {

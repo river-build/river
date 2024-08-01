@@ -14,11 +14,8 @@ func snapshot_migration_0002(iSnapshot *Snapshot) *Snapshot {
 				panic(err)
 			}
 			if shared.IsDefaultChannelId(channelId) {
-				channel.Autojoin = true
-			} else {
-				channel.Autojoin = false
+				channel.Settings.Autojoin = true
 			}
-			channel.ShowUserJoinLeaveEvents = true
 		}
 	}
 	return iSnapshot
