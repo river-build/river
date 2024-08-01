@@ -146,7 +146,7 @@ func TestLoad(t *testing.T) {
 	nextEvent := parsedEvent(t, join2)
 	err = view.ValidateNextEvent(ctx, btc.OnChainConfig, nextEvent, time.Now())
 	assert.NoError(t, err)
-	view, err = view.copyAndAddEvent(ctx, nextEvent)
+	view, err = view.copyAndAddEvent(nextEvent)
 	assert.NoError(t, err)
 
 	// with one new event, we shouldn't snapshot yet
@@ -168,7 +168,7 @@ func TestLoad(t *testing.T) {
 	assert.NoError(t, err)
 	err = view.ValidateNextEvent(ctx, btc.OnChainConfig, nextEvent, time.Now())
 	assert.NoError(t, err)
-	view, err = view.copyAndAddEvent(ctx, nextEvent)
+	view, err = view.copyAndAddEvent(nextEvent)
 	assert.NoError(t, err)
 	// with two new events, we should snapshot
 	assert.Equal(t, true, view.shouldSnapshot(ctx, btc.OnChainConfig))
@@ -231,7 +231,7 @@ func TestLoad(t *testing.T) {
 	assert.NoError(t, err)
 	err = newSV1.ValidateNextEvent(ctx, btc.OnChainConfig, nextEvent, time.Now())
 	assert.NoError(t, err)
-	_, err = newSV1.copyAndAddEvent(ctx, nextEvent)
+	_, err = newSV1.copyAndAddEvent(nextEvent)
 	assert.NoError(t, err)
 	// wait 2 second
 	time.Sleep(2 * time.Second)

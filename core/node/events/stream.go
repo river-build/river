@@ -371,6 +371,12 @@ func (s *streamImpl) addEventImpl(ctx context.Context, event *ParsedEvent) error
 		return err
 	}
 
+	// Check if event can be added before writing to storage.
+	newSV, err := s.view.copyAndAddEvent(event)
+	if err != nil {
+		return err
+	}
+
 	err = s.params.Storage.WriteEvent(
 		ctx,
 		s.streamId,
@@ -384,10 +390,6 @@ func (s *streamImpl) addEventImpl(ctx context.Context, event *ParsedEvent) error
 		return err
 	}
 
-	newSV, err := s.view.copyAndAddEvent(ctx, event)
-	if err != nil {
-		return err
-	}
 	prevSyncCookie := s.view.SyncCookie(s.params.Wallet.Address)
 	s.view = newSV
 	newSyncCookie := s.view.SyncCookie(s.params.Wallet.Address)

@@ -99,9 +99,11 @@ func MakeStreamView(
 			return nil, err
 		}
 		if !minipoolEvents.Set(parsed.Hash, parsed) {
-			// This error is ignored here to load from the db even if there is a duplicate event.
-			dlog.FromCtx(ctx).
-				Error("MakeStreamView: Duplicate event is detected", "event", parsed.ShortDebugStr(), "streamId", streamId)
+			return nil, RiverError(
+				Err_DUPLICATE_EVENT,
+				"duplicate event",
+			).Func("MakeStreamView").
+				Tags("streamId", streamId, "event", parsed.ShortDebugStr())
 		}
 	}
 
@@ -193,16 +195,18 @@ type streamViewImpl struct {
 
 var _ StreamView = (*streamViewImpl)(nil)
 
-func (r *streamViewImpl) copyAndAddEvent(ctx context.Context, event *ParsedEvent) (*streamViewImpl, error) {
+func (r *streamViewImpl) copyAndAddEvent(event *ParsedEvent) (*streamViewImpl, error) {
 	if event.Event.GetMiniblockHeader() != nil {
 		return nil, RiverError(Err_BAD_EVENT, "streamViewImpl: block event not allowed")
 	}
 
 	newMinipool := r.minipool.tryCopyAndAddEvent(event)
 	if newMinipool == nil {
-		dlog.FromCtx(ctx).
-			Error("copyAndAddEvent: Duplicate event is detected", "event", event.ShortDebugStr(), "stream", r.streamId)
-		return r, nil
+		return nil, RiverError(
+			Err_DUPLICATE_EVENT,
+			"streamViewImpl: duplicate event",
+		).Func("copyAndAddEvent").
+			Tags("event", event.ShortDebugStr(), "streamId", r.streamId)
 	}
 
 	ret := &streamViewImpl{
