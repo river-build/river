@@ -620,6 +620,20 @@ export const make_SpacePayload_ChannelUpdate = (
     }
 }
 
+export const make_SpacePayload_SpaceImage = (
+    value: PlainMessage<EncryptedData>,
+): PlainMessage<StreamEvent>['payload'] => {
+    return {
+        case: 'spacePayload',
+        value: {
+            content: {
+                case: 'spaceImage',
+                value,
+            },
+        },
+    }
+}
+
 export const make_SpacePayload_UpdateChannelAutojoin = (
     value: PlainMessage<SpacePayload_UpdateChannelAutojoin>,
 ): PlainMessage<StreamEvent>['payload'] => {
