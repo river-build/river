@@ -2,7 +2,6 @@
  * @group main
  */
 
-import exp from 'constants'
 import {
     setupWalletsAndContexts,
     createSpaceAndDefaultChannel,
@@ -62,7 +61,6 @@ describe('channelSpaceSettingsTests', () => {
         // Default channel only should be autojoin by default
         await waitFor(() => {
             const channelMetadata = spaceStreamView.spaceChannelsMetadata
-            console.log('channelMetadata', channelMetadata)
             check(channelMetadata.size === 2)
             check(channelMetadata.get(defaultChannelId)?.isAutojoin === true)
             check(channelMetadata.get(channel1Id!)?.isAutojoin === false)
@@ -128,7 +126,7 @@ describe('channelSpaceSettingsTests', () => {
         )
 
         // Add Carol to a role that gives her AddRemoveChannels permission so she can update autojoin
-        const { roleId, error: roleError } = await createRole(
+        const { error: roleError } = await createRole(
             bobSpaceDapp,
             bobProvider,
             spaceId,
@@ -215,7 +213,6 @@ describe('channelSpaceSettingsTests', () => {
         // All channels show join/leave events by default
         await waitFor(() => {
             const channelMetadata = spaceStreamView.spaceChannelsMetadata
-            console.log('channelMetadata', channelMetadata)
             check(channelMetadata.size === 2)
             check(channelMetadata.get(defaultChannelId)?.showUserJoinLeaveEvents === true)
             check(channelMetadata.get(channel1Id!)?.showUserJoinLeaveEvents === true)
@@ -282,7 +279,7 @@ describe('channelSpaceSettingsTests', () => {
 
         // Add Carol to a role that gives her AddRemoveChannels permission so she can update
         // showUserJoinLeaveEvents
-        const { roleId, error: roleError } = await createRole(
+        const { error: roleError } = await createRole(
             bobSpaceDapp,
             bobProvider,
             spaceId,

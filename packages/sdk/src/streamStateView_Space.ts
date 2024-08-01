@@ -127,7 +127,7 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
             throwWithCode(`Channel not found: ${channelId}`, Err.STREAM_BAD_EVENT)
         }
         this.spaceChannelsMetadata.set(channelId, {
-            ...channel!,
+            ...channel,
             isAutojoin: autojoin,
         })
         stateEmitter?.emit('spaceChannelAutojoinUpdated', this.streamId, channelId, autojoin)
@@ -144,7 +144,7 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
             throwWithCode(`Channel not found: ${channelId}`, Err.STREAM_BAD_EVENT)
         }
         this.spaceChannelsMetadata.set(channelId, {
-            ...channel!,
+            ...channel,
             showUserJoinLeaveEvents,
         })
         stateEmitter?.emit(
@@ -188,8 +188,8 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
                 this.spaceChannelsMetadata.set(channelId, {
                     isDefault: isDefaultChannelId(channelId),
                     updatedAtEventNum,
-                    isAutojoin: channel!.isAutojoin,
-                    showUserJoinLeaveEvents: channel!.showUserJoinLeaveEvents,
+                    isAutojoin: channel.isAutojoin,
+                    showUserJoinLeaveEvents: channel.showUserJoinLeaveEvents,
                 })
                 stateEmitter?.emit(
                     'spaceChannelUpdated',
