@@ -3784,6 +3784,8 @@ __metadata:
     "@types/node": ^20.5.0
     "@typescript-eslint/eslint-plugin": ^6.10.0
     "@typescript-eslint/parser": ^7.14.1
+    esbuild: ^0.21.5
+    esbuild-plugin-wasm: ^1.1.0
     eslint: ^8.53.0
     eslint-import-resolver-typescript: ^3.5.5
     eslint-plugin-import: ^2.27.5
@@ -8949,6 +8951,13 @@ __metadata:
     is-date-object: ^1.0.1
     is-symbol: ^1.0.2
   checksum: 4ead6671a2c1402619bdd77f3503991232ca15e17e46222b0a41a5d81aebc8740a77822f5b3c965008e631153e9ef0580540007744521e72de8e33599fca2eed
+  languageName: node
+  linkType: hard
+
+"esbuild-plugin-wasm@npm:^1.1.0":
+  version: 1.1.0
+  resolution: "esbuild-plugin-wasm@npm:1.1.0"
+  checksum: 382df12ecb92634d0f526cad4792b0ac5dc8016cdf63e23d9ee099f0f2c530855463cc45045c4a6ec10a6a1bd2ff59b5c4b24e6314a361fa70cc57645caf602b
   languageName: node
   linkType: hard
 
