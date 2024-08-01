@@ -12,9 +12,90 @@ import {
     createRole,
 } from './util.test'
 import { check } from '@river-build/dlog'
+import { SpacePayload_ChannelSettings } from '@river-build/proto'
 import { Permission, NoopRuleData } from '@river-build/web3'
 
 describe('channelSpaceSettingsTests', () => {
+    test('channel creation with default settings is not autojoin, hideUserJoinLeaveEvents false', async () => {
+        const { bob, bobProvider, bobSpaceDapp } = await setupWalletsAndContexts()
+        const everyoneMembership = await everyoneMembershipStruct(bobSpaceDapp, bob)
+
+        // Track autojoin state of channels via emitted client events
+        const updatedChannelAutojoinState = new Map<string, boolean>()
+        bob.on('spaceChannelAutojoinUpdated', (_spaceId, channelId, autojoin) => {
+            updatedChannelAutojoinState.set(channelId, autojoin)
+        })
+
+        // This channel is created with default channel settings
+        const { spaceId, defaultChannelId } = await createSpaceAndDefaultChannel(
+            bob,
+            bobSpaceDapp,
+            bobProvider.wallet,
+            "bob's town",
+            everyoneMembership,
+        )
+
+        const spaceStream = bob.streams.get(spaceId)
+        expect(spaceStream).toBeDefined()
+        const spaceStreamView = spaceStream!.view.spaceContent
+        expect(spaceStreamView).toBeDefined()
+
+        await waitFor(() => {
+            const channelMetadata = spaceStreamView.spaceChannelsMetadata
+            check(channelMetadata.size === 1)
+            check(channelMetadata.get(defaultChannelId)?.isAutojoin === false)
+            check(channelMetadata.get(defaultChannelId)?.hideUserJoinLeaveEvents === false)
+        })
+    })
+
+    test('create announcement channel (autojoin, hide user join/leave events)', async () => {
+        const { bob, bobProvider, bobSpaceDapp } = await setupWalletsAndContexts()
+        const everyoneMembership = await everyoneMembershipStruct(bobSpaceDapp, bob)
+
+        const { spaceId } = await createSpaceAndDefaultChannel(
+            bob,
+            bobSpaceDapp,
+            bobProvider.wallet,
+            "bob's town",
+            everyoneMembership,
+        )
+
+        const { channelId: announcementChannelId, error } = await createChannel(
+            bobSpaceDapp,
+            bobProvider,
+            spaceId,
+            'channel2',
+            [1], // member role created on town creation
+            bobProvider.wallet,
+        )
+        expect(error).toBeUndefined()
+        expect(announcementChannelId).toBeDefined()
+
+        const { streamId: announcementStreamId } = await bob.createChannel(
+            spaceId,
+            'channel2',
+            'channel2 topic',
+            announcementChannelId!,
+            undefined,
+            {
+                autojoin: true,
+                hideUserJoinLeaveEvents: true,
+            },
+        )
+
+        const spaceStream = bob.streams.get(spaceId)
+        expect(spaceStream).toBeDefined()
+        const spaceStreamView = spaceStream!.view.spaceContent
+        expect(spaceStreamView).toBeDefined()
+
+        await waitFor(() => {
+            const channelMetadata = spaceStreamView.spaceChannelsMetadata
+            check(channelMetadata.size === 2)
+            check(channelMetadata.get(announcementStreamId)?.isAutojoin === true)
+            check(channelMetadata.get(announcementStreamId)?.hideUserJoinLeaveEvents === true)
+        })
+    })
+
     test('set autojoin for channel', async () => {
         const { bob, bobProvider, bobSpaceDapp } = await setupWalletsAndContexts()
         const everyoneMembership = await everyoneMembershipStruct(bobSpaceDapp, bob)
@@ -62,7 +143,7 @@ describe('channelSpaceSettingsTests', () => {
         await waitFor(() => {
             const channelMetadata = spaceStreamView.spaceChannelsMetadata
             check(channelMetadata.size === 2)
-            check(channelMetadata.get(defaultChannelId)?.isAutojoin === true)
+            check(channelMetadata.get(defaultChannelId)?.isAutojoin === false)
             check(channelMetadata.get(channel1Id!)?.isAutojoin === false)
         })
 
@@ -76,8 +157,10 @@ describe('channelSpaceSettingsTests', () => {
         expect(eventId).toBeDefined()
 
         // Validate autojoin event was emitted for channel1
-        expect(updatedChannelAutojoinState.size).toBe(1)
-        expect(updatedChannelAutojoinState.get(channel1Id!)).toBe(true)
+        await waitFor(() => {
+            expect(updatedChannelAutojoinState.size).toBe(1)
+            expect(updatedChannelAutojoinState.get(channel1Id!)).toBe(true)
+        })
 
         // Expect autojoin change to sync to space stream view
         await waitFor(() => {
@@ -109,8 +192,19 @@ describe('channelSpaceSettingsTests', () => {
             everyoneMembership,
         )
 
+        // Validate current autojoin state for channel is false
+        const spaceStream = bob.streams.get(spaceId)
+        expect(spaceStream).toBeDefined()
+        const spaceStreamView = spaceStream!.view.spaceContent
+        expect(spaceStreamView).toBeDefined()
+        await waitFor(() => {
+            const channelMetadata = spaceStreamView.spaceChannelsMetadata
+            check(channelMetadata.size === 1)
+            check(channelMetadata.get(defaultChannelId)?.isAutojoin === false)
+        })
+
         // Unpermitted user alice should not be able to update autojoin.
-        // First, add alice to the space.
+        // First, add alice to the space and channel.
         await expectUserCanJoin(
             spaceId,
             defaultChannelId,
@@ -121,7 +215,7 @@ describe('channelSpaceSettingsTests', () => {
             aliceProvider.wallet,
         )
 
-        await expect(alice.updateChannelAutojoin(spaceId, defaultChannelId, false)).rejects.toThrow(
+        await expect(alice.updateChannelAutojoin(spaceId, defaultChannelId, true)).rejects.toThrow(
             /7:PERMISSION_DENIED/,
         )
 
@@ -138,7 +232,7 @@ describe('channelSpaceSettingsTests', () => {
         )
         expect(roleError).toBeUndefined()
 
-        // Add Carol to the space
+        // Add Carol to the space and the channel
         await expectUserCanJoin(
             spaceId,
             defaultChannelId,
@@ -150,30 +244,26 @@ describe('channelSpaceSettingsTests', () => {
         )
 
         // Carol's update should succeed
-        await expect(carol.updateChannelAutojoin(spaceId, defaultChannelId, false)).toResolve()
+        await expect(carol.updateChannelAutojoin(spaceId, defaultChannelId, true)).toResolve()
 
         // Validate autojoin event was applied on client
-        const spaceStream = bob.streams.get(spaceId)
-        expect(spaceStream).toBeDefined()
-        const spaceStreamView = spaceStream!.view.spaceContent
-        expect(spaceStreamView).toBeDefined()
         await waitFor(() => {
             const channelMetadata = spaceStreamView.spaceChannelsMetadata
             check(channelMetadata.size === 1)
-            check(channelMetadata.get(defaultChannelId)?.isAutojoin === false)
+            check(channelMetadata.get(defaultChannelId)?.isAutojoin === true)
         })
     })
 
-    test('set showUserJoinLeaveEvents on channels', async () => {
+    test('set hideUserJoinLeaveEvents on channels', async () => {
         const { bob, bobProvider, bobSpaceDapp } = await setupWalletsAndContexts()
         const everyoneMembership = await everyoneMembershipStruct(bobSpaceDapp, bob)
 
-        // Track showJoinLeaveEvent state of channels via emitted client events
-        const updatedChannelShowJoinLeaveEventsState = new Map<string, boolean>()
+        // Track hideJoinLeaveEvent state of channels via emitted client events
+        const updatedChannelHideJoinLeaveEventsState = new Map<string, boolean>()
         bob.on(
-            'spaceChannelShowUserJoinLeaveEventsUpdated',
-            (_spaceId, channelId, showJoinLeaveEvents) => {
-                updatedChannelShowJoinLeaveEventsState.set(channelId, showJoinLeaveEvents)
+            'spaceChannelHideUserJoinLeaveEventsUpdated',
+            (_spaceId, channelId, hideJoinLeaveEvents) => {
+                updatedChannelHideJoinLeaveEventsState.set(channelId, hideJoinLeaveEvents)
             },
         )
 
@@ -185,26 +275,6 @@ describe('channelSpaceSettingsTests', () => {
             everyoneMembership,
         )
 
-        // Create channel on contract
-        const { channelId: channel1Id, error } = await createChannel(
-            bobSpaceDapp,
-            bobProvider,
-            spaceId,
-            'channel1',
-            [1], // member role created on town creation
-            bobProvider.wallet,
-        )
-        expect(error).toBeUndefined()
-
-        // Create channel stream
-        const { streamId: channelStream1Id } = await bob.createChannel(
-            spaceId,
-            'channel1',
-            'channel1 topic',
-            channel1Id!,
-        )
-        expect(channelStream1Id).toEqual(channel1Id)
-
         const spaceStream = bob.streams.get(spaceId)
         expect(spaceStream).toBeDefined()
         const spaceStreamView = spaceStream!.view.spaceContent
@@ -213,32 +283,31 @@ describe('channelSpaceSettingsTests', () => {
         // All channels show join/leave events by default
         await waitFor(() => {
             const channelMetadata = spaceStreamView.spaceChannelsMetadata
-            check(channelMetadata.size === 2)
-            check(channelMetadata.get(defaultChannelId)?.showUserJoinLeaveEvents === true)
-            check(channelMetadata.get(channel1Id!)?.showUserJoinLeaveEvents === true)
+            check(channelMetadata.size === 1)
+            check(channelMetadata.get(defaultChannelId)?.hideUserJoinLeaveEvents === false)
         })
 
-        // Set channel1 to showUserJoinLeaveEvents=false
-        const { eventId, error: error2 } = await bob.updateChannelShowUserJoinLeaveEvents(
+        // Set channel1 to hideUserJoinLeaveEvents=true
+        const { eventId, error: error2 } = await bob.updateChannelHideUserJoinLeaveEvents(
             spaceId,
-            channel1Id!,
-            false,
+            defaultChannelId!,
+            true,
         )
         expect(error2).toBeUndefined()
         expect(eventId).toBeDefined()
 
-        // Validate updateShowUserJoinLeaveEvent event was emitted for channel1
-        expect(updatedChannelShowJoinLeaveEventsState.size).toBe(1)
-        expect(updatedChannelShowJoinLeaveEventsState.get(channel1Id!)).toBe(false)
+        // Validate updateHideUserJoinLeaveEvent event was emitted for channel1
+        expect(updatedChannelHideJoinLeaveEventsState.size).toBe(1)
+        expect(updatedChannelHideJoinLeaveEventsState.get(defaultChannelId!)).toBe(true)
 
-        // Expect showUserJoinLeaveEvents change to sync to space stream view
+        // Expect hideUserJoinLeaveEvents change to sync to space stream view
         await waitFor(() => {
             const channelMetadata = spaceStreamView.spaceChannelsMetadata
-            check(channelMetadata.get(channel1Id!)?.showUserJoinLeaveEvents === false)
+            check(channelMetadata.get(defaultChannelId!)?.hideUserJoinLeaveEvents === true)
         })
     })
 
-    test('unpermitted user cannot update channel showUserJoinLeaveEvents', async () => {
+    test('unpermitted user cannot update channel hideUserJoinLeaveEvents', async () => {
         const {
             bob,
             bobProvider,
@@ -261,8 +330,20 @@ describe('channelSpaceSettingsTests', () => {
             everyoneMembership,
         )
 
-        // Unpermitted user alice should not be able to update showUserJoinLeaveEvents.
-        // First, add alice to the space.
+        // Validate local synced client state for channel setting is false
+        const spaceStream = bob.streams.get(spaceId)
+        expect(spaceStream).toBeDefined()
+        const spaceStreamView = spaceStream!.view.spaceContent
+        expect(spaceStreamView).toBeDefined()
+        await waitFor(() => {
+            const channelMetadata = spaceStreamView.spaceChannelsMetadata
+            check(channelMetadata.size === 1)
+            check(channelMetadata.get(defaultChannelId)?.hideUserJoinLeaveEvents === false)
+        })
+
+
+        // Unpermitted user alice should not be able to update hideUserJoinLeaveEvents.
+        // First, add alice to the space and channel.
         await expectUserCanJoin(
             spaceId,
             defaultChannelId,
@@ -274,11 +355,11 @@ describe('channelSpaceSettingsTests', () => {
         )
 
         await expect(
-            alice.updateChannelShowUserJoinLeaveEvents(spaceId, defaultChannelId, false),
+            alice.updateChannelHideUserJoinLeaveEvents(spaceId, defaultChannelId, true),
         ).rejects.toThrow(/7:PERMISSION_DENIED/)
 
         // Add Carol to a role that gives her AddRemoveChannels permission so she can update
-        // showUserJoinLeaveEvents
+        // hideUserJoinLeaveEvents
         const { error: roleError } = await createRole(
             bobSpaceDapp,
             bobProvider,
@@ -291,7 +372,7 @@ describe('channelSpaceSettingsTests', () => {
         )
         expect(roleError).toBeUndefined()
 
-        // Add Carol to the space
+        // Add Carol to the space and channel.
         await expectUserCanJoin(
             spaceId,
             defaultChannelId,
@@ -304,18 +385,14 @@ describe('channelSpaceSettingsTests', () => {
 
         // Carol's update should succeed
         await expect(
-            carol.updateChannelShowUserJoinLeaveEvents(spaceId, defaultChannelId, false),
+            carol.updateChannelHideUserJoinLeaveEvents(spaceId, defaultChannelId, true),
         ).toResolve()
 
-        // Validate updateShowUserJoinLeaveEvents event was applied on client
-        const spaceStream = bob.streams.get(spaceId)
-        expect(spaceStream).toBeDefined()
-        const spaceStreamView = spaceStream!.view.spaceContent
-        expect(spaceStreamView).toBeDefined()
+        // Validate updateHideUserJoinLeaveEvents event was applied on client
         await waitFor(() => {
             const channelMetadata = spaceStreamView.spaceChannelsMetadata
             check(channelMetadata.size === 1)
-            check(channelMetadata.get(defaultChannelId)?.showUserJoinLeaveEvents === false)
+            check(channelMetadata.get(defaultChannelId)?.hideUserJoinLeaveEvents === true)
         })
     })
 })

@@ -73,10 +73,10 @@ export type StreamStateEvents = {
     spaceChannelCreated: (spaceId: string, channelId: string) => void
     spaceChannelUpdated: (spaceId: string, channelId: string, updatedAtEventNum: bigint) => void
     spaceChannelAutojoinUpdated: (spaceId: string, channelId: string, autojoin: boolean) => void
-    spaceChannelShowUserJoinLeaveEventsUpdated: (
+    spaceChannelHideUserJoinLeaveEventsUpdated: (
         spaceId: string,
         channelId: string,
-        showUserJoinLeaveEvents: boolean,
+        hideUserJoinLeaveEvents: boolean,
     ) => void
     spaceChannelDeleted: (spaceId: string, channelId: string) => void
     channelPinAdded: (channelId: string, pin: Pin) => void

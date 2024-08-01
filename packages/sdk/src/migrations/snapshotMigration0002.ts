@@ -1,16 +1,20 @@
-import { Snapshot } from '@river-build/proto'
+import { Snapshot, SpacePayload_ChannelSettings } from '@river-build/proto'
 import { isDefaultChannelId, streamIdFromBytes } from '../id'
+import { Space } from '@river-build/web3'
 
 export function snapshotMigration0002(snapshot: Snapshot): Snapshot {
     switch (snapshot.content?.case) {
         case 'spaceContent': {
             snapshot.content.value.channels = snapshot.content.value.channels.map((c) => {
-                if (isDefaultChannelId(streamIdFromBytes(c.channelId))) {
-                    c.autojoin = true
-                } else {
-                    c.autojoin = false
+                if (c.settings === undefined) {
+                    c.settings = new SpacePayload_ChannelSettings({
+                        autojoin: false,
+                        hideUserJoinLeaveEvents: false,
+                    })
                 }
-                c.showUserJoinLeaveEvents = true
+                if (isDefaultChannelId(streamIdFromBytes(c.channelId))) {
+                    c.settings.autojoin = true
+                }
                 return c
             })
         }

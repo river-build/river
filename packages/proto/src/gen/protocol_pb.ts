@@ -1941,7 +1941,7 @@ export class SpacePayload_UpdateChannelHideUserJoinLeaveEvents extends Message<S
 }
 
 /**
- * *
+ * * 
  * ChannelPayload
  *
  * @generated from message river.ChannelPayload

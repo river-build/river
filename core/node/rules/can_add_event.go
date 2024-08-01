@@ -266,7 +266,6 @@ func (params *aeParams) canAddSpacePayload(payload *StreamEvent_SpacePayload) ru
 			check(params.creatorIsMember).
 			check(params.spacePayloadHasValidChannel(&autojoinWrapper{content.UpdateChannelAutojoin})).
 			requireChainAuth(params.spacePayloadChannelModifyRequirements)
-
 	case *SpacePayload_UpdateChannelHideUserJoinLeaveEvents_:
 		return aeBuilder().
 			check(params.creatorIsMember).
@@ -276,7 +275,6 @@ func (params *aeParams) canAddSpacePayload(payload *StreamEvent_SpacePayload) ru
 				},
 			)).
 			requireChainAuth(params.spacePayloadChannelModifyRequirements)
-
 	default:
 		return aeBuilder().
 			fail(unknownContentType(content))
@@ -1065,31 +1063,6 @@ func (params *aeParams) channelMessageReactEntitlements() (*auth.ChainAuthArgs, 
 }
 
 func (params *aeParams) spacePayloadChannelModifyRequirements() (*auth.ChainAuthArgs, error) {
-	userId, err := shared.AddressHex(params.parsedEvent.Event.CreatorAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	inception, err := params.streamView.(events.SpaceStreamView).GetSpaceInception()
-	if err != nil {
-		return nil, err
-	}
-
-	spaceId, err := shared.StreamIdFromBytes(inception.StreamId)
-	if err != nil {
-		return nil, err
-	}
-
-	chainAuthArgs := auth.NewChainAuthArgsForSpace(
-		spaceId,
-		userId,
-		auth.PermissionAddRemoveChannels,
-	)
-
-	return chainAuthArgs, nil
-}
-
-func (params *aeParams) updateChannelShowUserJoinLeaveEventsRequirements() (*auth.ChainAuthArgs, error) {
 	userId, err := shared.AddressHex(params.parsedEvent.Event.CreatorAddress)
 	if err != nil {
 		return nil, err

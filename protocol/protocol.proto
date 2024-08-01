@@ -274,7 +274,7 @@ message SpacePayload {
     }
 }
 
-/**
+/** 
 * ChannelPayload
 */
 message ChannelPayload {

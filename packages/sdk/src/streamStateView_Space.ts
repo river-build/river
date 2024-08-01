@@ -9,7 +9,7 @@ import {
     SpacePayload_ChannelMetadata,
     SpacePayload_Snapshot,
     SpacePayload_UpdateChannelAutojoin,
-    SpacePayload_UpdateChannelShowUserJoinLeaveEvents,
+    SpacePayload_UpdateChannelHideUserJoinLeaveEvents,
 } from '@river-build/proto'
 import { StreamEncryptionEvents, StreamEvents, StreamStateEvents } from './streamEvents'
 import { StreamStateView_AbstractContent } from './streamStateView_AbstractContent'
@@ -22,7 +22,7 @@ export type ParsedChannelProperties = {
     isDefault: boolean
     updatedAtEventNum: bigint
     isAutojoin: boolean
-    showUserJoinLeaveEvents: boolean
+    hideUserJoinLeaveEvents: boolean
 }
 
 export class StreamStateView_Space extends StreamStateView_AbstractContent {
@@ -71,7 +71,7 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
             case 'updateChannelAutojoin':
                 // likewise, this data was conveyed in the snapshot
                 break
-            case 'updateChannelShowUserJoinLeaveEvents':
+            case 'updateChannelHideUserJoinLeaveEvents':
                 // likewise, this data was conveyed in the snapshot
                 break
             case undefined:
@@ -103,8 +103,8 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
             case 'updateChannelAutojoin':
                 this.addSpacePayload_UpdateChannelAutojoin(payload.content.value, stateEmitter)
                 break
-            case 'updateChannelShowUserJoinLeaveEvents':
-                this.addSpacePayload_UpdateChannelShowUserJoinLeaveEvents(
+            case 'updateChannelHideUserJoinLeaveEvents':
+                this.addSpacePayload_UpdateChannelHideUserJoinLeaveEvents(
                     payload.content.value,
                     stateEmitter,
                 )
@@ -133,11 +133,11 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
         stateEmitter?.emit('spaceChannelAutojoinUpdated', this.streamId, channelId, autojoin)
     }
 
-    private addSpacePayload_UpdateChannelShowUserJoinLeaveEvents(
-        payload: SpacePayload_UpdateChannelShowUserJoinLeaveEvents,
+    private addSpacePayload_UpdateChannelHideUserJoinLeaveEvents(
+        payload: SpacePayload_UpdateChannelHideUserJoinLeaveEvents,
         stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
     ): void {
-        const { channelId: channelIdBytes, showUserJoinLeaveEvents } = payload
+        const { channelId: channelIdBytes, hideUserJoinLeaveEvents } = payload
         const channelId = streamIdAsString(channelIdBytes)
         const channel = this.spaceChannelsMetadata.get(channelId)
         if (!channel) {
@@ -145,13 +145,13 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
         }
         this.spaceChannelsMetadata.set(channelId, {
             ...channel,
-            showUserJoinLeaveEvents,
+            hideUserJoinLeaveEvents,
         })
         stateEmitter?.emit(
-            'spaceChannelShowUserJoinLeaveEventsUpdated',
+            'spaceChannelHideUserJoinLeaveEventsUpdated',
             this.streamId,
             channelId,
-            showUserJoinLeaveEvents,
+            hideUserJoinLeaveEvents,
         )
     }
 
@@ -166,11 +166,13 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
         switch (op) {
             case ChannelOp.CO_CREATED: {
                 const isDefault = isDefaultChannelId(channelId)
+                const isAutojoin = payload.settings?.autojoin ?? false
+                const hideUserJoinLeaveEvents = payload.settings?.hideUserJoinLeaveEvents ?? false
                 this.spaceChannelsMetadata.set(channelId, {
                     isDefault,
                     updatedAtEventNum,
-                    isAutojoin: isDefault, // default value
-                    showUserJoinLeaveEvents: true, // default value
+                    isAutojoin,
+                    hideUserJoinLeaveEvents,
                 })
                 stateEmitter?.emit('spaceChannelCreated', this.streamId, channelId)
                 break
@@ -189,7 +191,7 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
                     isDefault: isDefaultChannelId(channelId),
                     updatedAtEventNum,
                     isAutojoin: channel.isAutojoin,
-                    showUserJoinLeaveEvents: channel.showUserJoinLeaveEvents,
+                    hideUserJoinLeaveEvents: channel.hideUserJoinLeaveEvents,
                 })
                 stateEmitter?.emit(
                     'spaceChannelUpdated',

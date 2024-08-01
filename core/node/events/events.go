@@ -285,6 +285,7 @@ func Make_SpacePayload_ChannelUpdate(
 	op ChannelOp,
 	channelId StreamId,
 	originEvent *EventRef,
+	settings *SpacePayload_ChannelSettings,
 ) *StreamEvent_SpacePayload {
 	return &StreamEvent_SpacePayload{
 		SpacePayload: &SpacePayload{
@@ -293,6 +294,7 @@ func Make_SpacePayload_ChannelUpdate(
 					Op:          op,
 					ChannelId:   channelId[:],
 					OriginEvent: originEvent,
+					Settings:    settings,
 				},
 			},
 		},

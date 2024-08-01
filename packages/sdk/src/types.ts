@@ -11,7 +11,7 @@ import {
     UserSettingsPayload_Inception,
     SpacePayload_ChannelUpdate,
     SpacePayload_UpdateChannelAutojoin,
-    SpacePayload_UpdateChannelShowUserJoinLeaveEvents,
+    SpacePayload_UpdateChannelHideUserJoinLeaveEvents,
     EncryptedData,
     UserPayload_UserMembership,
     UserSettingsPayload_UserBlock,
@@ -634,14 +634,14 @@ export const make_SpacePayload_UpdateChannelAutojoin = (
     }
 }
 
-export const make_SpacePayload_UpdateChannelShowUserJoinLeaveEvents = (
-    value: PlainMessage<SpacePayload_UpdateChannelShowUserJoinLeaveEvents>,
+export const make_SpacePayload_UpdateChannelHideUserJoinLeaveEvents = (
+    value: PlainMessage<SpacePayload_UpdateChannelHideUserJoinLeaveEvents>,
 ): PlainMessage<StreamEvent>['payload'] => {
     return {
         case: 'spacePayload',
         value: {
             content: {
-                case: 'updateChannelShowUserJoinLeaveEvents',
+                case: 'updateChannelHideUserJoinLeaveEvents',
                 value,
             },
         },
