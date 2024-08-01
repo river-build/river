@@ -261,7 +261,7 @@ func (params *aeParams) canAddSpacePayload(payload *StreamEvent_SpacePayload) ru
 				check(params.creatorIsValidNode).
 				check(ru.validSpaceChannelOp)
 		}
-	case *SpacePayload_SpaceImage:
+	case *SpacePayload_SpaceMetadata_:
 		return aeBuilder().
 			check(params.creatorIsMember).
 			requireOneOfChainAuths(params.spaceModifySpaceSettingsEntitlements)
