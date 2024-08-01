@@ -264,12 +264,12 @@ func (params *aeParams) canAddSpacePayload(payload *StreamEvent_SpacePayload) ru
 	case *SpacePayload_UpdateChannelAutojoin_:
 		return aeBuilder().
 			check(params.creatorIsMember).
-			check(params.spacePayloadHasValidChannel(&autojoinWrapper{content.UpdateChannelAutojoin})).
+			check(params.channelExistsInSpace(&autojoinWrapper{content.UpdateChannelAutojoin})).
 			requireChainAuth(params.spacePayloadChannelModifyRequirements)
 	case *SpacePayload_UpdateChannelHideUserJoinLeaveEvents_:
 		return aeBuilder().
 			check(params.creatorIsMember).
-			check(params.spacePayloadHasValidChannel(
+			check(params.channelExistsInSpace(
 				&hideUserJoinLeaveEventsWrapper{
 					content.UpdateChannelHideUserJoinLeaveEvents,
 				},
@@ -1321,7 +1321,7 @@ func (w *hideUserJoinLeaveEventsWrapper) ChannelIdBytes() ([]byte, error) {
 	return w.update.ChannelId, nil
 }
 
-func (params *aeParams) spacePayloadHasValidChannel(spaceChannelPayload HasChannelIdBytes) func() (bool, error) {
+func (params *aeParams) channelExistsInSpace(spaceChannelPayload HasChannelIdBytes) func() (bool, error) {
 	return func() (bool, error) {
 		channelIdBytes, err := spaceChannelPayload.ChannelIdBytes()
 		if err != nil {
