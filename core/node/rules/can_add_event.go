@@ -1092,15 +1092,8 @@ func (params *aeParams) updateAutojoinMessageChannelModifyRequirements() (*auth.
 		return nil, err
 	}
 
-	channelIdBytes := params.parsedEvent.Event.Payload.(*StreamEvent_SpacePayload).SpacePayload.Content.(*SpacePayload_UpdateChannelAutojoin_).UpdateChannelAutojoin.ChannelId
-	channelId, err := shared.StreamIdFromBytes(channelIdBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	chainAuthArgs := auth.NewChainAuthArgsForChannel(
+	chainAuthArgs := auth.NewChainAuthArgsForSpace(
 		spaceId,
-		channelId,
 		userId,
 		auth.PermissionAddRemoveChannels,
 	)
@@ -1124,15 +1117,8 @@ func (params *aeParams) updateChannelShowUserJoinLeaveEventsRequirements() (*aut
 		return nil, err
 	}
 
-	channelIdBytes := params.parsedEvent.Event.Payload.(*StreamEvent_SpacePayload).SpacePayload.Content.(*SpacePayload_UpdateChannelShowUserJoinLeaveEvents_).UpdateChannelShowUserJoinLeaveEvents.ChannelId
-	channelId, err := shared.StreamIdFromBytes(channelIdBytes)
-	if err != nil {
-		return nil, err
-	}
-
-	chainAuthArgs := auth.NewChainAuthArgsForChannel(
+	chainAuthArgs := auth.NewChainAuthArgsForSpace(
 		spaceId,
-		channelId,
 		userId,
 		auth.PermissionAddRemoveChannels,
 	)

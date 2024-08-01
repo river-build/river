@@ -191,13 +191,23 @@ func update_Snapshot_Space(iSnapshot *Snapshot, spacePayload *SpacePayload, even
 	case *SpacePayload_Inception_:
 		return RiverError(Err_INVALID_ARGUMENT, "cannot update blockheader with inception event")
 	case *SpacePayload_Channel:
+		channelStreamId, err := shared.StreamIdFromBytes(content.Channel.ChannelId)
+		if err != nil {
+			return RiverError(Err_INVALID_ARGUMENT, "invalid channel id").
+				Tag("channelId", content.Channel.ChannelId)
+		}
 		channel := &SpacePayload_ChannelMetadata{
 			ChannelId:         content.Channel.ChannelId,
 			Op:                content.Channel.Op,
 			OriginEvent:       content.Channel.OriginEvent,
 			UpdatedAtEventNum: eventNum,
-			Autojoin:          false,
 		}
+		// Apply default channel settings on creation
+		if channel.Op == ChannelOp_CO_CREATED {
+			channel.Autojoin = shared.IsDefaultChannelId(channelStreamId)
+			channel.ShowUserJoinLeaveEvents = true
+		}
+
 		snapshot.SpaceContent.Channels = insertChannel(snapshot.SpaceContent.Channels, channel)
 		return nil
 	case *SpacePayload_UpdateChannelAutojoin_:

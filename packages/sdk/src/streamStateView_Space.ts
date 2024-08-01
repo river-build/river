@@ -21,8 +21,8 @@ import { isDefaultChannelId, streamIdAsString } from './id'
 export type ParsedChannelProperties = {
     isDefault: boolean
     updatedAtEventNum: bigint
-    isAutojoin?: boolean
-    showUserJoinLeaveEvents?: boolean
+    isAutojoin: boolean
+    showUserJoinLeaveEvents: boolean
 }
 
 export class StreamStateView_Space extends StreamStateView_AbstractContent {
@@ -165,9 +165,12 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
         const channelId = streamIdAsString(channelIdBytes)
         switch (op) {
             case ChannelOp.CO_CREATED: {
+                const isDefault = isDefaultChannelId(channelId)
                 this.spaceChannelsMetadata.set(channelId, {
-                    isDefault: isDefaultChannelId(channelId),
+                    isDefault,
                     updatedAtEventNum,
+                    isAutojoin: isDefault, // default value
+                    showUserJoinLeaveEvents: true, // default value
                 })
                 stateEmitter?.emit('spaceChannelCreated', this.streamId, channelId)
                 break
@@ -178,10 +181,15 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
                 }
                 break
             case ChannelOp.CO_UPDATED: {
+                const channel = this.spaceChannelsMetadata.get(channelId)
+                if (!channel) {
+                    throwWithCode(`Channel not found: ${channelId}`, Err.STREAM_BAD_EVENT)
+                }
                 this.spaceChannelsMetadata.set(channelId, {
-                    ...this.spaceChannelsMetadata.get(channelId), // maintain autojoin and showUserJoinLeaveEvents
                     isDefault: isDefaultChannelId(channelId),
                     updatedAtEventNum,
+                    isAutojoin: channel!.isAutojoin,
+                    showUserJoinLeaveEvents: channel!.showUserJoinLeaveEvents,
                 })
                 stateEmitter?.emit(
                     'spaceChannelUpdated',

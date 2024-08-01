@@ -784,7 +784,12 @@ export class Client
         channelId: string | Uint8Array,
         showUserJoinLeaveEvents: boolean,
     ) {
-        this.logCall('updateChannelShowUserJoinLeaveEvents', channelId, spaceId, showUserJoinLeaveEvents)
+        this.logCall(
+            'updateChannelShowUserJoinLeaveEvents',
+            channelId,
+            spaceId,
+            showUserJoinLeaveEvents,
+        )
         assert(isSpaceStreamId(spaceId), 'spaceId must be a valid streamId')
         assert(isChannelStreamId(channelId), 'channelId must be a valid streamId')
 
@@ -794,7 +799,7 @@ export class Client
                 channelId: streamIdAsBytes(channelId),
                 showUserJoinLeaveEvents: showUserJoinLeaveEvents,
             }),
-            { method: 'updateChannelShowUserJoinLeaveEvents' }
+            { method: 'updateChannelShowUserJoinLeaveEvents' },
         )
     }
 
