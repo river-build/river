@@ -111,6 +111,8 @@ func (s *streamImpl) loadInternal(ctx context.Context) error {
 
 	view, err := MakeStreamView(ctx, streamData)
 	if err != nil {
+		dlog.FromCtx(ctx).
+			Error("Stream.loadInternal: Failed to parse stream data loaded from storage", "error", err, "streamId", s.streamId)
 		return err
 	}
 

@@ -52,8 +52,6 @@ func (m *OrderedMap[K, V]) Len() int {
 func (m *OrderedMap[K, V]) Set(key K, value V) bool {
 	_, ok := m.Map[key]
 	if ok {
-		// TODO: harden caller not to get into this codepath
-		// panic("key already exists")
 		return false
 	}
 	m.Map[key] = value
