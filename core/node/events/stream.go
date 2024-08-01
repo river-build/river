@@ -142,7 +142,7 @@ func (s *streamImpl) applyMiniblockImplNoLock(ctx context.Context, miniblock *Mi
 	// TODO: tests for this.
 
 	// Lets see if this miniblock can be applied.
-	newSV, err := s.view.copyAndApplyBlock(ctx, miniblock, s.params.ChainConfig)
+	newSV, err := s.view.copyAndApplyBlock(miniblock, s.params.ChainConfig)
 	if err != nil {
 		return err
 	}

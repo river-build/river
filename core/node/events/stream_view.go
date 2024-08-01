@@ -332,7 +332,6 @@ func (r *streamViewImpl) makeMiniblockHeader(
 }
 
 func (r *streamViewImpl) copyAndApplyBlock(
-	ctx context.Context,
 	miniblock *MiniblockInfo,
 	cfg crypto.OnChainConfiguration,
 ) (*streamViewImpl, error) {
@@ -389,8 +388,7 @@ func (r *streamViewImpl) copyAndApplyBlock(
 	for _, e := range r.minipool.events.Values {
 		if _, ok := remaining[e.Hash]; ok {
 			if !minipoolEvents.Set(e.Hash, e) {
-				dlog.FromCtx(ctx).
-					Error("copyAndApplyBlock: Duplicate event is detected", "event", e.ShortDebugStr(), "stream", r.streamId)
+				panic("duplicate values in map")
 			}
 		}
 	}
