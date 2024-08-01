@@ -131,7 +131,7 @@ describe('spaceTests', () => {
         })
     })
 
-    test.only('spaceImage', async () => {
+    test('spaceImage', async () => {
         const spaceId = makeUniqueSpaceStreamId()
         const spaceContractAddress = contractAddressFromSpaceId(spaceId)
         await expect(bobsClient.createSpace(spaceId)).toResolve()
