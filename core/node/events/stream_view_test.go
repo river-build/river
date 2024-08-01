@@ -59,9 +59,12 @@ func TestLoad(t *testing.T) {
 	miniblockProtoBytes, err := proto.Marshal(miniblockProto)
 	assert.NoError(t, err)
 
-	view, err := MakeStreamView(&storage.ReadStreamFromLastSnapshotResult{
-		Miniblocks: [][]byte{miniblockProtoBytes},
-	})
+	view, err := MakeStreamView(
+		ctx,
+		&storage.ReadStreamFromLastSnapshotResult{
+			Miniblocks: [][]byte{miniblockProtoBytes},
+		},
+	)
 
 	assert.NoError(t, err)
 
@@ -143,7 +146,7 @@ func TestLoad(t *testing.T) {
 	nextEvent := parsedEvent(t, join2)
 	err = view.ValidateNextEvent(ctx, btc.OnChainConfig, nextEvent, time.Now())
 	assert.NoError(t, err)
-	view, err = view.copyAndAddEvent(nextEvent)
+	view, err = view.copyAndAddEvent(ctx, nextEvent)
 	assert.NoError(t, err)
 
 	// with one new event, we shouldn't snapshot yet
@@ -165,7 +168,7 @@ func TestLoad(t *testing.T) {
 	assert.NoError(t, err)
 	err = view.ValidateNextEvent(ctx, btc.OnChainConfig, nextEvent, time.Now())
 	assert.NoError(t, err)
-	view, err = view.copyAndAddEvent(nextEvent)
+	view, err = view.copyAndAddEvent(ctx, nextEvent)
 	assert.NoError(t, err)
 	// with two new events, we should snapshot
 	assert.Equal(t, true, view.shouldSnapshot(ctx, btc.OnChainConfig))
@@ -207,14 +210,14 @@ func TestLoad(t *testing.T) {
 	miniblock, err := NewMiniblockInfoFromParsed(miniblockHeaderEvent, envelopes)
 	assert.NoError(t, err)
 	// with 5 generations (5 blocks kept in memory)
-	newSV1, err := view.copyAndApplyBlock(miniblock, btc.OnChainConfig)
+	newSV1, err := view.copyAndApplyBlock(ctx, miniblock, btc.OnChainConfig)
 	assert.NoError(t, err)
 	assert.Equal(t, len(newSV1.blocks), 2) // we should have both blocks in memory
 
 	btc.SetConfigValue(t, ctx, crypto.StreamRecencyConstraintsGenerationsConfigKey, crypto.ABIEncodeInt64(0))
 
 	// with 0 generations (0 in memory block history)
-	newSV2, err := view.copyAndApplyBlock(miniblock, btc.OnChainConfig)
+	newSV2, err := view.copyAndApplyBlock(ctx, miniblock, btc.OnChainConfig)
 	assert.NoError(t, err)
 	assert.Equal(t, len(newSV2.blocks), 1) // we should only have the latest block in memory
 	// add an event with an old hash
@@ -228,7 +231,7 @@ func TestLoad(t *testing.T) {
 	assert.NoError(t, err)
 	err = newSV1.ValidateNextEvent(ctx, btc.OnChainConfig, nextEvent, time.Now())
 	assert.NoError(t, err)
-	_, err = newSV1.copyAndAddEvent(nextEvent)
+	_, err = newSV1.copyAndAddEvent(ctx, nextEvent)
 	assert.NoError(t, err)
 	// wait 2 second
 	time.Sleep(2 * time.Second)

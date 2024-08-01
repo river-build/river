@@ -51,7 +51,10 @@ type StreamView interface {
 	IsMember(userAddress []byte) (bool, error)
 }
 
-func MakeStreamView(streamData *storage.ReadStreamFromLastSnapshotResult) (*streamViewImpl, error) {
+func MakeStreamView(
+	ctx context.Context,
+	streamData *storage.ReadStreamFromLastSnapshotResult,
+) (*streamViewImpl, error) {
 	if len(streamData.Miniblocks) <= 0 {
 		return nil, RiverError(Err_STREAM_EMPTY, "no blocks").Func("MakeStreamView")
 	}
@@ -95,7 +98,11 @@ func MakeStreamView(streamData *storage.ReadStreamFromLastSnapshotResult) (*stre
 		if err != nil {
 			return nil, err
 		}
-		minipoolEvents.Set(parsed.Hash, parsed)
+		if !minipoolEvents.Set(parsed.Hash, parsed) {
+			// This error is ignored here to load from the db even if there is a duplicate event.
+			dlog.FromCtx(ctx).
+				Error("MakeStreamView: Duplicate event is detected", "event", parsed.ShortDebugStr(), "streamId", streamId)
+		}
 	}
 
 	lastBlockHeader := miniblocks[len(miniblocks)-1].header()
@@ -113,7 +120,7 @@ func MakeStreamView(streamData *storage.ReadStreamFromLastSnapshotResult) (*stre
 	}, nil
 }
 
-func MakeRemoteStreamView(resp *GetStreamResponse) (*streamViewImpl, error) {
+func MakeRemoteStreamView(ctx context.Context, resp *GetStreamResponse) (*streamViewImpl, error) {
 	if len(resp.Stream.Miniblocks) <= 0 {
 		return nil, RiverError(Err_STREAM_EMPTY, "no blocks").Func("MakeStreamViewFromRemote")
 	}
@@ -152,7 +159,13 @@ func MakeRemoteStreamView(resp *GetStreamResponse) (*streamViewImpl, error) {
 		if err != nil {
 			return nil, err
 		}
-		minipoolEvents.Set(parsed.Hash, parsed)
+		if !minipoolEvents.Set(parsed.Hash, parsed) {
+			return nil, RiverError(
+				Err_DUPLICATE_EVENT,
+				"duplicate event",
+			).Func("MakeStreamView").
+				Tags("streamId", streamId, "event", parsed.ShortDebugStr())
+		}
 	}
 
 	lastBlockHeader := miniblocks[len(miniblocks)-1].header()
@@ -180,19 +193,26 @@ type streamViewImpl struct {
 
 var _ StreamView = (*streamViewImpl)(nil)
 
-func (r *streamViewImpl) copyAndAddEvent(event *ParsedEvent) (*streamViewImpl, error) {
+func (r *streamViewImpl) copyAndAddEvent(ctx context.Context, event *ParsedEvent) (*streamViewImpl, error) {
 	if event.Event.GetMiniblockHeader() != nil {
 		return nil, RiverError(Err_BAD_EVENT, "streamViewImpl: block event not allowed")
 	}
 
-	r = &streamViewImpl{
+	newMinipool := r.minipool.tryCopyAndAddEvent(event)
+	if newMinipool == nil {
+		dlog.FromCtx(ctx).
+			Error("copyAndAddEvent: Duplicate event is detected", "event", event.ShortDebugStr(), "stream", r.streamId)
+		return r, nil
+	}
+
+	ret := &streamViewImpl{
 		streamId:      r.streamId,
 		blocks:        r.blocks,
-		minipool:      r.minipool.copyAndAddEvent(event),
+		minipool:      newMinipool,
 		snapshot:      r.snapshot,
 		snapshotIndex: r.snapshotIndex,
 	}
-	return r, nil
+	return ret, nil
 }
 
 func (r *streamViewImpl) LastBlock() *MiniblockInfo {
@@ -308,6 +328,7 @@ func (r *streamViewImpl) makeMiniblockHeader(
 }
 
 func (r *streamViewImpl) copyAndApplyBlock(
+	ctx context.Context,
 	miniblock *MiniblockInfo,
 	cfg crypto.OnChainConfiguration,
 ) (*streamViewImpl, error) {
@@ -363,7 +384,10 @@ func (r *streamViewImpl) copyAndApplyBlock(
 	minipoolEvents := NewOrderedMap[common.Hash, *ParsedEvent](len(remaining))
 	for _, e := range r.minipool.events.Values {
 		if _, ok := remaining[e.Hash]; ok {
-			minipoolEvents.Set(e.Hash, e)
+			if !minipoolEvents.Set(e.Hash, e) {
+				dlog.FromCtx(ctx).
+					Error("copyAndApplyBlock: Duplicate event is detected", "event", e.ShortDebugStr(), "stream", r.streamId)
+			}
 		}
 	}
 

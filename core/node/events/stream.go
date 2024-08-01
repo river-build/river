@@ -109,7 +109,7 @@ func (s *streamImpl) loadInternal(ctx context.Context) error {
 		return err
 	}
 
-	view, err := MakeStreamView(streamData)
+	view, err := MakeStreamView(ctx, streamData)
 	if err != nil {
 		return err
 	}
@@ -142,7 +142,7 @@ func (s *streamImpl) applyMiniblockImplNoLock(ctx context.Context, miniblock *Mi
 	// TODO: tests for this.
 
 	// Lets see if this miniblock can be applied.
-	newSV, err := s.view.copyAndApplyBlock(miniblock, s.params.ChainConfig)
+	newSV, err := s.view.copyAndApplyBlock(ctx, miniblock, s.params.ChainConfig)
 	if err != nil {
 		return err
 	}
@@ -234,10 +234,13 @@ func (s *streamImpl) initFromBlockchain(ctx context.Context) error {
 	}
 
 	// Successfully put data into storage, init stream view.
-	view, err := MakeStreamView(&storage.ReadStreamFromLastSnapshotResult{
-		StartMiniblockNumber: 0,
-		Miniblocks:           [][]byte{mb},
-	})
+	view, err := MakeStreamView(
+		ctx,
+		&storage.ReadStreamFromLastSnapshotResult{
+			StartMiniblockNumber: 0,
+			Miniblocks:           [][]byte{mb},
+		},
+	)
 	if err != nil {
 		return err
 	}
@@ -381,7 +384,7 @@ func (s *streamImpl) addEventImpl(ctx context.Context, event *ParsedEvent) error
 		return err
 	}
 
-	newSV, err := s.view.copyAndAddEvent(event)
+	newSV, err := s.view.copyAndAddEvent(ctx, event)
 	if err != nil {
 		return err
 	}
