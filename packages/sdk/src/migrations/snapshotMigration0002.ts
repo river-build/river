@@ -1,6 +1,5 @@
 import { Snapshot, SpacePayload_ChannelSettings } from '@river-build/proto'
 import { isDefaultChannelId, streamIdFromBytes } from '../id'
-import { Space } from '@river-build/web3'
 
 export function snapshotMigration0002(snapshot: Snapshot): Snapshot {
     switch (snapshot.content?.case) {

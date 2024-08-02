@@ -314,7 +314,7 @@ describe('channelSpaceSettingsTests', () => {
         // Set channel1 to hideUserJoinLeaveEvents=true
         const { eventId, error: error2 } = await bob.updateChannelHideUserJoinLeaveEvents(
             spaceId,
-            defaultChannelId!,
+            defaultChannelId,
             true,
         )
         expect(error2).toBeUndefined()
@@ -322,12 +322,12 @@ describe('channelSpaceSettingsTests', () => {
 
         // Validate updateHideUserJoinLeaveEvent event was emitted for channel1
         expect(updatedChannelHideJoinLeaveEventsState.size).toBe(1)
-        expect(updatedChannelHideJoinLeaveEventsState.get(defaultChannelId!)).toBe(true)
+        expect(updatedChannelHideJoinLeaveEventsState.get(defaultChannelId)).toBe(true)
 
         // Expect hideUserJoinLeaveEvents change to sync to space stream view
         await waitFor(() => {
             const channelMetadata = spaceStreamView.spaceChannelsMetadata
-            check(channelMetadata.get(defaultChannelId!)?.hideUserJoinLeaveEvents === true)
+            check(channelMetadata.get(defaultChannelId)?.hideUserJoinLeaveEvents === true)
         })
     })
 
