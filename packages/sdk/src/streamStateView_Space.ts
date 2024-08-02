@@ -94,7 +94,7 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
                 // likewise, this data was conveyed in the snapshot
                 break
             case 'updateChannelHideUserJoinLeaveEvents':
-                // likewise, this data was conveyed in the snapshot
+            // likewise, this data was conveyed in the snapshot
             case 'spaceImage':
                 // nothing to do, spaceImage is set in the snapshot
                 break
@@ -187,7 +187,7 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
             hideUserJoinLeaveEvents,
         )
     }
-    
+
     private async decryptSpaceImage(encryptedImage: EncryptedData): Promise<ChunkedMedia> {
         const keyPhrase = contractAddressFromSpaceId(this.streamId)
         const plaintext = await decryptDerivedAESGCM(keyPhrase, encryptedImage)

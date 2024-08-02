@@ -365,7 +365,6 @@ describe('channelSpaceSettingsTests', () => {
             check(channelMetadata.get(defaultChannelId)?.hideUserJoinLeaveEvents === false)
         })
 
-
         // Unpermitted user alice should not be able to update hideUserJoinLeaveEvents.
         // First, add alice to the space and channel.
         await expectUserCanJoin(
