@@ -87,6 +87,14 @@ type aeKeyFulfillmentRules struct {
 	fulfillment *MemberPayload_KeyFulfillment
 }
 
+type aeAutojoinRules struct {
+	update *SpacePayload_UpdateChannelAutojoin
+}
+
+type aeHideUserJoinLeaveEventsWrapperRules struct {
+	update *SpacePayload_UpdateChannelHideUserJoinLeaveEvents
+}
+
 /*
 *
 * CanAddEvent
@@ -262,18 +270,16 @@ func (params *aeParams) canAddSpacePayload(payload *StreamEvent_SpacePayload) ru
 				check(ru.validSpaceChannelOp)
 		}
 	case *SpacePayload_UpdateChannelAutojoin_:
+		ru := &aeAutojoinRules{content.UpdateChannelAutojoin}
 		return aeBuilder().
 			check(params.creatorIsMember).
-			check(params.channelExistsInSpace(&autojoinWrapper{content.UpdateChannelAutojoin})).
+			check(params.channelExistsInSpace(ru)).
 			requireChainAuth(params.spacePayloadChannelModifyRequirements)
 	case *SpacePayload_UpdateChannelHideUserJoinLeaveEvents_:
+		ru := &aeHideUserJoinLeaveEventsWrapperRules{content.UpdateChannelHideUserJoinLeaveEvents}
 		return aeBuilder().
 			check(params.creatorIsMember).
-			check(params.channelExistsInSpace(
-				&hideUserJoinLeaveEventsWrapper{
-					content.UpdateChannelHideUserJoinLeaveEvents,
-				},
-			)).
+			check(params.channelExistsInSpace(ru)).
 			requireChainAuth(params.spacePayloadChannelModifyRequirements)
 	case *SpacePayload_SpaceImage:
 		return aeBuilder().
@@ -1308,34 +1314,26 @@ func (ru *aeUnpinRules) validUnpin() (bool, error) {
 }
 
 type HasChannelIdBytes interface {
-	ChannelIdBytes() ([]byte, error)
+	channelIdBytes() ([]byte, error)
 }
 
-type autojoinWrapper struct {
-	update *SpacePayload_UpdateChannelAutojoin
-}
-
-func (w *autojoinWrapper) ChannelIdBytes() ([]byte, error) {
+func (w *aeAutojoinRules) channelIdBytes() ([]byte, error) {
 	if w.update == nil {
 		return nil, RiverError(Err_INVALID_ARGUMENT, "event is not an update autojoin event")
 	}
 	return w.update.ChannelId, nil
 }
 
-type hideUserJoinLeaveEventsWrapper struct {
-	update *SpacePayload_UpdateChannelHideUserJoinLeaveEvents
-}
-
-func (w *hideUserJoinLeaveEventsWrapper) ChannelIdBytes() ([]byte, error) {
+func (w *aeHideUserJoinLeaveEventsWrapperRules) channelIdBytes() ([]byte, error) {
 	if w.update == nil {
 		return nil, RiverError(Err_INVALID_ARGUMENT, "event is not an update channel hide user join leave events event")
 	}
 	return w.update.ChannelId, nil
 }
 
-func (params *aeParams) channelExistsInSpace(spaceChannelPayload HasChannelIdBytes) func() (bool, error) {
+func (params *aeParams) channelExistsInSpace(spaceChannelPayloadRules HasChannelIdBytes) func() (bool, error) {
 	return func() (bool, error) {
-		channelIdBytes, err := spaceChannelPayload.ChannelIdBytes()
+		channelIdBytes, err := spaceChannelPayloadRules.channelIdBytes()
 		if err != nil {
 			return false, err
 		}
