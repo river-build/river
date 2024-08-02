@@ -261,7 +261,6 @@ func (params *aeParams) canAddSpacePayload(payload *StreamEvent_SpacePayload) ru
 				check(params.creatorIsValidNode).
 				check(ru.validSpaceChannelOp)
 		}
-<<<<<<< HEAD
 	case *SpacePayload_UpdateChannelAutojoin_:
 		return aeBuilder().
 			check(params.creatorIsMember).
@@ -276,12 +275,10 @@ func (params *aeParams) canAddSpacePayload(payload *StreamEvent_SpacePayload) ru
 				},
 			)).
 			requireChainAuth(params.spacePayloadChannelModifyRequirements)
-=======
 	case *SpacePayload_SpaceImage:
 		return aeBuilder().
 			check(params.creatorIsMember).
 			requireOneOfChainAuths(params.spaceModifySpaceSettingsEntitlements)
->>>>>>> main
 	default:
 		return aeBuilder().
 			fail(unknownContentType(content))
