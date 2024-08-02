@@ -58,7 +58,7 @@ func MakeChannelId(spaceId StreamId) (StreamId, error) {
 	// replace the first byte with the channel type
 	// copy the 20 bytes of the spaceId address
 	// fill the rest with random bytes
-	b, err := makeSpacePrefixChannelBytes(spaceId)
+	b, err := makeChannelIdPrefixBytes(spaceId)
 	if err != nil {
 		return StreamId{}, err
 	}
@@ -69,7 +69,7 @@ func MakeChannelId(spaceId StreamId) (StreamId, error) {
 	return StreamIdFromBytes(b[:])
 }
 
-func makeSpacePrefixChannelBytes(spaceId StreamId) (StreamId, error) {
+func makeChannelIdPrefixBytes(spaceId StreamId) (StreamId, error) {
 	// replace the first byte with the channel type
 	// copy the 20 bytes of the spaceId address
 	// leave the rest unwritten, which defaults to zeroes
@@ -83,7 +83,7 @@ func makeSpacePrefixChannelBytes(spaceId StreamId) (StreamId, error) {
 }
 
 func MakeDefaultChannelId(spaceId StreamId) (StreamId, error) {
-	bytes, err := makeSpacePrefixChannelBytes(spaceId)
+	bytes, err := makeChannelIdPrefixBytes(spaceId)
 	if err != nil {
 		return StreamId{}, err
 	}
