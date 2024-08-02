@@ -94,8 +94,8 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
                 // likewise, this data was conveyed in the snapshot
                 break
             case 'updateChannelHideUserJoinLeaveEvents':
-            // likewise, this data was conveyed in the snapshot
-                break;
+                // likewise, this data was conveyed in the snapshot
+                break
             case 'spaceImage':
                 // nothing to do, spaceImage is set in the snapshot
                 break
