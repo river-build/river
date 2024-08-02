@@ -1564,147 +1564,249 @@ func TestStreamSyncPingPong(t *testing.T) {
 	}, 20*time.Second, 100*time.Millisecond, "didn't receive all pongs in reasonable time or out of order")
 }
 
-func TestSyncSubscriptionWithTooSlowClient(t *testing.T) {
-	t.SkipNow()
-
+/*
+func TestSyncSubscriptionWithClientDroppingOff(t *testing.T) {
 	var (
 		req      = require.New(t)
 		services = newServiceTester(t, serviceTesterOpts{numNodes: 5, start: true})
 		client0  = services.testClient(0)
 		client1  = services.testClient(1)
 		ctx      = services.ctx
-		wallets  []*crypto.Wallet
-		users    []*protocol.SyncCookie
 		channels []*protocol.SyncCookie
 	)
 
-	// create users that will join and add messages to channels.
-	for range 10 {
-		// Create user streams
-		wallet, err := crypto.NewWallet(ctx)
-		req.NoError(err, "new wallet")
-		syncCookie, _, err := createUser(ctx, wallet, client0, nil)
-		req.NoError(err, "create user")
+	// create user that will submit messages
+	wallet, err := crypto.NewWallet(ctx)
+	req.NoError(err, "new wallet")
+	_, _, err = createUser(ctx, wallet, client0, nil)
+	req.NoError(err, "create user")
+	_, _, err = createUserDeviceKeyStream(ctx, wallet, client0, nil)
+	req.NoError(err)
 
-		_, _, err = createUserDeviceKeyStream(ctx, wallet, client0, nil)
-		req.NoError(err)
-
-		wallets = append(wallets, wallet)
-		users = append(users, syncCookie)
-	}
-
-	// create a space and several channels in it
+	// create a space
 	spaceID := testutils.FakeStreamId(STREAM_SPACE_BIN)
-	resspace, _, err := createSpace(ctx, wallets[0], client0, spaceID, nil)
+	resspace, _, err := createSpace(ctx, wallet, client0, spaceID, nil)
 	req.NoError(err)
 	req.NotNil(resspace, "create space sync cookie")
 
-	// create enough channels that they will be distributed among local and remote nodes
+	// create enough channels that they will be distributed over local and remote nodes
 	for range TestStreams {
 		channelId := testutils.FakeStreamId(STREAM_CHANNEL_BIN)
-		channel, _, err := createChannel(ctx, wallets[0], client0, spaceID, channelId, nil)
+		channel, _, err := createChannel(ctx, wallet, client0, spaceID, channelId, nil)
 		req.NoError(err)
 		req.NotNil(channel, "nil create channel sync cookie")
 		channels = append(channels, channel)
 	}
 
 	// subscribe to channel updates
-	fmt.Printf("sync streams on node %s\n", services.nodes[1].address)
-	syncPos := append(users, channels...)
-	syncRes, err := client1.SyncStreams(ctx, connect.NewRequest(&protocol.SyncStreamsRequest{SyncPos: syncPos}))
+	stream, err := client1.SyncStreams(ctx, connect.NewRequest(&protocol.SyncStreamsRequest{
+		SyncPos: channels,
+	}))
 	req.NoError(err, "sync streams")
 
-	syncRes.Receive()
-	syncID := syncRes.Msg().SyncId
-	t.Logf("subscription %s created on node: %s", syncID, services.nodes[1].address)
+	stream.Receive()
+	syncID := stream.Msg().GetSyncId()
+	req.NotEmpty(syncID, "expected non-empty sync id")
 
-	subCancelled := make(chan struct{})
+	t.Logf("subscription %s started on node: %s", syncID, services.nodes[1].address)
 
+	// subscribe to channels updates and simulate a slow client
 	go func() {
-		// don't read from syncRes and simulate an inactive client.
-		// the node should drop the subscription when the internal buffer is full with events it can't deliver
-		<-time.After(10 * time.Second)
+		received := 0
+		for stream.Receive() {
+			if err := stream.Err(); err != nil {
+				break
+			}
+			_ = stream.Msg()
 
-		_, err := client1.PingSync(ctx, connect.NewRequest(&protocol.PingSyncRequest{SyncId: syncID, Nonce: "ping"}))
-		req.Error(err, "sync must have been dropped")
+			received++
+			if received > 5 { // read some and drop off
+				break
+			}
+		}
 
-		close(subCancelled)
+		t.Logf("subscription %s finished on node: %s / %v", syncID, services.nodes[1].address, err)
 	}()
 
-	// users join channels
-	channelsCount := len(channels)
-	for i, wallet := range wallets[1:] {
-		for c := range channelsCount {
-			channel := channels[c]
+	// send a bunch of messages and ensure that the sync op is cancelled because the client doesn't keep up and the
+	// buffer becomes full
+	N := 10000
+	var tasks sync.WaitGroup
+	tasks.Add(1)
+	go func() {
+		defer tasks.Done()
 
-			miniBlockHashResp, err := client1.GetLastMiniblockHash(
-				ctx,
-				connect.NewRequest(&protocol.GetLastMiniblockHashRequest{StreamId: users[i+1].StreamId}))
+		channel := channels[0]
 
-			req.NoError(err, "get last miniblock hash")
+		client := services.testClient(rand.Intn(len(services.nodes)))
+		for n := range N {
+			msgContents := fmt.Sprintf("msg #%d", n)
 
-			channelId, _ := StreamIdFromBytes(channel.GetStreamId())
-			userJoin, err := events.MakeEnvelopeWithPayload(
+			getStreamResp, err := client.GetStream(ctx, connect.NewRequest(&protocol.GetStreamRequest{
+				StreamId: channel.GetStreamId(),
+				Optional: false,
+			}))
+			req.NoError(err)
+
+			message, err := events.MakeEnvelopeWithPayload(
 				wallet,
-				events.Make_UserPayload_Membership(protocol.MembershipOp_SO_JOIN, channelId, nil, spaceID[:]),
-				miniBlockHashResp.Msg.GetHash(),
+				events.Make_ChannelPayload_Message(msgContents),
+				getStreamResp.Msg.GetStream().GetNextSyncCookie().GetPrevMiniblockHash(),
 			)
 			req.NoError(err)
 
-			resp, err := client1.AddEvent(
+			_, err = client.AddEvent(
 				ctx,
 				connect.NewRequest(
 					&protocol.AddEventRequest{
-						StreamId: users[i+1].StreamId,
-						Event:    userJoin,
+						StreamId: channel.GetStreamId(),
+						Event:    message,
 					},
 				),
 			)
 
 			req.NoError(err)
-			req.Nil(resp.Msg.GetError())
 		}
+	}()
+
+	req.Eventuallyf(func() bool {
+		_, err := client1.PingSync(ctx, connect.NewRequest(&protocol.PingSyncRequest{
+			SyncId: syncID,
+			Nonce:  "ping",
+		}))
+		return err != nil // should return at some time a sync sub not found error
+	}, 20*time.Second, 100*time.Millisecond, "subscription not cancelled in reasonable time")
+
+	tasks.Wait() // for clean shutdown
+}
+
+func TestSyncSubscriptionWithTooSlowClient(t *testing.T) {
+	var (
+		req         = require.New(t)
+		services    = newServiceTester(t, serviceTesterOpts{numNodes: 5, start: true})
+		client0     = services.testClient(0)
+		client1     = services.testClient(1)
+		ctx, cancel = context.WithCancel(services.ctx)
+		channels    []*protocol.SyncCookie
+	)
+
+	// create user that will submit messages
+	wallet, err := crypto.NewWallet(ctx)
+	req.NoError(err, "new wallet")
+	_, _, err = createUser(ctx, wallet, client0, nil)
+	req.NoError(err, "create user")
+	_, _, err = createUserDeviceKeyStream(ctx, wallet, client0, nil)
+	req.NoError(err)
+
+	// create a space
+	spaceID := testutils.FakeStreamId(STREAM_SPACE_BIN)
+	resspace, _, err := createSpace(ctx, wallet, client0, spaceID, nil)
+	req.NoError(err)
+	req.NotNil(resspace, "create space sync cookie")
+
+	// create enough channels that they will be distributed over local and remote nodes
+	for range TestStreams {
+		channelId := testutils.FakeStreamId(STREAM_CHANNEL_BIN)
+		channel, _, err := createChannel(ctx, wallet, client0, spaceID, channelId, nil)
+		req.NoError(err)
+		req.NotNil(channel, "nil create channel sync cookie")
+		channels = append(channels, channel)
 	}
 
-	// send a bunch of messages and ensure that the sync op is cancelled because the client buffer becomes full
-	for i := range 10000 {
-		wallet := wallets[rand.Int()%len(wallets)]
-		channel := channels[rand.Int()%len(channels)]
-		msgContents := fmt.Sprintf("msg #%d", i)
+	subCancelled := make(chan struct{})
 
-		getStreamResp, err := client1.GetStream(ctx, connect.NewRequest(&protocol.GetStreamRequest{
-			StreamId: channel.GetStreamId(),
-			Optional: false,
+	// subscribe to channels updates and simulate a slow client
+	go func() {
+		// subscribe to channel updates
+		stream, err := client1.SyncStreams(ctx, connect.NewRequest(&protocol.SyncStreamsRequest{
+			SyncPos: channels,
 		}))
-		req.NoError(err)
+		req.NoError(err, "sync streams")
 
-		message, err := events.MakeEnvelopeWithPayload(
-			wallet,
-			events.Make_ChannelPayload_Message(msgContents),
-			getStreamResp.Msg.GetStream().GetNextSyncCookie().GetPrevMiniblockHash(),
-		)
-		req.NoError(err)
+		stream.Receive()
+		syncID := stream.Msg().GetSyncId()
+		req.NotEmpty(syncID, "expected non-empty sync id")
 
-		_, err = client1.AddEvent(
-			ctx,
-			connect.NewRequest(
-				&protocol.AddEventRequest{
+		t.Logf("subscription %s started on node: %s", syncID, services.nodes[1].address)
+
+		seed := time.Now().UnixNano()
+		r := rand.New(rand.NewSource(seed))
+
+		for stream.Receive() {
+			if err := stream.Err(); err != nil {
+				fmt.Printf("got err: %v\n", err)
+				break
+			}
+			msg := stream.Msg()
+			t.Logf("got stream update: %s / %d:%d\n", msg.SyncOp,
+				msg.GetStream().GetNextSyncCookie().GetMinipoolGen(),
+				msg.GetStream().GetNextSyncCookie().GetMinipoolSlot())
+
+			// ZZzzz...
+			duration := time.Duration(1+r.Intn(5000)) * time.Millisecond
+			time.Sleep(duration)
+		}
+
+		t.Logf("sync stream stopped")
+
+		close(subCancelled)
+	}()
+
+	// send a bunch of messages and ensure that the sync op is cancelled because the client doesn't keep up and the
+	// buffer becomes full
+	N := 10000
+	var tasks sync.WaitGroup
+	for i, channel := range channels {
+		tasks.Add(1)
+		go func() {
+			defer tasks.Done()
+
+			client := services.testClient(rand.Intn(len(services.nodes)))
+			for n := range N {
+				msgContents := fmt.Sprintf("msg #%d", i*N+n)
+
+				getStreamResp, err := client.GetStream(ctx, connect.NewRequest(&protocol.GetStreamRequest{
 					StreamId: channel.GetStreamId(),
-					Event:    message,
-				},
-			),
-		)
+					Optional: false,
+				}))
+				req.NoError(err)
 
-		req.NoError(err)
+				message, err := events.MakeEnvelopeWithPayload(
+					wallet,
+					events.Make_ChannelPayload_Message(msgContents),
+					getStreamResp.Msg.GetStream().GetNextSyncCookie().GetPrevMiniblockHash(),
+				)
+				req.NoError(err)
+
+				_, err = client.AddEvent(
+					ctx,
+					connect.NewRequest(
+						&protocol.AddEventRequest{
+							StreamId: channel.GetStreamId(),
+							Event:    message,
+						},
+					),
+				)
+
+				if errors.Is(err, context.Canceled) {
+					return
+				}
+				req.NoError(err)
+			}
+		}()
 	}
 
 	req.Eventuallyf(func() bool {
 		select {
 		case <-subCancelled:
-			fmt.Println("sub cancelled as expected")
 			return true
 		default:
 			return false
 		}
-	}, 20*time.Second, 100*time.Millisecond, "subscription not cancelled in reasonable time")
+	}, 30*time.Second, 100*time.Millisecond, "subscription not cancelled in reasonable time")
+
+	cancel()
+
+	tasks.Wait() // for clean shutdown
 }
+*/

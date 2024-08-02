@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"github.com/river-build/river/core/node/dlog"
 	"time"
 
@@ -110,16 +111,21 @@ func (syncOp *StreamSyncOperation) Run(
 					SyncId: syncOp.SyncID,
 					SyncOp: SyncOp_SYNC_CLOSE,
 				})
+
+				fmt.Printf("sync stopped %v\n", err)
+				panic("sync stopped")
 				return nil
 			}
 
 			msg.SyncId = syncOp.SyncID
 			if err = res.Send(msg); err != nil {
 				log.Error("Unable to send sync stream update to client", "err", err)
+				fmt.Printf("!!unable to send update to client %v\n", err)
+				panic("sync stopped " + err.Error())
 				return err
 			}
 
-		case <-syncOp.ctx.Done():
+		case <-syncOp.ctx.Done(): // client connection dropped
 			return nil
 
 		case cmd := <-syncOp.commands:
