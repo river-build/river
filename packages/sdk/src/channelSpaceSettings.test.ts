@@ -12,11 +12,10 @@ import {
     createRole,
 } from './util.test'
 import { check } from '@river-build/dlog'
-import { SpacePayload_ChannelSettings } from '@river-build/proto'
 import { Permission, NoopRuleData } from '@river-build/web3'
 
 describe('channelSpaceSettingsTests', () => {
-    test('channel creation with default settings is not autojoin, hideUserJoinLeaveEvents false', async () => {
+    test('channel creation with default settings', async () => {
         const { bob, bobProvider, bobSpaceDapp } = await setupWalletsAndContexts()
         const everyoneMembership = await everyoneMembershipStruct(bobSpaceDapp, bob)
 
@@ -26,7 +25,8 @@ describe('channelSpaceSettingsTests', () => {
             updatedChannelAutojoinState.set(channelId, autojoin)
         })
 
-        // This channel is created with default channel settings
+        // The default channel is created without channel settings here. It should
+        // be autojoin=true and hideUserJoinLeaveEvents=false.
         const { spaceId, defaultChannelId } = await createSpaceAndDefaultChannel(
             bob,
             bobSpaceDapp,
@@ -35,6 +35,27 @@ describe('channelSpaceSettingsTests', () => {
             everyoneMembership,
         )
 
+        // Create another channel. This channel should be autojoin=false, hideUserJoinLeaveEvents=false.
+        // Create channel on contract.
+        const { channelId: channel1Id, error } = await createChannel(
+            bobSpaceDapp,
+            bobProvider,
+            spaceId,
+            'channel1',
+            [1], // member role created on town creation
+            bobProvider.wallet,
+        )
+        expect(error).toBeUndefined()
+
+        // Create channel stream
+        const { streamId: channelStream1Id } = await bob.createChannel(
+            spaceId,
+            'channel1',
+            'channel1 topic',
+            channel1Id!,
+        )
+        expect(channelStream1Id).toEqual(channel1Id)
+
         const spaceStream = bob.streams.get(spaceId)
         expect(spaceStream).toBeDefined()
         const spaceStreamView = spaceStream!.view.spaceContent
@@ -42,9 +63,11 @@ describe('channelSpaceSettingsTests', () => {
 
         await waitFor(() => {
             const channelMetadata = spaceStreamView.spaceChannelsMetadata
-            check(channelMetadata.size === 1)
-            check(channelMetadata.get(defaultChannelId)?.isAutojoin === false)
+            check(channelMetadata.size === 2)
+            check(channelMetadata.get(defaultChannelId)?.isAutojoin === true)
             check(channelMetadata.get(defaultChannelId)?.hideUserJoinLeaveEvents === false)
+            check(channelMetadata.get(channel1Id!)?.isAutojoin === false)
+            check(channelMetadata.get(channel1Id!)?.hideUserJoinLeaveEvents === false)
         })
     })
 
@@ -143,7 +166,7 @@ describe('channelSpaceSettingsTests', () => {
         await waitFor(() => {
             const channelMetadata = spaceStreamView.spaceChannelsMetadata
             check(channelMetadata.size === 2)
-            check(channelMetadata.get(defaultChannelId)?.isAutojoin === false)
+            check(channelMetadata.get(defaultChannelId)?.isAutojoin === true)
             check(channelMetadata.get(channel1Id!)?.isAutojoin === false)
         })
 
@@ -192,7 +215,7 @@ describe('channelSpaceSettingsTests', () => {
             everyoneMembership,
         )
 
-        // Validate current autojoin state for channel is false
+        // Validate current autojoin state for default channel is true
         const spaceStream = bob.streams.get(spaceId)
         expect(spaceStream).toBeDefined()
         const spaceStreamView = spaceStream!.view.spaceContent
@@ -200,7 +223,7 @@ describe('channelSpaceSettingsTests', () => {
         await waitFor(() => {
             const channelMetadata = spaceStreamView.spaceChannelsMetadata
             check(channelMetadata.size === 1)
-            check(channelMetadata.get(defaultChannelId)?.isAutojoin === false)
+            check(channelMetadata.get(defaultChannelId)?.isAutojoin === true)
         })
 
         // Unpermitted user alice should not be able to update autojoin.
@@ -215,7 +238,8 @@ describe('channelSpaceSettingsTests', () => {
             aliceProvider.wallet,
         )
 
-        await expect(alice.updateChannelAutojoin(spaceId, defaultChannelId, true)).rejects.toThrow(
+        // Alice's update should fail
+        await expect(alice.updateChannelAutojoin(spaceId, defaultChannelId, false)).rejects.toThrow(
             /7:PERMISSION_DENIED/,
         )
 
@@ -244,13 +268,13 @@ describe('channelSpaceSettingsTests', () => {
         )
 
         // Carol's update should succeed
-        await expect(carol.updateChannelAutojoin(spaceId, defaultChannelId, true)).toResolve()
+        await expect(carol.updateChannelAutojoin(spaceId, defaultChannelId, false)).toResolve()
 
         // Validate autojoin event was applied on client
         await waitFor(() => {
             const channelMetadata = spaceStreamView.spaceChannelsMetadata
             check(channelMetadata.size === 1)
-            check(channelMetadata.get(defaultChannelId)?.isAutojoin === true)
+            check(channelMetadata.get(defaultChannelId)?.isAutojoin === false)
         })
     })
 

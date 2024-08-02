@@ -205,7 +205,7 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
         switch (op) {
             case ChannelOp.CO_CREATED: {
                 const isDefault = isDefaultChannelId(channelId)
-                const isAutojoin = payload.settings?.autojoin ?? false
+                const isAutojoin = payload.settings?.autojoin ?? isDefault
                 const hideUserJoinLeaveEvents = payload.settings?.hideUserJoinLeaveEvents ?? false
                 this.spaceChannelsMetadata.set(channelId, {
                     isDefault,

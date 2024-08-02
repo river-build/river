@@ -207,7 +207,13 @@ func update_Snapshot_Space(
 			if channel.Op == ChannelOp_CO_CREATED {
 				// Apply default channel settings for new channels when settings are not provided.
 				// Invariant: channel.Settings is defined for all channels in the snapshot.
-				channel.Settings = &SpacePayload_ChannelSettings{}
+				channelId, err := shared.StreamIdFromBytes(content.Channel.ChannelId)
+				if err != nil {
+					return err
+				}
+				channel.Settings = &SpacePayload_ChannelSettings{
+					Autojoin: shared.IsDefaultChannelId(channelId),
+				}
 			} else if channel.Op == ChannelOp_CO_UPDATED {
 				// Find the existing channel and copy over the settings if new ones are not provided.
 				existingChannel, err := findChannel(snapshot.SpaceContent.Channels, content.Channel.ChannelId)
@@ -232,6 +238,7 @@ func update_Snapshot_Space(
 			return err
 		}
 		channel.Settings.HideUserJoinLeaveEvents = content.UpdateChannelHideUserJoinLeaveEvents.HideUserJoinLeaveEvents
+		return nil
 	case *SpacePayload_SpaceImage:
 		snapshot.SpaceContent.SpaceImage = &SpacePayload_SnappedSpaceImage{
 			Data:           content.SpaceImage,
