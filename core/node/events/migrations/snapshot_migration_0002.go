@@ -14,7 +14,9 @@ func snapshot_migration_0002(iSnapshot *Snapshot) *Snapshot {
 			}
 			channelId, err := shared.StreamIdFromBytes(channel.ChannelId)
 			if err != nil {
-				panic(err)
+				// Note: it would be better to log this error, but we have no logging
+				// context here at this time
+				continue
 			}
 			if shared.IsDefaultChannelId(channelId) {
 				channel.Settings.Autojoin = true
