@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
     Client as StreamsClient,
     RiverConfig,
@@ -11,7 +13,7 @@ import {
     StreamRpcClient,
 } from '@river-build/sdk'
 import { makeConnection } from './connection'
-import { CryptoStore, EntitlementsDelegate } from '@river-build/encryption'
+import { CryptoStore, EntitlementsDelegate, type ExportedDevice } from '@river-build/encryption'
 import {
     ETH_ADDRESS,
     LocalhostWeb3Provider,
@@ -26,7 +28,8 @@ import { Wallet } from 'ethers'
 import { PlainMessage } from '@bufbuild/protobuf'
 import { ChannelMessage_Post_Attachment, ChannelMessage_Post_Mention } from '@river-build/proto'
 import { waitFor } from './waitFor'
-
+import { promises as fs } from 'node:fs'
+import * as path from 'node:path'
 const logger = dlogger('stress:stressClient')
 
 export async function makeStressClient(
@@ -87,6 +90,10 @@ export class StressClient {
 
     get logId(): string {
         return `client${this.clientIndex}:${shortenHexString(this.userId)}`
+    }
+
+    get deviceFilePath(): string {
+        return path.resolve(__dirname, `device_${this.clientIndex}.json`)
     }
 
     async fundWallet() {
@@ -186,12 +193,23 @@ export class StressClient {
         return channelId
     }
 
-    async startStreamsClient(metadata: { spaceId: string }) {
+    async startStreamsClient(config: Parameters<typeof this.streamsClient.initializeUser>[0]) {
         if (isDefined(this.streamsClient.userStreamId)) {
             return
         }
-        await this.streamsClient.initializeUser(metadata)
+        let device: ExportedDevice | undefined
+        try {
+            const rawDevice = await fs.readFile(this.deviceFilePath, 'utf8')
+            device = JSON.parse(rawDevice) as ExportedDevice
+        } catch {
+            return
+        }
+        await this.streamsClient.initializeUser({ ...config, fromExportedDevice: device })
         this.streamsClient.startSync()
+        logger.log(
+            'streamsClient key',
+            this.streamsClient.cryptoBackend?.encryptionDevice.deviceCurve25519Key,
+        )
     }
 
     async sendMessage(
@@ -241,6 +259,16 @@ export class StressClient {
     }
 
     async stop() {
+        await this.exportDevice()
         await this.streamsClient.stop()
+    }
+
+    async exportDevice(): Promise<ExportedDevice | undefined> {
+        const device = await this.streamsClient.cryptoBackend?.encryptionDevice.exportDevice()
+        if (device) {
+            await fs.writeFile(this.deviceFilePath, JSON.stringify(device, null, 2))
+            logger.log(`Device exported to ${this.deviceFilePath}`)
+        }
+        return device as ExportedDevice | undefined
     }
 }
