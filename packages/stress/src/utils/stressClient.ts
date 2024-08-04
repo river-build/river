@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
@@ -269,6 +270,6 @@ export class StressClient {
             await fs.writeFile(this.deviceFilePath, JSON.stringify(device, null, 2))
             logger.log(`Device exported to ${this.deviceFilePath}`)
         }
-        return device as ExportedDevice | undefined
+        return device
     }
 }

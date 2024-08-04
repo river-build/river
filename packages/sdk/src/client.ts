@@ -1997,7 +1997,6 @@ export class Client
         await this.cryptoStore.initialize()
 
         const crypto = new GroupEncryptionCrypto(this, this.cryptoStore)
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
         await crypto.init(opts)
         this.cryptoBackend = crypto
         this.decryptionExtensions = new ClientDecryptionExtensions(
