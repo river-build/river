@@ -163,7 +163,7 @@ export class StressClient {
         const spaceId = makeSpaceStreamId(spaceAddress)
         const defaultChannelId = makeDefaultChannelStreamId(spaceAddress)
         logger.log('spaceId, defaultChannelId', { spaceId, defaultChannelId })
-        await this.startStreamsClient({ spaceId })
+        await this.startStreamsClient({ metadata: { spaceId } })
         await this.streamsClient.createSpace(spaceId)
         await this.streamsClient.createChannel(spaceId, 'general', '', defaultChannelId)
         return { spaceId, defaultChannelId }
@@ -235,7 +235,7 @@ export class StressClient {
             )
             logger.log('joinSpace transaction', issued)
         }
-        await this.startStreamsClient({ spaceId })
+        await this.startStreamsClient({ metadata: { spaceId } })
         await this.streamsClient.joinStream(spaceId)
         await this.streamsClient.joinStream(makeDefaultChannelStreamId(spaceId))
     }
