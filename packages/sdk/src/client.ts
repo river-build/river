@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 import { Message, PlainMessage } from '@bufbuild/protobuf'
 import { datadogRum } from '@datadog/browser-rum'
 import { Permission } from '@river-build/web3'
@@ -51,6 +54,7 @@ import {
     UserDevice,
     UserDeviceCollection,
     makeSessionKeys,
+    type EncryptionDeviceInitOpts,
 } from '@river-build/encryption'
 import { assert, isDefined } from './check'
 import { errorContains, getRpcErrorProperty, StreamRpcClient } from './makeStreamRpcClient'
@@ -316,7 +320,12 @@ export class Client
         this.syncedStreamsExtensions.setStreamIds(streamIds)
     }
 
-    async initializeUser(newUserMetadata?: { spaceId: Uint8Array | string }): Promise<void> {
+    async initializeUser(
+        opts?: {
+            metadata?: { spaceId: Uint8Array | string }
+        } & EncryptionDeviceInitOpts,
+    ): Promise<void> {
+        const newUserMetadata = opts?.metadata
         const metadata = newUserMetadata
             ? {
                   ...newUserMetadata,
@@ -327,7 +336,7 @@ export class Client
         const initializeUserStartTime = performance.now()
         this.logCall('initializeUser', this.userId)
         assert(this.userStreamId === undefined, 'already initialized')
-        await this.initCrypto()
+        await this.initCrypto(opts)
 
         check(isDefined(this.decryptionExtensions), 'decryptionExtensions must be defined')
         check(isDefined(this.syncedStreamsExtensions), 'syncedStreamsExtensions must be defined')
@@ -1976,7 +1985,7 @@ export class Client
         return r.hash
     }
 
-    private async initCrypto(): Promise<void> {
+    private async initCrypto(opts?: EncryptionDeviceInitOpts): Promise<void> {
         this.logCall('initCrypto')
         if (this.cryptoBackend) {
             this.logCall('Attempt to re-init crypto backend, ignoring')
@@ -1988,7 +1997,8 @@ export class Client
         await this.cryptoStore.initialize()
 
         const crypto = new GroupEncryptionCrypto(this, this.cryptoStore)
-        await crypto.init()
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+        await crypto.init(opts)
         this.cryptoBackend = crypto
         this.decryptionExtensions = new ClientDecryptionExtensions(
             this,

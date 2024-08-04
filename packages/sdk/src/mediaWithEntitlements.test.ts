@@ -99,7 +99,7 @@ describe('mediaWithEntitlements', () => {
         const channelId = makeDefaultChannelStreamId(spaceAddress!)
         // join alice to the space so she can start up a client
 
-        await bobClient.initializeUser({ spaceId: spaceStreamId })
+        await bobClient.initializeUser({ metadata: { spaceId: spaceStreamId } })
         bobClient.startSync()
         await bobClient.createSpace(spaceStreamId)
         await bobClient.createChannel(spaceStreamId, 'Channel', 'Topic', channelId)
@@ -128,7 +128,7 @@ describe('mediaWithEntitlements', () => {
         await expect(bobClient.createMediaStream(channelId, spaceStreamId, 10)).toResolve()
         await bobClient.stop()
 
-        await aliceClient.initializeUser({ spaceId: space2Id })
+        await aliceClient.initializeUser({ metadata: { spaceId: space2Id } })
         aliceClient.startSync()
 
         // Alice is NOT a member of the channel is prevented from creating a media stream

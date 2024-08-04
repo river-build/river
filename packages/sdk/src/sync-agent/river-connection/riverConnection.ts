@@ -178,7 +178,7 @@ export class RiverConnection extends PersistedObservable<RiverConnectionModel> {
                     logger.log('canInitialize', canInitialize)
                     if (canInitialize) {
                         this.authStatus.setValue(AuthStatus.ConnectingToRiver)
-                        await client.initializeUser(this.newUserMetadata)
+                        await client.initializeUser({ metadata: this.newUserMetadata })
                         client.startSync()
                         this.setData({ userExists: true })
                         this.authStatus.setValue(AuthStatus.ConnectedToRiver)
