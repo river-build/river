@@ -31,6 +31,7 @@ import { ChannelMessage_Post_Attachment, ChannelMessage_Post_Mention } from '@ri
 import { waitFor } from './waitFor'
 import { promises as fs } from 'node:fs'
 import * as path from 'node:path'
+import { sha256 } from 'ethers/lib/utils'
 const logger = dlogger('stress:stressClient')
 
 export async function makeStressClient(
@@ -203,10 +204,12 @@ export class StressClient {
         if (rawDevice) {
             device = JSON.parse(rawDevice) as ExportedDevice
         }
+        const botPrivateKey = this.baseProvider.wallet.privateKey
         await this.streamsClient.initializeUser({
             spaceId: config.spaceId,
             encryptionDeviceInit: {
                 fromExportedDevice: device,
+                pickleKey: sha256(botPrivateKey),
             },
         })
         this.streamsClient.startSync()
