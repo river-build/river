@@ -140,12 +140,12 @@ export class EncryptionDevice {
                 await this.initializeAccount(account)
             }
             e2eKeys = JSON.parse(account.identity_keys())
+            await this.generateFallbackKeyIfNeeded()
+            this.fallbackKey = await this.getFallbackKey()
         } finally {
             account.free()
         }
 
-        await this.generateFallbackKeyIfNeeded()
-        this.fallbackKey = await this.getFallbackKey()
         this.deviceCurve25519Key = e2eKeys.curve25519
         // note jterzis 07/19/23: deprecating ed25519 key in favor of TDK
         // see: https://linear.app/hnt-labs/issue/HNT-1796/tdk-signature-storage-curve25519-key
