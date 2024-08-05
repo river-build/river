@@ -269,8 +269,12 @@ export class StressClient {
     async exportDevice(): Promise<ExportedDevice | undefined> {
         const device = await this.streamsClient.cryptoBackend?.encryptionDevice.exportDevice()
         if (device) {
-            await fs.writeFile(this.deviceFilePath, JSON.stringify(device, null, 2))
-            logger.log(`Device exported to ${this.deviceFilePath}`)
+            try {
+                await fs.writeFile(this.deviceFilePath, JSON.stringify(device, null, 2))
+                logger.log(`Device exported to ${this.deviceFilePath}`)
+            } catch (e) {
+                logger.error('Failed to export device', e)
+            }
         }
         return device
     }
