@@ -95,7 +95,7 @@ describe('withEntitlements', () => {
         const channelId = makeDefaultChannelStreamId(spaceAddress!)
         expect(isValidStreamId(channelId)).toBe(true)
         // then on the river node
-        await expect(bob.initializeUser({ metadata: { spaceId } })).toResolve()
+        await expect(bob.initializeUser({ spaceId })).toResolve()
         bob.startSync()
         const returnVal = await bob.createSpace(spaceId)
         expect(returnVal.streamId).toEqual(spaceId)
@@ -158,7 +158,7 @@ describe('withEntitlements', () => {
         log('transaction receipt for alice joining space', issued, tokenId)
         expect(issued).toBe(true)
 
-        await alice.initializeUser({ metadata: { spaceId } })
+        await alice.initializeUser({ spaceId })
         alice.startSync()
         await expect(alice.joinStream(spaceId)).toResolve()
         await expect(alice.joinStream(channelId)).toResolve()

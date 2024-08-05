@@ -374,7 +374,7 @@ export async function createSpaceAndDefaultChannel(
     const spaceId = makeSpaceStreamId(spaceAddress!)
     const channelId = makeDefaultChannelStreamId(spaceAddress!)
 
-    await client.initializeUser({ metadata: { spaceId } })
+    await client.initializeUser({ spaceId })
     client.startSync()
 
     const userStreamId = makeUserStreamId(client.userId)
@@ -426,7 +426,7 @@ export async function createUserStreamAndSyncClient(
     expect(spaceAddress).toBeDefined()
 
     const spaceId = makeSpaceStreamId(spaceAddress!)
-    await client.initializeUser({ metadata: { spaceId } })
+    await client.initializeUser({ spaceId })
 }
 
 export async function expectUserCanJoin(
@@ -453,7 +453,7 @@ export async function expectUserCanJoin(
     expect(issued).toBeTrue()
     log(`${name} joined space ${spaceId}`, Date.now() - joinStart)
 
-    await client.initializeUser({ metadata: { spaceId } })
+    await client.initializeUser({ spaceId })
     client.startSync()
 
     await expect(client.joinStream(spaceId)).toResolve()
