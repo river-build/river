@@ -152,7 +152,7 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
             this.latestEncryptedImage = currentEncryptedImage
 
             // Chain the decryption operations sequentially
-            this.decryptionQueue = this.decryptionQueue.then(() => {
+            this.decryptionQueue = this.decryptionQueue.then(async () => {
                 // Assign the decryption process to decryptionInProgress and return void to avoid ESLint warnings
                 this.decryptionInProgress = this.performDecryption(context, currentEncryptedImage)
                 return this.decryptionInProgress.then(() => undefined) // Ensure void return
