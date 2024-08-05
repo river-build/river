@@ -94,7 +94,7 @@ export class StressClient {
     }
 
     get deviceFilePath(): string {
-        return path.resolve(__dirname, `device_${this.clientIndex}.json`)
+        return path.resolve(`/tmp/device_${this.clientIndex}.json`)
     }
 
     async fundWallet() {
