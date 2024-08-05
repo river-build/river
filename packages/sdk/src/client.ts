@@ -869,7 +869,8 @@ export class Client
         })
 
         // encrypt the chunked media
-        const { key, iv } = await deriveKeyAndIV(spaceId)
+        // use the lowercased spaceId as the key phrase
+        const { key, iv } = await deriveKeyAndIV(spaceId.toLowerCase())
         const { ciphertext } = await encryptAESGCM(chunkedMedia.toBinary(), key, iv)
         const encryptedData = new EncryptedData({
             ciphertext: uint8ArrayToBase64(ciphertext),
