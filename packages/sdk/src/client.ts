@@ -855,8 +855,8 @@ export class Client
         this.logCall('setSpaceImage', spaceStreamId, mediaStreamId, info)
 
         // create the chunked media to be added
-        const spaceId = contractAddressFromSpaceId(spaceStreamId)
-        const context = spaceId.toLowerCase()
+        const spaceAddress = contractAddressFromSpaceId(spaceStreamId)
+        const context = spaceAddress.toLowerCase()
         const chunkedMedia = new ChunkedMedia({
             info,
             streamId: mediaStreamId,
