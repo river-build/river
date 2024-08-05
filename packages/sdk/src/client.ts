@@ -856,6 +856,7 @@ export class Client
 
         // create the chunked media to be added
         const spaceId = contractAddressFromSpaceId(spaceStreamId)
+        const context = spaceId.toLowerCase()
         const chunkedMedia = new ChunkedMedia({
             info,
             streamId: mediaStreamId,
@@ -863,14 +864,14 @@ export class Client
             encryption: {
                 case: 'derived',
                 value: {
-                    context: spaceId,
+                    context,
                 },
             },
         })
 
         // encrypt the chunked media
         // use the lowercased spaceId as the key phrase
-        const { key, iv } = await deriveKeyAndIV(spaceId.toLowerCase())
+        const { key, iv } = await deriveKeyAndIV(context)
         const { ciphertext } = await encryptAESGCM(chunkedMedia.toBinary(), key, iv)
         const encryptedData = new EncryptedData({
             ciphertext: uint8ArrayToBase64(ciphertext),
