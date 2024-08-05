@@ -15,6 +15,7 @@ import {
     StreamEvent,
     EncryptedData,
     StreamSettings,
+    SpacePayload_ChannelSettings,
     FullyReadMarkers,
     FullyReadMarker,
     Envelope,
@@ -117,6 +118,8 @@ import {
     make_MemberPayload_Nft,
     make_MemberPayload_Pin,
     make_MemberPayload_Unpin,
+    make_SpacePayload_UpdateChannelAutojoin,
+    make_SpacePayload_UpdateChannelHideUserJoinLeaveEvents,
     make_SpacePayload_SpaceImage,
 } from './types'
 
@@ -574,6 +577,7 @@ export class Client
         channelTopic: string,
         inChannelId: string | Uint8Array,
         streamSettings?: PlainMessage<StreamSettings>,
+        channelSettings?: PlainMessage<SpacePayload_ChannelSettings>,
     ): Promise<{ streamId: string }> {
         const oChannelId = inChannelId
         const channelId = streamIdAsBytes(oChannelId)
@@ -588,6 +592,7 @@ export class Client
                 streamId: channelId,
                 spaceId: streamIdAsBytes(spaceId),
                 settings: streamSettings,
+                channelSettings: channelSettings,
             }),
         )
         const joinEvent = await makeEvent(
@@ -765,6 +770,49 @@ export class Client
                 channelId: streamIdAsBytes(channelId),
             }),
             { method: 'updateChannel' },
+        )
+    }
+
+    async updateChannelAutojoin(
+        spaceId: string | Uint8Array,
+        channelId: string | Uint8Array,
+        autojoin: boolean,
+    ) {
+        this.logCall('updateChannelAutojoin', channelId, spaceId, autojoin)
+        assert(isSpaceStreamId(spaceId), 'spaceId must be a valid streamId')
+        assert(isChannelStreamId(channelId), 'channelId must be a valid streamId')
+
+        return this.makeEventAndAddToStream(
+            spaceId, // we send events to the stream of the space where updated channel belongs to
+            make_SpacePayload_UpdateChannelAutojoin({
+                channelId: streamIdAsBytes(channelId),
+                autojoin: autojoin,
+            }),
+            { method: 'updateChannelAutojoin' },
+        )
+    }
+
+    async updateChannelHideUserJoinLeaveEvents(
+        spaceId: string | Uint8Array,
+        channelId: string | Uint8Array,
+        hideUserJoinLeaveEvents: boolean,
+    ) {
+        this.logCall(
+            'updateChannelHideUserJoinLeaveEvents',
+            channelId,
+            spaceId,
+            hideUserJoinLeaveEvents,
+        )
+        assert(isSpaceStreamId(spaceId), 'spaceId must be a valid streamId')
+        assert(isChannelStreamId(channelId), 'channelId must be a valid streamId')
+
+        return this.makeEventAndAddToStream(
+            spaceId, // we send events to the stream of the space where updated channel belongs to
+            make_SpacePayload_UpdateChannelHideUserJoinLeaveEvents({
+                channelId: streamIdAsBytes(channelId),
+                hideUserJoinLeaveEvents,
+            }),
+            { method: 'updateChannelHideUserJoinLeaveEvents' },
         )
     }
 
