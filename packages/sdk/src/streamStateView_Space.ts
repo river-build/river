@@ -2,14 +2,16 @@ import TypedEmitter from 'typed-emitter'
 import { ConfirmedTimelineEvent, RemoteTimelineEvent } from './types'
 import {
     ChannelOp,
+    ChunkedMedia,
+    EncryptedData,
     Err,
     Snapshot,
     SpacePayload,
     SpacePayload_ChannelUpdate,
     SpacePayload_ChannelMetadata,
     SpacePayload_Snapshot,
-    ChunkedMedia,
-    EncryptedData,
+    SpacePayload_UpdateChannelAutojoin,
+    SpacePayload_UpdateChannelHideUserJoinLeaveEvents,
 } from '@river-build/proto'
 import { StreamEncryptionEvents, StreamEvents, StreamStateEvents } from './streamEvents'
 import { StreamStateView_AbstractContent } from './streamStateView_AbstractContent'
@@ -22,6 +24,8 @@ import { decryptDerivedAESGCM } from './crypto_utils'
 export type ParsedChannelProperties = {
     isDefault: boolean
     updatedAtEventNum: bigint
+    isAutojoin: boolean
+    hideUserJoinLeaveEvents: boolean
 }
 
 export class StreamStateView_Space extends StreamStateView_AbstractContent {
@@ -37,7 +41,7 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
 
     applySnapshot(
         eventHash: string,
-        snapshot: Snapshot,
+        _snapshot: Snapshot,
         content: SpacePayload_Snapshot,
         _cleartexts: Record<string, string> | undefined,
         _encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
@@ -73,6 +77,12 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
             case 'channel':
                 // nothing to do, channel data was conveyed in the snapshot
                 break
+            case 'updateChannelAutojoin':
+                // likewise, this data was conveyed in the snapshot
+                break
+            case 'updateChannelHideUserJoinLeaveEvents':
+                // likewise, this data was conveyed in the snapshot
+                break
             case 'spaceImage':
                 // nothing to do, spaceImage is set in the snapshot
                 break
@@ -85,8 +95,8 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
 
     appendEvent(
         event: RemoteTimelineEvent,
-        cleartext: string | undefined,
-        encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
+        _cleartext: string | undefined,
+        _encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
         stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
     ): void {
         check(event.remoteEvent.event.payload.case === 'spacePayload')
@@ -99,6 +109,15 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
                     event.hashStr,
                     payload.content.value,
                     event.eventNum,
+                    stateEmitter,
+                )
+                break
+            case 'updateChannelAutojoin':
+                this.addSpacePayload_UpdateChannelAutojoin(payload.content.value, stateEmitter)
+                break
+            case 'updateChannelHideUserJoinLeaveEvents':
+                this.addSpacePayload_UpdateChannelHideUserJoinLeaveEvents(
+                    payload.content.value,
                     stateEmitter,
                 )
                 break
@@ -168,8 +187,47 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
         }
     }
 
+    private addSpacePayload_UpdateChannelAutojoin(
+        payload: SpacePayload_UpdateChannelAutojoin,
+        stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
+    ): void {
+        const { channelId: channelIdBytes, autojoin } = payload
+        const channelId = streamIdAsString(channelIdBytes)
+        const channel = this.spaceChannelsMetadata.get(channelId)
+        if (!channel) {
+            throwWithCode(`Channel not found: ${channelId}`, Err.STREAM_BAD_EVENT)
+        }
+        this.spaceChannelsMetadata.set(channelId, {
+            ...channel,
+            isAutojoin: autojoin,
+        })
+        stateEmitter?.emit('spaceChannelAutojoinUpdated', this.streamId, channelId, autojoin)
+    }
+
+    private addSpacePayload_UpdateChannelHideUserJoinLeaveEvents(
+        payload: SpacePayload_UpdateChannelHideUserJoinLeaveEvents,
+        stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
+    ): void {
+        const { channelId: channelIdBytes, hideUserJoinLeaveEvents } = payload
+        const channelId = streamIdAsString(channelIdBytes)
+        const channel = this.spaceChannelsMetadata.get(channelId)
+        if (!channel) {
+            throwWithCode(`Channel not found: ${channelId}`, Err.STREAM_BAD_EVENT)
+        }
+        this.spaceChannelsMetadata.set(channelId, {
+            ...channel,
+            hideUserJoinLeaveEvents,
+        })
+        stateEmitter?.emit(
+            'spaceChannelHideUserJoinLeaveEventsUpdated',
+            this.streamId,
+            channelId,
+            hideUserJoinLeaveEvents,
+        )
+    }
+
     private addSpacePayload_Channel(
-        eventHash: string,
+        _eventHash: string,
         payload: SpacePayload_ChannelMetadata | SpacePayload_ChannelUpdate,
         updatedAtEventNum: bigint,
         stateEmitter?: TypedEmitter<StreamStateEvents>,
@@ -178,9 +236,14 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
         const channelId = streamIdAsString(channelIdBytes)
         switch (op) {
             case ChannelOp.CO_CREATED: {
+                const isDefault = isDefaultChannelId(channelId)
+                const isAutojoin = payload.settings?.autojoin ?? isDefault
+                const hideUserJoinLeaveEvents = payload.settings?.hideUserJoinLeaveEvents ?? false
                 this.spaceChannelsMetadata.set(channelId, {
-                    isDefault: isDefaultChannelId(channelId),
+                    isDefault,
                     updatedAtEventNum,
+                    isAutojoin,
+                    hideUserJoinLeaveEvents,
                 })
                 stateEmitter?.emit('spaceChannelCreated', this.streamId, channelId)
                 break
@@ -191,9 +254,15 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
                 }
                 break
             case ChannelOp.CO_UPDATED: {
+                const channel = this.spaceChannelsMetadata.get(channelId)
+                if (!channel) {
+                    throwWithCode(`Channel not found: ${channelId}`, Err.STREAM_BAD_EVENT)
+                }
                 this.spaceChannelsMetadata.set(channelId, {
                     isDefault: isDefaultChannelId(channelId),
                     updatedAtEventNum,
+                    isAutojoin: channel.isAutojoin,
+                    hideUserJoinLeaveEvents: channel.hideUserJoinLeaveEvents,
                 })
                 stateEmitter?.emit(
                     'spaceChannelUpdated',
