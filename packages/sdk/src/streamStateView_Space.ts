@@ -114,11 +114,16 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
 
     public async getSpaceImage(): Promise<ChunkedMedia | undefined> {
         if (this.encryptedSpaceImage) {
+            const initialEncryptedData = this.encryptedSpaceImage // Store the initial state
             const spaceAddress = contractAddressFromSpaceId(this.streamId)
             const context = spaceAddress.toLowerCase()
             const plaintext = await decryptDerivedAESGCM(context, this.encryptedSpaceImage)
-            this.spaceImage = ChunkedMedia.fromBinary(plaintext)
-            this.encryptedSpaceImage = undefined
+
+            // Ensure the state has not changed during the async operation
+            if (this.encryptedSpaceImage === initialEncryptedData) {
+                this.spaceImage = ChunkedMedia.fromBinary(plaintext)
+                this.encryptedSpaceImage = undefined
+            }
         }
         return this.spaceImage
     }
