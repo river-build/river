@@ -3652,7 +3652,7 @@ __metadata:
     ethers: ^5.7.2
     postcss: ^8.4.38
     prettier: ^2.8.8
-    prettier-plugin-tailwindcss: ^0.4.1
+    prettier-plugin-tailwindcss: ^0.6.5
     react: ^18.2.0
     react-dom: ^18.2.0
     react-hook-form: ^7.38.0
@@ -15744,16 +15744,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier-plugin-tailwindcss@npm:^0.4.1":
-  version: 0.4.1
-  resolution: "prettier-plugin-tailwindcss@npm:0.4.1"
+"prettier-plugin-tailwindcss@npm:^0.6.5":
+  version: 0.6.5
+  resolution: "prettier-plugin-tailwindcss@npm:0.6.5"
   peerDependencies:
     "@ianvs/prettier-plugin-sort-imports": "*"
     "@prettier/plugin-pug": "*"
     "@shopify/prettier-plugin-liquid": "*"
-    "@shufo/prettier-plugin-blade": "*"
     "@trivago/prettier-plugin-sort-imports": "*"
-    prettier: ^2.2 || ^3.0
+    "@zackad/prettier-plugin-twig-melody": "*"
+    prettier: ^3.0
     prettier-plugin-astro: "*"
     prettier-plugin-css-order: "*"
     prettier-plugin-import-sort: "*"
@@ -15761,9 +15761,9 @@ __metadata:
     prettier-plugin-marko: "*"
     prettier-plugin-organize-attributes: "*"
     prettier-plugin-organize-imports: "*"
+    prettier-plugin-sort-imports: "*"
     prettier-plugin-style-order: "*"
     prettier-plugin-svelte: "*"
-    prettier-plugin-twig-melody: "*"
   peerDependenciesMeta:
     "@ianvs/prettier-plugin-sort-imports":
       optional: true
@@ -15771,9 +15771,9 @@ __metadata:
       optional: true
     "@shopify/prettier-plugin-liquid":
       optional: true
-    "@shufo/prettier-plugin-blade":
-      optional: true
     "@trivago/prettier-plugin-sort-imports":
+      optional: true
+    "@zackad/prettier-plugin-twig-melody":
       optional: true
     prettier-plugin-astro:
       optional: true
@@ -15789,13 +15789,13 @@ __metadata:
       optional: true
     prettier-plugin-organize-imports:
       optional: true
+    prettier-plugin-sort-imports:
+      optional: true
     prettier-plugin-style-order:
       optional: true
     prettier-plugin-svelte:
       optional: true
-    prettier-plugin-twig-melody:
-      optional: true
-  checksum: 9bdf3b7c270cc544f6bc38bbb869d3a97afc93de5005eee7272a36f374488731349c9362d2bbe4c83bd2a14b8a7c96cd25b9b682d1bea6dccc5bf08b2d02096c
+  checksum: 550039fe046b34bf641e4bdff5c767c2607756bfdd35a67851a91f0a26ad8bc2c07964aeb30355b25771ea938d7e6a9246b8a87c109ae58be4def4142777e179
   languageName: node
   linkType: hard
 
