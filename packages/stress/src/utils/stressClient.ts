@@ -199,9 +199,10 @@ export class StressClient {
             return
         }
         let device: ExportedDevice | undefined
-        try {
-            const rawDevice = await fs.readFile(this.deviceFilePath, 'utf8')
+        const rawDevice = await fs.readFile(this.deviceFilePath, 'utf8').catch(() => undefined)
+        if (rawDevice) {
             device = JSON.parse(rawDevice) as ExportedDevice
+        }
         await this.streamsClient.initializeUser({
             spaceId: config.spaceId,
             encryptionDeviceInit: {
