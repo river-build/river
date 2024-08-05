@@ -194,7 +194,7 @@ export class StressClient {
         return channelId
     }
 
-    async startStreamsClient(config: Parameters<typeof this.streamsClient.initializeUser>[0]) {
+    async startStreamsClient(config: { spaceId?: string }) {
         if (isDefined(this.streamsClient.userStreamId)) {
             return
         }
