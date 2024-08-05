@@ -1,5 +1,5 @@
 import TypedEmitter from 'typed-emitter'
-import { ConfirmedTimelineEvent, isEncryptedData, RemoteTimelineEvent } from './types'
+import { ConfirmedTimelineEvent, RemoteTimelineEvent } from './types'
 import {
     ChannelOp,
     Err,
@@ -27,7 +27,8 @@ export type ParsedChannelProperties = {
 export class StreamStateView_Space extends StreamStateView_AbstractContent {
     readonly streamId: string
     readonly spaceChannelsMetadata = new Map<string, ParsedChannelProperties>()
-    private spaceImage: ChunkedMedia | EncryptedData | undefined
+    private spaceImage: ChunkedMedia | undefined
+    private encryptedSpaceImage: EncryptedData | undefined
 
     constructor(streamId: string) {
         super()
@@ -47,7 +48,7 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
         }
 
         if (content.spaceImage?.data) {
-            this.spaceImage = content.spaceImage.data
+            this.encryptedSpaceImage = content.spaceImage.data
         }
     }
 
@@ -102,7 +103,7 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
                 )
                 break
             case 'spaceImage':
-                this.spaceImage = payload.content.value
+                this.encryptedSpaceImage = payload.content.value
                 break
             case undefined:
                 break
@@ -112,10 +113,12 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
     }
 
     public async getSpaceImage(): Promise<ChunkedMedia | undefined> {
-        if (isEncryptedData(this.spaceImage)) {
-            const keyPhrase = contractAddressFromSpaceId(this.streamId)
-            const plaintext = await decryptDerivedAESGCM(keyPhrase, this.spaceImage)
+        if (this.encryptedSpaceImage) {
+            const spaceAddress = contractAddressFromSpaceId(this.streamId)
+            const context = spaceAddress.toLowerCase()
+            const plaintext = await decryptDerivedAESGCM(context, this.encryptedSpaceImage)
             this.spaceImage = ChunkedMedia.fromBinary(plaintext)
+            this.encryptedSpaceImage = undefined
         }
         return this.spaceImage
     }
