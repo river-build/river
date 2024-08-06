@@ -37,7 +37,11 @@ contract MockEntitlementGated is EntitlementGated {
     bytes32 transactionId = keccak256(
       abi.encodePacked(tx.origin, block.number)
     );
-    _requestEntitlementCheck(transactionId, IRuleEntitlement(address(this)), 0);
+    _requestEntitlementCheck(
+      transactionId,
+      IRuleEntitlement(address(this)),
+      roleId
+    );
     return transactionId;
   }
 }
