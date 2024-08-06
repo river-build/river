@@ -33,6 +33,9 @@ type (
 		streamCache events.StreamCache
 		// nodeRegistry is used to get the remote remoteNode endpoint from a thisNodeAddress address
 		nodeRegistry nodes.NodeRegistry
+		// SendTimeout is the timeout when sending a stream update to the client. If it takes longer the sync operation
+		// is cancelled.
+		sendTimeout time.Duration
 	}
 
 	// subCommand represents a request to add or remove a stream and ping sync operation
@@ -67,6 +70,9 @@ func NewStreamsSyncOperation(
 	// make the sync operation cancellable for CancelSync
 	ctx, cancel := context.WithCancel(ctx)
 
+	// TODO: make sendTimeout a config setting
+	sendTimeout := 30 * time.Second
+
 	return &StreamSyncOperation{
 		ctx:             ctx,
 		cancel:          cancel,
@@ -75,7 +81,61 @@ func NewStreamsSyncOperation(
 		commands:        make(chan *subCommand, 64),
 		streamCache:     streamCache,
 		nodeRegistry:    nodeRegistry,
+		sendTimeout:     sendTimeout,
 	}, nil
+}
+
+// sendMsgClientLoop sends msg to res and cancels the sync operation and returns in case of an error.
+func (syncOp *StreamSyncOperation) sendMsgClientLoop(
+	res *connect.ServerStream[SyncStreamsResponse],
+	sendQueue <-chan *syncStreamsResponseReply,
+) {
+	log := dlog.FromCtx(syncOp.ctx).With("syncId", syncOp.SyncID)
+
+	for msg := range sendQueue {
+		if err := res.Send(msg.msg); err != nil {
+			syncOp.cancel()
+			log.Debug("Unable to send msg to client", "err", err)
+			msg.err <- err
+			close(msg.err)
+			return
+		}
+		close(msg.err)
+	}
+}
+
+type syncStreamsResponseReply struct {
+	msg *SyncStreamsResponse
+	err chan error
+}
+
+// forwardMessageToClient writes msg to sendQueue which is picked up by sendMessagesToClient. sendMessagesToClient
+// writes the result to msg.err. If no results is read within the given timeout forwardMessageToClient returns an
+// Err_DEADLINE_EXCEEDED error. The caller is expected to cancel the sync operation.
+func (syncOp *StreamSyncOperation) forwardMessageToClient(
+	timeout time.Duration,
+	sendQueue chan<- *syncStreamsResponseReply,
+	msg *SyncStreamsResponse,
+) error {
+	streamMsg := &syncStreamsResponseReply{msg: msg, err: make(chan error, 1)}
+	sendTimeout := time.NewTimer(timeout)
+
+	select {
+	case sendQueue <- streamMsg:
+		select {
+		case err := <-streamMsg.err:
+			if !sendTimeout.Stop() {
+				<-sendTimeout.C
+			}
+			return err
+		case <-sendTimeout.C:
+			return RiverError(Err_DEADLINE_EXCEEDED, "timeout sending sync stream update to client")
+		}
+	case <-sendTimeout.C:
+		return RiverError(Err_DEADLINE_EXCEEDED, "timeout sending sync stream update to client")
+	case <-syncOp.ctx.Done():
+		return nil
+	}
 }
 
 // Run the stream sync until either sub.Cancel is called or until sub.ctx expired
@@ -84,8 +144,6 @@ func (syncOp *StreamSyncOperation) Run(
 	res *connect.ServerStream[SyncStreamsResponse],
 ) error {
 	defer syncOp.cancel()
-
-	log := dlog.FromCtx(syncOp.ctx).With("syncId", syncOp.SyncID)
 
 	cookies, err := client.ValidateAndGroupSyncCookies(req.Msg.GetSyncPos())
 	if err != nil {
@@ -102,11 +160,19 @@ func (syncOp *StreamSyncOperation) Run(
 
 	go syncers.Run()
 
+	var (
+		log            = dlog.FromCtx(syncOp.ctx).With("syncId", syncOp.SyncID)
+		clientSendChan = make(chan *syncStreamsResponseReply)
+	)
+	defer close(clientSendChan)
+
+	go syncOp.sendMsgClientLoop(res, clientSendChan)
+
 	for {
 		select {
 		case msg, ok := <-messages:
 			if !ok {
-				_ = res.Send(&SyncStreamsResponse{
+				_ = syncOp.forwardMessageToClient(syncOp.sendTimeout, clientSendChan, &SyncStreamsResponse{
 					SyncId: syncOp.SyncID,
 					SyncOp: SyncOp_SYNC_CLOSE,
 				})
@@ -114,7 +180,7 @@ func (syncOp *StreamSyncOperation) Run(
 			}
 
 			msg.SyncId = syncOp.SyncID
-			if err = res.Send(msg); err != nil {
+			if err = syncOp.forwardMessageToClient(syncOp.sendTimeout, clientSendChan, msg); err != nil {
 				log.Error("Unable to send sync stream update to client", "err", err)
 				return err
 			}
@@ -126,6 +192,7 @@ func (syncOp *StreamSyncOperation) Run(
 			if cmd.AddStreamReq != nil {
 				nodeAddress := common.BytesToAddress(cmd.AddStreamReq.Msg.GetSyncPos().GetNodeAddress())
 				streamID, err := shared.StreamIdFromBytes(cmd.AddStreamReq.Msg.GetSyncPos().GetStreamId())
+
 				if err != nil {
 					cmd.Reply(err)
 					continue
@@ -148,12 +215,11 @@ func (syncOp *StreamSyncOperation) Run(
 			} else if cmd.DebugDropStream != (shared.StreamId{}) {
 				cmd.Reply(syncers.DebugDropStream(cmd.Ctx, cmd.DebugDropStream))
 			} else if cmd.CancelReq != nil {
-				syncOp.cancel()
-
-				_ = res.Send(&SyncStreamsResponse{
+				_ = syncOp.forwardMessageToClient(syncOp.sendTimeout, clientSendChan, &SyncStreamsResponse{
 					SyncId: syncOp.SyncID,
 					SyncOp: SyncOp_SYNC_CLOSE,
 				})
+				syncOp.cancel()
 
 				cmd.Reply(nil)
 				return nil
