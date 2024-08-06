@@ -159,11 +159,9 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
             })
 
             await this.decryptionQueue
-
-            // Always return the last known good state of spaceImage, even if it wasn't updated
-            return this.spaceImage
         }
 
+        // Always return the last known good state of spaceImage, even if it wasn't updated
         return this.spaceImage
     }
 
