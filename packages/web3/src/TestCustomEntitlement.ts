@@ -1,7 +1,7 @@
 import { createTestClient, http, publicActions, walletActions } from 'viem'
 import { foundry } from 'viem/chains'
 
-import { MockCustomEntitlement } from 'MockCustomEntitlement'
+import { MockCustomEntitlement } from './MockCustomEntitlement'
 
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 

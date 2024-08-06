@@ -1,14 +1,13 @@
-import type { Abi } from 'abitype'
-import { Address } from './ContractTypes'
-import { keccak256 } from 'viem/utils'
+import { keccak256, parseEther } from 'viem/utils'
 import { foundry } from 'viem/chains'
-import { parseEther } from 'viem/utils'
-
+import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import { createTestClient, http, publicActions, walletActions } from 'viem'
 
-import { dlogger } from '@river-build/dlog'
+import type { Abi } from 'abitype'
 
-import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
+import { Address } from './ContractTypes'
+
+import { dlogger } from '@river-build/dlog'
 
 const logger = dlogger('csb:TestGatingUtils')
 
@@ -102,6 +101,7 @@ export async function deployContract(
             const hash = await client.deployContract({
                 abi,
                 account: throwawayAccount,
+                args: ['TestERC20', 'TST'],
                 bytecode,
             })
 

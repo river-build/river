@@ -1,16 +1,11 @@
 import { createTestClient, http, publicActions, walletActions } from 'viem'
 import { foundry } from 'viem/chains'
-
-import { MockERC20 } from './MockERC20'
-
+import { parseEther } from 'viem/utils'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 
-import { deployContract } from './TestGatingUtils'
-
-import { Mutex } from './TestGatingUtils'
-
+import { MockERC20 } from './MockERC20'
+import { deployContract, Mutex } from './TestGatingUtils'
 import { Address } from './ContractTypes'
-
 import { dlogger } from '@river-build/dlog'
 
 const logger = dlogger('csb:TestGatingERC20')
@@ -51,24 +46,73 @@ async function publicMint(
     })
         .extend(publicActions)
         .extend(walletActions)
+    
+    await client.setBalance({
+        address: throwawayAccount.address,
+        value: parseEther('1'),
+    })
 
     const contractAddress = await getContractAddress(tokenName)
 
     logger.log(`Minting ${amount} tokens to address ${toAddress}`)
-    const txnReceipt = await client.writeContract({
+    const { request, result } = await client.simulateContract({
         address: contractAddress,
         abi: MockERC20.abi,
         functionName: 'mint',
-        args: [toAddress, amount],
+        args: [toAddress, BigInt(amount)],
         account: throwawayAccount,
     })
-
-    const receipt = await client.waitForTransactionReceipt({ hash: txnReceipt })
+    const hash = await client.writeContract(request)
+    const receipt = await client.waitForTransactionReceipt({ hash })
     expect(receipt.status).toBe('success')
-    logger.log(`Minted ${amount} tokens to address ${toAddress}`, txnReceipt)
+    logger.log(`Minted ${amount} tokens to address ${toAddress}`, hash)
 }
+
+async function totalSupply(contractName: string): Promise<number> {
+    const contractAddress = await getContractAddress(contractName)
+    const client = createTestClient({
+        chain: foundry,
+        mode: 'anvil',
+        transport: http(),
+    })
+        .extend(publicActions)
+        .extend(walletActions)
+    
+    const totalSupply = await client.readContract({
+        address: contractAddress,
+        abi: MockERC20.abi,
+        functionName: 'totalSupply',
+        args: [],
+    })
+
+    return Number(totalSupply)
+}
+
+async function balanceOf(contractName: string, address: Address): Promise<number> {
+    const contractAddress = await getContractAddress(contractName)
+    const client = createTestClient({
+        chain: foundry,
+        mode: 'anvil',
+        transport: http(),
+    })
+        .extend(publicActions)
+        .extend(walletActions)
+    
+    const balance = await client.readContract({
+        address: contractAddress,
+        abi: MockERC20.abi,
+        functionName: 'balanceOf',
+        args: [address],
+    })
+
+    return Number(balance)
+}
+
+
 
 export const TestERC20 = {
     getContractAddress,
+    balanceOf,
+    totalSupply,
     publicMint,
 }

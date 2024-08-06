@@ -841,7 +841,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('erc20 gate join pass', async () => {
+    test.only('erc20 gate join pass', async () => {
         const erc20Address = await TestERC20.getContractAddress('TestERC20')
         const op: Operation = {
             opType: OperationType.CHECK,
@@ -856,7 +856,15 @@ describe('channelsWithEntitlements', () => {
             await setupChannelWithCustomRole([], ruleData)
 
         log("Mint Alice's ERC20 tokens")
+        const totalSupplyBeforeMint = await TestERC20.totalSupply('TestERC20')
+        expect(totalSupplyBeforeMint).toBe(0)
+        console.log('Total supply before mint', totalSupplyBeforeMint)
         await TestERC20.publicMint('TestERC20', alicesWallet.address as Address, 100)
+        const totalSupplyAfterMint = await TestERC20.totalSupply('TestERC20')
+        console.log('Total supply after mint', totalSupplyAfterMint)
+
+        const balance = await TestERC20.balanceOf('TestERC20', alicesWallet.address as Address)
+        expect(balance).toBe(100)
 
         log('expect that alice can join the channel')
         await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
