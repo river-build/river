@@ -158,16 +158,16 @@ export async function startStressChat(opts: {
         }
     })
 
+    logger.log('sumarizeChat')
+    const summary = await sumarizeChat(clients, chatConfig, errors)
+
+    logger.log('done', { summary })
+
     for (let i = 0; i < clients.length; i += 1) {
         const client = clients[i]
         logger.log(`stopping ${client.logId}`)
         await client.stop()
     }
-
-    logger.log('sumarizeChat')
-    const summary = await sumarizeChat(clients, chatConfig, errors)
-
-    logger.log('done', { summary })
 
     return { summary, chatConfig, opts }
 }
