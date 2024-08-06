@@ -30,9 +30,14 @@ import {
     Operation,
     OperationType,
     Permission,
+<<<<<<< HEAD
     TestCustomEntitlement,
     TestERC20,
     TestERC721,
+=======
+    TestNFT,
+    TestERC20,
+>>>>>>> 1edfaef3 (Fix error with refactoring contract deploys to only deploy once per contract. e2e tests for single wallet for erc20.)
     treeToRuleData,
     IRuleEntitlementBase,
     ISpaceDapp,

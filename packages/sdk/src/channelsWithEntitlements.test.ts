@@ -10,7 +10,7 @@ import {
     createRole,
     createChannel,
     setupWalletsAndContexts,
-    createSpaceAndDefaultChannel, 
+    createSpaceAndDefaultChannel,
     expectUserCanJoin,
     everyoneMembershipStruct,
     linkWallets,
@@ -38,6 +38,7 @@ import {
 } from '@river-build/web3'
 import { Client } from './client'
 import { make_MemberPayload_KeySolicitation } from './types'
+import { ethers } from 'ethers'
 
 const log = dlog('csb:test:channelsWithEntitlements')
 
