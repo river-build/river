@@ -92,7 +92,7 @@ contract EntitlementDataQueryableTest is
     assertEq(channelEntitlements[0].entitlementData, abi.encode(users));
   }
 
-  function test_fuzz_getCrossChainEntitlementData(address alice) external {
+  function test_fuzz_getCrossChainEntitlementData(address alice) public {
     // user must be EOA or implement `onERC721Received`
     vm.assume(alice != address(0) && alice.code.length == 0);
     vm.recordLogs();
@@ -111,6 +111,15 @@ contract EntitlementDataQueryableTest is
 
     assertTrue(data.entitlementData.length > 0);
     assertEq(data.entitlementType, "RuleEntitlementV2");
+  }
+
+  // TODO: debug this test
+  // `forge test --mt test_getCrossChainEntitlementData_fail -vvv`
+  function test_getCrossChainEntitlementData_fail() external {
+    vm.expectRevert(); // comment this line to debug the test
+    this.test_fuzz_getCrossChainEntitlementData(
+      0xea475d60c118d7058beF4bDd9c32bA51139a74e0
+    );
   }
 
   function _getRequestedEntitlementData(
