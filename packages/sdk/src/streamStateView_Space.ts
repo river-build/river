@@ -224,14 +224,11 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
                 break
             case ChannelOp.CO_UPDATED: {
                 const channel = this.spaceChannelsMetadata.get(channelId)
-                if (!channel) {
-                    throwWithCode(`Channel not found: ${channelId}`, Err.STREAM_BAD_EVENT)
-                }
                 this.spaceChannelsMetadata.set(channelId, {
                     isDefault: isDefaultChannelId(channelId),
                     updatedAtEventNum,
-                    isAutojoin: channel.isAutojoin,
-                    hideUserJoinLeaveEvents: channel.hideUserJoinLeaveEvents,
+                    isAutojoin: channel?.isAutojoin || isDefaultChannelId(channelId),
+                    hideUserJoinLeaveEvents: channel?.hideUserJoinLeaveEvents ?? false,
                 })
                 stateEmitter?.emit(
                     'spaceChannelUpdated',
