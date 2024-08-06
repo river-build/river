@@ -10,7 +10,7 @@ import {
     createRole,
     createChannel,
     setupWalletsAndContexts,
-    createSpaceAndDefaultChannel,
+    createSpaceAndDefaultChannel, 
     expectUserCanJoin,
     everyoneMembershipStruct,
     linkWallets,
@@ -26,7 +26,11 @@ import {
     NoopRuleData,
     IRuleEntitlementBase,
     Permission,
+<<<<<<< HEAD
     TestERC721,
+=======
+    TestNFT,
+>>>>>>> 7d6a7eb2 (Bindings + ERC20 test.)
     TestERC20,
     TestCustomEntitlement,
     LogicalOperationType,

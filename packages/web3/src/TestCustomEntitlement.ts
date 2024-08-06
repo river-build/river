@@ -16,14 +16,12 @@ const mockCustomContractsMutex = new Mutex()
 async function getContractAddress(tokenName: string): Promise<Address> {
     try {
         await mockCustomContractsMutex.lock()
-        if (!mockCustomContracts.has(tokenName)) {
-            const contractAddress = await deployContract(
-                tokenName,
-                MockCustomEntitlement.abi,
-                MockCustomEntitlement.bytecode,
-            )
-            mockCustomContracts.set(tokenName, contractAddress)
-        }
+        const contractAddress = await deployContract(
+            tokenName,
+            MockCustomEntitlement.abi,
+            MockCustomEntitlement.bytecode,
+        )
+        mockCustomContracts.set(tokenName, contractAddress)
     } catch (e) {
         logger.error('Failed to deploy contract', e)
         throw new Error(
