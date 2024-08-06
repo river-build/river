@@ -223,9 +223,12 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
                 }
                 break
             case ChannelOp.CO_UPDATED: {
+                // first take settings from payload, then from local channel, then defaults
+                const channel = this.spaceChannelsMetadata.get(channelId)
                 const isDefault = isDefaultChannelId(channelId)
-                const isAutojoin = payload.settings?.autojoin ?? isDefault
-                const hideUserJoinLeaveEvents = payload.settings?.hideUserJoinLeaveEvents ?? false
+                const isAutojoin = payload.settings?.autojoin ?? channel?.isAutojoin ?? isDefault
+                const hideUserJoinLeaveEvents =
+                    payload.settings?.hideUserJoinLeaveEvents ?? channel?.isAutojoin ?? false
                 this.spaceChannelsMetadata.set(channelId, {
                     isDefault,
                     updatedAtEventNum,
