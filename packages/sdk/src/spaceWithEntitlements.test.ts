@@ -29,6 +29,7 @@ import {
     OperationType,
     Permission,
     TestNFT,
+    TestERC20,
     treeToRuleData,
     IRuleEntitlementBase,
     ISpaceDapp,
@@ -763,4 +764,83 @@ describe('spaceWithEntitlements', () => {
         await alice.stopSync()
         log('Done', Date.now() - doneStart)
     })
+
+    test('erc20GateJoinPass', async () => {
+        const tokenName = 'TestERC20'
+        const erc20Address = await TestERC20.getContractAddress(tokenName)
+        const op: Operation = {
+            opType: OperationType.CHECK,
+            checkType: CheckOperationType.ERC20,
+            chainId: 31337n,
+            contractAddress: erc20Address,
+            threshold: 50n, // 50 tokens required
+        }
+        const ruleData = treeToRuleData(op)
+
+        const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId, channelId } =
+            await createTownWithRequirements({
+                everyone: false,
+                users: [],
+                ruleData,
+            })
+
+        // join alice
+        log('Minting 100 ERC20 tokens for alice')
+        await TestERC20.publicMint(tokenName, alicesWallet.address as Address, 100)
+
+        await expectUserCanJoin(
+            spaceId,
+            channelId,
+            'alice',
+            alice,
+            aliceSpaceDapp,
+            alicesWallet.address,
+            aliceProvider.wallet,
+        )
+
+        const doneStart = Date.now()
+        // kill the clients
+        await bob.stopSync()
+        await alice.stopSync()
+        log('Done', Date.now() - doneStart)
+    })
+
+    test('erc20GateJoinFail', async () => {
+        const tokenName = 'TestERC20'
+        const erc20Address = await TestERC20.getContractAddress(tokenName)
+        const op: Operation = {
+            opType: OperationType.CHECK,
+            checkType: CheckOperationType.ERC20,
+            chainId: 31337n,
+            contractAddress: erc20Address,
+            threshold: 50n, // 50 tokens required
+        }
+        const ruleData = treeToRuleData(op)
+
+        const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId, channelId } =
+            await createTownWithRequirements({
+                everyone: false,
+                users: [],
+                ruleData,
+            })
+
+        // Have alice create her own space so she can initialize her user stream.
+        // Then she will attempt to join the space from the client, which should fail.
+        await createUserStreamAndSyncClient(
+            alice,
+            aliceSpaceDapp,
+            'alice',
+            await everyoneMembershipStruct(aliceSpaceDapp, alice),
+            aliceProvider.wallet,
+        )
+
+        await expectUserCannotJoinSpace(spaceId, alice, aliceSpaceDapp, alicesWallet.address)
+
+        const doneStart = Date.now()
+        // kill the clients
+        await bob.stopSync()
+        await alice.stopSync()
+        log('Done', Date.now() - doneStart)
+    })
+
 })

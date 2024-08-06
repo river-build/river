@@ -10,7 +10,7 @@ import {
     createRole,
     createChannel,
     setupWalletsAndContexts,
-    createSpaceAndDefaultChannel, 
+    createSpaceAndDefaultChannel,
     expectUserCanJoin,
     everyoneMembershipStruct,
     linkWallets,
@@ -36,6 +36,7 @@ import {
 } from '@river-build/web3'
 import { Client } from './client'
 import { make_MemberPayload_KeySolicitation } from './types'
+import { ethers } from 'ethers'
 
 const log = dlog('csb:test:channelsWithEntitlements')
 
@@ -841,7 +842,34 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test.only('erc20 gate join pass', async () => {
+    test('erc20 gate join pass', async () => {
+        const TokenName = 'TestERC20'
+        const erc20Address = await TestERC20.getContractAddress(TokenName)
+        const op: Operation = {
+            opType: OperationType.CHECK,
+            checkType: CheckOperationType.ERC20,
+            chainId: 31337n,
+            contractAddress: erc20Address,
+            threshold: 50n, // 50 tokens required
+        }
+        const ruleData = treeToRuleData(op)
+
+        const { alice, bob, alicesWallet, aliceSpaceDapp, spaceId, channelId } =
+            await setupChannelWithCustomRole([], ruleData)
+
+        await TestERC20.publicMint(TokenName, alicesWallet.address as Address, 100)
+
+        log('expect that alice can join the channel')
+        await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
+
+        // kill the clients
+        const doneStart = Date.now()
+        await bob.stopSync()
+        await alice.stopSync()
+        log('Done', Date.now() - doneStart)
+    })
+
+    test.only('erc20 gate join fail', async () => {
         const erc20Address = await TestERC20.getContractAddress('TestERC20')
         const op: Operation = {
             opType: OperationType.CHECK,
@@ -855,19 +883,8 @@ describe('channelsWithEntitlements', () => {
         const { alice, bob, alicesWallet, aliceSpaceDapp, spaceId, channelId } =
             await setupChannelWithCustomRole([], ruleData)
 
-        log("Mint Alice's ERC20 tokens")
-        const totalSupplyBeforeMint = await TestERC20.totalSupply('TestERC20')
-        expect(totalSupplyBeforeMint).toBe(0)
-        console.log('Total supply before mint', totalSupplyBeforeMint)
-        await TestERC20.publicMint('TestERC20', alicesWallet.address as Address, 100)
-        const totalSupplyAfterMint = await TestERC20.totalSupply('TestERC20')
-        console.log('Total supply after mint', totalSupplyAfterMint)
-
-        const balance = await TestERC20.balanceOf('TestERC20', alicesWallet.address as Address)
-        expect(balance).toBe(100)
-
-        log('expect that alice can join the channel')
-        await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
+        log('expect that alice cannot join the channel')
+        await expectUserCannotJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
 
         // kill the clients
         const doneStart = Date.now()

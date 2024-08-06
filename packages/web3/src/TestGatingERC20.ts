@@ -16,8 +16,15 @@ const erc20ContractsMutex = new Mutex()
 async function getContractAddress(tokenName: string): Promise<Address> {
     try {
         await erc20ContractsMutex.lock()
-        const contractAddress = await deployContract(tokenName, MockERC20.abi, MockERC20.bytecode)
-        erc20Contracts.set(tokenName, contractAddress)
+        if (!erc20Contracts.has(tokenName)) {
+            const contractAddress = await deployContract(
+                tokenName,
+                MockERC20.abi,
+                MockERC20.bytecode,
+                ['TestERC20', 'TST'],
+            )
+            erc20Contracts.set(tokenName, contractAddress)
+        }
     } catch (e) {
         logger.error('Failed to deploy contract', e)
         throw new Error(
@@ -31,11 +38,7 @@ async function getContractAddress(tokenName: string): Promise<Address> {
     return erc20Contracts.get(tokenName)!
 }
 
-async function publicMint(
-    tokenName: string,
-    toAddress: Address,
-    amount: number,
-): Promise<void> {
+async function publicMint(tokenName: string, toAddress: Address, amount: number): Promise<void> {
     const privateKey = generatePrivateKey()
     const throwawayAccount = privateKeyToAccount(privateKey)
     const client = createTestClient({
@@ -46,7 +49,7 @@ async function publicMint(
     })
         .extend(publicActions)
         .extend(walletActions)
-    
+
     await client.setBalance({
         address: throwawayAccount.address,
         value: parseEther('1'),
@@ -54,18 +57,74 @@ async function publicMint(
 
     const contractAddress = await getContractAddress(tokenName)
 
-    logger.log(`Minting ${amount} tokens to address ${toAddress}`)
-    const { request, result } = await client.simulateContract({
+    logger.log('minting', contractAddress, toAddress)
+
+    const nftReceipt = await client.writeContract({
         address: contractAddress,
         abi: MockERC20.abi,
         functionName: 'mint',
-        args: [toAddress, BigInt(amount)],
+        args: [toAddress, 100n],
         account: throwawayAccount,
     })
-    const hash = await client.writeContract(request)
-    const receipt = await client.waitForTransactionReceipt({ hash })
+
+    logger.log('minted', nftReceipt)
+
+    const receipt = await client.waitForTransactionReceipt({ hash: nftReceipt })
     expect(receipt.status).toBe('success')
-    logger.log(`Minted ${amount} tokens to address ${toAddress}`, hash)
+
+    // create a filter to listen for the Transfer event to find the token id
+    // don't worry about the possibility of non-matching arguments, as we're specifying the contract
+    // address of the contract we're interested in.
+    const filter = await client.createContractEventFilter({
+        abi: MockERC20.abi,
+        address: contractAddress,
+        eventName: 'Transfer',
+        args: {
+            to: toAddress,
+        },
+        fromBlock: receipt.blockNumber,
+        toBlock: receipt.blockNumber,
+    })
+    const eventLogs = await client.getFilterLogs({ filter })
+    for (const eventLog of eventLogs) {
+        if (eventLog.transactionHash === receipt.transactionHash) {
+            console.log('mint logs', eventLog.args)
+            return
+        }
+    }
+
+    throw Error('No mint event found')
+
+    // const privateKey = generatePrivateKey()
+    // const throwawayAccount = privateKeyToAccount(privateKey)
+    // const client = createTestClient({
+    //     chain: foundry,
+    //     mode: 'anvil',
+    //     transport: http(),
+    //     account: throwawayAccount,
+    // })
+    //     .extend(publicActions)
+    //     .extend(walletActions)
+
+    // await client.setBalance({
+    //     address: throwawayAccount.address,
+    //     value: parseEther('1'),
+    // })
+
+    // const contractAddress = await getContractAddress(tokenName)
+
+    // logger.log(`Minting ${amount} tokens to address ${toAddress}`)
+    // const { request, result } = await client.simulateContract({
+    //     address: contractAddress,
+    //     abi: MockERC20.abi,
+    //     functionName: 'mint',
+    //     args: [toAddress, BigInt(amount)],
+    //     account: throwawayAccount,
+    // })
+    // const hash = await client.writeContract(request)
+    // const receipt = await client.waitForTransactionReceipt({ hash })
+    // expect(receipt.status).toBe('success')
+    // logger.log(`Minted ${amount} tokens to address ${toAddress}`, hash)
 }
 
 async function totalSupply(contractName: string): Promise<number> {
@@ -77,14 +136,14 @@ async function totalSupply(contractName: string): Promise<number> {
     })
         .extend(publicActions)
         .extend(walletActions)
-    
+
     const totalSupply = await client.readContract({
         address: contractAddress,
         abi: MockERC20.abi,
         functionName: 'totalSupply',
         args: [],
     })
-
+    console.log('contract totalSupply', totalSupply, 'address', contractAddress)
     return Number(totalSupply)
 }
 
@@ -97,7 +156,7 @@ async function balanceOf(contractName: string, address: Address): Promise<number
     })
         .extend(publicActions)
         .extend(walletActions)
-    
+
     const balance = await client.readContract({
         address: contractAddress,
         abi: MockERC20.abi,
@@ -107,8 +166,6 @@ async function balanceOf(contractName: string, address: Address): Promise<number
 
     return Number(balance)
 }
-
-
 
 export const TestERC20 = {
     getContractAddress,

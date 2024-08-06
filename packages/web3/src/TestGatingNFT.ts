@@ -32,12 +32,14 @@ const nftContractsMutex = new Mutex()
 async function getContractAddress(nftName: string): Promise<Address> {
     try {
         await nftContractsMutex.lock()
-        const contractAddress = await deployContract(
-            nftName,
-            MockERC721a.abi,
-            MockERC721a.bytecode.object,
-        )
-        nftContracts.set(nftName, contractAddress)
+        if (!nftContracts.has(nftName)) {
+            const contractAddress = await deployContract(
+                nftName,
+                MockERC721a.abi,
+                MockERC721a.bytecode.object,
+            )
+            nftContracts.set(nftName, contractAddress)
+        }
     } catch (e) {
         logger.error('Failed to deploy contract', e)
         throw new Error(

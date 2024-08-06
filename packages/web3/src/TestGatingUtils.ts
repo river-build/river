@@ -77,6 +77,7 @@ export async function deployContract(
     contractName: string,
     abi: Abi,
     bytecode: Address, // bytecode is a hex string
+    constructorArgs: any[] = [],
 ): Promise<Address> {
     let retryCount = 0
     let lastError: unknown
@@ -101,7 +102,7 @@ export async function deployContract(
             const hash = await client.deployContract({
                 abi,
                 account: throwawayAccount,
-                args: ['TestERC20', 'TST'],
+                args: constructorArgs,
                 bytecode,
             })
 
