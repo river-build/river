@@ -49,11 +49,8 @@ contract EntitlementDataQueryableTest is
     EntitlementData[] memory entitlement = entitlements
       .getEntitlementDataByPermission(Permissions.JoinSpace);
 
-    assertEq(entitlement.length == 1, true);
-    assertEq(
-      keccak256(abi.encodePacked(entitlement[0].entitlementType)),
-      keccak256(abi.encodePacked("UserEntitlement"))
-    );
+    assertEq(entitlement.length, 1);
+    assertEq(entitlement[0].entitlementType, "UserEntitlement");
   }
 
   function test_getChannelEntitlementDataByPermission() external {
@@ -86,15 +83,9 @@ contract EntitlementDataQueryableTest is
     EntitlementData[] memory channelEntitlements = entitlements
       .getChannelEntitlementDataByPermission(channelId, Permissions.Read);
 
-    assertEq(channelEntitlements.length == 1, true);
-    assertEq(
-      keccak256(abi.encodePacked(channelEntitlements[0].entitlementType)),
-      keccak256(abi.encodePacked("MockUserEntitlement"))
-    );
-    assertEq(
-      keccak256(abi.encodePacked(channelEntitlements[0].entitlementData)),
-      keccak256(abi.encode(users))
-    );
+    assertEq(channelEntitlements.length, 1);
+    assertEq(channelEntitlements[0].entitlementType, "MockUserEntitlement");
+    assertEq(channelEntitlements[0].entitlementData, abi.encode(users));
   }
 
   function test_getCrossChainEntitlementData() external {
@@ -115,10 +106,7 @@ contract EntitlementDataQueryableTest is
       .getCrossChainEntitlementData(transactionId, roleId);
 
     assertTrue(data.entitlementData.length > 0);
-    assertEq(
-      keccak256(abi.encodePacked(data.entitlementType)),
-      keccak256(abi.encodePacked("RuleEntitlementV2"))
-    );
+    assertEq(data.entitlementType, "RuleEntitlementV2");
   }
 
   function _getRequestedEntitlementData(
