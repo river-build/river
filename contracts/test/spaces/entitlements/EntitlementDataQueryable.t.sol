@@ -53,12 +53,16 @@ contract EntitlementDataQueryableTest is
     assertEq(entitlement[0].entitlementType, "UserEntitlement");
   }
 
-  function test_getChannelEntitlementDataByPermission() external {
+  function test_fuzz_getChannelEntitlementDataByPermission(
+    address[] memory users
+  ) external {
+    vm.assume(users.length > 0);
+    for (uint256 i; i < users.length; ++i) {
+      if (users[i] == address(0)) users[i] = vm.randomAddress();
+    }
+
     string[] memory permissions = new string[](1);
     permissions[0] = Permissions.Read;
-
-    address[] memory users = new address[](1);
-    users[0] = _randomAddress();
 
     CreateEntitlement[] memory createEntitlements = new CreateEntitlement[](1);
     createEntitlements[0] = CreateEntitlement({
@@ -88,9 +92,9 @@ contract EntitlementDataQueryableTest is
     assertEq(channelEntitlements[0].entitlementData, abi.encode(users));
   }
 
-  function test_getCrossChainEntitlementData() external {
-    address alice = _randomAddress();
-
+  function test_fuzz_getCrossChainEntitlementData(address alice) external {
+    // user must be EOA or implement `onERC721Received`
+    vm.assume(alice != address(0) && alice.code.length == 0);
     vm.recordLogs();
 
     vm.prank(alice);
@@ -121,7 +125,7 @@ contract EntitlementDataQueryableTest is
       address[] memory selectedNodes
     )
   {
-    for (uint i = 0; i < requestLogs.length; i++) {
+    for (uint256 i; i < requestLogs.length; ++i) {
       if (
         requestLogs[i].topics.length > 0 &&
         requestLogs[i].topics[0] == CHECK_REQUESTED
@@ -130,7 +134,9 @@ contract EntitlementDataQueryableTest is
           requestLogs[i].data,
           (address, address, bytes32, uint256, address[])
         );
+        return (contractAddress, transactionId, roleId, selectedNodes);
       }
     }
+    revert("Entitlement check request not found");
   }
 }
