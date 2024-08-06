@@ -88,7 +88,9 @@ export class StressClient {
         public rpcClient: StreamRpcClient,
         public spaceDapp: SpaceDapp,
         public streamsClient: StreamsClient,
-    ) {}
+    ) {
+        logger.log('StressClient', { clientIndex, userId, logId: this.logId })
+    }
 
     get logId(): string {
         return `client${this.clientIndex}:${shortenHexString(this.userId)}`
