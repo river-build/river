@@ -36,11 +36,14 @@ contract Integration_CreateSpace is
     spaceArchitect = Architect(spaceFactory);
   }
 
-  function test_createEveryoneSpace(string memory spaceId) external {
+  function test_fuzz_createEveryoneSpace(
+    string memory spaceId,
+    address founder,
+    address user
+  ) external {
     vm.assume(bytes(spaceId).length > 2 && bytes(spaceId).length < 100);
-
-    address founder = _randomAddress();
-    address user = _randomAddress();
+    // founder must be EOA or implement `onERC721Received`
+    vm.assume(founder != address(0) && founder.code.length == 0);
 
     SpaceInfo memory spaceInfo = _createEveryoneSpaceInfo(spaceId);
     spaceInfo.membership.settings.pricingModule = pricingModule;
@@ -57,11 +60,15 @@ contract Integration_CreateSpace is
     );
   }
 
-  function test_createUserGatedSpace(string memory spaceId) external {
+  function test_fuzz_createUserGatedSpace(
+    string memory spaceId,
+    address founder,
+    address user
+  ) external {
     vm.assume(bytes(spaceId).length > 2 && bytes(spaceId).length < 100);
-
-    address founder = _randomAddress();
-    address user = _randomAddress();
+    // founder/user must be EOA or implement `onERC721Received`
+    vm.assume(founder != address(0) && founder.code.length == 0);
+    vm.assume(user != address(0) && user.code.length == 0);
 
     address[] memory users = new address[](1);
     users[0] = user;
@@ -91,11 +98,16 @@ contract Integration_CreateSpace is
     );
   }
 
-  function test_createTokenGatedSpace(string memory spaceId) external {
+  function test_fuzz_createTokenGatedSpace(
+    string memory spaceId,
+    address founder,
+    address user
+  ) external {
     vm.assume(bytes(spaceId).length > 2 && bytes(spaceId).length < 100);
+    // founder/user must be EOA or implement `onERC721Received`
+    vm.assume(founder != address(0) && founder.code.length == 0);
+    vm.assume(user != address(0) && user.code.length == 0);
 
-    address founder = _randomAddress();
-    address user = _randomAddress();
     address mock = address(new MockERC721());
 
     // We first define how many operations we want to have
@@ -143,13 +155,16 @@ contract Integration_CreateSpace is
   //                           Channels
   // =============================================================
 
-  function test_createEveryoneSpace_with_separate_channels(
-    string memory spaceId
+  function test_fuzz_createEveryoneSpace_with_separate_channels(
+    string memory spaceId,
+    address founder,
+    address member
   ) external {
     vm.assume(bytes(spaceId).length > 2 && bytes(spaceId).length < 100);
-
-    address founder = _randomAddress();
-    address member = _randomAddress();
+    // founder/member must be EOA or implement `onERC721Received`
+    vm.assume(founder != address(0) && founder.code.length == 0);
+    vm.assume(member != address(0) && member.code.length == 0);
+    vm.assume(founder != member);
 
     // create space with default channel
     SpaceInfo memory spaceInfo = _createEveryoneSpaceInfo(spaceId);
@@ -218,7 +233,8 @@ contract Integration_CreateSpace is
       IEntitlementsManager(newSpace).isEntitledToSpace({
         user: member,
         permission: Permissions.Write
-      })
+      }),
+      "Member should be able to access the space"
     );
 
     // however they cannot access the channel
@@ -227,7 +243,8 @@ contract Integration_CreateSpace is
         channelId: "test2",
         user: member,
         permission: Permissions.Write
-      })
+      }),
+      "Member should not be able to access the channel"
     );
 
     // add role to channel to allow access
@@ -237,6 +254,9 @@ contract Integration_CreateSpace is
     bool isEntitledToChannelAfter = IEntitlementsManager(newSpace)
       .isEntitledToChannel("test2", member, Permissions.Write);
     // members can access the channel now
-    assertTrue(isEntitledToChannelAfter);
+    assertTrue(
+      isEntitledToChannelAfter,
+      "Member should be able to access the channel"
+    );
   }
 }
