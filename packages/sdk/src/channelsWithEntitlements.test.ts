@@ -26,11 +26,7 @@ import {
     NoopRuleData,
     IRuleEntitlementBase,
     Permission,
-<<<<<<< HEAD
     TestERC721,
-=======
-    TestNFT,
->>>>>>> 7d6a7eb2 (Bindings + ERC20 test.)
     TestERC20,
     TestCustomEntitlement,
     LogicalOperationType,
@@ -858,6 +854,11 @@ describe('channelsWithEntitlements', () => {
             await setupChannelWithCustomRole([], ruleData)
 
         await TestERC20.publicMint('TestERC20', alicesWallet.address as Address, 100)
+        const totalSupplyAfterMint = await TestERC20.totalSupply('TestERC20')
+        console.log('Total supply after mint', totalSupplyAfterMint)
+
+        const balance = await TestERC20.balanceOf('TestERC20', alicesWallet.address as Address)
+        expect(balance).toBe(100)
 
         log('expect that alice can join the channel')
         await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)

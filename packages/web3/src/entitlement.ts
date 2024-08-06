@@ -442,6 +442,8 @@ async function evaluateCheckOperation(
         return zeroAddress
     }
 
+    console.log('evaluateCheckOperation', operation)
+
     switch (operation.checkType) {
         case CheckOperationType.MOCK: {
             return evaluateMockOperation(operation, controller)

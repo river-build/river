@@ -48,6 +48,11 @@ async function publicMint(tokenName: string, toAddress: Address, amount: number)
     })
         .extend(publicActions)
         .extend(walletActions)
+    
+    await client.setBalance({
+        address: throwawayAccount.address,
+        value: parseEther('1'),
+    })
 
     await client.setBalance({
         address: throwawayAccount.address,
@@ -62,7 +67,7 @@ async function publicMint(tokenName: string, toAddress: Address, amount: number)
         address: contractAddress,
         abi: MockERC20.abi,
         functionName: 'mint',
-        args: [toAddress, amount],
+        args: [toAddress, BigInt(amount)],
         account: throwawayAccount,
     })
 
