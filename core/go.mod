@@ -3,8 +3,8 @@ module github.com/river-build/river/core
 go 1.22.6
 
 require (
-	connectrpc.com/connect v1.14.0
-	connectrpc.com/otelconnect v0.7.0
+	connectrpc.com/connect v1.16.2
+	connectrpc.com/otelconnect v0.7.1
 	github.com/deckarep/golang-set/v2 v2.6.0
 	github.com/ethereum/go-ethereum v1.14.5
 	github.com/exaring/otelpgx v0.6.2
