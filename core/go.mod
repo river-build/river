@@ -1,6 +1,6 @@
 module github.com/river-build/river/core
 
-go 1.22.6
+go 1.22.5
 
 require (
 	connectrpc.com/connect v1.16.2
