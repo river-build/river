@@ -3,42 +3,19 @@ import { foundry } from 'viem/chains'
 
 import MockERC721a from './MockERC721A'
 
-import { keccak256, parseEther } from 'viem/utils'
+import { parseEther } from 'viem/utils'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
+
+import { isHexString, deployContract } from './TestGatingUtils'
 
 import { Address } from './ContractTypes'
 
 import { dlogger } from '@river-build/dlog'
 
+import { Mutex } from './TestGatingUtils'
+
 const logger = dlogger('csb:TestGatingNFT')
 
-export function toEIP55Address(address: Address): Address {
-    const addressHash = keccak256(address.substring(2).toLowerCase() as Address)
-    let checksumAddress = '0x'
-
-    for (let i = 2; i < address.length; i++) {
-        if (parseInt(addressHash[i], 16) >= 8) {
-            checksumAddress += address[i].toUpperCase()
-        } else {
-            checksumAddress += address[i].toLowerCase()
-        }
-    }
-
-    return checksumAddress as Address
-}
-
-export function isEIP55Address(address: Address): boolean {
-    return address === toEIP55Address(address)
-}
-/*
- */
-export function isHexString(value: unknown): value is Address {
-    // Check if the value is undefined first
-    if (value === undefined) {
-        return false
-    }
-    return typeof value === 'string' && /^0x[0-9a-fA-F]+$/.test(value)
-}
 export class TestGatingNFT {
     public async publicMint(toAddress: string) {
         if (!isHexString(toAddress)) {
@@ -49,133 +26,36 @@ export class TestGatingNFT {
     }
 }
 
-class Mutex {
-    queue: ((value: void | PromiseLike<void>) => void)[]
-    locked: boolean
-    constructor() {
-        this.queue = []
-        this.locked = false
-    }
-
-    lock() {
-        if (!this.locked) {
-            this.locked = true
-            return Promise.resolve()
-        }
-
-        let unlockNext: (value: void | PromiseLike<void>) => void
-
-        const promise = new Promise<void>((resolve) => {
-            unlockNext = resolve
-        })
-
-        this.queue.push(unlockNext!)
-
-        return promise
-    }
-
-    unlock() {
-        if (this.queue.length > 0) {
-            const unlockNext = this.queue.shift()
-            unlockNext?.()
-        } else {
-            this.locked = false
-        }
-    }
-}
-
 const nftContracts = new Map<string, Address>()
 const nftContractsMutex = new Mutex()
 
-export async function getContractAddress(nftName: string): Promise<Address> {
-    let retryCount = 0
-    let lastError: unknown
+async function getContractAddress(nftName: string): Promise<Address> {
     try {
-        // If mulitple callers are in a Promise.all() and they all try to deploy the same contract at the same time,
-        // we want to make sure that only one of them actually deploys the contract.
         await nftContractsMutex.lock()
-
-        if (!nftContracts.has(nftName)) {
-            while (retryCount++ < 5) {
-                try {
-                    const privateKey = generatePrivateKey()
-                    const throwawayAccount = privateKeyToAccount(privateKey)
-                    const client = createTestClient({
-                        chain: foundry,
-                        mode: 'anvil',
-                        transport: http(),
-                        account: throwawayAccount,
-                    })
-                        .extend(publicActions)
-                        .extend(walletActions)
-
-                    await client.setBalance({
-                        address: throwawayAccount.address,
-                        value: parseEther('1'),
-                    })
-
-                    const hash = await client.deployContract({
-                        abi: MockERC721a.abi,
-                        account: throwawayAccount,
-                        bytecode: MockERC721a.bytecode.object,
-                    })
-
-                    const receipt = await client.waitForTransactionReceipt({ hash })
-
-                    if (receipt.contractAddress) {
-                        logger.info(
-                            'deployed',
-                            nftName,
-                            receipt.contractAddress,
-                            isEIP55Address(receipt.contractAddress),
-                            nftContracts,
-                        )
-                        // For some reason the address isn't in EIP-55, so we need to checksum it
-                        nftContracts.set(nftName, toEIP55Address(receipt.contractAddress))
-                    } else {
-                        throw new Error('Failed to deploy contract')
-                    }
-                    break
-                } catch (e) {
-                    lastError = e
-                    if (
-                        typeof e === 'object' &&
-                        e !== null &&
-                        'message' in e &&
-                        typeof e.message === 'string' &&
-                        (e.message.includes('nonce too low') ||
-                            e.message.includes('NonceTooLowError') ||
-                            e.message.includes(
-                                'Nonce provided for the transaction is lower than the current nonce',
-                            ))
-                    ) {
-                        logger.log('retrying because nonce too low', e, retryCount)
-                    } else {
-                        throw e
-                    }
-                }
-            }
-        }
+        const contractAddress = await deployContract(
+            nftName,
+            MockERC721a.abi,
+            MockERC721a.bytecode.object,
+        )
+        nftContracts.set(nftName, contractAddress)
+    } catch (e) {
+        logger.error('Failed to deploy contract', e)
+        throw new Error(
+            // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+            `Failed to get contract address: ${nftName}`,
+        )
     } finally {
         nftContractsMutex.unlock()
     }
 
-    const contractAddress = nftContracts.get(nftName)
-    if (!contractAddress) {
-        throw new Error(
-            // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-            `Failed to get contract address: ${nftName} retryCount: ${retryCount} lastError: ${lastError} `,
-        )
-    }
-
-    return contractAddress
+    return nftContracts.get(nftName)!
 }
 
 export async function getTestGatingNFTContractAddress(): Promise<Address> {
     return await getContractAddress('TestGatingNFT')
 }
 
-export async function publicMint(nftName: string, toAddress: Address): Promise<number> {
+async function publicMint(nftName: string, toAddress: Address): Promise<number> {
     const privateKey = generatePrivateKey()
     const throwawayAccount = privateKeyToAccount(privateKey)
     const client = createTestClient({
@@ -233,7 +113,7 @@ export async function publicMint(nftName: string, toAddress: Address): Promise<n
     throw Error('No mint event found')
 }
 
-export async function burn(nftName: string, tokenId: number): Promise<void> {
+async function burn(nftName: string, tokenId: number): Promise<void> {
     const client = createTestClient({
         chain: foundry,
         mode: 'anvil',
@@ -258,7 +138,7 @@ export async function burn(nftName: string, tokenId: number): Promise<void> {
     expect(receipt.status).toBe('success')
 }
 
-export async function balanceOf(nftName: string, address: Address): Promise<number> {
+async function balanceOf(nftName: string, address: Address): Promise<number> {
     const client = createTestClient({
         chain: foundry,
         mode: 'anvil',
@@ -277,4 +157,11 @@ export async function balanceOf(nftName: string, address: Address): Promise<numb
     })
 
     return Number(balanceEncoded)
+}
+
+export const TestNFT = {
+    publicMint,
+    burn,
+    balanceOf,
+    getContractAddress,
 }
