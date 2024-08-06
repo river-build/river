@@ -227,7 +227,7 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
                 this.spaceChannelsMetadata.set(channelId, {
                     isDefault: isDefaultChannelId(channelId),
                     updatedAtEventNum,
-                    isAutojoin: channel?.isAutojoin || isDefaultChannelId(channelId),
+                    isAutojoin: channel?.isAutojoin ?? isDefaultChannelId(channelId),
                     hideUserJoinLeaveEvents: channel?.hideUserJoinLeaveEvents ?? false,
                 })
                 stateEmitter?.emit(
