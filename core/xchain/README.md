@@ -24,7 +24,7 @@ This XChain Node resides in a monorepo and interfaces with the `EntitlementCheck
 
 ## Prerequisites
 
-- Go 1.22.2 or higher
+- Go 1.22.5 or higher
 - Foundry
 - Make utility
 
