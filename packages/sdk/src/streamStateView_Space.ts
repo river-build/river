@@ -33,6 +33,9 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
     readonly spaceChannelsMetadata = new Map<string, ParsedChannelProperties>()
     private spaceImage: ChunkedMedia | undefined
     private encryptedSpaceImage: EncryptedData | undefined
+    private decryptionInProgress:
+        | { encryptedData: EncryptedData; promise: Promise<ChunkedMedia | undefined> }
+        | undefined
 
     constructor(streamId: string) {
         super()
@@ -131,60 +134,34 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
         }
     }
 
-    private decryptionInProgress: Promise<ChunkedMedia | undefined> | undefined
-    private decryptionQueue: Promise<void> = Promise.resolve()
-    private latestEncryptedImage: EncryptedData | undefined
-
     public async getSpaceImage(): Promise<ChunkedMedia | undefined> {
-        // Take a snapshot of the current encrypted image
-        const currentEncryptedImage = this.encryptedSpaceImage
-
-        // If the current image is already being decrypted, return the ongoing decryption promise
-        if (this.decryptionInProgress && currentEncryptedImage === this.latestEncryptedImage) {
-            return this.decryptionInProgress
+        if (this.encryptedSpaceImage) {
+            const encryptedData = this.encryptedSpaceImage
+            this.encryptedSpaceImage = undefined
+            this.decryptionInProgress = {
+                promise: this.decryptSpaceImage(encryptedData),
+                encryptedData,
+            }
+            return this.decryptionInProgress.promise
         }
-
-        if (currentEncryptedImage) {
-            const spaceAddress = contractAddressFromSpaceId(this.streamId)
-            const context = spaceAddress.toLowerCase()
-
-            // Update the latest encrypted image
-            this.latestEncryptedImage = currentEncryptedImage
-
-            // Chain the decryption operations sequentially
-            this.decryptionQueue = this.decryptionQueue.then(async () => {
-                // Assign the decryption process to decryptionInProgress and return void to avoid ESLint warnings
-                this.decryptionInProgress = this.performDecryption(context, currentEncryptedImage)
-                return this.decryptionInProgress.then(() => undefined) // Ensure void return
-            })
-
-            await this.decryptionQueue
-
-            // Always return the last known good state of spaceImage, even if it wasn't updated
-            return this.spaceImage
+        if (this.decryptionInProgress) {
+            return this.decryptionInProgress.promise
         }
-
         return this.spaceImage
     }
 
-    private async performDecryption(
-        context: string,
-        currentEncryptedImage: EncryptedData,
+    private async decryptSpaceImage(
+        encryptedData: EncryptedData,
     ): Promise<ChunkedMedia | undefined> {
-        try {
-            const plaintext = await decryptDerivedAESGCM(context, currentEncryptedImage)
-
-            // Ensure the state is still relevant before updating
-            if (this.encryptedSpaceImage === currentEncryptedImage) {
-                this.spaceImage = ChunkedMedia.fromBinary(plaintext)
-                this.encryptedSpaceImage = undefined
-            }
-
-            return this.spaceImage
-        } finally {
-            // Clear the in-progress promise once it resolves or rejects
+        const spaceAddress = contractAddressFromSpaceId(this.streamId)
+        const context = spaceAddress.toLowerCase()
+        const plaintext = await decryptDerivedAESGCM(context, encryptedData)
+        const spaceImage = ChunkedMedia.fromBinary(plaintext)
+        if (encryptedData === this.decryptionInProgress?.encryptedData) {
+            this.spaceImage = spaceImage
             this.decryptionInProgress = undefined
         }
+        return spaceImage
     }
 
     private addSpacePayload_UpdateChannelAutojoin(
