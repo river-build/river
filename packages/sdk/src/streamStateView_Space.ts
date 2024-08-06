@@ -223,12 +223,14 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
                 }
                 break
             case ChannelOp.CO_UPDATED: {
-                const channel = this.spaceChannelsMetadata.get(channelId)
+                const isDefault = isDefaultChannelId(channelId)
+                const isAutojoin = payload.settings?.autojoin ?? isDefault
+                const hideUserJoinLeaveEvents = payload.settings?.hideUserJoinLeaveEvents ?? false
                 this.spaceChannelsMetadata.set(channelId, {
-                    isDefault: isDefaultChannelId(channelId),
+                    isDefault,
                     updatedAtEventNum,
-                    isAutojoin: channel?.isAutojoin ?? isDefaultChannelId(channelId),
-                    hideUserJoinLeaveEvents: channel?.hideUserJoinLeaveEvents ?? false,
+                    isAutojoin,
+                    hideUserJoinLeaveEvents,
                 })
                 stateEmitter?.emit(
                     'spaceChannelUpdated',
