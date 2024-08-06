@@ -303,10 +303,15 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
     uint256 spaceTokenId,
     Membership calldata membership
   ) internal view returns (bytes memory initCode, bytes32 salt) {
-    ImplementationStorage.Layout storage ds = ImplementationStorage.layout();
+    address spaceToken = address(ImplementationStorage.layout().spaceToken);
 
     // calculate salt
     salt = keccak256(abi.encode(msg.sender, spaceTokenId, block.timestamp));
+
+    IMembershipBase.Membership memory membershipSettings = membership.settings;
+    if (membershipSettings.feeRecipient == address(0)) {
+      membershipSettings.feeRecipient = msg.sender;
+    }
 
     // calculate init code
     initCode = abi.encodePacked(
@@ -318,22 +323,10 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
           manager: address(this)
         }),
         ITokenOwnableBase.TokenOwnable({
-          collection: address(ds.spaceToken),
+          collection: spaceToken,
           tokenId: spaceTokenId
         }),
-        IMembershipBase.Membership({
-          name: membership.settings.name,
-          symbol: membership.settings.symbol,
-          price: membership.settings.price,
-          maxSupply: membership.settings.maxSupply,
-          duration: membership.settings.duration,
-          currency: membership.settings.currency,
-          feeRecipient: membership.settings.feeRecipient == address(0)
-            ? msg.sender
-            : membership.settings.feeRecipient,
-          freeAllocation: membership.settings.freeAllocation,
-          pricingModule: membership.settings.pricingModule
-        })
+        membershipSettings
       )
     );
   }
