@@ -97,10 +97,13 @@ async function publicMint(tokenName: string, toAddress: Address, amount: number)
 
 async function totalSupply(contractName: string): Promise<number> {
     const contractAddress = await getContractAddress(contractName)
+    const privateKey = generatePrivateKey()
+    const throwawayAccount = privateKeyToAccount(privateKey)
     const client = createTestClient({
         chain: foundry,
         mode: 'anvil',
         transport: http(),
+        account: throwawayAccount,
     })
         .extend(publicActions)
         .extend(walletActions)
@@ -116,10 +119,13 @@ async function totalSupply(contractName: string): Promise<number> {
 
 async function balanceOf(contractName: string, address: Address): Promise<number> {
     const contractAddress = await getContractAddress(contractName)
+    const privateKey = generatePrivateKey()
+    const throwawayAccount = privateKeyToAccount(privateKey)
     const client = createTestClient({
         chain: foundry,
         mode: 'anvil',
         transport: http(),
+        account: throwawayAccount,
     })
         .extend(publicActions)
         .extend(walletActions)

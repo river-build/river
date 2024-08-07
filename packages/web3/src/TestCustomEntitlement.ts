@@ -87,11 +87,13 @@ async function isEntitled(
     userAddresses: Address[],
 ): Promise<boolean> {
     const contractAddress = await getContractAddress(customEntitlementContractName)
-    console.log('contractAddress', contractAddress)
+    const privateKey = generatePrivateKey()
+    const throwawayAccount = privateKeyToAccount(privateKey)
     const client = createTestClient({
         chain: foundry,
         mode: 'anvil',
         transport: http(),
+        account: throwawayAccount,
     })
         .extend(publicActions)
         .extend(walletActions)

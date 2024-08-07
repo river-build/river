@@ -111,10 +111,13 @@ async function publicMint(nftName: string, toAddress: Address): Promise<number> 
 }
 
 async function burn(nftName: string, tokenId: number): Promise<void> {
+    const privateKey = generatePrivateKey()
+    const throwawayAccount = privateKeyToAccount(privateKey)
     const client = createTestClient({
         chain: foundry,
         mode: 'anvil',
         transport: http(),
+        account: throwawayAccount,
     })
         .extend(publicActions)
         .extend(walletActions)
@@ -136,10 +139,13 @@ async function burn(nftName: string, tokenId: number): Promise<void> {
 }
 
 async function balanceOf(nftName: string, address: Address): Promise<number> {
+    const privateKey = generatePrivateKey()
+    const throwawayAccount = privateKeyToAccount(privateKey)
     const client = createTestClient({
         chain: foundry,
         mode: 'anvil',
         transport: http(),
+        account: throwawayAccount,
     })
         .extend(publicActions)
         .extend(walletActions)
