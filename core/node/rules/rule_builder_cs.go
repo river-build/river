@@ -10,7 +10,6 @@ import (
 type CreateStreamRules struct {
 	CreatorStreamId     shared.StreamId
 	RequiredUserAddrs   [][]byte
-	RequiredUsers       []string
 	RequiredMemberships [][]byte
 	ChainAuth           *auth.ChainAuthArgs
 	DerivedEvents       []*DerivedEvent
@@ -19,7 +18,6 @@ type CreateStreamRules struct {
 type ruleBuilderCS interface {
 	check(fn ...func() error) ruleBuilderCS
 	checkOneOf(fns ...func() error) ruleBuilderCS
-	requireUser(userIds ...string) ruleBuilderCS
 	requireUserAddr(userAddresses ...[]byte) ruleBuilderCS
 	requireMembership(streamIds ...[]byte) ruleBuilderCS
 	requireChainAuth(f func() (*auth.ChainAuthArgs, error)) ruleBuilderCS
@@ -32,7 +30,6 @@ type ruleBuilderCS interface {
 type ruleBuilderCSImpl struct {
 	failErr             error
 	creatorStreamId     shared.StreamId
-	requiredUsers       []string
 	requiredUserAddrs   [][]byte
 	requiredMemberships [][]byte
 	checks              [][]func() error
@@ -65,11 +62,6 @@ func (re *ruleBuilderCSImpl) check(fns ...func() error) ruleBuilderCS {
 
 func (re *ruleBuilderCSImpl) checkOneOf(fns ...func() error) ruleBuilderCS {
 	re.checks = append(re.checks, fns)
-	return re
-}
-
-func (re *ruleBuilderCSImpl) requireUser(userIds ...string) ruleBuilderCS {
-	re.requiredUsers = append(re.requiredUsers, userIds...)
 	return re
 }
 

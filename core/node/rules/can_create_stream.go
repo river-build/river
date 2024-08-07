@@ -271,7 +271,7 @@ func (ru *csParams) canCreateStream() ruleBuilderCS {
 				ru.params.eventCountGreaterThanOrEqualTo(4),
 				ru.checkGDMPayloads,
 			).
-			requireUser(ru.getGDMUserIds()[1:]...).
+			requireUserAddr(ru.getGDMUserIds()[1:]...).
 			requireDerivedEvents(ru.derivedGDMMembershipEvents)
 
 	case *UserPayload_Inception:
@@ -768,8 +768,8 @@ func (ru *csGdmChannelRules) checkGDMPayloads() error {
 	return nil
 }
 
-func (ru *csGdmChannelRules) getGDMUserIds() []string {
-	userIds := make([]string, 0, len(ru.params.parsedEvents)-1)
+func (ru *csGdmChannelRules) getGDMUserIds() [][]byte {
+	userIds := make([][]byte, 0, len(ru.params.parsedEvents)-1)
 	for _, event := range ru.params.parsedEvents[1:] {
 		payload := event.Event.GetMemberPayload()
 		if payload == nil {
@@ -779,12 +779,7 @@ func (ru *csGdmChannelRules) getGDMUserIds() []string {
 		if membershipPayload == nil {
 			continue
 		}
-		// todo we should remove the conversions here
-		userId, err := shared.AddressHex(membershipPayload.UserAddress)
-		if err != nil {
-			continue
-		}
-		userIds = append(userIds, userId)
+		userIds = append(userIds, membershipPayload.UserAddress)
 	}
 	return userIds
 }
