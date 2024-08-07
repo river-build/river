@@ -10,6 +10,7 @@ import { joinChat } from './joinChat'
 import { updateProfile } from './updateProfile'
 import { chitChat } from './chitChat'
 import { sumarizeChat } from './sumarizeChat'
+import { countReactions, updateCountClients } from './countClients'
 
 function getStressDuration(): number {
     check(isSet(process.env.STRESS_DURATION), 'process.env.STRESS_DURATION')
@@ -55,6 +56,7 @@ function getChatConfig(opts: { processIndex: number; rootWallet: Wallet }): Chat
         throw new Error('clientStartIndex >= clientEndIndex')
     }
     return {
+        kickoffMessageEventId: undefined,
         countClientsMessageEventId: undefined,
         containerIndex,
         containerCount,
@@ -128,6 +130,20 @@ export async function startStressChat(opts: {
     for (let i = 0; i < clients.length; i += PARALLEL_UPDATES) {
         const span = clients.slice(i, i + PARALLEL_UPDATES)
         const results = await Promise.allSettled(span.map((client) => joinChat(client, chatConfig)))
+        if (chatConfig.kickoffMessageEventId && chatConfig.countClientsMessageEventId) {
+            const reactionCount = await countReactions(
+                clients[0],
+                chatConfig.announceChannelId,
+                chatConfig.kickoffMessageEventId,
+            )
+            await updateCountClients(
+                clients[0],
+                chatConfig.announceChannelId,
+                chatConfig.countClientsMessageEventId,
+                chatConfig.clientsCount,
+                reactionCount,
+            )
+        }
         results.forEach((r, index) => {
             if (r.status === 'rejected') {
                 logger.error(`${span[index].logId} error calling joinChat`, r.reason)

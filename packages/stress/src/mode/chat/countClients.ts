@@ -1,4 +1,7 @@
+import { dlogger } from '@river-build/dlog'
 import type { StressClient } from '../../utils/stressClient'
+
+const logger = dlogger('stress:clients')
 
 export const updateCountClients = async (
     client: StressClient,
@@ -7,6 +10,7 @@ export const updateCountClients = async (
     totalClients: number,
     reactionCounts: number,
 ) => {
+    logger.info(`Clients: ${reactionCounts}/${totalClients} 🤖`)
     return await client.streamsClient.sendChannelMessage_Edit_Text(
         announceChannelId,
         countClientsMessageEventId,
@@ -31,15 +35,18 @@ export const countReactions = async (
         return 0
     }
 
-    let reactionCount = 0
-    channel.view.timeline.forEach((event) => {
-        if (
-            event.localEvent?.channelMessage.payload.case === 'reaction' &&
-            event.localEvent?.channelMessage.payload.value.refEventId === rootMessageId
-        ) {
-            reactionCount++
+    const reactions = channel.view.timeline.filter((event) => {
+        if (event.localEvent?.channelMessage.payload.case === 'reaction') {
+            return event.localEvent?.channelMessage.payload.value.refEventId === rootMessageId
         }
+        if (
+            event.decryptedContent?.kind === 'channelMessage' &&
+            event.decryptedContent?.content.payload.case === 'reaction'
+        ) {
+            return event.decryptedContent?.content.payload.value.refEventId === rootMessageId
+        }
+        return
     })
 
-    return reactionCount
+    return reactions.length
 }

@@ -35,6 +35,7 @@ export async function kickoffChat(rootClient: StressClient, cfg: ChatConfig) {
         `Clients: 0/${cfg.clientsCount} 🤖`,
     )
 
+    cfg.kickoffMessageEventId = kickoffMessageEventId
     cfg.countClientsMessageEventId = countClientsMessageEventId
 
     const initialStats = {
