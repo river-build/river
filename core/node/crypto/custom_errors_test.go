@@ -75,6 +75,12 @@ func TestEVMCustomError(t *testing.T) {
 		t.Fatalf("customError.DecodedError is nil")
 	}
 	a, _ := ABI2.GetAbi()
+	if a == nil {
+		t.Fatalf("ABI is nil")
+	}
+	if a.Errors == nil {
+		t.Fatalf("ABI Errors is nil")
+	}
 	if customError.DecodedError.ID != a.Errors["InvalidBlockNumber"].ID {
 		t.Fatalf(
 			"unexpected custom error message, exp: '%x', got: '%x'",
