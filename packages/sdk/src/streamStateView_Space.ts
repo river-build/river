@@ -159,9 +159,9 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
     private async decryptSpaceImage(
         encryptedData: EncryptedData,
     ): Promise<ChunkedMedia | undefined> {
-        const spaceAddress = contractAddressFromSpaceId(this.streamId)
-        const context = spaceAddress.toLowerCase()
         try {
+            const spaceAddress = contractAddressFromSpaceId(this.streamId)
+            const context = spaceAddress.toLowerCase()
             const plaintext = await decryptDerivedAESGCM(context, encryptedData)
             const decryptedImage = ChunkedMedia.fromBinary(plaintext)
             if (encryptedData === this.decryptionInProgress?.encryptedData) {
