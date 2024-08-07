@@ -13,6 +13,7 @@ import { mainnet } from 'viem/chains'
 import { ethers } from 'ethers'
 import { Address } from './ContractTypes'
 import { MOCK_ADDRESS } from './Utils'
+import { error } from 'console'
 
 const zeroAddress = ethers.constants.AddressZero
 
