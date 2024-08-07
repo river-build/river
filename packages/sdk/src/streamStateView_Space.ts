@@ -132,14 +132,14 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
     }
 
     private decryptionInProgress: Promise<ChunkedMedia | undefined> | undefined
-    private decryptingImage: EncryptedData | undefined
+    private imageBeingDecrypted: EncryptedData | undefined
 
     public async getSpaceImage(): Promise<ChunkedMedia | undefined> {
         // Take a snapshot of the current encrypted image
         const currentEncryptedImage = this.encryptedSpaceImage
 
         // If the current image is already being decrypted, return the ongoing decryption promise
-        if (this.decryptionInProgress && currentEncryptedImage === this.decryptingImage) {
+        if (this.decryptionInProgress && currentEncryptedImage === this.imageBeingDecrypted) {
             return this.decryptionInProgress
         }
 
@@ -148,7 +148,7 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
             const context = spaceAddress.toLowerCase()
 
             // the encrypted image that will be decrypted
-            this.decryptingImage = currentEncryptedImage
+            this.imageBeingDecrypted = currentEncryptedImage
 
             // Assign the decryption process to decryptionInProgress
             this.decryptionInProgress = this.decryptSpaceImage(context, currentEncryptedImage)
