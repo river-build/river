@@ -1,6 +1,7 @@
 {
-	"name": "space-redirect",
+	"name": "fetch-image",
 	"version": "0.0.0",
+	"packageManager": "yarn@3.8.0",
 	"private": true,
 	"main": "dist/node.js",
 	"type": "module",
@@ -8,10 +9,10 @@
 		"build:esbuild": "node ./esbuild.config.js",
 		"build:rollup": "rollup -c",
 		"build": "yarn build_node",
-		"clean": "rm -rf node_modules dist",
+		"clean": "rm -rf ./node_modules ./dist",
 		"dev": "yarn build:esbuild && yarn serve:esbuild",
-		"serve:rollup": "node --experimental-detect-module dist/node_rollup.js",
-		"serve:esbuild": "node --experimental-detect-module dist/node_esbuild.cjs"
+		"serve:rollup": "node --experimental-detect-module ./dist/node_rollup.js",
+		"serve:esbuild": "node --experimental-detect-module ./dist/node_esbuild.cjs"
 	},
 	"devDependencies": {
 		"@rollup/plugin-commonjs": "^26.0.1",
@@ -27,7 +28,6 @@
 		"ts-node": "^10.9.2",
 		"typescript": "^5.5.3"
 	},
-	"packageManager": "yarn@4.3.1",
 	"dependencies": {
 		"@bufbuild/buf": "^1.34.0",
 		"@bufbuild/protobuf": "^1.10.0",
