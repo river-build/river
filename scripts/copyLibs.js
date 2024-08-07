@@ -4,12 +4,12 @@ const path = require('path')
 const CONTRACT_LIBS = [
     '@openzeppelin',
     'account-abstraction/contracts',
-    'base64',
     'ds-test',
     'forge-std/src',
     'hardhat-deploy',
     '@prb/math/src',
     '@prb/test/src',
+    'solady/src',
 ]
 
 const findNodeModules = () => {
