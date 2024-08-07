@@ -177,6 +177,11 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
         } finally {
             // Clear the in-progress promise once it resolves or rejects
             this.decryptionInProgress = undefined
+
+            // Reset this.imageBeingDecrypted only if the current image is still relevant
+            if (this.encryptedSpaceImage === currentEncryptedImage) {
+                this.imageBeingDecrypted = undefined
+            }
         }
     }
 
