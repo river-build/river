@@ -14,6 +14,8 @@ import {
     getNftRuleData,
     twoNftRuleData,
     getXchainSupportedRpcUrlsForTesting,
+    erc20CheckOp,
+    customCheckOp,
 } from './util.test'
 import { dlog } from '@river-build/dlog'
 import { MembershipOp } from '@river-build/proto'
@@ -767,16 +769,7 @@ describe('spaceWithEntitlements', () => {
     })
 
     test('erc20GateJoinPass', async () => {
-        const tokenName = 'TestERC20'
-        const erc20Address = await TestERC20.getContractAddress(tokenName)
-        const op: Operation = {
-            opType: OperationType.CHECK,
-            checkType: CheckOperationType.ERC20,
-            chainId: 31337n,
-            contractAddress: erc20Address,
-            threshold: 50n, // 50 tokens required
-        }
-        const ruleData = treeToRuleData(op)
+        const ruleData = treeToRuleData(await erc20CheckOp('TestERC20', 50n))
 
         const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId, channelId } =
             await createTownWithRequirements({
@@ -787,7 +780,7 @@ describe('spaceWithEntitlements', () => {
 
         // join alice
         log('Minting 100 ERC20 tokens for alice')
-        await TestERC20.publicMint(tokenName, alicesWallet.address as Address, 100)
+        await TestERC20.publicMint('TestERC20', alicesWallet.address as Address, 100)
 
         await expectUserCanJoin(
             spaceId,
@@ -807,16 +800,7 @@ describe('spaceWithEntitlements', () => {
     })
 
     test('erc20GateJoinFail', async () => {
-        const tokenName = 'TestERC20'
-        const erc20Address = await TestERC20.getContractAddress(tokenName)
-        const op: Operation = {
-            opType: OperationType.CHECK,
-            checkType: CheckOperationType.ERC20,
-            chainId: 31337n,
-            contractAddress: erc20Address,
-            threshold: 50n, // 50 tokens required
-        }
-        const ruleData = treeToRuleData(op)
+        const ruleData = treeToRuleData(await erc20CheckOp('TestERC20', 50n))
 
         const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId, channelId } =
             await createTownWithRequirements({
@@ -844,17 +828,8 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('eRC20GateJoinPass - join as root, asset in linked wallet', async () => {
-        const tokenName = 'TestERC20'
-        const erc20Address = await TestERC20.getContractAddress(tokenName)
-        const op: Operation = {
-            opType: OperationType.CHECK,
-            checkType: CheckOperationType.ERC20,
-            chainId: 31337n,
-            contractAddress: erc20Address,
-            threshold: 50n, // 50 tokens required
-        }
-        const ruleData = treeToRuleData(op)
+    test('erc20GateJoinPass - join as root, asset in linked wallet', async () => {
+        const ruleData = treeToRuleData(await erc20CheckOp('TestERC20', 50n))
         const {
             alice,
             bob,
@@ -875,7 +850,7 @@ describe('spaceWithEntitlements', () => {
 
         // join alice
         log('Minting 50 ERC20 tokens for carols wallet, which is linked to alices wallet')
-        await TestERC20.publicMint(tokenName, carolsWallet.address as Address, 50)
+        await TestERC20.publicMint('TestERC20', carolsWallet.address as Address, 50)
 
         await expectUserCanJoin(
             spaceId,
@@ -895,16 +870,7 @@ describe('spaceWithEntitlements', () => {
     })
 
     test('erc20GateJoinPass - join as linked wallet, asset in root wallet', async () => {
-        const tokenName = 'TestERC20'
-        const erc20Address = await TestERC20.getContractAddress(tokenName)
-        const op: Operation = {
-            opType: OperationType.CHECK,
-            checkType: CheckOperationType.ERC20,
-            chainId: 31337n,
-            contractAddress: erc20Address,
-            threshold: 50n, // 50 tokens required
-        }
-        const ruleData = treeToRuleData(op)
+        const ruleData = treeToRuleData(await erc20CheckOp('TestERC20', 50n))
         const {
             alice,
             bob,
@@ -927,7 +893,7 @@ describe('spaceWithEntitlements', () => {
 
         // join alice
         log('Minting an NFT for carols wallet, which is the root to alices wallet')
-        await TestERC20.publicMint(tokenName, carolsWallet.address as Address, 50)
+        await TestERC20.publicMint('TestERC20', carolsWallet.address as Address, 50)
 
         log('expect that alice can join the space')
         await expectUserCanJoin(
@@ -948,16 +914,7 @@ describe('spaceWithEntitlements', () => {
     })
 
     test('erc20GateJoinPass - assets across wallets', async () => {
-        const tokenName = 'TestERC20'
-        const erc20Address = await TestERC20.getContractAddress(tokenName)
-        const op: Operation = {
-            opType: OperationType.CHECK,
-            checkType: CheckOperationType.ERC20,
-            chainId: 31337n,
-            contractAddress: erc20Address,
-            threshold: 50n, // 50 tokens required
-        }
-        const ruleData = treeToRuleData(op)
+        const ruleData = treeToRuleData(await erc20CheckOp('TestERC20', 50n))
         const {
             alice,
             bob,
@@ -980,8 +937,8 @@ describe('spaceWithEntitlements', () => {
 
         // join alice
         log('Minting an NFT for carols wallet, which is the root to alices wallet')
-        await TestERC20.publicMint(tokenName, carolsWallet.address as Address, 25)
-        await TestERC20.publicMint(tokenName, alicesWallet.address as Address, 25)
+        await TestERC20.publicMint('TestERC20', carolsWallet.address as Address, 25)
+        await TestERC20.publicMint('TestERC20', alicesWallet.address as Address, 25)
 
         log('expect that alice can join the space')
         await expectUserCanJoin(
@@ -1002,16 +959,7 @@ describe('spaceWithEntitlements', () => {
     })
 
     test('customEntitlementGateJoinPass', async () => {
-        const contractName = 'TestCustom'
-        const customAddress = await TestCustomEntitlement.getContractAddress(contractName)
-        const op: Operation = {
-            opType: OperationType.CHECK,
-            checkType: CheckOperationType.ISENTITLED,
-            chainId: 31337n,
-            contractAddress: customAddress,
-            threshold: 0n,
-        }
-        const ruleData = treeToRuleData(op)
+        const ruleData = treeToRuleData(await customCheckOp('TestCustom'))
 
         const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId, channelId } =
             await createTownWithRequirements({
@@ -1022,7 +970,7 @@ describe('spaceWithEntitlements', () => {
 
         // set alice as entitled; she should be able to join.
         await TestCustomEntitlement.setEntitled(
-            contractName,
+            'TestCustom',
             [alicesWallet.address as Address],
             true,
         )
@@ -1045,16 +993,7 @@ describe('spaceWithEntitlements', () => {
     })
 
     test('customEntitlementGateJoinFail', async () => {
-        const contractName = 'TestCustom'
-        const customAddress = await TestCustomEntitlement.getContractAddress(contractName)
-        const op: Operation = {
-            opType: OperationType.CHECK,
-            checkType: CheckOperationType.ISENTITLED,
-            chainId: 31337n,
-            contractAddress: customAddress,
-            threshold: 0n,
-        }
-        const ruleData = treeToRuleData(op)
+        const ruleData = treeToRuleData(await customCheckOp('TestCustom'))
 
         const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId, channelId } =
             await createTownWithRequirements({
@@ -1083,16 +1022,7 @@ describe('spaceWithEntitlements', () => {
     })
 
     test('customEntitlementGateJoinPass - join as root, asset in linked wallet', async () => {
-        const contractName = 'TestCustom'
-        const customAddress = await TestCustomEntitlement.getContractAddress(contractName)
-        const op: Operation = {
-            opType: OperationType.CHECK,
-            checkType: CheckOperationType.ISENTITLED,
-            chainId: 31337n,
-            contractAddress: customAddress,
-            threshold: 0n,
-        }
-        const ruleData = treeToRuleData(op)
+        const ruleData = treeToRuleData(await customCheckOp('TestCustom'))
         const {
             alice,
             bob,
@@ -1114,7 +1044,7 @@ describe('spaceWithEntitlements', () => {
         // join alice
         log("Setting carol's wallet as entitled")
         await TestCustomEntitlement.setEntitled(
-            contractName,
+            'TestCustom',
             [carolsWallet.address as Address],
             true,
         )
