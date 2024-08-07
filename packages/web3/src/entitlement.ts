@@ -13,7 +13,6 @@ import { mainnet } from 'viem/chains'
 import { ethers } from 'ethers'
 import { Address } from './ContractTypes'
 import { MOCK_ADDRESS } from './Utils'
-import { error } from 'console'
 
 const zeroAddress = ethers.constants.AddressZero
 
@@ -442,8 +441,6 @@ async function evaluateCheckOperation(
         controller.abort()
         return zeroAddress
     }
-
-    console.log('evaluateCheckOperation', operation)
 
     switch (operation.checkType) {
         case CheckOperationType.MOCK: {

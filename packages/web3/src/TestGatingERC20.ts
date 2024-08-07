@@ -67,7 +67,7 @@ async function publicMint(tokenName: string, toAddress: Address, amount: number)
         address: contractAddress,
         abi: MockERC20.abi,
         functionName: 'mint',
-        args: [toAddress, 100n],
+        args: [toAddress, amount],
         account: throwawayAccount,
     })
 
