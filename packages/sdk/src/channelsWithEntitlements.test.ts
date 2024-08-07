@@ -1017,7 +1017,7 @@ describe('channelsWithEntitlements', () => {
         )
 
         log('expect that alice can join the channel')
-        await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
+        await expectUserCannotJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
 
         // kill the clients
         const doneStart = Date.now()

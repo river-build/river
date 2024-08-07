@@ -704,14 +704,20 @@ async function evaluateCustomEntitledOperation(
         ['function isEntitled(address[]) view returns (bool)'],
         provider,
     )
-    const entitled = await contract.callStatic.isEntitled(linkedWallets)
-    if (entitled) {
-        return linkedWallets[0]
-    } else {
+    return await Promise.any(
+        linkedWallets.map(async (wallet): Promise<Address> => {
+            const isEntitled = await contract.callStatic.isEntitled([wallet])
+            if (isEntitled === true) {
+                return wallet as Address
+            }
+            throw new Error('Not entitled')
+        }),
+    ).catch(() => {
         controller.abort()
         return zeroAddress
-    }
+    })
 }
+
 async function evaluateContractBalanceAcrossWallets(
     contractAddress: Address,
     threshold: bigint,
