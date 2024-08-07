@@ -33,6 +33,9 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
     readonly spaceChannelsMetadata = new Map<string, ParsedChannelProperties>()
     private spaceImage: ChunkedMedia | undefined
     private encryptedSpaceImage: EncryptedData | undefined
+    private decryptionInProgress:
+        | { encryptedData: EncryptedData; promise: Promise<ChunkedMedia | undefined> }
+        | undefined
 
     constructor(streamId: string) {
         super()
@@ -131,54 +134,43 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
         }
     }
 
-    private decryptionInProgress: Promise<ChunkedMedia | undefined> | undefined
-    private imageBeingDecrypted: EncryptedData | undefined
-
     public async getSpaceImage(): Promise<ChunkedMedia | undefined> {
-        // Take a snapshot of the current encrypted image
-        const currentEncryptedImage = this.encryptedSpaceImage
-
-        // If the current image is already being decrypted, return the ongoing decryption promise
-        if (this.decryptionInProgress && currentEncryptedImage === this.imageBeingDecrypted) {
-            return this.decryptionInProgress
+        // if we have an encrypted space image, decrypt it
+        if (this.encryptedSpaceImage) {
+            const encryptedData = this.encryptedSpaceImage
+            this.encryptedSpaceImage = undefined
+            this.decryptionInProgress = {
+                promise: this.decryptSpaceImage(encryptedData),
+                encryptedData,
+            }
+            return this.decryptionInProgress.promise
         }
 
-        if (currentEncryptedImage) {
-            const spaceAddress = contractAddressFromSpaceId(this.streamId)
-            const context = spaceAddress.toLowerCase()
-
-            // the encrypted image that will be decrypted
-            this.imageBeingDecrypted = currentEncryptedImage
-
-            // Assign the decryption process to decryptionInProgress
-            this.decryptionInProgress = this.decryptSpaceImage(context, currentEncryptedImage)
-            return this.decryptionInProgress
+        // if there isn't an updated encrypted space image, but a decryption is
+        // in progress, return the promise
+        if (this.decryptionInProgress) {
+            return this.decryptionInProgress.promise
         }
 
-        // Always return the last known good state of spaceImage, even if it wasn't updated
+        // always return the decrypted space image
         return this.spaceImage
     }
 
     private async decryptSpaceImage(
-        context: string,
-        encryptedImage: EncryptedData,
+        encryptedData: EncryptedData,
     ): Promise<ChunkedMedia | undefined> {
+        const spaceAddress = contractAddressFromSpaceId(this.streamId)
+        const context = spaceAddress.toLowerCase()
         try {
-            const plaintext = await decryptDerivedAESGCM(context, encryptedImage)
-            const decryptedChunkedMedia = ChunkedMedia.fromBinary(plaintext)
-
-            // Ensure the state is still relevant before updating
-            if (this.encryptedSpaceImage === encryptedImage) {
-                this.spaceImage = decryptedChunkedMedia
-                this.encryptedSpaceImage = undefined
+            const plaintext = await decryptDerivedAESGCM(context, encryptedData)
+            const decryptedImage = ChunkedMedia.fromBinary(plaintext)
+            if (encryptedData === this.decryptionInProgress?.encryptedData) {
+                this.spaceImage = decryptedImage
             }
-
-            return decryptedChunkedMedia
+            return decryptedImage
         } finally {
-            // Reset only if the image being decrypted is the most up-to-date
-            if (this.imageBeingDecrypted === encryptedImage) {
+            if (encryptedData === this.decryptionInProgress?.encryptedData) {
                 this.decryptionInProgress = undefined
-                this.imageBeingDecrypted = undefined
             }
         }
     }
