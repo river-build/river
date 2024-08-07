@@ -55,6 +55,7 @@ import {
     treeToRuleData,
     SpaceDapp,
     TestERC20,
+    TestCustomEntitlement,
 } from '@river-build/web3'
 
 const log = dlog('csb:test:util')
@@ -142,7 +143,7 @@ export async function erc20CheckOp(contractName: string, threshold: bigint): Pro
 }
 
 export async function customCheckOp(contractName: string): Promise<Operation> {
-    const contractAddress = await TestERC20.getContractAddress(contractName)
+    const contractAddress = await TestCustomEntitlement.getContractAddress(contractName)
     return {
         opType: OperationType.CHECK,
         checkType: CheckOperationType.ISENTITLED,

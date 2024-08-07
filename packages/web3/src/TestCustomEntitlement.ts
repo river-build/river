@@ -82,7 +82,32 @@ async function setEntitled(
     )
 }
 
+async function isEntitled(
+    customEntitlementContractName: string,
+    userAddresses: Address[],
+): Promise<boolean> {
+    const contractAddress = await getContractAddress(customEntitlementContractName)
+    console.log('contractAddress', contractAddress)
+    const client = createTestClient({
+        chain: foundry,
+        mode: 'anvil',
+        transport: http(),
+    })
+        .extend(publicActions)
+        .extend(walletActions)
+
+    const result = await client.readContract({
+        address: contractAddress,
+        abi: MockCustomEntitlement.abi,
+        functionName: 'isEntitled',
+        args: [userAddresses],
+    })
+
+    return result as boolean
+}
+
 export const TestCustomEntitlement = {
     getContractAddress,
     setEntitled,
+    isEntitled,
 }
