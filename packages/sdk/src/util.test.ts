@@ -131,7 +131,7 @@ export const getXchainSupportedRpcUrlsForTesting = (): string[] => {
 }
 
 export async function erc20CheckOp(contractName: string, threshold: bigint): Promise<Operation> {
-    const contractAddress = (await TestERC20.getContractAddress(contractName)) as Address
+    const contractAddress = await TestERC20.getContractAddress(contractName)
     return {
         opType: OperationType.CHECK,
         checkType: CheckOperationType.ERC20,
@@ -142,7 +142,7 @@ export async function erc20CheckOp(contractName: string, threshold: bigint): Pro
 }
 
 export async function customCheckOp(contractName: string): Promise<Operation> {
-    const contractAddress = (await TestERC20.getContractAddress(contractName)) as Address
+    const contractAddress = await TestERC20.getContractAddress(contractName)
     return {
         opType: OperationType.CHECK,
         checkType: CheckOperationType.ISENTITLED,

@@ -38,7 +38,6 @@ import {
 } from '@river-build/web3'
 import { Client } from './client'
 import { make_MemberPayload_KeySolicitation } from './types'
-import { ethers } from 'ethers'
 
 const log = dlog('csb:test:channelsWithEntitlements')
 
@@ -869,8 +868,10 @@ describe('channelsWithEntitlements', () => {
     test('erc20 gate join fail', async () => {
         const ruleData = treeToRuleData(await erc20CheckOp('TestERC20', 50n))
 
-        const { alice, bob, alicesWallet, aliceSpaceDapp, spaceId, channelId } =
-            await setupChannelWithCustomRole([], ruleData)
+        const { alice, bob, aliceSpaceDapp, spaceId, channelId } = await setupChannelWithCustomRole(
+            [],
+            ruleData,
+        )
 
         log('expect that alice cannot join the channel')
         await expectUserCannotJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)

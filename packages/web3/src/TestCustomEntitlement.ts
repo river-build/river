@@ -61,7 +61,9 @@ async function setEntitled(
     const contractAddress = await getContractAddress(customEntitlementContractName)
 
     logger.log(
-        `Setting custom entitlement to ${entitled} for users ${userAddresses} for contract ${customEntitlementContractName}`,
+        `Setting custom entitlement to ${entitled} for users ${userAddresses.join(
+            ',',
+        )} for contract ${customEntitlementContractName}`,
     )
     const txnReceipt = await client.writeContract({
         address: contractAddress,
@@ -74,7 +76,9 @@ async function setEntitled(
     const receipt = await client.waitForTransactionReceipt({ hash: txnReceipt })
     expect(receipt.status).toBe('success')
     logger.log(
-        `Set custom entitlement to ${entitled} for users ${userAddresses} for contract ${customEntitlementContractName}`,
+        `Set custom entitlement to ${entitled} for users ${userAddresses.join(
+            ',',
+        )} for contract ${customEntitlementContractName}`,
     )
 }
 

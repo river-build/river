@@ -62,7 +62,7 @@ async function publicMint(tokenName: string, toAddress: Address, amount: number)
         address: contractAddress,
         abi: MockERC20.abi,
         functionName: 'mint',
-        args: [toAddress, 100n],
+        args: [toAddress, amount],
         account: throwawayAccount,
     })
 
@@ -87,43 +87,12 @@ async function publicMint(tokenName: string, toAddress: Address, amount: number)
     const eventLogs = await client.getFilterLogs({ filter })
     for (const eventLog of eventLogs) {
         if (eventLog.transactionHash === receipt.transactionHash) {
-            console.log('mint logs', eventLog.args)
+            logger.log('mint logs', eventLog.args)
             return
         }
     }
 
     throw Error('No mint event found')
-
-    // const privateKey = generatePrivateKey()
-    // const throwawayAccount = privateKeyToAccount(privateKey)
-    // const client = createTestClient({
-    //     chain: foundry,
-    //     mode: 'anvil',
-    //     transport: http(),
-    //     account: throwawayAccount,
-    // })
-    //     .extend(publicActions)
-    //     .extend(walletActions)
-
-    // await client.setBalance({
-    //     address: throwawayAccount.address,
-    //     value: parseEther('1'),
-    // })
-
-    // const contractAddress = await getContractAddress(tokenName)
-
-    // logger.log(`Minting ${amount} tokens to address ${toAddress}`)
-    // const { request, result } = await client.simulateContract({
-    //     address: contractAddress,
-    //     abi: MockERC20.abi,
-    //     functionName: 'mint',
-    //     args: [toAddress, BigInt(amount)],
-    //     account: throwawayAccount,
-    // })
-    // const hash = await client.writeContract(request)
-    // const receipt = await client.waitForTransactionReceipt({ hash })
-    // expect(receipt.status).toBe('success')
-    // logger.log(`Minted ${amount} tokens to address ${toAddress}`, hash)
 }
 
 async function totalSupply(contractName: string): Promise<number> {
@@ -142,7 +111,6 @@ async function totalSupply(contractName: string): Promise<number> {
         functionName: 'totalSupply',
         args: [],
     })
-    console.log('contract totalSupply', totalSupply, 'address', contractAddress)
     return Number(totalSupply)
 }
 

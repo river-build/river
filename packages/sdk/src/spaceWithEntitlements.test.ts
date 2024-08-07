@@ -802,7 +802,7 @@ describe('spaceWithEntitlements', () => {
     test('erc20GateJoinFail', async () => {
         const ruleData = treeToRuleData(await erc20CheckOp('TestERC20', 50n))
 
-        const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId, channelId } =
+        const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId } =
             await createTownWithRequirements({
                 everyone: false,
                 users: [],
@@ -995,7 +995,7 @@ describe('spaceWithEntitlements', () => {
     test('customEntitlementGateJoinFail', async () => {
         const ruleData = treeToRuleData(await customCheckOp('TestCustom'))
 
-        const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId, channelId } =
+        const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId } =
             await createTownWithRequirements({
                 everyone: false,
                 users: [],
