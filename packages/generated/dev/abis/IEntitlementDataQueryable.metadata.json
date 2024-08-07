@@ -18,9 +18,14 @@
             "type": "string"
           }
         ],
+        "stateMutability": "view",
+        "type": "function",
         "name": "getChannelEntitlementDataByPermission",
         "outputs": [
           {
+            "internalType": "struct IEntitlementDataQueryableBase.EntitlementData[]",
+            "name": "",
+            "type": "tuple[]",
             "components": [
               {
                 "internalType": "string",
@@ -32,14 +37,9 @@
                 "name": "entitlementData",
                 "type": "bytes"
               }
-            ],
-            "internalType": "struct IEntitlementDataQueryableBase.EntitlementData[]",
-            "name": "",
-            "type": "tuple[]"
+            ]
           }
-        ],
-        "stateMutability": "view",
-        "type": "function"
+        ]
       },
       {
         "inputs": [
@@ -54,9 +54,14 @@
             "type": "uint256"
           }
         ],
+        "stateMutability": "view",
+        "type": "function",
         "name": "getCrossChainEntitlementData",
         "outputs": [
           {
+            "internalType": "struct IEntitlementDataQueryableBase.EntitlementData",
+            "name": "",
+            "type": "tuple",
             "components": [
               {
                 "internalType": "string",
@@ -68,14 +73,9 @@
                 "name": "entitlementData",
                 "type": "bytes"
               }
-            ],
-            "internalType": "struct IEntitlementDataQueryableBase.EntitlementData",
-            "name": "",
-            "type": "tuple"
+            ]
           }
-        ],
-        "stateMutability": "view",
-        "type": "function"
+        ]
       },
       {
         "inputs": [
@@ -85,9 +85,14 @@
             "type": "string"
           }
         ],
+        "stateMutability": "view",
+        "type": "function",
         "name": "getEntitlementDataByPermission",
         "outputs": [
           {
+            "internalType": "struct IEntitlementDataQueryableBase.EntitlementData[]",
+            "name": "",
+            "type": "tuple[]",
             "components": [
               {
                 "internalType": "string",
@@ -99,14 +104,9 @@
                 "name": "entitlementData",
                 "type": "bytes"
               }
-            ],
-            "internalType": "struct IEntitlementDataQueryableBase.EntitlementData[]",
-            "name": "",
-            "type": "tuple[]"
+            ]
           }
-        ],
-        "stateMutability": "view",
-        "type": "function"
+        ]
       }
     ],
     "devdoc": {
@@ -121,39 +121,39 @@
     }
   },
   "settings": {
-    "compilationTarget": {
-      "contracts/src/spaces/facets/entitlements/extensions/IEntitlementDataQueryable.sol": "IEntitlementDataQueryable"
-    },
-    "evmVersion": "paris",
-    "libraries": {},
-    "metadata": {
-      "appendCBOR": false,
-      "bytecodeHash": "none"
-    },
+    "remappings": [
+      "@openzeppelin/=lib/@openzeppelin/",
+      "@prb/math/=lib/@prb/math/src/",
+      "@prb/test/=lib/@prb/test/src/",
+      "account-abstraction/=lib/account-abstraction/contracts/",
+      "base64/=lib/base64/",
+      "ds-test/=lib/ds-test/src/",
+      "forge-std/=lib/forge-std/src/",
+      "hardhat-deploy/=lib/hardhat-deploy/",
+      "solady/=lib/solady/src/"
+    ],
     "optimizer": {
       "enabled": true,
       "runs": 200
     },
-    "remappings": [
-      ":@openzeppelin/=lib/@openzeppelin/",
-      ":@prb/math/=lib/@prb/math/src/",
-      ":@prb/test/=lib/@prb/test/src/",
-      ":account-abstraction/=lib/account-abstraction/contracts/",
-      ":base64/=lib/base64/",
-      ":ds-test/=lib/ds-test/src/",
-      ":forge-std/=lib/forge-std/src/",
-      ":hardhat-deploy/=lib/hardhat-deploy/",
-      ":solady/=lib/solady/src/"
-    ]
+    "metadata": {
+      "bytecodeHash": "none",
+      "appendCBOR": false
+    },
+    "compilationTarget": {
+      "contracts/src/spaces/facets/entitlements/extensions/IEntitlementDataQueryable.sol": "IEntitlementDataQueryable"
+    },
+    "evmVersion": "paris",
+    "libraries": {}
   },
   "sources": {
     "contracts/src/spaces/facets/entitlements/extensions/IEntitlementDataQueryable.sol": {
       "keccak256": "0x408fcf935d47c3696901b138edbe3f862e63227e45a80be0154a21d39d6a4030",
-      "license": "MIT",
       "urls": [
         "bzz-raw://dab36eda141004d86570adf5daf5d011186bedea42c183eada86e4a24c3e15f3",
         "dweb:/ipfs/QmbSenMpHd3CW7LASFJmrbVZea7ueTS74NWjymEBMdpHbe"
-      ]
+      ],
+      "license": "MIT"
     }
   },
   "version": 1

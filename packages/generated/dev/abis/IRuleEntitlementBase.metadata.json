@@ -13,8 +13,8 @@
             "type": "uint256"
           }
         ],
-        "name": "CheckOperationsLimitReaced",
-        "type": "error"
+        "type": "error",
+        "name": "CheckOperationsLimitReaced"
       },
       {
         "inputs": [
@@ -29,8 +29,8 @@
             "type": "uint8"
           }
         ],
-        "name": "InvalidCheckOperationIndex",
-        "type": "error"
+        "type": "error",
+        "name": "InvalidCheckOperationIndex"
       },
       {
         "inputs": [
@@ -45,8 +45,8 @@
             "type": "uint8"
           }
         ],
-        "name": "InvalidLeftOperationIndex",
-        "type": "error"
+        "type": "error",
+        "name": "InvalidLeftOperationIndex"
       },
       {
         "inputs": [
@@ -61,8 +61,8 @@
             "type": "uint8"
           }
         ],
-        "name": "InvalidLogicalOperationIndex",
-        "type": "error"
+        "type": "error",
+        "name": "InvalidLogicalOperationIndex"
       },
       {
         "inputs": [
@@ -72,8 +72,8 @@
             "type": "uint8"
           }
         ],
-        "name": "InvalidOperationType",
-        "type": "error"
+        "type": "error",
+        "name": "InvalidOperationType"
       },
       {
         "inputs": [
@@ -88,8 +88,8 @@
             "type": "uint8"
           }
         ],
-        "name": "InvalidRightOperationIndex",
-        "type": "error"
+        "type": "error",
+        "name": "InvalidRightOperationIndex"
       },
       {
         "inputs": [
@@ -99,8 +99,8 @@
             "type": "uint256"
           }
         ],
-        "name": "LogicalOperationLimitReached",
-        "type": "error"
+        "type": "error",
+        "name": "LogicalOperationLimitReached"
       },
       {
         "inputs": [
@@ -110,15 +110,13 @@
             "type": "uint256"
           }
         ],
-        "name": "OperationsLimitReached",
-        "type": "error"
+        "type": "error",
+        "name": "OperationsLimitReached"
       }
     ],
     "devdoc": {
-      "details": "This contract manages entitlement rules based on blockchain operations. The contract maintains a tree-like data structure to combine various types of operations. The tree is implemented as a dynamic array of 'Operation' structs, and is built in post-order fashion. Post-order Tree Structure: In a post-order binary tree, children nodes must be added before their respective parent nodes. The 'LogicalOperation' nodes refer to their child nodes via indices in the 'operations' array. As new LogicalOperation nodes are added, they can only reference existing nodes in the 'operations' array, ensuring a valid post-order tree structure.",
       "kind": "dev",
       "methods": {},
-      "title": "RuleEntitlement",
       "version": 1
     },
     "userdoc": {
@@ -128,47 +126,47 @@
     }
   },
   "settings": {
-    "compilationTarget": {
-      "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol": "IRuleEntitlementBase"
-    },
-    "evmVersion": "paris",
-    "libraries": {},
-    "metadata": {
-      "appendCBOR": false,
-      "bytecodeHash": "none"
-    },
+    "remappings": [
+      "@openzeppelin/=lib/@openzeppelin/",
+      "@prb/math/=lib/@prb/math/src/",
+      "@prb/test/=lib/@prb/test/src/",
+      "account-abstraction/=lib/account-abstraction/contracts/",
+      "base64/=lib/base64/",
+      "ds-test/=lib/ds-test/src/",
+      "forge-std/=lib/forge-std/src/",
+      "hardhat-deploy/=lib/hardhat-deploy/",
+      "solady/=lib/solady/src/"
+    ],
     "optimizer": {
       "enabled": true,
       "runs": 200
     },
-    "remappings": [
-      ":@openzeppelin/=lib/@openzeppelin/",
-      ":@prb/math/=lib/@prb/math/src/",
-      ":@prb/test/=lib/@prb/test/src/",
-      ":account-abstraction/=lib/account-abstraction/contracts/",
-      ":base64/=lib/base64/",
-      ":ds-test/=lib/ds-test/src/",
-      ":forge-std/=lib/forge-std/src/",
-      ":hardhat-deploy/=lib/hardhat-deploy/",
-      ":solady/=lib/solady/src/"
-    ]
+    "metadata": {
+      "bytecodeHash": "none",
+      "appendCBOR": false
+    },
+    "compilationTarget": {
+      "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol": "IRuleEntitlementBase"
+    },
+    "evmVersion": "paris",
+    "libraries": {}
   },
   "sources": {
     "contracts/src/spaces/entitlements/IEntitlement.sol": {
       "keccak256": "0x81712a4b9127000ba341966d99395917dcb4b1305eadeddd1e1ad4e562587fdd",
-      "license": "MIT",
       "urls": [
         "bzz-raw://df0fcc9d7ed7489786684f5fa8375b277146969021f96f6a9feb81cb39176eca",
         "dweb:/ipfs/QmbxXXeXe6AzXUL8cSoABMx2E2QbRAK2uJXd8TRnDuKSJ8"
-      ]
+      ],
+      "license": "MIT"
     },
     "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol": {
       "keccak256": "0x2ad8c7e10beb26f80dde5445b9aa8fcb2fcbcb149c38d94e4434982924b6eb27",
-      "license": "MIT",
       "urls": [
         "bzz-raw://de00bf4a319a6c4c8a227039e9ac39f01ddc21f5c61186d7067614d686d010fd",
         "dweb:/ipfs/QmWseV2PXggxynEEDXq8HkLQstC9e8BFYVQFhrfxVaVH6j"
-      ]
+      ],
+      "license": "MIT"
     }
   },
   "version": 1

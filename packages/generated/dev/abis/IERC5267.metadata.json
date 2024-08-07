@@ -6,13 +6,15 @@
   "output": {
     "abi": [
       {
-        "anonymous": false,
         "inputs": [],
+        "type": "event",
         "name": "EIP712DomainChanged",
-        "type": "event"
+        "anonymous": false
       },
       {
         "inputs": [],
+        "stateMutability": "view",
+        "type": "function",
         "name": "eip712Domain",
         "outputs": [
           {
@@ -50,17 +52,10 @@
             "name": "extensions",
             "type": "uint256[]"
           }
-        ],
-        "stateMutability": "view",
-        "type": "function"
+        ]
       }
     ],
     "devdoc": {
-      "events": {
-        "EIP712DomainChanged()": {
-          "details": "MAY be emitted to signal that the domain could have changed."
-        }
-      },
       "kind": "dev",
       "methods": {
         "eip712Domain()": {
@@ -76,39 +71,39 @@
     }
   },
   "settings": {
-    "compilationTarget": {
-      "lib/@openzeppelin/contracts/interfaces/IERC5267.sol": "IERC5267"
-    },
-    "evmVersion": "paris",
-    "libraries": {},
-    "metadata": {
-      "appendCBOR": false,
-      "bytecodeHash": "none"
-    },
+    "remappings": [
+      "@openzeppelin/=lib/@openzeppelin/",
+      "@prb/math/=lib/@prb/math/src/",
+      "@prb/test/=lib/@prb/test/src/",
+      "account-abstraction/=lib/account-abstraction/contracts/",
+      "base64/=lib/base64/",
+      "ds-test/=lib/ds-test/src/",
+      "forge-std/=lib/forge-std/src/",
+      "hardhat-deploy/=lib/hardhat-deploy/",
+      "solady/=lib/solady/src/"
+    ],
     "optimizer": {
       "enabled": true,
       "runs": 200
     },
-    "remappings": [
-      ":@openzeppelin/=lib/@openzeppelin/",
-      ":@prb/math/=lib/@prb/math/src/",
-      ":@prb/test/=lib/@prb/test/src/",
-      ":account-abstraction/=lib/account-abstraction/contracts/",
-      ":base64/=lib/base64/",
-      ":ds-test/=lib/ds-test/src/",
-      ":forge-std/=lib/forge-std/src/",
-      ":hardhat-deploy/=lib/hardhat-deploy/",
-      ":solady/=lib/solady/src/"
-    ]
+    "metadata": {
+      "bytecodeHash": "none",
+      "appendCBOR": false
+    },
+    "compilationTarget": {
+      "lib/@openzeppelin/contracts/interfaces/IERC5267.sol": "IERC5267"
+    },
+    "evmVersion": "paris",
+    "libraries": {}
   },
   "sources": {
     "lib/@openzeppelin/contracts/interfaces/IERC5267.sol": {
       "keccak256": "0x92aa1df62dc3d33f1656d63bede0923e0df0b706ad4137c8b10b0a8fe549fd92",
-      "license": "MIT",
       "urls": [
         "bzz-raw://c5c0f29195ad64cbe556da8e257dac8f05f78c53f90323c0d2accf8e6922d33a",
         "dweb:/ipfs/QmQ61TED8uaCZwcbh8KkgRSsCav7x7HbcGHwHts3U4DmUP"
-      ]
+      ],
+      "license": "MIT"
     }
   },
   "version": 1
