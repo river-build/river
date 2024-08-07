@@ -4,8 +4,6 @@ import (
 	"context"
 	"sync"
 
-	"github.com/river-build/river/core/node/utils"
-
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
 
@@ -14,6 +12,7 @@ import (
 	"github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"
+	"github.com/river-build/river/core/node/utils"
 )
 
 type (
