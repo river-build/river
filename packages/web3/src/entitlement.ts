@@ -13,6 +13,7 @@ import { mainnet } from 'viem/chains'
 import { ethers } from 'ethers'
 import { Address } from './ContractTypes'
 import { MOCK_ADDRESS } from './Utils'
+import { error } from 'console'
 
 const zeroAddress = ethers.constants.AddressZero
 
@@ -448,8 +449,16 @@ async function evaluateCheckOperation(
         case CheckOperationType.MOCK: {
             return evaluateMockOperation(operation, controller)
         }
-        case CheckOperationType.ISENTITLED:
-            throw new Error(`CheckOperationType.ISENTITLED not implemented`)
+        case CheckOperationType.ISENTITLED: {
+            await Promise.all(providers.map((p) => p.ready))
+            const provider = findProviderFromChainId(providers, operation.chainId)
+
+            if (!provider) {
+                controller.abort()
+                return zeroAddress
+            }
+            return evaluateCustomEntitledOperation(operation, controller, provider, linkedWallets)
+        }
         case CheckOperationType.ERC20: {
             await Promise.all(providers.map((p) => p.ready))
             const provider = findProviderFromChainId(providers, operation.chainId)
@@ -687,8 +696,27 @@ async function evaluateERC20Operation(
     )
 }
 
+async function evaluateCustomEntitledOperation(
+    operation: CheckOperation,
+    controller: AbortController,
+    provider: ethers.providers.StaticJsonRpcProvider,
+    linkedWallets: string[],
+): Promise<EntitledWalletOrZeroAddress> {
+    const contract = new ethers.Contract(
+        operation.contractAddress,
+        ['function isEntitled(address[]) view returns (bool)'],
+        provider,
+    )
+    const entitled = await contract.callStatic.isEntitled(linkedWallets)
+    if (entitled) {
+        return linkedWallets[0]
+    } else {
+        controller.abort()
+        return zeroAddress
+    }
+}
 async function evaluateContractBalanceAcrossWallets(
-    contractAddress: `0x${string}`,
+    contractAddress: Address,
     threshold: bigint,
     controller: AbortController,
     provider: ethers.providers.StaticJsonRpcProvider,

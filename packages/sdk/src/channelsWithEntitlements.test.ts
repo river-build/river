@@ -869,7 +869,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test.only('erc20 gate join fail', async () => {
+    test('erc20 gate join fail', async () => {
         const erc20Address = await TestERC20.getContractAddress('TestERC20')
         const op: Operation = {
             opType: OperationType.CHECK,
@@ -888,6 +888,286 @@ describe('channelsWithEntitlements', () => {
 
         // kill the clients
         const doneStart = Date.now()
+        await bob.stopSync()
+        await alice.stopSync()
+        log('Done', Date.now() - doneStart)
+    })
+
+    test('ERC20 gate join pass - join as root, asset in linked wallet', async () => {
+        const erc20Address = await TestERC20.getContractAddress('TestERC20')
+        const op: Operation = {
+            opType: OperationType.CHECK,
+            checkType: CheckOperationType.ERC20,
+            chainId: 31337n,
+            contractAddress: erc20Address,
+            threshold: 50n, // 50 tokens required
+        }
+        const ruleData = treeToRuleData(op)
+
+        const {
+            alice,
+            bob,
+            aliceSpaceDapp,
+            aliceProvider,
+            carolsWallet,
+            carolProvider,
+            spaceId,
+            channelId,
+        } = await setupChannelWithCustomRole([], ruleData)
+
+        // Link carol's wallet to alice's as root
+        await linkWallets(aliceSpaceDapp, aliceProvider.wallet, carolProvider.wallet)
+
+        // Validate alice cannot join the channel
+        await expectUserCannotJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
+
+        // Mint the needed asset to Alice's linked wallet
+        log('Minting 50 ERC20 tokens for carols wallet, which is linked to alices wallet')
+        await TestERC20.publicMint('TestERC20', carolsWallet.address as Address, 50)
+
+        // Wait 2 seconds for the negative auth cache to expire
+        await new Promise((f) => setTimeout(f, 2000))
+
+        // Validate alice can join the channel
+        await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
+
+        const doneStart = Date.now()
+        // kill the clients
+        await bob.stopSync()
+        await alice.stopSync()
+        log('Done', Date.now() - doneStart)
+    })
+
+    test('ERC20 Gate Join Pass - join as linked wallet, assets in root wallet', async () => {
+        const erc20Address = await TestERC20.getContractAddress('TestERC20')
+        const op: Operation = {
+            opType: OperationType.CHECK,
+            checkType: CheckOperationType.ERC20,
+            chainId: 31337n,
+            contractAddress: erc20Address,
+            threshold: 50n, // 50 tokens required
+        }
+        const ruleData = treeToRuleData(op)
+        const {
+            alice,
+            bob,
+            aliceSpaceDapp,
+            carolSpaceDapp,
+            aliceProvider,
+            carolsWallet,
+            carolProvider,
+            spaceId,
+            channelId,
+        } = await setupChannelWithCustomRole([], ruleData)
+
+        log("Joining alice's wallet as a linked wallet to carols root wallet")
+        await linkWallets(carolSpaceDapp, carolProvider.wallet, aliceProvider.wallet)
+
+        log('Minting an NFT for carols wallet, which is the root to alices wallet')
+        await TestERC20.publicMint('TestERC20', carolsWallet.address as Address, 50)
+
+        log('expect that alice can join the space')
+        // Validate alice can join the channel
+        await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
+
+        const doneStart = Date.now()
+        // kill the clients
+        await bob.stopSync()
+        await alice.stopSync()
+        log('Done', Date.now() - doneStart)
+    })
+
+    test('ERC20 Gate Join Pass - assets split across wallets', async () => {
+        const erc20Address = await TestERC20.getContractAddress('TestERC20')
+        const op: Operation = {
+            opType: OperationType.CHECK,
+            checkType: CheckOperationType.ERC20,
+            chainId: 31337n,
+            contractAddress: erc20Address,
+            threshold: 50n, // 50 tokens required
+        }
+        const ruleData = treeToRuleData(op)
+        const {
+            alice,
+            bob,
+            aliceSpaceDapp,
+            carolSpaceDapp,
+            aliceProvider,
+            carolsWallet,
+            carolProvider,
+            spaceId,
+            channelId,
+        } = await setupChannelWithCustomRole([], ruleData)
+
+        log("Joining alice's wallet as a linked wallet to carols root wallet")
+        await linkWallets(carolSpaceDapp, carolProvider.wallet, aliceProvider.wallet)
+
+        log('Minting an NFT for carols wallet, which is the root to alices wallet')
+        await TestERC20.publicMint('TestERC20', carolsWallet.address as Address, 25)
+        await TestERC20.publicMint('TestERC20', aliceProvider.wallet.address as Address, 25)
+
+        log('expect that alice can join the space')
+        // Validate alice can join the channel
+        await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
+
+        const doneStart = Date.now()
+        // kill the clients
+        await bob.stopSync()
+        await alice.stopSync()
+        log('Done', Date.now() - doneStart)
+    })
+
+    test('custom entitlement gate pass', async () => {
+        const contractName = 'TestCustom'
+        const customAddress = await TestCustomEntitlement.getContractAddress(contractName)
+        const op: Operation = {
+            opType: OperationType.CHECK,
+            checkType: CheckOperationType.ISENTITLED,
+            chainId: 31337n,
+            contractAddress: customAddress,
+            threshold: 0n,
+        }
+        const ruleData = treeToRuleData(op)
+
+        const { alice, bob, alicesWallet, aliceSpaceDapp, spaceId, channelId } =
+            await setupChannelWithCustomRole([], ruleData)
+
+        await TestCustomEntitlement.setEntitled(
+            contractName,
+            [alicesWallet.address as Address],
+            true,
+        )
+
+        log('expect that alice can join the channel')
+        await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
+
+        // kill the clients
+        const doneStart = Date.now()
+        await bob.stopSync()
+        await alice.stopSync()
+        log('Done', Date.now() - doneStart)
+    })
+
+    test('custom entitlement gate fail', async () => {
+        const contractName = 'TestCustom'
+        const customAddress = await TestCustomEntitlement.getContractAddress(contractName)
+        const op: Operation = {
+            opType: OperationType.CHECK,
+            checkType: CheckOperationType.ISENTITLED,
+            chainId: 31337n,
+            contractAddress: customAddress,
+            threshold: 0n,
+        }
+        const ruleData = treeToRuleData(op)
+
+        const { alice, bob, alicesWallet, aliceSpaceDapp, spaceId, channelId } =
+            await setupChannelWithCustomRole([], ruleData)
+
+        await TestCustomEntitlement.setEntitled(
+            contractName,
+            [alicesWallet.address as Address],
+            false,
+        )
+
+        log('expect that alice can join the channel')
+        await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
+
+        // kill the clients
+        const doneStart = Date.now()
+        await bob.stopSync()
+        await alice.stopSync()
+        log('Done', Date.now() - doneStart)
+    })
+
+    test('custom entitlement gate join pass - join as root, linked wallet entitled', async () => {
+        const contractName = 'TestCustom'
+        const customAddress = await TestCustomEntitlement.getContractAddress(contractName)
+        const op: Operation = {
+            opType: OperationType.CHECK,
+            checkType: CheckOperationType.ISENTITLED,
+            chainId: 31337n,
+            contractAddress: customAddress,
+            threshold: 0n,
+        }
+        const ruleData = treeToRuleData(op)
+
+        const {
+            alice,
+            bob,
+            aliceSpaceDapp,
+            aliceProvider,
+            carolsWallet,
+            carolProvider,
+            spaceId,
+            channelId,
+        } = await setupChannelWithCustomRole([], ruleData)
+
+        // Link carol's wallet to alice's as root
+        await linkWallets(aliceSpaceDapp, aliceProvider.wallet, carolProvider.wallet)
+
+        // Validate alice cannot join the channel
+        await expectUserCannotJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
+
+        // Set entitlement for carol's wallet
+        await TestCustomEntitlement.setEntitled(
+            contractName,
+            [carolsWallet.address as Address],
+            true,
+        )
+
+        // Wait 2 seconds for the negative auth cache to expire
+        await new Promise((f) => setTimeout(f, 2000))
+
+        // Validate alice can join the channel
+        await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
+
+        const doneStart = Date.now()
+        // kill the clients
+        await bob.stopSync()
+        await alice.stopSync()
+        log('Done', Date.now() - doneStart)
+    })
+
+    test('custom entitlement gated join - join as linked wallet, assets in root wallet', async () => {
+        const contractName = 'TestCustom'
+        const customAddress = await TestCustomEntitlement.getContractAddress(contractName)
+        const op: Operation = {
+            opType: OperationType.CHECK,
+            checkType: CheckOperationType.ISENTITLED,
+            chainId: 31337n,
+            contractAddress: customAddress,
+            threshold: 0n,
+        }
+        const ruleData = treeToRuleData(op)
+
+        const {
+            alice,
+            bob,
+            aliceSpaceDapp,
+            carolSpaceDapp,
+            aliceProvider,
+            carolsWallet,
+            carolProvider,
+            spaceId,
+            channelId,
+        } = await setupChannelWithCustomRole([], ruleData)
+
+        log("Joining alice's wallet as a linked wallet to carols root wallet")
+        await linkWallets(carolSpaceDapp, carolProvider.wallet, aliceProvider.wallet)
+
+        // Set carol's wallet as entitled
+        await TestCustomEntitlement.setEntitled(
+            contractName,
+            [carolsWallet.address as Address],
+            true,
+        )
+
+        log('expect that alice can join the space')
+        // Validate alice can join the channel
+        await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
+
+        const doneStart = Date.now()
+        // kill the clients
         await bob.stopSync()
         await alice.stopSync()
         log('Done', Date.now() - doneStart)

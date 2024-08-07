@@ -1,14 +1,9 @@
-import { createTestClient, http, publicActions, walletActions } from 'viem'
+import { createTestClient, http, publicActions, walletActions, parseEther } from 'viem'
 import { foundry } from 'viem/chains'
-
-import { MockCustomEntitlement } from './MockCustomEntitlement'
-
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 
-import { deployContract } from './TestGatingUtils'
-
-import { Mutex } from './TestGatingUtils'
-
+import { MockCustomEntitlement } from './MockCustomEntitlement'
+import { deployContract, Mutex } from './TestGatingUtils'
 import { Address } from './ContractTypes'
 
 import { dlogger } from '@river-build/dlog'
@@ -57,6 +52,11 @@ async function setEntitled(
     })
         .extend(publicActions)
         .extend(walletActions)
+
+    await client.setBalance({
+        address: throwawayAccount.address,
+        value: parseEther('1'),
+    })
 
     const contractAddress = await getContractAddress(customEntitlementContractName)
 

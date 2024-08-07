@@ -1,6 +1,5 @@
-import { createTestClient, http, publicActions, walletActions } from 'viem'
+import { createTestClient, http, publicActions, walletActions, parseEther } from 'viem'
 import { foundry } from 'viem/chains'
-import { parseEther } from 'viem/utils'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 
 import { MockERC20 } from './MockERC20'
