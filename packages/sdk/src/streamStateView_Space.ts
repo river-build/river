@@ -161,25 +161,23 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
 
     private async decryptSpaceImage(
         context: string,
-        currentEncryptedImage: EncryptedData,
+        encryptedImage: EncryptedData,
     ): Promise<ChunkedMedia | undefined> {
         try {
-            const plaintext = await decryptDerivedAESGCM(context, currentEncryptedImage)
+            const plaintext = await decryptDerivedAESGCM(context, encryptedImage)
             const decryptedChunkedMedia = ChunkedMedia.fromBinary(plaintext)
 
             // Ensure the state is still relevant before updating
-            if (this.encryptedSpaceImage === currentEncryptedImage) {
+            if (this.encryptedSpaceImage === encryptedImage) {
                 this.spaceImage = decryptedChunkedMedia
                 this.encryptedSpaceImage = undefined
             }
 
             return decryptedChunkedMedia
         } finally {
-            // Clear the in-progress promise once it resolves or rejects
-            this.decryptionInProgress = undefined
-
-            // Reset this.imageBeingDecrypted only if the current image is still relevant
-            if (this.encryptedSpaceImage === currentEncryptedImage) {
+            // Reset only if the image being decrypted is the most up-to-date
+            if (this.imageBeingDecrypted === encryptedImage) {
+                this.decryptionInProgress = undefined
                 this.imageBeingDecrypted = undefined
             }
         }
