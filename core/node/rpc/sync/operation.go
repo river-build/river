@@ -2,11 +2,13 @@ package sync
 
 import (
 	"context"
-	"github.com/river-build/river/core/node/dlog"
 	"time"
+
+	"github.com/river-build/river/core/node/dlog"
 
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
+
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/nodes"
@@ -95,7 +97,6 @@ func (syncOp *StreamSyncOperation) Run(
 	syncers, messages, err := client.NewSyncers(
 		syncOp.ctx, syncOp.cancel, syncOp.SyncID, syncOp.streamCache,
 		syncOp.nodeRegistry, syncOp.thisNodeAddress, cookies)
-
 	if err != nil {
 		return err
 	}
