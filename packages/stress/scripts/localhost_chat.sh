@@ -46,6 +46,7 @@ export SESSION_ID="${SESSION_ID:-$(uuidgen)}"
 
 export PROCESSES_PER_CONTAINER="${PROCESSES_PER_CONTAINER:-4}"
 export CLIENTS_COUNT="${CLIENTS_COUNT:-100}"
+export RANDOM_CLIENTS_COUNT="${RANDOM_CLIENTS_COUNT:-5}"
 
 export MNEMONIC="toy alien remain valid print employ age multiply claim student story aware" 
 export WALLET_ADDRESS="0x95D7701A0Faa5F514B4c5B49bf66580fCE9ffbf7"
