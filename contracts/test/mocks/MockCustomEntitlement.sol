@@ -8,17 +8,17 @@ contract MockCustomEntitlement is ICustomEntitlement {
 
   constructor() {}
 
-  function setEntitled(address[] memory user, bool userIsEntitled) external {
-    for (uint256 i = 0; i < user.length; i++) {
-      entitled[keccak256(abi.encode(user[i]))] = userIsEntitled;
+  function setEntitled(address[] memory users, bool userIsEntitled) external {
+    for (uint256 i = 0; i < users.length; i++) {
+      entitled[keccak256(abi.encode(users[i]))] = userIsEntitled;
     }
   }
 
   function isEntitled(
-    address[] memory user
+    address[] memory users
   ) external view override returns (bool) {
-    for (uint256 i = 0; i < user.length; i++) {
-      if (entitled[keccak256(abi.encode(user[i]))] == true) {
+    for (uint256 i = 0; i < users.length; i++) {
+      if (entitled[keccak256(abi.encode(users[i]))] == true) {
         return true;
       }
     }
