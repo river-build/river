@@ -122,16 +122,17 @@ async function burn(nftName: string, tokenId: number): Promise<void> {
         .extend(publicActions)
         .extend(walletActions)
 
-    const contractAddress = await getContractAddress(nftName)
-
-    const account = (await client.getAddresses())[0]
+    await client.setBalance({
+        address: throwawayAccount.address,
+        value: parseEther('1'),
+    })
 
     const nftReceipt = await client.writeContract({
-        address: contractAddress,
+        address: await getContractAddress(nftName),
         abi: MockERC721a.abi,
         functionName: 'burn',
         args: [BigInt(tokenId)],
-        account,
+        account: throwawayAccount,
     })
 
     const receipt = await client.waitForTransactionReceipt({ hash: nftReceipt })
