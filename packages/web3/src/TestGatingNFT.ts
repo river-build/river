@@ -156,7 +156,7 @@ async function balanceOf(nftName: string, address: Address): Promise<number> {
     return Number(balanceEncoded)
 }
 
-export const TestNFT = {
+export const TestERC721 = {
     publicMint,
     burn,
     balanceOf,

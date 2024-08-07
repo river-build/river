@@ -24,7 +24,7 @@ import {
     NoopRuleData,
     IRuleEntitlementBase,
     Permission,
-    TestNFT,
+    TestERC721,
     TestERC20,
     TestCustomEntitlement,
     LogicalOperationType,
@@ -487,7 +487,7 @@ describe('channelsWithEntitlements', () => {
     })
 
     test('oneNftGateJoinPass - join as root, asset in linked wallet', async () => {
-        const testNft1Address = await TestNFT.getContractAddress('TestNFT1')
+        const testNft1Address = await TestERC721.getContractAddress('TestNFT1')
         const {
             alice,
             bob,
@@ -507,7 +507,7 @@ describe('channelsWithEntitlements', () => {
 
         // Mint the needed asset to Alice's linked wallet
         log('Minting an NFT for carols wallet, which is linked to alices wallet')
-        await TestNFT.publicMint('TestNFT1', carolsWallet.address as Address)
+        await TestERC721.publicMint('TestNFT1', carolsWallet.address as Address)
 
         // Wait 2 seconds for the negative auth cache to expire
         await new Promise((f) => setTimeout(f, 2000))
@@ -523,7 +523,7 @@ describe('channelsWithEntitlements', () => {
     })
 
     test('oneNftGateJoinPass - join as linked wallet, asset in root wallet', async () => {
-        const testNft1Address = await TestNFT.getContractAddress('TestNFT1')
+        const testNft1Address = await TestERC721.getContractAddress('TestNFT1')
         const {
             alice,
             bob,
@@ -540,7 +540,7 @@ describe('channelsWithEntitlements', () => {
         await linkWallets(carolSpaceDapp, carolProvider.wallet, aliceProvider.wallet)
 
         log('Minting an NFT for carols wallet, which is the root to alices wallet')
-        await TestNFT.publicMint('TestNFT1', carolsWallet.address as Address)
+        await TestERC721.publicMint('TestNFT1', carolsWallet.address as Address)
 
         log('expect that alice can join the space')
         // Validate alice can join the channel
@@ -554,7 +554,7 @@ describe('channelsWithEntitlements', () => {
     })
 
     test('oneNftGateJoinPass', async () => {
-        const testNftAddress = await TestNFT.getContractAddress('TestNFT')
+        const testNftAddress = await TestERC721.getContractAddress('TestNFT')
         const { alice, alicesWallet, aliceSpaceDapp, bob, spaceId, channelId } =
             await setupChannelWithCustomRole([], getNftRuleData(testNftAddress))
 
@@ -562,7 +562,7 @@ describe('channelsWithEntitlements', () => {
         await expectUserCannotJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
 
         // Mint an nft for alice - she should be able to join now
-        await TestNFT.publicMint('TestNFT', alicesWallet.address as Address)
+        await TestERC721.publicMint('TestNFT', alicesWallet.address as Address)
 
         // Wait 2 seconds for the negative auth cache to expire
         await new Promise((f) => setTimeout(f, 2000))
@@ -575,12 +575,12 @@ describe('channelsWithEntitlements', () => {
     })
 
     test('user booted on key request after entitlement loss', async () => {
-        const testNftAddress = await TestNFT.getContractAddress('TestNFT')
+        const testNftAddress = await TestERC721.getContractAddress('TestNFT')
         const { alice, alicesWallet, aliceSpaceDapp, bob, spaceId, channelId } =
             await setupChannelWithCustomRole([], getNftRuleData(testNftAddress))
 
         // Mint an nft for alice - she should be able to join now
-        const tokenId = await TestNFT.publicMint('TestNFT', alicesWallet.address as Address)
+        const tokenId = await TestERC721.publicMint('TestNFT', alicesWallet.address as Address)
 
         // Validate alice can join the channel
         await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
@@ -593,8 +593,8 @@ describe('channelsWithEntitlements', () => {
 
         // Burn Alice's NFT and validate her zero balance. She should now fail an entitlement check for the
         // channel.
-        await TestNFT.burn('TestNFT', tokenId)
-        await expect(TestNFT.balanceOf('TestNFT', alicesWallet.address as Address)).resolves.toBe(0)
+        await TestERC721.burn('TestNFT', tokenId)
+        await expect(TestERC721.balanceOf('TestNFT', alicesWallet.address as Address)).resolves.toBe(0)
 
         // Wait 5 seconds for the positive auth cache to expire
         await new Promise((f) => setTimeout(f, 5000))
@@ -634,7 +634,7 @@ describe('channelsWithEntitlements', () => {
     })
 
     test('user cannot post after entitlement loss', async () => {
-        const testNftAddress = await TestNFT.getContractAddress('TestNFT')
+        const testNftAddress = await TestERC721.getContractAddress('TestNFT')
         const { alice, alicesWallet, aliceSpaceDapp, bob, spaceId, channelId } =
             await setupChannelWithCustomRole([], getNftRuleData(testNftAddress), [
                 Permission.Read,
@@ -642,7 +642,7 @@ describe('channelsWithEntitlements', () => {
             ])
 
         // Mint an nft for alice - she should be able to join now
-        const tokenId = await TestNFT.publicMint('TestNFT', alicesWallet.address as Address)
+        const tokenId = await TestERC721.publicMint('TestNFT', alicesWallet.address as Address)
 
         // Validate alice can join the channel
         await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
@@ -655,8 +655,8 @@ describe('channelsWithEntitlements', () => {
 
         // Burn Alice's NFT and validate her zero balance. She should now fail an entitlement check for the
         // channel.
-        await TestNFT.burn('TestNFT', tokenId)
-        await expect(TestNFT.balanceOf('TestNFT', alicesWallet.address as Address)).resolves.toBe(0)
+        await TestERC721.burn('TestNFT', tokenId)
+        await expect(TestERC721.balanceOf('TestNFT', alicesWallet.address as Address)).resolves.toBe(0)
 
         // Wait 5 seconds for the positive auth cache to expire
         await new Promise((f) => setTimeout(f, 5000))
@@ -673,7 +673,7 @@ describe('channelsWithEntitlements', () => {
     })
 
     test('oneNftGateJoinFail', async () => {
-        const testNft1Address = await TestNFT.getContractAddress('TestNFT1')
+        const testNft1Address = await TestERC721.getContractAddress('TestNFT1')
         const { alice, aliceSpaceDapp, bob, spaceId, channelId } = await setupChannelWithCustomRole(
             [],
             getNftRuleData(testNft1Address),
@@ -688,13 +688,13 @@ describe('channelsWithEntitlements', () => {
     })
 
     test('twoNftGateJoinPass', async () => {
-        const testNft1Address = await TestNFT.getContractAddress('TestNFT1')
-        const testNft2Address = await TestNFT.getContractAddress('TestNFT2')
+        const testNft1Address = await TestERC721.getContractAddress('TestNFT1')
+        const testNft2Address = await TestERC721.getContractAddress('TestNFT2')
         const { alice, bob, alicesWallet, aliceSpaceDapp, spaceId, channelId } =
             await setupChannelWithCustomRole([], twoNftRuleData(testNft1Address, testNft2Address))
 
-        const aliceMintTx1 = TestNFT.publicMint('TestNFT1', alicesWallet.address as Address)
-        const aliceMintTx2 = TestNFT.publicMint('TestNFT2', alicesWallet.address as Address)
+        const aliceMintTx1 = TestERC721.publicMint('TestNFT1', alicesWallet.address as Address)
+        const aliceMintTx2 = TestERC721.publicMint('TestNFT2', alicesWallet.address as Address)
 
         log('Minting nfts for alice')
         await Promise.all([aliceMintTx1, aliceMintTx2])
@@ -711,8 +711,8 @@ describe('channelsWithEntitlements', () => {
     })
 
     test('twoNftGateJoinPass - acrossLinkedWallets', async () => {
-        const testNft1Address = await TestNFT.getContractAddress('TestNFT1')
-        const testNft2Address = await TestNFT.getContractAddress('TestNFT2')
+        const testNft1Address = await TestERC721.getContractAddress('TestNFT1')
+        const testNft2Address = await TestERC721.getContractAddress('TestNFT2')
         const {
             alice,
             bob,
@@ -725,8 +725,8 @@ describe('channelsWithEntitlements', () => {
             channelId,
         } = await setupChannelWithCustomRole([], twoNftRuleData(testNft1Address, testNft2Address))
 
-        const aliceMintTx1 = TestNFT.publicMint('TestNFT1', alicesWallet.address as Address)
-        const carolMintTx2 = TestNFT.publicMint('TestNFT2', carolsWallet.address as Address)
+        const aliceMintTx1 = TestERC721.publicMint('TestNFT1', alicesWallet.address as Address)
+        const carolMintTx2 = TestERC721.publicMint('TestNFT2', carolsWallet.address as Address)
 
         log('Minting nfts for alice and carol')
         await Promise.all([aliceMintTx1, carolMintTx2])
@@ -745,14 +745,14 @@ describe('channelsWithEntitlements', () => {
     })
 
     test('twoNftGateJoinFail', async () => {
-        const testNft1Address = await TestNFT.getContractAddress('TestNFT1')
-        const testNft2Address = await TestNFT.getContractAddress('TestNFT2')
+        const testNft1Address = await TestERC721.getContractAddress('TestNFT1')
+        const testNft2Address = await TestERC721.getContractAddress('TestNFT2')
         const { alice, aliceSpaceDapp, bob, alicesWallet, spaceId, channelId } =
             await setupChannelWithCustomRole([], twoNftRuleData(testNft1Address, testNft2Address))
 
         // Mint only one of the required NFTs for alice
         log('Minting only one of two required NFTs for alice')
-        await TestNFT.publicMint('TestNFT1', alicesWallet.address as Address)
+        await TestERC721.publicMint('TestNFT1', alicesWallet.address as Address)
 
         log('expect that alice cannot join the channel')
         await expectUserCannotJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
@@ -763,8 +763,8 @@ describe('channelsWithEntitlements', () => {
     })
 
     test('OrOfTwoNftGateJoinPass', async () => {
-        const testNft1Address = await TestNFT.getContractAddress('TestNFT1')
-        const testNft2Address = await TestNFT.getContractAddress('TestNFT2')
+        const testNft1Address = await TestERC721.getContractAddress('TestNFT1')
+        const testNft2Address = await TestERC721.getContractAddress('TestNFT2')
         const { alice, bob, alicesWallet, aliceSpaceDapp, spaceId, channelId } =
             await setupChannelWithCustomRole(
                 [],
@@ -772,7 +772,7 @@ describe('channelsWithEntitlements', () => {
             )
         // join alice
         log('Minting an NFT for alice')
-        await TestNFT.publicMint('TestNFT1', alicesWallet.address as Address)
+        await TestERC721.publicMint('TestNFT1', alicesWallet.address as Address)
 
         log('expect that alice can join the channel')
         await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
@@ -785,9 +785,9 @@ describe('channelsWithEntitlements', () => {
     })
 
     test('orOfTwoNftOrOneNftGateJoinPass', async () => {
-        const testNft1Address = await TestNFT.getContractAddress('TestNFT1')
-        const testNft2Address = await TestNFT.getContractAddress('TestNFT2')
-        const testNft3Address = await TestNFT.getContractAddress('TestNFT3')
+        const testNft1Address = await TestERC721.getContractAddress('TestNFT1')
+        const testNft2Address = await TestERC721.getContractAddress('TestNFT2')
+        const testNft3Address = await TestERC721.getContractAddress('TestNFT3')
         const leftOperation: Operation = {
             opType: OperationType.CHECK,
             checkType: CheckOperationType.ERC721,
@@ -828,8 +828,8 @@ describe('channelsWithEntitlements', () => {
             await setupChannelWithCustomRole([], ruleData)
 
         log("Mint Alice's NFTs")
-        const aliceMintTx1 = TestNFT.publicMint('TestNFT1', alicesWallet.address as Address)
-        const aliceMintTx2 = TestNFT.publicMint('TestNFT2', alicesWallet.address as Address)
+        const aliceMintTx1 = TestERC721.publicMint('TestNFT1', alicesWallet.address as Address)
+        const aliceMintTx2 = TestERC721.publicMint('TestNFT2', alicesWallet.address as Address)
         await Promise.all([aliceMintTx1, aliceMintTx2])
 
         log('expect that alice can join the channel')

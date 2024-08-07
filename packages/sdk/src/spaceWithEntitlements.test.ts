@@ -30,7 +30,7 @@ import {
     Permission,
     TestCustomEntitlement,
     TestERC20,
-    TestNFT,
+    TestERC721,
     treeToRuleData,
     IRuleEntitlementBase,
     ISpaceDapp,
@@ -146,9 +146,9 @@ describe('spaceWithEntitlements', () => {
     let testNft1Address: string, testNft2Address: string, testNft3Address: string
     beforeAll(async () => {
         ;[testNft1Address, testNft2Address, testNft3Address] = await Promise.all([
-            TestNFT.getContractAddress('TestNFT1'),
-            TestNFT.getContractAddress('TestNFT2'),
-            TestNFT.getContractAddress('TestNFT3'),
+            TestERC721.getContractAddress('TestNFT1'),
+            TestERC721.getContractAddress('TestNFT2'),
+            TestERC721.getContractAddress('TestNFT3'),
         ])
     })
 
@@ -427,7 +427,7 @@ describe('spaceWithEntitlements', () => {
 
         // join alice
         log('Minting an NFT for carols wallet, which is linked to alices wallet')
-        await TestNFT.publicMint('TestNFT1', carolsWallet.address as Address)
+        await TestERC721.publicMint('TestNFT1', carolsWallet.address as Address)
 
         await expectUserCanJoin(
             spaceId,
@@ -469,7 +469,7 @@ describe('spaceWithEntitlements', () => {
 
         // join alice
         log('Minting an NFT for carols wallet, which is the root to alices wallet')
-        await TestNFT.publicMint('TestNFT1', carolsWallet.address as Address)
+        await TestERC721.publicMint('TestNFT1', carolsWallet.address as Address)
 
         log('expect that alice can join the space')
         await expectUserCanJoin(
@@ -499,7 +499,7 @@ describe('spaceWithEntitlements', () => {
 
         // join alice
         log('Minting an NFT for alice')
-        await TestNFT.publicMint('TestNFT1', alicesWallet.address as Address)
+        await TestERC721.publicMint('TestNFT1', alicesWallet.address as Address)
 
         await expectUserCanJoin(
             spaceId,
@@ -560,8 +560,8 @@ describe('spaceWithEntitlements', () => {
                 ruleData: twoNftRuleData(testNft1Address, testNft2Address),
             })
 
-        const aliceMintTx1 = TestNFT.publicMint('TestNFT1', alicesWallet.address as Address)
-        const aliceMintTx2 = TestNFT.publicMint('TestNFT2', alicesWallet.address as Address)
+        const aliceMintTx1 = TestERC721.publicMint('TestNFT1', alicesWallet.address as Address)
+        const aliceMintTx2 = TestERC721.publicMint('TestNFT2', alicesWallet.address as Address)
 
         log('Minting nfts for alice')
         await Promise.all([aliceMintTx1, aliceMintTx2])
@@ -601,8 +601,8 @@ describe('spaceWithEntitlements', () => {
             ruleData: twoNftRuleData(testNft1Address, testNft2Address),
         })
 
-        const aliceMintTx1 = TestNFT.publicMint('TestNFT1', alicesWallet.address as Address)
-        const carolMintTx2 = TestNFT.publicMint('TestNFT2', carolsWallet.address as Address)
+        const aliceMintTx1 = TestERC721.publicMint('TestNFT1', alicesWallet.address as Address)
+        const carolMintTx2 = TestERC721.publicMint('TestNFT2', carolsWallet.address as Address)
 
         log('Minting nfts for alice and carol')
         await Promise.all([aliceMintTx1, carolMintTx2])
@@ -638,7 +638,7 @@ describe('spaceWithEntitlements', () => {
 
         // join alice
         log('Minting an NFT for alice')
-        await TestNFT.publicMint('TestNFT1', alicesWallet.address as Address)
+        await TestERC721.publicMint('TestNFT1', alicesWallet.address as Address)
 
         // first join the space on chain
         const aliceJoinStart = Date.now()
@@ -678,7 +678,7 @@ describe('spaceWithEntitlements', () => {
 
         // join alice
         log('Minting an NFT for alice')
-        await TestNFT.publicMint('TestNFT1', alicesWallet.address as Address)
+        await TestERC721.publicMint('TestNFT1', alicesWallet.address as Address)
 
         // first join the space on chain
         log('Expect alice can join space')
@@ -744,8 +744,8 @@ describe('spaceWithEntitlements', () => {
             })
 
         log("Mint Alice's NFTs")
-        const aliceMintTx1 = TestNFT.publicMint('TestNFT1', alicesWallet.address as Address)
-        const aliceMintTx2 = TestNFT.publicMint('TestNFT2', alicesWallet.address as Address)
+        const aliceMintTx1 = TestERC721.publicMint('TestNFT1', alicesWallet.address as Address)
+        const aliceMintTx2 = TestERC721.publicMint('TestNFT2', alicesWallet.address as Address)
         await Promise.all([aliceMintTx1, aliceMintTx2])
 
         log('expect alice can join space')
