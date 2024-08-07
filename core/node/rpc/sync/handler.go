@@ -115,7 +115,6 @@ func (h *handlerImpl) runSyncStreams(
 	doneChan chan error,
 ) {
 	// send SyncID to client
-	// run until sub.ctx expires or until the client calls CancelSync
 	if err := res.Send(&SyncStreamsResponse{
 		SyncId: op.SyncID,
 		SyncOp: SyncOp_SYNC_NEW,
@@ -124,6 +123,7 @@ func (h *handlerImpl) runSyncStreams(
 		return
 	}
 
+	// run until sub.ctx expires or until the client calls CancelSync
 	doneChan <- op.Run(req, res)
 }
 
