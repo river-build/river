@@ -5,6 +5,7 @@ import { getRandomEmoji } from '../../utils/emoji'
 import { getSystemInfo } from '../../utils/systemInfo'
 import { channelMessagePostWhere } from '../../utils/timeline'
 import { makeSillyMessage } from '../../utils/messages'
+import { countReactions, updateCountClients } from './countClients'
 
 export async function joinChat(client: StressClient, cfg: ChatConfig) {
     const logger = dlogger(`stress:joinChat:${client.logId}}`)
@@ -71,6 +72,16 @@ export async function joinChat(client: StressClient, cfg: ChatConfig) {
 
     // emoji it
     await client.sendReaction(announceChannelId, message.hashStr, getRandomEmoji())
+    const reactionCount = await countReactions(client, announceChannelId, message.hashStr)
+    if (cfg.countClientsMessageEventId) {
+        await updateCountClients(
+            client,
+            cfg.announceChannelId,
+            cfg.countClientsMessageEventId,
+            cfg.clientsCount,
+            reactionCount,
+        )
+    }
 
     logger.log('join channels')
     for (const channelId of cfg.channelIds) {

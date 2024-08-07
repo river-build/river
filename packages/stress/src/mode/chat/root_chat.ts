@@ -55,6 +55,7 @@ function getChatConfig(opts: { processIndex: number; rootWallet: Wallet }): Chat
         throw new Error('clientStartIndex >= clientEndIndex')
     }
     return {
+        countClientsMessageEventId: undefined,
         containerIndex,
         containerCount,
         processIndex: opts.processIndex,

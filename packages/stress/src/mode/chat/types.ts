@@ -12,6 +12,7 @@ export interface ChatConfig {
     sessionId: string
     spaceId: string
     announceChannelId: string
+    countClientsMessageEventId: string | undefined
     channelIds: string[]
     allWallets: Wallet[]
     randomClientsCount: number
