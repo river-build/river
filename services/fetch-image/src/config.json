@@ -1,0 +1,7 @@
+{
+	"chainConfig": {
+		"8543": {
+			"riverChainUrl": "https://mainnet.rpc.river.build/http"
+		}
+	}
+}
