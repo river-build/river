@@ -46,6 +46,7 @@ const (
 	ERC721
 	ERC1155
 	ISENTITLED
+	ETHBALANCE
 )
 
 func (t CheckOperationType) String() string {
@@ -62,6 +63,8 @@ func (t CheckOperationType) String() string {
 		return "ERC1155"
 	case ISENTITLED:
 		return "ISENTITLED"
+	case ETHBALANCE:
+		return "ETHBALANCE"
 	default:
 		return "UNKNOWN"
 	}

@@ -718,6 +718,16 @@ async function evaluateCustomEntitledOperation(
     })
 }
 
+async function evaluateEthBalanceOperation(
+    operation: CheckOperation,
+    controller: AbortController,
+    provider: ethers.providers.StaticJsonRpcProvider,
+    linkedWallets: string[],
+): Promise<EntitledWalletOrZeroAddress> {
+
+
+}
+
 async function evaluateContractBalanceAcrossWallets(
     contractAddress: Address,
     threshold: bigint,

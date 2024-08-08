@@ -36,7 +36,7 @@ func (e *Evaluator) evaluateCheckOperation(
 		return false, fmt.Errorf("evaluateCheckOperation: Chain ID is nil")
 	}
 	zeroAddress := common.Address{}
-	if op.ContractAddress == zeroAddress {
+	if op.CheckType != ETHBALANCE && op.ContractAddress == zeroAddress {
 		log.Info("Contract address is nil")
 		return false, fmt.Errorf("evaluateCheckOperation: Contract address is nil")
 	}
@@ -50,6 +50,8 @@ func (e *Evaluator) evaluateCheckOperation(
 		return e.evaluateErc721Operation(ctx, op, linkedWallets)
 	case ERC1155:
 		return e.evaluateErc1155Operation(ctx, op)
+	case ETHBALANCE:
+		return e.evaluateEthBalanceOperation(ctx, op, linkedWallets)
 	case CheckNONE:
 		fallthrough
 	case MOCK:
@@ -121,6 +123,47 @@ func (e *Evaluator) evaluateIsEntitledOperation(
 			return false, err
 		}
 		if isEntitled {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// Check balance in Wei
+func (e *Evaluator) evaluateEthBalanceOperation(
+	ctx context.Context,
+	op *CheckOperation,
+	linkedWallets []common.Address,
+) (bool, error) {
+	log := dlog.FromCtx(ctx).With("function", "evaluateEthBalanceOperation")
+	client, err := e.clients.Get(op.ChainID.Uint64())
+	if err != nil {
+		log.Error("Chain ID not found", "chainID", op.ChainID)
+		return false, fmt.Errorf("evaluateEthBalanceOperation: Chain ID %v not found", op.ChainID)
+	}
+
+	total := big.NewInt(0)
+	for _, wallet := range linkedWallets {
+		// Balance is returned as a representation of the balance according to the token's decimals,
+		// which stores the balance in an exponentiated form.
+		// Default decimals for ETH is 18, meaning the balance is stored in Wei.
+		balance, err := client.BalanceAt(ctx, wallet, nil)
+		if err != nil {
+			log.Error("Failed to retrieve ETH balance", "chain", op.ChainID, "error", err)
+			return false, err
+		}
+		total.Add(total, balance)
+
+		log.Debug("Retrieved ETH balance",
+			"balance", balance.String(),
+			"total", total.String(),
+			"threshold", op.Threshold.String(),
+			"chainID", op.ChainID.String(),
+		)
+
+		// Balance is a *big.Int
+		// Iteratively check if the total balance of evaluated wallets is greater than or equal to the threshold
+		if op.Threshold.Sign() > 0 && total.Sign() > 0 && total.Cmp(op.Threshold) >= 0 {
 			return true, nil
 		}
 	}
