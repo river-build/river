@@ -55,4 +55,7 @@ const run = async () => {
     }
     exit(0)
 }
-run().catch(() => exit(1))
+run().catch((e) => {
+    logger.error('unhandled error:', e)
+    exit(1)
+})

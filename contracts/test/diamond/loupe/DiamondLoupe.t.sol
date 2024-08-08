@@ -2,9 +2,9 @@
 pragma solidity ^0.8.23;
 
 //interfaces
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IDiamond} from "contracts/src/diamond/IDiamond.sol";
 import {IDiamondLoupe} from "contracts/src/diamond/facets/loupe/IDiamondLoupe.sol";
-import {IERC165} from "contracts/src/diamond/facets/introspection/IERC165.sol";
 
 //libraries
 
@@ -17,7 +17,7 @@ contract DiamondLoupeTest is DiamondCutSetup {
   DeployMockFacet mockFacetHelper = new DeployMockFacet();
   IDiamond.FacetCut[] internal facetCuts;
 
-  function test_supportsInterface() external {
+  function test_supportsInterface() external view {
     assertTrue(
       IERC165(diamond).supportsInterface(type(IDiamondLoupe).interfaceId)
     );
