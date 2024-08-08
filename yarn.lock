@@ -10810,36 +10810,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fetch-image@workspace:services/image-service":
-  version: 0.0.0-use.local
-  resolution: "fetch-image@workspace:services/image-service"
-  dependencies:
-    "@bufbuild/buf": ^1.34.0
-    "@bufbuild/protobuf": ^1.10.0
-    "@connectrpc/connect-web": ^1.4.0
-    "@fastify/cors": ^9.0.1
-    "@river-build/proto": "workspace:^"
-    "@river-build/sdk": "workspace:^"
-    "@rollup/plugin-commonjs": ^26.0.1
-    "@rollup/plugin-json": ^6.1.0
-    "@rollup/plugin-node-resolve": ^15.2.3
-    "@rollup/plugin-replace": ^5.0.7
-    "@rollup/plugin-typescript": ^11.1.6
-    "@rollup/plugin-url": ^8.0.2
-    "@rollup/plugin-wasm": ^6.2.2
-    "@types/node": ^20.14.10
-    dotenv: ^16.4.5
-    esbuild: ^0.23.0
-    ethers: 4
-    fastify: ^4.28.1
-    magic-bytes.js: ^1.10.0
-    rollup: ^4.18.1
-    ts-node: ^10.9.2
-    typescript: ^5.5.3
-    viem: ^2.17.3
-  languageName: unknown
-  linkType: soft
-
 "fflate@npm:^0.8.2":
   version: 0.8.2
   resolution: "fflate@npm:0.8.2"
@@ -12185,6 +12155,37 @@ __metadata:
   checksum: 3d4c309c6006e2621659311783eaea7ebcd41fe4ca1d78c91c473157ad6666a57a2df790fe0d07a12300d9aac2888204d7be8d59f9aaf665b1c7fcdb432517ef
   languageName: node
   linkType: hard
+
+"image-service@workspace:services/image-service":
+  version: 0.0.0-use.local
+  resolution: "image-service@workspace:services/image-service"
+  dependencies:
+    "@bufbuild/buf": ^1.34.0
+    "@bufbuild/protobuf": ^1.10.0
+    "@connectrpc/connect-web": ^1.4.0
+    "@fastify/cors": ^9.0.1
+    "@river-build/generated": "workspace:^"
+    "@river-build/proto": "workspace:^"
+    "@river-build/sdk": "workspace:^"
+    "@rollup/plugin-commonjs": ^26.0.1
+    "@rollup/plugin-json": ^6.1.0
+    "@rollup/plugin-node-resolve": ^15.2.3
+    "@rollup/plugin-replace": ^5.0.7
+    "@rollup/plugin-typescript": ^11.1.6
+    "@rollup/plugin-url": ^8.0.2
+    "@rollup/plugin-wasm": ^6.2.2
+    "@types/node": ^20.14.10
+    dotenv: ^16.4.5
+    esbuild: ^0.23.0
+    ethers: 4
+    fastify: ^4.28.1
+    magic-bytes.js: ^1.10.0
+    rollup: ^4.18.1
+    ts-node: ^10.9.2
+    typescript: ^5.5.3
+    viem: ^2.17.3
+  languageName: unknown
+  linkType: soft
 
 "import-fresh@npm:^3.2.1, import-fresh@npm:^3.3.0":
   version: 3.3.0
