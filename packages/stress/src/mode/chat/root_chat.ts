@@ -171,7 +171,7 @@ export async function startStressChat(opts: {
     logger.log('done', { summary })
 
     cancelStatsReporting?.()
-    
+
     for (let i = 0; i < clients.length; i += 1) {
         const client = clients[i]
         logger.log(`stopping ${client.logId}`)
