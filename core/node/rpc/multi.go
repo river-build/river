@@ -230,6 +230,7 @@ func GetRiverNetworkStatus(
 	cfg *config.Config,
 	nodeRegistry nodes.NodeRegistry,
 	riverChain *crypto.Blockchain,
+	baseChain *crypto.Blockchain,
 	connectOtelIterceptor *otelconnect.Interceptor,
 ) (*statusinfo.RiverStatus, error) {
 	startTime := time.Now()
@@ -309,7 +310,7 @@ func (s *Service) handleDebugMulti(w http.ResponseWriter, r *http.Request) {
 
 	log := s.defaultLogger
 
-	status, err := GetRiverNetworkStatus(ctx, s.config, s.nodeRegistry, s.riverChain, s.otelConnectIterceptor)
+	status, err := GetRiverNetworkStatus(ctx, s.config, s.nodeRegistry, s.riverChain, nil, s.otelConnectIterceptor)
 	if err == nil {
 		err = render.ExecuteAndWrite(&render.DebugMultiData{Status: status}, w)
 		if !s.config.Log.Simplify {
@@ -333,7 +334,7 @@ func (s *Service) handleDebugMultiJson(w http.ResponseWriter, r *http.Request) {
 	log := s.defaultLogger
 
 	w.Header().Set("Content-Type", "application/json")
-	status, err := GetRiverNetworkStatus(ctx, s.config, s.nodeRegistry, s.riverChain, s.otelConnectIterceptor)
+	status, err := GetRiverNetworkStatus(ctx, s.config, s.nodeRegistry, s.riverChain, nil, s.otelConnectIterceptor)
 	if err == nil {
 		// Write status as json
 		err = json.NewEncoder(w).Encode(status)
