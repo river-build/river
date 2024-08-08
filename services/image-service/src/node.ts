@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import { Server as HTTPSServer } from 'https';
+import { SERVER_PORT } from './environment';
 import cors from '@fastify/cors';
 import { handleImageRequest } from './handleImageRequest';
 import { handleMetadataRequest } from './handleMetadataRequest';
@@ -62,6 +63,6 @@ const startServer = async (port: number) => {
   }
 };
 
-// Start the server on port 3000, or the next available port
-startServer(3000);
+// Start the server on the port set in the .env, or the next available port
+startServer(SERVER_PORT);
 

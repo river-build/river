@@ -6,6 +6,7 @@ import deploymentData from '@river-build/generated/config/deployments.json';
 dotenv.config();
 
 export const DEFAULT_CHAIN_ID = parseInt(process.env.DEFAULT_CHAIN_ID ?? '550', 10);
+export const SERVER_PORT = parseInt(process.env.PORT ?? '443', 10);
 export const config = makeConfig(deploymentData);
 
 console.log('config', config, 'defaultChainId', DEFAULT_CHAIN_ID, `"${process.env.DEFAULT_CHAIN_ID}"`);
