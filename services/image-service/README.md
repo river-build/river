@@ -7,6 +7,6 @@ Fetches river images from river streams.
 Start the river image service:
 
 ```bash
-cp .env.sample .env
+cp .env.localhost .env
 yarn dev
 ```
