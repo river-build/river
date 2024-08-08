@@ -1216,7 +1216,7 @@ describe('spaceWithEntitlements', () => {
         await TestEthBalance.setBalance(carolsWallet.address as Address, 0n)
         await TestEthBalance.setBalance(alicesWallet.address as Address, 0n)
 
-        // Validate alice cannot join the channel
+        // Validate alice cannot join the space
         await expectUserCannotJoinSpace(spaceId, alice, aliceSpaceDapp, alicesWallet.address)
 
         await TestEthBalance.setBalance(carolsWallet.address as Address, oneEth)
@@ -1224,7 +1224,7 @@ describe('spaceWithEntitlements', () => {
         // Wait 2 seconds for the negative auth cache to expire
         await new Promise((f) => setTimeout(f, 2000))
 
-        // Validate alice can join the channel
+        // Validate alice can join the space
         await expectUserCanJoin(
             spaceId,
             channelId,
@@ -1268,8 +1268,8 @@ describe('spaceWithEntitlements', () => {
         await TestEthBalance.setBalance(carolsWallet.address as Address, oneEth)
         await TestEthBalance.setBalance(alicesWallet.address as Address, 0n)
 
-        log('expect that alice can join the channel')
-        // Validate alice can join the channel
+        log('expect that alice can join the space')
+        // Validate alice can join the space
         await expectUserCanJoin(
             spaceId,
             channelId,
@@ -1312,8 +1312,8 @@ describe('spaceWithEntitlements', () => {
         await TestEthBalance.setBalance(carolsWallet.address as Address, oneHalfEth)
         await TestEthBalance.setBalance(alicesWallet.address as Address, oneHalfEth)
 
-        // Validate alice can join the channel
-        log('expect that alice can join the channel')
+        // Validate alice can join the space
+        log('expect that alice can join the space')
         await expectUserCanJoin(
             spaceId,
             channelId,
@@ -1357,7 +1357,7 @@ describe('spaceWithEntitlements', () => {
         await TestEthBalance.setBalance(carolsWallet.address as Address, oneHalfEth)
         await TestEthBalance.setBalance(alicesWallet.address as Address, oneHalfEth)
 
-        log('expect neither alice nor carol can join the channel')
+        log('expect neither alice nor carol can join the space')
         await expectUserCannotJoinSpace(spaceId, alice, aliceSpaceDapp, alicesWallet.address)
         await expectUserCannotJoinSpace(spaceId, carol, carolSpaceDapp, carolsWallet.address)
 
