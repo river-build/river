@@ -1118,7 +1118,7 @@ describe('channelsWithEntitlements', () => {
     })
 
     test('eth balance gate pass', async () => {
-        const ruleData = treeToRuleData(await ethBalanceCheckOp(oneEth))
+        const ruleData = treeToRuleData(ethBalanceCheckOp(oneEth))
 
         const { alice, bob, alicesWallet, aliceSpaceDapp, spaceId, channelId } =
             await setupChannelWithCustomRole([], ruleData)
@@ -1138,12 +1138,12 @@ describe('channelsWithEntitlements', () => {
     })
 
     test('eth balance gate fail', async () => {
-        const ruleData = treeToRuleData(await ethBalanceCheckOp(oneEth))
+        const ruleData = treeToRuleData(ethBalanceCheckOp(oneEth))
 
         const { alice, bob, alicesWallet, aliceSpaceDapp, spaceId, channelId } =
             await setupChannelWithCustomRole([], ruleData)
 
-        TestEthBalance.setBalance(alicesWallet.address as Address, 0n)
+        await TestEthBalance.setBalance(alicesWallet.address as Address, 0n)
 
         log('expect that alice cannot join the channel (has no ETH)')
         await expectUserCannotJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
@@ -1156,7 +1156,7 @@ describe('channelsWithEntitlements', () => {
     })
 
     test('eth balance gate join pass - join as root, linked wallet entitled', async () => {
-        const ruleData = treeToRuleData(await ethBalanceCheckOp(oneEth))
+        const ruleData = treeToRuleData(ethBalanceCheckOp(oneEth))
         const {
             alice,
             bob,
@@ -1195,7 +1195,7 @@ describe('channelsWithEntitlements', () => {
     })
 
     test('eth balance gated join pass - join as linked wallet, assets in root wallet', async () => {
-        const ruleData = treeToRuleData(await ethBalanceCheckOp(oneEth))
+        const ruleData = treeToRuleData(ethBalanceCheckOp(oneEth))
         const {
             alice,
             bob,
@@ -1228,7 +1228,7 @@ describe('channelsWithEntitlements', () => {
     })
 
     test('eth balance gate join pass - assets across wallets', async () => {
-        const ruleData = treeToRuleData(await ethBalanceCheckOp(oneEth))
+        const ruleData = treeToRuleData(ethBalanceCheckOp(oneEth))
         const {
             alice,
             bob,
@@ -1260,7 +1260,7 @@ describe('channelsWithEntitlements', () => {
     })
 
     test('eth balance gate join fail - insufficient assets across wallets', async () => {
-        const ruleData = treeToRuleData(await ethBalanceCheckOp(twoEth))
+        const ruleData = treeToRuleData(ethBalanceCheckOp(twoEth))
         const {
             alice,
             bob,

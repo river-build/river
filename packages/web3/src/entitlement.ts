@@ -14,10 +14,6 @@ import { ethers } from 'ethers'
 import { Address } from './ContractTypes'
 import { MOCK_ADDRESS } from './Utils'
 
-import { dlogger } from '@river-build/dlog'
-
-const logger = dlogger('csb:entitlements')
-
 const zeroAddress = ethers.constants.AddressZero
 
 type ReadContractFunction = typeof publicClient.readContract<

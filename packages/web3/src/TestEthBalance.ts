@@ -1,4 +1,4 @@
-import { createTestClient, http, publicActions, walletActions, parseEther } from 'viem'
+import { createTestClient, http, publicActions, walletActions } from 'viem'
 import { foundry } from 'viem/chains'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 
