@@ -44,7 +44,7 @@ function createPublicClientFromChainId(chainId: number) {
 	console.log(`createPublicClientFromConfig: riverChainUrl=${riverChainUrl}; chainInfo=`, chainInfo);
 
 	switch (chainId) {
-		case 8543:
+		case 550:
 			return createPublicClient({
 				chain: mainnet,
 				transport: http(riverChainUrl),
