@@ -1,58 +1,34 @@
 import { DEFAULT_CHAIN_ID, getChainInfo } from './environment';
-import { Signer, ethers } from 'ethers';
-import { createPublicClient, defineChain, http } from 'viem';
+import { ethers } from 'ethers';
+import { createPublicClient, http } from 'viem';
+import { riverChainDevnet, riverChainLocalhost, riverChainProduction } from './evmChainConfig';
 
 import { JsonRpcProvider } from 'ethers/providers';
-import { mainnet } from 'viem/chains';
-import { makeSignerContext } from '@river-build/sdk';
 
-type ChainType = ReturnType<typeof defineChain>;
-
-const wallet = ethers.Wallet.createRandom();
 const provider: Record<number, JsonRpcProvider> = {};
 const publicClient: Record<number, ReturnType<typeof createPublicClientFromChainId>> = {};
-let localhostChain: ChainType
-
-function getLocalhostChain() {
-	if (!localhostChain) {
-		const riverChainUrl = getChainInfo(31338)?.riverChainUrl ?? 'https://127.0.0.1:8546';
-		localhostChain = defineChain({
-				id: 31338,
-				name: 'Localhost',
-				nativeCurrency: {
-					decimals: 18,
-					name: 'Ether',
-					symbol: 'ETH',
-				},
-				rpcUrls: {
-					default: { http: [riverChainUrl] },
-				}
-		});
-	}
-
-	return localhostChain;
-}
 
 function createPublicClientFromChainId(chainId: number) {
-	const chainInfo = getChainInfo(chainId);
-	if (!chainInfo) {
-		throw new Error('Chain info not found');
-	}
-
-	const riverChainUrl = chainInfo.riverChainUrl;
-
-	console.log(`createPublicClientFromConfig: riverChainUrl=${riverChainUrl}; chainInfo=`, chainInfo);
+	let riverChainUrl: string;
 
 	switch (chainId) {
 		case 550:
+			riverChainUrl = riverChainProduction.rpcUrls.default.http[0]
 			return createPublicClient({
-				chain: mainnet,
+				chain: riverChainProduction,
+				transport: http(riverChainUrl),
+			});
+		case 6524490:
+			riverChainUrl = riverChainDevnet.rpcUrls.default.http[0]
+			return createPublicClient({
+				chain: riverChainDevnet,
 				transport: http(riverChainUrl),
 			});
 		case 31338:
+			riverChainUrl = riverChainLocalhost.rpcUrls.default.http[0]
 			return createPublicClient({
-				chain: getLocalhostChain(),
-				transport: http(riverChainUrl),
+				chain: riverChainLocalhost,
+				transport: http(riverChainUrl)
 			});
 		default:
 			throw new Error(`Unsupported chain ${chainId}`);
@@ -75,9 +51,4 @@ export function getPublicClient(chainId: number = DEFAULT_CHAIN_ID) {
 		publicClient[chainId] = createPublicClientFromChainId(chainId);
 	}
 	return publicClient[chainId];
-}
-
-export async function getSignerContext(chainId: number = DEFAULT_CHAIN_ID) {
-	const signer: Signer = getProvider(chainId).getSigner(wallet.address);
-	return makeSignerContext(signer as any, wallet as any);
 }

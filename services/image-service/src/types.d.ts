@@ -1,12 +1,7 @@
 export interface ChainConfig {
   [chainId: number]: {
     riverRegistry: string;
-    riverChainUrl: string;
   };
-}
-
-export interface Config {
-  chainConfig: ChainConfig;
 }
 
 export type Address = `0x${string}`;
