@@ -1,7 +1,6 @@
-import { getChainInfo } from './environment';
+import { getAbi, getAddress } from './contracts';
 
 import { StreamIdHex } from './types';
-import { getAbi, getAddress } from './contracts/contracts';
 import { getContract } from 'viem';
 import { getPublicClient } from './evmRpcClient';
 

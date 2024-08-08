@@ -1,6 +1,6 @@
-import { DEFAULT_CHAIN_ID, getChainInfo } from '../environment';
+import { DEFAULT_CHAIN_ID, getChainInfo } from './environment';
 
-import { Address } from '../types';
+import { Address } from './types';
 import NodeRegistryAbi from '@river-build/generated/dev/abis/NodeRegistry.abi';
 import StreamRegistryAbi from '@river-build/generated/dev/abis/StreamRegistry.abi';
 
