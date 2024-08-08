@@ -7,9 +7,7 @@
 	"type": "module",
 	"scripts": {
 		"build:esbuild": "node ./esbuild.config.mjs",
-		"build:rollup": "rollup -c",
 		"dev": "yarn build:esbuild && yarn serve:esbuild",
-		"serve:rollup": "node --experimental-detect-module ./dist/node_rollup.js",
 		"serve:esbuild": "node --experimental-detect-module ./dist/node_esbuild.cjs"
 	},
 	"dependencies": {
