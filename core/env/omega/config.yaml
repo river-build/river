@@ -1,6 +1,6 @@
 # For running server in info mode ('info' command)
 port: 4040
-useHttps: false
+disableHttps: true
 
 # Blockchain configuration
 baseChain:
