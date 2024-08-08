@@ -278,14 +278,14 @@ const baseSepoliaChainLinkWallet_25Link: Address = '0xa4D440AeA5F555feEB5AEa0ddc
 const testEmptyAccount: Address = '0xb227905F186095083869928BAb49cA9CE9546817'
 
 // This wallet contains .5ETH on Base Sepolia
-const baseSepoliaEthWallet = "0x4BCfC6962Ab0297aF801da21216014F53B46E991"
+const baseSepolia0_5EthWallet = "0x4BCfC6962Ab0297aF801da21216014F53B46E991"
 // This wallet contains .05 ETH on Base Sepolia
-const baseSepoliaEthWallet2 = "0xB79Af997239A334355F60DBeD75bEDf30AcD37bD"
+const baseSepolia0_05EthWallet = "0xB79Af997239A334355F60DBeD75bEDf30AcD37bD"
 
 // .2 ETH on Ethereum Sepolia
-const sepoliaEthWallet = "0x8cECcB1e5537040Fc63A06C88b4c1dE61880dA4d"
+const sepolia0_2EthWallet = "0x8cECcB1e5537040Fc63A06C88b4c1dE61880dA4d"
 // .015 ETH on Ethereum Sepolia
-const sepoliaEthWallet2 = "0xB4d85De80afE92C97293c32B1C0c604133d0332E"
+const sepolia0_015EthWallet = "0xB4d85De80afE92C97293c32B1C0c604133d0332E"
 
 const chainlinkExp = BigInt(10) ** BigInt(18)
 
@@ -403,28 +403,28 @@ const ethBalanceCases = [
     {
         desc: 'eth sepolia',
         check: ethBalance0_2Eth_Sepolia,
-        wallets: [sepoliaEthWallet],
+        wallets: [sepolia0_2EthWallet],
         provider: ethSepoliaProvider,
         expectedResult: true,
     },
     {
         desc: 'eth sepolia (multiwallet)',
         check: ethBalance0_21Eth_Sepolia,
-        wallets: [sepoliaEthWallet, sepoliaEthWallet2],
+        wallets: [sepolia0_2EthWallet, sepolia0_015EthWallet],
         provider: ethSepoliaProvider,
         expectedResult: true,
     },
     {
         desc: 'eth sepolia (insufficient balance)',
         check: ethBalance0_1Eth_Sepolia,
-        wallets: [sepoliaEthWallet2],
+        wallets: [sepolia0_015EthWallet],
         provider: ethSepoliaProvider,
         expectedResult: false,
     },
     {
         desc: 'eth sepolia (multiwallet, insufficient balance)',
         check: ethBalance0_3Eth_Sepolia,
-        wallets: [sepoliaEthWallet, sepoliaEthWallet2],
+        wallets: [sepolia0_2EthWallet, sepolia0_015EthWallet],
         provider: ethSepoliaProvider,
         expectedResult: false,
     },
@@ -438,28 +438,28 @@ const ethBalanceCases = [
     {
         desc: 'base sepolia',
         check: ethBalance0_4Eth_BaseSepolia,
-        wallets: [baseSepoliaEthWallet],
+        wallets: [baseSepolia0_5EthWallet],
         provider: baseSepoliaProvider,
         expectedResult: true,
     },
     {
         desc: 'base sepolia (multiwallet)',
         check: ethBalance0_52Eth_BaseSepolia,
-        wallets: [baseSepoliaEthWallet, baseSepoliaEthWallet2],
+        wallets: [baseSepolia0_5EthWallet, baseSepolia0_05EthWallet],
         provider: baseSepoliaProvider,
         expectedResult: true,
     },
     {
         desc: 'base sepolia (insufficient balance)',
         check: ethBalance0_4Eth_BaseSepolia,
-        wallets: [baseSepoliaEthWallet2],
+        wallets: [baseSepolia0_05EthWallet],
         provider: baseSepoliaProvider,
         expectedResult: false,
     },
     {
         desc: 'base sepolia (multiwallet, insufficient balance)',
         check: ethBalance0_6Eth_BaseSepolia,
-        wallets: [baseSepoliaEthWallet, baseSepoliaEthWallet2],
+        wallets: [baseSepolia0_5EthWallet, baseSepolia0_05EthWallet],
         provider: baseSepoliaProvider,
         expectedResult: false,
     },

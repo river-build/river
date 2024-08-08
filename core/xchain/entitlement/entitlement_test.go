@@ -488,22 +488,22 @@ func TestCheckOperation_Untimed(t *testing.T) {
 		},
 		"ETH balance eth sepolia": {
 			&ethBalance0_2EthEthereumSepolia,
-			[]common.Address{examples.SepoliaEthWallet},
+			[]common.Address{examples.Sepolia0_2EthWallet},
 			true,
 		},
 		"ETH balance eth sepolia (multiwallet)": {
 			&ethBalance0_21EthEthereumSepolia,
-			[]common.Address{examples.SepoliaEthWallet, examples.SepoliaEthWallet2},
+			[]common.Address{examples.Sepolia0_2EthWallet, examples.Sepolia0_015EthWallet},
 			true,
 		},
 		"ETH balance eth sepolia (insufficient balance)": {
 			&ethBalance0_1EthEthereumSepolia,
-			[]common.Address{examples.SepoliaEthWallet2},
+			[]common.Address{examples.Sepolia0_015EthWallet},
 			false,
 		},
 		"ETH balance eth sepolia (multiwallet, insufficient balance)": {
 			&ethBalance0_3EthEthereumSepolia,
-			[]common.Address{examples.SepoliaEthWallet, examples.SepoliaEthWallet2},
+			[]common.Address{examples.Sepolia0_2EthWallet, examples.Sepolia0_015EthWallet},
 			false,
 		},
 		"ETH balance eth sepolia (no eth)": {
@@ -513,22 +513,22 @@ func TestCheckOperation_Untimed(t *testing.T) {
 		},
 		"ETH balance base sepolia": {
 			&ethBalance0_4EthBaseSepolia,
-			[]common.Address{examples.BaseSepoliaEthWallet},
+			[]common.Address{examples.BaseSepolia0_5EthWallet},
 			true,
 		},
 		"ETH balance base sepolia (multiwallet)": {
 			&ethBalance0_52EthBaseSepolia,
-			[]common.Address{examples.BaseSepoliaEthWallet, examples.BaseSepoliaEthWallet2},
+			[]common.Address{examples.BaseSepolia0_5EthWallet, examples.BaseSepolia0_05EthWallet},
 			true,
 		},
 		"ETH balance base sepolia (insufficient balance)": {
 			&ethBalance0_4EthBaseSepolia,
-			[]common.Address{examples.BaseSepoliaEthWallet2},
+			[]common.Address{examples.BaseSepolia0_05EthWallet},
 			false,
 		},
 		"ETH balance base sepolia (multiwallet, insufficient balance)": {
 			&ethBalance0_6EthBaseSepolia,
-			[]common.Address{examples.BaseSepoliaEthWallet, examples.BaseSepoliaEthWallet2},
+			[]common.Address{examples.BaseSepolia0_5EthWallet, examples.BaseSepolia0_05EthWallet},
 			false,
 		},
 		"ETH balance base sepolia (no eth, insufficient balance)": {

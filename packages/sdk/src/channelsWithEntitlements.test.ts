@@ -40,6 +40,7 @@ import {
 } from '@river-build/web3'
 import { Client } from './client'
 import { make_MemberPayload_KeySolicitation } from './types'
+import { ethers } from 'ethers'
 
 const log = dlog('csb:test:channelsWithEntitlements')
 const oneEth = BigInt(1e18)
@@ -1109,14 +1110,16 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test.only('eth balance gate pass', async () => {
+    test('eth balance gate pass', async () => {
         const ruleData = treeToRuleData(await ethBalanceCheckOp(oneEth))
 
         const { alice, bob, alicesWallet, aliceSpaceDapp, spaceId, channelId } =
             await setupChannelWithCustomRole([], ruleData)
 
+        // const alicesWallet = ethers.Wallet.createRandom()
         await TestEthBalance.setBalance(alicesWallet.address as Address, oneEth)
-        await expect(TestEthBalance.getBalance(alicesWallet.address as Address)).toEqual(oneEth)
+        const balance = await TestEthBalance.getBalance(alicesWallet.address as Address)
+        expect(balance).toEqual(oneEth)
 
         log('expect that alice can join the channel')
         await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
@@ -1127,6 +1130,24 @@ describe('channelsWithEntitlements', () => {
         await alice.stopSync()
         log('Done', Date.now() - doneStart)
     })
+
+    test.only('eth balance gate fail', async () => {
+        const ruleData = treeToRuleData(await ethBalanceCheckOp(oneEth))
+
+        const { alice, bob, alicesWallet, aliceSpaceDapp, spaceId, channelId } =
+            await setupChannelWithCustomRole([], ruleData)
+
+
+        log('expect that alice cannot join the channel (has no ETH)')
+        await expectUserCannotJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
+
+        // kill the clients
+        const doneStart = Date.now()
+        await bob.stopSync()
+        await alice.stopSync()
+        log('Done', Date.now() - doneStart)
+    })
+
 
     // Banning with entitlements — users need permission to ban other users.
     test('adminsCanRedactChannelMessages', async () => {
