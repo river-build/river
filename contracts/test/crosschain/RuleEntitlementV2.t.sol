@@ -13,28 +13,23 @@ import {IRuleEntitlement, IRuleEntitlementV2, IRuleEntitlementBase} from "contra
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
+// TODO: add tests for RuleEntitlementV2
 contract RuleEntitlementV2Test is
   TestUtils,
   IEntitlementBase,
   IRuleEntitlementBase
 {
-  RuleEntitlement internal implementation;
   RuleEntitlement internal ruleEntitlement;
-
-  RuleEntitlementV2 internal implementationV2;
   RuleEntitlementV2 internal ruleEntitlementV2;
 
   address internal entitlement;
-  address internal deployer;
-  address internal space;
+  address internal deployer = makeAddr("deployer");
+  address internal space = makeAddr("space");
   uint256 internal roleId = 0;
 
   function setUp() public {
-    deployer = _randomAddress();
-    space = _randomAddress();
-
     vm.startPrank(deployer);
-    implementation = new RuleEntitlement();
+    RuleEntitlement implementation = new RuleEntitlement();
     entitlement = address(
       new ERC1967Proxy(
         address(implementation),
@@ -44,6 +39,7 @@ contract RuleEntitlementV2Test is
     vm.stopPrank();
 
     ruleEntitlement = RuleEntitlement(entitlement);
+    ruleEntitlementV2 = RuleEntitlementV2(entitlement);
   }
 
   modifier givenRuleV1EntitlementIsSet() {
@@ -105,16 +101,16 @@ contract RuleEntitlementV2Test is
 
   function test_upgradeToRuleV2() external givenRuleV1EntitlementIsSet {
     // Validate Rule V1 exists
-    ruleEntitlement.getRuleData(roleId);
+    RuleData memory ruleData = ruleEntitlement.getRuleData(roleId);
+    assertTrue(ruleData.operations.length > 0);
 
     assertFalse(
       ruleEntitlement.supportsInterface(type(IRuleEntitlementV2).interfaceId)
     );
 
     // Upgrade to Rule V2
-    vm.startPrank(deployer);
-    implementationV2 = new RuleEntitlementV2();
-    vm.stopPrank();
+    vm.prank(deployer);
+    RuleEntitlementV2 implementationV2 = new RuleEntitlementV2();
 
     vm.prank(space);
     UUPSUpgradeable(entitlement).upgradeToAndCall(
@@ -122,14 +118,15 @@ contract RuleEntitlementV2Test is
       ""
     );
 
-    ruleEntitlementV2 = RuleEntitlementV2(entitlement);
+    // Rule V1 persists after upgrade
+    assertEq(
+      abi.encode(ruleEntitlementV2.getRuleData(roleId)),
+      abi.encode(ruleData)
+    );
 
     assertTrue(
       ruleEntitlementV2.supportsInterface(type(IRuleEntitlementV2).interfaceId)
     );
-
-    RuleData memory ruleData = ruleEntitlementV2.getRuleData(roleId);
-    assertTrue(ruleData.operations.length > 0);
 
     RuleDataV2 memory ruleDataV2 = ruleEntitlementV2.getRuleDataV2(roleId);
     assertTrue(ruleDataV2.operations.length == 0);
