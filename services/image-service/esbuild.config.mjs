@@ -9,7 +9,7 @@ build({
 			'.ts': 'ts',
 			'.wasm': 'file',
 		},
-		outdir: 'dist',
+		outfile: 'dist/node_esbuild.cjs',
 		outExtension: { ".js": ".cjs" },
 		platform: 'node',
 		sourcemap: 'inline',
