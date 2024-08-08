@@ -1,21 +1,18 @@
 import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-web';
 import { MediaContent, StreamIdHex } from './types';
-import { Miniblock, StreamService } from '@river-build/proto';
 import {
-	ParsedStreamAndCookie,
 	ParsedStreamResponse,
 	StreamStateView,
 	streamIdAsBytes,
 	streamIdAsString,
 	unpackStream,
-	unpackStreamAndCookie,
-	unpackStreamEx,
 } from '@river-build/sdk';
 import { PromiseClient, createPromiseClient } from '@connectrpc/connect';
 
 import { DEFAULT_CHAIN_ID } from './environment';
+import { StreamService } from '@river-build/proto';
 import { decryptAESGCM } from './cryptoUtils';
-import { fileTypeFromBuffer } from 'file-type';
+import { filetypemime } from 'magic-bytes.js';
 import { getNodeForStream } from './streamRegistry';
 
 const clients = new Map<string, StreamRpcClient>();
@@ -84,15 +81,18 @@ async function mediaContentFromStreamView(streamView: StreamStateView, secret: U
 		const decrypted = await decryptAESGCM(data, secret, iv);
 
 		// Determine the MIME type
-		const type = await fileTypeFromBuffer(decrypted);
-		console.log(`mediaContentFromStreamView: type=${JSON.stringify(type)}`);
+		const mimeType = filetypemime(decrypted);
+		if (mimeType?.length > 0) {
+			console.log(`mediaContentFromStreamView: type=${JSON.stringify(mimeType[0])}`);
 
-		// Return decrypted data and MIME type
-		return {
-			data: decrypted,
-			mimeType: type?.mime ?? 'application/octet-stream',
-		};
+			// Return decrypted data and MIME type
+			return {
+				data: decrypted,
+				mimeType: mimeType[0] ?? 'application/octet-stream',
+			};
+		}
 	}
+
 	throw new Error('No media information found');
 }
 
