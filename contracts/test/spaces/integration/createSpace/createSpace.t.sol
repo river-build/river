@@ -40,10 +40,8 @@ contract Integration_CreateSpace is
     string memory spaceId,
     address founder,
     address user
-  ) external {
+  ) external assumeEOA(founder) {
     vm.assume(bytes(spaceId).length > 2 && bytes(spaceId).length < 100);
-    // founder must be EOA or implement `onERC721Received`
-    vm.assume(founder != address(0) && founder.code.length == 0);
 
     SpaceInfo memory spaceInfo = _createEveryoneSpaceInfo(spaceId);
     spaceInfo.membership.settings.pricingModule = pricingModule;
@@ -64,11 +62,8 @@ contract Integration_CreateSpace is
     string memory spaceId,
     address founder,
     address user
-  ) external {
+  ) external assumeEOA(founder) assumeEOA(user) {
     vm.assume(bytes(spaceId).length > 2 && bytes(spaceId).length < 100);
-    // founder/user must be EOA or implement `onERC721Received`
-    vm.assume(founder != address(0) && founder.code.length == 0);
-    vm.assume(user != address(0) && user.code.length == 0);
 
     address[] memory users = new address[](1);
     users[0] = user;
@@ -102,11 +97,8 @@ contract Integration_CreateSpace is
     string memory spaceId,
     address founder,
     address user
-  ) external {
+  ) external assumeEOA(founder) assumeEOA(user) {
     vm.assume(bytes(spaceId).length > 2 && bytes(spaceId).length < 100);
-    // founder/user must be EOA or implement `onERC721Received`
-    vm.assume(founder != address(0) && founder.code.length == 0);
-    vm.assume(user != address(0) && user.code.length == 0);
 
     address mock = address(new MockERC721());
 
@@ -159,11 +151,8 @@ contract Integration_CreateSpace is
     string memory spaceId,
     address founder,
     address member
-  ) external {
+  ) external assumeEOA(founder) assumeEOA(member) {
     vm.assume(bytes(spaceId).length > 2 && bytes(spaceId).length < 100);
-    // founder/member must be EOA or implement `onERC721Received`
-    vm.assume(founder != address(0) && founder.code.length == 0);
-    vm.assume(member != address(0) && member.code.length == 0);
     vm.assume(founder != member);
 
     // create space with default channel
