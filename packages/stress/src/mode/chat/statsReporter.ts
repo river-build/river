@@ -6,14 +6,14 @@ const logger = dlogger('stress:statsReporter')
 
 export function statsReporter(rootClient: StressClient, chatConfig: ChatConfig) {
     let canceled = false
+    let lastReactionCount = 0
     const interval = setInterval(() => {
         if (canceled) {
             return
         }
-        let lastReactionCount = 0
         void (async () => {
             if (chatConfig.kickoffMessageEventId && chatConfig.countClientsMessageEventId) {
-                const reactionCount = await countReactions(
+                const reactionCount = countReactions(
                     rootClient,
                     chatConfig.announceChannelId,
                     chatConfig.kickoffMessageEventId,
@@ -37,6 +37,7 @@ export function statsReporter(rootClient: StressClient, chatConfig: ChatConfig) 
     }, 5000)
 
     return () => {
+        logger.info('canceled')
         clearInterval(interval)
         canceled = true
     }
@@ -63,13 +64,16 @@ export const updateCountClients = async (
     )
 }
 
-export const countReactions = async (
+export const countReactions = (
     client: StressClient,
     announceChannelId: string,
     rootMessageId: string,
 ) => {
-    const channel = await client.streamsClient.waitForStream(announceChannelId)
-    const message = await client.waitFor(() => channel.view.events.get(rootMessageId))
+    const channel = client.streamsClient.stream(announceChannelId)
+    if (!channel) {
+        return 0
+    }
+    const message = channel.view.events.get(rootMessageId)
     if (!message) {
         return 0
     }
