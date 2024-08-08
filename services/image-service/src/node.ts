@@ -5,7 +5,9 @@ import cors from '@fastify/cors';
 import { handleImageRequest } from './handleImageRequest';
 import { handleMetadataRequest } from './handleMetadataRequest';
 
-const server = Fastify({ logger: true });
+const server = Fastify({
+	logger: true,
+});
 
 server.register(cors, {
 	origin: '*', // Allow any origin
