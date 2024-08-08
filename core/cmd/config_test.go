@@ -8,7 +8,7 @@ import (
 
 func clean() {
 	configFiles = []string{}
-	cmdConfig = nil
+	CmdConfig = nil
 }
 
 func TestBlockchainConfiNotSetByDefault(t *testing.T) {

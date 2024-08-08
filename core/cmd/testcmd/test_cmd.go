@@ -1,24 +1,22 @@
-package cmd
+package testcmd
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/spf13/cobra"
 
+	"github.com/river-build/river/core/cmd"
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/nodes"
 	"github.com/river-build/river/core/node/registries"
 	"github.com/river-build/river/core/node/rpc"
-
-	"github.com/spf13/cobra"
 )
 
-func runPing(cfg *config.Config) error {
-	ctx := context.Background() // lint:ignore context.Background() is fine here
-
+func runPing2(ctx context.Context, cfg *config.Config) error {
 	blockchain, err := crypto.NewBlockchain(
 		ctx,
 		&cfg.RiverChain,
@@ -51,13 +49,13 @@ func runPing(cfg *config.Config) error {
 }
 
 func init() {
-	cmd := &cobra.Command{
-		Use:   "ping",
+	cm := &cobra.Command{
+		Use:   "ping2",
 		Short: "Pings all nodes in the network based on config and print the results as JSON",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return runPing(CmdConfig)
+		RunE: func(cm *cobra.Command, args []string) error {
+			return runPing2(cm.Context(), cmd.CmdConfig)
 		},
 	}
 
-	RootCmd.AddCommand(cmd)
+	cmd.RootCmd.AddCommand(cm)
 }

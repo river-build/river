@@ -14,7 +14,7 @@ func init() {
 		Use:   "config",
 		Short: "Config inspection commands",
 	}
-	rootCmd.AddCommand(configCmd)
+	RootCmd.AddCommand(configCmd)
 
 	configCmd.AddCommand(&cobra.Command{
 		Use:   "print",
@@ -33,7 +33,7 @@ func init() {
 			fmt.Println()
 
 			configMap := make(map[string]interface{})
-			if err := mapstructure.Decode(*cmdConfig, &configMap); err != nil {
+			if err := mapstructure.Decode(*CmdConfig, &configMap); err != nil {
 				fmt.Printf("Failed to decode config struct: %v\n", err)
 				return err
 			}

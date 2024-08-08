@@ -37,8 +37,8 @@ func init() {
 	registerCmd.Flags().Bool("approve", false, "automatically approve registration transaction")
 	unregisterCmd.Flags().Bool("approve", false, "automatically approve unregistration transaction")
 
-	rootCmd.AddCommand(registerCmd)
-	rootCmd.AddCommand(unregisterCmd)
+	RootCmd.AddCommand(registerCmd)
+	RootCmd.AddCommand(unregisterCmd)
 }
 
 func register(cmd *cobra.Command, args []string) error {
@@ -80,13 +80,13 @@ func registerImpl(operatorKeyfile string, userConfirmationMessage string, regist
 	}
 
 	metrics := infra.NewMetricsFactory(nil, "xchain", "cmdline")
-	baseChain, err := crypto.NewBlockchain(ctx, &cmdConfig.BaseChain, operatorWallet, metrics, nil)
+	baseChain, err := crypto.NewBlockchain(ctx, &CmdConfig.BaseChain, operatorWallet, metrics, nil)
 	if err != nil {
 		return fmt.Errorf("unable to instantiate base chain client: %s", err)
 	}
 	baseChain.StartChainMonitor(ctx)
 
-	checker, err := base.NewIEntitlementChecker(cmdConfig.GetEntitlementContractAddress(), baseChain.Client)
+	checker, err := base.NewIEntitlementChecker(CmdConfig.GetEntitlementContractAddress(), baseChain.Client)
 	if err != nil {
 		return err
 	}

@@ -18,5 +18,5 @@ func init() {
 		},
 	}
 
-	rootCmd.AddCommand(cmd)
+	RootCmd.AddCommand(cmd)
 }

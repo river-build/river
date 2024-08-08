@@ -19,9 +19,9 @@ func init() {
 		Use:   "info",
 		Short: "Runs the node in info mode when only /debug/multi page is available",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runInfo(cmdConfig)
+			return runInfo(CmdConfig)
 		},
 	}
 
-	rootCmd.AddCommand(cmd)
+	RootCmd.AddCommand(cmd)
 }

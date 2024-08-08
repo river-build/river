@@ -199,7 +199,7 @@ func init() {
 		Aliases: []string{"reg"},
 		Short:   "Stream registry management commands",
 	}
-	rootCmd.AddCommand(srCmd)
+	RootCmd.AddCommand(srCmd)
 
 	streamsCmd := &cobra.Command{
 		Use:   "streams",
@@ -209,7 +209,7 @@ func init() {
 			if err != nil {
 				return err
 			}
-			return srStreamDump(cmdConfig, countOnly)
+			return srStreamDump(CmdConfig, countOnly)
 		},
 	}
 	streamsCmd.Flags().Bool("count", false, "Only print the stream count")
@@ -220,7 +220,7 @@ func init() {
 		Short: "Get stream info from stream registry",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return srStream(cmdConfig, args[0])
+			return srStream(CmdConfig, args[0])
 		},
 	})
 
@@ -228,7 +228,7 @@ func init() {
 		Use:   "nodes",
 		Short: "Get node records from the registry contract",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return nodesDump(cmdConfig)
+			return nodesDump(CmdConfig)
 		},
 	})
 
@@ -236,7 +236,7 @@ func init() {
 		Use:   "settings",
 		Short: "Dump settings from the registry contract",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return settingsDump(cmdConfig)
+			return settingsDump(CmdConfig)
 		},
 	})
 
@@ -245,7 +245,7 @@ func init() {
 		Aliases: []string{"bn"},
 		Short:   "Print current River chain block number",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return blockNumber(cmdConfig)
+			return blockNumber(CmdConfig)
 		},
 	})
 }

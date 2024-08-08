@@ -50,5 +50,5 @@ func init() {
 	}
 	cmdGenKey.Flags().Bool("overwrite", false, "Overwrite existing key files")
 
-	rootCmd.AddCommand(cmdGenKey)
+	RootCmd.AddCommand(cmdGenKey)
 }

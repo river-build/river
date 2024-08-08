@@ -13,18 +13,18 @@ import (
 var configFiles []string
 
 var (
-	cmdConfig        *config.Config
+	CmdConfig        *config.Config
 	cmdConfigBuilder *builder.ConfigBuilder[config.Config]
 )
 
-var rootCmd = &cobra.Command{
+var RootCmd = &cobra.Command{
 	Use:          "river_node",
 	Short:        "River Protocol Node",
 	SilenceUsage: true, // Do not print usage when an error occurs
 }
 
 func Execute() {
-	err := rootCmd.Execute()
+	err := RootCmd.Execute()
 	if err != nil {
 		if err.Error() == "info_debug_exit" {
 			fmt.Println("Exiting with code 22 to initiate a restart")
@@ -43,19 +43,19 @@ func initViperConfig() (*config.Config, *builder.ConfigBuilder[config.Config], e
 		return nil, nil, err
 	}
 
-	err = bld.BindPFlag("Log.Level", rootCmd.PersistentFlags().Lookup("log_level"))
+	err = bld.BindPFlag("Log.Level", RootCmd.PersistentFlags().Lookup("log_level"))
 	if err != nil {
 		return nil, nil, err
 	}
-	err = bld.BindPFlag("Log.File", rootCmd.PersistentFlags().Lookup("log_file"))
+	err = bld.BindPFlag("Log.File", RootCmd.PersistentFlags().Lookup("log_file"))
 	if err != nil {
 		return nil, nil, err
 	}
-	err = bld.BindPFlag("Log.Console", rootCmd.PersistentFlags().Lookup("log_to_console"))
+	err = bld.BindPFlag("Log.Console", RootCmd.PersistentFlags().Lookup("log_to_console"))
 	if err != nil {
 		return nil, nil, err
 	}
-	err = bld.BindPFlag("Log.NoColor", rootCmd.PersistentFlags().Lookup("log_no_color"))
+	err = bld.BindPFlag("Log.NoColor", RootCmd.PersistentFlags().Lookup("log_no_color"))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -82,38 +82,38 @@ func initViperConfig() (*config.Config, *builder.ConfigBuilder[config.Config], e
 
 func initConfigAndLog() {
 	var err error
-	cmdConfig, cmdConfigBuilder, err = initViperConfig()
+	CmdConfig, cmdConfigBuilder, err = initViperConfig()
 	if err != nil {
 		fmt.Println("Failed to initialize config, error=", err)
 		os.Exit(1)
 	}
-	InitLogFromConfig(&cmdConfig.Log)
+	InitLogFromConfig(&CmdConfig.Log)
 }
 
 func init() {
 	cobra.OnInitialize(initConfigAndLog)
 
-	rootCmd.PersistentFlags().
+	RootCmd.PersistentFlags().
 		StringSliceVarP(&configFiles, "config", "c", []string{"./config/config.yaml"},
 			"Path to the configuration file. Can be specified multiple times. Values are applied in sequence. Set to empty to disable default config.")
 
-	rootCmd.PersistentFlags().StringP(
+	RootCmd.PersistentFlags().StringP(
 		"log_level",
 		"l",
 		"info",
 		"Log level (options: trace, debug, info, warn, error, panic, fatal)",
 	)
-	rootCmd.PersistentFlags().String(
+	RootCmd.PersistentFlags().String(
 		"log_file",
 		"",
 		"Path to the log file",
 	)
-	rootCmd.PersistentFlags().Bool(
+	RootCmd.PersistentFlags().Bool(
 		"log_to_console",
 		true,
 		"Log to console",
 	)
-	rootCmd.PersistentFlags().Bool(
+	RootCmd.PersistentFlags().Bool(
 		"log_no_color",
 		false,
 		"Disable color in log output",

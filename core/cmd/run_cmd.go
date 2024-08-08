@@ -44,7 +44,7 @@ func runServices(ctx context.Context, cfg *config.Config, stream bool, xchain bo
 	var xchainService server.XChain
 	var wg sync.WaitGroup
 	if xchain {
-		xchainService, err = server.New(ctx, cmdConfig, nil, 1, metricsRegistry)
+		xchainService, err = server.New(ctx, CmdConfig, nil, 1, metricsRegistry)
 		if err != nil {
 			return err
 		}
@@ -88,7 +88,7 @@ func init() {
 		Use:   "run",
 		Short: "Runs the node with both stream or xchain services",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runServices(cmd.Context(), cmdConfig, true, true)
+			return runServices(cmd.Context(), CmdConfig, true, true)
 		},
 	}
 
@@ -96,7 +96,7 @@ func init() {
 		Use:   "stream",
 		Short: "Runs the node in stream mode",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runServices(cmd.Context(), cmdConfig, true, false)
+			return runServices(cmd.Context(), CmdConfig, true, false)
 		},
 	})
 
@@ -104,9 +104,9 @@ func init() {
 		Use:   "xchain",
 		Short: "Runs the node in xchain mode",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runServices(cmd.Context(), cmdConfig, false, true)
+			return runServices(cmd.Context(), CmdConfig, false, true)
 		},
 	})
 
-	rootCmd.AddCommand(cmd)
+	RootCmd.AddCommand(cmd)
 }

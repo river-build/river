@@ -27,11 +27,11 @@ func init() {
 			if err != nil {
 				return err
 			}
-			return runArchive(cmdConfig, once)
+			return runArchive(CmdConfig, once)
 		},
 	}
 
 	cmdArch.Flags().Bool("once", false, "Run the archiver once and exit")
 
-	rootCmd.AddCommand(cmdArch)
+	RootCmd.AddCommand(cmdArch)
 }
