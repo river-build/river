@@ -1259,7 +1259,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test.only('eth balance gate join fail - insufficient assets across wallets', async () => {
+    test('eth balance gate join fail - insufficient assets across wallets', async () => {
         const ruleData = treeToRuleData(await ethBalanceCheckOp(twoEth))
         const {
             alice,

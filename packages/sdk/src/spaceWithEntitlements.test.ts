@@ -16,6 +16,10 @@ import {
     getXchainSupportedRpcUrlsForTesting,
     erc20CheckOp,
     customCheckOp,
+    ethBalanceCheckOp,
+    oneEth,
+    twoEth,
+    oneHalfEth,
 } from './util.test'
 import { dlog } from '@river-build/dlog'
 import { MembershipOp } from '@river-build/proto'
@@ -33,6 +37,7 @@ import {
     TestCustomEntitlement,
     TestERC20,
     TestERC721,
+    TestEthBalance,
     treeToRuleData,
     IRuleEntitlementBase,
     ISpaceDapp,
@@ -50,6 +55,7 @@ async function createTownWithRequirements(requirements: {
     const {
         alice,
         bob,
+        carol,
         aliceSpaceDapp,
         bobSpaceDapp,
         carolSpaceDapp,
@@ -112,6 +118,7 @@ async function createTownWithRequirements(requirements: {
     return {
         alice,
         bob,
+        carol,
         aliceSpaceDapp,
         bobSpaceDapp,
         carolSpaceDapp,
@@ -1114,6 +1121,245 @@ describe('spaceWithEntitlements', () => {
             alicesWallet.address,
             aliceProvider.wallet,
         )
+
+        const doneStart = Date.now()
+        // kill the clients
+        await bob.stopSync()
+        await alice.stopSync()
+        log('Done', Date.now() - doneStart)
+    })
+
+    test('ethBalanceGateJoinPass', async () => {
+        const ruleData = treeToRuleData(await ethBalanceCheckOp(oneEth))
+
+        const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId, channelId } =
+            await createTownWithRequirements({
+                everyone: false,
+                users: [],
+                ruleData,
+            })
+
+        await TestEthBalance.setBalance(alicesWallet.address as Address, oneEth)
+
+        await expectUserCanJoin(
+            spaceId,
+            channelId,
+            'alice',
+            alice,
+            aliceSpaceDapp,
+            alicesWallet.address,
+            aliceProvider.wallet,
+        )
+
+        const doneStart = Date.now()
+        // kill the clients
+        await bob.stopSync()
+        await alice.stopSync()
+        log('Done', Date.now() - doneStart)
+    })
+
+    test('ethBalanceGateJoinFail', async () => {
+        const ruleData = treeToRuleData(await ethBalanceCheckOp(oneEth))
+
+        const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId, channelId } =
+            await createTownWithRequirements({
+                everyone: false,
+                users: [],
+                ruleData,
+            })
+
+        // Explicitly set alice's balance to 0.
+        await TestEthBalance.setBalance(alicesWallet.address as Address, 0n)
+
+        // Have alice create her own space so she can initialize her user stream.
+        // Then she will attempt to join the space from the client, which should fail
+        // for permissions reasons.
+        await createUserStreamAndSyncClient(
+            alice,
+            aliceSpaceDapp,
+            'alice',
+            await everyoneMembershipStruct(aliceSpaceDapp, alice),
+            aliceProvider.wallet,
+        )
+
+        await expectUserCannotJoinSpace(spaceId, alice, aliceSpaceDapp, alicesWallet.address)
+
+        const doneStart = Date.now()
+        // kill the clients
+        await bob.stopSync()
+        await alice.stopSync()
+        log('Done', Date.now() - doneStart)
+    })
+
+    test('eth balance gate join pass - join as root, linked wallet entitled', async () => {
+        const ruleData = treeToRuleData(await ethBalanceCheckOp(oneEth))
+        const {
+            alice,
+            bob,
+            aliceSpaceDapp,
+            aliceProvider,
+            carolsWallet,
+            alicesWallet,
+            carolProvider,
+            spaceId,
+            channelId,
+        } = await createTownWithRequirements({
+            everyone: false,
+            users: [],
+            ruleData,
+        })
+
+        // Link carol's wallet to alice's as root
+        await linkWallets(aliceSpaceDapp, aliceProvider.wallet, carolProvider.wallet)
+
+        // Set wallet balances to 0
+        await TestEthBalance.setBalance(carolsWallet.address as Address, 0n)
+        await TestEthBalance.setBalance(alicesWallet.address as Address, 0n)
+
+        // Validate alice cannot join the channel
+        await expectUserCannotJoinSpace(spaceId, alice, aliceSpaceDapp, alicesWallet.address)
+
+        await TestEthBalance.setBalance(carolsWallet.address as Address, oneEth)
+
+        // Wait 2 seconds for the negative auth cache to expire
+        await new Promise((f) => setTimeout(f, 2000))
+
+        // Validate alice can join the channel
+        await expectUserCanJoin(
+            spaceId,
+            channelId,
+            'alice',
+            alice,
+            aliceSpaceDapp,
+            alicesWallet.address,
+            aliceProvider.wallet,
+        )
+
+        const doneStart = Date.now()
+        // kill the clients
+        await bob.stopSync()
+        await alice.stopSync()
+        log('Done', Date.now() - doneStart)
+    })
+
+    test('eth balance gated join pass - join as linked wallet, assets in root wallet', async () => {
+        const ruleData = treeToRuleData(await ethBalanceCheckOp(oneEth))
+        const {
+            alice,
+            bob,
+            aliceSpaceDapp,
+            carolSpaceDapp,
+            aliceProvider,
+            alicesWallet,
+            carolsWallet,
+            carolProvider,
+            spaceId,
+            channelId,
+        } = await createTownWithRequirements({
+            everyone: false,
+            users: [],
+            ruleData,
+        })
+
+        log("Joining alice's wallet as a linked wallet to carol's root wallet")
+        await linkWallets(carolSpaceDapp, carolProvider.wallet, aliceProvider.wallet)
+
+        log("Setting carol and alice's wallet balances to 1ETH and 0, respectively")
+        await TestEthBalance.setBalance(carolsWallet.address as Address, oneEth)
+        await TestEthBalance.setBalance(alicesWallet.address as Address, 0n)
+
+        log('expect that alice can join the channel')
+        // Validate alice can join the channel
+        await expectUserCanJoin(
+            spaceId,
+            channelId,
+            'alice',
+            alice,
+            aliceSpaceDapp,
+            alicesWallet.address,
+            aliceProvider.wallet,
+        )
+
+        const doneStart = Date.now()
+        // kill the clients
+        await bob.stopSync()
+        await alice.stopSync()
+        log('Done', Date.now() - doneStart)
+    })
+
+    test('eth balance gate join pass - assets across wallets', async () => {
+        const ruleData = treeToRuleData(await ethBalanceCheckOp(oneEth))
+        const {
+            alice,
+            bob,
+            aliceSpaceDapp,
+            aliceProvider,
+            carolsWallet,
+            alicesWallet,
+            carolProvider,
+            spaceId,
+            channelId,
+        } = await createTownWithRequirements({
+            everyone: false,
+            users: [],
+            ruleData,
+        })
+
+        // Link carol's wallet to alice's as root
+        await linkWallets(aliceSpaceDapp, aliceProvider.wallet, carolProvider.wallet)
+
+        // Set wallet balances to 0
+        await TestEthBalance.setBalance(carolsWallet.address as Address, oneHalfEth)
+        await TestEthBalance.setBalance(alicesWallet.address as Address, oneHalfEth)
+
+        // Validate alice can join the channel
+        log('expect that alice can join the channel')
+        await expectUserCanJoin(
+            spaceId,
+            channelId,
+            'alice',
+            alice,
+            aliceSpaceDapp,
+            alicesWallet.address,
+            aliceProvider.wallet,
+        )
+
+        const doneStart = Date.now()
+        // kill the clients
+        await bob.stopSync()
+        await alice.stopSync()
+        log('Done', Date.now() - doneStart)
+    })
+
+    test('eth balance gate join fail - insufficient assets across wallets', async () => {
+        const ruleData = treeToRuleData(await ethBalanceCheckOp(twoEth))
+        const {
+            alice,
+            bob,
+            carol,
+            aliceSpaceDapp,
+            carolSpaceDapp,
+            aliceProvider,
+            carolsWallet,
+            alicesWallet,
+            carolProvider,
+            spaceId,
+            channelId,
+        } = await createTownWithRequirements({
+            everyone: false,
+            users: [],
+            ruleData,
+        })
+        // Link carol's wallet to alice's as root
+        await linkWallets(aliceSpaceDapp, aliceProvider.wallet, carolProvider.wallet)
+
+        // Set wallet balances to 0
+        await TestEthBalance.setBalance(carolsWallet.address as Address, oneHalfEth)
+        await TestEthBalance.setBalance(alicesWallet.address as Address, oneHalfEth)
+
+        log('expect neither alice nor carol can join the channel')
+        await expectUserCannotJoinSpace(spaceId, alice, aliceSpaceDapp, alicesWallet.address)
+        await expectUserCannotJoinSpace(spaceId, carol, carolSpaceDapp, carolsWallet.address)
 
         const doneStart = Date.now()
         // kill the clients
