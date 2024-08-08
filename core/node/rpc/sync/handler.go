@@ -104,6 +104,8 @@ func (h *handlerImpl) SyncStreams(
 	defer h.activeSyncOperations.Delete(op.SyncID)
 
 	doneChan := make(chan error, 1)
+	defer close(doneChan)
+
 	go h.runSyncStreams(req, res, op, doneChan)
 	return <-doneChan
 }
