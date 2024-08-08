@@ -49,7 +49,7 @@
 /packages/generated/ @sergekh2 @texuf @giuseppecrj
 /packages/generated/dev/ @sergekh2 @giuseppecrj
 /packages/sdk/ @sergekh2 @texuf
-/packages/sdk/src/ @erikolsson
+/packages/sdk/src/ @sergekh2 @texuf @erikolsson
 /protocol/ @sergekh2 @texuf
 /scripts/ @texuf
 turbo.json @mechanical-turk
