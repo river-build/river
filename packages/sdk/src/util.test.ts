@@ -155,6 +155,7 @@ export async function customCheckOp(contractName: string): Promise<Operation> {
 
 export const twoEth = BigInt(2e18)
 export const oneEth = BigInt(1e18)
+export const threeEth = BigInt(3e18)
 export const oneHalfEth = BigInt(5e17)
 
 export function ethBalanceCheckOp(threshold: bigint): Operation {

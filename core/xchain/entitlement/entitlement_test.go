@@ -512,7 +512,7 @@ func TestCheckOperation_Untimed(t *testing.T) {
 			false,
 		},
 		"ETH balance base sepolia": {
-			&ethBalance0_4EthBaseSepolia,
+			&ethBalance0_5EthBaseSepolia,
 			[]common.Address{examples.BaseSepolia0_5EthWallet},
 			true,
 		},

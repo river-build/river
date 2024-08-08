@@ -153,7 +153,7 @@ func (e *Evaluator) evaluateEthBalanceOperation(
 		}
 		total.Add(total, balance)
 
-		log.Debug("Retrieved ETH balance",
+		log.Info("Retrieved ETH balance",
 			"balance", balance.String(),
 			"total", total.String(),
 			"threshold", op.Threshold.String(),
