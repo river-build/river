@@ -14,6 +14,10 @@ import { ethers } from 'ethers'
 import { Address } from './ContractTypes'
 import { MOCK_ADDRESS } from './Utils'
 
+import { dlogger } from '@river-build/dlog'
+
+const logger = dlogger('csb:entitlements')
+
 const zeroAddress = ethers.constants.AddressZero
 
 type ReadContractFunction = typeof publicClient.readContract<
@@ -739,6 +743,7 @@ async function evaluateEthBalanceOperation(
         linkedWallets.map(async (wallet) => {
             try {
                 const result = await provider.getBalance(wallet)
+                logger.info('balance_result', result, result.toString())
                 return {
                     wallet,
                     balance: result,
@@ -765,7 +770,6 @@ async function evaluateEthBalanceOperation(
         controller.abort()
         return zeroAddress
     }
-
 }
 
 async function evaluateContractBalanceAcrossWallets(

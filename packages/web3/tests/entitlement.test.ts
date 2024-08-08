@@ -278,14 +278,14 @@ const baseSepoliaChainLinkWallet_25Link: Address = '0xa4D440AeA5F555feEB5AEa0ddc
 const testEmptyAccount: Address = '0xb227905F186095083869928BAb49cA9CE9546817'
 
 // This wallet contains .5ETH on Base Sepolia
-const baseSepolia0_5EthWallet = "0x4BCfC6962Ab0297aF801da21216014F53B46E991"
+const baseSepolia0_5EthWallet = '0x4BCfC6962Ab0297aF801da21216014F53B46E991'
 // This wallet contains .05 ETH on Base Sepolia
-const baseSepolia0_05EthWallet = "0xB79Af997239A334355F60DBeD75bEDf30AcD37bD"
+const baseSepolia0_05EthWallet = '0xB79Af997239A334355F60DBeD75bEDf30AcD37bD'
 
 // .2 ETH on Ethereum Sepolia
-const sepolia0_2EthWallet = "0x8cECcB1e5537040Fc63A06C88b4c1dE61880dA4d"
+const sepolia0_2EthWallet = '0x8cECcB1e5537040Fc63A06C88b4c1dE61880dA4d'
 // .015 ETH on Ethereum Sepolia
-const sepolia0_015EthWallet = "0xB4d85De80afE92C97293c32B1C0c604133d0332E"
+const sepolia0_015EthWallet = '0xB4d85De80afE92C97293c32B1C0c604133d0332E'
 
 const chainlinkExp = BigInt(10) ** BigInt(18)
 

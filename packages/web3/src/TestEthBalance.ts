@@ -4,10 +4,7 @@ import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 
 import { Address } from './ContractTypes'
 
-async function setBalance(
-    walletAddress: Address,
-    balance: bigint,
-): Promise<void> {
+async function setBalance(walletAddress: Address, balance: bigint): Promise<void> {
     const privateKey = generatePrivateKey()
     const throwawayAccount = privateKeyToAccount(privateKey)
     const client = createTestClient({
@@ -25,9 +22,7 @@ async function setBalance(
     })
 }
 
-async function getBalance(
-    walletAddress: Address,
-): Promise<bigint> {
+async function getBalance(walletAddress: Address): Promise<bigint> {
     const privateKey = generatePrivateKey()
     const throwawayAccount = privateKeyToAccount(privateKey)
     const client = createTestClient({
