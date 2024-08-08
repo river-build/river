@@ -1,7 +1,46 @@
 import { dlogger } from '@river-build/dlog'
 import type { StressClient } from '../../utils/stressClient'
+import { ChatConfig } from './types'
 
-const logger = dlogger('stress:clients')
+const logger = dlogger('stress:statsReporter')
+
+export function statsReporter(rootClient: StressClient, chatConfig: ChatConfig) {
+    let canceled = false
+    const interval = setInterval(() => {
+        if (canceled) {
+            return
+        }
+        let lastReactionCount = 0
+        void (async () => {
+            if (chatConfig.kickoffMessageEventId && chatConfig.countClientsMessageEventId) {
+                const reactionCount = await countReactions(
+                    rootClient,
+                    chatConfig.announceChannelId,
+                    chatConfig.kickoffMessageEventId,
+                )
+                if (canceled) {
+                    return
+                }
+                if (lastReactionCount === reactionCount) {
+                    return
+                }
+                lastReactionCount = reactionCount
+                await updateCountClients(
+                    rootClient,
+                    chatConfig.announceChannelId,
+                    chatConfig.countClientsMessageEventId,
+                    chatConfig.clientsCount,
+                    reactionCount,
+                )
+            }
+        })()
+    }, 5000)
+
+    return () => {
+        clearInterval(interval)
+        canceled = true
+    }
+}
 
 export const updateCountClients = async (
     client: StressClient,

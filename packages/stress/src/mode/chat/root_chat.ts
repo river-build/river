@@ -10,7 +10,7 @@ import { joinChat } from './joinChat'
 import { updateProfile } from './updateProfile'
 import { chitChat } from './chitChat'
 import { sumarizeChat } from './sumarizeChat'
-import { countReactions, updateCountClients } from './countClients'
+import { statsReporter } from './statsReporter'
 
 function getStressDuration(): number {
     check(isSet(process.env.STRESS_DURATION), 'process.env.STRESS_DURATION')
@@ -108,7 +108,11 @@ export async function startStressChat(opts: {
         `clients.length !== chatConfig.clientsPerProcess ${clients.length} !== ${chatConfig.clientsPerProcess}`,
     )
 
+    let cancelStatsReporting: (() => void) | undefined
+
     if (chatConfig.processIndex === 0) {
+        cancelStatsReporting = statsReporter(clients[0], chatConfig)
+
         for (
             let i = chatConfig.clientsCount;
             i < chatConfig.clientsCount + chatConfig.randomClientsCount;
@@ -130,20 +134,6 @@ export async function startStressChat(opts: {
     for (let i = 0; i < clients.length; i += PARALLEL_UPDATES) {
         const span = clients.slice(i, i + PARALLEL_UPDATES)
         const results = await Promise.allSettled(span.map((client) => joinChat(client, chatConfig)))
-        if (chatConfig.kickoffMessageEventId && chatConfig.countClientsMessageEventId) {
-            const reactionCount = await countReactions(
-                clients[0],
-                chatConfig.announceChannelId,
-                chatConfig.kickoffMessageEventId,
-            )
-            await updateCountClients(
-                clients[0],
-                chatConfig.announceChannelId,
-                chatConfig.countClientsMessageEventId,
-                chatConfig.clientsCount,
-                reactionCount,
-            )
-        }
         results.forEach((r, index) => {
             if (r.status === 'rejected') {
                 logger.error(`${span[index].logId} error calling joinChat`, r.reason)
@@ -180,6 +170,8 @@ export async function startStressChat(opts: {
 
     logger.log('done', { summary })
 
+    cancelStatsReporting?.()
+    
     for (let i = 0; i < clients.length; i += 1) {
         const client = clients[i]
         logger.log(`stopping ${client.logId}`)
