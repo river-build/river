@@ -55,8 +55,8 @@ function makeConfig(configJson: ConfigJson, deploymentsJson: DeploymentsJson): C
 
 
 export function getChainInfo(chainId: number = DEFAULT_CHAIN_ID) {
-	if (chainId in config.chainConfig) {
-		return config.chainConfig[chainId];
+	if (chainId in config) {
+		return config[chainId];
 	}
 	return undefined;
 }
