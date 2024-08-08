@@ -24,7 +24,7 @@ export async function getNodeForStream(streamId: StreamIdHex, chainId?: number):
 		return { url: cachedData.url, lastMiniblockNum: cachedData.lastMiniblockNum };
 	}
 
-	const riverRegistry = getAddress(chainId).riverRegistry;
+	const riverRegistry = getAddress(chainId);
 	if (!riverRegistry) {
 		console.error('Registry address not found');
 		throw new Error(`Registry address not found`);

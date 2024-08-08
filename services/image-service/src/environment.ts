@@ -1,23 +1,14 @@
 import * as dotenv from 'dotenv';
 
 import { ChainConfig } from './types';
-import configData from './config.json';
 import deploymentData from '@river-build/generated/config/deployments.json';
 
 dotenv.config();
 
 export const DEFAULT_CHAIN_ID = parseInt(process.env.DEFAULT_CHAIN_ID ?? '550', 10);
-export const config = makeConfig(configData, deploymentData);
+export const config = makeConfig(deploymentData);
 
-console.log('config', config, 'defaultChainId', DEFAULT_CHAIN_ID);
-
-interface ConfigJson {
-  chainConfig: {
-    [chainId: number]: {
-      riverChainUrl: string;
-    };
-  };
-}
+console.log('config', config, 'defaultChainId', DEFAULT_CHAIN_ID, `"${process.env.DEFAULT_CHAIN_ID}"`);
 
 interface DeploymentsJson {
   [key: string]: {
@@ -30,23 +21,18 @@ interface DeploymentsJson {
   };
 }
 
-function makeConfig(configJson: ConfigJson, deploymentsJson: DeploymentsJson): ChainConfig {
+function makeConfig(deploymentsJson: DeploymentsJson): ChainConfig {
   const chainConfig: ChainConfig = {};
 
   for (const key in deploymentsJson) {
     if (deploymentsJson.hasOwnProperty(key)) {
       const riverData = deploymentsJson[key].river;
       const chainId = riverData.chainId;
+			const riverRegistry = riverData.addresses.riverRegistry;
 
-      if (configJson.chainConfig.hasOwnProperty(chainId.toString())) {
-        const riverChainUrl = configJson.chainConfig[chainId].riverChainUrl;
-        const riverRegistry = riverData.addresses.riverRegistry;
-
-        chainConfig[chainId] = {
-          riverRegistry,
-          riverChainUrl,
-        };
-      }
+			chainConfig[chainId] = {
+				riverRegistry,
+			};
     }
   }
 
