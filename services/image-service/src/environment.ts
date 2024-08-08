@@ -1,43 +1,60 @@
 import * as dotenv from 'dotenv';
 
-import { Address, ChainConfig, Config } from './types';
-
+import { ChainConfig } from './types';
 import configData from './config.json';
+import deploymentData from '@river-build/generated/config/deployments.json';
 
 dotenv.config();
 
-export const DEFAULT_CHAIN_ID = parseInt(process.env.DEFAULT_CHAIN_ID ?? '8543', 10);
-const LOCAL_RIVER_CHAIN_URL = process.env.LOCAL_RIVER_CHAIN_URL as string | undefined;
-const LOCAL_CHAIN_ID = 31338;
-const LOCAL_RIVER_REGISTRY = process.env.LOCAL_RIVER_REGISTRY as Address | undefined;
-
-export const config = makeConfig();
+export const DEFAULT_CHAIN_ID = parseInt(process.env.DEFAULT_CHAIN_ID ?? '550', 10);
+export const config = makeConfig(configData, deploymentData);
 
 console.log('config', config, 'defaultChainId', DEFAULT_CHAIN_ID);
 
-function makeConfig(): Config {
-	let updatedChainInfo = { ...configData.chainConfig } as ChainConfig;
-
-	// inject local chain info if env var is set
-  if (
-		LOCAL_RIVER_CHAIN_URL) {
-     if (!(LOCAL_CHAIN_ID in updatedChainInfo)) {
-      updatedChainInfo = {
-        ...updatedChainInfo,
-        [LOCAL_CHAIN_ID]: {
-					riverChainUrl: LOCAL_RIVER_CHAIN_URL,
-        },
-      };
-    }
-  }
-	return {
-    ...configData,
-    chainConfig: updatedChainInfo,
-  } as Config;
+interface ConfigJson {
+  chainConfig: {
+    [chainId: number]: {
+      riverChainUrl: string;
+    };
+  };
 }
 
+interface DeploymentsJson {
+  [key: string]: {
+    river: {
+      chainId: number;
+      addresses: {
+        riverRegistry: string;
+      };
+    };
+  };
+}
+
+function makeConfig(configJson: ConfigJson, deploymentsJson: DeploymentsJson): ChainConfig {
+  const chainConfig: ChainConfig = {};
+
+  for (const key in deploymentsJson) {
+    if (deploymentsJson.hasOwnProperty(key)) {
+      const riverData = deploymentsJson[key].river;
+      const chainId = riverData.chainId;
+
+      if (configJson.chainConfig.hasOwnProperty(chainId.toString())) {
+        const riverChainUrl = configJson.chainConfig[chainId].riverChainUrl;
+        const riverRegistry = riverData.addresses.riverRegistry;
+
+        chainConfig[chainId] = {
+          riverRegistry,
+          riverChainUrl,
+        };
+      }
+    }
+  }
+
+  return chainConfig;
+};
+
+
 export function getChainInfo(chainId: number = DEFAULT_CHAIN_ID) {
-	console.log('getChainInfo', chainId);
 	if (chainId in config.chainConfig) {
 		return config.chainConfig[chainId];
 	}

@@ -1,6 +1,7 @@
 export interface ChainConfig {
   [chainId: number]: {
-		riverChainUrl: string;
+    riverRegistry: string;
+    riverChainUrl: string;
   };
 }
 

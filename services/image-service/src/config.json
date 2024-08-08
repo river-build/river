@@ -1,7 +1,13 @@
 {
 	"chainConfig": {
-		"8543": {
+		"31338": {
+			"riverChainUrl": "http://localhost:8546"
+		},
+		"550": {
 			"riverChainUrl": "https://mainnet.rpc.river.build/http"
+		},
+		"6524490": {
+			"riverChainUrl": "https://devnet.rpc.river.build"
 		}
 	}
 }
