@@ -19,10 +19,10 @@ import {
     ETH_ADDRESS,
     LocalhostWeb3Provider,
     MembershipStruct,
-    NoopRuleData,
     Permission,
     SpaceDapp,
     getDynamicPricingModule,
+    EncodedNoopRuleData,
 } from '@river-build/web3'
 import { dlogger, shortenHexString } from '@river-build/dlog'
 import { Wallet } from 'ethers'
@@ -155,7 +155,7 @@ export class StressClient {
             requirements: {
                 everyone: true,
                 users: [],
-                ruleData: NoopRuleData,
+                ruleData: EncodedNoopRuleData,
             },
         } satisfies MembershipStruct
         const transaction = await this.spaceDapp.createSpace(

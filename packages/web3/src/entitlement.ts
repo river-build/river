@@ -10,7 +10,7 @@ import {
 } from 'viem'
 
 import { mainnet } from 'viem/chains'
-import { ethers } from 'ethers'
+import { type BytesLike, ethers } from 'ethers'
 import { Address } from './ContractTypes'
 import { MOCK_ADDRESS } from './Utils'
 
@@ -90,11 +90,13 @@ export const NoopOperation: NoOperation = {
     index: 0,
 }
 
-export const NoopRuleData = {
+export const NoopRuleData: IRuleEntitlementBase.RuleDataStruct = {
     operations: [],
     checkOperations: [],
     logicalOperations: [],
 }
+
+export const EncodedNoopRuleData: BytesLike = encodeEntitlementData(NoopRuleData)
 
 type EntitledWalletOrZeroAddress = string
 

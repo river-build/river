@@ -33,6 +33,7 @@ import {
     treeToRuleData,
     IRuleEntitlementBase,
     ISpaceDapp,
+    encodeEntitlementData,
 } from '@river-build/web3'
 
 const log = dlog('csb:test:spaceWithEntitlements')
@@ -82,7 +83,10 @@ async function createTownWithRequirements(requirements: {
             pricingModule: dynamicPricingModule!.module,
         },
         permissions: [Permission.Read, Permission.Write],
-        requirements,
+        requirements: {
+            ...requirements,
+            ruleData: encodeEntitlementData(requirements.ruleData),
+        },
     }
 
     // This helper method validates that the owner can join the space and default channel.

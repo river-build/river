@@ -21,8 +21,8 @@ import {
     createSpaceDapp,
     Permission,
     MembershipStruct,
-    NoopRuleData,
     ETH_ADDRESS,
+    EncodedNoopRuleData,
 } from '@river-build/web3'
 import { MembershipOp } from '@river-build/proto'
 import { makeBaseChainConfig } from './riverConfig'
@@ -70,7 +70,7 @@ describe('withEntitlements', () => {
             requirements: {
                 everyone: true,
                 users: [],
-                ruleData: NoopRuleData,
+                ruleData: EncodedNoopRuleData,
             },
         }
 

@@ -8,11 +8,11 @@ import { Entitlements } from '../entitlements/entitlements'
 import {
     ETH_ADDRESS,
     MembershipStruct,
-    NoopRuleData,
     Permission,
     SpaceDapp,
     getDynamicPricingModule,
     getFixedPricingModule,
+    EncodedNoopRuleData,
 } from '@river-build/web3'
 
 export async function makeRandomSyncAgentConfig(): Promise<SyncAgentConfig> {
@@ -82,7 +82,7 @@ export async function makeTestMembershipInfo(
         requirements: {
             everyone: true,
             users: [],
-            ruleData: NoopRuleData,
+            ruleData: EncodedNoopRuleData,
         },
     } satisfies MembershipStruct
 }

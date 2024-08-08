@@ -47,13 +47,13 @@ import {
     IArchitectBase,
     ETH_ADDRESS,
     MembershipStruct,
-    NoopRuleData,
     CheckOperationType,
     LogicalOperationType,
     Operation,
     OperationType,
     treeToRuleData,
     SpaceDapp,
+    EncodedNoopRuleData,
 } from '@river-build/web3'
 
 const log = dlog('csb:test:util')
@@ -490,7 +490,7 @@ export async function everyoneMembershipStruct(
         requirements: {
             everyone: true,
             users: [],
-            ruleData: NoopRuleData,
+            ruleData: EncodedNoopRuleData,
         },
     }
 }
