@@ -287,11 +287,12 @@ func GetRiverNetworkStatus(
 			dlog.FromCtx(ctx).Error("No OpenTelemetry interceptor for gRPC client")
 		}
 
-		wg.Add(4)
+		wg.Add(5)
 		go getHttpStatus(ctx, n.Url(), &r.Http11, http11client, &wg)
 		go getHttpStatus(ctx, n.Url(), &r.Http20, http20client, &wg)
 		go getGrpcStatus(ctx, r, NewStreamServiceClient(grpcHttpClient, n.Url(), connectOpts...), &wg)
 		go getEthBalance(ctx, &r.RiverEthBalance, riverChain, n.Address(), &wg)
+		go getEthBalance(ctx, &r.BaseEthBalance, baseChain, n.Address(), &wg)
 	}
 
 	wg.Wait()
