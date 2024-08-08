@@ -743,7 +743,6 @@ async function evaluateEthBalanceOperation(
         linkedWallets.map(async (wallet) => {
             try {
                 const result = await provider.getBalance(wallet)
-                logger.info('balance_result', result, result.toString())
                 return {
                     wallet,
                     balance: result,

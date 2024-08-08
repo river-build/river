@@ -54,11 +54,6 @@ async function publicMint(tokenName: string, toAddress: Address, amount: number)
         value: parseEther('1'),
     })
 
-    await client.setBalance({
-        address: throwawayAccount.address,
-        value: parseEther('1'),
-    })
-
     const contractAddress = await getContractAddress(tokenName)
 
     logger.log('minting', contractAddress, toAddress)

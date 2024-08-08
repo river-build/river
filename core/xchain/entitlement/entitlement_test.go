@@ -75,7 +75,7 @@ var ethBalance0_1EthEthereumSepolia = CheckOperation{
 	CheckType:       CheckOperationType(ETHBALANCE),
 	ChainID:         examples.EthSepoliaChainId,
 	ContractAddress: common.Address{},
-	// .2ETH in Wei
+	// .1ETH in Wei
 	Threshold: big.NewInt(100_000_000_000_000_000),
 }
 
@@ -93,7 +93,7 @@ var ethBalance0_21EthEthereumSepolia = CheckOperation{
 	CheckType:       CheckOperationType(ETHBALANCE),
 	ChainID:         examples.EthSepoliaChainId,
 	ContractAddress: common.Address{},
-	// .2ETH in Wei
+	// .21ETH in Wei
 	Threshold: big.NewInt(210_000_000_000_000_000),
 }
 
@@ -102,7 +102,7 @@ var ethBalance0_3EthEthereumSepolia = CheckOperation{
 	CheckType:       CheckOperationType(ETHBALANCE),
 	ChainID:         examples.EthSepoliaChainId,
 	ContractAddress: common.Address{},
-	// .2ETH in Wei
+	// .3ETH in Wei
 	Threshold: big.NewInt(300_000_000_000_000_000),
 }
 

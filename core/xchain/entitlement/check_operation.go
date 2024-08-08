@@ -144,9 +144,8 @@ func (e *Evaluator) evaluateEthBalanceOperation(
 
 	total := big.NewInt(0)
 	for _, wallet := range linkedWallets {
-		// Balance is returned as a representation of the balance according to the token's decimals,
-		// which stores the balance in an exponentiated form.
-		// Default decimals for ETH is 18, meaning the balance is stored in Wei.
+		// Balance is returned as a representation of the balance according the denomination of ETH.
+		// Default decimals for ETH is 18, meaning the balance is stored in Wei (1 ETH = 10^18 Wei).
 		balance, err := client.BalanceAt(ctx, wallet, nil)
 		if err != nil {
 			log.Error("Failed to retrieve ETH balance", "chain", op.ChainID, "error", err)
@@ -162,7 +161,8 @@ func (e *Evaluator) evaluateEthBalanceOperation(
 		)
 
 		// Balance is a *big.Int
-		// Iteratively check if the total balance of evaluated wallets is greater than or equal to the threshold
+		// Iteratively check if the total balance of evaluated wallets is greater than or equal to the
+		// threshold.
 		if op.Threshold.Sign() > 0 && total.Sign() > 0 && total.Cmp(op.Threshold) >= 0 {
 			return true, nil
 		}
