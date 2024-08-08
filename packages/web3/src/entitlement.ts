@@ -36,6 +36,7 @@ export enum CheckOperationType {
     ERC721,
     ERC1155,
     ISENTITLED,
+    ETHBALANCE,
 }
 
 // Enum for Operation oneof operation_clause
@@ -456,6 +457,16 @@ async function evaluateCheckOperation(
             }
             return evaluateCustomEntitledOperation(operation, controller, provider, linkedWallets)
         }
+        case CheckOperationType.ETHBALANCE: {
+            await Promise.all(providers.map((p) => p.ready))
+            const provider = findProviderFromChainId(providers, operation.chainId)
+
+            if (!provider) {
+                controller.abort()
+                return zeroAddress
+            }
+            return evaluateEthBalanceOperation(operation, controller, provider, linkedWallets)
+        }
         case CheckOperationType.ERC20: {
             await Promise.all(providers.map((p) => p.ready))
             const provider = findProviderFromChainId(providers, operation.chainId)
@@ -724,7 +735,36 @@ async function evaluateEthBalanceOperation(
     provider: ethers.providers.StaticJsonRpcProvider,
     linkedWallets: string[],
 ): Promise<EntitledWalletOrZeroAddress> {
+    const walletBalances = await Promise.all(
+        linkedWallets.map(async (wallet) => {
+            try {
+                const result = await provider.getBalance(wallet)
+                return {
+                    wallet,
+                    balance: result,
+                }
+            } catch (error) {
+                return {
+                    wallet,
+                    balance: ethers.BigNumber.from(0),
+                }
+            }
+        }),
+    )
 
+    const walletsWithAsset = walletBalances.filter((balance) => balance.balance.gt(0))
+
+    const accumulatedBalance = walletsWithAsset.reduce(
+        (acc, el) => acc.add(el.balance),
+        ethers.BigNumber.from(0),
+    )
+
+    if (walletsWithAsset.length > 0 && accumulatedBalance.gte(operation.threshold)) {
+        return walletsWithAsset[0].wallet
+    } else {
+        controller.abort()
+        return zeroAddress
+    }
 
 }
 

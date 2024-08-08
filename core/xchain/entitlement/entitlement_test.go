@@ -70,7 +70,7 @@ var (
 	sepoliaTestNoNftsWallet = examples.SepoliaChainlinkWallet
 )
 
-var ethBalance0_1BGweiEthereumSepolia = CheckOperation{
+var ethBalance0_1EthEthereumSepolia = CheckOperation{
 	OpType:          CHECK,
 	CheckType:       CheckOperationType(ETHBALANCE),
 	ChainID:         examples.EthSepoliaChainId,
@@ -79,7 +79,7 @@ var ethBalance0_1BGweiEthereumSepolia = CheckOperation{
 	Threshold: big.NewInt(100_000_000_000_000_000),
 }
 
-var ethBalance0_2BGweiEthereumSepolia = CheckOperation{
+var ethBalance0_2EthEthereumSepolia = CheckOperation{
 	OpType:          CHECK,
 	CheckType:       CheckOperationType(ETHBALANCE),
 	ChainID:         examples.EthSepoliaChainId,
@@ -88,7 +88,7 @@ var ethBalance0_2BGweiEthereumSepolia = CheckOperation{
 	Threshold: big.NewInt(200_000_000_000_000_000),
 }
 
-var ethBalance0_21BGweiEthereumSepolia = CheckOperation{
+var ethBalance0_21EthEthereumSepolia = CheckOperation{
 	OpType:          CHECK,
 	CheckType:       CheckOperationType(ETHBALANCE),
 	ChainID:         examples.EthSepoliaChainId,
@@ -97,7 +97,7 @@ var ethBalance0_21BGweiEthereumSepolia = CheckOperation{
 	Threshold: big.NewInt(210_000_000_000_000_000),
 }
 
-var ethBalance0_3BGweiEthereumSepolia = CheckOperation{
+var ethBalance0_3EthEthereumSepolia = CheckOperation{
 	OpType:          CHECK,
 	CheckType:       CheckOperationType(ETHBALANCE),
 	ChainID:         examples.EthSepoliaChainId,
@@ -106,7 +106,7 @@ var ethBalance0_3BGweiEthereumSepolia = CheckOperation{
 	Threshold: big.NewInt(300_000_000_000_000_000),
 }
 
-var ethBalance0_4BGweiBaseSepolia = CheckOperation{
+var ethBalance0_4EthBaseSepolia = CheckOperation{
 	OpType:          CHECK,
 	CheckType:       CheckOperationType(ETHBALANCE),
 	ChainID:         examples.BaseSepoliaChainId,
@@ -115,7 +115,7 @@ var ethBalance0_4BGweiBaseSepolia = CheckOperation{
 	Threshold: big.NewInt(400_000_000_000_000_000),
 }
 
-var ethBalance0_5BGweiBaseSepolia = CheckOperation{
+var ethBalance0_5EthBaseSepolia = CheckOperation{
 	OpType:          CHECK,
 	CheckType:       CheckOperationType(ETHBALANCE),
 	ChainID:         examples.BaseSepoliaChainId,
@@ -124,7 +124,7 @@ var ethBalance0_5BGweiBaseSepolia = CheckOperation{
 	Threshold: big.NewInt(500_000_000_000_000_000),
 }
 
-var ethBalance0_52BGweiBaseSepolia = CheckOperation{
+var ethBalance0_52EthBaseSepolia = CheckOperation{
 	OpType:          CHECK,
 	CheckType:       CheckOperationType(ETHBALANCE),
 	ChainID:         examples.BaseSepoliaChainId,
@@ -133,7 +133,7 @@ var ethBalance0_52BGweiBaseSepolia = CheckOperation{
 	Threshold: big.NewInt(520_000_000_000_000_000),
 }
 
-var ethBalance0_6BGweiBaseSepolia = CheckOperation{
+var ethBalance0_6EthBaseSepolia = CheckOperation{
 	OpType:          CHECK,
 	CheckType:       CheckOperationType(ETHBALANCE),
 	ChainID:         examples.BaseSepoliaChainId,
@@ -435,7 +435,6 @@ func TestCheckOperation_Untimed(t *testing.T) {
 			[]common.Address{examples.SepoliaChainlinkWallet},
 			false,
 		},
-
 		// NFT checks with single and multiple NFTs, wallets
 		"ERC721 eth sepolia": {
 			&nftCheckEthereumSepolia,
@@ -488,52 +487,52 @@ func TestCheckOperation_Untimed(t *testing.T) {
 			false,
 		},
 		"ETH balance eth sepolia": {
-			&ethBalance0_2BGweiEthereumSepolia,
+			&ethBalance0_2EthEthereumSepolia,
 			[]common.Address{examples.SepoliaEthWallet},
 			true,
 		},
 		"ETH balance eth sepolia (multiwallet)": {
-			&ethBalance0_21BGweiEthereumSepolia,
+			&ethBalance0_21EthEthereumSepolia,
 			[]common.Address{examples.SepoliaEthWallet, examples.SepoliaEthWallet2},
 			true,
 		},
 		"ETH balance eth sepolia (insufficient balance)": {
-			&ethBalance0_1BGweiEthereumSepolia,
+			&ethBalance0_1EthEthereumSepolia,
 			[]common.Address{examples.SepoliaEthWallet2},
 			false,
 		},
 		"ETH balance eth sepolia (multiwallet, insufficient balance)": {
-			&ethBalance0_3BGweiEthereumSepolia,
+			&ethBalance0_3EthEthereumSepolia,
 			[]common.Address{examples.SepoliaEthWallet, examples.SepoliaEthWallet2},
 			false,
 		},
 		"ETH balance eth sepolia (no eth)": {
-			&ethBalance0_1BGweiEthereumSepolia,
+			&ethBalance0_1EthEthereumSepolia,
 			[]common.Address{examples.EmptyEthTestAccount},
 			false,
 		},
 		"ETH balance base sepolia": {
-			&ethBalance0_4BGweiBaseSepolia,
+			&ethBalance0_4EthBaseSepolia,
 			[]common.Address{examples.BaseSepoliaEthWallet},
 			true,
 		},
 		"ETH balance base sepolia (multiwallet)": {
-			&ethBalance0_52BGweiBaseSepolia,
+			&ethBalance0_52EthBaseSepolia,
 			[]common.Address{examples.BaseSepoliaEthWallet, examples.BaseSepoliaEthWallet2},
 			true,
 		},
 		"ETH balance base sepolia (insufficient balance)": {
-			&ethBalance0_4BGweiBaseSepolia,
+			&ethBalance0_4EthBaseSepolia,
 			[]common.Address{examples.BaseSepoliaEthWallet2},
 			false,
 		},
 		"ETH balance base sepolia (multiwallet, insufficient balance)": {
-			&ethBalance0_6BGweiBaseSepolia,
+			&ethBalance0_6EthBaseSepolia,
 			[]common.Address{examples.BaseSepoliaEthWallet, examples.BaseSepoliaEthWallet2},
 			false,
 		},
 		"ETH balance base sepolia (no eth, insufficient balance)": {
-			&ethBalance0_1BGweiEthereumSepolia,
+			&ethBalance0_4EthBaseSepolia,
 			[]common.Address{examples.EmptyEthTestAccount},
 			false,
 		},

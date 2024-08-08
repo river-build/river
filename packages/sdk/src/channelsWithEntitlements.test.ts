@@ -17,6 +17,7 @@ import {
     getXchainSupportedRpcUrlsForTesting,
     erc20CheckOp,
     customCheckOp,
+    ethBalanceCheckOp,
 } from './util.test'
 import { MembershipOp } from '@river-build/proto'
 import { makeUserStreamId } from './id'
@@ -29,6 +30,7 @@ import {
     TestERC721,
     TestERC20,
     TestCustomEntitlement,
+    TestEthBalance,
     LogicalOperationType,
     OperationType,
     Operation,
@@ -40,6 +42,7 @@ import { Client } from './client'
 import { make_MemberPayload_KeySolicitation } from './types'
 
 const log = dlog('csb:test:channelsWithEntitlements')
+const oneEth = BigInt(1e18)
 
 // pass in users as 'alice', 'bob', 'carol' - b/c their wallets are created here
 async function setupChannelWithCustomRole(
@@ -1101,6 +1104,25 @@ describe('channelsWithEntitlements', () => {
 
         const doneStart = Date.now()
         // kill the clients
+        await bob.stopSync()
+        await alice.stopSync()
+        log('Done', Date.now() - doneStart)
+    })
+
+    test.only('eth balance gate pass', async () => {
+        const ruleData = treeToRuleData(await ethBalanceCheckOp(oneEth))
+
+        const { alice, bob, alicesWallet, aliceSpaceDapp, spaceId, channelId } =
+            await setupChannelWithCustomRole([], ruleData)
+
+        await TestEthBalance.setBalance(alicesWallet.address as Address, oneEth)
+        await expect(TestEthBalance.getBalance(alicesWallet.address as Address)).toEqual(oneEth)
+
+        log('expect that alice can join the channel')
+        await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
+
+        // kill the clients
+        const doneStart = Date.now()
         await bob.stopSync()
         await alice.stopSync()
         log('Done', Date.now() - doneStart)

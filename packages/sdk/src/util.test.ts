@@ -153,6 +153,16 @@ export async function customCheckOp(contractName: string): Promise<Operation> {
     }
 }
 
+export function ethBalanceCheckOp(threshold: bigint): Operation {
+    return {
+        opType: OperationType.CHECK,
+        checkType: CheckOperationType.ETHBALANCE,
+        chainId: 31337n,
+        contractAddress: ethers.constants.AddressZero,
+        threshold,
+    }
+}
+
 /**
  * makeUniqueSpaceStreamId - space stream ids are derived from the contract
  * in tests without entitlements there are no contracts, so we use a random id
