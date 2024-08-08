@@ -1,8 +1,10 @@
 import { build } from 'esbuild';
 
+const isDev = process.env.NODE_ENV !== 'production';
+
 build({
 		bundle: true,
-		entryPoints: ['src/node.ts'],
+		entryPoints: ['./src/node.ts'],
 		format: 'cjs',
 		logLevel: 'info',
 		loader: {

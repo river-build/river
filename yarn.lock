@@ -7984,7 +7984,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"chokidar@npm:^3.5.1, chokidar@npm:^3.5.2, chokidar@npm:^3.5.3":
+"chokidar@npm:^3.5.1, chokidar@npm:^3.5.2, chokidar@npm:^3.5.3, chokidar@npm:^3.6.0":
   version: 3.6.0
   resolution: "chokidar@npm:3.6.0"
   dependencies:
@@ -12175,6 +12175,7 @@ __metadata:
     "@rollup/plugin-url": ^8.0.2
     "@rollup/plugin-wasm": ^6.2.2
     "@types/node": ^20.14.10
+    chokidar: ^3.6.0
     dotenv: ^16.4.5
     esbuild: ^0.23.0
     ethers: 4
