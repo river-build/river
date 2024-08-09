@@ -10,6 +10,7 @@ import {
     ETH_ADDRESS,
     LocalhostWeb3Provider,
     MembershipStruct,
+    LegacyMembershipStruct,
     NoopRuleData,
     Permission,
     createSpaceDapp,
@@ -59,7 +60,7 @@ describe('mediaWithEntitlements', () => {
         expect(dynamicPricingModule).toBeDefined()
 
         // create a space stream,
-        const membershipInfo: MembershipStruct = {
+        const membershipInfo: LegacyMembershipStruct = {
             settings: {
                 name: 'Everyone',
                 symbol: 'MEMBER',
@@ -80,7 +81,7 @@ describe('mediaWithEntitlements', () => {
         }
 
         log('transaction start bob creating space')
-        const transaction = await spaceDapp.createSpace(
+        const transaction = await spaceDapp.createLegacySpace(
             {
                 spaceName: 'space-name',
                 uri: 'http://bobs-space-metadata.com',
@@ -104,7 +105,7 @@ describe('mediaWithEntitlements', () => {
         await bobClient.createChannel(spaceStreamId, 'Channel', 'Topic', channelId)
 
         // create a second space and join alice so she can start up a client
-        const transaction2 = await spaceDapp.createSpace(
+        const transaction2 = await spaceDapp.createLegacySpace(
             {
                 spaceName: 'space2',
                 uri: 'bobs-space2-metadata',
