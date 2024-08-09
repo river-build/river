@@ -25,7 +25,6 @@ function makeStreamRpcClient(url: string): StreamRpcClient {
 
   const options: ConnectTransportOptions = {
     baseUrl: url,
-    // interceptors: [retryInterceptor(retryParams), loggingInterceptor(transportId)],
   };
 
 	const transport = createConnectTransport(options);
