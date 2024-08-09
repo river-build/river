@@ -1,11 +1,3 @@
-# Re-enable logs
-log:
-    file: ''
-    level: info
-    console: true
-    noColor: false
-    format: text
-
 database:
     url: postgres://postgres:postgres@localhost:5433/river?sslmode=disable&pool_max_conns=1000
     database: ''
