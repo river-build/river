@@ -27,3 +27,6 @@ log:
     console: true
     noColor: false
     format: text
+
+debugEndpoints:
+    pprof: true
