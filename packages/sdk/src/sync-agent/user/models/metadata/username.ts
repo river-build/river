@@ -8,23 +8,22 @@ import type { RiverConnection } from '../../../river-connection/riverConnection'
 import type { Client } from '../../../../client'
 import { isDefined } from '../../../../check'
 import type { IStreamStateView } from '../../../../streamStateView'
-import { make_MemberPayload_DisplayName } from '../../../../types'
+import { make_MemberPayload_Username } from '../../../../types'
+import { usernameChecksum } from '../../../../utils'
+
 const logger = dlogger('csb:userSettings')
 
-type DisplayNameModel = {
-    isEncrypted: boolean
-    displayName: string
-}
-
-export interface UserMetadata_DisplayNameModel extends Identifiable {
+export interface UserMetadata_UsernameModel extends Identifiable {
     id: string
     streamId: string
     initialized: boolean
-    displayNames: Map<string, DisplayNameModel | undefined>
+    username: string
+    isUsernameConfirmed: boolean
+    isUsernameEncrypted: boolean
 }
 
-@persistedObservable({ tableName: 'UserMetadata_DisplayName' })
-export class UserMetadata_DisplayName extends PersistedObservable<UserMetadata_DisplayNameModel> {
+@persistedObservable({ tableName: 'UserMetadata_Username' })
+export class UserMetadata_Username extends PersistedObservable<UserMetadata_UsernameModel> {
     constructor(
         userId: string,
         streamId: string,
@@ -32,7 +31,14 @@ export class UserMetadata_DisplayName extends PersistedObservable<UserMetadata_D
         private riverConnection: RiverConnection,
     ) {
         super(
-            { id: userId, streamId, initialized: false, displayNames: new Map() },
+            {
+                id: userId,
+                streamId,
+                initialized: false,
+                username: '',
+                isUsernameConfirmed: false,
+                isUsernameEncrypted: false,
+            },
             store,
             LoadPriority.high,
         )
@@ -42,30 +48,45 @@ export class UserMetadata_DisplayName extends PersistedObservable<UserMetadata_D
         this.riverConnection.registerView(this.onClientStarted)
     }
 
-    async setDisplayName(displayName: string) {
+    isUsernameAvailable(username: string): boolean {
         const streamId = this.data.streamId
-        const oldState = this.data.displayNames.get(streamId)
+        const streamView = this.riverConnection.client?.stream(streamId)?.view
+        check(isDefined(streamView), 'stream not found')
+        return streamView.getUserMetadata().usernames.cleartextUsernameAvailable(username)
+    }
+
+    async setUsername(username: string) {
+        const streamId = this.data.streamId
+        const oldState = this.data
+        check(isDefined(oldState), 'oldState is not defined')
+        const streamView = this.riverConnection.client
+            ?.stream(streamId)
+            ?.view.getUserMetadata().usernames
+        streamView?.setLocalUsername(this.data.id, username)
         this.setData({
-            displayNames: this.data.displayNames.set(streamId, {
-                isEncrypted: false,
-                displayName,
-            }),
+            username,
+            isUsernameConfirmed: true,
+            isUsernameEncrypted: false,
         })
         return this.riverConnection
             .call(async (client) => {
                 check(isDefined(client.cryptoBackend), 'cryptoBackend is not defined')
                 const encryptedData = await client.cryptoBackend.encryptGroupEvent(
                     streamId,
-                    displayName,
+                    username,
                 )
+                encryptedData.checksum = usernameChecksum(username, streamId)
                 return client.makeEventAndAddToStream(
                     streamId,
-                    make_MemberPayload_DisplayName(encryptedData),
-                    { method: 'displayName' },
+                    make_MemberPayload_Username(encryptedData),
+                    {
+                        method: 'username',
+                    },
                 )
             })
             .catch((e) => {
-                this.setData({ displayNames: this.data.displayNames.set(streamId, oldState) })
+                this.setData(oldState)
+                streamView?.resetLocalUsername(this.data.id)
                 throw e
             })
     }
@@ -77,7 +98,8 @@ export class UserMetadata_DisplayName extends PersistedObservable<UserMetadata_D
             this.initialize(streamView)
         }
         client.addListener('streamInitialized', this.onStreamInitialized)
-        client.addListener('streamDisplayNameUpdated', this.onStreamDisplayNameUpdated)
+        client.addListener('streamUsernameUpdated', this.onStreamUsernameUpdated)
+        client.addListener('streamPendingUsernameUpdated', this.onStreamUsernameUpdated)
         return () => {
             client.removeListener('streamInitialized', this.onStreamInitialized)
         }
@@ -91,22 +113,17 @@ export class UserMetadata_DisplayName extends PersistedObservable<UserMetadata_D
         }
     }
 
-    private onStreamDisplayNameUpdated = (streamId: string, userId: string) => {
+    private onStreamUsernameUpdated = (streamId: string, userId: string) => {
         if (streamId === this.data.streamId && userId === this.data.id) {
             const stream = this.riverConnection.client?.streams.get(streamId)
             const metadata = stream?.view.getUserMetadata()
-            const info = metadata?.displayNames.info(userId)
             if (metadata) {
+                const { username, usernameConfirmed, usernameEncrypted } =
+                    metadata.usernames.info(userId)
                 this.setData({
-                    displayNames: this.data.displayNames.set(
-                        streamId,
-                        info
-                            ? {
-                                  isEncrypted: info.displayNameEncrypted,
-                                  displayName: info.displayName,
-                              }
-                            : undefined,
-                    ),
+                    username,
+                    isUsernameConfirmed: usernameConfirmed,
+                    isUsernameEncrypted: usernameEncrypted,
                 })
             }
         }

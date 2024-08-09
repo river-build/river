@@ -17,7 +17,7 @@ export interface UserMetadata_EnsAddressModel extends Identifiable {
     id: string
     streamId: string
     initialized: boolean
-    ensAddresses: Map<string, Address | undefined>
+    ensAddress?: Address
 }
 
 @persistedObservable({ tableName: 'UserMetadata_EnsAddress' })
@@ -28,22 +28,17 @@ export class UserMetadata_EnsAddress extends PersistedObservable<UserMetadata_En
         store: Store,
         private riverConnection: RiverConnection,
     ) {
-        super(
-            { id: userId, streamId, initialized: false, ensAddresses: new Map() },
-            store,
-            LoadPriority.high,
-        )
+        super({ id: userId, streamId, initialized: false }, store, LoadPriority.high)
     }
 
     protected override async onLoaded() {
         this.riverConnection.registerView(this.onClientStarted)
     }
 
-    async setEnsAddress(streamId: string, ensAddress: Address) {
-        const oldState = this.data.ensAddresses.get(streamId)
-        this.setData({
-            ensAddresses: this.data.ensAddresses.set(streamId, ensAddress),
-        })
+    async setEnsAddress(ensAddress: Address) {
+        const streamId = this.data.streamId
+        const oldState = this.data
+        this.setData({ ensAddress })
         return this.riverConnection
             .call(async (client) => {
                 const bytes = addressFromUserId(ensAddress)
@@ -54,7 +49,7 @@ export class UserMetadata_EnsAddress extends PersistedObservable<UserMetadata_En
                 )
             })
             .catch((e) => {
-                this.setData({ ensAddresses: this.data.ensAddresses.set(streamId, oldState) })
+                this.setData(oldState)
                 throw e
             })
     }
@@ -85,13 +80,8 @@ export class UserMetadata_EnsAddress extends PersistedObservable<UserMetadata_En
             const stream = this.riverConnection.client?.streams.get(streamId)
             const metadata = stream?.view.getUserMetadata()
             const ensAddress = metadata?.ensAddresses.info(userId)
-            if (metadata) {
-                this.setData({
-                    ensAddresses: this.data.ensAddresses.set(
-                        streamId,
-                        ensAddress as Address | undefined,
-                    ),
-                })
+            if (ensAddress) {
+                this.setData({ ensAddress: ensAddress as Address })
             }
         }
     }

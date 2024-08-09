@@ -23,7 +23,7 @@ export interface UserMetadata_NftModel extends Identifiable {
     id: string
     streamId: string
     initialized: boolean
-    nfts: Map<string, NftModel | undefined>
+    nft?: NftModel
 }
 
 @persistedObservable({ tableName: 'UserMetadata_Nft' })
@@ -34,11 +34,7 @@ export class UserMetadata_Nft extends PersistedObservable<UserMetadata_NftModel>
         store: Store,
         private riverConnection: RiverConnection,
     ) {
-        super(
-            { id: userId, streamId, initialized: false, nfts: new Map() },
-            store,
-            LoadPriority.high,
-        )
+        super({ id: userId, streamId, initialized: false }, store, LoadPriority.high)
     }
     protected override async onLoaded() {
         this.riverConnection.registerView(this.onClientStarted)
@@ -50,7 +46,7 @@ export class UserMetadata_Nft extends PersistedObservable<UserMetadata_NftModel>
         tokenId: Uint8Array | string,
         chainId: number,
     ) {
-        const oldState = this.data.nfts.get(streamId)
+        const oldState = this.data
         const contractAddressBytes =
             typeof contractAddress === 'string'
                 ? bin_fromHexString(contractAddress)
@@ -65,11 +61,11 @@ export class UserMetadata_Nft extends PersistedObservable<UserMetadata_NftModel>
                   })
                 : new MemberPayload_Nft()
         this.setData({
-            nfts: this.data.nfts.set(streamId, {
+            nft: {
                 contractAddress: contractAddressBytes,
                 tokenId: tokenIdBytes,
                 chainId,
-            }),
+            },
         })
         return this.riverConnection
             .call((client) =>
@@ -78,7 +74,7 @@ export class UserMetadata_Nft extends PersistedObservable<UserMetadata_NftModel>
                 }),
             )
             .catch((e) => {
-                this.setData({ nfts: this.data.nfts.set(streamId, oldState) })
+                this.setData(oldState)
                 throw e
             })
     }
@@ -106,8 +102,8 @@ export class UserMetadata_Nft extends PersistedObservable<UserMetadata_NftModel>
 
     private onStreamNftUpdated = (streamId: string, userId: string) => {
         if (streamId === this.data.streamId && userId === this.data.id) {
-            const stream = this.riverConnection.client?.streams.get(streamId)
-            const metadata = stream?.view.getUserMetadata()
+            const streamView = this.riverConnection.client?.stream(streamId)?.view
+            const metadata = streamView?.getUserMetadata()
             if (metadata) {
                 const nftPayload = metadata.nfts.confirmedNfts.get(userId)
                 const nft = nftPayload
@@ -117,7 +113,7 @@ export class UserMetadata_Nft extends PersistedObservable<UserMetadata_NftModel>
                           chainId: nftPayload.chainId,
                       }
                     : undefined
-                this.setData({ nfts: this.data.nfts.set(streamId, nft) })
+                this.setData({ nft })
             }
         }
     }
