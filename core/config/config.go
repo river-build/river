@@ -431,7 +431,7 @@ func (c *Config) Init() error {
 }
 
 // Return the schema to use for accessing the node.
-func (c *Config) Schema() string {
+func (c *Config) UrlSchema() string {
 	s := "https"
 	if c != nil && c.DisableHttps {
 		s = "http"

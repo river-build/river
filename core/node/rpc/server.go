@@ -173,7 +173,7 @@ func (s *Service) start() error {
 	if strings.HasPrefix(addr, "[::]") {
 		addr = "localhost" + addr[4:]
 	}
-	addr = s.config.Schema() + "://" + addr
+	addr = s.config.UrlSchema() + "://" + addr
 	s.defaultLogger.Info("Server started", "addr", addr+"/debug/multi")
 	return nil
 }

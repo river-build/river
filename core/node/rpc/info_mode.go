@@ -49,7 +49,7 @@ func (s *Service) startInfoMode() error {
 	// Get the port as an integer
 	port := tcpAddr.Port
 	// build the url by converting the integer to a string
-	url := s.config.Schema() + "://localhost:" + strconv.Itoa(port) + "/debug/multi"
+	url := s.config.UrlSchema() + "://localhost:" + strconv.Itoa(port) + "/debug/multi"
 	s.defaultLogger.Info("Server started", "port", port, "https", s.config.IsHttpsEnabled(), "url", url)
 	return nil
 }
