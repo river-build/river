@@ -2,7 +2,7 @@
 port: 4040
 disableHttps: true
 
-# Disable logging
+# Log info and above to console in text format
 log:
     file: ''
     level: info
