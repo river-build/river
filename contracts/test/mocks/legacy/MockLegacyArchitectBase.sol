@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {IArchitectBase} from "./IArchitect.sol";
+import {ILegacyArchitectBase} from "./IMockLegacyArchitect.sol";
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 import {IUserEntitlement} from "contracts/src/spaces/entitlements/user/IUserEntitlement.sol";
 import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
@@ -21,8 +21,8 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {StringSet} from "contracts/src/utils/StringSet.sol";
 import {Validator} from "contracts/src/utils/Validator.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-import {ArchitectStorage} from "./ArchitectStorage.sol";
-import {ImplementationStorage} from "./ImplementationStorage.sol";
+import {ArchitectStorage} from "contracts/src/factory/facets/architect/ArchitectStorage.sol";
+import {ImplementationStorage} from "contracts/src/factory/facets/architect/ImplementationStorage.sol";
 import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
 
 // contracts
@@ -32,7 +32,7 @@ import {SpaceProxy} from "contracts/src/spaces/facets/proxy/SpaceProxy.sol";
 // modules
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-abstract contract ArchitectBase is Factory, IArchitectBase {
+abstract contract LegacyArchitectBase is Factory, ILegacyArchitectBase {
   using StringSet for StringSet.Set;
   using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -52,7 +52,7 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
   }
 
   function _createSpace(
-    SpaceInfo calldata spaceInfo
+    SpaceInfo memory spaceInfo
   ) internal returns (address spaceAddress) {
     ArchitectStorage.Layout storage ds = ArchitectStorage.layout();
     ImplementationStorage.Layout storage ims = ImplementationStorage.layout();
@@ -86,7 +86,7 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
 
     // deploy token entitlement
     IRuleEntitlement ruleEntitlement = IRuleEntitlement(
-      _deployEntitlement(ims.ruleEntitlement, spaceAddress)
+      _deployEntitlement(ims.legacyRuleEntitlement, spaceAddress)
     );
 
     address[] memory entitlements = new address[](2);
@@ -130,6 +130,11 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
   //                           Implementations
   // =============================================================
 
+  function _setLegacyRuleEntitlement(IRuleEntitlement entitlement) internal {
+    ImplementationStorage.Layout storage ds = ImplementationStorage.layout();
+    ds.legacyRuleEntitlement = entitlement;
+  }
+
   function _setImplementations(
     ISpaceOwner spaceToken,
     IUserEntitlement userEntitlement,
@@ -168,7 +173,7 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
   function _createDefaultChannel(
     address space,
     uint256 roleId,
-    ChannelInfo calldata channelInfo
+    ChannelInfo memory channelInfo
   ) internal {
     uint256[] memory roleIds = new uint256[](1);
     roleIds[0] = roleId;
@@ -192,7 +197,7 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
     address spaceAddress,
     IUserEntitlement userEntitlement,
     IRuleEntitlement ruleEntitlement,
-    MembershipRequirements calldata requirements
+    MembershipRequirements memory requirements
   ) internal returns (uint256 roleId) {
     string[] memory joinPermissions = new string[](1);
     joinPermissions[0] = Permissions.JoinSpace;
@@ -233,12 +238,12 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
         );
       }
 
-      if (requirements.ruleData.length > 0) {
+      if (requirements.ruleData.operations.length > 0) {
         IRoles(spaceAddress).addRoleToEntitlement(
           roleId,
           IRolesBase.CreateEntitlement({
             module: ruleEntitlement,
-            data: requirements.ruleData
+            data: abi.encode(requirements.ruleData)
           })
         );
       }
@@ -248,8 +253,8 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
 
   function _createMemberEntitlement(
     address spaceAddress,
-    string calldata memberName,
-    string[] calldata memberPermissions,
+    string memory memberName,
+    string[] memory memberPermissions,
     IUserEntitlement userEntitlement
   ) internal returns (uint256 roleId) {
     address[] memory users = new address[](1);
@@ -273,7 +278,7 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
 
   function _deploySpace(
     uint256 spaceTokenId,
-    Membership calldata membership
+    Membership memory membership
   ) internal returns (address space) {
     // get deployment info
     (bytes memory initCode, bytes32 salt) = _getSpaceDeploymentInfo(
@@ -301,17 +306,12 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
 
   function _getSpaceDeploymentInfo(
     uint256 spaceTokenId,
-    Membership calldata membership
+    Membership memory membership
   ) internal view returns (bytes memory initCode, bytes32 salt) {
-    address spaceToken = address(ImplementationStorage.layout().spaceToken);
+    ImplementationStorage.Layout storage ds = ImplementationStorage.layout();
 
     // calculate salt
     salt = keccak256(abi.encode(msg.sender, spaceTokenId, block.timestamp));
-
-    IMembershipBase.Membership memory membershipSettings = membership.settings;
-    if (membershipSettings.feeRecipient == address(0)) {
-      membershipSettings.feeRecipient = msg.sender;
-    }
 
     // calculate init code
     initCode = abi.encodePacked(
@@ -323,10 +323,22 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
           manager: address(this)
         }),
         ITokenOwnableBase.TokenOwnable({
-          collection: spaceToken,
+          collection: address(ds.spaceToken),
           tokenId: spaceTokenId
         }),
-        membershipSettings
+        IMembershipBase.Membership({
+          name: membership.settings.name,
+          symbol: membership.settings.symbol,
+          price: membership.settings.price,
+          maxSupply: membership.settings.maxSupply,
+          duration: membership.settings.duration,
+          currency: membership.settings.currency,
+          feeRecipient: membership.settings.feeRecipient == address(0)
+            ? msg.sender
+            : membership.settings.feeRecipient,
+          freeAllocation: membership.settings.freeAllocation,
+          pricingModule: membership.settings.pricingModule
+        })
       )
     );
   }

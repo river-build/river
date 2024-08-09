@@ -117,7 +117,7 @@ contract EntitlementDataQueryableTest is
     assertTrue(data.entitlementData.length > 0);
     assertEq(
       keccak256(abi.encodePacked(data.entitlementType)),
-      keccak256(abi.encodePacked("RuleEntitlement"))
+      keccak256(abi.encodePacked("RuleEntitlementV2"))
     );
   }
 

@@ -37,7 +37,7 @@ abstract contract SpaceHelper {
           requirements: IArchitectBase.MembershipRequirements({
             everyone: false,
             users: users,
-            ruleData: RuleEntitlementUtil.getMockERC721RuleData()
+            ruleData: abi.encode(RuleEntitlementUtil.getMockERC721RuleData())
           }),
           permissions: new string[](0)
         }),
@@ -69,7 +69,7 @@ abstract contract SpaceHelper {
           requirements: IArchitectBase.MembershipRequirements({
             everyone: false,
             users: new address[](0),
-            ruleData: RuleEntitlementUtil.getNoopRuleData()
+            ruleData: abi.encode(RuleEntitlementUtil.getNoopRuleData())
           }),
           permissions: new string[](0)
         }),
@@ -105,7 +105,7 @@ abstract contract SpaceHelper {
           requirements: IArchitectBase.MembershipRequirements({
             everyone: true,
             users: new address[](0),
-            ruleData: RuleEntitlementUtil.getNoopRuleData()
+            ruleData: abi.encode(RuleEntitlementUtil.getNoopRuleData())
           }),
           permissions: permissions
         }),
@@ -141,7 +141,7 @@ abstract contract SpaceHelper {
           requirements: IArchitectBase.MembershipRequirements({
             everyone: false,
             users: new address[](0),
-            ruleData: RuleEntitlementUtil.getMockERC721RuleData()
+            ruleData: abi.encode(RuleEntitlementUtil.getMockERC721RuleData())
           }),
           permissions: permissions
         }),
