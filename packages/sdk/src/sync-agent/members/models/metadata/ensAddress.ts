@@ -13,22 +13,26 @@ import { make_MemberPayload_EnsAddress } from '../../../../types'
 import { addressFromUserId } from '../../../../id'
 const logger = dlogger('csb:userSettings')
 
-export interface UserMetadata_EnsAddressModel extends Identifiable {
+export interface MemberEnsAddressModel extends Identifiable {
     id: string
     streamId: string
     initialized: boolean
     ensAddress?: Address
 }
 
-@persistedObservable({ tableName: 'UserMetadata_EnsAddress' })
-export class UserMetadata_EnsAddress extends PersistedObservable<UserMetadata_EnsAddressModel> {
+@persistedObservable({ tableName: 'MemberEnsAddress' })
+export class MemberEnsAddress extends PersistedObservable<MemberEnsAddressModel> {
     constructor(
         userId: string,
         streamId: string,
         store: Store,
         private riverConnection: RiverConnection,
     ) {
-        super({ id: userId, streamId, initialized: false }, store, LoadPriority.high)
+        super(
+            { id: `${userId}_${streamId}`, streamId, initialized: false },
+            store,
+            LoadPriority.high,
+        )
     }
 
     protected override async onLoaded() {

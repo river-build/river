@@ -11,20 +11,16 @@ import type { IStreamStateView } from '../../../../streamStateView'
 import { make_MemberPayload_DisplayName } from '../../../../types'
 const logger = dlogger('csb:userSettings')
 
-type DisplayNameModel = {
-    isEncrypted: boolean
-    displayName: string
-}
-
-export interface UserMetadata_DisplayNameModel extends Identifiable {
+export interface MemberDisplayNameModel extends Identifiable {
     id: string
     streamId: string
     initialized: boolean
-    displayNames: Map<string, DisplayNameModel | undefined>
+    displayName?: string
+    isEncrypted?: boolean
 }
 
-@persistedObservable({ tableName: 'UserMetadata_DisplayName' })
-export class UserMetadata_DisplayName extends PersistedObservable<UserMetadata_DisplayNameModel> {
+@persistedObservable({ tableName: 'MemberDisplayName' })
+export class MemberDisplayName extends PersistedObservable<MemberDisplayNameModel> {
     constructor(
         userId: string,
         streamId: string,
@@ -32,7 +28,13 @@ export class UserMetadata_DisplayName extends PersistedObservable<UserMetadata_D
         private riverConnection: RiverConnection,
     ) {
         super(
-            { id: userId, streamId, initialized: false, displayNames: new Map() },
+            {
+                id: `${userId}_${streamId}`,
+                streamId,
+                initialized: false,
+                displayName: '',
+                isEncrypted: false,
+            },
             store,
             LoadPriority.high,
         )
@@ -44,13 +46,8 @@ export class UserMetadata_DisplayName extends PersistedObservable<UserMetadata_D
 
     async setDisplayName(displayName: string) {
         const streamId = this.data.streamId
-        const oldState = this.data.displayNames.get(streamId)
-        this.setData({
-            displayNames: this.data.displayNames.set(streamId, {
-                isEncrypted: false,
-                displayName,
-            }),
-        })
+        const oldState = this.data
+        this.setData({ displayName })
         return this.riverConnection
             .call(async (client) => {
                 check(isDefined(client.cryptoBackend), 'cryptoBackend is not defined')
@@ -65,7 +62,7 @@ export class UserMetadata_DisplayName extends PersistedObservable<UserMetadata_D
                 )
             })
             .catch((e) => {
-                this.setData({ displayNames: this.data.displayNames.set(streamId, oldState) })
+                this.setData(oldState)
                 throw e
             })
     }
@@ -96,17 +93,10 @@ export class UserMetadata_DisplayName extends PersistedObservable<UserMetadata_D
             const stream = this.riverConnection.client?.streams.get(streamId)
             const metadata = stream?.view.getUserMetadata()
             const info = metadata?.displayNames.info(userId)
-            if (metadata) {
+            if (info) {
                 this.setData({
-                    displayNames: this.data.displayNames.set(
-                        streamId,
-                        info
-                            ? {
-                                  isEncrypted: info.displayNameEncrypted,
-                                  displayName: info.displayName,
-                              }
-                            : undefined,
-                    ),
+                    displayName: info.displayName,
+                    isEncrypted: info.displayNameEncrypted,
                 })
             }
         }

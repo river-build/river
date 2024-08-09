@@ -19,22 +19,26 @@ type NftModel = {
     chainId: number
 }
 
-export interface UserMetadata_NftModel extends Identifiable {
+export interface MemberNftModel extends Identifiable {
     id: string
     streamId: string
     initialized: boolean
     nft?: NftModel
 }
 
-@persistedObservable({ tableName: 'UserMetadata_Nft' })
-export class UserMetadata_Nft extends PersistedObservable<UserMetadata_NftModel> {
+@persistedObservable({ tableName: 'MemberNft' })
+export class MemberNft extends PersistedObservable<MemberNftModel> {
     constructor(
         userId: string,
         streamId: string,
         store: Store,
         private riverConnection: RiverConnection,
     ) {
-        super({ id: userId, streamId, initialized: false }, store, LoadPriority.high)
+        super(
+            { id: `${userId}_${streamId}`, streamId, initialized: false },
+            store,
+            LoadPriority.high,
+        )
     }
     protected override async onLoaded() {
         this.riverConnection.registerView(this.onClientStarted)

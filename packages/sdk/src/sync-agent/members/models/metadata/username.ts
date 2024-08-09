@@ -13,7 +13,7 @@ import { usernameChecksum } from '../../../../utils'
 
 const logger = dlogger('csb:userSettings')
 
-export interface UserMetadata_UsernameModel extends Identifiable {
+export interface MemberUsernameModel extends Identifiable {
     id: string
     streamId: string
     initialized: boolean
@@ -22,8 +22,8 @@ export interface UserMetadata_UsernameModel extends Identifiable {
     isUsernameEncrypted: boolean
 }
 
-@persistedObservable({ tableName: 'UserMetadata_Username' })
-export class UserMetadata_Username extends PersistedObservable<UserMetadata_UsernameModel> {
+@persistedObservable({ tableName: 'MemberUsername' })
+export class MemberUsername extends PersistedObservable<MemberUsernameModel> {
     constructor(
         userId: string,
         streamId: string,
@@ -32,7 +32,7 @@ export class UserMetadata_Username extends PersistedObservable<UserMetadata_User
     ) {
         super(
             {
-                id: userId,
+                id: `${userId}_${streamId}`,
                 streamId,
                 initialized: false,
                 username: '',
