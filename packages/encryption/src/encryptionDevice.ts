@@ -9,10 +9,10 @@ import {
 } from './encryptionTypes'
 import { EncryptionDelegate } from './encryptionDelegate'
 import { GROUP_ENCRYPTION_ALGORITHM, GroupEncryptionSession } from './olmLib'
-import { dlog } from '@river-build/dlog'
+import { dlogger } from '@river-build/dlog'
 import type { ExtendedInboundGroupSessionData, GroupSessionRecord } from './storeTypes'
 
-const log = dlog('csb:encryption:encryptionDevice')
+const { log, error: dlogError } = dlogger('csb:encryption:encryptionDevice')
 
 // The maximum size of an event is 65K, and we base64 the content, so this is a
 // reasonable approximation to the biggest plaintext we can encrypt.
@@ -566,8 +566,15 @@ export class EncryptionDevice {
     ): Promise<{ ciphertext: string; sessionId: string }> {
         return await this.cryptoStore.withGroupSessions(async () => {
             log(`encrypting msg with group session for stream id ${streamId}`)
-
-            checkPayloadLength(payloadString)
+            try {
+                checkPayloadLength(payloadString)
+            } catch (e) {
+                dlogError(
+                    `Payload length check failed while encrypting a message for streamId ${streamId}`,
+                    e,
+                )
+                throw e
+            }
             const session = await this.getOutboundGroupSession(streamId)
             const ciphertext = session.encrypt(payloadString)
             const sessionId = session.session_id()
