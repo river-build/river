@@ -482,6 +482,39 @@ func TestCheckOperation_Untimed(t *testing.T) {
 			false,
 			nil,
 		},
+		"Custom entitlement Contract Address is nil": {
+			&CheckOperation{
+				OpType:    CHECK,
+				CheckType: CheckOperationType(ISENTITLED),
+				ChainID:   examples.EthSepoliaChainId,
+				Threshold: big.NewInt(1),
+			},
+			[]common.Address{examples.SepoliaChainlinkWallet},
+			false,
+			fmt.Errorf("evaluateCheckOperation: Contract address is nil for operation ISENTITLED"),
+		},
+		"ERC1155 Contract Address is nil": {
+			&CheckOperation{
+				OpType:    CHECK,
+				CheckType: CheckOperationType(ERC1155),
+				ChainID:   examples.EthSepoliaChainId,
+				Threshold: big.NewInt(1),
+			},
+			[]common.Address{examples.SepoliaChainlinkWallet},
+			false,
+			fmt.Errorf("evaluateCheckOperation: Contract address is nil for operation ERC1155"),
+		},
+		"ERC1155 Threshold is nil": {
+			&CheckOperation{
+				OpType:          CHECK,
+				CheckType:       CheckOperationType(ERC1155),
+				ChainID:         examples.EthSepoliaChainId,
+				ContractAddress: examples.EthSepoliaChainlinkContract,
+			},
+			[]common.Address{examples.SepoliaChainlinkWallet},
+			false,
+			fmt.Errorf("evaluateCheckOperation: Threshold is nil for operation ERC1155"),
+		},
 		// NFT checks with single and multiple NFTs, wallets
 		"ERC721 empty wallets": {
 			&nftCheckEthereumSepolia,
