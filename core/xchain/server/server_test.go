@@ -817,6 +817,7 @@ func TestEthBalance(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			ctx, cancel := test.NewTestContext()
+			ctx = dlog.CtxWithLog(ctx, noColorLogger())
 			defer cancel()
 
 			require := require.New(t)
@@ -831,19 +832,18 @@ func TestEthBalance(t *testing.T) {
 			cs.Start(ctx)
 			defer cs.Stop()
 
-			// Explicitly set client simulator wallet balance to zero.
+			// Explicitly set client simulator wallet balance to 1 Eth for covering gas fees.
 			err = anvilClient.Client().
-				CallContext(ctx, nil, "anvil_setBalance", cs.Wallet().Address, "0")
+				CallContext(ctx, nil, "anvil_setBalance", cs.Wallet().Address, node_crypto.Eth_1.String())
 			require.NoError(err)
 
 			// Initially the check should fail.
-			ethCheck := ethBalanceCheck(ChainID, 1e18)
-			t.Log("Checking entitlement for client simulator wallet", ethCheck)
+			ethCheck := ethBalanceCheck(ChainID, node_crypto.Eth_2.Uint64())
 			expectEntitlementCheckResult(require, cs, ctx, cfg, ethCheck, false)
 
-			// Fund the client simulator wallet with 1 eth.
+			// Fund the client simulator wallet with 10 eth - should pass the check.
 			err = anvilClient.Client().
-				CallContext(ctx, nil, "anvil_setBalance", cs.Wallet().Address, node_crypto.Eth_1.String())
+				CallContext(ctx, nil, "anvil_setBalance", cs.Wallet().Address, node_crypto.Eth_10.String())
 			require.NoError(err)
 
 			// Check should now succeed.
