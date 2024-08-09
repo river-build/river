@@ -27,6 +27,7 @@ function createPublicClientFromChainId(chainId: number) {
 				transport: http(riverChainUrl)
 			});
 		default:
+			console.error(`Unsupported chain ID: ${chainId}`);
 			throw new Error(`Unsupported chain ${chainId}`);
 	}
 }
