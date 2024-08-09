@@ -7,6 +7,16 @@ Fetches river images from river streams.
 Start the river image service:
 
 ```bash
-cp .env.localhost .env
+# make sure the river chain is running, and the contracts are deployed.
+# check that the deployed contract addresses and abis are generated.
+#
+# Look for these dependencies:
+# - packages/generated/config/deployments.json
+# - packages/generated/dev/abis/NodeRegistry.abi.ts
+# - packages/generated/dev/abis/StreamRegistry.abi.ts
+#
+# if the dependencies are not present, run:
+# ./<projectRoot>/scripts/start_dev.sh
+
 yarn dev
 ```
