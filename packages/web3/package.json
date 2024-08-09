@@ -18,6 +18,7 @@
         "watch": "tsc --watch"
     },
     "dependencies": {
+        "@0xsequence/multicall": "^1.10.3",
         "@isaacs/ttlcache": "^1.4.1",
         "@river-build/dlog": "workspace:^",
         "@river-build/generated": "workspace:^",

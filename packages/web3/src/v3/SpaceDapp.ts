@@ -32,6 +32,9 @@ import { RuleEntitlementShim } from './RuleEntitlementShim'
 import { PlatformRequirements } from './PlatformRequirements'
 import { EntitlementDataStructOutput } from './IEntitlementDataQueryableShim'
 import { CacheResult, EntitlementCache, Keyable } from '../EntitlementCache'
+import { providers as _providers } from '@0xsequence/multicall'
+
+const { MulticallProvider } = _providers
 
 const logger = dlogger('csb:SpaceDapp:debug')
 
@@ -570,7 +573,7 @@ export class SpaceDapp implements ISpaceDapp {
         }
 
         const providers = supportedXChainRpcUrls.map(
-            (url) => new ethers.providers.StaticJsonRpcProvider(url),
+            (url) => new MulticallProvider(new ethers.providers.StaticJsonRpcProvider(url)),
         )
         await Promise.all(providers.map((p) => p.ready))
 

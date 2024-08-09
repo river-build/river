@@ -1,18 +1,25 @@
+import { providers as _providers } from '@0xsequence/multicall'
 import { providers } from 'ethers'
 import { RiverConfig } from '../../riverConfig'
 
+const { MulticallProvider } = _providers
+
 export function makeRiverProvider(config: RiverConfig) {
     const river = config.river
-    return new providers.StaticJsonRpcProvider(river.rpcUrl, {
-        chainId: river.chainConfig.chainId,
-        name: `river-${river.chainConfig.chainId}`,
-    })
+    return new MulticallProvider(
+        new providers.StaticJsonRpcProvider(river.rpcUrl, {
+            chainId: river.chainConfig.chainId,
+            name: `river-${river.chainConfig.chainId}`,
+        }),
+    )
 }
 
 export function makeBaseProvider(config: RiverConfig) {
     const base = config.base
-    return new providers.StaticJsonRpcProvider(base.rpcUrl, {
-        chainId: base.chainConfig.chainId,
-        name: `base-${base.chainConfig.chainId}`,
-    })
+    return new MulticallProvider(
+        new providers.StaticJsonRpcProvider(base.rpcUrl, {
+            chainId: base.chainConfig.chainId,
+            name: `base-${base.chainConfig.chainId}`,
+        }),
+    )
 }
