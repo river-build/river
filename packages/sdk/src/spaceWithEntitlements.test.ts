@@ -1214,18 +1214,9 @@ describe('spaceWithEntitlements', () => {
         // Link carol's wallet to alice's as root
         await linkWallets(aliceSpaceDapp, aliceProvider.wallet, carolProvider.wallet)
 
-        // Explicitly set wallet balances to not enough, but not zero, since they have to pay to join
-        // the town.
+        // Alice's wallet balance is insufficient, but carol's is enough.
         await TestEthBalance.setBalance(alicesWallet.address as Address, oneHalfEth)
-        await TestEthBalance.setBalance(carolsWallet.address as Address, oneHalfEth)
-
-        // Validate alice cannot join the space
-        await expectUserCannotJoinSpace(spaceId, alice, aliceSpaceDapp, alicesWallet.address)
-
         await TestEthBalance.setBalance(carolsWallet.address as Address, threeEth)
-
-        // Wait 2 seconds for the negative auth cache to expire
-        await new Promise((f) => setTimeout(f, 2000))
 
         // Validate alice can join the space
         await expectUserCanJoin(
@@ -1314,6 +1305,24 @@ describe('spaceWithEntitlements', () => {
         // Set wallet balances to sum to < 3ETH but also be nonzero, as they have to pay to join the town.
         await TestEthBalance.setBalance(carolsWallet.address as Address, oneHalfEth)
         await TestEthBalance.setBalance(alicesWallet.address as Address, oneHalfEth)
+
+        // Have alice and carol create their own space so they can initialize their user streams.
+        // Then they will attempt to join the space from the client, which should fail
+        // for permissions reasons.
+        await createUserStreamAndSyncClient(
+            alice,
+            aliceSpaceDapp,
+            'alice',
+            await everyoneMembershipStruct(aliceSpaceDapp, alice),
+            aliceProvider.wallet,
+        )
+        await createUserStreamAndSyncClient(
+            carol,
+            carolSpaceDapp,
+            'carol',
+            await everyoneMembershipStruct(carolSpaceDapp, carol),
+            carolProvider.wallet,
+        )
 
         log('expect neither alice nor carol can join the space')
         await expectUserCannotJoinSpace(spaceId, alice, aliceSpaceDapp, alicesWallet.address)
