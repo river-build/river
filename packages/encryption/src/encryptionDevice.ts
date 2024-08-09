@@ -1,6 +1,4 @@
 // todo: fix lint issues and remove exception see: https://linear.app/hnt-labs/issue/HNT-1721/address-linter-overrides-in-matrix-encryption-code-from-sdk
-/* eslint-disable @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unused-vars, @typescript-eslint/no-unsafe-argument*/
-
 import { CryptoStore } from './cryptoStore'
 import {
     Account,
@@ -12,6 +10,7 @@ import {
 import { EncryptionDelegate } from './encryptionDelegate'
 import { GROUP_ENCRYPTION_ALGORITHM, GroupEncryptionSession } from './olmLib'
 import { dlog } from '@river-build/dlog'
+import type { ExtendedInboundGroupSessionData, GroupSessionRecord } from './storeTypes'
 
 const log = dlog('csb:encryption:encryptionDevice')
 
@@ -29,7 +28,22 @@ export interface InboundGroupSessionData {
     untrusted?: boolean
 }
 
-function checkPayloadLength(payloadString: string): void {
+export type ExportedDevice = {
+    pickleKey: string
+    pickledAccount: string
+    outboundSessions: GroupSessionRecord[]
+    inboundSessions: ExtendedInboundGroupSessionData[]
+}
+
+export type EncryptionDeviceInitOpts = {
+    fromExportedDevice?: ExportedDevice
+    pickleKey?: string
+}
+
+function checkPayloadLength(
+    payloadString: string,
+    opts: { streamId?: string; source: string },
+): void {
     if (payloadString === undefined) {
         throw new Error('payloadString undefined')
     }
@@ -37,10 +51,10 @@ function checkPayloadLength(payloadString: string): void {
     if (payloadString.length > MAX_PLAINTEXT_LENGTH) {
         // might as well fail early here rather than letting the olm library throw
         // a cryptic memory allocation error.
-        //
         throw new Error(
             `Message too long (${payloadString.length} bytes). ` +
-                `The maximum for an encrypted message is ${MAX_PLAINTEXT_LENGTH} bytes.`,
+                `The maximum for an encrypted message is ${MAX_PLAINTEXT_LENGTH} bytes.` +
+                `streamId: ${opts.streamId}, source: ${opts.source}`,
         )
     }
 }
@@ -109,30 +123,69 @@ export class EncryptionDevice {
      *
      *
      */
-    public async init(): Promise<void> {
+    public async init(opts?: EncryptionDeviceInitOpts): Promise<void> {
+        const { fromExportedDevice, pickleKey } = opts ?? {}
         let e2eKeys
         if (!this.delegate.initialized) {
             await this.delegate.init()
         }
         const account = this.delegate.createAccount()
         try {
-            await this.initializeAccount(account)
+            if (fromExportedDevice) {
+                this.pickleKey = fromExportedDevice.pickleKey
+                await this.initializeFromExportedDevice(fromExportedDevice, account)
+            } else {
+                if (pickleKey) {
+                    this.pickleKey = pickleKey
+                }
+                await this.initializeAccount(account)
+            }
+            e2eKeys = JSON.parse(account.identity_keys())
             await this.generateFallbackKeyIfNeeded()
             this.fallbackKey = await this.getFallbackKey()
-            e2eKeys = JSON.parse(account.identity_keys())
         } finally {
             account.free()
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         this.deviceCurve25519Key = e2eKeys.curve25519
         // note jterzis 07/19/23: deprecating ed25519 key in favor of TDK
         // see: https://linear.app/hnt-labs/issue/HNT-1796/tdk-signature-storage-curve25519-key
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         this.deviceDoNotUseKey = e2eKeys.ed25519
         log(
             `init: deviceCurve25519Key: ${this.deviceCurve25519Key}, fallbackKey ${JSON.stringify(
                 this.fallbackKey,
             )}`,
         )
+    }
+
+    private async initializeFromExportedDevice(
+        exportedData: ExportedDevice,
+        account: Account,
+    ): Promise<void> {
+        await this.cryptoStore.withAccountTx(() =>
+            this.cryptoStore.storeAccount(exportedData.pickledAccount),
+        )
+        await this.cryptoStore.withGroupSessions(() => {
+            return Promise.all([
+                ...exportedData.outboundSessions.map((session) =>
+                    this.cryptoStore.storeEndToEndOutboundGroupSession(
+                        session.sessionId,
+                        session.session,
+                        session.streamId,
+                    ),
+                ),
+                ...exportedData.inboundSessions.map((session) =>
+                    this.cryptoStore.storeEndToEndInboundGroupSession(
+                        session.streamId,
+                        session.sessionId,
+                        session,
+                    ),
+                ),
+            ])
+        })
+        account.unpickle(this.pickleKey, exportedData.pickledAccount)
     }
 
     private async initializeAccount(account: Account): Promise<void> {
@@ -143,6 +196,28 @@ export class EncryptionDevice {
             account.create()
             const pickledAccount = account.pickle(this.pickleKey)
             await this.cryptoStore.storeAccount(pickledAccount)
+        }
+    }
+
+    /**
+     * Export the current device state
+     * @returns ExportedDevice object containing the device state
+     */
+    public async exportDevice(): Promise<ExportedDevice> {
+        const account = await this.getAccount()
+        const pickledAccount = account.pickle(this.pickleKey)
+        account.free()
+
+        const [inboundSessions, outboundSessions] = await Promise.all([
+            this.cryptoStore.getAllEndToEndInboundGroupSessions(),
+            this.cryptoStore.getAllEndToEndOutboundGroupSessions(),
+        ])
+
+        return {
+            pickleKey: this.pickleKey,
+            pickledAccount,
+            inboundSessions,
+            outboundSessions,
         }
     }
 
@@ -347,9 +422,7 @@ export class EncryptionDevice {
      * @param func - Invoked with the unpickled session
      * @returns result of func
      */
-    private unpickleInboundGroupSession<T>(
-        sessionData: InboundGroupSessionData,
-    ): InboundGroupSession {
+    private unpickleInboundGroupSession(sessionData: InboundGroupSessionData): InboundGroupSession {
         const session = this.delegate.createInboundGroupSession()
         session.unpickle(this.pickleKey, sessionData.session)
         return session
@@ -497,7 +570,7 @@ export class EncryptionDevice {
         return await this.cryptoStore.withGroupSessions(async () => {
             log(`encrypting msg with group session for stream id ${streamId}`)
 
-            checkPayloadLength(payloadString)
+            checkPayloadLength(payloadString, { streamId, source: 'encryptGroupMessage' })
             const session = await this.getOutboundGroupSession(streamId)
             const ciphertext = session.encrypt(payloadString)
             const sessionId = session.session_id()
@@ -512,7 +585,7 @@ export class EncryptionDevice {
         fallbackKey: string,
         payload: string,
     ): Promise<{ type: 0 | 1; body: string }> {
-        checkPayloadLength(payload)
+        checkPayloadLength(payload, { source: 'encryptUsingFallbackKey' })
         return this.cryptoStore.withAccountTx(async () => {
             const session = this.delegate.createSession()
             try {
@@ -548,7 +621,7 @@ export class EncryptionDevice {
             throw new Error('Only pre-key messages supported')
         }
 
-        checkPayloadLength(ciphertext)
+        checkPayloadLength(ciphertext, { source: 'decryptMessage' })
         return await this.cryptoStore.withAccountTx(async () => {
             const account = await this.getAccount()
             const session = this.delegate.createSession()

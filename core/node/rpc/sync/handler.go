@@ -2,11 +2,11 @@ package sync
 
 import (
 	"context"
-	"github.com/river-build/river/core/node/utils"
 	"sync"
 
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
+
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/nodes"
@@ -17,8 +17,11 @@ import (
 type (
 	// Handler defines the external grpc interface that clients can call.
 	Handler interface {
+		// SyncStreams runs a stream sync operation that subscribes to streams on the local node and remote nodes.
+		// It returns syncId, if any and an error.
 		SyncStreams(
 			ctx context.Context,
+			syncId string,
 			req *connect.Request[SyncStreamsRequest],
 			res *connect.ServerStream[SyncStreamsResponse],
 		) error
@@ -88,31 +91,42 @@ func NewHandler(
 
 func (h *handlerImpl) SyncStreams(
 	ctx context.Context,
+	syncId string,
 	req *connect.Request[SyncStreamsRequest],
 	res *connect.ServerStream[SyncStreamsResponse],
 ) error {
-	ctx, log := utils.CtxAndLogForRequest(ctx, req)
-
-	op, err := NewStreamsSyncOperation(ctx, h.nodeAddr, h.streamCache, h.nodeRegistry)
+	op, err := NewStreamsSyncOperation(ctx, syncId, h.nodeAddr, h.streamCache, h.nodeRegistry)
 	if err != nil {
-		log.Error("Unable to create streams sync subscription", "error", err)
 		return err
 	}
 
 	h.activeSyncOperations.Store(op.SyncID, op)
 	defer h.activeSyncOperations.Delete(op.SyncID)
 
+	doneChan := make(chan error, 1)
+	defer close(doneChan)
+
+	go h.runSyncStreams(req, res, op, doneChan)
+	return <-doneChan
+}
+
+func (h *handlerImpl) runSyncStreams(
+	req *connect.Request[SyncStreamsRequest],
+	res *connect.ServerStream[SyncStreamsResponse],
+	op *StreamSyncOperation,
+	doneChan chan error,
+) {
 	// send SyncID to client
 	if err := res.Send(&SyncStreamsResponse{
 		SyncId: op.SyncID,
 		SyncOp: SyncOp_SYNC_NEW,
 	}); err != nil {
-		err := AsRiverError(err).Func("SyncStreams")
-		return err
+		doneChan <- AsRiverError(err).Func("SyncStreams")
+		return
 	}
 
 	// run until sub.ctx expires or until the client calls CancelSync
-	return op.Run(req, res)
+	doneChan <- op.Run(req, res)
 }
 
 func (h *handlerImpl) AddStreamToSync(

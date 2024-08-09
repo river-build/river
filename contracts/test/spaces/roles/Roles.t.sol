@@ -241,7 +241,7 @@ contract RolesTest is RolesBaseSetup {
     assertEq(currentRoles.length, allRoles.length - 2);
   }
 
-  function test_getRoles_default_roles() external {
+  function test_getRoles_default_roles() external view {
     IRoles.Role[] memory allRoles = roles.getRoles();
     assertEq(allRoles.length, 2);
   }

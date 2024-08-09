@@ -1,4 +1,5 @@
 import { check, dlogger } from '@river-build/dlog'
+import { promises as fs } from 'node:fs'
 import { isSet } from '../../utils/expect'
 import { ChatConfig } from './types'
 import { RiverConfig, makeDefaultChannelStreamId } from '@river-build/sdk'
@@ -10,6 +11,7 @@ import { joinChat } from './joinChat'
 import { updateProfile } from './updateProfile'
 import { chitChat } from './chitChat'
 import { sumarizeChat } from './sumarizeChat'
+import { statsReporter } from './statsReporter'
 
 function getStressDuration(): number {
     check(isSet(process.env.STRESS_DURATION), 'process.env.STRESS_DURATION')
@@ -55,6 +57,8 @@ function getChatConfig(opts: { processIndex: number; rootWallet: Wallet }): Chat
         throw new Error('clientStartIndex >= clientEndIndex')
     }
     return {
+        kickoffMessageEventId: undefined,
+        countClientsMessageEventId: undefined,
         containerIndex,
         containerCount,
         processIndex: opts.processIndex,
@@ -105,7 +109,11 @@ export async function startStressChat(opts: {
         `clients.length !== chatConfig.clientsPerProcess ${clients.length} !== ${chatConfig.clientsPerProcess}`,
     )
 
+    let cancelStatsReporting: (() => void) | undefined
+
     if (chatConfig.processIndex === 0) {
+        cancelStatsReporting = statsReporter(clients[0], chatConfig)
+
         for (
             let i = chatConfig.clientsCount;
             i < chatConfig.clientsCount + chatConfig.randomClientsCount;
@@ -163,6 +171,14 @@ export async function startStressChat(opts: {
 
     logger.log('done', { summary })
 
+    cancelStatsReporting?.()
+
+    for (let i = 0; i < clients.length; i += 1) {
+        const client = clients[i]
+        logger.log(`stopping ${client.logId}`)
+        await client.stop()
+    }
+
     return { summary, chatConfig, opts }
 }
 
@@ -187,11 +203,13 @@ export async function setupChat(opts: {
         channelIds.push(await client.createChannel(spaceId, `stress${i}`))
     }
     // log all the deets
-    logger.log(
-        `SPACE_ID=${spaceId} ANNOUNCE_CHANNEL_ID=${announceChannelId} CHANNEL_IDS=${channelIds.join(
-            ',',
-        )}`,
-    )
+    const envVars = [
+        `SPACE_ID=${spaceId}`,
+        `ANNOUNCE_CHANNEL_ID=${announceChannelId}`,
+        `CHANNEL_IDS=${channelIds.join(',')}`,
+    ]
+    logger.log(envVars.join('\n'))
+    await fs.writeFile('scripts/.env.localhost_chat', envVars.join('\n'))
     logger.log('join at', `http://localhost:3000/t/${spaceId}/?invite`)
     logger.log('or', `http://localhost:3001/spaces/${spaceId}/?invite`)
     logger.log('done')
