@@ -36,7 +36,7 @@ export enum CheckOperationType {
     ERC721,
     ERC1155,
     ISENTITLED,
-    ETHBALANCE,
+    NATIVE_COIN_BALANCE,
 }
 
 // Enum for Operation oneof operation_clause
@@ -457,7 +457,7 @@ async function evaluateCheckOperation(
             }
             return evaluateCustomEntitledOperation(operation, controller, provider, linkedWallets)
         }
-        case CheckOperationType.ETHBALANCE: {
+        case CheckOperationType.NATIVE_COIN_BALANCE: {
             await Promise.all(providers.map((p) => p.ready))
             const provider = findProviderFromChainId(providers, operation.chainId)
 
@@ -465,7 +465,12 @@ async function evaluateCheckOperation(
                 controller.abort()
                 return zeroAddress
             }
-            return evaluateEthBalanceOperation(operation, controller, provider, linkedWallets)
+            return evaluateNativeCoinBalanceOperation(
+                operation,
+                controller,
+                provider,
+                linkedWallets,
+            )
         }
         case CheckOperationType.ERC20: {
             await Promise.all(providers.map((p) => p.ready))
@@ -729,7 +734,7 @@ async function evaluateCustomEntitledOperation(
     })
 }
 
-async function evaluateEthBalanceOperation(
+async function evaluateNativeCoinBalanceOperation(
     operation: CheckOperation,
     controller: AbortController,
     provider: ethers.providers.StaticJsonRpcProvider,

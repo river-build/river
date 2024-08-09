@@ -36,7 +36,7 @@ func (e *Evaluator) evaluateCheckOperation(
 		return false, fmt.Errorf("evaluateCheckOperation: Chain ID is nil for operation %s", op.CheckType)
 	}
 	zeroAddress := common.Address{}
-	if op.CheckType != ETHBALANCE && op.ContractAddress == zeroAddress {
+	if op.CheckType != NATIVE_COIN_BALANCE && op.ContractAddress == zeroAddress {
 		log.Error("Entitlement check: contract address is nil for operation", "operation", op.CheckType.String())
 		return false, fmt.Errorf(
 			"evaluateCheckOperation: Contract address is nil for operation %s",
@@ -44,7 +44,8 @@ func (e *Evaluator) evaluateCheckOperation(
 		)
 	}
 
-	if op.CheckType == ERC20 || op.CheckType == ERC721 || op.CheckType == ERC1155 || op.CheckType == ETHBALANCE {
+	if op.CheckType == ERC20 || op.CheckType == ERC721 || op.CheckType == ERC1155 ||
+		op.CheckType == NATIVE_COIN_BALANCE {
 		if op.Threshold == nil {
 			log.Error("Entitlement check: threshold is nil for operation", "operation", op.CheckType.String())
 			return false, fmt.Errorf(
@@ -63,8 +64,8 @@ func (e *Evaluator) evaluateCheckOperation(
 		return e.evaluateErc721Operation(ctx, op, linkedWallets)
 	case ERC1155:
 		return e.evaluateErc1155Operation(ctx, op)
-	case ETHBALANCE:
-		return e.evaluateEthBalanceOperation(ctx, op, linkedWallets)
+	case NATIVE_COIN_BALANCE:
+		return e.evaluateNativeCoinBalanceOperation(ctx, op, linkedWallets)
 	case CheckNONE:
 		fallthrough
 	case MOCK:
@@ -143,31 +144,32 @@ func (e *Evaluator) evaluateIsEntitledOperation(
 	return false, nil
 }
 
-// Check balance in Wei
-func (e *Evaluator) evaluateEthBalanceOperation(
+// Check balance in decimals of native token
+func (e *Evaluator) evaluateNativeCoinBalanceOperation(
 	ctx context.Context,
 	op *CheckOperation,
 	linkedWallets []common.Address,
 ) (bool, error) {
-	log := dlog.FromCtx(ctx).With("function", "evaluateEthBalanceOperation")
+	log := dlog.FromCtx(ctx).With("function", "evaluateNativeTokenBalanceOperation")
 	client, err := e.clients.Get(op.ChainID.Uint64())
 	if err != nil {
 		log.Error("Chain ID not found", "chainID", op.ChainID)
-		return false, fmt.Errorf("evaluateEthBalanceOperation: Chain ID %v not found", op.ChainID)
+		return false, fmt.Errorf("evaluateNativeTokenBalanceOperation: Chain ID %v not found", op.ChainID)
 	}
 
 	total := big.NewInt(0)
 	for _, wallet := range linkedWallets {
-		// Balance is returned as a representation of the balance according the denomination of ETH.
-		// Default decimals for ETH is 18, meaning the balance is stored in Wei (1 ETH = 10^18 Wei).
+		// Balance is returned as a representation of the balance according the denomination of the
+		// native token. The default decimals for most native tokens is 18, and we don't convert
+		// according to decimals here, but compare the threshold directly with the balance.
 		balance, err := client.BalanceAt(ctx, wallet, nil)
 		if err != nil {
-			log.Error("Failed to retrieve ETH balance", "chain", op.ChainID, "error", err)
+			log.Error("Failed to retrieve native token balance", "chain", op.ChainID, "error", err)
 			return false, err
 		}
 		total.Add(total, balance)
 
-		log.Info("Retrieved ETH balance",
+		log.Info("Retrieved native token balance",
 			"balance", balance.String(),
 			"total", total.String(),
 			"threshold", op.Threshold.String(),

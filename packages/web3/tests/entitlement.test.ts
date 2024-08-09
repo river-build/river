@@ -289,65 +289,65 @@ const sepolia0_015EthWallet = '0xB4d85De80afE92C97293c32B1C0c604133d0332E'
 
 const chainlinkExp = BigInt(10) ** BigInt(18)
 
-const ethBalance0_1Eth_Sepolia: CheckOperation = {
+const nativeCoinBalance0_1Eth_Sepolia: CheckOperation = {
     opType: OperationType.CHECK,
-    checkType: CheckOperationType.ETHBALANCE,
+    checkType: CheckOperationType.NATIVE_COIN_BALANCE,
     chainId: ethereumSepoliaChainId,
     contractAddress: ethers.constants.AddressZero,
     threshold: 100_000_000_000_000_000n,
 }
 
-const ethBalance0_2Eth_Sepolia: CheckOperation = {
+const nativeCoinBalance0_2Eth_Sepolia: CheckOperation = {
     opType: OperationType.CHECK,
-    checkType: CheckOperationType.ETHBALANCE,
+    checkType: CheckOperationType.NATIVE_COIN_BALANCE,
     chainId: ethereumSepoliaChainId,
     contractAddress: ethers.constants.AddressZero,
     threshold: 200_000_000_000_000_000n,
 }
 
-const ethBalance0_21Eth_Sepolia: CheckOperation = {
+const nativeCoinBalance0_21Eth_Sepolia: CheckOperation = {
     opType: OperationType.CHECK,
-    checkType: CheckOperationType.ETHBALANCE,
+    checkType: CheckOperationType.NATIVE_COIN_BALANCE,
     chainId: ethereumSepoliaChainId,
     contractAddress: ethers.constants.AddressZero,
     threshold: 210_000_000_000_000_000n,
 }
 
-const ethBalance0_3Eth_Sepolia: CheckOperation = {
+const nativeCoinBalance0_3Eth_Sepolia: CheckOperation = {
     opType: OperationType.CHECK,
-    checkType: CheckOperationType.ETHBALANCE,
+    checkType: CheckOperationType.NATIVE_COIN_BALANCE,
     chainId: ethereumSepoliaChainId,
     contractAddress: ethers.constants.AddressZero,
     threshold: 300_000_000_000_000_000n,
 }
 
-const ethBalance0_4Eth_BaseSepolia: CheckOperation = {
+const nativeCoinBalance0_4Eth_BaseSepolia: CheckOperation = {
     opType: OperationType.CHECK,
-    checkType: CheckOperationType.ETHBALANCE,
+    checkType: CheckOperationType.NATIVE_COIN_BALANCE,
     chainId: baseSepoliaChainId,
     contractAddress: ethers.constants.AddressZero,
     threshold: 400_000_000_000_000_000n,
 }
 
-const ethBalance0_5Eth_BaseSepolia: CheckOperation = {
+const nativeCoinBalance0_5Eth_BaseSepolia: CheckOperation = {
     opType: OperationType.CHECK,
-    checkType: CheckOperationType.ETHBALANCE,
+    checkType: CheckOperationType.NATIVE_COIN_BALANCE,
     chainId: baseSepoliaChainId,
     contractAddress: ethers.constants.AddressZero,
     threshold: 500_000_000_000_000_000n,
 }
 
-const ethBalance0_52Eth_BaseSepolia: CheckOperation = {
+const nativeCoinBalance0_52Eth_BaseSepolia: CheckOperation = {
     opType: OperationType.CHECK,
-    checkType: CheckOperationType.ETHBALANCE,
+    checkType: CheckOperationType.NATIVE_COIN_BALANCE,
     chainId: baseSepoliaChainId,
     contractAddress: ethers.constants.AddressZero,
     threshold: 520_000_000_000_000_000n,
 }
 
-const ethBalance0_6Eth_BaseSepolia: CheckOperation = {
+const nativeCoinBalance0_6Eth_BaseSepolia: CheckOperation = {
     opType: OperationType.CHECK,
-    checkType: CheckOperationType.ETHBALANCE,
+    checkType: CheckOperationType.NATIVE_COIN_BALANCE,
     chainId: baseSepoliaChainId,
     contractAddress: ethers.constants.AddressZero,
     threshold: 600_000_000_000_000_000n,
@@ -399,80 +399,80 @@ const erc20ChainLinkCheckEthereumSepolia_90Tokens: CheckOperation = {
     threshold: 90n * chainlinkExp,
 }
 
-const ethBalanceCases = [
+const nativeCoinBalanceCases = [
     {
         desc: 'eth sepolia',
-        check: ethBalance0_2Eth_Sepolia,
+        check: nativeCoinBalance0_2Eth_Sepolia,
         wallets: [sepolia0_2EthWallet],
         provider: ethSepoliaProvider,
         expectedResult: true,
     },
     {
         desc: 'eth sepolia (multiwallet)',
-        check: ethBalance0_21Eth_Sepolia,
+        check: nativeCoinBalance0_21Eth_Sepolia,
         wallets: [sepolia0_2EthWallet, sepolia0_015EthWallet],
         provider: ethSepoliaProvider,
         expectedResult: true,
     },
     {
         desc: 'eth sepolia (insufficient balance)',
-        check: ethBalance0_1Eth_Sepolia,
+        check: nativeCoinBalance0_1Eth_Sepolia,
         wallets: [sepolia0_015EthWallet],
         provider: ethSepoliaProvider,
         expectedResult: false,
     },
     {
         desc: 'eth sepolia (multiwallet, insufficient balance)',
-        check: ethBalance0_3Eth_Sepolia,
+        check: nativeCoinBalance0_3Eth_Sepolia,
         wallets: [sepolia0_2EthWallet, sepolia0_015EthWallet],
         provider: ethSepoliaProvider,
         expectedResult: false,
     },
     {
         desc: 'eth sepolia (insufficient balance, no eth)',
-        check: ethBalance0_1Eth_Sepolia,
+        check: nativeCoinBalance0_1Eth_Sepolia,
         wallets: [testEmptyAccount],
         provider: ethSepoliaProvider,
         expectedResult: false,
     },
     {
         desc: 'base sepolia',
-        check: ethBalance0_4Eth_BaseSepolia,
+        check: nativeCoinBalance0_5Eth_BaseSepolia,
         wallets: [baseSepolia0_5EthWallet],
         provider: baseSepoliaProvider,
         expectedResult: true,
     },
     {
         desc: 'base sepolia (multiwallet)',
-        check: ethBalance0_52Eth_BaseSepolia,
+        check: nativeCoinBalance0_52Eth_BaseSepolia,
         wallets: [baseSepolia0_5EthWallet, baseSepolia0_05EthWallet],
         provider: baseSepoliaProvider,
         expectedResult: true,
     },
     {
         desc: 'base sepolia (insufficient balance)',
-        check: ethBalance0_4Eth_BaseSepolia,
+        check: nativeCoinBalance0_4Eth_BaseSepolia,
         wallets: [baseSepolia0_05EthWallet],
         provider: baseSepoliaProvider,
         expectedResult: false,
     },
     {
         desc: 'base sepolia (multiwallet, insufficient balance)',
-        check: ethBalance0_6Eth_BaseSepolia,
+        check: nativeCoinBalance0_6Eth_BaseSepolia,
         wallets: [baseSepolia0_5EthWallet, baseSepolia0_05EthWallet],
         provider: baseSepoliaProvider,
         expectedResult: false,
     },
     {
         desc: 'base sepolia (insufficient balance, no eth)',
-        check: ethBalance0_4Eth_BaseSepolia,
+        check: nativeCoinBalance0_4Eth_BaseSepolia,
         wallets: [testEmptyAccount],
         provider: baseSepoliaProvider,
         expectedResult: false,
     },
 ]
 
-test.each(ethBalanceCases)('ethBalance Check - $desc', async (props) => {
+test.each(nativeCoinBalanceCases)('Native Coin Balance Check - $desc', async (props) => {
     const { check, wallets, provider, expectedResult } = props
     const controller = new AbortController()
     const result = await evaluateTree(controller, wallets, [provider], check)

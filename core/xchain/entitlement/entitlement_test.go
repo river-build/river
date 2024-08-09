@@ -73,72 +73,72 @@ var (
 	sepoliaTestNoNftsWallet = examples.SepoliaChainlinkWallet
 )
 
-var ethBalance0_1EthEthereumSepolia = CheckOperation{
+var nativeCoinBalance0_1EthEthereumSepolia = CheckOperation{
 	OpType:          CHECK,
-	CheckType:       CheckOperationType(ETHBALANCE),
+	CheckType:       CheckOperationType(NATIVE_COIN_BALANCE),
 	ChainID:         examples.EthSepoliaChainId,
 	ContractAddress: common.Address{},
 	// .1ETH in Wei
 	Threshold: big.NewInt(100_000_000_000_000_000),
 }
 
-var ethBalance0_2EthEthereumSepolia = CheckOperation{
+var nativeCoinBalance0_2EthEthereumSepolia = CheckOperation{
 	OpType:          CHECK,
-	CheckType:       CheckOperationType(ETHBALANCE),
+	CheckType:       CheckOperationType(NATIVE_COIN_BALANCE),
 	ChainID:         examples.EthSepoliaChainId,
 	ContractAddress: common.Address{},
 	// .2ETH in Wei
 	Threshold: big.NewInt(200_000_000_000_000_000),
 }
 
-var ethBalance0_21EthEthereumSepolia = CheckOperation{
+var nativeCoinBalance0_21EthEthereumSepolia = CheckOperation{
 	OpType:          CHECK,
-	CheckType:       CheckOperationType(ETHBALANCE),
+	CheckType:       CheckOperationType(NATIVE_COIN_BALANCE),
 	ChainID:         examples.EthSepoliaChainId,
 	ContractAddress: common.Address{},
 	// .21ETH in Wei
 	Threshold: big.NewInt(210_000_000_000_000_000),
 }
 
-var ethBalance0_3EthEthereumSepolia = CheckOperation{
+var nativeCoinBalance0_3EthEthereumSepolia = CheckOperation{
 	OpType:          CHECK,
-	CheckType:       CheckOperationType(ETHBALANCE),
+	CheckType:       CheckOperationType(NATIVE_COIN_BALANCE),
 	ChainID:         examples.EthSepoliaChainId,
 	ContractAddress: common.Address{},
 	// .3ETH in Wei
 	Threshold: big.NewInt(300_000_000_000_000_000),
 }
 
-var ethBalance0_4EthBaseSepolia = CheckOperation{
+var nativeCoinBalance0_4EthBaseSepolia = CheckOperation{
 	OpType:          CHECK,
-	CheckType:       CheckOperationType(ETHBALANCE),
+	CheckType:       CheckOperationType(NATIVE_COIN_BALANCE),
 	ChainID:         examples.BaseSepoliaChainId,
 	ContractAddress: common.Address{},
 	// .4ETH in Wei
 	Threshold: big.NewInt(400_000_000_000_000_000),
 }
 
-var ethBalance0_5EthBaseSepolia = CheckOperation{
+var nativeCoinBalance0_5EthBaseSepolia = CheckOperation{
 	OpType:          CHECK,
-	CheckType:       CheckOperationType(ETHBALANCE),
+	CheckType:       CheckOperationType(NATIVE_COIN_BALANCE),
 	ChainID:         examples.BaseSepoliaChainId,
 	ContractAddress: common.Address{},
 	// .5ETH in Wei
 	Threshold: big.NewInt(500_000_000_000_000_000),
 }
 
-var ethBalance0_52EthBaseSepolia = CheckOperation{
+var nativeCoinBalance0_52EthBaseSepolia = CheckOperation{
 	OpType:          CHECK,
-	CheckType:       CheckOperationType(ETHBALANCE),
+	CheckType:       CheckOperationType(NATIVE_COIN_BALANCE),
 	ChainID:         examples.BaseSepoliaChainId,
 	ContractAddress: common.Address{},
 	// .52ETH in Wei
 	Threshold: big.NewInt(520_000_000_000_000_000),
 }
 
-var ethBalance0_6EthBaseSepolia = CheckOperation{
+var nativeCoinBalance0_6EthBaseSepolia = CheckOperation{
 	OpType:          CHECK,
-	CheckType:       CheckOperationType(ETHBALANCE),
+	CheckType:       CheckOperationType(NATIVE_COIN_BALANCE),
 	ChainID:         examples.BaseSepoliaChainId,
 	ContractAddress: common.Address{},
 	// .6ETH in Wei
@@ -637,7 +637,7 @@ func TestCheckOperation_Untimed(t *testing.T) {
 			nil,
 		},
 		"ETH balance empty wallets": {
-			&ethBalance0_2EthEthereumSepolia,
+			&nativeCoinBalance0_2EthEthereumSepolia,
 			[]common.Address{},
 			false,
 			nil,
@@ -645,79 +645,79 @@ func TestCheckOperation_Untimed(t *testing.T) {
 		"ETH balance invalid check (no chainId)": {
 			&CheckOperation{
 				OpType:    CHECK,
-				CheckType: CheckOperationType(ETHBALANCE),
+				CheckType: CheckOperationType(NATIVE_COIN_BALANCE),
 				Threshold: big.NewInt(1),
 			},
 			[]common.Address{examples.Sepolia0_2EthWallet},
 			false,
-			fmt.Errorf("evaluateCheckOperation: Chain ID is nil for operation ETHBALANCE"),
+			fmt.Errorf("evaluateCheckOperation: Chain ID is nil for operation NATIVE_COIN_BALANCE"),
 		},
 		"ETH balance invalid check (no threshold)": {
 			&CheckOperation{
 				OpType:    CHECK,
-				CheckType: CheckOperationType(ETHBALANCE),
+				CheckType: CheckOperationType(NATIVE_COIN_BALANCE),
 				ChainID:   examples.EthSepoliaChainId,
 			},
 			[]common.Address{examples.Sepolia0_2EthWallet},
 			false,
-			fmt.Errorf("evaluateCheckOperation: Threshold is nil for operation ETHBALANCE"),
+			fmt.Errorf("evaluateCheckOperation: Threshold is nil for operation NATIVE_COIN_BALANCE"),
 		},
 		"ETH balance eth sepolia": {
-			&ethBalance0_2EthEthereumSepolia,
+			&nativeCoinBalance0_2EthEthereumSepolia,
 			[]common.Address{examples.Sepolia0_2EthWallet},
 			true,
 			nil,
 		},
 		"ETH balance eth sepolia (multiwallet)": {
-			&ethBalance0_21EthEthereumSepolia,
+			&nativeCoinBalance0_21EthEthereumSepolia,
 			[]common.Address{examples.Sepolia0_2EthWallet, examples.Sepolia0_015EthWallet},
 			true,
 			nil,
 		},
 		"ETH balance eth sepolia (insufficient balance)": {
-			&ethBalance0_1EthEthereumSepolia,
+			&nativeCoinBalance0_1EthEthereumSepolia,
 			[]common.Address{examples.Sepolia0_015EthWallet},
 			false,
 			nil,
 		},
 		"ETH balance eth sepolia (multiwallet, insufficient balance)": {
-			&ethBalance0_3EthEthereumSepolia,
+			&nativeCoinBalance0_3EthEthereumSepolia,
 			[]common.Address{examples.Sepolia0_2EthWallet, examples.Sepolia0_015EthWallet},
 			false,
 			nil,
 		},
 		"ETH balance eth sepolia (no eth)": {
-			&ethBalance0_1EthEthereumSepolia,
+			&nativeCoinBalance0_1EthEthereumSepolia,
 			[]common.Address{examples.EmptyEthTestAccount},
 			false,
 			nil,
 		},
 		"ETH balance base sepolia": {
-			&ethBalance0_5EthBaseSepolia,
+			&nativeCoinBalance0_5EthBaseSepolia,
 			[]common.Address{examples.BaseSepolia0_5EthWallet},
 			true,
 			nil,
 		},
 		"ETH balance base sepolia (multiwallet)": {
-			&ethBalance0_52EthBaseSepolia,
+			&nativeCoinBalance0_52EthBaseSepolia,
 			[]common.Address{examples.BaseSepolia0_5EthWallet, examples.BaseSepolia0_05EthWallet},
 			true,
 			nil,
 		},
 		"ETH balance base sepolia (insufficient balance)": {
-			&ethBalance0_4EthBaseSepolia,
+			&nativeCoinBalance0_4EthBaseSepolia,
 			[]common.Address{examples.BaseSepolia0_05EthWallet},
 			false,
 			nil,
 		},
 		"ETH balance base sepolia (multiwallet, insufficient balance)": {
-			&ethBalance0_6EthBaseSepolia,
+			&nativeCoinBalance0_6EthBaseSepolia,
 			[]common.Address{examples.BaseSepolia0_5EthWallet, examples.BaseSepolia0_05EthWallet},
 			false,
 			nil,
 		},
 		"ETH balance base sepolia (no eth, insufficient balance)": {
-			&ethBalance0_4EthBaseSepolia,
+			&nativeCoinBalance0_4EthBaseSepolia,
 			[]common.Address{examples.EmptyEthTestAccount},
 			false,
 			nil,

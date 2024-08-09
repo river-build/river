@@ -414,7 +414,7 @@ func ethBalanceCheck(chainId uint64, threshold uint64) base.IRuleEntitlementBase
 		},
 		CheckOperations: []base.IRuleEntitlementBaseCheckOperation{
 			{
-				OpType:          uint8(entitlement.ETHBALANCE),
+				OpType:          uint8(entitlement.NATIVE_COIN_BALANCE),
 				ChainId:         new(big.Int).SetUint64(chainId),
 				ContractAddress: common.Address{},
 				Threshold:       new(big.Int).SetUint64(threshold),

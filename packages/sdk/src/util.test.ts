@@ -161,7 +161,7 @@ export const oneHalfEth = BigInt(5e17)
 export function ethBalanceCheckOp(threshold: bigint): Operation {
     return {
         opType: OperationType.CHECK,
-        checkType: CheckOperationType.ETHBALANCE,
+        checkType: CheckOperationType.NATIVE_COIN_BALANCE,
         chainId: 31337n,
         contractAddress: ethers.constants.AddressZero,
         threshold,
