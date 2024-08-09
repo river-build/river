@@ -14,9 +14,8 @@ const cache: Record<string, CachedStreamData> = {}
 
 export async function getNodeForStream(
 	streamId: StreamIdHex,
-	chainId?: number,
 ): Promise<{ url: string; lastMiniblockNum: bigint }> {
-	console.log('getNodeForStream', streamId, chainId)
+	console.log('getNodeForStream', streamId)
 
 	const now = Date.now()
 	const cachedData = cache[streamId]
@@ -37,13 +36,13 @@ export async function getNodeForStream(
 	const streamRegistry = getContract({
 		address: riverRegistry,
 		abi: getStreamRegistryAbi(),
-		client: getPublicClient(),
+		publicClient: getPublicClient(),
 	})
 
 	const nodeRegistry = getContract({
 		address: riverRegistry,
 		abi: getNodeRegistryAbi(),
-		client: getPublicClient(),
+		publicClient: getPublicClient(),
 	})
 
 	const streamData = await streamRegistry.read.getStream([streamId])
