@@ -431,12 +431,12 @@ func (c *Config) Init() error {
 }
 
 // Return the schema to use for accessing the node.
-func (c *Config) Schema() (s string) {
-	s = "https"
+func (c *Config) Schema() string {
+	s := "https"
 	if c != nil && c.DisableHttps {
 		s = "http"
 	}
-	return
+	return s
 }
 
 // Convenience method to check if HTTPS is enabled.
