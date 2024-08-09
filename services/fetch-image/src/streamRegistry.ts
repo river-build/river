@@ -45,10 +45,15 @@ export async function getNodeForStream(streamId: StreamIdHex, chainId?: number):
 
 	const streamData = await streamRegistry.read.getStream([streamId]);
 
+	if (streamData.nodes.length === 0) {
+		console.error(`No nodes found for stream ${streamId}`);
+		throw new Error(`No nodes found for stream ${streamId}`);
+	}
+
 	const lastMiniblockNum = streamData.lastMiniblockNum;
 
-	// todo: pick a random node from the list
-	const node = await nodeRegistry.read.getNode([streamData.nodes[0]]);
+	const randomIndex = Math.floor(Math.random() * streamData.nodes.length);
+	const node = await nodeRegistry.read.getNode([streamData.nodes[randomIndex]]);
 
 	console.log(`connected to node=${node.url}; lastMiniblockNum=${lastMiniblockNum}`);
 
