@@ -1,11 +1,7 @@
-import { DEFAULT_CHAIN_ID, getChainInfo } from './environment';
-import { ethers } from 'ethers';
+import { config } from './environment';
 import { createPublicClient, http } from 'viem';
 import { riverChainDevnet, riverChainLocalhost, riverChainProduction } from './evmChainConfig';
 
-import { JsonRpcProvider } from 'ethers/providers';
-
-const provider: Record<number, JsonRpcProvider> = {};
 const publicClient: Record<number, ReturnType<typeof createPublicClientFromChainId>> = {};
 
 function createPublicClientFromChainId(chainId: number) {
@@ -35,18 +31,11 @@ function createPublicClientFromChainId(chainId: number) {
 	}
 }
 
-function getProvider(chainId: number = DEFAULT_CHAIN_ID) {
-	if (!provider[chainId]) {
-		const chainInfo = getChainInfo(chainId);
-		if (!chainInfo) {
-			throw new Error('Chain info not found');
-		}
-		provider[chainId] = new ethers.providers.JsonRpcProvider(chainInfo.riverChainUrl);
+export function getPublicClient() {
+	const chainId = config.chainId
+	if (!chainId) {
+		throw new Error('cannot create evm rpc client because no chainId was configured')
 	}
-	return provider[chainId];
-}
-
-export function getPublicClient(chainId: number = DEFAULT_CHAIN_ID) {
 	if (!publicClient[chainId]) {
 		publicClient[chainId] = createPublicClientFromChainId(chainId);
 	}

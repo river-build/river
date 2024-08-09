@@ -23,7 +23,7 @@ export async function getNodeForStream(streamId: StreamIdHex, chainId?: number):
 		return { url: cachedData.url, lastMiniblockNum: cachedData.lastMiniblockNum };
 	}
 
-	const riverRegistry = getAddress(chainId);
+	const riverRegistry = getAddress();
 	if (!riverRegistry) {
 		console.error('Registry address not found');
 		throw new Error(`Registry address not found`);
@@ -33,14 +33,14 @@ export async function getNodeForStream(streamId: StreamIdHex, chainId?: number):
 
 	const streamRegistry = getContract({
 		address: riverRegistry,
-		abi: getAbi(chainId).StreamRegistry,
-		client: getPublicClient(chainId),
+		abi: getAbi().StreamRegistry,
+		client: getPublicClient(),
 	});
 
 	const nodeRegistry = getContract({
 		address: riverRegistry,
-		abi: getAbi(chainId).NodeRegistry,
-		client: getPublicClient(chainId),
+		abi: getAbi().NodeRegistry,
+		client: getPublicClient(),
 	});
 
 	const streamData = await streamRegistry.read.getStream([streamId]);

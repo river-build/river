@@ -9,7 +9,6 @@ import {
 } from '@river-build/sdk';
 import { PromiseClient, createPromiseClient } from '@connectrpc/connect';
 
-import { DEFAULT_CHAIN_ID } from './environment';
 import { StreamService } from '@river-build/proto';
 import { decryptAESGCM } from './cryptoUtils';
 import { filetypemime } from 'magic-bytes.js';
@@ -139,7 +138,6 @@ export async function getMediaStreamContent(
 	fullStreamId: StreamIdHex,
 	secret: Uint8Array,
 	iv: Uint8Array,
-	chainId: number = DEFAULT_CHAIN_ID
 ): Promise<MediaContent | { data: null; mimeType: null }> {
 	const toHexString = (byteArray: Uint8Array) => {
 		return Array.from(byteArray, (byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -155,7 +153,7 @@ export async function getMediaStreamContent(
 	*/
 
 	const streamId = stripHexPrefix(fullStreamId);
-	const sv = await getStream(streamId, chainId);
+	const sv = await getStream(streamId);
 
 	if (!sv) {
 		return { data: null, mimeType: null };
@@ -170,7 +168,7 @@ export async function getMediaStreamContent(
 	}
 
 	// Cache the result
-	const concatenatedString = `${chainId}${fullStreamId}${secretHex}${ivHex}`;
+	const concatenatedString = `${fullStreamId}${secretHex}${ivHex}`;
 	contentCache[concatenatedString] = result;
 
 	return result;

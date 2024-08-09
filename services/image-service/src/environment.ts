@@ -5,15 +5,14 @@ import deploymentData from '@river-build/generated/config/deployments.json';
 
 dotenv.config();
 
-export const DEFAULT_CHAIN_ID = parseInt(process.env.DEFAULT_CHAIN_ID ?? '550', 10);
 export const SERVER_PORT = parseInt(process.env.PORT ?? '443', 10);
-export const NODE_ENV = process.env.NODE_ENV;
-export const config = makeConfig(deploymentData);
+export const RIVER_ENV = process.env.RIVER_ENV ?? 'omega'
+export const config = makeConfig(deploymentData, RIVER_ENV);
 
-console.log('config', config, 'defaultChainId', DEFAULT_CHAIN_ID, `"${process.env.DEFAULT_CHAIN_ID}"`);
+console.log('config:', config);
 
 interface DeploymentsJson {
-  [key: string]: {
+  [riverEnv: string]: {
     river: {
       chainId: number;
       addresses: {
@@ -23,28 +22,33 @@ interface DeploymentsJson {
   };
 }
 
-function makeConfig(deploymentsJson: DeploymentsJson): ChainConfig {
-  const chainConfig: ChainConfig = {};
+interface AllChainConfig {
+  [riverEnv: string]: {
+		chainId: number
+    riverRegistry: string;
+  };
+}
+
+
+function makeConfig(deploymentsJson: DeploymentsJson, riverEnv: string): ChainConfig {
+  const allChainConfig: AllChainConfig = {};
 
   for (const key in deploymentsJson) {
-    if (deploymentsJson.hasOwnProperty(key)) {
-      const riverData = deploymentsJson[key].river;
-      const chainId = riverData.chainId;
-			const riverRegistry = riverData.addresses.riverRegistry;
-
-			chainConfig[chainId] = {
-				riverRegistry,
-			};
-    }
+    const envConfig = deploymentsJson[key];
+      if (envConfig.river) {
+        allChainConfig[key] = {
+          chainId: envConfig.river.chainId,
+          riverRegistry: envConfig.river.addresses.riverRegistry,
+        };
+      }
   }
 
-  return chainConfig;
-};
-
-
-export function getChainInfo(chainId: number = DEFAULT_CHAIN_ID) {
-	if (chainId in config) {
-		return config[chainId];
+	if (!allChainConfig[riverEnv].chainId || !allChainConfig[riverEnv].riverRegistry) {
+		throw new Error('chainId or riverRegistry undefined')
 	}
-	return undefined;
-}
+
+	return {
+		chainId: allChainConfig[riverEnv].chainId,
+		riverRegistry: allChainConfig[riverEnv].riverRegistry,
+	}
+};

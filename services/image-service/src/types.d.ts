@@ -1,7 +1,6 @@
 export interface ChainConfig {
-  [chainId: number]: {
+		chainId: number;
     riverRegistry: string;
-  };
 }
 
 export type Address = `0x${string}`;
@@ -12,5 +11,4 @@ export type StreamIdHex = `0x${string}`;
 export interface MediaContent {
 		data: ArrayBuffer;
 		mimeType: string;
-
 }

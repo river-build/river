@@ -42,7 +42,7 @@ export const riverChainLocalhost: ChainType = defineChain({
 		symbol: 'ETH',
 	},
 	rpcUrls: {
-		default: { http: ['https://127.0.0.1:8546'] },
+		default: { http: ['http://127.0.0.1:8546'] },
 	},
 	testnet: true,
 });
