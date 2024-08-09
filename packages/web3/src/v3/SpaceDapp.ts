@@ -9,7 +9,7 @@ import {
 } from '../ContractTypes'
 import { BytesLike, ContractReceipt, ContractTransaction, ethers } from 'ethers'
 import {
-    CreateSpaceParams,
+    CreateLegacySpaceParams,
     ISpaceDapp,
     TransactionOpts,
     UpdateChannelParams,
@@ -233,8 +233,8 @@ export class SpaceDapp implements ISpaceDapp {
         return bannedWalletAddresses
     }
 
-    public async createSpace(
-        params: CreateSpaceParams,
+    public async createLegacySpace(
+        params: CreateLegacySpaceParams,
         signer: ethers.Signer,
         txnOpts?: TransactionOpts,
     ): Promise<ContractTransaction> {
