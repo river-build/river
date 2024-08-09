@@ -21,8 +21,15 @@ export async function handleImageRequest(request: FastifyRequest, reply: Fastify
 			.send({ error: 'Bad Request', message: 'Invalid spaceAddress format' })
 	}
 
-	const streamId = makeStreamId(StreamPrefix.Space, spaceAddress)
-	const stream = await getStream(streamId)
+
+	let stream: StreamStateView | undefined
+	try {
+		const streamId = makeStreamId(StreamPrefix.Space, spaceAddress)
+		stream = await getStream(streamId)
+	} catch (e) {
+		console.error(`Failed to get stream for space ${spaceAddress}: ${e}`)
+		return reply.code(404).send('Stream not found')
+	}
 
 	if (!stream) {
 		return reply.code(404).send('Stream not found')
