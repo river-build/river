@@ -2,7 +2,7 @@ import { FastifyRequest, FastifyReply } from 'fastify'
 import { isValidEthereumAddress } from './validators';
 
 export function handleMetadataRequest(request: FastifyRequest, reply: FastifyReply, baseUrl: string) {
-	const { spaceAddress } = request.params as { spaceAddress?: Address };
+	const { spaceAddress } = request.params as { spaceAddress?: string };
 
 	if (!spaceAddress) {
     return reply

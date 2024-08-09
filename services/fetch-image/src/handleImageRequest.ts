@@ -7,7 +7,7 @@ import { isBytes32String, isValidEthereumAddress } from './validators';
 import { deriveKeyAndIV } from '@river-build/sdk';
 
 export async function handleImageRequest(request: FastifyRequest, reply: FastifyReply) {
-	const { spaceAddress } = request.params as { spaceAddress?: Address };
+	const { spaceAddress } = request.params as { spaceAddress?: string };
 
 	if (!spaceAddress) {
     return reply
