@@ -193,8 +193,8 @@ func (e *Evaluator) evaluateNativeCoinBalanceOperation(
 
 		// Balance is a *big.Int
 		// Iteratively check if the total balance of evaluated wallets is greater than or equal to the
-		// threshold.
-		if op.Threshold.Sign() > 0 && total.Sign() > 0 && total.Cmp(op.Threshold) >= 0 {
+		// threshold. Note threshold and total are always positive.
+		if total.Cmp(op.Threshold) >= 0 {
 			return true, nil
 		}
 	}
@@ -248,7 +248,8 @@ func (e *Evaluator) evaluateErc20Operation(
 
 		// Balance is a *big.Int
 		// Iteratively check if the total balance of evaluated wallets is greater than or equal to the threshold
-		if op.Threshold.Sign() > 0 && total.Sign() > 0 && total.Cmp(op.Threshold) >= 0 {
+		// Note threshold and total are always positive.
+		if total.Cmp(op.Threshold) >= 0 {
 			return true, nil
 		}
 	}
@@ -300,6 +301,7 @@ func (e *Evaluator) evaluateErc721Operation(
 		// )
 
 		// Iteratively check if the total balance of evaluated wallets is greater than or equal to the threshold
+		// Note threshold and total are always positive.
 		if total.Cmp(op.Threshold) >= 0 {
 			return true, nil
 		}
