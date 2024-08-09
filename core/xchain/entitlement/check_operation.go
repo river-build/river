@@ -32,13 +32,26 @@ func (e *Evaluator) evaluateCheckOperation(
 	// Sanity checks
 	log := dlog.FromCtx(ctx).With("function", "evaluateCheckOperation")
 	if op.ChainID == nil {
-		log.Info("Chain ID is nil")
-		return false, fmt.Errorf("evaluateCheckOperation: Chain ID is nil")
+		log.Error("Entitlement check: chain ID is nil for operation", "operation", op.CheckType.String())
+		return false, fmt.Errorf("evaluateCheckOperation: Chain ID is nil for operation %v", op.CheckType.String())
 	}
 	zeroAddress := common.Address{}
 	if op.CheckType != ETHBALANCE && op.ContractAddress == zeroAddress {
-		log.Info("Contract address is nil")
-		return false, fmt.Errorf("evaluateCheckOperation: Contract address is nil")
+		log.Error("Entitlement check: contract address is nil for operation", "operation", op.CheckType.String())
+		return false, fmt.Errorf(
+			"evaluateCheckOperation: Contract address is nil for operation %v",
+			op.CheckType.String(),
+		)
+	}
+
+	if op.CheckType == ERC20 || op.CheckType == ERC721 || op.CheckType == ERC1155 || op.CheckType == ETHBALANCE {
+		if op.Threshold == nil {
+			log.Error("Entitlement check: threshold is nil for operation", "operation", op.CheckType.String())
+			return false, fmt.Errorf(
+				"evaluateCheckOperation: Threshold is nil for operation %v",
+				op.CheckType.String(),
+			)
+		}
 	}
 
 	switch op.CheckType {
@@ -61,7 +74,8 @@ func (e *Evaluator) evaluateCheckOperation(
 	}
 }
 
-func (e *Evaluator) evaluateMockOperation(ctx context.Context,
+func (e *Evaluator) evaluateMockOperation(
+	ctx context.Context,
 	op *CheckOperation,
 ) (bool, error) {
 	delay := int(op.Threshold.Int64())
