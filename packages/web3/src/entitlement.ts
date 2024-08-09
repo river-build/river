@@ -1,4 +1,4 @@
-import type { AbiParameter, AbiFunction } from 'abitype'
+import type { ExtractAbiFunction } from 'abitype'
 import { IRuleEntitlementBase, IRuleEntitlementAbi } from './v3/IRuleEntitlementShim'
 
 import {
@@ -6,11 +6,13 @@ import {
     http,
     decodeAbiParameters,
     encodeAbiParameters,
+    getAbiItem,
+    Hex,
     PublicClient,
 } from 'viem'
 
 import { mainnet } from 'viem/chains'
-import { ethers } from 'ethers'
+import { type BytesLike, ethers } from 'ethers'
 import { Address } from './ContractTypes'
 import { MOCK_ADDRESS } from './Utils'
 
@@ -90,11 +92,13 @@ export const NoopOperation: NoOperation = {
     index: 0,
 }
 
-export const NoopRuleData = {
+export const NoopRuleData: IRuleEntitlementBase.RuleDataStruct = {
     operations: [],
     checkOperations: [],
     logicalOperations: [],
 }
+
+export const EncodedNoopRuleData: BytesLike = encodeEntitlementData(NoopRuleData)
 
 type EntitledWalletOrZeroAddress = string
 
@@ -175,35 +179,34 @@ export const getOperationTree = async (address: Address, roleId: bigint): Promis
     return postOrderArrayToTree(operations)
 }
 
-const encodeRuleDataInputs: readonly AbiParameter[] | undefined = (
-    Object.values(IRuleEntitlementAbi).find((abi) => abi.name === 'encodeRuleData') as
-        | AbiFunction
-        | undefined
-)?.inputs
-
 export function encodeEntitlementData(ruleData: IRuleEntitlementBase.RuleDataStruct): Address {
-    if (!encodeRuleDataInputs) {
+    const encodeRuleDataAbi: ExtractAbiFunction<typeof IRuleEntitlementAbi, 'encodeRuleData'> =
+        getAbiItem({
+            abi: IRuleEntitlementAbi,
+            name: 'encodeRuleData',
+        })
+
+    if (!encodeRuleDataAbi) {
         throw new Error('setRuleDataInputs not found')
     }
-    return encodeAbiParameters(encodeRuleDataInputs, [ruleData])
+    // @ts-ignore
+    return encodeAbiParameters(encodeRuleDataAbi.inputs, [ruleData])
 }
 
-const getRuleDataOutputs: readonly AbiParameter[] | undefined = (
-    Object.values(IRuleEntitlementAbi).find((abi) => abi.name === 'getRuleData') as
-        | AbiFunction
-        | undefined
-)?.outputs
+export function decodeEntitlementData(entitlementData: Hex): IRuleEntitlementBase.RuleDataStruct[] {
+    const getRuleDataAbi: ExtractAbiFunction<typeof IRuleEntitlementAbi, 'getRuleData'> =
+        getAbiItem({
+            abi: IRuleEntitlementAbi,
+            name: 'getRuleData',
+        })
 
-export function decodeEntitlementData(
-    entitlementData: Address,
-): IRuleEntitlementBase.RuleDataStruct[] {
-    if (!getRuleDataOutputs) {
+    if (!getRuleDataAbi) {
         throw new Error('getRuleDataOutputs not found')
     }
     return decodeAbiParameters(
-        getRuleDataOutputs,
+        getRuleDataAbi.outputs,
         entitlementData,
-    ) as IRuleEntitlementBase.RuleDataStruct[]
+    ) as unknown as IRuleEntitlementBase.RuleDataStruct[]
 }
 export function ruleDataToOperations(data: IRuleEntitlementBase.RuleDataStruct[]): Operation[] {
     if (data.length === 0) {

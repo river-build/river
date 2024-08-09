@@ -10,9 +10,9 @@ import {
     ETH_ADDRESS,
     LocalhostWeb3Provider,
     MembershipStruct,
-    NoopRuleData,
     Permission,
     createSpaceDapp,
+    EncodedNoopRuleData,
 } from '@river-build/web3'
 import { SignerContext } from './signerContext'
 import { makeBaseChainConfig } from './riverConfig'
@@ -75,7 +75,7 @@ describe('mediaWithEntitlements', () => {
             requirements: {
                 everyone: true,
                 users: [],
-                ruleData: NoopRuleData,
+                ruleData: EncodedNoopRuleData,
             },
         }
 
