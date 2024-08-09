@@ -23,6 +23,10 @@ contract DeployIntrospection is FacetHelper, Deployer {
     return "introspectionFacet";
   }
 
+  function creationCode() public pure returns (bytes memory) {
+    return type(IntrospectionFacet).creationCode;
+  }
+
   function __deploy(address deployer) public override returns (address) {
     vm.startBroadcast(deployer);
     IntrospectionFacet facet = new IntrospectionFacet();
