@@ -6,7 +6,7 @@ import { handleImageRequest } from './handleImageRequest'
 import { handleMetadataRequest } from './handleMetadataRequest'
 
 // Set the process title to 'fetch-image' so it can be easily identified
-// or killed with `pkill -f fetch-image`
+// or killed with `pkill fetch-image`
 process.title = 'fetch-image'
 
 const server = Fastify({
@@ -54,7 +54,7 @@ function isAddressInUseError(err: any): err is NodeJS.ErrnoException {
 }
 
 // Function to start the server on the first available port
-const startServer = async (port: number) => {
+async function startServer(port: number) {
 	try {
 		await server.listen({ port, host: 'localhost' })
 		const addressInfo = server.server.address()
@@ -71,6 +71,17 @@ const startServer = async (port: number) => {
 		}
 	}
 }
+
+process.on('SIGTERM', async () => {
+	try {
+		await server.close()
+		console.log('Server closed gracefully')
+		process.exit(0)
+	} catch (err) {
+		console.error('Error during server shutdown', err)
+		process.exit(1)
+	}
+})
 
 // Start the server on the port set in the .env, or the next available port
 startServer(SERVER_PORT)
