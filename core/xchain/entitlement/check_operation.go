@@ -35,6 +35,7 @@ func (e *Evaluator) evaluateCheckOperation(
 		log.Error("Entitlement check: chain ID is nil for operation", "operation", op.CheckType.String())
 		return false, fmt.Errorf("evaluateCheckOperation: Chain ID is nil for operation %s", op.CheckType)
 	}
+
 	zeroAddress := common.Address{}
 	if op.CheckType != NATIVE_COIN_BALANCE && op.ContractAddress == zeroAddress {
 		log.Error("Entitlement check: contract address is nil for operation", "operation", op.CheckType.String())
@@ -50,6 +51,20 @@ func (e *Evaluator) evaluateCheckOperation(
 			log.Error("Entitlement check: threshold is nil for operation", "operation", op.CheckType.String())
 			return false, fmt.Errorf(
 				"evaluateCheckOperation: Threshold is nil for operation %s",
+				op.CheckType,
+			)
+		}
+		if op.Threshold.Sign() <= 0 {
+			log.Error(
+				"Entitlement check: threshold is nonpositive for operation",
+				"operation",
+				op.CheckType.String(),
+				"threshold",
+				op.Threshold.String(),
+			)
+			return false, fmt.Errorf(
+				"evaluateCheckOperation: Threshold %s is nonpositive for operation %s",
+				op.Threshold,
 				op.CheckType,
 			)
 		}
