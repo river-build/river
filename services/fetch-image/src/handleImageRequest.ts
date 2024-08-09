@@ -1,10 +1,10 @@
-import { Address, StreamIdHex } from "./types";
-import { FastifyReply, FastifyRequest } from "fastify";
-import { StreamPrefix, StreamStateView, makeStreamId } from "@river-build/sdk";
-import { getMediaStreamContent, getStream } from "./riverStreamRpcClient";
-import { isBytes32String, isValidEthereumAddress } from "./validators";
+import { Address, StreamIdHex } from './types';
+import { FastifyReply, FastifyRequest } from 'fastify';
+import { StreamPrefix, StreamStateView, makeStreamId } from '@river-build/sdk';
+import { getMediaStreamContent, getStream } from './riverStreamRpcClient';
+import { isBytes32String, isValidEthereumAddress } from './validators';
 
-import { deriveKeyAndIV } from "./cryptoUtils";
+import { deriveKeyAndIV } from '@river-build/sdk';
 
 export async function handleImageRequest(request: FastifyRequest, reply: FastifyReply) {
 	const { spaceAddress } = request.params as { spaceAddress?: Address };

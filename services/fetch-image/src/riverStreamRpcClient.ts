@@ -1,6 +1,7 @@
 import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-web';
 import { MediaContent, StreamIdHex } from './types';
 import {
+	decryptAESGCM,
 	ParsedStreamResponse,
 	StreamStateView,
 	streamIdAsBytes,
@@ -10,7 +11,6 @@ import {
 import { PromiseClient, createPromiseClient } from '@connectrpc/connect';
 
 import { StreamService } from '@river-build/proto';
-import { decryptAESGCM } from './cryptoUtils';
 import { filetypemime } from 'magic-bytes.js';
 import { getNodeForStream } from './streamRegistry';
 
