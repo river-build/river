@@ -46,7 +46,6 @@ export type PricingModuleStruct = IPricingModulesBase.PricingModuleStruct
 export enum EntitlementModuleType {
     UserEntitlement = 'UserEntitlement',
     RuleEntitlement = 'RuleEntitlement',
-    RuleEntitlementV2 = 'RuleEntitlementV2',
 }
 
 /**
