@@ -144,7 +144,7 @@ func stacks2Handler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "Unknown profile")
 		return
 	}
-	p.WriteTo(w, 1)
+	_ = p.WriteTo(w, 1)
 }
 
 type onChainConfigHandler struct {
