@@ -204,13 +204,13 @@ func getGrpcStatus(
 func getEthBalance(
 	ctx context.Context,
 	result *string,
-	riverChain *crypto.Blockchain,
+	blockchain *crypto.Blockchain,
 	address common.Address,
 	wg *sync.WaitGroup,
 ) {
 	defer wg.Done()
 
-	balance, err := riverChain.Client.BalanceAt(ctx, address, nil)
+	balance, err := blockchain.Client.BalanceAt(ctx, address, nil)
 	if err != nil {
 		*result = "Error getting balance: " + err.Error()
 		return
