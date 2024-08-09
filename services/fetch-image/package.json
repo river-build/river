@@ -25,15 +25,7 @@
 		"viem": "^2.17.3"
 	},
 	"devDependencies": {
-		"@rollup/plugin-commonjs": "^26.0.1",
-		"@rollup/plugin-json": "^6.1.0",
-		"@rollup/plugin-node-resolve": "^15.2.3",
-		"@rollup/plugin-replace": "^5.0.7",
-		"@rollup/plugin-typescript": "^11.1.6",
-		"@rollup/plugin-url": "^8.0.2",
-		"@rollup/plugin-wasm": "^6.2.2",
 		"@types/node": "^20.14.10",
-		"chokidar": "^3.6.0",
 		"esbuild": "^0.23.0",
 		"rollup": "^4.18.1",
 		"ts-node": "^10.9.2",
