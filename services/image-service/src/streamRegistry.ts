@@ -1,4 +1,4 @@
-import { getAbi, getAddress } from './contracts';
+import { getAddress, getNodeRegistryAbi, getStreamRegistryAbi } from './contracts';
 
 import { StreamIdHex } from './types';
 import { getContract } from 'viem';
@@ -33,13 +33,13 @@ export async function getNodeForStream(streamId: StreamIdHex, chainId?: number):
 
 	const streamRegistry = getContract({
 		address: riverRegistry,
-		abi: getAbi().StreamRegistry,
+		abi: getStreamRegistryAbi(),
 		client: getPublicClient(),
 	});
 
 	const nodeRegistry = getContract({
 		address: riverRegistry,
-		abi: getAbi().NodeRegistry,
+		abi: getNodeRegistryAbi(),
 		client: getPublicClient(),
 	});
 

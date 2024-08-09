@@ -3,16 +3,12 @@ import NodeRegistryAbi from '@river-build/generated/dev/abis/NodeRegistry.abi';
 import StreamRegistryAbi from '@river-build/generated/dev/abis/StreamRegistry.abi';
 import { config } from './environment';
 
-let abi = {}
+export function getNodeRegistryAbi() {
+	return NodeRegistryAbi;
+}
 
-export function getAbi() {
-	if (abi) {
-		abi = {
-			NodeRegistry: NodeRegistryAbi,
-			StreamRegistry: StreamRegistryAbi,
-		};
-	}
-	return abi;
+export function getStreamRegistryAbi() {
+	return StreamRegistryAbi;
 }
 
 export function getAddress(): Address {

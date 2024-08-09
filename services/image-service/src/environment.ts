@@ -6,8 +6,7 @@ import deploymentData from '@river-build/generated/config/deployments.json';
 dotenv.config();
 
 export const SERVER_PORT = parseInt(process.env.PORT ?? '443', 10);
-export const RIVER_ENV = process.env.RIVER_ENV ?? 'omega'
-export const config = makeConfig(deploymentData, RIVER_ENV);
+export const config = makeConfig(deploymentData, process.env.RIVER_ENV ?? 'omega');
 
 console.log('config:', config);
 
@@ -28,7 +27,6 @@ interface AllChainConfig {
     riverRegistry: string;
   };
 }
-
 
 function makeConfig(deploymentsJson: DeploymentsJson, riverEnv: string): ChainConfig {
   const allChainConfig: AllChainConfig = {};

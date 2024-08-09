@@ -8,8 +8,6 @@ import { deriveKeyAndIV } from "./cryptoUtils";
 
 export async function handleImageRequest(request: FastifyRequest, reply: FastifyReply) {
 	const { spaceAddress } = request.params as { spaceAddress?: Address };
-	const { chainId: queryChainId } = request.query as { chainId?: string };
-	const chainId = queryChainId ? Number(queryChainId) : undefined;
 
 	if (!spaceAddress) {
     return reply
@@ -23,14 +21,8 @@ export async function handleImageRequest(request: FastifyRequest, reply: Fastify
       .send({ error: 'Bad Request', message: 'Invalid spaceAddress format' });
   }
 
-	if (chainId !== undefined && isNaN(chainId)) {
-    return reply
-      .code(400)
-      .send({ error: 'Bad Request', message: 'Invalid chainId format' });
-  }
-
 	const streamId = makeStreamId(StreamPrefix.Space, spaceAddress);
-	const stream = await getStream(streamId, chainId);
+	const stream = await getStream(streamId);
 
 	if (!stream) {
 		return reply.code(404).send('Stream not found');
@@ -53,7 +45,7 @@ export async function handleImageRequest(request: FastifyRequest, reply: Fastify
 	const context = spaceAddress.toLowerCase();
 	const { key, iv } = await deriveKeyAndIV(context);
 
-	const { data, mimeType } = (await getMediaStreamContent(fullStreamId, key, iv, chainId));
+	const { data, mimeType } = (await getMediaStreamContent(fullStreamId, key, iv));
 
 	if (data && mimeType) {
 		return reply.header('Content-Type', mimeType).send(Buffer.from(data));

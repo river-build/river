@@ -34,8 +34,8 @@ function makeStreamRpcClient(url: string): StreamRpcClient {
 	return client;
 }
 
-async function getStreamClient(streamId: `0x${string}`, chainId?: number) {
-	let { url, lastMiniblockNum } = await getNodeForStream(streamId, chainId);
+async function getStreamClient(streamId: `0x${string}`) {
+	let { url, lastMiniblockNum } = await getNodeForStream(streamId);
 	if (!clients.has(url)) {
 		const client = makeStreamRpcClient(url);
 		clients.set(client.url!, client);
@@ -102,12 +102,12 @@ function stripHexPrefix(hexString: string): string {
 	return hexString;
 }
 
-export async function getStream(streamId: string, chainId?: number): Promise<StreamStateView | undefined> {
+export async function getStream(streamId: string): Promise<StreamStateView | undefined> {
 	let client: StreamRpcClient | undefined;
 	let lastMiniblockNum: bigint | undefined;
 
 	try {
-		const result = await getStreamClient(`0x${streamId}`, chainId);
+		const result = await getStreamClient(`0x${streamId}`);
 		client = result.client;
 		lastMiniblockNum = result.lastMiniblockNum;
 	} catch (e) {
