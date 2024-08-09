@@ -50,7 +50,8 @@ interface IRuleEntitlementBase {
     ERC20,
     ERC721,
     ERC1155,
-    ISENTITLED
+    ISENTITLED,
+    ETHBALANCE
   }
 
   // Enum for Operation oneof operation_clause
