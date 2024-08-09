@@ -33,14 +33,14 @@ func (e *Evaluator) evaluateCheckOperation(
 	log := dlog.FromCtx(ctx).With("function", "evaluateCheckOperation")
 	if op.ChainID == nil {
 		log.Error("Entitlement check: chain ID is nil for operation", "operation", op.CheckType.String())
-		return false, fmt.Errorf("evaluateCheckOperation: Chain ID is nil for operation %v", op.CheckType.String())
+		return false, fmt.Errorf("evaluateCheckOperation: Chain ID is nil for operation %s", op.CheckType)
 	}
 	zeroAddress := common.Address{}
 	if op.CheckType != ETHBALANCE && op.ContractAddress == zeroAddress {
 		log.Error("Entitlement check: contract address is nil for operation", "operation", op.CheckType.String())
 		return false, fmt.Errorf(
-			"evaluateCheckOperation: Contract address is nil for operation %v",
-			op.CheckType.String(),
+			"evaluateCheckOperation: Contract address is nil for operation %s",
+			op.CheckType,
 		)
 	}
 
@@ -48,8 +48,8 @@ func (e *Evaluator) evaluateCheckOperation(
 		if op.Threshold == nil {
 			log.Error("Entitlement check: threshold is nil for operation", "operation", op.CheckType.String())
 			return false, fmt.Errorf(
-				"evaluateCheckOperation: Threshold is nil for operation %v",
-				op.CheckType.String(),
+				"evaluateCheckOperation: Threshold is nil for operation %s",
+				op.CheckType,
 			)
 		}
 	}

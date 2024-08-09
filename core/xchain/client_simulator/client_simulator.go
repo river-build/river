@@ -315,33 +315,24 @@ func (cs *clientSimulator) executeCheck(ctx context.Context, ruleData *deploy.IR
 	log := dlog.FromCtx(ctx).With("application", "clientSimulator")
 	log.Info("ClientSimulator executing check", "ruleData", ruleData, "cfg", cs.cfg)
 
-	requestEntitlementCheckFn := func(opts *bind.TransactOpts) (*types.Transaction, error) {
-		log.Info("Calling RequestEntitlementCheck", "opts", opts, "ruleData", ruleData)
-		gated, err := deploy.NewMockEntitlementGated(
-			cs.cfg.GetTestEntitlementContractAddress(),
-			cs.baseChain.Client,
-		)
-		if err != nil {
-			log.Error("Failed to get NewMockEntitlementGated", "err", err)
-			return nil, err
-		}
-		log.Info("NewMockEntitlementGated", "gated", gated.RequestEntitlementCheck, "err", err)
-		tx, err := gated.RequestEntitlementCheck(opts, big.NewInt(0), *ruleData)
-		log.Info("RequestEntitlementCheck called", "tx", tx, "err", err)
-		return tx, err
-	}
-
-	gasEstimate, err := cs.baseChain.TxPool.EstimateGas(ctx, requestEntitlementCheckFn)
-	log.Info("Gas estimate for request entitlement check", "gasEstimate", gasEstimate, "err", err)
-
 	pendingTx, err := cs.baseChain.TxPool.Submit(
 		ctx,
 		"RequestEntitlementCheck",
 		func(opts *bind.TransactOpts) (*types.Transaction, error) {
-			opts.GasLimit = max(gasEstimate, 2_500_000)
-			return requestEntitlementCheckFn(opts)
-		},
-	)
+			log.Info("Calling RequestEntitlementCheck", "opts", opts, "ruleData", ruleData)
+			gated, err := deploy.NewMockEntitlementGated(
+				cs.cfg.GetTestEntitlementContractAddress(),
+				cs.baseChain.Client,
+			)
+			if err != nil {
+				log.Error("Failed to get NewMockEntitlementGated", "err", err)
+				return nil, err
+			}
+			log.Info("NewMockEntitlementGated", "gated", gated.RequestEntitlementCheck, "err", err)
+			tx, err := gated.RequestEntitlementCheck(opts, big.NewInt(0), *ruleData)
+			log.Info("RequestEntitlementCheck called", "tx", tx, "err", err)
+			return tx, err
+		})
 
 	log.Info("Submitted entitlement check...")
 
