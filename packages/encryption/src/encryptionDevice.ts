@@ -9,10 +9,10 @@ import {
 } from './encryptionTypes'
 import { EncryptionDelegate } from './encryptionDelegate'
 import { GROUP_ENCRYPTION_ALGORITHM, GroupEncryptionSession } from './olmLib'
-import { dlogger } from '@river-build/dlog'
+import { dlog } from '@river-build/dlog'
 import type { ExtendedInboundGroupSessionData, GroupSessionRecord } from './storeTypes'
 
-const { log, error: dlogError } = dlogger('csb:encryption:encryptionDevice')
+const log = dlog('csb:encryption:encryptionDevice')
 
 // The maximum size of an event is 65K, and we base64 the content, so this is a
 // reasonable approximation to the biggest plaintext we can encrypt.
@@ -40,7 +40,10 @@ export type EncryptionDeviceInitOpts = {
     pickleKey?: string
 }
 
-function checkPayloadLength(payloadString: string): void {
+function checkPayloadLength(
+    payloadString: string,
+    opts: { streamId?: string; source: string },
+): void {
     if (payloadString === undefined) {
         throw new Error('payloadString undefined')
     }
@@ -48,10 +51,10 @@ function checkPayloadLength(payloadString: string): void {
     if (payloadString.length > MAX_PLAINTEXT_LENGTH) {
         // might as well fail early here rather than letting the olm library throw
         // a cryptic memory allocation error.
-        //
         throw new Error(
             `Message too long (${payloadString.length} bytes). ` +
-                `The maximum for an encrypted message is ${MAX_PLAINTEXT_LENGTH} bytes.`,
+                `The maximum for an encrypted message is ${MAX_PLAINTEXT_LENGTH} bytes.` +
+                `streamId: ${opts.streamId}, source: ${opts.source}`,
         )
     }
 }
@@ -566,15 +569,8 @@ export class EncryptionDevice {
     ): Promise<{ ciphertext: string; sessionId: string }> {
         return await this.cryptoStore.withGroupSessions(async () => {
             log(`encrypting msg with group session for stream id ${streamId}`)
-            try {
-                checkPayloadLength(payloadString)
-            } catch (e) {
-                dlogError(
-                    `Payload length check failed while encrypting a message for streamId ${streamId}`,
-                    e,
-                )
-                throw e
-            }
+
+            checkPayloadLength(payloadString, { streamId, source: 'encryptGroupMessage' })
             const session = await this.getOutboundGroupSession(streamId)
             const ciphertext = session.encrypt(payloadString)
             const sessionId = session.session_id()
@@ -589,7 +585,7 @@ export class EncryptionDevice {
         fallbackKey: string,
         payload: string,
     ): Promise<{ type: 0 | 1; body: string }> {
-        checkPayloadLength(payload)
+        checkPayloadLength(payload, { source: 'encryptUsingFallbackKey' })
         return this.cryptoStore.withAccountTx(async () => {
             const session = this.delegate.createSession()
             try {
@@ -625,7 +621,7 @@ export class EncryptionDevice {
             throw new Error('Only pre-key messages supported')
         }
 
-        checkPayloadLength(ciphertext)
+        checkPayloadLength(ciphertext, { source: 'decryptMessage' })
         return await this.cryptoStore.withAccountTx(async () => {
             const account = await this.getAccount()
             const session = this.delegate.createSession()
