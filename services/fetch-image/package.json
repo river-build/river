@@ -22,7 +22,7 @@
 		"ethers": "4",
 		"fastify": "^4.28.1",
 		"magic-bytes.js": "^1.10.0",
-		"viem": "^2.17.3"
+		"viem": "^1.18.2"
 	},
 	"devDependencies": {
 		"@types/node": "^20.14.10",
