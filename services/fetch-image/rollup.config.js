@@ -1,10 +1,10 @@
-import commonjs from '@rollup/plugin-commonjs';
-import resolve from '@rollup/plugin-node-resolve';
-import typescript from '@rollup/plugin-typescript';
-import json from '@rollup/plugin-json';
-import replace from '@rollup/plugin-replace';
-import url from '@rollup/plugin-url';
-import wasm from '@rollup/plugin-wasm';
+import commonjs from '@rollup/plugin-commonjs'
+import resolve from '@rollup/plugin-node-resolve'
+import typescript from '@rollup/plugin-typescript'
+import json from '@rollup/plugin-json'
+import replace from '@rollup/plugin-replace'
+import url from '@rollup/plugin-url'
+import wasm from '@rollup/plugin-wasm'
 
 export default {
 	treeshake: 'smallest',
@@ -42,4 +42,4 @@ export default {
 		}),
 	],
 	external: ['fs', 'path', 'os', 'events', 'crypto', 'stream', 'util'],
-};
+}

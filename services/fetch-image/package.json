@@ -8,6 +8,7 @@
 	"scripts": {
 		"build": "node ./esbuild.config.mjs",
 		"dev": "yarn build && NODE_ENV=development node --experimental-detect-module ./dist/node_esbuild.cjs",
+		"prettier": "prettier --config ../../packages/prettier-config/config.js --ignore-path .prettierignore .",
 		"start": "NODE_ENV=production node --experimental-detect-module ./dist/node_esbuild.cjs"
 	},
 	"dependencies": {
