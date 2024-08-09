@@ -5,6 +5,10 @@ import cors from '@fastify/cors';
 import { handleImageRequest } from './handleImageRequest';
 import { handleMetadataRequest } from './handleMetadataRequest';
 
+// Set the process title to 'fetch-image' so it can be easily identified
+// or killed with `pkill -f fetch-image`
+process.title = 'fetch-image';
+
 const server = Fastify({
 	logger: true,
 });
