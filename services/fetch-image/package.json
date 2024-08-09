@@ -7,8 +7,8 @@
 	"type": "module",
 	"scripts": {
 		"build": "node ./esbuild.config.mjs",
-		"dev": "yarn build && yarn start",
-		"start": "node --experimental-detect-module ./dist/node_esbuild.cjs"
+		"dev": "yarn build && NODE_ENV=development node --experimental-detect-module ./dist/node_esbuild.cjs",
+		"start": "NODE_ENV=production node --experimental-detect-module ./dist/node_esbuild.cjs"
 	},
 	"dependencies": {
 		"@bufbuild/buf": "^1.34.0",

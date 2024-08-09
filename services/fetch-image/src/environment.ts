@@ -3,7 +3,14 @@ import * as dotenv from 'dotenv';
 import { ChainConfig } from './types';
 import deploymentData from '@river-build/generated/config/deployments.json';
 
-dotenv.config();
+const isDev = process.env.NODE_ENV === 'development';
+const envFile = isDev ? '.env.localhost' : '.env';
+
+console.log('NODE_ENV:', process.env.NODE_ENV, 'isDev:', isDev, 'envFile:', envFile);
+
+dotenv.config({
+	path: envFile,
+});
 
 export const SERVER_PORT = parseInt(process.env.PORT ?? '443', 10);
 export const config = makeConfig(deploymentData, process.env.RIVER_ENV ?? 'omega');
