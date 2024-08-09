@@ -1,5 +1,5 @@
 import { RiverRegistry, SpaceDapp } from '@river-build/web3'
-import { RetryParams, makeStreamRpcClient } from '../../makeStreamRpcClient'
+import { makeStreamRpcClient } from '../../makeStreamRpcClient'
 import { StreamNodeUrls, StreamNodeUrlsModel } from './models/streamNodeUrls'
 import { Identifiable, LoadPriority, Store } from '../../store/store'
 import { dlogger } from '@river-build/dlog'
@@ -16,6 +16,7 @@ import { userIdFromAddress } from '../../id'
 import { TransactionalClient } from './models/transactionalClient'
 import { Observable } from '../../observable/observable'
 import { AuthStatus } from './models/authStatus'
+import { RetryParams } from '../../rpcInterceptors'
 
 const logger = dlogger('csb:riverConnection')
 
@@ -178,7 +179,7 @@ export class RiverConnection extends PersistedObservable<RiverConnectionModel> {
                     logger.log('canInitialize', canInitialize)
                     if (canInitialize) {
                         this.authStatus.setValue(AuthStatus.ConnectingToRiver)
-                        await client.initializeUser(this.newUserMetadata)
+                        await client.initializeUser({ spaceId: this.newUserMetadata?.spaceId })
                         client.startSync()
                         this.setData({ userExists: true })
                         this.authStatus.setValue(AuthStatus.ConnectedToRiver)

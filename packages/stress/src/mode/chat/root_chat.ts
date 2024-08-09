@@ -1,4 +1,5 @@
 import { check, dlogger } from '@river-build/dlog'
+import { promises as fs } from 'node:fs'
 import { isSet } from '../../utils/expect'
 import { ChatConfig } from './types'
 import { RiverConfig, makeDefaultChannelStreamId } from '@river-build/sdk'
@@ -163,6 +164,12 @@ export async function startStressChat(opts: {
 
     logger.log('done', { summary })
 
+    for (let i = 0; i < clients.length; i += 1) {
+        const client = clients[i]
+        logger.log(`stopping ${client.logId}`)
+        await client.stop()
+    }
+
     return { summary, chatConfig, opts }
 }
 
@@ -187,11 +194,13 @@ export async function setupChat(opts: {
         channelIds.push(await client.createChannel(spaceId, `stress${i}`))
     }
     // log all the deets
-    logger.log(
-        `SPACE_ID=${spaceId} ANNOUNCE_CHANNEL_ID=${announceChannelId} CHANNEL_IDS=${channelIds.join(
-            ',',
-        )}`,
-    )
+    const envVars = [
+        `SPACE_ID=${spaceId}`,
+        `ANNOUNCE_CHANNEL_ID=${announceChannelId}`,
+        `CHANNEL_IDS=${channelIds.join(',')}`,
+    ]
+    logger.log(envVars.join('\n'))
+    await fs.writeFile('scripts/.env.localhost_chat', envVars.join('\n'))
     logger.log('join at', `http://localhost:3000/t/${spaceId}/?invite`)
     logger.log('or', `http://localhost:3001/spaces/${spaceId}/?invite`)
     logger.log('done')

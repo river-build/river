@@ -29,7 +29,7 @@ type (
 		// ctx is the root context for all syncers in this set and used to cancel them
 		ctx context.Context
 		// globalSyncOpCtxCancel cancels ctx
-		globalSyncOpCtxCancel context.CancelFunc
+		globalSyncOpCtxCancel context.CancelCauseFunc
 		// syncID is the sync id as used between the client and this node
 		syncID string
 		// localNodeAddress is the node address for this stream node instance
@@ -79,7 +79,7 @@ func (cs SyncCookieSet) AsSlice() []*SyncCookie {
 // are streamed to the client.
 func NewSyncers(
 	ctx context.Context,
-	globalSyncOpCtxCancel context.CancelFunc,
+	globalSyncOpCtxCancel context.CancelCauseFunc,
 	syncID string,
 	streamCache events.StreamCache,
 	nodeRegistry nodes.NodeRegistry,
@@ -89,7 +89,7 @@ func NewSyncers(
 	var (
 		syncers         = make(map[common.Address]StreamsSyncer)
 		streamID2Syncer = make(map[StreamId]StreamsSyncer)
-		messages        = make(chan *SyncStreamsResponse, 128)
+		messages        = make(chan *SyncStreamsResponse, 256)
 	)
 
 	// instantiate background syncers for sync operation
@@ -124,14 +124,15 @@ func NewSyncers(
 	}
 
 	return &SyncerSet{
-		ctx:              ctx,
-		syncID:           syncID,
-		streamCache:      streamCache,
-		nodeRegistry:     nodeRegistry,
-		localNodeAddress: localNodeAddress,
-		syncers:          syncers,
-		streamID2Syncer:  streamID2Syncer,
-		messages:         messages,
+		ctx:                   ctx,
+		globalSyncOpCtxCancel: globalSyncOpCtxCancel,
+		syncID:                syncID,
+		streamCache:           streamCache,
+		nodeRegistry:          nodeRegistry,
+		localNodeAddress:      localNodeAddress,
+		syncers:               syncers,
+		streamID2Syncer:       streamID2Syncer,
+		messages:              messages,
 	}, messages, nil
 }
 

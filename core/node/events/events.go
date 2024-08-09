@@ -281,10 +281,28 @@ func Make_SpacePayload_Membership(op MembershipOp, userId string, initiatorId st
 	return Make_MemberPayload_Membership(op, userAddress, initiatorAddress, nil)
 }
 
+func Make_SpacePayload_SpaceImage(
+	ciphertext string,
+	algorithm string,
+) *StreamEvent_SpacePayload {
+	encryptedData := &EncryptedData{
+		Ciphertext: ciphertext,
+		Algorithm:  algorithm,
+	}
+	return &StreamEvent_SpacePayload{
+		SpacePayload: &SpacePayload{
+			Content: &SpacePayload_SpaceImage{
+				SpaceImage: encryptedData,
+			},
+		},
+	}
+}
+
 func Make_SpacePayload_ChannelUpdate(
 	op ChannelOp,
 	channelId StreamId,
 	originEvent *EventRef,
+	settings *SpacePayload_ChannelSettings,
 ) *StreamEvent_SpacePayload {
 	return &StreamEvent_SpacePayload{
 		SpacePayload: &SpacePayload{
@@ -293,6 +311,7 @@ func Make_SpacePayload_ChannelUpdate(
 					Op:          op,
 					ChannelId:   channelId[:],
 					OriginEvent: originEvent,
+					Settings:    settings,
 				},
 			},
 		},
