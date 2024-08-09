@@ -71,9 +71,12 @@ async function mediaContentFromStreamView(streamView: StreamStateView, secret: U
 		console.log(`mediaContentFromStreamView: mediaInfo.spaceId=${mediaInfo.spaceId}`);
 
 		// Aggregate data chunks into a single Uint8Array
-		const data = mediaInfo.chunks.reduce((acc, chunk) => {
-			return new Uint8Array([...acc, ...chunk]);
-		}, new Uint8Array());
+		const data = new Uint8Array(mediaInfo.chunks.reduce((totalLength, chunk) => totalLength + chunk.length, 0));
+		let offset = 0;
+		mediaInfo.chunks.forEach(chunk => {
+				data.set(chunk, offset);
+				offset += chunk.length;
+		});
 
 		// Decrypt the data
 		const decrypted = await decryptAESGCM(data, secret, iv);
