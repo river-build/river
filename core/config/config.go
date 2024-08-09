@@ -439,14 +439,6 @@ func (c *Config) UrlSchema() string {
 	return s
 }
 
-// Convenience method to check if HTTPS is enabled.
-func (c *Config) IsHttpsEnabled() bool {
-	if c != nil {
-		return !c.DisableHttps
-	}
-	return true
-}
-
 func parseBlockchainDurations(str string, result map[uint64]BlockchainInfo) error {
 	pairs := strings.Split(str, ",")
 	for _, pair := range pairs {

@@ -414,7 +414,7 @@ func (s *Service) runHttpServer() error {
 	})
 
 	address := fmt.Sprintf("%s:%d", cfg.Address, cfg.Port)
-	if cfg.IsHttpsEnabled() {
+	if !cfg.DisableHttps {
 		if !s.config.Log.Simplify {
 			log.Info("Using TLS server")
 		}

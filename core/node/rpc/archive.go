@@ -64,7 +64,7 @@ func (s *Service) startArchiveMode(once bool) error {
 	port := tcpAddr.Port
 	// construct the URL by converting the integer to a string
 	url := s.config.UrlSchema() + "://localhost:" + strconv.Itoa(port) + "/debug/multi"
-	s.defaultLogger.Info("Server started", "port", port, "https", s.config.IsHttpsEnabled(), "url", url)
+	s.defaultLogger.Info("Server started", "port", port, "https", !s.config.DisableHttps, "url", url)
 	return nil
 }
 

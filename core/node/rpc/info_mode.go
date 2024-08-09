@@ -50,7 +50,7 @@ func (s *Service) startInfoMode() error {
 	port := tcpAddr.Port
 	// build the url by converting the integer to a string
 	url := s.config.UrlSchema() + "://localhost:" + strconv.Itoa(port) + "/debug/multi"
-	s.defaultLogger.Info("Server started", "port", port, "https", s.config.IsHttpsEnabled(), "url", url)
+	s.defaultLogger.Info("Server started", "port", port, "https", !s.config.DisableHttps, "url", url)
 	return nil
 }
 
