@@ -3,8 +3,6 @@ import { isValidEthereumAddress } from './validators';
 
 export function handleMetadataRequest(request: FastifyRequest, reply: FastifyReply, baseUrl: string) {
 	const { spaceAddress } = request.params as { spaceAddress?: string };
-	const { chainId: queryChainId } = request.query as { chainId?: string };
-	const chainId = queryChainId ? Number(queryChainId) : undefined;
 
 	if (!spaceAddress) {
     return reply
@@ -17,12 +15,6 @@ export function handleMetadataRequest(request: FastifyRequest, reply: FastifyRep
     return reply
       .code(400)
       .send({ error: 'Bad Request', message: 'Invalid spaceAddress format' });
-  }
-
-	if (chainId !== undefined && isNaN(chainId)) {
-    return reply
-      .code(400)
-      .send({ error: 'Bad Request', message: 'Invalid chainId format' });
   }
 
 	const dummyJson = {
