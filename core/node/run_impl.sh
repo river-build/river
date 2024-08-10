@@ -71,6 +71,28 @@ if [ "$CONFIG" == "true" ]; then
     echo "RIVER_TEST_CONTRACT_ADDRESS=${ENTITLEMENT_TEST_ADDRESS}" >> ${RUN_BASE}/contracts.env
 
     source ../../contracts/.env.localhost
+    OPERATOR_ADDRESS=$(cast wallet addr $LOCAL_PRIVATE_KEY)
+
+    if [ "$DISABLE_BASE_CHAIN" != "true" ]; then
+        echo "Registration of operator $OPERATOR_ADDRESS in base registry at address $BASE_REGISTRY_ADDRESS"
+        # register operator
+        cast send \
+            --rpc-url http://127.0.0.1:8545 \
+            --private-key $LOCAL_PRIVATE_KEY \
+            $BASE_REGISTRY_ADDRESS \
+            "registerOperator(address)" \
+            $OPERATOR_ADDRESS \
+            2 > /dev/null
+        # set operator to approved
+        cast send \
+            --rpc-url http://127.0.0.1:8545 \
+            --private-key $TESTNET_PRIVATE_KEY \
+            $BASE_REGISTRY_ADDRESS \
+            "setOperatorStatus(address,uint8)" \
+            $OPERATOR_ADDRESS \
+            2 \
+            2 > /dev/null
+    fi
 
     ../../scripts/set-riverchain-config.sh
 
@@ -95,6 +117,17 @@ if [ "$CONFIG" == "true" ]; then
             $NODE_ADDRESS \
             https://localhost:$I_RPC_PORT \
             2 > /dev/null
+
+        if [ "$DISABLE_BASE_CHAIN" != "true" ]; then
+            echo "Registration of node $NODE_ADDRESS in base registry at address $BASE_REGISTRY_ADDRESS"
+            cast send \
+                --rpc-url http://127.0.0.1:8545 \
+                --private-key $LOCAL_PRIVATE_KEY \
+                $BASE_REGISTRY_ADDRESS \
+                "registerNode(address)" \
+                $NODE_ADDRESS \
+                2 > /dev/null
+        fi
     done
 
     echo "Node records in contract:"
@@ -103,14 +136,6 @@ if [ "$CONFIG" == "true" ]; then
         $RIVER_REGISTRY_ADDRESS \
         "getAllNodes()((uint8,string,address,address)[])" | sed 's/),/),\n/g'
     echo "<<<<<<<<<<<<<<<<<<<<<<<<<"
-
-    # config xchain config for this deployment
-    # the script is call create_multi.sh because there are always multiple xchain nodes for a deployment
-    # xchain depends on base, so only configure it when base is enabled
-    if [ "$DISABLE_BASE_CHAIN" != "true" ]; then
-        ../xchain/create_multi.sh
-    fi
-
 fi
 
 if [ "$BUILD" == "true" ]; then
@@ -125,6 +150,12 @@ if [ "$BUILD" == "true" ]; then
 fi
 
 if [ "$RUN" == "true" ]; then
+    if [ "$DISABLE_BASE_CHAIN" == "true" ]; then
+        RUN_CMD="run stream"
+    else
+        RUN_CMD="run"
+    fi
+
     pushd ${RUN_BASE}
     while read -r INSTANCE; do
         if [ ! -f $INSTANCE/config/config.env ]; then
@@ -135,7 +166,7 @@ if [ "$RUN" == "true" ]; then
         echo "Running instance '$INSTANCE' with extra aguments: '${args[@]:-}'"
         cast rpc -r http://127.0.0.1:8546 anvil_setBalance `cat ./wallet/node_address` 10000000000000000000
 
-        ../bin/river_node run stream --config ../common.yaml --config ../contracts.env --config ../config.yaml --config config/config.env "${args[@]:-}" &
+        ../bin/river_node ${RUN_CMD} --config ../common.yaml --config ../contracts.env --config ../config.yaml --config config/config.env "${args[@]:-}" &
 
         popd
     done < <(find . -type d -mindepth 1 -maxdepth 1 | sort)
