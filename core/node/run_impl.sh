@@ -5,7 +5,8 @@ cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")"
 : ${RUN_ENV:?} # values are single, single_ne, multi, multi_ne
 
 # check given env.env exists to validate RUN_ENV
-export ENV_PATH="../env/local/${RUN_ENV}"
+export ENV_PATH_BASE="../env/local"
+export ENV_PATH="${ENV_PATH_BASE}/${RUN_ENV}"
 if [ ! -f "${ENV_PATH}/env.env" ]; then
     echo "Invalid RUN_ENV: ${RUN_ENV}"
     exit 1
@@ -13,16 +14,13 @@ fi
 # source env params from ../env/local/${RUN_ENV}/env.env
 source ${ENV_PATH}/env.env
 
-export RUN_BASE="../run_files/${RUN_ENV}"
-export NUM_INSTANCES="${NUM_INSTANCES:-10}"
-export RPC_PORT="${RPC_PORT:-5170}"
-export DISABLE_BASE_CHAIN="${DISABLE_BASE_CHAIN:-false}"
-export RIVER_ENV="local_${RUN_ENV}"
-export RIVER_BLOCK_TIME="${RIVER_BLOCK_TIME:-1}"
+# check required vars are set
+: ${NUM_INSTANCES:?}
+: ${RPC_PORT:?}
+: ${DISABLE_BASE_CHAIN:?}
 
-# Set BLOCK_TIME_MS based on RIVER_BLOCK_TIME
-[ -z "${BLOCK_TIME_MS+x}" ] && BLOCK_TIME_MS=$(( ${RIVER_BLOCK_TIME} * 1000 ))
-export BLOCK_TIME_MS
+export RUN_BASE="../run_files/${RUN_ENV}"
+export RIVER_ENV="local_${RUN_ENV}"
 
 CONFIG=false
 RUN=false
@@ -76,33 +74,8 @@ if [ "$CONFIG" == "true" ]; then
 
     ../../scripts/set-riverchain-config.sh
 
-    TEMPLATE_FILE="./config-template.yaml"
-    OUTPUT_FILE="${RUN_BASE}/common_config.yaml"
-
-    cp "$TEMPLATE_FILE" "$OUTPUT_FILE"
-    grep -o '<.*>' "$TEMPLATE_FILE" | sort | uniq | while read -r KEY; do
-        key=$(echo "$KEY" | sed 's/^.\(.*\).$/\1/')
-        value=${!key:?$key is not set}
-
-        if [ -z "$value" ]; then
-            echo "Error: Missing value for key $key" >&2
-            exit 1
-        fi
-
-        # Check if key exists in the template file
-        if ! grep -q "<${key}>" "$OUTPUT_FILE"; then
-            echo "Error: Key $key not found in template." >&2
-            exit 1
-        fi
-
-        # Substitute the key with the value, adjust for macOS or Linux without creating backup files
-        if [ "$(uname)" == "Darwin" ]; then  # macOS
-            sed -i '' "s^<${key}>^${value}^g" "$OUTPUT_FILE"
-        else  # Linux
-            sed -i "s^<${key}>^${value}^g" "$OUTPUT_FILE"
-        fi
-    done
-
+    cp ${ENV_PATH_BASE}/common/common.yaml ${RUN_BASE}/common.yaml
+    cp ${ENV_PATH}/config.yaml ${RUN_BASE}/config.yaml
 
     for ((i=0; i<NUM_INSTANCES; i++)); do
         printf -v INSTANCE "%02d" $i
@@ -162,7 +135,7 @@ if [ "$RUN" == "true" ]; then
         echo "Running instance '$INSTANCE' with extra aguments: '${args[@]:-}'"
         cast rpc -r http://127.0.0.1:8546 anvil_setBalance `cat ./wallet/node_address` 10000000000000000000
 
-        ../bin/river_node run stream --config ../common_config.yaml --config ../contracts.env --config config/config.env "${args[@]:-}" &
+        ../bin/river_node run stream --config ../common.yaml --config ../contracts.env --config ../config.yaml --config config/config.env "${args[@]:-}" &
 
         popd
     done < <(find . -type d -mindepth 1 -maxdepth 1 | sort)
