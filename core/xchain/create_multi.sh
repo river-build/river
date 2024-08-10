@@ -69,7 +69,7 @@ cast send \
     2 > /dev/null
 
 # Number of instances
-N=5
+N=10
 
 # Base directory for the instances
 BASE_DIR="../run_files/${RUN_ENV}/xchain"
