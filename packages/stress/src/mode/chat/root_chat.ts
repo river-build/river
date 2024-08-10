@@ -13,7 +13,6 @@ import { chitChat } from './chitChat'
 import { sumarizeChat } from './sumarizeChat'
 import { statsReporter } from './statsReporter'
 import { RedisStorage } from '../../utils/storage'
-import { config } from 'node:process'
 
 function getStressDuration(): number {
     check(isSet(process.env.STRESS_DURATION), 'process.env.STRESS_DURATION')
