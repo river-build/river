@@ -4,6 +4,15 @@ cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")"
 
 : ${RUN_ENV:?} # values are single, single_ne, multi, multi_ne
 
+# check given env.env exists to validate RUN_ENV
+export ENV_PATH="../env/local/${RUN_ENV}"
+if [ ! -f "${ENV_PATH}/env.env" ]; then
+    echo "Invalid RUN_ENV: ${RUN_ENV}"
+    exit 1
+fi
+# source env params from ../env/local/${RUN_ENV}/env.env
+source ${ENV_PATH}/env.env
+
 export RUN_BASE="../run_files/${RUN_ENV}"
 export NUM_INSTANCES="${NUM_INSTANCES:-10}"
 export RPC_PORT="${RPC_PORT:-5170}"
