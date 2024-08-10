@@ -185,7 +185,7 @@ export function encodeEntitlementData(ruleData: IRuleEntitlementBase.RuleDataStr
         })
 
     if (!encodeRuleDataAbi) {
-        throw new Error('setRuleDataInputs not found')
+        throw new Error('encodeRuleData ABI not found')
     }
     // @ts-ignore
     return encodeAbiParameters(encodeRuleDataAbi.inputs, [ruleData])
@@ -199,13 +199,14 @@ export function decodeEntitlementData(entitlementData: Hex): IRuleEntitlementBas
         })
 
     if (!getRuleDataAbi) {
-        throw new Error('getRuleDataOutputs not found')
+        throw new Error('getRuleData ABI not found')
     }
     return decodeAbiParameters(
         getRuleDataAbi.outputs,
         entitlementData,
     ) as unknown as IRuleEntitlementBase.RuleDataStruct[]
 }
+
 export function ruleDataToOperations(data: IRuleEntitlementBase.RuleDataStruct[]): Operation[] {
     if (data.length === 0) {
         return []
