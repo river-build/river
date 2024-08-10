@@ -21,11 +21,6 @@ source ${ENV_PATH}/env.env
 
 export RUN_BASE="../run_files/${RUN_ENV}"
 export RIVER_ENV="local_${RUN_ENV}"
-export RIVER_BLOCK_TIME="${RIVER_BLOCK_TIME:-1}"
-
-# Set BLOCK_TIME_MS based on RIVER_BLOCK_TIME
-[ -z "${BLOCK_TIME_MS+x}" ] && BLOCK_TIME_MS=$(( ${RIVER_BLOCK_TIME} * 1000 ))
-export BLOCK_TIME_MS
 
 CONFIG=false
 RUN=false
@@ -79,14 +74,8 @@ if [ "$CONFIG" == "true" ]; then
 
     ../../scripts/set-riverchain-config.sh
 
-    cp ${ENV_PATH_BASE}/common/config.yaml ${RUN_BASE}/config.yaml
-
-    OUTPUT_FILE="${RUN_BASE}/common.env"
-
-    echo "" > "${OUTPUT_FILE}"
-    echo "RIVER_DISABLEBASECHAIN=${DISABLE_BASE_CHAIN}" >> "${OUTPUT_FILE}"
-    echo "RIVER_BASECHAIN_BLOCKTIMEMS=${BLOCK_TIME_MS}" >> "${OUTPUT_FILE}"
-    echo "RIVER_RIVERCHAIN_BLOCKTIMEMS=${BLOCK_TIME_MS}" >> "${OUTPUT_FILE}"
+    cp ${ENV_PATH_BASE}/common/common.yaml ${RUN_BASE}/common.yaml
+    cp ${ENV_PATH}/config.yaml ${RUN_BASE}/config.yaml
 
     for ((i=0; i<NUM_INSTANCES; i++)); do
         printf -v INSTANCE "%02d" $i
@@ -146,7 +135,7 @@ if [ "$RUN" == "true" ]; then
         echo "Running instance '$INSTANCE' with extra aguments: '${args[@]:-}'"
         cast rpc -r http://127.0.0.1:8546 anvil_setBalance `cat ./wallet/node_address` 10000000000000000000
 
-        ../bin/river_node run stream --config ../config.yaml --config ../contracts.env --config ../common.env --config config/config.env "${args[@]:-}" &
+        ../bin/river_node run stream --config ../common.yaml --config ../contracts.env --config ../config.yaml --config config/config.env "${args[@]:-}" &
 
         popd
     done < <(find . -type d -mindepth 1 -maxdepth 1 | sort)
