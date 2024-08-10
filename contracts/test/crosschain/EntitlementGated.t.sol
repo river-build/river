@@ -54,7 +54,7 @@ contract EntitlementGatedTest is
       nodes
     );
 
-    bytes32 realRequestId = gated.requestEntitlementCheck(
+    bytes32 realRequestId = gated.requestEntitlementCheckV2(
       0,
       RuleEntitlementUtil.getMockERC721RuleData()
     );
@@ -65,7 +65,7 @@ contract EntitlementGatedTest is
   function test_requestEntitlementCheck_revertWhen_alreadyRegistered()
     external
   {
-    gated.requestEntitlementCheck(
+    gated.requestEntitlementCheckV2(
       0,
       RuleEntitlementUtil.getMockERC721RuleData()
     );
@@ -73,7 +73,7 @@ contract EntitlementGatedTest is
     vm.expectRevert(
       EntitlementGated_TransactionCheckAlreadyRegistered.selector
     );
-    gated.requestEntitlementCheck(
+    gated.requestEntitlementCheckV2(
       0,
       RuleEntitlementUtil.getMockERC721RuleData()
     );
@@ -85,7 +85,7 @@ contract EntitlementGatedTest is
   function test_postEntitlementCheckResult_passing() external {
     vm.prank(address(gated));
     address[] memory nodes = entitlementChecker.getRandomNodes(5);
-    bytes32 requestId = gated.requestEntitlementCheck(
+    bytes32 requestId = gated.requestEntitlementCheckV2(
       0,
       RuleEntitlementUtil.getMockERC721RuleData()
     );
@@ -97,7 +97,7 @@ contract EntitlementGatedTest is
     vm.prank(address(gated));
     address[] memory nodes = entitlementChecker.getRandomNodes(5);
 
-    bytes32 requestId = gated.requestEntitlementCheck(
+    bytes32 requestId = gated.requestEntitlementCheckV2(
       0,
       RuleEntitlementUtil.getMockERC721RuleData()
     );
@@ -118,7 +118,7 @@ contract EntitlementGatedTest is
     vm.prank(address(gated));
     address[] memory nodes = entitlementChecker.getRandomNodes(5);
 
-    bytes32 requestId = gated.requestEntitlementCheck(
+    bytes32 requestId = gated.requestEntitlementCheckV2(
       0,
       RuleEntitlementUtil.getMockERC721RuleData()
     );
@@ -137,7 +137,7 @@ contract EntitlementGatedTest is
       vm.assume(node != nodes[i]);
     }
 
-    bytes32 requestId = gated.requestEntitlementCheck(
+    bytes32 requestId = gated.requestEntitlementCheckV2(
       0,
       RuleEntitlementUtil.getMockERC721RuleData()
     );
@@ -154,7 +154,7 @@ contract EntitlementGatedTest is
   function test_getEncodedRuleData() external {
     IRuleEntitlement.RuleDataV2 memory expected = RuleEntitlementUtil
       .getMockERC721RuleData();
-    gated.requestEntitlementCheck(0, expected);
+    gated.requestEntitlementCheckV2(0, expected);
     assertEq(abi.encode(gated.getRuleDataV2(0)), abi.encode(expected));
   }
 
@@ -166,7 +166,7 @@ contract EntitlementGatedTest is
     vm.prank(address(gated));
     address[] memory nodes = entitlementChecker.getRandomNodes(5);
 
-    bytes32 requestId = gated.requestEntitlementCheck(
+    bytes32 requestId = gated.requestEntitlementCheckV2(
       0,
       RuleEntitlementUtil.getMockERC721RuleData()
     );
