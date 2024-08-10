@@ -24,8 +24,8 @@ export class MemberDisplayName extends PersistedObservable<MemberDisplayNameMode
     constructor(
         userId: string,
         streamId: string,
-        store: Store,
         private riverConnection: RiverConnection,
+        store: Store,
     ) {
         super(
             {

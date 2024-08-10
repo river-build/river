@@ -27,8 +27,8 @@ export class MemberUsername extends PersistedObservable<MemberUsernameModel> {
     constructor(
         userId: string,
         streamId: string,
-        store: Store,
         private riverConnection: RiverConnection,
+        store: Store,
     ) {
         super(
             {
@@ -46,13 +46,6 @@ export class MemberUsername extends PersistedObservable<MemberUsernameModel> {
 
     protected override async onLoaded() {
         this.riverConnection.registerView(this.onClientStarted)
-    }
-
-    isUsernameAvailable(username: string): boolean {
-        const streamId = this.data.streamId
-        const streamView = this.riverConnection.client?.stream(streamId)?.view
-        check(isDefined(streamView), 'stream not found')
-        return streamView.getUserMetadata().usernames.cleartextUsernameAvailable(username)
     }
 
     async setUsername(username: string) {

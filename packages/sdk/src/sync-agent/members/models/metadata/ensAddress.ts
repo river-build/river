@@ -25,8 +25,8 @@ export class MemberEnsAddress extends PersistedObservable<MemberEnsAddressModel>
     constructor(
         userId: string,
         streamId: string,
-        store: Store,
         private riverConnection: RiverConnection,
+        store: Store,
     ) {
         super(
             { id: `${userId}_${streamId}`, streamId, initialized: false },
