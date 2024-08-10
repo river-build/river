@@ -1,4 +1,11 @@
-import { bin_fromHexString, bin_fromString, check, dlogger } from '@river-build/dlog'
+import {
+    bin_fromHexString,
+    bin_fromString,
+    bin_toHexString,
+    bin_toString,
+    check,
+    dlogger,
+} from '@river-build/dlog'
 import { LoadPriority, type Identifiable, type Store } from '../../../../store/store'
 import {
     PersistedObservable,
@@ -13,9 +20,9 @@ import { make_MemberPayload_Nft } from '../../../../types'
 
 const logger = dlogger('csb:userSettings')
 
-type NftModel = {
-    contractAddress: Uint8Array
-    tokenId: Uint8Array
+export type NftModel = {
+    contractAddress: string
+    tokenId: string
     chainId: number
 }
 
@@ -31,8 +38,8 @@ export class MemberNft extends PersistedObservable<MemberNftModel> {
     constructor(
         userId: string,
         streamId: string,
-        store: Store,
         private riverConnection: RiverConnection,
+        store: Store,
     ) {
         super(
             { id: `${userId}_${streamId}`, streamId, initialized: false },
@@ -44,30 +51,22 @@ export class MemberNft extends PersistedObservable<MemberNftModel> {
         this.riverConnection.registerView(this.onClientStarted)
     }
 
-    async setNft(
-        streamId: string,
-        contractAddress: Uint8Array | string,
-        tokenId: Uint8Array | string,
-        chainId: number,
-    ) {
+    async setNft(nft: NftModel) {
+        const streamId = this.data.streamId
         const oldState = this.data
-        const contractAddressBytes =
-            typeof contractAddress === 'string'
-                ? bin_fromHexString(contractAddress)
-                : contractAddress
-        const tokenIdBytes = typeof tokenId === 'string' ? bin_fromString(tokenId) : tokenId
+        const { contractAddress, tokenId, chainId } = nft
         const payload =
             tokenId.length > 0
                 ? new MemberPayload_Nft({
                       chainId: chainId,
-                      contractAddress: contractAddressBytes,
-                      tokenId: tokenIdBytes,
+                      contractAddress: bin_fromHexString(contractAddress),
+                      tokenId: bin_fromString(tokenId),
                   })
                 : new MemberPayload_Nft()
         this.setData({
             nft: {
-                contractAddress: contractAddressBytes,
-                tokenId: tokenIdBytes,
+                contractAddress,
+                tokenId,
                 chainId,
             },
         })
@@ -112,8 +111,8 @@ export class MemberNft extends PersistedObservable<MemberNftModel> {
                 const nftPayload = metadata.nfts.confirmedNfts.get(userId)
                 const nft = nftPayload
                     ? {
-                          contractAddress: nftPayload.contractAddress,
-                          tokenId: nftPayload.tokenId,
+                          contractAddress: bin_toHexString(nftPayload.contractAddress),
+                          tokenId: bin_toString(nftPayload.tokenId),
                           chainId: nftPayload.chainId,
                       }
                     : undefined
