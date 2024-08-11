@@ -108,8 +108,13 @@ contract RuleEntitlement is
   ) external onlySpace {
     if (entitlementData.length == 0) return;
 
-    // Decode the data
-    RuleData memory data = abi.decode(entitlementData, (RuleData));
+    // equivalent: abi.decode(entitlementData, (RuleData))
+    RuleData calldata data;
+    assembly {
+      // this is a variable length struct, so calldataload(entitlementData.offset) contains the
+      // offset from entitlementData.offset at which the struct begins
+      data := add(entitlementData.offset, calldataload(entitlementData.offset))
+    }
 
     if (data.operations.length == 0) return;
 
@@ -140,7 +145,7 @@ contract RuleEntitlement is
         }
 
         // Verify the logical operations make a DAG
-        LogicalOperation memory logicalOp = data.logicalOperations[index];
+        LogicalOperation calldata logicalOp = data.logicalOperations[index];
         uint8 leftOperationIndex = logicalOp.leftOperationIndex;
         uint8 rightOperationIndex = logicalOp.rightOperationIndex;
 
@@ -158,20 +163,7 @@ contract RuleEntitlement is
     Entitlement storage entitlement = entitlementsByRoleId[roleId];
     entitlement.grantedBy = _msgSender();
     entitlement.grantedTime = block.timestamp;
-
-    // All checks passed; initialize state variables
-    // Manually copy _checkOperations to checkOperations
-    for (uint256 i; i < checkOperationsLength; ++i) {
-      entitlement.data.checkOperations.push(data.checkOperations[i]);
-    }
-
-    for (uint256 i; i < logicalOperationsLength; ++i) {
-      entitlement.data.logicalOperations.push(data.logicalOperations[i]);
-    }
-
-    for (uint256 i; i < operationsLength; ++i) {
-      entitlement.data.operations.push(data.operations[i]);
-    }
+    entitlement.data = data;
   }
 
   // @inheritdoc IEntitlement

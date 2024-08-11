@@ -119,8 +119,13 @@ contract RuleEntitlementV2 is
 
     if (entitlementData.length == 0) return;
 
-    // Decode the data
-    RuleDataV2 memory data = abi.decode(entitlementData, (RuleDataV2));
+    // equivalent: abi.decode(entitlementData, (RuleDataV2))
+    RuleDataV2 calldata data;
+    assembly {
+      // this is a variable length struct, so calldataload(entitlementData.offset) contains the
+      // offset from entitlementData.offset at which the struct begins
+      data := add(entitlementData.offset, calldataload(entitlementData.offset))
+    }
 
     if (data.operations.length == 0) return;
 
@@ -151,7 +156,7 @@ contract RuleEntitlementV2 is
         }
 
         // Verify the logical operations make a DAG
-        LogicalOperation memory logicalOp = data.logicalOperations[index];
+        LogicalOperation calldata logicalOp = data.logicalOperations[index];
         uint8 leftOperationIndex = logicalOp.leftOperationIndex;
         uint8 rightOperationIndex = logicalOp.rightOperationIndex;
 
