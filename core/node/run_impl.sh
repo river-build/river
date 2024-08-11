@@ -82,7 +82,7 @@ if [ "$CONFIG" == "true" ]; then
             $BASE_REGISTRY_ADDRESS \
             "registerOperator(address)" \
             $OPERATOR_ADDRESS \
-            2 > /dev/null
+            > /dev/null
         # set operator to approved
         cast send \
             --rpc-url http://127.0.0.1:8545 \
@@ -91,7 +91,7 @@ if [ "$CONFIG" == "true" ]; then
             "setOperatorStatus(address,uint8)" \
             $OPERATOR_ADDRESS \
             2 \
-            2 > /dev/null
+            > /dev/null
     fi
 
     ../../scripts/set-riverchain-config.sh
@@ -126,9 +126,9 @@ if [ "$CONFIG" == "true" ]; then
                 $BASE_REGISTRY_ADDRESS \
                 "registerNode(address)" \
                 $NODE_ADDRESS \
-                2 > /dev/null
+                > /dev/null
         fi
-    done
+    d
 
     echo "Node records in contract:"
     cast call \
