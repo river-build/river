@@ -14,20 +14,16 @@ contract RuleEntitlementTest is
   IEntitlementBase,
   IRuleEntitlementBase
 {
-  RuleEntitlement internal implementation;
   RuleEntitlement internal ruleEntitlement;
 
   address internal entitlement;
-  address internal deployer;
-  address internal space;
+  address internal deployer = makeAddr("deployer");
+  address internal space = makeAddr("space");
   uint256 internal roleId = 0;
 
-  function setUp() public {
-    deployer = _randomAddress();
-    space = _randomAddress();
-
+  function setUp() public virtual {
     vm.startPrank(deployer);
-    implementation = new RuleEntitlement();
+    RuleEntitlement implementation = new RuleEntitlement();
     entitlement = address(
       new ERC1967Proxy(
         address(implementation),

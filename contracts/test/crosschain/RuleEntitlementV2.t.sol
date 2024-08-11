@@ -1,105 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-// utils
-import {TestUtils} from "contracts/test/utils/TestUtils.sol";
-
-import {RuleEntitlement} from "contracts/src/spaces/entitlements/rule/RuleEntitlement.sol";
 import {RuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/RuleEntitlementV2.sol";
 
-import {IEntitlementBase} from "contracts/src/spaces/entitlements/IEntitlement.sol";
-import {IRuleEntitlement, IRuleEntitlementV2, IRuleEntitlementBase} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
+import {IRuleEntitlement, IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {RuleEntitlementTest} from "./RuleEntitlement.t.sol";
 
 // TODO: add tests for RuleEntitlementV2
-contract RuleEntitlementV2Test is
-  TestUtils,
-  IEntitlementBase,
-  IRuleEntitlementBase
-{
-  RuleEntitlement internal ruleEntitlement;
+contract RuleEntitlementV2Test is RuleEntitlementTest {
   RuleEntitlementV2 internal ruleEntitlementV2;
 
-  address internal entitlement;
-  address internal deployer = makeAddr("deployer");
-  address internal space = makeAddr("space");
-  uint256 internal roleId = 0;
-
-  function setUp() public {
-    vm.startPrank(deployer);
-    RuleEntitlement implementation = new RuleEntitlement();
-    entitlement = address(
-      new ERC1967Proxy(
-        address(implementation),
-        abi.encodeCall(RuleEntitlement.initialize, (space))
-      )
-    );
-    vm.stopPrank();
-
-    ruleEntitlement = RuleEntitlement(entitlement);
+  function setUp() public override {
+    super.setUp();
     ruleEntitlementV2 = RuleEntitlementV2(entitlement);
   }
 
-  modifier givenRuleV1EntitlementIsSet() {
-    uint256 chainId = block.chainid;
-    address erc20Contract = _randomAddress();
-    address erc721Contract = _randomAddress();
-    uint256 threshold = 100;
-
-    // we have 3 operations total
-    Operation[] memory operations = new Operation[](3);
-
-    // we have 2 check operations
-    CheckOperation[] memory checkOperations = new CheckOperation[](2);
-
-    // and 1 logical operation
-    LogicalOperation[] memory logicalOperations = new LogicalOperation[](1);
-
-    // for the first check operation, we are checking ERC20 balance of 100 on chain 31337
-    checkOperations[0] = CheckOperation(
-      CheckOperationType.ERC20,
-      chainId,
-      erc20Contract,
-      threshold
-    );
-
-    // for the second check operation, we are checking ERC721 balance of 100 on chain 31337
-    checkOperations[1] = CheckOperation(
-      CheckOperationType.ERC721,
-      chainId,
-      erc721Contract,
-      threshold
-    );
-
-    // we are combining the two check operations with an AND operation so both must pass
-    logicalOperations[0] = LogicalOperation(LogicalOperationType.AND, 0, 1);
-
-    // the first operation is a check operation
-    operations[0] = Operation(CombinedOperationType.CHECK, 0);
-
-    // the second operation is a check operation
-    operations[1] = Operation(CombinedOperationType.CHECK, 1);
-
-    // the third operation is a logical operation
-    operations[2] = Operation(CombinedOperationType.LOGICAL, 0);
-
-    // we are combining all the operations into a rule data struct
-    RuleData memory ruleData = RuleData(
-      operations,
-      checkOperations,
-      logicalOperations
-    );
-
-    bytes memory encodedData = abi.encode(ruleData);
-
-    vm.prank(space);
-    ruleEntitlement.setEntitlement(roleId, encodedData);
-    _;
-  }
-
-  function test_upgradeToRuleV2() external givenRuleV1EntitlementIsSet {
+  function test_upgradeToRuleV2() external givenRuleEntitlementIsSet {
     // Validate Rule V1 exists
     RuleData memory ruleData = ruleEntitlement.getRuleData(roleId);
     assertTrue(ruleData.operations.length > 0);
