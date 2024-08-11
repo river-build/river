@@ -18,7 +18,9 @@ contract RuleEntitlementV2Test is RuleEntitlementTest {
     ruleEntitlementV2 = RuleEntitlementV2(entitlement);
   }
 
-  function test_upgradeToRuleV2() public givenRuleEntitlementIsSet {
+  function test_upgradeToRuleV2() public {
+    setRuleEntitlement();
+
     // Validate Rule V1 exists
     RuleData memory ruleData = ruleEntitlement.getRuleData(roleId);
     assertTrue(ruleData.operations.length > 0);
@@ -55,12 +57,12 @@ contract RuleEntitlementV2Test is RuleEntitlementTest {
     assertTrue(ruleDataV2.operations.length == 0);
 
     // Set Rule V2
+    bytes memory encodedData = _createRuleDataV2();
     vm.prank(space);
-    ruleEntitlementV2.setEntitlement(roleId, abi.encode(_createRuleDataV2()));
+    ruleEntitlementV2.setEntitlement(roleId, encodedData);
 
     // Validate Rule V2 exists and Rule V1 does not
-    ruleDataV2 = ruleEntitlementV2.getRuleDataV2(roleId);
-    assertTrue(ruleDataV2.operations.length > 0);
+    assertEq(ruleEntitlementV2.getEntitlementDataByRoleId(roleId), encodedData);
 
     RuleData memory ruleData = ruleEntitlementV2.getRuleData(roleId);
     assertTrue(ruleData.operations.length == 0);
@@ -161,7 +163,7 @@ contract RuleEntitlementV2Test is RuleEntitlementTest {
   function _createRuleDataV2()
     internal
     view
-    returns (RuleDataV2 memory ruleData)
+    returns (bytes memory encodedData)
   {
     uint256 chainId = block.chainid;
     address erc20Contract = _randomAddress();
@@ -206,6 +208,12 @@ contract RuleEntitlementV2Test is RuleEntitlementTest {
     operations[2] = Operation(CombinedOperationType.LOGICAL, 0);
 
     // we are combining all the operations into a rule data struct
-    ruleData = RuleDataV2(operations, checkOperations, logicalOperations);
+    RuleDataV2 memory ruleData = RuleDataV2(
+      operations,
+      checkOperations,
+      logicalOperations
+    );
+
+    encodedData = abi.encode(ruleData);
   }
 }

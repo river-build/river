@@ -37,7 +37,7 @@ contract RuleEntitlementTest is
     ruleEntitlement = RuleEntitlement(entitlement);
   }
 
-  modifier givenRuleEntitlementIsSet() {
+  function setRuleEntitlement() internal returns (bytes memory encodedData) {
     uint256 chainId = block.chainid;
     address erc20Contract = _randomAddress();
     address erc721Contract = _randomAddress();
@@ -87,25 +87,20 @@ contract RuleEntitlementTest is
       logicalOperations
     );
 
-    bytes memory encodedData = abi.encode(ruleData);
+    encodedData = abi.encode(ruleData);
 
     vm.prank(space);
     ruleEntitlement.setEntitlement(roleId, encodedData);
-    _;
   }
 
-  function test_setRuleEntitlement() public virtual givenRuleEntitlementIsSet {
-    Operation[] memory ruleOperations = ruleEntitlement
-      .getRuleData(roleId)
-      .operations;
-    assertEq(ruleOperations.length, 3);
+  function test_setRuleEntitlement() public virtual {
+    bytes memory encodedData = setRuleEntitlement();
+    assertEq(ruleEntitlement.getEntitlementDataByRoleId(roleId), encodedData);
   }
 
-  function test_removeRuleEntitlement()
-    external
-    virtual
-    givenRuleEntitlementIsSet
-  {
+  function test_removeRuleEntitlement() external virtual {
+    setRuleEntitlement();
+
     vm.prank(space);
     ruleEntitlement.removeEntitlement(roleId);
 
