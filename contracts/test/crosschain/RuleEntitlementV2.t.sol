@@ -64,6 +64,13 @@ contract RuleEntitlementV2Test is RuleEntitlementTest {
 
     RuleData memory ruleData = ruleEntitlementV2.getRuleData(roleId);
     assertTrue(ruleData.operations.length == 0);
+
+    bytes32 slot = getMappingValueSlot(roleId, ENTITLEMENTS_SLOT);
+    bytes32 grantedBy = vm.load(entitlement, slot);
+    assertEq(grantedBy, bytes32(0));
+    bytes32 grantedTime = vm.load(entitlement, bytes32(uint256(slot) + 1));
+    assertEq(grantedTime, bytes32(0));
+    assertEq(vm.getMappingLength(entitlement, bytes32(ENTITLEMENTS_SLOT)), 0);
   }
 
   function test_removeRuleEntitlement() external override {
