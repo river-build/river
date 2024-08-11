@@ -2,13 +2,11 @@
 pragma solidity ^0.8.24;
 
 import {RuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/RuleEntitlementV2.sol";
-
-import {IRuleEntitlement, IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
+import {IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {RuleEntitlementTest} from "./RuleEntitlement.t.sol";
 
-// TODO: add tests for RuleEntitlementV2
 contract RuleEntitlementV2Test is RuleEntitlementTest {
   uint256 internal constant ENTITLEMENT_V2_SLOT =
     0xa7ba26993e5aed586ba0b4d511980a49b23ea33e13d5f0920b7e42ae1a27cc00;
@@ -95,10 +93,59 @@ contract RuleEntitlementV2Test is RuleEntitlementTest {
   function test_fuzz_revertWhenNotAllowedToRemove(
     address caller
   ) external override {
+    test_upgradeToRuleV2();
+
     vm.assume(caller != space);
     vm.expectRevert(Entitlement__NotAllowed.selector);
     vm.prank(caller);
     ruleEntitlementV2.removeEntitlement(roleId);
+  }
+
+  function test_revertOnDirectionFailureEntitlementRule() external override {
+    test_upgradeToRuleV2();
+
+    Operation[] memory operations = new Operation[](4);
+    CheckOperationV2[] memory checkOperations = new CheckOperationV2[](2);
+    LogicalOperation[] memory logicalOperations = new LogicalOperation[](2);
+    checkOperations[0] = CheckOperationV2(
+      CheckOperationType.ERC20,
+      31337,
+      address(0x12),
+      abi.encode(uint256(100))
+    );
+    checkOperations[1] = CheckOperationV2(
+      CheckOperationType.ERC721,
+      31337,
+      address(0x21),
+      abi.encode(uint256(100))
+    );
+    // This operation is referring to a parent so will revert
+    logicalOperations[0] = LogicalOperation(LogicalOperationType.AND, 0, 3);
+    logicalOperations[1] = LogicalOperation(LogicalOperationType.AND, 0, 1);
+    operations[0] = Operation(CombinedOperationType.CHECK, 0);
+    operations[1] = Operation(CombinedOperationType.CHECK, 1);
+    operations[2] = Operation(CombinedOperationType.LOGICAL, 0);
+    operations[3] = Operation(CombinedOperationType.LOGICAL, 1);
+
+    RuleDataV2 memory ruleData = RuleDataV2(
+      operations,
+      checkOperations,
+      logicalOperations
+    );
+
+    bytes memory encodedData = abi.encode(ruleData);
+
+    vm.expectRevert(
+      abi.encodeWithSelector(InvalidRightOperationIndex.selector, 3, 2)
+    );
+
+    vm.prank(space);
+    ruleEntitlementV2.setEntitlement(0, encodedData);
+
+    Operation[] memory ruleOperations = ruleEntitlementV2
+      .getRuleDataV2(0)
+      .operations;
+    assertEq(ruleOperations.length, 0);
   }
 
   // =============================================================

@@ -142,7 +142,8 @@ contract RuleEntitlementTest is
   // =============================================================
   //                  Request Entitlement Check
   // =============================================================
-  function test_revertOnDirectionFailureEntitlementRule() external {
+
+  function test_revertOnDirectionFailureEntitlementRule() external virtual {
     Operation[] memory operations = new Operation[](4);
     CheckOperation[] memory checkOperations = new CheckOperation[](2);
     LogicalOperation[] memory logicalOperations = new LogicalOperation[](2);
@@ -182,7 +183,7 @@ contract RuleEntitlementTest is
     ruleEntitlement.setEntitlement(0, encodedData);
 
     Operation[] memory ruleOperations = ruleEntitlement
-      .getRuleData(uint256(0))
+      .getRuleData(0)
       .operations;
     assertEq(ruleOperations.length, 0);
   }
