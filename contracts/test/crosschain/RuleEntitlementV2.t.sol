@@ -10,6 +10,9 @@ import {RuleEntitlementTest} from "./RuleEntitlement.t.sol";
 
 // TODO: add tests for RuleEntitlementV2
 contract RuleEntitlementV2Test is RuleEntitlementTest {
+  uint256 internal constant ENTITLEMENT_V2_SLOT =
+    0xa7ba26993e5aed586ba0b4d511980a49b23ea33e13d5f0920b7e42ae1a27cc00;
+
   RuleEntitlementV2 internal ruleEntitlementV2;
 
   function setUp() public override {
@@ -17,7 +20,7 @@ contract RuleEntitlementV2Test is RuleEntitlementTest {
     ruleEntitlementV2 = RuleEntitlementV2(entitlement);
   }
 
-  function test_upgradeToRuleV2() external givenRuleEntitlementIsSet {
+  function test_upgradeToRuleV2() public givenRuleEntitlementIsSet {
     // Validate Rule V1 exists
     RuleData memory ruleData = ruleEntitlement.getRuleData(roleId);
     assertTrue(ruleData.operations.length > 0);
@@ -45,6 +48,10 @@ contract RuleEntitlementV2Test is RuleEntitlementTest {
     assertTrue(
       ruleEntitlementV2.supportsInterface(type(IRuleEntitlementV2).interfaceId)
     );
+  }
+
+  function test_setRuleEntitlement() public override {
+    test_upgradeToRuleV2();
 
     RuleDataV2 memory ruleDataV2 = ruleEntitlementV2.getRuleDataV2(roleId);
     assertTrue(ruleDataV2.operations.length == 0);
@@ -57,8 +64,41 @@ contract RuleEntitlementV2Test is RuleEntitlementTest {
     ruleDataV2 = ruleEntitlementV2.getRuleDataV2(roleId);
     assertTrue(ruleDataV2.operations.length > 0);
 
-    ruleData = ruleEntitlementV2.getRuleData(roleId);
+    RuleData memory ruleData = ruleEntitlementV2.getRuleData(roleId);
     assertTrue(ruleData.operations.length == 0);
+  }
+
+  function test_removeRuleEntitlement() external override {
+    test_setRuleEntitlement();
+
+    vm.prank(space);
+    ruleEntitlementV2.removeEntitlement(roleId);
+
+    RuleDataV2 memory emptyRuleData = RuleDataV2(
+      new Operation[](0),
+      new CheckOperationV2[](0),
+      new LogicalOperation[](0)
+    );
+    RuleDataV2 memory ruleData = ruleEntitlementV2.getRuleDataV2(roleId);
+    assertEq(abi.encode(ruleData), abi.encode(emptyRuleData));
+
+    assertEq(ruleEntitlementV2.getEntitlementDataByRoleId(roleId).length, 0);
+
+    bytes32 slot = getMappingValueSlot(roleId, ENTITLEMENT_V2_SLOT);
+    bytes32 grantedBy = vm.load(entitlement, slot);
+    assertEq(grantedBy, bytes32(0));
+    bytes32 grantedTime = vm.load(entitlement, bytes32(uint256(slot) + 1));
+    assertEq(grantedTime, bytes32(0));
+    assertEq(vm.getMappingLength(entitlement, bytes32(ENTITLEMENT_V2_SLOT)), 0);
+  }
+
+  function test_fuzz_revertWhenNotAllowedToRemove(
+    address caller
+  ) external override {
+    vm.assume(caller != space);
+    vm.expectRevert(Entitlement__NotAllowed.selector);
+    vm.prank(caller);
+    ruleEntitlementV2.removeEntitlement(roleId);
   }
 
   // =============================================================

@@ -14,6 +14,8 @@ contract RuleEntitlementTest is
   IEntitlementBase,
   IRuleEntitlementBase
 {
+  uint256 internal constant ENTITLEMENTS_SLOT = 0;
+
   RuleEntitlement internal ruleEntitlement;
 
   address internal entitlement;
@@ -92,28 +94,48 @@ contract RuleEntitlementTest is
     _;
   }
 
-  function test_setRuleEntitlement() external givenRuleEntitlementIsSet {
+  function test_setRuleEntitlement() public virtual givenRuleEntitlementIsSet {
     Operation[] memory ruleOperations = ruleEntitlement
       .getRuleData(roleId)
       .operations;
     assertEq(ruleOperations.length, 3);
   }
 
-  function test_removeRuleEntitlement() external givenRuleEntitlementIsSet {
+  function test_removeRuleEntitlement()
+    external
+    virtual
+    givenRuleEntitlementIsSet
+  {
     vm.prank(space);
     ruleEntitlement.removeEntitlement(roleId);
 
+    RuleData memory emptyRuleData = RuleData(
+      new Operation[](0),
+      new CheckOperation[](0),
+      new LogicalOperation[](0)
+    );
     RuleData memory ruleData = ruleEntitlement.getRuleData(roleId);
+    assertEq(abi.encode(ruleData), abi.encode(emptyRuleData));
 
-    assertEq(ruleData.operations.length, 0);
+    assertEq(
+      ruleEntitlement.getEntitlementDataByRoleId(roleId),
+      abi.encode(emptyRuleData)
+    );
+
+    bytes32 slot = getMappingValueSlot(roleId, ENTITLEMENTS_SLOT);
+    bytes32 grantedBy = vm.load(entitlement, slot);
+    assertEq(grantedBy, bytes32(0));
+    bytes32 grantedTime = vm.load(entitlement, bytes32(uint256(slot) + 1));
+    assertEq(grantedTime, bytes32(0));
+    assertEq(vm.getMappingLength(entitlement, bytes32(ENTITLEMENTS_SLOT)), 0);
   }
 
-  function test_revertWhenNotAllowedToRemove()
-    external
-    givenRuleEntitlementIsSet
-  {
+  function test_fuzz_revertWhenNotAllowedToRemove(
+    address caller
+  ) external virtual {
+    vm.assume(caller != space);
     vm.expectRevert(Entitlement__NotAllowed.selector);
-    vm.prank(_randomAddress());
+    vm.prank(caller);
     ruleEntitlement.removeEntitlement(roleId);
   }
 
