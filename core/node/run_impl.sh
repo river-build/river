@@ -133,6 +133,7 @@ if [ "$RUN" == "true" ]; then
 
         pushd $INSTANCE
         echo "Running instance '$INSTANCE' with extra aguments: '${args[@]:-}'"
+        cast rpc -r http://127.0.0.1:8545 anvil_setBalance `cat ./wallet/node_address` 10000000000000000000
         cast rpc -r http://127.0.0.1:8546 anvil_setBalance `cat ./wallet/node_address` 10000000000000000000
 
         ../bin/river_node run stream --config ../common.yaml --config ../contracts.env --config ../config.yaml --config config/config.env "${args[@]:-}" &
