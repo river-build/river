@@ -33,7 +33,7 @@
     },
     "dependencies": {
         "@river-build/sdk": "workspace:^",
-        "ethers": "^5.7.2"
+        "ethers": "^6.13.2"
     },
     "devDependencies": {
         "@testing-library/react": "^14.2.1",
