@@ -33,7 +33,7 @@ function createPublicClientFromChainId(chainId: number) {
 }
 
 export function getPublicClient() {
-	const chainId = config.chainId
+	const chainId = config.river.chainId
 	if (!chainId) {
 		throw new Error('cannot create evm rpc client because no chainId was configured')
 	}
