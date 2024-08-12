@@ -10,6 +10,7 @@ type CachedStreamData = {
 
 const cache: Record<string, CachedStreamData> = {}
 
+// TODO: remove this entire file
 export async function getNodeForStream(
 	config: Config,
 	streamId: StreamIdHex,
@@ -34,8 +35,13 @@ export async function getNodeForStream(
 	const streamData = await riverRegistry.streamRegistry.read.getStream(streamId)
 
 	if (streamData.nodes.length === 0) {
-		console.error(`No nodes found for stream ${streamId}`)
-		throw new Error(`No nodes found for stream ${streamId}`)
+		const err = new Error(`No nodes found for stream ${streamId}`)
+		logger.error(`No nodes found for stream`, {
+			streamId,
+			err,
+		})
+
+		throw err
 	}
 
 	const lastMiniblockNum = streamData.lastMiniblockNum
@@ -43,7 +49,11 @@ export async function getNodeForStream(
 	const randomIndex = Math.floor(Math.random() * streamData.nodes.length)
 	const node = await riverRegistry.nodeRegistry.read.getNode(streamData.nodes[randomIndex])
 
-	console.log(`connected to node=${node.url}; lastMiniblockNum=${lastMiniblockNum}`)
+	logger.info(`connected to node`, {
+		streamId,
+		nodeUrl: node.url,
+		lastMiniblockNum,
+	})
 
 	// Cache the result with a 15-minute expiration
 	cache[streamId] = {

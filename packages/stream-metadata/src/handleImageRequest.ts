@@ -3,6 +3,9 @@ import { StreamPrefix, StreamStateView, makeStreamId, deriveKeyAndIV } from '@ri
 
 import { getMediaStreamContent, getStream } from './riverStreamRpcClient'
 import { isBytes32String, isValidEthereumAddress } from './validators'
+import { getLogger } from './logger'
+
+const logger = getLogger('handleImageRequest')
 
 import { ChunkedMedia } from '@river-build/proto'
 import { StreamIdHex } from './types'
@@ -28,7 +31,10 @@ export async function handleImageRequest(request: FastifyRequest, reply: Fastify
 		const streamId = makeStreamId(StreamPrefix.Space, spaceAddress)
 		stream = await getStream(config, streamId)
 	} catch (e) {
-		console.error(`Failed to get stream for space ${spaceAddress}: ${e}`)
+		logger.error(`Failed to get stream`, {
+			error: e,
+			spaceAddress,
+		})
 		return reply.code(404).send('Stream not found')
 	}
 

@@ -6,10 +6,13 @@ import cors from '@fastify/cors'
 import { handleImageRequest } from './handleImageRequest'
 import { handleMetadataRequest } from './handleMetadataRequest'
 import { config } from './environment'
+import { getLogger } from './logger'
 
 // Set the process title to 'fetch-image' so it can be easily identified
 // or killed with `pkill fetch-image`
 process.title = 'stream-metadata'
+
+const logger = getLogger('server')
 
 const server = Fastify({
 	logger: true,
@@ -32,7 +35,7 @@ registerPlugins()
 
 server.get('/space/:spaceAddress', async (request, reply) => {
 	const { spaceAddress } = request.params as { spaceAddress?: string }
-	console.log(`GET /space/${spaceAddress}`)
+	logger.info(`GET /space`, { spaceAddress })
 
 	const { protocol, serverAddress } = getServerInfo()
 	return handleMetadataRequest(request, reply, `${protocol}://${serverAddress}`)
@@ -40,7 +43,9 @@ server.get('/space/:spaceAddress', async (request, reply) => {
 
 server.get('/space/:spaceAddress/image', async (request, reply) => {
 	const { spaceAddress } = request.params as { spaceAddress?: string }
-	console.log(`GET /space/${spaceAddress}/image`)
+	logger.info(`GET /space/../image`, {
+		spaceAddress,
+	})
 
 	return handleImageRequest(request, reply)
 })
@@ -87,10 +92,10 @@ async function startServer(port: number) {
 process.on('SIGTERM', async () => {
 	try {
 		await server.close()
-		console.log('Server closed gracefully')
+		logger.info('Server closed gracefully')
 		process.exit(0)
 	} catch (err) {
-		console.error('Error during server shutdown', err)
+		logger.info('Error during server shutdown', err)
 		process.exit(1)
 	}
 })
@@ -98,9 +103,11 @@ process.on('SIGTERM', async () => {
 // Start the server on the port set in the .env, or the next available port
 startServer(config.port)
 	.then(() => {
-		console.log('Server started')
+		logger.info('Server started')
 	})
-	.catch((err) => {
-		console.error('Error starting server', err)
+	.catch((err: unknown) => {
+		logger.error('Error starting server', {
+			err,
+		})
 		process.exit(1)
 	})
