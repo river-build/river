@@ -9,7 +9,6 @@ import { Client } from './client'
 import {
     ETH_ADDRESS,
     LocalhostWeb3Provider,
-    MembershipStruct,
     LegacyMembershipStruct,
     NoopRuleData,
     Permission,
