@@ -15,6 +15,8 @@ const NumberFromIntStringSchema = IntStringSchema.transform((str) => parseInt(st
 const envSchema = z.object({
 	RIVER_ENV: z.string(),
 	PORT: NumberFromIntStringSchema.optional().default('443'),
+	LOG_LEVEL: z.string().optional().default('info'),
+	LOG_PRETTY: z.boolean().optional().default(true),
 })
 
 // eslint-disable-next-line no-process-env -- this is the only line where we're allowed to use process.env
@@ -25,9 +27,11 @@ const riverDeploymentConfig = makeConfig(deploymentData, env.RIVER_ENV)
 export const config = {
 	port: env.PORT,
 	riverDeploymentConfig,
+	log: {
+		level: env.LOG_LEVEL,
+		pretty: env.LOG_PRETTY,
+	},
 } as const
-
-console.log('config:', config)
 
 interface DeploymentsJson {
 	[riverEnv: string]: {
