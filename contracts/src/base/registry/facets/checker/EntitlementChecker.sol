@@ -176,7 +176,9 @@ contract EntitlementChecker is IEntitlementChecker, Facet {
     for (uint256 i; i < totalNodeCount; ++i) {
       address node = layout.nodes.at(i);
       if (layout.operatorByNode[node] == operator) {
-        nodes[nodeCount++] = node;
+        unchecked {
+          nodes[nodeCount++] = node;
+        }
       }
     }
     assembly ("memory-safe") {
