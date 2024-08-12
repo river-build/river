@@ -20,7 +20,7 @@ export interface MemberEnsAddressModel extends Identifiable {
     ensAddress?: Address
 }
 
-@persistedObservable({ tableName: 'MemberEnsAddress' })
+@persistedObservable({ tableName: 'member_ensAddress' })
 export class MemberEnsAddress extends PersistedObservable<MemberEnsAddressModel> {
     constructor(
         userId: string,

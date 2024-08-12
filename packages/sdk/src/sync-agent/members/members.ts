@@ -11,7 +11,7 @@ type MembersModel = {
     initialized: boolean
 }
 
-@persistedObservable({ tableName: 'Members' })
+@persistedObservable({ tableName: 'members' })
 export class Members extends PersistedObservable<MembersModel> {
     private members: Map<string, Member>
     constructor(streamId: string, private riverConnection: RiverConnection, store: Store) {

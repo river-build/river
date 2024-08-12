@@ -22,7 +22,7 @@ export interface MemberUsernameModel extends Identifiable {
     isUsernameEncrypted: boolean
 }
 
-@persistedObservable({ tableName: 'MemberUsername' })
+@persistedObservable({ tableName: 'member_username' })
 export class MemberUsername extends PersistedObservable<MemberUsernameModel> {
     constructor(
         userId: string,

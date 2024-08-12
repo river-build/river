@@ -33,7 +33,7 @@ export interface MemberNftModel extends Identifiable {
     nft?: NftModel
 }
 
-@persistedObservable({ tableName: 'MemberNft' })
+@persistedObservable({ tableName: 'member_nft' })
 export class MemberNft extends PersistedObservable<MemberNftModel> {
     constructor(
         userId: string,
