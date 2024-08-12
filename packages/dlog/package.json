@@ -22,7 +22,8 @@
         "@river-build/proto": "workspace:^",
         "browser-or-node": "^3.0.0",
         "debug": "^4.3.4",
-        "ethereum-cryptography": "^1.2.0"
+        "ethereum-cryptography": "^1.2.0",
+        "winston": "^3.14.1"
     },
     "devDependencies": {
         "@types/debug": "^4.1.8",

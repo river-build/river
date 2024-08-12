@@ -2,6 +2,8 @@ import { bin_toHexString, isHexString, shortenHexString } from './binary'
 import debug, { Debugger } from 'debug'
 
 import { isJest } from './utils'
+import { createLogger, format, transports } from 'winston'
+import { isNode } from 'browser-or-node'
 
 // Works as debug.enabled, but falls back on options if not explicitly set in env instead of returning false.
 debug.enabled = (ns: string): boolean => {
@@ -140,9 +142,54 @@ export interface DLogOpts {
 
 const allDlogs: Map<string, DLogger> = new Map()
 
-const isDev = typeof process !== 'undefined' && process.env.NODE_ENV === 'development'
+const isDev = typeof process !== 'undefined' && process.env.NODE_ENV !== 'production'
 
-const makeDlog = (d: Debugger, opts?: DLogOpts): DLogger => {
+export const winstonLogger = createLogger({
+    exitOnError: false,
+    transports: [
+        ...(isDev
+            ? [
+                  new transports.Console({
+                      forceConsole: true,
+                      format: format.combine(
+                          format.colorize(),
+                          format.splat(),
+                          format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+                          format.printf(
+                              (info) =>
+                                  `${info.timestamp} ${info.level} [${info.label}]: ${info.message}`,
+                          ),
+                      ),
+                  }),
+                  new transports.Console({
+                      level: 'debug',
+                      forceConsole: true,
+                      format: format.combine(
+                          format.colorize(),
+                          format.splat(),
+                          format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+                          format.printf(
+                              (info) =>
+                                  `${info.timestamp} ${info.level} [${info.label}]: ${info.message}`,
+                          ),
+                      ),
+                  }),
+              ]
+            : [
+                  new transports.File({
+                      level: 'debug',
+                      filename: 'debug.log',
+                      format: format.combine(format.splat(), format.json()),
+                  }),
+                  new transports.File({
+                      filename: 'combined.log',
+                      format: format.combine(format.splat(), format.json()),
+                  }),
+              ]),
+    ],
+})
+
+const makeDlog = (d: Debugger, level: 'debug' | 'info' | 'error', opts?: DLogOpts): DLogger => {
     if (opts?.printStack) {
         d.log = console.error.bind(console)
     }
@@ -178,16 +225,26 @@ const makeDlog = (d: Debugger, opts?: DLogOpts): DLogger => {
                 newArgs.push(c)
             }
         }
-
-        d(fmt.join(''), ...newArgs, ...tailArgs)
+        if (isNode) {
+            winstonLogger
+                .child({ label: d.namespace })
+                .log(level, fmt.join(''), ...newArgs, ...tailArgs)
+        } else {
+            d.namespace = `${d.namespace}:${level}`
+            d.log(fmt.join(''), ...newArgs, ...tailArgs)
+        }
     }
 
     dlog.baseDebug = d
     dlog.namespace = d.namespace
     dlog.opts = opts
 
-    dlog.extend = (sub: string, delimiter?: string): DLogger => {
-        return makeDlog(d.extend(sub, delimiter), opts)
+    dlog.extend = (
+        sub: string,
+        delimiter?: string,
+        level?: 'debug' | 'info' | 'error',
+    ): DLogger => {
+        return makeDlog(d.extend(sub, delimiter), level ?? 'debug', opts)
     }
 
     Object.defineProperty(dlog, 'enabled', {
@@ -211,7 +268,7 @@ const makeDlog = (d: Debugger, opts?: DLogOpts): DLogger => {
  * @returns New logger with namespace `ns`.
  */
 export const dlog = (ns: string, opts?: DLogOpts): DLogger => {
-    return makeDlog(debug(ns), opts)
+    return makeDlog(debug(ns), 'debug', opts)
 }
 
 /**
@@ -222,7 +279,7 @@ export const dlog = (ns: string, opts?: DLogOpts): DLogger => {
  * @returns New logger with namespace `ns`.
  */
 export const dlogError = (ns: string): DLogger => {
-    const l = makeDlog(debug(ns), { defaultEnabled: true, printStack: true })
+    const l = makeDlog(debug(ns), 'error', { defaultEnabled: true, printStack: true })
     return l
 }
 
@@ -233,8 +290,8 @@ export const dlogError = (ns: string): DLogger => {
  */
 export const dlogger = (ns: string): { log: DLogger; info: DLogger; error: DLogger } => {
     return {
-        log: makeDlog(debug(ns + ':log')),
-        info: makeDlog(debug(ns + ':info'), { defaultEnabled: true, allowJest: true }),
-        error: dlogError(ns + ':error'),
+        log: dlog(ns),
+        info: makeDlog(debug(ns), 'info', { defaultEnabled: true, allowJest: true }),
+        error: dlogError(ns),
     }
 }
