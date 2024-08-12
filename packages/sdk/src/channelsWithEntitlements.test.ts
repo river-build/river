@@ -17,7 +17,7 @@ import {
     getXchainSupportedRpcUrlsForTesting,
     erc20CheckOp,
     customCheckOp,
-    ethBalanceCheckOp,
+    nativeCoinBalanceCheckOp,
 } from './util.test'
 import { MembershipOp } from '@river-build/proto'
 import { makeUserStreamId } from './id'
@@ -1117,8 +1117,8 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('eth balance gate pass', async () => {
-        const ruleData = treeToRuleData(ethBalanceCheckOp(oneEth))
+    test('native coin balance gate pass', async () => {
+        const ruleData = treeToRuleData(nativeCoinBalanceCheckOp(oneEth))
 
         const { alice, bob, alicesWallet, aliceSpaceDapp, spaceId, channelId } =
             await setupChannelWithCustomRole([], ruleData)
@@ -1137,8 +1137,8 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('eth balance gate fail', async () => {
-        const ruleData = treeToRuleData(ethBalanceCheckOp(oneEth))
+    test('native coin balance gate fail', async () => {
+        const ruleData = treeToRuleData(nativeCoinBalanceCheckOp(oneEth))
 
         const { alice, bob, alicesWallet, aliceSpaceDapp, spaceId, channelId } =
             await setupChannelWithCustomRole([], ruleData)
@@ -1155,8 +1155,8 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('eth balance gate join pass - join as root, linked wallet entitled', async () => {
-        const ruleData = treeToRuleData(ethBalanceCheckOp(oneEth))
+    test('native coin balance gate join pass - join as root, linked wallet entitled', async () => {
+        const ruleData = treeToRuleData(nativeCoinBalanceCheckOp(oneEth))
         const {
             alice,
             bob,
@@ -1194,8 +1194,8 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('eth balance gated join pass - join as linked wallet, assets in root wallet', async () => {
-        const ruleData = treeToRuleData(ethBalanceCheckOp(oneEth))
+    test('native coin balance gated join pass - join as linked wallet, assets in root wallet', async () => {
+        const ruleData = treeToRuleData(nativeCoinBalanceCheckOp(oneEth))
         const {
             alice,
             bob,
@@ -1227,8 +1227,8 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('eth balance gate join pass - assets across wallets', async () => {
-        const ruleData = treeToRuleData(ethBalanceCheckOp(oneEth))
+    test('native coin balance gate join pass - assets across wallets', async () => {
+        const ruleData = treeToRuleData(nativeCoinBalanceCheckOp(oneEth))
         const {
             alice,
             bob,
@@ -1259,8 +1259,8 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('eth balance gate join fail - insufficient assets across wallets', async () => {
-        const ruleData = treeToRuleData(ethBalanceCheckOp(twoEth))
+    test('native coin balance gate join fail - insufficient assets across wallets', async () => {
+        const ruleData = treeToRuleData(nativeCoinBalanceCheckOp(twoEth))
         const {
             alice,
             bob,

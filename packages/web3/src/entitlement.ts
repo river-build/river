@@ -39,6 +39,27 @@ export enum CheckOperationType {
     NATIVE_COIN_BALANCE,
 }
 
+function checkOpString(operation: CheckOperationType): string {
+    switch (operation) {
+        case CheckOperationType.NONE:
+            return 'NONE'
+        case CheckOperationType.MOCK:
+            return 'MOCK'
+        case CheckOperationType.ERC20:
+            return 'ERC20'
+        case CheckOperationType.ERC721:
+            return 'ERC721'
+        case CheckOperationType.ERC1155:
+            return 'ERC1155'
+        case CheckOperationType.ISENTITLED:
+            return 'ISENTITLED'
+        case CheckOperationType.NATIVE_COIN_BALANCE:
+            return 'NATIVE_COIN_BALANCE'
+        default:
+            return 'UNKNOWN'
+    }
+}
+
 // Enum for Operation oneof operation_clause
 export enum LogicalOperationType {
     NONE = 0,
@@ -447,6 +468,39 @@ async function evaluateCheckOperation(
         case CheckOperationType.MOCK: {
             return evaluateMockOperation(operation, controller)
         }
+        case CheckOperationType.NONE:
+            throw new Error('Unknown check operation type')
+        default:
+    }
+
+    if (operation.chainId < 0n) {
+        throw new Error(
+            `Invalid chain id for check operation ${checkOpString(operation.checkType)}`,
+        )
+    }
+
+    if (
+        operation.checkType !== CheckOperationType.NATIVE_COIN_BALANCE &&
+        operation.contractAddress === zeroAddress
+    ) {
+        throw new Error('Invalid contract address for check operation NATIVE_COIN_BALANCE')
+    }
+
+    if (
+        operation.checkType in
+        [
+            CheckOperationType.ERC20,
+            CheckOperationType.ERC721,
+            CheckOperationType.ERC1155,
+            CheckOperationType.NATIVE_COIN_BALANCE,
+        ]
+    ) {
+        if (operation.threshold <= 0n) {
+            throw new Error(`Invalid threshold for check operation ${operation.checkType}`)
+        }
+    }
+
+    switch (operation.checkType) {
         case CheckOperationType.ISENTITLED: {
             await Promise.all(providers.map((p) => p.ready))
             const provider = findProviderFromChainId(providers, operation.chainId)
@@ -494,7 +548,6 @@ async function evaluateCheckOperation(
         }
         case CheckOperationType.ERC1155:
             throw new Error('CheckOperationType.ERC1155 not implemented')
-        case CheckOperationType.NONE:
         default:
             throw new Error('Unknown check operation type')
     }

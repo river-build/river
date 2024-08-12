@@ -298,26 +298,17 @@ const nativeCoinBalance0_1Eth_Sepolia: CheckOperation = {
 }
 
 const nativeCoinBalance0_2Eth_Sepolia: CheckOperation = {
-    opType: OperationType.CHECK,
-    checkType: CheckOperationType.NATIVE_COIN_BALANCE,
-    chainId: ethereumSepoliaChainId,
-    contractAddress: ethers.constants.AddressZero,
+    ...nativeCoinBalance0_1Eth_Sepolia,
     threshold: 200_000_000_000_000_000n,
 }
 
 const nativeCoinBalance0_21Eth_Sepolia: CheckOperation = {
-    opType: OperationType.CHECK,
-    checkType: CheckOperationType.NATIVE_COIN_BALANCE,
-    chainId: ethereumSepoliaChainId,
-    contractAddress: ethers.constants.AddressZero,
+    ...nativeCoinBalance0_1Eth_Sepolia,
     threshold: 210_000_000_000_000_000n,
 }
 
 const nativeCoinBalance0_3Eth_Sepolia: CheckOperation = {
-    opType: OperationType.CHECK,
-    checkType: CheckOperationType.NATIVE_COIN_BALANCE,
-    chainId: ethereumSepoliaChainId,
-    contractAddress: ethers.constants.AddressZero,
+    ...nativeCoinBalance0_1Eth_Sepolia,
     threshold: 300_000_000_000_000_000n,
 }
 
@@ -330,26 +321,17 @@ const nativeCoinBalance0_4Eth_BaseSepolia: CheckOperation = {
 }
 
 const nativeCoinBalance0_5Eth_BaseSepolia: CheckOperation = {
-    opType: OperationType.CHECK,
-    checkType: CheckOperationType.NATIVE_COIN_BALANCE,
-    chainId: baseSepoliaChainId,
-    contractAddress: ethers.constants.AddressZero,
+    ...nativeCoinBalance0_4Eth_BaseSepolia,
     threshold: 500_000_000_000_000_000n,
 }
 
 const nativeCoinBalance0_52Eth_BaseSepolia: CheckOperation = {
-    opType: OperationType.CHECK,
-    checkType: CheckOperationType.NATIVE_COIN_BALANCE,
-    chainId: baseSepoliaChainId,
-    contractAddress: ethers.constants.AddressZero,
+    ...nativeCoinBalance0_4Eth_BaseSepolia,
     threshold: 520_000_000_000_000_000n,
 }
 
 const nativeCoinBalance0_6Eth_BaseSepolia: CheckOperation = {
-    opType: OperationType.CHECK,
-    checkType: CheckOperationType.NATIVE_COIN_BALANCE,
-    chainId: baseSepoliaChainId,
-    contractAddress: ethers.constants.AddressZero,
+    ...nativeCoinBalance0_4Eth_BaseSepolia,
     threshold: 600_000_000_000_000_000n,
 }
 
@@ -600,6 +582,98 @@ test.each(erc20Cases)('erc20Check - $desc', async (props) => {
     } else {
         expect(result).toEqual(zeroAddress)
     }
+})
+
+const errorTests = [
+    {
+        desc: 'erc20 invalid check (chainId)',
+        check: {
+            ...erc20ChainLinkCheckBaseSepolia_20Tokens,
+            chainId: -1n,
+        },
+        error: 'Invalid chain id for check operation ERC20',
+    },
+    {
+        desc: 'erc20 invalid check (threshold)',
+        check: {
+            ...erc20ChainLinkCheckBaseSepolia_20Tokens,
+            threshold: -1n,
+        },
+    },
+    {
+        desc: 'erc20 invalid check (contractAddress)',
+        check: {
+            ...erc20ChainLinkCheckBaseSepolia_20Tokens,
+            contractAddress: ethers.constants.AddressZero as Address,
+        },
+    },
+    {
+        desc: 'erc721 invalid check (chainId)',
+        check: {
+            ...nftCheckBaseSepolia,
+            opType: OperationType.CHECK,
+            chainId: -1n,
+        },
+    },
+    {
+        desc: 'erc721 invalid check (threshold)',
+        check: {
+            ...nftCheckBaseSepolia,
+            opType: OperationType.CHECK,
+            threshold: -1n,
+        },
+    },
+    {
+        desc: 'erc721 invalid check (contractAddress)',
+        check: {
+            ...nftCheckBaseSepolia,
+            opType: OperationType.CHECK,
+            contractAddress: ethers.constants.AddressZero as Address,
+        },
+    },
+    {
+        desc: 'custom entitlement invalid check (contractAddress)',
+        check: {
+            opType: OperationType.CHECK,
+            checkType: CheckOperationType.ISENTITLED,
+            chainId: 1n,
+            threshold: 1n,
+            contractAddress: ethers.constants.AddressZero as Address,
+        },
+    },
+    {
+        desc: 'custom entitlement invalid check (chainId)',
+        check: {
+            opType: OperationType.CHECK,
+            checkType: CheckOperationType.ISENTITLED,
+            chainId: -1n,
+            threshold: 1n,
+            contractAddress: nftCheckBaseSepolia.contractAddress,
+        },
+    },
+    {
+        desc: 'erc 1155 invalid check (contractAddress)',
+        check: {
+            opType: OperationType.CHECK,
+            checkType: CheckOperationType.ERC1155,
+            chainId: 1n,
+            threshold: 1n,
+            contractAddress: ethers.constants.AddressZero as Address,
+        },
+    },
+]
+
+test.each(errorTests)('error - $desc', async (props) => {
+    const { check, error } = props
+    const controller = new AbortController()
+    await expect(
+        evaluateTree(
+            controller,
+            [SepoliaTestNftWallet_1Token],
+            [ethSepoliaProvider],
+            check as CheckOperation,
+        ),
+    ).rejects.toThrow(error)
 })
 
 /*

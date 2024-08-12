@@ -16,7 +16,7 @@ import {
     getXchainSupportedRpcUrlsForTesting,
     erc20CheckOp,
     customCheckOp,
-    ethBalanceCheckOp,
+    nativeCoinBalanceCheckOp,
     oneEth,
     twoEth,
     threeEth,
@@ -1131,7 +1131,7 @@ describe('spaceWithEntitlements', () => {
     })
 
     test('ethBalanceGateJoinPass', async () => {
-        const ruleData = treeToRuleData(ethBalanceCheckOp(oneEth))
+        const ruleData = treeToRuleData(nativeCoinBalanceCheckOp(oneEth))
 
         const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId, channelId } =
             await createTownWithRequirements({
@@ -1160,7 +1160,7 @@ describe('spaceWithEntitlements', () => {
     })
 
     test('ethBalanceGateJoinFail', async () => {
-        const ruleData = treeToRuleData(ethBalanceCheckOp(oneEth))
+        const ruleData = treeToRuleData(nativeCoinBalanceCheckOp(oneEth))
 
         const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId } =
             await createTownWithRequirements({
@@ -1194,7 +1194,7 @@ describe('spaceWithEntitlements', () => {
     })
 
     test('eth balance gate join pass - join as root, linked wallet entitled', async () => {
-        const ruleData = treeToRuleData(ethBalanceCheckOp(threeEth))
+        const ruleData = treeToRuleData(nativeCoinBalanceCheckOp(threeEth))
         const {
             alice,
             bob,
@@ -1237,7 +1237,7 @@ describe('spaceWithEntitlements', () => {
     })
 
     test('eth balance gated join pass - join as linked wallet, assets in root wallet', async () => {
-        const ruleData = treeToRuleData(ethBalanceCheckOp(oneEth))
+        const ruleData = treeToRuleData(nativeCoinBalanceCheckOp(oneEth))
         const {
             alice,
             bob,
@@ -1282,7 +1282,7 @@ describe('spaceWithEntitlements', () => {
     })
 
     test('eth balance gate join fail - insufficient assets across wallets', async () => {
-        const ruleData = treeToRuleData(ethBalanceCheckOp(threeEth))
+        const ruleData = treeToRuleData(nativeCoinBalanceCheckOp(threeEth))
         const {
             alice,
             bob,

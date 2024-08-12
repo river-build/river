@@ -158,7 +158,7 @@ export const oneEth = BigInt(1e18)
 export const threeEth = BigInt(3e18)
 export const oneHalfEth = BigInt(5e17)
 
-export function ethBalanceCheckOp(threshold: bigint): Operation {
+export function nativeCoinBalanceCheckOp(threshold: bigint): Operation {
     return {
         opType: OperationType.CHECK,
         checkType: CheckOperationType.NATIVE_COIN_BALANCE,
