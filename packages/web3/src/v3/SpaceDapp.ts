@@ -32,6 +32,7 @@ import { RuleEntitlementShim } from './RuleEntitlementShim'
 import { PlatformRequirements } from './PlatformRequirements'
 import { EntitlementDataStructOutput } from './IEntitlementDataQueryableShim'
 import { CacheResult, EntitlementCache, Keyable } from '../EntitlementCache'
+import { ILegacyArchitectBase } from './ILegacySpaceArchitectShim'
 
 const logger = dlogger('csb:SpaceDapp:debug')
 
@@ -241,7 +242,7 @@ export class SpaceDapp implements ISpaceDapp {
         const spaceInfo = {
             name: params.spaceName,
             uri: params.uri,
-            membership: params.membership as any,
+            membership: params.membership,
             channel: {
                 metadata: params.channelName || '',
             },
@@ -249,7 +250,7 @@ export class SpaceDapp implements ISpaceDapp {
             longDescription: params.longDescription ?? '',
         }
         return wrapTransaction(
-            () => this.spaceRegistrar.SpaceArchitect.write(signer).createSpace(spaceInfo),
+            () => this.spaceRegistrar.LegacySpaceArchitect.write(signer).createSpace(spaceInfo),
             txnOpts,
         )
     }

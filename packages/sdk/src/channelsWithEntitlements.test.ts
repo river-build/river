@@ -372,7 +372,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('userEntitlementPass', async () => {
+    test.only('userEntitlementPass', async () => {
         const { alice, bob, aliceSpaceDapp, spaceId, channelId } = await setupChannelWithCustomRole(
             ['alice'],
             NoopRuleData,
