@@ -32,7 +32,6 @@ import { RuleEntitlementShim } from './RuleEntitlementShim'
 import { PlatformRequirements } from './PlatformRequirements'
 import { EntitlementDataStructOutput } from './IEntitlementDataQueryableShim'
 import { CacheResult, EntitlementCache, Keyable } from '../EntitlementCache'
-import { ILegacyArchitectBase } from './ILegacySpaceArchitectShim'
 
 const logger = dlogger('csb:SpaceDapp:debug')
 
