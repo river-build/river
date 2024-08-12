@@ -107,6 +107,18 @@ interface IRuleEntitlementBase {
     CheckOperationV2[] checkOperations;
     LogicalOperation[] logicalOperations;
   }
+
+  struct Entitlement {
+    address grantedBy;
+    uint256 grantedTime;
+    RuleData data;
+  }
+
+  struct EntitlementV2 {
+    address grantedBy;
+    uint256 grantedTime;
+    bytes data;
+  }
 }
 
 interface IRuleEntitlementV2 is IRuleEntitlementBase, IEntitlement {

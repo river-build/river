@@ -1,5 +1,6 @@
 import { Wallet } from 'ethers'
 import { StressClient } from '../../utils/stressClient'
+import { IStorage } from '../../utils/storage'
 
 export interface ChatConfig {
     containerIndex: number
@@ -12,6 +13,8 @@ export interface ChatConfig {
     sessionId: string
     spaceId: string
     announceChannelId: string
+    kickoffMessageEventId: string | undefined
+    countClientsMessageEventId: string | undefined
     channelIds: string[]
     allWallets: Wallet[]
     randomClientsCount: number
@@ -24,4 +27,5 @@ export interface ChatConfig {
     startedAtMs: number
     waitForSpaceMembershipTimeoutMs: number
     waitForChannelDecryptionTimeoutMs: number
+    globalPersistedStore: IStorage | undefined
 }
