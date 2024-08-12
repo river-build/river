@@ -163,27 +163,32 @@ contract EntitlementChecker is IEntitlementChecker, Facet {
   /**
    * @notice Get the nodes registered by an operator
    * @param operator The address of the operator
-   * @return nodes An array of node addresses
+   * @return An array of node addresses
    */
   function getNodesByOperator(
     address operator
-  ) external view returns (address[] memory nodes) {
+  ) external view returns (address[] memory) {
     EntitlementCheckerStorage.Layout storage layout = EntitlementCheckerStorage
       .layout();
     uint256 totalNodeCount = layout.nodes.length();
-    nodes = new address[](totalNodeCount);
-    uint256 nodeCount;
-    for (uint256 i; i < totalNodeCount; ++i) {
+    uint256 nodeCount = 0;
+    for (uint256 i = 0; i < totalNodeCount; i++) {
       address node = layout.nodes.at(i);
       if (layout.operatorByNode[node] == operator) {
-        unchecked {
-          nodes[nodeCount++] = node;
-        }
+        nodeCount++;
       }
     }
-    assembly ("memory-safe") {
-      mstore(nodes, nodeCount) // Update the length of the array
+    address[] memory nodes = new address[](nodeCount);
+    uint256 j = 0;
+    for (uint256 i = 0; i < totalNodeCount; i++) {
+      address node = layout.nodes.at(i);
+      if (layout.operatorByNode[node] == operator) {
+        nodes[j] = node;
+        j++;
+      }
     }
+
+    return nodes;
   }
 
   // =============================================================
@@ -204,18 +209,16 @@ contract EntitlementChecker is IEntitlementChecker, Facet {
     address[] memory randomNodes = new address[](count);
     uint256[] memory indices = new uint256[](nodeCount);
 
-    for (uint256 i; i < nodeCount; ++i) {
+    for (uint256 i = 0; i < nodeCount; i++) {
       indices[i] = i;
     }
 
-    unchecked {
-      for (uint256 i; i < count; ++i) {
-        // Adjust random function to generate within range 0 to n-1
-        uint256 rand = _pseudoRandom(i, nodeCount);
-        randomNodes[i] = layout.nodes.at(indices[rand]);
-        // Move the last element to the used slot and reduce the pool size
-        indices[rand] = indices[--nodeCount];
-      }
+    uint256 n = nodeCount;
+    for (uint256 i = 0; i < count; i++) {
+      uint256 rand = _pseudoRandom(i, n); // Adjust random function to generate within range 0 to n-1
+      randomNodes[i] = layout.nodes.at(indices[rand]);
+      indices[rand] = indices[n - 1]; // Move the last element to the used slot
+      n--; // Reduce the pool size
     }
     return randomNodes;
   }
@@ -228,7 +231,7 @@ contract EntitlementChecker is IEntitlementChecker, Facet {
     return
       uint256(
         keccak256(
-          abi.encode(block.prevrandao, block.timestamp, seed, msg.sender)
+          abi.encodePacked(block.prevrandao, block.timestamp, seed, msg.sender)
         )
       ) % nodeCount;
   }
