@@ -279,9 +279,6 @@ func (r *transactionPool) LastReplacementTransactionUnix() int64 {
 }
 
 func (r *transactionPool) EstimateGas(ctx context.Context, createTx CreateTransaction) (uint64, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
 	opts := &bind.TransactOpts{
 		From:    r.wallet.Address,
 		Nonce:   new(big.Int).SetUint64(0),
