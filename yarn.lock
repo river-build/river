@@ -10325,30 +10325,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fetch-image@workspace:services/fetch-image":
-  version: 0.0.0-use.local
-  resolution: "fetch-image@workspace:services/fetch-image"
-  dependencies:
-    "@bufbuild/buf": ^1.32.0
-    "@bufbuild/protobuf": ^1.9.0
-    "@connectrpc/connect-web": ^1.4.0
-    "@fastify/cors": ^9.0.1
-    "@river-build/generated": "workspace:^"
-    "@river-build/proto": "workspace:^"
-    "@river-build/sdk": "workspace:^"
-    "@types/node": ^20.5.0
-    dotenv: ^16.4.5
-    esbuild: ^0.21.5
-    ethers: ^5.7.2
-    fastify: ^4.28.1
-    magic-bytes.js: ^1.10.0
-    rollup: ^4.18.1
-    ts-node: ^10.9.1
-    typescript: ^5.1.6
-    viem: ^1.18.2
-  languageName: unknown
-  linkType: soft
-
 "fflate@npm:^0.8.2":
   version: 0.8.2
   resolution: "fflate@npm:0.8.2"
@@ -18428,6 +18404,30 @@ __metadata:
   checksum: c9b78453aeb0c84fcc59555518ac62bacab9fa98e323e7b7666e5f9f58af8f3155e34481078509b02929bd1268427f664d186604cdccee95abc446099b339f83
   languageName: node
   linkType: hard
+
+"stream-metadata@workspace:packages/stream-metadata":
+  version: 0.0.0-use.local
+  resolution: "stream-metadata@workspace:packages/stream-metadata"
+  dependencies:
+    "@bufbuild/buf": ^1.32.0
+    "@bufbuild/protobuf": ^1.9.0
+    "@connectrpc/connect-web": ^1.4.0
+    "@fastify/cors": ^9.0.1
+    "@river-build/generated": "workspace:^"
+    "@river-build/proto": "workspace:^"
+    "@river-build/sdk": "workspace:^"
+    "@types/node": ^20.5.0
+    dotenv: ^16.4.5
+    esbuild: ^0.21.5
+    ethers: ^5.7.2
+    fastify: ^4.28.1
+    magic-bytes.js: ^1.10.0
+    rollup: ^4.18.1
+    ts-node: ^10.9.1
+    typescript: ^5.1.6
+    viem: ^1.18.2
+  languageName: unknown
+  linkType: soft
 
 "stream-shift@npm:^1.0.0":
   version: 1.0.3

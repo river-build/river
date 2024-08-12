@@ -143,6 +143,9 @@ export interface DLogOpts {
 const allDlogs: Map<string, DLogger> = new Map()
 
 const isDev = typeof process !== 'undefined' && process.env.NODE_ENV !== 'production'
+// github#722
+const isSingleLineLogsMode =
+    typeof process !== 'undefined' && process.env.SINGLE_LINE_LOGS === 'true'
 
 export const winstonLogger = createLogger({
     exitOnError: false,
@@ -214,14 +217,14 @@ const makeDlog = (d: Debugger, level: 'debug' | 'info' | 'error', opts?: DLogOpt
                 newArgs.push(c)
             } else if (typeof c === 'object' && c !== null) {
                 if (c instanceof Error) {
-                    isDev ? fmt.push('%O\n') : fmt.push('%o\n')
+                    isSingleLineLogsMode ? fmt.push('%o\n') : fmt.push('%O\n')
                     tailArgs.push(c)
                 } else {
-                    isDev ? fmt.push('%O\n') : fmt.push('%o\n')
+                    isSingleLineLogsMode ? fmt.push('%o\n') : fmt.push('%O\n')
                     newArgs.push(cloneAndFormat(c, { shortenHex: true }))
                 }
             } else {
-                isDev ? fmt.push('%O ') : fmt.push('%o ')
+                isSingleLineLogsMode ? fmt.push('%o ') : fmt.push('%O ')
                 newArgs.push(c)
             }
         }

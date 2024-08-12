@@ -30,6 +30,7 @@ if [ -z "$DEBUG" ]; then
     export DEBUG="stress:*"
 fi
 export DEBUG_DEPTH="${DEBUG_DEPTH:-10}"
+export SINGLE_LINE_LOGS="true"
 # stride 
 export CONTAINER_INDEX="${CONTAINER_INDEX:-0}"
 export CONTAINER_COUNT="${CONTAINER_COUNT:-1}"
