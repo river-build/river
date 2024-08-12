@@ -15,7 +15,8 @@ const server = Fastify({
 	logger: true,
 })
 
-server.register(cors, {
+// TODO: get back to this, see how to handle this promise-like object
+void server.register(cors, {
 	origin: '*', // Allow any origin
 	methods: ['GET'], // Allowed HTTP methods
 })
@@ -51,8 +52,8 @@ function getServerInfo() {
 }
 
 // Type guard to check if error has code property
-function isAddressInUseError(err: any): err is NodeJS.ErrnoException {
-	return err && typeof err === 'object' && 'code' in err
+function isAddressInUseError(err: unknown): err is NodeJS.ErrnoException {
+	return err instanceof Error && 'code' in err && err.code === 'EADDRINUSE'
 }
 
 // Function to start the server on the first available port
@@ -64,9 +65,9 @@ async function startServer(port: number) {
 			server.log.info(`Server listening on ${addressInfo.address}:${addressInfo.port}`)
 		}
 	} catch (err) {
-		if (isAddressInUseError(err) && err.code === 'EADDRINUSE') {
+		if (isAddressInUseError(err)) {
 			server.log.warn(`Port ${port} is in use, trying port ${port + 1}`)
-			startServer(port + 1) // Try the next port
+			await startServer(port + 1) // Try the next port
 		} else {
 			server.log.error(err)
 			process.exit(1)
@@ -87,3 +88,10 @@ process.on('SIGTERM', async () => {
 
 // Start the server on the port set in the .env, or the next available port
 startServer(SERVER_PORT)
+	.then(() => {
+		console.log('Server started')
+	})
+	.catch((err) => {
+		console.error('Error starting server', err)
+		process.exit(1)
+	})
