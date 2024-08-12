@@ -23,6 +23,7 @@
 		"ethers": "^5.7.2",
 		"fastify": "^4.28.1",
 		"magic-bytes.js": "^1.10.0",
+		"pino": "^8.17.1",
 		"viem": "^1.18.2"
 	},
 	"devDependencies": {
