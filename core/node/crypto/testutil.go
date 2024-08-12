@@ -457,6 +457,7 @@ func makeTestBlockchain(
 		client,
 		nil,
 		infra.NewMetricsFactory(nil, "", ""),
+		nil,
 	)
 	if err != nil {
 		panic(err)
@@ -503,7 +504,11 @@ func (c *BlockchainTestContext) InitNodeRecordEx(ctx context.Context, index int,
 		return err
 	}
 
-	receipt := <-pendingTx.Wait()
+	receipt, err := pendingTx.Wait(ctx)
+	if err != nil {
+		return err
+	}
+
 	if receipt.Status != TransactionResultSuccess {
 		return fmt.Errorf("InitNodeRecordEx transaction failed")
 	}
@@ -528,7 +533,11 @@ func (c *BlockchainTestContext) UpdateNodeStatus(ctx context.Context, index int,
 		return err
 	}
 
-	receipt := <-pendingTx.Wait()
+	receipt, err := pendingTx.Wait(ctx)
+	if err != nil {
+		return err
+	}
+
 	if receipt.Status != TransactionResultSuccess {
 		return fmt.Errorf("UpdateNodeStatus transaction failed")
 	}
@@ -553,7 +562,10 @@ func (c *BlockchainTestContext) UpdateNodeUrl(ctx context.Context, index int, ur
 		return err
 	}
 
-	receipt := <-pendingTx.Wait()
+	receipt, err := pendingTx.Wait(ctx)
+	if err != nil {
+		return err
+	}
 	if receipt.Status != TransactionResultSuccess {
 		return fmt.Errorf("UpdateNodeStatus transaction failed")
 	}
@@ -592,7 +604,8 @@ func (c *BlockchainTestContext) SetConfigValue(t *testing.T, ctx context.Context
 		},
 	)
 	require.NoError(t, err)
-	receipt := <-pendingTx.Wait()
+	receipt, err := pendingTx.Wait(ctx)
+	require.NoError(t, err)
 	require.Equal(t, TransactionResultSuccess, receipt.Status)
 
 	require.EventuallyWithT(
