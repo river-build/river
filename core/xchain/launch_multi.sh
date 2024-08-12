@@ -7,7 +7,7 @@ cd "$(dirname "$0")"
 : ${RUN_ENV:?}
 
 RUN_FILES_DIR="../run_files"
-BASE_DIR="${RUN_FILES_DIR}/${RUN_ENV}/xchain"
+BASE_DIR="${RUN_FILES_DIR}/${RUN_ENV}"
 mkdir -p "${BASE_DIR}"
 
 SCRIPT_PID_FILE="${BASE_DIR}/launch_multi.pid"
@@ -21,16 +21,15 @@ echo $$ > "$SCRIPT_PID_FILE"
 make build
 
 # Get number of instances by counting instance directories
-N=$(ls -d ${BASE_DIR}/instance_* 2>/dev/null | wc -l)
+N=$(ls -d ${BASE_DIR}/[0-9]* 2>/dev/null | wc -l)
 
 # Function to handle Ctrl+C and wait for the child processes
 cleanup() {
   echo "Sending SIGINT to child processes..."
 
-  for (( i=1; i<=N; i++ ))
+  for (( i=0; i<N; i++ ))
   do
-    instance_dir="${BASE_DIR}/instance_${i}"
-
+    instance_dir=$(printf "${BASE_DIR}/%02d" $i)
     if [[ -f "${instance_dir}/node.pid" ]]; then
       pid=$(cat "${instance_dir}/node.pid")
       echo "Waiting on in ${instance_dir} with PID $pid has completed."
@@ -57,13 +56,12 @@ else
 fi
 
 # Loop to launch N instances from instance directories
-for (( i=1; i<=N; i++ ))
+for (( i=0; i<N; i++ ))
 do
-  INSTANCE_DIR="${BASE_DIR}/instance_${i}"
-  cp ../run_files/bin/river_node "${INSTANCE_DIR}/bin/river_node"
+  INSTANCE_DIR=$(printf "${BASE_DIR}/%02d" $i)
   pushd "${INSTANCE_DIR}"
 
-  ./bin/river_node --config ../../common.yaml --config ../../contracts.env --config ../../config.yaml --config config/config.yaml run xchain &
+  ../bin/river_node --config ../common.yaml --config ../contracts.env --config ../config.yaml --config config/config.env run xchain &
   node_pid=$!
   pwd
   echo $node_pid > node.pid
