@@ -1,4 +1,4 @@
-import { Address, StreamIdHex } from './types'
+import { StreamIdHex } from './types'
 import { FastifyReply, FastifyRequest } from 'fastify'
 import { StreamPrefix, StreamStateView, makeStreamId } from '@river-build/sdk'
 import { getMediaStreamContent, getStream } from './riverStreamRpcClient'
@@ -56,9 +56,7 @@ export async function handleImageRequest(request: FastifyRequest, reply: Fastify
 	}
 }
 
-async function getSpaceImage(
-	streamView: StreamStateView,
-): Promise<ChunkedMedia | undefined> {
+async function getSpaceImage(streamView: StreamStateView): Promise<ChunkedMedia | undefined> {
 	if (streamView.contentKind !== 'spaceContent') {
 		return undefined
 	}
