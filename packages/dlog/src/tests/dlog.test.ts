@@ -5,8 +5,6 @@
 import { dlog, dlogError } from '../dlog'
 import debug from 'debug'
 import { bin_fromHexString } from '../binary'
-import { CodeException } from '../check'
-import { Err } from '@river-build/proto'
 
 describe('dlogTest', () => {
     test('basic', () => {
