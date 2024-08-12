@@ -2,7 +2,7 @@ import NodeRegistryAbi from '@river-build/generated/dev/abis/NodeRegistry.abi'
 import StreamRegistryAbi from '@river-build/generated/dev/abis/StreamRegistry.abi'
 
 import { Address } from './types'
-import { config } from './environment'
+import { config } from './config'
 
 export function getNodeRegistryAbi() {
 	return NodeRegistryAbi

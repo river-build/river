@@ -3,7 +3,7 @@ import { Server as HTTPSServer } from 'https'
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 
-import { SERVER_PORT } from './environment'
+import { config } from './config'
 import { handleImageRequest } from './handleImageRequest'
 import { handleMetadataRequest } from './handleMetadataRequest'
 
@@ -87,7 +87,7 @@ process.on('SIGTERM', async () => {
 })
 
 // Start the server on the port set in the .env, or the next available port
-startServer(SERVER_PORT)
+startServer(config.port)
 	.then(() => {
 		console.log('Server started')
 	})

@@ -2,5 +2,8 @@
 	"root": true,
 	"extends": ["@river-build/eslint-config/typescript"],
 	"parser": "@typescript-eslint/parser",
-	"parserOptions": { "project": ["./tsconfig.json"] }
+	"parserOptions": { "project": ["./tsconfig.json"] },
+	"rules": {
+		"no-process-env": "error"
+	}
 }

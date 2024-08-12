@@ -6,7 +6,9 @@
 	"main": "dist/node.cjs",
 	"type": "module",
 	"scripts": {
-		"build": "node ./esbuild.config.mjs",
+		"typecheck": "tsc --noEmit",
+		"compile": "node ./esbuild.config.mjs",
+		"build": "yarn typecheck && yarn compile",
 		"lint": "eslint . --ext .ts",
 		"dev": "yarn build && NODE_ENV=development node --experimental-detect-module ./dist/node_esbuild.cjs",
 		"prettier": "prettier --config ../../packages/prettier-config/config.js --ignore-path .prettierignore .",
@@ -26,7 +28,9 @@
 		"fastify": "^4.28.1",
 		"magic-bytes.js": "^1.10.0",
 		"pino": "^8.17.1",
-		"viem": "^1.18.2"
+		"pino-pretty": "^10.2.3",
+		"viem": "^1.18.2",
+		"zod": "^3.21.4"
 	},
 	"devDependencies": {
 		"@river-build/eslint-config": "workspace:^",
