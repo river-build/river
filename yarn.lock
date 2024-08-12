@@ -18275,16 +18275,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"stream-shift@npm:^1.0.0":
-  version: 1.0.3
-  resolution: "stream-shift@npm:1.0.3"
-  checksum: a24c0a3f66a8f9024bd1d579a533a53be283b4475d4e6b4b3211b964031447bdf6532dd1f3c2b0ad66752554391b7c62bd7ca4559193381f766534e723d50242
-  languageName: node
-  linkType: hard
-
-"stream=metadata@workspace:packages/stream-metadata":
+"stream-metadata@workspace:packages/stream-metadata":
   version: 0.0.0-use.local
-  resolution: "stream=metadata@workspace:packages/stream-metadata"
+  resolution: "stream-metadata@workspace:packages/stream-metadata"
   dependencies:
     "@bufbuild/buf": ^1.32.0
     "@bufbuild/protobuf": ^1.9.0
@@ -18305,6 +18298,13 @@ __metadata:
     viem: ^1.18.2
   languageName: unknown
   linkType: soft
+
+"stream-shift@npm:^1.0.0":
+  version: 1.0.3
+  resolution: "stream-shift@npm:1.0.3"
+  checksum: a24c0a3f66a8f9024bd1d579a533a53be283b4475d4e6b4b3211b964031447bdf6532dd1f3c2b0ad66752554391b7c62bd7ca4559193381f766534e723d50242
+  languageName: node
+  linkType: hard
 
 "strict-uri-encode@npm:^2.0.0":
   version: 2.0.0
