@@ -1,6 +1,7 @@
-import { Address } from './types'
 import NodeRegistryAbi from '@river-build/generated/dev/abis/NodeRegistry.abi'
 import StreamRegistryAbi from '@river-build/generated/dev/abis/StreamRegistry.abi'
+
+import { Address } from './types'
 import { config } from './environment'
 
 export function getNodeRegistryAbi() {

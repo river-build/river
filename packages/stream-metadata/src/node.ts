@@ -1,7 +1,9 @@
-import Fastify from 'fastify'
 import { Server as HTTPSServer } from 'https'
-import { SERVER_PORT } from './environment'
+
+import Fastify from 'fastify'
 import cors from '@fastify/cors'
+
+import { SERVER_PORT } from './environment'
 import { handleImageRequest } from './handleImageRequest'
 import { handleMetadataRequest } from './handleMetadataRequest'
 

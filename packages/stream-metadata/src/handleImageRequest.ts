@@ -1,10 +1,11 @@
 import { FastifyReply, FastifyRequest } from 'fastify'
-import { StreamPrefix, StreamStateView, makeStreamId } from '@river-build/sdk'
+import { StreamPrefix, StreamStateView, makeStreamId, deriveKeyAndIV } from '@river-build/sdk'
+
+import { StreamIdHex } from './types'
 import { getMediaStreamContent, getStream } from './riverStreamRpcClient'
 import { isBytes32String, isValidEthereumAddress } from './validators'
 
 import { ChunkedMedia } from '@river-build/proto'
-import { StreamIdHex } from './types'
 import { config } from './environment'
 
 export async function handleImageRequest(request: FastifyRequest, reply: FastifyReply) {

@@ -13,6 +13,7 @@ import { PromiseClient, createPromiseClient } from '@connectrpc/connect'
 import { BigNumber } from 'ethers'
 import { StreamService } from '@river-build/proto'
 import { filetypemime } from 'magic-bytes.js'
+
 import { getNodeForStream } from './streamRegistry'
 
 const clients = new Map<string, StreamRpcClient>()
