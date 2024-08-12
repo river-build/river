@@ -15,7 +15,7 @@ process.title = 'stream-metadata'
 const logger = getLogger('server')
 
 const server = Fastify({
-	logger: true,
+	logger,
 })
 
 async function registerPlugins() {
