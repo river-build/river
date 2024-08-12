@@ -31,13 +31,33 @@ contract MockEntitlementGated is EntitlementGated {
 
   function requestEntitlementCheck(
     uint256 roleId,
+    IRuleEntitlement.RuleData calldata ruleData
+  ) external returns (bytes32) {
+    ruleDatasByRoleId[roleId] = ruleData;
+    bytes32 transactionId = keccak256(
+      abi.encodePacked(tx.origin, block.number)
+    );
+    _requestEntitlementCheck(
+      transactionId,
+      IRuleEntitlement(address(this)),
+      roleId
+    );
+    return transactionId;
+  }
+
+  function requestEntitlementCheckV2(
+    uint256 roleId,
     IRuleEntitlement.RuleDataV2 calldata ruleData
   ) external returns (bytes32) {
     ruleDatasV2ByRoleId[roleId] = ruleData;
     bytes32 transactionId = keccak256(
       abi.encodePacked(tx.origin, block.number)
     );
-    _requestEntitlementCheck(transactionId, IRuleEntitlement(address(this)), 0);
+    _requestEntitlementCheck(
+      transactionId,
+      IRuleEntitlement(address(this)),
+      roleId
+    );
     return transactionId;
   }
 }
