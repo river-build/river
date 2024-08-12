@@ -76,7 +76,7 @@ describe('syncAgents.test.ts', () => {
         )
     })
 
-    test('syncAgent read and update displayName', async () => {
+    test('syncAgents read and update displayName', async () => {
         await Promise.all([bob.start(), alice.start()])
         await waitFor(() => bob.spaces.value.status === 'loaded')
         expect(bob.spaces.data.spaceIds.length).toBeGreaterThan(0)
@@ -85,7 +85,7 @@ describe('syncAgents.test.ts', () => {
         const space = bob.spaces.getSpace(spaceId)
 
         const member = space.members.getMember(bob.userId)
-        expect(member?.displayName).toBe('')
+        expect(member?.displayName).toBe(undefined)
         await member?.setDisplayName('Bob')
         expect(space.members.getMember(bob.userId)?.displayName).toBe('Bob')
 
@@ -99,7 +99,7 @@ describe('syncAgents.test.ts', () => {
         )
     })
 
-    test('syncAgent read and update username', async () => {
+    test('syncAgents read and update username', async () => {
         await Promise.all([bob.start(), alice.start()])
         await waitFor(() => bob.spaces.value.status === 'loaded')
         expect(bob.spaces.data.spaceIds.length).toBeGreaterThan(0)
@@ -108,7 +108,7 @@ describe('syncAgents.test.ts', () => {
         const space = bob.spaces.getSpace(spaceId)
 
         const member = space.members.getMember(bob.userId)
-        expect(member?.username).toBe('')
+        expect(member?.username).toBe(undefined)
         await member?.setUsername('bob')
         expect(space.members.getMember(bob.userId)?.username).toBe('bob')
 
@@ -123,7 +123,7 @@ describe('syncAgents.test.ts', () => {
         )
     })
 
-    test('syncAgent read and update ensAddress', async () => {
+    test('syncAgents read and update ensAddress', async () => {
         await Promise.all([bob.start(), alice.start()])
         await waitFor(() => bob.spaces.value.status === 'loaded')
         expect(bob.spaces.data.spaceIds.length).toBeGreaterThan(0)
@@ -148,7 +148,7 @@ describe('syncAgents.test.ts', () => {
         )
     })
 
-    test('syncAgent read and update nft', async () => {
+    test('syncAgents read and update nft', async () => {
         await Promise.all([bob.start(), alice.start()])
         await waitFor(() => bob.spaces.value.status === 'loaded')
         expect(bob.spaces.data.spaceIds.length).toBeGreaterThan(0)

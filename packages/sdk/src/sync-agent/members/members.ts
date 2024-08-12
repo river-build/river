@@ -1,4 +1,4 @@
-import { check } from '@river-build/dlog'
+import { check, dlogger } from '@river-build/dlog'
 import { isDefined } from '../../check'
 import { PersistedObservable, persistedObservable } from '../../observable/persistedObservable'
 import type { Store } from '../../store/store'
@@ -11,6 +11,7 @@ type MembersModel = {
     initialized: boolean
 }
 
+const logger = dlogger('csb:members')
 @persistedObservable({ tableName: 'members' })
 export class Members extends PersistedObservable<MembersModel> {
     private members: Map<string, Member>
@@ -67,7 +68,7 @@ export class Members extends PersistedObservable<MembersModel> {
         const userIds = Array.from(stream.view.getMembers().joined.values()).map(
             (member) => member.userId,
         )
-
+        logger.info('onStreamInitialized', { userIds })
         for (const userId of userIds) {
             this.members.set(userId, new Member(userId, streamId, this.riverConnection, this.store))
         }
