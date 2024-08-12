@@ -9,7 +9,7 @@ import { config } from './environment'
 
 // Set the process title to 'fetch-image' so it can be easily identified
 // or killed with `pkill fetch-image`
-process.title = 'fetch-image'
+process.title = 'stream-metadata'
 
 const server = Fastify({
 	logger: true,
