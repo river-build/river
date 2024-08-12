@@ -2,7 +2,7 @@
 set -euo pipefail
 cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")"
 
-: ${RUN_ENV:?} # values are single, single_ne, multi, multi_ne
+: ${RUN_ENV:?} # values are multi, multi_ne
 
 # check given env.env exists to validate RUN_ENV
 export ENV_PATH_BASE="../env/local"
