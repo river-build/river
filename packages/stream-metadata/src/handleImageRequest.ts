@@ -1,6 +1,5 @@
 import { FastifyReply, FastifyRequest } from 'fastify'
-import { StreamPrefix, StreamStateView, makeStreamId, deriveKeyAndIV } from '@river-build/sdk'
-
+import { StreamPrefix, StreamStateView, makeStreamId } from '@river-build/sdk'
 import { getMediaStreamContent, getStream } from './riverStreamRpcClient'
 import { isBytes32String, isValidEthereumAddress } from './validators'
 import { getLogger } from './logger'
