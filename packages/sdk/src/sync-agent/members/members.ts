@@ -27,14 +27,24 @@ export class Members extends PersistedObservable<MembersModel> {
             ) {
                 this.onStreamInitialized(this.data.id)
             }
-            client.on('streamNewUserJoined', this.onMemberJoin)
-            client.on('streamNewUserInvited', this.onMemberJoin)
-            client.on('streamUserLeft', this.onMemberLeave)
+            client.on('streamNewUserJoined', (streamId, userId) =>
+                this.onMemberJoin(streamId, userId),
+            )
+            client.on('streamNewUserInvited', (streamId, userId) =>
+                this.onMemberJoin(streamId, userId),
+            )
+            client.on('streamUserLeft', (streamId, userId) => this.onMemberLeave(streamId, userId))
 
             return () => {
-                client.off('streamNewUserJoined', this.onMemberJoin)
-                client.off('streamNewUserInvited', this.onMemberJoin)
-                client.off('streamUserLeft', this.onMemberLeave)
+                client.off('streamNewUserJoined', (streamId, userId) =>
+                    this.onMemberJoin(streamId, userId),
+                )
+                client.off('streamNewUserInvited', (streamId, userId) =>
+                    this.onMemberJoin(streamId, userId),
+                )
+                client.off('streamUserLeft', (streamId, userId) =>
+                    this.onMemberLeave(streamId, userId),
+                )
             }
         })
     }
