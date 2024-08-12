@@ -12,7 +12,7 @@ echo "stress/scripts/localhost_chat.sh"
 # stress mode=chat requires the following environment variables
 # SPACE_ID
 # CHANNEL_IDS
-# RIVER_ENV (default=local_single) 
+# RIVER_ENV (default=local_multi) 
 # STRESS_MODE (default=chat)
 # STRESS_DURATION (default=120)
 #
@@ -24,7 +24,7 @@ export SPACE_ID="${SPACE_ID}"
 export CHANNEL_IDS="${CHANNEL_IDS}"
 export ANNOUNCE_CHANNEL_ID="${ANNOUNCE_CHANNEL_ID:-}"
 
-export RIVER_ENV="${RIVER_ENV:-local_single}"
+export RIVER_ENV="${RIVER_ENV:-local_multi}"
 export STRESS_MODE="${STRESS_MODE:-chat}"
 export STRESS_DURATION="${STRESS_DURATION:-360}"
 export SESSION_ID="${SESSION_ID:-$(uuidgen)}"
@@ -41,4 +41,4 @@ export NODE_TLS_REJECT_UNAUTHORIZED=0 # allow unsigned against localhost
 # fund the root wallet
 cast rpc -r $BASE_CHAIN_RPC_URL anvil_setBalance $WALLET_ADDRESS 10000000000000000000 > /dev/null
 
-./scripts/start.sh $@
+./scripts/start.sh "$@"
