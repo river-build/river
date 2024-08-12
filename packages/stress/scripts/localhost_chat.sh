@@ -4,7 +4,21 @@ cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")"
 cd ..
 
 # run scripts/localhost_chat_setup.sh to set up the environment variables
-source scripts/.env.localhost_chat
+# List of environment files to source
+ENV_FILES=(
+    "./scripts/.env.localhost_chat"
+    "./scripts/.env.storage"
+)
+
+# Loop through each file in the list
+for file in "${ENV_FILES[@]}"; do
+    if [ -f "$file" ]; then
+        source "$file"
+        echo "Sourced: $file"
+    else
+        echo "Skipped: $file file does not exist."
+    fi
+done
 
 echo "stress/scripts/localhost_chat.sh"
 
@@ -23,10 +37,11 @@ echo "stress/scripts/localhost_chat.sh"
 export SPACE_ID="${SPACE_ID}"
 export CHANNEL_IDS="${CHANNEL_IDS}"
 export ANNOUNCE_CHANNEL_ID="${ANNOUNCE_CHANNEL_ID:-}"
+export REDIS_HOST="${REDIS_HOST:-}"
 
 export RIVER_ENV="${RIVER_ENV:-local_multi}"
 export STRESS_MODE="${STRESS_MODE:-chat}"
-export STRESS_DURATION="${STRESS_DURATION:-360}"
+export STRESS_DURATION="${STRESS_DURATION:-180}"
 export SESSION_ID="${SESSION_ID:-$(uuidgen)}"
 
 export PROCESSES_PER_CONTAINER="${PROCESSES_PER_CONTAINER:-4}"
