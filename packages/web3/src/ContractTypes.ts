@@ -39,6 +39,10 @@ export type MembershipStruct = ISpaceArchitectBaseV3.MembershipStruct
 
 export type LegacyMembershipStruct = ILegacyArchitectBase.MembershipStruct
 
+export type MembershipRequirementsStruct = ISpaceArchitectBaseV3.MembershipRequirementsStruct
+
+export type LegacyMembershipRequirementsStruct = ILegacyArchitectBase.MembershipRequirementsStruct
+
 export type SpaceInfoStruct = ISpaceArchitectBaseV3.SpaceInfoStruct
 
 export type LegacySpaceInfoStruct = ILegacyArchitectBase.SpaceInfoStruct
