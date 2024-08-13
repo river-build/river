@@ -35,7 +35,8 @@ function makeStreamRpcClient(url: string): StreamRpcClient {
 }
 
 async function getStreamClient(config: Config, streamId: `0x${string}`) {
-	let { url, lastMiniblockNum } = await getNodeForStream(config, streamId)
+	const node = await getNodeForStream(config, streamId)
+	let url = node?.url
 	if (!clients.has(url)) {
 		const client = makeStreamRpcClient(url)
 		clients.set(client.url!, client)
@@ -44,7 +45,13 @@ async function getStreamClient(config: Config, streamId: `0x${string}`) {
 		console.log(`getStreamClient: Connecting to url=${url}`)
 	}
 	console.log(`getStreamClient: url=${url}`)
-	return { client: clients.get(url), lastMiniblockNum }
+
+	const client = clients.get(url)
+	if (!client) {
+		throw new Error(`Failed to get client for url ${url}`)
+	}
+
+	return { client, lastMiniblockNum: node.lastMiniblockNum }
 }
 
 function streamViewFromUnpackedResponse(
