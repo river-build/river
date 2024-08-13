@@ -11,7 +11,7 @@ import type { IStreamStateView } from '../../../../streamStateView'
 import { make_MemberPayload_Username } from '../../../../types'
 import { usernameChecksum } from '../../../../utils'
 
-const logger = dlogger('csb:userSettings')
+const logger = dlogger('csb:member_username')
 
 export interface MemberUsernameModel extends Identifiable {
     id: string
