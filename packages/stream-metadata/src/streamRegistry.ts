@@ -28,9 +28,8 @@ export async function getNodeForStream(
 
 	console.log('getNodeForStream', {
 		streamId,
-		riverRegistryAddress: riverRegistry.config.addresses.riverRegistry
+		riverRegistryAddress: riverRegistry.config.addresses.riverRegistry,
 	})
-
 
 	const streamData = await riverRegistry.streamRegistry.read.getStream(streamId)
 

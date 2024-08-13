@@ -111,7 +111,10 @@ function stripHexPrefix(hexString: string): string {
 	return hexString
 }
 
-export async function getStream(streamId: string, chainId: number): Promise<StreamStateView | undefined> {
+export async function getStream(
+	streamId: string,
+	chainId: number,
+): Promise<StreamStateView | undefined> {
 	let client: StreamRpcClient | undefined
 	let lastMiniblockNum: BigNumber | undefined
 

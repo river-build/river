@@ -11,7 +11,7 @@ const chainConfigs: ChainConfigs = {
 	},
 	31338: {
 		rpcUrl: 'http://127.0.0.1:8546',
-	}
+	},
 }
 
 interface ChainConfigs {
