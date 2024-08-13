@@ -136,7 +136,6 @@ describe('userSettingsTests', () => {
             ).toBe(false)
         })
 
-
         // bob blocks alice again
         await bobsClient.updateUserBlock(alicesClient.userId, true)
         // alice sends two messages after being blocked again, total blocked message should be 5
