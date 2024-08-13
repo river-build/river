@@ -41,8 +41,6 @@ async function getStreamClient(config: Config, streamId: `0x${string}`) {
 		const client = makeStreamRpcClient(url)
 		clients.set(client.url!, client)
 		url = client.url!
-
-		console.log(`getStreamClient: Connecting to url=${url}`)
 	}
 	console.log(`getStreamClient: url=${url}`)
 
