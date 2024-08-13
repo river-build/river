@@ -37,11 +37,3 @@ dotenv.config({
 })
 
 export const config = makeConfig()
-
-console.log('config', {
-	riverEnv: config.riverEnv,
-	chainId: config.river.chainId,
-	port: config.port,
-	riverRegistry: config.river.addresses.riverRegistry,
-	riverChainRpcUrl: config.riverChainRpcUrl,
-})
