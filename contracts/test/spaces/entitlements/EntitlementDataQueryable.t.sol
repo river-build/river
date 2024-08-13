@@ -45,7 +45,7 @@ contract EntitlementDataQueryableTest is
     );
   }
 
-  function test_getEntitlementDataByRole() external view {
+  function test_getEntitlementDataByPermission() external view {
     EntitlementData[] memory entitlement = entitlements
       .getEntitlementDataByPermission(Permissions.JoinSpace);
 

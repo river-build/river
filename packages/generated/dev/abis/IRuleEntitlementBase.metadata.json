@@ -160,10 +160,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol": {
-      "keccak256": "0x2ad8c7e10beb26f80dde5445b9aa8fcb2fcbcb149c38d94e4434982924b6eb27",
+      "keccak256": "0xcf8b74e8a7bfa0a9dd1de9a5c85d610584a7d8cb1ed6ac56b0b6ecbc61cfe9b5",
       "urls": [
-        "bzz-raw://de00bf4a319a6c4c8a227039e9ac39f01ddc21f5c61186d7067614d686d010fd",
-        "dweb:/ipfs/QmWseV2PXggxynEEDXq8HkLQstC9e8BFYVQFhrfxVaVH6j"
+        "bzz-raw://588d1b3babed794e8df961c5dcda1960212a7c03ad1f2a56732020f11d4e060d",
+        "dweb:/ipfs/QmdcnSThywhbBfytwwRUDkpb77AqZ2nBcwqGgmex6wynA8"
       ],
       "license": "MIT"
     }

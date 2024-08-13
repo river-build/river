@@ -63,7 +63,6 @@
         "Start Watches",
         "Casablanca",
         "Casablanca-No-Entitlements",
-        "XChain-Single",
         "Playground",
       ],
       "group": {
@@ -173,6 +172,16 @@
       }
     },
     {
+      "label": "Start Stress Testing Redis",
+      "type": "shell",
+      "command": "./packages/stress/scripts/start_redis.sh",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "group": "local-servers"
+      }
+    },
+    {
       "label": "Casablanca",
       "type": "shell",
       "command": "sleep 3 && yarn run --top-level csb:dev:entitlements -r",
@@ -275,33 +284,13 @@
     {
       "label": "CasablancaConfigureNodes",
       "type": "shell",
-      "command": "RIVER_BLOCK_TIME=1 ./scripts/configure-nodes.sh --single && RIVER_BLOCK_TIME=1 ./scripts/configure-nodes.sh --single_ne",
+      "command": "RIVER_BLOCK_TIME=1 ./scripts/configure-nodes.sh --multi && RIVER_BLOCK_TIME=1 ./scripts/configure-nodes.sh --multi_ne",
       "isBackground": true,
       "problemMatcher": [],
       "presentation": {
         "group": "ephemeral",
         "focus": true,
         "panel": "shared",
-      }
-    },
-    {
-      "label": "XChain-Single",
-      "type": "shell",
-      "command": "sleep 1 && RUN_ENV=single ./core/xchain/launch_multi.sh",
-      "isBackground": true,
-      "problemMatcher": [],
-      "presentation": {
-        "group": "xchain"
-      }
-    },
-    {
-      "label": "XChain-Multi",
-      "type": "shell",
-      "command": "sleep 1 && RUN_ENV=multi ./core/xchain/launch_multi.sh",
-      "isBackground": true,
-      "problemMatcher": [],
-      "presentation": {
-        "group": "xchain"
       }
     },
     {
