@@ -19,16 +19,16 @@ const server = Fastify({
 })
 
 async function registerPlugins() {
-  try {
-    await server.register(cors, {
-      origin: '*', // Allow any origin
-      methods: ['GET'], // Allowed HTTP methods
-    })
-    logger.info('CORS registered successfully')
-  } catch (err) {
-    logger.error('Error registering CORS', err)
-    process.exit(1) // Exit the process if registration fails
-  }
+	try {
+		await server.register(cors, {
+			origin: '*', // Allow any origin
+			methods: ['GET'], // Allowed HTTP methods
+		})
+		logger.info('CORS registered successfully')
+	} catch (err) {
+		logger.error('Error registering CORS', err)
+		process.exit(1) // Exit the process if registration fails
+	}
 }
 
 registerPlugins()
