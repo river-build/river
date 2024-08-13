@@ -1,9 +1,11 @@
-import { StreamIdHex } from './types'
 import { FastifyReply, FastifyRequest } from 'fastify'
 import { StreamPrefix, StreamStateView, makeStreamId } from '@river-build/sdk'
 import { getMediaStreamContent, getStream } from './riverStreamRpcClient'
 import { isBytes32String, isValidEthereumAddress } from './validators'
+
 import { ChunkedMedia } from '@river-build/proto'
+import { StreamIdHex } from './types'
+import { config } from './environment'
 
 export async function handleImageRequest(request: FastifyRequest, reply: FastifyReply) {
 	const { spaceAddress } = request.params as { spaceAddress?: string }
@@ -20,10 +22,11 @@ export async function handleImageRequest(request: FastifyRequest, reply: Fastify
 			.send({ error: 'Bad Request', message: 'Invalid spaceAddress format' })
 	}
 
+	const chainId = config.river.chainId
 	let stream: StreamStateView | undefined
 	try {
 		const streamId = makeStreamId(StreamPrefix.Space, spaceAddress)
-		stream = await getStream(streamId)
+		stream = await getStream(streamId, chainId)
 	} catch (e) {
 		console.error(`Failed to get stream for space ${spaceAddress}: ${e}`)
 		return reply.code(404).send('Stream not found')
@@ -47,7 +50,7 @@ export async function handleImageRequest(request: FastifyRequest, reply: Fastify
 
 	const { key, iv } = getEncryption(mediaStreamInfo)
 
-	const { data, mimeType } = await getMediaStreamContent(fullStreamId, key, iv)
+	const { data, mimeType } = await getMediaStreamContent(fullStreamId, chainId, key, iv)
 
 	if (data && mimeType) {
 		return reply.header('Content-Type', mimeType).send(Buffer.from(data))

@@ -1,15 +1,16 @@
 import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-web'
 import { MediaContent, StreamIdHex } from './types'
 import {
-	decryptAESGCM,
 	ParsedStreamResponse,
 	StreamStateView,
+	decryptAESGCM,
 	streamIdAsBytes,
 	streamIdAsString,
 	unpackStream,
 } from '@river-build/sdk'
 import { PromiseClient, createPromiseClient } from '@connectrpc/connect'
 
+import { BigNumber } from 'ethers'
 import { StreamService } from '@river-build/proto'
 import { filetypemime } from 'magic-bytes.js'
 import { getNodeForStream } from './streamRegistry'
@@ -33,8 +34,8 @@ function makeStreamRpcClient(url: string): StreamRpcClient {
 	return client
 }
 
-async function getStreamClient(streamId: `0x${string}`) {
-	let { url, lastMiniblockNum } = await getNodeForStream(streamId)
+async function getStreamClient(streamId: `0x${string}`, chainId: number) {
+	let { url, lastMiniblockNum } = await getNodeForStream(streamId, chainId)
 	if (!clients.has(url)) {
 		const client = makeStreamRpcClient(url)
 		clients.set(client.url!, client)
@@ -110,12 +111,12 @@ function stripHexPrefix(hexString: string): string {
 	return hexString
 }
 
-export async function getStream(streamId: string): Promise<StreamStateView | undefined> {
+export async function getStream(streamId: string, chainId: number): Promise<StreamStateView | undefined> {
 	let client: StreamRpcClient | undefined
-	let lastMiniblockNum: bigint | undefined
+	let lastMiniblockNum: BigNumber | undefined
 
 	try {
-		const result = await getStreamClient(`0x${streamId}`)
+		const result = await getStreamClient(`0x${streamId}`, chainId)
 		client = result.client
 		lastMiniblockNum = result.lastMiniblockNum
 	} catch (e) {
@@ -146,6 +147,7 @@ export async function getStream(streamId: string): Promise<StreamStateView | und
 
 export async function getMediaStreamContent(
 	fullStreamId: StreamIdHex,
+	chainId: number,
 	secret: Uint8Array,
 	iv: Uint8Array,
 ): Promise<MediaContent | { data: null; mimeType: null }> {
@@ -163,7 +165,7 @@ export async function getMediaStreamContent(
 	*/
 
 	const streamId = stripHexPrefix(fullStreamId)
-	const sv = await getStream(streamId)
+	const sv = await getStream(streamId, chainId)
 
 	if (!sv) {
 		return { data: null, mimeType: null }

@@ -1,12 +1,10 @@
-import { getAddress, getNodeRegistryAbi, getStreamRegistryAbi } from './contracts'
-
+import { BigNumber } from 'ethers'
 import { StreamIdHex } from './types'
-import { getContract } from 'viem'
-import { getPublicClient } from './evmRpcClient'
+import { getRiverRegistry } from './evmRpcClient'
 
 type CachedStreamData = {
 	url: string
-	lastMiniblockNum: bigint
+	lastMiniblockNum: BigNumber
 	expiration: number
 }
 
@@ -14,7 +12,8 @@ const cache: Record<string, CachedStreamData> = {}
 
 export async function getNodeForStream(
 	streamId: StreamIdHex,
-): Promise<{ url: string; lastMiniblockNum: bigint }> {
+	chainId: number,
+): Promise<{ url: string; lastMiniblockNum: BigNumber }> {
 	console.log('getNodeForStream', streamId)
 
 	const now = Date.now()
@@ -25,27 +24,15 @@ export async function getNodeForStream(
 		return { url: cachedData.url, lastMiniblockNum: cachedData.lastMiniblockNum }
 	}
 
-	const riverRegistry = getAddress()
-	if (!riverRegistry) {
-		console.error('Registry address not found')
-		throw new Error(`Registry address not found`)
-	}
+	const riverRegistry = getRiverRegistry(chainId)
 
-	console.log('streamId', streamId, 'riverRegistryAddress', riverRegistry)
-
-	const streamRegistry = getContract({
-		address: riverRegistry,
-		abi: getStreamRegistryAbi(),
-		publicClient: getPublicClient(),
+	console.log('getNodeForStream', {
+		streamId,
+		riverRegistryAddress: riverRegistry.config.addresses.riverRegistry
 	})
 
-	const nodeRegistry = getContract({
-		address: riverRegistry,
-		abi: getNodeRegistryAbi(),
-		publicClient: getPublicClient(),
-	})
 
-	const streamData = await streamRegistry.read.getStream([streamId])
+	const streamData = await riverRegistry.streamRegistry.read.getStream(streamId)
 
 	if (streamData.nodes.length === 0) {
 		console.error(`No nodes found for stream ${streamId}`)
@@ -55,7 +42,7 @@ export async function getNodeForStream(
 	const lastMiniblockNum = streamData.lastMiniblockNum
 
 	const randomIndex = Math.floor(Math.random() * streamData.nodes.length)
-	const node = await nodeRegistry.read.getNode([streamData.nodes[randomIndex]])
+	const node = await riverRegistry.nodeRegistry.read.getNode(streamData.nodes[randomIndex])
 
 	console.log(`connected to node=${node.url}; lastMiniblockNum=${lastMiniblockNum}`)
 
