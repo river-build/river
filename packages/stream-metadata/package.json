@@ -25,6 +25,8 @@
 		"ethers": "^5.7.2",
 		"fastify": "^4.28.1",
 		"magic-bytes.js": "^1.10.0",
+		"pino": "^8.17.1",
+		"pino-pretty": "^10.2.3",
 		"zod": "^3.21.4"
 	},
 	"devDependencies": {
