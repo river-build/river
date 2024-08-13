@@ -50,14 +50,6 @@ module.exports = {
                     },
                 ],
 
-                '@typescript-eslint/naming-convention': [
-                    'error',
-                    {
-                        selector: 'interface',
-                        format: ['PascalCase'],
-                        prefix: ['I'],
-                    },
-                ],
             },
         },
     ],
