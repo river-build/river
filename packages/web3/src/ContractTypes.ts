@@ -41,6 +41,8 @@ export type LegacyMembershipStruct = ILegacyArchitectBase.MembershipStruct
 
 export type SpaceInfoStruct = ISpaceArchitectBaseV3.SpaceInfoStruct
 
+export type LegacySpaceInfoStruct = ILegacyArchitectBase.SpaceInfoStruct
+
 export type PricingModuleStruct = IPricingModulesBase.PricingModuleStruct
 
 /**
