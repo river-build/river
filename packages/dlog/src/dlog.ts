@@ -138,6 +138,7 @@ export interface DLogOpts {
 
     // If true, binds to console.error so callstack is printed.
     printStack?: boolean
+    useWinston?: boolean
 }
 
 const allDlogs: Map<string, DLogger> = new Map()
@@ -192,7 +193,11 @@ export const winstonLogger = createLogger({
     ],
 })
 
-const makeDlog = (d: Debugger, level: 'debug' | 'info' | 'error', opts?: DLogOpts): DLogger => {
+const makeDlog = (
+    d: Debugger,
+    level: 'debug' | 'info' | 'error',
+    opts: DLogOpts = { useWinston: true },
+): DLogger => {
     if (opts?.printStack) {
         d.log = console.error.bind(console)
     }
@@ -228,13 +233,13 @@ const makeDlog = (d: Debugger, level: 'debug' | 'info' | 'error', opts?: DLogOpt
                 newArgs.push(c)
             }
         }
-        if (isNode) {
+        if (isNode && opts?.useWinston) {
             winstonLogger
                 .child({ label: d.namespace })
                 .log(level, fmt.join(''), ...newArgs, ...tailArgs)
         } else {
             d.namespace = `${d.namespace}:${level}`
-            d.log(fmt.join(''), ...newArgs, ...tailArgs)
+            d(fmt.join(''), ...newArgs, ...tailArgs)
         }
     }
 

@@ -2,7 +2,7 @@ import type { JestConfigWithTsJest } from 'ts-jest'
 
 const config: JestConfigWithTsJest = {
     preset: 'ts-jest/presets/default-esm',
-    testEnvironment: 'node',
+    testEnvironment: './../jest.env.ts',
     verbose: true,
     testTimeout: 60000,
     modulePathIgnorePatterns: ['/dist/'],
