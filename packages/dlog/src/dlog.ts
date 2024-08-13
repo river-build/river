@@ -147,38 +147,38 @@ const isDev = typeof process !== 'undefined' && process.env.NODE_ENV !== 'produc
 const isSingleLineLogsMode =
     typeof process !== 'undefined' && process.env.SINGLE_LINE_LOGS === 'true'
 
+const consoleTransports = [
+    new transports.Console({
+        forceConsole: true,
+        format: format.combine(
+            format.colorize(),
+            format.splat(),
+            format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+            format.printf(
+                (info) => `${info.timestamp} ${info.level} [${info.label}]: ${info.message}`,
+            ),
+        ),
+    }),
+    new transports.Console({
+        level: 'debug',
+        forceConsole: true,
+        format: format.combine(
+            format.colorize(),
+            format.splat(),
+            format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+            format.printf(
+                (info) => `${info.timestamp} ${info.level} [${info.label}]: ${info.message}`,
+            ),
+        ),
+    }),
+]
 export const winstonLogger = createLogger({
     exitOnError: false,
     transports: [
         ...(isDev
-            ? [
-                  new transports.Console({
-                      forceConsole: true,
-                      format: format.combine(
-                          format.colorize(),
-                          format.splat(),
-                          format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-                          format.printf(
-                              (info) =>
-                                  `${info.timestamp} ${info.level} [${info.label}]: ${info.message}`,
-                          ),
-                      ),
-                  }),
-                  new transports.Console({
-                      level: 'debug',
-                      forceConsole: true,
-                      format: format.combine(
-                          format.colorize(),
-                          format.splat(),
-                          format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-                          format.printf(
-                              (info) =>
-                                  `${info.timestamp} ${info.level} [${info.label}]: ${info.message}`,
-                          ),
-                      ),
-                  }),
-              ]
+            ? consoleTransports
             : [
+                  ...consoleTransports,
                   new transports.File({
                       level: 'debug',
                       filename: 'debug.log',
