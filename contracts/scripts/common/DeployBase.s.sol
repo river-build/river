@@ -8,6 +8,7 @@ pragma solidity ^0.8.0;
 //contracts
 import {Script} from "forge-std/Script.sol";
 import {DeployHelpers} from "./DeployHelpers.s.sol";
+import {DevOpsTools} from "./DevOpsTools.sol";
 
 contract DeployBase is DeployHelpers, Script {
   string internal constant DEPLOYMENT_CACHE_PATH = "contracts/deployments";
@@ -86,9 +87,12 @@ contract DeployBase is DeployHelpers, Script {
   }
 
   function getDeployment(string memory versionName) internal returns (address) {
-    string memory path = cachePath(versionName);
+    address contractAddress = DevOpsTools.get_most_recent_deployment(
+      versionName,
+      block.chainid
+    );
 
-    if (!exists(path)) {
+    if (contractAddress == address(0)) {
       debug(
         string.concat(
           "no deployment found for ",
@@ -100,8 +104,7 @@ contract DeployBase is DeployHelpers, Script {
       return address(0);
     }
 
-    string memory data = vm.readFile(path);
-    return vm.parseJsonAddress(data, ".address");
+    return contractAddress;
   }
 
   function saveDeployment(
