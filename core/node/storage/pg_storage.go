@@ -590,7 +590,8 @@ func (s *PostgresEventStore) writeEventTx(
 ) error {
 	envelopesRow, err := tx.Query(
 		ctx,
-		"SELECT generation, slot_num FROM minipools WHERE stream_id = $1 ORDER BY slot_num",
+		// Ordering by generation, slot_num allows this to be an index only query
+		"SELECT generation, slot_num FROM minipools WHERE stream_id = $1 ORDER BY generation, slot_num",
 		streamId,
 	)
 	if err != nil {
