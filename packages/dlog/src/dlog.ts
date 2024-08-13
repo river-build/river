@@ -193,12 +193,12 @@ export const winstonLogger = createLogger({
     ],
 })
 
-const makeDlog = (
-    d: Debugger,
-    level: 'debug' | 'info' | 'error',
-    opts: DLogOpts = { useWinston: true },
-): DLogger => {
-    if (opts?.printStack) {
+const makeDlog = (d: Debugger, level: 'debug' | 'info' | 'error', opts?: DLogOpts): DLogger => {
+    const defaultOpts = { useWinston: true }
+    const options = { ...defaultOpts, ...opts }
+
+    const namespace = d.namespace
+    if (options.printStack) {
         d.log = console.error.bind(console)
     }
 
@@ -233,12 +233,12 @@ const makeDlog = (
                 newArgs.push(c)
             }
         }
-        if (isNode && opts?.useWinston) {
+        if (isNode && options.useWinston) {
             winstonLogger
                 .child({ label: d.namespace })
                 .log(level, fmt.join(''), ...newArgs, ...tailArgs)
         } else {
-            d.namespace = `${d.namespace}:${level}`
+            d.namespace = `${namespace}:${level}`
             d(fmt.join(''), ...newArgs, ...tailArgs)
         }
     }
