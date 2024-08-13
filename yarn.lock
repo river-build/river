@@ -9213,6 +9213,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"esbuild-plugin-pino@npm:^2.2.0":
+  version: 2.2.0
+  resolution: "esbuild-plugin-pino@npm:2.2.0"
+  peerDependencies:
+    esbuild: ^0.17.1 || ^0.18.0 || ^0.19.0 || ^0.20.0 || ^0.21.0
+  checksum: 7dace40169cfeb583c493ef6d82db7892598502d1717a9d02a5f7b1025068003c4d8c1c9f72cc0a4962414f9a4ecc0889f62ed3624136203d56d4f175e6cc8c5
+  languageName: node
+  linkType: hard
+
 "esbuild-plugin-wasm@npm:^1.1.0":
   version: 1.1.0
   resolution: "esbuild-plugin-wasm@npm:1.1.0"
@@ -18391,6 +18400,7 @@ __metadata:
     "@types/node": ^20.5.0
     "@typescript-eslint/parser": ^7.14.1
     dotenv: ^16.4.5
+    esbuild-plugin-pino: ^2.2.0
     ethers: ^5.7.2
     fastify: ^4.28.1
     magic-bytes.js: ^1.10.0
