@@ -30,7 +30,7 @@ export class MemberDisplayName extends PersistedObservable<MemberDisplayNameMode
                 id: `${userId}_${streamId}`,
                 streamId,
                 initialized: false,
-                displayName: '',
+                displayName: undefined,
                 isEncrypted: false,
             },
             store,
