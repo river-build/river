@@ -41,7 +41,9 @@ contracts/cache
 cache_hardhat
 artifacts_*
 tsconfig.tsbuildinfo
-broadcast/
+!/broadcast
+/broadcast/*
+/broadcast/*/31337/
 
 *.pem
 
