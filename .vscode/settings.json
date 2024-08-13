@@ -9,7 +9,7 @@
     "./packages/sdk",
     "./packages/stress",
     "./packages/web3",
-    "./services/fetch-image",
+    "./package/stream-metadata",
   ],
   "[solidity]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
