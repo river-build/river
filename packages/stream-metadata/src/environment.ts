@@ -13,7 +13,10 @@ dotenv.config({
 export const SERVER_PORT = parseInt(process.env.PORT ?? '443', 10)
 export const config = makeConfig(process.env.RIVER_ENV, process.env.RIVER_CHAIN_RPC_URL)
 
-function makeConfig(riverEnv = 'omega', riverChainRpcUrl ='https://mainnet.rpc.river.build/http'): Config {
+function makeConfig(
+	riverEnv = 'omega',
+	riverChainRpcUrl = 'https://mainnet.rpc.river.build/http',
+): Config {
 	const web3Config = getWeb3Deployment(riverEnv)
 	return {
 		...web3Config,
