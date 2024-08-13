@@ -34,8 +34,8 @@ function makeStreamRpcClient(url: string): StreamRpcClient {
 	return client
 }
 
-async function getStreamClient(streamId: `0x${string}`, config: Config) {
-	let { url, lastMiniblockNum } = await getNodeForStream(streamId, config)
+async function getStreamClient(config: Config, streamId: `0x${string}`) {
+	let { url, lastMiniblockNum } = await getNodeForStream(config, streamId)
 	if (!clients.has(url)) {
 		const client = makeStreamRpcClient(url)
 		clients.set(client.url!, client)
@@ -112,14 +112,14 @@ function stripHexPrefix(hexString: string): string {
 }
 
 export async function getStream(
-	streamId: string,
 	config: Config,
+	streamId: string,
 ): Promise<StreamStateView | undefined> {
 	let client: StreamRpcClient | undefined
 	let lastMiniblockNum: BigNumber | undefined
 
 	try {
-		const result = await getStreamClient(`0x${streamId}`, config)
+		const result = await getStreamClient(config, `0x${streamId}`)
 		client = result.client
 		lastMiniblockNum = result.lastMiniblockNum
 	} catch (e) {
@@ -149,10 +149,10 @@ export async function getStream(
 }
 
 export async function getMediaStreamContent(
+	config: Config,
 	fullStreamId: StreamIdHex,
 	secret: Uint8Array,
 	iv: Uint8Array,
-	config: Config,
 ): Promise<MediaContent | { data: null; mimeType: null }> {
 	const toHexString = (byteArray: Uint8Array) => {
 		return Array.from(byteArray, (byte) => byte.toString(16).padStart(2, '0')).join('')
@@ -168,7 +168,7 @@ export async function getMediaStreamContent(
 	*/
 
 	const streamId = stripHexPrefix(fullStreamId)
-	const sv = await getStream(streamId, config)
+	const sv = await getStream(config, streamId)
 
 	if (!sv) {
 		return { data: null, mimeType: null }

@@ -11,8 +11,8 @@ type CachedStreamData = {
 const cache: Record<string, CachedStreamData> = {}
 
 export async function getNodeForStream(
-	streamId: StreamIdHex,
 	config: Config,
+	streamId: StreamIdHex,
 ): Promise<{ url: string; lastMiniblockNum: BigNumber }> {
 	console.log('getNodeForStream', streamId)
 

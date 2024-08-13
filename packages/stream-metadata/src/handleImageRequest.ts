@@ -25,7 +25,7 @@ export async function handleImageRequest(request: FastifyRequest, reply: Fastify
 	let stream: StreamStateView | undefined
 	try {
 		const streamId = makeStreamId(StreamPrefix.Space, spaceAddress)
-		stream = await getStream(streamId, config)
+		stream = await getStream(config, streamId)
 	} catch (e) {
 		console.error(`Failed to get stream for space ${spaceAddress}: ${e}`)
 		return reply.code(404).send('Stream not found')
@@ -49,7 +49,7 @@ export async function handleImageRequest(request: FastifyRequest, reply: Fastify
 
 	const { key, iv } = getEncryption(mediaStreamInfo)
 
-	const { data, mimeType } = await getMediaStreamContent(fullStreamId, key, iv, config)
+	const { data, mimeType } = await getMediaStreamContent(config, fullStreamId, key, iv)
 
 	if (data && mimeType) {
 		return reply.header('Content-Type', mimeType).send(Buffer.from(data))
