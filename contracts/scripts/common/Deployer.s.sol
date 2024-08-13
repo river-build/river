@@ -20,14 +20,6 @@ abstract contract Deployer is Script, DeployBase {
   // - logging
   function __deploy(address deployer) public virtual returns (address);
 
-  function cache() public returns (address) {
-    address cachedAddress = getDeployment(versionName());
-    if (cachedAddress == address(0)) {
-      revert("no cached deployment found");
-    }
-    return cachedAddress;
-  }
-
   // will first try to load existing deployments from `deployments/<network>/<contract>.json`
   // if OVERRIDE_DEPLOYMENTS is set to true or if no cached deployment is found:
   // - read PRIVATE_KEY from env
@@ -85,9 +77,9 @@ abstract contract Deployer is Script, DeployBase {
         vm.toString(deployedAddr)
       );
 
-      if (deployedAddr != address(0)) {
-        saveDeployment(versionName(), deployedAddr);
-      }
+      // if (deployedAddr != address(0)) {
+      //   saveDeployment(versionName(), deployedAddr);
+      // }
     }
 
     if (!isTesting()) postDeploy(deployer, deployedAddr);
