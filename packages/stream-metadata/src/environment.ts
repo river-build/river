@@ -23,8 +23,8 @@ function makeConfig(): Config {
 	return {
 		...web3Config,
 		log: {
-			logLevel: env.LOG_LEVEL,
-			logPretty: env.LOG_PRETTY,
+			level: env.LOG_LEVEL,
+			pretty: env.LOG_PRETTY,
 		},
 		port: env.PORT,
 		riverEnv: env.RIVER_ENV,
