@@ -11,26 +11,32 @@ const envSchema = z.object({
 	RIVER_ENV: z.string(),
 	RIVER_CHAIN_RPC_URL: z.string().url(),
 	PORT: NumberFromIntStringSchema.optional().default('443'),
+	LOG_LEVEL: z.string().optional().default('info'),
+	LOG_PRETTY: z.boolean().optional().default(true),
 })
+
+function makeConfig(): Config {
+	// eslint-disable-next-line no-process-env -- this is the only line where we're allowed to use process.env
+	const env = envSchema.parse(process.env)
+	const web3Config = getWeb3Deployment(env.RIVER_ENV)
+
+	return {
+		...web3Config,
+		log: {
+			logLevel: env.LOG_LEVEL,
+			logPretty: env.LOG_PRETTY,
+		},
+		port: env.PORT,
+		riverEnv: env.RIVER_ENV,
+		riverChainRpcUrl: env.RIVER_CHAIN_RPC_URL,
+	}
+}
 
 dotenv.config({
 	path: ['.env', '.env.local'],
 })
 
-// eslint-disable-next-line no-process-env -- this is the only line where we're allowed to use process.env
-const env = envSchema.parse(process.env)
-
-export const config = makeConfig(env.RIVER_ENV, env.RIVER_CHAIN_RPC_URL, env.PORT)
-
-function makeConfig(riverEnv: string, riverChainRpcUrl: string, port: number): Config {
-	const web3Config = getWeb3Deployment(riverEnv)
-	return {
-		...web3Config,
-		port,
-		riverEnv,
-		riverChainRpcUrl,
-	}
-}
+export const config = makeConfig()
 
 console.log('config', {
 	riverEnv: config.riverEnv,

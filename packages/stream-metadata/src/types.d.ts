@@ -2,6 +2,10 @@ import { getWeb3Deployment } from '@river-build/web3'
 
 export interface Config extends ReturnType<typeof getWeb3Deployment> {
 	port: number
+	log: {
+		logLevel: string
+		logPretty: boolean
+	}
 	riverEnv: string
 	riverChainRpcUrl: string
 }
