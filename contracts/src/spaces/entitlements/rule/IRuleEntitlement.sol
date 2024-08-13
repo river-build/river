@@ -50,7 +50,8 @@ interface IRuleEntitlementBase {
     ERC20,
     ERC721,
     ERC1155,
-    ISENTITLED
+    ISENTITLED,
+    NATIVE_COIN_BALANCE
   }
 
   // Enum for Operation oneof operation_clause
@@ -105,6 +106,18 @@ interface IRuleEntitlementBase {
     Operation[] operations;
     CheckOperationV2[] checkOperations;
     LogicalOperation[] logicalOperations;
+  }
+
+  struct Entitlement {
+    address grantedBy;
+    uint256 grantedTime;
+    RuleData data;
+  }
+
+  struct EntitlementV2 {
+    address grantedBy;
+    uint256 grantedTime;
+    bytes data;
   }
 }
 

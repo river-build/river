@@ -332,8 +332,7 @@ func (cs *clientSimulator) executeCheck(ctx context.Context, ruleData *deploy.IR
 			tx, err := gated.RequestEntitlementCheck(opts, big.NewInt(0), *ruleData)
 			log.Info("RequestEntitlementCheck called", "tx", tx, "err", err)
 			return tx, err
-		},
-	)
+		})
 
 	log.Info("Submitted entitlement check...")
 
@@ -350,7 +349,11 @@ func (cs *clientSimulator) executeCheck(ctx context.Context, ruleData *deploy.IR
 		return err
 	}
 
-	receipt := <-pendingTx.Wait()
+	receipt, err := pendingTx.Wait(ctx)
+	if err != nil {
+		return err
+	}
+
 	log.Info("Entitlement check mined", "receipt", receipt)
 	if receipt.Status == types.ReceiptStatusFailed {
 		log.Error("Failed to execute check - could not execute transaction")
