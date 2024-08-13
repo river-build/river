@@ -13,7 +13,6 @@ import { PromiseClient, createPromiseClient } from '@connectrpc/connect'
 import { BigNumber } from 'ethers'
 import { StreamService } from '@river-build/proto'
 import { filetypemime } from 'magic-bytes.js'
-
 import { getNodeForStream } from './streamRegistry'
 
 const clients = new Map<string, StreamRpcClient>()
@@ -129,10 +128,7 @@ export async function getStream(
 		client = result.client
 		lastMiniblockNum = result.lastMiniblockNum
 	} catch (e) {
-		console.error('Failed to get client for stream', {
-			err: e,
-			streamId,
-		})
+		console.error(`Failed to get client for stream ${streamId}: ${e}`)
 		return undefined
 	}
 
@@ -187,7 +183,7 @@ export async function getMediaStreamContent(
 	try {
 		result = await mediaContentFromStreamView(sv, secret, iv)
 	} catch (e) {
-		console.error(`Failed to get media content for stream ${fullStreamId}`, e)
+		console.error(`Failed to get media content for stream ${fullStreamId}: ${e}`)
 		return { data: null, mimeType: null }
 	}
 

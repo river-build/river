@@ -1,10 +1,10 @@
 import { FastifyReply, FastifyRequest } from 'fastify'
 import { StreamPrefix, StreamStateView, makeStreamId } from '@river-build/sdk'
-import { ChunkedMedia } from '@river-build/proto'
-
-import { StreamIdHex } from './types'
 import { getMediaStreamContent, getStream } from './riverStreamRpcClient'
 import { isBytes32String, isValidEthereumAddress } from './validators'
+
+import { ChunkedMedia } from '@river-build/proto'
+import { StreamIdHex } from './types'
 import { config } from './environment'
 
 export async function handleImageRequest(request: FastifyRequest, reply: FastifyReply) {
@@ -27,7 +27,7 @@ export async function handleImageRequest(request: FastifyRequest, reply: Fastify
 		const streamId = makeStreamId(StreamPrefix.Space, spaceAddress)
 		stream = await getStream(config, streamId)
 	} catch (e) {
-		console.error(`Failed to get stream for space ${spaceAddress}`, e)
+		console.error(`Failed to get stream for space ${spaceAddress}: ${e}`)
 		return reply.code(404).send('Stream not found')
 	}
 
@@ -69,11 +69,10 @@ async function getSpaceImage(streamView: StreamStateView): Promise<ChunkedMedia 
 
 function getEncryption(chunkedMedia: ChunkedMedia): { key: Uint8Array; iv: Uint8Array } {
 	switch (chunkedMedia.encryption.case) {
-		case 'aesgcm': {
+		case 'aesgcm':
 			const key = new Uint8Array(chunkedMedia.encryption.value.secretKey)
 			const iv = new Uint8Array(chunkedMedia.encryption.value.iv)
 			return { key, iv }
-		}
 		default:
 			throw new Error(`Unsupported encryption: ${chunkedMedia.encryption}`)
 	}

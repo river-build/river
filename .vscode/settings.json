@@ -8,8 +8,7 @@
     "./packages/proto",
     "./packages/sdk",
     "./packages/stress",
-    "./packages/web3",
-    "./packages/stream-metadata"
+    "./packages/web3"
   ],
   "[solidity]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
