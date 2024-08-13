@@ -15,11 +15,20 @@ const server = Fastify({
 	logger: true,
 })
 
-// TODO: get back to this, see how to handle this promise-like object
-void server.register(cors, {
-	origin: '*', // Allow any origin
-	methods: ['GET'], // Allowed HTTP methods
-})
+async function registerPlugins() {
+  try {
+    await server.register(cors, {
+      origin: '*', // Allow any origin
+      methods: ['GET'], // Allowed HTTP methods
+    })
+    console.info('CORS registered successfully')
+  } catch (err) {
+    console.error('Error registering CORS', err)
+    process.exit(1) // Exit the process if registration fails
+  }
+}
+
+registerPlugins()
 
 server.get('/space/:spaceAddress', async (request, reply) => {
 	const { spaceAddress } = request.params as { spaceAddress?: string }
