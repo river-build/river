@@ -8,7 +8,7 @@
     "./packages/proto",
     "./packages/sdk",
     "./packages/stress",
-    "./packages/web3"
+    "./packages/web3",
   ],
   "[solidity]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
