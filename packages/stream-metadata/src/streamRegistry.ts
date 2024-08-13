@@ -1,5 +1,5 @@
 import { BigNumber } from 'ethers'
-import { StreamIdHex } from './types'
+import { Config, StreamIdHex } from './types'
 import { getRiverRegistry } from './evmRpcClient'
 
 type CachedStreamData = {
@@ -12,7 +12,7 @@ const cache: Record<string, CachedStreamData> = {}
 
 export async function getNodeForStream(
 	streamId: StreamIdHex,
-	chainId: number,
+	config: Config,
 ): Promise<{ url: string; lastMiniblockNum: BigNumber }> {
 	console.log('getNodeForStream', streamId)
 
@@ -24,7 +24,7 @@ export async function getNodeForStream(
 		return { url: cachedData.url, lastMiniblockNum: cachedData.lastMiniblockNum }
 	}
 
-	const riverRegistry = getRiverRegistry(chainId)
+	const riverRegistry = getRiverRegistry(config)
 
 	console.log('getNodeForStream', {
 		streamId,

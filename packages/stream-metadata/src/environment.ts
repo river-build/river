@@ -1,5 +1,6 @@
 import * as dotenv from 'dotenv'
 
+import { Config } from './types'
 import { getWeb3Deployment } from '@river-build/web3'
 
 const isDev = process.env.NODE_ENV === 'development'
@@ -10,11 +11,20 @@ dotenv.config({
 })
 
 export const SERVER_PORT = parseInt(process.env.PORT ?? '443', 10)
-const riverEnv = process.env.RIVER_ENV ?? 'omega'
-export const config = getWeb3Deployment(riverEnv)
+export const config = makeConfig(process.env.RIVER_ENV, process.env.RIVER_CHAIN_RPC_URL)
+
+function makeConfig(riverEnv = 'omega', riverChainRpcUrl ='https://mainnet.rpc.river.build/http'): Config {
+	const web3Config = getWeb3Deployment(riverEnv)
+	return {
+		...web3Config,
+		riverEnv,
+		riverChainRpcUrl,
+	}
+}
 
 console.log('config', {
-	riverEnv,
+	riverEnv: config.riverEnv,
 	chainId: config.river.chainId,
 	riverRegistry: config.river.addresses.riverRegistry,
+	riverChainRpcUrl: config.riverChainRpcUrl,
 })

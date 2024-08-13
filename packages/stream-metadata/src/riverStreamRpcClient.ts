@@ -1,5 +1,5 @@
 import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-web'
-import { MediaContent, StreamIdHex } from './types'
+import { Config, MediaContent, StreamIdHex } from './types'
 import {
 	ParsedStreamResponse,
 	StreamStateView,
@@ -34,8 +34,8 @@ function makeStreamRpcClient(url: string): StreamRpcClient {
 	return client
 }
 
-async function getStreamClient(streamId: `0x${string}`, chainId: number) {
-	let { url, lastMiniblockNum } = await getNodeForStream(streamId, chainId)
+async function getStreamClient(streamId: `0x${string}`, config: Config) {
+	let { url, lastMiniblockNum } = await getNodeForStream(streamId, config)
 	if (!clients.has(url)) {
 		const client = makeStreamRpcClient(url)
 		clients.set(client.url!, client)
@@ -113,13 +113,13 @@ function stripHexPrefix(hexString: string): string {
 
 export async function getStream(
 	streamId: string,
-	chainId: number,
+	config: Config,
 ): Promise<StreamStateView | undefined> {
 	let client: StreamRpcClient | undefined
 	let lastMiniblockNum: BigNumber | undefined
 
 	try {
-		const result = await getStreamClient(`0x${streamId}`, chainId)
+		const result = await getStreamClient(`0x${streamId}`, config)
 		client = result.client
 		lastMiniblockNum = result.lastMiniblockNum
 	} catch (e) {
@@ -150,9 +150,9 @@ export async function getStream(
 
 export async function getMediaStreamContent(
 	fullStreamId: StreamIdHex,
-	chainId: number,
 	secret: Uint8Array,
 	iv: Uint8Array,
+	config: Config,
 ): Promise<MediaContent | { data: null; mimeType: null }> {
 	const toHexString = (byteArray: Uint8Array) => {
 		return Array.from(byteArray, (byte) => byte.toString(16).padStart(2, '0')).join('')
@@ -168,7 +168,7 @@ export async function getMediaStreamContent(
 	*/
 
 	const streamId = stripHexPrefix(fullStreamId)
-	const sv = await getStream(streamId, chainId)
+	const sv = await getStream(streamId, config)
 
 	if (!sv) {
 		return { data: null, mimeType: null }

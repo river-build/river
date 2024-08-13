@@ -22,11 +22,10 @@ export async function handleImageRequest(request: FastifyRequest, reply: Fastify
 			.send({ error: 'Bad Request', message: 'Invalid spaceAddress format' })
 	}
 
-	const chainId = config.river.chainId
 	let stream: StreamStateView | undefined
 	try {
 		const streamId = makeStreamId(StreamPrefix.Space, spaceAddress)
-		stream = await getStream(streamId, chainId)
+		stream = await getStream(streamId, config)
 	} catch (e) {
 		console.error(`Failed to get stream for space ${spaceAddress}: ${e}`)
 		return reply.code(404).send('Stream not found')
@@ -50,7 +49,7 @@ export async function handleImageRequest(request: FastifyRequest, reply: Fastify
 
 	const { key, iv } = getEncryption(mediaStreamInfo)
 
-	const { data, mimeType } = await getMediaStreamContent(fullStreamId, chainId, key, iv)
+	const { data, mimeType } = await getMediaStreamContent(fullStreamId, key, iv, config)
 
 	if (data && mimeType) {
 		return reply.header('Content-Type', mimeType).send(Buffer.from(data))
