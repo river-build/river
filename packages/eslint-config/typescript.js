@@ -49,7 +49,6 @@ module.exports = {
                         varsIgnorePattern: '^_',
                     },
                 ],
-
             },
         },
     ],
