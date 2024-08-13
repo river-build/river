@@ -86,15 +86,17 @@ export class MemberUsername extends PersistedObservable<MemberUsernameModel> {
 
     private onClientStarted = (client: Client) => {
         logger.log('onClientStarted')
-        const streamView = client.stream(this.data.streamId)?.view
-        if (streamView) {
-            this.initialize(streamView)
+        if (
+            client.streams.has(this.data.id) &&
+            client.streams.get(this.data.id)?.view.isInitialized
+        ) {
+            this.onStreamInitialized(this.data.id)
         }
-        client.addListener('streamInitialized', this.onStreamInitialized)
-        client.addListener('streamUsernameUpdated', this.onStreamUsernameUpdated)
-        client.addListener('streamPendingUsernameUpdated', this.onStreamUsernameUpdated)
+        client.on('streamUsernameUpdated', this.onStreamUsernameUpdated)
+        client.on('streamPendingUsernameUpdated', this.onStreamUsernameUpdated)
         return () => {
-            client.removeListener('streamInitialized', this.onStreamInitialized)
+            client.off('streamUsernameUpdated', this.onStreamUsernameUpdated)
+            client.off('streamPendingUsernameUpdated', this.onStreamUsernameUpdated)
         }
     }
 
@@ -102,7 +104,14 @@ export class MemberUsername extends PersistedObservable<MemberUsernameModel> {
         if (streamId === this.data.streamId) {
             const streamView = this.riverConnection.client?.stream(this.data.streamId)?.view
             check(isDefined(streamView), 'streamView is not defined')
-            this.initialize(streamView)
+            const metadata = streamView.getUserMetadata()
+            const info = metadata?.usernames.info(this.data.id)
+            this.setData({
+                initialized: true,
+                username: info?.username,
+                isUsernameConfirmed: info?.usernameConfirmed,
+                isUsernameEncrypted: info?.usernameEncrypted,
+            })
         }
     }
 

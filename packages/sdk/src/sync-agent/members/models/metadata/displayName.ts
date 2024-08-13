@@ -1,4 +1,4 @@
-import { check, dlogger } from '@river-build/dlog'
+import { check } from '@river-build/dlog'
 import { LoadPriority, type Identifiable, type Store } from '../../../../store/store'
 import {
     PersistedObservable,
@@ -7,9 +7,7 @@ import {
 import type { RiverConnection } from '../../../river-connection/riverConnection'
 import type { Client } from '../../../../client'
 import { isDefined } from '../../../../check'
-import type { IStreamStateView } from '../../../../streamStateView'
 import { make_MemberPayload_DisplayName } from '../../../../types'
-const logger = dlogger('csb:userSettings')
 
 export interface MemberDisplayNameModel extends Identifiable {
     id: string
@@ -68,15 +66,15 @@ export class MemberDisplayName extends PersistedObservable<MemberDisplayNameMode
     }
 
     private onClientStarted = (client: Client) => {
-        logger.log('onClientStarted')
-        const streamView = client.stream(this.data.streamId)?.view
-        if (streamView) {
-            this.initialize(streamView)
+        if (
+            client.streams.has(this.data.id) &&
+            client.streams.get(this.data.id)?.view.isInitialized
+        ) {
+            this.onStreamInitialized(this.data.id)
         }
-        client.addListener('streamInitialized', this.onStreamInitialized)
-        client.addListener('streamDisplayNameUpdated', this.onStreamDisplayNameUpdated)
+        client.on('streamDisplayNameUpdated', this.onStreamDisplayNameUpdated)
         return () => {
-            client.removeListener('streamInitialized', this.onStreamInitialized)
+            client.off('streamDisplayNameUpdated', this.onStreamDisplayNameUpdated)
         }
     }
 
@@ -84,7 +82,13 @@ export class MemberDisplayName extends PersistedObservable<MemberDisplayNameMode
         if (streamId === this.data.streamId) {
             const streamView = this.riverConnection.client?.stream(this.data.streamId)?.view
             check(isDefined(streamView), 'streamView is not defined')
-            this.initialize(streamView)
+            const metadata = streamView.getUserMetadata()
+            const info = metadata?.displayNames.info(this.data.id)
+            this.setData({
+                initialized: true,
+                displayName: info?.displayName,
+                isEncrypted: info?.displayNameEncrypted,
+            })
         }
     }
 
@@ -100,9 +104,5 @@ export class MemberDisplayName extends PersistedObservable<MemberDisplayNameMode
                 })
             }
         }
-    }
-
-    private initialize = (_streamView: IStreamStateView) => {
-        this.setData({ initialized: true })
     }
 }

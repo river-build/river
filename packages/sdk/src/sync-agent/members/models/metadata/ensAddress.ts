@@ -1,4 +1,4 @@
-import { check, dlogger } from '@river-build/dlog'
+import { check } from '@river-build/dlog'
 import { LoadPriority, type Identifiable, type Store } from '../../../../store/store'
 import {
     PersistedObservable,
@@ -7,11 +7,9 @@ import {
 import type { RiverConnection } from '../../../river-connection/riverConnection'
 import type { Client } from '../../../../client'
 import { isDefined } from '../../../../check'
-import type { IStreamStateView } from '../../../../streamStateView'
 import type { Address } from '@river-build/web3'
 import { make_MemberPayload_EnsAddress } from '../../../../types'
 import { addressFromUserId } from '../../../../id'
-const logger = dlogger('csb:userSettings')
 
 export interface MemberEnsAddressModel extends Identifiable {
     id: string
@@ -59,15 +57,15 @@ export class MemberEnsAddress extends PersistedObservable<MemberEnsAddressModel>
     }
 
     private onClientStarted = (client: Client) => {
-        logger.log('onClientStarted')
-        const streamView = client.stream(this.data.streamId)?.view
-        if (streamView) {
-            this.initialize(streamView)
+        if (
+            client.streams.has(this.data.id) &&
+            client.streams.get(this.data.id)?.view.isInitialized
+        ) {
+            this.onStreamInitialized(this.data.id)
         }
-        client.addListener('streamInitialized', this.onStreamInitialized)
-        client.addListener('streamEnsAddressUpdated', this.onStreamEnsAddressUpdated)
+        client.on('streamEnsAddressUpdated', this.onStreamEnsAddressUpdated)
         return () => {
-            client.removeListener('streamInitialized', this.onStreamInitialized)
+            client.off('streamEnsAddressUpdated', this.onStreamEnsAddressUpdated)
         }
     }
 
@@ -75,7 +73,9 @@ export class MemberEnsAddress extends PersistedObservable<MemberEnsAddressModel>
         if (streamId === this.data.streamId) {
             const streamView = this.riverConnection.client?.stream(this.data.streamId)?.view
             check(isDefined(streamView), 'streamView is not defined')
-            this.initialize(streamView)
+            const metadata = streamView.getUserMetadata()
+            const ensAddress = metadata?.ensAddresses.info(this.data.id) as Address | undefined
+            this.setData({ initialized: true, ensAddress })
         }
     }
 
@@ -88,9 +88,5 @@ export class MemberEnsAddress extends PersistedObservable<MemberEnsAddressModel>
                 this.setData({ ensAddress: ensAddress as Address })
             }
         }
-    }
-
-    private initialize = (_streamView: IStreamStateView) => {
-        this.setData({ initialized: true })
     }
 }

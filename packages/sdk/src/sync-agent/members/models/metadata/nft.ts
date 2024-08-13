@@ -4,7 +4,6 @@ import {
     bin_toHexString,
     bin_toString,
     check,
-    dlogger,
 } from '@river-build/dlog'
 import { LoadPriority, type Identifiable, type Store } from '../../../../store/store'
 import {
@@ -17,8 +16,6 @@ import { isDefined } from '../../../../check'
 import type { IStreamStateView } from '../../../../streamStateView'
 import { MemberPayload_Nft } from '@river-build/proto'
 import { make_MemberPayload_Nft } from '../../../../types'
-
-const logger = dlogger('csb:userSettings')
 
 export type NftModel = {
     contractAddress: string
@@ -83,15 +80,15 @@ export class MemberNft extends PersistedObservable<MemberNftModel> {
     }
 
     private onClientStarted = (client: Client) => {
-        logger.log('onClientStarted')
-        const streamView = client.stream(this.data.streamId)?.view
-        if (streamView) {
-            this.initialize(streamView)
+        if (
+            client.streams.has(this.data.id) &&
+            client.streams.get(this.data.id)?.view.isInitialized
+        ) {
+            this.onStreamInitialized(this.data.id)
         }
-        client.addListener('streamInitialized', this.onStreamInitialized)
-        client.addListener('streamNftUpdated', this.onStreamNftUpdated)
+        client.on('streamNftUpdated', this.onStreamNftUpdated)
         return () => {
-            client.removeListener('streamInitialized', this.onStreamInitialized)
+            client.off('streamNftUpdated', this.onStreamNftUpdated)
         }
     }
 
@@ -99,7 +96,18 @@ export class MemberNft extends PersistedObservable<MemberNftModel> {
         if (streamId === this.data.streamId) {
             const streamView = this.riverConnection.client?.stream(this.data.streamId)?.view
             check(isDefined(streamView), 'streamView is not defined')
-            this.initialize(streamView)
+            const metadata = streamView.getUserMetadata()
+            const nft = metadata?.nfts.confirmedNfts.get(this.data.id)
+            this.setData({
+                initialized: true,
+                nft: nft
+                    ? {
+                          contractAddress: bin_toHexString(nft.contractAddress),
+                          tokenId: bin_toString(nft.tokenId),
+                          chainId: nft.chainId,
+                      }
+                    : undefined,
+            })
         }
     }
 
