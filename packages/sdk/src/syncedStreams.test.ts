@@ -74,12 +74,12 @@ describe('syncStreams', () => {
         const alicesUserInboxStreamIdStr = makeUserInboxStreamId(alicesUserId)
         const alicesUserInboxStreamId = streamIdToBytes(alicesUserInboxStreamIdStr)
         const userInboxStreamResponse = await createStream(alicesUserInboxStreamId, [
-                await makeEvent(
-                    alicesContext,
+            await makeEvent(
+                alicesContext,
                 make_UserInboxPayload_Inception({
                     streamId: alicesUserInboxStreamId,
-                    }),
-                ),
+                }),
+            ),
         ])
         const userInboxStream = new SyncedStream(
             alicesUserId,
@@ -128,6 +128,9 @@ describe('syncStreams', () => {
             ).toBeDefined(),
         )
         const sendPing = async () => {
+            if (!alicesSyncedStreams.pingInfo) {
+                throw new Error('syncId not set')
+            }
             const n1 = nanoid()
             const n2 = nanoid()
             alicesSyncedStreams.pingInfo.nonces[n1] = {
@@ -151,10 +154,10 @@ describe('syncStreams', () => {
             })
             await Promise.all([p1, p2])
             await waitFor(() =>
-                expect(alicesSyncedStreams.pingInfo.nonces[n2].receivedAt).toBeDefined(),
+                expect(alicesSyncedStreams.pingInfo?.nonces[n2].receivedAt).toBeDefined(),
             )
             await waitFor(() =>
-                expect(alicesSyncedStreams.pingInfo.nonces[n1].receivedAt).toBeDefined(),
+                expect(alicesSyncedStreams.pingInfo?.nonces[n1].receivedAt).toBeDefined(),
             )
         }
 

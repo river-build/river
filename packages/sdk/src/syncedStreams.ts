@@ -5,7 +5,7 @@ import { SyncedStreamEvents } from './streamEvents'
 import TypedEmitter from 'typed-emitter'
 import { isDefined } from './check'
 import { streamIdAsString } from './id'
-import { SyncState, SyncedStreamsLoop } from './syncedStreamsLoop'
+import { PingInfo, SyncState, SyncedStreamsLoop } from './syncedStreamsLoop'
 import { SyncedStream } from './syncedStream'
 
 export class SyncedStreams {
@@ -41,6 +41,10 @@ export class SyncedStreams {
         return this.syncedStreamsLoop?.syncState ?? SyncState.NotSyncing
     }
 
+    public get pingInfo(): PingInfo | undefined {
+        return this.syncedStreamsLoop?.pingInfo
+    }
+
     public has(streamId: string | Uint8Array): boolean {
         return this.streams.get(streamIdAsString(streamId)) !== undefined
     }
@@ -64,8 +68,8 @@ export class SyncedStreams {
         return this.streams.size
     }
 
-        public getSyncId(): string | undefined {
-        return this.syncedStreamsLoop?.syncId
+    public getSyncId(): string | undefined {
+        return this.syncedStreamsLoop?.getSyncId()
     }
 
     public getStreams(): SyncedStream[] {
@@ -127,7 +131,7 @@ export class SyncedStreams {
             return
         }
         await this.syncedStreamsLoop?.removeStreamFromSync(streamId)
-            this.streams.delete(streamId)
+        this.streams.delete(streamId)
     }
 
     private log(...args: unknown[]): void {

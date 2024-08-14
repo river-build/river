@@ -71,7 +71,7 @@ interface Nonces {
     [nonce: string]: NonceStats
 }
 
-interface PingInfo {
+export interface PingInfo {
     nonces: Nonces // the nonce that the server should echo back
     currentSequence: number // the current sequence number
     pingTimeout?: NodeJS.Timeout // for cancelling the next ping
@@ -115,7 +115,7 @@ export class SyncedStreamsLoop {
     // and are cleared when sync stops
     private responsesQueue: SyncStreamsResponse[] = []
     private inProgressTick?: Promise<void>
-    private pingInfo: PingInfo = {
+    public pingInfo: PingInfo = {
         currentSequence: 0,
         nonces: {},
     }
