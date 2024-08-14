@@ -1,4 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify'
+
 import { isValidEthereumAddress } from './validators'
 
 export function handleMetadataRequest(
