@@ -9,7 +9,11 @@ import { getLogger } from './logger'
 
 const logger = getLogger('handleImageRequest')
 
-export async function handleImageRequest(config: Config, request: FastifyRequest, reply: FastifyReply) {
+export async function handleImageRequest(
+	config: Config,
+	request: FastifyRequest,
+	reply: FastifyReply,
+) {
 	const { spaceAddress } = request.params as { spaceAddress?: string }
 
 	if (!spaceAddress) {
