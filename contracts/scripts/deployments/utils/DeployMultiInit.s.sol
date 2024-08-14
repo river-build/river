@@ -7,7 +7,7 @@ import {FacetHelper} from "contracts/test/diamond/Facet.t.sol";
 
 contract DeployMultiInit is Deployer, FacetHelper {
   function versionName() public pure override returns (string memory) {
-    return "MultiInit";
+    return "multiInit";
   }
 
   function __deploy(address deployer) public override returns (address) {
