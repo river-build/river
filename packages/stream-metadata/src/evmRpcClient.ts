@@ -1,5 +1,6 @@
 import { RiverRegistry } from '@river-build/web3'
 import { ethers } from 'ethers'
+
 import { Config } from './environment'
 
 let riverRegistry: ReturnType<typeof createRiverRegistry> | undefined

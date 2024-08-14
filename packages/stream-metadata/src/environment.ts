@@ -1,7 +1,6 @@
 import * as dotenv from 'dotenv'
 import { getWeb3Deployment } from '@river-build/web3'
 import { z } from 'zod'
-import { getLogger } from './logger'
 
 dotenv.config({
 	path: ['.env', '.env.local'],

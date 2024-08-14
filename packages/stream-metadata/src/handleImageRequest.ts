@@ -1,11 +1,12 @@
+import { FastifyReply, FastifyRequest } from 'fastify'
 import { ChunkedMedia } from '@river-build/proto'
 import { StreamPrefix, StreamStateView, makeStreamId } from '@river-build/sdk'
-import { FastifyReply, FastifyRequest } from 'fastify'
 
-import { Config, StreamIdHex } from './types'
-import { getLogger } from './logger'
+import { Config } from './environment'
+import { StreamIdHex } from './types'
 import { getMediaStreamContent, getStream } from './riverStreamRpcClient'
 import { isBytes32String, isValidEthereumAddress } from './validators'
+import { getLogger } from './logger'
 
 const logger = getLogger('handleImageRequest')
 
