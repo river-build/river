@@ -10,7 +10,7 @@ const NumberFromIntStringSchema = IntStringSchema.transform((str) => parseInt(st
 const envSchema = z.object({
 	RIVER_ENV: z.string(),
 	RIVER_CHAIN_RPC_URL: z.string().url(),
-	PORT: NumberFromIntStringSchema.optional().default('443'),
+	PORT: NumberFromIntStringSchema,
 })
 
 dotenv.config({
