@@ -210,7 +210,7 @@ func (s *PostgresEventStore) txRunner(
 				if pgErr.Code == pgerrcode.SerializationFailure {
 					backoffErr := backoff.wait(ctx)
 					if backoffErr != nil {
-						return backoffErr
+						return AsRiverError(backoffErr).Func(name).Message("Timed out waiting for backoff")
 					}
 					log.Warn(
 						"pg.txRunner: retrying transaction due to serialization failure",
