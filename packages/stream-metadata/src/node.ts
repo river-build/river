@@ -1,9 +1,11 @@
-import Fastify from 'fastify'
 import { Server as HTTPSServer } from 'https'
-import { SERVER_PORT } from './environment'
+
+import Fastify from 'fastify'
 import cors from '@fastify/cors'
+
 import { handleImageRequest } from './handleImageRequest'
 import { handleMetadataRequest } from './handleMetadataRequest'
+import { config } from './environment'
 
 // Set the process title to 'fetch-image' so it can be easily identified
 // or killed with `pkill fetch-image`
@@ -13,10 +15,20 @@ const server = Fastify({
 	logger: true,
 })
 
-server.register(cors, {
-	origin: '*', // Allow any origin
-	methods: ['GET'], // Allowed HTTP methods
-})
+async function registerPlugins() {
+	try {
+		await server.register(cors, {
+			origin: '*', // Allow any origin
+			methods: ['GET'], // Allowed HTTP methods
+		})
+		console.info('CORS registered successfully')
+	} catch (err) {
+		console.error('Error registering CORS', err)
+		process.exit(1) // Exit the process if registration fails
+	}
+}
+
+registerPlugins()
 
 server.get('/space/:spaceAddress', async (request, reply) => {
 	const { spaceAddress } = request.params as { spaceAddress?: string }
@@ -49,8 +61,8 @@ function getServerInfo() {
 }
 
 // Type guard to check if error has code property
-function isAddressInUseError(err: any): err is NodeJS.ErrnoException {
-	return err && typeof err === 'object' && 'code' in err
+function isAddressInUseError(err: unknown): err is NodeJS.ErrnoException {
+	return err instanceof Error && 'code' in err && err.code === 'EADDRINUSE'
 }
 
 // Function to start the server on the first available port
@@ -62,9 +74,9 @@ async function startServer(port: number) {
 			server.log.info(`Server listening on ${addressInfo.address}:${addressInfo.port}`)
 		}
 	} catch (err) {
-		if (isAddressInUseError(err) && err.code === 'EADDRINUSE') {
+		if (isAddressInUseError(err)) {
 			server.log.warn(`Port ${port} is in use, trying port ${port + 1}`)
-			startServer(port + 1) // Try the next port
+			await startServer(port + 1) // Try the next port
 		} else {
 			server.log.error(err)
 			process.exit(1)
@@ -84,4 +96,11 @@ process.on('SIGTERM', async () => {
 })
 
 // Start the server on the port set in the .env, or the next available port
-startServer(SERVER_PORT)
+startServer(config.port)
+	.then(() => {
+		console.log('Server started')
+	})
+	.catch((err) => {
+		console.error('Error starting server', err)
+		process.exit(1)
+	})
