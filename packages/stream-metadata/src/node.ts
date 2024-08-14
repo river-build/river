@@ -16,9 +16,9 @@ const logger = getLogger('server')
 
 logger.info('config', {
 	riverEnv: config.riverEnv,
-	chainId: config.river.chainId,
+	chainId: config.web3Config.river.chainId,
 	port: config.port,
-	riverRegistry: config.river.addresses.riverRegistry,
+	riverRegistry: config.web3Config.river.addresses.riverRegistry,
 	riverChainRpcUrl: config.riverChainRpcUrl,
 })
 
