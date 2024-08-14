@@ -48,7 +48,7 @@ async function getStreamClient(config: Config, streamId: `0x${string}`) {
 		clients.set(client.url!, client)
 		url = client.url!
 	}
-	console.log(`getStreamClient: url=${url}`)
+	logger.info('getStreamClient: client url', url)
 
 	const client = clients.get(url)
 	if (!client) {
