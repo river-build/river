@@ -9,9 +9,9 @@
 		"build": "node ./esbuild.config.mjs",
 		"lint": "eslint . --ext .ts",
 		"lint:fix": "eslint . --ext .ts --fix",
-		"dev": "yarn build && node --experimental-detect-module ./dist/node_esbuild.cjs",
+		"dev": "yarn build && node ./dist/node_esbuild.cjs",
 		"prettier": "prettier --config ../prettier-config/config.js --ignore-path .prettierignore .",
-		"start": "node --experimental-detect-module ./dist/node_esbuild.cjs"
+		"start": "node ./dist/node_esbuild.cjs"
 	},
 	"dependencies": {
 		"@bufbuild/buf": "^1.32.0",
