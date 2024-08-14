@@ -5,7 +5,8 @@ pragma solidity ^0.8.23;
 import {IDiamond} from "contracts/src/diamond/IDiamond.sol";
 
 //contracts
-import {DiamondDeployer} from "../common/DiamondDeployer.s.sol";
+import {DiamondHelper} from "contracts/test/diamond/Diamond.t.sol";
+import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 import {Diamond} from "contracts/src/diamond/Diamond.sol";
 
 // helpers
@@ -31,7 +32,7 @@ import {DeployRewardsDistribution} from "contracts/scripts/deployments/facets/De
 import {DeployERC721ANonTransferable} from "contracts/scripts/deployments/facets/DeployERC721ANonTransferable.s.sol";
 import {DeployMockMessenger} from "contracts/scripts/deployments/facets/DeployMockMessenger.s.sol";
 
-contract DeployBaseRegistry is DiamondDeployer {
+contract DeployBaseRegistry is DiamondHelper, Deployer {
   DeployERC721ANonTransferable deployNFT = new DeployERC721ANonTransferable();
 
   // deployments
@@ -71,7 +72,7 @@ contract DeployBaseRegistry is DiamondDeployer {
 
   function diamondInitParams(
     address deployer
-  ) public override returns (Diamond.InitParams memory) {
+  ) internal returns (Diamond.InitParams memory) {
     multiInit = deployMultiInit.deploy();
     diamondCut = cutHelper.deploy();
     diamondLoupe = loupeHelper.deploy();
@@ -161,5 +162,12 @@ contract DeployBaseRegistry is DiamondDeployer {
           _initDatas
         )
       });
+  }
+
+  function __deploy(address deployer) public override returns (address) {
+    Diamond.InitParams memory initDiamondCut = diamondInitParams(deployer);
+    Diamond diamond = new Diamond(initDiamondCut);
+
+    return address(diamond);
   }
 }

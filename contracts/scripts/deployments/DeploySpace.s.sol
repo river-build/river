@@ -8,15 +8,13 @@ import {IERC721A} from "contracts/src/diamond/facets/token/ERC721A/IERC721A.sol"
 //libraries
 
 //contracts
-import {DiamondDeployer} from "../common/DiamondDeployer.s.sol";
+import {DiamondHelper} from "contracts/test/diamond/Diamond.t.sol";
+import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 
 import {TokenPausableHelper} from "contracts/test/diamond/pausable/token/TokenPausableSetup.sol";
 import {ERC721AHelper} from "contracts/test/diamond/erc721a/ERC721ASetup.sol";
 
 // Facets
-
-import {Banning} from "contracts/src/spaces/facets/banning/Banning.sol";
-
 import {MultiInit} from "contracts/src/diamond/initializers/MultiInit.sol";
 
 import {DeployDiamondCut} from "contracts/scripts/deployments/facets/DeployDiamondCut.s.sol";
@@ -37,10 +35,9 @@ import {DeployTokenPausable} from "contracts/scripts/deployments/facets/DeployTo
 import {DeployPrepayFacet} from "contracts/scripts/deployments/facets/DeployPrepayFacet.s.sol";
 import {DeployMultiInit} from "contracts/scripts/deployments/DeployMultiInit.s.sol";
 
-contract DeploySpace is DiamondDeployer {
-  address internal constant GOVERNANCE_ADDRESS =
-    0x63217D4c321CC02Ed306cB3843309184D347667B;
+import {SpaceDiamond} from "contracts/src/spaces/SpaceDiamond.sol";
 
+contract DeploySpace is DiamondHelper, Deployer {
   DeployDiamondCut diamondCutHelper = new DeployDiamondCut();
   DeployDiamondLoupe diamondLoupeHelper = new DeployDiamondLoupe();
   DeployIntrospection introspectionHelper = new DeployIntrospection();
@@ -87,12 +84,12 @@ contract DeploySpace is DiamondDeployer {
   address multiInit;
 
   function versionName() public pure override returns (string memory) {
-    return "space";
+    return "SpaceDiamond";
   }
 
   function diamondInitParams(
     address deployer
-  ) public override returns (Diamond.InitParams memory) {
+  ) internal returns (Diamond.InitParams memory) {
     diamondCut = diamondCutHelper.deploy();
     diamondLoupe = diamondLoupeHelper.deploy();
     introspection = introspectionHelper.deploy();
@@ -177,5 +174,13 @@ contract DeploySpace is DiamondDeployer {
           _initDatas
         )
       });
+  }
+
+  function __deploy(address deployer) public override returns (address) {
+    Diamond.InitParams memory initDiamondCut = diamondInitParams(deployer);
+    vm.broadcast(deployer);
+    SpaceDiamond diamond = new SpaceDiamond(initDiamondCut);
+
+    return address(diamond);
   }
 }

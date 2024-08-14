@@ -3,10 +3,10 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {IDiamond} from "contracts/src/diamond/IDiamond.sol";
-import {ISpaceOwner} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
 
 // helpers
-import {DiamondDeployer} from "../common/DiamondDeployer.s.sol";
+import {DiamondHelper} from "contracts/test/diamond/Diamond.t.sol";
+import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 
 // contracts
 import {Diamond} from "contracts/src/diamond/Diamond.sol";
@@ -40,7 +40,9 @@ import {DeployPausable} from "contracts/scripts/deployments/facets/DeployPausabl
 import {DeployPlatformRequirements} from "./facets/DeployPlatformRequirements.s.sol";
 import {DeployEIP712Facet} from "contracts/scripts/deployments/facets/DeployEIP712Facet.s.sol";
 
-contract DeploySpaceFactory is DiamondDeployer {
+import {SpaceFactory} from "contracts/src/factory/SpaceFactory.sol";
+
+contract DeploySpaceFactory is DiamondHelper, Deployer {
   // diamond helpers
   DeployOwnable ownableHelper = new DeployOwnable();
   DeployDiamondCut diamondCutHelper = new DeployDiamondCut();
@@ -96,12 +98,12 @@ contract DeploySpaceFactory is DiamondDeployer {
   address public fixedPricing;
 
   function versionName() public pure override returns (string memory) {
-    return "spaceFactory";
+    return "SpaceFactory";
   }
 
   function diamondInitParams(
     address deployer
-  ) public override returns (Diamond.InitParams memory) {
+  ) internal returns (Diamond.InitParams memory) {
     address multiInit = deployMultiInit.deploy();
 
     address space = deploySpace.deploy();
@@ -228,5 +230,13 @@ contract DeploySpaceFactory is DiamondDeployer {
           _initDatas
         )
       });
+  }
+
+  function __deploy(address deployer) public override returns (address) {
+    Diamond.InitParams memory initDiamondCut = diamondInitParams(deployer);
+    vm.broadcast(deployer);
+    Diamond diamond = new Diamond(initDiamondCut);
+
+    return address(diamond);
   }
 }
