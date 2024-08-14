@@ -3,10 +3,11 @@ import { Server as HTTPSServer } from 'https'
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 
-import { handleImageRequest } from './handleImageRequest'
-import { handleMetadataRequest } from './handleMetadataRequest'
 import { config } from './environment'
 import { getLogger } from './logger'
+import { handleHealthCheckRequest } from './handleHealthCheckRequest'
+import { handleImageRequest } from './handleImageRequest'
+import { handleMetadataRequest } from './handleMetadataRequest'
 
 // Set the process title to 'fetch-image' so it can be easily identified
 // or killed with `pkill fetch-image`
@@ -43,6 +44,14 @@ async function registerPlugins() {
 }
 
 void registerPlugins()
+
+/*
+ * Routes
+ */
+server.get('/health', async (request, reply) => {
+	logger.info(`GET /health`)
+	return handleHealthCheckRequest(config, request, reply)
+})
 
 /*
  * Routes
