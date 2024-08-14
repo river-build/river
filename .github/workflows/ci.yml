@@ -136,7 +136,7 @@ jobs:
               if: ${{ !cancelled() && steps.setup_success.outcome == 'success' }}
               uses: dominikh/staticcheck-action@v1
               with:
-                  version: latest
+                  version: v0.4.7
                   working-directory: core
                   install-go: false
 
