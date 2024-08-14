@@ -97,7 +97,7 @@ process.on('SIGTERM', async () => {
 		logger.info('Server closed gracefully')
 		process.exit(0)
 	} catch (err) {
-		logger.info('Error during server shutdown', err)
+		logger.error('Error during server shutdown', err)
 		process.exit(1)
 	}
 })
@@ -109,7 +109,7 @@ async function main() {
 		await startServer(config.port)
 		logger.info('Server started')
 	} catch (err) {
-		logger.error('Error starting server', { error: err })
+		logger.error('Error starting server', err)
 		process.exit(1)
 	}
 }
