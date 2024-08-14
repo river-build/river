@@ -112,7 +112,6 @@ async function main() {
 	setupRoutes()
 	// Start the server on the port set in the .env
 	await startServer(config.port)
-	logger.info('Server started')
 }
 
 main()
