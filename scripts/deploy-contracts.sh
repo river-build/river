@@ -37,8 +37,8 @@ if [ "${1-}" != "nobuild" ]; then
 fi
 
 # Account Abstraction is not supported on anvil
-# make deploy-base-anvil type=contract contract=DeployEntrypoint
-# make deploy-base-anvil type=contract contract=DeployAccountFactory
+# make deploy-base-anvil type=utils contract=DeployEntrypoint
+# make deploy-base-anvil type=utils contract=DeployAccountFactory
 
 
 # Only anvil supports automine but this might be a local geth node
@@ -63,16 +63,16 @@ make deploy-base-anvil type=facets contract=DeployRewardsDistribution
 make deploy-base-anvil type=facets contract=DeployMockMessenger # util
 make deploy-base-anvil type=facets contract=DeployERC721ANonTransferable
 make deploy-base-anvil type=diamonds contract=DeployBaseRegistry
-make deploy-base-anvil type=contract contract=DeployProxyBatchDelegation
-make deploy-base-anvil type=contract contract=DeployRiverBase
+make deploy-base-anvil type=utils contract=DeployProxyBatchDelegation
+make deploy-base-anvil type=utils contract=DeployRiverBase
 make deploy-base-anvil type=diamonds contract=DeploySpaceFactory
-make interact-base-anvil type=contract contract=InteractPostDeploy
+make interact-base-anvil contract=InteractPostDeploy
 
 # Utils
-make deploy-base-anvil type=contract contract=DeployMember
-make deploy-base-anvil type=contract contract=DeployMockNFT
-make deploy-base-anvil type=contract contract=DeployEntitlementGatedExample
-make deploy-base-anvil type=contract contract=DeployCustomEntitlementExample
+make deploy-base-anvil type=utils contract=DeployMember
+make deploy-base-anvil type=utils contract=DeployMockNFT
+make deploy-base-anvil type=utils contract=DeployEntitlementGatedExample
+make deploy-base-anvil type=utils contract=DeployCustomEntitlementExample
 
 # River Registry
 make deploy-river-anvil type=diamonds contract=DeployRiverRegistry
