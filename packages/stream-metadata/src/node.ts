@@ -108,16 +108,18 @@ process.on('SIGTERM', async () => {
 })
 
 async function main() {
-	try {
-		await registerPlugins()
-		setupRoutes()
-		// Start the server on the port set in the .env
-		await startServer(config.port)
-		logger.info('Server started')
-	} catch (err) {
-		logger.error('Error starting server', err)
-		process.exit(1)
-	}
+	await registerPlugins()
+	setupRoutes()
+	// Start the server on the port set in the .env
+	await startServer(config.port)
+	logger.info('Server started')
 }
 
-void main()
+main()
+	.then(() => {
+		logger.info('Server started')
+	})
+	.catch((err) => {
+		logger.error('Error starting server', err)
+		process.exit(1)
+	})
