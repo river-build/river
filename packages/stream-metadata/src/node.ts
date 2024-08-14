@@ -31,16 +31,11 @@ const server = Fastify({
 })
 
 async function registerPlugins() {
-	try {
-		await server.register(cors, {
-			origin: '*', // Allow any origin
-			methods: ['GET'], // Allowed HTTP methods
-		})
-		logger.info('CORS registered successfully')
-	} catch (err) {
-		logger.error('Error registering CORS', err)
-		process.exit(1) // Exit the process if registration fails
-	}
+	await server.register(cors, {
+		origin: '*', // Allow any origin
+		methods: ['GET'], // Allowed HTTP methods
+	})
+	logger.info('CORS registered successfully')
 }
 
 function setupRoutes() {
@@ -108,17 +103,15 @@ process.on('SIGTERM', async () => {
 })
 
 async function main() {
-	await registerPlugins()
-	setupRoutes()
-	// Start the server on the port set in the .env
-	await startServer(config.port)
+	try {
+		await registerPlugins()
+		setupRoutes()
+		await startServer(config.port)
+		logger.info('Server started')
+	} catch (err) {
+		logger.error('Error starting server', { error: err })
+		process.exit(1)
+	}
 }
 
-main()
-	.then(() => {
-		logger.info('Server started')
-	})
-	.catch((err) => {
-		logger.error('Error starting server', err)
-		process.exit(1)
-	})
+void main()
