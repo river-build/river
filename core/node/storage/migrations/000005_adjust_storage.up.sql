@@ -14,9 +14,3 @@ ALTER TABLE miniblock_candidates ALTER COLUMN blockdata SET STORAGE EXTERNAL;
 ALTER TABLE miniblocks ALTER COLUMN blockdata SET STORAGE EXTERNAL;
 
 ALTER TABLE minipools ALTER COLUMN envelope SET STORAGE EXTERNAL;
-
--- Apply changes to existing data by performing VACUUM FULL
-VACUUM FULL miniblock_candidates;
-VACUUM FULL es;
-VACUUM FULL miniblocks;
-VACUUM FULL minipools;
