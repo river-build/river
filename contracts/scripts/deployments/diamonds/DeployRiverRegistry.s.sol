@@ -129,6 +129,8 @@ contract DeployRiverRegistry is DiamondHelper, Deployer {
 
   function __deploy(address deployer) public override returns (address) {
     Diamond.InitParams memory initDiamondCut = diamondInitParams(deployer);
+
+    vm.broadcast(deployer);
     Diamond diamond = new Diamond(initDiamondCut);
 
     return address(diamond);
