@@ -3,7 +3,7 @@ import { Server as HTTPSServer } from 'https'
 import { config } from './environment'
 import cors from '@fastify/cors'
 import { getLogger } from './logger'
-import { handleHealthCheckRequest } from './handleHealthCheckRequests'
+import { handleHealthCheckRequest } from './handleHealthCheckRequest'
 import { handleImageRequest } from './handleImageRequest'
 import { handleMetadataRequest } from './handleMetadataRequest'
 
