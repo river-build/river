@@ -1,11 +1,9 @@
 import { RiverRegistry } from '@river-build/web3'
 import { ethers } from 'ethers'
 
-import { Config } from './environment'
+import { config } from './environment'
 
-let riverRegistry: ReturnType<typeof createRiverRegistry> | undefined
-
-function createRiverRegistry(config: Config) {
+function makeRiverRegistry() {
 	const provider = new ethers.providers.JsonRpcProvider(config.riverChainRpcUrl)
 	const rvrRegistry = new RiverRegistry(config.web3Config.river, provider)
 
@@ -16,9 +14,4 @@ function createRiverRegistry(config: Config) {
 	return rvrRegistry
 }
 
-export function getRiverRegistry(config: Config) {
-	if (!riverRegistry) {
-		riverRegistry = createRiverRegistry(config)
-	}
-	return riverRegistry
-}
+export const riverRegistry = makeRiverRegistry()

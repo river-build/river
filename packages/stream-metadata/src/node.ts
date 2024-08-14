@@ -44,7 +44,7 @@ function setupRoutes() {
 	 */
 	server.get('/health', async (request, reply) => {
 		logger.info(`GET /health`)
-		return handleHealthCheckRequest(config, request, reply)
+		return handleHealthCheckRequest(request, reply)
 	})
 
 	server.get('/space/:spaceAddress', async (request, reply) => {
@@ -60,7 +60,7 @@ function setupRoutes() {
 			spaceAddress,
 		})
 
-		return handleImageRequest(config, request, reply)
+		return handleImageRequest(request, reply)
 	})
 
 	// Generic / route to return 404
