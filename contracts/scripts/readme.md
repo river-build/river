@@ -48,7 +48,7 @@ This makes it easy to:
 - `OVERRIDE_DEPLOYMENTS=1`: It will redeploy a version of the contracts even if there's a cache in deployments assigned, be very careful when using this
 - `SAVE_DEPLOYMENTS=1`: It will save a cached address of deployments to `contracts/deployments/<network>/<contract>.json`
 
-## How to deploy
+## How to deploy locally
 
 ```bash
 # say you want to deploy a new ${CONTRACT}
@@ -67,7 +67,7 @@ This makes it easy to:
 -> forge script script/${CONTRACT}.s.sol --rpc-url <network>
 
 # perform the deployment
--> SAVE_DEPLOYMENTS=1 forge script script/${CONTRACT}.s.sol --ffi --rpc-url <network> --broadcast --verify --watch
+-> forge script script/${CONTRACT}.s.sol --ffi --rpc-url <network> --broadcast --verify --watch
 
 # Optionally verify the contract as a separate step
 -> forge verify-contract <CONTRACT_ADDRESS> <CONTRACT_NAME> --chain <network> --watch
@@ -78,13 +78,13 @@ This makes it easy to:
 ```bash
 # say you want to upgrade an implementation of Space inside SpaceFactory
 
-# deploy the same implementation contract you used to deploy SpaceImpl
+# deploy the same implementation contract you used to deploy DeployMultiInit
 # but with flags OVERRIDE_DEPLOYMENTS and SAVE_DEPLOYMENTS equal to 1
--> OVERRIDE_DEPLOYMENTS=1 SAVE_DEPLOYMENTS=1 make deploy-base-anvil contract=DeploySpaceImpl
+-> deploy-any-local rpc=base_anvil contract=DeployDeployMultiInit
 
-# next we'll deploy the script UpgradeSpaceImpl without flags
+# next we'll deploy the script UpgradeDeployMultiInit without flags
 # This will grab new and existing deployment addresses from our deployments cache and use those to interact with each other
--> make deploy-base-anvil contract=UpgradeSpaceImpl
+-> make deploy-base-anvil contract=UpgradeDeployMultiInit
 ```
 
 ## How to deploy a new space factory implementation, a new space implementation and update space factory to point to both of these?
@@ -95,16 +95,16 @@ This makes it easy to:
 SAVE_DEPLOYMENTS=1 make deploy-goerli contract=UpgradeSpaceFactoryImpl
 ```
 
-2. Deploy new Space implementation, you can either override the current cached address or just change your `versionName()` in the contract to `spaceImplv2` and remove the `OVERRIDE_DEPLOYMENTS=1` flag
+2. Deploy new Space implementation, you can either override the current cached address or just change your `versionName()` in the contract to `DeployMultiInitv2` and remove the `OVERRIDE_DEPLOYMENTS=1` flag
 
 ```bash
-SAVE_DEPLOYMENTS=1 OVERRIDE_DEPLOYMENTS=1 make deploy-goerli contract=DeploySpaceImpl
+SAVE_DEPLOYMENTS=1 OVERRIDE_DEPLOYMENTS=1 make deploy-goerli contract=DeployDeployMultiInit
 ```
 
 3. Update the Space Factory with the new Space Implementation
 
 ```bash
-SAVE_DEPLOYMENTS=1 make deploy-goerli contract=UpgradeSpaceImpl
+SAVE_DEPLOYMENTS=1 make deploy-goerli contract=UpgradeDeployMultiInit
 ```
 
 # How to deploy predeterministic contracts?
