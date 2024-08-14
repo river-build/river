@@ -4,13 +4,17 @@ import { z } from 'zod'
 
 import { Config } from './types'
 
+dotenv.config({
+	path: ['.env', '.env.local'],
+})
+
 const IntStringSchema = z.string().regex(/^[0-9]+$/)
 const NumberFromIntStringSchema = IntStringSchema.transform((str) => parseInt(str, 10))
 
 const envSchema = z.object({
 	RIVER_ENV: z.string(),
 	RIVER_CHAIN_RPC_URL: z.string().url(),
-	PORT: NumberFromIntStringSchema.optional().default('443'),
+	PORT: NumberFromIntStringSchema,
 	LOG_LEVEL: z.string().optional().default('info'),
 	LOG_PRETTY: z.boolean().optional().default(true),
 })
@@ -31,10 +35,6 @@ function makeConfig(): Config {
 		riverChainRpcUrl: env.RIVER_CHAIN_RPC_URL,
 	}
 }
-
-dotenv.config({
-	path: ['.env', '.env.local'],
-})
 
 export const config = makeConfig()
 
