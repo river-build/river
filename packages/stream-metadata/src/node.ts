@@ -9,11 +9,19 @@ import { handleHealthCheckRequest } from './handleHealthCheckRequest'
 import { handleImageRequest } from './handleImageRequest'
 import { handleMetadataRequest } from './handleMetadataRequest'
 
-// Set the process title to 'fetch-image' so it can be easily identified
-// or killed with `pkill fetch-image`
+// Set the process title to 'stream-metadata' so it can be easily identified
+// or killed with `pkill stream-metadata`
 process.title = 'stream-metadata'
 
 const logger = getLogger('server')
+
+logger.info({
+	riverEnv: config.riverEnv,
+	chainId: config.web3Config.river.chainId,
+	port: config.port,
+	riverRegistry: config.web3Config.river.addresses.riverRegistry,
+	riverChainRpcUrl: config.riverChainRpcUrl,
+})
 
 /*
  * Server setup
