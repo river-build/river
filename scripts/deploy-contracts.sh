@@ -66,7 +66,7 @@ make deploy-any-local rpc=base_anvil type=diamonds contract=DeployBaseRegistry
 make deploy-any-local rpc=base_anvil type=utils contract=DeployProxyBatchDelegation
 make deploy-any-local rpc=base_anvil type=utils contract=DeployRiverBase
 make deploy-any-local rpc=base_anvil type=diamonds contract=DeploySpaceFactory
-make interact-any-local rpv=base_anvil contract=InteractPostDeploy
+make interact-any-local rpc=base_anvil contract=InteractPostDeploy
 
 # Utils
 make deploy-any-local rpc=base_anvil type=utils contract=DeployMember
