@@ -264,8 +264,12 @@ func (st *serviceTester) Start(t *testing.T) {
 		)
 
 		st.AssertNoEVMError(err)
-		receipt := <-pendingTx.Wait()
-		if receipt == nil || receipt.Status != node_crypto.TransactionResultSuccess {
+		receipt, err := pendingTx.Wait(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if receipt.Status != node_crypto.TransactionResultSuccess {
 			log.Fatal("unable to register node")
 		}
 
@@ -342,7 +346,10 @@ func (st *serviceTester) linkWalletToRootWallet(
 	)
 
 	st.AssertNoEVMError(err)
-	receipt := <-pendingTx.Wait()
+	receipt, err := pendingTx.Wait(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
 	st.require.Equal(uint64(1), receipt.Status)
 }
 
@@ -399,6 +406,25 @@ func customEntitlementCheck(chainId uint64, contractAddress common.Address) base
 				ChainId:         new(big.Int).SetUint64(chainId),
 				ContractAddress: contractAddress,
 				Threshold:       new(big.Int).SetUint64(0),
+			},
+		},
+	}
+}
+
+func ethBalanceCheck(chainId uint64, threshold uint64) base.IRuleEntitlementBaseRuleData {
+	return base.IRuleEntitlementBaseRuleData{
+		Operations: []base.IRuleEntitlementBaseOperation{
+			{
+				OpType: uint8(entitlement.CHECK),
+				Index:  0,
+			},
+		},
+		CheckOperations: []base.IRuleEntitlementBaseCheckOperation{
+			{
+				OpType:          uint8(entitlement.NATIVE_COIN_BALANCE),
+				ChainId:         new(big.Int).SetUint64(chainId),
+				ContractAddress: common.Address{},
+				Threshold:       new(big.Int).SetUint64(threshold),
 			},
 		},
 	}
@@ -783,6 +809,89 @@ func TestCustomEntitlements(t *testing.T) {
 
 				// Untoggle entitlement for the wallet
 				toggleEntitlement(require, auth, customEntitlement, wallet, false)
+			}
+		})
+	}
+}
+
+func TestEthBalance(t *testing.T) {
+	tests := map[string]struct {
+		sentByRootKeyWallet bool
+	}{
+		"request sent by root key wallet": {sentByRootKeyWallet: true},
+		"request sent by linked wallet":   {sentByRootKeyWallet: false},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := test.NewTestContext()
+			ctx = dlog.CtxWithLog(ctx, noColorLogger())
+			defer cancel()
+
+			require := require.New(t)
+			st := newServiceTester(5, require)
+			defer st.Close()
+			st.Start(t)
+
+			cfg := st.Config()
+			bc := st.ClientSimulatorBlockchain()
+			cs, err := client_simulator.New(ctx, cfg, bc, bc.Wallet)
+			require.NoError(err)
+			cs.Start(ctx)
+			defer cs.Stop()
+
+			// Explicitly set client simulator wallet balance to 1 Eth for covering gas fees.
+			err = anvilClient.Client().
+				CallContext(ctx, nil, "anvil_setBalance", cs.Wallet().Address, node_crypto.Eth_1.String())
+			require.NoError(err)
+
+			// Initially the check should fail.
+			ethCheck := ethBalanceCheck(ChainID, node_crypto.Eth_2.Uint64())
+			expectEntitlementCheckResult(require, cs, ctx, cfg, ethCheck, false)
+
+			// Fund the client simulator wallet with 10 eth - should pass the check.
+			err = anvilClient.Client().
+				CallContext(ctx, nil, "anvil_setBalance", cs.Wallet().Address, node_crypto.Eth_10.String())
+			require.NoError(err)
+
+			// Check should now succeed.
+			expectEntitlementCheckResult(require, cs, ctx, cfg, ethCheck, true)
+
+			// Create a set of 3 linked wallets using client simulator address.
+			rootKey, wallet1, wallet2, wallet3 := generateLinkedWallets(
+				ctx,
+				require,
+				tc.sentByRootKeyWallet,
+				st,
+				cs.Wallet(),
+			)
+
+			// Set each wallet balance to 2 eth, bringing cumulative total over all wallets to 8 eth.
+			// This amount should not pass a threshold of 10eth, but increasing any single wallet balance
+			// to 4th would cause a 10eth check to pass.
+			for _, wallet := range []*node_crypto.Wallet{rootKey, wallet1, wallet2, wallet3} {
+				err = anvilClient.Client().
+					CallContext(ctx, nil, "anvil_setBalance", wallet.Address, node_crypto.Eth_2.String())
+				require.NoError(err)
+			}
+
+			eth10Check := ethBalanceCheck(ChainID, node_crypto.Eth_10.Uint64())
+
+			for _, wallet := range []*node_crypto.Wallet{wallet1, wallet2, wallet3} {
+				// Check should fail for all wallets.
+				expectEntitlementCheckResult(require, cs, ctx, cfg, eth10Check, false)
+
+				// Toggle entitlement for a particular linked wallet
+				err = anvilClient.Client().
+					CallContext(ctx, nil, "anvil_setBalance", wallet.Address, node_crypto.Eth_4.String())
+				require.NoError(err)
+
+				// Check should now succeed for the wallet.
+				expectEntitlementCheckResult(require, cs, ctx, cfg, ethCheck, true)
+
+				// Reset wallet balance.
+				err = anvilClient.Client().
+					CallContext(ctx, nil, "anvil_setBalance", wallet.Address, node_crypto.Eth_2.String())
+				require.NoError(err)
 			}
 		})
 	}
