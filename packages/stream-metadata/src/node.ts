@@ -82,15 +82,6 @@ function getServerInfo() {
 	return { protocol, serverAddress }
 }
 
-// Function to start the server on the first available port
-async function startServer(port: number) {
-	await server.listen({ port, host: 'localhost' })
-	const addressInfo = server.server.address()
-	if (addressInfo && typeof addressInfo === 'object') {
-		server.log.info(`Server listening on ${addressInfo.address}:${addressInfo.port}`)
-	}
-}
-
 process.on('SIGTERM', async () => {
 	try {
 		await server.close()
@@ -106,7 +97,7 @@ async function main() {
 	try {
 		await registerPlugins()
 		setupRoutes()
-		await startServer(config.port)
+		await server.listen({ port: config.port })
 		logger.info('Server started')
 	} catch (err) {
 		logger.error('Error starting server', err)
