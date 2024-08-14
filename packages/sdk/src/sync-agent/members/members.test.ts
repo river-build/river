@@ -1,16 +1,12 @@
 /**
  * @group with-entitilements
  */
-import { dlogger } from '@river-build/dlog'
 import { Bot } from '../utils/bot'
 import { waitFor } from '../../util.test'
 import type { SyncAgent } from '../syncAgent'
 import type { Space } from '../spaces/models/space'
 
-const logger = dlogger('csb:test:members')
-
 describe('members.test.ts', () => {
-    logger.log('start')
     const testUser = new Bot()
     let syncAgent: SyncAgent
     let space: Space

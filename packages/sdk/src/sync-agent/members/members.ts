@@ -1,4 +1,4 @@
-import { check, dlogger } from '@river-build/dlog'
+import { check } from '@river-build/dlog'
 import { isDefined } from '../../check'
 import { PersistedObservable, persistedObservable } from '../../observable/persistedObservable'
 import type { Store } from '../../store/store'
@@ -11,7 +11,6 @@ type MembersModel = {
     initialized: boolean
 }
 
-const logger = dlogger('csb:members')
 @persistedObservable({ tableName: 'members' })
 export class Members extends PersistedObservable<MembersModel> {
     private members: Map<string, Member>
@@ -28,24 +27,16 @@ export class Members extends PersistedObservable<MembersModel> {
             ) {
                 this.onStreamInitialized(this.data.id)
             }
-            client.on('streamNewUserJoined', (streamId, userId) =>
-                this.onMemberJoin(streamId, userId),
-            )
-            client.on('streamNewUserInvited', (streamId, userId) =>
-                this.onMemberJoin(streamId, userId),
-            )
-            client.on('streamUserLeft', (streamId, userId) => this.onMemberLeave(streamId, userId))
+            client.on('streamInitialized', this.onStreamInitialized)
+            client.on('streamNewUserJoined', this.onMemberJoin)
+            client.on('streamNewUserInvited', this.onMemberJoin)
+            client.on('streamUserLeft', this.onMemberLeave)
 
             return () => {
-                client.off('streamNewUserJoined', (streamId, userId) =>
-                    this.onMemberJoin(streamId, userId),
-                )
-                client.off('streamNewUserInvited', (streamId, userId) =>
-                    this.onMemberJoin(streamId, userId),
-                )
-                client.off('streamUserLeft', (streamId, userId) =>
-                    this.onMemberLeave(streamId, userId),
-                )
+                client.off('streamInitialized', this.onStreamInitialized)
+                client.off('streamNewUserJoined', this.onMemberJoin)
+                client.off('streamNewUserInvited', this.onMemberJoin)
+                client.off('streamUserLeft', this.onMemberLeave)
             }
         })
     }
@@ -61,10 +52,11 @@ export class Members extends PersistedObservable<MembersModel> {
         return streamView.getUserMetadata().usernames.cleartextUsernameAvailable(username)
     }
 
-    private onStreamInitialized(streamId: string): void {
+    private onStreamInitialized = (streamId: string): void => {
         if (streamId !== this.data.id) return
         const stream = this.riverConnection.client?.stream(streamId)
         check(isDefined(stream), 'stream is not defined')
+        this.members.clear()
         const userIds = Array.from(stream.view.getMembers().joined.values()).map(
             (member) => member.userId,
         )
@@ -74,13 +66,13 @@ export class Members extends PersistedObservable<MembersModel> {
         this.setData({ initialized: true, userIds })
     }
 
-    private onMemberLeave(streamId: string, userId: string): void {
+    private onMemberLeave = (streamId: string, userId: string): void => {
         if (streamId !== this.data.id) return
         this.members.delete(userId)
         this.setData({ userIds: this.data.userIds.filter((id) => id !== userId) })
     }
 
-    private onMemberJoin(streamId: string, userId: string): void {
+    private onMemberJoin = (streamId: string, userId: string): void => {
         if (streamId !== this.data.id) return
         this.members.set(userId, new Member(userId, streamId, this.riverConnection, this.store))
         this.setData({ userIds: [...this.data.userIds, userId] })

@@ -45,7 +45,22 @@ export class MemberUsername extends PersistedObservable<MemberUsernameModel> {
     }
 
     protected override async onLoaded() {
-        this.riverConnection.registerView(this.onClientStarted)
+        this.riverConnection.registerView((client) => {
+            if (
+                client.streams.has(this.data.id) &&
+                client.streams.get(this.data.id)?.view.isInitialized
+            ) {
+                this.onStreamInitialized(this.data.id)
+            }
+            client.on('streamInitialized', this.onStreamInitialized)
+            client.on('streamUsernameUpdated', this.onStreamUsernameUpdated)
+            client.on('streamPendingUsernameUpdated', this.onStreamUsernameUpdated)
+            return () => {
+                client.off('streamInitialized', this.onStreamInitialized)
+                client.off('streamUsernameUpdated', this.onStreamUsernameUpdated)
+                client.off('streamPendingUsernameUpdated', this.onStreamUsernameUpdated)
+            }
+        })
     }
 
     async setUsername(username: string) {
@@ -55,6 +70,7 @@ export class MemberUsername extends PersistedObservable<MemberUsernameModel> {
         const streamView = this.riverConnection.client
             ?.stream(streamId)
             ?.view.getUserMetadata().usernames
+        check(isDefined(streamView), 'streamView is not defined')
         streamView?.setLocalUsername(this.data.id, username)
         this.setData({
             username,
@@ -82,22 +98,6 @@ export class MemberUsername extends PersistedObservable<MemberUsernameModel> {
                 streamView?.resetLocalUsername(this.data.id)
                 throw e
             })
-    }
-
-    private onClientStarted = (client: Client) => {
-        logger.log('onClientStarted')
-        if (
-            client.streams.has(this.data.id) &&
-            client.streams.get(this.data.id)?.view.isInitialized
-        ) {
-            this.onStreamInitialized(this.data.id)
-        }
-        client.on('streamUsernameUpdated', this.onStreamUsernameUpdated)
-        client.on('streamPendingUsernameUpdated', this.onStreamUsernameUpdated)
-        return () => {
-            client.off('streamUsernameUpdated', this.onStreamUsernameUpdated)
-            client.off('streamPendingUsernameUpdated', this.onStreamUsernameUpdated)
-        }
     }
 
     private onStreamInitialized = (streamId: string) => {
@@ -129,9 +129,5 @@ export class MemberUsername extends PersistedObservable<MemberUsernameModel> {
                 })
             }
         }
-    }
-
-    private initialize = (_streamView: IStreamStateView) => {
-        this.setData({ initialized: true })
     }
 }

@@ -34,7 +34,20 @@ export class MemberEnsAddress extends PersistedObservable<MemberEnsAddressModel>
     }
 
     protected override async onLoaded() {
-        this.riverConnection.registerView(this.onClientStarted)
+        this.riverConnection.registerView((client) => {
+            if (
+                client.streams.has(this.data.id) &&
+                client.streams.get(this.data.id)?.view.isInitialized
+            ) {
+                this.onStreamInitialized(this.data.id)
+            }
+            client.on('streamInitialized', this.onStreamInitialized)
+            client.on('streamEnsAddressUpdated', this.onStreamEnsAddressUpdated)
+            return () => {
+                client.off('streamInitialized', this.onStreamInitialized)
+                client.off('streamEnsAddressUpdated', this.onStreamEnsAddressUpdated)
+            }
+        })
     }
 
     async setEnsAddress(ensAddress: Address) {
@@ -54,19 +67,6 @@ export class MemberEnsAddress extends PersistedObservable<MemberEnsAddressModel>
                 this.setData(oldState)
                 throw e
             })
-    }
-
-    private onClientStarted = (client: Client) => {
-        if (
-            client.streams.has(this.data.id) &&
-            client.streams.get(this.data.id)?.view.isInitialized
-        ) {
-            this.onStreamInitialized(this.data.id)
-        }
-        client.on('streamEnsAddressUpdated', this.onStreamEnsAddressUpdated)
-        return () => {
-            client.off('streamEnsAddressUpdated', this.onStreamEnsAddressUpdated)
-        }
     }
 
     private onStreamInitialized = (streamId: string) => {

@@ -45,7 +45,21 @@ export class MemberNft extends PersistedObservable<MemberNftModel> {
         )
     }
     protected override async onLoaded() {
-        this.riverConnection.registerView(this.onClientStarted)
+        this.riverConnection.registerView((client) => {
+            if (
+                client.streams.has(this.data.id) &&
+                client.streams.get(this.data.id)?.view.isInitialized
+            ) {
+                this.onStreamInitialized(this.data.id)
+            }
+            client.on('streamInitialized', this.onStreamInitialized)
+
+            client.on('streamNftUpdated', this.onStreamNftUpdated)
+            return () => {
+                client.off('streamInitialized', this.onStreamInitialized)
+                client.off('streamNftUpdated', this.onStreamNftUpdated)
+            }
+        })
     }
 
     async setNft(nft: NftModel) {
@@ -77,19 +91,6 @@ export class MemberNft extends PersistedObservable<MemberNftModel> {
                 this.setData(oldState)
                 throw e
             })
-    }
-
-    private onClientStarted = (client: Client) => {
-        if (
-            client.streams.has(this.data.id) &&
-            client.streams.get(this.data.id)?.view.isInitialized
-        ) {
-            this.onStreamInitialized(this.data.id)
-        }
-        client.on('streamNftUpdated', this.onStreamNftUpdated)
-        return () => {
-            client.off('streamNftUpdated', this.onStreamNftUpdated)
-        }
     }
 
     private onStreamInitialized = (streamId: string) => {
@@ -127,9 +128,5 @@ export class MemberNft extends PersistedObservable<MemberNftModel> {
                 this.setData({ nft })
             }
         }
-    }
-
-    private initialize = (_streamView: IStreamStateView) => {
-        this.setData({ initialized: true })
     }
 }

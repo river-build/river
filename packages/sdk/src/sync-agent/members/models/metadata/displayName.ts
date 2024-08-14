@@ -39,7 +39,20 @@ export class MemberDisplayName extends PersistedObservable<MemberDisplayNameMode
     }
 
     protected override async onLoaded() {
-        this.riverConnection.registerView(this.onClientStarted)
+        this.riverConnection.registerView((client) => {
+            if (
+                client.streams.has(this.data.id) &&
+                client.streams.get(this.data.id)?.view.isInitialized
+            ) {
+                this.onStreamInitialized(this.data.id)
+            }
+            client.on('streamInitialized', this.onStreamInitialized)
+            client.on('streamDisplayNameUpdated', this.onStreamDisplayNameUpdated)
+            return () => {
+                client.off('streamInitialized', this.onStreamInitialized)
+                client.off('streamDisplayNameUpdated', this.onStreamDisplayNameUpdated)
+            }
+        })
     }
 
     async setDisplayName(displayName: string) {
@@ -63,19 +76,6 @@ export class MemberDisplayName extends PersistedObservable<MemberDisplayNameMode
                 this.setData(oldState)
                 throw e
             })
-    }
-
-    private onClientStarted = (client: Client) => {
-        if (
-            client.streams.has(this.data.id) &&
-            client.streams.get(this.data.id)?.view.isInitialized
-        ) {
-            this.onStreamInitialized(this.data.id)
-        }
-        client.on('streamDisplayNameUpdated', this.onStreamDisplayNameUpdated)
-        return () => {
-            client.off('streamDisplayNameUpdated', this.onStreamDisplayNameUpdated)
-        }
     }
 
     private onStreamInitialized = (streamId: string) => {
