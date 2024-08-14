@@ -163,6 +163,25 @@ func (s *PostgresEventStore) txRunnerInner(
 	return nil
 }
 
+type backoffTracker struct {
+	last time.Duration
+}
+
+// Retries first attempt immediately, next waits for 50ms, then multipled by 1.5 each time.
+func (b *backoffTracker) wait(ctx context.Context) error {
+	if b.last == 0 {
+		b.last = 50 * time.Millisecond
+		return nil
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(b.last):
+		b.last = b.last * 3 / 2
+		return nil
+	}
+}
+
 func (s *PostgresEventStore) txRunner(
 	ctx context.Context,
 	name string,
@@ -181,6 +200,7 @@ func (s *PostgresEventStore) txRunner(
 
 	defer prometheus.NewTimer(s.txDuration.WithLabelValues(name)).ObserveDuration()
 
+	var backoff backoffTracker
 	for {
 		err := s.txRunnerInner(ctx, accessMode, txFn, opts)
 		if err != nil {
@@ -188,6 +208,10 @@ func (s *PostgresEventStore) txRunner(
 
 			if pgErr, ok := err.(*pgconn.PgError); ok {
 				if pgErr.Code == pgerrcode.SerializationFailure {
+					backoffErr := backoff.wait(ctx)
+					if backoffErr != nil {
+						return AsRiverError(backoffErr).Func(name).Message("Timed out waiting for backoff")
+					}
 					log.Warn(
 						"pg.txRunner: retrying transaction due to serialization failure",
 						"pgErr", pgErr,
