@@ -1,13 +1,11 @@
-import { Server as HTTPSServer } from 'https'
-
 import Fastify from 'fastify'
-import cors from '@fastify/cors'
-
-import { handleImageRequest } from './handleImageRequest'
-import { handleMetadataRequest } from './handleMetadataRequest'
+import { Server as HTTPSServer } from 'https'
 import { config } from './environment'
+import cors from '@fastify/cors'
 import { getLogger } from './logger'
 import { handleHealthCheckRequest } from './handleHealthCheckRequests'
+import { handleImageRequest } from './handleImageRequest'
+import { handleMetadataRequest } from './handleMetadataRequest'
 
 // Set the process title to 'fetch-image' so it can be easily identified
 // or killed with `pkill fetch-image`
