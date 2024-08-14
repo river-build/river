@@ -44,6 +44,7 @@ tsconfig.tsbuildinfo
 
 !/contracts/deployments
 /contracts/deployments/base_anvil
+/broadcast
 
 
 *.pem
