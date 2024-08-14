@@ -30,7 +30,7 @@ import {DeployUserEntitlement} from "contracts/scripts/deployments/DeployUserEnt
 import {DeployMultiInit} from "contracts/scripts/deployments/DeployMultiInit.s.sol";
 import {DeploySpace} from "contracts/scripts/deployments/DeploySpace.s.sol";
 import {DeploySpaceOwner} from "contracts/scripts/deployments/DeploySpaceOwner.s.sol";
-import {DeployRuleEntitlement} from "contracts/scripts/deployments/DeployRuleEntitlement.s.sol";
+import {DeployRuleEntitlement, DeployRuleEntitlementV2} from "contracts/scripts/deployments/DeployRuleEntitlement.s.sol";
 import {DeployWalletLink} from "contracts/scripts/deployments/facets/DeployWalletLink.s.sol";
 import {DeployTieredLogPricing} from "contracts/scripts/deployments/DeployTieredLogPricing.s.sol";
 import {DeployFixedPricing} from "contracts/scripts/deployments/DeployFixedPricing.s.sol";
@@ -41,6 +41,9 @@ import {DeployPlatformRequirements} from "./facets/DeployPlatformRequirements.s.
 import {DeployEIP712Facet} from "contracts/scripts/deployments/facets/DeployEIP712Facet.s.sol";
 
 import {SpaceFactory} from "contracts/src/factory/SpaceFactory.sol";
+
+// legacy
+import {DeployMockLegacyArchitect} from "./facets/DeployMockLegacyArchitect.s.sol";
 
 contract DeploySpaceFactory is DiamondHelper, Deployer {
   // diamond helpers
@@ -63,12 +66,19 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
   DeploySpace deploySpace = new DeploySpace();
   DeploySpaceOwner deploySpaceOwner = new DeploySpaceOwner();
   DeployUserEntitlement deployUserEntitlement = new DeployUserEntitlement();
-  DeployRuleEntitlement deployRuleEntitlement = new DeployRuleEntitlement();
+  DeployRuleEntitlement deployLegacyRuleEntitlement =
+    new DeployRuleEntitlement();
+  DeployRuleEntitlementV2 deployRuleEntitlementV2 =
+    new DeployRuleEntitlementV2();
+
   DeployTieredLogPricing deployTieredLogPricing = new DeployTieredLogPricing();
   DeployFixedPricing deployFixedPricing = new DeployFixedPricing();
   DeployPlatformRequirements platformReqsHelper =
     new DeployPlatformRequirements();
   DeployEIP712Facet eip712Helper = new DeployEIP712Facet();
+
+  DeployMockLegacyArchitect deployMockLegacyArchitect =
+    new DeployMockLegacyArchitect();
 
   // helpers
 
@@ -81,6 +91,7 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
 
   // space addresses
   address architect;
+  address legacyArchitect;
   address proxyManager;
   address pausable;
   address platformReqs;
@@ -91,6 +102,7 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
 
   // external contracts
   address public userEntitlement;
+  address public legacyRuleEntitlement;
   address public ruleEntitlement;
   address public spaceOwner;
 
@@ -111,7 +123,8 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
 
     // entitlement modules
     userEntitlement = deployUserEntitlement.deploy();
-    ruleEntitlement = deployRuleEntitlement.deploy();
+    ruleEntitlement = deployRuleEntitlementV2.deploy();
+    legacyRuleEntitlement = deployLegacyRuleEntitlement.deploy();
 
     // pricing modules
     tieredLogPricing = deployTieredLogPricing.deploy();
@@ -139,6 +152,9 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
     platformReqs = platformReqsHelper.deploy();
 
     eip712 = eip712Helper.deploy();
+
+    // legacy
+    legacyArchitect = deployMockLegacyArchitect.deploy();
 
     addFacet(
       diamondCutHelper.makeCut(diamondCut, IDiamond.FacetCutAction.Add),
@@ -172,6 +188,19 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
         spaceOwner, // spaceOwner
         userEntitlement, // userEntitlement
         ruleEntitlement // ruleEntitlement
+      )
+    );
+    addFacet(
+      deployMockLegacyArchitect.makeCut(
+        legacyArchitect,
+        IDiamond.FacetCutAction.Add
+      ),
+      legacyArchitect,
+      deployMockLegacyArchitect.makeInitData(
+        spaceOwner, // spaceOwnerToken
+        userEntitlement, // userEntitlement
+        ruleEntitlement, // ruleEntitlement
+        legacyRuleEntitlement // legacy ruleEntitlement
       )
     );
     addFacet(
