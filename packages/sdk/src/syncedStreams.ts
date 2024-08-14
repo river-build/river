@@ -408,7 +408,7 @@ export class SyncedStreams {
                                             resolve()
                                         }
                                         this.interruptSync = (e: unknown) => {
-                                            this.log('sync interrupted', e)
+                                            this.logError('sync interrupted', e)
                                             reject(e)
                                         }
                                     },
