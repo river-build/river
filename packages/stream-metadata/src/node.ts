@@ -1,7 +1,9 @@
-import Fastify from 'fastify'
 import { Server as HTTPSServer } from 'https'
-import { config } from './environment'
+
+import Fastify from 'fastify'
 import cors from '@fastify/cors'
+
+import { config } from './environment'
 import { getLogger } from './logger'
 import { handleHealthCheckRequest } from './handleHealthCheckRequest'
 import { handleImageRequest } from './handleImageRequest'

@@ -1,15 +1,19 @@
-import { Config, StreamIdHex } from './types'
-import { FastifyReply, FastifyRequest } from 'fastify'
+import { ChunkedMedia } from '@river-build/proto'
 import { StreamPrefix, StreamStateView, makeStreamId } from '@river-build/sdk'
+import { FastifyReply, FastifyRequest } from 'fastify'
+
+import { Config, StreamIdHex } from './types'
+import { getLogger } from './logger'
 import { getMediaStreamContent, getStream } from './riverStreamRpcClient'
 import { isBytes32String, isValidEthereumAddress } from './validators'
 
-import { ChunkedMedia } from '@river-build/proto'
-import { getLogger } from './logger'
-
 const logger = getLogger('handleImageRequest')
 
-export async function handleImageRequest(config: Config, request: FastifyRequest, reply: FastifyReply) {
+export async function handleImageRequest(
+	config: Config,
+	request: FastifyRequest,
+	reply: FastifyReply,
+) {
 	const { spaceAddress } = request.params as { spaceAddress?: string }
 
 	if (!spaceAddress) {
