@@ -43,7 +43,7 @@ contract DeploySpaceOwnerFacet is FacetHelper, Deployer {
   }
 
   function versionName() public pure override returns (string memory) {
-    return "spaceOwnerFacet";
+    return "SpaceOwner";
   }
 
   function __deploy(address deployer) public override returns (address) {

@@ -5,7 +5,8 @@ pragma solidity ^0.8.23;
 import {IDiamond} from "contracts/src/diamond/IDiamond.sol";
 
 // helpers
-import {DiamondDeployer} from "../common/DiamondDeployer.s.sol";
+import {DiamondHelper} from "contracts/test/diamond/Diamond.t.sol";
+import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 import {Diamond} from "contracts/src/diamond/Diamond.sol";
 
 import {DeployDiamondCut} from "contracts/scripts/deployments/facets/DeployDiamondCut.s.sol";
@@ -26,7 +27,7 @@ import {RiverConfig} from "contracts/src/river/registry/facets/config/RiverConfi
 
 import {MultiInit} from "contracts/src/diamond/initializers/MultiInit.sol";
 
-contract DeployRiverRegistry is DiamondDeployer {
+contract DeployRiverRegistry is DiamondHelper, Deployer {
   DeployDiamondCut internal cutHelper = new DeployDiamondCut();
   DeployDiamondLoupe internal loupeHelper = new DeployDiamondLoupe();
   DeployIntrospection internal introspectionHelper = new DeployIntrospection();
@@ -59,7 +60,7 @@ contract DeployRiverRegistry is DiamondDeployer {
 
   function diamondInitParams(
     address deployer
-  ) public override returns (Diamond.InitParams memory) {
+  ) internal returns (Diamond.InitParams memory) {
     address multiInit = deployMultiInit.deploy();
 
     diamondCut = cutHelper.deploy();
@@ -124,5 +125,12 @@ contract DeployRiverRegistry is DiamondDeployer {
           _initDatas
         )
       });
+  }
+
+  function __deploy(address deployer) public override returns (address) {
+    Diamond.InitParams memory initDiamondCut = diamondInitParams(deployer);
+    Diamond diamond = new Diamond(initDiamondCut);
+
+    return address(diamond);
   }
 }

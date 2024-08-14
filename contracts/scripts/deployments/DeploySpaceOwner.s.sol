@@ -7,7 +7,8 @@ import {IDiamond, Diamond} from "contracts/src/diamond/Diamond.sol";
 // libraries
 
 // contracts
-import {DiamondDeployer} from "../common/DiamondDeployer.s.sol";
+import {DiamondHelper} from "contracts/test/diamond/Diamond.t.sol";
+import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 
 // helpers
 import {DeployOwnable} from "contracts/scripts/deployments/facets/DeployOwnable.s.sol";
@@ -19,7 +20,9 @@ import {DeploySpaceOwnerFacet} from "contracts/scripts/deployments/facets/Deploy
 import {DeployGuardianFacet} from "contracts/scripts/deployments/facets/DeployGuardianFacet.s.sol";
 import {DeployMultiInit, MultiInit} from "contracts/scripts/deployments/DeployMultiInit.s.sol";
 
-contract DeploySpaceOwner is DiamondDeployer {
+import {SpaceOwnerDiamond} from "contracts/src/spaces/SpaceOwnerDiamond.sol";
+
+contract DeploySpaceOwner is DiamondHelper, Deployer {
   DeployDiamondCut diamondCutHelper = new DeployDiamondCut();
   DeployDiamondLoupe diamondLoupeHelper = new DeployDiamondLoupe();
   DeployOwnable ownableHelper = new DeployOwnable();
@@ -30,12 +33,12 @@ contract DeploySpaceOwner is DiamondDeployer {
   DeployMultiInit multiInitHelper = new DeployMultiInit();
 
   function versionName() public pure override returns (string memory) {
-    return "spaceOwner";
+    return "SpaceOwnerDiamond";
   }
 
   function diamondInitParams(
     address deployer
-  ) public override returns (Diamond.InitParams memory) {
+  ) internal returns (Diamond.InitParams memory) {
     address diamondCut = diamondCutHelper.deploy();
     address diamondLoupe = diamondLoupeHelper.deploy();
     address introspection = introspectionHelper.deploy();
@@ -97,5 +100,14 @@ contract DeploySpaceOwner is DiamondDeployer {
           _initDatas
         )
       });
+  }
+
+  function __deploy(address deployer) public override returns (address) {
+    Diamond.InitParams memory initDiamondCut = diamondInitParams(deployer);
+
+    vm.broadcast(deployer);
+    SpaceOwnerDiamond diamond = new SpaceOwnerDiamond(initDiamondCut);
+
+    return address(diamond);
   }
 }

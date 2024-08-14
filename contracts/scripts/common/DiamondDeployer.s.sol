@@ -27,7 +27,9 @@ abstract contract DiamondDeployer is Deployer {
   ) public virtual returns (Diamond.InitParams memory);
 
   // override hook that gets called in Deployer.s.sol so it deploys a diamond instead of a regular contract
-  function __deploy(address deployer) public override returns (address) {
+  function __deploy(
+    address deployer
+  ) public virtual override returns (address) {
     // call diamond params hook
     Diamond.InitParams memory initParams = diamondInitParams(deployer);
 

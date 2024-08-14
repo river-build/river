@@ -5,7 +5,9 @@ pragma solidity ^0.8.23;
 import {IDiamond} from "contracts/src/diamond/IDiamond.sol";
 
 // helpers
-import {DiamondDeployer} from "../common/DiamondDeployer.s.sol";
+import {DiamondHelper} from "contracts/test/diamond/Diamond.t.sol";
+import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
+
 import {Diamond} from "contracts/src/diamond/Diamond.sol";
 import {MultiInit} from "contracts/src/diamond/initializers/MultiInit.sol";
 
@@ -20,7 +22,7 @@ import {DeployIntrospection} from "contracts/scripts/deployments/facets/DeployIn
 import {DeployMultiInit} from "contracts/scripts/deployments/DeployMultiInit.s.sol";
 import {MockERC721A} from "contracts/test/mocks/MockERC721A.sol";
 
-contract DeployMockNFT is DiamondDeployer {
+contract DeployMockNFT is DiamondHelper, Deployer {
   DeployDiamondCut diamondCutHelper = new DeployDiamondCut();
   DeployDiamondLoupe loupeHelper = new DeployDiamondLoupe();
   DeployIntrospection introspectionHelper = new DeployIntrospection();
@@ -40,7 +42,7 @@ contract DeployMockNFT is DiamondDeployer {
 
   function diamondInitParams(
     address deployer
-  ) public override returns (Diamond.InitParams memory) {
+  ) internal returns (Diamond.InitParams memory) {
     address multiInit = multiInitHelper.deploy();
 
     diamondCut = diamondCutHelper.deploy();
@@ -84,5 +86,13 @@ contract DeployMockNFT is DiamondDeployer {
           _initDatas
         )
       });
+  }
+
+  function __deploy(address deployer) public override returns (address) {
+    Diamond.InitParams memory initDiamondCut = diamondInitParams(deployer);
+    vm.broadcast(deployer);
+    Diamond diamond = new Diamond(initDiamondCut);
+
+    return address(diamond);
   }
 }
