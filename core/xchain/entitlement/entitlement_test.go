@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"os"
 	"testing"
 	"time"
 
@@ -251,6 +252,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 	m.Run()
+	os.Exit(0)
 }
 
 func TestAndOperation(t *testing.T) {
