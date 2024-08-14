@@ -109,7 +109,6 @@ process.on('SIGTERM', async () => {
 
 async function main() {
 	try {
-		// Register plugins
 		await registerPlugins()
 		setupRoutes()
 		// Start the server on the port set in the .env
