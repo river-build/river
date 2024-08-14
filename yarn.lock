@@ -18292,6 +18292,7 @@ __metadata:
     "@types/node": ^20.5.0
     "@typescript-eslint/parser": ^7.14.1
     dotenv: ^16.4.5
+    esbuild: ^0.21.5
     ethers: ^5.7.2
     fastify: ^4.28.1
     magic-bytes.js: ^1.10.0
