@@ -613,8 +613,8 @@ export async function evaluateTree(
 export function createExternalTokenStruct(
     addresses: Address[],
     options?: {
-        checkOptions?: Partial<Omit<ContractCheckOperation, 'address'>>,
-        logicalOp?: LogicalOperationType,
+        checkOptions?: Partial<Omit<ContractCheckOperation, 'address'>>
+        logicalOp?: LogicalOperationType
     },
 ) {
     if (addresses.length === 0) {
@@ -632,8 +632,8 @@ export function createExternalTokenStruct(
 export function createExternalNFTStruct(
     addresses: Address[],
     options?: {
-        checkOptions?: Partial<Omit<ContractCheckOperation, 'address'>>,
-        logicalOp?: LogicalOperationType,
+        checkOptions?: Partial<Omit<ContractCheckOperation, 'address'>>
+        logicalOp?: LogicalOperationType
     },
 ) {
     if (addresses.length === 0) {
