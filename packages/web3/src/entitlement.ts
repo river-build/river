@@ -330,7 +330,7 @@ export function treeToRuleData(root: Operation): IRuleEntitlementBase.RuleDataSt
 async function evaluateAndOperation(
     controller: AbortController,
     linkedWallets: string[],
-    providers: ethers.providers.StaticJsonRpcProvider[],
+    providers: ethers.providers.BaseProvider[],
     operation?: AndOperation,
 ): Promise<EntitledWalletOrZeroAddress> {
     if (!operation?.leftOperation || !operation?.rightOperation) {
@@ -396,7 +396,7 @@ async function evaluateAndOperation(
 async function evaluateOrOperation(
     controller: AbortController,
     linkedWallets: string[],
-    providers: ethers.providers.StaticJsonRpcProvider[],
+    providers: ethers.providers.BaseProvider[],
     operation?: OrOperation,
 ): Promise<EntitledWalletOrZeroAddress> {
     if (!operation?.leftOperation || !operation?.rightOperation) {
@@ -458,7 +458,7 @@ async function evaluateOrOperation(
 async function evaluateCheckOperation(
     controller: AbortController,
     linkedWallets: string[],
-    providers: ethers.providers.StaticJsonRpcProvider[],
+    providers: ethers.providers.BaseProvider[],
     operation?: CheckOperation,
 ): Promise<EntitledWalletOrZeroAddress> {
     if (!operation) {
@@ -565,7 +565,7 @@ async function evaluateCheckOperation(
 export async function evaluateOperationsForEntitledWallet(
     operations: Operation[],
     linkedWallets: string[],
-    providers: ethers.providers.StaticJsonRpcProvider[],
+    providers: ethers.providers.BaseProvider[],
 ) {
     const controller = new AbortController()
     const result = evaluateTree(
@@ -581,7 +581,7 @@ export async function evaluateOperationsForEntitledWallet(
 export async function evaluateTree(
     controller: AbortController,
     linkedWallets: string[],
-    providers: ethers.providers.StaticJsonRpcProvider[],
+    providers: ethers.providers.BaseProvider[],
     entry?: Operation,
 ): Promise<EntitledWalletOrZeroAddress> {
     if (!entry) {
@@ -737,7 +737,7 @@ async function evaluateMockOperation(
 async function evaluateERC721Operation(
     operation: CheckOperation,
     controller: AbortController,
-    provider: ethers.providers.StaticJsonRpcProvider,
+    provider: ethers.providers.BaseProvider,
     linkedWallets: string[],
 ): Promise<EntitledWalletOrZeroAddress> {
     return evaluateContractBalanceAcrossWallets(
@@ -752,7 +752,7 @@ async function evaluateERC721Operation(
 async function evaluateERC20Operation(
     operation: CheckOperation,
     controller: AbortController,
-    provider: ethers.providers.StaticJsonRpcProvider,
+    provider: ethers.providers.BaseProvider,
     linkedWallets: string[],
 ): Promise<EntitledWalletOrZeroAddress> {
     return evaluateContractBalanceAcrossWallets(
@@ -767,7 +767,7 @@ async function evaluateERC20Operation(
 async function evaluateCustomEntitledOperation(
     operation: CheckOperation,
     controller: AbortController,
-    provider: ethers.providers.StaticJsonRpcProvider,
+    provider: ethers.providers.BaseProvider,
     linkedWallets: string[],
 ): Promise<EntitledWalletOrZeroAddress> {
     const contract = new ethers.Contract(
@@ -792,7 +792,7 @@ async function evaluateCustomEntitledOperation(
 async function evaluateNativeCoinBalanceOperation(
     operation: CheckOperation,
     controller: AbortController,
-    provider: ethers.providers.StaticJsonRpcProvider,
+    provider: ethers.providers.BaseProvider,
     linkedWallets: string[],
 ): Promise<EntitledWalletOrZeroAddress> {
     const walletBalances = await Promise.all(
@@ -831,7 +831,7 @@ async function evaluateContractBalanceAcrossWallets(
     contractAddress: Address,
     threshold: bigint,
     controller: AbortController,
-    provider: ethers.providers.StaticJsonRpcProvider,
+    provider: ethers.providers.BaseProvider,
     linkedWallets: string[],
 ): Promise<EntitledWalletOrZeroAddress> {
     const contract = new ethers.Contract(
@@ -879,10 +879,7 @@ async function evaluateContractBalanceAcrossWallets(
     }
 }
 
-function findProviderFromChainId(
-    providers: ethers.providers.StaticJsonRpcProvider[],
-    chainId: bigint,
-) {
+function findProviderFromChainId(providers: ethers.providers.BaseProvider[], chainId: bigint) {
     return providers.find((p) => p.network.chainId === Number(chainId))
 }
 
