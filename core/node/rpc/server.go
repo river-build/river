@@ -16,13 +16,17 @@ import (
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rs/cors"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/auth"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
-	"github.com/river-build/river/core/node/infra"
+	. "github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
@@ -30,9 +34,6 @@ import (
 	"github.com/river-build/river/core/node/rpc/sync"
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/xchain/entitlement"
-	"github.com/rs/cors"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 )
 
 const (
@@ -207,8 +208,8 @@ func (s *Service) initInstance(mode string) {
 		subsystem = "stream"
 	}
 	metricsRegistry := prometheus.NewRegistry()
-	s.metrics = infra.NewMetricsFactory(metricsRegistry, "river", subsystem)
-	s.metricsPublisher = infra.NewMetricsPublisher(metricsRegistry)
+	s.metrics = NewMetricsFactory(metricsRegistry, "river", subsystem)
+	s.metricsPublisher = NewMetricsPublisher(metricsRegistry)
 	s.metricsPublisher.StartMetricsServer(s.serverCtx, s.config.Metrics)
 }
 
