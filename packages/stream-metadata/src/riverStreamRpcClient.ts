@@ -12,9 +12,10 @@ import { BigNumber } from 'ethers'
 import { StreamService } from '@river-build/proto'
 import { filetypemime } from 'magic-bytes.js'
 
-import { Config, MediaContent, StreamIdHex } from './types'
+import { MediaContent, StreamIdHex } from './types'
 import { getNodeForStream } from './streamRegistry'
 import { getLogger } from './logger'
+import { Config } from './environment'
 
 const logger = getLogger('riverStreamRpcClient')
 
@@ -47,7 +48,7 @@ async function getStreamClient(config: Config, streamId: `0x${string}`) {
 		clients.set(client.url!, client)
 		url = client.url!
 	}
-	logger.info('getStreamClient', { url })
+	logger.info('getStreamClient: client url', url)
 
 	const client = clients.get(url)
 	if (!client) {

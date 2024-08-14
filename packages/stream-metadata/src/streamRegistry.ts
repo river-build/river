@@ -1,10 +1,9 @@
 import { BigNumber } from 'ethers'
 
-import { Config, StreamIdHex } from './types'
+import { StreamIdHex } from './types'
 import { getRiverRegistry } from './evmRpcClient'
 import { getLogger } from './logger'
-
-const logger = getLogger('streamRegistry')
+import { Config } from './environment'
 
 type CachedStreamData = {
 	url: string
@@ -13,6 +12,7 @@ type CachedStreamData = {
 }
 
 const cache: Record<string, CachedStreamData> = {}
+const logger = getLogger('streamRegistry')
 
 // TODO: remove this entire file
 export async function getNodeForStream(
