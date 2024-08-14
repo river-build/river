@@ -30,7 +30,7 @@ contract DeployMetadata is FacetHelper, Deployer {
   }
 
   function versionName() public pure override returns (string memory) {
-    return "MetadataFacet";
+    return "metadataFacet";
   }
 
   function __deploy(address deployer) public override returns (address) {

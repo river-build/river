@@ -58,7 +58,7 @@ contract DeployMembership is Deployer, FacetHelper {
   }
 
   function versionName() public pure override returns (string memory) {
-    return "MembershipFacet";
+    return "membershipFacet";
   }
 
   function __deploy(address deployer) public override returns (address) {

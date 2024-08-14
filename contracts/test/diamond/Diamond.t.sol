@@ -9,7 +9,7 @@ pragma solidity ^0.8.0;
 import {IDiamond, Diamond} from "contracts/src/diamond/Diamond.sol";
 
 abstract contract DiamondHelper is IDiamond {
-  uint256 index = 0;
+  uint256 private _index = 0;
 
   FacetCut[] internal _cuts;
   address[] internal _initAddresses;
@@ -38,6 +38,6 @@ abstract contract DiamondHelper is IDiamond {
   }
 
   function _resetIndex() internal {
-    index = 0;
+    _index = 0;
   }
 }

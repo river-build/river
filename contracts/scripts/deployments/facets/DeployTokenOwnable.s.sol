@@ -18,7 +18,7 @@ contract DeployTokenOwnable is FacetHelper, Deployer, ITokenOwnableBase {
   }
 
   function versionName() public pure override returns (string memory) {
-    return "TokenOwnableFacet";
+    return "tokenOwnableFacet";
   }
 
   function __deploy(address deployer) public override returns (address) {
