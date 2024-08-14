@@ -613,6 +613,7 @@ export async function evaluateTree(
 export function createExternalTokenStruct(
     addresses: Address[],
     checkOptions?: Partial<Omit<ContractCheckOperation, 'address'>>,
+    logicalOp: LogicalOperationType = LogicalOperationType.OR,
 ) {
     if (addresses.length === 0) {
         return NoopRuleData
@@ -623,12 +624,13 @@ export function createExternalTokenStruct(
         type: checkOptions?.type ?? (CheckOperationType.ERC20 as const),
         threshold: checkOptions?.threshold ?? BigInt(1),
     }))
-    return createOperationsTree(defaultChain)
+    return createOperationsTree(defaultChain, logicalOp)
 }
 
 export function createExternalNFTStruct(
     addresses: Address[],
     checkOptions?: Partial<Omit<ContractCheckOperation, 'address'>>,
+    logicalOp: LogicalOperationType = LogicalOperationType.OR,
 ) {
     if (addresses.length === 0) {
         return NoopRuleData
@@ -640,7 +642,7 @@ export function createExternalNFTStruct(
         type: checkOptions?.type ?? (CheckOperationType.ERC721 as const),
         threshold: checkOptions?.threshold ?? BigInt(1),
     }))
-    return createOperationsTree(defaultChain)
+    return createOperationsTree(defaultChain, logicalOp)
 }
 
 export type ContractCheckOperation = {
@@ -654,6 +656,7 @@ export function createOperationsTree(
     checkOp: (Omit<ContractCheckOperation, 'threshold'> & {
         threshold?: bigint
     })[],
+    logicalOp: LogicalOperationType = LogicalOperationType.OR,
 ): IRuleEntitlementBase.RuleDataStruct {
     if (checkOp.length === 0) {
         return {
@@ -677,7 +680,7 @@ export function createOperationsTree(
             if (i + 1 < operations.length) {
                 newOperations.push({
                     opType: OperationType.LOGICAL,
-                    logicalType: LogicalOperationType.AND,
+                    logicalType: logicalOp as LogicalOperationType.AND | LogicalOperationType.OR,
                     leftOperation: operations[i],
                     rightOperation: operations[i + 1],
                 })
