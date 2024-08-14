@@ -301,10 +301,9 @@ abstract contract ArchitectBase is Factory, IArchitectBase, PricingModulesBase {
   }
 
   function _verifyPricingModule(address pricingModule) internal view {
-    if (pricingModule == address(0)) revert Architect__InvalidPricingModule();
-
-    if (!_isPricingModule(pricingModule))
+    if (pricingModule == address(0) || !_isPricingModule(pricingModule)) {
       revert Architect__InvalidPricingModule();
+    }
   }
 
   function _getSpaceDeploymentInfo(
