@@ -1,4 +1,5 @@
 import { BigNumber } from 'ethers'
+
 import { StreamIdHex } from './types'
 import { getRiverRegistry } from './evmRpcClient'
 import { getLogger } from './logger'
