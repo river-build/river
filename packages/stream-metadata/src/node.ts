@@ -53,6 +53,9 @@ server.get('/health', async (request, reply) => {
 	return handleHealthCheckRequest(config, request, reply)
 })
 
+/*
+ * Routes
+ */
 server.get('/space/:spaceAddress', async (request, reply) => {
 	const { spaceAddress } = request.params as { spaceAddress?: string }
 	logger.info(`GET /space`, { spaceAddress })
