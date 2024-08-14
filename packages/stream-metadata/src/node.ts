@@ -7,6 +7,7 @@ import { handleImageRequest } from './handleImageRequest'
 import { handleMetadataRequest } from './handleMetadataRequest'
 import { config } from './environment'
 import { getLogger } from './logger'
+import { handleHealthCheckRequest } from './handleHealthCheckRequests'
 
 // Set the process title to 'fetch-image' so it can be easily identified
 // or killed with `pkill fetch-image`
@@ -47,6 +48,11 @@ void registerPlugins()
 /*
  * Routes
  */
+server.get('/health', async (request, reply) => {
+	logger.info(`GET /health`)
+	return handleHealthCheckRequest(request, reply)
+})
+
 server.get('/space/:spaceAddress', async (request, reply) => {
 	const { spaceAddress } = request.params as { spaceAddress?: string }
 	logger.info(`GET /space`, { spaceAddress })
