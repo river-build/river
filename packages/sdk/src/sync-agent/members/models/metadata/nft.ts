@@ -11,9 +11,7 @@ import {
     persistedObservable,
 } from '../../../../observable/persistedObservable'
 import type { RiverConnection } from '../../../river-connection/riverConnection'
-import type { Client } from '../../../../client'
 import { isDefined } from '../../../../check'
-import type { IStreamStateView } from '../../../../streamStateView'
 import { MemberPayload_Nft } from '@river-build/proto'
 import { make_MemberPayload_Nft } from '../../../../types'
 

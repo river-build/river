@@ -5,7 +5,6 @@ import {
     persistedObservable,
 } from '../../../../observable/persistedObservable'
 import type { RiverConnection } from '../../../river-connection/riverConnection'
-import type { Client } from '../../../../client'
 import { isDefined } from '../../../../check'
 import type { Address } from '@river-build/web3'
 import { make_MemberPayload_EnsAddress } from '../../../../types'

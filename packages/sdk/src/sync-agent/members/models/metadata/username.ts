@@ -1,17 +1,13 @@
-import { check, dlogger } from '@river-build/dlog'
+import { check } from '@river-build/dlog'
 import { LoadPriority, type Identifiable, type Store } from '../../../../store/store'
 import {
     PersistedObservable,
     persistedObservable,
 } from '../../../../observable/persistedObservable'
 import type { RiverConnection } from '../../../river-connection/riverConnection'
-import type { Client } from '../../../../client'
 import { isDefined } from '../../../../check'
-import type { IStreamStateView } from '../../../../streamStateView'
 import { make_MemberPayload_Username } from '../../../../types'
 import { usernameChecksum } from '../../../../utils'
-
-const logger = dlogger('csb:member_username')
 
 export interface MemberUsernameModel extends Identifiable {
     id: string
