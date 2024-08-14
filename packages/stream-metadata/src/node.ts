@@ -61,7 +61,7 @@ server.get('/space/:spaceAddress/image', async (request, reply) => {
 		spaceAddress,
 	})
 
-	return handleImageRequest(request, reply)
+	return handleImageRequest(config, request, reply)
 })
 
 // Generic / route to return 404
