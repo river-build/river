@@ -833,6 +833,8 @@ func (s *PostgresEventStore) PromoteBlock(
 	snapshotMiniblock bool,
 	envelopes [][]byte,
 ) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	return s.txRunner(
 		ctx,
 		"PromoteBlock",
