@@ -18,8 +18,6 @@ cache_path = "contracts/cache" # The path to the cache, relative to the root of 
 verbosity = 3 # The verbosity level to use during tests.
 fs_permissions = [
   { access = "read-write", path = "./contracts/deployments" },
-  { access = "read", path = "./broadcast" },
-  { access = "read", path = "./reports" },
 ] # Configures permissions for cheatcodes that touch the filesystem
 extra_output = ["metadata", "abi", "bin"]
 extra_output_files = ["metadata", "abi", "bin"]

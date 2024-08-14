@@ -16,7 +16,7 @@ contract DeployMembershipMetadata is Deployer, FacetHelper {
   }
 
   function versionName() public pure override returns (string memory) {
-    return "MembershipMetadata";
+    return "membershipMetadataFacet";
   }
 
   function __deploy(address deployer) public override returns (address) {

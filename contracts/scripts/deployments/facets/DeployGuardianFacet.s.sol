@@ -19,7 +19,7 @@ contract DeployGuardianFacet is FacetHelper, Deployer {
   }
 
   function versionName() public pure override returns (string memory) {
-    return "GuardianFacet";
+    return "guardianFacet";
   }
 
   function initializer() public pure override returns (bytes4) {

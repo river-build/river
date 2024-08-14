@@ -50,22 +50,22 @@ cast rpc evm_setAutomine true --rpc-url $RIVER_ANVIL_RPC_URL
 # Space Architect
 make clear-anvil-deployments
 make deploy-base-anvil contract=DeployMultiInit
-make deploy-base-anvil type=facet contract=DeployDiamondCut
-make deploy-base-anvil type=facet contract=DeployDiamondLoupe
-make deploy-base-anvil type=facet contract=DeployIntrospection
-make deploy-base-anvil type=facet contract=DeployOwnable
-make deploy-base-anvil type=facet contract=DeployMainnetDelegation
-make deploy-base-anvil type=facet contract=DeployEntitlementChecker
-make deploy-base-anvil type=facet contract=DeployMetadata
-make deploy-base-anvil type=facet contract=DeployNodeOperator
-make deploy-base-anvil type=facet contract=DeploySpaceDelegation
-make deploy-base-anvil type=facet contract=DeployRewardsDistribution
-make deploy-base-anvil type=facet contract=DeployMockMessenger # util
-make deploy-base-anvil type=facet contract=DeployERC721ANonTransferable
-make deploy-base-anvil type=contract contract=DeployBaseRegistry
+make deploy-base-anvil type=facets contract=DeployDiamondCut
+make deploy-base-anvil type=facets contract=DeployDiamondLoupe
+make deploy-base-anvil type=facets contract=DeployIntrospection
+make deploy-base-anvil type=facets contract=DeployOwnable
+make deploy-base-anvil type=facets contract=DeployMainnetDelegation
+make deploy-base-anvil type=facets contract=DeployEntitlementChecker
+make deploy-base-anvil type=facets contract=DeployMetadata
+make deploy-base-anvil type=facets contract=DeployNodeOperator
+make deploy-base-anvil type=facets contract=DeploySpaceDelegation
+make deploy-base-anvil type=facets contract=DeployRewardsDistribution
+make deploy-base-anvil type=facets contract=DeployMockMessenger # util
+make deploy-base-anvil type=facets contract=DeployERC721ANonTransferable
+make deploy-base-anvil type=diamonds contract=DeployBaseRegistry
 make deploy-base-anvil type=contract contract=DeployProxyBatchDelegation
 make deploy-base-anvil type=contract contract=DeployRiverBase
-make deploy-base-anvil type=contract contract=DeploySpaceFactory
+make deploy-base-anvil type=diamonds contract=DeploySpaceFactory
 make interact-base-anvil type=contract contract=InteractPostDeploy
 
 # Utils
@@ -75,7 +75,7 @@ make deploy-base-anvil type=contract contract=DeployEntitlementGatedExample
 make deploy-base-anvil type=contract contract=DeployCustomEntitlementExample
 
 # River Registry
-make deploy-river-anvil type=contract contract=DeployRiverRegistry
+make deploy-river-anvil type=diamonds contract=DeployRiverRegistry
 
 if [ "${BASE_EXECUTION_CLIENT}" != "geth_dev" ]; then
     cast rpc evm_setIntervalMining $RIVER_BLOCK_TIME --rpc-url $BASE_ANVIL_RPC_URL

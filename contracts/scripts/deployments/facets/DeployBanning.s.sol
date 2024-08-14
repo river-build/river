@@ -21,7 +21,7 @@ contract DeployBanning is Deployer, FacetHelper {
 
   // Deploying
   function versionName() public pure override returns (string memory) {
-    return "Banning";
+    return "banningFacet";
   }
 
   function __deploy(address deployer) public override returns (address) {
