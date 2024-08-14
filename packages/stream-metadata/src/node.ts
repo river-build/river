@@ -50,7 +50,7 @@ void registerPlugins()
  */
 server.get('/health', async (request, reply) => {
 	logger.info(`GET /health`)
-	return handleHealthCheckRequest(request, reply)
+	return handleHealthCheckRequest(config, request, reply)
 })
 
 server.get('/space/:spaceAddress', async (request, reply) => {
