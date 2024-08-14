@@ -2,7 +2,7 @@ import { BigNumber } from 'ethers'
 
 import { StreamIdHex } from './types'
 import { getLogger } from './logger'
-import { riverRegistry } from './evmRpcClient'
+import { getRiverRegistry } from './evmRpcClient'
 
 type CachedStreamData = {
 	url: string
@@ -27,6 +27,7 @@ export async function getNodeForStream(
 		return { url: cachedData.url, lastMiniblockNum: cachedData.lastMiniblockNum }
 	}
 
+	const riverRegistry = getRiverRegistry()
 	const streamData = await riverRegistry.streamRegistry.read.getStream(streamId)
 
 	if (streamData.nodes.length === 0) {

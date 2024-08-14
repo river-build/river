@@ -3,15 +3,16 @@ import { ethers } from 'ethers'
 
 import { config } from './environment'
 
-function makeRiverRegistry() {
+let riverRegistry: ReturnType<typeof createRiverRegistry> | undefined
+
+function createRiverRegistry() {
 	const provider = new ethers.providers.JsonRpcProvider(config.riverChainRpcUrl)
-	const rvrRegistry = new RiverRegistry(config.web3Config.river, provider)
-
-	if (!rvrRegistry) {
-		throw new Error('Failed to create river registry')
-	}
-
-	return rvrRegistry
+	return new RiverRegistry(config.web3Config.river, provider)
 }
 
-export const riverRegistry = makeRiverRegistry()
+export function getRiverRegistry() {
+	if (!riverRegistry) {
+		riverRegistry = createRiverRegistry()
+	}
+	return riverRegistry
+}
