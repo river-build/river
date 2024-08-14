@@ -741,9 +741,9 @@ func (s *PostgresEventStore) readMiniblocksTx(
 	return miniblocks, nil
 }
 
-// WriteBlockProposal adds a miniblock proposal candidate. When the miniblock is finalized, the node will promote the
+// WriteMiniblockCandidate adds a miniblock proposal candidate. When the miniblock is finalized, the node will promote the
 // candidate with the correct hash.
-func (s *PostgresEventStore) WriteBlockProposal(
+func (s *PostgresEventStore) WriteMiniblockCandidate(
 	ctx context.Context,
 	streamId StreamId,
 	blockHash common.Hash,
@@ -850,7 +850,7 @@ func (s *PostgresEventStore) readMiniblockCandidateTx(
 	return miniblock, nil
 }
 
-func (s *PostgresEventStore) PromoteBlock(
+func (s *PostgresEventStore) PromoteMiniblockCandidate(
 	ctx context.Context,
 	streamId StreamId,
 	minipoolGeneration int64,
