@@ -15,14 +15,6 @@ process.title = 'stream-metadata'
 
 const logger = getLogger('server')
 
-logger.info('config', {
-	riverEnv: config.riverEnv,
-	chainId: config.web3Config.river.chainId,
-	port: config.port,
-	riverRegistry: config.web3Config.river.addresses.riverRegistry,
-	riverChainRpcUrl: config.riverChainRpcUrl,
-})
-
 /*
  * Server setup
  */
@@ -43,40 +35,36 @@ async function registerPlugins() {
 	}
 }
 
-void registerPlugins()
-
-/*
- * Routes
- */
-server.get('/health', async (request, reply) => {
-	logger.info(`GET /health`)
-	return handleHealthCheckRequest(config, request, reply)
-})
-
-/*
- * Routes
- */
-server.get('/space/:spaceAddress', async (request, reply) => {
-	const { spaceAddress } = request.params as { spaceAddress?: string }
-	logger.info(`GET /space`, { spaceAddress })
-
-	const { protocol, serverAddress } = getServerInfo()
-	return handleMetadataRequest(request, reply, `${protocol}://${serverAddress}`)
-})
-
-server.get('/space/:spaceAddress/image', async (request, reply) => {
-	const { spaceAddress } = request.params as { spaceAddress?: string }
-	logger.info(`GET /space/../image`, {
-		spaceAddress,
+function setupRoutes() {
+	/*
+	 * Routes
+	 */
+	server.get('/health', async (request, reply) => {
+		logger.info(`GET /health`)
+		return handleHealthCheckRequest(config, request, reply)
 	})
 
-	return handleImageRequest(config, request, reply)
-})
+	server.get('/space/:spaceAddress', async (request, reply) => {
+		const { spaceAddress } = request.params as { spaceAddress?: string }
+		logger.info(`GET /space`, { spaceAddress })
+		const { protocol, serverAddress } = getServerInfo()
+		return handleMetadataRequest(request, reply, `${protocol}://${serverAddress}`)
+	})
 
-// Generic / route to return 404
-server.get('/', async (request, reply) => {
-	return reply.code(404).send('Not found')
-})
+	server.get('/space/:spaceAddress/image', async (request, reply) => {
+		const { spaceAddress } = request.params as { spaceAddress?: string }
+		logger.info(`GET /space/../image`, {
+			spaceAddress,
+		})
+
+		return handleImageRequest(config, request, reply)
+	})
+
+	// Generic / route to return 404
+	server.get('/', async (request, reply) => {
+		return reply.code(404).send('Not found')
+	})
+}
 
 /*
  * Start the server
@@ -91,27 +79,12 @@ function getServerInfo() {
 	return { protocol, serverAddress }
 }
 
-// Type guard to check if error has code property
-function isAddressInUseError(err: unknown): err is NodeJS.ErrnoException {
-	return err instanceof Error && 'code' in err && err.code === 'EADDRINUSE'
-}
-
 // Function to start the server on the first available port
 async function startServer(port: number) {
-	try {
-		await server.listen({ port, host: 'localhost' })
-		const addressInfo = server.server.address()
-		if (addressInfo && typeof addressInfo === 'object') {
-			server.log.info(`Server listening on ${addressInfo.address}:${addressInfo.port}`)
-		}
-	} catch (err) {
-		if (isAddressInUseError(err)) {
-			server.log.warn(`Port ${port} is in use, trying port ${port + 1}`)
-			await startServer(port + 1) // Try the next port
-		} else {
-			server.log.error(err)
-			process.exit(1)
-		}
+	await server.listen({ port, host: 'localhost' })
+	const addressInfo = server.server.address()
+	if (addressInfo && typeof addressInfo === 'object') {
+		server.log.info(`Server listening on ${addressInfo.address}:${addressInfo.port}`)
 	}
 }
 
@@ -126,14 +99,18 @@ process.on('SIGTERM', async () => {
 	}
 })
 
-// Start the server on the port set in the .env, or the next available port
-startServer(config.port)
-	.then(() => {
+async function main() {
+	try {
+		// Register plugins
+		await registerPlugins()
+		setupRoutes()
+		// Start the server on the port set in the .env
+		await startServer(config.port)
 		logger.info('Server started')
-	})
-	.catch((err: unknown) => {
-		logger.error('Error starting server', {
-			err,
-		})
+	} catch (err) {
+		logger.error('Error starting server', err)
 		process.exit(1)
-	})
+	}
+}
+
+void main()
