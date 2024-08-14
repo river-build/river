@@ -30,7 +30,7 @@ describe('dlogTest', () => {
                 },
             },
         }
-        const log = dlog('test:dlog')
+        const log = dlog('test:dlog', { useWinston: false })
         log(obj)
         log('\n\n\n')
 
@@ -59,7 +59,7 @@ describe('dlogTest', () => {
     })
 
     test('extend', () => {
-        const base_log = dlog('test:dlog')
+        const base_log = dlog('test:dlog', { useWinston: false })
         const log = base_log.extend('extend')
         log('extend')
         log(22)
@@ -68,7 +68,7 @@ describe('dlogTest', () => {
     })
 
     test('enabled1', () => {
-        const log = dlog('test:dlog')
+        const log = dlog('test:dlog', { useWinston: false })
         if (log.enabled) {
             log('enabled', log.enabled)
 
@@ -83,7 +83,7 @@ describe('dlogTest', () => {
     })
 
     test('circularReference', () => {
-        const log = dlog('test:dlog')
+        const log = dlog('test:dlog', { useWinston: false })
         class A {
             b: B
             constructor() {
@@ -101,7 +101,7 @@ describe('dlogTest', () => {
     })
 
     test('numbers', () => {
-        const log = dlog('test:dlog')
+        const log = dlog('test:dlog', { useWinston: false })
         log('test same number:', { a: 1, b: 1, c: 1, d: 2 })
     })
 
@@ -129,9 +129,9 @@ describe('dlogTest', () => {
 
     test('set', () => {
         const s = new Set([111, 222, { aaa: 333 }])
-        dlog('test:dlog')(s)
+        dlog('test:dlog', { useWinston: false })(s)
 
-        const log = dlog('test:dlog')
+        const log = dlog('test:dlog', { useWinston: false })
         log.enabled = true
 
         let output: string = ''
@@ -154,9 +154,9 @@ describe('dlogTest', () => {
             ['bbb', 222],
             ['ccc', { a: 333 }],
         ])
-        dlog('test:dlog')(s)
+        dlog('test:dlog', { useWinston: false })(s)
 
-        const log = dlog('test:dlog')
+        const log = dlog('test:dlog', { useWinston: false })
         log.enabled = true
 
         let output: string = ''
@@ -179,7 +179,7 @@ describe('dlogTest', () => {
         const ns = 'uniqueLogName'
 
         // Override
-        let log = dlog(ns)
+        let log = dlog(ns, { useWinston: false })
         expect(log.enabled).toBeFalsy()
         log.enabled = true
         expect(log.enabled).toBeTruthy()
@@ -187,20 +187,20 @@ describe('dlogTest', () => {
         expect(log.enabled).toBeFalsy()
 
         // Default
-        log = dlog(ns, { defaultEnabled: true, allowJest: true })
+        log = dlog(ns, { defaultEnabled: true, allowJest: true, useWinston: false })
         expect(log.enabled).toBeTruthy()
         log.enabled = false
         expect(log.enabled).toBeFalsy()
 
         // Default under Jest
-        log = dlog(ns, { defaultEnabled: true })
+        log = dlog(ns, { defaultEnabled: true, useWinston: false })
         expect(log.enabled).toBeFalsy()
         log.enabled = true
         expect(log.enabled).toBeTruthy()
 
         // Enabled explicitly by settings
         debug.enable(ns)
-        log = dlog(ns)
+        log = dlog(ns, { useWinston: false })
         expect(log.enabled).toBeTruthy()
 
         // Disabled explicitly by settings
@@ -208,7 +208,7 @@ describe('dlogTest', () => {
         expect(log.enabled).toBeFalsy()
 
         // Disabled explicitly by settings, default ignored
-        log = dlog(ns, { defaultEnabled: true, allowJest: true })
+        log = dlog(ns, { defaultEnabled: true, allowJest: true, useWinston: false })
         expect(log.enabled).toBeFalsy()
     })
 })
