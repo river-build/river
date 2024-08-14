@@ -1422,7 +1422,7 @@ func (s *PostgresEventStore) runMigrations(ctx context.Context) error {
 	// Trigger a full vacuum if we're upgrading to 5 to reclaim disk space
 	if beforeVersion < 5 && afterVersion == 5 {
 		// Run VACUUM FULL on the relevant tables
-		if err = s.vacuumTables(ctx); err != nil {
+		if err = s.vacuumTables(ctx, dbUrlWithSchema); err != nil {
 			return err
 		}
 	}
@@ -1431,9 +1431,10 @@ func (s *PostgresEventStore) runMigrations(ctx context.Context) error {
 }
 
 // vacuumTables runs VACUUM FULL on the list of tables
-func (s *PostgresEventStore) vacuumTables(ctx context.Context) error {
+func (s *PostgresEventStore) vacuumTables(ctx context.Context, dbUrlWithSchema string) error {
 	log := dlog.FromCtx(ctx)
-	db, err := sql.Open("postgres", s.dbUrl)
+
+	db, err := sql.Open("postgres", dbUrlWithSchema)
 	if err != nil {
 		return err
 	}
