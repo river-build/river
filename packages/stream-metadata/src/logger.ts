@@ -1,4 +1,5 @@
 import { pino } from 'pino'
+
 import { config } from './environment'
 
 const pretty = {
