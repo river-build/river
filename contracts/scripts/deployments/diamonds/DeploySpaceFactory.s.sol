@@ -117,7 +117,7 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
   ) internal returns (Diamond.InitParams memory) {
     address multiInit = deployMultiInit.deploy();
 
-    address space = deploySpace.deploy();
+    address spaceImpl = deploySpace.deploy();
     spaceOwner = deploySpaceOwner.deploy();
 
     // entitlement modules
@@ -205,7 +205,7 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
     addFacet(
       proxyManagerHelper.makeCut(proxyManager, IDiamond.FacetCutAction.Add),
       proxyManager,
-      proxyManagerHelper.makeInitData(space)
+      proxyManagerHelper.makeInitData(spaceImpl)
     );
     addFacet(
       pausableHelper.makeCut(pausable, IDiamond.FacetCutAction.Add),
