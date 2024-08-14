@@ -30,5 +30,5 @@ export function handleMetadataRequest(
 		image: `${baseUrl}/space/${spaceAddress}/image`,
 	}
 
-	reply.header('Content-Type', 'application/json').send(dummyJson)
+	return reply.header('Content-Type', 'application/json').send(dummyJson)
 }

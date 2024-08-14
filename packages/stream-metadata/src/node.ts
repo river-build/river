@@ -14,6 +14,17 @@ process.title = 'stream-metadata'
 
 const logger = getLogger('server')
 
+logger.info('config', {
+	riverEnv: config.riverEnv,
+	chainId: config.web3Config.river.chainId,
+	port: config.port,
+	riverRegistry: config.web3Config.river.addresses.riverRegistry,
+	riverChainRpcUrl: config.riverChainRpcUrl,
+})
+
+/*
+ * Server setup
+ */
 const server = Fastify({
 	logger,
 })
@@ -31,8 +42,11 @@ async function registerPlugins() {
 	}
 }
 
-registerPlugins()
+void registerPlugins()
 
+/*
+ * Routes
+ */
 server.get('/space/:spaceAddress', async (request, reply) => {
 	const { spaceAddress } = request.params as { spaceAddress?: string }
 	logger.info(`GET /space`, { spaceAddress })
@@ -47,7 +61,7 @@ server.get('/space/:spaceAddress/image', async (request, reply) => {
 		spaceAddress,
 	})
 
-	return handleImageRequest(request, reply)
+	return handleImageRequest(config, request, reply)
 })
 
 // Generic / route to return 404
@@ -55,6 +69,9 @@ server.get('/', async (request, reply) => {
 	return reply.code(404).send('Not found')
 })
 
+/*
+ * Start the server
+ */
 function getServerInfo() {
 	const addressInfo = server.server.address()
 	const protocol = server.server instanceof HTTPSServer ? 'https' : 'http'
