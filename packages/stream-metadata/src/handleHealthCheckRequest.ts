@@ -11,10 +11,9 @@ export async function handleHealthCheckRequest(
 	request: FastifyRequest,
 	reply: FastifyReply,
 ) {
-	let riverRegistry: ReturnType<typeof getRiverRegistry> | undefined
 	// Do a health check on the river registry
 	try {
-		riverRegistry = getRiverRegistry(config)
+		const riverRegistry = getRiverRegistry(config)
 		if (riverRegistry) {
 			await riverRegistry.getAllNodes()
 			// healthy
