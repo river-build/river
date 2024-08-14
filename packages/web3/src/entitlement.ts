@@ -612,37 +612,41 @@ export async function evaluateTree(
 // checks for testing.
 export function createExternalTokenStruct(
     addresses: Address[],
-    checkOptions?: Partial<Omit<ContractCheckOperation, 'address'>>,
-    logicalOp: LogicalOperationType = LogicalOperationType.OR,
+    options?: {
+        checkOptions?: Partial<Omit<ContractCheckOperation, 'address'>>,
+        logicalOp?: LogicalOperationType,
+    },
 ) {
     if (addresses.length === 0) {
         return NoopRuleData
     }
     const defaultChain = addresses.map((address) => ({
-        chainId: checkOptions?.chainId ?? 1n,
+        chainId: options?.checkOptions?.chainId ?? 1n,
         address: address,
-        type: checkOptions?.type ?? (CheckOperationType.ERC20 as const),
-        threshold: checkOptions?.threshold ?? BigInt(1),
+        type: options?.checkOptions?.type ?? (CheckOperationType.ERC20 as const),
+        threshold: options?.checkOptions?.threshold ?? BigInt(1),
     }))
-    return createOperationsTree(defaultChain, logicalOp)
+    return createOperationsTree(defaultChain, options?.logicalOp ?? LogicalOperationType.OR)
 }
 
 export function createExternalNFTStruct(
     addresses: Address[],
-    checkOptions?: Partial<Omit<ContractCheckOperation, 'address'>>,
-    logicalOp: LogicalOperationType = LogicalOperationType.OR,
+    options?: {
+        checkOptions?: Partial<Omit<ContractCheckOperation, 'address'>>,
+        logicalOp?: LogicalOperationType,
+    },
 ) {
     if (addresses.length === 0) {
         return NoopRuleData
     }
     const defaultChain = addresses.map((address) => ({
         // Anvil chain id
-        chainId: checkOptions?.chainId ?? 31337n,
+        chainId: options?.checkOptions?.chainId ?? 31337n,
         address: address,
-        type: checkOptions?.type ?? (CheckOperationType.ERC721 as const),
-        threshold: checkOptions?.threshold ?? BigInt(1),
+        type: options?.checkOptions?.type ?? (CheckOperationType.ERC721 as const),
+        threshold: options?.checkOptions?.threshold ?? BigInt(1),
     }))
-    return createOperationsTree(defaultChain, logicalOp)
+    return createOperationsTree(defaultChain, options?.logicalOp ?? LogicalOperationType.OR)
 }
 
 export type ContractCheckOperation = {
