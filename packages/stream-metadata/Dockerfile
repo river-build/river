@@ -34,7 +34,7 @@ COPY ./packages/stream-metadata /river/packages/stream-metadata
 # install dependencies and build
 RUN apk add --no-cache git curl
 RUN corepack enable
-RUN yarn install --frozen-lockfile
+RUN yarn install
 RUN yarn run turbo build --filter @river-build/stream-metadata
 
 # create runner image with only the necessary files
