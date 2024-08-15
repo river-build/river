@@ -3,7 +3,6 @@ import {
     IRuleEntitlementBase as LocalhostBase,
     IRuleEntitlementInterface as LocalhostInterface,
 } from '@river-build/generated/dev/typings/IRuleEntitlement'
-import { Hex } from 'viem'
 
 import LocalhostAbi from '@river-build/generated/dev/abis/IRuleEntitlement.abi.json' assert { type: 'json' }
 
@@ -38,7 +37,7 @@ export class RuleEntitlementShim
         return this.read.getRuleData(roleId)
     }
 
-    public decodeGetRuleData(entitlementData: Hex): LocalhostBase.RuleDataStruct[] | undefined {
+    public decodeGetRuleData(entitlementData: string): LocalhostBase.RuleDataStruct[] | undefined {
         try {
             const decoded = this.decodeFunctionResult(
                 'getRuleData',
