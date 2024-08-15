@@ -5,9 +5,9 @@ import cors from '@fastify/cors'
 
 import { config } from './environment'
 import { getLogger } from './logger'
-import { handleHealthCheckRequest } from './routes/handleHealthCheckRequest'
-import { handleImageRequest } from './routes/handleImageRequest'
-import { handleMetadataRequest } from './routes/handleMetadataRequest'
+import { checkHealth } from './routes/health'
+import { fetchSpaceImage } from './routes/spaceImage'
+import { fetchSpaceMetadata } from './routes/spaceMetadata'
 
 // Set the process title to 'stream-metadata' so it can be easily identified
 // or killed with `pkill stream-metadata`
@@ -44,14 +44,14 @@ function setupRoutes() {
 	 */
 	server.get('/health', async (request, reply) => {
 		logger.info(`GET /health`)
-		return handleHealthCheckRequest(request, reply)
+		return checkHealth(request, reply)
 	})
 
 	server.get('/space/:spaceAddress', async (request, reply) => {
 		const { spaceAddress } = request.params as { spaceAddress?: string }
 		logger.info(`GET /space`, { spaceAddress })
 		const { protocol, serverAddress } = getServerInfo()
-		return handleMetadataRequest(request, reply, `${protocol}://${serverAddress}`)
+		return fetchSpaceMetadata(request, reply, `${protocol}://${serverAddress}`)
 	})
 
 	server.get('/space/:spaceAddress/image', async (request, reply) => {
@@ -60,7 +60,7 @@ function setupRoutes() {
 			spaceAddress,
 		})
 
-		return handleImageRequest(request, reply)
+		return fetchSpaceImage(request, reply)
 	})
 
 	// Generic / route to return 404

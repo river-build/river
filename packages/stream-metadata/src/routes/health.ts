@@ -5,7 +5,7 @@ import { getRiverRegistry } from '../evmRpcClient'
 
 const logger = getLogger('handleHealthCheckRequest')
 
-export async function handleHealthCheckRequest(request: FastifyRequest, reply: FastifyReply) {
+export async function checkHealth(request: FastifyRequest, reply: FastifyReply) {
 	// Do a health check on the river registry
 	try {
 		await getRiverRegistry().getAllNodes()
