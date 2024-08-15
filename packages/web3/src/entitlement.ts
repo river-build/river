@@ -1,27 +1,25 @@
 import type { ExtractAbiFunction } from 'abitype'
 import { IRuleEntitlementBase, IRuleEntitlementAbi } from './v3/IRuleEntitlementShim'
 
-import { createPublicClient, http, encodeAbiParameters, getAbiItem, PublicClient } from 'viem'
+import {
+    createPublicClient,
+    http,
+    encodeAbiParameters,
+    getAbiItem,
+    PublicClient,
+    decodeFunctionResult,
+    DecodeFunctionResultReturnType,
+} from 'viem'
 
 import { mainnet } from 'viem/chains'
 import { ethers } from 'ethers'
 import { Address } from './ContractTypes'
 import { MOCK_ADDRESS } from './Utils'
+import { get } from 'lodash'
 
 const zeroAddress = ethers.constants.AddressZero
 
-// This public client is used purely to infer the typescript type of RuleData.
-const publicClient: PublicClient = createPublicClient({
-    chain: mainnet,
-    transport: http(),
-})
-
-type ReadContractFunction = typeof publicClient.readContract<
-    typeof IRuleEntitlementAbi,
-    'getRuleData'
->
-type ReadContractReturnType = ReturnType<ReadContractFunction>
-export type RuleData = Awaited<ReadContractReturnType>
+export type RuleData = DecodeFunctionResultReturnType<typeof IRuleEntitlementAbi, 'getRuleData'>
 
 export enum OperationType {
     NONE = 0,
