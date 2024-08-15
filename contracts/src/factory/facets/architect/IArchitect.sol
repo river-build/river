@@ -14,10 +14,12 @@ interface IArchitectBase {
   // =============================================================
   //                           STRUCTS
   // =============================================================
+
+  // Latest
   struct MembershipRequirements {
     bool everyone;
     address[] users;
-    IRuleEntitlement.RuleData ruleData;
+    bytes ruleData;
   }
 
   struct Membership {
@@ -56,6 +58,7 @@ interface IArchitectBase {
   error Architect__InvalidNetworkId();
   error Architect__InvalidAddress();
   error Architect__NotContract();
+  error Architect__InvalidPricingModule();
 }
 
 interface IArchitect is IArchitectBase {

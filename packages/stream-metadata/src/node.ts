@@ -1,43 +1,85 @@
-import Fastify from 'fastify'
+import { Server as HTTPServer, IncomingMessage, ServerResponse } from 'http'
 import { Server as HTTPSServer } from 'https'
-import { SERVER_PORT } from './environment'
-import cors from '@fastify/cors'
-import { handleImageRequest } from './handleImageRequest'
-import { handleMetadataRequest } from './handleMetadataRequest'
 
-// Set the process title to 'fetch-image' so it can be easily identified
-// or killed with `pkill fetch-image`
-process.title = 'fetch-image'
+import Fastify, { FastifyInstance } from 'fastify'
+import cors from '@fastify/cors'
+
+import { config } from './environment'
+import { getLogger } from './logger'
+import { checkHealth } from './routes/health'
+import { fetchSpaceImage } from './routes/spaceImage'
+import { fetchSpaceMetadata } from './routes/spaceMetadata'
+
+// Set the process title to 'stream-metadata' so it can be easily identified
+// or killed with `pkill stream-metadata`
+process.title = 'stream-metadata'
+
+const logger = getLogger('server')
+
+logger.info({
+	riverEnv: config.riverEnv,
+	chainId: config.web3Config.river.chainId,
+	port: config.port,
+	riverRegistry: config.web3Config.river.addresses.riverRegistry,
+	riverChainRpcUrl: config.riverChainRpcUrl,
+})
+
+/*
+ * Server setup
+ */
+export type Server = FastifyInstance<
+	HTTPServer | HTTPSServer,
+	IncomingMessage,
+	ServerResponse,
+	typeof logger
+>
 
 const server = Fastify({
-	logger: true,
+	logger,
 })
 
-server.register(cors, {
-	origin: '*', // Allow any origin
-	methods: ['GET'], // Allowed HTTP methods
-})
+async function registerPlugins() {
+	await server.register(cors, {
+		origin: '*', // Allow any origin
+		methods: ['GET'], // Allowed HTTP methods
+	})
+	logger.info('CORS registered successfully')
+}
 
-server.get('/space/:spaceAddress', async (request, reply) => {
-	const { spaceAddress } = request.params as { spaceAddress?: string }
-	console.log(`GET /space/${spaceAddress}`)
+export function setupRoutes(srv: Server) {
+	/*
+	 * Routes
+	 */
+	srv.get('/health', async (request, reply) => {
+		logger.info(`GET /health`)
+		return checkHealth(request, reply)
+	})
 
-	const { protocol, serverAddress } = getServerInfo()
-	return handleMetadataRequest(request, reply, `${protocol}://${serverAddress}`)
-})
+	srv.get('/space/:spaceAddress', async (request, reply) => {
+		const { spaceAddress } = request.params as { spaceAddress?: string }
+		logger.info(`GET /space`, { spaceAddress })
+		const { protocol, serverAddress } = getServerInfo()
+		return fetchSpaceMetadata(request, reply, `${protocol}://${serverAddress}`)
+	})
 
-server.get('/space/:spaceAddress/image', async (request, reply) => {
-	const { spaceAddress } = request.params as { spaceAddress?: string }
-	console.log(`GET /space/${spaceAddress}/image`)
+	srv.get('/space/:spaceAddress/image', async (request, reply) => {
+		const { spaceAddress } = request.params as { spaceAddress?: string }
+		logger.info(`GET /space/../image`, {
+			spaceAddress,
+		})
 
-	return handleImageRequest(request, reply)
-})
+		return fetchSpaceImage(request, reply)
+	})
 
-// Generic / route to return 404
-server.get('/', async (request, reply) => {
-	return reply.code(404).send('Not found')
-})
+	// Generic / route to return 404
+	server.get('/', async (request, reply) => {
+		return reply.code(404).send('Not found')
+	})
+}
 
+/*
+ * Start the server
+ */
 function getServerInfo() {
 	const addressInfo = server.server.address()
 	const protocol = server.server instanceof HTTPSServer ? 'https' : 'http'
@@ -48,40 +90,27 @@ function getServerInfo() {
 	return { protocol, serverAddress }
 }
 
-// Type guard to check if error has code property
-function isAddressInUseError(err: any): err is NodeJS.ErrnoException {
-	return err && typeof err === 'object' && 'code' in err
-}
-
-// Function to start the server on the first available port
-async function startServer(port: number) {
-	try {
-		await server.listen({ port, host: 'localhost' })
-		const addressInfo = server.server.address()
-		if (addressInfo && typeof addressInfo === 'object') {
-			server.log.info(`Server listening on ${addressInfo.address}:${addressInfo.port}`)
-		}
-	} catch (err) {
-		if (isAddressInUseError(err) && err.code === 'EADDRINUSE') {
-			server.log.warn(`Port ${port} is in use, trying port ${port + 1}`)
-			startServer(port + 1) // Try the next port
-		} else {
-			server.log.error(err)
-			process.exit(1)
-		}
-	}
-}
-
 process.on('SIGTERM', async () => {
 	try {
 		await server.close()
-		console.log('Server closed gracefully')
+		logger.info('Server closed gracefully')
 		process.exit(0)
 	} catch (err) {
-		console.error('Error during server shutdown', err)
+		logger.error('Error during server shutdown', err)
 		process.exit(1)
 	}
 })
 
-// Start the server on the port set in the .env, or the next available port
-startServer(SERVER_PORT)
+async function main() {
+	try {
+		await registerPlugins()
+		setupRoutes(server)
+		await server.listen({ port: config.port })
+		logger.info('Server started')
+	} catch (err) {
+		logger.error('Error starting server', err)
+		process.exit(1)
+	}
+}
+
+void main()
