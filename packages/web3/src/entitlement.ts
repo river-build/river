@@ -1,21 +1,11 @@
 import type { ExtractAbiFunction } from 'abitype'
 import { IRuleEntitlementBase, IRuleEntitlementAbi } from './v3/IRuleEntitlementShim'
 
-import {
-    createPublicClient,
-    http,
-    encodeAbiParameters,
-    getAbiItem,
-    PublicClient,
-    decodeFunctionResult,
-    DecodeFunctionResultReturnType,
-} from 'viem'
+import { encodeAbiParameters, getAbiItem, DecodeFunctionResultReturnType } from 'viem'
 
-import { mainnet } from 'viem/chains'
 import { ethers } from 'ethers'
 import { Address } from './ContractTypes'
 import { MOCK_ADDRESS } from './Utils'
-import { get } from 'lodash'
 
 const zeroAddress = ethers.constants.AddressZero
 
