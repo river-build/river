@@ -236,6 +236,7 @@ func ConvertV1RuleDataToV2(
 		}
 
 		switch CheckOperationType(checkOp.OpType) {
+		// All of the following check operations require a threshold
 		case MOCK:
 			fallthrough
 		case ERC20:
@@ -251,9 +252,11 @@ func ConvertV1RuleDataToV2(
 			}
 			ruleDataV2.CheckOperations[i].Params = params
 
+		// ERC1155 requires a threshold and a tokenId
 		case ERC1155:
 			return nil, fmt.Errorf("ERC1155 not supported by V1 rule data")
 
+		// ISENTITLED, CheckNone do not require params
 		case ISENTITLED:
 			fallthrough
 		case CheckNONE:

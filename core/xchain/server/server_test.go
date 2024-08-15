@@ -31,7 +31,7 @@ import (
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/stretchr/testify/require"
 
-	contract_types "github.com/river-build/river/core/contracts/types"
+	"github.com/river-build/river/core/node/types/test_util"
 )
 
 const (
@@ -354,83 +354,6 @@ func (st *serviceTester) linkWalletToRootWallet(
 	st.require.Equal(uint64(1), receipt.Status)
 }
 
-func erc721Check(chainId uint64, contractAddress common.Address, threshold uint64) base.IRuleEntitlementBaseRuleData {
-	return base.IRuleEntitlementBaseRuleData{
-		Operations: []base.IRuleEntitlementBaseOperation{
-			{
-				OpType: uint8(contract_types.CHECK),
-				Index:  0,
-			},
-		},
-		CheckOperations: []base.IRuleEntitlementBaseCheckOperation{
-			{
-				OpType:          uint8(contract_types.ERC721),
-				ChainId:         new(big.Int).SetUint64(chainId),
-				ContractAddress: contractAddress,
-				Threshold:       new(big.Int).SetUint64(threshold),
-			},
-		},
-	}
-}
-
-func erc20Check(chainId uint64, contractAddress common.Address, threshold uint64) base.IRuleEntitlementBaseRuleData {
-	return base.IRuleEntitlementBaseRuleData{
-		Operations: []base.IRuleEntitlementBaseOperation{
-			{
-				OpType: uint8(contract_types.CHECK),
-				Index:  0,
-			},
-		},
-		CheckOperations: []base.IRuleEntitlementBaseCheckOperation{
-			{
-				OpType:  uint8(contract_types.ERC20),
-				ChainId: new(big.Int).SetUint64(chainId),
-				// Chainlink is a good ERC 20 token to use for testing because it's easy to get from faucets.
-				ContractAddress: contractAddress,
-				Threshold:       new(big.Int).SetUint64(threshold),
-			},
-		},
-	}
-}
-
-func customEntitlementCheck(chainId uint64, contractAddress common.Address) base.IRuleEntitlementBaseRuleData {
-	return base.IRuleEntitlementBaseRuleData{
-		Operations: []base.IRuleEntitlementBaseOperation{
-			{
-				OpType: uint8(contract_types.CHECK),
-				Index:  0,
-			},
-		},
-		CheckOperations: []base.IRuleEntitlementBaseCheckOperation{
-			{
-				OpType:          uint8(contract_types.ISENTITLED),
-				ChainId:         new(big.Int).SetUint64(chainId),
-				ContractAddress: contractAddress,
-				Threshold:       new(big.Int).SetUint64(0),
-			},
-		},
-	}
-}
-
-func ethBalanceCheck(chainId uint64, threshold uint64) base.IRuleEntitlementBaseRuleData {
-	return base.IRuleEntitlementBaseRuleData{
-		Operations: []base.IRuleEntitlementBaseOperation{
-			{
-				OpType: uint8(contract_types.CHECK),
-				Index:  0,
-			},
-		},
-		CheckOperations: []base.IRuleEntitlementBaseCheckOperation{
-			{
-				OpType:          uint8(contract_types.NATIVE_COIN_BALANCE),
-				ChainId:         new(big.Int).SetUint64(chainId),
-				ContractAddress: common.Address{},
-				Threshold:       new(big.Int).SetUint64(threshold),
-			},
-		},
-	}
-}
-
 // Expect base anvil chain available at localhost:8545.
 // xchain needs an rpc url endpoint available for evaluating entitlements.
 var (
@@ -590,22 +513,50 @@ func TestErc721Entitlements(t *testing.T) {
 			auth, contractAddress, erc721 := deployMockErc721Contract(require, st)
 
 			// Expect no NFT minted for the client simulator wallet
-			expectEntitlementCheckResult(require, cs, ctx, cfg, erc721Check(ChainID, contractAddress, 1), false)
+			expectEntitlementCheckResult(
+				require,
+				cs,
+				ctx,
+				cfg,
+				test_util.Erc721Check(ChainID, contractAddress, 1),
+				false,
+			)
 
 			// Mint an NFT for client simulator wallet.
 			mintTokenForWallet(require, auth, st, erc721, cs.Wallet(), 1)
 
 			// Check if the wallet a 1 balance of the NFT - should pass
-			expectEntitlementCheckResult(require, cs, ctx, cfg, erc721Check(ChainID, contractAddress, 1), true)
+			expectEntitlementCheckResult(
+				require,
+				cs,
+				ctx,
+				cfg,
+				test_util.Erc721Check(ChainID, contractAddress, 1),
+				true,
+			)
 
 			// Checking for balance of 2 should fail
-			expectEntitlementCheckResult(require, cs, ctx, cfg, erc721Check(ChainID, contractAddress, 2), false)
+			expectEntitlementCheckResult(
+				require,
+				cs,
+				ctx,
+				cfg,
+				test_util.Erc721Check(ChainID, contractAddress, 2),
+				false,
+			)
 
 			// Create a set of 3 linked wallets using client simulator address.
 			_, wallet1, wallet2, _ := generateLinkedWallets(ctx, require, tc.sentByRootKeyWallet, st, cs.Wallet())
 
 			// Sanity check: balance of 4 across all 3 wallets should fail
-			expectEntitlementCheckResult(require, cs, ctx, cfg, erc721Check(ChainID, contractAddress, 4), false)
+			expectEntitlementCheckResult(
+				require,
+				cs,
+				ctx,
+				cfg,
+				test_util.Erc721Check(ChainID, contractAddress, 4),
+				false,
+			)
 
 			// Mint 2 NFTs for wallet1.
 			mintTokenForWallet(require, auth, st, erc721, wallet1, 2)
@@ -614,7 +565,14 @@ func TestErc721Entitlements(t *testing.T) {
 			mintTokenForWallet(require, auth, st, erc721, wallet2, 1)
 
 			// Accumulated balance of 4 across all 3 wallets should now pass
-			expectEntitlementCheckResult(require, cs, ctx, cfg, erc721Check(ChainID, contractAddress, 4), true)
+			expectEntitlementCheckResult(
+				require,
+				cs,
+				ctx,
+				cfg,
+				test_util.Erc721Check(ChainID, contractAddress, 4),
+				true,
+			)
 		})
 	}
 }
@@ -682,22 +640,50 @@ func TestErc20Entitlements(t *testing.T) {
 			auth, contractAddress, erc20 := deployMockErc20Contract(require, st)
 
 			// Check for balance of 1 should fail, as this wallet has no coins.
-			expectEntitlementCheckResult(require, cs, ctx, cfg, erc20Check(ChainID, contractAddress, 1), false)
+			expectEntitlementCheckResult(
+				require,
+				cs,
+				ctx,
+				cfg,
+				test_util.Erc20Check(ChainID, contractAddress, 1),
+				false,
+			)
 
 			// Mint 10 tokens for the client simulator wallet.
 			mintErc20TokensForWallet(require, auth, st, erc20, cs.Wallet(), 10)
 
 			// Check for balance of 10 should pass.
-			expectEntitlementCheckResult(require, cs, ctx, cfg, erc20Check(ChainID, contractAddress, 10), true)
+			expectEntitlementCheckResult(
+				require,
+				cs,
+				ctx,
+				cfg,
+				test_util.Erc20Check(ChainID, contractAddress, 10),
+				true,
+			)
 
 			// Checking for balance of 20 should fail
-			expectEntitlementCheckResult(require, cs, ctx, cfg, erc20Check(ChainID, contractAddress, 20), false)
+			expectEntitlementCheckResult(
+				require,
+				cs,
+				ctx,
+				cfg,
+				test_util.Erc20Check(ChainID, contractAddress, 20),
+				false,
+			)
 
 			// Create a set of 3 linked wallets using client simulator address.
 			_, wallet1, wallet2, _ := generateLinkedWallets(ctx, require, tc.sentByRootKeyWallet, st, cs.Wallet())
 
 			// Sanity check: balance of 30 across all 3 wallets should fail
-			expectEntitlementCheckResult(require, cs, ctx, cfg, erc20Check(ChainID, contractAddress, 30), false)
+			expectEntitlementCheckResult(
+				require,
+				cs,
+				ctx,
+				cfg,
+				test_util.Erc20Check(ChainID, contractAddress, 30),
+				false,
+			)
 
 			// Mint 19 tokens for wallet1.
 			mintErc20TokensForWallet(require, auth, st, erc20, wallet1, 19)
@@ -705,7 +691,14 @@ func TestErc20Entitlements(t *testing.T) {
 			mintErc20TokensForWallet(require, auth, st, erc20, wallet2, 1)
 
 			// Accumulated balance of 30 across all 3 wallets should now pass
-			expectEntitlementCheckResult(require, cs, ctx, cfg, erc20Check(ChainID, contractAddress, 30), true)
+			expectEntitlementCheckResult(
+				require,
+				cs,
+				ctx,
+				cfg,
+				test_util.Erc20Check(ChainID, contractAddress, 30),
+				true,
+			)
 		})
 	}
 }
@@ -783,7 +776,7 @@ func TestCustomEntitlements(t *testing.T) {
 			t.Log("Deployed custom entitlement contract", contractAddress.Hex(), ChainID)
 
 			// Initially the check should fail.
-			customCheck := customEntitlementCheck(ChainID, contractAddress)
+			customCheck := test_util.CustomEntitlementCheck(ChainID, contractAddress)
 			t.Log("Checking entitlement for client simulator wallet", customCheck)
 			expectEntitlementCheckResult(require, cs, ctx, cfg, customCheck, false)
 
@@ -846,7 +839,7 @@ func TestEthBalance(t *testing.T) {
 			require.NoError(err)
 
 			// Initially the check should fail.
-			ethCheck := ethBalanceCheck(ChainID, node_crypto.Eth_2.Uint64())
+			ethCheck := test_util.EthBalanceCheck(ChainID, node_crypto.Eth_2.Uint64())
 			expectEntitlementCheckResult(require, cs, ctx, cfg, ethCheck, false)
 
 			// Fund the client simulator wallet with 10 eth - should pass the check.
@@ -875,7 +868,7 @@ func TestEthBalance(t *testing.T) {
 				require.NoError(err)
 			}
 
-			eth10Check := ethBalanceCheck(ChainID, node_crypto.Eth_10.Uint64())
+			eth10Check := test_util.EthBalanceCheck(ChainID, node_crypto.Eth_10.Uint64())
 
 			for _, wallet := range []*node_crypto.Wallet{wallet1, wallet2, wallet3} {
 				// Check should fail for all wallets.
