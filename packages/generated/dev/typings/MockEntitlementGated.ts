@@ -318,7 +318,7 @@ export interface MockEntitlementGated extends BaseContract {
     ): Promise<ContractTransaction>;
 
     getCrossChainEntitlementData(
-      transactionId: PromiseOrValue<BytesLike>,
+      arg0: PromiseOrValue<BytesLike>,
       roleId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<[IEntitlementDataQueryableBase.EntitlementDataStructOutput]>;
@@ -365,7 +365,7 @@ export interface MockEntitlementGated extends BaseContract {
   ): Promise<ContractTransaction>;
 
   getCrossChainEntitlementData(
-    transactionId: PromiseOrValue<BytesLike>,
+    arg0: PromiseOrValue<BytesLike>,
     roleId: PromiseOrValue<BigNumberish>,
     overrides?: CallOverrides
   ): Promise<IEntitlementDataQueryableBase.EntitlementDataStructOutput>;
@@ -412,7 +412,7 @@ export interface MockEntitlementGated extends BaseContract {
     ): Promise<void>;
 
     getCrossChainEntitlementData(
-      transactionId: PromiseOrValue<BytesLike>,
+      arg0: PromiseOrValue<BytesLike>,
       roleId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<IEntitlementDataQueryableBase.EntitlementDataStructOutput>;
@@ -488,7 +488,7 @@ export interface MockEntitlementGated extends BaseContract {
     ): Promise<BigNumber>;
 
     getCrossChainEntitlementData(
-      transactionId: PromiseOrValue<BytesLike>,
+      arg0: PromiseOrValue<BytesLike>,
       roleId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
@@ -536,7 +536,7 @@ export interface MockEntitlementGated extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     getCrossChainEntitlementData(
-      transactionId: PromiseOrValue<BytesLike>,
+      arg0: PromiseOrValue<BytesLike>,
       roleId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;

@@ -39,7 +39,7 @@ const _abi = [
     name: "getCrossChainEntitlementData",
     inputs: [
       {
-        name: "transactionId",
+        name: "",
         type: "bytes32",
         internalType: "bytes32",
       },
