@@ -1035,7 +1035,7 @@ export class Client
         }
 
         await new Promise<void>((resolve, reject) => {
-            const timout = setTimeout(() => {
+            const timeout = setTimeout(() => {
                 this.off('streamInitialized', handler)
                 reject(new Error(`waitForStream: timeout waiting for ${streamId}`))
             }, timeoutMs)
@@ -1043,7 +1043,7 @@ export class Client
                 if (newStreamId === streamId) {
                     this.logCall('waitForStream: got streamInitialized', newStreamId)
                     this.off('streamInitialized', handler)
-                    clearTimeout(timout)
+                    clearTimeout(timeout)
                     resolve()
                 } else {
                     this.logCall(
