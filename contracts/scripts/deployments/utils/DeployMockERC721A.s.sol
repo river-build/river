@@ -14,7 +14,6 @@ contract DeployMockERC721A is Deployer {
     bytes32 salt = bytes32(uint256(uint160(deployer))); // create a salt from address
 
     bytes32 initCodeHash = hashInitCode(type(MockERC721A).creationCode);
-
     address predeterminedAddress = vm.computeCreate2Address(salt, initCodeHash);
 
     vm.startBroadcast(deployer);
