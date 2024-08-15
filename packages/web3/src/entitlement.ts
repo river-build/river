@@ -165,7 +165,7 @@ export function postOrderArrayToTree(operations: Operation[]): Operation {
     return root
 }
 
-export function encodeEntitlementData(ruleData: IRuleEntitlementBase.RuleDataStruct): Address {
+export function encodeEntitlementData(ruleData: IRuleEntitlementBase.RuleDataStruct): Hex {
     const encodeRuleDataAbi: ExtractAbiFunction<typeof IRuleEntitlementAbi, 'encodeRuleData'> =
         getAbiItem({
             abi: IRuleEntitlementAbi,
