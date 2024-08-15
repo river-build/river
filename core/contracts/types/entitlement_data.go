@@ -174,12 +174,14 @@ func DecodeThresholdParams(data []byte) (*ThresholdParams, error) {
 		return nil, err
 	}
 
-	return unpacked[0].(*ThresholdParams), nil
+	params := ThresholdParams{}
+	abi.ConvertType(unpacked[0], &params)
+	return &params, nil
 }
 
 type ERC1155Params struct {
-	Threshold *big.Int
-	TokenId   *big.Int
+	Threshold *big.Int `json:"threshold"`
+	TokenId   *big.Int `json:"tokenId"`
 }
 
 var erc1155ParamsType, _ = abi.NewType("tuple", "ERC1155Params", []abi.ArgumentMarshaling{
@@ -190,6 +192,17 @@ var erc1155ParamsType, _ = abi.NewType("tuple", "ERC1155Params", []abi.ArgumentM
 func (t *ERC1155Params) AbiEncode() ([]byte, error) {
 	value := abi.Arguments{{Type: erc1155ParamsType}}
 	return value.Pack(t)
+}
+
+func DecodeERC1155Params(data []byte) (*ERC1155Params, error) {
+	value := abi.Arguments{{Type: erc1155ParamsType, Name: "params"}}
+	unpacked, err := value.Unpack(data)
+	if err != nil {
+		return nil, err
+	}
+	params := ERC1155Params{}
+	abi.ConvertType(unpacked[0], &params)
+	return &params, nil
 }
 
 func ConvertV1RuleDataToV2(
