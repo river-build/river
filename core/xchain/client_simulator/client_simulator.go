@@ -10,8 +10,9 @@ import (
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/xchain/contracts"
-	"github.com/river-build/river/core/xchain/entitlement"
 	"github.com/river-build/river/core/xchain/examples"
+
+	contract_types "github.com/river-build/river/core/contracts/types"
 
 	node_crypto "github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
@@ -104,13 +105,13 @@ func customEntitlementExample(cfg *config.Config) base.IRuleEntitlementBaseRuleD
 	return base.IRuleEntitlementBaseRuleData{
 		Operations: []base.IRuleEntitlementBaseOperation{
 			{
-				OpType: uint8(entitlement.CHECK),
+				OpType: uint8(contract_types.CHECK),
 				Index:  0,
 			},
 		},
 		CheckOperations: []base.IRuleEntitlementBaseCheckOperation{
 			{
-				OpType:  uint8(entitlement.ISENTITLED),
+				OpType:  uint8(contract_types.ISENTITLED),
 				ChainId: big.NewInt(1),
 				// This contract is deployed on our local base dev chain.
 				ContractAddress: cfg.GetTestCustomEntitlementContractAddress(),
@@ -124,13 +125,13 @@ func erc721Example() base.IRuleEntitlementBaseRuleData {
 	return base.IRuleEntitlementBaseRuleData{
 		Operations: []base.IRuleEntitlementBaseOperation{
 			{
-				OpType: uint8(entitlement.CHECK),
+				OpType: uint8(contract_types.CHECK),
 				Index:  0,
 			},
 		},
 		CheckOperations: []base.IRuleEntitlementBaseCheckOperation{
 			{
-				OpType:  uint8(entitlement.ERC721),
+				OpType:  uint8(contract_types.ERC721),
 				ChainId: examples.EthSepoliaChainId,
 				// Custom NFT contract example
 				ContractAddress: examples.EthSepoliaTestNftContract,
@@ -144,13 +145,13 @@ func erc20Example() base.IRuleEntitlementBaseRuleData {
 	return base.IRuleEntitlementBaseRuleData{
 		Operations: []base.IRuleEntitlementBaseOperation{
 			{
-				OpType: uint8(entitlement.CHECK),
+				OpType: uint8(contract_types.CHECK),
 				Index:  0,
 			},
 		},
 		CheckOperations: []base.IRuleEntitlementBaseCheckOperation{
 			{
-				OpType:  uint8(entitlement.ERC20),
+				OpType:  uint8(contract_types.ERC20),
 				ChainId: examples.EthSepoliaChainId,
 				// Chainlink is a good ERC 20 token to use for testing because it's easy to get from faucets.
 				ContractAddress: examples.EthSepoliaChainlinkContract,
