@@ -1,7 +1,13 @@
 import type { ExtractAbiFunction } from 'abitype'
 import { IRuleEntitlementBase, IRuleEntitlementAbi } from './v3/IRuleEntitlementShim'
 
-import { encodeAbiParameters, getAbiItem, DecodeFunctionResultReturnType } from 'viem'
+import {
+    encodeAbiParameters,
+    decodeAbiParameters,
+    getAbiItem,
+    DecodeFunctionResultReturnType,
+    Hex,
+} from 'viem'
 
 import { ethers } from 'ethers'
 import { Address } from './ContractTypes'
@@ -179,6 +185,21 @@ export function encodeEntitlementData(ruleData: IRuleEntitlementBase.RuleDataStr
     return encodeAbiParameters(encodeRuleDataAbi.inputs, [ruleData])
 }
 
+export function decodeEntitlementData(entitlementData: Hex): IRuleEntitlementBase.RuleDataStruct[] {
+    const getRuleDataAbi: ExtractAbiFunction<typeof IRuleEntitlementAbi, 'getRuleData'> =
+        getAbiItem({
+            abi: IRuleEntitlementAbi,
+            name: 'getRuleData',
+        })
+
+    if (!getRuleDataAbi) {
+        throw new Error('getRuleData ABI not found')
+    }
+    return decodeAbiParameters(
+        getRuleDataAbi.outputs,
+        entitlementData,
+    ) as unknown as IRuleEntitlementBase.RuleDataStruct[]
+}
 export function ruleDataToOperations(data: IRuleEntitlementBase.RuleDataStruct[]): Operation[] {
     if (data.length === 0) {
         return []
