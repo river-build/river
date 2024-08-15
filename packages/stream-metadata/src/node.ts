@@ -5,9 +5,9 @@ import cors from '@fastify/cors'
 
 import { config } from './environment'
 import { getLogger } from './logger'
-import { handleHealthCheckRequest } from './handleHealthCheckRequest'
-import { handleImageRequest } from './handleImageRequest'
-import { handleMetadataRequest } from './handleMetadataRequest'
+import { handleHealthCheckRequest } from './routes/handleHealthCheckRequest'
+import { handleImageRequest } from './routes/handleImageRequest'
+import { handleMetadataRequest } from './routes/handleMetadataRequest'
 
 // Set the process title to 'stream-metadata' so it can be easily identified
 // or killed with `pkill stream-metadata`

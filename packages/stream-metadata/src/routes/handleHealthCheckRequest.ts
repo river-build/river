@@ -1,7 +1,7 @@
 import { FastifyReply, FastifyRequest } from 'fastify'
 
-import { getLogger } from './logger'
-import { getRiverRegistry } from './evmRpcClient'
+import { getLogger } from '../logger'
+import { getRiverRegistry } from '../evmRpcClient'
 
 const logger = getLogger('handleHealthCheckRequest')
 
