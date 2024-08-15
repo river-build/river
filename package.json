@@ -36,7 +36,6 @@
         "csb:wait": "yarn csb:wait:entitlements",
         "csb:wait:entitlements": "wait-on https://localhost:5157/info --timeout=900000 --i=5000 --verbose",
         "csb:wait:no-entitlements": "wait-on https://localhost:5158/info --timeout=900000 --i=5000 --verbose",
-        "drt:wait": "wait-on tcp:8008 --timeout=900000 --i=5000 --verbose",
         "lint": "turbo lint",
         "postinstall": "husky install",
         "prepare": "husky install",
