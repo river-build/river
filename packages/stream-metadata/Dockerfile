@@ -35,14 +35,13 @@ COPY ./packages/stream-metadata /river/packages/stream-metadata
 RUN apk add --no-cache git curl
 RUN corepack enable
 RUN yarn install
-
 RUN yarn run turbo build --filter @river-build/stream-metadata
 
+# create runner image with only the necessary files
 FROM node:lts-alpine3.20 as runner
-
 COPY --from=builder /river/packages/stream-metadata/dist /river/packages/stream-metadata/dist
 
-ENV NODE_ENV=production 
+# run the service
 WORKDIR /river/packages/stream-metadata
-
+ENV NODE_ENV=production 
 CMD ["node", "./dist/node_esbuild.cjs"]
