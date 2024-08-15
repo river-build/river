@@ -44,4 +44,4 @@ COPY --from=builder /river/packages/stream-metadata/dist /river/packages/stream-
 # run the service
 WORKDIR /river/packages/stream-metadata
 ENV NODE_ENV=production 
-CMD ["node", "./dist/node_esbuild.cjs"]
+CMD ["node", "--enable-source-maps", "./dist/node_esbuild.cjs"]
