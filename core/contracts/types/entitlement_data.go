@@ -21,13 +21,19 @@ type Entitlement struct {
 	UserEntitlement   []common.Address
 }
 
+const (
+	ModuleTypeRuleEntitlement   = "RuleEntitlement"
+	ModuleTypeUserEntitlement   = "UserEntitlement"
+	ModuleTypeRuleEntitlementV2 = "RuleEntitlementV2"
+)
+
 func MarshalEntitlement(
 	ctx context.Context,
 	rawEntitlement base.IEntitlementDataQueryableBaseEntitlementData,
 ) (Entitlement, error) {
 	log := dlog.FromCtx(ctx)
 	log.Info("Entitlement data", "entitlement_data", rawEntitlement.EntitlementData)
-	if rawEntitlement.EntitlementType == "RuleEntitlement" {
+	if rawEntitlement.EntitlementType == ModuleTypeRuleEntitlement {
 		// Parse the ABI definition
 		parsedABI, err := base.RuleEntitlementMetaData.GetAbi()
 		if err != nil {
@@ -79,7 +85,7 @@ func MarshalEntitlement(
 			EntitlementType: rawEntitlement.EntitlementType,
 			RuleEntitlement: &ruleData,
 		}, nil
-	} else if rawEntitlement.EntitlementType == "UserEntitlement" {
+	} else if rawEntitlement.EntitlementType == ModuleTypeUserEntitlement {
 		abiDef := `[{"name":"getAddresses","outputs":[{"type":"address[]","name":"out"}],"constant":true,"payable":false,"type":"function"}]`
 
 		// Parse the ABI definition
@@ -97,7 +103,7 @@ func MarshalEntitlement(
 			EntitlementType: rawEntitlement.EntitlementType,
 			UserEntitlement: addresses,
 		}, nil
-	} else if rawEntitlement.EntitlementType == "RuleEntitlementV2" {
+	} else if rawEntitlement.EntitlementType == ModuleTypeRuleEntitlementV2 {
 		// Parse the ABI definition
 		parsedABI, err := base.RuleEntitlementV2MetaData.GetAbi()
 		if err != nil {
@@ -150,7 +156,7 @@ func MarshalEntitlement(
 			RuleEntitlementV2: &ruleData,
 		}, nil
 	} else {
-		return Entitlement{}, fmt.Errorf("Invalid entitlement type '%s'", rawEntitlement.EntitlementType)
+		return Entitlement{}, fmt.Errorf("invalid entitlement type '%s'", rawEntitlement.EntitlementType)
 	}
 }
 
@@ -217,14 +223,10 @@ func ConvertV1RuleDataToV2(
 
 	// Straight copy of base operations and logical operations
 	ruleDataV2.Operations = make([]base.IRuleEntitlementBaseOperation, len(ruleData.Operations))
-	for i, operation := range ruleData.Operations {
-		ruleDataV2.Operations[i] = operation
-	}
+	copy(ruleDataV2.Operations, ruleData.Operations)
 
 	ruleDataV2.LogicalOperations = make([]base.IRuleEntitlementBaseLogicalOperation, len(ruleData.LogicalOperations))
-	for i, logicalOperation := range ruleData.LogicalOperations {
-		ruleDataV2.LogicalOperations[i] = logicalOperation
-	}
+	copy(ruleDataV2.LogicalOperations, ruleData.LogicalOperations)
 
 	// Convert checkops
 	ruleDataV2.CheckOperations = make([]base.IRuleEntitlementBaseCheckOperationV2, len(ruleData.CheckOperations))

@@ -544,12 +544,12 @@ func (x *xchain) getRuleData(
 	)
 	if err != nil {
 		x.getCrosschainEntitlementDataCalls.IncFail()
-		return nil, x.handleContractError(log, err, "Failed to GetCrossChainEntitlementData")
+		return nil, x.handleContractError(log, err, "failed to GetCrossChainEntitlementData")
 	}
 	x.getCrosschainEntitlementDataCalls.IncPass()
 	entitlement, err := contract_types.MarshalEntitlement(ctx, entitlementdata)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to marshal entitlement: %w", err)
+		return nil, fmt.Errorf("failed to marshal entitlement: %w", err)
 	}
 
 	if entitlement.RuleEntitlementV2 != nil {
@@ -562,12 +562,12 @@ func (x *xchain) getRuleData(
 			"transactionId", hex.EncodeToString(transactionId[:]),
 			"contractAddress", contractAddress.Hex(),
 		)
-		return nil, fmt.Errorf("No decoded rule entitlements for role")
+		return nil, fmt.Errorf("no decoded rule entitlements for role")
 	}
 
 	ruleDataV2, err := contract_types.ConvertV1RuleDataToV2(ctx, entitlement.RuleEntitlement)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to convert rule data to V2: %w", err)
+		return nil, fmt.Errorf("failed to convert rule data to V2: %w", err)
 	}
 	return ruleDataV2, nil
 }

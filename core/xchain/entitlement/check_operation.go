@@ -9,7 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prometheus/client_golang/prometheus"
-	"gopkg.in/DataDog/dd-trace-go.v1/internal/log"
 
 	"github.com/river-build/river/core/contracts/base"
 	"github.com/river-build/river/core/contracts/types"
@@ -109,6 +108,7 @@ func (e *Evaluator) evaluateMockOperation(
 	ctx context.Context,
 	op *types.CheckOperation,
 ) (bool, error) {
+	log := dlog.FromCtx(ctx).With("function", "evaluateMockOperation")
 	params, err := types.DecodeThresholdParams(op.Params)
 	if err != nil {
 		log.Error("evaluateMockOperation: failed to decode threshold params", "error", err)

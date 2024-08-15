@@ -489,9 +489,9 @@ func (ca *chainAuth) evaluateEntitlementData(
 
 	wallets := deserializeWallets(args.linkedWallets)
 	for _, ent := range entitlements {
-		if ent.EntitlementType == "RuleEntitlement" {
+		if ent.EntitlementType == types.ModuleTypeRuleEntitlement {
 			re := ent.RuleEntitlement
-			log.Debug("RuleEntitlement", "ruleEntitlement", re)
+			log.Debug(ent.EntitlementType, "re", re)
 
 			// Convert the rule data to the latest version
 			reV2, err := types.ConvertV1RuleDataToV2(ctx, re)
@@ -510,9 +510,9 @@ func (ca *chainAuth) evaluateEntitlementData(
 			} else {
 				log.Debug("rule entitlement is false", "spaceId", args.spaceId)
 			}
-		} else if ent.EntitlementType == "RueEntitlementV2" {
+		} else if ent.EntitlementType == types.ModuleTypeRuleEntitlementV2 {
 			re := ent.RuleEntitlementV2
-			log.Debug("RuleEntitlementV2", "ruleEntitlementV2", re)
+			log.Debug(ent.EntitlementType, "re", re)
 			result, err := ca.evaluator.EvaluateRuleData(ctx, wallets, re)
 			if err != nil {
 				return false, err
@@ -524,7 +524,7 @@ func (ca *chainAuth) evaluateEntitlementData(
 				log.Debug("rule entitlement v2 is false", "spaceId", args.spaceId)
 			}
 
-		} else if ent.EntitlementType == "UserEntitlement" {
+		} else if ent.EntitlementType == types.ModuleTypeUserEntitlement {
 			log.Debug("UserEntitlement", "userEntitlement", ent.UserEntitlement)
 			for _, user := range ent.UserEntitlement {
 				if user == everyone {
