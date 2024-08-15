@@ -16,7 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/fatih/color"
-	"github.com/river-build/river/tools/xchain/entitlement-checker-analysis/entitlement/generated"
+	"github.com/river-build/river/core/contracts/base"
 	"github.com/rodaine/table"
 	"github.com/spf13/cobra"
 	"unicode/utf8"
@@ -29,7 +29,7 @@ type EntitlementCheckVote struct {
 }
 
 type EntitlementCheck struct {
-	Request generated.IEntitlementCheckerEntitlementCheckRequested
+	Request base.IEntitlementCheckerEntitlementCheckRequested
 	Votes   map[common.Address]*EntitlementCheckVote
 }
 
@@ -116,7 +116,7 @@ func fetchEntitlementRequests(ctx context.Context, client *ethclient.Client, cfg
 	var (
 		from                        = cfg.BlockRange.From
 		to                          = cfg.BlockRange.To
-		checkerABI, _               = generated.IEntitlementCheckerMetaData.GetAbi()
+		checkerABI, _               = base.IEntitlementCheckerMetaData.GetAbi()
 		EntitlementCheckRequestedID = checkerABI.Events["EntitlementCheckRequested"].ID
 		requests                    []*EntitlementCheck
 		blockRangeSize              = int64(10 * 1024)
@@ -146,7 +146,7 @@ func fetchEntitlementRequests(ctx context.Context, client *ethclient.Client, cfg
 		for _, log := range logs {
 			switch log.Topics[0] {
 			case EntitlementCheckRequestedID:
-				var req generated.IEntitlementCheckerEntitlementCheckRequested
+				var req base.IEntitlementCheckerEntitlementCheckRequested
 				err := checkerABI.UnpackIntoInterface(&req, "EntitlementCheckRequested", log.Data)
 				if err != nil {
 					panic(err)
@@ -174,7 +174,7 @@ func fetchEntitlementRequests(ctx context.Context, client *ethclient.Client, cfg
 
 func fetchEntitlementResults(ctx context.Context, client *ethclient.Client, requests []*EntitlementCheck) []*EntitlementCheck {
 	var (
-		gatedABI, _                        = generated.IEntitlementGatedMetaData.GetAbi()
+		gatedABI, _                        = base.IEntitlementGatedMetaData.GetAbi()
 		EntitlementCheckResultPostedID     = gatedABI.Methods["postEntitlementCheckResult"].ID
 		postFuncSelector                   = hex.EncodeToString(EntitlementCheckResultPostedID[:4])
 		EntitlementCheckResultPostedInputs = gatedABI.Methods["postEntitlementCheckResult"].Inputs

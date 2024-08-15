@@ -1,11 +1,12 @@
 module github.com/river-build/river/tools/xchain/entitlement-checker-analysis
 
-go 1.22.5
+go 1.22.6
 
 require (
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/ethereum/go-ethereum v1.14.7
 	github.com/fatih/color v1.17.0
+	github.com/river-build/river/core v0.0.0-20240815011126-6a721176b1d0
 	github.com/rodaine/table v1.2.0
 	github.com/spf13/cobra v1.8.1
 )
@@ -39,11 +40,11 @@ require (
 	github.com/tklauser/go-sysconf v0.3.14 // indirect
 	github.com/tklauser/numcpus v0.8.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
-	golang.org/x/crypto v0.25.0 // indirect
+	golang.org/x/crypto v0.26.0 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
 	golang.org/x/mod v0.19.0 // indirect
-	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.22.0 // indirect
+	golang.org/x/sync v0.8.0 // indirect
+	golang.org/x/sys v0.23.0 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
