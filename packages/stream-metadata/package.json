@@ -7,6 +7,7 @@
 	"type": "module",
 	"scripts": {
 		"build": "node ./esbuild.config.mjs",
+		"build:turbo": "turbo build",
 		"lint": "eslint . --ext .ts",
 		"lint:fix": "eslint . --ext .ts --fix",
 		"dev": "yarn build && node ./dist/node_esbuild.cjs",

@@ -1,0 +1,12 @@
+services:
+    river-metrics-discovery:
+        container_name: river-metrics-discovery
+        build:
+            context: ../../
+            dockerfile: ./packages/stream-metadata/Dockerfile
+        environment:
+            RIVER_ENV: alpha
+            RIVER_CHAIN_RPC_URL: https://mainnet.rpc.river.build/http
+            PORT: 80
+        ports:
+            - 80:80

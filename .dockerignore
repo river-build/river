@@ -1,3 +1,5 @@
-node_modules
 .env
 .envrc
+.dockerignore
+packages/stream-metadata/Dockerfile
+packages/metrics-discovery/Dockerfile
