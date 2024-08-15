@@ -1,15 +1,7 @@
 import type { ExtractAbiFunction } from 'abitype'
 import { IRuleEntitlementBase, IRuleEntitlementAbi } from './v3/IRuleEntitlementShim'
 
-import {
-    createPublicClient,
-    http,
-    decodeAbiParameters,
-    encodeAbiParameters,
-    getAbiItem,
-    Hex,
-    PublicClient,
-} from 'viem'
+import { createPublicClient, http, encodeAbiParameters, getAbiItem, PublicClient } from 'viem'
 
 import { mainnet } from 'viem/chains'
 import { ethers } from 'ethers'
@@ -17,6 +9,12 @@ import { Address } from './ContractTypes'
 import { MOCK_ADDRESS } from './Utils'
 
 const zeroAddress = ethers.constants.AddressZero
+
+// This public client is used purely to infer the typescript type of RuleData.
+const publicClient: PublicClient = createPublicClient({
+    chain: mainnet,
+    transport: http(),
+})
 
 type ReadContractFunction = typeof publicClient.readContract<
     typeof IRuleEntitlementAbi,
@@ -137,11 +135,6 @@ function isAndOperation(operation: LogicalOperation): operation is AndOperation 
     return operation.logicalType === LogicalOperationType.AND
 }
 
-const publicClient: PublicClient = createPublicClient({
-    chain: mainnet,
-    transport: http(),
-})
-
 function isOrOperation(operation: LogicalOperation): operation is OrOperation {
     return operation.logicalType === LogicalOperationType.OR
 }
@@ -184,21 +177,6 @@ export function postOrderArrayToTree(operations: Operation[]): Operation {
     return root
 }
 
-export const getOperationTree = async (address: Address, roleId: bigint): Promise<Operation> => {
-    const entitlementData = await publicClient.readContract({
-        address: address,
-        abi: IRuleEntitlementAbi,
-        functionName: 'getEntitlementDataByRoleId',
-        args: [roleId],
-    })
-
-    const data = decodeEntitlementData(entitlementData)
-
-    const operations = ruleDataToOperations(data)
-
-    return postOrderArrayToTree(operations)
-}
-
 export function encodeEntitlementData(ruleData: IRuleEntitlementBase.RuleDataStruct): Address {
     const encodeRuleDataAbi: ExtractAbiFunction<typeof IRuleEntitlementAbi, 'encodeRuleData'> =
         getAbiItem({
@@ -211,22 +189,6 @@ export function encodeEntitlementData(ruleData: IRuleEntitlementBase.RuleDataStr
     }
     // @ts-ignore
     return encodeAbiParameters(encodeRuleDataAbi.inputs, [ruleData])
-}
-
-export function decodeEntitlementData(entitlementData: Hex): IRuleEntitlementBase.RuleDataStruct[] {
-    const getRuleDataAbi: ExtractAbiFunction<typeof IRuleEntitlementAbi, 'getRuleData'> =
-        getAbiItem({
-            abi: IRuleEntitlementAbi,
-            name: 'getRuleData',
-        })
-
-    if (!getRuleDataAbi) {
-        throw new Error('getRuleData ABI not found')
-    }
-    return decodeAbiParameters(
-        getRuleDataAbi.outputs,
-        entitlementData,
-    ) as unknown as IRuleEntitlementBase.RuleDataStruct[]
 }
 
 export function ruleDataToOperations(data: IRuleEntitlementBase.RuleDataStruct[]): Operation[] {
