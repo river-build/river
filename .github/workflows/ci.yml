@@ -58,7 +58,7 @@ jobs:
             - name: Setup Go
               uses: actions/setup-go@v5
               with:
-                  go-version-file: 'go.mod'
+                  go-version-file: 'core/go.mod'
                   cache-dependency-path: '**/*.sum'
 
             - name: Install Foundry
@@ -207,7 +207,7 @@ jobs:
             - name: Setup Go
               uses: actions/setup-go@v5
               with:
-                  go-version-file: 'go.work'
+                  go-version-file: 'core/go.mod'
                   cache-dependency-path: '**/*.sum'
 
             - name: Install Foundry
@@ -337,7 +337,7 @@ jobs:
             - name: Setup Go
               uses: actions/setup-go@v5
               with:
-                  go-version-file: 'go.work'
+                  go-version-file: 'core/go.mod'
                   cache-dependency-path: '**/*.sum'
 
             - name: Install Foundry
@@ -467,7 +467,7 @@ jobs:
             - name: Setup Go
               uses: actions/setup-go@v5
               with:
-                  go-version-file: 'go.work'
+                  go-version-file: 'core/go.mod'
                   cache-dependency-path: '**/*.sum'
 
             - name: Install Foundry
@@ -528,7 +528,7 @@ jobs:
             - name: Setup Go
               uses: actions/setup-go@v5
               with:
-                  go-version-file: 'go.work'
+                  go-version-file: 'core/go.mod'
                   cache-dependency-path: '**/*.sum'
 
             - name: Install Foundry
