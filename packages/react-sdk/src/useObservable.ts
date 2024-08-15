@@ -48,7 +48,7 @@ const isPersisted = <T>(value: T | PersistedModel<T>): value is PersistedModel<T
 }
 
 export function useObservable<T>(
-    observable: Observable<T>,
+    observable: Observable<T> | undefined,
     config?: ObservableConfig<T>,
 ): ObservableValue<T> {
     const opts = useMemo(
@@ -57,11 +57,17 @@ export function useObservable<T>(
     ) as ObservableConfig<T>
 
     const value = useSyncExternalStore(
-        (subscriber) => observable.subscribe(subscriber, { fireImediately: opts?.fireImmediately }),
-        () => observable.value,
+        (subscriber) =>
+            observable
+                ? observable.subscribe(subscriber, { fireImediately: opts?.fireImmediately })
+                : () => undefined,
+        () => observable?.value,
     )
 
     useEffect(() => {
+        if (!value) {
+            return
+        }
         if (isPersisted(value)) {
             if (value.status === 'loaded') {
                 opts.onUpdate?.(value.data)
