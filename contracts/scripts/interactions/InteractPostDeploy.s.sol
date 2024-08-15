@@ -27,7 +27,7 @@ contract InteractPostDeploy is Interaction {
   DeployProxyBatchDelegation deployProxyDelegation =
     new DeployProxyBatchDelegation();
 
-  function __interact(address deployer) public override {
+  function __interact(address deployer) internal override {
     address spaceOwner = deploySpaceOwner.deploy();
     address spaceFactory = deploySpaceFactory.deploy();
     address baseRegistry = deployBaseRegistry.deploy();
