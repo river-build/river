@@ -85,12 +85,27 @@ contract DeploySpace is DiamondHelper, Deployer {
     return "space";
   }
 
-  function diamondInitParams(
-    address deployer
-  ) internal returns (Diamond.InitParams memory) {
+  function addDefaultCuts() internal {
     diamondCut = diamondCutHelper.deploy();
     diamondLoupe = diamondLoupeHelper.deploy();
     introspection = introspectionHelper.deploy();
+
+    addCut(diamondCutHelper.makeCut(diamondCut, IDiamond.FacetCutAction.Add));
+    addCut(
+      diamondLoupeHelper.makeCut(diamondLoupe, IDiamond.FacetCutAction.Add)
+    );
+    addCut(
+      introspectionHelper.makeCut(introspection, IDiamond.FacetCutAction.Add)
+    );
+
+    addInit(diamondCut, diamondCutHelper.makeInitData(""));
+    addInit(diamondLoupe, diamondLoupeHelper.makeInitData(""));
+    addInit(introspection, introspectionHelper.makeInitData(""));
+  }
+
+  function diamondInitParams(
+    address deployer
+  ) public returns (Diamond.InitParams memory) {
     erc721aQueryable = erc721aQueryableHelper.deploy();
     banning = banningHelper.deploy();
     membership = membershipHelper.deploy();
@@ -111,13 +126,6 @@ contract DeploySpace is DiamondHelper, Deployer {
 
     addCut(
       tokenOwnableHelper.makeCut(tokenOwnable, IDiamond.FacetCutAction.Add)
-    );
-    addCut(diamondCutHelper.makeCut(diamondCut, IDiamond.FacetCutAction.Add));
-    addCut(
-      diamondLoupeHelper.makeCut(diamondLoupe, IDiamond.FacetCutAction.Add)
-    );
-    addCut(
-      introspectionHelper.makeCut(introspection, IDiamond.FacetCutAction.Add)
     );
     addCut(
       entitlementsHelper.makeCut(entitlements, IDiamond.FacetCutAction.Add)
@@ -158,9 +166,6 @@ contract DeploySpace is DiamondHelper, Deployer {
     addCut(prepayHelper.makeCut(prepay, IDiamond.FacetCutAction.Add));
 
     addInit(ownablePending, ownablePendingHelper.makeInitData(deployer));
-    addInit(diamondCut, diamondCutHelper.makeInitData(""));
-    addInit(diamondLoupe, diamondLoupeHelper.makeInitData(""));
-    addInit(introspection, introspectionHelper.makeInitData(""));
 
     return
       Diamond.InitParams({
@@ -175,6 +180,8 @@ contract DeploySpace is DiamondHelper, Deployer {
   }
 
   function __deploy(address deployer) public override returns (address) {
+    addDefaultCuts();
+
     Diamond.InitParams memory initDiamondCut = diamondInitParams(deployer);
     vm.broadcast(deployer);
     Diamond diamond = new Diamond(initDiamondCut);

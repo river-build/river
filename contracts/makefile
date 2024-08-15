@@ -51,9 +51,15 @@ deploy-any-local :;
 
 interact-any-local :;
 	@echo "Running $(contract) on local chain"
-	@$(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
+	@SAVE_DEPLOYMENTS=1 OVERRIDE_DEPLOYMENTS=1 $(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
 	forge script scripts/interactions/${contract}.s.sol:${contract} \
 	--ffi --rpc-url ${rpc} --private-key ${LOCAL_PRIVATE_KEY} --broadcast
+
+fork-any-local :;
+	@echo "Running $(contract) on a forked local network"
+	@$(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
+	forge script scripts/interactions/${contract}.s.sol:${contract} \
+	--ffi --fork-url ${rpc} --private-key ${LOCAL_PRIVATE_KEY}
 
 deploy-any :;
 	@echo "Running $(contract) on remote network"
@@ -115,6 +121,9 @@ deploy-base-anvil :;
 
 interact-base-anvil :;
 	@$(MAKE) interact-any-local rpc=base_anvil
+
+fork-base-anvil :;
+	@$(MAKE) fork-any-local rpc=base_anvil
 
 # ===========================
 # 				River Anvil

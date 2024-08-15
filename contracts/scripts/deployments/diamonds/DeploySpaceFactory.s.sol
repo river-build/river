@@ -112,9 +112,31 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
     return "spaceFactory";
   }
 
+  function addDefaultCuts() internal {
+    diamondCut = diamondCutHelper.deploy();
+    diamondLoupe = diamondLoupeHelper.deploy();
+    introspection = introspectionHelper.deploy();
+
+    addFacet(
+      diamondCutHelper.makeCut(diamondCut, IDiamond.FacetCutAction.Add),
+      diamondCut,
+      diamondCutHelper.makeInitData("")
+    );
+    addFacet(
+      diamondLoupeHelper.makeCut(diamondLoupe, IDiamond.FacetCutAction.Add),
+      diamondLoupe,
+      diamondLoupeHelper.makeInitData("")
+    );
+    addFacet(
+      introspectionHelper.makeCut(introspection, IDiamond.FacetCutAction.Add),
+      introspection,
+      introspectionHelper.makeInitData("")
+    );
+  }
+
   function diamondInitParams(
     address deployer
-  ) internal returns (Diamond.InitParams memory) {
+  ) public returns (Diamond.InitParams memory) {
     address multiInit = deployMultiInit.deploy();
 
     address spaceImpl = deploySpace.deploy();
@@ -136,10 +158,11 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
     pricingModules[1] = fixedPricing;
 
     // diamond facets
-    ownable = ownableHelper.deploy();
     diamondCut = diamondCutHelper.deploy();
     diamondLoupe = diamondLoupeHelper.deploy();
     introspection = introspectionHelper.deploy();
+
+    ownable = ownableHelper.deploy();
     metadata = metadataHelper.deploy();
 
     architect = architectHelper.deploy();
@@ -156,30 +179,17 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
     legacyArchitect = deployMockLegacyArchitect.deploy();
 
     addFacet(
-      diamondCutHelper.makeCut(diamondCut, IDiamond.FacetCutAction.Add),
-      diamondCut,
-      diamondCutHelper.makeInitData("")
+      ownableHelper.makeCut(ownable, IDiamond.FacetCutAction.Add),
+      ownable,
+      ownableHelper.makeInitData(deployer)
     );
-    addFacet(
-      diamondLoupeHelper.makeCut(diamondLoupe, IDiamond.FacetCutAction.Add),
-      diamondLoupe,
-      diamondLoupeHelper.makeInitData("")
-    );
-    addFacet(
-      introspectionHelper.makeCut(introspection, IDiamond.FacetCutAction.Add),
-      introspection,
-      introspectionHelper.makeInitData("")
-    );
+
     addFacet(
       metadataHelper.makeCut(metadata, IDiamond.FacetCutAction.Add),
       metadata,
       metadataHelper.makeInitData(bytes32("SpaceFactory"), "")
     );
-    addFacet(
-      ownableHelper.makeCut(ownable, IDiamond.FacetCutAction.Add),
-      ownable,
-      ownableHelper.makeInitData(deployer)
-    );
+
     addFacet(
       architectHelper.makeCut(architect, IDiamond.FacetCutAction.Add),
       architect,
@@ -261,6 +271,8 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
   }
 
   function __deploy(address deployer) public override returns (address) {
+    addDefaultCuts();
+
     Diamond.InitParams memory initDiamondCut = diamondInitParams(deployer);
     vm.broadcast(deployer);
     Diamond diamond = new Diamond(initDiamondCut);
