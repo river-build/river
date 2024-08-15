@@ -1,6 +1,5 @@
 services:
-    river-metrics-discovery:
-        container_name: river-metrics-discovery
+    stream-metadata:
         build:
             context: ../../
             dockerfile: ./packages/stream-metadata/Dockerfile
