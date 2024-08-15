@@ -608,13 +608,15 @@ export async function evaluateTree(
     }
 }
 
+type AndOr = LogicalOperationType.AND | LogicalOperationType.OR
+
 // These two methods are used to create a rule data struct for an external token or NFT
 // checks for testing.
 export function createExternalTokenStruct(
     addresses: Address[],
     options?: {
         checkOptions?: Partial<Omit<ContractCheckOperation, 'address'>>
-        logicalOp?: LogicalOperationType
+        logicalOp?: AndOr
     },
 ) {
     if (addresses.length === 0) {
@@ -633,7 +635,7 @@ export function createExternalNFTStruct(
     addresses: Address[],
     options?: {
         checkOptions?: Partial<Omit<ContractCheckOperation, 'address'>>
-        logicalOp?: LogicalOperationType
+        logicalOp?: AndOr
     },
 ) {
     if (addresses.length === 0) {
@@ -660,7 +662,7 @@ export function createOperationsTree(
     checkOp: (Omit<ContractCheckOperation, 'threshold'> & {
         threshold?: bigint
     })[],
-    logicalOp: LogicalOperationType = LogicalOperationType.OR,
+    logicalOp: AndOr = LogicalOperationType.OR,
 ): IRuleEntitlementBase.RuleDataStruct {
     if (checkOp.length === 0) {
         return {
@@ -684,7 +686,7 @@ export function createOperationsTree(
             if (i + 1 < operations.length) {
                 newOperations.push({
                     opType: OperationType.LOGICAL,
-                    logicalType: logicalOp as LogicalOperationType.AND | LogicalOperationType.OR,
+                    logicalType: logicalOp,
                     leftOperation: operations[i],
                     rightOperation: operations[i + 1],
                 })
