@@ -14,6 +14,7 @@
         "typecheck": "tsc --noEmit",
         "compile": "esbuild src/index.ts --sourcemap=inline --bundle --platform=node --target=node20 --format=cjs --outfile=dist/index.cjs",
         "build": "yarn typecheck && yarn compile",
+        "build:turbo": "turbo build",
         "dev": "yarn build && yarn start",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
