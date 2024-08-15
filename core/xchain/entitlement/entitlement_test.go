@@ -467,29 +467,6 @@ func TestCheckOperation_Untimed(t *testing.T) {
 			false,
 			fmt.Errorf("evaluateCheckOperation: Chain ID is nil for operation ERC20"),
 		},
-		"ERC20 invalid check (no threshold)": {
-			&CheckOperation{
-				OpType:          CHECK,
-				CheckType:       CheckOperationType(ERC20),
-				ChainID:         examples.EthSepoliaChainId,
-				ContractAddress: examples.EthSepoliaChainlinkContract,
-			},
-			[]common.Address{examples.SepoliaChainlinkWallet},
-			false,
-			fmt.Errorf("evaluateCheckOperation: Threshold is nil for operation ERC20"),
-		},
-		"ERC20 invalid check (invalid threshold: -1)": {
-			&CheckOperation{
-				OpType:          CHECK,
-				CheckType:       CheckOperationType(ERC20),
-				ChainID:         examples.EthSepoliaChainId,
-				ContractAddress: examples.EthSepoliaChainlinkContract,
-				Params:          encodeThresholdParams(big.NewInt(-1)),
-			},
-			[]common.Address{examples.SepoliaChainlinkWallet},
-			false,
-			fmt.Errorf("evaluateCheckOperation: Threshold -1 is nonpositive for operation ERC20"),
-		},
 		"ERC20 invalid check (invalid threshold: 0)": {
 			&CheckOperation{
 				OpType:          CHECK,
@@ -569,19 +546,7 @@ func TestCheckOperation_Untimed(t *testing.T) {
 			false,
 			fmt.Errorf("evaluateCheckOperation: Contract address is nil for operation ERC1155"),
 		},
-		"ERC1155 Threshold is nonpositive (-1)": {
-			&CheckOperation{
-				OpType:          CHECK,
-				CheckType:       CheckOperationType(ERC1155),
-				ChainID:         examples.EthSepoliaChainId,
-				ContractAddress: examples.EthSepoliaChainlinkContract,
-				Params:          encodeErc1155Params(big.NewInt(-1), big.NewInt(1)),
-			},
-			[]common.Address{examples.SepoliaChainlinkWallet},
-			false,
-			fmt.Errorf("evaluateCheckOperation: Threshold -1 is nonpositive for operation ERC1155"),
-		},
-		"ERC1155 Threshold is nonpositive (0)": {
+		"ERC1155 Threshold is zero (0)": {
 			&CheckOperation{
 				OpType:          CHECK,
 				CheckType:       CheckOperationType(ERC1155),
@@ -621,29 +586,6 @@ func TestCheckOperation_Untimed(t *testing.T) {
 			[]common.Address{sepoliaTestNftWallet_1Token},
 			false,
 			fmt.Errorf("evaluateCheckOperation: Chain ID is nil for operation ERC721"),
-		},
-		"ERC721 invalid check (no threshold)": {
-			&CheckOperation{
-				OpType:          CHECK,
-				CheckType:       CheckOperationType(ERC721),
-				ChainID:         examples.EthSepoliaChainId,
-				ContractAddress: examples.EthSepoliaTestNftContract,
-			},
-			[]common.Address{sepoliaTestNftWallet_1Token},
-			false,
-			fmt.Errorf("evaluateCheckOperation: Threshold is nil for operation ERC721"),
-		},
-		"ERC721 invalid check (invalid threshold: -1)": {
-			&CheckOperation{
-				OpType:          CHECK,
-				CheckType:       CheckOperationType(ERC721),
-				ChainID:         examples.EthSepoliaChainId,
-				ContractAddress: examples.EthSepoliaTestNftContract,
-				Params:          encodeThresholdParams(big.NewInt(-1)),
-			},
-			[]common.Address{sepoliaTestNftWallet_1Token},
-			false,
-			fmt.Errorf("evaluateCheckOperation: Threshold -1 is nonpositive for operation ERC721"),
 		},
 		"ERC721 invalid check (invalid threshold: 0)": {
 			&CheckOperation{
@@ -743,28 +685,6 @@ func TestCheckOperation_Untimed(t *testing.T) {
 			[]common.Address{examples.Sepolia0_2EthWallet},
 			false,
 			fmt.Errorf("evaluateCheckOperation: Chain ID is nil for operation NATIVE_COIN_BALANCE"),
-		},
-		"ETH balance invalid check (no threshold)": {
-			&CheckOperation{
-				OpType:    CHECK,
-				CheckType: CheckOperationType(NATIVE_COIN_BALANCE),
-				ChainID:   examples.EthSepoliaChainId,
-			},
-			[]common.Address{examples.Sepolia0_2EthWallet},
-			false,
-			fmt.Errorf("evaluateCheckOperation: Threshold is nil for operation NATIVE_COIN_BALANCE"),
-		},
-		"ETH balance invalid check (invalid threshold: -1)": {
-			&CheckOperation{
-				OpType:          CHECK,
-				CheckType:       CheckOperationType(NATIVE_COIN_BALANCE),
-				ChainID:         examples.EthSepoliaChainId,
-				Params:          encodeThresholdParams(big.NewInt(-1)),
-				ContractAddress: common.Address{},
-			},
-			[]common.Address{examples.Sepolia0_2EthWallet},
-			false,
-			fmt.Errorf("evaluateCheckOperation: Threshold -1 is nonpositive for operation NATIVE_COIN_BALANCE"),
 		},
 		"ETH balance invalid check (invalid threshold: 0)": {
 			&CheckOperation{
