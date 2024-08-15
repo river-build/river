@@ -259,10 +259,10 @@ export function ruleDataToOperations(data: IRuleEntitlementBase.RuleDataStruct[]
             const logicalOperation = firstData.logicalOperations[operation.index]
             decodedOperations.push({
                 opType: OperationType.LOGICAL,
-                logicalType: logicalOperation.logOpType as SupportedLogicalOperationType,
+                logicalType: logicalOperation.logOpType,
                 leftOperation: decodedOperations[logicalOperation.leftOperationIndex],
                 rightOperation: decodedOperations[logicalOperation.rightOperationIndex],
-            })
+            } satisfies LogicalOperation)
             // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
         } else if (operation.opType === OperationType.NONE) {
             decodedOperations.push(NoopOperation)
@@ -624,7 +624,7 @@ export function createExternalTokenStruct(
         type: options?.checkOptions?.type ?? (CheckOperationType.ERC20 as const),
         threshold: options?.checkOptions?.threshold ?? BigInt(1),
     }))
-    return createOperationsTree(defaultChain, options?.logicalOp)
+    return createOperationsTree(defaultChain, options?.logicalOp ?? LogicalOperationType.OR)
 }
 
 export function createExternalNFTStruct(
@@ -644,7 +644,7 @@ export function createExternalNFTStruct(
         type: options?.checkOptions?.type ?? (CheckOperationType.ERC721 as const),
         threshold: options?.checkOptions?.threshold ?? BigInt(1),
     }))
-    return createOperationsTree(defaultChain, options?.logicalOp)
+    return createOperationsTree(defaultChain, options?.logicalOp ?? LogicalOperationType.OR)
 }
 
 export type ContractCheckOperation = {
