@@ -68,7 +68,6 @@ export enum LogicalOperationType {
     AND,
     OR,
 }
-
 export type ContractOperation = {
     opType: OperationType
     index: number
@@ -123,6 +122,8 @@ export const NoopRuleData = {
 type EntitledWalletOrZeroAddress = string
 
 export type LogicalOperation = OrOperation | AndOperation
+export type SupportedLogicalOperationType = LogicalOperation['logicalType']
+
 export type Operation = CheckOperation | OrOperation | AndOperation | NoOperation
 
 function isCheckOperation(operation: Operation): operation is CheckOperation {
@@ -137,14 +138,14 @@ function isAndOperation(operation: LogicalOperation): operation is AndOperation 
     return operation.logicalType === LogicalOperationType.AND
 }
 
+function isOrOperation(operation: LogicalOperation): operation is OrOperation {
+    return operation.logicalType === LogicalOperationType.OR
+}
+
 const publicClient: PublicClient = createPublicClient({
     chain: mainnet,
     transport: http(),
 })
-
-function isOrOperation(operation: LogicalOperation): operation is OrOperation {
-    return operation.logicalType === LogicalOperationType.OR
-}
 
 export function postOrderArrayToTree(operations: Operation[]): Operation {
     const stack: Operation[] = []
@@ -258,10 +259,7 @@ export function ruleDataToOperations(data: IRuleEntitlementBase.RuleDataStruct[]
             const logicalOperation = firstData.logicalOperations[operation.index]
             decodedOperations.push({
                 opType: OperationType.LOGICAL,
-                logicalType: logicalOperation.logOpType as
-                    | LogicalOperationType.AND
-                    | LogicalOperationType.OR,
-
+                logicalType: logicalOperation.logOpType as SupportedLogicalOperationType,
                 leftOperation: decodedOperations[logicalOperation.leftOperationIndex],
                 rightOperation: decodedOperations[logicalOperation.rightOperationIndex],
             })
@@ -608,15 +606,13 @@ export async function evaluateTree(
     }
 }
 
-type AndOr = LogicalOperationType.AND | LogicalOperationType.OR
-
 // These two methods are used to create a rule data struct for an external token or NFT
 // checks for testing.
 export function createExternalTokenStruct(
     addresses: Address[],
     options?: {
         checkOptions?: Partial<Omit<ContractCheckOperation, 'address'>>
-        logicalOp?: AndOr
+        logicalOp?: SupportedLogicalOperationType
     },
 ) {
     if (addresses.length === 0) {
@@ -628,14 +624,14 @@ export function createExternalTokenStruct(
         type: options?.checkOptions?.type ?? (CheckOperationType.ERC20 as const),
         threshold: options?.checkOptions?.threshold ?? BigInt(1),
     }))
-    return createOperationsTree(defaultChain, options?.logicalOp ?? LogicalOperationType.OR)
+    return createOperationsTree(defaultChain, options?.logicalOp)
 }
 
 export function createExternalNFTStruct(
     addresses: Address[],
     options?: {
         checkOptions?: Partial<Omit<ContractCheckOperation, 'address'>>
-        logicalOp?: AndOr
+        logicalOp?: SupportedLogicalOperationType
     },
 ) {
     if (addresses.length === 0) {
@@ -648,7 +644,7 @@ export function createExternalNFTStruct(
         type: options?.checkOptions?.type ?? (CheckOperationType.ERC721 as const),
         threshold: options?.checkOptions?.threshold ?? BigInt(1),
     }))
-    return createOperationsTree(defaultChain, options?.logicalOp ?? LogicalOperationType.OR)
+    return createOperationsTree(defaultChain, options?.logicalOp)
 }
 
 export type ContractCheckOperation = {
@@ -662,7 +658,7 @@ export function createOperationsTree(
     checkOp: (Omit<ContractCheckOperation, 'threshold'> & {
         threshold?: bigint
     })[],
-    logicalOp: AndOr = LogicalOperationType.OR,
+    logicalOp: SupportedLogicalOperationType = LogicalOperationType.OR,
 ): IRuleEntitlementBase.RuleDataStruct {
     if (checkOp.length === 0) {
         return {
