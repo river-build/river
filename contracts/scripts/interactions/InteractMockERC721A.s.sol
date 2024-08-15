@@ -14,7 +14,7 @@ contract InteractMockERC721A is Interaction {
     address nft = getDeployment("mockERC721A");
 
     vm.startBroadcast(deployer);
-    MockERC721A(nft).mintTo(0xCF7f9A80aC35d04d57d369Ae1e085b58e6eb54e0);
+    MockERC721A(nft).mintTo(deployer);
     vm.stopBroadcast();
   }
 }

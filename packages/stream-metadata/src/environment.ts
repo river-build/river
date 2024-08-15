@@ -1,7 +1,6 @@
 import * as dotenv from 'dotenv'
 import { getWeb3Deployment } from '@river-build/web3'
 import { z } from 'zod'
-import { getLogger } from './logger'
 
 dotenv.config({
 	path: ['.env', '.env.local'],
@@ -38,13 +37,3 @@ function makeConfig() {
 export type Config = ReturnType<typeof makeConfig>
 
 export const config = makeConfig()
-
-const logger = getLogger('environment')
-
-logger.info('config', {
-	riverEnv: config.riverEnv,
-	chainId: config.web3Config.river.chainId,
-	port: config.port,
-	riverRegistry: config.web3Config.river.addresses.riverRegistry,
-	riverChainRpcUrl: config.riverChainRpcUrl,
-})
