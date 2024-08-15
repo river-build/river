@@ -88,6 +88,19 @@ abstract contract Deployer is Script, DeployBase {
   function postDeploy(address deployer, address deployment) public virtual {}
 
   function run() public virtual {
-    deploy();
+    bytes memory data = abi.encodeWithSignature("deploy()");
+
+    (bool success, bytes memory returnData) = address(this).delegatecall(data);
+    if (!success) {
+      if (returnData.length > 0) {
+        /// @solidity memory-safe-assembly
+        assembly {
+          let returnDataSize := mload(returnData)
+          revert(add(32, returnData), returnDataSize)
+        }
+      } else {
+        revert("FAILED_TO_CALL: deploy()");
+      }
+    }
   }
 }
