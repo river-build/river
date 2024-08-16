@@ -52,16 +52,67 @@ export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyRep
 
 	const fullStreamId: StreamIdHex = `0x${mediaStreamInfo.streamId}`
 	if (!isBytes32String(fullStreamId)) {
-		return reply.code(400).send('Invalid stream ID')
+		return reply.code(422).send('Invalid stream ID')
 	}
 
-	const { key, iv } = getEncryption(mediaStreamInfo)
+	let key: Uint8Array | undefined
+	let iv: Uint8Array | undefined
+	try {
+		const { key: _key, iv: _iv } = getEncryption(mediaStreamInfo)
+		key = _key
+		iv = _iv
+		if (!key || !iv) {
+			throw new Error('Invalid key or iv')
+		}
+	} catch (error) {
+		logger.error(
+			{
+				error,
+				spaceAddress,
+				mediaStreamId: mediaStreamInfo.streamId,
+			},
+			'Failed to get encryption keys',
+		)
+		return reply.code(422).send('Failed to get encryption keys')
+	}
 
-	const { data, mimeType } = await getMediaStreamContent(fullStreamId, key, iv)
+	let data: ArrayBuffer | null
+	let mimeType: string | null
+	try {
+		const { data: _data, mimeType: _mimType } = await getMediaStreamContent(
+			fullStreamId,
+			key,
+			iv,
+		)
+		data = _data
+		mimeType = _mimType
+		if (!data || !mimeType) {
+			throw new Error('Invalid data or mimeType')
+		}
+	} catch (error) {
+		logger.error(
+			{
+				error,
+				spaceAddress,
+				mediaStreamId: mediaStreamInfo.streamId,
+			},
+			'Failed to get image content',
+		)
+		return reply.code(422).send('Failed to get image content')
+	}
 
 	if (data && mimeType) {
 		return reply.header('Content-Type', mimeType).send(Buffer.from(data))
 	} else {
+		logger.info(
+			{
+				spaceAddress,
+				mediaStreamId: mediaStreamInfo.streamId,
+				mimeType,
+				data: data ? 'has image' : 'no image',
+			},
+			'No image',
+		)
 		return reply.code(404).send('No image')
 	}
 }
