@@ -39,17 +39,17 @@ function makeStreamRpcClient(url: string): StreamRpcClient {
 
 async function getStreamClient(streamId: `0x${string}`) {
 	const node = await getNodeForStream(streamId)
-	let nodeUrl = node?.url
-	if (!clients.has(nodeUrl)) {
-		const client = makeStreamRpcClient(nodeUrl)
+	let url = node?.url
+	if (!clients.has(url)) {
+		const client = makeStreamRpcClient(url)
 		clients.set(client.url!, client)
-		nodeUrl = client.url!
+		url = client.url!
 	}
-	logger.info({ url: nodeUrl }, 'getStreamClient')
+	logger.info({ url }, 'client connected to node')
 
-	const client = clients.get(nodeUrl)
+	const client = clients.get(url)
 	if (!client) {
-		throw new Error(`Failed to get client for url ${nodeUrl}`)
+		throw new Error(`Failed to get client for url ${url}`)
 	}
 
 	return { client, lastMiniblockNum: node.lastMiniblockNum }
@@ -104,7 +104,13 @@ async function mediaContentFromStreamView(
 		// Determine the MIME type
 		const mimeType = filetypemime(decrypted)
 		if (mimeType?.length > 0) {
-			logger.info({ mimeType }, 'mediaContentFromStreamView')
+			logger.info(
+				{
+					spaceId: mediaInfo.spaceId,
+					mimeType,
+				},
+				'mediaContentFromStreamView decrypted content',
+			)
 
 			// Return decrypted data and MIME type
 			return {

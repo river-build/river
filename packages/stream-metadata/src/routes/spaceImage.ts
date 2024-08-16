@@ -44,13 +44,13 @@ export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyRep
 	}
 
 	// get the image metatdata from the stream
-	const mediaStreamInfo = await getSpaceImage(stream)
+	const spaceImage = await getSpaceImage(stream)
 
-	if (!mediaStreamInfo) {
-		return reply.code(404).send('Image not found')
+	if (!spaceImage) {
+		return reply.code(404).send('spaceImage not found')
 	}
 
-	const fullStreamId: StreamIdHex = `0x${mediaStreamInfo.streamId}`
+	const fullStreamId: StreamIdHex = `0x${spaceImage.streamId}`
 	if (!isBytes32String(fullStreamId)) {
 		return reply.code(422).send('Invalid stream ID')
 	}
@@ -58,10 +58,19 @@ export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyRep
 	let key: Uint8Array | undefined
 	let iv: Uint8Array | undefined
 	try {
-		const { key: _key, iv: _iv } = getEncryption(mediaStreamInfo)
+		const { key: _key, iv: _iv } = getEncryption(spaceImage)
 		key = _key
 		iv = _iv
 		if (!key || !iv) {
+			logger.error(
+				{
+					key: key ? 'has key' : 'no key',
+					iv: iv ? 'has iv' : 'no iv',
+					spaceAddress,
+					mediaStreamId: spaceImage.streamId,
+				},
+				'Invalid key or iv',
+			)
 			throw new Error('Invalid key or iv')
 		}
 	} catch (error) {
@@ -69,11 +78,11 @@ export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyRep
 			{
 				error,
 				spaceAddress,
-				mediaStreamId: mediaStreamInfo.streamId,
+				mediaStreamId: spaceImage.streamId,
 			},
-			'Failed to get encryption keys',
+			'Failed to get encryption key or iv',
 		)
-		return reply.code(422).send('Failed to get encryption keys')
+		return reply.code(422).send('Failed to get encryption key or iv')
 	}
 
 	let data: ArrayBuffer | null
@@ -94,7 +103,7 @@ export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyRep
 			{
 				error,
 				spaceAddress,
-				mediaStreamId: mediaStreamInfo.streamId,
+				mediaStreamId: spaceImage.streamId,
 			},
 			'Failed to get image content',
 		)
@@ -107,7 +116,7 @@ export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyRep
 		logger.info(
 			{
 				spaceAddress,
-				mediaStreamId: mediaStreamInfo.streamId,
+				mediaStreamId: spaceImage.streamId,
 				mimeType,
 				data: data ? 'has image' : 'no image',
 			},
