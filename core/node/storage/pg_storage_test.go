@@ -996,8 +996,7 @@ func TestReadStreamFromLastSnapshot(t *testing.T) {
 
 	dataMaker := newDataMaker()
 
-	var store StreamStorage
-	store = pgEventStore
+	var store StreamStorage = pgEventStore
 
 	genMB, _ := dataMaker.mb()
 	mbs := [][]byte{genMB}
