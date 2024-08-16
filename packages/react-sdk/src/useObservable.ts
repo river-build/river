@@ -29,12 +29,12 @@ type ObservableValue<Data> = Data extends PersistedModel<infer UnwrappedData>
       }
     : {
           // Its a non persisted object - Observable<T>
-          data: Data
+          data: Data | undefined
           error: undefined
-          status: 'loaded'
-          isLoading: false
+          status: 'loading' | 'loaded'
+          isLoading: boolean
           isError: false
-          isLoaded: true
+          isLoaded: boolean
       }
 
 const isPersisted = <T>(value: T | PersistedModel<T>): value is PersistedModel<T> => {
@@ -81,10 +81,20 @@ export function useObservable<T>(
     }, [opts, value])
 
     const data = useMemo(() => {
+        if (!value) {
+            return {
+                data: undefined,
+                error: undefined,
+                status: 'loading' as const,
+                isLoading: true,
+                isError: false,
+                isLoaded: false,
+            }
+        }
         if (isPersisted(value)) {
             const { data, status } = value
             return {
-                data: data,
+                data: data as T,
                 error: status === 'error' ? value.error : undefined,
                 status,
                 isLoading: status === 'loading',
@@ -95,7 +105,7 @@ export function useObservable<T>(
             return {
                 data: value,
                 error: undefined,
-                status: 'loaded',
+                status: 'loaded' as const,
                 isLoading: false,
                 isError: false,
                 isLoaded: true,
