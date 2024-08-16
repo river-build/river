@@ -83,7 +83,7 @@ function copy_addresses() {
     local SOURCE_DIR=$1
     local DEST_DIR=$2
     local CHAIN_ID=$3
-    cp contracts/deployments/${SOURCE_DIR}/* packages/generated/deployments/${RIVER_ENV}/${DEST_DIR}/addresses
+    cp contracts/deployments/local_multi/${SOURCE_DIR}/* packages/generated/deployments/${RIVER_ENV}/${DEST_DIR}/addresses
     echo "{\"id\": ${CHAIN_ID}}" > packages/generated/deployments/${RIVER_ENV}/${DEST_DIR}/chainId.json
 
     if [ "$DEST_DIR" = "base" ] && [ -n "$BASE_EXECUTION_CLIENT" ]; then
