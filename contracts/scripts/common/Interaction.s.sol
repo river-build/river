@@ -23,7 +23,7 @@ abstract contract Interaction is Script, DeployBase {
   // - invoke __deploy() with the private key
   // - save the deployment to `deployments/<network>/<contract>.json`
   function interact() public virtual {
-    address deployer = msg.sender;
+    address deployer = _msgSender();
 
     info(
       string.concat(
@@ -42,5 +42,9 @@ abstract contract Interaction is Script, DeployBase {
 
   function run() public virtual {
     interact();
+  }
+
+  function _msgSender() internal view returns (address) {
+    return msg.sender;
   }
 }
