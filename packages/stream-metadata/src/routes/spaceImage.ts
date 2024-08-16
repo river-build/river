@@ -61,17 +61,17 @@ export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyRep
 		const { key: _key, iv: _iv } = getEncryption(spaceImage)
 		key = _key
 		iv = _iv
-		if (!key || !iv) {
+		if (key?.length === 0 || iv?.length === 0) {
 			logger.error(
 				{
-					key: key ? 'has key' : 'no key',
-					iv: iv ? 'has iv' : 'no iv',
+					key: key?.length === 0 ? 'has key' : 'no key',
+					iv: iv?.length === 0 ? 'has iv' : 'no iv',
 					spaceAddress,
 					mediaStreamId: spaceImage.streamId,
 				},
 				'Invalid key or iv',
 			)
-			throw new Error('Invalid key or iv')
+			return reply.code(422).send('Failed to get encryption key or iv')
 		}
 	} catch (error) {
 		logger.error(
@@ -96,7 +96,16 @@ export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyRep
 		data = _data
 		mimeType = _mimType
 		if (!data || !mimeType) {
-			throw new Error('Invalid data or mimeType')
+			logger.error(
+				{
+					data: data ? 'has data' : 'no data',
+					mimeType: mimeType ? mimeType : 'no mimeType',
+					spaceAddress,
+					mediaStreamId: spaceImage.streamId,
+				},
+				'Invalid data or mimeType',
+			)
+			return reply.code(422).send('Invalid data or mimeTypet')
 		}
 	} catch (error) {
 		logger.error(
@@ -110,20 +119,8 @@ export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyRep
 		return reply.code(422).send('Failed to get image content')
 	}
 
-	if (data && mimeType) {
-		return reply.header('Content-Type', mimeType).send(Buffer.from(data))
-	} else {
-		logger.info(
-			{
-				spaceAddress,
-				mediaStreamId: spaceImage.streamId,
-				mimeType,
-				data: data ? 'has image' : 'no image',
-			},
-			'No image',
-		)
-		return reply.code(404).send('No image')
-	}
+	// got the image data, send it back
+	return reply.header('Content-Type', mimeType).send(Buffer.from(data))
 }
 
 async function getSpaceImage(streamView: StreamStateView): Promise<ChunkedMedia | undefined> {
