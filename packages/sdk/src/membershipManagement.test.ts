@@ -20,6 +20,7 @@ import {
     ETH_ADDRESS,
 } from '@river-build/web3'
 import { makeBaseChainConfig } from './riverConfig'
+import { createVersionedSpace } from './util.test'
 
 const log = dlog('csb:test:membershipManagement')
 
@@ -64,7 +65,8 @@ describe('membershipManagement', () => {
         }
 
         log('transaction start bob creating space')
-        const transaction = await spaceDapp.createLegacySpace(
+        const transaction = await createVersionedSpace(
+            spaceDapp,
             {
                 spaceName: 'bobs-space-metadata',
                 uri: 'http://bobs-space-metadata.com',

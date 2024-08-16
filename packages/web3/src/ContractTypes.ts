@@ -9,6 +9,11 @@ import { RuleEntitlementShim } from './v3/RuleEntitlementShim'
 import { IRuleEntitlementBase } from './v3'
 import { IPricingModulesBase } from './v3/IPricingShim'
 
+import { RuleEntitlementV2Shim } from 'v3/RuleEntitlementV2Shim'
+import { NoopRuleData } from 'entitlement'
+
+import { CreateSpaceParams, CreateLegacySpaceParams } from 'ISpaceDapp'
+
 export const Permission = {
     Undefined: 'Undefined', // No permission required
     Read: 'Read',
@@ -25,7 +30,7 @@ export const Permission = {
 
 export type Permission = (typeof Permission)[keyof typeof Permission]
 
-export type EntitlementShim = UserEntitlementShimV3 | RuleEntitlementShim
+export type EntitlementShim = UserEntitlementShimV3 | RuleEntitlementShim | RuleEntitlementV2Shim
 
 export type EntitlementStruct = IRolesBaseV3.CreateEntitlementStruct
 
@@ -56,6 +61,18 @@ export enum EntitlementModuleType {
     UserEntitlement = 'UserEntitlement',
     RuleEntitlement = 'RuleEntitlement',
     RuleEntitlementV2 = 'RuleEntitlementV2',
+}
+
+export function isLegacyMembershipType(
+    object: MembershipStruct | LegacyMembershipStruct,
+): object is LegacyMembershipStruct {
+    return typeof object.requirements.ruleData === typeof NoopRuleData
+}
+
+export function isCreateLegacySpaceParams(
+    object: CreateSpaceParams | CreateLegacySpaceParams,
+): object is CreateLegacySpaceParams {
+    return typeof object.membership.requirements.ruleData === typeof NoopRuleData
 }
 
 /**

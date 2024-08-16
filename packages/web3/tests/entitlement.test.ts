@@ -1,4 +1,4 @@
-import { ethers } from 'ethers'
+import { BigNumber, ethers } from 'ethers'
 import {
     CheckOperation,
     CheckOperationType,
@@ -13,10 +13,15 @@ import {
     OrOperation,
     treeToRuleData,
     ruleDataToOperations,
+    encodeThresholdParams,
+    decodeThresholdParams,
+    encodeERC1155Params,
+    decodeERC1155Params,
 } from '../src/entitlement'
 import { MOCK_ADDRESS } from '../src/Utils'
 import { zeroAddress } from 'viem'
 import { Address } from '../src/ContractTypes'
+import { assert } from 'console'
 
 function makeRandomOperation(depth: number): Operation {
     const rand = Math.random()
@@ -847,4 +852,16 @@ test('encode', async () => {
     const operations = ruleDataToOperations(decodedDag)
     const newTree = postOrderArrayToTree(operations)
     expect(randomTree.opType === newTree.opType).toBeTruthy()
+})
+
+test('threshold params', async () => {
+    const encodedParams = encodeThresholdParams({ threshold: BigInt(100) })
+    const decodedParams = decodeThresholdParams(encodedParams)
+    expect(decodedParams).toEqual({ threshold: BigInt(100) })
+})
+
+test('erc1155 params', async () => {
+    const encodedParams = encodeERC1155Params({ threshold: BigInt(200), tokenId: BigInt(100) })
+    const decodedParams = decodeERC1155Params(encodedParams)
+    expect(decodedParams).toEqual({ threshold: BigInt(200), tokenId: BigInt(100) })
 })

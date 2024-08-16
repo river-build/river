@@ -10,6 +10,7 @@ import {
 import { BytesLike, ContractReceipt, ContractTransaction, ethers } from 'ethers'
 import {
     CreateLegacySpaceParams,
+    CreateSpaceParams,
     ISpaceDapp,
     TransactionOpts,
     UpdateChannelParams,
@@ -250,6 +251,27 @@ export class SpaceDapp implements ISpaceDapp {
         }
         return wrapTransaction(
             () => this.spaceRegistrar.LegacySpaceArchitect.write(signer).createSpace(spaceInfo),
+            txnOpts,
+        )
+    }
+
+    public async createSpace(
+        params: CreateSpaceParams,
+        signer: ethers.Signer,
+        txnOpts?: TransactionOpts,
+    ): Promise<ContractTransaction> {
+        const spaceInfo = {
+            name: params.spaceName,
+            uri: params.uri,
+            membership: params.membership,
+            channel: {
+                metadata: params.channelName || '',
+            },
+            shortDescription: params.shortDescription ?? '',
+            longDescription: params.longDescription ?? '',
+        }
+        return wrapTransaction(
+            () => this.spaceRegistrar.SpaceArchitect.write(signer).createSpace(spaceInfo),
             txnOpts,
         )
     }

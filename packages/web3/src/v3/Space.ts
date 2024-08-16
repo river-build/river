@@ -27,6 +27,7 @@ import { toPermissions } from '../ConvertersRoles'
 import { IMembershipShim } from './IMembershipShim'
 import { NoopRuleData } from '../entitlement'
 import { RuleEntitlementShim } from './RuleEntitlementShim'
+import { RuleEntitlementV2Shim } from './RuleEntitlementV2Shim'
 import { IRuleEntitlementBase } from '.'
 import { IBanningShim } from './IBanningShim'
 import { IERC721AQueryableShim } from './IERC721AQueryableShim'
@@ -314,6 +315,12 @@ export class Space {
                     break
                 case EntitlementModuleType.RuleEntitlement:
                     this.addressToEntitlement[address] = new RuleEntitlementShim(
+                        address,
+                        this.provider,
+                    )
+                    break
+                case EntitlementModuleType.RuleEntitlementV2:
+                    this.addressToEntitlement[address] = new RuleEntitlementV2Shim(
                         address,
                         this.provider,
                     )

@@ -1,5 +1,6 @@
 import type { ExtractAbiFunction } from 'abitype'
 import { IRuleEntitlementBase, IRuleEntitlementAbi } from './v3/IRuleEntitlementShim'
+import { IRuleEntitlementV2Base, IRuleEntitlementV2Abi } from 'v3/IRuleEntitlementV2Shim'
 
 import {
     encodeAbiParameters,
@@ -12,10 +13,15 @@ import {
 import { ethers } from 'ethers'
 import { Address } from './ContractTypes'
 import { MOCK_ADDRESS } from './Utils'
+import { ParamType } from 'ethers/lib/utils'
 
 const zeroAddress = ethers.constants.AddressZero
 
 export type RuleData = DecodeFunctionResultReturnType<typeof IRuleEntitlementAbi, 'getRuleData'>
+export type RuleDataV2 = DecodeFunctionResultReturnType<
+    typeof IRuleEntitlementV2Abi,
+    'getRuleDataV2'
+>
 
 export enum OperationType {
     NONE = 0,
@@ -82,12 +88,21 @@ export type CheckOperation = {
     contractAddress: Address
     threshold: bigint
 }
+export type CheckOperationV2 = {
+    opType: OperationType.CHECK
+    checkType: CheckOperationType
+    chainId: bigint
+    contractAddress: Address
+    params: Hex
+}
+
 export type OrOperation = {
     opType: OperationType.LOGICAL
     logicalType: LogicalOperationType.OR
     leftOperation: Operation
     rightOperation: Operation
 }
+
 export type AndOperation = {
     opType: OperationType.LOGICAL
     logicalType: LogicalOperationType.AND
@@ -110,6 +125,8 @@ export const NoopRuleData = {
     checkOperations: [],
     logicalOperations: [],
 }
+
+export const EncodedNoopRuleData = encodeRuleDataV2(NoopRuleData)
 
 type EntitledWalletOrZeroAddress = string
 
@@ -172,6 +189,48 @@ export function postOrderArrayToTree(operations: Operation[]): Operation {
     return root
 }
 
+export type ThresholdParams = {
+    threshold: bigint
+}
+
+export function encodeThresholdParams(thresholdParams: ThresholdParams): Hex {
+    return ethers.utils.defaultAbiCoder.encode(['uint256'], [thresholdParams.threshold]) as Hex
+}
+
+export function decodeThresholdParams(params: string): ThresholdParams {
+    const decoded = ethers.utils.defaultAbiCoder.decode(['uint256'], params)
+    return {
+        threshold: decoded[0].toBigInt(),
+    }
+}
+
+export type ERC1155Params = {
+    threshold: bigint
+    tokenId: bigint
+}
+
+const erc1155ParamsType = ParamType.from({
+    type: 'tuple',
+    baseType: 'tuple',
+    name: 'erc1155Params',
+    components: [
+        { name: 'threshold', type: 'uint256' },
+        { name: 'tokenId', type: 'uint256' },
+    ],
+})
+
+export function encodeERC1155Params(params: ERC1155Params): string {
+    return ethers.utils.defaultAbiCoder.encode([erc1155ParamsType], [params])
+}
+
+export function decodeERC1155Params(params: string): ERC1155Params {
+    const decoded = ethers.utils.defaultAbiCoder.decode([erc1155ParamsType], params)
+    return {
+        threshold: decoded[0].threshold.toBigInt(),
+        tokenId: decoded[0].tokenId.toBigInt(),
+    }
+}
+
 export function encodeEntitlementData(ruleData: IRuleEntitlementBase.RuleDataStruct): Hex {
     const encodeRuleDataAbi: ExtractAbiFunction<typeof IRuleEntitlementAbi, 'encodeRuleData'> =
         getAbiItem({
@@ -201,6 +260,21 @@ export function decodeEntitlementData(entitlementData: Hex): IRuleEntitlementBas
         entitlementData,
     ) as unknown as IRuleEntitlementBase.RuleDataStruct[]
 }
+
+export function encodeRuleDataV2(ruleData: IRuleEntitlementV2Base.RuleDataV2Struct): Hex {
+    const getRuleDataAbi: ExtractAbiFunction<typeof IRuleEntitlementV2Abi, 'getRuleDataV2'> =
+        getAbiItem({
+            abi: IRuleEntitlementV2Abi,
+            name: 'getRuleDataV2',
+        })
+
+    if (!getRuleDataAbi) {
+        throw new Error('encodeRuleDataV2 ABI not found')
+    }
+    // @ts-ignore
+    return encodeAbiParameters(encodeRuleDataAbi.outputs, [ruleData])
+}
+
 export function ruleDataToOperations(data: IRuleEntitlementBase.RuleDataStruct[]): Operation[] {
     if (data.length === 0) {
         return []

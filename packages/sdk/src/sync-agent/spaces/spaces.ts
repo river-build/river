@@ -13,6 +13,7 @@ import { CreateLegacySpaceParams, SpaceDapp } from '@river-build/web3'
 import { makeDefaultMembershipInfo } from '../utils/spaceUtils'
 import { ethers } from 'ethers'
 import { check, dlogger } from '@river-build/dlog'
+import { createVersionedSpace } from '../../util.test'
 
 const logger = dlogger('csb:spaces')
 
@@ -87,7 +88,8 @@ export class Spaces extends PersistedObservable<SpacesModel> {
             params.membership ??
             (await makeDefaultMembershipInfo(this.spaceDapp, this.riverConnection.userId))
         const channelName = params.channelName ?? 'general'
-        const transaction = await this.spaceDapp.createLegacySpace(
+        const transaction = await createVersionedSpace(
+            this.spaceDapp,
             {
                 spaceName: params.spaceName,
                 uri: params.uri ?? '',

@@ -31,7 +31,7 @@ import { ethers, ContractTransaction } from 'ethers'
 import { RiverDbManager } from './riverDbManager'
 import { StreamRpcClient, makeStreamRpcClient } from './makeStreamRpcClient'
 import assert from 'assert'
-import _ from 'lodash'
+import _, { create } from 'lodash'
 import { MockEntitlementsDelegate } from './utils'
 import { SignerContext, makeSignerContext } from './signerContext'
 import {
@@ -45,6 +45,8 @@ import {
     Permission,
     ISpaceDapp,
     LegacyMembershipStruct,
+    MembershipStruct,
+    isLegacyMembershipType,
     ETH_ADDRESS,
     NoopRuleData,
     CheckOperationType,
@@ -55,7 +57,15 @@ import {
     SpaceDapp,
     TestERC20,
     TestCustomEntitlement,
+    CreateSpaceParams,
+    CreateLegacySpaceParams,
+    isCreateLegacySpaceParams,
+    convertRuleDataV1ToV2,
+    encodeRuleDataV2,
+    SignerType,
 } from '@river-build/web3'
+
+import { useLegacySpaces } from './riverConfig'
 
 const log = dlog('csb:test:util')
 
@@ -439,25 +449,84 @@ export async function createSpaceAndDefaultChannel(
     }
 }
 
+// createSpace accepts either legacy or current space creation parameters and will fall back
+// to the legacy space creation endpoint on the spaceDapp if the appropriate flag is set.
+// If a user does not pass in a legacy space creation parameter, the function will not use
+// the legacy space creation endpoint, because the updated parameters are not backwards
+// compatible.
+export async function createVersionedSpace(
+    spaceDapp: ISpaceDapp,
+    createSpaceParams: CreateSpaceParams | CreateLegacySpaceParams,
+    signer: SignerType,
+): Promise<ethers.ContractTransaction> {
+    if (useLegacySpaces() && isCreateLegacySpaceParams(createSpaceParams)) {
+        console.log('CREATE_LEGACY_SPACE')
+        return await spaceDapp.createLegacySpace(
+            createSpaceParams as CreateLegacySpaceParams,
+            signer,
+        )
+    } else {
+        if (isCreateLegacySpaceParams(createSpaceParams)) {
+            console.log('CREATE_SPACE convert legacy params')
+            // Convert legacy space params to current space params
+            createSpaceParams = {
+                spaceName: createSpaceParams.spaceName,
+                uri: createSpaceParams.uri,
+                channelName: createSpaceParams.channelName,
+                membership: {
+                    settings: createSpaceParams.membership.settings,
+                    permissions: createSpaceParams.membership.permissions,
+                    requirements: {
+                        everyone: true,
+                        users: [],
+                        ruleData: encodeRuleDataV2(
+                            convertRuleDataV1ToV2(
+                                createSpaceParams.membership.requirements
+                                    .ruleData as IRuleEntitlementBase.RuleDataStruct,
+                            ),
+                        ),
+                    },
+                },
+            }
+        }
+        console.log('CREATE_SPACE')
+        return await spaceDapp.createSpace(createSpaceParams as CreateSpaceParams, signer)
+    }
+}
+
 // createUserStreamAndSyncClient creates a user stream for a given client that
 // uses a newly created space as the hint for the user stream, since the stream
 // node will not allow the creation of a user stream without a space id.
+//
+// If the membership info is a legacy membership struct and the legacy space flag
+// is set, the function will create a legacy space. Otherwise, it will convert the
+// legacy membership struct to a current membership struct if needed and use the
+// latest space creation endpoint.
 export async function createUserStreamAndSyncClient(
     client: Client,
     spaceDapp: ISpaceDapp,
     name: string,
-    membershipInfo: LegacyMembershipStruct,
+    membershipInfo: LegacyMembershipStruct | MembershipStruct,
     wallet: ethers.Wallet,
 ) {
-    const transaction = await spaceDapp.createLegacySpace(
-        {
+    var transaction: ethers.ContractTransaction
+    var createSpaceParams: CreateSpaceParams | CreateLegacySpaceParams
+    if (isLegacyMembershipType(membershipInfo)) {
+        createSpaceParams = {
             spaceName: `${name}-space`,
             uri: `${name}-space-metadata`,
             channelName: 'general',
             membership: membershipInfo,
-        },
-        wallet,
-    )
+        }
+    } else {
+        createSpaceParams = {
+            spaceName: `${name}-space`,
+            uri: `${name}-space-metadata`,
+            channelName: 'general',
+            membership: membershipInfo,
+        }
+    }
+    transaction = await createVersionedSpace(spaceDapp, createSpaceParams, wallet)
     const receipt = await transaction.wait()
     expect(receipt.status).toEqual(1)
     const spaceAddress = spaceDapp.getSpaceAddress(receipt)

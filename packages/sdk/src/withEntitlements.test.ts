@@ -26,6 +26,7 @@ import {
 } from '@river-build/web3'
 import { MembershipOp } from '@river-build/proto'
 import { makeBaseChainConfig } from './riverConfig'
+import { createVersionedSpace } from './util.test'
 
 const base_log = dlog('csb:test:withEntitlements')
 
@@ -75,7 +76,8 @@ describe('withEntitlements', () => {
         }
 
         log('transaction start bob creating space')
-        const transaction = await spaceDapp.createLegacySpace(
+        const transaction = await createVersionedSpace(
+            spaceDapp,
             {
                 spaceName: 'bobs-space-metadata',
                 uri: 'http://bobs-space-metadata.com',

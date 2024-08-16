@@ -4,6 +4,7 @@ import {
     ChannelMetadata,
     MembershipInfo,
     LegacyMembershipStruct,
+    MembershipStruct,
     Permission,
     PricingModuleStruct,
     RoleDetails,
@@ -25,6 +26,15 @@ export interface CreateLegacySpaceParams {
     uri: string
     channelName: string
     membership: LegacyMembershipStruct
+    shortDescription?: string
+    longDescription?: string
+}
+
+export interface CreateSpaceParams {
+    spaceName: string
+    uri: string
+    channelName: string
+    membership: MembershipStruct
     shortDescription?: string
     longDescription?: string
 }
@@ -88,6 +98,11 @@ export interface ISpaceDapp {
     bannedWalletAddresses: (spaceId: string) => Promise<string[]>
     createLegacySpace: (
         params: CreateLegacySpaceParams,
+        signer: SignerType,
+        txnOpts?: TransactionOpts,
+    ) => Promise<TransactionType>
+    createSpace: (
+        params: CreateSpaceParams,
         signer: SignerType,
         txnOpts?: TransactionOpts,
     ) => Promise<TransactionType>

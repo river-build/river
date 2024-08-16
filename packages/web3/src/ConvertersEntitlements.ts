@@ -1,8 +1,9 @@
 import { ethers } from 'ethers'
 
 import { Address, EntitlementStruct } from './ContractTypes'
-import { encodeEntitlementData } from './entitlement'
-import { IRuleEntitlementBase } from './v3'
+import { encodeEntitlementData, encodeThresholdParams } from './entitlement'
+import { IRuleEntitlementBase, IRuleEntitlementV2Base } from './v3'
+import { CheckOperationType } from './entitlement'
 
 const UserAddressesEncoding = 'address[]'
 
@@ -43,4 +44,55 @@ export function createRuleEntitlementStruct(
         module: moduleAddress,
         data: encoded,
     }
+}
+
+export function convertRuleDataV1ToV2(
+    ruleData: IRuleEntitlementBase.RuleDataStruct,
+): IRuleEntitlementV2Base.RuleDataV2Struct {
+    const operations: IRuleEntitlementBase.OperationStruct[] = ruleData.operations.map(
+        (op): IRuleEntitlementV2Base.OperationStruct => {
+            return { ...op }
+        },
+    )
+    const logicalOperations = ruleData.logicalOperations.map(
+        (op): IRuleEntitlementV2Base.LogicalOperationStruct => {
+            return { ...op }
+        },
+    )
+    const checkOperations = ruleData.checkOperations.map(
+        (op): IRuleEntitlementV2Base.CheckOperationV2Struct => {
+            switch (op.opType) {
+                case CheckOperationType.MOCK:
+                case CheckOperationType.ERC20:
+                case CheckOperationType.ERC721:
+                case CheckOperationType.NATIVE_COIN_BALANCE:
+                    const threshold = ethers.BigNumber.from(op.threshold).toBigInt()
+                    return {
+                        opType: op.opType,
+                        chainId: op.chainId,
+                        contractAddress: op.contractAddress,
+                        params: encodeThresholdParams({ threshold }),
+                    }
+                case CheckOperationType.ERC1155:
+                    throw new Error('ERC1155 not supported for V1 Rule Data')
+
+                case CheckOperationType.ISENTITLED:
+                    return {
+                        opType: op.opType,
+                        chainId: op.chainId,
+                        contractAddress: op.contractAddress,
+                        params: `0x`,
+                    }
+
+                case CheckOperationType.NONE:
+                default:
+                    throw new Error('Unsupported Check Operation Type')
+            }
+        },
+    )
+    return {
+        operations,
+        logicalOperations,
+        checkOperations,
+    } as IRuleEntitlementV2Base.RuleDataV2Struct
 }

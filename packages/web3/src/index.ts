@@ -1,6 +1,7 @@
 export * from './ContractHelpers'
 export * from './ISpaceDapp'
 export * from './ContractTypes'
+export * from './ConvertersEntitlements'
 export * from './LocalhostWeb3Provider'
 export * from './TestGatingNFT'
 export * from './TestGatingERC20'
