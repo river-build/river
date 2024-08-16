@@ -1,10 +1,4 @@
-import {
-    bin_fromHexString,
-    bin_fromString,
-    bin_toHexString,
-    bin_toString,
-    check,
-} from '@river-build/dlog'
+import { bin_toHexString, bin_toString, check } from '@river-build/dlog'
 import { LoadPriority, type Identifiable, type Store } from '../../../../store/store'
 import {
     PersistedObservable,
@@ -12,8 +6,6 @@ import {
 } from '../../../../observable/persistedObservable'
 import type { RiverConnection } from '../../../river-connection/riverConnection'
 import { isDefined } from '../../../../check'
-import { MemberPayload_Nft } from '@river-build/proto'
-import { make_MemberPayload_Nft } from '../../../../types'
 
 export type NftModel = {
     contractAddress: string
@@ -64,14 +56,6 @@ export class MemberNft extends PersistedObservable<MemberNftModel> {
         const streamId = this.data.streamId
         const oldState = this.data
         const { contractAddress, tokenId, chainId } = nft
-        const payload =
-            tokenId.length > 0
-                ? new MemberPayload_Nft({
-                      chainId: chainId,
-                      contractAddress: bin_fromHexString(contractAddress),
-                      tokenId: bin_fromString(tokenId),
-                  })
-                : new MemberPayload_Nft()
         this.setData({
             nft: {
                 contractAddress,
@@ -81,9 +65,7 @@ export class MemberNft extends PersistedObservable<MemberNftModel> {
         })
         return this.riverConnection
             .call((client) =>
-                client.makeEventAndAddToStream(streamId, make_MemberPayload_Nft(payload), {
-                    method: 'nft',
-                }),
+                client.setNft(streamId, nft.tokenId, nft.chainId, nft.contractAddress),
             )
             .catch((e) => {
                 this.setData(oldState)

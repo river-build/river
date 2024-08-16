@@ -7,7 +7,6 @@ import {
 import type { RiverConnection } from '../../../river-connection/riverConnection'
 import { isDefined } from '../../../../check'
 import type { Address } from '@river-build/web3'
-import { make_MemberPayload_EnsAddress } from '../../../../types'
 import { addressFromUserId } from '../../../../id'
 
 export interface MemberEnsAddressModel extends Identifiable {
@@ -53,15 +52,9 @@ export class MemberEnsAddress extends PersistedObservable<MemberEnsAddressModel>
         const streamId = this.data.streamId
         const oldState = this.data
         this.setData({ ensAddress })
+        const bytes = addressFromUserId(ensAddress as string)
         return this.riverConnection
-            .call(async (client) => {
-                const bytes = addressFromUserId(ensAddress)
-                return client.makeEventAndAddToStream(
-                    streamId,
-                    make_MemberPayload_EnsAddress(bytes),
-                    { method: 'ensAddress' },
-                )
-            })
+            .call((client) => client.setEnsAddress(streamId, bytes))
             .catch((e) => {
                 this.setData(oldState)
                 throw e

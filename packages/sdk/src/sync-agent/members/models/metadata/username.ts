@@ -6,8 +6,6 @@ import {
 } from '../../../../observable/persistedObservable'
 import type { RiverConnection } from '../../../river-connection/riverConnection'
 import { isDefined } from '../../../../check'
-import { make_MemberPayload_Username } from '../../../../types'
-import { usernameChecksum } from '../../../../utils'
 
 export interface MemberUsernameModel extends Identifiable {
     id: string
@@ -62,36 +60,15 @@ export class MemberUsername extends PersistedObservable<MemberUsernameModel> {
     async setUsername(username: string) {
         const streamId = this.data.streamId
         const oldState = this.data
-        check(isDefined(oldState), 'oldState is not defined')
-        const streamView = this.riverConnection.client
-            ?.stream(streamId)
-            ?.view.getUserMetadata().usernames
-        check(isDefined(streamView), 'streamView is not defined')
-        streamView?.setLocalUsername(this.data.id, username)
         this.setData({
             username,
             isUsernameConfirmed: true,
             isUsernameEncrypted: false,
         })
         return this.riverConnection
-            .call(async (client) => {
-                check(isDefined(client.cryptoBackend), 'cryptoBackend is not defined')
-                const encryptedData = await client.cryptoBackend.encryptGroupEvent(
-                    streamId,
-                    username,
-                )
-                encryptedData.checksum = usernameChecksum(username, streamId)
-                return client.makeEventAndAddToStream(
-                    streamId,
-                    make_MemberPayload_Username(encryptedData),
-                    {
-                        method: 'username',
-                    },
-                )
-            })
+            .call((client) => client.setUsername(streamId, username))
             .catch((e) => {
                 this.setData(oldState)
-                streamView?.resetLocalUsername(this.data.id)
                 throw e
             })
     }

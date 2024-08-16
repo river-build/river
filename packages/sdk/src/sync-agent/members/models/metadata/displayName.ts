@@ -6,7 +6,6 @@ import {
 } from '../../../../observable/persistedObservable'
 import type { RiverConnection } from '../../../river-connection/riverConnection'
 import { isDefined } from '../../../../check'
-import { make_MemberPayload_DisplayName } from '../../../../types'
 
 export interface MemberDisplayNameModel extends Identifiable {
     id: string
@@ -59,18 +58,7 @@ export class MemberDisplayName extends PersistedObservable<MemberDisplayNameMode
         const oldState = this.data
         this.setData({ displayName })
         return this.riverConnection
-            .call(async (client) => {
-                check(isDefined(client.cryptoBackend), 'cryptoBackend is not defined')
-                const encryptedData = await client.cryptoBackend.encryptGroupEvent(
-                    streamId,
-                    displayName,
-                )
-                return client.makeEventAndAddToStream(
-                    streamId,
-                    make_MemberPayload_DisplayName(encryptedData),
-                    { method: 'displayName' },
-                )
-            })
+            .call((client) => client.setDisplayName(streamId, displayName))
             .catch((e) => {
                 this.setData(oldState)
                 throw e
