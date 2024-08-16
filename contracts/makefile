@@ -22,7 +22,7 @@ lint :; yarn solhint "{scripts,src,test}/**/*.sol"
 
 anvil :; anvil -m 'test test test test test test test test test test test junk'
 
-clear-anvil-deployments :; rm -rf deployments/local_multi
+clear-anvil-deployments :; rm -rf deployments/local_multi deployments/local_multi_de
 
 # ================================== UTILITIES ==================================
 
