@@ -49,16 +49,16 @@ async function registerPlugins() {
 	logger.info('CORS registered successfully')
 }
 
-export function setupRoutes(srv: Server) {
+function setupRoutes() {
 	/*
 	 * Routes
 	 */
-	srv.get('/health', async (request, reply) => {
+	server.get('/health', async (request, reply) => {
 		logger.info(`GET /health`)
 		return checkHealth(request, reply)
 	})
 
-	srv.get('/space/:spaceAddress', async (request, reply) => {
+	server.get('/space/:spaceAddress', async (request, reply) => {
 		const { spaceAddress } = request.params as { spaceAddress?: string }
 		logger.info({ spaceAddress }, 'GET /space/../metadata')
 
@@ -66,7 +66,7 @@ export function setupRoutes(srv: Server) {
 		return fetchSpaceMetadata(request, reply, `${protocol}://${serverAddress}`)
 	})
 
-	srv.get('/space/:spaceAddress/image', async (request, reply) => {
+	server.get('/space/:spaceAddress/image', async (request, reply) => {
 		const { spaceAddress } = request.params as { spaceAddress?: string }
 		logger.info({ spaceAddress }, 'GET /space/../image')
 
@@ -106,7 +106,7 @@ process.on('SIGTERM', async () => {
 async function main() {
 	try {
 		await registerPlugins()
-		setupRoutes(server)
+		setupRoutes()
 		await server.listen({ port: config.port })
 		logger.info('Server started')
 	} catch (error) {
