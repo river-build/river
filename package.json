@@ -7,7 +7,7 @@
         "anvil": "yarn workspace @river-build/contracts exec anvil",
         "build": "turbo build",
         "cast": "yarn workspace @river-build/contracts exec cast",
-        "csb:build": "turbo build --filter @river-build/react-sdk",
+        "csb:build": "turbo build --filter @river-build/sdk",
         "clean": "./scripts/yarn-clean.sh",
         "csb:cb": "yarn csb:clean && yarn csb:build",
         "csb:clean": "yarn csb:command run clean",
