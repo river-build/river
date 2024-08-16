@@ -7,14 +7,17 @@ dotenv.config({
 })
 
 const IntStringSchema = z.string().regex(/^[0-9]+$/)
+const BoolStringSchema = z.string().regex(/^(true|false)$/)
+
 const NumberFromIntStringSchema = IntStringSchema.transform((str) => parseInt(str, 10))
+const BoolFromStringSchema = BoolStringSchema.transform((str) => str === 'true')
 
 const envSchema = z.object({
 	RIVER_ENV: z.string(),
 	RIVER_CHAIN_RPC_URL: z.string().url(),
 	PORT: NumberFromIntStringSchema,
 	LOG_LEVEL: z.string().optional().default('info'),
-	LOG_PRETTY: z.boolean().optional().default(true),
+	LOG_PRETTY: BoolFromStringSchema.optional().default('true'),
 })
 
 function makeConfig() {
