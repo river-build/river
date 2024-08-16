@@ -463,14 +463,9 @@ export async function createVersionedSpace(
     signer: SignerType,
 ): Promise<ethers.ContractTransaction> {
     if (useLegacySpaces() && isCreateLegacySpaceParams(createSpaceParams)) {
-        console.log('CREATE_LEGACY_SPACE')
-        return await spaceDapp.createLegacySpace(
-            createSpaceParams as CreateLegacySpaceParams,
-            signer,
-        )
+        return await spaceDapp.createLegacySpace(createSpaceParams, signer)
     } else {
         if (isCreateLegacySpaceParams(createSpaceParams)) {
-            console.log('CREATE_SPACE convert legacy params')
             // Convert legacy space params to current space params
             createSpaceParams = {
                 spaceName: createSpaceParams.spaceName,
@@ -492,7 +487,6 @@ export async function createVersionedSpace(
                 },
             }
         }
-        console.log('CREATE_SPACE')
         return await spaceDapp.createSpace(createSpaceParams, signer)
     }
 }
@@ -512,7 +506,6 @@ export async function createUserStreamAndSyncClient(
     membershipInfo: LegacyMembershipStruct | MembershipStruct,
     wallet: ethers.Wallet,
 ) {
-    let transaction: ethers.ContractTransaction
     let createSpaceParams: CreateSpaceParams | CreateLegacySpaceParams
     if (isLegacyMembershipType(membershipInfo)) {
         createSpaceParams = {
@@ -529,7 +522,7 @@ export async function createUserStreamAndSyncClient(
             membership: membershipInfo,
         }
     }
-    transaction = await createVersionedSpace(spaceDapp, createSpaceParams, wallet)
+    const transaction = await createVersionedSpace(spaceDapp, createSpaceParams, wallet)
     const receipt = await transaction.wait()
     expect(receipt.status).toEqual(1)
     const spaceAddress = spaceDapp.getSpaceAddress(receipt)
