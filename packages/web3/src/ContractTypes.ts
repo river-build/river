@@ -10,7 +10,7 @@ import { IRuleEntitlementBase } from './v3'
 import { IPricingModulesBase } from './v3/IPricingShim'
 
 import { RuleEntitlementV2Shim } from 'v3/RuleEntitlementV2Shim'
-import { NoopRuleData } from 'entitlement'
+import { NoopRuleData } from './entitlement'
 
 import { CreateSpaceParams, CreateLegacySpaceParams } from 'ISpaceDapp'
 

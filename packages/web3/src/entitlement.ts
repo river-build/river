@@ -1,6 +1,6 @@
 import type { ExtractAbiFunction } from 'abitype'
 import { IRuleEntitlementBase, IRuleEntitlementAbi } from './v3/IRuleEntitlementShim'
-import { IRuleEntitlementV2Base, IRuleEntitlementV2Abi } from 'v3/IRuleEntitlementV2Shim'
+import { IRuleEntitlementV2Base, IRuleEntitlementV2Abi } from './v3/IRuleEntitlementV2Shim'
 
 import {
     encodeAbiParameters,
