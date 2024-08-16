@@ -76,15 +76,14 @@ cast rpc evm_setIntervalMining $RIVER_BLOCK_TIME --rpc-url $RIVER_ANVIL_RPC_URL
 
 popd
 
-mkdir -p packages/generated/deployments/${RIVER_ENV}/base/addresses
-mkdir -p packages/generated/deployments/${RIVER_ENV}/river/addresses
+mkdir -p packages/generated/deployments/${RIVER_ENV}/base
+mkdir -p packages/generated/deployments/${RIVER_ENV}/river
 
 function copy_addresses() {
     local SOURCE_DIR=$1
     local DEST_DIR=$2
     local CHAIN_ID=$3
-    cp contracts/deployments/${RIVER_ENV}/${SOURCE_DIR}/* packages/generated/deployments/${RIVER_ENV}/${DEST_DIR}/addresses
-    echo "{\"id\": ${CHAIN_ID}}" > packages/generated/deployments/${RIVER_ENV}/${DEST_DIR}/chainId.json
+    cp -r contracts/deployments/${RIVER_ENV} packages/generated/deployments/${RIVER_ENV}
 
     if [ "$DEST_DIR" = "base" ] && [ -n "$BASE_EXECUTION_CLIENT" ]; then
         echo "{\"executionClient\": \"${BASE_EXECUTION_CLIENT}\"}" > packages/generated/deployments/${RIVER_ENV}/${DEST_DIR}/executionClient.json
