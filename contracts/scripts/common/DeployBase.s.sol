@@ -56,7 +56,7 @@ contract DeployBase is DeployHelpers, Script {
   function chainIdAlias() internal returns (string memory) {
     return
       block.chainid == 31337
-        ? "base_anvil"
+        ? "base_anvil" // if block.chain === 85432 'base'
         : getChain(block.chainid).chainAlias;
   }
 
