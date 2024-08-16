@@ -78,7 +78,7 @@ fork-any :;
 
 verify-any :;
 	@echo "Verifying $(contract) on a remote network"
-	@forge verify-contract ${address} ${contract}	--rpc-url ${rpc}
+	@forge verify-contract ${address} ${contract} --rpc-url ${rpc}
 
 explicit-verify-any :;
 	@echo "Verifying $(contract) on a remote network"
@@ -160,7 +160,6 @@ fork-base-sepolia :;
 	@$(MAKE) fork-any rpc=base_sepolia private_key=${TESTNET_PRIVATE_KEY}
 
 verify-base-sepolia :;
-	@$(MAKE) verify-any rpc=base_sepolia
 	@$(MAKE) explicit-verify-any rpc=base_sepolia verifier=${BASESCAN_SEPOLIA_URL} etherscan=${BASESCAN_API_KEY}
 
 # ===========================
@@ -205,7 +204,6 @@ fork-base :;
 	@$(MAKE) fork-any rpc=base private_key=${TESTNET_PRIVATE_KEY}
 
 verify-base :;
-	@$(MAKE) verify-any rpc=base
 	@$(MAKE) explicit-verify-any rpc=base verifier=${BASESCAN_URL} etherscan=${BASESCAN_API_KEY}
 
 # ===========================
