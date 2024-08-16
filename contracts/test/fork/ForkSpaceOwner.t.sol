@@ -17,9 +17,6 @@ import {SpaceHelper} from "contracts/test/spaces/SpaceHelper.sol";
 import {DeploySpaceOwnerFacet, SpaceOwner} from "contracts/scripts/deployments/facets/DeploySpaceOwnerFacet.s.sol";
 import {DeployArchitect} from "contracts/scripts/deployments/facets/DeployArchitect.s.sol";
 
-// debuggging
-import {console} from "forge-std/console.sol";
-
 contract ForkSpaceOwner is
   IArchitectBase,
   ISpaceOwnerBase,
@@ -38,9 +35,11 @@ contract ForkSpaceOwner is
   DeployArchitect architectHelper = new DeployArchitect();
 
   function setUp() external onlyForked {
+    address deployer = getDeployer();
+
     // create diamond cut to current space owner
-    address spaceOwnerFacet = spaceOwnerHelper.deploy();
-    address architectFacet = architectHelper.deploy();
+    address spaceOwnerFacet = spaceOwnerHelper.deploy(deployer);
+    address architectFacet = architectHelper.deploy(deployer);
 
     bytes4[] memory addSelectors = new bytes4[](2);
     addSelectors[0] = SpaceOwner.mintSpace.selector;
@@ -104,7 +103,7 @@ contract ForkSpaceOwner is
     );
   }
 
-  function test_getSpaceInfo() external onlyForked {
+  function test_getSpaceInfo() external view onlyForked {
     Space memory space = SpaceOwner(spaceOwnerDiamond).getSpaceInfo(
       0xC87bb04477151743070B45A3426938128896AC5D
     );

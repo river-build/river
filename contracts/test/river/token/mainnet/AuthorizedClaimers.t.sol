@@ -7,7 +7,7 @@ import {IAuthorizedClaimersBase} from "contracts/src/tokens/river/mainnet/claime
 //contracts
 import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 import {AuthorizedClaimers} from "contracts/src/tokens/river/mainnet/claimer/AuthorizedClaimers.sol";
-import {DeployAuthorizedClaimers} from "contracts/scripts/deployments/DeployAuthorizedClaimers.s.sol";
+import {DeployAuthorizedClaimers} from "contracts/scripts/deployments/utils/DeployAuthorizedClaimers.s.sol";
 
 contract AuthorizedClaimersTest is TestUtils, IAuthorizedClaimersBase {
   DeployAuthorizedClaimers internal deployAuthorizedClaimers =
@@ -68,7 +68,7 @@ contract AuthorizedClaimersTest is TestUtils, IAuthorizedClaimersBase {
     );
   }
 
-  function test_getAuthorizedClaimer_notAuthorized() public {
+  function test_getAuthorizedClaimer_notAuthorized() public view {
     assertEq(
       authorizedClaimers.getAuthorizedClaimer(_randomAddress()),
       address(0),

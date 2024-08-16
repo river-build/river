@@ -6,25 +6,26 @@ import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 
 import {RuleEntitlement} from "contracts/src/spaces/entitlements/rule/RuleEntitlement.sol";
 import {IEntitlementBase} from "contracts/src/spaces/entitlements/IEntitlement.sol";
-import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
+import {IRuleEntitlementBase} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-contract RuleEntitlementTest is TestUtils, IEntitlementBase {
-  RuleEntitlement internal implementation;
+contract RuleEntitlementTest is
+  TestUtils,
+  IEntitlementBase,
+  IRuleEntitlementBase
+{
+  uint256 internal constant ENTITLEMENTS_SLOT = 0;
+
   RuleEntitlement internal ruleEntitlement;
 
   address internal entitlement;
-  address internal deployer;
-  address internal space;
-
+  address internal deployer = makeAddr("deployer");
+  address internal space = makeAddr("space");
   uint256 internal roleId = 0;
 
-  function setUp() public {
-    deployer = _randomAddress();
-    space = _randomAddress();
-
+  function setUp() public virtual {
     vm.startPrank(deployer);
-    implementation = new RuleEntitlement();
+    RuleEntitlement implementation = new RuleEntitlement();
     entitlement = address(
       new ERC1967Proxy(
         address(implementation),
@@ -36,155 +37,132 @@ contract RuleEntitlementTest is TestUtils, IEntitlementBase {
     ruleEntitlement = RuleEntitlement(entitlement);
   }
 
-  modifier givenRuleEntitlementIsSet() {
-    uint256 chainId = 31337;
+  function setRuleEntitlement() internal returns (bytes memory encodedData) {
+    uint256 chainId = block.chainid;
     address erc20Contract = _randomAddress();
     address erc721Contract = _randomAddress();
     uint256 threshold = 100;
 
     // we have 3 operations total
-    IRuleEntitlement.Operation[]
-      memory operations = new IRuleEntitlement.Operation[](3);
+    Operation[] memory operations = new Operation[](3);
 
     // we have 2 check operations
-    IRuleEntitlement.CheckOperation[]
-      memory checkOperations = new IRuleEntitlement.CheckOperation[](2);
+    CheckOperation[] memory checkOperations = new CheckOperation[](2);
 
     // and 1 logical operation
-    IRuleEntitlement.LogicalOperation[]
-      memory logicalOperations = new IRuleEntitlement.LogicalOperation[](1);
+    LogicalOperation[] memory logicalOperations = new LogicalOperation[](1);
 
     // for the first check operation, we are checking ERC20 balance of 100 on chain 31337
-    checkOperations[0] = IRuleEntitlement.CheckOperation(
-      IRuleEntitlement.CheckOperationType.ERC20,
+    checkOperations[0] = CheckOperation(
+      CheckOperationType.ERC20,
       chainId,
       erc20Contract,
       threshold
     );
 
     // for the second check operation, we are checking ERC721 balance of 100 on chain 31337
-    checkOperations[1] = IRuleEntitlement.CheckOperation(
-      IRuleEntitlement.CheckOperationType.ERC721,
+    checkOperations[1] = CheckOperation(
+      CheckOperationType.ERC721,
       chainId,
       erc721Contract,
       threshold
     );
 
     // we are combining the two check operations with an AND operation so both must pass
-    logicalOperations[0] = IRuleEntitlement.LogicalOperation(
-      IRuleEntitlement.LogicalOperationType.AND,
-      0,
-      1
-    );
+    logicalOperations[0] = LogicalOperation(LogicalOperationType.AND, 0, 1);
 
     // the first operation is a check operation
-    operations[0] = IRuleEntitlement.Operation(
-      IRuleEntitlement.CombinedOperationType.CHECK,
-      0
-    );
+    operations[0] = Operation(CombinedOperationType.CHECK, 0);
 
     // the second operation is a check operation
-    operations[1] = IRuleEntitlement.Operation(
-      IRuleEntitlement.CombinedOperationType.CHECK,
-      1
-    );
+    operations[1] = Operation(CombinedOperationType.CHECK, 1);
 
     // the third operation is a logical operation
-    operations[2] = IRuleEntitlement.Operation(
-      IRuleEntitlement.CombinedOperationType.LOGICAL,
-      0
-    );
+    operations[2] = Operation(CombinedOperationType.LOGICAL, 0);
 
     // we are combining all the operations into a rule data struct
-    IRuleEntitlement.RuleData memory ruleData = IRuleEntitlement.RuleData(
+    RuleData memory ruleData = RuleData(
       operations,
       checkOperations,
       logicalOperations
     );
 
-    bytes memory encodedData = abi.encode(ruleData);
+    encodedData = abi.encode(ruleData);
 
     vm.prank(space);
     ruleEntitlement.setEntitlement(roleId, encodedData);
-    _;
   }
 
-  function test_setRuleEntitlement() external givenRuleEntitlementIsSet {
-    IRuleEntitlement.Operation[] memory ruleOperations = ruleEntitlement
-      .getRuleData(roleId)
-      .operations;
-    assertEq(ruleOperations.length, 3);
+  function test_setRuleEntitlement() public virtual {
+    bytes memory encodedData = setRuleEntitlement();
+    assertEq(ruleEntitlement.getEntitlementDataByRoleId(roleId), encodedData);
   }
 
-  function test_removeRuleEntitlement() external givenRuleEntitlementIsSet {
+  function test_removeRuleEntitlement() external virtual {
+    setRuleEntitlement();
+
     vm.prank(space);
     ruleEntitlement.removeEntitlement(roleId);
-    IRuleEntitlement.Operation[] memory ruleOperations = ruleEntitlement
-      .getRuleData(roleId)
-      .operations;
-    assertEq(ruleOperations.length, 0);
+
+    RuleData memory emptyRuleData = RuleData(
+      new Operation[](0),
+      new CheckOperation[](0),
+      new LogicalOperation[](0)
+    );
+    RuleData memory ruleData = ruleEntitlement.getRuleData(roleId);
+    assertEq(abi.encode(ruleData), abi.encode(emptyRuleData));
+
+    assertEq(
+      ruleEntitlement.getEntitlementDataByRoleId(roleId),
+      abi.encode(emptyRuleData)
+    );
+
+    bytes32 slot = getMappingValueSlot(roleId, ENTITLEMENTS_SLOT);
+    bytes32 grantedBy = vm.load(entitlement, slot);
+    assertEq(grantedBy, bytes32(0));
+    bytes32 grantedTime = vm.load(entitlement, bytes32(uint256(slot) + 1));
+    assertEq(grantedTime, bytes32(0));
+    assertEq(vm.getMappingLength(entitlement, bytes32(ENTITLEMENTS_SLOT)), 0);
   }
 
-  function test_revertWhenNotAllowedToRemove()
-    external
-    givenRuleEntitlementIsSet
-  {
+  function test_fuzz_revertWhenNotAllowedToRemove(
+    address caller
+  ) external virtual {
+    vm.assume(caller != space);
     vm.expectRevert(Entitlement__NotAllowed.selector);
-    vm.prank(_randomAddress());
+    vm.prank(caller);
     ruleEntitlement.removeEntitlement(roleId);
   }
 
   // =============================================================
   //                  Request Entitlement Check
   // =============================================================
-  function test_revertOnDirectionFailureEntitlementRule() external {
-    IRuleEntitlement.Operation[]
-      memory operations = new IRuleEntitlement.Operation[](4);
-    IRuleEntitlement.CheckOperation[]
-      memory checkOperations = new IRuleEntitlement.CheckOperation[](2);
-    IRuleEntitlement.LogicalOperation[]
-      memory logicalOperations = new IRuleEntitlement.LogicalOperation[](2);
-    checkOperations[0] = IRuleEntitlement.CheckOperation(
-      IRuleEntitlement.CheckOperationType.ERC20,
+
+  function test_revertOnDirectionFailureEntitlementRule() external virtual {
+    Operation[] memory operations = new Operation[](4);
+    CheckOperation[] memory checkOperations = new CheckOperation[](2);
+    LogicalOperation[] memory logicalOperations = new LogicalOperation[](2);
+    checkOperations[0] = CheckOperation(
+      CheckOperationType.ERC20,
       31337,
       address(0x12),
       100
     );
-    checkOperations[1] = IRuleEntitlement.CheckOperation(
-      IRuleEntitlement.CheckOperationType.ERC721,
+    checkOperations[1] = CheckOperation(
+      CheckOperationType.ERC721,
       31337,
       address(0x21),
       100
     );
     // This operation is referring to a parent so will revert
-    logicalOperations[0] = IRuleEntitlement.LogicalOperation(
-      IRuleEntitlement.LogicalOperationType.AND,
-      0,
-      3
-    );
-    logicalOperations[1] = IRuleEntitlement.LogicalOperation(
-      IRuleEntitlement.LogicalOperationType.AND,
-      0,
-      1
-    );
-    operations[0] = IRuleEntitlement.Operation(
-      IRuleEntitlement.CombinedOperationType.CHECK,
-      0
-    );
-    operations[1] = IRuleEntitlement.Operation(
-      IRuleEntitlement.CombinedOperationType.CHECK,
-      1
-    );
-    operations[2] = IRuleEntitlement.Operation(
-      IRuleEntitlement.CombinedOperationType.LOGICAL,
-      0
-    );
-    operations[3] = IRuleEntitlement.Operation(
-      IRuleEntitlement.CombinedOperationType.LOGICAL,
-      1
-    );
+    logicalOperations[0] = LogicalOperation(LogicalOperationType.AND, 0, 3);
+    logicalOperations[1] = LogicalOperation(LogicalOperationType.AND, 0, 1);
+    operations[0] = Operation(CombinedOperationType.CHECK, 0);
+    operations[1] = Operation(CombinedOperationType.CHECK, 1);
+    operations[2] = Operation(CombinedOperationType.LOGICAL, 0);
+    operations[3] = Operation(CombinedOperationType.LOGICAL, 1);
 
-    IRuleEntitlement.RuleData memory ruleData = IRuleEntitlement.RuleData(
+    RuleData memory ruleData = RuleData(
       operations,
       checkOperations,
       logicalOperations
@@ -193,18 +171,14 @@ contract RuleEntitlementTest is TestUtils, IEntitlementBase {
     bytes memory encodedData = abi.encode(ruleData);
 
     vm.expectRevert(
-      abi.encodeWithSelector(
-        IRuleEntitlement.InvalidRightOperationIndex.selector,
-        3,
-        2
-      )
+      abi.encodeWithSelector(InvalidRightOperationIndex.selector, 3, 2)
     );
 
     vm.prank(space);
     ruleEntitlement.setEntitlement(0, encodedData);
 
-    IRuleEntitlement.Operation[] memory ruleOperations = ruleEntitlement
-      .getRuleData(uint256(0))
+    Operation[] memory ruleOperations = ruleEntitlement
+      .getRuleData(0)
       .operations;
     assertEq(ruleOperations.length, 0);
   }

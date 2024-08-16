@@ -63,7 +63,7 @@
         "Start Watches",
         "Casablanca",
         "Casablanca-No-Entitlements",
-        "XChain-Single",
+        "Playground",
       ],
       "group": {
         "kind": "build",
@@ -79,6 +79,8 @@
         "WatchCasablancaProto",
         "WatchCasablancaWeb3",
         "WatchCasablancaSdk",
+        "WatchReactSdk",
+        "WatchStress",
       ],
       "group": {
         "kind": "build",
@@ -164,6 +166,16 @@
       "label": "Start Load Testing Redis",
       "type": "shell",
       "command": "./scripts/start-load-testing-redis.sh",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "group": "local-servers"
+      }
+    },
+    {
+      "label": "Start Stress Testing Redis",
+      "type": "shell",
+      "command": "./packages/stress/scripts/start_redis.sh",
       "isBackground": true,
       "problemMatcher": [],
       "presentation": {
@@ -273,33 +285,13 @@
     {
       "label": "CasablancaConfigureNodes",
       "type": "shell",
-      "command": "./scripts/configure-nodes.sh --single && ./scripts/configure-nodes.sh --single_ne",
+      "command": "RIVER_BLOCK_TIME=1 ./scripts/configure-nodes.sh --multi && RIVER_BLOCK_TIME=1 ./scripts/configure-nodes.sh --multi_ne",
       "isBackground": true,
       "problemMatcher": [],
       "presentation": {
         "group": "ephemeral",
         "focus": true,
         "panel": "shared",
-      }
-    },
-    {
-      "label": "XChain-Single",
-      "type": "shell",
-      "command": "sleep 1 && RUN_ENV=single ./core/xchain/launch_multi.sh",
-      "isBackground": true,
-      "problemMatcher": [],
-      "presentation": {
-        "group": "xchain"
-      }
-    },
-    {
-      "label": "XChain-Multi",
-      "type": "shell",
-      "command": "sleep 1 && RUN_ENV=multi ./core/xchain/launch_multi.sh",
-      "isBackground": true,
-      "problemMatcher": [],
-      "presentation": {
-        "group": "xchain"
       }
     },
     {
@@ -359,9 +351,29 @@
       }
     },
     {
+      "label": "Playground",
+      "type": "shell",
+      "command": "cd packages/playground && yarn dev",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "group": "apps"
+      }
+    },
+    {
       "label": "WatchCasablancaSdk",
       "type": "shell",
       "command": "cd packages/sdk && yarn watch",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "group": "local-watch"
+      }
+    },
+    {
+      "label": "WatchReactSdk",
+      "type": "shell",
+      "command": "cd packages/react-sdk && yarn watch",
       "isBackground": true,
       "problemMatcher": [],
       "presentation": {
@@ -392,6 +404,16 @@
       "label": "WatchCasablancaProto",
       "type": "shell",
       "command": "cd packages/proto && yarn watch",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "group": "local-watch-proto"
+      }
+    },
+    {
+      "label": "WatchStress",
+      "type": "shell",
+      "command": "cd packages/stress && yarn watch",
       "isBackground": true,
       "problemMatcher": [],
       "presentation": {

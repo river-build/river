@@ -28,10 +28,10 @@ import {SpaceOwner} from "contracts/src/spaces/facets/owner/SpaceOwner.sol";
 import {ISpaceDelegation} from "contracts/src/base/registry/facets/delegation/ISpaceDelegation.sol";
 
 // deployments
-import {DeploySpaceFactory} from "contracts/scripts/deployments/DeploySpaceFactory.s.sol";
-import {DeployRiverBase} from "contracts/scripts/deployments/DeployRiverBase.s.sol";
-import {DeployProxyBatchDelegation} from "contracts/scripts/deployments/DeployProxyBatchDelegation.s.sol";
-import {DeployBaseRegistry} from "contracts/scripts/deployments/DeployBaseRegistry.s.sol";
+import {DeploySpaceFactory} from "contracts/scripts/deployments/diamonds/DeploySpaceFactory.s.sol";
+import {DeployRiverBase} from "contracts/scripts/deployments/utils/DeployRiverBase.s.sol";
+import {DeployProxyBatchDelegation} from "contracts/scripts/deployments/utils/DeployProxyBatchDelegation.s.sol";
+import {DeployBaseRegistry} from "contracts/scripts/deployments/diamonds/DeployBaseRegistry.s.sol";
 
 /*
  * @notice - This is the base setup to start testing the entire suite of contracts
@@ -94,7 +94,7 @@ contract BaseSetup is TestUtils, SpaceHelper {
     operators = _createAccounts(10);
 
     // Base Registry
-    baseRegistry = deployBaseRegistry.deploy();
+    baseRegistry = deployBaseRegistry.deploy(deployer);
     entitlementChecker = IEntitlementChecker(baseRegistry);
     nodeOperator = INodeOperator(baseRegistry);
 
@@ -104,13 +104,13 @@ contract BaseSetup is TestUtils, SpaceHelper {
       mainnetDelegation_: baseRegistry,
       messenger_: address(messenger)
     });
-    mainnetProxyDelegation = deployProxyBatchDelegation.deploy();
+    mainnetProxyDelegation = deployProxyBatchDelegation.deploy(deployer);
     mainnetRiverToken = deployProxyBatchDelegation.riverToken();
     vault = deployProxyBatchDelegation.vault();
     claimers = deployProxyBatchDelegation.claimers();
 
     // Space Factory Diamond
-    spaceFactory = deploySpaceFactory.deploy();
+    spaceFactory = deploySpaceFactory.deploy(deployer);
     userEntitlement = deploySpaceFactory.userEntitlement();
     ruleEntitlement = deploySpaceFactory.ruleEntitlement();
     spaceOwner = deploySpaceFactory.spaceOwner();
@@ -121,7 +121,7 @@ contract BaseSetup is TestUtils, SpaceHelper {
     eip712Facet = EIP712Facet(spaceFactory);
 
     // Base Registry Diamond
-    riverToken = deployRiverTokenBase.deploy();
+    riverToken = deployRiverTokenBase.deploy(deployer);
     bridge = deployRiverTokenBase.bridgeBase();
 
     // POST DEPLOY
@@ -153,9 +153,12 @@ contract BaseSetup is TestUtils, SpaceHelper {
     space = Architect(spaceFactory).createSpace(spaceInfo);
     everyoneSpace = Architect(spaceFactory).createSpace(everyoneSpaceInfo);
     vm.stopPrank();
+  }
 
-    // _registerOperators();
-    // _registerNodes();
+  /// @dev Skips the test run if the account is not an EOA
+  modifier assumeEOA(address account) {
+    vm.assume(account != address(0) && account.code.length == 0);
+    _;
   }
 
   function _registerOperators() internal {

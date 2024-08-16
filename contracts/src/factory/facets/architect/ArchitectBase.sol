@@ -28,11 +28,12 @@ import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
 // contracts
 import {Factory} from "contracts/src/utils/Factory.sol";
 import {SpaceProxy} from "contracts/src/spaces/facets/proxy/SpaceProxy.sol";
+import {PricingModulesBase} from "contracts/src/factory/facets/architect/pricing/PricingModulesBase.sol";
 
 // modules
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-abstract contract ArchitectBase is Factory, IArchitectBase {
+abstract contract ArchitectBase is Factory, IArchitectBase, PricingModulesBase {
   using StringSet for StringSet.Set;
   using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -52,7 +53,7 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
   }
 
   function _createSpace(
-    SpaceInfo memory spaceInfo
+    SpaceInfo calldata spaceInfo
   ) internal returns (address spaceAddress) {
     ArchitectStorage.Layout storage ds = ArchitectStorage.layout();
     ImplementationStorage.Layout storage ims = ImplementationStorage.layout();
@@ -168,7 +169,7 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
   function _createDefaultChannel(
     address space,
     uint256 roleId,
-    ChannelInfo memory channelInfo
+    ChannelInfo calldata channelInfo
   ) internal {
     uint256[] memory roleIds = new uint256[](1);
     roleIds[0] = roleId;
@@ -192,7 +193,7 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
     address spaceAddress,
     IUserEntitlement userEntitlement,
     IRuleEntitlement ruleEntitlement,
-    MembershipRequirements memory requirements
+    MembershipRequirements calldata requirements
   ) internal returns (uint256 roleId) {
     string[] memory joinPermissions = new string[](1);
     joinPermissions[0] = Permissions.JoinSpace;
@@ -233,12 +234,12 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
         );
       }
 
-      if (requirements.ruleData.operations.length > 0) {
+      if (requirements.ruleData.length > 0) {
         IRoles(spaceAddress).addRoleToEntitlement(
           roleId,
           IRolesBase.CreateEntitlement({
             module: ruleEntitlement,
-            data: abi.encode(requirements.ruleData)
+            data: requirements.ruleData
           })
         );
       }
@@ -248,8 +249,8 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
 
   function _createMemberEntitlement(
     address spaceAddress,
-    string memory memberName,
-    string[] memory memberPermissions,
+    string calldata memberName,
+    string[] calldata memberPermissions,
     IUserEntitlement userEntitlement
   ) internal returns (uint256 roleId) {
     address[] memory users = new address[](1);
@@ -273,7 +274,7 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
 
   function _deploySpace(
     uint256 spaceTokenId,
-    Membership memory membership
+    Membership calldata membership
   ) internal returns (address space) {
     // get deployment info
     (bytes memory initCode, bytes32 salt) = _getSpaceDeploymentInfo(
@@ -299,14 +300,27 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
     return _deploy(initCode);
   }
 
+  function _verifyPricingModule(address pricingModule) internal view {
+    if (pricingModule == address(0) || !_isPricingModule(pricingModule)) {
+      revert Architect__InvalidPricingModule();
+    }
+  }
+
   function _getSpaceDeploymentInfo(
     uint256 spaceTokenId,
-    Membership memory membership
+    Membership calldata membership
   ) internal view returns (bytes memory initCode, bytes32 salt) {
-    ImplementationStorage.Layout storage ds = ImplementationStorage.layout();
+    _verifyPricingModule(membership.settings.pricingModule);
+
+    address spaceToken = address(ImplementationStorage.layout().spaceToken);
 
     // calculate salt
     salt = keccak256(abi.encode(msg.sender, spaceTokenId, block.timestamp));
+
+    IMembershipBase.Membership memory membershipSettings = membership.settings;
+    if (membershipSettings.feeRecipient == address(0)) {
+      membershipSettings.feeRecipient = msg.sender;
+    }
 
     // calculate init code
     initCode = abi.encodePacked(
@@ -318,22 +332,10 @@ abstract contract ArchitectBase is Factory, IArchitectBase {
           manager: address(this)
         }),
         ITokenOwnableBase.TokenOwnable({
-          collection: address(ds.spaceToken),
+          collection: spaceToken,
           tokenId: spaceTokenId
         }),
-        IMembershipBase.Membership({
-          name: membership.settings.name,
-          symbol: membership.settings.symbol,
-          price: membership.settings.price,
-          maxSupply: membership.settings.maxSupply,
-          duration: membership.settings.duration,
-          currency: membership.settings.currency,
-          feeRecipient: membership.settings.feeRecipient == address(0)
-            ? msg.sender
-            : membership.settings.feeRecipient,
-          freeAllocation: membership.settings.freeAllocation,
-          pricingModule: membership.settings.pricingModule
-        })
+        membershipSettings
       )
     );
   }

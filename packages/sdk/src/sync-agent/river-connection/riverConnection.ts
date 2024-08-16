@@ -1,5 +1,5 @@
 import { RiverRegistry, SpaceDapp } from '@river-build/web3'
-import { RetryParams, makeStreamRpcClient } from '../../makeStreamRpcClient'
+import { makeStreamRpcClient } from '../../makeStreamRpcClient'
 import { StreamNodeUrls, StreamNodeUrlsModel } from './models/streamNodeUrls'
 import { Identifiable, LoadPriority, Store } from '../../store/store'
 import { dlogger } from '@river-build/dlog'
@@ -16,6 +16,7 @@ import { userIdFromAddress } from '../../id'
 import { TransactionalClient } from './models/transactionalClient'
 import { Observable } from '../../observable/observable'
 import { AuthStatus } from './models/authStatus'
+import { RetryParams } from '../../rpcInterceptors'
 
 const logger = dlogger('csb:riverConnection')
 
@@ -115,7 +116,7 @@ export class RiverConnection extends PersistedObservable<RiverConnectionModel> {
         if (!urls) {
             return
         }
-        logger.log(`RiverConnection: setting rpcClient with urls: "${urls}"`)
+        logger.log(`setting rpcClient with urls: "${urls}"`)
         const rpcClient = makeStreamRpcClient(urls, this.clientParams.rpcRetryParams, () =>
             this.riverRegistryDapp.getOperationalNodeUrls(),
         )
@@ -130,6 +131,13 @@ export class RiverConnection extends PersistedObservable<RiverConnectionModel> {
             this.clientParams.highPriorityStreamIds,
         )
         this.client = client
+        // initialize views
+        this.store.withTransaction('RiverConnection::onNewClient', () => {
+            this.views.forEach((viewFn) => {
+                const onStopFn = viewFn(client)
+                this.onStoppedFns.push(onStopFn)
+            })
+        })
         // try to log in
         logger.log('attempting login after new client')
         this.login().catch((err) => {
@@ -171,16 +179,9 @@ export class RiverConnection extends PersistedObservable<RiverConnectionModel> {
                     logger.log('canInitialize', canInitialize)
                     if (canInitialize) {
                         this.authStatus.setValue(AuthStatus.ConnectingToRiver)
-                        await client.initializeUser(this.newUserMetadata)
+                        await client.initializeUser({ spaceId: this.newUserMetadata?.spaceId })
                         client.startSync()
                         this.setData({ userExists: true })
-                        // initialize views
-                        this.store.withTransaction('RiverConnection::login', () => {
-                            this.views.forEach((viewFn) => {
-                                const onStopFn = viewFn(client)
-                                this.onStoppedFns.push(onStopFn)
-                            })
-                        })
                         this.authStatus.setValue(AuthStatus.ConnectedToRiver)
                         // New rpcClient is available, resolve all queued requests
                         this.clientQueue.flush(client)

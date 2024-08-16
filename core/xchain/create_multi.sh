@@ -41,16 +41,9 @@ cd "$(dirname "$0")"
 
 : ${RUN_ENV:?}
 : ${RIVER_ENV:?} 
-
-: ${SPACE_FACTORY_ADDRESS:?}
 : ${BASE_REGISTRY_ADDRESS:?}
-: ${RIVER_REGISTRY_ADDRESS:?}
 
-export ENTITLEMENT_TEST_ADDRESS=$(jq -r '.address' ../../packages/generated/deployments/${RIVER_ENV}/base/addresses/entitlementGatedExample.json)
-export CUSTOM_ENTITLEMENT_TEST_ADDRESS=$(jq -r '.address' ../../packages/generated/deployments/${RIVER_ENV}/base/addresses/customEntitlementExample.json)
-export BASE_REGISTRY_ADDRESS=$(jq -r '.address' ../../packages/generated/deployments/${RIVER_ENV}/base/addresses/baseRegistry.json)
-
-make
+make build
 
 source ../../contracts/.env.localhost
 OPERATOR_ADDRESS=$(cast wallet addr $LOCAL_PRIVATE_KEY)
@@ -79,8 +72,7 @@ cast send \
 N=5
 
 # Base directory for the instances
-BASE_DIR="./run_files/${RUN_ENV}"
-
+BASE_DIR="../run_files/${RUN_ENV}/xchain"
 mkdir -p "${BASE_DIR}"
 
 
@@ -98,21 +90,11 @@ do
     mkdir -p "${INSTANCE_DIR}/bin" "${INSTANCE_DIR}/logs" "${INSTANCE_DIR}/config" "${INSTANCE_DIR}/wallet"
 
     # Copy node binary and config template
-    cp "./bin/river_node" "${INSTANCE_DIR}/bin"
-    # Using the same config as the node
-    cp ../node/run_files/${RUN_ENV}/00/config/config.yaml "${INSTANCE_DIR}/config/config.yaml"
-
-    # Substitute METRIC_PORT and create config.yaml
-    METRICS_PORT=$((9080 + i))
+    cp "../run_files/bin/river_node" "${INSTANCE_DIR}/bin"
+    touch "${INSTANCE_DIR}/config/config.yaml"
 
     echo "Creating instance_${i}"
     
-    yq eval ".metrics.port = \"$METRICS_PORT\"" -i "${INSTANCE_DIR}/config/config.yaml"
-    yq eval ".entitlement_contract.address = strenv(BASE_REGISTRY_ADDRESS)" -i "${INSTANCE_DIR}/config/config.yaml"
-    yq eval ".test_contract.address = strenv(ENTITLEMENT_TEST_ADDRESS)" -i "${INSTANCE_DIR}/config/config.yaml"
-    yq eval ".architectContract.address = strenv(SPACE_FACTORY_ADDRESS)" -i "${INSTANCE_DIR}/config/config.yaml"
-    yq eval ".registryContract.address = strenv(RIVER_REGISTRY_ADDRESS)" -i "${INSTANCE_DIR}/config/config.yaml"
-
     yq eval ".log.level = \"debug\"" -i "${INSTANCE_DIR}/config/config.yaml"
     
     pushd "${INSTANCE_DIR}"

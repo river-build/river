@@ -81,13 +81,16 @@ fi
 
 if prompt 'Stop XChain?:y/n '
 then
-    RUN_ENV=single ./core/xchain/stop_multi.sh
-    RUN_ENV=single_ne ./core/xchain/stop_multi.sh
     RUN_ENV=multi ./core/xchain/stop_multi.sh
     RUN_ENV=multi_ne ./core/xchain/stop_multi.sh
 
     # that script doesn't always work
     do_killl './bin/xchain_node run'
+fi
+
+if prompt 'Stop Stress?:y/n '
+then
+    ./packages/stress/scripts/stop_redis.sh
 fi
 
 do_killl yarn "$1"

@@ -3,7 +3,7 @@ import {
     ChannelDetails,
     ChannelMetadata,
     MembershipInfo,
-    MembershipStruct,
+    LegacyMembershipStruct,
     Permission,
     PricingModuleStruct,
     RoleDetails,
@@ -13,18 +13,18 @@ import {
 import { WalletLink as WalletLinkV3 } from './v3/WalletLink'
 import { BigNumber, BytesLike, ContractReceipt, ContractTransaction, ethers } from 'ethers'
 import { SpaceInfo } from './types'
-import { IRolesBase, Space, SpaceRegistrar, IRuleEntitlement } from './v3'
+import { IRolesBase, Space, SpaceRegistrar, IRuleEntitlementBase } from './v3'
 import { PricingModules } from './v3/PricingModules'
 import { BaseChainConfig } from './IStaticContractsInfo'
 import { PlatformRequirements } from './v3/PlatformRequirements'
 
 export type SignerType = ethers.Signer
 
-export interface CreateSpaceParams {
+export interface CreateLegacySpaceParams {
     spaceName: string
     uri: string
     channelName: string
-    membership: MembershipStruct
+    membership: LegacyMembershipStruct
     shortDescription?: string
     longDescription?: string
 }
@@ -44,7 +44,7 @@ export interface UpdateRoleParams {
     roleName: string
     permissions: Permission[]
     users: string[]
-    ruleData: IRuleEntitlement.RuleDataStruct
+    ruleData: IRuleEntitlementBase.RuleDataStruct
 }
 
 export interface TransactionOpts {
@@ -86,8 +86,8 @@ export interface ISpaceDapp {
     ) => Promise<TransactionType>
     walletAddressIsBanned: (spaceId: string, walletAddress: string) => Promise<boolean>
     bannedWalletAddresses: (spaceId: string) => Promise<string[]>
-    createSpace: (
-        params: CreateSpaceParams,
+    createLegacySpace: (
+        params: CreateLegacySpaceParams,
         signer: SignerType,
         txnOpts?: TransactionOpts,
     ) => Promise<TransactionType>
@@ -105,7 +105,7 @@ export interface ISpaceDapp {
         roleName: string,
         permissions: Permission[],
         users: string[],
-        ruleData: IRuleEntitlement.RuleDataStruct,
+        ruleData: IRuleEntitlementBase.RuleDataStruct,
         signer: SignerType,
         txnOpts?: TransactionOpts,
     ): Promise<TransactionType>

@@ -1,5 +1,5 @@
 # Start with an Alpine image that includes Go.
-FROM golang:1.22.2-alpine3.19 as builder
+FROM golang:1.22.6-alpine3.20 as builder
 
 # Install build-base for GCC (C compiler and related tools), git, and other dependencies.
 # Install libsecp256k1-dev if available or compile it from source.
@@ -41,14 +41,11 @@ COPY --from=builder /bin/river_node /usr/bin/river_node
 # Use setcap to allow the web server binary to bind to privileged ports
 RUN setcap 'cap_net_bind_service=+ep' /usr/bin/river_node
 
-COPY --from=builder /build/node/default_config.yaml /riveruser/stream_node/config/config.yaml
-COPY --from=builder /build/node/default_config.yaml /riveruser/xchain_node/config/config.yaml
+COPY --from=builder /build/node/default_config.yaml /riveruser/river_node/config/config.yaml
 
-RUN mkdir -p /riveruser/stream_node/logs
-RUN mkdir -p /riveruser/xchain_node/logs
+RUN mkdir -p /riveruser/river_node/logs
 RUN mkdir -p /riveruser/supervisord/logs
-RUN chown riveruser:riveruser /riveruser/stream_node/logs
-RUN chown riveruser:riveruser /riveruser/xchain_node/logs
+RUN chown riveruser:riveruser /riveruser/river_node/logs
 RUN chown riveruser:riveruser /riveruser/supervisord/logs
 
 # Set non-root user

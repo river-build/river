@@ -5,11 +5,15 @@ pragma solidity ^0.8.23;
 import {IEntitlementDataQueryable} from "contracts/src/spaces/facets/entitlements/extensions/IEntitlementDataQueryable.sol";
 import {IRolesBase} from "contracts/src/spaces/facets/roles/IRoles.sol";
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
-import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
-import {IUserEntitlement} from "contracts/src/spaces/entitlements/user/IUserEntitlement.sol";
+import {IEntitlementGatedBase} from "contracts/src/spaces/facets/gated/IEntitlementGated.sol";
 
 // libraries
+import {StringSet} from "contracts/src/utils/StringSet.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {ChannelService} from "contracts/src/spaces/facets/channels/ChannelService.sol";
+import {EntitlementGatedStorage} from "contracts/src/spaces/facets/gated/EntitlementGatedStorage.sol";
+import {RolesStorage} from "contracts/src/spaces/facets/roles/RolesStorage.sol";
+import {StringSet} from "contracts/src/utils/StringSet.sol";
 
 // contracts
 import {RolesBase} from "contracts/src/spaces/facets/roles/RolesBase.sol";
@@ -18,9 +22,13 @@ import {Facet} from "contracts/src/diamond/facets/Facet.sol";
 contract EntitlementDataQueryable is
   IRolesBase,
   IEntitlementDataQueryable,
+  IEntitlementGatedBase,
   RolesBase,
   Facet
 {
+  using StringSet for StringSet.Set;
+  using EnumerableSet for EnumerableSet.Bytes32Set;
+
   function getEntitlementDataByPermission(
     string calldata permission
   ) external view returns (EntitlementData[] memory) {
@@ -36,6 +44,25 @@ contract EntitlementDataQueryable is
     return _getEntitlements(roles);
   }
 
+  function getCrossChainEntitlementData(
+    bytes32 transactionId,
+    uint256 roleId
+  ) external view returns (EntitlementData memory) {
+    EntitlementGatedStorage.Layout storage ds = EntitlementGatedStorage
+      .layout();
+
+    Transaction storage transaction = ds.transactions[transactionId];
+
+    if (!transaction.hasBenSet) {
+      revert EntitlementGated_TransactionNotRegistered();
+    }
+
+    IEntitlement re = IEntitlement(transaction.entitlement);
+
+    return
+      EntitlementData(re.moduleType(), re.getEntitlementDataByRoleId(roleId));
+  }
+
   // =============================================================
   //                           Internal
   // =============================================================
@@ -43,77 +70,89 @@ contract EntitlementDataQueryable is
     bytes32 channelId,
     string calldata permission
   ) internal view returns (Role[] memory) {
+    // retrieve the roles associated with the channel
     uint256[] memory channelRoles = ChannelService.getRolesByChannel(channelId);
+    uint256 channelRolesLength = channelRoles.length;
 
-    uint256 roleCount = 0;
-    uint256[] memory matchedRoleIds = new uint256[](channelRoles.length);
+    // initialize arrays to store the matching role IDs
+    uint256[] memory matchedRoleIds = new uint256[](channelRolesLength);
+    uint256 matchedRoleCount = 0;
 
-    bytes32 requestedPermission = keccak256(abi.encodePacked(permission));
+    // access roles storage layout
+    RolesStorage.Layout storage rs = RolesStorage.layout();
 
-    // Count the number of roles that have the requested permission and record their ids.
-    for (uint256 i = 0; i < channelRoles.length; i++) {
-      Role memory role = _getRoleById(channelRoles[i]);
-      if (role.disabled) {
-        continue;
+    // iterate through channel roles and check for the requested permission
+    for (uint256 i; i < channelRolesLength; ++i) {
+      uint256 roleId = channelRoles[i];
+
+      RolesStorage.Role storage role = rs.roleById[channelRoles[i]];
+
+      bool hasPermission = false;
+
+      // check if role is associated with the channel and has the requested permission
+      if (rs.channelOverridesByRole[roleId].contains(channelId)) {
+        StringSet.Set storage permissions = rs.permissionOverridesByRole[
+          roleId
+        ][channelId];
+        hasPermission = permissions.contains(permission);
       }
-      // Check if the role has the requested permission.
-      for (uint256 j = 0; j < role.permissions.length; j++) {
-        if (keccak256(bytes(role.permissions[j])) == requestedPermission) {
-          matchedRoleIds[roleCount] = role.id;
-          roleCount++;
-          break;
+      // check the default permissions if this role didn't have a channel override.
+      else if (role.permissions.contains(permission)) {
+        hasPermission = true;
+      }
+
+      // store the role ID if it has the requested permission
+      if (hasPermission) {
+        matchedRoleIds[matchedRoleCount] = roleId;
+        unchecked {
+          ++matchedRoleCount;
         }
       }
     }
 
-    // Assemble the roles that have the requested permission for the specified channel.
-    Role[] memory roles = new Role[](roleCount);
-    for (uint256 i = 0; i < roleCount; i++) {
-      roles[i] = _getRoleById(matchedRoleIds[i]);
+    // create an array of roles with the matching IDs
+    Role[] memory rolesWithPermission = new Role[](matchedRoleCount);
+    for (uint256 i; i < matchedRoleCount; ++i) {
+      rolesWithPermission[i] = _getRoleById(matchedRoleIds[i]);
     }
 
-    return roles;
+    return rolesWithPermission;
   }
 
   function _getEntitlements(
     Role[] memory roles
-  ) internal view returns (EntitlementData[] memory) {
-    uint256 entitlementCount = 0;
-    for (uint256 i = 0; i < roles.length; i++) {
-      Role memory role = roles[i];
-      if (!role.disabled) {
-        entitlementCount += role.entitlements.length;
-      }
-    }
+  ) internal view returns (EntitlementData[] memory entitlementData) {
+    uint256 entitlementCount;
+    uint256 rolesLength = roles.length;
 
-    EntitlementData[] memory entitlementData = new EntitlementData[](
-      entitlementCount
-    );
-
-    entitlementCount = 0;
-
-    for (uint256 i = 0; i < roles.length; i++) {
-      Role memory role = roles[i];
-      if (!role.disabled) {
-        for (uint256 j = 0; j < role.entitlements.length; j++) {
-          IEntitlement entitlement = IEntitlement(role.entitlements[j]);
-          if (!entitlement.isCrosschain()) {
-            IUserEntitlement ue = IUserEntitlement(address(entitlement));
-            entitlementData[entitlementCount] = EntitlementData(
-              ue.moduleType(),
-              ue.getEntitlementDataByRoleId(role.id)
-            );
-          } else {
-            IRuleEntitlement re = IRuleEntitlement(address(entitlement));
-            entitlementData[entitlementCount] = EntitlementData(
-              re.moduleType(),
-              re.getEntitlementDataByRoleId(role.id)
-            );
-          }
-          entitlementCount++;
+    for (uint256 i; i < rolesLength; ++i) {
+      if (!roles[i].disabled) {
+        unchecked {
+          entitlementCount += roles[i].entitlements.length;
         }
       }
     }
-    return entitlementData;
+
+    entitlementData = new EntitlementData[](entitlementCount);
+
+    uint256 currentIndex = 0;
+
+    for (uint256 i; i < rolesLength; ++i) {
+      if (!roles[i].disabled) {
+        IEntitlement[] memory entitlements = roles[i].entitlements;
+        uint256 length = entitlements.length;
+        for (uint256 j; j < length; ++j) {
+          IEntitlement entitlement = IEntitlement(entitlements[j]);
+
+          entitlementData[currentIndex] = EntitlementData(
+            entitlement.moduleType(),
+            entitlement.getEntitlementDataByRoleId(roles[i].id)
+          );
+          unchecked {
+            ++currentIndex;
+          }
+        }
+      }
+    }
   }
 }

@@ -87,7 +87,7 @@
       {
         "inputs": [
           {
-            "internalType": "enum IRuleEntitlement.CombinedOperationType",
+            "internalType": "enum IRuleEntitlementBase.CombinedOperationType",
             "name": "opType",
             "type": "uint8"
           }
@@ -149,17 +149,17 @@
       {
         "inputs": [
           {
-            "internalType": "struct IRuleEntitlement.RuleData",
+            "internalType": "struct IRuleEntitlementBase.RuleData",
             "name": "data",
             "type": "tuple",
             "components": [
               {
-                "internalType": "struct IRuleEntitlement.Operation[]",
+                "internalType": "struct IRuleEntitlementBase.Operation[]",
                 "name": "operations",
                 "type": "tuple[]",
                 "components": [
                   {
-                    "internalType": "enum IRuleEntitlement.CombinedOperationType",
+                    "internalType": "enum IRuleEntitlementBase.CombinedOperationType",
                     "name": "opType",
                     "type": "uint8"
                   },
@@ -171,12 +171,12 @@
                 ]
               },
               {
-                "internalType": "struct IRuleEntitlement.CheckOperation[]",
+                "internalType": "struct IRuleEntitlementBase.CheckOperation[]",
                 "name": "checkOperations",
                 "type": "tuple[]",
                 "components": [
                   {
-                    "internalType": "enum IRuleEntitlement.CheckOperationType",
+                    "internalType": "enum IRuleEntitlementBase.CheckOperationType",
                     "name": "opType",
                     "type": "uint8"
                   },
@@ -198,12 +198,12 @@
                 ]
               },
               {
-                "internalType": "struct IRuleEntitlement.LogicalOperation[]",
+                "internalType": "struct IRuleEntitlementBase.LogicalOperation[]",
                 "name": "logicalOperations",
                 "type": "tuple[]",
                 "components": [
                   {
-                    "internalType": "enum IRuleEntitlement.LogicalOperationType",
+                    "internalType": "enum IRuleEntitlementBase.LogicalOperationType",
                     "name": "logOpType",
                     "type": "uint8"
                   },
@@ -265,17 +265,17 @@
         "name": "getRuleData",
         "outputs": [
           {
-            "internalType": "struct IRuleEntitlement.RuleData",
+            "internalType": "struct IRuleEntitlementBase.RuleData",
             "name": "data",
             "type": "tuple",
             "components": [
               {
-                "internalType": "struct IRuleEntitlement.Operation[]",
+                "internalType": "struct IRuleEntitlementBase.Operation[]",
                 "name": "operations",
                 "type": "tuple[]",
                 "components": [
                   {
-                    "internalType": "enum IRuleEntitlement.CombinedOperationType",
+                    "internalType": "enum IRuleEntitlementBase.CombinedOperationType",
                     "name": "opType",
                     "type": "uint8"
                   },
@@ -287,12 +287,12 @@
                 ]
               },
               {
-                "internalType": "struct IRuleEntitlement.CheckOperation[]",
+                "internalType": "struct IRuleEntitlementBase.CheckOperation[]",
                 "name": "checkOperations",
                 "type": "tuple[]",
                 "components": [
                   {
-                    "internalType": "enum IRuleEntitlement.CheckOperationType",
+                    "internalType": "enum IRuleEntitlementBase.CheckOperationType",
                     "name": "opType",
                     "type": "uint8"
                   },
@@ -314,12 +314,12 @@
                 ]
               },
               {
-                "internalType": "struct IRuleEntitlement.LogicalOperation[]",
+                "internalType": "struct IRuleEntitlementBase.LogicalOperation[]",
                 "name": "logicalOperations",
                 "type": "tuple[]",
                 "components": [
                   {
-                    "internalType": "enum IRuleEntitlement.LogicalOperationType",
+                    "internalType": "enum IRuleEntitlementBase.LogicalOperationType",
                     "name": "logOpType",
                     "type": "uint8"
                   },
@@ -551,10 +551,10 @@
       "@prb/math/=lib/@prb/math/src/",
       "@prb/test/=lib/@prb/test/src/",
       "account-abstraction/=lib/account-abstraction/contracts/",
-      "base64/=lib/base64/",
       "ds-test/=lib/ds-test/src/",
       "forge-std/=lib/forge-std/src/",
-      "hardhat-deploy/=lib/hardhat-deploy/"
+      "hardhat-deploy/=lib/hardhat-deploy/",
+      "solady/=lib/solady/src/"
     ],
     "optimizer": {
       "enabled": true,
@@ -580,10 +580,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol": {
-      "keccak256": "0x28650d058077713dfc28d5c613998d9f1e895a6f5f6b0d93467d25455fc3ea1d",
+      "keccak256": "0x53121c9c2db2eeaa44090110909be15a494f343daa98fb41c0136497c8b2d99a",
       "urls": [
-        "bzz-raw://e2446b7958f8b5f2713860e2826acf1b123c6b24719f844c7811d1e3f5a87c86",
-        "dweb:/ipfs/Qmesso9ftmVUCHi6w2gkJs9tEjGG5ZZgqhAenkyTDgFPC2"
+        "bzz-raw://c1c6a4bc911f33568d25669f96996377efbf4e2b28dd54f9bf7c3795dae49f90",
+        "dweb:/ipfs/QmXPaHFcWoPvRvqgMwgFWS91tmgMyNUn93bCzGGFRujtLw"
       ],
       "license": "MIT"
     }

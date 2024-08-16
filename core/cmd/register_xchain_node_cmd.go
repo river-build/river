@@ -79,8 +79,8 @@ func registerImpl(operatorKeyfile string, userConfirmationMessage string, regist
 		return nil
 	}
 
-	metrics := infra.NewMetrics("xchain", "cmdline")
-	baseChain, err := crypto.NewBlockchain(ctx, &cmdConfig.BaseChain, operatorWallet, metrics)
+	metrics := infra.NewMetricsFactory(nil, "xchain", "cmdline")
+	baseChain, err := crypto.NewBlockchain(ctx, &cmdConfig.BaseChain, operatorWallet, metrics, nil)
 	if err != nil {
 		return fmt.Errorf("unable to instantiate base chain client: %s", err)
 	}
@@ -128,7 +128,11 @@ func registerImpl(operatorKeyfile string, userConfirmationMessage string, regist
 		return err
 	}
 
-	receipt := <-pendingTx.Wait()
+	receipt, err := pendingTx.Wait(ctx)
+	if err != nil {
+		return err
+	}
+
 	if receipt == nil || receipt.Status != crypto.TransactionResultSuccess {
 		return fmt.Errorf("transaction failed")
 	}

@@ -35,17 +35,17 @@ import _ from 'lodash'
 import { MockEntitlementsDelegate } from './utils'
 import { SignerContext, makeSignerContext } from './signerContext'
 import {
+    Address,
     LocalhostWeb3Provider,
     PricingModuleStruct,
     createExternalNFTStruct,
     createRiverRegistry,
     createSpaceDapp,
-    IRuleEntitlement,
+    IRuleEntitlementBase,
     Permission,
     ISpaceDapp,
-    IArchitectBase,
+    LegacyMembershipStruct,
     ETH_ADDRESS,
-    MembershipStruct,
     NoopRuleData,
     CheckOperationType,
     LogicalOperationType,
@@ -53,6 +53,8 @@ import {
     OperationType,
     treeToRuleData,
     SpaceDapp,
+    TestERC20,
+    TestCustomEntitlement,
 } from '@river-build/web3'
 
 const log = dlog('csb:test:util')
@@ -126,6 +128,43 @@ export const TEST_ENCRYPTED_MESSAGE_PROPS: PlainMessage<EncryptedData> = {
 export const getXchainSupportedRpcUrlsForTesting = (): string[] => {
     // TODO: generate this for test environment and read from it
     return ['http://127.0.0.1:8545', 'http://127.0.0.1:8546']
+}
+
+export async function erc20CheckOp(contractName: string, threshold: bigint): Promise<Operation> {
+    const contractAddress = await TestERC20.getContractAddress(contractName)
+    return {
+        opType: OperationType.CHECK,
+        checkType: CheckOperationType.ERC20,
+        chainId: 31337n,
+        contractAddress,
+        threshold,
+    }
+}
+
+export async function customCheckOp(contractName: string): Promise<Operation> {
+    const contractAddress = await TestCustomEntitlement.getContractAddress(contractName)
+    return {
+        opType: OperationType.CHECK,
+        checkType: CheckOperationType.ISENTITLED,
+        chainId: 31337n,
+        contractAddress,
+        threshold: 0n,
+    }
+}
+
+export const twoEth = BigInt(2e18)
+export const oneEth = BigInt(1e18)
+export const threeEth = BigInt(3e18)
+export const oneHalfEth = BigInt(5e17)
+
+export function nativeCoinBalanceCheckOp(threshold: bigint): Operation {
+    return {
+        opType: OperationType.CHECK,
+        checkType: CheckOperationType.NATIVE_COIN_BALANCE,
+        chainId: 31337n,
+        contractAddress: ethers.constants.AddressZero,
+        threshold,
+    }
 }
 
 /**
@@ -350,13 +389,13 @@ export async function createSpaceAndDefaultChannel(
     spaceDapp: ISpaceDapp,
     wallet: ethers.Wallet,
     name: string,
-    membership: IArchitectBase.MembershipStruct,
+    membership: LegacyMembershipStruct,
 ): Promise<{
     spaceId: string
     defaultChannelId: string
     userStreamView: IStreamStateView
 }> {
-    const transaction = await spaceDapp.createSpace(
+    const transaction = await spaceDapp.createLegacySpace(
         {
             spaceName: `${name}-space`,
             uri: `http://${name}-space-metadata.com`,
@@ -407,10 +446,10 @@ export async function createUserStreamAndSyncClient(
     client: Client,
     spaceDapp: ISpaceDapp,
     name: string,
-    membershipInfo: IArchitectBase.MembershipStruct,
+    membershipInfo: LegacyMembershipStruct,
     wallet: ethers.Wallet,
 ) {
-    const transaction = await spaceDapp.createSpace(
+    const transaction = await spaceDapp.createLegacySpace(
         {
             spaceName: `${name}-space`,
             uri: `${name}-space-metadata`,
@@ -468,7 +507,7 @@ export async function expectUserCanJoin(
 export async function everyoneMembershipStruct(
     spaceDapp: ISpaceDapp,
     client: Client,
-): Promise<MembershipStruct> {
+): Promise<LegacyMembershipStruct> {
     const pricingModules = await spaceDapp.listPricingModules()
     const dynamicPricingModule = getDynamicPricingModule(pricingModules)
     expect(dynamicPricingModule).toBeDefined()
@@ -498,12 +537,12 @@ export function twoNftRuleData(
     nft1Address: string,
     nft2Address: string,
     logOpType: LogicalOperationType.AND | LogicalOperationType.OR = LogicalOperationType.AND,
-): IRuleEntitlement.RuleDataStruct {
+): IRuleEntitlementBase.RuleDataStruct {
     const leftOperation: Operation = {
         opType: OperationType.CHECK,
         checkType: CheckOperationType.ERC721,
         chainId: 31337n,
-        contractAddress: nft1Address as `0x${string}`,
+        contractAddress: nft1Address as Address,
         threshold: 1n,
     }
 
@@ -511,7 +550,7 @@ export function twoNftRuleData(
         opType: OperationType.CHECK,
         checkType: CheckOperationType.ERC721,
         chainId: 31337n,
-        contractAddress: nft2Address as `0x${string}`,
+        contractAddress: nft2Address as Address,
         threshold: 1n,
     }
     const root: Operation = {
@@ -680,7 +719,7 @@ export const getFixedPricingModule = (pricingModules: PricingModuleStruct[]) => 
     return pricingModules.find((module) => module.name === FIXED_PRICING)
 }
 
-export function getNftRuleData(testNftAddress: `0x${string}`): IRuleEntitlement.RuleDataStruct {
+export function getNftRuleData(testNftAddress: Address): IRuleEntitlementBase.RuleDataStruct {
     return createExternalNFTStruct([testNftAddress])
 }
 
@@ -696,7 +735,7 @@ export async function createRole(
     roleName: string,
     permissions: Permission[],
     users: string[],
-    ruleData: IRuleEntitlement.RuleDataStruct,
+    ruleData: IRuleEntitlementBase.RuleDataStruct,
     signer: ethers.Signer,
 ): Promise<CreateRoleContext> {
     let txn: ethers.ContractTransaction | undefined = undefined
@@ -752,4 +791,21 @@ export async function createChannel(
         return { channelId: undefined, error: new Error('Transaction failed') }
     }
     return { channelId, error: undefined }
+}
+
+// Type guard function based on field checks
+export function isEncryptedData(obj: unknown): obj is EncryptedData {
+    if (typeof obj !== 'object' || obj === null) {
+        return false
+    }
+
+    const data = obj as EncryptedData
+    return (
+        typeof data.ciphertext === 'string' &&
+        typeof data.algorithm === 'string' &&
+        typeof data.senderKey === 'string' &&
+        typeof data.sessionId === 'string' &&
+        (typeof data.checksum === 'string' || data.checksum === undefined) &&
+        (typeof data.refEventId === 'string' || data.refEventId === undefined)
+    )
 }

@@ -9,7 +9,7 @@
         "build:react": "turbo build --filter @river-build/react-sdk",
         "build:metrics-discovery": "turbo build --filter @river-build/metrics-discovery",
         "cast": "yarn workspace @river-build/contracts exec cast",
-        "csb:build": "yarn workspace @river-build/proto run build && yarn workspace @river-build/dlog run build && yarn workspace @river-build/web3 run build && yarn workspace @river-build/encryption run build && yarn workspace @river-build/sdk run build && echo BUILD DONE || (echo BUILD ERROR; exit 1)",
+        "csb:build": "yarn workspace @river-build/proto run build && yarn workspace @river-build/dlog run build && yarn workspace @river-build/web3 run build && yarn workspace @river-build/encryption run build && yarn workspace @river-build/sdk run build && yarn workspace @river-build/react-sdk run build && yarn workspace stream-metadata run build && echo BUILD DONE || (echo BUILD ERROR; exit 1)",
         "clean": "./scripts/yarn-clean.sh",
         "csb:cb": "yarn csb:clean && yarn csb:build",
         "csb:clean": "yarn csb:command run clean",
@@ -24,7 +24,6 @@
         "csb:list:include": "yarn csb:list | xargs -I arg echo -n \"--include arg \"",
         "csb:multi": "./core/scripts/launch_multi.sh",
         "csb:multi:no-entitlements": "./core/scripts/launch_multi.sh --disable_entitlements",
-        "csb:node": "./core/scripts/start_node.sh",
         "csb:prettier:check": "prettier --check ./packages",
         "csb:prettier:fix": "prettier --write ./packages",
         "csb:start": "yarn csb:start:entitlements",
@@ -62,7 +61,7 @@
         "eslint-plugin-mocha": "^10.1.0",
         "eslint-plugin-n": "^16.0.0",
         "eslint-plugin-prettier": "^4.2.1",
-        "husky": "^8.0.1",
+        "husky": "^9.1.4",
         "lerna": "^8.1.3",
         "lint-staged": "^13.1.2",
         "prettier": "^2.8.8",
@@ -133,6 +132,7 @@
     "workspaces": [
         "protocol",
         "packages/*",
-        "contracts"
+        "contracts",
+        "services/*"
     ]
 }

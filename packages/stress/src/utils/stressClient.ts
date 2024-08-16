@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
     Client as StreamsClient,
     RiverConfig,
@@ -11,11 +14,11 @@ import {
     StreamRpcClient,
 } from '@river-build/sdk'
 import { makeConnection } from './connection'
-import { CryptoStore, EntitlementsDelegate } from '@river-build/encryption'
+import { CryptoStore, EntitlementsDelegate, type ExportedDevice } from '@river-build/encryption'
 import {
     ETH_ADDRESS,
     LocalhostWeb3Provider,
-    MembershipStruct,
+    LegacyMembershipStruct,
     NoopRuleData,
     Permission,
     SpaceDapp,
@@ -26,13 +29,15 @@ import { Wallet } from 'ethers'
 import { PlainMessage } from '@bufbuild/protobuf'
 import { ChannelMessage_Post_Attachment, ChannelMessage_Post_Mention } from '@river-build/proto'
 import { waitFor } from './waitFor'
-
+import { sha256 } from 'ethers/lib/utils'
+import { IStorage } from './storage'
 const logger = dlogger('stress:stressClient')
 
 export async function makeStressClient(
     config: RiverConfig,
     clientIndex: number,
-    inWallet?: Wallet,
+    inWallet: Wallet | undefined,
+    globalPersistedStore: IStorage | undefined,
 ) {
     const { userId, signerContext, baseProvider, riverProvider, rpcClient } = await makeConnection(
         config,
@@ -47,7 +52,7 @@ export async function makeStressClient(
             user: string,
             permission: Permission,
         ) => {
-            if (config.environmentId === 'local_single_ne') {
+            if (config.environmentId === 'local_multi_ne') {
                 return true
             } else if (channelId && spaceId) {
                 return spaceDapp.isEntitledToChannel(spaceId, channelId, user, permission)
@@ -69,6 +74,7 @@ export async function makeStressClient(
         rpcClient,
         spaceDapp,
         streamsClient,
+        globalPersistedStore,
     )
 }
 
@@ -83,10 +89,17 @@ export class StressClient {
         public rpcClient: StreamRpcClient,
         public spaceDapp: SpaceDapp,
         public streamsClient: StreamsClient,
-    ) {}
+        public globalPersistedStore: IStorage | undefined,
+    ) {
+        logger.log('StressClient', { clientIndex, userId, logId: this.logId })
+    }
 
     get logId(): string {
         return `client${this.clientIndex}:${shortenHexString(this.userId)}`
+    }
+
+    get storageKey(): string {
+        return `stressclient_${this.userId}_${this.config.environmentId}`
     }
 
     async fundWallet() {
@@ -143,8 +156,8 @@ export class StressClient {
                 users: [],
                 ruleData: NoopRuleData,
             },
-        } satisfies MembershipStruct
-        const transaction = await this.spaceDapp.createSpace(
+        } satisfies LegacyMembershipStruct
+        const transaction = await this.spaceDapp.createLegacySpace(
             {
                 spaceName,
                 uri: '',
@@ -186,12 +199,33 @@ export class StressClient {
         return channelId
     }
 
-    async startStreamsClient(metadata: { spaceId: string }) {
+    async startStreamsClient(config: { spaceId?: string }) {
         if (isDefined(this.streamsClient.userStreamId)) {
             return
         }
-        await this.streamsClient.initializeUser(metadata)
+        let device: ExportedDevice | undefined
+        const rawDevice = await this.globalPersistedStore
+            ?.get(this.storageKey)
+            .catch(() => undefined)
+        if (rawDevice) {
+            device = JSON.parse(rawDevice) as ExportedDevice
+            logger.info(
+                `Device imported from ${this.storageKey}, outboundSessions: ${device.outboundSessions.length} inboundSessions: ${device.inboundSessions.length}`,
+            )
+        }
+        const botPrivateKey = this.baseProvider.wallet.privateKey
+        await this.streamsClient.initializeUser({
+            spaceId: config.spaceId,
+            encryptionDeviceInit: {
+                fromExportedDevice: device,
+                pickleKey: sha256(botPrivateKey),
+            },
+        })
         this.streamsClient.startSync()
+        logger.log(
+            'streamsClient key',
+            this.streamsClient.cryptoBackend?.encryptionDevice.deviceCurve25519Key,
+        )
     }
 
     async sendMessage(
@@ -241,6 +275,23 @@ export class StressClient {
     }
 
     async stop() {
+        await this.exportDevice()
         await this.streamsClient.stop()
+    }
+
+    async exportDevice(): Promise<ExportedDevice | undefined> {
+        const device = await this.streamsClient.cryptoBackend?.encryptionDevice.exportDevice()
+        if (device) {
+            try {
+                await this.globalPersistedStore?.set(
+                    this.storageKey,
+                    JSON.stringify(device, null, 2),
+                )
+                logger.log(`Device exported to ${this.storageKey}`)
+            } catch (e) {
+                logger.error('Failed to export device', e)
+            }
+        }
+        return device
     }
 }

@@ -53,7 +53,7 @@ func (s *Service) startArchiveMode(once bool) error {
 
 	s.riverChain.StartChainMonitor(s.serverCtx)
 
-	s.registerDebugHandlers(s.config.EnableDebugEndpoints)
+	s.registerDebugHandlers(s.config.EnableDebugEndpoints, s.config.DebugEndpoints)
 
 	s.SetStatus("OK")
 
@@ -62,14 +62,9 @@ func (s *Service) startArchiveMode(once bool) error {
 
 	// Get the port as an integer
 	port := tcpAddr.Port
-	// convert the integer to a string
-	url := "localhost:" + strconv.Itoa(port) + "/debug/multi"
-	if s.config.UseHttps {
-		url = "https://" + url
-	} else {
-		url = "http://" + url
-	}
-	s.defaultLogger.Info("Server started", "port", port, "https", s.config.UseHttps, "url", url)
+	// construct the URL by converting the integer to a string
+	url := s.config.UrlSchema() + "://localhost:" + strconv.Itoa(port) + "/debug/multi"
+	s.defaultLogger.Info("Server started", "port", port, "https", !s.config.DisableHttps, "url", url)
 	return nil
 }
 

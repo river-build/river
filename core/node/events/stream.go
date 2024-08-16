@@ -33,8 +33,12 @@ type Stream interface {
 }
 
 type SyncResultReceiver interface {
+	// OnUpdate is called each time a new cookie is available for a stream
 	OnUpdate(r *StreamAndCookie)
+	// OnSyncError is called when a sync subscription failed unrecoverable
 	OnSyncError(err error)
+	// OnStreamSyncDown is called when updates for a stream could not be given.
+	OnStreamSyncDown(StreamId)
 }
 
 // TODO: refactor interfaces.
@@ -96,7 +100,7 @@ func (s *streamImpl) loadInternal(ctx context.Context) error {
 	streamData, err := s.params.Storage.ReadStreamFromLastSnapshot(
 		ctx,
 		s.streamId,
-		max(0, streamRecencyConstraintsGenerations-1),
+		streamRecencyConstraintsGenerations,
 	)
 	if err != nil {
 		if AsRiverError(err).Code == Err_NOT_FOUND {
@@ -105,8 +109,10 @@ func (s *streamImpl) loadInternal(ctx context.Context) error {
 		return err
 	}
 
-	view, err := MakeStreamView(streamData)
+	view, err := MakeStreamView(ctx, streamData)
 	if err != nil {
+		dlog.FromCtx(ctx).
+			Error("Stream.loadInternal: Failed to parse stream data loaded from storage", "error", err, "streamId", s.streamId)
 		return err
 	}
 
@@ -152,7 +158,7 @@ func (s *streamImpl) applyMiniblockImplNoLock(ctx context.Context, miniblock *Mi
 		newMinipool = append(newMinipool, b)
 	}
 
-	err = s.params.Storage.PromoteBlock(
+	err = s.params.Storage.PromoteMiniblockCandidate(
 		ctx,
 		s.streamId,
 		s.view.minipool.generation,
@@ -230,10 +236,13 @@ func (s *streamImpl) initFromBlockchain(ctx context.Context) error {
 	}
 
 	// Successfully put data into storage, init stream view.
-	view, err := MakeStreamView(&storage.ReadStreamFromLastSnapshotResult{
-		StartMiniblockNumber: 0,
-		Miniblocks:           [][]byte{mb},
-	})
+	view, err := MakeStreamView(
+		ctx,
+		&storage.ReadStreamFromLastSnapshotResult{
+			StartMiniblockNumber: 0,
+			Miniblocks:           [][]byte{mb},
+		},
+	)
 	if err != nil {
 		return err
 	}
@@ -364,6 +373,12 @@ func (s *streamImpl) addEventImpl(ctx context.Context, event *ParsedEvent) error
 		return err
 	}
 
+	// Check if event can be added before writing to storage.
+	newSV, err := s.view.copyAndAddEvent(event)
+	if err != nil {
+		return err
+	}
+
 	err = s.params.Storage.WriteEvent(
 		ctx,
 		s.streamId,
@@ -377,10 +392,6 @@ func (s *streamImpl) addEventImpl(ctx context.Context, event *ParsedEvent) error
 		return err
 	}
 
-	newSV, err := s.view.copyAndAddEvent(event)
-	if err != nil {
-		return err
-	}
 	prevSyncCookie := s.view.SyncCookie(s.params.Wallet.Address)
 	s.view = newSV
 	newSyncCookie := s.view.SyncCookie(s.params.Wallet.Address)
@@ -585,7 +596,7 @@ func (s *streamImpl) SaveMiniblockCandidate(ctx context.Context, mb *Miniblock) 
 		)
 	}
 
-	return s.params.Storage.WriteBlockProposal(
+	return s.params.Storage.WriteMiniblockCandidate(
 		ctx,
 		s.streamId,
 		mbInfo.Hash,

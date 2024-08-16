@@ -10,20 +10,27 @@ import {IChannel} from "contracts/src/spaces/facets/channels/IChannel.sol";
 
 // libraries
 import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
+import {Vm} from "forge-std/Test.sol";
 
 // contracts
-import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
+
+import {MembershipBaseSetup} from "contracts/test/spaces/membership/MembershipBaseSetup.sol";
 
 // mocks
 import {MockUserEntitlement} from "contracts/test/mocks/MockUserEntitlement.sol";
 
 contract EntitlementDataQueryableTest is
-  BaseSetup,
+  MembershipBaseSetup,
   IEntitlementDataQueryableBase,
   IRolesBase
 {
   IEntitlementDataQueryable internal entitlements;
   MockUserEntitlement internal mockEntitlement;
+
+  bytes32 internal constant CHECK_REQUESTED =
+    keccak256(
+      "EntitlementCheckRequested(address,address,bytes32,uint256,address[])"
+    );
 
   function setUp() public override {
     super.setUp();
@@ -38,23 +45,24 @@ contract EntitlementDataQueryableTest is
     );
   }
 
-  function test_getEntitlementDataByRole() external {
+  function test_getEntitlementDataByPermission() external view {
     EntitlementData[] memory entitlement = entitlements
       .getEntitlementDataByPermission(Permissions.JoinSpace);
 
-    assertEq(entitlement.length == 1, true);
-    assertEq(
-      keccak256(abi.encodePacked(entitlement[0].entitlementType)),
-      keccak256(abi.encodePacked("UserEntitlement"))
-    );
+    assertEq(entitlement.length, 1);
+    assertEq(entitlement[0].entitlementType, "UserEntitlement");
   }
 
-  function test_GetChannelEntitlementDataByPermission() external {
+  function test_fuzz_getChannelEntitlementDataByPermission(
+    address[] memory users
+  ) external {
+    vm.assume(users.length > 0);
+    for (uint256 i; i < users.length; ++i) {
+      if (users[i] == address(0)) users[i] = vm.randomAddress();
+    }
+
     string[] memory permissions = new string[](1);
     permissions[0] = Permissions.Read;
-
-    address[] memory users = new address[](1);
-    users[0] = _randomAddress();
 
     CreateEntitlement[] memory createEntitlements = new CreateEntitlement[](1);
     createEntitlements[0] = CreateEntitlement({
@@ -79,14 +87,59 @@ contract EntitlementDataQueryableTest is
     EntitlementData[] memory channelEntitlements = entitlements
       .getChannelEntitlementDataByPermission(channelId, Permissions.Read);
 
-    assertEq(channelEntitlements.length == 1, true);
-    assertEq(
-      keccak256(abi.encodePacked(channelEntitlements[0].entitlementType)),
-      keccak256(abi.encodePacked("MockUserEntitlement"))
+    assertEq(channelEntitlements.length, 1);
+    assertEq(channelEntitlements[0].entitlementType, "MockUserEntitlement");
+    assertEq(channelEntitlements[0].entitlementData, abi.encode(users));
+  }
+
+  function test_fuzz_getCrossChainEntitlementData(
+    address user
+  ) external assumeEOA(user) {
+    // TODO: find a better way to exclude user from being a minter
+    vm.assume(user != alice && user != charlie);
+
+    vm.recordLogs();
+
+    vm.prank(user);
+    membership.joinSpace(user);
+
+    Vm.Log[] memory requestLogs = vm.getRecordedLogs(); // Retrieve the recorded logs
+
+    (, bytes32 transactionId, uint256 roleId, ) = _getRequestedEntitlementData(
+      requestLogs
     );
-    assertEq(
-      keccak256(abi.encodePacked(channelEntitlements[0].entitlementData)),
-      keccak256(abi.encode(users))
-    );
+
+    EntitlementData memory data = IEntitlementDataQueryable(userSpace)
+      .getCrossChainEntitlementData(transactionId, roleId);
+
+    assertTrue(data.entitlementData.length > 0);
+    assertEq(data.entitlementType, "RuleEntitlementV2");
+  }
+
+  function _getRequestedEntitlementData(
+    Vm.Log[] memory requestLogs
+  )
+    internal
+    pure
+    returns (
+      address contractAddress,
+      bytes32 transactionId,
+      uint256 roleId,
+      address[] memory selectedNodes
+    )
+  {
+    for (uint256 i; i < requestLogs.length; ++i) {
+      if (
+        requestLogs[i].topics.length > 0 &&
+        requestLogs[i].topics[0] == CHECK_REQUESTED
+      ) {
+        (, contractAddress, transactionId, roleId, selectedNodes) = abi.decode(
+          requestLogs[i].data,
+          (address, address, bytes32, uint256, address[])
+        );
+        return (contractAddress, transactionId, roleId, selectedNodes);
+      }
+    }
+    revert("Entitlement check request not found");
   }
 }

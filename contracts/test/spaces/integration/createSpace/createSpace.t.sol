@@ -10,9 +10,9 @@ import {IRolesBase} from "contracts/src/spaces/facets/roles/IRoles.sol";
 import {IArchitect} from "contracts/src/factory/facets/architect/IArchitect.sol";
 import {IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.sol";
 import {IMembership} from "contracts/src/spaces/facets/membership/IMembership.sol";
-import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
+import {IRuleEntitlementBase} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
-import {IEntitlementChecker} from "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol";
+
 // libraries
 import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
 
@@ -23,7 +23,12 @@ import {Architect} from "contracts/src/factory/facets/architect/Architect.sol";
 // mocks
 import {MockERC721} from "contracts/test/mocks/MockERC721.sol";
 
-contract Integration_CreateSpace is BaseSetup, IRolesBase, IArchitectBase {
+contract IntegrationCreateSpace is
+  BaseSetup,
+  IRolesBase,
+  IArchitectBase,
+  IRuleEntitlementBase
+{
   Architect public spaceArchitect;
 
   function setUp() public override {
@@ -31,11 +36,12 @@ contract Integration_CreateSpace is BaseSetup, IRolesBase, IArchitectBase {
     spaceArchitect = Architect(spaceFactory);
   }
 
-  function test_createEveryoneSpace(string memory spaceId) external {
+  function test_fuzz_createEveryoneSpace(
+    string memory spaceId,
+    address founder,
+    address user
+  ) external assumeEOA(founder) {
     vm.assume(bytes(spaceId).length > 2 && bytes(spaceId).length < 100);
-
-    address founder = _randomAddress();
-    address user = _randomAddress();
 
     SpaceInfo memory spaceInfo = _createEveryoneSpaceInfo(spaceId);
     spaceInfo.membership.settings.pricingModule = pricingModule;
@@ -52,11 +58,12 @@ contract Integration_CreateSpace is BaseSetup, IRolesBase, IArchitectBase {
     );
   }
 
-  function test_createUserGatedSpace(string memory spaceId) external {
+  function test_fuzz_createUserGatedSpace(
+    string memory spaceId,
+    address founder,
+    address user
+  ) external assumeEOA(founder) assumeEOA(user) {
     vm.assume(bytes(spaceId).length > 2 && bytes(spaceId).length < 100);
-
-    address founder = _randomAddress();
-    address user = _randomAddress();
 
     address[] memory users = new address[](1);
     users[0] = user;
@@ -86,44 +93,40 @@ contract Integration_CreateSpace is BaseSetup, IRolesBase, IArchitectBase {
     );
   }
 
-  function test_createTokenGatedSpace(string memory spaceId) external {
+  function test_fuzz_createTokenGatedSpace(
+    string memory spaceId,
+    address founder,
+    address user
+  ) external assumeEOA(founder) assumeEOA(user) {
     vm.assume(bytes(spaceId).length > 2 && bytes(spaceId).length < 100);
 
-    address founder = _randomAddress();
-    address user = _randomAddress();
     address mock = address(new MockERC721());
 
     // We first define how many operations we want to have
-    IRuleEntitlement.Operation[]
-      memory operations = new IRuleEntitlement.Operation[](1);
-    operations[0] = IRuleEntitlement.Operation({
-      opType: IRuleEntitlement.CombinedOperationType.CHECK,
-      index: 0
-    });
+    Operation[] memory operations = new Operation[](1);
+    operations[0] = Operation({opType: CombinedOperationType.CHECK, index: 0});
 
     // We then define the type of operations we want to have
-    IRuleEntitlement.CheckOperation[]
-      memory checkOperations = new IRuleEntitlement.CheckOperation[](1);
-    checkOperations[0] = IRuleEntitlement.CheckOperation({
-      opType: IRuleEntitlement.CheckOperationType.ERC721,
+    CheckOperationV2[] memory checkOperations = new CheckOperationV2[](1);
+    checkOperations[0] = CheckOperationV2({
+      opType: CheckOperationType.ERC721,
       chainId: block.chainid,
       contractAddress: mock,
-      threshold: 1
+      params: abi.encode(uint256(1))
     });
 
     // We then define the logical operations we want to have
-    IRuleEntitlement.LogicalOperation[]
-      memory logicalOperations = new IRuleEntitlement.LogicalOperation[](0);
+    LogicalOperation[] memory logicalOperations = new LogicalOperation[](0);
 
     // We then define the rule data
-    IRuleEntitlement.RuleData memory ruleData = IRuleEntitlement.RuleData({
+    RuleDataV2 memory ruleData = RuleDataV2({
       operations: operations,
       checkOperations: checkOperations,
       logicalOperations: logicalOperations
     });
 
     SpaceInfo memory spaceInfo = _createSpaceInfo(spaceId);
-    spaceInfo.membership.requirements.ruleData = ruleData;
+    spaceInfo.membership.requirements.ruleData = abi.encode(ruleData);
     spaceInfo.membership.settings.pricingModule = pricingModule;
 
     vm.prank(founder);
@@ -144,13 +147,13 @@ contract Integration_CreateSpace is BaseSetup, IRolesBase, IArchitectBase {
   //                           Channels
   // =============================================================
 
-  function test_createEveryoneSpace_with_separate_channels(
-    string memory spaceId
-  ) external {
+  function test_fuzz_createEveryoneSpace_with_separate_channels(
+    string memory spaceId,
+    address founder,
+    address member
+  ) external assumeEOA(founder) assumeEOA(member) {
     vm.assume(bytes(spaceId).length > 2 && bytes(spaceId).length < 100);
-
-    address founder = _randomAddress();
-    address member = _randomAddress();
+    vm.assume(founder != member);
 
     // create space with default channel
     SpaceInfo memory spaceInfo = _createEveryoneSpaceInfo(spaceId);
@@ -219,7 +222,8 @@ contract Integration_CreateSpace is BaseSetup, IRolesBase, IArchitectBase {
       IEntitlementsManager(newSpace).isEntitledToSpace({
         user: member,
         permission: Permissions.Write
-      })
+      }),
+      "Member should be able to access the space"
     );
 
     // however they cannot access the channel
@@ -228,7 +232,8 @@ contract Integration_CreateSpace is BaseSetup, IRolesBase, IArchitectBase {
         channelId: "test2",
         user: member,
         permission: Permissions.Write
-      })
+      }),
+      "Member should not be able to access the channel"
     );
 
     // add role to channel to allow access
@@ -238,6 +243,9 @@ contract Integration_CreateSpace is BaseSetup, IRolesBase, IArchitectBase {
     bool isEntitledToChannelAfter = IEntitlementsManager(newSpace)
       .isEntitledToChannel("test2", member, Permissions.Write);
     // members can access the channel now
-    assertTrue(isEntitledToChannelAfter);
+    assertTrue(
+      isEntitledToChannelAfter,
+      "Member should be able to access the channel"
+    );
   }
 }

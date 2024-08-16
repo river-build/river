@@ -2,6 +2,7 @@ package crypto
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/trace"
 	"math/big"
 	"time"
 
@@ -64,6 +65,7 @@ func NewBlockchain(
 	cfg *config.ChainConfig,
 	wallet *Wallet,
 	metrics infra.MetricsFactory,
+	tracer trace.Tracer,
 ) (*Blockchain, error) {
 	client, err := ethclient.DialContext(ctx, cfg.NetworkUrl)
 	if err != nil {
@@ -73,7 +75,12 @@ func NewBlockchain(
 			Func("NewBlockchain")
 	}
 
-	return NewBlockchainWithClient(ctx, cfg, wallet, client, client, metrics)
+	if tracer != nil {
+		instrumentedClient := NewInstrumentedEthClient(client, tracer)
+		return NewBlockchainWithClient(ctx, cfg, wallet, instrumentedClient, instrumentedClient, metrics, tracer)
+	}
+
+	return NewBlockchainWithClient(ctx, cfg, wallet, client, client, metrics, tracer)
 }
 
 func NewBlockchainWithClient(
@@ -83,6 +90,7 @@ func NewBlockchainWithClient(
 	client BlockchainClient,
 	clientCloser Closable,
 	metrics infra.MetricsFactory,
+	tracer trace.Tracer,
 ) (*Blockchain, error) {
 	if cfg.BlockTimeMs <= 0 {
 		return nil, RiverError(Err_BAD_CONFIG, "BlockTimeMs must be set").
@@ -126,7 +134,7 @@ func NewBlockchainWithClient(
 	if wallet != nil {
 		bc.Wallet = wallet
 		bc.TxPool, err = NewTransactionPoolWithPoliciesFromConfig(
-			ctx, cfg, bc.Client, wallet, bc.ChainMonitor, initialBlockNum, metrics)
+			ctx, cfg, bc.Client, wallet, bc.ChainMonitor, initialBlockNum, metrics, tracer)
 		if err != nil {
 			return nil, err
 		}

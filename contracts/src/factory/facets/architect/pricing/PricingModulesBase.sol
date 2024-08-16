@@ -2,9 +2,9 @@
 pragma solidity ^0.8.23;
 
 // interfaces
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {IPricingModulesBase} from "./IPricingModules.sol";
 import {IMembershipPricing} from "contracts/src/spaces/facets/membership/pricing/IMembershipPricing.sol";
-import {IERC165} from "contracts/src/diamond/facets/introspection/IERC165.sol";
 
 // libraries
 import {PricingModulesStorage} from "./PricingModulesStorage.sol";
@@ -12,7 +12,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 
 // contracts
 
-contract PricingModulesBase is IPricingModulesBase {
+abstract contract PricingModulesBase is IPricingModulesBase {
   using EnumerableSet for EnumerableSet.AddressSet;
 
   function _isPricingModule(address module) internal view returns (bool) {

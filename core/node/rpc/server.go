@@ -9,18 +9,13 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/signal"
 	"slices"
 	"strings"
-	"syscall"
 	"time"
 
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/rs/cors"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
-
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/auth"
 	. "github.com/river-build/river/core/node/base"
@@ -32,8 +27,12 @@ import (
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/registries"
+	"github.com/river-build/river/core/node/rpc/sync"
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/xchain/entitlement"
+	"github.com/rs/cors"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 )
 
 const (
@@ -174,11 +173,7 @@ func (s *Service) start() error {
 	if strings.HasPrefix(addr, "[::]") {
 		addr = "localhost" + addr[4:]
 	}
-	if s.config.UseHttps {
-		addr = "https://" + addr
-	} else {
-		addr = "http://" + addr
-	}
+	addr = s.config.UrlSchema() + "://" + addr
 	s.defaultLogger.Info("Server started", "addr", addr+"/debug/multi")
 	return nil
 }
@@ -211,14 +206,10 @@ func (s *Service) initInstance(mode string) {
 	if mode == ServerModeFull {
 		subsystem = "stream"
 	}
-	s.metrics = infra.NewMetrics("river", subsystem)
-	s.metrics.StartMetricsServer(s.serverCtx, s.config.Metrics)
-	s.rpcDuration = s.metrics.NewHistogramVecEx(
-		"rpc_duration_seconds",
-		"RPC duration in seconds",
-		infra.DefaultDurationBucketsSeconds,
-		"method",
-	)
+	metricsRegistry := prometheus.NewRegistry()
+	s.metrics = infra.NewMetricsFactory(metricsRegistry, "river", subsystem)
+	s.metricsPublisher = infra.NewMetricsPublisher(metricsRegistry)
+	s.metricsPublisher.StartMetricsServer(s.serverCtx, s.config.Metrics)
 }
 
 func (s *Service) initWallet() error {
@@ -260,7 +251,7 @@ func (s *Service) initBaseChain() error {
 
 	if !s.config.DisableBaseChain {
 		var err error
-		s.baseChain, err = crypto.NewBlockchain(ctx, &s.config.BaseChain, nil, s.metrics)
+		s.baseChain, err = crypto.NewBlockchain(ctx, &s.config.BaseChain, nil, s.metrics, s.otelTracer)
 		if err != nil {
 			return err
 		}
@@ -290,7 +281,7 @@ func (s *Service) initRiverChain() error {
 	ctx := s.serverCtx
 	var err error
 	if s.riverChain == nil {
-		s.riverChain, err = crypto.NewBlockchain(ctx, &s.config.RiverChain, s.wallet, s.metrics)
+		s.riverChain, err = crypto.NewBlockchain(ctx, &s.config.RiverChain, s.wallet, s.metrics, s.otelTracer)
 		if err != nil {
 			return err
 		}
@@ -400,7 +391,7 @@ func (s *Service) runHttpServer() error {
 	mux.HandleFunc("/status", s.handleStatus)
 
 	if cfg.Metrics.Enabled && !cfg.Metrics.DisablePublic {
-		mux.Handle("/metrics", s.metrics.CreateHandler())
+		mux.Handle("/metrics", s.metricsPublisher.CreateHandler())
 	}
 
 	corsMiddleware := cors.New(cors.Options{
@@ -423,12 +414,14 @@ func (s *Service) runHttpServer() error {
 	})
 
 	address := fmt.Sprintf("%s:%d", cfg.Address, cfg.Port)
-	if cfg.UseHttps {
+	if !cfg.DisableHttps {
 		if !s.config.Log.Simplify {
 			log.Info("Using TLS server")
 		}
 		if (cfg.TLSConfig.Cert == "") || (cfg.TLSConfig.Key == "") {
-			return RiverError(Err_BAD_CONFIG, "TLSConfig.Cert and TLSConfig.Key must be set if UseHttps is true")
+			return RiverError(
+				Err_BAD_CONFIG, "TLSConfig.Cert and TLSConfig.Key must be set if HTTPS is enabled",
+			)
 		}
 
 		// Base 64 encoding can't contain ., if . is present then it's assumed it's a file path
@@ -448,6 +441,13 @@ func (s *Service) runHttpServer() error {
 			if err != nil {
 				return err
 			}
+		}
+
+		// ensure that x/http2 is used
+		// https://github.com/golang/go/issues/42534
+		err = http2.ConfigureServer(s.httpServer, nil)
+		if err != nil {
+			return err
 		}
 
 		go s.serveTLS()
@@ -562,11 +562,10 @@ func (s *Service) initCacheAndSync() error {
 
 	s.mbProducer = events.NewMiniblockProducer(s.serverCtx, s.cache, nil)
 
-	s.syncHandler = NewSyncHandler(
-		s.wallet,
+	s.syncHandler = sync.NewHandler(
+		s.wallet.Address,
 		s.cache,
 		s.nodeRegistry,
-		s.streamRegistry,
 	)
 
 	return nil
@@ -582,12 +581,12 @@ func (s *Service) initHandlers() {
 
 	interceptors := connect.WithInterceptors(ii...)
 	streamServicePattern, streamServiceHandler := protocolconnect.NewStreamServiceHandler(s, interceptors)
-	s.mux.Handle(streamServicePattern, newHttpHandler(streamServiceHandler, s.defaultLogger, s.metrics))
+	s.mux.Handle(streamServicePattern, newHttpHandler(streamServiceHandler, s.defaultLogger))
 
 	nodeServicePattern, nodeServiceHandler := protocolconnect.NewNodeToNodeHandler(s, interceptors)
-	s.mux.Handle(nodeServicePattern, newHttpHandler(nodeServiceHandler, s.defaultLogger, s.metrics))
+	s.mux.Handle(nodeServicePattern, newHttpHandler(nodeServiceHandler, s.defaultLogger))
 
-	s.registerDebugHandlers(s.config.EnableDebugEndpoints)
+	s.registerDebugHandlers(s.config.EnableDebugEndpoints, s.config.DebugEndpoints)
 }
 
 // StartServer starts the server with the given configuration.
@@ -609,7 +608,7 @@ func StartServer(
 		config:     cfg,
 		riverChain: riverChain,
 		listener:   listener,
-		exitSignal: make(chan error, 1),
+		exitSignal: make(chan error, 16),
 	}
 
 	err := streamService.start()
@@ -699,30 +698,4 @@ func createH2CServer(ctx context.Context, address string, handler http.Handler) 
 type CertKey struct {
 	Cert string `json:"cert"`
 	Key  string `json:"key"`
-}
-
-func RunServer(ctx context.Context, cfg *config.Config) error {
-	log := dlog.FromCtx(ctx)
-
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	service, error := StartServer(ctx, cfg, nil, nil)
-	if error != nil {
-		log.Error("Failed to start server", "error", error)
-		return error
-	}
-	defer service.Close()
-
-	osSignal := make(chan os.Signal, 1)
-	signal.Notify(osSignal, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		sig := <-osSignal
-		if !cfg.Log.Simplify {
-			log.Info("Got OS signal", "signal", sig.String())
-		}
-		service.exitSignal <- nil
-	}()
-
-	return <-service.exitSignal
 }

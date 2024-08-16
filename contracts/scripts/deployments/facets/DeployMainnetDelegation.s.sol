@@ -23,6 +23,7 @@ contract DeployMainnetDelegation is FacetHelper, Deployer {
     addSelector(MainnetDelegation.setBatchAuthorizedClaimers.selector);
     addSelector(MainnetDelegation.getProxyDelegation.selector);
     addSelector(MainnetDelegation.getMessenger.selector);
+    addSelector(MainnetDelegation.removeDelegations.selector);
   }
 
   function initializer() public pure override returns (bytes4) {
@@ -35,7 +36,7 @@ contract DeployMainnetDelegation is FacetHelper, Deployer {
   }
 
   function versionName() public pure override returns (string memory) {
-    return "mainnetDelegation";
+    return "mainnetDelegationFacet";
   }
 
   function __deploy(address deployer) public override returns (address) {

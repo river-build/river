@@ -19,11 +19,12 @@ contract DeployEntitlementDataQueryable is Deployer, FacetHelper {
     addSelector(
       EntitlementDataQueryable.getChannelEntitlementDataByPermission.selector
     );
+    addSelector(EntitlementDataQueryable.getCrossChainEntitlementData.selector);
   }
 
   // Deploying
   function versionName() public pure override returns (string memory) {
-    return "entitlementDataQueryable";
+    return "entitlementDataQueryableFacet";
   }
 
   function __deploy(address deployer) public override returns (address) {

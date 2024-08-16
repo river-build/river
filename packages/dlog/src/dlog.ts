@@ -140,9 +140,12 @@ export interface DLogOpts {
 
 const allDlogs: Map<string, DLogger> = new Map()
 
+// github#722
+const isSingleLineLogsMode =
+    typeof process !== 'undefined' && process.env.SINGLE_LINE_LOGS === 'true'
+
 const makeDlog = (d: Debugger, opts?: DLogOpts): DLogger => {
     if (opts?.printStack) {
-        // eslint-disable-next-line no-console
         d.log = console.error.bind(console)
     }
 
@@ -166,14 +169,14 @@ const makeDlog = (d: Debugger, opts?: DLogOpts): DLogger => {
                 newArgs.push(c)
             } else if (typeof c === 'object' && c !== null) {
                 if (c instanceof Error) {
-                    tailArgs.push('\n')
+                    isSingleLineLogsMode ? fmt.push('%o\n') : fmt.push('%O\n')
                     tailArgs.push(c)
                 } else {
-                    fmt.push('%O\n')
+                    isSingleLineLogsMode ? fmt.push('%o\n') : fmt.push('%O\n')
                     newArgs.push(cloneAndFormat(c, { shortenHex: true }))
                 }
             } else {
-                fmt.push('%O ')
+                isSingleLineLogsMode ? fmt.push('%o ') : fmt.push('%O ')
                 newArgs.push(c)
             }
         }

@@ -2,11 +2,15 @@
  * @group main
  */
 
-import { makeTestClient, makeUniqueSpaceStreamId, waitFor } from './util.test'
+import { isEncryptedData, makeTestClient, makeUniqueSpaceStreamId, waitFor } from './util.test'
 import { Client } from './client'
 import { dlog } from '@river-build/dlog'
-import { makeUniqueChannelStreamId } from './id'
-import { MembershipOp } from '@river-build/proto'
+import { AES_GCM_DERIVED_ALGORITHM } from '@river-build/encryption'
+import { makeUniqueChannelStreamId, makeUniqueMediaStreamId } from './id'
+import { ChunkedMedia, MediaInfo, MembershipOp } from '@river-build/proto'
+import { deriveKeyAndIV } from './crypto_utils'
+import { PlainMessage } from '@bufbuild/protobuf'
+import { nanoid } from 'nanoid'
 
 const log = dlog('csb:test')
 
@@ -124,5 +128,110 @@ describe('spaceTests', () => {
                         prevUpdatedAt,
             ).toBe(true)
         })
+    })
+
+    test('spaceImage', async () => {
+        const spaceId = makeUniqueSpaceStreamId()
+        await expect(bobsClient.createSpace(spaceId)).toResolve()
+        const spaceStream = await bobsClient.waitForStream(spaceId)
+
+        // assert assumptions
+        expect(spaceStream).toBeDefined()
+        expect(
+            spaceStream.view.snapshot?.content.case === 'spaceContent' &&
+                spaceStream.view.snapshot?.content.value.spaceImage === undefined,
+        ).toBe(true)
+
+        // make a space image event
+        const mediaStreamId = makeUniqueMediaStreamId()
+        const image = new MediaInfo({
+            mimetype: 'image/png',
+            filename: 'bob-1.png',
+        })
+        const { key, iv } = await deriveKeyAndIV(nanoid(128)) // if in browser please use window.crypto.subtle.generateKey
+        const chunkedMediaInfo = {
+            info: image,
+            streamId: mediaStreamId,
+            encryption: {
+                case: 'aesgcm',
+                value: { secretKey: key, iv },
+            },
+            thumbnail: undefined,
+        } satisfies PlainMessage<ChunkedMedia>
+
+        await bobsClient.setSpaceImage(spaceId, chunkedMediaInfo)
+
+        // make a snapshot
+        await bobsClient.debugForceMakeMiniblock(spaceId, { forceSnapshot: true })
+
+        // see the space image in the snapshot
+        await waitFor(() => {
+            expect(
+                spaceStream.view.snapshot?.content.case === 'spaceContent' &&
+                    spaceStream.view.snapshot.content.value.spaceImage !== undefined &&
+                    spaceStream.view.snapshot.content.value.spaceImage.data !== undefined,
+            ).toBe(true)
+        })
+
+        // decrypt the snapshot and assert the image values
+        const encryptedData =
+            spaceStream.view.snapshot?.content.case === 'spaceContent'
+                ? spaceStream.view.snapshot.content.value.spaceImage?.data
+                : undefined
+        expect(
+            encryptedData !== undefined &&
+                isEncryptedData(encryptedData) &&
+                encryptedData.algorithm === AES_GCM_DERIVED_ALGORITHM,
+        ).toBe(true)
+        const decrypted = encryptedData
+            ? await bobsClient.decryptSpaceImage(spaceId, encryptedData)
+            : undefined
+        expect(
+            decrypted !== undefined &&
+                decrypted.info?.mimetype === image.mimetype &&
+                decrypted.info?.filename === image.filename &&
+                decrypted.encryption.case === 'aesgcm' &&
+                decrypted.encryption.value.secretKey !== undefined,
+        ).toBe(true)
+
+        // make another space image event
+        const mediaStreamId2 = makeUniqueMediaStreamId()
+        const image2 = new MediaInfo({
+            mimetype: 'image/jpg',
+            filename: 'bob-2.jpg',
+        })
+        const chunkedMediaInfo2 = {
+            info: image2,
+            streamId: mediaStreamId2,
+            encryption: {
+                case: 'aesgcm',
+                value: { secretKey: key, iv },
+            },
+            thumbnail: undefined,
+        } satisfies PlainMessage<ChunkedMedia>
+
+        await bobsClient.setSpaceImage(spaceId, chunkedMediaInfo2)
+
+        // make a snapshot
+        await bobsClient.debugForceMakeMiniblock(spaceId, { forceSnapshot: true })
+
+        // see the space image in the snapshot
+        await waitFor(() => {
+            expect(
+                spaceStream.view.snapshot?.content.case === 'spaceContent' &&
+                    spaceStream.view.snapshot.content.value.spaceImage !== undefined &&
+                    spaceStream.view.snapshot.content.value.spaceImage.data !== undefined,
+            ).toBe(true)
+        })
+
+        // decrypt the snapshot and assert the image values
+        const spaceImage = await spaceStream.view.spaceContent.getSpaceImage()
+        expect(
+            spaceImage !== undefined &&
+                spaceImage?.info?.mimetype === image2.mimetype &&
+                spaceImage?.info?.filename === image2.filename &&
+                spaceImage.encryption.case === 'aesgcm' &&
+                spaceImage.encryption.value.secretKey !== undefined,
+        ).toBe(true)
     })
 })

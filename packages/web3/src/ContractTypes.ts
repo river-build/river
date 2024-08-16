@@ -3,9 +3,10 @@ import {
     IMembershipBase as IMembershipBaseV3,
     IArchitectBase as ISpaceArchitectBaseV3,
 } from './v3/ISpaceArchitectShim'
+import { ILegacyArchitectBase } from './v3/ILegacySpaceArchitectShim'
 import { IRolesBase as IRolesBaseV3 } from './v3/IRolesShim'
 import { RuleEntitlementShim } from './v3/RuleEntitlementShim'
-import { IRuleEntitlement } from './v3'
+import { IRuleEntitlementBase } from './v3'
 import { IPricingModulesBase } from './v3/IPricingShim'
 
 export const Permission = {
@@ -19,7 +20,7 @@ export const Permission = {
     PinMessage: 'PinMessage',
     AddRemoveChannels: 'AddRemoveChannels',
     ModifySpaceSettings: 'ModifySpaceSettings',
-    ReactReply: 'ReactReply',
+    React: 'React',
 } as const
 
 export type Permission = (typeof Permission)[keyof typeof Permission]
@@ -36,7 +37,15 @@ type TotalSupplyOutputStruct = { totalSupply: number }
 
 export type MembershipStruct = ISpaceArchitectBaseV3.MembershipStruct
 
+export type LegacyMembershipStruct = ILegacyArchitectBase.MembershipStruct
+
+export type MembershipRequirementsStruct = ISpaceArchitectBaseV3.MembershipRequirementsStruct
+
+export type LegacyMembershipRequirementsStruct = ILegacyArchitectBase.MembershipRequirementsStruct
+
 export type SpaceInfoStruct = ISpaceArchitectBaseV3.SpaceInfoStruct
+
+export type LegacySpaceInfoStruct = ILegacyArchitectBase.SpaceInfoStruct
 
 export type PricingModuleStruct = IPricingModulesBase.PricingModuleStruct
 
@@ -46,6 +55,7 @@ export type PricingModuleStruct = IPricingModulesBase.PricingModuleStruct
 export enum EntitlementModuleType {
     UserEntitlement = 'UserEntitlement',
     RuleEntitlement = 'RuleEntitlement',
+    RuleEntitlementV2 = 'RuleEntitlementV2',
 }
 
 /**
@@ -56,7 +66,7 @@ export interface RoleDetails {
     name: string
     permissions: Permission[]
     users: string[]
-    ruleData: IRuleEntitlement.RuleDataStruct
+    ruleData: IRuleEntitlementBase.RuleDataStruct
     channels: ChannelMetadata[]
 }
 
@@ -90,7 +100,7 @@ export interface RoleEntitlements {
     name: string
     permissions: Permission[]
     users: string[]
-    ruleData: IRuleEntitlement.RuleDataStruct
+    ruleData: IRuleEntitlementBase.RuleDataStruct
 }
 
 /*
@@ -98,7 +108,7 @@ export interface RoleEntitlements {
 */
 export interface EntitlementDetails {
     users: string[]
-    ruleData: IRuleEntitlement.RuleDataStruct
+    ruleData: IRuleEntitlementBase.RuleDataStruct
 }
 
 export interface BasicRoleInfo {

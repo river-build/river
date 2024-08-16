@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 import { Message, PlainMessage } from '@bufbuild/protobuf'
 import { datadogRum } from '@datadog/browser-rum'
 import { Permission } from '@river-build/web3'
@@ -15,6 +18,7 @@ import {
     StreamEvent,
     EncryptedData,
     StreamSettings,
+    SpacePayload_ChannelSettings,
     FullyReadMarkers,
     FullyReadMarker,
     Envelope,
@@ -24,6 +28,7 @@ import {
     MemberPayload_Nft,
     CreateStreamRequest,
     AddEventResponse_Error,
+    ChunkedMedia,
 } from '@river-build/proto'
 import {
     bin_fromHexString,
@@ -35,8 +40,8 @@ import {
     dlogError,
     bin_fromString,
 } from '@river-build/dlog'
-import { assert, isDefined } from './check'
 import {
+    AES_GCM_DERIVED_ALGORITHM,
     BaseDecryptionExtensions,
     CryptoStore,
     DecryptionEvents,
@@ -48,8 +53,11 @@ import {
     UserDevice,
     UserDeviceCollection,
     makeSessionKeys,
+    type EncryptionDeviceInitOpts,
 } from '@river-build/encryption'
-import { errorContains, getRpcErrorProperty, StreamRpcClient } from './makeStreamRpcClient'
+import { StreamRpcClient } from './makeStreamRpcClient'
+import { errorContains, getRpcErrorProperty } from './rpcInterceptors'
+import { assert, isDefined } from './check'
 import EventEmitter from 'events'
 import TypedEmitter from 'typed-emitter'
 import {
@@ -70,7 +78,7 @@ import {
     streamIdAsString,
     makeSpaceStreamId,
     STREAM_ID_STRING_LENGTH,
-    makeMediaStreamIdFromSpaceId,
+    contractAddressFromSpaceId,
 } from './id'
 import { makeEvent, unpackMiniblock, unpackStream, unpackStreamEx } from './sign'
 import { StreamEvents } from './streamEvents'
@@ -112,6 +120,9 @@ import {
     make_MemberPayload_Nft,
     make_MemberPayload_Pin,
     make_MemberPayload_Unpin,
+    make_SpacePayload_UpdateChannelAutojoin,
+    make_SpacePayload_UpdateChannelHideUserJoinLeaveEvents,
+    make_SpacePayload_SpaceImage,
 } from './types'
 
 import debug from 'debug'
@@ -124,6 +135,13 @@ import { SyncState, SyncedStreams } from './syncedStreams'
 import { SyncedStream } from './syncedStream'
 import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
+import {
+    decryptAESGCM,
+    decryptDerivedAESGCM,
+    deriveKeyAndIV,
+    encryptAESGCM,
+    uint8ArrayToBase64,
+} from './crypto_utils'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
@@ -304,27 +322,29 @@ export class Client
         this.syncedStreamsExtensions.setStreamIds(streamIds)
     }
 
-    async initializeUser(newUserMetadata?: { spaceId: Uint8Array | string }): Promise<void> {
-        const metadata = newUserMetadata
+    async initializeUser(opts?: {
+        spaceId?: Uint8Array | string
+        encryptionDeviceInit?: EncryptionDeviceInitOpts
+    }): Promise<void> {
+        const initUserMetadata = opts?.spaceId
             ? {
-                  ...newUserMetadata,
-                  spaceId: streamIdAsBytes(newUserMetadata.spaceId),
+                  spaceId: streamIdAsBytes(opts?.spaceId),
               }
             : undefined
 
         const initializeUserStartTime = performance.now()
         this.logCall('initializeUser', this.userId)
         assert(this.userStreamId === undefined, 'already initialized')
-        await this.initCrypto()
+        await this.initCrypto(opts?.encryptionDeviceInit)
 
         check(isDefined(this.decryptionExtensions), 'decryptionExtensions must be defined')
         check(isDefined(this.syncedStreamsExtensions), 'syncedStreamsExtensions must be defined')
 
         await Promise.all([
-            this.initUserStream(metadata),
-            this.initUserInboxStream(metadata),
-            this.initUserDeviceKeyStream(metadata),
-            this.initUserSettingsStream(metadata),
+            this.initUserStream(initUserMetadata),
+            this.initUserInboxStream(initUserMetadata),
+            this.initUserDeviceKeyStream(initUserMetadata),
+            this.initUserSettingsStream(initUserMetadata),
         ])
         await this.initUserJoinedStreams()
 
@@ -561,6 +581,7 @@ export class Client
         channelTopic: string,
         inChannelId: string | Uint8Array,
         streamSettings?: PlainMessage<StreamSettings>,
+        channelSettings?: PlainMessage<SpacePayload_ChannelSettings>,
     ): Promise<{ streamId: string }> {
         const oChannelId = inChannelId
         const channelId = streamIdAsBytes(oChannelId)
@@ -575,6 +596,7 @@ export class Client
                 streamId: channelId,
                 spaceId: streamIdAsBytes(spaceId),
                 settings: streamSettings,
+                channelSettings: channelSettings,
             }),
         )
         const joinEvent = await makeEvent(
@@ -696,10 +718,7 @@ export class Client
             )
         }
 
-        const streamId =
-            !channelId && spaceId
-                ? makeMediaStreamIdFromSpaceId(spaceId)
-                : makeUniqueMediaStreamId()
+        const streamId = makeUniqueMediaStreamId()
 
         this.logCall('createMedia', channelId ?? spaceId, streamId)
 
@@ -755,6 +774,49 @@ export class Client
                 channelId: streamIdAsBytes(channelId),
             }),
             { method: 'updateChannel' },
+        )
+    }
+
+    async updateChannelAutojoin(
+        spaceId: string | Uint8Array,
+        channelId: string | Uint8Array,
+        autojoin: boolean,
+    ) {
+        this.logCall('updateChannelAutojoin', channelId, spaceId, autojoin)
+        assert(isSpaceStreamId(spaceId), 'spaceId must be a valid streamId')
+        assert(isChannelStreamId(channelId), 'channelId must be a valid streamId')
+
+        return this.makeEventAndAddToStream(
+            spaceId, // we send events to the stream of the space where updated channel belongs to
+            make_SpacePayload_UpdateChannelAutojoin({
+                channelId: streamIdAsBytes(channelId),
+                autojoin: autojoin,
+            }),
+            { method: 'updateChannelAutojoin' },
+        )
+    }
+
+    async updateChannelHideUserJoinLeaveEvents(
+        spaceId: string | Uint8Array,
+        channelId: string | Uint8Array,
+        hideUserJoinLeaveEvents: boolean,
+    ) {
+        this.logCall(
+            'updateChannelHideUserJoinLeaveEvents',
+            channelId,
+            spaceId,
+            hideUserJoinLeaveEvents,
+        )
+        assert(isSpaceStreamId(spaceId), 'spaceId must be a valid streamId')
+        assert(isChannelStreamId(channelId), 'channelId must be a valid streamId')
+
+        return this.makeEventAndAddToStream(
+            spaceId, // we send events to the stream of the space where updated channel belongs to
+            make_SpacePayload_UpdateChannelHideUserJoinLeaveEvents({
+                channelId: streamIdAsBytes(channelId),
+                hideUserJoinLeaveEvents,
+            }),
+            { method: 'updateChannelHideUserJoinLeaveEvents' },
         )
     }
 
@@ -827,6 +889,44 @@ export class Client
             }),
             { method: 'updateUserBlock' },
         )
+    }
+
+    async decryptSpaceImage(spaceId: string, encryptedData: EncryptedData): Promise<ChunkedMedia> {
+        this.logCall('getDecryptedSpaceImage', spaceId)
+
+        const keyPhrase = contractAddressFromSpaceId(spaceId)
+        const plaintext = await decryptDerivedAESGCM(keyPhrase, encryptedData)
+        return ChunkedMedia.fromBinary(plaintext)
+    }
+
+    async setSpaceImage(spaceStreamId: string, chunkedMediaInfo: PlainMessage<ChunkedMedia>) {
+        this.logCall(
+            'setSpaceImage',
+            spaceStreamId,
+            chunkedMediaInfo.streamId,
+            chunkedMediaInfo.info,
+        )
+
+        // create the chunked media to be added
+        const spaceAddress = contractAddressFromSpaceId(spaceStreamId)
+        const context = spaceAddress.toLowerCase()
+
+        // encrypt the chunked media
+        // use the lowercased spaceId as the key phrase
+        const { key, iv } = await deriveKeyAndIV(context)
+        const { ciphertext } = await encryptAESGCM(
+            new ChunkedMedia(chunkedMediaInfo).toBinary(),
+            key,
+            iv,
+        )
+        const encryptedData = new EncryptedData({
+            ciphertext: uint8ArrayToBase64(ciphertext),
+            algorithm: AES_GCM_DERIVED_ALGORITHM,
+        })
+
+        // add the event to the stream
+        const event = make_SpacePayload_SpaceImage(encryptedData)
+        return this.makeEventAndAddToStream(spaceStreamId, event, { method: 'setSpaceImage' })
     }
 
     async setDisplayName(streamId: string, displayName: string) {
@@ -921,19 +1021,29 @@ export class Client
         return stream.view.getUserMetadata().usernames.cleartextUsernameAvailable(username) ?? false
     }
 
-    async waitForStream(streamId: string | Uint8Array): Promise<Stream> {
-        this.logCall('waitForStream', streamId)
+    async waitForStream(
+        inStreamId: string | Uint8Array,
+        opts?: { timeoutMs?: number },
+    ): Promise<Stream> {
+        this.logCall('waitForStream', inStreamId)
+        const timeoutMs = opts?.timeoutMs ?? 15000
+        const streamId = streamIdAsString(inStreamId)
         let stream = this.stream(streamId)
         if (stream !== undefined && stream.view.isInitialized) {
             this.logCall('waitForStream: stream already initialized', streamId)
             return stream
         }
 
-        await new Promise<void>((resolve) => {
+        await new Promise<void>((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                this.off('streamInitialized', handler)
+                reject(new Error(`waitForStream: timeout waiting for ${streamId}`))
+            }, timeoutMs)
             const handler = (newStreamId: string) => {
                 if (newStreamId === streamId) {
                     this.logCall('waitForStream: got streamInitialized', newStreamId)
                     this.off('streamInitialized', handler)
+                    clearTimeout(timeout)
                     resolve()
                 } else {
                     this.logCall(
@@ -1215,13 +1325,14 @@ export class Client
 
             // We check entitlements on the client side for writes to channels. A top-level
             // message post is only permitted if the user has write permissions. If the message
-            // is a reply, a reaction, a self-redaction or an edit, it may have Write or ReactReply
-            // permissions - any change to an existing message authored by the user is implicitly
-            // permitted.
-            const expectedPermissions: Permission[] = [Permission.Write]
-            if (payload.payload.case !== 'post' || payload.payload.value.threadId !== undefined) {
-                expectedPermissions.push(Permission.ReactReply)
-            }
+            // is a reaction or redaction, the user may also have react permissions. This is
+            // to allow react-only users to react to posts and edit their reactions. We're not
+            // concerned with being overly permissive with redactions, as at this time, a user
+            // is always allowed to redact their own messages.
+            const expectedPermissions: Permission[] =
+                payload.payload.case === 'reaction' || payload.payload.case === 'redaction'
+                    ? [Permission.React, Permission.Write]
+                    : [Permission.Write]
             let isEntitled = false
             for (const permission of expectedPermissions) {
                 isEntitled = await this.entitlementsDelegate.isEntitled(
@@ -1236,9 +1347,9 @@ export class Client
             }
             if (!isEntitled) {
                 throw new Error(
-                    `user is not entitled to add message to channel (expected one of [${expectedPermissions.join(
+                    `user is not entitled to add message to channel (requires [${expectedPermissions.join(
                         ',',
-                    )}])`,
+                    )}] permission)`,
                 )
             }
         }
@@ -1362,6 +1473,28 @@ export class Client
             chunkIndex: chunkIndex,
         })
         return this.makeEventWithHashAndAddToStream(streamId, payload, prevMiniblockHash)
+    }
+
+    async getMediaPayload(
+        streamId: string,
+        secretKey: Uint8Array,
+        iv: Uint8Array,
+    ): Promise<Uint8Array | undefined> {
+        const stream = await this.getStream(streamId)
+        const mediaInfo = stream.mediaContent.info
+        if (!mediaInfo) {
+            return undefined
+        }
+        const data = new Uint8Array(
+            mediaInfo.chunks.reduce((totalLength, chunk) => totalLength + chunk.length, 0),
+        )
+        let offset = 0
+        mediaInfo.chunks.forEach((chunk) => {
+            data.set(chunk, offset)
+            offset += chunk.length
+        })
+
+        return decryptAESGCM(data, secretKey, iv)
     }
 
     async sendChannelMessage_Reaction(
@@ -1906,7 +2039,7 @@ export class Client
         return r.hash
     }
 
-    private async initCrypto(): Promise<void> {
+    private async initCrypto(opts?: EncryptionDeviceInitOpts): Promise<void> {
         this.logCall('initCrypto')
         if (this.cryptoBackend) {
             this.logCall('Attempt to re-init crypto backend, ignoring')
@@ -1918,7 +2051,7 @@ export class Client
         await this.cryptoStore.initialize()
 
         const crypto = new GroupEncryptionCrypto(this, this.cryptoStore)
-        await crypto.init()
+        await crypto.init(opts)
         this.cryptoBackend = crypto
         this.decryptionExtensions = new ClientDecryptionExtensions(
             this,
@@ -2125,5 +2258,9 @@ export class Client
     public async debugForceAddEvent(streamId: string, event: Envelope): Promise<void> {
         const jsonStr = event.toJsonString()
         await this.rpcClient.info({ debug: ['add_event', streamId, jsonStr] })
+    }
+
+    public async debugDropStream(syncId: string, streamId: string): Promise<void> {
+        await this.rpcClient.info({ debug: ['drop_stream', syncId, streamId] })
     }
 }

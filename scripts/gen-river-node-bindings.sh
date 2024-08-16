@@ -11,17 +11,23 @@ generate_go() {
     local PACKAGE=$2
     local CONTRACT=$3
     local GO_NAME=$4
+    local FILENAME=$CONTRACT
+    if [[ $# -eq 5 ]]; then
+        FILENAME=$5
+    fi
 
     local OUT_DIR="core/contracts/${DIR}"
     mkdir -p "${OUT_DIR}"
 
     go run github.com/ethereum/go-ethereum/cmd/abigen@${ABIGEN_VERSION} \
-        --abi contracts/out/${CONTRACT}.sol/${CONTRACT}.abi.json \
-        --bin contracts/out/${CONTRACT}.sol/${CONTRACT}.bin \
+        --abi contracts/out/${FILENAME}.sol/${CONTRACT}.abi.json \
+        --bin contracts/out/${FILENAME}.sol/${CONTRACT}.bin \
         --pkg "${PACKAGE}" \
         --type "${GO_NAME}" \
         --out "${OUT_DIR}/${GO_NAME}.go"
 }
+
+
 
 # Base (and other) contracts interfaces
 generate_go base base IArchitect architect
@@ -33,6 +39,7 @@ generate_go base base IPausable pausable
 generate_go base base IBanning banning
 generate_go base base IWalletLink wallet_link
 generate_go base base IRuleEntitlement rule_entitlement
+generate_go base base IRuleEntitlementV2 rule_entitlement_v2 IRuleEntitlement
 generate_go base base IEntitlementChecker i_entitlement_checker
 generate_go base base IEntitlementGated i_entitlement_gated
 generate_go base base IEntitlement i_entitlement
@@ -57,17 +64,18 @@ generate_go river river IRiverConfig river_config_v1
 # Full River contracts for deployment from tests
 generate_go river/deploy deploy MockRiverRegistry mock_river_registry
 
-# The follwing structs get included twice in the generated code, this utility removes them from a file
+# The following structs get included twice in the generated code, this utility removes them from a file
 #
-#		"IRuleEntitlementCheckOperation":   true,
-#		"IRuleEntitlementLogicalOperation": true,
-#		"IRuleEntitlementOperation":        true,
-#		"IRuleEntitlementRuleData":         true,
+#		"IRuleEntitlementBaseCheckOperation":   true,
+#		"IRuleEntitlementBaseLogicalOperation": true,
+#		"IRuleEntitlementBaseOperation":        true,
+#		"IRuleEntitlementBaseRuleData":         true,
 
 mkdir -p bin
 go build -o bin/gen-bindings-remove-struct scripts/gen-bindings-remove-struct.go
-./bin/gen-bindings-remove-struct core/contracts/base/architect.go IRuleEntitlementCheckOperation,IRuleEntitlementLogicalOperation,IRuleEntitlementOperation,IRuleEntitlementRuleData
-./bin/gen-bindings-remove-struct core/contracts/base/entitlements_manager.go IRuleEntitlementCheckOperation,IRuleEntitlementLogicalOperation,IRuleEntitlementOperation,IRuleEntitlementRuleData
-./bin/gen-bindings-remove-struct core/contracts/base/rule_entitlement.go IRuleEntitlementCheckOperation,IRuleEntitlementLogicalOperation,IRuleEntitlementOperation,IRuleEntitlementRuleData
+./bin/gen-bindings-remove-struct core/contracts/base/architect.go IRuleEntitlementBaseCheckOperation,IRuleEntitlementBaseLogicalOperation,IRuleEntitlementBaseOperation,IRuleEntitlementBaseRuleData
+./bin/gen-bindings-remove-struct core/contracts/base/entitlements_manager.go IRuleEntitlementBaseCheckOperation,IRuleEntitlementBaseLogicalOperation,IRuleEntitlementBaseOperation,IRuleEntitlementBaseRuleData
+./bin/gen-bindings-remove-struct core/contracts/base/rule_entitlement.go IRuleEntitlementBaseCheckOperation,IRuleEntitlementBaseLogicalOperation,IRuleEntitlementBaseOperation,IRuleEntitlementBaseRuleData
+./bin/gen-bindings-remove-struct core/contracts/base/rule_entitlement_v2.go IRuleEntitlementBaseCheckOperation,IRuleEntitlementBaseLogicalOperation,IRuleEntitlementBaseOperation,IRuleEntitlementBaseRuleData
 ./bin/gen-bindings-remove-struct core/contracts/base/deploy/mock_wallet_link.go IWalletLinkBaseLinkedWallet
 

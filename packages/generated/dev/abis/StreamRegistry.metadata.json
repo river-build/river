@@ -478,6 +478,69 @@
       {
         "inputs": [
           {
+            "internalType": "bytes32[]",
+            "name": "streamIds",
+            "type": "bytes32[]"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+        "name": "getStreams",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "foundCount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "struct StreamWithId[]",
+            "name": "",
+            "type": "tuple[]",
+            "components": [
+              {
+                "internalType": "bytes32",
+                "name": "id",
+                "type": "bytes32"
+              },
+              {
+                "internalType": "struct Stream",
+                "name": "stream",
+                "type": "tuple",
+                "components": [
+                  {
+                    "internalType": "bytes32",
+                    "name": "lastMiniblockHash",
+                    "type": "bytes32"
+                  },
+                  {
+                    "internalType": "uint64",
+                    "name": "lastMiniblockNum",
+                    "type": "uint64"
+                  },
+                  {
+                    "internalType": "uint64",
+                    "name": "reserved0",
+                    "type": "uint64"
+                  },
+                  {
+                    "internalType": "uint64",
+                    "name": "flags",
+                    "type": "uint64"
+                  },
+                  {
+                    "internalType": "address[]",
+                    "name": "nodes",
+                    "type": "address[]"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "inputs": [
+          {
             "internalType": "address",
             "name": "nodeAddress",
             "type": "address"
@@ -655,6 +718,9 @@
           "returns": {
             "_0": "stream, genesisMiniblockHash, genesisMiniblock"
           }
+        },
+        "getStreams(bytes32[])": {
+          "details": "Fetch a batch of streams. Returns how many were found, and the streams found. Results may be a subset of requested streams."
         }
       },
       "version": 1
@@ -678,10 +744,10 @@
       "@prb/math/=lib/@prb/math/src/",
       "@prb/test/=lib/@prb/test/src/",
       "account-abstraction/=lib/account-abstraction/contracts/",
-      "base64/=lib/base64/",
       "ds-test/=lib/ds-test/src/",
       "forge-std/=lib/forge-std/src/",
-      "hardhat-deploy/=lib/hardhat-deploy/"
+      "hardhat-deploy/=lib/hardhat-deploy/",
+      "solady/=lib/solady/src/"
     ],
     "optimizer": {
       "enabled": true,
@@ -699,18 +765,18 @@
   },
   "sources": {
     "contracts/src/river/registry/facets/stream/IStreamRegistry.sol": {
-      "keccak256": "0x1f4373bfa9cdbaa460a8c8870ae059226e1c4c2b03055d92994d582f8affbf4f",
+      "keccak256": "0xbb74a25365c5060ccd8d6724fa31193d0f79c453467e0dacda06bc8f3b9222f8",
       "urls": [
-        "bzz-raw://a2eee44be95c48eba75a2283aef37771861cc5c00c32b7bbba55f4408352cf79",
-        "dweb:/ipfs/QmVgv1dk5uTNcmagVUH1L1h4aHKpUhSvJPzzuQbSVAn1eT"
+        "bzz-raw://052308dc6478b1e0aa998e73ad558bad6dfec7f4e7e044953ac39a6742c18392",
+        "dweb:/ipfs/QmchpnD1xpQk9aEetzUQchDRg8xEEiJ58W4TtQRvr9tZcr"
       ],
       "license": "MIT"
     },
     "contracts/src/river/registry/facets/stream/StreamRegistry.sol": {
-      "keccak256": "0x3ee1ae880161a90c74e384b58b1a8f317f1e95342b28cf71db47f01337db7dfb",
+      "keccak256": "0xfb8130f9286df026d67d6332b6e40a02d4a3ee4420d6f276f29ce4f2ed9d6831",
       "urls": [
-        "bzz-raw://048bf90faa715f9c532a91d74aeab44a1c20183d04de9a80b7d1ce542325a5d5",
-        "dweb:/ipfs/QmW2eXQZWiRYC5cPX1UKVNTb9S3RngAUamCD9qpfiuyibs"
+        "bzz-raw://356743a3243de655d599df8d1f4575ac1423e2adb1807c029a393f39f0c652fc",
+        "dweb:/ipfs/QmbpdmhGwLnyFnjvE82cMpT882i2hVksYSTNpfME8gGe1t"
       ],
       "license": "MIT"
     },

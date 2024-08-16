@@ -448,7 +448,7 @@ contract RewardsDistributionTest is
       exDelegationsPerSpace
     );
 
-    for (uint i = 0; i < tOperators.length; i++) {
+    for (uint256 i = 0; i < tOperators.length; i++) {
       assertEq(
         _calculateTotalDelegation(tOperators[i].addr),
         spaceDelegationFacet.getTotalDelegation(tOperators[i].addr)
@@ -978,7 +978,7 @@ contract RewardsDistributionTest is
   function verifyUserRewardsAgainstExpected(
     Entity[] memory users,
     uint256[] memory expectedUserClaims
-  ) internal {
+  ) internal view {
     for (uint256 i = 0; i < users.length; i++) {
       uint256 reward = rewardsDistributionFacet.getClaimableAmountForDelegator(
         users[i].addr
@@ -994,7 +994,7 @@ contract RewardsDistributionTest is
   function verifyOperatorRewardsAgainstExpected(
     Entity[] memory operators,
     uint256[] memory expectedOperatorClaims
-  ) internal {
+  ) internal view {
     for (uint256 i = 0; i < operators.length; i++) {
       uint256 reward = rewardsDistributionFacet.getClaimableAmountForOperator(
         operator.getClaimAddressForOperator(operators[i].addr)
@@ -1158,19 +1158,19 @@ contract RewardsDistributionTest is
     address operatorAddr
   ) internal view returns (uint256) {
     uint256 totalDelegation = 0;
-    for (uint i = 0; i < tDelegations.length; i++) {
+    for (uint256 i = 0; i < tDelegations.length; i++) {
       if (tDelegations[i].operator == operatorAddr) {
         totalDelegation += tUsers[i].amount;
       }
     }
 
-    for (uint i = 0; i < tMainnetUserDelegations.length; i++) {
+    for (uint256 i = 0; i < tMainnetUserDelegations.length; i++) {
       if (tMainnetUserDelegations[i].operator == operatorAddr) {
         totalDelegation += tMainnetUsers[i].amount;
       }
     }
 
-    for (uint i = 0; i < tSpaceUserDelegations.length; i++) {
+    for (uint256 i = 0; i < tSpaceUserDelegations.length; i++) {
       if (
         spaceDelegationFacet.getSpaceDelegation(
           tSpaceUserDelegations[i].operator

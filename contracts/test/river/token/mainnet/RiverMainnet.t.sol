@@ -13,7 +13,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 //contracts
 import {TestUtils} from "contracts/test/utils/TestUtils.sol";
-import {DeployRiverMainnet} from "contracts/scripts/deployments/DeployRiverMainnet.s.sol";
+import {DeployRiverMainnet} from "contracts/scripts/deployments/utils/DeployRiverMainnet.s.sol";
 import {River} from "contracts/src/tokens/river/mainnet/River.sol";
 
 contract RiverMainnetTest is TestUtils, IRiverBase, ILockBase {
@@ -39,7 +39,7 @@ contract RiverMainnetTest is TestUtils, IRiverBase, ILockBase {
     (, , inflation) = deployRiverMainnet.config();
   }
 
-  function test_init() external {
+  function test_init() external view {
     assertEq(river.name(), "River");
     assertEq(river.symbol(), "RVR");
     assertEq(river.decimals(), 18);

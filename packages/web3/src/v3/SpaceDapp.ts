@@ -9,7 +9,7 @@ import {
 } from '../ContractTypes'
 import { BytesLike, ContractReceipt, ContractTransaction, ethers } from 'ethers'
 import {
-    CreateSpaceParams,
+    CreateLegacySpaceParams,
     ISpaceDapp,
     TransactionOpts,
     UpdateChannelParams,
@@ -23,7 +23,7 @@ import { createEntitlementStruct } from '../ConvertersRoles'
 import { BaseChainConfig } from '../IStaticContractsInfo'
 import { WalletLink, INVALID_ADDRESS } from './WalletLink'
 import { SpaceInfo } from '../types'
-import { IRuleEntitlement, UNKNOWN_ERROR, UserEntitlementShim } from './index'
+import { IRuleEntitlementBase, UNKNOWN_ERROR, UserEntitlementShim } from './index'
 import { PricingModules } from './PricingModules'
 import { dlogger, isJest } from '@river-build/dlog'
 import { EVERYONE_ADDRESS, stringifyChannelMetadataJSON } from '../Utils'
@@ -37,7 +37,7 @@ const logger = dlogger('csb:SpaceDapp:debug')
 
 type EntitlementData = {
     entitlementType: EntitlementModuleType
-    ruleEntitlement: IRuleEntitlement.RuleDataStruct[] | undefined
+    ruleEntitlement: IRuleEntitlementBase.RuleDataStruct[] | undefined
     userEntitlement: string[] | undefined
 }
 
@@ -233,15 +233,15 @@ export class SpaceDapp implements ISpaceDapp {
         return bannedWalletAddresses
     }
 
-    public async createSpace(
-        params: CreateSpaceParams,
+    public async createLegacySpace(
+        params: CreateLegacySpaceParams,
         signer: ethers.Signer,
         txnOpts?: TransactionOpts,
     ): Promise<ContractTransaction> {
         const spaceInfo = {
             name: params.spaceName,
             uri: params.uri,
-            membership: params.membership as any,
+            membership: params.membership,
             channel: {
                 metadata: params.channelName || '',
             },
@@ -249,7 +249,7 @@ export class SpaceDapp implements ISpaceDapp {
             longDescription: params.longDescription ?? '',
         }
         return wrapTransaction(
-            () => this.spaceRegistrar.SpaceArchitect.write(signer).createSpace(spaceInfo),
+            () => this.spaceRegistrar.LegacySpaceArchitect.write(signer).createSpace(spaceInfo),
             txnOpts,
         )
     }
@@ -289,7 +289,7 @@ export class SpaceDapp implements ISpaceDapp {
         roleName: string,
         permissions: Permission[],
         users: string[],
-        ruleData: IRuleEntitlement.RuleDataStruct,
+        ruleData: IRuleEntitlementBase.RuleDataStruct,
         signer: ethers.Signer,
         txnOpts?: TransactionOpts,
     ): Promise<ContractTransaction> {
@@ -731,7 +731,7 @@ export class SpaceDapp implements ISpaceDapp {
         if (
             permission === Permission.Read ||
             permission === Permission.Write ||
-            permission === Permission.ReactReply
+            permission === Permission.React
         ) {
             const linkedWallets = await this.getLinkedWallets(user)
 
@@ -1130,7 +1130,7 @@ export class SpaceDapp implements ISpaceDapp {
         }
         const [price, limit, currency, feeRecipient, duration, totalSupply, pricingModule] =
             await Promise.all([
-                space.Membership.read.getMembershipPrice(),
+                this.getJoinSpacePrice(spaceId),
                 space.Membership.read.getMembershipLimit(),
                 space.Membership.read.getMembershipCurrency(),
                 space.Ownable.read.owner(),

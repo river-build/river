@@ -217,6 +217,7 @@ func (st *serviceTester) getConfig(opts ...startOpts) *config.Config {
 
 	cfg := &config.Config{
 		DisableBaseChain: true,
+		DisableHttps:     true,
 		RegistryContract: st.btc.RegistryConfig(),
 		Database: config.DatabaseConfig{
 			Url:          st.dbUrl,
@@ -258,6 +259,7 @@ func (st *serviceTester) startSingle(i int, opts ...startOpts) error {
 		}
 		return err
 	}
+
 	st.nodes[i].service = service
 	st.nodes[i].address = bc.Wallet.Address
 
@@ -291,7 +293,12 @@ func (st *serviceTester) compareStreamDataInStorage(
 	// Read data from storage.
 	var data []*storage.DebugReadStreamDataResult
 	for _, n := range st.nodes {
-		d, err := n.service.storage.DebugReadStreamData(st.ctx, streamId)
+		// TODO: occasionally n.service.storage.DebugReadStreamData crashes due to nil pointer dereference,
+		// example: https://github.com/river-build/river/actions/runs/10127906870/job/28006223317#step:18:113
+		// the stack trace doesn't provide context which deref fails, therefore deref field by field.
+		svc := n.service
+		str := svc.storage
+		d, err := str.DebugReadStreamData(st.ctx, streamId)
 		if !assert.NoError(t, err) {
 			return
 		}

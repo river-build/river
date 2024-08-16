@@ -19,8 +19,8 @@ func GetDefaultConfig() *Config {
 		Database: DatabaseConfig{
 			StartupDelay: 2 * time.Second,
 		},
-		StorageType: "postgres",
-		UseHttps:    true,
+		StorageType:  "postgres",
+		DisableHttps: false,
 		BaseChain: ChainConfig{
 			// TODO: ChainId:
 			BlockTimeMs: 2000,
@@ -55,6 +55,14 @@ func GetDefaultConfig() *Config {
 		Archive: ArchiveConfig{
 			PrintStatsPeriod: 10 * time.Second,
 		},
+		DebugEndpoints: DebugEndpointsConfig{
+			Cache:           true,
+			Memory:          true,
+			PProf:           false,
+			Stacks:          true,
+			StacksMaxSizeKb: 5 * 1024,
+			TxPool:          true,
+		},
 	}
 }
 
@@ -66,8 +74,8 @@ type Config struct {
 	// DNS name of the node. Used to select interface to listen on. Can be empty.
 	Address string
 
-	UseHttps  bool // If TRUE TLSConfig must be set.
-	TLSConfig TLSConfig
+	DisableHttps bool // If FALSE TLSConfig must be set.
+	TLSConfig    TLSConfig
 
 	// Storage
 	Database    DatabaseConfig
@@ -149,8 +157,11 @@ type Config struct {
 	// EnableTestAPIs enables additional APIs used for testing.
 	EnableTestAPIs bool
 
-	// Enables go profiler, gc and so on enpoints on /debug
+	// EnableDebugEndpoints is a legacy setting, enables all debug endpoints.
+	// Per endpoint configuration is in DebugEndpoints.
 	EnableDebugEndpoints bool
+
+	DebugEndpoints DebugEndpointsConfig
 }
 
 type TLSConfig struct {
@@ -330,6 +341,15 @@ type MetricsConfig struct {
 	Interface string
 }
 
+type DebugEndpointsConfig struct {
+	Cache           bool
+	Memory          bool
+	PProf           bool
+	Stacks          bool
+	StacksMaxSizeKb int
+	TxPool          bool
+}
+
 func (ac *ArchiveConfig) GetReadMiniblocksSize() uint64 {
 	if ac.ReadMiniblocksSize <= 0 {
 		return 100
@@ -408,6 +428,15 @@ func (c *Config) GetTestCustomEntitlementContractAddress() common.Address {
 
 func (c *Config) Init() error {
 	return c.parseChains()
+}
+
+// Return the schema to use for accessing the node.
+func (c *Config) UrlSchema() string {
+	s := "https"
+	if c != nil && c.DisableHttps {
+		s = "http"
+	}
+	return s
 }
 
 func parseBlockchainDurations(str string, result map[uint64]BlockchainInfo) error {

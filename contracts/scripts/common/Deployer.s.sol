@@ -20,20 +20,18 @@ abstract contract Deployer is Script, DeployBase {
   // - logging
   function __deploy(address deployer) public virtual returns (address);
 
-  function cache() public returns (address) {
-    address cachedAddress = getDeployment(versionName());
-    if (cachedAddress == address(0)) {
-      revert("no cached deployment found");
-    }
-    return cachedAddress;
-  }
-
   // will first try to load existing deployments from `deployments/<network>/<contract>.json`
   // if OVERRIDE_DEPLOYMENTS is set to true or if no cached deployment is found:
   // - read PRIVATE_KEY from env
   // - invoke __deploy() with the private key
   // - save the deployment to `deployments/<network>/<contract>.json`
   function deploy() public virtual returns (address deployedAddr) {
+    return deploy(_msgSender());
+  }
+
+  function deploy(
+    address deployer
+  ) public virtual returns (address deployedAddr) {
     bool overrideDeployment = vm.envOr("OVERRIDE_DEPLOYMENTS", uint256(0)) > 0;
 
     address existingAddr = isTesting()
@@ -51,15 +49,6 @@ abstract contract Deployer is Script, DeployBase {
       );
       return existingAddr;
     }
-
-    uint256 pk = isAnvil()
-      ? vm.envUint("LOCAL_PRIVATE_KEY")
-      : vm.envUint("TESTNET_PRIVATE_KEY");
-
-    address potential = vm.addr(pk);
-    address deployer = isAnvil() ? potential : msg.sender != potential
-      ? msg.sender
-      : potential;
 
     if (!isTesting()) {
       info(
@@ -94,6 +83,24 @@ abstract contract Deployer is Script, DeployBase {
   function postDeploy(address deployer, address deployment) public virtual {}
 
   function run() public virtual {
-    deploy();
+    bytes memory data = abi.encodeWithSignature("deploy()");
+
+    // we use a dynamic call to call deploy as we do not want to prescribe a return type
+    (bool success, bytes memory returnData) = address(this).delegatecall(data);
+    if (!success) {
+      if (returnData.length > 0) {
+        /// @solidity memory-safe-assembly
+        assembly {
+          let returnDataSize := mload(returnData)
+          revert(add(32, returnData), returnDataSize)
+        }
+      } else {
+        revert("FAILED_TO_CALL: deploy()");
+      }
+    }
+  }
+
+  function _msgSender() internal view returns (address) {
+    return msg.sender;
   }
 }

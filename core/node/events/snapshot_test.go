@@ -13,6 +13,10 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+const (
+	AES_GCM_DERIVED_ALGORITHM = "r.aes-256-gcm.derived"
+)
+
 func make_User_Inception(wallet *crypto.Wallet, streamId StreamId, t *testing.T) *ParsedEvent {
 	envelope, err := MakeEnvelopeWithPayload(
 		wallet,
@@ -84,6 +88,26 @@ func make_Space_Membership(
 	return parsed
 }
 
+func make_Space_Image(
+	wallet *crypto.Wallet,
+	ciphertext string,
+	prevMiniblockHash []byte,
+	t *testing.T,
+) *ParsedEvent {
+	envelope, err := MakeEnvelopeWithPayload(
+		wallet,
+		Make_SpacePayload_SpaceImage(
+			ciphertext,
+			AES_GCM_DERIVED_ALGORITHM,
+		),
+		prevMiniblockHash,
+	)
+	assert.NoError(t, err)
+	parsed, err := ParseEvent(envelope)
+	assert.NoError(t, err)
+	return parsed
+}
+
 func make_Space_Username(wallet *crypto.Wallet, username string, prevHash []byte, t *testing.T) *ParsedEvent {
 	envelope, err := MakeEnvelopeWithPayload(
 		wallet,
@@ -123,7 +147,7 @@ func TestMakeSnapshot(t *testing.T) {
 	wallet, _ := crypto.NewWallet(ctx)
 	streamId := UserStreamIdFromAddr(wallet.Address)
 	inception := make_User_Inception(wallet, streamId, t)
-	snapshot, err := Make_GenisisSnapshot([]*ParsedEvent{inception})
+	snapshot, err := Make_GenesisSnapshot([]*ParsedEvent{inception})
 	assert.NoError(t, err)
 	assert.Equal(
 		t,
@@ -137,7 +161,7 @@ func TestUpdateSnapshot(t *testing.T) {
 	wallet, _ := crypto.NewWallet(ctx)
 	streamId := UserStreamIdFromAddr(wallet.Address)
 	inception := make_User_Inception(wallet, streamId, t)
-	snapshot, err := Make_GenisisSnapshot([]*ParsedEvent{inception})
+	snapshot, err := Make_GenesisSnapshot([]*ParsedEvent{inception})
 	assert.NoError(t, err)
 
 	membership := make_User_Membership(wallet, MembershipOp_SO_JOIN, streamId, nil, t)
@@ -161,7 +185,7 @@ func TestCloneAndUpdateUserSnapshot(t *testing.T) {
 	wallet, _ := crypto.NewWallet(ctx)
 	streamId := UserStreamIdFromAddr(wallet.Address)
 	inception := make_User_Inception(wallet, streamId, t)
-	snapshot1, err := Make_GenisisSnapshot([]*ParsedEvent{inception})
+	snapshot1, err := Make_GenesisSnapshot([]*ParsedEvent{inception})
 	assert.NoError(t, err)
 
 	snapshot := proto.Clone(snapshot1).(*Snapshot)
@@ -187,7 +211,7 @@ func TestCloneAndUpdateSpaceSnapshot(t *testing.T) {
 	wallet, _ := crypto.NewWallet(ctx)
 	streamId := UserStreamIdFromAddr(wallet.Address)
 	inception := make_Space_Inception(wallet, streamId, t)
-	snapshot1, err := Make_GenisisSnapshot([]*ParsedEvent{inception})
+	snapshot1, err := Make_GenesisSnapshot([]*ParsedEvent{inception})
 	assert.NoError(t, err)
 	userId, err := AddressHex(inception.Event.CreatorAddress)
 	assert.NoError(t, err)
@@ -197,7 +221,9 @@ func TestCloneAndUpdateSpaceSnapshot(t *testing.T) {
 	membership := make_Space_Membership(wallet, MembershipOp_SO_JOIN, userId, nil, t)
 	username := make_Space_Username(wallet, "bob", nil, t)
 	displayName := make_Space_DisplayName(wallet, "bobIsTheGreatest", nil, t)
-	events := []*ParsedEvent{membership, username, displayName}
+	imageCipertext := "space_image_ciphertext"
+	image := make_Space_Image(wallet, imageCipertext, nil, t)
+	events := []*ParsedEvent{membership, username, displayName, image}
 	for i, event := range events[:] {
 		err = Update_Snapshot(snapshot, event, 1, int64(3+i))
 		assert.NoError(t, err)
@@ -231,6 +257,17 @@ func TestCloneAndUpdateSpaceSnapshot(t *testing.T) {
 		int64(5),
 		member.DisplayName.EventNum,
 	)
+
+	assert.Equal(
+		t,
+		imageCipertext,
+		snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceImage.Data.Ciphertext,
+	)
+	assert.Equal(
+		t,
+		AES_GCM_DERIVED_ALGORITHM,
+		snapshot.Content.(*Snapshot_SpaceContent).SpaceContent.SpaceImage.Data.Algorithm,
+	)
 }
 
 func TestUpdateSnapshotFailsIfInception(t *testing.T) {
@@ -239,7 +276,7 @@ func TestUpdateSnapshotFailsIfInception(t *testing.T) {
 	wallet, _ := crypto.NewWallet(ctx)
 	streamId := UserStreamIdFromAddr(wallet.Address)
 	inception := make_User_Inception(wallet, streamId, t)
-	snapshot, err := Make_GenisisSnapshot([]*ParsedEvent{inception})
+	snapshot, err := Make_GenesisSnapshot([]*ParsedEvent{inception})
 	assert.NoError(t, err)
 
 	err = Update_Snapshot(snapshot, inception, 0, 1)

@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"encoding/hex"
+	"fmt"
 	"log/slog"
 	"math/big"
 
@@ -23,6 +25,8 @@ import (
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
+
+	contract_types "github.com/river-build/river/core/contracts/types"
 )
 
 type (
@@ -39,14 +43,15 @@ type (
 		evaluator       *entitlement.Evaluator
 
 		// Metrics
-		metrics                   *infra.Metrics
-		entitlementCheckRequested *infra.StatusCounterVec
-		entitlementCheckProcessed *infra.StatusCounterVec
-		entitlementCheckTx        *infra.StatusCounterVec
-		getRootKeyForWalletCalls  *infra.StatusCounterVec
-		getWalletsByRootKeyCalls  *infra.StatusCounterVec
-		getRuleDataCalls          *infra.StatusCounterVec
-		callDurations             *prometheus.HistogramVec
+		metrics                           infra.MetricsFactory
+		metricsPublisher                  *infra.MetricsPublisher
+		entitlementCheckRequested         *infra.StatusCounterVec
+		entitlementCheckProcessed         *infra.StatusCounterVec
+		entitlementCheckTx                *infra.StatusCounterVec
+		getRootKeyForWalletCalls          *infra.StatusCounterVec
+		getWalletsByRootKeyCalls          *infra.StatusCounterVec
+		getCrosschainEntitlementDataCalls *infra.StatusCounterVec
+		callDurations                     *prometheus.HistogramVec
 	}
 
 	// entitlementCheckReceipt holds the outcome of an xchain entitlement check request
@@ -77,6 +82,7 @@ func New(
 	cfg *config.Config,
 	baseChain *crypto.Blockchain,
 	workerID int,
+	metricsRegistry *prometheus.Registry,
 ) (server *xchain, err error) {
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -87,7 +93,7 @@ func New(
 		}
 	}()
 
-	metrics := infra.NewMetrics("river", "xchain")
+	metrics := infra.NewMetricsFactory(metricsRegistry, "river", "xchain")
 
 	evaluator, err := entitlement.NewEvaluatorFromConfig(ctx, cfg, metrics)
 	if err != nil {
@@ -131,7 +137,7 @@ func New(
 	log = log.With("nodeAddress", wallet.Address.Hex())
 
 	if baseChain == nil {
-		baseChain, err = crypto.NewBlockchain(ctx, &cfg.BaseChain, wallet, metrics)
+		baseChain, err = crypto.NewBlockchain(ctx, &cfg.BaseChain, wallet, metrics, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -186,8 +192,8 @@ func New(
 		getWalletsByRootKeyCalls: contractCounter.MustCurryWith(
 			map[string]string{"op": "read", "name": "get_wallets_by_root_key"},
 		),
-		getRuleDataCalls: contractCounter.MustCurryWith(
-			map[string]string{"op": "read", "name": "get_rule_data"},
+		getCrosschainEntitlementDataCalls: contractCounter.MustCurryWith(
+			map[string]string{"op": "read", "name": "get_crosschain_entitlement_data"},
 		),
 		callDurations: metrics.NewHistogramVecEx(
 			"call_duration_seconds",
@@ -195,6 +201,12 @@ func New(
 			infra.DefaultDurationBucketsSeconds,
 			"op",
 		),
+	}
+
+	// If extrernal metrics registry is provided, caller is publishing metrics.
+	// Otherwies, if publishing is enabled, publish here.
+	if metricsRegistry == nil && x.config.Metrics.Enabled && x.config.Metrics.Port > 0 {
+		x.metricsPublisher = infra.NewMetricsPublisher(metrics.Registry())
 	}
 
 	isRegistered, err := x.isRegistered(ctx)
@@ -253,11 +265,13 @@ func (x *xchain) Run(ctx context.Context) {
 		"nodeAddress", x.baseChain.Wallet.Address.Hex(),
 	)
 
-	if x.config.Metrics.Enabled {
+	if x.metricsPublisher != nil {
+		// TODO: remove once both service run from the same process
 		// node and xchain are run in the same docker container and share the same config key for the metrics port.
 		// to prevent both processes claiming the same port we decided to increment the port by 1 for xchain.
-		x.config.Metrics.Port += 1
-		x.metrics.StartMetricsServer(runCtx, x.config.Metrics)
+		cfg := x.config.Metrics
+		cfg.Port += 1
+		x.metricsPublisher.StartMetricsServer(runCtx, cfg)
 	}
 
 	// register callback for Base EntitlementCheckRequested events
@@ -290,14 +304,15 @@ func (x *xchain) onEntitlementCheckRequested(
 		return
 	}
 
-	log.Info("Received EntitlementCheckRequested", "xchain.req.txid", entitlementCheckRequest.TransactionId)
+	log.Info("Received EntitlementCheckRequested",
+		"xchain.req.txid", hex.EncodeToString(entitlementCheckRequest.TransactionId[:]))
 
 	// process the entitlement request and post the result to entitlementCheckResults
 	outcome, err := x.handleEntitlementCheckRequest(ctx, entitlementCheckRequest)
 	if err != nil {
 		x.entitlementCheckRequested.IncFail()
 		log.Error("Entitlement check failed to process",
-			"err", err, "xchain.req.txid", entitlementCheckRequest.TransactionId)
+			"err", err, "xchain.req.txid", hex.EncodeToString(entitlementCheckRequest.TransactionId[:]))
 		return
 	}
 	if outcome != nil { // request was not intended for this xchain instance.
@@ -321,7 +336,7 @@ func (x *xchain) handleEntitlementCheckRequest(
 ) (*entitlementCheckReceipt, error) {
 	log := x.Log(ctx).
 		With("function", "handleEntitlementCheckRequest").
-		With("req.txid", request.TransactionId).
+		With("req.txid", hex.EncodeToString(request.TransactionId[:])).
 		With("roleId", request.RoleId.String())
 
 	for _, selectedNodeAddress := range request.SelectedNodes {
@@ -422,7 +437,13 @@ func (x *xchain) writeEntitlementCheckResults(ctx context.Context, checkResults 
 
 	// wait until all transactions are processed before returning
 	for task := range pending {
-		receipt := <-task.ptx.Wait() // Base transaction receipt
+		receipt, err := task.ptx.Wait(ctx) // Base transaction receipt
+		if err != nil {
+			log.Warn("waiting for entitlement check response receipt failed",
+				"err", err, "tx.hash", task.ptx.TransactionHash())
+			x.entitlementCheckProcessed.IncFail()
+			continue
+		}
 
 		x.entitlementCheckTx.IncPass()
 		if receipt.Status == types.ReceiptStatusFailed {
@@ -507,22 +528,48 @@ func (x *xchain) getRuleData(
 	roleId *big.Int,
 	contractAddress common.Address,
 	client crypto.BlockchainClient,
-) (*base.IRuleEntitlementRuleData, error) {
+) (*base.IRuleEntitlementBaseRuleDataV2, error) {
 	log := x.Log(ctx).With("function", "getRuleData", "req.txid", transactionId)
-	gater, err := base.NewIEntitlementGated(contractAddress, client)
+	queryable, err := base.NewEntitlementDataQueryable(contractAddress, client)
 	if err != nil {
-		return nil, x.handleContractError(log, err, "Failed to create NewEntitlementGated")
+		return nil, x.handleContractError(log, err, "Failed to create EntitlementDataQueryable")
 	}
 
 	defer prometheus.NewTimer(x.callDurations.WithLabelValues("GetRuleData")).ObserveDuration()
 
-	ruleData, err := gater.GetRuleData(&bind.CallOpts{Context: ctx}, transactionId, roleId)
+	entitlementdata, err := queryable.GetCrossChainEntitlementData(
+		&bind.CallOpts{Context: ctx},
+		transactionId,
+		roleId,
+	)
 	if err != nil {
-		x.getRuleDataCalls.IncFail()
-		return nil, x.handleContractError(log, err, "Failed to GetEncodedRuleData")
+		x.getCrosschainEntitlementDataCalls.IncFail()
+		return nil, x.handleContractError(log, err, "failed to GetCrossChainEntitlementData")
 	}
-	x.getRuleDataCalls.IncPass()
-	return &ruleData, nil
+	x.getCrosschainEntitlementDataCalls.IncPass()
+	entitlement, err := contract_types.MarshalEntitlement(ctx, entitlementdata)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal entitlement: %w", err)
+	}
+
+	if entitlement.RuleEntitlementV2 != nil {
+		return entitlement.RuleEntitlementV2, nil
+	}
+
+	if entitlement.RuleEntitlement == nil {
+		log.Error("No decoded rule entitlements for role",
+			"roleId", roleId,
+			"transactionId", hex.EncodeToString(transactionId[:]),
+			"contractAddress", contractAddress.Hex(),
+		)
+		return nil, fmt.Errorf("no decoded rule entitlements for role")
+	}
+
+	ruleDataV2, err := contract_types.ConvertV1RuleDataToV2(ctx, entitlement.RuleEntitlement)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert rule data to V2: %w", err)
+	}
+	return ruleDataV2, nil
 }
 
 // process the given entitlement request.
@@ -536,7 +583,7 @@ func (x *xchain) process(
 	log := x.Log(ctx).
 		With("caller_address", callerAddress.Hex())
 
-	log = log.With("function", "process", "req.txid", request.TransactionId)
+	log = log.With("function", "process", "req.txid", hex.EncodeToString(request.TransactionId[:]))
 	log.Info("Process EntitlementCheckRequested")
 
 	wallets, err := x.getLinkedWallets(ctx, callerAddress)
