@@ -58,6 +58,7 @@ export class MemberDisplayName extends PersistedObservable<MemberDisplayNameMode
         const oldState = this.data
         this.setData({ displayName })
         return this.riverConnection
+            .withStream(streamId)
             .call((client) => client.setDisplayName(streamId, displayName))
             .catch((e) => {
                 this.setData(oldState)

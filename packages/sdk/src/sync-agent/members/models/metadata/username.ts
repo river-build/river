@@ -66,6 +66,7 @@ export class MemberUsername extends PersistedObservable<MemberUsernameModel> {
             isUsernameEncrypted: false,
         })
         return this.riverConnection
+            .withStream(streamId)
             .call((client) => client.setUsername(streamId, username))
             .catch((e) => {
                 this.setData(oldState)
