@@ -12,6 +12,7 @@ export class SyncedStreams {
     private syncedStreamsLoop: SyncedStreamsLoop | undefined
     // userId is the current user id
     private readonly userId: string
+    private readonly logNamespace: string
     // mapping of stream id to stream
     private readonly streams: Map<string, SyncedStream> = new Map()
     // loggers
@@ -30,11 +31,11 @@ export class SyncedStreams {
         this.userId = userId
         this.rpcClient = rpcClient
         this.clientEmitter = clientEmitter
-        const shortId = shortenHexString(
+        this.logNamespace = shortenHexString(
             this.userId.startsWith('0x') ? this.userId.slice(2) : this.userId,
         )
-        this.logSync = dlog('csb:cl:sync').extend(shortId)
-        this.logError = dlogError('csb:cl:sync:stream').extend(shortId)
+        this.logSync = dlog('csb:cl:sync').extend(this.logNamespace)
+        this.logError = dlogError('csb:cl:sync:stream').extend(this.logNamespace)
     }
 
     public get syncState(): SyncState {
@@ -95,10 +96,10 @@ export class SyncedStreams {
             .map((stream) => ({ syncCookie: stream.syncCookie!, stream }))
 
         this.syncedStreamsLoop = new SyncedStreamsLoop(
-            this.userId,
             this.clientEmitter,
             this.rpcClient,
             streamRecords,
+            this.logNamespace,
         )
         await this.syncedStreamsLoop.start()
     }

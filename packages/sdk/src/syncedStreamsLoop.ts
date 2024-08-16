@@ -77,8 +77,6 @@ export interface PingInfo {
     pingTimeout?: NodeJS.Timeout // for cancelling the next ping
 }
 export class SyncedStreamsLoop {
-    // userId is the current user id
-    private readonly userId: string
     // mapping of stream id to stream
     private readonly streams: Map<string, { syncCookie: SyncCookie; stream: ISyncedStream }>
     // loggers
@@ -121,12 +119,11 @@ export class SyncedStreamsLoop {
     }
 
     constructor(
-        userId: string,
         clientEmitter: TypedEmitter<SyncedStreamEvents>,
         rpcClient: StreamRpcClient,
         streams: { syncCookie: SyncCookie; stream: ISyncedStream }[],
+        logNamespace: string,
     ) {
-        this.userId = userId
         this.rpcClient = rpcClient
         this.clientEmitter = clientEmitter
         this.streams = new Map(
@@ -135,11 +132,8 @@ export class SyncedStreamsLoop {
                 { syncCookie, stream },
             ]),
         )
-        const shortId = shortenHexString(
-            this.userId.startsWith('0x') ? this.userId.slice(2) : this.userId,
-        )
-        this.logSync = dlog('csb:cl:sync').extend(shortId)
-        this.logError = dlogError('csb:cl:sync:stream').extend(shortId)
+        this.logSync = dlog('csb:cl:sync').extend(logNamespace)
+        this.logError = dlogError('csb:cl:sync:stream').extend(logNamespace)
     }
 
     public get syncState(): SyncState {
