@@ -1,11 +1,17 @@
 import Fastify from 'fastify'
+
 import { setupRoutes, Server } from '../../src/node'
+import { getLogger } from '../../src/logger'
+
+const logger = getLogger('stream-metadata:tests:integration:health')
 
 describe('GET /health Integration Test', () => {
 	let server: Server
 
 	beforeAll(async () => {
-		server = Fastify()
+		server = Fastify({
+			logger,
+		})
 		setupRoutes(server)
 		await server.listen({ port: 0 }) // Listen on a random available port
 	})
