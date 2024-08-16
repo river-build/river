@@ -1,4 +1,4 @@
-FROM node:lts-alpine3.20
+FROM node:lts-alpine3.20 as builder
 
 WORKDIR /river
 
@@ -21,20 +21,27 @@ COPY ./protocol ./protocol
 COPY ./scripts ./scripts
 
 # monorepo packages
+COPY ./packages/eslint-config /river/packages/eslint-config
+COPY ./packages/prettier-config /river/packages/prettier-config
 COPY ./packages/generated /river/packages/generated
 COPY ./packages/web3 /river/packages/web3
 COPY ./packages/dlog /river/packages/dlog
 COPY ./packages/proto /river/packages/proto
-COPY ./packages/metrics-discovery /river/packages/metrics-discovery
+COPY ./packages/sdk /river/packages/sdk
+COPY ./packages/encryption /river/packages/encryption
+COPY ./packages/stream-metadata /river/packages/stream-metadata
 
 # install dependencies and build
 RUN apk add --no-cache git curl
 RUN corepack enable
 RUN yarn install
-RUN yarn run turbo build --filter @river-build/metrics-discovery
+RUN yarn run turbo build --filter @river-build/stream-metadata
 
-WORKDIR /river/packages/metrics-discovery
+# create runner image with only the necessary files
+FROM node:lts-alpine3.20 as runner
+COPY --from=builder /river/packages/stream-metadata/dist /river/packages/stream-metadata/dist
 
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD curl -f http://localhost:8080 || exit 1
-
-CMD [ "yarn", "start"]
+# run the service
+WORKDIR /river/packages/stream-metadata
+ENV NODE_ENV=production 
+CMD ["node", "--enable-source-maps", "./dist/node_esbuild.cjs"]
