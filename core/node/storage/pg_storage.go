@@ -752,7 +752,7 @@ func (s *PostgresEventStore) WriteMiniblockCandidate(
 ) error {
 	return s.txRunner(
 		ctx,
-		"WriteBlockProposal",
+		"WriteMiniblockCandidate",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
 			return s.writeBlockProposalTxn(ctx, tx, streamId, blockHash, blockNumber, miniblock)
@@ -862,7 +862,7 @@ func (s *PostgresEventStore) PromoteMiniblockCandidate(
 	defer cancel()
 	return s.txRunner(
 		ctx,
-		"PromoteBlock",
+		"PromoteMiniblockCandidate",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
 			return s.promoteBlockTxn(
