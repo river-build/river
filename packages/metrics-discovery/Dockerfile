@@ -31,7 +31,7 @@ COPY ./packages/metrics-discovery /river/packages/metrics-discovery
 RUN apk add --no-cache git curl
 RUN corepack enable
 RUN yarn install
-RUN yarn workspace @river-build/metrics-discovery build:turbo
+RUN yarn run turbo build --filter @river-build/metrics-discovery
 
 WORKDIR /river/packages/metrics-discovery
 
