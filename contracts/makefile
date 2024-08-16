@@ -264,7 +264,7 @@ deploy-alpha-base-sepolia :;
 	@$(MAKE) resume-any context=alpha rpc=base_sepolia private_key=${TESTNET_PRIVATE_KEY} verifier=${BASESCAN_SEPOLIA_URL} etherscan=${BASESCAN_API_KEY}
 
 interact-alpha-base-sepolia :;
-	@$(MAKE) interact-any context=alpha rpc=base_sepolia private_key=${TESTNET_PRIVATE_KEY}
+	$(MAKE) interact-any context=alpha rpc=base_sepolia private_key=${TESTNET_PRIVATE_KEY}
 
 deploy-alpha-river-testnet :;
 	@$(MAKE) deploy-any context=alpha rpc=river_devnet private_key=${TESTNET_PRIVATE_KEY}

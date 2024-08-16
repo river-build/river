@@ -8,7 +8,7 @@ export BASE_CHAIN_ID="${BASE_CHAIN_ID:-31337}"
 export RIVER_CHAIN_ID="${RIVER_CHAIN_ID:-31338}"
 
 SKIP_CHAIN_WAIT="${SKIP_CHAIN_WAIT:-false}"
-BASE_EXECUTION_CLIENT="${BASE_EXECUTION_CLIENT:-''}"
+BASE_EXECUTION_CLIENT="${BASE_EXECUTION_CLIENT:-}"
 BASE_ANVIL_SOURCE_DIR=${BASE_ANVIL_SOURCE_DIR:-"base_anvil"}
 RIVER_ANVIL_SOURCE_DIR=${RIVER_ANVIL_SOURCE_DIR:-"river_anvil"}
 RIVER_BLOCK_TIME="${RIVER_BLOCK_TIME:-1}"
@@ -76,25 +76,14 @@ cast rpc evm_setIntervalMining $RIVER_BLOCK_TIME --rpc-url $RIVER_ANVIL_RPC_URL
 
 popd
 
-mkdir -p packages/generated/deployments/${RIVER_ENV}/base/addresses
-mkdir -p packages/generated/deployments/${RIVER_ENV}/river/addresses
 
-function copy_addresses() {
-    local SOURCE_DIR=$1
-    local DEST_DIR=$2
-    local CHAIN_ID=$3
-    cp contracts/deployments/${RIVER_ENV}/${SOURCE_DIR}/* packages/generated/deployments/${RIVER_ENV}/${DEST_DIR}/addresses
-    echo "{\"id\": ${CHAIN_ID}}" > packages/generated/deployments/${RIVER_ENV}/${DEST_DIR}/chainId.json
+# mkdir -p packages/generated/deployments/${RIVER_ENV}/{base,river}
+cp -r contracts/deployments/${RIVER_ENV} packages/generated/deployments/${RIVER_ENV}
 
-    if [ "$DEST_DIR" = "base" ] && [ -n "$BASE_EXECUTION_CLIENT" ]; then
-        echo "{\"executionClient\": \"${BASE_EXECUTION_CLIENT}\"}" > packages/generated/deployments/${RIVER_ENV}/${DEST_DIR}/executionClient.json
-    fi
-}
 
-# copy base contracts
-copy_addresses $BASE_ANVIL_SOURCE_DIR "base" "${BASE_CHAIN_ID}"
-# copy river contracts
-copy_addresses $RIVER_ANVIL_SOURCE_DIR "river" "${RIVER_CHAIN_ID}"
+if [ -n "$BASE_EXECUTION_CLIENT" ]; then
+    echo "{\"executionClient\": \"${BASE_EXECUTION_CLIENT}\"}" > packages/generated/deployments/${RIVER_ENV}/base/executionClient.json
+fi
 
 # Update the config
 pushd ./packages/generated
