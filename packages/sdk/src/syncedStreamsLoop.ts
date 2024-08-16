@@ -1,5 +1,5 @@
 import { Err, SyncCookie, SyncOp, SyncStreamsResponse } from '@river-build/proto'
-import { DLogger, dlog, dlogError, shortenHexString } from '@river-build/dlog'
+import { DLogger, dlog, dlogError } from '@river-build/dlog'
 import { StreamRpcClient } from './makeStreamRpcClient'
 import { unpackStream, unpackStreamAndCookie } from './sign'
 import { SyncedStreamEvents } from './streamEvents'
