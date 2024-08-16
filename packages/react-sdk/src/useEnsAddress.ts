@@ -1,14 +1,8 @@
-import { useMemo } from 'react'
-import { useSyncAgent } from './useSyncAgent'
+import type { Member } from '@river-build/sdk'
 import { useObservable } from './useObservable'
 import { useAction } from './internals/useAction'
 
-export const useEnsAddress = (spaceId: string, userId: string) => {
-    const sync = useSyncAgent()
-    const member = useMemo(
-        () => sync.spaces.getSpace(spaceId).members.getMember(userId),
-        [sync, spaceId, userId],
-    )
+export const useEnsAddress = (member: Member) => {
     const { data, ...rest } = useObservable(member?.observables.ensAddress)
     return {
         ...data,
@@ -16,12 +10,7 @@ export const useEnsAddress = (spaceId: string, userId: string) => {
     }
 }
 
-export const useSetEnsAddress = (spaceId: string) => {
-    const sync = useSyncAgent()
-    const member = useMemo(
-        () => sync.spaces.getSpace(spaceId).members.getMember(sync.userId),
-        [sync, spaceId],
-    )
-    const { action: setEnsAddress, ...rest } = useAction(member, 'setEnsAddress')
-    return { setEnsAddress, ...rest }
+export const useSetEnsAddress = (member: Member | undefined) => {
+    const { action, ...rest } = useAction(member, 'setEnsAddress')
+    return { setEnsAddress: action, ...rest }
 }

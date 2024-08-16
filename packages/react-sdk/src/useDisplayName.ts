@@ -1,14 +1,8 @@
-import { useMemo } from 'react'
-import { useSyncAgent } from './useSyncAgent'
+import type { Member } from '@river-build/sdk'
 import { useObservable } from './useObservable'
 import { useAction } from './internals/useAction'
 
-export const useDisplayName = (spaceId: string, userId: string) => {
-    const sync = useSyncAgent()
-    const member = useMemo(
-        () => sync.spaces.getSpace(spaceId).members.getMember(userId),
-        [sync, spaceId, userId],
-    )
+export const useDisplayName = (member: Member) => {
     const { data, ...rest } = useObservable(member?.observables.displayName)
     return {
         ...data,
@@ -16,12 +10,7 @@ export const useDisplayName = (spaceId: string, userId: string) => {
     }
 }
 
-export const useSetDisplayName = (spaceId: string) => {
-    const sync = useSyncAgent()
-    const member = useMemo(
-        () => sync.spaces.getSpace(spaceId).members.getMember(sync.userId),
-        [sync, spaceId],
-    )
-    const { action: setDisplayName, ...rest } = useAction(member, 'setDisplayName')
-    return { setDisplayName, ...rest }
+export const useSetDisplayName = (member: Member | undefined) => {
+    const { action, ...rest } = useAction(member, 'setDisplayName')
+    return { setDisplayName: action, ...rest }
 }
