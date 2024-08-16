@@ -39,17 +39,17 @@ function makeStreamRpcClient(url: string): StreamRpcClient {
 
 async function getStreamClient(streamId: `0x${string}`) {
 	const node = await getNodeForStream(streamId)
-	let url = node?.url
-	if (!clients.has(url)) {
-		const client = makeStreamRpcClient(url)
+	let nodeUrl = node?.url
+	if (!clients.has(nodeUrl)) {
+		const client = makeStreamRpcClient(nodeUrl)
 		clients.set(client.url!, client)
-		url = client.url!
+		nodeUrl = client.url!
 	}
-	logger.info({ url }, 'getStreamClient: client url')
+	logger.info({ url: nodeUrl }, 'getStreamClient')
 
-	const client = clients.get(url)
+	const client = clients.get(nodeUrl)
 	if (!client) {
-		throw new Error(`Failed to get client for url ${url}`)
+		throw new Error(`Failed to get client for url ${nodeUrl}`)
 	}
 
 	return { client, lastMiniblockNum: node.lastMiniblockNum }
@@ -150,7 +150,7 @@ export async function getStream(streamId: string): Promise<StreamStateView | und
 
 	logger.info(
 		{
-			clientUrl: client.url,
+			nodeUrl: client.url,
 			streamId,
 			lastMiniblockNum: lastMiniblockNum.toString(),
 		},
@@ -165,7 +165,7 @@ export async function getStream(streamId: string): Promise<StreamStateView | und
 
 	logger.info(
 		{
-			duration: Date.now() - start,
+			duration_ms: Date.now() - start,
 		},
 		'getStream finished',
 	)
