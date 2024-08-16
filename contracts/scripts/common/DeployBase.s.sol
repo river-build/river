@@ -57,7 +57,8 @@ contract DeployBase is DeployHelpers, Script {
     return
       block.chainid == 31337
         ? "base_anvil"
-        : getChain(block.chainid).chainAlias;
+        : // if block.chain === 85432 'base'
+        getChain(block.chainid).chainAlias;
   }
 
   function networkDirPath() internal returns (string memory path) {

@@ -62,6 +62,8 @@ abstract contract FacetTest is IDiamond, TestUtils {
 }
 
 abstract contract FacetHelper is IDiamond {
+  string public name = "FacetHelper";
+
   bytes4[] public functionSelectors;
   uint256 internal _index;
 
