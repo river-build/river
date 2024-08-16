@@ -107,7 +107,10 @@ async function main() {
 	try {
 		await registerPlugins()
 		setupRoutes()
-		await server.listen({ port: config.port })
+		await server.listen({
+			port: config.port,
+			host: config.host,
+		})
 		logger.info('Server started')
 	} catch (error) {
 		logger.error(error, 'Error starting server')
