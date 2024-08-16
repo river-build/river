@@ -46,9 +46,8 @@ type StreamStorage interface {
 		envelope []byte,
 	) error
 
-	// WriteBlockProposal adds a proposal candidate for future
-	// TODO: rename to WriteMiniblockCandidate
-	WriteBlockProposal(
+	// WriteMiniblockCandidate adds a proposal candidate for future miniblock.
+	WriteMiniblockCandidate(
 		ctx context.Context,
 		streamId StreamId,
 		blockHash common.Hash,
@@ -69,8 +68,7 @@ type StreamStorage interface {
 	// stores miniblock proposal with given hash at minipoolGeneration index and wipes all candidates for stream.
 	// If snapshotMiniblock is true, stores minipoolGeneration as last snapshot miniblock index,
 	// stores envelopes in the new minipool in slots starting with 0.
-	// TODO: rename to PromoteMiniblockCandidate
-	PromoteBlock(
+	PromoteMiniblockCandidate(
 		ctx context.Context,
 		streamId StreamId,
 		minipoolGeneration int64,

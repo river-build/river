@@ -1,9 +1,8 @@
 import { BigNumber } from 'ethers'
 
 import { StreamIdHex } from './types'
-import { getRiverRegistry } from './evmRpcClient'
 import { getLogger } from './logger'
-import { Config } from './environment'
+import { getRiverRegistry } from './evmRpcClient'
 
 type CachedStreamData = {
 	url: string
@@ -16,10 +15,9 @@ const logger = getLogger('streamRegistry')
 
 // TODO: remove this entire file
 export async function getNodeForStream(
-	config: Config,
 	streamId: StreamIdHex,
 ): Promise<{ url: string; lastMiniblockNum: BigNumber }> {
-	logger.info('getNodeForStream', streamId)
+	logger.info({ streamId }, 'getNodeForStream')
 
 	const now = Date.now()
 	const cachedData = cache[streamId]
@@ -29,23 +27,20 @@ export async function getNodeForStream(
 		return { url: cachedData.url, lastMiniblockNum: cachedData.lastMiniblockNum }
 	}
 
-	const riverRegistry = getRiverRegistry(config)
-
-	logger.info('getNodeForStream', {
-		streamId,
-		riverRegistryAddress: riverRegistry.config.addresses.riverRegistry,
-	})
-
+	const riverRegistry = getRiverRegistry()
 	const streamData = await riverRegistry.streamRegistry.read.getStream(streamId)
 
 	if (streamData.nodes.length === 0) {
-		const err = new Error(`No nodes found for stream ${streamId}`)
-		logger.error(`No nodes found for stream`, {
-			streamId,
-			err,
-		})
+		const error = new Error(`No nodes found for stream ${streamId}`)
+		logger.error(
+			{
+				streamId,
+				err: error,
+			},
+			'No nodes found for stream',
+		)
 
-		throw err
+		throw error
 	}
 
 	const lastMiniblockNum = streamData.lastMiniblockNum
@@ -53,11 +48,14 @@ export async function getNodeForStream(
 	const randomIndex = Math.floor(Math.random() * streamData.nodes.length)
 	const node = await riverRegistry.nodeRegistry.read.getNode(streamData.nodes[randomIndex])
 
-	logger.info(`connected to node`, {
-		streamId,
-		nodeUrl: node.url,
-		lastMiniblockNum,
-	})
+	logger.info(
+		{
+			streamId,
+			nodeUrl: node.url,
+			lastMiniblockNum,
+		},
+		'connected to node',
+	)
 
 	// Cache the result with a 15-minute expiration
 	cache[streamId] = {

@@ -158,7 +158,7 @@ func (s *streamImpl) applyMiniblockImplNoLock(ctx context.Context, miniblock *Mi
 		newMinipool = append(newMinipool, b)
 	}
 
-	err = s.params.Storage.PromoteBlock(
+	err = s.params.Storage.PromoteMiniblockCandidate(
 		ctx,
 		s.streamId,
 		s.view.minipool.generation,
@@ -597,7 +597,7 @@ func (s *streamImpl) SaveMiniblockCandidate(ctx context.Context, mb *Miniblock) 
 		)
 	}
 
-	return s.params.Storage.WriteBlockProposal(
+	return s.params.Storage.WriteMiniblockCandidate(
 		ctx,
 		s.streamId,
 		mbInfo.Hash,
