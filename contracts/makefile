@@ -51,7 +51,7 @@ deploy-any-local :;
 
 interact-any-local :;
 	@echo "Running $(contract) on local chain"
-	@SAVE_DEPLOYMENTS=1 OVERRIDE_DEPLOYMENTS=1 $(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
+	@SAVE_DEPLOYMENTS=1 $(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
 	forge script scripts/interactions/${contract}.s.sol:${contract} \
 	--ffi --rpc-url ${rpc} --private-key ${LOCAL_PRIVATE_KEY} --broadcast
 
@@ -74,7 +74,7 @@ resume-any :;
 
 interact-any :;
 	@echo "Running $(contract) on remote network"
-	@SAVE_DEPLOYMENTS=1 OVERRIDE_DEPLOYMENTS=1 $(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
+	@SAVE_DEPLOYMENTS=1 $(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
 	forge script scripts/interactions/${contract}.s.sol:${contract} \
 	--ffi --rpc-url ${rpc} --private-key ${private_key} --broadcast --verify
 
@@ -112,7 +112,7 @@ resume-any-ledger :;
 
 interact-any-ledger :;
 	@echo "Running $(contract) on remote network"
-	@SAVE_DEPLOYMENTS=1 OVERRIDE_DEPLOYMENTS=1 $(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
+	@SAVE_DEPLOYMENTS=1 $(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
 	forge script scripts/interactions/${contract}.s.sol:${contract} \
 	--ledger --hd-paths ${hd_path} --sender ${sender} \
 	--ffi --rpc-url ${rpc} --broadcast
