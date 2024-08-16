@@ -29,7 +29,7 @@ type ObservableValue<Data> = Data extends PersistedModel<infer UnwrappedData>
       }
     : {
           // Its a non persisted object - Observable<T>
-          data: Data | undefined
+          data: Data
           error: undefined
           status: 'loading' | 'loaded'
           isLoading: boolean
@@ -48,7 +48,7 @@ const isPersisted = <T>(value: T | PersistedModel<T>): value is PersistedModel<T
 }
 
 export function useObservable<T>(
-    observable: Observable<T> | undefined,
+    observable: Observable<T>,
     config?: ObservableConfig<T>,
 ): ObservableValue<T> {
     const opts = useMemo(
@@ -57,17 +57,11 @@ export function useObservable<T>(
     ) as ObservableConfig<T>
 
     const value = useSyncExternalStore(
-        (subscriber) =>
-            observable
-                ? observable.subscribe(subscriber, { fireImediately: opts?.fireImmediately })
-                : () => undefined,
-        () => observable?.value,
+        (subscriber) => observable.subscribe(subscriber, { fireImediately: opts?.fireImmediately }),
+        () => observable.value,
     )
 
     useEffect(() => {
-        if (!value) {
-            return
-        }
         if (isPersisted(value)) {
             if (value.status === 'loaded') {
                 opts.onUpdate?.(value.data)
@@ -81,20 +75,10 @@ export function useObservable<T>(
     }, [opts, value])
 
     const data = useMemo(() => {
-        if (!value) {
-            return {
-                data: undefined,
-                error: undefined,
-                status: 'loading' as const,
-                isLoading: true,
-                isError: false,
-                isLoaded: false,
-            }
-        }
         if (isPersisted(value)) {
             const { data, status } = value
             return {
-                data: data as T,
+                data: data,
                 error: status === 'error' ? value.error : undefined,
                 status,
                 isLoading: status === 'loading',
@@ -105,7 +89,7 @@ export function useObservable<T>(
             return {
                 data: value,
                 error: undefined,
-                status: 'loaded' as const,
+                status: 'loaded',
                 isLoading: false,
                 isError: false,
                 isLoaded: true,
