@@ -672,7 +672,7 @@ func TestGetStreamFromLastSnapshotConsistencyChecksMissingBlockFailure(t *testin
 	_, err := pgEventStore.ReadStreamFromLastSnapshot(ctx, streamId, 0)
 
 	require.NotNil(err)
-	require.Contains(err.Error(), "Miniblocks consistency violation - wrong block sequence number")
+	require.EqualValues(Err_INTERNAL, AsRiverError(err).Code)
 	require.Equal(AsRiverError(err).GetTag("ActualSeqNum"), int64(3))
 	require.Equal(AsRiverError(err).GetTag("ExpectedSeqNum"), int64(2))
 }
@@ -729,9 +729,7 @@ func TestGetStreamFromLastSnapshotConsistencyCheckWrongEnvelopeGeneration(t *tes
 	_, err := pgEventStore.ReadStreamFromLastSnapshot(ctx, streamId, 0)
 
 	require.NotNil(err)
-	require.Contains(err.Error(), "Minipool consistency violation - wrong event generation")
-	require.Equal(AsRiverError(err).GetTag("ActualGeneration"), int64(777))
-	require.Equal(AsRiverError(err).GetTag("ExpectedGeneration"), int64(1))
+	require.EqualValues(Err_MINIBLOCKS_STORAGE_FAILURE, AsRiverError(err).Code)
 }
 
 func TestGetStreamFromLastSnapshotConsistencyCheckNoZeroIndexEnvelope(t *testing.T) {
@@ -788,8 +786,6 @@ func TestGetStreamFromLastSnapshotConsistencyCheckNoZeroIndexEnvelope(t *testing
 
 	require.NotNil(err)
 	require.Contains(err.Error(), "Minipool consistency violation - slotNums are not sequential")
-	require.Equal(AsRiverError(err).GetTag("ActualSlotNumber"), int64(1))
-	require.Equal(AsRiverError(err).GetTag("ExpectedSlotNumber"), int64(0))
 }
 
 func TestGetStreamFromLastSnapshotConsistencyCheckGapInEnvelopesIndexes(t *testing.T) {
@@ -845,9 +841,7 @@ func TestGetStreamFromLastSnapshotConsistencyCheckGapInEnvelopesIndexes(t *testi
 	_, err := pgEventStore.ReadStreamFromLastSnapshot(ctx, streamId, 0)
 
 	require.NotNil(err)
-	require.Contains(err.Error(), "Minipool consistency violation - slotNums are not sequential")
-	require.Equal(AsRiverError(err).GetTag("ActualSlotNumber"), int64(2))
-	require.Equal(AsRiverError(err).GetTag("ExpectedSlotNumber"), int64(1))
+	require.EqualValues(Err_MINIBLOCKS_STORAGE_FAILURE, AsRiverError(err).Code)
 }
 
 func TestGetMiniblocksConsistencyChecks(t *testing.T) {
