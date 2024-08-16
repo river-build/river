@@ -13,9 +13,10 @@ const (
 )
 
 type ReadStreamFromLastSnapshotResult struct {
-	StartMiniblockNumber int64
-	Miniblocks           [][]byte
-	MinipoolEnvelopes    [][]byte
+	StartMiniblockNumber    int64
+	SnapshotMiniblockOffset int
+	Miniblocks              [][]byte
+	MinipoolEnvelopes       [][]byte
 }
 
 type StreamStorage interface {
@@ -24,12 +25,14 @@ type StreamStorage interface {
 	// Minipool is set to generation number 1 (i.e. number of miniblock that is going to be produced next) and is empty.
 	CreateStreamStorage(ctx context.Context, streamId StreamId, genesisMiniblock []byte) error
 
-	// Returns all stream blocks starting from last snapshot miniblock index and all envelopes in the given minipool.
-	// TODO: tests with precedingBlockCount > 0
+	// ReadStreamFromLastSnapshot reads last stream miniblocks and gurantees that last snapshot miniblock is included.
+	// It attempts to read at least numToRead miniblocks, but may return less if there are not enough miniblocks in storage,
+	// or more, if there are more miniblocks since the last snapshot.
+	// Also returns minipool envelopes for the current minipool.
 	ReadStreamFromLastSnapshot(
 		ctx context.Context,
 		streamId StreamId,
-		precedingBlockCount int,
+		numToRead int,
 	) (*ReadStreamFromLastSnapshotResult, error)
 
 	// Returns miniblocks with miniblockNum or "generation" from fromInclusive, to toExlusive.

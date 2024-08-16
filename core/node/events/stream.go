@@ -100,7 +100,7 @@ func (s *streamImpl) loadInternal(ctx context.Context) error {
 	streamData, err := s.params.Storage.ReadStreamFromLastSnapshot(
 		ctx,
 		s.streamId,
-		max(0, streamRecencyConstraintsGenerations-1),
+		streamRecencyConstraintsGenerations,
 	)
 	if err != nil {
 		if AsRiverError(err).Code == Err_NOT_FOUND {
@@ -391,7 +391,6 @@ func (s *streamImpl) addEventImpl(ctx context.Context, event *ParsedEvent) error
 	if err != nil {
 		return err
 	}
-
 
 	prevSyncCookie := s.view.SyncCookie(s.params.Wallet.Address)
 	s.view = newSV
