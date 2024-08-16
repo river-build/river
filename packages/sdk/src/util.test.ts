@@ -14,7 +14,12 @@ import { Entitlements } from './sync-agent/entitlements/entitlements'
 import { PlainMessage } from '@bufbuild/protobuf'
 import { IStreamStateView } from './streamStateView'
 import { Client } from './client'
-import { makeBaseChainConfig, makeRiverChainConfig, makeRiverConfig } from './riverConfig'
+import {
+    makeBaseChainConfig,
+    makeRiverChainConfig,
+    makeRiverConfig,
+    useLegacySpaces,
+} from './riverConfig'
 import {
     genId,
     makeSpaceStreamId,
@@ -31,7 +36,7 @@ import { ethers, ContractTransaction } from 'ethers'
 import { RiverDbManager } from './riverDbManager'
 import { StreamRpcClient, makeStreamRpcClient } from './makeStreamRpcClient'
 import assert from 'assert'
-import _, { create } from 'lodash'
+import _ from 'lodash'
 import { MockEntitlementsDelegate } from './utils'
 import { SignerContext, makeSignerContext } from './signerContext'
 import {
@@ -64,8 +69,6 @@ import {
     encodeRuleDataV2,
     SignerType,
 } from '@river-build/web3'
-
-import { useLegacySpaces } from './riverConfig'
 
 const log = dlog('csb:test:util')
 
@@ -490,7 +493,7 @@ export async function createVersionedSpace(
             }
         }
         console.log('CREATE_SPACE')
-        return await spaceDapp.createSpace(createSpaceParams as CreateSpaceParams, signer)
+        return await spaceDapp.createSpace(createSpaceParams, signer)
     }
 }
 
@@ -509,8 +512,8 @@ export async function createUserStreamAndSyncClient(
     membershipInfo: LegacyMembershipStruct | MembershipStruct,
     wallet: ethers.Wallet,
 ) {
-    var transaction: ethers.ContractTransaction
-    var createSpaceParams: CreateSpaceParams | CreateLegacySpaceParams
+    let transaction: ethers.ContractTransaction
+    let createSpaceParams: CreateSpaceParams | CreateLegacySpaceParams
     if (isLegacyMembershipType(membershipInfo)) {
         createSpaceParams = {
             spaceName: `${name}-space`,

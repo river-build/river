@@ -9,10 +9,10 @@ import { RuleEntitlementShim } from './v3/RuleEntitlementShim'
 import { IRuleEntitlementBase } from './v3'
 import { IPricingModulesBase } from './v3/IPricingShim'
 
-import { RuleEntitlementV2Shim } from 'v3/RuleEntitlementV2Shim'
+import { RuleEntitlementV2Shim } from './v3/RuleEntitlementV2Shim'
 import { NoopRuleData } from './entitlement'
 
-import { CreateSpaceParams, CreateLegacySpaceParams } from 'ISpaceDapp'
+import { CreateSpaceParams, CreateLegacySpaceParams } from './ISpaceDapp'
 
 export const Permission = {
     Undefined: 'Undefined', // No permission required

@@ -1,4 +1,4 @@
-import { BigNumber, ethers } from 'ethers'
+import { ethers } from 'ethers'
 import {
     CheckOperation,
     CheckOperationType,
@@ -21,7 +21,6 @@ import {
 import { MOCK_ADDRESS } from '../src/Utils'
 import { zeroAddress } from 'viem'
 import { Address } from '../src/ContractTypes'
-import { assert } from 'console'
 
 function makeRandomOperation(depth: number): Operation {
     const rand = Math.random()

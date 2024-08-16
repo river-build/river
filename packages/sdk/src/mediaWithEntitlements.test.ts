@@ -2,7 +2,12 @@
  * @group with-entitilements
  */
 
-import { makeUserContextFromWallet, makeTestClient, getDynamicPricingModule } from './util.test'
+import {
+    makeUserContextFromWallet,
+    makeTestClient,
+    getDynamicPricingModule,
+    createVersionedSpace,
+} from './util.test'
 import { makeDefaultChannelStreamId, makeSpaceStreamId } from './id'
 import { ethers, Wallet } from 'ethers'
 import { Client } from './client'
@@ -17,7 +22,6 @@ import {
 import { SignerContext } from './signerContext'
 import { makeBaseChainConfig } from './riverConfig'
 import { dlog } from '@river-build/dlog'
-import { createVersionedSpace } from './util.test'
 
 const log = dlog('csb:test:mediaWithEntitlements')
 

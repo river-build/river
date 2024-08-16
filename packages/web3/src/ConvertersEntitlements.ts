@@ -1,9 +1,8 @@
 import { ethers } from 'ethers'
 
 import { Address, EntitlementStruct } from './ContractTypes'
-import { encodeEntitlementData, encodeThresholdParams } from './entitlement'
 import { IRuleEntitlementBase, IRuleEntitlementV2Base } from './v3'
-import { CheckOperationType } from './entitlement'
+import { CheckOperationType, encodeEntitlementData, encodeThresholdParams } from './entitlement'
 
 const UserAddressesEncoding = 'address[]'
 
@@ -65,7 +64,7 @@ export function convertRuleDataV1ToV2(
                 case CheckOperationType.MOCK:
                 case CheckOperationType.ERC20:
                 case CheckOperationType.ERC721:
-                case CheckOperationType.NATIVE_COIN_BALANCE:
+                case CheckOperationType.NATIVE_COIN_BALANCE: {
                     const threshold = ethers.BigNumber.from(op.threshold).toBigInt()
                     return {
                         opType: op.opType,
@@ -73,6 +72,7 @@ export function convertRuleDataV1ToV2(
                         contractAddress: op.contractAddress,
                         params: encodeThresholdParams({ threshold }),
                     }
+                }
                 case CheckOperationType.ERC1155:
                     throw new Error('ERC1155 not supported for V1 Rule Data')
 

@@ -3,7 +3,11 @@
  */
 
 import { dlog } from '@river-build/dlog'
-import { makeUserContextFromWallet, getDynamicPricingModule } from './util.test'
+import {
+    makeUserContextFromWallet,
+    getDynamicPricingModule,
+    createVersionedSpace,
+} from './util.test'
 import {
     isValidStreamId,
     makeDefaultChannelStreamId,
@@ -20,7 +24,6 @@ import {
     ETH_ADDRESS,
 } from '@river-build/web3'
 import { makeBaseChainConfig } from './riverConfig'
-import { createVersionedSpace } from './util.test'
 
 const log = dlog('csb:test:membershipManagement')
 

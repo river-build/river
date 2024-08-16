@@ -13,7 +13,6 @@ import {
 import { ethers } from 'ethers'
 import { Address } from './ContractTypes'
 import { MOCK_ADDRESS } from './Utils'
-import { ParamType } from 'ethers/lib/utils'
 
 const zeroAddress = ethers.constants.AddressZero
 
@@ -193,15 +192,23 @@ export type ThresholdParams = {
     threshold: bigint
 }
 
+const thresholdParamsAbi = {
+    components: [
+        {
+            name: 'threshold',
+            type: 'uint256',
+        },
+    ],
+    name: 'thresholdParams',
+    type: 'tuple',
+} as const
+
 export function encodeThresholdParams(thresholdParams: ThresholdParams): Hex {
-    return ethers.utils.defaultAbiCoder.encode(['uint256'], [thresholdParams.threshold]) as Hex
+    return encodeAbiParameters([thresholdParamsAbi], [thresholdParams])
 }
 
-export function decodeThresholdParams(params: string): ThresholdParams {
-    const decoded = ethers.utils.defaultAbiCoder.decode(['uint256'], params)
-    return {
-        threshold: decoded[0].toBigInt(),
-    }
+export function decodeThresholdParams(params: Hex): Readonly<ThresholdParams> {
+    return decodeAbiParameters([thresholdParamsAbi], params)[0]
 }
 
 export type ERC1155Params = {
@@ -209,26 +216,27 @@ export type ERC1155Params = {
     tokenId: bigint
 }
 
-const erc1155ParamsType = ParamType.from({
-    type: 'tuple',
-    baseType: 'tuple',
-    name: 'erc1155Params',
+const erc11155ParamsAbi = {
     components: [
-        { name: 'threshold', type: 'uint256' },
-        { name: 'tokenId', type: 'uint256' },
+        {
+            name: 'threshold',
+            type: 'uint256',
+        },
+        {
+            name: 'tokenId',
+            type: 'uint256',
+        },
     ],
-})
+    name: 'erc1155Params',
+    type: 'tuple',
+} as const
 
-export function encodeERC1155Params(params: ERC1155Params): string {
-    return ethers.utils.defaultAbiCoder.encode([erc1155ParamsType], [params])
+export function encodeERC1155Params(params: ERC1155Params): Hex {
+    return encodeAbiParameters([erc11155ParamsAbi], [params])
 }
 
-export function decodeERC1155Params(params: string): ERC1155Params {
-    const decoded = ethers.utils.defaultAbiCoder.decode([erc1155ParamsType], params)
-    return {
-        threshold: decoded[0].threshold.toBigInt(),
-        tokenId: decoded[0].tokenId.toBigInt(),
-    }
+export function decodeERC1155Params(params: Hex): Readonly<ERC1155Params> {
+    return decodeAbiParameters([erc11155ParamsAbi], params)[0]
 }
 
 export function encodeEntitlementData(ruleData: IRuleEntitlementBase.RuleDataStruct): Hex {
@@ -262,17 +270,17 @@ export function decodeEntitlementData(entitlementData: Hex): IRuleEntitlementBas
 }
 
 export function encodeRuleDataV2(ruleData: IRuleEntitlementV2Base.RuleDataV2Struct): Hex {
-    const getRuleDataAbi: ExtractAbiFunction<typeof IRuleEntitlementV2Abi, 'getRuleDataV2'> =
+    const getRuleDataV2Abi: ExtractAbiFunction<typeof IRuleEntitlementV2Abi, 'getRuleDataV2'> =
         getAbiItem({
             abi: IRuleEntitlementV2Abi,
             name: 'getRuleDataV2',
         })
 
-    if (!getRuleDataAbi) {
+    if (!getRuleDataV2Abi) {
         throw new Error('encodeRuleDataV2 ABI not found')
     }
     // @ts-ignore
-    return encodeAbiParameters(encodeRuleDataAbi.outputs, [ruleData])
+    return encodeAbiParameters(getRuleDataV2Abi.outputs, [ruleData])
 }
 
 export function ruleDataToOperations(data: IRuleEntitlementBase.RuleDataStruct[]): Operation[] {

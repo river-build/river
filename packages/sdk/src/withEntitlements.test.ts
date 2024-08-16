@@ -8,6 +8,7 @@ import {
     makeTestClient,
     makeDonePromise,
     getDynamicPricingModule,
+    createVersionedSpace,
 } from './util.test'
 import {
     isValidStreamId,
@@ -26,7 +27,6 @@ import {
 } from '@river-build/web3'
 import { MembershipOp } from '@river-build/proto'
 import { makeBaseChainConfig } from './riverConfig'
-import { createVersionedSpace } from './util.test'
 
 const base_log = dlog('csb:test:withEntitlements')
 
