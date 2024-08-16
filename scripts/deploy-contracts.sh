@@ -21,7 +21,7 @@ if [ "${SKIP_CHAIN_WAIT}" != "true" ]; then
     ./scripts/wait-for-riverchain.sh
 fi
 
-rm -rf contracts/deployments/*
+rm -rf contracts/deployments/${RIVER_ENV}
 rm -rf packages/generated/deployments/${RIVER_ENV}
 
 
