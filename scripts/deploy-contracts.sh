@@ -77,7 +77,7 @@ cast rpc evm_setIntervalMining $RIVER_BLOCK_TIME --rpc-url $RIVER_ANVIL_RPC_URL
 popd
 
 
-mkdir -p packages/generated/deployments/${RIVER_ENV}/{base,river}
+# mkdir -p packages/generated/deployments/${RIVER_ENV}/{base,river}
 cp -r contracts/deployments/${RIVER_ENV} packages/generated/deployments/${RIVER_ENV}
 
 
