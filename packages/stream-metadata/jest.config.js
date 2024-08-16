@@ -1,8 +1,16 @@
 export default {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  testMatch: [
-    '**/tests/**/*.test.ts'
+  transform: {
+    '^.+\\.ts$': ['ts-jest', { useESM: true }],
+    '^.+\\.wasm$': 'jest-transform-stub',
+  },
+  transformIgnorePatterns: [
+    '/node_modules/(?!@river-build)',
   ],
-  verbose: true, // Optional: Makes the test output more detailed
+  extensionsToTreatAsEsm: ['.ts'],
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+		'@matrix-org/olm/olm.wasm': './tests/__mocks__/olm.wasm.js',  // Mock .wasm module
+  },
 };
