@@ -1,4 +1,4 @@
-import { PromiseClient, Transport, createPromiseClient } from '@connectrpc/connect'
+import { PromiseClient, createPromiseClient } from '@connectrpc/connect'
 import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-web'
 import { StreamService } from '@river-build/proto'
 import { dlog } from '@river-build/dlog'
