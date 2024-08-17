@@ -1,6 +1,6 @@
 import { RiverRegistry, SpaceDapp } from '@river-build/web3'
 import { MakeRpcClientType } from '../../makeStreamRpcClient'
-import { StreamNodeUrls } from './models/streamNodeUrls'
+import { RiverChain } from './models/riverChain'
 import { Identifiable, LoadPriority, Store } from '../../store/store'
 import { check, dlogger } from '@river-build/dlog'
 import { PromiseQueue } from '../utils/promiseQueue'
@@ -47,7 +47,7 @@ class LoginContext {
 @persistedObservable({ tableName: 'riverConnection' })
 export class RiverConnection extends PersistedObservable<RiverConnectionModel> {
     client?: TransactionalClient
-    streamNodeUrls: StreamNodeUrls
+    riverChain: RiverChain
     authStatus = new Observable<AuthStatus>(AuthStatus.Initializing)
     loginError?: Error
     private clientQueue = new PromiseQueue<Client>()
@@ -64,7 +64,7 @@ export class RiverConnection extends PersistedObservable<RiverConnectionModel> {
         private clientParams: ClientParams,
     ) {
         super({ id: '0', userExists: false }, store, LoadPriority.high)
-        this.streamNodeUrls = new StreamNodeUrls(store, riverRegistryDapp)
+        this.riverChain = new RiverChain(store, riverRegistryDapp, this.userId)
     }
 
     override async onLoaded() {
@@ -74,16 +74,14 @@ export class RiverConnection extends PersistedObservable<RiverConnectionModel> {
     get userId(): string {
         return userIdFromAddress(this.clientParams.signerContext.creatorAddress)
     }
-
     async start() {
         check(this.value.status === 'loaded', 'riverConnection not loaded')
-        await this.streamNodeUrls.when((x) => x.data.urls !== '', {
-            timeoutMs: 20000,
-            description: 'getOperationalNodeUrls',
-        })
-        await this.fetchUserExists()
-        this.createStreamsClient(this.streamNodeUrls.data.urls)
-        if (this.data.userExists) {
+        const [urls, userStreamExists] = await Promise.all([
+            this.riverChain.urls(),
+            this.riverChain.userStreamExists(),
+        ])
+        this.createStreamsClient(urls)
+        if (userStreamExists) {
             await this.login()
         } else {
             this.authStatus.setValue(AuthStatus.Credentialed)
@@ -98,6 +96,7 @@ export class RiverConnection extends PersistedObservable<RiverConnectionModel> {
         if (this.loginPromise) {
             this.loginPromise.context.cancelled = true
         }
+        this.riverChain.stop()
         await this.client?.stop()
         this.client = undefined
         this.authStatus.setValue(AuthStatus.Disconnected)
@@ -118,17 +117,6 @@ export class RiverConnection extends PersistedObservable<RiverConnectionModel> {
             this.onStoppedFns.push(onStopFn)
         }
         this.views.push(viewFn)
-    }
-
-    private async fetchUserExists() {
-        if (!this.data.userExists) {
-            const userStreamIdStr = makeUserStreamId(this.userId)
-            const userStreamId = streamIdAsBytes(userStreamIdStr)
-            const userExists = await this.riverRegistryDapp.streamExists(userStreamId)
-            if (userExists) {
-                this.setData({ userExists })
-            }
-        }
     }
 
     private createStreamsClient(urls: string): void {
