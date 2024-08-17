@@ -1,34 +1,18 @@
-import Fastify from 'fastify'
+import axios from 'axios'
 
-import { config } from '../../src/environment'
-import { setupRoutes, Server } from '../../src/node'
 import { getLogger } from '../../src/logger'
-import * as healthModule from '../../src/routes/health'
+import { getTestServerInfo } from '../../src/testUtils'
 
 const logger = getLogger('stream-metadata:tests:integration:health')
 
 describe('GET /health Integration Test', () => {
-	let server: Server
-
-	beforeAll(async () => {
-		server = Fastify({
-			logger,
-		})
-		setupRoutes(server)
-		await server.listen({ port: config.port }) // Listen on a random available port
-	})
-
-	afterAll(async () => {
-		await server.close()
-	})
+	const baseURL = getTestServerInfo()
+	logger.info({ baseURL }, 'baseURL')
 
 	it('should return status 200 and status ok when the server is healthy', async () => {
-		const response = await server.inject({
-			method: 'GET',
-			url: '/health',
-		})
+		const response = await axios.get(`${baseURL}/health`);
 
-		expect(response.statusCode).toBe(200)
-		expect(response.json()).toEqual({ status: 'ok' })
+    expect(response.status).toBe(200);
+    expect(response.data).toEqual({ status: 'ok' })
 	})
 })

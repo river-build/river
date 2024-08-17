@@ -12,6 +12,7 @@ const config: Config.InitialOptions = {
 	setupFilesAfterEnv: [resolve('./jest.setup.ts')],
   testEnvironment: 'node',
 	testPathIgnorePatterns: ['/dist/', '/node_modules/'],
+	testTimeout: 10000, // Set global timeout of 10 seconds for all tests
   transform: {
     '^.+\\.ts$': ['ts-jest', { useESM: true }],
     '^.+\\.wasm$': 'jest-transform-stub',

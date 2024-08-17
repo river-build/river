@@ -11,6 +11,6 @@
 		"rootDir": "./src",
 		"sourceMap": true
 	},
-	"include": ["src/**/*.ts"],
+	"include": ["src/**/*.ts", "src/testUtils.ts"],
 	"exclude": ["node_modules", "tests"]
 }

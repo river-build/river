@@ -3848,6 +3848,7 @@ __metadata:
     "@types/node": ^20.5.0
     "@types/uuid": ^10.0.0
     "@typescript-eslint/parser": ^7.14.1
+    axios: ^1.2.6
     dotenv: ^16.4.5
     esbuild: ^0.21.5
     esbuild-plugin-pino: ^2.2.0
@@ -3855,6 +3856,7 @@ __metadata:
     ethers: ^5.7.2
     fastify: ^4.28.1
     jest: ^29.6.2
+    jest-transform-stub: ^2.0.0
     magic-bytes.js: ^1.10.0
     pino: ^8.17.1
     pino-pretty: ^10.2.3
@@ -6694,6 +6696,17 @@ __metadata:
     follow-redirects: ^1.14.9
     form-data: ^4.0.0
   checksum: 38cb7540465fe8c4102850c4368053c21683af85c5fdf0ea619f9628abbcb59415d1e22ebc8a6390d2bbc9b58a9806c874f139767389c862ec9b772235f06854
+  languageName: node
+  linkType: hard
+
+"axios@npm:^1.2.6":
+  version: 1.7.4
+  resolution: "axios@npm:1.7.4"
+  dependencies:
+    follow-redirects: ^1.15.6
+    form-data: ^4.0.0
+    proxy-from-env: ^1.1.0
+  checksum: 0c17039a9acfe6a566fca8431ba5c1b455c83d30ea6157fec68a6722878fcd30f3bd32d172f6bee0c51fe75ca98e6414ddcd968a87b5606b573731629440bfaf
   languageName: node
   linkType: hard
 
@@ -12813,6 +12826,13 @@ __metadata:
     pretty-format: ^29.6.2
     semver: ^7.5.3
   checksum: c1c70a9dbce7fca62ed73ac38234b4ee643e8b667acf71b4417ab67776c1188bb08b8ad450e56a2889ad182903ffd416386fa8082a477724ccf8d8c29a4c6906
+  languageName: node
+  linkType: hard
+
+"jest-transform-stub@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "jest-transform-stub@npm:2.0.0"
+  checksum: c46134257e5fb047f5952e4a4a1339925dd009da15aa8d3310ba1d3e4d22266ed6c675cd18e58c9d5ca2246718d6cc8ff00ea6a4b6f3b2a6b285b6426f6ae8fe
   languageName: node
   linkType: hard
 
