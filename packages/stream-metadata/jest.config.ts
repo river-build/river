@@ -7,7 +7,7 @@ const config: Config.InitialOptions = {
 	modulePathIgnorePatterns: ['/dist/'],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
-    '\\.(wasm)$': require.resolve('./tests/__mocks__/mock-wasm-file.js'),  // Use resolve instead of require.resolve
+    '@matrix-org/olm/olm.wasm': require.resolve('./tests/__mocks__/mock-wasm-file.js'),
   },
 	setupFilesAfterEnv: [resolve('./jest.setup.ts')],
   testEnvironment: 'node',

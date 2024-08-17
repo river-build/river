@@ -2,6 +2,7 @@ import Fastify from 'fastify'
 
 import { setupRoutes, Server } from '../../src/node'
 import { getLogger } from '../../src/logger'
+import pino from 'pino'
 
 const logger = getLogger('stream-metadata:tests:integration:health')
 
