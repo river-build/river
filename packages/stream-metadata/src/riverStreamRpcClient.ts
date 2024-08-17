@@ -1,5 +1,4 @@
 import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-web'
-import { Config, MediaContent, StreamIdHex } from './types'
 import {
 	ParsedStreamResponse,
 	StreamStateView,
@@ -9,11 +8,14 @@ import {
 	unpackStream,
 } from '@river-build/sdk'
 import { PromiseClient, createPromiseClient } from '@connectrpc/connect'
-
-import { BigNumber } from 'ethers'
 import { StreamService } from '@river-build/proto'
 import { filetypemime } from 'magic-bytes.js'
+
+import { MediaContent, StreamIdHex } from './types'
 import { getNodeForStream } from './streamRegistry'
+import { getLogger } from './logger'
+
+const logger = getLogger('riverStreamRpcClient')
 
 const clients = new Map<string, StreamRpcClient>()
 
@@ -22,7 +24,7 @@ const contentCache: Record<string, MediaContent | undefined> = {}
 export type StreamRpcClient = PromiseClient<typeof StreamService> & { url?: string }
 
 function makeStreamRpcClient(url: string): StreamRpcClient {
-	console.log(`makeStreamRpcClient: Connecting to url=${url}`)
+	logger.info({ url }, 'makeStreamRpcClient: Connecting')
 
 	const options: ConnectTransportOptions = {
 		baseUrl: url,
@@ -34,15 +36,15 @@ function makeStreamRpcClient(url: string): StreamRpcClient {
 	return client
 }
 
-async function getStreamClient(config: Config, streamId: `0x${string}`) {
-	const node = await getNodeForStream(config, streamId)
+async function getStreamClient(streamId: `0x${string}`) {
+	const node = await getNodeForStream(streamId)
 	let url = node?.url
 	if (!clients.has(url)) {
 		const client = makeStreamRpcClient(url)
 		clients.set(client.url!, client)
 		url = client.url!
 	}
-	console.log(`getStreamClient: url=${url}`)
+	logger.info({ url }, 'client connected to node')
 
 	const client = clients.get(url)
 	if (!client) {
@@ -77,36 +79,65 @@ async function mediaContentFromStreamView(
 	iv: Uint8Array,
 ): Promise<MediaContent> {
 	const mediaInfo = streamView.mediaContent.info
-	if (mediaInfo) {
-		console.log(`mediaContentFromStreamView: mediaInfo.spaceId=${mediaInfo.spaceId}`)
-
-		// Aggregate data chunks into a single Uint8Array
-		const data = new Uint8Array(
-			mediaInfo.chunks.reduce((totalLength, chunk) => totalLength + chunk.length, 0),
+	if (!mediaInfo) {
+		logger.error(
+			{
+				spaceId: streamView.streamId,
+				mediaStreamId: streamView.mediaContent.streamId,
+			},
+			'No media information found',
 		)
-		let offset = 0
-		mediaInfo.chunks.forEach((chunk) => {
-			data.set(chunk, offset)
-			offset += chunk.length
-		})
-
-		// Decrypt the data
-		const decrypted = await decryptAESGCM(data, secret, iv)
-
-		// Determine the MIME type
-		const mimeType = filetypemime(decrypted)
-		if (mimeType?.length > 0) {
-			console.log(`mediaContentFromStreamView: type=${JSON.stringify(mimeType[0])}`)
-
-			// Return decrypted data and MIME type
-			return {
-				data: decrypted,
-				mimeType: mimeType[0] ?? 'application/octet-stream',
-			}
-		}
+		throw new Error('No media information found')
 	}
 
-	throw new Error('No media information found')
+	logger.info(
+		{
+			spaceId: mediaInfo.spaceId,
+			mediaStreamId: streamView.mediaContent.streamId,
+		},
+		'mediaContentFromStreamView',
+	)
+
+	// Aggregate data chunks into a single Uint8Array
+	const data = new Uint8Array(
+		mediaInfo.chunks.reduce((totalLength, chunk) => totalLength + chunk.length, 0),
+	)
+	let offset = 0
+	mediaInfo.chunks.forEach((chunk) => {
+		data.set(chunk, offset)
+		offset += chunk.length
+	})
+
+	// Decrypt the data
+	const decrypted = await decryptAESGCM(data, secret, iv)
+
+	// Determine the MIME type
+	const mimeType = filetypemime(decrypted)
+
+	if (mimeType?.length === 0) {
+		logger.error(
+			{
+				spaceId: mediaInfo.spaceId,
+				mimeType: mimeType?.length > 0 ? mimeType : 'no mimeType',
+			},
+			'No media information found',
+		)
+		throw new Error('No media information found')
+	}
+
+	logger.info(
+		{
+			spaceId: mediaInfo.spaceId,
+			mimeType,
+		},
+		'mediaContentFromStreamView decrypted content',
+	)
+
+	// Return decrypted data and MIME type
+	return {
+		data: decrypted,
+		mimeType: mimeType[0] ?? 'application/octet-stream',
+	}
 }
 
 function stripHexPrefix(hexString: string): string {
@@ -116,29 +147,23 @@ function stripHexPrefix(hexString: string): string {
 	return hexString
 }
 
-export async function getStream(
-	config: Config,
-	streamId: string,
-): Promise<StreamStateView | undefined> {
-	let client: StreamRpcClient | undefined
-	let lastMiniblockNum: BigNumber | undefined
-
-	try {
-		const result = await getStreamClient(config, `0x${streamId}`)
-		client = result.client
-		lastMiniblockNum = result.lastMiniblockNum
-	} catch (e) {
-		console.error(`Failed to get client for stream ${streamId}: ${e}`)
-		return undefined
-	}
+export async function getStream(streamId: string): Promise<StreamStateView> {
+	const result = await getStreamClient(`0x${streamId}`)
+	const client = result.client
+	const lastMiniblockNum = result.lastMiniblockNum
 
 	if (!client) {
-		console.error(`Failed to get client for stream ${streamId}`)
-		return undefined
+		logger.error({ streamId }, 'Failed to get client for stream')
+		throw new Error(`Failed to get client for stream ${streamId}`)
 	}
 
-	console.log(
-		`getStream: client=${client.url}; streamId=${streamId}; lastMiniblockNum=${lastMiniblockNum}`,
+	logger.info(
+		{
+			nodeUrl: client.url,
+			streamId,
+			lastMiniblockNum: lastMiniblockNum.toString(),
+		},
+		'getStream',
 	)
 
 	const start = Date.now()
@@ -147,14 +172,18 @@ export async function getStream(
 		streamId: streamIdAsBytes(streamId),
 	})
 
-	console.log(`getStream: getStream took ${Date.now() - start}ms`)
+	logger.info(
+		{
+			duration_ms: Date.now() - start,
+		},
+		'getStream finished',
+	)
 
 	const unpackedResponse = await unpackStream(response.stream)
 	return streamViewFromUnpackedResponse(streamId, unpackedResponse)
 }
 
 export async function getMediaStreamContent(
-	config: Config,
 	fullStreamId: StreamIdHex,
 	secret: Uint8Array,
 	iv: Uint8Array,
@@ -173,19 +202,14 @@ export async function getMediaStreamContent(
 	*/
 
 	const streamId = stripHexPrefix(fullStreamId)
-	const sv = await getStream(config, streamId)
+	const sv = await getStream(streamId)
 
 	if (!sv) {
-		return { data: null, mimeType: null }
+		logger.error({ streamId }, 'Failed to get stream')
+		throw new Error(`Failed to get stream ${streamId}`)
 	}
 
-	let result: MediaContent | undefined
-	try {
-		result = await mediaContentFromStreamView(sv, secret, iv)
-	} catch (e) {
-		console.error(`Failed to get media content for stream ${fullStreamId}: ${e}`)
-		return { data: null, mimeType: null }
-	}
+	const result = await mediaContentFromStreamView(sv, secret, iv)
 
 	// Cache the result
 	const concatenatedString = `${fullStreamId}${secretHex}${ivHex}`

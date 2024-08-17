@@ -27,6 +27,18 @@ import type {
   PromiseOrValue,
 } from "./common";
 
+export declare namespace IEntitlementDataQueryableBase {
+  export type EntitlementDataStruct = {
+    entitlementType: PromiseOrValue<string>;
+    entitlementData: PromiseOrValue<BytesLike>;
+  };
+
+  export type EntitlementDataStructOutput = [string, string] & {
+    entitlementType: string;
+    entitlementData: string;
+  };
+}
+
 export declare namespace IRuleEntitlementBase {
   export type OperationStruct = {
     opType: PromiseOrValue<BigNumberish>;
@@ -84,29 +96,74 @@ export declare namespace IRuleEntitlementBase {
     checkOperations: IRuleEntitlementBase.CheckOperationStructOutput[];
     logicalOperations: IRuleEntitlementBase.LogicalOperationStructOutput[];
   };
+
+  export type CheckOperationV2Struct = {
+    opType: PromiseOrValue<BigNumberish>;
+    chainId: PromiseOrValue<BigNumberish>;
+    contractAddress: PromiseOrValue<string>;
+    params: PromiseOrValue<BytesLike>;
+  };
+
+  export type CheckOperationV2StructOutput = [
+    number,
+    BigNumber,
+    string,
+    string
+  ] & {
+    opType: number;
+    chainId: BigNumber;
+    contractAddress: string;
+    params: string;
+  };
+
+  export type RuleDataV2Struct = {
+    operations: IRuleEntitlementBase.OperationStruct[];
+    checkOperations: IRuleEntitlementBase.CheckOperationV2Struct[];
+    logicalOperations: IRuleEntitlementBase.LogicalOperationStruct[];
+  };
+
+  export type RuleDataV2StructOutput = [
+    IRuleEntitlementBase.OperationStructOutput[],
+    IRuleEntitlementBase.CheckOperationV2StructOutput[],
+    IRuleEntitlementBase.LogicalOperationStructOutput[]
+  ] & {
+    operations: IRuleEntitlementBase.OperationStructOutput[];
+    checkOperations: IRuleEntitlementBase.CheckOperationV2StructOutput[];
+    logicalOperations: IRuleEntitlementBase.LogicalOperationStructOutput[];
+  };
 }
 
 export interface MockEntitlementGatedInterface extends utils.Interface {
   functions: {
     "__EntitlementGated_init(address)": FunctionFragment;
+    "getCrossChainEntitlementData(bytes32,uint256)": FunctionFragment;
     "getRuleData(uint256)": FunctionFragment;
     "getRuleData(bytes32,uint256)": FunctionFragment;
+    "getRuleDataV2(uint256)": FunctionFragment;
     "postEntitlementCheckResult(bytes32,uint256,uint8)": FunctionFragment;
     "requestEntitlementCheck(uint256,((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[]))": FunctionFragment;
+    "requestEntitlementCheckV2(uint256,((uint8,uint8)[],(uint8,uint256,address,bytes)[],(uint8,uint8,uint8)[]))": FunctionFragment;
   };
 
   getFunction(
     nameOrSignatureOrTopic:
       | "__EntitlementGated_init"
+      | "getCrossChainEntitlementData"
       | "getRuleData(uint256)"
       | "getRuleData(bytes32,uint256)"
+      | "getRuleDataV2"
       | "postEntitlementCheckResult"
       | "requestEntitlementCheck"
+      | "requestEntitlementCheckV2"
   ): FunctionFragment;
 
   encodeFunctionData(
     functionFragment: "__EntitlementGated_init",
     values: [PromiseOrValue<string>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getCrossChainEntitlementData",
+    values: [PromiseOrValue<BytesLike>, PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
     functionFragment: "getRuleData(uint256)",
@@ -115,6 +172,10 @@ export interface MockEntitlementGatedInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "getRuleData(bytes32,uint256)",
     values: [PromiseOrValue<BytesLike>, PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getRuleDataV2",
+    values: [PromiseOrValue<BigNumberish>]
   ): string;
   encodeFunctionData(
     functionFragment: "postEntitlementCheckResult",
@@ -128,9 +189,20 @@ export interface MockEntitlementGatedInterface extends utils.Interface {
     functionFragment: "requestEntitlementCheck",
     values: [PromiseOrValue<BigNumberish>, IRuleEntitlementBase.RuleDataStruct]
   ): string;
+  encodeFunctionData(
+    functionFragment: "requestEntitlementCheckV2",
+    values: [
+      PromiseOrValue<BigNumberish>,
+      IRuleEntitlementBase.RuleDataV2Struct
+    ]
+  ): string;
 
   decodeFunctionResult(
     functionFragment: "__EntitlementGated_init",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getCrossChainEntitlementData",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -142,11 +214,19 @@ export interface MockEntitlementGatedInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "getRuleDataV2",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "postEntitlementCheckResult",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
     functionFragment: "requestEntitlementCheck",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "requestEntitlementCheckV2",
     data: BytesLike
   ): Result;
 
@@ -237,6 +317,12 @@ export interface MockEntitlementGated extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
+    getCrossChainEntitlementData(
+      arg0: PromiseOrValue<BytesLike>,
+      roleId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<[IEntitlementDataQueryableBase.EntitlementDataStructOutput]>;
+
     "getRuleData(uint256)"(
       roleId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
@@ -247,6 +333,11 @@ export interface MockEntitlementGated extends BaseContract {
       roleId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<[IRuleEntitlementBase.RuleDataStructOutput]>;
+
+    getRuleDataV2(
+      roleId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<[IRuleEntitlementBase.RuleDataV2StructOutput]>;
 
     postEntitlementCheckResult(
       transactionId: PromiseOrValue<BytesLike>,
@@ -260,12 +351,24 @@ export interface MockEntitlementGated extends BaseContract {
       ruleData: IRuleEntitlementBase.RuleDataStruct,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
+
+    requestEntitlementCheckV2(
+      roleId: PromiseOrValue<BigNumberish>,
+      ruleData: IRuleEntitlementBase.RuleDataV2Struct,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
   };
 
   __EntitlementGated_init(
     entitlementChecker: PromiseOrValue<string>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
+
+  getCrossChainEntitlementData(
+    arg0: PromiseOrValue<BytesLike>,
+    roleId: PromiseOrValue<BigNumberish>,
+    overrides?: CallOverrides
+  ): Promise<IEntitlementDataQueryableBase.EntitlementDataStructOutput>;
 
   "getRuleData(uint256)"(
     roleId: PromiseOrValue<BigNumberish>,
@@ -277,6 +380,11 @@ export interface MockEntitlementGated extends BaseContract {
     roleId: PromiseOrValue<BigNumberish>,
     overrides?: CallOverrides
   ): Promise<IRuleEntitlementBase.RuleDataStructOutput>;
+
+  getRuleDataV2(
+    roleId: PromiseOrValue<BigNumberish>,
+    overrides?: CallOverrides
+  ): Promise<IRuleEntitlementBase.RuleDataV2StructOutput>;
 
   postEntitlementCheckResult(
     transactionId: PromiseOrValue<BytesLike>,
@@ -291,11 +399,23 @@ export interface MockEntitlementGated extends BaseContract {
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
+  requestEntitlementCheckV2(
+    roleId: PromiseOrValue<BigNumberish>,
+    ruleData: IRuleEntitlementBase.RuleDataV2Struct,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
   callStatic: {
     __EntitlementGated_init(
       entitlementChecker: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<void>;
+
+    getCrossChainEntitlementData(
+      arg0: PromiseOrValue<BytesLike>,
+      roleId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<IEntitlementDataQueryableBase.EntitlementDataStructOutput>;
 
     "getRuleData(uint256)"(
       roleId: PromiseOrValue<BigNumberish>,
@@ -308,6 +428,11 @@ export interface MockEntitlementGated extends BaseContract {
       overrides?: CallOverrides
     ): Promise<IRuleEntitlementBase.RuleDataStructOutput>;
 
+    getRuleDataV2(
+      roleId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<IRuleEntitlementBase.RuleDataV2StructOutput>;
+
     postEntitlementCheckResult(
       transactionId: PromiseOrValue<BytesLike>,
       roleId: PromiseOrValue<BigNumberish>,
@@ -318,6 +443,12 @@ export interface MockEntitlementGated extends BaseContract {
     requestEntitlementCheck(
       roleId: PromiseOrValue<BigNumberish>,
       ruleData: IRuleEntitlementBase.RuleDataStruct,
+      overrides?: CallOverrides
+    ): Promise<string>;
+
+    requestEntitlementCheckV2(
+      roleId: PromiseOrValue<BigNumberish>,
+      ruleData: IRuleEntitlementBase.RuleDataV2Struct,
       overrides?: CallOverrides
     ): Promise<string>;
   };
@@ -356,6 +487,12 @@ export interface MockEntitlementGated extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
+    getCrossChainEntitlementData(
+      arg0: PromiseOrValue<BytesLike>,
+      roleId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     "getRuleData(uint256)"(
       roleId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
@@ -363,6 +500,11 @@ export interface MockEntitlementGated extends BaseContract {
 
     "getRuleData(bytes32,uint256)"(
       transactionId: PromiseOrValue<BytesLike>,
+      roleId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    getRuleDataV2(
       roleId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
@@ -377,6 +519,12 @@ export interface MockEntitlementGated extends BaseContract {
     requestEntitlementCheck(
       roleId: PromiseOrValue<BigNumberish>,
       ruleData: IRuleEntitlementBase.RuleDataStruct,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    requestEntitlementCheckV2(
+      roleId: PromiseOrValue<BigNumberish>,
+      ruleData: IRuleEntitlementBase.RuleDataV2Struct,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
   };
@@ -387,6 +535,12 @@ export interface MockEntitlementGated extends BaseContract {
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
+    getCrossChainEntitlementData(
+      arg0: PromiseOrValue<BytesLike>,
+      roleId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
     "getRuleData(uint256)"(
       roleId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
@@ -394,6 +548,11 @@ export interface MockEntitlementGated extends BaseContract {
 
     "getRuleData(bytes32,uint256)"(
       transactionId: PromiseOrValue<BytesLike>,
+      roleId: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getRuleDataV2(
       roleId: PromiseOrValue<BigNumberish>,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
@@ -408,6 +567,12 @@ export interface MockEntitlementGated extends BaseContract {
     requestEntitlementCheck(
       roleId: PromiseOrValue<BigNumberish>,
       ruleData: IRuleEntitlementBase.RuleDataStruct,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    requestEntitlementCheckV2(
+      roleId: PromiseOrValue<BigNumberish>,
+      ruleData: IRuleEntitlementBase.RuleDataV2Struct,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
   };
