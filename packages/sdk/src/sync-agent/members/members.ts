@@ -4,6 +4,7 @@ import { PersistedObservable, persistedObservable } from '../../observable/persi
 import type { Store } from '../../store/store'
 import type { RiverConnection } from '../river-connection/riverConnection'
 import { Member } from './models/member'
+import { isUserId } from '../../id'
 
 type MembersModel = {
     id: string
@@ -13,10 +14,10 @@ type MembersModel = {
 
 @persistedObservable({ tableName: 'members' })
 export class Members extends PersistedObservable<MembersModel> {
-    private members: Map<string, Member>
+    private members: Record<string, Member>
     constructor(streamId: string, private riverConnection: RiverConnection, store: Store) {
         super({ id: streamId, userIds: [], initialized: false }, store)
-        this.members = new Map()
+        this.members = {}
     }
 
     protected override async onLoaded() {
@@ -42,7 +43,11 @@ export class Members extends PersistedObservable<MembersModel> {
     }
 
     getMember(userId: string) {
-        return this.members.get(userId)
+        check(isUserId(userId), 'invalid user id')
+        if (userId in this.members) {
+            return this.members[userId]
+        }
+        return undefined
     }
 
     isUsernameAvailable(username: string): boolean {
@@ -56,25 +61,25 @@ export class Members extends PersistedObservable<MembersModel> {
         if (streamId !== this.data.id) return
         const stream = this.riverConnection.client?.stream(streamId)
         check(isDefined(stream), 'stream is not defined')
-        this.members.clear()
+        this.members = {}
         const userIds = Array.from(stream.view.getMembers().joined.values()).map(
             (member) => member.userId,
         )
         for (const userId of userIds) {
-            this.members.set(userId, new Member(userId, streamId, this.riverConnection, this.store))
+            this.members[userId] = new Member(userId, streamId, this.riverConnection, this.store)
         }
         this.setData({ initialized: true, userIds })
     }
 
     private onMemberLeave = (streamId: string, userId: string): void => {
         if (streamId !== this.data.id) return
-        this.members.delete(userId)
+        delete this.members[userId]
         this.setData({ userIds: this.data.userIds.filter((id) => id !== userId) })
     }
 
     private onMemberJoin = (streamId: string, userId: string): void => {
         if (streamId !== this.data.id) return
-        this.members.set(userId, new Member(userId, streamId, this.riverConnection, this.store))
+        this.members[userId] = new Member(userId, streamId, this.riverConnection, this.store)
         this.setData({ userIds: [...this.data.userIds, userId] })
     }
 }

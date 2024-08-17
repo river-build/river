@@ -54,6 +54,7 @@ export class MemberEnsAddress extends PersistedObservable<MemberEnsAddressModel>
         this.setData({ ensAddress })
         const bytes = addressFromUserId(ensAddress as string)
         return this.riverConnection
+            .withStream(streamId)
             .call((client) => client.setEnsAddress(streamId, bytes))
             .catch((e) => {
                 this.setData(oldState)

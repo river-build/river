@@ -64,6 +64,7 @@ export class MemberNft extends PersistedObservable<MemberNftModel> {
             },
         })
         return this.riverConnection
+            .withStream(streamId)
             .call((client) =>
                 client.setNft(streamId, nft.tokenId, nft.chainId, nft.contractAddress),
             )
