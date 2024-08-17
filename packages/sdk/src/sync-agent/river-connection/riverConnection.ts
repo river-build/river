@@ -12,7 +12,7 @@ import {
 import { Client } from '../../client'
 import { SignerContext } from '../../signerContext'
 import { PersistedObservable, persistedObservable } from '../../observable/persistedObservable'
-import { makeUserStreamId, streamIdAsBytes, userIdFromAddress } from '../../id'
+import { userIdFromAddress } from '../../id'
 import { TransactionalClient } from './models/transactionalClient'
 import { Observable } from '../../observable/observable'
 import { AuthStatus } from './models/authStatus'
