@@ -53,19 +53,6 @@ export class MemberDisplayName extends PersistedObservable<MemberDisplayNameMode
         })
     }
 
-    async setDisplayName(displayName: string) {
-        const streamId = this.data.streamId
-        const oldState = this.data
-        this.setData({ displayName })
-        return this.riverConnection
-            .withStream(streamId)
-            .call((client) => client.setDisplayName(streamId, displayName))
-            .catch((e) => {
-                this.setData(oldState)
-                throw e
-            })
-    }
-
     private onStreamInitialized = (streamId: string) => {
         if (streamId === this.data.streamId) {
             const streamView = this.riverConnection.client?.stream(this.data.streamId)?.view

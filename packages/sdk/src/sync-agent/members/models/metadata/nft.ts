@@ -52,28 +52,6 @@ export class MemberNft extends PersistedObservable<MemberNftModel> {
         })
     }
 
-    async setNft(nft: NftModel) {
-        const streamId = this.data.streamId
-        const oldState = this.data
-        const { contractAddress, tokenId, chainId } = nft
-        this.setData({
-            nft: {
-                contractAddress,
-                tokenId,
-                chainId,
-            },
-        })
-        return this.riverConnection
-            .withStream(streamId)
-            .call((client) =>
-                client.setNft(streamId, nft.tokenId, nft.chainId, nft.contractAddress),
-            )
-            .catch((e) => {
-                this.setData(oldState)
-                throw e
-            })
-    }
-
     private onStreamInitialized = (streamId: string) => {
         if (streamId === this.data.streamId) {
             const streamView = this.riverConnection.client?.stream(this.data.streamId)?.view

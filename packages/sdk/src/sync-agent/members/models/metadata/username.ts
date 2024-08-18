@@ -57,23 +57,6 @@ export class MemberUsername extends PersistedObservable<MemberUsernameModel> {
         })
     }
 
-    async setUsername(username: string) {
-        const streamId = this.data.streamId
-        const oldState = this.data
-        this.setData({
-            username,
-            isUsernameConfirmed: true,
-            isUsernameEncrypted: false,
-        })
-        return this.riverConnection
-            .withStream(streamId)
-            .call((client) => client.setUsername(streamId, username))
-            .catch((e) => {
-                this.setData(oldState)
-                throw e
-            })
-    }
-
     private onStreamInitialized = (streamId: string) => {
         if (streamId === this.data.streamId) {
             const streamView = this.riverConnection.client?.stream(this.data.streamId)?.view

@@ -5,6 +5,7 @@ import { Bot } from '../utils/bot'
 import { waitFor } from '../../util.test'
 import type { SyncAgent } from '../syncAgent'
 import type { Space } from '../spaces/models/space'
+import { MembershipOp } from '@river-build/proto'
 
 describe('members.test.ts', () => {
     const testUser = new Bot()
@@ -34,5 +35,11 @@ describe('members.test.ts', () => {
         const members = space.members.data
         expect(members.userIds.length).toBe(1)
         expect(members.userIds[0]).toBe(testUser.userId)
+    })
+
+    test('Members.getMember always return a member, even if not in the space/channel yet', async () => {
+        const newMember = new Bot()
+        const member = space.members.getMember(newMember.userId)
+        expect(member.membership).toBe(MembershipOp.SO_UNSPECIFIED)
     })
 })

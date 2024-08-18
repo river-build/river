@@ -28,7 +28,7 @@ describe('metadata.test.ts - queue update', () => {
             )
             .then(({ spaceId }) => bob.spaces.getSpace(spaceId))
             .then((space) => {
-                const metadata = space.members.getMember(bob.userId)
+                const metadata = space.members.myself
 
                 return Promise.all([
                     metadata?.setUsername(testMetadata.username),
