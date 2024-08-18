@@ -1,5 +1,6 @@
 import type { Store } from '../../../store/store'
 import type { RiverConnection } from '../../river-connection/riverConnection'
+import { MemberMembership } from './membership'
 import { MemberDisplayName } from './metadata/displayName'
 import { MemberEnsAddress } from './metadata/ensAddress'
 import { MemberNft } from './metadata/nft'
@@ -11,6 +12,7 @@ export class Member {
         displayName: MemberDisplayName
         ensAddress: MemberEnsAddress
         nft: MemberNft
+        membership: MemberMembership
     }
     constructor(
         userId: string,
@@ -23,6 +25,7 @@ export class Member {
             displayName: new MemberDisplayName(userId, streamId, this.riverConnection, store),
             ensAddress: new MemberEnsAddress(userId, streamId, this.riverConnection, store),
             nft: new MemberNft(userId, streamId, this.riverConnection, store),
+            membership: new MemberMembership(userId, streamId, this.riverConnection, store),
         }
     }
 
@@ -42,7 +45,7 @@ export class Member {
         return this.observables.nft.data.nft
     }
 
-    setNft(nft: NftModel) {
-        return this.observables.nft.setNft(nft)
+    get membership() {
+        return this.observables.membership.data.op
     }
 }

@@ -36,4 +36,10 @@ describe('members.test.ts', () => {
         expect(members.userIds.length).toBe(1)
         expect(members.userIds[0]).toBe(testUser.userId)
     })
+
+    test('Members.getMember always return a member, even if not in the space/channel yet', async () => {
+        const newMember = new Bot()
+        const member = space.members.getMember(newMember.userId)
+        expect(member.membership).toBe(MembershipOp.SO_UNSPECIFIED)
+    })
 })

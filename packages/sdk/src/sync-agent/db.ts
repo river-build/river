@@ -1,4 +1,5 @@
 import { Members } from './members/members'
+import { MemberMembership } from './members/models/membership'
 import { MemberDisplayName } from './members/models/metadata/displayName'
 import { MemberEnsAddress } from './members/models/metadata/ensAddress'
 import { MemberNft } from './members/models/metadata/nft'
@@ -31,4 +32,5 @@ export const DB_MODELS = [
     MemberDisplayName,
     MemberEnsAddress,
     MemberNft,
+    MemberMembership,
 ]
