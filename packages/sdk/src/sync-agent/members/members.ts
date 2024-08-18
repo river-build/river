@@ -5,6 +5,7 @@ import type { Store } from '../../store/store'
 import type { RiverConnection } from '../river-connection/riverConnection'
 import { Member } from './models/member'
 import { isUserId } from '../../id'
+import { Myself } from './models/myself'
 
 type MembersModel = {
     id: string
@@ -15,6 +16,7 @@ type MembersModel = {
 @persistedObservable({ tableName: 'members' })
 export class Members extends PersistedObservable<MembersModel> {
     private members: Record<string, Member>
+    private _myself?: Myself // better naming? me, myself, myProfile?
     constructor(streamId: string, private riverConnection: RiverConnection, store: Store) {
         super({ id: streamId, userIds: [], initialized: false }, store)
         this.members = {}
@@ -42,12 +44,30 @@ export class Members extends PersistedObservable<MembersModel> {
         })
     }
 
+    // Lazy loading the myself object, so we dont create unneeded e.g: if we're not in the stream yet
+    // but we create it if we want to access it
+    get myself() {
+        if (this._myself) return this._myself
+        this._myself = new Myself(this.data.id, this.riverConnection, this.store)
+        return this._myself
+    }
+
     getMember(userId: string) {
         check(isUserId(userId), 'invalid user id')
-        if (userId in this.members) {
-            return this.members[userId]
+        if (userId === this.riverConnection.userId) {
+            return this.myself
         }
-        return undefined
+        // Its possible to get a member that its not in the userIds array, if the user left the stream for example
+        // We can get a member that left, to get the last snapshot of the member
+        if (!this.members[userId]) {
+            this.members[userId] = new Member(
+                userId,
+                this.data.id,
+                this.riverConnection,
+                this.store,
+            )
+        }
+        return this.members[userId]
     }
 
     isUsernameAvailable(username: string): boolean {
@@ -66,20 +86,36 @@ export class Members extends PersistedObservable<MembersModel> {
             (member) => member.userId,
         )
         for (const userId of userIds) {
-            this.members[userId] = new Member(userId, streamId, this.riverConnection, this.store)
+            if (userId === this.riverConnection.userId) {
+                this._myself = new Myself(streamId, this.riverConnection, this.store)
+            } else {
+                this.members[userId] = new Member(
+                    userId,
+                    streamId,
+                    this.riverConnection,
+                    this.store,
+                )
+            }
         }
         this.setData({ initialized: true, userIds })
     }
 
     private onMemberLeave = (streamId: string, userId: string): void => {
         if (streamId !== this.data.id) return
-        delete this.members[userId]
+        // We dont remove the member from the members map, because we want to keep the member object around
+        // so that we can still access the member's properties.
+        // In the next sync, the member map will be reinitialized, cleaning up the map.
+        // We remove the member from the userIds array, so that we don't try to access it later.
         this.setData({ userIds: this.data.userIds.filter((id) => id !== userId) })
     }
 
     private onMemberJoin = (streamId: string, userId: string): void => {
         if (streamId !== this.data.id) return
-        this.members[userId] = new Member(userId, streamId, this.riverConnection, this.store)
         this.setData({ userIds: [...this.data.userIds, userId] })
+        if (userId === this.riverConnection.userId) {
+            this._myself = new Myself(streamId, this.riverConnection, this.store)
+        } else {
+            this.members[userId] = new Member(userId, streamId, this.riverConnection, this.store)
+        }
     }
 }
