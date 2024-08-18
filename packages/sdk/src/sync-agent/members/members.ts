@@ -52,7 +52,7 @@ export class Members extends PersistedObservable<MembersModel> {
         return this._myself
     }
 
-    getMember(userId: string) {
+    get(userId: string) {
         check(isUserId(userId), 'invalid user id')
         if (userId === this.riverConnection.userId) {
             return this.myself
