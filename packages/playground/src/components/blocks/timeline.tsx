@@ -11,7 +11,7 @@ import {
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import type { Member, TimelineEvent } from '@river-build/sdk'
+import type { TimelineEvent } from '@river-build/sdk'
 import { useMemo } from 'react'
 import { useCurrentSpaceId } from '@/hooks/current-space'
 import { useCurrentChannelId } from '@/hooks/current-channel'
@@ -84,36 +84,32 @@ const Message = ({ event }: { event: TimelineEvent }) => {
     const sync = useSyncAgent()
     const spaceId = useCurrentSpaceId()
     const member = useMemo(
-        () => sync.spaces.getSpace(spaceId).members.getMember(event.creatorUserId),
+        () => sync.spaces.getSpace(spaceId).members.get(event.creatorUserId),
         [sync, spaceId, event.creatorUserId],
     )
-
-    return (
-        <div className="flex gap-1">
-            {member && <MemberInfo member={member} />}
-            <span>{event.text}</span>
-        </div>
-    )
-}
-
-const MemberInfo = ({ member }: { member: Member }) => {
-    const sync = useSyncAgent()
-    const { username, id: userId } = useUsername(member)
+    const { username } = useUsername(member)
     const { displayName } = useDisplayName(member)
     const { ensAddress } = useEnsAddress(member)
     const { nft } = useNft(member)
     const prettyDisplayName = displayName || username
 
     return (
-        <JsonHover data={{ ensAddress, displayName, username, nft }}>
-            <span
-                className={cn(
-                    'font-semibold',
-                    userId === sync.userId ? 'text-sky-500' : 'text-purple-500',
-                )}
-            >
-                {prettyDisplayName}:
-            </span>
-        </JsonHover>
+        <div className="flex gap-1">
+            {prettyDisplayName && (
+                <JsonHover data={{ username, displayName, ensAddress, nft }}>
+                    <span
+                        className={cn(
+                            'font-semibold',
+                            event.creatorUserId === sync.userId
+                                ? 'text-sky-500'
+                                : 'text-purple-500',
+                        )}
+                    >
+                        {prettyDisplayName}:
+                    </span>
+                </JsonHover>
+            )}
+            <span>{event.text}</span>
+        </div>
     )
 }
