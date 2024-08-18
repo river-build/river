@@ -41,7 +41,7 @@ describe('metadata.test.ts - queue update', () => {
         await updateAllMetadata
         const spaceId = bob.spaces.data.spaceIds[0]
         const space = bob.spaces.getSpace(spaceId)
-        const member = space.members.getMember(bob.userId)
+        const member = space.members.get(bob.userId)
         expect(member?.username).toBe(testMetadata.username)
         expect(member?.displayName).toBe(testMetadata.displayName)
         expect(member?.ensAddress).toBe(testMetadata.ensAddress)
