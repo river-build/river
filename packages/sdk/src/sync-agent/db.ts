@@ -4,7 +4,7 @@ import { MemberDisplayName } from './members/models/metadata/displayName'
 import { MemberEnsAddress } from './members/models/metadata/ensAddress'
 import { MemberNft } from './members/models/metadata/nft'
 import { MemberUsername } from './members/models/metadata/username'
-import { StreamNodeUrls } from './river-connection/models/streamNodeUrls'
+import { RiverChain } from './river-connection/models/riverChain'
 import { RiverConnection } from './river-connection/riverConnection'
 import { Channel } from './spaces/models/channel'
 import { Space } from './spaces/models/space'
@@ -20,7 +20,7 @@ export const DB_MODELS = [
     Channel,
     Space,
     Spaces,
-    StreamNodeUrls,
+    RiverChain,
     RiverConnection,
     User,
     UserDeviceKeys,
