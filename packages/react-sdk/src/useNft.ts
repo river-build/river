@@ -1,4 +1,4 @@
-import type { Member } from '@river-build/sdk'
+import type { Member, Myself } from '@river-build/sdk'
 import { useObservable } from './useObservable'
 import { useAction } from './internals/useAction'
 
@@ -10,7 +10,7 @@ export const useNft = (member: Member) => {
     }
 }
 
-export const useSetNft = (member: Member | undefined) => {
+export const useSetNft = (member: Myself) => {
     const { action, ...rest } = useAction(member, 'setNft')
     return { setNft: action, ...rest }
 }

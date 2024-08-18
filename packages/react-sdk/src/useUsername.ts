@@ -1,4 +1,4 @@
-import type { Member } from '@river-build/sdk'
+import type { Member, Myself } from '@river-build/sdk'
 import { useObservable } from './useObservable'
 import { useAction } from './internals/useAction'
 
@@ -10,7 +10,7 @@ export const useUsername = (member: Member) => {
     }
 }
 
-export const useSetUsername = (member: Member | undefined) => {
+export const useSetUsername = (member: Myself) => {
     const { action: setUsername, ...rest } = useAction(member, 'setUsername')
     return { setUsername, ...rest }
 }
