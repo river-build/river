@@ -29,10 +29,10 @@ export async function createLegacyEntitlementStruct<Space extends SpaceV3>(
         }
     }
     if (!userEntitlementAddress) {
-        throw new Error('User entitlement moodule address not found.')
+        throw new Error('User entitlement module address not found.')
     }
     if (!ruleEntitlementAddress) {
-        throw new Error('Rule entitlement moodule address not found.')
+        throw new Error('Rule entitlement module address not found.')
     }
 
     // create the entitlements array
