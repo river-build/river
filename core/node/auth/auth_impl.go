@@ -490,7 +490,6 @@ func (ca *chainAuth) evaluateEntitlementData(
 	wallets := deserializeWallets(args.linkedWallets)
 	for _, ent := range entitlements {
 		if ent.EntitlementType == types.ModuleTypeRuleEntitlement {
-			log.Info("authImpl Evaluating rule entitlement", "ruleEntitlement", ent.RuleEntitlement)
 			re := ent.RuleEntitlement
 			log.Debug(ent.EntitlementType, "re", re)
 
@@ -499,7 +498,6 @@ func (ca *chainAuth) evaluateEntitlementData(
 			if err != nil {
 				return false, err
 			}
-			log.Info("Converted rule data to V2", "ruleData", reV2)
 
 			result, err := ca.evaluator.EvaluateRuleData(ctx, wallets, reV2)
 			if err != nil {
@@ -512,7 +510,6 @@ func (ca *chainAuth) evaluateEntitlementData(
 				log.Debug("rule entitlement is false", "spaceId", args.spaceId)
 			}
 		} else if ent.EntitlementType == types.ModuleTypeRuleEntitlementV2 {
-			log.Info("authImpl Evaluating rule entitlement v2", "ruleEntitlement", ent.RuleEntitlement)
 			re := ent.RuleEntitlementV2
 			log.Debug(ent.EntitlementType, "re", re)
 			result, err := ca.evaluator.EvaluateRuleData(ctx, wallets, re)
@@ -563,7 +560,6 @@ func (ca *chainAuth) evaluateWithEntitlements(
 
 	// 1. Check if the user is the space owner
 	// Space owner has su over all space operations.
-	log.Info("evaluateWithEntitlements", "args", args, "owner", owner.Hex(), "wallets", args.linkedWallets)
 	wallets := deserializeWallets(args.linkedWallets)
 	for _, wallet := range wallets {
 		if wallet == owner {
