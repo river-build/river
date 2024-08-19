@@ -282,6 +282,7 @@ contract RewardsDistribution is
     address[] memory combinedDelegators = new address[](totalLength);
     uint256 count = 0;
     uint256 totalDelegation = 0;
+    address riverToken = sd.riverToken;
 
     //iterate through each of the categories of delegation and build an array of all the delegator addresses
     //and the sum of their combined delegations
@@ -290,7 +291,7 @@ contract RewardsDistribution is
     for (uint256 i = 0; i < delegators.length; i++) {
       combinedDelegators[count++] = delegators[i];
       //balance is retrieved from the Base token directly
-      totalDelegation += IERC20(sd.riverToken).balanceOf(delegators[i]);
+      totalDelegation += IERC20(riverToken).balanceOf(delegators[i]);
     }
 
     // Copy elements from the space delegators
@@ -305,7 +306,7 @@ contract RewardsDistribution is
       for (uint256 j = 0; j < spaceDelegatorDelegators.length; j++) {
         combinedDelegators[count++] = spaceDelegatorDelegators[j];
         //get their balance from the Base token since Spaces live on Base
-        totalDelegation += IERC20(sd.riverToken).balanceOf(
+        totalDelegation += IERC20(riverToken).balanceOf(
           spaceDelegatorDelegators[j]
         );
       }
@@ -339,6 +340,7 @@ contract RewardsDistribution is
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
 
+    address riverToken = sd.riverToken;
     address[] memory seenAddresses = new address[](delegatorsLen);
     for (uint256 i = 0; i < delegatorsLen; i++) {
       //check if this address has already been distributed since it could be in here twice
@@ -356,15 +358,15 @@ contract RewardsDistribution is
 
       uint256 amount = 0;
       //check if this user is delegating to the operator on Base
-      if (IVotes(sd.riverToken).delegates(combinedDelegators[i]) == operator) {
-        amount = IERC20(sd.riverToken).balanceOf(combinedDelegators[i]);
+      if (IVotes(riverToken).delegates(combinedDelegators[i]) == operator) {
+        amount = IERC20(riverToken).balanceOf(combinedDelegators[i]);
       }
       //check if this user is delegating to the operator on the Spaces
       address spaceDelegatee = sd.operatorBySpace[
-        IVotes(sd.riverToken).delegates(combinedDelegators[i])
+        IVotes(riverToken).delegates(combinedDelegators[i])
       ];
       if (spaceDelegatee == operator) {
-        amount += IERC20(sd.riverToken).balanceOf(combinedDelegators[i]);
+        amount += IERC20(riverToken).balanceOf(combinedDelegators[i]);
       }
       //check if this user is delegating to the operator on the mainnet
       if (
@@ -412,14 +414,15 @@ contract RewardsDistribution is
     SpaceDelegationStorage.Layout storage sd,
     address operator
   ) internal view returns (address[] memory) {
-    address[] memory delegators = IVotesEnumerable(sd.riverToken)
+    address riverToken = sd.riverToken;
+    address[] memory delegators = IVotesEnumerable(riverToken)
       .getDelegatorsByDelegatee(operator);
     address[] memory validDelegators = new address[](delegators.length);
     uint256 activeDelegators = 0;
     for (uint256 i = 0; i < delegators.length; i++) {
       if (
         _isActiveSinceLastCycle(
-          IVotesEnumerable(sd.riverToken).getDelegationTimeForDelegator(
+          IVotesEnumerable(riverToken).getDelegationTimeForDelegator(
             delegators[i]
           )
         )
