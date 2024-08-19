@@ -363,6 +363,7 @@ export class Space {
         let users: string[] = []
         let ruleData: IRuleEntitlementBase.RuleDataStruct | undefined = undefined
         let ruleDataV2: IRuleEntitlementV2Base.RuleDataV2Struct | undefined = undefined
+        let useRuleDataV1 = false
 
         // with the shims, get the role details for each entitlement
         await Promise.all(
@@ -371,15 +372,30 @@ export class Space {
                     users = (await entitlement.getRoleEntitlement(roleId)) ?? []
                 } else if (isRuleEntitlement(entitlement)) {
                     ruleData = (await entitlement.getRoleEntitlement(roleId)) ?? undefined
+                    useRuleDataV1 = true
                 } else if (isRuleEntitlementV2(entitlement)) {
                     ruleDataV2 = (await entitlement.getRoleEntitlement(roleId)) ?? undefined
                 }
             }),
         )
-
-        return { users, ruleData: ruleData ?? NoopRuleData, ruleDataV2: ruleDataV2 ?? NoopRuleData }
+        if (useRuleDataV1) {
+            return {
+                users,
+                ruleData: {
+                    kind: 'v1',
+                    rules: ruleData ?? NoopRuleData,
+                },
+            }
+        } else {
+            return {
+                users,
+                ruleData: {
+                    kind: 'v2',
+                    rules: ruleDataV2 ?? NoopRuleData,
+                },
+            }
+        }
     }
-
     private async getChannelsWithRole(roleId: BigNumberish): Promise<ChannelMetadata[]> {
         const channelMetadatas = new Map<string, ChannelMetadata>()
         // get all the channels from the space

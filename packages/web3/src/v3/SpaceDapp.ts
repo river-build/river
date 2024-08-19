@@ -6,6 +6,7 @@ import {
     Permission,
     PricingModuleStruct,
     RoleDetails,
+    VersionedRuleData,
 } from '../ContractTypes'
 import { BytesLike, ContractReceipt, ContractTransaction, ethers } from 'ethers'
 import {
@@ -22,6 +23,7 @@ import { IRolesBase } from './IRolesShim'
 import { Space } from './Space'
 import { SpaceRegistrar } from './SpaceRegistrar'
 import { createEntitlementStruct, createLegacyEntitlementStruct } from '../ConvertersRoles'
+import { convertRuleDataV1ToV2 } from '../ConvertersEntitlements'
 import { BaseChainConfig } from '../IStaticContractsInfo'
 import { WalletLink, INVALID_ADDRESS } from './WalletLink'
 import { SpaceInfo } from '../types'
@@ -45,8 +47,7 @@ const logger = dlogger('csb:SpaceDapp:debug')
 
 type EntitlementData = {
     entitlementType: EntitlementModuleType
-    ruleEntitlement: IRuleEntitlementBase.RuleDataStruct[] | undefined
-    ruleEntitlementV2: IRuleEntitlementV2Base.RuleDataV2Struct[] | undefined
+    ruleEntitlement: VersionedRuleData | undefined
     userEntitlement: string[] | undefined
 }
 
@@ -520,7 +521,24 @@ export class SpaceDapp implements ISpaceDapp {
                     entitlement.entitlementData,
                 )
                 if (decodedData) {
-                    entitlements[i].ruleEntitlement = decodedData
+                    entitlements[i].ruleEntitlement = {
+                        kind: 'v1',
+                        rules: decodedData,
+                    }
+                }
+            } else if (
+                (entitlement.entitlementType as EntitlementModuleType) ===
+                EntitlementModuleType.RuleEntitlementV2
+            ) {
+                entitlements[i].entitlementType = EntitlementModuleType.RuleEntitlementV2
+                const decodedData = ruleEntitlementV2Shim?.decodeGetRuleData(
+                    entitlement.entitlementData,
+                )
+                if (decodedData) {
+                    entitlements[i].ruleEntitlement = {
+                        kind: 'v2',
+                        rules: decodedData,
+                    }
                 }
             } else if (
                 (entitlement.entitlementType as EntitlementModuleType) ===
@@ -651,9 +669,29 @@ export class SpaceDapp implements ISpaceDapp {
         )
         await Promise.all(providers.map((p) => p.ready))
 
+        // Accumulate all RuleDataV1 entitlements and convert to V2s.
         const ruleEntitlements = entitlements
-            .filter((x) => x.entitlementType === EntitlementModuleType.RuleEntitlement)
-            .map((x) => x.ruleEntitlement)
+            .filter(
+                (x) =>
+                    x.entitlementType === EntitlementModuleType.RuleEntitlement &&
+                    x.ruleEntitlement?.kind == 'v1',
+            )
+            .map((x) =>
+                convertRuleDataV1ToV2(
+                    x.ruleEntitlement!.rules as IRuleEntitlementBase.RuleDataStruct,
+                ),
+            )
+
+        // Add all RuleDataV2 entitlements.
+        ruleEntitlements.push(
+            ...entitlements
+                .filter(
+                    (x) =>
+                        x.entitlementType === EntitlementModuleType.RuleEntitlementV2 &&
+                        x.ruleEntitlement?.kind == 'v2',
+                )
+                .map((x) => x.ruleEntitlement!.rules as IRuleEntitlementV2Base.RuleDataV2Struct),
+        )
 
         const entitledWalletsForAllRuleEntitlements = await Promise.all(
             ruleEntitlements.map(async (ruleData) => {
@@ -831,6 +869,7 @@ export class SpaceDapp implements ISpaceDapp {
                 channelId,
                 permission,
             )
+            console.log('HEY entitlements FOR CHANNEL JOIN', entitlements)
             const entitledWallet = await this.evaluateEntitledWallet(
                 user,
                 linkedWallets,

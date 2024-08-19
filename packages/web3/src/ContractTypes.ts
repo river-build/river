@@ -84,12 +84,24 @@ export function isRuleDataV1(
 /**
  * Role details from multiple contract sources
  */
+
+interface RuleDataV1 {
+    kind: 'v1'
+    rules: IRuleEntitlementBase.RuleDataStruct
+}
+interface RuleDataV2 {
+    kind: 'v2'
+    rules: IRuleEntitlementV2Base.RuleDataV2Struct
+}
+
+export type VersionedRuleData = RuleDataV1 | RuleDataV2
+
 export interface RoleDetails {
     id: number
     name: string
     permissions: Permission[]
     users: string[]
-    ruleData: IRuleEntitlementBase.RuleDataStruct
+    ruleData: VersionedRuleData
     channels: ChannelMetadata[]
 }
 
@@ -123,8 +135,7 @@ export interface RoleEntitlements {
     name: string
     permissions: Permission[]
     users: string[]
-    ruleData?: IRuleEntitlementBase.RuleDataStruct
-    ruleDataV2?: IRuleEntitlementV2Base.RuleDataV2Struct
+    ruleData: VersionedRuleData
 }
 
 /*
@@ -132,8 +143,7 @@ export interface RoleEntitlements {
 */
 export interface EntitlementDetails {
     users: string[]
-    ruleData?: IRuleEntitlementBase.RuleDataStruct
-    ruleDataV2?: IRuleEntitlementV2Base.RuleDataV2Struct
+    ruleData: VersionedRuleData
 }
 
 export interface BasicRoleInfo {

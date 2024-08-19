@@ -37,18 +37,18 @@ export class RuleEntitlementV2Shim
         return this.read.getRuleDataV2(roleId)
     }
 
-    public decodeGetRuleData(entitlmentData: string): LocalhostBase.RuleDataV2Struct[] | undefined {
+    public decodeGetRuleData(entitlementData: string): LocalhostBase.RuleDataV2Struct | undefined {
         try {
             const decoded = this.decodeFunctionResult(
                 'getRuleDataV2',
-                entitlmentData,
+                entitlementData,
             ) as unknown as LocalhostBase.RuleDataV2Struct[]
 
             if (decoded.length === 0) {
                 logger.error('RuleEntitlementV2Shim No rule data', decoded)
                 return undefined
             }
-            return decoded
+            return decoded.length > 0 ? decoded[0] : undefined
         } catch (error) {
             logger.error('RuleEntitlementV2Shim Error decoding RuleDataV2Struct', error)
         }

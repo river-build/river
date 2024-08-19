@@ -401,7 +401,7 @@ jobs:
               run: yarn csb:turbo-no-sdk
 
             - name: Run River Tests Against Legacy Spaces (with entitlements)
-              run: yarn workspace @river-build/sdk run test:ci:multi:ent
+              run: yarn workspace @river-build/sdk run test:ci:multi:ent:legacy
 
             - name: Run River Tests (with entitlements)
               run: yarn workspace @river-build/sdk run test:ci:multi:ent

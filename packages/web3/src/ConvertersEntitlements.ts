@@ -7,7 +7,9 @@ import {
     encodeRuleData,
     encodeRuleDataV2,
     encodeThresholdParams,
+    decodeThresholdParams,
 } from './entitlement'
+import { Hex } from 'viem'
 
 const UserAddressesEncoding = 'address[]'
 
@@ -111,4 +113,56 @@ export function convertRuleDataV1ToV2(
         logicalOperations,
         checkOperations,
     } as IRuleEntitlementV2Base.RuleDataV2Struct
+}
+
+export function convertRuleDataV2ToV1(
+    ruleData: IRuleEntitlementV2Base.RuleDataV2Struct,
+): IRuleEntitlementBase.RuleDataStruct {
+    const operations: IRuleEntitlementBase.OperationStruct[] = ruleData.operations.map(
+        (op): IRuleEntitlementV2Base.OperationStruct => {
+            return { ...op }
+        },
+    )
+    const logicalOperations = ruleData.logicalOperations.map(
+        (op): IRuleEntitlementV2Base.LogicalOperationStruct => {
+            return { ...op }
+        },
+    )
+    const checkOperations = ruleData.checkOperations.map(
+        (op): IRuleEntitlementBase.CheckOperationStruct => {
+            switch (op.opType) {
+                case CheckOperationType.MOCK:
+                case CheckOperationType.ERC20:
+                case CheckOperationType.ERC721:
+                case CheckOperationType.NATIVE_COIN_BALANCE: {
+                    const { threshold } = decodeThresholdParams(op.params as Hex)
+                    return {
+                        opType: op.opType,
+                        chainId: op.chainId,
+                        contractAddress: op.contractAddress,
+                        threshold,
+                    }
+                }
+                case CheckOperationType.ERC1155:
+                    throw new Error('ERC1155 not supported for V1 Rule Data')
+
+                case CheckOperationType.ISENTITLED:
+                    return {
+                        opType: op.opType,
+                        chainId: op.chainId,
+                        contractAddress: op.contractAddress,
+                        threshold: 0n,
+                    }
+
+                case CheckOperationType.NONE:
+                default:
+                    throw new Error('Unsupported Check Operation Type')
+            }
+        },
+    )
+    return {
+        operations,
+        logicalOperations,
+        checkOperations,
+    } as IRuleEntitlementBase.RuleDataStruct
 }

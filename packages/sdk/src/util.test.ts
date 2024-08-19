@@ -43,7 +43,7 @@ import {
     Address,
     LocalhostWeb3Provider,
     PricingModuleStruct,
-    createV1ExternalNFTStruct,
+    createExternalNFTStruct,
     createRiverRegistry,
     createSpaceDapp,
     IRuleEntitlementBase,
@@ -70,6 +70,9 @@ import {
     SignerType,
     IRuleEntitlementV2Base,
     isRuleDataV1,
+    encodeThresholdParams,
+    RuleDataV2,
+    convertRuleDataV2ToV1,
 } from '@river-build/web3'
 
 const log = dlog('csb:test:util')
@@ -152,7 +155,7 @@ export async function erc20CheckOp(contractName: string, threshold: bigint): Pro
         checkType: CheckOperationType.ERC20,
         chainId: 31337n,
         contractAddress,
-        threshold,
+        params: encodeThresholdParams({ threshold }),
     }
 }
 
@@ -163,7 +166,7 @@ export async function customCheckOp(contractName: string): Promise<Operation> {
         checkType: CheckOperationType.ISENTITLED,
         chainId: 31337n,
         contractAddress,
-        threshold: 0n,
+        params: '0x',
     }
 }
 
@@ -178,7 +181,7 @@ export function nativeCoinBalanceCheckOp(threshold: bigint): Operation {
         checkType: CheckOperationType.NATIVE_COIN_BALANCE,
         chainId: 31337n,
         contractAddress: ethers.constants.AddressZero,
-        threshold,
+        params: encodeThresholdParams({ threshold }),
     }
 }
 
@@ -498,11 +501,11 @@ export async function createVersionedSpaceFromMembership(
     }
 }
 
-// createSpace accepts either legacy or current space creation parameters and will fall back
-// to the legacy space creation endpoint on the spaceDapp if the appropriate flag is set.
+// createVersionedSpace accepts either legacy or current space creation parameters and will
+// fall backto the legacy space creation endpoint on the spaceDapp if the appropriate flag is set.
 // If a user does not pass in a legacy space creation parameter, the function will not use
 // the legacy space creation endpoint, because the updated parameters are not backwards
-// compatible.
+// compatible - we don't attempt conversion here.
 export async function createVersionedSpace(
     spaceDapp: ISpaceDapp,
     createSpaceParams: CreateSpaceParams | CreateLegacySpaceParams,
@@ -648,13 +651,13 @@ export function twoNftRuleData(
     nft1Address: string,
     nft2Address: string,
     logOpType: LogicalOperationType.AND | LogicalOperationType.OR = LogicalOperationType.AND,
-): IRuleEntitlementBase.RuleDataStruct {
+): IRuleEntitlementV2Base.RuleDataV2Struct {
     const leftOperation: Operation = {
         opType: OperationType.CHECK,
         checkType: CheckOperationType.ERC721,
         chainId: 31337n,
         contractAddress: nft1Address as Address,
-        threshold: 1n,
+        params: encodeThresholdParams({ threshold: 1n }),
     }
 
     const rightOperation: Operation = {
@@ -662,7 +665,7 @@ export function twoNftRuleData(
         checkType: CheckOperationType.ERC721,
         chainId: 31337n,
         contractAddress: nft2Address as Address,
-        threshold: 1n,
+        params: encodeThresholdParams({ threshold: 1n }),
     }
     const root: Operation = {
         opType: OperationType.LOGICAL,
@@ -830,8 +833,8 @@ export const getFixedPricingModule = (pricingModules: PricingModuleStruct[]) => 
     return pricingModules.find((module) => module.name === FIXED_PRICING)
 }
 
-export function getNftRuleData(testNftAddress: Address): IRuleEntitlementBase.RuleDataStruct {
-    return createV1ExternalNFTStruct([testNftAddress])
+export function getNftRuleData(testNftAddress: Address): IRuleEntitlementV2Base.RuleDataV2Struct {
+    return createExternalNFTStruct([testNftAddress])
 }
 
 export interface CreateRoleContext {
@@ -839,6 +842,9 @@ export interface CreateRoleContext {
     error: Error | undefined
 }
 
+// createRole creates a role on the spaceDapp with the given parameters, using the legacy endpoint
+// if the USE_LEGACY_SPACES environment variable is set and converting the ruleData into the correct
+// format as necessary. Be aware, though, that the legacy endpoint does not support erc1155 checks.
 export async function createRole(
     spaceDapp: ISpaceDapp,
     provider: ethers.providers.Provider,
@@ -851,18 +857,19 @@ export async function createRole(
 ): Promise<CreateRoleContext> {
     let txn: ethers.ContractTransaction | undefined = undefined
     let error: Error | undefined = undefined
-
     if (useLegacySpaces()) {
-        if (!isRuleDataV1(ruleData)) {
-            throw new Error('Rule data must be in V1 format for legacy spaces')
-        }
         try {
+            console.log('LEGACY CREATE ROLE')
+            if (!isRuleDataV1(ruleData)) {
+                console.log('CREATE ROLE V1: DOWNGRADING RULE DATA')
+                ruleData = convertRuleDataV2ToV1(ruleData)
+            }
             txn = await spaceDapp.legacyCreateRole(
                 spaceId,
                 roleName,
                 permissions,
                 users,
-                ruleData,
+                ruleData as IRuleEntitlementBase.RuleDataStruct,
                 signer,
             )
         } catch (err) {
@@ -870,7 +877,9 @@ export async function createRole(
             return { roleId: undefined, error }
         }
     } else {
+        console.log('CREATE ROLE V2')
         if (isRuleDataV1(ruleData)) {
+            console.log('CREATE ROLE V2: CONVERTING RULE DATA')
             ruleData = convertRuleDataV1ToV2(ruleData)
         }
         try {
