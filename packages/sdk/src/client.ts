@@ -131,7 +131,8 @@ import { usernameChecksum } from './utils'
 import { isEncryptedContentKind, toDecryptedContent } from './encryptedContentTypes'
 import { ClientDecryptionExtensions } from './clientDecryptionExtensions'
 import { PersistenceStore, IPersistenceStore, StubPersistenceStore } from './persistenceStore'
-import { SyncState, SyncedStreams } from './syncedStreams'
+import { SyncedStreams } from './syncedStreams'
+import { SyncState } from './syncedStreamsLoop'
 import { SyncedStream } from './syncedStream'
 import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
@@ -413,21 +414,6 @@ export class Client
         } else {
             return undefined
         }
-    }
-
-    async userExists(userId: string): Promise<boolean> {
-        const userStreamId = makeUserStreamId(userId)
-        return this.streamExists(userStreamId)
-    }
-
-    async streamExists(streamId: string | Uint8Array): Promise<boolean> {
-        this.logCall('streamExists?', streamId)
-        const response = await this.rpcClient.getStream({
-            streamId: streamIdAsBytes(streamId),
-            optional: true,
-        })
-        this.logCall('streamExists=', streamId, response.stream)
-        return response.stream !== undefined
     }
 
     private async createUserStream(
