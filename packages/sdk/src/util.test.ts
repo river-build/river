@@ -43,7 +43,7 @@ import {
     Address,
     LocalhostWeb3Provider,
     PricingModuleStruct,
-    createExternalNFTStruct,
+    createV1ExternalNFTStruct,
     createRiverRegistry,
     createSpaceDapp,
     IRuleEntitlementBase,
@@ -68,6 +68,8 @@ import {
     convertRuleDataV1ToV2,
     encodeRuleDataV2,
     SignerType,
+    IRuleEntitlementV2Base,
+    isRuleDataV1,
 } from '@river-build/web3'
 
 const log = dlog('csb:test:util')
@@ -402,20 +404,18 @@ export async function createSpaceAndDefaultChannel(
     spaceDapp: ISpaceDapp,
     wallet: ethers.Wallet,
     name: string,
-    membership: LegacyMembershipStruct,
+    membership: LegacyMembershipStruct | MembershipStruct,
 ): Promise<{
     spaceId: string
     defaultChannelId: string
     userStreamView: IStreamStateView
 }> {
-    const transaction = await spaceDapp.createLegacySpace(
-        {
-            spaceName: `${name}-space`,
-            uri: `http://${name}-space-metadata.com`,
-            channelName: 'general',
-            membership,
-        },
+    const transaction = await createVersionedSpaceFromMembership(
+        client,
+        spaceDapp,
         wallet,
+        name,
+        membership,
     )
     const receipt = await transaction.wait()
     expect(receipt.status).toEqual(1)
@@ -449,6 +449,52 @@ export async function createSpaceAndDefaultChannel(
         spaceId,
         defaultChannelId: channelId,
         userStreamView,
+    }
+}
+
+export async function createVersionedSpaceFromMembership(
+    client: Client,
+    spaceDapp: ISpaceDapp,
+    wallet: ethers.Wallet,
+    name: string,
+    membership: LegacyMembershipStruct | MembershipStruct,
+): Promise<ethers.ContractTransaction> {
+    if (useLegacySpaces() && isLegacyMembershipType(membership)) {
+        return await spaceDapp.createLegacySpace(
+            {
+                spaceName: `${name}-space`,
+                uri: `${name}-space-metadata`,
+                channelName: 'general',
+                membership,
+            },
+            wallet,
+        )
+    } else {
+        if (isLegacyMembershipType(membership)) {
+            // Convert legacy space params to current space params
+            membership = {
+                settings: membership.settings,
+                permissions: membership.permissions,
+                requirements: {
+                    everyone: true,
+                    users: [],
+                    ruleData: encodeRuleDataV2(
+                        convertRuleDataV1ToV2(
+                            membership.requirements.ruleData as IRuleEntitlementBase.RuleDataStruct,
+                        ),
+                    ),
+                },
+            }
+        }
+        return await spaceDapp.createSpace(
+            {
+                spaceName: `${name}-space`,
+                uri: `${name}-space-metadata`,
+                channelName: 'general',
+                membership,
+            },
+            wallet,
+        )
     }
 }
 
@@ -785,7 +831,7 @@ export const getFixedPricingModule = (pricingModules: PricingModuleStruct[]) => 
 }
 
 export function getNftRuleData(testNftAddress: Address): IRuleEntitlementBase.RuleDataStruct {
-    return createExternalNFTStruct([testNftAddress])
+    return createV1ExternalNFTStruct([testNftAddress])
 }
 
 export interface CreateRoleContext {
@@ -800,17 +846,46 @@ export async function createRole(
     roleName: string,
     permissions: Permission[],
     users: string[],
-    ruleData: IRuleEntitlementBase.RuleDataStruct,
+    ruleData: IRuleEntitlementBase.RuleDataStruct | IRuleEntitlementV2Base.RuleDataV2Struct,
     signer: ethers.Signer,
 ): Promise<CreateRoleContext> {
     let txn: ethers.ContractTransaction | undefined = undefined
     let error: Error | undefined = undefined
 
-    try {
-        txn = await spaceDapp.createRole(spaceId, roleName, permissions, users, ruleData, signer)
-    } catch (err) {
-        error = spaceDapp.parseSpaceError(spaceId, err)
-        return { roleId: undefined, error }
+    if (useLegacySpaces()) {
+        if (!isRuleDataV1(ruleData)) {
+            throw new Error('Rule data must be in V1 format for legacy spaces')
+        }
+        try {
+            txn = await spaceDapp.legacyCreateRole(
+                spaceId,
+                roleName,
+                permissions,
+                users,
+                ruleData,
+                signer,
+            )
+        } catch (err) {
+            error = spaceDapp.parseSpaceError(spaceId, err)
+            return { roleId: undefined, error }
+        }
+    } else {
+        if (isRuleDataV1(ruleData)) {
+            ruleData = convertRuleDataV1ToV2(ruleData)
+        }
+        try {
+            txn = await spaceDapp.createRole(
+                spaceId,
+                roleName,
+                permissions,
+                users,
+                ruleData,
+                signer,
+            )
+        } catch (err) {
+            error = spaceDapp.parseSpaceError(spaceId, err)
+            return { roleId: undefined, error }
+        }
     }
 
     const receipt = await provider.waitForTransaction(txn.hash)

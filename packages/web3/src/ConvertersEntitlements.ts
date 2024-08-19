@@ -2,7 +2,12 @@ import { ethers } from 'ethers'
 
 import { Address, EntitlementStruct } from './ContractTypes'
 import { IRuleEntitlementBase, IRuleEntitlementV2Base } from './v3'
-import { CheckOperationType, encodeEntitlementData, encodeThresholdParams } from './entitlement'
+import {
+    CheckOperationType,
+    encodeRuleData,
+    encodeRuleDataV2,
+    encodeThresholdParams,
+} from './entitlement'
 
 const UserAddressesEncoding = 'address[]'
 
@@ -38,7 +43,18 @@ export function createRuleEntitlementStruct(
     moduleAddress: Address,
     ruleData: IRuleEntitlementBase.RuleDataStruct,
 ): EntitlementStruct {
-    const encoded = encodeEntitlementData(ruleData)
+    const encoded = encodeRuleData(ruleData)
+    return {
+        module: moduleAddress,
+        data: encoded,
+    }
+}
+
+export function createRuleEntitlementV2Struct(
+    moduleAddress: Address,
+    ruleData: IRuleEntitlementV2Base.RuleDataV2Struct,
+): EntitlementStruct {
+    const encoded = encodeRuleDataV2(ruleData)
     return {
         module: moduleAddress,
         data: encoded,

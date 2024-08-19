@@ -239,7 +239,7 @@ export function decodeERC1155Params(params: Hex): Readonly<ERC1155Params> {
     return decodeAbiParameters([erc11155ParamsAbi], params)[0]
 }
 
-export function encodeEntitlementData(ruleData: IRuleEntitlementBase.RuleDataStruct): Hex {
+export function encodeRuleData(ruleData: IRuleEntitlementBase.RuleDataStruct): Hex {
     const encodeRuleDataAbi: ExtractAbiFunction<typeof IRuleEntitlementAbi, 'encodeRuleData'> =
         getAbiItem({
             abi: IRuleEntitlementAbi,
@@ -253,7 +253,7 @@ export function encodeEntitlementData(ruleData: IRuleEntitlementBase.RuleDataStr
     return encodeAbiParameters(encodeRuleDataAbi.inputs, [ruleData])
 }
 
-export function decodeEntitlementData(entitlementData: Hex): IRuleEntitlementBase.RuleDataStruct[] {
+export function decodeRuleData(entitlementData: Hex): IRuleEntitlementBase.RuleDataStruct[] {
     const getRuleDataAbi: ExtractAbiFunction<typeof IRuleEntitlementAbi, 'getRuleData'> =
         getAbiItem({
             abi: IRuleEntitlementAbi,
@@ -661,7 +661,7 @@ export async function evaluateTree(
 
 // These two methods are used to create a rule data struct for an external token or NFT
 // checks for testing.
-export function createExternalTokenStruct(
+export function createV1ExternalTokenStruct(
     addresses: Address[],
     options?: {
         checkOptions?: Partial<Omit<ContractCheckOperation, 'address'>>
@@ -677,10 +677,10 @@ export function createExternalTokenStruct(
         type: options?.checkOptions?.type ?? (CheckOperationType.ERC20 as const),
         threshold: options?.checkOptions?.threshold ?? BigInt(1),
     }))
-    return createOperationsTree(defaultChain, options?.logicalOp ?? LogicalOperationType.OR)
+    return createV1OperationsTree(defaultChain, options?.logicalOp ?? LogicalOperationType.OR)
 }
 
-export function createExternalNFTStruct(
+export function createV1ExternalNFTStruct(
     addresses: Address[],
     options?: {
         checkOptions?: Partial<Omit<ContractCheckOperation, 'address'>>
@@ -697,7 +697,7 @@ export function createExternalNFTStruct(
         type: options?.checkOptions?.type ?? (CheckOperationType.ERC721 as const),
         threshold: options?.checkOptions?.threshold ?? BigInt(1),
     }))
-    return createOperationsTree(defaultChain, options?.logicalOp ?? LogicalOperationType.OR)
+    return createV1OperationsTree(defaultChain, options?.logicalOp ?? LogicalOperationType.OR)
 }
 
 export type ContractCheckOperation = {
@@ -707,7 +707,7 @@ export type ContractCheckOperation = {
     threshold: bigint
 }
 
-export function createOperationsTree(
+export function createV1OperationsTree(
     checkOp: (Omit<ContractCheckOperation, 'threshold'> & {
         threshold?: bigint
     })[],
