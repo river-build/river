@@ -102,7 +102,6 @@ export function convertRuleDataV1ToV2(
                         params: `0x`,
                     }
 
-                case CheckOperationType.NONE:
                 default:
                     throw new Error('Unsupported Check Operation Type')
             }
@@ -154,7 +153,6 @@ export function convertRuleDataV2ToV1(
                         threshold: 0n,
                     }
 
-                case CheckOperationType.NONE:
                 default:
                     throw new Error('Unsupported Check Operation Type')
             }
