@@ -82,24 +82,26 @@ contract RewardsDistribution is
       ds.distributionByOperator[operatorsForClaimer[i]] = 0;
     }
 
+    _transferRewards(amount, msg.sender);
+  }
+
+  function _transferRewards(uint256 amount, address recipient) internal {
     if (amount == 0) revert RewardsDistribution_NoRewardsToClaim();
 
     SpaceDelegationStorage.Layout storage sd = SpaceDelegationStorage.layout();
-    if (IERC20(sd.riverToken).balanceOf(address(this)) < amount)
+    address riverToken = sd.riverToken;
+    if (IERC20(riverToken).balanceOf(address(this)) < amount)
       revert RewardsDistribution_InsufficientRewardBalance();
 
     CurrencyTransfer.transferCurrency(
-      sd.riverToken,
+      riverToken,
       address(this),
-      msg.sender,
+      recipient,
       amount
     );
   }
 
   function operatorClaimByAddress(address operatorAddress) external {
-    RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
-      .layout();
-
     NodeOperatorStorage.Layout storage nos = NodeOperatorStorage.layout();
     if (nos.claimerByOperator[operatorAddress] != msg.sender)
       revert RewardsDistribution_UnauthorizedOperatorClaimer(
@@ -108,19 +110,12 @@ contract RewardsDistribution is
       );
 
     uint256 amount = getClaimableAmountForOperator(operatorAddress);
-    if (amount == 0) revert RewardsDistribution_NoRewardsToClaim();
+
+    RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
+      .layout();
     ds.distributionByOperator[operatorAddress] = 0;
 
-    SpaceDelegationStorage.Layout storage sd = SpaceDelegationStorage.layout();
-    if (IERC20(sd.riverToken).balanceOf(address(this)) < amount)
-      revert RewardsDistribution_InsufficientRewardBalance();
-
-    CurrencyTransfer.transferCurrency(
-      sd.riverToken,
-      address(this),
-      msg.sender,
-      amount
-    );
+    _transferRewards(amount, msg.sender);
   }
 
   function mainnetClaim() external {
@@ -137,25 +132,10 @@ contract RewardsDistribution is
       ds.distributionByDelegator[delegatorsForClaimer[i]] = 0;
     }
 
-    if (totalClaimableAmount == 0)
-      revert RewardsDistribution_NoRewardsToClaim();
-
-    SpaceDelegationStorage.Layout storage sd = SpaceDelegationStorage.layout();
-    if (IERC20(sd.riverToken).balanceOf(address(this)) < totalClaimableAmount)
-      revert RewardsDistribution_InsufficientRewardBalance();
-
-    CurrencyTransfer.transferCurrency(
-      sd.riverToken,
-      address(this),
-      msg.sender,
-      totalClaimableAmount
-    );
+    _transferRewards(totalClaimableAmount, msg.sender);
   }
 
   function mainnetClaimByAddress(address mainnetDelegatorToClaim) external {
-    RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
-      .layout();
-
     if (_getAuthorizedClaimer(mainnetDelegatorToClaim) != msg.sender)
       revert RewardsDistribution_UnauthorizedClaimer(
         mainnetDelegatorToClaim,
@@ -163,41 +143,22 @@ contract RewardsDistribution is
       );
 
     uint256 amount = getClaimableAmountForDelegator(mainnetDelegatorToClaim);
-    if (amount == 0) revert RewardsDistribution_NoRewardsToClaim();
 
+    RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
+      .layout();
     ds.distributionByDelegator[mainnetDelegatorToClaim] = 0;
 
-    SpaceDelegationStorage.Layout storage sd = SpaceDelegationStorage.layout();
-    if (IERC20(sd.riverToken).balanceOf(address(this)) < amount)
-      revert RewardsDistribution_InsufficientRewardBalance();
-
-    CurrencyTransfer.transferCurrency(
-      sd.riverToken,
-      address(this),
-      msg.sender,
-      amount
-    );
+    _transferRewards(amount, msg.sender);
   }
 
   function delegatorClaim() external {
     uint256 amount = getClaimableAmountForDelegator(msg.sender);
-    if (amount == 0) revert RewardsDistribution_NoRewardsToClaim();
-
-    SpaceDelegationStorage.Layout storage sd = SpaceDelegationStorage.layout();
-    if (IERC20(sd.riverToken).balanceOf(address(this)) < amount)
-      revert RewardsDistribution_InsufficientRewardBalance();
 
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
-
     ds.distributionByDelegator[msg.sender] = 0;
 
-    CurrencyTransfer.transferCurrency(
-      sd.riverToken,
-      address(this),
-      msg.sender,
-      amount
-    );
+    _transferRewards(amount, msg.sender);
   }
 
   function distributeRewards(address operator) external onlyOwner {
@@ -268,13 +229,12 @@ contract RewardsDistribution is
   }
 
   function withdraw() external onlyOwner {
+    address riverToken = SpaceDelegationStorage.layout().riverToken;
     CurrencyTransfer.transferCurrency(
-      SpaceDelegationStorage.layout().riverToken,
+      riverToken,
       address(this),
       RewardsDistributionStorage.layout().withdrawalRecipient,
-      IERC20(SpaceDelegationStorage.layout().riverToken).balanceOf(
-        address(this)
-      )
+      IERC20(riverToken).balanceOf(address(this))
     );
   }
 
