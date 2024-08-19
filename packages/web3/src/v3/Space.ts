@@ -10,7 +10,6 @@ import {
     RoleEntitlements,
     isRuleEntitlement,
     isRuleEntitlementV2,
-    isStringArray,
     isUserEntitlement,
 } from '../ContractTypes'
 import { IChannelBase, IChannelShim } from './IChannelShim'

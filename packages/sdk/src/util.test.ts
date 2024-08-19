@@ -71,7 +71,6 @@ import {
     IRuleEntitlementV2Base,
     isRuleDataV1,
     encodeThresholdParams,
-    RuleDataV2,
     convertRuleDataV2ToV1,
 } from '@river-build/web3'
 
@@ -859,9 +858,7 @@ export async function createRole(
     let error: Error | undefined = undefined
     if (useLegacySpaces()) {
         try {
-            console.log('LEGACY CREATE ROLE')
             if (!isRuleDataV1(ruleData)) {
-                console.log('CREATE ROLE V1: DOWNGRADING RULE DATA')
                 ruleData = convertRuleDataV2ToV1(ruleData)
             }
             txn = await spaceDapp.legacyCreateRole(
@@ -869,7 +866,7 @@ export async function createRole(
                 roleName,
                 permissions,
                 users,
-                ruleData as IRuleEntitlementBase.RuleDataStruct,
+                ruleData,
                 signer,
             )
         } catch (err) {
@@ -877,9 +874,7 @@ export async function createRole(
             return { roleId: undefined, error }
         }
     } else {
-        console.log('CREATE ROLE V2')
         if (isRuleDataV1(ruleData)) {
-            console.log('CREATE ROLE V2: CONVERTING RULE DATA')
             ruleData = convertRuleDataV1ToV2(ruleData)
         }
         try {

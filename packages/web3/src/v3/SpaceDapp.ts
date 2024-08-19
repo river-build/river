@@ -868,7 +868,6 @@ export class SpaceDapp implements ISpaceDapp {
                 channelId,
                 permission,
             )
-            console.log('HEY entitlements FOR CHANNEL JOIN', entitlements)
             const entitledWallet = await this.evaluateEntitledWallet(
                 user,
                 linkedWallets,

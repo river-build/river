@@ -25,7 +25,6 @@ import { dlog } from '@river-build/dlog'
 import {
     Address,
     NoopRuleData,
-    IRuleEntitlementBase,
     IRuleEntitlementV2Base,
     Permission,
     TestERC721,
