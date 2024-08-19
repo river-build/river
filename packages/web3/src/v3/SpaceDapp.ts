@@ -495,7 +495,6 @@ export class SpaceDapp implements ISpaceDapp {
         const entitlements: EntitlementData[] = entitlementData.map((x) => ({
             entitlementType: x.entitlementType as EntitlementModuleType,
             ruleEntitlement: undefined,
-            ruleEntitlementV2: undefined,
             userEntitlement: undefined,
         }))
 

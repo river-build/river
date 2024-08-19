@@ -505,7 +505,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test.only('oneNftGateJoinPass', async () => {
+    test('oneNftGateJoinPass', async () => {
         const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId, channelId } =
             await createTownWithRequirements({
                 everyone: false,
