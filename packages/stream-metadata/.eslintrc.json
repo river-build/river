@@ -1,6 +1,31 @@
 {
 	"root": true,
-	"extends": ["@river-build/eslint-config/typescript"],
+	"extends": [
+    "@river-build/eslint-config/typescript",
+			"eslint:recommended",
+			"plugin:import/recommended",
+			"plugin:import/typescript",
+			"plugin:@typescript-eslint/recommended",
+			"plugin:@typescript-eslint/recommended-requiring-type-checking",
+			"plugin:prettier/recommended",
+			"plugin:jest/recommended"
+	],
 	"parser": "@typescript-eslint/parser",
-	"parserOptions": { "project": ["./tsconfig.json"] }
+	"parserOptions": { "project": ["./tsconfig.json"] },
+	"plugins": ["@typescript-eslint", "import"],
+	"ignorePatterns": ["dist/**", ".turbo/**", "node_modules/**", "jest.config.ts"],
+	"overrides": [
+        {
+            "files": ["**/*.test.*", "**/*.test_util.*"],
+            "rules": {
+                "jest/no-standalone-expect": "off",
+                "jest/expect-expect": "off",
+                "jest/no-conditional-expect": "off",
+                "jest/no-disabled-tests": "off",
+                "@typescript-eslint/no-unsafe-call": "off",
+                "@typescript-eslint/no-non-null-assertion": "off",
+                "@typescript-eslint/no-unsafe-argument": "off"
+            }
+        }
+    ]
 }
