@@ -45,7 +45,7 @@ const server = Fastify({
 
 server.addHook('onRequest', (request, reply, done) => {
 	const reqId = request.id // Use Fastify's generated reqId, which is now a UUID
-	request.log = logger.child({ reqId })
+	request.log = request.log.child({ reqId })
 	done()
 })
 
