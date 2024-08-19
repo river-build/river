@@ -40,11 +40,12 @@ export type Server = FastifyInstance<
 
 const server = Fastify({
 	logger,
+	genReqId: () => uuidv4(),
 })
 
 server.addHook('onRequest', (request, reply, done) => {
-	const requestId = uuidv4()
-	request.log = logger.child({ request_id: requestId })
+	const reqId = request.id // Use Fastify's generated reqId, which is now a UUID
+	request.log = logger.child({ reqId })
 	done()
 })
 
