@@ -4,7 +4,6 @@ import { Server as HTTPSServer } from 'https'
 import Fastify, { FastifyInstance } from 'fastify'
 import cors from '@fastify/cors'
 import { v4 as uuidv4 } from 'uuid'
-import { check } from 'prettier'
 
 import { config } from './environment'
 import { getLogger } from './logger'
@@ -62,24 +61,14 @@ function setupRoutes() {
 	 * Routes
 	 */
 	server.get('/health', checkHealth)
-
-	server.get('/space/:spaceAddress', async (request, reply) => {
-		const { spaceAddress } = request.params as { spaceAddress?: string }
-		logger.info({ spaceAddress }, 'GET /space/../metadata')
-
-		const { protocol, serverAddress } = getServerInfo()
-		return fetchSpaceMetadata(request, reply, `${protocol}://${serverAddress}`)
-	})
-
-	server.get('/space/:spaceAddress/image', async (request, reply) => {
-		const { spaceAddress } = request.params as { spaceAddress?: string }
-		logger.info({ spaceAddress }, 'GET /space/../image')
-
-		return fetchSpaceImage(request, reply)
-	})
+	server.get('/space/:spaceAddress', async (request, reply) =>
+		fetchSpaceMetadata(request, reply, getServerUrl()),
+	)
+	server.get('/space/:spaceAddress/image', fetchSpaceImage)
 
 	// Generic / route to return 404
 	server.get('/', async (request, reply) => {
+		request.log.info(`GET /`)
 		return reply.code(404).send('Not found')
 	})
 }
@@ -87,14 +76,14 @@ function setupRoutes() {
 /*
  * Start the server
  */
-function getServerInfo() {
+function getServerUrl() {
 	const addressInfo = server.server.address()
 	const protocol = server.server instanceof HTTPSServer ? 'https' : 'http'
 	const serverAddress =
 		typeof addressInfo === 'string'
 			? addressInfo
 			: `${addressInfo?.address}:${addressInfo?.port}`
-	return { protocol, serverAddress }
+	return `${protocol}://${serverAddress}`
 }
 
 process.on('SIGTERM', async () => {
