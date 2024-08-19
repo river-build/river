@@ -32,13 +32,12 @@ func MarshalEntitlement(
 	rawEntitlement base.IEntitlementDataQueryableBaseEntitlementData,
 ) (Entitlement, error) {
 	log := dlog.FromCtx(ctx)
-	log.Info(
-		"Entitlement data",
+	log.Debug(
+		"Marshalling entitlement data",
 		"entitlement_data", rawEntitlement.EntitlementData,
 		"entitlement_type", rawEntitlement.EntitlementType,
 	)
 	if rawEntitlement.EntitlementType == ModuleTypeRuleEntitlement {
-		log.Info("FOUND Rule entitlement")
 		// Parse the ABI definition
 		parsedABI, err := base.RuleEntitlementMetaData.GetAbi()
 		if err != nil {
@@ -94,7 +93,6 @@ func MarshalEntitlement(
 
 	if rawEntitlement.EntitlementType == ModuleTypeRuleEntitlementV2 {
 		// Parse the ABI definition
-		log.Info("FOUND Rule entitlement")
 		parsedABI, err := base.RuleEntitlementV2MetaData.GetAbi()
 		if err != nil {
 			log.Error("Failed to parse ABI", "error", err)
@@ -148,7 +146,6 @@ func MarshalEntitlement(
 	}
 
 	if rawEntitlement.EntitlementType == ModuleTypeUserEntitlement {
-		log.Info("FOUND User entitlement")
 		abiDef := `[{"name":"getAddresses","outputs":[{"type":"address[]","name":"out"}],"constant":true,"payable":false,"type":"function"}]`
 
 		// Parse the ABI definition
@@ -226,10 +223,6 @@ func ConvertV1RuleDataToV2(
 	ctx context.Context,
 	ruleData *base.IRuleEntitlementBaseRuleData,
 ) (*base.IRuleEntitlementBaseRuleDataV2, error) {
-	log := dlog.FromCtx(ctx)
-	log.Info("Rule data", "rule_data", ruleData)
-	// Parse the ABI definition
-
 	var ruleDataV2 base.IRuleEntitlementBaseRuleDataV2
 
 	// Straight copy of base operations and logical operations

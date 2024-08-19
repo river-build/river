@@ -25,7 +25,7 @@ on:
                 default: false
                 type: boolean
             skip_multinode_ent_legacy:
-                description: Skip Multi-node Ent LegacyTests
+                description: Skip Multi-node Ent Legacy Tests
                 required: false
                 default: false
                 type: boolean
