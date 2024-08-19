@@ -1,11 +1,10 @@
 import { FastifyReply, FastifyRequest } from 'fastify'
 
-import { getLogger } from '../logger'
 import { getRiverRegistry } from '../evmRpcClient'
 
-const logger = getLogger('handleHealthCheckRequest')
-
 export async function checkHealth(request: FastifyRequest, reply: FastifyReply) {
+	const logger = request.log.child({ functionName: 'handleHealthCheckRequest' })
+	logger.info(`GET /health`)
 	// Do a health check on the river registry
 	try {
 		await getRiverRegistry().getAllNodes()

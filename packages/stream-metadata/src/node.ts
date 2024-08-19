@@ -3,6 +3,8 @@ import { Server as HTTPSServer } from 'https'
 
 import Fastify, { FastifyInstance } from 'fastify'
 import cors from '@fastify/cors'
+import { v4 as uuidv4 } from 'uuid'
+import { check } from 'prettier'
 
 import { config } from './environment'
 import { getLogger } from './logger'
@@ -41,6 +43,12 @@ const server = Fastify({
 	logger,
 })
 
+server.addHook('onRequest', (request, reply, done) => {
+	const requestId = uuidv4()
+	request.log = logger.child({ request_id: requestId })
+	done()
+})
+
 async function registerPlugins() {
 	await server.register(cors, {
 		origin: '*', // Allow any origin
@@ -53,10 +61,7 @@ function setupRoutes() {
 	/*
 	 * Routes
 	 */
-	server.get('/health', async (request, reply) => {
-		logger.info(`GET /health`)
-		return checkHealth(request, reply)
-	})
+	server.get('/health', checkHealth)
 
 	server.get('/space/:spaceAddress', async (request, reply) => {
 		const { spaceAddress } = request.params as { spaceAddress?: string }
