@@ -25,7 +25,7 @@
     },
     "devDependencies": {
         "@bufbuild/buf": "^1.32.0",
-        "@bufbuild/protoc-gen-es": "^1.9.0",
+        "@bufbuild/protoc-gen-es": "^2.0.0",
         "@connectrpc/protoc-gen-connect-es": "^1.4.0",
         "@river-build/proto-source": "workspace:^",
         "@types/jest": "^29.5.3",
