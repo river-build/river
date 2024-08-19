@@ -21,11 +21,14 @@ import {DeploySpaceFactory} from "contracts/scripts/deployments/diamonds/DeployS
 import {DeployBaseRegistry} from "contracts/scripts/deployments/diamonds/DeployBaseRegistry.s.sol";
 import {DeploySpaceOwner} from "contracts/scripts/deployments/diamonds/DeploySpaceOwner.s.sol";
 
+// debuggging
+import {console} from "forge-std/console.sol";
+
 contract InteractAlpha is Interaction, DiamondHelper, IDiamondLoupeBase {
   DeploySpace deploySpace = new DeploySpace();
-  DeploySpaceFactory deploySpaceFactory = new DeploySpaceFactory();
-  DeployBaseRegistry deployBaseRegistry = new DeployBaseRegistry();
-  DeploySpaceOwner deploySpaceOwner = new DeploySpaceOwner();
+  // DeploySpaceFactory deploySpaceFactory = new DeploySpaceFactory();
+  // DeployBaseRegistry deployBaseRegistry = new DeployBaseRegistry();
+  // DeploySpaceOwner deploySpaceOwner = new DeploySpaceOwner();
 
   function __interact(address deployer) internal override {
     vm.setEnv("OVERRIDE_DEPLOYMENTS", "1");
@@ -33,6 +36,8 @@ contract InteractAlpha is Interaction, DiamondHelper, IDiamondLoupeBase {
     // address spaceOwner = getDeployment("spaceOwner");
     // address spaceFactory = getDeployment("spaceFactory");
     // address baseRegistry = getDeployment("baseRegistry");
+
+    console.log("space", space);
 
     FacetCut[] memory newCuts;
 
