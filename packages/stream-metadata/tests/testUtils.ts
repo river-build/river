@@ -5,6 +5,7 @@ import {
 	Client,
 	genId,
 	makeSignerContext,
+	makeSpaceStreamId,
 	MockEntitlementsDelegate,
 	RiverDbManager,
 	SignerContext,
@@ -22,6 +23,10 @@ export function isTest(): boolean {
 		process.env.TS_JEST === '1' ||
 		process.env.JEST_WORKER_ID !== undefined
 	)
+}
+
+export function makeUniqueSpaceStreamId(): string {
+	return makeSpaceStreamId(genId(40))
 }
 
 export function getTestServerUrl() {

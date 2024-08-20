@@ -3,13 +3,18 @@
  */
 import axios from 'axios'
 import { dlog } from '@river-build/dlog'
+import { contractAddressFromSpaceId } from '@river-build/sdk'
 
-import { getTestServerUrl, makeTestClient } from '../testUtils'
+import { getTestServerUrl, makeTestClient, makeUniqueSpaceStreamId } from '../testUtils'
 
+/*
 const log = dlog('stream-metadata:test', {
 	allowJest: true,
 	defaultEnabled: true,
 })
+	*/
+
+const log = console.log
 
 describe('GET /space/:spaceAddress/image', () => {
 	const baseURL = getTestServerUrl()
@@ -66,11 +71,14 @@ describe('GET /space/:spaceAddress/image', () => {
 		}
 	})
 
-	it('should return status 200 with valid spaceImage', async () => {
+	it.only('should return status 200 with valid spaceImage', async () => {
+		const spaceId = makeUniqueSpaceStreamId()
+		const spaceContractAddress = contractAddressFromSpaceId(spaceId)
 		const bobClient = await makeTestClient()
 		log('bobClient', {
-			userId: bobClient.userId,
-			userStreamId: bobClient.userStreamId,
+			bobsUserId: bobClient.userId,
+			spaceId,
+			spaceContractAddress,
 		})
 	})
 })
