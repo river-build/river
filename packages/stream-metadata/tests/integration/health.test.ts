@@ -5,7 +5,7 @@ import { getTestServerInfo } from '../testUtils'
 
 const logger = getLogger('stream-metadata:tests:integration:health')
 
-describe('GET /health Integration Test', () => {
+describe('GET /health', () => {
 	const baseURL = getTestServerInfo()
 	logger.info({ baseURL }, 'baseURL')
 
