@@ -180,11 +180,12 @@ export async function getStream(
 		streamId: streamIdAsBytes(streamId),
 	})
 
+	const duration_ms = Date.now() - start
 	logger.info(
 		{
-			duration_ms: Date.now() - start,
+			duration_ms,
 		},
-		'getStream finished',
+		`getStream finished in ${duration_ms}ms`,
 	)
 
 	const unpackedResponse = await unpackStream(response.stream)
