@@ -12,5 +12,5 @@
 		"sourceMap": true
 	},
 	"include": ["src/**/*.ts", "src/testUtils.ts"],
-	"exclude": ["node_modules", "tests"]
+	"exclude": ["node_modules", "tests", "jest.setup.ts"],
 }
