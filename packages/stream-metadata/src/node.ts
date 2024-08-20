@@ -69,10 +69,7 @@ export function setupRoutes(srv: Server) {
 	)
 	srv.get('/space/:spaceAddress/image', fetchSpaceImage)
 
-	// Generic / route to return 404
-	srv.get('/', async (request, reply) => {
-		return reply.code(404).send('Not found')
-	})
+	// Fastify will return 404 for any unmatched routes
 }
 
 // for testability, pass server instance as an argument

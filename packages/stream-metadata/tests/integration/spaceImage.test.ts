@@ -7,8 +7,9 @@ describe('GET /space/:spaceAddress/image', () => {
 
 	it('should return 404 /space/0x0000000000000000000000000000000000000000/image', async () => {
 		const expectedStatus = 404
+		const route = 'space'
 		try {
-			await axios.get(`${baseURL}/space`)
+			await axios.get(`${baseURL}/${route}`)
 			throw new Error(`Expected request to fail with status ${expectedStatus})`)
 		} catch (error) {
 			if (axios.isAxiosError(error)) {
@@ -21,10 +22,11 @@ describe('GET /space/:spaceAddress/image', () => {
 		}
 	})
 
-	it('should return 400 /space', async () => {
-		const expectedStatus = 400
+	it('should return 404 /space', async () => {
+		const expectedStatus = 404
+		const route = 'space'
 		try {
-			await axios.get(`${baseURL}/space`)
+			await axios.get(`${baseURL}/${route}`)
 			throw new Error(`Expected request to fail with status ${expectedStatus})`)
 		} catch (error) {
 			if (axios.isAxiosError(error)) {
@@ -39,8 +41,9 @@ describe('GET /space/:spaceAddress/image', () => {
 
 	it('should return 400 /space/0x0/image', async () => {
 		const expectedStatus = 400
+		const route = 'space/0x0/image'
 		try {
-			await axios.get(`${baseURL}/space`)
+			await axios.get(`${baseURL}/${route}`)
 			throw new Error(`Expected request to fail with status ${expectedStatus})`)
 		} catch (error) {
 			if (axios.isAxiosError(error)) {
