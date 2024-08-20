@@ -68,30 +68,44 @@ export function makeStreamRpcClient(url: string): StreamRpcClient {
 export async function makeTestClient() {
 	// create all the constructor arguments for the SDK client
 
-	// create a new wallet for the user
-	const context = await makeRandomUserContext()
-	const provider = new LocalhostWeb3Provider(testConfig.baseChainRpcUrl, bobsWallet)
-	const entitlementsDelegate = new MockEntitlementsDelegate()
-	const deviceId = `${genId(5)}`
-	const userId = userIdFromAddress(context.creatorAddress)
-	const dbName = `database-${userId}-${deviceId}`
-	const persistenceDbName = `persistence-${userId}${deviceId}`
-	// create a new client with store(s)
-	const cryptoStore = RiverDbManager.getCryptoDb(userId, dbName)
+	// arg1: user context and wallet
+	const { context, wallet } = await makeRandomUserContext()
+	const provider = new LocalhostWeb3Provider(testConfig.baseChainRpcUrl, wallet)
+	// need funds to create space and execute tranasctions
+	await provider.fundWallet()
 
-	//
+	// arg2: stream rpc client
 	const nodeUrl = await getAnyNodeUrlFromRiverRegistry()
 	if (!nodeUrl) {
 		throw new Error('No nodes available')
 	}
 	const rpcClient = makeStreamRpcClient(nodeUrl)
 
+	// arg3: crypto store
+	const deviceId = `${genId(5)}`
+	const userId = userIdFromAddress(context.creatorAddress)
+	const dbName = `database-${userId}-${deviceId}`
+	const cryptoStore = RiverDbManager.getCryptoDb(userId, dbName)
+
+	// arg4: entitlements delegate
+	const entitlementsDelegate = new MockEntitlementsDelegate()
+
+	// arg5: persistence db name
+	const persistenceDbName = `persistence-${userId}-${deviceId}`
+
+	// create the client with all the args
 	return new Client(context, rpcClient, cryptoStore, entitlementsDelegate, persistenceDbName)
 }
 
-export async function makeRandomUserContext(): Promise<SignerContext> {
+export async function makeRandomUserContext(): Promise<{
+	wallet: ethers.Wallet
+	context: SignerContext
+}> {
 	const wallet = ethers.Wallet.createRandom()
-	return makeUserContextFromWallet(wallet)
+	return {
+		wallet,
+		context: await makeUserContextFromWallet(wallet),
+	}
 }
 
 export async function makeUserContextFromWallet(wallet: ethers.Wallet): Promise<SignerContext> {
