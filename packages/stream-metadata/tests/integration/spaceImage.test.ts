@@ -56,5 +56,5 @@ describe('GET /space/:spaceAddress/image', () => {
 		}
 	})
 
-	it('should return status 200 with valid spaceImage', async () => {})
+	it.only('should return status 200 with valid spaceImage', async () => {})
 })

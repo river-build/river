@@ -22,7 +22,7 @@ export function getTestServerUrl() {
 	return baseURL
 }
 
-export async function getAnyNodeFromRiverRegistry() {
+export async function getAnyNodeUrlFromRiverRegistry() {
 	const riverRegistry = getRiverRegistry()
 	const nodes = await riverRegistry.getAllNodeUrls()
 
@@ -33,7 +33,7 @@ export async function getAnyNodeFromRiverRegistry() {
 	const randomIndex = Math.floor(Math.random() * nodes.length)
 	const anyNode = nodes[randomIndex]
 
-	return makeStreamRpcClient(anyNode.url)
+	return anyNode.url
 }
 
 export function makeStreamRpcClient(url: string): StreamRpcClient {
@@ -47,4 +47,23 @@ export function makeStreamRpcClient(url: string): StreamRpcClient {
 	client.url = url
 
 	return client
+}
+
+export async function makeTestClient() {
+	const context = await makeRandomUserContext()
+	const entitlementsDelegate = new MockEntitlementsDelegate()
+	const deviceId = `${genId(5)}`
+	const userId = userIdFromAddress(context.creatorAddress)
+	const dbName = `database-${userId}-${deviceId}`
+	const persistenceDbName = `persistence-${userId}${deviceId}`
+	const nodeUrl = await getAnyNodeUrlFromRiverRegistry()
+
+	if (!nodeUrl) {
+		throw new Error('No nodes available')
+	}
+
+	// create a new client with store(s)
+	const cryptoStore = RiverDbManager.getCryptoDb(userId, dbName)
+	const rpcClient = makeStreamRpcClient(nodeUrl)
+	return new Client(context, rpcClient, cryptoStore, entitlementsDelegate, persistenceDbName)
 }
