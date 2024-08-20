@@ -74,11 +74,23 @@ describe('GET /space/:spaceAddress/image', () => {
 	it.only('should return status 200 with valid spaceImage', async () => {
 		const spaceId = makeUniqueSpaceStreamId()
 		const spaceContractAddress = contractAddressFromSpaceId(spaceId)
-		const bobClient = await makeTestClient()
-		log('bobClient', {
-			bobsUserId: bobClient.userId,
-			spaceId,
-			spaceContractAddress,
-		})
+		const bobsClient = await makeTestClient()
+		log('before bobsClient.initializeUser')
+		await bobsClient.initializeUser()
+		log('before bobsClient.startSync')
+		bobsClient.startSync()
+
+		log('before bobsClient.createSpace')
+		await expect(bobsClient.createSpace(spaceId)).toResolve()
+		log('before bobsClient.waitForStream')
+		const spaceStream = await bobsClient.waitForStream(spaceId)
+		log('spaceStreamId', spaceStream.streamId)
+
+		// assert assumptions
+		expect(spaceStream).toBeDefined()
+		expect(
+			spaceStream.view.snapshot?.content.case === 'spaceContent' &&
+				spaceStream.view.snapshot?.content.value.spaceImage === undefined,
+		).toBe(true)
 	})
 })
