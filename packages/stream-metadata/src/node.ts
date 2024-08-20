@@ -67,11 +67,7 @@ function setupRoutes() {
 	)
 	server.get('/space/:spaceAddress/image', fetchSpaceImage)
 
-	// Generic / route to return 404
-	server.get('/', async (request, reply) => {
-		request.log.info(`GET /`)
-		return reply.code(404).send('Not found')
-	})
+	// Fastify will return 404 for any unmatched routes
 }
 
 /*
