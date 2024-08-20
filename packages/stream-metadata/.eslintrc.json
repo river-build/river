@@ -12,13 +12,13 @@
   ],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "project": ["./tsconfig.json", "./tsconfig.test.json"]
+    "project": "./tsconfig.json"  // Use the updated main tsconfig for everything
   },
   "plugins": ["@typescript-eslint", "import"],
   "settings": {
     "import/resolver": {
       "typescript": {
-        "project": ["./tsconfig.json", "./tsconfig.test.json"]
+        "project": ["./tsconfig.json"]
       }
     }
   },
@@ -27,7 +27,7 @@
     {
       "files": ["tests/**/*.ts"],
       "parserOptions": {
-        "project": "./tsconfig.test.json"
+        "project": "./tsconfig.json"
       },
       "rules": {
         "jest/no-standalone-expect": "off",

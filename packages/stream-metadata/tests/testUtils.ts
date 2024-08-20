@@ -1,4 +1,4 @@
-import { config } from './environment'
+import { config } from '../src/environment'
 
 export function isTest(): boolean {
 	return (

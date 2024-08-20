@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 import { getLogger } from '../../src/logger'
-import { getTestServerInfo } from '../../src/testUtils'
+import { getTestServerInfo } from '../testUtils'
 
 const logger = getLogger('stream-metadata:tests:integration:health')
 

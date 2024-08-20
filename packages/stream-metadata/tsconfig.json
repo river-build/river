@@ -1,16 +1,19 @@
 {
-  "compilerOptions": {
-    "module": "ESNext",
-    "target": "ES2022",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "sourceMap": true
-  },
-  "include": ["src/**/*.ts", "src/testUtils.ts"],
-  "exclude": ["node_modules", "tests", "jest.setup.ts"]
+	"compilerOptions": {
+		"module": "ESNext",
+		"target": "ES2022",
+		"moduleResolution": "node",
+		"resolveJsonModule": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"strict": true,
+		"outDir": "./dist",
+		"rootDir": ".",  // Now both 'src' and 'tests' are included
+		"sourceMap": true
+	},
+	"include": [
+        "src/**/*.ts",
+        "tests/**/*.ts"   // Include both directories
+    ],
+	"exclude": ["node_modules", "dist"]
 }
