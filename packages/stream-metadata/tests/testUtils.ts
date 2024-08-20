@@ -1,3 +1,8 @@
+import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-node'
+import { StreamService } from '@river-build/proto'
+import { createPromiseClient } from '@connectrpc/connect'
+
+import { StreamRpcClient } from '../src/riverStreamRpcClient'
 import { config } from '../src/environment'
 import { getRiverRegistry } from '../src/evmRpcClient'
 
@@ -21,12 +26,25 @@ export async function getAnyNodeFromRiverRegistry() {
 	const riverRegistry = getRiverRegistry()
 	const nodes = await riverRegistry.getAllNodeUrls()
 
-	if (!nodes || nodes?.length === 0) {
+	if (!nodes || nodes.length === 0) {
 		return undefined
 	}
 
 	const randomIndex = Math.floor(Math.random() * nodes.length)
 	const anyNode = nodes[randomIndex]
 
-	return anyNode.url
+	return makeStreamRpcClient(anyNode.url)
+}
+
+export function makeStreamRpcClient(url: string): StreamRpcClient {
+	const options: ConnectTransportOptions = {
+		httpVersion: '2',
+		baseUrl: url,
+	}
+
+	const transport = createConnectTransport(options)
+	const client: StreamRpcClient = createPromiseClient(StreamService, transport)
+	client.url = url
+
+	return client
 }

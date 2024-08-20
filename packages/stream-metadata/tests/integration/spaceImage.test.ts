@@ -56,7 +56,5 @@ describe('GET /space/:spaceAddress/image', () => {
 		}
 	})
 
-	it('should return status 200 with valid spaceImage', async () => {
-		//const bobsClient = await makeTestClient()
-	})
+	it.only('should return status 200 with valid spaceImage', async () => {})
 })
