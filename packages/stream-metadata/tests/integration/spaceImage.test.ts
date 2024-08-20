@@ -1,11 +1,12 @@
 import axios from 'axios'
+import { makeTestClient } from '@river-build/sdk'
 
 import { getTestServerInfo } from '../testUtils'
 
-describe('GET /spaceImage', () => {
+describe('GET /space/:spaceAddress/image', () => {
 	const baseURL = getTestServerInfo()
 
-	it('should return status 404 without arguments', async () => {
+	it('should return status 404 without spaceAddress', async () => {
 		try {
 			await axios.get(`${baseURL}/space`)
 			throw new Error('Expected request to fail with status 404')
@@ -18,5 +19,9 @@ describe('GET /spaceImage', () => {
 				throw error
 			}
 		}
+	})
+
+	it('should return status 200 with valid spaceImage', async () => {
+		//const bobsClient = await makeTestClient()
 	})
 })
