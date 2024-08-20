@@ -45,7 +45,7 @@ async function getStreamClient(log: FastifyBaseLogger, streamId: `0x${string}`) 
 		clients.set(client.url!, client)
 		url = client.url!
 	}
-	logger.info({ url }, 'client connected to node')
+	logger.info({ url }, `client connected to node ${url}`)
 
 	const client = clients.get(url)
 	if (!client) {
@@ -98,7 +98,7 @@ async function mediaContentFromStreamView(
 			spaceId: mediaInfo.spaceId,
 			mediaStreamId: streamView.mediaContent.streamId,
 		},
-		'mediaContentFromStreamView',
+		`streamView decrypting media content from stream ${streamView.mediaContent.streamId}`,
 	)
 
 	// Aggregate data chunks into a single Uint8Array
@@ -131,9 +131,10 @@ async function mediaContentFromStreamView(
 	logger.info(
 		{
 			spaceId: mediaInfo.spaceId,
+			mediaStreamId: streamView.mediaContent.streamId,
 			mimeType,
 		},
-		'mediaContentFromStreamView decrypted content',
+		`streamView decrypted media content from stream ${streamView.mediaContent.streamId}`,
 	)
 
 	// Return decrypted data and MIME type
@@ -170,7 +171,7 @@ export async function getStream(
 			streamId,
 			lastMiniblockNum: lastMiniblockNum.toString(),
 		},
-		'getStream',
+		`getStream ${streamId}`,
 	)
 
 	const start = Date.now()
