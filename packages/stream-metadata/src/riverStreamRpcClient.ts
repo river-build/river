@@ -98,7 +98,7 @@ async function mediaContentFromStreamView(
 			spaceId: mediaInfo.spaceId,
 			mediaStreamId: streamView.mediaContent.streamId,
 		},
-		`streamView decrypting media content from stream ${streamView.mediaContent.streamId}`,
+		`decrypting media content in stream ${streamView.mediaContent.streamId}`,
 	)
 
 	// Aggregate data chunks into a single Uint8Array
@@ -134,7 +134,7 @@ async function mediaContentFromStreamView(
 			mediaStreamId: streamView.mediaContent.streamId,
 			mimeType,
 		},
-		`streamView decrypted media content from stream ${streamView.mediaContent.streamId}`,
+		`decrypted media content in stream ${streamView.mediaContent.streamId}`,
 	)
 
 	// Return decrypted data and MIME type
