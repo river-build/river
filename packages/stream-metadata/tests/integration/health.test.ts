@@ -1,13 +1,9 @@
 import axios from 'axios'
 
-import { getLogger } from '../../src/logger'
 import { getTestServerInfo } from '../testUtils'
-
-const logger = getLogger('stream-metadata:tests:integration:health')
 
 describe('GET /health', () => {
 	const baseURL = getTestServerInfo()
-	logger.info({ baseURL }, 'baseURL')
 
 	it('should return status 200 and status ok when the server is healthy', async () => {
 		const response = await axios.get(`${baseURL}/health`)
