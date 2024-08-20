@@ -12,16 +12,20 @@ export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyRep
 	const { spaceAddress } = request.params as { spaceAddress?: string }
 
 	if (!spaceAddress) {
+		logger.info('spaceAddress parameter is required')
 		return reply
 			.code(400)
 			.send({ error: 'Bad Request', message: 'spaceAddress parameter is required' })
 	}
 
 	if (!isValidEthereumAddress(spaceAddress)) {
+		logger.info({ spaceAddress }, 'Invalid spaceAddress format')
 		return reply
 			.code(400)
 			.send({ error: 'Bad Request', message: 'Invalid spaceAddress format' })
 	}
+
+	logger.info({ spaceAddress }, 'Fetching space image')
 
 	let stream: StreamStateView | undefined
 	try {
