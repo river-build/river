@@ -13,7 +13,6 @@
 	},
 	"include": [
         "src/**/*.ts",
-        "tests/**/*.ts"   // Include both directories
     ],
-	"exclude": ["node_modules", "dist"]
+	"exclude": ["node_modules", "dist", "tests"]
 }
