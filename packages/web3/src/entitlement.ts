@@ -216,7 +216,7 @@ export type ERC1155Params = {
     tokenId: bigint
 }
 
-const erc11155ParamsAbi = {
+const erc1155ParamsAbi = {
     components: [
         {
             name: 'threshold',
@@ -230,7 +230,6 @@ const erc11155ParamsAbi = {
     name: 'erc1155Params',
     type: 'tuple',
 } as const
-
 export function encodeERC1155Params(params: ERC1155Params): Hex {
     return encodeAbiParameters([erc11155ParamsAbi], [params])
 }
