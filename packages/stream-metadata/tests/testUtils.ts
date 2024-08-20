@@ -12,9 +12,10 @@ import {
 	userIdFromAddress,
 } from '@river-build/sdk'
 import { ethers } from 'ethers'
+import { LocalhostWeb3Provider } from '@river-build/web3'
 
 import { StreamRpcClient } from '../src/riverStreamRpcClient'
-import { config } from '../src/environment'
+import { testConfig } from './testEnvironment'
 import { getRiverRegistry } from '../src/evmRpcClient'
 
 export function isTest(): boolean {
@@ -31,7 +32,7 @@ export function makeUniqueSpaceStreamId(): string {
 
 export function getTestServerUrl() {
 	// use the .env.test config to derive the baseURL of the server under test
-	const { host, port, riverEnv } = config
+	const { host, port, riverEnv } = testConfig
 	const protocol = riverEnv.startsWith('local') ? 'http' : 'https'
 	const baseURL = `${protocol}://${host}:${port}`
 	return baseURL
@@ -65,21 +66,26 @@ export function makeStreamRpcClient(url: string): StreamRpcClient {
 }
 
 export async function makeTestClient() {
+	// create all the constructor arguments for the SDK client
+
+	// create a new wallet for the user
 	const context = await makeRandomUserContext()
+	const provider = new LocalhostWeb3Provider(testConfig.baseChainRpcUrl, bobsWallet)
 	const entitlementsDelegate = new MockEntitlementsDelegate()
 	const deviceId = `${genId(5)}`
 	const userId = userIdFromAddress(context.creatorAddress)
 	const dbName = `database-${userId}-${deviceId}`
 	const persistenceDbName = `persistence-${userId}${deviceId}`
-	const nodeUrl = await getAnyNodeUrlFromRiverRegistry()
+	// create a new client with store(s)
+	const cryptoStore = RiverDbManager.getCryptoDb(userId, dbName)
 
+	//
+	const nodeUrl = await getAnyNodeUrlFromRiverRegistry()
 	if (!nodeUrl) {
 		throw new Error('No nodes available')
 	}
-
-	// create a new client with store(s)
-	const cryptoStore = RiverDbManager.getCryptoDb(userId, dbName)
 	const rpcClient = makeStreamRpcClient(nodeUrl)
+
 	return new Client(context, rpcClient, cryptoStore, entitlementsDelegate, persistenceDbName)
 }
 
