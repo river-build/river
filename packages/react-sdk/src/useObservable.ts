@@ -2,20 +2,27 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import { type Observable, type PersistedModel } from '@river-build/sdk'
 
-// TODO: Some util props:
-// - select: select a subset of the data, or transform it
-// - remove onError is is not a persisted model data
-export type ObservableConfig<Data> = Data extends PersistedModel<infer UnwrappedData>
-    ? {
-          fireImmediately?: boolean
-          onUpdate?: (data: UnwrappedData) => void
-          onError?: (error: Error) => void
-      }
-    : {
-          fireImmediately?: boolean
-          onUpdate?: (data: Data) => void
-          onError?: (error: Error) => void
-      }
+// eslint-disable-next-line @typescript-eslint/no-namespace
+export declare namespace ObservableConfig {
+    export type FromObservable<Observable_> = Observable_ extends Observable<infer Data>
+        ? FromData<Data>
+        : never
+
+    // TODO: Some util props:
+    // - select: select a subset of the data, or transform it
+    // - remove onError is is not a persisted model data
+    export type FromData<Data> = Data extends PersistedModel<infer UnwrappedData>
+        ? {
+              fireImmediately?: boolean
+              onUpdate?: (data: UnwrappedData) => void
+              onError?: (error: Error) => void
+          }
+        : {
+              fireImmediately?: boolean
+              onUpdate?: (data: Data) => void
+              onError?: (error: Error) => void
+          }
+}
 
 type ObservableValue<Data> = Data extends PersistedModel<infer UnwrappedData>
     ? {
@@ -49,12 +56,12 @@ const isPersisted = <T>(value: T | PersistedModel<T>): value is PersistedModel<T
 
 export function useObservable<T>(
     observable: Observable<T>,
-    config?: ObservableConfig<T>,
+    config?: ObservableConfig.FromData<T>,
 ): ObservableValue<T> {
     const opts = useMemo(
         () => ({ fireImmediately: true, ...config }),
         [config],
-    ) as ObservableConfig<T>
+    ) as ObservableConfig.FromData<T>
 
     const value = useSyncExternalStore(
         (subscriber) => observable.subscribe(subscriber, { fireImediately: opts?.fireImmediately }),
