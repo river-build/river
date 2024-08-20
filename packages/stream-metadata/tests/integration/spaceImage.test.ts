@@ -1,9 +1,9 @@
 import axios from 'axios'
 
-import { getTestServerInfo } from '../testUtils'
+import { getTestServerUrl } from '../testUtils'
 
 describe('GET /space/:spaceAddress/image', () => {
-	const baseURL = getTestServerInfo()
+	const baseURL = getTestServerUrl()
 
 	it('should return 404 /space/0x0000000000000000000000000000000000000000/image', async () => {
 		const expectedStatus = 404
@@ -56,5 +56,5 @@ describe('GET /space/:spaceAddress/image', () => {
 		}
 	})
 
-	it.only('should return status 200 with valid spaceImage', async () => {})
+	it('should return status 200 with valid spaceImage', async () => {})
 })

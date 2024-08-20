@@ -14,10 +14,10 @@ export function isTest(): boolean {
 	)
 }
 
-export function getTestServerInfo() {
+export function getTestServerUrl() {
 	// use the .env.test config to derive the baseURL of the server under test
 	const { host, port, riverEnv } = config
-	const protocol = riverEnv.startsWith('localhost') ? 'http' : 'https'
+	const protocol = riverEnv.startsWith('local') ? 'http' : 'https'
 	const baseURL = `${protocol}://${host}:${port}`
 	return baseURL
 }

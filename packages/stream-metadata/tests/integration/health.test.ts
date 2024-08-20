@@ -1,9 +1,9 @@
 import axios from 'axios'
 
-import { getTestServerInfo } from '../testUtils'
+import { getTestServerUrl } from '../testUtils'
 
 describe('GET /health', () => {
-	const baseURL = getTestServerInfo()
+	const baseURL = getTestServerUrl()
 
 	it('should return status 200 and status ok when the server is healthy', async () => {
 		const endpoint = `${baseURL}/health`
