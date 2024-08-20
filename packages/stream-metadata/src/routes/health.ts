@@ -5,7 +5,6 @@ import { getFunctionLogger } from '../logger'
 
 export async function checkHealth(request: FastifyRequest, reply: FastifyReply) {
 	const logger = getFunctionLogger(request.log, 'checkHealth')
-	logger.info(`GET /health`)
 	// Do a health check on the river registry
 	try {
 		await getRiverRegistry().getAllNodes()
