@@ -1,4 +1,5 @@
 import { config } from '../src/environment'
+import { getRiverRegistry } from '../src/evmRpcClient'
 
 export function isTest(): boolean {
 	return (
@@ -14,4 +15,18 @@ export function getTestServerInfo() {
 	const protocol = riverEnv.startsWith('localhost') ? 'http' : 'https'
 	const baseURL = `${protocol}://${host}:${port}`
 	return baseURL
+}
+
+export async function getAnyNodeFromRiverRegistry() {
+	const riverRegistry = getRiverRegistry()
+	const nodes = await riverRegistry.getAllNodeUrls()
+
+	if (!nodes || nodes?.length === 0) {
+		return undefined
+	}
+
+	const randomIndex = Math.floor(Math.random() * nodes.length)
+	const anyNode = nodes[randomIndex]
+
+	return anyNode.url
 }
