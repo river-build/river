@@ -29,7 +29,7 @@ on:
                 required: false
                 default: false
                 type: boolean
-              skip_go:
+            skip_go:
                 description: Skip Go Tests
                 required: false
                 default: false
