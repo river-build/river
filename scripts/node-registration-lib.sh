@@ -7,7 +7,7 @@
 # - PRIVATE_KEY
 
 # Construct the relative path to the address file for the River Registry
-JSON_FILE="packages/generated/addresses/river/riverRegistry.json"
+JSON_FILE="contracts/deployments/addresses/omega/river/riverRegistry.json"
 
 RIVER_REGISTRY_ADDRESS=$(jq -r '.address' "$JSON_FILE")
 
@@ -62,7 +62,7 @@ function update_node_status() {
 
 function node_exists() {
     local node_address=$1
-    
+
     # if the node doesnt exist, this will revert
     # so detect that and return false
 

@@ -59,10 +59,10 @@ if [ "$CONFIG" == "true" ]; then
     mkdir -p ${RUN_BASE}
     ../../scripts/deploy-contracts.sh
 
-    export SPACE_FACTORY_ADDRESS=$(jq -r '.address' ../../packages/generated/deployments/${RIVER_ENV}/base/addresses/spaceFactory.json)
-    export BASE_REGISTRY_ADDRESS=$(jq -r '.address' ../../packages/generated/deployments/${RIVER_ENV}/base/addresses/baseRegistry.json)
-    export RIVER_REGISTRY_ADDRESS=$(jq -r '.address' ../../packages/generated/deployments/${RIVER_ENV}/river/addresses/riverRegistry.json)    
-    export ENTITLEMENT_TEST_ADDRESS=$(jq -r '.address' ../../packages/generated/deployments/${RIVER_ENV}/base/addresses/entitlementGatedExample.json)
+    export SPACE_FACTORY_ADDRESS=$(jq -r '.address' ../../contracts/deployments/${RIVER_ENV}/base/addresses/spaceFactory.json)
+    export BASE_REGISTRY_ADDRESS=$(jq -r '.address' ../../contracts/deployments/${RIVER_ENV}/base/addresses/baseRegistry.json)
+    export RIVER_REGISTRY_ADDRESS=$(jq -r '.address' ../../contracts/deployments/${RIVER_ENV}/river/addresses/riverRegistry.json)
+    export ENTITLEMENT_TEST_ADDRESS=$(jq -r '.address' ../../contracts/deployments/${RIVER_ENV}/base/addresses/entitlementGatedExample.json)
 
     echo "" > ${RUN_BASE}/contracts.env
     echo "RIVER_ARCHITECTCONTRACT_ADDRESS=${SPACE_FACTORY_ADDRESS}" >> ${RUN_BASE}/contracts.env
