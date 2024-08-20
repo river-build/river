@@ -231,11 +231,11 @@ const erc1155ParamsAbi = {
     type: 'tuple',
 } as const
 export function encodeERC1155Params(params: ERC1155Params): Hex {
-    return encodeAbiParameters([erc11155ParamsAbi], [params])
+    return encodeAbiParameters([erc1155ParamsAbi], [params])
 }
 
 export function decodeERC1155Params(params: Hex): Readonly<ERC1155Params> {
-    return decodeAbiParameters([erc11155ParamsAbi], params)[0]
+    return decodeAbiParameters([erc1155ParamsAbi], params)[0]
 }
 
 export function encodeRuleData(ruleData: IRuleEntitlementBase.RuleDataStruct): Hex {
