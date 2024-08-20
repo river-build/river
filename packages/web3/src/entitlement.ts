@@ -282,6 +282,23 @@ export function encodeRuleDataV2(ruleData: IRuleEntitlementV2Base.RuleDataV2Stru
     return encodeAbiParameters(getRuleDataV2Abi.outputs, [ruleData])
 }
 
+export function decodeRuleDataV2(entitlementData: Hex): IRuleEntitlementV2Base.RuleDataV2Struct {
+    const getRuleDataV2Abi: ExtractAbiFunction<typeof IRuleEntitlementV2Abi, 'getRuleDataV2'> =
+        getAbiItem({
+            abi: IRuleEntitlementV2Abi,
+            name: 'getRuleDataV2',
+        })
+
+    if (!getRuleDataV2Abi) {
+        throw new Error('encodeRuleDataV2 ABI not found')
+    }
+    // @ts-ignore
+    return decodeAbiParameters(
+        getRuleDataV2Abi.outputs,
+        entitlementData,
+    ) as unknown as IRuleEntitlementV2Base.RuleDataV2Struct[]
+}
+
 export function ruleDataToOperations(data: IRuleEntitlementV2Base.RuleDataV2Struct): Operation[] {
     const decodedOperations: Operation[] = []
     const roData = data as RuleDataV2
