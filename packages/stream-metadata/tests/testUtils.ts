@@ -1,6 +1,16 @@
 import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-node'
 import { StreamService } from '@river-build/proto'
 import { createPromiseClient } from '@connectrpc/connect'
+import {
+	Client,
+	genId,
+	makeSignerContext,
+	MockEntitlementsDelegate,
+	RiverDbManager,
+	SignerContext,
+	userIdFromAddress,
+} from '@river-build/sdk'
+import { ethers } from 'ethers'
 
 import { StreamRpcClient } from '../src/riverStreamRpcClient'
 import { config } from '../src/environment'
@@ -66,4 +76,15 @@ export async function makeTestClient() {
 	const cryptoStore = RiverDbManager.getCryptoDb(userId, dbName)
 	const rpcClient = makeStreamRpcClient(nodeUrl)
 	return new Client(context, rpcClient, cryptoStore, entitlementsDelegate, persistenceDbName)
+}
+
+export async function makeRandomUserContext(): Promise<SignerContext> {
+	const wallet = ethers.Wallet.createRandom()
+	return makeUserContextFromWallet(wallet)
+}
+
+export async function makeUserContextFromWallet(wallet: ethers.Wallet): Promise<SignerContext> {
+	const userPrimaryWallet = wallet
+	const delegateWallet = ethers.Wallet.createRandom()
+	return makeSignerContext(userPrimaryWallet, delegateWallet, { days: 1 })
 }
