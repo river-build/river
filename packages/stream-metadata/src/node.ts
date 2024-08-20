@@ -49,7 +49,7 @@ server.addHook('onRequest', (request, reply, done) => {
 	done()
 })
 
-// for testability, accept a server instance as an argument
+// for testability, pass server instance as an argument
 export async function registerPlugins(srv: Server) {
 	await srv.register(cors, {
 		origin: '*', // Allow any origin
@@ -58,7 +58,7 @@ export async function registerPlugins(srv: Server) {
 	logger.info('CORS registered successfully')
 }
 
-// for testability, accept a server instance as an argument
+// for testability, pass server instance as an argument
 export function setupRoutes(srv: Server) {
 	/*
 	 * Routes
@@ -75,7 +75,7 @@ export function setupRoutes(srv: Server) {
 	})
 }
 
-// for testability, accept a server instance as an argument
+// for testability, pass server instance as an argument
 export function getServerUrl(srv: Server) {
 	const addressInfo = srv.server.address()
 	const protocol = srv.server instanceof HTTPSServer ? 'https' : 'http'
