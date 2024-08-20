@@ -1,9 +1,19 @@
+/**
+ * @group integration/stream-metadata
+ */
 import axios from 'axios'
+import { dlog } from '@river-build/dlog'
 
 import { getTestServerUrl } from '../testUtils'
 
+const log = dlog('stream-metadata:test', {
+	allowJest: true,
+	defaultEnabled: true,
+})
+
 describe('GET /health', () => {
 	const baseURL = getTestServerUrl()
+	log('baseURL', baseURL)
 
 	it('should return status 200 and status ok when the server is healthy', async () => {
 		const endpoint = `${baseURL}/health`

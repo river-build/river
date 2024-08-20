@@ -1,9 +1,19 @@
+/**
+ * @group integration/stream-metadata
+ */
 import axios from 'axios'
+import { dlog } from '@river-build/dlog'
 
-import { getTestServerUrl } from '../testUtils'
+import { getTestServerUrl, makeTestClient } from '../testUtils'
+
+const log = dlog('stream-metadata:test', {
+	allowJest: true,
+	defaultEnabled: true,
+})
 
 describe('GET /space/:spaceAddress/image', () => {
 	const baseURL = getTestServerUrl()
+	log('baseURL', baseURL)
 
 	it('should return 404 /space/0x0000000000000000000000000000000000000000/image', async () => {
 		const expectedStatus = 404
@@ -56,5 +66,11 @@ describe('GET /space/:spaceAddress/image', () => {
 		}
 	})
 
-	it.only('should return status 200 with valid spaceImage', async () => {})
+	it('should return status 200 with valid spaceImage', async () => {
+		const bobClient = await makeTestClient()
+		log('bobClient', {
+			userId: bobClient.userId,
+			userStreamId: bobClient.userStreamId,
+		})
+	})
 })
