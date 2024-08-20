@@ -6,7 +6,7 @@
 	"main": "dist/node.cjs",
 	"type": "module",
 	"scripts": {
-		"build": "NODE_ENV=production node ./esbuild.config.mjs",
+		"build": "node ./esbuild.config.mjs",
 		"dev": "yarn build && node ./dist/node_esbuild.cjs",
 		"lint": "eslint . --ext .ts",
 		"lint:fix": "eslint . --ext .ts --fix",
