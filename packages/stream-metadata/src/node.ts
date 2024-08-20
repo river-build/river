@@ -49,33 +49,33 @@ server.addHook('onRequest', (request, reply, done) => {
 	done()
 })
 
-async function registerPlugins() {
-	await server.register(cors, {
+// for testability, pass server instance as an argument
+export async function registerPlugins(srv: Server) {
+	await srv.register(cors, {
 		origin: '*', // Allow any origin
 		methods: ['GET'], // Allowed HTTP methods
 	})
 	logger.info('CORS registered successfully')
 }
 
-function setupRoutes() {
+// for testability, pass server instance as an argument
+export function setupRoutes(srv: Server) {
 	/*
 	 * Routes
 	 */
-	server.get('/health', checkHealth)
-	server.get('/space/:spaceAddress', async (request, reply) =>
-		fetchSpaceMetadata(request, reply, getServerUrl()),
+	srv.get('/health', checkHealth)
+	srv.get('/space/:spaceAddress', async (request, reply) =>
+		fetchSpaceMetadata(request, reply, getServerUrl(srv)),
 	)
-	server.get('/space/:spaceAddress/image', fetchSpaceImage)
+	srv.get('/space/:spaceAddress/image', fetchSpaceImage)
 
 	// Fastify will return 404 for any unmatched routes
 }
 
-/*
- * Start the server
- */
-function getServerUrl() {
-	const addressInfo = server.server.address()
-	const protocol = server.server instanceof HTTPSServer ? 'https' : 'http'
+// for testability, pass server instance as an argument
+export function getServerUrl(srv: Server) {
+	const addressInfo = srv.server.address()
+	const protocol = srv.server instanceof HTTPSServer ? 'https' : 'http'
 	const serverAddress =
 		typeof addressInfo === 'string'
 			? addressInfo
@@ -96,8 +96,8 @@ process.on('SIGTERM', async () => {
 
 async function main() {
 	try {
-		await registerPlugins()
-		setupRoutes()
+		await registerPlugins(server)
+		setupRoutes(server)
 		await server.listen({
 			port: config.port,
 			host: config.host,
