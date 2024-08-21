@@ -8,6 +8,7 @@ import {
 	genId,
 	makeSignerContext,
 	makeSpaceStreamId,
+	makeUniqueMediaStreamId,
 	RiverDbManager,
 	SignerContext,
 	userIdFromAddress,
@@ -151,6 +152,7 @@ export async function createMediaStream(
 	client: Client,
 	numberOfChunks: number,
 ): Promise<void> {
+	const mediaStreamId = makeUniqueMediaStreamId()
 	const chunks = makeMediaChunks(numberOfChunks, 10)
 	const { prevMiniblockHash } = await client.createMediaStream(mediaStreamId)
 	await sendMediaChunks(client, mediaStreamId, chunks, prevMiniblockHash)
