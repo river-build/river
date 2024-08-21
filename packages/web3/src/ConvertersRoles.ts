@@ -10,7 +10,10 @@ import {
     createRuleEntitlementStruct,
     createRuleEntitlementV2Struct,
     createUserEntitlementStruct,
+    convertRuleDataV2ToV1,
 } from './ConvertersEntitlements'
+import { decodeRuleDataV2 } from './entitlement'
+import { Hex } from 'viem'
 
 import { Space as SpaceV3 } from './v3/Space'
 import { IRuleEntitlementBase, IRuleEntitlementV2Base } from './v3'
@@ -123,9 +126,13 @@ export function toPermissions(permissions: readonly string[]): Permission[] {
 export function downgradeMembershipStruct(membership: MembershipStruct): LegacyMembershipStruct {
     return {
         requirements: {
-            ruleData: membership.requirements.ruleData,
-            permissions: membership.requirements.permissions,
+            ruleData: convertRuleDataV2ToV1(
+                decodeRuleDataV2(membership.requirements.ruleData as Hex),
+            ),
+            everyone: membership.requirements.everyone,
+            users: membership.requirements.users,
         },
         permissions: membership.permissions,
+        settings: membership.settings,
     }
 }
