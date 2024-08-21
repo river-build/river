@@ -87,7 +87,8 @@ interact-any-explicit :;
 
 fork-any :;
 	@echo "Running $(contract) on a forked remote network"
-	@forge script scripts/interactions/${contract}.s.sol:${contract} \
+	@$(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
+	forge script scripts/interactions/${contract}.s.sol:${contract} \
 	--ffi --fork-url ${rpc} --private-key ${private_key} -vvvv
 
 verify-any :;
