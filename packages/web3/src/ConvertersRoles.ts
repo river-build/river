@@ -1,4 +1,11 @@
-import { EntitlementModuleType, Permission, EntitlementStruct, Address } from './ContractTypes'
+import {
+    EntitlementModuleType,
+    Permission,
+    EntitlementStruct,
+    Address,
+    MembershipStruct,
+    LegacyMembershipStruct,
+} from './ContractTypes'
 import {
     createRuleEntitlementStruct,
     createRuleEntitlementV2Struct,
@@ -111,4 +118,14 @@ export function toPermissions(permissions: readonly string[]): Permission[] {
         const perm = p as Permission
         return perm
     })
+}
+
+export function downgradeMembershipStruct(membership: MembershipStruct): LegacyMembershipStruct {
+    return {
+        requirements: {
+            ruleData: membership.requirements.ruleData,
+            permissions: membership.requirements.permissions,
+        },
+        permissions: membership.permissions,
+    }
 }
