@@ -46,7 +46,8 @@
         "test": "turbo test",
         "test:unit": "turbo test:unit -- --silent",
         "test:react": "vitest --project @river-build/react-sdk",
-        "test:build": "turbo test:build"
+        "test:build": "turbo test:build",
+        "make-config": "node ./scripts/make-config.js"
     },
     "devDependencies": {
         "@arethetypeswrong/cli": "^0.15.3",

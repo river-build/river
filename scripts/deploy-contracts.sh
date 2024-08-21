@@ -86,6 +86,6 @@ if [ -n "$BASE_EXECUTION_CLIENT" ]; then
 fi
 
 # Update the config
-pushd ./packages/generated
-    yarn make-config
+pushd /
+    ./scripts/make-config.sh
 popd
