@@ -1,3 +1,4 @@
+import 'fake-indexeddb/auto' // used to mock indexdb in dexie, don't remove
 import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-node'
 import { StreamService } from '@river-build/proto'
 import { createPromiseClient } from '@connectrpc/connect'
