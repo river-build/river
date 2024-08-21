@@ -78,7 +78,7 @@ popd
 
 
 # mkdir -p packages/generated/deployments/${RIVER_ENV}/{base,river}
-cp -r contracts/deployments/${RIVER_ENV} packages/generated/deployments/${RIVER_ENV}
+# cp -r contracts/deployments/${RIVER_ENV} packages/generated/deployments/${RIVER_ENV}
 
 
 if [ -n "$BASE_EXECUTION_CLIENT" ]; then
