@@ -203,8 +203,11 @@ const thresholdParamsAbi = {
     type: 'tuple',
 } as const
 
-export function encodeThresholdParams(thresholdParams: ThresholdParams): Hex {
-    return encodeAbiParameters([thresholdParamsAbi], [thresholdParams])
+export function encodeThresholdParams(params: ThresholdParams): Hex {
+    if (params.threshold < 0n) {
+        throw new Error(`Invalid threshold ${params.threshold}: must be greater than or equal to 0`)
+    }
+    return encodeAbiParameters([thresholdParamsAbi], [params])
 }
 
 export function decodeThresholdParams(params: Hex): Readonly<ThresholdParams> {
@@ -231,6 +234,12 @@ const erc1155ParamsAbi = {
     type: 'tuple',
 } as const
 export function encodeERC1155Params(params: ERC1155Params): Hex {
+    if (params.threshold < 0n) {
+        throw new Error(`Invalid threshold ${params.threshold}: must be greater than or equal to 0`)
+    }
+    if (params.tokenId < 0n) {
+        throw new Error(`Invalid tokenId ${params.tokenId}: must be greater than or equal to 0`)
+    }
     return encodeAbiParameters([erc1155ParamsAbi], [params])
 }
 
@@ -252,7 +261,7 @@ export function encodeRuleData(ruleData: IRuleEntitlementBase.RuleDataStruct): H
     return encodeAbiParameters(encodeRuleDataAbi.inputs, [ruleData])
 }
 
-export function decodeRuleData(entitlementData: Hex): IRuleEntitlementBase.RuleDataStruct[] {
+export function decodeRuleData(entitlementData: Hex): IRuleEntitlementBase.RuleDataStruct {
     const getRuleDataAbi: ExtractAbiFunction<typeof IRuleEntitlementAbi, 'getRuleData'> =
         getAbiItem({
             abi: IRuleEntitlementAbi,
@@ -262,10 +271,11 @@ export function decodeRuleData(entitlementData: Hex): IRuleEntitlementBase.RuleD
     if (!getRuleDataAbi) {
         throw new Error('getRuleData ABI not found')
     }
-    return decodeAbiParameters(
+    const decoded = decodeAbiParameters(
         getRuleDataAbi.outputs,
         entitlementData,
     ) as unknown as IRuleEntitlementBase.RuleDataStruct[]
+    return decoded[0]
 }
 
 export function encodeRuleDataV2(ruleData: IRuleEntitlementV2Base.RuleDataV2Struct): Hex {
@@ -293,10 +303,11 @@ export function decodeRuleDataV2(entitlementData: Hex): IRuleEntitlementV2Base.R
         throw new Error('encodeRuleDataV2 ABI not found')
     }
     // @ts-ignore
-    return decodeAbiParameters(
+    const decoded = decodeAbiParameters(
         getRuleDataV2Abi.outputs,
         entitlementData,
     ) as unknown as IRuleEntitlementV2Base.RuleDataV2Struct[]
+    return decoded[0]
 }
 
 export function ruleDataToOperations(data: IRuleEntitlementV2Base.RuleDataV2Struct): Operation[] {

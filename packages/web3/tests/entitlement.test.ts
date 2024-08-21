@@ -601,13 +601,6 @@ const errorTests = [
         error: 'Invalid chain id for check operation ERC20',
     },
     {
-        desc: 'erc20 invalid check (threshold)',
-        check: {
-            ...erc20ChainLinkCheckBaseSepolia_20Tokens,
-            threshold: -1n,
-        },
-    },
-    {
         desc: 'erc20 invalid check (contractAddress)',
         check: {
             ...erc20ChainLinkCheckBaseSepolia_20Tokens,
@@ -620,14 +613,6 @@ const errorTests = [
             ...nftCheckBaseSepolia,
             opType: OperationType.CHECK,
             chainId: -1n,
-        },
-    },
-    {
-        desc: 'erc721 invalid check (threshold)',
-        check: {
-            ...nftCheckBaseSepolia,
-            opType: OperationType.CHECK,
-            threshold: -1n,
         },
     },
     {
@@ -644,7 +629,6 @@ const errorTests = [
             opType: OperationType.CHECK,
             checkType: CheckOperationType.ISENTITLED,
             chainId: 1n,
-            threshold: 1n,
             contractAddress: ethers.constants.AddressZero as Address,
         },
     },
@@ -654,7 +638,6 @@ const errorTests = [
             opType: OperationType.CHECK,
             checkType: CheckOperationType.ISENTITLED,
             chainId: -1n,
-            threshold: 1n,
             contractAddress: nftCheckBaseSepolia.contractAddress,
         },
     },
@@ -664,7 +647,6 @@ const errorTests = [
             opType: OperationType.CHECK,
             checkType: CheckOperationType.ERC1155,
             chainId: 1n,
-            threshold: 1n,
             contractAddress: ethers.constants.AddressZero as Address,
         },
     },
@@ -856,6 +838,11 @@ test('encode/decode rule data v2', async () => {
     expect(randomTree.opType === newTree.opType).toBeTruthy()
 })
 
+// encode/decode should respect address equality semantics but may not maintain case
+function addressesEqual(a: string, b: string): boolean {
+    return a.toLowerCase() === b.toLowerCase()
+}
+
 test('encode/decode rule data', async () => {
     const randomTree = makeRandomOperation(5)
     const data = treeToRuleData(randomTree)
@@ -864,38 +851,56 @@ test('encode/decode rule data', async () => {
     const decodedDag = decodeRuleData(encoded)
 
     for (let i = 0; i < v1.operations.length; i++) {
-        expect(v1.operations[i].opType).toBe(decodedDag[0].operations[i].opType)
-        expect(v1.operations[i].index).toBe(decodedDag[0].operations[i].index)
+        expect(v1.operations[i].opType).toBe(decodedDag.operations[i].opType)
+        expect(v1.operations[i].index).toBe(decodedDag.operations[i].index)
     }
 
     for (let i = 0; i < v1.logicalOperations.length; i++) {
-        expect(v1.logicalOperations[i].logOpType).toBe(decodedDag[0].logicalOperations[i].logOpType)
+        expect(v1.logicalOperations[i].logOpType).toBe(decodedDag.logicalOperations[i].logOpType)
         expect(v1.logicalOperations[i].leftOperationIndex).toBe(
-            decodedDag[0].logicalOperations[i].leftOperationIndex,
+            decodedDag.logicalOperations[i].leftOperationIndex,
         )
         expect(v1.logicalOperations[i].rightOperationIndex).toBe(
-            decodedDag[0].logicalOperations[i].rightOperationIndex,
+            decodedDag.logicalOperations[i].rightOperationIndex,
         )
     }
 
     for (let i = 0; i < v1.checkOperations.length; i++) {
-        expect(v1.checkOperations[i].opType).toBe(decodedDag[0].checkOperations[i].opType)
-        expect(v1.checkOperations[i].chainId).toBe(decodedDag[0].checkOperations[i].chainId)
-        expect(v1.checkOperations[i].contractAddress).toBe(
-            decodedDag[0].checkOperations[i].contractAddress,
-        )
-        expect(v1.checkOperations[i].threshold).toBe(decodedDag[0].checkOperations[i].threshold)
+        expect(v1.checkOperations[i].opType).toBe(decodedDag.checkOperations[i].opType)
+        expect(v1.checkOperations[i].chainId).toBe(decodedDag.checkOperations[i].chainId)
+        expect(
+            addressesEqual(
+                v1.checkOperations[i].contractAddress as string,
+                decodedDag.checkOperations[i].contractAddress as string,
+            ),
+        ).toBeTruthy()
+        expect(v1.checkOperations[i].threshold).toBe(decodedDag.checkOperations[i].threshold)
     }
 })
 
-test('threshold params', async () => {
-    const encodedParams = encodeThresholdParams({ threshold: BigInt(100) })
-    const decodedParams = decodeThresholdParams(encodedParams)
-    expect(decodedParams).toEqual({ threshold: BigInt(100) })
+describe('threshold params', () => {
+    test('encode/decode', () => {
+        const encodedParams = encodeThresholdParams({ threshold: BigInt(100) })
+        const decodedParams = decodeThresholdParams(encodedParams)
+        expect(decodedParams).toEqual({ threshold: BigInt(100) })
+    })
+
+    test('encode invalid params', () => {
+        expect(() => encodeThresholdParams({ threshold: BigInt(-1) })).toThrow(
+            'Invalid threshold -1: must be greater than or equal to 0',
+        )
+    })
 })
 
-test('erc1155 params', async () => {
-    const encodedParams = encodeERC1155Params({ threshold: BigInt(200), tokenId: BigInt(100) })
-    const decodedParams = decodeERC1155Params(encodedParams)
-    expect(decodedParams).toEqual({ threshold: BigInt(200), tokenId: BigInt(100) })
+describe('erc1155 params', () => {
+    test('encode invalid params', () => {
+        expect(() => encodeERC1155Params({ threshold: BigInt(-1), tokenId: BigInt(100) })).toThrow(
+            'Invalid threshold -1: must be greater than or equal to 0',
+        )
+    })
+    test('encode/decode', () => {
+        const encodedParams = encodeERC1155Params({ threshold: BigInt(200), tokenId: BigInt(100) })
+        const decodedParams = decodeERC1155Params(encodedParams)
+        expect(decodedParams).toEqual({ threshold: BigInt(200), tokenId: BigInt(100) })
+    })
 })
