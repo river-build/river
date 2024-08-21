@@ -118,20 +118,41 @@ export async function makeUserContextFromWallet(wallet: ethers.Wallet): Promise<
 	return makeSignerContext(userPrimaryWallet, delegateWallet, { days: 1 })
 }
 
-export function makeMediaChunks(numberOfChunks: number, totalDataSize: number): Buffer[][] {
-	const chunks: Buffer[][] = []
-	// Calculate the size of each chunk
-	const chunkSize = Math.ceil(totalDataSize / numberOfChunks)
+export function makeMediaChunks(numberOfChunks: number, chunkSize: number): Uint8Array[] {
+	const chunks: Uint8Array[] = []
 
 	for (let i = 0; i < numberOfChunks; i++) {
-			const chunkArray: Buffer[] = []
-			const chunk = Buffer.alloc(chunkSize); // Allocate only the calculated chunk size
-			chunk.fill(i)
-			chunkArray.push(chunk)
-			chunks.push(chunkArray)
+		const chunk = new Uint8Array(chunkSize)
+		chunk.fill(i)
+		chunks.push(chunk)
 	}
 
 	return chunks
 }
 
-export function
+export async function sendMediaChunks(
+	client: Client,
+	mediaStreamId: string,
+	chunks: Uint8Array[],
+	prevMiniblockHash: Uint8Array,
+): Promise<void> {
+	for (const [index, chunk] of chunks.entries()) {
+		const { prevMiniblockHash: hash } = await client.sendMediaPayload(
+			mediaStreamId,
+			chunk,
+			index,
+			prevMiniblockHash,
+		)
+		prevMiniblockHash = hash
+	}
+}
+
+export async function createMediaStream(
+	client: Client,
+	numberOfChunks: number,
+): Promise<void> {
+	const chunks = makeMediaChunks(numberOfChunks, 10)
+	const { prevMiniblockHash } = await client.createMediaStream(mediaStreamId)
+	await sendMediaChunks(client, mediaStreamId, chunks, prevMiniblockHash)
+}
+)

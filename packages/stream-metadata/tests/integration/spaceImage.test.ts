@@ -3,7 +3,13 @@
  */
 import axios from 'axios'
 import { dlog } from '@river-build/dlog'
-import { contractAddressFromSpaceId } from '@river-build/sdk'
+import {
+	contractAddressFromSpaceId,
+	deriveKeyAndIV,
+	makeUniqueMediaStreamId,
+} from '@river-build/sdk'
+import { ChunkedMedia, MediaInfo } from '@river-build/proto'
+import { PlainMessage } from '@bufbuild/protobuf'
 
 import { getTestServerUrl, makeTestClient, makeUniqueSpaceStreamId } from '../testUtils'
 
@@ -70,8 +76,16 @@ describe('GET /space/:spaceAddress/image', () => {
 	})
 
 	it.only('should return status 200 with valid spaceImage', async () => {
+		/**
+		 * 1. create a space.
+		 * 2. upload a space image.
+		 * 3. fetch the space image from the stream-metadata server.
+		 */
+
+		/*
+		 * 1. create a space.
+		 */
 		const spaceId = makeUniqueSpaceStreamId()
-		const spaceContractAddress = contractAddressFromSpaceId(spaceId)
 		const bobsClient = await makeTestClient()
 
 		await bobsClient.initializeUser()
@@ -87,5 +101,44 @@ describe('GET /space/:spaceAddress/image', () => {
 			spaceStream.view.snapshot?.content.case === 'spaceContent' &&
 				spaceStream.view.snapshot?.content.value.spaceImage === undefined,
 		).toBe(true)
+
+		/*
+		 * 2. upload a space image.
+		 */
+		// make a space image event
+		const mediaStreamId = makeUniqueMediaStreamId()
+		const image = new MediaInfo({
+			mimetype: 'image/png',
+			filename: 'bob-1.png',
+		})
+		const { key, iv } = await deriveKeyAndIV(nanoid(128)) // if in browser please use window.crypto.subtle.generateKey
+		const chunkedMediaInfo = {
+			info: image,
+			streamId: mediaStreamId,
+			encryption: {
+				case: 'aesgcm',
+				value: { secretKey: key, iv },
+			},
+			thumbnail: undefined,
+		} satisfies PlainMessage<ChunkedMedia>
+
+		await bobsClient.setSpaceImage(spaceId, chunkedMediaInfo)
+
+		// make a snapshot
+		await bobsClient.debugForceMakeMiniblock(spaceId, { forceSnapshot: true })
+
+		// see the space image in the snapshot
+		await waitFor(() => {
+			expect(
+				spaceStream.view.snapshot?.content.case === 'spaceContent' &&
+					spaceStream.view.snapshot.content.value.spaceImage !== undefined &&
+					spaceStream.view.snapshot.content.value.spaceImage.data !== undefined,
+			).toBe(true)
+		})
+
+		/*
+		 * 3. fetch the space image from the stream-metadata server.
+		 */
+		const spaceContractAddress = contractAddressFromSpaceId(spaceId)
 	})
 })
