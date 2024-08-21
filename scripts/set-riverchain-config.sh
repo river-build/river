@@ -5,7 +5,7 @@ cd ..
 
 : ${RUN_ENV:?}
 RIVER_ENV="local_${RUN_ENV}"
-RIVER_REGISTRY_ADDRESS=$(jq -r '.address' packages/generated/deployments/${RIVER_ENV}/river/addresses/riverRegistry.json)
+RIVER_REGISTRY_ADDRESS=$(jq -r '.address' contracts/deployments/${RIVER_ENV}/river/addresses/riverRegistry.json)
 SKIP_CHAIN_WAIT="${SKIP_CHAIN_WAIT:-false}"
 
 . contracts/.env.localhost

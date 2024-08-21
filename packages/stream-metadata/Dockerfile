@@ -23,7 +23,7 @@ COPY ./scripts ./scripts
 # monorepo packages
 COPY ./packages/eslint-config /river/packages/eslint-config
 COPY ./packages/prettier-config /river/packages/prettier-config
-COPY ./packages/generated /river/packages/generated
+COPY ./contracts/deployments /river/contracts/deployments
 COPY ./packages/web3 /river/packages/web3
 COPY ./packages/dlog /river/packages/dlog
 COPY ./packages/proto /river/packages/proto
@@ -43,5 +43,5 @@ COPY --from=builder /river/packages/stream-metadata/dist /river/packages/stream-
 
 # run the service
 WORKDIR /river/packages/stream-metadata
-ENV NODE_ENV=production 
+ENV NODE_ENV=production
 CMD ["node", "--enable-source-maps", "./dist/node_esbuild.cjs"]

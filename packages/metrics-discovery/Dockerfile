@@ -21,7 +21,7 @@ COPY ./protocol ./protocol
 COPY ./scripts ./scripts
 
 # monorepo packages
-COPY ./packages/generated /river/packages/generated
+COPY ./contracts/deployments /river/contracts/deployments
 COPY ./packages/web3 /river/packages/web3
 COPY ./packages/dlog /river/packages/dlog
 COPY ./packages/proto /river/packages/proto

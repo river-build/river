@@ -26,7 +26,7 @@
 ##
 
 # Order is important; the last matching pattern takes the most
-# precedence. 
+# precedence.
 
 /*.* @brianathere @texuf
 /.github/ @mechanical-turk
@@ -46,8 +46,6 @@
 /infra/ @mechanical-turk
 /packages/ @sergekh2 @texuf
 /packages/generated/ @sergekh2 @giuseppecrj
-/packages/generated/addresses/ @sergekh2 @texuf @giuseppecrj
-/packages/generated/deployments/ @sergekh2 @texuf @giuseppecrj
 /packages/generated/dev/ @sergekh2 @giuseppecrj
 /packages/sdk/ @sergekh2 @texuf
 /packages/sdk/src/ @sergekh2 @texuf @erikolsson
