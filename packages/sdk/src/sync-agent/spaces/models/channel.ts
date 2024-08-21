@@ -44,8 +44,12 @@ export class Channel extends PersistedObservable<ChannelModel> {
                 this.onStreamInitialized(this.data.id)
             }
             client.on('streamInitialized', this.onStreamInitialized)
+            client.on('streamNewUserJoined', this.onStreamUserJoined)
+            client.on('streamUserLeft', this.onStreamUserLeft)
             return () => {
                 client.off('streamInitialized', this.onStreamInitialized)
+                client.off('streamNewUserJoined', this.onStreamUserJoined)
+                client.off('streamUserLeft', this.onStreamUserLeft)
                 this.connectionStatus.setValue(StreamConnectionStatus.disconnected)
             }
         })
@@ -107,8 +111,22 @@ export class Channel extends PersistedObservable<ChannelModel> {
         if (streamId === this.data.id) {
             const stream = this.riverConnection.client?.stream(this.data.id)
             check(isDefined(stream), 'stream is not defined')
+            const hasJoined = stream.view.getMembers().isMemberJoined(this.riverConnection.userId)
+            this.setData({ isJoined: hasJoined })
             this.timeline.initialize(stream)
             this.connectionStatus.setValue(StreamConnectionStatus.connected)
+        }
+    }
+
+    private onStreamUserJoined = (streamId: string, userId: string) => {
+        if (streamId === this.data.id && userId === this.riverConnection.userId) {
+            this.setData({ isJoined: true })
+        }
+    }
+
+    private onStreamUserLeft = (streamId: string, userId: string) => {
+        if (streamId === this.data.id && userId === this.riverConnection.userId) {
+            this.setData({ isJoined: false })
         }
     }
 }
