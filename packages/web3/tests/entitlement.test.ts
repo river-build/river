@@ -851,7 +851,7 @@ test('encode/decode rule data v2', async () => {
     const encoded = encodeRuleDataV2(data)
 
     const decodedDag = decodeRuleDataV2(encoded)
-    const operations = ruleDataToOperations(decodedDag[0])
+    const operations = ruleDataToOperations(decodedDag)
     const newTree = postOrderArrayToTree(operations)
     expect(randomTree.opType === newTree.opType).toBeTruthy()
 })
