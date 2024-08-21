@@ -72,5 +72,29 @@
       "args": ["${file}", "--config", "${workspaceFolder}/packages/stress/jest.config.ts", "-i", "--no-cache", "--forceExit"],
       "console": "integratedTerminal",
     },
+    {
+      "name": "Jest: current file in 'packages/stream-metadata/'",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/.bin/jest",
+      "runtimeArgs": [
+        "--experimental-vm-modules"
+      ],
+      "args": [
+        "${relativeFile}",
+        "--config",
+        "${workspaceFolder}/packages/stream-metadata/jest.config.ts",
+        "--runInBand",
+        "--watchAll=false"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": ["<node_internals>/**"],
+      "env": {
+        "NODE_ENV": "test",
+        "DEBUG": "*"  // Enable all debug logs, adjust as needed
+      }
+    }
   ]
 }
