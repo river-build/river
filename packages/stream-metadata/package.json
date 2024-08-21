@@ -37,6 +37,7 @@
 	},
 	"devDependencies": {
 		"@river-build/dlog": "workspace:^",
+		"@river-build/encryption": "workspace:^",
 		"@river-build/eslint-config": "workspace:^",
 		"@river-build/prettier-config": "workspace:^",
 		"@types/jest": "^29.5.3",

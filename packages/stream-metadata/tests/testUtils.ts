@@ -7,17 +7,17 @@ import {
 	genId,
 	makeSignerContext,
 	makeSpaceStreamId,
-	MockEntitlementsDelegate,
 	RiverDbManager,
 	SignerContext,
 	userIdFromAddress,
 } from '@river-build/sdk'
 import { ethers } from 'ethers'
-import { LocalhostWeb3Provider } from '@river-build/web3'
+import { createSpaceDapp, LocalhostWeb3Provider } from '@river-build/web3'
 
 import { StreamRpcClient } from '../src/riverStreamRpcClient'
 import { testConfig } from './testEnvironment'
 import { getRiverRegistry } from '../src/evmRpcClient'
+import { TestEntitlements } from './testEntitlements'
 
 export function isTest(): boolean {
 	return (
@@ -89,7 +89,8 @@ export async function makeTestClient() {
 	const cryptoStore = RiverDbManager.getCryptoDb(userId, dbName)
 
 	// arg4: entitlements delegate
-	const entitlementsDelegate = new MockEntitlementsDelegate()
+	const spaceDapp = createSpaceDapp(provider, testConfig.web3Config.base)
+	const entitlementsDelegate = new TestEntitlements(spaceDapp)
 
 	// arg5: persistence db name
 	const persistenceDbName = `persistence-${userId}-${deviceId}`

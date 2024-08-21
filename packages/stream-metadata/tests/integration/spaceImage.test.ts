@@ -7,14 +7,12 @@ import { contractAddressFromSpaceId } from '@river-build/sdk'
 
 import { getTestServerUrl, makeTestClient, makeUniqueSpaceStreamId } from '../testUtils'
 
-/*
 const log = dlog('stream-metadata:test', {
 	allowJest: true,
 	defaultEnabled: true,
 })
-	*/
 
-const log = console.log
+//const log = console.log
 
 describe('GET /space/:spaceAddress/image', () => {
 	const baseURL = getTestServerUrl()
