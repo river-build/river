@@ -119,22 +119,19 @@ export async function makeUserContextFromWallet(wallet: ethers.Wallet): Promise<
 	return makeSignerContext(userPrimaryWallet, delegateWallet, { days: 1 })
 }
 
-export function makeMediaChunks(numberOfChunks: number, chunkSize: number): Uint8Array[] {
-	const chunks: Uint8Array[] = []
-
-	for (let i = 0; i < numberOfChunks; i++) {
-		const chunk = new Uint8Array(chunkSize)
-		chunk.fill(i)
-		chunks.push(chunk)
+export function makeDataBlob(fillSize: number): Uint8Array {
+	const data = new Uint8Array(fillSize)
+	for (let i = 0; i < fillSize; i++) {
+		data.fill(i)
 	}
-
-	return chunks
+	return data
 }
 
-export async function sendMediaChunks(
+export async function encryptAndSendMediaPayload(
 	client: Client,
+	spaceId: string,
 	mediaStreamId: string,
-	chunks: Uint8Array[],
+	data: Uint8Array,
 	prevMiniblockHash: Uint8Array,
 ): Promise<void> {
 	for (const [index, chunk] of chunks.entries()) {
@@ -147,14 +144,30 @@ export async function sendMediaChunks(
 		prevMiniblockHash = hash
 	}
 }
-
-export async function createMediaStream(
-	client: Client,
-	numberOfChunks: number,
-): Promise<void> {
-	const mediaStreamId = makeUniqueMediaStreamId()
-	const chunks = makeMediaChunks(numberOfChunks, 10)
-	const { prevMiniblockHash } = await client.createMediaStream(mediaStreamId)
-	await sendMediaChunks(client, mediaStreamId, chunks, prevMiniblockHash)
+/*
+export async function encryptPayloadWithDerivedAesGcm(
+	data: Uint8Array,
+): Promise<{ key: Uint8Array; iv: Uint8Array; encryptedData: Uint8Array }> {
+	const { key, iv } = await deriveKeyAndIV(nanoid(128))
+	const encryptedData = await aesGcmEncrypt(data, key, iv)
+	return { key, iv, encryptedData }
 }
+const { streamId: mediaStreamId, prevMiniblockHash } = await bobsClient.createMediaStream(
+	undefined,
+	spaceId,
+	blob.length,
+	undefined,
 )
+// make a space image event
+const { key, iv } = await deriveKeyAndIV(nanoid(128))
+const chunkedDataInfo = {
+	info: image,
+	streamId: mediaStreamId,
+	encryption: {
+		case: 'aesgcm',
+		value: { secretKey: key, iv },
+	},
+	thumbnail: undefined,
+} satisfies PlainMessage<ChunkedMedia>
+)
+*/

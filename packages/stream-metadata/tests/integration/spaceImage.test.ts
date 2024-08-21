@@ -3,15 +3,16 @@
  */
 import axios from 'axios'
 import { dlog } from '@river-build/dlog'
-import {
-	contractAddressFromSpaceId,
-	deriveKeyAndIV,
-	makeUniqueMediaStreamId,
-} from '@river-build/sdk'
-import { ChunkedMedia, MediaInfo } from '@river-build/proto'
+import { contractAddressFromSpaceId, deriveKeyAndIV } from '@river-build/sdk'
+import { ChunkedMedia } from '@river-build/proto'
 import { PlainMessage } from '@bufbuild/protobuf'
 
-import { getTestServerUrl, makeTestClient, makeUniqueSpaceStreamId } from '../testUtils'
+import {
+	getTestServerUrl,
+	makeDataBlob,
+	makeTestClient,
+	makeUniqueSpaceStreamId,
+} from '../testUtils'
 
 const log = dlog('stream-metadata:test', {
 	allowJest: true,
@@ -105,14 +106,16 @@ describe('GET /space/:spaceAddress/image', () => {
 		/*
 		 * 2. upload a space image.
 		 */
+		const blob = makeDataBlob(20)
+		const { streamId: mediaStreamId, prevMiniblockHash } = await bobsClient.createMediaStream(
+			undefined,
+			spaceId,
+			blob.length,
+			undefined,
+		)
 		// make a space image event
-		const mediaStreamId = makeUniqueMediaStreamId()
-		const image = new MediaInfo({
-			mimetype: 'image/png',
-			filename: 'bob-1.png',
-		})
-		const { key, iv } = await deriveKeyAndIV(nanoid(128)) // if in browser please use window.crypto.subtle.generateKey
-		const chunkedMediaInfo = {
+		const { key, iv } = await deriveKeyAndIV(nanoid(128))
+		const chunkedDataInfo = {
 			info: image,
 			streamId: mediaStreamId,
 			encryption: {
@@ -122,7 +125,7 @@ describe('GET /space/:spaceAddress/image', () => {
 			thumbnail: undefined,
 		} satisfies PlainMessage<ChunkedMedia>
 
-		await bobsClient.setSpaceImage(spaceId, chunkedMediaInfo)
+		await bobsClient.setSpaceImage(spaceId, chunkedDataInfo)
 
 		// make a snapshot
 		await bobsClient.debugForceMakeMiniblock(spaceId, { forceSnapshot: true })
