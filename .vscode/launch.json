@@ -76,6 +76,7 @@
       "name": "Jest: current file in 'packages/stream-metadata/'",
       "type": "node",
       "request": "launch",
+      "cwd": "${workspaceFolder}",
       "program": "${workspaceFolder}/node_modules/.bin/jest",
       "runtimeArgs": [
         "--experimental-vm-modules"
@@ -85,15 +86,13 @@
         "--config",
         "${workspaceFolder}/packages/stream-metadata/jest.config.ts",
         "--runInBand",
-        "--watchAll=false"
+        "--no-cache",
+        "--forceExit"
       ],
-      "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
-      "skipFiles": ["<node_internals>/**"],
       "env": {
-        "NODE_ENV": "test",
-        "DEBUG": "*"  // Enable all debug logs, adjust as needed
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0",
       }
     }
   ]
