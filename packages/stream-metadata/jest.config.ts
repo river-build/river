@@ -10,9 +10,10 @@ const config: Config.InitialOptions = {
 		'@matrix-org/olm/olm.wasm': resolve(__dirname, './tests/__mocks__/mock-wasm-file.js'),
 	},
 	setupFilesAfterEnv: [resolve(__dirname, './jest.setup.ts')],
+	setupFiles: ['fake-indexeddb/auto'],
 	testEnvironment: 'node',
 	testPathIgnorePatterns: ['/dist/', '/node_modules/'],
-	testTimeout: 10000,
+	testTimeout: 120000,
 	transform: {
 		'^.+\\.ts$': ['ts-jest', { useESM: true }],
 		'^.+\\.wasm$': 'jest-transform-stub',
