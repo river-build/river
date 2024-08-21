@@ -6,6 +6,7 @@ import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 
 //interfaces
 import {IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.sol";
+import {ILegacyArchitect, ILegacyArchitectBase} from "contracts/test/mocks/legacy/IMockLegacyArchitect.sol";
 import {IMembership} from "contracts/src/spaces/facets/membership/IMembership.sol";
 import {IPricingModulesBase} from "contracts/src/factory/facets/architect/pricing/IPricingModules.sol";
 
@@ -47,10 +48,14 @@ contract ForkCreateSpace is
     address founder = _randomAddress();
     address spaceFactory = 0xC09Ac0FFeecAaE5100158247512DC177AeacA3e3;
 
-    Architect spaceArchitect = Architect(spaceFactory);
+    ILegacyArchitect spaceArchitect = ILegacyArchitect(spaceFactory);
 
-    SpaceInfo memory spaceInfo = _createEveryoneSpaceInfo("fork-space");
+    ILegacyArchitectBase.SpaceInfo memory spaceInfo = _createLegacySpaceInfo(
+      "fork-space"
+    );
     address dynamicPricingModule = getDynamicPricingModule(spaceFactory);
+
+    console.log("Dynamic Pricing Module: %s", dynamicPricingModule);
 
     assertNotEq(dynamicPricingModule, address(0));
 
