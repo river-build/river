@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import { type Observable, type PersistedModel } from '@river-build/sdk'
+import { isPersistedModel } from './utils'
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export declare namespace ObservableConfig {
@@ -44,16 +45,6 @@ type ObservableValue<Data> = Data extends PersistedModel<infer UnwrappedData>
           isLoaded: true
       }
 
-const isPersisted = <T>(value: T | PersistedModel<T>): value is PersistedModel<T> => {
-    if (typeof value !== 'object') {
-        return false
-    }
-    if (value === null) {
-        return false
-    }
-    return 'status' in value && 'data' in value
-}
-
 export function useObservable<T>(
     observable: Observable<T>,
     config?: ObservableConfig.FromData<T>,
@@ -69,7 +60,7 @@ export function useObservable<T>(
     )
 
     useEffect(() => {
-        if (isPersisted(value)) {
+        if (isPersistedModel(value)) {
             if (value.status === 'loaded') {
                 opts.onUpdate?.(value.data)
             }
@@ -82,7 +73,7 @@ export function useObservable<T>(
     }, [opts, value])
 
     const data = useMemo(() => {
-        if (isPersisted(value)) {
+        if (isPersistedModel(value)) {
             const { data, status } = value
             return {
                 data: data,
