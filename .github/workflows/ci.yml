@@ -405,9 +405,6 @@ jobs:
             - name: Build & Test (with entitlements)
               run: yarn csb:turbo-no-sdk
 
-            - name: Run River Tests Against Legacy Spaces (with entitlements)
-              run: yarn workspace @river-build/sdk run test:ci:multi:ent:legacy
-
             - name: Run River Tests (with entitlements)
               run: yarn workspace @river-build/sdk run test:ci:multi:ent
 
@@ -535,6 +532,8 @@ jobs:
                   ./run_multi.sh -r &
                   for i in {5170..5179}; do yarn wait-on https://localhost:$i/debug/multi --timeout=900000 --i=5000 --verbose; done
 
+            - name: Build & Test (with entitlements)
+              run: yarn csb:turbo-no-sdk
             - name: Run River Tests Against Legacy Spaces (with entitlements)
               run: yarn workspace @river-build/sdk run test:ci:multi:ent:legacy
 
