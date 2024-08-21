@@ -89,9 +89,7 @@ func MarshalEntitlement(
 			EntitlementType: rawEntitlement.EntitlementType,
 			RuleEntitlement: &ruleData,
 		}, nil
-	}
-
-	if rawEntitlement.EntitlementType == ModuleTypeRuleEntitlementV2 {
+	} else if rawEntitlement.EntitlementType == ModuleTypeRuleEntitlementV2 {
 		// Parse the ABI definition
 		parsedABI, err := base.RuleEntitlementV2MetaData.GetAbi()
 		if err != nil {
@@ -143,9 +141,7 @@ func MarshalEntitlement(
 			EntitlementType:   rawEntitlement.EntitlementType,
 			RuleEntitlementV2: &ruleData,
 		}, nil
-	}
-
-	if rawEntitlement.EntitlementType == ModuleTypeUserEntitlement {
+	} else if rawEntitlement.EntitlementType == ModuleTypeUserEntitlement {
 		abiDef := `[{"name":"getAddresses","outputs":[{"type":"address[]","name":"out"}],"constant":true,"payable":false,"type":"function"}]`
 
 		// Parse the ABI definition
