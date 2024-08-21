@@ -606,6 +606,20 @@ export const make_UserDeviceKeyPayload_EncryptionDevice = (
     }
 }
 
+export const make_UserDeviceKeyPayload_ProfileImage = (
+    value: EncryptedData,
+): PlainMessage<StreamEvent>['payload'] => {
+    return {
+        case: 'userDeviceKeyPayload',
+        value: {
+            content: {
+                case: 'profileImage',
+                value,
+            },
+        },
+    }
+}
+
 export const make_SpacePayload_ChannelUpdate = (
     value: PlainMessage<SpacePayload_ChannelUpdate>,
 ): PlainMessage<StreamEvent>['payload'] => {
