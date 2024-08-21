@@ -117,3 +117,21 @@ export async function makeUserContextFromWallet(wallet: ethers.Wallet): Promise<
 	const delegateWallet = ethers.Wallet.createRandom()
 	return makeSignerContext(userPrimaryWallet, delegateWallet, { days: 1 })
 }
+
+export function makeMediaChunks(numberOfChunks: number, totalDataSize: number): Buffer[][] {
+	const chunks: Buffer[][] = []
+	// Calculate the size of each chunk
+	const chunkSize = Math.ceil(totalDataSize / numberOfChunks)
+
+	for (let i = 0; i < numberOfChunks; i++) {
+			const chunkArray: Buffer[] = []
+			const chunk = Buffer.alloc(chunkSize); // Allocate only the calculated chunk size
+			chunk.fill(i)
+			chunkArray.push(chunk)
+			chunks.push(chunkArray)
+	}
+
+	return chunks
+}
+
+export function
