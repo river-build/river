@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto' // used to mock indexdb in dexie, don't remove
 import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-node'
 import { StreamService } from '@river-build/proto'
 import { createPromiseClient } from '@connectrpc/connect'
+import { foundry } from 'viem/chains'
 import {
 	Client,
 	genId,
@@ -69,30 +70,31 @@ export function makeStreamRpcClient(url: string): StreamRpcClient {
 export async function makeTestClient() {
 	// create all the constructor arguments for the SDK client
 
-	// arg1: user context and wallet
+	// arg: user context and wallet
 	const { context, wallet } = await makeRandomUserContext()
 	const provider = new LocalhostWeb3Provider(testConfig.baseChainRpcUrl, wallet)
 	// need funds to create space and execute tranasctions
 	await provider.fundWallet()
 
-	// arg2: stream rpc client
+	// arg: stream rpc client
 	const nodeUrl = await getAnyNodeUrlFromRiverRegistry()
 	if (!nodeUrl) {
 		throw new Error('No nodes available')
 	}
 	const rpcClient = makeStreamRpcClient(nodeUrl)
 
-	// arg3: crypto store
+	// arg: crypto store
 	const deviceId = `${genId(5)}`
 	const userId = userIdFromAddress(context.creatorAddress)
 	const dbName = `database-${userId}-${deviceId}`
 	const cryptoStore = RiverDbManager.getCryptoDb(userId, dbName)
 
-	// arg4: entitlements delegate
+	// arg: entitlements delegate
 	const spaceDapp = createSpaceDapp(provider, testConfig.web3Config.base)
-	const entitlementsDelegate = new TestEntitlements(spaceDapp)
+	const xchainRpcUrls = [foundry.rpcUrls.public.http[0]]
+	const entitlementsDelegate = new TestEntitlements(spaceDapp, xchainRpcUrls)
 
-	// arg5: persistence db name
+	// arg: persistence db name
 	const persistenceDbName = `persistence-${userId}-${deviceId}`
 
 	// create the client with all the args

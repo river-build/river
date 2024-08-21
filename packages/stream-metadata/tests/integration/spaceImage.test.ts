@@ -73,14 +73,11 @@ describe('GET /space/:spaceAddress/image', () => {
 		const spaceId = makeUniqueSpaceStreamId()
 		const spaceContractAddress = contractAddressFromSpaceId(spaceId)
 		const bobsClient = await makeTestClient()
-		log('before bobsClient.initializeUser')
+
 		await bobsClient.initializeUser()
-		log('before bobsClient.startSync')
 		bobsClient.startSync()
 
-		log('before bobsClient.createSpace')
-		await expect(bobsClient.createSpace(spaceId)).toResolve()
-		log('before bobsClient.waitForStream')
+		await bobsClient.createSpace(spaceId)
 		const spaceStream = await bobsClient.waitForStream(spaceId)
 		log('spaceStreamId', spaceStream.streamId)
 

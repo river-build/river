@@ -3,9 +3,11 @@ import { ISpaceDapp, Permission } from '@river-build/web3'
 
 export class TestEntitlements implements EntitlementsDelegate {
 	private spaceDapp: ISpaceDapp
+	private xchainRpcUrls: string[]
 
-	constructor(spaceDapp: ISpaceDapp) {
+	constructor(spaceDapp: ISpaceDapp, xchainRpcUrls: string[]) {
 		this.spaceDapp = spaceDapp
+		this.xchainRpcUrls = xchainRpcUrls
 	}
 
 	async isEntitled(
@@ -15,7 +17,13 @@ export class TestEntitlements implements EntitlementsDelegate {
 		permission: Permission,
 	) {
 		if (channelId && spaceId) {
-			return this.spaceDapp.isEntitledToChannel(spaceId, channelId, user, permission)
+			return this.spaceDapp.isEntitledToChannel(
+				spaceId,
+				channelId,
+				user,
+				permission,
+				this.xchainRpcUrls,
+			)
 		} else if (spaceId) {
 			return this.spaceDapp.isEntitledToSpace(spaceId, user, permission)
 		} else {

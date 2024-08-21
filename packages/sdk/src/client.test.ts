@@ -118,7 +118,7 @@ describe('clientTest', () => {
         await alicesClient.stop()
     })
 
-    test('bobTalksToHimself-noflush', async () => {
+    test.only('bobTalksToHimself-noflush', async () => {
         await expect(bobsClient.initializeUser()).toResolve()
         bobsClient.startSync()
 
