@@ -1,10 +1,11 @@
 import 'fake-indexeddb/auto' // used to mock indexdb in dexie, don't remove
 import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-node'
-import { StreamService } from '@river-build/proto'
+import { ChunkedMedia, MediaInfo, StreamService } from '@river-build/proto'
 import { createPromiseClient } from '@connectrpc/connect'
 import { foundry } from 'viem/chains'
 import {
 	Client,
+	encryptAESGCM,
 	genId,
 	makeSignerContext,
 	makeSpaceStreamId,
@@ -119,55 +120,61 @@ export async function makeUserContextFromWallet(wallet: ethers.Wallet): Promise<
 	return makeSignerContext(userPrimaryWallet, delegateWallet, { days: 1 })
 }
 
-export function makeDataBlob(fillSize: number): Uint8Array {
+export function makeMediaBlob(
+	filename: string,
+	fillSize: number,
+): { data: Uint8Array; info: MediaInfo } {
 	const data = new Uint8Array(fillSize)
 	for (let i = 0; i < fillSize; i++) {
 		data.fill(i)
 	}
-	return data
+	return {
+		data,
+		info: new MediaInfo({
+			mimetype: 'application/octet-stream',
+			filename,
+			sizeBytes: BigInt(data.length),
+		}),
+	}
 }
 
 export async function encryptAndSendMediaPayload(
 	client: Client,
 	spaceId: string,
-	mediaStreamId: string,
+	info: MediaInfo,
 	data: Uint8Array,
-	prevMiniblockHash: Uint8Array,
-): Promise<void> {
-	for (const [index, chunk] of chunks.entries()) {
-		const { prevMiniblockHash: hash } = await client.sendMediaPayload(
-			mediaStreamId,
-			chunk,
-			index,
-			prevMiniblockHash,
-		)
-		prevMiniblockHash = hash
+	chunkSize = 10,
+): Promise<ChunkedMedia> {
+	const { ciphertext, secretKey, iv } = await encryptAESGCM(data)
+	const chunkCount = Math.ceil(ciphertext.length / chunkSize)
+
+	const mediaStreamInfo = await client.createMediaStream(undefined, spaceId, chunkCount)
+
+	if (!mediaStreamInfo) {
+		throw new Error('Failed to create media stream')
 	}
+
+	const chunkIndex = 0
+	for (let i = 0; i < ciphertext.length; i += chunkSize) {
+		const chunk = ciphertext.slice(i, i + chunkSize)
+		const { prevMiniblockHash } = await client.sendMediaPayload(
+			mediaStreamInfo.streamId,
+			chunk,
+			chunkIndex,
+			mediaStreamInfo.prevMiniblockHash,
+		)
+		mediaStreamInfo.prevMiniblockHash = prevMiniblockHash
+	}
+
+	const chunkedMedia = new ChunkedMedia({
+		info,
+		streamId: mediaStreamInfo.streamId,
+		encryption: {
+			case: 'aesgcm',
+			value: { secretKey, iv },
+		},
+		thumbnail: undefined,
+	})
+
+	return chunkedMedia
 }
-/*
-export async function encryptPayloadWithDerivedAesGcm(
-	data: Uint8Array,
-): Promise<{ key: Uint8Array; iv: Uint8Array; encryptedData: Uint8Array }> {
-	const { key, iv } = await deriveKeyAndIV(nanoid(128))
-	const encryptedData = await aesGcmEncrypt(data, key, iv)
-	return { key, iv, encryptedData }
-}
-const { streamId: mediaStreamId, prevMiniblockHash } = await bobsClient.createMediaStream(
-	undefined,
-	spaceId,
-	blob.length,
-	undefined,
-)
-// make a space image event
-const { key, iv } = await deriveKeyAndIV(nanoid(128))
-const chunkedDataInfo = {
-	info: image,
-	streamId: mediaStreamId,
-	encryption: {
-		case: 'aesgcm',
-		value: { secretKey: key, iv },
-	},
-	thumbnail: undefined,
-} satisfies PlainMessage<ChunkedMedia>
-)
-*/

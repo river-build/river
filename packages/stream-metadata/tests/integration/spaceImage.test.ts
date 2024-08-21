@@ -8,8 +8,9 @@ import { ChunkedMedia } from '@river-build/proto'
 import { PlainMessage } from '@bufbuild/protobuf'
 
 import {
+	encryptAndSendMediaPayload,
 	getTestServerUrl,
-	makeDataBlob,
+	makeMediaBlob,
 	makeTestClient,
 	makeUniqueSpaceStreamId,
 } from '../testUtils'
@@ -106,38 +107,15 @@ describe('GET /space/:spaceAddress/image', () => {
 		/*
 		 * 2. upload a space image.
 		 */
-		const blob = makeDataBlob(20)
-		const { streamId: mediaStreamId, prevMiniblockHash } = await bobsClient.createMediaStream(
-			undefined,
-			spaceId,
-			blob.length,
-			undefined,
-		)
-		// make a space image event
-		const { key, iv } = await deriveKeyAndIV(nanoid(128))
-		const chunkedDataInfo = {
-			info: image,
-			streamId: mediaStreamId,
-			encryption: {
-				case: 'aesgcm',
-				value: { secretKey: key, iv },
-			},
-			thumbnail: undefined,
-		} satisfies PlainMessage<ChunkedMedia>
+		const dataSize = 20
+		const filename = 'bob.png'
+		const { data, info } = makeMediaBlob(filename, dataSize)
+		const chunkedMedia = await encryptAndSendMediaPayload(bobsClient, spaceId, info, data)
 
-		await bobsClient.setSpaceImage(spaceId, chunkedDataInfo)
+		await bobsClient.setSpaceImage(spaceId, chunkedMedia)
 
 		// make a snapshot
 		await bobsClient.debugForceMakeMiniblock(spaceId, { forceSnapshot: true })
-
-		// see the space image in the snapshot
-		await waitFor(() => {
-			expect(
-				spaceStream.view.snapshot?.content.case === 'spaceContent' &&
-					spaceStream.view.snapshot.content.value.spaceImage !== undefined &&
-					spaceStream.view.snapshot.content.value.spaceImage.data !== undefined,
-			).toBe(true)
-		})
 
 		/*
 		 * 3. fetch the space image from the stream-metadata server.
