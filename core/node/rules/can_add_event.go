@@ -328,6 +328,9 @@ func (params *aeParams) canAddUserDeviceKeyPayload(payload *StreamEvent_UserDevi
 	case *UserDeviceKeyPayload_EncryptionDevice_:
 		return aeBuilder().
 			check(params.creatorIsMember)
+	case *UserDeviceKeyPayload_ProfileImage:
+		return aeBuilder().
+			check(params.creatorIsMember)
 	default:
 		return aeBuilder().
 			fail(unknownContentType(content))

@@ -233,6 +233,7 @@ func (ru *csParams) canCreateStream() ruleBuilderCS {
 				ru.checkMediaInceptionPayload,
 			).
 			requireMembership(
+				inception.UserId,
 				inception.ChannelId,
 				inception.SpaceId,
 			).
@@ -527,6 +528,11 @@ func (ru *csMediaRules) checkMediaInceptionPayload() error {
 			Err_BAD_STREAM_CREATION_PARAMS,
 			fmt.Sprintf("chunk count must be less than or equal to %d", ru.params.maxChunkCount),
 		)
+	}
+	// check if channel id is nil , space id is nil, user id is not nil
+	if len(ru.inception.ChannelId) == 0 && len(ru.inception.SpaceId) == 0 && len(ru.inception.UserId) == 20 {
+		// TODO: check if user id is valid
+		return nil
 	}
 
 	// checks for space or channel media stream
