@@ -123,14 +123,24 @@ export function makeMediaBlob(
 	filename: string,
 	fillSize: number,
 ): { data: Uint8Array; info: MediaInfo } {
-	const data = new Uint8Array(fillSize)
-	for (let i = 0; i < fillSize; i++) {
-		data.fill(i)
+	// Example of JPEG magic bytes (0xFF 0xD8 0xFF)
+	const magicBytes = [0xff, 0xd8, 0xff]
+
+	// Create a Uint8Array with the size including magic bytes
+	const data = new Uint8Array(fillSize + magicBytes.length)
+
+	// Set the magic bytes at the beginning
+	data.set(magicBytes, 0)
+
+	// Fill the rest of the array with arbitrary data
+	for (let i = magicBytes.length; i < data.length; i++) {
+		data[i] = i % 256 // Fill with some pattern
 	}
+
 	return {
 		data,
 		info: new MediaInfo({
-			mimetype: 'application/octet-stream',
+			mimetype: 'image/jpeg', // Set the expected MIME type
 			filename,
 			sizeBytes: BigInt(data.length),
 		}),
