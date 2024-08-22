@@ -2,24 +2,23 @@ import 'fake-indexeddb/auto' // used to mock indexdb in dexie, don't remove
 import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-node'
 import { ChunkedMedia, MediaInfo, StreamService } from '@river-build/proto'
 import { createPromiseClient } from '@connectrpc/connect'
-import { foundry } from 'viem/chains'
 import {
 	Client,
 	encryptAESGCM,
 	genId,
 	makeSignerContext,
 	makeSpaceStreamId,
+	MockEntitlementsDelegate,
 	RiverDbManager,
 	SignerContext,
 	userIdFromAddress,
 } from '@river-build/sdk'
 import { ethers } from 'ethers'
-import { createSpaceDapp, LocalhostWeb3Provider } from '@river-build/web3'
+import { LocalhostWeb3Provider } from '@river-build/web3'
 
 import { StreamRpcClient } from '../src/riverStreamRpcClient'
 import { testConfig } from './testEnvironment'
 import { getRiverRegistry } from '../src/evmRpcClient'
-import { TestEntitlements } from './testEntitlements'
 
 export function isTest(): boolean {
 	return (
@@ -91,9 +90,7 @@ export async function makeTestClient() {
 	const cryptoStore = RiverDbManager.getCryptoDb(userId, dbName)
 
 	// arg: entitlements delegate
-	const spaceDapp = createSpaceDapp(provider, testConfig.web3Config.base)
-	const xchainRpcUrls = [foundry.rpcUrls.public.http[0]]
-	const entitlementsDelegate = new TestEntitlements(spaceDapp, xchainRpcUrls)
+	const entitlementsDelegate = new MockEntitlementsDelegate()
 
 	// arg: persistence db name
 	const persistenceDbName = `persistence-${userId}-${deviceId}`
