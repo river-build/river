@@ -8,7 +8,7 @@
 		"skipLibCheck": true,
 		"strict": true,
 		"outDir": "./dist",
-		"rootDir": ".",  // Now both 'src' and 'tests' are included
+		"rootDir": "./src",
 		"sourceMap": true
 	},
 	"include": [
