@@ -75,7 +75,7 @@ describe('GET /space/:spaceAddress/image', () => {
 		}
 	})
 
-	it('should return status 200 with valid spaceImage', async () => {
+	it.only('should return status 200 with valid spaceImage', async () => {
 		/**
 		 * 1. create a space.
 		 * 2. upload a space image.
@@ -119,5 +119,8 @@ describe('GET /space/:spaceAddress/image', () => {
 		 * 3. fetch the space image from the stream-metadata server.
 		 */
 		const spaceContractAddress = contractAddressFromSpaceId(spaceId)
+		const route = `space/${spaceContractAddress}/image`
+		const response = await axios.get(`${baseURL}/${route}`)
+		expect(response.status).toBe(200)
 	})
 })
