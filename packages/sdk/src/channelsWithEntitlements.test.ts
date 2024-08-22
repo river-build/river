@@ -40,7 +40,6 @@ import {
 } from '@river-build/web3'
 import { Client } from './client'
 import { make_MemberPayload_KeySolicitation } from './types'
-import { get } from 'lodash'
 
 const log = dlog('csb:test:channelsWithEntitlements')
 const twoEth = BigInt(2e18)
