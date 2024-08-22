@@ -12,7 +12,7 @@
 		"dev": "yarn dev:local_multi",
 		"dev:local_multi": "yarn run-build",
 		"dev:local_multi_ne": "RIVER_ENV=local_multi_ne PORT=3003 yarn run-build",
-		"run-build": "dotenv -e .env.local yarn build && node ./dist/node_esbuild.cjs",
+		"run-build": "yarn build && node ./dist/node_esbuild.cjs",
 		"prettier": "prettier --config ../prettier-config/config.js --ignore-path .prettierignore .",
 		"start": "node ./dist/node_esbuild.cjs"
 	},
@@ -42,7 +42,6 @@
 		"@types/node": "^20.5.0",
 		"@types/uuid": "^10.0.0",
 		"@typescript-eslint/parser": "^7.14.1",
-		"dotenv-cli": "^7.4.2",
 		"esbuild": "^0.21.5",
 		"eslint": "^8.53.0",
 		"prettier": "^2.8.8",
