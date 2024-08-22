@@ -75,7 +75,7 @@ describe('GET /space/:spaceAddress/image', () => {
 		}
 	})
 
-	it.only('should return status 200 with valid spaceImage', async () => {
+	it('should return status 200 with valid spaceImage', async () => {
 		/**
 		 * 1. create a space.
 		 * 2. upload a space image.
@@ -105,7 +105,7 @@ describe('GET /space/:spaceAddress/image', () => {
 		/*
 		 * 2. upload a space image.
 		 */
-		const dataSize = 100
+		const dataSize = 30
 		const filename = 'bob.png'
 		const { data, info } = makeMediaBlob(filename, dataSize)
 		const chunkedMedia = await encryptAndSendMediaPayload(bobsClient, spaceId, info, data)
