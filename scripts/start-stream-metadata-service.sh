@@ -40,7 +40,7 @@ if ! pushd "$RUN_DIR"; then
 fi
 
 # Copy the sample env file to .env.local
-cp ./.env.local.sample ./.env.local
+cp ./.env.local-sample ./.env.local
 
 # Start the development server with the specified environment
 if [ -n "$RIVER_ENV" ]; then
