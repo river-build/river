@@ -28,6 +28,7 @@ contract InteractAlpha is Interaction, DiamondHelper, IDiamondLoupeBase {
   DeploySpaceOwner deploySpaceOwner = new DeploySpaceOwner();
 
   function __interact(address deployer) internal override {
+    vm.setEnv("OVERRIDE_DEPLOYMENTS", "1");
     address space = getDeployment("space");
     address spaceOwner = getDeployment("spaceOwner");
     address spaceFactory = getDeployment("spaceFactory");
@@ -40,7 +41,7 @@ contract InteractAlpha is Interaction, DiamondHelper, IDiamondLoupeBase {
     removeRemoteFacets(deployer, spaceFactory);
     removeRemoteFacets(deployer, baseRegistry);
 
-    // // Deploy Space
+    // Deploy Space
     deploySpace.diamondInitParams(deployer);
     newCuts = deploySpace.getCuts();
     vm.broadcast(deployer);

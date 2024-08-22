@@ -131,7 +131,8 @@ import { usernameChecksum } from './utils'
 import { isEncryptedContentKind, toDecryptedContent } from './encryptedContentTypes'
 import { ClientDecryptionExtensions } from './clientDecryptionExtensions'
 import { PersistenceStore, IPersistenceStore, StubPersistenceStore } from './persistenceStore'
-import { SyncState, SyncedStreams } from './syncedStreams'
+import { SyncedStreams } from './syncedStreams'
+import { SyncState } from './syncedStreamsLoop'
 import { SyncedStream } from './syncedStream'
 import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
@@ -413,21 +414,6 @@ export class Client
         } else {
             return undefined
         }
-    }
-
-    async userExists(userId: string): Promise<boolean> {
-        const userStreamId = makeUserStreamId(userId)
-        return this.streamExists(userStreamId)
-    }
-
-    async streamExists(streamId: string | Uint8Array): Promise<boolean> {
-        this.logCall('streamExists?', streamId)
-        const response = await this.rpcClient.getStream({
-            streamId: streamIdAsBytes(streamId),
-            optional: true,
-        })
-        this.logCall('streamExists=', streamId, response.stream)
-        return response.stream !== undefined
     }
 
     private async createUserStream(
@@ -943,7 +929,7 @@ export class Client
         check(isDefined(this.cryptoBackend))
         const stream = this.stream(streamId)
         check(isDefined(stream), 'stream not found')
-        stream.view.getUserMetadata().usernames.setLocalUsername(this.userId, username)
+        stream.view.getMemberMetadata().usernames.setLocalUsername(this.userId, username)
         const encryptedData = await this.cryptoBackend.encryptGroupEvent(streamId, username)
         encryptedData.checksum = usernameChecksum(username, streamId)
         try {
@@ -955,7 +941,7 @@ export class Client
                 },
             )
         } catch (err) {
-            stream.view.getUserMetadata().usernames.resetLocalUsername(this.userId)
+            stream.view.getMemberMetadata().usernames.resetLocalUsername(this.userId)
             throw err
         }
     }
@@ -1018,12 +1004,14 @@ export class Client
     isUsernameAvailable(streamId: string, username: string): boolean {
         const stream = this.streams.get(streamId)
         check(isDefined(stream), 'stream not found')
-        return stream.view.getUserMetadata().usernames.cleartextUsernameAvailable(username) ?? false
+        return (
+            stream.view.getMemberMetadata().usernames.cleartextUsernameAvailable(username) ?? false
+        )
     }
 
     async waitForStream(
         inStreamId: string | Uint8Array,
-        opts?: { timeoutMs?: number },
+        opts?: { timeoutMs?: number; logId?: string },
     ): Promise<Stream> {
         this.logCall('waitForStream', inStreamId)
         const timeoutMs = opts?.timeoutMs ?? 15000
@@ -1037,7 +1025,13 @@ export class Client
         await new Promise<void>((resolve, reject) => {
             const timeout = setTimeout(() => {
                 this.off('streamInitialized', handler)
-                reject(new Error(`waitForStream: timeout waiting for ${streamId}`))
+                reject(
+                    new Error(
+                        `waitForStream: timeout waiting for ${
+                            opts?.logId ? opts.logId + ' ' : ''
+                        }${streamId}`,
+                    ),
+                )
             }, timeoutMs)
             const handler = (newStreamId: string) => {
                 if (newStreamId === streamId) {
@@ -2006,14 +2000,12 @@ export class Client
             retryCount = retryCount ?? 0
             if (errorContains(err, Err.BAD_PREV_MINIBLOCK_HASH) && retryCount < 3) {
                 const expectedHash = getRpcErrorProperty(err, 'expected')
-                this.logInfo(
-                    'RETRYING event after BAD_PREV_MINIBLOCK_HASH response',
+                this.logInfo('RETRYING event after BAD_PREV_MINIBLOCK_HASH response', {
+                    syncStats: this.streams.stats(),
                     retryCount,
-                    'prevHash:',
                     prevMiniblockHash,
-                    'expectedHash:',
                     expectedHash,
-                )
+                })
                 check(isDefined(expectedHash), 'expected hash not found in error')
                 return await this.makeEventWithHashAndAddToStream(
                     streamId,
