@@ -22,9 +22,14 @@ interface IPartnerRegistryBase {
   error PartnerRegistry__NotPartnerAccount(address account);
   error PartnerRegistry__PartnerNotActive(address account);
   error PartnerRegistry__InvalidPartnerFee(uint256 fee);
+  error PartnerRegistry__InvalidRecipient();
 
   // Events
   event PartnerRegistered(address indexed account);
+  event PartnerUpdated(address indexed account);
+  event PartnerRemoved(address indexed account);
+  event MaxPartnerFeeSet(uint256 fee);
+  event RegistryFeeSet(uint256 fee);
 }
 
 interface IPartnerRegistry is IPartnerRegistryBase {
@@ -37,4 +42,15 @@ interface IPartnerRegistry is IPartnerRegistryBase {
   function updatePartner(Partner memory partner) external;
 
   function removePartner(address account) external;
+
+  // =============================================================
+  //                           Admin
+  // =============================================================
+  function maxPartnerFee() external view returns (uint256 fee);
+
+  function setMaxPartnerFee(uint256 fee) external;
+
+  function registryFee() external view returns (uint256 fee);
+
+  function setRegistryFee(uint256 fee) external;
 }

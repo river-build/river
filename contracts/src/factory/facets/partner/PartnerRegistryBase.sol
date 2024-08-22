@@ -57,24 +57,36 @@ abstract contract PartnerRegistryBase is IPartnerRegistryBase {
     if (partner.account != msg.sender)
       revert PartnerRegistry__NotPartnerAccount(msg.sender);
 
+    if (partner.recipient == address(0))
+      revert PartnerRegistry__InvalidRecipient();
+
     PartnerRegistryStorage.Layout storage ds = PartnerRegistryStorage.layout();
 
     if (!ds.partners.contains(partner.account))
       revert PartnerRegistry__PartnerNotRegistered(partner.account);
 
+    PartnerRegistryStorage.PartnerSettings memory settings = ds
+      .partnerSettingsByVersion[CURRENT_VERSION];
+
+    if (partner.fee > settings.maxPartnerFee)
+      revert PartnerRegistry__InvalidPartnerFee(partner.fee);
+
     ds.partnerByAccount[partner.account].recipient = partner.recipient;
     ds.partnerByAccount[partner.account].fee = partner.fee;
     ds.partnerByAccount[partner.account].active = partner.active;
+
+    emit PartnerUpdated(partner.account);
   }
 
   function _removePartner(address account) internal {
     PartnerRegistryStorage.Layout storage ds = PartnerRegistryStorage.layout();
 
-    if (!ds.partners.contains(account))
+    if (!ds.partners.remove(account))
       revert PartnerRegistry__PartnerNotRegistered(account);
 
-    ds.partners.remove(account);
     delete ds.partnerByAccount[account];
+
+    emit PartnerRemoved(account);
   }
 
   function _partner(
@@ -93,5 +105,29 @@ abstract contract PartnerRegistryBase is IPartnerRegistryBase {
   function _partnerFee(address account) internal view returns (uint256 fee) {
     PartnerRegistryStorage.Layout storage ds = PartnerRegistryStorage.layout();
     fee = ds.partnerByAccount[account].fee;
+  }
+
+  function _maxPartnerFee() internal view returns (uint256 fee) {
+    PartnerRegistryStorage.Layout storage ds = PartnerRegistryStorage.layout();
+    fee = ds.partnerSettingsByVersion[CURRENT_VERSION].maxPartnerFee;
+  }
+
+  function _setMaxPartnerFee(uint256 fee) internal {
+    PartnerRegistryStorage.Layout storage ds = PartnerRegistryStorage.layout();
+    ds.partnerSettingsByVersion[CURRENT_VERSION].maxPartnerFee = fee;
+
+    emit MaxPartnerFeeSet(fee);
+  }
+
+  function _registryFee() internal view returns (uint256 fee) {
+    PartnerRegistryStorage.Layout storage ds = PartnerRegistryStorage.layout();
+    fee = ds.partnerSettingsByVersion[CURRENT_VERSION].registryFee;
+  }
+
+  function _setRegistryFee(uint256 fee) internal {
+    PartnerRegistryStorage.Layout storage ds = PartnerRegistryStorage.layout();
+    ds.partnerSettingsByVersion[CURRENT_VERSION].registryFee = fee;
+
+    emit RegistryFeeSet(fee);
   }
 }

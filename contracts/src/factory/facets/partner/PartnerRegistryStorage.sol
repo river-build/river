@@ -15,14 +15,14 @@ library PartnerRegistryStorage {
 
   struct Partner {
     address recipient;
-    uint256 fee;
+    uint256 fee; // fee in basis points
     uint256 createdAt;
     bool active;
   }
 
   struct PartnerSettings {
-    uint256 registryFee;
-    uint256 maxPartnerFee;
+    uint256 registryFee; // fee in ether
+    uint256 maxPartnerFee; // fee in basis points
   }
 
   struct Layout {
@@ -32,9 +32,8 @@ library PartnerRegistryStorage {
   }
 
   function layout() internal pure returns (Layout storage ds) {
-    bytes32 slot = STORAGE_SLOT;
     assembly {
-      ds.slot := slot
+      ds.slot := STORAGE_SLOT
     }
   }
 }
