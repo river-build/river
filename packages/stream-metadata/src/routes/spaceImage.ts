@@ -143,9 +143,10 @@ function getEncryption(
 	const logger = getFunctionLogger(log, 'getEncryption')
 	switch (chunkedMedia.encryption.case) {
 		case 'aesgcm': {
-			const key = chunkedMedia.encryption.value.secretKey
-			const iv = chunkedMedia.encryption.value.iv
-			return { key, iv }
+			return {
+				key: chunkedMedia.encryption.value.secretKey,
+				iv: chunkedMedia.encryption.value.iv,
+			}
 		}
 		default:
 			logger.error(
