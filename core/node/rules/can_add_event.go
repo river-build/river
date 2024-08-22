@@ -328,7 +328,7 @@ func (params *aeParams) canAddUserMetadataPayload(payload *StreamEvent_UserMetad
 	case *UserMetadataPayload_EncryptionDevice_:
 		return aeBuilder().
 			check(params.creatorIsMember)
-	case *UserDeviceKeyPayload_ProfileImage:
+	case *UserMetadataPayload_ProfileImage:
 		return aeBuilder().
 			check(params.creatorIsMember)
 	default:

@@ -606,7 +606,7 @@ export const make_UserMetadataPayload_EncryptionDevice = (
     }
 }
 
-export const make_UserDeviceKeyPayload_ProfileImage = (
+export const make_UserMetadataPayload_ProfileImage = (
     value: EncryptedData,
 ): PlainMessage<StreamEvent>['payload'] => {
     return {

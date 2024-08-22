@@ -124,7 +124,7 @@ import {
     make_SpacePayload_UpdateChannelAutojoin,
     make_SpacePayload_UpdateChannelHideUserJoinLeaveEvents,
     make_SpacePayload_SpaceImage,
-    make_UserDeviceKeyPayload_ProfileImage,
+    make_UserMetadataPayload_ProfileImage,
 } from './types'
 
 import debug from 'debug'
@@ -931,7 +931,7 @@ export class Client
         })
 
         // add the event to the stream
-        const event = make_UserDeviceKeyPayload_ProfileImage(encryptedData)
+        const event = make_UserMetadataPayload_ProfileImage(encryptedData)
         return this.makeEventAndAddToStream(userStreamId, event, { method: 'setUserProfileImage' })
     }
 

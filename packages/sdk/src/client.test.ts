@@ -1009,13 +1009,13 @@ describe('clientTest', () => {
         await expect(await bobsClient.initializeUser()).toResolve()
         bobsClient.startSync()
         const streamId = bobsClient.userMetadataStreamId!
-        const userDeviceKeysStream = await bobsClient.waitForStream(streamId)
+        const userMetadataStream = await bobsClient.waitForStream(streamId)
 
         // assert assumptionsP
-        expect(userDeviceKeysStream).toBeDefined()
+        expect(userMetadataStream).toBeDefined()
         expect(
-            userDeviceKeysStream.view.snapshot?.content.case === 'userMetadataContent' &&
-                userDeviceKeysStream.view.snapshot?.content.value.profileImage === undefined,
+            userMetadataStream.view.snapshot?.content.case === 'userMetadataContent' &&
+                userMetadataStream.view.snapshot?.content.value.profileImage === undefined,
         ).toBe(true)
 
         // make a space image event
@@ -1036,7 +1036,7 @@ describe('clientTest', () => {
         } satisfies PlainMessage<ChunkedMedia>
 
         const { eventId } = await bobsClient.setUserProfileImage(chunkedMediaInfo)
-        expect(await waitFor(() => userDeviceKeysStream.view.events.has(eventId))).toBe(true)
+        expect(await waitFor(() => userMetadataStream.view.events.has(eventId))).toBe(true)
 
         const decrypted = await bobsClient.getUserProfileImage(bobsClient.userId)
         expect(decrypted).toBeDefined()
