@@ -75,11 +75,12 @@ describe('GET /space/:spaceAddress/image', () => {
 		}
 	})
 
-	it.only('should return status 200 with valid spaceImage', async () => {
+	it('should return status 200 with spaceImage', async () => {
 		/**
 		 * 1. create a space.
 		 * 2. upload a space image.
 		 * 3. fetch the space image from the stream-metadata server.
+		 * 4. verify the response.
 		 */
 
 		/*
@@ -136,5 +137,55 @@ describe('GET /space/:spaceAddress/image', () => {
 		expect(responseData.slice(0, magicBytes.length)).toEqual(new Uint8Array(magicBytes))
 		// Verify the entire response data matches the expected data
 		expect(responseData).toEqual(expectedData)
+	})
+
+	it('should return status 404 without spaceImage', async () => {
+		/**
+		 * 1. create a space.
+		 * 2. fetch the space image from the stream-metadata server.
+		 * 3. expect 404.
+		 */
+
+		/*
+		 * 1. create a space.
+		 */
+		const spaceId = makeUniqueSpaceStreamId()
+		const bobsClient = await makeTestClient()
+
+		await bobsClient.initializeUser()
+		bobsClient.startSync()
+
+		await bobsClient.createSpace(spaceId)
+		const spaceStream = await bobsClient.waitForStream(spaceId)
+		log('spaceStreamId', spaceStream.streamId)
+
+		// assert assumptions
+		expect(spaceStream).toBeDefined()
+		expect(
+			spaceStream.view.snapshot?.content.case === 'spaceContent' &&
+				spaceStream.view.snapshot?.content.value.spaceImage === undefined,
+		).toBe(true)
+
+		// make a snapshot
+		await bobsClient.debugForceMakeMiniblock(spaceId, { forceSnapshot: true })
+
+		/*
+		 * 2. fetch the space image from the stream-metadata server.
+		 */
+		const spaceContractAddress = contractAddressFromSpaceId(spaceId)
+		const route = `space/${spaceContractAddress}/image`
+		const expectedStatus = 404
+		try {
+			await axios.get(`${baseURL}/${route}`)
+			throw new Error(`Expected request to fail with status ${expectedStatus})`)
+		} catch (error) {
+			if (axios.isAxiosError(error)) {
+				expect(error.response).toBeDefined()
+				expect(error.response?.status).toBe(expectedStatus)
+			} else {
+				// If the error is not an Axios error, rethrow it
+				throw error
+			}
+		}
 	})
 })
