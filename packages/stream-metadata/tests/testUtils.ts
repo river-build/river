@@ -9,7 +9,6 @@ import {
 	genId,
 	makeSignerContext,
 	makeSpaceStreamId,
-	makeUniqueMediaStreamId,
 	RiverDbManager,
 	SignerContext,
 	userIdFromAddress,
