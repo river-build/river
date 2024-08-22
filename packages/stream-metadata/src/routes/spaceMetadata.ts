@@ -10,9 +10,9 @@ export function fetchSpaceMetadata(
 ) {
 	const logger = getFunctionLogger(request.log, 'fetchSpaceMetadata')
 	const { spaceAddress } = request.params as { spaceAddress?: string }
-	logger.info({ spaceAddress }, 'GET /space/../metadata')
 
 	if (!spaceAddress) {
+		logger.error('spaceAddress parameter is required')
 		return reply
 			.code(400)
 			.send({ error: 'Bad Request', message: 'spaceAddress parameter is required' })
@@ -20,6 +20,7 @@ export function fetchSpaceMetadata(
 
 	// Validate spaceAddress format using the helper function
 	if (!isValidEthereumAddress(spaceAddress)) {
+		logger.error({ spaceAddress }, 'Invalid spaceAddress format')
 		return reply
 			.code(400)
 			.send({ error: 'Bad Request', message: 'Invalid spaceAddress format' })
