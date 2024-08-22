@@ -105,7 +105,7 @@ describe('GET /space/:spaceAddress/image', () => {
 		/*
 		 * 2. upload a space image.
 		 */
-		const dataSize = 20
+		const dataSize = 100
 		const filename = 'bob.png'
 		const { data, info } = makeMediaBlob(filename, dataSize)
 		const chunkedMedia = await encryptAndSendMediaPayload(bobsClient, spaceId, info, data)
