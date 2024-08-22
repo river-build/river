@@ -31,7 +31,7 @@ export async function joinChat(client: StressClient, cfg: ChatConfig) {
 
     const announceChannel = await client.streamsClient.waitForStream(announceChannelId, {
         timeoutMs: 1000 * 60,
-        logId: 'joinChatWaitForAnnounceChannel',
+        method: 'joinChatWaitForAnnounceChannel',
     })
     let count = 0
     const message = await client.waitFor(
@@ -84,7 +84,7 @@ export async function joinChat(client: StressClient, cfg: ChatConfig) {
                 ?.view.userContent.isJoined(channelId)
         ) {
             await client.streamsClient.joinStream(channelId)
-            await client.streamsClient.waitForStream(channelId)
+            await client.streamsClient.waitForStream(channelId, { method: 'joinChat:joinChannel' })
         }
         await client.streamsClient.cryptoBackend?.ensureOutboundSession(channelId, {
             awaitInitialShareSession: true,

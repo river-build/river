@@ -58,14 +58,18 @@ async function sendAMessage() {
     )
     await alice.joinSpace(spaceId, { skipMintMembership: true })
     logger.log('=======================send a message - alice join space =======================')
-    const channel = await alice.streamsClient.waitForStream(defaultChannelId)
+    const channel = await alice.streamsClient.waitForStream(defaultChannelId, {
+        method: 'demo:alice:defaultChannel',
+    })
     logger.log('=======================send a message - alice wait =======================')
     await waitFor(() => channel.view.timeline.filter(isDecryptedEvent).length > 0)
     logger.log('alices sees: ', channel.view.timeline.filter(isDecryptedEvent))
     logger.log('=======================send a message - alice sends =======================')
     await alice.sendMessage(defaultChannelId, 'hi bob')
     logger.log('=======================send a message - alice sent =======================')
-    const bobChannel = await bob.streamsClient.waitForStream(defaultChannelId)
+    const bobChannel = await bob.streamsClient.waitForStream(defaultChannelId, {
+        method: 'demo:bob:defaultChannel',
+    })
     logger.log('=======================send a message - bob wait =======================')
     await waitFor(() => bobChannel.view.timeline.filter(isDecryptedEvent).length > 0) // bob doesn't decrypt his own messages
     logger.log('bob sees: ', bobChannel.view.timeline.filter(isDecryptedEvent))

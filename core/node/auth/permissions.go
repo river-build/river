@@ -9,7 +9,7 @@ const (
 	PermissionInvite
 	PermissionJoin
 	PermissionRedact
-	PermissionBan
+	PermissionBan	
 	PermissionPinMessages
 	PermissionAddRemoveChannels
 	PermissionModifySpaceSettings

@@ -24,7 +24,7 @@ export class Myself extends Member {
             isUsernameEncrypted: false,
         })
         return this.riverConnection
-            .withStream(streamId)
+            .withStream(streamId, { method: 'myself:setUsername' })
             .call((client) => client.setUsername(streamId, username))
             .catch((e) => {
                 usernameObservable.setData(oldState)
@@ -38,7 +38,7 @@ export class Myself extends Member {
         const oldState = displayNameObservable.data
         displayNameObservable.setData({ displayName })
         return this.riverConnection
-            .withStream(streamId)
+            .withStream(streamId, { method: 'myself:setDisplayName' })
             .call((client) => client.setDisplayName(streamId, displayName))
             .catch((e) => {
                 displayNameObservable.setData(oldState)
@@ -53,7 +53,7 @@ export class Myself extends Member {
         ensAddressObservable.setData({ ensAddress })
         const bytes = addressFromUserId(ensAddress as string)
         return this.riverConnection
-            .withStream(streamId)
+            .withStream(streamId, { method: 'myself:setEnsAddress' })
             .call((client) => client.setEnsAddress(streamId, bytes))
             .catch((e) => {
                 ensAddressObservable.setData(oldState)
@@ -74,7 +74,7 @@ export class Myself extends Member {
             },
         })
         return this.riverConnection
-            .withStream(streamId)
+            .withStream(streamId, { method: 'myself:setNft' })
             .call((client) =>
                 client.setNft(streamId, nft.tokenId, nft.chainId, nft.contractAddress),
             )

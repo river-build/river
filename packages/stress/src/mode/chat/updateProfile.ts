@@ -6,7 +6,9 @@ import { ChatConfig } from './types'
 export async function updateProfile(client: StressClient, cfg: ChatConfig) {
     const logger = dlogger(`stress:updateProfile:${client.logId}`)
     // set the name and profile picture in the space
-    const spaceStream = await client.streamsClient.waitForStream(cfg.spaceId)
+    const spaceStream = await client.streamsClient.waitForStream(cfg.spaceId, {
+        method: 'chat:updateProfile',
+    })
     const existingName = spaceStream.view?.membershipContent.memberMetadata.usernames.info(
         client.userId,
     )

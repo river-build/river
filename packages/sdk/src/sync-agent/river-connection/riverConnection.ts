@@ -112,21 +112,28 @@ export class RiverConnection extends PersistedObservable<RiverConnectionModel> {
         }
     }
 
-    withStream<T>(streamId: string): {
+    withStream<T>(
+        streamId: string,
+        opts: { timeoutMs?: number; method: string },
+    ): {
         call: (fn: (client: Client, stream: Stream) => Promise<T>) => Promise<T>
     } {
         return {
-            call: (fn) => {
+            call: (fn): Promise<T> => {
                 return this.call(async (client) => {
-                    const stream = await client.waitForStream(streamId)
+                    const stream = await client.waitForStream(streamId, opts)
                     return fn(client, stream)
                 })
             },
         }
     }
 
-    callWithStream<T>(streamId: string, fn: (client: Client, stream: Stream) => Promise<T>) {
-        return this.withStream(streamId).call(fn)
+    callWithStream<T>(
+        streamId: string,
+        opts: { timeoutMs?: number; method: string },
+        fn: (client: Client, stream: Stream) => Promise<T>,
+    ) {
+        return this.withStream(streamId, opts).call(fn)
     }
 
     registerView(viewFn: onClientStartedFn) {

@@ -1036,10 +1036,11 @@ export class Client
 
     async waitForStream(
         inStreamId: string | Uint8Array,
-        opts?: { timeoutMs?: number; logId?: string },
+        opts?: { timeoutMs?: number; method: string },
     ): Promise<Stream> {
         this.logCall('waitForStream', inStreamId)
         const timeoutMs = opts?.timeoutMs ?? 15000
+        const method = opts?.method ?? 'waitForStream'
         const streamId = streamIdAsString(inStreamId)
         let stream = this.stream(streamId)
         if (stream !== undefined && stream.view.isInitialized) {
@@ -1051,11 +1052,7 @@ export class Client
             const timeout = setTimeout(() => {
                 this.off('streamInitialized', handler)
                 reject(
-                    new Error(
-                        `waitForStream: timeout waiting for ${
-                            opts?.logId ? opts.logId + ' ' : ''
-                        }${streamId}`,
-                    ),
+                    new Error(`waitForStream: timeout waiting for ${method} streamId: ${streamId}`),
                 )
             }, timeoutMs)
             const handler = (newStreamId: string) => {
@@ -1198,7 +1195,7 @@ export class Client
                     this.logCall('initStream', streamId, 'already initialized')
                     return stream
                 } else {
-                    return this.waitForStream(streamId)
+                    return this.waitForStream(streamId, { method: 'initStream' })
                 }
             } else {
                 this.logCall('initStream creating stream', streamId)

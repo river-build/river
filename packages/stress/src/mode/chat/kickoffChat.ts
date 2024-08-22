@@ -22,7 +22,9 @@ export async function kickoffChat(rootClient: StressClient, cfg: ChatConfig) {
     logger.log('start client')
     await startRootClient(rootClient, balance, spaceId, announceChannelId)
 
-    await rootClient.streamsClient.waitForStream(announceChannelId)
+    await rootClient.streamsClient.waitForStream(announceChannelId, {
+        method: 'kickoffChat:announceChannel',
+    })
 
     logger.log('share keys')
     const shareKeysStart = Date.now()
