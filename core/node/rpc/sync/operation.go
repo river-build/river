@@ -39,6 +39,11 @@ type (
 		nodeRegistry nodes.NodeRegistry
 	}
 
+	dbgDropStreamCmd struct {
+		StreamID shared.StreamId
+		Temp     bool
+	}
+
 	// subCommand represents a request to add or remove a stream and ping sync operation
 	subCommand struct {
 		Ctx             context.Context
@@ -46,7 +51,7 @@ type (
 		AddStreamReq    *connect.Request[AddStreamToSyncRequest]
 		PingReq         *connect.Request[PingSyncRequest]
 		CancelReq       *connect.Request[CancelSyncRequest]
-		DebugDropStream shared.StreamId
+		DebugDropStream *dbgDropStreamCmd
 		reply           chan error
 	}
 )
@@ -158,8 +163,8 @@ func (syncOp *StreamSyncOperation) Run(
 					PongNonce: cmd.PingReq.Msg.GetNonce(),
 				})
 				cmd.Reply(err)
-			} else if cmd.DebugDropStream != (shared.StreamId{}) {
-				cmd.Reply(syncers.DebugDropStream(cmd.Ctx, cmd.DebugDropStream))
+			} else if cmd.DebugDropStream != nil && cmd.DebugDropStream.StreamID != (shared.StreamId{}) {
+				cmd.Reply(syncers.DebugDropStream(cmd.Ctx, cmd.DebugDropStream.StreamID, cmd.DebugDropStream.Temp))
 			} else if cmd.CancelReq != nil {
 				_ = res.Send(&SyncStreamsResponse{
 					SyncId: syncOp.SyncID,
@@ -269,10 +274,14 @@ func (syncOp *StreamSyncOperation) PingSync(
 	return connect.NewResponse(&PingSyncResponse{}), nil
 }
 
-func (syncOp *StreamSyncOperation) debugDropStream(ctx context.Context, streamID shared.StreamId) error {
+func (syncOp *StreamSyncOperation) debugDropStream(
+	ctx context.Context,
+	streamID shared.StreamId,
+	temporarilyDown bool,
+) error {
 	cmd := &subCommand{
 		Ctx:             ctx,
-		DebugDropStream: streamID,
+		DebugDropStream: &dbgDropStreamCmd{StreamID: streamID, Temp: temporarilyDown},
 		reply:           make(chan error, 1),
 	}
 

@@ -21,7 +21,7 @@ type (
 	}
 
 	DebugStreamsSyncer interface {
-		DebugDropStream(ctx context.Context, streamID StreamId) (bool, error)
+		DebugDropStream(ctx context.Context, streamID StreamId, temp bool) (bool, error)
 	}
 
 	// SyncerSet is the set of StreamsSyncers that are used for a sync operation.
@@ -239,7 +239,7 @@ func (ss *SyncerSet) RemoveStream(ctx context.Context, streamID StreamId) error 
 	return nil
 }
 
-func (ss *SyncerSet) DebugDropStream(ctx context.Context, streamID StreamId) error {
+func (ss *SyncerSet) DebugDropStream(ctx context.Context, streamID StreamId, temp bool) error {
 	ss.muSyncers.Lock()
 	defer ss.muSyncers.Unlock()
 
@@ -256,7 +256,7 @@ func (ss *SyncerSet) DebugDropStream(ctx context.Context, streamID StreamId) err
 			Tags("syncId", ss.syncID, "streamId", streamID)
 	}
 
-	syncerStopped, err := debugSyncer.DebugDropStream(ctx, streamID)
+	syncerStopped, err := debugSyncer.DebugDropStream(ctx, streamID, temp)
 	if err != nil {
 		return err
 	}

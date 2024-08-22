@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-
 	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/utils"

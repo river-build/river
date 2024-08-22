@@ -210,7 +210,7 @@ func (sub *testStreamCacheViewEvictionSub) OnSyncError(err error) {
 	sub.receivedErrors = append(sub.receivedErrors, err)
 }
 
-func (sub *testStreamCacheViewEvictionSub) OnStreamSyncDown(streamID shared.StreamId) {
+func (sub *testStreamCacheViewEvictionSub) OnStreamSyncDown(streamID shared.StreamId, temp bool) {
 	sub.streamErrors = append(sub.streamErrors, streamID)
 }
 

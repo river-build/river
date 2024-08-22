@@ -38,7 +38,7 @@ type SyncResultReceiver interface {
 	// OnSyncError is called when a sync subscription failed unrecoverable
 	OnSyncError(err error)
 	// OnStreamSyncDown is called when updates for a stream could not be given.
-	OnStreamSyncDown(StreamId)
+	OnStreamSyncDown(streamID StreamId, temporarily bool)
 }
 
 // TODO: refactor interfaces.

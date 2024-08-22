@@ -96,10 +96,18 @@ func (s *Service) debugDropStream(
 		return nil, RiverError(Err_DEBUG_ERROR, "drop_stream requires a sync id and stream id")
 	}
 
+	temporarilyDown := false
 	syncID := request.Msg.Debug[1]
 	streamID, err := shared.StreamIdFromString(request.Msg.Debug[2])
 	if err != nil {
 		return nil, err
+	}
+
+	if len(request.Msg.Debug) > 3 {
+		temporarilyDown, err = strconv.ParseBool(request.Msg.Debug[3])
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	dbgHandler, ok := s.syncHandler.(sync.DebugHandler)
@@ -107,7 +115,7 @@ func (s *Service) debugDropStream(
 		return nil, RiverError(Err_UNAVAILABLE, "Drop stream not supported")
 	}
 
-	if err = dbgHandler.DebugDropStream(ctx, syncID, streamID); err != nil {
+	if err = dbgHandler.DebugDropStream(ctx, syncID, streamID, temporarilyDown); err != nil {
 		return nil, err
 	}
 

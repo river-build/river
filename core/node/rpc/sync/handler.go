@@ -54,6 +54,7 @@ type (
 			ctx context.Context,
 			syncID string,
 			streamID shared.StreamId,
+			temporarilyDown bool,
 		) error
 	}
 
@@ -174,9 +175,10 @@ func (h *handlerImpl) DebugDropStream(
 	ctx context.Context,
 	syncID string,
 	streamID shared.StreamId,
+	temporarilyDown bool,
 ) error {
 	if op, ok := h.activeSyncOperations.Load(syncID); ok {
-		return op.(*StreamSyncOperation).debugDropStream(ctx, streamID)
+		return op.(*StreamSyncOperation).debugDropStream(ctx, streamID, temporarilyDown)
 	}
 	return RiverError(Err_NOT_FOUND, "unknown sync operation").Tag("syncId", syncID)
 }

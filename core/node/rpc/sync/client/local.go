@@ -116,14 +116,14 @@ func (s *localSyncer) OnSyncError(error) {
 	for streamID, syncStream := range s.activeStreams {
 		syncStream.Unsub(s)
 		delete(s.activeStreams, streamID)
-		s.OnStreamSyncDown(streamID)
+		s.OnStreamSyncDown(streamID, true)
 	}
 }
 
 // OnStreamSyncDown is called when updates for a stream could not be given.
-func (s *localSyncer) OnStreamSyncDown(streamID StreamId) {
+func (s *localSyncer) OnStreamSyncDown(streamID StreamId, temporarily bool) {
 	select {
-	case s.messages <- &SyncStreamsResponse{SyncOp: SyncOp_SYNC_DOWN, StreamId: streamID[:]}:
+	case s.messages <- &SyncStreamsResponse{SyncOp: SyncOp_SYNC_DOWN, StreamId: streamID[:], SyncDownTemp: temporarily}:
 		return
 	case <-s.syncStreamCtx.Done():
 		return
@@ -161,7 +161,7 @@ func (s *localSyncer) addStream(ctx context.Context, streamID StreamId, cookie *
 	return nil
 }
 
-func (s *localSyncer) DebugDropStream(_ context.Context, streamID StreamId) (bool, error) {
+func (s *localSyncer) DebugDropStream(_ context.Context, streamID StreamId, temp bool) (bool, error) {
 	s.activeStreamsMu.Lock()
 	defer s.activeStreamsMu.Unlock()
 
@@ -169,7 +169,7 @@ func (s *localSyncer) DebugDropStream(_ context.Context, streamID StreamId) (boo
 	if found {
 		syncStream.Unsub(s)
 		delete(s.activeStreams, streamID)
-		s.OnStreamSyncDown(streamID)
+		s.OnStreamSyncDown(streamID, temp)
 		return false, nil
 	}
 

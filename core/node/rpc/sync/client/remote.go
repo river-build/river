@@ -141,7 +141,7 @@ func (s *remoteSyncer) Run() {
 			streamID := key.(StreamId)
 			log.Debug("stream down", "syncId", s.forwarderSyncID, "remote", s.remoteAddr, "stream", streamID)
 
-			msg := &SyncStreamsResponse{SyncOp: SyncOp_SYNC_DOWN, StreamId: streamID[:]}
+			msg := &SyncStreamsResponse{SyncOp: SyncOp_SYNC_DOWN, StreamId: streamID[:], SyncDownTemp: true}
 
 			// TODO: slow down a bit to give client time to read stream down updates
 			if err := s.sendSyncStreamResponseToClient(msg); err != nil {
@@ -263,11 +263,12 @@ func (s *remoteSyncer) RemoveStream(ctx context.Context, streamID StreamId) (boo
 	return noMoreStreams, err
 }
 
-func (s *remoteSyncer) DebugDropStream(ctx context.Context, streamID StreamId) (bool, error) {
+func (s *remoteSyncer) DebugDropStream(ctx context.Context, streamID StreamId, temp bool) (bool, error) {
 	if _, err := s.client.Info(ctx, connect.NewRequest(&InfoRequest{Debug: []string{
 		"drop_stream",
 		s.syncID,
 		streamID.String(),
+		fmt.Sprintf("%v", temp),
 	}})); err != nil {
 		return false, AsRiverError(err)
 	}

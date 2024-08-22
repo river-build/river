@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/river-build/river/core/node/base"
 	"math/rand"
 	"net"
 	"net/http"
@@ -22,6 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	eth_crypto "github.com/ethereum/go-ethereum/crypto"
+	"github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
@@ -1115,7 +1115,7 @@ func TestUnstableStreams(t *testing.T) {
 	var (
 		messages           = make(chan string, 512)
 		mu                 sync.Mutex
-		streamDownMessages = make(map[StreamId]struct{})
+		streamDownMessages = make(map[StreamId]bool)
 		syncCookies        = make(map[StreamId][]*protocol.StreamAndCookie)
 	)
 
@@ -1156,6 +1156,7 @@ func TestUnstableStreams(t *testing.T) {
 				}
 
 			case protocol.SyncOp_SYNC_DOWN:
+				req.True(msg.SyncDownTemp, "expected stream sync down temp")
 				req.Equal(syncID, msg.GetSyncId(), "sync id")
 				streamID, err := StreamIdFromBytes(msg.GetStreamId())
 				req.NoError(err, "stream id")
@@ -1165,7 +1166,7 @@ func TestUnstableStreams(t *testing.T) {
 					t.Error("received a second down message in a row for a stream")
 					return
 				}
-				streamDownMessages[streamID] = struct{}{}
+				streamDownMessages[streamID] = msg.SyncDownTemp
 				mu.Unlock()
 
 			case protocol.SyncOp_SYNC_CLOSE:
@@ -1232,6 +1233,7 @@ func TestUnstableStreams(t *testing.T) {
 			"drop_stream",
 			syncID,
 			streamID.String(),
+			"true",
 		}})); err != nil {
 			req.NoError(err, "unable to bring stream down")
 		}
@@ -1358,7 +1360,7 @@ func TestUnstableStreams(t *testing.T) {
 	)
 
 	mu.Lock()
-	streamDownMessages = map[StreamId]struct{}{}
+	streamDownMessages = make(map[StreamId]bool)
 	mu.Unlock()
 
 	for _, pos := range syncPos {
@@ -1373,6 +1375,7 @@ func TestUnstableStreams(t *testing.T) {
 			"drop_stream",
 			syncID,
 			targetStream.String(),
+			"true",
 		}}))
 		req.NoError(err, "drop stream")
 	}
