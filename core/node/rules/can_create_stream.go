@@ -529,9 +529,9 @@ func (ru *csMediaRules) checkMediaInceptionPayload() error {
 			fmt.Sprintf("chunk count must be less than or equal to %d", ru.params.maxChunkCount),
 		)
 	}
-	// check if channel id is nil , space id is nil, user id is not nil
-	if len(ru.inception.ChannelId) == 0 && len(ru.inception.SpaceId) == 0 && len(ru.inception.UserId) == 20 {
-		// TODO: check if user id is valid
+
+	// TODO: so user id is more like user stream id?
+	if len(ru.inception.ChannelId) == 0 && len(ru.inception.SpaceId) == 0 && shared.ValidUserStreamIdBytes(ru.inception.UserId) {
 		return nil
 	}
 
