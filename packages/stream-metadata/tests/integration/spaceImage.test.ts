@@ -13,7 +13,7 @@ import {
 	makeUniqueSpaceStreamId,
 } from '../testUtils'
 
-const log = dlog('stream-metadata:test', {
+const log = dlog('stream-metadata:test:spaceImage', {
 	allowJest: true,
 	defaultEnabled: true,
 })

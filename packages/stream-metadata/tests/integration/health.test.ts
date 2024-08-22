@@ -6,7 +6,7 @@ import { dlog } from '@river-build/dlog'
 
 import { getTestServerUrl } from '../testUtils'
 
-const log = dlog('stream-metadata:test', {
+const log = dlog('stream-metadata:test:health', {
 	allowJest: true,
 	defaultEnabled: true,
 })
