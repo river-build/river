@@ -136,13 +136,7 @@ import { SyncState } from './syncedStreamsLoop'
 import { SyncedStream } from './syncedStream'
 import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
-import {
-    decryptAESGCM,
-    decryptDerivedAESGCM,
-    deriveKeyAndIV,
-    encryptAESGCM,
-    uint8ArrayToBase64,
-} from './crypto_utils'
+import { decryptAESGCM, deriveKeyAndIV, encryptAESGCM, uint8ArrayToBase64 } from './crypto_utils'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
@@ -875,14 +869,6 @@ export class Client
             }),
             { method: 'updateUserBlock' },
         )
-    }
-
-    async decryptSpaceImage(spaceId: string, encryptedData: EncryptedData): Promise<ChunkedMedia> {
-        this.logCall('getDecryptedSpaceImage', spaceId)
-
-        const keyPhrase = contractAddressFromSpaceId(spaceId)
-        const plaintext = await decryptDerivedAESGCM(keyPhrase, encryptedData)
-        return ChunkedMedia.fromBinary(plaintext)
     }
 
     async setSpaceImage(spaceStreamId: string, chunkedMediaInfo: PlainMessage<ChunkedMedia>) {
