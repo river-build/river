@@ -28,8 +28,8 @@ export async function fetchUserProfileImage(request: FastifyRequest, reply: Fast
 
 	let stream: StreamStateView | undefined
 	try {
-		const userDeviceKeyStreamId = makeStreamId(StreamPrefix.UserDevice, userId)
-		stream = await getStream(logger, userDeviceKeyStreamId)
+		const userMetadataStreamId = makeStreamId(StreamPrefix.UserMetadata, userId)
+		stream = await getStream(logger, userMetadataStreamId)
 	} catch (error) {
 		logger.error(
 			{
@@ -127,10 +127,10 @@ export async function fetchUserProfileImage(request: FastifyRequest, reply: Fast
 }
 
 async function getUserProfileImage(streamView: StreamStateView): Promise<ChunkedMedia | undefined> {
-	if (streamView.contentKind !== 'userDeviceKeyContent') {
+	if (streamView.contentKind !== 'userMetadataContent') {
 		return undefined
 	}
 
-	const userImage = await streamView.userDeviceKeyContent.getProfileImage()
+	const userImage = await streamView.userMetadataContent.getProfileImage()
 	return userImage
 }
