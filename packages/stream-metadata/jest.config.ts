@@ -22,9 +22,10 @@ const config: Config.InitialOptions = {
 	verbose: true,
 	globals: {
     'ts-jest': {
-      tsconfig: './tsconfig.test.json',
+      tsconfig: './tsconfig.test.json',  // Use the correct tsconfig for tests
     },
   },
+	testMatch: ['**/?(*.)+(test).ts'],
 }
 
 export default config
