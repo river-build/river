@@ -1,3 +1,9 @@
+import { Members } from './members/members'
+import { MemberMembership } from './members/models/membership'
+import { MemberDisplayName } from './members/models/metadata/displayName'
+import { MemberEnsAddress } from './members/models/metadata/ensAddress'
+import { MemberNft } from './members/models/metadata/nft'
+import { MemberUsername } from './members/models/metadata/username'
 import { RiverChain } from './river-connection/models/riverChain'
 import { RiverConnection } from './river-connection/riverConnection'
 import { Channel } from './spaces/models/channel'
@@ -21,4 +27,10 @@ export const DB_MODELS = [
     UserInbox,
     UserMemberships,
     UserSettings,
+    Members,
+    MemberUsername,
+    MemberDisplayName,
+    MemberEnsAddress,
+    MemberNft,
+    MemberMembership,
 ]
