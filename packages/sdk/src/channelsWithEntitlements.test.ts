@@ -274,9 +274,19 @@ describe('channelsWithEntitlements', () => {
         )
         expect(channelError).toBeUndefined()
 
+        // Then, establish a stream for the channel on the river node.
+        const { streamId: channelStreamId } = await bob.createChannel(
+            spaceId,
+            'double-role-gated-channel',
+            'user only needs a single role to get into this channel',
+            channelId!,
+        )
+        expect(channelStreamId).toEqual(channelId)
+
         // Mint an NFT for alice so that she satisfies the second role
         await TestERC721.publicMint('TestNFT2', alicesWallet.address as Address)
 
+        // Join alice to the channel
         await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
     })
 
