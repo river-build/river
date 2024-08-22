@@ -43,6 +43,9 @@ export class StreamStateView_UserMetadata extends StreamStateView_AbstractConten
         for (const value of content.encryptionDevices) {
             this.addUserDeviceKey(value, encryptionEmitter, undefined)
         }
+        if (content.profileImage?.data) {
+            this.addProfileImage(content.profileImage.data)
+        }
     }
 
     prependEvent(
@@ -51,7 +54,7 @@ export class StreamStateView_UserMetadata extends StreamStateView_AbstractConten
         _encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
         _stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
     ): void {
-        // nohing to do
+        // nothing to do
     }
 
     appendEvent(
@@ -69,7 +72,7 @@ export class StreamStateView_UserMetadata extends StreamStateView_AbstractConten
                 this.addUserDeviceKey(payload.content.value, encryptionEmitter, stateEmitter)
                 break
             case 'profileImage':
-                this.encryptedProfileImage = payload.content.value
+                this.addProfileImage(payload.content.value, stateEmitter)
                 break
             case undefined:
                 break
@@ -94,6 +97,14 @@ export class StreamStateView_UserMetadata extends StreamStateView_AbstractConten
         this.deviceKeys.push(device)
         encryptionEmitter?.emit('userDeviceKeyMessage', this.streamId, this.streamCreatorId, device)
         stateEmitter?.emit('userDeviceKeysUpdated', this.streamId, this.deviceKeys)
+    }
+
+    private addProfileImage(
+        data: EncryptedData,
+        stateEmitter?: TypedEmitter<StreamStateEvents> | undefined,
+    ) {
+        this.encryptedProfileImage = data
+        stateEmitter?.emit('userProfileImageUpdated', this.streamId)
     }
 
     public async getProfileImage() {
