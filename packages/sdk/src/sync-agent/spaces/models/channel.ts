@@ -9,6 +9,7 @@ import { isDefined } from '../../../check'
 import { Observable } from '../../../observable/observable'
 import { StreamConnectionStatus } from '../../streams/models/streamConnectionStatus'
 import { ChannelDetails, SpaceDapp } from '@river-build/web3'
+import { Members } from '../../members/members'
 
 const logger = dlogger('csb:channel')
 
@@ -23,6 +24,7 @@ export interface ChannelModel extends Identifiable {
 export class Channel extends PersistedObservable<ChannelModel> {
     connectionStatus = new Observable<StreamConnectionStatus>(StreamConnectionStatus.connecting)
     timeline: Timeline
+    members: Members
     constructor(
         id: string,
         spaceId: string,
@@ -32,6 +34,7 @@ export class Channel extends PersistedObservable<ChannelModel> {
     ) {
         super({ id, spaceId, isJoined: false }, store)
         this.timeline = new Timeline(riverConnection.userId)
+        this.members = new Members(id, riverConnection, store)
     }
 
     protected override async onLoaded() {
