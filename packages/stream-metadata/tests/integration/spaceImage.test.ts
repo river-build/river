@@ -1,6 +1,3 @@
-/**
- * @group integration/stream-metadata
- */
 import axios from 'axios'
 import { dlog } from '@river-build/dlog'
 import { contractAddressFromSpaceId } from '@river-build/sdk'
@@ -20,7 +17,7 @@ const log = dlog('stream-metadata:test:spaceImage', {
 
 //const log = console.log
 
-describe('GET /space/:spaceAddress/image', () => {
+describe('integration/stream-metadata/space/:spaceAddress/image', () => {
 	const baseURL = getTestServerUrl()
 	log('baseURL', baseURL)
 

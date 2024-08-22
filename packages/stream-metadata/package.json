@@ -15,7 +15,8 @@
 		"run-build": "dotenv -e .env.local yarn build && node ./dist/node_esbuild.cjs",
 		"prettier": "prettier --config ../prettier-config/config.js --ignore-path .prettierignore .",
 		"start": "yarn build && node ./dist/node_esbuild.cjs",
-		"test": "dotenv -e .env.test -- node --experimental-vm-modules $(yarn bin jest)"
+		"test": "dotenv -e .env.test -- node --experimental-vm-modules $(yarn bin jest)",
+  	"test:integration": "yarn test --testNamePattern='integration/stream-metadata'"
 	},
 	"dependencies": {
 		"@bufbuild/buf": "^1.32.0",
