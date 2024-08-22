@@ -16,7 +16,7 @@
 		"prettier": "prettier --config ../prettier-config/config.js --ignore-path .prettierignore .",
 		"start": "yarn build && node ./dist/node_esbuild.cjs",
 		"test": "dotenv -e .env.test -- node --experimental-vm-modules $(yarn bin jest)",
-  	"test:integration": "yarn test --testNamePattern='integration/stream-metadata'"
+		"test:integration": "yarn test --testNamePattern='integration/stream-metadata'"
 	},
 	"dependencies": {
 		"@bufbuild/buf": "^1.32.0",
@@ -49,6 +49,7 @@
 		"@types/uuid": "^10.0.0",
 		"@typescript-eslint/parser": "^7.14.1",
 		"axios": "^1.2.6",
+		"dotenv-cli": "^7.4.2",
 		"esbuild": "^0.21.5",
 		"eslint": "^8.53.0",
 		"eslint-config-prettier": "^8.8.0",
