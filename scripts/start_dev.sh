@@ -119,7 +119,8 @@ commands=(
     "watch_go:cd protocol && yarn watch:go"
     "core_multi:./core/node/run_multi.sh -r"
     "core_multi_ne:./core/node/run_multi.sh -r --de"
-    "river_stream_metadata:./scripts/start-stream-metadata-service.sh"
+    "river_stream_metadata_multi:./scripts/start-stream-metadata-service.sh"
+    "river_stream_metadata_multi_ne:./scripts/start-stream-metadata-service.sh -e local_multi_ne"
 )
 
 # Create a Tmux window for each command
