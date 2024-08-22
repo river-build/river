@@ -1,6 +1,3 @@
-/**
- * @group integration/stream-metadata
- */
 import axios from 'axios'
 import { dlog } from '@river-build/dlog'
 
@@ -11,7 +8,7 @@ const log = dlog('stream-metadata:test:spaceMetadata', {
 	defaultEnabled: true,
 })
 
-describe('GET /space/:spaceAddress', () => {
+describe('integration/space/:spaceAddress', () => {
 	const baseURL = getTestServerUrl()
 	log('baseURL', baseURL)
 
