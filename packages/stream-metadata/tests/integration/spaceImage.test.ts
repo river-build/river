@@ -3,9 +3,7 @@
  */
 import axios from 'axios'
 import { dlog } from '@river-build/dlog'
-import { contractAddressFromSpaceId, deriveKeyAndIV } from '@river-build/sdk'
-import { ChunkedMedia } from '@river-build/proto'
-import { PlainMessage } from '@bufbuild/protobuf'
+import { contractAddressFromSpaceId } from '@river-build/sdk'
 
 import {
 	encryptAndSendMediaPayload,
