@@ -1,5 +1,3 @@
--include .env
-
 .PHONY: all test clean deploy-base-anvil
 
 all: clean install build
@@ -48,19 +46,19 @@ deploy-any-local :;
 	@echo "Running $(contract) on local chain"
 	@SAVE_DEPLOYMENTS=1 $(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
 	forge script scripts/deployments/${type}/${contract}.s.sol:${contract} \
-	--ffi --rpc-url ${rpc} --private-key ${LOCAL_PRIVATE_KEY} --broadcast
+	--ffi --rpc-url ${rpc} --private-key ${private_key} --broadcast
 
 interact-any-local :;
 	@echo "Running $(contract) on local chain"
 	@SAVE_DEPLOYMENTS=1 $(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
 	forge script scripts/interactions/${contract}.s.sol:${contract} \
-	--ffi --rpc-url ${rpc} --private-key ${LOCAL_PRIVATE_KEY} --broadcast
+	--ffi --rpc-url ${rpc} --private-key ${private_key} --broadcast
 
 fork-any-local :;
 	@echo "Running $(contract) on a forked local network"
 	@$(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
 	forge script scripts/interactions/${contract}.s.sol:${contract} \
-	--ffi --fork-url ${rpc} --private-key ${LOCAL_PRIVATE_KEY}
+	--ffi --fork-url ${rpc} --private-key ${private_key}
 
 deploy-any :;
 	@echo "Running $(contract) on remote network"
@@ -166,13 +164,13 @@ interact-river-anvil :;
 # 			River Testnet
 # ===========================
 deploy-river-testnet :;
-	@$(MAKE) deploy-any rpc=river_devnet private_key=${TESTNET_PRIVATE_KEY}
+	@$(MAKE) deploy-any rpc=river_devnet private_key=${private_key}
 
 interact-river-testnet :;
-	@$(MAKE) interact-any rpc=river_devnet private_key=${TESTNET_PRIVATE_KEY}
+	@$(MAKE) interact-any rpc=river_devnet private_key=${private_key}
 
 fork-river-testnet :;
-	@$(MAKE) fork-any rpc=river_devnet private_key=${TESTNET_PRIVATE_KEY}
+	@$(MAKE) fork-any rpc=river_devnet private_key=${private_key}
 
 verify-river-testnet :;
 	@$(MAKE) verify-any rpc=river_devnet
@@ -185,14 +183,14 @@ deploy-ledger-base-sepolia :;
 	@$(MAKE) resume-any-ledger rpc=base_sepolia hd_path=${HD_PATH} sender=${SENDER_ADDRESS} verifier=${BASESCAN_SEPOLIA_URL} etherscan=${BASESCAN_API_KEY}
 
 deploy-base-sepolia :;
-	@$(MAKE) deploy-any rpc=base_sepolia private_key=${TESTNET_PRIVATE_KEY}
-	@$(MAKE) resume-any rpc=base_sepolia private_key=${TESTNET_PRIVATE_KEY} verifier=${BASESCAN_SEPOLIA_URL} etherscan=${BASESCAN_API_KEY}
+	@$(MAKE) deploy-any rpc=base_sepolia private_key=${private_key}
+	@$(MAKE) resume-any rpc=base_sepolia private_key=${private_key} verifier=${BASESCAN_SEPOLIA_URL} etherscan=${BASESCAN_API_KEY}
 
 interact-base-sepolia :;
-	@$(MAKE) interact-any rpc=base_sepolia private_key=${TESTNET_PRIVATE_KEY}
+	@$(MAKE) interact-any rpc=base_sepolia private_key=${private_key}
 
 fork-base-sepolia :;
-	@$(MAKE) fork-any rpc=base_sepolia private_key=${TESTNET_PRIVATE_KEY}
+	@$(MAKE) fork-any rpc=base_sepolia private_key=${private_key}
 
 verify-base-sepolia :;
 	@$(MAKE) verify-any rpc=base_sepolia
@@ -203,13 +201,13 @@ verify-base-sepolia :;
 # ===========================
 
 deploy-sepolia :;
-	@$(MAKE) deploy-any rpc=sepolia private_key=${TESTNET_PRIVATE_KEY}
+	@$(MAKE) deploy-any rpc=sepolia private_key=${private_key}
 
 interact-sepolia :;
-	@$(MAKE) interact-any rpc=sepolia private_key=${TESTNET_PRIVATE_KEY}
+	@$(MAKE) interact-any rpc=sepolia private_key=${private_key}
 
 fork-sepolia :;
-	@$(MAKE) fork-any rpc=sepolia private_key=${TESTNET_PRIVATE_KEY}
+	@$(MAKE) fork-any rpc=sepolia private_key=${private_key}
 
 verify-sepolia :;
 	@$(MAKE) verify-any rpc=sepolia
@@ -237,11 +235,11 @@ interact-base :;
 	@$(MAKE) interact-any-ledger rpc=base hd_path=${HD_PATH} sender=${SENDER_ADDRESS}
 
 fork-base :;
-	@$(MAKE) fork-any rpc=base private_key=${TESTNET_PRIVATE_KEY}
+	@$(MAKE) fork-any rpc=base private_key=${private_key}
 
 verify-base :;
 	@$(MAKE) verify-any rpc=base
-	@$(MAKE) explicit-verify-any rpc=base verifier=${BLOCKSCOUT_BASE_URL} etherscan=${BLOCKSCOUT_BASE_API_KEY}
+	@$(MAKE) explicit-verify-any rpc=base
 
 # ===========================
 # 				Mainnet
@@ -253,7 +251,7 @@ interact-mainnet :;
 	@$(MAKE) interact-any-ledger rpc=mainnet hd_path=${HD_PATH} sender=${SENDER_ADDRESS}
 
 fork-mainnet :;
-	@$(MAKE) fork-any rpc=mainnet private_key=${TESTNET_PRIVATE_KEY}
+	@$(MAKE) fork-any rpc=mainnet private_key=${private_key}
 
 verify-mainnet :;
 	@$(MAKE) verify-any rpc=mainnet
@@ -270,17 +268,17 @@ deploy-alpha-base-anvil:;
 	@$(MAKE) deploy-any-local context=alpha rpc=base_anvil
 
 deploy-alpha-sepolia :;
-	@$(MAKE) deploy-any context=alpha rpc=sepolia private_key=${TESTNET_PRIVATE_KEY}
+	@$(MAKE) deploy-any context=alpha rpc=sepolia private_key=${private_key}
 
 deploy-alpha-base-sepolia :;
-	@$(MAKE) deploy-any context=alpha rpc=base_sepolia private_key=${TESTNET_PRIVATE_KEY}
-	@$(MAKE) resume-any context=alpha rpc=base_sepolia private_key=${TESTNET_PRIVATE_KEY} verifier=${BASESCAN_SEPOLIA_URL} etherscan=${BASESCAN_API_KEY}
+	@$(MAKE) deploy-any context=alpha rpc=base_sepolia private_key=${private_key}
+	@$(MAKE) resume-any context=alpha rpc=base_sepolia private_key=${private_key} verifier=${BASESCAN_SEPOLIA_URL} etherscan=${BASESCAN_API_KEY}
 
 interact-alpha-base-sepolia :;
-	$(MAKE) interact-any context=alpha rpc=base_sepolia private_key=${TESTNET_PRIVATE_KEY}
+	$(MAKE) interact-any context=alpha rpc=base_sepolia private_key=${private_key}
 
 deploy-alpha-river-testnet :;
-	@$(MAKE) deploy-any context=alpha rpc=river_devnet private_key=${TESTNET_PRIVATE_KEY}
+	@$(MAKE) deploy-any context=alpha rpc=river_devnet private_key=${private_key}
 
 # ===========================
 # 				OMEGA
