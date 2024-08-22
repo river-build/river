@@ -136,13 +136,7 @@ import { SyncState } from './syncedStreamsLoop'
 import { SyncedStream } from './syncedStream'
 import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
-import {
-    decryptAESGCM,
-    decryptDerivedAESGCM,
-    deriveKeyAndIV,
-    encryptAESGCM,
-    uint8ArrayToBase64,
-} from './crypto_utils'
+import { decryptAESGCM, deriveKeyAndIV, encryptAESGCM, uint8ArrayToBase64 } from './crypto_utils'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
@@ -877,14 +871,6 @@ export class Client
         )
     }
 
-    async decryptSpaceImage(spaceId: string, encryptedData: EncryptedData): Promise<ChunkedMedia> {
-        this.logCall('getDecryptedSpaceImage', spaceId)
-
-        const keyPhrase = contractAddressFromSpaceId(spaceId)
-        const plaintext = await decryptDerivedAESGCM(keyPhrase, encryptedData)
-        return ChunkedMedia.fromBinary(plaintext)
-    }
-
     async setSpaceImage(spaceStreamId: string, chunkedMediaInfo: PlainMessage<ChunkedMedia>) {
         this.logCall(
             'setSpaceImage',
@@ -929,7 +915,7 @@ export class Client
         check(isDefined(this.cryptoBackend))
         const stream = this.stream(streamId)
         check(isDefined(stream), 'stream not found')
-        stream.view.getUserMetadata().usernames.setLocalUsername(this.userId, username)
+        stream.view.getMemberMetadata().usernames.setLocalUsername(this.userId, username)
         const encryptedData = await this.cryptoBackend.encryptGroupEvent(streamId, username)
         encryptedData.checksum = usernameChecksum(username, streamId)
         try {
@@ -941,7 +927,7 @@ export class Client
                 },
             )
         } catch (err) {
-            stream.view.getUserMetadata().usernames.resetLocalUsername(this.userId)
+            stream.view.getMemberMetadata().usernames.resetLocalUsername(this.userId)
             throw err
         }
     }
@@ -1004,12 +990,14 @@ export class Client
     isUsernameAvailable(streamId: string, username: string): boolean {
         const stream = this.streams.get(streamId)
         check(isDefined(stream), 'stream not found')
-        return stream.view.getUserMetadata().usernames.cleartextUsernameAvailable(username) ?? false
+        return (
+            stream.view.getMemberMetadata().usernames.cleartextUsernameAvailable(username) ?? false
+        )
     }
 
     async waitForStream(
         inStreamId: string | Uint8Array,
-        opts?: { timeoutMs?: number },
+        opts?: { timeoutMs?: number; logId?: string },
     ): Promise<Stream> {
         this.logCall('waitForStream', inStreamId)
         const timeoutMs = opts?.timeoutMs ?? 15000
@@ -1023,7 +1011,13 @@ export class Client
         await new Promise<void>((resolve, reject) => {
             const timeout = setTimeout(() => {
                 this.off('streamInitialized', handler)
-                reject(new Error(`waitForStream: timeout waiting for ${streamId}`))
+                reject(
+                    new Error(
+                        `waitForStream: timeout waiting for ${
+                            opts?.logId ? opts.logId + ' ' : ''
+                        }${streamId}`,
+                    ),
+                )
             }, timeoutMs)
             const handler = (newStreamId: string) => {
                 if (newStreamId === streamId) {
@@ -1992,14 +1986,12 @@ export class Client
             retryCount = retryCount ?? 0
             if (errorContains(err, Err.BAD_PREV_MINIBLOCK_HASH) && retryCount < 3) {
                 const expectedHash = getRpcErrorProperty(err, 'expected')
-                this.logInfo(
-                    'RETRYING event after BAD_PREV_MINIBLOCK_HASH response',
+                this.logInfo('RETRYING event after BAD_PREV_MINIBLOCK_HASH response', {
+                    syncStats: this.streams.stats(),
                     retryCount,
-                    'prevHash:',
                     prevMiniblockHash,
-                    'expectedHash:',
                     expectedHash,
-                )
+                })
                 check(isDefined(expectedHash), 'expected hash not found in error')
                 return await this.makeEventWithHashAndAddToStream(
                     streamId,
