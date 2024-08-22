@@ -15,8 +15,6 @@ const log = dlog('stream-metadata:test:spaceImage', {
 	defaultEnabled: true,
 })
 
-//const log = console.log
-
 describe('integration/stream-metadata/space/:spaceAddress/image', () => {
 	const baseURL = getTestServerUrl()
 	log('baseURL', baseURL)
