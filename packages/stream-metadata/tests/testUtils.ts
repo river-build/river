@@ -153,13 +153,13 @@ export async function encryptAndSendMediaPayload(
 		throw new Error('Failed to create media stream')
 	}
 
-	const chunkIndex = 0
+	let chunkIndex = 0
 	for (let i = 0; i < ciphertext.length; i += chunkSize) {
 		const chunk = ciphertext.slice(i, i + chunkSize)
 		const { prevMiniblockHash } = await client.sendMediaPayload(
 			mediaStreamInfo.streamId,
 			chunk,
-			chunkIndex,
+			chunkIndex++,
 			mediaStreamInfo.prevMiniblockHash,
 		)
 		mediaStreamInfo.prevMiniblockHash = prevMiniblockHash
