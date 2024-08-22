@@ -119,10 +119,11 @@ export async function makeUserContextFromWallet(wallet: ethers.Wallet): Promise<
 	return makeSignerContext(userPrimaryWallet, delegateWallet, { days: 1 })
 }
 
-export function makeMediaBlob(
-	filename: string,
-	fillSize: number,
-): { data: Uint8Array; info: MediaInfo } {
+export function makeJpegBlob(fillSize: number): {
+	magicBytes: number[]
+	data: Uint8Array
+	info: MediaInfo
+} {
 	// Example of JPEG magic bytes (0xFF 0xD8 0xFF)
 	const magicBytes = [0xff, 0xd8, 0xff]
 
@@ -138,10 +139,10 @@ export function makeMediaBlob(
 	}
 
 	return {
+		magicBytes,
 		data,
 		info: new MediaInfo({
 			mimetype: 'image/jpeg', // Set the expected MIME type
-			filename,
 			sizeBytes: BigInt(data.length),
 		}),
 	}
