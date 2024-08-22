@@ -715,15 +715,14 @@ export class Client
 
         const streamId = makeUniqueMediaStreamId()
 
-        const userStreamId = userId ? makeUserStreamId(userId) : undefined
-        this.logCall('createMedia', channelId ?? spaceId ?? userStreamId, streamId)
+        this.logCall('createMedia', channelId ?? spaceId, userId, streamId)
         const inceptionEvent = await makeEvent(
             this.signerContext,
             make_MediaPayload_Inception({
                 streamId: streamIdAsBytes(streamId),
                 channelId: channelId ? streamIdAsBytes(channelId) : undefined,
                 spaceId: spaceId ? streamIdAsBytes(spaceId) : undefined,
-                userId: userStreamId ? streamIdAsBytes(userStreamId) : undefined,
+                userId: userId ? addressFromUserId(userId) : undefined,
                 chunkCount,
                 settings: streamSettings,
             }),

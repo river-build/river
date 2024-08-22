@@ -226,6 +226,18 @@ func (ru *csParams) canCreateStream() ruleBuilderCS {
 			params:    ru,
 			inception: inception,
 		}
+		
+		if shared.ValidUserIdBytes(inception.UserId) {
+			return builder.
+				check(
+					ru.params.streamIdTypeIsCorrect(shared.STREAM_MEDIA_BIN),
+					ru.params.eventCountMatches(1),
+					ru.checkMediaInceptionPayload,
+				).
+				requireUserAddr(inception.UserId).
+				requireChainAuth(ru.getChainAuthForMediaStream)
+		}
+
 		return builder.
 			check(
 				ru.params.streamIdTypeIsCorrect(shared.STREAM_MEDIA_BIN),
@@ -233,7 +245,6 @@ func (ru *csParams) canCreateStream() ruleBuilderCS {
 				ru.checkMediaInceptionPayload,
 			).
 			requireMembership(
-				inception.UserId,
 				inception.ChannelId,
 				inception.SpaceId,
 			).
@@ -530,8 +541,7 @@ func (ru *csMediaRules) checkMediaInceptionPayload() error {
 		)
 	}
 
-	// TODO: so user id is more like user stream id?
-	if len(ru.inception.ChannelId) == 0 && len(ru.inception.SpaceId) == 0 && shared.ValidUserStreamIdBytes(ru.inception.UserId) {
+	if len(ru.inception.ChannelId) == 0 && len(ru.inception.SpaceId) == 0 && shared.ValidUserIdBytes(ru.inception.UserId) {
 		return nil
 	}
 

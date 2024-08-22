@@ -5,7 +5,7 @@ import { StreamStateView_AbstractContent } from './streamStateView_AbstractConte
 import { check } from '@river-build/dlog'
 import { logNever } from './check'
 import { StreamEncryptionEvents, StreamStateEvents } from './streamEvents'
-import { streamIdFromBytes } from './id'
+import { streamIdFromBytes, userIdFromAddress } from './id'
 
 export class StreamStateView_Media extends StreamStateView_AbstractContent {
     readonly streamId: string
@@ -40,8 +40,7 @@ export class StreamStateView_Media extends StreamStateView_AbstractContent {
         this.info = {
             spaceId: inception.spaceId ? streamIdFromBytes(inception.spaceId) : '',
             channelId: inception.channelId ? streamIdFromBytes(inception.channelId) : '',
-            // TODO: check if this should be user stream id
-            userId: inception.userId ? streamIdFromBytes(inception.userId) : '',
+            userId: inception.userId ? userIdFromAddress(inception.userId) : '',
             chunkCount: inception.chunkCount,
             chunks: Array<Uint8Array>(inception.chunkCount),
         }
