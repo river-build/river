@@ -8,7 +8,7 @@ import { contractAddressFromSpaceId } from '@river-build/sdk'
 import {
 	encryptAndSendMediaPayload,
 	getTestServerUrl,
-	makeMediaBlob,
+	makeJpegBlob,
 	makeTestClient,
 	makeUniqueSpaceStreamId,
 } from '../testUtils'
@@ -106,9 +106,13 @@ describe('GET /space/:spaceAddress/image', () => {
 		 * 2. upload a space image.
 		 */
 		const dataSize = 30
-		const filename = 'bob.png'
-		const { data, info } = makeMediaBlob(filename, dataSize)
-		const chunkedMedia = await encryptAndSendMediaPayload(bobsClient, spaceId, info, data)
+		const { data: expectedData, magicBytes, info } = makeJpegBlob(dataSize)
+		const chunkedMedia = await encryptAndSendMediaPayload(
+			bobsClient,
+			spaceId,
+			info,
+			expectedData,
+		)
 
 		await bobsClient.setSpaceImage(spaceId, chunkedMedia)
 
@@ -120,7 +124,17 @@ describe('GET /space/:spaceAddress/image', () => {
 		 */
 		const spaceContractAddress = contractAddressFromSpaceId(spaceId)
 		const route = `space/${spaceContractAddress}/image`
-		const response = await axios.get(`${baseURL}/${route}`)
+		const response = await axios.get(`${baseURL}/${route}`, {
+			responseType: 'arraybuffer', // Ensures that Axios returns the response as a buffer
+		})
+
 		expect(response.status).toBe(200)
+		// Verify the Content-Type header matches the expected MIME type
+		expect(response.headers['content-type']).toBe('image/jpeg')
+		const responseData = new Uint8Array(response.data)
+		// Verify the magic bytes in the response match the expected magic bytes
+		expect(responseData.slice(0, magicBytes.length)).toEqual(new Uint8Array(magicBytes))
+		// Verify the entire response data matches the expected data
+		expect(responseData).toEqual(expectedData)
 	})
 })
