@@ -10,7 +10,7 @@
 		"lint": "eslint . --ext .ts",
 		"lint:fix": "eslint . --ext .ts --fix",
 		"dev": "yarn dev:local_multi",
-		"dev:local_multi": "RIVER_ENV=local_multi PORT=3002 yarn run-build",
+		"dev:local_multi": "yarn run-build",
 		"dev:local_multi_ne": "RIVER_ENV=local_multi_ne PORT=3003 yarn run-build",
 		"run-build": "dotenv -e .env.local yarn build && node ./dist/node_esbuild.cjs",
 		"prettier": "prettier --config ../prettier-config/config.js --ignore-path .prettierignore .",
