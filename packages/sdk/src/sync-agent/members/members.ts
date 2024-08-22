@@ -74,7 +74,7 @@ export class Members extends PersistedObservable<MembersModel> {
         const streamId = this.data.id
         const streamView = this.riverConnection.client?.stream(streamId)?.view
         check(isDefined(streamView), 'stream not found')
-        return streamView.getUserMetadata().usernames.cleartextUsernameAvailable(username)
+        return streamView.getMemberMetadata().usernames.cleartextUsernameAvailable(username)
     }
 
     private onStreamInitialized = (streamId: string): void => {

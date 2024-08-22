@@ -57,7 +57,7 @@ export class MemberDisplayName extends PersistedObservable<MemberDisplayNameMode
         if (streamId === this.data.streamId) {
             const streamView = this.riverConnection.client?.stream(this.data.streamId)?.view
             check(isDefined(streamView), 'streamView is not defined')
-            const metadata = streamView.getUserMetadata()
+            const metadata = streamView.getMemberMetadata()
             const info = metadata?.displayNames.info(this.data.id)
             this.setData({
                 initialized: true,
@@ -70,7 +70,7 @@ export class MemberDisplayName extends PersistedObservable<MemberDisplayNameMode
     private onStreamDisplayNameUpdated = (streamId: string, userId: string) => {
         if (streamId === this.data.streamId && userId === this.data.id) {
             const stream = this.riverConnection.client?.streams.get(streamId)
-            const metadata = stream?.view.getUserMetadata()
+            const metadata = stream?.view.getMemberMetadata()
             const info = metadata?.displayNames.info(userId)
             if (info) {
                 this.setData({

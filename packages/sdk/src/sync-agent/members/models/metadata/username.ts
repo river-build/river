@@ -61,7 +61,7 @@ export class MemberUsername extends PersistedObservable<MemberUsernameModel> {
         if (streamId === this.data.streamId) {
             const streamView = this.riverConnection.client?.stream(this.data.streamId)?.view
             check(isDefined(streamView), 'streamView is not defined')
-            const metadata = streamView.getUserMetadata()
+            const metadata = streamView.getMemberMetadata()
             const info = metadata?.usernames.info(this.data.id)
             this.setData({
                 initialized: true,
@@ -75,7 +75,7 @@ export class MemberUsername extends PersistedObservable<MemberUsernameModel> {
     private onStreamUsernameUpdated = (streamId: string, userId: string) => {
         if (streamId === this.data.streamId && userId === this.data.id) {
             const stream = this.riverConnection.client?.streams.get(streamId)
-            const metadata = stream?.view.getUserMetadata()
+            const metadata = stream?.view.getMemberMetadata()
             if (metadata) {
                 const { username, usernameConfirmed, usernameEncrypted } =
                     metadata.usernames.info(userId)

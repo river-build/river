@@ -29,7 +29,10 @@ export async function joinChat(client: StressClient, cfg: ChatConfig) {
     // start up the client
     await startFollowerClient(client, cfg.spaceId, announceChannelId)
 
-    const announceChannel = await client.streamsClient.waitForStream(announceChannelId)
+    const announceChannel = await client.streamsClient.waitForStream(announceChannelId, {
+        timeoutMs: 1000 * 60,
+        logId: 'joinChatWaitForAnnounceChannel',
+    })
     let count = 0
     const message = await client.waitFor(
         () => {
@@ -101,15 +104,13 @@ async function startFollowerClient(
     spaceId: string,
     announceChannelId: string,
 ) {
-    const userExists = await client.userExists()
+    const userExists = client.userExists()
     if (!userExists) {
         await client.joinSpace(spaceId, { skipMintMembership: true })
     } else {
         const isMember = await client.isMemberOf(spaceId)
         if (!isMember) {
             await client.joinSpace(spaceId, { skipMintMembership: true })
-        } else {
-            await client.startStreamsClient({ spaceId })
         }
     }
 
