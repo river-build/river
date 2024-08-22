@@ -144,8 +144,8 @@ function getEncryption(
 	const logger = getFunctionLogger(log, 'getEncryption')
 	switch (chunkedMedia.encryption.case) {
 		case 'aesgcm': {
-			const key = new Uint8Array(chunkedMedia.encryption.value.secretKey)
-			const iv = new Uint8Array(chunkedMedia.encryption.value.iv)
+			const key = chunkedMedia.encryption.value.secretKey
+			const iv = chunkedMedia.encryption.value.iv
 			return { key, iv }
 		}
 		default:
