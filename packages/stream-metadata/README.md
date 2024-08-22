@@ -18,6 +18,6 @@ Start the river image service:
 # if the dependencies are not present, run:
 # ./<projectRoot>/scripts/start_dev.sh
 
-cp .env.local.sample .env.local
+cp .env.local-sample .env.local
 yarn dev
 ```
