@@ -77,16 +77,15 @@ contract PartnerRegistry_updatePartner is PartnerRegistrySetup {
   function test_revertWhen_updatePartner_invalidPartnerFee(
     Partner memory partner
   ) external givenPartnerIsRegistered(partner) {
-    Partner memory updatedPartner = partner;
-    updatedPartner.fee = partnerRegistry.maxPartnerFee() + 1;
+    partner.fee = partnerRegistry.maxPartnerFee() + 1;
 
     vm.prank(partner.account);
     vm.expectRevert(
       abi.encodeWithSelector(
         PartnerRegistry__InvalidPartnerFee.selector,
-        updatedPartner.fee
+        partner.fee
       )
     );
-    partnerRegistry.updatePartner(updatedPartner);
+    partnerRegistry.updatePartner(partner);
   }
 }
