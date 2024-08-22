@@ -1,12 +1,13 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "rootDir": ".",
-    "outDir": "./dist"
+    "rootDir": ".",  // This allows both src and tests to be included
+    "outDir": "./dist/tests",  // Outputs test files to a separate directory
+    "sourceMap": true
   },
   "include": [
     "tests/**/*.ts",
-		"tests/testUtils.ts"
+    "src/**/*.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }

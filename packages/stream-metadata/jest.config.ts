@@ -20,6 +20,11 @@ const config: Config.InitialOptions = {
 	},
 	transformIgnorePatterns: ['/node_modules/(?!@river-build)'],
 	verbose: true,
+	globals: {
+    'ts-jest': {
+      tsconfig: './tsconfig.test.json',
+    },
+  },
 }
 
 export default config
