@@ -27,8 +27,8 @@ library PartnerRegistryStorage {
 
   struct Layout {
     EnumerableSet.AddressSet partners;
+    PartnerSettings partnerSettings;
     mapping(address account => Partner) partnerByAccount;
-    mapping(bytes32 version => PartnerSettings) partnerSettingsByVersion;
   }
 
   function layout() internal pure returns (Layout storage ds) {
