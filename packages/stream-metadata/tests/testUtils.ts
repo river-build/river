@@ -105,7 +105,16 @@ export async function makeTestClient() {
 	const persistenceDbName = `persistence-${userId}-${deviceId}`
 
 	// create the client with all the args
-	return new Client(context, rpcClient, cryptoStore, entitlementsDelegate, persistenceDbName)
+	return {
+		wallet,
+		client: new Client(
+			context,
+			rpcClient,
+			cryptoStore,
+			entitlementsDelegate,
+			persistenceDbName,
+		),
+	}
 }
 
 export async function makeRandomUserContext(): Promise<{
