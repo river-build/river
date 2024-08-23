@@ -68,7 +68,7 @@ import {
     makeDMStreamId,
     makeUniqueGDMChannelStreamId,
     makeUniqueMediaStreamId,
-    makeUserDeviceKeyStreamId,
+    makeUserMetadataStreamId,
     makeUserSettingsStreamId,
     makeUserStreamId,
     makeUserInboxStreamId,
@@ -84,7 +84,7 @@ import { makeEvent, unpackMiniblock, unpackStream, unpackStreamEx } from './sign
 import { StreamEvents } from './streamEvents'
 import { IStreamStateView, StreamStateView } from './streamStateView'
 import {
-    make_UserDeviceKeyPayload_Inception,
+    make_UserMetadataPayload_Inception,
     make_ChannelPayload_Inception,
     make_ChannelProperties,
     make_ChannelPayload_Message,
@@ -104,7 +104,7 @@ import {
     StreamTimelineEvent,
     make_UserInboxPayload_Ack,
     make_UserInboxPayload_Inception,
-    make_UserDeviceKeyPayload_EncryptionDevice,
+    make_UserMetadataPayload_EncryptionDevice,
     make_UserInboxPayload_GroupEncryptionSessions,
     ParsedStreamResponse,
     make_GDMChannelPayload_ChannelProperties,
@@ -156,7 +156,7 @@ export class Client
 
     userStreamId?: string
     userSettingsStreamId?: string
-    userDeviceKeyStreamId?: string
+    userMetadataStreamId?: string
     userInboxStreamId?: string
 
     private readonly logCall: DLogger
@@ -338,7 +338,7 @@ export class Client
         await Promise.all([
             this.initUserStream(initUserMetadata),
             this.initUserInboxStream(initUserMetadata),
-            this.initUserDeviceKeyStream(initUserMetadata),
+            this.initUserMetadataStream(initUserMetadata),
             this.initUserSettingsStream(initUserMetadata),
         ])
         await this.initUserJoinedStreams()
@@ -374,14 +374,14 @@ export class Client
         }
     }
 
-    private async initUserDeviceKeyStream(metadata?: { spaceId: Uint8Array }) {
-        this.userDeviceKeyStreamId = makeUserDeviceKeyStreamId(this.userId)
-        const userDeviceKeyStream = this.createSyncedStream(this.userDeviceKeyStreamId)
-        if (!(await userDeviceKeyStream.initializeFromPersistence())) {
+    private async initUserMetadataStream(metadata?: { spaceId: Uint8Array }) {
+        this.userMetadataStreamId = makeUserMetadataStreamId(this.userId)
+        const userMetadataStream = this.createSyncedStream(this.userMetadataStreamId)
+        if (!(await userMetadataStream.initializeFromPersistence())) {
             const response =
-                (await this.getUserStream(this.userDeviceKeyStreamId)) ??
-                (await this.createUserDeviceKeyStream(this.userDeviceKeyStreamId, metadata))
-            await userDeviceKeyStream.initializeFromResponse(response)
+                (await this.getUserStream(this.userMetadataStreamId)) ??
+                (await this.createUserMetadataStream(this.userMetadataStreamId, metadata))
+            await userMetadataStream.initializeFromResponse(response)
         }
     }
 
@@ -430,22 +430,22 @@ export class Client
         return unpackStream(response.stream)
     }
 
-    private async createUserDeviceKeyStream(
-        userDeviceKeyStreamId: string | Uint8Array,
+    private async createUserMetadataStream(
+        userMetadataStreamId: string | Uint8Array,
         metadata: { spaceId: Uint8Array } | undefined,
     ): Promise<ParsedStreamResponse> {
         const userDeviceKeyEvents = [
             await makeEvent(
                 this.signerContext,
-                make_UserDeviceKeyPayload_Inception({
-                    streamId: streamIdAsBytes(userDeviceKeyStreamId),
+                make_UserMetadataPayload_Inception({
+                    streamId: streamIdAsBytes(userMetadataStreamId),
                 }),
             ),
         ]
 
         const response = await this.rpcClient.createStream({
             events: userDeviceKeyEvents,
-            streamId: streamIdAsBytes(userDeviceKeyStreamId),
+            streamId: streamIdAsBytes(userMetadataStreamId),
             metadata: metadata,
         })
         return unpackStream(response.stream)
@@ -1875,7 +1875,7 @@ export class Client
         const forceDownload = userIds.length <= 10
         const promises = userIds.map(
             async (userId): Promise<{ userId: string; devices: UserDevice[] }> => {
-                const streamId = makeUserDeviceKeyStreamId(userId)
+                const streamId = makeUserMetadataStreamId(userId)
                 try {
                     // also always download your own keys so you always share to your most up to date devices
                     if (!forceDownload && userId !== this.userId) {
@@ -1887,9 +1887,7 @@ export class Client
                     // return latest 10 device keys
                     const deviceLookback = 10
                     const stream = await this.getStream(streamId)
-                    const userDevices = stream.userDeviceKeyContent.deviceKeys.slice(
-                        -deviceLookback,
-                    )
+                    const userDevices = stream.userMetadataContent.deviceKeys.slice(-deviceLookback)
                     await this.cryptoStore.saveUserDevices(userId, userDevices)
                     return { userId, devices: userDevices }
                 } catch (e) {
@@ -2058,13 +2056,13 @@ export class Client
         check(isDefined(this.cryptoBackend), 'crypto backend not initialized')
         this.logCall('initCrypto:: uploading device keys...')
 
-        check(isDefined(this.userDeviceKeyStreamId))
-        const stream = this.stream(this.userDeviceKeyStreamId)
+        check(isDefined(this.userMetadataStreamId))
+        const stream = this.stream(this.userMetadataStreamId)
         check(isDefined(stream), 'device key stream not found')
 
         return this.makeEventAndAddToStream(
-            this.userDeviceKeyStreamId,
-            make_UserDeviceKeyPayload_EncryptionDevice({
+            this.userMetadataStreamId,
+            make_UserMetadataPayload_EncryptionDevice({
                 ...this.userDeviceKey(),
             }),
             { method: 'userDeviceKey' },
