@@ -15,6 +15,7 @@ import {
 } from '@river-build/sdk'
 import { ethers } from 'ethers'
 import {
+	BaseChainConfig,
 	CreateLegacySpaceParams,
 	findDynamicPricingModule,
 	LegacyMembershipStruct,
@@ -197,6 +198,14 @@ export async function encryptAndSendMediaPayload(
 	})
 
 	return chunkedMedia
+}
+
+export function makeSpaceDapp(baseChainConfig: BaseChainConfig, baseRpcUrl: string): SpaceDapp {
+	const provider = new ethers.providers.StaticJsonRpcProvider(baseRpcUrl, {
+		chainId: baseChainConfig.chainId,
+		name: `base-${baseChainConfig.chainId}`,
+	})
+	return new SpaceDapp(baseChainConfig, provider)
 }
 
 export interface CreateSpaceParams {
