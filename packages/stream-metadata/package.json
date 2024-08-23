@@ -7,13 +7,14 @@
 	"type": "module",
 	"scripts": {
 		"build": "node ./esbuild.config.mjs",
+		"config": "./scripts/cp-config.sh",
+		"dev": "yarn config && yarn dev:local_multi",
+		"dev:local_multi": "yarn config && yarn run-build",
+		"dev:local_multi_ne": "yarn config && RIVER_ENV=local_multi_ne PORT=3003 yarn run-build",
 		"lint": "eslint . --ext .ts",
 		"lint:fix": "eslint . --ext .ts --fix",
-		"dev": "yarn dev:local_multi",
-		"dev:local_multi": "yarn run-build",
-		"dev:local_multi_ne": "RIVER_ENV=local_multi_ne PORT=3003 yarn run-build",
-		"run-build": "yarn build && node ./dist/node_esbuild.cjs",
 		"prettier": "prettier --config ../prettier-config/config.js --ignore-path .prettierignore .",
+		"run-build": "yarn build && node ./dist/node_esbuild.cjs",
 		"start": "node ./dist/node_esbuild.cjs"
 	},
 	"dependencies": {
