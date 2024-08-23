@@ -1,9 +1,13 @@
 import axios from 'axios'
 import { dlog } from '@river-build/dlog'
-import { contractAddressFromSpaceId } from '@river-build/sdk'
-import { CreateLegacySpaceParams } from '@river-build/web3'
 
-import { getTestServerUrl, makeCreateSpaceParams, makeTestClient } from '../testUtils'
+import {
+	getTestServerUrl,
+	makeCreateSpaceParams,
+	makeSpaceDapp,
+	makeTestClient,
+} from '../testUtils'
+import { testConfig } from '../testEnvironment'
 
 const log = dlog('stream-metadata:test:spaceMetadata', {
 	allowJest: true,
@@ -50,17 +54,22 @@ describe('integration/space/:spaceAddress', () => {
 
 	it('should return status 200 without spaceImage', async () => {
 		/**
-		 * 1. create a space.
-		 * 2. fetch the space contract info from the stream-metadata server.
-		 * 3. verify the response.
+		 * 1. create a space on-chain.
+		 * 2. create a space stream.
+		 * 3. fetch the space contract info from the stream-metadata server.
+		 * 4. verify the response.
 		 */
 
 		/*
-		 * 1. create a space.
+		 * 1. create a space on-chain.
 		 */
-		const bobsClient = await makeTestClient()
+		const { client: bobsClient, wallet: bobsWallet } = await makeTestClient()
+		await bobsClient.initializeUser()
+		bobsClient.startSync()
 
-		const createSpaceParams = makeCreateSpaceParams(spaceDapp, {
+		const spaceDapp = makeSpaceDapp(testConfig.web3Config.base, testConfig.baseChainRpcUrl)
+
+		const createSpaceParams = await makeCreateSpaceParams(spaceDapp, {
 			spaceName: 'bobs space',
 			spaceImageUri: '',
 			channelName: 'general',
@@ -68,8 +77,19 @@ describe('integration/space/:spaceAddress', () => {
 			longDescription: 'bobs space long description',
 		})
 
-		await bobsClient.initializeUser()
-		bobsClient.startSync()
+		const tx = await spaceDapp.createLegacySpace(createSpaceParams, bobsWallet)
+		const receipt = await tx.wait()
+		expect(receipt.status).toBe(1)
+
+		const spaceId = spaceDapp.getSpaceAddress(receipt)
+		if (!spaceId) {
+			throw new Error('spaceId is undefined')
+		}
+		log('spaceId', spaceId)
+
+		/*
+		 * 2. create a space stream.
+		 */
 		await bobsClient.createSpace(spaceId)
 		const spaceStream = await bobsClient.waitForStream(spaceId)
 		log('spaceStreamId', spaceStream.streamId)
