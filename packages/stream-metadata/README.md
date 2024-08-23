@@ -15,7 +15,7 @@ Fetches river images from river streams.
 Run `./scripts/start_dev.sh`, and then kill the stream-metadata
 service. Running the script will:
 
-- build all the dependencies: core/*, packages/*, etc
+- build all the dependencies: core/_, packages/_, etc
 - start the base chain, river chain, and river node
 
 ```bash
