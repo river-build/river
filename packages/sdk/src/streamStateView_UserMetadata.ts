@@ -1,106 +1,51 @@
-import {
-    WrappedEncryptedData as WrappedEncryptedData,
-    EncryptedData,
-    MemberPayload_Nft,
-} from '@river-build/proto'
 import TypedEmitter from 'typed-emitter'
-import { ConfirmedTimelineEvent, RemoteTimelineEvent } from './types'
+import { RemoteTimelineEvent } from './types'
+import {
+    Snapshot,
+    UserMetadataPayload,
+    UserMetadataPayload_EncryptionDevice,
+    UserMetadataPayload_Snapshot,
+    ChunkedMedia,
+    type EncryptedData,
+} from '@river-build/proto'
+import { StreamStateView_AbstractContent } from './streamStateView_AbstractContent'
+import { check } from '@river-build/dlog'
+import { logNever } from './check'
+import { UserDevice } from '@river-build/encryption'
 import { StreamEncryptionEvents, StreamStateEvents } from './streamEvents'
-import { UserMetadata_Usernames } from './userMetadata_Usernames'
-import { UserMetadata_DisplayNames } from './userMetadata_DisplayNames'
-import { bin_toHexString } from '@river-build/dlog'
-import { userMetadata_EnsAddresses } from './userMetadata_EnsAddresses'
-import { userMetadata_Nft } from './userMetadata_Nft'
+import { getUserIdFromStreamId } from './id'
+import { decryptDerivedAESGCM } from './crypto_utils'
 
-export type UserInfo = {
-    username: string
-    usernameConfirmed: boolean
-    usernameEncrypted: boolean
-    displayName: string
-    displayNameEncrypted: boolean
-    ensAddress?: string
-    nft?: {
-        chainId: number
-        tokenId: string
-        contractAddress: string
-    }
-}
+export class StreamStateView_UserMetadata extends StreamStateView_AbstractContent {
+    readonly streamId: string
+    readonly streamCreatorId: string
+    private profileImage: ChunkedMedia | undefined
+    private encryptedProfileImage: EncryptedData | undefined
+    private decryptionInProgress:
+        | { encryptedData: EncryptedData; promise: Promise<ChunkedMedia | undefined> }
+        | undefined
 
-export class StreamStateView_UserMetadata {
-    readonly usernames: UserMetadata_Usernames
-    readonly displayNames: UserMetadata_DisplayNames
-    readonly ensAddresses: userMetadata_EnsAddresses
-    readonly nfts: userMetadata_Nft
+    // user_id -> device_keys, fallback_keys
+    readonly deviceKeys: UserDevice[] = []
 
     constructor(streamId: string) {
-        this.usernames = new UserMetadata_Usernames(streamId)
-        this.displayNames = new UserMetadata_DisplayNames(streamId)
-        this.ensAddresses = new userMetadata_EnsAddresses(streamId)
-        this.nfts = new userMetadata_Nft(streamId)
+        super()
+        this.streamId = streamId
+        this.streamCreatorId = getUserIdFromStreamId(streamId)
     }
 
     applySnapshot(
-        usernames: { userId: string; wrappedEncryptedData: WrappedEncryptedData }[],
-        displayNames: { userId: string; wrappedEncryptedData: WrappedEncryptedData }[],
-        ensAddresses: { userId: string; ensAddress: Uint8Array }[],
-        nfts: { userId: string; nft: MemberPayload_Nft }[],
-        cleartexts: Record<string, string> | undefined,
+        snapshot: Snapshot,
+        content: UserMetadataPayload_Snapshot,
         encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
-    ) {
-        // Sort the payloads — this is necessary because we want to
-        // make sure that whoever claimed a username first gets it.
-        const sortedUsernames = sortPayloads(usernames)
-        for (const payload of sortedUsernames) {
-            if (!payload.wrappedEncryptedData.data) {
-                continue
-            }
-            const data = payload.wrappedEncryptedData.data
-            const userId = payload.userId
-            const eventId = bin_toHexString(payload.wrappedEncryptedData.eventHash)
-            const clearText = cleartexts?.[eventId]
-            this.usernames.addEncryptedData(
-                eventId,
-                data,
-                userId,
-                false,
-                clearText,
-                encryptionEmitter,
-                undefined,
-            )
-        }
-        const sortedDisplayNames = sortPayloads(displayNames)
-        for (const payload of sortedDisplayNames) {
-            if (!payload.wrappedEncryptedData.data) {
-                continue
-            }
-            const data = payload.wrappedEncryptedData.data
-            const userId = payload.userId
-            const eventId = bin_toHexString(payload.wrappedEncryptedData.eventHash)
-            const clearText = cleartexts?.[eventId]
-            this.displayNames.addEncryptedData(
-                eventId,
-                data,
-                userId,
-                false,
-                clearText,
-                encryptionEmitter,
-                undefined,
-            )
-        }
-
-        this.ensAddresses.applySnapshot(ensAddresses)
-        this.nfts.applySnapshot(nfts)
-    }
-
-    onConfirmedEvent(
-        confirmedEvent: ConfirmedTimelineEvent,
-        stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
     ): void {
-        const eventId = confirmedEvent.hashStr
-        this.usernames.onConfirmEvent(eventId, stateEmitter)
-        this.displayNames.onConfirmEvent(eventId, stateEmitter)
-        this.ensAddresses.onConfirmEvent(eventId, stateEmitter)
-        this.nfts.onConfirmEvent(eventId, stateEmitter)
+        // dispatch events for all device keys, todo this seems inefficient?
+        for (const value of content.encryptionDevices) {
+            this.addUserDeviceKey(value, encryptionEmitter, undefined)
+        }
+        if (content.profileImage?.data) {
+            this.addProfileImage(content.profileImage.data)
+        }
     }
 
     prependEvent(
@@ -109,98 +54,96 @@ export class StreamStateView_UserMetadata {
         _encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
         _stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
     ): void {
-        // usernames were conveyed in the snapshot
+        // nothing to do
     }
 
-    appendDisplayName(
-        eventId: string,
-        data: EncryptedData,
-        userId: string,
-        cleartext: string | undefined,
+    appendEvent(
+        event: RemoteTimelineEvent,
+        _cleartext: string | undefined,
         encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
         stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
     ): void {
-        this.displayNames.addEncryptedData(
-            eventId,
-            data,
-            userId,
-            true,
-            cleartext,
-            encryptionEmitter,
-            stateEmitter,
-        )
+        check(event.remoteEvent.event.payload.case === 'userMetadataPayload')
+        const payload: UserMetadataPayload = event.remoteEvent.event.payload.value
+        switch (payload.content.case) {
+            case 'inception':
+                break
+            case 'encryptionDevice':
+                this.addUserDeviceKey(payload.content.value, encryptionEmitter, stateEmitter)
+                break
+            case 'profileImage':
+                this.addProfileImage(payload.content.value, stateEmitter)
+                break
+            case undefined:
+                break
+            default:
+                logNever(payload.content)
+        }
     }
 
-    appendUsername(
-        eventId: string,
-        data: EncryptedData,
-        userId: string,
-        cleartext: string | undefined,
+    private addUserDeviceKey(
+        value: UserMetadataPayload_EncryptionDevice,
         encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
         stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
-    ): void {
-        this.usernames.addEncryptedData(
-            eventId,
-            data,
-            userId,
-            true,
-            cleartext,
-            encryptionEmitter,
-            stateEmitter,
-        )
-    }
-
-    appendEnsAddress(
-        eventId: string,
-        EnsAddress: Uint8Array,
-        userId: string,
-        stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
-    ): void {
-        this.ensAddresses.addEnsAddressEvent(eventId, EnsAddress, userId, true, stateEmitter)
-    }
-
-    appendNft(
-        eventId: string,
-        nft: MemberPayload_Nft,
-        userId: string,
-        stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
-    ): void {
-        this.nfts.addNftEvent(eventId, nft, userId, true, stateEmitter)
-    }
-
-    onDecryptedContent(
-        eventId: string,
-        content: string,
-        emitter?: TypedEmitter<StreamStateEvents>,
     ) {
-        this.displayNames.onDecryptedContent(eventId, content, emitter)
-        this.usernames.onDecryptedContent(eventId, content, emitter)
+        const device = {
+            deviceKey: value.deviceKey,
+            fallbackKey: value.fallbackKey,
+        } satisfies UserDevice
+        const existing = this.deviceKeys.findIndex((x) => x.deviceKey === device.deviceKey)
+        if (existing >= 0) {
+            this.deviceKeys.splice(existing, 1)
+        }
+        this.deviceKeys.push(device)
+        encryptionEmitter?.emit('userDeviceKeyMessage', this.streamId, this.streamCreatorId, device)
+        stateEmitter?.emit('userDeviceKeysUpdated', this.streamId, this.deviceKeys)
     }
 
-    userInfo(userId: string): UserInfo {
-        const usernameInfo = this.usernames.info(userId)
-        const displayNameInfo = this.displayNames.info(userId)
-        const ensAddress = this.ensAddresses.info(userId)
-        const nft = this.nfts.info(userId)
-        return {
-            ...usernameInfo,
-            ...displayNameInfo,
-            ensAddress,
-            nft,
+    private addProfileImage(
+        data: EncryptedData,
+        stateEmitter?: TypedEmitter<StreamStateEvents> | undefined,
+    ) {
+        this.encryptedProfileImage = data
+        stateEmitter?.emit('userProfileImageUpdated', this.streamId)
+    }
+
+    public async getProfileImage() {
+        // if we have an encrypted space image, decrypt it
+        if (this.encryptedProfileImage) {
+            const encryptedData = this.encryptedProfileImage
+            this.encryptedProfileImage = undefined
+            this.decryptionInProgress = {
+                promise: this.decryptProfileImage(encryptedData),
+                encryptedData,
+            }
+            return this.decryptionInProgress.promise
+        }
+
+        // if there isn't an updated encrypted profile image, but a decryption is
+        // in progress, return the promise
+        if (this.decryptionInProgress) {
+            return this.decryptionInProgress.promise
+        }
+
+        return this.profileImage
+    }
+
+    private async decryptProfileImage(
+        encryptedData: EncryptedData,
+    ): Promise<ChunkedMedia | undefined> {
+        try {
+            const userId = getUserIdFromStreamId(this.streamId)
+            const context = userId.toLowerCase()
+            const plaintext = await decryptDerivedAESGCM(context, encryptedData)
+            const decryptedImage = ChunkedMedia.fromBinary(plaintext)
+            if (encryptedData === this.decryptionInProgress?.encryptedData) {
+                this.profileImage = decryptedImage
+            }
+            return decryptedImage
+        } finally {
+            if (encryptedData === this.decryptionInProgress?.encryptedData) {
+                this.decryptionInProgress = undefined
+            }
         }
     }
-}
-
-function sortPayloads(
-    payloads: { userId: string; wrappedEncryptedData: WrappedEncryptedData }[],
-): { userId: string; wrappedEncryptedData: WrappedEncryptedData }[] {
-    return payloads.sort((a, b) => {
-        if (a.wrappedEncryptedData.eventNum > b.wrappedEncryptedData.eventNum) {
-            return 1
-        } else if (a.wrappedEncryptedData.eventNum < b.wrappedEncryptedData.eventNum) {
-            return -1
-        } else {
-            return 0
-        }
-    })
 }

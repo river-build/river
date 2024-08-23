@@ -1,9 +1,15 @@
-import { StreamNodeUrls } from './river-connection/models/streamNodeUrls'
+import { Members } from './members/members'
+import { MemberMembership } from './members/models/membership'
+import { MemberDisplayName } from './members/models/metadata/displayName'
+import { MemberEnsAddress } from './members/models/metadata/ensAddress'
+import { MemberNft } from './members/models/metadata/nft'
+import { MemberUsername } from './members/models/metadata/username'
+import { RiverChain } from './river-connection/models/riverChain'
 import { RiverConnection } from './river-connection/riverConnection'
 import { Channel } from './spaces/models/channel'
 import { Space } from './spaces/models/space'
 import { Spaces } from './spaces/spaces'
-import { UserDeviceKeys } from './user/models/userDeviceKeys'
+import { UserMetadata } from './user/models/userMetadata'
 import { UserInbox } from './user/models/userInbox'
 import { UserMemberships } from './user/models/userMemberships'
 import { UserSettings } from './user/models/userSettings'
@@ -14,11 +20,17 @@ export const DB_MODELS = [
     Channel,
     Space,
     Spaces,
-    StreamNodeUrls,
+    RiverChain,
     RiverConnection,
     User,
-    UserDeviceKeys,
+    UserMetadata,
     UserInbox,
     UserMemberships,
     UserSettings,
+    Members,
+    MemberUsername,
+    MemberDisplayName,
+    MemberEnsAddress,
+    MemberNft,
+    MemberMembership,
 ]

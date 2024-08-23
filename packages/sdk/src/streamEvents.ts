@@ -17,7 +17,7 @@ import {
 } from './types'
 import { KeySolicitationContent, UserDevice } from '@river-build/encryption'
 import { EncryptedContent } from './encryptedContentTypes'
-import { SyncState } from './syncedStreams'
+import { SyncState } from './syncedStreamsLoop'
 import { Pin } from './streamStateView_Members'
 
 export type StreamChange = {
@@ -64,6 +64,7 @@ export type StreamStateEvents = {
     userInvitedToStream: (streamId: string) => void
     userLeftStream: (streamId: string) => void
     userStreamMembershipChanged: (streamId: string, payload: UserPayload_UserMembership) => void
+    userProfileImageUpdated: (streamId: string) => void
     userInboxDeviceSummaryUpdated: (
         streamId: string,
         deviceKey: string,

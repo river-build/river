@@ -1,109 +1,88 @@
+import { Server as HTTPServer, IncomingMessage, ServerResponse } from 'http'
 import { Server as HTTPSServer } from 'https'
 
-import Fastify from 'fastify'
+import Fastify, { FastifyInstance } from 'fastify'
 import cors from '@fastify/cors'
+import { v4 as uuidv4 } from 'uuid'
 
-import { handleImageRequest } from './handleImageRequest'
-import { handleMetadataRequest } from './handleMetadataRequest'
 import { config } from './environment'
 import { getLogger } from './logger'
+import { checkHealth } from './routes/health'
+import { fetchSpaceImage } from './routes/spaceImage'
+import { fetchSpaceMetadata } from './routes/spaceMetadata'
+import { fetchUserProfileImage } from './routes/profileImage'
 
-// Set the process title to 'fetch-image' so it can be easily identified
-// or killed with `pkill fetch-image`
+// Set the process title to 'stream-metadata' so it can be easily identified
+// or killed with `pkill stream-metadata`
 process.title = 'stream-metadata'
 
 const logger = getLogger('server')
 
-logger.info('config', {
-	riverEnv: config.riverEnv,
-	chainId: config.web3Config.river.chainId,
-	port: config.port,
-	riverRegistry: config.web3Config.river.addresses.riverRegistry,
-	riverChainRpcUrl: config.riverChainRpcUrl,
-})
+logger.info(
+	{
+		riverEnv: config.riverEnv,
+		chainId: config.web3Config.river.chainId,
+		port: config.port,
+		riverRegistry: config.web3Config.river.addresses.riverRegistry,
+		riverChainRpcUrl: config.riverChainRpcUrl,
+	},
+	'config',
+)
 
 /*
  * Server setup
  */
+export type Server = FastifyInstance<
+	HTTPServer | HTTPSServer,
+	IncomingMessage,
+	ServerResponse,
+	typeof logger
+>
+
 const server = Fastify({
 	logger,
+	genReqId: () => uuidv4(),
 })
 
-async function registerPlugins() {
-	try {
-		await server.register(cors, {
-			origin: '*', // Allow any origin
-			methods: ['GET'], // Allowed HTTP methods
-		})
-		logger.info('CORS registered successfully')
-	} catch (err) {
-		logger.error('Error registering CORS', err)
-		process.exit(1) // Exit the process if registration fails
-	}
+server.addHook('onRequest', (request, reply, done) => {
+	const reqId = request.id // Use Fastify's generated reqId, which is now a UUID
+	request.log = request.log.child({ reqId })
+	done()
+})
+
+// for testability, pass server instance as an argument
+export async function registerPlugins(srv: Server) {
+	await srv.register(cors, {
+		origin: '*', // Allow any origin
+		methods: ['GET'], // Allowed HTTP methods
+	})
+	logger.info('CORS registered successfully')
 }
 
-void registerPlugins()
+// for testability, pass server instance as an argument
+export function setupRoutes(srv: Server) {
+	/*
+	 * Routes
+	 */
+	srv.get('/health', checkHealth)
+	srv.get('/space/:spaceAddress', async (request, reply) =>
+		fetchSpaceMetadata(request, reply, getServerUrl(srv)),
+	)
+	srv.get('/space/:spaceAddress/image', fetchSpaceImage)
+	srv.get('/user/:userId/image', fetchUserProfileImage)
 
-/*
- * Routes
- */
-server.get('/space/:spaceAddress', async (request, reply) => {
-	const { spaceAddress } = request.params as { spaceAddress?: string }
-	logger.info(`GET /space`, { spaceAddress })
+	// Fastify will return 404 for any unmatched routes
+}
 
-	const { protocol, serverAddress } = getServerInfo()
-	return handleMetadataRequest(request, reply, `${protocol}://${serverAddress}`)
-})
-
-server.get('/space/:spaceAddress/image', async (request, reply) => {
-	const { spaceAddress } = request.params as { spaceAddress?: string }
-	logger.info(`GET /space/../image`, {
-		spaceAddress,
-	})
-
-	return handleImageRequest(config, request, reply)
-})
-
-// Generic / route to return 404
-server.get('/', async (request, reply) => {
-	return reply.code(404).send('Not found')
-})
-
-/*
- * Start the server
- */
-function getServerInfo() {
-	const addressInfo = server.server.address()
-	const protocol = server.server instanceof HTTPSServer ? 'https' : 'http'
+// for testability, pass server instance as an argument
+export function getServerUrl(srv: Server) {
+	const addressInfo = srv.server.address()
+	const protocol = srv.server instanceof HTTPSServer ? 'https' : 'http'
 	const serverAddress =
 		typeof addressInfo === 'string'
 			? addressInfo
 			: `${addressInfo?.address}:${addressInfo?.port}`
-	return { protocol, serverAddress }
-}
-
-// Type guard to check if error has code property
-function isAddressInUseError(err: unknown): err is NodeJS.ErrnoException {
-	return err instanceof Error && 'code' in err && err.code === 'EADDRINUSE'
-}
-
-// Function to start the server on the first available port
-async function startServer(port: number) {
-	try {
-		await server.listen({ port, host: 'localhost' })
-		const addressInfo = server.server.address()
-		if (addressInfo && typeof addressInfo === 'object') {
-			server.log.info(`Server listening on ${addressInfo.address}:${addressInfo.port}`)
-		}
-	} catch (err) {
-		if (isAddressInUseError(err)) {
-			server.log.warn(`Port ${port} is in use, trying port ${port + 1}`)
-			await startServer(port + 1) // Try the next port
-		} else {
-			server.log.error(err)
-			process.exit(1)
-		}
-	}
+	return `${protocol}://${serverAddress}`
 }
 
 process.on('SIGTERM', async () => {
@@ -111,20 +90,25 @@ process.on('SIGTERM', async () => {
 		await server.close()
 		logger.info('Server closed gracefully')
 		process.exit(0)
-	} catch (err) {
-		logger.info('Error during server shutdown', err)
+	} catch (error) {
+		logger.error(error, 'Error during server shutdown')
 		process.exit(1)
 	}
 })
 
-// Start the server on the port set in the .env, or the next available port
-startServer(config.port)
-	.then(() => {
-		logger.info('Server started')
-	})
-	.catch((err: unknown) => {
-		logger.error('Error starting server', {
-			err,
+async function main() {
+	try {
+		await registerPlugins(server)
+		setupRoutes(server)
+		await server.listen({
+			port: config.port,
+			host: config.host,
 		})
+		logger.info('Server started')
+	} catch (error) {
+		logger.error(error, 'Error starting server')
 		process.exit(1)
-	})
+	}
+}
+
+void main()

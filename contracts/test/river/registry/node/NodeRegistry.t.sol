@@ -34,7 +34,7 @@ contract NodeRegistryTest is RiverRegistryBaseSetup, INodeRegistryBase {
 
     Node memory registered = nodeRegistry.getNode(node);
     assertEq(registered.url, url);
-    assertEq(uint(registered.status), uint(NodeStatus.Operational));
+    assertEq(uint256(registered.status), uint256(NodeStatus.Operational));
     assertEq(registered.operator, nodeOperator);
   }
 
@@ -45,6 +45,7 @@ contract NodeRegistryTest is RiverRegistryBaseSetup, INodeRegistryBase {
     vm.assume(node != address(0));
     vm.assume(nodeOperator != address(0));
     vm.assume(nodeOperator != node);
+    vm.assume(operatorRegistry.isOperator(nodeOperator) == false);
 
     vm.prank(nodeOperator);
     vm.expectRevert(bytes(RiverRegistryErrors.BAD_AUTH));
@@ -123,7 +124,7 @@ contract NodeRegistryTest is RiverRegistryBaseSetup, INodeRegistryBase {
     givenNodeStatusIs(nodeOperator, node, NodeStatus.RemoteOnly)
   {
     Node memory updated = nodeRegistry.getNode(node);
-    assertEq(uint(updated.status), uint(NodeStatus.RemoteOnly));
+    assertEq(uint256(updated.status), uint256(NodeStatus.RemoteOnly));
   }
 
   function test_revertWhen_updateNodeStatusNodeNotFound(address node) external {
