@@ -1,7 +1,9 @@
 import axios from 'axios'
 import { dlog } from '@river-build/dlog'
+import { contractAddressFromSpaceId } from '@river-build/sdk'
+import { CreateLegacySpaceParams } from '@river-build/web3'
 
-import { getTestServerUrl } from '../testUtils'
+import { getTestServerUrl, makeCreateSpaceParams, makeTestClient } from '../testUtils'
 
 const log = dlog('stream-metadata:test:spaceMetadata', {
 	allowJest: true,
@@ -44,5 +46,43 @@ describe('integration/space/:spaceAddress', () => {
 				throw error
 			}
 		}
+	})
+
+	it('should return status 200 without spaceImage', async () => {
+		/**
+		 * 1. create a space.
+		 * 2. fetch the space contract info from the stream-metadata server.
+		 * 3. verify the response.
+		 */
+
+		/*
+		 * 1. create a space.
+		 */
+		const bobsClient = await makeTestClient()
+
+		const createSpaceParams = makeCreateSpaceParams(spaceDapp, {
+			spaceName: 'bobs space',
+			spaceImageUri: '',
+			channelName: 'general',
+			shortDescription: 'bobs space short description',
+			longDescription: 'bobs space long description',
+		})
+
+		await bobsClient.initializeUser()
+		bobsClient.startSync()
+		await bobsClient.createSpace(spaceId)
+		const spaceStream = await bobsClient.waitForStream(spaceId)
+		log('spaceStreamId', spaceStream.streamId)
+
+		// assert assumptions
+		expect(spaceStream).toBeDefined()
+		expect(
+			spaceStream.view.snapshot?.content.case === 'spaceContent' &&
+				spaceStream.view.snapshot?.content.value.spaceImage === undefined,
+		).toBe(true)
+
+		/*
+		 * 3. fetch the space image from the stream-metadata server.
+		 */
 	})
 })

@@ -14,7 +14,15 @@ import {
 	userIdFromAddress,
 } from '@river-build/sdk'
 import { ethers } from 'ethers'
-import { LocalhostWeb3Provider } from '@river-build/web3'
+import {
+	CreateLegacySpaceParams,
+	findDynamicPricingModule,
+	LegacyMembershipStruct,
+	LocalhostWeb3Provider,
+	NoopRuleData,
+	Permission,
+	SpaceDapp,
+} from '@river-build/web3'
 
 import { StreamRpcClient } from '../src/riverStreamRpcClient'
 import { testConfig } from './testEnvironment'
@@ -189,4 +197,57 @@ export async function encryptAndSendMediaPayload(
 	})
 
 	return chunkedMedia
+}
+
+export interface CreateSpaceParams {
+	spaceName: string
+	spaceImageUri: string
+	shortDescription: string
+	longDescription: string
+	channelName: string
+}
+
+export async function makeCreateSpaceParams(spaceDapp: SpaceDapp, args: CreateSpaceParams) {
+	const { spaceName, spaceImageUri, shortDescription, longDescription } = args
+	/*
+	 * assemble all the parameters needed to create a space.
+	 */
+
+	// pricing module
+	const pricingModules = await spaceDapp.listPricingModules()
+	const dynamicPricingModule = findDynamicPricingModule(pricingModules)
+	if (!dynamicPricingModule) {
+		throw new Error('No dynamic pricing module found')
+	}
+	const pricingModule = await dynamicPricingModule.module
+	// membership
+	const membership: LegacyMembershipStruct = {
+		settings: {
+			name: spaceName + ' - Member',
+			symbol: 'MEMBER',
+			price: 1,
+			maxSupply: 10,
+			duration: 60 * 60 * 24 * 365,
+			currency: ethers.constants.AddressZero,
+			feeRecipient: ethers.constants.AddressZero,
+			freeAllocation: 0,
+			pricingModule,
+		},
+		requirements: {
+			everyone: true,
+			users: [],
+			ruleData: NoopRuleData,
+		},
+		permissions: [Permission.Read, Permission.Write, Permission.React],
+	}
+	// all create space args
+	const createSpaceParams: CreateLegacySpaceParams = {
+		spaceName: spaceName,
+		uri: spaceImageUri,
+		channelName: 'general',
+		membership,
+		shortDescription,
+		longDescription,
+	}
+	return createSpaceParams
 }
