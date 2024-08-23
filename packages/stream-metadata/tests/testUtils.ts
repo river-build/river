@@ -155,7 +155,12 @@ export async function encryptAndSendMediaPayload(
 	const { ciphertext, secretKey, iv } = await encryptAESGCM(data)
 	const chunkCount = Math.ceil(ciphertext.length / chunkSize)
 
-	const mediaStreamInfo = await client.createMediaStream(undefined, spaceId, chunkCount)
+	const mediaStreamInfo = await client.createMediaStream(
+		undefined,
+		spaceId,
+		undefined,
+		chunkCount,
+	)
 
 	if (!mediaStreamInfo) {
 		throw new Error('Failed to create media stream')
