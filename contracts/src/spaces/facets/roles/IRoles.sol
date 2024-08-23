@@ -104,4 +104,20 @@ interface IRoles is IRolesBase {
     uint256 roleId,
     CreateEntitlement memory entitlement
   ) external;
+
+  function setChannelPermissionOverrides(
+    uint256 roleId,
+    bytes32 channelId,
+    string[] calldata permissions
+  ) external;
+
+  function getChannelPermissionOverrides(
+    uint256 roleId,
+    bytes32 channelId
+  ) external view returns (string[] memory permissions);
+
+  function clearChannelPermissionOverrides(
+    uint256 roleId,
+    bytes32 channelId
+  ) external;
 }
