@@ -125,6 +125,7 @@ import {
     make_SpacePayload_UpdateChannelHideUserJoinLeaveEvents,
     make_SpacePayload_SpaceImage,
     make_UserMetadataPayload_ProfileImage,
+    make_UserMetadataPayload_Bio,
 } from './types'
 
 import debug from 'debug'
@@ -938,6 +939,33 @@ export class Client
     async getUserProfileImage(userId: string | Uint8Array) {
         const streamId = makeUserMetadataStreamId(userId)
         return this.stream(streamId)?.view.userMetadataContent.getProfileImage()
+    }
+
+    async setUserBio(bio: string) {
+        this.logCall('setUserBio', bio)
+
+        // create the chunked media to be added
+        const context = this.userId.toLowerCase()
+        const userStreamId = makeUserMetadataStreamId(this.userId)
+
+        // encrypt the chunked media
+        // use the lowercased userId as the key phrase
+        const { key, iv } = await deriveKeyAndIV(context)
+        const bioBinary = new TextEncoder().encode(bio)
+        const { ciphertext } = await encryptAESGCM(bioBinary, key, iv)
+        const encryptedData = new EncryptedData({
+            ciphertext: uint8ArrayToBase64(ciphertext),
+            algorithm: AES_GCM_DERIVED_ALGORITHM,
+        })
+
+        // add the event to the stream
+        const event = make_UserMetadataPayload_Bio(encryptedData)
+        return this.makeEventAndAddToStream(userStreamId, event, { method: 'setUserBio' })
+    }
+
+    async getUserBio(userId: string | Uint8Array) {
+        const streamId = makeUserMetadataStreamId(userId)
+        return this.stream(streamId)?.view.userMetadataContent.getBio()
     }
 
     async setDisplayName(streamId: string, displayName: string) {
