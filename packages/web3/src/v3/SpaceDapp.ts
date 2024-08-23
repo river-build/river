@@ -589,11 +589,12 @@ export class SpaceDapp implements ISpaceDapp {
             }),
         )
 
-        // if every check has an entitled wallet, return the first one
-        if (
-            entitledWalletsForAllRuleEntitlements.every((w) => w !== ethers.constants.AddressZero)
-        ) {
-            return entitledWalletsForAllRuleEntitlements[0]
+        const validWallets = entitledWalletsForAllRuleEntitlements.filter(
+            (w) => w !== ethers.constants.AddressZero,
+        )
+        // if any ruleData check passes with an entitled wallet, return the first wallet that passed
+        if (validWallets.length > 0) {
+            return validWallets[0]
         }
         return
     }
@@ -731,7 +732,8 @@ export class SpaceDapp implements ISpaceDapp {
         if (
             permission === Permission.Read ||
             permission === Permission.Write ||
-            permission === Permission.React
+            permission === Permission.React ||
+            permission === Permission.PinMessage
         ) {
             const linkedWallets = await this.getLinkedWallets(user)
 
