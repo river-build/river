@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { dlog } from '@river-build/dlog'
 import { contractAddressFromSpaceId } from '@river-build/sdk'
+import { ethers } from 'ethers'
 
 import {
 	encryptAndSendMediaPayload,
@@ -81,12 +82,13 @@ describe('integration/stream-metadata/space/:spaceAddress/image', () => {
 		/*
 		 * 1. create a space.
 		 */
-		const spaceId = makeUniqueSpaceStreamId()
-		const { client: bobsClient } = await makeTestClient()
+		const bobsWallet = ethers.Wallet.createRandom()
+		const bobsClient = await makeTestClient(bobsWallet)
 
 		await bobsClient.initializeUser()
 		bobsClient.startSync()
 
+		const spaceId = makeUniqueSpaceStreamId()
 		await bobsClient.createSpace(spaceId)
 		const spaceStream = await bobsClient.waitForStream(spaceId)
 		log('spaceStreamId', spaceStream.streamId)
@@ -144,12 +146,13 @@ describe('integration/stream-metadata/space/:spaceAddress/image', () => {
 		/*
 		 * 1. create a space.
 		 */
-		const spaceId = makeUniqueSpaceStreamId()
-		const { client: bobsClient } = await makeTestClient()
+		const bobsWallet = ethers.Wallet.createRandom()
+		const bobsClient = await makeTestClient(bobsWallet)
 
 		await bobsClient.initializeUser()
 		bobsClient.startSync()
 
+		const spaceId = makeUniqueSpaceStreamId()
 		await bobsClient.createSpace(spaceId)
 		const spaceStream = await bobsClient.waitForStream(spaceId)
 		log('spaceStreamId', spaceStream.streamId)

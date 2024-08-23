@@ -84,11 +84,11 @@ export function makeSpaceDapp(wallet: ethers.Wallet): SpaceDapp {
 	return new SpaceDapp(testConfig.web3Config.base, provider)
 }
 
-export async function makeTestClient() {
+export async function makeTestClient(wallet: ethers.Wallet): Promise<Client> {
 	// create all the constructor arguments for the SDK client
 
 	// arg: user context and wallet
-	const { context, wallet } = await makeRandomUserContext()
+	const context = await makeRandomUserContext(wallet)
 	const provider = makeEthersProvider(wallet)
 	// need funds to create space and execute tranasctions
 	await provider.fundWallet()
@@ -113,27 +113,11 @@ export async function makeTestClient() {
 	const persistenceDbName = `persistence-${userId}-${deviceId}`
 
 	// create the client with all the args
-	return {
-		wallet,
-		client: new Client(
-			context,
-			rpcClient,
-			cryptoStore,
-			entitlementsDelegate,
-			persistenceDbName,
-		),
-	}
+	return new Client(context, rpcClient, cryptoStore, entitlementsDelegate, persistenceDbName)
 }
 
-export async function makeRandomUserContext(): Promise<{
-	wallet: ethers.Wallet
-	context: SignerContext
-}> {
-	const wallet = ethers.Wallet.createRandom()
-	return {
-		wallet,
-		context: await makeUserContextFromWallet(wallet),
-	}
+export async function makeRandomUserContext(wallet: ethers.Wallet) {
+	return makeUserContextFromWallet(wallet)
 }
 
 export async function makeUserContextFromWallet(wallet: ethers.Wallet): Promise<SignerContext> {

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { dlog } from '@river-build/dlog'
+import { ethers } from 'ethers'
 
 import {
 	getTestServerUrl,
@@ -62,7 +63,8 @@ describe('integration/space/:spaceAddress', () => {
 		/*
 		 * 1. create a space on-chain.
 		 */
-		const { client: bobsClient, wallet: bobsWallet } = await makeTestClient()
+		const bobsWallet = ethers.Wallet.createRandom()
+		const bobsClient = await makeTestClient(bobsWallet)
 		await bobsClient.initializeUser()
 		bobsClient.startSync()
 
