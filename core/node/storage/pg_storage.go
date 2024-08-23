@@ -1450,7 +1450,8 @@ func (s *PostgresEventStore) vacuumTables(ctx context.Context, dbUrlWithSchema s
 	}
 	defer db.Close()
 
-	tables := []string{"miniblock_candidates", "es", "miniblocks", "minipools"}
+	// Skipping miniblocks table as it can be very large and VACUUM FULL can take a long time
+	tables := []string{"miniblock_candidates", "es", "minipools"}
 
 	for _, table := range tables {
 		query := fmt.Sprintf("VACUUM FULL %s;", table)
