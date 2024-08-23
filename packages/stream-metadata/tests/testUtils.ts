@@ -15,7 +15,6 @@ import {
 } from '@river-build/sdk'
 import { ethers } from 'ethers'
 import {
-	BaseChainConfig,
 	CreateLegacySpaceParams,
 	findDynamicPricingModule,
 	LegacyMembershipStruct,
@@ -76,12 +75,21 @@ export function makeStreamRpcClient(url: string): StreamRpcClient {
 	return client
 }
 
+export function makeEthersProvider(wallet: ethers.Wallet) {
+	return new LocalhostWeb3Provider(testConfig.baseChainRpcUrl, wallet)
+}
+
+export function makeSpaceDapp(wallet: ethers.Wallet): SpaceDapp {
+	const provider = makeEthersProvider(wallet)
+	return new SpaceDapp(testConfig.web3Config.base, provider)
+}
+
 export async function makeTestClient() {
 	// create all the constructor arguments for the SDK client
 
 	// arg: user context and wallet
 	const { context, wallet } = await makeRandomUserContext()
-	const provider = new LocalhostWeb3Provider(testConfig.baseChainRpcUrl, wallet)
+	const provider = makeEthersProvider(wallet)
 	// need funds to create space and execute tranasctions
 	await provider.fundWallet()
 
@@ -207,14 +215,6 @@ export async function encryptAndSendMediaPayload(
 	})
 
 	return chunkedMedia
-}
-
-export function makeSpaceDapp(baseChainConfig: BaseChainConfig, baseRpcUrl: string): SpaceDapp {
-	const provider = new ethers.providers.StaticJsonRpcProvider(baseRpcUrl, {
-		chainId: baseChainConfig.chainId,
-		name: `base-${baseChainConfig.chainId}`,
-	})
-	return new SpaceDapp(baseChainConfig, provider)
 }
 
 export interface CreateSpaceParams {

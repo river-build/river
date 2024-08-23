@@ -82,7 +82,7 @@ describe('integration/stream-metadata/space/:spaceAddress/image', () => {
 		 * 1. create a space.
 		 */
 		const spaceId = makeUniqueSpaceStreamId()
-		const bobsClient = await makeTestClient()
+		const { client: bobsClient } = await makeTestClient()
 
 		await bobsClient.initializeUser()
 		bobsClient.startSync()
@@ -145,7 +145,7 @@ describe('integration/stream-metadata/space/:spaceAddress/image', () => {
 		 * 1. create a space.
 		 */
 		const spaceId = makeUniqueSpaceStreamId()
-		const bobsClient = await makeTestClient()
+		const { client: bobsClient } = await makeTestClient()
 
 		await bobsClient.initializeUser()
 		bobsClient.startSync()
