@@ -7,7 +7,6 @@ import {
 	makeSpaceDapp,
 	makeTestClient,
 } from '../testUtils'
-import { testConfig } from '../testEnvironment'
 
 const log = dlog('stream-metadata:test:spaceMetadata', {
 	allowJest: true,
@@ -67,7 +66,7 @@ describe('integration/space/:spaceAddress', () => {
 		await bobsClient.initializeUser()
 		bobsClient.startSync()
 
-		const spaceDapp = makeSpaceDapp(testConfig.web3Config.base, testConfig.baseChainRpcUrl)
+		const spaceDapp = makeSpaceDapp(bobsWallet)
 
 		const createSpaceParams = await makeCreateSpaceParams(spaceDapp, {
 			spaceName: 'bobs space',
