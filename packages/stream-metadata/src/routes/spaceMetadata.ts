@@ -1,9 +1,11 @@
 import { FastifyRequest, FastifyReply } from 'fastify'
+import { SpaceInfo } from '@river-build/web3'
 
 import { isValidEthereumAddress } from '../validators'
 import { getFunctionLogger } from '../logger'
+import { getSpaceDapp } from '../contract-utils'
 
-export function fetchSpaceMetadata(
+export async function fetchSpaceMetadata(
 	request: FastifyRequest,
 	reply: FastifyReply,
 	serverUrl: string,
@@ -26,13 +28,28 @@ export function fetchSpaceMetadata(
 			.send({ error: 'Bad Request', message: 'Invalid spaceAddress format' })
 	}
 
-	const dummyJson = {
-		name: '....',
-		description: '....',
-		members: 99999,
-		fees: '0.001 eth',
+	const spaceDapp = getSpaceDapp()
+	let spaceContractInfo: SpaceInfo | undefined
+	try {
+		spaceContractInfo = await spaceDapp.getSpaceInfo(spaceAddress)
+	} catch (error) {
+		logger.error({ spaceAddress, error }, 'Failed to fetch space contract info')
+		return reply
+			.code(404)
+			.send({ error: 'Not Found', message: 'Failed to fetch space contract info' })
+	}
+
+	if (!spaceContractInfo) {
+		logger.error({ spaceAddress }, 'Space contract not found')
+		return reply.code(404).send({ error: 'Not Found', message: 'Space contract not found' })
+	}
+
+	const metadata = {
+		name: spaceContractInfo.name,
+		longDescription: spaceContractInfo.longDescription,
+		shortDescription: spaceContractInfo.shortDescription,
 		image: `${serverUrl}/space/${spaceAddress}/image`,
 	}
 
-	return reply.header('Content-Type', 'application/json').send(dummyJson)
+	return reply.header('Content-Type', 'application/json').send(metadata)
 }
