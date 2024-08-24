@@ -7,7 +7,7 @@ export function getMediaEncryption(
 	log: FastifyBaseLogger,
 	chunkedMedia: ChunkedMedia,
 ): { key: Uint8Array; iv: Uint8Array } {
-	const logger = getFunctionLogger(log, 'getEncryption')
+	const logger = getFunctionLogger(log, 'getMediaEncryption')
 	switch (chunkedMedia.encryption.case) {
 		case 'aesgcm': {
 			return {
