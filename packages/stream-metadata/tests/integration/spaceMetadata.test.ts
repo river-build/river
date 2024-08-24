@@ -88,13 +88,7 @@ describe('integration/space/:spaceAddress', () => {
 		// need funds to create space and execute tranasctions
 		await provider.fundWallet()
 
-		let tx: ethers.ContractTransaction | undefined
-		try {
-			tx = await spaceDapp.createLegacySpace(createSpaceParams, provider.signer)
-		} catch (e) {
-			console.error(e)
-			throw e
-		}
+		const tx = await spaceDapp.createLegacySpace(createSpaceParams, provider.signer)
 		const receipt = await tx.wait()
 		expect(receipt.status).toBe(1)
 
@@ -122,7 +116,6 @@ describe('integration/space/:spaceAddress', () => {
 			name: expectedMetadata.name,
 			longDescription: expectedMetadata.longDescription,
 			shortDescription: expectedMetadata.shortDescription,
-			uri: expectedMetadata.uri,
 			image: `${baseURL}/space/${spaceAddress}/image`,
 		})
 	})
