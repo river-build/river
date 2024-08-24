@@ -4,12 +4,9 @@ import { SpaceInfo } from '@river-build/web3'
 import { isValidEthereumAddress } from '../validators'
 import { getFunctionLogger } from '../logger'
 import { getSpaceDapp } from '../contract-utils'
+import { config } from '../environment'
 
-export async function fetchSpaceMetadata(
-	request: FastifyRequest,
-	reply: FastifyReply,
-	serverUrl: string,
-) {
+export async function fetchSpaceMetadata(request: FastifyRequest, reply: FastifyReply) {
 	const logger = getFunctionLogger(request.log, 'fetchSpaceMetadata')
 	const { spaceAddress } = request.params as { spaceAddress?: string }
 
@@ -48,8 +45,35 @@ export async function fetchSpaceMetadata(
 		name: spaceContractInfo.name,
 		longDescription: spaceContractInfo.longDescription,
 		shortDescription: spaceContractInfo.shortDescription,
-		image: `${serverUrl}/space/${spaceAddress}/image`,
+		image: getImageUrl(spaceContractInfo.uri, spaceAddress),
 	}
 
 	return reply.header('Content-Type', 'application/json').send(metadata)
+}
+
+function getImageUrl(contractUri: string, spaceAddress: string) {
+	const isDefaultPort =
+		config.riverStreamMetadataHostUrl.port === '' ||
+		config.riverStreamMetadataHostUrl.port === '80' ||
+		config.riverStreamMetadataHostUrl.port === '443'
+
+	// Check if contractUri is empty or starts with the config.riverStreamMetadataHostUrl
+	if (
+		contractUri === '' ||
+		contractUri.startsWith(config.riverStreamMetadataHostUrl.toString())
+	) {
+		// Start building the base URL
+		let baseUrl = `${config.riverStreamMetadataHostUrl.origin}/space/${spaceAddress}/image`
+
+		// If config has a port that is not 80 or 443, and riverStreamMetadataHostUrl
+		// has the default port, add the config port to the URL
+		if (config.port !== 80 && config.port !== 443 && isDefaultPort) {
+			baseUrl = `${config.riverStreamMetadataHostUrl.protocol}//${config.riverStreamMetadataHostUrl.hostname}:${config.port}/space/${spaceAddress}/image`
+		}
+
+		return baseUrl
+	}
+
+	// If the contractUri doesn't meet the conditions, return it as is
+	return contractUri
 }
