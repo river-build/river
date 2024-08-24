@@ -10,11 +10,19 @@ import {
 	makeTestClient,
 	SpaceMetadataParams,
 } from '../testUtils'
+import { config } from '../../src/environment'
 
 const log = dlog('stream-metadata:test:spaceMetadata', {
 	allowJest: true,
 	defaultEnabled: true,
 })
+
+interface MetadataResponse {
+	name: string
+	longDescription: string
+	shortDescription: string
+	image: string
+}
 
 describe('integration/space/:spaceAddress', () => {
 	const baseURL = getTestServerUrl()
@@ -109,14 +117,16 @@ describe('integration/space/:spaceAddress', () => {
 		 * 3. fetch the space metadata from the stream-metadata server.
 		 */
 		const route = `space/${spaceAddress}`
-		const response = await axios.get(`${baseURL}/${route}`)
+		const response = await axios.get<MetadataResponse>(`${baseURL}/${route}`)
+		log('response', { status: response.status, data: response.data })
+
+		const { name, longDescription, shortDescription, image } = response.data
 		expect(response.status).toBe(200)
 		expect(response.headers['content-type']).toContain('application/json')
-		expect(response.data).toEqual({
-			name: expectedMetadata.name,
-			longDescription: expectedMetadata.longDescription,
-			shortDescription: expectedMetadata.shortDescription,
-			image: `${baseURL}/space/${spaceAddress}/image`,
-		})
+		expect(name).toEqual(expectedMetadata.name)
+		expect(longDescription).toEqual(expectedMetadata.longDescription)
+		expect(shortDescription).toEqual(expectedMetadata.shortDescription)
+		const expectedImageUrl = `http://localhost:${config.port}/space/${spaceAddress}/image`
+		expect(image.toLowerCase()).toEqual(expectedImageUrl.toLowerCase())
 	})
 })
