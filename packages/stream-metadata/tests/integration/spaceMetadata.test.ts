@@ -93,20 +93,24 @@ describe('integration/space/:spaceAddress', () => {
 		const receipt = await tx.wait()
 		expect(receipt.status).toBe(1)
 
-		const spaceId = spaceDapp.getSpaceAddress(receipt)
-		if (!spaceId) {
-			throw new Error('spaceId is undefined')
+		const spaceAddress = spaceDapp.getSpaceAddress(receipt)
+		expect(spaceAddress).toBeDefined()
+		if (!spaceAddress) {
+			throw new Error('spaceAddress is undefined')
 		}
-		log('spaceId', spaceId)
 
 		/*
 		 * 2. create a space stream.
 		 */
-		const spaceStreamId = await bobsClient.createSpace(spaceId)
+		const spaceStreamId = await bobsClient.createSpace(spaceAddress)
+		expect(spaceStreamId).toBeDefined()
 		log('spaceStreamId', spaceStreamId)
 
 		/*
-		 * 3. fetch the space image from the stream-metadata server.
+		 * 3. fetch the space metadata from the stream-metadata server.
 		 */
+		const route = `space/${spaceAddress}`
+		const response = await axios.get(`${baseURL}/${route}`)
+		expect(response.status).toBe(200)
 	})
 })
