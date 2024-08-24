@@ -26,7 +26,7 @@ import {
 } from '@river-build/web3'
 
 import { StreamRpcClient } from '../src/riverStreamRpcClient'
-import { testConfig } from './testEnvironment'
+import { config } from '../src/environment'
 import { getRiverRegistry } from '../src/evmRpcClient'
 
 export function isTest(): boolean {
@@ -43,7 +43,7 @@ export function makeUniqueSpaceStreamId(): string {
 
 export function getTestServerUrl() {
 	// use the .env.test config to derive the baseURL of the server under test
-	const { host, port, riverEnv } = testConfig
+	const { host, port, riverEnv } = config
 	const protocol = riverEnv.startsWith('local') ? 'http' : 'https'
 	const baseURL = `${protocol}://${host}:${port}`
 	return baseURL
@@ -77,12 +77,12 @@ export function makeStreamRpcClient(url: string): StreamRpcClient {
 }
 
 export function makeEthersProvider(wallet: ethers.Wallet) {
-	return new LocalhostWeb3Provider(testConfig.baseChainRpcUrl, wallet)
+	return new LocalhostWeb3Provider(config.baseChainRpcUrl, wallet)
 }
 
 export function makeSpaceDapp(wallet: ethers.Wallet): SpaceDapp {
 	const provider = makeEthersProvider(wallet)
-	return new SpaceDapp(testConfig.web3Config.base, provider)
+	return new SpaceDapp(config.web3Config.base, provider)
 }
 
 export async function makeTestClient(wallet: ethers.Wallet): Promise<Client> {
