@@ -8,6 +8,7 @@ import {
 	makeEthersProvider,
 	makeSpaceDapp,
 	makeTestClient,
+	SpaceMetadataParams,
 } from '../testUtils'
 
 const log = dlog('stream-metadata:test:spaceMetadata', {
@@ -70,14 +71,18 @@ describe('integration/space/:spaceAddress', () => {
 		bobsClient.startSync()
 
 		const spaceDapp = makeSpaceDapp(bobsWallet)
-
-		const createSpaceParams = await makeCreateSpaceParams(bobsClient.userId, spaceDapp, {
-			spaceName: 'bobs space',
-			spaceImageUri: '',
-			channelName: 'general',
+		const expectedMetadata: SpaceMetadataParams = {
+			name: 'bobs space',
+			uri: '',
 			shortDescription: 'bobs space short description',
 			longDescription: 'bobs space long description',
-		})
+		}
+
+		const createSpaceParams = await makeCreateSpaceParams(
+			bobsClient.userId,
+			spaceDapp,
+			expectedMetadata,
+		)
 
 		const provider = makeEthersProvider(bobsWallet)
 		// need funds to create space and execute tranasctions
@@ -112,5 +117,13 @@ describe('integration/space/:spaceAddress', () => {
 		const route = `space/${spaceAddress}`
 		const response = await axios.get(`${baseURL}/${route}`)
 		expect(response.status).toBe(200)
+		expect(response.headers['content-type']).toContain('application/json')
+		expect(response.data).toEqual({
+			name: expectedMetadata.name,
+			longDescription: expectedMetadata.longDescription,
+			shortDescription: expectedMetadata.shortDescription,
+			uri: expectedMetadata.uri,
+			image: `${baseURL}/space/${spaceAddress}/image`,
+		})
 	})
 })

@@ -195,20 +195,19 @@ export async function encryptAndSendMediaPayload(
 	return chunkedMedia
 }
 
-export interface CreateSpaceParams {
-	spaceName: string
-	spaceImageUri: string
+export interface SpaceMetadataParams {
+	name: string
+	uri: string
 	shortDescription: string
 	longDescription: string
-	channelName: string
 }
 
 export async function makeCreateSpaceParams(
 	userId: string,
 	spaceDapp: SpaceDapp,
-	args: CreateSpaceParams,
+	args: SpaceMetadataParams,
 ) {
-	const { spaceName, spaceImageUri, shortDescription, longDescription } = args
+	const { name: spaceName, uri: spaceImageUri, shortDescription, longDescription } = args
 	/*
 	 * assemble all the parameters needed to create a space.
 	 */
