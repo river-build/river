@@ -14,8 +14,9 @@ const BoolFromStringSchema = BoolStringSchema.transform((str) => str === 'true')
 
 const envSchema = z.object({
 	RIVER_ENV: z.string(),
-	RIVER_CHAIN_RPC_URL: z.string().url(),
 	BASE_CHAIN_RPC_URL: z.string().url(),
+	RIVER_CHAIN_RPC_URL: z.string().url(),
+	RIVER_STREAM_METADATA_HOST_URL: z.string().url(),
 	PORT: NumberFromIntStringSchema,
 	HOST: z.string().optional().default('127.0.0.1'),
 	LOG_LEVEL: z.string().optional().default('info'),
@@ -30,8 +31,9 @@ function makeConfig() {
 	return {
 		web3Config,
 		riverEnv: env.RIVER_ENV,
-		riverChainRpcUrl: env.RIVER_CHAIN_RPC_URL,
 		baseChainRpcUrl: env.BASE_CHAIN_RPC_URL,
+		riverChainRpcUrl: env.RIVER_CHAIN_RPC_URL,
+		riverStreamMetadataHostUrl: new URL(env.RIVER_STREAM_METADATA_HOST_URL),
 		host: env.HOST,
 		port: env.PORT,
 		log: {
