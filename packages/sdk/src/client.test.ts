@@ -9,10 +9,11 @@ import { Client } from './client'
 import {
     makeUserStreamId,
     makeUserSettingsStreamId,
-    makeUserDeviceKeyStreamId,
+    makeUserMetadataStreamId,
     makeUserInboxStreamId,
     makeUniqueChannelStreamId,
     addressFromUserId,
+    makeUniqueMediaStreamId,
 } from './id'
 import {
     makeDonePromise,
@@ -26,12 +27,14 @@ import {
     CancelSyncRequest,
     CancelSyncResponse,
     ChannelMessage,
+    MediaInfo,
     SnapshotCaseType,
     SyncOp,
     SyncStreamsRequest,
     SyncStreamsResponse,
+    type ChunkedMedia,
 } from '@river-build/proto'
-import { PartialMessage } from '@bufbuild/protobuf'
+import { PartialMessage, type PlainMessage } from '@bufbuild/protobuf'
 import { CallOptions } from '@connectrpc/connect'
 import { jest } from '@jest/globals'
 import {
@@ -41,6 +44,8 @@ import {
     make_MemberPayload_KeySolicitation,
 } from './types'
 import { SignerContext } from './signerContext'
+import { deriveKeyAndIV } from './crypto_utils'
+import { nanoid } from 'nanoid'
 
 const log = dlog('csb:test')
 
@@ -290,7 +295,7 @@ describe('clientTest', () => {
         expect(bobsClient.streams.get(makeUserSettingsStreamId(bobsClient.userId))).toBeDefined()
         expect(bobsClient.streams.get(makeUserStreamId(bobsClient.userId))).toBeDefined()
         expect(bobsClient.streams.get(makeUserInboxStreamId(bobsClient.userId))).toBeDefined()
-        expect(bobsClient.streams.get(makeUserDeviceKeyStreamId(bobsClient.userId))).toBeDefined()
+        expect(bobsClient.streams.get(makeUserMetadataStreamId(bobsClient.userId))).toBeDefined()
     })
 
     test('clientCreatesStreamsForExistingUser', async () => {
@@ -303,7 +308,7 @@ describe('clientTest', () => {
         ).toBeDefined()
         expect(bobsAnotherClient.streams.get(makeUserStreamId(bobsClient.userId))).toBeDefined()
         expect(
-            bobsAnotherClient.streams.get(makeUserDeviceKeyStreamId(bobsClient.userId)),
+            bobsAnotherClient.streams.get(makeUserMetadataStreamId(bobsClient.userId)),
         ).toBeDefined()
     })
 
@@ -773,13 +778,13 @@ describe('clientTest', () => {
             (streamId: string, userId: string, userDevice: UserDevice): void => {
                 log('userDeviceKeyMessage for Bob', streamId, userId, userDevice)
                 bobSelfInbox.runAndDone(() => {
-                    expect(streamId).toBe(bobUserDeviceKeyStreamId)
+                    expect(streamId).toBe(bobUserMetadataStreamId)
                     expect(userId).toBe(bobsUserId)
                     expect(userDevice.deviceKey).toBeDefined()
                 })
             },
         )
-        const bobUserDeviceKeyStreamId = bobsClient.userDeviceKeyStreamId
+        const bobUserMetadataStreamId = bobsClient.userMetadataStreamId
         await bobSelfInbox.expectToSucceed()
     })
 
@@ -795,13 +800,13 @@ describe('clientTest', () => {
             (streamId: string, userId: string, deviceKeys: UserDevice): void => {
                 log('userDeviceKeyMessage for Bob', streamId, userId, deviceKeys)
                 bobSelfInbox.runAndDone(() => {
-                    expect(streamId).toBe(bobUserDeviceKeyStreamId)
+                    expect(streamId).toBe(bobUserMetadataStreamId)
                     expect(userId).toBe(bobsUserId)
                     expect(deviceKeys.deviceKey).toBeDefined()
                 })
             },
         )
-        const bobUserDeviceKeyStreamId = bobsClient.userDeviceKeyStreamId
+        const bobUserMetadataStreamId = bobsClient.userMetadataStreamId
         await bobSelfInbox.expectToSucceed()
         const deviceKeys = await bobsClient.downloadUserDeviceInfo([bobsUserId])
         expect(deviceKeys[bobsUserId]).toBeDefined()
@@ -821,13 +826,13 @@ describe('clientTest', () => {
             (streamId: string, userId: string, deviceKeys: UserDevice): void => {
                 log('userDeviceKeyMessage for Alice', streamId, userId, deviceKeys)
                 alicesSelfInbox.runAndDone(() => {
-                    expect(streamId).toBe(aliceUserDeviceKeyStreamId)
+                    expect(streamId).toBe(aliceUserMetadataStreamId)
                     expect(userId).toBe(alicesUserId)
                     expect(deviceKeys.deviceKey).toBeDefined()
                 })
             },
         )
-        const aliceUserDeviceKeyStreamId = alicesClient.userDeviceKeyStreamId
+        const aliceUserMetadataStreamId = alicesClient.userMetadataStreamId
         const deviceKeys = await bobsClient.downloadUserDeviceInfo([alicesUserId])
         expect(deviceKeys[alicesUserId]).toBeDefined()
     })
@@ -848,16 +853,14 @@ describe('clientTest', () => {
             (streamId: string, userId: string, deviceKeys: UserDevice): void => {
                 log('userDeviceKeyMessage', streamId, userId, deviceKeys)
                 bobSelfInbox.runAndDone(() => {
-                    expect([bobUserDeviceKeyStreamId, aliceUserDeviceKeyStreamId]).toContain(
-                        streamId,
-                    )
+                    expect([bobUserMetadataStreamId, aliceUserMetadataStreamId]).toContain(streamId)
                     expect([bobsUserId, alicesUserId]).toContain(userId)
                     expect(deviceKeys.deviceKey).toBeDefined()
                 })
             },
         )
-        const aliceUserDeviceKeyStreamId = alicesClient.userDeviceKeyStreamId
-        const bobUserDeviceKeyStreamId = bobsClient.userDeviceKeyStreamId
+        const aliceUserMetadataStreamId = alicesClient.userMetadataStreamId
+        const bobUserMetadataStreamId = bobsClient.userMetadataStreamId
         const deviceKeys = await bobsClient.downloadUserDeviceInfo([alicesUserId, bobsUserId])
         expect(Object.keys(deviceKeys).length).toEqual(2)
         expect(deviceKeys[alicesUserId]).toBeDefined()
@@ -881,16 +884,14 @@ describe('clientTest', () => {
             (streamId: string, userId: string, deviceKeys: UserDevice): void => {
                 log('userDeviceKeyMessage', streamId, userId, deviceKeys)
                 bobSelfInbox.runAndDone(() => {
-                    expect([bobUserDeviceKeyStreamId, aliceUserDeviceKeyStreamId]).toContain(
-                        streamId,
-                    )
+                    expect([bobUserMetadataStreamId, aliceUserMetadataStreamId]).toContain(streamId)
                     expect([bobsUserId, alicesUserId]).toContain(userId)
                     expect(deviceKeys.deviceKey).toBeDefined()
                 })
             },
         )
-        const aliceUserDeviceKeyStreamId = alicesClient.userDeviceKeyStreamId
-        const bobUserDeviceKeyStreamId = bobsClient.userDeviceKeyStreamId
+        const aliceUserMetadataStreamId = alicesClient.userMetadataStreamId
+        const bobUserMetadataStreamId = bobsClient.userMetadataStreamId
         const fallbackKeys = await bobsClient.downloadUserDeviceInfo([alicesUserId, bobsUserId])
 
         expect(fallbackKeys).toBeDefined()
@@ -988,7 +989,7 @@ describe('clientTest', () => {
     test('clientOnlyUploadsDeviceKeysOnce', async () => {
         await expect(await bobsClient.initializeUser()).toResolve()
         bobsClient.startSync()
-        const stream = bobsClient.stream(bobsClient.userDeviceKeyStreamId!)!
+        const stream = bobsClient.stream(bobsClient.userMetadataStreamId!)!
 
         const waitForInitialUpload = makeDonePromise()
         stream.on('userDeviceKeyMessage', () => {
@@ -1000,7 +1001,48 @@ describe('clientTest', () => {
             await bobsClient.uploadDeviceKeys()
         }
 
-        const keys = stream.view.userDeviceKeyContent.deviceKeys
+        const keys = stream.view.userMetadataContent.deviceKeys
         expect(keys).toHaveLength(1)
+    })
+
+    test('setUserProfilePicture', async () => {
+        await expect(await bobsClient.initializeUser()).toResolve()
+        bobsClient.startSync()
+        const streamId = bobsClient.userMetadataStreamId!
+        const userMetadataStream = await bobsClient.waitForStream(streamId)
+
+        // assert assumptionsP
+        expect(userMetadataStream).toBeDefined()
+        expect(
+            userMetadataStream.view.snapshot?.content.case === 'userMetadataContent' &&
+                userMetadataStream.view.snapshot?.content.value.profileImage === undefined,
+        ).toBe(true)
+
+        // make a space image event
+        const mediaStreamId = makeUniqueMediaStreamId()
+        const image = new MediaInfo({
+            mimetype: 'image/png',
+            filename: 'bob-1.png',
+        })
+        const { key, iv } = await deriveKeyAndIV(nanoid(128)) // if in browser please use window.crypto.subtle.generateKey
+        const chunkedMediaInfo = {
+            info: image,
+            streamId: mediaStreamId,
+            encryption: {
+                case: 'aesgcm',
+                value: { secretKey: key, iv },
+            },
+            thumbnail: undefined,
+        } satisfies PlainMessage<ChunkedMedia>
+
+        const { eventId } = await bobsClient.setUserProfileImage(chunkedMediaInfo)
+        expect(await waitFor(() => userMetadataStream.view.events.has(eventId))).toBe(true)
+
+        const decrypted = await bobsClient.getUserProfileImage(bobsClient.userId)
+        expect(decrypted).toBeDefined()
+        expect(decrypted?.info?.mimetype).toBe(image.mimetype)
+        expect(decrypted?.info?.filename).toBe(image.filename)
+        expect(decrypted?.encryption.case).toBe(chunkedMediaInfo.encryption.case)
+        expect(decrypted?.encryption.value?.secretKey).toBeDefined()
     })
 })

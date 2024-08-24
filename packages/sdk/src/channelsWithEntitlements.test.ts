@@ -25,7 +25,7 @@ import { dlog } from '@river-build/dlog'
 import {
     Address,
     NoopRuleData,
-    IRuleEntitlementBase,
+    IRuleEntitlementV2Base,
     Permission,
     TestERC721,
     TestERC20,
@@ -37,6 +37,7 @@ import {
     CheckOperationType,
     treeToRuleData,
     ISpaceDapp,
+    encodeThresholdParams,
 } from '@river-build/web3'
 import { Client } from './client'
 import { make_MemberPayload_KeySolicitation } from './types'
@@ -49,7 +50,7 @@ const oneHalfEth = BigInt(5e17)
 // pass in users as 'alice', 'bob', 'carol' - b/c their wallets are created here
 async function setupChannelWithCustomRole(
     userNames: string[],
-    ruleData: IRuleEntitlementBase.RuleDataStruct,
+    ruleData: IRuleEntitlementV2Base.RuleDataV2Struct,
     permissions: Permission[] = [Permission.Read],
 ) {
     const {
@@ -180,9 +181,9 @@ async function expectUserCanJoinChannel(
 
     // Stream node should allow the join
     await expect(client.joinStream(channelId)).toResolve()
-    const aliceUserStreamView = (await client.waitForStream(makeUserStreamId(client.userId))!).view
+    const userStreamView = (await client.waitForStream(makeUserStreamId(client.userId))!).view
     // Wait for alice's user stream to have the join
-    await waitFor(() => aliceUserStreamView.userContent.isMember(channelId, MembershipOp.SO_JOIN))
+    await waitFor(() => userStreamView.userContent.isMember(channelId, MembershipOp.SO_JOIN))
 }
 
 async function expectUserCannotJoinChannel(
@@ -207,6 +208,89 @@ async function expectUserCannotJoinChannel(
 }
 
 describe('channelsWithEntitlements', () => {
+    test('User who satisfies only one role ruledata requirement can join channel', async () => {
+        const {
+            alice,
+            bob,
+            alicesWallet,
+            aliceProvider,
+            bobProvider,
+            aliceSpaceDapp,
+            bobSpaceDapp,
+        } = await setupWalletsAndContexts()
+
+        const { spaceId, defaultChannelId } = await createSpaceAndDefaultChannel(
+            bob,
+            bobSpaceDapp,
+            bobProvider.wallet,
+            'bob',
+            await everyoneMembershipStruct(bobSpaceDapp, bob),
+        )
+
+        await expectUserCanJoin(
+            spaceId,
+            defaultChannelId,
+            'alice',
+            alice,
+            aliceSpaceDapp,
+            alicesWallet.address,
+            aliceProvider.wallet,
+        )
+
+        const testNft1Address = await TestERC721.getContractAddress('TestNFT1')
+        const testNft2Address = await TestERC721.getContractAddress('TestNFT2')
+
+        const { roleId: nft1RoleId, error: roleError } = await createRole(
+            bobSpaceDapp,
+            bobProvider,
+            spaceId,
+            'gated role',
+            [Permission.Read],
+            [],
+            getNftRuleData(testNft1Address),
+            bobProvider.wallet,
+        )
+        expect(roleError).toBeUndefined()
+
+        const { roleId: nft2RoleId, error: roleError2 } = await createRole(
+            bobSpaceDapp,
+            bobProvider,
+            spaceId,
+            'gated role',
+            [Permission.Read],
+            [],
+            getNftRuleData(testNft2Address),
+            bobProvider.wallet,
+        )
+        expect(roleError2).toBeUndefined()
+
+        // Create a channel gated by the both role in the space contract.
+        const { channelId, error: channelError } = await createChannel(
+            bobSpaceDapp,
+            bobProvider,
+            spaceId,
+            'double-role-gated-channel',
+            [nft1RoleId!.valueOf(), nft2RoleId!.valueOf()],
+            bobProvider.wallet,
+        )
+        expect(channelError).toBeUndefined()
+
+        // Then, establish a stream for the channel on the river node.
+        const { streamId: channelStreamId } = await bob.createChannel(
+            spaceId,
+            'double-role-gated-channel',
+            'user only needs a single role to get into this channel',
+            channelId!,
+        )
+        expect(channelStreamId).toEqual(channelId)
+
+        // Mint an NFT for alice so that she satisfies the second role
+        await TestERC721.publicMint('TestNFT2', alicesWallet.address as Address)
+
+        // Join alice to the channel
+        await expectUserCanJoinChannel(alice, aliceSpaceDapp, spaceId, channelId!)
+    })
+
     test("READ-only user cannot write or react to a channel's messages", async () => {
         const { alice, bob, aliceSpaceDapp, spaceId, channelId } = await setupChannelWithCustomRole(
             ['alice'],
@@ -809,12 +893,13 @@ describe('channelsWithEntitlements', () => {
         const testNft1Address = await TestERC721.getContractAddress('TestNFT1')
         const testNft2Address = await TestERC721.getContractAddress('TestNFT2')
         const testNft3Address = await TestERC721.getContractAddress('TestNFT3')
+        const params = encodeThresholdParams({ threshold: 1n })
         const leftOperation: Operation = {
             opType: OperationType.CHECK,
             checkType: CheckOperationType.ERC721,
             chainId: 31337n,
             contractAddress: testNft1Address,
-            threshold: 1n,
+            params,
         }
 
         const rightOperation: Operation = {
@@ -822,7 +907,7 @@ describe('channelsWithEntitlements', () => {
             checkType: CheckOperationType.ERC721,
             chainId: 31337n,
             contractAddress: testNft2Address,
-            threshold: 1n,
+            params,
         }
         const two: Operation = {
             opType: OperationType.LOGICAL,
@@ -840,7 +925,7 @@ describe('channelsWithEntitlements', () => {
                 checkType: CheckOperationType.ERC721,
                 chainId: 31337n,
                 contractAddress: testNft3Address,
-                threshold: 1n,
+                params,
             },
         }
 

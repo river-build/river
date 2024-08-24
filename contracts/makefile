@@ -22,7 +22,8 @@ lint :; yarn solhint "{scripts,src,test}/**/*.sol"
 
 anvil :; anvil -m 'test test test test test test test test test test test junk'
 
-clear-anvil-deployments :; rm -rf deployments/alpha/base_anvil deployments/base_anvil deployments/river_anvil
+clear-anvil-deployments :;
+	@rm -rf deployments/$(context)
 
 # ================================== UTILITIES ==================================
 
@@ -51,9 +52,15 @@ deploy-any-local :;
 
 interact-any-local :;
 	@echo "Running $(contract) on local chain"
-	@$(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
+	@SAVE_DEPLOYMENTS=1 $(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
 	forge script scripts/interactions/${contract}.s.sol:${contract} \
 	--ffi --rpc-url ${rpc} --private-key ${LOCAL_PRIVATE_KEY} --broadcast
+
+fork-any-local :;
+	@echo "Running $(contract) on a forked local network"
+	@$(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
+	forge script scripts/interactions/${contract}.s.sol:${contract} \
+	--ffi --fork-url ${rpc} --private-key ${LOCAL_PRIVATE_KEY}
 
 deploy-any :;
 	@echo "Running $(contract) on remote network"
@@ -62,18 +69,32 @@ deploy-any :;
 	--ffi --rpc-url ${rpc} --private-key ${private_key} --broadcast --verify
 
 resume-any :;
-	@forge script scripts/deployments/${type}/${contract}.s.sol:${contract} \
+	@$(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
+	forge script scripts/deployments/${type}/${contract}.s.sol:${contract} \
 	--ffi --rpc-url ${rpc} --private-key ${private_key} --verifier-url ${verifier} --etherscan-api-key ${etherscan} --verify --resume
 
 interact-any :;
 	@echo "Running $(contract) on remote network"
-	@$(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
+	@SAVE_DEPLOYMENTS=1 $(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
 	forge script scripts/interactions/${contract}.s.sol:${contract} \
-	--ffi --rpc-url ${rpc} --private-key ${private_key} --broadcast
+	--ffi --rpc-url ${rpc} --private-key ${private_key} --broadcast --verify
+
+interact-any-explicit :;
+	@echo "Running $(contract) on remote network"
+	@SAVE_DEPLOYMENTS=1 $(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
+	forge script scripts/interactions/${contract}.s.sol:${contract} \
+	--ffi --rpc-url ${rpc} --private-key ${private_key} --broadcast --verifier-url ${verifier} --etherscan-api-key ${etherscan} --verify
+
+interact-resume-any-explicit :;
+	@echo "Running $(contract) on remote network"
+	@SAVE_DEPLOYMENTS=1 $(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
+	forge script scripts/interactions/${contract}.s.sol:${contract} \
+	--ffi --rpc-url ${rpc} --private-key ${private_key} --broadcast --verifier-url ${verifier} --etherscan-api-key ${etherscan} --verify --resume
 
 fork-any :;
 	@echo "Running $(contract) on a forked remote network"
-	@forge script scripts/interactions/${contract}.s.sol:${contract} \
+	@$(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
+	forge script scripts/interactions/${contract}.s.sol:${contract} \
 	--ffi --fork-url ${rpc} --private-key ${private_key} -vvvv
 
 verify-any :;
@@ -84,6 +105,13 @@ explicit-verify-any :;
 	@echo "Verifying $(contract) on a remote network"
 	@forge verify-contract ${address} ${contract} --verifier-url ${verifier} --etherscan-api-key ${etherscan}
 
+deploy-any-local-ledger :;
+	@echo "Running $(contract) on local chain"
+	@SAVE_DEPLOYMENTS=1 $(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
+	forge script scripts/deployments/${type}/${contract}.s.sol:${contract} \
+	--ledger --hd-paths ${hd_path} --sender ${sender} \
+	--ffi --rpc-url ${rpc} --broadcast
+
 deploy-any-ledger :;
 	@echo "Running $(contract) on remote network"
 	@SAVE_DEPLOYMENTS=1 $(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
@@ -93,12 +121,12 @@ deploy-any-ledger :;
 
 resume-any-ledger :;
 	@forge script scripts/deployments/${type}/${contract}.s.sol:${contract} \
-	--ledger --hd-paths ${hd_path} --sender ${sender} \
-	--ffi --rpc-url ${rpc} --broadcast --verify --resume
+	--ledger --hd-paths ${hd_path} \
+	--ffi --rpc-url ${rpc} --broadcast --verifier-url ${verifier} --etherscan-api-key ${etherscan} --verify --resume
 
 interact-any-ledger :;
 	@echo "Running $(contract) on remote network"
-	@$(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
+	@SAVE_DEPLOYMENTS=1 $(if $(context),DEPLOYMENT_CONTEXT=$(context)) \
 	forge script scripts/interactions/${contract}.s.sol:${contract} \
 	--ledger --hd-paths ${hd_path} --sender ${sender} \
 	--ffi --rpc-url ${rpc} --broadcast
@@ -111,10 +139,17 @@ interact-any-ledger :;
 # 				Base Anvil
 # ===========================
 deploy-base-anvil :;
-	@$(MAKE) deploy-any-local rpc=base_anvil
+	@$(MAKE) deploy-any-local context=local_multi rpc=base_anvil
+
+# THIS IS FOR TESTING ONLY
+deploy-base-anvil-ledger :;
+	@$(MAKE) deploy-any-local-ledger context=local_multi rpc=base_anvil hd_path=${HD_PATH} sender=${SENDER_ADDRESS}
 
 interact-base-anvil :;
-	@$(MAKE) interact-any-local rpc=base_anvil
+	@$(MAKE) interact-any-local context=local_multi rpc=base_anvil
+
+fork-base-anvil :;
+	@$(MAKE) fork-any-local context=local_multi rpc=base_anvil
 
 # ===========================
 # 				River Anvil
@@ -146,8 +181,8 @@ verify-river-testnet :;
 # 				 Base Sepolia
 # ===========================
 deploy-ledger-base-sepolia :;
-	@$(MAKE) deploy-any-ledger rpc=base_sepolia hd_path="m/44\'/60\'/1\'/0/0" sender=${PRODUCTION_ADDRESS}
-	@$(MAKE) resume-any-ledger rpc=base_sepolia hd_path="m/44\'/60\'/1\'/0/0" sender=${PRODUCTION_ADDRESS} verifier=${BASESCAN_SEPOLIA_URL} etherscan=${BASESCAN_API_KEY}
+	@$(MAKE) deploy-any-ledger rpc=base_sepolia hd_path=${HD_PATH} sender=${SENDER_ADDRESS}
+	@$(MAKE) resume-any-ledger rpc=base_sepolia hd_path=${HD_PATH} sender=${SENDER_ADDRESS} verifier=${BASESCAN_SEPOLIA_URL} etherscan=${BASESCAN_API_KEY}
 
 deploy-base-sepolia :;
 	@$(MAKE) deploy-any rpc=base_sepolia private_key=${TESTNET_PRIVATE_KEY}
@@ -186,36 +221,36 @@ verify-sepolia :;
 # 				 	River
 # ===========================
 deploy-river :;
-	@$(MAKE) deploy-any-ledger rpc=river hd_path="m/44\'/60\'/1\'/0/0" sender=${PRODUCTION_ADDRESS}
+	@$(MAKE) deploy-any-ledger rpc=river hd_path=${HD_PATH} sender=${SENDER_ADDRESS}
 
 interact-river :;
-	@$(MAKE) interact-any-ledger rpc=river hd_path="m/44\'/60\'/1\'/0/0" sender=${PRODUCTION_ADDRESS}
+	@$(MAKE) interact-any-ledger rpc=river hd_path=${HD_PATH} sender=${SENDER_ADDRESS}
 
 # ===========================
 # 				 		Base
 # ===========================
 deploy-base :;
-	@$(MAKE) deploy-any-ledger rpc=base hd_path="m/44\'/60\'/1\'/0/0" sender=${PRODUCTION_ADDRESS}
-	@$(MAKE) resume-any-ledger rpc=base hd_path="m/44\'/60\'/1\'/0/0" sender=${PRODUCTION_ADDRESS} verifier=${BASESCAN_URL} etherscan=${BASESCAN_API_KEY}
+	@$(MAKE) deploy-any-ledger rpc=base hd_path=${HD_PATH} sender=${SENDER_ADDRESS}
+	@$(MAKE) resume-any-ledger rpc=base hd_path=${HD_PATH} sender=${SENDER_ADDRESS} verifier=${BASESCAN_URL} etherscan=${BASESCAN_API_KEY}
 
 interact-base :;
-	@$(MAKE) interact-any-ledger rpc=base hd_path="m/44\'/60\'/1\'/0/0" sender=${PRODUCTION_ADDRESS}
+	@$(MAKE) interact-any-ledger rpc=base hd_path=${HD_PATH} sender=${SENDER_ADDRESS}
 
 fork-base :;
 	@$(MAKE) fork-any rpc=base private_key=${TESTNET_PRIVATE_KEY}
 
 verify-base :;
 	@$(MAKE) verify-any rpc=base
-	@$(MAKE) explicit-verify-any rpc=base verifier=${BASESCAN_URL} etherscan=${BASESCAN_API_KEY}
+	@$(MAKE) explicit-verify-any rpc=base verifier=${BLOCKSCOUT_BASE_URL} etherscan=${BLOCKSCOUT_BASE_API_KEY}
 
 # ===========================
 # 				Mainnet
 # ===========================
 deploy-mainnet :;
-	@$(MAKE) deploy-any-ledger rpc=mainnet hd_path="m/44\'/60\'/1\'/0/0" sender=${PRODUCTION_ADDRESS}
+	@$(MAKE) deploy-any-ledger rpc=mainnet hd_path=${HD_PATH} sender=${SENDER_ADDRESS}
 
 interact-mainnet :;
-	@$(MAKE) interact-any-ledger rpc=mainnet hd_path="m/44\'/60\'/1\'/0/0" sender=${PRODUCTION_ADDRESS}
+	@$(MAKE) interact-any-ledger rpc=mainnet hd_path=${HD_PATH} sender=${SENDER_ADDRESS}
 
 fork-mainnet :;
 	@$(MAKE) fork-any rpc=mainnet private_key=${TESTNET_PRIVATE_KEY}
@@ -239,6 +274,18 @@ deploy-alpha-sepolia :;
 
 deploy-alpha-base-sepolia :;
 	@$(MAKE) deploy-any context=alpha rpc=base_sepolia private_key=${TESTNET_PRIVATE_KEY}
+	@$(MAKE) resume-any context=alpha rpc=base_sepolia private_key=${TESTNET_PRIVATE_KEY} verifier=${BASESCAN_SEPOLIA_URL} etherscan=${BASESCAN_API_KEY}
+
+interact-alpha-base-sepolia :;
+	$(MAKE) interact-any context=alpha rpc=base_sepolia private_key=${TESTNET_PRIVATE_KEY}
 
 deploy-alpha-river-testnet :;
 	@$(MAKE) deploy-any context=alpha rpc=river_devnet private_key=${TESTNET_PRIVATE_KEY}
+
+# ===========================
+# 				OMEGA
+# ===========================
+
+deploy-omega-base :;
+	@$(MAKE) deploy-any-ledger context=omega rpc=base hd_path=${HD_PATH} sender=${SENDER_ADDRESS}
+	@$(MAKE) resume-any-ledger context=omega rpc=base hd_path=${HD_PATH} sender=${SENDER_ADDRESS} verifier=${BASESCAN_URL} etherscan=${BASESCAN_API_KEY}
