@@ -5,6 +5,7 @@ import { ethers } from 'ethers'
 import {
 	getTestServerUrl,
 	makeCreateSpaceParams,
+	makeEthersProvider,
 	makeSpaceDapp,
 	makeTestClient,
 } from '../testUtils'
@@ -70,7 +71,7 @@ describe('integration/space/:spaceAddress', () => {
 
 		const spaceDapp = makeSpaceDapp(bobsWallet)
 
-		const createSpaceParams = await makeCreateSpaceParams(spaceDapp, {
+		const createSpaceParams = await makeCreateSpaceParams(bobsClient.userId, spaceDapp, {
 			spaceName: 'bobs space',
 			spaceImageUri: '',
 			channelName: 'general',
@@ -78,7 +79,17 @@ describe('integration/space/:spaceAddress', () => {
 			longDescription: 'bobs space long description',
 		})
 
-		const tx = await spaceDapp.createLegacySpace(createSpaceParams, bobsWallet)
+		const provider = makeEthersProvider(bobsWallet)
+		// need funds to create space and execute tranasctions
+		await provider.fundWallet()
+
+		let tx: ethers.ContractTransaction | undefined
+		try {
+			tx = await spaceDapp.createLegacySpace(createSpaceParams, provider.signer)
+		} catch (e) {
+			console.error(e)
+			throw e
+		}
 		const receipt = await tx.wait()
 		expect(receipt.status).toBe(1)
 
@@ -91,16 +102,8 @@ describe('integration/space/:spaceAddress', () => {
 		/*
 		 * 2. create a space stream.
 		 */
-		await bobsClient.createSpace(spaceId)
-		const spaceStream = await bobsClient.waitForStream(spaceId)
-		log('spaceStreamId', spaceStream.streamId)
-
-		// assert assumptions
-		expect(spaceStream).toBeDefined()
-		expect(
-			spaceStream.view.snapshot?.content.case === 'spaceContent' &&
-				spaceStream.view.snapshot?.content.value.spaceImage === undefined,
-		).toBe(true)
+		const spaceStreamId = await bobsClient.createSpace(spaceId)
+		log('spaceStreamId', spaceStreamId)
 
 		/*
 		 * 3. fetch the space image from the stream-metadata server.

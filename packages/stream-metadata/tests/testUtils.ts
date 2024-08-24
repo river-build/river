@@ -16,7 +16,8 @@ import {
 import { ethers } from 'ethers'
 import {
 	CreateLegacySpaceParams,
-	findDynamicPricingModule,
+	ETH_ADDRESS,
+	getDynamicPricingModule,
 	LegacyMembershipStruct,
 	LocalhostWeb3Provider,
 	NoopRuleData,
@@ -88,10 +89,7 @@ export async function makeTestClient(wallet: ethers.Wallet): Promise<Client> {
 	// create all the constructor arguments for the SDK client
 
 	// arg: user context and wallet
-	const context = await makeRandomUserContext(wallet)
-	const provider = makeEthersProvider(wallet)
-	// need funds to create space and execute tranasctions
-	await provider.fundWallet()
+	const context = await makeUserContext(wallet)
 
 	// arg: stream rpc client
 	const nodeUrl = await getAnyNodeUrlFromRiverRegistry()
@@ -116,11 +114,7 @@ export async function makeTestClient(wallet: ethers.Wallet): Promise<Client> {
 	return new Client(context, rpcClient, cryptoStore, entitlementsDelegate, persistenceDbName)
 }
 
-export async function makeRandomUserContext(wallet: ethers.Wallet) {
-	return makeUserContextFromWallet(wallet)
-}
-
-export async function makeUserContextFromWallet(wallet: ethers.Wallet): Promise<SignerContext> {
+export async function makeUserContext(wallet: ethers.Wallet): Promise<SignerContext> {
 	const userPrimaryWallet = wallet
 	const delegateWallet = ethers.Wallet.createRandom()
 	return makeSignerContext(userPrimaryWallet, delegateWallet, { days: 1 })
@@ -209,38 +203,34 @@ export interface CreateSpaceParams {
 	channelName: string
 }
 
-export async function makeCreateSpaceParams(spaceDapp: SpaceDapp, args: CreateSpaceParams) {
+export async function makeCreateSpaceParams(
+	userId: string,
+	spaceDapp: SpaceDapp,
+	args: CreateSpaceParams,
+) {
 	const { spaceName, spaceImageUri, shortDescription, longDescription } = args
 	/*
 	 * assemble all the parameters needed to create a space.
 	 */
-
-	// pricing module
-	const pricingModules = await spaceDapp.listPricingModules()
-	const dynamicPricingModule = findDynamicPricingModule(pricingModules)
-	if (!dynamicPricingModule) {
-		throw new Error('No dynamic pricing module found')
-	}
-	const pricingModule = await dynamicPricingModule.module
-	// membership
+	const dynamicPricingModule = await getDynamicPricingModule(spaceDapp)
 	const membership: LegacyMembershipStruct = {
 		settings: {
-			name: spaceName + ' - Member',
+			name: 'Everyone',
 			symbol: 'MEMBER',
-			price: 1,
-			maxSupply: 10,
-			duration: 60 * 60 * 24 * 365,
-			currency: ethers.constants.AddressZero,
-			feeRecipient: ethers.constants.AddressZero,
+			price: 0,
+			maxSupply: 1000,
+			duration: 0,
+			currency: ETH_ADDRESS,
+			feeRecipient: userId,
 			freeAllocation: 0,
-			pricingModule,
+			pricingModule: dynamicPricingModule.module,
 		},
+		permissions: [Permission.Read, Permission.Write],
 		requirements: {
 			everyone: true,
 			users: [],
 			ruleData: NoopRuleData,
 		},
-		permissions: [Permission.Read, Permission.Write, Permission.React],
 	}
 	// all create space args
 	const createSpaceParams: CreateLegacySpaceParams = {
