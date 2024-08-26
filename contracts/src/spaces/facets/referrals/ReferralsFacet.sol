@@ -17,33 +17,39 @@ contract ReferralsFacet is IReferrals, ReferralsBase, Entitled, Facet {
     _addInterface(type(IReferrals).interfaceId);
   }
 
+  /// @inheritdoc IReferrals
   function registerReferral(Referral memory referral) external {
     _validatePermission(Permissions.ModifyRoles);
     _registerReferral(referral);
   }
 
+  /// @inheritdoc IReferrals
   function referralInfo(
     string memory referralCode
   ) external view returns (Referral memory) {
     return _referralInfo(referralCode);
   }
 
+  /// @inheritdoc IReferrals
   function updateReferral(Referral memory referral) external {
     _validatePermission(Permissions.ModifyRoles);
     _updateReferral(referral);
   }
 
+  /// @inheritdoc IReferrals
   function removeReferral(string memory referralCode) external {
     _validatePermission(Permissions.ModifyRoles);
     _removeReferral(referralCode);
   }
 
   // admin
+  /// @inheritdoc IReferrals
   function setMaxBpsFee(uint256 bps) external {
     _validatePermission(Permissions.ModifyRoles);
     _setMaxBpsFee(bps);
   }
 
+  /// @inheritdoc IReferrals
   function maxBpsFee() external view returns (uint256) {
     return _maxBpsFee();
   }

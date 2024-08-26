@@ -78,7 +78,19 @@ interface IReferrals is IReferralsBase {
     string memory referralCode
   ) external view returns (Referral memory);
 
+  /// @notice Update a referral
+  /// @param referral The referral information to update
+  function updateReferral(Referral memory referral) external;
+
   /// @notice Remove a referral
   /// @param referralCode The unique code of the referral to remove
   function removeReferral(string memory referralCode) external;
+
+  /// @notice Set the max bps fee
+  /// @param bps The new max bps fee
+  function setMaxBpsFee(uint256 bps) external;
+
+  /// @notice Get the max bps fee
+  /// @return The max bps fee
+  function maxBpsFee() external view returns (uint256);
 }
