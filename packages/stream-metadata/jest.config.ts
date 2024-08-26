@@ -13,7 +13,7 @@ const config: Config.InitialOptions = {
 	setupFiles: ['fake-indexeddb/auto'],
 	testEnvironment: 'node',
 	testPathIgnorePatterns: ['/dist/', '/node_modules/'],
-	testTimeout: 120000,
+	testTimeout: 120_000,
 	transform: {
 		'^.+\\.ts$': [
 			'ts-jest',
