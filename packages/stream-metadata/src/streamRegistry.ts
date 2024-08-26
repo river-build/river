@@ -3,7 +3,6 @@ import { FastifyBaseLogger } from 'fastify'
 
 import { StreamIdHex } from './types'
 import { getRiverRegistry } from './evmRpcClient'
-import { getFunctionLogger } from './logger'
 
 type CachedStreamData = {
 	url: string
