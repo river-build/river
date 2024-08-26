@@ -15,9 +15,10 @@ const cache: Record<string, CachedStreamData> = {}
 
 // TODO: remove this entire file
 export async function getNodeForStream(
-	logger: FastifyBaseLogger,
+	log: FastifyBaseLogger,
 	streamId: StreamIdHex,
 ): Promise<{ url: string; lastMiniblockNum: BigNumber }> {
+	const logger = getFunctionLogger(log, 'getNodeForStream')
 	logger.info({ streamId }, 'find node for stream')
 
 	const now = Date.now()
