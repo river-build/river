@@ -34,9 +34,9 @@ contract MembershipBaseSetup is
   BaseSetup
 {
   int256 internal constant EXCHANGE_RATE = 222616000000;
-  uint256 internal constant MAX_BPS = 10000;
+  uint256 internal constant MAX_BPS = 10000; // 100%
   uint256 constant REFERRAL_CODE = 999;
-  uint16 constant REFERRAL_BPS = 1000;
+  uint16 constant REFERRAL_BPS = 1000; // 10%
   uint256 constant MEMBERSHIP_PRICE = 1 ether;
 
   MembershipFacet internal membership;
@@ -83,6 +83,7 @@ contract MembershipBaseSetup is
     userSpaceInfo.membership.settings.pricingModule = fixedPricingModule;
 
     vm.startPrank(founder);
+    // user space is a space where only alice and charlie are allowed along with the founder
     userSpace = Architect(spaceFactory).createSpace(userSpaceInfo);
     vm.stopPrank();
 

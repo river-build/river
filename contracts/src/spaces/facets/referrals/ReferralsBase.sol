@@ -10,36 +10,38 @@ import {ReferralsStorage} from "./ReferralsStorage.sol";
 import {IReferralsBase} from "./IReferrals.sol";
 
 abstract contract ReferralsBase is IReferralsBase {
-  function _validateReferral(Referral memory referral) internal {
-    // validate referral recipient
+  function _validateReferral(Referral memory referral) internal view {
     if (referral.recipient == address(0)) {
-      revert ReferralsBase__InvalidRecipient();
+      revert Referrals__InvalidRecipient();
     }
 
-    // validate referral basis points
     if (referral.basisPoints == 0) {
-      revert ReferralsBase__InvalidBasisPoints();
+      revert Referrals__InvalidBasisPoints();
+    }
+
+    if (bytes(referral.referralCode).length == 0) {
+      revert Referrals__InvalidReferralCode();
+    }
+
+    // if max bps fee is set, check if referral.basisPoints is less than or equal to max bps fee
+    if (_maxBpsFee() > 0 && referral.basisPoints > _maxBpsFee()) {
+      revert Referrals__InvalidBpsFee();
     }
   }
 
   function _registerReferral(Referral memory referral) internal {
     _validateReferral(referral);
 
-    bytes32 referralCode = keccak256(abi.encode(referral.referralCode));
-
+    bytes32 referralCode = keccak256(bytes(referral.referralCode));
     ReferralsStorage.Layout storage ds = ReferralsStorage.layout();
 
-    ReferralsStorage.Referral memory storedReferral = ds.referrals[
-      referralCode
-    ];
-
-    if (storedReferral.referrer != address(0)) {
-      revert ReferralsBase__InvalidReferralCode();
+    if (ds.referrals[referralCode].recipient != address(0)) {
+      revert Referrals__ReferralAlreadyExists();
     }
 
     ds.referrals[referralCode] = ReferralsStorage.Referral({
-      basisPoints: referral.basisPoints,
-      referrer: referral.recipient
+      bpsFee: referral.basisPoints,
+      recipient: referral.recipient
     });
 
     emit ReferralRegistered(
@@ -53,38 +55,31 @@ abstract contract ReferralsBase is IReferralsBase {
     string memory referralCode
   ) internal view returns (Referral memory) {
     ReferralsStorage.Layout storage ds = ReferralsStorage.layout();
-
-    ReferralsStorage.Referral memory storedReferral = ds.referrals[
-      keccak256(abi.encode(referralCode))
+    ReferralsStorage.Referral storage storedReferral = ds.referrals[
+      keccak256(bytes(referralCode))
     ];
 
     return
       Referral({
         referralCode: referralCode,
-        basisPoints: storedReferral.basisPoints,
-        recipient: storedReferral.referrer
+        basisPoints: storedReferral.bpsFee,
+        recipient: storedReferral.recipient
       });
   }
 
   function _updateReferral(Referral memory referral) internal {
     _validateReferral(referral);
 
-    bytes32 referralCode = keccak256(abi.encode(referral.referralCode));
-
+    bytes32 referralCode = keccak256(bytes(referral.referralCode));
     ReferralsStorage.Layout storage ds = ReferralsStorage.layout();
 
-    // validate referral exists
-    ReferralsStorage.Referral memory storedReferral = ds.referrals[
-      referralCode
-    ];
-
-    if (storedReferral.referrer == address(0)) {
-      revert ReferralsBase__InvalidReferralCode();
+    if (ds.referrals[referralCode].recipient == address(0)) {
+      revert Referrals__InvalidReferralCode();
     }
 
     ds.referrals[referralCode] = ReferralsStorage.Referral({
-      basisPoints: referral.basisPoints,
-      referrer: referral.recipient
+      bpsFee: referral.basisPoints,
+      recipient: referral.recipient
     });
 
     emit ReferralUpdated(
@@ -95,7 +90,22 @@ abstract contract ReferralsBase is IReferralsBase {
   }
 
   function _removeReferral(string memory referralCode) internal {
+    bytes32 referralCodeHash = keccak256(bytes(referralCode));
+
+    delete ReferralsStorage.layout().referrals[referralCodeHash];
+
+    emit ReferralRemoved(referralCodeHash);
+  }
+
+  // admin
+  function _setMaxBpsFee(uint256 maxBpsFee) internal {
     ReferralsStorage.Layout storage ds = ReferralsStorage.layout();
-    delete ds.referrals[keccak256(abi.encode(referralCode))];
+    ds.referralSettings.maxBpsFee = maxBpsFee;
+
+    emit MaxBpsFeeUpdated(maxBpsFee);
+  }
+
+  function _maxBpsFee() internal view returns (uint256) {
+    return ReferralsStorage.layout().referralSettings.maxBpsFee;
   }
 }

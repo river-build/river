@@ -13,6 +13,10 @@ import {IReferrals} from "./IReferrals.sol";
 import {ReferralsBase} from "./ReferralsBase.sol";
 
 contract ReferralsFacet is IReferrals, ReferralsBase, Entitled, Facet {
+  function __ReferralsFacet_init() external onlyInitializing {
+    _addInterface(type(IReferrals).interfaceId);
+  }
+
   function registerReferral(Referral memory referral) external {
     _validatePermission(Permissions.ModifyRoles);
     _registerReferral(referral);
@@ -32,5 +36,15 @@ contract ReferralsFacet is IReferrals, ReferralsBase, Entitled, Facet {
   function removeReferral(string memory referralCode) external {
     _validatePermission(Permissions.ModifyRoles);
     _removeReferral(referralCode);
+  }
+
+  // admin
+  function setMaxBpsFee(uint256 bps) external {
+    _validatePermission(Permissions.ModifyRoles);
+    _setMaxBpsFee(bps);
+  }
+
+  function maxBpsFee() external view returns (uint256) {
+    return _maxBpsFee();
   }
 }
