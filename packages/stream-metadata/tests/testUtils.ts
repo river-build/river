@@ -21,7 +21,7 @@ import {
 	NoopRuleData,
 	Permission,
 	SpaceDapp,
-	getDynamicPricingModule
+	getDynamicPricingModule,
 } from '@river-build/web3'
 
 import { StreamRpcClient } from '../src/riverStreamRpcClient'
