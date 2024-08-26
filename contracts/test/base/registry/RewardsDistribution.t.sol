@@ -7,7 +7,7 @@ import {IERC721ABase} from "contracts/src/diamond/facets/token/ERC721A/IERC721A.
 import {IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.sol";
 import {INodeOperator} from "contracts/src/base/registry/facets/operator/INodeOperator.sol";
 import {ISpaceDelegationBase} from "contracts/src/base/registry/facets/delegation/ISpaceDelegation.sol";
-import {IRewardsDistributionBase} from "contracts/src/base/registry/facets/distribution/IRewardsDistribution.sol";
+import {IRewardsDistributionBase} from "contracts/src/base/registry/facets/distribution/v1/IRewardsDistribution.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import {Architect} from "contracts/src/factory/facets/architect/Architect.sol";
@@ -27,7 +27,7 @@ import {IntrospectionFacet} from "contracts/src/diamond/facets/introspection/Int
 import {ERC721A} from "contracts/src/diamond/facets/token/ERC721A/ERC721A.sol";
 import {River} from "contracts/src/tokens/river/base/River.sol";
 import {MainnetDelegation} from "contracts/src/tokens/river/base/delegation/MainnetDelegation.sol";
-import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/RewardsDistribution.sol";
+import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/v1/RewardsDistribution.sol";
 import {SpaceDelegationFacet} from "contracts/src/base/registry/facets/delegation/SpaceDelegationFacet.sol";
 import {INodeOperatorBase} from "contracts/src/base/registry/facets/operator/INodeOperator.sol";
 
