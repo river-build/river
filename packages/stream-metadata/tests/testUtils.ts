@@ -1,5 +1,8 @@
 import 'fake-indexeddb/auto' // used to mock indexdb in dexie, don't remove
 
+import { ethers } from 'ethers'
+import { createPromiseClient } from '@connectrpc/connect'
+import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-node'
 import { ChunkedMedia, MediaInfo, StreamService } from '@river-build/proto'
 import {
 	Client,
@@ -12,7 +15,6 @@ import {
 	makeSpaceStreamId,
 	userIdFromAddress,
 } from '@river-build/sdk'
-import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-node'
 import {
 	CreateLegacySpaceParams,
 	ETH_ADDRESS,
@@ -26,8 +28,6 @@ import {
 
 import { StreamRpcClient } from '../src/riverStreamRpcClient'
 import { config } from '../src/environment'
-import { createPromiseClient } from '@connectrpc/connect'
-import { ethers } from 'ethers'
 import { getRiverRegistry } from '../src/evmRpcClient'
 
 export function isTest(): boolean {
