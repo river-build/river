@@ -29,6 +29,12 @@ export class Member {
         }
     }
 
+    onStreamInitialized(streamId: string) {
+        for (const model of Object.values(this.observables)) {
+            model.onStreamInitialized(streamId)
+        }
+    }
+
     get username() {
         return this.observables.username.data.username
     }

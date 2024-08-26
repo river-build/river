@@ -38,22 +38,14 @@ export class MemberDisplayName extends PersistedObservable<MemberDisplayNameMode
 
     protected override async onLoaded() {
         this.riverConnection.registerView((client) => {
-            if (
-                client.streams.has(this.data.id) &&
-                client.streams.get(this.data.id)?.view.isInitialized
-            ) {
-                this.onStreamInitialized(this.data.id)
-            }
-            client.on('streamInitialized', this.onStreamInitialized)
             client.on('streamDisplayNameUpdated', this.onStreamDisplayNameUpdated)
             return () => {
-                client.off('streamInitialized', this.onStreamInitialized)
                 client.off('streamDisplayNameUpdated', this.onStreamDisplayNameUpdated)
             }
         })
     }
 
-    private onStreamInitialized = (streamId: string) => {
+    public onStreamInitialized = (streamId: string) => {
         if (streamId === this.data.streamId) {
             const streamView = this.riverConnection.client?.stream(this.data.streamId)?.view
             check(isDefined(streamView), 'streamView is not defined')
