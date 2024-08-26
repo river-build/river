@@ -79,22 +79,22 @@ async function getImageUrl(logger: FastifyBaseLogger, contractUri: string, space
 	}
 
 	const isDefaultPort =
-		config.riverStreamMetadataHostUrl.port === '' ||
-		config.riverStreamMetadataHostUrl.port === '80' ||
-		config.riverStreamMetadataHostUrl.port === '443'
+		config.riverStreamMetadataBaseUrl.port === '' ||
+		config.riverStreamMetadataBaseUrl.port === '80' ||
+		config.riverStreamMetadataBaseUrl.port === '443'
 
 	// Check if contractUri is empty or starts with the config.riverStreamMetadataHostUrl
 	if (
 		contractUri === '' ||
-		contractUri.startsWith(config.riverStreamMetadataHostUrl.toString())
+		contractUri.startsWith(config.riverStreamMetadataBaseUrl.toString())
 	) {
 		// Start building the base URL
-		let baseUrl = `${config.riverStreamMetadataHostUrl.origin}/space/${spaceAddress}/image`
+		let baseUrl = `${config.riverStreamMetadataBaseUrl.origin}/space/${spaceAddress}/image`
 
 		// If config has a port that is not 80 or 443, and riverStreamMetadataHostUrl
 		// has the default port, add the config port to the URL
 		if (config.port !== 80 && config.port !== 443 && isDefaultPort) {
-			baseUrl = `${config.riverStreamMetadataHostUrl.protocol}//${config.riverStreamMetadataHostUrl.hostname}:${config.port}/space/${spaceAddress}/image`
+			baseUrl = `${config.riverStreamMetadataBaseUrl.protocol}//${config.riverStreamMetadataBaseUrl.hostname}:${config.port}/space/${spaceAddress}/image`
 		}
 
 		return baseUrl
