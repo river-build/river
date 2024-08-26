@@ -7,7 +7,7 @@ export function fetchSpaceMetadata(
 	reply: FastifyReply,
 	serverUrl: string,
 ) {
-	const logger = request.log.child({ name: 'fetchSpaceMetadata' })
+	const logger = request.log.child({ name: fetchSpaceMetadata.name })
 	const { spaceAddress } = request.params as { spaceAddress?: string }
 	logger.info({ spaceAddress }, 'GET /space/../metadata')
 

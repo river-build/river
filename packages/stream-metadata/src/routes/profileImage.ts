@@ -8,7 +8,7 @@ import { isBytes32String, isValidEthereumAddress } from '../validators'
 import { getMediaEncryption } from '../media-encryption'
 
 export async function fetchUserProfileImage(request: FastifyRequest, reply: FastifyReply) {
-	const logger = request.log.child({ name: 'fetchUserProfileImage' })
+	const logger = request.log.child({ name: fetchUserProfileImage.name })
 	const { userId } = request.params as { userId?: string }
 
 	if (!userId) {

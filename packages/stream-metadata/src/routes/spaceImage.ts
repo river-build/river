@@ -8,7 +8,7 @@ import { isBytes32String, isValidEthereumAddress } from '../validators'
 import { getMediaEncryption } from '../media-encryption'
 
 export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyReply) {
-	const logger = request.log.child({ name: 'fetchSpaceImage' })
+	const logger = request.log.child({ name: fetchSpaceImage.name })
 	const { spaceAddress } = request.params as { spaceAddress?: string }
 
 	if (!spaceAddress) {
