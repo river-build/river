@@ -1,6 +1,7 @@
 import { FastifyRequest, FastifyReply, FastifyBaseLogger } from 'fastify'
 import { SpaceInfo } from '@river-build/web3'
 import { makeStreamId, StreamPrefix, StreamStateView } from '@river-build/sdk'
+import { ChunkedMedia } from '@river-build/proto'
 
 import { isValidEthereumAddress } from '../validators'
 import { getFunctionLogger } from '../logger'
@@ -8,6 +9,12 @@ import { getSpaceDapp } from '../contract-utils'
 import { config } from '../environment'
 import { getStream } from '../riverStreamRpcClient'
 import { getSpaceImage } from './spaceImage'
+
+export interface SpaceMetadataResponse {
+	name: string
+	description: string
+	image: string | undefined
+}
 
 export async function fetchSpaceMetadata(request: FastifyRequest, reply: FastifyReply) {
 	const logger = getFunctionLogger(request.log, 'fetchSpaceMetadata')
@@ -29,9 +36,9 @@ export async function fetchSpaceMetadata(request: FastifyRequest, reply: Fastify
 	}
 
 	const spaceDapp = getSpaceDapp()
-	let spaceContractInfo: SpaceInfo | undefined
+	let spaceInfo: SpaceInfo | undefined
 	try {
-		spaceContractInfo = await spaceDapp.getSpaceInfo(spaceAddress)
+		spaceInfo = await spaceDapp.getSpaceInfo(spaceAddress)
 	} catch (error) {
 		logger.error({ spaceAddress, error }, 'Failed to fetch space contract info')
 		return reply
@@ -39,25 +46,36 @@ export async function fetchSpaceMetadata(request: FastifyRequest, reply: Fastify
 			.send({ error: 'Not Found', message: 'Failed to fetch space contract info' })
 	}
 
-	if (!spaceContractInfo) {
+	if (!spaceInfo) {
 		logger.error({ spaceAddress }, 'Space contract not found')
 		return reply.code(404).send({ error: 'Not Found', message: 'Space contract not found' })
 	}
 
-	const metadata = {
-		name: spaceContractInfo.name,
-		longDescription: spaceContractInfo.longDescription,
-		shortDescription: spaceContractInfo.shortDescription,
-		image: getImageUrl(logger, spaceContractInfo.uri, spaceAddress),
+	const spaceMetadata: SpaceMetadataResponse = {
+		name: spaceInfo.name,
+		description: getSpaceDecription(spaceInfo),
+		image: await getImageUrl(logger, spaceInfo.uri, spaceAddress),
 	}
 
-	return reply.header('Content-Type', 'application/json').send(metadata)
+	return reply.header('Content-Type', 'application/json').send(spaceMetadata)
+}
+
+function getSpaceDecription({ shortDescription, longDescription }: SpaceInfo): string {
+	if (shortDescription && longDescription) {
+		return `${shortDescription}\n\n${longDescription}`
+	}
+
+	if (shortDescription) {
+		return shortDescription
+	}
+
+	return longDescription || ''
 }
 
 async function getImageUrl(logger: FastifyBaseLogger, contractUri: string, spaceAddress: string) {
-	const doesSpaceImageExist = await spaceImageExists(logger, spaceAddress)
-	if (!doesSpaceImageExist) {
-		return ''
+	const hasSpaceImageExist = await hasSpaceImage(logger, spaceAddress)
+	if (!hasSpaceImageExist) {
+		return undefined
 	}
 
 	const isDefaultPort =
@@ -86,7 +104,7 @@ async function getImageUrl(logger: FastifyBaseLogger, contractUri: string, space
 	return contractUri
 }
 
-async function spaceImageExists(log: FastifyBaseLogger, spaceAddress: string): Promise<boolean> {
+async function hasSpaceImage(log: FastifyBaseLogger, spaceAddress: string): Promise<boolean> {
 	const logger = getFunctionLogger(log, 'spaceImageExists')
 
 	let stream: StreamStateView | undefined
@@ -109,7 +127,11 @@ async function spaceImageExists(log: FastifyBaseLogger, spaceAddress: string): P
 	}
 
 	// get the image metatdata from the stream
-	const spaceImage = await getSpaceImage(stream)
-	logger.info({ spaceImage }, 'spaceImageExists')
+	let spaceImage: ChunkedMedia | undefined
+	try {
+		spaceImage = await getSpaceImage(stream)
+	} catch (error) {
+		return false
+	}
 	return spaceImage !== undefined
 }
