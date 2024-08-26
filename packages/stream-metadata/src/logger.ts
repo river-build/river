@@ -1,5 +1,4 @@
 import { LoggerOptions, TransportSingleOptions, pino } from 'pino'
-import { FastifyBaseLogger } from 'fastify'
 
 import { config } from './environment'
 
