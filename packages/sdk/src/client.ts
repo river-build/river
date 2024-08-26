@@ -29,6 +29,7 @@ import {
     CreateStreamRequest,
     AddEventResponse_Error,
     ChunkedMedia,
+    UserBio,
 } from '@river-build/proto'
 import {
     bin_fromHexString,
@@ -941,7 +942,7 @@ export class Client
         return this.stream(streamId)?.view.userMetadataContent.getProfileImage()
     }
 
-    async setUserBio(bio: string) {
+    async setUserBio(bio: UserBio) {
         this.logCall('setUserBio', bio)
 
         // create the chunked media to be added
@@ -951,7 +952,7 @@ export class Client
         // encrypt the chunked media
         // use the lowercased userId as the key phrase
         const { key, iv } = await deriveKeyAndIV(context)
-        const bioBinary = new TextEncoder().encode(bio)
+        const bioBinary = bio.toBinary()
         const { ciphertext } = await encryptAESGCM(bioBinary, key, iv)
         const encryptedData = new EncryptedData({
             ciphertext: uint8ArrayToBase64(ciphertext),

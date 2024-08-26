@@ -32,6 +32,7 @@ import {
     SyncOp,
     SyncStreamsRequest,
     SyncStreamsResponse,
+    UserBio,
     type ChunkedMedia,
 } from '@river-build/proto'
 import { PartialMessage, type PlainMessage } from '@bufbuild/protobuf'
@@ -1058,7 +1059,7 @@ describe('clientTest', () => {
                 userMetadataStream.view.snapshot?.content.value.profileImage === undefined,
         ).toBe(true)
 
-        const bio = 'Hello, world!'
+        const bio = new UserBio({ bio: 'Hello, world!' })
         const { eventId } = await bobsClient.setUserBio(bio)
         expect(await waitFor(() => userMetadataStream.view.events.has(eventId))).toBe(true)
 

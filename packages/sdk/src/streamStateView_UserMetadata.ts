@@ -7,6 +7,7 @@ import {
     UserMetadataPayload_Snapshot,
     ChunkedMedia,
     type EncryptedData,
+    UserBio,
 } from '@river-build/proto'
 import { StreamStateView_AbstractContent } from './streamStateView_AbstractContent'
 import { check } from '@river-build/dlog'
@@ -21,10 +22,10 @@ export class StreamStateView_UserMetadata extends StreamStateView_AbstractConten
     readonly streamCreatorId: string
     private profileImage: ChunkedMedia | undefined
     private encryptedProfileImage: EncryptedData | undefined
-    private bio: string | undefined
+    private bio: UserBio | undefined
     private encryptedBio: EncryptedData | undefined
     private decryptionInProgress: {
-        bio: Promise<string> | undefined
+        bio: Promise<UserBio> | undefined
         image: Promise<ChunkedMedia> | undefined
     } = { bio: undefined, image: undefined }
 
@@ -168,7 +169,7 @@ export class StreamStateView_UserMetadata extends StreamStateView_AbstractConten
                 bio: this.decrypt(
                     encryptedData,
                     (plaintext) => {
-                        const bioPlaintext = new TextDecoder().decode(plaintext)
+                        const bioPlaintext = UserBio.fromBinary(plaintext)
                         this.bio = bioPlaintext
                         return bioPlaintext
                     },
