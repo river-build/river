@@ -65,6 +65,10 @@ export function makeStreamRpcClient(url: string): StreamRpcClient {
 	return client
 }
 
+export function makeEthersProvider(wallet: ethers.Wallet) {
+	return new LocalhostWeb3Provider(config.baseChainRpcUrl, wallet)
+}
+
 export async function makeTestClient(wallet: ethers.Wallet): Promise<Client> {
 	// create all the constructor arguments for the SDK client
 
