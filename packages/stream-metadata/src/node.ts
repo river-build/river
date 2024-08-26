@@ -24,7 +24,6 @@ logger.info(
 		chainId: config.web3Config.river.chainId,
 		port: config.port,
 		riverRegistry: config.web3Config.river.addresses.riverRegistry,
-		baseChainRpcUrl: config.baseChainRpcUrl,
 		riverChainRpcUrl: config.riverChainRpcUrl,
 		baseChainRpcUrl: config.baseChainRpcUrl,
 	},
