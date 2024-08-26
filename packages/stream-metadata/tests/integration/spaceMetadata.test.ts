@@ -37,6 +37,60 @@ describe('integration/space/:spaceAddress', () => {
 		await bobsClient.stopSync()
 	})
 
+	async function runDecriptionTest(shortDescription: string, longDescription: string) {
+		const spaceDapp = makeSpaceDapp(bobsWallet)
+		const expectedMetadata: SpaceMetadataParams = {
+			name: 'bobs space',
+			uri: '',
+			shortDescription,
+			longDescription,
+		}
+
+		const createSpaceParams = await makeCreateSpaceParams(
+			bobsClient.userId,
+			spaceDapp,
+			expectedMetadata,
+		)
+
+		const provider = makeEthersProvider(bobsWallet)
+		await provider.fundWallet()
+
+		const tx = await spaceDapp.createLegacySpace(createSpaceParams, provider.signer)
+		const receipt = await tx.wait()
+		expect(receipt.status).toBe(1)
+
+		const spaceAddress = spaceDapp.getSpaceAddress(receipt)
+		expect(spaceAddress).toBeDefined()
+		if (!spaceAddress) {
+			throw new Error('spaceAddress is undefined')
+		}
+
+		const spaceStreamId = await bobsClient.createSpace(spaceAddress)
+		expect(spaceStreamId).toBeDefined()
+		log('spaceStreamId', spaceStreamId)
+
+		const route = `space/${spaceAddress}`
+		const response = await axios.get<SpaceMetadataResponse>(`${baseURL}/${route}`)
+		log('response', { status: response.status, data: response.data })
+
+		const { name, description, image } = response.data
+		expect(response.status).toBe(200)
+		expect(response.headers['content-type']).toContain('application/json')
+		expect(name).toEqual(expectedMetadata.name)
+
+		let expectedDescription
+		if (shortDescription && longDescription) {
+			expectedDescription = `${shortDescription}\n\n${longDescription}`
+		} else if (shortDescription) {
+			expectedDescription = shortDescription
+		} else {
+			expectedDescription = longDescription
+		}
+
+		expect(description).toEqual(expectedDescription)
+		expect(image).toBeUndefined()
+	}
+
 	it('should return 404 /space', async () => {
 		const expectedStatus = 404
 		const route = 'space'
@@ -71,66 +125,16 @@ describe('integration/space/:spaceAddress', () => {
 		}
 	})
 
-	it('should return status 200 without spaceImage', async () => {
-		/**
-		 * 1. create a space on-chain.
-		 * 2. create a space stream.
-		 * 3. fetch the space contract info from the stream-metadata server.
-		 * 4. verify the response.
-		 */
+	it('should return status 200 without spaceImage - both descriptions have values', async () => {
+		await runDecriptionTest('bobs space short description', 'bobs space long description')
+	})
 
-		/*
-		 * 1. create a space on-chain.
-		 */
-		const spaceDapp = makeSpaceDapp(bobsWallet)
-		const expectedMetadata: SpaceMetadataParams = {
-			name: 'bobs space',
-			uri: '',
-			shortDescription: 'bobs space short description',
-			longDescription: 'bobs space long description',
-		}
+	it('should return status 200 without spaceImage - shortDescription has value, longDescription is empty', async () => {
+		await runDecriptionTest('bobs space short description', '')
+	})
 
-		const createSpaceParams = await makeCreateSpaceParams(
-			bobsClient.userId,
-			spaceDapp,
-			expectedMetadata,
-		)
-
-		const provider = makeEthersProvider(bobsWallet)
-		// need funds to create space and execute tranasctions
-		await provider.fundWallet()
-
-		const tx = await spaceDapp.createLegacySpace(createSpaceParams, provider.signer)
-		const receipt = await tx.wait()
-		expect(receipt.status).toBe(1)
-
-		const spaceAddress = spaceDapp.getSpaceAddress(receipt)
-		expect(spaceAddress).toBeDefined()
-		if (!spaceAddress) {
-			throw new Error('spaceAddress is undefined')
-		}
-
-		/*
-		 * 2. create a space stream.
-		 */
-		const spaceStreamId = await bobsClient.createSpace(spaceAddress)
-		expect(spaceStreamId).toBeDefined()
-		log('spaceStreamId', spaceStreamId)
-
-		/*
-		 * 3. fetch the space metadata from the stream-metadata server.
-		 */
-		const route = `space/${spaceAddress}`
-		const response = await axios.get<SpaceMetadataResponse>(`${baseURL}/${route}`)
-		log('response', { status: response.status, data: response.data })
-
-		const { name, description, image } = response.data
-		expect(response.status).toBe(200)
-		expect(response.headers['content-type']).toContain('application/json')
-		expect(name).toEqual(expectedMetadata.name)
-		const expectedDescription = `${expectedMetadata.shortDescription}\n\n${expectedMetadata.longDescription}`
-		expect(description).toEqual(expectedDescription)
-		expect(image).toBeUndefined()
+	it('should return status 200 without spaceImage - shortDescription is empty, longDescription has value', async () => {
+		await runDecriptionTest('', 'bobs space long description')
 	})
 
 	it('should return status 200 with spaceImage', async () => {
