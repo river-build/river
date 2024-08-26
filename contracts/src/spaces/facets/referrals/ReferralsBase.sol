@@ -16,15 +16,18 @@ abstract contract ReferralsBase is IReferralsBase {
   }
 
   function _registerReferral(Referral memory referral) internal {
-    _validateReferral(referral);
     bytes32 referralCode = keccak256(bytes(referral.referralCode));
     ReferralsStorage.Layout storage ds = ReferralsStorage.layout();
     if (ds.referrals[referralCode].recipient != address(0))
       revert Referrals__ReferralAlreadyExists();
+
+    _validateReferral(referral);
+
     ds.referrals[referralCode] = ReferralsStorage.Referral(
       referral.basisPoints,
       referral.recipient
     );
+
     emit ReferralRegistered(
       referralCode,
       referral.basisPoints,
