@@ -1,13 +1,16 @@
-import axios from 'axios';
-import { ethers } from 'ethers';
+import axios from 'axios'
+import { ethers } from 'ethers'
 
-import { dlog } from '@river-build/dlog';
-import { Client, contractAddressFromSpaceId } from '@river-build/sdk';
+import { dlog } from '@river-build/dlog'
+import { Client, contractAddressFromSpaceId } from '@river-build/sdk'
 
 import {
-    encryptAndSendMediaPayload, getTestServerUrl, makeJpegBlob, makeTestClient,
-    makeUniqueSpaceStreamId
-} from '../testUtils';
+	encryptAndSendMediaPayload,
+	getTestServerUrl,
+	makeJpegBlob,
+	makeTestClient,
+	makeUniqueSpaceStreamId,
+} from '../testUtils'
 
 const log = dlog('stream-metadata:test:spaceImage', {
 	allowJest: true,

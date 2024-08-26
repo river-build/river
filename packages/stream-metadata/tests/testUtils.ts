@@ -1,22 +1,34 @@
-import 'fake-indexeddb/auto'; // used to mock indexdb in dexie, don't remove
+import 'fake-indexeddb/auto' // used to mock indexdb in dexie, don't remove
 
-import { ethers } from 'ethers';
-
-import { createPromiseClient } from '@connectrpc/connect';
-import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-node';
-import { ChunkedMedia, MediaInfo, StreamService } from '@river-build/proto';
+import { ChunkedMedia, MediaInfo, StreamService } from '@river-build/proto'
 import {
-    Client, encryptAESGCM, genId, makeSignerContext, makeSpaceStreamId, MockEntitlementsDelegate,
-    RiverDbManager, SignerContext, userIdFromAddress
-} from '@river-build/sdk';
+	Client,
+	MockEntitlementsDelegate,
+	RiverDbManager,
+	SignerContext,
+	encryptAESGCM,
+	genId,
+	makeSignerContext,
+	makeSpaceStreamId,
+	userIdFromAddress,
+} from '@river-build/sdk'
+import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-node'
 import {
-    CreateLegacySpaceParams, ETH_ADDRESS, getDynamicPricingModule, LegacyMembershipStruct,
-    LocalhostWeb3Provider, NoopRuleData, Permission, SpaceDapp
-} from '@river-build/web3';
+	CreateLegacySpaceParams,
+	ETH_ADDRESS,
+	LegacyMembershipStruct,
+	LocalhostWeb3Provider,
+	NoopRuleData,
+	Permission,
+	SpaceDapp,
+	getDynamicPricingModule
+} from '@river-build/web3'
 
-import { config } from '../src/environment';
-import { getRiverRegistry } from '../src/evmRpcClient';
-import { StreamRpcClient } from '../src/riverStreamRpcClient';
+import { StreamRpcClient } from '../src/riverStreamRpcClient'
+import { config } from '../src/environment'
+import { createPromiseClient } from '@connectrpc/connect'
+import { ethers } from 'ethers'
+import { getRiverRegistry } from '../src/evmRpcClient'
 
 export function isTest(): boolean {
 	return (
