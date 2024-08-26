@@ -6,6 +6,7 @@ pragma solidity ^0.8.18;
 // libraries
 
 // contracts
+
 interface IRewardsDistributionBase {
   struct Deposit {
     uint96 balance;
@@ -17,7 +18,7 @@ interface IRewardsDistributionBase {
   struct Treasure {
     uint256 balance;
     uint256 rewardPerTokenAccumulated;
-    uint256 unclaimedReward;
+    uint256 unclaimedRewardSnapshot;
   }
 }
 
