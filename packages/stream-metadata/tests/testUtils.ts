@@ -1,23 +1,18 @@
-import 'fake-indexeddb/auto' // used to mock indexdb in dexie, don't remove
-import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-node'
-import { ChunkedMedia, MediaInfo, StreamService } from '@river-build/proto'
-import { createPromiseClient } from '@connectrpc/connect'
-import {
-	Client,
-	encryptAESGCM,
-	genId,
-	makeSignerContext,
-	makeSpaceStreamId,
-	MockEntitlementsDelegate,
-	RiverDbManager,
-	SignerContext,
-	userIdFromAddress,
-} from '@river-build/sdk'
-import { ethers } from 'ethers'
+import 'fake-indexeddb/auto'; // used to mock indexdb in dexie, don't remove
 
-import { StreamRpcClient } from '../src/riverStreamRpcClient'
-import { config } from '../src/environment'
-import { getRiverRegistry } from '../src/evmRpcClient'
+import { ethers } from 'ethers';
+
+import { createPromiseClient } from '@connectrpc/connect';
+import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-node';
+import { ChunkedMedia, MediaInfo, StreamService } from '@river-build/proto';
+import {
+    Client, encryptAESGCM, genId, makeSignerContext, makeSpaceStreamId, MockEntitlementsDelegate,
+    RiverDbManager, SignerContext, userIdFromAddress
+} from '@river-build/sdk';
+
+import { config } from '../src/environment';
+import { getRiverRegistry } from '../src/evmRpcClient';
+import { StreamRpcClient } from '../src/riverStreamRpcClient';
 
 export function isTest(): boolean {
 	return (
