@@ -18,7 +18,7 @@
 		"prettier": "prettier --config ../prettier-config/config.js --ignore-path .prettierignore .",
 		"run-build": "yarn build && node ./dist/node_esbuild.cjs",
 		"start": "node ./dist/node_esbuild.cjs",
-		"test": "NODE_TLS_REJECT_UNAUTHORIZED=0 node --experimental-vm-modules $(yarn bin jest)",
+		"test": "NODE_TLS_REJECT_UNAUTHORIZED=0 node --experimental-vm-modules $(yarn bin jest) --forceExit",
 		"test:integration": "yarn test --testNamePattern='integration/stream-metadata'"
 	},
 	"dependencies": {
