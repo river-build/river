@@ -4,9 +4,11 @@ import { ethers } from 'ethers'
 import { Client } from '@river-build/sdk'
 
 import {
+	encryptAndSendMediaPayload,
 	getTestServerUrl,
 	makeCreateSpaceParams,
 	makeEthersProvider,
+	makeJpegBlob,
 	makeSpaceDapp,
 	makeTestClient,
 	SpaceMetadataParams,
@@ -141,8 +143,9 @@ describe('integration/space/:spaceAddress', () => {
 		/**
 		 * 1. create a space on-chain.
 		 * 2. create a space stream.
-		 * 3. fetch the space contract info from the stream-metadata server.
-		 * 4. verify the response.
+		 * 3. upload a space image.
+		 * 4. fetch the space contract info from the stream-metadata server.
+		 * 5. verify the response.
 		 */
 
 		/*
@@ -179,24 +182,41 @@ describe('integration/space/:spaceAddress', () => {
 		/*
 		 * 2. create a space stream.
 		 */
-		const spaceStreamId = await bobsClient.createSpace(spaceAddress)
+		const { streamId: spaceStreamId } = await bobsClient.createSpace(spaceAddress)
 		expect(spaceStreamId).toBeDefined()
 		log('spaceStreamId', spaceStreamId)
 
 		/*
-		 * 3. fetch the space metadata from the stream-metadata server.
+		 * 3. upload a space image.
+		 */
+		const dataSize = 30
+		const { data: imageData, info } = makeJpegBlob(dataSize)
+		const chunkedMedia = await encryptAndSendMediaPayload(
+			bobsClient,
+			spaceStreamId,
+			info,
+			imageData,
+		)
+
+		await bobsClient.setSpaceImage(spaceStreamId, chunkedMedia)
+
+		/*
+		 * 4. fetch the space metadata from the stream-metadata server.
 		 */
 		const route = `space/${spaceAddress}`
 		const response = await axios.get<SpaceMetadataResponse>(`${baseURL}/${route}`)
 		log('response', { status: response.status, data: response.data })
 
-		const { name, description, image } = response.data
+		/*
+		 * 5. verify the response.
+		 */
+		const { name, description, image: imageUrl } = response.data
 		expect(response.status).toBe(200)
 		expect(response.headers['content-type']).toContain('application/json')
 		expect(name).toEqual(expectedMetadata.name)
 		const expectedDescription = `${expectedMetadata.shortDescription}\n\n${expectedMetadata.longDescription}`
 		expect(description).toEqual(expectedDescription)
-		//const expectedImageUrl = `http://localhost:${config.port}/space/${spaceAddress}/image`
-		//expect(image.toLowerCase()).toEqual(expectedImageUrl.toLowerCase())
+		const expectedImageUrl = `http://localhost:${config.port}/space/${spaceAddress}/image`
+		expect(imageUrl?.toLowerCase()).toEqual(expectedImageUrl.toLowerCase())
 	})
 })
