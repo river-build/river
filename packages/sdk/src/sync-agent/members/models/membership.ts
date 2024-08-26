@@ -13,8 +13,8 @@ export interface MemberMembershipModel extends Identifiable {
     op: MembershipOp
 }
 
-// The streamInitialized, streamNewUserInvited, streamNewUserJoined, streamUserLeft are not listened here.
-// They are listened in the members model, which propagates the updates to the membership model.
+// This model doenst listen to events here.
+// They are listened in the members model, which propagates the updates to this model.
 @persistedObservable({ tableName: 'member_membership' })
 export class MemberMembership extends PersistedObservable<MemberMembershipModel> {
     constructor(
@@ -44,11 +44,7 @@ export class MemberMembership extends PersistedObservable<MemberMembershipModel>
         }
     }
 
-    public onStreamMembershipUpdated = (
-        streamId: string,
-        userId: string,
-        op: MembershipOp.SO_JOIN | MembershipOp.SO_INVITE | MembershipOp.SO_LEAVE,
-    ) => {
+    public onStreamMembershipUpdated = (streamId: string, userId: string, op: MembershipOp) => {
         if (streamId === this.data.streamId && userId === this.data.id) {
             this.setData({ op })
         }

@@ -20,6 +20,8 @@ export interface MemberNftModel extends Identifiable {
     nft?: NftModel
 }
 
+// This model doenst listen to events here.
+// They are listened in the members model, which propagates the updates to this model.
 @persistedObservable({ tableName: 'member_nft' })
 export class MemberNft extends PersistedObservable<MemberNftModel> {
     constructor(
@@ -33,14 +35,6 @@ export class MemberNft extends PersistedObservable<MemberNftModel> {
             store,
             LoadPriority.high,
         )
-    }
-    protected override async onLoaded() {
-        this.riverConnection.registerView((client) => {
-            client.on('streamNftUpdated', this.onStreamNftUpdated)
-            return () => {
-                client.off('streamNftUpdated', this.onStreamNftUpdated)
-            }
-        })
     }
 
     public onStreamInitialized = (streamId: string) => {
@@ -62,7 +56,7 @@ export class MemberNft extends PersistedObservable<MemberNftModel> {
         }
     }
 
-    private onStreamNftUpdated = (streamId: string, userId: string) => {
+    public onStreamNftUpdated = (streamId: string, userId: string) => {
         if (streamId === this.data.streamId && userId === this.data.id) {
             const streamView = this.riverConnection.client?.stream(streamId)?.view
             const metadata = streamView?.getMemberMetadata()

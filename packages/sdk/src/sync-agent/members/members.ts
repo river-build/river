@@ -35,11 +35,21 @@ export class Members extends PersistedObservable<MembersModel> {
             client.on('streamNewUserJoined', this.onMemberJoin)
             client.on('streamNewUserInvited', this.onMemberInvite)
             client.on('streamUserLeft', this.onMemberLeave)
+            client.on('streamUsernameUpdated', this.onUsernameUpdated)
+            client.on('streamPendingUsernameUpdated', this.onUsernameUpdated)
+            client.on('streamNftUpdated', this.onNftUpdated)
+            client.on('streamEnsAddressUpdated', this.onEnsAddressUpdated)
+            client.on('streamDisplayNameUpdated', this.onDisplayNameUpdated)
             return () => {
                 client.off('streamInitialized', this.onStreamInitialized)
                 client.off('streamNewUserJoined', this.onMemberJoin)
                 client.off('streamNewUserInvited', this.onMemberInvite)
                 client.off('streamUserLeft', this.onMemberLeave)
+                client.off('streamUsernameUpdated', this.onUsernameUpdated)
+                client.off('streamPendingUsernameUpdated', this.onUsernameUpdated)
+                client.off('streamNftUpdated', this.onNftUpdated)
+                client.off('streamEnsAddressUpdated', this.onEnsAddressUpdated)
+                client.off('streamDisplayNameUpdated', this.onDisplayNameUpdated)
             }
         })
     }
@@ -167,5 +177,28 @@ export class Members extends PersistedObservable<MembersModel> {
                 )
             }
         }
+    }
+
+    private onUsernameUpdated = (streamId: string, userId: string): void => {
+        if (streamId !== this.data.id) return
+        const member = this.get(userId)
+        member.onUsernameUpdated(streamId, userId)
+    }
+
+    private onDisplayNameUpdated = (streamId: string, userId: string): void => {
+        if (streamId !== this.data.id) return
+        const member = this.get(userId)
+        member.onDisplayNameUpdated(streamId, userId)
+    }
+    private onNftUpdated = (streamId: string, userId: string): void => {
+        if (streamId !== this.data.id) return
+        const member = this.get(userId)
+        member.onNftUpdated(streamId, userId)
+    }
+
+    private onEnsAddressUpdated = (streamId: string, userId: string): void => {
+        if (streamId !== this.data.id) return
+        const member = this.get(userId)
+        member.onEnsAddressUpdated(streamId, userId)
     }
 }

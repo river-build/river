@@ -5,6 +5,7 @@ import { MemberDisplayName } from './metadata/displayName'
 import { MemberEnsAddress } from './metadata/ensAddress'
 import { MemberNft } from './metadata/nft'
 import { MemberUsername } from './metadata/username'
+import { MembershipOp } from '@river-build/proto'
 
 export class Member {
     observables: {
@@ -33,6 +34,26 @@ export class Member {
         for (const model of Object.values(this.observables)) {
             model.onStreamInitialized(streamId)
         }
+    }
+
+    onUsernameUpdated(streamId: string, userId: string) {
+        this.observables.username.onStreamUsernameUpdated(streamId, userId)
+    }
+
+    onDisplayNameUpdated(streamId: string, userId: string) {
+        this.observables.displayName.onStreamDisplayNameUpdated(streamId, userId)
+    }
+
+    onEnsAddressUpdated(streamId: string, userId: string) {
+        this.observables.ensAddress.onStreamEnsAddressUpdated(streamId, userId)
+    }
+
+    onNftUpdated(streamId: string, userId: string) {
+        this.observables.nft.onStreamNftUpdated(streamId, userId)
+    }
+
+    onMembershipUpdated(streamId: string, userId: string, op: MembershipOp) {
+        this.observables.membership.onStreamMembershipUpdated(streamId, userId, op)
     }
 
     get username() {

@@ -15,6 +15,8 @@ export interface MemberEnsAddressModel extends Identifiable {
     ensAddress?: Address
 }
 
+// This model doenst listen to events here.
+// They are listened in the members model, which propagates the updates to this model.
 @persistedObservable({ tableName: 'member_ensAddress' })
 export class MemberEnsAddress extends PersistedObservable<MemberEnsAddressModel> {
     constructor(
@@ -30,15 +32,6 @@ export class MemberEnsAddress extends PersistedObservable<MemberEnsAddressModel>
         )
     }
 
-    protected override async onLoaded() {
-        this.riverConnection.registerView((client) => {
-            client.on('streamEnsAddressUpdated', this.onStreamEnsAddressUpdated)
-            return () => {
-                client.off('streamEnsAddressUpdated', this.onStreamEnsAddressUpdated)
-            }
-        })
-    }
-
     public onStreamInitialized = (streamId: string) => {
         if (streamId === this.data.streamId) {
             const streamView = this.riverConnection.client?.stream(this.data.streamId)?.view
@@ -49,7 +42,7 @@ export class MemberEnsAddress extends PersistedObservable<MemberEnsAddressModel>
         }
     }
 
-    private onStreamEnsAddressUpdated = (streamId: string, userId: string) => {
+    public onStreamEnsAddressUpdated = (streamId: string, userId: string) => {
         if (streamId === this.data.streamId && userId === this.data.id) {
             const stream = this.riverConnection.client?.streams.get(streamId)
             const metadata = stream?.view.getMemberMetadata()
