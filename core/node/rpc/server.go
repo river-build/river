@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"connectrpc.com/otelconnect"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/river-build/river/core/config"
@@ -575,6 +576,9 @@ func (s *Service) initHandlers() {
 	ii := []connect.Interceptor{}
 	if s.otelConnectIterceptor != nil {
 		ii = append(ii, s.otelConnectIterceptor)
+		if i, err := otelconnect.NewInterceptor(); err == nil {
+			ii = append(ii, i)
+		}
 	}
 	ii = append(ii, s.NewMetricsInterceptor())
 	ii = append(ii, NewTimeoutInterceptor(s.config.Network.RequestTimeout))
