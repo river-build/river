@@ -21,7 +21,3 @@ const baseLogger = pino(pinoOptions)
 export function getLogger(name: string, meta: Record<string, unknown> = {}) {
 	return baseLogger.child({ name, ...meta })
 }
-
-export function getFunctionLogger(logger: FastifyBaseLogger, functionName: string) {
-	return logger.child({ functionName })
-}
