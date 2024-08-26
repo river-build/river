@@ -412,8 +412,9 @@ func (ca *chainAuth) isEntitledToChannelUncached(
 	log := dlog.FromCtx(ctx)
 	log.Debug("isEntitledToChannelUncached", "args", args)
 
-	// For read and write permissions, fetch the entitlements and evaluate them locally.
-	if (args.permission == PermissionRead) || (args.permission == PermissionWrite) {
+	// For read, write and react permissions, fetch the entitlements and evaluate them locally.
+	if (args.permission == PermissionRead) || (args.permission == PermissionWrite) ||
+		(args.permission == PermissionReact) {
 		result, cacheHit, err := ca.entitlementManagerCache.executeUsingCache(
 			ctx,
 			cfg,
@@ -498,7 +499,6 @@ func (ca *chainAuth) evaluateEntitlementData(
 			if err != nil {
 				return false, err
 			}
-			log.Debug("Converted rule data to V2", "ruleData", reV2)
 
 			result, err := ca.evaluator.EvaluateRuleData(ctx, wallets, reV2)
 			if err != nil {
@@ -561,7 +561,6 @@ func (ca *chainAuth) evaluateWithEntitlements(
 
 	// 1. Check if the user is the space owner
 	// Space owner has su over all space operations.
-	log.Info("evaluateWithEntitlements", "args", args, "owner", owner.Hex(), "wallets", args.linkedWallets)
 	wallets := deserializeWallets(args.linkedWallets)
 	for _, wallet := range wallets {
 		if wallet == owner {
