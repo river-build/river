@@ -1,15 +1,13 @@
-import axios from 'axios'
-import { dlog } from '@river-build/dlog'
-import { contractAddressFromSpaceId } from '@river-build/sdk'
-import { ethers } from 'ethers'
+import axios from 'axios';
+import { ethers } from 'ethers';
+
+import { dlog } from '@river-build/dlog';
+import { Client, contractAddressFromSpaceId } from '@river-build/sdk';
 
 import {
-	encryptAndSendMediaPayload,
-	getTestServerUrl,
-	makeJpegBlob,
-	makeTestClient,
-	makeUniqueSpaceStreamId,
-} from '../testUtils'
+    encryptAndSendMediaPayload, getTestServerUrl, makeJpegBlob, makeTestClient,
+    makeUniqueSpaceStreamId
+} from '../testUtils';
 
 const log = dlog('stream-metadata:test:spaceImage', {
 	allowJest: true,
@@ -19,6 +17,20 @@ const log = dlog('stream-metadata:test:spaceImage', {
 describe('integration/stream-metadata/space/:spaceAddress/image', () => {
 	const baseURL = getTestServerUrl()
 	log('baseURL', baseURL)
+
+	let bobsClient: Client
+	let bobsWallet: ethers.Wallet
+
+	beforeEach(async () => {
+		bobsWallet = ethers.Wallet.createRandom()
+		bobsClient = await makeTestClient(bobsWallet)
+		await bobsClient.initializeUser()
+		bobsClient.startSync()
+	})
+
+	afterEach(async () => {
+		await bobsClient.stopSync()
+	})
 
 	it('should return 404 /space/0x0000000000000000000000000000000000000000/image', async () => {
 		const expectedStatus = 404
@@ -82,12 +94,6 @@ describe('integration/stream-metadata/space/:spaceAddress/image', () => {
 		/*
 		 * 1. create a space.
 		 */
-		const bobsWallet = ethers.Wallet.createRandom()
-		const bobsClient = await makeTestClient(bobsWallet)
-
-		await bobsClient.initializeUser()
-		bobsClient.startSync()
-
 		const spaceId = makeUniqueSpaceStreamId()
 		await bobsClient.createSpace(spaceId)
 		const spaceStream = await bobsClient.waitForStream(spaceId)
@@ -146,12 +152,6 @@ describe('integration/stream-metadata/space/:spaceAddress/image', () => {
 		/*
 		 * 1. create a space.
 		 */
-		const bobsWallet = ethers.Wallet.createRandom()
-		const bobsClient = await makeTestClient(bobsWallet)
-
-		await bobsClient.initializeUser()
-		bobsClient.startSync()
-
 		const spaceId = makeUniqueSpaceStreamId()
 		await bobsClient.createSpace(spaceId)
 		const spaceStream = await bobsClient.waitForStream(spaceId)

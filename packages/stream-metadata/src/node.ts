@@ -26,6 +26,7 @@ logger.info(
 		riverRegistry: config.web3Config.river.addresses.riverRegistry,
 		baseChainRpcUrl: config.baseChainRpcUrl,
 		riverChainRpcUrl: config.riverChainRpcUrl,
+		baseChainRpcUrl: config.baseChainRpcUrl,
 	},
 	'config',
 )
