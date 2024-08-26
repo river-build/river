@@ -1,10 +1,13 @@
 import type { ChunkedMedia } from '@river-build/proto'
 import type { FastifyBaseLogger } from 'fastify'
 
+import { getFunctionLogger } from './logger'
+
 export function getMediaEncryption(
-	logger: FastifyBaseLogger,
+	log: FastifyBaseLogger,
 	chunkedMedia: ChunkedMedia,
 ): { key: Uint8Array; iv: Uint8Array } {
+	const logger = getFunctionLogger(log, 'getEncryption')
 	switch (chunkedMedia.encryption.case) {
 		case 'aesgcm': {
 			return {
