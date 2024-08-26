@@ -14,10 +14,9 @@ import {
 	userIdFromAddress,
 } from '@river-build/sdk'
 import { ethers } from 'ethers'
-import { LocalhostWeb3Provider } from '@river-build/web3'
 
 import { StreamRpcClient } from '../src/riverStreamRpcClient'
-import { testConfig } from './testEnvironment'
+import { config } from '../src/environment'
 import { getRiverRegistry } from '../src/evmRpcClient'
 
 export function isTest(): boolean {
@@ -34,7 +33,7 @@ export function makeUniqueSpaceStreamId(): string {
 
 export function getTestServerUrl() {
 	// use the .env.test config to derive the baseURL of the server under test
-	const { host, port, riverEnv } = testConfig
+	const { host, port, riverEnv } = config
 	const protocol = riverEnv.startsWith('local') ? 'http' : 'https'
 	const baseURL = `${protocol}://${host}:${port}`
 	return baseURL
@@ -67,14 +66,11 @@ export function makeStreamRpcClient(url: string): StreamRpcClient {
 	return client
 }
 
-export async function makeTestClient() {
+export async function makeTestClient(wallet: ethers.Wallet) {
 	// create all the constructor arguments for the SDK client
 
-	// arg: user context and wallet
-	const { context, wallet } = await makeRandomUserContext()
-	const provider = new LocalhostWeb3Provider(testConfig.baseChainRpcUrl, wallet)
-	// need funds to create space and execute tranasctions
-	await provider.fundWallet()
+	// arg: user context
+	const context = await makeUserContext(wallet)
 
 	// arg: stream rpc client
 	const nodeUrl = await getAnyNodeUrlFromRiverRegistry()
@@ -99,18 +95,7 @@ export async function makeTestClient() {
 	return new Client(context, rpcClient, cryptoStore, entitlementsDelegate, persistenceDbName)
 }
 
-export async function makeRandomUserContext(): Promise<{
-	wallet: ethers.Wallet
-	context: SignerContext
-}> {
-	const wallet = ethers.Wallet.createRandom()
-	return {
-		wallet,
-		context: await makeUserContextFromWallet(wallet),
-	}
-}
-
-export async function makeUserContextFromWallet(wallet: ethers.Wallet): Promise<SignerContext> {
+export async function makeUserContext(wallet: ethers.Wallet): Promise<SignerContext> {
 	const userPrimaryWallet = wallet
 	const delegateWallet = ethers.Wallet.createRandom()
 	return makeSignerContext(userPrimaryWallet, delegateWallet, { days: 1 })
