@@ -1,10 +1,13 @@
-import { FastifyRequest, FastifyReply } from 'fastify'
+import { FastifyRequest, FastifyReply, FastifyBaseLogger } from 'fastify'
 import { SpaceInfo } from '@river-build/web3'
+import { makeStreamId, StreamPrefix, StreamStateView } from '@river-build/sdk'
 
 import { isValidEthereumAddress } from '../validators'
 import { getFunctionLogger } from '../logger'
 import { getSpaceDapp } from '../contract-utils'
 import { config } from '../environment'
+import { getStream } from '../riverStreamRpcClient'
+import { getSpaceImage } from './spaceImage'
 
 export async function fetchSpaceMetadata(request: FastifyRequest, reply: FastifyReply) {
 	const logger = getFunctionLogger(request.log, 'fetchSpaceMetadata')
@@ -45,13 +48,18 @@ export async function fetchSpaceMetadata(request: FastifyRequest, reply: Fastify
 		name: spaceContractInfo.name,
 		longDescription: spaceContractInfo.longDescription,
 		shortDescription: spaceContractInfo.shortDescription,
-		image: getImageUrl(spaceContractInfo.uri, spaceAddress),
+		image: getImageUrl(logger, spaceContractInfo.uri, spaceAddress),
 	}
 
 	return reply.header('Content-Type', 'application/json').send(metadata)
 }
 
-function getImageUrl(contractUri: string, spaceAddress: string) {
+async function getImageUrl(logger: FastifyBaseLogger, contractUri: string, spaceAddress: string) {
+	const doesSpaceImageExist = await spaceImageExists(logger, spaceAddress)
+	if (!doesSpaceImageExist) {
+		return ''
+	}
+
 	const isDefaultPort =
 		config.riverStreamMetadataHostUrl.port === '' ||
 		config.riverStreamMetadataHostUrl.port === '80' ||
@@ -76,4 +84,32 @@ function getImageUrl(contractUri: string, spaceAddress: string) {
 
 	// If the contractUri doesn't meet the conditions, return it as is
 	return contractUri
+}
+
+async function spaceImageExists(log: FastifyBaseLogger, spaceAddress: string): Promise<boolean> {
+	const logger = getFunctionLogger(log, 'spaceImageExists')
+
+	let stream: StreamStateView | undefined
+	try {
+		const streamId = makeStreamId(StreamPrefix.Space, spaceAddress)
+		stream = await getStream(logger, streamId)
+	} catch (error) {
+		logger.error(
+			{
+				error,
+				spaceAddress,
+			},
+			'Failed to get stream',
+		)
+		return false
+	}
+
+	if (!stream) {
+		return false
+	}
+
+	// get the image metatdata from the stream
+	const spaceImage = await getSpaceImage(stream)
+	logger.info({ spaceImage }, 'spaceImageExists')
+	return spaceImage !== undefined
 }
