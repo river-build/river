@@ -23,7 +23,7 @@ library RewardsDistributionStorage {
     uint256 rewardRate;
     uint256 rewardPerTokenAccumulated;
     mapping(address depositor => uint256 amount) stakedByDepositor;
-    mapping(address beneficiary => IRewardsDistributionBase.Treasure) earningPower;
+    mapping(address beneficiary => IRewardsDistributionBase.Treasure) treasureByBeneficiary;
     mapping(uint256 depositId => IRewardsDistributionBase.Deposit deposit) deposits;
     mapping(address delegatee => address surrogate) surrogates;
     mapping(address rewardNotifier => bool) isRewardNotifier;
