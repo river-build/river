@@ -127,17 +127,15 @@ func getHttpStatus(
 			result.StatusText = resp.Status
 			result.Protocol = resp.Proto
 			result.UsedTLS = resp.TLS != nil
-			if resp.StatusCode == 200 {
-				statusJson, err := io.ReadAll(resp.Body)
+
+			// Always try to read the response body, even if the status code is not 200.
+			statusJson, err := io.ReadAll(resp.Body)
+			if err == nil && len(statusJson) > 0 {
+				st, err := statusinfo.StatusResponseFromJson(statusJson)
 				if err == nil {
-					st, err := statusinfo.StatusResponseFromJson(statusJson)
-					if err == nil {
-						result.Response = st
-					} else {
-						result.Response.Status = "Error decoding response: " + err.Error()
-					}
+					result.Response = st
 				} else {
-					result.Response.Status = "Error reading response: " + err.Error()
+					result.Response.Status = "Error decoding response: " + err.Error()
 				}
 			}
 		} else {
