@@ -1,4 +1,3 @@
-import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-web'
 import {
 	ParsedStreamResponse,
 	StreamStateView,
@@ -8,6 +7,7 @@ import {
 	unpackStream,
 } from '@river-build/sdk'
 import { PromiseClient, createPromiseClient } from '@connectrpc/connect'
+import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-node'
 import { StreamService } from '@river-build/proto'
 import { filetypemime } from 'magic-bytes.js'
 import { FastifyBaseLogger } from 'fastify'
@@ -25,6 +25,7 @@ function makeStreamRpcClient(logger: FastifyBaseLogger, url: string): StreamRpcC
 	logger.info({ url }, 'Connecting')
 
 	const options: ConnectTransportOptions = {
+		httpVersion: '2',
 		baseUrl: url,
 	}
 
