@@ -18,6 +18,7 @@ const envSchema = z.object({
 	BASE_CHAIN_RPC_URL: z.string().url(),
 	PORT: NumberFromIntStringSchema,
 	HOST: z.string().optional().default('127.0.0.1'),
+	ENABLE_CACHE: BoolFromStringSchema.optional().default('true'),
 	LOG_LEVEL: z.string().optional().default('info'),
 	LOG_PRETTY: BoolFromStringSchema.optional().default('true'),
 })
@@ -34,6 +35,7 @@ function makeConfig() {
 		riverChainRpcUrl: env.RIVER_CHAIN_RPC_URL,
 		host: env.HOST,
 		port: env.PORT,
+		enableCache: env.ENABLE_CACHE,
 		log: {
 			level: env.LOG_LEVEL,
 			pretty: env.LOG_PRETTY,
