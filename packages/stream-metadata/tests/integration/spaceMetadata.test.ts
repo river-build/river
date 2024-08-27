@@ -69,18 +69,16 @@ describe('integration/space/:spaceAddress', () => {
 
 		const spaceStreamId = await bobsClient.createSpace(spaceAddress)
 		expect(spaceStreamId).toBeDefined()
-		log('spaceStreamId', spaceStreamId)
 
 		const route = `space/${spaceAddress}`
 		const response = await axios.get<SpaceMetadataResponse>(`${baseURL}/${route}`)
-		log('response', { status: response.status, data: response.data })
 
 		const { name, description, image } = response.data
 		expect(response.status).toBe(200)
 		expect(response.headers['content-type']).toContain('application/json')
 		expect(name).toEqual(expectedMetadata.name)
 
-		let expectedDescription
+		let expectedDescription: string
 		if (shortDescription && longDescription) {
 			expectedDescription = `${shortDescription}\n\n${longDescription}`
 		} else if (shortDescription) {
@@ -184,7 +182,6 @@ describe('integration/space/:spaceAddress', () => {
 		 */
 		const { streamId: spaceStreamId } = await bobsClient.createSpace(spaceAddress)
 		expect(spaceStreamId).toBeDefined()
-		log('spaceStreamId', spaceStreamId)
 
 		/*
 		 * 3. upload a space image.
