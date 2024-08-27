@@ -207,11 +207,11 @@ export async function getMediaStreamContent(
 
 	const secretHex = toHexString(secret)
 	const ivHex = toHexString(iv)
+	const cacheKey = `${fullStreamId}${secretHex}${ivHex}`
 
 	if (config.enableCache) {
-		const concatenatedString = `${fullStreamId}${secretHex}${ivHex}`
-	if (contentCache[concatenatedString]) {
-		return contentCache[concatenatedString]
+		if (contentCache[cacheKey]) {
+		return contentCache[cacheKey]
 		}
 	}
 
@@ -226,8 +226,7 @@ export async function getMediaStreamContent(
 	const result = await mediaContentFromStreamView(logger, sv, secret, iv)
 
 	// Cache the result
-	const concatenatedString = `${fullStreamId}${secretHex}${ivHex}`
-	contentCache[concatenatedString] = result
+	contentCache[cacheKey] = result
 
 	return result
 }
