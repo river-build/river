@@ -30,7 +30,8 @@ import {DeployUserEntitlement} from "contracts/scripts/deployments/utils/DeployU
 import {DeployMultiInit} from "contracts/scripts/deployments/utils/DeployMultiInit.s.sol";
 import {DeploySpace} from "contracts/scripts/deployments/diamonds/DeploySpace.s.sol";
 import {DeploySpaceOwner} from "contracts/scripts/deployments/diamonds/DeploySpaceOwner.s.sol";
-import {DeployRuleEntitlement, DeployRuleEntitlementV2} from "contracts/scripts/deployments/utils/DeployRuleEntitlement.s.sol";
+import {DeployRuleEntitlement} from "contracts/scripts/deployments/utils/DeployRuleEntitlement.s.sol";
+import {DeployRuleEntitlementV2} from "contracts/scripts/deployments/utils/DeployRuleEntitlementV2.s.sol";
 import {DeployWalletLink} from "contracts/scripts/deployments/facets/DeployWalletLink.s.sol";
 import {DeployTieredLogPricing} from "contracts/scripts/deployments/utils/DeployTieredLogPricing.s.sol";
 import {DeployFixedPricing} from "contracts/scripts/deployments/utils/DeployFixedPricing.s.sol";
@@ -39,6 +40,7 @@ import {DeployImplementationRegistry} from "contracts/scripts/deployments/facets
 import {DeployPausable} from "contracts/scripts/deployments/facets/DeployPausable.s.sol";
 import {DeployPlatformRequirements} from "contracts/scripts/deployments/facets/DeployPlatformRequirements.s.sol";
 import {DeployEIP712Facet} from "contracts/scripts/deployments/facets/DeployEIP712Facet.s.sol";
+import {DeployPartnerRegistry} from "contracts/scripts/deployments/facets/DeployPartnerRegistry.s.sol";
 
 import {SpaceFactory} from "contracts/src/factory/SpaceFactory.sol";
 
@@ -65,6 +67,7 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
   DeployEIP712Facet eip712Helper = new DeployEIP712Facet();
   DeployMockLegacyArchitect deployMockLegacyArchitect =
     new DeployMockLegacyArchitect();
+  DeployPartnerRegistry partnerRegistryHelper = new DeployPartnerRegistry();
   DeployMultiInit deployMultiInit = new DeployMultiInit();
 
   // dependencies
@@ -100,6 +103,7 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
   address registry;
   address walletLink;
   address eip712;
+  address partnerRegistry;
 
   // external contracts
   address public spaceImpl;
@@ -174,6 +178,7 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
     platformReqs = platformReqsHelper.deploy(deployer);
     eip712 = eip712Helper.deploy(deployer);
     pricingModulesFacet = pricingModulesHelper.deploy(deployer);
+    partnerRegistry = partnerRegistryHelper.deploy(deployer);
 
     // legacy
     legacyArchitect = deployMockLegacyArchitect.deploy(deployer);
@@ -190,7 +195,8 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
       architectHelper.makeInitData(
         spaceOwner, // spaceOwner
         userEntitlement, // userEntitlement
-        ruleEntitlement // ruleEntitlement
+        ruleEntitlement, // ruleEntitlement
+        legacyRuleEntitlement // legacyRuleEntitlement
       )
     );
     addFacet(
@@ -199,12 +205,7 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
         IDiamond.FacetCutAction.Add
       ),
       legacyArchitect,
-      deployMockLegacyArchitect.makeInitData(
-        spaceOwner, // spaceOwnerToken
-        userEntitlement, // userEntitlement
-        ruleEntitlement, // ruleEntitlement
-        legacyRuleEntitlement // legacy ruleEntitlement
-      )
+      deployMockLegacyArchitect.makeInitData("")
     );
     addFacet(
       proxyManagerHelper.makeCut(proxyManager, IDiamond.FacetCutAction.Add),
@@ -250,6 +251,14 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
       eip712Helper.makeCut(eip712, IDiamond.FacetCutAction.Add),
       eip712,
       eip712Helper.makeInitData("SpaceFactory", "1")
+    );
+    addFacet(
+      partnerRegistryHelper.makeCut(
+        partnerRegistry,
+        IDiamond.FacetCutAction.Add
+      ),
+      partnerRegistry,
+      partnerRegistryHelper.makeInitData("")
     );
 
     return

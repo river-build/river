@@ -14,7 +14,6 @@ import { FastifyBaseLogger } from 'fastify'
 
 import { MediaContent, StreamIdHex } from './types'
 import { getNodeForStream } from './streamRegistry'
-import { getFunctionLogger } from './logger'
 
 const clients = new Map<string, StreamRpcClient>()
 
@@ -22,8 +21,7 @@ const contentCache: Record<string, MediaContent | undefined> = {}
 
 export type StreamRpcClient = PromiseClient<typeof StreamService> & { url?: string }
 
-function makeStreamRpcClient(log: FastifyBaseLogger, url: string): StreamRpcClient {
-	const logger = getFunctionLogger(log, 'makeStreamRpcClient')
+function makeStreamRpcClient(logger: FastifyBaseLogger, url: string): StreamRpcClient {
 	logger.info({ url }, 'Connecting')
 
 	const options: ConnectTransportOptions = {
@@ -36,8 +34,7 @@ function makeStreamRpcClient(log: FastifyBaseLogger, url: string): StreamRpcClie
 	return client
 }
 
-async function getStreamClient(log: FastifyBaseLogger, streamId: `0x${string}`) {
-	const logger = getFunctionLogger(log, 'getStreamClient')
+async function getStreamClient(logger: FastifyBaseLogger, streamId: `0x${string}`) {
 	const node = await getNodeForStream(logger, streamId)
 	let url = node?.url
 	if (!clients.has(url)) {
@@ -49,7 +46,8 @@ async function getStreamClient(log: FastifyBaseLogger, streamId: `0x${string}`) 
 
 	const client = clients.get(url)
 	if (!client) {
-		throw new Error(`Failed to get client for url ${url}`)
+		logger.error({ url }, 'Failed to get client for url')
+		throw new Error('Failed to get client for url')
 	}
 
 	return { client, lastMiniblockNum: node.lastMiniblockNum }
@@ -75,12 +73,11 @@ function streamViewFromUnpackedResponse(
 }
 
 async function mediaContentFromStreamView(
-	log: FastifyBaseLogger,
+	logger: FastifyBaseLogger,
 	streamView: StreamStateView,
 	secret: Uint8Array,
 	iv: Uint8Array,
 ): Promise<MediaContent> {
-	const logger = getFunctionLogger(log, 'mediaContentFromStreamView')
 	const mediaInfo = streamView.mediaContent.info
 	if (!mediaInfo) {
 		logger.error(
@@ -98,7 +95,7 @@ async function mediaContentFromStreamView(
 			spaceId: mediaInfo.spaceId,
 			mediaStreamId: streamView.mediaContent.streamId,
 		},
-		'mediaContentFromStreamView',
+		'decrypting media content in stream',
 	)
 
 	// Aggregate data chunks into a single Uint8Array
@@ -131,9 +128,10 @@ async function mediaContentFromStreamView(
 	logger.info(
 		{
 			spaceId: mediaInfo.spaceId,
+			mediaStreamId: streamView.mediaContent.streamId,
 			mimeType,
 		},
-		'mediaContentFromStreamView decrypted content',
+		'decrypted media content in stream',
 	)
 
 	// Return decrypted data and MIME type
@@ -151,10 +149,9 @@ function stripHexPrefix(hexString: string): string {
 }
 
 export async function getStream(
-	log: FastifyBaseLogger,
+	logger: FastifyBaseLogger,
 	streamId: string,
 ): Promise<StreamStateView> {
-	const logger = getFunctionLogger(log, 'getStream')
 	const result = await getStreamClient(logger, `0x${streamId}`)
 	const client = result.client
 	const lastMiniblockNum = result.lastMiniblockNum
@@ -179,9 +176,10 @@ export async function getStream(
 		streamId: streamIdAsBytes(streamId),
 	})
 
+	const duration_ms = Date.now() - start
 	logger.info(
 		{
-			duration_ms: Date.now() - start,
+			duration_ms,
 		},
 		'getStream finished',
 	)
@@ -191,12 +189,11 @@ export async function getStream(
 }
 
 export async function getMediaStreamContent(
-	log: FastifyBaseLogger,
+	logger: FastifyBaseLogger,
 	fullStreamId: StreamIdHex,
 	secret: Uint8Array,
 	iv: Uint8Array,
 ): Promise<MediaContent | { data: null; mimeType: null }> {
-	const logger = getFunctionLogger(log, 'getMediaStreamContent')
 	const toHexString = (byteArray: Uint8Array) => {
 		return Array.from(byteArray, (byte) => byte.toString(16).padStart(2, '0')).join('')
 	}
