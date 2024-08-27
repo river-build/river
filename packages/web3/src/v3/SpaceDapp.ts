@@ -692,25 +692,24 @@ export class SpaceDapp implements ISpaceDapp {
                 .map((x) => x.ruleEntitlement!.rules as IRuleEntitlementV2Base.RuleDataV2Struct),
         )
 
-        const entitledWalletsForAllRuleEntitlements = await Promise.all(
+        return await Promise.any(
             ruleEntitlements.map(async (ruleData) => {
                 if (!ruleData) {
                     throw new Error('Rule data not found')
                 }
                 const operations = ruleDataToOperations(ruleData)
 
-                return evaluateOperationsForEntitledWallet(operations, allWallets, providers)
+                const result = await evaluateOperationsForEntitledWallet(
+                    operations,
+                    allWallets,
+                    providers,
+                )
+                if (result !== ethers.constants.AddressZero) {
+                    return result
+                }
+                throw new Error('No entitled wallet found for this rule')
             }),
-        )
-
-        const validWallets = entitledWalletsForAllRuleEntitlements.filter(
-            (w) => w !== ethers.constants.AddressZero,
-        )
-        // if any ruleData check passes with an entitled wallet, return the first wallet that passed
-        if (validWallets.length > 0) {
-            return validWallets[0]
-        }
-        return
+        ).catch(() => undefined)
     }
 
     /**
