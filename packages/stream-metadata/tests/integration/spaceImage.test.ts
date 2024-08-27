@@ -161,38 +161,54 @@ describe('integration/stream-metadata/space/:spaceAddress/image', () => {
 		 * upload a space image.
 		 */
 		const dataSize = 30
-		const { data: expectedData, magicBytes, info } = makeImageBlob(dataSize)
-		const chunkedMedia = await encryptAndSendMediaPayload(
+		const { data: jpegData, info: jpegInfo } = makeImageBlob('image/jpeg', dataSize)
+		const jpegMedia = await encryptAndSendMediaPayload(
 			bobsClient,
 			spaceId,
-			info,
-			expectedData,
+			jpegInfo,
+			jpegData,
 		)
 
-		await bobsClient.setSpaceImage(spaceId, chunkedMedia)
-
+		await bobsClient.setSpaceImage(spaceId, jpegMedia)
 		// make a snapshot
 		await bobsClient.debugForceMakeMiniblock(spaceId, { forceSnapshot: true })
 
 		/*
-		 * set the space image cache on the stream-metadata server.
+		 * fetching the space image should return the jpeg image, and cache the
+		 * image in the stream-metadata server.
 		 */
 		const spaceContractAddress = contractAddressFromSpaceId(spaceId)
 		const route = `space/${spaceContractAddress}/image`
-		const response = await axios.get(`${baseURL}/${route}`, {
+		await axios.get(`${baseURL}/${route}`, {
 			responseType: 'arraybuffer',
 		})
 
+		// set a new space image
+		const { data: expectedPng, magicBytes: pngMagicBytes, info: pngInfo } = makeImageBlob('image/png', dataSize)
+		const pngMedia = await encryptAndSendMediaPayload(
+			bobsClient,
+			spaceId,
+			pngInfo,
+			expectedPng,
+		)
 
+		await bobsClient.setSpaceImage(spaceId, pngMedia)
+		// make another snapshot
+		await bobsClient.debugForceMakeMiniblock(spaceId, { forceSnapshot: true })
 
-		expect(response.status).toBe(200)
+		// fetch the space image again
+		const pngResponse = await axios.get(`${baseURL}/${route}`, {
+			responseType: 'arraybuffer',
+		})
+
+		expect(pngResponse.status).toBe(200)
 		// Verify the Content-Type header matches the expected MIME type
-		expect(response.headers['content-type']).toBe('image/jpeg')
-		const responseData = new Uint8Array(response.data)
+		expect(pngResponse.headers['content-type']).toBe('image/png')
+		const pngData = new Uint8Array(pngResponse.data)
 		// Verify the magic bytes in the response match the expected magic bytes
-		expect(responseData.slice(0, magicBytes.length)).toEqual(new Uint8Array(magicBytes))
+		expect(pngData.slice(0, pngMagicBytes.length)).toEqual(new Uint8Array(pngMagicBytes))
 		// Verify the entire response data matches the expected data
-		expect(responseData).toEqual(expectedData)
+		expect(expectedPng).toEqual(pngData)
 	})
 
 	it('should return status 404 without spaceImage', async () => {
