@@ -6,12 +6,14 @@ import {IRewardsDistributionBase} from "./IRewardsDistribution.sol";
 
 // libraries
 import {FixedPointMathLib} from "solady/src/utils/FixedPointMathLib.sol";
+import {SafeTransferLib} from "solady/src/utils/SafeTransferLib.sol";
 import {RewardsDistributionStorage} from "./RewardsDistributionStorage.sol";
 
 // contracts
 
 library RewardsDistribution {
   using FixedPointMathLib for uint256;
+  using SafeTransferLib for address;
 
   uint256 internal constant SCALE_FACTOR = 1e36;
 
@@ -45,7 +47,8 @@ library RewardsDistribution {
 
     return
       rewardPerTokenAccumulated +
-      rewardRate.fullMulDiv(
+      FixedPointMathLib.fullMulDiv(
+        rewardRate,
         lastTimeRewardDistributed($) - lastUpdateTime,
         totalStaked
       );
@@ -93,6 +96,19 @@ library RewardsDistribution {
     treasure.rewardPerTokenAccumulated = $.rewardPerTokenAccumulated;
   }
 
+  function retrieveOrDeploySurrogate(
+    RewardsDistributionStorage.Layout storage $,
+    address delegatee
+  ) internal returns (address surrogate) {
+    surrogate = $.surrogates[delegatee];
+
+    if (surrogate == address(0)) {
+      // TODO: surrogate = new DelegationSurrogate(STAKE_TOKEN, delegatee);
+      $.surrogates[delegatee] = surrogate;
+      emit IRewardsDistributionBase.SurrogateDeployed(delegatee, surrogate);
+    }
+  }
+
   function stake(
     RewardsDistributionStorage.Layout storage $,
     address depositor,
@@ -105,5 +121,42 @@ library RewardsDistribution {
 
     updateGlobalReward($);
     updateReward($, beneficiary);
+
+    depositId = $.nextDepositId++;
+
+    $.totalStaked += amount;
+    $.stakedByDepositor[depositor] += amount;
+    $.treasureByBeneficiary[beneficiary].balance += amount;
+    $.deposits[depositId] = IRewardsDistributionBase.Deposit({
+      balance: amount,
+      owner: depositor,
+      delegatee: delegatee,
+      beneficiary: beneficiary
+    });
+
+    address surrogate = retrieveOrDeploySurrogate($, delegatee);
+    $.stakeToken.safeTransferFrom(depositor, surrogate, amount);
+    // TODO: emit events
+  }
+
+  function increaseStake(
+    RewardsDistributionStorage.Layout storage $,
+    uint256 depositId,
+    uint96 amount
+  ) internal {
+    IRewardsDistributionBase.Deposit storage deposit = $.deposits[depositId];
+    (address beneficiary, address owner) = (deposit.beneficiary, deposit.owner);
+
+    updateGlobalReward($);
+    updateReward($, beneficiary);
+
+    $.totalStaked += amount;
+    $.stakedByDepositor[owner] += amount;
+    $.treasureByBeneficiary[beneficiary].balance += amount;
+    deposit.balance += amount;
+
+    address surrogate = $.surrogates[deposit.delegatee];
+    $.stakeToken.safeTransferFrom(owner, surrogate, amount);
+    // TODO: emit events
   }
 }

@@ -20,6 +20,8 @@ interface IRewardsDistributionBase {
     uint256 rewardPerTokenAccumulated;
     uint256 unclaimedRewardSnapshot;
   }
+
+  event SurrogateDeployed(address indexed delegatee, address indexed surrogate);
 }
 
 interface IRewardsDistribution is IRewardsDistributionBase {}
