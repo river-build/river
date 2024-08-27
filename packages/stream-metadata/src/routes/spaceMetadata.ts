@@ -4,7 +4,6 @@ import { makeStreamId, StreamPrefix, StreamStateView } from '@river-build/sdk'
 import { ChunkedMedia } from '@river-build/proto'
 
 import { isValidEthereumAddress } from '../validators'
-import { getFunctionLogger } from '../logger'
 import { getSpaceDapp } from '../contract-utils'
 import { config } from '../environment'
 import { getStream } from '../riverStreamRpcClient'
@@ -16,8 +15,12 @@ export interface SpaceMetadataResponse {
 	image: string | undefined
 }
 
-export async function fetchSpaceMetadata(request: FastifyRequest, reply: FastifyReply) {
-	const logger = getFunctionLogger(request.log, 'fetchSpaceMetadata')
+export async function fetchSpaceMetadata(
+	request: FastifyRequest,
+	reply: FastifyReply,
+	serverUrl: string,
+) {
+	const logger = request.log.child({ name: fetchSpaceMetadata.name })
 	const { spaceAddress } = request.params as { spaceAddress?: string }
 
 	if (!spaceAddress) {
@@ -104,9 +107,7 @@ async function getImageUrl(logger: FastifyBaseLogger, contractUri: string, space
 	return contractUri
 }
 
-async function hasSpaceImage(log: FastifyBaseLogger, spaceAddress: string): Promise<boolean> {
-	const logger = getFunctionLogger(log, 'spaceImageExists')
-
+async function hasSpaceImage(logger: FastifyBaseLogger, spaceAddress: string): Promise<boolean> {
 	let stream: StreamStateView | undefined
 	try {
 		const streamId = makeStreamId(StreamPrefix.Space, spaceAddress)
