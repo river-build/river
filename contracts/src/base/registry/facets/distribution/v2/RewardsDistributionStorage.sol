@@ -22,11 +22,13 @@ library RewardsDistributionStorage {
     uint256 lastUpdateTime;
     uint256 rewardRate;
     uint256 rewardPerTokenAccumulated;
+    uint256 nextDepositId;
     mapping(address depositor => uint256 amount) stakedByDepositor;
     mapping(address beneficiary => IRewardsDistributionBase.Treasure) treasureByBeneficiary;
     mapping(uint256 depositId => IRewardsDistributionBase.Deposit) deposits;
     mapping(address delegatee => address surrogate) surrogates;
     mapping(address rewardNotifier => bool) isRewardNotifier;
+    mapping(address operator => uint256 commissionRate) commissionRateByOperator;
   }
 
   function layout() internal pure returns (Layout storage s) {
