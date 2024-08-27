@@ -6,7 +6,7 @@ pragma solidity ^0.8.23;
 // libraries
 
 // contracts
-import {Multicallable} from "solady/utils/Multicallable.sol";
+import {Multicallable} from "solady/src/utils/Multicallable.sol";
 
 contract MockMulticall is Multicallable {
   function one() external pure returns (uint256) {

@@ -5,4 +5,4 @@ forge-std/=lib/forge-std/src/
 hardhat-deploy/=lib/hardhat-deploy/
 @prb/math/=lib/@prb/math/src/
 @prb/test/=lib/@prb/test/src/
-solady/=lib/solady/src/
+solady/=lib/solady/
