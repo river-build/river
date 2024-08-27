@@ -39,6 +39,7 @@ sepolia = "${SEPOLIA_RPC_URL}"
 base_sepolia = "${BASE_SEPOLIA_RPC_URL}"
 base = "${BASE_RPC_URL}"
 mainnet = "${MAINNET_RPC_URL}"
+gnosis = "${GNOSIS_RPC_URL}"
 
 [fmt]
 line_length = 80
