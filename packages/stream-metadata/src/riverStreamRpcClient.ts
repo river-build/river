@@ -14,7 +14,6 @@ import { FastifyBaseLogger } from 'fastify'
 
 import { MediaContent, StreamIdHex } from './types'
 import { getNodeForStream } from './streamRegistry'
-import { getFunctionLogger } from './logger'
 import { config } from './environment'
 
 const clients = new Map<string, StreamRpcClient>()
@@ -23,8 +22,7 @@ const contentCache: Record<string, MediaContent | undefined> = {}
 
 export type StreamRpcClient = PromiseClient<typeof StreamService> & { url?: string }
 
-function makeStreamRpcClient(log: FastifyBaseLogger, url: string): StreamRpcClient {
-	const logger = getFunctionLogger(log, 'makeStreamRpcClient')
+function makeStreamRpcClient(logger: FastifyBaseLogger, url: string): StreamRpcClient {
 	logger.info({ url }, 'Connecting')
 
 	const options: ConnectTransportOptions = {
@@ -37,8 +35,7 @@ function makeStreamRpcClient(log: FastifyBaseLogger, url: string): StreamRpcClie
 	return client
 }
 
-async function getStreamClient(log: FastifyBaseLogger, streamId: `0x${string}`) {
-	const logger = getFunctionLogger(log, 'getStreamClient')
+async function getStreamClient(logger: FastifyBaseLogger, streamId: `0x${string}`) {
 	const node = await getNodeForStream(logger, streamId)
 	let url = node?.url
 	if (!clients.has(url)) {
@@ -77,12 +74,11 @@ function streamViewFromUnpackedResponse(
 }
 
 async function mediaContentFromStreamView(
-	log: FastifyBaseLogger,
+	logger: FastifyBaseLogger,
 	streamView: StreamStateView,
 	secret: Uint8Array,
 	iv: Uint8Array,
 ): Promise<MediaContent> {
-	const logger = getFunctionLogger(log, 'mediaContentFromStreamView')
 	const mediaInfo = streamView.mediaContent.info
 	if (!mediaInfo) {
 		logger.error(
@@ -154,10 +150,9 @@ function stripHexPrefix(hexString: string): string {
 }
 
 export async function getStream(
-	log: FastifyBaseLogger,
+	logger: FastifyBaseLogger,
 	streamId: string,
 ): Promise<StreamStateView> {
-	const logger = getFunctionLogger(log, 'getStream')
 	const result = await getStreamClient(logger, `0x${streamId}`)
 	const client = result.client
 	const lastMiniblockNum = result.lastMiniblockNum
@@ -195,12 +190,11 @@ export async function getStream(
 }
 
 export async function getMediaStreamContent(
-	log: FastifyBaseLogger,
+	logger: FastifyBaseLogger,
 	fullStreamId: StreamIdHex,
 	secret: Uint8Array,
 	iv: Uint8Array,
 ): Promise<MediaContent | { data: null; mimeType: null }> {
-	const logger = getFunctionLogger(log, 'getMediaStreamContent')
 	const toHexString = (byteArray: Uint8Array) => {
 		return Array.from(byteArray, (byte) => byte.toString(16).padStart(2, '0')).join('')
 	}
@@ -211,7 +205,7 @@ export async function getMediaStreamContent(
 
 	if (config.enableCache) {
 		if (contentCache[cacheKey]) {
-		return contentCache[cacheKey]
+			return contentCache[cacheKey]
 		}
 	}
 

@@ -104,20 +104,21 @@ export async function makeUserContext(wallet: ethers.Wallet): Promise<SignerCont
 	return makeSignerContext(userPrimaryWallet, delegateWallet, { days: 1 })
 }
 
-export function makeImageBlob(mimeType: ImageMimeType, fillSize: number): {
+export function makeImageBlob(
+	mimeType: ImageMimeType,
+	fillSize: number,
+): {
 	magicBytes: number[]
 	data: Uint8Array
 	info: MediaInfo
 } {
-	let magicBytes: number[]
-	
+	let magicBytes: number[] = []
+
 	// Determine magic bytes based on the MIME type
 	if (mimeType === 'image/jpeg') {
 		magicBytes = [0xff, 0xd8, 0xff]
 	} else if (mimeType === 'image/png') {
 		magicBytes = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
-	} else {
-		throw new Error(`Unsupported image mime type: ${mimeType}`)
 	}
 
 	// Create a Uint8Array with the size including magic bytes

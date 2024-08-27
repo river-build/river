@@ -162,12 +162,7 @@ describe('integration/stream-metadata/space/:spaceAddress/image', () => {
 		 */
 		const dataSize = 30
 		const { data: jpegData, info: jpegInfo } = makeImageBlob('image/jpeg', dataSize)
-		const jpegMedia = await encryptAndSendMediaPayload(
-			bobsClient,
-			spaceId,
-			jpegInfo,
-			jpegData,
-		)
+		const jpegMedia = await encryptAndSendMediaPayload(bobsClient, spaceId, jpegInfo, jpegData)
 
 		await bobsClient.setSpaceImage(spaceId, jpegMedia)
 		// make a snapshot
@@ -184,13 +179,12 @@ describe('integration/stream-metadata/space/:spaceAddress/image', () => {
 		})
 
 		// set a new space image
-		const { data: expectedPng, magicBytes: pngMagicBytes, info: pngInfo } = makeImageBlob('image/png', dataSize)
-		const pngMedia = await encryptAndSendMediaPayload(
-			bobsClient,
-			spaceId,
-			pngInfo,
-			expectedPng,
-		)
+		const {
+			data: expectedPng,
+			magicBytes: pngMagicBytes,
+			info: pngInfo,
+		} = makeImageBlob('image/png', dataSize)
+		const pngMedia = await encryptAndSendMediaPayload(bobsClient, spaceId, pngInfo, expectedPng)
 
 		await bobsClient.setSpaceImage(spaceId, pngMedia)
 		// make another snapshot
