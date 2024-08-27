@@ -51,9 +51,10 @@ export async function fetchUserBio(request: FastifyRequest, reply: FastifyReply)
 	return reply.header('Content-Type', 'application/json').send({ bio })
 }
 
-async function getUserBio(streamView: StreamStateView): Promise<string | undefined> {
+async function getUserBio(streamView: StreamStateView) {
 	if (streamView.contentKind !== 'userMetadataContent') {
 		return undefined
 	}
-	return streamView.userMetadataContent.getBio()
+	const bio = await streamView.userMetadataContent.getBio()
+	return bio?.bio
 }
