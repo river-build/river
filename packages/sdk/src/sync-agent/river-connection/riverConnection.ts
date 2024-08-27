@@ -161,7 +161,7 @@ export class RiverConnection extends PersistedObservable<RiverConnectionModel> {
             this.clientParams.logNamespaceFilter,
             this.clientParams.highPriorityStreamIds,
         )
-        client.setMaxListeners(5000)
+        client.setMaxListeners(100)
         this.client = client
         // initialize views
         this.store.withTransaction('RiverConnection::onNewClient', () => {
