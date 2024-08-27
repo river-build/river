@@ -3,10 +3,9 @@ import { StreamPrefix, StreamStateView, makeStreamId } from '@river-build/sdk'
 
 import { getStream } from '../riverStreamRpcClient'
 import { isValidEthereumAddress } from '../validators'
-import { getFunctionLogger } from '../logger'
 
 export async function fetchUserBio(request: FastifyRequest, reply: FastifyReply) {
-	const logger = getFunctionLogger(request.log, 'fetchUserBio')
+	const logger = request.log.child({ name: fetchUserBio.name })
 	const { userId } = request.params as { userId?: string }
 
 	if (!userId) {
