@@ -15,6 +15,7 @@ import { FastifyBaseLogger } from 'fastify'
 import { MediaContent, StreamIdHex } from './types'
 import { getNodeForStream } from './streamRegistry'
 import { getFunctionLogger } from './logger'
+import { config } from './environment'
 
 const clients = new Map<string, StreamRpcClient>()
 
@@ -207,11 +208,12 @@ export async function getMediaStreamContent(
 	const secretHex = toHexString(secret)
 	const ivHex = toHexString(iv)
 
-	/*
+	if (config.enableCache) {
+		const concatenatedString = `${fullStreamId}${secretHex}${ivHex}`
 	if (contentCache[concatenatedString]) {
-		return contentCache[concatenatedString];
+		return contentCache[concatenatedString]
+		}
 	}
-	*/
 
 	const streamId = stripHexPrefix(fullStreamId)
 	const sv = await getStream(logger, streamId)
