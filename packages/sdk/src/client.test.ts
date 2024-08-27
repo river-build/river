@@ -1064,6 +1064,6 @@ describe('clientTest', () => {
         expect(await waitFor(() => userMetadataStream.view.events.has(eventId))).toBe(true)
 
         const decrypted = await bobsClient.getUserBio(bobsClient.userId)
-        expect(decrypted).toBe(bio)
+        expect(decrypted).toStrictEqual(bio)
     })
 })
