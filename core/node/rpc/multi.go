@@ -95,6 +95,7 @@ func traceCtxForTimeline(
 func getHttpStatus(
 	ctx context.Context,
 	baseUrl string,
+	suffix string,
 	result *statusinfo.HttpResult,
 	client *http.Client,
 	wg *sync.WaitGroup,
@@ -107,7 +108,7 @@ func getHttpStatus(
 	var usedAddr string
 	var timeline statusinfo.Timeline
 	var timelineMu sync.Mutex
-	url := baseUrl + "/status?blockchain=1"
+	url := baseUrl + "/status" + suffix
 	req, err := http.NewRequestWithContext(
 		traceCtxForTimeline(ctx, start, &timeline, &timelineMu, &dnsAddrs, &usedAddr),
 		"GET", url, nil)
@@ -288,8 +289,8 @@ func GetRiverNetworkStatus(
 		}
 
 		wg.Add(4)
-		go getHttpStatus(ctx, n.Url(), &r.Http11, http11client, &wg)
-		go getHttpStatus(ctx, n.Url(), &r.Http20, http20client, &wg)
+		go getHttpStatus(ctx, n.Url(), "?blockchain=1", &r.Http11, http11client, &wg)
+		go getHttpStatus(ctx, n.Url(), "?blockchain=0", &r.Http20, http20client, &wg)
 		go getGrpcStatus(ctx, r, NewStreamServiceClient(grpcHttpClient, n.Url(), connectOpts...), &wg)
 		go getEthBalance(ctx, &r.RiverEthBalance, riverChain, n.Address(), &wg)
 		if baseChain != nil {
