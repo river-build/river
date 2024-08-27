@@ -6,7 +6,7 @@ import { Client, contractAddressFromSpaceId } from '@river-build/sdk'
 import {
 	encryptAndSendMediaPayload,
 	getTestServerUrl,
-	makeJpegBlob,
+	makeImageBlob,
 	makeTestClient,
 	makeUniqueSpaceStreamId,
 } from '../testUtils'
@@ -112,7 +112,7 @@ describe('integration/stream-metadata/space/:spaceAddress/image', () => {
 		 * 2. upload a space image.
 		 */
 		const dataSize = 30
-		const { data: expectedData, magicBytes, info } = makeJpegBlob(dataSize)
+		const { data: expectedData, magicBytes, info } = makeImageBlob('image/jpeg', dataSize)
 		const chunkedMedia = await encryptAndSendMediaPayload(
 			bobsClient,
 			spaceId,
@@ -133,6 +133,57 @@ describe('integration/stream-metadata/space/:spaceAddress/image', () => {
 		const response = await axios.get(`${baseURL}/${route}`, {
 			responseType: 'arraybuffer', // Ensures that Axios returns the response as a buffer
 		})
+
+		expect(response.status).toBe(200)
+		// Verify the Content-Type header matches the expected MIME type
+		expect(response.headers['content-type']).toBe('image/jpeg')
+		const responseData = new Uint8Array(response.data)
+		// Verify the magic bytes in the response match the expected magic bytes
+		expect(responseData.slice(0, magicBytes.length)).toEqual(new Uint8Array(magicBytes))
+		// Verify the entire response data matches the expected data
+		expect(responseData).toEqual(expectedData)
+	})
+
+	it('should return updated spaceImage with cache enabled', async () => {
+		/*
+		 * create a space.
+		 */
+		const spaceId = makeUniqueSpaceStreamId()
+		await bobsClient.createSpace(spaceId)
+		const spaceStream = await bobsClient.waitForStream(spaceId)
+		expect(spaceStream).toBeDefined()
+		expect(
+			spaceStream.view.snapshot?.content.case === 'spaceContent' &&
+				spaceStream.view.snapshot?.content.value.spaceImage === undefined,
+		).toBe(true)
+
+		/*
+		 * upload a space image.
+		 */
+		const dataSize = 30
+		const { data: expectedData, magicBytes, info } = makeImageBlob(dataSize)
+		const chunkedMedia = await encryptAndSendMediaPayload(
+			bobsClient,
+			spaceId,
+			info,
+			expectedData,
+		)
+
+		await bobsClient.setSpaceImage(spaceId, chunkedMedia)
+
+		// make a snapshot
+		await bobsClient.debugForceMakeMiniblock(spaceId, { forceSnapshot: true })
+
+		/*
+		 * set the space image cache on the stream-metadata server.
+		 */
+		const spaceContractAddress = contractAddressFromSpaceId(spaceId)
+		const route = `space/${spaceContractAddress}/image`
+		const response = await axios.get(`${baseURL}/${route}`, {
+			responseType: 'arraybuffer',
+		})
+
+
 
 		expect(response.status).toBe(200)
 		// Verify the Content-Type header matches the expected MIME type

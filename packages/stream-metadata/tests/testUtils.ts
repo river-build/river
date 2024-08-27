@@ -20,6 +20,8 @@ import { config } from '../src/environment'
 import { getRiverRegistry } from '../src/evmRpcClient'
 import { StreamRpcClient } from '../src/riverStreamRpcClient'
 
+export type ImageMimeType = 'image/jpeg' | 'image/png' // for testing purposes
+
 export function isTest(): boolean {
 	return (
 		process.env.NODE_ENV === 'test' ||
@@ -102,13 +104,21 @@ export async function makeUserContext(wallet: ethers.Wallet): Promise<SignerCont
 	return makeSignerContext(userPrimaryWallet, delegateWallet, { days: 1 })
 }
 
-export function makeJpegBlob(fillSize: number): {
+export function makeImageBlob(mimeType: ImageMimeType, fillSize: number): {
 	magicBytes: number[]
 	data: Uint8Array
 	info: MediaInfo
 } {
-	// Example of JPEG magic bytes (0xFF 0xD8 0xFF)
-	const magicBytes = [0xff, 0xd8, 0xff]
+	let magicBytes: number[]
+	
+	// Determine magic bytes based on the MIME type
+	if (mimeType === 'image/jpeg') {
+		magicBytes = [0xff, 0xd8, 0xff]
+	} else if (mimeType === 'image/png') {
+		magicBytes = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+	} else {
+		throw new Error(`Unsupported image mime type: ${mimeType}`)
+	}
 
 	// Create a Uint8Array with the size including magic bytes
 	const data = new Uint8Array(fillSize + magicBytes.length)
@@ -125,7 +135,7 @@ export function makeJpegBlob(fillSize: number): {
 		magicBytes,
 		data,
 		info: new MediaInfo({
-			mimetype: 'image/jpeg', // Set the expected MIME type
+			mimetype: mimeType, // Set the expected MIME type
 			sizeBytes: BigInt(data.length),
 		}),
 	}
