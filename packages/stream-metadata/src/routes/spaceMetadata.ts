@@ -18,7 +18,6 @@ export interface SpaceMetadataResponse {
 export async function fetchSpaceMetadata(
 	request: FastifyRequest,
 	reply: FastifyReply,
-	serverUrl: string,
 ) {
 	const logger = request.log.child({ name: fetchSpaceMetadata.name })
 	const { spaceAddress } = request.params as { spaceAddress?: string }
