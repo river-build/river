@@ -125,15 +125,15 @@ describe('integration/space/:spaceAddress', () => {
 		}
 	})
 
-	it('should return status 200 without spaceImage - both descriptions have values', async () => {
+	it('should return status 200 - both descriptions have values', async () => {
 		await runDecriptionTest('bobs space short description', 'bobs space long description')
 	})
 
-	it('should return status 200 without spaceImage - shortDescription has value, longDescription is empty', async () => {
+	it('should return status 200 - shortDescription has value, longDescription is empty', async () => {
 		await runDecriptionTest('bobs space short description', '')
 	})
 
-	it('should return status 200 without spaceImage - shortDescription is empty, longDescription has value', async () => {
+	it('should return status 200 - shortDescription is empty, longDescription has value', async () => {
 		await runDecriptionTest('', 'bobs space long description')
 	})
 
