@@ -16,4 +16,8 @@ contract MockMulticall is Multicallable {
   function two() external pure returns (uint256) {
     return 2;
   }
+
+  fallback(bytes calldata) external returns (bytes memory) {
+    return msg.data;
+  }
 }
