@@ -6,29 +6,20 @@ import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/con
 import { ChunkedMedia, MediaInfo, StreamService } from '@river-build/proto'
 import {
 	Client,
-	MockEntitlementsDelegate,
-	RiverDbManager,
-	SignerContext,
 	encryptAESGCM,
 	genId,
 	makeSignerContext,
 	makeSpaceStreamId,
+	MockEntitlementsDelegate,
+	RiverDbManager,
+	SignerContext,
 	userIdFromAddress,
 } from '@river-build/sdk'
-import {
-	CreateLegacySpaceParams,
-	ETH_ADDRESS,
-	LegacyMembershipStruct,
-	LocalhostWeb3Provider,
-	NoopRuleData,
-	Permission,
-	SpaceDapp,
-	getDynamicPricingModule,
-} from '@river-build/web3'
 
-import { StreamRpcClient } from '../src/riverStreamRpcClient'
 import { config } from '../src/environment'
 import { getRiverRegistry } from '../src/evmRpcClient'
+import { StreamRpcClient } from '../src/riverStreamRpcClient'
+import { CreateLegacySpaceParams, ETH_ADDRESS, getDynamicPricingModule, LegacyMembershipStruct, LocalhostWeb3Provider, NoopRuleData, Permission, SpaceDapp } from '@river-build/web3'
 
 export function isTest(): boolean {
 	return (

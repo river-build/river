@@ -33,7 +33,10 @@ function makeConfig() {
 		riverEnv: env.RIVER_ENV,
 		baseChainRpcUrl: env.BASE_CHAIN_RPC_URL,
 		riverChainRpcUrl: env.RIVER_CHAIN_RPC_URL,
+<<<<<<< HEAD
 		riverStreamMetadataBaseUrl: new URL(env.RIVER_STREAM_METADATA_BASE_URL),
+=======
+>>>>>>> main
 		host: env.HOST,
 		port: env.PORT,
 		log: {
