@@ -4,7 +4,7 @@ import { makeStreamId, StreamPrefix, StreamStateView } from '@river-build/sdk'
 import { ChunkedMedia } from '@river-build/proto'
 
 import { isValidEthereumAddress } from '../validators'
-import { getSpaceDapp } from '../contract-utils'
+import { spaceDapp } from '../contract-utils'
 import { config } from '../environment'
 import { getStream } from '../riverStreamRpcClient'
 import { getSpaceImage } from './spaceImage'
@@ -15,10 +15,7 @@ export interface SpaceMetadataResponse {
 	image: string | undefined
 }
 
-export async function fetchSpaceMetadata(
-	request: FastifyRequest,
-	reply: FastifyReply,
-) {
+export async function fetchSpaceMetadata(request: FastifyRequest, reply: FastifyReply) {
 	const logger = request.log.child({ name: fetchSpaceMetadata.name })
 	const { spaceAddress } = request.params as { spaceAddress?: string }
 
@@ -37,7 +34,6 @@ export async function fetchSpaceMetadata(
 			.send({ error: 'Bad Request', message: 'Invalid spaceAddress format' })
 	}
 
-	const spaceDapp = getSpaceDapp()
 	let spaceInfo: SpaceInfo | undefined
 	try {
 		spaceInfo = await spaceDapp.getSpaceInfo(spaceAddress)

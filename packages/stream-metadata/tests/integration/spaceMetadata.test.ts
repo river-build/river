@@ -14,7 +14,7 @@ import {
 } from '../testUtils'
 import { config } from '../../src/environment'
 import { SpaceMetadataResponse } from '../../src/routes/spaceMetadata'
-import { getSpaceDapp } from '../../src/contract-utils'
+import { spaceDapp } from '../../src/contract-utils'
 
 const log = dlog('stream-metadata:test:spaceMetadata', {
 	allowJest: true,
@@ -40,7 +40,6 @@ describe('integration/space/:spaceAddress', () => {
 	})
 
 	async function runDecriptionTest(shortDescription: string, longDescription: string) {
-		const spaceDapp = getSpaceDapp()
 		const expectedMetadata: SpaceMetadataParams = {
 			name: 'bobs space',
 			uri: '',
@@ -149,7 +148,6 @@ describe('integration/space/:spaceAddress', () => {
 		/*
 		 * 1. create a space on-chain.
 		 */
-		const spaceDapp = getSpaceDapp()
 		const expectedMetadata: SpaceMetadataParams = {
 			name: 'bobs space',
 			uri: '',
