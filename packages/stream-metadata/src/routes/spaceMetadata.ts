@@ -77,7 +77,7 @@ function getSpaceDecription({ shortDescription, longDescription }: SpaceInfo): s
 	return longDescription || ''
 }
 
-const baseUrlString = config.riverStreamMetadataBaseUrl.toString().toLowerCase();
+const baseUrlString = config.riverStreamMetadataBaseUrl.toString().toLowerCase()
 
 async function getImageUrl(logger: FastifyBaseLogger, contractUri: string, spaceAddress: string) {
 	const hasSpaceImageExist = await hasSpaceImage(logger, spaceAddress)
@@ -88,7 +88,10 @@ async function getImageUrl(logger: FastifyBaseLogger, contractUri: string, space
 	// Handle local development environment
 	if (config.riverEnv.startsWith('local')) {
 		if (!contractUri || contractUri.toLowerCase().startsWith(baseUrlString)) {
-			const localUrl = new URL(`/space/${spaceAddress}/image`, config.riverStreamMetadataBaseUrl)
+			const localUrl = new URL(
+				`/space/${spaceAddress}/image`,
+				config.riverStreamMetadataBaseUrl,
+			)
 			localUrl.port = config.port.toString()
 			return localUrl.toString()
 		}
