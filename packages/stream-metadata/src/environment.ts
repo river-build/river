@@ -27,13 +27,17 @@ function makeConfig() {
 	// eslint-disable-next-line no-process-env -- this is the only line where we're allowed to use process.env
 	const env = envSchema.parse(process.env)
 	const web3Config = getWeb3Deployment(env.RIVER_ENV)
+	const riverStreamMetadataBaseUrl = new URL(env.RIVER_STREAM_METADATA_BASE_URL)
+	if (env.RIVER_ENV.startsWith('local')) {
+		riverStreamMetadataBaseUrl.port = env.PORT.toString()
+	}
 
 	return {
 		web3Config,
 		riverEnv: env.RIVER_ENV,
 		baseChainRpcUrl: env.BASE_CHAIN_RPC_URL,
 		riverChainRpcUrl: env.RIVER_CHAIN_RPC_URL,
-		riverStreamMetadataBaseUrl: new URL(env.RIVER_STREAM_METADATA_BASE_URL),
+		riverStreamMetadataBaseUrl,
 		host: env.HOST,
 		port: env.PORT,
 		log: {

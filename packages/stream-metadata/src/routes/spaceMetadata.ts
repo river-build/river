@@ -77,7 +77,8 @@ function getSpaceDecription({ shortDescription, longDescription }: SpaceInfo): s
 	return longDescription || ''
 }
 
-const baseUrlString = config.riverStreamMetadataBaseUrl.toString().toLowerCase()
+// remove the trailing slash from the baseUrlString and make it lowercase for comparison
+const baseUrlString = config.riverStreamMetadataBaseUrl.toString().replace(/\/$/, '').toLowerCase()
 
 async function getImageUrl(logger: FastifyBaseLogger, contractUri: string, spaceAddress: string) {
 	const hasSpaceImageExist = await hasSpaceImage(logger, spaceAddress)
@@ -85,19 +86,8 @@ async function getImageUrl(logger: FastifyBaseLogger, contractUri: string, space
 		return undefined
 	}
 
-	// Handle local development environment
-	if (config.riverEnv.startsWith('local')) {
-		if (!contractUri || contractUri.toLowerCase().startsWith(baseUrlString)) {
-			const localUrl = new URL(
-				`/space/${spaceAddress}/image`,
-				config.riverStreamMetadataBaseUrl,
-			)
-			localUrl.port = config.port.toString()
-			return localUrl.toString()
-		}
-	}
-
-	// Handle production environment or non-local
+	// handle the case where the space uses our default stream-metadata service
+	// or the contractUri is not set
 	if (!contractUri || contractUri.toLowerCase().startsWith(baseUrlString)) {
 		return `${baseUrlString}/space/${spaceAddress}/image`
 	}
