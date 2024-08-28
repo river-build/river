@@ -1,12 +1,12 @@
 import { FastifyReply, FastifyRequest } from 'fastify'
 import { ChunkedMedia } from '@river-build/proto'
 import { StreamPrefix, StreamStateView, makeStreamId } from '@river-build/sdk'
+import { z } from 'zod'
 
 import { StreamIdHex } from '../types'
 import { getMediaStreamContent, getStream } from '../riverStreamRpcClient'
 import { isBytes32String, isValidEthereumAddress } from '../validators'
 import { getMediaEncryption } from '../media-encryption'
-import { z } from 'zod'
 
 const paramsSchema = z.object({
 	userId: z.string().min(1, 'userId parameter is required'),

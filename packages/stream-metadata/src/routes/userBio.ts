@@ -1,9 +1,9 @@
 import { FastifyReply, FastifyRequest } from 'fastify'
 import { StreamPrefix, StreamStateView, makeStreamId } from '@river-build/sdk'
+import { z } from 'zod'
 
 import { getStream } from '../riverStreamRpcClient'
 import { isValidEthereumAddress } from '../validators'
-import { z } from 'zod'
 
 const paramsSchema = z.object({
 	userId: z.string().min(1, 'userId parameter is required'),
