@@ -282,7 +282,7 @@ jobs:
             - name: Run Stream Metadata Nodes
               run: |
                   yarn workspace @river-build/stream-metadata dev:local_multi_ne &
-                  yarn wait-on https://localhost:3003/debug/multi --timeout=120000 --i=5000 --verbose
+                  yarn wait-on http://localhost:3003/health --timeout=120000 --i=5000 --verbose
 
             - name: Run Stream Metadata Tests (without entitlements)
               working-directory: packages/stream-metadata
