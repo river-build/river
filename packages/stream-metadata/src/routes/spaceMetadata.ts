@@ -1,13 +1,18 @@
-import { FastifyRequest, FastifyReply, FastifyBaseLogger } from 'fastify'
-import { SpaceInfo } from '@river-build/web3'
-import { makeStreamId, StreamPrefix, StreamStateView } from '@river-build/sdk'
+import { FastifyBaseLogger, FastifyReply, FastifyRequest } from 'fastify'
+import { StreamPrefix, StreamStateView, makeStreamId } from '@river-build/sdk'
 import { ChunkedMedia } from '@river-build/proto'
+import { SpaceInfo } from '@river-build/web3'
+import { z } from 'zod'
 
+import { config } from '../environment'
+import { getSpaceImage } from './spaceImage'
+import { getStream } from '../riverStreamRpcClient'
 import { isValidEthereumAddress } from '../validators'
 import { spaceDapp } from '../contract-utils'
-import { config } from '../environment'
-import { getStream } from '../riverStreamRpcClient'
-import { getSpaceImage } from './spaceImage'
+
+const paramsSchema = z.object({
+	spaceAddress: z.string().min(1, 'spaceAddress parameter is required'),
+})
 
 export interface SpaceMetadataResponse {
 	name: string
@@ -17,14 +22,16 @@ export interface SpaceMetadataResponse {
 
 export async function fetchSpaceMetadata(request: FastifyRequest, reply: FastifyReply) {
 	const logger = request.log.child({ name: fetchSpaceMetadata.name })
-	const { spaceAddress } = request.params as { spaceAddress?: string }
 
-	if (!spaceAddress) {
-		logger.error('spaceAddress parameter is required')
-		return reply
-			.code(400)
-			.send({ error: 'Bad Request', message: 'spaceAddress parameter is required' })
+	const parseResult = paramsSchema.safeParse(request.params)
+
+	if (!parseResult.success) {
+		const errorMessage = parseResult.error.errors[0]?.message || 'Invalid parameters'
+		logger.info(errorMessage)
+		return reply.code(400).send({ error: 'Bad Request', message: errorMessage })
 	}
+
+	const { spaceAddress } = parseResult.data
 
 	// Validate spaceAddress format using the helper function
 	if (!isValidEthereumAddress(spaceAddress)) {
