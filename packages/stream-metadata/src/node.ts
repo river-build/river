@@ -67,9 +67,7 @@ export function setupRoutes(srv: Server) {
 	 * Routes
 	 */
 	srv.get('/health', checkHealth)
-	srv.get('/space/:spaceAddress', async (request, reply) =>
-		fetchSpaceMetadata(request, reply),
-	)
+	srv.get('/space/:spaceAddress', async (request, reply) => fetchSpaceMetadata(request, reply))
 	srv.get('/space/:spaceAddress/image', fetchSpaceImage)
 	srv.get('/user/:userId/image', fetchUserProfileImage)
 	srv.get('/user/:userId/bio', fetchUserBio)
