@@ -84,7 +84,7 @@ export function makeEthersProvider(wallet: ethers.Wallet) {
 export async function makeTestClient(wallet: ethers.Wallet): Promise<Client> {
 	// create all the constructor arguments for the SDK client
 
-	// arg: user context and wallet
+	// arg: user context
 	const context = await makeUserContext(wallet)
 
 	// arg: stream rpc client
