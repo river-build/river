@@ -125,6 +125,7 @@ export class StreamStateView_Space extends StreamStateView_AbstractContent {
                 )
                 break
             case 'spaceImage':
+                stateEmitter?.emit('spaceImageUpdated', this.streamId)
                 this.encryptedSpaceImage = payload.content.value
                 break
             case undefined:
