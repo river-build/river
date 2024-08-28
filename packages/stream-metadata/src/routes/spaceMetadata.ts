@@ -77,35 +77,29 @@ function getSpaceDecription({ shortDescription, longDescription }: SpaceInfo): s
 	return longDescription || ''
 }
 
+const baseUrlString = config.riverStreamMetadataBaseUrl.toString().toLowerCase();
+
 async function getImageUrl(logger: FastifyBaseLogger, contractUri: string, spaceAddress: string) {
 	const hasSpaceImageExist = await hasSpaceImage(logger, spaceAddress)
 	if (!hasSpaceImageExist) {
 		return undefined
 	}
 
-	const isDefaultPort =
-		config.riverStreamMetadataBaseUrl.port === '' ||
-		config.riverStreamMetadataBaseUrl.port === '80' ||
-		config.riverStreamMetadataBaseUrl.port === '443'
-
-	// Check if contractUri is empty or starts with the config.riverStreamMetadataHostUrl
-	if (
-		contractUri === '' ||
-		contractUri.startsWith(config.riverStreamMetadataBaseUrl.toString())
-	) {
-		// Start building the base URL
-		let baseUrl = `${config.riverStreamMetadataBaseUrl.origin}/space/${spaceAddress}/image`
-
-		// If config has a port that is not 80 or 443, and riverStreamMetadataHostUrl
-		// has the default port, add the config port to the URL
-		if (config.port !== 80 && config.port !== 443 && isDefaultPort) {
-			baseUrl = `${config.riverStreamMetadataBaseUrl.protocol}//${config.riverStreamMetadataBaseUrl.hostname}:${config.port}/space/${spaceAddress}/image`
+	// Handle local development environment
+	if (config.riverEnv.startsWith('local')) {
+		if (!contractUri || contractUri.toLowerCase().startsWith(baseUrlString)) {
+			const localUrl = new URL(`/space/${spaceAddress}/image`, config.riverStreamMetadataBaseUrl)
+			localUrl.port = config.port.toString()
+			return localUrl.toString()
 		}
-
-		return baseUrl
 	}
 
-	// If the contractUri doesn't meet the conditions, return it as is
+	// Handle production environment or non-local
+	if (!contractUri || contractUri.toLowerCase().startsWith(baseUrlString)) {
+		return `${baseUrlString}/space/${spaceAddress}/image`
+	}
+
+	// Fallback, return the original contractUri as is
 	return contractUri
 }
 
