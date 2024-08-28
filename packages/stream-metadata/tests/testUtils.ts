@@ -15,11 +15,20 @@ import {
 	SignerContext,
 	userIdFromAddress,
 } from '@river-build/sdk'
+import {
+	CreateLegacySpaceParams,
+	ETH_ADDRESS,
+	getDynamicPricingModule,
+	LegacyMembershipStruct,
+	LocalhostWeb3Provider,
+	NoopRuleData,
+	Permission,
+	SpaceDapp,
+} from '@river-build/web3'
 
 import { config } from '../src/environment'
 import { getRiverRegistry } from '../src/evmRpcClient'
 import { StreamRpcClient } from '../src/riverStreamRpcClient'
-import { CreateLegacySpaceParams, ETH_ADDRESS, getDynamicPricingModule, LegacyMembershipStruct, LocalhostWeb3Provider, NoopRuleData, Permission, SpaceDapp } from '@river-build/web3'
 
 export function isTest(): boolean {
 	return (
