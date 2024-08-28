@@ -6,17 +6,23 @@ import { StreamIdHex } from '../types'
 import { getMediaStreamContent, getStream } from '../riverStreamRpcClient'
 import { isBytes32String, isValidEthereumAddress } from '../validators'
 import { getMediaEncryption } from '../media-encryption'
+import { z } from 'zod'
+
+const paramsSchema = z.object({
+	userId: z.string().min(1, 'userId parameter is required'),
+})
 
 export async function fetchUserProfileImage(request: FastifyRequest, reply: FastifyReply) {
 	const logger = request.log.child({ name: fetchUserProfileImage.name })
-	const { userId } = request.params as { userId?: string }
+	const parseResult = paramsSchema.safeParse(request.params)
 
-	if (!userId) {
-		logger.info('userId parameter is required')
-		return reply
-			.code(400)
-			.send({ error: 'Bad Request', message: 'userId parameter is required' })
+	if (!parseResult.success) {
+		const errorMessage = parseResult.error.errors[0]?.message || 'Invalid parameters'
+		logger.info(errorMessage)
+		return reply.code(400).send({ error: 'Bad Request', message: errorMessage })
 	}
+
+	const { userId } = parseResult.data
 
 	if (!isValidEthereumAddress(userId)) {
 		logger.info({ userId }, 'Invalid userId')
