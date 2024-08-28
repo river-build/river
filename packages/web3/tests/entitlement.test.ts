@@ -970,7 +970,7 @@ function assertOperationsEqual(actual: Operation[], expected: Operation[]) {
 }
 
 describe('createOperationsTree', () => {
-    test.only('empty', () => {
+    test('empty', () => {
         const checkOp: DecodedCheckOperation[] = []
         const tree = createOperationsTree(checkOp)
         expect(tree).toEqual({
@@ -984,7 +984,7 @@ describe('createOperationsTree', () => {
         assertOperationsEqual(operations, [NoopOperation])
     })
 
-    test.only('single check', () => {
+    test('single check', () => {
         const checkOp: DecodedCheckOperation[] = [
             {
                 type: CheckOperationType.ERC721,
@@ -1015,7 +1015,7 @@ describe('createOperationsTree', () => {
         })
     })
 
-    test.only('two checks', () => {
+    test('two checks', () => {
         const checkOp: DecodedCheckOperation[] = [
             {
                 type: CheckOperationType.ISENTITLED,
@@ -1100,7 +1100,7 @@ describe('createOperationsTree', () => {
         ])
     })
 
-    test.only('three checks', () => {
+    test('three checks', () => {
         const checkOp: DecodedCheckOperation[] = [
             {
                 type: CheckOperationType.ISENTITLED,
