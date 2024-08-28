@@ -35,7 +35,7 @@ export async function fetchSpaceMetadata(request: FastifyRequest, reply: Fastify
 
 	// Validate spaceAddress format using the helper function
 	if (!isValidEthereumAddress(spaceAddress)) {
-		logger.error({ spaceAddress }, 'Invalid spaceAddress format')
+		logger.info({ spaceAddress }, 'Invalid spaceAddress format')
 		return reply
 			.code(400)
 			.send({ error: 'Bad Request', message: 'Invalid spaceAddress format' })
