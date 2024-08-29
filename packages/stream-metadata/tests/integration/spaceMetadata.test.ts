@@ -90,71 +90,17 @@ describe('integration/space/:spaceAddress', () => {
 		expect(image).toBeUndefined()
 	}
 
-	it('should return 404 /space', async () => {
-		const expectedStatus = 404
-		const route = 'space'
-		try {
-			await axios.get(`${baseURL}/${route}`)
-			throw new Error(`Expected request to fail with status ${expectedStatus})`)
-		} catch (error) {
-			if (axios.isAxiosError(error)) {
-				expect(error.response).toBeDefined()
-				expect(error.response?.status).toBe(expectedStatus)
-			} else {
-				// If the error is not an Axios error, rethrow it
-				throw error
-			}
-		}
-	})
-
-	it('should return 400 /space/0x', async () => {
-		const expectedStatus = 400
-		const route = 'space/0x'
-		try {
-			await axios.get(`${baseURL}/${route}`)
-			throw new Error(`Expected request to fail with status ${expectedStatus})`)
-		} catch (error) {
-			if (axios.isAxiosError(error)) {
-				expect(error.response).toBeDefined()
-				expect(error.response?.status).toBe(expectedStatus)
-			} else {
-				// If the error is not an Axios error, rethrow it
-				throw error
-			}
-		}
-	})
-
-	it('should return status 200 - both descriptions have values', async () => {
-		await runDecriptionTest('bobs space short description', 'bobs space long description')
-	})
-
-	it('should return status 200 - shortDescription has value, longDescription is empty', async () => {
-		await runDecriptionTest('bobs space short description', '')
-	})
-
-	it('should return status 200 - shortDescription is empty, longDescription has value', async () => {
-		await runDecriptionTest('', 'bobs space long description')
-	})
-
-	it.only('should return status 200 with spaceImage', async () => {
-		/**
-		 * 1. create a space on-chain.
-		 * 2. create a space stream.
-		 * 3. upload a space image.
-		 * 4. fetch the space contract info from the stream-metadata server.
-		 * 5. verify the response.
-		 */
-
-		/*
-		 * 1. create a space on-chain.
-		 */
+	async function runSpaceImageTest(spaceUri: string) {
 		const expectedMetadata: SpaceMetadataParams = {
 			name: 'bobs space',
-			uri: '',
+			uri: spaceUri,
 			shortDescription: 'bobs space short description',
 			longDescription: 'bobs space long description',
 		}
 
+		/*
+		 * 1. create a space on-chain.
+		 */
 		const createSpaceParams = await makeCreateSpaceParams(
 			bobsClient.userId,
 			spaceDapp,
@@ -162,7 +108,6 @@ describe('integration/space/:spaceAddress', () => {
 		)
 
 		const provider = makeEthersProvider(bobsWallet)
-		// need funds to create space and execute tranasctions
 		await provider.fundWallet()
 
 		const tx = await spaceDapp.createLegacySpace(createSpaceParams, provider.signer)
@@ -211,7 +156,69 @@ describe('integration/space/:spaceAddress', () => {
 		expect(name).toEqual(expectedMetadata.name)
 		const expectedDescription = `${expectedMetadata.shortDescription}\n\n${expectedMetadata.longDescription}`
 		expect(description).toEqual(expectedDescription)
-		const expectedImageUrl = `http://localhost:${config.port}/space/${spaceAddress}/image`
+
+		let expectedImageUrl = spaceUri
+		if (spaceUri.trim() === '' || spaceUri === config.riverSpaceStreamBaseUrl) {
+			expectedImageUrl = `${config.riverSpaceStreamBaseUrl}/${spaceAddress}/image`
+		}
 		expect(imageUrl?.toLowerCase()).toEqual(expectedImageUrl.toLowerCase())
+	}
+
+	it('should return 404 /space', async () => {
+		const expectedStatus = 404
+		const route = 'space'
+		try {
+			await axios.get(`${baseURL}/${route}`)
+			throw new Error(`Expected request to fail with status ${expectedStatus})`)
+		} catch (error) {
+			if (axios.isAxiosError(error)) {
+				expect(error.response).toBeDefined()
+				expect(error.response?.status).toBe(expectedStatus)
+			} else {
+				// If the error is not an Axios error, rethrow it
+				throw error
+			}
+		}
+	})
+
+	it('should return 400 /space/0x', async () => {
+		const expectedStatus = 400
+		const route = 'space/0x'
+		try {
+			await axios.get(`${baseURL}/${route}`)
+			throw new Error(`Expected request to fail with status ${expectedStatus})`)
+		} catch (error) {
+			if (axios.isAxiosError(error)) {
+				expect(error.response).toBeDefined()
+				expect(error.response?.status).toBe(expectedStatus)
+			} else {
+				// If the error is not an Axios error, rethrow it
+				throw error
+			}
+		}
+	})
+
+	it('should return status 200 - both descriptions have values', async () => {
+		await runDecriptionTest('bobs space short description', 'bobs space long description')
+	})
+
+	it('should return status 200 - shortDescription has value, longDescription is empty', async () => {
+		await runDecriptionTest('bobs space short description', '')
+	})
+
+	it('should return status 200 - shortDescription is empty, longDescription has value', async () => {
+		await runDecriptionTest('', 'bobs space long description')
+	})
+
+	it('should return status 200 with spaceImage when uri is empty string', async () => {
+		await runSpaceImageTest('')
+	})
+
+	it('should return status 200 with spaceImage when uri is whitespace', async () => {
+		await runSpaceImageTest(' ')
+	})
+
+	it('should return status 200 with spaceImage when uri is https://example.com', async () => {
+		await runSpaceImageTest('https://example.com')
 	})
 })
