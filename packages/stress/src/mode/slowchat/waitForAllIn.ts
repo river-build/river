@@ -4,12 +4,17 @@ import { ChatConfig } from '../common/types'
 import { isDefined } from '@river-build/sdk'
 
 export async function waitForAllIn(rootClient: StressClient, chatConfig: ChatConfig) {
+    check(isDefined(chatConfig.kickoffMessageEventId), 'kickoffMessageEventId')
     const logger = dlogger(`stress:statsReporter:${rootClient.logId}`)
     const lastReactionCount = 0
+    const timeout = 600000 // 10 minutes
+    const startTime = Date.now()
+
     // eslint-disable-next-line no-constant-condition
     while (true) {
-        check(isDefined(chatConfig.kickoffMessageEventId), 'kickoffMessageEventId')
-
+        if (Date.now() - startTime > timeout) {
+            throw new Error('Timeout waiting for all clients to react')
+        }
         const reactionCount = countReactions(
             rootClient,
             chatConfig.announceChannelId,
