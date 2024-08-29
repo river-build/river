@@ -102,6 +102,7 @@ contract MembershipJoin is
   function _joinSpaceWithReferral(
     address receiver,
     address partner,
+    address userReferral,
     string memory referralCode
   ) internal {
     _validateJoinSpace(receiver);
@@ -113,7 +114,7 @@ contract MembershipJoin is
         TransactionType.JOIN_SPACE_WITH_REFERRAL,
         sender,
         receiver,
-        abi.encode(partner, referralCode)
+        abi.encode(partner, userReferral, referralCode)
       ),
       msg.value
     );
@@ -260,26 +261,28 @@ contract MembershipJoin is
       revert Membership__InvalidTransactionType();
     }
 
-    (address partner, string memory referralCode) = abi.decode(
-      referralData,
-      (address, string)
-    );
+    (address partner, address userReferral, string memory referralCode) = abi
+      .decode(referralData, (address, address, string));
 
     uint256 protocolFeeBps = _collectProtocolFee(sender, membershipPrice);
-    uint256 referralFeeBps = _collectReferralFee(
-      sender,
-      referralCode,
-      membershipPrice
-    );
+
     uint256 partnerFeeBps = _collectPartnerFee(
       sender,
       partner,
       membershipPrice
     );
+
+    uint256 referralFeeBps = _collectReferralCodeFee(
+      sender,
+      userReferral,
+      referralCode,
+      membershipPrice
+    );
+
     uint256 surplus = membershipPrice -
       protocolFeeBps -
-      referralFeeBps -
-      partnerFeeBps;
+      partnerFeeBps -
+      referralFeeBps;
 
     if (surplus > 0) {
       _transferIn(sender, surplus);
@@ -339,28 +342,40 @@ contract MembershipJoin is
   /// @param referralCode The referral code used
   /// @param membershipPrice The price of the membership
   /// @return The amount of referral fee collected
-  function _collectReferralFee(
+  function _collectReferralCodeFee(
     address sender,
+    address userReferral,
     string memory referralCode,
     uint256 membershipPrice
   ) internal returns (uint256) {
-    if (bytes(referralCode).length == 0) return 0;
+    uint256 referralFeeBps;
 
-    Referral memory referral = _referralInfo(referralCode);
-    if (referral.recipient == address(0) || referral.basisPoints == 0) return 0;
+    if (bytes(referralCode).length == 0) {
+      Referral memory referral = _referralInfo(referralCode);
+      if (referral.recipient == address(0) || referral.basisPoints == 0)
+        return 0;
 
-    uint256 referralFee = referral.basisPoints;
-    uint256 referralFeeBps = BasisPoints.calculate(
-      membershipPrice,
-      referralFee
-    );
+      uint256 referralFee = referral.basisPoints;
+      referralFeeBps = BasisPoints.calculate(membershipPrice, referralFee);
 
-    CurrencyTransfer.transferCurrency(
-      _getMembershipCurrency(),
-      sender,
-      referral.recipient,
-      referralFeeBps
-    );
+      CurrencyTransfer.transferCurrency(
+        _getMembershipCurrency(),
+        sender,
+        referral.recipient,
+        referralFeeBps
+      );
+    } else if (userReferral != address(0)) {
+      if (userReferral == sender) return 0;
+
+      referralFeeBps = BasisPoints.calculate(membershipPrice, _defaultBpsFee());
+
+      CurrencyTransfer.transferCurrency(
+        _getMembershipCurrency(),
+        sender,
+        userReferral,
+        referralFeeBps
+      );
+    }
 
     return referralFeeBps;
   }
@@ -380,22 +395,11 @@ contract MembershipJoin is
     Partner memory partnerInfo = IPartnerRegistry(_getSpaceFactory())
       .partnerInfo(partner);
 
-    uint256 partnerFee;
-    address recipient;
+    if (partnerInfo.fee == 0) return 0;
 
-    if (partnerInfo.recipient == address(0)) {
-      // Partner info doesn't exist, use default fee
-      partnerFee = _defaultBpsFee();
-      recipient = partner;
-    } else if (partnerInfo.fee == 0) {
-      // Partner info exists but fee is 0, return without collecting fee
-      return 0;
-    } else {
-      // Use existing partner info
-      partnerFee = partnerInfo.fee;
-      recipient = partnerInfo.recipient;
-    }
-
+    // Use existing partner info
+    uint256 partnerFee = partnerInfo.fee;
+    address recipient = partnerInfo.recipient;
     uint256 partnerFeeBps = BasisPoints.calculate(membershipPrice, partnerFee);
 
     CurrencyTransfer.transferCurrency(
