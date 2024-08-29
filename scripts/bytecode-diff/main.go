@@ -48,7 +48,7 @@ func main() {
 	rootCmd.Flags().StringVar(&compiledFacetsPath, "compiled-facets", "", "Path to compiled facets")
 	rootCmd.Flags().StringVar(&facetSourcePath, "facets", "", "Path to facet source files")
 	rootCmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
-	rootCmd.Flags().StringVar(&reportOutDir, "report-out-dir", "", "Path to report output directory")
+	rootCmd.Flags().StringVar(&reportOutDir, "report-out-dir", "deployed-diffs", "Path to report output directory")
 
 	rootCmd.PreRun = func(cmd *cobra.Command, args []string) {
 		if sourceDiff {
@@ -79,7 +79,10 @@ func main() {
 					"or COMPILED_FACETS_PATH environment variable")
 			}
 
-			reportOutDir = os.Getenv("REPORT_OUT_DIR")
+			envReportOutDir := os.Getenv("REPORT_OUT_DIR")
+			if envReportOutDir != "" {
+				reportOutDir = envReportOutDir
+			}
 			if reportOutDir == "" {
 				reportOutDir = cmd.Flag("report-out-dir").Value.String()
 			}
