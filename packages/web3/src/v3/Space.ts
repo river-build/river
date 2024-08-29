@@ -472,7 +472,7 @@ export class Space {
         untilTokenId = Number(untilTokenId)
 
         const tokenIds = Array.from({ length: untilTokenId }, (_, i) => i)
-        const promises = tokenIds.map((tokenId) => this.Membership.read.ownerOf(tokenId))
+        const promises = tokenIds.map((tokenId) => this.erc721A.read.ownerOf(tokenId))
         return Promise.all(promises)
     }
 }
