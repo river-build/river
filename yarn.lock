@@ -3769,7 +3769,6 @@ __metadata:
     "@typescript-eslint/eslint-plugin": ^6.10.0
     "@typescript-eslint/parser": ^7.14.1
     browser-or-node: ^3.0.0
-    bullmq: ^5.11.0
     debug: ^4.3.4
     dexie: ^4.0.7
     eslint: ^8.53.0
@@ -7132,21 +7131,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bullmq@npm:^5.11.0":
-  version: 5.11.0
-  resolution: "bullmq@npm:5.11.0"
-  dependencies:
-    cron-parser: ^4.6.0
-    ioredis: ^5.4.1
-    msgpackr: ^1.10.1
-    node-abort-controller: ^3.1.1
-    semver: ^7.5.4
-    tslib: ^2.0.0
-    uuid: ^9.0.0
-  checksum: 783017c53aefc0a3ad2520ec072e19b09638205c2243b0bfd4bed6ea7131b71b6b7673444a1f9b517cf931186716b33bb35073074403afb626ad81d0ae772ee5
-  languageName: node
-  linkType: hard
-
 "byte-size@npm:8.1.1":
   version: 8.1.1
   resolution: "byte-size@npm:8.1.1"
@@ -8123,15 +8107,6 @@ __metadata:
   version: 1.1.1
   resolution: "create-require@npm:1.1.1"
   checksum: a9a1503d4390d8b59ad86f4607de7870b39cad43d929813599a23714831e81c520bddf61bcdd1f8e30f05fd3a2b71ae8538e946eb2786dc65c2bbc520f692eff
-  languageName: node
-  linkType: hard
-
-"cron-parser@npm:^4.6.0":
-  version: 4.9.0
-  resolution: "cron-parser@npm:4.9.0"
-  dependencies:
-    luxon: ^3.2.1
-  checksum: 3cf248fc5cae6c19ec7124962b1cd84b76f02b9bc4f58976b3bd07624db3ef10aaf1548efcc2d2dcdab0dad4f12029d640a55ecce05ea5e1596af9db585502cf
   languageName: node
   linkType: hard
 
@@ -11681,23 +11656,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ioredis@npm:^5.4.1":
-  version: 5.4.1
-  resolution: "ioredis@npm:5.4.1"
-  dependencies:
-    "@ioredis/commands": ^1.1.1
-    cluster-key-slot: ^1.1.0
-    debug: ^4.3.4
-    denque: ^2.1.0
-    lodash.defaults: ^4.2.0
-    lodash.isarguments: ^3.1.0
-    redis-errors: ^1.2.0
-    redis-parser: ^3.0.0
-    standard-as-callback: ^2.1.0
-  checksum: 92210294f75800febe7544c27b07e4892480172363b11971aa575be5b68f023bfed4bc858abc9792230c153aa80409047a358f174062c14d17536aa4499fe10b
-  languageName: node
-  linkType: hard
-
 "ip-address@npm:^9.0.5":
   version: 9.0.5
   resolution: "ip-address@npm:9.0.5"
@@ -13741,13 +13699,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"luxon@npm:^3.2.1":
-  version: 3.4.3
-  resolution: "luxon@npm:3.4.3"
-  checksum: 3eade81506224d038ed24035a0cd0dd4887848d7eba9361dce9ad8ef81380596a68153240be3988721f9690c624fb449fcf8fd8c3fc0681a6a8496faf48e92a3
-  languageName: node
-  linkType: hard
-
 "lz-string@npm:^1.5.0":
   version: 1.5.0
   resolution: "lz-string@npm:1.5.0"
@@ -14555,13 +14506,6 @@ __metadata:
   version: 2.6.2
   resolution: "neo-async@npm:2.6.2"
   checksum: deac9f8d00eda7b2e5cd1b2549e26e10a0faa70adaa6fdadca701cc55f49ee9018e427f424bac0c790b7c7e2d3068db97f3093f1093975f2acb8f8818b936ed9
-  languageName: node
-  linkType: hard
-
-"node-abort-controller@npm:^3.1.1":
-  version: 3.1.1
-  resolution: "node-abort-controller@npm:3.1.1"
-  checksum: 2c340916af9710328b11c0828223fc65ba320e0d082214a211311bf64c2891028e42ef276b9799188c4ada9e6e1c54cf7a0b7c05dd9d59fcdc8cd633304c8047
   languageName: node
   linkType: hard
 
