@@ -23,6 +23,12 @@ interface IMembershipBase {
     address pricingModule;
   }
 
+  struct ReferralTypes {
+    address receiver;
+    address userReferral;
+    string referralCode;
+  }
+
   // =============================================================
   //                           Errors
   // =============================================================
@@ -79,6 +85,11 @@ interface IMembership is IMembershipBase {
    * @param receiver The address of the receiver
    */
   function joinSpace(address receiver) external payable;
+
+  function joinSpaceWithReferral(
+    address receiver,
+    ReferralTypes memory referral
+  ) external payable;
 
   /**
    * @notice Renew a space membership

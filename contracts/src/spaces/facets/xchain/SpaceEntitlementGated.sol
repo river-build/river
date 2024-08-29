@@ -8,16 +8,12 @@ pragma solidity ^0.8.23;
 // contracts
 import {EntitlementGated} from "contracts/src/spaces/facets/gated/EntitlementGated.sol";
 import {MembershipJoin} from "contracts/src/spaces/facets/membership/join/MembershipJoin.sol";
-import {ISpaceEntitlementGatedBase} from "contracts/src/spaces/facets/xchain/ISpaceEntitlementGated.sol";
+import {IMembership} from "contracts/src/spaces/facets/membership/IMembership.sol";
 
 /// @title SpaceEntitlementGated
 /// @notice Handles entitlement-gated access to spaces and membership token issuance
 /// @dev Inherits from ISpaceEntitlementGatedBase, MembershipJoin, and EntitlementGated
-contract SpaceEntitlementGated is
-  ISpaceEntitlementGatedBase,
-  MembershipJoin,
-  EntitlementGated
-{
+contract SpaceEntitlementGated is MembershipJoin, EntitlementGated {
   /// @notice Processes the result of an entitlement check
   /// @dev This function is called when the result of an entitlement check is posted
   /// @param transactionId The unique identifier for the transaction
@@ -32,15 +28,17 @@ contract SpaceEntitlementGated is
       return;
     }
 
-    (TransactionType transactionType, address sender, address receiver, ) = abi
-      .decode(data, (TransactionType, address, address, bytes));
+    (bytes4 transactionType, address sender, address receiver, ) = abi.decode(
+      data,
+      (bytes4, address, address, bytes)
+    );
 
     if (result == NodeVoteStatus.PASSED) {
       bool shouldCharge = _shouldChargeForJoinSpace(sender, transactionId);
       if (shouldCharge) {
-        if (transactionType == TransactionType.JOIN_SPACE_WITH_REFERRAL) {
+        if (transactionType == IMembership.joinSpaceWithReferral.selector) {
           _chargeForJoinSpaceWithReferral(transactionId);
-        } else if (transactionType == TransactionType.JOIN_SPACE_NO_REFERRAL) {
+        } else if (transactionType == IMembership.joinSpace.selector) {
           _chargeForJoinSpace(transactionId);
         }
       }

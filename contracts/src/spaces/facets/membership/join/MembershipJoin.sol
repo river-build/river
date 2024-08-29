@@ -2,12 +2,12 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {ISpaceEntitlementGatedBase} from "contracts/src/spaces/facets/xchain/ISpaceEntitlementGated.sol";
+
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 import {IPartnerRegistryBase, IPartnerRegistry} from "contracts/src/factory/facets/partner/IPartnerRegistry.sol";
 import {IRolesBase} from "contracts/src/spaces/facets/roles/IRoles.sol";
 import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
-
+import {IMembership} from "contracts/src/spaces/facets/membership/IMembership.sol";
 // libraries
 import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
 import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
@@ -26,7 +26,6 @@ import {EntitlementGatedBase} from "contracts/src/spaces/facets/gated/Entitlemen
 /// @notice Handles the logic for joining a space, including entitlement checks and payment processing
 /// @dev Inherits from multiple base contracts to provide comprehensive membership functionality
 contract MembershipJoin is
-  ISpaceEntitlementGatedBase,
   IRolesBase,
   IPartnerRegistryBase,
   MembershipBase,
@@ -42,80 +41,43 @@ contract MembershipJoin is
     bytes32(abi.encodePacked(Permissions.JoinSpace));
 
   /// @notice Encodes data for joining a space
-  /// @param transactionType The type of transaction (join with or without referral)
+  /// @param selector The type of transaction (join with or without referral)
   /// @param sender The address of the sender
   /// @param receiver The address of the receiver
   /// @param referralData Additional data for referrals
   /// @return Encoded join space data
   function _encodeJoinSpaceData(
-    TransactionType transactionType,
+    bytes4 selector,
     address sender,
     address receiver,
     bytes memory referralData
   ) internal pure returns (bytes memory) {
-    return abi.encode(transactionType, sender, receiver, referralData);
-  }
-
-  /// @notice Handles the process of joining a space
-  /// @param receiver The address that will receive the membership token
-  function _joinSpace(address receiver) internal {
-    _validateJoinSpace(receiver);
-
-    address sender = msg.sender;
-    bytes32 transactionId = _registerTransaction(
-      sender,
-      _encodeJoinSpaceData(
-        TransactionType.JOIN_SPACE_NO_REFERRAL,
-        sender,
-        receiver,
-        ""
-      ),
-      msg.value
-    );
-
-    (bool isEntitled, bool isCrosschainPending) = _checkEntitlement(
-      sender,
-      transactionId
-    );
-
-    if (!isCrosschainPending) {
-      if (isEntitled) {
-        bool shouldCharge = _shouldChargeForJoinSpace(sender, transactionId);
-        if (shouldCharge) {
-          _chargeForJoinSpace(transactionId);
-        } else {
-          _refundBalance(transactionId, sender);
-        }
-        _issueToken(receiver);
-      } else {
-        _captureData(transactionId, "");
-        _refundBalance(transactionId, sender);
-        emit MembershipTokenRejected(receiver);
-      }
-    }
+    return abi.encode(selector, sender, receiver, referralData);
   }
 
   /// @notice Handles the process of joining a space with a referral
   /// @param receiver The address that will receive the membership token
-  /// @param partner The address of the partner for the referral
-  /// @param referralCode The referral code used
+  /// @param referral The referral information
   function _joinSpaceWithReferral(
     address receiver,
-    address partner,
-    address userReferral,
-    string memory referralCode
+    ReferralTypes memory referral
   ) internal {
     _validateJoinSpace(receiver);
 
     address sender = msg.sender;
+    bool isNotReferral = _isNotReferral(referral);
+
+    bytes memory referralData = isNotReferral
+      ? bytes("")
+      : abi.encode(referral);
+
+    bytes4 selector = isNotReferral
+      ? IMembership.joinSpace.selector
+      : IMembership.joinSpaceWithReferral.selector;
+
     bytes32 transactionId = _registerTransaction(
       sender,
-      _encodeJoinSpaceData(
-        TransactionType.JOIN_SPACE_WITH_REFERRAL,
-        sender,
-        receiver,
-        abi.encode(partner, userReferral, referralCode)
-      ),
+      _encodeJoinSpaceData(selector, sender, receiver, referralData),
       msg.value
     );
 
@@ -128,7 +90,11 @@ contract MembershipJoin is
       if (isEntitled) {
         bool shouldCharge = _shouldChargeForJoinSpace(sender, transactionId);
         if (shouldCharge) {
-          _chargeForJoinSpaceWithReferral(transactionId);
+          if (isNotReferral) {
+            _chargeForJoinSpace(transactionId);
+          } else {
+            _chargeForJoinSpaceWithReferral(transactionId);
+          }
         } else {
           _refundBalance(transactionId, sender);
         }
@@ -139,6 +105,15 @@ contract MembershipJoin is
         emit MembershipTokenRejected(receiver);
       }
     }
+  }
+
+  function _isNotReferral(
+    ReferralTypes memory referral
+  ) internal pure returns (bool) {
+    return
+      referral.receiver == address(0) &&
+      referral.userReferral == address(0) &&
+      bytes(referral.referralCode).length == 0;
   }
 
   /// @notice Checks if a user is entitled to join the space and handles the entitlement process
@@ -219,12 +194,12 @@ contract MembershipJoin is
     if (userValue == 0) revert Membership__InsufficientPayment();
     if (userValue != membershipPrice) revert Membership__InvalidPayment();
 
-    (TransactionType transactionType, address sender, , ) = abi.decode(
+    (bytes4 selector, address sender, , ) = abi.decode(
       _getCapturedData(transactionId),
-      (TransactionType, address, address, bytes)
+      (bytes4, address, address, bytes)
     );
 
-    if (transactionType != TransactionType.JOIN_SPACE_NO_REFERRAL) {
+    if (selector != IMembership.joinSpace.selector) {
       revert Membership__InvalidTransactionType();
     }
 
@@ -247,17 +222,12 @@ contract MembershipJoin is
     if (userValue == 0) revert Membership__InsufficientPayment();
     if (userValue != membershipPrice) revert Membership__InvalidPayment();
 
-    (
-      TransactionType transactionType,
-      address sender,
-      ,
-      bytes memory referralData
-    ) = abi.decode(
-        _getCapturedData(transactionId),
-        (TransactionType, address, address, bytes)
-      );
+    (bytes4 selector, address sender, , bytes memory referralData) = abi.decode(
+      _getCapturedData(transactionId),
+      (bytes4, address, address, bytes)
+    );
 
-    if (transactionType != TransactionType.JOIN_SPACE_WITH_REFERRAL) {
+    if (selector != IMembership.joinSpaceWithReferral.selector) {
       revert Membership__InvalidTransactionType();
     }
 
