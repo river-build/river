@@ -1,4 +1,4 @@
-import axios from 'axios'
+import axios, { AxiosResponse } from 'axios'
 import { dlog } from '@river-build/dlog'
 import { ethers } from 'ethers'
 import { Client } from '@river-build/sdk'
@@ -87,7 +87,7 @@ describe('integration/space/:spaceAddress', () => {
 		}
 
 		expect(description).toEqual(expectedDescription)
-		expect(image).toBeUndefined()
+		expect(image).toBeDefined()
 	}
 
 	async function runSpaceImageTest(spaceUri: string) {
@@ -144,24 +144,44 @@ describe('integration/space/:spaceAddress', () => {
 		 * 4. fetch the space metadata from the stream-metadata server.
 		 */
 		const route = `space/${spaceAddress}`
-		const response = await axios.get<SpaceMetadataResponse>(`${baseURL}/${route}`)
-		log('response', { status: response.status, data: response.data })
+		let response: AxiosResponse<SpaceMetadataResponse>
+
+		try {
+			response = await axios.get<SpaceMetadataResponse>(`${baseURL}/${route}`, {
+				maxRedirects: 0, // Prevent Axios from following redirects
+				validateStatus: (status) => status < 400, // Only reject if status is 400 or higher
+			})
+		} catch (error: unknown) {
+			if (axios.isAxiosError(error) && error.response && error.response.status === 302) {
+				response = error.response as AxiosResponse<SpaceMetadataResponse> // Capture the 302 response
+			} else {
+				throw error // Rethrow if it's not a 302
+			}
+		}
 
 		/*
 		 * 5. verify the response.
 		 */
-		const { name, description, image: imageUrl } = response.data
-		expect(response.status).toBe(200)
-		expect(response.headers['content-type']).toContain('application/json')
-		expect(name).toEqual(expectedMetadata.name)
-		const expectedDescription = `${expectedMetadata.shortDescription}<br><br>${expectedMetadata.longDescription}`
-		expect(description).toEqual(expectedDescription)
-
-		let expectedImageUrl = spaceUri
 		if (spaceUri.trim() === '' || spaceUri === config.riverSpaceStreamBaseUrl) {
-			expectedImageUrl = `${config.riverSpaceStreamBaseUrl}/${spaceAddress}/image`
+			// 200 response case
+			const { name, description, image: imageUrl } = response.data
+			expect(response.status).toBe(200)
+			expect(response.headers['content-type']).toContain('application/json')
+			expect(name).toEqual(expectedMetadata.name)
+			const expectedDescription = `${expectedMetadata.shortDescription}<br><br>${expectedMetadata.longDescription}`
+			expect(description).toEqual(expectedDescription)
+
+			let expectedImageUrl = spaceUri
+			if (spaceUri.trim() === '' || spaceUri === config.riverSpaceStreamBaseUrl) {
+				expectedImageUrl = `${config.riverSpaceStreamBaseUrl}/${spaceAddress}/image`
+			}
+			expect(imageUrl.toLowerCase()).toEqual(expectedImageUrl.toLowerCase())
+		} else {
+			// 302 redirect case
+			expect(response.status).toBe(302)
+			expect(response.headers['location']).toBeDefined()
+			expect(response.headers['location']).toEqual(spaceUri.toLowerCase())
 		}
-		expect(imageUrl?.toLowerCase()).toEqual(expectedImageUrl.toLowerCase())
 	}
 
 	it('should return 404 /space', async () => {
@@ -218,7 +238,7 @@ describe('integration/space/:spaceAddress', () => {
 		await runSpaceImageTest(' ')
 	})
 
-	it('should return status 200 with spaceImage when uri is https://example.com', async () => {
+	it('should return status 302 with spaceImage when uri is https://example.com', async () => {
 		await runSpaceImageTest('https://example.com')
 	})
 })
