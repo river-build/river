@@ -12,7 +12,6 @@ import (
 )
 
 func main() {
-	// Load .env file if it exists
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found")
 	}
@@ -35,19 +34,17 @@ func main() {
 				}
 			}
 
-			// Main logic will be implemented here
 			if sourceDiff {
 				fmt.Println("Running diff for facet path recursively onl compiled facet contracts:", facetSourcePath, compiledFacetsPath)
 				if err := executeSourceDiff(cmd, facetSourcePath, compiledFacetsPath, sourceDiffDir); err != nil {
 					log.Fatalf("Error executing source diff: %v", err)
 				}
 			}
-			// ... other operations ...
 		},
 	}
 	rootCmd.Flags().StringVarP(&rpcURL, "rpc", "r", "", "Base RPC provider URL")
 	rootCmd.Flags().BoolVarP(&sourceDiff, "source-diff-only", "s", false, "Run source code diff")
-	rootCmd.Flags().StringVar(&sourceDiffDir, "source-diff-log", "", "Path to diff log file")
+	rootCmd.Flags().StringVar(&sourceDiffDir, "source-diff-log", "source-diffs", "Path to diff log file")
 	rootCmd.Flags().StringVar(&compiledFacetsPath, "compiled-facets", "", "Path to compiled facets")
 	rootCmd.Flags().StringVar(&facetSourcePath, "facets", "", "Path to facet source files")
 	rootCmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
@@ -55,15 +52,15 @@ func main() {
 
 	rootCmd.PreRun = func(cmd *cobra.Command, args []string) {
 		if sourceDiff {
-			sourceDiffDir = os.Getenv("SOURCE_DIFF_DIR")
+			envSourceDiffDir := os.Getenv("SOURCE_DIFF_DIR")
+			if envSourceDiffDir != "" {
+				sourceDiffDir = envSourceDiffDir
+			}
+
 			if sourceDiffDir == "" {
 				sourceDiffDir = cmd.Flag("source-diff-log").Value.String()
 			}
 
-			if sourceDiffDir == "" {
-				log.Fatal("Source diff log path is missing. Set it using --source-diff-log flag " +
-					"or SOURCE_DIFF_LOG_PATH environment variable")
-			}
 			facetSourcePath = os.Getenv("FACET_SOURCE_PATH")
 			if facetSourcePath == "" {
 				facetSourcePath = cmd.Flag("facets").Value.String()

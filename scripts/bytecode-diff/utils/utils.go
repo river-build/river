@@ -107,7 +107,6 @@ func CreateFacetHashesReport(
 	var updatedHashes, existingHashes map[string]string
 
 	if latestFile == "" {
-		// No previous file found, all hashes are existing
 		existingHashes = compiledHashes
 		updatedHashes = make(map[string]string)
 	} else {
@@ -147,15 +146,21 @@ func writeYamlReport(yamlOutputDir string, report Data, commitHash, currentDate 
 		return fmt.Errorf("error marshaling YAML content: %v", err)
 	}
 
+	// Convert relative path to absolute path
+	absYamlOutputDir, err := filepath.Abs(yamlOutputDir)
+	if err != nil {
+		return fmt.Errorf("error getting absolute path: %v", err)
+	}
+
 	filename := fmt.Sprintf("%s_%s.yaml", commitHash, currentDate)
-	fullPath := filepath.Join(yamlOutputDir, filename)
+	fullPath := filepath.Join(absYamlOutputDir, filename)
 
 	// Check if file already exists
 	if _, err := os.Stat(fullPath); err == nil {
 		// File exists, generate a unique name
 		for i := 1; ; i++ {
 			newFilename := fmt.Sprintf("%s_%s_%d.yaml", commitHash, currentDate, i)
-			fullPath = filepath.Join(yamlOutputDir, newFilename)
+			fullPath = filepath.Join(absYamlOutputDir, newFilename)
 			if _, err := os.Stat(fullPath); os.IsNotExist(err) {
 				break
 			}
@@ -163,7 +168,7 @@ func writeYamlReport(yamlOutputDir string, report Data, commitHash, currentDate 
 	}
 
 	// Ensure the output directory exists
-	err = os.MkdirAll(yamlOutputDir, dirPermissions)
+	err = os.MkdirAll(absYamlOutputDir, dirPermissions)
 	if err != nil {
 		return fmt.Errorf("error creating output directory: %v", err)
 	}
@@ -182,14 +187,38 @@ func writeYamlReport(yamlOutputDir string, report Data, commitHash, currentDate 
 }
 
 func getLatestYamlFile(dir string, currentCommitHash string) (string, error) {
-	files, err := os.ReadDir(dir)
+	// Convert to absolute path
+	absDir, err := filepath.Abs(dir)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error getting absolute path: %v", err)
 	}
 
-	sort.Slice(files, func(i, j int) bool {
-		nameParts1 := strings.Split(strings.TrimSuffix(files[i].Name(), ".yaml"), "_")
-		nameParts2 := strings.Split(strings.TrimSuffix(files[j].Name(), ".yaml"), "_")
+	// Check if directory exists
+	if _, err := os.Stat(absDir); os.IsNotExist(err) {
+		// Directory doesn't exist, return empty string without error
+		return "", nil
+	}
+
+	files, err := os.ReadDir(absDir)
+	if err != nil {
+		return "", fmt.Errorf("error reading directory: %v", err)
+	}
+
+	var yamlFiles []os.DirEntry
+	for _, file := range files {
+		if !file.IsDir() && strings.HasSuffix(file.Name(), ".yaml") {
+			yamlFiles = append(yamlFiles, file)
+		}
+	}
+
+	if len(yamlFiles) == 0 {
+		// No YAML files found, return empty string without error
+		return "", nil
+	}
+
+	sort.Slice(yamlFiles, func(i, j int) bool {
+		nameParts1 := strings.Split(strings.TrimSuffix(yamlFiles[i].Name(), ".yaml"), "_")
+		nameParts2 := strings.Split(strings.TrimSuffix(yamlFiles[j].Name(), ".yaml"), "_")
 
 		if len(nameParts1) < 2 || len(nameParts2) < 2 {
 			return false
@@ -212,12 +241,10 @@ func getLatestYamlFile(dir string, currentCommitHash string) (string, error) {
 		return len(nameParts1) > len(nameParts2)
 	})
 
-	for _, file := range files {
-		if !file.IsDir() && strings.HasSuffix(file.Name(), ".yaml") {
-			commitHash := strings.Split(file.Name(), "_")[0]
-			if commitHash != currentCommitHash {
-				return filepath.Join(dir, file.Name()), nil
-			}
+	for _, file := range yamlFiles {
+		commitHash := strings.Split(file.Name(), "_")[0]
+		if commitHash != currentCommitHash {
+			return filepath.Join(absDir, file.Name()), nil
 		}
 	}
 
