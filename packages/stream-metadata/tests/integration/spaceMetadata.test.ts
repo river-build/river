@@ -79,7 +79,7 @@ describe('integration/space/:spaceAddress', () => {
 
 		let expectedDescription: string
 		if (shortDescription && longDescription) {
-			expectedDescription = `${shortDescription}\n\n${longDescription}`
+			expectedDescription = `${shortDescription}<br><br>${longDescription}`
 		} else if (shortDescription) {
 			expectedDescription = shortDescription
 		} else {
@@ -154,7 +154,7 @@ describe('integration/space/:spaceAddress', () => {
 		expect(response.status).toBe(200)
 		expect(response.headers['content-type']).toContain('application/json')
 		expect(name).toEqual(expectedMetadata.name)
-		const expectedDescription = `${expectedMetadata.shortDescription}\n\n${expectedMetadata.longDescription}`
+		const expectedDescription = `${expectedMetadata.shortDescription}<br><br>${expectedMetadata.longDescription}`
 		expect(description).toEqual(expectedDescription)
 
 		let expectedImageUrl = spaceUri

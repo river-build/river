@@ -67,7 +67,7 @@ export async function fetchSpaceMetadata(request: FastifyRequest, reply: Fastify
 
 function getSpaceDecription({ shortDescription, longDescription }: SpaceInfo): string {
 	if (shortDescription && longDescription) {
-		return `${shortDescription}\n\n${longDescription}`
+		return `${shortDescription}<br><br>${longDescription}`
 	}
 
 	if (shortDescription) {
