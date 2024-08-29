@@ -88,7 +88,7 @@ async function getImageUrl(logger: FastifyBaseLogger, contractUri: string, space
 
 	// handle the case where the space uses our default stream-metadata service
 	// or the contractUri is not set or is an empty string
-	const defaultSpaceImageUrl = `${config.riverSpaceStreamBaseUrl}space/${spaceAddress}`
+	const defaultSpaceImageUrl = `${config.riverSpaceStreamBaseUrl}/${spaceAddress}`
 	if (!normalizedContractUri || normalizedContractUri === defaultSpaceImageUrl.toLowerCase()) {
 		return `${defaultSpaceImageUrl}/image`
 	}
