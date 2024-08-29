@@ -35,7 +35,7 @@ import {
 } from './index'
 import { PricingModules } from './PricingModules'
 import { dlogger, isJest } from '@river-build/dlog'
-import { EVERYONE_ADDRESS, stringifyChannelMetadataJSON } from '../Utils'
+import { EVERYONE_ADDRESS, stringifyChannelMetadataJSON, NoEntitledWalletError } from '../Utils'
 import { evaluateOperationsForEntitledWallet, ruleDataToOperations } from '../entitlement'
 import { RuleEntitlementShim } from './RuleEntitlementShim'
 import { PlatformRequirements } from './PlatformRequirements'
@@ -707,9 +707,11 @@ export class SpaceDapp implements ISpaceDapp {
                 if (result !== ethers.constants.AddressZero) {
                     return result
                 }
-                throw new Error('No entitled wallet found for this rule')
+                // This is not a true error, but is used here so that the Promise.any will not
+                // resolve with an unentitled wallet.
+                throw new NoEntitledWalletError()
             }),
-        ).catch(() => undefined)
+        ).catch(NoEntitledWalletError.throwIfRuntimeErrors)
     }
 
     /**
