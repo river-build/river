@@ -5,6 +5,7 @@ import {
     SyncAgent,
     type SyncAgentConfig,
     makeSignerContext,
+    makeSignerContextFromAuthToken,
 } from '@river-build/sdk'
 import { ethers } from 'ethers'
 
@@ -21,5 +22,13 @@ export const connectRiver = async (
     signerContext: SignerContext,
     config: Omit<SyncAgentConfig, 'context'>,
 ): Promise<SyncAgent> => {
+    return new SyncAgent({ context: signerContext, ...config })
+}
+
+export const connectRiverWithToken = async (
+    token: string,
+    config: Omit<SyncAgentConfig, 'context'>,
+): Promise<SyncAgent> => {
+    const signerContext = await makeSignerContextFromAuthToken(token)
     return new SyncAgent({ context: signerContext, ...config })
 }
