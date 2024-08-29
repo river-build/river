@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"bytecode-diff/utils"
 	u "bytecode-diff/utils"
 
 	"github.com/joho/godotenv"
@@ -18,7 +19,7 @@ func main() {
 	}
 
 	supportedEnvironments := []string{"alpha", "gamma", "omega"}
-	var rpcURL string
+	var baseRpcUrl string
 	var facetSourcePath string
 	var compiledFacetsPath string
 	var sourceDiffDir string
@@ -26,6 +27,7 @@ func main() {
 	var reportOutDir string
 	var originEnvironment, targetEnvironment string
 	var deploymentsPath string
+	var baseSepoliaRpcUrl string
 
 	rootCmd := &cobra.Command{
 		Use:   "bytecode-diff [origin_environment] [target_environment]",
@@ -36,8 +38,8 @@ func main() {
 					return fmt.Errorf("no positional arguments expected when --source-diff-only is set")
 				}
 			} else {
-				if len(args) != 2 {
-					return fmt.Errorf("exactly two arguments required when --source-diff-only is not set, [origin_environment], [target_environment]")
+				if len(args) < 2 {
+					return fmt.Errorf("at least two arguments required when --source-diff-only is not set, [origin_environment], [target_environment]")
 				}
 			}
 			return nil
@@ -114,22 +116,30 @@ func main() {
 
 				fmt.Printf("Origin Environment: %s, Target Environment: %s\n", originEnvironment, targetEnvironment)
 
-				if rpcURL == "" {
-					rpcURL = os.Getenv("BASE_RPC_URL")
-					if rpcURL == "" {
-						log.Fatal("RPC URL not provided. Set it using --rpc flag or BASE_RPC_URL environment variable")
+				if baseRpcUrl == "" {
+					baseRpcUrl = os.Getenv("BASE_RPC_URL")
+					if baseRpcUrl == "" {
+						log.Fatal("Base RPC URL not provided. Set it using --base-rpc flag or BASE_RPC_URL environment variable")
+					}
+				}
+
+				if baseSepoliaRpcUrl == "" {
+					baseSepoliaRpcUrl = os.Getenv("BASE_SEPOLIA_RPC_URL")
+					if baseSepoliaRpcUrl == "" {
+						log.Fatal("Base Sepolia RPC URL not provided. Set it using --base-sepolia-rpc flag or BASE_SEPOLIA_RPC_URL environment variable")
 					}
 				}
 
 				fmt.Println("Running diff for environment:", originEnvironment, targetEnvironment)
 
-				if err := executeEnvrionmentDiff(cmd, deploymentsPath, originEnvironment, targetEnvironment, reportOutDir); err != nil {
+				if err := executeEnvrionmentDiff(cmd, baseRpcUrl, baseSepoliaRpcUrl, deploymentsPath, originEnvironment, targetEnvironment, reportOutDir); err != nil {
 					log.Fatalf("Error executing environment diff: %v", err)
 				}
 			}
 		},
 	}
-	rootCmd.Flags().StringVarP(&rpcURL, "rpc", "r", "", "Base RPC provider URL")
+	rootCmd.Flags().StringVarP(&baseRpcUrl, "base-rpc", "b", "", "Base RPC provider URL")
+	rootCmd.Flags().StringVarP(&baseSepoliaRpcUrl, "base-sepolia-rpc", "", "", "Base Sepolia RPC provider URL")
 	rootCmd.Flags().BoolVarP(&sourceDiff, "source-diff-only", "s", false, "Run source code diff")
 	rootCmd.Flags().StringVar(&sourceDiffDir, "source-diff-log", "source-diffs", "Path to diff log file")
 	rootCmd.Flags().StringVar(&compiledFacetsPath, "compiled-facets", "", "Path to compiled facets")
@@ -175,7 +185,7 @@ func executeSourceDiff(cmd *cobra.Command, facetSourcePath, compiledFacetsPath s
 	return nil
 }
 
-func executeEnvrionmentDiff(cmd *cobra.Command, deploymentsPath, originEnvironment, targetEnvironment string, reportOutDir string) error {
+func executeEnvrionmentDiff(cmd *cobra.Command, baseRpcUrl, baseSepoliaRpcUrl, deploymentsPath, originEnvironment, targetEnvironment string, reportOutDir string) error {
 	verbose, _ := cmd.Flags().GetBool("verbose")
 	// walk environment diamonds and get all facet addresses from DiamondLoupe facet view
 	var baseDiamonds = []u.Diamond{
@@ -205,9 +215,45 @@ func executeEnvrionmentDiff(cmd *cobra.Command, deploymentsPath, originEnvironme
 			fmt.Printf("Target Diamond: %s, Addresses: %v\n", diamond, addresses)
 		}
 	}
+	// Create Ethereum client
+	clients, err := utils.CreateEthereumClients(baseRpcUrl, baseSepoliaRpcUrl, originEnvironment, targetEnvironment, verbose)
 
 	// getCode for all facet addresses over base rpc url and compare with compiled hashes
+	originFacets := make(map[string][]utils.Facet)
+	for diamondName, diamondAddress := range originDiamonds {
+		facets, err := utils.ReadAllFacets(clients[originEnvironment], diamondAddress)
+		if err != nil {
+			return fmt.Errorf("error reading all facets for origin diamond %s: %v", diamondName, err)
+		}
+		originFacets[string(diamondName)] = facets
+	}
+	if verbose {
+		for diamondName, facets := range originFacets {
+			fmt.Printf("Origin Facets for Diamond contract %s\n", diamondName)
+			for _, facet := range facets {
+				fmt.Printf("Facet: %s\n", facet.FacetAddress)
+				fmt.Printf("Selectors: %v\n", facet.SelectorsHex)
+			}
+		}
+	}
 
+	targetFacets := make(map[string][]utils.Facet)
+	for diamondName, diamondAddress := range targetDiamonds {
+		facets, err := utils.ReadAllFacets(clients[targetEnvironment], diamondAddress)
+		if err != nil {
+			return fmt.Errorf("error reading all facets for target diamond %s: %v", diamondName, err)
+		}
+		targetFacets[string(diamondName)] = facets
+	}
+	if verbose {
+		for diamondName, facets := range targetFacets {
+			fmt.Printf("Target Facets for Diamond contract %s\n", diamondName)
+			for _, facet := range facets {
+				fmt.Printf("Facet: %s\n", facet.FacetAddress)
+				fmt.Printf("Selectors: %v\n", facet.SelectorsHex)
+			}
+		}
+	}
 	// create report
 	fmt.Println("Report out dir:", reportOutDir)
 	return nil
