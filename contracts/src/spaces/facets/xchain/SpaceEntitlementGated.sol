@@ -10,12 +10,18 @@ import {EntitlementGated} from "contracts/src/spaces/facets/gated/EntitlementGat
 import {MembershipJoin} from "contracts/src/spaces/facets/membership/join/MembershipJoin.sol";
 import {ISpaceEntitlementGatedBase} from "contracts/src/spaces/facets/xchain/ISpaceEntitlementGated.sol";
 
+/// @title SpaceEntitlementGated
+/// @notice Handles entitlement-gated access to spaces and membership token issuance
+/// @dev Inherits from ISpaceEntitlementGatedBase, MembershipJoin, and EntitlementGated
 contract SpaceEntitlementGated is
   ISpaceEntitlementGatedBase,
   MembershipJoin,
   EntitlementGated
 {
-  /// @dev Hook called after a node has posted the result of an entitlement check
+  /// @notice Processes the result of an entitlement check
+  /// @dev This function is called when the result of an entitlement check is posted
+  /// @param transactionId The unique identifier for the transaction
+  /// @param result The result of the entitlement check (PASSED or FAILED)
   function _onEntitlementCheckResultPosted(
     bytes32 transactionId,
     NodeVoteStatus result
