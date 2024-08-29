@@ -124,7 +124,7 @@ export async function makeAuthToken(
 ): Promise<string> {
     const delegate = await makeSignerDelegate(signer, expiry)
     const authToken = new AuthToken({
-        privateKey: delegate.delegateWallet.privateKey,
+        delegatePrivateKey: delegate.delegateWallet.privateKey,
         delegateSig: delegate.signerContext.delegateSig,
         expiryEpochMs: delegate.signerContext.delegateExpiryEpochMs,
     })
@@ -133,14 +133,14 @@ export async function makeAuthToken(
 
 export async function makeSignerContextFromAuthToken(authTokenStr: string): Promise<SignerContext> {
     const authToken = AuthToken.fromBinary(hexToBytes(authTokenStr))
-    const wallet = new ethers.Wallet(authToken.privateKey)
+    const delegateWallet = new ethers.Wallet(authToken.delegatePrivateKey)
     const creatorAddress = recoverPublicKeyFromDelegateSig({
-        delegatePubKey: wallet.publicKey,
+        delegatePubKey: delegateWallet.publicKey,
         delegateSig: authToken.delegateSig,
         expiryEpochMs: authToken.expiryEpochMs,
     })
     return {
-        signerPrivateKey: () => authToken.privateKey.slice(2), // remove the 0x prefix,
+        signerPrivateKey: () => authToken.delegatePrivateKey.slice(2), // remove the 0x prefix,
         creatorAddress,
         delegateSig: authToken.delegateSig,
         delegateExpiryEpochMs: authToken.expiryEpochMs,
