@@ -76,4 +76,13 @@ abstract contract ReferralsBase is IReferralsBase {
   function _maxBpsFee() internal view returns (uint256) {
     return ReferralsStorage.layout().referralSettings.maxBpsFee;
   }
+
+  function _setDefaultBpsFee(uint256 defaultBpsFee) internal {
+    ReferralsStorage.layout().referralSettings.defaultBpsFee = defaultBpsFee;
+    emit DefaultBpsFeeUpdated(defaultBpsFee);
+  }
+
+  function _defaultBpsFee() internal view returns (uint256) {
+    return ReferralsStorage.layout().referralSettings.defaultBpsFee;
+  }
 }

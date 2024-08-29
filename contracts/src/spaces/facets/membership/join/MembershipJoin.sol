@@ -22,6 +22,9 @@ import {PrepayBase} from "contracts/src/spaces/facets/prepay/PrepayBase.sol";
 import {ReferralsBase} from "contracts/src/spaces/facets/referrals/ReferralsBase.sol";
 import {EntitlementGatedBase} from "contracts/src/spaces/facets/gated/EntitlementGatedBase.sol";
 
+/// @title MembershipJoin
+/// @notice Handles the logic for joining a space, including entitlement checks and payment processing
+/// @dev Inherits from multiple base contracts to provide comprehensive membership functionality
 contract MembershipJoin is
   ISpaceEntitlementGatedBase,
   IRolesBase,
@@ -34,9 +37,16 @@ contract MembershipJoin is
   Entitled,
   PrepayBase
 {
+  /// @notice Constant representing the permission to join a space
   bytes32 constant JOIN_SPACE =
     bytes32(abi.encodePacked(Permissions.JoinSpace));
 
+  /// @notice Encodes data for joining a space
+  /// @param transactionType The type of transaction (join with or without referral)
+  /// @param sender The address of the sender
+  /// @param receiver The address of the receiver
+  /// @param referralData Additional data for referrals
+  /// @return Encoded join space data
   function _encodeJoinSpaceData(
     TransactionType transactionType,
     address sender,
@@ -46,6 +56,8 @@ contract MembershipJoin is
     return abi.encode(transactionType, sender, receiver, referralData);
   }
 
+  /// @notice Handles the process of joining a space
+  /// @param receiver The address that will receive the membership token
   function _joinSpace(address receiver) internal {
     _validateJoinSpace(receiver);
 
@@ -71,6 +83,8 @@ contract MembershipJoin is
         bool shouldCharge = _shouldChargeForJoinSpace(sender, transactionId);
         if (shouldCharge) {
           _chargeForJoinSpace(transactionId);
+        } else {
+          _refundBalance(transactionId, sender);
         }
         _issueToken(receiver);
       } else {
@@ -81,6 +95,10 @@ contract MembershipJoin is
     }
   }
 
+  /// @notice Handles the process of joining a space with a referral
+  /// @param receiver The address that will receive the membership token
+  /// @param partner The address of the partner for the referral
+  /// @param referralCode The referral code used
   function _joinSpaceWithReferral(
     address receiver,
     address partner,
@@ -165,6 +183,10 @@ contract MembershipJoin is
     return (isEntitled, isCrosschainPending);
   }
 
+  /// @notice Determines if a charge should be applied for joining the space
+  /// @param sender The address of the user joining the space
+  /// @param transactionId The unique identifier for this join transaction
+  /// @return shouldCharge A boolean indicating whether a charge should be applied
   function _shouldChargeForJoinSpace(
     address sender,
     bytes32 transactionId
@@ -187,6 +209,8 @@ contract MembershipJoin is
     return shouldCharge;
   }
 
+  /// @notice Processes the charge for joining a space without referral
+  /// @param transactionId The unique identifier for this join transaction
   function _chargeForJoinSpace(bytes32 transactionId) internal {
     uint256 membershipPrice = _getMembershipPrice(_totalSupply());
     uint256 userValue = _getCapturedValue(transactionId);
@@ -213,6 +237,8 @@ contract MembershipJoin is
     _captureData(transactionId, "");
   }
 
+  /// @notice Processes the charge for joining a space with referral
+  /// @param transactionId The unique identifier for this join transaction
   function _chargeForJoinSpaceWithReferral(bytes32 transactionId) internal {
     uint256 membershipPrice = _getMembershipPrice(_totalSupply());
     uint256 userValue = _getCapturedValue(transactionId);
@@ -263,6 +289,8 @@ contract MembershipJoin is
     _captureData(transactionId, "");
   }
 
+  /// @notice Issues a membership token to the receiver
+  /// @param receiver The address that will receive the membership token
   function _issueToken(address receiver) internal {
     // get token id
     uint256 tokenId = _nextTokenId();
@@ -280,6 +308,8 @@ contract MembershipJoin is
     emit MembershipTokenIssued(receiver, tokenId);
   }
 
+  /// @notice Validates if a user can join the space
+  /// @param receiver The address that will receive the membership token
   function _validateJoinSpace(address receiver) internal view {
     if (receiver == address(0)) revert Membership__InvalidAddress();
     if (
@@ -288,6 +318,9 @@ contract MembershipJoin is
     ) revert Membership__MaxSupplyReached();
   }
 
+  /// @notice Refunds the balance to the sender if necessary
+  /// @param transactionId The unique identifier for this join transaction
+  /// @param sender The address of the sender to refund
   function _refundBalance(bytes32 transactionId, address sender) internal {
     uint256 userValue = _getCapturedValue(transactionId);
     if (userValue > 0) {
@@ -301,6 +334,11 @@ contract MembershipJoin is
     }
   }
 
+  /// @notice Collects the referral fee if applicable
+  /// @param sender The address of the sender
+  /// @param referralCode The referral code used
+  /// @param membershipPrice The price of the membership
+  /// @return The amount of referral fee collected
   function _collectReferralFee(
     address sender,
     string memory referralCode,
@@ -327,6 +365,11 @@ contract MembershipJoin is
     return referralFeeBps;
   }
 
+  /// @notice Collects the partner fee if applicable
+  /// @param sender The address of the sender
+  /// @param partner The address of the partner
+  /// @param membershipPrice The price of the membership
+  /// @return The amount of partner fee collected
   function _collectPartnerFee(
     address sender,
     address partner,
@@ -337,15 +380,28 @@ contract MembershipJoin is
     Partner memory partnerInfo = IPartnerRegistry(_getSpaceFactory())
       .partnerInfo(partner);
 
-    if (!partnerInfo.active || partnerInfo.fee == 0) return 0;
+    uint256 partnerFee;
+    address recipient;
 
-    uint256 partnerFee = partnerInfo.fee;
+    if (partnerInfo.recipient == address(0)) {
+      // Partner info doesn't exist, use default fee
+      partnerFee = _defaultBpsFee();
+      recipient = partner;
+    } else if (partnerInfo.fee == 0) {
+      // Partner info exists but fee is 0, return without collecting fee
+      return 0;
+    } else {
+      // Use existing partner info
+      partnerFee = partnerInfo.fee;
+      recipient = partnerInfo.recipient;
+    }
+
     uint256 partnerFeeBps = BasisPoints.calculate(membershipPrice, partnerFee);
 
     CurrencyTransfer.transferCurrency(
       _getMembershipCurrency(),
       sender,
-      partnerInfo.recipient,
+      recipient,
       partnerFeeBps
     );
 

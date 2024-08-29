@@ -19,6 +19,7 @@ library ReferralsStorage {
 
   struct ReferralSettings {
     uint256 maxBpsFee; // fee in basis points
+    uint256 defaultBpsFee; // fee in basis points
   }
 
   struct Layout {

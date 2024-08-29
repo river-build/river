@@ -65,6 +65,10 @@ interface IMembership is IMembershipBase {
   // =============================================================
   //                           Funds
   // =============================================================
+  /**
+   * @notice Withdraws the balance of the contract
+   * @param receiver The address to receive the withdrawn funds
+   */
   function withdraw(address receiver) external;
 
   // =============================================================

@@ -21,6 +21,8 @@ contract MembershipFacet is
   // =============================================================
   //                           Withdrawal
   // =============================================================
+
+  /// @inheritdoc IMembership
   function withdraw(address account) external onlyOwner {
     if (account == address(0)) revert Membership__InvalidAddress();
     uint256 balance = _getCreatorBalance();
@@ -191,8 +193,4 @@ contract MembershipFacet is
   function getSpaceFactory() external view returns (address) {
     return _getSpaceFactory();
   }
-
-  // =============================================================
-  //                           Overrides
-  // =============================================================
 }

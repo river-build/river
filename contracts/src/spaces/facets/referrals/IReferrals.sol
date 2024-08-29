@@ -62,6 +62,10 @@ interface IReferralsBase {
   /// @notice Event emitted when the max bps fee is updated
   /// @param maxBpsFee The new max bps fee
   event MaxBpsFeeUpdated(uint256 maxBpsFee);
+
+  /// @notice Event emitted when the default bps fee is updated
+  /// @param defaultBpsFee The new default bps fee
+  event DefaultBpsFeeUpdated(uint256 defaultBpsFee);
 }
 
 /// @title IReferrals
@@ -93,4 +97,12 @@ interface IReferrals is IReferralsBase {
   /// @notice Get the max bps fee
   /// @return The max bps fee
   function maxBpsFee() external view returns (uint256);
+
+  /// @notice Set the default bps fee
+  /// @param bps The new default bps fee
+  function setDefaultBpsFee(uint256 bps) external;
+
+  /// @notice Get the default bps fee
+  /// @return The default bps fee
+  function defaultBpsFee() external view returns (uint256);
 }
