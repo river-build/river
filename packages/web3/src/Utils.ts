@@ -29,7 +29,7 @@ export class NoEntitledWalletError extends Error {
      * @returns undefined
      * @throws AggregateError
      */
-    static throwIfRuntimeErrors(error: AggregateError) {
+    static throwIfRuntimeErrors = (error: AggregateError) => {
         const runtimeErrors = error.errors.filter(
             (e) => !(e instanceof NoEntitledWalletError),
         ) as Error[]
