@@ -31,18 +31,13 @@ function makeConfig() {
 	if (env.RIVER_ENV.startsWith('local')) {
 		baseUrl.port = env.PORT.toString()
 	}
-	// Ensure no trailing slash when converting to string
-	const riverStreamMetadataBaseUrl = `${baseUrl.origin}${baseUrl.pathname.replace(
-		/\/$/,
-		'',
-	)}`.toLowerCase()
 
 	return {
 		web3Config,
 		riverEnv: env.RIVER_ENV,
 		baseChainRpcUrl: env.BASE_CHAIN_RPC_URL,
 		riverChainRpcUrl: env.RIVER_CHAIN_RPC_URL,
-		riverStreamMetadataBaseUrl,
+		riverSpaceStreamBaseUrl: baseUrl.toString().toLowerCase(),
 		host: env.HOST,
 		port: env.PORT,
 		log: {

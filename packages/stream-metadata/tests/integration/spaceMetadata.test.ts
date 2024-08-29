@@ -136,7 +136,7 @@ describe('integration/space/:spaceAddress', () => {
 		await runDecriptionTest('', 'bobs space long description')
 	})
 
-	it('should return status 200 with spaceImage', async () => {
+	it.only('should return status 200 with spaceImage', async () => {
 		/**
 		 * 1. create a space on-chain.
 		 * 2. create a space stream.

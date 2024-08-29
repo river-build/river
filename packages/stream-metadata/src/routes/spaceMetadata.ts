@@ -83,10 +83,14 @@ async function getImageUrl(logger: FastifyBaseLogger, contractUri: string, space
 		return undefined
 	}
 
+	// Normalize the contractUri for case-insensitive comparison and handle empty string
+	const normalizedContractUri = contractUri?.toLowerCase().trim() || ''
+
 	// handle the case where the space uses our default stream-metadata service
-	// or the contractUri is not set
-	if (!contractUri || contractUri.toLowerCase().startsWith(config.riverStreamMetadataBaseUrl)) {
-		return `${config.riverStreamMetadataBaseUrl}/space/${spaceAddress}/image`
+	// or the contractUri is not set or is an empty string
+	const defaultSpaceImageUrl = `${config.riverSpaceStreamBaseUrl}space/${spaceAddress}`
+	if (!normalizedContractUri || normalizedContractUri === defaultSpaceImageUrl.toLowerCase()) {
+		return `${defaultSpaceImageUrl}/image`
 	}
 
 	// Fallback, return the original contractUri as is
