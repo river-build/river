@@ -4,7 +4,7 @@ Bytecode-Diff is a tool to retrieve and display contract bytecode diff for Base 
 
 ## Prerequisites
 
-- Go 1.21 or later
+- Go 1.22 or later
 - Base RPC Provider URL
 
 ## Usage
@@ -14,7 +14,19 @@ The basic command structure is:
 ```bash
 # disable go.work file since bytecode-diff is not a module in parent go workspace
 go mod download
-GOWORK=off go run main.go
+# run source diff from checked out commitSha compared nearest commit with a source diff report in SOURCE_DIFF_DIR
+GOWORK=off go run main.go -v -s
+
+# write report with contract addresses, their keccak256 compilaed bytecode hash under two keys, existing and updated.
+➜  bytecode-diff ✗ yq eval '.existing' source-diffs/00adc44f_08292024_5.yaml
+Architect: 0xd291e489716f2c9cfc2e2c6047ce777159969943c85d09c51aaf7bbad10f7c13
+ArchitectBase: 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470
+ArchitectStorage: 0x86159d997458669c4df8af2da4b5ce9ca742099a3f854c5eb3e718e16a74e4da
+Banning: 0xde1354882fd30088cce4b00ff720a6dbc8c9f25653477c6ee99e20e17edb6068
+BanningBase: 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470
+BanningStorage: 0x86159d997458669c4df8af2da4b5ce9ca742099a3f854c5eb3e718e16a74e4da
+ChannelBase: 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470
+...
 ```
 
 ### Flags
@@ -44,7 +56,7 @@ You can also set the following environment variables instead of using flags:
 ```
 ./bytecode-diff --source-diff-only \
   --rpc https://base-rpc.example.com \
-  --source-diff-dir /path/to/alph-reports \
+  --source-diff-dir /path/to/source-diff-reports \
   --facets /path/to/facet/sources \
   --compiled-facets /path/to/compiled/facets \
   --report-out-dir /path/to/report/output \
