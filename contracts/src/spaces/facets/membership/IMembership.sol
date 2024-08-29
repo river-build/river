@@ -43,6 +43,7 @@ interface IMembershipBase {
   error Membership__NotExpired();
   error Membership__InsufficientAllowance();
   error Membership__InvalidPayment();
+  error Membership__InvalidTransactionType();
 
   // =============================================================
   //                           Events

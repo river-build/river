@@ -5,7 +5,6 @@ pragma solidity ^0.8.23;
 import {IMembershipBase} from "./IMembership.sol";
 import {IPlatformRequirements} from "contracts/src/factory/facets/platform/requirements/IPlatformRequirements.sol";
 import {IMembershipPricing} from "./pricing/IMembershipPricing.sol";
-import {IPrepay} from "contracts/src/spaces/facets/prepay/IPrepay.sol";
 import {IPricingModules} from "contracts/src/factory/facets/architect/pricing/IPricingModules.sol";
 // libraries
 import {MembershipStorage} from "./MembershipStorage.sol";

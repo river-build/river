@@ -4,7 +4,7 @@ pragma solidity ^0.8.23;
 // interfaces
 import {IMembershipBase} from "contracts/src/spaces/facets/membership/IMembership.sol";
 import {IEntitlementBase} from "contracts/src/spaces/entitlements/IEntitlement.sol";
-import {IERC721ABase} from "contracts/src/diamond/facets/token/ERC721A/IERC721A.sol";
+import {IERC721ABase, IERC721A} from "contracts/src/diamond/facets/token/ERC721A/IERC721A.sol";
 import {IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.sol";
 import {IPlatformRequirements} from "contracts/src/factory/facets/platform/requirements/IPlatformRequirements.sol";
 import {IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
@@ -12,6 +12,7 @@ import {IEntitlementsManager, IEntitlementsManagerBase} from "contracts/src/spac
 import {IRoles, IRolesBase} from "contracts/src/spaces/facets/roles/IRoles.sol";
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 import {IPrepay} from "contracts/src/spaces/facets/prepay/IPrepay.sol";
+import {IWalletLink, IWalletLinkBase} from "contracts/src/factory/facets/wallet-link/IWalletLink.sol";
 
 // libraries
 import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
@@ -24,13 +25,13 @@ import {Vm} from "forge-std/Test.sol";
 
 import {Architect} from "contracts/src/factory/facets/architect/Architect.sol";
 import {MembershipFacet} from "contracts/src/spaces/facets/membership/MembershipFacet.sol";
-import {MembershipReferralFacet} from "contracts/src/spaces/facets/membership/referral/MembershipReferralFacet.sol";
 
 contract MembershipBaseSetup is
   IMembershipBase,
   IEntitlementBase,
   IERC721ABase,
   IOwnableBase,
+  IWalletLinkBase,
   BaseSetup
 {
   int256 internal constant EXCHANGE_RATE = 222616000000;
@@ -40,7 +41,8 @@ contract MembershipBaseSetup is
   uint256 constant MEMBERSHIP_PRICE = 1 ether;
 
   MembershipFacet internal membership;
-  MembershipReferralFacet internal referrals;
+  IERC721A internal membershipToken;
+
   IPlatformRequirements internal platformReqs;
   IPrepay prepayFacet;
 
@@ -88,7 +90,7 @@ contract MembershipBaseSetup is
     vm.stopPrank();
 
     membership = MembershipFacet(userSpace);
-    referrals = MembershipReferralFacet(userSpace);
+    membershipToken = IERC721A(userSpace);
     prepayFacet = IPrepay(userSpace);
     platformReqs = IPlatformRequirements(spaceFactory);
 
@@ -108,7 +110,7 @@ contract MembershipBaseSetup is
     vm.startPrank(alice);
     vm.deal(alice, MEMBERSHIP_PRICE);
     membership.joinSpace{value: MEMBERSHIP_PRICE}(alice);
-    assertEq(membership.balanceOf(alice), 1);
+    assertEq(membershipToken.balanceOf(alice), 1);
     vm.stopPrank();
     _;
   }
@@ -116,6 +118,31 @@ contract MembershipBaseSetup is
   modifier givenAliceHasMintedMembership() {
     vm.startPrank(alice);
     membership.joinSpace(alice);
+    vm.stopPrank();
+    _;
+  }
+
+  modifier givenWalletIsLinked(
+    Vm.Wallet memory rootWallet,
+    Vm.Wallet memory newWallet
+  ) {
+    IWalletLink wl = IWalletLink(spaceFactory);
+
+    uint256 nonce = wl.getLatestNonceForRootKey(newWallet.addr);
+
+    bytes memory signature = _signWalletLink(
+      rootWallet.privateKey,
+      newWallet.addr,
+      nonce
+    );
+
+    vm.startPrank(newWallet.addr);
+    vm.expectEmit(address(wl));
+    emit LinkWalletToRootKey(newWallet.addr, rootWallet.addr);
+    wl.linkCallerToRootKey(
+      LinkedWallet(rootWallet.addr, signature, LINKED_WALLET_MESSAGE),
+      nonce
+    );
     vm.stopPrank();
     _;
   }
@@ -161,12 +188,6 @@ contract MembershipBaseSetup is
 
   modifier givenFounderIsCaller() {
     vm.startPrank(founder);
-    _;
-  }
-
-  modifier givenReferralCodeHasBeenCreated() {
-    vm.prank(founder);
-    referrals.createReferralCode(REFERRAL_CODE, REFERRAL_BPS);
     _;
   }
 }

@@ -53,10 +53,6 @@ contract DeployMembership is Deployer, FacetHelper {
     addSelector(IMembership.getSpaceFactory.selector);
   }
 
-  function initializer() public pure override returns (bytes4) {
-    return MembershipFacet.__Membership_init.selector;
-  }
-
   function versionName() public pure override returns (string memory) {
     return "membershipFacet";
   }
