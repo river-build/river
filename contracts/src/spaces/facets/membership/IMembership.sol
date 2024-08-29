@@ -24,7 +24,7 @@ interface IMembershipBase {
   }
 
   struct ReferralTypes {
-    address receiver;
+    address partner;
     address userReferral;
     string referralCode;
   }
@@ -86,6 +86,11 @@ interface IMembership is IMembershipBase {
    */
   function joinSpace(address receiver) external payable;
 
+  /**
+   * @notice Join a space with a referral
+   * @param receiver The address of the receiver
+   * @param referral The referral data
+   */
   function joinSpaceWithReferral(
     address receiver,
     ReferralTypes memory referral

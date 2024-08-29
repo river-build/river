@@ -111,7 +111,7 @@ contract MembershipJoin is
     ReferralTypes memory referral
   ) internal pure returns (bool) {
     return
-      referral.receiver == address(0) &&
+      referral.partner == address(0) &&
       referral.userReferral == address(0) &&
       bytes(referral.referralCode).length == 0;
   }
