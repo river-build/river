@@ -37,7 +37,7 @@ function makeConfig() {
 		riverEnv: env.RIVER_ENV,
 		baseChainRpcUrl: env.BASE_CHAIN_RPC_URL,
 		riverChainRpcUrl: env.RIVER_CHAIN_RPC_URL,
-		riverSpaceStreamBaseUrl: baseUrl.toString().toLowerCase(),
+		riverSpaceStreamBaseUrl: `${baseUrl.origin}/space`.toLowerCase(),
 		host: env.HOST,
 		port: env.PORT,
 		log: {
