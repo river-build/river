@@ -56,10 +56,23 @@ export async function fetchSpaceMetadata(request: FastifyRequest, reply: Fastify
 		return reply.code(404).send({ error: 'Not Found', message: 'Space contract not found' })
 	}
 
+	// Normalize the contractUri for case-insensitive comparison and handle empty string
+	const normalizedContractUri = spaceInfo.uri.toLowerCase().trim() || ''
+	const defaultSpaceTokenUri = `${config.riverSpaceStreamBaseUrl}/${spaceAddress}`
+
+	// Not using the default space image service
+	// redirect to the space contract's uri
+	if (normalizedContractUri && normalizedContractUri !== defaultSpaceTokenUri.toLowerCase()) {
+		return reply.redirect(spaceInfo.uri)
+	}
+
+	// handle the case where the space uses our default stream-metadata service
+	// or the contractUri is not set or is an empty string
+	const image = `${defaultSpaceTokenUri}/image`
 	const spaceMetadata: SpaceMetadataResponse = {
 		name: spaceInfo.name,
 		description: getSpaceDecription(spaceInfo),
-		image: await getImageUrl(logger, spaceInfo.uri, spaceAddress),
+		image,
 	}
 
 	return reply.header('Content-Type', 'application/json').send(spaceMetadata)
@@ -75,54 +88,4 @@ function getSpaceDecription({ shortDescription, longDescription }: SpaceInfo): s
 	}
 
 	return longDescription || ''
-}
-
-async function getImageUrl(logger: FastifyBaseLogger, contractUri: string, spaceAddress: string) {
-	const hasSpaceImageExist = await hasSpaceImage(logger, spaceAddress)
-	if (!hasSpaceImageExist) {
-		return undefined
-	}
-
-	// Normalize the contractUri for case-insensitive comparison and handle empty string
-	const normalizedContractUri = contractUri?.toLowerCase().trim() || ''
-
-	// handle the case where the space uses our default stream-metadata service
-	// or the contractUri is not set or is an empty string
-	const defaultSpaceImageUrl = `${config.riverSpaceStreamBaseUrl}/${spaceAddress}`
-	if (!normalizedContractUri || normalizedContractUri === defaultSpaceImageUrl.toLowerCase()) {
-		return `${defaultSpaceImageUrl}/image`
-	}
-
-	// Fallback, return the original contractUri as is
-	return contractUri
-}
-
-async function hasSpaceImage(logger: FastifyBaseLogger, spaceAddress: string): Promise<boolean> {
-	let stream: StreamStateView | undefined
-	try {
-		const streamId = makeStreamId(StreamPrefix.Space, spaceAddress)
-		stream = await getStream(logger, streamId)
-	} catch (error) {
-		logger.error(
-			{
-				error,
-				spaceAddress,
-			},
-			'Failed to get stream',
-		)
-		return false
-	}
-
-	if (!stream) {
-		return false
-	}
-
-	// get the image metatdata from the stream
-	let spaceImage: ChunkedMedia | undefined
-	try {
-		spaceImage = await getSpaceImage(stream)
-	} catch (error) {
-		return false
-	}
-	return spaceImage !== undefined
 }
