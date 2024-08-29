@@ -1,12 +1,8 @@
-import { FastifyBaseLogger, FastifyReply, FastifyRequest } from 'fastify'
-import { StreamPrefix, StreamStateView, makeStreamId } from '@river-build/sdk'
-import { ChunkedMedia } from '@river-build/proto'
+import { FastifyReply, FastifyRequest } from 'fastify'
 import { SpaceInfo } from '@river-build/web3'
 import { z } from 'zod'
 
 import { config } from '../environment'
-import { getSpaceImage } from './spaceImage'
-import { getStream } from '../riverStreamRpcClient'
 import { isValidEthereumAddress } from '../validators'
 import { spaceDapp } from '../contract-utils'
 
@@ -17,7 +13,7 @@ const paramsSchema = z.object({
 export interface SpaceMetadataResponse {
 	name: string
 	description: string
-	image: string | undefined
+	image: string
 }
 
 export async function fetchSpaceMetadata(request: FastifyRequest, reply: FastifyReply) {
@@ -60,22 +56,22 @@ export async function fetchSpaceMetadata(request: FastifyRequest, reply: Fastify
 	const normalizedContractUri = spaceInfo.uri.toLowerCase().trim() || ''
 	const defaultSpaceTokenUri = `${config.riverSpaceStreamBaseUrl}/${spaceAddress}`
 
-	// Not using the default space image service
-	// redirect to the space contract's uri
-	if (normalizedContractUri && normalizedContractUri !== defaultSpaceTokenUri.toLowerCase()) {
-		return reply.redirect(spaceInfo.uri)
-	}
-
 	// handle the case where the space uses our default stream-metadata service
 	// or the contractUri is not set or is an empty string
-	const image = `${defaultSpaceTokenUri}/image`
-	const spaceMetadata: SpaceMetadataResponse = {
-		name: spaceInfo.name,
-		description: getSpaceDecription(spaceInfo),
-		image,
+	if (!normalizedContractUri || normalizedContractUri === defaultSpaceTokenUri.toLowerCase()) {
+		const image = `${defaultSpaceTokenUri}/image`
+		const spaceMetadata: SpaceMetadataResponse = {
+			name: spaceInfo.name,
+			description: getSpaceDecription(spaceInfo),
+			image,
+		}
+
+		return reply.header('Content-Type', 'application/json').send(spaceMetadata)
 	}
 
-	return reply.header('Content-Type', 'application/json').send(spaceMetadata)
+	// Not using the default space image service
+	// redirect to the space contract's uri
+	return reply.redirect(spaceInfo.uri)
 }
 
 function getSpaceDecription({ shortDescription, longDescription }: SpaceInfo): string {
