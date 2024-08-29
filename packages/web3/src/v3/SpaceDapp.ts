@@ -258,7 +258,7 @@ export class SpaceDapp implements ISpaceDapp {
         }
         const bannedTokenIds = await space.Banning.read.banned()
         const bannedWalletAddresses = await Promise.all(
-            bannedTokenIds.map(async (tokenId) => await space.Membership.read.ownerOf(tokenId)),
+            bannedTokenIds.map(async (tokenId) => await space.ERC721A.read.ownerOf(tokenId)),
         )
         return bannedWalletAddresses
     }
@@ -1256,7 +1256,7 @@ export class SpaceDapp implements ISpaceDapp {
         if (!space) {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
         }
-        const totalSupply = await space.Membership.read.totalSupply()
+        const totalSupply = await space.ERC721A.read.totalSupply()
 
         return { totalSupply: totalSupply.toNumber() }
     }
@@ -1273,7 +1273,7 @@ export class SpaceDapp implements ISpaceDapp {
                 space.Membership.read.getMembershipCurrency(),
                 space.Ownable.read.owner(),
                 space.Membership.read.getMembershipDuration(),
-                space.Membership.read.totalSupply(),
+                space.ERC721A.read.totalSupply(),
                 space.Membership.read.getMembershipPricingModule(),
             ])
 
