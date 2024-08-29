@@ -15,7 +15,7 @@ import { check } from '@river-build/dlog'
 import { Permission, NoopRuleData } from '@river-build/web3'
 
 describe('channelSpaceSettingsTests', () => {
-    test('channel creation with default settings', async () => {
+    test.concurrent('channel creation with default settings', async () => {
         const { bob, bobProvider, bobSpaceDapp } = await setupWalletsAndContexts()
         const everyoneMembership = await everyoneMembershipStruct(bobSpaceDapp, bob)
 
@@ -71,55 +71,58 @@ describe('channelSpaceSettingsTests', () => {
         })
     })
 
-    test('create announcement channel (autojoin, hide user join/leave events)', async () => {
-        const { bob, bobProvider, bobSpaceDapp } = await setupWalletsAndContexts()
-        const everyoneMembership = await everyoneMembershipStruct(bobSpaceDapp, bob)
+    test.concurrent(
+        'create announcement channel (autojoin, hide user join/leave events)',
+        async () => {
+            const { bob, bobProvider, bobSpaceDapp } = await setupWalletsAndContexts()
+            const everyoneMembership = await everyoneMembershipStruct(bobSpaceDapp, bob)
 
-        const { spaceId } = await createSpaceAndDefaultChannel(
-            bob,
-            bobSpaceDapp,
-            bobProvider.wallet,
-            "bob's town",
-            everyoneMembership,
-        )
+            const { spaceId } = await createSpaceAndDefaultChannel(
+                bob,
+                bobSpaceDapp,
+                bobProvider.wallet,
+                "bob's town",
+                everyoneMembership,
+            )
 
-        const { channelId: announcementChannelId, error } = await createChannel(
-            bobSpaceDapp,
-            bobProvider,
-            spaceId,
-            'channel2',
-            [1], // member role created on town creation
-            bobProvider.wallet,
-        )
-        expect(error).toBeUndefined()
-        expect(announcementChannelId).toBeDefined()
+            const { channelId: announcementChannelId, error } = await createChannel(
+                bobSpaceDapp,
+                bobProvider,
+                spaceId,
+                'channel2',
+                [1], // member role created on town creation
+                bobProvider.wallet,
+            )
+            expect(error).toBeUndefined()
+            expect(announcementChannelId).toBeDefined()
 
-        const { streamId: announcementStreamId } = await bob.createChannel(
-            spaceId,
-            'channel2',
-            'channel2 topic',
-            announcementChannelId!,
-            undefined,
-            {
-                autojoin: true,
-                hideUserJoinLeaveEvents: true,
-            },
-        )
+            const { streamId: announcementStreamId } = await bob.createChannel(
+                spaceId,
+                'channel2',
+                'channel2 topic',
+                announcementChannelId!,
+                undefined,
+                {
+                    autojoin: true,
+                    hideUserJoinLeaveEvents: true,
+                },
+            )
 
-        const spaceStream = bob.streams.get(spaceId)
-        expect(spaceStream).toBeDefined()
-        const spaceStreamView = spaceStream!.view.spaceContent
-        expect(spaceStreamView).toBeDefined()
+            const spaceStream = bob.streams.get(spaceId)
+            expect(spaceStream).toBeDefined()
+            const spaceStreamView = spaceStream!.view.spaceContent
+            expect(spaceStreamView).toBeDefined()
 
-        await waitFor(() => {
-            const channelMetadata = spaceStreamView.spaceChannelsMetadata
-            check(channelMetadata.size === 2)
-            check(channelMetadata.get(announcementStreamId)?.isAutojoin === true)
-            check(channelMetadata.get(announcementStreamId)?.hideUserJoinLeaveEvents === true)
-        })
-    })
+            await waitFor(() => {
+                const channelMetadata = spaceStreamView.spaceChannelsMetadata
+                check(channelMetadata.size === 2)
+                check(channelMetadata.get(announcementStreamId)?.isAutojoin === true)
+                check(channelMetadata.get(announcementStreamId)?.hideUserJoinLeaveEvents === true)
+            })
+        },
+    )
 
-    test('set autojoin for channel', async () => {
+    test.concurrent('set autojoin for channel', async () => {
         const { bob, bobProvider, bobSpaceDapp } = await setupWalletsAndContexts()
         const everyoneMembership = await everyoneMembershipStruct(bobSpaceDapp, bob)
 
@@ -192,7 +195,7 @@ describe('channelSpaceSettingsTests', () => {
         })
     })
 
-    test('unpermitted user cannot update channel autojoin', async () => {
+    test.concurrent('unpermitted user cannot update channel autojoin', async () => {
         const {
             bob,
             bobProvider,
@@ -278,7 +281,7 @@ describe('channelSpaceSettingsTests', () => {
         })
     })
 
-    test('set hideUserJoinLeaveEvents on channels', async () => {
+    test.concurrent('set hideUserJoinLeaveEvents on channels', async () => {
         const { bob, bobProvider, bobSpaceDapp } = await setupWalletsAndContexts()
         const everyoneMembership = await everyoneMembershipStruct(bobSpaceDapp, bob)
 
@@ -331,7 +334,7 @@ describe('channelSpaceSettingsTests', () => {
         })
     })
 
-    test('unpermitted user cannot update channel hideUserJoinLeaveEvents', async () => {
+    test.concurrent('unpermitted user cannot update channel hideUserJoinLeaveEvents', async () => {
         const {
             bob,
             bobProvider,
