@@ -1,4 +1,4 @@
-import { parseChannelMetadataJSON } from '../src/Utils'
+import { parseChannelMetadataJSON } from './Utils'
 
 describe('utils.test.ts', () => {
     test('channelMetadataJson', async () => {
