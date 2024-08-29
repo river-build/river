@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	u "bytecode-diff/utils"
 
@@ -24,6 +25,7 @@ func main() {
 	var sourceDiff bool
 	var reportOutDir string
 	var originEnvironment, targetEnvironment string
+	var deploymentsPath string
 
 	rootCmd := &cobra.Command{
 		Use:   "bytecode-diff [origin_environment] [target_environment]",
@@ -78,30 +80,51 @@ func main() {
 				if reportOutDir == "" {
 					log.Fatal("Report out directory is missing. Set it using --report-out-dir flag or REPORT_OUT_DIR environment variable")
 				}
+				return
+			}
+
+			envDeploymentsPath := os.Getenv("DEPLOYMENTS_PATH")
+			if envDeploymentsPath != "" {
+				deploymentsPath = envDeploymentsPath
+			}
+			if deploymentsPath == "" {
+				deploymentsPath = cmd.Flag("deployments").Value.String()
+			}
+			if deploymentsPath == "" {
+				log.Fatal("Deployments path is missing. Set it using --deployments flag or DEPLOYMENTS_PATH environment variable")
 			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			if !sourceDiff {
+
+			if sourceDiff {
+
+				fmt.Println("Running diff for facet path recursively onl compiled facet contracts:", facetSourcePath, compiledFacetsPath)
+
+				if err := executeSourceDiff(cmd, facetSourcePath, compiledFacetsPath, sourceDiffDir); err != nil {
+					log.Fatalf("Error executing source diff: %v", err)
+				}
+			} else {
+
 				originEnvironment, targetEnvironment = args[0], args[1]
 				for _, environment := range []string{originEnvironment, targetEnvironment} {
 					if !u.Contains(supportedEnvironments, environment) {
 						log.Fatalf("Environment %s not supported. Environment can be one of alpha, gamma, or omega.", environment)
 					}
 				}
+
 				fmt.Printf("Origin Environment: %s, Target Environment: %s\n", originEnvironment, targetEnvironment)
-			}
 
-			if rpcURL == "" {
-				rpcURL = os.Getenv("BASE_RPC_URL")
 				if rpcURL == "" {
-					log.Fatal("RPC URL not provided. Set it using --rpc flag or BASE_RPC_URL environment variable")
+					rpcURL = os.Getenv("BASE_RPC_URL")
+					if rpcURL == "" {
+						log.Fatal("RPC URL not provided. Set it using --rpc flag or BASE_RPC_URL environment variable")
+					}
 				}
-			}
 
-			if sourceDiff {
-				fmt.Println("Running diff for facet path recursively onl compiled facet contracts:", facetSourcePath, compiledFacetsPath)
-				if err := executeSourceDiff(cmd, facetSourcePath, compiledFacetsPath, sourceDiffDir); err != nil {
-					log.Fatalf("Error executing source diff: %v", err)
+				fmt.Println("Running diff for environment:", originEnvironment, targetEnvironment)
+
+				if err := executeEnvrionmentDiff(cmd, deploymentsPath, originEnvironment, targetEnvironment, reportOutDir); err != nil {
+					log.Fatalf("Error executing environment diff: %v", err)
 				}
 			}
 		},
@@ -113,6 +136,7 @@ func main() {
 	rootCmd.Flags().StringVar(&facetSourcePath, "facets", "", "Path to facet source files")
 	rootCmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
 	rootCmd.Flags().StringVar(&reportOutDir, "report-out-dir", "deployed-diffs", "Path to report output directory")
+	rootCmd.Flags().StringVar(&deploymentsPath, "deployments", "../../contracts/deployments", "Path to deployments directory")
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -148,5 +172,43 @@ func executeSourceDiff(cmd *cobra.Command, facetSourcePath, compiledFacetsPath s
 		return fmt.Errorf("error creating facet hashes report: %v", err)
 	}
 
+	return nil
+}
+
+func executeEnvrionmentDiff(cmd *cobra.Command, deploymentsPath, originEnvironment, targetEnvironment string, reportOutDir string) error {
+	verbose, _ := cmd.Flags().GetBool("verbose")
+	// walk environment diamonds and get all facet addresses from DiamondLoupe facet view
+	var baseDiamonds = []u.Diamond{
+		u.BaseRegistry,
+		u.Space,
+		u.SpaceFactory,
+		u.SpaceOwner,
+	}
+	originDeploymentsPath := filepath.Join(deploymentsPath, originEnvironment)
+	originDiamonds, err := u.GetDiamondAddresses(originDeploymentsPath, baseDiamonds, verbose)
+	if err != nil {
+		return fmt.Errorf("error getting diamond addresses for origin environment: %v", err)
+	}
+	if verbose {
+		for diamond, addresses := range originDiamonds {
+			fmt.Printf("Origin Diamond: %s, Addresses: %v\n", diamond, addresses)
+		}
+	}
+
+	targetDeploymentsPath := filepath.Join(deploymentsPath, targetEnvironment)
+	targetDiamonds, err := u.GetDiamondAddresses(targetDeploymentsPath, baseDiamonds, verbose)
+	if err != nil {
+		return fmt.Errorf("error getting diamond addresses for target environment: %v", err)
+	}
+	if verbose {
+		for diamond, addresses := range targetDiamonds {
+			fmt.Printf("Target Diamond: %s, Addresses: %v\n", diamond, addresses)
+		}
+	}
+
+	// getCode for all facet addresses over base rpc url and compare with compiled hashes
+
+	// create report
+	fmt.Println("Report out dir:", reportOutDir)
 	return nil
 }

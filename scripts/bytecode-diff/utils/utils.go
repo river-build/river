@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"encoding/json"
+
 	"github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/yaml.v2"
 )
@@ -28,6 +30,15 @@ type FacetFile struct {
 	Path     string
 	Filename string
 }
+
+type Diamond string
+
+const (
+	BaseRegistry Diamond = "baseRegistry"
+	Space        Diamond = "space"
+	SpaceFactory Diamond = "space"
+	SpaceOwner   Diamond = "spaceOwner"
+)
 
 func GetFacetFiles(facetSourcePath string) ([]FacetFile, error) {
 	var facetFiles []FacetFile
@@ -275,4 +286,32 @@ func Contains(slice []string, item string) bool {
 		}
 	}
 	return false
+}
+
+func GetDiamondAddresses(basePath string, diamonds []Diamond, verbose bool) (map[Diamond]string, error) {
+	diamondAddresses := make(map[Diamond]string)
+
+	for _, diamond := range diamonds {
+		filePath := filepath.Join(basePath, "base", "addresses", fmt.Sprintf("%s.json", diamond))
+
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			if verbose {
+				fmt.Printf("Error reading file %s: %v\n", filePath, err)
+			}
+			continue
+		}
+
+		var addressData struct {
+			Address string `json:"address"`
+		}
+
+		if err := json.Unmarshal(data, &addressData); err != nil {
+			return nil, fmt.Errorf("error unmarshaling JSON from file %s: %v", filePath, err)
+		}
+
+		diamondAddresses[diamond] = addressData.Address
+	}
+
+	return diamondAddresses, nil
 }
