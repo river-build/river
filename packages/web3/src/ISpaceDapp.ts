@@ -144,6 +144,15 @@ export interface ISpaceDapp {
         signer: SignerType,
         txnOpts?: TransactionOpts,
     ) => Promise<TransactionType>
+    createChannelWithPermissionOverrides: (
+        spaceId: string,
+        channelName: string,
+        channelDescription: string,
+        channelNetworkId: string,
+        roles: { roleId: number; permissions: Permission[] }[],
+        signer: SignerType,
+        txnOpts?: TransactionOpts,
+    ) => Promise<TransactionType>
     legacyCreateRole(
         spaceId: string,
         roleName: string,

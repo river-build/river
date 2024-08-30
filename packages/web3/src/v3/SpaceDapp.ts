@@ -341,6 +341,35 @@ export class SpaceDapp implements ISpaceDapp {
         )
     }
 
+    public async createChannelWithPermissionOverrides(
+        spaceId: string,
+        channelName: string,
+        channelDescription: string,
+        channelNetworkId: string,
+        roles: { roleId: number; permissions: Permission[] }[],
+        signer: ethers.Signer,
+        txnOpts?: TransactionOpts,
+    ): Promise<ContractTransaction> {
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+        const channelId = ensureHexPrefix(channelNetworkId)
+
+        return wrapTransaction(
+            () =>
+                space.Channels.write(signer).createChannelWithOverridePermissions(
+                    channelId,
+                    stringifyChannelMetadataJSON({
+                        name: channelName,
+                        description: channelDescription,
+                    }),
+                    roles,
+                ),
+            txnOpts,
+        )
+    }
+
     public async legacyCreateRole(
         spaceId: string,
         roleName: string,
