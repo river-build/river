@@ -34,14 +34,17 @@ contract SpaceEntitlementGated is MembershipJoin, EntitlementGated {
     );
 
     if (result == NodeVoteStatus.PASSED) {
-      bool shouldCharge = _shouldChargeForJoinSpace(sender, transactionId);
+      bool shouldCharge = _shouldChargeForJoinSpace();
       if (shouldCharge) {
         if (transactionType == IMembership.joinSpaceWithReferral.selector) {
           _chargeForJoinSpaceWithReferral(transactionId);
         } else if (transactionType == IMembership.joinSpace.selector) {
           _chargeForJoinSpace(transactionId);
         }
+      } else {
+        _refundBalance(transactionId, sender);
       }
+
       _issueToken(receiver);
     } else {
       _captureData(transactionId, "");

@@ -183,15 +183,15 @@ abstract contract MembershipBase is IMembershipBase {
   function _setMembershipFreeAllocation(uint256 newAllocation) internal {
     MembershipStorage.Layout storage ds = MembershipStorage.layout();
     ds.freeAllocation = newAllocation;
+    ds.freeAllocationEnabled = true;
     emit MembershipFreeAllocationUpdated(newAllocation);
   }
 
   function _getMembershipFreeAllocation() internal view returns (uint256) {
     MembershipStorage.Layout storage ds = MembershipStorage.layout();
 
-    uint256 freeAllocation = ds.freeAllocation;
+    if (ds.freeAllocationEnabled) return ds.freeAllocation;
 
-    if (freeAllocation > 0) return freeAllocation;
     return IPlatformRequirements(ds.spaceFactory).getMembershipMintLimit();
   }
 

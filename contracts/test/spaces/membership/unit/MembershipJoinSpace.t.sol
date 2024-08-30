@@ -392,8 +392,8 @@ contract MembershipJoinSpaceTest is
     membership.setMembershipLimit(1);
   }
 
-  function test_joinSpace_withValueAndFreeAllocation(uint256 value) external {
-    vm.assume(value > 0);
+  function test_joinSpace_withValueAndFreeAllocation() external {
+    uint256 value = membership.getMembershipPrice();
 
     // assert there are freeAllocations available
     vm.prank(founder);
@@ -405,7 +405,7 @@ contract MembershipJoinSpaceTest is
     vm.deal(alice, value);
     membership.joinSpace{value: value}(alice);
 
-    // space has balance
+    // alice gets a refund
     assertTrue(address(membership).balance == 0);
     assertTrue(alice.balance == value);
 

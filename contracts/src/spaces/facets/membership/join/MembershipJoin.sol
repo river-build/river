@@ -22,6 +22,9 @@ import {PrepayBase} from "contracts/src/spaces/facets/prepay/PrepayBase.sol";
 import {ReferralsBase} from "contracts/src/spaces/facets/referrals/ReferralsBase.sol";
 import {EntitlementGatedBase} from "contracts/src/spaces/facets/gated/EntitlementGatedBase.sol";
 
+// debuggging
+import {console} from "forge-std/console.sol";
+
 /// @title MembershipJoin
 /// @notice Handles the logic for joining a space, including entitlement checks and payment processing
 /// @dev Inherits from multiple base contracts to provide comprehensive membership functionality
@@ -63,6 +66,7 @@ contract MembershipJoin is
     ReferralTypes memory referral
   ) internal {
     _validateJoinSpace(receiver);
+    _validatePayment();
 
     address sender = msg.sender;
     bool isNotReferral = _isNotReferral(referral);
@@ -88,7 +92,7 @@ contract MembershipJoin is
 
     if (!isCrosschainPending) {
       if (isEntitled) {
-        bool shouldCharge = _shouldChargeForJoinSpace(sender, transactionId);
+        bool shouldCharge = _shouldChargeForJoinSpace();
         if (shouldCharge) {
           if (isNotReferral) {
             _chargeForJoinSpace(transactionId);
@@ -98,12 +102,20 @@ contract MembershipJoin is
         } else {
           _refundBalance(transactionId, sender);
         }
+
         _issueToken(receiver);
       } else {
         _captureData(transactionId, "");
         _refundBalance(transactionId, sender);
         emit MembershipTokenRejected(receiver);
       }
+    }
+  }
+
+  function _validatePayment() internal view {
+    if (msg.value > 0) {
+      uint256 price = _getMembershipPrice(_totalSupply());
+      if (msg.value != price) revert Membership__InvalidPayment();
     }
   }
 
@@ -160,39 +172,29 @@ contract MembershipJoin is
   }
 
   /// @notice Determines if a charge should be applied for joining the space
-  /// @param sender The address of the user joining the space
-  /// @param transactionId The unique identifier for this join transaction
   /// @return shouldCharge A boolean indicating whether a charge should be applied
-  function _shouldChargeForJoinSpace(
-    address sender,
-    bytes32 transactionId
-  ) internal returns (bool shouldCharge) {
+  function _shouldChargeForJoinSpace() internal returns (bool shouldCharge) {
     uint256 totalSupply = _totalSupply();
     uint256 freeAllocation = _getMembershipFreeAllocation();
     uint256 prepaidSupply = _getPrepaidSupply();
 
     if (freeAllocation > totalSupply) {
-      shouldCharge = false;
-      _refundBalance(transactionId, sender);
-    } else if (prepaidSupply > 0) {
-      shouldCharge = false;
-      _reducePrepay(1);
-      _refundBalance(transactionId, sender);
-    } else {
-      shouldCharge = true;
+      return false;
     }
 
-    return shouldCharge;
+    if (prepaidSupply > 0) {
+      _reducePrepay(1);
+      return false;
+    }
+
+    return true;
   }
 
   /// @notice Processes the charge for joining a space without referral
   /// @param transactionId The unique identifier for this join transaction
   function _chargeForJoinSpace(bytes32 transactionId) internal {
-    uint256 membershipPrice = _getMembershipPrice(_totalSupply());
-    uint256 userValue = _getCapturedValue(transactionId);
-
-    if (userValue == 0) revert Membership__InsufficientPayment();
-    if (userValue != membershipPrice) revert Membership__InvalidPayment();
+    uint256 membershipPrice = _getCapturedValue(transactionId);
+    if (membershipPrice == 0) revert Membership__InsufficientPayment();
 
     (bytes4 selector, address sender, , ) = abi.decode(
       _getCapturedData(transactionId),
@@ -216,11 +218,8 @@ contract MembershipJoin is
   /// @notice Processes the charge for joining a space with referral
   /// @param transactionId The unique identifier for this join transaction
   function _chargeForJoinSpaceWithReferral(bytes32 transactionId) internal {
-    uint256 membershipPrice = _getMembershipPrice(_totalSupply());
-    uint256 userValue = _getCapturedValue(transactionId);
-
-    if (userValue == 0) revert Membership__InsufficientPayment();
-    if (userValue != membershipPrice) revert Membership__InvalidPayment();
+    uint256 membershipPrice = _getCapturedValue(transactionId);
+    if (membershipPrice == 0) revert Membership__InsufficientPayment();
 
     (bytes4 selector, address sender, , bytes memory referralData) = abi.decode(
       _getCapturedData(transactionId),
