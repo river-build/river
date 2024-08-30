@@ -1087,7 +1087,7 @@ export class SpaceDapp implements ISpaceDapp {
             throw new Error(`Space with spaceId "${params.spaceNetworkId}" is not found.`)
         }
         const channelId = ensureHexPrefix(params.channelId)
-        
+
         return wrapTransaction(
             () =>
                 space.Roles.write(signer).clearChannelPermissionOverrides(params.roleId, channelId),
