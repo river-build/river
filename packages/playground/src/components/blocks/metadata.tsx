@@ -100,7 +100,7 @@ export const MetadataBlock = (props: BlockProps) => {
                             <FormItem>
                                 <FormLabel>Username</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="the_bob" {...field} />
+                                    <Input placeholder="(Username)" {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -113,7 +113,7 @@ export const MetadataBlock = (props: BlockProps) => {
                             <FormItem>
                                 <FormLabel>Display Name</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Bob" {...field} />
+                                    <Input placeholder="(Display Name)" {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -126,10 +126,7 @@ export const MetadataBlock = (props: BlockProps) => {
                             <FormItem>
                                 <FormLabel>ENS Address</FormLabel>
                                 <FormControl>
-                                    <Input
-                                        placeholder="0x7c68798466a7c9E048Fcb6eb1Ac3A876Ba98d8Ee"
-                                        {...field}
-                                    />
+                                    <Input placeholder="(0x...)" {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -142,10 +139,7 @@ export const MetadataBlock = (props: BlockProps) => {
                             <FormItem>
                                 <FormLabel>NFT Contract Address</FormLabel>
                                 <FormControl>
-                                    <Input
-                                        placeholder="0x5af0d9827e0c53e4799bb226655a1de152a425a5"
-                                        {...field}
-                                    />
+                                    <Input placeholder="(0x....)" {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -158,7 +152,7 @@ export const MetadataBlock = (props: BlockProps) => {
                             <FormItem>
                                 <FormLabel>NFT Token ID</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="1043" {...field} />
+                                    <Input placeholder="(10..)" {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -171,7 +165,7 @@ export const MetadataBlock = (props: BlockProps) => {
                             <FormItem>
                                 <FormLabel>NFT Chain ID</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="1" {...field} />
+                                    <Input placeholder="(99..)" {...field} />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
