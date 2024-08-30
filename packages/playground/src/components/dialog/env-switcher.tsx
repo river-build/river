@@ -42,11 +42,11 @@ type RiverEnvSwitcherProps = {
 
 export const RiverEnvSwitcher = (props: RiverEnvSwitcherProps) => {
     const { currentEnv, setEnv } = props
-    const { connect, connectWithToken, disconnect, isConnected } = useRiverConnection()
+    const { connect, connectUsingBearerToken, disconnect, isConnected } = useRiverConnection()
     const { switchNetwork } = useSwitchNetwork()
     const { disconnect: disconnectWallet } = useDisconnect()
     const signer = useEthersSigner()
-    const [authToken, setAuthToken] = useState('')
+    const [bearerToken, setBearerToken] = useState('')
 
     return (
         <Dialog>
@@ -68,12 +68,12 @@ export const RiverEnvSwitcher = (props: RiverEnvSwitcherProps) => {
                 </DialogHeader>
                 <div className="space-y-6">
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="auth-token">Auth Token</Label>
+                        <Label htmlFor="bearer-token">Bearer Token</Label>
                         <Input
-                            id="auth-token"
-                            placeholder="Paste your auth token here"
-                            value={authToken}
-                            onChange={(e) => setAuthToken(e.target.value)}
+                            id="bearer-token"
+                            placeholder="Paste your bearer token here"
+                            value={bearerToken}
+                            onChange={(e) => setBearerToken(e.target.value)}
                         />
                     </div>
                     <div className="flex flex-col gap-2">
@@ -91,8 +91,8 @@ export const RiverEnvSwitcher = (props: RiverEnvSwitcherProps) => {
                                         switchNetwork?.(chainId)
                                         setEnv(id)
                                         const riverConfig = makeRiverConfig(id)
-                                        if (authToken) {
-                                            await connectWithToken(authToken, {
+                                        if (bearerToken) {
+                                            await connectUsingBearerToken(bearerToken, {
                                                 riverConfig,
                                             }).then((sync) => {
                                                 if (sync?.config.context) {
