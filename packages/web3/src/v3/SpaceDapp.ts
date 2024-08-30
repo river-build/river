@@ -132,6 +132,10 @@ function newChannelEntitlementRequest(
     return new EntitlementRequest(spaceId, channelId, '', permission)
 }
 
+function ensureHexPrefix(value: string): string {
+    return value.startsWith('0x') ? value : `0x${value}`
+}
+
 type EntitledWallet = string | undefined
 export class SpaceDapp implements ISpaceDapp {
     private isLegacySpaceCache: Map<string, boolean>
@@ -321,9 +325,8 @@ export class SpaceDapp implements ISpaceDapp {
         if (!space) {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
         }
-        const channelId = channelNetworkId.startsWith('0x')
-            ? channelNetworkId
-            : `0x${channelNetworkId}`
+        const channelId = ensureHexPrefix(channelNetworkId)
+
         return wrapTransaction(
             () =>
                 space.Channels.write(signer).createChannel(
@@ -407,9 +410,8 @@ export class SpaceDapp implements ISpaceDapp {
         if (!space) {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
         }
-        const channelId = channelNetworkId.startsWith('0x')
-            ? channelNetworkId
-            : `0x${channelNetworkId}`
+        const channelId = ensureHexPrefix(channelNetworkId)
+
         return space.getChannel(channelId)
     }
 
@@ -842,9 +844,8 @@ export class SpaceDapp implements ISpaceDapp {
         if (!space) {
             return false
         }
-        const channelId = channelNetworkId.startsWith('0x')
-            ? channelNetworkId
-            : `0x${channelNetworkId}`
+
+        const channelId = ensureHexPrefix(channelNetworkId)
 
         if (
             permission === Permission.Read ||
@@ -969,10 +970,12 @@ export class SpaceDapp implements ISpaceDapp {
     public async encodedUpdateChannelData(space: Space, params: UpdateChannelParams) {
         // data for the multicall
         const encodedCallData: BytesLike[] = []
+
+        const channelId = ensureHexPrefix(params.channelId)
         // update the channel metadata
         encodedCallData.push(
             space.Channels.interface.encodeFunctionData('updateChannel', [
-                params.channelId.startsWith('0x') ? params.channelId : `0x${params.channelId}`,
+                channelId,
                 stringifyChannelMetadataJSON({
                     name: params.channelName,
                     description: params.channelDescription,
@@ -1039,19 +1042,17 @@ export class SpaceDapp implements ISpaceDapp {
     public async getChannelPermissionOverrides(
         spaceId: string,
         roleId: number,
-        channelId: string,
+        channelNetworkId: string,
     ): Promise<Permission[]> {
         const space = this.getSpace(spaceId)
         if (!space) {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
         }
 
-        return (
-            await space.Roles.read.getChannelPermissionOverrides(
-                roleId,
-                channelId?.startsWith('0x') ? channelId : `0x${channelId}`,
-            )
-        ).filter(isPermission)
+        const channelId = ensureHexPrefix(channelNetworkId)
+        return (await space.Roles.read.getChannelPermissionOverrides(roleId, channelId)).filter(
+            isPermission,
+        )
     }
 
     public async setChannelPermissionOverrides(
@@ -1063,9 +1064,8 @@ export class SpaceDapp implements ISpaceDapp {
         if (!space) {
             throw new Error(`Space with spaceId "${params.spaceNetworkId}" is not found.`)
         }
-        const channelId = params.channelId.startsWith('0x')
-            ? params.channelId
-            : `0x${params.channelId}`
+        const channelId = ensureHexPrefix(params.channelId)
+
         return wrapTransaction(
             () =>
                 space.Roles.write(signer).setChannelPermissionOverrides(
@@ -1086,9 +1086,8 @@ export class SpaceDapp implements ISpaceDapp {
         if (!space) {
             throw new Error(`Space with spaceId "${params.spaceNetworkId}" is not found.`)
         }
-        const channelId = params.channelId.startsWith('0x')
-            ? params.channelId
-            : `0x${params.channelId}`
+        const channelId = ensureHexPrefix(params.channelId)
+
         return wrapTransaction(
             () =>
                 space.Roles.write(signer).clearChannelPermissionOverrides(params.roleId, channelId),
@@ -1220,9 +1219,7 @@ export class SpaceDapp implements ISpaceDapp {
         signer: ethers.Signer,
         txnOpts?: TransactionOpts,
     ): Promise<ContractTransaction> {
-        const channelId = channelNetworkId.startsWith('0x')
-            ? channelNetworkId
-            : `0x${channelNetworkId}`
+        const channelId = ensureHexPrefix(channelNetworkId)
         const space = this.getSpace(spaceId)
         if (!space) {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
@@ -1368,9 +1365,7 @@ export class SpaceDapp implements ISpaceDapp {
         channelNetworkId: string,
         _updatedRoleIds: number[],
     ): Promise<BytesLike[]> {
-        const channelId = channelNetworkId.startsWith('0x')
-            ? channelNetworkId
-            : `0x${channelNetworkId}`
+        const channelId = ensureHexPrefix(channelNetworkId)
         const encodedCallData: BytesLike[] = []
         const [channelInfo] = await Promise.all([
             space.Channels.read.getChannel(channelId),
@@ -1414,9 +1409,7 @@ export class SpaceDapp implements ISpaceDapp {
         channelNetworkId: string,
         roleIds: number[],
     ): BytesLike[] {
-        const channelId = channelNetworkId.startsWith('0x')
-            ? channelNetworkId
-            : `0x${channelNetworkId}`
+        const channelId = ensureHexPrefix(channelNetworkId)
         const encodedCallData: BytesLike[] = []
         for (const roleId of roleIds) {
             const encodedBytes = space.Channels.interface.encodeFunctionData('addRoleToChannel', [
@@ -1433,9 +1426,7 @@ export class SpaceDapp implements ISpaceDapp {
         channelNetworkId: string,
         roleIds: number[],
     ): BytesLike[] {
-        const channelId = channelNetworkId.startsWith('0x')
-            ? channelNetworkId
-            : `0x${channelNetworkId}`
+        const channelId = ensureHexPrefix(channelNetworkId)
         const encodedCallData: BytesLike[] = []
         for (const roleId of roleIds) {
             const encodedBytes = space.Channels.interface.encodeFunctionData(
