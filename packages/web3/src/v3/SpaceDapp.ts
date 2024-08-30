@@ -1048,6 +1048,7 @@ export class SpaceDapp implements ISpaceDapp {
         if (!space) {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
         }
+
         const channelId = ensureHexPrefix(channelNetworkId)
         return (await space.Roles.read.getChannelPermissionOverrides(roleId, channelId)).filter(
             isPermission,
@@ -1064,6 +1065,7 @@ export class SpaceDapp implements ISpaceDapp {
             throw new Error(`Space with spaceId "${params.spaceNetworkId}" is not found.`)
         }
         const channelId = ensureHexPrefix(params.channelId)
+
         return wrapTransaction(
             () =>
                 space.Roles.write(signer).setChannelPermissionOverrides(
@@ -1085,6 +1087,7 @@ export class SpaceDapp implements ISpaceDapp {
             throw new Error(`Space with spaceId "${params.spaceNetworkId}" is not found.`)
         }
         const channelId = ensureHexPrefix(params.channelId)
+        
         return wrapTransaction(
             () =>
                 space.Roles.write(signer).clearChannelPermissionOverrides(params.roleId, channelId),
