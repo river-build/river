@@ -12,6 +12,8 @@ import {IRolesBase} from "contracts/src/spaces/facets/roles/IRoles.sol";
 // libraries
 import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
 import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
+// debuggging
+import {console} from "forge-std/console.sol";
 
 // contracts
 import {MembershipBase} from "./MembershipBase.sol";

@@ -9,11 +9,13 @@ import {IEntitlementGated} from "contracts/src/spaces/facets/gated/IEntitlementG
 import {IEntitlementGatedBase} from "contracts/src/spaces/facets/gated/IEntitlementGated.sol";
 import {IEntitlementCheckerBase} from "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol";
 import {IWalletLink, IWalletLinkBase} from "contracts/src/factory/facets/wallet-link/IWalletLink.sol";
+import {IArchitect, IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.sol";
 
 //libraries
 import {Vm} from "forge-std/Test.sol";
 
 //contracts
+import {MembershipFacet} from "contracts/src/spaces/facets/membership/MembershipFacet.sol";
 
 contract MembershipJoinSpace is
   MembershipBaseSetup,
@@ -553,5 +555,31 @@ contract MembershipJoinSpace is
 
     assertEq(membership.balanceOf(bob), 1);
     assertTrue(address(membership).balance > 0);
+  }
+
+  function test_joinSpaceWithInitialFreeAllocation() external {
+    address[] memory allowedUsers = new address[](2);
+    allowedUsers[0] = alice;
+    allowedUsers[1] = bob;
+
+    IArchitectBase.SpaceInfo memory freeAllocationInfo = _createUserSpaceInfo(
+      "FreeAllocationSpace",
+      allowedUsers
+    );
+    freeAllocationInfo.membership.settings.pricingModule = fixedPricingModule;
+    freeAllocationInfo.membership.settings.freeAllocation = 1;
+
+    vm.prank(founder);
+    address freeAllocationSpace = IArchitect(spaceFactory).createSpace(
+      freeAllocationInfo
+    );
+
+    MembershipFacet freeAllocationMembership = MembershipFacet(
+      freeAllocationSpace
+    );
+
+    vm.prank(bob);
+    vm.expectRevert(Membership__InsufficientPayment.selector);
+    freeAllocationMembership.joinSpace(bob);
   }
 }

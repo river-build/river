@@ -30,6 +30,7 @@ abstract contract MembershipBase is IMembershipBase {
 
     if (info.freeAllocation > 0) {
       _verifyFreeAllocation(info.freeAllocation);
+      ds.freeAllocationEnabled = true;
     }
 
     if (info.price > 0) {
