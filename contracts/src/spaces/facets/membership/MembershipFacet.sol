@@ -25,6 +25,8 @@ import {PrepayBase} from "contracts/src/spaces/facets/prepay/PrepayBase.sol";
 
 import {EntitlementGated} from "contracts/src/spaces/facets/gated/EntitlementGated.sol";
 
+import {console} from "forge-std/console.sol";
+
 contract MembershipFacet is
   IMembership,
   MembershipBase,
@@ -83,6 +85,7 @@ contract MembershipFacet is
   /// @inheritdoc IMembership
   function joinSpace(address receiver) external payable nonReentrant {
     _validateJoinSpace(receiver);
+    _validatePayment();
 
     address sender = msg.sender;
     bytes32 keyHash = keccak256(abi.encodePacked(sender, block.number));
@@ -142,38 +145,43 @@ contract MembershipFacet is
     }
   }
 
+  function _validatePayment() internal {
+    if (msg.value > 0) {
+      uint256 membershipPrice = _getMembershipPrice(_totalSupply());
+      if (msg.value != membershipPrice) revert Membership__InvalidPayment();
+    }
+  }
+
   function _issueToken(bytes32 transactionId) internal {
     (address sender, address receiver) = abi.decode(
       _getCapturedData(transactionId),
       (address, address)
     );
 
-    uint256 totalSupply = _totalSupply();
-    uint256 membershipPrice;
-
     uint256 freeAllocation = _getMembershipFreeAllocation();
     uint256 prepaidSupply = _getPrepaidSupply();
 
-    if (freeAllocation > totalSupply) {
-      membershipPrice = 0;
+    bool shouldCharge = true;
+    uint256 membershipPrice;
+
+    if (freeAllocation > _totalSupply()) {
+      shouldCharge = false;
       _refundBalance(transactionId, sender);
     } else if (prepaidSupply > 0) {
-      membershipPrice = 0;
+      shouldCharge = false;
       _reducePrepay(1);
       _refundBalance(transactionId, sender);
-    } else {
-      membershipPrice = _getMembershipPrice(totalSupply);
+    }
+
+    if (shouldCharge) {
+      membershipPrice = _getCapturedValue(transactionId);
+      if (membershipPrice == 0) revert Membership__InsufficientPayment();
     }
 
     // get token id
     uint256 tokenId = _nextTokenId();
 
-    if (membershipPrice > 0) {
-      uint256 userValue = _getCapturedValue(transactionId);
-
-      if (userValue == 0) revert Membership__InsufficientPayment();
-      if (userValue != membershipPrice) revert Membership__InvalidPayment();
-
+    if (shouldCharge) {
       // set renewal price for token
       _setMembershipRenewalPrice(tokenId, membershipPrice);
       uint256 protocolFee = _collectProtocolFee(sender, membershipPrice);
