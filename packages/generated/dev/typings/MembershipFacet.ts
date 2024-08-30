@@ -28,6 +28,20 @@ import type {
   PromiseOrValue,
 } from "./common";
 
+export declare namespace IMembershipBase {
+  export type ReferralTypesStruct = {
+    partner: PromiseOrValue<string>;
+    userReferral: PromiseOrValue<string>;
+    referralCode: PromiseOrValue<string>;
+  };
+
+  export type ReferralTypesStructOutput = [string, string, string] & {
+    partner: string;
+    userReferral: string;
+    referralCode: string;
+  };
+}
+
 export interface MembershipFacetInterface extends utils.Interface {
   functions: {
     "expiresAt(uint256)": FunctionFragment;
@@ -41,6 +55,7 @@ export interface MembershipFacetInterface extends utils.Interface {
     "getMembershipRenewalPrice(uint256)": FunctionFragment;
     "getSpaceFactory()": FunctionFragment;
     "joinSpace(address)": FunctionFragment;
+    "joinSpaceWithReferral(address,(address,address,string))": FunctionFragment;
     "renewMembership(uint256)": FunctionFragment;
     "setMembershipFreeAllocation(uint256)": FunctionFragment;
     "setMembershipImage(string)": FunctionFragment;
@@ -63,6 +78,7 @@ export interface MembershipFacetInterface extends utils.Interface {
       | "getMembershipRenewalPrice"
       | "getSpaceFactory"
       | "joinSpace"
+      | "joinSpaceWithReferral"
       | "renewMembership"
       | "setMembershipFreeAllocation"
       | "setMembershipImage"
@@ -115,6 +131,10 @@ export interface MembershipFacetInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "joinSpace",
     values: [PromiseOrValue<string>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "joinSpaceWithReferral",
+    values: [PromiseOrValue<string>, IMembershipBase.ReferralTypesStruct]
   ): string;
   encodeFunctionData(
     functionFragment: "renewMembership",
@@ -183,6 +203,10 @@ export interface MembershipFacetInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "joinSpace", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "joinSpaceWithReferral",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "renewMembership",
     data: BytesLike
@@ -792,6 +816,12 @@ export interface MembershipFacet extends BaseContract {
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
+    joinSpaceWithReferral(
+      receiver: PromiseOrValue<string>,
+      referral: IMembershipBase.ReferralTypesStruct,
+      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
     renewMembership(
       tokenId: PromiseOrValue<BigNumberish>,
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
@@ -859,6 +889,12 @@ export interface MembershipFacet extends BaseContract {
     overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
+  joinSpaceWithReferral(
+    receiver: PromiseOrValue<string>,
+    referral: IMembershipBase.ReferralTypesStruct,
+    overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
   renewMembership(
     tokenId: PromiseOrValue<BigNumberish>,
     overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
@@ -923,6 +959,12 @@ export interface MembershipFacet extends BaseContract {
 
     joinSpace(
       receiver: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    joinSpaceWithReferral(
+      receiver: PromiseOrValue<string>,
+      referral: IMembershipBase.ReferralTypesStruct,
       overrides?: CallOverrides
     ): Promise<void>;
 
@@ -1293,6 +1335,12 @@ export interface MembershipFacet extends BaseContract {
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
+    joinSpaceWithReferral(
+      receiver: PromiseOrValue<string>,
+      referral: IMembershipBase.ReferralTypesStruct,
+      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
     renewMembership(
       tokenId: PromiseOrValue<BigNumberish>,
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
@@ -1372,6 +1420,12 @@ export interface MembershipFacet extends BaseContract {
 
     joinSpace(
       receiver: PromiseOrValue<string>,
+      overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    joinSpaceWithReferral(
+      receiver: PromiseOrValue<string>,
+      referral: IMembershipBase.ReferralTypesStruct,
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 

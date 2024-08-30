@@ -156,6 +156,41 @@
   },
   {
     "type": "function",
+    "name": "joinSpaceWithReferral",
+    "inputs": [
+      {
+        "name": "receiver",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "referral",
+        "type": "tuple",
+        "internalType": "struct IMembershipBase.ReferralTypes",
+        "components": [
+          {
+            "name": "partner",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "userReferral",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "referralCode",
+            "type": "string",
+            "internalType": "string"
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
     "name": "renewMembership",
     "inputs": [
       {

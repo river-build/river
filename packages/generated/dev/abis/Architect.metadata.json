@@ -957,10 +957,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/facets/membership/IMembership.sol": {
-      "keccak256": "0x45a35d1677275a831218d931acc661727004fe73de7bbedbef585571808643c7",
+      "keccak256": "0x68c31487d49212facd5c95dc351c8b652e866d58d6e17178f0afce69ac4e3895",
       "urls": [
-        "bzz-raw://fa8729750276460aae72a64606982bcd76f57e199d15e1ff823ec9e0bee3e9c2",
-        "dweb:/ipfs/QmUu82pqyNZ1zcN4gvHyEEqdnKFo2nSZi7r1AAg9ZYs7Kb"
+        "bzz-raw://89c20a832f53340918762d956646fcd6c4676cbdd58656134e59e8d2bf8c3870",
+        "dweb:/ipfs/QmUDMbiFv29AGCfPNGQNppphXddf5a7mhkatJDSQ4KvUD3"
       ],
       "license": "MIT"
     },

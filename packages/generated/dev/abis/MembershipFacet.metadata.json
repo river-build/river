@@ -1373,6 +1373,40 @@
       {
         "inputs": [
           {
+            "internalType": "address",
+            "name": "receiver",
+            "type": "address"
+          },
+          {
+            "internalType": "struct IMembershipBase.ReferralTypes",
+            "name": "referral",
+            "type": "tuple",
+            "components": [
+              {
+                "internalType": "address",
+                "name": "partner",
+                "type": "address"
+              },
+              {
+                "internalType": "address",
+                "name": "userReferral",
+                "type": "address"
+              },
+              {
+                "internalType": "string",
+                "name": "referralCode",
+                "type": "string"
+              }
+            ]
+          }
+        ],
+        "stateMutability": "payable",
+        "type": "function",
+        "name": "joinSpaceWithReferral"
+      },
+      {
+        "inputs": [
+          {
             "internalType": "uint256",
             "name": "tokenId",
             "type": "uint256"
@@ -1516,6 +1550,12 @@
             "receiver": "The address of the receiver"
           }
         },
+        "joinSpaceWithReferral(address,(address,address,string))": {
+          "params": {
+            "receiver": "The address of the receiver",
+            "referral": "The referral data"
+          }
+        },
         "renewMembership(uint256)": {
           "params": {
             "tokenId": "The token id of the membership"
@@ -1584,6 +1624,9 @@
         },
         "joinSpace(address)": {
           "notice": "Join a space"
+        },
+        "joinSpaceWithReferral(address,(address,address,string))": {
+          "notice": "Join a space with a referral"
         },
         "renewMembership(uint256)": {
           "notice": "Renew a space membership"
@@ -2011,10 +2054,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/facets/membership/IMembership.sol": {
-      "keccak256": "0x45a35d1677275a831218d931acc661727004fe73de7bbedbef585571808643c7",
+      "keccak256": "0x68c31487d49212facd5c95dc351c8b652e866d58d6e17178f0afce69ac4e3895",
       "urls": [
-        "bzz-raw://fa8729750276460aae72a64606982bcd76f57e199d15e1ff823ec9e0bee3e9c2",
-        "dweb:/ipfs/QmUu82pqyNZ1zcN4gvHyEEqdnKFo2nSZi7r1AAg9ZYs7Kb"
+        "bzz-raw://89c20a832f53340918762d956646fcd6c4676cbdd58656134e59e8d2bf8c3870",
+        "dweb:/ipfs/QmUDMbiFv29AGCfPNGQNppphXddf5a7mhkatJDSQ4KvUD3"
       ],
       "license": "MIT"
     },
@@ -2027,10 +2070,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/facets/membership/MembershipFacet.sol": {
-      "keccak256": "0x98cde52545d9cefdb751620e1fe4307e5d9bdb83e9ebc5c8684b784cb80030b4",
+      "keccak256": "0xb7308e220d0d256a2113f27e5bb47e020e91cafa2de3a76d455a6430e0156db7",
       "urls": [
-        "bzz-raw://3ba299ee46093c4bf31fb6c25f70e65aaf3de54597c9e2c7ce44a278e2909804",
-        "dweb:/ipfs/QmcjWUWiSgq2kgafhYHQ229AyrT5CVaAoep6Eww9HSNjvL"
+        "bzz-raw://2935c30baa893e8a5ba13000f195ab40e25e75e9873c96b9d7b69868b0f33342",
+        "dweb:/ipfs/QmPFG4rmAQpsKYkJnqaFtn73MMhZ75HG2dAr6z3cgYSXuA"
       ],
       "license": "MIT"
     },
@@ -2043,10 +2086,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/facets/membership/join/MembershipJoin.sol": {
-      "keccak256": "0x1459e4f985b9016956cd123e7a5996811614021d8d7778aa64609ada099c250a",
+      "keccak256": "0xb9646f43bee6713ea49f928de3de5cf1dc29144413bdfa5dc702ebfeaab5b588",
       "urls": [
-        "bzz-raw://018530d113a152769d8257af060eb9a634561bc841dde425233307f1b8059369",
-        "dweb:/ipfs/QmXaNq5o1tnTrVUfRBS2G4yGZfkVTCJUrahUcsTDXPZsQg"
+        "bzz-raw://a5c53e2c981589082131de35925e1ef5b307e361fb5f582a8957812055122503",
+        "dweb:/ipfs/QmNyNMP2dM5izZ7ewisUPyJJCZUdawjgTHuWeC6EQZD3cu"
       ],
       "license": "MIT"
     },
@@ -2127,14 +2170,6 @@
       "urls": [
         "bzz-raw://f667b95874e4299f93064815001f7f1170e3268e677bb969c70e909f0086d53f",
         "dweb:/ipfs/QmRpEpYsMN4C3yB9ujW3MRa8VxwQRoFHP1qoyFEko7W575"
-      ],
-      "license": "MIT"
-    },
-    "contracts/src/spaces/facets/xchain/ISpaceEntitlementGated.sol": {
-      "keccak256": "0x8c05950d5187548a1b7244a4566ce06d36520cf52625da4e0438bda2ebb0be9a",
-      "urls": [
-        "bzz-raw://787449a00b189e71c401a4681111860cd1127c10f9b6395cd2b239c358e07282",
-        "dweb:/ipfs/Qmcg9FRKykSsGzm9RMUbSNUrvwEfy6HVrXgjfgTSbWiJAZ"
       ],
       "license": "MIT"
     },
