@@ -25,8 +25,6 @@ import {PrepayBase} from "contracts/src/spaces/facets/prepay/PrepayBase.sol";
 
 import {EntitlementGated} from "contracts/src/spaces/facets/gated/EntitlementGated.sol";
 
-import {console} from "forge-std/console.sol";
-
 contract MembershipFacet is
   IMembership,
   MembershipBase,
