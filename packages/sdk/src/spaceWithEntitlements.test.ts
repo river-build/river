@@ -756,7 +756,7 @@ describe('spaceWithEntitlements', () => {
                 opType: OperationType.CHECK,
                 checkType: CheckOperationType.ERC721,
                 chainId: 31337n,
-                contractAddress: getTestNft3Address(),
+                contractAddress: await getTestNft3Address(),
                 params,
             },
         }
