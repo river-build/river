@@ -38,7 +38,7 @@ import {
 } from './index'
 import { PricingModules } from './PricingModules'
 import { dlogger, isJest } from '@river-build/dlog'
-import { EVERYONE_ADDRESS, stringifyChannelMetadataJSON } from '../Utils'
+import { EVERYONE_ADDRESS, stringifyChannelMetadataJSON, NoEntitledWalletError } from '../Utils'
 import { evaluateOperationsForEntitledWallet, ruleDataToOperations } from '../entitlement'
 import { RuleEntitlementShim } from './RuleEntitlementShim'
 import { PlatformRequirements } from './PlatformRequirements'
@@ -726,25 +726,26 @@ export class SpaceDapp implements ISpaceDapp {
                 .map((x) => x.ruleEntitlement!.rules as IRuleEntitlementV2Base.RuleDataV2Struct),
         )
 
-        const entitledWalletsForAllRuleEntitlements = await Promise.all(
+        return await Promise.any(
             ruleEntitlements.map(async (ruleData) => {
                 if (!ruleData) {
                     throw new Error('Rule data not found')
                 }
                 const operations = ruleDataToOperations(ruleData)
 
-                return evaluateOperationsForEntitledWallet(operations, allWallets, providers)
+                const result = await evaluateOperationsForEntitledWallet(
+                    operations,
+                    allWallets,
+                    providers,
+                )
+                if (result !== ethers.constants.AddressZero) {
+                    return result
+                }
+                // This is not a true error, but is used here so that the Promise.any will not
+                // resolve with an unentitled wallet.
+                throw new NoEntitledWalletError()
             }),
-        )
-
-        const validWallets = entitledWalletsForAllRuleEntitlements.filter(
-            (w) => w !== ethers.constants.AddressZero,
-        )
-        // if any ruleData check passes with an entitled wallet, return the first wallet that passed
-        if (validWallets.length > 0) {
-            return validWallets[0]
-        }
-        return
+        ).catch(NoEntitledWalletError.throwIfRuntimeErrors)
     }
 
     /**
