@@ -31,13 +31,25 @@ ChannelBase: 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470
 
 ### Flags
 
-- `-r, --rpc`: Base RPC provider URL
-- `-s, --source-diff-only`: Run Solidity source code diff
-- `--source-diff-log`: Path to source diff log file
-- `--compiled-facets`: Path to compiled facets
-- `--facets`: Path to facet source files
-- `-v, --verbose`: Enable verbose output
-- `--report-out-dir`: Path to report output directory
+```base
+➜  bytecode-diff ✗ go run ./main.go --help
+A tool to retrieve and display contract bytecode diff for Base
+
+Usage:
+  bytecode-diff [origin_environment] [target_environment] [flags]
+
+Flags:
+  -b, --base-rpc string           Base RPC provider URL
+      --base-sepolia-rpc string   Base Sepolia RPC provider URL
+      --compiled-facets string    Path to compiled facets
+      --deployments string        Path to deployments directory (default "../../contracts/deployments")
+      --facets string             Path to facet source files
+  -h, --help                      help for bytecode-diff
+      --report-out-dir string     Path to report output directory (default "deployed-diffs")
+      --source-diff-log string    Path to diff log file (default "source-diffs")
+  -s, --source-diff-only          Run source code diff
+  -v, --verbose                   Enable verbose output
+```
 
 ### Environment Variables
 
@@ -48,6 +60,7 @@ You can also set the following environment variables instead of using flags:
 - `FACET_SOURCE_PATH`: Path to facet source files
 - `COMPILED_FACETS_PATH`: Path to compiled facets
 - `REPORT_OUT_DIR`: Path to report output directory
+- `BASESCAN_API_KEY`: Required. Your API key for BaseScan.
 
 ## Examples
 
@@ -73,6 +86,12 @@ export COMPILED_FACETS_PATH=/path/to/compiled/facets
 export REPORT_OUT_DIR=/path/to/report/output
 
 ./bytecode-diff -s --verbose
+```
+
+3. Run pairwise remote bytecode diff of deployed facets for diamonds in alpha, gamma, and omega environments.
+
+```
+GOWORK=off go run ./main.go gamma omega -v
 ```
 
 ## Notes
