@@ -420,6 +420,37 @@ contract MembershipJoinSpaceTest is
     assertEq(address(membership).balance, 0);
   }
 
+  function test_joinSpace_priceChangesMidTransaction()
+    external
+    givenMembershipHasPrice
+  {
+    vm.deal(bob, MEMBERSHIP_PRICE);
+
+    vm.recordLogs();
+    vm.prank(bob);
+    membership.joinSpace{value: MEMBERSHIP_PRICE}(bob);
+    Vm.Log[] memory logs = vm.getRecordedLogs();
+
+    (
+      address contractAddress,
+      bytes32 transactionId,
+      uint256 roleId,
+      address[] memory selectedNodes
+    ) = _getRequestedEntitlementData(logs);
+
+    for (uint256 i = 0; i < 3; i++) {
+      vm.prank(selectedNodes[i]);
+      IEntitlementGated(contractAddress).postEntitlementCheckResult(
+        transactionId,
+        roleId,
+        IEntitlementGatedBase.NodeVoteStatus.FAILED
+      );
+    }
+
+    assertEq(membershipToken.balanceOf(bob), 0);
+    assertEq(bob.balance, MEMBERSHIP_PRICE);
+  }
+
   // utils
 
   function _getEntitlementCheckRequestCount(

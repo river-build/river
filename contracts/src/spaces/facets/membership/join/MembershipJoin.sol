@@ -22,9 +22,6 @@ import {PrepayBase} from "contracts/src/spaces/facets/prepay/PrepayBase.sol";
 import {ReferralsBase} from "contracts/src/spaces/facets/referrals/ReferralsBase.sol";
 import {EntitlementGatedBase} from "contracts/src/spaces/facets/gated/EntitlementGatedBase.sol";
 
-// debuggging
-import {console} from "forge-std/console.sol";
-
 /// @title MembershipJoin
 /// @notice Handles the logic for joining a space, including entitlement checks and payment processing
 /// @dev Inherits from multiple base contracts to provide comprehensive membership functionality
