@@ -130,9 +130,20 @@ func main() {
 					}
 				}
 
-				fmt.Println("Running diff for environment:", originEnvironment, targetEnvironment)
+				basescanAPIKey := os.Getenv("BASESCAN_API_KEY")
+				if basescanAPIKey == "" {
+					log.Fatal("BaseScan API key not provided. Set it using BASESCAN_API_KEY environment variable")
+				}
 
-				if err := executeEnvrionmentDiff(cmd, baseRpcUrl, baseSepoliaRpcUrl, deploymentsPath, originEnvironment, targetEnvironment, reportOutDir); err != nil {
+				fmt.Println("Running diff for environment:", originEnvironment, targetEnvironment)
+				// Create BaseConfig struct
+				baseConfig := u.BaseConfig{
+					BaseRpcUrl:        baseRpcUrl,
+					BaseSepoliaRpcUrl: baseSepoliaRpcUrl,
+					BasescanAPIKey:    basescanAPIKey,
+				}
+
+				if err := executeEnvrionmentDiff(cmd, baseConfig, deploymentsPath, originEnvironment, targetEnvironment, reportOutDir); err != nil {
 					log.Fatalf("Error executing environment diff: %v", err)
 				}
 			}
@@ -185,7 +196,7 @@ func executeSourceDiff(cmd *cobra.Command, facetSourcePath, compiledFacetsPath s
 	return nil
 }
 
-func executeEnvrionmentDiff(cmd *cobra.Command, baseRpcUrl, baseSepoliaRpcUrl, deploymentsPath, originEnvironment, targetEnvironment string, reportOutDir string) error {
+func executeEnvrionmentDiff(cmd *cobra.Command, baseConfig u.BaseConfig, deploymentsPath, originEnvironment, targetEnvironment string, reportOutDir string) error {
 	verbose, _ := cmd.Flags().GetBool("verbose")
 	// walk environment diamonds and get all facet addresses from DiamondLoupe facet view
 	var baseDiamonds = []u.Diamond{
@@ -216,12 +227,13 @@ func executeEnvrionmentDiff(cmd *cobra.Command, baseRpcUrl, baseSepoliaRpcUrl, d
 		}
 	}
 	// Create Ethereum client
-	clients, err := utils.CreateEthereumClients(baseRpcUrl, baseSepoliaRpcUrl, originEnvironment, targetEnvironment, verbose)
+	clients, err := utils.CreateEthereumClients(baseConfig.BaseRpcUrl, baseConfig.BaseSepoliaRpcUrl, originEnvironment, targetEnvironment, verbose)
 
 	// getCode for all facet addresses over base rpc url and compare with compiled hashes
 	originFacets := make(map[string][]utils.Facet)
+
 	for diamondName, diamondAddress := range originDiamonds {
-		facets, err := utils.ReadAllFacets(clients[originEnvironment], diamondAddress)
+		facets, err := utils.ReadAllFacets(clients[originEnvironment], diamondAddress, baseConfig.BasescanAPIKey)
 		if err != nil {
 			return fmt.Errorf("error reading all facets for origin diamond %s: %v", diamondName, err)
 		}
@@ -231,7 +243,7 @@ func executeEnvrionmentDiff(cmd *cobra.Command, baseRpcUrl, baseSepoliaRpcUrl, d
 		for diamondName, facets := range originFacets {
 			fmt.Printf("Origin Facets for Diamond contract %s\n", diamondName)
 			for _, facet := range facets {
-				fmt.Printf("Facet: %s\n", facet.FacetAddress)
+				fmt.Printf("Facet: %s %s\n", facet.FacetAddress, facet.ContractName)
 				fmt.Printf("Selectors: %v\n", facet.SelectorsHex)
 			}
 		}
@@ -239,7 +251,7 @@ func executeEnvrionmentDiff(cmd *cobra.Command, baseRpcUrl, baseSepoliaRpcUrl, d
 
 	targetFacets := make(map[string][]utils.Facet)
 	for diamondName, diamondAddress := range targetDiamonds {
-		facets, err := utils.ReadAllFacets(clients[targetEnvironment], diamondAddress)
+		facets, err := utils.ReadAllFacets(clients[targetEnvironment], diamondAddress, baseConfig.BasescanAPIKey)
 		if err != nil {
 			return fmt.Errorf("error reading all facets for target diamond %s: %v", diamondName, err)
 		}
@@ -249,7 +261,7 @@ func executeEnvrionmentDiff(cmd *cobra.Command, baseRpcUrl, baseSepoliaRpcUrl, d
 		for diamondName, facets := range targetFacets {
 			fmt.Printf("Target Facets for Diamond contract %s\n", diamondName)
 			for _, facet := range facets {
-				fmt.Printf("Facet: %s\n", facet.FacetAddress)
+				fmt.Printf("Facet: %s %s\n", facet.FacetAddress, facet.ContractName)
 				fmt.Printf("Selectors: %v\n", facet.SelectorsHex)
 			}
 		}

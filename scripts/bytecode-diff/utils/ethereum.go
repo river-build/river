@@ -3,7 +3,10 @@ package utils
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 
 	"github.com/ethereum/go-ethereum"
@@ -17,10 +20,11 @@ type Facet struct {
 	FacetAddress common.Address
 	Selectors    [][4]byte
 	SelectorsHex []string `abi:"-"`
+	ContractName string   `json:",omitempty"`
 }
 
-// ReadAllFacets reads all the facets from the given contract address
-func ReadAllFacets(client *ethclient.Client, contractAddress string) ([]Facet, error) {
+// ReadAllFacets reads all the facets from the given Diamond contract address
+func ReadAllFacets(client *ethclient.Client, contractAddress string, basescanAPIKey string) ([]Facet, error) {
 	if client == nil {
 		return nil, fmt.Errorf("Ethereum client is nil")
 	}
@@ -78,8 +82,19 @@ func ReadAllFacets(client *ethclient.Client, contractAddress string) ([]Facet, e
 		return nil, fmt.Errorf("failed to unpack result: %v", err)
 	}
 
-	// Iterate through all facet addresses and call facetFunctionSelectors
+	basescanUrl, err := GetBasescanUrl(client)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Basescan URL: %v", err)
+	}
+
 	for i, facet := range facets {
+		// read contract name from basescan source code api
+		contractName, err := GetContractNameFromBasescan(basescanUrl, facet.FacetAddress.Hex(), basescanAPIKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get contract name from Basescan: %v", err)
+		}
+
+		facets[i].ContractName = contractName
 		data, err := contractABI.Pack("facetFunctionSelectors", facet.FacetAddress)
 		if err != nil {
 			return nil, fmt.Errorf("failed to pack data for facetFunctionSelectors: %v", err)
@@ -92,6 +107,7 @@ func ReadAllFacets(client *ethclient.Client, contractAddress string) ([]Facet, e
 		if err != nil {
 			return nil, fmt.Errorf("failed to call facetFunctionSelectors: %v", err)
 		}
+
 		var selectors []common.Hash
 		err = contractABI.UnpackIntoInterface(&selectors, "facetFunctionSelectors", result)
 		if err != nil {
@@ -149,4 +165,60 @@ func CreateEthereumClients(baseRpcUrl, baseSepoliaRpcUrl, originEnvironment, tar
 	}
 
 	return clients, nil
+}
+
+// GetBasescanUrl determines the appropriate Basescan API URL based on the chain ID
+func GetBasescanUrl(client *ethclient.Client) (string, error) {
+	chainID, err := client.ChainID(context.Background())
+	if err != nil {
+		return "", fmt.Errorf("failed to get chain ID: %v", err)
+	}
+
+	switch chainID.Int64() {
+	case 8453: // Base Mainnet
+		return "https://api.basescan.org", nil
+	case 84532: // Base Sepolia
+		return "https://api-sepolia.basescan.org", nil
+	default:
+		return "", fmt.Errorf("unsupported chain ID: %d", chainID)
+	}
+}
+
+// GetContractNameFromBasescan retrieves the contract name for a given address using the appropriate Basescan API
+func GetContractNameFromBasescan(baseURL, address, apiKey string) (string, error) {
+	url := fmt.Sprintf("%s/api?module=contract&action=getsourcecode&address=%s&apikey=%s", baseURL, address, apiKey)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", fmt.Errorf("failed to make request to Basescan API: %v", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %v", err)
+	}
+
+	var result struct {
+		Status  string `json:"status"`
+		Message string `json:"message"`
+		Result  []struct {
+			ContractName string `json:"ContractName"`
+		} `json:"result"`
+	}
+
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		return "", fmt.Errorf("failed to unmarshal JSON response: %v", err)
+	}
+
+	if result.Status != "1" {
+		return "", fmt.Errorf("Basescan API error: %s", result.Message)
+	}
+
+	if len(result.Result) == 0 {
+		return "", fmt.Errorf("no contract found for address %s", address)
+	}
+
+	return result.Result[0].ContractName, nil
 }
