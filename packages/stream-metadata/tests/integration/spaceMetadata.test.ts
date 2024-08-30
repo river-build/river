@@ -13,7 +13,7 @@ import {
 	SpaceMetadataParams,
 } from '../testUtils'
 import { config } from '../../src/environment'
-import { SpaceMetadataResponse } from '../../src/routes/spaceMetadata'
+import { spaceMetadataBaseUrl, SpaceMetadataResponse } from '../../src/routes/spaceMetadata'
 import { spaceDapp } from '../../src/contract-utils'
 
 const log = dlog('stream-metadata:test:spaceMetadata', {
@@ -162,7 +162,7 @@ describe('integration/space/:spaceAddress', () => {
 		/*
 		 * 5. verify the response.
 		 */
-		if (spaceUri.trim() === '' || spaceUri === config.riverSpaceStreamBaseUrl) {
+		if (spaceUri.trim() === '' || spaceUri.toLowerCase() === spaceMetadataBaseUrl) {
 			// 200 response case
 			const { name, description, image: imageUrl } = response.data
 			expect(response.status).toBe(200)
@@ -172,8 +172,8 @@ describe('integration/space/:spaceAddress', () => {
 			expect(description).toEqual(expectedDescription)
 
 			let expectedImageUrl = spaceUri
-			if (spaceUri.trim() === '' || spaceUri === config.riverSpaceStreamBaseUrl) {
-				expectedImageUrl = `${config.riverSpaceStreamBaseUrl}/${spaceAddress}/image`
+			if (spaceUri.trim() === '' || spaceUri === config.streamMetadataBaseUrl) {
+				expectedImageUrl = `${spaceMetadataBaseUrl}/${spaceAddress}/image`
 			}
 			expect(imageUrl.toLowerCase()).toEqual(expectedImageUrl.toLowerCase())
 		} else {

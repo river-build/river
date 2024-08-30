@@ -6,6 +6,8 @@ import { config } from '../environment'
 import { isValidEthereumAddress } from '../validators'
 import { spaceDapp } from '../contract-utils'
 
+export const spaceMetadataBaseUrl = `${config.streamMetadataBaseUrl}space`.toLowerCase()
+
 const paramsSchema = z.object({
 	spaceAddress: z.string().min(1, 'spaceAddress parameter is required'),
 })
@@ -54,7 +56,7 @@ export async function fetchSpaceMetadata(request: FastifyRequest, reply: Fastify
 
 	// Normalize the contractUri for case-insensitive comparison and handle empty string
 	const normalizedContractUri = spaceInfo.uri.toLowerCase().trim() || ''
-	const defaultSpaceTokenUri = `${config.riverSpaceStreamBaseUrl}/${spaceAddress}`
+	const defaultSpaceTokenUri = `${spaceMetadataBaseUrl}/${spaceAddress}`
 
 	// handle the case where the space uses our default stream-metadata service
 	// or the contractUri is not set or is an empty string
