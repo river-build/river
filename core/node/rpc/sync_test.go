@@ -236,7 +236,6 @@ func checkUpdate(t *testing.T, update *protocol.StreamAndCookie, opts *updateOpt
 			return
 		}
 	}
-	fmt.Println("checkUpdate: update: ", updateStr)
 	if opts.mbs >= 0 {
 		require.Len(t, update.Miniblocks, opts.mbs, "checkUpdate: update: %s", updateStr)
 	}
@@ -290,6 +289,12 @@ func TestSyncWithFlush(t *testing.T) {
 
 	require.NoError(addUserBlockedFillerEvent(ctx, wallet, client0, streamId, hash))
 	syncClients.expectOneUpdate(t, &updateOpts{events: 1, eventType: "UserSettingsPayload"})
+
+	hash, mbNum, err = makeMiniblock(ctx, client0, streamId, false, 0)
+	require.NoError(err)
+	require.NotEmpty(hash)
+	require.Equal(int64(2), mbNum)
+	syncClients.expectOneUpdate(t, &updateOpts{events: 1, eventType: "MiniblockHeader"})
 
 	syncClients.cancelAll(t, ctx)
 	syncClients.checkDone(t)
