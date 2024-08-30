@@ -3,6 +3,7 @@ import {
     ChannelDetails,
     ChannelMetadata,
     EntitlementModuleType,
+    isPermission,
     Permission,
     PricingModuleStruct,
     RoleDetails,
@@ -17,6 +18,8 @@ import {
     UpdateChannelParams,
     LegacyUpdateRoleParams,
     UpdateRoleParams,
+    SetChannelPermissionOverridesParams,
+    ClearChannelPermissionOverridesParams,
 } from '../ISpaceDapp'
 import { LOCALHOST_CHAIN_ID } from '../Web3Constants'
 import { IRolesBase } from './IRolesShim'
@@ -1029,6 +1032,66 @@ export class SpaceDapp implements ISpaceDapp {
                     params.permissions,
                     updatedEntitlemets,
                 ),
+            txnOpts,
+        )
+    }
+
+    public async getChannelPermissionOverrides(
+        spaceId: string,
+        roleId: number,
+        channelId: string,
+    ): Promise<Permission[]> {
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+
+        return (
+            await space.Roles.read.getChannelPermissionOverrides(
+                roleId,
+                channelId?.startsWith('0x') ? channelId : `0x${channelId}`,
+            )
+        ).filter(isPermission)
+    }
+
+    public async setChannelPermissionOverrides(
+        params: SetChannelPermissionOverridesParams,
+        signer: ethers.Signer,
+        txnOpts?: TransactionOpts,
+    ): Promise<ContractTransaction> {
+        const space = this.getSpace(params.spaceNetworkId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${params.spaceNetworkId}" is not found.`)
+        }
+        const channelId = params.channelId.startsWith('0x')
+            ? params.channelId
+            : `0x${params.channelId}`
+        return wrapTransaction(
+            () =>
+                space.Roles.write(signer).setChannelPermissionOverrides(
+                    params.roleId,
+                    channelId,
+                    params.permissions,
+                ),
+            txnOpts,
+        )
+    }
+
+    public async clearChannelPermissionOverrides(
+        params: ClearChannelPermissionOverridesParams,
+        signer: ethers.Signer,
+        txnOpts?: TransactionOpts,
+    ): Promise<ContractTransaction> {
+        const space = this.getSpace(params.spaceNetworkId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${params.spaceNetworkId}" is not found.`)
+        }
+        const channelId = params.channelId.startsWith('0x')
+            ? params.channelId
+            : `0x${params.channelId}`
+        return wrapTransaction(
+            () =>
+                space.Roles.write(signer).clearChannelPermissionOverrides(params.roleId, channelId),
             txnOpts,
         )
     }
