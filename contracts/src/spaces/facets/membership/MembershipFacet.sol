@@ -172,8 +172,8 @@ contract MembershipFacet is
     }
 
     if (shouldCharge) {
-      membershipPrice = _getCapturedValue(transactionId);
-      if (membershipPrice == 0) revert Membership__InsufficientPayment();
+      paidPrice = _getCapturedValue(transactionId);
+      if (paidPrice == 0) revert Membership__InsufficientPayment();
     }
 
     // get token id
