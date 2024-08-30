@@ -163,16 +163,6 @@
       }
     },
     {
-      "label": "Start Load Testing Redis",
-      "type": "shell",
-      "command": "./scripts/start-load-testing-redis.sh",
-      "isBackground": true,
-      "problemMatcher": [],
-      "presentation": {
-        "group": "local-servers"
-      }
-    },
-    {
       "label": "Start Stress Testing Redis",
       "type": "shell",
       "command": "./packages/stress/scripts/start_redis.sh",
@@ -465,7 +455,7 @@
     {
       "label": "Kill Watches",
       "type": "shell",
-      "command": "echo 'killing watches' && kill $(ps -ax | grep 'yarn watch' | awk '{print $1}') && return 0",
+      "command": "./scripts/kill-watches.sh",
       "isBackground": false,
       "problemMatcher": [],
       "presentation": {
