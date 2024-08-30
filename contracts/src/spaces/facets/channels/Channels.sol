@@ -26,7 +26,7 @@ contract Channels is IChannel, ChannelBase, RolesBase, Entitled, Facet {
   function createChannelWithOverridePermissions(
     bytes32 channelId,
     string memory metadata,
-    RolePermissions[] memory rolePermissions //how do we pass in a m
+    RolePermissions[] calldata rolePermissions
   ) external {
     _validatePermission(Permissions.ModifyChannels);
 
