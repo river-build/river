@@ -160,7 +160,7 @@ contract MembershipFacet is
     uint256 prepaidSupply = _getPrepaidSupply();
 
     bool shouldCharge = true;
-    uint256 membershipPrice;
+    uint256 paidPrice;
 
     if (freeAllocation > _totalSupply()) {
       shouldCharge = false;
@@ -181,14 +181,14 @@ contract MembershipFacet is
 
     if (shouldCharge) {
       // set renewal price for token
-      _setMembershipRenewalPrice(tokenId, membershipPrice);
-      uint256 protocolFee = _collectProtocolFee(sender, membershipPrice);
+      _setMembershipRenewalPrice(tokenId, paidPrice);
+      uint256 protocolFee = _collectProtocolFee(sender, paidPrice);
 
-      uint256 surplus = membershipPrice - protocolFee;
+      uint256 surplus = paidPrice - protocolFee;
       if (surplus > 0) _transferIn(sender, surplus);
 
       // release captured value
-      _releaseCapturedValue(transactionId, membershipPrice);
+      _releaseCapturedValue(transactionId, paidPrice);
       _captureData(transactionId, "");
     }
 
