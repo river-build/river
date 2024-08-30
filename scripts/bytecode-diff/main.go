@@ -228,7 +228,11 @@ func executeEnvrionmentDiff(cmd *cobra.Command, baseConfig u.BaseConfig, deploym
 	}
 	// Create Ethereum client
 	clients, err := utils.CreateEthereumClients(baseConfig.BaseRpcUrl, baseConfig.BaseSepoliaRpcUrl, originEnvironment, targetEnvironment, verbose)
-
+	defer func() {
+		for _, client := range clients {
+			client.Close()
+		}
+	}()
 	// getCode for all facet addresses over base rpc url and compare with compiled hashes
 	originFacets := make(map[string][]utils.Facet)
 
@@ -237,7 +241,24 @@ func executeEnvrionmentDiff(cmd *cobra.Command, baseConfig u.BaseConfig, deploym
 		if err != nil {
 			return fmt.Errorf("error reading all facets for origin diamond %s: %v", diamondName, err)
 		}
+		err = utils.AddContractCodeHashes(clients[originEnvironment], facets)
+		if err != nil {
+			return fmt.Errorf("error adding contract code hashes for origin diamond %s: %v", diamondName, err)
+		}
 		originFacets[string(diamondName)] = facets
+	}
+
+	targetFacets := make(map[string][]utils.Facet)
+	for diamondName, diamondAddress := range targetDiamonds {
+		facets, err := utils.ReadAllFacets(clients[targetEnvironment], diamondAddress, baseConfig.BasescanAPIKey)
+		if err != nil {
+			return fmt.Errorf("error reading all facets for target diamond %s: %v", diamondName, err)
+		}
+		err = utils.AddContractCodeHashes(clients[targetEnvironment], facets)
+		if err != nil {
+			return fmt.Errorf("error adding contract code hashes for target diamond %s: %v", diamondName, err)
+		}
+		targetFacets[string(diamondName)] = facets
 	}
 	if verbose {
 		for diamondName, facets := range originFacets {
@@ -247,17 +268,6 @@ func executeEnvrionmentDiff(cmd *cobra.Command, baseConfig u.BaseConfig, deploym
 				fmt.Printf("Selectors: %v\n", facet.SelectorsHex)
 			}
 		}
-	}
-
-	targetFacets := make(map[string][]utils.Facet)
-	for diamondName, diamondAddress := range targetDiamonds {
-		facets, err := utils.ReadAllFacets(clients[targetEnvironment], diamondAddress, baseConfig.BasescanAPIKey)
-		if err != nil {
-			return fmt.Errorf("error reading all facets for target diamond %s: %v", diamondName, err)
-		}
-		targetFacets[string(diamondName)] = facets
-	}
-	if verbose {
 		for diamondName, facets := range targetFacets {
 			fmt.Printf("Target Facets for Diamond contract %s\n", diamondName)
 			for _, facet := range facets {
@@ -266,7 +276,27 @@ func executeEnvrionmentDiff(cmd *cobra.Command, baseConfig u.BaseConfig, deploym
 			}
 		}
 	}
+
+	// compare facets and create report
+	differences := utils.CompareFacets(originFacets, targetFacets)
+	if verbose {
+		for diamondName, facets := range differences {
+			fmt.Printf("\nDifferences for Diamond contract %s\n", diamondName)
+			for _, facet := range facets {
+				fmt.Printf("\nOrigin Facet: %s %s\n", facet.FacetAddress, facet.ContractName)
+				fmt.Printf("Selector Diff: %v\n", facet.SelectorsHex)
+				if facet.OriginBytecodeHash != facet.TargetBytecodeHash {
+					fmt.Printf("Different bytecode hashes for facet %s\n", facet.ContractName)
+					fmt.Printf("Origin Bytecode Hash: %s\n", facet.OriginBytecodeHash)
+					fmt.Printf("Target Bytecode Hash: %s\n", facet.TargetBytecodeHash)
+					fmt.Printf("Target Contract Address: %s\n", facet.TargetContractAddress)
+				}
+			}
+		}
+	}
+
 	// create report
 	fmt.Println("Report out dir:", reportOutDir)
+	err = u.GenerateYAMLReport(differences, reportOutDir)
 	return nil
 }

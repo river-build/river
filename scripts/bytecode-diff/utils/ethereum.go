@@ -12,15 +12,17 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 // Facet represents the struct returned by the facets() function
 type Facet struct {
 	FacetAddress common.Address
-	Selectors    [][4]byte
-	SelectorsHex []string `abi:"-"`
-	ContractName string   `json:",omitempty"`
+	Selectors    [][4]byte `json:",omitempty"`
+	SelectorsHex []string  `abi:"-"`
+	ContractName string    `json:",omitempty"`
+	BytecodeHash string    `json:",omitempty"`
 }
 
 // ReadAllFacets reads all the facets from the given Diamond contract address
@@ -221,4 +223,23 @@ func GetContractNameFromBasescan(baseURL, address, apiKey string) (string, error
 	}
 
 	return result.Result[0].ContractName, nil
+}
+
+// AddContractCodeHashes reads the contract code for each facet and adds its keccak256 hash to the Facet struct
+func AddContractCodeHashes(client *ethclient.Client, facets []Facet) error {
+	for i, facet := range facets {
+		// Read the contract code
+		code, err := client.CodeAt(context.Background(), facet.FacetAddress, nil)
+		if err != nil {
+			return fmt.Errorf("failed to read contract code for address %s: %v", facet.FacetAddress.Hex(), err)
+		}
+
+		// Hash the code using Keccak256Hash
+		hash := crypto.Keccak256Hash(code)
+
+		// Store the hash hex string in the Facet struct
+		facets[i].BytecodeHash = hash.Hex()
+	}
+
+	return nil
 }

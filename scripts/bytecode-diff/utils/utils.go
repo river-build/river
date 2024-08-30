@@ -21,6 +21,11 @@ const (
 	filePermissions = 0o644
 )
 
+type DiamondReport struct {
+	Name   string      `yaml:"name"`
+	Facets []FacetDiff `yaml:"facets"`
+}
+
 type Data struct {
 	Updated  map[string]string `yaml:"updated"`
 	Existing map[string]string `yaml:"existing"`
@@ -314,4 +319,52 @@ func GetDiamondAddresses(basePath string, diamonds []Diamond, verbose bool) (map
 	}
 
 	return diamondAddresses, nil
+}
+
+func GenerateYAMLReport(facetDiffs map[string][]FacetDiff, reportOutDir string) error {
+	type Report struct {
+		Diamonds []DiamondReport `yaml:"diamonds"`
+	}
+
+	var report Report
+
+	for diamondName, diffs := range facetDiffs {
+		diamondReport := DiamondReport{
+			Name:   diamondName,
+			Facets: diffs,
+		}
+		report.Diamonds = append(report.Diamonds, diamondReport)
+	}
+
+	// Create filename with date and incremental integer
+	date := time.Now().Format("010206")
+	var filename string
+	for i := 1; ; i++ {
+		filename = filepath.Join(reportOutDir, fmt.Sprintf("facet_diff_%s_%d.yaml", date, i))
+		if _, err := os.Stat(filename); os.IsNotExist(err) {
+			break
+		}
+	}
+
+	// Ensure the directory exists
+	err := os.MkdirAll(filepath.Dir(filename), 0755)
+	if err != nil {
+		return fmt.Errorf("failed to create directory: %v", err)
+	}
+
+	// Write YAML file
+	file, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %v", err)
+	}
+	defer file.Close()
+
+	encoder := yaml.NewEncoder(file)
+	err = encoder.Encode(report)
+	if err != nil {
+		return fmt.Errorf("failed to encode YAML: %v", err)
+	}
+
+	fmt.Printf("Report generated: %s\n", filename)
+	return nil
 }
