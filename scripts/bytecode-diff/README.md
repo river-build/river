@@ -1,17 +1,25 @@
 # Bytecode-Diff Tool
 
-Bytecode-Diff is a tool to retrieve and display contract bytecode diff for Base deployed contracts and Solidity source compiled bytecode compiled with forge. It provides functionality to run source code diffs and create reports that detail changes in Solidity source code and deployed bytecode between two compiled bytecode versions and two deployed bytecode versions across different networks.
+Bytecode-Diff is a tool to retrieve and display contract bytecode diff for Base deployed contracts and Solidity source compiled bytecode compiled with forge. It provides functionality to run source code diffs or remote bytecode diffs and create reports that detail changes between two compiled bytecode versions of contracts.
 
 ## Prerequisites
 
 - Go 1.22 or later
 - Base RPC Provider URL
+- Basescan API Key
 
 ## Usage
+
+### Local Source Code Diff
+
+Compile contracts with forge and run source code diff comparing nearest commit report with checked out commit.
 
 The basic command structure is:
 
 ```bash
+# ensure contracts are compiled with forge
+cd ../../contracts
+make build
 # disable go.work file since bytecode-diff is not a module in parent go workspace
 go mod download
 # run source diff from checked out commitSha compared nearest commit with a source diff report in SOURCE_DIFF_DIR
@@ -29,10 +37,56 @@ ChannelBase: 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470
 ...
 ```
 
+### Run pairwise remote bytecode diff on facets deployed to two networks
+
+Runs bytecode diff from deployed facets for diamonds in alpha, gamma, and omega environments as per source coordinates of diamonds for each environment.
+
+```
+# compare omega against gamma facets and facet selectors
+GOWORK=off go run ./main.go gamma omega -v
+
+# output facet implementation changes by facet or selectors that are missing from omega
+➜  bytecode-diff git:(jt/net-62-contract-differ) ✗ yq eval deployed-diffs/facet_diff_090324_18.yaml
+diamonds:
+  - name: spaceOwner
+    origin: gamma
+    target: omega
+    facets:
+      - originContractName: ""
+        originFacetAddress: 0xfa98a1648761e494fc7d6efe5a06e357a76bd6fb
+        selectorsDiff:
+          - "0x3953801b"
+          - "0x91de4a83"
+        originBytecodeHash: 0xf86d9dbe53c89e14fa69cde925cca02b6efad519fe172f7b04d9515d7700a59b
+        originVerified: false
+        targetVerified: false
+      - originContractName: SpaceOwner
+        originFacetAddress: 0x30c912d8ceb9793e4cd240862acfd0e6c4436c52
+        targetContractAddresses:
+          - 0x63bC35259Ac32DF43Fba3b890F0F74951451976A
+          - 0xe7EB1313f0E7076616534225e16E971B72b50C42
+        selectorsDiff: []
+        originBytecodeHash: 0x461b53ab37fd24283ecd63eb0d4e71bd554a266036c73caf6d2ac39c435e7732
+        targetBytecodeHashes:
+          - 0x86d20161a13671a6138b80551e94dd8c1638bc5151807ff2194aa1e50cdb3cac
+          - 0xff0a94e93a4f4f6ee0ecd0d0e469e55ca40f1ab6c10e6af9da5b2b597f32b178
+        originVerified: true
+        targetVerified: true
+      - originContractName: ""
+        originFacetAddress: 0xdba2ce6125cc6b7f93c63d181a0780d5b421940b
+        selectorsDiff:
+          - "0x0d653654"
+          - "0x466a18de"
+        originBytecodeHash: 0x583c2852056f90c96ed1cab935489f644b8ef564e0a7f11564925d07cf3bc593
+        originVerified: false
+        targetVerified: false
+
+```
+
 ### Flags
 
 ```base
-➜  bytecode-diff ✗ go run ./main.go --help
+➜  bytecode-diff ✗ GOWORK=off go run ./main.go --help
 A tool to retrieve and display contract bytecode diff for Base
 
 Usage:
@@ -45,6 +99,7 @@ Flags:
       --deployments string        Path to deployments directory (default "../../contracts/deployments")
       --facets string             Path to facet source files
   -h, --help                      help for bytecode-diff
+      --log-level string          Set the logging level (debug, info, warn, error) (default "info")
       --report-out-dir string     Path to report output directory (default "deployed-diffs")
       --source-diff-log string    Path to diff log file (default "source-diffs")
   -s, --source-diff-only          Run source code diff
@@ -56,10 +111,11 @@ Flags:
 You can also set the following environment variables instead of using flags:
 
 - `BASE_RPC_URL`: Base RPC provider URL
+- `BASE_SEPOLIA_RPC_URL`: Base Sepolia RPC provider URL
 - `SOURCE_DIFF_DIR`: Path to source diff reports
 - `FACET_SOURCE_PATH`: Path to facet source files
 - `COMPILED_FACETS_PATH`: Path to compiled facets
-- `REPORT_OUT_DIR`: Path to report output directory
+- `REPORT_OUT_DIR`: (Optional) Path to report output directory
 - `BASESCAN_API_KEY`: Required. Your API key for BaseScan.
 
 ## Examples
@@ -68,7 +124,6 @@ You can also set the following environment variables instead of using flags:
 
 ```
 ./bytecode-diff --source-diff-only \
-  --rpc https://base-rpc.example.com \
   --source-diff-dir /path/to/source-diff-reports \
   --facets /path/to/facet/sources \
   --compiled-facets /path/to/compiled/facets \
@@ -79,19 +134,12 @@ You can also set the following environment variables instead of using flags:
 2. Run source code diff using environment variables:
 
 ```
-export BASE_RPC_URL=https://base-rpc.example.com
 export SOURCE_DIFF_DIR=/path/to/source_diff.log
 export FACET_SOURCE_PATH=/path/to/facet/sources
 export COMPILED_FACETS_PATH=/path/to/compiled/facets
 export REPORT_OUT_DIR=/path/to/report/output
 
 ./bytecode-diff -s --verbose
-```
-
-3. Run pairwise remote bytecode diff of deployed facets for diamonds in alpha, gamma, and omega environments.
-
-```
-GOWORK=off go run ./main.go gamma omega -v
 ```
 
 ## Notes

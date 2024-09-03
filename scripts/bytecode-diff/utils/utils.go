@@ -44,7 +44,7 @@ type Diamond string
 const (
 	BaseRegistry Diamond = "baseRegistry"
 	Space        Diamond = "space"
-	SpaceFactory Diamond = "space"
+	SpaceFactory Diamond = "spaceFactory"
 	SpaceOwner   Diamond = "spaceOwner"
 )
 
