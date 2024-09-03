@@ -26,7 +26,7 @@ library RewardsDistributionStorage {
     mapping(address depositor => uint256 amount) stakedByDepositor;
     mapping(address beneficiary => IRewardsDistributionBase.Treasure) treasureByBeneficiary;
     mapping(uint256 depositId => IRewardsDistributionBase.Deposit) deposits;
-    mapping(address delegatee => address surrogate) surrogates;
+    mapping(address delegatee => address minion) delegationMinions;
     mapping(address rewardNotifier => bool) isRewardNotifier;
     mapping(address operator => uint256 commissionRate) commissionRateByOperator;
   }
