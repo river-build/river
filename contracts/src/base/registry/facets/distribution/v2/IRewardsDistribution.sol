@@ -9,7 +9,7 @@ pragma solidity ^0.8.18;
 
 interface IRewardsDistributionBase {
   struct Deposit {
-    uint96 balance;
+    uint96 amount;
     address owner;
     address delegatee;
     address beneficiary;
