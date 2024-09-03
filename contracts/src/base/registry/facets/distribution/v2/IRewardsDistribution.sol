@@ -21,7 +21,7 @@ interface IRewardsDistributionBase {
     uint256 unclaimedRewardSnapshot;
   }
 
-  event SurrogateDeployed(address indexed delegatee, address indexed surrogate);
+  event MinionDeployed(address indexed delegatee, address indexed minion);
 }
 
 interface IRewardsDistribution is IRewardsDistributionBase {}
