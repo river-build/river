@@ -11,6 +11,7 @@ import {RewardsDistributionStorage} from "./RewardsDistributionStorage.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 
 // contracts
+import {DelegationMinion} from "./DelegationMinion.sol";
 
 library RewardsDistribution {
   using CustomRevert for bytes4;
@@ -98,16 +99,16 @@ library RewardsDistribution {
     treasure.rewardPerTokenAccumulated = $.rewardPerTokenAccumulated;
   }
 
-  function retrieveOrDeploySurrogate(
+  function retrieveOrDeployMinion(
     RewardsDistributionStorage.Layout storage $,
     address delegatee
-  ) internal returns (address surrogate) {
-    surrogate = $.surrogates[delegatee];
+  ) internal returns (address minion) {
+    minion = $.delegationMinions[delegatee];
 
-    if (surrogate == address(0)) {
-      // TODO: surrogate = new DelegationSurrogate(STAKE_TOKEN, delegatee);
-      $.surrogates[delegatee] = surrogate;
-      emit IRewardsDistributionBase.SurrogateDeployed(delegatee, surrogate);
+    if (minion == address(0)) {
+      minion = new DelegationMinion($.stakeToken, delegatee);
+      $.delegationMinions[delegatee] = minion;
+      emit IRewardsDistributionBase.MinionDeployed(delegatee, minion);
     }
   }
 
@@ -138,8 +139,8 @@ library RewardsDistribution {
       beneficiary: beneficiary
     });
 
-    address surrogate = retrieveOrDeploySurrogate($, delegatee);
-    $.stakeToken.safeTransferFrom(depositor, surrogate, amount);
+    address minion = retrieveOrDeployMinion($, delegatee);
+    $.stakeToken.safeTransferFrom(depositor, minion, amount);
     // TODO: emit events
   }
 
@@ -159,8 +160,8 @@ library RewardsDistribution {
     $.treasureByBeneficiary[beneficiary].balance += amount;
     deposit.balance += amount;
 
-    address surrogate = $.surrogates[deposit.delegatee];
-    $.stakeToken.safeTransferFrom(owner, surrogate, amount);
+    address minion = $.delegationMinions[deposit.delegatee];
+    $.stakeToken.safeTransferFrom(owner, minion, amount);
     // TODO: emit events
   }
 }
