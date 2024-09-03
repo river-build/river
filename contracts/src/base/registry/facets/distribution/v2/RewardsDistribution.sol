@@ -106,7 +106,7 @@ library RewardsDistribution {
     minion = $.delegationMinions[delegatee];
 
     if (minion == address(0)) {
-      minion = new DelegationMinion($.stakeToken, delegatee);
+      minion = address(new DelegationMinion($.stakeToken, delegatee));
       $.delegationMinions[delegatee] = minion;
       emit IRewardsDistributionBase.MinionDeployed(delegatee, minion);
     }
@@ -162,6 +162,43 @@ library RewardsDistribution {
 
     address minion = $.delegationMinions[deposit.delegatee];
     $.stakeToken.safeTransferFrom(owner, minion, amount);
+    // TODO: emit events
+  }
+
+  function redelegate(
+    RewardsDistributionStorage.Layout storage $,
+    uint256 depositId,
+    address newDelegatee
+  ) internal {
+    if (newDelegatee == address(0))
+      RewardsDistribution_InvalidAddress.selector.revertWith();
+    IRewardsDistributionBase.Deposit storage deposit = $.deposits[depositId];
+    address oldDelegatee = deposit.delegatee;
+    address oldMinion = $.delegationMinions[oldDelegatee];
+    deposit.delegatee = newDelegatee;
+    address newMinion = retrieveOrDeployMinion($, newDelegatee);
+    $.stakeToken.safeTransferFrom(oldMinion, newMinion, deposit.balance);
+    // TODO: emit events
+  }
+
+  function changeBeneficiary(
+    RewardsDistributionStorage.Layout storage $,
+    uint256 depositId,
+    address newBeneficiary
+  ) internal {
+    if (newBeneficiary == address(0))
+      RewardsDistribution_InvalidAddress.selector.revertWith();
+    updateGlobalReward($);
+    IRewardsDistributionBase.Deposit storage deposit = $.deposits[depositId];
+    address oldBeneficiary = deposit.beneficiary;
+    updateReward($, oldBeneficiary);
+    uint96 balance = deposit.balance;
+    // TODO: unchecked math
+    $.treasureByBeneficiary[oldBeneficiary].balance -= balance;
+
+    updateReward($, newBeneficiary);
+    deposit.beneficiary = newBeneficiary;
+    $.treasureByBeneficiary[newBeneficiary].balance += balance;
     // TODO: emit events
   }
 }
