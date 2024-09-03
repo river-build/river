@@ -20,6 +20,21 @@ func init() {
 	utils.SetLogger(log)
 }
 
+func setLogLevel(level string) {
+	switch level {
+	case "debug":
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	case "info":
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	case "warn":
+		zerolog.SetGlobalLevel(zerolog.WarnLevel)
+	case "error":
+		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	default:
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	}
+}
+
 func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Warn().Msg("No .env file found")
@@ -181,21 +196,6 @@ func main() {
 
 }
 
-func setLogLevel(level string) {
-	switch level {
-	case "debug":
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	case "info":
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	case "warn":
-		zerolog.SetGlobalLevel(zerolog.WarnLevel)
-	case "error":
-		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
-	default:
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	}
-}
-
 func executeSourceDiff(verbose bool, facetSourcePath, compiledFacetsPath string, reportOutDir string) error {
 	facetFiles, err := u.GetFacetFiles(facetSourcePath)
 	if err != nil {
@@ -244,13 +244,13 @@ func executeEnvrionmentDiff(verbose bool, baseConfig u.BaseConfig, deploymentsPa
 	originDeploymentsPath := filepath.Join(deploymentsPath, originEnvironment)
 	originDiamonds, err := u.GetDiamondAddresses(originDeploymentsPath, baseDiamonds, verbose)
 	if err != nil {
-		log.Error().Err(err).Msg("Error getting diamond addresses for origin environment")
+		log.Error().Err(err).Msgf("Error getting diamond addresses for origin environment %s", originEnvironment)
 		return err
 	}
 	targetDeploymentsPath := filepath.Join(deploymentsPath, targetEnvironment)
 	targetDiamonds, err := u.GetDiamondAddresses(targetDeploymentsPath, baseDiamonds, verbose)
 	if err != nil {
-		log.Error().Err(err).Msg("Error getting diamond addresses for target environment")
+		log.Error().Err(err).Msgf("Error getting diamond addresses for target environment %s", targetEnvironment)
 		return err
 	}
 	// Create Ethereum client
@@ -321,36 +321,20 @@ func executeEnvrionmentDiff(verbose bool, baseConfig u.BaseConfig, deploymentsPa
 			log.Info().Str("diamondName", diamondName).Msg("Differences for Diamond contract")
 			for _, facet := range facets {
 				log.Info().
-					Str("facetAddress", facet.FacetAddress.Hex()).
-					Str("contractName", facet.ContractName).
+					Str("facetAddress", facet.OriginContractAddress.Hex()).
+					Str("originContractName", facet.OriginContractName).
 					Msg("Origin Facet")
 				log.Info().
-					Interface("selectorDiff", facet.SelectorsHex).
+					Interface("selectorDiff", facet.SelectorsDiff).
 					Msg("Selector Diff")
 
-				if facet.OriginBytecodeHash != facet.TargetBytecodeHash {
-					log.Info().
-						Str("contractName", facet.ContractName).
-						Str("originBytecodeHash", facet.OriginBytecodeHash).
-						Str("targetBytecodeHash", facet.TargetBytecodeHash).
-						Str("targetContractAddress", facet.TargetContractAddress.Hex()).
-						Msg("Different bytecode hashes for facet")
-				} else {
-					log.Info().
-						Str("contractName", facet.ContractName).
-						Str("facetAddress", facet.FacetAddress.Hex()).
-						Str("originBytecodeHash", facet.OriginBytecodeHash).
-						Str("targetBytecodeHash", facet.TargetBytecodeHash).
-						Str("targetContractAddress", facet.TargetContractAddress.Hex()).
-						Msg("No differences found for facet")
-				}
 			}
 		}
 	}
 
 	// create report
 	log.Info().Str("reportOutDir", reportOutDir).Msg("Generating YAML report")
-	err = u.GenerateYAMLReport(differences, reportOutDir)
+	err = u.GenerateYAMLReport(originEnvironment, targetEnvironment, differences, reportOutDir)
 	if err != nil {
 		log.Error().Err(err).Msg("Error generating YAML report")
 		return err

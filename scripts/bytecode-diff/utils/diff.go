@@ -1,22 +1,26 @@
 package utils
 
 import (
-	"strings"
-
 	"github.com/ethereum/go-ethereum/common"
 )
 
 // FacetDiff represents the differences between origin and target facets
 type FacetDiff struct {
-	Facet
-	OriginBytecodeHash    string         `json:",omitempty"`
-	TargetBytecodeHash    string         `json:",omitempty"`
-	TargetContractAddress common.Address `json:",omitempty"`
+	OriginContractName      string         `yaml:"originContractName"`
+	TargetContractName      string         `yaml:"targetContractName,omitempty"`
+	OriginContractAddress   common.Address `yaml:"originFacetAddress"`
+	TargetContractAddresses []string       `yaml:"targetContractAddresses,omitempty"`
+	SelectorsDiff           []string       `yaml:"selectorsDiff" abi:"-"`
+	OriginBytecodeHash      string         `yaml:"originBytecodeHash,omitempty"`
+	TargetBytecodeHashes    []string       `yaml:"targetBytecodeHashes,omitempty"`
+	OriginVerified          bool           `yaml:"originVerified"`
+	TargetVerified          bool           `yaml:"targetVerified"`
 }
 
 type MergedFacet struct {
 	Facet
-	BytecodeHashes []string
+	BytecodeHashes    []string
+	ContractAddresses []string
 }
 
 // CompareFacets compares origin and target Facet arrays and returns the differences
@@ -37,8 +41,41 @@ func CompareFacets(origin, target map[string][]Facet) map[string][]FacetDiff {
 		var diamondDifferences []FacetDiff
 		// compare each origin facet set for each diamond with target facets
 		for _, o := range originFacets {
+			// if origin facet is not verified, add it to differences
+			if o.ContractName == "" {
+				Log.Info().Msgf("Origin facet is not verified: %+v", o)
+				diamondDifferences = append(diamondDifferences, FacetDiff{
+					OriginContractAddress:   o.FacetAddress,
+					SelectorsDiff:           o.SelectorsHex,
+					OriginContractName:      o.ContractName,
+					TargetContractName:      "",
+					OriginBytecodeHash:      o.BytecodeHash,
+					TargetBytecodeHashes:    []string{},
+					TargetContractAddresses: []string{},
+					OriginVerified:          false,
+				})
+				continue
+			}
 			found := false
 			for _, t := range mergedTargetFacets {
+				if o.FacetAddress == common.HexToAddress("0xfa98a1648761e494fc7d6efe5a06e357a76bd6fb") {
+					Log.Info().Msgf("Target Facet for facet address 0xfa98a1648761e494fc7d6efe5a06e357a76bd6fb : %+v", t)
+					Log.Info().Msgf("Origin facet name: %s", o.ContractName)
+				}
+				// if target facet is not verified, add it to differences
+				if t.ContractName == "" {
+					diamondDifferences = append(diamondDifferences, FacetDiff{
+						OriginContractAddress:   o.FacetAddress,
+						SelectorsDiff:           o.SelectorsHex,
+						OriginContractName:      o.ContractName,
+						TargetContractName:      "",
+						OriginBytecodeHash:      o.BytecodeHash,
+						TargetBytecodeHashes:    []string{},
+						TargetContractAddresses: []string{},
+						TargetVerified:          false,
+					})
+					continue
+				}
 				// find match by facetName
 				if t.ContractName == o.ContractName {
 					found = true
@@ -52,30 +89,30 @@ func CompareFacets(origin, target map[string][]Facet) map[string][]FacetDiff {
 					}
 					if len(diffSelectors) > 0 || bytecodeChanged {
 						diamondDifferences = append(diamondDifferences, FacetDiff{
-							Facet: Facet{
-								FacetAddress: o.FacetAddress,
-								SelectorsHex: diffSelectors,
-								ContractName: o.ContractName,
-							},
-							OriginBytecodeHash:    o.BytecodeHash,
-							TargetBytecodeHash:    strings.Join(t.BytecodeHashes, ","),
-							TargetContractAddress: t.FacetAddress,
+							OriginContractAddress:   o.FacetAddress,
+							SelectorsDiff:           diffSelectors,
+							OriginContractName:      o.ContractName,
+							OriginBytecodeHash:      o.BytecodeHash,
+							TargetBytecodeHashes:    t.BytecodeHashes,
+							TargetContractAddresses: t.ContractAddresses,
+							OriginVerified:          true,
+							TargetVerified:          true,
 						})
 					}
 					break
 				}
 			}
 			if !found {
-				// Contract doesn't exist in target, add all selectors
+				// Contract by name doesn't exist in target set, add all selectors
 				diamondDifferences = append(diamondDifferences, FacetDiff{
-					Facet: Facet{
-						FacetAddress: o.FacetAddress,
-						SelectorsHex: o.SelectorsHex,
-						ContractName: o.ContractName,
-					},
-					OriginBytecodeHash:    o.BytecodeHash,
-					TargetBytecodeHash:    "",
-					TargetContractAddress: common.Address{},
+					OriginContractAddress:   o.FacetAddress,
+					SelectorsDiff:           o.SelectorsHex,
+					OriginContractName:      o.ContractName,
+					TargetContractName:      "",
+					OriginBytecodeHash:      o.BytecodeHash,
+					TargetBytecodeHashes:    []string{},
+					TargetContractAddresses: []string{},
+					OriginVerified:          true,
 				})
 			}
 		}
@@ -93,14 +130,12 @@ func convertToFacetDiff(facets []Facet) []FacetDiff {
 	diffs := make([]FacetDiff, len(facets))
 	for i, f := range facets {
 		diffs[i] = FacetDiff{
-			Facet: Facet{
-				FacetAddress: f.FacetAddress,
-				SelectorsHex: f.SelectorsHex,
-				ContractName: f.ContractName,
-			},
-			OriginBytecodeHash:    f.BytecodeHash,
-			TargetBytecodeHash:    "",
-			TargetContractAddress: common.Address{},
+			OriginContractAddress:   f.FacetAddress,
+			SelectorsDiff:           f.SelectorsHex,
+			OriginContractName:      f.ContractName,
+			OriginBytecodeHash:      f.BytecodeHash,
+			TargetContractAddresses: []string{},
+			TargetContractName:      "",
 		}
 	}
 	return diffs
@@ -133,11 +168,13 @@ func mergeFacets(facets []Facet) []MergedFacet {
 			existing.SelectorsHex = append(existing.SelectorsHex, facet.SelectorsHex...)
 			// Append BytecodeHash
 			existing.BytecodeHashes = append(existing.BytecodeHashes, facet.BytecodeHash)
+			existing.ContractAddresses = append(existing.ContractAddresses, facet.FacetAddress.Hex())
 			mergedFacets[facet.ContractName] = existing
 		} else {
 			mergedFacets[facet.ContractName] = MergedFacet{
-				Facet:          facet,
-				BytecodeHashes: []string{facet.BytecodeHash},
+				Facet:             facet,
+				BytecodeHashes:    []string{facet.BytecodeHash},
+				ContractAddresses: []string{facet.FacetAddress.Hex()},
 			}
 		}
 	}

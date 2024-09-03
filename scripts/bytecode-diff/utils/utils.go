@@ -24,6 +24,8 @@ const (
 
 type DiamondReport struct {
 	Name   string      `yaml:"name"`
+	Origin string      `yaml:"origin"`
+	Target string      `yaml:"target"`
 	Facets []FacetDiff `yaml:"facets"`
 }
 
@@ -321,7 +323,7 @@ func GetDiamondAddresses(basePath string, diamonds []Diamond, verbose bool) (map
 	return diamondAddresses, nil
 }
 
-func GenerateYAMLReport(facetDiffs map[string][]FacetDiff, reportOutDir string) error {
+func GenerateYAMLReport(originEnvironment, targetEnvironment string, facetDiffs map[string][]FacetDiff, reportOutDir string) error {
 	type Report struct {
 		Diamonds []DiamondReport `yaml:"diamonds"`
 	}
@@ -331,6 +333,8 @@ func GenerateYAMLReport(facetDiffs map[string][]FacetDiff, reportOutDir string) 
 	for diamondName, diffs := range facetDiffs {
 		diamondReport := DiamondReport{
 			Name:   diamondName,
+			Origin: originEnvironment,
+			Target: targetEnvironment,
 			Facets: diffs,
 		}
 		report.Diamonds = append(report.Diamonds, diamondReport)
