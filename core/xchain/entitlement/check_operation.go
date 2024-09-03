@@ -414,11 +414,11 @@ func (e *Evaluator) evaluateErc1155Operation(
 		return false, err
 	}
 
-	// Decode the threshold params
+	// Decode the ERC1155 params
 	params, err := types.DecodeERC1155Params(op.Params)
 	if err != nil {
-		log.Error("evaluateErc1155Operation: failed to decode threshold params", "error", err)
-		return false, fmt.Errorf("evaluateErc1155Operation: failed to decode threshold params, %w", err)
+		log.Error("evaluateErc1155Operation: failed to decode erc1155 params", "error", err)
+		return false, fmt.Errorf("evaluateErc1155Operation: failed to decode erc1155 params, %w", err)
 	}
 
 	total := big.NewInt(0)
