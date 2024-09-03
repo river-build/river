@@ -8,10 +8,12 @@ import {IRewardsDistributionBase} from "./IRewardsDistribution.sol";
 import {FixedPointMathLib} from "solady/src/utils/FixedPointMathLib.sol";
 import {SafeTransferLib} from "solady/src/utils/SafeTransferLib.sol";
 import {RewardsDistributionStorage} from "./RewardsDistributionStorage.sol";
+import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 
 // contracts
 
 library RewardsDistribution {
+  using CustomRevert for bytes4;
   using FixedPointMathLib for uint256;
   using SafeTransferLib for address;
 
@@ -116,8 +118,10 @@ library RewardsDistribution {
     address delegatee,
     address beneficiary
   ) internal returns (uint256 depositId) {
-    if (delegatee == address(0)) revert RewardsDistribution_InvalidAddress();
-    if (beneficiary == address(0)) revert RewardsDistribution_InvalidAddress();
+    if (delegatee == address(0))
+      RewardsDistribution_InvalidAddress.selector.revertWith();
+    if (beneficiary == address(0))
+      RewardsDistribution_InvalidAddress.selector.revertWith();
 
     updateGlobalReward($);
     updateReward($, beneficiary);
