@@ -42,7 +42,6 @@ contract ReferralsFacet is IReferrals, ReferralsBase, Entitled, Facet {
     _removeReferral(referralCode);
   }
 
-  // admin
   /// @inheritdoc IReferrals
   function setMaxBpsFee(uint256 bps) external {
     _validatePermission(Permissions.ModifyRoles);
@@ -52,5 +51,16 @@ contract ReferralsFacet is IReferrals, ReferralsBase, Entitled, Facet {
   /// @inheritdoc IReferrals
   function maxBpsFee() external view returns (uint256) {
     return _maxBpsFee();
+  }
+
+  /// @inheritdoc IReferrals
+  function setDefaultBpsFee(uint256 bps) external {
+    _validatePermission(Permissions.ModifyRoles);
+    _setDefaultBpsFee(bps);
+  }
+
+  /// @inheritdoc IReferrals
+  function defaultBpsFee() external view returns (uint256) {
+    return _defaultBpsFee();
   }
 }
