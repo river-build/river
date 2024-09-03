@@ -8,11 +8,13 @@ import {MembershipBaseSetup} from "../MembershipBaseSetup.sol";
 import {IEntitlementGated} from "contracts/src/spaces/facets/gated/IEntitlementGated.sol";
 import {IEntitlementGatedBase} from "contracts/src/spaces/facets/gated/IEntitlementGated.sol";
 import {IEntitlementCheckerBase} from "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol";
+import {IArchitect, IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.sol";
 
 //libraries
 import {Vm} from "forge-std/Test.sol";
 
 //contracts
+import {MembershipFacet} from "contracts/src/spaces/facets/membership/MembershipFacet.sol";
 
 contract MembershipJoinSpaceTest is
   MembershipBaseSetup,
@@ -486,5 +488,67 @@ contract MembershipJoinSpaceTest is
         );
       }
     }
+  }
+
+  function test_joinSpacePriceChangesMidTransaction()
+    external
+    givenMembershipHasPrice
+  {
+    vm.deal(bob, MEMBERSHIP_PRICE);
+
+    assertEq(membershipToken.balanceOf(bob), 0);
+
+    vm.recordLogs();
+    vm.prank(bob);
+    membership.joinSpace{value: MEMBERSHIP_PRICE}(bob);
+    Vm.Log[] memory logs = vm.getRecordedLogs();
+
+    vm.prank(founder);
+    membership.setMembershipPrice(MEMBERSHIP_PRICE * 2);
+
+    (
+      address contractAddress,
+      bytes32 transactionId,
+      uint256 roleId,
+      address[] memory selectedNodes
+    ) = _getRequestedEntitlementData(logs);
+
+    for (uint256 i = 0; i < 3; i++) {
+      vm.prank(selectedNodes[i]);
+      IEntitlementGated(contractAddress).postEntitlementCheckResult(
+        transactionId,
+        roleId,
+        IEntitlementGatedBase.NodeVoteStatus.PASSED
+      );
+    }
+
+    assertEq(membershipToken.balanceOf(bob), 1);
+    assertTrue(address(membership).balance > 0);
+  }
+
+  function test_joinSpaceWithInitialFreeAllocation() external {
+    address[] memory allowedUsers = new address[](2);
+    allowedUsers[0] = alice;
+    allowedUsers[1] = bob;
+
+    IArchitectBase.SpaceInfo memory freeAllocationInfo = _createUserSpaceInfo(
+      "FreeAllocationSpace",
+      allowedUsers
+    );
+    freeAllocationInfo.membership.settings.pricingModule = fixedPricingModule;
+    freeAllocationInfo.membership.settings.freeAllocation = 1;
+
+    vm.prank(founder);
+    address freeAllocationSpace = IArchitect(spaceFactory).createSpace(
+      freeAllocationInfo
+    );
+
+    MembershipFacet freeAllocationMembership = MembershipFacet(
+      freeAllocationSpace
+    );
+
+    vm.prank(bob);
+    vm.expectRevert(Membership__InsufficientPayment.selector);
+    freeAllocationMembership.joinSpace(bob);
   }
 }

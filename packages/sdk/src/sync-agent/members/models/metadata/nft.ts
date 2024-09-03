@@ -20,10 +20,12 @@ export interface MemberNftModel extends Identifiable {
     nft?: NftModel
 }
 
+// This model doenst listen to events here.
+// They are listened in the members model, which propagates the updates to this model.
 @persistedObservable({ tableName: 'member_nft' })
 export class MemberNft extends PersistedObservable<MemberNftModel> {
     constructor(
-        userId: string,
+        private userId: string,
         streamId: string,
         private riverConnection: RiverConnection,
         store: Store,
@@ -34,30 +36,13 @@ export class MemberNft extends PersistedObservable<MemberNftModel> {
             LoadPriority.high,
         )
     }
-    protected override async onLoaded() {
-        this.riverConnection.registerView((client) => {
-            if (
-                client.streams.has(this.data.id) &&
-                client.streams.get(this.data.id)?.view.isInitialized
-            ) {
-                this.onStreamInitialized(this.data.id)
-            }
-            client.on('streamInitialized', this.onStreamInitialized)
 
-            client.on('streamNftUpdated', this.onStreamNftUpdated)
-            return () => {
-                client.off('streamInitialized', this.onStreamInitialized)
-                client.off('streamNftUpdated', this.onStreamNftUpdated)
-            }
-        })
-    }
-
-    private onStreamInitialized = (streamId: string) => {
+    public onStreamInitialized = (streamId: string) => {
         if (streamId === this.data.streamId) {
             const streamView = this.riverConnection.client?.stream(this.data.streamId)?.view
             check(isDefined(streamView), 'streamView is not defined')
             const metadata = streamView.getMemberMetadata()
-            const nft = metadata?.nfts.confirmedNfts.get(this.data.id)
+            const nft = metadata?.nfts.confirmedNfts.get(this.userId)
             this.setData({
                 initialized: true,
                 nft: nft
@@ -71,8 +56,8 @@ export class MemberNft extends PersistedObservable<MemberNftModel> {
         }
     }
 
-    private onStreamNftUpdated = (streamId: string, userId: string) => {
-        if (streamId === this.data.streamId && userId === this.data.id) {
+    public onStreamNftUpdated = (streamId: string, userId: string) => {
+        if (streamId === this.data.streamId && userId === this.userId) {
             const streamView = this.riverConnection.client?.stream(streamId)?.view
             const metadata = streamView?.getMemberMetadata()
             if (metadata) {

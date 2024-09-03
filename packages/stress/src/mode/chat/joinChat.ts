@@ -1,5 +1,5 @@
 import { StressClient } from '../../utils/stressClient'
-import { ChatConfig } from './types'
+import { ChatConfig } from '../common/types'
 import { dlogger } from '@river-build/dlog'
 import { getRandomEmoji } from '../../utils/emoji'
 import { getSystemInfo } from '../../utils/systemInfo'
