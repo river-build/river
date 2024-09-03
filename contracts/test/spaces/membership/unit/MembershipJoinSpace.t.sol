@@ -394,8 +394,8 @@ contract MembershipJoinSpaceTest is
     membership.setMembershipLimit(1);
   }
 
-  function test_joinSpace_withValueAndFreeAllocation(uint256 value) external {
-    vm.assume(value > 0);
+  function test_joinSpace_withValueAndFreeAllocation() external {
+    uint256 value = membership.getMembershipPrice();
 
     // assert there are freeAllocations available
     vm.prank(founder);
@@ -407,7 +407,7 @@ contract MembershipJoinSpaceTest is
     vm.deal(alice, value);
     membership.joinSpace{value: value}(alice);
 
-    // space has balance
+    // alice gets a refund
     assertTrue(address(membership).balance == 0);
     assertTrue(alice.balance == value);
 
@@ -420,6 +420,37 @@ contract MembershipJoinSpaceTest is
     // withdraw address balance is 0
     assertEq(withdrawAddress.balance, 0);
     assertEq(address(membership).balance, 0);
+  }
+
+  function test_joinSpace_priceChangesMidTransaction()
+    external
+    givenMembershipHasPrice
+  {
+    vm.deal(bob, MEMBERSHIP_PRICE);
+
+    vm.recordLogs();
+    vm.prank(bob);
+    membership.joinSpace{value: MEMBERSHIP_PRICE}(bob);
+    Vm.Log[] memory logs = vm.getRecordedLogs();
+
+    (
+      address contractAddress,
+      bytes32 transactionId,
+      uint256 roleId,
+      address[] memory selectedNodes
+    ) = _getRequestedEntitlementData(logs);
+
+    for (uint256 i = 0; i < 3; i++) {
+      vm.prank(selectedNodes[i]);
+      IEntitlementGated(contractAddress).postEntitlementCheckResult(
+        transactionId,
+        roleId,
+        IEntitlementGatedBase.NodeVoteStatus.FAILED
+      );
+    }
+
+    assertEq(membershipToken.balanceOf(bob), 0);
+    assertEq(bob.balance, MEMBERSHIP_PRICE);
   }
 
   // utils
@@ -457,34 +488,6 @@ contract MembershipJoinSpaceTest is
         );
       }
     }
-  }
-
-  function test_joinSpace_withValueAndFreeAllocation() external {
-    uint256 price = membership.getMembershipPrice();
-
-    // assert there are freeAllocations available
-    vm.prank(founder);
-    membership.setMembershipFreeAllocation(1000);
-    uint256 freeAlloc = membership.getMembershipFreeAllocation();
-    assertTrue(freeAlloc > 0);
-
-    vm.prank(alice);
-    vm.deal(alice, price);
-    membership.joinSpace{value: price}(alice);
-
-    // space has balance
-    assertTrue(address(membership).balance == 0);
-    assertTrue(alice.balance == price);
-
-    // Attempt to withdraw
-    address withdrawAddress = _randomAddress();
-    vm.prank(founder);
-    vm.expectRevert(Membership__InsufficientPayment.selector);
-    membership.withdraw(withdrawAddress);
-
-    // withdraw address balance is 0
-    assertEq(withdrawAddress.balance, 0);
-    assertEq(address(membership).balance, 0);
   }
 
   function test_joinSpacePriceChangesMidTransaction()
