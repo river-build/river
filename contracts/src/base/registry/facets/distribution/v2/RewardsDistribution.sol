@@ -21,6 +21,9 @@ library RewardsDistribution {
   uint256 internal constant SCALE_FACTOR = 1e36;
 
   error RewardsDistribution_InvalidAddress();
+  error RewardsDistribution_InvalidRewardNotifier();
+  error RewardsDistribution_InvalidRewardRate();
+  error RewardsDistribution_InsufficientReward();
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                          VIEWERS                           */
@@ -68,13 +71,6 @@ library RewardsDistribution {
       (treasure.balance *
         (currentRewardPerTokenAccumulated($) -
           treasure.rewardPerTokenAccumulated));
-  }
-
-  function unclaimedReward(
-    RewardsDistributionStorage.Layout storage $,
-    address beneficiary
-  ) internal view returns (uint256) {
-    return currentUnclaimedReward($, beneficiary) / SCALE_FACTOR;
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -133,7 +129,7 @@ library RewardsDistribution {
     $.stakedByDepositor[depositor] += amount;
     $.treasureByBeneficiary[beneficiary].balance += amount;
     $.deposits[depositId] = IRewardsDistributionBase.Deposit({
-      balance: amount,
+      amount: amount,
       owner: depositor,
       delegatee: delegatee,
       beneficiary: beneficiary
@@ -158,7 +154,7 @@ library RewardsDistribution {
     $.totalStaked += amount;
     $.stakedByDepositor[owner] += amount;
     $.treasureByBeneficiary[beneficiary].balance += amount;
-    deposit.balance += amount;
+    deposit.amount += amount;
 
     address minion = $.delegationMinions[deposit.delegatee];
     $.stakeToken.safeTransferFrom(owner, minion, amount);
@@ -177,7 +173,7 @@ library RewardsDistribution {
     address oldMinion = $.delegationMinions[oldDelegatee];
     deposit.delegatee = newDelegatee;
     address newMinion = retrieveOrDeployMinion($, newDelegatee);
-    $.stakeToken.safeTransferFrom(oldMinion, newMinion, deposit.balance);
+    $.stakeToken.safeTransferFrom(oldMinion, newMinion, deposit.amount);
     // TODO: emit events
   }
 
@@ -192,13 +188,89 @@ library RewardsDistribution {
     IRewardsDistributionBase.Deposit storage deposit = $.deposits[depositId];
     address oldBeneficiary = deposit.beneficiary;
     updateReward($, oldBeneficiary);
-    uint96 balance = deposit.balance;
+    uint96 amount = deposit.amount;
     // TODO: unchecked math
-    $.treasureByBeneficiary[oldBeneficiary].balance -= balance;
+    $.treasureByBeneficiary[oldBeneficiary].balance -= amount;
 
     updateReward($, newBeneficiary);
     deposit.beneficiary = newBeneficiary;
-    $.treasureByBeneficiary[newBeneficiary].balance += balance;
+    $.treasureByBeneficiary[newBeneficiary].balance += amount;
+    // TODO: emit events
+  }
+
+  function withdraw(
+    RewardsDistributionStorage.Layout storage $,
+    uint256 depositId,
+    uint96 amount
+  ) internal {
+    updateGlobalReward($);
+    IRewardsDistributionBase.Deposit storage deposit = $.deposits[depositId];
+    updateReward($, deposit.beneficiary);
+
+    deposit.amount -= amount;
+    unchecked {
+      $.totalStaked -= amount;
+      $.stakedByDepositor[deposit.owner] -= amount;
+      $.treasureByBeneficiary[deposit.beneficiary].balance -= amount;
+    }
+    $.stakeToken.safeTransferFrom(
+      $.delegationMinions[deposit.delegatee],
+      deposit.owner,
+      amount
+    );
+    // TODO: emit events
+  }
+
+  function claimReward(
+    RewardsDistributionStorage.Layout storage $,
+    address beneficiary
+  ) internal returns (uint256 reward) {
+    updateGlobalReward($);
+    updateReward($, beneficiary);
+
+    IRewardsDistributionBase.Treasure storage treasure = $
+      .treasureByBeneficiary[beneficiary];
+    reward = treasure.unclaimedRewardSnapshot / SCALE_FACTOR;
+    if (reward != 0) {
+      unchecked {
+        treasure.unclaimedRewardSnapshot -= reward * SCALE_FACTOR;
+      }
+      $.rewardToken.safeTransfer(beneficiary, reward);
+      // TODO: emit events
+    }
+  }
+
+  function notifyRewardAmount(
+    RewardsDistributionStorage.Layout storage $,
+    uint256 reward
+  ) internal {
+    if (!$.isRewardNotifier[msg.sender])
+      RewardsDistribution_InvalidRewardNotifier.selector.revertWith();
+
+    $.rewardPerTokenAccumulated = currentRewardPerTokenAccumulated($);
+
+    uint256 rewardRate;
+    uint256 rewardDuration = $.rewardDuration;
+    if (block.timestamp >= $.rewardEndTime) {
+      rewardRate = reward.mulDiv(SCALE_FACTOR, rewardDuration);
+    } else {
+      uint256 remainingTime;
+      unchecked {
+        remainingTime = $.rewardEndTime - block.timestamp;
+      }
+      uint256 leftover = $.rewardRate * remainingTime;
+      rewardRate = (leftover + reward * SCALE_FACTOR) / rewardDuration;
+    }
+    $.rewardRate = rewardRate;
+
+    $.rewardEndTime = block.timestamp + rewardDuration;
+    $.lastUpdateTime = block.timestamp;
+
+    if (rewardRate < SCALE_FACTOR)
+      RewardsDistribution_InvalidRewardRate.selector.revertWith();
+
+    if (rewardRate.mulDiv(rewardDuration, SCALE_FACTOR) > reward)
+      RewardsDistribution_InsufficientReward.selector.revertWith();
     // TODO: emit events
   }
 }
