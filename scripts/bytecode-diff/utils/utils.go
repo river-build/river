@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"encoding/hex"
 	"encoding/json"
 
 	"github.com/ethereum/go-ethereum/crypto"
@@ -65,7 +66,7 @@ func GetFacetFiles(facetSourcePath string) ([]FacetFile, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("error walking the path %v: %v", facetSourcePath, err)
+		return nil, fmt.Errorf("error walking the path %v: %w", facetSourcePath, err)
 	}
 
 	return facetFiles, nil
@@ -108,7 +109,7 @@ func CreateFacetHashesReport(
 	cmd := exec.Command("git", "rev-parse", "--short", "HEAD")
 	commitHashRaw, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("error getting git commit hash: %v", err)
+		return fmt.Errorf("error getting git commit hash: %w", err)
 	}
 	commitHash := strings.TrimSpace(string(commitHashRaw))
 
@@ -159,13 +160,13 @@ func CreateFacetHashesReport(
 func writeYamlReport(yamlOutputDir string, report Data, commitHash, currentDate string, verbose bool) error {
 	yamlContent, err := yaml.Marshal(report)
 	if err != nil {
-		return fmt.Errorf("error marshaling YAML content: %v", err)
+		return fmt.Errorf("error marshaling YAML content: %w", err)
 	}
 
 	// Convert relative path to absolute path
 	absYamlOutputDir, err := filepath.Abs(yamlOutputDir)
 	if err != nil {
-		return fmt.Errorf("error getting absolute path: %v", err)
+		return fmt.Errorf("error getting absolute path: %w", err)
 	}
 
 	filename := fmt.Sprintf("%s_%s.yaml", commitHash, currentDate)
@@ -186,17 +187,17 @@ func writeYamlReport(yamlOutputDir string, report Data, commitHash, currentDate 
 	// Ensure the output directory exists
 	err = os.MkdirAll(absYamlOutputDir, dirPermissions)
 	if err != nil {
-		return fmt.Errorf("error creating output directory: %v", err)
+		return fmt.Errorf("error creating output directory: %w", err)
 	}
 
 	// Write YAML file
 	err = os.WriteFile(fullPath, yamlContent, filePermissions)
 	if err != nil {
-		return fmt.Errorf("error writing YAML file: %v", err)
+		return fmt.Errorf("error writing YAML file: %w", err)
 	}
 
 	if verbose {
-		fmt.Printf("YAML file created: %s\n", fullPath)
+		Log.Info().Msgf("YAML file created: %s", fullPath)
 	}
 
 	return nil
@@ -206,7 +207,7 @@ func getLatestYamlFile(dir string, currentCommitHash string) (string, error) {
 	// Convert to absolute path
 	absDir, err := filepath.Abs(dir)
 	if err != nil {
-		return "", fmt.Errorf("error getting absolute path: %v", err)
+		return "", err
 	}
 
 	// Check if directory exists
@@ -217,7 +218,7 @@ func getLatestYamlFile(dir string, currentCommitHash string) (string, error) {
 
 	files, err := os.ReadDir(absDir)
 	if err != nil {
-		return "", fmt.Errorf("error reading directory: %v", err)
+		return "", err
 	}
 
 	var yamlFiles []os.DirEntry
@@ -301,9 +302,7 @@ func GetDiamondAddresses(basePath string, diamonds []Diamond, verbose bool) (map
 
 		data, err := os.ReadFile(filePath)
 		if err != nil {
-			if verbose {
-				fmt.Printf("Error reading file %s: %v\n", filePath, err)
-			}
+			Log.Error().Err(err).Msgf("Error reading file %s", filePath)
 			continue
 		}
 
@@ -312,7 +311,8 @@ func GetDiamondAddresses(basePath string, diamonds []Diamond, verbose bool) (map
 		}
 
 		if err := json.Unmarshal(data, &addressData); err != nil {
-			return nil, fmt.Errorf("error unmarshaling JSON from file %s: %v", filePath, err)
+			Log.Error().Err(err).Msgf("Error unmarshaling JSON from file %s", filePath)
+			continue
 		}
 
 		diamondAddresses[diamond] = addressData.Address
@@ -349,22 +349,42 @@ func GenerateYAMLReport(facetDiffs map[string][]FacetDiff, reportOutDir string) 
 	// Ensure the directory exists
 	err := os.MkdirAll(filepath.Dir(filename), 0755)
 	if err != nil {
-		return fmt.Errorf("failed to create directory: %v", err)
+		return err
 	}
 
 	// Write YAML file
 	file, err := os.Create(filename)
 	if err != nil {
-		return fmt.Errorf("failed to create file: %v", err)
+		return err
 	}
 	defer file.Close()
 
 	encoder := yaml.NewEncoder(file)
 	err = encoder.Encode(report)
 	if err != nil {
-		return fmt.Errorf("failed to encode YAML: %v", err)
+		return err
 	}
 
-	fmt.Printf("Report generated: %s\n", filename)
+	Log.Info().Msgf("Report generated: %s", filename)
 	return nil
+}
+
+// BytesToHexString converts a byte slice to its hex string representation
+func BytesToHexString(bytes []byte) string {
+	// Convert the bytes to a hex string, preserving all bytes
+	hexString := hex.EncodeToString(bytes)
+
+	// Trim trailing zeros, but ensure at least one character remains
+	trimmed := strings.TrimRight(hexString, "0")
+	if trimmed == "" {
+		trimmed = "0"
+	}
+
+	// Ensure the string represents at least one byte (two hex characters)
+	if len(trimmed)%2 != 0 {
+		trimmed = "0" + trimmed
+	}
+
+	// Add "0x" prefix
+	return "0x" + trimmed
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -10,12 +9,20 @@ import (
 	u "bytecode-diff/utils"
 
 	"github.com/joho/godotenv"
+	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 )
 
+var log zerolog.Logger
+
+func init() {
+	log = zerolog.New(os.Stderr).With().Timestamp().Logger()
+	utils.SetLogger(log)
+}
+
 func main() {
 	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found")
+		log.Warn().Msg("No .env file found")
 	}
 
 	supportedEnvironments := []string{"alpha", "gamma", "omega"}
@@ -28,10 +35,14 @@ func main() {
 	var originEnvironment, targetEnvironment string
 	var deploymentsPath string
 	var baseSepoliaRpcUrl string
+	var logLevel string
 
 	rootCmd := &cobra.Command{
 		Use:   "bytecode-diff [origin_environment] [target_environment]",
 		Short: "A tool to retrieve and display contract bytecode diff for Base",
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			setLogLevel(logLevel)
+		},
 		Args: func(cmd *cobra.Command, args []string) error {
 			if sourceDiff {
 				if len(args) != 0 {
@@ -60,16 +71,17 @@ func main() {
 					facetSourcePath = cmd.Flag("facets").Value.String()
 				}
 				if facetSourcePath == "" {
-					log.Fatal("Facet source path is missing. Set it using --facets flag or FACET_SOURCE_PATH environment variable")
+					log.Fatal().Msg("Facet source path is missing. Set it using --facets flag or FACET_SOURCE_PATH environment variable")
 				}
 
 				compiledFacetsPath = os.Getenv("COMPILED_FACETS_PATH")
-				fmt.Println("Compiled facets path:", compiledFacetsPath)
+				log.Debug().Str("compiledFacetsPath", compiledFacetsPath).Msg("Compiled facets path from environment")
 				if compiledFacetsPath == "" {
 					compiledFacetsPath = cmd.Flag("compiled-facets").Value.String()
+					log.Debug().Str("compiledFacetsPath", compiledFacetsPath).Msg("Compiled facets path from flag")
 				}
 				if compiledFacetsPath == "" {
-					log.Fatal("Compiled facets path is missing. Set it using --compiled-facets flag or COMPILED_FACETS_PATH environment variable")
+					log.Fatal().Msg("Compiled facets path is missing. Set it using --compiled-facets flag or COMPILED_FACETS_PATH environment variable")
 				}
 
 				envReportOutDir := os.Getenv("REPORT_OUT_DIR")
@@ -80,7 +92,7 @@ func main() {
 					reportOutDir = cmd.Flag("report-out-dir").Value.String()
 				}
 				if reportOutDir == "" {
-					log.Fatal("Report out directory is missing. Set it using --report-out-dir flag or REPORT_OUT_DIR environment variable")
+					log.Fatal().Msg("Report out directory is missing. Set it using --report-out-dir flag or REPORT_OUT_DIR environment variable")
 				}
 				return
 			}
@@ -93,49 +105,51 @@ func main() {
 				deploymentsPath = cmd.Flag("deployments").Value.String()
 			}
 			if deploymentsPath == "" {
-				log.Fatal("Deployments path is missing. Set it using --deployments flag or DEPLOYMENTS_PATH environment variable")
+				log.Fatal().Msg("Deployments path is missing. Set it using --deployments flag or DEPLOYMENTS_PATH environment variable")
 			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 
+			verbose, _ := cmd.Flags().GetBool("verbose")
 			if sourceDiff {
 
-				fmt.Println("Running diff for facet path recursively onl compiled facet contracts:", facetSourcePath, compiledFacetsPath)
+				log.Info().Str("facetSourcePath", facetSourcePath).Str("compiledFacetsPath", compiledFacetsPath).Msg("Running diff for facet path recursively only compiled facet contracts")
 
-				if err := executeSourceDiff(cmd, facetSourcePath, compiledFacetsPath, sourceDiffDir); err != nil {
-					log.Fatalf("Error executing source diff: %v", err)
+				if err := executeSourceDiff(verbose, facetSourcePath, compiledFacetsPath, sourceDiffDir); err != nil {
+					log.Fatal().Err(err).Msg("Error executing source diff")
+					return
 				}
 			} else {
 
 				originEnvironment, targetEnvironment = args[0], args[1]
 				for _, environment := range []string{originEnvironment, targetEnvironment} {
 					if !u.Contains(supportedEnvironments, environment) {
-						log.Fatalf("Environment %s not supported. Environment can be one of alpha, gamma, or omega.", environment)
+						log.Fatal().Str("environment", environment).Msg("Environment not supported. Environment can be one of alpha, gamma, or omega.")
 					}
 				}
 
-				fmt.Printf("Origin Environment: %s, Target Environment: %s\n", originEnvironment, targetEnvironment)
+				log.Info().Str("originEnvironment", originEnvironment).Str("targetEnvironment", targetEnvironment).Msg("Environment")
 
 				if baseRpcUrl == "" {
 					baseRpcUrl = os.Getenv("BASE_RPC_URL")
 					if baseRpcUrl == "" {
-						log.Fatal("Base RPC URL not provided. Set it using --base-rpc flag or BASE_RPC_URL environment variable")
+						log.Fatal().Msg("Base RPC URL not provided. Set it using --base-rpc flag or BASE_RPC_URL environment variable")
 					}
 				}
 
 				if baseSepoliaRpcUrl == "" {
 					baseSepoliaRpcUrl = os.Getenv("BASE_SEPOLIA_RPC_URL")
 					if baseSepoliaRpcUrl == "" {
-						log.Fatal("Base Sepolia RPC URL not provided. Set it using --base-sepolia-rpc flag or BASE_SEPOLIA_RPC_URL environment variable")
+						log.Fatal().Msg("Base Sepolia RPC URL not provided. Set it using --base-sepolia-rpc flag or BASE_SEPOLIA_RPC_URL environment variable")
 					}
 				}
 
 				basescanAPIKey := os.Getenv("BASESCAN_API_KEY")
 				if basescanAPIKey == "" {
-					log.Fatal("BaseScan API key not provided. Set it using BASESCAN_API_KEY environment variable")
+					log.Fatal().Msg("BaseScan API key not provided. Set it using BASESCAN_API_KEY environment variable")
 				}
 
-				fmt.Println("Running diff for environment:", originEnvironment, targetEnvironment)
+				log.Info().Str("originEnvironment", originEnvironment).Str("targetEnvironment", targetEnvironment).Msg("Running diff for environment")
 				// Create BaseConfig struct
 				baseConfig := u.BaseConfig{
 					BaseRpcUrl:        baseRpcUrl,
@@ -143,8 +157,8 @@ func main() {
 					BasescanAPIKey:    basescanAPIKey,
 				}
 
-				if err := executeEnvrionmentDiff(cmd, baseConfig, deploymentsPath, originEnvironment, targetEnvironment, reportOutDir); err != nil {
-					log.Fatalf("Error executing environment diff: %v", err)
+				if err := executeEnvrionmentDiff(verbose, baseConfig, deploymentsPath, originEnvironment, targetEnvironment, reportOutDir); err != nil {
+					log.Fatal().Err(err).Msg("Error executing environment diff")
 				}
 			}
 		},
@@ -158,46 +172,68 @@ func main() {
 	rootCmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
 	rootCmd.Flags().StringVar(&reportOutDir, "report-out-dir", "deployed-diffs", "Path to report output directory")
 	rootCmd.Flags().StringVar(&deploymentsPath, "deployments", "../../contracts/deployments", "Path to deployments directory")
+	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "Set the logging level (debug, info, warn, error)")
 
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		log.Error().Err(err).Msg("Error executing root command")
 		os.Exit(1)
 	}
 
 }
 
-func executeSourceDiff(cmd *cobra.Command, facetSourcePath, compiledFacetsPath string, reportOutDir string) error {
+func setLogLevel(level string) {
+	switch level {
+	case "debug":
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	case "info":
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	case "warn":
+		zerolog.SetGlobalLevel(zerolog.WarnLevel)
+	case "error":
+		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	default:
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	}
+}
+
+func executeSourceDiff(verbose bool, facetSourcePath, compiledFacetsPath string, reportOutDir string) error {
 	facetFiles, err := u.GetFacetFiles(facetSourcePath)
 	if err != nil {
-		fmt.Println("facetSourcePath", facetSourcePath)
-		fmt.Println("compiledFacetsPath", compiledFacetsPath)
-		return fmt.Errorf("error getting facet files: %v", err)
+		log.Error().
+			Str("facetSourcePath", facetSourcePath).
+			Str("compiledFacetsPath", compiledFacetsPath).
+			Err(err).
+			Msg("Error getting facet files")
+		return err
 	}
-	fmt.Println("Facet files length:", len(facetFiles))
+	log.Debug().Int("facetFilesCount", len(facetFiles)).Msg("Facet files length")
 
 	compiledHashes, err := u.GetCompiledFacetHashes(compiledFacetsPath, facetFiles)
 	if err != nil {
-		return fmt.Errorf("error getting compiled facet hashes for path %s: %v", compiledFacetsPath, err)
+		log.Error().
+			Err(err).
+			Str("compiledFacetsPath", compiledFacetsPath).
+			Msg("Error getting compiled facet hashes")
+		return err
 	}
 
-	verbose, _ := cmd.Flags().GetBool("verbose")
 	if verbose {
-		fmt.Println("Compiled Facet Hashe len:", len(compiledHashes))
+		log.Info().Int("compiledHashesCount", len(compiledHashes)).Msg("Compiled Facet Hashes")
 		for file, hash := range compiledHashes {
-			fmt.Printf("%s: %s\n", file, hash)
+			log.Info().Str("file", file).Str("hash", hash).Msg("Compiled Facet Hash")
 		}
 	}
 
 	err = u.CreateFacetHashesReport(compiledFacetsPath, compiledHashes, reportOutDir, verbose)
 	if err != nil {
-		return fmt.Errorf("error creating facet hashes report: %v", err)
+		log.Error().Err(err).Msg("Error creating facet hashes report")
+		return err
 	}
 
 	return nil
 }
 
-func executeEnvrionmentDiff(cmd *cobra.Command, baseConfig u.BaseConfig, deploymentsPath, originEnvironment, targetEnvironment string, reportOutDir string) error {
-	verbose, _ := cmd.Flags().GetBool("verbose")
+func executeEnvrionmentDiff(verbose bool, baseConfig u.BaseConfig, deploymentsPath, originEnvironment, targetEnvironment string, reportOutDir string) error {
 	// walk environment diamonds and get all facet addresses from DiamondLoupe facet view
 	var baseDiamonds = []u.Diamond{
 		u.BaseRegistry,
@@ -208,23 +244,14 @@ func executeEnvrionmentDiff(cmd *cobra.Command, baseConfig u.BaseConfig, deploym
 	originDeploymentsPath := filepath.Join(deploymentsPath, originEnvironment)
 	originDiamonds, err := u.GetDiamondAddresses(originDeploymentsPath, baseDiamonds, verbose)
 	if err != nil {
-		return fmt.Errorf("error getting diamond addresses for origin environment: %v", err)
+		log.Error().Err(err).Msg("Error getting diamond addresses for origin environment")
+		return err
 	}
-	if verbose {
-		for diamond, addresses := range originDiamonds {
-			fmt.Printf("Origin Diamond: %s, Addresses: %v\n", diamond, addresses)
-		}
-	}
-
 	targetDeploymentsPath := filepath.Join(deploymentsPath, targetEnvironment)
 	targetDiamonds, err := u.GetDiamondAddresses(targetDeploymentsPath, baseDiamonds, verbose)
 	if err != nil {
-		return fmt.Errorf("error getting diamond addresses for target environment: %v", err)
-	}
-	if verbose {
-		for diamond, addresses := range targetDiamonds {
-			fmt.Printf("Target Diamond: %s, Addresses: %v\n", diamond, addresses)
-		}
+		log.Error().Err(err).Msg("Error getting diamond addresses for target environment")
+		return err
 	}
 	// Create Ethereum client
 	clients, err := utils.CreateEthereumClients(baseConfig.BaseRpcUrl, baseConfig.BaseSepoliaRpcUrl, originEnvironment, targetEnvironment, verbose)
@@ -239,11 +266,13 @@ func executeEnvrionmentDiff(cmd *cobra.Command, baseConfig u.BaseConfig, deploym
 	for diamondName, diamondAddress := range originDiamonds {
 		facets, err := utils.ReadAllFacets(clients[originEnvironment], diamondAddress, baseConfig.BasescanAPIKey)
 		if err != nil {
-			return fmt.Errorf("error reading all facets for origin diamond %s: %v", diamondName, err)
+			log.Error().Err(err).Msgf("Error reading all facets for origin diamond %s", diamondName)
+			return err
 		}
 		err = utils.AddContractCodeHashes(clients[originEnvironment], facets)
 		if err != nil {
-			return fmt.Errorf("error adding contract code hashes for origin diamond %s: %v", diamondName, err)
+			log.Error().Err(err).Msgf("Error adding contract code hashes for origin diamond %s", diamondName)
+			return err
 		}
 		originFacets[string(diamondName)] = facets
 	}
@@ -252,27 +281,35 @@ func executeEnvrionmentDiff(cmd *cobra.Command, baseConfig u.BaseConfig, deploym
 	for diamondName, diamondAddress := range targetDiamonds {
 		facets, err := utils.ReadAllFacets(clients[targetEnvironment], diamondAddress, baseConfig.BasescanAPIKey)
 		if err != nil {
-			return fmt.Errorf("error reading all facets for target diamond %s: %v", diamondName, err)
+			log.Error().Err(err).Msgf("Error reading all facets for target diamond %s", diamondName)
+			return err
 		}
 		err = utils.AddContractCodeHashes(clients[targetEnvironment], facets)
 		if err != nil {
-			return fmt.Errorf("error adding contract code hashes for target diamond %s: %v", diamondName, err)
+			log.Error().Err(err).Msgf("Error adding contract code hashes for target diamond %s", diamondName)
+			return err
 		}
 		targetFacets[string(diamondName)] = facets
 	}
 	if verbose {
 		for diamondName, facets := range originFacets {
-			fmt.Printf("Origin Facets for Diamond contract %s\n", diamondName)
+			log.Info().Str("diamondName", diamondName).Msg("Origin Facets for Diamond contract")
 			for _, facet := range facets {
-				fmt.Printf("Facet: %s %s\n", facet.FacetAddress, facet.ContractName)
-				fmt.Printf("Selectors: %v\n", facet.SelectorsHex)
+				log.Info().
+					Str("facetAddress", facet.FacetAddress.Hex()).
+					Str("contractName", facet.ContractName).
+					Interface("selectors", facet.SelectorsHex).
+					Msg("Facet")
 			}
 		}
 		for diamondName, facets := range targetFacets {
-			fmt.Printf("Target Facets for Diamond contract %s\n", diamondName)
+			log.Info().Str("diamondName", diamondName).Msg("Target Facets for Diamond contract")
 			for _, facet := range facets {
-				fmt.Printf("Facet: %s %s\n", facet.FacetAddress, facet.ContractName)
-				fmt.Printf("Selectors: %v\n", facet.SelectorsHex)
+				log.Info().
+					Str("facetAddress", facet.FacetAddress.Hex()).
+					Str("contractName", facet.ContractName).
+					Interface("selectors", facet.SelectorsHex).
+					Msg("Facet")
 			}
 		}
 	}
@@ -281,22 +318,42 @@ func executeEnvrionmentDiff(cmd *cobra.Command, baseConfig u.BaseConfig, deploym
 	differences := utils.CompareFacets(originFacets, targetFacets)
 	if verbose {
 		for diamondName, facets := range differences {
-			fmt.Printf("\nDifferences for Diamond contract %s\n", diamondName)
+			log.Info().Str("diamondName", diamondName).Msg("Differences for Diamond contract")
 			for _, facet := range facets {
-				fmt.Printf("\nOrigin Facet: %s %s\n", facet.FacetAddress, facet.ContractName)
-				fmt.Printf("Selector Diff: %v\n", facet.SelectorsHex)
+				log.Info().
+					Str("facetAddress", facet.FacetAddress.Hex()).
+					Str("contractName", facet.ContractName).
+					Msg("Origin Facet")
+				log.Info().
+					Interface("selectorDiff", facet.SelectorsHex).
+					Msg("Selector Diff")
+
 				if facet.OriginBytecodeHash != facet.TargetBytecodeHash {
-					fmt.Printf("Different bytecode hashes for facet %s\n", facet.ContractName)
-					fmt.Printf("Origin Bytecode Hash: %s\n", facet.OriginBytecodeHash)
-					fmt.Printf("Target Bytecode Hash: %s\n", facet.TargetBytecodeHash)
-					fmt.Printf("Target Contract Address: %s\n", facet.TargetContractAddress)
+					log.Info().
+						Str("contractName", facet.ContractName).
+						Str("originBytecodeHash", facet.OriginBytecodeHash).
+						Str("targetBytecodeHash", facet.TargetBytecodeHash).
+						Str("targetContractAddress", facet.TargetContractAddress.Hex()).
+						Msg("Different bytecode hashes for facet")
+				} else {
+					log.Info().
+						Str("contractName", facet.ContractName).
+						Str("facetAddress", facet.FacetAddress.Hex()).
+						Str("originBytecodeHash", facet.OriginBytecodeHash).
+						Str("targetBytecodeHash", facet.TargetBytecodeHash).
+						Str("targetContractAddress", facet.TargetContractAddress.Hex()).
+						Msg("No differences found for facet")
 				}
 			}
 		}
 	}
 
 	// create report
-	fmt.Println("Report out dir:", reportOutDir)
+	log.Info().Str("reportOutDir", reportOutDir).Msg("Generating YAML report")
 	err = u.GenerateYAMLReport(differences, reportOutDir)
+	if err != nil {
+		log.Error().Err(err).Msg("Error generating YAML report")
+		return err
+	}
 	return nil
 }

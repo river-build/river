@@ -2,7 +2,6 @@ package utils
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -57,7 +56,7 @@ func ReadAllFacets(client *ethclient.Client, contractAddress string, basescanAPI
         }
     ]`))
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse ABI: %v", err)
+		return nil, fmt.Errorf("failed to parse ABI: %w", err)
 	}
 
 	// Create a new instance of the contract
@@ -74,32 +73,32 @@ func ReadAllFacets(client *ethclient.Client, contractAddress string, basescanAPI
 		Data: data,
 	}, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to call contract: %v", err)
+		return nil, fmt.Errorf("failed to pack data: %w", err)
 	}
 
 	// Unpack the result
 	var facets []Facet
 	err = contractABI.UnpackIntoInterface(&facets, "facets", result)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unpack result: %v", err)
+		return nil, fmt.Errorf("failed to unpack result: %w", err)
 	}
 
 	basescanUrl, err := GetBasescanUrl(client)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get Basescan URL: %v", err)
+		return nil, fmt.Errorf("failed to get Basescan URL: %w", err)
 	}
 
 	for i, facet := range facets {
 		// read contract name from basescan source code api
 		contractName, err := GetContractNameFromBasescan(basescanUrl, facet.FacetAddress.Hex(), basescanAPIKey)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get contract name from Basescan: %v", err)
+			return nil, fmt.Errorf("failed to get contract name from Basescan: %w", err)
 		}
 
 		facets[i].ContractName = contractName
 		data, err := contractABI.Pack("facetFunctionSelectors", facet.FacetAddress)
 		if err != nil {
-			return nil, fmt.Errorf("failed to pack data for facetFunctionSelectors: %v", err)
+			return nil, fmt.Errorf("failed to pack data for facetFunctionSelectors: %w", err)
 		}
 
 		result, err := client.CallContract(context.Background(), ethereum.CallMsg{
@@ -107,34 +106,19 @@ func ReadAllFacets(client *ethclient.Client, contractAddress string, basescanAPI
 			Data: data,
 		}, nil)
 		if err != nil {
-			return nil, fmt.Errorf("failed to call facetFunctionSelectors: %v", err)
+			return nil, fmt.Errorf("failed to call facetFunctionSelectors: %w", err)
 		}
 
 		var selectors []common.Hash
 		err = contractABI.UnpackIntoInterface(&selectors, "facetFunctionSelectors", result)
 		if err != nil {
-			return nil, fmt.Errorf("failed to unpack facetFunctionSelectors result: %v", err)
+			return nil, fmt.Errorf("failed to unpack facetFunctionSelectors result: %w", err)
 		}
 
 		// Convert selectors to hex strings
 		hexSelectors := make([]string, len(selectors))
 		for j, selector := range selectors {
-			// Convert the 4-byte selector to a hex string, preserving all bytes
-			hexString := hex.EncodeToString(selector[:])
-
-			// Trim trailing zeros, but ensure at least one character remains
-			trimmed := strings.TrimRight(hexString, "0")
-			if trimmed == "" {
-				trimmed = "0"
-			}
-
-			// Ensure the string represents at least one byte (two hex characters)
-			if len(trimmed)%2 != 0 {
-				trimmed = "0" + trimmed
-			}
-
-			// Add "0x" prefix
-			hexSelectors[j] = "0x" + trimmed
+			hexSelectors[j] = BytesToHexString(selector[:])
 		}
 
 		facets[i].SelectorsHex = hexSelectors
@@ -156,13 +140,13 @@ func CreateEthereumClients(baseRpcUrl, baseSepoliaRpcUrl, originEnvironment, tar
 
 		client, err := ethclient.Dial(rpcUrl)
 		if err != nil {
-			return nil, fmt.Errorf("failed to connect to the Ethereum client for %s: %v", env, err)
+			return nil, fmt.Errorf("failed to connect to the Ethereum client for %s: %w", env, err)
 		}
 
 		clients[env] = client
 
 		if verbose {
-			fmt.Printf("Successfully connected to Ethereum client for %s\n", env)
+			Log.Info().Msgf("Successfully connected to Ethereum client for %s", env)
 		}
 	}
 
@@ -173,7 +157,7 @@ func CreateEthereumClients(baseRpcUrl, baseSepoliaRpcUrl, originEnvironment, tar
 func GetBasescanUrl(client *ethclient.Client) (string, error) {
 	chainID, err := client.ChainID(context.Background())
 	if err != nil {
-		return "", fmt.Errorf("failed to get chain ID: %v", err)
+		return "", fmt.Errorf("failed to get chain ID: %w", err)
 	}
 
 	switch chainID.Int64() {
@@ -192,13 +176,13 @@ func GetContractNameFromBasescan(baseURL, address, apiKey string) (string, error
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return "", fmt.Errorf("failed to make request to Basescan API: %v", err)
+		return "", fmt.Errorf("failed to make request to Basescan API: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("failed to read response body: %v", err)
+		return "", fmt.Errorf("failed to read response body: %w", err)
 	}
 
 	var result struct {
@@ -211,7 +195,7 @@ func GetContractNameFromBasescan(baseURL, address, apiKey string) (string, error
 
 	err = json.Unmarshal(body, &result)
 	if err != nil {
-		return "", fmt.Errorf("failed to unmarshal JSON response: %v", err)
+		return "", fmt.Errorf("failed to unmarshal JSON response: %w", err)
 	}
 
 	if result.Status != "1" {
@@ -231,7 +215,7 @@ func AddContractCodeHashes(client *ethclient.Client, facets []Facet) error {
 		// Read the contract code
 		code, err := client.CodeAt(context.Background(), facet.FacetAddress, nil)
 		if err != nil {
-			return fmt.Errorf("failed to read contract code for address %s: %v", facet.FacetAddress.Hex(), err)
+			return fmt.Errorf("failed to read contract code for address %s: %w", facet.FacetAddress.Hex(), err)
 		}
 
 		// Hash the code using Keccak256Hash
