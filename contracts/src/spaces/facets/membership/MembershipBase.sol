@@ -29,6 +29,7 @@ abstract contract MembershipBase is IMembershipBase {
 
     if (info.freeAllocation > 0) {
       _verifyFreeAllocation(info.freeAllocation);
+      ds.freeAllocationEnabled = true;
     }
 
     if (info.price > 0) {
@@ -183,6 +184,7 @@ abstract contract MembershipBase is IMembershipBase {
   function _setMembershipFreeAllocation(uint256 newAllocation) internal {
     MembershipStorage.Layout storage ds = MembershipStorage.layout();
     ds.freeAllocation = newAllocation;
+    ds.freeAllocationEnabled = true;
     emit MembershipFreeAllocationUpdated(newAllocation);
   }
 
@@ -191,7 +193,7 @@ abstract contract MembershipBase is IMembershipBase {
 
     uint256 freeAllocation = ds.freeAllocation;
 
-    if (freeAllocation > 0) return freeAllocation;
+    if (ds.freeAllocationEnabled) return freeAllocation;
     return IPlatformRequirements(ds.spaceFactory).getMembershipMintLimit();
   }
 
