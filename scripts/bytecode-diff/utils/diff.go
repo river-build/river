@@ -71,8 +71,9 @@ func CompareFacets(origin, target map[string][]Facet) map[string][]FacetDiff {
 						TargetContractName:      "",
 						OriginBytecodeHash:      o.BytecodeHash,
 						TargetBytecodeHashes:    []string{},
-						TargetContractAddresses: []string{},
+						TargetContractAddresses: t.ContractAddresses,
 						TargetVerified:          false,
+						OriginVerified:          true,
 					})
 					continue
 				}
