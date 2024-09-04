@@ -26,7 +26,7 @@ library StakingRewards {
   }
 
   struct Treasure {
-    uint256 balance;
+    uint256 earningPower;
     uint256 rewardPerTokenAccumulated;
     uint256 unclaimedRewardSnapshot;
   }
@@ -97,7 +97,7 @@ library StakingRewards {
     Treasure storage treasure = $.treasureByBeneficiary[beneficiary];
     return
       treasure.unclaimedRewardSnapshot +
-      (treasure.balance *
+      (treasure.earningPower *
         (currentRewardPerTokenAccumulated($) -
           treasure.rewardPerTokenAccumulated));
   }
@@ -150,7 +150,7 @@ library StakingRewards {
 
     $.totalStaked += amount;
     $.stakedByDepositor[depositor] += amount;
-    $.treasureByBeneficiary[beneficiary].balance += amount;
+    $.treasureByBeneficiary[beneficiary].earningPower += amount;
     $.deposits[depositId] = Deposit({
       amount: amount,
       owner: depositor,
@@ -176,7 +176,7 @@ library StakingRewards {
 
     $.totalStaked += amount;
     $.stakedByDepositor[owner] += amount;
-    $.treasureByBeneficiary[beneficiary].balance += amount;
+    $.treasureByBeneficiary[beneficiary].earningPower += amount;
     deposit.amount += amount;
 
     address minion = $.delegationMinions[deposit.delegatee];
@@ -213,11 +213,11 @@ library StakingRewards {
     updateReward($, oldBeneficiary);
     uint96 amount = deposit.amount;
     // TODO: unchecked math
-    $.treasureByBeneficiary[oldBeneficiary].balance -= amount;
+    $.treasureByBeneficiary[oldBeneficiary].earningPower -= amount;
 
     updateReward($, newBeneficiary);
     deposit.beneficiary = newBeneficiary;
-    $.treasureByBeneficiary[newBeneficiary].balance += amount;
+    $.treasureByBeneficiary[newBeneficiary].earningPower += amount;
     // TODO: emit events
   }
 
@@ -234,7 +234,7 @@ library StakingRewards {
     unchecked {
       $.totalStaked -= amount;
       $.stakedByDepositor[deposit.owner] -= amount;
-      $.treasureByBeneficiary[deposit.beneficiary].balance -= amount;
+      $.treasureByBeneficiary[deposit.beneficiary].earningPower -= amount;
     }
     $.stakeToken.safeTransferFrom(
       $.delegationMinions[deposit.delegatee],
