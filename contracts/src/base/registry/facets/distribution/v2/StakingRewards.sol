@@ -2,41 +2,71 @@
 pragma solidity ^0.8.18;
 
 // interfaces
-import {IRewardsDistributionBase} from "./IRewardsDistribution.sol";
 
 // libraries
 import {FixedPointMathLib} from "solady/src/utils/FixedPointMathLib.sol";
 import {SafeTransferLib} from "solady/src/utils/SafeTransferLib.sol";
-import {RewardsDistributionStorage} from "./RewardsDistributionStorage.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 
 // contracts
 import {DelegationMinion} from "./DelegationMinion.sol";
 
-library RewardsDistribution {
+library StakingRewards {
   using CustomRevert for bytes4;
   using FixedPointMathLib for uint256;
   using SafeTransferLib for address;
 
   uint256 internal constant SCALE_FACTOR = 1e36;
 
-  error RewardsDistribution_InvalidAddress();
-  error RewardsDistribution_InvalidRewardNotifier();
-  error RewardsDistribution_InvalidRewardRate();
-  error RewardsDistribution_InsufficientReward();
+  struct Deposit {
+    uint96 amount;
+    address owner;
+    address delegatee;
+    address beneficiary;
+  }
+
+  struct Treasure {
+    uint256 balance;
+    uint256 rewardPerTokenAccumulated;
+    uint256 unclaimedRewardSnapshot;
+  }
+
+  struct Layout {
+    address rewardToken;
+    address stakeToken;
+    uint256 totalStaked;
+    uint256 rewardDuration;
+    uint256 rewardEndTime;
+    uint256 lastUpdateTime;
+    uint256 rewardRate;
+    uint256 rewardPerTokenAccumulated;
+    uint256 nextDepositId;
+    mapping(address depositor => uint256 amount) stakedByDepositor;
+    mapping(address beneficiary => Treasure) treasureByBeneficiary;
+    mapping(uint256 depositId => Deposit) deposits;
+    mapping(address delegatee => address minion) delegationMinions;
+    mapping(address rewardNotifier => bool) isRewardNotifier;
+  }
+
+  event MinionDeployed(address indexed delegatee, address indexed minion);
+
+  error StakingRewards_InvalidAddress();
+  error StakingRewards_InvalidRewardNotifier();
+  error StakingRewards_InvalidRewardRate();
+  error StakingRewards_InsufficientReward();
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                          VIEWERS                           */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   function lastTimeRewardDistributed(
-    RewardsDistributionStorage.Layout storage $
+    Layout storage $
   ) internal view returns (uint256) {
     return FixedPointMathLib.min($.rewardEndTime, block.timestamp);
   }
 
   function currentRewardPerTokenAccumulated(
-    RewardsDistributionStorage.Layout storage $
+    Layout storage $
   ) internal view returns (uint256) {
     (
       uint256 totalStaked,
@@ -61,11 +91,10 @@ library RewardsDistribution {
   }
 
   function currentUnclaimedReward(
-    RewardsDistributionStorage.Layout storage $,
+    Layout storage $,
     address beneficiary
   ) internal view returns (uint256) {
-    IRewardsDistributionBase.Treasure storage treasure = $
-      .treasureByBeneficiary[beneficiary];
+    Treasure storage treasure = $.treasureByBeneficiary[beneficiary];
     return
       treasure.unclaimedRewardSnapshot +
       (treasure.balance *
@@ -77,26 +106,20 @@ library RewardsDistribution {
   /*                       STATE MUTATING                       */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-  function updateGlobalReward(
-    RewardsDistributionStorage.Layout storage $
-  ) internal {
+  function updateGlobalReward(Layout storage $) internal {
     $.rewardPerTokenAccumulated = currentRewardPerTokenAccumulated($);
     $.lastUpdateTime = lastTimeRewardDistributed($);
   }
 
   /// @dev Must be called after updating the global reward.
-  function updateReward(
-    RewardsDistributionStorage.Layout storage $,
-    address beneficiary
-  ) internal {
-    IRewardsDistributionBase.Treasure storage treasure = $
-      .treasureByBeneficiary[beneficiary];
+  function updateReward(Layout storage $, address beneficiary) internal {
+    Treasure storage treasure = $.treasureByBeneficiary[beneficiary];
     treasure.unclaimedRewardSnapshot = currentUnclaimedReward($, beneficiary);
     treasure.rewardPerTokenAccumulated = $.rewardPerTokenAccumulated;
   }
 
   function retrieveOrDeployMinion(
-    RewardsDistributionStorage.Layout storage $,
+    Layout storage $,
     address delegatee
   ) internal returns (address minion) {
     minion = $.delegationMinions[delegatee];
@@ -104,21 +127,21 @@ library RewardsDistribution {
     if (minion == address(0)) {
       minion = address(new DelegationMinion($.stakeToken, delegatee));
       $.delegationMinions[delegatee] = minion;
-      emit IRewardsDistributionBase.MinionDeployed(delegatee, minion);
+      emit MinionDeployed(delegatee, minion);
     }
   }
 
   function stake(
-    RewardsDistributionStorage.Layout storage $,
+    Layout storage $,
     address depositor,
     uint96 amount,
     address delegatee,
     address beneficiary
   ) internal returns (uint256 depositId) {
     if (delegatee == address(0))
-      RewardsDistribution_InvalidAddress.selector.revertWith();
+      StakingRewards_InvalidAddress.selector.revertWith();
     if (beneficiary == address(0))
-      RewardsDistribution_InvalidAddress.selector.revertWith();
+      StakingRewards_InvalidAddress.selector.revertWith();
 
     updateGlobalReward($);
     updateReward($, beneficiary);
@@ -128,7 +151,7 @@ library RewardsDistribution {
     $.totalStaked += amount;
     $.stakedByDepositor[depositor] += amount;
     $.treasureByBeneficiary[beneficiary].balance += amount;
-    $.deposits[depositId] = IRewardsDistributionBase.Deposit({
+    $.deposits[depositId] = Deposit({
       amount: amount,
       owner: depositor,
       delegatee: delegatee,
@@ -141,11 +164,11 @@ library RewardsDistribution {
   }
 
   function increaseStake(
-    RewardsDistributionStorage.Layout storage $,
+    Layout storage $,
     uint256 depositId,
     uint96 amount
   ) internal {
-    IRewardsDistributionBase.Deposit storage deposit = $.deposits[depositId];
+    Deposit storage deposit = $.deposits[depositId];
     (address beneficiary, address owner) = (deposit.beneficiary, deposit.owner);
 
     updateGlobalReward($);
@@ -162,13 +185,13 @@ library RewardsDistribution {
   }
 
   function redelegate(
-    RewardsDistributionStorage.Layout storage $,
+    Layout storage $,
     uint256 depositId,
     address newDelegatee
   ) internal {
     if (newDelegatee == address(0))
-      RewardsDistribution_InvalidAddress.selector.revertWith();
-    IRewardsDistributionBase.Deposit storage deposit = $.deposits[depositId];
+      StakingRewards_InvalidAddress.selector.revertWith();
+    Deposit storage deposit = $.deposits[depositId];
     address oldDelegatee = deposit.delegatee;
     address oldMinion = $.delegationMinions[oldDelegatee];
     deposit.delegatee = newDelegatee;
@@ -178,14 +201,14 @@ library RewardsDistribution {
   }
 
   function changeBeneficiary(
-    RewardsDistributionStorage.Layout storage $,
+    Layout storage $,
     uint256 depositId,
     address newBeneficiary
   ) internal {
     if (newBeneficiary == address(0))
-      RewardsDistribution_InvalidAddress.selector.revertWith();
+      StakingRewards_InvalidAddress.selector.revertWith();
     updateGlobalReward($);
-    IRewardsDistributionBase.Deposit storage deposit = $.deposits[depositId];
+    Deposit storage deposit = $.deposits[depositId];
     address oldBeneficiary = deposit.beneficiary;
     updateReward($, oldBeneficiary);
     uint96 amount = deposit.amount;
@@ -199,12 +222,12 @@ library RewardsDistribution {
   }
 
   function withdraw(
-    RewardsDistributionStorage.Layout storage $,
+    Layout storage $,
     uint256 depositId,
     uint96 amount
   ) internal {
     updateGlobalReward($);
-    IRewardsDistributionBase.Deposit storage deposit = $.deposits[depositId];
+    Deposit storage deposit = $.deposits[depositId];
     updateReward($, deposit.beneficiary);
 
     deposit.amount -= amount;
@@ -222,14 +245,13 @@ library RewardsDistribution {
   }
 
   function claimReward(
-    RewardsDistributionStorage.Layout storage $,
+    Layout storage $,
     address beneficiary
   ) internal returns (uint256 reward) {
     updateGlobalReward($);
     updateReward($, beneficiary);
 
-    IRewardsDistributionBase.Treasure storage treasure = $
-      .treasureByBeneficiary[beneficiary];
+    Treasure storage treasure = $.treasureByBeneficiary[beneficiary];
     reward = treasure.unclaimedRewardSnapshot / SCALE_FACTOR;
     if (reward != 0) {
       unchecked {
@@ -240,12 +262,9 @@ library RewardsDistribution {
     }
   }
 
-  function notifyRewardAmount(
-    RewardsDistributionStorage.Layout storage $,
-    uint256 reward
-  ) internal {
+  function notifyRewardAmount(Layout storage $, uint256 reward) internal {
     if (!$.isRewardNotifier[msg.sender])
-      RewardsDistribution_InvalidRewardNotifier.selector.revertWith();
+      StakingRewards_InvalidRewardNotifier.selector.revertWith();
 
     $.rewardPerTokenAccumulated = currentRewardPerTokenAccumulated($);
 
@@ -267,10 +286,10 @@ library RewardsDistribution {
     $.lastUpdateTime = block.timestamp;
 
     if (rewardRate < SCALE_FACTOR)
-      RewardsDistribution_InvalidRewardRate.selector.revertWith();
+      StakingRewards_InvalidRewardRate.selector.revertWith();
 
     if (rewardRate.mulDiv(rewardDuration, SCALE_FACTOR) > reward)
-      RewardsDistribution_InsufficientReward.selector.revertWith();
+      StakingRewards_InsufficientReward.selector.revertWith();
     // TODO: emit events
   }
 }
