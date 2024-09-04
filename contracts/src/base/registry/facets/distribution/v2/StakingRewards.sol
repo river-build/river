@@ -50,6 +50,10 @@ library StakingRewards {
 
   event MinionDeployed(address indexed delegatee, address indexed minion);
 
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           ERRORS                           */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   error StakingRewards_InvalidAddress();
   error StakingRewards_InvalidRewardNotifier();
   error StakingRewards_InvalidRewardRate();
@@ -149,8 +153,13 @@ library StakingRewards {
     depositId = $.nextDepositId++;
 
     $.totalStaked += amount;
-    $.stakedByDepositor[depositor] += amount;
-    $.treasureByBeneficiary[beneficiary].earningPower += amount;
+    unchecked {
+      // because totalStaked >= stakedByDepositor[depositor]
+      // and totalStaked >= treasureByBeneficiary[beneficiary].earningPower
+      // if totalStaked doesn't overflow, they won't
+      $.stakedByDepositor[depositor] += amount;
+      $.treasureByBeneficiary[beneficiary].earningPower += amount;
+    }
     $.deposits[depositId] = Deposit({
       amount: amount,
       owner: depositor,
@@ -169,15 +178,21 @@ library StakingRewards {
     uint96 amount
   ) internal {
     Deposit storage deposit = $.deposits[depositId];
+    // cache storage reads
     (address beneficiary, address owner) = (deposit.beneficiary, deposit.owner);
 
     updateGlobalReward($);
     updateReward($, beneficiary);
 
-    $.totalStaked += amount;
-    $.stakedByDepositor[owner] += amount;
-    $.treasureByBeneficiary[beneficiary].earningPower += amount;
     deposit.amount += amount;
+    $.totalStaked += amount;
+    unchecked {
+      // because totalStaked >= stakedByDepositor[depositor]
+      // and totalStaked >= treasureByBeneficiary[beneficiary].earningPower
+      // if totalStaked doesn't overflow, they won't
+      $.stakedByDepositor[owner] += amount;
+      $.treasureByBeneficiary[beneficiary].earningPower += amount;
+    }
 
     address minion = $.delegationMinions[deposit.delegatee];
     $.stakeToken.safeTransferFrom(owner, minion, amount);
@@ -211,13 +226,19 @@ library StakingRewards {
     Deposit storage deposit = $.deposits[depositId];
     address oldBeneficiary = deposit.beneficiary;
     updateReward($, oldBeneficiary);
-    uint96 amount = deposit.amount;
-    // TODO: unchecked math
-    $.treasureByBeneficiary[oldBeneficiary].earningPower -= amount;
+    uint256 amount = deposit.amount;
+    unchecked {
+      // treasureByBeneficiary[oldBeneficiary].earningPower >= deposit.amount
+      $.treasureByBeneficiary[oldBeneficiary].earningPower -= amount;
+    }
 
     updateReward($, newBeneficiary);
     deposit.beneficiary = newBeneficiary;
-    $.treasureByBeneficiary[newBeneficiary].earningPower += amount;
+    unchecked {
+      // the invariant totalStaked >= treasureByBeneficiary[beneficiary].earningPower is ensured on stake and increaseStake
+      // the following won't overflow
+      $.treasureByBeneficiary[newBeneficiary].earningPower += amount;
+    }
     // TODO: emit events
   }
 
@@ -228,17 +249,22 @@ library StakingRewards {
   ) internal {
     updateGlobalReward($);
     Deposit storage deposit = $.deposits[depositId];
-    updateReward($, deposit.beneficiary);
+    // cache storage reads
+    (address beneficiary, address owner) = (deposit.beneficiary, deposit.owner);
+    updateReward($, beneficiary);
 
     deposit.amount -= amount;
     unchecked {
+      // totalStaked >= deposit.amount
       $.totalStaked -= amount;
-      $.stakedByDepositor[deposit.owner] -= amount;
-      $.treasureByBeneficiary[deposit.beneficiary].earningPower -= amount;
+      // stakedByDepositor[owner] >= deposit.amount
+      $.stakedByDepositor[owner] -= amount;
+      // treasureByBeneficiary[beneficiary].earningPower >= deposit.amount
+      $.treasureByBeneficiary[beneficiary].earningPower -= amount;
     }
     $.stakeToken.safeTransferFrom(
       $.delegationMinions[deposit.delegatee],
-      deposit.owner,
+      owner,
       amount
     );
     // TODO: emit events
@@ -268,22 +294,30 @@ library StakingRewards {
 
     $.rewardPerTokenAccumulated = currentRewardPerTokenAccumulated($);
 
+    // cache storage reads
+    (uint256 rewardDuration, uint256 rewardEndTime) = (
+      $.rewardDuration,
+      $.rewardEndTime
+    );
+
     uint256 rewardRate;
-    uint256 rewardDuration = $.rewardDuration;
-    if (block.timestamp >= $.rewardEndTime) {
+    if (block.timestamp >= rewardEndTime) {
       rewardRate = reward.mulDiv(SCALE_FACTOR, rewardDuration);
     } else {
       uint256 remainingTime;
       unchecked {
-        remainingTime = $.rewardEndTime - block.timestamp;
+        remainingTime = rewardEndTime - block.timestamp;
       }
       uint256 leftover = $.rewardRate * remainingTime;
       rewardRate = (leftover + reward * SCALE_FACTOR) / rewardDuration;
     }
-    $.rewardRate = rewardRate;
 
-    $.rewardEndTime = block.timestamp + rewardDuration;
-    $.lastUpdateTime = block.timestamp;
+    // batch storage writes
+    ($.rewardEndTime, $.lastUpdateTime, $.rewardRate) = (
+      block.timestamp + rewardDuration,
+      block.timestamp,
+      rewardRate
+    );
 
     if (rewardRate < SCALE_FACTOR)
       StakingRewards_InvalidRewardRate.selector.revertWith();
