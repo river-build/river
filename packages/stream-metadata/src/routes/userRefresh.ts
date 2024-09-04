@@ -29,8 +29,8 @@ export async function userRefresh(request: FastifyRequest, reply: FastifyReply) 
 		const path = `/user/${userId}/image`
 
 		// Refresh CloudFront cache
-		await cloudFront.createInvalidation({
-			DistributionId: config.aws.cloudfrontDistributionId,
+		await cloudFront?.createInvalidation({
+			DistributionId: config.aws?.CLOUDFRONT_DISTRIBUTION_ID,
 			InvalidationBatch: {
 				CallerReference: `user-refresh-${userId}-${Date.now()}`,
 				Paths: {
