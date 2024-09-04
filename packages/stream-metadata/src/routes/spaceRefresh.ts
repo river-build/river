@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 import { isValidEthereumAddress } from '../validators'
 import { config } from '../environment'
+import { cloudFront } from '../aws'
 
 const paramsSchema = z.object({
 	spaceAddress: z
@@ -28,10 +29,22 @@ export async function spaceRefresh(request: FastifyRequest, reply: FastifyReply)
 	logger.info({ spaceAddress }, 'Refreshing space')
 
 	try {
-		const route = `${config.streamMetadataBaseUrl}/space/${spaceAddress}/image`
-		// refresh cloudflare cache
+		const path = `/space/${spaceAddress}/image`
 
-		// refresh opensea cache
+		// Refresh CloudFront cache
+		await cloudFront.createInvalidation({
+			DistributionId: config.aws.cloudfrontDistributionId,
+			InvalidationBatch: {
+				CallerReference: `space-refresh-${spaceAddress}-${Date.now()}`,
+				Paths: {
+					Quantity: 1,
+					Items: [path],
+				},
+			},
+		})
+		logger.info({ path }, 'CloudFront cache invalidated')
+
+		// TODO: Implement OpenSea cache refresh
 
 		return reply.code(200).send({ ok: true })
 	} catch (error) {

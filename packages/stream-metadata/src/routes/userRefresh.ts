@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 import { isValidEthereumAddress } from '../validators'
 import { config } from '../environment'
+import { cloudFront } from '../aws'
 
 const paramsSchema = z.object({
 	userId: z.string().min(1, 'userId parameter is required').refine(isValidEthereumAddress, {
@@ -25,8 +26,20 @@ export async function userRefresh(request: FastifyRequest, reply: FastifyReply) 
 	logger.info({ userId }, 'Refreshing user')
 
 	try {
-		const route = `${config.streamMetadataBaseUrl}/user/${userId}/image`
-		// refresh cloudflare cache
+		const path = `/user/${userId}/image`
+
+		// Refresh CloudFront cache
+		await cloudFront.createInvalidation({
+			DistributionId: config.aws.cloudfrontDistributionId,
+			InvalidationBatch: {
+				CallerReference: `user-refresh-${userId}-${Date.now()}`,
+				Paths: {
+					Quantity: 1,
+					Items: [path],
+				},
+			},
+		})
+		logger.info({ path }, 'CloudFront cache invalidated')
 
 		return reply.code(200).send({ ok: true })
 	} catch (error) {

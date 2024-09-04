@@ -21,6 +21,10 @@ const envSchema = z.object({
 	HOST: z.string().optional().default('127.0.0.1'),
 	LOG_LEVEL: z.string().optional().default('info'),
 	LOG_PRETTY: BoolFromStringSchema.optional().default('true'),
+	AWS_REGION: z.string().optional().default('us-east-1'),
+	AWS_ACCESS_KEY_ID: z.string().optional(),
+	AWS_SECRET_ACCESS_KEY: z.string().optional(),
+	CLOUDFRONT_DISTRIBUTION_ID: z.string(),
 })
 
 function makeConfig() {
@@ -40,6 +44,12 @@ function makeConfig() {
 		log: {
 			level: env.LOG_LEVEL,
 			pretty: env.LOG_PRETTY,
+		},
+		aws: {
+			region: env.AWS_REGION,
+			accessKeyId: env.AWS_ACCESS_KEY_ID,
+			secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
+			cloudfrontDistributionId: env.CLOUDFRONT_DISTRIBUTION_ID,
 		},
 	}
 }
