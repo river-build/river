@@ -344,7 +344,7 @@ func GenerateYAMLReport(originEnvironment, targetEnvironment string, facetDiffs 
 	date := time.Now().Format("010206")
 	var filename string
 	for i := 1; ; i++ {
-		filename = filepath.Join(reportOutDir, fmt.Sprintf("facet_diff_%s_%d.yaml", date, i))
+		filename = filepath.Join(reportOutDir, fmt.Sprintf("diff_%s_to_%s_%s_%d.yaml", originEnvironment, targetEnvironment, date, i))
 		if _, err := os.Stat(filename); os.IsNotExist(err) {
 			break
 		}
