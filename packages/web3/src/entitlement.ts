@@ -573,6 +573,16 @@ async function evaluateCheckOperation(
         }
     }
 
+    if (operation.checkType === CheckOperationType.ERC1155) {
+        const { tokenId, threshold } = decodeERC1155Params(operation.params)
+        if (tokenId < 0n) {
+            throw new Error(`Invalid token id for check operation ${operation.checkType}`)
+        }
+        if (threshold <= 0n) {
+            throw new Error(`Invalid threshold for check operation ${operation.checkType}`)
+        }
+    }
+
     switch (operation.checkType) {
         case CheckOperationType.ISENTITLED: {
             await Promise.all(providers.map((p) => p.ready))
@@ -598,6 +608,16 @@ async function evaluateCheckOperation(
                 provider,
                 linkedWallets,
             )
+        }
+        case CheckOperationType.ERC1155: {
+            await Promise.all(providers.map((p) => p.ready))
+            const provider = findProviderFromChainId(providers, operation.chainId)
+
+            if (!provider) {
+                controller.abort()
+                return zeroAddress
+            }
+            return evaluateERC1155Operation(operation, controller, provider, linkedWallets)
         }
         case CheckOperationType.ERC20: {
             await Promise.all(providers.map((p) => p.ready))
@@ -904,6 +924,52 @@ async function evaluateCustomEntitledOperation(
         controller.abort()
         return zeroAddress
     })
+}
+
+async function evaluateERC1155Operation(
+    operation: CheckOperationV2,
+    controller: AbortController,
+    provider: ethers.providers.BaseProvider,
+    linkedWallets: string[],
+): Promise<EntitledWalletOrZeroAddress> {
+    const contract = new ethers.Contract(
+        operation.contractAddress,
+        ['function balanceOf(address, uint256) view returns (uint)'],
+        provider,
+    )
+
+    const { threshold, tokenId } = decodeERC1155Params(operation.params)
+
+    const walletBalances = await Promise.all(
+        linkedWallets.map(async (wallet) => {
+            try {
+                const result = await contract.callStatic.balanceOf(wallet, tokenId)
+                return {
+                    wallet,
+                    balance: result,
+                }
+            } catch (error) {
+                return {
+                    wallet,
+                    balance: ethers.BigNumber.from(0),
+                }
+            }
+        }),
+    )
+
+    const walletsWithAsset = walletBalances.filter((balance) => balance.balance.gt(0))
+
+    const accumulatedBalance = walletsWithAsset.reduce(
+        (acc, el) => acc.add(el.balance),
+        ethers.BigNumber.from(0),
+    )
+
+    if (walletsWithAsset.length > 0 && accumulatedBalance.gte(threshold)) {
+        return walletsWithAsset[0].wallet
+    } else {
+        controller.abort()
+        return zeroAddress
+    }
 }
 
 async function evaluateNativeCoinBalanceOperation(
