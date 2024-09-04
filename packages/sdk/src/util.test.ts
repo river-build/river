@@ -970,6 +970,7 @@ export function isEncryptedData(obj: unknown): obj is EncryptedData {
         (typeof data.refEventId === 'string' || data.refEventId === undefined)
     )
 }
+
 // Users need to be mapped from 'alice', 'bob', etc to their wallet addresses,
 // because the wallets are created within this helper method.
 export async function createTownWithRequirements(requirements: {
@@ -1062,6 +1063,7 @@ export async function createTownWithRequirements(requirements: {
         bobUserStreamView,
     }
 }
+
 export async function expectUserCannotJoinSpace(
     spaceId: string,
     client: Client,
@@ -1077,7 +1079,9 @@ export async function expectUserCannotJoinSpace(
     )
     expect(entitledWallet).toBeUndefined()
     await expect(client.joinStream(spaceId)).rejects.toThrow(/PERMISSION_DENIED/)
-} // pass in users as 'alice', 'bob', 'carol' - b/c their wallets are created here
+}
+
+// pass in users as 'alice', 'bob', 'carol' - b/c their wallets are created here
 export async function setupChannelWithCustomRole(
     userNames: string[],
     ruleData: IRuleEntitlementV2Base.RuleDataV2Struct,
@@ -1191,6 +1195,7 @@ export async function setupChannelWithCustomRole(
         roleId,
     }
 }
+
 export async function expectUserCanJoinChannel(
     client: Client,
     spaceDapp: ISpaceDapp,
@@ -1214,6 +1219,7 @@ export async function expectUserCanJoinChannel(
     // Wait for alice's user stream to have the join
     await waitFor(() => userStreamView.userContent.isMember(channelId, MembershipOp.SO_JOIN))
 }
+
 export async function expectUserCannotJoinChannel(
     client: Client,
     spaceDapp: ISpaceDapp,
