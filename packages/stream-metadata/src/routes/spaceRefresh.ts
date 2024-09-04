@@ -1,9 +1,11 @@
 import { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
+import { BigNumber } from 'ethers'
 
 import { isValidEthereumAddress } from '../validators'
 import { config } from '../environment'
 import { cloudFront } from '../aws'
+import { spaceDapp } from '../contract-utils'
 
 const paramsSchema = z.object({
 	spaceAddress: z
@@ -44,7 +46,8 @@ export async function spaceRefresh(request: FastifyRequest, reply: FastifyReply)
 		})
 		logger.info({ path }, 'CloudFront cache invalidated')
 
-		// TODO: Implement OpenSea cache refresh
+		await refreshOpenSea(spaceAddress)
+		logger.info({ path }, 'OpenSea cache invalidated')
 
 		return reply.code(200).send({ ok: true })
 	} catch (error) {
@@ -56,4 +59,26 @@ export async function spaceRefresh(request: FastifyRequest, reply: FastifyReply)
 		)
 		return reply.code(500).send('Failed to refresh space')
 	}
+}
+
+const refreshOpenSea = async (spaceAddress: string) => {
+	const space = await spaceDapp.getSpaceInfo(spaceAddress)
+	if (!space) {
+		throw new Error('Space not found')
+	}
+
+	const tokenId = BigNumber.from(space.tokenId).toString()
+	let chain
+	if (space.networkId === '1') {
+		chain = 'base'
+	} else if (space.networkId === '84532') {
+		chain = 'base_sepolia'
+	} else {
+		throw new Error('Unsupported network')
+	}
+
+	const url = `https://api.opensea.io/api/v2/chain/${chain}/contract/${spaceAddress}/nfts/${tokenId}/refresh`
+	const response = await fetch(url)
+
+	return { ok: response.ok }
 }
