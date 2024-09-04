@@ -18,6 +18,8 @@ contract DeployReferrals is Deployer, FacetHelper {
     addSelector(ReferralsFacet.removeReferral.selector);
     addSelector(ReferralsFacet.setMaxBpsFee.selector);
     addSelector(ReferralsFacet.maxBpsFee.selector);
+    addSelector(ReferralsFacet.setDefaultBpsFee.selector);
+    addSelector(ReferralsFacet.defaultBpsFee.selector);
   }
 
   function versionName() public pure override returns (string memory) {

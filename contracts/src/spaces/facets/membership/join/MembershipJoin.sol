@@ -64,7 +64,7 @@ contract MembershipJoin is
   ) internal {
     _validateJoinSpace(receiver);
     _validatePayment();
-
+    _validateUserReferral(receiver, referral);
     address sender = msg.sender;
     bool isNotReferral = _isNotReferral(referral);
 
@@ -113,6 +113,19 @@ contract MembershipJoin is
     if (msg.value > 0) {
       uint256 price = _getMembershipPrice(_totalSupply());
       if (msg.value != price) revert Membership__InvalidPayment();
+    }
+  }
+
+  function _validateUserReferral(
+    address receiver,
+    ReferralTypes memory referral
+  ) internal view {
+    if (referral.userReferral != address(0)) {
+      if (
+        referral.userReferral == receiver || referral.userReferral == msg.sender
+      ) {
+        revert Membership__InvalidAddress();
+      }
     }
   }
 
@@ -227,21 +240,20 @@ contract MembershipJoin is
       revert Membership__InvalidTransactionType();
     }
 
-    (address partner, address userReferral, string memory referralCode) = abi
-      .decode(referralData, (address, address, string));
+    ReferralTypes memory referral = abi.decode(referralData, (ReferralTypes));
 
     uint256 protocolFeeBps = _collectProtocolFee(sender, membershipPrice);
 
     uint256 partnerFeeBps = _collectPartnerFee(
       sender,
-      partner,
+      referral.partner,
       membershipPrice
     );
 
     uint256 referralFeeBps = _collectReferralCodeFee(
       sender,
-      userReferral,
-      referralCode,
+      referral.userReferral,
+      referral.referralCode,
       membershipPrice
     );
 
@@ -316,8 +328,9 @@ contract MembershipJoin is
   ) internal returns (uint256) {
     uint256 referralFeeBps;
 
-    if (bytes(referralCode).length == 0) {
+    if (bytes(referralCode).length != 0) {
       Referral memory referral = _referralInfo(referralCode);
+
       if (referral.recipient == address(0) || referral.basisPoints == 0)
         return 0;
 
