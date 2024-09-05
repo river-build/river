@@ -1,11 +1,10 @@
 package main
 
 import (
+	"bytecode-diff/utils"
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"bytecode-diff/utils"
 
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
@@ -85,7 +84,8 @@ func main() {
 					facetSourcePath = cmd.Flag("facets").Value.String()
 				}
 				if facetSourcePath == "" {
-					log.Fatal().Msg("Facet source path is missing. Set it using --facets flag or FACET_SOURCE_PATH environment variable")
+					log.Fatal().
+						Msg("Facet source path is missing. Set it using --facets flag or FACET_SOURCE_PATH environment variable")
 				}
 
 				compiledFacetsPath = os.Getenv("COMPILED_FACETS_PATH")
@@ -95,7 +95,8 @@ func main() {
 					log.Debug().Str("compiledFacetsPath", compiledFacetsPath).Msg("Compiled facets path from flag")
 				}
 				if compiledFacetsPath == "" {
-					log.Fatal().Msg("Compiled facets path is missing. Set it using --compiled-facets flag or COMPILED_FACETS_PATH environment variable")
+					log.Fatal().
+						Msg("Compiled facets path is missing. Set it using --compiled-facets flag or COMPILED_FACETS_PATH environment variable")
 				}
 
 				envReportOutDir := os.Getenv("REPORT_OUT_DIR")
@@ -106,7 +107,8 @@ func main() {
 					reportOutDir = cmd.Flag("report-out-dir").Value.String()
 				}
 				if reportOutDir == "" {
-					log.Fatal().Msg("Report out directory is missing. Set it using --report-out-dir flag or REPORT_OUT_DIR environment variable")
+					log.Fatal().
+						Msg("Report out directory is missing. Set it using --report-out-dir flag or REPORT_OUT_DIR environment variable")
 				}
 				return
 			}
@@ -119,15 +121,18 @@ func main() {
 				deploymentsPath = cmd.Flag("deployments").Value.String()
 			}
 			if deploymentsPath == "" {
-				log.Fatal().Msg("Deployments path is missing. Set it using --deployments flag or DEPLOYMENTS_PATH environment variable")
+				log.Fatal().
+					Msg("Deployments path is missing. Set it using --deployments flag or DEPLOYMENTS_PATH environment variable")
 			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-
 			verbose, _ := cmd.Flags().GetBool("verbose")
 			if sourceDiff {
 
-				log.Info().Str("facetSourcePath", facetSourcePath).Str("compiledFacetsPath", compiledFacetsPath).Msg("Running diff for facet path recursively only compiled facet contracts")
+				log.Info().
+					Str("facetSourcePath", facetSourcePath).
+					Str("compiledFacetsPath", compiledFacetsPath).
+					Msg("Running diff for facet path recursively only compiled facet contracts")
 
 				if err := executeSourceDiff(verbose, facetSourcePath, compiledFacetsPath, sourceDiffDir); err != nil {
 					log.Fatal().Err(err).Msg("Error executing source diff")
@@ -181,18 +186,19 @@ func main() {
 	rootCmd.Flags().StringVarP(&baseSepoliaRpcUrl, "base-sepolia-rpc", "", "", "Base Sepolia RPC provider URL")
 	rootCmd.Flags().BoolVarP(&sourceDiff, "source-diff-only", "s", false, "Run source code diff")
 	rootCmd.Flags().StringVar(&sourceDiffDir, "source-diff-log", "source-diffs", "Path to diff log file")
-	rootCmd.Flags().StringVar(&compiledFacetsPath, "compiled-facets", "", "Path to compiled facets")
+	rootCmd.Flags().StringVar(&compiledFacetsPath, "compiled-facets", "../../contracts/out", "Path to compiled facets")
 	rootCmd.Flags().StringVar(&facetSourcePath, "facets", "", "Path to facet source files")
 	rootCmd.Flags().BoolP("verbose", "v", false, "Enable verbose output")
 	rootCmd.Flags().StringVar(&reportOutDir, "report-out-dir", "deployed-diffs", "Path to report output directory")
-	rootCmd.Flags().StringVar(&deploymentsPath, "deployments", "../../contracts/deployments", "Path to deployments directory")
-	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "Set the logging level (debug, info, warn, error)")
+	rootCmd.Flags().
+		StringVar(&deploymentsPath, "deployments", "../../contracts/deployments", "Path to deployments directory")
+	rootCmd.PersistentFlags().
+		StringVar(&logLevel, "log-level", "info", "Set the logging level (debug, info, warn, error)")
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Error().Err(err).Msg("Error executing root command")
 		os.Exit(1)
 	}
-
 }
 
 func executeSourceDiff(verbose bool, facetSourcePath, compiledFacetsPath string, reportOutDir string) error {
@@ -232,9 +238,14 @@ func executeSourceDiff(verbose bool, facetSourcePath, compiledFacetsPath string,
 	return nil
 }
 
-func executeEnvrionmentDiff(verbose bool, baseConfig utils.BaseConfig, deploymentsPath, originEnvironment, targetEnvironment string, reportOutDir string) error {
+func executeEnvrionmentDiff(
+	verbose bool,
+	baseConfig utils.BaseConfig,
+	deploymentsPath, originEnvironment, targetEnvironment string,
+	reportOutDir string,
+) error {
 	// walk environment diamonds and get all facet addresses from DiamondLoupe facet view
-	var baseDiamonds = []utils.Diamond{
+	baseDiamonds := []utils.Diamond{
 		utils.BaseRegistry,
 		utils.Space,
 		utils.SpaceFactory,
@@ -253,7 +264,13 @@ func executeEnvrionmentDiff(verbose bool, baseConfig utils.BaseConfig, deploymen
 		return err
 	}
 	// Create Ethereum client
-	clients, err := utils.CreateEthereumClients(baseConfig.BaseRpcUrl, baseConfig.BaseSepoliaRpcUrl, originEnvironment, targetEnvironment, verbose)
+	clients, err := utils.CreateEthereumClients(
+		baseConfig.BaseRpcUrl,
+		baseConfig.BaseSepoliaRpcUrl,
+		originEnvironment,
+		targetEnvironment,
+		verbose,
+	)
 	defer func() {
 		for _, client := range clients {
 			client.Close()
