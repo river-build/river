@@ -25,10 +25,10 @@ const envMainSchema = z.object({
 
 const envAwsSchema = z
 	.object({
-		AWS_REGION: z.string(),
-		AWS_ACCESS_KEY_ID: z.string(),
-		AWS_SECRET_ACCESS_KEY: z.string(),
-		CLOUDFRONT_DISTRIBUTION_ID: z.string(),
+		AWS_REGION: z.string().min(1),
+		AWS_ACCESS_KEY_ID: z.string().min(1),
+		AWS_SECRET_ACCESS_KEY: z.string().min(1),
+		CLOUDFRONT_DISTRIBUTION_ID: z.string().min(1),
 	})
 	.optional()
 
@@ -36,7 +36,7 @@ function makeConfig() {
 	// eslint-disable-next-line no-process-env -- this is the only line where we're allowed to use process.env
 
 	const envMain = envMainSchema.parse(process.env)
-	const envAws = envAwsSchema.parse(process.env)
+	const envAws = envAwsSchema.safeParse(process.env)
 	const web3Config = getWeb3Deployment(envMain.RIVER_ENV)
 	const baseUrl = new URL(envMain.RIVER_STREAM_METADATA_BASE_URL)
 
@@ -52,7 +52,7 @@ function makeConfig() {
 			level: envMain.LOG_LEVEL,
 			pretty: envMain.LOG_PRETTY,
 		},
-		aws: envAws,
+		aws: envAws?.success ? envAws.data : undefined,
 	}
 }
 
