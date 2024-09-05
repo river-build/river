@@ -900,11 +900,12 @@ export class SpaceDapp implements ISpaceDapp {
                 }
             }
 
-            const entitlements = await this.getChannelEntitlementsForPermission(
+            const entitlements = await this.getChannelEntitlementsForPermissionUncached(
                 spaceId,
                 channelId,
                 permission,
             )
+
             const entitledWallet = await this.evaluateEntitledWallet(
                 user,
                 linkedWallets,
