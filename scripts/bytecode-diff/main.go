@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"bytecode-diff/utils"
-	u "bytecode-diff/utils"
 
 	"github.com/joho/godotenv"
 	"github.com/rs/zerolog"
@@ -138,7 +137,7 @@ func main() {
 
 				originEnvironment, targetEnvironment = args[0], args[1]
 				for _, environment := range []string{originEnvironment, targetEnvironment} {
-					if !u.Contains(supportedEnvironments, environment) {
+					if !utils.Contains(supportedEnvironments, environment) {
 						log.Fatal().Str("environment", environment).Msg("Environment not supported. Environment can be one of alpha, gamma, or omega.")
 					}
 				}
@@ -166,7 +165,7 @@ func main() {
 
 				log.Info().Str("originEnvironment", originEnvironment).Str("targetEnvironment", targetEnvironment).Msg("Running diff for environment")
 				// Create BaseConfig struct
-				baseConfig := u.BaseConfig{
+				baseConfig := utils.BaseConfig{
 					BaseRpcUrl:        baseRpcUrl,
 					BaseSepoliaRpcUrl: baseSepoliaRpcUrl,
 					BasescanAPIKey:    basescanAPIKey,
@@ -197,7 +196,7 @@ func main() {
 }
 
 func executeSourceDiff(verbose bool, facetSourcePath, compiledFacetsPath string, reportOutDir string) error {
-	facetFiles, err := u.GetFacetFiles(facetSourcePath)
+	facetFiles, err := utils.GetFacetFiles(facetSourcePath)
 	if err != nil {
 		log.Error().
 			Str("facetSourcePath", facetSourcePath).
@@ -208,7 +207,7 @@ func executeSourceDiff(verbose bool, facetSourcePath, compiledFacetsPath string,
 	}
 	log.Debug().Int("facetFilesCount", len(facetFiles)).Msg("Facet files length")
 
-	compiledHashes, err := u.GetCompiledFacetHashes(compiledFacetsPath, facetFiles)
+	compiledHashes, err := utils.GetCompiledFacetHashes(compiledFacetsPath, facetFiles)
 	if err != nil {
 		log.Error().
 			Err(err).
@@ -224,7 +223,7 @@ func executeSourceDiff(verbose bool, facetSourcePath, compiledFacetsPath string,
 		}
 	}
 
-	err = u.CreateFacetHashesReport(compiledFacetsPath, compiledHashes, reportOutDir, verbose)
+	err = utils.CreateFacetHashesReport(compiledFacetsPath, compiledHashes, reportOutDir, verbose)
 	if err != nil {
 		log.Error().Err(err).Msg("Error creating facet hashes report")
 		return err
@@ -233,22 +232,22 @@ func executeSourceDiff(verbose bool, facetSourcePath, compiledFacetsPath string,
 	return nil
 }
 
-func executeEnvrionmentDiff(verbose bool, baseConfig u.BaseConfig, deploymentsPath, originEnvironment, targetEnvironment string, reportOutDir string) error {
+func executeEnvrionmentDiff(verbose bool, baseConfig utils.BaseConfig, deploymentsPath, originEnvironment, targetEnvironment string, reportOutDir string) error {
 	// walk environment diamonds and get all facet addresses from DiamondLoupe facet view
-	var baseDiamonds = []u.Diamond{
-		u.BaseRegistry,
-		u.Space,
-		u.SpaceFactory,
-		u.SpaceOwner,
+	var baseDiamonds = []utils.Diamond{
+		utils.BaseRegistry,
+		utils.Space,
+		utils.SpaceFactory,
+		utils.SpaceOwner,
 	}
 	originDeploymentsPath := filepath.Join(deploymentsPath, originEnvironment)
-	originDiamonds, err := u.GetDiamondAddresses(originDeploymentsPath, baseDiamonds, verbose)
+	originDiamonds, err := utils.GetDiamondAddresses(originDeploymentsPath, baseDiamonds, verbose)
 	if err != nil {
 		log.Error().Err(err).Msgf("Error getting diamond addresses for origin environment %s", originEnvironment)
 		return err
 	}
 	targetDeploymentsPath := filepath.Join(deploymentsPath, targetEnvironment)
-	targetDiamonds, err := u.GetDiamondAddresses(targetDeploymentsPath, baseDiamonds, verbose)
+	targetDiamonds, err := utils.GetDiamondAddresses(targetDeploymentsPath, baseDiamonds, verbose)
 	if err != nil {
 		log.Error().Err(err).Msgf("Error getting diamond addresses for target environment %s", targetEnvironment)
 		return err
@@ -334,7 +333,7 @@ func executeEnvrionmentDiff(verbose bool, baseConfig u.BaseConfig, deploymentsPa
 
 	// create report
 	log.Info().Str("reportOutDir", reportOutDir).Msg("Generating YAML report")
-	err = u.GenerateYAMLReport(originEnvironment, targetEnvironment, differences, reportOutDir)
+	err = utils.GenerateYAMLReport(originEnvironment, targetEnvironment, differences, reportOutDir)
 	if err != nil {
 		log.Error().Err(err).Msg("Error generating YAML report")
 		return err

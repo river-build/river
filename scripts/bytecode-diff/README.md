@@ -41,7 +41,7 @@ ChannelBase: 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470
 
 Runs bytecode diff from deployed facets for diamonds in alpha, gamma, and omega environments as per source coordinates of diamonds for each environment.
 
-```
+```bash
 # compare omega against gamma facets and facet selectors
 GOWORK=off go run ./main.go gamma omega -v
 
@@ -85,7 +85,7 @@ diamonds:
 
 ### Flags
 
-```base
+```bash
 ➜  bytecode-diff ✗ GOWORK=off go run ./main.go --help
 A tool to retrieve and display contract bytecode diff for Base
 
@@ -133,7 +133,7 @@ You can also set the following environment variables instead of using flags:
 
 2. Run source code diff using environment variables:
 
-```
+```bash
 export SOURCE_DIFF_DIR=/path/to/source_diff.log
 export FACET_SOURCE_PATH=/path/to/facet/sources
 export COMPILED_FACETS_PATH=/path/to/compiled/facets
