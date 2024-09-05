@@ -10,7 +10,7 @@ type FacetDiff struct {
 	TargetContractName      string         `yaml:"targetContractName,omitempty"`
 	OriginContractAddress   common.Address `yaml:"originFacetAddress"`
 	TargetContractAddresses []string       `yaml:"targetContractAddresses,omitempty"`
-	SelectorsDiff           []string       `yaml:"selectorsDiff" abi:"-"`
+	SelectorsDiff           []string       `yaml:"selectorsDiff"`
 	OriginBytecodeHash      string         `yaml:"originBytecodeHash,omitempty"`
 	TargetBytecodeHashes    []string       `yaml:"targetBytecodeHashes,omitempty"`
 	OriginVerified          bool           `yaml:"originVerified"`
@@ -57,51 +57,29 @@ func CompareFacets(origin, target map[string][]Facet) map[string][]FacetDiff {
 				continue
 			}
 			found := false
-			for _, t := range mergedTargetFacets {
-				if o.FacetAddress == common.HexToAddress("0xfa98a1648761e494fc7d6efe5a06e357a76bd6fb") {
-					Log.Info().Msgf("Target Facet for facet address 0xfa98a1648761e494fc7d6efe5a06e357a76bd6fb : %+v", t)
-					Log.Info().Msgf("Origin facet name: %s", o.ContractName)
+			if t, exists := mergedTargetFacets[o.ContractName]; exists {
+				// find match by facetName
+				diffSelectors := getDifferentSelectors(o.SelectorsHex, t.SelectorsHex)
+				bytecodeChanged := false
+				for _, targetHash := range t.BytecodeHashes {
+					if o.BytecodeHash != targetHash {
+						bytecodeChanged = true
+						break
+					}
 				}
-				// if target facet is not verified, add it to differences
-				if t.ContractName == "" {
+				if len(diffSelectors) > 0 || bytecodeChanged {
 					diamondDifferences = append(diamondDifferences, FacetDiff{
 						OriginContractAddress:   o.FacetAddress,
-						SelectorsDiff:           o.SelectorsHex,
+						SelectorsDiff:           diffSelectors,
 						OriginContractName:      o.ContractName,
-						TargetContractName:      "",
 						OriginBytecodeHash:      o.BytecodeHash,
-						TargetBytecodeHashes:    []string{},
+						TargetBytecodeHashes:    t.BytecodeHashes,
 						TargetContractAddresses: t.ContractAddresses,
-						TargetVerified:          false,
 						OriginVerified:          true,
+						TargetVerified:          true,
 					})
-					continue
 				}
-				// find match by facetName
-				if t.ContractName == o.ContractName {
-					found = true
-					diffSelectors := getDifferentSelectors(o.SelectorsHex, t.SelectorsHex)
-					bytecodeChanged := false
-					for _, targetHash := range t.BytecodeHashes {
-						if o.BytecodeHash != targetHash {
-							bytecodeChanged = true
-							break
-						}
-					}
-					if len(diffSelectors) > 0 || bytecodeChanged {
-						diamondDifferences = append(diamondDifferences, FacetDiff{
-							OriginContractAddress:   o.FacetAddress,
-							SelectorsDiff:           diffSelectors,
-							OriginContractName:      o.ContractName,
-							OriginBytecodeHash:      o.BytecodeHash,
-							TargetBytecodeHashes:    t.BytecodeHashes,
-							TargetContractAddresses: t.ContractAddresses,
-							OriginVerified:          true,
-							TargetVerified:          true,
-						})
-					}
-					break
-				}
+				found = true
 			}
 			if !found {
 				// Contract by name doesn't exist in target set, add all selectors
@@ -160,14 +138,12 @@ func getDifferentSelectors(origin, target []string) []string {
 }
 
 // mergeFacets combines facets with the same ContractName
-func mergeFacets(facets []Facet) []MergedFacet {
+func mergeFacets(facets []Facet) map[string]MergedFacet {
 	mergedFacets := make(map[string]MergedFacet)
 
 	for _, facet := range facets {
 		if existing, ok := mergedFacets[facet.ContractName]; ok {
-			// Merge SelectorsHex
 			existing.SelectorsHex = append(existing.SelectorsHex, facet.SelectorsHex...)
-			// Append BytecodeHash
 			existing.BytecodeHashes = append(existing.BytecodeHashes, facet.BytecodeHash)
 			existing.ContractAddresses = append(existing.ContractAddresses, facet.FacetAddress.Hex())
 			mergedFacets[facet.ContractName] = existing
@@ -180,11 +156,5 @@ func mergeFacets(facets []Facet) []MergedFacet {
 		}
 	}
 
-	// Convert map to slice
-	result := make([]MergedFacet, 0, len(mergedFacets))
-	for _, facet := range mergedFacets {
-		result = append(result, facet)
-	}
-
-	return result
+	return mergedFacets
 }
