@@ -950,6 +950,7 @@ export class Client
         // encrypt the chunked media
         // use the lowercased userId as the key phrase
         const { key, iv } = await deriveKeyAndIV(context)
+        bio.updatedAtEpochMs = BigInt(Date.now())
         const bioBinary = bio.toBinary()
         const { ciphertext } = await encryptAESGCM(bioBinary, key, iv)
         const encryptedData = new EncryptedData({
@@ -1029,13 +1030,14 @@ export class Client
         check(isDefined(event), 'event not found')
         const remoteEvent = event.remoteEvent
         check(isDefined(remoteEvent), 'remoteEvent not found')
-        await this.makeEventAndAddToStream(
+        const result = await this.makeEventAndAddToStream(
             streamId,
             make_MemberPayload_Pin(remoteEvent.hash, remoteEvent.event),
             {
                 method: 'pin',
             },
         )
+        return result
     }
 
     async unpin(streamId: string, eventId: string) {
@@ -1044,13 +1046,14 @@ export class Client
         const pin = stream.view.membershipContent.pins.find((x) => x.event.hashStr === eventId)
         check(isDefined(pin), 'pin not found')
         check(isDefined(pin.event.remoteEvent), 'remoteEvent not found')
-        await this.makeEventAndAddToStream(
+        const result = await this.makeEventAndAddToStream(
             streamId,
             make_MemberPayload_Unpin(pin.event.remoteEvent.hash),
             {
                 method: 'unpin',
             },
         )
+        return result
     }
 
     isUsernameAvailable(streamId: string, username: string): boolean {
