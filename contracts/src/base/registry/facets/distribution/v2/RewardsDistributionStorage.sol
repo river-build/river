@@ -13,7 +13,12 @@ library RewardsDistributionStorage {
   bytes32 internal constant STORAGE_SLOT =
     0x9aed53e346ef79853612b4c863c4eb308de8a5e84e0fd7d00dad88eb5ff1ea00;
 
-  function layout() internal pure returns (StakingRewards.Layout storage s) {
+  struct Layout {
+    StakingRewards.Layout stakingRewards;
+    mapping(address rewardNotifier => bool) isRewardNotifier;
+  }
+
+  function layout() internal pure returns (Layout storage s) {
     assembly {
       s.slot := STORAGE_SLOT
     }
