@@ -1,24 +1,21 @@
- name: Network Diff Upgrade
+name: Network Diff Upgrade
 
- on:
-      workflow_dispatch:
+on:
+    workflow_dispatch:
 
- jobs:
-      diff_report:
-          name: Network Diff Report
-          runs-on: ubuntu-latest
-
-          steps:
-              - name: Checkout code
-                uses: actions/checkout@v4
-                with:
-                    ref: main
-
-              - name: Set up Go
-                uses: actions/setup-go@v4
-                with:
-                  go-version: '1.22'
-
-              - name: Run Network Diff
-                run: make network-diff
-                working-directory: river/contracts
+jobs:
+    diff_report:
+        name: Gamma Network Diff Report
+        uses: ./.github/workflows/Bytecode_diff_report.yml
+        secrets: inherit
+        with:
+          origin_environment: alpha
+          target_environment: gamma
+    
+    upgrade_gamma_facets:
+        name: Upgrade Gamma Facets
+        needs: diff_report
+        uses: ./.github/workflows/Upgrade_network_facets.yml
+        secrets: inherit
+        with:
+            environment_name: gamma
