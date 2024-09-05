@@ -31,6 +31,7 @@ logger.info(
 		riverChainRpcUrl: config.riverChainRpcUrl,
 		baseChainRpcUrl: config.baseChainRpcUrl,
 		streamMetadataBaseUrl: config.streamMetadataBaseUrl,
+		aws: config.aws ? 'enabled' : 'disabled',
 	},
 	'config',
 )
