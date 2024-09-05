@@ -1,0 +1,24 @@
+ name: Network Diff Upgrade
+
+ on:
+      workflow_dispatch:
+
+ jobs:
+      diff_report:
+          name: Network Diff Report
+          runs-on: ubuntu-latest
+
+          steps:
+              - name: Checkout code
+                uses: actions/checkout@v4
+                with:
+                    ref: main
+
+              - name: Set up Go
+                uses: actions/setup-go@v4
+                with:
+                  go-version: '1.22'
+
+              - name: Run Network Diff
+                run: make network-diff
+                working-directory: river/contracts
