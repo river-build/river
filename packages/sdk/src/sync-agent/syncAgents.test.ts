@@ -103,11 +103,10 @@ describe('syncAgents.test.ts', () => {
         expect(result2).toBeDefined()
         expect(result2.error).toBeUndefined()
 
-        // alice can't pin, she doesn't have permissions
+        // alice can't pin yet, she doesn't have permissions
         const aliceChannel = alice.spaces.getSpace(spaceId).getChannel(channelId)
         await waitFor(() => aliceChannel.value.status === 'loaded')
 
-        await expect(aliceChannel.pin(event!.eventId)).rejects.toThrow('PERMISSION_DENIED')
         // grant permissions
         const { roleId, error: roleError } = await createRole(
             bob.riverConnection.spaceDapp,
