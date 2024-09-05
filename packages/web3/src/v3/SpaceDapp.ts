@@ -877,43 +877,34 @@ export class SpaceDapp implements ISpaceDapp {
 
         const channelId = ensureHexPrefix(channelNetworkId)
 
-        if (
-            permission === Permission.Read ||
-            permission === Permission.Write ||
-            permission === Permission.React ||
-            permission === Permission.PinMessage
-        ) {
-            const linkedWallets = await this.getLinkedWallets(user)
+        const linkedWallets = await this.getLinkedWallets(user)
 
-            const owner = await space.Ownable.read.owner()
+        const owner = await space.Ownable.read.owner()
 
-            // Space owner is entitled to all channels
-            if (linkedWallets.includes(owner)) {
-                return true
-            }
-
-            const bannedWallets = await this.bannedWalletAddresses(spaceId)
-            for (const wallet of linkedWallets) {
-                if (bannedWallets.includes(wallet)) {
-                    return false
-                }
-            }
-
-            const entitlements = await this.getChannelEntitlementsForPermission(
-                spaceId,
-                channelId,
-                permission,
-            )
-            const entitledWallet = await this.evaluateEntitledWallet(
-                user,
-                linkedWallets,
-                entitlements,
-                supportedXChainRpcUrls,
-            )
-            return entitledWallet !== undefined
+        // Space owner is entitled to all channels
+        if (linkedWallets.includes(owner)) {
+            return true
         }
 
-        return space.Entitlements.read.isEntitledToChannel(channelId, user, permission)
+        const bannedWallets = await this.bannedWalletAddresses(spaceId)
+        for (const wallet of linkedWallets) {
+            if (bannedWallets.includes(wallet)) {
+                return false
+            }
+        }
+
+        const entitlements = await this.getChannelEntitlementsForPermission(
+            spaceId,
+            channelId,
+            permission,
+        )
+        const entitledWallet = await this.evaluateEntitledWallet(
+            user,
+            linkedWallets,
+            entitlements,
+            supportedXChainRpcUrls,
+        )
+        return entitledWallet !== undefined
     }
 
     public parseSpaceFactoryError(error: unknown): Error {
