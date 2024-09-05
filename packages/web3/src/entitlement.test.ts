@@ -2,11 +2,14 @@ import { ethers } from 'ethers'
 import {
     CheckOperationV2,
     CheckOperationType,
+    DecodedCheckOperation,
     LogicalOperationType,
+    LogicalOperation,
     encodeRuleData,
     decodeRuleData,
     encodeRuleDataV2,
     decodeRuleDataV2,
+    NoopOperation,
     OperationType,
     evaluateTree,
     postOrderArrayToTree,
@@ -19,11 +22,13 @@ import {
     decodeThresholdParams,
     encodeERC1155Params,
     decodeERC1155Params,
-} from '../src/entitlement'
-import { MOCK_ADDRESS } from '../src/Utils'
+    createOperationsTree,
+} from './entitlement'
+import { MOCK_ADDRESS, MOCK_ADDRESS_2, MOCK_ADDRESS_3 } from './Utils'
 import { zeroAddress } from 'viem'
-import { Address } from '../src/ContractTypes'
-import { convertRuleDataV2ToV1 } from '../src/ConvertersEntitlements'
+import { Address } from './ContractTypes'
+import { convertRuleDataV2ToV1 } from './ConvertersEntitlements'
+import { IRuleEntitlementV2Base } from './v3/IRuleEntitlementV2Shim'
 
 function makeRandomOperation(depth: number): Operation {
     const rand = Math.random()
@@ -234,7 +239,7 @@ const nftCases = [
         desc: 'eth sepolia (insufficient balance)',
         check: nftMultiCheckEthereumSepolia,
         wallets: [SepoliaTestNftWallet_1Token],
-        provider: baseSepoliaProvider,
+        provider: ethSepoliaProvider,
         expectedResult: false,
     },
     {
@@ -245,7 +250,7 @@ const nftCases = [
             SepoliaTestNftWallet_2Tokens,
             SepoliaTestNftWallet_3Tokens,
         ],
-        provider: baseSepoliaProvider,
+        provider: ethSepoliaProvider,
         expectedResult: true,
     },
     {
@@ -256,7 +261,7 @@ const nftCases = [
             SepoliaTestNftWallet_2Tokens,
             SepoliaTestNftWallet_3Tokens,
         ],
-        provider: baseSepoliaProvider,
+        provider: ethSepoliaProvider,
         expectedResult: false,
     },
 ]
@@ -266,7 +271,8 @@ test.each(nftCases)('erc721Check - $desc', async (props) => {
     const controller = new AbortController()
     const result = await evaluateTree(controller, wallets, [provider], check)
     if (expectedResult) {
-        expect(result).toBeTruthy()
+        expect(result as Address).toBeTruthy()
+        expect(result).not.toEqual(zeroAddress)
     } else {
         expect(result).toEqual(zeroAddress)
     }
@@ -280,7 +286,7 @@ const ethSepoliaChainLinkContract: Address = '0x779877A7B0D9E8603169DdbD7836e478
 // Some wallet addresses are duplicated for the sake of self-documenting variable names.
 const sepoliaChainLinkWallet_50Link: Address = '0x4BCfC6962Ab0297aF801da21216014F53B46E991'
 const sepoliaChainLinkWallet_25Link: Address = '0xa4D440AeA5F555feEB5AEa0ddcED6e1B9FaD6A9C'
-const baseSepoliaChainLinkWallet_50Link: Address = '0x4BCfC6962Ab0297aF801da21216014F53B46E991'
+const baseSepoliaChainLinkWallet_25Link2: Address = '0x4BCfC6962Ab0297aF801da21216014F53B46E991'
 const baseSepoliaChainLinkWallet_25Link: Address = '0xa4D440AeA5F555feEB5AEa0ddcED6e1B9FaD6A9C'
 const testEmptyAccount: Address = '0xb227905F186095083869928BAb49cA9CE9546817'
 
@@ -295,6 +301,13 @@ const sepolia0_2EthWallet = '0x8cECcB1e5537040Fc63A06C88b4c1dE61880dA4d'
 const sepolia0_015EthWallet = '0xB4d85De80afE92C97293c32B1C0c604133d0332E'
 
 const chainlinkExp = BigInt(10) ** BigInt(18)
+
+// ERC1155 test contracts and wallets
+const baseSepoliaErc1155Contract = '0x60327B4F2936E02B910e8A236d46D0B7C1986DCB'
+const baseSepoliaErc1155Wallet_TokenId0_700Tokens = '0x1FDBA84c2153568bc22686B88B617CF64cdb0637'
+const baseSepoliaErc1155Wallet_TokenId0_300Tokens = '0xB79Af997239A334355F60DBeD75bEDf30AcD37bD'
+const baseSepoliaErc1155Wallet_TokenId1_100Tokens = '0x1FDBA84c2153568bc22686B88B617CF64cdb0637'
+const baseSepoliaErc1155Wallet_TokenId1_50Tokens = '0xB79Af997239A334355F60DBeD75bEDf30AcD37bD'
 
 const nativeCoinBalance0_1Eth_Sepolia: CheckOperationV2 = {
     opType: OperationType.CHECK,
@@ -355,9 +368,9 @@ const erc20ChainLinkCheckBaseSepolia_30Tokens: CheckOperationV2 = {
     params: encodeThresholdParams({ threshold: 30n * chainlinkExp }),
 }
 
-const erc20ChainLinkCheckBaseSepolia_75Tokens: CheckOperationV2 = {
+const erc20ChainLinkCheckBaseSepolia_50Tokens: CheckOperationV2 = {
     ...erc20ChainLinkCheckBaseSepolia_20Tokens,
-    params: encodeThresholdParams({ threshold: 75n * chainlinkExp }),
+    params: encodeThresholdParams({ threshold: 50n * chainlinkExp }),
 }
 
 const erc20ChainLinkCheckBaseSepolia_90Tokens: CheckOperationV2 = {
@@ -387,6 +400,138 @@ const erc20ChainLinkCheckEthereumSepolia_90Tokens: CheckOperationV2 = {
     ...erc20ChainLinkEthereumSepolia_20Tokens,
     params: encodeThresholdParams({ threshold: 90n * chainlinkExp }),
 }
+
+const erc1155CheckBaseSepolia_TokenId0_700Tokens: CheckOperationV2 = {
+    opType: OperationType.CHECK,
+    checkType: CheckOperationType.ERC1155,
+    chainId: baseSepoliaChainId,
+    contractAddress: baseSepoliaErc1155Contract,
+    params: encodeERC1155Params({ threshold: 700n, tokenId: 0n }),
+}
+
+const erc1155CheckBaseSepolia_TokenId0_1000Tokens: CheckOperationV2 = {
+    ...erc1155CheckBaseSepolia_TokenId0_700Tokens,
+    params: encodeERC1155Params({ threshold: 1000n, tokenId: 0n }),
+}
+
+const erc1155CheckBaseSepolia_TokenId0_1001Tokens: CheckOperationV2 = {
+    ...erc1155CheckBaseSepolia_TokenId0_700Tokens,
+    params: encodeERC1155Params({ threshold: 1001n, tokenId: 0n }),
+}
+
+const erc1155CheckBaseSepolia_TokenId1_100Tokens: CheckOperationV2 = {
+    opType: OperationType.CHECK,
+    checkType: CheckOperationType.ERC1155,
+    chainId: baseSepoliaChainId,
+    contractAddress: baseSepoliaErc1155Contract,
+    params: encodeERC1155Params({ threshold: 100n, tokenId: 1n }),
+}
+
+const erc1155CheckBaseSepolia_TokenId1_150Tokens: CheckOperationV2 = {
+    ...erc1155CheckBaseSepolia_TokenId1_100Tokens,
+    params: encodeERC1155Params({ threshold: 150n, tokenId: 1n }),
+}
+
+const erc1155CheckBaseSepolia_TokenId1_151Tokens: CheckOperationV2 = {
+    ...erc1155CheckBaseSepolia_TokenId1_100Tokens,
+    params: encodeERC1155Params({ threshold: 151n, tokenId: 1n }),
+}
+
+const erc1155Cases = [
+    {
+        desc: 'base sepolia token id 0 (no wallets)',
+        check: erc1155CheckBaseSepolia_TokenId0_700Tokens,
+        wallets: [],
+        provider: baseSepoliaProvider,
+        expectedResult: false,
+    },
+    {
+        desc: 'base sepolia token id 0 (single wallet, insufficient balance)',
+        check: erc1155CheckBaseSepolia_TokenId0_700Tokens,
+        wallets: [baseSepoliaErc1155Wallet_TokenId0_300Tokens],
+        provider: baseSepoliaProvider,
+        expectedResult: false,
+    },
+    {
+        desc: 'base sepolia token id 0 (single wallet)',
+        check: erc1155CheckBaseSepolia_TokenId0_700Tokens,
+        wallets: [baseSepoliaErc1155Wallet_TokenId0_700Tokens],
+        provider: baseSepoliaProvider,
+        expectedResult: true,
+    },
+    {
+        desc: 'base sepolia token id 0 (multiwallet, insufficient balance)',
+        check: erc1155CheckBaseSepolia_TokenId0_1001Tokens,
+        wallets: [
+            baseSepoliaErc1155Wallet_TokenId0_700Tokens,
+            baseSepoliaErc1155Wallet_TokenId0_300Tokens,
+        ],
+        provider: baseSepoliaProvider,
+        expectedResult: false,
+    },
+    {
+        desc: 'base sepolia token id 0 (multiwallet)',
+        check: erc1155CheckBaseSepolia_TokenId0_1000Tokens,
+        wallets: [
+            baseSepoliaErc1155Wallet_TokenId0_700Tokens,
+            baseSepoliaErc1155Wallet_TokenId0_300Tokens,
+        ],
+        provider: baseSepoliaProvider,
+        expectedResult: true,
+    },
+    {
+        desc: 'base sepolia token id 1 (no wallets)',
+        check: erc1155CheckBaseSepolia_TokenId1_100Tokens,
+        wallets: [],
+        provider: baseSepoliaProvider,
+        expectedResult: false,
+    },
+    {
+        desc: 'base sepolia token id 1 (single wallet, insufficient balance)',
+        check: erc1155CheckBaseSepolia_TokenId1_100Tokens,
+        wallets: [baseSepoliaErc1155Wallet_TokenId1_50Tokens],
+        provider: baseSepoliaProvider,
+        expectedResult: false,
+    },
+    {
+        desc: 'base sepolia token id 1 (single wallet)',
+        check: erc1155CheckBaseSepolia_TokenId1_100Tokens,
+        wallets: [baseSepoliaErc1155Wallet_TokenId1_100Tokens],
+        provider: baseSepoliaProvider,
+        expectedResult: true,
+    },
+    {
+        desc: 'base sepolia token id 1 (multiwallet, insufficient balance)',
+        check: erc1155CheckBaseSepolia_TokenId1_151Tokens,
+        wallets: [
+            baseSepoliaErc1155Wallet_TokenId1_100Tokens,
+            baseSepoliaErc1155Wallet_TokenId1_50Tokens,
+        ],
+        provider: baseSepoliaProvider,
+        expectedResult: false,
+    },
+    {
+        desc: 'base sepolia token id 1 (multiwallet)',
+        check: erc1155CheckBaseSepolia_TokenId1_150Tokens,
+        wallets: [
+            baseSepoliaErc1155Wallet_TokenId1_100Tokens,
+            baseSepoliaErc1155Wallet_TokenId1_50Tokens,
+        ],
+        provider: baseSepoliaProvider,
+        expectedResult: true,
+    },
+]
+
+test.each(erc1155Cases)('ERC1155 Check - $desc', async (props) => {
+    const { check, wallets, provider, expectedResult } = props
+    const controller = new AbortController()
+    const result = await evaluateTree(controller, wallets, [provider], check)
+    if (expectedResult) {
+        expect(result).not.toEqual(zeroAddress)
+    } else {
+        expect(result).toEqual(zeroAddress)
+    }
+})
 
 const nativeCoinBalanceCases = [
     {
@@ -466,7 +611,8 @@ test.each(nativeCoinBalanceCases)('Native Coin Balance Check - $desc', async (pr
     const controller = new AbortController()
     const result = await evaluateTree(controller, wallets, [provider], check)
     if (expectedResult) {
-        expect(result).toBeTruthy()
+        expect(result as Address).toBeTruthy()
+        expect(result).not.toEqual(zeroAddress)
     } else {
         expect(result).toEqual(zeroAddress)
     }
@@ -511,21 +657,21 @@ const erc20Cases = [
     {
         desc: 'base sepolia (two nonempty wallets, true)',
         check: erc20ChainLinkCheckBaseSepolia_30Tokens,
-        wallets: [baseSepoliaChainLinkWallet_25Link, baseSepoliaChainLinkWallet_50Link],
+        wallets: [baseSepoliaChainLinkWallet_25Link, baseSepoliaChainLinkWallet_25Link2],
         provider: baseSepoliaProvider,
         expectedResult: true,
     },
     {
         desc: 'base sepolia (two nonempty wallets, exact balance - true)',
-        check: erc20ChainLinkCheckBaseSepolia_75Tokens,
-        wallets: [baseSepoliaChainLinkWallet_25Link, baseSepoliaChainLinkWallet_50Link],
+        check: erc20ChainLinkCheckBaseSepolia_50Tokens,
+        wallets: [baseSepoliaChainLinkWallet_25Link, baseSepoliaChainLinkWallet_25Link2],
         provider: baseSepoliaProvider,
         expectedResult: true,
     },
     {
         desc: 'base sepolia (two nonempty wallets, false)',
         check: erc20ChainLinkCheckBaseSepolia_90Tokens,
-        wallets: [baseSepoliaChainLinkWallet_25Link, baseSepoliaChainLinkWallet_50Link],
+        wallets: [baseSepoliaChainLinkWallet_25Link, baseSepoliaChainLinkWallet_25Link2],
         provider: baseSepoliaProvider,
         expectedResult: false,
     },
@@ -538,14 +684,14 @@ const erc20Cases = [
     },
     {
         desc: 'eth sepolia (single wallet)',
-        check: erc20ChainLinkCheckBaseSepolia_20Tokens,
+        check: erc20ChainLinkEthereumSepolia_20Tokens,
         wallets: [sepoliaChainLinkWallet_25Link],
         provider: ethSepoliaProvider,
         expectedResult: true,
     },
     {
         desc: 'eth sepolia (two wallets)',
-        check: erc20ChainLinkCheckBaseSepolia_20Tokens,
+        check: erc20ChainLinkEthereumSepolia_20Tokens,
         wallets: [sepoliaChainLinkWallet_25Link, testEmptyAccount],
         provider: ethSepoliaProvider,
         expectedResult: true,
@@ -585,7 +731,8 @@ test.each(erc20Cases)('erc20Check - $desc', async (props) => {
     const controller = new AbortController()
     const result = await evaluateTree(controller, wallets, [provider], check)
     if (expectedResult) {
-        expect(result).toBeTruthy()
+        expect(result as Address).toBeTruthy()
+        expect(result).not.toEqual(zeroAddress)
     } else {
         expect(result).toEqual(zeroAddress)
     }
@@ -902,5 +1049,319 @@ describe('erc1155 params', () => {
         const encodedParams = encodeERC1155Params({ threshold: BigInt(200), tokenId: BigInt(100) })
         const decodedParams = decodeERC1155Params(encodedParams)
         expect(decodedParams).toEqual({ threshold: BigInt(200), tokenId: BigInt(100) })
+    })
+})
+
+function assertRuleDatasEqual(
+    actual: IRuleEntitlementV2Base.RuleDataV2Struct,
+    expected: IRuleEntitlementV2Base.RuleDataV2Struct,
+) {
+    expect(expected.operations.length).toBe(actual.operations.length)
+    for (let i = 0; i < expected.operations.length; i++) {
+        expect(expected.operations[i].opType).toBe(actual.operations[i].opType)
+        expect(expected.operations[i].index).toBe(actual.operations[i].index)
+    }
+    expect(expected.checkOperations.length).toBe(actual.checkOperations.length)
+    for (let i = 0; i < expected.checkOperations.length; i++) {
+        expect(expected.checkOperations[i].opType).toBe(actual.checkOperations[i].opType)
+        expect(expected.checkOperations[i].chainId).toBe(actual.checkOperations[i].chainId)
+        expect(expected.checkOperations[i].contractAddress).toBe(
+            actual.checkOperations[i].contractAddress,
+        )
+        expect(expected.checkOperations[i].params as string).toBe(
+            actual.checkOperations[i].params as string,
+        )
+    }
+    expect(expected.logicalOperations.length).toBe(actual.logicalOperations.length)
+    for (let i = 0; i < expected.logicalOperations.length; i++) {
+        expect(expected.logicalOperations[i].logOpType).toBe(actual.logicalOperations[i].logOpType)
+        expect(expected.logicalOperations[i].leftOperationIndex).toBe(
+            actual.logicalOperations[i].leftOperationIndex,
+        )
+    }
+}
+
+function assertOperationEqual(actual: Operation, expected: Operation) {
+    expect(actual.opType).toBe(expected.opType)
+    if (expected.opType === OperationType.CHECK) {
+        const actualCheck = actual as CheckOperationV2
+        const expectedCheck = expected
+        expect(actualCheck.checkType).toBe(expectedCheck.checkType)
+        expect(actualCheck.chainId).toBe(expectedCheck.chainId)
+        expect(actualCheck.contractAddress).toBe(expectedCheck.contractAddress)
+        expect(actualCheck.params).toBe(expectedCheck.params)
+    } else if (expected.opType === OperationType.LOGICAL) {
+        const actualLogical = actual as LogicalOperation
+        const expectedLogical = expected
+        expect(actualLogical.logicalType).toBe(expectedLogical.logicalType)
+        // This check involves some redundance since these element have been visited already,
+        // but it ensures that embedded operations in the tree are equal since the
+        // operations tree does not use indices, but builds a tree directly.
+        assertOperationEqual(actualLogical.leftOperation, expectedLogical.leftOperation)
+        assertOperationEqual(actualLogical.rightOperation, expectedLogical.rightOperation)
+    } else if (expected.opType === OperationType.NONE) {
+        expect(actual.opType).toBe(expected.opType)
+    }
+}
+
+function assertOperationsEqual(actual: Operation[], expected: Operation[]) {
+    expect(expected.length).toBe(actual.length)
+    for (let i = 0; i < expected.length; i++) {
+        assertOperationEqual(actual[i], expected[i])
+    }
+}
+
+describe('createOperationsTree', () => {
+    test('empty', () => {
+        const checkOp: DecodedCheckOperation[] = []
+        const tree = createOperationsTree(checkOp)
+        expect(tree).toEqual({
+            operations: [NoopOperation],
+            checkOperations: [],
+            logicalOperations: [],
+        })
+
+        // Validate conversion of rule data to operations tree (used for evaluation)
+        const operations = ruleDataToOperations(tree)
+        assertOperationsEqual(operations, [NoopOperation])
+    })
+
+    test('single check', () => {
+        const checkOp: DecodedCheckOperation[] = [
+            {
+                type: CheckOperationType.ERC721,
+                chainId: 1n,
+                address: MOCK_ADDRESS,
+                threshold: BigInt(1),
+            },
+        ]
+        const tree = createOperationsTree(checkOp)
+
+        // Validate the constructed rule data
+        assertRuleDatasEqual(tree, {
+            operations: [
+                {
+                    opType: OperationType.CHECK,
+                    index: 0,
+                },
+            ],
+            checkOperations: [
+                {
+                    opType: CheckOperationType.ERC721,
+                    chainId: 1n,
+                    contractAddress: MOCK_ADDRESS,
+                    params: encodeThresholdParams({ threshold: BigInt(1) }),
+                },
+            ],
+            logicalOperations: [],
+        })
+    })
+
+    test('two checks', () => {
+        const checkOp: DecodedCheckOperation[] = [
+            {
+                type: CheckOperationType.ISENTITLED,
+                chainId: 1n,
+                address: MOCK_ADDRESS,
+            },
+            {
+                type: CheckOperationType.ERC721,
+                chainId: 1n,
+                address: MOCK_ADDRESS_2,
+                threshold: BigInt(1),
+            },
+        ]
+
+        const tree = createOperationsTree(checkOp)
+
+        // Validate the constructed rule data
+        assertRuleDatasEqual(tree, {
+            operations: [
+                {
+                    opType: OperationType.CHECK,
+                    index: 0,
+                },
+                {
+                    opType: OperationType.CHECK,
+                    index: 1,
+                },
+                {
+                    opType: OperationType.LOGICAL,
+                    index: 0,
+                },
+            ],
+            checkOperations: [
+                {
+                    opType: CheckOperationType.ISENTITLED,
+                    chainId: 1n,
+                    contractAddress: MOCK_ADDRESS,
+                    params: '0x',
+                },
+                {
+                    opType: CheckOperationType.ERC721,
+                    chainId: 1n,
+                    contractAddress: MOCK_ADDRESS_2,
+                    params: encodeThresholdParams({ threshold: BigInt(1) }),
+                },
+            ],
+            logicalOperations: [
+                {
+                    logOpType: LogicalOperationType.OR,
+                    leftOperationIndex: 0,
+                    rightOperationIndex: 1,
+                },
+            ],
+        })
+
+        // Validate conversion of rule data to operations tree (used for evaluation)
+        const operations = ruleDataToOperations(tree)
+
+        const check1: CheckOperationV2 = {
+            opType: OperationType.CHECK,
+            checkType: CheckOperationType.ISENTITLED,
+            chainId: 1n,
+            contractAddress: MOCK_ADDRESS,
+            params: '0x',
+        }
+        const check2: CheckOperationV2 = {
+            opType: OperationType.CHECK,
+            checkType: CheckOperationType.ERC721,
+            chainId: 1n,
+            contractAddress: MOCK_ADDRESS_2,
+            params: encodeThresholdParams({ threshold: BigInt(1) }),
+        }
+        assertOperationsEqual(operations, [
+            check1,
+            check2,
+            {
+                opType: OperationType.LOGICAL,
+                logicalType: LogicalOperationType.OR,
+                leftOperation: check1,
+                rightOperation: check2,
+            } satisfies LogicalOperation,
+        ])
+    })
+
+    test('three checks', () => {
+        const checkOp: DecodedCheckOperation[] = [
+            {
+                type: CheckOperationType.ISENTITLED,
+                chainId: 1n,
+                address: MOCK_ADDRESS,
+            },
+            {
+                type: CheckOperationType.ERC721,
+                chainId: 2n,
+                address: MOCK_ADDRESS_2,
+                threshold: BigInt(1),
+            },
+            {
+                type: CheckOperationType.ERC20,
+                chainId: 3n,
+                address: MOCK_ADDRESS_3,
+                threshold: BigInt(1),
+            },
+        ]
+
+        const tree = createOperationsTree(checkOp)
+
+        // Validate the constructed rule data
+        assertRuleDatasEqual(tree, {
+            operations: [
+                {
+                    opType: OperationType.CHECK,
+                    index: 0,
+                },
+                {
+                    opType: OperationType.CHECK,
+                    index: 1,
+                },
+                {
+                    opType: OperationType.LOGICAL,
+                    index: 0,
+                },
+                {
+                    opType: OperationType.CHECK,
+                    index: 2,
+                },
+                {
+                    opType: OperationType.LOGICAL,
+                    index: 1,
+                },
+            ],
+            checkOperations: [
+                {
+                    opType: CheckOperationType.ISENTITLED,
+                    chainId: 1n,
+                    contractAddress: MOCK_ADDRESS,
+                    params: '0x',
+                },
+                {
+                    opType: CheckOperationType.ERC721,
+                    chainId: 2n,
+                    contractAddress: MOCK_ADDRESS_2,
+                    params: encodeThresholdParams({ threshold: BigInt(1) }),
+                },
+                {
+                    opType: CheckOperationType.ERC20,
+                    chainId: 3n,
+                    contractAddress: MOCK_ADDRESS_3,
+                    params: encodeThresholdParams({ threshold: BigInt(1) }),
+                },
+            ],
+            logicalOperations: [
+                {
+                    logOpType: LogicalOperationType.OR,
+                    leftOperationIndex: 0,
+                    rightOperationIndex: 1,
+                },
+                {
+                    logOpType: LogicalOperationType.OR,
+                    leftOperationIndex: 2,
+                    rightOperationIndex: 3,
+                },
+            ],
+        })
+
+        // Validate conversion of rule data to operations tree (used for evaluation)
+        const operations = ruleDataToOperations(tree)
+
+        const check1: CheckOperationV2 = {
+            opType: OperationType.CHECK,
+            checkType: CheckOperationType.ISENTITLED,
+            chainId: 1n,
+            contractAddress: MOCK_ADDRESS,
+            params: '0x',
+        }
+        const check2: CheckOperationV2 = {
+            opType: OperationType.CHECK,
+            checkType: CheckOperationType.ERC721,
+            chainId: 2n,
+            contractAddress: MOCK_ADDRESS_2,
+            params: encodeThresholdParams({ threshold: BigInt(1) }),
+        }
+        const check3: CheckOperationV2 = {
+            opType: OperationType.CHECK,
+            checkType: CheckOperationType.ERC20,
+            chainId: 3n,
+            contractAddress: MOCK_ADDRESS_3,
+            params: encodeThresholdParams({ threshold: BigInt(1) }),
+        }
+
+        const logical1: LogicalOperation = {
+            opType: OperationType.LOGICAL,
+            logicalType: LogicalOperationType.OR,
+            leftOperation: check1,
+            rightOperation: check2,
+        }
+
+        const logical2: LogicalOperation = {
+            opType: OperationType.LOGICAL,
+            logicalType: LogicalOperationType.OR,
+            leftOperation: logical1,
+            rightOperation: check3,
+        }
+
+        assertOperationsEqual(operations, [check1, check2, logical1, check3, logical2])
     })
 })

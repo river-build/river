@@ -3,160 +3,44 @@
  */
 
 import {
-    getDynamicPricingModule,
-    everyoneMembershipStruct,
-    waitFor,
+    createTownWithRequirements,
     createUserStreamAndSyncClient,
-    createSpaceAndDefaultChannel,
-    expectUserCanJoin,
-    setupWalletsAndContexts,
-    linkWallets,
-    getNftRuleData,
-    twoNftRuleData,
-    getXchainSupportedRpcUrlsForTesting,
-    erc20CheckOp,
     customCheckOp,
+    erc20CheckOp,
+    everyoneMembershipStruct,
+    expectUserCanJoin,
+    expectUserCannotJoinSpace,
+    getNftRuleData,
+    getXchainSupportedRpcUrlsForTesting,
+    linkWallets,
     nativeCoinBalanceCheckOp,
     oneEth,
-    twoEth,
-    threeEth,
     oneHalfEth,
+    setupWalletsAndContexts,
+    threeEth,
+    twoEth,
+    twoNftRuleData,
+    waitFor,
 } from './util.test'
 import { dlog } from '@river-build/dlog'
 import { MembershipOp } from '@river-build/proto'
-import { Client } from './client'
 import {
     Address,
     CheckOperationType,
-    ETH_ADDRESS,
     LogicalOperationType,
-    MembershipStruct,
     NoopRuleData,
     Operation,
     OperationType,
-    Permission,
     TestCustomEntitlement,
     TestERC20,
     TestERC721,
     TestEthBalance,
     treeToRuleData,
-    IRuleEntitlementV2Base,
-    ISpaceDapp,
-    encodeRuleDataV2,
     encodeThresholdParams,
+    createExternalNFTStruct,
 } from '@river-build/web3'
 
 const log = dlog('csb:test:spaceWithEntitlements')
-
-// Users need to be mapped from 'alice', 'bob', etc to their wallet addresses,
-// because the wallets are created within this helper method.
-async function createTownWithRequirements(requirements: {
-    everyone: boolean
-    users: string[]
-    ruleData: IRuleEntitlementV2Base.RuleDataV2Struct
-}) {
-    const {
-        alice,
-        bob,
-        carol,
-        aliceSpaceDapp,
-        bobSpaceDapp,
-        carolSpaceDapp,
-        aliceProvider,
-        bobProvider,
-        carolProvider,
-        alicesWallet,
-        bobsWallet,
-        carolsWallet,
-    } = await setupWalletsAndContexts()
-
-    const pricingModules = await bobSpaceDapp.listPricingModules()
-    const dynamicPricingModule = getDynamicPricingModule(pricingModules)
-    expect(dynamicPricingModule).toBeDefined()
-
-    const userNameToWallet: Record<string, string> = {
-        alice: alicesWallet.address,
-        bob: bobsWallet.address,
-        carol: carolsWallet.address,
-    }
-    requirements.users = requirements.users.map((user) => userNameToWallet[user])
-
-    const membershipInfo: MembershipStruct = {
-        settings: {
-            name: 'Everyone',
-            symbol: 'MEMBER',
-            price: 0,
-            maxSupply: 1000,
-            duration: 0,
-            currency: ETH_ADDRESS,
-            feeRecipient: bob.userId,
-            freeAllocation: 0,
-            pricingModule: dynamicPricingModule!.module,
-        },
-        permissions: [Permission.Read, Permission.Write],
-        requirements: {
-            everyone: requirements.everyone,
-            users: requirements.users,
-            ruleData: encodeRuleDataV2(requirements.ruleData),
-        },
-    }
-
-    // This helper method validates that the owner can join the space and default channel.
-    const {
-        spaceId,
-        defaultChannelId: channelId,
-        userStreamView: bobUserStreamView,
-    } = await createSpaceAndDefaultChannel(
-        bob,
-        bobSpaceDapp,
-        bobProvider.wallet,
-        'bobs',
-        membershipInfo,
-    )
-
-    // Validate that owner passes entitlement check
-    const entitledWallet = await bobSpaceDapp.getEntitledWalletForJoiningSpace(
-        spaceId,
-        bobsWallet.address,
-        getXchainSupportedRpcUrlsForTesting(),
-    )
-    expect(entitledWallet).toBeDefined()
-
-    return {
-        alice,
-        bob,
-        carol,
-        aliceSpaceDapp,
-        bobSpaceDapp,
-        carolSpaceDapp,
-        aliceProvider,
-        bobProvider,
-        carolProvider,
-        alicesWallet,
-        bobsWallet,
-        carolsWallet,
-        spaceId,
-        channelId,
-        bobUserStreamView,
-    }
-}
-
-async function expectUserCannotJoinSpace(
-    spaceId: string,
-    client: Client,
-    spaceDapp: ISpaceDapp,
-    address: string,
-) {
-    // Check that the local evaluation of the user's entitlements for joining the space
-    // fails.
-    const entitledWallet = await spaceDapp.getEntitledWalletForJoiningSpace(
-        spaceId,
-        address,
-        getXchainSupportedRpcUrlsForTesting(),
-    )
-    expect(entitledWallet).toBeUndefined()
-    await expect(client.joinStream(spaceId)).rejects.toThrow(/PERMISSION_DENIED/)
-}
 
 describe('spaceWithEntitlements', () => {
     let testNft1Address: string, testNft2Address: string, testNft3Address: string
@@ -780,6 +664,99 @@ describe('spaceWithEntitlements', () => {
         const doneStart = Date.now()
         await bob.stopSync()
         await alice.stopSync()
+        log('Done', Date.now() - doneStart)
+    })
+
+    test('user with only one entitlement from 3-nested NFT rule data can join space', async () => {
+        const testNft1 = 'TestNft1'
+        const testNft2 = 'TestNft2'
+        const testNft3 = 'TestNft3'
+        const testNftAddress = await TestERC721.getContractAddress(testNft1)
+        const testNftAddress2 = await TestERC721.getContractAddress(testNft2)
+        const testNftAddress3 = await TestERC721.getContractAddress(testNft3)
+
+        const ruleData = createExternalNFTStruct([testNftAddress, testNftAddress2, testNftAddress3])
+
+        const {
+            alice,
+            bob,
+            carol,
+            aliceSpaceDapp,
+            aliceProvider,
+            carolProvider,
+            carolSpaceDapp,
+            alicesWallet,
+            carolsWallet,
+            spaceId,
+            channelId,
+        } = await createTownWithRequirements({
+            everyone: false,
+            users: [],
+            ruleData,
+        })
+        // Set up additional users to test single ownership of all three nfts.
+        const {
+            alice: dave,
+            alicesWallet: davesWallet,
+            aliceSpaceDapp: daveSpaceDapp,
+            aliceProvider: daveProvider,
+            carol: emily,
+            carolProvider: emilyProvider,
+            carolSpaceDapp: emilySpaceDapp,
+            carolsWallet: emilyWallet,
+        } = await setupWalletsAndContexts()
+
+        // Have alice create her own space so she can initialize her user stream.
+        // Then she will attempt to join the space from herclient, which should fail.
+        await createUserStreamAndSyncClient(
+            alice,
+            aliceSpaceDapp,
+            'alice',
+            await everyoneMembershipStruct(aliceSpaceDapp, alice),
+            aliceProvider.wallet,
+        )
+        await expectUserCannotJoinSpace(spaceId, alice, aliceSpaceDapp, alicesWallet.address)
+
+        await TestERC721.publicMint(testNft1, carolsWallet.address as Address)
+        await expectUserCanJoin(
+            spaceId,
+            channelId,
+            'carol',
+            carol,
+            carolSpaceDapp,
+            carolsWallet.address,
+            carolProvider.wallet,
+        )
+
+        await TestERC721.publicMint(testNft2, davesWallet.address as Address)
+        await expectUserCanJoin(
+            spaceId,
+            channelId,
+            'dave',
+            dave,
+            daveSpaceDapp,
+            davesWallet.address,
+            daveProvider.wallet,
+        )
+
+        await TestERC721.publicMint(testNft3, emilyWallet.address as Address)
+        await expectUserCanJoin(
+            spaceId,
+            channelId,
+            'emily',
+            emily,
+            emilySpaceDapp,
+            emilyWallet.address,
+            emilyProvider.wallet,
+        )
+
+        // kill the clients
+        const doneStart = Date.now()
+        await bob.stopSync()
+        await alice.stopSync()
+        await carol.stopSync()
+        await dave.stopSync()
+        await emily.stopSync()
         log('Done', Date.now() - doneStart)
     })
 
