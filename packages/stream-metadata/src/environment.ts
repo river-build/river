@@ -21,6 +21,7 @@ const envMainSchema = z.object({
 	HOST: z.string().optional().default('127.0.0.1'),
 	LOG_LEVEL: z.string().optional().default('info'),
 	LOG_PRETTY: BoolFromStringSchema.optional().default('true'),
+	OPENSEA_API_KEY: z.string().optional(),
 })
 
 const envAwsSchema = z
@@ -48,6 +49,7 @@ function makeConfig() {
 		streamMetadataBaseUrl: baseUrl.origin,
 		host: envMain.HOST,
 		port: envMain.PORT,
+		openSeaApiKey: envMain.OPENSEA_API_KEY,
 		log: {
 			level: envMain.LOG_LEVEL,
 			pretty: envMain.LOG_PRETTY,

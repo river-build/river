@@ -62,6 +62,10 @@ export async function spaceRefresh(request: FastifyRequest, reply: FastifyReply)
 }
 
 const refreshOpenSea = async (spaceAddress: string) => {
+	if (!config.openSeaApiKey) {
+		return
+	}
+
 	const space = await spaceDapp.getSpaceInfo(spaceAddress)
 	if (!space) {
 		throw new Error('Space not found')
@@ -69,16 +73,23 @@ const refreshOpenSea = async (spaceAddress: string) => {
 
 	const tokenId = BigNumber.from(space.tokenId).toString()
 	let chain
+	let url
 	if (space.networkId === '1') {
 		chain = 'base'
+		url = `https://api.opensea.io/api/v2/chain/${chain}/contract/${spaceAddress}/nfts/${tokenId}/refresh`
 	} else if (space.networkId === '84532') {
 		chain = 'base_sepolia'
+		url = `https://testnets-api.opensea.io/api/v2/chain/${chain}/contract/${spaceAddress}/nfts/${tokenId}/refresh`
 	} else {
 		throw new Error('Unsupported network')
 	}
 
-	const url = `https://api.opensea.io/api/v2/chain/${chain}/contract/${spaceAddress}/nfts/${tokenId}/refresh`
-	const response = await fetch(url)
+	const response = await fetch(url, {
+		method: 'POST',
+		headers: {
+			'x-api-key': config.openSeaApiKey,
+		},
+	})
 
 	return { ok: response.ok }
 }
