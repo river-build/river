@@ -25,7 +25,7 @@ import {EntitlementGatedBase} from "contracts/src/spaces/facets/gated/Entitlemen
 /// @title MembershipJoin
 /// @notice Handles the logic for joining a space, including entitlement checks and payment processing
 /// @dev Inherits from multiple base contracts to provide comprehensive membership functionality
-contract MembershipJoin is
+abstract contract MembershipJoin is
   IRolesBase,
   IPartnerRegistryBase,
   MembershipBase,
