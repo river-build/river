@@ -32,6 +32,7 @@ logger.info(
 		baseChainRpcUrl: config.baseChainRpcUrl,
 		streamMetadataBaseUrl: config.streamMetadataBaseUrl,
 		aws: config.aws ? 'enabled' : 'disabled',
+		openSeaApiKey: config.openSeaApiKey ? 'enabled' : 'disabled',
 	},
 	'config',
 )
