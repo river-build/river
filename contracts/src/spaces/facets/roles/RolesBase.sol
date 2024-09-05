@@ -372,9 +372,13 @@ abstract contract RolesBase is IRolesBase {
 
     // check if new permissions are not empty then add them
     uint256 permissionsLen = permissions.length;
-    for (uint256 i = 0; i < permissionsLen; i++) {
-      _checkEmptyString(permissions[i]);
-      permissionsSet.add(permissions[i]);
+    if (permissionsLen > 0) {
+      for (uint256 i = 0; i < permissionsLen; i++) {
+        _checkEmptyString(permissions[i]);
+        permissionsSet.add(permissions[i]);
+      }
+    } else {
+      _clearChannelPermissionOverrides(roleId, channelId);
     }
 
     emit PermissionsAddedToChannelRole(msg.sender, roleId, channelId);
