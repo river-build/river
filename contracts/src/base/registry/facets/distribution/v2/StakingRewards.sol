@@ -9,13 +9,9 @@ import {SafeTransferLib} from "solady/src/utils/SafeTransferLib.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 
 // contracts
-import {DelegationMinion} from "./DelegationMinion.sol";
+import {DelegationProxy} from "./DelegationProxy.sol";
 
 library StakingRewards {
-  using CustomRevert for bytes4;
-  using FixedPointMathLib for uint256;
-  using SafeTransferLib for address;
-
   uint256 internal constant SCALE_FACTOR = 1e36;
 
   struct Deposit {
@@ -44,18 +40,19 @@ library StakingRewards {
     mapping(address depositor => uint256 amount) stakedByDepositor;
     mapping(address beneficiary => Treasure) treasureByBeneficiary;
     mapping(uint256 depositId => Deposit) deposits;
-    mapping(address delegatee => address minion) delegationMinions;
-    mapping(address rewardNotifier => bool) isRewardNotifier;
+    mapping(address delegatee => address proxy) delegationProxies;
   }
 
-  event MinionDeployed(address indexed delegatee, address indexed minion);
+  event DelegationProxyDeployed(
+    address indexed delegatee,
+    address indexed proxy
+  );
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                           ERRORS                           */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   error StakingRewards_InvalidAddress();
-  error StakingRewards_InvalidRewardNotifier();
   error StakingRewards_InvalidRewardRate();
   error StakingRewards_InsufficientReward();
 
@@ -64,24 +61,25 @@ library StakingRewards {
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   function lastTimeRewardDistributed(
-    Layout storage $
+    Layout storage ds
   ) internal view returns (uint256) {
-    return FixedPointMathLib.min($.rewardEndTime, block.timestamp);
+    return FixedPointMathLib.min(ds.rewardEndTime, block.timestamp);
   }
 
   function currentRewardPerTokenAccumulated(
-    Layout storage $
+    Layout storage ds
   ) internal view returns (uint256) {
+    // cache storage reads
     (
       uint256 totalStaked,
       uint256 lastUpdateTime,
       uint256 rewardRate,
       uint256 rewardPerTokenAccumulated
     ) = (
-        $.totalStaked,
-        $.lastUpdateTime,
-        $.rewardRate,
-        $.rewardPerTokenAccumulated
+        ds.totalStaked,
+        ds.lastUpdateTime,
+        ds.rewardRate,
+        ds.rewardPerTokenAccumulated
       );
     if (totalStaked == 0) return rewardPerTokenAccumulated;
 
@@ -89,20 +87,20 @@ library StakingRewards {
       rewardPerTokenAccumulated +
       FixedPointMathLib.fullMulDiv(
         rewardRate,
-        lastTimeRewardDistributed($) - lastUpdateTime,
+        lastTimeRewardDistributed(ds) - lastUpdateTime,
         totalStaked
       );
   }
 
   function currentUnclaimedReward(
-    Layout storage $,
+    Layout storage ds,
     address beneficiary
   ) internal view returns (uint256) {
-    Treasure storage treasure = $.treasureByBeneficiary[beneficiary];
+    Treasure storage treasure = ds.treasureByBeneficiary[beneficiary];
     return
       treasure.unclaimedRewardSnapshot +
       (treasure.earningPower *
-        (currentRewardPerTokenAccumulated($) -
+        (currentRewardPerTokenAccumulated(ds) -
           treasure.rewardPerTokenAccumulated));
   }
 
@@ -110,160 +108,170 @@ library StakingRewards {
   /*                       STATE MUTATING                       */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-  function updateGlobalReward(Layout storage $) internal {
-    $.rewardPerTokenAccumulated = currentRewardPerTokenAccumulated($);
-    $.lastUpdateTime = lastTimeRewardDistributed($);
+  function updateGlobalReward(Layout storage ds) internal {
+    ds.rewardPerTokenAccumulated = currentRewardPerTokenAccumulated(ds);
+    ds.lastUpdateTime = lastTimeRewardDistributed(ds);
   }
 
   /// @dev Must be called after updating the global reward.
-  function updateReward(Layout storage $, address beneficiary) internal {
-    Treasure storage treasure = $.treasureByBeneficiary[beneficiary];
-    treasure.unclaimedRewardSnapshot = currentUnclaimedReward($, beneficiary);
-    treasure.rewardPerTokenAccumulated = $.rewardPerTokenAccumulated;
+  function updateReward(Layout storage ds, address beneficiary) internal {
+    Treasure storage treasure = ds.treasureByBeneficiary[beneficiary];
+    treasure.unclaimedRewardSnapshot = currentUnclaimedReward(ds, beneficiary);
+    treasure.rewardPerTokenAccumulated = ds.rewardPerTokenAccumulated;
   }
 
-  function retrieveOrDeployMinion(
-    Layout storage $,
+  function retrieveOrDeployProxy(
+    Layout storage ds,
     address delegatee
-  ) internal returns (address minion) {
-    minion = $.delegationMinions[delegatee];
+  ) internal returns (address proxy) {
+    proxy = ds.delegationProxies[delegatee];
 
-    if (minion == address(0)) {
-      minion = address(new DelegationMinion($.stakeToken, delegatee));
-      $.delegationMinions[delegatee] = minion;
-      emit MinionDeployed(delegatee, minion);
+    if (proxy == address(0)) {
+      proxy = address(new DelegationProxy(ds.stakeToken, delegatee));
+      ds.delegationProxies[delegatee] = proxy;
+      emit DelegationProxyDeployed(delegatee, proxy);
     }
   }
 
   function stake(
-    Layout storage $,
+    Layout storage ds,
     address depositor,
     uint96 amount,
     address delegatee,
     address beneficiary
   ) internal returns (uint256 depositId) {
-    if (delegatee == address(0))
-      StakingRewards_InvalidAddress.selector.revertWith();
-    if (beneficiary == address(0))
-      StakingRewards_InvalidAddress.selector.revertWith();
+    if (delegatee == address(0)) {
+      CustomRevert.revertWith(StakingRewards_InvalidAddress.selector);
+    }
+    if (beneficiary == address(0)) {
+      CustomRevert.revertWith(StakingRewards_InvalidAddress.selector);
+    }
 
-    updateGlobalReward($);
-    updateReward($, beneficiary);
+    updateGlobalReward(ds);
+    updateReward(ds, beneficiary);
 
-    depositId = $.nextDepositId++;
+    depositId = ds.nextDepositId++;
 
-    $.totalStaked += amount;
+    ds.totalStaked += amount;
     unchecked {
       // because totalStaked >= stakedByDepositor[depositor]
       // and totalStaked >= treasureByBeneficiary[beneficiary].earningPower
       // if totalStaked doesn't overflow, they won't
-      $.stakedByDepositor[depositor] += amount;
-      $.treasureByBeneficiary[beneficiary].earningPower += amount;
+      ds.stakedByDepositor[depositor] += amount;
+      ds.treasureByBeneficiary[beneficiary].earningPower += amount;
     }
-    $.deposits[depositId] = Deposit({
+    ds.deposits[depositId] = Deposit({
       amount: amount,
       owner: depositor,
       delegatee: delegatee,
       beneficiary: beneficiary
     });
 
-    address minion = retrieveOrDeployMinion($, delegatee);
-    $.stakeToken.safeTransferFrom(depositor, minion, amount);
+    address proxy = retrieveOrDeployProxy(ds, delegatee);
+    SafeTransferLib.safeTransferFrom(ds.stakeToken, depositor, proxy, amount);
     // TODO: emit events
   }
 
   function increaseStake(
-    Layout storage $,
+    Layout storage ds,
     uint256 depositId,
     uint96 amount
   ) internal {
-    Deposit storage deposit = $.deposits[depositId];
+    Deposit storage deposit = ds.deposits[depositId];
     // cache storage reads
     (address beneficiary, address owner) = (deposit.beneficiary, deposit.owner);
 
-    updateGlobalReward($);
-    updateReward($, beneficiary);
+    updateGlobalReward(ds);
+    updateReward(ds, beneficiary);
 
     deposit.amount += amount;
-    $.totalStaked += amount;
+    ds.totalStaked += amount;
     unchecked {
       // because totalStaked >= stakedByDepositor[depositor]
       // and totalStaked >= treasureByBeneficiary[beneficiary].earningPower
       // if totalStaked doesn't overflow, they won't
-      $.stakedByDepositor[owner] += amount;
-      $.treasureByBeneficiary[beneficiary].earningPower += amount;
+      ds.stakedByDepositor[owner] += amount;
+      ds.treasureByBeneficiary[beneficiary].earningPower += amount;
     }
 
-    address minion = $.delegationMinions[deposit.delegatee];
-    $.stakeToken.safeTransferFrom(owner, minion, amount);
+    address proxy = ds.delegationProxies[deposit.delegatee];
+    SafeTransferLib.safeTransferFrom(ds.stakeToken, owner, proxy, amount);
     // TODO: emit events
   }
 
   function redelegate(
-    Layout storage $,
+    Layout storage ds,
     uint256 depositId,
     address newDelegatee
   ) internal {
-    if (newDelegatee == address(0))
-      StakingRewards_InvalidAddress.selector.revertWith();
-    Deposit storage deposit = $.deposits[depositId];
+    if (newDelegatee == address(0)) {
+      CustomRevert.revertWith(StakingRewards_InvalidAddress.selector);
+    }
+    Deposit storage deposit = ds.deposits[depositId];
     address oldDelegatee = deposit.delegatee;
-    address oldMinion = $.delegationMinions[oldDelegatee];
+    address oldProxy = ds.delegationProxies[oldDelegatee];
     deposit.delegatee = newDelegatee;
-    address newMinion = retrieveOrDeployMinion($, newDelegatee);
-    $.stakeToken.safeTransferFrom(oldMinion, newMinion, deposit.amount);
+    address newProxy = retrieveOrDeployProxy(ds, newDelegatee);
+    SafeTransferLib.safeTransferFrom(
+      ds.stakeToken,
+      oldProxy,
+      newProxy,
+      deposit.amount
+    );
     // TODO: emit events
   }
 
   function changeBeneficiary(
-    Layout storage $,
+    Layout storage ds,
     uint256 depositId,
     address newBeneficiary
   ) internal {
-    if (newBeneficiary == address(0))
-      StakingRewards_InvalidAddress.selector.revertWith();
-    updateGlobalReward($);
-    Deposit storage deposit = $.deposits[depositId];
+    if (newBeneficiary == address(0)) {
+      CustomRevert.revertWith(StakingRewards_InvalidAddress.selector);
+    }
+    updateGlobalReward(ds);
+    Deposit storage deposit = ds.deposits[depositId];
     address oldBeneficiary = deposit.beneficiary;
-    updateReward($, oldBeneficiary);
+    updateReward(ds, oldBeneficiary);
     uint256 amount = deposit.amount;
     unchecked {
       // treasureByBeneficiary[oldBeneficiary].earningPower >= deposit.amount
-      $.treasureByBeneficiary[oldBeneficiary].earningPower -= amount;
+      ds.treasureByBeneficiary[oldBeneficiary].earningPower -= amount;
     }
 
-    updateReward($, newBeneficiary);
+    updateReward(ds, newBeneficiary);
     deposit.beneficiary = newBeneficiary;
     unchecked {
       // the invariant totalStaked >= treasureByBeneficiary[beneficiary].earningPower is ensured on stake and increaseStake
       // the following won't overflow
-      $.treasureByBeneficiary[newBeneficiary].earningPower += amount;
+      ds.treasureByBeneficiary[newBeneficiary].earningPower += amount;
     }
     // TODO: emit events
   }
 
   function withdraw(
-    Layout storage $,
+    Layout storage ds,
     uint256 depositId,
     uint96 amount
   ) internal {
-    updateGlobalReward($);
-    Deposit storage deposit = $.deposits[depositId];
+    updateGlobalReward(ds);
+    Deposit storage deposit = ds.deposits[depositId];
     // cache storage reads
     (address beneficiary, address owner) = (deposit.beneficiary, deposit.owner);
-    updateReward($, beneficiary);
+    updateReward(ds, beneficiary);
 
     deposit.amount -= amount;
     unchecked {
       // totalStaked >= deposit.amount
-      $.totalStaked -= amount;
+      ds.totalStaked -= amount;
       // stakedByDepositor[owner] >= deposit.amount
-      $.stakedByDepositor[owner] -= amount;
+      ds.stakedByDepositor[owner] -= amount;
       // treasureByBeneficiary[beneficiary].earningPower >= deposit.amount
-      $.treasureByBeneficiary[beneficiary].earningPower -= amount;
+      ds.treasureByBeneficiary[beneficiary].earningPower -= amount;
     }
-    $.stakeToken.safeTransferFrom(
-      $.delegationMinions[deposit.delegatee],
+    SafeTransferLib.safeTransferFrom(
+      ds.stakeToken,
+      ds.delegationProxies[deposit.delegatee],
       owner,
       amount
     );
@@ -271,59 +279,65 @@ library StakingRewards {
   }
 
   function claimReward(
-    Layout storage $,
+    Layout storage ds,
     address beneficiary
   ) internal returns (uint256 reward) {
-    updateGlobalReward($);
-    updateReward($, beneficiary);
+    updateGlobalReward(ds);
+    updateReward(ds, beneficiary);
 
-    Treasure storage treasure = $.treasureByBeneficiary[beneficiary];
+    Treasure storage treasure = ds.treasureByBeneficiary[beneficiary];
     reward = treasure.unclaimedRewardSnapshot / SCALE_FACTOR;
     if (reward != 0) {
       unchecked {
         treasure.unclaimedRewardSnapshot -= reward * SCALE_FACTOR;
       }
-      $.rewardToken.safeTransfer(beneficiary, reward);
+      SafeTransferLib.safeTransfer(ds.rewardToken, beneficiary, reward);
       // TODO: emit events
     }
   }
 
-  function notifyRewardAmount(Layout storage $, uint256 reward) internal {
-    if (!$.isRewardNotifier[msg.sender])
-      StakingRewards_InvalidRewardNotifier.selector.revertWith();
-
-    $.rewardPerTokenAccumulated = currentRewardPerTokenAccumulated($);
+  function notifyRewardAmount(Layout storage ds, uint256 reward) internal {
+    ds.rewardPerTokenAccumulated = currentRewardPerTokenAccumulated(ds);
 
     // cache storage reads
     (uint256 rewardDuration, uint256 rewardEndTime) = (
-      $.rewardDuration,
-      $.rewardEndTime
+      ds.rewardDuration,
+      ds.rewardEndTime
     );
 
     uint256 rewardRate;
     if (block.timestamp >= rewardEndTime) {
-      rewardRate = reward.mulDiv(SCALE_FACTOR, rewardDuration);
+      rewardRate = FixedPointMathLib.mulDiv(
+        reward,
+        SCALE_FACTOR,
+        rewardDuration
+      );
     } else {
       uint256 remainingTime;
       unchecked {
         remainingTime = rewardEndTime - block.timestamp;
       }
-      uint256 leftover = $.rewardRate * remainingTime;
+      uint256 leftover = ds.rewardRate * remainingTime;
       rewardRate = (leftover + reward * SCALE_FACTOR) / rewardDuration;
     }
 
     // batch storage writes
-    ($.rewardEndTime, $.lastUpdateTime, $.rewardRate) = (
+    (ds.rewardEndTime, ds.lastUpdateTime, ds.rewardRate) = (
       block.timestamp + rewardDuration,
       block.timestamp,
       rewardRate
     );
 
-    if (rewardRate < SCALE_FACTOR)
-      StakingRewards_InvalidRewardRate.selector.revertWith();
+    if (rewardRate < SCALE_FACTOR) {
+      CustomRevert.revertWith(StakingRewards_InvalidRewardRate.selector);
+    }
 
-    if (rewardRate.mulDiv(rewardDuration, SCALE_FACTOR) > reward)
-      StakingRewards_InsufficientReward.selector.revertWith();
+    if (
+      FixedPointMathLib.mulDiv(rewardRate, rewardDuration, SCALE_FACTOR) >
+      reward
+    ) {
+      CustomRevert.revertWith(StakingRewards_InsufficientReward.selector);
+    }
     // TODO: emit events
   }
 }
