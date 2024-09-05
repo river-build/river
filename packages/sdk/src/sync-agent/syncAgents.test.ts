@@ -4,7 +4,7 @@
 import { dlogger } from '@river-build/dlog'
 import { SyncAgent } from './syncAgent'
 import { Bot } from './utils/bot'
-import { createRole, waitFor } from '../util.test'
+import { waitFor } from '../util.test'
 import { NoopRuleData, Permission } from '@river-build/web3'
 
 const logger = dlogger('csb:test:syncAgents')
@@ -108,9 +108,7 @@ describe('syncAgents.test.ts', () => {
         await waitFor(() => aliceChannel.value.status === 'loaded')
 
         // grant permissions
-        const { roleId, error: roleError } = await createRole(
-            bob.riverConnection.spaceDapp,
-            bobUser.web3Provider,
+        const txn1 = await alice.riverConnection.spaceDapp.createRole(
             spaceId,
             'pin message role',
             [Permission.PinMessage],
@@ -118,15 +116,18 @@ describe('syncAgents.test.ts', () => {
             NoopRuleData,
             bobUser.signer,
         )
+        const { roleId, error: roleError } =
+            await alice.riverConnection.spaceDapp.waitForRoleCreated(spaceId, txn1)
         expect(roleError).toBeUndefined()
         expect(roleId).toBeDefined()
-        const txn = await bob.riverConnection.spaceDapp.addRoleToChannel(
+        const txn2 = await bob.riverConnection.spaceDapp.addRoleToChannel(
             spaceId,
             channelId,
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
             roleId!,
             bobUser.signer,
         )
-        await txn.wait()
+        await txn2.wait()
         // alice can pin
         const result3 = await aliceChannel.pin(event!.eventId)
         expect(result3).toBeDefined()
