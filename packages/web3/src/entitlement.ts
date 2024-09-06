@@ -11,7 +11,7 @@ import {
     Hex,
 } from 'viem'
 
-import { ethers, providers } from 'ethers'
+import { ethers } from 'ethers'
 import { Address } from './ContractTypes'
 import { MOCK_ADDRESS } from './Utils'
 
@@ -608,10 +608,7 @@ async function evaluateCheckOperation(
             return evaluateCustomEntitledOperation(operation, controller, provider, linkedWallets)
         }
         case CheckOperationType.ETH_BALANCE: {
-            const etherChainProviders = await findEtherChainProviders(
-                xchainConfig,
-                operation.chainId,
-            )
+            const etherChainProviders = await findEtherChainProviders(xchainConfig)
 
             if (!etherChainProviders.length) {
                 controller.abort()
@@ -993,7 +990,7 @@ async function getEthBalance(
     wallet: string,
 ): Promise<{ wallet: string; balance: ethers.BigNumber }> {
     try {
-        const balance = (await provider.getBalance(wallet)) as ethers.BigNumber
+        const balance = await provider.getBalance(wallet)
         return {
             wallet,
             balance,
@@ -1099,7 +1096,7 @@ async function findProviderFromChainId(xchainConfig: XchainConfig, chainId: bigi
     return provider
 }
 
-async function findEtherChainProviders(xchainConfig: XchainConfig, chainId: bigint) {
+async function findEtherChainProviders(xchainConfig: XchainConfig) {
     const etherChainProviders = []
     for (const chainId of xchainConfig.etherBasedChains) {
         if (!xchainConfig.supportedRpcUrls.has(Number(chainId))) {

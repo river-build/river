@@ -172,17 +172,20 @@ const nftMultiCheckHighThresholdBaseSepolia: CheckOperationV2 = {
     params: encodeThresholdParams({ threshold: 100n }),
 } as const
 
-const ethSepoliaProvider = new ethers.providers.JsonRpcProvider(
-    'https://ethereum-sepolia-rpc.publicnode.com',
-)
-const baseSepoliaProvider = new ethers.providers.JsonRpcProvider('https://sepolia.base.org')
-
 const xchainConfig: XchainConfig = {
     supportedRpcUrls: new Map<number, string>([
         [Number(ethereumSepoliaChainId), 'https://ethereum-sepolia-rpc.publicnode.com'],
         [Number(baseSepoliaChainId), 'https://sepolia.base.org'],
     ]),
     etherBasedChains: [Number(ethereumSepoliaChainId), Number(baseSepoliaChainId)],
+}
+
+const minimalEtherChainsConfig: XchainConfig = {
+    supportedRpcUrls: new Map<number, string>([
+        [Number(ethereumSepoliaChainId), 'https://ethereum-sepolia-rpc.publicnode.com'],
+        [Number(baseSepoliaChainId), 'https://sepolia.base.org'],
+    ]),
+    etherBasedChains: [Number(ethereumSepoliaChainId)],
 }
 
 const nftCases = [
@@ -290,8 +293,6 @@ const baseSepoliaChainLinkWallet_25Link2: Address = '0x4BCfC6962Ab0297aF801da212
 const baseSepoliaChainLinkWallet_25Link: Address = '0xa4D440AeA5F555feEB5AEa0ddcED6e1B9FaD6A9C'
 const testEmptyAccount: Address = '0xb227905F186095083869928BAb49cA9CE9546817'
 
-// This wallet has no eth in it on any chains
-const emptyEthWallet = '0xb227905F186095083869928BAb49cA9CE9546817'
 // This wallet has .4ETH on Sepolia, and .1ETH on Base Sepolia
 const ethWallet_0_5Eth = '0x3ef41b0469c1B808Caad9d643F596023e2aa8f11'
 // This wallet has .1ETH on Sepolia, and .1ETH on Base Sepolia
@@ -416,21 +417,18 @@ const erc1155Cases = [
         desc: 'base sepolia token id 0 (no wallets)',
         check: erc1155CheckBaseSepolia_TokenId0_700Tokens,
         wallets: [],
-        provider: baseSepoliaProvider,
         expectedResult: false,
     },
     {
         desc: 'base sepolia token id 0 (single wallet, insufficient balance)',
         check: erc1155CheckBaseSepolia_TokenId0_700Tokens,
         wallets: [baseSepoliaErc1155Wallet_TokenId0_300Tokens],
-        provider: baseSepoliaProvider,
         expectedResult: false,
     },
     {
         desc: 'base sepolia token id 0 (single wallet)',
         check: erc1155CheckBaseSepolia_TokenId0_700Tokens,
         wallets: [baseSepoliaErc1155Wallet_TokenId0_700Tokens],
-        provider: baseSepoliaProvider,
         expectedResult: true,
     },
     {
@@ -440,7 +438,6 @@ const erc1155Cases = [
             baseSepoliaErc1155Wallet_TokenId0_700Tokens,
             baseSepoliaErc1155Wallet_TokenId0_300Tokens,
         ],
-        provider: baseSepoliaProvider,
         expectedResult: false,
     },
     {
@@ -450,28 +447,24 @@ const erc1155Cases = [
             baseSepoliaErc1155Wallet_TokenId0_700Tokens,
             baseSepoliaErc1155Wallet_TokenId0_300Tokens,
         ],
-        provider: baseSepoliaProvider,
         expectedResult: true,
     },
     {
         desc: 'base sepolia token id 1 (no wallets)',
         check: erc1155CheckBaseSepolia_TokenId1_100Tokens,
         wallets: [],
-        provider: baseSepoliaProvider,
         expectedResult: false,
     },
     {
         desc: 'base sepolia token id 1 (single wallet, insufficient balance)',
         check: erc1155CheckBaseSepolia_TokenId1_100Tokens,
         wallets: [baseSepoliaErc1155Wallet_TokenId1_50Tokens],
-        provider: baseSepoliaProvider,
         expectedResult: false,
     },
     {
         desc: 'base sepolia token id 1 (single wallet)',
         check: erc1155CheckBaseSepolia_TokenId1_100Tokens,
         wallets: [baseSepoliaErc1155Wallet_TokenId1_100Tokens],
-        provider: baseSepoliaProvider,
         expectedResult: true,
     },
     {
@@ -481,7 +474,6 @@ const erc1155Cases = [
             baseSepoliaErc1155Wallet_TokenId1_100Tokens,
             baseSepoliaErc1155Wallet_TokenId1_50Tokens,
         ],
-        provider: baseSepoliaProvider,
         expectedResult: false,
     },
     {
@@ -491,13 +483,12 @@ const erc1155Cases = [
             baseSepoliaErc1155Wallet_TokenId1_100Tokens,
             baseSepoliaErc1155Wallet_TokenId1_50Tokens,
         ],
-        provider: baseSepoliaProvider,
         expectedResult: true,
     },
 ]
 
 test.each(erc1155Cases)('ERC1155 Check - $desc', async (props) => {
-    const { check, wallets, provider, expectedResult } = props
+    const { check, wallets, expectedResult } = props
     const controller = new AbortController()
     const result = await evaluateTree(controller, wallets, xchainConfig, check)
     if (expectedResult) {
@@ -551,6 +542,36 @@ test.each(ethBalanceCases)('Eth Balance Check - $desc', async (props) => {
         expect(result).toEqual(zeroAddress)
     }
 })
+
+const ethBalanceCasesMinimalEtherChains = [
+    {
+        desc: 'positive result',
+        check: ethBalance_0_4,
+        wallets: [ethWallet_0_5Eth],
+        expectedResult: true,
+    },
+    {
+        desc: 'negative result',
+        check: ethBalance_0_5,
+        wallets: [ethWallet_0_5Eth],
+        expectedResult: false,
+    },
+]
+
+test.each(ethBalanceCasesMinimalEtherChains)(
+    'Eth Balance Check - Ether chains < xChain supported chains - $desc',
+    async (props) => {
+        const { check, wallets, expectedResult } = props
+        const controller = new AbortController()
+        const result = await evaluateTree(controller, wallets, minimalEtherChainsConfig, check)
+        if (expectedResult) {
+            expect(result as Address).toBeTruthy()
+            expect(result).not.toEqual(zeroAddress)
+        } else {
+            expect(result).toEqual(zeroAddress)
+        }
+    },
+)
 
 const erc20Cases = [
     {

@@ -1169,9 +1169,6 @@ describe('spaceWithEntitlements', () => {
             aliceProvider.wallet,
         )
 
-        const balance = await TestEthBalance.getBaseBalance(alicesWallet.address as Address)
-        console.log("Alice's wallet balance after joining space", balance)
-
         const doneStart = Date.now()
         // kill the clients
         await bob.stopSync()
