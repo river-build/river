@@ -3579,7 +3579,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@radix-ui/react-dialog@npm:^1.0.4, @radix-ui/react-dialog@npm:^1.1.1":
+"@radix-ui/react-dialog@npm:^1.1.1":
   version: 1.1.1
   resolution: "@radix-ui/react-dialog@npm:1.1.1"
   dependencies:
@@ -4223,7 +4223,6 @@ __metadata:
     tailwindcss: ^3.4.4
     tailwindcss-animate: ^1.0.7
     typescript: ^5.1.6
-    vaul: ^0.9.2
     viem: ^1.18.2
     vite: ^5.3.1
     vite-plugin-checker: ^0.6.4
@@ -21040,18 +21039,6 @@ __metadata:
     react:
       optional: true
   checksum: cce2d9212aac9fc4bdeba2d381188cc831cfe8d2d03039024cfcd58ba1801f2a5b14d01c2bb21a2c9f12046d2ede64f1dd887175185f39bee553677a35592c30
-  languageName: node
-  linkType: hard
-
-"vaul@npm:^0.9.2":
-  version: 0.9.2
-  resolution: "vaul@npm:0.9.2"
-  dependencies:
-    "@radix-ui/react-dialog": ^1.0.4
-  peerDependencies:
-    react: ^16.8 || ^17.0 || ^18.0
-    react-dom: ^16.8 || ^17.0 || ^18.0
-  checksum: 4b315e2894e2eb5f69bc3cc7bb533f82645940ce140cf29367cc24a9b2b8132ddf45377ce736c92e77c5a5a9ca7e908ee2b0f55bc1f02dafbce7b78b706444d4
   languageName: node
   linkType: hard
 
