@@ -782,7 +782,7 @@ const errorTests = [
     },
 ]
 
-test.only.each(errorTests)('error - $desc', async (props) => {
+test.each(errorTests)('error - $desc', async (props) => {
     const { check, error } = props
     const controller = new AbortController()
     await expect(
