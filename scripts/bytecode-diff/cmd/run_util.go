@@ -3,14 +3,32 @@ package cmd
 import (
 	"bytecode-diff/utils"
 	"fmt"
+	"html/template"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
+
+var htmlRender bool
+
+func getIncrementedFileName(basePath string, extension string) string {
+	dir := filepath.Dir(basePath)
+	fileName := filepath.Base(basePath[:len(basePath)-len(filepath.Ext(basePath))])
+
+	for i := 1; ; i++ {
+		newFileName := fmt.Sprintf("%s_hashed_%d%s", fileName, i, extension)
+		fullPath := filepath.Join(dir, newFileName)
+		if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+			return fullPath
+		}
+	}
+}
 
 var AddHashesCmd = &cobra.Command{
 	Use:   "add-hashes [environment] [yaml_file_path]",
@@ -92,13 +110,7 @@ var AddHashesCmd = &cobra.Command{
 		}
 
 		// Write updated YAML file
-		outputPath := filepath.Join(
-			filepath.Dir(yamlFilePath),
-			fmt.Sprintf(
-				"%s_hashed.yaml",
-				filepath.Base(yamlFilePath[:len(yamlFilePath)-len(filepath.Ext(yamlFilePath))]),
-			),
-		)
+		outputPath := getIncrementedFileName(yamlFilePath, ".yaml")
 
 		updatedYAML, err := yaml.Marshal(data)
 		if err != nil {
@@ -110,12 +122,142 @@ var AddHashesCmd = &cobra.Command{
 			log.Fatal().Err(err).Str("file", outputPath).Msg("Failed to write updated YAML file")
 		}
 
+		// After writing the updated YAML file
+		if htmlRender {
+			htmlContent, err := renderYAMLToHTML(updatedYAML)
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to render YAML to HTML")
+			} else {
+				htmlOutputPath := getIncrementedFileName(yamlFilePath, ".html")
+				err = os.WriteFile(htmlOutputPath, []byte(htmlContent), 0644)
+				if err != nil {
+					log.Error().Err(err).Str("file", htmlOutputPath).Msg("Failed to write HTML file")
+				} else {
+					log.Info().Str("file", htmlOutputPath).Msg("Successfully wrote HTML file with bytecode hashes")
+				}
+			}
+		}
+
 		log.Info().Str("file", outputPath).Msg("Successfully wrote updated YAML file with bytecode hashes")
 	},
+}
+
+func renderYAMLToHTML(yamlData []byte) (string, error) {
+	var data map[string]interface{}
+	err := yaml.Unmarshal(yamlData, &data)
+	if err != nil {
+		return "", fmt.Errorf("failed to unmarshal YAML data: %w", err)
+	}
+
+	log.Info().Interface("data", data).Msg("YAML data structure")
+
+	tmpl := `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YAML Content with Bytecode Hashes</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; }
+        h1, h2, h3 { color: #333; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>YAML Content with Bytecode Hashes</h1>
+    <p>Generated on: {{.currentTime}}</p>
+
+    <h2>Deployments</h2>
+    <table>
+        <tr>
+            <th>Name</th>
+            <th>Address</th>
+            <th>Bytecode Hash</th>
+            <th>Basescan Link</th>
+            <th>Deployment Date</th>
+        </tr>
+        {{range $name, $deployment := .deployments}}
+        <tr>
+            <td>{{$name}}</td>
+            <td>{{$deployment.address}}</td>
+            <td>{{$deployment.bytecodeHash}}</td>
+            <td><a href="{{$deployment.baseScanLink}}" target="_blank">View on Basescan</a></td>
+            <td>{{$deployment.deploymentDate}}</td>
+        </tr>
+        {{end}}
+    </table>
+
+    <h2>Diamonds</h2>
+    {{if .diamonds}}
+        {{range $name, $diamond := .diamonds}}
+            <h3>Diamond: {{$name}}</h3>
+            <h4>Facets</h4>
+            {{if $diamond.facets}}
+                <table>
+                    <tr>
+                        <th>Contract Name</th>
+                        <th>Origin Address</th>
+                        <th>Origin Bytecode Hash</th>
+                        <th>Target Addresses</th>
+                        <th>Target Bytecode Hashes</th>
+                    </tr>
+                    {{range $facet := $diamond.facets}}
+                    <tr>
+                        <td>{{$facet.originContractName}}</td>
+                        <td>{{$facet.originFacetAddress}}</td>
+                        <td>{{$facet.originBytecodeHash}}</td>
+                        <td>
+                            {{range $addr := $facet.targetContractAddresses}}
+                                {{$addr}}<br>
+                            {{end}}
+                        </td>
+                        <td>
+                            {{range $hash := $facet.targetBytecodeHashes}}
+                                {{$hash}}<br>
+                            {{end}}
+                        </td>
+                    </tr>
+                    {{end}}
+                </table>
+            {{else}}
+                <p>No facets found for this diamond.</p>
+            {{end}}
+        {{end}}
+    {{else}}
+        <p>No diamonds found in the YAML data.</p>
+    {{end}}
+
+    {{range $key, $value := .}}
+    {{if and (ne $key "deployments") (ne $key "diamonds")}}
+    <h2>{{$key}}</h2>
+    <pre>{{$value | printf "%#v"}}</pre>
+    {{end}}
+    {{end}}
+</body>
+</html>`
+
+	t, err := template.New("yaml2html").Parse(tmpl)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse HTML template: %w", err)
+	}
+
+	data["currentTime"] = time.Now().UTC().Format(time.RFC3339)
+
+	var buf strings.Builder
+	err = t.Execute(&buf, data)
+	if err != nil {
+		return "", fmt.Errorf("failed to execute HTML template: %w", err)
+	}
+
+	return buf.String(), nil
 }
 
 func init() {
 	AddHashesCmd.Flags().StringVar(&baseRpcUrl, "base-rpc-url", os.Getenv("BASE_RPC_URL"), "Base RPC URL")
 	AddHashesCmd.Flags().
 		StringVar(&baseSepoliaRpcUrl, "base-sepolia-rpc-url", os.Getenv("BASE_SEPOLIA_RPC_URL"), "Base Sepolia RPC URL")
+	AddHashesCmd.Flags().BoolVar(&htmlRender, "html-render", true, "Render output as HTML")
 }
