@@ -94,6 +94,12 @@ interface IArchitect is IArchitectBase {
   /// @param SpaceInfo Space information
   function createSpace(SpaceInfo memory SpaceInfo) external returns (address);
 
+  /// @notice Creates a new space with a prepayment
+  /// @param createSpace Space information
+  function createSpaceWithPrepay(
+    CreateSpace memory createSpace
+  ) external payable returns (address);
+
   // =============================================================
   //                         Implementations
   // =============================================================

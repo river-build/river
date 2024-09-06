@@ -670,12 +670,30 @@
     ],
     "devdoc": {
       "kind": "dev",
-      "methods": {},
+      "methods": {
+        "createSpace((string,string,((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],bytes),string[]),(string),string,string))": {
+          "params": {
+            "SpaceInfo": "Space information"
+          }
+        },
+        "createSpaceWithPrepay(((string,string,string,string),((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],bytes),string[]),(string),(uint256)))": {
+          "params": {
+            "createSpace": "Space information"
+          }
+        }
+      },
       "version": 1
     },
     "userdoc": {
       "kind": "user",
-      "methods": {},
+      "methods": {
+        "createSpace((string,string,((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],bytes),string[]),(string),string,string))": {
+          "notice": "Creates a new space"
+        },
+        "createSpaceWithPrepay(((string,string,string,string),((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],bytes),string[]),(string),(uint256)))": {
+          "notice": "Creates a new space with a prepayment"
+        }
+      },
       "version": 1
     }
   },
@@ -955,10 +973,10 @@
       "license": "MIT"
     },
     "contracts/src/factory/facets/architect/Architect.sol": {
-      "keccak256": "0x61f1e8b8f89c71f7e9d7f3b82cf33d184d18ba652ec00ba644854143f4415760",
+      "keccak256": "0xdbecbdf1a7e1e122cbd62c08206048c9c54bc5b754a2bda4e5929265862e7cce",
       "urls": [
-        "bzz-raw://8532bb0cc09b3db90d1c34682e5ad5fac1fcbdefe7b08060c87bb9b3e0bd8162",
-        "dweb:/ipfs/QmTf8RHPfQ26KnqDQ9NikdbCKRBTPvCJjJbUnFnXCCHUiz"
+        "bzz-raw://735d98c992f619cf3b1092053178bf96ca3364476449397e3fcec5125524d82e",
+        "dweb:/ipfs/Qmf51MVgQ2bAKPLhFf7KtSi9dtGDvpxwEXuwAHK1LnkMvL"
       ],
       "license": "MIT"
     },
@@ -979,10 +997,10 @@
       "license": "MIT"
     },
     "contracts/src/factory/facets/architect/IArchitect.sol": {
-      "keccak256": "0x09c389adef33ccf8f897ae7ffac94e61d22557cfb5fe622342fd0f999b24ca5d",
+      "keccak256": "0x1ea9ec73b105a887d08bc6faf8572458fbbaad6f872d5ad3657d9dcb89955c2e",
       "urls": [
-        "bzz-raw://c661d753a7e2f76b90ecf98f51252d83a5d5b572ee23c025dfd1635b80a657c6",
-        "dweb:/ipfs/QmdjeRY7HQv2QB9DEmFhUkziWJP3DMSQwb5DfoEb4pr7UX"
+        "bzz-raw://497421a6061c4c6c22312229f9f3369bdec7cdc1efdbd64a708e70d3dcf939d8",
+        "dweb:/ipfs/QmeySQ1hSPBGMZXpJ2ksGKEiv9CeSUFdTdUKAwVtPduLh4"
       ],
       "license": "MIT"
     },
