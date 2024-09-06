@@ -147,8 +147,8 @@ type Config struct {
 	XChainBlockchains []uint64
 
 	// EtherBasedXChainBlockchains is a list of chain IDs that are allowed to be used in xChain checks.
-	// If value is not set, a default set of ether-based chains is used to populate this list. This
-	// list will always be a subset of XChainBlockchains - exteraneous chain IDs will be ignored.
+	// If value is not set, the chains in GetDefaultBlockchainInfo() that use ether as a native fee currency
+	// will be used. This list will always be a subset of XChainBlockchains - exteraneous chain IDs will be discarded.
 	// TODO: this value is going to be moved on-chain so same setting is shared between all nodes and clients.
 	EtherBasedXChainBlockchains []uint64
 
@@ -474,8 +474,8 @@ func parseBlockchainDurations(str string, result map[uint64]BlockchainInfo) erro
 }
 
 func (c *Config) parseChains() error {
-	bcDurations := GetDefaultBlockchainInfo()
-	err := parseBlockchainDurations(c.ChainBlocktimes, bcDurations)
+	defaultChainInfo := GetDefaultBlockchainInfo()
+	err := parseBlockchainDurations(c.ChainBlocktimes, defaultChainInfo)
 	if err != nil {
 		return err
 	}
@@ -499,7 +499,7 @@ func (c *Config) parseChains() error {
 				return WrapRiverError(Err_BAD_CONFIG, err).Message("Failed to pase chain Id").Tag("chainId", parts[0])
 			}
 
-			info, ok := bcDurations[chainID]
+			info, ok := defaultChainInfo[chainID]
 			if !ok {
 				return RiverError(Err_BAD_CONFIG, "Chain blocktime not set").Tag("chainId", chainID)
 			}
