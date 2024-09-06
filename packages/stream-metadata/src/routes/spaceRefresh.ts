@@ -1,6 +1,7 @@
-import { FastifyReply, FastifyRequest } from 'fastify'
+import { FastifyReply, FastifyRequest, type FastifyBaseLogger } from 'fastify'
 import { z } from 'zod'
 import { BigNumber } from 'ethers'
+import { BASE_MAINNET, BASE_SEPOLIA } from '@river-build/web3'
 
 import { isValidEthereumAddress } from '../validators'
 import { config } from '../environment'
@@ -34,10 +35,12 @@ export async function spaceRefresh(request: FastifyRequest, reply: FastifyReply)
 		const path = `/space/${spaceAddress}/image`
 		await createCloudfrontInvalidation({ path, logger })
 
-		await refreshOpenSea(spaceAddress)
-		logger.info({ path }, 'OpenSea cache invalidated')
+		const openseaStatus = await refreshOpenSea(logger, spaceAddress)
+		if (!openseaStatus) {
+			return reply.code(500).send({ error: 'Failed to refresh space' })
+		}
 
-		return reply.code(200).send({ ok: true })
+		return reply.code(openseaStatus.status).send({ ok: openseaStatus.ok })
 	} catch (error) {
 		logger.error(
 			{
@@ -45,11 +48,11 @@ export async function spaceRefresh(request: FastifyRequest, reply: FastifyReply)
 			},
 			'Failed to refresh space',
 		)
-		return reply.code(500).send('Failed to refresh space')
+		return reply.code(500).send({ error: 'Failed to refresh space' })
 	}
 }
 
-const refreshOpenSea = async (spaceAddress: string) => {
+const refreshOpenSea = async (logger: FastifyBaseLogger, spaceAddress: string) => {
 	if (!config.openSeaApiKey) {
 		return
 	}
@@ -62,22 +65,28 @@ const refreshOpenSea = async (spaceAddress: string) => {
 	const tokenId = BigNumber.from(space.tokenId).toString()
 	let chain
 	let url
-	if (space.networkId === '1') {
+	if (space.networkId === String(BASE_MAINNET)) {
 		chain = 'base'
 		url = `https://api.opensea.io/api/v2/chain/${chain}/contract/${spaceAddress}/nfts/${tokenId}/refresh`
-	} else if (space.networkId === '84532') {
+	} else if (space.networkId === String(BASE_SEPOLIA)) {
 		chain = 'base_sepolia'
 		url = `https://testnets-api.opensea.io/api/v2/chain/${chain}/contract/${spaceAddress}/nfts/${tokenId}/refresh`
 	} else {
 		throw new Error('Unsupported network')
 	}
 
-	const response = await fetch(url, {
+	logger.info({ url }, 'refreshing openSea')
+	const status = await fetch(url, {
 		method: 'POST',
 		headers: {
 			'x-api-key': config.openSeaApiKey,
 		},
+	}).then((response) => {
+		if (!response.ok) {
+			return { ok: false, status: response.status }
+		}
+		return { ok: true, status: response.status }
 	})
 
-	return { ok: response.ok }
+	return status
 }
