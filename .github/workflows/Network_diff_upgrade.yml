@@ -4,18 +4,21 @@ on:
     workflow_dispatch:
 
 jobs:
-    diff_report:
-        name: Gamma Network Diff Report
-        uses: ./.github/workflows/Bytecode_diff_report.yml
-        secrets: inherit
-        with:
-            origin_environment: alpha
-            target_environment: gamma
+    Run_Bytecode_Diff_Upgrade:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  ref: main
 
-    upgrade_gamma_facets:
-        name: Upgrade Gamma Facets
-        needs: diff_report
-        uses: ./.github/workflows/Upgrade_network_facets.yml
-        secrets: inherit
-        with:
-            environment_name: gamma
+            - name: Gamma Network Diff Report
+              uses: ./.github/workflows/Bytecode_diff_report.yml
+              with:
+                  origin_environment: alpha
+                  target_environment: gamma
+
+            - name: Upgrade Gamma Facets
+              uses: ./.github/workflows/Upgrade_network_facets.yml
+              with:
+                  environment_name: gamma
