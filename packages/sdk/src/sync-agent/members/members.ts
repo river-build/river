@@ -23,7 +23,7 @@ export class Members extends PersistedObservable<MembersModel> {
         this.members = {}
     }
 
-    protected override async onLoaded() {
+    protected override onLoaded() {
         this.riverConnection.registerView((client) => {
             if (
                 client.streams.has(this.data.id) &&
