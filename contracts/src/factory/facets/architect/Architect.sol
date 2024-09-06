@@ -43,9 +43,15 @@ contract Architect is
   //                            Space
   // =============================================================
   function createSpace(
-    SpaceInfo calldata spaceInfo
+    SpaceInfo memory spaceInfo
   ) external nonReentrant whenNotPaused returns (address) {
     return _createSpace(spaceInfo);
+  }
+
+  function createSpaceWithPrepay(
+    CreateSpace memory spaceInfo
+  ) external payable nonReentrant whenNotPaused returns (address) {
+    return _createSpaceWithPrepay(spaceInfo);
   }
 
   function getSpaceByTokenId(uint256 tokenId) external view returns (address) {

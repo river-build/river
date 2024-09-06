@@ -42,6 +42,24 @@ interface IArchitectBase {
     string longDescription;
   }
 
+  struct Metadata {
+    string name;
+    string uri;
+    string shortDescription;
+    string longDescription;
+  }
+
+  struct Prepay {
+    uint256 supply;
+  }
+
+  struct CreateSpace {
+    Metadata metadata;
+    Membership membership;
+    ChannelInfo channel;
+    Prepay prepay;
+  }
+
   // =============================================================
   //                           EVENTS
   // =============================================================
