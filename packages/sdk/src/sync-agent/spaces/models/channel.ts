@@ -95,13 +95,17 @@ export class Channel extends PersistedObservable<ChannelModel> {
 
     async pin(eventId: string) {
         const channelId = this.data.id
-        const result = await this.riverConnection.call((client) => client.pin(channelId, eventId))
+        const result = await this.riverConnection
+            .withStream(channelId)
+            .call((client) => client.pin(channelId, eventId))
         return result
     }
 
     async unpin(eventId: string) {
         const channelId = this.data.id
-        const result = await this.riverConnection.call((client) => client.unpin(channelId, eventId))
+        const result = await this.riverConnection
+            .withStream(channelId)
+            .call((client) => client.unpin(channelId, eventId))
         return result
     }
 
