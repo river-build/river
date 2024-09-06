@@ -9,9 +9,9 @@ jobs:
         uses: ./.github/workflows/Bytecode_diff_report.yml
         secrets: inherit
         with:
-          origin_environment: alpha
-          target_environment: gamma
-    
+            origin_environment: alpha
+            target_environment: gamma
+
     upgrade_gamma_facets:
         name: Upgrade Gamma Facets
         needs: diff_report
