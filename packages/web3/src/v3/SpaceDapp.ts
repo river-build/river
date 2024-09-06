@@ -208,10 +208,29 @@ export class SpaceDapp implements ISpaceDapp {
         if (!space) {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
         }
+        const channelId = ensureHexPrefix(channelNetworkId)
         return wrapTransaction(
-            () => space.Channels.write(signer).addRoleToChannel(channelNetworkId, roleId),
+            () => space.Channels.write(signer).addRoleToChannel(channelId, roleId),
             txnOpts,
         )
+    }
+
+    public async waitForRoleCreated(
+        spaceId: string,
+        txn: ContractTransaction,
+    ): Promise<{ roleId: number | undefined; error: Error | undefined }> {
+        const receipt = await this.provider.waitForTransaction(txn.hash)
+        if (receipt.status === 0) {
+            return { roleId: undefined, error: new Error('Transaction failed') }
+        }
+
+        const parsedLogs = await this.parseSpaceLogs(spaceId, receipt.logs)
+        const roleCreatedEvent = parsedLogs.find((log) => log?.name === 'RoleCreated')
+        if (!roleCreatedEvent) {
+            return { roleId: undefined, error: new Error('RoleCreated event not found') }
+        }
+        const roleId = (roleCreatedEvent.args[1] as ethers.BigNumber).toNumber()
+        return { roleId, error: undefined }
     }
 
     public async banWalletAddress(
@@ -265,7 +284,7 @@ export class SpaceDapp implements ISpaceDapp {
         }
         const bannedTokenIds = await space.Banning.read.banned()
         const bannedWalletAddresses = await Promise.all(
-            bannedTokenIds.map(async (tokenId) => await space.Membership.read.ownerOf(tokenId)),
+            bannedTokenIds.map(async (tokenId) => await space.ERC721A.read.ownerOf(tokenId)),
         )
         return bannedWalletAddresses
     }
@@ -877,43 +896,34 @@ export class SpaceDapp implements ISpaceDapp {
 
         const channelId = ensureHexPrefix(channelNetworkId)
 
-        if (
-            permission === Permission.Read ||
-            permission === Permission.Write ||
-            permission === Permission.React ||
-            permission === Permission.PinMessage
-        ) {
-            const linkedWallets = await this.getLinkedWallets(user)
+        const linkedWallets = await this.getLinkedWallets(user)
 
-            const owner = await space.Ownable.read.owner()
+        const owner = await space.Ownable.read.owner()
 
-            // Space owner is entitled to all channels
-            if (linkedWallets.includes(owner)) {
-                return true
-            }
-
-            const bannedWallets = await this.bannedWalletAddresses(spaceId)
-            for (const wallet of linkedWallets) {
-                if (bannedWallets.includes(wallet)) {
-                    return false
-                }
-            }
-
-            const entitlements = await this.getChannelEntitlementsForPermission(
-                spaceId,
-                channelId,
-                permission,
-            )
-            const entitledWallet = await this.evaluateEntitledWallet(
-                user,
-                linkedWallets,
-                entitlements,
-                supportedXChainRpcUrls,
-            )
-            return entitledWallet !== undefined
+        // Space owner is entitled to all channels
+        if (linkedWallets.includes(owner)) {
+            return true
         }
 
-        return space.Entitlements.read.isEntitledToChannel(channelId, user, permission)
+        const bannedWallets = await this.bannedWalletAddresses(spaceId)
+        for (const wallet of linkedWallets) {
+            if (bannedWallets.includes(wallet)) {
+                return false
+            }
+        }
+
+        const entitlements = await this.getChannelEntitlementsForPermission(
+            spaceId,
+            channelId,
+            permission,
+        )
+        const entitledWallet = await this.evaluateEntitledWallet(
+            user,
+            linkedWallets,
+            entitlements,
+            supportedXChainRpcUrls,
+        )
+        return entitledWallet !== undefined
     }
 
     public parseSpaceFactoryError(error: unknown): Error {
@@ -1346,7 +1356,7 @@ export class SpaceDapp implements ISpaceDapp {
         if (!space) {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
         }
-        const totalSupply = await space.Membership.read.totalSupply()
+        const totalSupply = await space.ERC721A.read.totalSupply()
 
         return { totalSupply: totalSupply.toNumber() }
     }
@@ -1363,7 +1373,7 @@ export class SpaceDapp implements ISpaceDapp {
                 space.Membership.read.getMembershipCurrency(),
                 space.Ownable.read.owner(),
                 space.Membership.read.getMembershipDuration(),
-                space.Membership.read.totalSupply(),
+                space.ERC721A.read.totalSupply(),
                 space.Membership.read.getMembershipPricingModule(),
             ])
 

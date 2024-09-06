@@ -1,6 +1,6 @@
 {
     "name": "@river-build/sdk",
-    "version": "0.0.56",
+    "version": "0.0.58",
     "packageManager": "yarn@3.8.0",
     "type": "module",
     "main": "dist/index.js",
@@ -17,7 +17,7 @@
         "test": "yarn test:ci:multi:ne",
         "test:ci": "yarn test:ci:multi:ne",
         "test:ci:multi:ent:legacy": "USE_LEGACY_SPACES=true RIVER_ENV=local_multi yarn my-jest --group=with-entitilements",
-        "test:ci:multi:ent": "RIVER_ENV=local_multi yarn my-jest --group=with-entitilements",
+        "test:ci:multi:ent": "RIVER_ENV=local_multi yarn my-jest --group=with-entitilements --group=with-v2-entitlements",
         "test:ci:multi:ne": "RIVER_ENV=local_multi_ne yarn my-jest --group=main",
         "test:ci:with-entitlements": "yarn test:ci:multi:ent",
         "watch": "tsc --watch"
