@@ -5,7 +5,6 @@ import { ArrowLeftIcon } from '@radix-ui/react-icons'
 import { GridSidePanel } from '@/components/layout/grid-side-panel'
 import { SpaceProvider } from '@/hooks/current-space'
 import { CreateChannel } from '@/components/form/channel/create'
-import { JsonHover } from '@/components/utils/json-hover'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
@@ -73,12 +72,10 @@ const ChannelInfo = ({
     const { data: channel } = useChannel(spaceId, channelId)
 
     return (
-        <JsonHover data={channel}>
-            <div>
-                <Button variant="outline" onClick={() => onChannelChange(channelId)}>
-                    {channel.metadata?.name || 'Unnamed Channel'}
-                </Button>
-            </div>
-        </JsonHover>
+        <div>
+            <Button variant="outline" onClick={() => onChannelChange(channelId)}>
+                {channel.metadata?.name || 'Unnamed Channel'}
+            </Button>
+        </div>
     )
 }
