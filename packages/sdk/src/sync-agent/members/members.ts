@@ -116,6 +116,7 @@ export class Members extends PersistedObservable<MembersModel> {
         // In the next sync, the member map will be reinitialized, cleaning up the map.
         // We remove the member from the userIds array, so that we don't try to access it later.
         this.setData({ userIds: this.data.userIds.filter((id) => id !== userId) })
+        if (!this.members[userId]) return
         this.members[userId].observables.membership.onStreamMembershipUpdated(
             streamId,
             userId,
@@ -126,50 +127,36 @@ export class Members extends PersistedObservable<MembersModel> {
     private onMemberJoin = (streamId: string, userId: string): void => {
         if (streamId !== this.data.id) return
         this.setData({ userIds: [...this.data.userIds, userId] })
-        if (!this.members[userId]) {
-            this.members[userId] = new Member(userId, streamId, this.riverConnection, this.store)
-            this.members[userId].onStreamInitialized(streamId)
-            this.members[userId].observables.membership.onStreamMembershipUpdated(
-                streamId,
-                userId,
-                MembershipOp.SO_JOIN,
-            )
-        }
     }
 
     private onMemberInvite = (streamId: string, userId: string): void => {
         if (streamId !== this.data.id) return
         this.setData({ userIds: [...this.data.userIds, userId] })
-        if (!this.members[userId]) {
-            this.members[userId] = new Member(userId, streamId, this.riverConnection, this.store)
-            this.members[userId].onStreamInitialized(streamId)
-            this.members[userId].observables.membership.onStreamMembershipUpdated(
-                streamId,
-                userId,
-                MembershipOp.SO_INVITE,
-            )
-        }
     }
 
     private onUsernameUpdated = (streamId: string, userId: string): void => {
         if (streamId !== this.data.id) return
+        if (!this.members[userId]) return
         const member = this.get(userId)
         member.onUsernameUpdated(streamId, userId)
     }
 
     private onDisplayNameUpdated = (streamId: string, userId: string): void => {
         if (streamId !== this.data.id) return
+        if (!this.members[userId]) return
         const member = this.get(userId)
         member.onDisplayNameUpdated(streamId, userId)
     }
     private onNftUpdated = (streamId: string, userId: string): void => {
         if (streamId !== this.data.id) return
+        if (!this.members[userId]) return
         const member = this.get(userId)
         member.onNftUpdated(streamId, userId)
     }
 
     private onEnsAddressUpdated = (streamId: string, userId: string): void => {
         if (streamId !== this.data.id) return
+        if (!this.members[userId]) return
         const member = this.get(userId)
         member.onEnsAddressUpdated(streamId, userId)
     }
