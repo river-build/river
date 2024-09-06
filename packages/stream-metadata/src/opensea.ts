@@ -8,9 +8,9 @@ import { spaceDapp } from './contract-utils'
 const getOpenSeaAPIUrl = (space: SpaceInfo) => {
 	const tokenId = BigNumber.from(space.tokenId).toString()
 	if (space.networkId === String(BASE_MAINNET)) {
-		return `https://api.opensea.io/api/v2/chain/base/contract/${space.address}/nfts/${tokenId}/refresh`
+		return `https://api.opensea.io/api/v2/chain/base/contract/${space.owner}/nfts/${tokenId}/refresh`
 	} else if (space.networkId === String(BASE_SEPOLIA)) {
-		return `https://testnets-api.opensea.io/api/v2/chain/base_sepolia/contract/${space.address}/nfts/${tokenId}/refresh`
+		return `https://testnets-api.opensea.io/api/v2/chain/base_sepolia/contract/${space.owner}/nfts/${tokenId}/refresh`
 	} else {
 		throw new Error('Unsupported network')
 	}
