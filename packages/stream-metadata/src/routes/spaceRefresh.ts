@@ -4,7 +4,7 @@ import { BigNumber } from 'ethers'
 
 import { isValidEthereumAddress } from '../validators'
 import { config } from '../environment'
-import { cloudFront } from '../aws'
+import { createCloudfrontInvalidation } from '../aws'
 import { spaceDapp } from '../contract-utils'
 
 const paramsSchema = z.object({
@@ -32,19 +32,7 @@ export async function spaceRefresh(request: FastifyRequest, reply: FastifyReply)
 
 	try {
 		const path = `/space/${spaceAddress}/image`
-
-		// Refresh CloudFront cache
-		await cloudFront?.createInvalidation({
-			DistributionId: config.aws?.CLOUDFRONT_DISTRIBUTION_ID,
-			InvalidationBatch: {
-				CallerReference: `space-refresh-${spaceAddress}-${Date.now()}`,
-				Paths: {
-					Quantity: 1,
-					Items: [path],
-				},
-			},
-		})
-		logger.info({ path }, 'CloudFront cache invalidated')
+		await createCloudfrontInvalidation({ path, logger })
 
 		await refreshOpenSea(spaceAddress)
 		logger.info({ path }, 'OpenSea cache invalidated')
