@@ -8,6 +8,24 @@ type BlockchainInfo struct {
 	Blocktime time.Duration
 }
 
+func GetDefaultEtherBasedXChainBlockchains() []uint64 {
+	return []uint64{
+		// Mainnets
+		1,     // Ethereum Mainnet
+		8453,  // Base Mainnet
+		42161, // Arbitrum One
+		10,    // Optimism Mainnet
+
+		// Testnets
+		11155111, // Ethereum Sepolia
+		84532,    // Base Sepolia
+
+		// Local
+		31337, // Anvil Base
+		31338, // Anvil River
+	}
+}
+
 func GetDefaultBlockchainInfo() map[uint64]BlockchainInfo {
 	return map[uint64]BlockchainInfo{
 		1: {

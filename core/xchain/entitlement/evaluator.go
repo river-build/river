@@ -12,6 +12,7 @@ import (
 type Evaluator struct {
 	clients        BlockchainClientPool
 	evalHistrogram *prometheus.HistogramVec
+	ethChainIds    []uint64
 }
 
 func NewEvaluatorFromConfig(ctx context.Context, cfg *config.Config, metrics infra.MetricsFactory) (*Evaluator, error) {
@@ -27,5 +28,6 @@ func NewEvaluatorFromConfig(ctx context.Context, cfg *config.Config, metrics inf
 			infra.DefaultDurationBucketsSeconds,
 			"operation",
 		),
+		ethChainIds: cfg.EtherBasedXChainBlockchains,
 	}, nil
 }
