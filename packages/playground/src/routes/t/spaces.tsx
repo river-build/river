@@ -3,7 +3,6 @@ import { useCallback } from 'react'
 import { useSpace, useUserSpaces } from '@river-build/react-sdk'
 import { GridSidePanel } from '@/components/layout/grid-side-panel'
 import { Button } from '@/components/ui/button'
-import { JsonHover } from '@/components/utils/json-hover'
 import { CreateSpace } from '@/components/form/space/create'
 import { JoinSpace } from '@/components/form/space/join'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -64,12 +63,10 @@ const SpaceInfo = ({
 }) => {
     const { data: space } = useSpace(spaceId)
     return (
-        <JsonHover data={space}>
-            <div>
-                <Button variant="outline" onClick={() => onSpaceChange(space.id)}>
-                    {space.metadata?.name || 'Unnamed Space'}
-                </Button>
-            </div>
-        </JsonHover>
+        <div>
+            <Button variant="outline" onClick={() => onSpaceChange(space.id)}>
+                {space.metadata?.name || 'Unnamed Space'}
+            </Button>
+        </div>
     )
 }
