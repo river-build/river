@@ -77,33 +77,35 @@ export class Channel extends PersistedObservable<ChannelModel> {
         },
     ): Promise<{ eventId: string }> {
         const channelId = this.data.id
-        const result = await this.riverConnection
-            .withStream<{ eventId: string }>(channelId)
-            .call((client) => {
-                return client.sendChannelMessage_Text(channelId, {
-                    threadId: options?.threadId,
-                    threadPreview: options?.threadId ? '🙉' : undefined,
-                    replyId: options?.replyId,
-                    replyPreview: options?.replyId ? '🙈' : undefined,
-                    content: {
-                        body: message,
-                        mentions: options?.mentions ?? [],
-                        attachments: options?.attachments ?? [],
-                    },
-                })
+        const result = await this.riverConnection.withStream(channelId).call((client) => {
+            return client.sendChannelMessage_Text(channelId, {
+                threadId: options?.threadId,
+                threadPreview: options?.threadId ? '🙉' : undefined,
+                replyId: options?.replyId,
+                replyPreview: options?.replyId ? '🙈' : undefined,
+                content: {
+                    body: message,
+                    mentions: options?.mentions ?? [],
+                    attachments: options?.attachments ?? [],
+                },
             })
+        })
         return result
     }
 
     async pin(eventId: string) {
         const channelId = this.data.id
-        const result = await this.riverConnection.call((client) => client.pin(channelId, eventId))
+        const result = await this.riverConnection
+            .withStream(channelId)
+            .call((client) => client.pin(channelId, eventId))
         return result
     }
 
     async unpin(eventId: string) {
         const channelId = this.data.id
-        const result = await this.riverConnection.call((client) => client.unpin(channelId, eventId))
+        const result = await this.riverConnection
+            .withStream(channelId)
+            .call((client) => client.unpin(channelId, eventId))
         return result
     }
 

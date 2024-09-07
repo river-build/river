@@ -111,9 +111,6 @@ export class Space extends PersistedObservable<SpaceModel> {
     }
 
     getChannel(channelId: string): Channel {
-        if (!this.data.channelIds.includes(channelId)) {
-            throw new Error(`channel ${channelId} not found in space ${this.data.id}`)
-        }
         if (!this.channels[channelId]) {
             this.channels[channelId] = new Channel(
                 channelId,
