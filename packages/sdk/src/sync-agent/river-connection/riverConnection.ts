@@ -68,7 +68,7 @@ export class RiverConnection extends PersistedObservable<RiverConnectionModel> {
         this.riverChain = new RiverChain(store, riverRegistryDapp, this.userId)
     }
 
-    override async onLoaded() {
+    protected override onLoaded() {
         //
     }
 

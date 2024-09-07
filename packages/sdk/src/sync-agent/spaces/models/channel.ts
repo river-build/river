@@ -34,7 +34,7 @@ export class Channel extends PersistedObservable<ChannelModel> {
         this.members = new Members(id, riverConnection, store)
     }
 
-    protected override async onLoaded() {
+    protected override onLoaded() {
         this.riverConnection.registerView((client) => {
             if (
                 client.streams.has(this.data.id) &&
