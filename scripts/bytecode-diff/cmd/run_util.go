@@ -32,7 +32,7 @@ func getIncrementedFileName(basePath string, extension string) string {
 
 var AddHashesCmd = &cobra.Command{
 	Use:   "add-hashes [environment] [yaml_file_path]",
-	Short: "Add bytecode hashes to a YAML file for a specific environment",
+	Short: "Add bytecode hashes and render yaml, html reports",
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		environment := args[0]
@@ -124,7 +124,7 @@ var AddHashesCmd = &cobra.Command{
 
 		// After writing the updated YAML file
 		if htmlRender {
-			htmlContent, err := renderYAMLToHTML(updatedYAML)
+			htmlContent, err := renderYAMLToHTML(updatedYAML, environment)
 			if err != nil {
 				log.Error().Err(err).Msg("Failed to render YAML to HTML")
 			} else {
@@ -142,14 +142,15 @@ var AddHashesCmd = &cobra.Command{
 	},
 }
 
-func renderYAMLToHTML(yamlData []byte) (string, error) {
+func renderYAMLToHTML(yamlData []byte, environment string) (string, error) {
 	var data map[string]interface{}
 	err := yaml.Unmarshal(yamlData, &data)
 	if err != nil {
 		return "", fmt.Errorf("failed to unmarshal YAML data: %w", err)
 	}
 
-	log.Info().Interface("data", data).Msg("YAML data structure")
+	data["environment"] = environment
+	data["currentTime"] = time.Now().UTC().Format(time.RFC3339)
 
 	tmpl := `
 <!DOCTYPE html>
@@ -157,17 +158,18 @@ func renderYAMLToHTML(yamlData []byte) (string, error) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YAML Content with Bytecode Hashes</title>
+    <title>Base Facets Bytecode Diff Report</title>
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; }
-        h1, h2, h3 { color: #333; }
+        h1 { color: forestgreen; }
+        h2, h3 { color: #333; }
         table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         th { background-color: #f2f2f2; }
     </style>
 </head>
 <body>
-    <h1>YAML Content with Bytecode Hashes</h1>
+    <h1>{{.environment}}: Base Facets Bytecode Diff Report</h1>
     <p>Generated on: {{.currentTime}}</p>
 
     <h2>Deployments</h2>
@@ -193,7 +195,7 @@ func renderYAMLToHTML(yamlData []byte) (string, error) {
     <h2>Diamonds</h2>
     {{if .diamonds}}
         {{range $name, $diamond := .diamonds}}
-            <h3>Diamond: {{$name}}</h3>
+            <h3>Diamond: {{$diamond.name}}</h3>
             <h4>Facets</h4>
             {{if $diamond.facets}}
                 <table>
@@ -203,6 +205,10 @@ func renderYAMLToHTML(yamlData []byte) (string, error) {
                         <th>Origin Bytecode Hash</th>
                         <th>Target Addresses</th>
                         <th>Target Bytecode Hashes</th>
+						<th>Selectors Missing on {{.environment}}</th>
+						<th>Origin Verified</th>
+						<th>Target Verified</th>
+
                     </tr>
                     {{range $facet := $diamond.facets}}
                     <tr>
@@ -219,6 +225,9 @@ func renderYAMLToHTML(yamlData []byte) (string, error) {
                                 {{$hash}}<br>
                             {{end}}
                         </td>
+						<td>{{$facet.selectorsDiff}}</td>
+						<td>{{$facet.originVerified}}</td>
+						<td>{{$facet.targetVerified}}</td>
                     </tr>
                     {{end}}
                 </table>
@@ -243,8 +252,6 @@ func renderYAMLToHTML(yamlData []byte) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to parse HTML template: %w", err)
 	}
-
-	data["currentTime"] = time.Now().UTC().Format(time.RFC3339)
 
 	var buf strings.Builder
 	err = t.Execute(&buf, data)
