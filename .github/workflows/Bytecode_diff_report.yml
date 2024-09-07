@@ -1,5 +1,7 @@
 name: Bytecode Diff Report
 env:
+    FOUNDRY_VERSION: nightly
+    TESTNET_PRIVATE_KEY: ${{ secrets.GAMMA_BASE_SEPOLIA_DEPLOYER_PK }}
     BASE_RPC_URL: ${{ secrets.BASE_RPC_URL }}
     BASE_SEPOLIA_RPC_URL: ${{ secrets.BASE_SEPOLIA_RPC_URL }}
     FACET_SOURCE_PATH: ../../contracts/src
@@ -51,7 +53,7 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v4
               with:
-                  ref: main
+                  ref: ${{ github.event_name == 'workflow_dispatch' && github.ref || 'main' }}
 
             - name: Set up Go
               uses: actions/setup-go@v4
@@ -60,9 +62,9 @@ jobs:
 
             - name: Install dependencies
               run: |
-                  cd scripts/bytecode-diff
                   go mod download
                   go mod tidy
+              working-directory: scripts/bytecode-diff
 
             - name: Run report generation
               run: |

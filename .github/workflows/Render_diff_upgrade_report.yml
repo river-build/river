@@ -30,11 +30,23 @@ on:
 jobs:
     Render_Diff_Upgrade_Report:
         runs-on: ubuntu-latest
+
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
               with:
-                  ref: main
+                  ref: ${{ github.event_name == 'workflow_dispatch' && github.ref || 'main' }}
+
+            - name: Set up Go
+              uses: actions/setup-go@v4
+              with:
+                  go-version: '1.22' # Specify the Go version you need
+
+            - name: Install dependencies
+              run: |
+                  go mod download
+                  go mod tidy
+              working-directory: scripts/bytecode-diff
 
             - name: Get latest facet diff file
               run: |
