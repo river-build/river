@@ -19,7 +19,7 @@ jobs:
                   origin_environment: alpha
                   target_environment: gamma
 
-            - name: Render Network Diff Upgrade Report 
+            - name: Render Network Diff Upgrade Report
               uses: ./.github/workflows/Render_diff_upgrade_report.yml
               with:
                   environment_name: gamma
