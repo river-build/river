@@ -97,8 +97,7 @@ func ReadAllFacets(client *ethclient.Client, contractAddress string, basescanAPI
 		contractName, err := GetContractNameFromBasescan(basescanUrl, facet.FacetAddress.Hex(), basescanAPIKey)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"failed to get contract name from Basescan (%s...): %w",
-				basescanUrl[:len(basescanUrl)-5],
+				"failed to get contract name from Basescan: %w",
 				err,
 			)
 		}
@@ -203,8 +202,7 @@ func GetContractNameFromBasescan(baseURL, address, apiKey string) (string, error
 		return "", fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	// Print the raw JSON response
-	Log.Info().Msgf("Raw Basescan JSON response: %s", string(body))
+	Log.Debug().Msgf("Raw Basescan JSON response: %s", string(body))
 
 	var result struct {
 		Status  string `json:"status"`

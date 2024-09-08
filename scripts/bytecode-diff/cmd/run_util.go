@@ -45,6 +45,7 @@ var AddHashesCmd = &cobra.Command{
 				Msg("Environment not supported. Environment can be one of alpha, gamma, or omega.")
 		}
 
+		// todo: just require 1 rpc url based on env
 		if baseRpcUrl == "" {
 			log.Fatal().
 				Msg("Base RPC URL not provided. Set it using --base-rpc-url flag or BASE_RPC_URL environment variable")
