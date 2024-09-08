@@ -92,7 +92,11 @@ func ReadAllFacets(client *ethclient.Client, contractAddress string, basescanAPI
 		// read contract name from basescan source code api
 		contractName, err := GetContractNameFromBasescan(basescanUrl, facet.FacetAddress.Hex(), basescanAPIKey)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get contract name from Basescan: %w", err)
+			return nil, fmt.Errorf(
+				"failed to get contract name from Basescan (%s...): %w",
+				basescanUrl[:len(basescanUrl)-5],
+				err,
+			)
 		}
 
 		facets[i].ContractName = contractName
