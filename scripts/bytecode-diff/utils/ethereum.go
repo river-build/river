@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -89,6 +90,9 @@ func ReadAllFacets(client *ethclient.Client, contractAddress string, basescanAPI
 	}
 
 	for i, facet := range facets {
+		// Throttle API calls to 2 per second to avoid being rate limited
+		time.Sleep(500 * time.Millisecond)
+
 		// read contract name from basescan source code api
 		contractName, err := GetContractNameFromBasescan(basescanUrl, facet.FacetAddress.Hex(), basescanAPIKey)
 		if err != nil {
