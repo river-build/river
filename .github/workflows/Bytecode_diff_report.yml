@@ -95,6 +95,7 @@ jobs:
               working-directory: scripts/bytecode-diff
               env:
                   REPORT_OUT_DIR: ${{ env.REPORT_OUT_DIR }}
+                  BASESCAN_API_KEY: ${{ env.BASESCAN_API_KEY }}
                   BASE_RPC_URL: ${{ env.BASE_RPC_URL }}
                   BASE_SEPOLIA_RPC_URL: ${{ env.BASE_SEPOLIA_RPC_URL }}
                   FACET_SOURCE_PATH: ${{ env.FACET_SOURCE_PATH }}
