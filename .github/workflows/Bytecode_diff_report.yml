@@ -119,6 +119,9 @@ jobs:
               working-directory: scripts/bytecode-diff
 
             - name: Run facet upgrades based on diffs
+              run: |
+                  ./scripts/upgrade-facets.sh ${{ inputs.target_environment }} ${{ env.REPORT_OUT_DIR }} ${{ env.FACET_DIFF_FILE }}
+              working-directory: scripts/bytecode-diff
               env:
                   BASE_RPC_URL: ${{ env.BASE_RPC_URL }}
                   BASE_SEPOLIA_RPC_URL: ${{ env.BASE_SEPOLIA_RPC_URL }}
@@ -126,19 +129,18 @@ jobs:
                   BLOCKSCOUT_SEPOLIA_API_KEY: ${{ env.BLOCKSCOUT_SEPOLIA_API_KEY }}
                   BASESCAN_API_KEY: ${{ env.BASESCAN_API_KEY }}
                   BASESCAN_SEPOLIA_URL: ${{ env.BASESCAN_SEPOLIA_URL }}
-              run: |
-                  ./scripts/upgrade-facets.sh ${{ inputs.target_environment }} ${{ env.REPORT_OUT_DIR }} ${{ env.FACET_DIFF_FILE }}
-              working-directory: scripts/bytecode-diff
+                  TESTNET_PRIVATE_KEY: ${{ env.TESTNET_PRIVATE_KEY }}
 
             - name: Run final html report generation w/ updated hashes
               id: gen_html_report
+
+              run: |
+                  go run main.go add-hashes ${{ inputs.target_environment }} ${{ env.REPORT_OUT_DIR }}/${{ env.FACET_DIFF_FILE }}
+              working-directory: scripts/bytecode-diff
               env:
                   BASE_RPC_URL: ${{ env.BASE_RPC_URL }}
                   BASE_SEPOLIA_RPC_URL: ${{ env.BASE_SEPOLIA_RPC_URL }}
                   GOWORK: ${{ env.GOWORK }}
-              run: |
-                  go run main.go add-hashes ${{ inputs.target_environment }} ${{ env.FACET_DIFF_FILE }}
-              working-directory: scripts/bytecode-diff
 
             - name: Configure AWS credentials
               if: steps.gen_html_report.outcome == 'success'
