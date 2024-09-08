@@ -4,22 +4,9 @@ on:
     workflow_dispatch:
 
 jobs:
-    Run_Gamma_Bytecode_Diff_Upgrade:
-        name: Run Gamma Bytecode Diff Upgrade
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-              with:
-                  ref: ${{ github.ref }}
-
-            - name: Network Diff Report
-              uses: ./.github/workflows/Bytecode_diff_report.yml
-              with:
-                  origin_environment: alpha
-                  target_environment: gamma
-
-            - name: Render Network Diff Upgrade Report
-              uses: ./.github/workflows/Render_diff_upgrade_report.yml
-              with:
-                  environment_name: gamma
+    Run_Alpha_to_Gamma:
+        name: Run Alpha to Gamma Diff Upgrade
+        uses: ./.github/workflows/Bytecode_diff_report.yml
+        with:
+            origin_environment: alpha
+            target_environment: gamma

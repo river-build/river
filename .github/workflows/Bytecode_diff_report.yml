@@ -11,7 +11,11 @@ env:
     BASESCAN_SEPOLIA_URL: 'https://api-sepolia.basescan.org/api'
     BLOCKSCOUT_SEPOLIA_URL: 'https://base-sepolia.blockscout.com/api'
     BLOCKSCOUT_SEPOLIA_API_KEY: ${{ secrets.BLOCKSCOUT_BASE_SEPOLIA_API_KEY }}
+    AWS_ACCESS_KEY_ID: ${{ secrets.RIVER_S3_AWS_ACCESS_KEY_ID }}
+    AWS_SECRET_ACCESS_KEY: ${{ secrets.RIVER_S3_AWS_SECRET_ACCESS_KEY }}
+    AWS_REGION: ${{ secrets.RIVER_S3_AWS_REGION }}
     GOWORK: off
+
 on:
     workflow_dispatch:
         inputs:
@@ -46,7 +50,7 @@ on:
                 type: string
 
 jobs:
-    run:
+    Render_Network_Diff_Upgrade_Report:
         runs-on: ubuntu-latest
 
         steps:
@@ -82,3 +86,39 @@ jobs:
               run: |
                   ./scripts/upgrade-facets.sh ${{ inputs.target_environment }} ${{ env.REPORT_OUT_DIR }} ${{ env.FACET_DIFF_FILE }}
               working-directory: scripts/bytecode-diff
+
+            - name: Run final html report generation w/ updated hashes
+              id: gen_html_report
+              run: |
+                  go run main.go add-hashes ${{ inputs.target_environment }} ${{ env.FACET_DIFF_FILE }}
+              working-directory: scripts/bytecode-diff
+
+            - name: Configure AWS credentials
+              if: steps.gen_html_report.outcome == 'success'
+              uses: aws-actions/configure-aws-credentials@v1
+              with:
+                  aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+                  aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+                  aws-region: ${{ env.AWS_REGION }}
+
+            - name: Copy HTML report to S3
+              if: steps.gen_html_report.outcome == 'success'
+              run: |
+                  # Find the latest hashed HTML file
+                  HTML_FILE=$(find ${{ env.REPORT_OUT_DIR }} -name "*_hashed_*.html" | sort -r | head -n 1)
+
+                  if [ -z "$HTML_FILE" ]; then
+                    echo "Error: No HTML file found"
+                    exit 1
+                  fi
+
+                  echo "Latest HTML file: $HTML_FILE"
+
+                  # Copy to report.html
+                  aws s3 cp $HTML_FILE s3://${{ inputs.target_environment }}-reports/report.html
+
+                  # Copy to report_YYYYMMDD.html
+                  DATED_FILENAME="report_$(date -u +%Y%m%d).html"
+                  aws s3 cp $HTML_FILE s3://${{ inputs.target_environment }}-reports/$DATED_FILENAME
+
+                  echo "HTML report copied to S3 bucket ${{ inputs.target_environment }}-reports files report.html and $DATED_FILENAME"
