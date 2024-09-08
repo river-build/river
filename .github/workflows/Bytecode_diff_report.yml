@@ -71,15 +71,15 @@ jobs:
               working-directory: scripts/bytecode-diff
 
             - name: Run report generation
+              run: |
+                  go run main.go -v ${{ inputs.origin_environment }} ${{ inputs.target_environment }}
+              working-directory: scripts/bytecode-diff
               env:
                   REPORT_OUT_DIR: ${{ env.REPORT_OUT_DIR }}
                   BASE_RPC_URL: ${{ env.BASE_RPC_URL }}
                   BASE_SEPOLIA_RPC_URL: ${{ env.BASE_SEPOLIA_RPC_URL }}
                   FACET_SOURCE_PATH: ${{ env.FACET_SOURCE_PATH }}
                   GOWORK: ${{ env.GOWORK }}
-              run: |
-                  go run main.go -v ${{ inputs.origin_environment }} ${{ inputs.target_environment }}
-              working-directory: scripts/bytecode-diff
 
             - name: Get latest facet diff file
               run: |
