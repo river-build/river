@@ -171,3 +171,4 @@ jobs:
                   aws s3 cp $HTML_FILE s3://${{ inputs.target_environment }}-reports/$DATED_FILENAME
 
                   echo "HTML report copied to S3 bucket ${{ inputs.target_environment }}-reports files report.html and $DATED_FILENAME"
+              working-directory: scripts/bytecode-diff
