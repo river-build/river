@@ -48,6 +48,25 @@ on:
                 description: 'Target environment'
                 required: true
                 type: string
+        secrets:
+            BASE_RPC_URL:
+                required: true
+            BASE_SEPOLIA_RPC_URL:
+                required: true
+            BASESCAN_API_KEY:
+                required: true
+            BASESCAN_SEPOLIA_API_KEY:
+                required: true
+            BLOCKSCOUT_BASE_SEPOLIA_API_KEY:
+                required: true
+            GAMMA_BASE_SEPOLIA_DEPLOYER_PK:
+                required: true
+            RIVER_S3_AWS_ACCESS_KEY_ID:
+                required: true
+            RIVER_S3_AWS_SECRET_ACCESS_KEY:
+                required: true
+            RIVER_S3_AWS_REGION:
+                required: true
 
 jobs:
     Render_Network_Diff_Upgrade_Report:
