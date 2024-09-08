@@ -19,7 +19,7 @@ import (
 type Facet struct {
 	FacetAddress common.Address
 	Selectors    [][4]byte `json:",omitempty"`
-	SelectorsHex []string  `                  abi:"-"`
+	SelectorsHex []string  `abi:"-"`
 	ContractName string    `json:",omitempty"`
 	BytecodeHash string    `json:",omitempty"`
 }
@@ -132,7 +132,10 @@ func ReadAllFacets(client *ethclient.Client, contractAddress string, basescanAPI
 }
 
 func CreateEthereumClients(
-	baseRpcUrl, baseSepoliaRpcUrl, originEnvironment, targetEnvironment string,
+	baseRpcUrl string,
+	baseSepoliaRpcUrl string,
+	originEnvironment string,
+	targetEnvironment string,
 	verbose bool,
 ) (map[string]*ethclient.Client, error) {
 	clients := make(map[string]*ethclient.Client)
@@ -186,6 +189,10 @@ func GetContractNameFromBasescan(baseURL, address, apiKey string) (string, error
 		return "", fmt.Errorf("failed to make request to Basescan API: %w", err)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("Basescan API returned non-200 status code: %d", resp.StatusCode)
+	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

@@ -285,6 +285,12 @@ func executeEnvrionmentDiff(
 	originFacets := make(map[string][]utils.Facet)
 
 	for diamondName, diamondAddress := range originDiamonds {
+		if verbose {
+			log.Info().
+				Str("diamondName", fmt.Sprintf("%s", diamondName)).
+				Str("diamondAddress", diamondAddress).
+				Msg("Origin Diamond Address")
+		}
 		facets, err := utils.ReadAllFacets(clients[originEnvironment], diamondAddress, baseConfig.BasescanAPIKey)
 		if err != nil {
 			log.Error().Err(err).Msgf("Error reading all facets for origin diamond %s", diamondName)
