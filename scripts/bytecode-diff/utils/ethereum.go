@@ -199,6 +199,9 @@ func GetContractNameFromBasescan(baseURL, address, apiKey string) (string, error
 		return "", fmt.Errorf("failed to read response body: %w", err)
 	}
 
+	// Print the raw JSON response
+	Log.Info().Msgf("Raw Basescan JSON response: %s", string(body))
+
 	var result struct {
 		Status  string `json:"status"`
 		Message string `json:"message"`
