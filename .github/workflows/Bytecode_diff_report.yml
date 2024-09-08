@@ -71,6 +71,12 @@ jobs:
               working-directory: scripts/bytecode-diff
 
             - name: Run report generation
+              env:
+                  REPORT_OUT_DIR: ${{ env.REPORT_OUT_DIR }}
+                  BASE_RPC_URL: ${{ env.BASE_RPC_URL }}
+                  BASE_SEPOLIA_RPC_URL: ${{ env.BASE_SEPOLIA_RPC_URL }}
+                  FACET_SOURCE_PATH: ${{ env.FACET_SOURCE_PATH }}
+                  GOWORK: ${{ env.GOWORK }}
               run: |
                   go run main.go -v ${{ inputs.origin_environment }} ${{ inputs.target_environment }}
               working-directory: scripts/bytecode-diff
@@ -83,12 +89,23 @@ jobs:
               working-directory: scripts/bytecode-diff
 
             - name: Run facet upgrades based on diffs
+              env:
+                  BASE_RPC_URL: ${{ env.BASE_RPC_URL }}
+                  BASE_SEPOLIA_RPC_URL: ${{ env.BASE_SEPOLIA_RPC_URL }}
+                  BLOCKSCOUT_SEPOLIA_URL: ${{ env.BLOCKSCOUT_SEPOLIA_URL }}
+                  BLOCKSCOUT_SEPOLIA_API_KEY: ${{ env.BLOCKSCOUT_SEPOLIA_API_KEY }}
+                  BASESCAN_SEPOLIA_API_KEY: ${{ env.BASESCAN_SEPOLIA_API_KEY }}
+                  BASESCAN_SEPOLIA_URL: ${{ env.BASESCAN_SEPOLIA_URL }}
               run: |
                   ./scripts/upgrade-facets.sh ${{ inputs.target_environment }} ${{ env.REPORT_OUT_DIR }} ${{ env.FACET_DIFF_FILE }}
               working-directory: scripts/bytecode-diff
 
             - name: Run final html report generation w/ updated hashes
               id: gen_html_report
+              env:
+                  BASE_RPC_URL: ${{ env.BASE_RPC_URL }}
+                  BASE_SEPOLIA_RPC_URL: ${{ env.BASE_SEPOLIA_RPC_URL }}
+                  GOWORK: ${{ env.GOWORK }}
               run: |
                   go run main.go add-hashes ${{ inputs.target_environment }} ${{ env.FACET_DIFF_FILE }}
               working-directory: scripts/bytecode-diff
