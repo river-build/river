@@ -7,7 +7,6 @@ env:
     FACET_SOURCE_PATH: ../../contracts/src
     REPORT_OUT_DIR: ${{ vars.REPORT_OUT_DIR }}
     BASESCAN_API_KEY: ${{ secrets.BASESCAN_API_KEY }}
-    BASESCAN_SEPOLIA_API_KEY: ${{ secrets.BASESCAN_SEPOLIA_API_KEY }}
     BASESCAN_SEPOLIA_URL: 'https://api-sepolia.basescan.org/api'
     BLOCKSCOUT_SEPOLIA_URL: 'https://base-sepolia.blockscout.com/api'
     BLOCKSCOUT_SEPOLIA_API_KEY: ${{ secrets.BLOCKSCOUT_BASE_SEPOLIA_API_KEY }}
@@ -54,8 +53,6 @@ on:
             BASE_SEPOLIA_RPC_URL:
                 required: true
             BASESCAN_API_KEY:
-                required: true
-            BASESCAN_SEPOLIA_API_KEY:
                 required: true
             BLOCKSCOUT_BASE_SEPOLIA_API_KEY:
                 required: true
@@ -127,7 +124,7 @@ jobs:
                   BASE_SEPOLIA_RPC_URL: ${{ env.BASE_SEPOLIA_RPC_URL }}
                   BLOCKSCOUT_SEPOLIA_URL: ${{ env.BLOCKSCOUT_SEPOLIA_URL }}
                   BLOCKSCOUT_SEPOLIA_API_KEY: ${{ env.BLOCKSCOUT_SEPOLIA_API_KEY }}
-                  BASESCAN_SEPOLIA_API_KEY: ${{ env.BASESCAN_SEPOLIA_API_KEY }}
+                  BASESCAN_API_KEY: ${{ env.BASESCAN_API_KEY }}
                   BASESCAN_SEPOLIA_URL: ${{ env.BASESCAN_SEPOLIA_URL }}
               run: |
                   ./scripts/upgrade-facets.sh ${{ inputs.target_environment }} ${{ env.REPORT_OUT_DIR }} ${{ env.FACET_DIFF_FILE }}

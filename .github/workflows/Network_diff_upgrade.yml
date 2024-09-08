@@ -14,7 +14,6 @@ jobs:
             BASE_RPC_URL: ${{ secrets.BASE_RPC_URL }}
             BASE_SEPOLIA_RPC_URL: ${{ secrets.BASE_SEPOLIA_RPC_URL }}
             BASESCAN_API_KEY: ${{ secrets.BASESCAN_API_KEY }}
-            BASESCAN_SEPOLIA_API_KEY: ${{ secrets.BASESCAN_SEPOLIA_API_KEY }}
             BLOCKSCOUT_BASE_SEPOLIA_API_KEY: ${{ secrets.BLOCKSCOUT_BASE_SEPOLIA_API_KEY }}
             GAMMA_BASE_SEPOLIA_DEPLOYER_PK: ${{ secrets.GAMMA_BASE_SEPOLIA_DEPLOYER_PK }}
             RIVER_S3_AWS_ACCESS_KEY_ID: ${{ secrets.RIVER_S3_AWS_ACCESS_KEY_ID }}
