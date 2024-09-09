@@ -289,10 +289,6 @@ var cfg = &config.Config{
 		examples.EthSepoliaChainIdUint64,
 		examples.BaseSepoliaChainIdUint64,
 	},
-	EtherBasedXChainBlockchains: []uint64{
-		examples.EthSepoliaChainIdUint64,
-		examples.BaseSepoliaChainIdUint64,
-	},
 }
 
 var evaluator *Evaluator
@@ -810,6 +806,21 @@ func TestCheckOperation_Untimed(t *testing.T) {
 	}
 }
 
+var singleEtherChainBlockChainInfo = map[uint64]config.BlockchainInfo{
+	examples.EthSepoliaChainId.Uint64(): {
+		ChainId:      examples.EthSepoliaChainId.Uint64(),
+		Name:         "Ethereum Seplia",
+		Blocktime:    12000,
+		IsEtherBased: true,
+	},
+	examples.BaseSepoliaChainId.Uint64(): {
+		ChainId:      examples.BaseSepoliaChainId.Uint64(),
+		Name:         "Base Sepolia",
+		Blocktime:    2000,
+		IsEtherBased: false, // for the sake of testing
+	},
+}
+
 func Test_evaluateEthBalance_withConfig(t *testing.T) {
 	tests := map[string]struct {
 		cfg         config.Config
@@ -836,9 +847,6 @@ func Test_evaluateEthBalance_withConfig(t *testing.T) {
 					examples.EthSepoliaChainIdUint64,
 					examples.BaseSepoliaChainIdUint64,
 				},
-				EtherBasedXChainBlockchains: []uint64{
-					examples.EthSepoliaChainIdUint64,
-				},
 			},
 			op: &ethBalance0_4,
 			wallets: []common.Address{
@@ -864,9 +872,6 @@ func Test_evaluateEthBalance_withConfig(t *testing.T) {
 					examples.EthSepoliaChainIdUint64,
 					examples.BaseSepoliaChainIdUint64,
 				},
-				EtherBasedXChainBlockchains: []uint64{
-					examples.EthSepoliaChainIdUint64,
-				},
 			},
 			op: &ethBalance0_5,
 			wallets: []common.Address{
@@ -879,9 +884,10 @@ func Test_evaluateEthBalance_withConfig(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			require := require.New(t)
-			customEvaluator, err := NewEvaluatorFromConfig(
+			customEvaluator, err := NewEvaluatorFromConfigWithBlockchainInfo(
 				context.Background(),
 				&tc.cfg,
+				singleEtherChainBlockChainInfo,
 				infra.NewMetricsFactory(nil, "", ""),
 			)
 			require.NoError(err)

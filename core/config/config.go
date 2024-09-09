@@ -146,12 +146,6 @@ type Config struct {
 	// If value is not set, as a fallback ChainConfigs keys are used.
 	XChainBlockchains []uint64
 
-	// EtherBasedXChainBlockchains is a list of chain IDs that are allowed to be used in xChain checks.
-	// If value is not set, the chains in GetDefaultBlockchainInfo() that use ether as a native fee currency
-	// will be used. This list will always be a subset of XChainBlockchains - exteraneous chain IDs will be discarded.
-	// TODO: this value is going to be moved on-chain so same setting is shared between all nodes and clients.
-	EtherBasedXChainBlockchains []uint64
-
 	// extra xChain configuration
 	EntitlementContract           ContractConfig `mapstructure:"entitlement_contract"`
 	TestEntitlementContract       ContractConfig `mapstructure:"test_contract"`
@@ -521,25 +515,6 @@ func (c *Config) parseChains() error {
 			c.XChainBlockchains = append(c.XChainBlockchains, chainID)
 		}
 	}
-
-	// Compute filtered list of ether-based xchain blockchains, using the default list of ether-based chains if none are set.
-	unfilteredEtherChains := c.EtherBasedXChainBlockchains
-	if len(unfilteredEtherChains) == 0 {
-		unfilteredEtherChains = GetDefaultEtherBasedXChainBlockchains()
-	}
-
-	isXchainBlockchain := make(map[uint64]struct{}, len(c.XChainBlockchains))
-	for _, chainID := range c.XChainBlockchains {
-		isXchainBlockchain[chainID] = struct{}{}
-	}
-
-	supportedEtherChains := make([]uint64, 0, len(unfilteredEtherChains))
-	for _, chainID := range unfilteredEtherChains {
-		if _, ok := isXchainBlockchain[chainID]; ok {
-			supportedEtherChains = append(supportedEtherChains, chainID)
-		}
-	}
-	c.EtherBasedXChainBlockchains = supportedEtherChains
 
 	return nil
 }

@@ -10,10 +10,10 @@ type BlockchainInfo struct {
 	Blocktime    time.Duration
 }
 
-func GetDefaultEtherBasedXChainBlockchains() []uint64 {
-	etherBasedChains := make([]uint64, 0, len(GetDefaultBlockchainInfo()))
-	for chainId := range GetDefaultBlockchainInfo() {
-		if GetDefaultBlockchainInfo()[chainId].IsEtherBased {
+func GetEtherBasedBlockchains(chains []uint64, defaultBlockchainInfo map[uint64]BlockchainInfo) []uint64 {
+	etherBasedChains := make([]uint64, 0, len(chains))
+	for _, chainId := range chains {
+		if info, ok := defaultBlockchainInfo[chainId]; ok && info.IsEtherBased {
 			etherBasedChains = append(etherBasedChains, chainId)
 		}
 	}
@@ -83,7 +83,7 @@ func GetDefaultBlockchainInfo() map[uint64]BlockchainInfo {
 			ChainId:      31338,
 			Name:         "Anvil River",
 			Blocktime:    2 * time.Second,
-			IsEtherBased: true,  // This is set for ease of testing.
+			IsEtherBased: true, // This is set for ease of testing.
 		},
 		100: {
 			ChainId:   100,

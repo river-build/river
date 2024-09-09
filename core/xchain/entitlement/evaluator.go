@@ -16,6 +16,20 @@ type Evaluator struct {
 }
 
 func NewEvaluatorFromConfig(ctx context.Context, cfg *config.Config, metrics infra.MetricsFactory) (*Evaluator, error) {
+	return NewEvaluatorFromConfigWithBlockchainInfo(
+		ctx,
+		cfg,
+		config.GetDefaultBlockchainInfo(),
+		metrics,
+	)
+}
+
+func NewEvaluatorFromConfigWithBlockchainInfo(
+	ctx context.Context,
+	cfg *config.Config,
+	blockChainInfo map[uint64]config.BlockchainInfo,
+	metrics infra.MetricsFactory,
+) (*Evaluator, error) {
 	clients, err := NewBlockchainClientPool(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -28,6 +42,9 @@ func NewEvaluatorFromConfig(ctx context.Context, cfg *config.Config, metrics inf
 			infra.DefaultDurationBucketsSeconds,
 			"operation",
 		),
-		ethChainIds: cfg.EtherBasedXChainBlockchains,
+		ethChainIds: config.GetEtherBasedBlockchains(
+			cfg.XChainBlockchains,
+			blockChainInfo,
+		),
 	}, nil
 }
