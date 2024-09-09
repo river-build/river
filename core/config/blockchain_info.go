@@ -1,6 +1,11 @@
 package config
 
-import "time"
+import (
+	"context"
+	"time"
+
+	"github.com/river-build/river/core/node/dlog"
+)
 
 type BlockchainInfo struct {
 	ChainId uint64
@@ -10,11 +15,18 @@ type BlockchainInfo struct {
 	Blocktime    time.Duration
 }
 
-func GetEtherBasedBlockchains(chains []uint64, defaultBlockchainInfo map[uint64]BlockchainInfo) []uint64 {
+func GetEtherBasedBlockchains(
+	ctx context.Context,
+	chains []uint64,
+	defaultBlockchainInfo map[uint64]BlockchainInfo,
+) []uint64 {
+	log := dlog.FromCtx(ctx)
 	etherBasedChains := make([]uint64, 0, len(chains))
 	for _, chainId := range chains {
 		if info, ok := defaultBlockchainInfo[chainId]; ok && info.IsEtherBased {
 			etherBasedChains = append(etherBasedChains, chainId)
+		} else if !ok {
+			log.Error("Missing BlockchainInfo for chain", "chainId", chainId)
 		}
 	}
 	return etherBasedChains

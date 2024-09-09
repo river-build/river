@@ -43,6 +43,7 @@ func NewEvaluatorFromConfigWithBlockchainInfo(
 			"operation",
 		),
 		ethChainIds: config.GetEtherBasedBlockchains(
+			ctx,
 			cfg.XChainBlockchains,
 			blockChainInfo,
 		),
