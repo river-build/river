@@ -171,6 +171,11 @@ const _abi = [
         type: "address",
         internalType: "contract IRuleEntitlement",
       },
+      {
+        name: "spaceProxyInitializer",
+        type: "address",
+        internalType: "contract ISpaceProxyInitializer",
+      },
     ],
     stateMutability: "view",
   },
@@ -235,6 +240,11 @@ const _abi = [
         name: "legacyRuleEntitlement",
         type: "address",
         internalType: "contract IRuleEntitlement",
+      },
+      {
+        name: "spaceProxyInitializer",
+        type: "address",
+        internalType: "contract ISpaceProxyInitializer",
       },
     ],
     outputs: [],

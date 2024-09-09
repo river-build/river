@@ -22,6 +22,11 @@ export default [
         "name": "legacyRuleEntitlement",
         "type": "address",
         "internalType": "contract IRuleEntitlement"
+      },
+      {
+        "name": "proxyInitializer",
+        "type": "address",
+        "internalType": "contract ISpaceProxyInitializer"
       }
     ],
     "outputs": [],
@@ -190,6 +195,11 @@ export default [
         "name": "legacyRuleEntitlement",
         "type": "address",
         "internalType": "contract IRuleEntitlement"
+      },
+      {
+        "name": "spaceProxyInitializer",
+        "type": "address",
+        "internalType": "contract ISpaceProxyInitializer"
       }
     ],
     "stateMutability": "view"
@@ -255,6 +265,11 @@ export default [
         "name": "legacyRuleEntitlement",
         "type": "address",
         "internalType": "contract IRuleEntitlement"
+      },
+      {
+        "name": "spaceProxyInitializer",
+        "type": "address",
+        "internalType": "contract ISpaceProxyInitializer"
       }
     ],
     "outputs": [],
