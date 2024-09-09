@@ -1,0 +1,157 @@
+version: '3'
+
+set: [errexit, nounset, pipefail]
+shopt: [globstar]
+
+# make RUN_ENV required
+env:
+  RUN_ENV:
+    sh: |
+      if [ ! -f "./env/local/${RUN_ENV}/env.env" ]; then
+        echo "Error: ./env/local/${RUN_ENV}/env.env does not exist" >&2
+        exit 1
+      fi
+      echo "${RUN_ENV}"
+  ENV_PATH_BASE: "./env/local"
+  ENV_PATH: "{{.ENV_PATH_BASE}}/{{.RUN_ENV}}"
+  RUN_BASE: "./run_files/{{.RUN_ENV}}"
+  RIVER_ENV: "local_{{.RUN_ENV}}"
+  OPERATOR_ADDRESS:
+    sh: |
+      source ../contracts/.env.localhost
+      echo "${SENDER_ADDRESS}"
+  LOCAL_PRIVATE_KEY:
+    sh: |
+      source ../contracts/.env.localhost
+      echo "${LOCAL_PRIVATE_KEY}"
+  CONTRACTS_DIR: "../packages/generated/deployments/{{.RIVER_ENV}}"
+  INSTANCE_BASE: "{{.RUN_BASE}}"
+  INSTANCES_LIST:
+    sh: |
+      source {{.ENV_PATH}}/env.env
+      seq -s " " 0 $((NUM_INSTANCES - 1))
+  RPC_BASE: "http://127.0.0.1:8545"
+  RPC_RIVER: "http://127.0.0.1:8546"
+      
+
+dotenv:
+  - ./env/local/{{.RUN_ENV}}/env.env
+
+tasks:
+  anvil-start:
+    label: anvil-start-{{.NAME}}
+    requires:
+      vars: 
+        - NAME
+        - PORT
+        - CHAIN_ID
+    cmds:
+      - echo "Starting {{.NAME}} on port {{.PORT}}"
+      - mkdir -p ./run_files/anvil
+      - bash -c '
+          nohup anvil --chain-id {{.CHAIN_ID}} 
+                      --port {{.PORT}} 
+                      --block-time 1 
+                      > ./run_files/anvil/{{.NAME}}.log 2>&1 &
+        '
+      - ../scripts/wait-for-port.sh {{.PORT}} anvil_{{.NAME}}
+    status:
+      - lsof -i :{{.PORT}} 
+
+  anvil-base:
+    cmds:
+      - task: anvil-start
+        vars:
+          NAME: base
+          PORT: 8545
+          CHAIN_ID: 31337
+
+  anvil-base-stop:
+    cmds:
+      - ../scripts/kill-on-port.sh 8545
+
+  anvil-river:
+    cmds:
+      - task: anvil-start
+        vars:
+          NAME: river
+          PORT: 8546
+          CHAIN_ID: 31338
+
+  anvil-river-stop:
+    cmds:
+      - ../scripts/kill-on-port.sh 8546
+
+  anvils:
+    deps:
+      - anvil-base
+      - anvil-river
+
+  anvils-stop:
+    deps:
+      - anvil-base-stop
+      - anvil-river-stop
+
+  echo-env:
+    silent: true
+    cmds:
+      - echo "RUN_ENV=${RUN_ENV}"
+      - echo "DISABLE_BASE_CHAIN=${DISABLE_BASE_CHAIN}"
+      - echo "NUM_INSTANCES=${NUM_INSTANCES}"
+      - echo "RPC_PORT=${RPC_PORT}"
+      - echo "ENV_PATH=${ENV_PATH}"
+      - echo "RUN_BASE=${RUN_BASE}"
+      - echo "RIVER_ENV=${RIVER_ENV}"
+      - echo "OPERATOR_ADDRESS=${OPERATOR_ADDRESS}"
+      - echo "INSTANCES_LIST=${INSTANCES_LIST}"
+
+  deploy-contracts:
+    deps:
+      - anvils
+    cmds:
+      - |
+        mkdir -p ${RUN_BASE}
+        ./../scripts/deploy-contracts.sh
+        echo "" > ${RUN_BASE}/contracts.env
+        echo "RIVER_ARCHITECTCONTRACT_ADDRESS=$(jq -r '.address' ${CONTRACTS_DIR}/base/addresses/spaceFactory.json)" >> ${RUN_BASE}/contracts.env
+        echo "RIVER_ENTITLEMENT_CONTRACT_ADDRESS=$(jq -r '.address' ${CONTRACTS_DIR}/base/addresses/baseRegistry.json)" >> ${RUN_BASE}/contracts.env
+        echo "RIVER_REGISTRYCONTRACT_ADDRESS=$(jq -r '.address' ${CONTRACTS_DIR}/river/addresses/riverRegistry.json)" >> ${RUN_BASE}/contracts.env
+        echo "RIVER_TEST_CONTRACT_ADDRESS=$(jq -r '.address' ${CONTRACTS_DIR}/base/addresses/entitlementGatedExample.json)" >> ${RUN_BASE}/contracts.env
+  
+  config-instance:
+    requires:
+      vars:
+        - INSTANCE_NUM
+    env:
+      INSTANCE_NUM: "{{.INSTANCE_NUM}}"
+    cmds:
+      - |
+        INSTANCE_DIR="${INSTANCE_BASE}/$(printf "%02d" ${INSTANCE_NUM})"
+        mkdir -p ${INSTANCE_DIR}/config
+        mkdir -p ${INSTANCE_DIR}/logs
+        mkdir -p ${INSTANCE_DIR}/wallet
+        mkdir -p ${INSTANCE_DIR}/certs
+
+        echo "RIVER_PORT=$((RPC_PORT + INSTANCE_NUM))" > ${INSTANCE_DIR}/config/config.env
+
+        if [ ! -f "${INSTANCE_DIR}/wallet/private_key" ]; then
+          cast wallet new --json > "${INSTANCE_DIR}/wallet/wallet.json"
+          jq -r .[0].address "${INSTANCE_DIR}/wallet/wallet.json" > "${INSTANCE_DIR}/wallet/node_address"
+          jq -r .[0].private_key "${INSTANCE_DIR}/wallet/wallet.json" | sed 's/^0x//' > "${INSTANCE_DIR}/wallet/private_key"
+          cast rpc -r ${RPC_BASE} anvil_setBalance $(cat "${INSTANCE_DIR}/wallet/node_address") 10000000000000000000000
+          cast rpc -r ${RPC_RIVER} anvil_setBalance $(cat "${INSTANCE_DIR}/wallet/node_address") 10000000000000000000000
+        fi
+
+        if [ ! -f "${INSTANCE_DIR}/certs/cert.pem" ]; then
+          ./scripts/generate-certs.sh $(realpath ${INSTANCE_DIR}/certs)
+        fi
+
+  config-all-instances:
+    cmds:
+      - for: { var: INSTANCES_LIST }
+        task: config-instance
+        vars:
+          INSTANCE_NUM: "{{.ITEM}}"
+         
+
+
