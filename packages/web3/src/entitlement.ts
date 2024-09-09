@@ -18,7 +18,7 @@ import { MOCK_ADDRESS } from './Utils'
 const log = dlogger('csb:entitlement')
 
 export type XchainConfig = {
-    supportedRpcUrls: Map<number, string>
+    supportedRpcUrls: { [chainId: number]: string }
     // The chain ids for supported chains that use ether as the native currency.
     // These chains will be used to determine a user's cumulative ether balance.
     etherBasedChains: number[]
@@ -1086,11 +1086,11 @@ async function evaluateContractBalanceAcrossWallets(
 }
 
 async function findProviderFromChainId(xchainConfig: XchainConfig, chainId: bigint) {
-    if (!xchainConfig.supportedRpcUrls.has(Number(chainId))) {
+    if (!(Number(chainId) in xchainConfig.supportedRpcUrls)) {
         return undefined
     }
 
-    const url = xchainConfig.supportedRpcUrls.get(Number(chainId))
+    const url = xchainConfig.supportedRpcUrls[Number(chainId)]
     const provider = new ethers.providers.StaticJsonRpcProvider(url)
     await provider.ready
     return provider
@@ -1099,10 +1099,10 @@ async function findProviderFromChainId(xchainConfig: XchainConfig, chainId: bigi
 async function findEtherChainProviders(xchainConfig: XchainConfig) {
     const etherChainProviders = []
     for (const chainId of xchainConfig.etherBasedChains) {
-        if (!xchainConfig.supportedRpcUrls.has(Number(chainId))) {
+        if (!(Number(chainId) in xchainConfig.supportedRpcUrls)) {
             log.info(`(WARN) findEtherChainProviders: No supported RPC URL for chain id ${chainId}`)
         } else {
-            const url = xchainConfig.supportedRpcUrls.get(Number(chainId))
+            const url = xchainConfig.supportedRpcUrls[Number(chainId)]
             etherChainProviders.push(new ethers.providers.StaticJsonRpcProvider(url))
         }
     }
