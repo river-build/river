@@ -31,8 +31,8 @@ var (
 
 // MockCustomEntitlementMetaData contains all meta data concerning the MockCustomEntitlement contract.
 var MockCustomEntitlementMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"constructor\",\"inputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"isEntitled\",\"inputs\":[{\"name\":\"users\",\"type\":\"address[]\",\"internalType\":\"address[]\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"setEntitled\",\"inputs\":[{\"name\":\"users\",\"type\":\"address[]\",\"internalType\":\"address[]\"},{\"name\":\"userIsEntitled\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"supportsInterface\",\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"}]",
-	Bin: "0x608060405234801561001057600080fd5b50610377806100206000396000f3fe608060405234801561001057600080fd5b50600436106100415760003560e01c806301ffc9a7146100465780633f4c4d831461007e578063ddc6e68e14610093575b600080fd5b61006a6100543660046101c5565b6001600160e01b031916636ee3734760e11b1490565b604051901515815260200160405180910390f35b61009161008c3660046102cd565b6100a6565b005b61006a6100a1366004610324565b610130565b60005b825181101561012b57816000808584815181106100c8576100c8610361565b60200260200101516040516020016100ef91906001600160a01b0391909116815260200190565b60408051808303601f19018152918152815160209283012083529082019290925201600020805460ff19169115159190911790556001016100a9565b505050565b6000805b82518110156101bc5760008084838151811061015257610152610361565b602002602001015160405160200161017991906001600160a01b0391909116815260200190565b60408051601f198184030181529181528151602092830120835290820192909252016000205460ff1615156001036101b45750600192915050565b600101610134565b50600092915050565b6000602082840312156101d757600080fd5b81356001600160e01b0319811681146101ef57600080fd5b9392505050565b634e487b7160e01b600052604160045260246000fd5b80356001600160a01b038116811461022357600080fd5b919050565b600082601f83011261023957600080fd5b8135602067ffffffffffffffff80831115610256576102566101f6565b8260051b604051601f19603f8301168101818110848211171561027b5761027b6101f6565b604052938452602081870181019490810192508785111561029b57600080fd5b6020870191505b848210156102c2576102b38261020c565b835291830191908301906102a2565b979650505050505050565b600080604083850312156102e057600080fd5b823567ffffffffffffffff8111156102f757600080fd5b61030385828601610228565b9250506020830135801515811461031957600080fd5b809150509250929050565b60006020828403121561033657600080fd5b813567ffffffffffffffff81111561034d57600080fd5b61035984828501610228565b949350505050565b634e487b7160e01b600052603260045260246000fd",
+	ABI: "[{\"type\":\"constructor\",\"inputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"isEntitled\",\"inputs\":[{\"name\":\"\",\"type\":\"address[]\",\"internalType\":\"address[]\"},{\"name\":\"\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"pure\"},{\"type\":\"function\",\"name\":\"isEntitled\",\"inputs\":[{\"name\":\"users\",\"type\":\"address[]\",\"internalType\":\"address[]\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"setEntitled\",\"inputs\":[{\"name\":\"users\",\"type\":\"address[]\",\"internalType\":\"address[]\"},{\"name\":\"userIsEntitled\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"supportsInterface\",\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"}]",
+	Bin: "0x608060405234801561001057600080fd5b50610455806100206000396000f3fe608060405234801561001057600080fd5b506004361061004c5760003560e01c806301ffc9a71461005157806316089f65146100895780633f4c4d831461009f578063ddc6e68e146100b4575b600080fd5b61007561005f3660046101e6565b6001600160e01b03191663cbce79eb60e01b1490565b604051901515815260200160405180910390f35b6100756100973660046102f4565b600192915050565b6100b26100ad3660046103ab565b6100c7565b005b6100756100c2366004610402565b610151565b60005b825181101561014c57816000808584815181106100e9576100e961043f565b602002602001015160405160200161011091906001600160a01b0391909116815260200190565b60408051808303601f19018152918152815160209283012083529082019290925201600020805460ff19169115159190911790556001016100ca565b505050565b6000805b82518110156101dd576000808483815181106101735761017361043f565b602002602001015160405160200161019a91906001600160a01b0391909116815260200190565b60408051601f198184030181529181528151602092830120835290820192909252016000205460ff1615156001036101d55750600192915050565b600101610155565b50600092915050565b6000602082840312156101f857600080fd5b81356001600160e01b03198116811461021057600080fd5b9392505050565b634e487b7160e01b600052604160045260246000fd5b604051601f8201601f1916810167ffffffffffffffff8111828210171561025657610256610217565b604052919050565b600082601f83011261026f57600080fd5b8135602067ffffffffffffffff82111561028b5761028b610217565b8160051b61029a82820161022d565b92835284810182019282810190878511156102b457600080fd5b83870192505b848310156102e95782356001600160a01b03811681146102da5760008081fd5b825291830191908301906102ba565b979650505050505050565b6000806040838503121561030757600080fd5b823567ffffffffffffffff8082111561031f57600080fd5b61032b8683870161025e565b935060209150818501358181111561034257600080fd5b8501601f8101871361035357600080fd5b80358281111561036557610365610217565b610377601f8201601f1916850161022d565b9250808352878482840101111561038d57600080fd5b80848301858501376000848285010152505080925050509250929050565b600080604083850312156103be57600080fd5b823567ffffffffffffffff8111156103d557600080fd5b6103e18582860161025e565b925050602083013580151581146103f757600080fd5b809150509250929050565b60006020828403121561041457600080fd5b813567ffffffffffffffff81111561042b57600080fd5b6104378482850161025e565b949350505050565b634e487b7160e01b600052603260045260246000fd",
 }
 
 // MockCustomEntitlementABI is the input ABI used to generate the binding from.
@@ -202,12 +202,12 @@ func (_MockCustomEntitlement *MockCustomEntitlementTransactorRaw) Transact(opts 
 	return _MockCustomEntitlement.Contract.contract.Transact(opts, method, params...)
 }
 
-// IsEntitled is a free data retrieval call binding the contract method 0xddc6e68e.
+// IsEntitled is a free data retrieval call binding the contract method 0x16089f65.
 //
-// Solidity: function isEntitled(address[] users) view returns(bool)
-func (_MockCustomEntitlement *MockCustomEntitlementCaller) IsEntitled(opts *bind.CallOpts, users []common.Address) (bool, error) {
+// Solidity: function isEntitled(address[] , bytes ) pure returns(bool)
+func (_MockCustomEntitlement *MockCustomEntitlementCaller) IsEntitled(opts *bind.CallOpts, arg0 []common.Address, arg1 []byte) (bool, error) {
 	var out []interface{}
-	err := _MockCustomEntitlement.contract.Call(opts, &out, "isEntitled", users)
+	err := _MockCustomEntitlement.contract.Call(opts, &out, "isEntitled", arg0, arg1)
 
 	if err != nil {
 		return *new(bool), err
@@ -219,18 +219,49 @@ func (_MockCustomEntitlement *MockCustomEntitlementCaller) IsEntitled(opts *bind
 
 }
 
-// IsEntitled is a free data retrieval call binding the contract method 0xddc6e68e.
+// IsEntitled is a free data retrieval call binding the contract method 0x16089f65.
 //
-// Solidity: function isEntitled(address[] users) view returns(bool)
-func (_MockCustomEntitlement *MockCustomEntitlementSession) IsEntitled(users []common.Address) (bool, error) {
-	return _MockCustomEntitlement.Contract.IsEntitled(&_MockCustomEntitlement.CallOpts, users)
+// Solidity: function isEntitled(address[] , bytes ) pure returns(bool)
+func (_MockCustomEntitlement *MockCustomEntitlementSession) IsEntitled(arg0 []common.Address, arg1 []byte) (bool, error) {
+	return _MockCustomEntitlement.Contract.IsEntitled(&_MockCustomEntitlement.CallOpts, arg0, arg1)
 }
 
-// IsEntitled is a free data retrieval call binding the contract method 0xddc6e68e.
+// IsEntitled is a free data retrieval call binding the contract method 0x16089f65.
+//
+// Solidity: function isEntitled(address[] , bytes ) pure returns(bool)
+func (_MockCustomEntitlement *MockCustomEntitlementCallerSession) IsEntitled(arg0 []common.Address, arg1 []byte) (bool, error) {
+	return _MockCustomEntitlement.Contract.IsEntitled(&_MockCustomEntitlement.CallOpts, arg0, arg1)
+}
+
+// IsEntitled0 is a free data retrieval call binding the contract method 0xddc6e68e.
 //
 // Solidity: function isEntitled(address[] users) view returns(bool)
-func (_MockCustomEntitlement *MockCustomEntitlementCallerSession) IsEntitled(users []common.Address) (bool, error) {
-	return _MockCustomEntitlement.Contract.IsEntitled(&_MockCustomEntitlement.CallOpts, users)
+func (_MockCustomEntitlement *MockCustomEntitlementCaller) IsEntitled0(opts *bind.CallOpts, users []common.Address) (bool, error) {
+	var out []interface{}
+	err := _MockCustomEntitlement.contract.Call(opts, &out, "isEntitled0", users)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
+}
+
+// IsEntitled0 is a free data retrieval call binding the contract method 0xddc6e68e.
+//
+// Solidity: function isEntitled(address[] users) view returns(bool)
+func (_MockCustomEntitlement *MockCustomEntitlementSession) IsEntitled0(users []common.Address) (bool, error) {
+	return _MockCustomEntitlement.Contract.IsEntitled0(&_MockCustomEntitlement.CallOpts, users)
+}
+
+// IsEntitled0 is a free data retrieval call binding the contract method 0xddc6e68e.
+//
+// Solidity: function isEntitled(address[] users) view returns(bool)
+func (_MockCustomEntitlement *MockCustomEntitlementCallerSession) IsEntitled0(users []common.Address) (bool, error) {
+	return _MockCustomEntitlement.Contract.IsEntitled0(&_MockCustomEntitlement.CallOpts, users)
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.

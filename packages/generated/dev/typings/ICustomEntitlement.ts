@@ -22,16 +22,24 @@ import type {
 
 export interface ICustomEntitlementInterface extends utils.Interface {
   functions: {
+    "isEntitled(address[],bytes)": FunctionFragment;
     "isEntitled(address[])": FunctionFragment;
     "supportsInterface(bytes4)": FunctionFragment;
   };
 
   getFunction(
-    nameOrSignatureOrTopic: "isEntitled" | "supportsInterface"
+    nameOrSignatureOrTopic:
+      | "isEntitled(address[],bytes)"
+      | "isEntitled(address[])"
+      | "supportsInterface"
   ): FunctionFragment;
 
   encodeFunctionData(
-    functionFragment: "isEntitled",
+    functionFragment: "isEntitled(address[],bytes)",
+    values: [PromiseOrValue<string>[], PromiseOrValue<BytesLike>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "isEntitled(address[])",
     values: [PromiseOrValue<string>[]]
   ): string;
   encodeFunctionData(
@@ -39,7 +47,14 @@ export interface ICustomEntitlementInterface extends utils.Interface {
     values: [PromiseOrValue<BytesLike>]
   ): string;
 
-  decodeFunctionResult(functionFragment: "isEntitled", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "isEntitled(address[],bytes)",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "isEntitled(address[])",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "supportsInterface",
     data: BytesLike
@@ -75,7 +90,13 @@ export interface ICustomEntitlement extends BaseContract {
   removeListener: OnEvent<this>;
 
   functions: {
-    isEntitled(
+    "isEntitled(address[],bytes)"(
+      users: PromiseOrValue<string>[],
+      entitledData: PromiseOrValue<BytesLike>,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>;
+
+    "isEntitled(address[])"(
       user: PromiseOrValue<string>[],
       overrides?: CallOverrides
     ): Promise<[boolean]>;
@@ -86,7 +107,13 @@ export interface ICustomEntitlement extends BaseContract {
     ): Promise<[boolean]>;
   };
 
-  isEntitled(
+  "isEntitled(address[],bytes)"(
+    users: PromiseOrValue<string>[],
+    entitledData: PromiseOrValue<BytesLike>,
+    overrides?: CallOverrides
+  ): Promise<boolean>;
+
+  "isEntitled(address[])"(
     user: PromiseOrValue<string>[],
     overrides?: CallOverrides
   ): Promise<boolean>;
@@ -97,7 +124,13 @@ export interface ICustomEntitlement extends BaseContract {
   ): Promise<boolean>;
 
   callStatic: {
-    isEntitled(
+    "isEntitled(address[],bytes)"(
+      users: PromiseOrValue<string>[],
+      entitledData: PromiseOrValue<BytesLike>,
+      overrides?: CallOverrides
+    ): Promise<boolean>;
+
+    "isEntitled(address[])"(
       user: PromiseOrValue<string>[],
       overrides?: CallOverrides
     ): Promise<boolean>;
@@ -111,7 +144,13 @@ export interface ICustomEntitlement extends BaseContract {
   filters: {};
 
   estimateGas: {
-    isEntitled(
+    "isEntitled(address[],bytes)"(
+      users: PromiseOrValue<string>[],
+      entitledData: PromiseOrValue<BytesLike>,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    "isEntitled(address[])"(
       user: PromiseOrValue<string>[],
       overrides?: CallOverrides
     ): Promise<BigNumber>;
@@ -123,7 +162,13 @@ export interface ICustomEntitlement extends BaseContract {
   };
 
   populateTransaction: {
-    isEntitled(
+    "isEntitled(address[],bytes)"(
+      users: PromiseOrValue<string>[],
+      entitledData: PromiseOrValue<BytesLike>,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    "isEntitled(address[])"(
       user: PromiseOrValue<string>[],
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;

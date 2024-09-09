@@ -31,7 +31,7 @@ var (
 
 // ICustomEntitlementMetaData contains all meta data concerning the ICustomEntitlement contract.
 var ICustomEntitlementMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"function\",\"name\":\"isEntitled\",\"inputs\":[{\"name\":\"user\",\"type\":\"address[]\",\"internalType\":\"address[]\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"supportsInterface\",\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"}]",
+	ABI: "[{\"type\":\"function\",\"name\":\"isEntitled\",\"inputs\":[{\"name\":\"users\",\"type\":\"address[]\",\"internalType\":\"address[]\"},{\"name\":\"entitledData\",\"type\":\"bytes\",\"internalType\":\"bytes\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"isEntitled\",\"inputs\":[{\"name\":\"user\",\"type\":\"address[]\",\"internalType\":\"address[]\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"supportsInterface\",\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\",\"internalType\":\"bytes4\"}],\"outputs\":[{\"name\":\"\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"stateMutability\":\"view\"}]",
 }
 
 // ICustomEntitlementABI is the input ABI used to generate the binding from.
@@ -180,12 +180,12 @@ func (_ICustomEntitlement *ICustomEntitlementTransactorRaw) Transact(opts *bind.
 	return _ICustomEntitlement.Contract.contract.Transact(opts, method, params...)
 }
 
-// IsEntitled is a free data retrieval call binding the contract method 0xddc6e68e.
+// IsEntitled is a free data retrieval call binding the contract method 0x16089f65.
 //
-// Solidity: function isEntitled(address[] user) view returns(bool)
-func (_ICustomEntitlement *ICustomEntitlementCaller) IsEntitled(opts *bind.CallOpts, user []common.Address) (bool, error) {
+// Solidity: function isEntitled(address[] users, bytes entitledData) view returns(bool)
+func (_ICustomEntitlement *ICustomEntitlementCaller) IsEntitled(opts *bind.CallOpts, users []common.Address, entitledData []byte) (bool, error) {
 	var out []interface{}
-	err := _ICustomEntitlement.contract.Call(opts, &out, "isEntitled", user)
+	err := _ICustomEntitlement.contract.Call(opts, &out, "isEntitled", users, entitledData)
 
 	if err != nil {
 		return *new(bool), err
@@ -197,18 +197,49 @@ func (_ICustomEntitlement *ICustomEntitlementCaller) IsEntitled(opts *bind.CallO
 
 }
 
-// IsEntitled is a free data retrieval call binding the contract method 0xddc6e68e.
+// IsEntitled is a free data retrieval call binding the contract method 0x16089f65.
 //
-// Solidity: function isEntitled(address[] user) view returns(bool)
-func (_ICustomEntitlement *ICustomEntitlementSession) IsEntitled(user []common.Address) (bool, error) {
-	return _ICustomEntitlement.Contract.IsEntitled(&_ICustomEntitlement.CallOpts, user)
+// Solidity: function isEntitled(address[] users, bytes entitledData) view returns(bool)
+func (_ICustomEntitlement *ICustomEntitlementSession) IsEntitled(users []common.Address, entitledData []byte) (bool, error) {
+	return _ICustomEntitlement.Contract.IsEntitled(&_ICustomEntitlement.CallOpts, users, entitledData)
 }
 
-// IsEntitled is a free data retrieval call binding the contract method 0xddc6e68e.
+// IsEntitled is a free data retrieval call binding the contract method 0x16089f65.
+//
+// Solidity: function isEntitled(address[] users, bytes entitledData) view returns(bool)
+func (_ICustomEntitlement *ICustomEntitlementCallerSession) IsEntitled(users []common.Address, entitledData []byte) (bool, error) {
+	return _ICustomEntitlement.Contract.IsEntitled(&_ICustomEntitlement.CallOpts, users, entitledData)
+}
+
+// IsEntitled0 is a free data retrieval call binding the contract method 0xddc6e68e.
 //
 // Solidity: function isEntitled(address[] user) view returns(bool)
-func (_ICustomEntitlement *ICustomEntitlementCallerSession) IsEntitled(user []common.Address) (bool, error) {
-	return _ICustomEntitlement.Contract.IsEntitled(&_ICustomEntitlement.CallOpts, user)
+func (_ICustomEntitlement *ICustomEntitlementCaller) IsEntitled0(opts *bind.CallOpts, user []common.Address) (bool, error) {
+	var out []interface{}
+	err := _ICustomEntitlement.contract.Call(opts, &out, "isEntitled0", user)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
+}
+
+// IsEntitled0 is a free data retrieval call binding the contract method 0xddc6e68e.
+//
+// Solidity: function isEntitled(address[] user) view returns(bool)
+func (_ICustomEntitlement *ICustomEntitlementSession) IsEntitled0(user []common.Address) (bool, error) {
+	return _ICustomEntitlement.Contract.IsEntitled0(&_ICustomEntitlement.CallOpts, user)
+}
+
+// IsEntitled0 is a free data retrieval call binding the contract method 0xddc6e68e.
+//
+// Solidity: function isEntitled(address[] user) view returns(bool)
+func (_ICustomEntitlement *ICustomEntitlementCallerSession) IsEntitled0(user []common.Address) (bool, error) {
+	return _ICustomEntitlement.Contract.IsEntitled0(&_ICustomEntitlement.CallOpts, user)
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.

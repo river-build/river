@@ -9,6 +9,30 @@
     "name": "isEntitled",
     "inputs": [
       {
+        "name": "",
+        "type": "address[]",
+        "internalType": "address[]"
+      },
+      {
+        "name": "",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "function",
+    "name": "isEntitled",
+    "inputs": [
+      {
         "name": "users",
         "type": "address[]",
         "internalType": "address[]"

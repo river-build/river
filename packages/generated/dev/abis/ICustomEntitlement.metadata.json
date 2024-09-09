@@ -9,6 +9,30 @@
         "inputs": [
           {
             "internalType": "address[]",
+            "name": "users",
+            "type": "address[]"
+          },
+          {
+            "internalType": "bytes",
+            "name": "entitledData",
+            "type": "bytes"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+        "name": "isEntitled",
+        "outputs": [
+          {
+            "internalType": "bool",
+            "name": "",
+            "type": "bool"
+          }
+        ]
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address[]",
             "name": "user",
             "type": "address[]"
           }
@@ -55,6 +79,15 @@
             "_0": "whether the user is entitled to the permission"
           }
         },
+        "isEntitled(address[],bytes)": {
+          "params": {
+            "entitledData": "data to pass to the entitlement check",
+            "users": "addresses of the users to check"
+          },
+          "returns": {
+            "_0": "whether the user is entitled to the permission"
+          }
+        },
         "supportsInterface(bytes4)": {
           "details": "Returns true if this contract implements the interface defined by `interfaceId`. See the corresponding https://eips.ethereum.org/EIPS/eip-165#how-interfaces-are-identified[EIP section] to learn more about how these ids are created. This function call must use less than 30 000 gas."
         }
@@ -65,6 +98,9 @@
       "kind": "user",
       "methods": {
         "isEntitled(address[])": {
+          "notice": "checks whether a user is has a given permission for a channel or a space"
+        },
+        "isEntitled(address[],bytes)": {
           "notice": "checks whether a user is has a given permission for a channel or a space"
         }
       },
@@ -77,6 +113,7 @@
       "@prb/math/=lib/@prb/math/src/",
       "@prb/test/=lib/@prb/test/src/",
       "account-abstraction/=lib/account-abstraction/contracts/",
+      "base64/=lib/base64/",
       "ds-test/=lib/ds-test/src/",
       "forge-std/=lib/forge-std/src/",
       "hardhat-deploy/=lib/hardhat-deploy/",
@@ -98,10 +135,10 @@
   },
   "sources": {
     "contracts/src/spaces/entitlements/ICustomEntitlement.sol": {
-      "keccak256": "0x898618a1c86c7e561c79d39e82a0d1fb9823525ac95d3efb08af779b6f6cbd5c",
+      "keccak256": "0x45b70c27fd9166718aee345e6b1a18a3d054d52c4971ce95ec22e6e28782a361",
       "urls": [
-        "bzz-raw://f56813e903bf9dc5cd19adde95722067c100d34978c21cc1f9d9921982e5cfd6",
-        "dweb:/ipfs/QmVu6zNqfbnAUzF1AmenknzNHuMMPiB2agRLGUkGqXuE4a"
+        "bzz-raw://fc6f7948f78ce78ff6e7d43ca96ce2c48f7f3cbf7b08ce0018fa2b6f6b908836",
+        "dweb:/ipfs/QmY6oCe5RBbMEC6ZTzwmi8EaQLdqTZz6SvUKiZQExALsM7"
       ],
       "license": "MIT"
     },
