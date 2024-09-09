@@ -3,7 +3,7 @@ name: Network Diff Upgrade
 on:
     workflow_dispatch:
     schedule:
-        - cron: '0 6 * * 1'  # Run every Monday at 6:00 AM UTC
+        - cron: '0 6 * * 1' # Run every Monday at 6:00 AM UTC
 
 jobs:
     Run_Alpha_to_Gamma:
