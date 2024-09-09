@@ -237,7 +237,10 @@ func (c *streamChecker) addToSync(ctx context.Context, state *streamState) {
 		PrevMiniblockHash: info.LastMiniblockHash[:],
 	}
 
-	c.syncReceiver.AddStream(ctx, state.streamId, cookie, c.updates)
+	err = c.syncReceiver.AddStream(ctx, state.streamId, cookie, c.updates)
+	if err != nil {
+		dlog.FromCtx(ctx).Error("addToSync: Failed to add stream", "error", err)
+	}
 }
 
 func (c *streamChecker) run(ctx context.Context) {
