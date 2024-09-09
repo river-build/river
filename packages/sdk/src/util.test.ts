@@ -148,10 +148,10 @@ export const TEST_ENCRYPTED_MESSAGE_PROPS: PlainMessage<EncryptedData> = {
 export const getXchainConfigForTesting = (): XchainConfig => {
     // TODO: generate this for test environment and read from it
     return {
-        supportedRpcUrls: new Map<number, string>([
-            [31337, 'http://127.0.0.1:8545'],
-            [31338, 'http://127.0.0.1:8546'],
-        ]),
+        supportedRpcUrls: {
+            31337: 'http://127.0.0.1:8545',
+            31338: 'http://127.0.0.1:8546',
+        },
         etherBasedChains: [31337, 31338],
     }
 }

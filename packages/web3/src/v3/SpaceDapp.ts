@@ -141,7 +141,7 @@ function ensureHexPrefix(value: string): string {
 }
 
 const EmptyXchainConfig: XchainConfig = {
-    supportedRpcUrls: new Map<number, string>([]),
+    supportedRpcUrls: {},
     etherBasedChains: [],
 }
 

@@ -173,18 +173,18 @@ const nftMultiCheckHighThresholdBaseSepolia: CheckOperationV2 = {
 } as const
 
 const xchainConfig: XchainConfig = {
-    supportedRpcUrls: new Map<number, string>([
-        [Number(ethereumSepoliaChainId), 'https://ethereum-sepolia-rpc.publicnode.com'],
-        [Number(baseSepoliaChainId), 'https://sepolia.base.org'],
-    ]),
+    supportedRpcUrls: {
+        [Number(ethereumSepoliaChainId)]: 'https://ethereum-sepolia-rpc.publicnode.com',
+        [Number(baseSepoliaChainId)]: 'https://sepolia.base.org',
+    },
     etherBasedChains: [Number(ethereumSepoliaChainId), Number(baseSepoliaChainId)],
 }
 
 const minimalEtherChainsConfig: XchainConfig = {
-    supportedRpcUrls: new Map<number, string>([
-        [Number(ethereumSepoliaChainId), 'https://ethereum-sepolia-rpc.publicnode.com'],
-        [Number(baseSepoliaChainId), 'https://sepolia.base.org'],
-    ]),
+    supportedRpcUrls: {
+        [Number(ethereumSepoliaChainId)]: 'https://ethereum-sepolia-rpc.publicnode.com',
+        [Number(baseSepoliaChainId)]: 'https://sepolia.base.org',
+    },
     etherBasedChains: [Number(ethereumSepoliaChainId)],
 }
 
