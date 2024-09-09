@@ -17,6 +17,7 @@ import {RuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/RuleEnti
 import {IRoles} from "contracts/src/spaces/facets/roles/IRoles.sol";
 import {IMembership} from "contracts/src/spaces/facets/membership/IMembership.sol";
 import {ISpaceOwner} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
+import {ISpaceProxyInitializer} from "contracts/src/spaces/facets/proxy/ISpaceProxyInitializer.sol";
 
 // libraries
 import {LibString} from "solady/utils/LibString.sol";
@@ -28,8 +29,8 @@ import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {Architect} from "contracts/src/factory/facets/architect/Architect.sol";
 import {MockERC721} from "contracts/test/mocks/MockERC721.sol";
 import {UserEntitlement} from "contracts/src/spaces/entitlements/user/UserEntitlement.sol";
+import {SpaceProxyInitializer} from "contracts/src/spaces/facets/proxy/SpaceProxyInitializer.sol";
 import {Factory} from "contracts/src/utils/Factory.sol";
-
 // errors
 import {Validator__InvalidStringLength} from "contracts/src/utils/Validator.sol";
 
@@ -112,13 +113,15 @@ contract ArchitectTest is
       ISpaceOwner spaceTokenAddress,
       IUserEntitlement userEntitlementAddress,
       IRuleEntitlementV2 ruleEntitlementAddress,
-      IRuleEntitlement legacyRuleEntitlementAddress
+      IRuleEntitlement legacyRuleEntitlementAddress,
+      ISpaceProxyInitializer spaceProxyInitializerAddress
     ) = spaceArchitect.getSpaceArchitectImplementations();
 
     assertEq(spaceOwner, address(spaceTokenAddress));
     assertEq(userEntitlement, address(userEntitlementAddress));
     assertEq(ruleEntitlement, address(ruleEntitlementAddress));
     assertEq(legacyRuleEntitlement, address(legacyRuleEntitlementAddress));
+    assertEq(spaceProxyInitializer, address(spaceProxyInitializerAddress));
   }
 
   function test_fuzz_setImplementations(address user) external {
@@ -126,6 +129,7 @@ contract ArchitectTest is
     IUserEntitlement newUserEntitlement = new UserEntitlement();
     IRuleEntitlement newRuleEntitlement = new RuleEntitlement();
     IRuleEntitlementV2 newRuleEntitlementV2 = new RuleEntitlementV2();
+    ISpaceProxyInitializer newSpaceProxyInitializer = new SpaceProxyInitializer();
 
     vm.assume(user != deployer);
 
@@ -135,7 +139,8 @@ contract ArchitectTest is
       newSpaceToken,
       newUserEntitlement,
       newRuleEntitlementV2,
-      newRuleEntitlement
+      newRuleEntitlement,
+      newSpaceProxyInitializer
     );
 
     vm.prank(deployer);
@@ -143,20 +148,26 @@ contract ArchitectTest is
       newSpaceToken,
       newUserEntitlement,
       newRuleEntitlementV2,
-      newRuleEntitlement
+      newRuleEntitlement,
+      newSpaceProxyInitializer
     );
 
     (
       ISpaceOwner spaceTokenAddress,
       IUserEntitlement userEntitlementAddress,
       IRuleEntitlementV2 ruleEntitlementAddress,
-      IRuleEntitlement legacyRuleEntitlement
+      IRuleEntitlement legacyRuleEntitlement,
+      ISpaceProxyInitializer spaceProxyInitializerAddress
     ) = spaceArchitect.getSpaceArchitectImplementations();
 
     assertEq(address(newSpaceToken), address(spaceTokenAddress));
     assertEq(address(newUserEntitlement), address(userEntitlementAddress));
     assertEq(address(newRuleEntitlementV2), address(ruleEntitlementAddress));
     assertEq(address(newRuleEntitlement), address(legacyRuleEntitlement));
+    assertEq(
+      address(newSpaceProxyInitializer),
+      address(spaceProxyInitializerAddress)
+    );
   }
 
   function test_fuzz_transfer_space_ownership(
@@ -180,7 +191,7 @@ contract ArchitectTest is
       )
     );
 
-    (ISpaceOwner spaceOwner, , , ) = spaceArchitect
+    (ISpaceOwner spaceOwner, , , , ) = spaceArchitect
       .getSpaceArchitectImplementations();
     uint256 tokenId = spaceArchitect.getTokenIdBySpace(newSpace);
 

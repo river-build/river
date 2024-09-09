@@ -9,6 +9,7 @@ import {IUserEntitlement} from "contracts/src/spaces/entitlements/user/IUserEnti
 import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {ISpaceOwner} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
+import {ISpaceProxyInitializer} from "contracts/src/spaces/facets/proxy/ISpaceProxyInitializer.sol";
 
 // contracts
 interface IArchitectBase {
@@ -84,7 +85,8 @@ interface IArchitect is IArchitectBase {
     ISpaceOwner ownerTokenImplementation,
     IUserEntitlement userEntitlementImplementation,
     IRuleEntitlementV2 ruleEntitlementImplementation,
-    IRuleEntitlement legacyRuleEntitlement
+    IRuleEntitlement legacyRuleEntitlement,
+    ISpaceProxyInitializer spaceProxyInitializer
   ) external;
 
   function getSpaceArchitectImplementations()
@@ -94,6 +96,7 @@ interface IArchitect is IArchitectBase {
       ISpaceOwner ownerTokenImplementation,
       IUserEntitlement userEntitlementImplementation,
       IRuleEntitlementV2 ruleEntitlementImplementation,
-      IRuleEntitlement legacyRuleEntitlement
+      IRuleEntitlement legacyRuleEntitlement,
+      ISpaceProxyInitializer spaceProxyInitializer
     );
 }

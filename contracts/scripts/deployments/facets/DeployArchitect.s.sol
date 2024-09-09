@@ -27,7 +27,8 @@ contract DeployArchitect is FacetHelper, Deployer {
     address _spaceOwnerToken,
     address _userEntitlement,
     address _ruleEntitlement,
-    address _legacyRuleEntitlement
+    address _legacyRuleEntitlement,
+    address _proxyInitializer
   ) public pure returns (bytes memory) {
     return
       abi.encodeWithSelector(
@@ -35,7 +36,8 @@ contract DeployArchitect is FacetHelper, Deployer {
         _spaceOwnerToken,
         _userEntitlement,
         _ruleEntitlement,
-        _legacyRuleEntitlement
+        _legacyRuleEntitlement,
+        _proxyInitializer
       );
   }
 

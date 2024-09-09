@@ -45,6 +45,7 @@ import {DeployPartnerRegistry} from "contracts/scripts/deployments/facets/Deploy
 import {SpaceFactory} from "contracts/src/factory/SpaceFactory.sol";
 
 import {DeployMockLegacyArchitect} from "contracts/scripts/deployments/facets/DeployMockLegacyArchitect.s.sol";
+import {DeploySpaceProxyInitializer} from "contracts/scripts/deployments/utils/DeploySpaceProxyInitializer.s.sol";
 
 contract DeploySpaceFactory is DiamondHelper, Deployer {
   // diamond helpers
@@ -81,6 +82,8 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
 
   DeployTieredLogPricing deployTieredLogPricing = new DeployTieredLogPricing();
   DeployFixedPricing deployFixedPricing = new DeployFixedPricing();
+  DeploySpaceProxyInitializer deploySpaceProxyInitializer =
+    new DeploySpaceProxyInitializer();
 
   // helpers
   address multiInit;
@@ -111,7 +114,7 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
   address public legacyRuleEntitlement;
   address public ruleEntitlement;
   address public spaceOwner;
-
+  address public spaceProxyInitializer;
   address public tieredLogPricing;
   address public fixedPricing;
   address[] pricingModules;
@@ -182,6 +185,7 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
 
     // legacy
     legacyArchitect = deployMockLegacyArchitect.deploy(deployer);
+    spaceProxyInitializer = deploySpaceProxyInitializer.deploy(deployer);
 
     addFacet(
       metadataHelper.makeCut(metadata, IDiamond.FacetCutAction.Add),
@@ -196,7 +200,8 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
         spaceOwner, // spaceOwner
         userEntitlement, // userEntitlement
         ruleEntitlement, // ruleEntitlement
-        legacyRuleEntitlement // legacyRuleEntitlement
+        legacyRuleEntitlement, // legacyRuleEntitlement
+        spaceProxyInitializer // spaceProxyInitializer
       )
     );
     addFacet(
