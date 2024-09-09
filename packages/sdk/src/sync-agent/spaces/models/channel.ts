@@ -1,6 +1,6 @@
 import { PlainMessage } from '@bufbuild/protobuf'
 import { PersistedObservable, persistedObservable } from '../../../observable/persistedObservable'
-import { Identifiable, Store } from '../../../store/store'
+import { Identifiable, LoadPriority, Store } from '../../../store/store'
 import { RiverConnection } from '../../river-connection/riverConnection'
 import { ChannelMessage_Post_Attachment, ChannelMessage_Post_Mention } from '@river-build/proto'
 import { Timeline } from '../../timeline/timeline'
@@ -29,7 +29,7 @@ export class Channel extends PersistedObservable<ChannelModel> {
         private spaceDapp: SpaceDapp,
         store: Store,
     ) {
-        super({ id, spaceId, isJoined: false }, store)
+        super({ id, spaceId, isJoined: false }, store, LoadPriority.high)
         this.timeline = new Timeline(riverConnection.userId)
         this.members = new Members(id, riverConnection, store)
     }
