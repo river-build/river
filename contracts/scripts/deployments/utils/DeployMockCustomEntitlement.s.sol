@@ -9,9 +9,9 @@ pragma solidity ^0.8.23;
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 import {MockCustomEntitlement} from "contracts/test/mocks/MockCustomEntitlement.sol";
 
-contract DeployCustomEntitlementExample is Deployer {
+contract DeployMockCustomEntitlement is Deployer {
   function versionName() public pure override returns (string memory) {
-    return "customEntitlementExample";
+    return "mockCustomEntitlement";
   }
 
   function __deploy(address deployer) public override returns (address) {

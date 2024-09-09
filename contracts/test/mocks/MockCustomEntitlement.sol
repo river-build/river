@@ -25,6 +25,13 @@ contract MockCustomEntitlement is ICustomEntitlement {
     return false;
   }
 
+  function isEntitled(
+    address[] memory,
+    bytes memory
+  ) external pure override returns (bool) {
+    return true;
+  }
+
   function supportsInterface(
     bytes4 interfaceId
   ) public view virtual override returns (bool) {
