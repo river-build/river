@@ -56,8 +56,9 @@ func StartSyncReceiver(
 	}
 
 	receiver := &syncReceiver{
-		syncId: msg.SyncId,
-		stub:   stub,
+		syncId:  msg.SyncId,
+		stub:    stub,
+		streams: make(map[StreamId]*streamInfo),
 	}
 
 	go receiver.receive(ctx, resp, onSyncExit)
