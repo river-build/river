@@ -143,6 +143,20 @@ var AddHashesCmd = &cobra.Command{
 	},
 }
 
+func countMatches(hashes interface{}, originHash string) int {
+	count := 0
+	if hashSlice, ok := hashes.([]interface{}); ok {
+		for _, hash := range hashSlice {
+			if hashStr, ok := hash.(string); ok {
+				if hashStr == originHash {
+					count++
+				}
+			}
+		}
+	}
+	return count
+}
+
 func renderYAMLToHTML(yamlData []byte, environment string) (string, error) {
 	var data map[string]interface{}
 	err := yaml.Unmarshal(yamlData, &data)
@@ -153,7 +167,11 @@ func renderYAMLToHTML(yamlData []byte, environment string) (string, error) {
 	data["environment"] = environment
 	data["reportTime"] = time.Now().UTC().Format(time.RFC3339)
 
-	t, err := template.ParseFiles("templates/report.html")
+	funcMap := template.FuncMap{
+		"countMatches": countMatches,
+	}
+
+	t, err := template.New("report.html").Funcs(funcMap).ParseFiles("templates/report.html")
 	if err != nil {
 		return "", fmt.Errorf("failed to parse HTML template: %w", err)
 	}
