@@ -22,8 +22,8 @@ const envMainSchema = z.object({
 	HOST: z.string().optional().default('127.0.0.1'),
 	LOG_LEVEL: z.string().optional().default('info'),
 	LOG_PRETTY: BoolFromStringSchema.optional().default('true'),
-	OPENSEA_API_KEY: z.string().min(1).optional(),
-	CLOUDFRONT_DISTRIBUTION_ID: z.string().min(1).optional(),
+	OPENSEA_API_KEY: z.string().optional(),
+	CLOUDFRONT_DISTRIBUTION_ID: z.string().optional(),
 })
 
 function makeConfig() {
