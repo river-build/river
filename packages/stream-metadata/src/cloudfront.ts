@@ -8,11 +8,9 @@ export class CloudfrontManager {
 
 	constructor(
 		private readonly logger: FastifyBaseLogger,
-		private readonly config: {
-			distributionId: string
-			invalidationConfirmationMaxAttempts: number
-			invalidationConfirmationWait: number
-		},
+		private readonly distributionId: string,
+		private readonly invalidationConfirmationMaxAttempts: number,
+		private readonly invalidationConfirmationWait: number,
 	) {
 		this.cloudFront = new CloudFront({
 			serviceId: 'stream-metadata',
@@ -22,7 +20,7 @@ export class CloudfrontManager {
 
 	private async invalidate(params: { path: string; waitUntilFinished?: boolean }) {
 		const invalidationCommand = await this.cloudFront.createInvalidation({
-			DistributionId: this.config.distributionId,
+			DistributionId: this.distributionId,
 			InvalidationBatch: {
 				CallerReference: `${new Date().toISOString()}-${params.path.substring(0, 5)}`,
 				Paths: {
@@ -47,7 +45,7 @@ export class CloudfrontManager {
 		let currentInvalidationCommand = invalidationCommand
 		while (currentInvalidationCommand.Invalidation?.Status !== 'Completed') {
 			attempts += 1
-			if (attempts >= this.config.invalidationConfirmationMaxAttempts) {
+			if (attempts >= this.invalidationConfirmationMaxAttempts) {
 				this.logger.error(
 					{
 						invalidation: currentInvalidationCommand,
@@ -67,11 +65,9 @@ export class CloudfrontManager {
 			if (!currentInvalidationCommand.Invalidation) {
 				throw new Error('Invalidation not found')
 			}
-			await new Promise((resolve) =>
-				setTimeout(resolve, this.config.invalidationConfirmationWait),
-			)
+			await new Promise((resolve) => setTimeout(resolve, this.invalidationConfirmationWait))
 			currentInvalidationCommand = await this.cloudFront.getInvalidation({
-				DistributionId: this.config.distributionId,
+				DistributionId: this.distributionId,
 				Id: currentInvalidationCommand.Invalidation.Id,
 			})
 		}
@@ -89,7 +85,7 @@ export class CloudfrontManager {
 		logger: FastifyBaseLogger
 		waitUntilFinished?: boolean
 	}) {
-		if (!envConfig.cloudfront) {
+		if (!config as envConfig.cloudfront) {
 			params.logger.warn(
 				{
 					path: params.path,
@@ -99,7 +95,12 @@ export class CloudfrontManager {
 			return
 		}
 
-		const cloudfrontManager = new CloudfrontManager(params.logger, envConfig.cloudfront)
+		const cloudfrontManager = new CloudfrontManager(
+			params.logger,
+			config as envConfig.cloudfront.distributionId,
+			config as envConfig.cloudfront.invalidationConfirmationMaxAttempts,
+			config as envConfig.cloudfront.invalidationConfirmationWait,
+		)
 
 		return cloudfrontManager.invalidate(params)
 	}
