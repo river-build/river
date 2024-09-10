@@ -2,7 +2,7 @@ import { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 
 import { isValidEthereumAddress } from '../validators'
-import { CloudfrontManager } from '../cloudfront'
+import { CloudfrontManager } from '../aws'
 
 const paramsSchema = z.object({
 	userId: z.string().min(1, 'userId parameter is required').refine(isValidEthereumAddress, {
