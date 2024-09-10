@@ -11,6 +11,8 @@ import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 // contracts
 
 library CurrencyTransfer {
+  using SafeTransferLib for address;
+
   /// @dev The address interpreted as native token of the chain.
   address internal constant NATIVE_TOKEN =
     address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
@@ -99,15 +101,15 @@ library CurrencyTransfer {
     }
 
     if (from == address(this)) {
-      SafeTransferLib.safeTransfer(token, to, amount);
+      token.safeTransfer(to, amount);
     } else {
-      SafeTransferLib.safeTransferFrom(token, from, to, amount);
+      token.safeTransferFrom(from, to, amount);
     }
   }
 
   /// @dev Transfers `amount` of native token to `to`.
   function safeTransferNativeToken(address to, uint256 value) internal {
-    SafeTransferLib.safeTransferETH(to, value);
+    to.safeTransferETH(value);
   }
 
   /// @dev Transfers `amount` of native token to `to`. (With native token wrapping)
@@ -116,10 +118,10 @@ library CurrencyTransfer {
     uint256 value,
     address _nativeTokenWrapper
   ) internal {
-    bool success = SafeTransferLib.trySafeTransferETH(to, value, gasleft());
+    bool success = to.trySafeTransferETH(value, gasleft());
     if (!success) {
       IWETH(_nativeTokenWrapper).deposit{value: value}();
-      SafeTransferLib.safeTransfer(_nativeTokenWrapper, to, value);
+      _nativeTokenWrapper.safeTransfer(to, value);
     }
   }
 }
