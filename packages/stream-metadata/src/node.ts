@@ -32,7 +32,7 @@ logger.info(
 		baseChainRpcUrl: config.baseChainRpcUrl,
 		streamMetadataBaseUrl: config.streamMetadataBaseUrl,
 		cloudfront: config.cloudfront,
-		opensea: config.opensea ? { ...config.opensea, apiKey: '***' } : undefined,
+		openSea: config.openSea ? { ...config.openSea, apiKey: '***' } : undefined,
 	},
 	'config',
 )
