@@ -2,7 +2,7 @@ import { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 
 import { isValidEthereumAddress } from '../validators'
-import { CloudfrontManager } from '../aws'
+import { CloudfrontManager } from '../cloudfront'
 import { refreshOpenSea } from '../opensea'
 
 const paramsSchema = z.object({
