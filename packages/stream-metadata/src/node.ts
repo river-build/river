@@ -31,13 +31,8 @@ logger.info(
 		riverChainRpcUrl: config.riverChainRpcUrl,
 		baseChainRpcUrl: config.baseChainRpcUrl,
 		streamMetadataBaseUrl: config.streamMetadataBaseUrl,
-		cloudfront: {
-			...config.cloudfront,
-			enabled: !!config.cloudfront,
-		},
-		openSeaApiKey: {
-			enabled: !!config.openSeaApiKey,
-		},
+		cloudfront: config.cloudfront,
+		opensea: config.opensea ? { ...config.opensea, apiKey: '***' } : undefined,
 	},
 	'config',
 )
