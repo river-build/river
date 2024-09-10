@@ -305,6 +305,10 @@ export class EncryptionDevice {
 
     public async getFallbackKey(): Promise<{ keyId: string; key: string }> {
         const account = await this.getAccount()
+        return EncryptionDevice.getFallbackKeyFromAccount(account)
+    }
+
+    public static async getFallbackKeyFromAccount(account: Account): Promise<{ keyId: string; key: string }> {
         const record: Record<string, Record<string, string>> = JSON.parse(
             account.unpublished_fallback_key(),
         )

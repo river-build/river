@@ -2,6 +2,7 @@
  * @group main
  */
 
+import { Account } from '@matrix-org/olm'
 import { CryptoStore } from '../cryptoStore'
 import { EncryptionDelegate } from '../encryptionDelegate'
 import { EncryptionDevice } from '../encryptionDevice'
@@ -134,5 +135,19 @@ describe('EncryptionDevice import/export', () => {
         // Check that the imported state matches the original
         expect(newDevice.deviceCurve25519Key).toEqual(initialCurve25519Key)
         expect(newDevice.pickleKey).toEqual(device.pickleKey)
+        expect(newDevice.fallbackKey).toEqual(device.fallbackKey)
+    })
+
+    test('initialize e2ekeys', async () => {
+        // this is roughly what i guessed would've been the error...
+        // i don't think the error is in here
+        for (let i = 0; i < 10000; i++) {
+            const account = delegate.createAccount()
+            account.create()
+            const keys = JSON.parse(account.identity_keys())
+            account.generate_fallback_key()
+            const keys2 = JSON.parse(account.identity_keys())
+            expect(keys).toEqual(keys2)
+        }
     })
 })
