@@ -30,11 +30,8 @@ export async function spaceRefresh(request: FastifyRequest, reply: FastifyReply)
 
 	try {
 		const path = `/space/${spaceAddress}/image`
-
-		await Promise.all([
-			createCloudfrontInvalidation({ path, logger }),
-			refreshOpenSea({ spaceAddress, logger }),
-		])
+		await createCloudfrontInvalidation({ path, logger, waitUntilFinished: true })
+		await refreshOpenSea({ spaceAddress, logger })
 
 		return reply.code(200).send({ ok: true })
 	} catch (error) {

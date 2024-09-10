@@ -6,8 +6,9 @@ import { config } from './environment'
 export const createCloudfrontInvalidation = async (params: {
 	path: string
 	logger: FastifyBaseLogger
+	waitUntilFinished?: boolean
 }) => {
-	if (!config.aws?.CLOUDFRONT_DISTRIBUTION_ID) {
+	if (!config.cloudfront) {
 		params.logger.warn(
 			{
 				path: params.path,
@@ -22,8 +23,8 @@ export const createCloudfrontInvalidation = async (params: {
 		logger: params.logger,
 	})
 
-	await cloudFront?.createInvalidation({
-		DistributionId: config.aws?.CLOUDFRONT_DISTRIBUTION_ID,
+	const invalidationCommand = await cloudFront?.createInvalidation({
+		DistributionId: config.cloudfront.distributionId,
 		InvalidationBatch: {
 			CallerReference: `${new Date().toISOString()}-${params.path.substring(0, 5)}`,
 			Paths: {
@@ -34,4 +35,38 @@ export const createCloudfrontInvalidation = async (params: {
 	})
 
 	params.logger.info({ path: params.path }, 'CloudFront cache invalidation created')
+
+	if (params.waitUntilFinished) {
+		let attempts = 0
+		let currentInvalidationCommand = invalidationCommand
+		while (currentInvalidationCommand.Invalidation?.Status !== 'Completed') {
+			attempts += 1
+			if (attempts >= config.cloudfront.invalidationConfirmationMaxAttempts) {
+				params.logger.error(
+					{
+						invalidation: currentInvalidationCommand,
+						path: params.path,
+					},
+					'CloudFront cache invalidation did not complete in time',
+				)
+				throw new Error('CloudFront cache invalidation did not complete in time')
+			}
+			params.logger.info(
+				{
+					invalidation: currentInvalidationCommand,
+					path: params.path,
+				},
+				'Waiting for CloudFront cache invalidation to complete...',
+			)
+			if (!currentInvalidationCommand.Invalidation) {
+				throw new Error('Invalidation not found')
+			}
+			await new Promise((resolve) => setTimeout(resolve, 1000))
+			currentInvalidationCommand = await cloudFront.getInvalidation({
+				DistributionId: config.cloudfront.distributionId,
+				Id: currentInvalidationCommand.Invalidation.Id,
+			})
+		}
+		params.logger.info({ path: params.path }, 'CloudFront cache invalidation completed')
+	}
 }
