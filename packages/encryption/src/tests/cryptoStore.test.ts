@@ -150,4 +150,46 @@ describe('EncryptionDevice import/export', () => {
             expect(keys).toEqual(keys2)
         }
     })
+
+    test('encrypt many many messages', async () => {
+        const encryptionDevice = new EncryptionDevice(delegate, store)
+        await encryptionDevice.init()
+
+        for (let i = 0; i < 1000; i++) {
+            const anotherDevice = new EncryptionDevice(delegate, store)
+            await anotherDevice.init()
+            const ciphertext = await encryptionDevice.encryptUsingFallbackKey(
+                anotherDevice.deviceCurve25519Key!,
+                anotherDevice.fallbackKey.key,
+                'hello',
+            )
+            const plaintext = await anotherDevice.decryptMessage(
+                ciphertext.body,
+                encryptionDevice.deviceCurve25519Key!,
+            )
+
+            expect(plaintext).toEqual('hello')
+        }
+    })
+
+    test('decrypt many many messages', async () => {
+        const encryptionDevice = new EncryptionDevice(delegate, store)
+        await encryptionDevice.init()
+
+        for (let i = 0; i < 1000; i++) {
+            const anotherDevice = new EncryptionDevice(delegate, store)
+            await anotherDevice.init()
+            const ciphertext = await anotherDevice.encryptUsingFallbackKey(
+                encryptionDevice.deviceCurve25519Key!,
+                encryptionDevice.fallbackKey.key,
+                'hello',
+            )
+            const plaintext = await encryptionDevice.decryptMessage(
+                ciphertext.body,
+                anotherDevice.deviceCurve25519Key!,
+            )
+
+            expect(plaintext).toEqual('hello')
+        }
+    })
 })
