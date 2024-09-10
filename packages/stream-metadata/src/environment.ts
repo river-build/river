@@ -55,7 +55,7 @@ function makeConfig() {
 		streamMetadataBaseUrl: baseUrl.origin,
 		host: envMain.HOST,
 		port: envMain.PORT,
-		openSea: openSea,
+		openSea,
 		cloudfront,
 		log: {
 			level: envMain.LOG_LEVEL,
