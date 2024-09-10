@@ -29,9 +29,9 @@ contract PoapEntitlement is ICrossChainEntitlement {
     return false;
   }
 
-  function properties() external pure returns (Property[] memory) {
-    Property[] memory schema = new Property[](1);
-    schema[0] = Property(
+  function parameters() external pure returns (Parameter[] memory) {
+    Parameter[] memory schema = new Parameter[](1);
+    schema[0] = Parameter(
       "eventId",
       "uint256",
       "The ID of the event associated with the POAP token"

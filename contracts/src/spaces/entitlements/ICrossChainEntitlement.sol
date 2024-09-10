@@ -7,7 +7,7 @@ pragma solidity ^0.8.23;
 
 // contracts
 interface ICrossChainEntitlement {
-  struct Property {
+  struct Parameter {
     string name;
     string primitive;
     string description;
@@ -15,8 +15,8 @@ interface ICrossChainEntitlement {
 
   function isEntitled(
     address[] calldata users,
-    bytes calldata data
+    bytes calldata parameters
   ) external view returns (bool);
 
-  function properties() external view returns (Property[] memory);
+  function parameters() external view returns (Parameter[] memory);
 }
