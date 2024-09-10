@@ -2,12 +2,13 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-
+import {ICrossChainEntitlement} from "contracts/src/spaces/entitlements/ICrossChainEntitlement.sol";
+import {IPOAP} from "./IPOAP.sol";
 // libraries
 
 // contracts
 
-contract PoapEntitlement {
+contract PoapEntitlement is ICrossChainEntitlement {
   IPOAP immutable poapContract;
 
   constructor(address poapContractAddress) {
@@ -28,8 +29,14 @@ contract PoapEntitlement {
     return false;
   }
 
-  function schema() public pure returns (string memory) {
-    return "uint256 eventId";
+  function properties() external pure returns (Property[] memory) {
+    Property[] memory schema = new Property[](1);
+    schema[0] = Property(
+      "eventId",
+      "uint256",
+      "The ID of the event associated with the POAP token"
+    );
+    return schema;
   }
 
   // =============================================================
@@ -51,12 +58,4 @@ contract PoapEntitlement {
     }
     return false;
   }
-}
-
-interface IPOAP {
-  function balanceOf(address owner) external view returns (uint256);
-  function tokenDetailsOfOwnerByIndex(
-    address owner,
-    uint256 index
-  ) external view returns (uint256 eventId, uint256 tokenId);
 }
