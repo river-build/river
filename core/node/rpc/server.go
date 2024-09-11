@@ -330,8 +330,6 @@ func (s *Service) initRiverChain() error {
 		s.chainConfig,
 	)
 
-	s.defaultLogger.Info("chain config for xchain", "blockchains", s.chainConfig.Get().XChain.Blockchains)
-
 	return nil
 }
 
