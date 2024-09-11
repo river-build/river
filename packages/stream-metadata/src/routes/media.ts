@@ -65,10 +65,10 @@ export async function fetchMedia(request: FastifyRequest, reply: FastifyReply) {
 			reply
 				.header('Content-Type', mimeType)
 				/**
-				 * public: The response may be cached by any cache, including shared caches like a CDN.
-				 * max-age=31536000: The response may be cached for up to 1 year. This is the maximum value for max-age.
+				 * public: The response must be cached by any cache, including shared caches like a CDN.
+				 * max-age=31536000: The response must be cached for up to 1 year. This is the maximum value for max-age.
 				 */
-				.header('Cache-Control', 'public, max-age=31536000')
+				.header('Cache-Control', 'public, max-age=31536000, immutable')
 				.send(Buffer.from(data))
 		)
 	} catch (error) {
