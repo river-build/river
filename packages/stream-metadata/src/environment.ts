@@ -23,21 +23,22 @@ const envMainSchema = z.object({
 	LOG_LEVEL: z.string().optional().default('info'),
 	LOG_PRETTY: BoolFromStringSchema.optional().default('true'),
 	OPENSEA_API_KEY: z.string().optional(),
+	CLOUDFRONT_DISTRIBUTION_ID: z.string().optional(),
 })
-
-const envAwsSchema = z
-	.object({
-		CLOUDFRONT_DISTRIBUTION_ID: z.string().min(1),
-	})
-	.optional()
 
 function makeConfig() {
 	// eslint-disable-next-line no-process-env -- this is the only line where we're allowed to use process.env
 
 	const envMain = envMainSchema.parse(process.env)
-	const envAws = envAwsSchema.safeParse(process.env)
 	const web3Config = getWeb3Deployment(envMain.RIVER_ENV)
 	const baseUrl = new URL(envMain.RIVER_STREAM_METADATA_BASE_URL)
+	const cloudfront = envMain.CLOUDFRONT_DISTRIBUTION_ID
+		? {
+				distributionId: envMain.CLOUDFRONT_DISTRIBUTION_ID,
+				invalidationConfirmationWait: 5000, // wait 5 seconds between each invalidation attempt
+				invalidationConfirmationMaxAttempts: 10, // maximum of 10 attempts
+		  }
+		: undefined
 
 	return {
 		web3Config,
@@ -48,11 +49,11 @@ function makeConfig() {
 		host: envMain.HOST,
 		port: envMain.PORT,
 		openSeaApiKey: envMain.OPENSEA_API_KEY,
+		cloudfront,
 		log: {
 			level: envMain.LOG_LEVEL,
 			pretty: envMain.LOG_PRETTY,
 		},
-		aws: envAws?.success ? envAws.data : undefined,
 		instance: {
 			id: v4(),
 			deployedAt: new Date().toISOString(),
