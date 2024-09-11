@@ -27,8 +27,10 @@ jobs:
             BASE_RPC_URL: ${{ secrets.BASE_RPC_URL }}
             BASE_SEPOLIA_RPC_URL: ${{ secrets.BASE_SEPOLIA_RPC_URL }}
             BASESCAN_API_KEY: ${{ secrets.BASESCAN_API_KEY }}
+            BLOCKSCOUT_BASE_API_KEY: ${{ secrets.BLOCKSCOUT_BASE_API_KEY }}
             BLOCKSCOUT_BASE_SEPOLIA_API_KEY: ${{ secrets.BLOCKSCOUT_BASE_SEPOLIA_API_KEY }}
             GAMMA_BASE_SEPOLIA_DEPLOYER_PK: ${{ secrets.GAMMA_BASE_SEPOLIA_DEPLOYER_PK }}
+            OMEGA_BASE_DEPLOYER_PK: ${{ secrets.OMEGA_BASE_DEPLOYER_PK }}
             RIVER_S3_AWS_ACCESS_KEY_ID: ${{ secrets.RIVER_S3_AWS_ACCESS_KEY_ID }}
             RIVER_S3_AWS_SECRET_ACCESS_KEY: ${{ secrets.RIVER_S3_AWS_SECRET_ACCESS_KEY }}
             RIVER_S3_AWS_REGION: ${{ secrets.RIVER_S3_AWS_REGION }}
@@ -44,6 +46,7 @@ jobs:
             BASE_RPC_URL: ${{ secrets.BASE_RPC_URL }}
             BASE_SEPOLIA_RPC_URL: ${{ secrets.BASE_SEPOLIA_RPC_URL }}
             BASESCAN_API_KEY: ${{ secrets.BASESCAN_API_KEY }}
+            BLOCKSCOUT_BASE_API_KEY: ${{ secrets.BLOCKSCOUT_BASE_API_KEY }}
             BLOCKSCOUT_BASE_SEPOLIA_API_KEY: ${{ secrets.BLOCKSCOUT_BASE_SEPOLIA_API_KEY }}
             GAMMA_BASE_SEPOLIA_DEPLOYER_PK: ${{ secrets.GAMMA_BASE_SEPOLIA_DEPLOYER_PK }}
             OMEGA_BASE_DEPLOYER_PK: ${{ secrets.OMEGA_BASE_DEPLOYER_PK }}
