@@ -210,6 +210,8 @@ abstract contract ArchitectBase is Factory, IArchitectBase, PricingModulesBase {
   ) internal {
     ImplementationStorage.Layout storage ds = ImplementationStorage.layout();
     ds.proxyInitializer = proxyInitializer;
+
+    emit Architect__ProxyInitializerSet(address(proxyInitializer));
   }
 
   // =============================================================

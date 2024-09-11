@@ -341,6 +341,8 @@ contract ArchitectTest is
 
   function test_fuzz_setProxyInitializer(address proxyInitializer) external {
     vm.prank(deployer);
+    vm.expectEmit(address(spaceArchitect));
+    emit Architect__ProxyInitializerSet(proxyInitializer);
     spaceArchitect.setProxyInitializer(
       ISpaceProxyInitializer(proxyInitializer)
     );

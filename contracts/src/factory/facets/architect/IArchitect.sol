@@ -79,6 +79,7 @@ interface IArchitectBase {
   error Architect__InvalidAddress();
   error Architect__NotContract();
   error Architect__InvalidPricingModule();
+  event Architect__ProxyInitializerSet(address indexed proxyInitializer);
 }
 
 interface IArchitect is IArchitectBase {
