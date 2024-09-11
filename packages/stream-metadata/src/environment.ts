@@ -45,6 +45,13 @@ function makeConfig() {
 		  }
 		: undefined
 
+	const openSea = envMain.OPENSEA_API_KEY
+		? {
+				apiKey: envMain.OPENSEA_API_KEY,
+				refreshDelay: 5 * 60 * 1000, // 5 minutes
+		  }
+		: undefined
+
 	return {
 		web3Config,
 		riverEnv: envMain.RIVER_ENV,
