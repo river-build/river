@@ -50,8 +50,8 @@ process_file() {
     local file="$1"
     echo "Processing file: $file"
 
-    # Extract originContractNames into an array, strip "Facet" suffix, and remove duplicates
-    contract_names=($(yq e '.diamonds[].facets[].originContractName' "$file" | sed 's/Facet$//' | sort -u))
+    # Extract sourceContractNames into an array, strip "Facet" suffix, and remove duplicates
+    contract_names=($(yq e '.diamonds[].facets[].sourceContractName' "$file" | sed 's/Facet$//' | sort -u))
 
     # Determine which make command to use
     if [[ "$network" == "omega" ]]; then
