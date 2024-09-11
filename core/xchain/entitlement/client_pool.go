@@ -36,7 +36,10 @@ func NewBlockchainClientPool(
 ) (BlockchainClientPool, error) {
 	log := dlog.FromCtx(ctx)
 	clients := make(map[uint64]crypto.BlockchainClient)
-	// TODO: why this is not returning errors if chain client can't be created?
+	// TODO: This is not creating errors if a client cannot be created for the sake of maintaining
+	// data availability on the network. As soon as replicated streams reaches maturity on external
+	// networks, consider returning an error, and possibly causing the node to fail to start, if a
+	// client cannot be created for any XChain-supported chain.
 	for _, chainID := range onChainCfg.Get().XChain.Blockchains {
 		chainCfg, ok := cfg.ChainConfigs[chainID]
 		if !ok {
