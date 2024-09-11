@@ -164,19 +164,23 @@ export interface IArchitectInterface extends utils.Interface {
   functions: {
     "createSpace((string,string,((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],bytes),string[]),(string),string,string))": FunctionFragment;
     "createSpaceWithPrepay(((string,string,string,string),((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],bytes),string[]),(string),(uint256)))": FunctionFragment;
+    "getProxyInitializer()": FunctionFragment;
     "getSpaceArchitectImplementations()": FunctionFragment;
     "getSpaceByTokenId(uint256)": FunctionFragment;
     "getTokenIdBySpace(address)": FunctionFragment;
-    "setSpaceArchitectImplementations(address,address,address,address,address)": FunctionFragment;
+    "setProxyInitializer(address)": FunctionFragment;
+    "setSpaceArchitectImplementations(address,address,address,address)": FunctionFragment;
   };
 
   getFunction(
     nameOrSignatureOrTopic:
       | "createSpace"
       | "createSpaceWithPrepay"
+      | "getProxyInitializer"
       | "getSpaceArchitectImplementations"
       | "getSpaceByTokenId"
       | "getTokenIdBySpace"
+      | "setProxyInitializer"
       | "setSpaceArchitectImplementations"
   ): FunctionFragment;
 
@@ -187,6 +191,10 @@ export interface IArchitectInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "createSpaceWithPrepay",
     values: [IArchitectBase.CreateSpaceStruct]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getProxyInitializer",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "getSpaceArchitectImplementations",
@@ -201,9 +209,12 @@ export interface IArchitectInterface extends utils.Interface {
     values: [PromiseOrValue<string>]
   ): string;
   encodeFunctionData(
+    functionFragment: "setProxyInitializer",
+    values: [PromiseOrValue<string>]
+  ): string;
+  encodeFunctionData(
     functionFragment: "setSpaceArchitectImplementations",
     values: [
-      PromiseOrValue<string>,
       PromiseOrValue<string>,
       PromiseOrValue<string>,
       PromiseOrValue<string>,
@@ -220,6 +231,10 @@ export interface IArchitectInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "getProxyInitializer",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "getSpaceArchitectImplementations",
     data: BytesLike
   ): Result;
@@ -232,16 +247,35 @@ export interface IArchitectInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "setProxyInitializer",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "setSpaceArchitectImplementations",
     data: BytesLike
   ): Result;
 
   events: {
+    "Architect__ProxyInitializerSet(address)": EventFragment;
     "SpaceCreated(address,uint256,address)": EventFragment;
   };
 
+  getEvent(
+    nameOrSignatureOrTopic: "Architect__ProxyInitializerSet"
+  ): EventFragment;
   getEvent(nameOrSignatureOrTopic: "SpaceCreated"): EventFragment;
 }
+
+export interface Architect__ProxyInitializerSetEventObject {
+  proxyInitializer: string;
+}
+export type Architect__ProxyInitializerSetEvent = TypedEvent<
+  [string],
+  Architect__ProxyInitializerSetEventObject
+>;
+
+export type Architect__ProxyInitializerSetEventFilter =
+  TypedEventFilter<Architect__ProxyInitializerSetEvent>;
 
 export interface SpaceCreatedEventObject {
   owner: string;
@@ -292,15 +326,16 @@ export interface IArchitect extends BaseContract {
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
+    getProxyInitializer(overrides?: CallOverrides): Promise<[string]>;
+
     getSpaceArchitectImplementations(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, string, string, string] & {
+      [string, string, string, string] & {
         ownerTokenImplementation: string;
         userEntitlementImplementation: string;
         ruleEntitlementImplementation: string;
         legacyRuleEntitlement: string;
-        spaceProxyInitializer: string;
       }
     >;
 
@@ -314,12 +349,16 @@ export interface IArchitect extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[BigNumber]>;
 
+    setProxyInitializer(
+      proxyInitializer: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
     setSpaceArchitectImplementations(
       ownerTokenImplementation: PromiseOrValue<string>,
       userEntitlementImplementation: PromiseOrValue<string>,
       ruleEntitlementImplementation: PromiseOrValue<string>,
       legacyRuleEntitlement: PromiseOrValue<string>,
-      spaceProxyInitializer: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
   };
@@ -334,15 +373,16 @@ export interface IArchitect extends BaseContract {
     overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
+  getProxyInitializer(overrides?: CallOverrides): Promise<string>;
+
   getSpaceArchitectImplementations(
     overrides?: CallOverrides
   ): Promise<
-    [string, string, string, string, string] & {
+    [string, string, string, string] & {
       ownerTokenImplementation: string;
       userEntitlementImplementation: string;
       ruleEntitlementImplementation: string;
       legacyRuleEntitlement: string;
-      spaceProxyInitializer: string;
     }
   >;
 
@@ -356,12 +396,16 @@ export interface IArchitect extends BaseContract {
     overrides?: CallOverrides
   ): Promise<BigNumber>;
 
+  setProxyInitializer(
+    proxyInitializer: PromiseOrValue<string>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
   setSpaceArchitectImplementations(
     ownerTokenImplementation: PromiseOrValue<string>,
     userEntitlementImplementation: PromiseOrValue<string>,
     ruleEntitlementImplementation: PromiseOrValue<string>,
     legacyRuleEntitlement: PromiseOrValue<string>,
-    spaceProxyInitializer: PromiseOrValue<string>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
@@ -376,15 +420,16 @@ export interface IArchitect extends BaseContract {
       overrides?: CallOverrides
     ): Promise<string>;
 
+    getProxyInitializer(overrides?: CallOverrides): Promise<string>;
+
     getSpaceArchitectImplementations(
       overrides?: CallOverrides
     ): Promise<
-      [string, string, string, string, string] & {
+      [string, string, string, string] & {
         ownerTokenImplementation: string;
         userEntitlementImplementation: string;
         ruleEntitlementImplementation: string;
         legacyRuleEntitlement: string;
-        spaceProxyInitializer: string;
       }
     >;
 
@@ -398,17 +443,28 @@ export interface IArchitect extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    setProxyInitializer(
+      proxyInitializer: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
     setSpaceArchitectImplementations(
       ownerTokenImplementation: PromiseOrValue<string>,
       userEntitlementImplementation: PromiseOrValue<string>,
       ruleEntitlementImplementation: PromiseOrValue<string>,
       legacyRuleEntitlement: PromiseOrValue<string>,
-      spaceProxyInitializer: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<void>;
   };
 
   filters: {
+    "Architect__ProxyInitializerSet(address)"(
+      proxyInitializer?: PromiseOrValue<string> | null
+    ): Architect__ProxyInitializerSetEventFilter;
+    Architect__ProxyInitializerSet(
+      proxyInitializer?: PromiseOrValue<string> | null
+    ): Architect__ProxyInitializerSetEventFilter;
+
     "SpaceCreated(address,uint256,address)"(
       owner?: PromiseOrValue<string> | null,
       tokenId?: PromiseOrValue<BigNumberish> | null,
@@ -432,6 +488,8 @@ export interface IArchitect extends BaseContract {
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
+    getProxyInitializer(overrides?: CallOverrides): Promise<BigNumber>;
+
     getSpaceArchitectImplementations(
       overrides?: CallOverrides
     ): Promise<BigNumber>;
@@ -446,12 +504,16 @@ export interface IArchitect extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    setProxyInitializer(
+      proxyInitializer: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
     setSpaceArchitectImplementations(
       ownerTokenImplementation: PromiseOrValue<string>,
       userEntitlementImplementation: PromiseOrValue<string>,
       ruleEntitlementImplementation: PromiseOrValue<string>,
       legacyRuleEntitlement: PromiseOrValue<string>,
-      spaceProxyInitializer: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
   };
@@ -467,6 +529,10 @@ export interface IArchitect extends BaseContract {
       overrides?: PayableOverrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
+    getProxyInitializer(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
     getSpaceArchitectImplementations(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
@@ -481,12 +547,16 @@ export interface IArchitect extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
+    setProxyInitializer(
+      proxyInitializer: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
     setSpaceArchitectImplementations(
       ownerTokenImplementation: PromiseOrValue<string>,
       userEntitlementImplementation: PromiseOrValue<string>,
       ruleEntitlementImplementation: PromiseOrValue<string>,
       legacyRuleEntitlement: PromiseOrValue<string>,
-      spaceProxyInitializer: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
   };
