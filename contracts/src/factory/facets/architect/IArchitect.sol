@@ -109,8 +109,7 @@ interface IArchitect is IArchitectBase {
     ISpaceOwner ownerTokenImplementation,
     IUserEntitlement userEntitlementImplementation,
     IRuleEntitlementV2 ruleEntitlementImplementation,
-    IRuleEntitlement legacyRuleEntitlement,
-    ISpaceProxyInitializer spaceProxyInitializer
+    IRuleEntitlement legacyRuleEntitlement
   ) external;
 
   function getSpaceArchitectImplementations()
@@ -120,7 +119,20 @@ interface IArchitect is IArchitectBase {
       ISpaceOwner ownerTokenImplementation,
       IUserEntitlement userEntitlementImplementation,
       IRuleEntitlementV2 ruleEntitlementImplementation,
-      IRuleEntitlement legacyRuleEntitlement,
-      ISpaceProxyInitializer spaceProxyInitializer
+      IRuleEntitlement legacyRuleEntitlement
     );
+
+  // =============================================================
+  //                    Proxy Initializer
+  // =============================================================
+  /// @notice Retrieves the current proxy initializer
+  /// @return The address of the current ISpaceProxyInitializer contract
+  function getProxyInitializer() external view returns (ISpaceProxyInitializer);
+
+  /// @notice Sets a new proxy initializer
+  /// @param proxyInitializer The address of the new ISpaceProxyInitializer contract to be set
+  /// @dev This function should only be callable by the contract owner or authorized roles
+  function setProxyInitializer(
+    ISpaceProxyInitializer proxyInitializer
+  ) external;
 }

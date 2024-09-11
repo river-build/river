@@ -159,8 +159,7 @@ abstract contract ArchitectBase is Factory, IArchitectBase, PricingModulesBase {
     ISpaceOwner spaceToken,
     IUserEntitlement userEntitlement,
     IRuleEntitlementV2 ruleEntitlement,
-    IRuleEntitlement legacyRuleEntitlement,
-    ISpaceProxyInitializer proxyInitializer
+    IRuleEntitlement legacyRuleEntitlement
   ) internal {
     if (address(spaceToken).code.length == 0) revert Architect__NotContract();
     if (address(userEntitlement).code.length == 0)
@@ -173,7 +172,6 @@ abstract contract ArchitectBase is Factory, IArchitectBase, PricingModulesBase {
     ds.userEntitlement = userEntitlement;
     ds.ruleEntitlement = ruleEntitlement;
     ds.legacyRuleEntitlement = legacyRuleEntitlement;
-    ds.proxyInitializer = proxyInitializer;
   }
 
   function _getImplementations()
@@ -183,8 +181,7 @@ abstract contract ArchitectBase is Factory, IArchitectBase, PricingModulesBase {
       ISpaceOwner spaceToken,
       IUserEntitlement userEntitlementImplementation,
       IRuleEntitlementV2 ruleEntitlementImplementation,
-      IRuleEntitlement legacyRuleEntitlement,
-      ISpaceProxyInitializer proxyInitializer
+      IRuleEntitlement legacyRuleEntitlement
     )
   {
     ImplementationStorage.Layout storage ds = ImplementationStorage.layout();
@@ -193,10 +190,29 @@ abstract contract ArchitectBase is Factory, IArchitectBase, PricingModulesBase {
       ds.spaceToken,
       ds.userEntitlement,
       ds.ruleEntitlement,
-      ds.legacyRuleEntitlement,
-      ds.proxyInitializer
+      ds.legacyRuleEntitlement
     );
   }
+
+  // =============================================================
+  //                         Proxy Initializer
+  // =============================================================
+  function _getProxyInitializer()
+    internal
+    view
+    returns (ISpaceProxyInitializer)
+  {
+    return ImplementationStorage.layout().proxyInitializer;
+  }
+
+  function _setProxyInitializer(
+    ISpaceProxyInitializer proxyInitializer
+  ) internal {
+    ImplementationStorage.Layout storage ds = ImplementationStorage.layout();
+    ds.proxyInitializer = proxyInitializer;
+  }
+
+  // =============================================================
 
   // =============================================================
   //                  Internal Channel Helpers

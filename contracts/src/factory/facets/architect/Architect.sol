@@ -37,9 +37,9 @@ contract Architect is
       ownerImplementation,
       userEntitlementImplementation,
       ruleEntitlementImplementation,
-      legacyRuleEntitlement,
-      proxyInitializer
+      legacyRuleEntitlement
     );
+    _setProxyInitializer(proxyInitializer);
   }
 
   // =============================================================
@@ -79,15 +79,13 @@ contract Architect is
     ISpaceOwner spaceToken,
     IUserEntitlement userEntitlementImplementation,
     IRuleEntitlementV2 ruleEntitlementImplementation,
-    IRuleEntitlement legacyRuleEntitlement,
-    ISpaceProxyInitializer spaceProxyInitializer
+    IRuleEntitlement legacyRuleEntitlement
   ) external onlyOwner {
     _setImplementations(
       spaceToken,
       userEntitlementImplementation,
       ruleEntitlementImplementation,
-      legacyRuleEntitlement,
-      spaceProxyInitializer
+      legacyRuleEntitlement
     );
   }
 
@@ -99,10 +97,29 @@ contract Architect is
       ISpaceOwner spaceToken,
       IUserEntitlement userEntitlementImplementation,
       IRuleEntitlementV2 ruleEntitlementImplementation,
-      IRuleEntitlement legacyRuleEntitlement,
-      ISpaceProxyInitializer spaceProxyInitializer
+      IRuleEntitlement legacyRuleEntitlement
     )
   {
     return _getImplementations();
+  }
+
+  // =============================================================
+  //                         Proxy Initializer
+  // =============================================================
+
+  /// @inheritdoc IArchitect
+  function getProxyInitializer()
+    external
+    view
+    returns (ISpaceProxyInitializer)
+  {
+    return _getProxyInitializer();
+  }
+
+  /// @inheritdoc IArchitect
+  function setProxyInitializer(
+    ISpaceProxyInitializer proxyInitializer
+  ) external onlyOwner {
+    _setProxyInitializer(proxyInitializer);
   }
 }
