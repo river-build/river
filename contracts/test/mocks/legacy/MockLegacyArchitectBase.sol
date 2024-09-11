@@ -302,10 +302,7 @@ abstract contract LegacyArchitectBase is Factory, ILegacyArchitectBase {
           SpaceProxyInitializer.initialize,
           (
             msg.sender,
-            IManagedProxyBase.ManagedProxy({
-              managerSelector: IProxyManager.getImplementation.selector,
-              manager: address(this)
-            }),
+            address(this),
             ITokenOwnableBase.TokenOwnable({
               collection: address(ds.spaceToken),
               tokenId: spaceTokenId

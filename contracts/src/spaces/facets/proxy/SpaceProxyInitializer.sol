@@ -28,14 +28,14 @@ contract SpaceProxyInitializer is
 {
   function initialize(
     address owner,
-    ManagedProxy memory managedProxy,
+    address manager,
     TokenOwnable memory tokenOwnable,
     Membership memory membership
   ) external initializer {
     __IntrospectionBase_init();
     __TokenOwnableBase_init(tokenOwnable);
     __ERC721ABase_init(membership.name, membership.symbol);
-    __MembershipBase_init(membership, managedProxy.manager);
+    __MembershipBase_init(membership, manager);
 
     _safeMint(owner, 1);
     _setFallbackEntitlementChecker();

@@ -375,10 +375,7 @@ abstract contract ArchitectBase is Factory, IArchitectBase, PricingModulesBase {
           SpaceProxyInitializer.initialize,
           (
             msg.sender,
-            IManagedProxyBase.ManagedProxy({
-              managerSelector: IProxyManager.getImplementation.selector,
-              manager: address(this)
-            }),
+            address(this),
             ITokenOwnableBase.TokenOwnable({
               collection: spaceToken,
               tokenId: spaceTokenId
