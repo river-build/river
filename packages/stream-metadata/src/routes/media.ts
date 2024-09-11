@@ -67,8 +67,10 @@ export async function fetchMedia(request: FastifyRequest, reply: FastifyReply) {
 				/**
 				 * public: The response must be cached by any cache, including shared caches like a CDN.
 				 * max-age=31536000: The response must be cached for up to 1 year. This is the maximum value for max-age.
+				 * s-maxage=31536000: The response must be cached for up to 1 year by shared caches like a CDN.
+				 * immutable: The response is immutable and won't change over time.
 				 */
-				.header('Cache-Control', 'public, max-age=31536000, immutable')
+				.header('Cache-Control', 'public, max-age=31536000, s-maxage=31536000, immutable')
 				.send(Buffer.from(data))
 		)
 	} catch (error) {
