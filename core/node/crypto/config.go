@@ -575,14 +575,6 @@ func abiBytesToTypeDecoder(ctx context.Context) mapstructure.DecodeHookFuncValue
 				log.Error("failed to decode string", "err", err, "bytes", from.Bytes())
 			} else if to.Kind() == reflect.Slice && to.Type().Elem().Kind() == reflect.Uint64 {
 				v, err := ABIDecodeUint64Array(from.Bytes())
-				// size := 32
-				// bytes := from.Bytes()
-				// log.Error("len", "len", len(bytes))
-				// for i := 0; i < len(bytes); i += size {
-				// 	log.Error("i", "i", i)
-				// 	arr := bytes[i:min(i+size, len(bytes))]
-				// 	log.Error("arr i", "i", i, "arr", arr)
-				// }
 				if err == nil {
 					return v, nil
 				}
