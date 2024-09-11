@@ -35,8 +35,6 @@ function makeConfig() {
 	const cloudfront = envMain.CLOUDFRONT_DISTRIBUTION_ID
 		? {
 				distributionId: envMain.CLOUDFRONT_DISTRIBUTION_ID,
-				invalidationConfirmationWait: 5000, // wait 5 seconds between each invalidation attempt
-				invalidationConfirmationMaxAttempts: 10, // maximum of 10 attempts
 		  }
 		: undefined
 

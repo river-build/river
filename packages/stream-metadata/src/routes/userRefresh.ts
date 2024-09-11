@@ -2,7 +2,7 @@ import { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 
 import { isValidEthereumAddress } from '../validators'
-import { CloudfrontManager } from '../aws'
+import { createCloudfrontInvalidation } from '../aws'
 
 const paramsSchema = z.object({
 	userId: z.string().min(1, 'userId parameter is required').refine(isValidEthereumAddress, {
@@ -28,7 +28,7 @@ export async function userRefresh(request: FastifyRequest, reply: FastifyReply) 
 		const path = `/user/${userId}/image`
 
 		// Refresh CloudFront cache
-		await CloudfrontManager.createCloudfrontInvalidation({ path, logger })
+		await createCloudfrontInvalidation({ path, logger })
 
 		return reply.code(200).send({ ok: true })
 	} catch (error) {
