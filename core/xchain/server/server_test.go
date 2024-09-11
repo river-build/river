@@ -37,8 +37,9 @@ import (
 )
 
 const (
-	ChainID         = 31337
-	BaseRpcEndpoint = "http://localhost:8545"
+	BaseChainID      = 31337
+	BaseRpcEndpoint  = "http://localhost:8545"
+	RiverRpcEndpoint = "http://localhost:8546"
 )
 
 type testNodeRecord struct {
@@ -51,6 +52,7 @@ type serviceTester struct {
 	cancel              context.CancelFunc
 	require             *require.Assertions
 	btc                 *node_crypto.BlockchainTestContext
+	riverBtc            *node_crypto.BlockchainTestContext
 	clientSimBlockchain *node_crypto.Blockchain
 	nodes               []*testNodeRecord
 	stopBlockAutoMining func()
@@ -63,7 +65,8 @@ type serviceTester struct {
 
 	// Contracts
 	entitlementChecker *base.IEntitlementChecker
-	walletLink         *base.WalletLink
+
+	walletLink *base.WalletLink
 
 	decoder *node_crypto.EvmErrorDecoder
 }
@@ -102,6 +105,14 @@ func newServiceTester(numNodes int, require *require.Assertions) *serviceTester 
 	)
 	require.NoError(err)
 	st.btc = btc
+
+	riverBtc, err := node_crypto.NewBlockchainTestContext(
+		ctx,
+		crypto.TestParams{NumKeys: numNodes + 1, MineOnTx: true, AutoMine: true},
+	)
+	require.NoError(err)
+	st.riverBtc = riverBtc
+
 	st.clientSimBlockchain = st.btc.GetBlockchain(st.ctx, len(st.nodes))
 
 	st.deployXchainTestContracts()
@@ -118,7 +129,7 @@ func (st *serviceTester) deployXchainTestContracts() {
 		approvedNodeOperators = append(approvedNodeOperators, w.Address)
 	}
 
-	log.Info("Deploying contracts")
+	log.Info("Deploying base contracts")
 	client := st.btc.DeployerBlockchain.Client
 
 	chainId, err := client.ChainID(st.ctx)
@@ -208,56 +219,69 @@ func (st *serviceTester) Close() {
 	st.cancel()
 }
 
+func startAutominingBtc(ctx context.Context, btc *crypto.BlockchainTestContext, done chan struct{}) {
+	blockPeriod := time.NewTicker(2 * time.Second)
+	chainID, err := btc.Client().ChainID(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	signer := types.LatestSignerForChainID(chainID)
+	for {
+		select {
+		case <-ctx.Done():
+			close(done)
+			return
+		case <-blockPeriod.C:
+			_, _ = btc.DeployerBlockchain.TxPool.Submit(
+				ctx,
+				"noop",
+				func(opts *bind.TransactOpts) (*types.Transaction, error) {
+					gp, err := btc.Client().SuggestGasPrice(ctx)
+					if err != nil {
+						return nil, err
+					}
+					tx := types.NewTransaction(
+						opts.Nonce.Uint64(),
+						btc.GetDeployerWallet().Address,
+						big.NewInt(1),
+						21000,
+						gp,
+						nil,
+					)
+					return types.SignTx(tx, signer, btc.GetDeployerWallet().PrivateKeyStruct)
+				},
+			)
+		}
+	}
+}
+
 func (st *serviceTester) Start(t *testing.T) {
 	ctx, cancel := context.WithCancel(st.ctx)
-	done := make(chan struct{})
+	baseChainDone := make(chan struct{})
+	riverChainDone := make(chan struct{})
 	st.stopBlockAutoMining = func() {
 		cancel()
-		<-done
+		<-baseChainDone
+		<-riverChainDone
 	}
 
-	// hack to ensure that the chain always produces blocks (automining=true)
+	// hack to ensure that the chains always produce blocks (automining=true)
 	// commit on simulated backend with no pending txs can sometimes crash the simulator.
 	// by having a pending tx with automining enabled we can work around that issue.
-	go func() {
-		blockPeriod := time.NewTicker(2 * time.Second)
-		chainID, err := st.btc.Client().ChainID(st.ctx)
-		if err != nil {
-			log.Fatal(err)
-		}
-		signer := types.LatestSignerForChainID(chainID)
-		for {
-			select {
-			case <-ctx.Done():
-				close(done)
-				return
-			case <-blockPeriod.C:
-				_, _ = st.btc.DeployerBlockchain.TxPool.Submit(
-					ctx,
-					"noop",
-					func(opts *bind.TransactOpts) (*types.Transaction, error) {
-						gp, err := st.btc.Client().SuggestGasPrice(ctx)
-						if err != nil {
-							return nil, err
-						}
-						tx := types.NewTransaction(
-							opts.Nonce.Uint64(),
-							st.btc.GetDeployerWallet().Address,
-							big.NewInt(1),
-							21000,
-							gp,
-							nil,
-						)
-						return types.SignTx(tx, signer, st.btc.GetDeployerWallet().PrivateKeyStruct)
-					},
-				)
-			}
-		}
-	}()
+	go startAutominingBtc(ctx, st.btc, baseChainDone)
+	go startAutominingBtc(ctx, st.riverBtc, riverChainDone)
+
+	st.riverBtc.SetConfigValue(
+		t,
+		ctx,
+		crypto.XChainBlockchainsConfigKey,
+		crypto.ABIEncodeUint64Array([]uint64{BaseChainID}),
+	)
 
 	for i := 0; i < len(st.nodes); i++ {
 		st.nodes[i] = &testNodeRecord{}
 		bc := st.btc.GetBlockchain(st.ctx, i)
+		rc := st.riverBtc.GetBlockchain(st.ctx, i)
 
 		// register node
 		pendingTx, err := bc.TxPool.Submit(
@@ -278,7 +302,7 @@ func (st *serviceTester) Start(t *testing.T) {
 			log.Fatal("unable to register node")
 		}
 
-		svr, err := server.New(st.ctx, st.Config(), bc, i, nil)
+		svr, err := server.New(st.ctx, st.Config(), bc, rc, i, nil)
 		st.require.NoError(err)
 		st.nodes[i].svr = svr
 		st.nodes[i].address = bc.Wallet.Address
@@ -288,10 +312,9 @@ func (st *serviceTester) Start(t *testing.T) {
 
 func (st *serviceTester) Config() *config.Config {
 	cfg := &config.Config{
-		BaseChain:         node_config.ChainConfig{},
-		RiverChain:        node_config.ChainConfig{},
-		Chains:            fmt.Sprintf("%d:%s", ChainID, BaseRpcEndpoint),
-		XChainBlockchains: []uint64{ChainID},
+		BaseChain:  node_config.ChainConfig{},
+		RiverChain: node_config.ChainConfig{},
+		Chains:     fmt.Sprintf("%d:%s", BaseChainID, BaseRpcEndpoint),
 		TestEntitlementContract: config.ContractConfig{
 			Address: st.mockEntitlementGatedAddress,
 		},
@@ -303,6 +326,9 @@ func (st *serviceTester) Config() *config.Config {
 		},
 		TestCustomEntitlementContract: config.ContractConfig{
 			Address: st.mockCustomEntitlementAddress,
+		},
+		RegistryContract: config.ContractConfig{
+			Address: st.riverBtc.RiverRegistryAddress,
 		},
 		Log: config.LogConfig{
 			NoColor: true,
@@ -566,7 +592,7 @@ func TestErc721Entitlements(t *testing.T) {
 			}
 
 			// Expect no NFT minted for the client simulator wallet
-			oneCheck := test_util.Erc721Check(ChainID, contractAddress, 1)
+			oneCheck := test_util.Erc721Check(BaseChainID, contractAddress, 1)
 			check(oneCheck, false)
 			// Mint an NFT for client simulator wallet.
 			mintTokenForWallet(require, auth, st, erc721, cs.Wallet(), 1)
@@ -575,13 +601,13 @@ func TestErc721Entitlements(t *testing.T) {
 			check(oneCheck, true)
 
 			// Checking for balance of 2 should fail
-			check(test_util.Erc721Check(ChainID, contractAddress, 2), false)
+			check(test_util.Erc721Check(BaseChainID, contractAddress, 2), false)
 
 			// Create a set of 3 linked wallets using client simulator address.
 			_, wallet1, wallet2, _ := generateLinkedWallets(ctx, require, tc.sentByRootKeyWallet, st, cs.Wallet())
 
 			// Sanity check: balance of 4 across all 3 wallets should fail
-			fourCheck := test_util.Erc721Check(ChainID, contractAddress, 4)
+			fourCheck := test_util.Erc721Check(BaseChainID, contractAddress, 4)
 			check(fourCheck, false)
 
 			// Mint 2 NFTs for wallet1.
@@ -710,7 +736,7 @@ func TestErc1155Entitlements(t *testing.T) {
 			// Deploy mock ERC1155 contract to anvil chain
 			auth, contractAddress, erc1155 := deployMockErc1155Contract(require, st)
 
-			oneGoldCheck := test_util.Erc1155Check(ChainID, contractAddress, 1, TokenGold)
+			oneGoldCheck := test_util.Erc1155Check(BaseChainID, contractAddress, 1, TokenGold)
 			expectV2EntitlementCheckResult(
 				require,
 				cs,
@@ -733,8 +759,8 @@ func TestErc1155Entitlements(t *testing.T) {
 				true,
 			)
 
-			threeGoldCheck := test_util.Erc1155Check(ChainID, contractAddress, 3, TokenGold)
-			oneSilverCheck := test_util.Erc1155Check(ChainID, contractAddress, 1, TokenSilver)
+			threeGoldCheck := test_util.Erc1155Check(BaseChainID, contractAddress, 3, TokenGold)
+			oneSilverCheck := test_util.Erc1155Check(BaseChainID, contractAddress, 1, TokenSilver)
 
 			// Create a set of 3 linked wallets using client simulator address.
 			_, wallet1, wallet2, _ := generateLinkedWallets(ctx, require, tc.sentByRootKeyWallet, st, cs.Wallet())
@@ -835,24 +861,24 @@ func TestErc20Entitlements(t *testing.T) {
 			}
 
 			// Check for balance of 1 should fail, as this wallet has no coins.
-			oneCheck := test_util.Erc20Check(ChainID, contractAddress, 1)
+			oneCheck := test_util.Erc20Check(BaseChainID, contractAddress, 1)
 			check(oneCheck, false)
 			// Mint 10 tokens for the client simulator wallet.
 			mintErc20TokensForWallet(require, auth, st, erc20, cs.Wallet(), 10)
 
 			// Check for balance of 10 should pass.
-			tenCheck := test_util.Erc20Check(ChainID, contractAddress, 10)
+			tenCheck := test_util.Erc20Check(BaseChainID, contractAddress, 10)
 			check(tenCheck, true)
 
 			// Checking for balance of 20 should fail
-			twentyCheck := test_util.Erc20Check(ChainID, contractAddress, 20)
+			twentyCheck := test_util.Erc20Check(BaseChainID, contractAddress, 20)
 			check(twentyCheck, false)
 
 			// Create a set of 3 linked wallets using client simulator address.
 			_, wallet1, wallet2, _ := generateLinkedWallets(ctx, require, tc.sentByRootKeyWallet, st, cs.Wallet())
 
 			// Sanity check: balance of 30 across all 3 wallets should fail
-			thirtyCheck := test_util.Erc20Check(ChainID, contractAddress, 30)
+			thirtyCheck := test_util.Erc20Check(BaseChainID, contractAddress, 30)
 			check(thirtyCheck, false)
 
 			// Mint 19 tokens for wallet1.
@@ -966,10 +992,10 @@ func TestCustomEntitlements(t *testing.T) {
 
 			// Deploy mock custom entitlement contract to anvil chain
 			auth, contractAddress, customEntitlement := deployMockCustomEntitlement(require, st)
-			t.Log("Deployed custom entitlement contract", contractAddress.Hex(), ChainID)
+			t.Log("Deployed custom entitlement contract", contractAddress.Hex(), BaseChainID)
 
 			// Initially the check should fail.
-			customCheck := test_util.CustomEntitlementCheck(ChainID, contractAddress)
+			customCheck := test_util.CustomEntitlementCheck(BaseChainID, contractAddress)
 			check(customCheck, false)
 
 			toggleEntitlement(require, auth, customEntitlement, cs.Wallet(), true)
@@ -1061,7 +1087,7 @@ func TestEthBalance(t *testing.T) {
 			require.NoError(err)
 
 			// Initially the check should fail.
-			ethCheck := test_util.EthBalanceCheck(ChainID, node_crypto.Eth_2.Uint64())
+			ethCheck := test_util.EthBalanceCheck(BaseChainID, node_crypto.Eth_2.Uint64())
 			check(ethCheck, false)
 
 			// Fund the client simulator wallet with 10 eth - should pass the check.
@@ -1090,7 +1116,7 @@ func TestEthBalance(t *testing.T) {
 				require.NoError(err)
 			}
 
-			eth10Check := test_util.EthBalanceCheck(ChainID, node_crypto.Eth_10.Uint64())
+			eth10Check := test_util.EthBalanceCheck(BaseChainID, node_crypto.Eth_10.Uint64())
 
 			for _, wallet := range []*node_crypto.Wallet{wallet1, wallet2, wallet3} {
 				// Check should fail for all wallets.
