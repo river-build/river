@@ -14,7 +14,7 @@ import {Facet} from "contracts/src/diamond/facets/Facet.sol";
 contract MembershipMetadata is ERC721ABase, Facet {
   function tokenURI(uint256 tokenId) public view returns (string memory) {
     if (!_exists(tokenId)) revert URIQueryForNonexistentToken();
-    TokenOwnableStorage.Layout memory ds = TokenOwnableStorage.layout();
+    TokenOwnableStorage.Layout storage ds = TokenOwnableStorage.layout();
     return IERC721A(ds.collection).tokenURI(ds.tokenId);
   }
 }
