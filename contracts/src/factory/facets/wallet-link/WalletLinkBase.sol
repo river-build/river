@@ -24,6 +24,22 @@ abstract contract WalletLinkBase is IWalletLinkBase, EIP712Base, Nonces {
   bytes32 private constant _LINKED_WALLET_TYPEHASH =
     0x6bb89d031fcd292ecd4c0e6855878b7165cebc3a2f35bc6bbac48c088dd8325c;
 
+  function _linkSmartAccountToRootWallet(
+    LinkedWallet memory rootWallet,
+    address expectedSmartAccountAddress,
+    uint256 nonce
+  ) internal {
+    // get the smart account's wallet
+    address smartAccountAddress = SimpleAccountFactory(simpleAccountFactory)
+      .getAddress(rootWallet.addr);
+
+    if (smartAccountAddress != expectedSmartAccountAddress)
+      revert WalletLink__InvalidAddress();
+
+    // link the wallet to the root wallet
+    // _linkWalletToRootWallet(wallet, rootWallet, nonce);
+  }
+
   // =============================================================
   //                      External - Write
   // =============================================================

@@ -551,4 +551,22 @@ contract MembershipJoinSpaceTest is
     vm.expectRevert(Membership__InsufficientPayment.selector);
     freeAllocationMembership.joinSpace(bob);
   }
+
+  function test_joinSpaceWithWalletLink() external {
+    // we're linking alice's smart account to alice's eoa
+    Vm.Wallet aliceOtherWallet = vm.createWallet("alice-other-wallet");
+
+    // get nonce
+    uint256 rootNonce = walletLink.getNonce(aliceWallet.addr);
+
+    // sign the wallet link
+    bytes memory smartSignature = _signWalletLink(
+      aliceSmartAccount.privateKey,
+      aliceWallet.addr,
+      nonce
+    );
+
+    // vm.prank(alice);
+    // membership.joinSpaceWithWalletLink(alice, aliceWallet, aliceWallet, 0);
+  }
 }

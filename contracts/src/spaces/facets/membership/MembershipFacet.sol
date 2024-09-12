@@ -52,6 +52,16 @@ contract MembershipFacet is
     _joinSpaceWithReferral(receiver, referral);
   }
 
+  function joinSpaceWithWalletLink(
+    address receiver,
+    LinkedWallet memory wallet,
+    LinkedWallet memory rootWallet,
+    uint256 nonce
+  ) external payable nonReentrant {
+    _joinSpaceWithReferral(receiver, ReferralTypes(address(0), address(0), ""));
+    _linkWallet(wallet, rootWallet, nonce);
+  }
+
   // =============================================================
   //                           Renewal
   // =============================================================

@@ -6,13 +6,15 @@ import {IMembershipBase} from "./IMembership.sol";
 import {IPlatformRequirements} from "contracts/src/factory/facets/platform/requirements/IPlatformRequirements.sol";
 import {IMembershipPricing} from "./pricing/IMembershipPricing.sol";
 import {IPricingModules} from "contracts/src/factory/facets/architect/pricing/IPricingModules.sol";
+import {IWalletLink, IWalletLinkBase} from "contracts/src/factory/facets/wallet-link/IWalletLink.sol";
+
 // libraries
 import {MembershipStorage} from "./MembershipStorage.sol";
 import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
 import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 import {SafeERC20, IERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-abstract contract MembershipBase is IMembershipBase {
+abstract contract MembershipBase is IMembershipBase, IWalletLinkBase {
   using SafeERC20 for IERC20;
 
   function __MembershipBase_init(
@@ -238,5 +240,12 @@ abstract contract MembershipBase is IMembershipBase {
 
   function _setMembershipImage(string memory image) internal {
     MembershipStorage.layout().membershipImage = image;
+  }
+
+  // =============================================================
+  //                     Wallet Linking
+  // =============================================================
+  function _linkWallet(LinkedWallet memory rootWallet, uint256 nonce) internal {
+    IWalletLink(_getSpaceFactory()).linkCallerToRootKey(rootWallet, nonce);
   }
 }
