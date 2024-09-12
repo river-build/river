@@ -8,9 +8,10 @@ import {IGuardian} from "./IGuardian.sol";
 
 // contracts
 import {GuardianBase} from "./GuardianBase.sol";
+import {OwnableBase} from "contracts/src/diamond/facets/ownable/OwnableBase.sol";
 import {Facet} from "contracts/src/diamond/facets/Facet.sol";
 
-contract GuardianFacet is IGuardian, GuardianBase, Facet {
+contract GuardianFacet is IGuardian, GuardianBase, OwnableBase, Facet {
   function __GuardianFacet_init(uint256 cooldown) external onlyInitializing {
     _setDefaultCooldown(cooldown);
   }
@@ -33,5 +34,9 @@ contract GuardianFacet is IGuardian, GuardianBase, Facet {
 
   function getDefaultCooldown() external view returns (uint256) {
     return _getDefaultCooldown();
+  }
+
+  function setDefaultCooldown(uint256 cooldown) external onlyOwner {
+    _setDefaultCooldown(cooldown);
   }
 }
