@@ -290,28 +290,17 @@ func getLatestYamlFile(dir string, currentCommitHash string) (Data, error) {
 	}
 
 	sort.Slice(yamlFiles, func(i, j int) bool {
-		nameParts1 := strings.Split(strings.TrimSuffix(yamlFiles[i].Name(), ".yaml"), "_")
-		nameParts2 := strings.Split(strings.TrimSuffix(yamlFiles[j].Name(), ".yaml"), "_")
-
-		if len(nameParts1) < 2 || len(nameParts2) < 2 {
-			return false
-		}
-
-		date1, _ := strconv.Atoi(nameParts1[1])
-		date2, _ := strconv.Atoi(nameParts2[1])
+		date1, _ := getDateFromFileName(yamlFiles[i].Name())
+		date2, _ := getDateFromFileName(yamlFiles[j].Name())
 
 		if date1 != date2 {
 			return date1 > date2
 		}
 
-		if len(nameParts1) == 3 && len(nameParts2) == 3 {
-			num1, _ := strconv.Atoi(nameParts1[2])
-			num2, _ := strconv.Atoi(nameParts2[2])
-
-			return num1 > num2
-		}
-
-		return len(nameParts1) > len(nameParts2)
+		// If dates are the same, compare modification times
+		info1, _ := yamlFiles[i].Info()
+		info2, _ := yamlFiles[j].Info()
+		return info1.ModTime().After(info2.ModTime())
 	})
 
 	for _, file := range yamlFiles {
@@ -369,28 +358,35 @@ func getLatestYamlFileFromS3(s3Path string, currentCommitHash string) (Data, err
 		return Data{}, fmt.Errorf("unable to list S3 objects: %w", err)
 	}
 
-	// Find the latest YAML file by date and integer suffix
-	var latestFile *types.Object
-	var latestDate, latestSuffix int
+	// Find the latest YAML file by date and last modified time
+	var latestFiles []*types.Object
+	var latestDate int
 
 	for _, obj := range resp.Contents {
 		if strings.HasSuffix(*obj.Key, ".yaml") {
 			commitHash := strings.Split(filepath.Base(*obj.Key), "_")[0]
 			if commitHash != currentCommitHash {
-				date, suffix, isValid := parseYamlFileName(*obj.Key)
-				if isValid {
-					if latestFile == nil || date > latestDate || (date == latestDate && suffix > latestSuffix) {
-						latestFile = &obj
-						latestDate = date
-						latestSuffix = suffix
-					}
+				date, _ := getDateFromFileName(*obj.Key)
+				if date > latestDate {
+					latestDate = date
+					latestFiles = []*types.Object{&obj}
+				} else if date == latestDate {
+					latestFiles = append(latestFiles, &obj)
 				}
 			}
 		}
 	}
 
-	if latestFile == nil {
+	if len(latestFiles) == 0 {
 		return Data{}, nil
+	}
+
+	// If multiple files have the same latest date, choose the one with the latest modification time
+	latestFile := latestFiles[0]
+	for _, file := range latestFiles[1:] {
+		if file.LastModified.After(*latestFile.LastModified) {
+			latestFile = file
+		}
 	}
 
 	// Download the file from S3
@@ -419,26 +415,13 @@ func getLatestYamlFileFromS3(s3Path string, currentCommitHash string) (Data, err
 	return previousData, nil
 }
 
-// Helper function to parse YAML file name
-func parseYamlFileName(fileName string) (date int, suffix int, isValid bool) {
+// Helper function to extract date from filename in the form filename_MMDDYYYY.yaml
+func getDateFromFileName(fileName string) (int, error) {
 	parts := strings.Split(strings.TrimSuffix(filepath.Base(fileName), ".yaml"), "_")
 	if len(parts) < 2 {
-		return 0, 0, false
+		return 0, fmt.Errorf("invalid filename format")
 	}
-
-	date, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return 0, 0, false
-	}
-
-	if len(parts) == 3 {
-		suffix, err = strconv.Atoi(parts[2])
-		if err != nil {
-			return 0, 0, false
-		}
-	}
-
-	return date, suffix, true
+	return strconv.Atoi(parts[1])
 }
 
 func categorizeHashes(
