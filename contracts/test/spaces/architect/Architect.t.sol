@@ -17,6 +17,7 @@ import {RuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/RuleEnti
 import {IRoles} from "contracts/src/spaces/facets/roles/IRoles.sol";
 import {IMembership} from "contracts/src/spaces/facets/membership/IMembership.sol";
 import {ISpaceOwner} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
+import {ISpaceProxyInitializer} from "contracts/src/spaces/facets/proxy/ISpaceProxyInitializer.sol";
 
 // libraries
 import {LibString} from "solady/utils/LibString.sol";
@@ -28,8 +29,8 @@ import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {Architect} from "contracts/src/factory/facets/architect/Architect.sol";
 import {MockERC721} from "contracts/test/mocks/MockERC721.sol";
 import {UserEntitlement} from "contracts/src/spaces/entitlements/user/UserEntitlement.sol";
+import {SpaceProxyInitializer} from "contracts/src/spaces/facets/proxy/SpaceProxyInitializer.sol";
 import {Factory} from "contracts/src/utils/Factory.sol";
-
 // errors
 import {Validator__InvalidStringLength} from "contracts/src/utils/Validator.sol";
 
@@ -335,6 +336,28 @@ contract ArchitectTest is
         user,
         Permissions.ModifyChannels
       )
+    );
+  }
+
+  function test_fuzz_setProxyInitializer(address proxyInitializer) external {
+    vm.prank(deployer);
+    vm.expectEmit(address(spaceArchitect));
+    emit Architect__ProxyInitializerSet(proxyInitializer);
+    spaceArchitect.setProxyInitializer(
+      ISpaceProxyInitializer(proxyInitializer)
+    );
+
+    assertEq(address(spaceArchitect.getProxyInitializer()), proxyInitializer);
+  }
+
+  function test_fuzz_setProxyInitializer_revertIfNotOwner(
+    address user,
+    address proxyInitializer
+  ) external assumeEOA(user) {
+    vm.prank(user);
+    vm.expectRevert(abi.encodeWithSelector(Ownable__NotOwner.selector, user));
+    spaceArchitect.setProxyInitializer(
+      ISpaceProxyInitializer(proxyInitializer)
     );
   }
 }
