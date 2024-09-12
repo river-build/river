@@ -20,6 +20,10 @@ abstract contract GuardianBase is IGuardianBase {
     GuardianStorage.layout().defaultCooldown = cooldown;
   }
 
+  function _getDefaultCooldown() internal view returns (uint256) {
+    return GuardianStorage.layout().defaultCooldown;
+  }
+
   /**
    * @notice Enables a guardian
    * @param guardian The guardian address

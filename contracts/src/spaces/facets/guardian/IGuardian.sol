@@ -30,4 +30,8 @@ interface IGuardian is IGuardianBase {
   function guardianCooldown(address guardian) external view returns (uint256);
 
   function isGuardianEnabled(address guardian) external view returns (bool);
+
+  function getDefaultCooldown() external view returns (uint256);
+
+  function setDefaultCooldown(uint256 cooldown) external;
 }

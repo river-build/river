@@ -16,6 +16,7 @@ contract DeployGuardianFacet is FacetHelper, Deployer {
     addSelector(GuardianFacet.guardianCooldown.selector);
     addSelector(GuardianFacet.disableGuardian.selector);
     addSelector(GuardianFacet.isGuardianEnabled.selector);
+    addSelector(GuardianFacet.getDefaultCooldown.selector);
   }
 
   function versionName() public pure override returns (string memory) {

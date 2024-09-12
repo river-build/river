@@ -30,4 +30,8 @@ contract GuardianFacet is IGuardian, GuardianBase, Facet {
   function isGuardianEnabled(address guardian) external view returns (bool) {
     return _guardianEnabled(guardian);
   }
+
+  function getDefaultCooldown() external view returns (uint256) {
+    return _getDefaultCooldown();
+  }
 }
