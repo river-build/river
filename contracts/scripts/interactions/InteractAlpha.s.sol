@@ -17,18 +17,11 @@ import {DeploySpaceFactory} from "contracts/scripts/deployments/diamonds/DeployS
 import {DeployBaseRegistry} from "contracts/scripts/deployments/diamonds/DeployBaseRegistry.s.sol";
 import {DeploySpaceOwner} from "contracts/scripts/deployments/diamonds/DeploySpaceOwner.s.sol";
 
-import {DeploySpaceFactoryInit} from "contracts/scripts/deployments/facets/DeploySpaceFactoryInit.s.sol";
-import {DeploySpaceProxyInitializer} from "contracts/scripts/deployments/utils/DeploySpaceProxyInitializer.s.sol";
-
 contract InteractAlpha is AlphaHelper {
   DeploySpace deploySpace = new DeploySpace();
   DeploySpaceFactory deploySpaceFactory = new DeploySpaceFactory();
   DeployBaseRegistry deployBaseRegistry = new DeployBaseRegistry();
   DeploySpaceOwner deploySpaceOwner = new DeploySpaceOwner();
-
-  DeploySpaceFactoryInit deploySpaceFactoryInit = new DeploySpaceFactoryInit();
-  DeploySpaceProxyInitializer deploySpaceProxyInitializer =
-    new DeploySpaceProxyInitializer();
 
   function __interact(address deployer) internal override {
     vm.setEnv("OVERRIDE_DEPLOYMENTS", "1");
@@ -56,18 +49,11 @@ contract InteractAlpha is AlphaHelper {
     vm.broadcast(deployer);
     IDiamondCut(spaceOwner).diamondCut(newCuts, address(0), "");
 
-    // Deploy Space Factory Init
-    address spaceProxyInitializer = deploySpaceProxyInitializer.deploy(
-      deployer
-    );
-    address spaceFactoryInit = deploySpaceFactoryInit.deploy(deployer);
-    bytes memory initData = deploySpaceFactoryInit.makeInitData(
-      spaceProxyInitializer
-    );
-
     // Deploy Space Factory
     deploySpaceFactory.diamondInitParams(deployer);
     newCuts = deploySpaceFactory.getCuts();
+    address spaceFactoryInit = deploySpaceFactory.spaceFactoryInit();
+    bytes memory initData = deploySpaceFactory.spaceFactoryInitData();
     vm.broadcast(deployer);
     IDiamondCut(spaceFactory).diamondCut(newCuts, spaceFactoryInit, initData);
 

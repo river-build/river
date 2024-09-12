@@ -122,6 +122,7 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
 
   // init
   address public spaceFactoryInit;
+  bytes public spaceFactoryInitData;
 
   function versionName() public pure override returns (string memory) {
     return "spaceFactory";
@@ -130,7 +131,6 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
   function addImmutableCuts(address deployer) internal {
     spaceImpl = deploySpace.deploy(deployer);
     spaceOwner = deploySpaceOwner.deploy(deployer);
-    spaceFactoryInit = deploySpaceFactoryInit.deploy(deployer);
 
     // entitlement modules
     userEntitlement = deployUserEntitlement.deploy(deployer);
@@ -191,6 +191,10 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
     // legacy
     legacyArchitect = deployMockLegacyArchitect.deploy(deployer);
     spaceProxyInitializer = deploySpaceProxyInitializer.deploy(deployer);
+    spaceFactoryInit = deploySpaceFactoryInit.deploy(deployer);
+    spaceFactoryInitData = deploySpaceFactoryInit.makeInitData(
+      spaceProxyInitializer
+    );
 
     addFacet(
       metadataHelper.makeCut(metadata, IDiamond.FacetCutAction.Add),
@@ -270,10 +274,7 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
       partnerRegistryHelper.makeInitData("")
     );
 
-    addInit(
-      spaceFactoryInit,
-      deploySpaceFactoryInit.makeInitData(spaceProxyInitializer)
-    );
+    addInit(spaceFactoryInit, spaceFactoryInitData);
 
     return
       Diamond.InitParams({
