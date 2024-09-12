@@ -1,9 +1,12 @@
 package utils
 
 import (
+	"bytes"
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,6 +17,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"gopkg.in/yaml.v2"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
 const (
@@ -117,27 +125,23 @@ func CreateFacetHashesReport(
 	// Get current date in MMDDYYYY format
 	currentDate := time.Now().UTC().Format("01022006")
 
-	latestFile, err := getLatestYamlFile(yamlOutputDir, commitHash)
+	var previousData Data
+
+	if strings.HasPrefix(yamlOutputDir, "s3://") {
+		previousData, err = getLatestYamlFileFromS3(yamlOutputDir, commitHash)
+	} else {
+		previousData, err = getLatestYamlFile(yamlOutputDir, commitHash)
+	}
 	if err != nil {
 		return err
 	}
 
 	var updatedHashes, existingHashes map[string]string
 
-	if latestFile == "" {
+	if previousData.Updated == nil && previousData.Existing == nil {
 		existingHashes = compiledHashes
 		updatedHashes = make(map[string]string)
 	} else {
-		var previousData Data
-		data, err := os.ReadFile(latestFile)
-		if err != nil {
-			return err
-		}
-		err = yaml.Unmarshal(data, &previousData)
-		if err != nil {
-			return err
-		}
-
 		// Combine previous Updated and Existing into a single map for comparison
 		previousHashes := make(map[string]string)
 		for k, v := range previousData.Updated {
@@ -155,6 +159,9 @@ func CreateFacetHashesReport(
 		Existing: existingHashes,
 	}
 
+	if strings.HasPrefix(yamlOutputDir, "s3://") {
+		return writeYamlReportToS3(yamlOutputDir, report, commitHash, currentDate, verbose)
+	}
 	return writeYamlReport(yamlOutputDir, report, commitHash, currentDate, verbose)
 }
 
@@ -204,22 +211,70 @@ func writeYamlReport(yamlOutputDir string, report Data, commitHash, currentDate 
 	return nil
 }
 
-func getLatestYamlFile(dir string, currentCommitHash string) (string, error) {
+func writeYamlReportToS3(s3Path string, report Data, commitHash, currentDate string, verbose bool) error {
+	// Parse bucket and key from s3Path
+	parts := strings.SplitN(strings.TrimPrefix(s3Path, "s3://"), "/", 2)
+	bucket := parts[0]
+	keyPrefix := ""
+	if len(parts) > 1 {
+		keyPrefix = parts[1]
+	}
+
+	// Marshal report to YAML
+	yamlContent, err := yaml.Marshal(report)
+	if err != nil {
+		return fmt.Errorf("error marshaling YAML content: %w", err)
+	}
+
+	// Generate filename
+	filename := fmt.Sprintf("%s_%s.yaml", commitHash, currentDate)
+	key := filename
+	if keyPrefix != "" {
+		key = filepath.Join(keyPrefix, filename)
+	}
+
+	// Load AWS configuration
+	cfg, err := config.LoadDefaultConfig(context.TODO())
+	if err != nil {
+		return fmt.Errorf("unable to load SDK config: %w", err)
+	}
+
+	// Create S3 client
+	client := s3.NewFromConfig(cfg)
+
+	// Upload file to S3
+	_, err = client.PutObject(context.TODO(), &s3.PutObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+		Body:   bytes.NewReader(yamlContent),
+	})
+	if err != nil {
+		return fmt.Errorf("error uploading file to S3: %w", err)
+	}
+
+	if verbose {
+		Log.Info().Msgf("YAML file uploaded to S3: s3://%s/%s", bucket, key)
+	}
+
+	return nil
+}
+
+func getLatestYamlFile(dir string, currentCommitHash string) (Data, error) {
 	// Convert to absolute path
 	absDir, err := filepath.Abs(dir)
 	if err != nil {
-		return "", err
+		return Data{}, err
 	}
 
 	// Check if directory exists
 	if _, err := os.Stat(absDir); os.IsNotExist(err) {
 		// Directory doesn't exist, return empty string without error
-		return "", nil
+		return Data{}, nil
 	}
 
 	files, err := os.ReadDir(absDir)
 	if err != nil {
-		return "", err
+		return Data{}, err
 	}
 
 	var yamlFiles []os.DirEntry
@@ -231,7 +286,7 @@ func getLatestYamlFile(dir string, currentCommitHash string) (string, error) {
 
 	if len(yamlFiles) == 0 {
 		// No YAML files found, return empty string without error
-		return "", nil
+		return Data{}, nil
 	}
 
 	sort.Slice(yamlFiles, func(i, j int) bool {
@@ -262,11 +317,128 @@ func getLatestYamlFile(dir string, currentCommitHash string) (string, error) {
 	for _, file := range yamlFiles {
 		commitHash := strings.Split(file.Name(), "_")[0]
 		if commitHash != currentCommitHash {
-			return filepath.Join(absDir, file.Name()), nil
+			latestFile := filepath.Join(absDir, file.Name())
+
+			// Read and unmarshal the YAML file
+			data, err := os.ReadFile(latestFile)
+			if err != nil {
+				return Data{}, fmt.Errorf("error reading YAML file: %w", err)
+			}
+
+			var previousData Data
+			err = yaml.Unmarshal(data, &previousData)
+			if err != nil {
+				return Data{}, fmt.Errorf("error unmarshaling YAML data: %w", err)
+			}
+
+			return previousData, nil
 		}
 	}
 
-	return "", nil // No file with a different commit hash found
+	return Data{}, nil // No file with a different commit hash found
+}
+
+func getLatestYamlFileFromS3(s3Path string, currentCommitHash string) (Data, error) {
+	// Parse bucket and prefix from s3Path
+	parts := strings.SplitN(strings.TrimPrefix(s3Path, "s3://"), "/", 2)
+	bucket := parts[0]
+	prefix := ""
+	if len(parts) > 1 {
+		prefix = parts[1]
+	}
+
+	// Load AWS configuration
+	cfg, err := config.LoadDefaultConfig(context.TODO())
+	if err != nil {
+		return Data{}, fmt.Errorf("unable to load SDK config: %w", err)
+	}
+
+	// Create S3 client
+	client := s3.NewFromConfig(cfg)
+
+	// List objects in the bucket
+	input := &s3.ListObjectsV2Input{
+		Bucket: aws.String(bucket),
+	}
+	if prefix != "" {
+		input.Prefix = aws.String(prefix)
+	}
+
+	resp, err := client.ListObjectsV2(context.TODO(), input)
+	if err != nil {
+		return Data{}, fmt.Errorf("unable to list S3 objects: %w", err)
+	}
+
+	// Find the latest YAML file by date and integer suffix
+	var latestFile *types.Object
+	var latestDate, latestSuffix int
+
+	for _, obj := range resp.Contents {
+		if strings.HasSuffix(*obj.Key, ".yaml") {
+			commitHash := strings.Split(filepath.Base(*obj.Key), "_")[0]
+			if commitHash != currentCommitHash {
+				date, suffix, isValid := parseYamlFileName(*obj.Key)
+				if isValid {
+					if latestFile == nil || date > latestDate || (date == latestDate && suffix > latestSuffix) {
+						latestFile = &obj
+						latestDate = date
+						latestSuffix = suffix
+					}
+				}
+			}
+		}
+	}
+
+	if latestFile == nil {
+		return Data{}, nil
+	}
+
+	// Download the file from S3
+	bucket, key := parts[0], *latestFile.Key
+	result, err := client.GetObject(context.TODO(), &s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return Data{}, fmt.Errorf("error downloading file from S3: %w", err)
+	}
+	defer result.Body.Close()
+
+	// Read and unmarshal the YAML data
+	data, err := io.ReadAll(result.Body)
+	if err != nil {
+		return Data{}, fmt.Errorf("error reading S3 object body: %w", err)
+	}
+
+	var previousData Data
+	err = yaml.Unmarshal(data, &previousData)
+	if err != nil {
+		return Data{}, fmt.Errorf("error unmarshaling YAML data: %w", err)
+	}
+
+	return previousData, nil
+}
+
+// Helper function to parse YAML file name
+func parseYamlFileName(fileName string) (date int, suffix int, isValid bool) {
+	parts := strings.Split(strings.TrimSuffix(filepath.Base(fileName), ".yaml"), "_")
+	if len(parts) < 2 {
+		return 0, 0, false
+	}
+
+	date, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, 0, false
+	}
+
+	if len(parts) == 3 {
+		suffix, err = strconv.Atoi(parts[2])
+		if err != nil {
+			return 0, 0, false
+		}
+	}
+
+	return date, suffix, true
 }
 
 func categorizeHashes(
