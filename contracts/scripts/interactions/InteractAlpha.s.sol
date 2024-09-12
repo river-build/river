@@ -2,14 +2,10 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {IDiamondLoupe, IDiamondLoupeBase} from "contracts/src/diamond/facets/loupe/IDiamondLoupe.sol";
+
 import {IDiamondCut} from "contracts/src/diamond/facets/cut/IDiamondCut.sol";
-import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import {IERC173} from "contracts/src/diamond/facets/ownable/IERC173.sol";
-import {IOwnablePending} from "contracts/src/diamond/facets/ownable/pending/IOwnablePending.sol";
 
 import {Diamond} from "contracts/src/diamond/Diamond.sol";
-import {DiamondHelper} from "contracts/test/diamond/Diamond.t.sol";
 
 // libraries
 
@@ -21,11 +17,18 @@ import {DeploySpaceFactory} from "contracts/scripts/deployments/diamonds/DeployS
 import {DeployBaseRegistry} from "contracts/scripts/deployments/diamonds/DeployBaseRegistry.s.sol";
 import {DeploySpaceOwner} from "contracts/scripts/deployments/diamonds/DeploySpaceOwner.s.sol";
 
+import {DeploySpaceFactoryInit} from "contracts/scripts/deployments/facets/DeploySpaceFactoryInit.s.sol";
+import {DeploySpaceProxyInitializer} from "contracts/scripts/deployments/utils/DeploySpaceProxyInitializer.s.sol";
+
 contract InteractAlpha is AlphaHelper {
   DeploySpace deploySpace = new DeploySpace();
   DeploySpaceFactory deploySpaceFactory = new DeploySpaceFactory();
   DeployBaseRegistry deployBaseRegistry = new DeployBaseRegistry();
   DeploySpaceOwner deploySpaceOwner = new DeploySpaceOwner();
+
+  DeploySpaceFactoryInit deploySpaceFactoryInit = new DeploySpaceFactoryInit();
+  DeploySpaceProxyInitializer deploySpaceProxyInitializer =
+    new DeploySpaceProxyInitializer();
 
   function __interact(address deployer) internal override {
     vm.setEnv("OVERRIDE_DEPLOYMENTS", "1");
@@ -53,11 +56,20 @@ contract InteractAlpha is AlphaHelper {
     vm.broadcast(deployer);
     IDiamondCut(spaceOwner).diamondCut(newCuts, address(0), "");
 
+    // Deploy Space Factory Init
+    address spaceProxyInitializer = deploySpaceProxyInitializer.deploy(
+      deployer
+    );
+    address spaceFactoryInit = deploySpaceFactoryInit.deploy(deployer);
+    bytes memory initData = deploySpaceFactoryInit.makeInitData(
+      spaceProxyInitializer
+    );
+
     // Deploy Space Factory
     deploySpaceFactory.diamondInitParams(deployer);
     newCuts = deploySpaceFactory.getCuts();
     vm.broadcast(deployer);
-    IDiamondCut(spaceFactory).diamondCut(newCuts, address(0), "");
+    IDiamondCut(spaceFactory).diamondCut(newCuts, spaceFactoryInit, initData);
 
     // Deploy Base Registry
     deployBaseRegistry.diamondInitParams(deployer);

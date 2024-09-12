@@ -205,8 +205,7 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
         spaceOwner, // spaceOwner
         userEntitlement, // userEntitlement
         ruleEntitlement, // ruleEntitlement
-        legacyRuleEntitlement, // legacyRuleEntitlement
-        address(0) // spaceProxyInitializer
+        legacyRuleEntitlement // legacyRuleEntitlement
       )
     );
     addFacet(

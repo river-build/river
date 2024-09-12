@@ -10,6 +10,8 @@ import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 import {SpaceFactoryInit} from "contracts/src/factory/SpaceFactoryInit.sol";
 import {FacetHelper} from "contracts/test/diamond/Facet.t.sol";
 
+// helpers
+
 contract DeploySpaceFactoryInit is Deployer, FacetHelper {
   constructor() {
     addSelector(SpaceFactoryInit.initialize.selector);
