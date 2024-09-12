@@ -13,6 +13,9 @@ import (
 	"strings"
 	"time"
 
+	psutilCpu "github.com/shirou/gopsutil/cpu"
+	psutilMem "github.com/shirou/gopsutil/mem"
+
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
@@ -59,12 +62,49 @@ type httpMux interface {
 	Handle(pattern string, handler http.Handler)
 }
 
+func formatMemory(size uint64) string {
+	units := []string{"B", "KB", "MB", "GB", "TB", "PB"}
+	for size >= 1024*1024 && len(units) > 2 {
+		size /= 1024
+		units = units[1:] // pop lowest unit
+	}
+
+	if size <= 1024 {
+		return fmt.Sprintf("%v%v", size, units[0])
+	}
+
+	// Try to preserve the last divide to make the answer floating point
+	floatSize := float64(size) / float64(1024)
+	return fmt.Sprintf("%.2f%v", floatSize, units[1])
+}
+
+func (s *Service) handleDebugStats(w http.ResponseWriter, r *http.Request) {
+	// Get memory stats
+	v, _ := psutilMem.VirtualMemory()
+
+	// Get CPU stats
+	cpuPercentages, _ := psutilCpu.Percent(time.Second, false)
+
+	// Print the results
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(
+		w,
+		"Memory Usage: Total: %v, Used: %v, Available: %v\n",
+		formatMemory(v.Total),
+		formatMemory(v.Used),
+		formatMemory(v.Available),
+	)
+	fmt.Fprintf(w, "CPU Usage: %.2f%%\n", cpuPercentages[0])
+}
+
 func (s *Service) registerDebugHandlers(enableDebugEndpoints bool, cfg config.DebugEndpointsConfig) {
 	mux := s.mux
 	handler := debugHandler{}
 	mux.HandleFunc("/debug", handler.ServeHTTP)
 	handler.HandleFunc(mux, "/debug/multi", s.handleDebugMulti)
 	handler.HandleFunc(mux, "/debug/multi/json", s.handleDebugMultiJson)
+	handler.HandleFunc(mux, "/debug/stats", s.handleDebugStats)
 	handler.Handle(mux, "/debug/config", &onChainConfigHandler{onChainConfig: s.chainConfig})
 
 	if cfg.Cache || enableDebugEndpoints {
