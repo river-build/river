@@ -69,12 +69,10 @@ export async function fetchUserProfileImage(request: FastifyRequest, reply: Fast
 
 		return (
 			reply
-				.redirect(redirectUrl)
-				/**
-				 * public: The response may be cached by any cache, including shared caches like a CDN.
-				 * max-age=300: The response may be cached by the client for 300 seconds (5 minutes).
-				 */
-				.header('Cache-Control', 'public, max-age=300')
+				// client should cache the image for 30 seconds, and the CDN for 5 minutes
+				// after 30 seconds, the client will check the CDN for a new image
+				.header('Cache-Control', 'public, max-age=30, s-maxage=300')
+				.redirect(redirectUrl, 307)
 		)
 	} catch (error) {
 		logger.error(
