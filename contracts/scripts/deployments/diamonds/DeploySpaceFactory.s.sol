@@ -44,6 +44,7 @@ import {DeployPartnerRegistry} from "contracts/scripts/deployments/facets/Deploy
 
 import {DeployMockLegacyArchitect} from "contracts/scripts/deployments/facets/DeployMockLegacyArchitect.s.sol";
 import {DeploySpaceProxyInitializer} from "contracts/scripts/deployments/utils/DeploySpaceProxyInitializer.s.sol";
+import {DeploySpaceFactoryInit} from "contracts/scripts/deployments/facets/DeploySpaceFactoryInit.s.sol";
 
 contract DeploySpaceFactory is DiamondHelper, Deployer {
   // diamond helpers
@@ -83,6 +84,8 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
   DeploySpaceProxyInitializer deploySpaceProxyInitializer =
     new DeploySpaceProxyInitializer();
 
+  DeploySpaceFactoryInit deploySpaceFactoryInit = new DeploySpaceFactoryInit();
+
   // helpers
   address multiInit;
 
@@ -117,6 +120,9 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
   address public fixedPricing;
   address[] pricingModules;
 
+  // init
+  address public spaceFactoryInit;
+
   function versionName() public pure override returns (string memory) {
     return "spaceFactory";
   }
@@ -124,6 +130,7 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
   function addImmutableCuts(address deployer) internal {
     spaceImpl = deploySpace.deploy(deployer);
     spaceOwner = deploySpaceOwner.deploy(deployer);
+    spaceFactoryInit = deploySpaceFactoryInit.deploy(deployer);
 
     // entitlement modules
     userEntitlement = deployUserEntitlement.deploy(deployer);
@@ -199,7 +206,7 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
         userEntitlement, // userEntitlement
         ruleEntitlement, // ruleEntitlement
         legacyRuleEntitlement, // legacyRuleEntitlement
-        spaceProxyInitializer // spaceProxyInitializer
+        address(0) // spaceProxyInitializer
       )
     );
     addFacet(
@@ -262,6 +269,11 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
       ),
       partnerRegistry,
       partnerRegistryHelper.makeInitData("")
+    );
+
+    addInit(
+      spaceFactoryInit,
+      deploySpaceFactoryInit.makeInitData(spaceProxyInitializer)
     );
 
     return
