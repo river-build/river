@@ -1,0 +1,115 @@
+syntax = "proto3";
+package river;
+option go_package = "github.com/river-build/river/core/node/protocol";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+service NotificationService {
+  // SetSettings sets the notification settings, overwriting any existing settings.
+  rpc SetSettings(SetSettingsRequest) returns (SetSettingsResponse);
+  // GetSettings returns user stored notification settings.
+  rpc GetSettings(GetSettingsRequest) returns (GetSettingsResponse);
+  // SubscribeWebPush subscribes a client to receive notifications through web push
+  rpc SubscribeWebPush(SubscribeWebPushRequest) returns (SubscribeWebPushResponse);
+
+  rpc UnsubscribeWebPush(UnsubscribeWebPushRequest) returns (UnsubscribeWebPushResponse);
+}
+
+message GetSettingsRequest {
+  // user id for which to retrieve settings
+  bytes user_id = 1;
+}
+
+message GetSettingsResponse {
+  // user id for which the settings are retrieved
+  bytes user_id = 1;
+}
+
+message SetSettingsRequest {
+  // user id for which to retrieve settings
+  bytes user_id = 1;
+  // user_settings are global and overwrite space/channel specific settings
+  UserGlobalSettings user_settings = 2;
+  // space_settings holds specific settings per space and per channel
+  repeated SpaceSetting space_settings = 3;
+}
+
+message SetSettingsResponse {
+  // user id for which to retrieve settings
+  bytes user_id = 1;
+}
+
+message UserGlobalSettings {
+  // blocked_users hold the list of users that the users won't receive notifications for.
+  repeated bytes blocked_users = 1;
+  // if dm_messages is true the user will receive notifications for incoming DM messages
+  bool dm_messages = 2;
+  // if mentions is true the user will receive notifications for messages in which the user is mentioned
+  bool mentions = 3;
+  // if reply_to is true the user will receive notifications for threads in which he participates
+  bool reply_to = 4;
+}
+
+enum MuteSetting {
+  // MUTES indicates that the user won't receive notifications for a channel, or if set on a space level
+  // for none of the channels within that space unless a channel is explicit set to unmute.
+  MUTED = 0;
+  // UN_MUTED indicates that the user will receive notifications for a channel, or if set on a space level
+  // for all channels that are not explicitly set to mute in a space.
+  UN_MUTED = 1;
+}
+
+// ChannelSetting hold settings specific for a DM, GDM or channel stream.
+message ChannelSetting {
+  // channel_id points to the channel for which this setting applies (also called stream id in the river protocol).
+  bytes channel_id = 1;
+  // space_id is required when channel_id points to a channel within a space.
+  // for GM and GDM channels space_id must be kept empty.
+  optional bytes space_id = 2;
+  // mute indicates if the user wants to receive notifications for the channel within the space.
+  MuteSetting mute = 3;
+}
+
+// SpaceSettings hold settings that applied to all streams within the space.
+// These can be overwritten by channel specific settings.
+message SpaceSetting {
+  // mute is applied to all channels within the space. If not set the default is used.
+  optional MuteSetting mute = 1;
+  // channel_settings holds specific settings that overwrite the space default mute setting
+  repeated ChannelSetting channel_settings = 2;
+}
+
+message WebPushSubscriptionObjectKeys {
+  // An Elliptic curve Diffie–Hellman public key on the P-256 curve (that is, the NIST
+  // secp256r1 elliptic curve) and obtained from the browser when subscribing.
+  string p256dh = 1;
+  // An authentication secret and obtained from the browser when subscribing.
+  string auth = 2;
+}
+
+message WebPushSubscriptionObject {
+  // A string containing the endpoint associated with the push subscription.
+  string endpoint = 1;
+  // subscription expiration time associated with the push subscription (in milliseconds)
+  optional int64 expirationTime = 2;
+  // keys obtained from the browser when subscribing for notifications. The notifications
+  // service uses these details to protect the notifications content.
+  WebPushSubscriptionObjectKeys keys = 3;
+}
+
+message SubscribeWebPushRequest {
+  // user id for which to retrieve settings
+  bytes user_id = 1;
+  // subscription holds the subscribe object that is returned by the browser when subscribing
+  WebPushSubscriptionObject subscription = 2;
+
+  // TODO: discuss how to separate notifications when 2 or more account share a single browser/app
+  // and account A must not receive notifications for account B.
+}
+
+message SubscribeWebPushResponse {}
+
+message UnsubscribeWebPushRequest {}
+
+message UnsubscribeWebPushResponse {}

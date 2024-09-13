@@ -640,6 +640,10 @@ message SyncCookie  {
     int64 minipool_gen = 3;
     int64 minipool_slot = 4;
     bytes prev_miniblock_hash = 5;
+    // Only used when supplying a sync cookie as a position when starting a stream sync session or
+    // adding a stream to a sync. When set to true the node will start syncing from the last snapshot,
+    // similar as providing a too old cookie.
+    optional bool force_sync_reset = 6;
 }
 
 message StreamAndCookie {

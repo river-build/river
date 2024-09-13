@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	StreamStorageTypePostgres = "postgres"
+	StreamStorageTypePostgres       = "postgres"
+	NotificationStorageTypePostgres = "postgres"
 )
 
 type ReadStreamFromLastSnapshotResult struct {

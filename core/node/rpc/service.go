@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"github.com/river-build/river/core/node/notifications"
 	"log/slog"
 	"net"
 	"net/http"
@@ -42,8 +43,9 @@ type Service struct {
 	exitSignal chan error
 
 	// Storage
-	storagePoolInfo *storage.PgxPoolInfo
-	storage         storage.StreamStorage
+	storagePoolInfo      *storage.PgxPoolInfo
+	storage              storage.StreamStorage
+	notificationsStorage storage.NotificationsStorage
 
 	// Streams
 	cache              events.StreamCache
@@ -75,6 +77,8 @@ type Service struct {
 
 	// Archiver is not nil if running in archive mode
 	Archiver *Archiver
+
+	NotificationService *notifications.Service
 
 	// Metrics
 	metrics               infra.MetricsFactory
