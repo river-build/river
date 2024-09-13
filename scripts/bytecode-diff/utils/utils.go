@@ -482,8 +482,8 @@ func getLatestYamlFileFromS3(s3Path string, currentCommitHash string) (SourceDif
 		}
 	}
 
-	// Download the file from S3
 	bucket, key := parts[0], *latestFile.Key
+	// Download the file from S3
 	result, err := client.GetObject(context.TODO(), &s3.GetObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
