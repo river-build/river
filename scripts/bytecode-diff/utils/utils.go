@@ -48,13 +48,20 @@ type SourceFacetDiff struct {
 }
 
 type SourceDiffReport struct {
-	Environment string            `yaml:"environment"`
-	Updated     []SourceFacetDiff `yaml:"updated"`
-	Existing    []SourceFacetDiff `yaml:"existing"`
+	Environment        string            `yaml:"environment"`
+	CurrentCommitHash  string            `yaml:"currentCommitHash"`
+	PreviousCommitHash string            `yaml:"previousCommitHash"`
+	Updated            []SourceFacetDiff `yaml:"updated"`
+	Existing           []SourceFacetDiff `yaml:"existing"`
 }
 
 type FacetName string
 type DiamondName string
+
+type CommitHashes struct {
+	Previous string `yaml:"previous"`
+	Current  string `yaml:"current"`
+}
 
 type Data struct {
 	Updated  map[FacetName]string `yaml:"updated"`
@@ -141,6 +148,7 @@ func CreateFacetHashesReport(
 	compiledHashes map[FacetName]string,
 	alphaFacets map[DiamondName][]Facet,
 	outputPath string,
+	environment string,
 	verbose bool,
 ) error {
 	// Get current git commit hash
@@ -165,7 +173,11 @@ func CreateFacetHashesReport(
 		return err
 	}
 
-	report := generateReport(previousReport, compiledHashes, alphaFacets)
+	commitHashes := CommitHashes{
+		Previous: previousReport.CurrentCommitHash,
+		Current:  commitHash,
+	}
+	report := generateReport(previousReport, compiledHashes, alphaFacets, environment, commitHashes)
 
 	if strings.HasPrefix(outputPath, "s3://") {
 		return writeYamlReportToS3(outputPath, report, commitHash, currentDate, verbose)
@@ -173,14 +185,16 @@ func CreateFacetHashesReport(
 	return writeYamlReport(outputPath, report, commitHash, currentDate, verbose)
 }
 
-func generateReport(previousReport SourceDiffReport, currentHashes map[FacetName]string, alphaFacets map[DiamondName][]Facet) SourceDiffReport {
+func generateReport(previousReport SourceDiffReport, currentHashes map[FacetName]string, envFacets map[DiamondName][]Facet, environment string, commitHashes CommitHashes) SourceDiffReport {
 	report := SourceDiffReport{
-		Environment: previousReport.Environment,
-		Updated:     []SourceFacetDiff{},
-		Existing:    []SourceFacetDiff{},
+		Environment:        environment,
+		CurrentCommitHash:  commitHashes.Current,
+		PreviousCommitHash: commitHashes.Previous,
+		Updated:            []SourceFacetDiff{},
+		Existing:           []SourceFacetDiff{},
 	}
 
-	for diamond, facets := range alphaFacets {
+	for diamond, facets := range envFacets {
 		updatedFacets := []FacetSourceDiff{}
 		existingFacets := []FacetSourceDiff{}
 

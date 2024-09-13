@@ -265,7 +265,7 @@ func executeSourceDiff(verbose bool, baseConfig utils.BaseConfig, facetSourcePat
 		alphaFacets[utils.DiamondName(diamondName)] = facets
 	}
 
-	err = utils.CreateFacetHashesReport(compiledFacetsPath, compiledHashes, alphaFacets, reportOutDir, verbose)
+	err = utils.CreateFacetHashesReport(compiledFacetsPath, compiledHashes, alphaFacets, reportOutDir, sourceEnvironment, verbose)
 
 	if err != nil {
 		if verbose {
