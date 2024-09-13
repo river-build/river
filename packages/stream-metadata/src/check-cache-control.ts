@@ -17,14 +17,14 @@ export function addCacheControlCheck(
 	},
 ) {
 	const { skippedRoutes } = options
-	srv.addHook('onSend', (request, reply, payload, done) => {
+	srv.addHook('onResponse', (request, reply, done) => {
 		const shouldCheck = !skippedRoutes.some((route) => request.url.includes(route))
 
 		if (shouldCheck) {
 			const cacheControlHeader = reply.getHeader('Cache-Control')
 			if (isEmptyHeader(cacheControlHeader)) {
 				const headers = reply.getHeaders()
-				request.log.warn({ headers, payload }, 'Missing Cache-Control header')
+				request.log.warn({ headers }, 'Missing Cache-Control header')
 			}
 		}
 
