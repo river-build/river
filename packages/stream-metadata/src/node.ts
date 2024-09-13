@@ -15,6 +15,7 @@ import { fetchUserBio } from './routes/userBio'
 import { fetchMedia } from './routes/media'
 import { spaceRefresh } from './routes/spaceRefresh'
 import { userRefresh } from './routes/userRefresh'
+import { addCacheControlCheck } from './check-cache-control'
 
 // Set the process title to 'stream-metadata' so it can be easily identified
 // or killed with `pkill stream-metadata`
@@ -118,6 +119,9 @@ async function main() {
 	try {
 		await registerPlugins(server)
 		setupRoutes(server)
+		addCacheControlCheck(server, {
+			skippedRoutes: ['/refresh', '/health'],
+		})
 		await server.listen({
 			port: config.port,
 			host: config.host,
