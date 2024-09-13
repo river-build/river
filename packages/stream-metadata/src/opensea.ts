@@ -21,36 +21,45 @@ const getAllMemberTokenIds = async (
 	const limit = 200
 	const chainId = config.web3Config.base.chainId
 
-	let url
-	if (chainId === BASE_MAINNET) {
-		url = `https://api.opensea.io/api/v2/chain/base/contract/${space.address}/nfts?limit=${limit}&next=${next}`
-	} else if (chainId === BASE_SEPOLIA) {
-		url = `https://testnets-api.opensea.io/api/v2/chain/base_sepolia/contract/${space.address}/nfts?limit=${limit}&next=${next}`
-	} else {
-		logger.error({ chainId }, 'Unsupported network')
-		throw new Error(`Unsupported network ${chainId}`)
-	}
+	const getUrl = (nextCursor?: string) => {
+		const baseUrl =
+			chainId === BASE_MAINNET
+				? 'https://api.opensea.io/api/v2/chain/base'
+				: chainId === BASE_SEPOLIA
+				? 'https://testnets-api.opensea.io/api/v2/chain/base_sepolia'
+				: null
 
-	try {
-		const response = await fetch(url, {
-			headers: {
-				'x-api-key': config.openSea.apiKey,
-			},
-		})
-
-		const data = (await response.json()) as GetNFTs
-		if (!data.next) {
-			return data.nfts.map((nft) => nft.identifier)
+		if (!baseUrl) {
+			throw new Error(`Unsupported network ${chainId}`)
 		}
-
-		return getAllMemberTokenIds(logger, space, data.next).then((ids) => [
-			...ids,
-			...data.nfts.map((nft) => nft.identifier),
-		])
-	} catch (error) {
-		logger.error({ error }, 'Failed to get all member token ids')
-		return []
+		return `${baseUrl}/contract/${space.address}/nfts?limit=${limit}${
+			nextCursor ? `&next=${nextCursor}` : ''
+		}`
 	}
+
+	const fetchNFTs = async (nextCursor?: string): Promise<GetNFTs> => {
+		const response = await fetch(getUrl(nextCursor), {
+			headers: { 'x-api-key': config.openSea!.apiKey },
+		})
+		if (!response.ok) {
+			logger.error({ response }, 'OpenSea API request failed')
+			throw new Error(`OpenSea API request failed: ${response.status} ${response.statusText}`)
+		}
+		return response.json() as Promise<GetNFTs>
+	}
+
+	const reducer = async (acc: string[], nextCursor?: string): Promise<string[]> => {
+		try {
+			const data = await fetchNFTs(nextCursor)
+			const ids = [...acc, ...data.nfts.map((nft) => nft.identifier)]
+			return data.next ? await reducer(ids, data.next) : ids
+		} catch (error) {
+			logger.error({ error }, 'Failed to get member token id')
+			return []
+		}
+	}
+
+	return reducer([], next)
 }
 
 const refreshMemberNft = async (logger: FastifyBaseLogger, space: SpaceInfo, tokenId: string) => {
