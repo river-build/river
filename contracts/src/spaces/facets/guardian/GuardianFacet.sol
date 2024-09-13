@@ -16,7 +16,7 @@ contract GuardianFacet is IGuardian, GuardianBase, OwnableBase, Facet {
     _setDefaultCooldown(cooldown);
   }
 
-  function enableGuardian() external onlyEOA {
+  function enableGuardian() external {
     _enableGuardian(msg.sender);
   }
 
@@ -24,7 +24,7 @@ contract GuardianFacet is IGuardian, GuardianBase, OwnableBase, Facet {
     return _guardianCooldown(guardian);
   }
 
-  function disableGuardian() external onlyEOA {
+  function disableGuardian() external {
     _disableGuardian(msg.sender);
   }
 

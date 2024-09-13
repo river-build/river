@@ -3,16 +3,12 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {IArchitect, IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.sol";
-import {IGuardian} from "contracts/src/spaces/facets/guardian/IGuardian.sol";
 
 // libraries
 
 // contracts
 import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 import {SpaceHelper} from "contracts/test/spaces/SpaceHelper.sol";
-
-// debuggging
-import {console} from "forge-std/console.sol";
 
 contract ForkOmegaSpace is TestUtils, SpaceHelper, IArchitectBase {
   address founder;
@@ -34,11 +30,5 @@ contract ForkOmegaSpace is TestUtils, SpaceHelper, IArchitectBase {
 
     vm.prank(founder);
     space = spaceArchitect.createSpace(spaceInfo);
-  }
-
-  function test_guardian() external view {
-    IGuardian guardian = IGuardian(spaceOwner);
-    console.log("guardianCoolDown", guardian.guardianCooldown(founder));
-    console.log("getDefaultCooldown", guardian.getDefaultCooldown());
   }
 }

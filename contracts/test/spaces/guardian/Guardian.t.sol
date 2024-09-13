@@ -3,13 +3,21 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {IGuardianBase} from "contracts/src/spaces/facets/guardian/IGuardian.sol";
+import {IGuardian} from "contracts/src/spaces/facets/guardian/IGuardian.sol";
 
 // libraries
 
 // contracts
-import {GuardianSetup} from "./GuardianSetup.sol";
+import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
+import {SimpleAccount} from "lib/account-abstraction/contracts/samples/SimpleAccount.sol";
+contract GuardianTest is BaseSetup, IGuardianBase {
+  IGuardian guardian;
 
-contract GuardianTest is GuardianSetup, IGuardianBase {
+  function setUp() public override {
+    super.setUp();
+    guardian = IGuardian(spaceOwner);
+  }
+
   // guardian is enabled by default
   function test_isGuardianEnabled() external view {
     address wallet = _randomAddress();
@@ -30,8 +38,9 @@ contract GuardianTest is GuardianSetup, IGuardianBase {
     assertFalse(guardian.isGuardianEnabled(wallet));
   }
 
-  function test_enableGuardian() external {
-    address wallet = _randomAddress();
+  function test_enableGuardian(address user) external {
+    SimpleAccount account = _createSimpleAccount(user);
+    address wallet = address(account);
 
     vm.prank(wallet);
     guardian.disableGuardian();
@@ -47,23 +56,6 @@ contract GuardianTest is GuardianSetup, IGuardianBase {
     assertTrue(guardian.isGuardianEnabled(wallet));
   }
 
-  function test_revert_disableGuardian_notEOA() external {
-    vm.prank(address(this));
-    vm.expectRevert(NotExternalAccount.selector);
-    guardian.disableGuardian();
-  }
-
-  function test_revert_enableGuardian_notEOA() external {
-    address wallet = _randomAddress();
-
-    vm.prank(wallet);
-    guardian.disableGuardian();
-
-    vm.prank(address(this));
-    vm.expectRevert(NotExternalAccount.selector);
-    guardian.enableGuardian();
-  }
-
   function test_revert_disableGuardian_alreadyDisabled() external {
     address wallet = _randomAddress();
 
@@ -71,7 +63,7 @@ contract GuardianTest is GuardianSetup, IGuardianBase {
     guardian.disableGuardian();
 
     vm.prank(wallet);
-    vm.expectRevert(AlreadyDisabled.selector);
+    vm.expectRevert(Guardian_AlreadyDisabled.selector);
     guardian.disableGuardian();
   }
 
@@ -79,7 +71,7 @@ contract GuardianTest is GuardianSetup, IGuardianBase {
     address wallet = _randomAddress();
 
     vm.prank(wallet);
-    vm.expectRevert(AlreadyEnabled.selector);
+    vm.expectRevert(Guardian_AlreadyEnabled.selector);
     guardian.enableGuardian();
   }
 }
