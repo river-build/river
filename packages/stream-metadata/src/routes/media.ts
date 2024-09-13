@@ -28,7 +28,7 @@ const querySchema = z.object({
 
 const CACHE_CONTROL = {
 	200: 'public, max-age=31536000',
-	'4xx': 'public, max-age=30, s-maxage=300',
+	'4xx': 'public, max-age=30, s-maxage=3600',
 }
 
 export async function fetchMedia(request: FastifyRequest, reply: FastifyReply) {

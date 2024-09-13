@@ -16,7 +16,7 @@ const paramsSchema = z.object({
 })
 
 const CACHE_CONTROL = {
-	307: 'public, max-age=30, s-maxage=300',
+	307: 'public, max-age=30, s-maxage=3600',
 	'4xx': 'public, max-age=30, s-maxage=3600',
 }
 

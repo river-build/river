@@ -19,8 +19,8 @@ export interface SpaceMetadataResponse {
 }
 
 const CACHE_CONTROL = {
-	200: 'public, max-age=30, s-maxage=300',
-	307: 'public, max-age=3600', // NOTE: this is called when the space uses a different image service than ours. So it makes sense to keep a high cache time. We're setting both client and cdn cache time to 1 hour for now. We can adjust this later if needed.
+	200: 'public, max-age=30, s-maxage=3600',
+	307: 'public, max-age=30, s-max-age=3600', // NOTE: this is called when the space uses a different image service than ours, but a client is requesting the image from our service.
 	'4xx': 'public, max-age=30, s-maxage=3600',
 }
 
