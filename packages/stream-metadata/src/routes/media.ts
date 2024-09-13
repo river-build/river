@@ -28,9 +28,7 @@ const querySchema = z.object({
 
 const CACHE_CONTROL = {
 	200: 'public, max-age=31536000',
-	400: 'public, max-age=30, s-maxage=300',
-	404: 'public, max-age=30, s-maxage=300',
-	422: 'public, max-age=30, s-maxage=300',
+	'4xx': 'public, max-age=30, s-maxage=300',
 }
 
 export async function fetchMedia(request: FastifyRequest, reply: FastifyReply) {
@@ -43,7 +41,7 @@ export async function fetchMedia(request: FastifyRequest, reply: FastifyReply) {
 		logger.info(errorMessage)
 		return reply
 			.code(400)
-			.header('Cache-Control', CACHE_CONTROL[400])
+			.header('Cache-Control', CACHE_CONTROL['4xx'])
 			.send({ error: 'Bad Request', message: errorMessage })
 	}
 	if (!queryResult.success) {
@@ -51,7 +49,7 @@ export async function fetchMedia(request: FastifyRequest, reply: FastifyReply) {
 		logger.info(errorMessage)
 		return reply
 			.code(400)
-			.header('Cache-Control', CACHE_CONTROL[400])
+			.header('Cache-Control', CACHE_CONTROL['4xx'])
 			.send({ error: 'Bad Request', message: errorMessage })
 	}
 
@@ -73,7 +71,7 @@ export async function fetchMedia(request: FastifyRequest, reply: FastifyReply) {
 			)
 			return reply
 				.code(422)
-				.header('Cache-Control', CACHE_CONTROL[422])
+				.header('Cache-Control', CACHE_CONTROL['4xx'])
 				.send('Invalid data or mimeType')
 		}
 
@@ -88,7 +86,7 @@ export async function fetchMedia(request: FastifyRequest, reply: FastifyReply) {
 		// And return a 500 here, and again, give it a proper cache-control header.
 		return reply
 			.code(404)
-			.header('Cache-Control', CACHE_CONTROL[404])
+			.header('Cache-Control', CACHE_CONTROL['4xx'])
 			.send({ error: 'Not Found', message: 'Failed to fetch media stream content' })
 	}
 }
