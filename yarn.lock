@@ -4275,7 +4275,7 @@ __metadata:
     jest-extended: ^4.0.1
     ts-jest: ^29.1.1
     ts-node: ^10.9.1
-    typescript: ^5.1.6
+    typescript: ^5.6.2
   languageName: unknown
   linkType: soft
 
@@ -4291,7 +4291,7 @@ __metadata:
     "@river-build/web3": "workspace:^"
     "@types/jest": ^29.5.3
     "@types/lodash": ^4.14.186
-    "@types/node": ^20.5.0
+    "@types/node": ^20.16.5
     "@typescript-eslint/eslint-plugin": ^6.10.0
     "@typescript-eslint/parser": ^7.14.1
     debug: ^4.3.4
@@ -4308,7 +4308,7 @@ __metadata:
     ts-jest: ^29.1.1
     ts-node: ^10.9.1
     typed-emitter: ^2.1.0
-    typescript: ^5.1.6
+    typescript: ^5.6.2
   languageName: unknown
   linkType: soft
 
@@ -4334,7 +4334,7 @@ __metadata:
     eslint: ^8.53.0
     ethers: ^5.7.2
     prettier: ^2.8.8
-    typescript: ^5.1.6
+    typescript: ^5.6.2
     zod: ^3.21.4
   languageName: unknown
   linkType: soft
@@ -4357,7 +4357,7 @@ __metadata:
     "@river-build/react-sdk": "workspace:^"
     "@river-build/sdk": "workspace:^"
     "@tanstack/react-query": ^5.51.15
-    "@types/node": ^20.5.0
+    "@types/node": ^20.16.5
     "@types/react": ^18.2.11
     "@types/react-dom": ^18.2.4
     "@typescript-eslint/eslint-plugin": ^6.10.0
@@ -4382,7 +4382,7 @@ __metadata:
     tailwind-merge: ^2.3.0
     tailwindcss: ^3.4.4
     tailwindcss-animate: ^1.0.7
-    typescript: ^5.1.6
+    typescript: ^5.6.2
     viem: ^1.18.2
     vite: ^5.3.1
     vite-plugin-checker: ^0.6.4
@@ -4418,13 +4418,13 @@ __metadata:
     "@connectrpc/protoc-gen-connect-es": ^1.4.0
     "@river-build/proto-source": "workspace:^"
     "@types/jest": ^29.5.3
-    "@types/node": ^20.5.0
+    "@types/node": ^20.16.5
     jest: ^29.6.2
     jest-extended: ^4.0.1
     lodash.debounce: ^4.0.8
     ts-jest: ^29.1.1
     ts-node: ^10.9.1
-    typescript: ^5.1.6
+    typescript: ^5.6.2
   languageName: unknown
   linkType: soft
 
@@ -4445,10 +4445,10 @@ __metadata:
     ethers: ^5.7.2
     react: ^18.2.0
     react-dom: ^18.2.0
-    typescript: ^5.1.6
+    typescript: ^5.6.2
   peerDependencies:
     react: ^18.2.0
-    typescript: ^5.1.6
+    typescript: ^5.6.2
   languageName: unknown
   linkType: soft
 
@@ -4470,7 +4470,7 @@ __metadata:
     "@types/debug": ^4.1.8
     "@types/jest": ^29.5.3
     "@types/lodash": ^4.14.186
-    "@types/node": ^20.5.0
+    "@types/node": ^20.16.5
     "@types/seedrandom": ^3.0.4
     "@typescript-eslint/eslint-plugin": ^6.10.0
     "@typescript-eslint/parser": ^7.14.1
@@ -4498,7 +4498,7 @@ __metadata:
     ts-jest: ^29.1.1
     ts-node: ^10.9.1
     typed-emitter: ^2.1.0
-    typescript: ^5.1.6
+    typescript: ^5.6.2
   languageName: unknown
   linkType: soft
 
@@ -4521,7 +4521,7 @@ __metadata:
     "@river-build/sdk": "workspace:^"
     "@river-build/web3": "workspace:^"
     "@types/jest": ^29.5.3
-    "@types/node": ^20.5.0
+    "@types/node": ^20.16.5
     "@types/uuid": ^10.0.0
     "@typescript-eslint/parser": ^7.14.1
     axios: ^1.2.6
@@ -4544,7 +4544,7 @@ __metadata:
     prettier: ^2.8.8
     ts-jest: ^29.1.1
     ts-node: ^10.9.1
-    typescript: ^5.1.6
+    typescript: ^5.6.2
     uuid: ^8.3.2
     zod: ^3.21.4
   languageName: unknown
@@ -4569,7 +4569,7 @@ __metadata:
     "@types/debug": ^4.1.8
     "@types/jest": ^29.5.3
     "@types/lodash": ^4.14.186
-    "@types/node": ^20.5.0
+    "@types/node": ^20.16.5
     "@typescript-eslint/eslint-plugin": ^6.10.0
     "@typescript-eslint/parser": ^7.14.1
     esbuild: ^0.21.5
@@ -4590,7 +4590,7 @@ __metadata:
     ts-jest: ^29.1.1
     ts-node: ^10.9.1
     typed-emitter: ^2.1.0
-    typescript: ^5.1.6
+    typescript: ^5.6.2
   languageName: unknown
   linkType: soft
 
@@ -4603,7 +4603,7 @@ __metadata:
     "@river-build/generated": "workspace:^"
     "@types/jest": ^29.5.3
     "@types/lodash": ^4.14.186
-    "@types/node": ^20.5.0
+    "@types/node": ^20.16.5
     "@typescript-eslint/eslint-plugin": ^6.10.0
     "@typescript-eslint/parser": ^7.14.1
     abitype: ^0.9.10
@@ -4620,7 +4620,7 @@ __metadata:
     ts-jest: ^29.1.1
     ts-node: ^10.9.1
     typed-emitter: ^2.1.0
-    typescript: ^5.1.6
+    typescript: ^5.6.2
     viem: ^1.18.2
     zod: ^3.21.4
   languageName: unknown
@@ -6135,7 +6135,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*, @types/node@npm:^20.2.5, @types/node@npm:^20.5.0":
+"@types/node@npm:*, @types/node@npm:^20.2.5":
   version: 20.11.24
   resolution: "@types/node@npm:20.11.24"
   dependencies:
@@ -6150,6 +6150,15 @@ __metadata:
   dependencies:
     undici-types: ~6.19.2
   checksum: 1f788966ff7df07add0af3481fb68c7fe5091cc72a265c671432abb443788ddacca4ca6378af64fe100c20f857c4d80170d358e66c070171fcea0d4adb1b45b1
+  languageName: node
+  linkType: hard
+
+"@types/node@npm:^20.16.5":
+  version: 20.16.5
+  resolution: "@types/node@npm:20.16.5"
+  dependencies:
+    undici-types: ~6.19.2
+  checksum: f38b7bd8c4993dcf38943afa2ffdd7dfd18fc94f8f3f28d0c1045a10d39871a6cc1b8f8d3bf0c7ed848457d0e1d283482f6ca125579c13fed1b7575d23e8e8f5
   languageName: node
   linkType: hard
 
@@ -18731,7 +18740,7 @@ __metadata:
   dependencies:
     "@arethetypeswrong/cli": ^0.15.3
     "@typechain/ethers-v5": ^10.1.1
-    "@types/node": ^20.5.0
+    "@types/node": ^20.16.5
     eslint: ^8.53.0
     eslint-config-prettier: ^8.8.0
     eslint-plugin-mocha: ^10.1.0
@@ -18747,7 +18756,7 @@ __metadata:
     ts-node: ^10.9.1
     turbo: ^2.0.12
     typechain: ^8.1.1
-    typescript: ^5.1.6
+    typescript: ^5.6.2
     vitest: ^1.6.0
     wait-on: ^7.0.1
   languageName: unknown
@@ -20918,7 +20927,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:5.3.3, typescript@npm:^5.1.6":
+"typescript@npm:5.3.3":
   version: 5.3.3
   resolution: "typescript@npm:5.3.3"
   bin:
@@ -20948,6 +20957,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"typescript@npm:^5.6.2":
+  version: 5.6.2
+  resolution: "typescript@npm:5.6.2"
+  bin:
+    tsc: bin/tsc
+    tsserver: bin/tsserver
+  checksum: 48777e1dabd9044519f56cd012b0296e3b72bafe12b7e8e34222751d45c67e0eba5387ecdaa6c14a53871a29361127798df6dc8d1d35643a0a47cb0b1c65a33a
+  languageName: node
+  linkType: hard
+
 "typescript@patch:typescript@4.5.2#~builtin<compat/typescript>":
   version: 4.5.2
   resolution: "typescript@patch:typescript@npm%3A4.5.2#~builtin<compat/typescript>::version=4.5.2&hash=bcec9a"
@@ -20958,7 +20977,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@5.3.3#~builtin<compat/typescript>, typescript@patch:typescript@^5.1.6#~builtin<compat/typescript>":
+"typescript@patch:typescript@5.3.3#~builtin<compat/typescript>":
   version: 5.3.3
   resolution: "typescript@patch:typescript@npm%3A5.3.3#~builtin<compat/typescript>::version=5.3.3&hash=e012d7"
   bin:
@@ -20985,6 +21004,16 @@ __metadata:
     tsc: bin/tsc
     tsserver: bin/tsserver
   checksum: 1f8f3b6aaea19f0f67cba79057674ba580438a7db55057eb89cc06950483c5d632115c14077f6663ea76fd09fce3c190e6414bb98582ec80aa5a4eaf345d5b68
+  languageName: node
+  linkType: hard
+
+"typescript@patch:typescript@^5.6.2#~builtin<compat/typescript>":
+  version: 5.6.2
+  resolution: "typescript@patch:typescript@npm%3A5.6.2#~builtin<compat/typescript>::version=5.6.2&hash=d69c25"
+  bin:
+    tsc: bin/tsc
+    tsserver: bin/tsserver
+  checksum: c084ee1ab865f108c787e6233a5f63c126c482c0c8e87ec998ac5288a2ad54b603e1ea8b8b272355823b833eb31b9fabb99e8c6152283e1cb47e3a76bd6faf6c
   languageName: node
   linkType: hard
 

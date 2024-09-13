@@ -17,6 +17,6 @@
         "jsx": "react-jsx",
         "incremental": true
     },
-    "include": ["src", ".eslint.cjs", "vite.config.ts"],
+    "include": ["src", ".eslint.cjs"],
     "references": [{ "path": "./tsconfig.node.json" }]
 }
