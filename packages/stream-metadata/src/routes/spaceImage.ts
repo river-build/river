@@ -21,7 +21,6 @@ const paramsSchema = z.object({
 const CACHE_CONTROL = {
 	307: 'public, max-age=30, s-maxage=3600',
 	'4xx': 'public, max-age=30, s-maxage=3600',
-	'5xx': 'public, max-age=30, s-maxage=300', // TODO: should we cache the 500s?
 }
 
 export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyReply) {
@@ -107,8 +106,8 @@ export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyRep
 			'Failed to get encryption key or iv',
 		)
 		return reply
-			.code(500)
-			.header('Cache-Control', CACHE_CONTROL['5xx'])
+			.code(422)
+			.header('Cache-Control', CACHE_CONTROL['4xx'])
 			.send('Failed to get encryption key or iv')
 	}
 }
