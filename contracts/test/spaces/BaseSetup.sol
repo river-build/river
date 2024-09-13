@@ -70,6 +70,7 @@ contract BaseSetup is TestUtils, SpaceHelper {
   address internal userEntitlement;
   address internal ruleEntitlement;
   address internal legacyRuleEntitlement;
+
   address internal spaceOwner;
 
   address internal baseRegistry;
@@ -128,6 +129,7 @@ contract BaseSetup is TestUtils, SpaceHelper {
     userEntitlement = deploySpaceFactory.userEntitlement();
     ruleEntitlement = deploySpaceFactory.ruleEntitlement();
     legacyRuleEntitlement = deploySpaceFactory.legacyRuleEntitlement();
+
     spaceOwner = deploySpaceFactory.spaceOwner();
     pricingModule = deploySpaceFactory.tieredLogPricing();
     fixedPricingModule = deploySpaceFactory.fixedPricing();
