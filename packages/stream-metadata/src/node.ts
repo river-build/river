@@ -72,14 +72,18 @@ export function setupRoutes(srv: Server) {
 	/*
 	 * Routes
 	 */
+
+	// cached
+	srv.get('/media/:mediaStreamId', fetchMedia)
+	srv.get('/user/:userId/image', fetchUserProfileImage)
+	srv.get('/space/:spaceAddress/image', fetchSpaceImage)
+
+	// not cached
 	srv.get('/health', checkHealth)
 	srv.get('/space/:spaceAddress', fetchSpaceMetadata)
-	srv.get('/space/:spaceAddress/image', fetchSpaceImage)
 	srv.get('/space/:spaceAddress/refresh', spaceRefresh)
-	srv.get('/user/:userId/image', fetchUserProfileImage)
 	srv.get('/user/:userId/refresh', userRefresh)
 	srv.get('/user/:userId/bio', fetchUserBio)
-	srv.get('/media/:mediaStreamId', fetchMedia)
 
 	// Fastify will return 404 for any unmatched routes
 }
