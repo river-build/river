@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-
 	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/protocol"
 )
@@ -130,6 +129,9 @@ type Config struct {
 
 	// Should be set if node is run in archive mode.
 	Archive ArchiveConfig
+
+	// Notifications must be set when run in notification mode.
+	Notifications NotificationsConfig `mapstructure:"notifications"`
 
 	// Feature flags
 	// Used to disable functionality for some testing setups.
@@ -322,6 +324,71 @@ type ArchiveConfig struct {
 	WorkerPoolSize int // If 0, default to 20.
 
 	StreamsContractCallPageSize int64 // If 0, default to 5000.
+}
+
+type APNPushNotificationsConfig struct {
+	// IosAppBundleID is used as the topic ID for notifications.
+	// Towns client:
+	// gamma: com.towns.internal
+	// alpha: com.towns.ios.alpha
+	// omega: com.towns.ios
+	AppBundleID string `mapstructure:"app_bundle_id"`
+	// Expiration holds the duration in which the notification must be delivered. After that
+	// the server might drop the notification. If set to 0 a default of 12 hours is used.
+	Expiration time.Duration
+	// KeyID from developer account (Certificates, Identifiers & Profiles -> Keys)
+	KeyID string `mapstructure:"key_id"`
+	// TeamID from developer account (View Account -> Membership)
+	TeamID string `mapstructure:"team_id"`
+	// AuthKey contains the private key to authenticate the notification service with the APN service
+	AuthKey string `mapstructure:"auth_key"`
+}
+
+type WebPushVapidNotificationConfig struct {
+	// PrivateKey is the private key of the public key that is shared with the client
+	// and used to sign push notifications that allows the client to verify the incoming
+	// notification for origin and validity.
+	PrivateKey string `mapstructure:"private_key"`
+	// PublicKey as shared with the client that is used for subscribing and verifying
+	// the incoming push notification.
+	PublicKey string `mapstructure:"public_key"`
+	// Subject must either be a URL or a 'mailto:' address.
+	Subject string `mapstructure:"subject"`
+}
+
+type WebPushNotificationConfig struct {
+	Vapid WebPushVapidNotificationConfig
+}
+
+type NotificationsConfig struct {
+	// SubscriptionExpirationDuration if the client isn't seen within this duration stop sending
+	// notifications to it. Defaults to 90 days.
+	SubscriptionExpirationDuration time.Duration `mapstructure:"subscription_expiration_duration"`
+	// Simulate if set to true uses the simulator notification backend that doesn't
+	// send notifications to the client but only logs them. This is intended for development
+	// purposes. Default is false.
+	Simulate bool
+	// APN holds the Apple Push notification settings
+	APN APNPushNotificationsConfig `mapstructure:"apn"`
+	// Web holds the Web Push notification settings
+	Web WebPushNotificationConfig `mapstructure:"webpush"`
+
+	// Authentication holds configuration for the Client API authentication service.
+	Authentication struct {
+		// ChallengeTimeout is the lifetime an authentication challenge is valid (default=30s).
+		ChallengeTimeout time.Duration
+		// SessionTokenKey contains the configuration for the JWT session token.
+		SessionToken struct {
+			// Lifetime indicates how long a session token is valid (default=30m).
+			Lifetime time.Duration
+			Key      struct {
+				// Algorithm indicates how the session token is signed (only HS256 is supported)
+				Algorithm string
+				// Key holds the hex encoded key
+				Key string
+			}
+		}
+	}
 }
 
 type LogConfig struct {

@@ -15,3 +15,5 @@ architectContract:
 # River contracts
 registryContract:
     address: '0xf18E98D36A6bd1aDb52F776aCc191E69B491c070'
+# This config template is used for local and CI tests. Default production config is in default_config.yaml
+

@@ -238,7 +238,7 @@ func NewPostgresEventStore(
 	metrics infra.MetricsFactory,
 ) (*PostgresEventStore, error) {
 	store := &PostgresEventStore{}
-	if err := store.init(ctx, poolInfo, metrics, migrationsDir); err != nil {
+	if err := store.init(ctx, poolInfo, metrics, migrationsDir, "migrations"); err != nil {
 		return nil, AsRiverError(err).Func("NewPostgresEventStore")
 	}
 	return store, nil
@@ -449,6 +449,7 @@ func (s *PostgresEventStore) init(
 	poolInfo *PgxPoolInfo,
 	metrics infra.MetricsFactory,
 	migrations embed.FS,
+	migrationPath string,
 ) error {
 	log := dlog.FromCtx(ctx)
 
@@ -482,7 +483,8 @@ func (s *PostgresEventStore) init(
 		log.Info("PostgresEventStore: using isolation level", "level", s.isolationLevel)
 	}
 
-	err := s.InitStorage(ctx)
+	err := s.InitStorage(ctx, migrationPath)
+
 	if err != nil {
 		return err
 	}
@@ -490,13 +492,26 @@ func (s *PostgresEventStore) init(
 	return nil
 }
 
+func newPostgresEventStore(
+	ctx context.Context,
+	poolInfo *PgxPoolInfo,
+	metrics infra.MetricsFactory,
+	migrations embed.FS,
+) (*PostgresEventStore, error) {
+	store := &PostgresEventStore{}
+	if err := store.init(ctx, poolInfo, metrics, migrations, "migrations"); err != nil {
+		return nil, err
+	}
+	return store, nil
+}
+
 // Close closes the connection pool
 func (s *PostgresEventStore) Close(ctx context.Context) {
 	s.pool.Close()
 }
 
-func (s *PostgresEventStore) InitStorage(ctx context.Context) error {
-	err := s.initStorage(ctx)
+func (s *PostgresEventStore) InitStorage(ctx context.Context, migrationPath string) error {
+	err := s.initStorage(ctx, migrationPath)
 	if err != nil {
 		return AsRiverError(err).Func("InitStorage").Tag("schemaName", s.schemaName)
 	}
@@ -546,9 +561,9 @@ func getSSLMode(dbURL string) string {
 	return "disable"
 }
 
-func (s *PostgresEventStore) runMigrations(ctx context.Context) error {
+func (s *PostgresEventStore) runMigrations(ctx context.Context, migrationPath string) error {
 	// Run migrations
-	iofsMigrationsDir, err := iofs.New(s.migrationDir, "migrations")
+	iofsMigrationsDir, err := iofs.New(s.migrationDir, migrationPath)
 	if err != nil {
 		return WrapRiverError(Err_DB_OPERATION_FAILURE, err).Message("Error loading migrations")
 	}
@@ -570,7 +585,7 @@ func (s *PostgresEventStore) runMigrations(ctx context.Context) error {
 	return nil
 }
 
-func (s *PostgresEventStore) initStorage(ctx context.Context) error {
+func (s *PostgresEventStore) initStorage(ctx context.Context, migrationPath string) error {
 	err := s.txRunner(
 		ctx,
 		"createSchema",
@@ -582,7 +597,7 @@ func (s *PostgresEventStore) initStorage(ctx context.Context) error {
 		return err
 	}
 
-	err = s.runMigrations(ctx)
+	err = s.runMigrations(ctx, migrationPath)
 	if err != nil {
 		return err
 	}

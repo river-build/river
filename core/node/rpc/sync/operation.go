@@ -281,13 +281,13 @@ func (syncOp *StreamSyncOperation) process(cmd *subCommand) error {
 		case err := <-cmd.reply:
 			return err
 		case <-syncOp.ctx.Done():
-			return RiverError(Err_CANCELED, "sync operation cancelled").Tags("syncId", syncOp.SyncID)
+			return RiverError(Err_CANCELED, "syncOp operation cancelled").Tags("syncId", syncOp.SyncID)
 		}
 	case <-time.After(10 * time.Second):
-		err := RiverError(Err_DEADLINE_EXCEEDED, "sync operation command queue full").Tags("syncId", syncOp.SyncID)
-		dlog.FromCtx(syncOp.ctx).Error("Sync operation command queue full", "err", err)
+		err := RiverError(Err_DEADLINE_EXCEEDED, "syncOp operation command queue full").Tags("syncId", syncOp.SyncID)
+		dlog.FromCtx(syncOp.ctx).Error("SyncOp operation command queue full", "err", err)
 		return err
 	case <-syncOp.ctx.Done():
-		return RiverError(Err_CANCELED, "sync operation cancelled").Tags("syncId", syncOp.SyncID)
+		return RiverError(Err_CANCELED, "syncOp operation cancelled").Tags("syncId", syncOp.SyncID)
 	}
 }

@@ -4,11 +4,10 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"golang.org/x/net/http2"
 	"net/http"
 	"os"
 	"path/filepath"
-
-	"golang.org/x/net/http2"
 
 	"github.com/river-build/river/core/node/dlog"
 )
@@ -60,6 +59,7 @@ func GetHttpClient(ctx context.Context) (*http.Client, error) {
 	return &http.Client{
 		Transport: &http2.Transport{
 			TLSClientConfig: getTLSConfig(ctx),
+			AllowHTTP:       true,
 		},
 	}, nil
 }

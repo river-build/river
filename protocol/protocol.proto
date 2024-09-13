@@ -24,7 +24,7 @@ message Miniblock {
 message Envelope {
     /**
      * Hash of event.
-     * While hash can be recalculated from the event, having it here explicitely
+     * While hash can be recalculated from the event, having it here explicitly
      * makes it easier to work with event.
      * For the event to be valid, must match hash of event field. 
      */
@@ -59,7 +59,7 @@ message StreamEvent {
       * delegate_sig allows event to be signed by a delegate keypair 
       *
       * delegate_sig constains signature of the 
-      * public key of the delegate keypair + the delegate_expirary_epoch_ms.
+      * public key of the delegate keypair + the delegate_expiry_epoch_ms.
       * User's wallet is used to produce this signature.
       * 
       * If present, for the event to be valid:
@@ -643,6 +643,10 @@ message SyncCookie  {
     int64 minipool_gen = 3;
     int64 minipool_slot = 4;
     bytes prev_miniblock_hash = 5;
+    // Only used when supplying a sync cookie as a position when starting a stream sync session or
+    // adding a stream to a sync. When set to true the node will start syncing from the last snapshot,
+    // similar as providing a too old cookie.
+    optional bool force_sync_reset = 6;
 }
 
 message StreamAndCookie {

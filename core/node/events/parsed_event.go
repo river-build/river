@@ -20,6 +20,7 @@ type ParsedEvent struct {
 	MiniblockRef  *MiniblockRef
 	SignerPubKey  []byte
 	shortDebugStr string
+	Tags          *Tags
 }
 
 func (e *ParsedEvent) GetEnvelopeBytes() ([]byte, error) {
@@ -52,7 +53,6 @@ func ParseEvent(envelope *Envelope) (*ParsedEvent, error) {
 	}
 
 	if len(streamEvent.DelegateSig) > 0 {
-
 		err := CheckDelegateSig(
 			streamEvent.CreatorAddress,
 			signerPubKey,
@@ -82,6 +82,7 @@ func ParseEvent(envelope *Envelope) (*ParsedEvent, error) {
 			Num:  streamEvent.PrevMiniblockNum,
 		},
 		SignerPubKey: signerPubKey,
+		Tags:         streamEvent.GetTags(),
 	}, nil
 }
 

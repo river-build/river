@@ -28,6 +28,7 @@ func (m *minipoolInstance) tryCopyAndAddEvent(event *ParsedEvent) *minipoolInsta
 		generation:     m.generation,
 		eventNumOffset: m.eventNumOffset,
 	}
+
 	if !m.events.Set(event.Hash, event) {
 		return nil
 	}

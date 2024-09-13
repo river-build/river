@@ -17,16 +17,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/river-build/river/core/node/base"
-
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	eth_crypto "github.com/ethereum/go-ethereum/crypto"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/net/http2"
-	"google.golang.org/protobuf/proto"
-
+	"github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
@@ -36,6 +31,9 @@ import (
 	river_sync "github.com/river-build/river/core/node/rpc/sync"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/testutils"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/net/http2"
+	"google.golang.org/protobuf/proto"
 )
 
 func setupTestHttpClient() {
@@ -218,6 +216,128 @@ func createSpace(
 	}
 
 	return resspace.Msg.Stream.NextSyncCookie, joinSpace.Hash, nil
+}
+
+func createGDMChannel(
+	ctx context.Context,
+	initiator *crypto.Wallet,
+	members []*crypto.Wallet,
+	client protocolconnect.StreamServiceClient,
+	channelID StreamId,
+	streamSettings *protocol.StreamSettings,
+) (*protocol.SyncCookie, []byte, error) {
+	channel, err := events.MakeEnvelopeWithPayload(
+		initiator,
+		events.Make_GdmChannelPayload_Inception(
+			channelID,
+			streamSettings,
+		),
+		nil,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	envelopes := []*protocol.Envelope{channel}
+
+	for _, member := range append([]*crypto.Wallet{initiator}, members...) {
+		join, err := events.MakeEnvelopeWithPayload(
+			initiator,
+			events.Make_GdmChannelPayload_Membership(
+				protocol.MembershipOp_SO_JOIN,
+				member.Address.String(),
+				initiator.Address.String(),
+			),
+			nil,
+		)
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		envelopes = append(envelopes, join)
+	}
+
+	reschannel, err := client.CreateStream(ctx, connect.NewRequest(&protocol.CreateStreamRequest{
+		Events:   envelopes,
+		StreamId: channelID[:],
+	}))
+
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(reschannel.Msg.Stream.Miniblocks) == 0 {
+		return nil, nil, fmt.Errorf("expected at least one miniblock")
+	}
+
+	miniblockHash := reschannel.Msg.Stream.Miniblocks[len(reschannel.Msg.Stream.Miniblocks)-1].Header.Hash
+	return reschannel.Msg.Stream.NextSyncCookie, miniblockHash, nil
+}
+
+func createDMChannel(
+	ctx context.Context,
+	initiator *crypto.Wallet,
+	member *crypto.Wallet,
+	client protocolconnect.StreamServiceClient,
+	channelStreamId StreamId,
+	streamSettings *protocol.StreamSettings,
+) (*protocol.SyncCookie, []byte, error) {
+	channel, err := events.MakeEnvelopeWithPayload(
+		initiator,
+		events.Make_DmChannelPayload_Inception(
+			channelStreamId,
+			initiator.Address,
+			member.Address,
+			streamSettings,
+		),
+		nil,
+	)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	join1, err := events.MakeEnvelopeWithPayload(
+		initiator,
+		events.Make_DmChannelPayload_Membership(
+			protocol.MembershipOp_SO_JOIN,
+			member.Address.String(),
+			initiator.Address.String(),
+		),
+		nil,
+	)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	join2, err := events.MakeEnvelopeWithPayload(
+		initiator,
+		events.Make_DmChannelPayload_Membership(
+			protocol.MembershipOp_SO_JOIN,
+			member.Address.String(),
+			initiator.Address.String(),
+		),
+		nil,
+	)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	reschannel, err := client.CreateStream(ctx, connect.NewRequest(&protocol.CreateStreamRequest{
+		Events:   []*protocol.Envelope{channel, join1, join2},
+		StreamId: channelStreamId[:],
+	}))
+
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(reschannel.Msg.Stream.Miniblocks) == 0 {
+		return nil, nil, fmt.Errorf("expected at least one miniblock")
+	}
+	miniblockHash := reschannel.Msg.Stream.Miniblocks[len(reschannel.Msg.Stream.Miniblocks)-1].Header.Hash
+	return reschannel.Msg.Stream.NextSyncCookie, miniblockHash, nil
 }
 
 func createChannel(

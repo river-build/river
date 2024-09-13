@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
+	"github.com/river-build/river/core/node/notifications"
 	"log/slog"
 	"net"
 	"net/http"
@@ -38,9 +39,10 @@ import (
 )
 
 const (
-	ServerModeFull    = "full"
-	ServerModeInfo    = "info"
-	ServerModeArchive = "archive"
+	ServerModeFull         = "full"
+	ServerModeInfo         = "info"
+	ServerModeArchive      = "archive"
+	ServerModeNotification = "notification"
 )
 
 func (s *Service) httpServerClose() {
@@ -200,11 +202,19 @@ func (s *Service) initInstance(mode string) {
 		}
 	}
 	if !s.config.Log.Simplify {
-		s.defaultLogger = dlog.FromCtx(s.serverCtx).With(
-			"instanceId", s.instanceId,
-			"nodeType", "stream",
-			"mode", mode,
-		)
+		if mode == ServerModeNotification {
+			s.defaultLogger = dlog.FromCtx(s.serverCtx).With(
+				"instanceId", s.instanceId,
+				"mode", mode,
+				"nodeType", "notification",
+			)
+		} else {
+			s.defaultLogger = dlog.FromCtx(s.serverCtx).With(
+				"instanceId", s.instanceId,
+				"mode", mode,
+				"nodeType", "stream",
+			)
+		}
 	} else {
 		s.defaultLogger = dlog.FromCtx(s.serverCtx).With(
 			"port", port,
@@ -220,6 +230,8 @@ func (s *Service) initInstance(mode string) {
 	subsystem := mode
 	if mode == ServerModeFull {
 		subsystem = "stream"
+	} else if mode == ServerModeNotification {
+		subsystem = "notification"
 	}
 	metricsRegistry := prometheus.NewRegistry()
 	s.metrics = infra.NewMetricsFactory(metricsRegistry, "river", subsystem)
@@ -348,6 +360,8 @@ func (s *Service) prepareStore() error {
 			schema = storage.DbSchemaNameFromAddress(s.wallet.Address.Hex())
 		case ServerModeArchive:
 			schema = storage.DbSchemaNameForArchive(s.config.Archive.ArchiveId)
+		case ServerModeNotification:
+			schema = storage.DbSchemaNameForNotifications(s.config.RiverChain.ChainId)
 		default:
 			return RiverError(
 				Err_BAD_CONFIG,
@@ -401,9 +415,6 @@ func (s *Service) runHttpServer() error {
 
 	mux := http.NewServeMux()
 	s.mux = mux
-
-	mux.HandleFunc("/info", s.handleInfo)
-	mux.HandleFunc("/status", s.handleStatus)
 
 	if cfg.Metrics.Enabled && !cfg.Metrics.DisablePublic {
 		mux.Handle("/metrics", s.metricsPublisher.CreateHandler())
@@ -510,6 +521,44 @@ func (s *Service) initEntitlements() error {
 		return err
 	}
 	return nil
+}
+
+func (s *Service) initNotificationsStore() error {
+	ctx := s.serverCtx
+	log := s.defaultLogger
+
+	switch s.config.StorageType {
+	case storage.NotificationStorageTypePostgres:
+		pgstore, err := storage.NewPostgresNotificationStore(
+			ctx,
+			s.storagePoolInfo,
+			s.exitSignal,
+			s.metrics,
+		)
+
+		if err != nil {
+			return err
+		}
+
+		s.notifications = notifications.NewUserPreferencesCache(pgstore)
+		s.onClose(pgstore.Close)
+
+		if !s.config.Log.Simplify {
+			log.Info(
+				"Created postgres notifications store",
+				"schema",
+				s.storagePoolInfo.Schema,
+			)
+		}
+		return nil
+	default:
+		return RiverError(
+			Err_BAD_CONFIG,
+			"Unknown storage type",
+			"storageType",
+			s.config.StorageType,
+		).Func("createStore")
+	}
 }
 
 func (s *Service) initStore() error {
@@ -625,6 +674,34 @@ func (s *Service) initHandlers() {
 	s.mux.Handle(nodeServicePattern, newHttpHandler(nodeServiceHandler, s.defaultLogger))
 
 	s.registerDebugHandlers(s.config.EnableDebugEndpoints, s.config.DebugEndpoints)
+}
+
+func (s *Service) initNotificationHandlers() error {
+	var ii []connect.Interceptor
+	if s.otelConnectIterceptor != nil {
+		ii = append(ii, s.otelConnectIterceptor)
+	}
+	ii = append(ii, s.NewMetricsInterceptor())
+	ii = append(ii, NewTimeoutInterceptor(s.config.Network.RequestTimeout))
+
+	authInceptor, err := notifications.NewAuthenticationInterceptor(
+		s.config.Notifications.Authentication.SessionToken.Key.Algorithm,
+		s.config.Notifications.Authentication.SessionToken.Key.Key,
+	)
+	if err != nil {
+		return err
+	}
+
+	ii = append(ii, authInceptor)
+
+	interceptors := connect.WithInterceptors(ii...)
+	notificationServicePattern, notificationServiceHandler := protocolconnect.NewNotificationServiceHandler(s.NotificationService, interceptors)
+	notificationAuthServicePattern, notificationAuthServiceHandler := protocolconnect.NewAuthenticationServiceHandler(s.NotificationService, interceptors)
+
+	s.mux.Handle(notificationServicePattern, newHttpHandler(notificationServiceHandler, s.defaultLogger))
+	s.mux.Handle(notificationAuthServicePattern, newHttpHandler(notificationAuthServiceHandler, s.defaultLogger))
+
+	return nil
 }
 
 // StartServer starts the server with the given configuration.
