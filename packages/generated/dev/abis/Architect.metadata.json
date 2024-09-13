@@ -284,11 +284,6 @@
             "internalType": "contract IRuleEntitlement",
             "name": "legacyRuleEntitlement",
             "type": "address"
-          },
-          {
-            "internalType": "contract ISpaceProxyInitializer",
-            "name": "proxyInitializer",
-            "type": "address"
           }
         ],
         "stateMutability": "nonpayable",
@@ -1017,10 +1012,10 @@
       "license": "MIT"
     },
     "contracts/src/factory/facets/architect/Architect.sol": {
-      "keccak256": "0xef3e7c19a4a10cdd06d2c9a8332bb17546fe0a4be2dfa7a45093013479ea2dc7",
+      "keccak256": "0xb81eaab5817bc8c507c43bdc558fe4742b68fb13416a730f60d432f2a99e10b4",
       "urls": [
-        "bzz-raw://9475b9631a40dd2424b4a947c735bf749b95e9bbeeca0de7a4e10194d62debf6",
-        "dweb:/ipfs/Qmf4QNcTmkWn1PPht3xxbUiYVSNpQ8Df2WgUyZTvoi6mYf"
+        "bzz-raw://7de10b4168e5f97fe1e7f43e0909e8d2dd5271c70c70a7c0b31990e28d179916",
+        "dweb:/ipfs/Qmb9p5yFPMrn5carX1LoHyv3oxwUm1GFAWrQ9VjtNVLFHi"
       ],
       "license": "MIT"
     },
