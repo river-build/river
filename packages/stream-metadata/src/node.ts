@@ -78,12 +78,12 @@ export function setupRoutes(srv: Server) {
 	srv.get('/media/:mediaStreamId', fetchMedia)
 	srv.get('/user/:userId/image', fetchUserProfileImage)
 	srv.get('/space/:spaceAddress/image', fetchSpaceImage)
+	srv.get('/space/:spaceAddress', fetchSpaceMetadata)
 
 	// not cached
 	srv.get('/health', checkHealth)
 
 	// should be cached, but not before implementing /refresh on metadata routes
-	srv.get('/space/:spaceAddress', fetchSpaceMetadata)
 	srv.get('/user/:userId/bio', fetchUserBio)
 
 	// should be rate-limited, but not yet
