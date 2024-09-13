@@ -90,7 +90,7 @@ export async function fetchSpaceMetadata(request: FastifyRequest, reply: Fastify
 
 	// Not using the default space image service
 	// redirect to the space contract's uri
-	return reply.header('Cache-Control', CACHE_CONTROL[307]).redirect(spaceInfo.uri)
+	return reply.header('Cache-Control', CACHE_CONTROL[307]).redirect(spaceInfo.uri, 307)
 }
 
 function getSpaceDecription({ shortDescription, longDescription }: SpaceInfo): string {
