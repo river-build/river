@@ -80,10 +80,14 @@ export function setupRoutes(srv: Server) {
 
 	// not cached
 	srv.get('/health', checkHealth)
+
+	// should be cached, but not before implementing /refresh on metadata routes
 	srv.get('/space/:spaceAddress', fetchSpaceMetadata)
+	srv.get('/user/:userId/bio', fetchUserBio)
+
+	// should be rate-limited, but not yet
 	srv.get('/space/:spaceAddress/refresh', spaceRefresh)
 	srv.get('/user/:userId/refresh', userRefresh)
-	srv.get('/user/:userId/bio', fetchUserBio)
 
 	// Fastify will return 404 for any unmatched routes
 }
