@@ -4,6 +4,7 @@ import {
     ChannelMetadata,
     EntitlementModuleType,
     isPermission,
+    MembershipInfo,
     Permission,
     PricingModuleStruct,
     RoleDetails,
