@@ -105,19 +105,6 @@ contract InteractAlphaSparse is AlphaHelper {
       }
     }
 
-    // Log diamond names and facet addresses
-    for (uint256 i = 0; i < diamonds.length; i++) {
-      console.log("Diamond:", diamonds[i].diamond);
-      console.log("Facet addresses:");
-      for (uint256 j = 0; j < diamonds[i].facets.length; j++) {
-        console.log("Facet:", diamonds[i].facets[j].facetName);
-        console.logAddress(diamonds[i].facets[j].deployedAddress);
-      }
-      console.log("---");
-    }
-
-    console.log("address", deployer);
-
     vm.setEnv("OVERRIDE_DEPLOYMENTS", "1");
 
     // Iterate over diamonds array and process each diamond
