@@ -113,20 +113,30 @@ contract InteractAlphaSparse is AlphaHelper {
       address diamondAddress;
       FacetCut[] memory newCuts;
       Facet[] memory existingFacets;
+      string[] memory facetNames = new string[](diamonds[i].numFacets);
+      address[] memory facetAddresses = new address[](diamonds[i].numFacets);
 
+      for (uint256 j = 0; j < diamonds[i].numFacets; j++) {
+        facetAddresses[j] = diamonds[i].facets[j].deployedAddress;
+      }
+      // Create an in-memory array of facet names from diamonds[i]
+      for (uint256 j = 0; j < diamonds[i].numFacets; j++) {
+        facetNames[j] = diamonds[i].facets[j].facetName;
+      }
       bytes32 diamondNameHash = keccak256(abi.encodePacked(diamondName));
 
       if (diamondNameHash == keccak256(abi.encodePacked("space"))) {
         diamondAddress = getDeployment("space");
         existingFacets = IDiamondLoupe(diamondAddress).facets();
         // remove and redeploy facets based on diamond facet array of updated facets
-        removeRemoteFacets(deployer, diamondAddress);
+        removeRemoteFacetsByAddresses(deployer, diamondAddress, facetAddresses);
         deploySpace.diamondInitParams(deployer);
         newCuts = deploySpace.getCuts();
       } else if (diamondNameHash == keccak256(abi.encodePacked("spaceOwner"))) {
         diamondAddress = getDeployment("spaceOwner");
         existingFacets = IDiamondLoupe(diamondAddress).facets();
-        removeRemoteFacets(deployer, diamondAddress);
+        // remove and redeploy facets based on diamond facet array of updated facets
+        removeRemoteFacetsByAddresses(deployer, diamondAddress, facetAddresses);
         deploySpaceOwner.diamondInitParams(deployer);
         newCuts = deploySpaceOwner.getCuts();
       } else if (
@@ -135,7 +145,7 @@ contract InteractAlphaSparse is AlphaHelper {
         diamondAddress = getDeployment("spaceFactory");
         existingFacets = IDiamondLoupe(diamondAddress).facets();
         // remove and redeploy facets based on diamond facet array of updated facets
-        removeRemoteFacets(deployer, diamondAddress);
+        removeRemoteFacetsByAddresses(deployer, diamondAddress, facetAddresses);
         deploySpaceFactory.diamondInitParams(deployer);
         newCuts = deploySpaceFactory.getCuts();
       } else if (
@@ -144,7 +154,7 @@ contract InteractAlphaSparse is AlphaHelper {
         diamondAddress = getDeployment("baseRegistry");
         existingFacets = IDiamondLoupe(diamondAddress).facets();
         // remove and redeploy facets based on diamond facet array of updated facets
-        removeRemoteFacets(deployer, diamondAddress);
+        removeRemoteFacetsByAddresses(deployer, diamondAddress, facetAddresses);
         deployBaseRegistry.diamondInitParams(deployer);
         newCuts = deployBaseRegistry.getCuts();
       } else {
