@@ -238,6 +238,7 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 		ctx, cancel := context.WithTimeout(ctx, time.Second*10)
 		defer cancel()
 		delay := time.Millisecond * 20
+	forLoop:
 		for {
 			select {
 			case <-ctx.Done():
@@ -249,7 +250,7 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 				}
 				record, _, mb, err = s.params.Registry.GetStreamWithGenesis(ctx, streamId)
 				if err == nil {
-					break
+					break forLoop
 				}
 				delay *= 2
 			}
