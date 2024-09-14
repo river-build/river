@@ -112,16 +112,20 @@ contract InteractAlphaSparse is AlphaHelper {
       string memory diamondName = diamonds[i].diamond;
       address diamondAddress;
       FacetCut[] memory newCuts;
+      Facet[] memory existingFacets;
 
       bytes32 diamondNameHash = keccak256(abi.encodePacked(diamondName));
 
       if (diamondNameHash == keccak256(abi.encodePacked("space"))) {
         diamondAddress = getDeployment("space");
+        existingFacets = IDiamondLoupe(diamondAddress).facets();
+        // remove and redeploy facets based on diamond facet array of updated facets
         removeRemoteFacets(deployer, diamondAddress);
         deploySpace.diamondInitParams(deployer);
         newCuts = deploySpace.getCuts();
       } else if (diamondNameHash == keccak256(abi.encodePacked("spaceOwner"))) {
         diamondAddress = getDeployment("spaceOwner");
+        existingFacets = IDiamondLoupe(diamondAddress).facets();
         removeRemoteFacets(deployer, diamondAddress);
         deploySpaceOwner.diamondInitParams(deployer);
         newCuts = deploySpaceOwner.getCuts();
@@ -129,6 +133,8 @@ contract InteractAlphaSparse is AlphaHelper {
         diamondNameHash == keccak256(abi.encodePacked("spaceFactory"))
       ) {
         diamondAddress = getDeployment("spaceFactory");
+        existingFacets = IDiamondLoupe(diamondAddress).facets();
+        // remove and redeploy facets based on diamond facet array of updated facets
         removeRemoteFacets(deployer, diamondAddress);
         deploySpaceFactory.diamondInitParams(deployer);
         newCuts = deploySpaceFactory.getCuts();
@@ -136,6 +142,8 @@ contract InteractAlphaSparse is AlphaHelper {
         diamondNameHash == keccak256(abi.encodePacked("baseRegistry"))
       ) {
         diamondAddress = getDeployment("baseRegistry");
+        existingFacets = IDiamondLoupe(diamondAddress).facets();
+        // remove and redeploy facets based on diamond facet array of updated facets
         removeRemoteFacets(deployer, diamondAddress);
         deployBaseRegistry.diamondInitParams(deployer);
         newCuts = deployBaseRegistry.getCuts();
