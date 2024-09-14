@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {LibString} from "solady/src/utils/LibString.sol";
+import {LibString} from "solady/utils/LibString.sol";
 import {ISpaceOwner} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
 import {Interaction} from "../common/Interaction.s.sol";
 

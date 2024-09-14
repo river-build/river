@@ -1367,7 +1367,7 @@
       "ds-test/=node_modules/ds-test/src/",
       "forge-std/=node_modules/forge-std/src/",
       "hardhat-deploy/=node_modules/hardhat-deploy/",
-      "solady/=node_modules/solady/"
+      "solady/=node_modules/solady/src/"
     ],
     "optimizer": {
       "enabled": true,
@@ -1633,10 +1633,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/facets/owner/SpaceOwnerUriBase.sol": {
-      "keccak256": "0x1f4842f55b9dbb570e0896c51e3b5e1c57d1d366c831e5d5bdfcf90629d55d9c",
+      "keccak256": "0xbc0f6bc661567cdc37620e295a3619aa5787a60fe6330fa6e2044314ab46fe49",
       "urls": [
-        "bzz-raw://007a75157296ee679be9106491c1bf01d875332597b5d0cf97e3bf4cfa622671",
-        "dweb:/ipfs/QmT1B1jdZRtutyCM7dnPPmBYQKTmXBPpeVdiwBkTH1UkyD"
+        "bzz-raw://6eae9fe0a43035a47e600d7a476f314c0a9aebaa59754e851751a18b1736751f",
+        "dweb:/ipfs/QmfN95VxwSkkvemoJ3w8gtzYjnehb1aocuu8zVLk6KPCBv"
       ],
       "license": "MIT"
     },

@@ -10,7 +10,7 @@ import {IChannelBase, IChannel} from "contracts/src/spaces/facets/channels/IChan
 import {ChannelService__ChannelDoesNotExist} from "contracts/src/spaces/facets/channels/ChannelService.sol";
 
 //contracts
-import {Multicallable} from "solady/src/utils/Multicallable.sol";
+import {Multicallable} from "solady/utils/Multicallable.sol";
 import {BaseSetup} from "../BaseSetup.sol";
 
 contract MulticallTest is BaseSetup {

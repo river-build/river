@@ -20,7 +20,7 @@ import {ISpaceOwner} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
 import {ISpaceProxyInitializer} from "contracts/src/spaces/facets/proxy/ISpaceProxyInitializer.sol";
 
 // libraries
-import {LibString} from "solady/src/utils/LibString.sol";
+import {LibString} from "solady/utils/LibString.sol";
 import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
 import {RuleEntitlementUtil} from "contracts/test/crosschain/RuleEntitlementUtil.sol";
 
