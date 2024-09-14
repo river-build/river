@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Base Facets Bytecode Diff Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; }
+        h1 { color: forestgreen; }
+        h2, h3 { color: #333; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .true { background-color: #90EE90; }
+        .false { background-color: #FFCCCB; }
+    </style>
+</head>
+<body>
+    <h1>gamma: Base Facets Bytecode Diff Report</h1>
+    <p>Generated on: 2024-09-09T19:49:32Z</p>
+
+    <h2>Deployments</h2>
+    <table>
+        <tr>
+            <th>Name</th>
+            <th>Address</th>
+            <th>Bytecode Hash</th>
+            <th>Basescan Link</th>
+            <th>Deployment Date</th>
+        </tr>
+        
+        <tr>
+            <td>Architect</td>
+            <td>
+                
+                    <a href="https://sepolia.basescan.org/address/0xf5d485e6347c2a3b61495bb8d957b6fd5aae8234" target="_blank">0xf5d485e6347c2a3b61495bb8d957b6fd5aae8234</a>
+                
+            </td>
+            <td>0xa720b876d79a4589d3f508abdc14aa73e8a4f5e2b477c6c76b80c5d661115d30</td>
+            <td><a href="https://sepolia.basescan.org/tx/0x2e8bd6d9766b97d30e82ebba0f77114704b402d5fbea197ba91eef97b3a01ec2" target="_blank">View on Basescan</a></td>
+            <td>2024-09-07 22:28</td>
+        </tr>
+        
+        <tr>
+            <td>Banning</td>
+            <td>
+                
+                    <a href="https://sepolia.basescan.org/address/0xf659cbf5b897766b8f3b2b70e7a13bc35d577fce" target="_blank">0xf659cbf5b897766b8f3b2b70e7a13bc35d577fce</a>
+                
+            </td>
+            <td>0xa2ce3e77ba060ff1d59ed384e1c6c5788f308ad8bbbef612eb3e5de4e1d79de8</td>
+            <td><a href="https://sepolia.basescan.org/tx/0x740d6fb89dbd5213d1e88907f19e2b891e388828d5d5b5eaab4fd86321df8e0e" target="_blank">View on Basescan</a></td>
+            <td>2024-09-07 22:29</td>
+        </tr>
+        
+        <tr>
+            <td>Channels</td>
+            <td>
+                
+                    <a href="https://sepolia.basescan.org/address/0x7357e51160973f722b7232d89e0218d1a9a957a8" target="_blank">0x7357e51160973f722b7232d89e0218d1a9a957a8</a>
+                
+            </td>
+            <td>0x45d1c26a6a191c2429067866b3322a148e4ebf43c92fa3b4d0ba783bb242a360</td>
+            <td><a href="https://sepolia.basescan.org/tx/0xb46a9a392c2e79fdbb4443df1c81edb78fb917bc28203891e82f2ffc95e6ecc4" target="_blank">View on Basescan</a></td>
+            <td>2024-09-07 22:30</td>
+        </tr>
+        
+        <tr>
+            <td>ERC721ANonTransferable</td>
+            <td>
+                
+                    <a href="https://sepolia.basescan.org/address/0x018cab8aa0bdc4c68f43ac6555b6d5e2ecdba10c" target="_blank">0x018cab8aa0bdc4c68f43ac6555b6d5e2ecdba10c</a>
+                
+            </td>
+            <td>0x2f202924a568f16114852b23b8e5336c225644b8f9de626f05cc5866f081cf7f</td>
+            <td><a href="https://sepolia.basescan.org/tx/0xa74e1d249b960e788e89ca2b0ee7cbd1364080b7c5a75ce363081a77dcecbc2a" target="_blank">View on Basescan</a></td>
+            <td>2024-09-07 22:31</td>
+        </tr>
+        
+        <tr>
+            <td>EntitlementDataQueryable</td>
+            <td>
+                
+                    <a href="https://sepolia.basescan.org/address/0x756c326a05d11cba1b156a7496925ea4c8ada736" target="_blank">0x756c326a05d11cba1b156a7496925ea4c8ada736</a>
+                
+            </td>
+            <td>0x2f070e4f84f4518ad656cf97d1f4055483a08985fdbd9b870a16003c681f787b</td>
+            <td><a href="https://sepolia.basescan.org/tx/0x98c9f017efd4ed46594376f37eb31ea87f6a17ba5f5bde0b86356d9172201513" target="_blank">View on Basescan</a></td>
+            <td>2024-09-07 22:31</td>
+        </tr>
+        
+        <tr>
+            <td>EntitlementsManager</td>
+            <td>
+                
+                    <a href="https://sepolia.basescan.org/address/0x8644defa6cf2c79ea4ffcc9a29719eb3fb163782" target="_blank">0x8644defa6cf2c79ea4ffcc9a29719eb3fb163782</a>
+                
+            </td>
+            <td>0xf1f1c71decd4c087929ca392abd8e1ce8549f567fac8616105a7e644f629a91a</td>
+            <td><a href="https://sepolia.basescan.org/tx/0x5e1f041bf2bdb152fba1f0c6f00ac96ed5ba78e91510d9fc0ceef52963f1d22a" target="_blank">View on Basescan</a></td>
+            <td>2024-09-07 22:32</td>
+        </tr>
+        
+        <tr>
+            <td>ImplementationRegistryFacet</td>
+            <td>
+                
+                    <a href="https://sepolia.basescan.org/address/0x49b2bc9994df120264e1358cd4902a6bc8ccac94" target="_blank">0x49b2bc9994df120264e1358cd4902a6bc8ccac94</a>
+                
+            </td>
+            <td>0xfc39fd5e4277ca5b6ded80147b956ec4cdb897705a95b6162677de7ebb065052</td>
+            <td><a href="https://sepolia.basescan.org/tx/0xfc8e28c8cb83c52bfa9d6f0b2acaf8efdf9930c0ee9e54a6bb76be3eb73e9256" target="_blank">View on Basescan</a></td>
+            <td>2024-09-07 22:33</td>
+        </tr>
+        
+        <tr>
+            <td>MainnetDelegation</td>
+            <td>
+                
+                    <a href="https://sepolia.basescan.org/address/0xebc76dff5862b36f50d3c9fe479423aaeaad2954" target="_blank">0xebc76dff5862b36f50d3c9fe479423aaeaad2954</a>
+                
+            </td>
+            <td>0x1e4d02faeae3b38cdfd02ed32e76b17d255eb6b3d987909f475c1ca4c7ce830a</td>
+            <td><a href="https://sepolia.basescan.org/tx/0x3eba74512d3811f55660571c9d33cf2946c8c9edf9ac8f61bab099284b2c788d" target="_blank">View on Basescan</a></td>
+            <td>2024-09-07 22:34</td>
+        </tr>
+        
+        <tr>
+            <td>MembershipMetadata</td>
+            <td>
+                
+                    <a href="https://sepolia.basescan.org/address/0xeb75942b8c1c05d0a632329fa4ae44d2af54da60" target="_blank">0xeb75942b8c1c05d0a632329fa4ae44d2af54da60</a>
+                
+            </td>
+            <td>0x30dccb2efbb54ead430cb6ddafd211f40cd5782b8b906c66b8923c93e57ad252</td>
+            <td><a href="https://sepolia.basescan.org/tx/0xfac4a8ca9986274df26030a9cd3267dfcc52992566e81ffca9ebb2ab174ff5d3" target="_blank">View on Basescan</a></td>
+            <td>2024-09-07 22:35</td>
+        </tr>
+        
+        <tr>
+            <td>MetadataFacet</td>
+            <td>
+                
+                    <a href="https://sepolia.basescan.org/address/0x587043ca4ab6f9172207c1515304cbccb604e39b" target="_blank">0x587043ca4ab6f9172207c1515304cbccb604e39b</a>
+                
+            </td>
+            <td>0x798dd2bf8b50bd849eb6e82b282fbad343f30e0f2e5e94556fe01d6e0761c09f</td>
+            <td><a href="https://sepolia.basescan.org/tx/0x366ff565398d8b18528e0df0d5b997eb603085207faf5d44d3801d6e7c75ada7" target="_blank">View on Basescan</a></td>
+            <td>2024-09-07 22:36</td>
+        </tr>
+        
+        <tr>
+            <td>MockLegacyArchitect</td>
+            <td>
+                
+                    <a href="https://sepolia.basescan.org/address/0xa5daa7043a765085e36b00267ce703f707ed949d" target="_blank">0xa5daa7043a765085e36b00267ce703f707ed949d</a>
+                
+            </td>
+            <td>0xe35bde59818e27fa6a4462209766e997c77dc44fe13ef3ae2bbcd290b187f6c4</td>
+            <td><a href="https://sepolia.basescan.org/tx/0xa82191c06fcdc90413a44154be04703ed7436084e7be0dbdb11e4454be619350" target="_blank">View on Basescan</a></td>
+            <td>2024-09-07 22:37</td>
+        </tr>
+        
+        <tr>
+            <td>NodeOperatorFacet</td>
+            <td>
+                
+                    <a href="https://sepolia.basescan.org/address/0xd87d5b787716076598c15513c424386c8de257ef" target="_blank">0xd87d5b787716076598c15513c424386c8de257ef</a>
+                
+            </td>
+            <td>0x58a85775db24a7f6e5536ece2fb1aaa195f18bd971c4529d1023f7571fd72a1e</td>
+            <td><a href="https://sepolia.basescan.org/tx/0xc07a217c5cff55e6481c88bed133dac5a4a199fe4091e528ac0610e73cb03d0f" target="_blank">View on Basescan</a></td>
+            <td>2024-09-07 22:38</td>
+        </tr>
+        
+        <tr>
+            <td>PlatformRequirementsFacet</td>
+            <td>
+                
+                    <a href="https://sepolia.basescan.org/address/0x46a89d0394658f39d6007617fe754dcc9ebd1269" target="_blank">0x46a89d0394658f39d6007617fe754dcc9ebd1269</a>
+                
+            </td>
+            <td>0x846a62acb457119effefca98198d3b3051f1cb0328a3c13f8cf22f56e70a927e</td>
+            <td><a href="https://sepolia.basescan.org/tx/0x5e5e3e50f5e2283f61830b6f65d87d47b261c77e397a1b74b4afd7851fe63299" target="_blank">View on Basescan</a></td>
+            <td>2024-09-07 22:39</td>
+        </tr>
+        
+        <tr>
+            <td>PricingModulesFacet</td>
+            <td>
+                
+                    <a href="https://sepolia.basescan.org/address/0x0a78b4df5ff21f647927625a94e8201eebfad3f4" target="_blank">0x0a78b4df5ff21f647927625a94e8201eebfad3f4</a>
+                
+            </td>
+            <td>0x7bce5963a2497ff3c33ddb0cadc8b1c80a360c00064b891c0e540cde63af88c5</td>
+            <td><a href="https://sepolia.basescan.org/tx/0x62f88d0e069b79471e1910d7952df9b48f0e19373c651a8b7dbe59cdc178844c" target="_blank">View on Basescan</a></td>
+            <td>2024-09-07 22:41</td>
+        </tr>
+        
+        <tr>
+            <td>ProxyManager</td>
+            <td>
+                
+                    <a href="https://sepolia.basescan.org/address/0x55910d5802b12406ef13e59d03d9a3b2e346c9ea" target="_blank">0x55910d5802b12406ef13e59d03d9a3b2e346c9ea</a>
+                
+            </td>
+            <td>0x15e0d766f92a0333a14aa85f4da7117c1637a2742b7f03ffa1735f9fd663091b</td>
+            <td><a href="https://sepolia.basescan.org/tx/0xbe66fc17ef4d87330ab538a6ecb91ee6b8348213212e877552195c3118b4791b" target="_blank">View on Basescan</a></td>
+            <td>2024-09-07 22:41</td>
+        </tr>
+        
+        <tr>
+            <td>ReferralsFacet</td>
+            <td>
+                
+                    <a href="https://sepolia.basescan.org/address/0xf44eb5f5d7b489d01911508d115cb8f5f15f773e" target="_blank">0xf44eb5f5d7b489d01911508d115cb8f5f15f773e</a>
+                
+            </td>
+            <td>0xe07aa5738c9a4f320010e693131cc68157e12f8381b776f20b4e1518706cbdc0</td>
+            <td><a href="https://sepolia.basescan.org/tx/0xe125af76b2aebd5b7358917a96dbe1fa5e472f29192baf19abe8e3cb39aba5e8" target="_blank">View on Basescan</a></td>
+            <td>2024-09-07 22:42</td>
+        </tr>
+        
+        <tr>
+            <td>RewardsDistribution</td>
+            <td>
+                
+                    <a href="https://sepolia.basescan.org/address/0x984d1050bb877fdd6b1f9248c8668438cd800cd7" target="_blank">0x984d1050bb877fdd6b1f9248c8668438cd800cd7</a>
+                
+            </td>
+            <td>0x67f5b998dc616d71133c2d724e8bafbbc0352fe5892e4445e5bcade7f1b358e2</td>
+            <td><a href="https://sepolia.basescan.org/tx/0x674c035e4db176a39a718850b069311a0311fbe8e64f070b2f9baa7653e65102" target="_blank">View on Basescan</a></td>
+            <td>2024-09-07 22:43</td>
+        </tr>
+        
+        <tr>
+            <td>Roles</td>
+            <td>
+                
+                    <a href="https://sepolia.basescan.org/address/0x414842157d503de20fff70f8a7b00017bda7e3ce" target="_blank">0x414842157d503de20fff70f8a7b00017bda7e3ce</a>
+                
+            </td>
+            <td>0x0a4bd32dfda8c3276d7aadaa9784f74706b6f2c6c771d561e592ce4627a9466b</td>
+            <td><a href="https://sepolia.basescan.org/tx/0x25a5b10662198d5d657fead8ea93f0dd24a4091bcf9f067cbfe238ed5a472331" target="_blank">View on Basescan</a></td>
+            <td>2024-09-07 22:44</td>
+        </tr>
+        
+        <tr>
+            <td>WalletLink</td>
+            <td>
+                
+                    <a href="https://sepolia.basescan.org/address/0x0c824a33dd29102f4596cca5a555eb86c2b4dd00" target="_blank">0x0c824a33dd29102f4596cca5a555eb86c2b4dd00</a>
+                
+            </td>
+            <td>0x2e34a139597d657fc2a190a8a4ac4a1e8dab974b54c601f1ae900f9d5993e337</td>
+            <td><a href="https://sepolia.basescan.org/tx/0x4f486de5499d80970bff29bd88ada2620464effb4ca489da8938c36966b960e7" target="_blank">View on Basescan</a></td>
+            <td>2024-09-07 22:45</td>
+        </tr>
+        
+    </table>
+
+    <h2>Diamonds</h2>
+    
+        
+            <h3>Diamond: baseRegistry</h3>
+            <h4>Facets</h4>
+            
+                <table>
+                    <tr>
+                        <th>Contract Name</th>
+                        <th>Origin Address</th>
+                        <th>Origin Bytecode Hash</th>
+                        <th>Target Addresses</th>
+                        <th>Target Bytecode Hashes</th>
+						<th>Selectors Missing on gamma</th>
+						<th>Origin Verified</th>
+						<th>Target Verified</th>
+
+                    </tr>
+                    
+                    <tr>
+                        <td>ERC721ANonTransferable</td>
+                        <td>
+                            
+                                <a href="https://sepolia.basescan.org/address/0x6164228e33fd8f0d6f2f9a78bac7b677f688e8c2" target="_blank">0x6164228e33fd8f0d6f2f9a78bac7b677f688e8c2</a>
+                            
+                        </td>
+                        <td>0x2f202924a568f16114852b23b8e5336c225644b8f9de626f05cc5866f081cf7f</td>
+                        <td>
+                            
+                                
+                                    <a href="https://sepolia.basescan.org/address/0x03F025B76a6427512aAF889D2a447d54Cb8cdf37" target="_blank">0x03F025B76a6427512aAF889D2a447d54Cb8cdf37</a><br>
+                                
+                            
+                        </td>
+                        <td>
+                            
+                                0xe9fadd0791887a7f0ca2abd78457e0f5d053da833ab20ac0d6da7f5895cf76ef<br>
+                            
+                        </td>
+						<td>[]</td>
+						<td class="true">true</td>
+						<td class="true">true</td>
+                    </tr>
+                    
+                    <tr>
+                        <td>NodeOperatorFacet</td>
+                        <td>
+                            
+                                <a href="https://sepolia.basescan.org/address/0xac34c353c91abf11d9c92983ed9d1dbb96eaac6c" target="_blank">0xac34c353c91abf11d9c92983ed9d1dbb96eaac6c</a>
+                            
+                        </td>
+                        <td>0x58a85775db24a7f6e5536ece2fb1aaa195f18bd971c4529d1023f7571fd72a1e</td>
+                        <td>
+                            
+                                
+                                    <a href="https://sepolia.basescan.org/address/0x51cdeAB72B4f51b3aCe2Ee1697D35C14F2dA6d45" target="_blank">0x51cdeAB72B4f51b3aCe2Ee1697D35C14F2dA6d45</a><br>
+                                
+                            
+                        </td>
+                        <td>
+                            
+                                0xb62bd51a1dc23449f61eb5681ac29722e4967d50c4463fdc1c997d4fd5e6a628<br>
+                            
+                        </td>
+						<td>[]</td>
+						<td class="true">true</td>
+						<td class="true">true</td>
+                    </tr>
+                    
+                    <tr>
+                        <td>MetadataFacet</td>
+                        <td>
+                            
+                                <a href="https://sepolia.basescan.org/address/0xd65e5c98fc98117482cb76d65c42e051c68784d1" target="_blank">0xd65e5c98fc98117482cb76d65c42e051c68784d1</a>
+                            
+                        </td>
+                        <td>0x798dd2bf8b50bd849eb6e82b282fbad343f30e0f2e5e94556fe01d6e0761c09f</td>
+                        <td>
+                            
+                                
+                                    <a href="https://sepolia.basescan.org/address/0xfEf0E6839A427914173823fD39a2CB704eCF3108" target="_blank">0xfEf0E6839A427914173823fD39a2CB704eCF3108</a><br>
+                                
+                            
+                        </td>
+                        <td>
+                            
+                                0xa1d982edf13f0e8e116ed3ce837013f13cf8cf7c080bc4302e4603255e330f12<br>
+                            
+                        </td>
+						<td>[]</td>
+						<td class="true">true</td>
+						<td class="true">true</td>
+                    </tr>
+                    
+                    <tr>
+                        <td>RewardsDistribution</td>
+                        <td>
+                            
+                                <a href="https://sepolia.basescan.org/address/0xe1f9a7e8a8e000fb753f05bb2f8910412dab53f1" target="_blank">0xe1f9a7e8a8e000fb753f05bb2f8910412dab53f1</a>
+                            
+                        </td>
+                        <td>0x67f5b998dc616d71133c2d724e8bafbbc0352fe5892e4445e5bcade7f1b358e2</td>
+                        <td>
+                            
+                                
+                                    <a href="https://sepolia.basescan.org/address/0xA8e0EA750905F48e7a57ebd37c23C3F9a095eb25" target="_blank">0xA8e0EA750905F48e7a57ebd37c23C3F9a095eb25</a><br>
+                                
+                            
+                                
+                                    <a href="https://sepolia.basescan.org/address/0x3BeEb3493A73B715a1cd0C60350D6e9e1f51F72f" target="_blank">0x3BeEb3493A73B715a1cd0C60350D6e9e1f51F72f</a><br>
+                                
+                            
+                        </td>
+                        <td>
+                            
+                                0x61593f7f453b97f0af112d2fa9731e90becdd25bcc80f35a5aee08556b152e0c<br>
+                            
+                                0xf492190212449587a180b0490820a4e79aa149f7cb149611086cad0eacc624d4<br>
+                            
+                        </td>
+						<td>[0xfc8a584f 0x3ccfd60b]</td>
+						<td class="true">true</td>
+						<td class="true">true</td>
+                    </tr>
+                    
+                    <tr>
+                        <td>MainnetDelegation</td>
+                        <td>
+                            
+                                <a href="https://sepolia.basescan.org/address/0xb8d51ba5e28bfa89df8fac1b8e4b4f89ec102e2b" target="_blank">0xb8d51ba5e28bfa89df8fac1b8e4b4f89ec102e2b</a>
+                            
+                        </td>
+                        <td>0x1e4d02faeae3b38cdfd02ed32e76b17d255eb6b3d987909f475c1ca4c7ce830a</td>
+                        <td>
+                            
+                                
+                                    <a href="https://sepolia.basescan.org/address/0xD18f7552b152976eB5472c12a83533C79E9eDcc9" target="_blank">0xD18f7552b152976eB5472c12a83533C79E9eDcc9</a><br>
+                                
+                            
+                        </td>
+                        <td>
+                            
+                                0x2de2f6d51c32ca5ce4a491ade5f7a24e9ba424979fd366f80ac5c71385bfa148<br>
+                            
+                        </td>
+						<td>[]</td>
+						<td class="true">true</td>
+						<td class="true">true</td>
+                    </tr>
+                    
+                </table>
+            
+        
+            <h3>Diamond: space</h3>
+            <h4>Facets</h4>
+            
+                <table>
+                    <tr>
+                        <th>Contract Name</th>
+                        <th>Origin Address</th>
+                        <th>Origin Bytecode Hash</th>
+                        <th>Target Addresses</th>
+                        <th>Target Bytecode Hashes</th>
+						<th>Selectors Missing on gamma</th>
+						<th>Origin Verified</th>
+						<th>Target Verified</th>
+
+                    </tr>
+                    
+                    <tr>
+                        <td>EntitlementsManager</td>
+                        <td>
+                            
+                                <a href="https://sepolia.basescan.org/address/0x365ce6e4eb9a1b2b222f5ecb576e5368de9ce742" target="_blank">0x365ce6e4eb9a1b2b222f5ecb576e5368de9ce742</a>
+                            
+                        </td>
+                        <td>0xf1f1c71decd4c087929ca392abd8e1ce8549f567fac8616105a7e644f629a91a</td>
+                        <td>
+                            
+                                
+                                    <a href="https://sepolia.basescan.org/address/0x1A4a6ec1898ed3803f1DcF54Afcf3bC1E8E64F28" target="_blank">0x1A4a6ec1898ed3803f1DcF54Afcf3bC1E8E64F28</a><br>
+                                
+                            
+                        </td>
+                        <td>
+                            
+                                0xbd7871d12e8ba717ce15222ef82cf01beafbc4e22a16894357e4c13eef8d03b9<br>
+                            
+                        </td>
+						<td>[]</td>
+						<td class="true">true</td>
+						<td class="true">true</td>
+                    </tr>
+                    
+                    <tr>
+                        <td>Roles</td>
+                        <td>
+                            
+                                <a href="https://sepolia.basescan.org/address/0x9849207aab1ae1a02984f76601c27b9acde8b896" target="_blank">0x9849207aab1ae1a02984f76601c27b9acde8b896</a>
+                            
+                        </td>
+                        <td>0x0a4bd32dfda8c3276d7aadaa9784f74706b6f2c6c771d561e592ce4627a9466b</td>
+                        <td>
+                            
+                                
+                                    <a href="https://sepolia.basescan.org/address/0xDC373a4913c443A9fd6adE0F09A448050C46443f" target="_blank">0xDC373a4913c443A9fd6adE0F09A448050C46443f</a><br>
+                                
+                            
+                        </td>
+                        <td>
+                            
+                                0x280b8a37eed891de258d346f2e2d02de26bd2516b8be920078f686e90818c63c<br>
+                            
+                        </td>
+						<td>[]</td>
+						<td class="true">true</td>
+						<td class="true">true</td>
+                    </tr>
+                    
+                    <tr>
+                        <td>Channels</td>
+                        <td>
+                            
+                                <a href="https://sepolia.basescan.org/address/0x72c144d5158418e5e2f3a0b7cf25bada8143feb4" target="_blank">0x72c144d5158418e5e2f3a0b7cf25bada8143feb4</a>
+                            
+                        </td>
+                        <td>0x45d1c26a6a191c2429067866b3322a148e4ebf43c92fa3b4d0ba783bb242a360</td>
+                        <td>
+                            
+                                
+                                    <a href="https://sepolia.basescan.org/address/0xff29f23B46a6f1a5286A7fA7E1549ac99C2B2785" target="_blank">0xff29f23B46a6f1a5286A7fA7E1549ac99C2B2785</a><br>
+                                
+                            
+                        </td>
+                        <td>
+                            
+                                0x61957d31b18513d093b3653345a059f4e9b2bbdee355d8b4daf6f4621bf78c0a<br>
+                            
+                        </td>
+						<td>[]</td>
+						<td class="true">true</td>
+						<td class="true">true</td>
+                    </tr>
+                    
+                    <tr>
+                        <td>Banning</td>
+                        <td>
+                            
+                                <a href="https://sepolia.basescan.org/address/0xbf3aeee998f7d23758a4837f05d8ac197aeff08d" target="_blank">0xbf3aeee998f7d23758a4837f05d8ac197aeff08d</a>
+                            
+                        </td>
+                        <td>0xa2ce3e77ba060ff1d59ed384e1c6c5788f308ad8bbbef612eb3e5de4e1d79de8</td>
+                        <td>
+                            
+                                
+                                    <a href="https://sepolia.basescan.org/address/0x9905061F7C3144f3347a121F80cBdfb21ba86c35" target="_blank">0x9905061F7C3144f3347a121F80cBdfb21ba86c35</a><br>
+                                
+                            
+                        </td>
+                        <td>
+                            
+                                0xb9ae38a5fadc380a2a3c3135571f99b65cc1ba2d3dc8723c212578c6bf059318<br>
+                            
+                        </td>
+						<td>[]</td>
+						<td class="true">true</td>
+						<td class="true">true</td>
+                    </tr>
+                    
+                    <tr>
+                        <td>MembershipMetadata</td>
+                        <td>
+                            
+                                <a href="https://sepolia.basescan.org/address/0x57bd44076be6cd79c03c31a60fa5d661ec0c7b8a" target="_blank">0x57bd44076be6cd79c03c31a60fa5d661ec0c7b8a</a>
+                            
+                        </td>
+                        <td>0x30dccb2efbb54ead430cb6ddafd211f40cd5782b8b906c66b8923c93e57ad252</td>
+                        <td>
+                            
+                        </td>
+                        <td>
+                            
+                        </td>
+						<td>[0xc87b56dd]</td>
+						<td class="true">true</td>
+						<td class="false">false</td>
+                    </tr>
+                    
+                    <tr>
+                        <td>EntitlementDataQueryable</td>
+                        <td>
+                            
+                                <a href="https://sepolia.basescan.org/address/0xfc897f5c0dfe0cb871b6b479037f81506c68c473" target="_blank">0xfc897f5c0dfe0cb871b6b479037f81506c68c473</a>
+                            
+                        </td>
+                        <td>0x2f070e4f84f4518ad656cf97d1f4055483a08985fdbd9b870a16003c681f787b</td>
+                        <td>
+                            
+                                
+                                    <a href="https://sepolia.basescan.org/address/0x5d81FD1f554e7e2f4402d6cb60D99da53F253eF8" target="_blank">0x5d81FD1f554e7e2f4402d6cb60D99da53F253eF8</a><br>
+                                
+                            
+                        </td>
+                        <td>
+                            
+                                0x252aec97af7ec6007e7c76934ca3d7e5fba9ebe8dd22994308108a99124877e8<br>
+                            
+                        </td>
+						<td>[]</td>
+						<td class="true">true</td>
+						<td class="true">true</td>
+                    </tr>
+                    
+                    <tr>
+                        <td>PrepayFacet</td>
+                        <td>
+                            
+                                <a href="https://sepolia.basescan.org/address/0x7e188ccc46884631c8b69221e2fe07c992a433f9" target="_blank">0x7e188ccc46884631c8b69221e2fe07c992a433f9</a>
+                            
+                        </td>
+                        <td>0x2a021d780771453a722ae069e0e001f780c87b5208a29078c8534eb349ba49b8</td>
+                        <td>
+                            
+                                
+                                    <a href="https://sepolia.basescan.org/address/0x90a6492d6ebFCFAEAb3884b6669686bD9e98c2Ab" target="_blank">0x90a6492d6ebFCFAEAb3884b6669686bD9e98c2Ab</a><br>
+                                
+                            
+                        </td>
+                        <td>
+                            
+                                0xfd202d7b5d320d2a758d62ae80acd95d1431335a92aac221aaacb351b1b14a77<br>
+                            
+                        </td>
+						<td>[]</td>
+						<td class="true">true</td>
+						<td class="true">true</td>
+                    </tr>
+                    
+                    <tr>
+                        <td>ReferralsFacet</td>
+                        <td>
+                            
+                                <a href="https://sepolia.basescan.org/address/0x9e301a03fa28fe5cd68f15821884978ee50c1df9" target="_blank">0x9e301a03fa28fe5cd68f15821884978ee50c1df9</a>
+                            
+                        </td>
+                        <td>0xe07aa5738c9a4f320010e693131cc68157e12f8381b776f20b4e1518706cbdc0</td>
+                        <td>
+                            
+                                
+                                    <a href="https://sepolia.basescan.org/address/0xa5D71a0AE1D93AC38Bb3f26a8e4f63595aCEd64A" target="_blank">0xa5D71a0AE1D93AC38Bb3f26a8e4f63595aCEd64A</a><br>
+                                
+                            
+                        </td>
+                        <td>
+                            
+                                0xa1c48e2bef5accfe35086b715c708fa1ad503aa5b2b353d77675429abea9b70d<br>
+                            
+                        </td>
+						<td>[]</td>
+						<td class="true">true</td>
+						<td class="true">true</td>
+                    </tr>
+                    
+                </table>
+            
+        
+            <h3>Diamond: spaceFactory</h3>
+            <h4>Facets</h4>
+            
+                <table>
+                    <tr>
+                        <th>Contract Name</th>
+                        <th>Origin Address</th>
+                        <th>Origin Bytecode Hash</th>
+                        <th>Target Addresses</th>
+                        <th>Target Bytecode Hashes</th>
+						<th>Selectors Missing on gamma</th>
+						<th>Origin Verified</th>
+						<th>Target Verified</th>
+
+                    </tr>
+                    
+                    <tr>
+                        <td>MetadataFacet</td>
+                        <td>
+                            
+                                <a href="https://sepolia.basescan.org/address/0xbc3ab607efc65eb6baaf052689bc59dd2b3f0c06" target="_blank">0xbc3ab607efc65eb6baaf052689bc59dd2b3f0c06</a>
+                            
+                        </td>
+                        <td>0x798dd2bf8b50bd849eb6e82b282fbad343f30e0f2e5e94556fe01d6e0761c09f</td>
+                        <td>
+                            
+                                
+                                    <a href="https://sepolia.basescan.org/address/0xe4dd431A05f4f50703924FFC1B07644B482f7F8f" target="_blank">0xe4dd431A05f4f50703924FFC1B07644B482f7F8f</a><br>
+                                
+                            
+                        </td>
+                        <td>
+                            
+                                0xa1d982edf13f0e8e116ed3ce837013f13cf8cf7c080bc4302e4603255e330f12<br>
+                            
+                        </td>
+						<td>[]</td>
+						<td class="true">true</td>
+						<td class="true">true</td>
+                    </tr>
+                    
+                    <tr>
+                        <td>Architect</td>
+                        <td>
+                            
+                                <a href="https://sepolia.basescan.org/address/0xb6d5e5d7e92f78f051b50fc1ce27a74cc97b24fd" target="_blank">0xb6d5e5d7e92f78f051b50fc1ce27a74cc97b24fd</a>
+                            
+                        </td>
+                        <td>0x20d0a86e9ea31a39663285aacfe88705983520a4482a7bac5ada891c9adfe090</td>
+                        <td>
+                            
+                                
+                                    <a href="https://sepolia.basescan.org/address/0x86540f3A1e4E719A56bF09AE0c6988A5ea5febE2" target="_blank">0x86540f3A1e4E719A56bF09AE0c6988A5ea5febE2</a><br>
+                                
+                            
+                        </td>
+                        <td>
+                            
+                                0xd888b2b841f4731cb804dce485836627bad39f0aa1eee00f5eba7480e504745f<br>
+                            
+                        </td>
+						<td>[]</td>
+						<td class="true">true</td>
+						<td class="true">true</td>
+                    </tr>
+                    
+                    <tr>
+                        <td>MockLegacyArchitect</td>
+                        <td>
+                            
+                                <a href="https://sepolia.basescan.org/address/0xab3b67df5db1e8de67c2df2a5613a11bd39c9502" target="_blank">0xab3b67df5db1e8de67c2df2a5613a11bd39c9502</a>
+                            
+                        </td>
+                        <td>0x0c8ac5a218b39d3afffa64a02afe5498be60fd2cd2399fc0b702f13582175200</td>
+                        <td>
+                            
+                        </td>
+                        <td>
+                            
+                        </td>
+						<td>[0xef009225]</td>
+						<td class="true">true</td>
+						<td class="false">false</td>
+                    </tr>
+                    
+                    <tr>
+                        <td>ProxyManager</td>
+                        <td>
+                            
+                                <a href="https://sepolia.basescan.org/address/0x396df9ee578b2f14dd17947ea43ab8d268836a10" target="_blank">0x396df9ee578b2f14dd17947ea43ab8d268836a10</a>
+                            
+                        </td>
+                        <td>0x15e0d766f92a0333a14aa85f4da7117c1637a2742b7f03ffa1735f9fd663091b</td>
+                        <td>
+                            
+                                
+                                    <a href="https://sepolia.basescan.org/address/0x3aef9f704D2AC56f4d8b19A5a1e094def56bF93D" target="_blank">0x3aef9f704D2AC56f4d8b19A5a1e094def56bF93D</a><br>
+                                
+                            
+                        </td>
+                        <td>
+                            
+                                0x60a367681b056fc771947a0a8dc627eccc2c48be00eb7058a551848c2eb90076<br>
+                            
+                        </td>
+						<td>[]</td>
+						<td class="true">true</td>
+						<td class="true">true</td>
+                    </tr>
+                    
+                    <tr>
+                        <td>PlatformRequirementsFacet</td>
+                        <td>
+                            
+                                <a href="https://sepolia.basescan.org/address/0xc2df9c3d613e198892932ed06e8615953b48fd5a" target="_blank">0xc2df9c3d613e198892932ed06e8615953b48fd5a</a>
+                            
+                        </td>
+                        <td>0x846a62acb457119effefca98198d3b3051f1cb0328a3c13f8cf22f56e70a927e</td>
+                        <td>
+                            
+                                
+                                    <a href="https://sepolia.basescan.org/address/0x6431cF8735c170885453E41336508299e127EA97" target="_blank">0x6431cF8735c170885453E41336508299e127EA97</a><br>
+                                
+                            
+                        </td>
+                        <td>
+                            
+                                0x43555f42d9e18a95b01e3d4bbb8c5dc2cd3a73ebbb41ce3f34e0db61e02a0a1c<br>
+                            
+                        </td>
+						<td>[0x190eaaba]</td>
+						<td class="true">true</td>
+						<td class="true">true</td>
+                    </tr>
+                    
+                    <tr>
+                        <td>PricingModulesFacet</td>
+                        <td>
+                            
+                                <a href="https://sepolia.basescan.org/address/0xbec7c7f5e984fd10ac282a5441af11af60783eae" target="_blank">0xbec7c7f5e984fd10ac282a5441af11af60783eae</a>
+                            
+                        </td>
+                        <td>0x7bce5963a2497ff3c33ddb0cadc8b1c80a360c00064b891c0e540cde63af88c5</td>
+                        <td>
+                            
+                                
+                                    <a href="https://sepolia.basescan.org/address/0xBfDfa527f07a31A254dDF29499Eed373676b82F9" target="_blank">0xBfDfa527f07a31A254dDF29499Eed373676b82F9</a><br>
+                                
+                            
+                        </td>
+                        <td>
+                            
+                                0x6580feb1ed2ec7c5c16f3f8207877bc2a059c8b29468abc79b6732759084b1d9<br>
+                            
+                        </td>
+						<td>[]</td>
+						<td class="true">true</td>
+						<td class="true">true</td>
+                    </tr>
+                    
+                    <tr>
+                        <td>ImplementationRegistryFacet</td>
+                        <td>
+                            
+                                <a href="https://sepolia.basescan.org/address/0xadfe93e541f4c33dc777ede4ea8033678d1e7735" target="_blank">0xadfe93e541f4c33dc777ede4ea8033678d1e7735</a>
+                            
+                        </td>
+                        <td>0xfc39fd5e4277ca5b6ded80147b956ec4cdb897705a95b6162677de7ebb065052</td>
+                        <td>
+                            
+                                
+                                    <a href="https://sepolia.basescan.org/address/0x441f1aCAAd919369B04CdB060183cd1497dCfB49" target="_blank">0x441f1aCAAd919369B04CdB060183cd1497dCfB49</a><br>
+                                
+                            
+                        </td>
+                        <td>
+                            
+                                0x772ab337f0b86061f02964c0fc47747f7fa49d4f99fe5edb3964af7fc3d0e06b<br>
+                            
+                        </td>
+						<td>[]</td>
+						<td class="true">true</td>
+						<td class="true">true</td>
+                    </tr>
+                    
+                    <tr>
+                        <td>WalletLink</td>
+                        <td>
+                            
+                                <a href="https://sepolia.basescan.org/address/0x422d35867cd490c5b4aca8efcaedc8cee207ddd5" target="_blank">0x422d35867cd490c5b4aca8efcaedc8cee207ddd5</a>
+                            
+                        </td>
+                        <td>0x2e34a139597d657fc2a190a8a4ac4a1e8dab974b54c601f1ae900f9d5993e337</td>
+                        <td>
+                            
+                                
+                                    <a href="https://sepolia.basescan.org/address/0xa81a65CdA100D9D353f388C6FAB6aBaD0426d4CF" target="_blank">0xa81a65CdA100D9D353f388C6FAB6aBaD0426d4CF</a><br>
+                                
+                            
+                        </td>
+                        <td>
+                            
+                                0x61e8546a5b88207bb0e803d9e76edc1d9242adb57721a9cf47fb76c0195ced9b<br>
+                            
+                        </td>
+						<td>[]</td>
+						<td class="true">true</td>
+						<td class="true">true</td>
+                    </tr>
+                    
+                </table>
+            
+        
+            <h3>Diamond: spaceOwner</h3>
+            <h4>Facets</h4>
+            
+                <table>
+                    <tr>
+                        <th>Contract Name</th>
+                        <th>Origin Address</th>
+                        <th>Origin Bytecode Hash</th>
+                        <th>Target Addresses</th>
+                        <th>Target Bytecode Hashes</th>
+						<th>Selectors Missing on gamma</th>
+						<th>Origin Verified</th>
+						<th>Target Verified</th>
+
+                    </tr>
+                    
+                    <tr>
+                        <td>MetadataFacet</td>
+                        <td>
+                            
+                                <a href="https://sepolia.basescan.org/address/0x7c4bd0069b110103a697fe8f9273e4baff5bcc7e" target="_blank">0x7c4bd0069b110103a697fe8f9273e4baff5bcc7e</a>
+                            
+                        </td>
+                        <td>0x798dd2bf8b50bd849eb6e82b282fbad343f30e0f2e5e94556fe01d6e0761c09f</td>
+                        <td>
+                            
+                        </td>
+                        <td>
+                            
+                        </td>
+						<td>[0xcb2ef6f7 0x0a0a8e46 0xe8a3d485 0x938e3d7b]</td>
+						<td class="true">true</td>
+						<td class="false">false</td>
+                    </tr>
+                    
+                </table>
+            
+        
+    
+
+    
+    
+    
+    
+    
+    
+    <h2>environment</h2>
+    <pre>&#34;gamma&#34;</pre>
+    
+    
+    
+    <h2>reportTime</h2>
+    <pre>&#34;2024-09-09T19:49:32Z&#34;</pre>
+    
+    
+</body>
+</html>

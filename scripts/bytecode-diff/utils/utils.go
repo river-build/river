@@ -43,8 +43,9 @@ type FacetSourceDiff struct {
 }
 
 type SourceFacetDiff struct {
-	Diamond string            `yaml:"diamond"`
-	Facets  []FacetSourceDiff `yaml:"facets"`
+	Diamond   string            `yaml:"diamond"`
+	Facets    []FacetSourceDiff `yaml:"facets"`
+	NumFacets uint              `yaml:"numFacets"`
 }
 
 type SourceDiffReport struct {
@@ -53,6 +54,8 @@ type SourceDiffReport struct {
 	PreviousCommitHash string            `yaml:"previousCommitHash"`
 	Updated            []SourceFacetDiff `yaml:"updated"`
 	Existing           []SourceFacetDiff `yaml:"existing"`
+	NumUpdated         uint              `yaml:"numUpdated"`
+	NumExisting        uint              `yaml:"numExisting"`
 }
 
 type FacetName string
@@ -221,17 +224,23 @@ func generateReport(previousReport SourceDiffReport, currentHashes map[FacetName
 
 		if len(updatedFacets) > 0 {
 			report.Updated = append(report.Updated, SourceFacetDiff{
-				Diamond: string(diamond),
-				Facets:  updatedFacets,
+				Diamond:   string(diamond),
+				Facets:    updatedFacets,
+				NumFacets: uint(len(updatedFacets)),
 			})
 		}
 		if len(existingFacets) > 0 {
 			report.Existing = append(report.Existing, SourceFacetDiff{
-				Diamond: string(diamond),
-				Facets:  existingFacets,
+				Diamond:   string(diamond),
+				Facets:    existingFacets,
+				NumFacets: uint(len(existingFacets)),
 			})
 		}
 	}
+
+	// Calculate NumUpdated and NumExisting
+	report.NumUpdated = uint(len(report.Updated))
+	report.NumExisting = uint(len(report.Existing))
 
 	return report
 }

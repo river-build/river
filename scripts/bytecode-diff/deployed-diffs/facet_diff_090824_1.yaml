@@ -1,0 +1,236 @@
+diamonds:
+- name: spaceOwner
+  origin: alpha
+  target: gamma
+  facets:
+  - originContractName: MetadataFacet
+    originFacetAddress: 0xe05f1af1e19714874358f1c8cc245ea783880b03
+    selectorsDiff:
+    - "0xcb2ef6f7"
+    - "0x0a0a8e46"
+    - "0xe8a3d485"
+    - "0x938e3d7b"
+    originBytecodeHash: 0x798dd2bf8b50bd849eb6e82b282fbad343f30e0f2e5e94556fe01d6e0761c09f
+    originVerified: true
+    targetVerified: false
+- name: baseRegistry
+  origin: alpha
+  target: gamma
+  facets:
+  - originContractName: ERC721ANonTransferable
+    originFacetAddress: 0x70bc1cad292867ce7676daf2041d842a83222fdf
+    targetContractAddresses:
+    - 0x03F025B76a6427512aAF889D2a447d54Cb8cdf37
+    selectorsDiff: []
+    originBytecodeHash: 0x2f202924a568f16114852b23b8e5336c225644b8f9de626f05cc5866f081cf7f
+    targetBytecodeHashes:
+    - 0xe9fadd0791887a7f0ca2abd78457e0f5d053da833ab20ac0d6da7f5895cf76ef
+    originVerified: true
+    targetVerified: true
+  - originContractName: NodeOperatorFacet
+    originFacetAddress: 0xcae8c0c27430db8e187060bddf9e69fcab9bdc4b
+    targetContractAddresses:
+    - 0x51cdeAB72B4f51b3aCe2Ee1697D35C14F2dA6d45
+    selectorsDiff: []
+    originBytecodeHash: 0x58a85775db24a7f6e5536ece2fb1aaa195f18bd971c4529d1023f7571fd72a1e
+    targetBytecodeHashes:
+    - 0xb62bd51a1dc23449f61eb5681ac29722e4967d50c4463fdc1c997d4fd5e6a628
+    originVerified: true
+    targetVerified: true
+  - originContractName: MetadataFacet
+    originFacetAddress: 0x8e3c8fbc9a8ced433cf3aeb4c8c349f2a423eb4f
+    targetContractAddresses:
+    - 0xfEf0E6839A427914173823fD39a2CB704eCF3108
+    selectorsDiff: []
+    originBytecodeHash: 0x798dd2bf8b50bd849eb6e82b282fbad343f30e0f2e5e94556fe01d6e0761c09f
+    targetBytecodeHashes:
+    - 0xa1d982edf13f0e8e116ed3ce837013f13cf8cf7c080bc4302e4603255e330f12
+    originVerified: true
+    targetVerified: true
+  - originContractName: RewardsDistribution
+    originFacetAddress: 0x0df3fb9d760d36a6e6b0e1f24f6037014bfb324f
+    targetContractAddresses:
+    - 0xA8e0EA750905F48e7a57ebd37c23C3F9a095eb25
+    - 0x3BeEb3493A73B715a1cd0C60350D6e9e1f51F72f
+    selectorsDiff:
+    - "0xfc8a584f"
+    - "0x3ccfd60b"
+    originBytecodeHash: 0x67f5b998dc616d71133c2d724e8bafbbc0352fe5892e4445e5bcade7f1b358e2
+    targetBytecodeHashes:
+    - 0x61593f7f453b97f0af112d2fa9731e90becdd25bcc80f35a5aee08556b152e0c
+    - 0xf492190212449587a180b0490820a4e79aa149f7cb149611086cad0eacc624d4
+    originVerified: true
+    targetVerified: true
+  - originContractName: MainnetDelegation
+    originFacetAddress: 0x31ab1081773ac0283b53f7c826646dc6b03e7c0a
+    targetContractAddresses:
+    - 0xD18f7552b152976eB5472c12a83533C79E9eDcc9
+    selectorsDiff: []
+    originBytecodeHash: 0x1e4d02faeae3b38cdfd02ed32e76b17d255eb6b3d987909f475c1ca4c7ce830a
+    targetBytecodeHashes:
+    - 0x2de2f6d51c32ca5ce4a491ade5f7a24e9ba424979fd366f80ac5c71385bfa148
+    originVerified: true
+    targetVerified: true
+- name: space
+  origin: alpha
+  target: gamma
+  facets:
+  - originContractName: EntitlementsManager
+    originFacetAddress: 0x537bb6f1a27ac0878c5b7c4d3594209b38620a72
+    targetContractAddresses:
+    - 0x1A4a6ec1898ed3803f1DcF54Afcf3bC1E8E64F28
+    selectorsDiff: []
+    originBytecodeHash: 0xf1f1c71decd4c087929ca392abd8e1ce8549f567fac8616105a7e644f629a91a
+    targetBytecodeHashes:
+    - 0xbd7871d12e8ba717ce15222ef82cf01beafbc4e22a16894357e4c13eef8d03b9
+    originVerified: true
+    targetVerified: true
+  - originContractName: Roles
+    originFacetAddress: 0xc8b533019ec3dc4d330f8b391c482a932dfce9f0
+    targetContractAddresses:
+    - 0xDC373a4913c443A9fd6adE0F09A448050C46443f
+    selectorsDiff: []
+    originBytecodeHash: 0x0a4bd32dfda8c3276d7aadaa9784f74706b6f2c6c771d561e592ce4627a9466b
+    targetBytecodeHashes:
+    - 0x280b8a37eed891de258d346f2e2d02de26bd2516b8be920078f686e90818c63c
+    originVerified: true
+    targetVerified: true
+  - originContractName: Channels
+    originFacetAddress: 0xe96f0b40f29b187e0b72d65c125b5c81d8ec7427
+    targetContractAddresses:
+    - 0xff29f23B46a6f1a5286A7fA7E1549ac99C2B2785
+    selectorsDiff: []
+    originBytecodeHash: 0x45d1c26a6a191c2429067866b3322a148e4ebf43c92fa3b4d0ba783bb242a360
+    targetBytecodeHashes:
+    - 0x61957d31b18513d093b3653345a059f4e9b2bbdee355d8b4daf6f4621bf78c0a
+    originVerified: true
+    targetVerified: true
+  - originContractName: Banning
+    originFacetAddress: 0x1a3c8d57a7091a23044d7f4f86f67ed9e0549a93
+    targetContractAddresses:
+    - 0x9905061F7C3144f3347a121F80cBdfb21ba86c35
+    selectorsDiff: []
+    originBytecodeHash: 0xa2ce3e77ba060ff1d59ed384e1c6c5788f308ad8bbbef612eb3e5de4e1d79de8
+    targetBytecodeHashes:
+    - 0xb9ae38a5fadc380a2a3c3135571f99b65cc1ba2d3dc8723c212578c6bf059318
+    originVerified: true
+    targetVerified: true
+  - originContractName: MembershipMetadata
+    originFacetAddress: 0xaaa1844ec3614b1542cf969f396ce3b0c9475ff5
+    selectorsDiff:
+    - "0xc87b56dd"
+    originBytecodeHash: 0x30dccb2efbb54ead430cb6ddafd211f40cd5782b8b906c66b8923c93e57ad252
+    originVerified: true
+    targetVerified: false
+  - originContractName: EntitlementDataQueryable
+    originFacetAddress: 0x3521938d549f31557930baa4cf72017df31aa081
+    targetContractAddresses:
+    - 0x5d81FD1f554e7e2f4402d6cb60D99da53F253eF8
+    selectorsDiff: []
+    originBytecodeHash: 0x2f070e4f84f4518ad656cf97d1f4055483a08985fdbd9b870a16003c681f787b
+    targetBytecodeHashes:
+    - 0x252aec97af7ec6007e7c76934ca3d7e5fba9ebe8dd22994308108a99124877e8
+    originVerified: true
+    targetVerified: true
+  - originContractName: PrepayFacet
+    originFacetAddress: 0x84dabfb6b35a85fb77709fe010b122f269c41cc9
+    targetContractAddresses:
+    - 0x90a6492d6ebFCFAEAb3884b6669686bD9e98c2Ab
+    selectorsDiff: []
+    originBytecodeHash: 0x2a021d780771453a722ae069e0e001f780c87b5208a29078c8534eb349ba49b8
+    targetBytecodeHashes:
+    - 0xfd202d7b5d320d2a758d62ae80acd95d1431335a92aac221aaacb351b1b14a77
+    originVerified: true
+    targetVerified: true
+  - originContractName: ReferralsFacet
+    originFacetAddress: 0xfe40f84e18f1df4a19456ed4d14ae0518661eece
+    targetContractAddresses:
+    - 0xa5D71a0AE1D93AC38Bb3f26a8e4f63595aCEd64A
+    selectorsDiff: []
+    originBytecodeHash: 0xe07aa5738c9a4f320010e693131cc68157e12f8381b776f20b4e1518706cbdc0
+    targetBytecodeHashes:
+    - 0xa1c48e2bef5accfe35086b715c708fa1ad503aa5b2b353d77675429abea9b70d
+    originVerified: true
+    targetVerified: true
+- name: spaceFactory
+  origin: alpha
+  target: gamma
+  facets:
+  - originContractName: MetadataFacet
+    originFacetAddress: 0x570dc0dc3d9456cd3611956f8c0b3be2cf2e340f
+    targetContractAddresses:
+    - 0xe4dd431A05f4f50703924FFC1B07644B482f7F8f
+    selectorsDiff: []
+    originBytecodeHash: 0x798dd2bf8b50bd849eb6e82b282fbad343f30e0f2e5e94556fe01d6e0761c09f
+    targetBytecodeHashes:
+    - 0xa1d982edf13f0e8e116ed3ce837013f13cf8cf7c080bc4302e4603255e330f12
+    originVerified: true
+    targetVerified: true
+  - originContractName: Architect
+    originFacetAddress: 0xd023224e7fea063182b69810866c8b6db8865172
+    targetContractAddresses:
+    - 0x86540f3A1e4E719A56bF09AE0c6988A5ea5febE2
+    selectorsDiff: []
+    originBytecodeHash: 0x20d0a86e9ea31a39663285aacfe88705983520a4482a7bac5ada891c9adfe090
+    targetBytecodeHashes:
+    - 0xd888b2b841f4731cb804dce485836627bad39f0aa1eee00f5eba7480e504745f
+    originVerified: true
+    targetVerified: true
+  - originContractName: MockLegacyArchitect
+    originFacetAddress: 0x2be4c4a3b6061613b4ec7db718e4fa6b3d1af8fd
+    selectorsDiff:
+    - "0xef009225"
+    originBytecodeHash: 0x0c8ac5a218b39d3afffa64a02afe5498be60fd2cd2399fc0b702f13582175200
+    originVerified: true
+    targetVerified: false
+  - originContractName: ProxyManager
+    originFacetAddress: 0x3ef661572b47415b8494976dbcebf68f538b1d99
+    targetContractAddresses:
+    - 0x3aef9f704D2AC56f4d8b19A5a1e094def56bF93D
+    selectorsDiff: []
+    originBytecodeHash: 0x15e0d766f92a0333a14aa85f4da7117c1637a2742b7f03ffa1735f9fd663091b
+    targetBytecodeHashes:
+    - 0x60a367681b056fc771947a0a8dc627eccc2c48be00eb7058a551848c2eb90076
+    originVerified: true
+    targetVerified: true
+  - originContractName: PlatformRequirementsFacet
+    originFacetAddress: 0x41059dc2256bc916c6d0bfa59e54bc031610599f
+    targetContractAddresses:
+    - 0x6431cF8735c170885453E41336508299e127EA97
+    selectorsDiff:
+    - "0x190eaaba"
+    originBytecodeHash: 0x846a62acb457119effefca98198d3b3051f1cb0328a3c13f8cf22f56e70a927e
+    targetBytecodeHashes:
+    - 0x43555f42d9e18a95b01e3d4bbb8c5dc2cd3a73ebbb41ce3f34e0db61e02a0a1c
+    originVerified: true
+    targetVerified: true
+  - originContractName: PricingModulesFacet
+    originFacetAddress: 0x3e78b4f6e1ffe55baed4bcda13a980080d6cecd5
+    targetContractAddresses:
+    - 0xBfDfa527f07a31A254dDF29499Eed373676b82F9
+    selectorsDiff: []
+    originBytecodeHash: 0x7bce5963a2497ff3c33ddb0cadc8b1c80a360c00064b891c0e540cde63af88c5
+    targetBytecodeHashes:
+    - 0x6580feb1ed2ec7c5c16f3f8207877bc2a059c8b29468abc79b6732759084b1d9
+    originVerified: true
+    targetVerified: true
+  - originContractName: ImplementationRegistryFacet
+    originFacetAddress: 0xb7888b796754296c6f9c9c060b609ea000f0aae9
+    targetContractAddresses:
+    - 0x441f1aCAAd919369B04CdB060183cd1497dCfB49
+    selectorsDiff: []
+    originBytecodeHash: 0xfc39fd5e4277ca5b6ded80147b956ec4cdb897705a95b6162677de7ebb065052
+    targetBytecodeHashes:
+    - 0x772ab337f0b86061f02964c0fc47747f7fa49d4f99fe5edb3964af7fc3d0e06b
+    originVerified: true
+    targetVerified: true
+  - originContractName: WalletLink
+    originFacetAddress: 0x02a36b6e9b3b9363812f51936d65c1a186597d3d
+    targetContractAddresses:
+    - 0xa81a65CdA100D9D353f388C6FAB6aBaD0426d4CF
+    selectorsDiff: []
+    originBytecodeHash: 0x2e34a139597d657fc2a190a8a4ac4a1e8dab974b54c601f1ae900f9d5993e337
+    targetBytecodeHashes:
+    - 0x61e8546a5b88207bb0e803d9e76edc1d9242adb57721a9cf47fb76c0195ced9b
+    originVerified: true
+    targetVerified: true
