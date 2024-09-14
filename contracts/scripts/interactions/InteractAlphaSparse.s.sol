@@ -48,10 +48,6 @@ contract InteractAlphaSparse is AlphaHelper {
   }
 
   string private jsonData;
-  bytes private updatedData;
-  bytes private updatedFacets;
-
-  uint256 private updatedDiamondLen;
 
   function readJSON(string memory filename) internal {
     {
@@ -64,6 +60,7 @@ contract InteractAlphaSparse is AlphaHelper {
   function __interact(address deployer) internal override {
     readJSON(DEFAULT_JSON_FILE);
     DiamondFacets[] memory diamonds;
+    uint256 updatedDiamondLen;
     // scope to avoid stack-too-deep error
     {
       updatedDiamondLen = abi.decode(
