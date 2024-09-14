@@ -4,6 +4,7 @@ cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")"
 cd ..
 
 : ${RUN_ENV:?}
+source ./core/run_files/${RUN_ENV}/contracts.env
 RIVER_ENV="local_${RUN_ENV}"
 RIVER_REGISTRY_ADDRESS=$(jq -r '.address' packages/generated/deployments/${RIVER_ENV}/river/addresses/riverRegistry.json)
 SKIP_CHAIN_WAIT="${SKIP_CHAIN_WAIT:-false}"
