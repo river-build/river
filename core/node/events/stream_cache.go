@@ -123,7 +123,7 @@ func (s *streamCacheImpl) onStreamAllocated(ctx context.Context, event *river.St
 			nodes:            NewStreamNodes(event.Nodes, s.params.Wallet.Address),
 			lastAccessedTime: time.Now(),
 		}
-		_, err := s.tryLoadStreamRecordImpl(ctx, stream, event.GenesisMiniblock)
+		_, err := s.createStreamStorage(ctx, stream, event.GenesisMiniblock)
 		if err != nil {
 			dlog.FromCtx(ctx).Error("onStreamAllocated: failed to create stream", "err", err)
 		}
@@ -286,10 +286,10 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 		lastAccessedTime: time.Now(),
 	}
 
-	return s.tryLoadStreamRecordImpl(ctx, stream, mb)
+	return s.createStreamStorage(ctx, stream, mb)
 }
 
-func (s *streamCacheImpl) tryLoadStreamRecordImpl(
+func (s *streamCacheImpl) createStreamStorage(
 	ctx context.Context,
 	stream *streamImpl,
 	mb []byte,
