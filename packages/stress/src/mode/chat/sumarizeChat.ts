@@ -1,6 +1,6 @@
 import { check, dlogger, shortenHexString } from '@river-build/dlog'
 import { StressClient } from '../../utils/stressClient'
-import { ChatConfig } from './types'
+import { ChatConfig } from '../common/types'
 import { getSystemInfo } from '../../utils/systemInfo'
 import { channelMessagePostWhere } from '../../utils/timeline'
 import { isDefined } from '@river-build/sdk'
@@ -20,7 +20,19 @@ export async function sumarizeChat(
     const message = defaultChannel.view.timeline.find(
         channelMessagePostWhere((value) => value.body.includes(cfg.sessionId)),
     )
-    check(isDefined(message), 'message not found')
+
+    if (!message) {
+        logger.error('message not found', { defaultChannel })
+        return {
+            containerIndex: cfg.containerIndex,
+            processIndex: cfg.processIndex,
+            freeMemory: getSystemInfo().FreeMemory,
+            checkinCounts: {},
+            errors: [
+                `message not found in ${cfg.announceChannelId} that includes ${cfg.sessionId}`,
+            ],
+        }
+    }
 
     const checkinCounts: Record<string, Record<string, number>> = {}
 

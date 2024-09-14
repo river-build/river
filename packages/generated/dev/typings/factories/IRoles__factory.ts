@@ -57,6 +57,24 @@ const _abi = [
   },
   {
     type: "function",
+    name: "clearChannelPermissionOverrides",
+    inputs: [
+      {
+        name: "roleId",
+        type: "uint256",
+        internalType: "uint256",
+      },
+      {
+        name: "channelId",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "createRole",
     inputs: [
       {
@@ -95,6 +113,30 @@ const _abi = [
       },
     ],
     stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "getChannelPermissionOverrides",
+    inputs: [
+      {
+        name: "roleId",
+        type: "uint256",
+        internalType: "uint256",
+      },
+      {
+        name: "channelId",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+    ],
+    outputs: [
+      {
+        name: "permissions",
+        type: "string[]",
+        internalType: "string[]",
+      },
+    ],
+    stateMutability: "view",
   },
   {
     type: "function",
@@ -264,6 +306,29 @@ const _abi = [
   },
   {
     type: "function",
+    name: "setChannelPermissionOverrides",
+    inputs: [
+      {
+        name: "roleId",
+        type: "uint256",
+        internalType: "uint256",
+      },
+      {
+        name: "channelId",
+        type: "bytes32",
+        internalType: "bytes32",
+      },
+      {
+        name: "permissions",
+        type: "string[]",
+        internalType: "string[]",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "updateRole",
     inputs: [
       {
@@ -301,6 +366,81 @@ const _abi = [
     ],
     outputs: [],
     stateMutability: "nonpayable",
+  },
+  {
+    type: "event",
+    name: "PermissionsAddedToChannelRole",
+    inputs: [
+      {
+        name: "updater",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "roleId",
+        type: "uint256",
+        indexed: true,
+        internalType: "uint256",
+      },
+      {
+        name: "channelId",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "PermissionsRemovedFromChannelRole",
+    inputs: [
+      {
+        name: "updater",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "roleId",
+        type: "uint256",
+        indexed: true,
+        internalType: "uint256",
+      },
+      {
+        name: "channelId",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "PermissionsUpdatedForChannelRole",
+    inputs: [
+      {
+        name: "updater",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+      {
+        name: "roleId",
+        type: "uint256",
+        indexed: true,
+        internalType: "uint256",
+      },
+      {
+        name: "channelId",
+        type: "bytes32",
+        indexed: true,
+        internalType: "bytes32",
+      },
+    ],
+    anonymous: false,
   },
   {
     type: "event",

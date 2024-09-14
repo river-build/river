@@ -9,7 +9,7 @@ export default [
     "name": "isEntitled",
     "inputs": [
       {
-        "name": "user",
+        "name": "users",
         "type": "address[]",
         "internalType": "address[]"
       }
@@ -28,7 +28,7 @@ export default [
     "name": "setEntitled",
     "inputs": [
       {
-        "name": "user",
+        "name": "users",
         "type": "address[]",
         "internalType": "address[]"
       },
@@ -40,5 +40,24 @@ export default [
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "supportsInterface",
+    "inputs": [
+      {
+        "name": "interfaceId",
+        "type": "bytes4",
+        "internalType": "bytes4"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
   }
 ] as const

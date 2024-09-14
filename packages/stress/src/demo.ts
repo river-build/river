@@ -1,14 +1,16 @@
 import 'fake-indexeddb/auto' // used to mock indexdb in dexie, don't remove
-import { isDecryptedEvent, makeRiverConfig } from '@river-build/sdk'
+import { isDecryptedEvent, makeRiverConfig, randomUrlSelector } from '@river-build/sdk'
 import { check, dlogger } from '@river-build/dlog'
 import { InfoRequest } from '@river-build/proto'
 import { EncryptionDelegate } from '@river-build/encryption'
-import { makeConnection } from './utils/connection'
 import { makeStressClient } from './utils/stressClient'
 import { expect, isSet } from './utils/expect'
 import { printSystemInfo } from './utils/systemInfo'
 import { waitFor } from './utils/waitFor'
-import { Wallet } from 'ethers'
+import { ethers, Wallet } from 'ethers'
+import { RedisStorage } from './utils/storage'
+import { makeHttp2StreamRpcClient } from './utils/rpc-http2'
+import { createRiverRegistry } from '@river-build/web3'
 
 check(isSet(process.env.RIVER_ENV), 'process.env.RIVER_ENV')
 
@@ -24,8 +26,13 @@ function getRootWallet() {
 }
 
 async function spamInfo(count: number) {
-    const connection = await makeConnection(config)
-    const { rpcClient } = connection
+    const staticRiverProvider = new ethers.providers.StaticJsonRpcProvider(config.river.rpcUrl)
+    const riverRegistry = createRiverRegistry(staticRiverProvider, config.river.chainConfig)
+    const urls = await riverRegistry.getOperationalNodeUrls()
+    const selectedUrl = randomUrlSelector(urls)
+    const rpcClient = makeHttp2StreamRpcClient(selectedUrl, undefined, () =>
+        riverRegistry.getOperationalNodeUrls(),
+    )
     for (let i = 0; i < count; i++) {
         logger.log(`iteration ${i}`)
         const info = await rpcClient.info(new InfoRequest({}), {
@@ -38,12 +45,12 @@ async function spamInfo(count: number) {
 
 async function sendAMessage() {
     logger.log('=======================send a message - start =======================')
-    const bob = await makeStressClient(config, 0, getRootWallet())
+    const bob = await makeStressClient(config, 0, getRootWallet(), undefined)
     const { spaceId, defaultChannelId } = await bob.createSpace("bob's space")
     await bob.sendMessage(defaultChannelId, 'hello')
 
     logger.log('=======================send a message - make alice =======================')
-    const alice = await makeStressClient(config, 1)
+    const alice = await makeStressClient(config, 1, undefined, undefined)
     await bob.spaceDapp.joinSpace(
         spaceId,
         alice.baseProvider.wallet.address,
@@ -116,9 +123,23 @@ async function encryptDecrypt() {
     bobAccount.free()
 }
 
+async function demoExternalStoreage() {
+    if (isSet(process.env.REDIS_HOST)) {
+        const storage = new RedisStorage(process.env.REDIS_HOST)
+        const value = await storage.get('demo_key')
+        logger.info('value', value)
+        const nextValue = value ? parseInt(value) + 1 : 1
+        await storage.set('demo_key', nextValue.toString())
+        const newValue = await storage.get('demo_key')
+        logger.info('value updated', { from: value, to: newValue })
+    }
+}
+
 printSystemInfo(logger)
 
 const run = async () => {
+    logger.log('========================storage========================')
+    await demoExternalStoreage()
     logger.log('==========================spamInfo==========================')
     await spamInfo(1)
     logger.log('=======================encryptDecrypt=======================')

@@ -63,7 +63,6 @@
         "Start Watches",
         "Casablanca",
         "Casablanca-No-Entitlements",
-        "XChain-Single",
         "Playground",
       ],
       "group": {
@@ -81,6 +80,7 @@
         "WatchCasablancaWeb3",
         "WatchCasablancaSdk",
         "WatchReactSdk",
+        "WatchStress",
       ],
       "group": {
         "kind": "build",
@@ -163,9 +163,9 @@
       }
     },
     {
-      "label": "Start Load Testing Redis",
+      "label": "Start Stress Testing Redis",
       "type": "shell",
-      "command": "./scripts/start-load-testing-redis.sh",
+      "command": "./packages/stress/scripts/start_redis.sh",
       "isBackground": true,
       "problemMatcher": [],
       "presentation": {
@@ -275,33 +275,13 @@
     {
       "label": "CasablancaConfigureNodes",
       "type": "shell",
-      "command": "RIVER_BLOCK_TIME=1 ./scripts/configure-nodes.sh --single && RIVER_BLOCK_TIME=1 ./scripts/configure-nodes.sh --single_ne",
+      "command": "RIVER_BLOCK_TIME=1 ./scripts/configure-nodes.sh --multi && RIVER_BLOCK_TIME=1 ./scripts/configure-nodes.sh --multi_ne",
       "isBackground": true,
       "problemMatcher": [],
       "presentation": {
         "group": "ephemeral",
         "focus": true,
         "panel": "shared",
-      }
-    },
-    {
-      "label": "XChain-Single",
-      "type": "shell",
-      "command": "sleep 1 && RUN_ENV=single ./core/xchain/launch_multi.sh",
-      "isBackground": true,
-      "problemMatcher": [],
-      "presentation": {
-        "group": "xchain"
-      }
-    },
-    {
-      "label": "XChain-Multi",
-      "type": "shell",
-      "command": "sleep 1 && RUN_ENV=multi ./core/xchain/launch_multi.sh",
-      "isBackground": true,
-      "problemMatcher": [],
-      "presentation": {
-        "group": "xchain"
       }
     },
     {
@@ -421,6 +401,16 @@
       }
     },
     {
+      "label": "WatchStress",
+      "type": "shell",
+      "command": "cd packages/stress && yarn watch",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "group": "local-watch-proto"
+      }
+    },
+    {
       "label": "WatchCasablancaWeb3",
       "type": "shell",
       "command": "cd packages/web3 && yarn watch",
@@ -465,7 +455,7 @@
     {
       "label": "Kill Watches",
       "type": "shell",
-      "command": "echo 'killing watches' && kill $(ps -ax | grep 'yarn watch' | awk '{print $1}') && return 0",
+      "command": "./scripts/kill-watches.sh",
       "isBackground": false,
       "problemMatcher": [],
       "presentation": {

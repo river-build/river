@@ -38,16 +38,6 @@ contract PrepayFacetTest is MembershipBaseSetup, IPrepayBase {
   //                           Reverts
   // =============================================================
 
-  function test_revertWhen_notOwner() external {
-    address notOwner = _randomAddress();
-
-    vm.prank(notOwner);
-    vm.expectRevert(
-      abi.encodeWithSelector(Ownable__NotOwner.selector, notOwner)
-    );
-    prepayFacet.prepayMembership(1);
-  }
-
   function test_revertWhen_invalidSupplyAmount() external {
     vm.prank(founder);
     vm.expectRevert(Prepay__InvalidSupplyAmount.selector);
@@ -75,9 +65,13 @@ contract PrepayFacetTest is MembershipBaseSetup, IPrepayBase {
    */
   function test_integration_prepayMembership()
     external
-    givenMembershipHasPrice
     givenFounderHasPrepaid(1)
   {
+    vm.startPrank(founder);
+    membership.setMembershipPrice(MEMBERSHIP_PRICE);
+    membership.setMembershipFreeAllocation(0);
+    vm.stopPrank();
+
     // Alice mints a membership
     vm.prank(alice);
     membership.joinSpace(alice);

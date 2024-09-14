@@ -12,7 +12,8 @@ import {IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.
 import {IMembership} from "contracts/src/spaces/facets/membership/IMembership.sol";
 import {IRuleEntitlementBase} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
-
+import {IPlatformRequirements} from "contracts/src/factory/facets/platform/requirements/IPlatformRequirements.sol";
+import {IPrepay} from "contracts/src/spaces/facets/prepay/IPrepay.sol";
 // libraries
 import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
 
@@ -23,7 +24,7 @@ import {Architect} from "contracts/src/factory/facets/architect/Architect.sol";
 // mocks
 import {MockERC721} from "contracts/test/mocks/MockERC721.sol";
 
-contract Integration_CreateSpace is
+contract IntegrationCreateSpace is
   BaseSetup,
   IRolesBase,
   IArchitectBase,
@@ -36,11 +37,12 @@ contract Integration_CreateSpace is
     spaceArchitect = Architect(spaceFactory);
   }
 
-  function test_createEveryoneSpace(string memory spaceId) external {
+  function test_fuzz_createEveryoneSpace(
+    string memory spaceId,
+    address founder,
+    address user
+  ) external assumeEOA(founder) {
     vm.assume(bytes(spaceId).length > 2 && bytes(spaceId).length < 100);
-
-    address founder = _randomAddress();
-    address user = _randomAddress();
 
     SpaceInfo memory spaceInfo = _createEveryoneSpaceInfo(spaceId);
     spaceInfo.membership.settings.pricingModule = pricingModule;
@@ -57,11 +59,12 @@ contract Integration_CreateSpace is
     );
   }
 
-  function test_createUserGatedSpace(string memory spaceId) external {
+  function test_fuzz_createUserGatedSpace(
+    string memory spaceId,
+    address founder,
+    address user
+  ) external assumeEOA(founder) assumeEOA(user) {
     vm.assume(bytes(spaceId).length > 2 && bytes(spaceId).length < 100);
-
-    address founder = _randomAddress();
-    address user = _randomAddress();
 
     address[] memory users = new address[](1);
     users[0] = user;
@@ -91,11 +94,13 @@ contract Integration_CreateSpace is
     );
   }
 
-  function test_createTokenGatedSpace(string memory spaceId) external {
+  function test_fuzz_createTokenGatedSpace(
+    string memory spaceId,
+    address founder,
+    address user
+  ) external assumeEOA(founder) assumeEOA(user) {
     vm.assume(bytes(spaceId).length > 2 && bytes(spaceId).length < 100);
 
-    address founder = _randomAddress();
-    address user = _randomAddress();
     address mock = address(new MockERC721());
 
     // We first define how many operations we want to have
@@ -103,26 +108,26 @@ contract Integration_CreateSpace is
     operations[0] = Operation({opType: CombinedOperationType.CHECK, index: 0});
 
     // We then define the type of operations we want to have
-    CheckOperation[] memory checkOperations = new CheckOperation[](1);
-    checkOperations[0] = CheckOperation({
+    CheckOperationV2[] memory checkOperations = new CheckOperationV2[](1);
+    checkOperations[0] = CheckOperationV2({
       opType: CheckOperationType.ERC721,
       chainId: block.chainid,
       contractAddress: mock,
-      threshold: 1
+      params: abi.encode(uint256(1))
     });
 
     // We then define the logical operations we want to have
     LogicalOperation[] memory logicalOperations = new LogicalOperation[](0);
 
     // We then define the rule data
-    RuleData memory ruleData = RuleData({
+    RuleDataV2 memory ruleData = RuleDataV2({
       operations: operations,
       checkOperations: checkOperations,
       logicalOperations: logicalOperations
     });
 
     SpaceInfo memory spaceInfo = _createSpaceInfo(spaceId);
-    spaceInfo.membership.requirements.ruleData = ruleData;
+    spaceInfo.membership.requirements.ruleData = abi.encode(ruleData);
     spaceInfo.membership.settings.pricingModule = pricingModule;
 
     vm.prank(founder);
@@ -143,13 +148,13 @@ contract Integration_CreateSpace is
   //                           Channels
   // =============================================================
 
-  function test_createEveryoneSpace_with_separate_channels(
-    string memory spaceId
-  ) external {
+  function test_fuzz_createEveryoneSpace_with_separate_channels(
+    string memory spaceId,
+    address founder,
+    address member
+  ) external assumeEOA(founder) assumeEOA(member) {
     vm.assume(bytes(spaceId).length > 2 && bytes(spaceId).length < 100);
-
-    address founder = _randomAddress();
-    address member = _randomAddress();
+    vm.assume(founder != member);
 
     // create space with default channel
     SpaceInfo memory spaceInfo = _createEveryoneSpaceInfo(spaceId);
@@ -218,7 +223,8 @@ contract Integration_CreateSpace is
       IEntitlementsManager(newSpace).isEntitledToSpace({
         user: member,
         permission: Permissions.Write
-      })
+      }),
+      "Member should be able to access the space"
     );
 
     // however they cannot access the channel
@@ -227,7 +233,8 @@ contract Integration_CreateSpace is
         channelId: "test2",
         user: member,
         permission: Permissions.Write
-      })
+      }),
+      "Member should not be able to access the channel"
     );
 
     // add role to channel to allow access
@@ -237,6 +244,47 @@ contract Integration_CreateSpace is
     bool isEntitledToChannelAfter = IEntitlementsManager(newSpace)
       .isEntitledToChannel("test2", member, Permissions.Write);
     // members can access the channel now
-    assertTrue(isEntitledToChannelAfter);
+    assertTrue(
+      isEntitledToChannelAfter,
+      "Member should be able to access the channel"
+    );
+  }
+
+  function test_fuzz_createSpaceWithPrepay(
+    string memory spaceId,
+    address founder,
+    address member
+  ) external assumeEOA(founder) assumeEOA(member) {
+    vm.assume(bytes(spaceId).length > 2 && bytes(spaceId).length < 100);
+    vm.assume(founder != member);
+
+    // create space with default channel
+    CreateSpace memory spaceInfo = _createSpaceWithPrepayInfo(spaceId);
+    spaceInfo.membership.settings.pricingModule = pricingModule;
+    spaceInfo.prepay.supply = 100;
+    spaceInfo.membership.requirements.everyone = true;
+
+    uint256 cost = spaceInfo.prepay.supply *
+      IPlatformRequirements(spaceFactory).getMembershipFee();
+
+    vm.deal(founder, cost);
+    vm.prank(founder);
+    address newSpace = spaceArchitect.createSpaceWithPrepay{value: cost}(
+      spaceInfo
+    );
+
+    uint256 prepaidSupply = IPrepay(newSpace).prepaidMembershipSupply();
+
+    assertTrue(
+      IEntitlementsManager(newSpace).isEntitledToSpace(
+        member,
+        Permissions.JoinSpace
+      )
+    );
+
+    assertTrue(
+      prepaidSupply == spaceInfo.prepay.supply,
+      "Prepaid supply should be equal to the supply"
+    );
   }
 }

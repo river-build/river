@@ -12,11 +12,10 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/stretchr/testify/require"
-
 	"github.com/river-build/river/core/contracts/river"
 	"github.com/river-build/river/core/node/base/test"
 	"github.com/river-build/river/core/node/crypto"
+	"github.com/stretchr/testify/require"
 )
 
 func TestChainMonitorBlocks(t *testing.T) {
@@ -50,13 +49,15 @@ func TestChainMonitorBlocks(t *testing.T) {
 
 func TestNextPollInterval(t *testing.T) {
 	var (
-		require          = require.New(t)
-		blockPeriod      = 2 * time.Second
-		errSlowdownLimit = 10 * time.Second
-		tests            = []struct {
+		require           = require.New(t)
+		blockPeriod       = 2 * time.Second
+		closeDownDuration = max(25*time.Millisecond, blockPeriod/50)
+		errSlowdownLimit  = 10 * time.Second
+		tests             = []struct {
 			calc           crypto.ChainMonitorPollInterval
 			took           time.Duration
 			gotErr         bool
+			gotBlock       bool
 			multipleBlocks bool
 			exp            time.Duration
 		}{
@@ -64,13 +65,15 @@ func TestNextPollInterval(t *testing.T) {
 				calc:           crypto.NewChainMonitorPollIntervalCalculator(blockPeriod, errSlowdownLimit),
 				took:           50 * time.Millisecond,
 				gotErr:         false,
+				gotBlock:       true,
 				multipleBlocks: false,
-				exp:            blockPeriod - 50*time.Millisecond,
+				exp:            blockPeriod - 50*time.Millisecond - closeDownDuration,
 			},
 			{
 				calc:           crypto.NewChainMonitorPollIntervalCalculator(blockPeriod, errSlowdownLimit),
 				took:           50 * time.Millisecond,
 				gotErr:         true,
+				gotBlock:       false,
 				multipleBlocks: false,
 				exp:            blockPeriod,
 			},
@@ -78,6 +81,7 @@ func TestNextPollInterval(t *testing.T) {
 				calc:           crypto.NewChainMonitorPollIntervalCalculator(blockPeriod, errSlowdownLimit),
 				took:           50 * time.Millisecond,
 				gotErr:         false,
+				gotBlock:       true,
 				multipleBlocks: true,
 				exp:            time.Duration(0),
 			},
@@ -85,6 +89,7 @@ func TestNextPollInterval(t *testing.T) {
 				calc:           crypto.NewChainMonitorPollIntervalCalculator(blockPeriod, errSlowdownLimit),
 				took:           50 * time.Millisecond,
 				gotErr:         true,
+				gotBlock:       true,
 				multipleBlocks: true,
 				exp:            blockPeriod,
 			},
@@ -92,8 +97,8 @@ func TestNextPollInterval(t *testing.T) {
 	)
 
 	for i, tc := range tests {
-		require.Equal(tc.exp,
-			tc.calc.Interval(tc.took, tc.multipleBlocks, tc.gotErr), fmt.Sprintf("test# %d", i))
+		got := tc.calc.Interval(tc.took, tc.gotBlock, tc.multipleBlocks, tc.gotErr)
+		require.Equal(tc.exp, got, fmt.Sprintf("test# %d", i))
 	}
 
 	// test scenarios that require multiple times to request
@@ -104,33 +109,33 @@ func TestNextPollInterval(t *testing.T) {
 	)
 
 	// multiple errors followed by a successful call that yielded no new blocks
-	pollInterval := poll.Interval(took, false, true)
+	pollInterval := poll.Interval(took, false, false, true)
 	require.Equal(blockPeriod, pollInterval)
-	pollInterval = poll.Interval(took, false, true)
+	pollInterval = poll.Interval(took, false, false, true)
 	require.Equal(2*blockPeriod, pollInterval)
-	pollInterval = poll.Interval(took, false, true)
+	pollInterval = poll.Interval(took, false, false, true)
 	require.Equal(slowdownLim, pollInterval)
-	pollInterval = poll.Interval(took, false, false)
-	require.Equal(blockPeriod-took, pollInterval)
+	pollInterval = poll.Interval(took, true, false, false)
+	require.Equal(blockPeriod-took-closeDownDuration, pollInterval)
 
 	// multiple errors followed by a successful call that yielded one of just a couple of blocks
-	pollInterval = poll.Interval(took, false, true)
+	pollInterval = poll.Interval(took, false, false, true)
 	require.Equal(blockPeriod, pollInterval)
-	pollInterval = poll.Interval(took, false, true)
+	pollInterval = poll.Interval(took, false, false, true)
 	require.Equal(2*blockPeriod, pollInterval)
-	pollInterval = poll.Interval(took, false, true)
+	pollInterval = poll.Interval(took, false, false, true)
 	require.Equal(slowdownLim, pollInterval)
-	pollInterval = poll.Interval(took, false, false)
-	require.Equal(blockPeriod-took, pollInterval)
+	pollInterval = poll.Interval(took, true, false, false)
+	require.Equal(blockPeriod-took-closeDownDuration, pollInterval)
 
 	// multiple errors followed by a successful call that yielded multiple blocks
-	pollInterval = poll.Interval(took, false, true)
+	pollInterval = poll.Interval(took, true, false, true)
 	require.Equal(blockPeriod, pollInterval)
-	pollInterval = poll.Interval(took, false, true)
+	pollInterval = poll.Interval(took, true, false, true)
 	require.Equal(2*blockPeriod, pollInterval)
-	pollInterval = poll.Interval(took, false, true)
+	pollInterval = poll.Interval(took, true, false, true)
 	require.Equal(slowdownLim, pollInterval)
-	pollInterval = poll.Interval(took, true, false)
+	pollInterval = poll.Interval(took, true, true, false)
 	require.Equal(time.Duration(0), pollInterval)
 }
 
@@ -208,7 +213,8 @@ func TestChainMonitorEvents(t *testing.T) {
 		tc.Commit(ctx)
 	}
 
-	receipt := <-pendingTx.Wait()
+	receipt, err := pendingTx.Wait(ctx)
+	require.NoError(err)
 	require.Equal(uint64(1), receipt.Status)
 
 	// wait a bit for the monitor to catch up and has called the callbacks
@@ -300,7 +306,8 @@ func TestContractAllEventsFromFuture(t *testing.T) {
 		tc.Commit(ctx)
 	}
 
-	receipt := <-pendingTx.Wait()
+	receipt, err := pendingTx.Wait(ctx)
+	require.NoError(err)
 	require.Equal(crypto.TransactionResultSuccess, receipt.Status)
 
 	var (
@@ -360,7 +367,8 @@ func TestContractAllEventsFromFuture(t *testing.T) {
 		tc.Commit(ctx)
 	}
 
-	receipt = <-pendingTx.Wait()
+	receipt, err = pendingTx.Wait(ctx)
+	require.NoError(err)
 	require.Equal(crypto.TransactionResultSuccess, receipt.Status)
 
 	// ensure that futureContractEventsCallbackCapturedEvents received old NodeAdded events
@@ -444,7 +452,8 @@ func TestContractAllEventsFromPast(t *testing.T) {
 		tc.Commit(ctx)
 	}
 
-	receipt := <-pendingTx.Wait()
+	receipt, err := pendingTx.Wait(ctx)
+	require.NoError(err)
 	require.Equal(crypto.TransactionResultSuccess, receipt.Status)
 
 	var (
@@ -564,7 +573,8 @@ func TestContractEventsWithTopicsFromPast(t *testing.T) {
 		tc.Commit(ctx)
 	}
 
-	receipt := <-pendingTx.Wait()
+	receipt, err := pendingTx.Wait(ctx)
+	require.NoError(err)
 	require.Equal(crypto.TransactionResultSuccess, receipt.Status)
 
 	var (
@@ -668,17 +678,22 @@ func TestEventsOrder(t *testing.T) {
 	require.NoError(err)
 
 	// generate blocks until last tx is processed
-	var receipt *types.Receipt
-	for receipt == nil {
-		tc.Commit(ctx)
-		select {
-		case r := <-pendingTx.Wait():
-			receipt = r
-		default:
+	done := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-time.After(10 * time.Millisecond):
+				tc.Commit(ctx)
+			case <-done:
+				return
+			}
 		}
-		time.Sleep(10 * time.Millisecond)
-	}
+	}()
 
+	receipt, err := pendingTx.Wait(ctx)
+	close(done)
+
+	require.NoError(err)
 	require.Equal(crypto.TransactionResultSuccess, receipt.Status)
 
 	// make sure that the event callback is called in the correct order

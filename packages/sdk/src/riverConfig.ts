@@ -11,9 +11,17 @@ import { check } from '@river-build/dlog'
 
 function getEnvironmentId(): string {
     if (typeof process === 'object') {
-        return process.env.RIVER_ENV || 'local_single'
+        return process.env.RIVER_ENV || 'local_multi'
     }
-    return 'local_single'
+    return 'local_multi'
+}
+
+// Test flag to toggle usage of legacy spaces
+export function useLegacySpaces(): boolean {
+    if (typeof process === 'object') {
+        return process.env.USE_LEGACY_SPACES === 'true'
+    }
+    return true
 }
 
 function getBaseRpcUrlForChain(chainId: number): string {
@@ -27,6 +35,8 @@ function getBaseRpcUrlForChain(chainId: number): string {
             return 'http://localhost:8545'
         case 84532:
             return 'https://sepolia.base.org'
+        case 8453:
+            return 'https://mainnet.base.org'
         default:
             throw new Error(`No preset RPC url for base chainId ${chainId}`)
     }
@@ -43,6 +53,8 @@ function getRiverRpcUrlForChain(chainId: number): string {
             return 'http://localhost:8546'
         case 6524490:
             return 'https://devnet.rpc.river.build'
+        case 550:
+            return 'https://mainnet.rpc.river.build'
         default:
             throw new Error(`No preset RPC url for river chainId ${chainId}`)
     }

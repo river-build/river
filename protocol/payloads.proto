@@ -178,15 +178,22 @@ message ChunkedMedia {
         bytes secretKey = 2;
     }
 
-    message DerivedAESGCM {
-        string context = 1;
-    }
-
     MediaInfo info = 1;
     string streamId = 2;
     EmbeddedMedia thumbnail = 3;
     oneof encryption {
         AESGCM aesgcm = 101;
-        DerivedAESGCM derived = 102;
     }
+}
+
+message UserBio {
+    string bio = 1;
+    optional uint64 updated_at_epoch_ms = 2;
+}
+
+// a client created with an bearer token cannot make blockchain transactions, but can add events to the river nodes
+message BearerToken {
+    string delegate_private_key = 1;
+    bytes delegate_sig = 2;
+    int64 expiry_epoch_ms = 3;
 }

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"database/sql"
 	"embed"
 	"encoding/hex"
 	"fmt"
@@ -163,6 +164,25 @@ func (s *PostgresEventStore) txRunnerInner(
 	return nil
 }
 
+type backoffTracker struct {
+	last time.Duration
+}
+
+// Retries first attempt immediately, next waits for 50ms, then multipled by 1.5 each time.
+func (b *backoffTracker) wait(ctx context.Context) error {
+	if b.last == 0 {
+		b.last = 50 * time.Millisecond
+		return nil
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(b.last):
+		b.last = b.last * 3 / 2
+		return nil
+	}
+}
+
 func (s *PostgresEventStore) txRunner(
 	ctx context.Context,
 	name string,
@@ -181,6 +201,7 @@ func (s *PostgresEventStore) txRunner(
 
 	defer prometheus.NewTimer(s.txDuration.WithLabelValues(name)).ObserveDuration()
 
+	var backoff backoffTracker
 	for {
 		err := s.txRunnerInner(ctx, accessMode, txFn, opts)
 		if err != nil {
@@ -188,6 +209,10 @@ func (s *PostgresEventStore) txRunner(
 
 			if pgErr, ok := err.(*pgconn.PgError); ok {
 				if pgErr.Code == pgerrcode.SerializationFailure {
+					backoffErr := backoff.wait(ctx)
+					if backoffErr != nil {
+						return AsRiverError(backoffErr).Func(name).Message("Timed out waiting for backoff")
+					}
 					log.Warn(
 						"pg.txRunner: retrying transaction due to serialization failure",
 						"pgErr", pgErr,
@@ -415,7 +440,7 @@ func (s *PostgresEventStore) writeArchiveMiniblocksTx(
 func (s *PostgresEventStore) ReadStreamFromLastSnapshot(
 	ctx context.Context,
 	streamId StreamId,
-	precedingBlockCount int,
+	numToRead int,
 ) (*ReadStreamFromLastSnapshotResult, error) {
 	var ret *ReadStreamFromLastSnapshotResult
 	err := s.txRunner(
@@ -424,7 +449,7 @@ func (s *PostgresEventStore) ReadStreamFromLastSnapshot(
 		pgx.ReadOnly,
 		func(ctx context.Context, tx pgx.Tx) error {
 			var err error
-			ret, err = s.readStreamFromLastSnapshotTx(ctx, tx, streamId, precedingBlockCount)
+			ret, err = s.readStreamFromLastSnapshotTx(ctx, tx, streamId, numToRead)
 			return err
 		},
 		nil,
@@ -436,23 +461,16 @@ func (s *PostgresEventStore) ReadStreamFromLastSnapshot(
 	return ret, nil
 }
 
-// Supported consistency checks:
-// 1. There are no gaps in miniblocks sequence and it starts from latestsnaphot
-// 2. There are no gaps in slot_num for envelopes in minipools and it starts from 0
-// 3. For envelopes all generations are the same and equals to "max generation seq_num in miniblocks" + 1
 func (s *PostgresEventStore) readStreamFromLastSnapshotTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
-	precedingBlockCount int,
+	numToRead int,
 ) (*ReadStreamFromLastSnapshotResult, error) {
-	var result ReadStreamFromLastSnapshotResult
-
-	// first let's check what is the last block with snapshot
-	var latest_snapshot_miniblock_index int64
+	var snapshotMiniblockIndex int64
 	err := tx.
 		QueryRow(ctx, "SELECT latest_snapshot_miniblock FROM es WHERE stream_id = $1", streamId).
-		Scan(&latest_snapshot_miniblock_index)
+		Scan(&snapshotMiniblockIndex)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, WrapRiverError(Err_NOT_FOUND, err).Message("stream not found in local storage")
@@ -461,12 +479,22 @@ func (s *PostgresEventStore) readStreamFromLastSnapshotTx(
 		}
 	}
 
-	result.StartMiniblockNumber = max(0, latest_snapshot_miniblock_index-int64(max(0, precedingBlockCount)))
+	var lastMiniblockIndex int64
+	err = tx.
+		QueryRow(ctx, "SELECT MAX(seq_num) FROM miniblocks WHERE stream_id = $1", streamId).
+		Scan(&lastMiniblockIndex)
+	if err != nil {
+		return nil, WrapRiverError(Err_INTERNAL, err).Message("db inconsistency: failed to get last miniblock index")
+	}
+
+	numToRead = max(1, numToRead)
+	startSeqNum := max(0, lastMiniblockIndex-int64(numToRead-1))
+	startSeqNum = min(startSeqNum, snapshotMiniblockIndex)
 
 	miniblocksRow, err := tx.Query(
 		ctx,
 		"SELECT blockdata, seq_num FROM miniblocks WHERE seq_num >= $1 AND stream_id = $2 ORDER BY seq_num",
-		latest_snapshot_miniblock_index,
+		startSeqNum,
 		streamId,
 	)
 	if err != nil {
@@ -474,50 +502,52 @@ func (s *PostgresEventStore) readStreamFromLastSnapshotTx(
 	}
 	defer miniblocksRow.Close()
 
-	// Retrieve miniblocks starting from the latest miniblock with snapshot
 	var miniblocks [][]byte
-
-	// During scanning rows we also check that there are no gaps in miniblocks sequence and it starts from latestsnaphot
 	var counter int64 = 0
-	var seqNum int64
-
+	var readLastSeqNum int64
+	var readFirstSeqNum int64
 	for miniblocksRow.Next() {
 		var blockdata []byte
-
-		err = miniblocksRow.Scan(&blockdata, &seqNum)
+		err = miniblocksRow.Scan(&blockdata, &readLastSeqNum)
 		if err != nil {
 			return nil, err
 		}
-		if seqNum != latest_snapshot_miniblock_index+counter {
+		if counter == 0 {
+			readFirstSeqNum = readLastSeqNum
+		} else if readLastSeqNum != readFirstSeqNum+counter {
 			return nil, RiverError(
-				Err_MINIBLOCKS_STORAGE_FAILURE,
-				"Miniblocks consistency violation - wrong block sequence number",
-				"ActualSeqNum", seqNum,
-				"ExpectedSeqNum", latest_snapshot_miniblock_index+counter)
+				Err_INTERNAL,
+				"Miniblocks consistency violation - miniblocks are not sequential in db",
+				"ActualSeqNum", readLastSeqNum,
+				"ExpectedSeqNum", readFirstSeqNum+counter)
 		}
 		miniblocks = append(miniblocks, blockdata)
 		counter++
 	}
+	miniblocksRow.Close()
 
-	// At this moment seqNum contains max miniblock number in the miniblock storage
-	result.Miniblocks = miniblocks
+	if !(readFirstSeqNum <= snapshotMiniblockIndex && snapshotMiniblockIndex <= readLastSeqNum) {
+		return nil, RiverError(
+			Err_INTERNAL,
+			"Miniblocks consistency violation - snapshotMiniblocIndex is out of range",
+			"snapshotMiniblockIndex", snapshotMiniblockIndex,
+			"readFirstSeqNum", readFirstSeqNum,
+			"readLastSeqNum", readLastSeqNum)
+	}
 
-	// Retrieve events from minipool
 	rows, err := tx.Query(
 		ctx,
-		"SELECT envelope, generation, slot_num FROM minipools WHERE slot_num > -1 AND stream_id = $1 ORDER BY generation, slot_num",
+		"SELECT envelope, generation, slot_num FROM minipools WHERE stream_id = $1 ORDER BY generation, slot_num",
 		streamId,
 	)
 	if err != nil {
 		return nil, err
 	}
-
 	defer rows.Close()
 
 	var envelopes [][]byte
-	var slotNumsCounter int64 = 0
-
-	// Let's check during scan that slot_nums start from 0 and there are no gaps and that each generation is equal to maxSeqNumInMiniblocksTable+1
+	var expectedGeneration int64 = readLastSeqNum + 1
+	var expectedSlot int64 = -1
 	for rows.Next() {
 		var envelope []byte
 		var generation int64
@@ -526,30 +556,35 @@ func (s *PostgresEventStore) readStreamFromLastSnapshotTx(
 		if err != nil {
 			return nil, err
 		}
-		// Check that we don't have gaps in slot numbers
-		if slotNum != slotNumsCounter {
+		if generation != expectedGeneration {
+			return nil, RiverError(
+				Err_MINIBLOCKS_STORAGE_FAILURE,
+				"Minipool consistency violation - minipool generation doesn't match last miniblock generation",
+			).
+				Tag("generation", generation).
+				Tag("expectedGeneration", expectedGeneration)
+		}
+		if slotNum != expectedSlot {
 			return nil, RiverError(
 				Err_MINIBLOCKS_STORAGE_FAILURE,
 				"Minipool consistency violation - slotNums are not sequential",
 			).
-				Tag("ActualSlotNumber", slotNum).
-				Tag("ExpectedSlotNumber", slotNumsCounter)
+				Tag("slotNum", slotNum).
+				Tag("expectedSlot", expectedSlot)
 		}
-		// Check that all events in minipool have proper generation
-		if generation != seqNum+1 {
-			return nil, RiverError(
-				Err_MINIBLOCKS_STORAGE_FAILURE,
-				"Minipool consistency violation - wrong event generation",
-			).
-				Tag("ActualGeneration", generation).
-				Tag("ExpectedGeneration", slotNum)
+
+		if slotNum >= 0 {
+			envelopes = append(envelopes, envelope)
 		}
-		envelopes = append(envelopes, envelope)
-		slotNumsCounter++
+		expectedSlot++
 	}
 
-	result.MinipoolEnvelopes = envelopes
-	return &result, nil
+	return &ReadStreamFromLastSnapshotResult{
+		StartMiniblockNumber:    readFirstSeqNum,
+		SnapshotMiniblockOffset: int(snapshotMiniblockIndex - readFirstSeqNum),
+		Miniblocks:              miniblocks,
+		MinipoolEnvelopes:       envelopes,
+	}, nil
 }
 
 // Adds event to the given minipool.
@@ -590,7 +625,8 @@ func (s *PostgresEventStore) writeEventTx(
 ) error {
 	envelopesRow, err := tx.Query(
 		ctx,
-		"SELECT generation, slot_num FROM minipools WHERE stream_id = $1 ORDER BY slot_num",
+		// Ordering by generation, slot_num allows this to be an index only query
+		"SELECT generation, slot_num FROM minipools WHERE stream_id = $1 ORDER BY generation, slot_num",
 		streamId,
 	)
 	if err != nil {
@@ -716,9 +752,9 @@ func (s *PostgresEventStore) readMiniblocksTx(
 	return miniblocks, nil
 }
 
-// WriteBlockProposal adds a miniblock proposal candidate. When the miniblock is finalized, the node will promote the
+// WriteMiniblockCandidate adds a miniblock proposal candidate. When the miniblock is finalized, the node will promote the
 // candidate with the correct hash.
-func (s *PostgresEventStore) WriteBlockProposal(
+func (s *PostgresEventStore) WriteMiniblockCandidate(
 	ctx context.Context,
 	streamId StreamId,
 	blockHash common.Hash,
@@ -727,7 +763,7 @@ func (s *PostgresEventStore) WriteBlockProposal(
 ) error {
 	return s.txRunner(
 		ctx,
-		"WriteBlockProposal",
+		"WriteMiniblockCandidate",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
 			return s.writeBlockProposalTxn(ctx, tx, streamId, blockHash, blockNumber, miniblock)
@@ -825,7 +861,7 @@ func (s *PostgresEventStore) readMiniblockCandidateTx(
 	return miniblock, nil
 }
 
-func (s *PostgresEventStore) PromoteBlock(
+func (s *PostgresEventStore) PromoteMiniblockCandidate(
 	ctx context.Context,
 	streamId StreamId,
 	minipoolGeneration int64,
@@ -833,9 +869,11 @@ func (s *PostgresEventStore) PromoteBlock(
 	snapshotMiniblock bool,
 	envelopes [][]byte,
 ) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	return s.txRunner(
 		ctx,
-		"PromoteBlock",
+		"PromoteMiniblockCandidate",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
 			return s.promoteBlockTxn(
@@ -1357,7 +1395,7 @@ func getSSLMode(dbURL string) string {
 	return "disable"
 }
 
-func (s *PostgresEventStore) runMigrations() error {
+func (s *PostgresEventStore) runMigrations(ctx context.Context) error {
 	// Run migrations
 	iofsMigrationsDir, err := iofs.New(s.migrationDir, "migrations")
 	if err != nil {
@@ -1374,8 +1412,53 @@ func (s *PostgresEventStore) runMigrations() error {
 		return WrapRiverError(Err_DB_OPERATION_FAILURE, err).Message("Error creating migration instance")
 	}
 
+	// Get the current migration version before running Up()
+	beforeVersion, _, err := migration.Version()
+	if err != nil && err != migrate.ErrNilVersion {
+		return WrapRiverError(Err_DB_OPERATION_FAILURE, err).Message("Error fetching migration version before running migrations")
+	}
+	
+
 	if err = migration.Up(); err != nil && err != migrate.ErrNoChange {
 		return WrapRiverError(Err_DB_OPERATION_FAILURE, err).Message("Error running migrations")
+	}
+
+	// Get the migration version after running Up()
+	afterVersion, _, err := migration.Version()
+	if err != nil {
+		return WrapRiverError(Err_DB_OPERATION_FAILURE, err).Message("Error fetching migration version after running migrations")
+	}
+
+	// Trigger a full vacuum if we're upgrading to 5 to reclaim disk space
+	if beforeVersion < 5 && afterVersion == 5 {
+		// Run VACUUM FULL on the relevant tables
+		if err = s.vacuumTables(ctx, dbUrlWithSchema); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// vacuumTables runs VACUUM FULL on the list of tables
+func (s *PostgresEventStore) vacuumTables(ctx context.Context, dbUrlWithSchema string) error {
+	log := dlog.FromCtx(ctx)
+
+	db, err := sql.Open("postgres", dbUrlWithSchema)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	// Skipping miniblocks table as it can be very large and VACUUM FULL can take a long time
+	tables := []string{"miniblock_candidates", "es", "minipools"}
+
+	for _, table := range tables {
+		query := fmt.Sprintf("VACUUM FULL %s;", table)
+		if _, err := db.Exec(query); err != nil {
+			return WrapRiverError(Err_DB_OPERATION_FAILURE, err).Message("Error running VACUUM FULL").Tag("table", table)
+		}
+		log.Info("Successfully vacuumed table", "table", table)
 	}
 
 	return nil
@@ -1523,7 +1606,7 @@ func (s *PostgresEventStore) initStorage(ctx context.Context) error {
 		return err
 	}
 
-	err = s.runMigrations()
+	err = s.runMigrations(ctx)
 	if err != nil {
 		return err
 	}

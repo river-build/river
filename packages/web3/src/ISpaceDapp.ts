@@ -3,22 +3,39 @@ import {
     ChannelDetails,
     ChannelMetadata,
     MembershipInfo,
+    LegacyMembershipStruct,
     MembershipStruct,
     Permission,
     PricingModuleStruct,
     RoleDetails,
     TotalSupplyInfo,
 } from './ContractTypes'
+import { XchainConfig } from './entitlement'
 
 import { WalletLink as WalletLinkV3 } from './v3/WalletLink'
 import { BigNumber, BytesLike, ContractReceipt, ContractTransaction, ethers } from 'ethers'
 import { SpaceInfo } from './types'
-import { IRolesBase, Space, SpaceRegistrar, IRuleEntitlementBase } from './v3'
+import {
+    IRolesBase,
+    Space,
+    SpaceRegistrar,
+    IRuleEntitlementBase,
+    IRuleEntitlementV2Base,
+} from './v3'
 import { PricingModules } from './v3/PricingModules'
 import { BaseChainConfig } from './IStaticContractsInfo'
 import { PlatformRequirements } from './v3/PlatformRequirements'
 
 export type SignerType = ethers.Signer
+
+export interface CreateLegacySpaceParams {
+    spaceName: string
+    uri: string
+    channelName: string
+    membership: LegacyMembershipStruct
+    shortDescription?: string
+    longDescription?: string
+}
 
 export interface CreateSpaceParams {
     spaceName: string
@@ -38,13 +55,35 @@ export interface UpdateChannelParams {
     disabled?: boolean
 }
 
-export interface UpdateRoleParams {
+export interface LegacyUpdateRoleParams {
     spaceNetworkId: string
     roleId: number
     roleName: string
     permissions: Permission[]
     users: string[]
     ruleData: IRuleEntitlementBase.RuleDataStruct
+}
+
+export interface UpdateRoleParams {
+    spaceNetworkId: string
+    roleId: number
+    roleName: string
+    permissions: Permission[]
+    users: string[]
+    ruleData: IRuleEntitlementV2Base.RuleDataV2Struct
+}
+
+export interface SetChannelPermissionOverridesParams {
+    spaceNetworkId: string
+    channelId: string
+    roleId: number
+    permissions: Permission[]
+}
+
+export interface ClearChannelPermissionOverridesParams {
+    spaceNetworkId: string
+    channelId: string
+    roleId: number
 }
 
 export interface TransactionOpts {
@@ -68,6 +107,7 @@ export interface ISpaceDapp {
     readonly walletLink: WalletLinkV3
     readonly pricingModules: PricingModules
     readonly platformRequirements: PlatformRequirements
+    isLegacySpace: (spaceId: string) => Promise<boolean>
     addRoleToChannel: (
         spaceId: string,
         channelNetworkId: string,
@@ -86,6 +126,11 @@ export interface ISpaceDapp {
     ) => Promise<TransactionType>
     walletAddressIsBanned: (spaceId: string, walletAddress: string) => Promise<boolean>
     bannedWalletAddresses: (spaceId: string) => Promise<string[]>
+    createLegacySpace: (
+        params: CreateLegacySpaceParams,
+        signer: SignerType,
+        txnOpts?: TransactionOpts,
+    ) => Promise<TransactionType>
     createSpace: (
         params: CreateSpaceParams,
         signer: SignerType,
@@ -100,7 +145,16 @@ export interface ISpaceDapp {
         signer: SignerType,
         txnOpts?: TransactionOpts,
     ) => Promise<TransactionType>
-    createRole(
+    createChannelWithPermissionOverrides: (
+        spaceId: string,
+        channelName: string,
+        channelDescription: string,
+        channelNetworkId: string,
+        roles: { roleId: number; permissions: Permission[] }[],
+        signer: SignerType,
+        txnOpts?: TransactionOpts,
+    ) => Promise<TransactionType>
+    legacyCreateRole(
         spaceId: string,
         roleName: string,
         permissions: Permission[],
@@ -109,6 +163,23 @@ export interface ISpaceDapp {
         signer: SignerType,
         txnOpts?: TransactionOpts,
     ): Promise<TransactionType>
+    createRole(
+        spaceId: string,
+        roleName: string,
+        permissions: Permission[],
+        users: string[],
+        ruleData: IRuleEntitlementV2Base.RuleDataV2Struct,
+        signer: SignerType,
+        txnOpts?: TransactionOpts,
+    ): Promise<TransactionType>
+    waitForRoleCreated(
+        spaceId: string,
+        txn: ContractTransaction,
+    ): Promise<{ roleId: number | undefined; error: Error | undefined }>
+    createLegacyUpdatedEntitlements(
+        space: Space,
+        params: LegacyUpdateRoleParams,
+    ): Promise<IRolesBase.CreateEntitlementStruct[]>
     createUpdatedEntitlements(
         space: Space,
         params: UpdateRoleParams,
@@ -123,6 +194,11 @@ export interface ISpaceDapp {
     getChannels: (spaceId: string) => Promise<ChannelMetadata[]>
     getChannelDetails: (spaceId: string, channelId: string) => Promise<ChannelDetails | null>
     getPermissionsByRoleId: (spaceId: string, roleId: number) => Promise<Permission[]>
+    getChannelPermissionOverrides(
+        spaceId: string,
+        roleId: number,
+        channelId: string,
+    ): Promise<Permission[]>
     getRole: (spaceId: string, roleId: number) => Promise<RoleDetails | null>
     getRoles: (spaceId: string) => Promise<BasicRoleInfo[]>
     getSpaceInfo: (spaceId: string) => Promise<SpaceInfo | undefined>
@@ -132,12 +208,12 @@ export interface ISpaceDapp {
         channelId: string,
         user: string,
         permission: Permission,
-        supportedXChainRpcUrls: string[],
+        xchainConfig: XchainConfig,
     ) => Promise<boolean>
     getEntitledWalletForJoiningSpace: (
         spaceId: string,
         wallet: string,
-        supportedXChainRpcUrls: string[],
+        xchainConfig: XchainConfig,
     ) => Promise<string | undefined>
     parseAllContractErrors: (args: { spaceId?: string; error: unknown }) => Error
     parseSpaceFactoryError: (error: unknown) => Error
@@ -151,8 +227,23 @@ export interface ISpaceDapp {
         signer: SignerType,
         txnOpts?: TransactionOpts,
     ) => Promise<TransactionType>
+    legacyUpdateRole: (
+        params: LegacyUpdateRoleParams,
+        signer: SignerType,
+        txnOpts?: TransactionOpts,
+    ) => Promise<TransactionType>
     updateRole: (
         params: UpdateRoleParams,
+        signer: SignerType,
+        txnOpts?: TransactionOpts,
+    ) => Promise<TransactionType>
+    setChannelPermissionOverrides: (
+        params: SetChannelPermissionOverridesParams,
+        signer: SignerType,
+        txnOpts?: TransactionOpts,
+    ) => Promise<TransactionType>
+    clearChannelPermissionOverrides: (
+        params: ClearChannelPermissionOverridesParams,
         signer: SignerType,
         txnOpts?: TransactionOpts,
     ) => Promise<TransactionType>

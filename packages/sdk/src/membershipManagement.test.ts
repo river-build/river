@@ -1,9 +1,13 @@
 /**
- * @group with-entitilements
+ * @group with-entitlements
  */
 
 import { dlog } from '@river-build/dlog'
-import { makeUserContextFromWallet, getDynamicPricingModule } from './util.test'
+import {
+    makeUserContextFromWallet,
+    getDynamicPricingModule,
+    createVersionedSpace,
+} from './util.test'
 import {
     isValidStreamId,
     makeDefaultChannelStreamId,
@@ -15,7 +19,7 @@ import {
     LocalhostWeb3Provider,
     createSpaceDapp,
     Permission,
-    MembershipStruct,
+    LegacyMembershipStruct,
     NoopRuleData,
     ETH_ADDRESS,
 } from '@river-build/web3'
@@ -43,7 +47,7 @@ describe('membershipManagement', () => {
         // create a space stream,
         log('Bob created user, about to create space')
         // first on the blockchain
-        const membershipInfo: MembershipStruct = {
+        const membershipInfo: LegacyMembershipStruct = {
             settings: {
                 name: 'Everyone',
                 symbol: 'MEMBER',
@@ -64,7 +68,8 @@ describe('membershipManagement', () => {
         }
 
         log('transaction start bob creating space')
-        const transaction = await spaceDapp.createSpace(
+        const transaction = await createVersionedSpace(
+            spaceDapp,
             {
                 spaceName: 'bobs-space-metadata',
                 uri: 'http://bobs-space-metadata.com',

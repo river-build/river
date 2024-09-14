@@ -184,8 +184,8 @@ func (params *aeParams) canAddEvent() ruleBuilderAE {
 		return params.canAddSpacePayload(payload)
 	case *StreamEvent_UserPayload:
 		return params.canAddUserPayload(payload)
-	case *StreamEvent_UserDeviceKeyPayload:
-		return params.canAddUserDeviceKeyPayload(payload)
+	case *StreamEvent_UserMetadataPayload:
+		return params.canAddUserMetadataPayload(payload)
 	case *StreamEvent_UserSettingsPayload:
 		return params.canAddUserSettingsPayload(payload)
 	case *StreamEvent_UserInboxPayload:
@@ -208,11 +208,11 @@ func (params *aeParams) canAddChannelPayload(payload *StreamEvent_ChannelPayload
 	case *ChannelPayload_Message:
 		return aeBuilder().
 			check(params.creatorIsMember).
-			requireOneOfChainAuths(params.channelMessageWriteEntitlements, params.channelMessageReactEntitlements)
+			requireOneOfChainAuths(params.channelEntitlements(auth.PermissionWrite), params.channelEntitlements(auth.PermissionReact))
 	case *ChannelPayload_Redaction_:
 		return aeBuilder().
 			check(params.creatorIsMember).
-			requireChainAuth(params.redactChannelMessageEntitlements)
+			requireChainAuth(params.channelEntitlements(auth.PermissionRedact))
 	default:
 		return aeBuilder().
 			fail(unknownContentType(content))
@@ -274,17 +274,17 @@ func (params *aeParams) canAddSpacePayload(payload *StreamEvent_SpacePayload) ru
 		return aeBuilder().
 			check(params.creatorIsMember).
 			check(params.channelExistsInSpace(ru)).
-			requireChainAuth(params.spacePayloadChannelModifyRequirements)
+			requireChainAuth(params.spaceEntitlements(auth.PermissionAddRemoveChannels))
 	case *SpacePayload_UpdateChannelHideUserJoinLeaveEvents_:
 		ru := &aeHideUserJoinLeaveEventsWrapperRules{content.UpdateChannelHideUserJoinLeaveEvents}
 		return aeBuilder().
 			check(params.creatorIsMember).
 			check(params.channelExistsInSpace(ru)).
-			requireChainAuth(params.spacePayloadChannelModifyRequirements)
+			requireChainAuth(params.spaceEntitlements(auth.PermissionAddRemoveChannels))
 	case *SpacePayload_SpaceImage:
 		return aeBuilder().
 			check(params.creatorIsMember).
-			requireOneOfChainAuths(params.spaceModifySpaceSettingsEntitlements)
+			requireOneOfChainAuths(params.spaceEntitlements(auth.PermissionModifySpaceSettings))
 	default:
 		return aeBuilder().
 			fail(unknownContentType(content))
@@ -320,12 +320,18 @@ func (params *aeParams) canAddUserPayload(payload *StreamEvent_UserPayload) rule
 	}
 }
 
-func (params *aeParams) canAddUserDeviceKeyPayload(payload *StreamEvent_UserDeviceKeyPayload) ruleBuilderAE {
-	switch content := payload.UserDeviceKeyPayload.Content.(type) {
-	case *UserDeviceKeyPayload_Inception_:
+func (params *aeParams) canAddUserMetadataPayload(payload *StreamEvent_UserMetadataPayload) ruleBuilderAE {
+	switch content := payload.UserMetadataPayload.Content.(type) {
+	case *UserMetadataPayload_Inception_:
 		return aeBuilder().
 			fail(invalidContentType(content))
-	case *UserDeviceKeyPayload_EncryptionDevice_:
+	case *UserMetadataPayload_EncryptionDevice_:
+		return aeBuilder().
+			check(params.creatorIsMember)
+	case *UserMetadataPayload_ProfileImage:
+		return aeBuilder().
+			check(params.creatorIsMember)
+	case *UserMetadataPayload_Bio:
 		return aeBuilder().
 			check(params.creatorIsMember)
 	default:
@@ -430,7 +436,7 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 			return aeBuilder().
 				checkOneOf(params.creatorIsMember).
 				check(ru.validKeySolicitation).
-				requireChainAuth(params.channelMessageReadEntitlements).
+				requireChainAuth(params.channelEntitlements(auth.PermissionRead)).
 				onChainAuthFailure(params.onEntitlementFailureForUserEvent)
 		} else {
 			return aeBuilder().
@@ -476,12 +482,12 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 			return aeBuilder().
 				check(params.creatorIsMember).
 				check(pinRuls.validPin).
-				requireChainAuth(params.spaceWriteEntitlements)
+				requireChainAuth(params.spaceEntitlements(auth.PermissionPinMessage))
 		} else if shared.ValidChannelStreamId(params.streamView.StreamId()) {
 			return aeBuilder().
 				check(params.creatorIsMember).
 				check(pinRuls.validPin).
-				requireChainAuth(params.channelMessageWriteEntitlements)
+				requireChainAuth(params.channelEntitlements(auth.PermissionPinMessage))
 		} else {
 			return aeBuilder().
 				check(params.creatorIsMember).
@@ -496,12 +502,12 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 			return aeBuilder().
 				check(params.creatorIsMember).
 				check(unpinRules.validUnpin).
-				requireChainAuth(params.spaceWriteEntitlements)
+				requireChainAuth(params.spaceEntitlements(auth.PermissionPinMessage))
 		} else if shared.ValidChannelStreamId(params.streamView.StreamId()) {
 			return aeBuilder().
 				check(params.creatorIsMember).
 				check(unpinRules.validUnpin).
-				requireChainAuth(params.channelMessageWriteEntitlements)
+				requireChainAuth(params.channelEntitlements(auth.PermissionPinMessage))
 		} else {
 			return aeBuilder().
 				check(params.creatorIsMember).
@@ -974,135 +980,56 @@ func (ru *aeMembershipRules) channelMembershipEntitlements() (*auth.ChainAuthArg
 	return chainAuthArgs, nil
 }
 
-func (params *aeParams) spaceWriteEntitlements() (*auth.ChainAuthArgs, error) {
-	spaceId := params.streamView.StreamId()
+// return function that can be used to check if a user has a permission for a space
+func (params *aeParams) spaceEntitlements(permission auth.Permission) func() (*auth.ChainAuthArgs, error) {
+	return func() (*auth.ChainAuthArgs, error) {
+		spaceId := params.streamView.StreamId()
 
-	if !shared.ValidSpaceStreamId(spaceId) {
-		return nil, RiverError(Err_INVALID_ARGUMENT, "invalid space stream id", "streamId", spaceId)
+		if !shared.ValidSpaceStreamId(spaceId) {
+			return nil, RiverError(Err_INVALID_ARGUMENT, "invalid space stream id", "streamId", spaceId)
+		}
+		permissionUser, err := shared.AddressHex(params.parsedEvent.Event.CreatorAddress)
+		if err != nil {
+			return nil, err
+		}
+
+		chainAuthArgs := auth.NewChainAuthArgsForSpace(
+			*spaceId,
+			permissionUser,
+			permission,
+		)
+		return chainAuthArgs, nil
 	}
-
-	permissionUser, err := shared.AddressHex(params.parsedEvent.Event.CreatorAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	chainAuthArgs := auth.NewChainAuthArgsForSpace(
-		*spaceId,
-		permissionUser,
-		auth.PermissionWrite,
-	)
-	return chainAuthArgs, nil
 }
 
-func (params *aeParams) spaceModifySpaceSettingsEntitlements() (*auth.ChainAuthArgs, error) {
-	spaceId := params.streamView.StreamId()
+// retrun a function that can be used to check if a user has a permission for a channel
+func (params *aeParams) channelEntitlements(permission auth.Permission) func() (*auth.ChainAuthArgs, error) {
+	return func() (*auth.ChainAuthArgs, error) {
+		userId, err := shared.AddressHex(params.parsedEvent.Event.CreatorAddress)
+		if err != nil {
+			return nil, err
+		}
+		channelId := *params.streamView.StreamId()
 
-	if !shared.ValidSpaceStreamId(spaceId) {
-		return nil, RiverError(Err_INVALID_ARGUMENT, "invalid space stream id", "streamId", spaceId)
+		inception, err := params.streamView.(events.ChannelStreamView).GetChannelInception()
+		if err != nil {
+			return nil, err
+		}
+
+		spaceId, err := shared.StreamIdFromBytes(inception.SpaceId)
+		if err != nil {
+			return nil, err
+		}
+
+		chainAuthArgs := auth.NewChainAuthArgsForChannel(
+			spaceId,
+			channelId,
+			userId,
+			permission,
+		)
+
+		return chainAuthArgs, nil
 	}
-
-	permissionUser, err := shared.AddressHex(params.parsedEvent.Event.CreatorAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	chainAuthArgs := auth.NewChainAuthArgsForSpace(
-		*spaceId,
-		permissionUser,
-		auth.PermissionModifySpaceSettings,
-	)
-	return chainAuthArgs, nil
-}
-
-func (params *aeParams) channelMessageWriteEntitlements() (*auth.ChainAuthArgs, error) {
-	userId, err := shared.AddressHex(params.parsedEvent.Event.CreatorAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	inception, err := params.streamView.(events.ChannelStreamView).GetChannelInception()
-	if err != nil {
-		return nil, err
-	}
-
-	spaceId, err := shared.StreamIdFromBytes(inception.SpaceId)
-	if err != nil {
-		return nil, err
-	}
-
-	chainAuthArgs := auth.NewChainAuthArgsForChannel(
-		spaceId,
-		*params.streamView.StreamId(),
-		userId,
-		auth.PermissionWrite,
-	)
-
-	return chainAuthArgs, nil
-}
-
-func (params *aeParams) channelMessageReadEntitlements() (*auth.ChainAuthArgs, error) {
-	userId, err := shared.AddressHex(params.parsedEvent.Event.CreatorAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	inception, err := params.streamView.(events.ChannelStreamView).GetChannelInception()
-	if err != nil {
-		return nil, err
-	}
-
-	spaceId, err := shared.StreamIdFromBytes(inception.SpaceId)
-	if err != nil {
-		return nil, err
-	}
-
-	chainAuthArgs := auth.NewChainAuthArgsForChannel(
-		spaceId,
-		*params.streamView.StreamId(),
-		userId,
-		auth.PermissionRead,
-	)
-
-	return chainAuthArgs, nil
-}
-
-func (params *aeParams) channelMessageReactEntitlements() (*auth.ChainAuthArgs, error) {
-	userId, err := shared.AddressHex(params.parsedEvent.Event.CreatorAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	inception, err := params.streamView.(events.ChannelStreamView).GetChannelInception()
-	if err != nil {
-		return nil, err
-	}
-
-	spaceId, err := shared.StreamIdFromBytes(inception.SpaceId)
-	if err != nil {
-		return nil, err
-	}
-
-	chainAuthArgs := auth.NewChainAuthArgsForChannel(
-		spaceId,
-		*params.streamView.StreamId(),
-		userId,
-		auth.PermissionReact,
-	)
-
-	return chainAuthArgs, nil
-}
-
-func (params *aeParams) spacePayloadChannelModifyRequirements() (*auth.ChainAuthArgs, error) {
-	userId, err := shared.AddressHex(params.parsedEvent.Event.CreatorAddress)
-	if err != nil {
-		return nil, err
-	}
-	chainAuthArgs := auth.NewChainAuthArgsForSpace(
-		*params.streamView.StreamId(),
-		userId,
-		auth.PermissionAddRemoveChannels,
-	)
-	return chainAuthArgs, nil
 }
 
 func (params *aeParams) onEntitlementFailureForUserEvent() (*DerivedEvent, error) {
@@ -1133,32 +1060,6 @@ func (params *aeParams) onEntitlementFailureForUserEvent() (*DerivedEvent, error
 			spaceId[:],
 		),
 	}, nil
-}
-
-func (params *aeParams) redactChannelMessageEntitlements() (*auth.ChainAuthArgs, error) {
-	userId, err := shared.AddressHex(params.parsedEvent.Event.CreatorAddress)
-	if err != nil {
-		return nil, err
-	}
-
-	inception, err := params.streamView.(events.ChannelStreamView).GetChannelInception()
-	if err != nil {
-		return nil, err
-	}
-
-	spaceId, err := shared.StreamIdFromBytes(inception.SpaceId)
-	if err != nil {
-		return nil, err
-	}
-
-	chainAuthArgs := auth.NewChainAuthArgsForChannel(
-		spaceId,
-		*params.streamView.StreamId(),
-		userId,
-		auth.PermissionRedact,
-	)
-
-	return chainAuthArgs, nil
 }
 
 func (params *aeParams) creatorIsValidNode() (bool, error) {
@@ -1276,8 +1177,8 @@ func (ru *aePinRules) validPin() (bool, error) {
 		return false, err
 	}
 	// check if we have too many pins
-	if len(existingPins) > 5 {
-		// if we have more than 5 pins, we can't add more
+	if len(existingPins) > 100 {
+		// if we have more than N pins, we can't add more
 		return false, RiverError(Err_INVALID_ARGUMENT, "channel has too many pins")
 	}
 	// check if the hash is already pinned

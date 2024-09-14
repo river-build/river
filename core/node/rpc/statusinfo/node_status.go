@@ -10,15 +10,17 @@ type BlockchainPing struct {
 }
 
 type StatusResponse struct {
-	Status     string          `json:"status"`
-	InstanceId string          `json:"instance_id"`
-	Address    string          `json:"address"`
-	Version    string          `json:"version"`
-	StartTime  string          `json:"start_time"`
-	Uptime     string          `json:"uptime"`
-	Graffiti   string          `json:"graffiti,omitempty"`
-	River      *BlockchainPing `json:"river,omitempty"`
-	Base       *BlockchainPing `json:"base,omitempty"`
+	Status            string           `json:"status"`
+	InstanceId        string           `json:"instance_id"`
+	Address           string           `json:"address"`
+	Version           string           `json:"version"`
+	StartTime         string           `json:"start_time"`
+	Uptime            string           `json:"uptime"`
+	Graffiti          string           `json:"graffiti,omitempty"`
+	River             *BlockchainPing  `json:"river,omitempty"`
+	Base              *BlockchainPing  `json:"base,omitempty"`
+	OtherChains       []BlockchainPing `json:"other_chains,omitempty"`
+	XChainBlockchains []uint64         `json:"x_chain_blockchains"`
 }
 
 func StatusResponseFromJson(data []byte) (StatusResponse, error) {
@@ -91,6 +93,7 @@ type NodeStatus struct {
 	Http20          HttpResult       `json:"http20"`
 	Grpc            GrpcResult       `json:"grpc"`
 	RiverEthBalance string           `json:"river_eth_balance"`
+	BaseEthBalance  string           `json:"base_eth_balance"`
 }
 
 type RiverStatus struct {

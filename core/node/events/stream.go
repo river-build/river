@@ -100,7 +100,7 @@ func (s *streamImpl) loadInternal(ctx context.Context) error {
 	streamData, err := s.params.Storage.ReadStreamFromLastSnapshot(
 		ctx,
 		s.streamId,
-		max(0, streamRecencyConstraintsGenerations-1),
+		streamRecencyConstraintsGenerations,
 	)
 	if err != nil {
 		if AsRiverError(err).Code == Err_NOT_FOUND {
@@ -158,7 +158,7 @@ func (s *streamImpl) applyMiniblockImplNoLock(ctx context.Context, miniblock *Mi
 		newMinipool = append(newMinipool, b)
 	}
 
-	err = s.params.Storage.PromoteBlock(
+	err = s.params.Storage.PromoteMiniblockCandidate(
 		ctx,
 		s.streamId,
 		s.view.minipool.generation,
@@ -186,6 +186,22 @@ func (s *streamImpl) PromoteCandidate(ctx context.Context, mbHash common.Hash, m
 		if err := s.loadInternal(ctx); err != nil {
 			return err
 		}
+	}
+
+	// Check if the miniblock is already applied.
+	if mbNum <= s.view.LastBlock().Num {
+		// Log error if hash doesn't match.
+		mb, _ := s.view.blockWithNum(mbNum)
+		if mb != nil && mbHash != mb.Hash {
+			dlog.FromCtx(ctx).Error("PromoteCandidate: Miniblock is already applied",
+				"streamId", s.streamId,
+				"blockNum", mbNum,
+				"blockHash", mbHash,
+				"lastBlockNum", s.view.LastBlock().Num,
+				"lastBlockHash", s.view.LastBlock().Hash,
+			)
+		}
+		return nil
 	}
 
 	miniblockBytes, err := s.params.Storage.ReadMiniblockCandidate(ctx, s.streamId, mbHash, mbNum)
@@ -392,7 +408,6 @@ func (s *streamImpl) addEventImpl(ctx context.Context, event *ParsedEvent) error
 		return err
 	}
 
-
 	prevSyncCookie := s.view.SyncCookie(s.params.Wallet.Address)
 	s.view = newSV
 	newSyncCookie := s.view.SyncCookie(s.params.Wallet.Address)
@@ -597,7 +612,7 @@ func (s *streamImpl) SaveMiniblockCandidate(ctx context.Context, mb *Miniblock) 
 		)
 	}
 
-	return s.params.Storage.WriteBlockProposal(
+	return s.params.Storage.WriteMiniblockCandidate(
 		ctx,
 		s.streamId,
 		mbInfo.Hash,

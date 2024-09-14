@@ -18,6 +18,11 @@
       {
         "inputs": [],
         "type": "error",
+        "name": "Architect__InvalidPricingModule"
+      },
+      {
+        "inputs": [],
+        "type": "error",
         "name": "Architect__InvalidStringLength"
       },
       {
@@ -54,6 +59,17 @@
         "inputs": [
           {
             "internalType": "address",
+            "name": "module",
+            "type": "address"
+          }
+        ],
+        "type": "error",
+        "name": "InvalidPricingModule"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
             "name": "account",
             "type": "address"
           }
@@ -85,6 +101,19 @@
         "inputs": [],
         "type": "error",
         "name": "Validator__InvalidAddress"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "proxyInitializer",
+            "type": "address",
+            "indexed": true
+          }
+        ],
+        "type": "event",
+        "name": "Architect__ProxyInitializerSet",
+        "anonymous": false
       },
       {
         "inputs": [
@@ -161,6 +190,45 @@
         "inputs": [
           {
             "internalType": "address",
+            "name": "module",
+            "type": "address",
+            "indexed": true
+          }
+        ],
+        "type": "event",
+        "name": "PricingModuleAdded",
+        "anonymous": false
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "module",
+            "type": "address",
+            "indexed": true
+          }
+        ],
+        "type": "event",
+        "name": "PricingModuleRemoved",
+        "anonymous": false
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "module",
+            "type": "address",
+            "indexed": true
+          }
+        ],
+        "type": "event",
+        "name": "PricingModuleUpdated",
+        "anonymous": false
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
             "name": "owner",
             "type": "address",
             "indexed": true
@@ -208,8 +276,13 @@
             "type": "address"
           },
           {
-            "internalType": "contract IRuleEntitlement",
+            "internalType": "contract IRuleEntitlementV2",
             "name": "ruleEntitlementImplementation",
+            "type": "address"
+          },
+          {
+            "internalType": "contract IRuleEntitlement",
+            "name": "legacyRuleEntitlement",
             "type": "address"
           }
         ],
@@ -307,77 +380,9 @@
                         "type": "address[]"
                       },
                       {
-                        "internalType": "struct IRuleEntitlementBase.RuleData",
+                        "internalType": "bytes",
                         "name": "ruleData",
-                        "type": "tuple",
-                        "components": [
-                          {
-                            "internalType": "struct IRuleEntitlementBase.Operation[]",
-                            "name": "operations",
-                            "type": "tuple[]",
-                            "components": [
-                              {
-                                "internalType": "enum IRuleEntitlementBase.CombinedOperationType",
-                                "name": "opType",
-                                "type": "uint8"
-                              },
-                              {
-                                "internalType": "uint8",
-                                "name": "index",
-                                "type": "uint8"
-                              }
-                            ]
-                          },
-                          {
-                            "internalType": "struct IRuleEntitlementBase.CheckOperation[]",
-                            "name": "checkOperations",
-                            "type": "tuple[]",
-                            "components": [
-                              {
-                                "internalType": "enum IRuleEntitlementBase.CheckOperationType",
-                                "name": "opType",
-                                "type": "uint8"
-                              },
-                              {
-                                "internalType": "uint256",
-                                "name": "chainId",
-                                "type": "uint256"
-                              },
-                              {
-                                "internalType": "address",
-                                "name": "contractAddress",
-                                "type": "address"
-                              },
-                              {
-                                "internalType": "uint256",
-                                "name": "threshold",
-                                "type": "uint256"
-                              }
-                            ]
-                          },
-                          {
-                            "internalType": "struct IRuleEntitlementBase.LogicalOperation[]",
-                            "name": "logicalOperations",
-                            "type": "tuple[]",
-                            "components": [
-                              {
-                                "internalType": "enum IRuleEntitlementBase.LogicalOperationType",
-                                "name": "logOpType",
-                                "type": "uint8"
-                              },
-                              {
-                                "internalType": "uint8",
-                                "name": "leftOperationIndex",
-                                "type": "uint8"
-                              },
-                              {
-                                "internalType": "uint8",
-                                "name": "rightOperationIndex",
-                                "type": "uint8"
-                              }
-                            ]
-                          }
-                        ]
+                        "type": "bytes"
                       }
                     ]
                   },
@@ -425,6 +430,177 @@
         ]
       },
       {
+        "inputs": [
+          {
+            "internalType": "struct IArchitectBase.CreateSpace",
+            "name": "spaceInfo",
+            "type": "tuple",
+            "components": [
+              {
+                "internalType": "struct IArchitectBase.Metadata",
+                "name": "metadata",
+                "type": "tuple",
+                "components": [
+                  {
+                    "internalType": "string",
+                    "name": "name",
+                    "type": "string"
+                  },
+                  {
+                    "internalType": "string",
+                    "name": "uri",
+                    "type": "string"
+                  },
+                  {
+                    "internalType": "string",
+                    "name": "shortDescription",
+                    "type": "string"
+                  },
+                  {
+                    "internalType": "string",
+                    "name": "longDescription",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "internalType": "struct IArchitectBase.Membership",
+                "name": "membership",
+                "type": "tuple",
+                "components": [
+                  {
+                    "internalType": "struct IMembershipBase.Membership",
+                    "name": "settings",
+                    "type": "tuple",
+                    "components": [
+                      {
+                        "internalType": "string",
+                        "name": "name",
+                        "type": "string"
+                      },
+                      {
+                        "internalType": "string",
+                        "name": "symbol",
+                        "type": "string"
+                      },
+                      {
+                        "internalType": "uint256",
+                        "name": "price",
+                        "type": "uint256"
+                      },
+                      {
+                        "internalType": "uint256",
+                        "name": "maxSupply",
+                        "type": "uint256"
+                      },
+                      {
+                        "internalType": "uint64",
+                        "name": "duration",
+                        "type": "uint64"
+                      },
+                      {
+                        "internalType": "address",
+                        "name": "currency",
+                        "type": "address"
+                      },
+                      {
+                        "internalType": "address",
+                        "name": "feeRecipient",
+                        "type": "address"
+                      },
+                      {
+                        "internalType": "uint256",
+                        "name": "freeAllocation",
+                        "type": "uint256"
+                      },
+                      {
+                        "internalType": "address",
+                        "name": "pricingModule",
+                        "type": "address"
+                      }
+                    ]
+                  },
+                  {
+                    "internalType": "struct IArchitectBase.MembershipRequirements",
+                    "name": "requirements",
+                    "type": "tuple",
+                    "components": [
+                      {
+                        "internalType": "bool",
+                        "name": "everyone",
+                        "type": "bool"
+                      },
+                      {
+                        "internalType": "address[]",
+                        "name": "users",
+                        "type": "address[]"
+                      },
+                      {
+                        "internalType": "bytes",
+                        "name": "ruleData",
+                        "type": "bytes"
+                      }
+                    ]
+                  },
+                  {
+                    "internalType": "string[]",
+                    "name": "permissions",
+                    "type": "string[]"
+                  }
+                ]
+              },
+              {
+                "internalType": "struct IArchitectBase.ChannelInfo",
+                "name": "channel",
+                "type": "tuple",
+                "components": [
+                  {
+                    "internalType": "string",
+                    "name": "metadata",
+                    "type": "string"
+                  }
+                ]
+              },
+              {
+                "internalType": "struct IArchitectBase.Prepay",
+                "name": "prepay",
+                "type": "tuple",
+                "components": [
+                  {
+                    "internalType": "uint256",
+                    "name": "supply",
+                    "type": "uint256"
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "stateMutability": "payable",
+        "type": "function",
+        "name": "createSpaceWithPrepay",
+        "outputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ]
+      },
+      {
+        "inputs": [],
+        "stateMutability": "view",
+        "type": "function",
+        "name": "getProxyInitializer",
+        "outputs": [
+          {
+            "internalType": "contract ISpaceProxyInitializer",
+            "name": "",
+            "type": "address"
+          }
+        ]
+      },
+      {
         "inputs": [],
         "stateMutability": "view",
         "type": "function",
@@ -441,8 +617,13 @@
             "type": "address"
           },
           {
-            "internalType": "contract IRuleEntitlement",
+            "internalType": "contract IRuleEntitlementV2",
             "name": "ruleEntitlementImplementation",
+            "type": "address"
+          },
+          {
+            "internalType": "contract IRuleEntitlement",
+            "name": "legacyRuleEntitlement",
             "type": "address"
           }
         ]
@@ -488,6 +669,18 @@
       {
         "inputs": [
           {
+            "internalType": "contract ISpaceProxyInitializer",
+            "name": "proxyInitializer",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function",
+        "name": "setProxyInitializer"
+      },
+      {
+        "inputs": [
+          {
             "internalType": "contract ISpaceOwner",
             "name": "spaceToken",
             "type": "address"
@@ -498,8 +691,13 @@
             "type": "address"
           },
           {
-            "internalType": "contract IRuleEntitlement",
+            "internalType": "contract IRuleEntitlementV2",
             "name": "ruleEntitlementImplementation",
+            "type": "address"
+          },
+          {
+            "internalType": "contract IRuleEntitlement",
+            "name": "legacyRuleEntitlement",
             "type": "address"
           }
         ],
@@ -510,12 +708,47 @@
     ],
     "devdoc": {
       "kind": "dev",
-      "methods": {},
+      "methods": {
+        "createSpace((string,string,((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],bytes),string[]),(string),string,string))": {
+          "params": {
+            "SpaceInfo": "Space information"
+          }
+        },
+        "createSpaceWithPrepay(((string,string,string,string),((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],bytes),string[]),(string),(uint256)))": {
+          "params": {
+            "createSpace": "Space information"
+          }
+        },
+        "getProxyInitializer()": {
+          "returns": {
+            "_0": "The address of the current ISpaceProxyInitializer contract"
+          }
+        },
+        "setProxyInitializer(address)": {
+          "details": "This function should only be callable by the contract owner or authorized roles",
+          "params": {
+            "proxyInitializer": "The address of the new ISpaceProxyInitializer contract to be set"
+          }
+        }
+      },
       "version": 1
     },
     "userdoc": {
       "kind": "user",
-      "methods": {},
+      "methods": {
+        "createSpace((string,string,((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],bytes),string[]),(string),string,string))": {
+          "notice": "Creates a new space"
+        },
+        "createSpaceWithPrepay(((string,string,string,string),((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],bytes),string[]),(string),(uint256)))": {
+          "notice": "Creates a new space with a prepayment"
+        },
+        "getProxyInitializer()": {
+          "notice": "Retrieves the current proxy initializer"
+        },
+        "setProxyInitializer(address)": {
+          "notice": "Sets a new proxy initializer"
+        }
+      },
       "version": 1
     }
   },
@@ -528,7 +761,8 @@
       "base64/=lib/base64/",
       "ds-test/=lib/ds-test/src/",
       "forge-std/=lib/forge-std/src/",
-      "hardhat-deploy/=lib/hardhat-deploy/"
+      "hardhat-deploy/=lib/hardhat-deploy/",
+      "solady/=lib/solady/src/"
     ],
     "optimizer": {
       "enabled": true,
@@ -577,19 +811,19 @@
       ],
       "license": "MIT"
     },
-    "contracts/src/diamond/facets/introspection/IERC165.sol": {
-      "keccak256": "0x486758ee326820b0dd468c6a7a90fda8d67d48d3114792c587cee0e8417b366b",
+    "contracts/src/diamond/facets/introspection/IIntrospectionBase.sol": {
+      "keccak256": "0x51e706ab1184a3a5b353b87cfee07d471b9a5ef93897022bbcd1085b39a0c762",
       "urls": [
-        "bzz-raw://b695090abcec8c2d487d73961265030fa4f64ecd84f6d80b85c6c7d4d9142ea0",
-        "dweb:/ipfs/QmQTKuV2WEoy6vTCRxL39zEqubLUf9NhoC2BGB19CiYqRq"
+        "bzz-raw://3df386912c5cc759faee161b7825b2014040d04bf06528e74f4d759f06f2eb19",
+        "dweb:/ipfs/QmP5AnGGNY4gsV1ABJ3WaueAsAwJVQ229ZfGjGxW8rSbEL"
       ],
       "license": "MIT"
     },
     "contracts/src/diamond/facets/introspection/IntrospectionBase.sol": {
-      "keccak256": "0x93ac0d2f738615e69dbcfd5fa6ac5840ec48329ac92094605638bcf2abd6708f",
+      "keccak256": "0x35f27aa0a4b64673a2648110422f31de0c5a71c68df562eccb9c4f2a27ee6647",
       "urls": [
-        "bzz-raw://fbcb2cd0e47b6ef39bec6cbdeedf6e292e8849d4e25f4bb6c72ee574446b02f1",
-        "dweb:/ipfs/QmcDwxFALaQBLbsGsjdttkQkE48PdKWq43XY7f34MxqZSw"
+        "bzz-raw://2eb1f2ff2e2d7222bf8fe2cf7558a2e47925e3d4557208362b1f50e63cb43006",
+        "dweb:/ipfs/QmNcJZSAEPreUy66tt5brPrauVnUb4tqvcxej5Uc4SZZWz"
       ],
       "license": "MIT"
     },
@@ -777,35 +1011,19 @@
       ],
       "license": "MIT"
     },
-    "contracts/src/diamond/utils/multicall/IMulticall.sol": {
-      "keccak256": "0x6dc9ea0a61c25be2ccf2812ae27c4044d2471b113862f242ef5d11fba1167ec1",
-      "urls": [
-        "bzz-raw://31d7c5626cb8817e9a638b42dac9d19eafdbb5e7db50a54a667bf9a8e469e0e8",
-        "dweb:/ipfs/Qmex9vaHpj8wPwG31Rvft9oXtdLeK1JRCrzgGSVMqszRGZ"
-      ],
-      "license": "MIT"
-    },
-    "contracts/src/diamond/utils/multicall/Multicall.sol": {
-      "keccak256": "0xd033d4a233fbfee42239cea898cfb995d1e3aa2585aee8def257703cd00a3b5b",
-      "urls": [
-        "bzz-raw://03cb097e17b5443b71058d028b3409db07a7ecad1d1edc360c72ed32cbd9c0dd",
-        "dweb:/ipfs/QmTbqyWToxcJynYhRBioTTPHucUExeEiriKekZ1vBToUpg"
-      ],
-      "license": "MIT"
-    },
     "contracts/src/factory/facets/architect/Architect.sol": {
-      "keccak256": "0x546e407119ca047d99f622d77fe017f893e4148a0ab1b32938113815083204af",
+      "keccak256": "0xb81eaab5817bc8c507c43bdc558fe4742b68fb13416a730f60d432f2a99e10b4",
       "urls": [
-        "bzz-raw://f32d3dbaa7f2317db849eae44be1a1408abbb461e667ad08087ee220ac577888",
-        "dweb:/ipfs/Qmf4cmkXNY4Wh8vrk1S39LGr35JkHTR7Mdr4MXXETqt7fW"
+        "bzz-raw://7de10b4168e5f97fe1e7f43e0909e8d2dd5271c70c70a7c0b31990e28d179916",
+        "dweb:/ipfs/Qmb9p5yFPMrn5carX1LoHyv3oxwUm1GFAWrQ9VjtNVLFHi"
       ],
       "license": "MIT"
     },
     "contracts/src/factory/facets/architect/ArchitectBase.sol": {
-      "keccak256": "0x4676216deb8678864044c22050d05c0860a6b0a9e324aa232167f88dbe79c0ad",
+      "keccak256": "0x8f4984bbf8873b14c35645fee62496025ac377ddee8c731b16f325908ac7d2f0",
       "urls": [
-        "bzz-raw://e16ca2c87ccf1fb7761694353586b1f712e29b2def92edbb2eb429792b08bfe4",
-        "dweb:/ipfs/QmbfsL35mBjHuq9bwMnhB9UdZ2dqpuopPNSDBYRf2ATkhP"
+        "bzz-raw://c78d5acf2839f1fc2f4b66376ef3ae6a9d94a84b51c44dc81f9e2d5c785f6ebd",
+        "dweb:/ipfs/QmZQSMZMhJ3BH3Lm9X6QV6ETcFFJ5XtKkUUZQ3SqJTEUKK"
       ],
       "license": "MIT"
     },
@@ -818,18 +1036,18 @@
       "license": "MIT"
     },
     "contracts/src/factory/facets/architect/IArchitect.sol": {
-      "keccak256": "0xdc01eb58a1778852dc48091aa5e2155f13be6089a337ac4e5196a378ffbce195",
+      "keccak256": "0x7557473a08229252796468403453dfa39c6780f7716cf06152a7d57ff4d778fd",
       "urls": [
-        "bzz-raw://31fc4dc1923f3484729151de58f0a43839ce4b65d846b0aa2dd8f4416914e714",
-        "dweb:/ipfs/QmNb5NiKSHwkmHb6hWNhu9GnPaEFJGdUMy4Tzv4KDmap1u"
+        "bzz-raw://f625cde9c07288ba1f24aceb0aec11eaed619df0d130dbada5cffbcd8b08f804",
+        "dweb:/ipfs/QmSHzmeL6owo321yAusyQZqnVfgvLEoxLDjEpxDF3kpn8o"
       ],
       "license": "MIT"
     },
     "contracts/src/factory/facets/architect/ImplementationStorage.sol": {
-      "keccak256": "0x539f0fc6ea9638bf9db3ec27511ee3775671ac0a538ff341563e3518468a8907",
+      "keccak256": "0x439caf29eb65f4b17dac2976e530112d6a8c35242bc39861796b631d6c1aee94",
       "urls": [
-        "bzz-raw://5b904a1779579e3facc6d9b27a007deb35dce71403ca6d27d63a3d3906fcf9de",
-        "dweb:/ipfs/Qmab9yzwbmRy5znzDVZ5kTT98j4EkkaZ8bRoFizdwiHy4S"
+        "bzz-raw://9dabd06aceeb34fe9b5931d0468bd35d80ec6900f35b1bb375187ad84e917d66",
+        "dweb:/ipfs/QmdqduCPXcmmTEme4YjNbNz48uB1nQkARRusai8BnEXJ4f"
       ],
       "license": "MIT"
     },
@@ -838,6 +1056,22 @@
       "urls": [
         "bzz-raw://15f95100f32791a9aa2e3cc47fb9cd58542e9250834bfc38756012cc4baaa786",
         "dweb:/ipfs/QmYGPF6HQLoq5bCgMYW1AyT2Vz1H12Lt8LDdmzTadN5Ppm"
+      ],
+      "license": "MIT"
+    },
+    "contracts/src/factory/facets/architect/pricing/PricingModulesBase.sol": {
+      "keccak256": "0x5853efe27bcebe135c4925110690ea9e8d6de1d69789f5f7c5511fb41f124488",
+      "urls": [
+        "bzz-raw://c7c48c477ddfb70e519fee1e53fc9f368f343dd8be5b981a16a0b84ac4017686",
+        "dweb:/ipfs/QmZQsD8F9maUG5MECF7rYrwPM448bRQxohzow7TpTzCe1o"
+      ],
+      "license": "MIT"
+    },
+    "contracts/src/factory/facets/architect/pricing/PricingModulesStorage.sol": {
+      "keccak256": "0x88ecfde80e4a4efc905356f55462300868a8d181fca835b0f18d55e85481c2d3",
+      "urls": [
+        "bzz-raw://60e4e031c4aca8c85e225960db2faa03783d6b0632e2151dae32302652b90834",
+        "dweb:/ipfs/Qmee4HJEx982dgTX6pYYnZUDPUgPHW55ZYZT1FZdShs69T"
       ],
       "license": "MIT"
     },
@@ -874,10 +1108,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol": {
-      "keccak256": "0x2ad8c7e10beb26f80dde5445b9aa8fcb2fcbcb149c38d94e4434982924b6eb27",
+      "keccak256": "0x362d73e7b5a9626ffb3c76ebd7c41cae6240ce0a8d2ec401df345814a39b303b",
       "urls": [
-        "bzz-raw://de00bf4a319a6c4c8a227039e9ac39f01ddc21f5c61186d7067614d686d010fd",
-        "dweb:/ipfs/QmWseV2PXggxynEEDXq8HkLQstC9e8BFYVQFhrfxVaVH6j"
+        "bzz-raw://c750b186885d1af5cda10755c8443629b270d18b221c1054a7e9344adbea7ce4",
+        "dweb:/ipfs/QmcwkJjGj8PGy43KRRh2c4ggcjBVD65XDsoq8H5LozTeN2"
       ],
       "license": "MIT"
     },
@@ -890,34 +1124,34 @@
       "license": "MIT"
     },
     "contracts/src/spaces/facets/Permissions.sol": {
-      "keccak256": "0x08f1d02cacf8b8adcb38219623f999d15908185eefca4e3d0ea2c3486091d08c",
+      "keccak256": "0x0b7ad76893a8b11877f161bf8d6180230190572f8a171ff5b124570be468976e",
       "urls": [
-        "bzz-raw://b6b021cd9adfed316fc1f43b99e5430d75469ef13d252fa5eb25057155908b77",
-        "dweb:/ipfs/QmYAhL8hWcbtHARsAY9nauyRB4BERUi9s7SSRYkb1e1kCh"
+        "bzz-raw://d21a0dd820441b95a17a5f6681a4a68fdf180fe90aaaa0f3e9e5800b2a247634",
+        "dweb:/ipfs/QmRVHasadqCqDSZRaRrddJXR23wkbVs9LQ6WcPxfDFH37x"
       ],
       "license": "MIT"
     },
     "contracts/src/spaces/facets/channels/IChannel.sol": {
-      "keccak256": "0x8f461ec8c49234f27257fc5cf20dd5e9fdb4692d9b17075be63e8ee6db854554",
+      "keccak256": "0x8940643f9701981062aeb6adfb8d0b7387acdaecae0baaca01e372330252769e",
       "urls": [
-        "bzz-raw://52673312b7dfe3fa2b0e8b603a368036f3b428b303f9e539b558ccfdf5490b54",
-        "dweb:/ipfs/Qme3LoUvB1Axz9ZJZ8Erv6Cw6GLPQB7PNghMQ3FUYfA4VV"
+        "bzz-raw://aa59ac6c1cd515f476398776e27fc0dfa5f5563192d60a793620cde2f84e6ed9",
+        "dweb:/ipfs/QmVLiENXctwtHuSBmw5z4458bw8EbYzfKCVn3ZgqoaJ1MA"
       ],
       "license": "MIT"
     },
     "contracts/src/spaces/facets/entitlements/IEntitlementsManager.sol": {
-      "keccak256": "0x3be8ab93ad7f1417c0b0f6aa3f74dca36034464085d40fd2e94f3b31ff5be03d",
+      "keccak256": "0x3a706517df398a51e19fac4a3c1987886605b8a8fdff319dbe8acc8efb786d30",
       "urls": [
-        "bzz-raw://4e97436fca686896a1ffc56dd64f58997775bef504e0568c62ba4d103a99939c",
-        "dweb:/ipfs/QmWn5wvuuEFDhnqXJcJVb69ndDmhUMXWdUGYKR2VBfLsEw"
+        "bzz-raw://7ba8da65886f17602bad12eac53f57079321b88030d77be1437d5a77b51b7763",
+        "dweb:/ipfs/QmZWdoM6Drtd9XaPJ8UxBQLSSrqBPViE5UvukDw3i7rah3"
       ],
       "license": "MIT"
     },
     "contracts/src/spaces/facets/gated/EntitlementGatedBase.sol": {
-      "keccak256": "0xcefa5c3c81c73fefaa7da433ddd5c419dc4c31cd86e8c31f47894663ca7269e8",
+      "keccak256": "0xc126ab162786e4a043bdeb437c79b1ad662a339a73afca5d62aecf86f2ec1696",
       "urls": [
-        "bzz-raw://27fe60a48a69d5be67fdf17f5aac1e90ef0234da564ec4f6e2cbfe53fbb9ba0c",
-        "dweb:/ipfs/QmPemsjAUmjjjyLWbHzVmqLxyBAN7CFi6DViy9uQEM3wjt"
+        "bzz-raw://2745494dafb968eeec52e5b1d73ff6a9a9eaaf0243fc88b53b8862f940974ca2",
+        "dweb:/ipfs/Qmd3ShreFj8YWL5YDEEnS2vPcm43PyEeWFBrpJdXGmTWKW"
       ],
       "license": "MIT"
     },
@@ -938,26 +1172,26 @@
       "license": "MIT"
     },
     "contracts/src/spaces/facets/membership/IMembership.sol": {
-      "keccak256": "0x7fbf37c681ae95610ed376a30d68808b9da602a3225dbe1724dfe7c1c82de672",
+      "keccak256": "0x68c31487d49212facd5c95dc351c8b652e866d58d6e17178f0afce69ac4e3895",
       "urls": [
-        "bzz-raw://afa8d56cca2d01883595cfbd1a6aa3b63202ed25fb56ac1e57d3cf645665dd77",
-        "dweb:/ipfs/QmbLF87ZZCovJn3enbs78mcJu39zXi8FYum72fTufZt3e4"
+        "bzz-raw://89c20a832f53340918762d956646fcd6c4676cbdd58656134e59e8d2bf8c3870",
+        "dweb:/ipfs/QmUDMbiFv29AGCfPNGQNppphXddf5a7mhkatJDSQ4KvUD3"
       ],
       "license": "MIT"
     },
     "contracts/src/spaces/facets/membership/MembershipBase.sol": {
-      "keccak256": "0x4f42c9176fb345d3da7825e0045e57707396d52bb8e208c81ed81e9d76bd90eb",
+      "keccak256": "0x05ff331416d3cc54728c1fb3a59d0a312a8eceefa667a20fbfce74900afd55f5",
       "urls": [
-        "bzz-raw://1fac0c230acd543d90c1b88174e3dcdc9a135e7217741a32580b250941ad30bf",
-        "dweb:/ipfs/QmXaLoyaFmomPPZCcJiY3dzsRjZiWoVkNdKtDa67vh16CR"
+        "bzz-raw://2310c22209027c0379f09df78a3bfe106b16347ebc98c2ee61269e1eaf008aef",
+        "dweb:/ipfs/Qmd85R9jbWen2V4xUusdLsUbqZ4HpAtsgQ6u8n2W18t4EV"
       ],
       "license": "MIT"
     },
     "contracts/src/spaces/facets/membership/MembershipStorage.sol": {
-      "keccak256": "0xe9085b2b8ec900936853d0f8d7204f11eb5db3aba8c9c72799da62817afed8c0",
+      "keccak256": "0x901e36addd71ab233a40af5185e6070be44b5aa7b1487dab3b0f9dc75d05e972",
       "urls": [
-        "bzz-raw://3fec75bce4b207c375b54dacc0296dc11991f7cc89da0e81e13457ae2120146a",
-        "dweb:/ipfs/QmXzZdw5FnTZqpskq3yLguKTRmhLRBVueMVfH6RY4HuSsa"
+        "bzz-raw://017f70c4ed3fdc4cbef99380339b07f161ea01797acd0181d9d802e407f4b6cd",
+        "dweb:/ipfs/QmeJNCJwAPU7VCyfNJSeTxf56dBVXNoJxYV4NN6AhtxsCa"
       ],
       "license": "MIT"
     },
@@ -985,27 +1219,43 @@
       ],
       "license": "MIT"
     },
-    "contracts/src/spaces/facets/proxy/SpaceProxy.sol": {
-      "keccak256": "0x0abbcfe10500b16399e91aefced93c460a0916e43738b06701c6994aff0e7c4f",
+    "contracts/src/spaces/facets/proxy/ISpaceProxyInitializer.sol": {
+      "keccak256": "0x2f2a656a9c694243fef1de866c2d8b00850a0f7045d69ecf03d934929f5aea26",
       "urls": [
-        "bzz-raw://074691333cc1da44a2768dcd7c6d8ec62cf119449114e1cde7516285cccfed7b",
-        "dweb:/ipfs/QmQ7bwLuNgHpnPGbzMH9CNtG8ap4neP6pwEGmVJT5nrD8J"
+        "bzz-raw://d09487818cd4461afea29aef2b43ca2ddc80c992b86ac678b7b255a6d2ddf4cb",
+        "dweb:/ipfs/QmZtJXRo4zJkpNxczDfEh7NQ78GKEpzaDFPL5ozVhFSjmJ"
+      ],
+      "license": "MIT"
+    },
+    "contracts/src/spaces/facets/proxy/SpaceProxy.sol": {
+      "keccak256": "0x1f94346c27a7162a679b2ef291ecee5a3a6469fc3238a0f276e838f9c659b4c2",
+      "urls": [
+        "bzz-raw://787a268528ade450f04cecf6b9aec9e8950e4d1ff2458c604193d9200352ac1b",
+        "dweb:/ipfs/QmPf7rmMpgeGTLKhyB4zCJTF1QosrK1zuhuUdXoSof7isH"
+      ],
+      "license": "MIT"
+    },
+    "contracts/src/spaces/facets/proxy/SpaceProxyInitializer.sol": {
+      "keccak256": "0x14b95a8d185bad998d4eb28986f85c07a914c2eadf1584776508bd534c527c86",
+      "urls": [
+        "bzz-raw://f62e283e307eecf64447135cdf63059982ac32623b732076416a8cf6569311aa",
+        "dweb:/ipfs/QmcYaLXdWYbipxhuqPqEmbHbX8GfHVnJDPScN1Uzyfx1WP"
       ],
       "license": "MIT"
     },
     "contracts/src/spaces/facets/roles/IRoles.sol": {
-      "keccak256": "0xa69cfbcd989b8794187a56a93deffbefaee8ca456e381ce30f85897893c50272",
+      "keccak256": "0x8e83ae75871b3aa2f2c2885770c0c810e7cf53b4bcb06ff3d73bbcc49b7a7a65",
       "urls": [
-        "bzz-raw://cf8e9b2711f66eefb949f5b5ead4d72005f1845cd63f22b287fdba3339101bd4",
-        "dweb:/ipfs/Qmf7sPY4BgmvZf7p4GBsyVyd4o66yJXMgAmEgpdQAQyBdx"
+        "bzz-raw://3995418818a37c318df894c3a64f646f9a70113b0edf54fa34dc4c5ba2f426ed",
+        "dweb:/ipfs/QmSeDc6kasbA8THfZU5fS5uQbbeV3X85qauF8PapgXzgT3"
       ],
       "license": "MIT"
     },
     "contracts/src/utils/Factory.sol": {
-      "keccak256": "0x150045213e6284abce967c3f6abc8989952d181c43540acf92709486aebec3ce",
+      "keccak256": "0xb85beb5f8320a8a1e860690391d9b34187570c6f22e586b662fcf131f8b24e4c",
       "urls": [
-        "bzz-raw://282730a1c005f83c5eb11d2f19ca5a8c2ab1bba4e4a403eb651f6a232a874791",
-        "dweb:/ipfs/QmcPLz1uWkCukNsSwu69i8BVmjF7g9pg47cAmD3swaaFTY"
+        "bzz-raw://e9bfdf5d51b2d9e4c0b74248281fbcc0bd62201421f05539f3fa4673ae909e5c",
+        "dweb:/ipfs/Qmd6JNfs3sRcQxdKS9sfvNsRyLtJU5farA1YvaFULxugF4"
       ],
       "license": "MIT"
     },
@@ -1018,10 +1268,10 @@
       "license": "MIT"
     },
     "contracts/src/utils/Validator.sol": {
-      "keccak256": "0x4f469950ab5fb75049aec2b55f9f78ade4bbc3a35e072acaadb2fbe9eab6fb5f",
+      "keccak256": "0x902f8ae6b6ec4703e6a72e40411ddaf062b73eb2890cab3c893ac3828367c61f",
       "urls": [
-        "bzz-raw://5689fa29f227bdedd2f085799b197a3c807e08a6520b7bcc953bd4f0c286c306",
-        "dweb:/ipfs/QmeVULCHP8i43FGhkMs6Y8zxJDiN59f3Pw3bRPc3QdcLCt"
+        "bzz-raw://39e68f53191121d78a6adc94587e085fb2845206cc8f5c58bf7f4532126e6bb3",
+        "dweb:/ipfs/QmPLJ9UXfvhJEPhyKpQyz2WM7oNtGgJtbFpXfM8hmZDWRG"
       ],
       "license": "MIT"
     },
@@ -1142,6 +1392,22 @@
       "urls": [
         "bzz-raw://ad85dd393ee0a1917c57046abc5155f51f77844b2c6a42c05c1b8dd26d6ff3c1",
         "dweb:/ipfs/QmNqYc8To2NdnpP6E1tGz7t6A7beuENde5yovwov5pW1fA"
+      ],
+      "license": "MIT"
+    },
+    "lib/solady/src/utils/LibClone.sol": {
+      "keccak256": "0x87e7107cd0dd0b0a4842f705bde584e8aa5149b678654d3b438e6683b1b90314",
+      "urls": [
+        "bzz-raw://f33b424b3d85944e32c9dace9939f9faa4d30ef7f2d2b0b9f8238f956c8ed89d",
+        "dweb:/ipfs/QmYpf82Ufq9bEr3vaz7HYSkrjB1pryYYFP4pALqnGbhUgi"
+      ],
+      "license": "MIT"
+    },
+    "lib/solady/src/utils/Multicallable.sol": {
+      "keccak256": "0x0f5895a87b561dcf8b4d4068e1a56ab28bbebde08ff88534bdc8fe0379516d1c",
+      "urls": [
+        "bzz-raw://bbf0a55f90662536abe978d26b44a76a3ead4e962db205e64850d6c8276129bf",
+        "dweb:/ipfs/QmZXGTxig4Kk4uxeCJzMW5xRBqWSUEKTtdwRDd93121CyV"
       ],
       "license": "MIT"
     }

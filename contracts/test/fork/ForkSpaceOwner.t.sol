@@ -17,9 +17,6 @@ import {SpaceHelper} from "contracts/test/spaces/SpaceHelper.sol";
 import {DeploySpaceOwnerFacet, SpaceOwner} from "contracts/scripts/deployments/facets/DeploySpaceOwnerFacet.s.sol";
 import {DeployArchitect} from "contracts/scripts/deployments/facets/DeployArchitect.s.sol";
 
-// debuggging
-import {console} from "forge-std/console.sol";
-
 contract ForkSpaceOwner is
   IArchitectBase,
   ISpaceOwnerBase,
@@ -38,9 +35,11 @@ contract ForkSpaceOwner is
   DeployArchitect architectHelper = new DeployArchitect();
 
   function setUp() external onlyForked {
+    address deployer = getDeployer();
+
     // create diamond cut to current space owner
-    address spaceOwnerFacet = spaceOwnerHelper.deploy();
-    address architectFacet = architectHelper.deploy();
+    address spaceOwnerFacet = spaceOwnerHelper.deploy(deployer);
+    address architectFacet = architectHelper.deploy(deployer);
 
     bytes4[] memory addSelectors = new bytes4[](2);
     addSelectors[0] = SpaceOwner.mintSpace.selector;
@@ -94,14 +93,7 @@ contract ForkSpaceOwner is
     IArchitect spaceArchitect = IArchitect(spaceFactory);
 
     vm.prank(founder);
-    address spaceAdd = spaceArchitect.createSpace(spaceInfo);
-
-    Space memory space = SpaceOwner(spaceOwnerDiamond).getSpaceInfo(spaceAdd);
-    // verify space.shortDescription is longer than 0
-    assertTrue(
-      bytes(space.shortDescription).length > 0,
-      "Short description is empty"
-    );
+    spaceArchitect.createSpace(spaceInfo);
   }
 
   function test_getSpaceInfo() external view onlyForked {

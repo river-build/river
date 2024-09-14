@@ -19,8 +19,8 @@ func GetDefaultConfig() *Config {
 		Database: DatabaseConfig{
 			StartupDelay: 2 * time.Second,
 		},
-		StorageType: "postgres",
-		UseHttps:    true,
+		StorageType:  "postgres",
+		DisableHttps: false,
 		BaseChain: ChainConfig{
 			// TODO: ChainId:
 			BlockTimeMs: 2000,
@@ -74,8 +74,8 @@ type Config struct {
 	// DNS name of the node. Used to select interface to listen on. Can be empty.
 	Address string
 
-	UseHttps  bool // If TRUE TLSConfig must be set.
-	TLSConfig TLSConfig
+	DisableHttps bool // If FALSE TLSConfig must be set.
+	TLSConfig    TLSConfig
 
 	// Storage
 	Database    DatabaseConfig
@@ -430,6 +430,15 @@ func (c *Config) Init() error {
 	return c.parseChains()
 }
 
+// Return the schema to use for accessing the node.
+func (c *Config) UrlSchema() string {
+	s := "https"
+	if c != nil && c.DisableHttps {
+		s = "http"
+	}
+	return s
+}
+
 func parseBlockchainDurations(str string, result map[uint64]BlockchainInfo) error {
 	pairs := strings.Split(str, ",")
 	for _, pair := range pairs {
@@ -459,8 +468,8 @@ func parseBlockchainDurations(str string, result map[uint64]BlockchainInfo) erro
 }
 
 func (c *Config) parseChains() error {
-	bcDurations := GetDefaultBlockchainInfo()
-	err := parseBlockchainDurations(c.ChainBlocktimes, bcDurations)
+	defaultChainInfo := GetDefaultBlockchainInfo()
+	err := parseBlockchainDurations(c.ChainBlocktimes, defaultChainInfo)
 	if err != nil {
 		return err
 	}
@@ -484,7 +493,7 @@ func (c *Config) parseChains() error {
 				return WrapRiverError(Err_BAD_CONFIG, err).Message("Failed to pase chain Id").Tag("chainId", parts[0])
 			}
 
-			info, ok := bcDurations[chainID]
+			info, ok := defaultChainInfo[chainID]
 			if !ok {
 				return RiverError(Err_BAD_CONFIG, "Chain blocktime not set").Tag("chainId", chainID)
 			}
@@ -506,6 +515,7 @@ func (c *Config) parseChains() error {
 			c.XChainBlockchains = append(c.XChainBlockchains, chainID)
 		}
 	}
+
 	return nil
 }
 

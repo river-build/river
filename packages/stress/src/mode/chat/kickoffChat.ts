@@ -1,7 +1,7 @@
 import { StressClient } from '../../utils/stressClient'
 import { getSystemInfo } from '../../utils/systemInfo'
 import { BigNumber, Wallet } from 'ethers'
-import { ChatConfig } from './types'
+import { ChatConfig } from '../common/types'
 import { check, dlogger } from '@river-build/dlog'
 import { makeCodeBlock } from '../../utils/messages'
 
@@ -10,6 +10,12 @@ const logger = dlogger('stress:kickoffChat')
 export async function kickoffChat(rootClient: StressClient, cfg: ChatConfig) {
     logger.log('kickoffChat', rootClient.userId)
     check(rootClient.clientIndex === 0, 'rootClient.clientIndex === 0')
+    const globalRunIndex = parseInt(
+        (await cfg.globalPersistedStore?.get('stress_global_run_index').catch(() => undefined)) ??
+            '0',
+    )
+    await cfg.globalPersistedStore?.set('stress_global_run_index', `${globalRunIndex + 1}`)
+
     const { spaceId, sessionId } = cfg
     const balance = await rootClient.baseProvider.wallet.getBalance()
     const announceChannelId = cfg.announceChannelId
@@ -26,16 +32,24 @@ export async function kickoffChat(rootClient: StressClient, cfg: ChatConfig) {
     const shareKeysDuration = Date.now() - shareKeysStart
 
     logger.log('send message')
-    const { eventId } = await rootClient.sendMessage(
+    const { eventId: kickoffMessageEventId } = await rootClient.sendMessage(
         announceChannelId,
         `hello, we're starting the stress test now!, containers: ${cfg.containerCount} ppc: ${cfg.processesPerContainer} clients: ${cfg.clientsCount} randomNewClients: ${cfg.randomClients.length} sessionId: ${sessionId}`,
     )
+    const { eventId: countClientsMessageEventId } = await rootClient.sendMessage(
+        cfg.announceChannelId,
+        `Clients: 0/${cfg.clientsCount} 🤖`,
+    )
+
+    cfg.kickoffMessageEventId = kickoffMessageEventId
+    cfg.countClientsMessageEventId = countClientsMessageEventId
 
     const initialStats = {
         timeToShareKeys: shareKeysDuration + 'ms',
         walletBalance: balance.toString(),
         testDuration: cfg.duration,
         clientsCount: cfg.clientsCount,
+        globalRunIndex,
     }
 
     logger.log('start thread')
@@ -44,7 +58,7 @@ export async function kickoffChat(rootClient: StressClient, cfg: ChatConfig) {
         `System Info: ${makeCodeBlock(getSystemInfo())} Initial Stats: ${makeCodeBlock(
             initialStats,
         )}`,
-        { threadId: eventId },
+        { threadId: kickoffMessageEventId },
     )
 
     const mintMembershipForWallet = async (wallet: Wallet, i: number) => {
@@ -88,7 +102,7 @@ async function startRootClient(
     spaceId: string,
     defaultChannelId: string,
 ) {
-    const userExists = await client.userExists()
+    const userExists = client.userExists()
     if (!userExists) {
         if (balance.lte(0)) {
             throw new Error('Insufficient balance')
@@ -98,8 +112,6 @@ async function startRootClient(
         const isMember = await client.isMemberOf(spaceId)
         if (!isMember) {
             await client.joinSpace(spaceId)
-        } else {
-            await client.startStreamsClient({ spaceId })
         }
     }
 

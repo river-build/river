@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net"
@@ -12,24 +13,29 @@ import (
 	"slices"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/river-build/river/core/node/base"
 
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	eth_crypto "github.com/ethereum/go-ethereum/crypto"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/net/http2"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/nodes"
 	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
+	river_sync "github.com/river-build/river/core/node/rpc/sync"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/testutils"
-	"github.com/stretchr/testify/require"
-	"golang.org/x/net/http2"
-	"google.golang.org/protobuf/proto"
 )
 
 func setupTestHttpClient() {
@@ -53,16 +59,16 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func createUserDeviceKeyStream(
+func createUserMetadataStream(
 	ctx context.Context,
 	wallet *crypto.Wallet,
 	client protocolconnect.StreamServiceClient,
 	streamSettings *protocol.StreamSettings,
 ) (*protocol.SyncCookie, []byte, error) {
-	userDeviceKeyStreamId := UserDeviceKeyStreamIdFromAddress(wallet.Address)
+	userMetadataStreamId := UserMetadataStreamIdFromAddress(wallet.Address)
 	inception, err := events.MakeEnvelopeWithPayload(
 		wallet,
-		events.Make_UserDeviceKeyPayload_Inception(userDeviceKeyStreamId, streamSettings),
+		events.Make_UserMetadataPayload_Inception(userMetadataStreamId, streamSettings),
 		nil,
 	)
 	if err != nil {
@@ -70,7 +76,7 @@ func createUserDeviceKeyStream(
 	}
 	res, err := client.CreateStream(ctx, connect.NewRequest(&protocol.CreateStreamRequest{
 		Events:   []*protocol.Envelope{inception},
-		StreamId: userDeviceKeyStreamId[:],
+		StreamId: userMetadataStreamId[:],
 	}))
 	if err != nil {
 		return nil, nil, err
@@ -376,7 +382,7 @@ func testMethodsWithClient(tester *serviceTester, client protocolconnect.StreamS
 	require.NoError(err)
 	require.NotNil(res, "nil sync cookie")
 
-	_, _, err = createUserDeviceKeyStream(ctx, wallet1, client, nil)
+	_, _, err = createUserMetadataStream(ctx, wallet1, client, nil)
 	require.NoError(err)
 
 	// get stream optional should now return not nil
@@ -392,7 +398,7 @@ func testMethodsWithClient(tester *serviceTester, client protocolconnect.StreamS
 	require.NoError(err)
 	require.NotNil(resuser, "nil sync cookie")
 
-	_, _, err = createUserDeviceKeyStream(ctx, wallet2, client, nil)
+	_, _, err = createUserMetadataStream(ctx, wallet2, client, nil)
 	require.NoError(err)
 
 	// create space
@@ -529,7 +535,7 @@ func testRiverDeviceId(tester *serviceTester) {
 	require.NoError(err)
 	require.NotNil(resuser)
 
-	_, _, err = createUserDeviceKeyStream(ctx, wallet, client, nil)
+	_, _, err = createUserMetadataStream(ctx, wallet, client, nil)
 	require.NoError(err)
 
 	spaceId := testutils.FakeStreamId(STREAM_SPACE_BIN)
@@ -606,8 +612,8 @@ func testSyncStreams(tester *serviceTester) {
 	wallet, _ := crypto.NewWallet(ctx)
 	_, _, err := createUser(ctx, wallet, client, nil)
 	require.Nilf(err, "error calling createUser: %v", err)
-	_, _, err = createUserDeviceKeyStream(ctx, wallet, client, nil)
-	require.Nilf(err, "error calling createUserDeviceKeyStream: %v", err)
+	_, _, err = createUserMetadataStream(ctx, wallet, client, nil)
+	require.Nilf(err, "error calling createUserMetadataStream: %v", err)
 	// create space
 	spaceId := testutils.FakeStreamId(STREAM_SPACE_BIN)
 	space1, _, err := createSpace(ctx, wallet, client, spaceId, nil)
@@ -679,8 +685,8 @@ func testAddStreamsToSync(tester *serviceTester) {
 	alice, _, err := createUser(ctx, aliceWallet, aliceClient, nil)
 	require.Nilf(err, "error calling createUser: %v", err)
 	require.NotNil(alice, "nil sync cookie for alice")
-	_, _, err = createUserDeviceKeyStream(ctx, aliceWallet, aliceClient, nil)
-	require.Nilf(err, "error calling createUserDeviceKeyStream: %v", err)
+	_, _, err = createUserMetadataStream(ctx, aliceWallet, aliceClient, nil)
+	require.Nilf(err, "error calling createUserMetadataStream: %v", err)
 
 	// create bob's client, wallet, and streams
 	bobClient := tester.testClient(0)
@@ -688,8 +694,8 @@ func testAddStreamsToSync(tester *serviceTester) {
 	bob, _, err := createUser(ctx, bobWallet, bobClient, nil)
 	require.Nilf(err, "error calling createUser: %v", err)
 	require.NotNil(bob, "nil sync cookie for bob")
-	_, _, err = createUserDeviceKeyStream(ctx, bobWallet, bobClient, nil)
-	require.Nilf(err, "error calling createUserDeviceKeyStream: %v", err)
+	_, _, err = createUserMetadataStream(ctx, bobWallet, bobClient, nil)
+	require.Nilf(err, "error calling createUserMetadataStream: %v", err)
 	// alice creates a space
 	spaceId := testutils.FakeStreamId(STREAM_SPACE_BIN)
 	space1, _, err := createSpace(ctx, aliceWallet, aliceClient, spaceId, nil)
@@ -779,7 +785,7 @@ func testRemoveStreamsFromSync(tester *serviceTester) {
 	alice, _, err := createUser(ctx, aliceWallet, aliceClient, nil)
 	require.Nilf(err, "error calling createUser: %v", err)
 	require.NotNil(alice, "nil sync cookie for alice")
-	_, _, err = createUserDeviceKeyStream(ctx, aliceWallet, aliceClient, nil)
+	_, _, err = createUserMetadataStream(ctx, aliceWallet, aliceClient, nil)
 	require.NoError(err)
 
 	// create bob's client, wallet, and streams
@@ -788,8 +794,8 @@ func testRemoveStreamsFromSync(tester *serviceTester) {
 	bob, _, err := createUser(ctx, bobWallet, bobClient, nil)
 	require.Nilf(err, "error calling createUser: %v", err)
 	require.NotNil(bob, "nil sync cookie for bob")
-	_, _, err = createUserDeviceKeyStream(ctx, bobWallet, bobClient, nil)
-	require.Nilf(err, "error calling createUserDeviceKeyStream: %v", err)
+	_, _, err = createUserMetadataStream(ctx, bobWallet, bobClient, nil)
+	require.Nilf(err, "error calling createUserMetadataStream: %v", err)
 	// alice creates a space
 	spaceId := testutils.FakeStreamId(STREAM_SPACE_BIN)
 	space1, _, err := createSpace(ctx, aliceWallet, aliceClient, spaceId, nil)
@@ -1076,7 +1082,7 @@ func TestUnstableStreams(t *testing.T) {
 		syncCookie, _, err := createUser(ctx, wallet, client0, nil)
 		req.NoError(err, "create user")
 
-		_, _, err = createUserDeviceKeyStream(ctx, wallet, client0, nil)
+		_, _, err = createUserMetadataStream(ctx, wallet, client0, nil)
 		req.NoError(err)
 
 		wallets = append(wallets, wallet)
@@ -1564,18 +1570,29 @@ func TestStreamSyncPingPong(t *testing.T) {
 	}, 20*time.Second, 100*time.Millisecond, "didn't receive all pongs in reasonable time or out of order")
 }
 
-func TestSyncSubscriptionWithTooSlowClient(t *testing.T) {
-	t.SkipNow()
+type slowStreamsResponseSender struct {
+	sendDuration time.Duration
+}
 
+func (s slowStreamsResponseSender) Send(msg *protocol.SyncStreamsResponse) error {
+	time.Sleep(s.sendDuration)
+	return nil
+}
+
+// TestSyncSubscriptionWithTooSlowClient ensures that a sync operation cancels itself when a subscriber isn't able to
+// keep up with sync updates.
+func TestSyncSubscriptionWithTooSlowClient(t *testing.T) {
 	var (
 		req      = require.New(t)
 		services = newServiceTester(t, serviceTesterOpts{numNodes: 5, start: true})
 		client0  = services.testClient(0)
 		client1  = services.testClient(1)
+		node1    = services.nodes[1]
 		ctx      = services.ctx
 		wallets  []*crypto.Wallet
 		users    []*protocol.SyncCookie
 		channels []*protocol.SyncCookie
+		syncID   = base.GenNanoid()
 	)
 
 	// create users that will join and add messages to channels.
@@ -1586,7 +1603,7 @@ func TestSyncSubscriptionWithTooSlowClient(t *testing.T) {
 		syncCookie, _, err := createUser(ctx, wallet, client0, nil)
 		req.NoError(err, "create user")
 
-		_, _, err = createUserDeviceKeyStream(ctx, wallet, client0, nil)
+		_, _, err = createUserMetadataStream(ctx, wallet, client0, nil)
 		req.NoError(err)
 
 		wallets = append(wallets, wallet)
@@ -1608,27 +1625,23 @@ func TestSyncSubscriptionWithTooSlowClient(t *testing.T) {
 		channels = append(channels, channel)
 	}
 
-	// subscribe to channel updates
-	fmt.Printf("sync streams on node %s\n", services.nodes[1].address)
+	// subscribe to channel updates on node 1 direct through a sync op to have better control over it
+	t.Logf("subscribe on node %s", node1.address)
 	syncPos := append(users, channels...)
-	syncRes, err := client1.SyncStreams(ctx, connect.NewRequest(&protocol.SyncStreamsRequest{SyncPos: syncPos}))
-	req.NoError(err, "sync streams")
+	syncOp, err := river_sync.NewStreamsSyncOperation(
+		ctx, syncID, node1.address, node1.service.cache, node1.service.nodeRegistry)
+	req.NoError(err, "NewStreamsSyncOperation")
 
-	syncRes.Receive()
-	syncID := syncRes.Msg().SyncId
-	t.Logf("subscription %s created on node: %s", syncID, services.nodes[1].address)
+	syncOpResult := make(chan error)
+	syncOpStopped := atomic.Bool{}
 
-	subCancelled := make(chan struct{})
-
+	// run the subscription in the background that takes a long time for each update to send to the client.
+	// this must cancel the sync op with a buffer too full error.
 	go func() {
-		// don't read from syncRes and simulate an inactive client.
-		// the node should drop the subscription when the internal buffer is full with events it can't deliver
-		<-time.After(10 * time.Second)
-
-		_, err := client1.PingSync(ctx, connect.NewRequest(&protocol.PingSyncRequest{SyncId: syncID, Nonce: "ping"}))
-		req.Error(err, "sync must have been dropped")
-
-		close(subCancelled)
+		slowSubscriber := slowStreamsResponseSender{sendDuration: 250 * time.Millisecond}
+		syncOpErr := syncOp.Run(connect.NewRequest(&protocol.SyncStreamsRequest{SyncPos: syncPos}), slowSubscriber)
+		syncOpStopped.Store(true)
+		syncOpResult <- syncOpErr
 	}()
 
 	// users join channels
@@ -1636,12 +1649,10 @@ func TestSyncSubscriptionWithTooSlowClient(t *testing.T) {
 	for i, wallet := range wallets[1:] {
 		for c := range channelsCount {
 			channel := channels[c]
-
-			miniBlockHashResp, err := client1.GetLastMiniblockHash(
-				ctx,
+			miniBlockHashResp, err := client1.GetLastMiniblockHash(ctx,
 				connect.NewRequest(&protocol.GetLastMiniblockHashRequest{StreamId: users[i+1].StreamId}))
 
-			req.NoError(err, "get last miniblock hash")
+			req.NoError(err, "get last mini-block hash")
 
 			channelId, _ := StreamIdFromBytes(channel.GetStreamId())
 			userJoin, err := events.MakeEnvelopeWithPayload(
@@ -1666,8 +1677,12 @@ func TestSyncSubscriptionWithTooSlowClient(t *testing.T) {
 		}
 	}
 
-	// send a bunch of messages and ensure that the sync op is cancelled because the client buffer becomes full
-	for i := range 10000 {
+	// send a bunch of messages and ensure that the sync op is cancelled because the client can't keep up
+	for i := range 2500 {
+		if syncOpStopped.Load() { // no need to send additional messages, sync op already cancelled
+			break
+		}
+
 		wallet := wallets[rand.Int()%len(wallets)]
 		channel := channels[rand.Int()%len(channels)]
 		msgContents := fmt.Sprintf("msg #%d", i)
@@ -1698,13 +1713,20 @@ func TestSyncSubscriptionWithTooSlowClient(t *testing.T) {
 		req.NoError(err)
 	}
 
+	// At some moment one of the syncers in the sync op syncer set encounters a buffer full and cancels the sync op.
+	// Ensure that the sync op ends with protocol.Err_BUFFER_FULL.
 	req.Eventuallyf(func() bool {
 		select {
-		case <-subCancelled:
-			fmt.Println("sub cancelled as expected")
-			return true
+		case err := <-syncOpResult:
+			var riverErr *base.RiverErrorImpl
+			if errors.As(err, &riverErr) {
+				req.Equal(riverErr.Code, protocol.Err_BUFFER_FULL, "unexpected error code")
+				return true
+			}
+			req.FailNow("received unexpected err", err)
+			return false
 		default:
 			return false
 		}
-	}, 20*time.Second, 100*time.Millisecond, "subscription not cancelled in reasonable time")
+	}, 20*time.Second, 100*time.Millisecond, "sync operation not stopped within reasonable time")
 }

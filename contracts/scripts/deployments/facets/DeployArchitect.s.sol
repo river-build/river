@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 //interfaces
-
+import {IArchitect} from "contracts/src/factory/facets/architect/IArchitect.sol";
 //libraries
 
 //contracts
@@ -12,11 +12,14 @@ import {FacetHelper} from "contracts/test/diamond/Facet.t.sol";
 
 contract DeployArchitect is FacetHelper, Deployer {
   constructor() {
-    addSelector(Architect.createSpace.selector);
-    addSelector(Architect.getSpaceByTokenId.selector);
-    addSelector(Architect.getTokenIdBySpace.selector);
-    addSelector(Architect.setSpaceArchitectImplementations.selector);
-    addSelector(Architect.getSpaceArchitectImplementations.selector);
+    addSelector(IArchitect.createSpace.selector);
+    addSelector(IArchitect.getSpaceByTokenId.selector);
+    addSelector(IArchitect.getTokenIdBySpace.selector);
+    addSelector(IArchitect.setSpaceArchitectImplementations.selector);
+    addSelector(IArchitect.getSpaceArchitectImplementations.selector);
+    addSelector(IArchitect.createSpaceWithPrepay.selector);
+    addSelector(IArchitect.setProxyInitializer.selector);
+    addSelector(IArchitect.getProxyInitializer.selector);
   }
 
   function initializer() public pure override returns (bytes4) {
@@ -26,14 +29,16 @@ contract DeployArchitect is FacetHelper, Deployer {
   function makeInitData(
     address _spaceOwnerToken,
     address _userEntitlement,
-    address _ruleEntitlement
+    address _ruleEntitlement,
+    address _legacyRuleEntitlement
   ) public pure returns (bytes memory) {
     return
       abi.encodeWithSelector(
         initializer(),
         _spaceOwnerToken,
         _userEntitlement,
-        _ruleEntitlement
+        _ruleEntitlement,
+        _legacyRuleEntitlement
       );
   }
 

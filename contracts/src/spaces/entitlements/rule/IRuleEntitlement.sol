@@ -50,7 +50,8 @@ interface IRuleEntitlementBase {
     ERC20,
     ERC721,
     ERC1155,
-    ISENTITLED
+    ISENTITLED,
+    ETH_BALANCE
   }
 
   // Enum for Operation oneof operation_clause
@@ -105,6 +106,40 @@ interface IRuleEntitlementBase {
     Operation[] operations;
     CheckOperationV2[] checkOperations;
     LogicalOperation[] logicalOperations;
+  }
+
+  struct Entitlement {
+    address grantedBy;
+    uint256 grantedTime;
+    RuleData data;
+  }
+
+  struct EntitlementV2 {
+    address grantedBy;
+    uint256 grantedTime;
+    bytes data;
+  }
+
+  // Parameters are not used in contracts but are defined here for documentation purposes.
+  struct MockParams {
+    uint256 threshold; // used for testing
+  }
+
+  struct ERC20Params {
+    uint256 threshold;
+  }
+
+  struct ERC721Params {
+    uint256 threshold;
+  }
+
+  struct ERC1155Params {
+    uint256 threshold;
+    uint256 tokenId;
+  }
+
+  struct NativeCoinBalanceParams {
+    uint256 threshold;
   }
 }
 

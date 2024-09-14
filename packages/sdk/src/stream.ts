@@ -35,6 +35,10 @@ export class Stream extends (EventEmitter as new () => TypedEmitter<StreamEvents
         return this._view.streamId
     }
 
+    get syncCookie(): SyncCookie | undefined {
+        return this.view.syncCookie
+    }
+
     /**
      * NOTE: Separating initial rollup from the constructor allows consumer to subscribe to events
      * on the new stream event and still access this object through Client.streams.
@@ -150,12 +154,12 @@ export class Stream extends (EventEmitter as new () => TypedEmitter<StreamEvents
                     resolve()
                 }
             }
-
+            const timeoutError = new Error(`waitFor timeout waiting for ${event}`)
             // Set up the timeout
             const timeout = setTimeout(() => {
                 this.logEmitFromStream('waitFor timeout', this.streamId, event)
                 this.off(event, handler as StreamEvents[E])
-                reject(new Error(`Timed out waiting for event: ${event}`))
+                reject(timeoutError)
             }, opts.timeoutMs)
 
             this.on(event, handler as StreamEvents[E])

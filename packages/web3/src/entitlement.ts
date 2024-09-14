@@ -1,27 +1,36 @@
-import type { AbiParameter, AbiFunction } from 'abitype'
+import type { ExtractAbiFunction } from 'abitype'
 import { IRuleEntitlementBase, IRuleEntitlementAbi } from './v3/IRuleEntitlementShim'
+import { IRuleEntitlementV2Base, IRuleEntitlementV2Abi } from './v3/IRuleEntitlementV2Shim'
+import { dlogger } from '@river-build/dlog'
 
 import {
-    createPublicClient,
-    http,
-    decodeAbiParameters,
     encodeAbiParameters,
-    PublicClient,
+    decodeAbiParameters,
+    getAbiItem,
+    DecodeFunctionResultReturnType,
+    Hex,
 } from 'viem'
 
-import { mainnet } from 'viem/chains'
 import { ethers } from 'ethers'
 import { Address } from './ContractTypes'
 import { MOCK_ADDRESS } from './Utils'
 
+const log = dlogger('csb:entitlement')
+
+export type XchainConfig = {
+    supportedRpcUrls: { [chainId: number]: string }
+    // The chain ids for supported chains that use ether as the native currency.
+    // These chains will be used to determine a user's cumulative ether balance.
+    etherBasedChains: number[]
+}
+
 const zeroAddress = ethers.constants.AddressZero
 
-type ReadContractFunction = typeof publicClient.readContract<
-    typeof IRuleEntitlementAbi,
-    'getRuleData'
+export type RuleData = DecodeFunctionResultReturnType<typeof IRuleEntitlementAbi, 'getRuleData'>
+export type RuleDataV2 = DecodeFunctionResultReturnType<
+    typeof IRuleEntitlementV2Abi,
+    'getRuleDataV2'
 >
-type ReadContractReturnType = ReturnType<ReadContractFunction>
-export type RuleData = Awaited<ReadContractReturnType>
 
 export enum OperationType {
     NONE = 0,
@@ -36,6 +45,28 @@ export enum CheckOperationType {
     ERC721,
     ERC1155,
     ISENTITLED,
+    ETH_BALANCE,
+}
+
+function checkOpString(operation: CheckOperationType): string {
+    switch (operation) {
+        case CheckOperationType.NONE:
+            return 'NONE'
+        case CheckOperationType.MOCK:
+            return 'MOCK'
+        case CheckOperationType.ERC20:
+            return 'ERC20'
+        case CheckOperationType.ERC721:
+            return 'ERC721'
+        case CheckOperationType.ERC1155:
+            return 'ERC1155'
+        case CheckOperationType.ISENTITLED:
+            return 'ISENTITLED'
+        case CheckOperationType.ETH_BALANCE:
+            return 'ETH_BALANCE'
+        default:
+            return 'UNKNOWN'
+    }
 }
 
 // Enum for Operation oneof operation_clause
@@ -44,7 +75,6 @@ export enum LogicalOperationType {
     AND,
     OR,
 }
-
 export type ContractOperation = {
     opType: OperationType
     index: number
@@ -67,12 +97,21 @@ export type CheckOperation = {
     contractAddress: Address
     threshold: bigint
 }
+export type CheckOperationV2 = {
+    opType: OperationType.CHECK
+    checkType: CheckOperationType
+    chainId: bigint
+    contractAddress: Address
+    params: Hex
+}
+
 export type OrOperation = {
     opType: OperationType.LOGICAL
     logicalType: LogicalOperationType.OR
     leftOperation: Operation
     rightOperation: Operation
 }
+
 export type AndOperation = {
     opType: OperationType.LOGICAL
     logicalType: LogicalOperationType.AND
@@ -96,12 +135,16 @@ export const NoopRuleData = {
     logicalOperations: [],
 }
 
+export const EncodedNoopRuleData = encodeRuleDataV2(NoopRuleData)
+
 type EntitledWalletOrZeroAddress = string
 
 export type LogicalOperation = OrOperation | AndOperation
-export type Operation = CheckOperation | OrOperation | AndOperation | NoOperation
+export type SupportedLogicalOperationType = LogicalOperation['logicalType']
 
-function isCheckOperation(operation: Operation): operation is CheckOperation {
+export type Operation = CheckOperationV2 | OrOperation | AndOperation | NoOperation
+
+function isCheckOperationV2(operation: Operation): operation is CheckOperationV2 {
     return operation.opType === OperationType.CHECK
 }
 
@@ -112,11 +155,6 @@ function isLogicalOperation(operation: Operation): operation is LogicalOperation
 function isAndOperation(operation: LogicalOperation): operation is AndOperation {
     return operation.logicalType === LogicalOperationType.AND
 }
-
-const publicClient: PublicClient = createPublicClient({
-    chain: mainnet,
-    transport: http(),
-})
 
 function isOrOperation(operation: LogicalOperation): operation is OrOperation {
     return operation.logicalType === LogicalOperationType.OR
@@ -160,87 +198,153 @@ export function postOrderArrayToTree(operations: Operation[]): Operation {
     return root
 }
 
-export const getOperationTree = async (address: Address, roleId: bigint): Promise<Operation> => {
-    const entitlementData = await publicClient.readContract({
-        address: address,
-        abi: IRuleEntitlementAbi,
-        functionName: 'getEntitlementDataByRoleId',
-        args: [roleId],
-    })
-
-    const data = decodeEntitlementData(entitlementData)
-
-    const operations = ruleDataToOperations(data)
-
-    return postOrderArrayToTree(operations)
+export type ThresholdParams = {
+    threshold: bigint
 }
 
-const encodeRuleDataInputs: readonly AbiParameter[] | undefined = (
-    Object.values(IRuleEntitlementAbi).find((abi) => abi.name === 'encodeRuleData') as
-        | AbiFunction
-        | undefined
-)?.inputs
+const thresholdParamsAbi = {
+    components: [
+        {
+            name: 'threshold',
+            type: 'uint256',
+        },
+    ],
+    name: 'thresholdParams',
+    type: 'tuple',
+} as const
 
-export function encodeEntitlementData(ruleData: IRuleEntitlementBase.RuleDataStruct): Address {
-    if (!encodeRuleDataInputs) {
-        throw new Error('setRuleDataInputs not found')
+export function encodeThresholdParams(params: ThresholdParams): Hex {
+    if (params.threshold < 0n) {
+        throw new Error(`Invalid threshold ${params.threshold}: must be greater than or equal to 0`)
     }
-    return encodeAbiParameters(encodeRuleDataInputs, [ruleData])
+    return encodeAbiParameters([thresholdParamsAbi], [params])
 }
 
-const getRuleDataOutputs: readonly AbiParameter[] | undefined = (
-    Object.values(IRuleEntitlementAbi).find((abi) => abi.name === 'getRuleData') as
-        | AbiFunction
-        | undefined
-)?.outputs
+export function decodeThresholdParams(params: Hex): Readonly<ThresholdParams> {
+    return decodeAbiParameters([thresholdParamsAbi], params)[0]
+}
 
-export function decodeEntitlementData(
-    entitlementData: Address,
-): IRuleEntitlementBase.RuleDataStruct[] {
-    if (!getRuleDataOutputs) {
-        throw new Error('getRuleDataOutputs not found')
+export type ERC1155Params = {
+    threshold: bigint
+    tokenId: bigint
+}
+
+const erc1155ParamsAbi = {
+    components: [
+        {
+            name: 'threshold',
+            type: 'uint256',
+        },
+        {
+            name: 'tokenId',
+            type: 'uint256',
+        },
+    ],
+    name: 'erc1155Params',
+    type: 'tuple',
+} as const
+export function encodeERC1155Params(params: ERC1155Params): Hex {
+    if (params.threshold < 0n) {
+        throw new Error(`Invalid threshold ${params.threshold}: must be greater than or equal to 0`)
     }
-    return decodeAbiParameters(
-        getRuleDataOutputs,
+    if (params.tokenId < 0n) {
+        throw new Error(`Invalid tokenId ${params.tokenId}: must be greater than or equal to 0`)
+    }
+    return encodeAbiParameters([erc1155ParamsAbi], [params])
+}
+
+export function decodeERC1155Params(params: Hex): Readonly<ERC1155Params> {
+    return decodeAbiParameters([erc1155ParamsAbi], params)[0]
+}
+
+export function encodeRuleData(ruleData: IRuleEntitlementBase.RuleDataStruct): Hex {
+    const encodeRuleDataAbi: ExtractAbiFunction<typeof IRuleEntitlementAbi, 'encodeRuleData'> =
+        getAbiItem({
+            abi: IRuleEntitlementAbi,
+            name: 'encodeRuleData',
+        })
+
+    if (!encodeRuleDataAbi) {
+        throw new Error('encodeRuleData ABI not found')
+    }
+    // @ts-ignore
+    return encodeAbiParameters(encodeRuleDataAbi.inputs, [ruleData])
+}
+
+export function decodeRuleData(entitlementData: Hex): IRuleEntitlementBase.RuleDataStruct {
+    const getRuleDataAbi: ExtractAbiFunction<typeof IRuleEntitlementAbi, 'getRuleData'> =
+        getAbiItem({
+            abi: IRuleEntitlementAbi,
+            name: 'getRuleData',
+        })
+
+    if (!getRuleDataAbi) {
+        throw new Error('getRuleData ABI not found')
+    }
+    const decoded = decodeAbiParameters(
+        getRuleDataAbi.outputs,
         entitlementData,
-    ) as IRuleEntitlementBase.RuleDataStruct[]
+    ) as unknown as IRuleEntitlementBase.RuleDataStruct[]
+    return decoded[0]
 }
-export function ruleDataToOperations(data: IRuleEntitlementBase.RuleDataStruct[]): Operation[] {
-    if (data.length === 0) {
-        return []
+
+export function encodeRuleDataV2(ruleData: IRuleEntitlementV2Base.RuleDataV2Struct): Hex {
+    const getRuleDataV2Abi: ExtractAbiFunction<typeof IRuleEntitlementV2Abi, 'getRuleDataV2'> =
+        getAbiItem({
+            abi: IRuleEntitlementV2Abi,
+            name: 'getRuleDataV2',
+        })
+
+    if (!getRuleDataV2Abi) {
+        throw new Error('encodeRuleDataV2 ABI not found')
     }
+    // @ts-ignore
+    return encodeAbiParameters(getRuleDataV2Abi.outputs, [ruleData])
+}
+
+export function decodeRuleDataV2(entitlementData: Hex): IRuleEntitlementV2Base.RuleDataV2Struct {
+    const getRuleDataV2Abi: ExtractAbiFunction<typeof IRuleEntitlementV2Abi, 'getRuleDataV2'> =
+        getAbiItem({
+            abi: IRuleEntitlementV2Abi,
+            name: 'getRuleDataV2',
+        })
+
+    if (!getRuleDataV2Abi) {
+        throw new Error('encodeRuleDataV2 ABI not found')
+    }
+    // @ts-ignore
+    const decoded = decodeAbiParameters(
+        getRuleDataV2Abi.outputs,
+        entitlementData,
+    ) as unknown as IRuleEntitlementV2Base.RuleDataV2Struct[]
+    return decoded[0]
+}
+
+export function ruleDataToOperations(data: IRuleEntitlementV2Base.RuleDataV2Struct): Operation[] {
     const decodedOperations: Operation[] = []
+    const roData = data as RuleDataV2
 
-    const firstData: RuleData = data[0] as RuleData
-
-    if (firstData.operations === undefined) {
-        return []
-    }
-
-    firstData.operations.forEach((operation) => {
+    roData.operations.forEach((operation) => {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
         if (operation.opType === OperationType.CHECK) {
-            const checkOperation = firstData.checkOperations[operation.index]
+            const checkOperation = roData.checkOperations[operation.index]
             decodedOperations.push({
                 opType: OperationType.CHECK,
                 checkType: checkOperation.opType,
                 chainId: checkOperation.chainId,
                 contractAddress: checkOperation.contractAddress,
-                threshold: checkOperation.threshold,
+                params: checkOperation.params,
             })
         }
         // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
         else if (operation.opType === OperationType.LOGICAL) {
-            const logicalOperation = firstData.logicalOperations[operation.index]
+            const logicalOperation = roData.logicalOperations[operation.index]
             decodedOperations.push({
                 opType: OperationType.LOGICAL,
-                logicalType: logicalOperation.logOpType as
-                    | LogicalOperationType.AND
-                    | LogicalOperationType.OR,
-
+                logicalType: logicalOperation.logOpType,
                 leftOperation: decodedOperations[logicalOperation.leftOperationIndex],
                 rightOperation: decodedOperations[logicalOperation.rightOperationIndex],
-            })
+            } satisfies LogicalOperation)
             // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
         } else if (operation.opType === OperationType.NONE) {
             decodedOperations.push(NoopOperation)
@@ -253,18 +357,18 @@ export function ruleDataToOperations(data: IRuleEntitlementBase.RuleDataStruct[]
 
 type DeepWriteable<T> = { -readonly [P in keyof T]: DeepWriteable<T[P]> }
 
-export function postOrderTraversal(operation: Operation, data: DeepWriteable<RuleData>) {
+export function postOrderTraversal(operation: Operation, data: DeepWriteable<RuleDataV2>) {
     if (isLogicalOperation(operation)) {
         postOrderTraversal(operation.leftOperation, data)
         postOrderTraversal(operation.rightOperation, data)
     }
 
-    if (isCheckOperation(operation)) {
+    if (isCheckOperationV2(operation)) {
         data.checkOperations.push({
             opType: operation.checkType,
             chainId: operation.chainId,
             contractAddress: operation.contractAddress,
-            threshold: operation.threshold,
+            params: operation.params,
         })
         data.operations.push({
             opType: OperationType.CHECK,
@@ -273,8 +377,8 @@ export function postOrderTraversal(operation: Operation, data: DeepWriteable<Rul
     } else if (isLogicalOperation(operation)) {
         data.logicalOperations.push({
             logOpType: operation.logicalType,
-            leftOperationIndex: data.logicalOperations.length, // Index of left child
-            rightOperationIndex: data.logicalOperations.length + 1, // Index of right child
+            leftOperationIndex: data.operations.length - 2, // Index of left child
+            rightOperationIndex: data.operations.length - 1, // Index of right child
         })
         data.operations.push({
             opType: OperationType.LOGICAL,
@@ -283,7 +387,7 @@ export function postOrderTraversal(operation: Operation, data: DeepWriteable<Rul
     }
 }
 
-export function treeToRuleData(root: Operation): IRuleEntitlementBase.RuleDataStruct {
+export function treeToRuleData(root: Operation): IRuleEntitlementV2Base.RuleDataV2Struct {
     const data = {
         operations: [],
         checkOperations: [],
@@ -306,7 +410,7 @@ export function treeToRuleData(root: Operation): IRuleEntitlementBase.RuleDataSt
 async function evaluateAndOperation(
     controller: AbortController,
     linkedWallets: string[],
-    providers: ethers.providers.StaticJsonRpcProvider[],
+    xchainConfig: XchainConfig,
     operation?: AndOperation,
 ): Promise<EntitledWalletOrZeroAddress> {
     if (!operation?.leftOperation || !operation?.rightOperation) {
@@ -333,7 +437,7 @@ async function evaluateAndOperation(
 
     async function racer(operationEntry: Operation): Promise<EntitledWalletOrZeroAddress> {
         const result = await Promise.race([
-            evaluateTree(newController, linkedWallets, providers, operationEntry),
+            evaluateTree(newController, linkedWallets, xchainConfig, operationEntry),
             interupted,
         ])
         if (result === interuptFlag) {
@@ -372,7 +476,7 @@ async function evaluateAndOperation(
 async function evaluateOrOperation(
     controller: AbortController,
     linkedWallets: string[],
-    providers: ethers.providers.StaticJsonRpcProvider[],
+    xchainConfig: XchainConfig,
     operation?: OrOperation,
 ): Promise<EntitledWalletOrZeroAddress> {
     if (!operation?.leftOperation || !operation?.rightOperation) {
@@ -400,7 +504,7 @@ async function evaluateOrOperation(
 
     async function racer(operation: Operation): Promise<EntitledWalletOrZeroAddress> {
         const result = await Promise.race([
-            evaluateTree(newController, linkedWallets, providers, operation),
+            evaluateTree(newController, linkedWallets, xchainConfig, operation),
             interupted,
         ])
         if (result === interuptFlag) {
@@ -434,8 +538,8 @@ async function evaluateOrOperation(
 async function evaluateCheckOperation(
     controller: AbortController,
     linkedWallets: string[],
-    providers: ethers.providers.StaticJsonRpcProvider[],
-    operation?: CheckOperation,
+    xchainConfig: XchainConfig,
+    operation?: CheckOperationV2,
 ): Promise<EntitledWalletOrZeroAddress> {
     if (!operation) {
         controller.abort()
@@ -446,11 +550,89 @@ async function evaluateCheckOperation(
         case CheckOperationType.MOCK: {
             return evaluateMockOperation(operation, controller)
         }
-        case CheckOperationType.ISENTITLED:
-            throw new Error(`CheckOperationType.ISENTITLED not implemented`)
+        case CheckOperationType.NONE:
+            throw new Error('Unknown check operation type')
+        default:
+    }
+
+    if (operation.checkType !== CheckOperationType.ETH_BALANCE && operation.chainId < 0n) {
+        throw new Error(
+            `Invalid chain id for check operation ${checkOpString(operation.checkType)}`,
+        )
+    }
+
+    if (
+        operation.checkType !== CheckOperationType.ETH_BALANCE &&
+        operation.contractAddress === zeroAddress
+    ) {
+        throw new Error(
+            `Invalid contract address for check operation ${checkOpString(operation.checkType)}`,
+        )
+    }
+
+    if (
+        [
+            CheckOperationType.ERC20,
+            CheckOperationType.ERC721,
+            CheckOperationType.ETH_BALANCE,
+        ].includes(operation.checkType)
+    ) {
+        const { threshold } = decodeThresholdParams(operation.params)
+        if (threshold <= 0n) {
+            throw new Error(
+                `Invalid threshold for check operation ${checkOpString(operation.checkType)}`,
+            )
+        }
+    } else if (operation.checkType === CheckOperationType.ERC1155) {
+        const { tokenId, threshold } = decodeERC1155Params(operation.params)
+        if (tokenId < 0n) {
+            throw new Error(
+                `Invalid token id for check operation ${checkOpString(operation.checkType)}`,
+            )
+        }
+        if (threshold <= 0n) {
+            throw new Error(
+                `Invalid threshold for check operation ${checkOpString(operation.checkType)}`,
+            )
+        }
+    }
+
+    switch (operation.checkType) {
+        case CheckOperationType.ISENTITLED: {
+            const provider = await findProviderFromChainId(xchainConfig, operation.chainId)
+
+            if (!provider) {
+                controller.abort()
+                return zeroAddress
+            }
+            return evaluateCustomEntitledOperation(operation, controller, provider, linkedWallets)
+        }
+        case CheckOperationType.ETH_BALANCE: {
+            const etherChainProviders = await findEtherChainProviders(xchainConfig)
+
+            if (!etherChainProviders.length) {
+                controller.abort()
+                return zeroAddress
+            }
+
+            return evaluateEthBalanceOperation(
+                operation,
+                controller,
+                etherChainProviders,
+                linkedWallets,
+            )
+        }
+        case CheckOperationType.ERC1155: {
+            const provider = await findProviderFromChainId(xchainConfig, operation.chainId)
+
+            if (!provider) {
+                controller.abort()
+                return zeroAddress
+            }
+            return evaluateERC1155Operation(operation, controller, provider, linkedWallets)
+        }
         case CheckOperationType.ERC20: {
-            await Promise.all(providers.map((p) => p.ready))
-            const provider = findProviderFromChainId(providers, operation.chainId)
+            const provider = await findProviderFromChainId(xchainConfig, operation.chainId)
 
             if (!provider) {
                 controller.abort()
@@ -459,18 +641,15 @@ async function evaluateCheckOperation(
             return evaluateERC20Operation(operation, controller, provider, linkedWallets)
         }
         case CheckOperationType.ERC721: {
-            await Promise.all(providers.map((p) => p.ready))
-            const provider = findProviderFromChainId(providers, operation.chainId)
+            const provider = await findProviderFromChainId(xchainConfig, operation.chainId)
 
             if (!provider) {
                 controller.abort()
                 return zeroAddress
             }
+
             return evaluateERC721Operation(operation, controller, provider, linkedWallets)
         }
-        case CheckOperationType.ERC1155:
-            throw new Error('CheckOperationType.ERC1155 not implemented')
-        case CheckOperationType.NONE:
         default:
             throw new Error('Unknown check operation type')
     }
@@ -486,13 +665,13 @@ async function evaluateCheckOperation(
 export async function evaluateOperationsForEntitledWallet(
     operations: Operation[],
     linkedWallets: string[],
-    providers: ethers.providers.StaticJsonRpcProvider[],
+    xchainConfig: XchainConfig,
 ) {
     const controller = new AbortController()
     const result = evaluateTree(
         controller,
         linkedWallets,
-        providers,
+        xchainConfig,
         operations[operations.length - 1],
     )
     controller.abort()
@@ -502,7 +681,7 @@ export async function evaluateOperationsForEntitledWallet(
 export async function evaluateTree(
     controller: AbortController,
     linkedWallets: string[],
-    providers: ethers.providers.StaticJsonRpcProvider[],
+    xchainConfig: XchainConfig,
     entry?: Operation,
 ): Promise<EntitledWalletOrZeroAddress> {
     if (!entry) {
@@ -516,14 +695,14 @@ export async function evaluateTree(
 
     if (isLogicalOperation(entry)) {
         if (isAndOperation(entry)) {
-            return evaluateAndOperation(newController, linkedWallets, providers, entry)
+            return evaluateAndOperation(newController, linkedWallets, xchainConfig, entry)
         } else if (isOrOperation(entry)) {
-            return evaluateOrOperation(newController, linkedWallets, providers, entry)
+            return evaluateOrOperation(newController, linkedWallets, xchainConfig, entry)
         } else {
             throw new Error('Unknown operation type')
         }
-    } else if (isCheckOperation(entry)) {
-        return evaluateCheckOperation(newController, linkedWallets, providers, entry)
+    } else if (isCheckOperationV2(entry)) {
+        return evaluateCheckOperation(newController, linkedWallets, xchainConfig, entry)
     } else {
         throw new Error('Unknown operation type')
     }
@@ -533,49 +712,55 @@ export async function evaluateTree(
 // checks for testing.
 export function createExternalTokenStruct(
     addresses: Address[],
-    checkOptions?: Partial<Omit<ContractCheckOperation, 'address'>>,
+    options?: {
+        checkOptions?: Partial<Omit<DecodedCheckOperation, 'address'>>
+        logicalOp?: SupportedLogicalOperationType
+    },
 ) {
     if (addresses.length === 0) {
         return NoopRuleData
     }
     const defaultChain = addresses.map((address) => ({
-        chainId: checkOptions?.chainId ?? 1n,
+        chainId: options?.checkOptions?.chainId ?? 1n,
         address: address,
-        type: checkOptions?.type ?? (CheckOperationType.ERC20 as const),
-        threshold: checkOptions?.threshold ?? BigInt(1),
+        type: options?.checkOptions?.type ?? (CheckOperationType.ERC20 as const),
+        params: encodeThresholdParams({ threshold: options?.checkOptions?.threshold ?? BigInt(1) }),
     }))
-    return createOperationsTree(defaultChain)
+    return createOperationsTree(defaultChain, options?.logicalOp ?? LogicalOperationType.OR)
 }
 
 export function createExternalNFTStruct(
     addresses: Address[],
-    checkOptions?: Partial<Omit<ContractCheckOperation, 'address'>>,
+    options?: {
+        checkOptions?: Partial<Omit<DecodedCheckOperation, 'address'>>
+        logicalOp?: SupportedLogicalOperationType
+    },
 ) {
     if (addresses.length === 0) {
         return NoopRuleData
     }
     const defaultChain = addresses.map((address) => ({
         // Anvil chain id
-        chainId: checkOptions?.chainId ?? 31337n,
+        chainId: options?.checkOptions?.chainId ?? 31337n,
         address: address,
-        type: checkOptions?.type ?? (CheckOperationType.ERC721 as const),
-        threshold: checkOptions?.threshold ?? BigInt(1),
+        type: options?.checkOptions?.type ?? (CheckOperationType.ERC721 as const),
+        params: encodeThresholdParams({ threshold: options?.checkOptions?.threshold ?? BigInt(1) }),
     }))
-    return createOperationsTree(defaultChain)
+    return createOperationsTree(defaultChain, options?.logicalOp ?? LogicalOperationType.OR)
 }
 
-export type ContractCheckOperation = {
+export type DecodedCheckOperation = {
     type: CheckOperationType
     chainId: bigint
     address: Address
-    threshold: bigint
+    threshold?: bigint
+    tokenId?: bigint
 }
 
 export function createOperationsTree(
-    checkOp: (Omit<ContractCheckOperation, 'threshold'> & {
-        threshold?: bigint
-    })[],
-): IRuleEntitlementBase.RuleDataStruct {
+    checkOp: DecodedCheckOperation[],
+    logicalOp: SupportedLogicalOperationType = LogicalOperationType.OR,
+): IRuleEntitlementV2Base.RuleDataV2Struct {
     if (checkOp.length === 0) {
         return {
             operations: [NoopOperation],
@@ -584,13 +769,32 @@ export function createOperationsTree(
         }
     }
 
-    let operations: Operation[] = checkOp.map((op) => ({
-        opType: OperationType.CHECK,
-        checkType: op.type,
-        chainId: op.chainId,
-        contractAddress: op.address,
-        threshold: op.threshold ?? BigInt(1), // Example threshold, adjust as needed
-    }))
+    let operations: Operation[] = checkOp.map((op) => {
+        let params: Hex
+        switch (op.type) {
+            case CheckOperationType.ERC20:
+            case CheckOperationType.ERC721:
+            case CheckOperationType.ETH_BALANCE:
+                params = encodeThresholdParams({ threshold: op.threshold ?? BigInt(1) })
+                break
+            case CheckOperationType.ERC1155:
+                params = encodeERC1155Params({
+                    threshold: op.threshold ?? BigInt(1),
+                    tokenId: op.tokenId ?? BigInt(0),
+                })
+                break
+            default:
+                params = '0x'
+        }
+
+        return {
+            opType: OperationType.CHECK,
+            checkType: op.type,
+            chainId: op.chainId,
+            contractAddress: op.address,
+            params,
+        }
+    })
 
     while (operations.length > 1) {
         const newOperations: Operation[] = []
@@ -598,7 +802,7 @@ export function createOperationsTree(
             if (i + 1 < operations.length) {
                 newOperations.push({
                     opType: OperationType.LOGICAL,
-                    logicalType: LogicalOperationType.AND,
+                    logicalType: logicalOp,
                     leftOperation: operations[i],
                     rightOperation: operations[i + 1],
                 })
@@ -612,30 +816,49 @@ export function createOperationsTree(
     return treeToRuleData(operations[0])
 }
 
-export function createContractCheckOperationFromTree(
-    entitlementData: IRuleEntitlementBase.RuleDataStruct,
-): ContractCheckOperation[] {
-    const operations = ruleDataToOperations([entitlementData])
-    const checkOpSubsets: ContractCheckOperation[] = []
+// Return a set of reified check operations from a rule data struct in order to easily evaluate
+// thresholds, convert check operations into token schemas, etc.
+export function createDecodedCheckOperationFromTree(
+    entitlementData: IRuleEntitlementV2Base.RuleDataV2Struct,
+): DecodedCheckOperation[] {
+    const operations = ruleDataToOperations(entitlementData)
+    const checkOpSubsets: DecodedCheckOperation[] = []
     operations.forEach((operation) => {
-        if (isCheckOperation(operation)) {
-            checkOpSubsets.push({
+        if (isCheckOperationV2(operation)) {
+            const op = {
                 address: operation.contractAddress,
                 chainId: operation.chainId,
                 type: operation.checkType,
-                threshold: operation.threshold,
-            })
+            }
+            if (operation.checkType === CheckOperationType.ERC1155) {
+                const { threshold, tokenId } = decodeERC1155Params(operation.params)
+                checkOpSubsets.push({
+                    ...op,
+                    threshold,
+                    tokenId,
+                })
+            } else if (
+                operation.checkType === CheckOperationType.ERC20 ||
+                operation.checkType === CheckOperationType.ERC721
+            ) {
+                const { threshold } = decodeThresholdParams(operation.params)
+                checkOpSubsets.push({
+                    ...op,
+                    threshold,
+                })
+            }
         }
     })
     return checkOpSubsets
 }
 
 async function evaluateMockOperation(
-    operation: CheckOperation,
+    operation: CheckOperationV2,
     controller: AbortController,
 ): Promise<EntitledWalletOrZeroAddress> {
     const result = operation.chainId === 1n
-    const delay = Number.parseInt(operation.threshold.valueOf().toString())
+    const { threshold } = decodeThresholdParams(operation.params)
+    const delay = Number.parseInt(threshold.toString())
 
     return await new Promise((resolve) => {
         controller.signal.onabort = () => {
@@ -656,14 +879,15 @@ async function evaluateMockOperation(
 }
 
 async function evaluateERC721Operation(
-    operation: CheckOperation,
+    operation: CheckOperationV2,
     controller: AbortController,
-    provider: ethers.providers.StaticJsonRpcProvider,
+    provider: ethers.providers.BaseProvider,
     linkedWallets: string[],
 ): Promise<EntitledWalletOrZeroAddress> {
+    const { threshold } = decodeThresholdParams(operation.params)
     return evaluateContractBalanceAcrossWallets(
         operation.contractAddress,
-        operation.threshold,
+        threshold,
         controller,
         provider,
         linkedWallets,
@@ -671,25 +895,149 @@ async function evaluateERC721Operation(
 }
 
 async function evaluateERC20Operation(
-    operation: CheckOperation,
+    operation: CheckOperationV2,
     controller: AbortController,
-    provider: ethers.providers.StaticJsonRpcProvider,
+    provider: ethers.providers.BaseProvider,
     linkedWallets: string[],
 ): Promise<EntitledWalletOrZeroAddress> {
+    const { threshold } = decodeThresholdParams(operation.params)
     return evaluateContractBalanceAcrossWallets(
         operation.contractAddress,
-        operation.threshold,
+        threshold,
         controller,
         provider,
         linkedWallets,
     )
 }
 
+async function evaluateCustomEntitledOperation(
+    operation: CheckOperationV2,
+    controller: AbortController,
+    provider: ethers.providers.BaseProvider,
+    linkedWallets: string[],
+): Promise<EntitledWalletOrZeroAddress> {
+    const contract = new ethers.Contract(
+        operation.contractAddress,
+        ['function isEntitled(address[]) view returns (bool)'],
+        provider,
+    )
+    return await Promise.any(
+        linkedWallets.map(async (wallet): Promise<Address> => {
+            const isEntitled = await contract.callStatic.isEntitled([wallet])
+            if (isEntitled === true) {
+                return wallet as Address
+            }
+            throw new Error('Not entitled')
+        }),
+    ).catch(() => {
+        controller.abort()
+        return zeroAddress
+    })
+}
+
+async function evaluateERC1155Operation(
+    operation: CheckOperationV2,
+    controller: AbortController,
+    provider: ethers.providers.BaseProvider,
+    linkedWallets: string[],
+): Promise<EntitledWalletOrZeroAddress> {
+    const contract = new ethers.Contract(
+        operation.contractAddress,
+        ['function balanceOf(address, uint256) view returns (uint)'],
+        provider,
+    )
+
+    const { threshold, tokenId } = decodeERC1155Params(operation.params)
+
+    const walletBalances = await Promise.all(
+        linkedWallets.map(async (wallet) => {
+            try {
+                const result = (await contract.callStatic.balanceOf(
+                    wallet,
+                    tokenId,
+                )) as ethers.BigNumberish
+                const resultAsBigNumber = ethers.BigNumber.from(result)
+                return {
+                    wallet,
+                    balance: resultAsBigNumber,
+                }
+            } catch (error) {
+                return {
+                    wallet,
+                    balance: ethers.BigNumber.from(0),
+                }
+            }
+        }),
+    )
+
+    const walletsWithAsset = walletBalances.filter((result) => result.balance.gt(0))
+
+    const accumulatedBalance = walletsWithAsset.reduce(
+        (acc, el) => acc.add(el.balance),
+        ethers.BigNumber.from(0),
+    )
+
+    if (walletsWithAsset.length > 0 && accumulatedBalance.gte(threshold)) {
+        return walletsWithAsset[0].wallet
+    } else {
+        controller.abort()
+        return zeroAddress
+    }
+}
+
+async function getEthBalance(
+    provider: ethers.providers.BaseProvider,
+    wallet: string,
+): Promise<{ wallet: string; balance: ethers.BigNumber }> {
+    try {
+        const balance = await provider.getBalance(wallet)
+        return {
+            wallet,
+            balance,
+        }
+    } catch (error) {
+        return {
+            wallet,
+            balance: ethers.BigNumber.from(0),
+        }
+    }
+}
+
+async function evaluateEthBalanceOperation(
+    operation: CheckOperationV2,
+    controller: AbortController,
+    providers: ethers.providers.BaseProvider[],
+    linkedWallets: string[],
+): Promise<EntitledWalletOrZeroAddress> {
+    const { threshold } = decodeThresholdParams(operation.params)
+
+    const balancePromises: Promise<{ wallet: string; balance: ethers.BigNumber }>[] = []
+    for (const wallet of linkedWallets) {
+        for (const provider of providers) {
+            balancePromises.push(getEthBalance(provider, wallet))
+        }
+    }
+    const walletBalances = await Promise.all(balancePromises)
+
+    const walletsWithAsset = walletBalances.filter((balance) => balance.balance.gt(0))
+    const accumulatedBalance = walletsWithAsset.reduce(
+        (acc, el) => acc.add(el.balance),
+        ethers.BigNumber.from(0),
+    )
+
+    if (walletsWithAsset.length > 0 && accumulatedBalance.gte(threshold)) {
+        return walletsWithAsset[0].wallet
+    } else {
+        controller.abort()
+        return zeroAddress
+    }
+}
+
 async function evaluateContractBalanceAcrossWallets(
-    contractAddress: `0x${string}`,
+    contractAddress: Address,
     threshold: bigint,
     controller: AbortController,
-    provider: ethers.providers.StaticJsonRpcProvider,
+    provider: ethers.providers.BaseProvider,
     linkedWallets: string[],
 ): Promise<EntitledWalletOrZeroAddress> {
     const contract = new ethers.Contract(
@@ -737,11 +1085,29 @@ async function evaluateContractBalanceAcrossWallets(
     }
 }
 
-function findProviderFromChainId(
-    providers: ethers.providers.StaticJsonRpcProvider[],
-    chainId: bigint,
-) {
-    return providers.find((p) => p.network.chainId === Number(chainId))
+async function findProviderFromChainId(xchainConfig: XchainConfig, chainId: bigint) {
+    if (!(Number(chainId) in xchainConfig.supportedRpcUrls)) {
+        return undefined
+    }
+
+    const url = xchainConfig.supportedRpcUrls[Number(chainId)]
+    const provider = new ethers.providers.StaticJsonRpcProvider(url)
+    await provider.ready
+    return provider
+}
+
+async function findEtherChainProviders(xchainConfig: XchainConfig) {
+    const etherChainProviders = []
+    for (const chainId of xchainConfig.etherBasedChains) {
+        if (!(Number(chainId) in xchainConfig.supportedRpcUrls)) {
+            log.info(`(WARN) findEtherChainProviders: No supported RPC URL for chain id ${chainId}`)
+        } else {
+            const url = xchainConfig.supportedRpcUrls[Number(chainId)]
+            etherChainProviders.push(new ethers.providers.StaticJsonRpcProvider(url))
+        }
+    }
+    await Promise.all(etherChainProviders.map((p) => p.ready))
+    return etherChainProviders
 }
 
 function isValidAddress(value: unknown): value is Address {

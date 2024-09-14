@@ -100,81 +100,8 @@ const _abi = [
                   },
                   {
                     name: "ruleData",
-                    type: "tuple",
-                    internalType: "struct IRuleEntitlementBase.RuleData",
-                    components: [
-                      {
-                        name: "operations",
-                        type: "tuple[]",
-                        internalType: "struct IRuleEntitlementBase.Operation[]",
-                        components: [
-                          {
-                            name: "opType",
-                            type: "uint8",
-                            internalType:
-                              "enum IRuleEntitlementBase.CombinedOperationType",
-                          },
-                          {
-                            name: "index",
-                            type: "uint8",
-                            internalType: "uint8",
-                          },
-                        ],
-                      },
-                      {
-                        name: "checkOperations",
-                        type: "tuple[]",
-                        internalType:
-                          "struct IRuleEntitlementBase.CheckOperation[]",
-                        components: [
-                          {
-                            name: "opType",
-                            type: "uint8",
-                            internalType:
-                              "enum IRuleEntitlementBase.CheckOperationType",
-                          },
-                          {
-                            name: "chainId",
-                            type: "uint256",
-                            internalType: "uint256",
-                          },
-                          {
-                            name: "contractAddress",
-                            type: "address",
-                            internalType: "address",
-                          },
-                          {
-                            name: "threshold",
-                            type: "uint256",
-                            internalType: "uint256",
-                          },
-                        ],
-                      },
-                      {
-                        name: "logicalOperations",
-                        type: "tuple[]",
-                        internalType:
-                          "struct IRuleEntitlementBase.LogicalOperation[]",
-                        components: [
-                          {
-                            name: "logOpType",
-                            type: "uint8",
-                            internalType:
-                              "enum IRuleEntitlementBase.LogicalOperationType",
-                          },
-                          {
-                            name: "leftOperationIndex",
-                            type: "uint8",
-                            internalType: "uint8",
-                          },
-                          {
-                            name: "rightOperationIndex",
-                            type: "uint8",
-                            internalType: "uint8",
-                          },
-                        ],
-                      },
-                    ],
+                    type: "bytes",
+                    internalType: "bytes",
                   },
                 ],
               },
@@ -221,6 +148,177 @@ const _abi = [
   },
   {
     type: "function",
+    name: "createSpaceWithPrepay",
+    inputs: [
+      {
+        name: "createSpace",
+        type: "tuple",
+        internalType: "struct IArchitectBase.CreateSpace",
+        components: [
+          {
+            name: "metadata",
+            type: "tuple",
+            internalType: "struct IArchitectBase.Metadata",
+            components: [
+              {
+                name: "name",
+                type: "string",
+                internalType: "string",
+              },
+              {
+                name: "uri",
+                type: "string",
+                internalType: "string",
+              },
+              {
+                name: "shortDescription",
+                type: "string",
+                internalType: "string",
+              },
+              {
+                name: "longDescription",
+                type: "string",
+                internalType: "string",
+              },
+            ],
+          },
+          {
+            name: "membership",
+            type: "tuple",
+            internalType: "struct IArchitectBase.Membership",
+            components: [
+              {
+                name: "settings",
+                type: "tuple",
+                internalType: "struct IMembershipBase.Membership",
+                components: [
+                  {
+                    name: "name",
+                    type: "string",
+                    internalType: "string",
+                  },
+                  {
+                    name: "symbol",
+                    type: "string",
+                    internalType: "string",
+                  },
+                  {
+                    name: "price",
+                    type: "uint256",
+                    internalType: "uint256",
+                  },
+                  {
+                    name: "maxSupply",
+                    type: "uint256",
+                    internalType: "uint256",
+                  },
+                  {
+                    name: "duration",
+                    type: "uint64",
+                    internalType: "uint64",
+                  },
+                  {
+                    name: "currency",
+                    type: "address",
+                    internalType: "address",
+                  },
+                  {
+                    name: "feeRecipient",
+                    type: "address",
+                    internalType: "address",
+                  },
+                  {
+                    name: "freeAllocation",
+                    type: "uint256",
+                    internalType: "uint256",
+                  },
+                  {
+                    name: "pricingModule",
+                    type: "address",
+                    internalType: "address",
+                  },
+                ],
+              },
+              {
+                name: "requirements",
+                type: "tuple",
+                internalType: "struct IArchitectBase.MembershipRequirements",
+                components: [
+                  {
+                    name: "everyone",
+                    type: "bool",
+                    internalType: "bool",
+                  },
+                  {
+                    name: "users",
+                    type: "address[]",
+                    internalType: "address[]",
+                  },
+                  {
+                    name: "ruleData",
+                    type: "bytes",
+                    internalType: "bytes",
+                  },
+                ],
+              },
+              {
+                name: "permissions",
+                type: "string[]",
+                internalType: "string[]",
+              },
+            ],
+          },
+          {
+            name: "channel",
+            type: "tuple",
+            internalType: "struct IArchitectBase.ChannelInfo",
+            components: [
+              {
+                name: "metadata",
+                type: "string",
+                internalType: "string",
+              },
+            ],
+          },
+          {
+            name: "prepay",
+            type: "tuple",
+            internalType: "struct IArchitectBase.Prepay",
+            components: [
+              {
+                name: "supply",
+                type: "uint256",
+                internalType: "uint256",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    stateMutability: "payable",
+  },
+  {
+    type: "function",
+    name: "getProxyInitializer",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "contract ISpaceProxyInitializer",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     name: "getSpaceArchitectImplementations",
     inputs: [],
     outputs: [
@@ -236,6 +334,11 @@ const _abi = [
       },
       {
         name: "ruleEntitlementImplementation",
+        type: "address",
+        internalType: "contract IRuleEntitlementV2",
+      },
+      {
+        name: "legacyRuleEntitlement",
         type: "address",
         internalType: "contract IRuleEntitlement",
       },
@@ -282,6 +385,19 @@ const _abi = [
   },
   {
     type: "function",
+    name: "setProxyInitializer",
+    inputs: [
+      {
+        name: "proxyInitializer",
+        type: "address",
+        internalType: "contract ISpaceProxyInitializer",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "setSpaceArchitectImplementations",
     inputs: [
       {
@@ -297,11 +413,29 @@ const _abi = [
       {
         name: "ruleEntitlementImplementation",
         type: "address",
+        internalType: "contract IRuleEntitlementV2",
+      },
+      {
+        name: "legacyRuleEntitlement",
+        type: "address",
         internalType: "contract IRuleEntitlement",
       },
     ],
     outputs: [],
     stateMutability: "nonpayable",
+  },
+  {
+    type: "event",
+    name: "Architect__ProxyInitializerSet",
+    inputs: [
+      {
+        name: "proxyInitializer",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+    ],
+    anonymous: false,
   },
   {
     type: "event",
@@ -336,6 +470,11 @@ const _abi = [
   {
     type: "error",
     name: "Architect__InvalidNetworkId",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "Architect__InvalidPricingModule",
     inputs: [],
   },
   {

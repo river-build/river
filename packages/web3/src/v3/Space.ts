@@ -9,7 +9,7 @@ import {
     RoleDetails,
     RoleEntitlements,
     isRuleEntitlement,
-    isStringArray,
+    isRuleEntitlementV2,
     isUserEntitlement,
 } from '../ContractTypes'
 import { IChannelBase, IChannelShim } from './IChannelShim'
@@ -27,13 +27,15 @@ import { toPermissions } from '../ConvertersRoles'
 import { IMembershipShim } from './IMembershipShim'
 import { NoopRuleData } from '../entitlement'
 import { RuleEntitlementShim } from './RuleEntitlementShim'
-import { IRuleEntitlementBase } from '.'
+import { RuleEntitlementV2Shim } from './RuleEntitlementV2Shim'
+import { IRuleEntitlementBase, IRuleEntitlementV2Base } from '.'
 import { IBanningShim } from './IBanningShim'
 import { IERC721AQueryableShim } from './IERC721AQueryableShim'
 import { IEntitlementDataQueryableShim } from './IEntitlementDataQueryableShim'
 import { BaseChainConfig } from '../IStaticContractsInfo'
 import { parseChannelMetadataJSON } from '../Utils'
 import { IPrepayShim } from './IPrepayShim'
+import { IERC721AShim } from './IERC721AShim'
 
 interface AddressToEntitlement {
     [address: string]: EntitlementShim
@@ -56,6 +58,7 @@ export class Space {
     private readonly erc721AQueryable: IERC721AQueryableShim
     private readonly entitlementDataQueryable: IEntitlementDataQueryableShim
     private readonly prepay: IPrepayShim
+    private readonly erc721A: IERC721AShim
 
     constructor(
         address: string,
@@ -81,6 +84,7 @@ export class Space {
         this.erc721AQueryable = new IERC721AQueryableShim(address, provider)
         this.entitlementDataQueryable = new IEntitlementDataQueryableShim(address, provider)
         this.prepay = new IPrepayShim(address, provider)
+        this.erc721A = new IERC721AShim(address, provider)
     }
 
     private getAllShims() {
@@ -97,6 +101,7 @@ export class Space {
             this.erc721AQueryable,
             this.entitlementDataQueryable,
             this.prepay,
+            this.erc721A,
         ] as const
     }
 
@@ -154,6 +159,10 @@ export class Space {
 
     public get Prepay(): IPrepayShim {
         return this.prepay
+    }
+
+    public get ERC721A(): IERC721AShim {
+        return this.erc721A
     }
 
     public getSpaceInfo(): Promise<ISpaceOwnerBase.SpaceStruct> {
@@ -318,6 +327,12 @@ export class Space {
                         this.provider,
                     )
                     break
+                case EntitlementModuleType.RuleEntitlementV2:
+                    this.addressToEntitlement[address] = new RuleEntitlementV2Shim(
+                        address,
+                        this.provider,
+                    )
+                    break
                 default:
                     throw new Error(
                         `Unsupported entitlement module type: ${entitlement.moduleType}`,
@@ -353,38 +368,41 @@ export class Space {
         roleId: BigNumberish,
     ): Promise<EntitlementDetails> {
         let users: string[] = []
-        let ruleData
+        let ruleData: IRuleEntitlementBase.RuleDataStruct | undefined = undefined
+        let ruleDataV2: IRuleEntitlementV2Base.RuleDataV2Struct | undefined = undefined
+        let useRuleDataV1 = false
+
         // with the shims, get the role details for each entitlement
-        const entitlements = await Promise.all(
+        await Promise.all(
             entitlementShims.map(async (entitlement) => {
                 if (isUserEntitlement(entitlement)) {
-                    return await entitlement.getRoleEntitlement(roleId)
+                    users = (await entitlement.getRoleEntitlement(roleId)) ?? []
                 } else if (isRuleEntitlement(entitlement)) {
-                    return await entitlement.getRoleEntitlement(roleId)
+                    ruleData = (await entitlement.getRoleEntitlement(roleId)) ?? undefined
+                    useRuleDataV1 = true
+                } else if (isRuleEntitlementV2(entitlement)) {
+                    ruleDataV2 = (await entitlement.getRoleEntitlement(roleId)) ?? undefined
                 }
-                return undefined
             }),
         )
-
-        function isRuleDataStruct(
-            ruleData: IRuleEntitlementBase.RuleDataStruct | undefined,
-        ): ruleData is IRuleEntitlementBase.RuleDataStruct {
-            return ruleData !== undefined
-        }
-
-        for (const entitlment of entitlements) {
-            if (entitlment) {
-                if (isStringArray(entitlment)) {
-                    users = users.concat(entitlment)
-                } else if (isRuleDataStruct(entitlment)) {
-                    ruleData = entitlment
-                }
+        if (useRuleDataV1) {
+            return {
+                users,
+                ruleData: {
+                    kind: 'v1',
+                    rules: ruleData ?? NoopRuleData,
+                },
+            }
+        } else {
+            return {
+                users,
+                ruleData: {
+                    kind: 'v2',
+                    rules: ruleDataV2 ?? NoopRuleData,
+                },
             }
         }
-
-        return { users, ruleData: ruleData ?? NoopRuleData }
     }
-
     private async getChannelsWithRole(roleId: BigNumberish): Promise<ChannelMetadata[]> {
         const channelMetadatas = new Map<string, ChannelMetadata>()
         // get all the channels from the space
@@ -448,13 +466,13 @@ export class Space {
      */
     public async __expensivelyGetMembers(untilTokenId?: BigNumberish): Promise<string[]> {
         if (untilTokenId === undefined) {
-            untilTokenId = await this.Membership.read.totalSupply()
+            untilTokenId = await this.erc721A.read.totalSupply()
         }
 
         untilTokenId = Number(untilTokenId)
 
         const tokenIds = Array.from({ length: untilTokenId }, (_, i) => i)
-        const promises = tokenIds.map((tokenId) => this.Membership.read.ownerOf(tokenId))
+        const promises = tokenIds.map((tokenId) => this.erc721A.read.ownerOf(tokenId))
         return Promise.all(promises)
     }
 }

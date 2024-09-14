@@ -37,10 +37,16 @@ type IChannelBaseChannel struct {
 	RoleIds  []*big.Int
 }
 
+// IChannelBaseRolePermissions is an auto generated low-level Go binding around an user-defined struct.
+type IChannelBaseRolePermissions struct {
+	RoleId      *big.Int
+	Permissions []string
+}
+
 // ChannelsMetaData contains all meta data concerning the Channels contract.
 var ChannelsMetaData = &bind.MetaData{
-	ABI: "[{\"type\":\"function\",\"name\":\"addRoleToChannel\",\"inputs\":[{\"name\":\"channelId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"roleId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"createChannel\",\"inputs\":[{\"name\":\"channelId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"metadata\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"roleIds\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"getChannel\",\"inputs\":[{\"name\":\"channelId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"channel\",\"type\":\"tuple\",\"internalType\":\"structIChannelBase.Channel\",\"components\":[{\"name\":\"id\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"disabled\",\"type\":\"bool\",\"internalType\":\"bool\"},{\"name\":\"metadata\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"roleIds\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getChannels\",\"inputs\":[],\"outputs\":[{\"name\":\"channels\",\"type\":\"tuple[]\",\"internalType\":\"structIChannelBase.Channel[]\",\"components\":[{\"name\":\"id\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"disabled\",\"type\":\"bool\",\"internalType\":\"bool\"},{\"name\":\"metadata\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"roleIds\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRolesByChannel\",\"inputs\":[{\"name\":\"channelId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"roleIds\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"removeChannel\",\"inputs\":[{\"name\":\"channelId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"removeRoleFromChannel\",\"inputs\":[{\"name\":\"channelId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"roleId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"updateChannel\",\"inputs\":[{\"name\":\"channelId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"metadata\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"disabled\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"Approval\",\"inputs\":[{\"name\":\"owner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"approved\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ApprovalForAll\",\"inputs\":[{\"name\":\"owner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"operator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"approved\",\"type\":\"bool\",\"indexed\":false,\"internalType\":\"bool\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Banned\",\"inputs\":[{\"name\":\"moderator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ChannelCreated\",\"inputs\":[{\"name\":\"caller\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"channelId\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ChannelRemoved\",\"inputs\":[{\"name\":\"caller\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"channelId\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ChannelRoleAdded\",\"inputs\":[{\"name\":\"caller\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"channelId\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"roleId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ChannelRoleRemoved\",\"inputs\":[{\"name\":\"caller\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"channelId\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"roleId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ChannelUpdated\",\"inputs\":[{\"name\":\"caller\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"channelId\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ConsecutiveTransfer\",\"inputs\":[{\"name\":\"fromTokenId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"toTokenId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"from\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"to\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Initialized\",\"inputs\":[{\"name\":\"version\",\"type\":\"uint32\",\"indexed\":false,\"internalType\":\"uint32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"InterfaceAdded\",\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\",\"indexed\":true,\"internalType\":\"bytes4\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"InterfaceRemoved\",\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\",\"indexed\":true,\"internalType\":\"bytes4\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OwnershipTransferred\",\"inputs\":[{\"name\":\"previousOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"newOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Paused\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"SubscriptionUpdate\",\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"expiration\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Transfer\",\"inputs\":[{\"name\":\"from\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"to\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Unbanned\",\"inputs\":[{\"name\":\"moderator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Unpaused\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"ApprovalCallerNotOwnerNorApproved\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ApprovalQueryForNonexistentToken\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BalanceQueryForZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Banning__AlreadyBanned\",\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"Banning__CannotBanOwner\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Banning__CannotBanSelf\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Banning__InvalidTokenId\",\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"Banning__NotBanned\",\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ChannelService__ChannelAlreadyExists\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ChannelService__ChannelDisabled\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ChannelService__ChannelDoesNotExist\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ChannelService__RoleAlreadyExists\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ChannelService__RoleDoesNotExist\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ERC5643__DurationZero\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ERC5643__InvalidTokenId\",\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ERC5643__NotApprovedOrOwner\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ERC5643__SubscriptionNotRenewable\",\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"Entitlement__InvalidValue\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Entitlement__NotAllowed\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Entitlement__NotMember\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Entitlement__ValueAlreadyExists\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Initializable_InInitializingState\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Introspection_AlreadySupported\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Introspection_NotSupported\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"MintERC2309QuantityExceedsLimit\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"MintToZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"MintZeroQuantity\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Ownable__NotOwner\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"Ownable__ZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"OwnerQueryForNonexistentToken\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"OwnershipNotInitializedForExtraData\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Pausable__NotPaused\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Pausable__Paused\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TransferCallerNotOwnerNorApproved\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TransferFromIncorrectOwner\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TransferToNonERC721ReceiverImplementer\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TransferToZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"URIQueryForNonexistentToken\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Validator__InvalidStringLength\",\"inputs\":[]}]",
-	Bin: "0x608060405234801561001057600080fd5b5061001961001e565b6100c4565b7f59b501c3653afc186af7d48dda36cf6732bd21629a6295693664240a6ef520008054640100000000900460ff161561006a576040516366008a2d60e01b815260040160405180910390fd5b805463ffffffff90811610156100c157805463ffffffff191663ffffffff90811782556040519081527fe9c9b456cb2994b80aeef036cf59d26e9617df80f816a6ee5a5b4166e07e2f5c9060200160405180910390a15b50565b611e2a806100d36000396000f3fe608060405234801561001057600080fd5b50600436106100885760003560e01c80639575f6ac1161005b5780639575f6ac146100f15780639935218314610106578063b9de615914610126578063ef86d6961461013957600080fd5b806302da0e511461008d57806337644cf7146100a2578063831c2b82146100b5578063921f7175146100de575b600080fd5b6100a061009b36600461169a565b61014c565b005b6100a06100b03660046116b3565b61018a565b6100c86100c336600461169a565b6101cb565b6040516100d59190611792565b60405180910390f35b6100a06100ec366004611880565b6101fd565b6100f961023f565b6040516100d59190611948565b61011961011436600461169a565b61024e565b6040516100d591906119ac565b6100a06101343660046116b3565b610259565b6100a06101473660046119fe565b610296565b61017e6040518060400160405280601181526020017041646452656d6f76654368616e6e656c7360781b8152506102d3565b610187816102fb565b50565b6101bd826040518060400160405280601181526020017041646452656d6f76654368616e6e656c7360781b81525061033c565b6101c78282610363565b5050565b60408051608081018252600080825260208201526060918101829052818101919091526101f7826103ad565b92915050565b61022f6040518060400160405280601181526020017041646452656d6f76654368616e6e656c7360781b8152506102d3565b61023a838383610414565b505050565b6060610249610465565b905090565b60606101f78261059d565b61028c826040518060400160405280601181526020017041646452656d6f76654368616e6e656c7360781b81525061033c565b6101c782826105a8565b6102c86040518060400160405280601181526020017041646452656d6f76654368616e6e656c7360781b8152506102d3565b61023a8383836105ea565b6102de600082610627565b61018757604051630ce39a4b60e21b815260040160405180910390fd5b610304816106ab565b60405181815233907f3a3f387aa42656bc1732adfc7aea5cde9ccc05a59f9af9c29ebfa68e66383e939060200160405180910390a250565b6103468282610627565b6101c757604051630ce39a4b60e21b815260040160405180910390fd5b61036d82826107a2565b604080518381526020810183905233917f2b10481523b59a7978f8ab73b237349b0f38c801f6094bdc8994d379c067d71391015b60405180910390a25050565b60408051608081018252600080825260208201526060918101829052818101919091526000806103dc84610833565b925092505060006103ec85610953565b6040805160808101825296875292151560208701529185019290925260608401525090919050565b61041f8260006109ab565b61042a8383836109cf565b60405183815233907fdd6c5b83be3557f8b2674712946f9f05dcd882b82bfd58b9539b9706efd35d8c906020015b60405180910390a2505050565b60606000610471610b09565b90506000815167ffffffffffffffff81111561048f5761048f6117a5565b6040519080825280602002602001820160405280156104e357816020015b60408051608081018252600080825260208201526060918101829052818101919091528152602001906001900390816104ad5790505b50905060005b825181101561059657600080600061051986858151811061050c5761050c611a59565b6020026020010151610833565b925092509250600061054387868151811061053657610536611a59565b6020026020010151610953565b9050604051806080016040528085815260200183151581526020018481526020018281525086868151811061057a5761057a611a59565b60200260200101819052505050505080806001019150506104e9565b5092915050565b60606101f782610953565b6105b28282610b29565b604080518381526020810183905233917faee688d80dbf97230e5d2b4b06aa7074bfe38ddd8abf856551177db30395612991016103a1565b6105f5838383610bb9565b60405183815233907f94af4a611b3fb1eaa653a6b29f82b71bcea25ca378171c5f059010fa18e0716e90602001610458565b60003380610633610c6e565b6001600160a01b031614806106a357507fe17a067c7963a59b6dfd65d33b053fdbea1c56500e2aae4f976d9eda4da9eb005460ff161580156106a357506106a38482856040516020016106869190611a6f565b60405160208183030381529060405261069e90611a8b565b610d32565b949350505050565b6106b481610fdf565b600080516020611e0a8339815191526106cd8183611016565b5060408051602080820183526000808352858152600280860190925292909220909101906106fb9082611b33565b50600082815260028083016020526040822060018101805460ff19169055828155919061072a9083018261164c565b50506000828152600382016020526040812061074590611022565b905060005b815181101561079c5761079382828151811061076857610768611a59565b602002602001015184600301600087815260200190815260200160002061101690919063ffffffff16565b5060010161074a565b50505050565b6107ab82610fdf565b6107b48261102f565b60008281527f804ad633258ac9b908ae115a2763b3f6e04be3b1165402c872b25af51850430360205260409020600080516020611e0a833981519152906107fb9083611091565b15610819576040516302369ff360e41b815260040160405180910390fd5b6000838152600382016020526040902061079c90836110a9565b60006060600061084284610fdf565b60008481527f804ad633258ac9b908ae115a2763b3f6e04be3b1165402c872b25af51850430260209081526040808320815160608101835281548152600182015460ff16151593810193909352600281018054600080516020611e0a833981519152959493840191906108b490611aaf565b80601f01602080910402602001604051908101604052809291908181526020018280546108e090611aaf565b801561092d5780601f106109025761010080835404028352916020019161092d565b820191906000526020600020905b81548152906001019060200180831161091057829003601f168201915b505050919092525050815160408301516020909301519099929850965090945050505050565b606061095e82610fdf565b60008281527f804ad633258ac9b908ae115a2763b3f6e04be3b1165402c872b25af51850430360205260409020600080516020611e0a833981519152906109a490611022565b9392505050565b8151829082111561023a576040516374eb20a760e01b815260040160405180910390fd5b6109d8836110b5565b600080516020611e0a8339815191526109f181856110a9565b50604080516060810182528581526000602080830182815283850188815289845260028781019093529490922083518155915160018301805460ff191691151591909117905592519192909190820190610a4b9082611b33565b5090505060005b8251811015610b0257610a9b838281518110610a7057610a70611a59565b602002602001015183600301600088815260200190815260200160002061109190919063ffffffff16565b15610ab9576040516302369ff360e41b815260040160405180910390fd5b610af9838281518110610ace57610ace611a59565b60200260200101518360030160008881526020019081526020016000206110a990919063ffffffff16565b50600101610a52565b5050505050565b6060600080516020611e0a833981519152610b2381611022565b91505090565b610b3282610fdf565b610b3b8261102f565b60008281527f804ad633258ac9b908ae115a2763b3f6e04be3b1165402c872b25af51850430360205260409020600080516020611e0a83398151915290610b829083611091565b610b9f576040516333cb039f60e11b815260040160405180910390fd5b6000838152600382016020526040902061079c9083611016565b610bc283610fdf565b60008381527f804ad633258ac9b908ae115a2763b3f6e04be3b1165402c872b25af518504302602052604090208251600080516020611e0a833981519152919015801590610c2f575080600201604051610c1c9190611bf3565b6040518091039020848051906020012014155b15610c445760028101610c428582611b33565b505b600181015460ff16151583151514610b0257600101805460ff191692151592909217909155505050565b6040805180820182527fd2f24d4f172e4e84e48e7c4125b6e904c29e5eba33ad4938fee51dd5dbd4b600546001600160a01b03168082527fd2f24d4f172e4e84e48e7c4125b6e904c29e5eba33ad4938fee51dd5dbd4b60154602080840182905284516331a9108f60e11b815260048101929092529351600094636352211e92602480820193918290030181865afa158015610d0e573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610b239190611c85565b600080610d3d610c6e565b90506000610d4a856110eb565b80519091506000610d5961136d565b805190915060005b83811015610e18576000858281518110610d7d57610d7d611a59565b60200260200101519050866001600160a01b0316816001600160a01b031603610db05760019750505050505050506109a4565b60005b83811015610e0e57816001600160a01b0316610de7868381518110610dda57610dda611a59565b6020026020010151611398565b6001600160a01b031603610e06576000985050505050505050506109a4565b600101610db3565b5050600101610d61565b507fa558e822bd359dacbe30f0da89cbfde5f95895b441e13a4864caec1423c931006000610e657fa558e822bd359dacbe30f0da89cbfde5f95895b441e13a4864caec1423c931016113a3565b905060005b81811015610fcd5760008381610e8360018301856113ad565b6001600160a01b03908116825260208083019390935260409182016000208251606081018452905491821680825260ff600160a01b84048116151583870152600160a81b9093049092161515818401528251630b86d87960e21b815292519094509092632e1b61e492600480820193918290030181865afa158015610f0c573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610f309190611ca0565b158015610fad575080600001516001600160a01b0316630cf0b5338e8a8e6040518463ffffffff1660e01b8152600401610f6c93929190611cbd565b602060405180830381865afa158015610f89573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610fad9190611ca0565b15610fc457600199505050505050505050506109a4565b50600101610e6a565b5060009b9a5050505050505050505050565b610ff981600080516020611e0a8339815191525b90611091565b6101875760405163560b4b4160e11b815260040160405180910390fd5b60006109a483836113b9565b606060006109a4836114ac565b60008181527f804ad633258ac9b908ae115a2763b3f6e04be3b1165402c872b25af5185043026020526040902060010154600080516020611e0a8339815191529060ff16156101c757604051636ce0028960e11b815260040160405180910390fd5b600081815260018301602052604081205415156109a4565b60006109a48383611508565b6110cd81600080516020611e0a833981519152610ff3565b1561018757604051632324f7d960e21b815260040160405180910390fd5b606060007fc21004fcc619240a31f006438274d15cd813308303284436eef6055f0fdcb6006006015460405162468b7360e31b81526001600160a01b038581166004830152909116915060009082906302345b9890602401600060405180830381865afa158015611160573d6000803e3d6000fd5b505050506040513d6000823e601f3d908101601f191682016040526111889190810190611d1f565b604051631f04207360e31b81526001600160a01b03868116600483015291925060009184169063f821039890602401602060405180830381865afa1580156111d4573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906111f89190611c85565b90508151600014801561121357506001600160a01b03811615155b1561128d5760405162468b7360e31b81526001600160a01b03808316600483015291955085918416906302345b9890602401600060405180830381865afa158015611262573d6000803e3d6000fd5b505050506040513d6000823e601f3d908101601f1916820160405261128a9190810190611d1f565b91505b8151600061129c826001611dcd565b67ffffffffffffffff8111156112b4576112b46117a5565b6040519080825280602002602001820160405280156112dd578160200160208202803683370190505b50905060005b82811015611337578481815181106112fd576112fd611a59565b602002602001015182828151811061131757611317611a59565b6001600160a01b03909216602092830291909101909101526001016112e3565b508681838151811061134b5761134b611a59565b6001600160a01b03909216602092830291909101909101529695505050505050565b60606102497f49daf035076c43671ca9f9fb568d931e51ab7f9098a5a694781b45341112cf00611022565b60006101f782611557565b60006101f7825490565b60006109a48383611622565b600081815260018301602052604081205480156114a25760006113dd600183611de0565b85549091506000906113f190600190611de0565b905080821461145657600086600001828154811061141157611411611a59565b906000526020600020015490508087600001848154811061143457611434611a59565b6000918252602080832090910192909255918252600188019052604090208390555b855486908061146757611467611df3565b6001900381819060005260206000200160009055905585600101600086815260200190815260200160002060009055600193505050506101f7565b60009150506101f7565b6060816000018054806020026020016040519081016040528092919081815260200182805480156114fc57602002820191906000526020600020905b8154815260200190600101908083116114e8575b50505050509050919050565b600081815260018301602052604081205461154f575081546001818101845560008481526020808220909301849055845484825282860190935260409020919091556101f7565b5060006101f7565b60008181527f6569bde4a160c636ea8b8d11acb83a60d7fec0b8f2e09389306cba0e1340df046020526040812054907f6569bde4a160c636ea8b8d11acb83a60d7fec0b8f2e09389306cba0e1340df0090600160e01b83169003611608578160000361160257805483106115de57604051636f96cda160e11b815260040160405180910390fd5b5b6000199092016000818152600484016020526040902054909290915081156115df575b50919050565b50604051636f96cda160e11b815260040160405180910390fd5b600082600001828154811061163957611639611a59565b9060005260206000200154905092915050565b50805461165890611aaf565b6000825580601f10611668575050565b601f01602090049060005260206000209081019061018791905b808211156116965760008155600101611682565b5090565b6000602082840312156116ac57600080fd5b5035919050565b600080604083850312156116c657600080fd5b50508035926020909101359150565b60005b838110156116f05781810151838201526020016116d8565b50506000910152565b805182526000602080830151151581850152604083015160806040860152805180608087015261172f8160a088018585016116d5565b601f19601f820116860191505060a08101606085015160a087840301606088015281815180845260c0850191508583019450600093505b808410156117865784518252938501936001939093019290850190611766565b50979650505050505050565b6020815260006109a460208301846116f9565b634e487b7160e01b600052604160045260246000fd5b604051601f8201601f1916810167ffffffffffffffff811182821017156117e4576117e46117a5565b604052919050565b600082601f8301126117fd57600080fd5b813567ffffffffffffffff811115611817576118176117a5565b61182a601f8201601f19166020016117bb565b81815284602083860101111561183f57600080fd5b816020850160208301376000918101602001919091529392505050565b600067ffffffffffffffff821115611876576118766117a5565b5060051b60200190565b60008060006060848603121561189557600080fd5b8335925060208085013567ffffffffffffffff808211156118b557600080fd5b6118c1888389016117ec565b945060408701359150808211156118d757600080fd5b508501601f810187136118e957600080fd5b80356118fc6118f78261185c565b6117bb565b81815260059190911b8201830190838101908983111561191b57600080fd5b928401925b8284101561193957833582529284019290840190611920565b80955050505050509250925092565b600060208083016020845280855180835260408601915060408160051b87010192506020870160005b8281101561199f57603f1988860301845261198d8583516116f9565b94509285019290850190600101611971565b5092979650505050505050565b6020808252825182820181905260009190848201906040850190845b818110156119e4578351835292840192918401916001016119c8565b50909695505050505050565b801515811461018757600080fd5b600080600060608486031215611a1357600080fd5b83359250602084013567ffffffffffffffff811115611a3157600080fd5b611a3d868287016117ec565b9250506040840135611a4e816119f0565b809150509250925092565b634e487b7160e01b600052603260045260246000fd5b60008251611a818184602087016116d5565b9190910192915050565b805160208083015191908110156116025760001960209190910360031b1b16919050565b600181811c90821680611ac357607f821691505b60208210810361160257634e487b7160e01b600052602260045260246000fd5b601f82111561023a576000816000526020600020601f850160051c81016020861015611b0c5750805b601f850160051c820191505b81811015611b2b57828155600101611b18565b505050505050565b815167ffffffffffffffff811115611b4d57611b4d6117a5565b611b6181611b5b8454611aaf565b84611ae3565b602080601f831160018114611b965760008415611b7e5750858301515b600019600386901b1c1916600185901b178555611b2b565b600085815260208120601f198616915b82811015611bc557888601518255948401946001909101908401611ba6565b5085821015611be35787850151600019600388901b60f8161c191681555b5050505050600190811b01905550565b6000808354611c0181611aaf565b60018281168015611c195760018114611c2e57611c5d565b60ff1984168752821515830287019450611c5d565b8760005260208060002060005b85811015611c545781548a820152908401908201611c3b565b50505082870194505b50929695505050505050565b80516001600160a01b0381168114611c8057600080fd5b919050565b600060208284031215611c9757600080fd5b6109a482611c69565b600060208284031215611cb257600080fd5b81516109a4816119f0565b60006060820185835260206060602085015281865180845260808601915060208801935060005b81811015611d095784516001600160a01b031683529383019391830191600101611ce4565b5050809350505050826040830152949350505050565b60006020808385031215611d3257600080fd5b825167ffffffffffffffff811115611d4957600080fd5b8301601f81018513611d5a57600080fd5b8051611d686118f78261185c565b81815260059190911b82018301908381019087831115611d8757600080fd5b928401925b82841015611dac57611d9d84611c69565b82529284019290840190611d8c565b979650505050505050565b634e487b7160e01b600052601160045260246000fd5b808201808211156101f7576101f7611db7565b818103818111156101f7576101f7611db7565b634e487b7160e01b600052603160045260246000fdfe804ad633258ac9b908ae115a2763b3f6e04be3b1165402c872b25af518504300",
+	ABI: "[{\"type\":\"function\",\"name\":\"addRoleToChannel\",\"inputs\":[{\"name\":\"channelId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"roleId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"createChannel\",\"inputs\":[{\"name\":\"channelId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"metadata\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"roleIds\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"createChannelWithOverridePermissions\",\"inputs\":[{\"name\":\"channelId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"metadata\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"rolePermissions\",\"type\":\"tuple[]\",\"internalType\":\"structIChannelBase.RolePermissions[]\",\"components\":[{\"name\":\"roleId\",\"type\":\"uint256\",\"internalType\":\"uint256\"},{\"name\":\"permissions\",\"type\":\"string[]\",\"internalType\":\"string[]\"}]}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"getChannel\",\"inputs\":[{\"name\":\"channelId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"channel\",\"type\":\"tuple\",\"internalType\":\"structIChannelBase.Channel\",\"components\":[{\"name\":\"id\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"disabled\",\"type\":\"bool\",\"internalType\":\"bool\"},{\"name\":\"metadata\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"roleIds\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getChannels\",\"inputs\":[],\"outputs\":[{\"name\":\"channels\",\"type\":\"tuple[]\",\"internalType\":\"structIChannelBase.Channel[]\",\"components\":[{\"name\":\"id\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"disabled\",\"type\":\"bool\",\"internalType\":\"bool\"},{\"name\":\"metadata\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"roleIds\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}]}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"getRolesByChannel\",\"inputs\":[{\"name\":\"channelId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[{\"name\":\"roleIds\",\"type\":\"uint256[]\",\"internalType\":\"uint256[]\"}],\"stateMutability\":\"view\"},{\"type\":\"function\",\"name\":\"removeChannel\",\"inputs\":[{\"name\":\"channelId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"removeRoleFromChannel\",\"inputs\":[{\"name\":\"channelId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"roleId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"function\",\"name\":\"updateChannel\",\"inputs\":[{\"name\":\"channelId\",\"type\":\"bytes32\",\"internalType\":\"bytes32\"},{\"name\":\"metadata\",\"type\":\"string\",\"internalType\":\"string\"},{\"name\":\"disabled\",\"type\":\"bool\",\"internalType\":\"bool\"}],\"outputs\":[],\"stateMutability\":\"nonpayable\"},{\"type\":\"event\",\"name\":\"Approval\",\"inputs\":[{\"name\":\"owner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"approved\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ApprovalForAll\",\"inputs\":[{\"name\":\"owner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"operator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"approved\",\"type\":\"bool\",\"indexed\":false,\"internalType\":\"bool\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Banned\",\"inputs\":[{\"name\":\"moderator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ChannelCreated\",\"inputs\":[{\"name\":\"caller\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"channelId\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ChannelRemoved\",\"inputs\":[{\"name\":\"caller\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"channelId\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ChannelRoleAdded\",\"inputs\":[{\"name\":\"caller\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"channelId\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"roleId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ChannelRoleRemoved\",\"inputs\":[{\"name\":\"caller\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"channelId\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"},{\"name\":\"roleId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ChannelUpdated\",\"inputs\":[{\"name\":\"caller\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"channelId\",\"type\":\"bytes32\",\"indexed\":false,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"ConsecutiveTransfer\",\"inputs\":[{\"name\":\"fromTokenId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"toTokenId\",\"type\":\"uint256\",\"indexed\":false,\"internalType\":\"uint256\"},{\"name\":\"from\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"to\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Initialized\",\"inputs\":[{\"name\":\"version\",\"type\":\"uint32\",\"indexed\":false,\"internalType\":\"uint32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"InterfaceAdded\",\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\",\"indexed\":true,\"internalType\":\"bytes4\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"InterfaceRemoved\",\"inputs\":[{\"name\":\"interfaceId\",\"type\":\"bytes4\",\"indexed\":true,\"internalType\":\"bytes4\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"OwnershipTransferred\",\"inputs\":[{\"name\":\"previousOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"newOwner\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Paused\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"PermissionsAddedToChannelRole\",\"inputs\":[{\"name\":\"updater\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"roleId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"channelId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"PermissionsRemovedFromChannelRole\",\"inputs\":[{\"name\":\"updater\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"roleId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"channelId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"PermissionsUpdatedForChannelRole\",\"inputs\":[{\"name\":\"updater\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"roleId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"channelId\",\"type\":\"bytes32\",\"indexed\":true,\"internalType\":\"bytes32\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleCreated\",\"inputs\":[{\"name\":\"creator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"roleId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleRemoved\",\"inputs\":[{\"name\":\"remover\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"roleId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"RoleUpdated\",\"inputs\":[{\"name\":\"updater\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"roleId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"SubscriptionUpdate\",\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"},{\"name\":\"expiration\",\"type\":\"uint64\",\"indexed\":false,\"internalType\":\"uint64\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Transfer\",\"inputs\":[{\"name\":\"from\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"to\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Unbanned\",\"inputs\":[{\"name\":\"moderator\",\"type\":\"address\",\"indexed\":true,\"internalType\":\"address\"},{\"name\":\"tokenId\",\"type\":\"uint256\",\"indexed\":true,\"internalType\":\"uint256\"}],\"anonymous\":false},{\"type\":\"event\",\"name\":\"Unpaused\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"indexed\":false,\"internalType\":\"address\"}],\"anonymous\":false},{\"type\":\"error\",\"name\":\"ApprovalCallerNotOwnerNorApproved\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ApprovalQueryForNonexistentToken\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"BalanceQueryForZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Banning__AlreadyBanned\",\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"Banning__CannotBanOwner\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Banning__CannotBanSelf\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Banning__InvalidTokenId\",\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"Banning__NotBanned\",\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ChannelService__ChannelAlreadyExists\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ChannelService__ChannelDisabled\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ChannelService__ChannelDoesNotExist\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ChannelService__RoleAlreadyExists\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ChannelService__RoleDoesNotExist\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ERC5643__DurationZero\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ERC5643__InvalidTokenId\",\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"ERC5643__NotApprovedOrOwner\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"ERC5643__SubscriptionNotRenewable\",\"inputs\":[{\"name\":\"tokenId\",\"type\":\"uint256\",\"internalType\":\"uint256\"}]},{\"type\":\"error\",\"name\":\"Entitlement__InvalidValue\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Entitlement__NotAllowed\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Entitlement__NotMember\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Entitlement__ValueAlreadyExists\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Initializable_InInitializingState\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Introspection_AlreadySupported\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Introspection_NotSupported\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"MintERC2309QuantityExceedsLimit\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"MintToZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"MintZeroQuantity\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Ownable__NotOwner\",\"inputs\":[{\"name\":\"account\",\"type\":\"address\",\"internalType\":\"address\"}]},{\"type\":\"error\",\"name\":\"Ownable__ZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"OwnerQueryForNonexistentToken\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"OwnershipNotInitializedForExtraData\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Pausable__NotPaused\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Pausable__Paused\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Roles__EntitlementAlreadyExists\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Roles__EntitlementDoesNotExist\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Roles__InvalidEntitlementAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Roles__InvalidPermission\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Roles__PermissionAlreadyExists\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Roles__PermissionDoesNotExist\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Roles__RoleDoesNotExist\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TransferCallerNotOwnerNorApproved\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TransferFromIncorrectOwner\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TransferToNonERC721ReceiverImplementer\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"TransferToZeroAddress\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"URIQueryForNonexistentToken\",\"inputs\":[]},{\"type\":\"error\",\"name\":\"Validator__InvalidStringLength\",\"inputs\":[]}]",
+	Bin: "0x60806040523480156200001157600080fd5b506200001c62000022565b620000ca565b7f59b501c3653afc186af7d48dda36cf6732bd21629a6295693664240a6ef520008054640100000000900460ff16156200006f576040516366008a2d60e01b815260040160405180910390fd5b805463ffffffff9081161015620000c757805463ffffffff191663ffffffff90811782556040519081527fe9c9b456cb2994b80aeef036cf59d26e9617df80f816a6ee5a5b4166e07e2f5c9060200160405180910390a15b50565b61270f80620000da6000396000f3fe608060405234801561001057600080fd5b50600436106100935760003560e01c8063921f717511610066578063921f7175146100fc5780639575f6ac1461010f5780639935218314610124578063b9de615914610144578063ef86d6961461015757600080fd5b806302da0e511461009857806337644cf7146100ad5780635a2dce7a146100c0578063831c2b82146100d3575b600080fd5b6100ab6100a6366004611e18565b61016a565b005b6100ab6100bb366004611e31565b6101a8565b6100ab6100ce366004611f08565b6101e9565b6100e66100e1366004611e18565b610349565b6040516100f39190612062565b60405180910390f35b6100ab61010a366004612098565b61037b565b6101176103bd565b6040516100f3919061215f565b610137610132366004611e18565b6103cc565b6040516100f391906121c3565b6100ab610152366004611e31565b6103d7565b6100ab610165366004612215565b610414565b61019c6040518060400160405280601181526020017041646452656d6f76654368616e6e656c7360781b815250610451565b6101a581610479565b50565b6101db826040518060400160405280601181526020017041646452656d6f76654368616e6e656c7360781b8152506104ba565b6101e582826104e1565b5050565b61021b6040518060400160405280601181526020017041646452656d6f76654368616e6e656c7360781b815250610451565b6000816001600160401b0381111561023557610235611e53565b60405190808252806020026020018201604052801561025e578160200160208202803683370190505b50905060005b828110156102b95783838281811061027e5761027e61226f565b90506020028101906102909190612285565b600001358282815181106102a6576102a661226f565b6020908102919091010152600101610264565b506102c585858361052b565b60005b82811015610341576103398484838181106102e5576102e561226f565b90506020028101906102f79190612285565b358786868581811061030b5761030b61226f565b905060200281019061031d9190612285565b61032b9060208101906122a5565b610334916122f5565b61057c565b6001016102c8565b505050505050565b604080516080810182526000808252602082015260609181018290528181019190915261037582610718565b92915050565b6103ad6040518060400160405280601181526020017041646452656d6f76654368616e6e656c7360781b815250610451565b6103b883838361052b565b505050565b60606103c761077f565b905090565b6060610375826108b6565b61040a826040518060400160405280601181526020017041646452656d6f76654368616e6e656c7360781b8152506104ba565b6101e582826108c1565b6104466040518060400160405280601181526020017041646452656d6f76654368616e6e656c7360781b815250610451565b6103b8838383610903565b61045c600082610940565b6101a557604051630ce39a4b60e21b815260040160405180910390fd5b610482816109c4565b60405181815233907f3a3f387aa42656bc1732adfc7aea5cde9ccc05a59f9af9c29ebfa68e66383e939060200160405180910390a250565b6104c48282610940565b6101e557604051630ce39a4b60e21b815260040160405180910390fd5b6104eb8282610abb565b604080518381526020810183905233917f2b10481523b59a7978f8ab73b237349b0f38c801f6094bdc8994d379c067d71391015b60405180910390a25050565b610536826000610b4c565b610541838383610b70565b60405183815233907fdd6c5b83be3557f8b2674712946f9f05dcd882b82bfd58b9539b9706efd35d8c906020015b60405180910390a2505050565b61058582610caa565b61058e83610ce1565b60008381527f672ef851d5f92307da037116e23aa9e31af7e1f7e3ca62c4e6d540631df3fd04602052604090207f672ef851d5f92307da037116e23aa9e31af7e1f7e3ca62c4e6d540631df3fd00906105e79084610d28565b506000848152600582016020908152604080832086845290915281209061060d82610d3b565b111561066757600061061e82610d45565b805190915060005b818110156106635761065a8382815181106106435761064361226f565b602002602001015185610d5090919063ffffffff16565b50600101610626565b5050505b825180156106d75760005b818110156106d15761069c85828151811061068f5761068f61226f565b6020026020010151610d5c565b6106c88582815181106106b1576106b161226f565b602002602001015184610d7d90919063ffffffff16565b50600101610672565b506106e1565b6106e18686610d89565b6040518590879033907f38ef31503bf60258feeceab5e2c3778cf74be2a8fbcc150d209ca96cd3c9855390600090a4505050505050565b604080516080810182526000808252602082015260609181018290528181019190915260008061074784610e7f565b9250925050600061075785610f9f565b6040805160808101825296875292151560208701529185019290925260608401525090919050565b6060600061078b610ff0565b9050600081516001600160401b038111156107a8576107a8611e53565b6040519080825280602002602001820160405280156107fc57816020015b60408051608081018252600080825260208201526060918101829052818101919091528152602001906001900390816107c65790505b50905060005b82518110156108af5760008060006108328685815181106108255761082561226f565b6020026020010151610e7f565b925092509250600061085c87868151811061084f5761084f61226f565b6020026020010151610f9f565b905060405180608001604052808581526020018315158152602001848152602001828152508686815181106108935761089361226f565b6020026020010181905250505050508080600101915050610802565b5092915050565b606061037582610f9f565b6108cb8282611010565b604080518381526020810183905233917faee688d80dbf97230e5d2b4b06aa7074bfe38ddd8abf856551177db303956129910161051f565b61090e8383836110a0565b60405183815233907f94af4a611b3fb1eaa653a6b29f82b71bcea25ca378171c5f059010fa18e0716e9060200161056f565b6000338061094c611155565b6001600160a01b031614806109bc57507fe17a067c7963a59b6dfd65d33b053fdbea1c56500e2aae4f976d9eda4da9eb005460ff161580156109bc57506109bc84828560405160200161099f9190612368565b6040516020818303038152906040526109b79061237a565b611219565b949350505050565b6109cd81610caa565b6000805160206126ef8339815191526109e68183611492565b506040805160208082018352600080835285815260028086019092529290922090910190610a14908261241a565b50600082815260028083016020526040822060018101805460ff191690558281559190610a4390830182611dca565b505060008281526003820160205260408120610a5e9061149e565b905060005b8151811015610ab557610aac828281518110610a8157610a8161226f565b602002602001015184600301600087815260200190815260200160002061149290919063ffffffff16565b50600101610a63565b50505050565b610ac482610caa565b610acd826114ab565b60008281527f804ad633258ac9b908ae115a2763b3f6e04be3b1165402c872b25af518504303602052604090206000805160206126ef83398151915290610b14908361150d565b15610b32576040516302369ff360e41b815260040160405180910390fd5b60008381526003820160205260409020610ab59083610d28565b815182908211156103b8576040516374eb20a760e01b815260040160405180910390fd5b610b7983611525565b6000805160206126ef833981519152610b928185610d28565b50604080516060810182528581526000602080830182815283850188815289845260028781019093529490922083518155915160018301805460ff191691151591909117905592519192909190820190610bec908261241a565b5090505060005b8251811015610ca357610c3c838281518110610c1157610c1161226f565b602002602001015183600301600088815260200190815260200160002061150d90919063ffffffff16565b15610c5a576040516302369ff360e41b815260040160405180910390fd5b610c9a838281518110610c6f57610c6f61226f565b6020026020010151836003016000888152602001908152602001600020610d2890919063ffffffff16565b50600101610bf3565b5050505050565b610cc4816000805160206126ef8339815191525b9061150d565b6101a55760405163560b4b4160e11b815260040160405180910390fd5b610d0b7f672ef851d5f92307da037116e23aa9e31af7e1f7e3ca62c4e6d540631df3fd018261150d565b6101a55760405163a3f70f7b60e01b815260040160405180910390fd5b6000610d34838361155b565b9392505050565b6000610375825490565b6060610375826115aa565b6000610d348383611687565b80516000036101a55760405162ce76c160e41b815260040160405180910390fd5b6000610d348383611846565b610d9282610ce1565b610d9b81610caa565b60008281527f672ef851d5f92307da037116e23aa9e31af7e1f7e3ca62c4e6d540631df3fd056020908152604080832084845290915281207f672ef851d5f92307da037116e23aa9e31af7e1f7e3ca62c4e6d540631df3fd0091610dfe82610d45565b805190915060005b81811015610e2c57610e238382815181106106435761064361226f565b50600101610e06565b5060008681526004850160205260409020610e479086611492565b506040518590879033907f07439707c74b686d8e4d3f3226348eac82205e6dffd780ac4c555a4c2dc9d86c90600090a4505050505050565b600060606000610e8e84610caa565b60008481527f804ad633258ac9b908ae115a2763b3f6e04be3b1165402c872b25af51850430260209081526040808320815160608101835281548152600182015460ff161515938101939093526002810180546000805160206126ef83398151915295949384019190610f009061239e565b80601f0160208091040260200160405190810160405280929190818152602001828054610f2c9061239e565b8015610f795780601f10610f4e57610100808354040283529160200191610f79565b820191906000526020600020905b815481529060010190602001808311610f5c57829003601f168201915b505050919092525050815160408301516020909301519099929850965090945050505050565b6060610faa82610caa565b60008281527f804ad633258ac9b908ae115a2763b3f6e04be3b1165402c872b25af518504303602052604090206000805160206126ef83398151915290610d349061149e565b60606000805160206126ef83398151915261100a8161149e565b91505090565b61101982610caa565b611022826114ab565b60008281527f804ad633258ac9b908ae115a2763b3f6e04be3b1165402c872b25af518504303602052604090206000805160206126ef83398151915290611069908361150d565b611086576040516333cb039f60e11b815260040160405180910390fd5b60008381526003820160205260409020610ab59083611492565b6110a983610caa565b60008381527f804ad633258ac9b908ae115a2763b3f6e04be3b1165402c872b25af5185043026020526040902082516000805160206126ef83398151915291901580159061111657508060020160405161110391906124d9565b6040518091039020848051906020012014155b1561112b5760028101611129858261241a565b505b600181015460ff16151583151514610ca357600101805460ff191692151592909217909155505050565b6040805180820182527fd2f24d4f172e4e84e48e7c4125b6e904c29e5eba33ad4938fee51dd5dbd4b600546001600160a01b03168082527fd2f24d4f172e4e84e48e7c4125b6e904c29e5eba33ad4938fee51dd5dbd4b60154602080840182905284516331a9108f60e11b815260048101929092529351600094636352211e92602480820193918290030181865afa1580156111f5573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061100a919061256b565b600080611224611155565b90506000611231856118a0565b80519091506000611240611b21565b805190915060005b838110156112ff5760008582815181106112645761126461226f565b60200260200101519050866001600160a01b0316816001600160a01b031603611297576001975050505050505050610d34565b60005b838110156112f557816001600160a01b03166112ce8683815181106112c1576112c161226f565b6020026020010151611b4c565b6001600160a01b0316036112ed57600098505050505050505050610d34565b60010161129a565b5050600101611248565b507fa558e822bd359dacbe30f0da89cbfde5f95895b441e13a4864caec1423c93100600061134c7fa558e822bd359dacbe30f0da89cbfde5f95895b441e13a4864caec1423c93101610d3b565b905060005b81811015611480576000838161136a6001830185611b57565b6001600160a01b0390811682526020808301939093526040918201600020548251630b86d87960e21b81529251911693508392632e1b61e492600480820193918290030181865afa1580156113c3573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906113e79190612586565b1580156114605750806001600160a01b0316630cf0b5338e8a8e6040518463ffffffff1660e01b815260040161141f939291906125a3565b602060405180830381865afa15801561143c573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906114609190612586565b156114775760019950505050505050505050610d34565b50600101611351565b5060009b9a5050505050505050505050565b6000610d348383611b63565b60606000610d3483611c4c565b60008181527f804ad633258ac9b908ae115a2763b3f6e04be3b1165402c872b25af51850430260205260409020600101546000805160206126ef8339815191529060ff16156101e557604051636ce0028960e11b815260040160405180910390fd5b60008181526001830160205260408120541515610d34565b61153d816000805160206126ef833981519152610cbe565b156101a557604051632324f7d960e21b815260040160405180910390fd5b60008181526001830160205260408120546115a257508154600181810184556000848152602080822090930184905584548482528286019093526040902091909155610375565b506000610375565b606081600001805480602002602001604051908101604052809291908181526020016000905b8282101561167c5783829060005260206000200180546115ef9061239e565b80601f016020809104026020016040519081016040528092919081815260200182805461161b9061239e565b80156116685780601f1061163d57610100808354040283529160200191611668565b820191906000526020600020905b81548152906001019060200180831161164b57829003601f168201915b5050505050815260200190600101906115d0565b505050509050919050565b600080836001018360405161169c9190612368565b90815260200160405180910390205490508060001461183c5760006116c260018361261b565b85549091506000906116d69060019061261b565b90508181146117dd5760008660000182815481106116f6576116f661226f565b90600052602060002001805461170b9061239e565b80601f01602080910402602001604051908101604052809291908181526020018280546117379061239e565b80156117845780601f1061175957610100808354040283529160200191611784565b820191906000526020600020905b81548152906001019060200180831161176757829003601f168201915b50505050509050808760000184815481106117a1576117a161226f565b9060005260206000200190816117b7919061241a565b508387600101826040516117cb9190612368565b90815260405190819003602001902055505b85548690806117ee576117ee61262e565b60019003818190600052602060002001600061180a9190611dca565b9055856001018560405161181e9190612368565b90815260200160405180910390206000905560019350505050610375565b6000915050610375565b60006118528383611ca8565b6115a257825460018101845560008481526020902001611872838261241a565b5082546040516001850190611888908590612368565b90815260405190819003602001902055506001610375565b606060007fc21004fcc619240a31f006438274d15cd813308303284436eef6055f0fdcb6006006015460405162468b7360e31b81526001600160a01b038581166004830152909116915060009082906302345b9890602401600060405180830381865afa158015611915573d6000803e3d6000fd5b505050506040513d6000823e601f3d908101601f1916820160405261193d9190810190612644565b604051631f04207360e31b81526001600160a01b03868116600483015291925060009184169063f821039890602401602060405180830381865afa158015611989573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906119ad919061256b565b9050815160001480156119c857506001600160a01b03811615155b15611a425760405162468b7360e31b81526001600160a01b03808316600483015291955085918416906302345b9890602401600060405180830381865afa158015611a17573d6000803e3d6000fd5b505050506040513d6000823e601f3d908101601f19168201604052611a3f9190810190612644565b91505b81516000611a518260016126db565b6001600160401b03811115611a6857611a68611e53565b604051908082528060200260200182016040528015611a91578160200160208202803683370190505b50905060005b82811015611aeb57848181518110611ab157611ab161226f565b6020026020010151828281518110611acb57611acb61226f565b6001600160a01b0390921660209283029190910190910152600101611a97565b5086818381518110611aff57611aff61226f565b6001600160a01b03909216602092830291909101909101529695505050505050565b60606103c77f49daf035076c43671ca9f9fb568d931e51ab7f9098a5a694781b45341112cf0061149e565b600061037582611cd5565b6000610d348383611da0565b6000818152600183016020526040812054801561183c576000611b8760018361261b565b8554909150600090611b9b9060019061261b565b9050808214611c00576000866000018281548110611bbb57611bbb61226f565b9060005260206000200154905080876000018481548110611bde57611bde61226f565b6000918252602080832090910192909255918252600188019052604090208390555b8554869080611c1157611c1161262e565b600190038181906000526020600020016000905590558560010160008681526020019081526020016000206000905560019350505050610375565b606081600001805480602002602001604051908101604052809291908181526020018280548015611c9c57602002820191906000526020600020905b815481526020019060010190808311611c88575b50505050509050919050565b60008260010182604051611cbc9190612368565b9081526040519081900360200190205415159392505050565b60008181527f6569bde4a160c636ea8b8d11acb83a60d7fec0b8f2e09389306cba0e1340df046020526040812054907f6569bde4a160c636ea8b8d11acb83a60d7fec0b8f2e09389306cba0e1340df0090600160e01b83169003611d865781600003611d805780548310611d5c57604051636f96cda160e11b815260040160405180910390fd5b5b600019909201600081815260048401602052604090205490929091508115611d5d575b50919050565b50604051636f96cda160e11b815260040160405180910390fd5b6000826000018281548110611db757611db761226f565b9060005260206000200154905092915050565b508054611dd69061239e565b6000825580601f10611de6575050565b601f0160209004906000526020600020908101906101a591905b80821115611e145760008155600101611e00565b5090565b600060208284031215611e2a57600080fd5b5035919050565b60008060408385031215611e4457600080fd5b50508035926020909101359150565b634e487b7160e01b600052604160045260246000fd5b604051601f8201601f191681016001600160401b0381118282101715611e9157611e91611e53565b604052919050565b600082601f830112611eaa57600080fd5b81356001600160401b03811115611ec357611ec3611e53565b611ed6601f8201601f1916602001611e69565b818152846020838601011115611eeb57600080fd5b816020850160208301376000918101602001919091529392505050565b60008060008060608587031215611f1e57600080fd5b8435935060208501356001600160401b0380821115611f3c57600080fd5b611f4888838901611e99565b94506040870135915080821115611f5e57600080fd5b818701915087601f830112611f7257600080fd5b813581811115611f8157600080fd5b8860208260051b8501011115611f9657600080fd5b95989497505060200194505050565b60005b83811015611fc0578181015183820152602001611fa8565b50506000910152565b8051825260006020808301511515818501526040830151608060408601528051806080870152611fff8160a08801858501611fa5565b601f19601f820116860191505060a08101606085015160a087840301606088015281815180845260c0850191508583019450600093505b808410156120565784518252938501936001939093019290850190612036565b50979650505050505050565b602081526000610d346020830184611fc9565b60006001600160401b0382111561208e5761208e611e53565b5060051b60200190565b6000806000606084860312156120ad57600080fd5b833592506020808501356001600160401b03808211156120cc57600080fd5b6120d888838901611e99565b945060408701359150808211156120ee57600080fd5b508501601f8101871361210057600080fd5b803561211361210e82612075565b611e69565b81815260059190911b8201830190838101908983111561213257600080fd5b928401925b8284101561215057833582529284019290840190612137565b80955050505050509250925092565b600060208083016020845280855180835260408601915060408160051b87010192506020870160005b828110156121b657603f198886030184526121a4858351611fc9565b94509285019290850190600101612188565b5092979650505050505050565b6020808252825182820181905260009190848201906040850190845b818110156121fb578351835292840192918401916001016121df565b50909695505050505050565b80151581146101a557600080fd5b60008060006060848603121561222a57600080fd5b8335925060208401356001600160401b0381111561224757600080fd5b61225386828701611e99565b925050604084013561226481612207565b809150509250925092565b634e487b7160e01b600052603260045260246000fd5b60008235603e1983360301811261229b57600080fd5b9190910192915050565b6000808335601e198436030181126122bc57600080fd5b8301803591506001600160401b038211156122d657600080fd5b6020019150600581901b36038213156122ee57600080fd5b9250929050565b600061230361210e84612075565b80848252602080830192508560051b85013681111561232157600080fd5b855b8181101561235c5780356001600160401b038111156123425760008081fd5b61234e36828a01611e99565b865250938201938201612323565b50919695505050505050565b6000825161229b818460208701611fa5565b80516020808301519190811015611d805760001960209190910360031b1b16919050565b600181811c908216806123b257607f821691505b602082108103611d8057634e487b7160e01b600052602260045260246000fd5b601f8211156103b8576000816000526020600020601f850160051c810160208610156123fb5750805b601f850160051c820191505b8181101561034157828155600101612407565b81516001600160401b0381111561243357612433611e53565b61244781612441845461239e565b846123d2565b602080601f83116001811461247c57600084156124645750858301515b600019600386901b1c1916600185901b178555610341565b600085815260208120601f198616915b828110156124ab5788860151825594840194600190910190840161248c565b50858210156124c95787850151600019600388901b60f8161c191681555b5050505050600190811b01905550565b60008083546124e78161239e565b600182811680156124ff576001811461251457612543565b60ff1984168752821515830287019450612543565b8760005260208060002060005b8581101561253a5781548a820152908401908201612521565b50505082870194505b50929695505050505050565b80516001600160a01b038116811461256657600080fd5b919050565b60006020828403121561257d57600080fd5b610d348261254f565b60006020828403121561259857600080fd5b8151610d3481612207565b60006060820185835260206060602085015281865180845260808601915060208801935060005b818110156125ef5784516001600160a01b0316835293830193918301916001016125ca565b5050809350505050826040830152949350505050565b634e487b7160e01b600052601160045260246000fd5b8181038181111561037557610375612605565b634e487b7160e01b600052603160045260246000fd5b6000602080838503121561265757600080fd5b82516001600160401b0381111561266d57600080fd5b8301601f8101851361267e57600080fd5b805161268c61210e82612075565b81815260059190911b820183019083810190878311156126ab57600080fd5b928401925b828410156126d0576126c18461254f565b825292840192908401906126b0565b979650505050505050565b808201808211156103755761037561260556fe804ad633258ac9b908ae115a2763b3f6e04be3b1165402c872b25af518504300",
 }
 
 // ChannelsABI is the input ABI used to generate the binding from.
@@ -343,6 +349,27 @@ func (_Channels *ChannelsSession) CreateChannel(channelId [32]byte, metadata str
 // Solidity: function createChannel(bytes32 channelId, string metadata, uint256[] roleIds) returns()
 func (_Channels *ChannelsTransactorSession) CreateChannel(channelId [32]byte, metadata string, roleIds []*big.Int) (*types.Transaction, error) {
 	return _Channels.Contract.CreateChannel(&_Channels.TransactOpts, channelId, metadata, roleIds)
+}
+
+// CreateChannelWithOverridePermissions is a paid mutator transaction binding the contract method 0x5a2dce7a.
+//
+// Solidity: function createChannelWithOverridePermissions(bytes32 channelId, string metadata, (uint256,string[])[] rolePermissions) returns()
+func (_Channels *ChannelsTransactor) CreateChannelWithOverridePermissions(opts *bind.TransactOpts, channelId [32]byte, metadata string, rolePermissions []IChannelBaseRolePermissions) (*types.Transaction, error) {
+	return _Channels.contract.Transact(opts, "createChannelWithOverridePermissions", channelId, metadata, rolePermissions)
+}
+
+// CreateChannelWithOverridePermissions is a paid mutator transaction binding the contract method 0x5a2dce7a.
+//
+// Solidity: function createChannelWithOverridePermissions(bytes32 channelId, string metadata, (uint256,string[])[] rolePermissions) returns()
+func (_Channels *ChannelsSession) CreateChannelWithOverridePermissions(channelId [32]byte, metadata string, rolePermissions []IChannelBaseRolePermissions) (*types.Transaction, error) {
+	return _Channels.Contract.CreateChannelWithOverridePermissions(&_Channels.TransactOpts, channelId, metadata, rolePermissions)
+}
+
+// CreateChannelWithOverridePermissions is a paid mutator transaction binding the contract method 0x5a2dce7a.
+//
+// Solidity: function createChannelWithOverridePermissions(bytes32 channelId, string metadata, (uint256,string[])[] rolePermissions) returns()
+func (_Channels *ChannelsTransactorSession) CreateChannelWithOverridePermissions(channelId [32]byte, metadata string, rolePermissions []IChannelBaseRolePermissions) (*types.Transaction, error) {
+	return _Channels.Contract.CreateChannelWithOverridePermissions(&_Channels.TransactOpts, channelId, metadata, rolePermissions)
 }
 
 // RemoveChannel is a paid mutator transaction binding the contract method 0x02da0e51.
@@ -2472,6 +2499,951 @@ func (_Channels *ChannelsFilterer) WatchPaused(opts *bind.WatchOpts, sink chan<-
 func (_Channels *ChannelsFilterer) ParsePaused(log types.Log) (*ChannelsPaused, error) {
 	event := new(ChannelsPaused)
 	if err := _Channels.contract.UnpackLog(event, "Paused", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// ChannelsPermissionsAddedToChannelRoleIterator is returned from FilterPermissionsAddedToChannelRole and is used to iterate over the raw logs and unpacked data for PermissionsAddedToChannelRole events raised by the Channels contract.
+type ChannelsPermissionsAddedToChannelRoleIterator struct {
+	Event *ChannelsPermissionsAddedToChannelRole // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ChannelsPermissionsAddedToChannelRoleIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ChannelsPermissionsAddedToChannelRole)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ChannelsPermissionsAddedToChannelRole)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ChannelsPermissionsAddedToChannelRoleIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ChannelsPermissionsAddedToChannelRoleIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ChannelsPermissionsAddedToChannelRole represents a PermissionsAddedToChannelRole event raised by the Channels contract.
+type ChannelsPermissionsAddedToChannelRole struct {
+	Updater   common.Address
+	RoleId    *big.Int
+	ChannelId [32]byte
+	Raw       types.Log // Blockchain specific contextual infos
+}
+
+// FilterPermissionsAddedToChannelRole is a free log retrieval operation binding the contract event 0x38ef31503bf60258feeceab5e2c3778cf74be2a8fbcc150d209ca96cd3c98553.
+//
+// Solidity: event PermissionsAddedToChannelRole(address indexed updater, uint256 indexed roleId, bytes32 indexed channelId)
+func (_Channels *ChannelsFilterer) FilterPermissionsAddedToChannelRole(opts *bind.FilterOpts, updater []common.Address, roleId []*big.Int, channelId [][32]byte) (*ChannelsPermissionsAddedToChannelRoleIterator, error) {
+
+	var updaterRule []interface{}
+	for _, updaterItem := range updater {
+		updaterRule = append(updaterRule, updaterItem)
+	}
+	var roleIdRule []interface{}
+	for _, roleIdItem := range roleId {
+		roleIdRule = append(roleIdRule, roleIdItem)
+	}
+	var channelIdRule []interface{}
+	for _, channelIdItem := range channelId {
+		channelIdRule = append(channelIdRule, channelIdItem)
+	}
+
+	logs, sub, err := _Channels.contract.FilterLogs(opts, "PermissionsAddedToChannelRole", updaterRule, roleIdRule, channelIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ChannelsPermissionsAddedToChannelRoleIterator{contract: _Channels.contract, event: "PermissionsAddedToChannelRole", logs: logs, sub: sub}, nil
+}
+
+// WatchPermissionsAddedToChannelRole is a free log subscription operation binding the contract event 0x38ef31503bf60258feeceab5e2c3778cf74be2a8fbcc150d209ca96cd3c98553.
+//
+// Solidity: event PermissionsAddedToChannelRole(address indexed updater, uint256 indexed roleId, bytes32 indexed channelId)
+func (_Channels *ChannelsFilterer) WatchPermissionsAddedToChannelRole(opts *bind.WatchOpts, sink chan<- *ChannelsPermissionsAddedToChannelRole, updater []common.Address, roleId []*big.Int, channelId [][32]byte) (event.Subscription, error) {
+
+	var updaterRule []interface{}
+	for _, updaterItem := range updater {
+		updaterRule = append(updaterRule, updaterItem)
+	}
+	var roleIdRule []interface{}
+	for _, roleIdItem := range roleId {
+		roleIdRule = append(roleIdRule, roleIdItem)
+	}
+	var channelIdRule []interface{}
+	for _, channelIdItem := range channelId {
+		channelIdRule = append(channelIdRule, channelIdItem)
+	}
+
+	logs, sub, err := _Channels.contract.WatchLogs(opts, "PermissionsAddedToChannelRole", updaterRule, roleIdRule, channelIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ChannelsPermissionsAddedToChannelRole)
+				if err := _Channels.contract.UnpackLog(event, "PermissionsAddedToChannelRole", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParsePermissionsAddedToChannelRole is a log parse operation binding the contract event 0x38ef31503bf60258feeceab5e2c3778cf74be2a8fbcc150d209ca96cd3c98553.
+//
+// Solidity: event PermissionsAddedToChannelRole(address indexed updater, uint256 indexed roleId, bytes32 indexed channelId)
+func (_Channels *ChannelsFilterer) ParsePermissionsAddedToChannelRole(log types.Log) (*ChannelsPermissionsAddedToChannelRole, error) {
+	event := new(ChannelsPermissionsAddedToChannelRole)
+	if err := _Channels.contract.UnpackLog(event, "PermissionsAddedToChannelRole", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// ChannelsPermissionsRemovedFromChannelRoleIterator is returned from FilterPermissionsRemovedFromChannelRole and is used to iterate over the raw logs and unpacked data for PermissionsRemovedFromChannelRole events raised by the Channels contract.
+type ChannelsPermissionsRemovedFromChannelRoleIterator struct {
+	Event *ChannelsPermissionsRemovedFromChannelRole // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ChannelsPermissionsRemovedFromChannelRoleIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ChannelsPermissionsRemovedFromChannelRole)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ChannelsPermissionsRemovedFromChannelRole)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ChannelsPermissionsRemovedFromChannelRoleIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ChannelsPermissionsRemovedFromChannelRoleIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ChannelsPermissionsRemovedFromChannelRole represents a PermissionsRemovedFromChannelRole event raised by the Channels contract.
+type ChannelsPermissionsRemovedFromChannelRole struct {
+	Updater   common.Address
+	RoleId    *big.Int
+	ChannelId [32]byte
+	Raw       types.Log // Blockchain specific contextual infos
+}
+
+// FilterPermissionsRemovedFromChannelRole is a free log retrieval operation binding the contract event 0x07439707c74b686d8e4d3f3226348eac82205e6dffd780ac4c555a4c2dc9d86c.
+//
+// Solidity: event PermissionsRemovedFromChannelRole(address indexed updater, uint256 indexed roleId, bytes32 indexed channelId)
+func (_Channels *ChannelsFilterer) FilterPermissionsRemovedFromChannelRole(opts *bind.FilterOpts, updater []common.Address, roleId []*big.Int, channelId [][32]byte) (*ChannelsPermissionsRemovedFromChannelRoleIterator, error) {
+
+	var updaterRule []interface{}
+	for _, updaterItem := range updater {
+		updaterRule = append(updaterRule, updaterItem)
+	}
+	var roleIdRule []interface{}
+	for _, roleIdItem := range roleId {
+		roleIdRule = append(roleIdRule, roleIdItem)
+	}
+	var channelIdRule []interface{}
+	for _, channelIdItem := range channelId {
+		channelIdRule = append(channelIdRule, channelIdItem)
+	}
+
+	logs, sub, err := _Channels.contract.FilterLogs(opts, "PermissionsRemovedFromChannelRole", updaterRule, roleIdRule, channelIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ChannelsPermissionsRemovedFromChannelRoleIterator{contract: _Channels.contract, event: "PermissionsRemovedFromChannelRole", logs: logs, sub: sub}, nil
+}
+
+// WatchPermissionsRemovedFromChannelRole is a free log subscription operation binding the contract event 0x07439707c74b686d8e4d3f3226348eac82205e6dffd780ac4c555a4c2dc9d86c.
+//
+// Solidity: event PermissionsRemovedFromChannelRole(address indexed updater, uint256 indexed roleId, bytes32 indexed channelId)
+func (_Channels *ChannelsFilterer) WatchPermissionsRemovedFromChannelRole(opts *bind.WatchOpts, sink chan<- *ChannelsPermissionsRemovedFromChannelRole, updater []common.Address, roleId []*big.Int, channelId [][32]byte) (event.Subscription, error) {
+
+	var updaterRule []interface{}
+	for _, updaterItem := range updater {
+		updaterRule = append(updaterRule, updaterItem)
+	}
+	var roleIdRule []interface{}
+	for _, roleIdItem := range roleId {
+		roleIdRule = append(roleIdRule, roleIdItem)
+	}
+	var channelIdRule []interface{}
+	for _, channelIdItem := range channelId {
+		channelIdRule = append(channelIdRule, channelIdItem)
+	}
+
+	logs, sub, err := _Channels.contract.WatchLogs(opts, "PermissionsRemovedFromChannelRole", updaterRule, roleIdRule, channelIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ChannelsPermissionsRemovedFromChannelRole)
+				if err := _Channels.contract.UnpackLog(event, "PermissionsRemovedFromChannelRole", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParsePermissionsRemovedFromChannelRole is a log parse operation binding the contract event 0x07439707c74b686d8e4d3f3226348eac82205e6dffd780ac4c555a4c2dc9d86c.
+//
+// Solidity: event PermissionsRemovedFromChannelRole(address indexed updater, uint256 indexed roleId, bytes32 indexed channelId)
+func (_Channels *ChannelsFilterer) ParsePermissionsRemovedFromChannelRole(log types.Log) (*ChannelsPermissionsRemovedFromChannelRole, error) {
+	event := new(ChannelsPermissionsRemovedFromChannelRole)
+	if err := _Channels.contract.UnpackLog(event, "PermissionsRemovedFromChannelRole", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// ChannelsPermissionsUpdatedForChannelRoleIterator is returned from FilterPermissionsUpdatedForChannelRole and is used to iterate over the raw logs and unpacked data for PermissionsUpdatedForChannelRole events raised by the Channels contract.
+type ChannelsPermissionsUpdatedForChannelRoleIterator struct {
+	Event *ChannelsPermissionsUpdatedForChannelRole // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ChannelsPermissionsUpdatedForChannelRoleIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ChannelsPermissionsUpdatedForChannelRole)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ChannelsPermissionsUpdatedForChannelRole)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ChannelsPermissionsUpdatedForChannelRoleIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ChannelsPermissionsUpdatedForChannelRoleIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ChannelsPermissionsUpdatedForChannelRole represents a PermissionsUpdatedForChannelRole event raised by the Channels contract.
+type ChannelsPermissionsUpdatedForChannelRole struct {
+	Updater   common.Address
+	RoleId    *big.Int
+	ChannelId [32]byte
+	Raw       types.Log // Blockchain specific contextual infos
+}
+
+// FilterPermissionsUpdatedForChannelRole is a free log retrieval operation binding the contract event 0x3af5ed504e4a660b9f6e42f60e665a22d0b50830f9c8f7d4344ab4313cc0ab4a.
+//
+// Solidity: event PermissionsUpdatedForChannelRole(address indexed updater, uint256 indexed roleId, bytes32 indexed channelId)
+func (_Channels *ChannelsFilterer) FilterPermissionsUpdatedForChannelRole(opts *bind.FilterOpts, updater []common.Address, roleId []*big.Int, channelId [][32]byte) (*ChannelsPermissionsUpdatedForChannelRoleIterator, error) {
+
+	var updaterRule []interface{}
+	for _, updaterItem := range updater {
+		updaterRule = append(updaterRule, updaterItem)
+	}
+	var roleIdRule []interface{}
+	for _, roleIdItem := range roleId {
+		roleIdRule = append(roleIdRule, roleIdItem)
+	}
+	var channelIdRule []interface{}
+	for _, channelIdItem := range channelId {
+		channelIdRule = append(channelIdRule, channelIdItem)
+	}
+
+	logs, sub, err := _Channels.contract.FilterLogs(opts, "PermissionsUpdatedForChannelRole", updaterRule, roleIdRule, channelIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ChannelsPermissionsUpdatedForChannelRoleIterator{contract: _Channels.contract, event: "PermissionsUpdatedForChannelRole", logs: logs, sub: sub}, nil
+}
+
+// WatchPermissionsUpdatedForChannelRole is a free log subscription operation binding the contract event 0x3af5ed504e4a660b9f6e42f60e665a22d0b50830f9c8f7d4344ab4313cc0ab4a.
+//
+// Solidity: event PermissionsUpdatedForChannelRole(address indexed updater, uint256 indexed roleId, bytes32 indexed channelId)
+func (_Channels *ChannelsFilterer) WatchPermissionsUpdatedForChannelRole(opts *bind.WatchOpts, sink chan<- *ChannelsPermissionsUpdatedForChannelRole, updater []common.Address, roleId []*big.Int, channelId [][32]byte) (event.Subscription, error) {
+
+	var updaterRule []interface{}
+	for _, updaterItem := range updater {
+		updaterRule = append(updaterRule, updaterItem)
+	}
+	var roleIdRule []interface{}
+	for _, roleIdItem := range roleId {
+		roleIdRule = append(roleIdRule, roleIdItem)
+	}
+	var channelIdRule []interface{}
+	for _, channelIdItem := range channelId {
+		channelIdRule = append(channelIdRule, channelIdItem)
+	}
+
+	logs, sub, err := _Channels.contract.WatchLogs(opts, "PermissionsUpdatedForChannelRole", updaterRule, roleIdRule, channelIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ChannelsPermissionsUpdatedForChannelRole)
+				if err := _Channels.contract.UnpackLog(event, "PermissionsUpdatedForChannelRole", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParsePermissionsUpdatedForChannelRole is a log parse operation binding the contract event 0x3af5ed504e4a660b9f6e42f60e665a22d0b50830f9c8f7d4344ab4313cc0ab4a.
+//
+// Solidity: event PermissionsUpdatedForChannelRole(address indexed updater, uint256 indexed roleId, bytes32 indexed channelId)
+func (_Channels *ChannelsFilterer) ParsePermissionsUpdatedForChannelRole(log types.Log) (*ChannelsPermissionsUpdatedForChannelRole, error) {
+	event := new(ChannelsPermissionsUpdatedForChannelRole)
+	if err := _Channels.contract.UnpackLog(event, "PermissionsUpdatedForChannelRole", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// ChannelsRoleCreatedIterator is returned from FilterRoleCreated and is used to iterate over the raw logs and unpacked data for RoleCreated events raised by the Channels contract.
+type ChannelsRoleCreatedIterator struct {
+	Event *ChannelsRoleCreated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ChannelsRoleCreatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ChannelsRoleCreated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ChannelsRoleCreated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ChannelsRoleCreatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ChannelsRoleCreatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ChannelsRoleCreated represents a RoleCreated event raised by the Channels contract.
+type ChannelsRoleCreated struct {
+	Creator common.Address
+	RoleId  *big.Int
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterRoleCreated is a free log retrieval operation binding the contract event 0x20a7a288530dd94b1eccaa691a582ecfd7550c9dfcee78ddf50a97f774a2b147.
+//
+// Solidity: event RoleCreated(address indexed creator, uint256 indexed roleId)
+func (_Channels *ChannelsFilterer) FilterRoleCreated(opts *bind.FilterOpts, creator []common.Address, roleId []*big.Int) (*ChannelsRoleCreatedIterator, error) {
+
+	var creatorRule []interface{}
+	for _, creatorItem := range creator {
+		creatorRule = append(creatorRule, creatorItem)
+	}
+	var roleIdRule []interface{}
+	for _, roleIdItem := range roleId {
+		roleIdRule = append(roleIdRule, roleIdItem)
+	}
+
+	logs, sub, err := _Channels.contract.FilterLogs(opts, "RoleCreated", creatorRule, roleIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ChannelsRoleCreatedIterator{contract: _Channels.contract, event: "RoleCreated", logs: logs, sub: sub}, nil
+}
+
+// WatchRoleCreated is a free log subscription operation binding the contract event 0x20a7a288530dd94b1eccaa691a582ecfd7550c9dfcee78ddf50a97f774a2b147.
+//
+// Solidity: event RoleCreated(address indexed creator, uint256 indexed roleId)
+func (_Channels *ChannelsFilterer) WatchRoleCreated(opts *bind.WatchOpts, sink chan<- *ChannelsRoleCreated, creator []common.Address, roleId []*big.Int) (event.Subscription, error) {
+
+	var creatorRule []interface{}
+	for _, creatorItem := range creator {
+		creatorRule = append(creatorRule, creatorItem)
+	}
+	var roleIdRule []interface{}
+	for _, roleIdItem := range roleId {
+		roleIdRule = append(roleIdRule, roleIdItem)
+	}
+
+	logs, sub, err := _Channels.contract.WatchLogs(opts, "RoleCreated", creatorRule, roleIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ChannelsRoleCreated)
+				if err := _Channels.contract.UnpackLog(event, "RoleCreated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRoleCreated is a log parse operation binding the contract event 0x20a7a288530dd94b1eccaa691a582ecfd7550c9dfcee78ddf50a97f774a2b147.
+//
+// Solidity: event RoleCreated(address indexed creator, uint256 indexed roleId)
+func (_Channels *ChannelsFilterer) ParseRoleCreated(log types.Log) (*ChannelsRoleCreated, error) {
+	event := new(ChannelsRoleCreated)
+	if err := _Channels.contract.UnpackLog(event, "RoleCreated", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// ChannelsRoleRemovedIterator is returned from FilterRoleRemoved and is used to iterate over the raw logs and unpacked data for RoleRemoved events raised by the Channels contract.
+type ChannelsRoleRemovedIterator struct {
+	Event *ChannelsRoleRemoved // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ChannelsRoleRemovedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ChannelsRoleRemoved)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ChannelsRoleRemoved)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ChannelsRoleRemovedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ChannelsRoleRemovedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ChannelsRoleRemoved represents a RoleRemoved event raised by the Channels contract.
+type ChannelsRoleRemoved struct {
+	Remover common.Address
+	RoleId  *big.Int
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterRoleRemoved is a free log retrieval operation binding the contract event 0x268a6f1b90f6f5ddf50cc736d36513e80cdc5fd56326bff71f335e8b4b61d055.
+//
+// Solidity: event RoleRemoved(address indexed remover, uint256 indexed roleId)
+func (_Channels *ChannelsFilterer) FilterRoleRemoved(opts *bind.FilterOpts, remover []common.Address, roleId []*big.Int) (*ChannelsRoleRemovedIterator, error) {
+
+	var removerRule []interface{}
+	for _, removerItem := range remover {
+		removerRule = append(removerRule, removerItem)
+	}
+	var roleIdRule []interface{}
+	for _, roleIdItem := range roleId {
+		roleIdRule = append(roleIdRule, roleIdItem)
+	}
+
+	logs, sub, err := _Channels.contract.FilterLogs(opts, "RoleRemoved", removerRule, roleIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ChannelsRoleRemovedIterator{contract: _Channels.contract, event: "RoleRemoved", logs: logs, sub: sub}, nil
+}
+
+// WatchRoleRemoved is a free log subscription operation binding the contract event 0x268a6f1b90f6f5ddf50cc736d36513e80cdc5fd56326bff71f335e8b4b61d055.
+//
+// Solidity: event RoleRemoved(address indexed remover, uint256 indexed roleId)
+func (_Channels *ChannelsFilterer) WatchRoleRemoved(opts *bind.WatchOpts, sink chan<- *ChannelsRoleRemoved, remover []common.Address, roleId []*big.Int) (event.Subscription, error) {
+
+	var removerRule []interface{}
+	for _, removerItem := range remover {
+		removerRule = append(removerRule, removerItem)
+	}
+	var roleIdRule []interface{}
+	for _, roleIdItem := range roleId {
+		roleIdRule = append(roleIdRule, roleIdItem)
+	}
+
+	logs, sub, err := _Channels.contract.WatchLogs(opts, "RoleRemoved", removerRule, roleIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ChannelsRoleRemoved)
+				if err := _Channels.contract.UnpackLog(event, "RoleRemoved", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRoleRemoved is a log parse operation binding the contract event 0x268a6f1b90f6f5ddf50cc736d36513e80cdc5fd56326bff71f335e8b4b61d055.
+//
+// Solidity: event RoleRemoved(address indexed remover, uint256 indexed roleId)
+func (_Channels *ChannelsFilterer) ParseRoleRemoved(log types.Log) (*ChannelsRoleRemoved, error) {
+	event := new(ChannelsRoleRemoved)
+	if err := _Channels.contract.UnpackLog(event, "RoleRemoved", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// ChannelsRoleUpdatedIterator is returned from FilterRoleUpdated and is used to iterate over the raw logs and unpacked data for RoleUpdated events raised by the Channels contract.
+type ChannelsRoleUpdatedIterator struct {
+	Event *ChannelsRoleUpdated // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ChannelsRoleUpdatedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ChannelsRoleUpdated)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ChannelsRoleUpdated)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ChannelsRoleUpdatedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ChannelsRoleUpdatedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ChannelsRoleUpdated represents a RoleUpdated event raised by the Channels contract.
+type ChannelsRoleUpdated struct {
+	Updater common.Address
+	RoleId  *big.Int
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterRoleUpdated is a free log retrieval operation binding the contract event 0x1aff41ff8e9139aae6bb355cc69107cda7e1d1dcd25511da436f3171bdbf77e6.
+//
+// Solidity: event RoleUpdated(address indexed updater, uint256 indexed roleId)
+func (_Channels *ChannelsFilterer) FilterRoleUpdated(opts *bind.FilterOpts, updater []common.Address, roleId []*big.Int) (*ChannelsRoleUpdatedIterator, error) {
+
+	var updaterRule []interface{}
+	for _, updaterItem := range updater {
+		updaterRule = append(updaterRule, updaterItem)
+	}
+	var roleIdRule []interface{}
+	for _, roleIdItem := range roleId {
+		roleIdRule = append(roleIdRule, roleIdItem)
+	}
+
+	logs, sub, err := _Channels.contract.FilterLogs(opts, "RoleUpdated", updaterRule, roleIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return &ChannelsRoleUpdatedIterator{contract: _Channels.contract, event: "RoleUpdated", logs: logs, sub: sub}, nil
+}
+
+// WatchRoleUpdated is a free log subscription operation binding the contract event 0x1aff41ff8e9139aae6bb355cc69107cda7e1d1dcd25511da436f3171bdbf77e6.
+//
+// Solidity: event RoleUpdated(address indexed updater, uint256 indexed roleId)
+func (_Channels *ChannelsFilterer) WatchRoleUpdated(opts *bind.WatchOpts, sink chan<- *ChannelsRoleUpdated, updater []common.Address, roleId []*big.Int) (event.Subscription, error) {
+
+	var updaterRule []interface{}
+	for _, updaterItem := range updater {
+		updaterRule = append(updaterRule, updaterItem)
+	}
+	var roleIdRule []interface{}
+	for _, roleIdItem := range roleId {
+		roleIdRule = append(roleIdRule, roleIdItem)
+	}
+
+	logs, sub, err := _Channels.contract.WatchLogs(opts, "RoleUpdated", updaterRule, roleIdRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ChannelsRoleUpdated)
+				if err := _Channels.contract.UnpackLog(event, "RoleUpdated", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRoleUpdated is a log parse operation binding the contract event 0x1aff41ff8e9139aae6bb355cc69107cda7e1d1dcd25511da436f3171bdbf77e6.
+//
+// Solidity: event RoleUpdated(address indexed updater, uint256 indexed roleId)
+func (_Channels *ChannelsFilterer) ParseRoleUpdated(log types.Log) (*ChannelsRoleUpdated, error) {
+	event := new(ChannelsRoleUpdated)
+	if err := _Channels.contract.UnpackLog(event, "RoleUpdated", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

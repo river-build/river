@@ -4,8 +4,10 @@ pragma solidity ^0.8.23;
 // interfaces
 import {IArchitect} from "contracts/src/factory/facets/architect/IArchitect.sol";
 import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
+import {IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {ISpaceOwner} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
 import {IUserEntitlement} from "contracts/src/spaces/entitlements/user/IUserEntitlement.sol";
+import {ISpaceProxyInitializer} from "contracts/src/spaces/facets/proxy/ISpaceProxyInitializer.sol";
 
 // libraries
 
@@ -27,28 +29,41 @@ contract Architect is
   function __Architect_init(
     ISpaceOwner ownerImplementation,
     IUserEntitlement userEntitlementImplementation,
-    IRuleEntitlement ruleEntitlementImplementation
+    IRuleEntitlementV2 ruleEntitlementImplementation,
+    IRuleEntitlement legacyRuleEntitlement
   ) external onlyInitializing {
     _setImplementations(
       ownerImplementation,
       userEntitlementImplementation,
-      ruleEntitlementImplementation
+      ruleEntitlementImplementation,
+      legacyRuleEntitlement
     );
   }
 
   // =============================================================
   //                            Space
   // =============================================================
+
+  /// @inheritdoc IArchitect
   function createSpace(
-    SpaceInfo calldata spaceInfo
+    SpaceInfo memory spaceInfo
   ) external nonReentrant whenNotPaused returns (address) {
     return _createSpace(spaceInfo);
   }
 
+  /// @inheritdoc IArchitect
+  function createSpaceWithPrepay(
+    CreateSpace memory spaceInfo
+  ) external payable nonReentrant whenNotPaused returns (address) {
+    return _createSpaceWithPrepay(spaceInfo);
+  }
+
+  /// @inheritdoc IArchitect
   function getSpaceByTokenId(uint256 tokenId) external view returns (address) {
     return _getSpaceByTokenId(tokenId);
   }
 
+  /// @inheritdoc IArchitect
   function getTokenIdBySpace(address space) external view returns (uint256) {
     return _getTokenIdBySpace(space);
   }
@@ -57,27 +72,52 @@ contract Architect is
   //                         Implementations
   // =============================================================
 
+  /// @inheritdoc IArchitect
   function setSpaceArchitectImplementations(
     ISpaceOwner spaceToken,
     IUserEntitlement userEntitlementImplementation,
-    IRuleEntitlement ruleEntitlementImplementation
+    IRuleEntitlementV2 ruleEntitlementImplementation,
+    IRuleEntitlement legacyRuleEntitlement
   ) external onlyOwner {
     _setImplementations(
       spaceToken,
       userEntitlementImplementation,
-      ruleEntitlementImplementation
+      ruleEntitlementImplementation,
+      legacyRuleEntitlement
     );
   }
 
+  /// @inheritdoc IArchitect
   function getSpaceArchitectImplementations()
     external
     view
     returns (
       ISpaceOwner spaceToken,
       IUserEntitlement userEntitlementImplementation,
-      IRuleEntitlement ruleEntitlementImplementation
+      IRuleEntitlementV2 ruleEntitlementImplementation,
+      IRuleEntitlement legacyRuleEntitlement
     )
   {
     return _getImplementations();
+  }
+
+  // =============================================================
+  //                         Proxy Initializer
+  // =============================================================
+
+  /// @inheritdoc IArchitect
+  function getProxyInitializer()
+    external
+    view
+    returns (ISpaceProxyInitializer)
+  {
+    return _getProxyInitializer();
+  }
+
+  /// @inheritdoc IArchitect
+  function setProxyInitializer(
+    ISpaceProxyInitializer proxyInitializer
+  ) external onlyOwner {
+    _setProxyInitializer(proxyInitializer);
   }
 }

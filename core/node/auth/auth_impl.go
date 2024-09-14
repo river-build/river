@@ -11,6 +11,7 @@ import (
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/base"
+	"github.com/river-build/river/core/contracts/types"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
@@ -342,7 +343,7 @@ func (ca *chainAuth) checkChannelEnabled(
 // not that the caller is allowed to access the permission
 type entitlementCacheResult struct {
 	allowed         bool
-	entitlementData []Entitlement
+	entitlementData []types.Entitlement
 	owner           common.Address
 }
 
@@ -411,58 +412,44 @@ func (ca *chainAuth) isEntitledToChannelUncached(
 	log := dlog.FromCtx(ctx)
 	log.Debug("isEntitledToChannelUncached", "args", args)
 
-	// For read and write permissions, fetch the entitlements and evaluate them locally.
-	if (args.permission == PermissionRead) || (args.permission == PermissionWrite) {
-		result, cacheHit, err := ca.entitlementManagerCache.executeUsingCache(
-			ctx,
-			cfg,
-			args,
-			ca.getChannelEntitlementsForPermissionUncached,
-		)
-		if err != nil {
-			return &boolCacheResult{
-					allowed: false,
-				}, AsRiverError(
-					err,
-				).Func("isEntitledToChannel").
-					Message("Failed to get channel entitlements")
-		}
-
-		if cacheHit {
-			ca.entitlementCacheHit.Inc()
-		} else {
-			ca.entitlementCacheMiss.Inc()
-		}
-
-		temp := (result.(*timestampedCacheValue).Result())
-		entitlementData := temp.(*entitlementCacheResult) // Assuming result is of *entitlementCacheResult type
-
-		allowed, err := ca.evaluateWithEntitlements(
-			ctx,
-			cfg,
-			args,
-			entitlementData.owner,
-			entitlementData.entitlementData,
-		)
-		if err != nil {
-			err = AsRiverError(err).
-				Func("isEntitledToChannel").
-				Message("Failed to evaluate entitlements").
-				Tag("channelId", args.channelId)
-		}
-		return &boolCacheResult{allowed}, err
+	result, cacheHit, err := ca.entitlementManagerCache.executeUsingCache(
+		ctx,
+		cfg,
+		args,
+		ca.getChannelEntitlementsForPermissionUncached,
+	)
+	if err != nil {
+		return &boolCacheResult{
+				allowed: false,
+			}, AsRiverError(
+				err,
+			).Func("isEntitledToChannel").
+				Message("Failed to get channel entitlements")
 	}
 
-	// For all other permissions, defer the entitlement check to existing synchronous logic on the space contract.
-	// This call will ignore cross-chain entitlements.
-	allowed, err := ca.spaceContract.IsEntitledToChannel(
+	if cacheHit {
+		ca.entitlementCacheHit.Inc()
+	} else {
+		ca.entitlementCacheMiss.Inc()
+	}
+
+	temp := (result.(*timestampedCacheValue).Result())
+	entitlementData := temp.(*entitlementCacheResult) // Assuming result is of *entitlementCacheResult type
+
+	allowed, err := ca.evaluateWithEntitlements(
 		ctx,
-		args.spaceId,
-		args.channelId,
-		args.principal,
-		args.permission,
+		cfg,
+		args,
+		entitlementData.owner,
+		entitlementData.entitlementData,
 	)
-	return &boolCacheResult{allowed: allowed}, err
+	if err != nil {
+		err = AsRiverError(err).
+			Func("isEntitledToChannel").
+			Message("Failed to evaluate entitlements").
+			Tag("channelId", args.channelId)
+	}
+	return &boolCacheResult{allowed}, err
 }
 
 func deserializeWallets(serialized string) []common.Address {
@@ -479,7 +466,7 @@ func deserializeWallets(serialized string) []common.Address {
 // Rule entitlements are evaluated by a library shared with xchain and user entitlements are evaluated in the loop.
 func (ca *chainAuth) evaluateEntitlementData(
 	ctx context.Context,
-	entitlements []Entitlement,
+	entitlements []types.Entitlement,
 	cfg *config.Config,
 	args *ChainAuthArgs,
 ) (bool, error) {
@@ -488,10 +475,17 @@ func (ca *chainAuth) evaluateEntitlementData(
 
 	wallets := deserializeWallets(args.linkedWallets)
 	for _, ent := range entitlements {
-		if ent.entitlementType == "RuleEntitlement" {
-			re := ent.ruleEntitlement
-			log.Debug("RuleEntitlement", "ruleEntitlement", re)
-			result, err := ca.evaluator.EvaluateRuleData(ctx, wallets, re)
+		if ent.EntitlementType == types.ModuleTypeRuleEntitlement {
+			re := ent.RuleEntitlement
+			log.Debug(ent.EntitlementType, "re", re)
+
+			// Convert the rule data to the latest version
+			reV2, err := types.ConvertV1RuleDataToV2(ctx, re)
+			if err != nil {
+				return false, err
+			}
+
+			result, err := ca.evaluator.EvaluateRuleData(ctx, wallets, reV2)
 			if err != nil {
 				return false, err
 			}
@@ -501,9 +495,23 @@ func (ca *chainAuth) evaluateEntitlementData(
 			} else {
 				log.Debug("rule entitlement is false", "spaceId", args.spaceId)
 			}
-		} else if ent.entitlementType == "UserEntitlement" {
-			log.Debug("UserEntitlement", "userEntitlement", ent.userEntitlement)
-			for _, user := range ent.userEntitlement {
+		} else if ent.EntitlementType == types.ModuleTypeRuleEntitlementV2 {
+			re := ent.RuleEntitlementV2
+			log.Debug(ent.EntitlementType, "re", re)
+			result, err := ca.evaluator.EvaluateRuleData(ctx, wallets, re)
+			if err != nil {
+				return false, err
+			}
+			if result {
+				log.Debug("rule entitlement v2 is true", "spaceId", args.spaceId)
+				return true, nil
+			} else {
+				log.Debug("rule entitlement v2 is false", "spaceId", args.spaceId)
+			}
+
+		} else if ent.EntitlementType == types.ModuleTypeUserEntitlement {
+			log.Debug("UserEntitlement", "userEntitlement", ent.UserEntitlement)
+			for _, user := range ent.UserEntitlement {
 				if user == everyone {
 					log.Debug("user entitlement: everyone is entitled to space", "spaceId", args.spaceId)
 					return true, nil
@@ -532,13 +540,12 @@ func (ca *chainAuth) evaluateWithEntitlements(
 	cfg *config.Config,
 	args *ChainAuthArgs,
 	owner common.Address,
-	entitlements []Entitlement,
+	entitlements []types.Entitlement,
 ) (bool, error) {
 	log := dlog.FromCtx(ctx)
 
 	// 1. Check if the user is the space owner
 	// Space owner has su over all space operations.
-	log.Info("evaluateWithEntitlements", "args", args, "owner", owner.Hex(), "wallets", args.linkedWallets)
 	wallets := deserializeWallets(args.linkedWallets)
 	for _, wallet := range wallets {
 		if wallet == owner {

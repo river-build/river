@@ -1,14 +1,13 @@
 import { PlainMessage } from '@bufbuild/protobuf'
 import { PersistedObservable, persistedObservable } from '../../../observable/persistedObservable'
-import { Identifiable, Store } from '../../../store/store'
+import { Identifiable, LoadPriority, Store } from '../../../store/store'
 import { RiverConnection } from '../../river-connection/riverConnection'
 import { ChannelMessage_Post_Attachment, ChannelMessage_Post_Mention } from '@river-build/proto'
 import { Timeline } from '../../timeline/timeline'
 import { check, dlogger } from '@river-build/dlog'
 import { isDefined } from '../../../check'
-import { Observable } from '../../../observable/observable'
-import { StreamConnectionStatus } from '../../streams/models/streamConnectionStatus'
 import { ChannelDetails, SpaceDapp } from '@river-build/web3'
+import { Members } from '../../members/members'
 
 const logger = dlogger('csb:channel')
 
@@ -21,8 +20,8 @@ export interface ChannelModel extends Identifiable {
 
 @persistedObservable({ tableName: 'channel' })
 export class Channel extends PersistedObservable<ChannelModel> {
-    connectionStatus = new Observable<StreamConnectionStatus>(StreamConnectionStatus.connecting)
     timeline: Timeline
+    members: Members
     constructor(
         id: string,
         spaceId: string,
@@ -30,13 +29,13 @@ export class Channel extends PersistedObservable<ChannelModel> {
         private spaceDapp: SpaceDapp,
         store: Store,
     ) {
-        super({ id, spaceId, isJoined: false }, store)
+        super({ id, spaceId, isJoined: false }, store, LoadPriority.high)
         this.timeline = new Timeline(riverConnection.userId)
+        this.members = new Members(id, riverConnection, store)
     }
 
-    protected override async onLoaded() {
+    protected override onLoaded() {
         this.riverConnection.registerView((client) => {
-            this.connectionStatus.setValue(StreamConnectionStatus.connecting)
             if (
                 client.streams.has(this.data.id) &&
                 client.streams.get(this.data.id)?.view.isInitialized
@@ -44,9 +43,12 @@ export class Channel extends PersistedObservable<ChannelModel> {
                 this.onStreamInitialized(this.data.id)
             }
             client.on('streamInitialized', this.onStreamInitialized)
+            client.on('streamNewUserJoined', this.onStreamUserJoined)
+            client.on('streamUserLeft', this.onStreamUserLeft)
             return () => {
                 client.off('streamInitialized', this.onStreamInitialized)
-                this.connectionStatus.setValue(StreamConnectionStatus.disconnected)
+                client.off('streamNewUserJoined', this.onStreamUserJoined)
+                client.off('streamUserLeft', this.onStreamUserLeft)
             }
         })
 
@@ -73,11 +75,10 @@ export class Channel extends PersistedObservable<ChannelModel> {
             mentions?: PlainMessage<ChannelMessage_Post_Mention>[]
             attachments?: PlainMessage<ChannelMessage_Post_Attachment>[]
         },
-    ) {
-        await this.connectionStatus.when((status) => status === StreamConnectionStatus.connected)
+    ): Promise<{ eventId: string }> {
         const channelId = this.data.id
-        const eventId = await this.riverConnection.call((client) =>
-            client.sendChannelMessage_Text(channelId, {
+        const result = await this.riverConnection.withStream(channelId).call((client) => {
+            return client.sendChannelMessage_Text(channelId, {
                 threadId: options?.threadId,
                 threadPreview: options?.threadId ? '🙉' : undefined,
                 replyId: options?.replyId,
@@ -87,9 +88,25 @@ export class Channel extends PersistedObservable<ChannelModel> {
                     mentions: options?.mentions ?? [],
                     attachments: options?.attachments ?? [],
                 },
-            }),
-        )
-        return eventId
+            })
+        })
+        return result
+    }
+
+    async pin(eventId: string) {
+        const channelId = this.data.id
+        const result = await this.riverConnection
+            .withStream(channelId)
+            .call((client) => client.pin(channelId, eventId))
+        return result
+    }
+
+    async unpin(eventId: string) {
+        const channelId = this.data.id
+        const result = await this.riverConnection
+            .withStream(channelId)
+            .call((client) => client.unpin(channelId, eventId))
+        return result
     }
 
     async sendReaction(refEventId: string, reaction: string) {
@@ -107,8 +124,21 @@ export class Channel extends PersistedObservable<ChannelModel> {
         if (streamId === this.data.id) {
             const stream = this.riverConnection.client?.stream(this.data.id)
             check(isDefined(stream), 'stream is not defined')
+            const hasJoined = stream.view.getMembers().isMemberJoined(this.riverConnection.userId)
+            this.setData({ isJoined: hasJoined })
             this.timeline.initialize(stream)
-            this.connectionStatus.setValue(StreamConnectionStatus.connected)
+        }
+    }
+
+    private onStreamUserJoined = (streamId: string, userId: string) => {
+        if (streamId === this.data.id && userId === this.riverConnection.userId) {
+            this.setData({ isJoined: true })
+        }
+    }
+
+    private onStreamUserLeft = (streamId: string, userId: string) => {
+        if (streamId === this.data.id && userId === this.riverConnection.userId) {
+            this.setData({ isJoined: false })
         }
     }
 }

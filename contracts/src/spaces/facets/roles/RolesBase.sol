@@ -96,42 +96,37 @@ abstract contract RolesBase is IRolesBase {
   ) internal view returns (Role[] memory) {
     uint256[] memory roleIds = _getRoleIds();
     uint256 roleIdLen = roleIds.length;
-    uint256[] memory matchedRoleIds = new uint256[](roleIdLen);
+    Role[] memory rolesWithPermission = new Role[](roleIdLen);
     uint256 count = 0;
 
     bytes32 requestedPermission = keccak256(bytes(permission));
 
-    // First pass to find roles with the permission and capture their IDs
     for (uint256 i = 0; i < roleIdLen; i++) {
-      (, , string[] memory permissions, ) = _getRole(roleIds[i]);
+      (
+        string memory name,
+        bool isImmutable,
+        string[] memory permissions,
+        IEntitlement[] memory entitlements
+      ) = _getRole(roleIds[i]);
+
       for (uint256 j = 0; j < permissions.length; j++) {
         if (keccak256(bytes(permissions[j])) == requestedPermission) {
-          matchedRoleIds[count] = roleIds[i];
+          rolesWithPermission[count] = Role({
+            id: roleIds[i],
+            name: name,
+            disabled: isImmutable,
+            permissions: permissions,
+            entitlements: entitlements
+          });
           count++;
           break;
         }
       }
     }
 
-    // Initialize the array of roles with the correct size
-    Role[] memory rolesWithPermission = new Role[](count);
-
-    // Populate the array using the captured role IDs
-    for (uint256 i = 0; i < count; i++) {
-      uint256 roleId = matchedRoleIds[i];
-      (
-        string memory name,
-        bool isImmutable,
-        string[] memory permissions,
-        IEntitlement[] memory entitlements
-      ) = _getRole(roleId);
-      rolesWithPermission[i] = Role({
-        id: roleId,
-        name: name,
-        disabled: isImmutable,
-        permissions: permissions,
-        entitlements: entitlements
-      });
+    // Resize the array to remove unused slots
+    assembly {
+      mstore(rolesWithPermission, count)
     }
 
     return rolesWithPermission;
@@ -164,6 +159,9 @@ abstract contract RolesBase is IRolesBase {
     string[] memory permissions,
     CreateEntitlement[] memory entitlements
   ) internal {
+    // check role exists
+    _checkRoleExists(roleId);
+
     // get current entitlements before updating them
     IEntitlement[] memory currentEntitlements = _getEntitlementsByRole(roleId);
     uint256 currentEntitlementsLen = currentEntitlements.length;
@@ -259,6 +257,9 @@ abstract contract RolesBase is IRolesBase {
   }
 
   function _removeRole(uint256 roleId) internal {
+    // check role exists
+    _checkRoleExists(roleId);
+
     // get current entitlements
     IEntitlement[] memory currentEntitlements = _getEntitlementsByRole(roleId);
     uint256 currentEntitlementsLen = currentEntitlements.length;
@@ -316,6 +317,93 @@ abstract contract RolesBase is IRolesBase {
     }
 
     emit RoleRemoved(msg.sender, roleId);
+  }
+
+  // =============================================================
+  // Channel Permissions
+  // =============================================================
+  function _getChannelPermissionOverrides(
+    uint256 roleId,
+    bytes32 channelId
+  ) internal view returns (string[] memory permissions) {
+    // check role exists
+    _checkRoleExists(roleId);
+
+    // check channel exists
+    ChannelService.checkChannelExists(channelId);
+
+    return
+      RolesStorage
+      .layout()
+      .permissionOverridesByRole[roleId][channelId].values();
+  }
+
+  function _setChannelPermissionOverrides(
+    uint256 roleId,
+    bytes32 channelId,
+    string[] memory permissions
+  ) internal {
+    ChannelService.checkChannelExists(channelId);
+
+    // check role exists
+    _checkRoleExists(roleId);
+
+    RolesStorage.Layout storage rs = RolesStorage.layout();
+
+    rs.channelOverridesByRole[roleId].add(channelId);
+
+    StringSet.Set storage permissionsSet = rs.permissionOverridesByRole[roleId][
+      channelId
+    ];
+
+    // remove current channel permissions if any
+    if (permissionsSet.length() > 0) {
+      string[] memory currentPermissions = permissionsSet.values();
+      uint256 currentPermissionsLen = currentPermissions.length;
+      for (uint256 i = 0; i < currentPermissionsLen; i++) {
+        permissionsSet.remove(currentPermissions[i]);
+      }
+    }
+
+    // check if new permissions are not empty then add them
+    uint256 permissionsLen = permissions.length;
+    if (permissionsLen > 0) {
+      for (uint256 i = 0; i < permissionsLen; i++) {
+        _checkEmptyString(permissions[i]);
+        permissionsSet.add(permissions[i]);
+      }
+    } else {
+      _clearChannelPermissionOverrides(roleId, channelId);
+    }
+
+    emit PermissionsAddedToChannelRole(msg.sender, roleId, channelId);
+  }
+
+  function _clearChannelPermissionOverrides(
+    uint256 roleId,
+    bytes32 channelId
+  ) internal {
+    // check role exists
+    _checkRoleExists(roleId);
+
+    // check channel exists
+    ChannelService.checkChannelExists(channelId);
+
+    RolesStorage.Layout storage rs = RolesStorage.layout();
+    StringSet.Set storage permissionsSet = rs.permissionOverridesByRole[roleId][
+      channelId
+    ];
+
+    // get current permissions
+    string[] memory currentPermissions = permissionsSet.values();
+    uint256 currentPermissionsLen = currentPermissions.length;
+    for (uint256 i = 0; i < currentPermissionsLen; i++) {
+      permissionsSet.remove(currentPermissions[i]);
+    }
+
+    rs.channelOverridesByRole[roleId].remove(channelId);
+
+    emit PermissionsRemovedFromChannelRole(msg.sender, roleId, channelId);
   }
 
   // =============================================================
@@ -413,6 +501,9 @@ abstract contract RolesBase is IRolesBase {
     uint256 roleId,
     string[] memory permissions
   ) internal {
+    // check role exists
+    _checkRoleExists(roleId);
+
     RolesStorage.Layout storage rs = RolesStorage.layout();
 
     uint256 permissionLen = permissions.length;
@@ -438,6 +529,9 @@ abstract contract RolesBase is IRolesBase {
     uint256 roleId,
     string[] memory permissions
   ) internal {
+    // check role exists
+    _checkRoleExists(roleId);
+
     // check permissions
     RolesStorage.Layout storage rs = RolesStorage.layout();
 
@@ -496,6 +590,9 @@ abstract contract RolesBase is IRolesBase {
     uint256 roleId,
     CreateEntitlement memory entitlement
   ) internal {
+    // check role exists
+    _checkRoleExists(roleId);
+
     // check entitlements exists
     EntitlementsManagerService.checkEntitlement(address(entitlement.module));
 

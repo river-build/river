@@ -3,6 +3,7 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.sol";
+import {ILegacyArchitectBase} from "contracts/test/mocks/legacy/IMockLegacyArchitect.sol";
 import {IMembershipBase} from "contracts/src/spaces/facets/membership/IMembership.sol";
 import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
 
@@ -15,14 +16,24 @@ abstract contract SpaceHelper {
   function _createUserSpaceInfo(
     string memory spaceId,
     address[] memory users
-  ) internal pure returns (IArchitectBase.SpaceInfo memory) {
+  ) internal pure returns (IArchitectBase.SpaceInfo memory info) {
+    info = _createSpaceInfo(spaceId);
+    info.membership.requirements.users = users;
+    info.membership.requirements.ruleData = abi.encode(
+      RuleEntitlementUtil.getMockERC721RuleData()
+    );
+  }
+
+  function _createLegacySpaceInfo(
+    string memory spaceId
+  ) internal pure returns (ILegacyArchitectBase.SpaceInfo memory) {
     return
-      IArchitectBase.SpaceInfo({
+      ILegacyArchitectBase.SpaceInfo({
         name: spaceId,
         uri: "ipfs://test",
         shortDescription: "short description",
         longDescription: "long description",
-        membership: IArchitectBase.Membership({
+        membership: ILegacyArchitectBase.Membership({
           settings: IMembershipBase.Membership({
             name: "Member",
             symbol: "MEM",
@@ -34,14 +45,14 @@ abstract contract SpaceHelper {
             freeAllocation: 0,
             pricingModule: address(0)
           }),
-          requirements: IArchitectBase.MembershipRequirements({
+          requirements: ILegacyArchitectBase.MembershipRequirements({
             everyone: false,
-            users: users,
-            ruleData: RuleEntitlementUtil.getMockERC721RuleData()
+            users: new address[](0),
+            ruleData: RuleEntitlementUtil.getLegacyNoopRuleData()
           }),
           permissions: new string[](0)
         }),
-        channel: IArchitectBase.ChannelInfo({metadata: "ipfs://test"})
+        channel: ILegacyArchitectBase.ChannelInfo({metadata: "ipfs://test"})
       });
   }
 
@@ -69,7 +80,7 @@ abstract contract SpaceHelper {
           requirements: IArchitectBase.MembershipRequirements({
             everyone: false,
             users: new address[](0),
-            ruleData: RuleEntitlementUtil.getNoopRuleData()
+            ruleData: abi.encode(RuleEntitlementUtil.getNoopRuleData())
           }),
           permissions: new string[](0)
         }),
@@ -79,73 +90,62 @@ abstract contract SpaceHelper {
 
   function _createEveryoneSpaceInfo(
     string memory spaceId
-  ) internal pure returns (IArchitectBase.SpaceInfo memory) {
-    string[] memory permissions = new string[](2);
+  ) internal pure returns (IArchitectBase.SpaceInfo memory info) {
+    info = _createSpaceInfo(spaceId);
+    string[] memory permissions = new string[](3);
     permissions[0] = Permissions.Read;
     permissions[1] = Permissions.Write;
+    permissions[2] = Permissions.React;
 
-    return
-      IArchitectBase.SpaceInfo({
-        name: spaceId,
-        uri: "ipfs://test",
-        shortDescription: "short description",
-        longDescription: "long description",
-        membership: IArchitectBase.Membership({
-          settings: IMembershipBase.Membership({
-            name: "Member",
-            symbol: "MEM",
-            price: 0,
-            maxSupply: 0,
-            duration: 0,
-            currency: address(0),
-            feeRecipient: address(0),
-            freeAllocation: 0,
-            pricingModule: address(0)
-          }),
-          requirements: IArchitectBase.MembershipRequirements({
-            everyone: true,
-            users: new address[](0),
-            ruleData: RuleEntitlementUtil.getNoopRuleData()
-          }),
-          permissions: permissions
-        }),
-        channel: IArchitectBase.ChannelInfo({metadata: "ipfs://test"})
-      });
+    info.membership.requirements.everyone = true;
+    info.membership.permissions = permissions;
   }
 
   function _createGatedSpaceInfo(
     string memory townId
-  ) internal pure returns (IArchitectBase.SpaceInfo memory) {
+  ) internal pure returns (IArchitectBase.SpaceInfo memory info) {
+    info = _createSpaceInfo(townId);
     string[] memory permissions = new string[](2);
     permissions[0] = Permissions.Read;
     permissions[1] = Permissions.Write;
 
-    return
-      IArchitectBase.SpaceInfo({
-        name: townId,
+    info.membership.requirements.ruleData = abi.encode(
+      RuleEntitlementUtil.getMockERC721RuleData()
+    );
+    info.membership.permissions = permissions;
+  }
+
+  function _createSpaceWithPrepayInfo(
+    string memory spaceId
+  ) internal pure returns (IArchitectBase.CreateSpace memory info) {
+    info = IArchitectBase.CreateSpace({
+      metadata: IArchitectBase.Metadata({
+        name: spaceId,
         uri: "ipfs://test",
         shortDescription: "short description",
-        longDescription: "long description",
-        membership: IArchitectBase.Membership({
-          settings: IMembershipBase.Membership({
-            name: "Member",
-            symbol: "MEM",
-            price: 0,
-            maxSupply: 0,
-            duration: 0,
-            currency: address(0),
-            feeRecipient: address(0),
-            freeAllocation: 0,
-            pricingModule: address(0)
-          }),
-          requirements: IArchitectBase.MembershipRequirements({
-            everyone: false,
-            users: new address[](0),
-            ruleData: RuleEntitlementUtil.getMockERC721RuleData()
-          }),
-          permissions: permissions
+        longDescription: "long description"
+      }),
+      membership: IArchitectBase.Membership({
+        settings: IMembershipBase.Membership({
+          name: "Member",
+          symbol: "MEM",
+          price: 0,
+          maxSupply: 0,
+          duration: 0,
+          currency: address(0),
+          feeRecipient: address(0),
+          freeAllocation: 0,
+          pricingModule: address(0)
         }),
-        channel: IArchitectBase.ChannelInfo({metadata: "ipfs://test"})
-      });
+        requirements: IArchitectBase.MembershipRequirements({
+          everyone: false,
+          users: new address[](0),
+          ruleData: abi.encode(RuleEntitlementUtil.getNoopRuleData())
+        }),
+        permissions: new string[](0)
+      }),
+      channel: IArchitectBase.ChannelInfo({metadata: "ipfs://test"}),
+      prepay: IArchitectBase.Prepay({supply: 0})
+    });
   }
 }

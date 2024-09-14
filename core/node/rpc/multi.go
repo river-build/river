@@ -95,6 +95,7 @@ func traceCtxForTimeline(
 func getHttpStatus(
 	ctx context.Context,
 	baseUrl string,
+	suffix string,
 	result *statusinfo.HttpResult,
 	client *http.Client,
 	wg *sync.WaitGroup,
@@ -107,7 +108,7 @@ func getHttpStatus(
 	var usedAddr string
 	var timeline statusinfo.Timeline
 	var timelineMu sync.Mutex
-	url := baseUrl + "/status?blockchain=1"
+	url := baseUrl + "/status" + suffix
 	req, err := http.NewRequestWithContext(
 		traceCtxForTimeline(ctx, start, &timeline, &timelineMu, &dnsAddrs, &usedAddr),
 		"GET", url, nil)
@@ -126,17 +127,15 @@ func getHttpStatus(
 			result.StatusText = resp.Status
 			result.Protocol = resp.Proto
 			result.UsedTLS = resp.TLS != nil
-			if resp.StatusCode == 200 {
-				statusJson, err := io.ReadAll(resp.Body)
+
+			// Always try to read the response body, even if the status code is not 200.
+			statusJson, err := io.ReadAll(resp.Body)
+			if err == nil && len(statusJson) > 0 {
+				st, err := statusinfo.StatusResponseFromJson(statusJson)
 				if err == nil {
-					st, err := statusinfo.StatusResponseFromJson(statusJson)
-					if err == nil {
-						result.Response = st
-					} else {
-						result.Response.Status = "Error decoding response: " + err.Error()
-					}
+					result.Response = st
 				} else {
-					result.Response.Status = "Error reading response: " + err.Error()
+					result.Response.Status = "Error decoding response: " + err.Error()
 				}
 			}
 		} else {
@@ -204,13 +203,13 @@ func getGrpcStatus(
 func getEthBalance(
 	ctx context.Context,
 	result *string,
-	riverChain *crypto.Blockchain,
+	blockchain *crypto.Blockchain,
 	address common.Address,
 	wg *sync.WaitGroup,
 ) {
 	defer wg.Done()
 
-	balance, err := riverChain.Client.BalanceAt(ctx, address, nil)
+	balance, err := blockchain.Client.BalanceAt(ctx, address, nil)
 	if err != nil {
 		*result = "Error getting balance: " + err.Error()
 		return
@@ -230,6 +229,7 @@ func GetRiverNetworkStatus(
 	cfg *config.Config,
 	nodeRegistry nodes.NodeRegistry,
 	riverChain *crypto.Blockchain,
+	baseChain *crypto.Blockchain,
 	connectOtelIterceptor *otelconnect.Interceptor,
 ) (*statusinfo.RiverStatus, error) {
 	startTime := time.Now()
@@ -287,10 +287,14 @@ func GetRiverNetworkStatus(
 		}
 
 		wg.Add(4)
-		go getHttpStatus(ctx, n.Url(), &r.Http11, http11client, &wg)
-		go getHttpStatus(ctx, n.Url(), &r.Http20, http20client, &wg)
+		go getHttpStatus(ctx, n.Url(), "?blockchain=1", &r.Http11, http11client, &wg)
+		go getHttpStatus(ctx, n.Url(), "?blockchain=0", &r.Http20, http20client, &wg)
 		go getGrpcStatus(ctx, r, NewStreamServiceClient(grpcHttpClient, n.Url(), connectOpts...), &wg)
 		go getEthBalance(ctx, &r.RiverEthBalance, riverChain, n.Address(), &wg)
+		if baseChain != nil {
+			wg.Add(1)
+			go getEthBalance(ctx, &r.BaseEthBalance, baseChain, n.Address(), &wg)
+		}
 	}
 
 	wg.Wait()
@@ -309,7 +313,14 @@ func (s *Service) handleDebugMulti(w http.ResponseWriter, r *http.Request) {
 
 	log := s.defaultLogger
 
-	status, err := GetRiverNetworkStatus(ctx, s.config, s.nodeRegistry, s.riverChain, s.otelConnectIterceptor)
+	status, err := GetRiverNetworkStatus(
+		ctx,
+		s.config,
+		s.nodeRegistry,
+		s.riverChain,
+		s.baseChain,
+		s.otelConnectIterceptor,
+	)
 	if err == nil {
 		err = render.ExecuteAndWrite(&render.DebugMultiData{Status: status}, w)
 		if !s.config.Log.Simplify {
@@ -333,7 +344,14 @@ func (s *Service) handleDebugMultiJson(w http.ResponseWriter, r *http.Request) {
 	log := s.defaultLogger
 
 	w.Header().Set("Content-Type", "application/json")
-	status, err := GetRiverNetworkStatus(ctx, s.config, s.nodeRegistry, s.riverChain, s.otelConnectIterceptor)
+	status, err := GetRiverNetworkStatus(
+		ctx,
+		s.config,
+		s.nodeRegistry,
+		s.riverChain,
+		s.baseChain,
+		s.otelConnectIterceptor,
+	)
 	if err == nil {
 		// Write status as json
 		err = json.NewEncoder(w).Encode(status)

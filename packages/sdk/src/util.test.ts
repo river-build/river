@@ -14,7 +14,12 @@ import { Entitlements } from './sync-agent/entitlements/entitlements'
 import { PlainMessage } from '@bufbuild/protobuf'
 import { IStreamStateView } from './streamStateView'
 import { Client } from './client'
-import { makeBaseChainConfig, makeRiverChainConfig, makeRiverConfig } from './riverConfig'
+import {
+    makeBaseChainConfig,
+    makeRiverChainConfig,
+    makeRiverConfig,
+    useLegacySpaces,
+} from './riverConfig'
 import {
     genId,
     makeSpaceStreamId,
@@ -44,9 +49,10 @@ import {
     IRuleEntitlementBase,
     Permission,
     ISpaceDapp,
-    IArchitectBase,
-    ETH_ADDRESS,
+    LegacyMembershipStruct,
     MembershipStruct,
+    isLegacyMembershipType,
+    ETH_ADDRESS,
     NoopRuleData,
     CheckOperationType,
     LogicalOperationType,
@@ -54,6 +60,21 @@ import {
     OperationType,
     treeToRuleData,
     SpaceDapp,
+    TestERC20,
+    TestERC1155,
+    TestCustomEntitlement,
+    CreateSpaceParams,
+    CreateLegacySpaceParams,
+    isCreateLegacySpaceParams,
+    convertRuleDataV1ToV2,
+    encodeRuleDataV2,
+    SignerType,
+    IRuleEntitlementV2Base,
+    isRuleDataV1,
+    encodeThresholdParams,
+    encodeERC1155Params,
+    convertRuleDataV2ToV1,
+    XchainConfig,
 } from '@river-build/web3'
 
 const log = dlog('csb:test:util')
@@ -124,9 +145,67 @@ export const TEST_ENCRYPTED_MESSAGE_PROPS: PlainMessage<EncryptedData> = {
     senderKey: '',
 }
 
-export const getXchainSupportedRpcUrlsForTesting = (): string[] => {
+export const getXchainConfigForTesting = (): XchainConfig => {
     // TODO: generate this for test environment and read from it
-    return ['http://127.0.0.1:8545', 'http://127.0.0.1:8546']
+    return {
+        supportedRpcUrls: {
+            31337: 'http://127.0.0.1:8545',
+            31338: 'http://127.0.0.1:8546',
+        },
+        etherBasedChains: [31337, 31338],
+    }
+}
+
+export async function erc1155CheckOp(
+    contractName: string,
+    tokenId: bigint,
+    threshold: bigint,
+): Promise<Operation> {
+    const contractAddress = await TestERC1155.getContractAddress(contractName)
+    return {
+        opType: OperationType.CHECK,
+        checkType: CheckOperationType.ERC1155,
+        chainId: 31337n,
+        contractAddress,
+        params: encodeERC1155Params({ threshold, tokenId }),
+    }
+}
+
+export async function erc20CheckOp(contractName: string, threshold: bigint): Promise<Operation> {
+    const contractAddress = await TestERC20.getContractAddress(contractName)
+    return {
+        opType: OperationType.CHECK,
+        checkType: CheckOperationType.ERC20,
+        chainId: 31337n,
+        contractAddress,
+        params: encodeThresholdParams({ threshold }),
+    }
+}
+
+export async function customCheckOp(contractName: string): Promise<Operation> {
+    const contractAddress = await TestCustomEntitlement.getContractAddress(contractName)
+    return {
+        opType: OperationType.CHECK,
+        checkType: CheckOperationType.ISENTITLED,
+        chainId: 31337n,
+        contractAddress,
+        params: '0x',
+    }
+}
+
+export const twoEth = BigInt(2e18)
+export const oneEth = BigInt(1e18)
+export const threeEth = BigInt(3e18)
+export const oneHalfEth = BigInt(5e17)
+
+export function ethBalanceCheckOp(threshold: bigint): Operation {
+    return {
+        opType: OperationType.CHECK,
+        checkType: CheckOperationType.ETH_BALANCE,
+        chainId: 31337n,
+        contractAddress: ethers.constants.AddressZero,
+        params: encodeThresholdParams({ threshold }),
+    }
 }
 
 /**
@@ -351,20 +430,18 @@ export async function createSpaceAndDefaultChannel(
     spaceDapp: ISpaceDapp,
     wallet: ethers.Wallet,
     name: string,
-    membership: IArchitectBase.MembershipStruct,
+    membership: LegacyMembershipStruct | MembershipStruct,
 ): Promise<{
     spaceId: string
     defaultChannelId: string
     userStreamView: IStreamStateView
 }> {
-    const transaction = await spaceDapp.createSpace(
-        {
-            spaceName: `${name}-space`,
-            uri: `http://${name}-space-metadata.com`,
-            channelName: 'general',
-            membership,
-        },
+    const transaction = await createVersionedSpaceFromMembership(
+        client,
+        spaceDapp,
         wallet,
+        name,
+        membership,
     )
     const receipt = await transaction.wait()
     expect(receipt.status).toEqual(1)
@@ -401,25 +478,123 @@ export async function createSpaceAndDefaultChannel(
     }
 }
 
+export async function createVersionedSpaceFromMembership(
+    client: Client,
+    spaceDapp: ISpaceDapp,
+    wallet: ethers.Wallet,
+    name: string,
+    membership: LegacyMembershipStruct | MembershipStruct,
+): Promise<ethers.ContractTransaction> {
+    if (useLegacySpaces() && isLegacyMembershipType(membership)) {
+        return await spaceDapp.createLegacySpace(
+            {
+                spaceName: `${name}-space`,
+                uri: `${name}-space-metadata`,
+                channelName: 'general',
+                membership,
+            },
+            wallet,
+        )
+    } else {
+        if (isLegacyMembershipType(membership)) {
+            // Convert legacy space params to current space params
+            membership = {
+                settings: membership.settings,
+                permissions: membership.permissions,
+                requirements: {
+                    everyone: membership.requirements.everyone,
+                    users: [],
+                    ruleData: encodeRuleDataV2(
+                        convertRuleDataV1ToV2(
+                            membership.requirements.ruleData as IRuleEntitlementBase.RuleDataStruct,
+                        ),
+                    ),
+                },
+            }
+        }
+        return await spaceDapp.createSpace(
+            {
+                spaceName: `${name}-space`,
+                uri: `${name}-space-metadata`,
+                channelName: 'general',
+                membership,
+            },
+            wallet,
+        )
+    }
+}
+
+// createVersionedSpace accepts either legacy or current space creation parameters and will
+// fall backto the legacy space creation endpoint on the spaceDapp if the appropriate flag is set.
+// If a user does not pass in a legacy space creation parameter, the function will not use
+// the legacy space creation endpoint, because the updated parameters are not backwards
+// compatible - we don't attempt conversion here.
+export async function createVersionedSpace(
+    spaceDapp: ISpaceDapp,
+    createSpaceParams: CreateSpaceParams | CreateLegacySpaceParams,
+    signer: SignerType,
+): Promise<ethers.ContractTransaction> {
+    if (useLegacySpaces() && isCreateLegacySpaceParams(createSpaceParams)) {
+        return await spaceDapp.createLegacySpace(createSpaceParams, signer)
+    } else {
+        if (isCreateLegacySpaceParams(createSpaceParams)) {
+            // Convert legacy space params to current space params
+            createSpaceParams = {
+                spaceName: createSpaceParams.spaceName,
+                uri: createSpaceParams.uri,
+                channelName: createSpaceParams.channelName,
+                membership: {
+                    settings: createSpaceParams.membership.settings,
+                    permissions: createSpaceParams.membership.permissions,
+                    requirements: {
+                        everyone: createSpaceParams.membership.requirements.everyone,
+                        users: [],
+                        ruleData: encodeRuleDataV2(
+                            convertRuleDataV1ToV2(
+                                createSpaceParams.membership.requirements
+                                    .ruleData as IRuleEntitlementBase.RuleDataStruct,
+                            ),
+                        ),
+                    },
+                },
+            }
+        }
+        return await spaceDapp.createSpace(createSpaceParams, signer)
+    }
+}
+
 // createUserStreamAndSyncClient creates a user stream for a given client that
 // uses a newly created space as the hint for the user stream, since the stream
 // node will not allow the creation of a user stream without a space id.
+//
+// If the membership info is a legacy membership struct and the legacy space flag
+// is set, the function will create a legacy space. Otherwise, it will convert the
+// legacy membership struct to a current membership struct if needed and use the
+// latest space creation endpoint.
 export async function createUserStreamAndSyncClient(
     client: Client,
     spaceDapp: ISpaceDapp,
     name: string,
-    membershipInfo: IArchitectBase.MembershipStruct,
+    membershipInfo: LegacyMembershipStruct | MembershipStruct,
     wallet: ethers.Wallet,
 ) {
-    const transaction = await spaceDapp.createSpace(
-        {
+    let createSpaceParams: CreateSpaceParams | CreateLegacySpaceParams
+    if (isLegacyMembershipType(membershipInfo)) {
+        createSpaceParams = {
             spaceName: `${name}-space`,
             uri: `${name}-space-metadata`,
             channelName: 'general',
             membership: membershipInfo,
-        },
-        wallet,
-    )
+        }
+    } else {
+        createSpaceParams = {
+            spaceName: `${name}-space`,
+            uri: `${name}-space-metadata`,
+            channelName: 'general',
+            membership: membershipInfo,
+        }
+    }
+    const transaction = await createVersionedSpace(spaceDapp, createSpaceParams, wallet)
     const receipt = await transaction.wait()
     expect(receipt.status).toEqual(1)
     const spaceAddress = spaceDapp.getSpaceAddress(receipt)
@@ -445,7 +620,7 @@ export async function expectUserCanJoin(
     const entitledWallet = await spaceDapp.getEntitledWalletForJoiningSpace(
         spaceId,
         address,
-        getXchainSupportedRpcUrlsForTesting(),
+        getXchainConfigForTesting(),
     )
     expect(entitledWallet).toBeDefined()
 
@@ -469,7 +644,7 @@ export async function expectUserCanJoin(
 export async function everyoneMembershipStruct(
     spaceDapp: ISpaceDapp,
     client: Client,
-): Promise<MembershipStruct> {
+): Promise<LegacyMembershipStruct> {
     const pricingModules = await spaceDapp.listPricingModules()
     const dynamicPricingModule = getDynamicPricingModule(pricingModules)
     expect(dynamicPricingModule).toBeDefined()
@@ -499,13 +674,13 @@ export function twoNftRuleData(
     nft1Address: string,
     nft2Address: string,
     logOpType: LogicalOperationType.AND | LogicalOperationType.OR = LogicalOperationType.AND,
-): IRuleEntitlementBase.RuleDataStruct {
+): IRuleEntitlementV2Base.RuleDataV2Struct {
     const leftOperation: Operation = {
         opType: OperationType.CHECK,
         checkType: CheckOperationType.ERC721,
         chainId: 31337n,
         contractAddress: nft1Address as Address,
-        threshold: 1n,
+        params: encodeThresholdParams({ threshold: 1n }),
     }
 
     const rightOperation: Operation = {
@@ -513,7 +688,7 @@ export function twoNftRuleData(
         checkType: CheckOperationType.ERC721,
         chainId: 31337n,
         contractAddress: nft2Address as Address,
-        threshold: 1n,
+        params: encodeThresholdParams({ threshold: 1n }),
     }
     const root: Operation = {
         opType: OperationType.LOGICAL,
@@ -681,7 +856,7 @@ export const getFixedPricingModule = (pricingModules: PricingModuleStruct[]) => 
     return pricingModules.find((module) => module.name === FIXED_PRICING)
 }
 
-export function getNftRuleData(testNftAddress: Address): IRuleEntitlementBase.RuleDataStruct {
+export function getNftRuleData(testNftAddress: Address): IRuleEntitlementV2Base.RuleDataV2Struct {
     return createExternalNFTStruct([testNftAddress])
 }
 
@@ -690,6 +865,9 @@ export interface CreateRoleContext {
     error: Error | undefined
 }
 
+// createRole creates a role on the spaceDapp with the given parameters, using the legacy endpoint
+// if the USE_LEGACY_SPACES environment variable is set and converting the ruleData into the correct
+// format as necessary. Be aware, though, that the legacy endpoint does not support erc1155 checks.
 export async function createRole(
     spaceDapp: ISpaceDapp,
     provider: ethers.providers.Provider,
@@ -697,31 +875,49 @@ export async function createRole(
     roleName: string,
     permissions: Permission[],
     users: string[],
-    ruleData: IRuleEntitlementBase.RuleDataStruct,
+    ruleData: IRuleEntitlementBase.RuleDataStruct | IRuleEntitlementV2Base.RuleDataV2Struct,
     signer: ethers.Signer,
 ): Promise<CreateRoleContext> {
     let txn: ethers.ContractTransaction | undefined = undefined
     let error: Error | undefined = undefined
-
-    try {
-        txn = await spaceDapp.createRole(spaceId, roleName, permissions, users, ruleData, signer)
-    } catch (err) {
-        error = spaceDapp.parseSpaceError(spaceId, err)
-        return { roleId: undefined, error }
+    if (useLegacySpaces()) {
+        try {
+            if (!isRuleDataV1(ruleData)) {
+                ruleData = convertRuleDataV2ToV1(ruleData)
+            }
+            txn = await spaceDapp.legacyCreateRole(
+                spaceId,
+                roleName,
+                permissions,
+                users,
+                ruleData,
+                signer,
+            )
+        } catch (err) {
+            error = spaceDapp.parseSpaceError(spaceId, err)
+            return { roleId: undefined, error }
+        }
+    } else {
+        if (isRuleDataV1(ruleData)) {
+            ruleData = convertRuleDataV1ToV2(ruleData)
+        }
+        try {
+            txn = await spaceDapp.createRole(
+                spaceId,
+                roleName,
+                permissions,
+                users,
+                ruleData,
+                signer,
+            )
+        } catch (err) {
+            error = spaceDapp.parseSpaceError(spaceId, err)
+            return { roleId: undefined, error }
+        }
     }
 
-    const receipt = await provider.waitForTransaction(txn.hash)
-    if (receipt.status === 0) {
-        return { roleId: undefined, error: new Error('Transaction failed') }
-    }
-
-    const parsedLogs = await spaceDapp.parseSpaceLogs(spaceId, receipt.logs)
-    const roleCreatedEvent = parsedLogs.find((log) => log?.name === 'RoleCreated')
-    if (!roleCreatedEvent) {
-        return { roleId: undefined, error: new Error('RoleCreated event not found') }
-    }
-    const roleId = (roleCreatedEvent.args[1] as ethers.BigNumber).toNumber()
-    return { roleId, error: undefined }
+    const { roleId, error: roleError } = await spaceDapp.waitForRoleCreated(spaceId, txn)
+    return { roleId, error: roleError }
 }
 
 export interface CreateChannelContext {
@@ -770,4 +966,274 @@ export function isEncryptedData(obj: unknown): obj is EncryptedData {
         (typeof data.checksum === 'string' || data.checksum === undefined) &&
         (typeof data.refEventId === 'string' || data.refEventId === undefined)
     )
+}
+
+// Users need to be mapped from 'alice', 'bob', etc to their wallet addresses,
+// because the wallets are created within this helper method.
+export async function createTownWithRequirements(requirements: {
+    everyone: boolean
+    users: string[]
+    ruleData: IRuleEntitlementV2Base.RuleDataV2Struct
+}) {
+    const {
+        alice,
+        bob,
+        carol,
+        aliceSpaceDapp,
+        bobSpaceDapp,
+        carolSpaceDapp,
+        aliceProvider,
+        bobProvider,
+        carolProvider,
+        alicesWallet,
+        bobsWallet,
+        carolsWallet,
+    } = await setupWalletsAndContexts()
+
+    const pricingModules = await bobSpaceDapp.listPricingModules()
+    const dynamicPricingModule = getDynamicPricingModule(pricingModules)
+    expect(dynamicPricingModule).toBeDefined()
+
+    const userNameToWallet: Record<string, string> = {
+        alice: alicesWallet.address,
+        bob: bobsWallet.address,
+        carol: carolsWallet.address,
+    }
+    requirements.users = requirements.users.map((user) => userNameToWallet[user])
+
+    const membershipInfo: MembershipStruct = {
+        settings: {
+            name: 'Everyone',
+            symbol: 'MEMBER',
+            price: 0,
+            maxSupply: 1000,
+            duration: 0,
+            currency: ETH_ADDRESS,
+            feeRecipient: bob.userId,
+            freeAllocation: 0,
+            pricingModule: dynamicPricingModule!.module,
+        },
+        permissions: [Permission.Read, Permission.Write],
+        requirements: {
+            everyone: requirements.everyone,
+            users: requirements.users,
+            ruleData: encodeRuleDataV2(requirements.ruleData),
+        },
+    }
+
+    // This helper method validates that the owner can join the space and default channel.
+    const {
+        spaceId,
+        defaultChannelId: channelId,
+        userStreamView: bobUserStreamView,
+    } = await createSpaceAndDefaultChannel(
+        bob,
+        bobSpaceDapp,
+        bobProvider.wallet,
+        'bobs',
+        membershipInfo,
+    )
+
+    // Validate that owner passes entitlement check
+    const entitledWallet = await bobSpaceDapp.getEntitledWalletForJoiningSpace(
+        spaceId,
+        bobsWallet.address,
+        getXchainConfigForTesting(),
+    )
+    expect(entitledWallet).toBeDefined()
+
+    return {
+        alice,
+        bob,
+        carol,
+        aliceSpaceDapp,
+        bobSpaceDapp,
+        carolSpaceDapp,
+        aliceProvider,
+        bobProvider,
+        carolProvider,
+        alicesWallet,
+        bobsWallet,
+        carolsWallet,
+        spaceId,
+        channelId,
+        bobUserStreamView,
+    }
+}
+
+export async function expectUserCannotJoinSpace(
+    spaceId: string,
+    client: Client,
+    spaceDapp: ISpaceDapp,
+    address: string,
+) {
+    // Check that the local evaluation of the user's entitlements for joining the space
+    // fails.
+    const entitledWallet = await spaceDapp.getEntitledWalletForJoiningSpace(
+        spaceId,
+        address,
+        getXchainConfigForTesting(),
+    )
+    expect(entitledWallet).toBeUndefined()
+    await expect(client.joinStream(spaceId)).rejects.toThrow(/PERMISSION_DENIED/)
+}
+
+// pass in users as 'alice', 'bob', 'carol' - b/c their wallets are created here
+export async function setupChannelWithCustomRole(
+    userNames: string[],
+    ruleData: IRuleEntitlementV2Base.RuleDataV2Struct,
+    permissions: Permission[] = [Permission.Read],
+) {
+    const {
+        alice,
+        bob,
+        carol,
+        alicesWallet,
+        bobsWallet,
+        carolsWallet,
+        aliceProvider,
+        bobProvider,
+        carolProvider,
+        aliceSpaceDapp,
+        bobSpaceDapp,
+        carolSpaceDapp,
+    } = await setupWalletsAndContexts()
+
+    const userNameToWallet: Record<string, string> = {
+        alice: alicesWallet.address,
+        bob: bobsWallet.address,
+        carol: carolsWallet.address,
+    }
+    const users = userNames.map((user) => userNameToWallet[user])
+
+    const { spaceId, defaultChannelId } = await createSpaceAndDefaultChannel(
+        bob,
+        bobSpaceDapp,
+        bobProvider.wallet,
+        'bob',
+        await everyoneMembershipStruct(bobSpaceDapp, bob),
+    )
+
+    const { roleId, error: roleError } = await createRole(
+        bobSpaceDapp,
+        bobProvider,
+        spaceId,
+        'gated role',
+        permissions,
+        users,
+        ruleData,
+        bobProvider.wallet,
+    )
+    expect(roleError).toBeUndefined()
+    log('roleId', roleId)
+
+    // Create a channel gated by the above role in the space contract.
+    const { channelId, error: channelError } = await createChannel(
+        bobSpaceDapp,
+        bobProvider,
+        spaceId,
+        'custom-role-gated-channel',
+        [roleId!.valueOf()],
+        bobProvider.wallet,
+    )
+    expect(channelError).toBeUndefined()
+    log('channelId', channelId)
+
+    // Then, establish a stream for the channel on the river node.
+    const { streamId: channelStreamId } = await bob.createChannel(
+        spaceId,
+        'nft-gated-channel',
+        'talk about nfts here',
+        channelId!,
+    )
+    expect(channelStreamId).toEqual(channelId)
+    // As the space owner, Bob should always be able to join the channel regardless of the custom role.
+    await expect(bob.joinStream(channelId!)).toResolve()
+
+    // Join alice to the town so she can attempt to join the role-gated channel.
+    // Alice should have no issue joining the space and default channel for an "everyone" town.
+    await expectUserCanJoin(
+        spaceId,
+        defaultChannelId,
+        'alice',
+        alice,
+        aliceSpaceDapp,
+        alicesWallet.address,
+        aliceProvider.wallet,
+    )
+
+    // Add carol to the space also so she can attempt to join role-gated channels.
+    await expectUserCanJoin(
+        spaceId,
+        defaultChannelId,
+        'carol',
+        carol,
+        carolSpaceDapp,
+        carolsWallet.address,
+        carolProvider.wallet,
+    )
+
+    return {
+        alice,
+        bob,
+        carol,
+        alicesWallet,
+        bobsWallet,
+        carolsWallet,
+        aliceProvider,
+        bobProvider,
+        carolProvider,
+        aliceSpaceDapp,
+        bobSpaceDapp,
+        carolSpaceDapp,
+        spaceId,
+        defaultChannelId,
+        channelId,
+        roleId,
+    }
+}
+
+export async function expectUserCanJoinChannel(
+    client: Client,
+    spaceDapp: ISpaceDapp,
+    spaceId: string,
+    channelId: string,
+) {
+    // Space dapp should evaluate the user as entitled to the channel
+    await expect(
+        spaceDapp.isEntitledToChannel(
+            spaceId,
+            channelId,
+            client.userId,
+            Permission.Read,
+            getXchainConfigForTesting(),
+        ),
+    ).resolves.toBeTruthy()
+
+    // Stream node should allow the join
+    await expect(client.joinStream(channelId)).toResolve()
+    const userStreamView = (await client.waitForStream(makeUserStreamId(client.userId))!).view
+    // Wait for alice's user stream to have the join
+    await waitFor(() => userStreamView.userContent.isMember(channelId, MembershipOp.SO_JOIN))
+}
+
+export async function expectUserCannotJoinChannel(
+    client: Client,
+    spaceDapp: ISpaceDapp,
+    spaceId: string,
+    channelId: string,
+) {
+    // Space dapp should evaluate the user as not entitled to the channel
+    await expect(
+        spaceDapp.isEntitledToChannel(
+            spaceId,
+            channelId,
+            client.userId,
+            Permission.Read,
+            getXchainConfigForTesting(),
+        ),
+    ).resolves.toBeFalsy()
+
+    // Stream node should not allow the join
+    await expect(client.joinStream(channelId)).rejects.toThrow(/7:PERMISSION_DENIED/)
 }

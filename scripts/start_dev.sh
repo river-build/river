@@ -101,10 +101,8 @@ wait_for_process "$BUILD_PID" "build"
 echo "STARTED ALL CHAINS AND BUILT ALL CONTRACTS"
 
 # Now generate the core server config
-./scripts/configure-nodes.sh --single
-./scripts/configure-nodes.sh --single_ne
 ./scripts/configure-nodes.sh --multi
-#./scripts/configure-nodes.sh --multi_ne
+./scripts/configure-nodes.sh --multi_ne
 
 # Continue with rest of the script
 echo "Continuing with the rest of the script..."
@@ -119,12 +117,9 @@ commands=(
     "watch_proto:cd packages/proto && yarn watch"
     "watch_web3:cd packages/web3 && yarn watch"
     "watch_go:cd protocol && yarn watch:go"
-    "core_single:./core/node/run_single.sh -r"
-    "core_single_ne:./core/node/run_single.sh -r --de"
     "core_multi:./core/node/run_multi.sh -r"
-    #"core_multi_ne:./core/node/run_multi.sh -r --de"
-    "xchain_single:RUN_ENV=single ./core/xchain/launch_multi.sh"
-    "xchain_multi:RUN_ENV=multi ./core/xchain/launch_multi.sh"
+    "core_multi_ne:./core/node/run_multi.sh -r --de"
+    "river_stream_metadata_multi_ne:yarn workspace @river-build/stream-metadata dev:local_multi_ne"
 )
 
 # Create a Tmux window for each command
@@ -148,4 +143,5 @@ is_closed() {
 if is_closed ; then
     echo "Session $SESSION_NAME has closed; delete core postgres container and volume"
     ./core/scripts/stop_storage.sh
+    yarn workspace @river-build/stream-metadata kill:local_multi_ne
 fi

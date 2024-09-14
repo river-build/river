@@ -29,7 +29,7 @@ type (
 		// ctx is the root context for all syncers in this set and used to cancel them
 		ctx context.Context
 		// globalSyncOpCtxCancel cancels ctx
-		globalSyncOpCtxCancel context.CancelFunc
+		globalSyncOpCtxCancel context.CancelCauseFunc
 		// syncID is the sync id as used between the client and this node
 		syncID string
 		// localNodeAddress is the node address for this stream node instance
@@ -79,7 +79,7 @@ func (cs SyncCookieSet) AsSlice() []*SyncCookie {
 // are streamed to the client.
 func NewSyncers(
 	ctx context.Context,
-	globalSyncOpCtxCancel context.CancelFunc,
+	globalSyncOpCtxCancel context.CancelCauseFunc,
 	syncID string,
 	streamCache events.StreamCache,
 	nodeRegistry nodes.NodeRegistry,
@@ -90,6 +90,17 @@ func NewSyncers(
 		syncers         = make(map[common.Address]StreamsSyncer)
 		streamID2Syncer = make(map[StreamId]StreamsSyncer)
 		messages        = make(chan *SyncStreamsResponse, 256)
+		ss              = &SyncerSet{
+			ctx:                   ctx,
+			globalSyncOpCtxCancel: globalSyncOpCtxCancel,
+			syncID:                syncID,
+			streamCache:           streamCache,
+			nodeRegistry:          nodeRegistry,
+			localNodeAddress:      localNodeAddress,
+			syncers:               syncers,
+			streamID2Syncer:       streamID2Syncer,
+			messages:              messages,
+		}
 	)
 
 	// instantiate background syncers for sync operation
@@ -108,7 +119,7 @@ func NewSyncers(
 			}
 
 			syncer, err := newRemoteSyncer(
-				ctx, globalSyncOpCtxCancel, syncID, nodeAddress, client, cookieSet.AsSlice(), messages)
+				ctx, globalSyncOpCtxCancel, syncID, nodeAddress, client, cookieSet.AsSlice(), ss.rmStream, messages)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -123,17 +134,7 @@ func NewSyncers(
 		}
 	}
 
-	return &SyncerSet{
-		ctx:                   ctx,
-		globalSyncOpCtxCancel: globalSyncOpCtxCancel,
-		syncID:                syncID,
-		streamCache:           streamCache,
-		nodeRegistry:          nodeRegistry,
-		localNodeAddress:      localNodeAddress,
-		syncers:               syncers,
-		streamID2Syncer:       streamID2Syncer,
-		messages:              messages,
-	}, messages, nil
+	return ss, messages, nil
 }
 
 func (ss *SyncerSet) Run() {
@@ -190,7 +191,9 @@ func (ss *SyncerSet) AddStream(ctx context.Context, nodeAddress common.Address, 
 		if err != nil {
 			return err
 		}
-		if syncer, err = newRemoteSyncer(ss.ctx, ss.globalSyncOpCtxCancel, ss.syncID, nodeAddress, client, []*SyncCookie{cookie}, ss.messages); err != nil {
+		if syncer, err = newRemoteSyncer(
+			ss.ctx, ss.globalSyncOpCtxCancel, ss.syncID, nodeAddress, client,
+			[]*SyncCookie{cookie}, ss.rmStream, ss.messages); err != nil {
 			return err
 		}
 	}
@@ -289,4 +292,10 @@ func ValidateAndGroupSyncCookies(syncCookies []*SyncCookie) (StreamCookieSetGrou
 		cookies[nodeAddr][streamID] = cookie
 	}
 	return cookies, nil
+}
+
+func (ss *SyncerSet) rmStream(streamID StreamId) {
+	ss.muSyncers.Lock()
+	delete(ss.streamID2Syncer, streamID)
+	ss.muSyncers.Unlock()
 }
