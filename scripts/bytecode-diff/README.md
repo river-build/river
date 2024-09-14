@@ -49,38 +49,60 @@ GOWORK=off go run ./main.go gamma omega -v
 ➜  bytecode-diff git:(jt/net-62-contract-differ) ✗ yq eval deployed-diffs/facet_diff_090324_18.yaml
 diamonds:
   - name: spaceOwner
-    origin: gamma
+    source: gamma
     target: omega
     facets:
-      - originContractName: ""
-        originFacetAddress: 0xfa98a1648761e494fc7d6efe5a06e357a76bd6fb
+      - sourceContractName: ""
+        sourceFacetAddress: 0xfa98a1648761e494fc7d6efe5a06e357a76bd6fb
         selectorsDiff:
           - "0x3953801b"
           - "0x91de4a83"
-        originBytecodeHash: 0xf86d9dbe53c89e14fa69cde925cca02b6efad519fe172f7b04d9515d7700a59b
-        originVerified: false
+        sourceBytecodeHash: 0xf86d9dbe53c89e14fa69cde925cca02b6efad519fe172f7b04d9515d7700a59b
+        sourceVerified: false
         targetVerified: false
-      - originContractName: SpaceOwner
-        originFacetAddress: 0x30c912d8ceb9793e4cd240862acfd0e6c4436c52
+      - sourceContractName: SpaceOwner
+        sourceFacetAddress: 0x30c912d8ceb9793e4cd240862acfd0e6c4436c52
         targetContractAddresses:
           - 0x63bC35259Ac32DF43Fba3b890F0F74951451976A
           - 0xe7EB1313f0E7076616534225e16E971B72b50C42
         selectorsDiff: []
-        originBytecodeHash: 0x461b53ab37fd24283ecd63eb0d4e71bd554a266036c73caf6d2ac39c435e7732
+        sourceBytecodeHash: 0x461b53ab37fd24283ecd63eb0d4e71bd554a266036c73caf6d2ac39c435e7732
         targetBytecodeHashes:
           - 0x86d20161a13671a6138b80551e94dd8c1638bc5151807ff2194aa1e50cdb3cac
           - 0xff0a94e93a4f4f6ee0ecd0d0e469e55ca40f1ab6c10e6af9da5b2b597f32b178
-        originVerified: true
+        sourceVerified: true
         targetVerified: true
-      - originContractName: ""
-        originFacetAddress: 0xdba2ce6125cc6b7f93c63d181a0780d5b421940b
+      - sourceContractName: ""
+        sourceFacetAddress: 0xdba2ce6125cc6b7f93c63d181a0780d5b421940b
         selectorsDiff:
           - "0x0d653654"
           - "0x466a18de"
-        originBytecodeHash: 0x583c2852056f90c96ed1cab935489f644b8ef564e0a7f11564925d07cf3bc593
-        originVerified: false
+        sourceBytecodeHash: 0x583c2852056f90c96ed1cab935489f644b8ef564e0a7f11564925d07cf3bc593
+        sourceVerified: false
         targetVerified: false
 
+```
+
+### Run keccak256 hash generation on deployed contracts
+
+```bash
+GOWORK=off go run main.go add-hashes gamma deployed-diffs/facet_diff_090624_1.yaml
+
+# output to new yaml file suffixed with _hashed.yaml including bytecodeHash for each contract in deployments section
+➜  bytecode-diff git:(jt/net-62-upgrade-script-2) ✗ yq e '.deployments' deployed-diffs/facet_diff_090624_1_hashed.yaml
+Architect:
+  address: 0xa18a3df4f63cdcae943d9c76730adf2812388de4
+  baseScanLink: https://sepolia.basescan.org/tx/0x4280ef1300fe001e7d85e7495eba13fc99be53ee7a7060e753d466f8bebf1622
+  bytecodeHash: 0x20d0a86e9ea31a39663285aacfe88705983520a4482a7bac5ada891c9adfe090
+  deploymentDate: 2024-09-06 19:04
+  transactionHash: 0x4280ef1300fe001e7d85e7495eba13fc99be53ee7a7060e753d466f8bebf1622
+Banning:
+  address: 0x4d88d1fbba6ce6bcdb4381549ee0b7c0d2b56919
+  baseScanLink: https://sepolia.basescan.org/tx/0x4ccbaf9750bcd0971975e73a24b05f1c51d4703cf72a406356c79eb54de9c33c
+  bytecodeHash: 0xa2ce3e77ba060ff1d59ed384e1c6c5788f308ad8bbbef612eb3e5de4e1d79de8
+  deploymentDate: 2024-09-06 19:05
+  transactionHash: 0x4ccbaf9750bcd0971975e73a24b05f1c51d4703cf72a406356c79eb54de9c33c
+...
 ```
 
 ### Flags
@@ -90,7 +112,7 @@ diamonds:
 A tool to retrieve and display contract bytecode diff for Base
 
 Usage:
-  bytecode-diff [origin_environment] [target_environment] [flags]
+  bytecode-diff [source_environment] [target_environment] [flags]
 
 Flags:
   -b, --base-rpc string           Base RPC provider URL

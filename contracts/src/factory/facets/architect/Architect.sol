@@ -7,6 +7,7 @@ import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEnti
 import {IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {ISpaceOwner} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
 import {IUserEntitlement} from "contracts/src/spaces/entitlements/user/IUserEntitlement.sol";
+import {ISpaceProxyInitializer} from "contracts/src/spaces/facets/proxy/ISpaceProxyInitializer.sol";
 
 // libraries
 
@@ -42,16 +43,27 @@ contract Architect is
   // =============================================================
   //                            Space
   // =============================================================
+
+  /// @inheritdoc IArchitect
   function createSpace(
-    SpaceInfo calldata spaceInfo
+    SpaceInfo memory spaceInfo
   ) external nonReentrant whenNotPaused returns (address) {
     return _createSpace(spaceInfo);
   }
 
+  /// @inheritdoc IArchitect
+  function createSpaceWithPrepay(
+    CreateSpace memory spaceInfo
+  ) external payable nonReentrant whenNotPaused returns (address) {
+    return _createSpaceWithPrepay(spaceInfo);
+  }
+
+  /// @inheritdoc IArchitect
   function getSpaceByTokenId(uint256 tokenId) external view returns (address) {
     return _getSpaceByTokenId(tokenId);
   }
 
+  /// @inheritdoc IArchitect
   function getTokenIdBySpace(address space) external view returns (uint256) {
     return _getTokenIdBySpace(space);
   }
@@ -60,6 +72,7 @@ contract Architect is
   //                         Implementations
   // =============================================================
 
+  /// @inheritdoc IArchitect
   function setSpaceArchitectImplementations(
     ISpaceOwner spaceToken,
     IUserEntitlement userEntitlementImplementation,
@@ -74,6 +87,7 @@ contract Architect is
     );
   }
 
+  /// @inheritdoc IArchitect
   function getSpaceArchitectImplementations()
     external
     view
@@ -85,5 +99,25 @@ contract Architect is
     )
   {
     return _getImplementations();
+  }
+
+  // =============================================================
+  //                         Proxy Initializer
+  // =============================================================
+
+  /// @inheritdoc IArchitect
+  function getProxyInitializer()
+    external
+    view
+    returns (ISpaceProxyInitializer)
+  {
+    return _getProxyInitializer();
+  }
+
+  /// @inheritdoc IArchitect
+  function setProxyInitializer(
+    ISpaceProxyInitializer proxyInitializer
+  ) external onlyOwner {
+    _setProxyInitializer(proxyInitializer);
   }
 }
