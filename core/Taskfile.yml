@@ -7,413 +7,413 @@ run: when_changed
 silent: true
 
 env:
-  RUN_ENV:
-    sh: |
-      if [ ! -f "./env/local/${RUN_ENV}/env.env" ]; then
-        echo "Error: ./env/local/${RUN_ENV}/env.env does not exist" >&2
-        exit 1
-      fi
-      echo "${RUN_ENV}"
-  ENV_PATH_BASE: "./env/local"
-  ENV_PATH: "{{.ENV_PATH_BASE}}/{{.RUN_ENV}}"
-  RUN_BASE: "./run_files/{{.RUN_ENV}}"
-  RIVER_ENV: "local_{{.RUN_ENV}}"
-  OPERATOR_ADDRESS:
-    sh: |
-      source ../contracts/.env.localhost
-      echo "${SENDER_ADDRESS}"
-  LOCAL_PRIVATE_KEY:
-    sh: |
-      source ../contracts/.env.localhost
-      echo "${LOCAL_PRIVATE_KEY}"
-  CONTRACTS_DIR: "../packages/generated/deployments/{{.RIVER_ENV}}"
-  INSTANCE_BASE: "{{.RUN_BASE}}"
-  INSTANCES_LIST:
-    sh: |
-      source {{.ENV_PATH}}/env.env
-      seq -f "%02g" -s " " 0 $((NUM_INSTANCES - 1))
-  RPC_BASE: "http://127.0.0.1:8545"
-  RPC_RIVER: "http://127.0.0.1:8546"
-      
+    RUN_ENV:
+        sh: |
+            if [ ! -f "./env/local/${RUN_ENV}/env.env" ]; then
+              echo "Error: ./env/local/${RUN_ENV}/env.env does not exist" >&2
+              exit 1
+            fi
+            echo "${RUN_ENV}"
+    ENV_PATH_BASE: './env/local'
+    ENV_PATH: '{{.ENV_PATH_BASE}}/{{.RUN_ENV}}'
+    RUN_BASE: './run_files/{{.RUN_ENV}}'
+    RIVER_ENV: 'local_{{.RUN_ENV}}'
+    OPERATOR_ADDRESS:
+        sh: |
+            source ../contracts/.env.localhost
+            echo "${SENDER_ADDRESS}"
+    LOCAL_PRIVATE_KEY:
+        sh: |
+            source ../contracts/.env.localhost
+            echo "${LOCAL_PRIVATE_KEY}"
+    CONTRACTS_DIR: '../packages/generated/deployments/{{.RIVER_ENV}}'
+    INSTANCE_BASE: '{{.RUN_BASE}}'
+    INSTANCES_LIST:
+        sh: |
+            source {{.ENV_PATH}}/env.env
+            seq -f "%02g" -s " " 0 $((NUM_INSTANCES - 1))
+    RPC_BASE: 'http://127.0.0.1:8545'
+    RPC_RIVER: 'http://127.0.0.1:8546'
+
 dotenv:
-  - ./env/local/{{.RUN_ENV}}/env.env
+    - ./env/local/{{.RUN_ENV}}/env.env
 
 tasks:
-  anvil-start:
-    label: anvil-start-{{.NAME}}
-    requires:
-      vars: 
-        - NAME
-        - PORT
-        - CHAIN_ID
-    cmds:
-      - echo "Starting {{.NAME}} on port {{.PORT}}"
-      - mkdir -p ./run_files/anvil
-      - bash -c '
-          nohup anvil --chain-id {{.CHAIN_ID}} 
-                      --port {{.PORT}} 
-                      --block-time 1 
-                      > ./run_files/anvil/{{.NAME}}.log 2>&1 &
-        '
-      - ../scripts/wait-for-port.sh {{.PORT}} anvil_{{.NAME}}
-    status:
-      - lsof -i :{{.PORT}} 
+    anvil-start:
+        label: anvil-start-{{.NAME}}
+        requires:
+            vars:
+                - NAME
+                - PORT
+                - CHAIN_ID
+        cmds:
+            - echo "Starting {{.NAME}} on port {{.PORT}}"
+            - mkdir -p ./run_files/anvil
+            - bash -c '
+              nohup anvil --chain-id {{.CHAIN_ID}}
+              --port {{.PORT}}
+              --block-time 1
+              > ./run_files/anvil/{{.NAME}}.log 2>&1 &
+              '
+            - ../scripts/wait-for-port.sh {{.PORT}} anvil_{{.NAME}}
+        status:
+            - lsof -i :{{.PORT}}
 
-  anvil-base:
-    cmds:
-      - task: anvil-start
-        vars:
-          NAME: base
-          PORT: 8545
-          CHAIN_ID: 31337
+    anvil-base:
+        cmds:
+            - task: anvil-start
+              vars:
+                  NAME: base
+                  PORT: 8545
+                  CHAIN_ID: 31337
 
-  anvil-base-stop:
-    cmds:
-      - ../scripts/kill-on-port.sh 8545 anvil_base
+    anvil-base-stop:
+        cmds:
+            - ../scripts/kill-on-port.sh 8545 anvil_base
 
-  anvil-river:
-    cmds:
-      - task: anvil-start
-        vars:
-          NAME: river
-          PORT: 8546
-          CHAIN_ID: 31338
+    anvil-river:
+        cmds:
+            - task: anvil-start
+              vars:
+                  NAME: river
+                  PORT: 8546
+                  CHAIN_ID: 31338
 
-  anvil-river-stop:
-    cmds:
-      - ../scripts/kill-on-port.sh 8546 anvil_river
+    anvil-river-stop:
+        cmds:
+            - ../scripts/kill-on-port.sh 8546 anvil_river
 
-  anvils:
-    deps:
-      - anvil-base
-      - anvil-river
+    anvils:
+        deps:
+            - anvil-base
+            - anvil-river
 
-  anvils-stop:
-    deps:
-      - anvil-base-stop
-      - anvil-river-stop
+    anvils-stop:
+        deps:
+            - anvil-base-stop
+            - anvil-river-stop
 
-  echo-env:
-    silent: true
-    cmds:
-      - echo "RUN_ENV=${RUN_ENV}"
-      - echo "DISABLE_BASE_CHAIN=${DISABLE_BASE_CHAIN}"
-      - echo "NUM_INSTANCES=${NUM_INSTANCES}"
-      - echo "RPC_PORT=${RPC_PORT}"
-      - echo "ENV_PATH=${ENV_PATH}"
-      - echo "RUN_BASE=${RUN_BASE}"
-      - echo "INSTANCE_BASE=${INSTANCE_BASE}"
-      - echo "RIVER_ENV=${RIVER_ENV}"
-      - echo "OPERATOR_ADDRESS=${OPERATOR_ADDRESS}"
-      - echo "INSTANCES_LIST=${INSTANCES_LIST}"
-      - echo "RPC_BASE=${RPC_BASE}"
-      - echo "RPC_RIVER=${RPC_RIVER}"
+    echo-env:
+        silent: true
+        cmds:
+            - echo "RUN_ENV=${RUN_ENV}"
+            - echo "DISABLE_BASE_CHAIN=${DISABLE_BASE_CHAIN}"
+            - echo "NUM_INSTANCES=${NUM_INSTANCES}"
+            - echo "RPC_PORT=${RPC_PORT}"
+            - echo "ENV_PATH=${ENV_PATH}"
+            - echo "RUN_BASE=${RUN_BASE}"
+            - echo "INSTANCE_BASE=${INSTANCE_BASE}"
+            - echo "RIVER_ENV=${RIVER_ENV}"
+            - echo "OPERATOR_ADDRESS=${OPERATOR_ADDRESS}"
+            - echo "INSTANCES_LIST=${INSTANCES_LIST}"
+            - echo "RPC_BASE=${RPC_BASE}"
+            - echo "RPC_RIVER=${RPC_RIVER}"
 
-  deploy-contracts:
-    deps:
-      - anvils
-    cmds:
-      - |
-        mkdir -p ${RUN_BASE}
-        ./../scripts/deploy-contracts.sh
-        echo "" > ${RUN_BASE}/contracts.env
-        echo "RIVER_ARCHITECTCONTRACT_ADDRESS=$(jq -r '.address' ${CONTRACTS_DIR}/base/addresses/spaceFactory.json)" >> ${RUN_BASE}/contracts.env
-        echo "RIVER_ENTITLEMENT_CONTRACT_ADDRESS=$(jq -r '.address' ${CONTRACTS_DIR}/base/addresses/baseRegistry.json)" >> ${RUN_BASE}/contracts.env
-        echo "RIVER_REGISTRYCONTRACT_ADDRESS=$(jq -r '.address' ${CONTRACTS_DIR}/river/addresses/riverRegistry.json)" >> ${RUN_BASE}/contracts.env
-        echo "RIVER_TEST_CONTRACT_ADDRESS=$(jq -r '.address' ${CONTRACTS_DIR}/base/addresses/entitlementGatedExample.json)" >> ${RUN_BASE}/contracts.env
-  
-  config-instance:
-    silent: true
-    run: always
-    deps:
-      - anvils
-    requires:
-      vars:
-        - INSTANCE_NUM
-    env:
-      INSTANCE_NUM: "{{.INSTANCE_NUM}}"
-    cmds:
-      - |
-        INSTANCE_DIR="${INSTANCE_BASE}/${INSTANCE_NUM}"
-        mkdir -p ${INSTANCE_DIR}/config
-        mkdir -p ${INSTANCE_DIR}/logs
-        mkdir -p ${INSTANCE_DIR}/wallet
-        mkdir -p ${INSTANCE_DIR}/certs
+    deploy-contracts:
+        deps:
+            - anvils
+        cmds:
+            - |
+                mkdir -p ${RUN_BASE}
+                ./../scripts/deploy-contracts.sh
+                echo "" > ${RUN_BASE}/contracts.env
+                echo "RIVER_ARCHITECTCONTRACT_ADDRESS=$(jq -r '.address' ${CONTRACTS_DIR}/base/addresses/spaceFactory.json)" >> ${RUN_BASE}/contracts.env
+                echo "RIVER_ENTITLEMENT_CONTRACT_ADDRESS=$(jq -r '.address' ${CONTRACTS_DIR}/base/addresses/baseRegistry.json)" >> ${RUN_BASE}/contracts.env
+                echo "RIVER_REGISTRYCONTRACT_ADDRESS=$(jq -r '.address' ${CONTRACTS_DIR}/river/addresses/riverRegistry.json)" >> ${RUN_BASE}/contracts.env
+                echo "RIVER_TEST_CONTRACT_ADDRESS=$(jq -r '.address' ${CONTRACTS_DIR}/base/addresses/entitlementGatedExample.json)" >> ${RUN_BASE}/contracts.env
 
-        bash -c 'echo "RIVER_PORT=$((${RPC_PORT} + 10#${INSTANCE_NUM}))"' > ${INSTANCE_DIR}/config/config.env
+    config-instance:
+        silent: true
+        run: always
+        deps:
+            - anvils
+        requires:
+            vars:
+                - INSTANCE_NUM
+        env:
+            INSTANCE_NUM: '{{.INSTANCE_NUM}}'
+        cmds:
+            - |
+                INSTANCE_DIR="${INSTANCE_BASE}/${INSTANCE_NUM}"
+                mkdir -p ${INSTANCE_DIR}/config
+                mkdir -p ${INSTANCE_DIR}/logs
+                mkdir -p ${INSTANCE_DIR}/wallet
+                mkdir -p ${INSTANCE_DIR}/certs
 
-        if [ ! -f "${INSTANCE_DIR}/wallet/private_key" ]; then
-          cast wallet new --json > "${INSTANCE_DIR}/wallet/wallet.json"
-          jq -r .[0].address "${INSTANCE_DIR}/wallet/wallet.json" > "${INSTANCE_DIR}/wallet/node_address"
-          jq -r .[0].private_key "${INSTANCE_DIR}/wallet/wallet.json" | sed 's/^0x//' > "${INSTANCE_DIR}/wallet/private_key"
-          cast rpc -r ${RPC_BASE} anvil_setBalance $(cat "${INSTANCE_DIR}/wallet/node_address") 0xfffffffffffffffffffffffffffffffffffffffffffffffffff
-          cast rpc -r ${RPC_RIVER} anvil_setBalance $(cat "${INSTANCE_DIR}/wallet/node_address") 0xfffffffffffffffffffffffffffffffffffffffffffffffffff
-        fi
+                bash -c 'echo "RIVER_PORT=$((${RPC_PORT} + 10#${INSTANCE_NUM}))"' > ${INSTANCE_DIR}/config/config.env
 
-        if [ ! -f "${INSTANCE_DIR}/certs/cert.pem" ]; then
-          ./scripts/generate-certs.sh $(realpath ${INSTANCE_DIR}/certs)
-        fi
+                if [ ! -f "${INSTANCE_DIR}/wallet/private_key" ]; then
+                  cast wallet new --json > "${INSTANCE_DIR}/wallet/wallet.json"
+                  jq -r .[0].address "${INSTANCE_DIR}/wallet/wallet.json" > "${INSTANCE_DIR}/wallet/node_address"
+                  jq -r .[0].private_key "${INSTANCE_DIR}/wallet/wallet.json" | sed 's/^0x//' > "${INSTANCE_DIR}/wallet/private_key"
+                  cast rpc -r ${RPC_BASE} anvil_setBalance $(cat "${INSTANCE_DIR}/wallet/node_address") 0xfffffffffffffffffffffffffffffffffffffffffffffffffff
+                  cast rpc -r ${RPC_RIVER} anvil_setBalance $(cat "${INSTANCE_DIR}/wallet/node_address") 0xfffffffffffffffffffffffffffffffffffffffffffffffffff
+                fi
 
-  config-all-instances:
-    cmds:
-      - for: { var: INSTANCES_LIST }
-        task: config-instance
-        vars:
-          INSTANCE_NUM: "{{.ITEM}}"
+                if [ ! -f "${INSTANCE_DIR}/certs/cert.pem" ]; then
+                  ./scripts/generate-certs.sh $(realpath ${INSTANCE_DIR}/certs)
+                fi
 
-  clean:
-    cmds:
-      - rm -rf ${RUN_BASE}
+    config-all-instances:
+        cmds:
+            - for: { var: INSTANCES_LIST }
+              task: config-instance
+              vars:
+                  INSTANCE_NUM: '{{.ITEM}}'
 
-  just-config-base-chain:
-    cmds:
-      - |
-        source ${RUN_BASE}/contracts.env
-        # register operator
-        cast send \
-            --rpc-url ${RPC_BASE} \
-            --private-key $LOCAL_PRIVATE_KEY \
-            $RIVER_ENTITLEMENT_CONTRACT_ADDRESS \
-            "registerOperator(address)" \
-            $OPERATOR_ADDRESS > /dev/null
-        # set operator to approved
-        cast send \
-            --rpc-url ${RPC_BASE} \
-            --private-key $LOCAL_PRIVATE_KEY \
-            $RIVER_ENTITLEMENT_CONTRACT_ADDRESS \
-            "setOperatorStatus(address,uint8)" \
-            $OPERATOR_ADDRESS \
-            2 > /dev/null
-    status:
-      - '[ "${DISABLE_BASE_CHAIN}" == "true" ]' 
+    clean:
+        cmds:
+            - rm -rf ${RUN_BASE}
 
-  config-base-chain:
-    deps:
-      - deploy-contracts
-    cmds:
-      - task: just-config-base-chain
+    just-config-base-chain:
+        cmds:
+            - |
+                source ${RUN_BASE}/contracts.env
+                # register operator
+                cast send \
+                    --rpc-url ${RPC_BASE} \
+                    --private-key $LOCAL_PRIVATE_KEY \
+                    $RIVER_ENTITLEMENT_CONTRACT_ADDRESS \
+                    "registerOperator(address)" \
+                    $OPERATOR_ADDRESS > /dev/null
+                # set operator to approved
+                cast send \
+                    --rpc-url ${RPC_BASE} \
+                    --private-key $LOCAL_PRIVATE_KEY \
+                    $RIVER_ENTITLEMENT_CONTRACT_ADDRESS \
+                    "setOperatorStatus(address,uint8)" \
+                    $OPERATOR_ADDRESS \
+                    2 > /dev/null
+        status:
+            - '[ "${DISABLE_BASE_CHAIN}" == "true" ]'
 
-  just-config-river-chain:
-    cmds:
-      - |
-        source ${RUN_BASE}/contracts.env
-        ./../scripts/set-riverchain-config.sh
+    config-base-chain:
+        deps:
+            - deploy-contracts
+        cmds:
+            - task: just-config-base-chain
 
-  config-river-chain:
-    deps:
-      - deploy-contracts
-    cmds:
-      - task: just-config-river-chain
+    just-config-river-chain:
+        cmds:
+            - |
+                source ${RUN_BASE}/contracts.env
+                ./../scripts/set-riverchain-config.sh
 
-  config-root:
-    cmds:
-      - |
-        mkdir -p ${RUN_BASE}
-        cp ${ENV_PATH_BASE}/common/common.yaml ${RUN_BASE}/common.yaml
-        cp ${ENV_PATH_BASE}/common/run.sh ${RUN_BASE}/run.sh
-        cp ${ENV_PATH}/config.yaml ${RUN_BASE}/config.yaml
+    config-river-chain:
+        deps:
+            - deploy-contracts
+        cmds:
+            - task: just-config-river-chain
 
-  register-node-base:
-    run: always
-    requires:
-      vars:
-        - INSTANCE_NUM
-    env:
-      INSTANCE_NUM: "{{.INSTANCE_NUM}}"
-    cmds:
-      - |
-        source ${RUN_BASE}/contracts.env
-        NODE_ADDRESS=$(cat ${INSTANCE_BASE}/${INSTANCE_NUM}/wallet/node_address)
-        cast send \
-                --rpc-url ${RPC_BASE} \
-                --private-key $LOCAL_PRIVATE_KEY \
-                $RIVER_ENTITLEMENT_CONTRACT_ADDRESS \
-                "registerNode(address)" \
-                $NODE_ADDRESS > /dev/null
-    status:
-      - '[ "${DISABLE_BASE_CHAIN}" == "true" ]' 
+    config-root:
+        cmds:
+            - |
+                mkdir -p ${RUN_BASE}
+                cp ${ENV_PATH_BASE}/common/common.yaml ${RUN_BASE}/common.yaml
+                cp ${ENV_PATH_BASE}/common/run.sh ${RUN_BASE}/run.sh
+                cp ${ENV_PATH}/config.yaml ${RUN_BASE}/config.yaml
 
-  just-register-all-nodes-base:
-    cmds:
-      - for: { var: INSTANCES_LIST }
-        task: register-node-base
-        vars:
-          INSTANCE_NUM: "{{.ITEM}}"
-    status:
-      - '[ "${DISABLE_BASE_CHAIN}" == "true" ]' 
+    register-node-base:
+        run: always
+        requires:
+            vars:
+                - INSTANCE_NUM
+        env:
+            INSTANCE_NUM: '{{.INSTANCE_NUM}}'
+        cmds:
+            - |
+                source ${RUN_BASE}/contracts.env
+                NODE_ADDRESS=$(cat ${INSTANCE_BASE}/${INSTANCE_NUM}/wallet/node_address)
+                cast send \
+                        --rpc-url ${RPC_BASE} \
+                        --private-key $LOCAL_PRIVATE_KEY \
+                        $RIVER_ENTITLEMENT_CONTRACT_ADDRESS \
+                        "registerNode(address)" \
+                        $NODE_ADDRESS > /dev/null
+        status:
+            - '[ "${DISABLE_BASE_CHAIN}" == "true" ]'
 
-  register-all-nodes-base:
-    deps:
-      - config-base-chain
-      - config-all-instances
-    cmds:
-      - task: just-register-all-nodes-base
+    just-register-all-nodes-base:
+        cmds:
+            - for: { var: INSTANCES_LIST }
+              task: register-node-base
+              vars:
+                  INSTANCE_NUM: '{{.ITEM}}'
+        status:
+            - '[ "${DISABLE_BASE_CHAIN}" == "true" ]'
 
-  register-node-river:
-    run: always
-    requires:
-      vars:
-        - INSTANCE_NUM
-    env:
-      INSTANCE_NUM: "{{.INSTANCE_NUM}}"
-    cmds:
-      - |
-        source ${RUN_BASE}/contracts.env
-        source ${INSTANCE_BASE}/${INSTANCE_NUM}/config/config.env
-        NODE_ADDRESS=$(cat ${INSTANCE_BASE}/${INSTANCE_NUM}/wallet/node_address)
-        cast send \
-                --rpc-url ${RPC_RIVER} \
-                --private-key $LOCAL_PRIVATE_KEY \
-                $RIVER_REGISTRYCONTRACT_ADDRESS \
-                "registerNode(address,string,uint8)" \
-                $NODE_ADDRESS \
-                https://localhost:${RIVER_PORT} \
-                2 > /dev/null
+    register-all-nodes-base:
+        deps:
+            - config-base-chain
+            - config-all-instances
+        cmds:
+            - task: just-register-all-nodes-base
 
-  just-register-all-nodes-river:
-    cmds:
-      - for: { var: INSTANCES_LIST }
-        task: register-node-river
-        vars:
-          INSTANCE_NUM: "{{.ITEM}}"
+    register-node-river:
+        run: always
+        requires:
+            vars:
+                - INSTANCE_NUM
+        env:
+            INSTANCE_NUM: '{{.INSTANCE_NUM}}'
+        cmds:
+            - |
+                source ${RUN_BASE}/contracts.env
+                source ${INSTANCE_BASE}/${INSTANCE_NUM}/config/config.env
+                NODE_ADDRESS=$(cat ${INSTANCE_BASE}/${INSTANCE_NUM}/wallet/node_address)
+                cast send \
+                        --rpc-url ${RPC_RIVER} \
+                        --private-key $LOCAL_PRIVATE_KEY \
+                        $RIVER_REGISTRYCONTRACT_ADDRESS \
+                        "registerNode(address,string,uint8)" \
+                        $NODE_ADDRESS \
+                        https://localhost:${RIVER_PORT} \
+                        2 > /dev/null
 
-  register-all-nodes-river:
-    deps:
-      - config-river-chain
-      - config-all-instances
-    cmds:
-      - task: just-register-all-nodes-river
+    just-register-all-nodes-river:
+        cmds:
+            - for: { var: INSTANCES_LIST }
+              task: register-node-river
+              vars:
+                  INSTANCE_NUM: '{{.ITEM}}'
 
-  config:
-    deps:
-      - config-root
-      - register-all-nodes-base
-      - register-all-nodes-river
+    register-all-nodes-river:
+        deps:
+            - config-river-chain
+            - config-all-instances
+        cmds:
+            - task: just-register-all-nodes-river
 
-  build:
-    cmds:
-      - |
-        OUTPUT=${RUN_BASE}/bin/river_node
-        echo Building node binary ${OUTPUT}
-        mkdir -p ${RUN_BASE}/bin
-        go build \
-            -o ${OUTPUT} \
-            -race \
-            -ldflags="-X github.com/river-build/river/core/river_node/version.branch=$(git rev-parse --abbrev-ref HEAD) -X github.com/river-build/river/core/river_node/version.commit=$(git describe --tags --always --dirty)" \
-            ./river_node/main.go
+    config:
+        deps:
+            - config-root
+            - register-all-nodes-base
+            - register-all-nodes-river
 
-  # Since task output is prefixed with the name of the task, we use 'rn' here
-  # so it is compact on the screen
-  rn:
-    run: always
-    requires:
-      vars:
-        - INSTANCE_NUM
-    env:
-      INSTANCE_NUM: "{{.INSTANCE_NUM}}"
-    cmds:
-      - |
-        RUN_ARGS=${RUN_ARGS:-}
-        if [ "$DISABLE_BASE_CHAIN" == "true" ]; then
-          RUN_CMD="run stream"
-        fi
-        cd ${INSTANCE_BASE}/${INSTANCE_NUM}
-        RUN_CMD=${RUN_CMD:-run} bash -c '
-            ../bin/river_node ${RUN_CMD} \
-                --config ../common.yaml \
-                --config ../contracts.env \
-                --config ../config.yaml \
-                --config config/config.env \
-                ${RUN_ARGS}' &
+    build:
+        cmds:
+            - |
+                OUTPUT=${RUN_BASE}/bin/river_node
+                echo Building node binary ${OUTPUT}
+                mkdir -p ${RUN_BASE}/bin
+                go build \
+                    -o ${OUTPUT} \
+                    -race \
+                    -ldflags="-X github.com/river-build/river/core/river_node/version.branch=$(git rev-parse --abbrev-ref HEAD) -X github.com/river-build/river/core/river_node/version.commit=$(git describe --tags --always --dirty)" \
+                    ./river_node/main.go
 
-  stop-node:
-    run: always
-    requires:
-      vars:
-        - INSTANCE_NUM
-    env:
-      INSTANCE_NUM: "{{.INSTANCE_NUM}}"
-    cmds:
-      - |
-        pushd ${INSTANCE_BASE}/${INSTANCE_NUM}
-        source config/config.env
-        popd
-        ../scripts/kill-on-port.sh ${RIVER_PORT} instance_${INSTANCE_NUM}
+    # Since task output is prefixed with the name of the task, we use 'rn' here
+    # so it is compact on the screen
+    rn:
+        run: always
+        requires:
+            vars:
+                - INSTANCE_NUM
+        env:
+            INSTANCE_NUM: '{{.INSTANCE_NUM}}'
+        cmds:
+            - |
+                RUN_ARGS=${RUN_ARGS:-}
+                if [ "$DISABLE_BASE_CHAIN" == "true" ]; then
+                  RUN_CMD="run stream"
+                fi
+                cd ${INSTANCE_BASE}/${INSTANCE_NUM}
+                RUN_CMD=${RUN_CMD:-run} bash -c '
+                    ../bin/river_node ${RUN_CMD} \
+                        --config ../common.yaml \
+                        --config ../contracts.env \
+                        --config ../config.yaml \
+                        --config config/config.env \
+                        ${RUN_ARGS}' &
 
-  stop-all:
-    cmds:
-      - for: { var: INSTANCES_LIST }
-        task: stop-node
-        vars:
-          INSTANCE_NUM: "{{.ITEM}}"
-           
-  wait-node:
-    run: always
-    requires:
-      vars:
-        - INSTANCE_NUM
-    env:
-      INSTANCE_NUM: "{{.INSTANCE_NUM}}"
-    cmds:
-      - |
-        pushd ${INSTANCE_BASE}/${INSTANCE_NUM}
-        source config/config.env
-        popd
-        cd ..
-        yarn wait-on https://localhost:${RIVER_PORT}/status?blockchain=1 --timeout=60000
+    stop-node:
+        run: always
+        requires:
+            vars:
+                - INSTANCE_NUM
+        env:
+            INSTANCE_NUM: '{{.INSTANCE_NUM}}'
+        cmds:
+            - |
+                pushd ${INSTANCE_BASE}/${INSTANCE_NUM}
+                source config/config.env
+                popd
+                ../scripts/kill-on-port.sh ${RIVER_PORT} instance_${INSTANCE_NUM}
 
-  wait-ctrl-c:
-    cmds:
-      - echo "STARTED ALL, CTRL+C TO EXIT"
-      - bash -c 'trap "exit 0" INT TERM; while true; do sleep 1; done'
+    stop-all:
+        cmds:
+            - for: { var: INSTANCES_LIST }
+              task: stop-node
+              vars:
+                  INSTANCE_NUM: '{{.ITEM}}'
 
-  # Executed all dependencies and then starts the nodes in background
-  start:
-    deps:
-      - config
-      - build
-    cmds:
-      - task: just-start
+    wait-node:
+        run: always
+        requires:
+            vars:
+                - INSTANCE_NUM
+        env:
+            INSTANCE_NUM: '{{.INSTANCE_NUM}}'
+        cmds:
+            - |
+                pushd ${INSTANCE_BASE}/${INSTANCE_NUM}
+                source config/config.env
+                popd
+                cd ..
+                yarn wait-on https://localhost:${RIVER_PORT}/status?blockchain=1 --timeout=60000
 
-  # Starts the nodes in background without executing dependencies
-  just-start:
-    cmds:
-      - for: { var: INSTANCES_LIST }
-        task: rn
-        vars:
-          INSTANCE_NUM: "{{.ITEM}}"
-      - for: { var: INSTANCES_LIST }
-        task: wait-node
-        vars:
-          INSTANCE_NUM: "{{.ITEM}}"
+    wait-ctrl-c:
+        cmds:
+            - echo "STARTED ALL, CTRL+C TO EXIT"
+            - bash -c 'trap "exit 0" INT TERM; while true; do sleep 1; done'
 
-  # Executes all dependencies and then starts the nodes in foreground waiting for CTRL+C
-  run:
-    deps:
-      - config
-      - build
-    cmds:
-      - for: { var: INSTANCES_LIST }
-        task: rn
-        vars:
-          INSTANCE_NUM: "{{.ITEM}}"
-      - for: { var: INSTANCES_LIST }
-        task: wait-node
-        vars:
-          INSTANCE_NUM: "{{.ITEM}}"
-      - task: wait-ctrl-c
-      - task: stop-all
+    # Executed all dependencies and then starts the nodes in background
+    start:
+        deps:
+            - config
+            - build
+        cmds:
+            - task: just-start
 
-  # Starts the nodes in foreground without executing dependencies waiting for CTRL+C
-  just-run:
-    cmds:
-      - for: { var: INSTANCES_LIST }
-        task: rn
-        vars:
-          INSTANCE_NUM: "{{.ITEM}}"
-      - for: { var: INSTANCES_LIST }
-        task: wait-node
-        vars:
-          INSTANCE_NUM: "{{.ITEM}}"
-      - task: wait-ctrl-c
-      - task: stop-all
+    # Starts the nodes in background without executing dependencies
+    just-start:
+        cmds:
+            - for: { var: INSTANCES_LIST }
+              task: rn
+              vars:
+                  INSTANCE_NUM: '{{.ITEM}}'
+            - for: { var: INSTANCES_LIST }
+              task: wait-node
+              vars:
+                  INSTANCE_NUM: '{{.ITEM}}'
+
+    # Executes all dependencies and then starts the nodes in foreground waiting for CTRL+C
+    run:
+        deps:
+            - config
+            - build
+        cmds:
+            - for: { var: INSTANCES_LIST }
+              task: rn
+              vars:
+                  INSTANCE_NUM: '{{.ITEM}}'
+            - for: { var: INSTANCES_LIST }
+              task: wait-node
+              vars:
+                  INSTANCE_NUM: '{{.ITEM}}'
+            - task: wait-ctrl-c
+            - task: stop-all
+
+    # Starts the nodes in foreground without executing dependencies waiting for CTRL+C
+    just-run:
+        cmds:
+            - for: { var: INSTANCES_LIST }
+              task: rn
+              vars:
+                  INSTANCE_NUM: '{{.ITEM}}'
+            - for: { var: INSTANCES_LIST }
+              task: wait-node
+              vars:
+                  INSTANCE_NUM: '{{.ITEM}}'
+            - task: wait-ctrl-c
+            - task: stop-all

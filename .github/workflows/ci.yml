@@ -269,10 +269,9 @@ jobs:
                   echo "NODE_EXTRA_CA_CERTS=$HOME/river-ca-cert.pem" >> $GITHUB_ENV
 
             - name: Run multiple nodes
-              working-directory: core/node
+              working-directory: core
               run: |
                   go install github.com/go-task/task/v3/cmd/task@latest
-                  cd ./core
                   RUN_ENV=multi_ne task start
 
             - name: Run SDK Tests (without entitlements)
@@ -406,9 +405,9 @@ jobs:
                   echo "NODE_EXTRA_CA_CERTS=$HOME/river-ca-cert.pem" >> $GITHUB_ENV
 
             - name: Run multiple nodes
+              working-directory: core
               run: |
                   go install github.com/go-task/task/v3/cmd/task@latest
-                  cd ./core
                   RUN_ENV=multi task start
 
             - name: Build & Test (with entitlements)
@@ -535,9 +534,9 @@ jobs:
                   echo "NODE_EXTRA_CA_CERTS=$HOME/river-ca-cert.pem" >> $GITHUB_ENV
 
             - name: Run multiple nodes
+              working-directory: core
               run: |
                   go install github.com/go-task/task/v3/cmd/task@latest
-                  cd ./core
                   RUN_ENV=multi_ne task start
 
             - name: Build & Test (with entitlements)
