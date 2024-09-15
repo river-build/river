@@ -98,7 +98,6 @@ abstract contract AlphaHelper is Interaction, DiamondHelper, IDiamondLoupeBase {
         continue;
       }
 
-      // Check if the facet address is in the provided list
       bool shouldRemove = false;
       for (uint256 j; j < facetAddresses.length; j++) {
         if (facets[i].facet == facetAddresses[j]) {

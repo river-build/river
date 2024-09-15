@@ -58,7 +58,10 @@ contract InteractAlphaSparse is AlphaHelper {
   }
 
   function __interact(address deployer) internal override {
+    vm.setEnv("OVERRIDE_DEPLOYMENTS", "1");
+
     readJSON(DEFAULT_JSON_FILE);
+
     DiamondFacets[] memory diamonds;
     uint256 updatedDiamondLen;
     // scope to avoid stack-too-deep error
@@ -105,8 +108,6 @@ contract InteractAlphaSparse is AlphaHelper {
       }
     }
 
-    vm.setEnv("OVERRIDE_DEPLOYMENTS", "1");
-
     // Iterate over diamonds array and process each diamond
     for (uint256 i = 0; i < diamonds.length; i++) {
       string memory diamondName = diamonds[i].diamond;
@@ -118,11 +119,9 @@ contract InteractAlphaSparse is AlphaHelper {
 
       for (uint256 j = 0; j < diamonds[i].numFacets; j++) {
         facetAddresses[j] = diamonds[i].facets[j].deployedAddress;
-      }
-      // Create an in-memory array of facet names from diamonds[i]
-      for (uint256 j = 0; j < diamonds[i].numFacets; j++) {
         facetNames[j] = diamonds[i].facets[j].facetName;
       }
+
       bytes32 diamondNameHash = keccak256(abi.encodePacked(diamondName));
 
       if (diamondNameHash == keccak256(abi.encodePacked("space"))) {
@@ -130,14 +129,14 @@ contract InteractAlphaSparse is AlphaHelper {
         existingFacets = IDiamondLoupe(diamondAddress).facets();
         // remove and redeploy facets based on diamond facet array of updated facets
         removeRemoteFacetsByAddresses(deployer, diamondAddress, facetAddresses);
-        deploySpace.diamondInitParams(deployer);
+        deploySpace.diamondInitParamsFromFacets(deployer, facetNames);
         newCuts = deploySpace.getCuts();
       } else if (diamondNameHash == keccak256(abi.encodePacked("spaceOwner"))) {
         diamondAddress = getDeployment("spaceOwner");
         existingFacets = IDiamondLoupe(diamondAddress).facets();
         // remove and redeploy facets based on diamond facet array of updated facets
         removeRemoteFacetsByAddresses(deployer, diamondAddress, facetAddresses);
-        deploySpaceOwner.diamondInitParams(deployer);
+        deploySpaceOwner.diamondInitParamsFromFacets(deployer, facetNames);
         newCuts = deploySpaceOwner.getCuts();
       } else if (
         diamondNameHash == keccak256(abi.encodePacked("spaceFactory"))
@@ -146,7 +145,7 @@ contract InteractAlphaSparse is AlphaHelper {
         existingFacets = IDiamondLoupe(diamondAddress).facets();
         // remove and redeploy facets based on diamond facet array of updated facets
         removeRemoteFacetsByAddresses(deployer, diamondAddress, facetAddresses);
-        deploySpaceFactory.diamondInitParams(deployer);
+        deploySpaceFactory.diamondInitParamsFromFacets(deployer, facetNames);
         newCuts = deploySpaceFactory.getCuts();
       } else if (
         diamondNameHash == keccak256(abi.encodePacked("baseRegistry"))
@@ -155,7 +154,7 @@ contract InteractAlphaSparse is AlphaHelper {
         existingFacets = IDiamondLoupe(diamondAddress).facets();
         // remove and redeploy facets based on diamond facet array of updated facets
         removeRemoteFacetsByAddresses(deployer, diamondAddress, facetAddresses);
-        deployBaseRegistry.diamondInitParams(deployer);
+        deployBaseRegistry.diamondInitParamsFromFacets(deployer, facetNames);
         newCuts = deployBaseRegistry.getCuts();
       } else {
         console.log("Unknown diamond:", diamondName);
