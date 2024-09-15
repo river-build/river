@@ -239,8 +239,8 @@ jobs:
               uses: mxschmitt/action-tmate@v3
               if: contains(github.event.pull_request.labels.*.name, 'ssh')
 
-            - name: Start and configure blockchains
-              run: ./scripts/bc-all-start.sh
+            #- name: Start and configure blockchains
+            #  run: ./scripts/bc-all-start.sh
 
             - name: Print Yarn package versions
               run: yarn info --name-only --all
@@ -271,9 +271,9 @@ jobs:
             - name: Run multiple nodes
               working-directory: core/node
               run: |
-                  ./run_multi.sh --de -c
-                  ./run_multi.sh --de -r &
-                  for i in {5180..5189}; do yarn wait-on https://localhost:$i/debug/multi --timeout=900000 --i=5000 --verbose; done
+                  go install github.com/go-task/task/v3/cmd/task@latest
+                  cd ./core
+                  RUN_ENV=multi_ne task start
 
             - name: Run SDK Tests (without entitlements)
               working-directory: packages/sdk
@@ -376,8 +376,8 @@ jobs:
               uses: mxschmitt/action-tmate@v3
               if: contains(github.event.pull_request.labels.*.name, 'ssh')
 
-            - name: Start and configure blockchains
-              run: ./scripts/bc-all-start.sh
+            #- name: Start and configure blockchains
+            #  run: ./scripts/bc-all-start.sh
 
             - name: Print Yarn package versions
               run: yarn info --name-only --all
@@ -407,10 +407,9 @@ jobs:
 
             - name: Run multiple nodes
               run: |
-                  cd ./core/node
-                  ./run_multi.sh -c
-                  ./run_multi.sh -r &
-                  for i in {5170..5179}; do yarn wait-on https://localhost:$i/debug/multi --timeout=900000 --i=5000 --verbose; done
+                  go install github.com/go-task/task/v3/cmd/task@latest
+                  cd ./core
+                  RUN_ENV=multi task start
 
             - name: Build & Test (with entitlements)
               run: yarn csb:turbo-no-sdk
@@ -506,8 +505,8 @@ jobs:
               uses: mxschmitt/action-tmate@v3
               if: contains(github.event.pull_request.labels.*.name, 'ssh')
 
-            - name: Start and configure blockchains
-              run: ./scripts/bc-all-start.sh
+            #- name: Start and configure blockchains
+            #  run: ./scripts/bc-all-start.sh
 
             - name: Print Yarn package versions
               run: yarn info --name-only --all
@@ -537,10 +536,9 @@ jobs:
 
             - name: Run multiple nodes
               run: |
-                  cd ./core/node
-                  ./run_multi.sh -c
-                  ./run_multi.sh -r &
-                  for i in {5170..5179}; do yarn wait-on https://localhost:$i/debug/multi --timeout=900000 --i=5000 --verbose; done
+                  go install github.com/go-task/task/v3/cmd/task@latest
+                  cd ./core
+                  RUN_ENV=multi_ne task start
 
             - name: Build & Test (with entitlements)
               run: yarn csb:turbo-no-sdk

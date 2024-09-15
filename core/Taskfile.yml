@@ -69,7 +69,7 @@ tasks:
 
   anvil-base-stop:
     cmds:
-      - ../scripts/kill-on-port.sh 8545
+      - ../scripts/kill-on-port.sh 8545 anvil_base
 
   anvil-river:
     cmds:
@@ -81,7 +81,7 @@ tasks:
 
   anvil-river-stop:
     cmds:
-      - ../scripts/kill-on-port.sh 8546
+      - ../scripts/kill-on-port.sh 8546 anvil_river
 
   anvils:
     deps:
@@ -165,7 +165,7 @@ tasks:
     cmds:
       - rm -rf ${RUN_BASE}
 
-  config-base-chain:
+  just-config-base-chain:
     cmds:
       - |
         source ${RUN_BASE}/contracts.env
@@ -187,23 +187,23 @@ tasks:
     status:
       - '[ "${DISABLE_BASE_CHAIN}" == "true" ]' 
 
-  config-base-chain-deps:
+  config-base-chain:
     deps:
       - deploy-contracts
     cmds:
-      - task: config-base-chain
+      - task: just-config-base-chain
 
-  config-river-chain:
+  just-config-river-chain:
     cmds:
       - |
         source ${RUN_BASE}/contracts.env
         ./../scripts/set-riverchain-config.sh
 
-  config-river-chain-deps:
+  config-river-chain:
     deps:
       - deploy-contracts
     cmds:
-      - task: config-river-chain
+      - task: just-config-river-chain
 
   config-root:
     cmds:
@@ -233,7 +233,7 @@ tasks:
     status:
       - '[ "${DISABLE_BASE_CHAIN}" == "true" ]' 
 
-  register-all-nodes-base:
+  just-register-all-nodes-base:
     cmds:
       - for: { var: INSTANCES_LIST }
         task: register-node-base
@@ -242,12 +242,12 @@ tasks:
     status:
       - '[ "${DISABLE_BASE_CHAIN}" == "true" ]' 
 
-  register-all-nodes-base-deps:
+  register-all-nodes-base:
     deps:
-      - config-base-chain-deps
+      - config-base-chain
       - config-all-instances
     cmds:
-      - task: register-all-nodes-base
+      - task: just-register-all-nodes-base
 
   register-node-river:
     run: always
@@ -270,28 +270,150 @@ tasks:
                 https://localhost:${RIVER_PORT} \
                 2 > /dev/null
 
-  register-all-nodes-river:
+  just-register-all-nodes-river:
     cmds:
       - for: { var: INSTANCES_LIST }
         task: register-node-river
         vars:
           INSTANCE_NUM: "{{.ITEM}}"
 
-  register-all-nodes-river-deps:
+  register-all-nodes-river:
     deps:
-      - config-river-chain-deps
+      - config-river-chain
       - config-all-instances
     cmds:
-      - task: register-all-nodes-river
+      - task: just-register-all-nodes-river
 
   config:
     deps:
       - config-root
-      - register-all-nodes-base-deps
-      - register-all-nodes-river-deps
+      - register-all-nodes-base
+      - register-all-nodes-river
 
+  build:
+    cmds:
+      - |
+        OUTPUT=${RUN_BASE}/bin/river_node
+        echo Building node binary ${OUTPUT}
+        mkdir -p ${RUN_BASE}/bin
+        go build \
+            -o ${OUTPUT} \
+            -race \
+            -ldflags="-X github.com/river-build/river/core/river_node/version.branch=$(git rev-parse --abbrev-ref HEAD) -X github.com/river-build/river/core/river_node/version.commit=$(git describe --tags --always --dirty)" \
+            ./river_node/main.go
 
+  # Since task output is prefixed with the name of the task, we use 'rn' here
+  # so it is compact on the screen
+  rn:
+    run: always
+    requires:
+      vars:
+        - INSTANCE_NUM
+    env:
+      INSTANCE_NUM: "{{.INSTANCE_NUM}}"
+    cmds:
+      - |
+        RUN_ARGS=${RUN_ARGS:-}
+        if [ "$DISABLE_BASE_CHAIN" == "true" ]; then
+          RUN_CMD="run stream"
+        fi
+        cd ${INSTANCE_BASE}/${INSTANCE_NUM}
+        RUN_CMD=${RUN_CMD:-run} bash -c '
+            ../bin/river_node ${RUN_CMD} \
+                --config ../common.yaml \
+                --config ../contracts.env \
+                --config ../config.yaml \
+                --config config/config.env \
+                ${RUN_ARGS}' &
 
-         
+  stop-node:
+    run: always
+    requires:
+      vars:
+        - INSTANCE_NUM
+    env:
+      INSTANCE_NUM: "{{.INSTANCE_NUM}}"
+    cmds:
+      - |
+        pushd ${INSTANCE_BASE}/${INSTANCE_NUM}
+        source config/config.env
+        popd
+        ../scripts/kill-on-port.sh ${RIVER_PORT} instance_${INSTANCE_NUM}
 
+  stop-all:
+    cmds:
+      - for: { var: INSTANCES_LIST }
+        task: stop-node
+        vars:
+          INSTANCE_NUM: "{{.ITEM}}"
+           
+  wait-node:
+    run: always
+    requires:
+      vars:
+        - INSTANCE_NUM
+    env:
+      INSTANCE_NUM: "{{.INSTANCE_NUM}}"
+    cmds:
+      - |
+        pushd ${INSTANCE_BASE}/${INSTANCE_NUM}
+        source config/config.env
+        popd
+        cd ..
+        yarn wait-on https://localhost:${RIVER_PORT}/status?blockchain=1 --timeout=60000
 
+  wait-ctrl-c:
+    cmds:
+      - echo "STARTED ALL, CTRL+C TO EXIT"
+      - bash -c 'trap "exit 0" INT TERM; while true; do sleep 1; done'
+
+  # Executed all dependencies and then starts the nodes in background
+  start:
+    deps:
+      - config
+      - build
+    cmds:
+      - task: just-start
+
+  # Starts the nodes in background without executing dependencies
+  just-start:
+    cmds:
+      - for: { var: INSTANCES_LIST }
+        task: rn
+        vars:
+          INSTANCE_NUM: "{{.ITEM}}"
+      - for: { var: INSTANCES_LIST }
+        task: wait-node
+        vars:
+          INSTANCE_NUM: "{{.ITEM}}"
+
+  # Executes all dependencies and then starts the nodes in foreground waiting for CTRL+C
+  run:
+    deps:
+      - config
+      - build
+    cmds:
+      - for: { var: INSTANCES_LIST }
+        task: rn
+        vars:
+          INSTANCE_NUM: "{{.ITEM}}"
+      - for: { var: INSTANCES_LIST }
+        task: wait-node
+        vars:
+          INSTANCE_NUM: "{{.ITEM}}"
+      - task: wait-ctrl-c
+      - task: stop-all
+
+  # Starts the nodes in foreground without executing dependencies waiting for CTRL+C
+  just-run:
+    cmds:
+      - for: { var: INSTANCES_LIST }
+        task: rn
+        vars:
+          INSTANCE_NUM: "{{.ITEM}}"
+      - for: { var: INSTANCES_LIST }
+        task: wait-node
+        vars:
+          INSTANCE_NUM: "{{.ITEM}}"
+      - task: wait-ctrl-c
+      - task: stop-all
