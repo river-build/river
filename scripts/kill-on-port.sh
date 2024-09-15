@@ -2,28 +2,29 @@
 set -euo pipefail
 
 I_RPC_PORT=$1
+NAME=${2:-process}
 
 WAIT_TIME=1
 MAX_ATTEMPTS=5
 
-echo "Stopping instance on port $I_RPC_PORT"
+echo "Stopping ${NAME} on port $I_RPC_PORT"
 
 PID="$(lsof -t -i:${I_RPC_PORT} || true)"
 
 # Check if PID is empty
 if [ -z "$PID" ]; then
-  echo "No process found for instance on port $I_RPC_PORT. Skipping..."
+  echo "No process found for ${NAME} on port $I_RPC_PORT. Skipping..."
   exit 0
 fi
 
 # Check if process exists before attempting to stop it
 if ! kill -0 $PID 2>/dev/null; then
-  echo "Instance with PID $PID on port $I_RPC_PORT is not running. Skipping..."
+  echo "${NAME} with PID $PID on port $I_RPC_PORT is not running. Skipping..."
   exit  0
 fi
 
 # Send SIGTERM (Ctrl-C)
-echo "Stopping instance with PID $PID on port $I_RPC_PORT"
+echo "Stopping ${NAME} with PID $PID on port $I_RPC_PORT"
 kill -SIGTERM $PID
 
 # Loop to check if process stops
@@ -35,8 +36,8 @@ done
 
 # Check if process is still running, and if so, send SIGKILL (-9)
 if kill -0 $PID 2>/dev/null; then
-  echo "Instance with PID $PID on port $I_RPC_PORT did not stop; forcefully killing..."
+  echo "${NAME} with PID $PID on port $I_RPC_PORT did not stop; forcefully killing..."
   kill -SIGKILL $PID
 else
-  echo "Instance with PID $PID on port $I_RPC_PORT stopped successfully"
+  echo "${NAME} with PID $PID on port $I_RPC_PORT stopped successfully"
 fi
