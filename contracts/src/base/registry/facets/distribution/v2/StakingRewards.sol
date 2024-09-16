@@ -157,11 +157,39 @@ library StakingRewards {
     updateReward(ds, beneficiaryTreasure);
 
     depositId = ds.nextDepositId++;
+    Deposit storage deposit = ds.deposits[depositId];
+    (deposit.amount, deposit.owner, deposit.beneficiary, deposit.delegatee) = (
+      amount,
+      depositor,
+      beneficiary,
+      delegatee
+    );
 
+    _increaseStake(
+      ds,
+      deposit,
+      beneficiaryTreasure,
+      depositor,
+      amount,
+      delegatee
+    );
+
+    address proxy = retrieveOrDeployProxy(ds, delegatee);
+    ds.stakeToken.safeTransferFrom(depositor, proxy, amount);
+  }
+
+  function _increaseStake(
+    Layout storage ds,
+    Deposit storage deposit,
+    Treasure storage beneficiaryTreasure,
+    address depositor,
+    uint96 amount,
+    address delegatee
+  ) private {
     ds.totalStaked += amount;
     unchecked {
       // because totalStaked >= stakedByDepositor[depositor]
-      // and totalStaked >= treasureByBeneficiary[beneficiary].earningPower
+      // and totalStaked >= beneficiaryTreasure.earningPower
       // if totalStaked doesn't overflow, they won't
       ds.stakedByDepositor[depositor] += amount;
 
@@ -181,18 +209,8 @@ library StakingRewards {
         beneficiaryTreasure.earningPower += amount - commissionEarningPower;
         delegateeTreasure.earningPower += commissionEarningPower;
       }
-
-      ds.deposits[depositId] = Deposit({
-        amount: amount,
-        owner: depositor,
-        beneficiary: beneficiary,
-        delegatee: delegatee,
-        commissionEarningPower: commissionEarningPower
-      });
+      deposit.commissionEarningPower += commissionEarningPower;
     }
-
-    address proxy = retrieveOrDeployProxy(ds, delegatee);
-    ds.stakeToken.safeTransferFrom(depositor, proxy, amount);
   }
 
   function increaseStake(
@@ -202,7 +220,13 @@ library StakingRewards {
   ) internal {
     Deposit storage deposit = ds.deposits[depositId];
     // cache storage reads
-    (address beneficiary, address owner) = (deposit.beneficiary, deposit.owner);
+    (
+      uint96 currentAmount,
+      address owner,
+      address beneficiary,
+      address delegatee
+    ) = (deposit.amount, deposit.owner, deposit.beneficiary, deposit.delegatee);
+    deposit.amount = currentAmount + amount;
 
     updateGlobalReward(ds);
 
@@ -211,17 +235,9 @@ library StakingRewards {
     ];
     updateReward(ds, beneficiaryTreasure);
 
-    deposit.amount += amount;
-    ds.totalStaked += amount;
-    unchecked {
-      // because totalStaked >= stakedByDepositor[depositor]
-      // and totalStaked >= treasureByBeneficiary[beneficiary].earningPower
-      // if totalStaked doesn't overflow, they won't
-      ds.stakedByDepositor[owner] += amount;
-      beneficiaryTreasure.earningPower += amount;
-    }
+    _increaseStake(ds, deposit, beneficiaryTreasure, owner, amount, delegatee);
 
-    address proxy = ds.delegationProxies[deposit.delegatee];
+    address proxy = ds.delegationProxies[delegatee];
     ds.stakeToken.safeTransferFrom(owner, proxy, amount);
   }
 
