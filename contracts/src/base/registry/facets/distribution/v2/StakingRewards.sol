@@ -19,8 +19,9 @@ library StakingRewards {
   struct Deposit {
     uint96 amount;
     address owner;
-    address delegatee;
     address beneficiary;
+    uint96 commissionEarningPower;
+    address delegatee;
   }
 
   struct Treasure {
@@ -43,6 +44,7 @@ library StakingRewards {
     mapping(address beneficiary => Treasure) treasureByBeneficiary;
     mapping(uint256 depositId => Deposit) deposits;
     mapping(address delegatee => address proxy) delegationProxies;
+    mapping(address delegatee => uint256) commissionRateByDelegatee;
   }
 
   event DelegationProxyDeployed(
@@ -160,14 +162,35 @@ library StakingRewards {
       // and totalStaked >= treasureByBeneficiary[beneficiary].earningPower
       // if totalStaked doesn't overflow, they won't
       ds.stakedByDepositor[depositor] += amount;
-      ds.treasureByBeneficiary[beneficiary].earningPower += amount;
+
+      uint256 commissionRate = ds.commissionRateByDelegatee[delegatee];
+      uint256 commissionEarningPower;
+      if (commissionRate == 0) {
+        ds.treasureByBeneficiary[beneficiary].earningPower += amount;
+      } else {
+        updateReward(ds, delegatee);
+
+        commissionEarningPower = FixedPointMathLib.mulDiv(
+          amount,
+          commissionRate,
+          SCALE_FACTOR
+        );
+        ds.treasureByBeneficiary[beneficiary].earningPower +=
+          amount -
+          commissionEarningPower;
+        ds
+          .treasureByBeneficiary[delegatee]
+          .earningPower += commissionEarningPower;
+      }
+
+      ds.deposits[depositId] = Deposit({
+        amount: amount,
+        owner: depositor,
+        beneficiary: beneficiary,
+        delegatee: delegatee,
+        commissionEarningPower: commissionEarningPower
+      });
     }
-    ds.deposits[depositId] = Deposit({
-      amount: amount,
-      owner: depositor,
-      delegatee: delegatee,
-      beneficiary: beneficiary
-    });
 
     address proxy = retrieveOrDeployProxy(ds, delegatee);
     ds.stakeToken.safeTransferFrom(depositor, proxy, amount);

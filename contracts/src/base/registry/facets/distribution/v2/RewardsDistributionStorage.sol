@@ -14,7 +14,7 @@ library RewardsDistributionStorage {
     0x9aed53e346ef79853612b4c863c4eb308de8a5e84e0fd7d00dad88eb5ff1ea00;
 
   struct Layout {
-    StakingRewards.Layout stakingRewards;
+    StakingRewards.Layout staking;
     mapping(address rewardNotifier => bool) isRewardNotifier;
   }
 
