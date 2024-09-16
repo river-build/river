@@ -215,10 +215,9 @@ library StakingRewards {
 
   function increaseStake(
     Layout storage ds,
-    uint256 depositId,
+    Deposit storage deposit,
     uint96 amount
   ) internal {
-    Deposit storage deposit = ds.deposits[depositId];
     // cache storage reads
     (
       uint96 currentAmount,
