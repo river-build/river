@@ -10,6 +10,7 @@ import {SpaceDelegationStorage} from "contracts/src/base/registry/facets/delegat
 
 // libraries
 import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
+import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 import {StakingRewards} from "./StakingRewards.sol";
 
 // contracts
@@ -75,9 +76,21 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     StakingRewards.Deposit storage deposit = ds.staking.deposits[depositId];
-    if (msg.sender != deposit.owner)
-      revert RewardsDistribution_NotDepositOwner();
+    if (msg.sender != deposit.owner) {
+      CustomRevert.revertWith(RewardsDistribution_NotDepositOwner.selector);
+    }
 
     StakingRewards.increaseStake(ds.staking, deposit, amount);
+  }
+
+  function redelegate(uint256 depositId, address delegatee) external {
+    RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
+      .layout();
+    StakingRewards.Deposit storage deposit = ds.staking.deposits[depositId];
+    if (msg.sender != deposit.owner) {
+      CustomRevert.revertWith(RewardsDistribution_NotDepositOwner.selector);
+    }
+
+    StakingRewards.redelegate(ds.staking, deposit, delegatee);
   }
 }
