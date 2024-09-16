@@ -165,52 +165,16 @@ library StakingRewards {
       delegatee
     );
 
-    _increaseStake(
-      ds,
-      deposit,
-      beneficiaryTreasure,
-      depositor,
-      amount,
-      delegatee
-    );
-
-    address proxy = retrieveOrDeployProxy(ds, delegatee);
-    ds.stakeToken.safeTransferFrom(depositor, proxy, amount);
-  }
-
-  function _increaseStake(
-    Layout storage ds,
-    Deposit storage deposit,
-    Treasure storage beneficiaryTreasure,
-    address depositor,
-    uint96 amount,
-    address delegatee
-  ) private {
     ds.totalStaked += amount;
     unchecked {
       // because totalStaked >= stakedByDepositor[depositor]
-      // and totalStaked >= beneficiaryTreasure.earningPower
       // if totalStaked doesn't overflow, they won't
       ds.stakedByDepositor[depositor] += amount;
-
-      uint256 commissionRate = ds.commissionRateByDelegatee[delegatee];
-      uint96 commissionEarningPower;
-      if (commissionRate == 0) {
-        beneficiaryTreasure.earningPower += amount;
-      } else {
-        Treasure storage delegateeTreasure = ds.treasureByBeneficiary[
-          delegatee
-        ];
-        updateReward(ds, delegateeTreasure);
-
-        commissionEarningPower = uint96(
-          FixedPointMathLib.mulDiv(amount, commissionRate, SCALE_FACTOR)
-        );
-        beneficiaryTreasure.earningPower += amount - commissionEarningPower;
-        delegateeTreasure.earningPower += commissionEarningPower;
-      }
-      deposit.commissionEarningPower += commissionEarningPower;
     }
+    _increaseEarningPower(ds, deposit, beneficiaryTreasure, amount, delegatee);
+
+    address proxy = retrieveOrDeployProxy(ds, delegatee);
+    ds.stakeToken.safeTransferFrom(depositor, proxy, amount);
   }
 
   function increaseStake(
@@ -234,26 +198,95 @@ library StakingRewards {
     ];
     updateReward(ds, beneficiaryTreasure);
 
-    _increaseStake(ds, deposit, beneficiaryTreasure, owner, amount, delegatee);
+    ds.totalStaked += amount;
+    unchecked {
+      // because totalStaked >= stakedByDepositor[depositor]
+      // if totalStaked doesn't overflow, they won't
+      ds.stakedByDepositor[owner] += amount;
+    }
+    _increaseEarningPower(ds, deposit, beneficiaryTreasure, amount, delegatee);
 
     address proxy = ds.delegationProxies[delegatee];
     ds.stakeToken.safeTransferFrom(owner, proxy, amount);
   }
 
+  function _increaseEarningPower(
+    Layout storage ds,
+    Deposit storage deposit,
+    Treasure storage beneficiaryTreasure,
+    uint96 amount,
+    address delegatee
+  ) private {
+    unchecked {
+      uint256 commissionRate = ds.commissionRateByDelegatee[delegatee];
+      uint96 commissionEarningPower;
+      if (commissionRate == 0) {
+        beneficiaryTreasure.earningPower += amount;
+      } else {
+        Treasure storage delegateeTreasure = ds.treasureByBeneficiary[
+          delegatee
+        ];
+        updateReward(ds, delegateeTreasure);
+
+        commissionEarningPower = uint96(
+          FixedPointMathLib.mulDiv(amount, commissionRate, SCALE_FACTOR)
+        );
+        beneficiaryTreasure.earningPower += amount - commissionEarningPower;
+        delegateeTreasure.earningPower += commissionEarningPower;
+      }
+      deposit.commissionEarningPower += commissionEarningPower;
+    }
+  }
+
   function redelegate(
     Layout storage ds,
-    uint256 depositId,
+    Deposit storage deposit,
     address newDelegatee
   ) internal {
     if (newDelegatee == address(0)) {
       CustomRevert.revertWith(StakingRewards_InvalidAddress.selector);
     }
-    Deposit storage deposit = ds.deposits[depositId];
-    address oldDelegatee = deposit.delegatee;
+
+    updateGlobalReward(ds);
+
+    (
+      uint96 amount,
+      address beneficiary,
+      address oldDelegatee,
+      uint96 commissionEarningPower
+    ) = (
+        deposit.amount,
+        deposit.beneficiary,
+        deposit.delegatee,
+        deposit.commissionEarningPower
+      );
+
+    Treasure storage beneficiaryTreasure = ds.treasureByBeneficiary[
+      beneficiary
+    ];
+    updateReward(ds, beneficiaryTreasure);
+    beneficiaryTreasure.earningPower -= amount - commissionEarningPower;
+
+    {
+      Treasure storage delegateeTreasure = ds.treasureByBeneficiary[
+        oldDelegatee
+      ];
+      updateReward(ds, delegateeTreasure);
+      delegateeTreasure.earningPower -= commissionEarningPower;
+    }
+
+    _increaseEarningPower(
+      ds,
+      deposit,
+      beneficiaryTreasure,
+      amount,
+      newDelegatee
+    );
+
     address oldProxy = ds.delegationProxies[oldDelegatee];
     deposit.delegatee = newDelegatee;
     address newProxy = retrieveOrDeployProxy(ds, newDelegatee);
-    ds.stakeToken.safeTransferFrom(oldProxy, newProxy, deposit.amount);
+    ds.stakeToken.safeTransferFrom(oldProxy, newProxy, amount);
   }
 
   function changeBeneficiary(
