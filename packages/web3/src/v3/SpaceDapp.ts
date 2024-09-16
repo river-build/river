@@ -1291,7 +1291,12 @@ export class SpaceDapp implements ISpaceDapp {
         const membershipPrice = await space.Membership.read.getMembershipPrice()
         const freeAllocation = await this.getMembershipFreeAllocation(spaceId)
         const totalSupply = await space.ERC721A.read.totalSupply()
-        const remainingFreeSupply = freeAllocation.add(prepaidSupply).sub(totalSupply)
+        // totalSupply = number of memberships minted
+        // freeAllocation = number of memberships that are free to mint, set during space creation
+        // prepaidSupply = number of additional prepaid memberships
+        const remainingFreeSupply = totalSupply.lt(freeAllocation)
+            ? freeAllocation.add(prepaidSupply).sub(totalSupply)
+            : prepaidSupply
 
         return {
             price: prepaidSupply.gt(0) ? ethers.BigNumber.from(0) : membershipPrice,
