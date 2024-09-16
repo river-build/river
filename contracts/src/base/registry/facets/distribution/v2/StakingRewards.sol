@@ -98,9 +98,8 @@ library StakingRewards {
 
   function currentUnclaimedReward(
     Layout storage ds,
-    address beneficiary
+    Treasure storage treasure
   ) internal view returns (uint256) {
-    Treasure storage treasure = ds.treasureByBeneficiary[beneficiary];
     return
       treasure.unclaimedRewardSnapshot +
       (treasure.earningPower *
@@ -118,9 +117,8 @@ library StakingRewards {
   }
 
   /// @dev Must be called after updating the global reward.
-  function updateReward(Layout storage ds, address beneficiary) internal {
-    Treasure storage treasure = ds.treasureByBeneficiary[beneficiary];
-    treasure.unclaimedRewardSnapshot = currentUnclaimedReward(ds, beneficiary);
+  function updateReward(Layout storage ds, Treasure storage treasure) internal {
+    treasure.unclaimedRewardSnapshot = currentUnclaimedReward(ds, treasure);
     treasure.rewardPerTokenAccumulated = ds.rewardPerTokenAccumulated;
   }
 
@@ -152,7 +150,11 @@ library StakingRewards {
     }
 
     updateGlobalReward(ds);
-    updateReward(ds, beneficiary);
+
+    Treasure storage beneficiaryTreasure = ds.treasureByBeneficiary[
+      beneficiary
+    ];
+    updateReward(ds, beneficiaryTreasure);
 
     depositId = ds.nextDepositId++;
 
@@ -164,23 +166,20 @@ library StakingRewards {
       ds.stakedByDepositor[depositor] += amount;
 
       uint256 commissionRate = ds.commissionRateByDelegatee[delegatee];
-      uint256 commissionEarningPower;
+      uint96 commissionEarningPower;
       if (commissionRate == 0) {
-        ds.treasureByBeneficiary[beneficiary].earningPower += amount;
+        beneficiaryTreasure.earningPower += amount;
       } else {
-        updateReward(ds, delegatee);
+        Treasure storage delegateeTreasure = ds.treasureByBeneficiary[
+          delegatee
+        ];
+        updateReward(ds, delegateeTreasure);
 
-        commissionEarningPower = FixedPointMathLib.mulDiv(
-          amount,
-          commissionRate,
-          SCALE_FACTOR
+        commissionEarningPower = uint96(
+          FixedPointMathLib.mulDiv(amount, commissionRate, SCALE_FACTOR)
         );
-        ds.treasureByBeneficiary[beneficiary].earningPower +=
-          amount -
-          commissionEarningPower;
-        ds
-          .treasureByBeneficiary[delegatee]
-          .earningPower += commissionEarningPower;
+        beneficiaryTreasure.earningPower += amount - commissionEarningPower;
+        delegateeTreasure.earningPower += commissionEarningPower;
       }
 
       ds.deposits[depositId] = Deposit({
@@ -206,7 +205,11 @@ library StakingRewards {
     (address beneficiary, address owner) = (deposit.beneficiary, deposit.owner);
 
     updateGlobalReward(ds);
-    updateReward(ds, beneficiary);
+
+    Treasure storage beneficiaryTreasure = ds.treasureByBeneficiary[
+      beneficiary
+    ];
+    updateReward(ds, beneficiaryTreasure);
 
     deposit.amount += amount;
     ds.totalStaked += amount;
@@ -215,7 +218,7 @@ library StakingRewards {
       // and totalStaked >= treasureByBeneficiary[beneficiary].earningPower
       // if totalStaked doesn't overflow, they won't
       ds.stakedByDepositor[owner] += amount;
-      ds.treasureByBeneficiary[beneficiary].earningPower += amount;
+      beneficiaryTreasure.earningPower += amount;
     }
 
     address proxy = ds.delegationProxies[deposit.delegatee];
@@ -246,22 +249,28 @@ library StakingRewards {
     if (newBeneficiary == address(0)) {
       CustomRevert.revertWith(StakingRewards_InvalidAddress.selector);
     }
+
     updateGlobalReward(ds);
+
     Deposit storage deposit = ds.deposits[depositId];
-    address oldBeneficiary = deposit.beneficiary;
-    updateReward(ds, oldBeneficiary);
+    Treasure storage oldTreasure = ds.treasureByBeneficiary[
+      deposit.beneficiary
+    ];
+    updateReward(ds, oldTreasure);
+
     uint256 amount = deposit.amount;
     unchecked {
       // treasureByBeneficiary[oldBeneficiary].earningPower >= deposit.amount
-      ds.treasureByBeneficiary[oldBeneficiary].earningPower -= amount;
+      oldTreasure.earningPower -= amount;
     }
 
-    updateReward(ds, newBeneficiary);
+    Treasure storage newTreasure = ds.treasureByBeneficiary[newBeneficiary];
+    updateReward(ds, newTreasure);
     deposit.beneficiary = newBeneficiary;
     unchecked {
       // the invariant totalStaked >= treasureByBeneficiary[beneficiary].earningPower is ensured on stake and increaseStake
       // the following won't overflow
-      ds.treasureByBeneficiary[newBeneficiary].earningPower += amount;
+      newTreasure.earningPower += amount;
     }
   }
 
@@ -274,7 +283,11 @@ library StakingRewards {
     Deposit storage deposit = ds.deposits[depositId];
     // cache storage reads
     (address beneficiary, address owner) = (deposit.beneficiary, deposit.owner);
-    updateReward(ds, beneficiary);
+
+    Treasure storage beneficiaryTreasure = ds.treasureByBeneficiary[
+      beneficiary
+    ];
+    updateReward(ds, beneficiaryTreasure);
 
     deposit.amount -= amount;
     unchecked {
@@ -283,7 +296,7 @@ library StakingRewards {
       // stakedByDepositor[owner] >= deposit.amount
       ds.stakedByDepositor[owner] -= amount;
       // treasureByBeneficiary[beneficiary].earningPower >= deposit.amount
-      ds.treasureByBeneficiary[beneficiary].earningPower -= amount;
+      beneficiaryTreasure.earningPower -= amount;
     }
     ds.stakeToken.safeTransferFrom(
       ds.delegationProxies[deposit.delegatee],
@@ -297,9 +310,10 @@ library StakingRewards {
     address beneficiary
   ) internal returns (uint256 reward) {
     updateGlobalReward(ds);
-    updateReward(ds, beneficiary);
 
     Treasure storage treasure = ds.treasureByBeneficiary[beneficiary];
+    updateReward(ds, treasure);
+
     reward = treasure.unclaimedRewardSnapshot / SCALE_FACTOR;
     if (reward != 0) {
       unchecked {
