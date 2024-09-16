@@ -4,14 +4,16 @@ pragma solidity ^0.8.18;
 // interfaces
 
 // libraries
-import {FixedPointMathLib} from "solady/src/utils/FixedPointMathLib.sol";
-import {SafeTransferLib} from "solady/src/utils/SafeTransferLib.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 
 // contracts
 import {DelegationProxy} from "./DelegationProxy.sol";
 
 library StakingRewards {
+  using SafeTransferLib for address;
+
   uint256 internal constant SCALE_FACTOR = 1e36;
 
   struct Deposit {
@@ -168,8 +170,7 @@ library StakingRewards {
     });
 
     address proxy = retrieveOrDeployProxy(ds, delegatee);
-    SafeTransferLib.safeTransferFrom(ds.stakeToken, depositor, proxy, amount);
-    // TODO: emit events
+    ds.stakeToken.safeTransferFrom(depositor, proxy, amount);
   }
 
   function increaseStake(
@@ -195,8 +196,7 @@ library StakingRewards {
     }
 
     address proxy = ds.delegationProxies[deposit.delegatee];
-    SafeTransferLib.safeTransferFrom(ds.stakeToken, owner, proxy, amount);
-    // TODO: emit events
+    ds.stakeToken.safeTransferFrom(owner, proxy, amount);
   }
 
   function redelegate(
@@ -212,13 +212,7 @@ library StakingRewards {
     address oldProxy = ds.delegationProxies[oldDelegatee];
     deposit.delegatee = newDelegatee;
     address newProxy = retrieveOrDeployProxy(ds, newDelegatee);
-    SafeTransferLib.safeTransferFrom(
-      ds.stakeToken,
-      oldProxy,
-      newProxy,
-      deposit.amount
-    );
-    // TODO: emit events
+    ds.stakeToken.safeTransferFrom(oldProxy, newProxy, deposit.amount);
   }
 
   function changeBeneficiary(
@@ -246,7 +240,6 @@ library StakingRewards {
       // the following won't overflow
       ds.treasureByBeneficiary[newBeneficiary].earningPower += amount;
     }
-    // TODO: emit events
   }
 
   function withdraw(
@@ -269,13 +262,11 @@ library StakingRewards {
       // treasureByBeneficiary[beneficiary].earningPower >= deposit.amount
       ds.treasureByBeneficiary[beneficiary].earningPower -= amount;
     }
-    SafeTransferLib.safeTransferFrom(
-      ds.stakeToken,
+    ds.stakeToken.safeTransferFrom(
       ds.delegationProxies[deposit.delegatee],
       owner,
       amount
     );
-    // TODO: emit events
   }
 
   function claimReward(
@@ -291,8 +282,7 @@ library StakingRewards {
       unchecked {
         treasure.unclaimedRewardSnapshot -= reward * SCALE_FACTOR;
       }
-      SafeTransferLib.safeTransfer(ds.rewardToken, beneficiary, reward);
-      // TODO: emit events
+      ds.rewardToken.safeTransfer(beneficiary, reward);
     }
   }
 
@@ -338,6 +328,5 @@ library StakingRewards {
     ) {
       CustomRevert.revertWith(StakingRewards_InsufficientReward.selector);
     }
-    // TODO: emit events
   }
 }
