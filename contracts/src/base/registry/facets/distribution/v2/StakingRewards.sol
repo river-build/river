@@ -238,6 +238,31 @@ library StakingRewards {
     }
   }
 
+  function _decreaseEarningPower(
+    Layout storage ds,
+    Deposit storage deposit,
+    Treasure storage beneficiaryTreasure,
+    uint96 amount,
+    address delegatee
+  ) private {
+    updateReward(ds, beneficiaryTreasure);
+
+    unchecked {
+      uint96 commissionEarningPower = deposit.commissionEarningPower;
+      if (commissionEarningPower == 0) {
+        beneficiaryTreasure.earningPower -= amount;
+      } else {
+        beneficiaryTreasure.earningPower -= amount - commissionEarningPower;
+
+        Treasure storage delegateeTreasure = ds.treasureByBeneficiary[
+          delegatee
+        ];
+        updateReward(ds, delegateeTreasure);
+        delegateeTreasure.earningPower -= commissionEarningPower;
+      }
+    }
+  }
+
   function redelegate(
     Layout storage ds,
     Deposit storage deposit,
@@ -249,31 +274,22 @@ library StakingRewards {
 
     updateGlobalReward(ds);
 
-    (
-      uint96 amount,
-      address beneficiary,
-      address oldDelegatee,
-      uint96 commissionEarningPower
-    ) = (
-        deposit.amount,
-        deposit.beneficiary,
-        deposit.delegatee,
-        deposit.commissionEarningPower
-      );
+    (uint96 amount, address beneficiary, address oldDelegatee) = (
+      deposit.amount,
+      deposit.beneficiary,
+      deposit.delegatee
+    );
 
     Treasure storage beneficiaryTreasure = ds.treasureByBeneficiary[
       beneficiary
     ];
-    updateReward(ds, beneficiaryTreasure);
-    beneficiaryTreasure.earningPower -= amount - commissionEarningPower;
-
-    {
-      Treasure storage delegateeTreasure = ds.treasureByBeneficiary[
-        oldDelegatee
-      ];
-      updateReward(ds, delegateeTreasure);
-      delegateeTreasure.earningPower -= commissionEarningPower;
-    }
+    _decreaseEarningPower(
+      ds,
+      deposit,
+      beneficiaryTreasure,
+      amount,
+      oldDelegatee
+    );
 
     _increaseEarningPower(
       ds,
@@ -301,24 +317,27 @@ library StakingRewards {
     updateGlobalReward(ds);
 
     Deposit storage deposit = ds.deposits[depositId];
-    Treasure storage oldTreasure = ds.treasureByBeneficiary[
-      deposit.beneficiary
-    ];
-    updateReward(ds, oldTreasure);
-
-    uint256 amount = deposit.amount;
-    unchecked {
-      // treasureByBeneficiary[oldBeneficiary].earningPower >= deposit.amount
-      oldTreasure.earningPower -= amount;
-    }
-
-    Treasure storage newTreasure = ds.treasureByBeneficiary[newBeneficiary];
-    updateReward(ds, newTreasure);
+    (uint96 amount, address oldBeneficiary, uint96 commissionEarningPower) = (
+      deposit.amount,
+      deposit.beneficiary,
+      deposit.commissionEarningPower
+    );
     deposit.beneficiary = newBeneficiary;
+
     unchecked {
+      uint96 amountMinusCommission = amount - commissionEarningPower;
+
+      Treasure storage oldTreasure = ds.treasureByBeneficiary[oldBeneficiary];
+      updateReward(ds, oldTreasure);
+
+      oldTreasure.earningPower -= amountMinusCommission;
+
+      Treasure storage newTreasure = ds.treasureByBeneficiary[newBeneficiary];
+      updateReward(ds, newTreasure);
+
       // the invariant totalStaked >= treasureByBeneficiary[beneficiary].earningPower is ensured on stake and increaseStake
       // the following won't overflow
-      newTreasure.earningPower += amount;
+      newTreasure.earningPower += amountMinusCommission;
     }
   }
 
