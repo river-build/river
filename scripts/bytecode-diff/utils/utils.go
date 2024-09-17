@@ -58,8 +58,10 @@ type SourceDiffReport struct {
 	NumExisting        uint              `yaml:"numExisting"`
 }
 
-type FacetName string
-type DiamondName string
+type (
+	FacetName   string
+	DiamondName string
+)
 
 type CommitHashes struct {
 	Previous string `yaml:"previous"`
@@ -154,6 +156,7 @@ func CreateFacetHashesReport(
 	environment string,
 	verbose bool,
 ) error {
+	var err error
 	// Get current git commit hash
 	cmd := exec.Command("git", "rev-parse", "--short", "HEAD")
 	commitHashRaw, err := cmd.Output()
@@ -166,9 +169,18 @@ func CreateFacetHashesReport(
 	currentDate := time.Now().UTC().Format("01022006")
 
 	var previousReport SourceDiffReport
+	var s3Client *s3.Client
+	var cfg aws.Config
 
 	if strings.HasPrefix(outputPath, "s3://") {
-		previousReport, err = getLatestYamlFileFromS3(outputPath, commitHash)
+		// Create S3 client
+		cfg, err = config.LoadDefaultConfig(context.TODO())
+		if err != nil {
+			return fmt.Errorf("unable to load SDK config: %w", err)
+		}
+		s3Client = s3.NewFromConfig(cfg)
+
+		previousReport, err = getLatestYamlFileFromS3(s3Client, outputPath, commitHash)
 	} else {
 		previousReport, err = getLatestYamlFile(outputPath, commitHash)
 	}
@@ -183,12 +195,18 @@ func CreateFacetHashesReport(
 	report := generateReport(previousReport, compiledHashes, alphaFacets, environment, commitHashes)
 
 	if strings.HasPrefix(outputPath, "s3://") {
-		return writeYamlReportToS3(outputPath, report, commitHash, currentDate, verbose)
+		return writeYamlReportToS3(s3Client, outputPath, report, commitHash, currentDate, verbose)
 	}
 	return writeYamlReport(outputPath, report, commitHash, currentDate, verbose)
 }
 
-func generateReport(previousReport SourceDiffReport, currentHashes map[FacetName]string, envFacets map[DiamondName][]Facet, environment string, commitHashes CommitHashes) SourceDiffReport {
+func generateReport(
+	previousReport SourceDiffReport,
+	currentHashes map[FacetName]string,
+	envFacets map[DiamondName][]Facet,
+	environment string,
+	commitHashes CommitHashes,
+) SourceDiffReport {
 	report := SourceDiffReport{
 		Environment:        environment,
 		CurrentCommitHash:  commitHashes.Current,
@@ -267,7 +285,12 @@ func findPreviousDiff(previousReport SourceDiffReport, diamond string, facetName
 	return nil
 }
 
-func writeYamlReport(yamlOutputDir string, report SourceDiffReport, commitHash, currentDate string, verbose bool) error {
+func writeYamlReport(
+	yamlOutputDir string,
+	report SourceDiffReport,
+	commitHash, currentDate string,
+	verbose bool,
+) error {
 	yamlContent, err := yaml.Marshal(report)
 	if err != nil {
 		return fmt.Errorf("error marshaling YAML content: %w", err)
@@ -313,7 +336,13 @@ func writeYamlReport(yamlOutputDir string, report SourceDiffReport, commitHash, 
 	return nil
 }
 
-func writeYamlReportToS3(s3Path string, report SourceDiffReport, commitHash, currentDate string, verbose bool) error {
+func writeYamlReportToS3(
+	client *s3.Client,
+	s3Path string,
+	report SourceDiffReport,
+	commitHash, currentDate string,
+	verbose bool,
+) error {
 	// Parse bucket and key from s3Path
 	parts := strings.SplitN(strings.TrimPrefix(s3Path, "s3://"), "/", 2)
 	bucket := parts[0]
@@ -334,15 +363,6 @@ func writeYamlReportToS3(s3Path string, report SourceDiffReport, commitHash, cur
 	if keyPrefix != "" {
 		key = filepath.Join(keyPrefix, filename)
 	}
-
-	// Load AWS configuration
-	cfg, err := config.LoadDefaultConfig(context.TODO())
-	if err != nil {
-		return fmt.Errorf("unable to load SDK config: %w", err)
-	}
-
-	// Create S3 client
-	client := s3.NewFromConfig(cfg)
 
 	// Upload file to S3
 	_, err = client.PutObject(context.TODO(), &s3.PutObjectInput{
@@ -429,7 +449,7 @@ func getLatestYamlFile(dir string, currentCommitHash string) (SourceDiffReport, 
 	return SourceDiffReport{}, nil // No file with a different commit hash found
 }
 
-func getLatestYamlFileFromS3(s3Path string, currentCommitHash string) (SourceDiffReport, error) {
+func getLatestYamlFileFromS3(client *s3.Client, s3Path string, currentCommitHash string) (SourceDiffReport, error) {
 	// Parse bucket and prefix from s3Path
 	parts := strings.SplitN(strings.TrimPrefix(s3Path, "s3://"), "/", 2)
 	bucket := parts[0]
@@ -437,15 +457,6 @@ func getLatestYamlFileFromS3(s3Path string, currentCommitHash string) (SourceDif
 	if len(parts) > 1 {
 		prefix = parts[1]
 	}
-
-	// Load AWS configuration
-	cfg, err := config.LoadDefaultConfig(context.TODO())
-	if err != nil {
-		return SourceDiffReport{}, fmt.Errorf("unable to load SDK config: %w", err)
-	}
-
-	// Create S3 client
-	client := s3.NewFromConfig(cfg)
 
 	// List objects in the bucket
 	input := &s3.ListObjectsV2Input{
@@ -491,11 +502,10 @@ func getLatestYamlFileFromS3(s3Path string, currentCommitHash string) (SourceDif
 		}
 	}
 
-	bucket, key := parts[0], *latestFile.Key
 	// Download the file from S3
 	result, err := client.GetObject(context.TODO(), &s3.GetObjectInput{
 		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
+		Key:    latestFile.Key,
 	})
 	if err != nil {
 		return SourceDiffReport{}, fmt.Errorf("error downloading file from S3: %w", err)
