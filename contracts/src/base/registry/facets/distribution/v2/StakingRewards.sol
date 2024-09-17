@@ -2,6 +2,7 @@
 pragma solidity ^0.8.18;
 
 // interfaces
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // libraries
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
@@ -158,6 +159,7 @@ library StakingRewards {
 
     depositId = ds.nextDepositId++;
     Deposit storage deposit = ds.deposits[depositId];
+    // batch storage writes
     (deposit.amount, deposit.owner, deposit.beneficiary, deposit.delegatee) = (
       amount,
       depositor,
@@ -274,6 +276,7 @@ library StakingRewards {
 
     updateGlobalReward(ds);
 
+    // cache storage reads
     (uint96 amount, address beneficiary, address oldDelegatee) = (
       deposit.amount,
       deposit.beneficiary,
@@ -317,6 +320,7 @@ library StakingRewards {
     updateGlobalReward(ds);
 
     Deposit storage deposit = ds.deposits[depositId];
+    // TODO: measure gas
     (uint96 amount, address oldBeneficiary, uint96 commissionEarningPower) = (
       deposit.amount,
       deposit.beneficiary,
@@ -428,7 +432,7 @@ library StakingRewards {
 
     if (
       FixedPointMathLib.mulDiv(rewardRate, rewardDuration, SCALE_FACTOR) >
-      reward
+      IERC20(ds.rewardToken).balanceOf(address(this))
     ) {
       CustomRevert.revertWith(StakingRewards_InsufficientReward.selector);
     }
