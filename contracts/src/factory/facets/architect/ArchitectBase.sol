@@ -372,9 +372,6 @@ abstract contract ArchitectBase is Factory, IArchitectBase, PricingModulesBase {
     salt = keccak256(abi.encode(msg.sender, spaceTokenId, block.timestamp));
 
     IMembershipBase.Membership memory membershipSettings = membership.settings;
-    if (membershipSettings.feeRecipient == address(0)) {
-      membershipSettings.feeRecipient = msg.sender;
-    }
 
     address proxyInitializer = address(
       ImplementationStorage.layout().proxyInitializer

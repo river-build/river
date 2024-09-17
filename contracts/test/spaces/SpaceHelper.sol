@@ -39,9 +39,7 @@ abstract contract SpaceHelper {
             symbol: "MEM",
             price: 0,
             maxSupply: 0,
-            duration: 0,
             currency: address(0),
-            feeRecipient: address(0),
             freeAllocation: 0,
             pricingModule: address(0)
           }),
@@ -71,9 +69,7 @@ abstract contract SpaceHelper {
             symbol: "MEM",
             price: 0,
             maxSupply: 0,
-            duration: 0,
             currency: address(0),
-            feeRecipient: address(0),
             freeAllocation: 0,
             pricingModule: address(0)
           }),
@@ -131,9 +127,7 @@ abstract contract SpaceHelper {
           symbol: "MEM",
           price: 0,
           maxSupply: 0,
-          duration: 0,
           currency: address(0),
-          feeRecipient: address(0),
           freeAllocation: 0,
           pricingModule: address(0)
         }),

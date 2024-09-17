@@ -283,9 +283,6 @@ abstract contract LegacyArchitectBase is Factory, ILegacyArchitectBase {
     salt = keccak256(abi.encode(msg.sender, spaceTokenId, block.timestamp));
 
     IMembershipBase.Membership memory membershipSettings = membership.settings;
-    if (membershipSettings.feeRecipient == address(0)) {
-      membershipSettings.feeRecipient = msg.sender;
-    }
 
     address proxyInitializer = address(ds.proxyInitializer);
 
