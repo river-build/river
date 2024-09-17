@@ -22,11 +22,6 @@ export default [
         "name": "legacyRuleEntitlement",
         "type": "address",
         "internalType": "contract IRuleEntitlement"
-      },
-      {
-        "name": "proxyInitializer",
-        "type": "address",
-        "internalType": "contract ISpaceProxyInitializer"
       }
     ],
     "outputs": [],

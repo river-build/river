@@ -30,8 +30,7 @@ contract Architect is
     ISpaceOwner ownerImplementation,
     IUserEntitlement userEntitlementImplementation,
     IRuleEntitlementV2 ruleEntitlementImplementation,
-    IRuleEntitlement legacyRuleEntitlement,
-    ISpaceProxyInitializer proxyInitializer
+    IRuleEntitlement legacyRuleEntitlement
   ) external onlyInitializing {
     _setImplementations(
       ownerImplementation,
@@ -39,7 +38,6 @@ contract Architect is
       ruleEntitlementImplementation,
       legacyRuleEntitlement
     );
-    _setProxyInitializer(proxyInitializer);
   }
 
   // =============================================================
