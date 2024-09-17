@@ -8,7 +8,7 @@ import (
 // RenderableData is the interface for all data that can be rendered
 type RenderableData interface {
 	*AvailableDebugHandlersData | *CacheData | *TransactionPoolData | *OnChainConfigData |
-		*GoRoutineData | *MemStatsData | *InfoIndexData | *DebugMultiData | *SystemStatsData
+		*GoRoutineData | *SystemStatsData | *InfoIndexData | *DebugMultiData
 
 	// TemplateName returns the name of the template to be used for rendering
 	TemplateName() string
@@ -68,26 +68,19 @@ type GoRoutineStack struct {
 }
 
 // Struct for memory stats
-type MemStatsData struct {
+type SystemStatsData struct {
+	// Stats specific to this process
 	MemAlloc      uint64
 	TotalAlloc    uint64
 	Sys           uint64
 	NumLiveObjs   uint64
 	NumGoroutines int
-}
 
-func (d MemStatsData) TemplateName() string {
-	return "templates/debug/memory.template.html"
-}
-
-type SystemStatsData struct {
-	TotalMemory           uint64
-	TotalMemoryString     string
-	UsedMemory            uint64
-	UsedMemoryString      string
-	AvailableMemory       uint64
-	AvailableMemoryString string
-	CpuUsagePercent       float64
+	// System-wide
+	TotalMemory     uint64
+	UsedMemory      uint64
+	AvailableMemory uint64
+	CpuUsagePercent float64
 }
 
 func (d SystemStatsData) TemplateName() string {

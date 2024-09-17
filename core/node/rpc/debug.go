@@ -13,9 +13,6 @@ import (
 	"strings"
 	"time"
 
-	psutilCpu "github.com/shirou/gopsutil/cpu"
-	psutilMem "github.com/shirou/gopsutil/mem"
-
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
@@ -70,16 +67,12 @@ func (s *Service) registerDebugHandlers(enableDebugEndpoints bool, cfg config.De
 	handler.HandleFunc(mux, "/debug/multi/json", s.handleDebugMultiJson)
 	handler.Handle(mux, "/debug/config", &onChainConfigHandler{onChainConfig: s.chainConfig})
 
-	if enableDebugEndpoints {
-		handler.HandleFunc(mux, "/debug/stats", s.handleDebugStats)
-	}
-
 	if cfg.Cache || enableDebugEndpoints {
 		handler.Handle(mux, "/debug/cache", &cacheHandler{cache: s.cache})
 	}
 
 	if cfg.Memory || enableDebugEndpoints {
-		handler.HandleFunc(mux, "/debug/memory", MemoryHandler)
+		handler.HandleFunc(mux, "/debug/stats", StatsHandler)
 	}
 
 	if cfg.PProf || enableDebugEndpoints {
@@ -98,54 +91,6 @@ func (s *Service) registerDebugHandlers(enableDebugEndpoints bool, cfg config.De
 	if cfg.TxPool || enableDebugEndpoints {
 		handler.Handle(mux, "/debug/txpool", &txpoolHandler{riverTxPool: s.riverChain.TxPool})
 	}
-}
-
-func formatMemory(size uint64) string {
-	units := []string{"B", "KB", "MB", "GB", "TB", "PB"}
-	for size >= 1024*1024 && len(units) > 2 {
-		size /= 1024
-		units = units[1:] // pop lowest unit
-	}
-
-	if size <= 1024 {
-		return fmt.Sprintf("%v%v", size, units[0])
-	}
-
-	// Try to preserve the last divide to make the answer floating point
-	floatSize := float64(size) / float64(1024)
-	return fmt.Sprintf("%.2f%v", floatSize, units[1])
-}
-
-func (s *Service) handleDebugStats(w http.ResponseWriter, r *http.Request) {
-	var (
-		ctx   = r.Context()
-		reply render.SystemStatsData
-	)
-
-	// Get memory stats
-	v, _ := psutilMem.VirtualMemory()
-	reply.TotalMemory = v.Total
-	reply.TotalMemoryString = formatMemory(v.Total)
-	reply.UsedMemory = v.Used
-	reply.UsedMemoryString = formatMemory(v.Used)
-	reply.AvailableMemory = v.Available
-	reply.AvailableMemoryString = formatMemory(v.Available)
-
-	// Get CPU stats
-	cpuPercentages, _ := psutilCpu.Percent(time.Second, false)
-	reply.CpuUsagePercent = cpuPercentages[0]
-
-	// Print the results
-	output, err := render.Execute(&reply)
-	if err != nil {
-		dlog.FromCtx(ctx).Error("unable to render stack data", "err", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/html")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(output.Bytes())
 }
 
 type stacksHandler struct {
