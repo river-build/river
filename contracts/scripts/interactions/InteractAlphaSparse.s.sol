@@ -58,7 +58,7 @@ contract InteractAlphaSparse is AlphaHelper {
   }
 
   /**
-   * @notice Decodes diamond and facet data from a JSON file
+   * @notice Decodes diamond and facet data from a JSON file output by the bytecode-diff script
    * @dev Reads the JSON file specified by the DEFAULT_JSON_FILE constant
    *      and parses it to extract information about updated diamonds and their facets
    * @return An array of DiamondFacets structs containing the decoded information
@@ -136,30 +136,30 @@ contract InteractAlphaSparse is AlphaHelper {
       bytes32 diamondNameHash = keccak256(abi.encodePacked(diamondName));
 
       if (diamondNameHash == keccak256(abi.encodePacked("space"))) {
+        // deploy space diamond by facets
         diamondAddress = getDeployment("space");
-        // remove and redeploy facets based on diamond facet array of updated facets
         removeRemoteFacetsByAddresses(deployer, diamondAddress, facetAddresses);
         deploySpace.diamondInitParamsFromFacets(deployer, facetNames);
         newCuts = deploySpace.getCuts();
       } else if (diamondNameHash == keccak256(abi.encodePacked("spaceOwner"))) {
+        //  deploy spaceOwner diamond by facets
         diamondAddress = getDeployment("spaceOwner");
-        // remove and redeploy facets based on diamond facet array of updated facets
         removeRemoteFacetsByAddresses(deployer, diamondAddress, facetAddresses);
         deploySpaceOwner.diamondInitParamsFromFacets(deployer, facetNames);
         newCuts = deploySpaceOwner.getCuts();
       } else if (
         diamondNameHash == keccak256(abi.encodePacked("spaceFactory"))
       ) {
+        // deploy spaceFactory diamond by facets
         diamondAddress = getDeployment("spaceFactory");
-        // remove and redeploy facets based on diamond facet array of updated facets
         removeRemoteFacetsByAddresses(deployer, diamondAddress, facetAddresses);
         deploySpaceFactory.diamondInitParamsFromFacets(deployer, facetNames);
         newCuts = deploySpaceFactory.getCuts();
       } else if (
         diamondNameHash == keccak256(abi.encodePacked("baseRegistry"))
       ) {
+        // deploy baseRegistry diamond by facets
         diamondAddress = getDeployment("baseRegistry");
-        // remove and redeploy facets based on diamond facet array of updated facets
         removeRemoteFacetsByAddresses(deployer, diamondAddress, facetAddresses);
         deployBaseRegistry.diamondInitParamsFromFacets(deployer, facetNames);
         newCuts = deployBaseRegistry.getCuts();
