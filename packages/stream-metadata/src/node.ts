@@ -14,7 +14,7 @@ import { fetchUserProfileImage } from './routes/profileImage'
 import { fetchUserBio } from './routes/userBio'
 import { fetchMedia } from './routes/media'
 import { spaceRefresh, spaceRefreshOnResponse } from './routes/spaceRefresh'
-import { userRefresh } from './routes/userRefresh'
+import { userRefresh, userRefreshOnResponse } from './routes/userRefresh'
 import { addCacheControlCheck } from './check-cache-control'
 
 // Set the process title to 'stream-metadata' so it can be easily identified
@@ -88,7 +88,7 @@ export function setupRoutes(srv: Server) {
 
 	// should be rate-limited, but not yet
 	srv.get('/space/:spaceAddress/refresh', { onResponse: spaceRefreshOnResponse }, spaceRefresh)
-	srv.get('/user/:userId/refresh', userRefresh)
+	srv.get('/user/:userId/refresh', { onResponse: userRefreshOnResponse }, userRefresh)
 
 	// Fastify will return 404 for any unmatched routes
 }
