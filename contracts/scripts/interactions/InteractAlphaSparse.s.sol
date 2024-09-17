@@ -57,56 +57,61 @@ contract InteractAlphaSparse is AlphaHelper {
     }
   }
 
+  function decodeDiamondsFromJSON()
+    internal
+    view
+    returns (DiamondFacets[] memory)
+  {
+    uint256 updatedDiamondLen = abi.decode(
+      vm.parseJson(jsonData, ".numUpdated"),
+      (uint256)
+    );
+    DiamondFacets[] memory diamonds = new DiamondFacets[](updatedDiamondLen);
+
+    for (uint256 i = 0; i < updatedDiamondLen; i++) {
+      bytes memory diamondData = vm.parseJson(
+        jsonData,
+        string.concat(".updated[", vm.toString(i), "]")
+      );
+
+      // Decode diamond name and number of facets
+      (string memory diamondName, uint256 numFacets) = abi.decode(
+        diamondData,
+        (string, uint256)
+      );
+
+      // Create DiamondFacets struct with fixed-size facets array
+      diamonds[i] = DiamondFacets({
+        diamond: diamondName,
+        numFacets: numFacets,
+        facets: new FacetData[](numFacets)
+      });
+
+      // Decode facets one by one
+      for (uint256 j = 0; j < numFacets; j++) {
+        bytes memory facetData = vm.parseJson(
+          jsonData,
+          string.concat(
+            ".updated[",
+            vm.toString(i),
+            "].facets[",
+            vm.toString(j),
+            "]"
+          )
+        );
+        diamonds[i].facets[j] = abi.decode(facetData, (FacetData));
+      }
+    }
+
+    return diamonds;
+  }
+
   function __interact(address deployer) internal override {
     vm.setEnv("OVERRIDE_DEPLOYMENTS", "1");
 
     readJSON(DEFAULT_JSON_FILE);
 
-    DiamondFacets[] memory diamonds;
-    uint256 updatedDiamondLen;
-    // scope to avoid stack-too-deep error
-    {
-      updatedDiamondLen = abi.decode(
-        vm.parseJson(jsonData, ".numUpdated"),
-        (uint256)
-      );
-      diamonds = new DiamondFacets[](updatedDiamondLen);
-
-      for (uint256 i = 0; i < updatedDiamondLen; i++) {
-        bytes memory diamondData = vm.parseJson(
-          jsonData,
-          string.concat(".updated[", vm.toString(i), "]")
-        );
-
-        // Decode diamond name and number of facets
-        (string memory diamondName, uint256 numFacets) = abi.decode(
-          diamondData,
-          (string, uint256)
-        );
-
-        // Create DiamondFacets struct with fixed-size facets array
-        diamonds[i] = DiamondFacets({
-          diamond: diamondName,
-          numFacets: numFacets,
-          facets: new FacetData[](numFacets)
-        });
-
-        // Decode facets one by one
-        for (uint256 j = 0; j < numFacets; j++) {
-          bytes memory facetData = vm.parseJson(
-            jsonData,
-            string.concat(
-              ".updated[",
-              vm.toString(i),
-              "].facets[",
-              vm.toString(j),
-              "]"
-            )
-          );
-          diamonds[i].facets[j] = abi.decode(facetData, (FacetData));
-        }
-      }
-    }
+    DiamondFacets[] memory diamonds = decodeDiamondsFromJSON();
 
     // Iterate over diamonds array and process each diamond
     for (uint256 i = 0; i < diamonds.length; i++) {
