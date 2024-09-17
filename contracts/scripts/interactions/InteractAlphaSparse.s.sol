@@ -57,6 +57,13 @@ contract InteractAlphaSparse is AlphaHelper {
     }
   }
 
+  /**
+   * @notice Decodes diamond and facet data from a JSON file
+   * @dev Reads the JSON file specified by the DEFAULT_JSON_FILE constant
+   *      and parses it to extract information about updated diamonds and their facets
+   * @return An array of DiamondFacets structs containing the decoded information
+   */
+
   function decodeDiamondsFromJSON()
     internal
     view
@@ -118,7 +125,6 @@ contract InteractAlphaSparse is AlphaHelper {
       string memory diamondName = diamonds[i].diamond;
       address diamondAddress;
       FacetCut[] memory newCuts;
-      Facet[] memory existingFacets;
       string[] memory facetNames = new string[](diamonds[i].numFacets);
       address[] memory facetAddresses = new address[](diamonds[i].numFacets);
 
@@ -131,14 +137,12 @@ contract InteractAlphaSparse is AlphaHelper {
 
       if (diamondNameHash == keccak256(abi.encodePacked("space"))) {
         diamondAddress = getDeployment("space");
-        existingFacets = IDiamondLoupe(diamondAddress).facets();
         // remove and redeploy facets based on diamond facet array of updated facets
         removeRemoteFacetsByAddresses(deployer, diamondAddress, facetAddresses);
         deploySpace.diamondInitParamsFromFacets(deployer, facetNames);
         newCuts = deploySpace.getCuts();
       } else if (diamondNameHash == keccak256(abi.encodePacked("spaceOwner"))) {
         diamondAddress = getDeployment("spaceOwner");
-        existingFacets = IDiamondLoupe(diamondAddress).facets();
         // remove and redeploy facets based on diamond facet array of updated facets
         removeRemoteFacetsByAddresses(deployer, diamondAddress, facetAddresses);
         deploySpaceOwner.diamondInitParamsFromFacets(deployer, facetNames);
@@ -147,7 +151,6 @@ contract InteractAlphaSparse is AlphaHelper {
         diamondNameHash == keccak256(abi.encodePacked("spaceFactory"))
       ) {
         diamondAddress = getDeployment("spaceFactory");
-        existingFacets = IDiamondLoupe(diamondAddress).facets();
         // remove and redeploy facets based on diamond facet array of updated facets
         removeRemoteFacetsByAddresses(deployer, diamondAddress, facetAddresses);
         deploySpaceFactory.diamondInitParamsFromFacets(deployer, facetNames);
@@ -156,7 +159,6 @@ contract InteractAlphaSparse is AlphaHelper {
         diamondNameHash == keccak256(abi.encodePacked("baseRegistry"))
       ) {
         diamondAddress = getDeployment("baseRegistry");
-        existingFacets = IDiamondLoupe(diamondAddress).facets();
         // remove and redeploy facets based on diamond facet array of updated facets
         removeRemoteFacetsByAddresses(deployer, diamondAddress, facetAddresses);
         deployBaseRegistry.diamondInitParamsFromFacets(deployer, facetNames);
