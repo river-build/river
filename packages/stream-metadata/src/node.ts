@@ -13,7 +13,7 @@ import { fetchSpaceMetadata } from './routes/spaceMetadata'
 import { fetchUserProfileImage } from './routes/profileImage'
 import { fetchUserBio } from './routes/userBio'
 import { fetchMedia } from './routes/media'
-import { spaceRefresh } from './routes/spaceRefresh'
+import { spaceRefresh, spaceRefreshOnResponse } from './routes/spaceRefresh'
 import { userRefresh } from './routes/userRefresh'
 import { addCacheControlCheck } from './check-cache-control'
 
@@ -87,7 +87,7 @@ export function setupRoutes(srv: Server) {
 	srv.get('/user/:userId/bio', fetchUserBio)
 
 	// should be rate-limited, but not yet
-	srv.get('/space/:spaceAddress/refresh', spaceRefresh)
+	srv.get('/space/:spaceAddress/refresh', { onResponse: spaceRefreshOnResponse }, spaceRefresh)
 	srv.get('/user/:userId/refresh', userRefresh)
 
 	// Fastify will return 404 for any unmatched routes
