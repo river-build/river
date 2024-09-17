@@ -10,6 +10,7 @@ const paramsSchema = z.object({
 	}),
 })
 
+// This route handler validates the refresh request and quickly returns a 200 response.
 export async function userRefresh(request: FastifyRequest, reply: FastifyReply) {
 	const logger = request.log.child({ name: userRefresh.name })
 
@@ -24,6 +25,7 @@ export async function userRefresh(request: FastifyRequest, reply: FastifyReply) 
 	return reply.code(200).send({ ok: true })
 }
 
+// This onResponse hook does the actual heavy lifting of invalidating the CloudFront cache.
 export async function userRefreshOnResponse(
 	request: FastifyRequest,
 	reply: FastifyReply,
