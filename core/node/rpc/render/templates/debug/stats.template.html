@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Stats</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+      }
+      .container {
+        width: 80%;
+        margin: 0 auto;
+      }
+      .stats {
+        margin-top: 20px;
+      }
+      #loading {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>System Usage</h1>
+      <div class="stats">
+        <strong>Total Memory:</strong> {{.TotalMemory}} bytes, or {{.TotalMemoryString}}<br />
+        <strong>Used Memory:</strong> {{.UsedMemory}} bytes, or {{.UsedMemoryString}}<br />
+        <strong>Available Memory:</strong> {{.AvailableMemory}} bytes, or {{.AvailableMemoryString}}<br />
+        <br />
+        <strong>Cpu Usage:</strong> {{.CpuUsagePercent | printf "%.2f" }}%<br />
+      </div>
+    </div>
+  </body>
+</html>
