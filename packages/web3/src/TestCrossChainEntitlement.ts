@@ -1,7 +1,14 @@
-import { createTestClient, http, publicActions, walletActions, parseEther } from 'viem'
+import {
+    createTestClient,
+    http,
+    publicActions,
+    walletActions,
+    parseEther,
+    encodeAbiParameters,
+    Hex,
+} from 'viem'
 import { foundry } from 'viem/chains'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
-import { encodeAbiParameters, Hex } from 'viem'
 
 import { MockCrossChainEntitlement } from './MockCrossChainEntitlement'
 import { deployContract, Mutex } from './TestGatingUtils'

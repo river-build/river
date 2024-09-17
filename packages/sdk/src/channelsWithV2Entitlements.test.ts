@@ -13,7 +13,6 @@ import {
 } from './util.test'
 import { dlog } from '@river-build/dlog'
 import { Address, treeToRuleData, TestERC1155, TestCrossChainEntitlement } from '@river-build/web3'
-import { id } from 'ethers/lib/utils'
 
 const log = dlog('csb:test:channelsWithV2Entitlements')
 const test1155Name = 'TestERC1155'
