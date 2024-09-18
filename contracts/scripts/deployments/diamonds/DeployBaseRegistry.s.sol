@@ -173,7 +173,7 @@ contract DeployBaseRegistry is DiamondHelper, Deployer {
   function diamondInitParamsFromFacets(
     address deployer,
     string[] memory facets
-  ) public returns (Diamond.InitParams memory) {
+  ) public {
     for (uint256 i = 0; i < facets.length; i++) {
       string memory facetName = facets[i];
       bytes32 facetNameHash = keccak256(abi.encodePacked(facetName));
@@ -253,17 +253,6 @@ contract DeployBaseRegistry is DiamondHelper, Deployer {
         );
       }
     }
-
-    return
-      Diamond.InitParams({
-        baseFacets: baseFacets(),
-        init: multiInit,
-        initData: abi.encodeWithSelector(
-          MultiInit.multiInit.selector,
-          _initAddresses,
-          _initDatas
-        )
-      });
   }
 
   function __deploy(address deployer) public override returns (address) {
