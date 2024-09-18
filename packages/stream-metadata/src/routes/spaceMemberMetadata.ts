@@ -13,7 +13,7 @@ const paramsSchema = z.object({
 	tokenId: z.string().min(1, 'tokenId parameter is required'),
 })
 
-interface SpaceMemberMetadataResponse {
+export interface SpaceMemberMetadataResponse {
 	name: string
 	description: string
 	image: string
