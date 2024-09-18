@@ -69,7 +69,7 @@ function makeConfig() {
 			id: v4(),
 			deployedAt: new Date().toISOString(),
 		},
-		commitSha: envMain.DD_GIT_COMMIT_SHA,
+		version: envMain.DD_GIT_COMMIT_SHA,
 		apm: {
 			tracingEnabled: envMain.TRACING_ENABLED,
 			profilingEnabled: envMain.PROFILING_ENABLED,

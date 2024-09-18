@@ -10,7 +10,7 @@ if (config.apm.tracingEnabled) {
 		env: config.riverEnv,
 		profiling: config.apm.profilingEnabled,
 		logInjection: true,
-		version: config.commitSha,
+		version: config.version,
 	})
 }
 

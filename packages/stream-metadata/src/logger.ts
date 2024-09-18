@@ -26,7 +26,7 @@ export function getLogger(name: string, meta: Record<string, unknown> = {}) {
 	return baseLogger.child({
 		name,
 		instance: config.instance,
-		commitSha: config.commitSha,
+		version: config.version,
 		...meta,
 	})
 }
