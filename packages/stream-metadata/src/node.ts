@@ -28,6 +28,9 @@ const logger = getLogger('server')
 
 logger.info(
 	{
+		instance: config.instance,
+		apm: config.apm,
+		version: config.version,
 		riverEnv: config.riverEnv,
 		chainId: config.web3Config.river.chainId,
 		port: config.port,
