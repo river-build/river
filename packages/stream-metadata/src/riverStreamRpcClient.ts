@@ -207,10 +207,9 @@ export async function getMediaStreamContent(
 	fullStreamId: StreamIdHex,
 	secret: Uint8Array,
 	iv: Uint8Array,
-): Promise<MediaContent | { data: null; mimeType: null }> {
+): Promise<MediaContent> {
 	const streamId = stripHexPrefix(fullStreamId)
 	const sv = await getStream(logger, streamId)
 	const result = await mediaContentFromStreamView(logger, sv, secret, iv)
-
 	return result
 }
