@@ -49,12 +49,8 @@ contract InteractAlphaSparse is AlphaHelper {
 
   string private jsonData;
 
-  function readJSON(string memory filename) internal {
-    {
-      string memory root = vm.projectRoot();
-      string memory path = string.concat(root, DEFAULT_REPORT_PATH, filename);
-      jsonData = vm.readFile(path);
-    }
+  function readJSON(string memory jsonPath) internal {
+    jsonData = vm.readFile(jsonPath);
   }
 
   /**
@@ -113,10 +109,35 @@ contract InteractAlphaSparse is AlphaHelper {
     return diamonds;
   }
 
+  /**
+   * @notice Processes diamond and facet updates based on JSON input
+   * @dev This function reads a JSON file containing information about diamond and facet updates,
+   *      then applies these updates to the corresponding diamonds. It performs the following steps:
+   *      1. Sets the OVERRIDE_DEPLOYMENTS environment variable
+   *      2. Determines the JSON input path (either from INTERACTION_INPUT_PATH env var or using a default)
+   *      3. Reads and decodes the JSON data
+   *      4. Iterates through each diamond update:
+   *         - Identifies the diamond type (space, spaceOwner, spaceFactory, or baseRegistry)
+   *         - Removes existing facets that are to be updated
+   *         - Prepares new facet cuts
+   *         - Executes a diamondCut operation to apply the updates
+   * @param deployer The address of the account that will deploy and interact with the contracts
+   */
   function __interact(address deployer) internal override {
     vm.setEnv("OVERRIDE_DEPLOYMENTS", "1");
 
-    readJSON(DEFAULT_JSON_FILE);
+    string memory jsonPath;
+    try vm.envString("INTERACTION_INPUT_PATH") returns (string memory path) {
+      jsonPath = string.concat(vm.projectRoot(), path);
+    } catch {
+      jsonPath = string.concat(
+        vm.projectRoot(),
+        DEFAULT_REPORT_PATH,
+        DEFAULT_JSON_FILE
+      );
+    }
+
+    readJSON(jsonPath);
 
     DiamondFacets[] memory diamonds = decodeDiamondsFromJSON();
 
