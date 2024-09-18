@@ -210,12 +210,6 @@ export async function getMediaStreamContent(
 ): Promise<MediaContent | { data: null; mimeType: null }> {
 	const streamId = stripHexPrefix(fullStreamId)
 	const sv = await getStream(logger, streamId)
-
-	if (!sv) {
-		logger.error({ streamId }, 'Failed to get stream')
-		throw new Error(`Failed to get stream ${streamId}`)
-	}
-
 	const result = await mediaContentFromStreamView(logger, sv, secret, iv)
 
 	return result
