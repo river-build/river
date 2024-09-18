@@ -1,3 +1,5 @@
+import './tracer' // must come before importing any instrumented module.
+
 import { Server as HTTPServer, IncomingMessage, ServerResponse } from 'http'
 import { Server as HTTPSServer } from 'https'
 
