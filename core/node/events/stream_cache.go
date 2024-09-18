@@ -92,8 +92,7 @@ func NewStreamCache(
 	// these tasks sync up the local db with the latest block in the registry.
 	var localStreamResults []*registries.GetStreamResult
 	if err := params.Registry.ForAllStreams(ctx, params.AppliedBlockNum, func(stream *registries.GetStreamResult) bool {
-		nodes := NewStreamNodes(stream.Nodes, params.Wallet.Address)
-		if nodes.IsLocal() {
+		if slices.Contains(stream.Nodes, params.Wallet.Address) {
 			localStreamResults = append(localStreamResults, stream)
 		}
 		return true
@@ -110,14 +109,12 @@ func NewStreamCache(
 
 	// load local streams in-memory cache
 	for _, stream := range localStreamResults {
-		if slices.Contains(stream.Nodes, params.Wallet.Address) {
-			s.cache.Store(stream.StreamId, &streamImpl{
-				params:           params,
-				streamId:         stream.StreamId,
-				nodes:            NewStreamNodes(stream.Nodes, params.Wallet.Address),
-				lastAccessedTime: time.Now(),
-			})
-		}
+		s.cache.Store(stream.StreamId, &streamImpl{
+			params:           params,
+			streamId:         stream.StreamId,
+			nodes:            NewStreamNodes(stream.Nodes, params.Wallet.Address),
+			lastAccessedTime: time.Now(),
+		})
 	}
 
 	err = params.Registry.OnStreamEvent(

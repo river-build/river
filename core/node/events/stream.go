@@ -141,14 +141,14 @@ func (s *streamImpl) importMiniblocks(
 		return nil
 	}
 
-	blocksToWriteToStorage := make([]*storage.LatestMiniBlock, len(miniblocks))
+	blocksToWriteToStorage := make([]*storage.MiniblockData, len(miniblocks))
 	for i, miniblock := range miniblocks {
 		bytes, err := miniblock.ToBytes()
 		if err != nil {
 			return err
 		}
 
-		blocksToWriteToStorage[i] = &storage.LatestMiniBlock{
+		blocksToWriteToStorage[i] = &storage.MiniblockData{
 			StreamID:      s.streamId,
 			Number:        miniblock.Num,
 			MiniBlockInfo: bytes,
@@ -176,32 +176,30 @@ func (s *streamImpl) importMiniblocks(
 	// apply mini-blocks one by one on view, backup existing view in case
 	// applying/writing miniblocks fails rollback view.
 	var (
-		err              error
-		viewBeforeImport = s.view
+		err  error
+		view = s.view
 	)
+
 	for _, miniblock := range miniblocks {
-		if miniblock.Num <= s.view.LastBlock().Num {
+		if miniblock.Num <= view.LastBlock().Num {
 			blocksToWriteToStorage = blocksToWriteToStorage[1:]
 			continue
 		}
 
-		view, err := s.view.copyAndApplyBlock(miniblock, s.params.ChainConfig, true)
+		view, err = view.copyAndApplyBlock(miniblock, s.params.ChainConfig, true)
 		if err != nil {
-			s.view = viewBeforeImport
 			return err
 		}
-
-		s.view = view
 	}
 
-	err = s.params.Storage.ImportMiniBlocks(ctx, blocksToWriteToStorage)
+	err = s.params.Storage.ImportMiniblocks(ctx, blocksToWriteToStorage)
 	if err != nil {
-		s.view = viewBeforeImport
 		return err
 	}
 
-	// TODO: inform subscribes with rate throttling?
+	s.view = view
 
+	// TODO: inform subscribes with rate throttling?
 	return nil
 }
 
@@ -291,7 +289,7 @@ func (s *streamImpl) PromoteCandidate(ctx context.Context, mbHash common.Hash, m
 func (s *streamImpl) initFromGenesis(
 	ctx context.Context,
 	genesisInfo *MiniblockInfo,
-	genesis *storage.LatestMiniBlock,
+	genesis *storage.MiniblockData,
 ) error {
 	if genesis.Number != 0 {
 		return RiverError(Err_BAD_BLOCK, "init from genesis must be from block with num 0")

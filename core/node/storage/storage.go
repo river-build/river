@@ -106,18 +106,18 @@ type StreamStorage interface {
 	) (*DebugReadStreamDataResult, error)
 
 	// StreamLastMiniBlock returns the last mini-block number for the given stream from storage.
-	StreamLastMiniBlock(ctx context.Context, streamID StreamId) (*LatestMiniBlock, error)
+	StreamLastMiniBlock(ctx context.Context, streamID StreamId) (*MiniblockData, error)
 
-	// ImportMiniBlocks imports raw blocks into the database.
+	// ImportMiniblocks imports raw blocks into the database.
 	//
 	// This bypasses the mini-block candidate/promotion approach and is meant to catch up the storage with the
 	// streams registry after the node was down.
-	ImportMiniBlocks(ctx context.Context, miniBlocks []*LatestMiniBlock) error
+	ImportMiniblocks(ctx context.Context, miniBlocks []*MiniblockData) error
 
 	Close(ctx context.Context)
 }
 
-type LatestMiniBlock struct {
+type MiniblockData struct {
 	StreamID      StreamId
 	Number        int64
 	MiniBlockInfo []byte

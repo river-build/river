@@ -1757,15 +1757,15 @@ func (s *PostgresEventStore) debugReadStreamData(
 func (s *PostgresEventStore) StreamLastMiniBlock(
 	ctx context.Context,
 	streamID StreamId,
-) (*LatestMiniBlock, error) {
-	var ret *LatestMiniBlock
+) (*MiniblockData, error) {
+	var ret *MiniblockData
 	err := s.txRunner(
 		ctx,
-		"StreamLastMiniBlocks",
+		"StreamLastMiniBlock",
 		pgx.ReadOnly,
 		func(ctx context.Context, tx pgx.Tx) error {
 			var err error
-			ret, err = s.lastMiniBlockForStream(ctx, tx, streamID)
+			ret, err = s.streamLastMiniBlockTx(ctx, tx, streamID)
 			return err
 		},
 		nil,
@@ -1776,17 +1776,14 @@ func (s *PostgresEventStore) StreamLastMiniBlock(
 	return ret, nil
 }
 
-func (s *PostgresEventStore) lastMiniBlockForStream(
+func (s *PostgresEventStore) streamLastMiniBlockTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamID StreamId,
-) (*LatestMiniBlock, error) {
+) (*MiniblockData, error) {
 	miniblockNumsRow, err := tx.Query(
 		ctx,
-		`select o.stream_id, o.seq_num, o.blockdata from miniblocks o inner join (
-			select stream_id, max(seq_num) as max_seq_num from miniblocks
-				WHERE stream_id = $1 group by stream_id
-			) i on o.stream_id = i.stream_id and o.seq_num = i.max_seq_num`,
+		"SELECT seq_num, blockdata FROM miniblocks WHERE stream_id = $1 ORDER BY seq_num DESC LIMIT 1",
 		streamID,
 	)
 
@@ -1798,17 +1795,16 @@ func (s *PostgresEventStore) lastMiniBlockForStream(
 
 	if miniblockNumsRow.Next() {
 		var (
-			streamId  StreamId
 			maxSeqNum int64
 			blockData []byte
 		)
 
-		if err = miniblockNumsRow.Scan(&streamId, &maxSeqNum, &blockData); err != nil {
+		if err = miniblockNumsRow.Scan(&maxSeqNum, &blockData); err != nil {
 			return nil, err
 		}
 
-		return &LatestMiniBlock{
-			StreamID:      streamId,
+		return &MiniblockData{
+			StreamID:      streamID,
 			Number:        maxSeqNum,
 			MiniBlockInfo: blockData,
 		}, nil
@@ -1819,7 +1815,7 @@ func (s *PostgresEventStore) lastMiniBlockForStream(
 		Func("lastMiniBlockForStream")
 }
 
-func (s *PostgresEventStore) ImportMiniBlocks(ctx context.Context, miniBlocks []*LatestMiniBlock) error {
+func (s *PostgresEventStore) ImportMiniblocks(ctx context.Context, miniBlocks []*MiniblockData) error {
 	if len(miniBlocks) == 0 {
 		return nil
 	}
@@ -1836,14 +1832,14 @@ func (s *PostgresEventStore) ImportMiniBlocks(ctx context.Context, miniBlocks []
 				miniBlocks = miniBlocks[1:]
 			}
 
-			return s.importMiniBlocks(ctx, tx, miniBlocks)
+			return s.importMiniblocksTx(ctx, tx, miniBlocks)
 		},
 		nil,
 		"streamId", miniBlocks[0].StreamID,
 	)
 }
 
-func (s *PostgresEventStore) importMiniBlocks(ctx context.Context, tx pgx.Tx, miniBlocks []*LatestMiniBlock) error {
+func (s *PostgresEventStore) importMiniblocksTx(ctx context.Context, tx pgx.Tx, miniBlocks []*MiniblockData) error {
 	if len(miniBlocks) == 0 {
 		return nil
 	}
