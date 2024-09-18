@@ -1261,33 +1261,33 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@datadog/native-appsec@npm:8.1.1":
-  version: 8.1.1
-  resolution: "@datadog/native-appsec@npm:8.1.1"
+"@datadog/native-appsec@npm:8.0.1":
+  version: 8.0.1
+  resolution: "@datadog/native-appsec@npm:8.0.1"
   dependencies:
     node-gyp: latest
     node-gyp-build: ^3.9.0
-  checksum: b606a3c4b62e782c420a3c51e675c8581fb7170805be77d6173c4e10f461fcc38bfcac0c8e16a5513d5b63f7bd4bd93d0c193c0503217304fcd4bb36c65a4b34
+  checksum: 68b4085c9de46959ed7c5a2808ce7b54c3ca3d9acf46c235b9b1803ecf63e09b2393a56754c671149c929aa3729b3ea26a913fc5d4162af5ca83cd5dd7ab1fe7
   languageName: node
   linkType: hard
 
-"@datadog/native-iast-rewriter@npm:2.4.1":
-  version: 2.4.1
-  resolution: "@datadog/native-iast-rewriter@npm:2.4.1"
+"@datadog/native-iast-rewriter@npm:2.3.1":
+  version: 2.3.1
+  resolution: "@datadog/native-iast-rewriter@npm:2.3.1"
   dependencies:
     lru-cache: ^7.14.0
     node-gyp-build: ^4.5.0
-  checksum: 15f6cf9617a16113b0cd941617140ef16c2fd5b3ecc6b20f25ac84b78efb5d3be7d6ada686e3bf40d2f935e9aaf40f9271df18aa4301a4e25a54e4638c2751d2
+  checksum: 00927ed3737bbecd59e0d4bf4b5a93f786c81c217504c269531e830abccd6b221dc35fe5e9bba27189471bae2a0f916d160aa3b70e592a8bab3a65e06da181df
   languageName: node
   linkType: hard
 
-"@datadog/native-iast-taint-tracking@npm:3.1.0":
-  version: 3.1.0
-  resolution: "@datadog/native-iast-taint-tracking@npm:3.1.0"
+"@datadog/native-iast-taint-tracking@npm:3.0.0":
+  version: 3.0.0
+  resolution: "@datadog/native-iast-taint-tracking@npm:3.0.0"
   dependencies:
     node-gyp: latest
     node-gyp-build: ^3.9.0
-  checksum: b40f22d1a701bed0469bea5b9a31c5378ee3697228ccdea46f62abb1d9cf03c666c13585d4a152749f4f7731102044666a1d01ddbd65eea3c7d8bc53fe6133da
+  checksum: 0034e267f8ab42a6fe7665823c4a564d2baf07608be01365179bc4021e242ffd0c477b407b911b1448cfdb4ba95998f50709eee3a1ae583164a443aea0f83482
   languageName: node
   linkType: hard
 
@@ -4525,7 +4525,7 @@ __metadata:
     "@types/uuid": ^10.0.0
     "@typescript-eslint/parser": ^7.14.1
     axios: ^1.2.6
-    dd-trace: ^5.19.0
+    dd-trace: 5.19.0
     dotenv: ^16.4.5
     esbuild: ^0.21.5
     esbuild-plugin-pino: ^2.2.0
@@ -9523,13 +9523,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dd-trace@npm:^5.19.0":
-  version: 5.22.0
-  resolution: "dd-trace@npm:5.22.0"
+"dd-trace@npm:5.19.0":
+  version: 5.19.0
+  resolution: "dd-trace@npm:5.19.0"
   dependencies:
-    "@datadog/native-appsec": 8.1.1
-    "@datadog/native-iast-rewriter": 2.4.1
-    "@datadog/native-iast-taint-tracking": 3.1.0
+    "@datadog/native-appsec": 8.0.1
+    "@datadog/native-iast-rewriter": 2.3.1
+    "@datadog/native-iast-taint-tracking": 3.0.0
     "@datadog/native-metrics": ^2.0.0
     "@datadog/pprof": 5.3.0
     "@datadog/sketches-js": ^2.1.0
@@ -9556,7 +9556,7 @@ __metadata:
     semver: ^7.5.4
     shell-quote: ^1.8.1
     tlhunter-sorted-set: ^0.1.0
-  checksum: 1f5483f5a00e388a507e92da0de704ca521a2ee52a012577ae6822a415344fd88dffd8c51c6a4319262b75a29c74656afb69ccba1bc54ccd4e2b369b6f0c299a
+  checksum: 011bb138f486f2e93d49463a0e9f88b27be4bf04c8337a89954522437fb8939e1d5871ed8d714e1bc63cecdf2a034645b5ce46fb2fe487762aea4b14009df2d5
   languageName: node
   linkType: hard
 
