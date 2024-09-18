@@ -13,24 +13,22 @@ contract InteractRiverRegistry is Interaction {
   function __interact(address deployer) internal override {
     address riverRegistry = getDeployment("riverRegistry");
 
-    uint64[] memory chains = new uint64[](13);
-    chains[0] = 85432;
-    chains[1] = 11155111;
-    chains[2] = 550;
-    chains[3] = 6524490;
-    chains[4] = 8453;
-    chains[5] = 84532;
-    chains[6] = 137;
-    chains[7] = 42161;
-    chains[8] = 10;
-    chains[9] = 31337;
-    chains[10] = 31338;
-    chains[11] = 100;
-    chains[12] = 10200;
+    uint64[] memory chains = new uint64[](11);
+    chains[0] = 1; // mainnet
+    chains[1] = 11155111; // sepolia
+    chains[2] = 550; // river mainnet
+    chains[3] = 6524490; // river testnet
+    chains[4] = 8453; // base
+    chains[5] = 84532; // base sepolia
+    chains[6] = 137; // polygon
+    chains[7] = 42161; // arbitrum
+    chains[8] = 10; // optimism
+    chains[9] = 100; // gnosis
+    chains[10] = 10200; // gnosis chiado
 
     vm.startBroadcast(deployer);
     IRiverConfig(riverRegistry).setConfiguration(
-      "xchain.blockchains",
+      bytes32("xchain.blockchains"),
       0,
       abi.encode(chains)
     );
