@@ -16,6 +16,7 @@ import { fetchMedia } from './routes/media'
 import { spaceRefresh, spaceRefreshOnResponse } from './routes/spaceRefresh'
 import { userRefresh, userRefreshOnResponse } from './routes/userRefresh'
 import { addCacheControlCheck } from './check-cache-control'
+import { fetchSpaceMemberMetadata } from './routes/spaceMemberMetadata'
 
 // Set the process title to 'stream-metadata' so it can be easily identified
 // or killed with `pkill stream-metadata`
@@ -79,6 +80,7 @@ export function setupRoutes(srv: Server) {
 	srv.get('/user/:userId/image', fetchUserProfileImage)
 	srv.get('/space/:spaceAddress/image', fetchSpaceImage)
 	srv.get('/space/:spaceAddress', fetchSpaceMetadata)
+	srv.get('/space/:spaceAddress/token/:tokenId', fetchSpaceMemberMetadata)
 
 	// not cached
 	srv.get('/health', checkHealth)
