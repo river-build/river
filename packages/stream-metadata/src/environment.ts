@@ -24,6 +24,9 @@ const envMainSchema = z.object({
 	LOG_PRETTY: BoolFromStringSchema.optional().default('true'),
 	OPENSEA_API_KEY: z.string().optional(),
 	CLOUDFRONT_DISTRIBUTION_ID: z.string().optional(),
+	TRACING_ENABLED: BoolFromStringSchema.optional().default('false'),
+	PROFILING_ENABLED: BoolFromStringSchema.optional().default('false'),
+	DD_GIT_COMMIT_SHA: z.string().optional(),
 })
 
 function makeConfig() {
@@ -65,6 +68,11 @@ function makeConfig() {
 		instance: {
 			id: v4(),
 			deployedAt: new Date().toISOString(),
+		},
+		commitSha: envMain.DD_GIT_COMMIT_SHA,
+		apm: {
+			tracingEnabled: envMain.TRACING_ENABLED,
+			profilingEnabled: envMain.PROFILING_ENABLED,
 		},
 	}
 }
