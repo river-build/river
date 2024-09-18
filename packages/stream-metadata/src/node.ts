@@ -13,9 +13,10 @@ import { fetchSpaceMetadata } from './routes/spaceMetadata'
 import { fetchUserProfileImage } from './routes/profileImage'
 import { fetchUserBio } from './routes/userBio'
 import { fetchMedia } from './routes/media'
-import { spaceRefresh } from './routes/spaceRefresh'
-import { userRefresh } from './routes/userRefresh'
+import { spaceRefresh, spaceRefreshOnResponse } from './routes/spaceRefresh'
+import { userRefresh, userRefreshOnResponse } from './routes/userRefresh'
 import { addCacheControlCheck } from './check-cache-control'
+import { fetchSpaceMemberMetadata } from './routes/spaceMemberMetadata'
 
 // Set the process title to 'stream-metadata' so it can be easily identified
 // or killed with `pkill stream-metadata`
@@ -79,6 +80,7 @@ export function setupRoutes(srv: Server) {
 	srv.get('/user/:userId/image', fetchUserProfileImage)
 	srv.get('/space/:spaceAddress/image', fetchSpaceImage)
 	srv.get('/space/:spaceAddress', fetchSpaceMetadata)
+	srv.get('/space/:spaceAddress/token/:tokenId', fetchSpaceMemberMetadata)
 
 	// not cached
 	srv.get('/health', checkHealth)
@@ -87,8 +89,8 @@ export function setupRoutes(srv: Server) {
 	srv.get('/user/:userId/bio', fetchUserBio)
 
 	// should be rate-limited, but not yet
-	srv.get('/space/:spaceAddress/refresh', spaceRefresh)
-	srv.get('/user/:userId/refresh', userRefresh)
+	srv.get('/space/:spaceAddress/refresh', { onResponse: spaceRefreshOnResponse }, spaceRefresh)
+	srv.get('/user/:userId/refresh', { onResponse: userRefreshOnResponse }, userRefresh)
 
 	// Fastify will return 404 for any unmatched routes
 }
