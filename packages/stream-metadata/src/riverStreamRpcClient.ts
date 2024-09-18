@@ -158,14 +158,7 @@ export async function getStream(
 	logger: FastifyBaseLogger,
 	streamId: string,
 ): Promise<StreamStateView> {
-	const result = await getStreamClient(logger, `0x${streamId}`)
-	const client = result.client
-	const lastMiniblockNum = result.lastMiniblockNum
-
-	if (!client) {
-		logger.error({ streamId }, 'Failed to get client for stream')
-		throw new Error(`Failed to get client for stream ${streamId}`)
-	}
+	const { client, lastMiniblockNum } = await getStreamClient(logger, `0x${streamId}`)
 	logger.info(
 		{
 			nodeUrl: client.url,
