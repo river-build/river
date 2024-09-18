@@ -35,19 +35,10 @@ function makeStreamRpcClient(logger: FastifyBaseLogger, url: string): StreamRpcC
 
 async function getStreamClient(logger: FastifyBaseLogger, streamId: `0x${string}`) {
 	const node = await getNodeForStream(logger, streamId)
-	let url = node?.url
-	if (!clients.has(url)) {
-		const client = makeStreamRpcClient(logger, url)
-		clients.set(client.url!, client)
-		url = client.url!
-	}
-	logger.info({ url }, 'client connected to node')
+	const client = clients.get(node.url) || makeStreamRpcClient(logger, node.url)
+	clients.set(node.url, client)
 
-	const client = clients.get(url)
-	if (!client) {
-		logger.error({ url }, 'Failed to get client for url')
-		throw new Error('Failed to get client for url')
-	}
+	logger.info({ url: node.url }, 'client connected to node')
 
 	return { client, lastMiniblockNum: node.lastMiniblockNum }
 }
