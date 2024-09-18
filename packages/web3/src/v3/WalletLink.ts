@@ -25,15 +25,17 @@ export class WalletLink {
         }
     }
 
+    public async isLinkedAlready(walletAddress: string): Promise<boolean> {
+        const rootKeyAddress = await this.walletLinkShim.read.getRootKeyForWallet(walletAddress)
+
+        return rootKeyAddress !== INVALID_ADDRESS
+    }
+
     private async assertNotAlreadyLinked(rootKey: ethers.Signer, wallet: ethers.Signer | Address) {
         const rootKeyAddress = await rootKey.getAddress()
         const walletAddress = typeof wallet === 'string' ? wallet : await wallet.getAddress()
-        const isLinkedAlready = await this.walletLinkShim.read.checkIfLinked(
-            rootKeyAddress,
-            walletAddress,
-        )
 
-        if (isLinkedAlready) {
+        if (await this.isLinkedAlready(walletAddress)) {
             throw new WalletAlreadyLinkedError()
         }
 
@@ -42,11 +44,7 @@ export class WalletLink {
 
     private async assertAlreadyLinked(rootKey: ethers.Signer, walletAddress: string) {
         const rootKeyAddress = await rootKey.getAddress()
-        const isLinkedAlready = await this.walletLinkShim.read.checkIfLinked(
-            rootKeyAddress,
-            walletAddress,
-        )
-        if (!isLinkedAlready) {
+        if (!(await this.isLinkedAlready(walletAddress))) {
             throw new WalletNotLinkedError()
         }
         return { rootKeyAddress, walletAddress }
