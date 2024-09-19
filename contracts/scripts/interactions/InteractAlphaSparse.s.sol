@@ -37,13 +37,13 @@ contract InteractAlphaSparse is AlphaHelper {
 
   struct DiamondFacets {
     string diamond;
-    uint256 numFacets;
     FacetData[] facets;
+    uint256 numFacets;
   }
 
   struct FacetData {
-    string facetName;
     address deployedAddress;
+    string facetName;
     bytes32 sourceHash;
   }
 
@@ -72,38 +72,16 @@ contract InteractAlphaSparse is AlphaHelper {
     DiamondFacets[] memory diamonds = new DiamondFacets[](updatedDiamondLen);
 
     for (uint256 i = 0; i < updatedDiamondLen; i++) {
-      bytes memory diamondData = vm.parseJson(
-        jsonData,
-        string.concat(".updated[", vm.toString(i), "]")
-      );
-
       // Decode diamond name and number of facets
-      (string memory diamondName, uint256 numFacets) = abi.decode(
-        diamondData,
-        (string, uint256)
+      DiamondFacets memory diamondData = abi.decode(
+        vm.parseJson(
+          jsonData,
+          string.concat("$.updated[", vm.toString(i), "]")
+        ),
+        (DiamondFacets)
       );
 
-      // Create DiamondFacets struct with fixed-size facets array
-      diamonds[i] = DiamondFacets({
-        diamond: diamondName,
-        numFacets: numFacets,
-        facets: new FacetData[](numFacets)
-      });
-
-      // Decode facets one by one
-      for (uint256 j = 0; j < numFacets; j++) {
-        bytes memory facetData = vm.parseJson(
-          jsonData,
-          string.concat(
-            ".updated[",
-            vm.toString(i),
-            "].facets[",
-            vm.toString(j),
-            "]"
-          )
-        );
-        diamonds[i].facets[j] = abi.decode(facetData, (FacetData));
-      }
+      diamonds[i] = diamondData;
     }
 
     return diamonds;
@@ -143,15 +121,18 @@ contract InteractAlphaSparse is AlphaHelper {
 
     // Iterate over diamonds array and process each diamond
     for (uint256 i = 0; i < diamonds.length; i++) {
+      console.log("interact::diamondName", diamonds[i].diamond);
       string memory diamondName = diamonds[i].diamond;
       address diamondAddress;
       FacetCut[] memory newCuts;
-      string[] memory facetNames = new string[](diamonds[i].numFacets);
-      address[] memory facetAddresses = new address[](diamonds[i].numFacets);
+      uint256 numFacets = diamonds[i].facets.length;
+      string[] memory facetNames = new string[](numFacets);
+      address[] memory facetAddresses = new address[](numFacets);
 
-      for (uint256 j = 0; j < diamonds[i].numFacets; j++) {
-        facetAddresses[j] = diamonds[i].facets[j].deployedAddress;
-        facetNames[j] = diamonds[i].facets[j].facetName;
+      for (uint256 j = 0; j < numFacets; j++) {
+        FacetData memory facetData = diamonds[i].facets[j];
+        facetAddresses[j] = facetData.deployedAddress;
+        facetNames[j] = facetData.facetName;
       }
 
       bytes32 diamondNameHash = keccak256(abi.encodePacked(diamondName));
