@@ -212,10 +212,13 @@ _run-node $INSTANCE_NUM $INSTANCE_DIR:
 _stop-node $INSTANCE_NUM $INSTANCE_DIR:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
     source ${ENV_FILE}
+    if [ ! -f "${INSTANCE_DIR}/config/config.env" ]; then
+        exit 0
+    fi
     source ${INSTANCE_DIR}/config/config.env
     ../scripts/kill-on-port.sh ${RIVER_PORT} instance_${INSTANCE_NUM}
 
-stop-all: (_loop-instances "_stop-node")
+stop: (_loop-instances "_stop-node")
 
 _wait-node $INSTANCE_NUM $INSTANCE_DIR:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
@@ -240,13 +243,13 @@ _start-all: (_loop-instances "_run-node")
 
 _wait-all: (_loop-instances "_wait-node")
 
-start: stop-all config build just-start
+start: stop config build just-start
 
 just-start: _start-all _wait-all
 
-run: stop-all config build just-run
+run: stop config build just-run
 
-just-run: _start-all _wait-all wait-ctrl-c stop-all
+just-run: _start-all _wait-all wait-ctrl-c stop
 
 _loop-instances $CMD:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
