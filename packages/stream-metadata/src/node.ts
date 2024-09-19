@@ -1,3 +1,5 @@
+import './tracer' // must come before importing any instrumented module.
+
 import { Server as HTTPServer, IncomingMessage, ServerResponse } from 'http'
 import { Server as HTTPSServer } from 'https'
 
@@ -26,6 +28,9 @@ const logger = getLogger('server')
 
 logger.info(
 	{
+		instance: config.instance,
+		apm: config.apm,
+		version: config.version,
 		riverEnv: config.riverEnv,
 		chainId: config.web3Config.river.chainId,
 		port: config.port,
