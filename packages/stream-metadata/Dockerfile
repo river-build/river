@@ -53,5 +53,4 @@ ENV DD_GIT_REPOSITORY_URL="https://github.com/river-build/river" \
     DD_GIT_COMMIT_SHA=${GIT_SHA} \
     NODE_ENV=production
 
-# CMD ["node", "--enable-source-maps", "./dist/node_esbuild.cjs"]
-CMD ["sleep", "infinity"]
+CMD ["node", "--enable-source-maps", "./dist/node_esbuild.cjs"]
