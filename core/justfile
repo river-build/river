@@ -39,7 +39,7 @@ clean:
     @rm -rf ${RUN_BASE}
 
 _anvil-start $NAME $PORT $CHAIN_ID:
-    #!/usr/bin/env bash {{BASH_OPTS}}
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
     mkdir -p ./run_files/anvil
     if lsof -i :${PORT} > /dev/null; then
         echo "Anvil already running on port ${PORT}"
@@ -68,7 +68,7 @@ anvils: anvil-base anvil-river
 anvils-stop: anvil-base-stop anvil-river-stop
 
 deploy-contracts: anvils
-    #!/usr/bin/env bash {{BASH_OPTS}}
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
     source ${ENV_FILE}
     echo "Deploying contracts"
     mkdir -p ${RUN_BASE}
@@ -80,7 +80,7 @@ deploy-contracts: anvils
     echo "RIVER_TEST_CONTRACT_ADDRESS=$(jq -r '.address' ${CONTRACTS_DIR}/base/addresses/entitlementGatedExample.json)" >> ${RUN_BASE}/contracts.env
 
 _config-instance $INSTANCE_NUM $INSTANCE_DIR:
-    #!/usr/bin/env bash {{BASH_OPTS}}
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
     source ${ENV_FILE}
     mkdir -p ${INSTANCE_DIR}/{config,logs,wallet,certs}
     echo "RIVER_PORT=$((${RPC_PORT} + ${INSTANCE_NUM}))" > ${INSTANCE_DIR}/config/config.env
@@ -104,7 +104,7 @@ _remove-instance $INSTANCE_NUM $INSTANCE_DIR:
 remove-instances: (_loop-instances "_remove-instance")
 
 just-config-base-chain:
-    #!/usr/bin/env bash {{BASH_OPTS}}
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
     source ${ENV_FILE}
     if [ "${DISABLE_BASE_CHAIN}" != "true" ]; then
         source ${RUN_BASE}/contracts.env
@@ -126,7 +126,7 @@ just-config-base-chain:
 config-base-chain: deploy-contracts just-config-base-chain
 
 just-config-river-chain:
-    #!/usr/bin/env bash {{BASH_OPTS}}
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
     source ${ENV_FILE}
     source ${RUN_BASE}/contracts.env
     ../scripts/set-riverchain-config.sh
@@ -134,7 +134,7 @@ just-config-river-chain:
 config-river-chain: deploy-contracts just-config-river-chain
 
 config-root:
-    #!/usr/bin/env bash {{BASH_OPTS}}
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
     source ${ENV_FILE}
     mkdir -p ${RUN_BASE}
     cp ${ENV_PATH_BASE}/common/common.yaml ${RUN_BASE}/common.yaml
@@ -142,7 +142,7 @@ config-root:
     cp ${ENV_PATH}/config.yaml ${RUN_BASE}/config.yaml
 
 _register-node-base $INSTANCE_NUM $INSTANCE_DIR:
-    #!/usr/bin/env bash {{BASH_OPTS}}
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
     source ${ENV_FILE}
     if [ "${DISABLE_BASE_CHAIN}" != "true" ]; then
         source ${RUN_BASE}/contracts.env
@@ -160,7 +160,7 @@ just-register-nodes-base: (_loop-instances "_register-node-base")
 register-nodes-base: config-base-chain config-instances just-register-nodes-base
 
 _register-node-river $INSTANCE_NUM $INSTANCE_DIR:
-    #!/usr/bin/env bash {{BASH_OPTS}}
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
     source ${ENV_FILE}
     source ${RUN_BASE}/contracts.env
     NODE_ADDRESS=$(cat ${INSTANCE_DIR}/wallet/node_address)
@@ -181,7 +181,7 @@ register-nodes-river: config-river-chain config-instances just-register-nodes-ri
 config: config-root register-nodes-base register-nodes-river
 
 build:
-    #!/usr/bin/env bash {{BASH_OPTS}}
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
     source ${ENV_FILE}
     OUTPUT=${RUN_BASE}/bin/river_node
     echo "Building node binary ${OUTPUT}"
@@ -193,7 +193,7 @@ build:
         ./river_node/main.go
 
 _run-node $INSTANCE_NUM $INSTANCE_DIR:
-    #!/usr/bin/env bash {{BASH_OPTS}}
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
     source ${ENV_FILE}
     RUN_ARGS=${RUN_ARGS:-}
     RUN_CMD=${RUN_CMD:-run}
@@ -210,7 +210,7 @@ _run-node $INSTANCE_NUM $INSTANCE_DIR:
         > ./logs/tty.stdout.log 2> ./logs/tty.stderr.log &
 
 _stop-node $INSTANCE_NUM $INSTANCE_DIR:
-    #!/usr/bin/env bash {{BASH_OPTS}}
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
     source ${ENV_FILE}
     source ${INSTANCE_DIR}/config/config.env
     ../scripts/kill-on-port.sh ${RIVER_PORT} instance_${INSTANCE_NUM}
@@ -218,19 +218,19 @@ _stop-node $INSTANCE_NUM $INSTANCE_DIR:
 stop-all: (_loop-instances "_stop-node")
 
 _wait-node $INSTANCE_NUM $INSTANCE_DIR:
-    #!/usr/bin/env bash {{BASH_OPTS}}
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
     source ${ENV_FILE}
     source ${INSTANCE_DIR}/config/config.env
     cd ..
     yarn wait-on https://localhost:${RIVER_PORT}/status?blockchain=1 --timeout=60000
 
 wait-ctrl-c:
-    #!/usr/bin/env bash {{BASH_OPTS}}
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
     echo "CTRL+C TO EXIT"
     bash -c 'trap "exit 0" INT TERM; while true; do sleep 1; done'
 
 tail-logs:
-    #!/usr/bin/env bash {{BASH_OPTS}}
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
     source ${ENV_FILE}
     shopt -s nullglob
     LOGS=(${INSTANCE_BASE}/*/logs/tty.*.log)
@@ -249,7 +249,7 @@ run: stop-all config build just-run
 just-run: _start-all _wait-all wait-ctrl-c stop-all
 
 _loop-instances $CMD:
-    #!/usr/bin/env bash {{BASH_OPTS}}
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
     source ${ENV_FILE}
     for ((i=0; i<${NUM_INSTANCES}; i++)); do
         INSTANCE_NAME=$(printf "%02d" ${i})
@@ -258,7 +258,7 @@ _loop-instances $CMD:
     done
 
 _ping-anvil $URL $NAME:
-    #!/usr/bin/env bash {{BASH_OPTS}}
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
     echo "PINGING ${NAME} ON ${URL}"
     cast chain-id -r ${URL}
 
