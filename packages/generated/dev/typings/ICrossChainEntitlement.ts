@@ -20,40 +20,51 @@ import type {
   PromiseOrValue,
 } from "./common";
 
-export interface ICustomEntitlementInterface extends utils.Interface {
+export declare namespace ICrossChainEntitlement {
+  export type ParameterStruct = {
+    name: PromiseOrValue<string>;
+    primitive: PromiseOrValue<string>;
+    description: PromiseOrValue<string>;
+  };
+
+  export type ParameterStructOutput = [string, string, string] & {
+    name: string;
+    primitive: string;
+    description: string;
+  };
+}
+
+export interface ICrossChainEntitlementInterface extends utils.Interface {
   functions: {
-    "isEntitled(address[])": FunctionFragment;
-    "supportsInterface(bytes4)": FunctionFragment;
+    "isEntitled(address[],bytes)": FunctionFragment;
+    "parameters()": FunctionFragment;
   };
 
   getFunction(
-    nameOrSignatureOrTopic: "isEntitled" | "supportsInterface"
+    nameOrSignatureOrTopic: "isEntitled" | "parameters"
   ): FunctionFragment;
 
   encodeFunctionData(
     functionFragment: "isEntitled",
-    values: [PromiseOrValue<string>[]]
+    values: [PromiseOrValue<string>[], PromiseOrValue<BytesLike>]
   ): string;
   encodeFunctionData(
-    functionFragment: "supportsInterface",
-    values: [PromiseOrValue<BytesLike>]
+    functionFragment: "parameters",
+    values?: undefined
   ): string;
 
   decodeFunctionResult(functionFragment: "isEntitled", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "supportsInterface",
-    data: BytesLike
-  ): Result;
+  decodeFunctionResult(functionFragment: "parameters", data: BytesLike): Result;
 
   events: {};
 }
 
-export interface ICustomEntitlement extends BaseContract {
+export interface ICrossChainEntitlement extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
 
-  interface: ICustomEntitlementInterface;
+  interface: ICrossChainEntitlementInterface;
 
   queryFilter<TEvent extends TypedEvent>(
     event: TypedEventFilter<TEvent>,
@@ -76,61 +87,57 @@ export interface ICustomEntitlement extends BaseContract {
 
   functions: {
     isEntitled(
-      user: PromiseOrValue<string>[],
+      users: PromiseOrValue<string>[],
+      parameters: PromiseOrValue<BytesLike>,
       overrides?: CallOverrides
     ): Promise<[boolean]>;
 
-    supportsInterface(
-      interfaceId: PromiseOrValue<BytesLike>,
+    parameters(
       overrides?: CallOverrides
-    ): Promise<[boolean]>;
+    ): Promise<[ICrossChainEntitlement.ParameterStructOutput[]]>;
   };
 
   isEntitled(
-    user: PromiseOrValue<string>[],
+    users: PromiseOrValue<string>[],
+    parameters: PromiseOrValue<BytesLike>,
     overrides?: CallOverrides
   ): Promise<boolean>;
 
-  supportsInterface(
-    interfaceId: PromiseOrValue<BytesLike>,
+  parameters(
     overrides?: CallOverrides
-  ): Promise<boolean>;
+  ): Promise<ICrossChainEntitlement.ParameterStructOutput[]>;
 
   callStatic: {
     isEntitled(
-      user: PromiseOrValue<string>[],
+      users: PromiseOrValue<string>[],
+      parameters: PromiseOrValue<BytesLike>,
       overrides?: CallOverrides
     ): Promise<boolean>;
 
-    supportsInterface(
-      interfaceId: PromiseOrValue<BytesLike>,
+    parameters(
       overrides?: CallOverrides
-    ): Promise<boolean>;
+    ): Promise<ICrossChainEntitlement.ParameterStructOutput[]>;
   };
 
   filters: {};
 
   estimateGas: {
     isEntitled(
-      user: PromiseOrValue<string>[],
+      users: PromiseOrValue<string>[],
+      parameters: PromiseOrValue<BytesLike>,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    supportsInterface(
-      interfaceId: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    parameters(overrides?: CallOverrides): Promise<BigNumber>;
   };
 
   populateTransaction: {
     isEntitled(
-      user: PromiseOrValue<string>[],
+      users: PromiseOrValue<string>[],
+      parameters: PromiseOrValue<BytesLike>,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    supportsInterface(
-      interfaceId: PromiseOrValue<BytesLike>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+    parameters(overrides?: CallOverrides): Promise<PopulatedTransaction>;
   };
 }
