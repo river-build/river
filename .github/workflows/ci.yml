@@ -272,7 +272,7 @@ jobs:
 
             - name: Run multiple nodes
               working-directory: core
-              run: just RUN_ENV=multi_ne start
+              run: just RUN_ENV=multi_ne config-and-start
 
             - name: Run SDK Tests (without entitlements)
               working-directory: packages/sdk
@@ -407,7 +407,7 @@ jobs:
                   echo "NODE_EXTRA_CA_CERTS=$HOME/river-ca-cert.pem" >> $GITHUB_ENV
 
             - name: Run multiple nodes
-              run: just RUN_ENV=multi start
+              run: just RUN_ENV=multi config-and-start
               working-directory: core
 
             - name: Build & Test (with entitlements)
@@ -536,7 +536,7 @@ jobs:
                   echo "NODE_EXTRA_CA_CERTS=$HOME/river-ca-cert.pem" >> $GITHUB_ENV
 
             - name: Run multiple nodes
-              run: just RUN_ENV=multi start
+              run: just RUN_ENV=multi config-and-start
               working-directory: core
 
             - name: Build & Test (with entitlements)

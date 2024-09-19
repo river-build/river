@@ -218,6 +218,7 @@ _stop-node $INSTANCE_NUM $INSTANCE_DIR:
     source ${INSTANCE_DIR}/config/config.env
     ../scripts/kill-on-port.sh ${RIVER_PORT} instance_${INSTANCE_NUM}
 
+# Stop all nodes
 stop: (_loop-instances "_stop-node")
 
 _wait-node $INSTANCE_NUM $INSTANCE_DIR:
@@ -232,6 +233,7 @@ wait-ctrl-c:
     echo "CTRL+C TO EXIT"
     bash -c 'trap "exit 0" INT TERM; while true; do sleep 1; done'
 
+# Tail logs from all instances
 tail-logs:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
     source ${ENV_FILE}
@@ -243,13 +245,23 @@ _start-all: (_loop-instances "_run-node")
 
 _wait-all: (_loop-instances "_wait-node")
 
-start: stop config build just-start
+# Config, build, and start nodes in background
+config-and-start: stop config build start
 
-just-start: _start-all _wait-all
+# Start nodes in background, config and build should be run before
+start: _start-all _wait-all
 
-run: stop config build just-run
+# Config, build, and run nodes in foreground, CTRL-C to exit
+config-and-run: stop config build run
 
-just-run: _start-all _wait-all wait-ctrl-c stop
+# Config, build, and run nodes in foreground tailing logs
+config-run-tail: stop config build run-and-tail
+
+# Run nodes in foreground, config and build should be run before, CTRL-C to exit
+run: _start-all _wait-all wait-ctrl-c stop
+
+# Start nodes in foreground tailing logs, config and build should be run before
+run-and-tail: _start-all _wait-all tail-logs stop
 
 _loop-instances $CMD:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
