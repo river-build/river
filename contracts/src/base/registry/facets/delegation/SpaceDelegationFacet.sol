@@ -160,17 +160,16 @@ contract SpaceDelegationFacet is ISpaceDelegation, OwnableBase, Facet {
     );
     if (riverToken_ == address(0) || mainnetDelegation_ == address(0)) return 0;
 
-    uint256 delegation;
+    // get the delegation from the mainnet delegation
+    uint256 delegation = IMainnetDelegation(mainnetDelegation_)
+      .getDelegatedStakeByOperator(operator);
+
     // get the delegation from the base delegation
     address[] memory baseDelegators = IVotesEnumerable(riverToken_)
       .getDelegatorsByDelegatee(operator);
     for (uint256 i; i < baseDelegators.length; ++i) {
       delegation += IERC20(riverToken_).balanceOf(baseDelegators[i]);
     }
-
-    // get the delegation from the mainnet delegation
-    delegation += IMainnetDelegation(mainnetDelegation_)
-      .getDelegatedStakeByOperator(operator);
 
     address[] memory spaces = ds.spacesByOperator[operator].values();
 
