@@ -5,7 +5,7 @@ pragma solidity ^0.8.24;
 import {IWETH} from "contracts/src/utils/interfaces/IWETH.sol";
 
 // libraries
-import {SafeTransferLib} from "solady/src/utils/SafeTransferLib.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 
 // contracts
