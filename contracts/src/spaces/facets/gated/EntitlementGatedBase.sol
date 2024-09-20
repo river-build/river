@@ -150,15 +150,16 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
         ? NodeVoteStatus.PASSED
         : NodeVoteStatus.FAILED;
 
-      if (
-        finalStatus == NodeVoteStatus.PASSED ||
-        _checkAllRoleIdsCompleted(transactionId)
-      ) {
+      bool allRoleIdsCompleted = _checkAllRoleIdsCompleted(transactionId);
+
+      if (finalStatus == NodeVoteStatus.PASSED || allRoleIdsCompleted) {
         _onEntitlementCheckResultPosted(transactionId, finalStatus);
+        emit EntitlementCheckResultPosted(transactionId, finalStatus);
       }
 
-      emit EntitlementCheckResultPosted(transactionId, finalStatus);
-      _removeTransaction(transactionId);
+      if (allRoleIdsCompleted) {
+        _removeTransaction(transactionId);
+      }
     }
   }
 
