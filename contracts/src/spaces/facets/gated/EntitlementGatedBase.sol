@@ -149,10 +149,33 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
       NodeVoteStatus finalStatus = passed > failed
         ? NodeVoteStatus.PASSED
         : NodeVoteStatus.FAILED;
-      _onEntitlementCheckResultPosted(transactionId, finalStatus);
+
+      if (
+        finalStatus == NodeVoteStatus.PASSED ||
+        _checkAllRoleIdsCompleted(transactionId)
+      ) {
+        _onEntitlementCheckResultPosted(transactionId, finalStatus);
+      }
+
       emit EntitlementCheckResultPosted(transactionId, finalStatus);
       _removeTransaction(transactionId);
     }
+  }
+
+  function _checkAllRoleIdsCompleted(
+    bytes32 transactionId
+  ) internal view returns (bool) {
+    EntitlementGatedStorage.Layout storage ds = EntitlementGatedStorage
+      .layout();
+
+    Transaction storage transaction = ds.transactions[transactionId];
+    uint256 roleIdsLength = transaction.roleIds.length;
+    for (uint256 i; i < roleIdsLength; ++i) {
+      if (!transaction.isCompleted[transaction.roleIds[i]]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   function _removeTransaction(bytes32 transactionId) internal {
