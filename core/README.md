@@ -8,8 +8,8 @@ To list all available commands:
 
 There are two local environments available:
 
-- multi_ne - no entitelements
-- multi - entitelements are enabled
+- multi_ne - no entitlements
+- multi - entitlements are enabled
 
 Environment name always needs to be provided through RUN_ENV variable.
 
