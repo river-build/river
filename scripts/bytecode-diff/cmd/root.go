@@ -20,12 +20,20 @@ var (
 	sourceDiffDir         string
 	sourceDiff            bool
 	reportOutDir          string
-	originEnvironment     string
+	sourceEnvironment     string
 	targetEnvironment     string
 	deploymentsPath       string
 	baseSepoliaRpcUrl     string
 	logLevel              string
 )
+
+// Add this new constant declaration
+var baseDiamonds = []utils.Diamond{
+	utils.BaseRegistry,
+	utils.Space,
+	utils.SpaceFactory,
+	utils.SpaceOwner,
+}
 
 func init() {
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger()
@@ -74,7 +82,7 @@ func Execute() {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "bytecode-diff [origin_environment] [target_environment]",
+	Use:   "bytecode-diff [source_environment] [target_environment]",
 	Short: "A tool to retrieve and display contract bytecode diff for Base",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		setLogLevel(logLevel)
@@ -86,7 +94,7 @@ var rootCmd = &cobra.Command{
 			}
 		} else {
 			if len(args) < 2 {
-				return fmt.Errorf("at least two arguments required when --source-diff-only is not set, [origin_environment], [target_environment]")
+				return fmt.Errorf("at least two arguments required when --source-diff-only is not set, [source_environment], [target_environment]")
 			}
 		}
 		return nil
@@ -133,23 +141,28 @@ var rootCmd = &cobra.Command{
 				log.Fatal().
 					Msg("Report out directory is missing. Set it using --report-out-dir flag or REPORT_OUT_DIR environment variable")
 			}
+			envDeploymentsPath := os.Getenv("DEPLOYMENTS_PATH")
+			if envDeploymentsPath != "" {
+				deploymentsPath = envDeploymentsPath
+			}
+			if deploymentsPath == "" {
+				deploymentsPath = cmd.Flag("deployments").Value.String()
+			}
+			if deploymentsPath == "" {
+				log.Fatal().
+					Msg("Deployments path is missing. Set it using --deployments flag or DEPLOYMENTS_PATH environment variable")
+			}
 			return
 		}
 
-		envDeploymentsPath := os.Getenv("DEPLOYMENTS_PATH")
-		if envDeploymentsPath != "" {
-			deploymentsPath = envDeploymentsPath
-		}
-		if deploymentsPath == "" {
-			deploymentsPath = cmd.Flag("deployments").Value.String()
-		}
-		if deploymentsPath == "" {
-			log.Fatal().
-				Msg("Deployments path is missing. Set it using --deployments flag or DEPLOYMENTS_PATH environment variable")
-		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		verbose, _ := cmd.Flags().GetBool("verbose")
+		baseConfig := utils.BaseConfig{
+			BaseRpcUrl:        baseRpcUrl,
+			BaseSepoliaRpcUrl: baseSepoliaRpcUrl,
+			BasescanAPIKey:    os.Getenv("BASESCAN_API_KEY"),
+		}
 		if sourceDiff {
 
 			log.Info().
@@ -157,20 +170,20 @@ var rootCmd = &cobra.Command{
 				Str("compiledFacetsPath", compiledFacetsPath).
 				Msg("Running diff for facet path recursively only compiled facet contracts")
 
-			if err := executeSourceDiff(verbose, facetSourcePath, compiledFacetsPath, sourceDiffDir); err != nil {
+			if err := executeSourceDiff(verbose, baseConfig, facetSourcePath, compiledFacetsPath, sourceDiffDir); err != nil {
 				log.Fatal().Err(err).Msg("Error executing source diff")
 				return
 			}
 		} else {
 
-			originEnvironment, targetEnvironment = args[0], args[1]
-			for _, environment := range []string{originEnvironment, targetEnvironment} {
+			sourceEnvironment, targetEnvironment = args[0], args[1]
+			for _, environment := range []string{sourceEnvironment, targetEnvironment} {
 				if !utils.Contains(supportedEnvironments, environment) {
 					log.Fatal().Str("environment", environment).Msg("Environment not supported. Environment can be one of alpha, gamma, or omega.")
 				}
 			}
 
-			log.Info().Str("originEnvironment", originEnvironment).Str("targetEnvironment", targetEnvironment).Msg("Environment")
+			log.Info().Str("sourceEnvironment", sourceEnvironment).Str("targetEnvironment", targetEnvironment).Msg("Environment")
 
 			if baseRpcUrl == "" {
 				baseRpcUrl = os.Getenv("BASE_RPC_URL")
@@ -191,22 +204,16 @@ var rootCmd = &cobra.Command{
 				log.Fatal().Msg("BaseScan API key not provided. Set it using BASESCAN_API_KEY environment variable")
 			}
 
-			log.Info().Str("originEnvironment", originEnvironment).Str("targetEnvironment", targetEnvironment).Msg("Running diff for environment")
-			// Create BaseConfig struct
-			baseConfig := utils.BaseConfig{
-				BaseRpcUrl:        baseRpcUrl,
-				BaseSepoliaRpcUrl: baseSepoliaRpcUrl,
-				BasescanAPIKey:    basescanAPIKey,
-			}
+			log.Info().Str("sourceEnvironment", sourceEnvironment).Str("targetEnvironment", targetEnvironment).Msg("Running diff for environment")
 
-			if err := executeEnvrionmentDiff(verbose, baseConfig, deploymentsPath, originEnvironment, targetEnvironment, reportOutDir); err != nil {
+			if err := executeEnvrionmentDiff(verbose, baseConfig, deploymentsPath, sourceEnvironment, targetEnvironment, reportOutDir); err != nil {
 				log.Fatal().Err(err).Msg("Error executing environment diff")
 			}
 		}
 	},
 }
 
-func executeSourceDiff(verbose bool, facetSourcePath, compiledFacetsPath string, reportOutDir string) error {
+func executeSourceDiff(verbose bool, baseConfig utils.BaseConfig, facetSourcePath, compiledFacetsPath string, reportOutDir string) error {
 	facetFiles, err := utils.GetFacetFiles(facetSourcePath)
 	if err != nil {
 		log.Error().
@@ -229,13 +236,47 @@ func executeSourceDiff(verbose bool, facetSourcePath, compiledFacetsPath string,
 
 	if verbose {
 		log.Info().Int("compiledHashesCount", len(compiledHashes)).Msg("Compiled Facet Hashes")
-		for file, hash := range compiledHashes {
-			log.Info().Str("file", file).Str("hash", hash).Msg("Compiled Facet Hash")
+		for facet, hash := range compiledHashes {
+			log.Info().Str("facet", string(facet)).Str("hash", hash).Msg("Compiled Facet Hash")
 		}
 	}
+	// read all addresses of facets from alpha deployed diamond contracts
+	const sourceEnvironment = "alpha"
 
-	err = utils.CreateFacetHashesReport(compiledFacetsPath, compiledHashes, reportOutDir, verbose)
+	sourceDeploymentsPath := filepath.Join(deploymentsPath, sourceEnvironment)
+	sourceDiamonds, err := utils.GetDiamondAddresses(sourceDeploymentsPath, baseDiamonds, verbose)
+
+	// Create Ethereum client
+	client, err := utils.CreateEthereumClient(baseConfig.BaseSepoliaRpcUrl)
 	if err != nil {
+		log.Error().Err(err).Msg("Error creating Ethereum client")
+		return err
+	}
+	defer client.Close()
+
+	alphaFacets := make(map[utils.DiamondName][]utils.Facet)
+	for diamondName, diamondAddress := range sourceDiamonds {
+		// read all facet addresses, names from diamond contract
+		facets, err := utils.ReadAllFacets(client, diamondAddress, baseConfig.BasescanAPIKey, false)
+		if err != nil {
+			log.Error().Err(err).Str("diamond", string(diamondName)).Msg("Error reading all facets for source diamond")
+			return err
+		}
+		alphaFacets[utils.DiamondName(diamondName)] = facets
+	}
+
+	err = utils.CreateFacetHashesReport(compiledFacetsPath, compiledHashes, alphaFacets, reportOutDir, sourceEnvironment, verbose)
+
+	if err != nil {
+		if verbose {
+			log.Info().
+				Str("compiledFacetsPath", compiledFacetsPath).
+				Interface("compiledHashes", compiledHashes).
+				Interface("alphaFacets", alphaFacets).
+				Str("reportOutDir", reportOutDir).
+				Bool("verbose", verbose).
+				Msg("Arguments for CreateFacetHashesReport")
+		}
 		log.Error().Err(err).Msg("Error creating facet hashes report")
 		return err
 	}
@@ -246,20 +287,14 @@ func executeSourceDiff(verbose bool, facetSourcePath, compiledFacetsPath string,
 func executeEnvrionmentDiff(
 	verbose bool,
 	baseConfig utils.BaseConfig,
-	deploymentsPath, originEnvironment, targetEnvironment string,
+	deploymentsPath, sourceEnvironment, targetEnvironment string,
 	reportOutDir string,
 ) error {
 	// walk environment diamonds and get all facet addresses from DiamondLoupe facet view
-	baseDiamonds := []utils.Diamond{
-		utils.BaseRegistry,
-		utils.Space,
-		utils.SpaceFactory,
-		utils.SpaceOwner,
-	}
-	originDeploymentsPath := filepath.Join(deploymentsPath, originEnvironment)
-	originDiamonds, err := utils.GetDiamondAddresses(originDeploymentsPath, baseDiamonds, verbose)
+	sourceDeploymentsPath := filepath.Join(deploymentsPath, sourceEnvironment)
+	sourceDiamonds, err := utils.GetDiamondAddresses(sourceDeploymentsPath, baseDiamonds, verbose)
 	if err != nil {
-		log.Error().Err(err).Msgf("Error getting diamond addresses for origin environment %s", originEnvironment)
+		log.Error().Err(err).Msgf("Error getting diamond addresses for source environment %s", sourceEnvironment)
 		return err
 	}
 	targetDeploymentsPath := filepath.Join(deploymentsPath, targetEnvironment)
@@ -272,7 +307,7 @@ func executeEnvrionmentDiff(
 	clients, err := utils.CreateEthereumClients(
 		baseConfig.BaseRpcUrl,
 		baseConfig.BaseSepoliaRpcUrl,
-		originEnvironment,
+		sourceEnvironment,
 		targetEnvironment,
 		verbose,
 	)
@@ -282,31 +317,31 @@ func executeEnvrionmentDiff(
 		}
 	}()
 	// getCode for all facet addresses over base rpc url and compare with compiled hashes
-	originFacets := make(map[string][]utils.Facet)
+	sourceFacets := make(map[string][]utils.Facet)
 
-	for diamondName, diamondAddress := range originDiamonds {
+	for diamondName, diamondAddress := range sourceDiamonds {
 		if verbose {
 			log.Info().
 				Str("diamondName", fmt.Sprintf("%s", diamondName)).
 				Str("diamondAddress", diamondAddress).
-				Msg("Origin Diamond Address")
+				Msg("source Diamond Address")
 		}
-		facets, err := utils.ReadAllFacets(clients[originEnvironment], diamondAddress, baseConfig.BasescanAPIKey)
+		facets, err := utils.ReadAllFacets(clients[sourceEnvironment], diamondAddress, baseConfig.BasescanAPIKey, true)
 		if err != nil {
-			log.Error().Err(err).Msgf("Error reading all facets for origin diamond %s", diamondName)
+			log.Error().Err(err).Msgf("Error reading all facets for source diamond %s", diamondName)
 			return err
 		}
-		err = utils.AddContractCodeHashes(clients[originEnvironment], facets)
+		err = utils.AddContractCodeHashes(clients[sourceEnvironment], facets)
 		if err != nil {
-			log.Error().Err(err).Msgf("Error adding contract code hashes for origin diamond %s", diamondName)
+			log.Error().Err(err).Msgf("Error adding contract code hashes for source diamond %s", diamondName)
 			return err
 		}
-		originFacets[string(diamondName)] = facets
+		sourceFacets[string(diamondName)] = facets
 	}
 
 	targetFacets := make(map[string][]utils.Facet)
 	for diamondName, diamondAddress := range targetDiamonds {
-		facets, err := utils.ReadAllFacets(clients[targetEnvironment], diamondAddress, baseConfig.BasescanAPIKey)
+		facets, err := utils.ReadAllFacets(clients[targetEnvironment], diamondAddress, baseConfig.BasescanAPIKey, true)
 		if err != nil {
 			log.Error().Err(err).Msgf("Error reading all facets for target diamond %s", diamondName)
 			return err
@@ -319,8 +354,8 @@ func executeEnvrionmentDiff(
 		targetFacets[string(diamondName)] = facets
 	}
 	if verbose {
-		for diamondName, facets := range originFacets {
-			log.Info().Str("diamondName", diamondName).Msg("Origin Facets for Diamond contract")
+		for diamondName, facets := range sourceFacets {
+			log.Info().Str("diamondName", diamondName).Msg("source Facets for Diamond contract")
 			for _, facet := range facets {
 				log.Info().
 					Str("facetAddress", facet.FacetAddress.Hex()).
@@ -342,15 +377,15 @@ func executeEnvrionmentDiff(
 	}
 
 	// compare facets and create report
-	differences := utils.CompareFacets(originFacets, targetFacets)
+	differences := utils.CompareFacets(sourceFacets, targetFacets)
 	if verbose {
 		for diamondName, facets := range differences {
 			log.Info().Str("diamondName", diamondName).Msg("Differences for Diamond contract")
 			for _, facet := range facets {
 				log.Info().
-					Str("facetAddress", facet.OriginContractAddress.Hex()).
-					Str("originContractName", facet.OriginContractName).
-					Msg("Origin Facet")
+					Str("facetAddress", facet.SourceContractAddress.Hex()).
+					Str("sourceContractName", facet.SourceContractName).
+					Msg("Source Facet")
 				log.Info().
 					Interface("selectorDiff", facet.SelectorsDiff).
 					Msg("Selector Diff")
@@ -361,7 +396,7 @@ func executeEnvrionmentDiff(
 
 	// create report
 	log.Info().Str("reportOutDir", reportOutDir).Msg("Generating YAML report")
-	err = utils.GenerateYAMLReport(originEnvironment, targetEnvironment, differences, reportOutDir)
+	err = utils.GenerateYAMLReport(sourceEnvironment, targetEnvironment, differences, reportOutDir)
 	if err != nil {
 		log.Error().Err(err).Msg("Error generating YAML report")
 		return err

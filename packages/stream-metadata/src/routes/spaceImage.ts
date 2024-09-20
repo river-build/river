@@ -18,6 +18,11 @@ const paramsSchema = z.object({
 		}),
 })
 
+const CACHE_CONTROL = {
+	307: 'public, max-age=30, s-maxage=3600',
+	'4xx': 'public, max-age=30, s-maxage=3600',
+}
+
 export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyReply) {
 	const logger = request.log.child({ name: fetchSpaceImage.name })
 
@@ -26,13 +31,16 @@ export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyRep
 	if (!parseResult.success) {
 		const errorMessage = parseResult.error.errors[0]?.message || 'Invalid parameters'
 		logger.info(errorMessage)
-		return reply.code(400).send({ error: 'Bad Request', message: errorMessage })
+		return reply
+			.code(400)
+			.header('Cache-Control', CACHE_CONTROL['4xx'])
+			.send({ error: 'Bad Request', message: errorMessage })
 	}
 
 	const { spaceAddress } = parseResult.data
 	logger.info({ spaceAddress }, 'Fetching space image')
 
-	let stream: StreamStateView | undefined
+	let stream: StreamStateView
 	try {
 		const streamId = makeStreamId(StreamPrefix.Space, spaceAddress)
 		stream = await getStream(logger, streamId)
@@ -44,17 +52,19 @@ export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyRep
 			},
 			'Failed to get stream',
 		)
-		return reply.code(404).send('Stream not found')
-	}
-
-	if (!stream) {
-		return reply.code(404).send('Stream not found')
+		return reply
+			.code(404)
+			.header('Cache-Control', CACHE_CONTROL['4xx'])
+			.send('Stream not found')
 	}
 
 	// get the image metatdata from the stream
 	const spaceImage = await getSpaceImage(stream)
 	if (!spaceImage) {
-		return reply.code(404).send('spaceImage not found')
+		return reply
+			.code(404)
+			.header('Cache-Control', CACHE_CONTROL['4xx'])
+			.send('spaceImage not found')
 	}
 
 	try {
@@ -69,21 +79,16 @@ export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyRep
 				},
 				'Invalid key or iv',
 			)
-			return reply.code(422).send('Failed to get encryption key or iv')
+			return reply
+				.code(422)
+				.header('Cache-Control', CACHE_CONTROL['4xx'])
+				.send('Failed to get encryption key or iv')
 		}
 		const redirectUrl = `${config.streamMetadataBaseUrl}/media/${
 			spaceImage.streamId
 		}?key=${bin_toHexString(key)}&iv=${bin_toHexString(iv)}`
 
-		return (
-			reply
-				.redirect(redirectUrl)
-				/**
-				 * public: The response may be cached by any cache, including shared caches like a CDN.
-				 * max-age=300: The response may be cached by the client for 300 seconds (5 minutes).
-				 */
-				.header('Cache-Control', 'public, max-age=300')
-		)
+		return reply.header('Cache-Control', CACHE_CONTROL[307]).redirect(redirectUrl, 307)
 	} catch (error) {
 		logger.error(
 			{
@@ -93,7 +98,10 @@ export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyRep
 			},
 			'Failed to get encryption key or iv',
 		)
-		return reply.code(500).send('Failed to get encryption key or iv')
+		return reply
+			.code(422)
+			.header('Cache-Control', CACHE_CONTROL['4xx'])
+			.send('Failed to get encryption key or iv')
 	}
 }
 

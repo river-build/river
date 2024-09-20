@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"log/slog"
 	"math/big"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -15,13 +17,14 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/prometheus/client_golang/prometheus"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/river-build/river/core/config"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
 	. "github.com/river-build/river/core/node/protocol"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type (
@@ -79,21 +82,22 @@ type (
 		walletBalanceLastTimeChecked time.Time
 		walletBalance                prometheus.Gauge
 
-		// mu guards lastPendingTx that is used to determine the tx nonce
-		mu            sync.Mutex
-		lastPendingTx *txPoolPendingTransaction
+		// mu guards lastNonce that is used to determine the tx nonce
+		mu        sync.Mutex
+		lastNonce *uint64
 	}
 
 	// txPoolPendingTransaction represents a transaction that is submitted to the chain but no receipt was retrieved.
 	txPoolPendingTransaction struct {
-		txHashes    []common.Hash // transaction hashes, due to resubmit there can be multiple
-		tx          *types.Transaction
-		txOpts      *bind.TransactOpts
-		name        string
-		resubmit    CreateTransaction
-		firstSubmit time.Time
-		lastSubmit  time.Time
-		tracer      trace.Tracer
+		txHashes     []common.Hash // transaction hashes, due to resubmit there can be multiple
+		tx           *types.Transaction
+		txOpts       *bind.TransactOpts
+		name         string
+		resubmit     CreateTransaction
+		firstSubmit  time.Time
+		lastSubmit   time.Time
+		tracer       trace.Tracer
+		receiptPolls uint
 		// listener waits on this channel for the transaction receipt
 		listener chan *types.Receipt
 		// The hash of the transaction that was executed on the chain. This is only set on the
@@ -124,6 +128,7 @@ type (
 		transactionsReplaced              *prometheus.CounterVec
 		transactionsPending               prometheus.Gauge
 		transactionsProcessed             *prometheus.CounterVec
+		transactionReceiptsMissing        prometheus.Counter
 		transactionGasCap                 *prometheus.GaugeVec
 		transactionGasTip                 *prometheus.GaugeVec
 
@@ -131,8 +136,10 @@ type (
 	}
 )
 
-var _ TransactionPool = (*transactionPool)(nil)
-var _ TransactionPoolPendingTransaction = (*txPoolPendingTransaction)(nil)
+var (
+	_ TransactionPool                   = (*transactionPool)(nil)
+	_ TransactionPoolPendingTransaction = (*txPoolPendingTransaction)(nil)
+)
 
 func newPendingTransactionPool(
 	monitor ChainMonitor,
@@ -165,6 +172,10 @@ func newPendingTransactionPool(
 		"How long it takes before a transaction is included in the chain since last submit",
 		prometheus.LinearBuckets(1.0, 2.0, 10), "chain_id", "address",
 	)
+	transactionReceiptsMissingCounter := metrics.NewCounterVecEx(
+		"txpool_missing_tx_receipts", "Number of receipts missing for submitted transactions",
+		"chain_id", "address",
+	)
 
 	curryLabels := prometheus.Labels{"chain_id": chainID.String(), "address": wallet.Address.String()}
 
@@ -188,6 +199,7 @@ func newPendingTransactionPool(
 		transactionsReplaced:              transactionsReplacedCounter.MustCurryWith(curryLabels),
 		transactionsPending:               transactionsPendingCounter.With(curryLabels),
 		transactionsProcessed:             transactionsProcessedCounter.MustCurryWith(curryLabels),
+		transactionReceiptsMissing:        transactionReceiptsMissingCounter.With(curryLabels),
 		transactionTotalInclusionDuration: transactionTotalInclusionDuration.With(curryLabels),
 		transactionInclusionDuration:      transactionInclusionDuration.With(curryLabels),
 		transactionGasCap:                 transactionGasCap.MustCurryWith(curryLabels),
@@ -219,6 +231,64 @@ func (pool *pendingTransactionPool) run() {
 	}
 }
 
+func (pool *pendingTransactionPool) closeTx(
+	log *slog.Logger,
+	ptx *txPoolPendingTransaction,
+	receipt *types.Receipt,
+	txHash common.Hash,
+) {
+	pool.pendingTxs.Delete(ptx.tx.Nonce())
+	if (txHash != common.Hash{}) {
+		ptx.executedHash.Store(&txHash)
+	}
+	if receipt != nil {
+		ptx.listener <- receipt
+	}
+	close(ptx.listener)
+
+	status := "failed"
+	if receipt != nil {
+		if receipt.Status == types.ReceiptStatusSuccessful {
+			status = "succeeded"
+		}
+
+		log.Debug(
+			"TxPool: Transaction DONE",
+			"txHash", txHash,
+			"chain", pool.chainID,
+			"name", ptx.name,
+			"from", ptx.txOpts.From,
+			"to", ptx.tx.To(),
+			"nonce", ptx.tx.Nonce(),
+			"succeeded", receipt.Status == types.ReceiptStatusSuccessful,
+			"cumulativeGasUsed", receipt.CumulativeGasUsed,
+			"gasUsed", receipt.GasUsed,
+			"effectiveGasPrice", receipt.EffectiveGasPrice,
+			"blockHash", receipt.BlockHash,
+			"blockNumber", receipt.BlockNumber,
+		)
+	} else {
+		status = "canceled"
+		log.Debug(
+			"TxPool: Transaction DONE",
+			"txHash", txHash,
+			"chain", pool.chainID,
+			"name", ptx.name,
+			"from", ptx.txOpts.From,
+			"to", ptx.tx.To(),
+			"nonce", ptx.tx.Nonce(),
+			"succeeded", false,
+		)
+	}
+
+	pool.pendingTxCount.Add(-1)
+	pool.processedTxCount.Add(1)
+	pool.transactionTotalInclusionDuration.Observe(time.Since(ptx.firstSubmit).Seconds())
+	pool.transactionInclusionDuration.Observe(time.Since(ptx.lastSubmit).Seconds())
+	pool.transactionsProcessed.With(prometheus.Labels{"status": status}).Inc()
+	pool.transactionsPending.Add(-1)
+}
+
 func (pool *pendingTransactionPool) checkPendingTransactions(ctx context.Context, head *types.Header) {
 	// Try lock to have only one invocation at a time.
 	if !pool.onCheckPendingTransactionsMutex.TryLock() {
@@ -246,44 +316,13 @@ func (pool *pendingTransactionPool) checkPendingTransactions(ctx context.Context
 		)
 
 		if ptxConfirmed {
+			ptx.receiptPolls++
 			// there can be multiple transactions (original + replacements), start from latest submitted
 			for i := len(ptx.txHashes) - 1; i >= 0; i-- {
 				txHash := ptx.txHashes[i]
 				receipt, err := pool.client.TransactionReceipt(ctx, txHash)
 				if receipt != nil {
-					pool.pendingTxs.Delete(ptx.tx.Nonce())
-					ptx.executedHash.Store(&txHash)
-					ptx.listener <- receipt
-					close(ptx.listener)
-
-					status := "failed"
-					if receipt.Status == types.ReceiptStatusSuccessful {
-						status = "succeeded"
-					}
-
-					log.Debug(
-						"TxPool: Transaction DONE",
-						"txHash", txHash,
-						"chain", pool.chainID,
-						"name", ptx.name,
-						"from", ptx.txOpts.From,
-						"to", ptx.tx.To(),
-						"nonce", ptx.tx.Nonce(),
-						"succeeded", receipt.Status == types.ReceiptStatusSuccessful,
-						"cumulativeGasUsed", receipt.CumulativeGasUsed,
-						"gasUsed", receipt.GasUsed,
-						"effectiveGasPrice", receipt.EffectiveGasPrice,
-						"blockHash", receipt.BlockHash,
-						"blockNumber", receipt.BlockNumber,
-					)
-
-					pool.pendingTxCount.Add(-1)
-					pool.processedTxCount.Add(1)
-					pool.transactionTotalInclusionDuration.Observe(time.Since(ptx.firstSubmit).Seconds())
-					pool.transactionInclusionDuration.Observe(time.Since(ptx.lastSubmit).Seconds())
-					pool.transactionsProcessed.With(prometheus.Labels{"status": status}).Inc()
-					pool.transactionsPending.Add(-1)
-
+					pool.closeTx(log, ptx, receipt, txHash)
 					return true
 				}
 				if errors.Is(err, ethereum.NotFound) {
@@ -294,50 +333,67 @@ func (pool *pendingTransactionPool) checkPendingTransactions(ctx context.Context
 					return true
 				}
 			}
-		} else { // determine if tx is eligible for resubmit
-			if pool.replacePolicy.Eligible(head, ptx.lastSubmit, ptx.tx) {
-				ptx.txOpts.GasPrice, ptx.txOpts.GasFeeCap, ptx.txOpts.GasTipCap =
-					pool.pricePolicy.Reprice(head, ptx.tx)
 
-				ptx.txOpts.GasLimit = 0 // force re-simulation to determine new gas limit
+			// it is possible that the nonce already progressed as an indication the tx was included in the chain
+			// but the rpc node doesn't yet have the receipt available. Allow several retries before giving up waiting
+			// for the receipt.
+			if ptx.receiptPolls > 15 {
+				// Receipt not available can be caused by the chain rpc node lagging behind the canonical chain at
+				// the time the transactions were created and an outdated nonce was retrieved from the rpc node. A tx
+				// with hat same nonce was already included in the canonical chain. When the rpc node caught up the tx
+				// was dropped from the rpc node tx pool and therefor we never get a receipt for it. Closing
+				// ptx.listener will yield an error to the client waiting for the receipt that it is not available.
+				pool.transactionReceiptsMissing.Add(1)
+				pool.pendingTxs.Delete(nonce)
+				close(ptx.listener) // this will return an error that the receipt wasn't available when waiting for it
+			}
+		} else if ptx.txOpts.Context != nil && ptx.txOpts.Context.Err() != nil {
+			log.Debug("replacement transaction canceled", "txHash", ptx.tx.Hash(), "err", ptx.txOpts.Context.Err())
+			pool.closeTx(log, ptx, nil, common.Hash{})
+		} else if pool.replacePolicy.Eligible(head, ptx.lastSubmit, ptx.tx) { // determine if tx is eligible for resubmit
+			ptx.txOpts.GasPrice, ptx.txOpts.GasFeeCap, ptx.txOpts.GasTipCap = pool.pricePolicy.Reprice(head, ptx.tx)
 
-				tx, err := ptx.resubmit(ptx.txOpts)
-				if err != nil {
-					log.Warn("unable to create replacement transaction", "txHash", ptx.tx.Hash(), "err", err)
-					return true
-				}
+			ptx.txOpts.GasLimit = 0 // force re-simulation to determine new gas limit
 
-				if err := pool.client.SendTransaction(ctx, tx); err == nil {
-					log.Debug(
-						"TxPool: Transaction REPLACED",
-						"old", ptx.tx.Hash(),
-						"txHash", tx.Hash(),
-						"chain", pool.chainID,
-						"name", ptx.name,
-						"nonce", tx.Nonce(),
-						"from", ptx.txOpts.From,
-						"to", tx.To(),
-						"gasPrice", tx.GasPrice(),
-						"gasFeeCap", tx.GasFeeCap(),
-						"gasTipCap", tx.GasTipCap(),
-					)
+			tx, err := ptx.resubmit(ptx.txOpts)
+			if err != nil {
+				log.Warn("unable to create replacement transaction", "txHash", ptx.tx.Hash(), "err", err)
+				return true
+			}
 
-					ptx.tx = tx
-					ptx.txHashes = append(ptx.txHashes, tx.Hash())
-					ptx.lastSubmit = time.Now()
+			if err := pool.client.SendTransaction(ctx, tx); err == nil {
+				log.Debug(
+					"TxPool: Transaction REPLACED",
+					"old", ptx.tx.Hash(),
+					"txHash", tx.Hash(),
+					"chain", pool.chainID,
+					"name", ptx.name,
+					"nonce", tx.Nonce(),
+					"from", ptx.txOpts.From,
+					"to", tx.To(),
+					"gasPrice", tx.GasPrice(),
+					"gasFeeCap", tx.GasFeeCap(),
+					"gasTipCap", tx.GasTipCap(),
+				)
 
-					funcSelector := funcSelectorFromTxForMetrics(tx)
-					gasCap, _ := tx.GasFeeCap().Float64()
-					tipCap, _ := tx.GasTipCap().Float64()
+				ptx.tx = tx
+				ptx.txHashes = append(ptx.txHashes, tx.Hash())
+				ptx.lastSubmit = time.Now()
 
-					pool.replacementsSent.Add(1)
-					pool.lastReplacementSent.Store(ptx.lastSubmit.Unix())
-					pool.transactionsReplaced.With(prometheus.Labels{"func_selector": funcSelector}).Add(1)
-					pool.transactionGasCap.With(prometheus.Labels{"replacement": "false"}).Set(gasCap)
-					pool.transactionGasTip.With(prometheus.Labels{"replacement": "false"}).Set(tipCap)
-				} else {
-					log.Error("unable to replace transaction", "txHash", tx.Hash(), "err", err)
-				}
+				funcSelector := funcSelectorFromTxForMetrics(tx)
+				gasCap, _ := tx.GasFeeCap().Float64()
+				tipCap, _ := tx.GasTipCap().Float64()
+
+				pool.replacementsSent.Add(1)
+				pool.lastReplacementSent.Store(ptx.lastSubmit.Unix())
+				pool.transactionsReplaced.With(prometheus.Labels{"func_selector": funcSelector}).Add(1)
+				pool.transactionGasCap.With(prometheus.Labels{"replacement": "false"}).Set(gasCap)
+				pool.transactionGasTip.With(prometheus.Labels{"replacement": "false"}).Set(tipCap)
+			} else if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				log.Debug("replacement transaction canceled", "txHash", tx.Hash(), "err", err)
+				pool.closeTx(log, ptx, nil, common.Hash{})
+			} else {
+				log.Error("unable to replace transaction", "txHash", tx.Hash(), "err", err)
 			}
 		}
 
@@ -478,8 +534,8 @@ func (tx *txPoolPendingTransaction) TransactionHash() common.Hash {
 
 // caller is expected to hold a lock on r.mu
 func (r *transactionPool) nextNonce(ctx context.Context) (uint64, error) {
-	if r.lastPendingTx != nil {
-		return r.lastPendingTx.tx.Nonce() + 1, nil
+	if r.lastNonce != nil {
+		return *r.lastNonce + 1, nil
 	}
 	return r.client.PendingNonceAt(ctx, r.wallet.Address)
 }
@@ -507,16 +563,24 @@ func (r *transactionPool) Submit(
 	name string,
 	createTx CreateTransaction,
 ) (TransactionPoolPendingTransaction, error) {
-	var span trace.Span
+	// lock to prevent tx.Nonce collisions
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
+	return r.submitNoLock(ctx, name, createTx, true)
+}
+
+func (r *transactionPool) submitNoLock(
+	ctx context.Context,
+	name string,
+	createTx CreateTransaction,
+	canRetry bool,
+) (TransactionPoolPendingTransaction, error) {
+	var span trace.Span
 	if r.tracer != nil {
 		ctx, span = r.tracer.Start(ctx, "txpool_submit")
 		defer span.End()
 	}
-
-	// lock to prevent tx.Nonce collisions
-	r.mu.Lock()
-	defer r.mu.Unlock()
 
 	nonce, err := r.nextNonce(ctx)
 	if err != nil {
@@ -548,6 +612,13 @@ func (r *transactionPool) Submit(
 	}
 
 	if err := r.client.SendTransaction(ctx, tx); err != nil {
+		// force fetching the latest nonce from the rpc node again when it was reported to be too low. This can be
+		// caused by the chain rpc node lagging behind when the tx pool fetched the nonce. When the chain rpc node
+		// caught up the fetched nonce can be too low. Fetch the nonce again recovers from this scenario.
+		if canRetry && strings.Contains(strings.ToLower(err.Error()), "nonce too low") {
+			r.lastNonce = nil
+			return r.submitNoLock(ctx, name, createTx, false)
+		}
 		return nil, err
 	}
 
@@ -564,7 +635,11 @@ func (r *transactionPool) Submit(
 		listener:    make(chan *types.Receipt, 1),
 	}
 
-	r.lastPendingTx = pendingTx
+	if r.lastNonce == nil {
+		r.lastNonce = new(uint64)
+	}
+	*r.lastNonce = pendingTx.tx.Nonce()
+
 	r.pendingTransactionPool.addPendingTx <- pendingTx
 
 	// metrics

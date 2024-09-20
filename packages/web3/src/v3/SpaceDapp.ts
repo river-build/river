@@ -4,6 +4,7 @@ import {
     ChannelMetadata,
     EntitlementModuleType,
     isPermission,
+    MembershipInfo,
     Permission,
     PricingModuleStruct,
     RoleDetails,
@@ -39,7 +40,11 @@ import {
 import { PricingModules } from './PricingModules'
 import { dlogger, isJest } from '@river-build/dlog'
 import { EVERYONE_ADDRESS, stringifyChannelMetadataJSON, NoEntitledWalletError } from '../Utils'
-import { evaluateOperationsForEntitledWallet, ruleDataToOperations } from '../entitlement'
+import {
+    XchainConfig,
+    evaluateOperationsForEntitledWallet,
+    ruleDataToOperations,
+} from '../entitlement'
 import { RuleEntitlementShim } from './RuleEntitlementShim'
 import { PlatformRequirements } from './PlatformRequirements'
 import { EntitlementDataStructOutput } from './IEntitlementDataQueryableShim'
@@ -134,6 +139,11 @@ function newChannelEntitlementRequest(
 
 function ensureHexPrefix(value: string): string {
     return value.startsWith('0x') ? value : `0x${value}`
+}
+
+const EmptyXchainConfig: XchainConfig = {
+    supportedRpcUrls: {},
+    etherBasedChains: [],
 }
 
 type EntitledWallet = string | undefined
@@ -315,20 +325,23 @@ export class SpaceDapp implements ISpaceDapp {
         signer: ethers.Signer,
         txnOpts?: TransactionOpts,
     ): Promise<ContractTransaction> {
-        const spaceInfo = {
-            name: params.spaceName,
-            uri: params.uri,
-            membership: params.membership,
-            channel: {
-                metadata: params.channelName || '',
-            },
-            shortDescription: params.shortDescription ?? '',
-            longDescription: params.longDescription ?? '',
-        }
-        return wrapTransaction(
-            () => this.spaceRegistrar.SpaceArchitect.write(signer).createSpace(spaceInfo),
-            txnOpts,
-        )
+        return wrapTransaction(() => {
+            return this.spaceRegistrar.SpaceArchitect.write(signer).createSpaceWithPrepay({
+                channel: {
+                    metadata: params.channelName || '',
+                },
+                membership: params.membership,
+                metadata: {
+                    name: params.spaceName,
+                    uri: params.uri,
+                    longDescription: params.longDescription || '',
+                    shortDescription: params.shortDescription || '',
+                },
+                prepay: {
+                    supply: params.prepaySupply ?? 0,
+                },
+            })
+        }, txnOpts)
     }
 
     public async createChannel(
@@ -697,7 +710,7 @@ export class SpaceDapp implements ISpaceDapp {
         rootKey: string,
         allWallets: string[],
         entitlements: EntitlementData[],
-        supportedXChainRpcUrls: string[],
+        xchainConfig: XchainConfig,
     ): Promise<EntitledWallet> {
         const isEveryOneSpace = entitlements.some((e) =>
             e.userEntitlement?.includes(EVERYONE_ADDRESS),
@@ -715,11 +728,6 @@ export class SpaceDapp implements ISpaceDapp {
                 }
             }
         }
-
-        const providers = supportedXChainRpcUrls.map(
-            (url) => new ethers.providers.StaticJsonRpcProvider(url),
-        )
-        await Promise.all(providers.map((p) => p.ready))
 
         // Accumulate all RuleDataV1 entitlements and convert to V2s.
         const ruleEntitlements = entitlements
@@ -755,7 +763,7 @@ export class SpaceDapp implements ISpaceDapp {
                 const result = await evaluateOperationsForEntitledWallet(
                     operations,
                     allWallets,
-                    providers,
+                    xchainConfig,
                 )
                 if (result !== ethers.constants.AddressZero) {
                     return result
@@ -773,7 +781,7 @@ export class SpaceDapp implements ISpaceDapp {
     public async getEntitledWalletForJoiningSpace(
         spaceId: string,
         rootKey: string,
-        supportedXChainRpcUrls: string[],
+        xchainConfig: XchainConfig,
     ): Promise<EntitledWallet> {
         const { value } = await this.entitledWalletCache.executeUsingCache(
             newSpaceEntitlementEvaluationRequest(spaceId, rootKey, Permission.JoinSpace),
@@ -781,7 +789,7 @@ export class SpaceDapp implements ISpaceDapp {
                 const entitledWallet = await this.getEntitledWalletForJoiningSpaceUncached(
                     request.spaceId,
                     request.userId,
-                    supportedXChainRpcUrls,
+                    xchainConfig,
                 )
                 return new EntitledWalletCacheResult(entitledWallet)
             },
@@ -792,7 +800,7 @@ export class SpaceDapp implements ISpaceDapp {
     private async getEntitledWalletForJoiningSpaceUncached(
         spaceId: string,
         rootKey: string,
-        supportedXChainRpcUrls: string[],
+        xchainConfig: XchainConfig,
     ): Promise<EntitledWallet> {
         const allWallets = await this.getLinkedWallets(rootKey)
 
@@ -816,12 +824,7 @@ export class SpaceDapp implements ISpaceDapp {
         }
 
         const entitlements = await this.getEntitlementsForPermission(spaceId, Permission.JoinSpace)
-        return await this.evaluateEntitledWallet(
-            rootKey,
-            allWallets,
-            entitlements,
-            supportedXChainRpcUrls,
-        )
+        return await this.evaluateEntitledWallet(rootKey, allWallets, entitlements, xchainConfig)
     }
 
     public async isEntitledToSpace(
@@ -864,7 +867,7 @@ export class SpaceDapp implements ISpaceDapp {
         channelNetworkId: string,
         user: string,
         permission: Permission,
-        supportedXChainRpcUrls: string[] = [],
+        xchainConfig: XchainConfig = EmptyXchainConfig,
     ): Promise<boolean> {
         const { value } = await this.entitlementEvaluationCache.executeUsingCache(
             newChannelEntitlementEvaluationRequest(spaceId, channelNetworkId, user, permission),
@@ -874,7 +877,7 @@ export class SpaceDapp implements ISpaceDapp {
                     request.channelId,
                     request.userId,
                     request.permission,
-                    supportedXChainRpcUrls,
+                    xchainConfig,
                 )
                 return new BooleanCacheResult(isEntitled)
             },
@@ -887,7 +890,7 @@ export class SpaceDapp implements ISpaceDapp {
         channelNetworkId: string,
         user: string,
         permission: Permission,
-        supportedXChainRpcUrls: string[] = [],
+        xchainConfig: XchainConfig,
     ): Promise<boolean> {
         const space = this.getSpace(spaceId)
         if (!space) {
@@ -921,7 +924,7 @@ export class SpaceDapp implements ISpaceDapp {
             user,
             linkedWallets,
             entitlements,
-            supportedXChainRpcUrls,
+            xchainConfig,
         )
         return entitledWallet !== undefined
     }
@@ -1278,17 +1281,39 @@ export class SpaceDapp implements ISpaceDapp {
         return space.Membership.address
     }
 
-    public async getJoinSpacePrice(spaceId: string): Promise<ethers.BigNumber> {
+    public async getJoinSpacePriceDetails(spaceId: string): Promise<{
+        price: ethers.BigNumber
+        prepaidSupply: ethers.BigNumber
+        remainingFreeSupply: ethers.BigNumber
+    }> {
         const space = this.getSpace(spaceId)
         if (!space) {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
         }
         const prepaidSupply = await space.Prepay.read.prepaidMembershipSupply()
+        const membershipPrice = await space.Membership.read.getMembershipPrice()
+        const freeAllocation = await this.getMembershipFreeAllocation(spaceId)
+        const totalSupply = await space.ERC721A.read.totalSupply()
+        // totalSupply = number of memberships minted
+        // freeAllocation = number of memberships that are free to mint, set during space creation
+        // prepaidSupply = number of additional prepaid memberships
+        const remainingFreeSupply = totalSupply.lt(freeAllocation)
+            ? freeAllocation.add(prepaidSupply).sub(totalSupply)
+            : prepaidSupply
 
-        if (prepaidSupply.gt(0)) {
-            return ethers.BigNumber.from(0)
+        return {
+            price: prepaidSupply.gt(0) ? ethers.BigNumber.from(0) : membershipPrice,
+            prepaidSupply,
+            remainingFreeSupply,
         }
-        return space.Membership.read.getMembershipPrice()
+    }
+
+    public async getMembershipFreeAllocation(spaceId: string) {
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+        return space.Membership.read.getMembershipFreeAllocation()
     }
 
     public async joinSpace(
@@ -1366,26 +1391,36 @@ export class SpaceDapp implements ISpaceDapp {
         if (!space) {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
         }
-        const [price, limit, currency, feeRecipient, duration, totalSupply, pricingModule] =
-            await Promise.all([
-                this.getJoinSpacePrice(spaceId),
-                space.Membership.read.getMembershipLimit(),
-                space.Membership.read.getMembershipCurrency(),
-                space.Ownable.read.owner(),
-                space.Membership.read.getMembershipDuration(),
-                space.ERC721A.read.totalSupply(),
-                space.Membership.read.getMembershipPricingModule(),
-            ])
+        const [
+            joinSpacePriceDetails,
+            limit,
+            currency,
+            feeRecipient,
+            duration,
+            totalSupply,
+            pricingModule,
+        ] = await Promise.all([
+            this.getJoinSpacePriceDetails(spaceId),
+            space.Membership.read.getMembershipLimit(),
+            space.Membership.read.getMembershipCurrency(),
+            space.Ownable.read.owner(),
+            space.Membership.read.getMembershipDuration(),
+            space.ERC721A.read.totalSupply(),
+            space.Membership.read.getMembershipPricingModule(),
+        ])
+        const { price, prepaidSupply, remainingFreeSupply } = joinSpacePriceDetails
 
         return {
-            price: price, // keep as BigNumber (wei)
+            price, // keep as BigNumber (wei)
             maxSupply: limit.toNumber(),
             currency: currency,
             feeRecipient: feeRecipient,
             duration: duration.toNumber(),
             totalSupply: totalSupply.toNumber(),
             pricingModule: pricingModule,
-        }
+            prepaidSupply: prepaidSupply.toNumber(),
+            remainingFreeSupply: remainingFreeSupply.toNumber(),
+        } satisfies MembershipInfo
     }
 
     public getWalletLink(): WalletLink {

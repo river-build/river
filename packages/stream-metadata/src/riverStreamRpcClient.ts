@@ -17,8 +17,6 @@ import { getNodeForStream } from './streamRegistry'
 
 const clients = new Map<string, StreamRpcClient>()
 
-const contentCache: Record<string, MediaContent | undefined> = {}
-
 export type StreamRpcClient = PromiseClient<typeof StreamService> & { url?: string }
 
 function makeStreamRpcClient(logger: FastifyBaseLogger, url: string): StreamRpcClient {
@@ -37,21 +35,19 @@ function makeStreamRpcClient(logger: FastifyBaseLogger, url: string): StreamRpcC
 
 async function getStreamClient(logger: FastifyBaseLogger, streamId: `0x${string}`) {
 	const node = await getNodeForStream(logger, streamId)
-	let url = node?.url
-	if (!clients.has(url)) {
-		const client = makeStreamRpcClient(logger, url)
-		clients.set(client.url!, client)
-		url = client.url!
-	}
-	logger.info({ url }, 'client connected to node')
+	const client = clients.get(node.url) || makeStreamRpcClient(logger, node.url)
+	clients.set(node.url, client)
 
-	const client = clients.get(url)
-	if (!client) {
-		logger.error({ url }, 'Failed to get client for url')
-		throw new Error('Failed to get client for url')
-	}
+	logger.info({ url: node.url }, 'client connected to node')
 
 	return { client, lastMiniblockNum: node.lastMiniblockNum }
+}
+
+function removeClient(logger: FastifyBaseLogger, clientToRemove: StreamRpcClient) {
+	logger.info({ url: clientToRemove.url }, 'removeClient')
+	if (clientToRemove.url) {
+		clients.delete(clientToRemove.url)
+	}
 }
 
 function streamViewFromUnpackedResponse(
@@ -153,15 +149,7 @@ export async function getStream(
 	logger: FastifyBaseLogger,
 	streamId: string,
 ): Promise<StreamStateView> {
-	const result = await getStreamClient(logger, `0x${streamId}`)
-	const client = result.client
-	const lastMiniblockNum = result.lastMiniblockNum
-
-	if (!client) {
-		logger.error({ streamId }, 'Failed to get client for stream')
-		throw new Error(`Failed to get client for stream ${streamId}`)
-	}
-
+	const { client, lastMiniblockNum } = await getStreamClient(logger, `0x${streamId}`)
 	logger.info(
 		{
 			nodeUrl: client.url,
@@ -171,22 +159,31 @@ export async function getStream(
 		'getStream',
 	)
 
-	const start = Date.now()
+	try {
+		const start = Date.now()
 
-	const response = await client.getStream({
-		streamId: streamIdAsBytes(streamId),
-	})
+		const response = await client.getStream({
+			streamId: streamIdAsBytes(streamId),
+		})
 
-	const duration_ms = Date.now() - start
-	logger.info(
-		{
-			duration_ms,
-		},
-		'getStream finished',
-	)
+		const duration_ms = Date.now() - start
+		logger.info(
+			{
+				duration_ms,
+			},
+			'getStream finished',
+		)
 
-	const unpackedResponse = await unpackStream(response.stream)
-	return streamViewFromUnpackedResponse(streamId, unpackedResponse)
+		const unpackedResponse = await unpackStream(response.stream)
+		return streamViewFromUnpackedResponse(streamId, unpackedResponse)
+	} catch (e) {
+		logger.error(
+			{ url: client.url, streamId, error: e },
+			'getStream failed, removing client from cache',
+		)
+		removeClient(logger, client)
+		throw e
+	}
 }
 
 export async function getMediaStreamContent(
@@ -194,33 +191,9 @@ export async function getMediaStreamContent(
 	fullStreamId: StreamIdHex,
 	secret: Uint8Array,
 	iv: Uint8Array,
-): Promise<MediaContent | { data: null; mimeType: null }> {
-	const toHexString = (byteArray: Uint8Array) => {
-		return Array.from(byteArray, (byte) => byte.toString(16).padStart(2, '0')).join('')
-	}
-
-	const secretHex = toHexString(secret)
-	const ivHex = toHexString(iv)
-
-	/*
-	if (contentCache[concatenatedString]) {
-		return contentCache[concatenatedString];
-	}
-	*/
-
+): Promise<MediaContent> {
 	const streamId = stripHexPrefix(fullStreamId)
 	const sv = await getStream(logger, streamId)
-
-	if (!sv) {
-		logger.error({ streamId }, 'Failed to get stream')
-		throw new Error(`Failed to get stream ${streamId}`)
-	}
-
 	const result = await mediaContentFromStreamView(logger, sv, secret, iv)
-
-	// Cache the result
-	const concatenatedString = `${fullStreamId}${secretHex}${ivHex}`
-	contentCache[concatenatedString] = result
-
 	return result
 }

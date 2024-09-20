@@ -10,6 +10,7 @@ import {
     RoleDetails,
     TotalSupplyInfo,
 } from './ContractTypes'
+import { XchainConfig } from './entitlement'
 
 import { WalletLink as WalletLinkV3 } from './v3/WalletLink'
 import { BigNumber, BytesLike, ContractReceipt, ContractTransaction, ethers } from 'ethers'
@@ -43,6 +44,7 @@ export interface CreateSpaceParams {
     membership: MembershipStruct
     shortDescription?: string
     longDescription?: string
+    prepaySupply?: number
 }
 
 export interface UpdateChannelParams {
@@ -207,12 +209,12 @@ export interface ISpaceDapp {
         channelId: string,
         user: string,
         permission: Permission,
-        supportedXChainRpcUrls: string[],
+        xchainConfig: XchainConfig,
     ) => Promise<boolean>
     getEntitledWalletForJoiningSpace: (
         spaceId: string,
         wallet: string,
-        supportedXChainRpcUrls: string[],
+        xchainConfig: XchainConfig,
     ) => Promise<string | undefined>
     parseAllContractErrors: (args: { spaceId?: string; error: unknown }) => Error
     parseSpaceFactoryError: (error: unknown) => Error
@@ -268,7 +270,11 @@ export interface ISpaceDapp {
     ) => Promise<TransactionType>
     getSpace(spaceId: string): Space | undefined
     getSpaceMembershipTokenAddress: (spaceId: string) => Promise<string>
-    getJoinSpacePrice: (spaceId: string) => Promise<BigNumber>
+    getJoinSpacePriceDetails: (spaceId: string) => Promise<{
+        price: ethers.BigNumber
+        prepaidSupply: ethers.BigNumber
+        remainingFreeSupply: ethers.BigNumber
+    }>
     joinSpace: (
         spaceId: string,
         recipient: string,
@@ -311,4 +317,5 @@ export interface ISpaceDapp {
         receiver: string,
         abortController?: AbortController,
     ) => Promise<{ issued: true; tokenId: string } | { issued: false; tokenId: undefined }>
+    getMembershipFreeAllocation: (spaceId: string) => Promise<BigNumber>
 }

@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+
 	"github.com/river-build/river/core/node/utils"
 
 	"connectrpc.com/connect"
@@ -39,7 +40,7 @@ func (s *Service) allocateStream(ctx context.Context, req *AllocateStreamRequest
 
 	// TODO: check request is signed by correct node
 	// TODO: all checks that should be done on create?
-	_, view, err := s.cache.CreateStream(ctx, streamId)
+	_, view, err := s.cache.GetStream(ctx, streamId)
 	if err != nil {
 		return nil, err
 	}
@@ -138,6 +139,10 @@ func (s *Service) proposeMiniblock(
 	proposal, err := view.ProposeNextMiniblock(ctx, s.chainConfig, req.DebugForceSnapshot)
 	if err != nil {
 		return nil, err
+	}
+
+	if proposal == nil {
+		return nil, RiverError(Err_MINIPOOL_MISSING_EVENTS, "Empty stream minipool")
 	}
 
 	return &ProposeMiniblockResponse{
