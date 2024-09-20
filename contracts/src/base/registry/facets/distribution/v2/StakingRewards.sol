@@ -310,7 +310,7 @@ library StakingRewards {
 
   function changeBeneficiary(
     Layout storage ds,
-    uint256 depositId,
+    Deposit storage deposit,
     address newBeneficiary
   ) internal {
     if (newBeneficiary == address(0)) {
@@ -319,7 +319,6 @@ library StakingRewards {
 
     updateGlobalReward(ds);
 
-    Deposit storage deposit = ds.deposits[depositId];
     // TODO: measure gas
     (uint96 amount, address oldBeneficiary, uint96 commissionEarningPower) = (
       deposit.amount,
@@ -347,11 +346,10 @@ library StakingRewards {
 
   function withdraw(
     Layout storage ds,
-    uint256 depositId,
+    Deposit storage deposit,
     uint96 amount
   ) internal {
     updateGlobalReward(ds);
-    Deposit storage deposit = ds.deposits[depositId];
     // cache storage reads
     (address beneficiary, address owner) = (deposit.beneficiary, deposit.owner);
 
