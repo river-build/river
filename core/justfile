@@ -226,7 +226,7 @@ _wait-node $INSTANCE_NUM $INSTANCE_DIR:
     source ${ENV_FILE}
     source ${INSTANCE_DIR}/config/config.env
     cd ..
-    yarn wait-on https://localhost:${RIVER_PORT}/status?blockchain=1 --timeout=60000
+    yarn wait-on https://localhost:${RIVER_PORT}/status?blockchain=1 --timeout=300000
 
 _wait-ctrl-c:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
