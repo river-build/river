@@ -203,6 +203,9 @@ contract RiverBaseTest is BaseSetup, ILockBase, IOwnableBase {
   {
     vm.assume(alice != bob);
 
+    vm.expectEmit();
+    emit IVotes.DelegateVotesChanged(space, 0, stakeRequirement);
+
     vm.prank(bob);
     riverFacet.delegate(space);
 
@@ -221,14 +224,6 @@ contract RiverBaseTest is BaseSetup, ILockBase, IOwnableBase {
       space,
       stakeRequirement,
       2 * stakeRequirement
-    );
-
-    // duplicate delegate votes change
-    vm.expectEmit();
-    emit IVotes.DelegateVotesChanged(
-      space,
-      2 * stakeRequirement,
-      3 * stakeRequirement
     );
 
     vm.prank(alice);
