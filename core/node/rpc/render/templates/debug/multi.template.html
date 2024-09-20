@@ -1,72 +1,71 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Protocol and Node Responses</title>
+    <style>
+      body {
+        font-family: monospace;
+      }
 
-<head>
-  <meta charset="UTF-8" />
-  <title>Protocol and Node Responses</title>
-  <style>
-    body {
-      font-family: monospace;
-    }
+      .success {
+        color: green;
+      }
 
-    .success {
-      color: green;
-    }
+      .error {
+        color: red;
+      }
 
-    .error {
-      color: red;
-    }
+      table,
+      th,
+      td {
+        border: 1px solid black;
+        border-collapse: collapse;
+      }
 
-    table,
-    th,
-    td {
-      border: 1px solid black;
-      border-collapse: collapse;
-    }
+      th,
+      td {
+        padding: 8px;
+        text-align: center;
+      }
 
-    th,
-    td {
-      padding: 8px;
-      text-align: center;
-    }
+      .tooltip {
+        position: relative;
+        display: inline-block;
+      }
 
-    .tooltip {
-      position: relative;
-      display: inline-block;
-    }
+      .tooltip .tooltiptext {
+        visibility: hidden;
+        background-color: white;
+        color: indigo;
+        text-align: left;
+        border: 1px solid black;
+        padding: 5px;
+        position: absolute;
+        z-index: 1;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        white-space: pre-wrap;
+        margin-top: 5px;
+        max-height: 300px;
+        overflow-y: auto;
+      }
 
-    .tooltip .tooltiptext {
-      visibility: hidden;
-      background-color: white;
-      color: indigo;
-      text-align: left;
-      border: 1px solid black;
-      padding: 5px;
-      position: absolute;
-      z-index: 1;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      white-space: pre-wrap;
-      margin-top: 5px;
-      max-height: 300px;
-      overflow-y: auto;
-    }
+      .tooltip:hover .tooltiptext {
+        visibility: visible;
+      }
 
-    .tooltip:hover .tooltiptext {
-      visibility: visible;
-    }
+      .tooltip:nth-last-child(-n + 3) .tooltiptext {
+        right: 0;
+        left: auto;
+        transform: none;
+      }
+    </style>
+  </head>
+  <!-- prettier-ignore -->
 
-    .tooltip:nth-last-child(-n + 3) .tooltiptext {
-      right: 0;
-      left: auto;
-      transform: none;
-    }
-  </style>
-</head>
-<!-- prettier-ignore -->
-
-<body>
+  <body>
   <h2>Node Response Times</h2>
   <table>
     <!-- Header row -->
@@ -182,5 +181,4 @@ UTC: {{.StartTime}}</pre>
     });
   </script>
 </body>
-
 </html>
