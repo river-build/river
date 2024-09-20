@@ -21,6 +21,7 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
   using StakingRewards for StakingRewards.Layout;
 
   error RewardsDistribution_NotDepositOwner();
+  error RewardsDistribution_NotRewardNotifier();
 
   function __RewardsDistribution_init() external onlyInitializing {
     _addInterface(type(IRewardsDistribution).interfaceId);
@@ -76,9 +77,7 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     StakingRewards.Deposit storage deposit = ds.staking.deposits[depositId];
-    if (msg.sender != deposit.owner) {
-      CustomRevert.revertWith(RewardsDistribution_NotDepositOwner.selector);
-    }
+    _revertIfNotDepositOwner(deposit);
 
     StakingRewards.increaseStake(ds.staking, deposit, amount);
   }
@@ -87,10 +86,53 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     StakingRewards.Deposit storage deposit = ds.staking.deposits[depositId];
+    _revertIfNotDepositOwner(deposit);
+
+    StakingRewards.redelegate(ds.staking, deposit, delegatee);
+  }
+
+  function changeBeneficiary(
+    uint256 depositId,
+    address newBeneficiary
+  ) external {
+    RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
+      .layout();
+    StakingRewards.Deposit storage deposit = ds.staking.deposits[depositId];
+    _revertIfNotDepositOwner(deposit);
+
+    StakingRewards.changeBeneficiary(ds.staking, deposit, newBeneficiary);
+  }
+
+  function withdraw(uint256 depositId, uint96 amount) external {
+    RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
+      .layout();
+    StakingRewards.Deposit storage deposit = ds.staking.deposits[depositId];
+    _revertIfNotDepositOwner(deposit);
+
+    StakingRewards.withdraw(ds.staking, deposit, amount);
+  }
+
+  function claimReward() external returns (uint256) {
+    RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
+      .layout();
+    return StakingRewards.claimReward(ds.staking, msg.sender);
+  }
+
+  function notifyRewardAmount(uint256 reward) external {
+    RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
+      .layout();
+    if (!ds.isRewardNotifier[msg.sender]) {
+      CustomRevert.revertWith(RewardsDistribution_NotRewardNotifier.selector);
+    }
+
+    StakingRewards.notifyRewardAmount(ds.staking, reward);
+  }
+
+  function _revertIfNotDepositOwner(
+    StakingRewards.Deposit storage deposit
+  ) internal view {
     if (msg.sender != deposit.owner) {
       CustomRevert.revertWith(RewardsDistribution_NotDepositOwner.selector);
     }
-
-    StakingRewards.redelegate(ds.staking, deposit, delegatee);
   }
 }
