@@ -264,7 +264,7 @@ run: _start-all _wait-all _wait-ctrl-c stop
 # Start nodes in foreground tailing logs, config and build should be run before
 run-and-tail: _start-all _wait-all tail-logs stop
 
-_loop-instances $CMD:
+_loop-instances-seq $CMD:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
     source ${ENV_FILE}
     for ((i=0; i<${NUM_INSTANCES}; i++)); do
@@ -273,13 +273,13 @@ _loop-instances $CMD:
         just ${CMD} ${i} ${INSTANCE_DIR}
     done
 
-# _loop-instances-parallel $CMD:
-#     #!/usr/bin/env -S bash {{BASH_OPTS}}
-#     source ${ENV_FILE}
-#     seq 0 $((${NUM_INSTANCES}-1)) | parallel -j0 --line-buffer \
-#         'INSTANCE_NAME=$(printf "%02d" {})
-#          INSTANCE_DIR="${INSTANCE_BASE}/${INSTANCE_NAME}"
-#          just ${CMD} {} ${INSTANCE_DIR}'
+_loop-instances-parallel $CMD:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    seq 0 $((${NUM_INSTANCES}-1)) | parallel -j0 --line-buffer \
+        'INSTANCE_NAME=$(printf "%02d" {})
+         INSTANCE_DIR="${INSTANCE_BASE}/${INSTANCE_NAME}"
+         just ${CMD} {} ${INSTANCE_DIR}'
 
 # _loop-instances $CMD:
 #     #!/usr/bin/env -S bash {{BASH_OPTS}}
@@ -288,6 +288,8 @@ _loop-instances $CMD:
 #     else
 #         just _loop-instances-seq "${CMD}"
 #     fi
+
+_loop-instances CMD: (_loop-instances-seq CMD)
 
 _ping-anvil $URL $NAME:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
