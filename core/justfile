@@ -92,7 +92,8 @@ _config-instance $INSTANCE_NUM $INSTANCE_DIR:
     if [ ! -f "${INSTANCE_DIR}/certs/cert.pem" ]; then
         ./scripts/generate-certs.sh $(realpath ${INSTANCE_DIR}/certs)
     fi
-    cast rpc -r ${RPC_BASE} anvil_setBalance $(cat "${INSTANCE_DIR}/wallet/node_address") 0xfffffffffffffffffffffffffffffffffffffffffffffffffff
+    # Next command fails if running with geth, ignore error
+    cast rpc -r ${RPC_BASE} anvil_setBalance $(cat "${INSTANCE_DIR}/wallet/node_address") 0xfffffffffffffffffffffffffffffffffffffffffffffffffff || true
     cast rpc -r ${RPC_RIVER} anvil_setBalance $(cat "${INSTANCE_DIR}/wallet/node_address") 0xfffffffffffffffffffffffffffffffffffffffffffffffffff
 
 
