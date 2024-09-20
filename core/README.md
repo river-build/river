@@ -1,6 +1,7 @@
 # Using just to start local deployment
 
 Local [DB](#provisioning-docker-with-postgres-db) and [CA](#setting-up-local-ca-for-tls) need to be provisioned.
+[Just](#installing-just) installed.
 
 To list all available commands:
 
