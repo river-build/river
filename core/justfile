@@ -155,7 +155,7 @@ _register-node-base $INSTANCE_NUM $INSTANCE_DIR:
             $NODE_ADDRESS > /dev/null
     fi
 
-just-register-nodes-base: (_loop-instances "_register-node-base")
+just-register-nodes-base: (_loop-instances-seq "_register-node-base")
 
 register-nodes-base: config-base-chain config-instances just-register-nodes-base
 
@@ -174,7 +174,7 @@ _register-node-river $INSTANCE_NUM $INSTANCE_DIR:
         https://localhost:${RIVER_PORT} \
         2 > /dev/null
 
-just-register-nodes-river: (_loop-instances "_register-node-river")
+just-register-nodes-river: (_loop-instances-seq "_register-node-river")
 
 register-nodes-river: config-river-chain config-instances just-register-nodes-river
 
@@ -228,7 +228,7 @@ _wait-node $INSTANCE_NUM $INSTANCE_DIR:
     cd ..
     yarn wait-on https://localhost:${RIVER_PORT}/status?blockchain=1 --timeout=60000
 
-wait-ctrl-c:
+_wait-ctrl-c:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
     echo "CTRL+C TO EXIT"
     bash -c 'trap "exit 0" INT TERM; while true; do sleep 1; done'
@@ -258,12 +258,12 @@ config-and-run: stop config build run
 config-run-tail: stop config build run-and-tail
 
 # Run nodes in foreground, config and build should be run before, CTRL-C to exit
-run: _start-all _wait-all wait-ctrl-c stop
+run: _start-all _wait-all _wait-ctrl-c stop
 
 # Start nodes in foreground tailing logs, config and build should be run before
 run-and-tail: _start-all _wait-all tail-logs stop
 
-_loop-instances $CMD:
+_loop-instances-seq $CMD:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
     source ${ENV_FILE}
     for ((i=0; i<${NUM_INSTANCES}; i++)); do
@@ -271,6 +271,22 @@ _loop-instances $CMD:
         INSTANCE_DIR="${INSTANCE_BASE}/${INSTANCE_NAME}"
         just ${CMD} ${i} ${INSTANCE_DIR}
     done
+
+_loop-instances-parallel $CMD:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    seq 0 $((${NUM_INSTANCES}-1)) | parallel -j0 --line-buffer \
+        'INSTANCE_NAME=$(printf "%02d" {})
+         INSTANCE_DIR="${INSTANCE_BASE}/${INSTANCE_NAME}"
+         just ${CMD} {} ${INSTANCE_DIR}'
+
+_loop-instances $CMD:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    if command -v parallel &> /dev/null; then
+        just _loop-instances-parallel "${CMD}"
+    else
+        just _loop-instances-seq "${CMD}"
+    fi
 
 _ping-anvil $URL $NAME:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
