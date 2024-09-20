@@ -7,8 +7,10 @@ import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC2
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ILockBase} from "contracts/src/tokens/lock/ILock.sol";
 import {IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
+import {IVotes} from "contracts/src/diamond/facets/governance/votes/IVotes.sol";
 
 //libraries
+import {console} from "forge-std/console.sol";
 
 //contracts
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
@@ -189,6 +191,52 @@ contract RiverBaseTest is BaseSetup, ILockBase, IOwnableBase {
     vm.prank(alice);
     vm.expectRevert(River.River__TransferLockEnabled.selector);
     riverFacet.transfer(bob, amount);
+  }
+
+  function test_delegateVotes_isCorrect(
+    address alice,
+    address bob
+  )
+    public
+    givenCallerHasBridgedTokens(alice, stakeRequirement)
+    givenCallerHasBridgedTokens(bob, stakeRequirement)
+  {
+    vm.assume(alice != bob);
+
+    vm.expectEmit();
+    emit IVotes.DelegateVotesChanged(space, 0, stakeRequirement);
+
+    vm.prank(bob);
+    riverFacet.delegate(space);
+
+    uint256 timestamp = block.timestamp;
+    vm.warp(timestamp + 1);
+    console.log("getVotes: ", riverFacet.getVotes(space));
+    console.log("getPastVotes: ", riverFacet.getPastVotes(space, timestamp));
+    assertEq(
+      riverFacet.getVotes(space),
+      riverFacet.getPastVotes(space, timestamp)
+    );
+    assertEq(riverFacet.getVotes(space), stakeRequirement);
+
+    vm.expectEmit();
+    emit IVotes.DelegateVotesChanged(
+      space,
+      stakeRequirement,
+      2 * stakeRequirement
+    );
+
+    vm.prank(alice);
+    riverFacet.transfer(bob, stakeRequirement);
+
+    vm.warp(timestamp + 10);
+
+    console.log("getVotes: ", riverFacet.getVotes(space));
+    console.log(
+      "getPastVotes: ",
+      riverFacet.getPastVotes(space, timestamp + 1)
+    );
+    assertEq(riverFacet.getVotes(space), 2 * stakeRequirement);
   }
 
   // =============================================================
