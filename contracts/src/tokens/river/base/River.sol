@@ -226,6 +226,7 @@ contract River is
 
     super._update(from, to, value);
 
+    // TODO: bug?
     _transferVotingUnits(from, to, value);
   }
 
