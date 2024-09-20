@@ -4,7 +4,7 @@ block_timestamp = 1_680_220_800 # The value of block.timestamp in tests. March 3
 bytecode_hash = "none" # Determines the hash method for the metadata hash that is appended to the bytecode
 cbor_metadata = false # Remove all metadata hashes from your contract's bytecode.
 evm_version = "paris" # The EVM version to use during tests.
-fuzz = { runs = 256 } # The amount of fuzz runs to perform for each fuzz test case.
+fuzz = { runs = 65536, seed = "42" } # The amount of fuzz runs to perform for each fuzz test case.
 gas_reports = ["*"] # The contracts to print gas reports for.
 libs = ["node_modules", "lib"]
 optimizer = true # Whether or not to enable the Solidity optimizer.
@@ -23,6 +23,8 @@ fs_permissions = [
 extra_output = ["metadata", "abi", "bin"]
 extra_output_files = ["metadata", "abi", "bin"]
 
+[profile.ci]
+fuzz = { runs = 65536, seed = "42" }
 
 [etherscan]
 sepolia = { chain = 11155111, key = "${ETHERSCAN_API_KEY}" }
