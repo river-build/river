@@ -92,7 +92,8 @@ _config-instance $INSTANCE_NUM $INSTANCE_DIR:
     if [ ! -f "${INSTANCE_DIR}/certs/cert.pem" ]; then
         ./scripts/generate-certs.sh $(realpath ${INSTANCE_DIR}/certs)
     fi
-    cast rpc -r ${RPC_BASE} anvil_setBalance $(cat "${INSTANCE_DIR}/wallet/node_address") 0xfffffffffffffffffffffffffffffffffffffffffffffffffff
+    # Next command fails if running with geth, ignore error
+    cast rpc -r ${RPC_BASE} anvil_setBalance $(cat "${INSTANCE_DIR}/wallet/node_address") 0xfffffffffffffffffffffffffffffffffffffffffffffffffff || true
     cast rpc -r ${RPC_RIVER} anvil_setBalance $(cat "${INSTANCE_DIR}/wallet/node_address") 0xfffffffffffffffffffffffffffffffffffffffffffffffffff
 
 
@@ -226,7 +227,7 @@ _wait-node $INSTANCE_NUM $INSTANCE_DIR:
     source ${ENV_FILE}
     source ${INSTANCE_DIR}/config/config.env
     cd ..
-    yarn wait-on https://localhost:${RIVER_PORT}/status?blockchain=1 --timeout=60000
+    yarn wait-on https://localhost:${RIVER_PORT}/status?blockchain=1 --timeout=300000
 
 _wait-ctrl-c:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
@@ -280,13 +281,15 @@ _loop-instances-parallel $CMD:
          INSTANCE_DIR="${INSTANCE_BASE}/${INSTANCE_NAME}"
          just ${CMD} {} ${INSTANCE_DIR}'
 
-_loop-instances $CMD:
-    #!/usr/bin/env -S bash {{BASH_OPTS}}
-    if command -v parallel &> /dev/null; then
-        just _loop-instances-parallel "${CMD}"
-    else
-        just _loop-instances-seq "${CMD}"
-    fi
+# _loop-instances $CMD:
+#     #!/usr/bin/env -S bash {{BASH_OPTS}}
+#     if command -v parallel &> /dev/null; then
+#         just _loop-instances-parallel "${CMD}"
+#     else
+#         just _loop-instances-seq "${CMD}"
+#     fi
+
+_loop-instances CMD: (_loop-instances-seq CMD)
 
 _ping-anvil $URL $NAME:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
