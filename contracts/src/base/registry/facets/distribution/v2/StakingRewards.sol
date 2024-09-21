@@ -17,20 +17,40 @@ library StakingRewards {
 
   uint256 internal constant SCALE_FACTOR = 1e36;
 
+  /// @notice The deposit information
+  /// @param amount The amount of stakeToken that is staked
+  /// @param owner The address of the depositor
+  /// @param commissionEarningPower The amount of stakeToken assigned to the commission
+  /// @param delegatee The address of the delegatee
+  /// @param beneficiary The address of the beneficiary
   struct Deposit {
     uint96 amount;
     address owner;
-    address beneficiary;
     uint96 commissionEarningPower;
     address delegatee;
+    address beneficiary;
   }
 
+  /// @notice The account information for a beneficiary
+  /// @param earningPower The amount of stakeToken that is yielding rewards
+  /// @param rewardPerTokenAccumulated The scaled amount of rewardToken that has been accumulated per staked token
+  /// @param unclaimedRewardSnapshot The snapshot of the unclaimed reward scaled
   struct Treasure {
     uint256 earningPower;
     uint256 rewardPerTokenAccumulated;
     uint256 unclaimedRewardSnapshot;
   }
 
+  /// @notice The layout of the staking rewards storage
+  /// @param rewardToken The token that is being distributed as rewards
+  /// @param stakeToken The token that is being staked
+  /// @param totalStaked The total amount of stakeToken that is staked
+  /// @param rewardDuration The duration of the reward distribution
+  /// @param rewardEndTime The time at which the reward distribution ends
+  /// @param lastUpdateTime The time at which the reward was last updated
+  /// @param rewardRate The scaled rate of reward distributed per second
+  /// @param rewardPerTokenAccumulated The scaled amount of rewardToken that has been accumulated per staked token
+  /// @param nextDepositId The next deposit ID that will be used
   struct Layout {
     address rewardToken;
     address stakeToken;
@@ -43,7 +63,7 @@ library StakingRewards {
     uint256 nextDepositId;
     mapping(address depositor => uint256 amount) stakedByDepositor;
     mapping(address beneficiary => Treasure) treasureByBeneficiary;
-    mapping(uint256 depositId => Deposit) deposits;
+    mapping(uint256 depositId => Deposit) depositById;
     mapping(address delegatee => address proxy) delegationProxies;
     mapping(address delegatee => uint256) commissionRateByDelegatee;
   }
@@ -158,7 +178,7 @@ library StakingRewards {
     updateReward(ds, beneficiaryTreasure);
 
     depositId = ds.nextDepositId++;
-    Deposit storage deposit = ds.deposits[depositId];
+    Deposit storage deposit = ds.depositById[depositId];
     // batch storage writes
     (deposit.amount, deposit.owner, deposit.beneficiary, deposit.delegatee) = (
       amount,
