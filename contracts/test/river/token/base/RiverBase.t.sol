@@ -10,7 +10,6 @@ import {IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
 import {IVotes} from "contracts/src/diamond/facets/governance/votes/IVotes.sol";
 
 //libraries
-import {console} from "forge-std/console.sol";
 
 //contracts
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
@@ -42,7 +41,7 @@ contract RiverBaseTest is BaseSetup, ILockBase, IOwnableBase {
 
   modifier givenCallerHasBridgedTokens(address caller, uint256 amount) {
     vm.assume(caller != address(0));
-    vm.assume(amount >= stakeRequirement && amount <= stakeRequirement * 10);
+    amount = bound(amount, stakeRequirement, type(uint208).max);
 
     vm.prank(bridge);
     riverFacet.mint(caller, amount);
@@ -50,7 +49,7 @@ contract RiverBaseTest is BaseSetup, ILockBase, IOwnableBase {
   }
 
   // Permit and Permit with Signature
-  function test_allowance(
+  function test_fuzz_allowance(
     address alice,
     uint256 amount,
     address bob
@@ -65,11 +64,19 @@ contract RiverBaseTest is BaseSetup, ILockBase, IOwnableBase {
     assertEq(riverFacet.allowance(alice, bob), amount);
   }
 
-  function test_permit(uint256 amount, address bob) external {
+  function test_fuzz_permit(
+    uint256 alicePrivateKey,
+    uint256 amount,
+    address bob
+  ) external {
+    alicePrivateKey = bound(
+      alicePrivateKey,
+      1,
+      0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364140
+    );
     vm.assume(bob != address(0));
-    vm.assume(amount > 0 && amount <= 1000);
+    amount = bound(amount, 1, type(uint208).max);
 
-    uint256 alicePrivateKey = _randomUint256();
     address alice = vm.addr(alicePrivateKey);
 
     vm.prank(bridge);
@@ -94,14 +101,19 @@ contract RiverBaseTest is BaseSetup, ILockBase, IOwnableBase {
     assertEq(riverFacet.allowance(alice, bob), amount);
   }
 
-  function test_revertWhen_permitDeadlineExpired(
+  function test_fuzz_revertWhen_permitDeadlineExpired(
+    uint256 alicePrivateKey,
     uint256 amount,
     address bob
   ) external {
+    alicePrivateKey = bound(
+      alicePrivateKey,
+      1,
+      0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364140
+    );
     vm.assume(bob != address(0));
-    vm.assume(amount > 0 && amount <= 1000);
+    amount = bound(amount, 1, type(uint208).max);
 
-    uint256 alicePrivateKey = _randomUint256();
     address alice = vm.addr(alicePrivateKey);
 
     vm.prank(bridge);
@@ -145,7 +157,7 @@ contract RiverBaseTest is BaseSetup, ILockBase, IOwnableBase {
     _;
   }
 
-  function test_delegateToZeroAddress(
+  function test_fuzz_revertWhen_delegateToZeroAddress(
     address alice,
     uint256 amount
   ) external givenCallerHasBridgedTokens(alice, amount) {
@@ -156,7 +168,7 @@ contract RiverBaseTest is BaseSetup, ILockBase, IOwnableBase {
   }
 
   // Locking
-  function test_enableLock(
+  function test_fuzz_enableLock(
     address alice,
     uint256 amount
   )
@@ -178,7 +190,7 @@ contract RiverBaseTest is BaseSetup, ILockBase, IOwnableBase {
     assertEq(riverFacet.isLockEnabled(alice), false);
   }
 
-  function test_revertWhen_transferringWhileLockEnabled(
+  function test_fuzz_revertWhen_transferringWhileLockEnabled(
     address alice,
     uint256 amount,
     address bob
@@ -193,50 +205,48 @@ contract RiverBaseTest is BaseSetup, ILockBase, IOwnableBase {
     riverFacet.transfer(bob, amount);
   }
 
-  function test_delegateVotes_isCorrect(
+  function test_fuzz_delegateVotes_isCorrect(
     address alice,
-    address bob
-  )
-    public
-    givenCallerHasBridgedTokens(alice, stakeRequirement)
-    givenCallerHasBridgedTokens(bob, stakeRequirement)
-  {
+    uint256 amountA,
+    address bob,
+    uint256 amountB
+  ) public {
     vm.assume(alice != bob);
+    vm.assume(alice != address(0));
+    vm.assume(bob != address(0));
+
+    amountA = bound(amountA, 1, type(uint208).max - stakeRequirement);
+    amountB = bound(amountB, stakeRequirement, type(uint208).max - amountA);
+
+    vm.prank(bridge);
+    riverFacet.mint(alice, amountA);
+
+    vm.prank(bridge);
+    riverFacet.mint(bob, amountB);
 
     vm.expectEmit();
-    emit IVotes.DelegateVotesChanged(space, 0, stakeRequirement);
+    emit IVotes.DelegateVotesChanged(space, 0, amountB);
 
     vm.prank(bob);
     riverFacet.delegate(space);
 
     uint256 timestamp = block.timestamp;
     vm.warp(timestamp + 1);
-    console.log("getVotes: ", riverFacet.getVotes(space));
-    console.log("getPastVotes: ", riverFacet.getPastVotes(space, timestamp));
     assertEq(
       riverFacet.getVotes(space),
       riverFacet.getPastVotes(space, timestamp)
     );
-    assertEq(riverFacet.getVotes(space), stakeRequirement);
+    assertEq(riverFacet.getVotes(space), amountB);
 
     vm.expectEmit();
-    emit IVotes.DelegateVotesChanged(
-      space,
-      stakeRequirement,
-      2 * stakeRequirement
-    );
+    emit IVotes.DelegateVotesChanged(space, amountB, amountA + amountB);
 
     vm.prank(alice);
-    riverFacet.transfer(bob, stakeRequirement);
+    riverFacet.transfer(bob, amountA);
 
     vm.warp(timestamp + 10);
 
-    console.log("getVotes: ", riverFacet.getVotes(space));
-    console.log(
-      "getPastVotes: ",
-      riverFacet.getPastVotes(space, timestamp + 1)
-    );
-    assertEq(riverFacet.getVotes(space), 2 * stakeRequirement);
+    assertEq(riverFacet.getVotes(space), amountA + amountB);
   }
 
   // =============================================================
