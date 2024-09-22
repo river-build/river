@@ -47,6 +47,33 @@ const (
 	MediaStreamMembershipLimitsDMConfigKey          = "media.streamMembershipLimits.88"
 )
 
+var (
+	knownOnChainSettingKeys map[string]string
+	onceInitKeys            sync.Once
+)
+
+func AllKnownOnChainSettingKeys() map[string]string {
+	onceInitKeys.Do(func() {
+		knownOnChainSettingKeys = map[string]string{
+			StreamMediaMaxChunkCountConfigKey:               "uint",
+			StreamMediaMaxChunkSizeConfigKey:                "uint",
+			StreamRecencyConstraintsAgeSecConfigKey:         "uint",
+			StreamRecencyConstraintsGenerationsConfigKey:    "uint",
+			StreamReplicationFactorConfigKey:                "uint",
+			StreamDefaultMinEventsPerSnapshotConfigKey:      "uint",
+			StreamMinEventsPerSnapshotUserInboxConfigKey:    "uint",
+			StreamMinEventsPerSnapshotUserSettingsConfigKey: "uint",
+			StreamMinEventsPerSnapshotUserConfigKey:         "uint",
+			StreamMinEventsPerSnapshotUserDeviceConfigKey:   "uint",
+			StreamCacheExpirationMsConfigKey:                "uint",
+			StreamCacheExpirationPollIntervalMsConfigKey:    "uint",
+			MediaStreamMembershipLimitsGDMConfigKey:         "uint",
+			MediaStreamMembershipLimitsDMConfigKey:          "uint",
+		}
+	})
+	return knownOnChainSettingKeys
+}
+
 // OnChainSettings holds the configuration settings that are stored on-chain.
 // This data structure is immutable, so it is safe to access it concurrently.
 type OnChainSettings struct {
@@ -301,6 +328,7 @@ func HashSettingName(name string) common.Hash {
 
 func (occ *onChainConfiguration) processRawSettings(
 	ctx context.Context,
+	blockNum BlockNumber,
 ) {
 	log := dlog.FromCtx(ctx)
 
@@ -339,6 +367,8 @@ func (occ *onChainConfiguration) processRawSettings(
 	}
 
 	occ.cfg.Store(&settings)
+
+	log.Info("OnChainConfig: applied", "settings", settings[len(settings)-1], "currentBlock", blockNum)
 }
 
 func NewOnChainConfig(
@@ -419,7 +449,7 @@ func makeOnChainConfig(
 		defaultsMap:      defaultsMap,
 		loadedSettingMap: rawSettings,
 	}
-	cfg.processRawSettings(ctx)
+	cfg.processRawSettings(ctx, appliedBlockNum)
 
 	// set the current block number as the current active block. This is used to determine which settings are currently
 	// active. Settings can be queued and become active after a future block.
@@ -446,7 +476,7 @@ func (occ *onChainConfiguration) applyEvent(ctx context.Context, event *river.Ri
 	occ.mu.Lock()
 	defer occ.mu.Unlock()
 	occ.loadedSettingMap.apply(ctx, occ.keyHashToName, event)
-	occ.processRawSettings(ctx)
+	occ.processRawSettings(ctx, BlockNumber(event.Block))
 }
 
 var (
