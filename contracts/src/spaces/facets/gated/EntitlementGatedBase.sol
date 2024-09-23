@@ -116,19 +116,19 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
     uint256 transactionNodesLength = nodeVotesForRole.length;
 
     for (uint256 i; i < transactionNodesLength; ++i) {
-      NodeVote storage tempVote = nodeVotesForRole[i];
+      NodeVote storage currentVote = nodeVotesForRole[i];
 
       // Update vote if not yet voted
-      if (tempVote.node == msg.sender) {
-        if (tempVote.vote != NodeVoteStatus.NOT_VOTED) {
+      if (currentVote.node == msg.sender) {
+        if (currentVote.vote != NodeVoteStatus.NOT_VOTED) {
           revert EntitlementGated_NodeAlreadyVoted();
         }
-        tempVote.vote = result;
+        currentVote.vote = result;
         found = true;
       }
 
       unchecked {
-        NodeVoteStatus currentStatus = tempVote.vote;
+        NodeVoteStatus currentStatus = currentVote.vote;
         // Count votes
         if (currentStatus == NodeVoteStatus.PASSED) {
           ++passed;
