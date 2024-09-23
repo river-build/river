@@ -189,7 +189,7 @@ contract EntitlementGatedTest is
       );
     }
 
-    // second roleId is entitled
+    // second roleId is not entitled
     for (uint256 i; i < 3; ++i) {
       vm.prank(nodes[i]);
 
