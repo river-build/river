@@ -8,10 +8,12 @@ fi
 
 if [ "$RUN_MODE" == "full" ]; then
     echo "Running full node"
-    exec /usr/bin/supervisord -c /etc/full_node.supervisord.conf
+    cd /riveruser/river_node
+    exec /usr/bin/river_node run
 elif [ "$RUN_MODE" == "archive" ]; then
     echo "Running archive node"
-    exec /usr/bin/supervisord -c /etc/archive_node.supervisord.conf
+    cd /riveruser/river_node
+    exec /usr/bin/river_node archive
 else
     echo "Unknown RUN_MODE: $RUN_MODE"
     exit 1

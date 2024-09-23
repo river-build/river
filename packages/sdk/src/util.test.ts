@@ -62,7 +62,7 @@ import {
     SpaceDapp,
     TestERC20,
     TestERC1155,
-    TestCustomEntitlement,
+    TestCrossChainEntitlement,
     CreateSpaceParams,
     CreateLegacySpaceParams,
     isCreateLegacySpaceParams,
@@ -182,14 +182,14 @@ export async function erc20CheckOp(contractName: string, threshold: bigint): Pro
     }
 }
 
-export async function customCheckOp(contractName: string): Promise<Operation> {
-    const contractAddress = await TestCustomEntitlement.getContractAddress(contractName)
+export async function mockCrossChainCheckOp(contractName: string, id: bigint): Promise<Operation> {
+    const contractAddress = await TestCrossChainEntitlement.getContractAddress(contractName)
     return {
         opType: OperationType.CHECK,
         checkType: CheckOperationType.ISENTITLED,
         chainId: 31337n,
         contractAddress,
-        params: '0x',
+        params: TestCrossChainEntitlement.encodeIdParameter(id),
     }
 }
 

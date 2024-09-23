@@ -44,6 +44,7 @@ export interface CreateSpaceParams {
     membership: MembershipStruct
     shortDescription?: string
     longDescription?: string
+    prepaySupply?: number
 }
 
 export interface UpdateChannelParams {
@@ -269,7 +270,11 @@ export interface ISpaceDapp {
     ) => Promise<TransactionType>
     getSpace(spaceId: string): Space | undefined
     getSpaceMembershipTokenAddress: (spaceId: string) => Promise<string>
-    getJoinSpacePrice: (spaceId: string) => Promise<BigNumber>
+    getJoinSpacePriceDetails: (spaceId: string) => Promise<{
+        price: ethers.BigNumber
+        prepaidSupply: ethers.BigNumber
+        remainingFreeSupply: ethers.BigNumber
+    }>
     joinSpace: (
         spaceId: string,
         recipient: string,
@@ -312,4 +317,5 @@ export interface ISpaceDapp {
         receiver: string,
         abortController?: AbortController,
     ) => Promise<{ issued: true; tokenId: string } | { issued: false; tokenId: undefined }>
+    getMembershipFreeAllocation: (spaceId: string) => Promise<BigNumber>
 }
