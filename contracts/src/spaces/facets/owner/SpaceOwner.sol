@@ -75,6 +75,11 @@ contract SpaceOwner is
   }
 
   /// @inheritdoc ISpaceOwner
+  function getSpaceByTokenId(uint256 tokenId) external view returns (address) {
+    return _getSpaceByTokenId(tokenId);
+  }
+
+  /// @inheritdoc ISpaceOwner
   function updateSpaceInfo(
     address space,
     string memory name,

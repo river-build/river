@@ -110,4 +110,8 @@ abstract contract SpaceOwnerBase is ISpaceOwnerBase {
         longDescription: metadata.longDescription
       });
   }
+
+  function _getSpaceByTokenId(uint256 tokenId) internal view returns (address) {
+    return SpaceOwnerStorage.layout().spaceByTokenId[tokenId];
+  }
 }
