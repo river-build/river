@@ -71,9 +71,9 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
     transaction.roleIds.push(roleId);
 
     uint256 length = selectedNodes.length;
-    NodeVote[] storage nodeVotes = transaction.nodeVotesArray[roleId];
+    NodeVote[] storage nodeVotesForRole = transaction.nodeVotesArray[roleId];
     for (uint256 i; i < length; ++i) {
-      nodeVotes.push(
+      nodeVotesForRole.push(
         NodeVote({node: selectedNodes[i], vote: NodeVoteStatus.NOT_VOTED})
       );
     }
@@ -112,11 +112,11 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
     uint256 passed = 0;
     uint256 failed = 0;
 
-    NodeVote[] storage nodeVotes = transaction.nodeVotesArray[roleId];
-    uint256 transactionNodesLength = nodeVotes.length;
+    NodeVote[] storage nodeVotesForRole = transaction.nodeVotesArray[roleId];
+    uint256 transactionNodesLength = nodeVotesForRole.length;
 
     for (uint256 i; i < transactionNodesLength; ++i) {
-      NodeVote storage tempVote = nodeVotes[i];
+      NodeVote storage tempVote = nodeVotesForRole[i];
 
       // Update vote if not yet voted
       if (tempVote.node == msg.sender) {
@@ -146,15 +146,15 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
       passed > transactionNodesLength / 2 || failed > transactionNodesLength / 2
     ) {
       transaction.isCompleted[roleId] = true;
-      NodeVoteStatus finalStatus = passed > failed
+      NodeVoteStatus finalStatusForRole = passed > failed
         ? NodeVoteStatus.PASSED
         : NodeVoteStatus.FAILED;
 
       bool allRoleIdsCompleted = _checkAllRoleIdsCompleted(transactionId);
 
-      if (finalStatus == NodeVoteStatus.PASSED || allRoleIdsCompleted) {
-        _onEntitlementCheckResultPosted(transactionId, finalStatus);
-        emit EntitlementCheckResultPosted(transactionId, finalStatus);
+      if (finalStatusForRole == NodeVoteStatus.PASSED || allRoleIdsCompleted) {
+        _onEntitlementCheckResultPosted(transactionId, finalStatusForRole);
+        emit EntitlementCheckResultPosted(transactionId, finalStatusForRole);
       }
 
       if (allRoleIdsCompleted) {
