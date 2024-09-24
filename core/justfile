@@ -77,6 +77,26 @@ anvils: anvil-base anvil-river
 
 anvils-stop: anvil-base-stop anvil-river-stop
 
+storage-start:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    if lsof -i :5433 > /dev/null; then
+        echo "Postgres already running on port 5433"
+    else
+        echo "Starting Postgres"
+        cd ./scripts
+        docker compose --project-name river up --detach --wait
+    fi
+
+storage-stop:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    cd ./scripts
+    docker compose --project-name river down
+
+storage-clean:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    cd ./scripts
+    docker compose --project-name river down --volumes --rmi all
+
 deploy-contracts: anvils
     #!/usr/bin/env -S bash {{BASH_OPTS}}
     source ${ENV_FILE}
@@ -189,7 +209,7 @@ just-register-nodes-river: (_loop-instances-seq "_register-node-river")
 
 register-nodes-river: config-river-chain config-instances just-register-nodes-river
 
-config: config-root register-nodes-base register-nodes-river
+config: config-root register-nodes-base register-nodes-river storage-start
 
 build:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
