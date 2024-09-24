@@ -6,12 +6,13 @@ import {IMerkleAirdrop} from "./IMerkleAirdrop.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // libraries
-import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {ECDSA} from "solady/utils/ECDSA.sol";
+import {MerkleProofLib} from "solady/utils/MerkleProofLib.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
 // contracts
 import {EIP712Base} from "contracts/src/diamond/utils/cryptography/signature/EIP712Base.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 import {Facet} from "contracts/src/diamond/facets/Facet.sol";
 
 contract MerkleAirdrop is IMerkleAirdrop, EIP712Base, Facet {
@@ -53,27 +54,25 @@ contract MerkleAirdrop is IMerkleAirdrop, EIP712Base, Facet {
     address account,
     uint256 amount,
     bytes32[] calldata merkleProof,
-    bytes memory signature
+    bytes calldata signature
   ) external {
     MerkleAirdropStorage.Layout storage ds = MerkleAirdropStorage.layout();
 
     if (ds.claimed[account]) {
-      revert MerkleAirdrop__AlreadyClaimed();
+      CustomRevert.revertWith(MerkleAirdrop__AlreadyClaimed.selector);
     }
 
     _validateSignature(account, getMessageHash(account, amount), signature);
 
     // verify merkle proof
-    //should we use bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(account, amount))));
-    bytes32 leaf = keccak256(abi.encodePacked(account, amount));
-
-    if (!MerkleProof.verify(merkleProof, ds.merkleRoot, leaf)) {
-      revert MerkleAirdrop__InvalidProof();
+    bytes32 leaf = _createLeaf(account, amount);
+    if (!MerkleProofLib.verify(merkleProof, ds.merkleRoot, leaf)) {
+      CustomRevert.revertWith(MerkleAirdrop__InvalidProof.selector);
     }
 
     ds.claimed[account] = true;
     emit Claimed(account, amount);
-    SafeERC20.safeTransfer(ds.token, account, amount);
+    SafeTransferLib.safeTransfer(address(ds.token), account, amount);
   }
 
   // =============================================================
@@ -91,11 +90,27 @@ contract MerkleAirdrop is IMerkleAirdrop, EIP712Base, Facet {
   function _validateSignature(
     address signer,
     bytes32 digest,
-    bytes memory signature
-  ) internal pure {
-    address actualSigner = ECDSA.recover(digest, signature);
+    bytes calldata signature
+  ) internal view {
+    address actualSigner = ECDSA.recoverCalldata(digest, signature);
     if (actualSigner != signer) {
-      revert MerkleAirdrop__InvalidSignature();
+      CustomRevert.revertWith(MerkleAirdrop__InvalidSignature.selector);
+    }
+  }
+
+  function _createLeaf(
+    address account,
+    uint256 amount
+  ) internal pure returns (bytes32 leaf) {
+    assembly ("memory-safe") {
+      // Store the account address at memory location 0
+      mstore(0, account)
+      // Store the amount at memory location 0x20 (32 bytes after the account address)
+      mstore(0x20, amount)
+      // Compute the keccak256 hash of the account and amount, and store it at memory location 0
+      mstore(0, keccak256(0, 0x40))
+      // Compute the keccak256 hash of the previous hash (stored at memory location 0) and store it in the leaf variable
+      leaf := keccak256(0, 0x20)
     }
   }
 }
