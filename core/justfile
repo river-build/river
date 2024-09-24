@@ -43,7 +43,7 @@ clean:
 _anvil-start $NAME $PORT $CHAIN_ID:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
     mkdir -p ./run_files/anvil
-    if lsof -i :${PORT} > /dev/null; then
+    if nc -z localhost ${PORT} > /dev/null; then
         echo "Anvil already running on port ${PORT}"
     else
         echo "Starting ${NAME} on port ${PORT}"
@@ -79,7 +79,7 @@ anvils-stop: anvil-base-stop anvil-river-stop
 
 storage-start:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
-    if lsof -i :5433 > /dev/null; then
+    if nc -z localhost 5433 > /dev/null; then
         echo "Postgres already running on port 5433"
     else
         echo "Starting Postgres"
