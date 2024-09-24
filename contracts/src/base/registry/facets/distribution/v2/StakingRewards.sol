@@ -77,9 +77,9 @@ library StakingRewards {
   /*                           ERRORS                           */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-  error StakingRewards_InvalidAddress();
-  error StakingRewards_InvalidRewardRate();
-  error StakingRewards_InsufficientReward();
+  error StakingRewards__InvalidAddress();
+  error StakingRewards__InvalidRewardRate();
+  error StakingRewards__InsufficientReward();
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                          VIEWERS                           */
@@ -164,10 +164,10 @@ library StakingRewards {
     address beneficiary
   ) internal returns (uint256 depositId) {
     if (delegatee == address(0)) {
-      CustomRevert.revertWith(StakingRewards_InvalidAddress.selector);
+      CustomRevert.revertWith(StakingRewards__InvalidAddress.selector);
     }
     if (beneficiary == address(0)) {
-      CustomRevert.revertWith(StakingRewards_InvalidAddress.selector);
+      CustomRevert.revertWith(StakingRewards__InvalidAddress.selector);
     }
 
     updateGlobalReward(ds);
@@ -291,7 +291,7 @@ library StakingRewards {
     address newDelegatee
   ) internal {
     if (newDelegatee == address(0)) {
-      CustomRevert.revertWith(StakingRewards_InvalidAddress.selector);
+      CustomRevert.revertWith(StakingRewards__InvalidAddress.selector);
     }
 
     updateGlobalReward(ds);
@@ -334,7 +334,7 @@ library StakingRewards {
     address newBeneficiary
   ) internal {
     if (newBeneficiary == address(0)) {
-      CustomRevert.revertWith(StakingRewards_InvalidAddress.selector);
+      CustomRevert.revertWith(StakingRewards__InvalidAddress.selector);
     }
 
     updateGlobalReward(ds);
@@ -445,14 +445,14 @@ library StakingRewards {
     );
 
     if (rewardRate < SCALE_FACTOR) {
-      CustomRevert.revertWith(StakingRewards_InvalidRewardRate.selector);
+      CustomRevert.revertWith(StakingRewards__InvalidRewardRate.selector);
     }
 
     if (
       FixedPointMathLib.mulDiv(rewardRate, rewardDuration, SCALE_FACTOR) >
       IERC20(ds.rewardToken).balanceOf(address(this))
     ) {
-      CustomRevert.revertWith(StakingRewards_InsufficientReward.selector);
+      CustomRevert.revertWith(StakingRewards__InsufficientReward.selector);
     }
   }
 }

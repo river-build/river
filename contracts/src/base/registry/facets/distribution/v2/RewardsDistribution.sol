@@ -5,19 +5,22 @@ pragma solidity ^0.8.23;
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
-import {RewardsDistributionStorage} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistributionStorage.sol";
-import {SpaceDelegationStorage} from "contracts/src/base/registry/facets/delegation/SpaceDelegationStorage.sol";
 
 // libraries
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
+import {NodeOperatorStorage} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
+import {SpaceDelegationStorage} from "contracts/src/base/registry/facets/delegation/SpaceDelegationStorage.sol";
 import {StakingRewards} from "./StakingRewards.sol";
+import {RewardsDistributionStorage} from "./RewardsDistributionStorage.sol";
 
 // contracts
 import {Facet} from "contracts/src/diamond/facets/Facet.sol";
 import {IRewardsDistribution} from "./IRewardsDistribution.sol";
 
 contract RewardsDistribution is IRewardsDistribution, Facet {
+  using EnumerableSet for EnumerableSet.AddressSet;
   using StakingRewards for StakingRewards.Layout;
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -123,7 +126,7 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     if (!ds.isRewardNotifier[msg.sender]) {
-      CustomRevert.revertWith(RewardsDistribution_NotRewardNotifier.selector);
+      CustomRevert.revertWith(RewardsDistribution__NotRewardNotifier.selector);
     }
 
     StakingRewards.notifyRewardAmount(ds.staking, reward);
@@ -242,11 +245,26 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
   /*                          INTERNAL                          */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
+  function _isOperatorOrSpace(
+    address delegatee
+  ) internal view returns (bool isSpace) {
+    SpaceDelegationStorage.Layout storage sd = SpaceDelegationStorage.layout();
+    NodeOperatorStorage.Layout storage nos = NodeOperatorStorage.layout();
+    address operator = sd.operatorBySpace[delegatee];
+    if (operator != address(0)) {
+      return true;
+    }
+    if (nos.operators.contains(delegatee)) {
+      return false;
+    }
+    CustomRevert.revertWith(RewardsDistribution__NotOperatorOrSpace.selector);
+  }
+
   function _revertIfNotDepositOwner(
     StakingRewards.Deposit storage deposit
   ) internal view {
     if (msg.sender != deposit.owner) {
-      CustomRevert.revertWith(RewardsDistribution_NotDepositOwner.selector);
+      CustomRevert.revertWith(RewardsDistribution__NotDepositOwner.selector);
     }
   }
 }
