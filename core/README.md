@@ -1,6 +1,6 @@
 # Using just to start local deployment
 
-Local [CA](#setting-up-local-ca-for-tls) need to be provisioned.
+Local [CA](#setting-up-local-ca-for-tls) needs to be provisioned.
 [Just](#installing-just) installed.
 
 To list all available commands:
