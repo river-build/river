@@ -34,7 +34,7 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
   function stake(
     uint96 amount,
     address delegatee
-  ) external returns (uint256 depositId) {
+  ) external onlyOperatorOrSpace(delegatee) returns (uint256 depositId) {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     depositId = StakingRewards.stake(
@@ -54,7 +54,7 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
     uint8 v,
     bytes32 r,
     bytes32 s
-  ) external returns (uint256 depositId) {
+  ) external onlyOperatorOrSpace(delegatee) returns (uint256 depositId) {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     try
@@ -86,7 +86,10 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
     StakingRewards.increaseStake(ds.staking, deposit, amount);
   }
 
-  function redelegate(uint256 depositId, address delegatee) external {
+  function redelegate(
+    uint256 depositId,
+    address delegatee
+  ) external onlyOperatorOrSpace(delegatee) {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     StakingRewards.Deposit storage deposit = ds.staking.depositById[depositId];
@@ -116,10 +119,28 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
     StakingRewards.withdraw(ds.staking, deposit, amount);
   }
 
-  function claimReward() external returns (uint256) {
+  function claimReward(
+    address beneficiary,
+    address recipient
+  ) external returns (uint256) {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
-    return StakingRewards.claimReward(ds.staking, msg.sender);
+    // If the beneficiary is a space, only the operator can claim the reward
+    if (_isSpace(beneficiary)) {
+      SpaceDelegationStorage.Layout storage sd = SpaceDelegationStorage
+        .layout();
+      address operator = sd.operatorBySpace[beneficiary];
+      _checkClaimer(operator);
+    }
+    // If the beneficiary is an operator, only the claimer can claim the reward
+    else if (_isOperator(beneficiary)) {
+      _checkClaimer(beneficiary);
+    }
+    // If the beneficiary is not an operator or space, only the beneficiary can claim the reward
+    else if (msg.sender != beneficiary) {
+      CustomRevert.revertWith(RewardsDistribution__NotBeneficiary.selector);
+    }
+    return StakingRewards.claimReward(ds.staking, beneficiary, recipient);
   }
 
   function notifyRewardAmount(uint256 reward) external {
@@ -245,19 +266,35 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
   /*                          INTERNAL                          */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-  function _isOperatorOrSpace(
-    address delegatee
-  ) internal view returns (bool isSpace) {
+  function _isOperator(address delegatee) internal view returns (bool) {
+    NodeOperatorStorage.Layout storage nos = NodeOperatorStorage.layout();
+    return nos.operators.contains(delegatee);
+  }
+
+  function _isSpace(address delegatee) internal view returns (bool) {
+    SpaceDelegationStorage.Layout storage sd = SpaceDelegationStorage.layout();
+    return sd.operatorBySpace[delegatee] != address(0);
+  }
+
+  function _checkClaimer(address operator) internal view {
+    NodeOperatorStorage.Layout storage nos = NodeOperatorStorage.layout();
+    address claimer = nos.claimerByOperator[operator];
+    if (msg.sender != claimer) {
+      CustomRevert.revertWith(RewardsDistribution__NotClaimer.selector);
+    }
+  }
+
+  modifier onlyOperatorOrSpace(address delegatee) {
+    _onlyOperatorOrSpace(delegatee);
+    _;
+  }
+
+  function _onlyOperatorOrSpace(address delegatee) internal view {
     SpaceDelegationStorage.Layout storage sd = SpaceDelegationStorage.layout();
     NodeOperatorStorage.Layout storage nos = NodeOperatorStorage.layout();
-    address operator = sd.operatorBySpace[delegatee];
-    if (operator != address(0)) {
-      return true;
+    if (!(_isOperator(delegatee) || _isSpace(delegatee))) {
+      CustomRevert.revertWith(RewardsDistribution__NotOperatorOrSpace.selector);
     }
-    if (nos.operators.contains(delegatee)) {
-      return false;
-    }
-    CustomRevert.revertWith(RewardsDistribution__NotOperatorOrSpace.selector);
   }
 
   function _revertIfNotDepositOwner(
