@@ -1,15 +1,10 @@
 package statusinfo
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
-	"time"
 
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/storage"
 )
-
 
 type BlockchainPing struct {
 	Result  string `json:"result"`
@@ -63,70 +58,6 @@ type HttpResult struct {
 	DNSAddresses  []string       `json:"dns_addresses"`
 }
 
-type PostgresStatusResult struct {
-        TotalConns              int32         `json:"total_conns"`
-        AcquiredConns           int32         `json:"acquired_conns"`
-        IdleConns               int32         `json:"idle_conns"`
-        ConstructingConns       int32         `json:"constructing_conns"`
-        MaxConns                int32         `json:"max_conns"`
-        NewConnsCount           int64         `json:"new_conns_count"`
-        AcquireCount            int64         `json:"acquire_count"`
-        EmptyAcquireCount       int64         `json:"empty_acquire_count"`
-        CanceledAcquireCount    int64         `json:"canceled_acquire_count"`
-        AcquireDuration         time.Duration `json:"acquire_duration"`
-        MaxLifetimeDestroyCount int64         `json:"max_lifetime_destroy_count"`
-        MaxIdleDestroyCount     int64         `json:"max_idle_destroy_count"`
-		Version string `json:"version"`
-		EsCount string `json:"es_count"`
-		SystemId string `json:"system_id"`
-}
-
-func PreparePostgresStatus(	ctx context.Context,
-	 pool *storage.PgxPoolInfo) PostgresStatusResult {
-	poolStat:= pool.Pool.Stat()
-	 // Query to get PostgreSQL version
-	 var version string
-	 err := pool.Pool.QueryRow(ctx, "SELECT version()").Scan(&version)
-	 if err != nil {
-		version = fmt.Sprintf("Error: %v", err)
-		dlog.FromCtx(ctx).Error("failed to get PostgreSQL version", "err", err)
-	 }
-
-	// Query to count rows in the es table
-	var esCount string
-	var count int64
-	err = pool.Pool.QueryRow(ctx, "SELECT COUNT(*) FROM es").Scan(&count)
-	if err != nil {
-		esCount = fmt.Sprintf("Error: %v", err)
-	} else {
-		esCount = fmt.Sprintf("%d", count)
-	}
-
-	var systemId string
-    err = pool.Pool.QueryRow(ctx, "SELECT system_identifier FROM pg_control_system()").Scan(&systemId)
-    if err != nil {
-        systemId = fmt.Sprintf("Error: %v", err)
-    }
-
-    return PostgresStatusResult {
-            TotalConns:              poolStat.TotalConns(),
-            AcquiredConns:           poolStat.AcquiredConns(),
-            IdleConns:               poolStat.IdleConns(),
-            ConstructingConns:       poolStat.ConstructingConns(),
-            MaxConns:                poolStat.MaxConns(),
-            NewConnsCount:           poolStat.NewConnsCount(),
-            AcquireCount:            poolStat.AcquireCount(),
-            EmptyAcquireCount:       poolStat.EmptyAcquireCount(),
-            CanceledAcquireCount:    poolStat.CanceledAcquireCount(),
-            AcquireDuration:         poolStat.AcquireDuration(),
-            MaxLifetimeDestroyCount: poolStat.MaxLifetimeDestroyCount(),
-            MaxIdleDestroyCount:     poolStat.MaxIdleDestroyCount(),
-			Version: version,
-			EsCount: esCount,
-			SystemId: systemId,
-        }
-}
-
 func (r HttpResult) ToPrettyJson() string {
 	return toPrettyJson(r)
 }
@@ -160,14 +91,14 @@ func (r GrpcResult) ToPrettyJson() string {
 }
 
 type NodeStatus struct {
-	Record          RegistryNodeInfo `json:"record"`
-	Local           bool             `json:"local,omitempty"`
-	Http11          HttpResult       `json:"http11"`
-	Http20          HttpResult       `json:"http20"`
-	Grpc            GrpcResult       `json:"grpc"`
-	RiverEthBalance string           `json:"river_eth_balance"`
-	BaseEthBalance  string           `json:"base_eth_balance"`
-	PostgresStatus  PostgresStatusResult `json:"postgres_status"`
+	Record          RegistryNodeInfo             `json:"record"`
+	Local           bool                         `json:"local,omitempty"`
+	Http11          HttpResult                   `json:"http11"`
+	Http20          HttpResult                   `json:"http20"`
+	Grpc            GrpcResult                   `json:"grpc"`
+	RiverEthBalance string                       `json:"river_eth_balance"`
+	BaseEthBalance  string                       `json:"base_eth_balance"`
+	PostgresStatus  storage.PostgresStatusResult `json:"postgres_status"`
 }
 
 type RiverStatus struct {
