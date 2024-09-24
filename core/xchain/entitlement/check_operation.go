@@ -182,7 +182,7 @@ func (e *Evaluator) evaluateMockOperation(
 
 	if (op.ContractAddress != common.Address{}) {
 		// Grab last two digits of contract address as a unique identifier of which check
-		// caused the error, for ease of reading.
+		// caused the error, for ease of debugging test cases.
 		code := fmt.Sprintf("%v", op.ContractAddress)[40:]
 		return false, fmt.Errorf("intentional failure (%v)", code)
 	}
