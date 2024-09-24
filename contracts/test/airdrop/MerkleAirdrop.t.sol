@@ -12,6 +12,7 @@ import {DeployEIP712Facet} from "contracts/scripts/deployments/facets/DeployEIP7
 //interfaces
 import {IDiamond} from "contracts/src/diamond/Diamond.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IMerkleAirdropBase} from "contracts/src/utils/airdrop/merkle/IMerkleAirdrop.sol";
 
 //libraries
 import {MerkleTree} from "contracts/test/utils/MerkleTree.sol";
@@ -20,7 +21,7 @@ import {MerkleTree} from "contracts/test/utils/MerkleTree.sol";
 import {MerkleAirdrop} from "contracts/src/utils/airdrop/merkle/MerkleAirdrop.sol";
 import {MockERC20} from "contracts/test/mocks/MockERC20.sol";
 import {EIP712Facet} from "contracts/src/diamond/utils/cryptography/signature/EIP712Facet.sol";
-contract MerkleAirdropTest is TestUtils {
+contract MerkleAirdropTest is TestUtils, IMerkleAirdropBase {
   uint256 internal constant TOTAL_TOKEN_AMOUNT = 1000;
 
   DeployDiamond diamondHelper = new DeployDiamond();
@@ -79,9 +80,36 @@ contract MerkleAirdropTest is TestUtils {
     // Initialize the MerkleAirdrop and token contracts
     merkleAirdrop = MerkleAirdrop(diamond);
     eip712Facet = EIP712Facet(diamond);
-    token = MockERC20(tokenAddress);
 
+    // Mint tokens to the diamond
+    token = MockERC20(tokenAddress);
     token.mint(diamond, TOTAL_TOKEN_AMOUNT);
+  }
+
+  modifier givenWalletHasClaimed(Vm.Wallet memory _wallet, uint256 _amount) {
+    bytes memory signature = _signClaim(_wallet, _wallet.addr, _amount);
+    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[_wallet.addr]);
+
+    vm.prank(_randomAddress());
+    vm.expectEmit(address(merkleAirdrop));
+    emit Claimed(_wallet.addr, _amount, _wallet.addr);
+    merkleAirdrop.claim(_wallet.addr, _amount, proof, signature, address(0));
+    _;
+  }
+
+  modifier givenWalletHasClaimedWithReceiver(
+    Vm.Wallet memory _wallet,
+    uint256 _amount,
+    address _receiver
+  ) {
+    bytes memory signature = _signClaim(_wallet, _wallet.addr, _amount);
+    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[_wallet.addr]);
+
+    vm.prank(_randomAddress());
+    vm.expectEmit(address(merkleAirdrop));
+    emit Claimed(_wallet.addr, _amount, _receiver);
+    merkleAirdrop.claim(_wallet.addr, _amount, proof, signature, _receiver);
+    _;
   }
 
   function test_getToken() external view {
@@ -94,25 +122,48 @@ contract MerkleAirdropTest is TestUtils {
     assertEq(_root, root);
   }
 
-  function test_claim() external {
+  function test_claim() external givenWalletHasClaimed(bob, 100) {
+    assertEq(token.balanceOf(bob.addr), 100);
+  }
+
+  function test_claimWithReceiver()
+    external
+    givenWalletHasClaimedWithReceiver(bob, 100, alice.addr)
+  {
+    assertEq(token.balanceOf(alice.addr), 100);
+  }
+
+  function test_revertWhen_alreadyClaimed()
+    external
+    givenWalletHasClaimed(bob, 100)
+  {
+    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[bob.addr]);
     bytes memory signature = _signClaim(bob, bob.addr, 100);
 
-    vm.prank(_randomAddress());
-    merkleAirdrop.claim(
-      bob.addr,
-      100,
-      merkleTree.getProof(tree, treeIndex[bob.addr]),
-      signature,
-      address(0)
-    );
+    vm.prank(bob.addr);
+    vm.expectRevert(MerkleAirdrop__AlreadyClaimed.selector);
+    merkleAirdrop.claim(bob.addr, 100, proof, signature, address(0));
+  }
 
-    assertEq(token.balanceOf(bob.addr), 100);
+  function test_revertWhen_invalidSignature() external {
+    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[bob.addr]);
+    bytes memory signature = _signClaim(alice, bob.addr, 100);
+
+    vm.expectRevert(MerkleAirdrop__InvalidSignature.selector);
+    merkleAirdrop.claim(bob.addr, 100, proof, signature, address(0));
+  }
+
+  function test_revertWhen_invalidProof() external {
+    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[alice.addr]);
+    bytes memory signature = _signClaim(bob, bob.addr, 100);
+
+    vm.expectRevert(MerkleAirdrop__InvalidProof.selector);
+    merkleAirdrop.claim(bob.addr, 100, proof, signature, address(0));
   }
 
   // =============================================================
   //                           Internal
   // =============================================================
-
   function _createTree() internal {
     treeIndex[bob.addr] = 0;
     accounts.push(bob.addr);
@@ -131,9 +182,7 @@ contract MerkleAirdropTest is TestUtils {
     uint256 _amount
   ) internal view returns (bytes memory) {
     bytes32 typeDataHash = merkleAirdrop.getMessageHash(_account, _amount);
-
     (uint8 v, bytes32 r, bytes32 s) = vm.sign(_wallet.privateKey, typeDataHash);
-
     return abi.encodePacked(r, s, v);
   }
 }
