@@ -27,14 +27,17 @@ contract MerkleAirdrop is IMerkleAirdrop, EIP712Base, Facet {
     __MerkleAirdrop_init_unchained(merkleRoot, token);
   }
 
+  /// @inheritdoc IMerkleAirdrop
   function getMerkleRoot() public view returns (bytes32) {
     return MerkleAirdropStorage.layout().merkleRoot;
   }
 
+  /// @inheritdoc IMerkleAirdrop
   function getToken() public view returns (IERC20) {
     return MerkleAirdropStorage.layout().token;
   }
 
+  /// @inheritdoc IMerkleAirdrop
   function getMessageHash(
     address account,
     uint256 amount
@@ -45,12 +48,13 @@ contract MerkleAirdrop is IMerkleAirdrop, EIP712Base, Facet {
       );
   }
 
+  /// @inheritdoc IMerkleAirdrop
   function claim(
     address account,
     uint256 amount,
     bytes32[] calldata merkleProof,
     bytes memory signature
-  ) public {
+  ) external {
     MerkleAirdropStorage.Layout storage ds = MerkleAirdropStorage.layout();
 
     if (ds.claimed[account]) {
