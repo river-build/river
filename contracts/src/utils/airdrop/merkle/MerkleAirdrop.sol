@@ -73,9 +73,9 @@ contract MerkleAirdrop is IMerkleAirdrop, EIP712Base, Facet {
     }
 
     ds.claimed[account] = true;
-    emit Claimed(account, amount, receiver);
 
     address recipient = receiver == address(0) ? account : receiver;
+    emit Claimed(account, amount, recipient);
 
     SafeTransferLib.safeTransfer(address(ds.token), recipient, amount);
   }
