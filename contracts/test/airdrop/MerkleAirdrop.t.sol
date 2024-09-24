@@ -28,10 +28,10 @@ contract MerkleAirdropTest is TestUtils {
   DeployMerkleAirdrop airdropHelper = new DeployMerkleAirdrop();
   DeployMockERC20 tokenHelper = new DeployMockERC20();
   DeployEIP712Facet eip712Helper = new DeployEIP712Facet();
+  MerkleTree internal merkleTree = new MerkleTree();
 
   MerkleAirdrop internal merkleAirdrop;
   MockERC20 internal token;
-  MerkleTree internal merkleTree;
   EIP712Facet internal eip712Facet;
 
   mapping(address => uint256) internal treeIndex;
@@ -122,7 +122,6 @@ contract MerkleAirdropTest is TestUtils {
     accounts.push(alice.addr);
     amounts.push(200);
 
-    merkleTree = new MerkleTree();
     (root, tree) = merkleTree.constructTree(accounts, amounts);
   }
 
