@@ -347,6 +347,11 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+var (
+	errSlow = fmt.Errorf("intentional failure (02)")
+	errFast = fmt.Errorf("intentional failure (01)")
+)
+
 func TestAndOperation(t *testing.T) {
 	testCases := []struct {
 		description  string
@@ -398,7 +403,7 @@ func TestAndOperation(t *testing.T) {
 		},
 	}
 
-	for idx, tc := range testCases {
+	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
 			tree := &AndOperation{
 				OpType:         LOGICAL,
@@ -424,16 +429,11 @@ func TestAndOperation(t *testing.T) {
 				expectedDuration,
 				timingThreshold,
 			) {
-				t.Errorf("evaluateAndOperation(%v) took %v; want %v", idx, elapsedTime, expectedDuration)
+				t.Errorf("evaluateAndOperation(%v) took %v; want %v", tc.description, elapsedTime, expectedDuration)
 			}
 		})
 	}
 }
-
-var (
-	errSlow = fmt.Errorf("intentional failure (02)")
-	errFast = fmt.Errorf("intentional failure (01)")
-)
 
 func TestOrOperation(t *testing.T) {
 	testCases := []struct {
@@ -486,7 +486,7 @@ func TestOrOperation(t *testing.T) {
 		},
 	}
 
-	for idx, tc := range testCases {
+	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
 			tree := &OrOperation{
 				OpType:         LOGICAL,
@@ -512,7 +512,7 @@ func TestOrOperation(t *testing.T) {
 				expectedDuration,
 				timingThreshold,
 			) {
-				t.Errorf("evaluateOrOperation(%v) took %v; want %v", idx, elapsedTime, expectedDuration)
+				t.Errorf("evaluateOrOperation(%v) took %v; want %v", tc.description, elapsedTime, expectedDuration)
 			}
 		})
 	}
