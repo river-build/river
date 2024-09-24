@@ -8,7 +8,6 @@ import {DeployDiamond} from "contracts/scripts/deployments/utils/DeployDiamond.s
 import {DeployMerkleAirdrop} from "contracts/scripts/deployments/facets/DeployMerkleAirdrop.s.sol";
 import {DeployMockERC20} from "contracts/scripts/deployments/utils/DeployMockERC20.s.sol";
 import {DeployEIP712Facet} from "contracts/scripts/deployments/facets/DeployEIP712Facet.s.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 //interfaces
 import {IDiamond} from "contracts/src/diamond/Diamond.sol";

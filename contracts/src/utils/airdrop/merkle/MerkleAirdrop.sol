@@ -15,8 +15,9 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {Facet} from "contracts/src/diamond/facets/Facet.sol";
 
 contract MerkleAirdrop is IMerkleAirdrop, EIP712Base, Facet {
+  // keccak256("AirdropClaim(address account,uint256 amount)");
   bytes32 private constant MESSAGE_TYPEHASH =
-    keccak256("AirdropClaim(address account,uint256 amount)");
+    0xaa726e564e52b64144617a6a46c42e8b763d4d224ca1a3e13c1491f8a4763a23;
 
   function __MerkleAirdrop_init(
     bytes32 merkleRoot,
