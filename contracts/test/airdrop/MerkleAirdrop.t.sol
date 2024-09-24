@@ -102,7 +102,8 @@ contract MerkleAirdropTest is TestUtils {
       bob.addr,
       100,
       merkleTree.getProof(tree, treeIndex[bob.addr]),
-      signature
+      signature,
+      address(0)
     );
 
     assertEq(token.balanceOf(bob.addr), 100);

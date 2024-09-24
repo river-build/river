@@ -9,6 +9,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {MerkleProofLib} from "solady/utils/MerkleProofLib.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {MerkleAirdropStorage} from "./MerkleAirdropStorage.sol";
 
 // contracts
 import {EIP712Base} from "contracts/src/diamond/utils/cryptography/signature/EIP712Base.sol";
@@ -54,7 +55,8 @@ contract MerkleAirdrop is IMerkleAirdrop, EIP712Base, Facet {
     address account,
     uint256 amount,
     bytes32[] calldata merkleProof,
-    bytes calldata signature
+    bytes calldata signature,
+    address receiver
   ) external {
     MerkleAirdropStorage.Layout storage ds = MerkleAirdropStorage.layout();
 
@@ -66,13 +68,16 @@ contract MerkleAirdrop is IMerkleAirdrop, EIP712Base, Facet {
 
     // verify merkle proof
     bytes32 leaf = _createLeaf(account, amount);
-    if (!MerkleProofLib.verify(merkleProof, ds.merkleRoot, leaf)) {
+    if (!MerkleProofLib.verifyCalldata(merkleProof, ds.merkleRoot, leaf)) {
       CustomRevert.revertWith(MerkleAirdrop__InvalidProof.selector);
     }
 
     ds.claimed[account] = true;
-    emit Claimed(account, amount);
-    SafeTransferLib.safeTransfer(address(ds.token), account, amount);
+    emit Claimed(account, amount, receiver);
+
+    address recipient = receiver == address(0) ? account : receiver;
+
+    SafeTransferLib.safeTransfer(address(ds.token), recipient, amount);
   }
 
   // =============================================================
@@ -111,25 +116,6 @@ contract MerkleAirdrop is IMerkleAirdrop, EIP712Base, Facet {
       mstore(0, keccak256(0, 0x40))
       // Compute the keccak256 hash of the previous hash (stored at memory location 0) and store it in the leaf variable
       leaf := keccak256(0, 0x20)
-    }
-  }
-}
-
-library MerkleAirdropStorage {
-  // keccak256(abi.encode(uint256(keccak256("merkle.airdrop.storage")) - 1)) & ~bytes32(uint256(0xff))
-  bytes32 constant STORAGE_SLOT =
-    0x5499e8f18bf9226c15306964dca998d3d8d3ddae851b652336bc6dea221b5200;
-
-  struct Layout {
-    IERC20 token;
-    bytes32 merkleRoot;
-    mapping(address => bool) claimed;
-  }
-
-  function layout() internal pure returns (Layout storage ds) {
-    bytes32 slot = STORAGE_SLOT;
-    assembly {
-      ds.slot := slot
     }
   }
 }

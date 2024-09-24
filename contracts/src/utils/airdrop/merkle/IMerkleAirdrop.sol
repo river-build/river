@@ -11,7 +11,7 @@ interface IMerkleAirdropBase {
   error MerkleAirdrop__AlreadyClaimed();
   error MerkleAirdrop__InvalidSignature();
 
-  event Claimed(address account, uint256 amount);
+  event Claimed(address account, uint256 amount, address recipient);
   event MerkleRootUpdated(bytes32 merkleRoot);
 
   struct AirdropClaim {
@@ -47,6 +47,7 @@ interface IMerkleAirdrop is IMerkleAirdropBase {
     address account,
     uint256 amount,
     bytes32[] calldata merkleProof,
-    bytes calldata signature
+    bytes calldata signature,
+    address receiver
   ) external;
 }
