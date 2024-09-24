@@ -3,7 +3,7 @@ package events
 import (
 	"bytes"
 	"context"
-
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
@@ -52,6 +52,9 @@ func (ts *TrackedNotificationStreamView) ApplyMiniblockHeader(header *MiniblockH
 	// Consider refactoring it that both view can use the same logic.
 
 	lastBlock := ts.view.LastBlock()
+
+	fmt.Printf("lastblock: %p / header: %p\n", lastBlock, header)
+
 	if header.MiniblockNum != lastBlock.header().MiniblockNum+1 {
 		return RiverError(
 			Err_BAD_BLOCK,

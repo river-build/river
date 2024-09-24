@@ -3,8 +3,10 @@ package storage
 import (
 	"context"
 	"embed"
-	"encoding/json"
 	"errors"
+	"github.com/SherClockHolmes/webpush-go"
+	"github.com/river-build/river/core/node/protocol"
+	"github.com/river-build/river/core/node/shared"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -191,10 +193,57 @@ func (s *PostgresNotificationStore) Close(ctx context.Context) {
 //	return nil
 //}
 
-func (s *PostgresNotificationStore) SetSettings(ctx context.Context, userID common.Address, settings json.RawMessage) error {
+func (s *PostgresNotificationStore) SetSettings(ctx context.Context, userID common.Address, settings *protocol.Settings) error {
 	return errors.New("Postgres notifications storage is not implemented")
 }
 
-func (s *PostgresNotificationStore) GetSettings(ctx context.Context, userID common.Address) (json.RawMessage, error) {
+func (s *PostgresNotificationStore) GetSettings(ctx context.Context, userID common.Address) (*protocol.Settings, error) {
 	return nil, errors.New("Postgres notifications storage is not implemented")
+}
+
+func (s *PostgresNotificationStore) SubscribeWebPush(
+	ctx context.Context,
+	userID common.Address,
+	webPushSubscription *webpush.Subscription,
+) error {
+	// upsert with webPushSubscription.Keys as primary key and set user id
+	return errors.New("Postgres notifications storage is not implemented")
+}
+
+func (s *PostgresNotificationStore) UnsubscribeWebPush(
+	ctx context.Context,
+	userID common.Address,
+	webPushSubscription *webpush.Subscription,
+) error {
+	// ensure that userID is associated with webPushSubscription and delete it
+	return errors.New("Postgres notifications storage is not implemented")
+}
+
+func (s *PostgresNotificationStore) SubscribeAPN(ctx context.Context, deviceToken []byte, userID common.Address) error {
+	// upsert: if device token is already registered update userID, of not insert
+	return errors.New("Postgres notifications storage is not implemented")
+}
+
+func (s *PostgresNotificationStore) UnsubscribeAPN(ctx context.Context, deviceToken []byte, userID common.Address) error {
+	// only delete if userID is associated with the given deviceToken
+	return errors.New("Postgres notifications storage is not implemented")
+}
+
+func (s *PostgresNotificationStore) UpdateSpaceSetting(
+	ctx context.Context,
+	userID common.Address,
+	spaceID shared.StreamId,
+	value protocol.SpaceNotificationSettingValue,
+) error {
+	return errors.New("Postgres notifications storage is not implemented")
+}
+
+func (s *PostgresNotificationStore) UpdateChannelSetting(
+	ctx context.Context,
+	userID common.Address,
+	spaceID *shared.StreamId,
+	channelID shared.StreamId,
+	value protocol.ChannelSettingValue,
+) error {
+	return errors.New("Postgres notifications storage is not implemented")
 }

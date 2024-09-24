@@ -10,13 +10,17 @@ service NotificationService {
   rpc SetSettings(SetSettingsRequest) returns (SetSettingsResponse);
   // GetSettings returns user stored notification settings.
   rpc GetSettings(GetSettingsRequest) returns (GetSettingsResponse);
+  // UpdateSpaceSettings updates settings for all channels within a space.
+  rpc UpdateSpaceSettings(UpdateSpaceSettingsRequest) returns (UpdateSpaceSettingsResponse);
+  // UpdateChannelSettings updates settings for a particular channel.
+  rpc UpdateChannelSettings(UpdateChannelSettingsRequest) returns (UpdateChannelSettingsResponse);
   // SubscribeWebPush subscribes a client to receive notifications through web push.
-  // If the given req.subscription is already associated with a user id the user id
-  // is updated with req.user_id (upsert).
+  // If the given req.subscription is already associated with a web push subscription the user id is updated (upsert).
   rpc SubscribeWebPush(SubscribeWebPushRequest) returns (SubscribeWebPushResponse);
   // UnsubscribeWebPush deletes web push subscription.
   rpc UnsubscribeWebPush(UnsubscribeWebPushRequest) returns (UnsubscribeWebPushResponse);
   // SubscribeAPN subscribes a device to receive Apple Push Notifications.
+  // If the given device token is already associated with an APN subscription the user id is updated (upsert).
   rpc SubscribeAPN(SubscribeAPNRequest) returns (SubscribeAPNResponse);
   // UnsubscribeAPN unsubscribes a device from receiving Apple Push Notifications.
   rpc UnsubscribeAPN(UnsubscribeAPNRequest) returns (UnsubscribeAPNResponse);
@@ -28,23 +32,25 @@ message GetSettingsRequest {
 }
 
 message GetSettingsResponse {
-  // user id for which the settings are retrieved
-  bytes user_id = 1;
+  Settings settings = 1;
 }
 
-message SetSettingsRequest {
+message Settings {
   // user id for which to retrieve settings
   bytes user_id = 1;
   // user_settings are global and overwrite space/channel specific settings
   UserGlobalSettings user_settings = 2;
-  // space_settings holds specific settings per space and per channel
-  repeated SpaceSetting space_settings = 3;
+  // space holds specific settings for spaces and channels within a space
+  repeated SpaceSetting space = 3;
+  // dm_gdm_channels holds specific settings for DM/GDM channels
+  repeated ChannelSetting dm_gdm_channels = 4;
 }
 
-message SetSettingsResponse {
-  // user id for which to retrieve settings
-  bytes user_id = 1;
+message SetSettingsRequest {
+    Settings settings = 1;
 }
+
+message SetSettingsResponse {}
 
 message UserGlobalSettings {
   // blocked_users hold the list of users that the users won't receive notifications for.
@@ -57,34 +63,73 @@ message UserGlobalSettings {
   bool reply_to = 4;
 }
 
-enum MuteSetting {
+// ChannelSettingValue is a user configured indication if the user wants to receive notifications for a channel.
+enum ChannelSettingValue {
+  // CHANNEL_DEFAULT indicates that the defaults are used from the space the channel is part of.
+  // If the channel is a DM/GDM channel only the users global settings are applied.
+  CHANNEL_DEFAULT = 0;
   // MUTES indicates that the user won't receive notifications for a channel, or if set on a space level
   // for none of the channels within that space unless a channel is explicit set to unmute.
-  MUTED = 0;
+  CHANNEL_MUTED = 1;
   // UN_MUTED indicates that the user will receive notifications for a channel, or if set on a space level
   // for all channels that are not explicitly set to mute in a space.
-  UN_MUTED = 1;
+  CHANNEL_UNMUTED = 2;
 }
 
 // ChannelSetting hold settings specific for a DM, GDM or channel stream.
 message ChannelSetting {
-  // channel_id points to the channel for which this setting applies (also called stream id in the river protocol).
+  // channel_id points to the channel for which this setting applies.
   bytes channel_id = 1;
-  // space_id is required when channel_id points to a channel within a space.
-  // for GM and GDM channels space_id must be kept empty.
-  optional bytes space_id = 2;
-  // mute indicates if the user wants to receive notifications for the channel within the space.
-  MuteSetting mute = 3;
+  // setting indicates if the user wants to receive notifications for the channel within the space.
+  ChannelSettingValue value = 3;
+}
+
+// SpaceNotificationSettingValue is a user specified setting that applies to all channels within a space.
+enum SpaceNotificationSettingValue {
+  // SPACE_ONLY_MENTIONS_REPLIES_REACTIONS indicates that the user will receive notifications for messages that either
+  // the user is mentioned in, or is a reply/reaction to his message, unless the channel is muted (default).
+  SPACE_ONLY_MENTIONS_REPLIES_REACTIONS = 0;
+  // SPACE_ALL_MESSAGES indicates that the user will receive notifications for all messages for all channels in the
+  // space unless a channel is muted.
+  SPACE_ALL_MESSAGES = 1;
+  // SPACE_NO_MESSAGES indicates that the user won't receive notifications for any of the channels in the town.
+  SPACE_NO_MESSAGES = 2;
 }
 
 // SpaceSettings hold settings that applied to all streams within the space.
 // These can be overwritten by channel specific settings.
 message SpaceSetting {
-  // mute is applied to all channels within the space. If not set the default is used.
-  optional MuteSetting mute = 1;
-  // channel_settings holds specific settings that overwrite the space default mute setting
-  repeated ChannelSetting channel_settings = 2;
+  // space channel id
+  bytes space_id = 1;
+  // value is applied to all channels within the space unless overwritten by a channel specific setting.
+  SpaceNotificationSettingValue value = 2;
+  // channels holds specific settings that overwrite the space default setting
+  repeated ChannelSetting channels = 3;
 }
+
+message UpdateSpaceSettingsRequest {
+  // user_id
+  bytes user_id = 1;
+  // space channel id
+  bytes space_id = 2;
+  // value are applied to all channels within the space.
+  SpaceNotificationSettingValue value = 3;
+}
+
+message UpdateSpaceSettingsResponse {}
+
+message UpdateChannelSettingsRequest {
+  bytes user_id = 1;
+  // channel_id points to the channel for which this setting applies.
+  bytes channel_id = 2;
+  // space_id is required when channel_id points to a channel within a space.
+  // for GM and GDM channels space_id must not be set.
+  optional bytes space_id = 3;
+  // value indicates the user overwritten value or a channel default must be used.
+  ChannelSettingValue value = 4;
+}
+
+message UpdateChannelSettingsResponse {}
 
 message WebPushSubscriptionObjectKeys {
   // An Elliptic curve Diffie–Hellman public key on the P-256 curve (that is, the NIST
@@ -105,33 +150,37 @@ message WebPushSubscriptionObject {
 }
 
 message SubscribeWebPushRequest {
-  // user id for which to retrieve settings
-  bytes user_id = 1;
-  // subscription holds the subscribe object that is returned by the browser when subscribing
-  WebPushSubscriptionObject subscription = 2;
+  // subscription holds the subscribe data that is returned by the browser when subscribing
+  WebPushSubscriptionObject subscription = 1;
+  // user id that wants to subscribe
+  bytes user_id = 2;
 }
 
 message SubscribeWebPushResponse {}
 
 message UnsubscribeWebPushRequest {
-  // user id for which to retrieve settings
-  bytes user_id = 1;
-  // subscription holds the subscribe object that is returned by the browser when subscribing
-  WebPushSubscriptionObject subscription = 2;
+  // subscription holds the subscribe data that is returned by the browser when subscribing
+  WebPushSubscriptionObject subscription = 1;
+  // user id that wants to unsubscribe
+  bytes user_id = 2;
 }
 
 message UnsubscribeWebPushResponse {}
 
 message SubscribeAPNRequest {
-  // apple device token ID
-  string device_token = 1;
+  // APN device token
+  bytes device_token = 1;
+  // user id that wants to subscribe
+  bytes user_id = 2;
 }
 
-message SubscribeAPNResponse{}
+message SubscribeAPNResponse {}
 
-message UnsubscribeAPNRequest{
-  // apple device token ID
-  string device_token = 1;
+message UnsubscribeAPNRequest {
+  // APN device token
+  bytes device_token = 1;
+  // user id that wants to unsubscribe
+  bytes user_id = 2;
 }
 
-message UnsubscribeAPNResponse{}
+message UnsubscribeAPNResponse {}

@@ -178,6 +178,7 @@ func (w *streamsTrackerWorker) addStream(
 	streamID shared.StreamId,
 	nodes []common.Address,
 ) error {
+	forceReset := true
 	// TODO: discuss if we can add "SyncFromLastSnapshot" to the add stream to sync request that orders the
 	// node to always sync from latest snapshot instead only when the client provided an outdated sync cookie.
 	_, err := syncOp.AddStreamToSync(ctx, connect.NewRequest(&protocol.AddStreamToSyncRequest{
@@ -188,6 +189,7 @@ func (w *streamsTrackerWorker) addStream(
 			MinipoolGen:       1, // try to force a sync reset
 			MinipoolSlot:      0,
 			PrevMiniblockHash: []byte{0},
+			ForceSyncReset:    &forceReset,
 		},
 	}))
 

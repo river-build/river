@@ -39,21 +39,37 @@ const (
 	// NotificationServiceGetSettingsProcedure is the fully-qualified name of the NotificationService's
 	// GetSettings RPC.
 	NotificationServiceGetSettingsProcedure = "/river.NotificationService/GetSettings"
+	// NotificationServiceUpdateSpaceSettingsProcedure is the fully-qualified name of the
+	// NotificationService's UpdateSpaceSettings RPC.
+	NotificationServiceUpdateSpaceSettingsProcedure = "/river.NotificationService/UpdateSpaceSettings"
+	// NotificationServiceUpdateChannelSettingsProcedure is the fully-qualified name of the
+	// NotificationService's UpdateChannelSettings RPC.
+	NotificationServiceUpdateChannelSettingsProcedure = "/river.NotificationService/UpdateChannelSettings"
 	// NotificationServiceSubscribeWebPushProcedure is the fully-qualified name of the
 	// NotificationService's SubscribeWebPush RPC.
 	NotificationServiceSubscribeWebPushProcedure = "/river.NotificationService/SubscribeWebPush"
 	// NotificationServiceUnsubscribeWebPushProcedure is the fully-qualified name of the
 	// NotificationService's UnsubscribeWebPush RPC.
 	NotificationServiceUnsubscribeWebPushProcedure = "/river.NotificationService/UnsubscribeWebPush"
+	// NotificationServiceSubscribeAPNProcedure is the fully-qualified name of the NotificationService's
+	// SubscribeAPN RPC.
+	NotificationServiceSubscribeAPNProcedure = "/river.NotificationService/SubscribeAPN"
+	// NotificationServiceUnsubscribeAPNProcedure is the fully-qualified name of the
+	// NotificationService's UnsubscribeAPN RPC.
+	NotificationServiceUnsubscribeAPNProcedure = "/river.NotificationService/UnsubscribeAPN"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
-	notificationServiceServiceDescriptor                  = protocol.File_notifications_proto.Services().ByName("NotificationService")
-	notificationServiceSetSettingsMethodDescriptor        = notificationServiceServiceDescriptor.Methods().ByName("SetSettings")
-	notificationServiceGetSettingsMethodDescriptor        = notificationServiceServiceDescriptor.Methods().ByName("GetSettings")
-	notificationServiceSubscribeWebPushMethodDescriptor   = notificationServiceServiceDescriptor.Methods().ByName("SubscribeWebPush")
-	notificationServiceUnsubscribeWebPushMethodDescriptor = notificationServiceServiceDescriptor.Methods().ByName("UnsubscribeWebPush")
+	notificationServiceServiceDescriptor                     = protocol.File_notifications_proto.Services().ByName("NotificationService")
+	notificationServiceSetSettingsMethodDescriptor           = notificationServiceServiceDescriptor.Methods().ByName("SetSettings")
+	notificationServiceGetSettingsMethodDescriptor           = notificationServiceServiceDescriptor.Methods().ByName("GetSettings")
+	notificationServiceUpdateSpaceSettingsMethodDescriptor   = notificationServiceServiceDescriptor.Methods().ByName("UpdateSpaceSettings")
+	notificationServiceUpdateChannelSettingsMethodDescriptor = notificationServiceServiceDescriptor.Methods().ByName("UpdateChannelSettings")
+	notificationServiceSubscribeWebPushMethodDescriptor      = notificationServiceServiceDescriptor.Methods().ByName("SubscribeWebPush")
+	notificationServiceUnsubscribeWebPushMethodDescriptor    = notificationServiceServiceDescriptor.Methods().ByName("UnsubscribeWebPush")
+	notificationServiceSubscribeAPNMethodDescriptor          = notificationServiceServiceDescriptor.Methods().ByName("SubscribeAPN")
+	notificationServiceUnsubscribeAPNMethodDescriptor        = notificationServiceServiceDescriptor.Methods().ByName("UnsubscribeAPN")
 )
 
 // NotificationServiceClient is a client for the river.NotificationService service.
@@ -62,9 +78,20 @@ type NotificationServiceClient interface {
 	SetSettings(context.Context, *connect.Request[protocol.SetSettingsRequest]) (*connect.Response[protocol.SetSettingsResponse], error)
 	// GetSettings returns user stored notification settings.
 	GetSettings(context.Context, *connect.Request[protocol.GetSettingsRequest]) (*connect.Response[protocol.GetSettingsResponse], error)
-	// SubscribeWebPush subscribes a client to receive notifications through web push
+	// UpdateSpaceSettings updates settings for all channels within a space.
+	UpdateSpaceSettings(context.Context, *connect.Request[protocol.UpdateSpaceSettingsRequest]) (*connect.Response[protocol.UpdateSpaceSettingsResponse], error)
+	// UpdateChannelSettings updates settings for a particular channel.
+	UpdateChannelSettings(context.Context, *connect.Request[protocol.UpdateChannelSettingsRequest]) (*connect.Response[protocol.UpdateChannelSettingsResponse], error)
+	// SubscribeWebPush subscribes a client to receive notifications through web push.
+	// If the given req.subscription is already associated with a web push subscription the user id is updated (upsert).
 	SubscribeWebPush(context.Context, *connect.Request[protocol.SubscribeWebPushRequest]) (*connect.Response[protocol.SubscribeWebPushResponse], error)
+	// UnsubscribeWebPush deletes web push subscription.
 	UnsubscribeWebPush(context.Context, *connect.Request[protocol.UnsubscribeWebPushRequest]) (*connect.Response[protocol.UnsubscribeWebPushResponse], error)
+	// SubscribeAPN subscribes a device to receive Apple Push Notifications.
+	// If the given device token is already associated with an APN subscription the user id is updated (upsert).
+	SubscribeAPN(context.Context, *connect.Request[protocol.SubscribeAPNRequest]) (*connect.Response[protocol.SubscribeAPNResponse], error)
+	// UnsubscribeAPN unsubscribes a device from receiving Apple Push Notifications.
+	UnsubscribeAPN(context.Context, *connect.Request[protocol.UnsubscribeAPNRequest]) (*connect.Response[protocol.UnsubscribeAPNResponse], error)
 }
 
 // NewNotificationServiceClient constructs a client for the river.NotificationService service. By
@@ -89,6 +116,18 @@ func NewNotificationServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(notificationServiceGetSettingsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		updateSpaceSettings: connect.NewClient[protocol.UpdateSpaceSettingsRequest, protocol.UpdateSpaceSettingsResponse](
+			httpClient,
+			baseURL+NotificationServiceUpdateSpaceSettingsProcedure,
+			connect.WithSchema(notificationServiceUpdateSpaceSettingsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		updateChannelSettings: connect.NewClient[protocol.UpdateChannelSettingsRequest, protocol.UpdateChannelSettingsResponse](
+			httpClient,
+			baseURL+NotificationServiceUpdateChannelSettingsProcedure,
+			connect.WithSchema(notificationServiceUpdateChannelSettingsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		subscribeWebPush: connect.NewClient[protocol.SubscribeWebPushRequest, protocol.SubscribeWebPushResponse](
 			httpClient,
 			baseURL+NotificationServiceSubscribeWebPushProcedure,
@@ -101,15 +140,31 @@ func NewNotificationServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(notificationServiceUnsubscribeWebPushMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		subscribeAPN: connect.NewClient[protocol.SubscribeAPNRequest, protocol.SubscribeAPNResponse](
+			httpClient,
+			baseURL+NotificationServiceSubscribeAPNProcedure,
+			connect.WithSchema(notificationServiceSubscribeAPNMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		unsubscribeAPN: connect.NewClient[protocol.UnsubscribeAPNRequest, protocol.UnsubscribeAPNResponse](
+			httpClient,
+			baseURL+NotificationServiceUnsubscribeAPNProcedure,
+			connect.WithSchema(notificationServiceUnsubscribeAPNMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // notificationServiceClient implements NotificationServiceClient.
 type notificationServiceClient struct {
-	setSettings        *connect.Client[protocol.SetSettingsRequest, protocol.SetSettingsResponse]
-	getSettings        *connect.Client[protocol.GetSettingsRequest, protocol.GetSettingsResponse]
-	subscribeWebPush   *connect.Client[protocol.SubscribeWebPushRequest, protocol.SubscribeWebPushResponse]
-	unsubscribeWebPush *connect.Client[protocol.UnsubscribeWebPushRequest, protocol.UnsubscribeWebPushResponse]
+	setSettings           *connect.Client[protocol.SetSettingsRequest, protocol.SetSettingsResponse]
+	getSettings           *connect.Client[protocol.GetSettingsRequest, protocol.GetSettingsResponse]
+	updateSpaceSettings   *connect.Client[protocol.UpdateSpaceSettingsRequest, protocol.UpdateSpaceSettingsResponse]
+	updateChannelSettings *connect.Client[protocol.UpdateChannelSettingsRequest, protocol.UpdateChannelSettingsResponse]
+	subscribeWebPush      *connect.Client[protocol.SubscribeWebPushRequest, protocol.SubscribeWebPushResponse]
+	unsubscribeWebPush    *connect.Client[protocol.UnsubscribeWebPushRequest, protocol.UnsubscribeWebPushResponse]
+	subscribeAPN          *connect.Client[protocol.SubscribeAPNRequest, protocol.SubscribeAPNResponse]
+	unsubscribeAPN        *connect.Client[protocol.UnsubscribeAPNRequest, protocol.UnsubscribeAPNResponse]
 }
 
 // SetSettings calls river.NotificationService.SetSettings.
@@ -122,6 +177,16 @@ func (c *notificationServiceClient) GetSettings(ctx context.Context, req *connec
 	return c.getSettings.CallUnary(ctx, req)
 }
 
+// UpdateSpaceSettings calls river.NotificationService.UpdateSpaceSettings.
+func (c *notificationServiceClient) UpdateSpaceSettings(ctx context.Context, req *connect.Request[protocol.UpdateSpaceSettingsRequest]) (*connect.Response[protocol.UpdateSpaceSettingsResponse], error) {
+	return c.updateSpaceSettings.CallUnary(ctx, req)
+}
+
+// UpdateChannelSettings calls river.NotificationService.UpdateChannelSettings.
+func (c *notificationServiceClient) UpdateChannelSettings(ctx context.Context, req *connect.Request[protocol.UpdateChannelSettingsRequest]) (*connect.Response[protocol.UpdateChannelSettingsResponse], error) {
+	return c.updateChannelSettings.CallUnary(ctx, req)
+}
+
 // SubscribeWebPush calls river.NotificationService.SubscribeWebPush.
 func (c *notificationServiceClient) SubscribeWebPush(ctx context.Context, req *connect.Request[protocol.SubscribeWebPushRequest]) (*connect.Response[protocol.SubscribeWebPushResponse], error) {
 	return c.subscribeWebPush.CallUnary(ctx, req)
@@ -132,15 +197,36 @@ func (c *notificationServiceClient) UnsubscribeWebPush(ctx context.Context, req 
 	return c.unsubscribeWebPush.CallUnary(ctx, req)
 }
 
+// SubscribeAPN calls river.NotificationService.SubscribeAPN.
+func (c *notificationServiceClient) SubscribeAPN(ctx context.Context, req *connect.Request[protocol.SubscribeAPNRequest]) (*connect.Response[protocol.SubscribeAPNResponse], error) {
+	return c.subscribeAPN.CallUnary(ctx, req)
+}
+
+// UnsubscribeAPN calls river.NotificationService.UnsubscribeAPN.
+func (c *notificationServiceClient) UnsubscribeAPN(ctx context.Context, req *connect.Request[protocol.UnsubscribeAPNRequest]) (*connect.Response[protocol.UnsubscribeAPNResponse], error) {
+	return c.unsubscribeAPN.CallUnary(ctx, req)
+}
+
 // NotificationServiceHandler is an implementation of the river.NotificationService service.
 type NotificationServiceHandler interface {
 	// SetSettings sets the notification settings, overwriting any existing settings.
 	SetSettings(context.Context, *connect.Request[protocol.SetSettingsRequest]) (*connect.Response[protocol.SetSettingsResponse], error)
 	// GetSettings returns user stored notification settings.
 	GetSettings(context.Context, *connect.Request[protocol.GetSettingsRequest]) (*connect.Response[protocol.GetSettingsResponse], error)
-	// SubscribeWebPush subscribes a client to receive notifications through web push
+	// UpdateSpaceSettings updates settings for all channels within a space.
+	UpdateSpaceSettings(context.Context, *connect.Request[protocol.UpdateSpaceSettingsRequest]) (*connect.Response[protocol.UpdateSpaceSettingsResponse], error)
+	// UpdateChannelSettings updates settings for a particular channel.
+	UpdateChannelSettings(context.Context, *connect.Request[protocol.UpdateChannelSettingsRequest]) (*connect.Response[protocol.UpdateChannelSettingsResponse], error)
+	// SubscribeWebPush subscribes a client to receive notifications through web push.
+	// If the given req.subscription is already associated with a web push subscription the user id is updated (upsert).
 	SubscribeWebPush(context.Context, *connect.Request[protocol.SubscribeWebPushRequest]) (*connect.Response[protocol.SubscribeWebPushResponse], error)
+	// UnsubscribeWebPush deletes web push subscription.
 	UnsubscribeWebPush(context.Context, *connect.Request[protocol.UnsubscribeWebPushRequest]) (*connect.Response[protocol.UnsubscribeWebPushResponse], error)
+	// SubscribeAPN subscribes a device to receive Apple Push Notifications.
+	// If the given device token is already associated with an APN subscription the user id is updated (upsert).
+	SubscribeAPN(context.Context, *connect.Request[protocol.SubscribeAPNRequest]) (*connect.Response[protocol.SubscribeAPNResponse], error)
+	// UnsubscribeAPN unsubscribes a device from receiving Apple Push Notifications.
+	UnsubscribeAPN(context.Context, *connect.Request[protocol.UnsubscribeAPNRequest]) (*connect.Response[protocol.UnsubscribeAPNResponse], error)
 }
 
 // NewNotificationServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -161,6 +247,18 @@ func NewNotificationServiceHandler(svc NotificationServiceHandler, opts ...conne
 		connect.WithSchema(notificationServiceGetSettingsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	notificationServiceUpdateSpaceSettingsHandler := connect.NewUnaryHandler(
+		NotificationServiceUpdateSpaceSettingsProcedure,
+		svc.UpdateSpaceSettings,
+		connect.WithSchema(notificationServiceUpdateSpaceSettingsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	notificationServiceUpdateChannelSettingsHandler := connect.NewUnaryHandler(
+		NotificationServiceUpdateChannelSettingsProcedure,
+		svc.UpdateChannelSettings,
+		connect.WithSchema(notificationServiceUpdateChannelSettingsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	notificationServiceSubscribeWebPushHandler := connect.NewUnaryHandler(
 		NotificationServiceSubscribeWebPushProcedure,
 		svc.SubscribeWebPush,
@@ -173,16 +271,36 @@ func NewNotificationServiceHandler(svc NotificationServiceHandler, opts ...conne
 		connect.WithSchema(notificationServiceUnsubscribeWebPushMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	notificationServiceSubscribeAPNHandler := connect.NewUnaryHandler(
+		NotificationServiceSubscribeAPNProcedure,
+		svc.SubscribeAPN,
+		connect.WithSchema(notificationServiceSubscribeAPNMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	notificationServiceUnsubscribeAPNHandler := connect.NewUnaryHandler(
+		NotificationServiceUnsubscribeAPNProcedure,
+		svc.UnsubscribeAPN,
+		connect.WithSchema(notificationServiceUnsubscribeAPNMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/river.NotificationService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case NotificationServiceSetSettingsProcedure:
 			notificationServiceSetSettingsHandler.ServeHTTP(w, r)
 		case NotificationServiceGetSettingsProcedure:
 			notificationServiceGetSettingsHandler.ServeHTTP(w, r)
+		case NotificationServiceUpdateSpaceSettingsProcedure:
+			notificationServiceUpdateSpaceSettingsHandler.ServeHTTP(w, r)
+		case NotificationServiceUpdateChannelSettingsProcedure:
+			notificationServiceUpdateChannelSettingsHandler.ServeHTTP(w, r)
 		case NotificationServiceSubscribeWebPushProcedure:
 			notificationServiceSubscribeWebPushHandler.ServeHTTP(w, r)
 		case NotificationServiceUnsubscribeWebPushProcedure:
 			notificationServiceUnsubscribeWebPushHandler.ServeHTTP(w, r)
+		case NotificationServiceSubscribeAPNProcedure:
+			notificationServiceSubscribeAPNHandler.ServeHTTP(w, r)
+		case NotificationServiceUnsubscribeAPNProcedure:
+			notificationServiceUnsubscribeAPNHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -200,10 +318,26 @@ func (UnimplementedNotificationServiceHandler) GetSettings(context.Context, *con
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.NotificationService.GetSettings is not implemented"))
 }
 
+func (UnimplementedNotificationServiceHandler) UpdateSpaceSettings(context.Context, *connect.Request[protocol.UpdateSpaceSettingsRequest]) (*connect.Response[protocol.UpdateSpaceSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.NotificationService.UpdateSpaceSettings is not implemented"))
+}
+
+func (UnimplementedNotificationServiceHandler) UpdateChannelSettings(context.Context, *connect.Request[protocol.UpdateChannelSettingsRequest]) (*connect.Response[protocol.UpdateChannelSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.NotificationService.UpdateChannelSettings is not implemented"))
+}
+
 func (UnimplementedNotificationServiceHandler) SubscribeWebPush(context.Context, *connect.Request[protocol.SubscribeWebPushRequest]) (*connect.Response[protocol.SubscribeWebPushResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.NotificationService.SubscribeWebPush is not implemented"))
 }
 
 func (UnimplementedNotificationServiceHandler) UnsubscribeWebPush(context.Context, *connect.Request[protocol.UnsubscribeWebPushRequest]) (*connect.Response[protocol.UnsubscribeWebPushResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.NotificationService.UnsubscribeWebPush is not implemented"))
+}
+
+func (UnimplementedNotificationServiceHandler) SubscribeAPN(context.Context, *connect.Request[protocol.SubscribeAPNRequest]) (*connect.Response[protocol.SubscribeAPNResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.NotificationService.SubscribeAPN is not implemented"))
+}
+
+func (UnimplementedNotificationServiceHandler) UnsubscribeAPN(context.Context, *connect.Request[protocol.UnsubscribeAPNRequest]) (*connect.Response[protocol.UnsubscribeAPNResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.NotificationService.UnsubscribeAPN is not implemented"))
 }
