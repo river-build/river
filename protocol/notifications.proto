@@ -10,10 +10,16 @@ service NotificationService {
   rpc SetSettings(SetSettingsRequest) returns (SetSettingsResponse);
   // GetSettings returns user stored notification settings.
   rpc GetSettings(GetSettingsRequest) returns (GetSettingsResponse);
-  // SubscribeWebPush subscribes a client to receive notifications through web push
+  // SubscribeWebPush subscribes a client to receive notifications through web push.
+  // If the given req.subscription is already associated with a user id the user id
+  // is updated with req.user_id (upsert).
   rpc SubscribeWebPush(SubscribeWebPushRequest) returns (SubscribeWebPushResponse);
-
+  // UnsubscribeWebPush deletes web push subscription.
   rpc UnsubscribeWebPush(UnsubscribeWebPushRequest) returns (UnsubscribeWebPushResponse);
+  // SubscribeAPN subscribes a device to receive Apple Push Notifications.
+  rpc SubscribeAPN(SubscribeAPNRequest) returns (SubscribeAPNResponse);
+  // UnsubscribeAPN unsubscribes a device from receiving Apple Push Notifications.
+  rpc UnsubscribeAPN(UnsubscribeAPNRequest) returns (UnsubscribeAPNResponse);
 }
 
 message GetSettingsRequest {
@@ -103,13 +109,29 @@ message SubscribeWebPushRequest {
   bytes user_id = 1;
   // subscription holds the subscribe object that is returned by the browser when subscribing
   WebPushSubscriptionObject subscription = 2;
-
-  // TODO: discuss how to separate notifications when 2 or more account share a single browser/app
-  // and account A must not receive notifications for account B.
 }
 
 message SubscribeWebPushResponse {}
 
-message UnsubscribeWebPushRequest {}
+message UnsubscribeWebPushRequest {
+  // user id for which to retrieve settings
+  bytes user_id = 1;
+  // subscription holds the subscribe object that is returned by the browser when subscribing
+  WebPushSubscriptionObject subscription = 2;
+}
 
 message UnsubscribeWebPushResponse {}
+
+message SubscribeAPNRequest {
+  // apple device token ID
+  string device_token = 1;
+}
+
+message SubscribeAPNResponse{}
+
+message UnsubscribeAPNRequest{
+  // apple device token ID
+  string device_token = 1;
+}
+
+message UnsubscribeAPNResponse{}
