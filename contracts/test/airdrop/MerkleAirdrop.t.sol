@@ -87,7 +87,12 @@ contract MerkleAirdropTest is TestUtils, IMerkleAirdropBase {
   }
 
   modifier givenWalletHasClaimed(Vm.Wallet memory _wallet, uint256 _amount) {
-    bytes memory signature = _signClaim(_wallet, _wallet.addr, _amount);
+    bytes memory signature = _signClaim(
+      _wallet,
+      _wallet.addr,
+      _amount,
+      address(0)
+    );
     bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[_wallet.addr]);
 
     vm.prank(_randomAddress());
@@ -102,7 +107,12 @@ contract MerkleAirdropTest is TestUtils, IMerkleAirdropBase {
     uint256 _amount,
     address _receiver
   ) {
-    bytes memory signature = _signClaim(_wallet, _wallet.addr, _amount);
+    bytes memory signature = _signClaim(
+      _wallet,
+      _wallet.addr,
+      _amount,
+      _receiver
+    );
     bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[_wallet.addr]);
 
     vm.prank(_randomAddress());
@@ -138,7 +148,7 @@ contract MerkleAirdropTest is TestUtils, IMerkleAirdropBase {
     givenWalletHasClaimed(bob, 100)
   {
     bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[bob.addr]);
-    bytes memory signature = _signClaim(bob, bob.addr, 100);
+    bytes memory signature = _signClaim(bob, bob.addr, 100, address(0));
 
     vm.prank(bob.addr);
     vm.expectRevert(MerkleAirdrop__AlreadyClaimed.selector);
@@ -147,7 +157,7 @@ contract MerkleAirdropTest is TestUtils, IMerkleAirdropBase {
 
   function test_revertWhen_invalidSignature() external {
     bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[bob.addr]);
-    bytes memory signature = _signClaim(alice, bob.addr, 100);
+    bytes memory signature = _signClaim(alice, bob.addr, 100, address(0));
 
     vm.expectRevert(MerkleAirdrop__InvalidSignature.selector);
     merkleAirdrop.claim(bob.addr, 100, proof, signature, address(0));
@@ -155,7 +165,7 @@ contract MerkleAirdropTest is TestUtils, IMerkleAirdropBase {
 
   function test_revertWhen_invalidProof() external {
     bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[alice.addr]);
-    bytes memory signature = _signClaim(bob, bob.addr, 100);
+    bytes memory signature = _signClaim(bob, bob.addr, 100, address(0));
 
     vm.expectRevert(MerkleAirdrop__InvalidProof.selector);
     merkleAirdrop.claim(bob.addr, 100, proof, signature, address(0));
@@ -179,9 +189,14 @@ contract MerkleAirdropTest is TestUtils, IMerkleAirdropBase {
   function _signClaim(
     Vm.Wallet memory _wallet,
     address _account,
-    uint256 _amount
+    uint256 _amount,
+    address _receiver
   ) internal view returns (bytes memory) {
-    bytes32 typeDataHash = merkleAirdrop.getMessageHash(_account, _amount);
+    bytes32 typeDataHash = merkleAirdrop.getMessageHash(
+      _account,
+      _amount,
+      _receiver
+    );
     (uint8 v, bytes32 r, bytes32 s) = vm.sign(_wallet.privateKey, typeDataHash);
     return abi.encodePacked(r, s, v);
   }

@@ -17,9 +17,9 @@ import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 import {Facet} from "contracts/src/diamond/facets/Facet.sol";
 
 contract MerkleAirdrop is IMerkleAirdrop, EIP712Base, Facet {
-  // keccak256("AirdropClaim(address account,uint256 amount)");
+  // keccak256("AirdropClaim(address account,uint256 amount,address receiver)");
   bytes32 private constant MESSAGE_TYPEHASH =
-    0xaa726e564e52b64144617a6a46c42e8b763d4d224ca1a3e13c1491f8a4763a23;
+    0x0770323f1f7513b8a3d8df16b4b8fd506e7a76eaf71c03c687683b8d52979b5c;
 
   function __MerkleAirdrop_init(
     bytes32 merkleRoot,
@@ -42,11 +42,14 @@ contract MerkleAirdrop is IMerkleAirdrop, EIP712Base, Facet {
   /// @inheritdoc IMerkleAirdrop
   function getMessageHash(
     address account,
-    uint256 amount
+    uint256 amount,
+    address receiver
   ) public view returns (bytes32) {
     return
       _hashTypedDataV4(
-        keccak256(abi.encode(MESSAGE_TYPEHASH, AirdropClaim(account, amount)))
+        keccak256(
+          abi.encode(MESSAGE_TYPEHASH, AirdropClaim(account, amount, receiver))
+        )
       );
   }
 
@@ -64,7 +67,11 @@ contract MerkleAirdrop is IMerkleAirdrop, EIP712Base, Facet {
       CustomRevert.revertWith(MerkleAirdrop__AlreadyClaimed.selector);
     }
 
-    _validateSignature(account, getMessageHash(account, amount), signature);
+    _validateSignature(
+      account,
+      getMessageHash(account, amount, receiver),
+      signature
+    );
 
     // verify merkle proof
     bytes32 leaf = _createLeaf(account, amount);

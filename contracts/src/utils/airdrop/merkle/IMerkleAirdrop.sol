@@ -17,6 +17,7 @@ interface IMerkleAirdropBase {
   struct AirdropClaim {
     address account;
     uint256 amount;
+    address receiver;
   }
 }
 
@@ -27,7 +28,8 @@ interface IMerkleAirdrop is IMerkleAirdropBase {
   /// @return The computed message hash
   function getMessageHash(
     address account,
-    uint256 amount
+    uint256 amount,
+    address receiver
   ) external view returns (bytes32);
 
   /// @notice Retrieves the current Merkle root used for verifying claims
