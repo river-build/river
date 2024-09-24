@@ -131,60 +131,10 @@ contract MerkleAirdropTest is TestUtils {
     address _account,
     uint256 _amount
   ) internal view returns (bytes memory) {
-    (
-      ,
-      string memory name,
-      string memory version,
-      uint256 chainId,
-      address verifyingContract,
-      ,
-
-    ) = eip712Facet.eip712Domain();
-
-    bytes32 typeDataHash = MessageHashUtils.toTypedDataHash(
-      _getDomainSeparator(name, version, chainId, verifyingContract),
-      _getAirdropClaimHash(_account, _amount)
-    );
+    bytes32 typeDataHash = merkleAirdrop.getMessageHash(_account, _amount);
 
     (uint8 v, bytes32 r, bytes32 s) = vm.sign(_wallet.privateKey, typeDataHash);
 
     return abi.encodePacked(r, s, v);
-  }
-
-  function _getAirdropClaimHash(
-    address _account,
-    uint256 _amount
-  ) internal pure returns (bytes32) {
-    return
-      keccak256(
-        abi.encode(
-          // keccak256("AirdropClaim(address account,uint256 amount)")
-          0xaa726e564e52b64144617a6a46c42e8b763d4d224ca1a3e13c1491f8a4763a23,
-          _account,
-          _amount
-        )
-      );
-  }
-
-  function _getDomainSeparator(
-    string memory name,
-    string memory version,
-    uint256 chainId,
-    address verifyingContract
-  ) public pure returns (bytes32) {
-    bytes32 nameHash = keccak256(abi.encodePacked(name));
-    bytes32 versionHash = keccak256(abi.encodePacked(version));
-
-    return
-      keccak256(
-        abi.encode(
-          // keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
-          0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f,
-          nameHash,
-          versionHash,
-          chainId,
-          verifyingContract
-        )
-      );
   }
 }
