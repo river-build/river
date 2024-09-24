@@ -61,7 +61,7 @@ func (e *Evaluator) evaluateAndOperation(
 	defer rightCancel()
 	go func() {
 		leftResult, leftErr = e.evaluateOp(leftCtx, op.LeftOperation, linkedWallets)
-		if !leftResult && isNilOrCancelled(leftErr) {
+		if !leftResult && leftErr == nil {
 			// cancel the other goroutine if the left result is false, since we know
 			// the user is unentitled
 			rightCancel()
@@ -71,7 +71,7 @@ func (e *Evaluator) evaluateAndOperation(
 
 	go func() {
 		rightResult, rightErr = e.evaluateOp(rightCtx, op.RightOperation, linkedWallets)
-		if !rightResult && isNilOrCancelled(rightErr) {
+		if !rightResult && rightErr == nil {
 			// cancel the other goroutine if the right result is false, since we know
 			// the user is unentitled
 			leftCancel()
