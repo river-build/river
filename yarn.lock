@@ -1396,6 +1396,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@effect/schema@npm:^0.74.0":
+  version: 0.74.0
+  resolution: "@effect/schema@npm:0.74.0"
+  dependencies:
+    fast-check: ^3.21.0
+  peerDependencies:
+    effect: ^3.8.3
+  checksum: d9257ab1ea4d37cd136d621e591dd9c6852d58c748bc9de733fdcc0a10b53033c59d61f4298d529d2015e2aae4a150bdffc2df639450127963398749f154cd56
+  languageName: node
+  linkType: hard
+
 "@esbuild/aix-ppc64@npm:0.21.5":
   version: 0.21.5
   resolution: "@esbuild/aix-ppc64@npm:0.21.5"
@@ -4459,6 +4470,7 @@ __metadata:
     "@bufbuild/protobuf": ^1.9.0
     "@connectrpc/connect": ^1.4.0
     "@connectrpc/connect-web": ^1.4.0
+    "@effect/schema": ^0.74.0
     "@ethereumjs/util": ^8.0.1
     "@jest/globals": ^29.6.2
     "@river-build/dlog": "workspace:^"
@@ -4477,6 +4489,7 @@ __metadata:
     browser-or-node: ^3.0.0
     debug: ^4.3.4
     dexie: ^4.0.7
+    effect: ^3.8.3
     eslint: ^8.53.0
     eslint-import-resolver-typescript: ^3.5.5
     eslint-plugin-import: ^2.27.5
@@ -10056,6 +10069,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"effect@npm:^3.8.3":
+  version: 3.8.3
+  resolution: "effect@npm:3.8.3"
+  checksum: 30f967ebc1979f460243c7aa341e14dad0efec78eb266a6e0bbdebf9d10e47dd5f8c84c597f13d1b61b87693f50e8d52c640d2a24c3d1385eae9db56567106db
+  languageName: node
+  linkType: hard
+
 "ejs@npm:^3.1.7":
   version: 3.1.10
   resolution: "ejs@npm:3.1.10"
@@ -11293,6 +11313,15 @@ __metadata:
   dependencies:
     pure-rand: ^6.0.0
   checksum: 6ec642fcfe69faa56a42785cb7b373905357db3c7373add4b84d97b8b0fa2a7efa0e119159d42e5fe5607f64cb3948a1986c45a0484156060ce168186bdbdb4a
+  languageName: node
+  linkType: hard
+
+"fast-check@npm:^3.21.0":
+  version: 3.22.0
+  resolution: "fast-check@npm:3.22.0"
+  dependencies:
+    pure-rand: ^6.1.0
+  checksum: 40b7700da759c9942c5603498d640b48da52d01605345eb551b79fc013c5056acf2844c0b02e5f3d42ce3c1b4df2c776e21d5f31418d6635a8343e2578544529
   languageName: node
   linkType: hard
 
@@ -17912,6 +17941,13 @@ __metadata:
   version: 6.0.1
   resolution: "pure-rand@npm:6.0.1"
   checksum: 4bb565399993b815658a72e359f574ce4f04827a42a905105d61163ae86f456d91595a0e4241e7bce04328fae0638ae70ac0428d93ecb55971c465bd084f8648
+  languageName: node
+  linkType: hard
+
+"pure-rand@npm:^6.1.0":
+  version: 6.1.0
+  resolution: "pure-rand@npm:6.1.0"
+  checksum: 8d53bc02bed99eca0b65b505090152ee7e9bd67dd74f8ff32ba1c883b87234067c5bf68d2614759fb217d82594d7a92919e6df80f97885e7b12b42af4bd3316a
   languageName: node
   linkType: hard
 
