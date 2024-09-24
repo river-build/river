@@ -10,7 +10,7 @@ import {
     RoleDetails,
     VersionedRuleData,
 } from '../ContractTypes'
-import { BytesLike, ContractReceipt, ContractTransaction, ethers } from 'ethers'
+import { BigNumberish, BytesLike, ContractReceipt, ContractTransaction, ethers } from 'ethers'
 import {
     CreateLegacySpaceParams,
     CreateSpaceParams,
@@ -458,6 +458,23 @@ export class SpaceDapp implements ISpaceDapp {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
         }
         return space.getChannels()
+    }
+
+    public async tokenURI(spaceId: string) {
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+        const spaceInfo = await space.getSpaceInfo()
+        return space.SpaceOwnerErc721A.read.tokenURI(spaceInfo.tokenId)
+    }
+
+    public memberTokenURI(spaceId: string, tokenId: string) {
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+        return space.ERC721A.read.tokenURI(tokenId)
     }
 
     public async getChannelDetails(
