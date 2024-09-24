@@ -396,7 +396,8 @@ library StakingRewards {
 
   function claimReward(
     Layout storage ds,
-    address beneficiary
+    address beneficiary,
+    address recipient
   ) internal returns (uint256 reward) {
     updateGlobalReward(ds);
 
@@ -408,7 +409,7 @@ library StakingRewards {
       unchecked {
         treasure.unclaimedRewardSnapshot -= reward * SCALE_FACTOR;
       }
-      ds.rewardToken.safeTransfer(beneficiary, reward);
+      ds.rewardToken.safeTransfer(recipient, reward);
     }
   }
 
