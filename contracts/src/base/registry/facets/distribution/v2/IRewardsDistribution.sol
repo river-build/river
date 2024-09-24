@@ -9,8 +9,9 @@ import {StakingRewards} from "./StakingRewards.sol";
 // contracts
 
 interface IRewardsDistributionBase {
-  error RewardsDistribution_NotDepositOwner();
-  error RewardsDistribution_NotRewardNotifier();
+  error RewardsDistribution__NotDepositOwner();
+  error RewardsDistribution__NotRewardNotifier();
+  error RewardsDistribution__NotOperatorOrSpace();
 }
 
 interface IRewardsDistribution is IRewardsDistributionBase {
