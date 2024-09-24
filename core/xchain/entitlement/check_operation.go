@@ -179,11 +179,14 @@ func (e *Evaluator) evaluateMockOperation(
 	if result != nil {
 		return false, result
 	}
-	if op.ChainID.Sign() != 0 {
-		return true, nil
-	} else {
-		return false, nil
+
+	if (op.ContractAddress != common.Address{}) {
+		// Grab last two digits of contract address as a unique identifier of which check
+		// caused the error, for ease of reading.
+		code := fmt.Sprintf("%v", op.ContractAddress)[40:]
+		return false, fmt.Errorf("intentional failure (%v)", code)
 	}
+	return op.ChainID.Sign() != 0, nil
 }
 
 func (e *Evaluator) evaluateIsEntitledOperation(

@@ -26,6 +26,21 @@ func (e *Evaluator) EvaluateRuleData(
 	return e.evaluateOp(ctx, opTree, linkedWallets)
 }
 
+func isNilOrCancelled(err error) bool {
+	return err == nil || err == context.Canceled
+}
+
+// evaluateAndOperation evaluates the results of it's two child operations, ANDs them, and
+// returns the final response. As soon as any one child operation evaluates as unentitled,
+// the method will short-circuit evaluation of the other child and return a false response.
+//
+// In the case where one child operation results in an error:
+//   - If the other child evaluates as unentitled, return the false result, because the user
+//     is definitely not entitled.
+//   - If the other child evaluates to true, return the error because we do not know
+//     if the user was truly entitled.
+//
+// If both child calls result in an error, the method will return a wrapped error.
 func (e *Evaluator) evaluateAndOperation(
 	ctx context.Context,
 	op *types.AndOperation,
@@ -46,9 +61,9 @@ func (e *Evaluator) evaluateAndOperation(
 	defer rightCancel()
 	go func() {
 		leftResult, leftErr = e.evaluateOp(leftCtx, op.LeftOperation, linkedWallets)
-		if !leftResult || leftErr != nil {
-			// cancel the other goroutine
-			// if the left result is false or there is an error
+		if !leftResult && isNilOrCancelled(leftErr) {
+			// cancel the other goroutine if the left result is false, since we know
+			// the user is unentitled
 			rightCancel()
 		}
 		wg.Done()
@@ -56,18 +71,45 @@ func (e *Evaluator) evaluateAndOperation(
 
 	go func() {
 		rightResult, rightErr = e.evaluateOp(rightCtx, op.RightOperation, linkedWallets)
-		if !rightResult || rightErr != nil {
-			// cancel the other goroutine
-			// if the right result is false or there is an error
+		if !rightResult && isNilOrCancelled(rightErr) {
+			// cancel the other goroutine if the right result is false, since we know
+			// the user is unentitled
 			leftCancel()
 		}
 		wg.Done()
 	}()
 
 	wg.Wait()
-	return leftResult && rightResult, nil
+	if leftResult && rightResult {
+		return true, nil
+	} else if !leftResult && leftErr == nil {
+		return false, nil
+	} else if !rightResult && rightErr == nil {
+		return false, nil
+	} else {
+		if !isNilOrCancelled(leftErr) && !isNilOrCancelled(rightErr) {
+			return false, fmt.Errorf("%w; %w", leftErr, rightErr)
+		} else {
+			finalErr := leftErr
+			if !isNilOrCancelled(rightErr) {
+				finalErr = rightErr
+			}
+			return false, finalErr
+		}
+	}
 }
 
+// evaluateOrOperation evaluates the results of it's two child operations, ORs them, and
+// returns the final response. As soon as any one child operation evaluates as entitled,
+// the method will short-circuit evaluation of the other child and return a true response.
+//
+// In the case where one child operation results in an error:
+//   - If the other child evaluates as entitled, return the true result, because the user
+//     is definitely entitled.
+//   - If the other child evaluates to false, return the error because we do not know
+//     if the user was truly unentitled.
+//
+// If both child calls result in an error, the method will return a wrapped error.
 func (e *Evaluator) evaluateOrOperation(
 	ctx context.Context,
 	op *types.OrOperation,
@@ -88,9 +130,9 @@ func (e *Evaluator) evaluateOrOperation(
 	defer rightCancel()
 	go func() {
 		leftResult, leftErr = e.evaluateOp(leftCtx, op.LeftOperation, linkedWallets)
-		if leftResult || leftErr != nil {
-			// cancel the other goroutine
-			// if the left result is true or there is an error
+		if leftResult {
+			// cancel the other goroutine if the left result is true, since we know
+			// the user is unentitled
 			rightCancel()
 		}
 		wg.Done()
@@ -98,16 +140,29 @@ func (e *Evaluator) evaluateOrOperation(
 
 	go func() {
 		rightResult, rightErr = e.evaluateOp(rightCtx, op.RightOperation, linkedWallets)
-		if rightResult || rightErr != nil {
-			// cancel the other goroutine
-			// if the right result is true or there is an error
+		if rightResult {
+			// cancel the other goroutine if the right result is true, since we know
+			// the user is entitled
 			leftCancel()
 		}
 		wg.Done()
 	}()
 
 	wg.Wait()
-	return leftResult || rightResult, nil
+	// If at least one child evaluates as entitled, log any errors and return a true result.
+	if leftResult || rightResult {
+		return true, nil
+	} else {
+		if leftErr != nil && rightErr != nil {
+			return false, fmt.Errorf("%w; %w", leftErr, rightErr)
+		} else {
+			finalErr := leftErr
+			if rightErr != nil {
+				finalErr = rightErr
+			}
+			return false, finalErr
+		}
+	}
 }
 
 func awaitTimeout(ctx context.Context, f func() error) error {
@@ -120,7 +175,7 @@ func awaitTimeout(ctx context.Context, f func() error) error {
 	select {
 	case <-ctx.Done():
 		// If the context was cancelled or expired, return an error
-		return fmt.Errorf("operation cancelled: %w", ctx.Err())
+		return ctx.Err()
 	case err := <-doneCh:
 		// If the function finished executing, return its result
 		return err
