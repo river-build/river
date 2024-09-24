@@ -228,13 +228,13 @@ func getEthBalance(
 
 func getPgxPoolStatus(
 	ctx context.Context,
-	result *statusinfo.PostgresStatusResult,
+	result *storage.PostgresStatusResult,
 	poolInfo *storage.PgxPoolInfo,
 	wg *sync.WaitGroup,
 ) {
 	defer wg.Done()
 
-	*result = statusinfo.PreparePostgresStatus(ctx, poolInfo)
+	*result = storage.PreparePostgresStatus(ctx, *poolInfo)
 }
 
 func GetRiverNetworkStatus(
