@@ -29,12 +29,10 @@ import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {Architect} from "contracts/src/factory/facets/architect/Architect.sol";
 import {MockERC721} from "contracts/test/mocks/MockERC721.sol";
 import {UserEntitlement} from "contracts/src/spaces/entitlements/user/UserEntitlement.sol";
-import {SpaceProxyInitializer} from "contracts/src/spaces/facets/proxy/SpaceProxyInitializer.sol";
+
 import {Factory} from "contracts/src/utils/Factory.sol";
 // errors
 import {Validator__InvalidStringLength} from "contracts/src/utils/Validator.sol";
-
-import {console} from "forge-std/console.sol";
 
 contract ArchitectTest is
   BaseSetup,
