@@ -10,7 +10,7 @@ import {
     RoleDetails,
     VersionedRuleData,
 } from '../ContractTypes'
-import { BigNumberish, BytesLike, ContractReceipt, ContractTransaction, ethers } from 'ethers'
+import { BytesLike, ContractReceipt, ContractTransaction, ethers } from 'ethers'
 import {
     CreateLegacySpaceParams,
     CreateSpaceParams,
