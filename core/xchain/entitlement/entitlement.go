@@ -27,8 +27,9 @@ func (e *Evaluator) EvaluateRuleData(
 	return e.evaluateOp(ctx, opTree, linkedWallets)
 }
 
-// Ignore context cancellations, which can occur when a logical operation evaluation short-circuits
-// because one child returns a definitive answer.
+// isEntitlementEvaluationError returns true iff the error is the result of a failure when evaluating
+// an entitlement. It ignores context cancellations, which can occur when a operation evaluation
+// short-circuits because the other child returned a definitive answer.
 func isEntitlementEvaluationError(err error) bool {
 	return err != nil && !errors.Is(err, context.Canceled)
 }
