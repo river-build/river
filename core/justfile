@@ -11,6 +11,7 @@ CONTRACTS_DIR := '../packages/generated/deployments' / RIVER_ENV
 INSTANCE_BASE := RUN_BASE
 RPC_BASE := 'http://127.0.0.1:8545'
 RPC_RIVER := 'http://127.0.0.1:8546'
+BASE_EXECUTION_CLIENT := env_var_or_default("BASE_EXECUTION_CLIENT", "")
 
 OPERATOR_ADDRESS := `source ../contracts/.env.localhost && echo "${SENDER_ADDRESS}"`
 LOCAL_PRIVATE_KEY := `source ../contracts/.env.localhost && echo "${LOCAL_PRIVATE_KEY}"`
@@ -34,6 +35,7 @@ print-env:
     @echo "RPC_RIVER=${RPC_RIVER}"
     @echo "OPERATOR_ADDRESS=${OPERATOR_ADDRESS}"
     @echo "LOCAL_PRIVATE_KEY=${LOCAL_PRIVATE_KEY}"
+    @echo "BASE_EXECUTION_CLIENT=${BASE_EXECUTION_CLIENT}"
 
 clean:
     @rm -rf ${RUN_BASE}
@@ -41,7 +43,7 @@ clean:
 _anvil-start $NAME $PORT $CHAIN_ID:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
     mkdir -p ./run_files/anvil
-    if lsof -i :${PORT} > /dev/null; then
+    if nc -z localhost ${PORT} > /dev/null; then
         echo "Anvil already running on port ${PORT}"
     else
         echo "Starting ${NAME} on port ${PORT}"
@@ -53,10 +55,18 @@ _anvil-start $NAME $PORT $CHAIN_ID:
         ../scripts/wait-for-port.sh ${PORT} anvil_${NAME}
     fi
 
-anvil-base: (_anvil-start "base" "8545" "31337")
+anvil-base: 
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    if [ "${BASE_EXECUTION_CLIENT}" != "geth_dev" ]; then
+        just _anvil-start "base" "8545" "31337"
+    fi
+
 
 anvil-base-stop:
-    ../scripts/kill-on-port.sh 8545 anvil_base
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    if [ "${BASE_EXECUTION_CLIENT}" != "geth_dev" ]; then
+        ../scripts/kill-on-port.sh 8545 anvil_base
+    fi
 
 anvil-river: (_anvil-start "river" "8546" "31338")
 
@@ -66,6 +76,26 @@ anvil-river-stop:
 anvils: anvil-base anvil-river
 
 anvils-stop: anvil-base-stop anvil-river-stop
+
+storage-start:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    if nc -z localhost 5433 > /dev/null; then
+        echo "Postgres already running on port 5433"
+    else
+        echo "Starting Postgres"
+        cd ./scripts
+        docker compose --project-name river up --detach --wait
+    fi
+
+storage-stop:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    cd ./scripts
+    docker compose --project-name river down
+
+storage-clean:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    cd ./scripts
+    docker compose --project-name river down --volumes --rmi all
 
 deploy-contracts: anvils
     #!/usr/bin/env -S bash {{BASH_OPTS}}
@@ -92,7 +122,8 @@ _config-instance $INSTANCE_NUM $INSTANCE_DIR:
     if [ ! -f "${INSTANCE_DIR}/certs/cert.pem" ]; then
         ./scripts/generate-certs.sh $(realpath ${INSTANCE_DIR}/certs)
     fi
-    cast rpc -r ${RPC_BASE} anvil_setBalance $(cat "${INSTANCE_DIR}/wallet/node_address") 0xfffffffffffffffffffffffffffffffffffffffffffffffffff
+    # Next command fails if running with geth, ignore error
+    cast rpc -r ${RPC_BASE} anvil_setBalance $(cat "${INSTANCE_DIR}/wallet/node_address") 0xfffffffffffffffffffffffffffffffffffffffffffffffffff || true
     cast rpc -r ${RPC_RIVER} anvil_setBalance $(cat "${INSTANCE_DIR}/wallet/node_address") 0xfffffffffffffffffffffffffffffffffffffffffffffffffff
 
 
@@ -178,7 +209,7 @@ just-register-nodes-river: (_loop-instances-seq "_register-node-river")
 
 register-nodes-river: config-river-chain config-instances just-register-nodes-river
 
-config: config-root register-nodes-base register-nodes-river
+config: config-root register-nodes-base register-nodes-river storage-start
 
 build:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
@@ -226,7 +257,7 @@ _wait-node $INSTANCE_NUM $INSTANCE_DIR:
     source ${ENV_FILE}
     source ${INSTANCE_DIR}/config/config.env
     cd ..
-    yarn wait-on https://localhost:${RIVER_PORT}/status?blockchain=1 --timeout=60000
+    yarn wait-on https://localhost:${RIVER_PORT}/status?blockchain=1 --timeout=300000
 
 _wait-ctrl-c:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
@@ -280,13 +311,15 @@ _loop-instances-parallel $CMD:
          INSTANCE_DIR="${INSTANCE_BASE}/${INSTANCE_NAME}"
          just ${CMD} {} ${INSTANCE_DIR}'
 
-_loop-instances $CMD:
-    #!/usr/bin/env -S bash {{BASH_OPTS}}
-    if command -v parallel &> /dev/null; then
-        just _loop-instances-parallel "${CMD}"
-    else
-        just _loop-instances-seq "${CMD}"
-    fi
+# _loop-instances $CMD:
+#     #!/usr/bin/env -S bash {{BASH_OPTS}}
+#     if command -v parallel &> /dev/null; then
+#         just _loop-instances-parallel "${CMD}"
+#     else
+#         just _loop-instances-seq "${CMD}"
+#     fi
+
+_loop-instances CMD: (_loop-instances-seq CMD)
 
 _ping-anvil $URL $NAME:
     #!/usr/bin/env -S bash {{BASH_OPTS}}

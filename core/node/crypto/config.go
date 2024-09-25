@@ -45,6 +45,7 @@ const (
 	StreamCacheExpirationPollIntervalMsConfigKey    = "stream.cacheExpirationPollIntervalMs"
 	MediaStreamMembershipLimitsGDMConfigKey         = "media.streamMembershipLimits.77"
 	MediaStreamMembershipLimitsDMConfigKey          = "media.streamMembershipLimits.88"
+	XChainBlockchainsConfigKey                      = "xchain.blockchains"
 )
 
 var (
@@ -93,6 +94,12 @@ type OnChainSettings struct {
 	StreamCachePollIntterval time.Duration `mapstructure:"stream.cacheExpirationPollIntervalMs"`
 
 	MembershipLimits MembershipLimitsSettings `mapstructure:",squash"`
+
+	XChain XChainSettings `mapstructure:",squash"`
+}
+
+type XChainSettings struct {
+	Blockchains []uint64 `mapstructure:"xchain.blockchains"`
 }
 
 type MinSnapshotEventsSettings struct {
@@ -158,6 +165,9 @@ func DefaultOnChainSettings() *OnChainSettings {
 		MembershipLimits: MembershipLimitsSettings{
 			GDM: 48,
 			DM:  2,
+		},
+		XChain: XChainSettings{
+			Blockchains: []uint64{},
 		},
 	}
 }
@@ -480,10 +490,11 @@ func (occ *onChainConfiguration) applyEvent(ctx context.Context, event *river.Ri
 }
 
 var (
-	int64Type, _   = abi.NewType("int64", "", nil)
-	uint64Type, _  = abi.NewType("uint64", "", nil)
-	uint256Type, _ = abi.NewType("uint256", "", nil)
-	stringType, _  = abi.NewType("string", "string", nil)
+	int64Type, _              = abi.NewType("int64", "", nil)
+	uint64Type, _             = abi.NewType("uint64", "", nil)
+	uint64DynamicArrayType, _ = abi.NewType("uint64[]", "", nil)
+	uint256Type, _            = abi.NewType("uint256", "", nil)
+	stringType, _             = abi.NewType("string", "string", nil)
 )
 
 // ABIEncodeInt64 returns Solidity abi.encode(i)
@@ -512,6 +523,19 @@ func ABIDecodeUint64(data []byte) (uint64, error) {
 		return 0, err
 	}
 	return args[0].(uint64), nil
+}
+
+func ABIEncodeUint64Array(values []uint64) []byte {
+	value, _ := abi.Arguments{{Type: uint64DynamicArrayType}}.Pack(values)
+	return value
+}
+
+func ABIDecodeUint64Array(data []byte) ([]uint64, error) {
+	args, err := abi.Arguments{{Type: uint64DynamicArrayType}}.Unpack(data)
+	if err != nil {
+		return []uint64{}, err
+	}
+	return args[0].([]uint64), nil
 }
 
 // ABIEncodeUint256 returns Solidity abi.encode(i)
@@ -595,6 +619,12 @@ func abiBytesToTypeDecoder(ctx context.Context) mapstructure.DecodeHookFuncValue
 					return v, nil
 				}
 				log.Error("failed to decode string", "err", err, "bytes", from.Bytes())
+			} else if to.Kind() == reflect.Slice && to.Type().Elem().Kind() == reflect.Uint64 {
+				v, err := ABIDecodeUint64Array(from.Bytes())
+				if err == nil {
+					return v, nil
+				}
+				log.Error("failed to decode []uint64", "err", err, "bytes", from.Bytes())
 			} else {
 				log.Error("unsupported type for setting decoding", "type", to.Kind(), "bytes", from.Bytes())
 			}
