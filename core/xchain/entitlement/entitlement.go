@@ -199,7 +199,7 @@ func awaitTimeout(ctx context.Context, f func() error) error {
 	select {
 	case <-ctx.Done():
 		// If the context was cancelled or expired, return an error
-		return ctx.Err()
+		return fmt.Errorf("operation cancelled: %w", ctx.Err())
 	case err := <-doneCh:
 		// If the function finished executing, return its result
 		return err
