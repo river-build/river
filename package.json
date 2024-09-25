@@ -19,7 +19,6 @@
         "csb:list:include": "yarn csb:list | xargs -I arg echo -n \"--include arg \"",
         "csb:prettier:check": "prettier --check ./packages",
         "csb:prettier:fix": "prettier --write ./packages",
-        "csb:storage": "./core/scripts/launch_storage.sh",
         "csb:test": "yarn csb:command run test && echo ALL GOOD || (echo NOT PASSED; exit 1)",
         "csb:test-remote": "yarn workspace @river-build/sdk run test",
         "csb:turbo": "bash -c 'yarn run turbo run build test:ci $(yarn csb:list:filter)'",
