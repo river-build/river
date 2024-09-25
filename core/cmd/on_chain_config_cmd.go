@@ -6,7 +6,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -65,7 +67,7 @@ func getOnChainConfig(cmd *cobra.Command, args []string) error {
 	valueType := ""
 	if len(args) > 1 {
 		valueType = args[1]
-		if valueType != "uint" && valueType != "int" && valueType != "string" {
+		if valueType != "uint" && valueType != "uints" && valueType != "int" && valueType != "string" {
 			return RiverError(Err_INVALID_ARGUMENT, "invalid value type", "type", valueType)
 		}
 	} else {
@@ -120,6 +122,12 @@ func getOnChainConfig(cmd *cobra.Command, args []string) error {
 				return err
 			}
 			fmt.Printf("%d\n", num)
+		case "uints":
+			nums, err := crypto.ABIDecodeUint64Array(s.Value)
+			if err != nil {
+				return err
+			}
+			fmt.Println(nums)
 		case "string":
 			str, err := crypto.ABIDecodeString(s.Value)
 			if err != nil {
@@ -150,6 +158,17 @@ func encodeValue(valueType string, value string) ([]byte, error) {
 		return crypto.ABIEncodeInt64(num), nil
 	case "string":
 		return crypto.ABIEncodeString(value), nil
+	case "uints":
+		strNums := strings.Split(value, ",")
+		nums := make([]uint64, len(strNums))
+		for i, strNum := range strNums {
+			num, err := strconv.ParseUint(strings.TrimSpace(strNum), 10, 64)
+			if err != nil {
+				return nil, RiverError(Err_INVALID_ARGUMENT, "invalid uint64 value", "value", strNum)
+			}
+			nums[i] = num
+		}
+		return crypto.ABIEncodeUint64Array(nums), nil
 	default:
 		return nil, RiverError(Err_INVALID_ARGUMENT, "invalid value type", "type", valueType)
 	}
@@ -321,6 +340,19 @@ func setOnChainConfigFromCSV(cmd *cobra.Command, args []string) error {
 	return submitConfig(ctx, cfg, setArgsList)
 }
 
+func printOnChainConfigNames(cmd *cobra.Command, args []string) error {
+	names := crypto.AllKnownOnChainSettingKeys()
+	keys := make([]string, 0, len(names))
+	for key := range names {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, name := range keys {
+		fmt.Printf("%s    %s\n", name, names[name])
+	}
+	return nil
+}
+
 func init() {
 	onChainConfigCmd := &cobra.Command{
 		Use:   "on-chain-config",
@@ -342,7 +374,7 @@ func init() {
 	})
 
 	setCmd := &cobra.Command{
-		Use:   "set <key> <blockNumber> <value> [uint|int|string]",
+		Use:   "set <key> <blockNumber> <value> [uint|int|string|uints]",
 		Short: "Set on-chain config. Requires PRIVATE_KEY to be set.",
 		Args:  cobra.RangeArgs(3, 4),
 		RunE:  setOnChainConfig,
@@ -352,10 +384,16 @@ func init() {
 
 	setCsvCmd := &cobra.Command{
 		Use:   "set-csv <file>",
-		Short: "Set on-chain config from CSV file: key,blockNumber,value>,[uint|int|string]. Requires PRIVATE_KEY to be set.",
+		Short: "Set on-chain config from CSV file: key,blockNumber,value>,[uint|int|string|uints]. Requires PRIVATE_KEY to be set.",
 		Args:  cobra.ExactArgs(1),
 		RunE:  setOnChainConfigFromCSV,
 	}
 	setCsvCmd.Flags().Bool("force", false, "Force setting even if name is unknown or there is type mismatch")
 	onChainConfigCmd.AddCommand(setCsvCmd)
+
+	onChainConfigCmd.AddCommand(&cobra.Command{
+		Use:   "names",
+		Short: "Print known on-chain config names and types",
+		RunE:  printOnChainConfigNames,
+	})
 }

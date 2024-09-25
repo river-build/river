@@ -70,6 +70,7 @@ func AllKnownOnChainSettingKeys() map[string]string {
 			StreamCacheExpirationPollIntervalMsConfigKey:    "uint",
 			MediaStreamMembershipLimitsGDMConfigKey:         "uint",
 			MediaStreamMembershipLimitsDMConfigKey:          "uint",
+			XChainBlockchainsConfigKey:                      "uints",
 		}
 	})
 	return knownOnChainSettingKeys
