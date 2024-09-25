@@ -7,7 +7,6 @@ import (
 
 	"github.com/river-build/river/core/node/shared"
 
-	"github.com/river-build/river/core/contracts/base"
 	"github.com/river-build/river/core/contracts/types"
 )
 
@@ -55,5 +54,5 @@ type SpaceContract interface {
 	GetRoles(
 		ctx context.Context,
 		spaceId shared.StreamId,
-	) ([]base.IRolesBaseRole, error)
+	) ([]types.BaseRole, error)
 }
