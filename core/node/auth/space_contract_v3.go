@@ -22,6 +22,7 @@ type Space struct {
 	address         common.Address
 	managerContract *base.EntitlementsManager
 	queryContract   *base.EntitlementDataQueryable
+	rolesContract   *base.IRoles
 	banning         Banning
 	pausable        *base.Pausable
 	channels        *base.Channels
@@ -57,6 +58,18 @@ func NewSpaceContractV3(
 	}
 
 	return spaceContract, nil
+}
+
+func (sc *SpaceContractV3) GetRoles(
+	ctx context.Context,
+	spaceId shared.StreamId,
+) ([]base.IRolesBaseRole, error) {
+	space, err := sc.getSpace(ctx, spaceId)
+	if err != nil {
+		return nil, err
+	}
+
+	return space.rolesContract.GetRoles(nil)
 }
 
 func (sc *SpaceContractV3) IsMember(
@@ -337,6 +350,10 @@ func (sc *SpaceContractV3) getSpace(ctx context.Context, spaceId shared.StreamId
 		if err != nil {
 			return nil, err
 		}
+		rolesContract, err := base.NewIRoles(address, sc.backend)
+		if err != nil {
+			return nil, err
+		}
 		pausable, err := base.NewPausable(address, sc.backend)
 		if err != nil {
 			return nil, err
@@ -355,6 +372,7 @@ func (sc *SpaceContractV3) getSpace(ctx context.Context, spaceId shared.StreamId
 			address:         address,
 			managerContract: managerContract,
 			queryContract:   queryContract,
+			rolesContract:   rolesContract,
 			banning:         banning,
 			pausable:        pausable,
 			channels:        channels,

@@ -7,6 +7,7 @@ import (
 
 	"github.com/river-build/river/core/node/shared"
 
+	"github.com/river-build/river/core/contracts/base"
 	"github.com/river-build/river/core/contracts/types"
 )
 
@@ -51,4 +52,8 @@ type SpaceContract interface {
 		spaceId shared.StreamId,
 		linkedWallets []common.Address,
 	) (bool, error)
+	GetRoles(
+		ctx context.Context,
+		spaceId shared.StreamId,
+	) ([]base.IRolesBaseRole, error)
 }
