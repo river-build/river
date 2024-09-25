@@ -65,7 +65,6 @@ library StakingRewards {
     mapping(address beneficiary => Treasure) treasureByBeneficiary;
     mapping(uint256 depositId => Deposit) depositById;
     mapping(address delegatee => address proxy) delegationProxies;
-    mapping(address delegatee => uint256) commissionRateByDelegatee;
   }
 
   event DelegationProxyDeployed(
@@ -161,7 +160,8 @@ library StakingRewards {
     address depositor,
     uint96 amount,
     address delegatee,
-    address beneficiary
+    address beneficiary,
+    uint256 commissionRate
   ) internal returns (uint256 depositId) {
     if (delegatee == address(0)) {
       CustomRevert.revertWith(StakingRewards__InvalidAddress.selector);
@@ -193,7 +193,14 @@ library StakingRewards {
       // if totalStaked doesn't overflow, they won't
       ds.stakedByDepositor[depositor] += amount;
     }
-    _increaseEarningPower(ds, deposit, beneficiaryTreasure, amount, delegatee);
+    _increaseEarningPower(
+      ds,
+      deposit,
+      beneficiaryTreasure,
+      amount,
+      delegatee,
+      commissionRate
+    );
 
     address proxy = retrieveOrDeployProxy(ds, delegatee);
     ds.stakeToken.safeTransferFrom(depositor, proxy, amount);
@@ -202,7 +209,8 @@ library StakingRewards {
   function increaseStake(
     Layout storage ds,
     Deposit storage deposit,
-    uint96 amount
+    uint96 amount,
+    uint256 commissionRate
   ) internal {
     // cache storage reads
     (
@@ -226,7 +234,14 @@ library StakingRewards {
       // if totalStaked doesn't overflow, they won't
       ds.stakedByDepositor[owner] += amount;
     }
-    _increaseEarningPower(ds, deposit, beneficiaryTreasure, amount, delegatee);
+    _increaseEarningPower(
+      ds,
+      deposit,
+      beneficiaryTreasure,
+      amount,
+      delegatee,
+      commissionRate
+    );
 
     address proxy = ds.delegationProxies[delegatee];
     ds.stakeToken.safeTransferFrom(owner, proxy, amount);
@@ -237,10 +252,10 @@ library StakingRewards {
     Deposit storage deposit,
     Treasure storage beneficiaryTreasure,
     uint96 amount,
-    address delegatee
+    address delegatee,
+    uint256 commissionRate
   ) private {
     unchecked {
-      uint256 commissionRate = ds.commissionRateByDelegatee[delegatee];
       uint96 commissionEarningPower;
       if (commissionRate == 0) {
         beneficiaryTreasure.earningPower += amount;
@@ -288,7 +303,8 @@ library StakingRewards {
   function redelegate(
     Layout storage ds,
     Deposit storage deposit,
-    address newDelegatee
+    address newDelegatee,
+    uint256 commissionRate
   ) internal {
     if (newDelegatee == address(0)) {
       CustomRevert.revertWith(StakingRewards__InvalidAddress.selector);
@@ -319,7 +335,8 @@ library StakingRewards {
       deposit,
       beneficiaryTreasure,
       amount,
-      newDelegatee
+      newDelegatee,
+      commissionRate
     );
 
     address oldProxy = ds.delegationProxies[oldDelegatee];
