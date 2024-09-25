@@ -37,12 +37,12 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
   ) external onlyOperatorOrSpace(delegatee) returns (uint256 depositId) {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
-    depositId = StakingRewards.stake(
-      ds.staking,
+    depositId = ds.staking.stake(
       msg.sender,
       amount,
       delegatee,
-      msg.sender
+      msg.sender,
+      _getCommissionRate(delegatee)
     );
   }
 
@@ -68,12 +68,12 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
         s
       )
     {} catch {}
-    depositId = StakingRewards.stake(
-      ds.staking,
+    depositId = ds.staking.stake(
       msg.sender,
       amount,
       delegatee,
-      beneficiary
+      beneficiary,
+      _getCommissionRate(delegatee)
     );
   }
 
@@ -83,7 +83,11 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
     StakingRewards.Deposit storage deposit = ds.staking.depositById[depositId];
     _revertIfNotDepositOwner(deposit);
 
-    StakingRewards.increaseStake(ds.staking, deposit, amount);
+    ds.staking.increaseStake(
+      deposit,
+      amount,
+      _getCommissionRate(deposit.delegatee)
+    );
   }
 
   function redelegate(
@@ -95,7 +99,7 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
     StakingRewards.Deposit storage deposit = ds.staking.depositById[depositId];
     _revertIfNotDepositOwner(deposit);
 
-    StakingRewards.redelegate(ds.staking, deposit, delegatee);
+    ds.staking.redelegate(deposit, delegatee, _getCommissionRate(delegatee));
   }
 
   function changeBeneficiary(
@@ -107,7 +111,7 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
     StakingRewards.Deposit storage deposit = ds.staking.depositById[depositId];
     _revertIfNotDepositOwner(deposit);
 
-    StakingRewards.changeBeneficiary(ds.staking, deposit, newBeneficiary);
+    ds.staking.changeBeneficiary(deposit, newBeneficiary);
   }
 
   function withdraw(uint256 depositId, uint96 amount) external {
@@ -116,9 +120,10 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
     StakingRewards.Deposit storage deposit = ds.staking.depositById[depositId];
     _revertIfNotDepositOwner(deposit);
 
-    StakingRewards.withdraw(ds.staking, deposit, amount);
+    ds.staking.withdraw(deposit, amount);
   }
 
+  // TODO: transfer rewards when a space redelegates
   function claimReward(
     address beneficiary,
     address recipient
@@ -140,7 +145,7 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
     else if (msg.sender != beneficiary) {
       CustomRevert.revertWith(RewardsDistribution__NotBeneficiary.selector);
     }
-    return StakingRewards.claimReward(ds.staking, beneficiary, recipient);
+    return ds.staking.claimReward(beneficiary, recipient);
   }
 
   function notifyRewardAmount(uint256 reward) external {
@@ -150,7 +155,7 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
       CustomRevert.revertWith(RewardsDistribution__NotRewardNotifier.selector);
     }
 
-    StakingRewards.notifyRewardAmount(ds.staking, reward);
+    ds.staking.notifyRewardAmount(reward);
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -224,14 +229,6 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
     return ds.staking.delegationProxies[delegatee];
   }
 
-  function commissionRateByDelegatee(
-    address delegatee
-  ) external view returns (uint256) {
-    RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
-      .layout();
-    return ds.staking.commissionRateByDelegatee[delegatee];
-  }
-
   function isRewardNotifier(address notifier) external view returns (bool) {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
@@ -241,13 +238,13 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
   function lastTimeRewardDistributed() external view returns (uint256) {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
-    return StakingRewards.lastTimeRewardDistributed(ds.staking);
+    return ds.staking.lastTimeRewardDistributed();
   }
 
   function currentRewardPerTokenAccumulated() external view returns (uint256) {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
-    return StakingRewards.currentRewardPerTokenAccumulated(ds.staking);
+    return ds.staking.currentRewardPerTokenAccumulated();
   }
 
   function currentUnclaimedReward(
@@ -256,8 +253,7 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     return
-      StakingRewards.currentUnclaimedReward(
-        ds.staking,
+      ds.staking.currentUnclaimedReward(
         ds.staking.treasureByBeneficiary[beneficiary]
       );
   }
@@ -266,16 +262,7 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
   /*                          INTERNAL                          */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-  function _isOperator(address delegatee) internal view returns (bool) {
-    NodeOperatorStorage.Layout storage nos = NodeOperatorStorage.layout();
-    return nos.operators.contains(delegatee);
-  }
-
-  function _isSpace(address delegatee) internal view returns (bool) {
-    SpaceDelegationStorage.Layout storage sd = SpaceDelegationStorage.layout();
-    return sd.operatorBySpace[delegatee] != address(0);
-  }
-
+  /// @dev Checks if the caller is the claimer of the operator
   function _checkClaimer(address operator) internal view {
     NodeOperatorStorage.Layout storage nos = NodeOperatorStorage.layout();
     address claimer = nos.claimerByOperator[operator];
@@ -284,19 +271,45 @@ contract RewardsDistribution is IRewardsDistribution, Facet {
     }
   }
 
+  /// @dev Returns the commission rate of the operator or space
+  function _getCommissionRate(
+    address delegatee
+  ) internal view returns (uint256) {
+    // If the delegatee is a space, get the operator
+    if (_isSpace(delegatee)) {
+      SpaceDelegationStorage.Layout storage sd = SpaceDelegationStorage
+        .layout();
+      delegatee = sd.operatorBySpace[delegatee];
+    }
+    NodeOperatorStorage.Layout storage nos = NodeOperatorStorage.layout();
+    return nos.commissionByOperator[delegatee];
+  }
+
+  /// @dev Checks if the delegatee is an operator
+  function _isOperator(address delegatee) internal view returns (bool) {
+    NodeOperatorStorage.Layout storage nos = NodeOperatorStorage.layout();
+    return nos.operators.contains(delegatee);
+  }
+
+  /// @dev Checks if the delegatee is a space
+  function _isSpace(address delegatee) internal view returns (bool) {
+    SpaceDelegationStorage.Layout storage sd = SpaceDelegationStorage.layout();
+    return sd.operatorBySpace[delegatee] != address(0);
+  }
+
   modifier onlyOperatorOrSpace(address delegatee) {
     _onlyOperatorOrSpace(delegatee);
     _;
   }
 
+  /// @dev Reverts if the delegatee is not an operator or space
   function _onlyOperatorOrSpace(address delegatee) internal view {
-    SpaceDelegationStorage.Layout storage sd = SpaceDelegationStorage.layout();
-    NodeOperatorStorage.Layout storage nos = NodeOperatorStorage.layout();
     if (!(_isOperator(delegatee) || _isSpace(delegatee))) {
       CustomRevert.revertWith(RewardsDistribution__NotOperatorOrSpace.selector);
     }
   }
 
+  /// @dev Reverts if the caller is not the owner of the deposit
   function _revertIfNotDepositOwner(
     StakingRewards.Deposit storage deposit
   ) internal view {
