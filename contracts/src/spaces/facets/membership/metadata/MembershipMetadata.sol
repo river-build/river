@@ -17,7 +17,7 @@ contract MembershipMetadata is ERC721ABase, Facet {
     if (!_exists(tokenId)) revert URIQueryForNonexistentToken();
     TokenOwnableStorage.Layout storage ds = TokenOwnableStorage.layout();
     string memory baseURI = IERC721A(ds.collection).tokenURI(ds.tokenId);
-    string memory tokenIdStr = LibString.toString(ds.tokenId);
+    string memory tokenIdStr = LibString.toString(tokenId);
     return string.concat(baseURI, "/token/", tokenIdStr);
   }
 }
