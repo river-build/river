@@ -34,6 +34,8 @@ import {Factory} from "contracts/src/utils/Factory.sol";
 // errors
 import {Validator__InvalidStringLength} from "contracts/src/utils/Validator.sol";
 
+import {console} from "forge-std/console.sol";
+
 contract ArchitectTest is
   BaseSetup,
   IArchitectBase,
@@ -76,6 +78,45 @@ contract ArchitectTest is
     );
   }
 
+  function test_createSpace_syncedEntitlements(
+    address founder
+  ) external assumeEOA(founder) {
+    vm.prank(founder);
+    IArchitectBase.SpaceInfo memory spaceInfo = _createGatedSpaceInfo("Test");
+    spaceInfo.membership.settings.pricingModule = pricingModule;
+    spaceInfo.membership.requirements.syncEntitlements = true;
+    address spaceAddress = spaceArchitect.createSpace(spaceInfo);
+
+    IRoles.Role[] memory roles = IRoles(spaceAddress).getRoles();
+    IRoles.Role memory memberRole;
+    for (uint256 i; i < roles.length; ++i) {
+      if (LibString.eq(roles[i].name, "Member")) {
+        memberRole = roles[i];
+        break;
+      }
+    }
+
+    IEntitlementsManager.Entitlement[]
+      memory entitlements = IEntitlementsManager(spaceAddress)
+        .getEntitlements();
+    address ruleEntitlementAddress;
+    for (uint256 i; i < entitlements.length; ++i) {
+      if (LibString.eq(entitlements[i].moduleType, "RuleEntitlementV2")) {
+        ruleEntitlementAddress = entitlements[i].moduleAddress;
+        break;
+      }
+    }
+
+    IRuleEntitlement.RuleDataV2 memory ruleData = IRuleEntitlementV2(
+      ruleEntitlementAddress
+    ).getRuleDataV2(memberRole.id);
+
+    assertEq(
+      abi.encode(ruleData),
+      abi.encode(RuleEntitlementUtil.getMockERC721RuleData())
+    );
+  }
+
   function test_fuzz_minterRoleEntitlementExists(
     address founder
   ) external assumeEOA(founder) {
@@ -96,8 +137,8 @@ contract ArchitectTest is
       }
     }
 
-    uint256 minterRoleId = 1;
     // ruleData for minter role
+    uint256 minterRoleId = 1;
     IRuleEntitlement.RuleDataV2 memory ruleData = IRuleEntitlementV2(
       ruleEntitlementAddress
     ).getRuleDataV2(minterRoleId);
