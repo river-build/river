@@ -19,8 +19,8 @@ export interface SpaceMetadataResponse {
 }
 
 const CACHE_CONTROL = {
-	200: 'public, max-age=30, s-maxage=3600, stale-while-revalidate',
-	307: 'public, max-age=30, s-max-age=3600, stale-while-revalidate', // NOTE: this is called when the space uses a different image service than ours, but a client is requesting the image from our service.
+	200: 'public, max-age=30, s-maxage=3600, stale-while-revalidate=3600',
+	307: 'public, max-age=30, s-max-age=3600, stale-while-revalidate=3600', // NOTE: this is called when the space uses a different image service than ours, but a client is requesting the image from our service.
 	'4xx': 'public, max-age=30, s-maxage=3600',
 }
 
