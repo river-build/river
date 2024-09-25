@@ -714,7 +714,7 @@ func (ca *chainAuth) checkStreamIsEnabled(
 		}
 		return isEnabled, nil
 	} else {
-		return false, RiverError(Err_INTERNAL, "Unknown chain auth kind").Func("checkEntitlement")
+		return false, RiverError(Err_INTERNAL, "Unknown chain auth kind").Func("checkStreamIsEnabled")
 	}
 }
 
