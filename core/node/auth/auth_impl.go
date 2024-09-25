@@ -294,12 +294,6 @@ func (ca *chainAuth) checkSpaceEnabled(ctx context.Context, cfg *config.Config, 
 	}
 
 	return isEnabled.IsAllowed(), nil
-
-	// if isEnabled.IsAllowed() {
-	// 	return nil
-	// } else {
-	// 	return RiverError(Err_SPACE_DISABLED, "Space is disabled", "spaceId", spaceId).Func("isEntitledToSpace")
-	// }
 }
 
 func (ca *chainAuth) isChannelEnabledUncached(
