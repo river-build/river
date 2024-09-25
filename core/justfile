@@ -156,13 +156,25 @@ just-config-base-chain:
 
 config-base-chain: deploy-contracts just-config-base-chain
 
+_run-local-binary $ARGS:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    cd ${RUN_BASE}
+    mkdir -p logs
+    ./bin/river_node \
+        --config common.yaml \
+        --config config.yaml \
+        --config contracts.env \
+        ${ARGS}
+
 just-config-river-chain:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
     source ${ENV_FILE}
-    source ${RUN_BASE}/contracts.env
-    ../scripts/set-riverchain-config.sh
+    PRIVATE_KEY=${LOCAL_PRIVATE_KEY} \
+        just _run-local-binary \
+        "on-chain-config set-csv ../../${ENV_PATH}/on_chain.csv"
 
-config-river-chain: deploy-contracts just-config-river-chain
+config-river-chain: deploy-contracts config-root build just-config-river-chain
 
 config-root:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
