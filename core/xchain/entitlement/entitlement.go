@@ -2,6 +2,7 @@ package entitlement
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -26,8 +27,33 @@ func (e *Evaluator) EvaluateRuleData(
 	return e.evaluateOp(ctx, opTree, linkedWallets)
 }
 
-func isNilOrCancelled(err error) bool {
-	return err == nil || err == context.Canceled
+// Ignore context cancellations, which can occur when a logical operation evaluation short-circuits
+// because one child returns a definitive answer.
+func isEntitlementEvaluationError(err error) bool {
+	return err != nil && !errors.Is(err, context.Canceled)
+}
+
+// logIfEntitlementError conditionally logs an error if it was not a context cancellation.
+func logIfEntitlementError(ctx context.Context, err error) {
+	if isEntitlementEvaluationError(err) {
+		dlog.FromCtx(ctx).Warn("Entitlement evaluation succeeded, but encountered error", "error", err)
+	}
+}
+
+// composeEntitlementEvaluationError returns a composed error type that incorporates the error of
+// either child as long as that error is not a context cancellation, which we ignore because we
+// introduce it ourselves.
+func composeEntitlementEvaluationError(leftErr error, rightErr error) error {
+	if isEntitlementEvaluationError(leftErr) && isEntitlementEvaluationError(rightErr) {
+		return fmt.Errorf("%w; %w", leftErr, rightErr)
+	}
+	if isEntitlementEvaluationError(leftErr) {
+		return leftErr
+	}
+	if isEntitlementEvaluationError(rightErr) {
+		return rightErr
+	}
+	return nil
 }
 
 // evaluateAndOperation evaluates the results of it's two child operations, ANDs them, and
@@ -80,23 +106,25 @@ func (e *Evaluator) evaluateAndOperation(
 	}()
 
 	wg.Wait()
+
+	// Evaluate definitive results and return them without error, logging if an evaluation error occurred.
+	// 1. Both checks are true - return true
+	// 2. If either check is false, was not cancelled, and did not fail - return false, as the user is not entitled.
 	if leftResult && rightResult {
 		return true, nil
-	} else if !leftResult && leftErr == nil {
-		return false, nil
-	} else if !rightResult && rightErr == nil {
-		return false, nil
-	} else {
-		if !isNilOrCancelled(leftErr) && !isNilOrCancelled(rightErr) {
-			return false, fmt.Errorf("%w; %w", leftErr, rightErr)
-		} else {
-			finalErr := leftErr
-			if !isNilOrCancelled(rightErr) {
-				finalErr = rightErr
-			}
-			return false, finalErr
-		}
 	}
+
+	if !leftResult && leftErr == nil {
+		logIfEntitlementError(ctx, rightErr)
+		return false, nil
+	}
+
+	if !rightResult && rightErr == nil {
+		logIfEntitlementError(ctx, leftErr)
+		return false, nil
+	}
+
+	return false, composeEntitlementEvaluationError(leftErr, rightErr)
 }
 
 // evaluateOrOperation evaluates the results of it's two child operations, ORs them, and
@@ -149,20 +177,15 @@ func (e *Evaluator) evaluateOrOperation(
 	}()
 
 	wg.Wait()
+
 	// If at least one child evaluates as entitled, log any errors and return a true result.
 	if leftResult || rightResult {
+		logIfEntitlementError(ctx, leftErr)
+		logIfEntitlementError(ctx, rightErr)
 		return true, nil
-	} else {
-		if leftErr != nil && rightErr != nil {
-			return false, fmt.Errorf("%w; %w", leftErr, rightErr)
-		} else {
-			finalErr := leftErr
-			if rightErr != nil {
-				finalErr = rightErr
-			}
-			return false, finalErr
-		}
 	}
+
+	return false, composeEntitlementEvaluationError(leftErr, rightErr)
 }
 
 func awaitTimeout(ctx context.Context, f func() error) error {
