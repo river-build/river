@@ -2,8 +2,6 @@ package rpc
 
 import (
 	"context"
-	"github.com/river-build/river/core/node/notifications"
-	"github.com/river-build/river/core/node/notifications/push"
 	"net"
 	"os"
 	"os/signal"
@@ -15,6 +13,8 @@ import (
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/notifications"
+	"github.com/river-build/river/core/node/notifications/push"
 )
 
 func (s *Service) startNotificationMode() error {
@@ -38,13 +38,24 @@ func (s *Service) startNotificationMode() error {
 		return AsRiverError(err).Message("Failed to init store").LogError(s.defaultLogger)
 	}
 
-	s.NotificationService = notifications.NewService(
+	notifier := notifications.NewNotificationMessageProcessor(
+		s.serverCtx,
+		s.notifications,
+		push.NewMessageNotificationsSimulator(), // TODO: from config
+	)
+
+	s.NotificationService, err = notifications.NewService(
+		s.serverCtx,
 		s.config.Notifications,
 		s.chainConfig,
-		s.notificationsStorage,
+		s.notifications,
 		s.registryContract,
 		s.nodeRegistry,
-		push.NewMessageNotificationsSimulator()) // TODO
+		notifier,
+	)
+	if err != nil {
+		return AsRiverError(err).Message("Failed to instantiate notification service").LogError(s.defaultLogger)
+	}
 
 	err = s.runHttpServer()
 	if err != nil {

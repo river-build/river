@@ -20,6 +20,7 @@ type ParsedEvent struct {
 	PrevMiniblockHash *common.Hash `dlog:"omit"`
 	SignerPubKey      []byte
 	shortDebugStr     string
+	Tags              *Tags
 }
 
 func (e *ParsedEvent) GetEnvelopeBytes() ([]byte, error) {
@@ -52,7 +53,6 @@ func ParseEvent(envelope *Envelope) (*ParsedEvent, error) {
 	}
 
 	if len(streamEvent.DelegateSig) > 0 {
-
 		err := CheckDelegateSig(
 			streamEvent.CreatorAddress,
 			signerPubKey,
@@ -80,6 +80,7 @@ func ParseEvent(envelope *Envelope) (*ParsedEvent, error) {
 		Hash:              common.BytesToHash(envelope.Hash),
 		PrevMiniblockHash: &PrevMiniblockHash,
 		SignerPubKey:      signerPubKey,
+		Tags:              streamEvent.GetTags(),
 	}, nil
 }
 

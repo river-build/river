@@ -11,6 +11,7 @@ import (
 	"github.com/SherClockHolmes/webpush-go"
 	"github.com/river-build/river/core/config"
 	. "github.com/river-build/river/core/node/base"
+	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/protocol"
 	"github.com/sideshow/apns2"
 	payload2 "github.com/sideshow/apns2/payload"
@@ -180,10 +181,13 @@ func (n *MessageNotifications) SendApplePushNotification(
 }
 
 func (n *MessageNotificationsSimulator) SendWebPushNotification(
-	_ context.Context,
+	ctx context.Context,
 	subscription *webpush.Subscription,
 	payload []byte,
 ) error {
+	log := dlog.FromCtx(ctx)
+	log.Info("SendWebPushNotification %s:%s", subscription.Keys.P256dh, subscription.Keys.Auth)
+
 	n.WebPushNotificationsByEndpoint[subscription.Endpoint] = append(
 		n.WebPushNotificationsByEndpoint[subscription.Endpoint], payload)
 
@@ -191,10 +195,12 @@ func (n *MessageNotificationsSimulator) SendWebPushNotification(
 }
 
 func (n *MessageNotificationsSimulator) SendApplePushNotification(
-	_ context.Context,
+	ctx context.Context,
 	deviceToken string,
 	payload *payload2.Payload,
 ) error {
+	log := dlog.FromCtx(ctx)
+	log.Info("SendApplePushNotification %s", deviceToken)
 
 	return nil
 }

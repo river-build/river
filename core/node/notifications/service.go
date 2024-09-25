@@ -12,44 +12,50 @@ import (
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/nodes"
-	"github.com/river-build/river/core/node/notifications/push"
-	"github.com/river-build/river/core/node/notifications/sync"
+	notificationssync "github.com/river-build/river/core/node/notifications/sync"
 	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/registries"
 	"github.com/river-build/river/core/node/shared"
-	"github.com/river-build/river/core/node/storage"
 )
 
 type (
 	Service struct {
 		notificationsConfig config.NotificationsConfig
 		onChainConfig       crypto.OnChainConfiguration
-		storage             storage.NotificationsStorage
-		tracker             *sync.StreamsTracker
+		userPreferences     UserPreferencesStore
 		riverRegistry       *registries.RiverRegistryContract
 		nodes               nodes.NodeRegistry
-		notifier            push.MessageNotifier
+		listener            events.StreamEventListener
+		streamsTracker      *notificationssync.StreamsTracker
 	}
 )
 
 func NewService(
+	ctx context.Context,
 	notificationsConfig config.NotificationsConfig,
 	onChainConfig crypto.OnChainConfiguration,
-	storage storage.NotificationsStorage,
+	userPreferences UserPreferencesStore,
 	riverRegistry *registries.RiverRegistryContract,
 	nodes nodes.NodeRegistry,
-	notifier push.MessageNotifier,
-) *Service {
+	listener events.StreamEventListener,
+) (*Service, error) {
+	tracker, err := notificationssync.NewStreamsTracker(
+		ctx, onChainConfig, notificationsConfig.Workers, riverRegistry, nodes, listener, userPreferences)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Service{
 		notificationsConfig,
 		onChainConfig,
-		storage,
-		nil,
+		userPreferences,
 		riverRegistry,
 		nodes,
-		notifier,
-	}
+		listener,
+		tracker,
+	}, nil
 }
 
 func (s *Service) Start(ctx context.Context) {
@@ -57,15 +63,9 @@ func (s *Service) Start(ctx context.Context) {
 
 	go func() {
 		for {
-			log.Info("start streams tracker")
-			tracker, err := sync.NewStreamsTracker(
-				ctx, s.onChainConfig, s.notificationsConfig.Workers, s.riverRegistry, s.nodes, s.notifier)
+			log.Info("Start notification streams tracker")
 
-			if err == nil {
-				tracker.Run(ctx)
-			} else {
-				log.Error("Unable to start tracking streams", "err", err)
-			}
+			s.streamsTracker.Run(ctx)
 
 			select {
 			case <-time.After(10 * time.Second):
@@ -77,7 +77,7 @@ func (s *Service) Start(ctx context.Context) {
 	}()
 }
 
-// SetSettings sets the notification settings, overwriting any existing settings.
+// SetSettings sets the notification preferences, overwriting any existing preferences.
 func (s *Service) SetSettings(
 	ctx context.Context,
 	req *connect.Request[protocol.SetSettingsRequest],
@@ -93,15 +93,14 @@ func (s *Service) SetSettings(
 	}
 
 	// TODO: validate req
-
-	if err := s.storage.SetSettings(ctx, userID, settings); err != nil {
+	if err := s.userPreferences.SetSettings(ctx, userID, settings); err != nil {
 		return nil, AsRiverError(err).Func("SetSettings")
 	}
 
 	return connect.NewResponse(&protocol.SetSettingsResponse{}), nil
 }
 
-// GetSettings returns user stored notification settings.
+// GetSettings returns user stored notification preferences.
 func (s *Service) GetSettings(
 	ctx context.Context,
 	req *connect.Request[protocol.GetSettingsRequest],
@@ -115,7 +114,7 @@ func (s *Service) GetSettings(
 		return nil, RiverError(protocol.Err_INVALID_ARGUMENT, "Invalid user id")
 	}
 
-	settings, err := s.storage.GetSettings(ctx, userID)
+	settings, err := s.userPreferences.GetSettings(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +139,7 @@ func (s *Service) UpdateSpaceSettings(
 		return nil, AsRiverError(err).Func("UpdateSpaceSettings")
 	}
 
-	if err := s.storage.UpdateSpaceSetting(ctx, userID, spaceID, value); err != nil {
+	if err := s.userPreferences.UpdateSpaceSetting(ctx, userID, spaceID, value); err != nil {
 		return nil, AsRiverError(err).Func("UpdateSpaceSettings")
 	}
 
@@ -174,7 +173,7 @@ func (s *Service) UpdateChannelSettings(
 		return nil, RiverError(protocol.Err_INVALID_ARGUMENT, "Missing/invalid space id")
 	}
 
-	if err := s.storage.UpdateChannelSetting(ctx, userID, spaceID, channelID, value); err != nil {
+	if err := s.userPreferences.UpdateChannelSetting(ctx, userID, spaceID, channelID, value); err != nil {
 		return nil, AsRiverError(err).Func("UpdateChannelSettings")
 	}
 
@@ -203,7 +202,7 @@ func (s *Service) SubscribeWebPush(
 		return nil, RiverError(protocol.Err_INVALID_ARGUMENT, "Invalid user id")
 	}
 
-	if err := s.storage.SubscribeWebPush(ctx, userID, webPushSub); err != nil {
+	if err := s.userPreferences.AddWebPushSubscription(ctx, userID, webPushSub); err != nil {
 		return nil, err
 	}
 
@@ -232,7 +231,7 @@ func (s *Service) UnsubscribeWebPush(
 		return nil, RiverError(protocol.Err_INVALID_ARGUMENT, "Invalid user id")
 	}
 
-	if err := s.storage.UnsubscribeWebPush(ctx, userID, webPushSub); err != nil {
+	if err := s.userPreferences.RemoveWebPushSubscription(ctx, userID, webPushSub); err != nil {
 		return nil, err
 	}
 
@@ -255,7 +254,7 @@ func (s *Service) SubscribeAPN(
 		return nil, RiverError(protocol.Err_INVALID_ARGUMENT, "Invalid user id")
 	}
 
-	if err := s.storage.SubscribeAPN(ctx, deviceToken, userID); err != nil {
+	if err := s.userPreferences.AddAPNSubscription(ctx, deviceToken, userID); err != nil {
 		return nil, err
 	}
 
@@ -278,7 +277,7 @@ func (s *Service) UnsubscribeAPN(
 		return nil, RiverError(protocol.Err_INVALID_ARGUMENT, "Invalid user id")
 	}
 
-	if err := s.storage.UnsubscribeAPN(ctx, deviceToken, userID); err != nil {
+	if err := s.userPreferences.RemoveAPNSubscription(ctx, deviceToken, userID); err != nil {
 		return nil, err
 	}
 

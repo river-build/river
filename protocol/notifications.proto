@@ -6,7 +6,7 @@ import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 
 service NotificationService {
-  // SetSettings sets the notification settings, overwriting any existing settings.
+  // SetSettings sets the notification settings, overwriting all existing settings.
   rpc SetSettings(SetSettingsRequest) returns (SetSettingsResponse);
   // GetSettings returns user stored notification settings.
   rpc GetSettings(GetSettingsRequest) returns (GetSettingsResponse);
@@ -38,12 +38,10 @@ message GetSettingsResponse {
 message Settings {
   // user id for which to retrieve settings
   bytes user_id = 1;
-  // user_settings are global and overwrite space/channel specific settings
-  UserGlobalSettings user_settings = 2;
   // space holds specific settings for spaces and channels within a space
-  repeated SpaceSetting space = 3;
+  repeated SpaceSetting space = 2;
   // dm_gdm_channels holds specific settings for DM/GDM channels
-  repeated ChannelSetting dm_gdm_channels = 4;
+  repeated ChannelSetting dm_gdm_channels = 3;
 }
 
 message SetSettingsRequest {
@@ -52,28 +50,22 @@ message SetSettingsRequest {
 
 message SetSettingsResponse {}
 
-message UserGlobalSettings {
-  // blocked_users hold the list of users that the users won't receive notifications for.
-  repeated bytes blocked_users = 1;
-  // if dm_messages is true the user will receive notifications for incoming DM messages
-  bool dm_messages = 2;
-  // if mentions is true the user will receive notifications for messages in which the user is mentioned
-  bool mentions = 3;
-  // if reply_to is true the user will receive notifications for threads in which he participates
-  bool reply_to = 4;
-}
-
 // ChannelSettingValue is a user configured indication if the user wants to receive notifications for a channel.
 enum ChannelSettingValue {
-  // CHANNEL_DEFAULT indicates that the defaults are used from the space the channel is part of.
-  // If the channel is a DM/GDM channel only the users global settings are applied.
-  CHANNEL_DEFAULT = 0;
-  // MUTES indicates that the user won't receive notifications for a channel, or if set on a space level
-  // for none of the channels within that space unless a channel is explicit set to unmute.
-  CHANNEL_MUTED = 1;
-  // UN_MUTED indicates that the user will receive notifications for a channel, or if set on a space level
-  // for all channels that are not explicitly set to mute in a space.
-  CHANNEL_UNMUTED = 2;
+  // CHANNEL_SETTING_VALUE_UNSPECIFIED value not set, for channels the default space setting are used
+  // (equivalent to CHANNEL_SETTING_VALUE_DEFAULT)
+  CHANNEL_SETTING_VALUE_UNSPECIFIED = 0;
+  // CHANNEL_SETTING_VALUE_DEFAULT indicates that the defaults are used from the space the channel is part of.
+  // For DM/GDM channels CHANNEL_SETTING_VALUE_DEFAULT is equivalent to CHANNEL_SETTING_VALUE_ALL.
+  CHANNEL_SETTING_VALUE_DEFAULT = 1;
+  // CHANNEL_SETTING_VALUE_MUTED indicates that the user won't receive notifications for a channel, or if set on a space
+  // level for none of the channels within that space unless a channel is explicit set to unmute.
+  CHANNEL_SETTING_VALUE_MUTED = 2;
+  // CHANNEL_SETTING_VALUE_UNMUTED indicates that the user will receive notifications for a channel, or if set on a
+  // space level for all channels that are not explicitly set to mute in a space.
+  CHANNEL_SETTING_VALUE_UNMUTED = 3;
+  // CHANNEL_SETTING_VALUE_ALL indicates that the user receives notifications for all messages/reactions/mentions
+  CHANNEL_SETTING_VALUE_ALL = 4;
 }
 
 // ChannelSetting hold settings specific for a DM, GDM or channel stream.
@@ -86,14 +78,16 @@ message ChannelSetting {
 
 // SpaceNotificationSettingValue is a user specified setting that applies to all channels within a space.
 enum SpaceNotificationSettingValue {
+  // SPACE_UNSPECIFIED not set
+  SPACE_UNSPECIFIED = 0;
   // SPACE_ONLY_MENTIONS_REPLIES_REACTIONS indicates that the user will receive notifications for messages that either
   // the user is mentioned in, or is a reply/reaction to his message, unless the channel is muted (default).
-  SPACE_ONLY_MENTIONS_REPLIES_REACTIONS = 0;
+  SPACE_ONLY_MENTIONS_REPLIES_REACTIONS = 1;
   // SPACE_ALL_MESSAGES indicates that the user will receive notifications for all messages for all channels in the
   // space unless a channel is muted.
-  SPACE_ALL_MESSAGES = 1;
+  SPACE_ALL_MESSAGES = 2;
   // SPACE_NO_MESSAGES indicates that the user won't receive notifications for any of the channels in the town.
-  SPACE_NO_MESSAGES = 2;
+  SPACE_NO_MESSAGES = 3;
 }
 
 // SpaceSettings hold settings that applied to all streams within the space.
@@ -124,7 +118,7 @@ message UpdateChannelSettingsRequest {
   bytes channel_id = 2;
   // space_id is required when channel_id points to a channel within a space.
   // for GM and GDM channels space_id must not be set.
-  optional bytes space_id = 3;
+  bytes space_id = 3;
   // value indicates the user overwritten value or a channel default must be used.
   ChannelSettingValue value = 4;
 }
@@ -143,7 +137,7 @@ message WebPushSubscriptionObject {
   // A string containing the endpoint associated with the push subscription.
   string endpoint = 1;
   // subscription expiration time associated with the push subscription (in milliseconds)
-  optional int64 expirationTime = 2;
+  int64 expirationTime = 2;
   // keys obtained from the browser when subscribing for notifications. The notifications
   // service uses these details to protect the notifications content.
   WebPushSubscriptionObjectKeys keys = 3;

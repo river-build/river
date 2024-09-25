@@ -74,7 +74,7 @@ var (
 
 // NotificationServiceClient is a client for the river.NotificationService service.
 type NotificationServiceClient interface {
-	// SetSettings sets the notification settings, overwriting any existing settings.
+	// SetSettings sets the notification settings, overwriting all existing settings.
 	SetSettings(context.Context, *connect.Request[protocol.SetSettingsRequest]) (*connect.Response[protocol.SetSettingsResponse], error)
 	// GetSettings returns user stored notification settings.
 	GetSettings(context.Context, *connect.Request[protocol.GetSettingsRequest]) (*connect.Response[protocol.GetSettingsResponse], error)
@@ -209,7 +209,7 @@ func (c *notificationServiceClient) UnsubscribeAPN(ctx context.Context, req *con
 
 // NotificationServiceHandler is an implementation of the river.NotificationService service.
 type NotificationServiceHandler interface {
-	// SetSettings sets the notification settings, overwriting any existing settings.
+	// SetSettings sets the notification settings, overwriting all existing settings.
 	SetSettings(context.Context, *connect.Request[protocol.SetSettingsRequest]) (*connect.Response[protocol.SetSettingsResponse], error)
 	// GetSettings returns user stored notification settings.
 	GetSettings(context.Context, *connect.Request[protocol.GetSettingsRequest]) (*connect.Response[protocol.GetSettingsResponse], error)

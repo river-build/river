@@ -590,7 +590,7 @@ func (s *streamImpl) Sub(ctx context.Context, cookie *SyncCookie, receiver SyncR
 
 	s.lastAccessedTime = time.Now()
 
-	if cookie.MinipoolGen == s.view.minipool.generation && !cookie.GetForceSyncReset() {
+	if cookie.MinipoolGen == s.view.minipool.generation {
 		if slot > int64(s.view.minipool.events.Len()) {
 			return RiverError(Err_BAD_SYNC_COOKIE, "Stream.Sub: bad slot")
 		}
@@ -621,11 +621,10 @@ func (s *streamImpl) Sub(ctx context.Context, cookie *SyncCookie, receiver SyncR
 		s.receivers.Add(receiver)
 
 		miniblockIndex, err := s.view.indexOfMiniblockWithNum(cookie.MinipoolGen)
-		if cookie.GetForceSyncReset() || err != nil {
-			if err != nil {
-				// The user's sync cookie is out of date. Send a sync reset and return an up-to-date StreamAndCookie.
-				log.Warn("Stream.Sub: out of date cookie.MiniblockNum. Sending sync reset.", "error", err.Error())
-			}
+		if err != nil {
+			// The user's sync cookie is out of date. Send a sync reset and return an up-to-date StreamAndCookie.
+			log.Warn("Stream.Sub: out of date cookie.MiniblockNum. Sending sync reset.", "error", err.Error())
+
 			receiver.OnUpdate(
 				&StreamAndCookie{
 					Events:         s.view.MinipoolEnvelopes(),

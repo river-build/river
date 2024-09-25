@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
+	"github.com/river-build/river/core/node/notifications"
 	"log/slog"
 	"net"
 	"net/http"
@@ -360,7 +361,7 @@ func (s *Service) prepareStore() error {
 		case ServerModeArchive:
 			schema = storage.DbSchemaNameForArchive(s.config.Archive.ArchiveId)
 		case ServerModeNotification:
-			schema = storage.DbSchemaNameForNotifications()
+			schema = storage.DbSchemaNameForNotifications(s.config.RiverChain.ChainId)
 		default:
 			return RiverError(
 				Err_BAD_CONFIG,
@@ -527,7 +528,7 @@ func (s *Service) initNotificationsStore() error {
 
 	switch s.config.StorageType {
 	case storage.NotificationStorageTypePostgres:
-		store, err := storage.NewPostgresNotificationsStore(
+		pgstore, err := storage.NewPostgresNotificationStore(
 			ctx,
 			s.storagePoolInfo,
 			s.instanceId,
@@ -539,8 +540,8 @@ func (s *Service) initNotificationsStore() error {
 			return err
 		}
 
-		s.notificationsStorage = store
-		s.onClose(store.Close)
+		s.notifications = notifications.NewUserPreferencesCachedStore(pgstore)
+		s.onClose(pgstore.Close)
 
 		if !s.config.Log.Simplify {
 			log.Info(

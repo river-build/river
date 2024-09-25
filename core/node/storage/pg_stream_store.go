@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -52,6 +53,7 @@ func NewPostgresStreamStore(
 		poolInfo,
 		metrics,
 		migrationsDir,
+		"migrations",
 	); err != nil {
 		return nil, AsRiverError(err).Func("NewPostgresStreamStore")
 	}
@@ -1047,6 +1049,10 @@ func DbSchemaNameForArchive(archiveId string) string {
 	return "arch" + strings.ToLower(archiveId)
 }
 
+func DbSchemaNameForNotifications(riverChainID uint64) string {
+	return fmt.Sprintf("n_%d", riverChainID)
+}
+
 func (s *PostgresStreamStore) listOtherInstancesTx(ctx context.Context, tx pgx.Tx) error {
 	log := dlog.FromCtx(ctx)
 
@@ -1155,7 +1161,7 @@ func (s *PostgresStreamStore) listenForNewNodes(ctx context.Context) {
 		notification, err := conn.Conn().WaitForNotification(ctx)
 
 		// Cancellation indicates a valid exit.
-		if err == context.Canceled {
+		if errors.Is(err, context.Canceled) {
 			return
 		}
 

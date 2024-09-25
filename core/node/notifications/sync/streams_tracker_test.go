@@ -2,18 +2,15 @@ package sync_test
 
 import (
 	"context"
-	"testing"
-	"time"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/nodes"
 	"github.com/river-build/river/core/node/notifications/push"
 	"github.com/river-build/river/core/node/notifications/sync"
 	"github.com/river-build/river/core/node/registries"
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func TestStreamsTracker(t *testing.T) {
@@ -61,23 +58,6 @@ func TestStreamsTracker(t *testing.T) {
 	workersCount := uint(25) // use default
 	tracker, err := sync.NewStreamsTracker(ctx, onChainConfig, workersCount, riverRegistryContract, nodeRegistry, notifier)
 	req.NoError(err)
-
-	riverRegistryContract.OnStreamEvent(
-		ctx,
-		riverChain.InitialBlockNum,
-		tracker.StreamAllocated,
-		tracker.StreamLastMiniblockUpdated,
-		tracker.StreamPlacementUpdated,
-	)
-
-	metrics := infra.NewMetricsFactory(nil, "tests", "streamstracker")
-	go chainMonitor.RunWithBlockPeriod(
-		ctx,
-		riverChain.Client,
-		riverChain.InitialBlockNum,
-		time.Duration(riverChainCfg.BlockTimeMs)*time.Millisecond,
-		metrics,
-	)
 
 	tracker.Run(ctx)
 }
