@@ -3,13 +3,13 @@ package sync
 import (
 	"context"
 	"crypto/sha256"
-	"github.com/river-build/river/core/node/crypto"
 	"math/big"
 	"slices"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/river-build/river/core/contracts/river"
+	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/nodes"
 	"github.com/river-build/river/core/node/notifications/push"
@@ -115,7 +115,7 @@ func (tracker *StreamsTracker) StreamAllocated(ctx context.Context, event *river
 		return
 	}
 	if tracker.StreamSupported(streamID) {
-		// TODO: tracker.workers[tracker.workerIndex(streamID)].addStream(ctx, streamID)
+		_ = tracker.workers[tracker.workerIndex(streamID)].addStream(ctx, nil, streamID, event.Nodes)
 	}
 }
 
@@ -124,5 +124,5 @@ func (tracker *StreamsTracker) StreamLastMiniblockUpdated(ctx context.Context, e
 }
 
 func (tracker *StreamsTracker) StreamPlacementUpdated(ctx context.Context, event *river.StreamRegistryV1StreamPlacementUpdated) {
-	// TODO: move stream to different worker if needed
+	// move stream to different worker when this is implemented
 }

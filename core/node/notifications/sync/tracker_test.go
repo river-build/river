@@ -2,13 +2,13 @@ package sync_test
 
 import (
 	"context"
-	"github.com/river-build/river/core/node/infra"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/crypto"
+	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/nodes"
 	"github.com/river-build/river/core/node/notifications/push"
 	"github.com/river-build/river/core/node/notifications/sync"
@@ -42,14 +42,24 @@ func TestStreamsTracker(t *testing.T) {
 	req.NoError(err)
 
 	chainMonitor := crypto.NewChainMonitor()
+
+	onChainConfig, err := crypto.NewOnChainConfig(
+		ctx,
+		riverChain.Client,
+		common.HexToAddress("0x1298c03Fde548dc433a452573E36A713b38A0404"),
+		riverChain.InitialBlockNum,
+		chainMonitor,
+	)
+	req.NoError(err)
+
 	nodeRegistry, err := nodes.LoadNodeRegistry(
 		ctx, riverRegistryContract, common.Address{}, riverChain.InitialBlockNum, chainMonitor, nil)
 	req.NoError(err)
 
 	notifier := push.NewMessageNotificationsSimulator()
 
-	workersCount := 25 // use default
-	tracker, err := sync.NewStreamsTracker(ctx, workersCount, riverRegistryContract, nodeRegistry, notifier)
+	workersCount := uint(25) // use default
+	tracker, err := sync.NewStreamsTracker(ctx, onChainConfig, workersCount, riverRegistryContract, nodeRegistry, notifier)
 	req.NoError(err)
 
 	riverRegistryContract.OnStreamEvent(

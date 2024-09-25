@@ -47,13 +47,15 @@ func (ts *TrackedNotificationStreamView) AddEvent(event *ParsedEvent) error {
 	return nil
 }
 
-func (ts *TrackedNotificationStreamView) ApplyMiniblockHeader(header *MiniblockHeader) error {
+func (ts *TrackedNotificationStreamView) ApplyMiniblockHeader(event *ParsedEvent) error {
 	// TODO: this logic is mostly copied from streamViewImpl::copyAndApplyBlock.
 	// Consider refactoring it that both view can use the same logic.
 
 	lastBlock := ts.view.LastBlock()
 
-	fmt.Printf("lastblock: %p / header: %p\n", lastBlock, header)
+	header := event.Event.GetMiniblockHeader()
+
+	fmt.Printf("lastblock: %p / header: %p / %+v\n", lastBlock.header(), header, header.GetContent())
 
 	if header.MiniblockNum != lastBlock.header().MiniblockNum+1 {
 		return RiverError(
@@ -117,10 +119,10 @@ func (ts *TrackedNotificationStreamView) ApplyMiniblockHeader(header *MiniblockH
 	eventNumOffset := header.EventNumOffset + int64(len(header.EventHashes)) + 1 // plus one for header
 
 	miniblock := &MiniblockInfo{ // TODO: set these values
-		//Hash        common.Hash
-		Num: header.MiniblockNum,
-		//headerEvent *ParsedEvent
-		//events      []*ParsedEvent
+		Hash:        event.Hash,
+		Num:         header.MiniblockNum,
+		headerEvent: event,
+		//events: event.Event.      []*ParsedEvent
 		//Proto       *Miniblock
 	}
 

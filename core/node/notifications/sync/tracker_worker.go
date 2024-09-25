@@ -40,6 +40,8 @@ type (
 		riverRegistry *registries.RiverRegistryContract
 		// nodes provide access to nodes that are registered
 		nodes nodes.NodeRegistry
+
+		muStreamToNodeAddresses sync.Mutex
 		// streamToNodeAddresses is used to keep a list of streams to its node addresses
 		streamToNodeAddresses map[shared.StreamId][]common.Address
 	}
@@ -100,7 +102,7 @@ func (w *streamsTrackerWorker) run(ctx context.Context) {
 			log                     = log.With("syncId", syncID)
 		)
 
-		log.Info("Start stream sync session", "ID", w.ID)
+		log.Info("Start stream sync session")
 
 		// stream cache and address are only required for local streams which the notification service doesn't have.
 		// therefor it is safe to pass a nil stream cache with a dummy address.
@@ -112,7 +114,7 @@ func (w *streamsTrackerWorker) run(ctx context.Context) {
 			continue
 		}
 
-		// spin off 2 go-routines, one processes stream updates and the other one processes stream registrations.
+		// spin off background tasks, one processes stream updates and the other one processes stream registrations.
 		// if one of the fails unexpected cancel the other one and restart sync operation.
 		var tasks sync.WaitGroup
 		tasks.Add(2)
@@ -172,15 +174,26 @@ func (w *streamsTrackerWorker) syncStreams(
 	<-ctx.Done()
 }
 
+func (w *streamsTrackerWorker) AddStream(
+	ctx context.Context,
+	streamID shared.StreamId,
+	nodes []common.Address,
+) error {
+	w.trackedStreams.LoadOrStore(streamID, true)
+}
+
 func (w *streamsTrackerWorker) addStream(
 	ctx context.Context,
 	syncOp *riversync.StreamSyncOperation,
 	streamID shared.StreamId,
 	nodes []common.Address,
 ) error {
+	// force reset, this will cause the stream node to send us the last snapshot and everything after that.
+	// the notification service can use the snapshot to dertermine if it had missed events before that when it was down
+	// and catch up when needed.
 	forceReset := true
-	// TODO: discuss if we can add "SyncFromLastSnapshot" to the add stream to sync request that orders the
-	// node to always sync from latest snapshot instead only when the client provided an outdated sync cookie.
+	log := dlog.FromCtx(ctx)
+
 	_, err := syncOp.AddStreamToSync(ctx, connect.NewRequest(&protocol.AddStreamToSyncRequest{
 		SyncId: syncOp.SyncID,
 		SyncPos: &protocol.SyncCookie{
@@ -195,11 +208,23 @@ func (w *streamsTrackerWorker) addStream(
 
 	if err == nil {
 		w.SubscribedStreams.Add(1)
+		log.Debug(
+			"Added stream to sync session",
+			"syncId", syncOp.SyncID,
+			"streamId", streamID,
+			"worker", w.ID)
+	} else {
+		log.Error("Unable to add stream to sync session",
+			"err", err,
+			"syncId", syncOp.SyncID,
+			"streamId", streamID,
+			"worker", w.ID)
 	}
 
 	return err
 }
 
+// Send is called by the running sync session for each update.
 func (w *streamsTrackerWorker) Send(msg *protocol.SyncStreamsResponse) error {
 	log := dlog.Log()
 	syncID := msg.GetSyncId()
@@ -239,14 +264,11 @@ func (w *streamsTrackerWorker) Send(msg *protocol.SyncStreamsResponse) error {
 		} else {
 			ts, ok := w.trackedStreams.Load(streamID)
 			if !ok {
-				// TODO: handle case where we didn't receive the sync reset indication first and must grab the stream
-				// snapshot in a different way. Maybe add the FromSnapshot indication to the AddStreamRequest to force
-				// the node to always sync from the latest snapshot.
-				log.Debug("TODO: got sync update without reset - ignore stream for now but handle this case",
+				// this could happen when the first update wasn't a sync reset as requested
+				log.Debug("Got sync update for non-tracked stream",
 					"syncId", syncID,
 					"stream", msg.GetStream().GetNextSyncCookie().GetStreamId(),
 					"reset", reset)
-
 				return nil
 			}
 
@@ -262,7 +284,7 @@ func (w *streamsTrackerWorker) Send(msg *protocol.SyncStreamsResponse) error {
 
 				if parsedEvent.Event.GetMiniblockHeader() != nil {
 					// clean up minipool
-					if err := trackedStream.ApplyMiniblockHeader(parsedEvent.Event.GetMiniblockHeader()); err != nil {
+					if err := trackedStream.ApplyMiniblockHeader(parsedEvent); err != nil {
 						log.Error("Unable to apply miniblock to tracked stream", "streamId", streamID, "err", err)
 						// TODO: decide what to do, force sync stream reset and start over?
 						return err
@@ -274,7 +296,7 @@ func (w *streamsTrackerWorker) Send(msg *protocol.SyncStreamsResponse) error {
 						return err
 					}
 
-					log.Info("applied event to stream", "streamId", streamID)
+					log.Debug("applied event to stream", "streamId", streamID)
 
 					// TODO: determine if there is someone that needs to receive a notification for this update
 					// Logic should also take care of not sending notifications multiple times.
