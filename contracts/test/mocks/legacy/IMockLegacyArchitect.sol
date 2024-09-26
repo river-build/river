@@ -34,10 +34,10 @@ interface ILegacyArchitectBase {
   struct SpaceInfo {
     string name;
     string uri;
-    Membership membership;
-    ChannelInfo channel;
     string shortDescription;
     string longDescription;
+    Membership membership;
+    ChannelInfo channel;
   }
 
   // =============================================================

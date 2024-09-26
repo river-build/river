@@ -184,6 +184,16 @@
                 "type": "string"
               },
               {
+                "internalType": "string",
+                "name": "shortDescription",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "longDescription",
+                "type": "string"
+              },
+              {
                 "internalType": "struct ILegacyArchitectBase.Membership",
                 "name": "membership",
                 "type": "tuple",
@@ -353,16 +363,6 @@
                     "type": "string"
                   }
                 ]
-              },
-              {
-                "internalType": "string",
-                "name": "shortDescription",
-                "type": "string"
-              },
-              {
-                "internalType": "string",
-                "name": "longDescription",
-                "type": "string"
               }
             ]
           }
@@ -881,10 +881,10 @@
       "license": "MIT"
     },
     "contracts/test/mocks/legacy/IMockLegacyArchitect.sol": {
-      "keccak256": "0xca94f3ed09ba08446f061e81f944829a33c7dd19973d520cda5a65415f2a5953",
+      "keccak256": "0x523b0507d34e0d8f19ba67c42aa5a1c6d554829ed556ccf47321c44c4d71eace",
       "urls": [
-        "bzz-raw://cbc6e9a5b078eb55d5139fe925ffa0c53e2e08a4ec056e9526d527f023b3bbfc",
-        "dweb:/ipfs/QmZm1ogwT3ydBZLBFc2q5ZUQZqDCZSoMKnXmyZo8Mhj9W6"
+        "bzz-raw://affa4f6cd8970f37e9124073fec37ea0257ad9f968a32aafca375aa90d46f3fa",
+        "dweb:/ipfs/Qmf4Bu31zZSt8KvKgenAmo9Xesve9kf6k5AgR54c2cNV3t"
       ],
       "license": "MIT"
     },

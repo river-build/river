@@ -165,32 +165,32 @@ export declare namespace ILegacyArchitectBase {
   export type SpaceInfoStruct = {
     name: PromiseOrValue<string>;
     uri: PromiseOrValue<string>;
-    membership: ILegacyArchitectBase.MembershipStruct;
-    channel: ILegacyArchitectBase.ChannelInfoStruct;
     shortDescription: PromiseOrValue<string>;
     longDescription: PromiseOrValue<string>;
+    membership: ILegacyArchitectBase.MembershipStruct;
+    channel: ILegacyArchitectBase.ChannelInfoStruct;
   };
 
   export type SpaceInfoStructOutput = [
     string,
     string,
-    ILegacyArchitectBase.MembershipStructOutput,
-    ILegacyArchitectBase.ChannelInfoStructOutput,
     string,
-    string
+    string,
+    ILegacyArchitectBase.MembershipStructOutput,
+    ILegacyArchitectBase.ChannelInfoStructOutput
   ] & {
     name: string;
     uri: string;
-    membership: ILegacyArchitectBase.MembershipStructOutput;
-    channel: ILegacyArchitectBase.ChannelInfoStructOutput;
     shortDescription: string;
     longDescription: string;
+    membership: ILegacyArchitectBase.MembershipStructOutput;
+    channel: ILegacyArchitectBase.ChannelInfoStructOutput;
   };
 }
 
 export interface ILegacyArchitectInterface extends utils.Interface {
   functions: {
-    "createSpace((string,string,((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[]),bool),string[]),(string),string,string))": FunctionFragment;
+    "createSpace((string,string,string,string,((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[]),bool),string[]),(string)))": FunctionFragment;
   };
 
   getFunction(nameOrSignatureOrTopic: "createSpace"): FunctionFragment;
