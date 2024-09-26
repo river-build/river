@@ -357,18 +357,6 @@ abstract contract ArchitectBase is
     return IRoles(spaceAddress).createRole(roleName, permissions, entitlements);
   }
 
-  function _addEntitlement(
-    address spaceAddress,
-    uint256 roleId,
-    IEntitlement entitlement,
-    bytes memory entitlementData
-  ) internal {
-    IRoles(spaceAddress).addRoleToEntitlement(
-      roleId,
-      CreateEntitlement({module: entitlement, data: entitlementData})
-    );
-  }
-
   // =============================================================
   //                      Deployment Helpers
   // =============================================================
