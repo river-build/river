@@ -127,16 +127,19 @@ export declare namespace ILegacyArchitectBase {
     everyone: PromiseOrValue<boolean>;
     users: PromiseOrValue<string>[];
     ruleData: IRuleEntitlementBase.RuleDataStruct;
+    syncEntitlements: PromiseOrValue<boolean>;
   };
 
   export type MembershipRequirementsStructOutput = [
     boolean,
     string[],
-    IRuleEntitlementBase.RuleDataStructOutput
+    IRuleEntitlementBase.RuleDataStructOutput,
+    boolean
   ] & {
     everyone: boolean;
     users: string[];
     ruleData: IRuleEntitlementBase.RuleDataStructOutput;
+    syncEntitlements: boolean;
   };
 
   export type MembershipStruct = {
@@ -187,7 +190,7 @@ export declare namespace ILegacyArchitectBase {
 
 export interface ILegacyArchitectInterface extends utils.Interface {
   functions: {
-    "createSpace((string,string,((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[])),string[]),(string),string,string))": FunctionFragment;
+    "createSpace((string,string,((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],((uint8,uint8)[],(uint8,uint256,address,uint256)[],(uint8,uint8,uint8)[]),bool),string[]),(string),string,string))": FunctionFragment;
   };
 
   getFunction(nameOrSignatureOrTopic: "createSpace"): FunctionFragment;

@@ -180,6 +180,11 @@ const _abi = [
                       },
                     ],
                   },
+                  {
+                    name: "syncEntitlements",
+                    type: "bool",
+                    internalType: "bool",
+                  },
                 ],
               },
               {

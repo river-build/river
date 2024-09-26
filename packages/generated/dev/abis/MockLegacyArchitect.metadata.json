@@ -327,6 +327,11 @@
                             ]
                           }
                         ]
+                      },
+                      {
+                        "internalType": "bool",
+                        "name": "syncEntitlements",
+                        "type": "bool"
                       }
                     ]
                   },
@@ -724,10 +729,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/facets/gated/EntitlementGatedBase.sol": {
-      "keccak256": "0xc366826972be55e693cc94a807a4670835d5b6e2ad76bda1568d973cb17c9d48",
+      "keccak256": "0x8babfaf697f9f8d9062fb2a3a2208669740976eb859db2e6a525e986ff8a7e1d",
       "urls": [
-        "bzz-raw://52da22c7232956849a9d64934af2b13c48a79c9920d7cbdff719195399671029",
-        "dweb:/ipfs/QmexiBbVtWDgRwVjftFDjtxLEhcPVQmp78b1bu8s94w2Pg"
+        "bzz-raw://c7833c78de50512840feba7438ddcb0062d8170c168b8a0b53c04406cd8c93e4",
+        "dweb:/ipfs/QmU7jMfHMxu1S2fx4H3BvE1cqF7H1gPcib9VkCgKity2Ct"
       ],
       "license": "MIT"
     },
@@ -876,10 +881,10 @@
       "license": "MIT"
     },
     "contracts/test/mocks/legacy/IMockLegacyArchitect.sol": {
-      "keccak256": "0xda4956d5384fc1493ead294982a1e30d70f321093c03a3eaedba4114b4ea6433",
+      "keccak256": "0xca94f3ed09ba08446f061e81f944829a33c7dd19973d520cda5a65415f2a5953",
       "urls": [
-        "bzz-raw://8a3edbce99bb79f5dd48e5db23fbd19db3e30ecb02084db05c494b9fcc19fc4f",
-        "dweb:/ipfs/QmYZixqcSWawJb7664ArqyHvcRa1cFCxdLKC1naGKyyBMK"
+        "bzz-raw://cbc6e9a5b078eb55d5139fe925ffa0c53e2e08a4ec056e9526d527f023b3bbfc",
+        "dweb:/ipfs/QmZm1ogwT3ydBZLBFc2q5ZUQZqDCZSoMKnXmyZo8Mhj9W6"
       ],
       "license": "MIT"
     },

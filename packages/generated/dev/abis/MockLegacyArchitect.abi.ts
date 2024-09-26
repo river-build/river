@@ -169,6 +169,11 @@ export default [
                         ]
                       }
                     ]
+                  },
+                  {
+                    "name": "syncEntitlements",
+                    "type": "bool",
+                    "internalType": "bool"
                   }
                 ]
               },

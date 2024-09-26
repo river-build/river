@@ -448,8 +448,8 @@ export async function createSpaceAndDefaultChannel(
     const spaceAddress = spaceDapp.getSpaceAddress(receipt)
     expect(spaceAddress).toBeDefined()
 
-    const spaceId = makeSpaceStreamId(spaceAddress!)
-    const channelId = makeDefaultChannelStreamId(spaceAddress!)
+    const spaceId = makeSpaceStreamId(spaceAddress)
+    const channelId = makeDefaultChannelStreamId(spaceAddress)
 
     await client.initializeUser({ spaceId })
     client.startSync()
@@ -504,6 +504,7 @@ export async function createVersionedSpaceFromMembership(
                 requirements: {
                     everyone: membership.requirements.everyone,
                     users: [],
+                    syncEntitlements: false,
                     ruleData: encodeRuleDataV2(
                         convertRuleDataV1ToV2(
                             membership.requirements.ruleData as IRuleEntitlementBase.RuleDataStruct,
@@ -549,6 +550,7 @@ export async function createVersionedSpace(
                     requirements: {
                         everyone: createSpaceParams.membership.requirements.everyone,
                         users: [],
+                        syncEntitlements: false,
                         ruleData: encodeRuleDataV2(
                             convertRuleDataV1ToV2(
                                 createSpaceParams.membership.requirements
@@ -600,7 +602,7 @@ export async function createUserStreamAndSyncClient(
     const spaceAddress = spaceDapp.getSpaceAddress(receipt)
     expect(spaceAddress).toBeDefined()
 
-    const spaceId = makeSpaceStreamId(spaceAddress!)
+    const spaceId = makeSpaceStreamId(spaceAddress)
     await client.initializeUser({ spaceId })
 }
 
@@ -659,13 +661,14 @@ export async function everyoneMembershipStruct(
             currency: ETH_ADDRESS,
             feeRecipient: client.userId,
             freeAllocation: 0,
-            pricingModule: dynamicPricingModule!.module,
+            pricingModule: dynamicPricingModule.module,
         },
         permissions: [Permission.Read, Permission.Write],
         requirements: {
             everyone: true,
             users: [],
             ruleData: NoopRuleData,
+            syncEntitlements: false,
         },
     }
 }
@@ -1011,13 +1014,14 @@ export async function createTownWithRequirements(requirements: {
             currency: ETH_ADDRESS,
             feeRecipient: bob.userId,
             freeAllocation: 0,
-            pricingModule: dynamicPricingModule!.module,
+            pricingModule: dynamicPricingModule.module,
         },
         permissions: [Permission.Read, Permission.Write],
         requirements: {
             everyone: requirements.everyone,
             users: requirements.users,
             ruleData: encodeRuleDataV2(requirements.ruleData),
+            syncEntitlements: false,
         },
     }
 
