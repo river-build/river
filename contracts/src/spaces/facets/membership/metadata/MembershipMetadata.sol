@@ -17,7 +17,7 @@ import {Facet} from "contracts/src/diamond/facets/Facet.sol";
 contract MembershipMetadata is IMembershipMetadata, ERC721ABase, Facet {
   /// @inheritdoc IMembershipMetadata
   function refreshMetadata() external {
-    emit IERC4906.BatchMetadataUpdate(1, type(uint256).max);
+    emit IERC4906.BatchMetadataUpdate(0, type(uint256).max);
   }
 
   function tokenURI(uint256 tokenId) public view returns (string memory) {

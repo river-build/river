@@ -41,7 +41,7 @@ contract MembershipTokenUriTest is MembershipBaseSetup {
 
   function test_refreshMetadata() external {
     vm.expectEmit(address(membership));
-    emit IERC4906.BatchMetadataUpdate(1, type(uint256).max);
+    emit IERC4906.BatchMetadataUpdate(0, type(uint256).max);
     IMembershipMetadata(address(membership)).refreshMetadata();
   }
 }
