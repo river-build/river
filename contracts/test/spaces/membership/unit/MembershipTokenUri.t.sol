@@ -8,6 +8,7 @@ import {MembershipBaseSetup} from "../MembershipBaseSetup.sol";
 
 //contracts
 import {ERC721AQueryable} from "contracts/src/diamond/facets/token/ERC721A/extensions/ERC721AQueryable.sol";
+import {MembershipMetadata} from "contracts/src/spaces/facets/membership/metadata/MembershipMetadata.sol";
 
 contract MembershipTokenUriTest is MembershipBaseSetup {
   function test_setMembershipImage()
@@ -34,8 +35,12 @@ contract MembershipTokenUriTest is MembershipBaseSetup {
     uint256 tokenId = tokenIds[0];
 
     string memory uri = membershipToken.tokenURI(tokenId);
-    assertTrue(
-      keccak256(abi.encodePacked(uri)) != keccak256(abi.encodePacked(""))
-    );
+    assertEq(uri, "ipfs://test/token/1");
+  }
+
+  function test_refreshMetadata() external {
+    vm.expectEmit(address(membership));
+    emit MembershipMetadata.MetadataUpdate(type(uint256).max);
+    MembershipMetadata(address(membership)).refreshMetadata();
   }
 }

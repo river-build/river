@@ -15,6 +15,7 @@ import {LibString} from "solady/utils/LibString.sol";
 // contracts
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {SpaceOwner} from "contracts/src/spaces/facets/owner/SpaceOwner.sol";
+import {MembershipMetadata} from "contracts/src/spaces/facets/membership/metadata/MembershipMetadata.sol";
 
 contract SpaceOwnerTest is ISpaceOwnerBase, IOwnableBase, BaseSetup {
   string internal name = "Awesome Space";
@@ -88,7 +89,10 @@ contract SpaceOwnerTest is ISpaceOwnerBase, IOwnableBase, BaseSetup {
   function test_updateSpaceInfo() external {
     address spaceAddress = _randomAddress();
 
-    mintSpace(uri, spaceAddress);
+    uint256 tokenId = mintSpace(uri, spaceAddress);
+
+    vm.expectEmit(address(spaceOwnerToken));
+    emit MembershipMetadata.MetadataUpdate(tokenId);
 
     vm.prank(spaceFactory);
     spaceOwnerToken.updateSpaceInfo(
