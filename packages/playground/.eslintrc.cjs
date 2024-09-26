@@ -85,4 +85,5 @@ module.exports = {
     node: true,
     jest: true,
   },
+  ignorePatterns: ["vite.config.ts"],
 };

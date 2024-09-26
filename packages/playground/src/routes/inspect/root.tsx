@@ -39,7 +39,6 @@ const checkId = (id: string) => {
 }
 
 const buildStreamMetadataUrl = (
-    // eslint-disable-next-line @typescript-eslint/no-restricted-types
     env: 'gamma' | 'omega' | 'alpha' | 'local_single' | (string & {}),
 ) => {
     switch (env) {

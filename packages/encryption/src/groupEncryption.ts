@@ -33,7 +33,7 @@ export class GroupEncryption extends EncryptionAlgorithm {
         try {
             await this.device.getOutboundGroupSessionKey(streamId)
             return
-        } catch (error) {
+        } catch {
             // if we don't have a cached session at this point, create a new one
             const sessionId = await this.device.createOutboundGroupSession(streamId)
             log(`Started new megolm session ${sessionId}`)

@@ -966,7 +966,7 @@ async function evaluateERC1155Operation(
                     wallet,
                     balance: resultAsBigNumber,
                 }
-            } catch (error) {
+            } catch {
                 return {
                     wallet,
                     balance: ethers.BigNumber.from(0),
@@ -1000,7 +1000,7 @@ async function getEthBalance(
             wallet,
             balance,
         }
-    } catch (error) {
+    } catch {
         return {
             wallet,
             balance: ethers.BigNumber.from(0),
@@ -1066,7 +1066,7 @@ async function evaluateContractBalanceAcrossWallets(
                     wallet,
                     balance: resultAsBigNumber,
                 }
-            } catch (error) {
+            } catch {
                 return {
                     wallet,
                     balance: ethers.BigNumber.from(0),

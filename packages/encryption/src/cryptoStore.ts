@@ -4,6 +4,7 @@ import {
     GroupSessionRecord,
     UserDeviceRecord,
 } from './storeTypes'
+// eslint-disable-next-line import/no-named-as-default
 import Dexie, { Table } from 'dexie'
 
 import { InboundGroupSessionData } from './encryptionDevice'
