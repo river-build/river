@@ -25,6 +25,7 @@ module.exports = {
     curly: "warn",
     "@typescript-eslint/no-base-to-string": "error",
     "@typescript-eslint/no-unused-vars": ["warn", { args: "none" }],
+    "@typescript-eslint/no-empty-object-type": "off",
     "no-unused-vars": "off",
     "import/no-named-as-default-member": "off",
     "react/display-name": "off",
