@@ -65,7 +65,7 @@ describe('withEntitlements', () => {
                 currency: ETH_ADDRESS,
                 feeRecipient: bob.userId,
                 freeAllocation: 0,
-                pricingModule: dynamicPricingModule.module,
+                pricingModule: dynamicPricingModule!.module,
             },
             permissions: [Permission.Read, Permission.Write],
             requirements: {
@@ -92,9 +92,9 @@ describe('withEntitlements', () => {
         expect(receipt.status).toEqual(1)
         const spaceAddress = spaceDapp.getSpaceAddress(receipt)
         expect(spaceAddress).toBeDefined()
-        const spaceId = makeSpaceStreamId(spaceAddress)
+        const spaceId = makeSpaceStreamId(spaceAddress!)
         expect(isValidStreamId(spaceId)).toBe(true)
-        const channelId = makeDefaultChannelStreamId(spaceAddress)
+        const channelId = makeDefaultChannelStreamId(spaceAddress!)
         expect(isValidStreamId(channelId)).toBe(true)
         // then on the river node
         await expect(bob.initializeUser({ spaceId })).toResolve()

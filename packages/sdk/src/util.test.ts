@@ -448,8 +448,8 @@ export async function createSpaceAndDefaultChannel(
     const spaceAddress = spaceDapp.getSpaceAddress(receipt)
     expect(spaceAddress).toBeDefined()
 
-    const spaceId = makeSpaceStreamId(spaceAddress)
-    const channelId = makeDefaultChannelStreamId(spaceAddress)
+    const spaceId = makeSpaceStreamId(spaceAddress!)
+    const channelId = makeDefaultChannelStreamId(spaceAddress!)
 
     await client.initializeUser({ spaceId })
     client.startSync()
@@ -602,7 +602,7 @@ export async function createUserStreamAndSyncClient(
     const spaceAddress = spaceDapp.getSpaceAddress(receipt)
     expect(spaceAddress).toBeDefined()
 
-    const spaceId = makeSpaceStreamId(spaceAddress)
+    const spaceId = makeSpaceStreamId(spaceAddress!)
     await client.initializeUser({ spaceId })
 }
 
@@ -661,7 +661,7 @@ export async function everyoneMembershipStruct(
             currency: ETH_ADDRESS,
             feeRecipient: client.userId,
             freeAllocation: 0,
-            pricingModule: dynamicPricingModule.module,
+            pricingModule: dynamicPricingModule!.module,
         },
         permissions: [Permission.Read, Permission.Write],
         requirements: {
@@ -1014,7 +1014,7 @@ export async function createTownWithRequirements(requirements: {
             currency: ETH_ADDRESS,
             feeRecipient: bob.userId,
             freeAllocation: 0,
-            pricingModule: dynamicPricingModule.module,
+            pricingModule: dynamicPricingModule!.module,
         },
         permissions: [Permission.Read, Permission.Write],
         requirements: {

@@ -24,7 +24,7 @@ describe('Legacy Space Detection', () => {
         const spaceAddress = aliceSpaceDapp.getSpaceAddress(receipt)
         expect(spaceAddress).toBeDefined()
 
-        await expect(aliceSpaceDapp.isLegacySpace(spaceAddress)).resolves.toBeTruthy()
+        await expect(aliceSpaceDapp.isLegacySpace(spaceAddress!)).resolves.toBeTruthy()
     })
 
     test('Detect V2 space', async () => {
@@ -56,6 +56,6 @@ describe('Legacy Space Detection', () => {
         const spaceAddress = aliceSpaceDapp.getSpaceAddress(receipt)
         expect(spaceAddress).toBeDefined()
 
-        await expect(aliceSpaceDapp.isLegacySpace(spaceAddress)).resolves.toBeFalsy()
+        await expect(aliceSpaceDapp.isLegacySpace(spaceAddress!)).resolves.toBeFalsy()
     })
 })

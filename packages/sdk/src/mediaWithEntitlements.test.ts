@@ -74,7 +74,7 @@ describe('mediaWithEntitlements', () => {
                 currency: ETH_ADDRESS,
                 feeRecipient: bobClient.userId,
                 freeAllocation: 0,
-                pricingModule: dynamicPricingModule.module,
+                pricingModule: dynamicPricingModule!.module,
             },
             permissions: [Permission.Read, Permission.Write],
             requirements: {
@@ -101,8 +101,8 @@ describe('mediaWithEntitlements', () => {
         log('transaction receipt', receipt)
         const spaceAddress = spaceDapp.getSpaceAddress(receipt)
         expect(spaceAddress).toBeDefined()
-        const spaceStreamId = makeSpaceStreamId(spaceAddress)
-        const channelId = makeDefaultChannelStreamId(spaceAddress)
+        const spaceStreamId = makeSpaceStreamId(spaceAddress!)
+        const channelId = makeDefaultChannelStreamId(spaceAddress!)
         // join alice to the space so she can start up a client
 
         await bobClient.initializeUser({ spaceId: spaceStreamId })
@@ -125,7 +125,7 @@ describe('mediaWithEntitlements', () => {
         log('transaction2 receipt', receipt2)
         const space2Address = spaceDapp.getSpaceAddress(receipt)
         expect(space2Address).toBeDefined()
-        const space2Id = makeSpaceStreamId(space2Address)
+        const space2Id = makeSpaceStreamId(space2Address!)
         await spaceDapp.joinSpace(space2Id, aliceClient.userId, provider.wallet)
 
         /**
@@ -173,7 +173,7 @@ describe('mediaWithEntitlements', () => {
                 currency: ETH_ADDRESS,
                 feeRecipient: bobClient.userId,
                 freeAllocation: 0,
-                pricingModule: dynamicPricingModule.module,
+                pricingModule: dynamicPricingModule!.module,
             },
             permissions: [Permission.Read, Permission.Write],
             requirements: {
@@ -200,7 +200,7 @@ describe('mediaWithEntitlements', () => {
         log('transaction receipt', receipt)
         const spaceAddress = spaceDapp.getSpaceAddress(receipt)
         expect(spaceAddress).toBeDefined()
-        const spaceStreamId = makeSpaceStreamId(spaceAddress)
+        const spaceStreamId = makeSpaceStreamId(spaceAddress!)
         await bobClient.initializeUser({ spaceId: spaceStreamId })
         bobClient.startSync()
         await bobClient.createSpace(spaceStreamId)
