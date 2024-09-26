@@ -7,6 +7,7 @@ import {IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
 import {ISpaceOwnerBase} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
 import {Validator__InvalidStringLength, Validator__InvalidAddress} from "contracts/src/utils/Validator.sol";
 import {IERC721ABase} from "contracts/src/diamond/facets/token/ERC721A/IERC721A.sol";
+import {IMembershipMetadata} from "contracts/src/spaces/facets/membership/metadata/IMembershipMetadata.sol";
 
 // libraries
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
@@ -15,7 +16,6 @@ import {LibString} from "solady/utils/LibString.sol";
 // contracts
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {SpaceOwner} from "contracts/src/spaces/facets/owner/SpaceOwner.sol";
-import {MembershipMetadata} from "contracts/src/spaces/facets/membership/metadata/MembershipMetadata.sol";
 
 contract SpaceOwnerTest is ISpaceOwnerBase, IOwnableBase, BaseSetup {
   string internal name = "Awesome Space";
@@ -87,12 +87,12 @@ contract SpaceOwnerTest is ISpaceOwnerBase, IOwnableBase, BaseSetup {
   // ------------ updateSpace ------------
 
   function test_updateSpaceInfo() external {
-    address spaceAddress = _randomAddress();
+    address spaceAddress = everyoneSpace;
 
     uint256 tokenId = mintSpace(uri, spaceAddress);
 
     vm.expectEmit(address(spaceOwnerToken));
-    emit MembershipMetadata.MetadataUpdate(tokenId);
+    emit IMembershipMetadata.MetadataUpdate(tokenId);
 
     vm.prank(spaceFactory);
     spaceOwnerToken.updateSpaceInfo(
@@ -157,7 +157,7 @@ contract SpaceOwnerTest is ISpaceOwnerBase, IOwnableBase, BaseSetup {
     vm.prank(deployer);
     spaceOwnerToken.setDefaultUri(defaultUri);
 
-    address spaceAddress = _randomAddress();
+    address spaceAddress = everyoneSpace;
 
     mintSpace(uri, spaceAddress);
 

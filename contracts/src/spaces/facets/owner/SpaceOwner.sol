@@ -3,12 +3,12 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {ISpaceOwner} from "./ISpaceOwner.sol";
+import {IMembershipMetadata} from "contracts/src/spaces/facets/membership/metadata/IMembershipMetadata.sol";
 
 // libraries
 
 // contracts
 import {ERC721A} from "contracts/src/diamond/facets/token/ERC721A/ERC721A.sol";
-import {MembershipMetadata} from "contracts/src/spaces/facets/membership/metadata/MembershipMetadata.sol";
 import {SpaceOwnerBase} from "./SpaceOwnerBase.sol";
 import {OwnableBase} from "contracts/src/diamond/facets/ownable/OwnableBase.sol";
 import {GuardianBase} from "contracts/src/spaces/facets/guardian/GuardianBase.sol";
@@ -85,9 +85,9 @@ contract SpaceOwner is
     _onlySpaceOwner(space);
     _updateSpace(space, name, uri, shortDescription, longDescription);
 
-    space.call(abi.encodeCall(MembershipMetadata.refreshMetadata, ()));
+    IMembershipMetadata(space).refreshMetadata();
 
-    emit MembershipMetadata.MetadataUpdate(_getTokenId(space));
+    emit IMembershipMetadata.MetadataUpdate(_getTokenId(space));
   }
 
   function nonces(address owner) external view returns (uint256 result) {
