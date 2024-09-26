@@ -129,28 +129,45 @@ abstract contract ArchitectBase is
     // create minter role with requirements
     string[] memory joinPermissions = new string[](1);
     joinPermissions[0] = Permissions.JoinSpace;
-    _createEntitlementForRole(
-      spaceAddress,
-      MINTER_ROLE,
-      joinPermissions,
-      spaceInfo.membership.requirements,
-      userEntitlement,
-      ruleEntitlement
-    );
-
-    // create member role with membership as the requirement
-    if (!spaceInfo.membership.requirements.syncEntitlements) {
-      spaceInfo.membership.requirements.everyone = true;
+    if (spaceInfo.membership.requirements.everyone) {
+      _createEveryoneEntitlement(
+        spaceAddress,
+        MINTER_ROLE,
+        joinPermissions,
+        userEntitlement
+      );
+    } else {
+      _createEntitlementForRole(
+        spaceAddress,
+        MINTER_ROLE,
+        joinPermissions,
+        spaceInfo.membership.requirements,
+        userEntitlement,
+        ruleEntitlement
+      );
     }
 
-    uint256 memberRoleId = _createEntitlementForRole(
-      spaceAddress,
-      spaceInfo.membership.settings.name,
-      spaceInfo.membership.permissions,
-      spaceInfo.membership.requirements,
-      userEntitlement,
-      ruleEntitlement
-    );
+    uint256 memberRoleId;
+
+    // if entitlement are synced, create a role with the membership requirements
+    if (spaceInfo.membership.requirements.syncEntitlements) {
+      memberRoleId = _createEntitlementForRole(
+        spaceAddress,
+        spaceInfo.membership.settings.name,
+        spaceInfo.membership.permissions,
+        spaceInfo.membership.requirements,
+        userEntitlement,
+        ruleEntitlement
+      );
+    } else {
+      // else create a role with the everyone entitlement
+      memberRoleId = _createEveryoneEntitlement(
+        spaceAddress,
+        spaceInfo.membership.settings.name,
+        spaceInfo.membership.permissions,
+        userEntitlement
+      );
+    }
 
     // create default channel
     _createDefaultChannel(spaceAddress, memberRoleId, spaceInfo.channel);
@@ -265,64 +282,70 @@ abstract contract ArchitectBase is
     IUserEntitlement userEntitlement,
     IRuleEntitlement ruleEntitlement
   ) internal returns (uint256 roleId) {
-    if (requirements.everyone) {
-      address[] memory users = new address[](1);
-      users[0] = EVERYONE_ADDRESS;
+    uint256 entitlementCount = 0;
+    uint256 userReqsLen = requirements.users.length;
+    uint256 ruleReqsLen = requirements.ruleData.length;
 
-      CreateEntitlement[] memory entitlements = new CreateEntitlement[](1);
-      entitlements[0].module = userEntitlement;
-      entitlements[0].data = abi.encode(users);
-
-      roleId = _createRoleWithEntitlements(
-        spaceAddress,
-        roleName,
-        permissions,
-        entitlements
-      );
-    } else {
-      roleId = _createRole(spaceAddress, roleName, permissions);
-
-      uint256 userReqsLen = requirements.users.length;
-      uint256 ruleReqsLen = requirements.ruleData.length;
-
-      if (userReqsLen != 0) {
-        // validate users
-        for (uint256 i; i < userReqsLen; ++i) {
-          Validator.checkAddress(requirements.users[i]);
-        }
-
-        _addEntitlement(
-          spaceAddress,
-          roleId,
-          userEntitlement,
-          abi.encode(requirements.users)
-        );
-      }
-
-      if (ruleReqsLen > 0) {
-        _addEntitlement(
-          spaceAddress,
-          roleId,
-          ruleEntitlement,
-          requirements.ruleData
-        );
-      }
+    if (userReqsLen > 0) {
+      ++entitlementCount;
     }
 
-    return roleId;
+    if (ruleReqsLen > 0) {
+      ++entitlementCount;
+    }
+
+    CreateEntitlement[] memory entitlements = new CreateEntitlement[](
+      entitlementCount
+    );
+
+    uint256 entitlementIndex;
+
+    if (userReqsLen != 0) {
+      // validate users
+      for (uint256 i; i < userReqsLen; ++i) {
+        Validator.checkAddress(requirements.users[i]);
+      }
+
+      entitlements[entitlementIndex++] = CreateEntitlement({
+        module: userEntitlement,
+        data: abi.encode(requirements.users)
+      });
+    }
+
+    if (ruleReqsLen > 0) {
+      entitlements[entitlementIndex++] = CreateEntitlement({
+        module: ruleEntitlement,
+        data: requirements.ruleData
+      });
+    }
+
+    roleId = _createRoleWithEntitlements(
+      spaceAddress,
+      roleName,
+      permissions,
+      entitlements
+    );
   }
 
-  function _createRole(
+  function _createEveryoneEntitlement(
     address spaceAddress,
     string memory roleName,
-    string[] memory permissions
+    string[] memory permissions,
+    IUserEntitlement userEntitlement
   ) internal returns (uint256 roleId) {
-    return
-      IRoles(spaceAddress).createRole(
-        roleName,
-        permissions,
-        new CreateEntitlement[](0)
-      );
+    address[] memory users = new address[](1);
+    users[0] = EVERYONE_ADDRESS;
+
+    CreateEntitlement[] memory entitlements = new CreateEntitlement[](1);
+    entitlements[0].module = userEntitlement;
+    entitlements[0].data = abi.encode(users);
+
+    roleId = _createRoleWithEntitlements(
+      spaceAddress,
+      roleName,
+      permissions,
+      entitlements
+    );
   }
 
   function _createRoleWithEntitlements(

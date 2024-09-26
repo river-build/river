@@ -76,7 +76,48 @@ contract ArchitectTest is
     );
   }
 
-  function test_createSpace_syncedEntitlements(
+  function test_fuzz_createUserSpace_syncedEntitlements(
+    address founder
+  ) external assumeEOA(founder) {
+    vm.prank(founder);
+
+    address[] memory users = new address[](1);
+    users[0] = _randomAddress();
+
+    IArchitectBase.SpaceInfo memory spaceInfo = _createUserSpaceInfo(
+      "Test",
+      users
+    );
+    spaceInfo.membership.settings.pricingModule = pricingModule;
+    spaceInfo.membership.requirements.syncEntitlements = true;
+    address spaceAddress = spaceArchitect.createSpace(spaceInfo);
+
+    IRoles.Role[] memory roles = IRoles(spaceAddress).getRoles();
+    IRoles.Role memory memberRole;
+    for (uint256 i; i < roles.length; ++i) {
+      if (LibString.eq(roles[i].name, "Member")) {
+        memberRole = roles[i];
+        break;
+      }
+    }
+
+    IEntitlementsManager.Entitlement[]
+      memory entitlements = IEntitlementsManager(spaceAddress)
+        .getEntitlements();
+    address entitlementAddress;
+    for (uint256 i; i < entitlements.length; ++i) {
+      if (LibString.eq(entitlements[i].moduleType, "UserEntitlement")) {
+        entitlementAddress = entitlements[i].moduleAddress;
+        break;
+      }
+    }
+
+    bytes memory entitlementData = IUserEntitlement(entitlementAddress)
+      .getEntitlementDataByRoleId(memberRole.id);
+    assertEq(entitlementData, abi.encode(users));
+  }
+
+  function test_fuzz_createGatedSpace_syncedEntitlements(
     address founder
   ) external assumeEOA(founder) {
     vm.prank(founder);
@@ -348,21 +389,6 @@ contract ArchitectTest is
         break;
       }
     }
-
-    // update the permissions of the member role
-    // string[] memory permissions = new string[](3);
-    // permissions[0] = Permissions.Read;
-    // permissions[1] = Permissions.Write;
-    // permissions[2] = Permissions.AddRemoveChannels;
-    // IRoles.CreateEntitlement[]
-    //   memory entitlements = new IRoles.CreateEntitlement[](0);
-    // vm.prank(founder);
-    // IRoles(spaceInstance).updateRole(
-    //   memberRole.id,
-    //   memberRole.name,
-    //   permissions,
-    //   entitlements
-    // );
 
     string[] memory permissions = new string[](1);
     permissions[0] = Permissions.AddRemoveChannels;

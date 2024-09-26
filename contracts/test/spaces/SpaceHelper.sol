@@ -140,9 +140,9 @@ abstract contract SpaceHelper {
         }),
         requirements: IArchitectBase.MembershipRequirements({
           everyone: false,
-          syncEntitlements: false,
           users: new address[](0),
-          ruleData: abi.encode(RuleEntitlementUtil.getNoopRuleData())
+          ruleData: abi.encode(RuleEntitlementUtil.getNoopRuleData()),
+          syncEntitlements: false
         }),
         permissions: new string[](0)
       }),
