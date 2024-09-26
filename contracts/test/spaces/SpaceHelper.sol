@@ -46,6 +46,7 @@ abstract contract SpaceHelper {
             pricingModule: address(0)
           }),
           requirements: ILegacyArchitectBase.MembershipRequirements({
+            syncEntitlements: false,
             everyone: false,
             users: new address[](0),
             ruleData: RuleEntitlementUtil.getLegacyNoopRuleData()
