@@ -2,6 +2,7 @@
 pragma solidity ^0.8.23;
 
 // interfaces
+import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
 import {ISpaceOwner} from "./ISpaceOwner.sol";
 import {IMembershipMetadata} from "contracts/src/spaces/facets/membership/metadata/IMembershipMetadata.sol";
 
@@ -87,7 +88,7 @@ contract SpaceOwner is
 
     IMembershipMetadata(space).refreshMetadata();
 
-    emit IMembershipMetadata.MetadataUpdate(_getTokenId(space));
+    emit IERC4906.MetadataUpdate(_getTokenId(space));
   }
 
   function nonces(address owner) external view returns (uint256 result) {

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.23;
 
 // interfaces
+import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
 import {IERC721A} from "contracts/src/diamond/facets/token/ERC721A/IERC721A.sol";
 import {IMembershipMetadata} from "./IMembershipMetadata.sol";
 
@@ -16,7 +17,7 @@ import {Facet} from "contracts/src/diamond/facets/Facet.sol";
 contract MembershipMetadata is IMembershipMetadata, ERC721ABase, Facet {
   /// @inheritdoc IMembershipMetadata
   function refreshMetadata() external {
-    emit BatchMetadataUpdate(1, type(uint256).max);
+    emit IERC4906.BatchMetadataUpdate(1, type(uint256).max);
   }
 
   function tokenURI(uint256 tokenId) public view returns (string memory) {

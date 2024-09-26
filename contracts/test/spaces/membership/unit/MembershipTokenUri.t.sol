@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 // interfaces
+import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
 import {IMembershipMetadata} from "contracts/src/spaces/facets/membership/metadata/IMembershipMetadata.sol";
 
 // utils
@@ -40,7 +41,7 @@ contract MembershipTokenUriTest is MembershipBaseSetup {
 
   function test_refreshMetadata() external {
     vm.expectEmit(address(membership));
-    emit IMembershipMetadata.BatchMetadataUpdate(1, type(uint256).max);
+    emit IERC4906.BatchMetadataUpdate(1, type(uint256).max);
     IMembershipMetadata(address(membership)).refreshMetadata();
   }
 }

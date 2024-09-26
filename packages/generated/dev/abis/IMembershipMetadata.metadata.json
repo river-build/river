@@ -6,38 +6,6 @@
   "output": {
     "abi": [
       {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "_fromTokenId",
-            "type": "uint256",
-            "indexed": false
-          },
-          {
-            "internalType": "uint256",
-            "name": "_toTokenId",
-            "type": "uint256",
-            "indexed": false
-          }
-        ],
-        "type": "event",
-        "name": "BatchMetadataUpdate",
-        "anonymous": false
-      },
-      {
-        "inputs": [
-          {
-            "internalType": "uint256",
-            "name": "_tokenId",
-            "type": "uint256",
-            "indexed": false
-          }
-        ],
-        "type": "event",
-        "name": "MetadataUpdate",
-        "anonymous": false
-      },
-      {
         "inputs": [],
         "stateMutability": "nonpayable",
         "type": "function",
@@ -105,10 +73,10 @@
   },
   "sources": {
     "contracts/src/spaces/facets/membership/metadata/IMembershipMetadata.sol": {
-      "keccak256": "0x28f1008b1e87b46741fb7a6ffd74bcd85cf43118bc26449adacd71ab78dc008a",
+      "keccak256": "0x880c5cb358b4a471d273ae582bb0068f679ca0adfd75cf36f21107aced4ecfcb",
       "urls": [
-        "bzz-raw://bafb33e2eee425e7d9fcea293345a9add1ac4d70c83e167d92c43529a8b58432",
-        "dweb:/ipfs/QmXfJXr3YxRYvu5M58saE59KqJ5UK8eQ6AkQQaTeorjfsr"
+        "bzz-raw://6c8f64c60534a1bbf0242d1a4ee69a8b164b78dd62ea1681bf60a801d6db6c80",
+        "dweb:/ipfs/QmYYaFyqzZBb6KnJ2BVft418C5m7viZAPLpxHitP8kbJZb"
       ],
       "license": "MIT"
     }

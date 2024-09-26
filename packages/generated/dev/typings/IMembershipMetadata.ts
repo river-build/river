@@ -13,11 +13,7 @@ import type {
   Signer,
   utils,
 } from "ethers";
-import type {
-  FunctionFragment,
-  Result,
-  EventFragment,
-} from "@ethersproject/abi";
+import type { FunctionFragment, Result } from "@ethersproject/abi";
 import type { Listener, Provider } from "@ethersproject/providers";
 import type {
   TypedEventFilter,
@@ -52,36 +48,8 @@ export interface IMembershipMetadataInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "tokenURI", data: BytesLike): Result;
 
-  events: {
-    "BatchMetadataUpdate(uint256,uint256)": EventFragment;
-    "MetadataUpdate(uint256)": EventFragment;
-  };
-
-  getEvent(nameOrSignatureOrTopic: "BatchMetadataUpdate"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "MetadataUpdate"): EventFragment;
+  events: {};
 }
-
-export interface BatchMetadataUpdateEventObject {
-  _fromTokenId: BigNumber;
-  _toTokenId: BigNumber;
-}
-export type BatchMetadataUpdateEvent = TypedEvent<
-  [BigNumber, BigNumber],
-  BatchMetadataUpdateEventObject
->;
-
-export type BatchMetadataUpdateEventFilter =
-  TypedEventFilter<BatchMetadataUpdateEvent>;
-
-export interface MetadataUpdateEventObject {
-  _tokenId: BigNumber;
-}
-export type MetadataUpdateEvent = TypedEvent<
-  [BigNumber],
-  MetadataUpdateEventObject
->;
-
-export type MetadataUpdateEventFilter = TypedEventFilter<MetadataUpdateEvent>;
 
 export interface IMembershipMetadata extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
@@ -138,19 +106,7 @@ export interface IMembershipMetadata extends BaseContract {
     ): Promise<string>;
   };
 
-  filters: {
-    "BatchMetadataUpdate(uint256,uint256)"(
-      _fromTokenId?: null,
-      _toTokenId?: null
-    ): BatchMetadataUpdateEventFilter;
-    BatchMetadataUpdate(
-      _fromTokenId?: null,
-      _toTokenId?: null
-    ): BatchMetadataUpdateEventFilter;
-
-    "MetadataUpdate(uint256)"(_tokenId?: null): MetadataUpdateEventFilter;
-    MetadataUpdate(_tokenId?: null): MetadataUpdateEventFilter;
-  };
+  filters: {};
 
   estimateGas: {
     refreshMetadata(

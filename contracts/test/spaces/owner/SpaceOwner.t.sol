@@ -2,12 +2,12 @@
 pragma solidity ^0.8.23;
 
 // interfaces
+import {IERC4906} from "@openzeppelin/contracts/interfaces/IERC4906.sol";
 import {IGuardian} from "contracts/src/spaces/facets/guardian/IGuardian.sol";
 import {IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
 import {ISpaceOwnerBase} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
 import {Validator__InvalidStringLength, Validator__InvalidAddress} from "contracts/src/utils/Validator.sol";
 import {IERC721ABase} from "contracts/src/diamond/facets/token/ERC721A/IERC721A.sol";
-import {IMembershipMetadata} from "contracts/src/spaces/facets/membership/metadata/IMembershipMetadata.sol";
 
 // libraries
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
@@ -92,7 +92,7 @@ contract SpaceOwnerTest is ISpaceOwnerBase, IOwnableBase, BaseSetup {
     uint256 tokenId = mintSpace(uri, spaceAddress);
 
     vm.expectEmit(address(spaceOwnerToken));
-    emit IMembershipMetadata.MetadataUpdate(tokenId);
+    emit IERC4906.MetadataUpdate(tokenId);
 
     vm.prank(spaceFactory);
     spaceOwnerToken.updateSpaceInfo(
