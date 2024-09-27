@@ -86,7 +86,7 @@ func (s *PostgresStreamStore) initStreamStorage(ctx context.Context) error {
 }
 
 // txRunner runs transactions against the underlying postgres store. This override
-// sets the logger stored in the context to add the node's uuid as a log field.
+// adds logging tags for the node's UUID.
 func (s *PostgresStreamStore) txRunner(
 	ctx context.Context,
 	name string,
@@ -95,8 +95,9 @@ func (s *PostgresStreamStore) txRunner(
 	opts *txRunnerOpts,
 	tags ...any,
 ) error {
+	tags = append(tags, "currentUUID", s.nodeUUID)
 	return s.PostgresEventStore.txRunner(
-		dlog.CtxWithLogValues(ctx, "currentUUID", s.nodeUUID),
+		ctx,
 		name,
 		accessMode,
 		txFn,
