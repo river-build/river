@@ -36,7 +36,7 @@ describe('channelScrubbing', () => {
         await linkWallets(aliceSpaceDapp, aliceProvider.wallet, alicesLinkedProvider.wallet)
 
         // Mint the needed asset to Alice's linked wallet
-        log('Minting an NFT for carols wallet, which is linked to alices wallet')
+        log('Minting an NFT to alices linked wallet')
         await TestERC721.publicMint(TestNftName, alicesLinkedWallet.address as Address)
 
         // Join alice to the channel based on her linked wallet credentials
