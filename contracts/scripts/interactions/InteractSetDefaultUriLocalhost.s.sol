@@ -6,7 +6,7 @@ import {ISpaceOwner} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
 import {Interaction} from "../common/Interaction.s.sol";
 
 contract InteractSetDefaultUriLocalhost is Interaction {
-  string internal constant URI = "http://localhost:3002/space";
+  string internal constant URI = "http://localhost:3002/";
 
   function __interact(address deployer) internal override {
     address spaceOwner = getDeployment("spaceOwner");
