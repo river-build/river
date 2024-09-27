@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
 	. "github.com/river-build/river/core/node/events"
@@ -62,6 +63,7 @@ func (s *Service) addParsedEvent(
 	if err != nil {
 		return err
 	}
+	_, _ = s.scrubTaskProcessor.TryScheduleScrub(ctx, streamId)
 
 	canAddEvent, chainAuthArgsList, sideEffects, err := rules.CanAddEvent(
 		ctx,

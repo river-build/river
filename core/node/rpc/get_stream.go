@@ -20,7 +20,6 @@ func (s *Service) localGetStream(
 	}
 
 	_, streamView, err := s.cache.GetStream(ctx, streamId)
-
 	if err != nil {
 		if req.Msg.Optional && AsRiverError(err).Code == Err_NOT_FOUND {
 			// aellis - this is actually an error, if the forwarder thinks the stream exists, but it doesn't exist in the cache
@@ -32,6 +31,7 @@ func (s *Service) localGetStream(
 			return nil, err
 		}
 	} else {
+		_, _ = s.scrubTaskProcessor.TryScheduleScrub(ctx, streamId)
 		return connect.NewResponse(&GetStreamResponse{
 			Stream: &StreamAndCookie{
 				Events:         streamView.MinipoolEnvelopes(),

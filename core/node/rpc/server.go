@@ -32,6 +32,8 @@ import (
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/registries"
 	"github.com/river-build/river/core/node/rpc/sync"
+	"github.com/river-build/river/core/node/rules"
+	"github.com/river-build/river/core/node/scrub"
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/xchain/entitlement"
 )
@@ -103,6 +105,8 @@ func (s *Service) onClose(f any) {
 		s.onCloseFuncs = append(s.onCloseFuncs, func() {
 			_ = f(s.serverCtx)
 		})
+	case context.CancelFunc:
+		s.onCloseFuncs = append(s.onCloseFuncs, func() { f() })
 	default:
 		panic("unsupported onClose type")
 	}
@@ -171,6 +175,8 @@ func (s *Service) start() error {
 	s.riverChain.StartChainMonitor(s.serverCtx)
 
 	s.initHandlers()
+
+	s.initScrubbing(s.serverCtx)
 
 	s.SetStatus("OK")
 
@@ -578,7 +584,47 @@ func (s *Service) initCacheAndSync() error {
 		s.otelTracer,
 	)
 
+	scrubEventQueue := make(chan *rules.DerivedEvent, 100)
+	s.scrubEventQueue = scrubEventQueue
+	s.scrubTaskProcessor, err = scrub.NewStreamScrubTasksProcessor(
+		s.cache,
+		scrubEventQueue,
+		s.chainAuth,
+		s.config,
+	)
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (s *Service) initScrubbing(ctx context.Context) {
+	log := dlog.FromCtx(ctx).With("Func", "initScrubbing")
+	ctx, cancel := context.WithCancel(ctx)
+	s.onClose(cancel)
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case event := <-s.scrubEventQueue:
+				err := s.addEventPayload(ctx, event.StreamId, event.Payload)
+				if err != nil {
+					log.Error(
+						"Error sending membership scrub event for user",
+						"streamId",
+						event.StreamId,
+						"error",
+						err,
+						"payload",
+						event.Payload,
+					)
+				}
+			}
+		}
+	}()
 }
 
 func (s *Service) initHandlers() {
@@ -602,8 +648,8 @@ func (s *Service) initHandlers() {
 // StartServer starts the server with the given configuration.
 // riverchain and listener can be provided for testing purposes.
 // Returns Service.
-// Service.Close should be called to close listener, db connection and stop stop the server.
-// Error is posted to Serivce.exitSignal if DB conflict is detected (newer instance is started)
+// Service.Close should be called to close listener, db connection and stop the server.
+// Error is posted to Service.exitSignal if DB conflict is detected (newer instance is started)
 // and server must exit.
 func StartServer(
 	ctx context.Context,

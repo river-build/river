@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
 	. "github.com/river-build/river/core/node/nodes"
@@ -25,9 +26,15 @@ type MiniblockStream interface {
 	GetMiniblocks(ctx context.Context, fromInclusive int64, ToExclusive int64) ([]*Miniblock, bool, error)
 }
 
+type ScrubbableStream interface {
+	LastScrubbedTime() time.Time
+	MarkScrubbed(ctx context.Context)
+}
+
 type Stream interface {
 	AddableStream
 	MiniblockStream
+	ScrubbableStream
 }
 
 type SyncResultReceiver interface {
@@ -77,14 +84,30 @@ type streamImpl struct {
 	mu   sync.RWMutex
 	view *streamViewImpl
 
-	// lastAccessedTime keeps track when the stream was last used by a client
+	// lastAccessedTime keeps track of when the stream was last used by a client
 	lastAccessedTime time.Time
+	// lastScrubbedTime keeps track of when the stream was last scrubbed.
+	lastScrubbedTime time.Time
 
 	// TODO: perf optimization: support subs on unloaded streams.
 	receivers mapset.Set[SyncResultReceiver]
 }
 
 var _ SyncStream = (*streamImpl)(nil)
+
+func (s *streamImpl) LastScrubbedTime() time.Time {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.lastScrubbedTime
+}
+
+func (s *streamImpl) MarkScrubbed(ctx context.Context) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.lastScrubbedTime = time.Now()
+}
 
 // Should be called with lock held
 // Either view or loadError will be set in Stream.
@@ -123,10 +146,8 @@ func (s *streamImpl) ApplyMiniblock(ctx context.Context, miniblock *MiniblockInf
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.view == nil {
-		if err := s.loadInternal(ctx); err != nil {
-			return err
-		}
+	if err := s.loadInternal(ctx); err != nil {
+		return err
 	}
 
 	return s.applyMiniblockImplNoLock(ctx, miniblock)
@@ -251,10 +272,8 @@ func (s *streamImpl) PromoteCandidate(ctx context.Context, mbHash common.Hash, m
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.view == nil {
-		if err := s.loadInternal(ctx); err != nil {
-			return err
-		}
+	if err := s.loadInternal(ctx); err != nil {
+		return err
 	}
 
 	// Check if the miniblock is already applied.
@@ -387,8 +406,7 @@ func (s *streamImpl) getView(ctx context.Context) (*streamViewImpl, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.lastAccessedTime = time.Now()
-	err := s.loadInternal(ctx)
-	if err != nil {
+	if err := s.loadInternal(ctx); err != nil {
 		return nil, err
 	}
 	return s.view, nil
@@ -469,8 +487,7 @@ func (s *streamImpl) GetMiniblocks(
 func (s *streamImpl) AddEvent(ctx context.Context, event *ParsedEvent) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	err := s.loadInternal(ctx)
-	if err != nil {
+	if err := s.loadInternal(ctx); err != nil {
 		return err
 	}
 
@@ -556,8 +573,7 @@ func (s *streamImpl) Sub(ctx context.Context, cookie *SyncCookie, receiver SyncR
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	err := s.loadInternal(ctx)
-	if err != nil {
+	if err := s.loadInternal(ctx); err != nil {
 		return err
 	}
 
