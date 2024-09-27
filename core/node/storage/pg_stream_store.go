@@ -5,6 +5,7 @@ import (
 	"embed"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"golang.org/x/crypto/sha3"
 
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
@@ -1062,7 +1064,19 @@ func (s *PostgresStreamStore) listOtherInstancesTx(ctx context.Context, tx pgx.T
 		if err != nil {
 			return err
 		}
-		log.Info("Found UUID during startup", "uuid", storedUUID, "timestamp", storedTimestamp, "info", storedInfo)
+		log.Error(
+			"Found UUID during startup",
+			"uuid",
+			storedUUID,
+			"timestamp",
+			storedTimestamp,
+			"storedInfo",
+			storedInfo,
+			"currentInfo",
+			getCurrentNodeProcessInfo(s.schemaName),
+			"schema",
+			s.schemaName,
+		)
 		found = true
 	}
 
@@ -1424,4 +1438,18 @@ func (s *PostgresStreamStore) importMiniblocksTx(
 	)
 
 	return err
+}
+
+func createTableSuffix(streamId StreamId) string {
+	sum := sha3.Sum224([]byte(streamId.String()))
+	return hex.EncodeToString(sum[:])
+}
+
+func getCurrentNodeProcessInfo(currentSchemaName string) string {
+	currentHostname, err := os.Hostname()
+	if err != nil {
+		currentHostname = "unknown"
+	}
+	currentPID := os.Getpid()
+	return fmt.Sprintf("hostname=%s, pid=%d, schema=%s", currentHostname, currentPID, currentSchemaName)
 }

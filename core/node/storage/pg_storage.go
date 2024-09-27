@@ -4,10 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"embed"
-	"encoding/hex"
 	"fmt"
 	"log/slog"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -28,7 +26,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"golang.org/x/crypto/sha3"
 	"golang.org/x/sync/semaphore"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -800,18 +797,4 @@ func (s *PostgresEventStore) initStorage(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func createTableSuffix(streamId StreamId) string {
-	sum := sha3.Sum224([]byte(streamId.String()))
-	return hex.EncodeToString(sum[:])
-}
-
-func getCurrentNodeProcessInfo(currentSchemaName string) string {
-	currentHostname, err := os.Hostname()
-	if err != nil {
-		currentHostname = "unknown"
-	}
-	currentPID := os.Getpid()
-	return fmt.Sprintf("hostname=%s, pid=%d, schema=%s", currentHostname, currentPID, currentSchemaName)
 }
