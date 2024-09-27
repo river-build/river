@@ -52,7 +52,7 @@ describe('channelScrubbing', () => {
         await expect(bob.joinStream(channelId!)).toResolve()
 
         const userStreamView = (await alice.waitForStream(makeUserStreamId(alice.userId))!).view
-        // Wait for alice's user stream to have the join
+        // Wait for alice's user stream to have the leave event
         await waitFor(() => userStreamView.userContent.isMember(channelId!, MembershipOp.SO_LEAVE))
     })
 })

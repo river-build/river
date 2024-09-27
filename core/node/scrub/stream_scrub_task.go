@@ -29,6 +29,7 @@ type StreamScrubTaskProcessor interface {
 }
 
 type streamScrubTaskProcessorImpl struct {
+	ctx             context.Context
 	pendingTasks    sync.Map
 	workerPool      *ants.Pool
 	cache           events.StreamCache
@@ -38,6 +39,7 @@ type streamScrubTaskProcessorImpl struct {
 }
 
 func NewStreamScrubTasksProcessor(
+	ctx context.Context,
 	cache events.StreamCache,
 	scrubEventQueue chan<- *rules.DerivedEvent,
 	chainAuth auth.ChainAuth,
@@ -51,6 +53,7 @@ func NewStreamScrubTasksProcessor(
 	}
 
 	proc := &streamScrubTaskProcessorImpl{
+		ctx:             ctx,
 		cache:           cache,
 		workerPool:      workerPool,
 		scrubEventQueue: scrubEventQueue,
@@ -61,8 +64,8 @@ func NewStreamScrubTasksProcessor(
 }
 
 func (tp *streamScrubTaskProcessorImpl) processTask(task *streamScrubTask) {
-	log := dlog.FromCtx(task.ctx).With("Func", "streamScrubTask.process")
-	_, view, err := tp.cache.GetStream(task.ctx, task.channelId)
+	log := dlog.FromCtx(tp.ctx).With("Func", "streamScrubTask.process")
+	_, view, err := tp.cache.GetStream(tp.ctx, task.channelId)
 	if err != nil {
 		log.Error(
 			"Unable to scrub stream; could not fetch stream view",
@@ -81,7 +84,7 @@ func (tp *streamScrubTaskProcessorImpl) processTask(task *streamScrubTask) {
 	}
 	for member := range (*members).Iter() {
 		isEntitled, err := tp.chainAuth.IsEntitled(
-			task.ctx,
+			tp.ctx,
 			tp.config,
 			auth.NewChainAuthArgsForChannel(
 				task.spaceId,
@@ -146,7 +149,6 @@ func (tp *streamScrubTaskProcessorImpl) processTask(task *streamScrubTask) {
 }
 
 type streamScrubTask struct {
-	ctx           context.Context
 	channelId     shared.StreamId
 	spaceId       shared.StreamId
 	taskProcessor *streamScrubTaskProcessorImpl
@@ -182,7 +184,7 @@ func (tp *streamScrubTaskProcessorImpl) TryScheduleScrub(
 		return false, nil
 	}
 
-	task := &streamScrubTask{ctx: ctx, channelId: streamId, spaceId: *view.StreamParentId(), taskProcessor: tp}
+	task := &streamScrubTask{channelId: streamId, spaceId: *view.StreamParentId(), taskProcessor: tp}
 	_, alreadyScheduled := tp.pendingTasks.LoadOrStore(streamId, task)
 	if !alreadyScheduled {
 		log.Info("Scheduling scrub for stream", "streamId", streamId)

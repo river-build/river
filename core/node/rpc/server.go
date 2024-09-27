@@ -176,7 +176,9 @@ func (s *Service) start() error {
 
 	s.initHandlers()
 
-	s.initScrubbing(s.serverCtx)
+	if err := s.initScrubbing(s.serverCtx); err != nil {
+		return AsRiverError(err).Message("Failed to initialize scrubbing").LogError(s.defaultLogger)
+	}
 
 	s.SetStatus("OK")
 
@@ -584,9 +586,18 @@ func (s *Service) initCacheAndSync() error {
 		s.otelTracer,
 	)
 
+	return nil
+}
+
+func (s *Service) initScrubbing(ctx context.Context) (err error) {
+	log := dlog.FromCtx(ctx).With("Func", "initScrubbing")
+	ctx, cancel := context.WithCancel(ctx)
+	s.onClose(cancel)
+
 	scrubEventQueue := make(chan *rules.DerivedEvent, 100)
 	s.scrubEventQueue = scrubEventQueue
 	s.scrubTaskProcessor, err = scrub.NewStreamScrubTasksProcessor(
+		ctx,
 		s.cache,
 		scrubEventQueue,
 		s.chainAuth,
@@ -595,14 +606,6 @@ func (s *Service) initCacheAndSync() error {
 	if err != nil {
 		return err
 	}
-
-	return nil
-}
-
-func (s *Service) initScrubbing(ctx context.Context) {
-	log := dlog.FromCtx(ctx).With("Func", "initScrubbing")
-	ctx, cancel := context.WithCancel(ctx)
-	s.onClose(cancel)
 
 	go func() {
 		for {
@@ -625,6 +628,8 @@ func (s *Service) initScrubbing(ctx context.Context) {
 			}
 		}
 	}()
+
+	return nil
 }
 
 func (s *Service) initHandlers() {
