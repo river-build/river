@@ -128,7 +128,6 @@ func (s *Service) start() error {
 	if err != nil {
 		return AsRiverError(err).Message("Failed to init river chain").LogError(s.defaultLogger)
 	}
-	s.defaultLogger.Info("On-chain Configuration", "config", s.chainConfig.Get())
 
 	err = s.initEntitlements()
 	if err != nil {
