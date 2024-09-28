@@ -102,7 +102,7 @@ func getOnChainConfig(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(settings) == 0 {
-		return RiverError(Err_INTERNAL, "returned seetings are empty")
+		return RiverError(Err_INTERNAL, "returned settings are empty")
 	}
 
 	for _, s := range settings {
@@ -110,25 +110,25 @@ func getOnChainConfig(cmd *cobra.Command, args []string) error {
 		switch valueType {
 		case "":
 			fmt.Printf("%s\n", hex.EncodeToString(s.Value))
-		case "uint":
+		case crypto.AbiTypeName_Uint64:
 			num, err := crypto.ABIDecodeUint64(s.Value)
 			if err != nil {
 				return err
 			}
 			fmt.Printf("%d\n", num)
-		case "int":
+		case crypto.AbiTypeName_Int64:
 			num, err := crypto.ABIDecodeInt64(s.Value)
 			if err != nil {
 				return err
 			}
 			fmt.Printf("%d\n", num)
-		case "uints":
+		case crypto.AbiTypeName_Uint64Array:
 			nums, err := crypto.ABIDecodeUint64Array(s.Value)
 			if err != nil {
 				return err
 			}
 			fmt.Println(nums)
-		case "string":
+		case crypto.AbiTypeName_String:
 			str, err := crypto.ABIDecodeString(s.Value)
 			if err != nil {
 				return err
@@ -144,21 +144,21 @@ func getOnChainConfig(cmd *cobra.Command, args []string) error {
 
 func encodeValue(valueType string, value string) ([]byte, error) {
 	switch valueType {
-	case "uint":
+	case crypto.AbiTypeName_Uint64:
 		num, err := strconv.ParseUint(value, 10, 64)
 		if err != nil {
 			return nil, err
 		}
 		return crypto.ABIEncodeUint64(num), nil
-	case "int":
+	case crypto.AbiTypeName_Int64:
 		num, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
 			return nil, err
 		}
 		return crypto.ABIEncodeInt64(num), nil
-	case "string":
+	case crypto.AbiTypeName_String:
 		return crypto.ABIEncodeString(value), nil
-	case "uints":
+	case crypto.AbiTypeName_Uint64Array:
 		strNums := strings.Split(value, ",")
 		nums := make([]uint64, len(strNums))
 		for i, strNum := range strNums {
@@ -367,14 +367,14 @@ func init() {
 	})
 
 	onChainConfigCmd.AddCommand(&cobra.Command{
-		Use:   "get <key> [type]",
+		Use:   "get <key> [abi_type]",
 		Short: "Get on-chain config.",
 		Args:  cobra.RangeArgs(1, 2),
 		RunE:  getOnChainConfig,
 	})
 
 	setCmd := &cobra.Command{
-		Use:   "set <key> <blockNumber> <value> [uint|int|string|uints]",
+		Use:   "set <key> <blockNumber> <value> [abi_type]",
 		Short: "Set on-chain config. Requires PRIVATE_KEY to be set.",
 		Args:  cobra.RangeArgs(3, 4),
 		RunE:  setOnChainConfig,
@@ -384,7 +384,7 @@ func init() {
 
 	setCsvCmd := &cobra.Command{
 		Use:   "set-csv <file>",
-		Short: "Set on-chain config from CSV file: key,blockNumber,value>,[uint|int|string|uints]. Requires PRIVATE_KEY to be set.",
+		Short: "Set on-chain config from CSV file: key,blockNumber,value>,[abi_type]. Requires PRIVATE_KEY to be set.",
 		Args:  cobra.ExactArgs(1),
 		RunE:  setOnChainConfigFromCSV,
 	}

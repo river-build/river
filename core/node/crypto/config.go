@@ -53,24 +53,25 @@ var (
 	onceInitKeys            sync.Once
 )
 
+// AllKnownOnChainSettingKeys returns a map of all known on-chain setting keys and their Ethereum ABI types.
 func AllKnownOnChainSettingKeys() map[string]string {
 	onceInitKeys.Do(func() {
-		knownOnChainSettingKeys = map[string]string{
-			StreamMediaMaxChunkCountConfigKey:               "uint",
-			StreamMediaMaxChunkSizeConfigKey:                "uint",
-			StreamRecencyConstraintsAgeSecConfigKey:         "uint",
-			StreamRecencyConstraintsGenerationsConfigKey:    "uint",
-			StreamReplicationFactorConfigKey:                "uint",
-			StreamDefaultMinEventsPerSnapshotConfigKey:      "uint",
-			StreamMinEventsPerSnapshotUserInboxConfigKey:    "uint",
-			StreamMinEventsPerSnapshotUserSettingsConfigKey: "uint",
-			StreamMinEventsPerSnapshotUserConfigKey:         "uint",
-			StreamMinEventsPerSnapshotUserDeviceConfigKey:   "uint",
-			StreamCacheExpirationMsConfigKey:                "uint",
-			StreamCacheExpirationPollIntervalMsConfigKey:    "uint",
-			MediaStreamMembershipLimitsGDMConfigKey:         "uint",
-			MediaStreamMembershipLimitsDMConfigKey:          "uint",
-			XChainBlockchainsConfigKey:                      "uints",
+		result := map[string]any{}
+		err := mapstructure.Decode(OnChainSettings{}, &result)
+		if err != nil {
+			panic(err)
+		}
+		knownOnChainSettingKeys = map[string]string{}
+		for k, v := range result {
+			if strings.HasSuffix(k, "Ms") || strings.HasSuffix(k, "Seconds") {
+				knownOnChainSettingKeys[k] = "int64"
+				continue
+			}
+			t := reflect.TypeOf(v).String()
+			if strings.HasPrefix(t, "[]") {
+				t = t[2:] + "[]"
+			}
+			knownOnChainSettingKeys[k] = t
 		}
 	})
 	return knownOnChainSettingKeys
@@ -491,11 +492,17 @@ func (occ *onChainConfiguration) applyEvent(ctx context.Context, event *river.Ri
 }
 
 var (
-	int64Type, _              = abi.NewType("int64", "", nil)
-	uint64Type, _             = abi.NewType("uint64", "", nil)
-	uint64DynamicArrayType, _ = abi.NewType("uint64[]", "", nil)
-	uint256Type, _            = abi.NewType("uint256", "", nil)
-	stringType, _             = abi.NewType("string", "string", nil)
+	AbiTypeName_Int64       = "int64"
+	AbiTypeName_Uint64      = "uint64"
+	AbiTypeName_Uint64Array = "uint64[]"
+	AbiTypeName_Uint256     = "uint256"
+	AbiTypeName_String      = "string"
+
+	int64Type, _              = abi.NewType(AbiTypeName_Int64, "", nil)
+	uint64Type, _             = abi.NewType(AbiTypeName_Uint64, "", nil)
+	uint64DynamicArrayType, _ = abi.NewType(AbiTypeName_Uint64Array, "", nil)
+	uint256Type, _            = abi.NewType(AbiTypeName_Uint256, "", nil)
+	stringType, _             = abi.NewType(AbiTypeName_String, "", nil)
 )
 
 // ABIEncodeInt64 returns Solidity abi.encode(i)
