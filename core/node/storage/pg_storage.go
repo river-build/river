@@ -18,7 +18,6 @@ import (
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/infra"
 	. "github.com/river-build/river/core/node/protocol"
-	. "github.com/river-build/river/core/node/shared"
 
 	"github.com/river-build/river/core/node/dlog"
 
