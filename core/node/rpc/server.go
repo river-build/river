@@ -662,6 +662,7 @@ func createServerFromBase64(
 		BaseContext: func(listener net.Listener) context.Context {
 			return ctx
 		},
+		ErrorLog: newHttpLogger(ctx),
 	}, nil
 }
 
@@ -688,6 +689,7 @@ func createServerFromFile(
 		BaseContext: func(listener net.Listener) context.Context {
 			return ctx
 		},
+		ErrorLog: newHttpLogger(ctx),
 	}, nil
 }
 
@@ -700,6 +702,7 @@ func createH2CServer(ctx context.Context, address string, handler http.Handler) 
 		BaseContext: func(listener net.Listener) context.Context {
 			return ctx
 		},
+		ErrorLog: newHttpLogger(ctx),
 	}, nil
 }
 
