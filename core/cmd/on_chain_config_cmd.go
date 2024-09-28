@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -67,7 +68,7 @@ func getOnChainConfig(cmd *cobra.Command, args []string) error {
 	valueType := ""
 	if len(args) > 1 {
 		valueType = args[1]
-		if valueType != "uint" && valueType != "uints" && valueType != "int" && valueType != "string" {
+		if !slices.Contains(crypto.AbiTypeName_All, valueType) {
 			return RiverError(Err_INVALID_ARGUMENT, "invalid value type", "type", valueType)
 		}
 	} else {

@@ -498,6 +498,14 @@ var (
 	AbiTypeName_Uint256     = "uint256"
 	AbiTypeName_String      = "string"
 
+	AbiTypeName_All = []string{
+		AbiTypeName_Int64,
+		AbiTypeName_Uint64,
+		AbiTypeName_Uint64Array,
+		AbiTypeName_Uint256,
+		AbiTypeName_String,
+	}
+
 	int64Type, _              = abi.NewType(AbiTypeName_Int64, "", nil)
 	uint64Type, _             = abi.NewType(AbiTypeName_Uint64, "", nil)
 	uint64DynamicArrayType, _ = abi.NewType(AbiTypeName_Uint64Array, "", nil)
