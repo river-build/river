@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/sha3"
 
 	. "github.com/river-build/river/core/node/base"
@@ -1110,6 +1111,34 @@ func (s *PostgresStreamStore) initializeSingleNodeKeyTx(ctx context.Context, tx 
 	}
 
 	return nil
+}
+
+// acquireListeningConnection returns a connection that listens for changes to the schema, or
+// a nil connection if the context is cancelled. In the event of failure to acquire a connection
+// or listen, it will retry indefinitely until success.
+func (s *PostgresEventStore) acquireListeningConnection(ctx context.Context) *pgxpool.Conn {
+	var err error
+	var conn *pgxpool.Conn
+	log := dlog.FromCtx(ctx)
+	for {
+		conn, err = s.pool.Acquire(ctx)
+		if err == nil {
+			_, err = conn.Exec(ctx, "listen singlenodekey")
+			if err == nil {
+				log.Debug("Listening connection acquired")
+				return conn
+			} else {
+				conn.Release()
+			}
+		}
+		if err == context.Canceled {
+			return nil
+		}
+		log.Debug("Failed to acquire listening connection, retrying", "error", err)
+
+		// In the event of networking issues, wait a small period of time for recovery.
+		time.Sleep(100 * time.Millisecond)
+	}
 }
 
 // Call with a cancellable context and pgx should terminate when the context is

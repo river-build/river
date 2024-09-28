@@ -547,7 +547,7 @@ func (s *PostgresEventStore) init(
 		streamingConnectionRatio = MaxStreamingConnectionsRatio
 	}
 
-	var totalReservableConns int64 = int64(poolInfo.Pool.Config().MaxConns) - 1 // subtract extra connection for the listeneer
+	var totalReservableConns int64 = int64(poolInfo.Pool.Config().MaxConns) - 1 // reserve one connection for creating listeners
 	var numRegularConnections int64 = int64(float32(totalReservableConns) * (1 - streamingConnectionRatio))
 	var numStreamingConnections int64 = totalReservableConns - numRegularConnections
 
@@ -748,34 +748,6 @@ func (s *PostgresEventStore) vacuumTables(ctx context.Context, dbUrlWithSchema s
 	}
 
 	return nil
-}
-
-// acquireListeningConnection returns a connection that listens for changes to the schema, or
-// a nil connection if the context is cancelled. In the event of failure to acquire a connection
-// or listen, it will retry indefinitely until success.
-func (s *PostgresEventStore) acquireListeningConnection(ctx context.Context) *pgxpool.Conn {
-	var err error
-	var conn *pgxpool.Conn
-	log := dlog.FromCtx(ctx)
-	for {
-		conn, err = s.pool.Acquire(ctx)
-		if err == nil {
-			_, err = conn.Exec(ctx, "listen singlenodekey")
-			if err == nil {
-				log.Debug("Listening connection acquired")
-				return conn
-			} else {
-				conn.Release()
-			}
-		}
-		if err == context.Canceled {
-			return nil
-		}
-		log.Debug("Failed to acquire listening connection, retrying", "error", err)
-
-		// In the event of networking issues, wait a small period of time for recovery.
-		time.Sleep(100 * time.Millisecond)
-	}
 }
 
 func (s *PostgresEventStore) initStorage(ctx context.Context) error {
