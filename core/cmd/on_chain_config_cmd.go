@@ -276,17 +276,21 @@ func submitConfig(ctx context.Context, cfg *config.Config, args []setArgs) error
 		txs = append(txs, tx)
 	}
 
-	for _, tx := range txs {
+	var ret_err error
+	for i, tx := range txs {
 		receipt, err := tx.Wait(ctx)
 		if err != nil {
-			return err
+			fmt.Printf("Failed to get receipt for tx %d for key %s: %s\n", i, args[i].key, err)
+			ret_err = err
+			continue
 		}
 		if receipt.Status != types.ReceiptStatusSuccessful {
-			return RiverError(Err_INTERNAL, "transaction failed", "tx", receipt.TxHash)
+			fmt.Printf("Transaction %s for key %s failed\n", receipt.TxHash, args[i].key)
+			ret_err = RiverError(Err_INTERNAL, "transaction failed", "tx", receipt.TxHash)
 		}
 	}
 
-	return nil
+	return ret_err
 }
 
 func setOnChainConfig(cmd *cobra.Command, args []string) error {
