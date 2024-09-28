@@ -78,6 +78,10 @@ anvils: anvil-base anvil-river
 
 anvils-stop: anvil-base-stop anvil-river-stop
 
+anvils-tail-logs:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    tail -n 10 -F ./run_files/anvil/*.log
+
 storage-start:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
     if nc -z localhost 5433 > /dev/null 2>&1; then
@@ -284,7 +288,23 @@ tail-logs:
     source ${ENV_FILE}
     shopt -s nullglob
     LOGS=(${INSTANCE_BASE}/*/logs/tty.*.log)
-    tail -n 500 -f ${LOGS[@]}
+    tail -n 500 -F ${LOGS[@]}
+
+# Tail logs from all instances starting with 10 last lines
+tail-logs-short:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    shopt -s nullglob
+    LOGS=(${INSTANCE_BASE}/*/logs/tty.*.log)
+    tail -n 10 -F ${LOGS[@]}
+
+# Print last 10 lines from each instance log
+print-logs:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    shopt -s nullglob
+    LOGS=(${INSTANCE_BASE}/*/logs/tty.*.log)
+    tail -n 10 ${LOGS[@]}
 
 # Tail stderr from all instances
 tail-stderr:
@@ -292,7 +312,7 @@ tail-stderr:
     source ${ENV_FILE}
     shopt -s nullglob
     LOGS=(${INSTANCE_BASE}/*/logs/tty.stderr.log)
-    tail -n 500 -f ${LOGS[@]}
+    tail -n 500 -F ${LOGS[@]}
 
 # Print stderr from all instances
 print-stderr:
