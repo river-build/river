@@ -1064,7 +1064,7 @@ func (s *PostgresStreamStore) listOtherInstancesTx(ctx context.Context, tx pgx.T
 		if err != nil {
 			return err
 		}
-		log.Error(
+		log.Info(
 			"Found UUID during startup",
 			"uuid",
 			storedUUID,
@@ -1072,10 +1072,6 @@ func (s *PostgresStreamStore) listOtherInstancesTx(ctx context.Context, tx pgx.T
 			storedTimestamp,
 			"storedInfo",
 			storedInfo,
-			"currentInfo",
-			getCurrentNodeProcessInfo(s.schemaName),
-			"schema",
-			s.schemaName,
 		)
 		found = true
 	}
