@@ -62,6 +62,7 @@ export async function userRefreshOnResponse(
 				error,
 				userId,
 				target,
+				path,
 			},
 			'Failed to refresh user',
 		)
