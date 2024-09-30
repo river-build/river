@@ -9,6 +9,10 @@ const paramsSchema = z.object({
 	userId: z.string().min(1, 'userId parameter is required'),
 })
 
+const CACHE_CONTROL = {
+	200: 'public, max-age=30, s-maxage=3600, stale-while-revalidate=3600',
+}
+
 export async function fetchUserBio(request: FastifyRequest, reply: FastifyReply) {
 	const logger = request.log.child({ name: fetchUserBio.name })
 	const parseResult = paramsSchema.safeParse(request.params)
@@ -50,7 +54,10 @@ export async function fetchUserBio(request: FastifyRequest, reply: FastifyReply)
 	}
 	const bio = protobufBio.bio
 
-	return reply.header('Content-Type', 'application/json').send({ bio })
+	return reply
+		.header('Content-Type', 'application/json')
+		.header('Cache-Control', CACHE_CONTROL[200])
+		.send({ bio })
 }
 
 async function getUserBio(streamView: StreamStateView) {

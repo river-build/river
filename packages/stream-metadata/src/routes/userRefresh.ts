@@ -10,14 +10,25 @@ const paramsSchema = z.object({
 	}),
 })
 
+const querySchema = z.object({
+	target: z.enum(['bio', 'image', 'all']).default('all'),
+})
+
 // This route handler validates the refresh request and quickly returns a 200 response.
 export async function userRefresh(request: FastifyRequest, reply: FastifyReply) {
 	const logger = request.log.child({ name: userRefresh.name })
 
-	const parseResult = paramsSchema.safeParse(request.params)
+	const paramsParseResult = paramsSchema.safeParse(request.params)
 
-	if (!parseResult.success) {
-		const errorMessage = parseResult.error.errors[0]?.message || 'Invalid parameters'
+	if (!paramsParseResult.success) {
+		const errorMessage = paramsParseResult.error.errors[0]?.message || 'Invalid parameters'
+		logger.info(errorMessage)
+		return reply.code(400).send({ error: 'Bad Request', message: errorMessage })
+	}
+
+	const queryParamResult = querySchema.safeParse(request.query)
+	if (!queryParamResult.success) {
+		const errorMessage = queryParamResult.error.errors[0]?.message || 'Invalid query parameters'
 		logger.info(errorMessage)
 		return reply.code(400).send({ error: 'Bad Request', message: errorMessage })
 	}
@@ -34,17 +45,32 @@ export async function userRefreshOnResponse(
 	const logger = request.log.child({ name: userRefreshOnResponse.name })
 
 	const { userId } = paramsSchema.parse(request.params)
+	const { target } = querySchema.parse(request.query)
 
-	logger.info({ userId }, 'Refreshing user')
+	logger.info({ userId, target }, 'Refreshing user')
+
+	const imagePath = `/user/${userId}/image`
+	const bioPath = `/user/${userId}/bio`
 
 	try {
-		const path = `/user/${userId}/image`
-		await CloudfrontManager.createCloudfrontInvalidation({ path, logger })
+		if (target === 'image') {
+			await CloudfrontManager.createCloudfrontInvalidation({ path: imagePath, logger })
+		}
+		if (target === 'bio') {
+			await CloudfrontManager.createCloudfrontInvalidation({ path: bioPath, logger })
+		}
+		if (target === 'all') {
+			await Promise.all([
+				CloudfrontManager.createCloudfrontInvalidation({ path: imagePath, logger }),
+				CloudfrontManager.createCloudfrontInvalidation({ path: bioPath, logger }),
+			])
+		}
 	} catch (error) {
 		logger.error(
 			{
 				error,
 				userId,
+				target,
 			},
 			'Failed to refresh user',
 		)
