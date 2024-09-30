@@ -65,7 +65,10 @@ func NewStreamScrubTasksProcessor(
 }
 
 func (tp *streamScrubTaskProcessorImpl) processTask(task *streamScrubTask) {
-	log := dlog.FromCtx(tp.ctx).With("Func", "streamScrubTask.process")
+	log := dlog.FromCtx(tp.ctx).
+		With("Func", "streamScrubTask.process").
+		With("channelId", task.channelId).
+		With("spaceId", task.spaceId)
 	_, view, err := tp.cache.GetStream(tp.ctx, task.channelId)
 	if err != nil {
 		log.Error(
@@ -78,7 +81,13 @@ func (tp *streamScrubTaskProcessorImpl) processTask(task *streamScrubTask) {
 		return
 	}
 
-	members, err := view.(events.JoinableStreamView).GetChannelMembers()
+	joinableView, ok := view.(events.JoinableStreamView)
+	if !ok {
+		log.Error("Unable to scrub stream; could not cast view to JoinableStreamView")
+		return
+	}
+
+	members, err := joinableView.GetChannelMembers()
 	if err != nil {
 		log.Error("Failed to fetch stream members", "error", err)
 		return
@@ -125,7 +134,6 @@ func (tp *streamScrubTaskProcessorImpl) processTask(task *streamScrubTask) {
 					err,
 				)
 			}
-
 			log.Info("Entitlement loss detected; enqueueing scrub for user",
 				"user",
 				member,
