@@ -32,7 +32,6 @@ import (
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/registries"
 	"github.com/river-build/river/core/node/rpc/sync"
-	"github.com/river-build/river/core/node/rules"
 	"github.com/river-build/river/core/node/scrub"
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/xchain/entitlement"
@@ -589,45 +588,19 @@ func (s *Service) initCacheAndSync() error {
 }
 
 func (s *Service) initScrubbing(ctx context.Context) (err error) {
-	log := dlog.FromCtx(ctx).With("Func", "initScrubbing")
 	ctx, cancel := context.WithCancel(ctx)
 	s.onClose(cancel)
 
-	scrubEventQueue := make(chan *rules.DerivedEvent, 100)
-	s.scrubEventQueue = scrubEventQueue
 	s.scrubTaskProcessor, err = scrub.NewStreamScrubTasksProcessor(
 		ctx,
 		s.cache,
-		scrubEventQueue,
+		s,
 		s.chainAuth,
 		s.config,
 	)
 	if err != nil {
-		return err
+		return AsRiverError(err, Err_BAD_CONFIG).Message("Unable to instantiate stream scrub task processor")
 	}
-
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case event := <-s.scrubEventQueue:
-				err := s.addEventPayload(ctx, event.StreamId, event.Payload)
-				if err != nil {
-					log.Error(
-						"Error sending membership scrub event for user",
-						"streamId",
-						event.StreamId,
-						"error",
-						err,
-						"payload",
-						event.Payload,
-					)
-				}
-			}
-		}
-	}()
-
 	return nil
 }
 

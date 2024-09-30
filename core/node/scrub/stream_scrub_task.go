@@ -13,9 +13,8 @@ import (
 	"github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
-	"github.com/river-build/river/core/node/protocol"
-	"github.com/river-build/river/core/node/rules"
-	"github.com/river-build/river/core/node/shared"
+	. "github.com/river-build/river/core/node/protocol"
+	. "github.com/river-build/river/core/node/shared"
 )
 
 type StreamScrubTaskProcessor interface {
@@ -26,40 +25,44 @@ type StreamScrubTaskProcessor interface {
 	// - the stream has not been recently scrubbed, and
 	//
 	// - there is no pending scrub for the given stream.
-	TryScheduleScrub(ctx context.Context, streamId shared.StreamId) (bool, error)
+	TryScheduleScrub(ctx context.Context, streamId StreamId) (bool, error)
+}
+
+type EventAdder interface {
+	AddEventPayload(ctx context.Context, streamId StreamId, payload IsStreamEvent_Payload) error
 }
 
 type streamScrubTaskProcessorImpl struct {
-	ctx             context.Context
-	pendingTasks    sync.Map
-	workerPool      *ants.Pool
-	cache           events.StreamCache
-	scrubEventQueue chan<- *rules.DerivedEvent
-	chainAuth       auth.ChainAuth
-	config          *config.Config
+	ctx          context.Context
+	pendingTasks sync.Map
+	workerPool   *ants.Pool
+	cache        events.StreamCache
+	eventAdder   EventAdder
+	chainAuth    auth.ChainAuth
+	config       *config.Config
 }
 
 func NewStreamScrubTasksProcessor(
 	ctx context.Context,
 	cache events.StreamCache,
-	scrubEventQueue chan<- *rules.DerivedEvent,
+	eventAdder EventAdder,
 	chainAuth auth.ChainAuth,
 	cfg *config.Config,
 ) (StreamScrubTaskProcessor, error) {
 	workerPool, err := ants.NewPool(100, ants.WithNonblocking(true))
 	if err != nil {
-		return nil, base.WrapRiverError(protocol.Err_INTERNAL, err).
+		return nil, base.WrapRiverError(Err_INTERNAL, err).
 			Message("Unable to create stream scrub task worker processor").
 			Func("syncDatabaseWithRegistry")
 	}
 
 	proc := &streamScrubTaskProcessorImpl{
-		ctx:             ctx,
-		cache:           cache,
-		workerPool:      workerPool,
-		scrubEventQueue: scrubEventQueue,
-		chainAuth:       chainAuth,
-		config:          cfg,
+		ctx:        ctx,
+		cache:      cache,
+		workerPool: workerPool,
+		eventAdder: eventAdder,
+		chainAuth:  chainAuth,
+		config:     cfg,
 	}
 	return proc, nil
 }
@@ -73,8 +76,6 @@ func (tp *streamScrubTaskProcessorImpl) processTask(task *streamScrubTask) {
 	if err != nil {
 		log.Error(
 			"Unable to scrub stream; could not fetch stream view",
-			"streamId",
-			task.channelId,
 			"error",
 			err,
 		)
@@ -107,10 +108,6 @@ func (tp *streamScrubTaskProcessorImpl) processTask(task *streamScrubTask) {
 			log.Error("Scrubbing error: unable to evaluate user entitlement",
 				"user",
 				member,
-				"channel",
-				task.channelId,
-				"spaceId",
-				task.spaceId,
 				"error",
 				err,
 			)
@@ -119,12 +116,12 @@ func (tp *streamScrubTaskProcessorImpl) processTask(task *streamScrubTask) {
 		// In the case that the user is not entitled, they must have lost their entitlement
 		// after joining the channel, so let's go ahead and boot them.
 		if !isEntitled {
-			userId, err := shared.AddressFromUserId(member)
+			userId, err := AddressFromUserId(member)
 			if err != nil {
 				log.Error("Error converting user id into address", "member", member, "error", err)
 				continue
 			}
-			userStreamId, err := shared.UserStreamIdFromBytes(userId)
+			userStreamId, err := UserStreamIdFromBytes(userId)
 			if err != nil {
 				log.Error(
 					"Error constructing user id stream from user address",
@@ -134,32 +131,38 @@ func (tp *streamScrubTaskProcessorImpl) processTask(task *streamScrubTask) {
 					err,
 				)
 			}
-			log.Info("Entitlement loss detected; enqueueing scrub for user",
+			log.Info("Entitlement loss detected; adding LEAVE event for user",
 				"user",
 				member,
 				"userStreamId",
 				userStreamId,
-				"channel",
-				task.channelId,
-				"space",
-				task.spaceId,
 			)
-			tp.scrubEventQueue <- &rules.DerivedEvent{
-				StreamId: userStreamId,
-				Payload: events.Make_UserPayload_Membership(
-					protocol.MembershipOp_SO_LEAVE,
+			err = tp.eventAdder.AddEventPayload(
+				tp.ctx,
+				userStreamId,
+				events.Make_UserPayload_Membership(
+					MembershipOp_SO_LEAVE,
 					task.channelId,
 					&member,
 					task.spaceId[:],
 				),
+			)
+			if err != nil {
+				log.Error(
+					"scrub error: unable to add channel leave event to user stream",
+					"userStreamId",
+					userStreamId,
+					"error",
+					err,
+				)
 			}
 		}
 	}
 }
 
 type streamScrubTask struct {
-	channelId     shared.StreamId
-	spaceId       shared.StreamId
+	channelId     StreamId
+	spaceId       StreamId
 	taskProcessor *streamScrubTaskProcessorImpl
 }
 
@@ -176,10 +179,10 @@ func (t *streamScrubTask) process() {
 // whenever the node falls behind due to high scrubbing volume.
 func (tp *streamScrubTaskProcessorImpl) TryScheduleScrub(
 	ctx context.Context,
-	streamId shared.StreamId,
+	streamId StreamId,
 ) (bool, error) {
 	log := dlog.FromCtx(ctx).With("Func", "TryScheduleScrub")
-	if !shared.ValidChannelStreamId(&streamId) {
+	if !ValidChannelStreamId(&streamId) {
 		return false, nil
 	}
 

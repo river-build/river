@@ -21,7 +21,6 @@ import (
 	. "github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/registries"
 	river_sync "github.com/river-build/river/core/node/rpc/sync"
-	"github.com/river-build/river/core/node/rules"
 	"github.com/river-build/river/core/node/scrub"
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/xchain/entitlement"
@@ -51,7 +50,6 @@ type Service struct {
 	mbProducer         events.MiniblockProducer
 	syncHandler        river_sync.Handler
 	scrubTaskProcessor scrub.StreamScrubTaskProcessor
-	scrubEventQueue    <-chan *rules.DerivedEvent
 
 	// River chain
 	riverChain       *crypto.Blockchain
