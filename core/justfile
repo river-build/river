@@ -383,8 +383,10 @@ _start-all: (_loop-instances "_run-node")
 
 _wait-all: (_loop-instances "_wait-node")
 
-# Config, build, and start nodes in background
+# Config, build, and start nodes in background. Alias: cbs
 config-and-start: stop config build start
+
+alias cbs := config-and-start
 
 # Start nodes in background, config and build should be run before
 start: _start-all _wait-all
@@ -400,6 +402,9 @@ run: _start-all _wait-all _wait-ctrl-c stop
 
 # Start nodes in foreground tailing logs, config and build should be run before
 run-and-tail: _start-all _wait-all tail-logs stop
+
+# Stop, build, and start nodes in background
+restart: stop build start
 
 _loop-instances-seq $CMD:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
