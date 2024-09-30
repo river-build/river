@@ -481,3 +481,18 @@ _ping-instance-tcp $INSTANCE_NUM $INSTANCE_DIR:
 
 ping-instances-tcp: (_loop-instances-seq-nostop "_ping-instance-tcp")
 
+# Invoke cast with -r for river chain.
+[positional-arguments]
+cast-river +args:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    METHOD=$1
+    shift
+    cast ${METHOD} -r ${RPC_RIVER} "$@"
+
+# Invoke cast with -r for base chain.
+[positional-arguments]
+cast-base *args:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    METHOD=$1
+    shift
+    cast ${METHOD} -r ${RPC_BASE} "$@"
