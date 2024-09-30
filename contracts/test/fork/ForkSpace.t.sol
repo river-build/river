@@ -10,6 +10,8 @@ import {IArchitect, IArchitectBase} from "contracts/src/factory/facets/architect
 import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 import {SpaceHelper} from "contracts/test/spaces/SpaceHelper.sol";
 
+import {CreateSpaceFacet} from "contracts/src/factory/facets/create/CreateSpace.sol";
+
 contract ForkOmegaSpace is TestUtils, SpaceHelper, IArchitectBase {
   address founder;
   address space;
@@ -17,7 +19,7 @@ contract ForkOmegaSpace is TestUtils, SpaceHelper, IArchitectBase {
   address spaceFactory = 0x9978c826d93883701522d2CA645d5436e5654252;
   address spaceOwner = 0x2824D1235d1CbcA6d61C00C3ceeCB9155cd33a42;
 
-  IArchitect spaceArchitect = IArchitect(spaceFactory);
+  CreateSpaceFacet spaceArchitect = CreateSpaceFacet(spaceFactory);
 
   function setUp() external onlyForked {
     SpaceInfo memory spaceInfo = _createEveryoneSpaceInfo("fork-space");

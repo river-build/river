@@ -45,7 +45,7 @@ abstract contract SpaceHelper {
             freeAllocation: 0,
             pricingModule: address(0)
           }),
-          requirements: ILegacyArchitectBase.MembershipRequirements({
+          requirements: ILegacyArchitectBase.Minter({
             everyone: false,
             users: new address[](0),
             ruleData: RuleEntitlementUtil.getLegacyNoopRuleData()
@@ -77,7 +77,7 @@ abstract contract SpaceHelper {
             freeAllocation: 0,
             pricingModule: address(0)
           }),
-          requirements: IArchitectBase.MembershipRequirements({
+          requirements: IArchitectBase.Minter({
             everyone: false,
             users: new address[](0),
             ruleData: abi.encode(RuleEntitlementUtil.getNoopRuleData())
@@ -137,7 +137,7 @@ abstract contract SpaceHelper {
           freeAllocation: 0,
           pricingModule: address(0)
         }),
-        requirements: IArchitectBase.MembershipRequirements({
+        requirements: IArchitectBase.Minter({
           everyone: false,
           users: new address[](0),
           ruleData: abi.encode(RuleEntitlementUtil.getNoopRuleData())

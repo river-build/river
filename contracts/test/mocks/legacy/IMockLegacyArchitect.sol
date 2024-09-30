@@ -14,7 +14,7 @@ interface ILegacyArchitectBase {
   // =============================================================
 
   // Latest
-  struct MembershipRequirements {
+  struct Minter {
     bool everyone;
     address[] users;
     IRuleEntitlement.RuleData ruleData;
@@ -22,7 +22,7 @@ interface ILegacyArchitectBase {
 
   struct Membership {
     IMembershipBase.Membership settings;
-    MembershipRequirements requirements;
+    Minter requirements;
     string[] permissions;
   }
 

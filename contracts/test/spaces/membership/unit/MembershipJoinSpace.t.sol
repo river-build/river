@@ -15,9 +15,7 @@ import {Vm} from "forge-std/Test.sol";
 
 //contracts
 import {MembershipFacet} from "contracts/src/spaces/facets/membership/MembershipFacet.sol";
-
-// debuggging
-import {console} from "forge-std/console.sol";
+import {CreateSpaceFacet} from "contracts/src/factory/facets/create/CreateSpace.sol";
 
 contract MembershipJoinSpaceTest is
   MembershipBaseSetup,
@@ -546,7 +544,7 @@ contract MembershipJoinSpaceTest is
     freeAllocationInfo.membership.settings.freeAllocation = 1;
 
     vm.prank(founder);
-    address freeAllocationSpace = IArchitect(spaceFactory).createSpace(
+    address freeAllocationSpace = CreateSpaceFacet(spaceFactory).createSpace(
       freeAllocationInfo
     );
 

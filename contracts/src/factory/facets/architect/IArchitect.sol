@@ -18,7 +18,7 @@ interface IArchitectBase {
   // =============================================================
 
   // Latest
-  struct MembershipRequirements {
+  struct Minter {
     bool everyone;
     address[] users;
     bytes ruleData;
@@ -26,7 +26,7 @@ interface IArchitectBase {
 
   struct Membership {
     IMembershipBase.Membership settings;
-    MembershipRequirements requirements;
+    Minter requirements;
     string[] permissions;
   }
 
@@ -91,16 +91,6 @@ interface IArchitect is IArchitectBase {
   ) external view returns (address space);
 
   function getTokenIdBySpace(address space) external view returns (uint256);
-
-  /// @notice Creates a new space
-  /// @param SpaceInfo Space information
-  function createSpace(SpaceInfo memory SpaceInfo) external returns (address);
-
-  /// @notice Creates a new space with a prepayment
-  /// @param createSpace Space information
-  function createSpaceWithPrepay(
-    CreateSpace memory createSpace
-  ) external payable returns (address);
 
   // =============================================================
   //                         Implementations

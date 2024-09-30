@@ -166,7 +166,7 @@ abstract contract LegacyArchitectBase is Factory, ILegacyArchitectBase {
     address spaceAddress,
     IUserEntitlement userEntitlement,
     IRuleEntitlement ruleEntitlement,
-    MembershipRequirements memory requirements
+    Minter memory requirements
   ) internal returns (uint256 roleId) {
     string[] memory joinPermissions = new string[](1);
     joinPermissions[0] = Permissions.JoinSpace;

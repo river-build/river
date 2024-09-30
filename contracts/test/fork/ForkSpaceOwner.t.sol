@@ -17,6 +17,8 @@ import {SpaceHelper} from "contracts/test/spaces/SpaceHelper.sol";
 import {DeploySpaceOwnerFacet, SpaceOwner} from "contracts/scripts/deployments/facets/DeploySpaceOwnerFacet.s.sol";
 import {DeployArchitect} from "contracts/scripts/deployments/facets/DeployArchitect.s.sol";
 
+import {CreateSpaceFacet} from "contracts/src/factory/facets/create/CreateSpace.sol";
+
 contract ForkSpaceOwner is
   IArchitectBase,
   ISpaceOwnerBase,
@@ -67,7 +69,7 @@ contract ForkSpaceOwner is
     diamondCut.diamondCut(cut, address(0), new bytes(0));
 
     bytes4[] memory architectSelectors = new bytes4[](1);
-    architectSelectors[0] = IArchitect.createSpace.selector;
+    architectSelectors[0] = CreateSpaceFacet.createSpace.selector;
     IDiamond.FacetCut[] memory architectCut = new IDiamond.FacetCut[](1);
     architectCut[0] = IDiamond.FacetCut({
       facetAddress: architectFacet,
@@ -90,7 +92,7 @@ contract ForkSpaceOwner is
       .settings
       .pricingModule = 0x7E49Fcec32E060a3D710d568B249c0ED69f01005;
 
-    IArchitect spaceArchitect = IArchitect(spaceFactory);
+    CreateSpaceFacet spaceArchitect = CreateSpaceFacet(spaceFactory);
 
     vm.prank(founder);
     spaceArchitect.createSpace(spaceInfo);

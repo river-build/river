@@ -27,6 +27,7 @@ import {MockMessenger} from "contracts/test/mocks/MockMessenger.sol";
 
 // deployments
 import {Architect} from "contracts/src/factory/facets/architect/Architect.sol";
+import {CreateSpaceFacet} from "contracts/src/factory/facets/create/CreateSpace.sol";
 import {SpaceHelper} from "contracts/test/spaces/SpaceHelper.sol";
 import {RuleEntitlement} from "contracts/src/spaces/entitlements/rule/RuleEntitlement.sol";
 
@@ -167,8 +168,10 @@ contract BaseSetup is TestUtils, SpaceHelper {
     everyoneSpaceInfo.membership.settings.pricingModule = fixedPricingModule;
 
     vm.startPrank(founder);
-    space = Architect(spaceFactory).createSpace(spaceInfo);
-    everyoneSpace = Architect(spaceFactory).createSpace(everyoneSpaceInfo);
+    space = CreateSpaceFacet(spaceFactory).createSpace(spaceInfo);
+    everyoneSpace = CreateSpaceFacet(spaceFactory).createSpace(
+      everyoneSpaceInfo
+    );
     vm.stopPrank();
   }
 
