@@ -26,15 +26,9 @@ type MiniblockStream interface {
 	GetMiniblocks(ctx context.Context, fromInclusive int64, ToExclusive int64) ([]*Miniblock, bool, error)
 }
 
-type ScrubbableStream interface {
-	LastScrubbedTime() time.Time
-	MarkScrubbed(ctx context.Context)
-}
-
 type Stream interface {
 	AddableStream
 	MiniblockStream
-	ScrubbableStream
 }
 
 type SyncResultReceiver interface {
@@ -86,28 +80,12 @@ type streamImpl struct {
 
 	// lastAccessedTime keeps track of when the stream was last used by a client
 	lastAccessedTime time.Time
-	// lastScrubbedTime keeps track of when the stream was last scrubbed.
-	lastScrubbedTime time.Time
 
 	// TODO: perf optimization: support subs on unloaded streams.
 	receivers mapset.Set[SyncResultReceiver]
 }
 
 var _ SyncStream = (*streamImpl)(nil)
-
-func (s *streamImpl) LastScrubbedTime() time.Time {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	return s.lastScrubbedTime
-}
-
-func (s *streamImpl) MarkScrubbed(ctx context.Context) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.lastScrubbedTime = time.Now()
-}
 
 // Should be called with lock held
 // Either view or loadError will be set in Stream.

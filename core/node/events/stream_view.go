@@ -186,11 +186,12 @@ func MakeRemoteStreamView(ctx context.Context, resp *GetStreamResponse) (*stream
 }
 
 type streamViewImpl struct {
-	streamId      StreamId
-	blocks        []*MiniblockInfo
-	minipool      *minipoolInstance
-	snapshot      *Snapshot
-	snapshotIndex int
+	streamId         StreamId
+	blocks           []*MiniblockInfo
+	minipool         *minipoolInstance
+	snapshot         *Snapshot
+	snapshotIndex    int
+	lastScrubbedTime time.Time
 }
 
 var _ StreamView = (*streamViewImpl)(nil)
@@ -210,11 +211,12 @@ func (r *streamViewImpl) copyAndAddEvent(event *ParsedEvent) (*streamViewImpl, e
 	}
 
 	ret := &streamViewImpl{
-		streamId:      r.streamId,
-		blocks:        r.blocks,
-		minipool:      newMinipool,
-		snapshot:      r.snapshot,
-		snapshotIndex: r.snapshotIndex,
+		streamId:         r.streamId,
+		blocks:           r.blocks,
+		minipool:         newMinipool,
+		snapshot:         r.snapshot,
+		snapshotIndex:    r.snapshotIndex,
+		lastScrubbedTime: r.lastScrubbedTime,
 	}
 	return ret, nil
 }
@@ -411,11 +413,12 @@ func (r *streamViewImpl) copyAndApplyBlock(
 	eventNumOffset := header.EventNumOffset + int64(len(header.EventHashes)) + 1 // plus one for header
 
 	return &streamViewImpl{
-		streamId:      r.streamId,
-		blocks:        append(r.blocks[startIndex:], miniblock),
-		minipool:      newMiniPoolInstance(minipoolEvents, generation, eventNumOffset),
-		snapshot:      snapshot,
-		snapshotIndex: snapshotIndex,
+		streamId:         r.streamId,
+		blocks:           append(r.blocks[startIndex:], miniblock),
+		minipool:         newMiniPoolInstance(minipoolEvents, generation, eventNumOffset),
+		snapshot:         snapshot,
+		snapshotIndex:    snapshotIndex,
+		lastScrubbedTime: r.lastScrubbedTime,
 	}, nil
 }
 

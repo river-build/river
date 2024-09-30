@@ -2,6 +2,7 @@ package scrub
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -174,13 +175,18 @@ func (tp *streamScrubTaskProcessorImpl) TryScheduleScrub(
 		return false, nil
 	}
 
-	syncStream, view, err := tp.cache.GetStream(ctx, streamId)
+	_, view, err := tp.cache.GetStream(ctx, streamId)
 	if err != nil {
 		log.Warn("Unable to get stream from cache", "streamId", streamId)
 		return false, err
 	}
 
-	if time.Since(syncStream.LastScrubbedTime()) < tp.config.Scrubbing.ScrubEligibleDuration {
+	joinableView, ok := view.(events.JoinableStreamView)
+	if !ok {
+		log.Error("Unable to cast channel view as JoinableStreamView", "streamId", streamId)
+		return false, fmt.Errorf("unable to cast channel view JoinableStreamView")
+	}
+	if time.Since(joinableView.LastScrubbedTime()) < tp.config.Scrubbing.ScrubEligibleDuration {
 		return false, nil
 	}
 
@@ -191,7 +197,7 @@ func (tp *streamScrubTaskProcessorImpl) TryScheduleScrub(
 		_ = tp.workerPool.Submit(func() {
 			task.process()
 			tp.pendingTasks.Delete(task.channelId)
-			syncStream.MarkScrubbed(ctx)
+			joinableView.MarkScrubbed(ctx)
 		})
 	}
 
