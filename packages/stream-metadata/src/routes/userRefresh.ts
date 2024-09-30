@@ -51,20 +51,11 @@ export async function userRefreshOnResponse(
 
 	const imagePath = `/user/${userId}/image`
 	const bioPath = `/user/${userId}/bio`
+	const path =
+		target === 'image' ? [imagePath] : target === 'bio' ? [bioPath] : [imagePath, bioPath]
 
 	try {
-		if (target === 'image') {
-			await CloudfrontManager.createCloudfrontInvalidation({ path: imagePath, logger })
-		}
-		if (target === 'bio') {
-			await CloudfrontManager.createCloudfrontInvalidation({ path: bioPath, logger })
-		}
-		if (target === 'all') {
-			await Promise.all([
-				CloudfrontManager.createCloudfrontInvalidation({ path: imagePath, logger }),
-				CloudfrontManager.createCloudfrontInvalidation({ path: bioPath, logger }),
-			])
-		}
+		await CloudfrontManager.createCloudfrontInvalidation({ path, logger })
 	} catch (error) {
 		logger.error(
 			{

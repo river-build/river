@@ -20,14 +20,16 @@ export class CloudfrontManager {
 		})
 	}
 
-	private async invalidate(params: { path: string; waitUntilFinished?: boolean }) {
+	private async invalidate(params: { path: string[]; waitUntilFinished?: boolean }) {
 		const invalidationCommand = await this.cloudFront.createInvalidation({
 			DistributionId: this.config.distributionId,
 			InvalidationBatch: {
-				CallerReference: `${new Date().toISOString()}-${params.path.substring(0, 5)}`,
+				CallerReference: `${new Date().toISOString()}-${params.path
+					.map((path) => path.substring(0, 5))
+					.join('-')}`,
 				Paths: {
-					Quantity: 1,
-					Items: [params.path],
+					Quantity: params.path.length,
+					Items: params.path,
 				},
 			},
 		})
@@ -41,7 +43,7 @@ export class CloudfrontManager {
 
 	private async waitForInvalidation(
 		invalidationCommand: GetInvalidationCommandOutput,
-		path: string,
+		paths: string[],
 	) {
 		let attempts = 0
 		let currentInvalidationCommand = invalidationCommand
@@ -51,7 +53,7 @@ export class CloudfrontManager {
 				this.logger.error(
 					{
 						invalidation: currentInvalidationCommand,
-						path,
+						paths,
 					},
 					'CloudFront cache invalidation did not complete in time',
 				)
@@ -60,7 +62,7 @@ export class CloudfrontManager {
 			this.logger.info(
 				{
 					invalidation: currentInvalidationCommand,
-					path,
+					paths,
 				},
 				'Waiting for CloudFront cache invalidation to complete...',
 			)
@@ -78,14 +80,14 @@ export class CloudfrontManager {
 		this.logger.info(
 			{
 				invalidation: currentInvalidationCommand,
-				path,
+				paths,
 			},
 			'CloudFront cache invalidation completed',
 		)
 	}
 
 	static async createCloudfrontInvalidation(params: {
-		path: string
+		path: string[]
 		logger: FastifyBaseLogger
 		waitUntilFinished?: boolean
 	}) {
