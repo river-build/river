@@ -181,20 +181,20 @@ func (tp *streamScrubTaskProcessorImpl) TryScheduleScrub(
 	ctx context.Context,
 	streamId StreamId,
 ) (bool, error) {
-	log := dlog.FromCtx(ctx).With("Func", "TryScheduleScrub")
+	log := dlog.FromCtx(ctx).With("Func", "TryScheduleScrub").With("streamId", streamId)
 	if !ValidChannelStreamId(&streamId) {
 		return false, nil
 	}
 
 	_, view, err := tp.cache.GetStream(ctx, streamId)
 	if err != nil {
-		log.Warn("Unable to get stream from cache", "streamId", streamId)
+		log.Warn("Unable to get stream from cache")
 		return false, err
 	}
 
 	joinableView, ok := view.(events.JoinableStreamView)
 	if !ok {
-		log.Error("Unable to cast channel view as JoinableStreamView", "streamId", streamId)
+		log.Error("Unable to cast channel view as JoinableStreamView")
 		return false, fmt.Errorf("unable to cast channel view JoinableStreamView")
 	}
 	if time.Since(joinableView.LastScrubbedTime()) < tp.config.Scrubbing.ScrubEligibleDuration {
@@ -204,7 +204,7 @@ func (tp *streamScrubTaskProcessorImpl) TryScheduleScrub(
 	task := &streamScrubTask{channelId: streamId, spaceId: *view.StreamParentId(), taskProcessor: tp}
 	_, alreadyScheduled := tp.pendingTasks.LoadOrStore(streamId, task)
 	if !alreadyScheduled {
-		log.Info("Scheduling scrub for stream", "streamId", streamId)
+		log.Info("Scheduling scrub for stream", "lastScrubbedTime", joinableView.LastScrubbedTime())
 		_ = tp.workerPool.Submit(func() {
 			task.process()
 			tp.pendingTasks.Delete(task.channelId)
