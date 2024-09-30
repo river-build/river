@@ -415,6 +415,15 @@ contract DeploySpaceFactory is DiamondHelper, Deployer {
           partnerRegistry,
           partnerRegistryHelper.makeInitData("")
         );
+      } else if (
+        facetNameHash == keccak256(abi.encodePacked("CreateSpaceFacet"))
+      ) {
+        create = createSpaceHelper.deploy(deployer);
+        addFacet(
+          createSpaceHelper.makeCut(create, IDiamond.FacetCutAction.Add),
+          create,
+          createSpaceHelper.makeInitData("")
+        );
       }
     }
   }
