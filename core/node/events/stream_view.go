@@ -225,18 +225,17 @@ func (r *streamViewImpl) LastBlock() *MiniblockInfo {
 	return r.blocks[len(r.blocks)-1]
 }
 
-// Returns nil if there are no events to propose.
 func (r *streamViewImpl) ProposeNextMiniblock(
 	ctx context.Context,
 	cfg crypto.OnChainConfiguration,
 	forceSnapshot bool,
 ) (*MiniblockProposal, error) {
-	if r.minipool.events.Len() == 0 && !forceSnapshot {
-		return nil, nil
-	}
-	hashes := make([][]byte, 0, r.minipool.events.Len())
-	for _, e := range r.minipool.events.Values {
-		hashes = append(hashes, e.Hash[:])
+	var hashes [][]byte
+	if r.minipool.events.Len() != 0 {
+		hashes = make([][]byte, 0, r.minipool.events.Len())
+		for _, e := range r.minipool.events.Values {
+			hashes = append(hashes, e.Hash[:])
+		}
 	}
 	return &MiniblockProposal{
 		Hashes:            hashes,
@@ -333,16 +332,17 @@ func (r *streamViewImpl) makeMiniblockHeader(
 	}, events, nil
 }
 
+// copyAndApplyBlock copies the current view and applies the given miniblock to it.
+// Returns the new view and the events that were in the applied miniblock, but not in the minipool.
 func (r *streamViewImpl) copyAndApplyBlock(
 	miniblock *MiniblockInfo,
 	cfg crypto.OnChainConfiguration,
-	skipMiniblockEventsCheck bool,
-) (*streamViewImpl, error) {
+) (*streamViewImpl, []*Envelope, error) {
 	recencyConstraintsGenerations := int(cfg.Get().RecencyConstraintsGen)
 
 	header := miniblock.headerEvent.Event.GetMiniblockHeader()
 	if header == nil {
-		return nil, RiverError(
+		return nil, nil, RiverError(
 			Err_INTERNAL,
 			"streamViewImpl: non block event not allowed",
 			"stream",
@@ -354,7 +354,7 @@ func (r *streamViewImpl) copyAndApplyBlock(
 
 	lastBlock := r.LastBlock()
 	if header.MiniblockNum != lastBlock.header().MiniblockNum+1 {
-		return nil, RiverError(
+		return nil, nil, RiverError(
 			Err_BAD_BLOCK,
 			"streamViewImpl: block number mismatch",
 			"expected",
@@ -364,7 +364,7 @@ func (r *streamViewImpl) copyAndApplyBlock(
 		)
 	}
 	if !bytes.Equal(lastBlock.headerEvent.Hash[:], header.PrevMiniblockHash) {
-		return nil, RiverError(
+		return nil, nil, RiverError(
 			Err_BAD_BLOCK,
 			"streamViewImpl: block hash mismatch",
 			"expected",
@@ -379,11 +379,12 @@ func (r *streamViewImpl) copyAndApplyBlock(
 		remaining[k] = v
 	}
 
+	newEvents := []*Envelope{}
 	for _, e := range miniblock.events {
 		if _, ok := remaining[e.Hash]; ok {
 			delete(remaining, e.Hash)
-		} else if !skipMiniblockEventsCheck {
-			return nil, RiverError(Err_BAD_BLOCK, "streamViewImpl: block event not found", "stream", r.streamId, "event_hash", FormatHash(e.Hash))
+		} else {
+			newEvents = append(newEvents, e.Envelope)
 		}
 	}
 
@@ -419,7 +420,7 @@ func (r *streamViewImpl) copyAndApplyBlock(
 		snapshot:         snapshot,
 		snapshotIndex:    snapshotIndex,
 		lastScrubbedTime: r.lastScrubbedTime,
-	}, nil
+	}, newEvents, nil
 }
 
 func (r *streamViewImpl) StreamId() *StreamId {

@@ -179,16 +179,20 @@ func (s *streamImpl) importMiniblocks(
 		view = s.view
 	)
 
+	allNewEvents := []*Envelope{}
 	for _, miniblock := range miniblocks {
 		if miniblock.Num <= view.LastBlock().Num {
 			blocksToWriteToStorage = blocksToWriteToStorage[1:]
 			continue
 		}
 
-		view, err = view.copyAndApplyBlock(miniblock, s.params.ChainConfig, true)
+		var newEvents []*Envelope
+		view, newEvents, err = view.copyAndApplyBlock(miniblock, s.params.ChainConfig)
 		if err != nil {
 			return err
 		}
+		allNewEvents = append(allNewEvents, newEvents...)
+		allNewEvents = append(allNewEvents, miniblock.headerEvent.Envelope)
 	}
 
 	err = s.params.Storage.ImportMiniblocks(ctx, blocksToWriteToStorage)
@@ -196,9 +200,10 @@ func (s *streamImpl) importMiniblocks(
 		return err
 	}
 
+	prevSyncCookie := s.view.SyncCookie(s.params.Wallet.Address)
 	s.view = view
-
-	// TODO: inform subscribes with rate throttling?
+	newSyncCookie := s.view.SyncCookie(s.params.Wallet.Address)
+	s.notifySubscribers(allNewEvents, newSyncCookie, prevSyncCookie)
 	return nil
 }
 
@@ -212,7 +217,7 @@ func (s *streamImpl) applyMiniblockImplNoLock(ctx context.Context, miniblock *Mi
 	// TODO: tests for this.
 
 	// Lets see if this miniblock can be applied.
-	newSV, err := s.view.copyAndApplyBlock(miniblock, s.params.ChainConfig, false)
+	newSV, newEvents, err := s.view.copyAndApplyBlock(miniblock, s.params.ChainConfig)
 	if err != nil {
 		return err
 	}
@@ -242,7 +247,8 @@ func (s *streamImpl) applyMiniblockImplNoLock(ctx context.Context, miniblock *Mi
 	s.view = newSV
 	newSyncCookie := s.view.SyncCookie(s.params.Wallet.Address)
 
-	s.notifySubscribers([]*Envelope{miniblock.headerEvent.Envelope}, newSyncCookie, prevSyncCookie)
+	newEvents = append(newEvents, miniblock.headerEvent.Envelope)
+	s.notifySubscribers(newEvents, newSyncCookie, prevSyncCookie)
 	return nil
 }
 
