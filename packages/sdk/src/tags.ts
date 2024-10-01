@@ -9,7 +9,7 @@ export function makeTags(
 ): PlainMessage<Tags> {
     return {
         messageInteractionType: getMessageInteractionType(message),
-        groupMentionType: getGroupMentionType(message),
+        groupMentionTypes: getGroupMentionTypes(message),
         mentionedUserAddresses: getMentionedUserIds(message),
         participatingUserIds: getParticipatingUserIds(message, streamView),
     } satisfies PlainMessage<Tags>
@@ -32,7 +32,8 @@ function getMessageInteractionType(message: PlainMessage<ChannelMessage>): Messa
     }
 }
 
-function getGroupMentionType(message: PlainMessage<ChannelMessage>): GroupMentionType {
+function getGroupMentionTypes(message: PlainMessage<ChannelMessage>): GroupMentionType[] {
+    const types: GroupMentionType[] = []
     if (
         message.payload.case === 'post' &&
         message.payload.value.content.case === 'text' &&
@@ -40,9 +41,9 @@ function getGroupMentionType(message: PlainMessage<ChannelMessage>): GroupMentio
             (m) => m.mentionBehavior.case === 'atChannel',
         )
     ) {
-        return GroupMentionType.AT_CHANNEL
+        types.push(GroupMentionType.AT_CHANNEL)
     }
-    return GroupMentionType.UNSPECIFIED
+    return types
 }
 
 function getMentionedUserIds(message: PlainMessage<ChannelMessage>): Uint8Array[] {

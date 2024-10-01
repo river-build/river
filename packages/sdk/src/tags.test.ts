@@ -94,7 +94,7 @@ describe('makeTags', () => {
         const tags = makeTags(reactionMessage, mockStreamView)
 
         expect(tags.messageInteractionType).toBe(MessageInteractionType.REACTION)
-        expect(tags.groupMentionType).toBe(GroupMentionType.UNSPECIFIED)
+        expect(tags.groupMentionTypes).toEqual([])
         expect(tags.mentionedUserAddresses).toEqual([])
         expect(tags.participatingUserIds).toEqual([user2.address])
     })
@@ -226,7 +226,7 @@ describe('makeTags', () => {
         const tags = makeTags(replyMessage, mockStreamView)
 
         expect(tags.messageInteractionType).toBe(MessageInteractionType.REPLY)
-        expect(tags.groupMentionType).toBe(GroupMentionType.AT_CHANNEL)
+        expect(tags.groupMentionTypes).toEqual([GroupMentionType.AT_CHANNEL])
         expect(tags.mentionedUserAddresses).toEqual([user1.address])
         expect(tags.participatingUserIds).toEqual([user2.address, user3.address, user4.address])
     })

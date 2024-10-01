@@ -660,7 +660,7 @@ message Minipool {
 
 message Tags {
     MessageInteractionType message_interaction_type = 1;
-    GroupMentionType group_mention_type = 2;
+    repeated GroupMentionType group_mention_types = 2;
     repeated bytes mentioned_user_addresses = 3;
     repeated bytes participating_user_ids = 4;
 }
