@@ -179,12 +179,17 @@ func (t *streamScrubTask) process() {
 // If the worker pool is full, the method will not block but will return an error.
 // This is so that we don't affect ability to post updates to channels with stale scrubs
 // whenever the node falls behind due to high scrubbing volume.
+// Note: if we ever scrub spaces, we'll need to make sure we kick the user from all channels
+// in the space before kicking them out of the space.
 func (tp *streamScrubTaskProcessorImpl) TryScheduleScrub(
 	ctx context.Context,
 	streamId StreamId,
 	force bool,
 ) (bool, error) {
 	log := dlog.FromCtx(ctx).With("Func", "TryScheduleScrub").With("streamId", streamId)
+	// Note: This check ensures we are only scrubbing channels. If we ever scrub spaces,
+	// we'll need to make sure we kick the user from all channels in the space before
+	// kicking them out of the space.
 	if !ValidChannelStreamId(&streamId) {
 		return false, nil
 	}
