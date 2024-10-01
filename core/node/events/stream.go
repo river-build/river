@@ -26,7 +26,17 @@ type MiniblockStream interface {
 	GetMiniblocks(ctx context.Context, fromInclusive int64, ToExclusive int64) ([]*Miniblock, bool, error)
 }
 
+// A ScrubTrackable tracks and updates the last time a stream was scrubbed. Scrubbing is a
+// process where the stream node analyzes stream membership for members that have lost
+// membership entitlements and generates LEAVE events to boot them from the stream. At this
+// time, we only apply scrubbing to channels, which are a subset of joinable streams.
+type ScrubTrackable interface {
+	LastScrubbedTime() time.Time
+	MarkScrubbed(ctx context.Context)
+}
+
 type Stream interface {
+	ScrubTrackable
 	AddableStream
 	MiniblockStream
 }
@@ -80,12 +90,29 @@ type streamImpl struct {
 
 	// lastAccessedTime keeps track of when the stream was last used by a client
 	lastAccessedTime time.Time
+	// lastScrubbedTime keeps track of when the stream was last scrubbed. Streams that
+	// are never scrubbed will not have this value modified.
+	lastScrubbedTime time.Time
 
 	// TODO: perf optimization: support subs on unloaded streams.
 	receivers mapset.Set[SyncResultReceiver]
 }
 
 var _ SyncStream = (*streamImpl)(nil)
+
+func (s *streamImpl) LastScrubbedTime() time.Time {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.lastScrubbedTime
+}
+
+func (s *streamImpl) MarkScrubbed(ctx context.Context) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.lastScrubbedTime = time.Now()
+}
 
 // Should be called with lock held
 // Either view or loadError will be set in Stream.

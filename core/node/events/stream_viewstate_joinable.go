@@ -2,8 +2,6 @@ package events
 
 import (
 	"bytes"
-	"context"
-	"time"
 
 	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"
@@ -12,18 +10,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// A ScrubTrackable tracks and updates the last time a stream was scrubbed. Scrubbing is a
-// process where the stream node analyzes stream membership for members that have lost
-// membership entitlements and generates LEAVE events to boot them from the stream. At this
-// time, we only apply scrubbing to channels, which are a subset of joinable streams.
-type ScrubTrackable interface {
-	LastScrubbedTime() time.Time
-	MarkScrubbed(ctx context.Context)
-}
-
 type JoinableStreamView interface {
 	StreamView
-	ScrubTrackable
 	GetChannelMembers() (*mapset.Set[string], error)
 	GetMembership(userAddress []byte) (protocol.MembershipOp, error)
 	GetKeySolicitations(userAddress []byte) ([]*protocol.MemberPayload_KeySolicitation, error)
@@ -31,14 +19,6 @@ type JoinableStreamView interface {
 }
 
 var _ JoinableStreamView = (*streamViewImpl)(nil)
-
-func (r *streamViewImpl) LastScrubbedTime() time.Time {
-	return r.lastScrubbedTime
-}
-
-func (r *streamViewImpl) MarkScrubbed(ctx context.Context) {
-	r.lastScrubbedTime = time.Now()
-}
 
 func (r *streamViewImpl) GetChannelMembers() (*mapset.Set[string], error) {
 	members := mapset.NewSet[string]()
