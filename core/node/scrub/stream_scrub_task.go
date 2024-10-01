@@ -5,11 +5,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/panjf2000/ants/v2"
+	"github.com/gammazero/workerpool"
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/auth"
-	"github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
 	. "github.com/river-build/river/core/node/protocol"
@@ -36,7 +35,7 @@ type EventAdder interface {
 type streamScrubTaskProcessorImpl struct {
 	ctx          context.Context
 	pendingTasks sync.Map
-	workerPool   *ants.Pool
+	workerPool   *workerpool.WorkerPool
 	cache        events.StreamCache
 	eventAdder   EventAdder
 	chainAuth    auth.ChainAuth
@@ -50,17 +49,10 @@ func NewStreamScrubTasksProcessor(
 	chainAuth auth.ChainAuth,
 	cfg *config.Config,
 ) (StreamScrubTaskProcessor, error) {
-	workerPool, err := ants.NewPool(100, ants.WithNonblocking(true))
-	if err != nil {
-		return nil, base.WrapRiverError(Err_INTERNAL, err).
-			Message("Unable to create stream scrub task worker processor").
-			Func("syncDatabaseWithRegistry")
-	}
-
 	proc := &streamScrubTaskProcessorImpl{
 		ctx:        ctx,
 		cache:      cache,
-		workerPool: workerPool,
+		workerPool: workerpool.New(100),
 		eventAdder: eventAdder,
 		chainAuth:  chainAuth,
 		config:     cfg,
@@ -208,7 +200,7 @@ func (tp *streamScrubTaskProcessorImpl) TryScheduleScrub(
 	_, alreadyScheduled := tp.pendingTasks.LoadOrStore(streamId, task)
 	if !alreadyScheduled {
 		log.Info("Scheduling scrub for stream", "lastScrubbedTime", stream.LastScrubbedTime())
-		_ = tp.workerPool.Submit(func() {
+		tp.workerPool.Submit(func() {
 			task.process()
 			tp.pendingTasks.Delete(task.channelId)
 			stream.MarkScrubbed(ctx)
