@@ -24,7 +24,9 @@ type StreamScrubTaskProcessor interface {
 	// - the stream has not been recently scrubbed, and
 	//
 	// - there is no pending scrub for the given stream.
-	TryScheduleScrub(ctx context.Context, streamId StreamId) (bool, error)
+	//
+	// If force is set to true, a scrub will be scheduled even if the stream was recently scrubbed.
+	TryScheduleScrub(ctx context.Context, streamId StreamId, force bool) (bool, error)
 }
 
 type EventAdder interface {
@@ -173,12 +175,14 @@ func (t *streamScrubTask) process() {
 // - the stream is a channel stream,
 // - the stream has not been recently scrubbed, and
 // - there is no pending scrub for the given stream.
+// The force parameter will schedule a scrub even if the stream was recently scrubbed.
 // If the worker pool is full, the method will not block but will return an error.
 // This is so that we don't affect ability to post updates to channels with stale scrubs
 // whenever the node falls behind due to high scrubbing volume.
 func (tp *streamScrubTaskProcessorImpl) TryScheduleScrub(
 	ctx context.Context,
 	streamId StreamId,
+	force bool,
 ) (bool, error) {
 	log := dlog.FromCtx(ctx).With("Func", "TryScheduleScrub").With("streamId", streamId)
 	if !ValidChannelStreamId(&streamId) {
@@ -191,7 +195,7 @@ func (tp *streamScrubTaskProcessorImpl) TryScheduleScrub(
 		return false, err
 	}
 
-	if time.Since(stream.LastScrubbedTime()) < tp.config.Scrubbing.ScrubEligibleDuration {
+	if !force && time.Since(stream.LastScrubbedTime()) < tp.config.Scrubbing.ScrubEligibleDuration {
 		return false, nil
 	}
 

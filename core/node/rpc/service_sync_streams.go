@@ -63,7 +63,7 @@ func (s *Service) SyncStreams(
 				)
 				continue
 			}
-			_, _ = s.scrubTaskProcessor.TryScheduleScrub(ctx, streamId)
+			_, _ = s.scrubTaskProcessor.TryScheduleScrub(ctx, streamId, false)
 		}
 		log.Debug("SyncStreams DONE", "syncId", syncId, "duration", time.Since(startTime))
 	}
@@ -96,7 +96,7 @@ func (s *Service) AddStreamToSync(
 				req.Msg.SyncPos.StreamId,
 			)
 		} else {
-			_, _ = s.scrubTaskProcessor.TryScheduleScrub(ctx, streamId)
+			_, _ = s.scrubTaskProcessor.TryScheduleScrub(ctx, streamId, false)
 		}
 	}
 	return res, err
