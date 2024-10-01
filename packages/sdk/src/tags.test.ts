@@ -96,7 +96,7 @@ describe('makeTags', () => {
         expect(tags.messageInteractionType).toBe(MessageInteractionType.REACTION)
         expect(tags.groupMentionTypes).toEqual([])
         expect(tags.mentionedUserAddresses).toEqual([])
-        expect(tags.participatingUserIds).toEqual([user2.address])
+        expect(tags.participatingUserAddresses).toEqual([user2.address])
     })
 
     it('should create tags for a reply message', () => {
@@ -228,6 +228,10 @@ describe('makeTags', () => {
         expect(tags.messageInteractionType).toBe(MessageInteractionType.REPLY)
         expect(tags.groupMentionTypes).toEqual([GroupMentionType.AT_CHANNEL])
         expect(tags.mentionedUserAddresses).toEqual([user1.address])
-        expect(tags.participatingUserIds).toEqual([user2.address, user3.address, user4.address])
+        expect(tags.participatingUserAddresses).toEqual([
+            user2.address,
+            user3.address,
+            user4.address,
+        ])
     })
 })

@@ -11,7 +11,7 @@ export function makeTags(
         messageInteractionType: getMessageInteractionType(message),
         groupMentionTypes: getGroupMentionTypes(message),
         mentionedUserAddresses: getMentionedUserIds(message),
-        participatingUserIds: getParticipatingUserIds(message, streamView),
+        participatingUserAddresses: getParticipatingUserAddresses(message, streamView),
     } satisfies PlainMessage<Tags>
 }
 
@@ -55,7 +55,7 @@ function getMentionedUserIds(message: PlainMessage<ChannelMessage>): Uint8Array[
     return []
 }
 
-function getParticipatingUserIds(
+function getParticipatingUserAddresses(
     message: PlainMessage<ChannelMessage>,
     streamView: IStreamStateView,
 ): Uint8Array[] {

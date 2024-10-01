@@ -662,7 +662,7 @@ message Tags {
     MessageInteractionType message_interaction_type = 1;
     repeated GroupMentionType group_mention_types = 2;
     repeated bytes mentioned_user_addresses = 3;
-    repeated bytes participating_user_ids = 4;
+    repeated bytes participating_user_addresses = 4;
 }
 
 // GetStreamExResponse is a stream of raw data that represents the current state of the requested stream.
