@@ -43,7 +43,7 @@ export async function spaceRefreshOnResponse(
 
 	try {
 		await CloudfrontManager.createCloudfrontInvalidation({
-			path: [`/space/${spaceAddress}/image`],
+			paths: [`/space/${spaceAddress}/image`],
 			logger,
 			waitUntilFinished: true,
 		})

@@ -20,24 +20,24 @@ export class CloudfrontManager {
 		})
 	}
 
-	private async invalidate(params: { path: string[]; waitUntilFinished?: boolean }) {
+	private async invalidate(params: { paths: string[]; waitUntilFinished?: boolean }) {
 		const invalidationCommand = await this.cloudFront.createInvalidation({
 			DistributionId: this.config.distributionId,
 			InvalidationBatch: {
-				CallerReference: `${new Date().toISOString()}-${params.path
+				CallerReference: `${new Date().toISOString()}-${params.paths
 					.map((path) => path.substring(0, 5))
 					.join('-')}`,
 				Paths: {
-					Quantity: params.path.length,
-					Items: params.path,
+					Quantity: params.paths.length,
+					Items: params.paths,
 				},
 			},
 		})
 
-		this.logger.info({ path: params.path }, 'CloudFront cache invalidation created')
+		this.logger.info({ path: params.paths }, 'CloudFront cache invalidation created')
 
 		if (params.waitUntilFinished) {
-			await this.waitForInvalidation(invalidationCommand, params.path)
+			await this.waitForInvalidation(invalidationCommand, params.paths)
 		}
 	}
 
@@ -87,14 +87,14 @@ export class CloudfrontManager {
 	}
 
 	static async createCloudfrontInvalidation(params: {
-		path: string[]
+		paths: string[]
 		logger: FastifyBaseLogger
 		waitUntilFinished?: boolean
 	}) {
 		if (!envConfig.cloudfront) {
 			params.logger.warn(
 				{
-					path: params.path,
+					paths: params.paths,
 				},
 				'CloudFront distribution ID not set, skipping cache invalidation',
 			)

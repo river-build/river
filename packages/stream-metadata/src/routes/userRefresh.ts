@@ -51,18 +51,18 @@ export async function userRefreshOnResponse(
 
 	const imagePath = `/user/${userId}/image`
 	const bioPath = `/user/${userId}/bio`
-	const path =
+	const paths =
 		target === 'image' ? [imagePath] : target === 'bio' ? [bioPath] : [imagePath, bioPath]
 
 	try {
-		await CloudfrontManager.createCloudfrontInvalidation({ path, logger })
+		await CloudfrontManager.createCloudfrontInvalidation({ paths, logger })
 	} catch (error) {
 		logger.error(
 			{
 				error,
 				userId,
 				target,
-				path,
+				paths,
 			},
 			'Failed to refresh user',
 		)
