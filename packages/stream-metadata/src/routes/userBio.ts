@@ -10,7 +10,8 @@ const paramsSchema = z.object({
 })
 
 const CACHE_CONTROL = {
-	200: 'public, max-age=30, s-maxage=3600, stale-while-revalidate=3600',
+	// cache for 1 year, allow data usage for 1 hour while revalidating
+	200: 'public, max-age=31536000, stale-while-revalidate=3600',
 }
 
 export async function fetchUserBio(request: FastifyRequest, reply: FastifyReply) {
