@@ -22,7 +22,7 @@ const CACHE_CONTROL = {
 	// Client caches for 30s, uses cached version for up to 7 days while revalidating in background
 	307: 'public, max-age=30, s-maxage=3600, stale-while-revalidate=604800',
 	400: 'public, max-age=30, s-maxage=3600',
-	404: 'public, max-age=5, s-maxage=3600', // 5s max-age to avoid client's rendering borken images during town creation flow
+	404: 'public, max-age=5, s-maxage=3600', // 5s max-age to avoid client's rendering broken images during town creation flow
 	422: 'public, max-age=30, s-maxage=3600',
 }
 
