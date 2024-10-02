@@ -16,9 +16,6 @@ import {Vm} from "forge-std/Test.sol";
 //contracts
 import {MembershipFacet} from "contracts/src/spaces/facets/membership/MembershipFacet.sol";
 
-// debuggging
-import {console} from "forge-std/console.sol";
-
 contract MembershipJoinSpaceTest is
   MembershipBaseSetup,
   IEntitlementCheckerBase,
@@ -330,7 +327,7 @@ contract MembershipJoinSpaceTest is
 
   function test_joinSpaceAsFounder() external {
     vm.prank(founder);
-    membership.joinSpace(bob);
+    membership.joinSpace(founder);
   }
 
   function test_joinSpace_pass_crossChain() external {
@@ -557,5 +554,18 @@ contract MembershipJoinSpaceTest is
     vm.prank(bob);
     vm.expectRevert(Membership__InsufficientPayment.selector);
     freeAllocationMembership.joinSpace(bob);
+  }
+
+  function test_joinSpace_withFeeOnlyPrice() external {
+    uint256 fee = platformReqs.getMembershipFee();
+
+    vm.prank(founder);
+    membership.setMembershipPrice(fee);
+
+    vm.deal(alice, fee);
+    vm.prank(alice);
+    membership.joinSpace{value: fee}(alice);
+
+    assertEq(membershipToken.balanceOf(alice), 1);
   }
 }

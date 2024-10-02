@@ -8,6 +8,7 @@ import {IPartnerRegistryBase, IPartnerRegistry} from "contracts/src/factory/face
 import {IRolesBase} from "contracts/src/spaces/facets/roles/IRoles.sol";
 import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {IMembership} from "contracts/src/spaces/facets/membership/IMembership.sol";
+import {IPlatformRequirements} from "contracts/src/factory/facets/platform/requirements/IPlatformRequirements.sol";
 // libraries
 import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
 import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
@@ -21,6 +22,9 @@ import {Entitled} from "contracts/src/spaces/facets/Entitled.sol";
 import {PrepayBase} from "contracts/src/spaces/facets/prepay/PrepayBase.sol";
 import {ReferralsBase} from "contracts/src/spaces/facets/referrals/ReferralsBase.sol";
 import {EntitlementGatedBase} from "contracts/src/spaces/facets/gated/EntitlementGatedBase.sol";
+
+// debuggging
+import {console} from "forge-std/console.sol";
 
 /// @title MembershipJoin
 /// @notice Handles the logic for joining a space, including entitlement checks and payment processing
@@ -109,11 +113,25 @@ abstract contract MembershipJoin is
     }
   }
 
+  function _getRequiredAmount() internal view returns (uint256) {
+    // Check if there are any prepaid memberships available
+    uint256 prepaidSupply = _getPrepaidSupply();
+    if (prepaidSupply > 0) return 0; // If prepaid memberships exist, no payment is required
+
+    // Get the current membership price based on total supply
+    uint256 price = _getMembershipPrice(_totalSupply());
+    if (price == 0) return 0; // If the price is zero, no payment is required
+
+    // Calculate the protocol fee
+    uint256 fee = _getProtocolFee(price);
+
+    // Return the higher of the price or fee to ensure at least the protocol fee is covered
+    return price > fee ? price : fee;
+  }
+
   function _validatePayment() internal view {
-    if (msg.value > 0) {
-      uint256 price = _getMembershipPrice(_totalSupply());
-      if (msg.value != price) revert Membership__InvalidPayment();
-    }
+    uint256 requiredAmount = _getRequiredAmount();
+    if (msg.value < requiredAmount) revert Membership__InvalidPayment();
   }
 
   function _validateUserReferral(
