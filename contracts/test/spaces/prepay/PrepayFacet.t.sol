@@ -78,7 +78,7 @@ contract PrepayFacetTest is MembershipBaseSetup, IPrepayBase {
 
     // Bob tries to mint a membership but fails
     vm.prank(charlie);
-    vm.expectRevert(Membership__InvalidPayment.selector);
+    vm.expectRevert(Membership__InsufficientPayment.selector);
     membership.joinSpace(charlie);
   }
 }

@@ -127,8 +127,10 @@ abstract contract MembershipJoin is
   }
 
   function _validatePayment() internal view {
-    uint256 requiredAmount = _getRequiredAmount();
-    if (msg.value < requiredAmount) revert Membership__InvalidPayment();
+    if (msg.value > 0) {
+      uint256 requiredAmount = _getRequiredAmount();
+      if (msg.value < requiredAmount) revert Membership__InvalidPayment();
+    }
   }
 
   function _validateUserReferral(
