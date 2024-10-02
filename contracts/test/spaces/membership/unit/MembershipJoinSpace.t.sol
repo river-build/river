@@ -327,7 +327,7 @@ contract MembershipJoinSpaceTest is
 
   function test_joinSpaceAsFounder() external {
     vm.prank(founder);
-    membership.joinSpace(founder);
+    membership.joinSpace(bob);
   }
 
   function test_joinSpace_pass_crossChain() external {
