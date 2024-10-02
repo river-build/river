@@ -135,10 +135,6 @@ contract MembershipFacet is
     return _getMembershipRenewalPrice(tokenId, _totalSupply());
   }
 
-  function getMembershipRequiredAmount() external view returns (uint256) {
-    return _getRequiredAmount();
-  }
-
   // =============================================================
   //                           Allocation
   // =============================================================

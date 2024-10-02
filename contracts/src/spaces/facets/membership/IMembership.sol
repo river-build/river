@@ -150,12 +150,6 @@ interface IMembership is IMembershipBase {
   function getMembershipPrice() external view returns (uint256);
 
   /**
-   * @notice Get the membership required amount
-   * @return The membership required amount
-   */
-  function getMembershipRequiredAmount() external view returns (uint256);
-
-  /**
    * @notice Get the membership renewal price
    * @param tokenId The token id of the membership
    * @return The membership renewal price
