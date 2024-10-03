@@ -16,8 +16,7 @@ import {IPlatformRequirements} from "contracts/src/factory/facets/platform/requi
 import {IPrepay} from "contracts/src/spaces/facets/prepay/IPrepay.sol";
 // libraries
 import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
-import {RuleEntitlementUtil} from "contracts/test/crosschain/RuleEntitlementUtil.sol";
-import {LibString} from "solady/utils/LibString.sol";
+
 // contracts
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {Architect} from "contracts/src/factory/facets/architect/Architect.sol";
