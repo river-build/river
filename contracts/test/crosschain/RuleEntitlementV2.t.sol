@@ -88,12 +88,11 @@ contract RuleEntitlementV2Test is RuleEntitlementTest {
   function test_setRuleEntitlement_revertOnZeroLengthRuleData() public {
     test_upgradeToRuleV2();
 
-    RuleDataV2 memory ruleDataV2;
-
     vm.expectRevert(abi.encodeWithSelector(Entitlement__InvalidValue.selector));
 
     vm.prank(space);
 
+    RuleDataV2 memory ruleDataV2;
     ruleEntitlementV2.setEntitlement(roleId, abi.encode(ruleDataV2));
   }
 
