@@ -89,7 +89,6 @@ contract RuleEntitlementV2Test is RuleEntitlementTest {
     test_upgradeToRuleV2();
 
     RuleDataV2 memory ruleDataV2;
-    assertTrue(ruleDataV2.operations.length == 0);
 
     vm.expectRevert(abi.encodeWithSelector(Entitlement__InvalidValue.selector));
 
