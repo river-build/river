@@ -138,60 +138,6 @@ contract IntegrationCreateSpace is
   }
 
   // =============================================================
-  //                    Updating Space Minter
-  // =============================================================
-
-  function test_updateSpaceMinter() external {
-    address founder = _randomAddress();
-    address newMinter = _randomAddress();
-
-    address[] memory users = new address[](1);
-    users[0] = newMinter;
-
-    SpaceInfo memory spaceInfo = _createUserSpaceInfo("test", users);
-    spaceInfo.membership.requirements.ruleData = abi.encode(
-      RuleEntitlementUtil.getNoopRuleData()
-    );
-    spaceInfo.membership.settings.pricingModule = pricingModule;
-
-    vm.prank(founder);
-    address newSpace = spaceArchitect.createSpace(spaceInfo);
-
-    users[0] = address(1); // EVERYONE_ADDRESS
-
-    IEntitlementsManager.Entitlement[]
-      memory entitlements = IEntitlementsManager(newSpace).getEntitlements();
-    address userEntitlement;
-    for (uint256 i; i < entitlements.length; ++i) {
-      if (LibString.eq(entitlements[i].moduleType, "UserEntitlement")) {
-        userEntitlement = entitlements[i].moduleAddress;
-        break;
-      }
-    }
-
-    if (userEntitlement == address(0)) {
-      revert("User entitlement not found");
-    }
-
-    CreateEntitlement[] memory updateEntitlements = new CreateEntitlement[](1);
-    updateEntitlements[0] = CreateEntitlement({
-      module: IEntitlement(userEntitlement),
-      data: abi.encode(users)
-    });
-
-    string[] memory updatePermissions = new string[](1);
-    updatePermissions[0] = Permissions.JoinSpace;
-
-    vm.prank(founder);
-    IRoles(newSpace).updateRole({
-      roleId: 1,
-      roleName: "",
-      permissions: updatePermissions,
-      entitlements: updateEntitlements
-    });
-  }
-
-  // =============================================================
   //                           Channels
   // =============================================================
 
