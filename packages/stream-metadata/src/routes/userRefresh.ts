@@ -39,7 +39,11 @@ export async function userRefreshOnResponse(
 
 	try {
 		const path = `/user/${userId}/image`
-		await CloudfrontManager.createCloudfrontInvalidation({ path, logger })
+		await CloudfrontManager.createCloudfrontInvalidation({
+			path,
+			logger,
+			waitUntilFinished: true,
+		})
 	} catch (error) {
 		logger.error(
 			{
