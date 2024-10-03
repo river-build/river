@@ -18,15 +18,16 @@ interface IArchitectBase {
   // =============================================================
 
   // Latest
-  struct Minter {
+  struct MembershipRequirements {
     bool everyone;
     address[] users;
     bytes ruleData;
+    bool syncEntitlements;
   }
 
   struct Membership {
     IMembershipBase.Membership settings;
-    Minter requirements;
+    MembershipRequirements requirements;
     string[] permissions;
   }
 
@@ -37,10 +38,10 @@ interface IArchitectBase {
   struct SpaceInfo {
     string name;
     string uri;
-    Membership membership;
-    ChannelInfo channel;
     string shortDescription;
     string longDescription;
+    Membership membership;
+    ChannelInfo channel;
   }
 
   struct Metadata {

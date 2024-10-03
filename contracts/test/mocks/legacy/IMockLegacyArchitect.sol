@@ -14,15 +14,16 @@ interface ILegacyArchitectBase {
   // =============================================================
 
   // Latest
-  struct Minter {
+  struct MembershipRequirements {
     bool everyone;
     address[] users;
     IRuleEntitlement.RuleData ruleData;
+    bool syncEntitlements;
   }
 
   struct Membership {
     IMembershipBase.Membership settings;
-    Minter requirements;
+    MembershipRequirements requirements;
     string[] permissions;
   }
 
@@ -33,10 +34,10 @@ interface ILegacyArchitectBase {
   struct SpaceInfo {
     string name;
     string uri;
-    Membership membership;
-    ChannelInfo channel;
     string shortDescription;
     string longDescription;
+    Membership membership;
+    ChannelInfo channel;
   }
 
   // =============================================================

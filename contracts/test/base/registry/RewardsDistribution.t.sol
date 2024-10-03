@@ -31,7 +31,7 @@ import {MainnetDelegation} from "contracts/src/tokens/river/base/delegation/Main
 import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/RewardsDistribution.sol";
 import {SpaceDelegationFacet} from "contracts/src/base/registry/facets/delegation/SpaceDelegationFacet.sol";
 
-import {CreateSpaceFacet} from "contracts/src/factory/facets/create/CreateSpace.sol";
+import {ICreateSpace} from "contracts/src/factory/facets/create/ICreateSpace.sol";
 
 contract RewardsDistributionTest is
   BaseSetup,
@@ -1362,7 +1362,7 @@ contract RewardsDistributionTest is
         memory everyoneSpaceInfo = _createEveryoneSpaceInfo(spaceName);
       everyoneSpaceInfo.membership.settings.pricingModule = fixedPricingModule;
 
-      address everyoneSpace = CreateSpaceFacet(spaceFactory).createSpace(
+      address everyoneSpace = ICreateSpace(spaceFactory).createSpace(
         everyoneSpaceInfo
       );
 
