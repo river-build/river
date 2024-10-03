@@ -78,7 +78,7 @@ contract RuleEntitlementV2Test is RuleEntitlementTest {
   function test_setRuleEntitlement_revertOnEmptyRuleData() public {
     test_upgradeToRuleV2();
 
-    vm.expectRevert(abi.encodeWithSelector(Entitlement__InvalidValue.selector));
+    vm.expectRevert(Entitlement__InvalidValue.selector);
 
     vm.prank(space);
 
@@ -88,7 +88,7 @@ contract RuleEntitlementV2Test is RuleEntitlementTest {
   function test_setRuleEntitlement_revertOnZeroLengthRuleData() public {
     test_upgradeToRuleV2();
 
-    vm.expectRevert(abi.encodeWithSelector(Entitlement__InvalidValue.selector));
+    vm.expectRevert(Entitlement__InvalidValue.selector);
 
     vm.prank(space);
 
