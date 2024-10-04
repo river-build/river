@@ -1028,10 +1028,19 @@ export class SpaceDapp implements ISpaceDapp {
     }
 
     public async encodedUpdateChannelData(space: Space, params: UpdateChannelParams) {
+        const channelId = ensureHexPrefix(params.channelId)
+
+        if (params.disabled) {
+            // when disabling the channel we don't necesailly need to pass names and roles
+            // for the contract to accept this exception, these values need to be empty
+            return [
+                space.Channels.interface.encodeFunctionData('updateChannel', [channelId, '', true]),
+            ]
+        }
+
         // data for the multicall
         const encodedCallData: BytesLike[] = []
 
-        const channelId = ensureHexPrefix(params.channelId)
         // update the channel metadata
         encodedCallData.push(
             space.Channels.interface.encodeFunctionData('updateChannel', [
