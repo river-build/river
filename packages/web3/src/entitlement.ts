@@ -308,6 +308,14 @@ export function encodeRuleDataV2(ruleData: IRuleEntitlementV2Base.RuleDataV2Stru
 }
 
 export function decodeRuleDataV2(entitlementData: Hex): IRuleEntitlementV2Base.RuleDataV2Struct {
+    if (entitlementData === '0x') {
+        return {
+            operations: [],
+            checkOperations: [],
+            logicalOperations: [],
+        } as IRuleEntitlementV2Base.RuleDataV2Struct
+    }
+
     const getRuleDataV2Abi: ExtractAbiFunction<typeof IRuleEntitlementV2Abi, 'getRuleDataV2'> =
         getAbiItem({
             abi: IRuleEntitlementV2Abi,
