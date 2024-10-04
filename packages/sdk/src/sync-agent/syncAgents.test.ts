@@ -133,4 +133,14 @@ describe('syncAgents.test.ts', () => {
         expect(result3).toBeDefined()
         expect(result3.error).toBeUndefined()
     })
+
+    test('gdm', async () => {
+        await Promise.all([bob.start(), alice.start()])
+        const { streamId } = await bob.gdms.createGDM([alice.userId])
+        const aliceGdm = alice.gdms.getGdm(streamId)
+        expect(aliceGdm.members.data.userIds).toEqual([bob.userId, alice.userId])
+        await aliceGdm.sendMessage('Hello, World!')
+        const bobGdm = bob.gdms.getGdm(streamId)
+        expect(bobGdm.timeline.events.value.find((e) => e.text === 'Hello, World!')).toBeDefined()
+    })
 })
