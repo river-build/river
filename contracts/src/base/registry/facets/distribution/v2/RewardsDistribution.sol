@@ -2,13 +2,11 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
+import {IRewardsDistribution} from "./IRewardsDistribution.sol";
 
 // libraries
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 import {NodeOperatorStorage} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
 import {SpaceDelegationStorage} from "contracts/src/base/registry/facets/delegation/SpaceDelegationStorage.sol";
@@ -17,7 +15,6 @@ import {RewardsDistributionStorage} from "./RewardsDistributionStorage.sol";
 
 // contracts
 import {Facet} from "contracts/src/diamond/facets/Facet.sol";
-import {IRewardsDistribution} from "./IRewardsDistribution.sol";
 
 contract RewardsDistribution is IRewardsDistribution, Facet {
   using EnumerableSet for EnumerableSet.AddressSet;
