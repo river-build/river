@@ -29,6 +29,7 @@ import {DeployNodeOperator} from "contracts/scripts/deployments/facets/DeployNod
 import {DeployMetadata} from "contracts/scripts/deployments/facets/DeployMetadata.s.sol";
 import {DeploySpaceDelegation} from "contracts/scripts/deployments/facets/DeploySpaceDelegation.s.sol";
 import {DeployRewardsDistribution} from "contracts/scripts/deployments/facets/DeployRewardsDistribution.s.sol";
+import {DeployRewardsDistributionV2} from "contracts/scripts/deployments/facets/DeployRewardsDistributionV2.s.sol";
 import {DeployERC721ANonTransferable} from "contracts/scripts/deployments/facets/DeployERC721ANonTransferable.s.sol";
 import {DeployMockMessenger} from "contracts/scripts/deployments/facets/DeployMockMessenger.s.sol";
 
@@ -49,6 +50,8 @@ contract DeployBaseRegistry is DiamondHelper, Deployer {
   DeploySpaceDelegation spaceDelegationHelper = new DeploySpaceDelegation();
   DeployRewardsDistribution distributionHelper =
     new DeployRewardsDistribution();
+  DeployRewardsDistributionV2 distributionV2Helper =
+    new DeployRewardsDistributionV2();
   DeployMockMessenger messengerHelper = new DeployMockMessenger();
 
   address multiInit;
@@ -62,6 +65,7 @@ contract DeployBaseRegistry is DiamondHelper, Deployer {
 
   address nft;
   address distribution;
+  address distributionV2;
   address spaceDelegation;
   address mainnetDelegation;
   address public messenger;
@@ -107,6 +111,7 @@ contract DeployBaseRegistry is DiamondHelper, Deployer {
     entitlementChecker = checkerHelper.deploy(deployer);
     operator = operatorHelper.deploy(deployer);
     distribution = distributionHelper.deploy(deployer);
+    distributionV2 = distributionV2Helper.deploy(deployer);
     mainnetDelegation = mainnetDelegationHelper.deploy(deployer);
     spaceDelegation = spaceDelegationHelper.deploy(deployer);
     nft = deployNFT.deploy(deployer);
@@ -138,6 +143,11 @@ contract DeployBaseRegistry is DiamondHelper, Deployer {
       distributionHelper.makeCut(distribution, IDiamond.FacetCutAction.Add),
       distribution,
       distributionHelper.makeInitData("")
+    );
+    addFacet(
+      distributionV2Helper.makeCut(distributionV2, IDiamond.FacetCutAction.Add),
+      distributionV2,
+      distributionV2Helper.makeInitData("")
     );
     addFacet(
       spaceDelegationHelper.makeCut(
@@ -214,6 +224,18 @@ contract DeployBaseRegistry is DiamondHelper, Deployer {
           distributionHelper.makeCut(distribution, IDiamond.FacetCutAction.Add),
           distribution,
           distributionHelper.makeInitData("")
+        );
+      } else if (
+        facetNameHash == keccak256(abi.encodePacked("RewardsDistributionV2"))
+      ) {
+        distributionV2 = distributionV2Helper.deploy(deployer);
+        addFacet(
+          distributionV2Helper.makeCut(
+            distributionV2,
+            IDiamond.FacetCutAction.Add
+          ),
+          distributionV2,
+          distributionV2Helper.makeInitData("")
         );
       } else if (
         facetNameHash == keccak256(abi.encodePacked("MainnetDelegation"))

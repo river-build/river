@@ -15,18 +15,40 @@ import {RewardsDistributionStorage} from "./RewardsDistributionStorage.sol";
 
 // contracts
 import {Facet} from "contracts/src/diamond/facets/Facet.sol";
+import {OwnableBase} from "contracts/src/diamond/facets/ownable/OwnableBase.sol";
 
-contract RewardsDistribution is IRewardsDistribution, Facet {
+contract RewardsDistribution is IRewardsDistribution, OwnableBase, Facet {
   using EnumerableSet for EnumerableSet.AddressSet;
   using StakingRewards for StakingRewards.Layout;
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-  /*                       STATE MUTATING                       */
+  /*                       ADMIN SETTERS                        */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   function __RewardsDistribution_init() external onlyInitializing {
     _addInterface(type(IRewardsDistribution).interfaceId);
   }
+
+  function setStakeAndRewardTokens(
+    address stakeToken,
+    address rewardToken
+  ) external onlyOwner {
+    RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
+      .layout();
+    ds.staking.stakeToken = stakeToken;
+    ds.staking.rewardToken = rewardToken;
+  }
+
+  function setRewardNotifier(
+    address notifier,
+    bool enabled
+  ) external onlyOwner {
+    RewardsDistributionStorage.layout().isRewardNotifier[notifier] = enabled;
+  }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                       STATE MUTATING                       */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   function stake(
     uint96 amount,
