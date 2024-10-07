@@ -4,42 +4,59 @@ import { ChatConfig } from '../common/types'
 
 const logger = dlogger('stress:statsReporter')
 
-export function statsReporter(rootClient: StressClient, chatConfig: ChatConfig) {
-    let canceled = false
-    let lastReactionCount = 0
-    const interval = setInterval(() => {
-        if (canceled) {
-            return
-        }
-        void (async () => {
-            if (chatConfig.kickoffMessageEventId && chatConfig.countClientsMessageEventId) {
-                const reactionCount = countReactions(
-                    rootClient,
-                    chatConfig.announceChannelId,
-                    chatConfig.kickoffMessageEventId,
-                )
+export function statsReporter(chatConfig: ChatConfig) {
+    return {
+        logStep: (
+            client: StressClient,
+            step: string,
+            isSuccess: boolean,
+            metadata?: Record<string, unknown>,
+        ) => {
+            logger.info({
+                sequence: 'STRESS_RESULT',
+                step,
+                result: isSuccess ? 'PASS' : 'FAIL',
+                sessionId: client.logId,
+                metadata,
+            })
+        },
+        reactionCounter: (rootClient: StressClient) => {
+            let canceled = false
+            let lastReactionCount = 0
+            const interval = setInterval(() => {
                 if (canceled) {
                     return
                 }
-                if (lastReactionCount === reactionCount) {
-                    return
-                }
-                lastReactionCount = reactionCount
-                await updateCountClients(
-                    rootClient,
-                    chatConfig.announceChannelId,
-                    chatConfig.countClientsMessageEventId,
-                    chatConfig.clientsCount,
-                    reactionCount,
-                )
+                void (async () => {
+                    if (chatConfig.kickoffMessageEventId && chatConfig.countClientsMessageEventId) {
+                        const reactionCount = countReactions(
+                            rootClient,
+                            chatConfig.announceChannelId,
+                            chatConfig.kickoffMessageEventId,
+                        )
+                        if (canceled) {
+                            return
+                        }
+                        if (lastReactionCount === reactionCount) {
+                            return
+                        }
+                        lastReactionCount = reactionCount
+                        await updateCountClients(
+                            rootClient,
+                            chatConfig.announceChannelId,
+                            chatConfig.countClientsMessageEventId,
+                            chatConfig.clientsCount,
+                            reactionCount,
+                        )
+                    }
+                })()
+            }, 5000)
+            return () => {
+                logger.info('canceled')
+                clearInterval(interval)
+                canceled = true
             }
-        })()
-    }, 5000)
-
-    return () => {
-        logger.info('canceled')
-        clearInterval(interval)
-        canceled = true
+        },
     }
 }
 

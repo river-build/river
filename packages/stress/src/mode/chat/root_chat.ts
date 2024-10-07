@@ -11,7 +11,7 @@ import { kickoffChat } from './kickoffChat'
 import { joinChat } from './joinChat'
 import { updateProfile } from './updateProfile'
 import { chitChat } from './chitChat'
-import { sumarizeChat } from './sumarizeChat'
+import { summarizeChat } from './summarizeChat'
 import { statsReporter } from './statsReporter'
 import { getChatConfig } from '../common/common'
 
@@ -45,10 +45,11 @@ export async function startStressChat(opts: {
         `clients.length !== chatConfig.clientsPerProcess ${clients.length} !== ${chatConfig.clientsPerProcess}`,
     )
 
-    let cancelStatsReporting: (() => void) | undefined
+    let cancelReactionCounter: (() => void) | undefined
+    const { reactionCounter, logStep } = statsReporter(chatConfig)
 
     if (chatConfig.processIndex === 0) {
-        cancelStatsReporting = statsReporter(clients[0], chatConfig)
+        cancelReactionCounter = reactionCounter(clients[0])
 
         for (
             let i = chatConfig.clientsCount;
@@ -78,9 +79,14 @@ export async function startStressChat(opts: {
         const results = await Promise.allSettled(span.map((client) => joinChat(client, chatConfig)))
         results.forEach((r, index) => {
             if (r.status === 'rejected') {
-                logger.error(`${span[index].logId} error calling joinChat`, r.reason)
                 errors.push(r.reason)
             }
+            logStep(
+                span[index],
+                'JOIN_CHAT',
+                r.status === 'fulfilled',
+                r.status === 'fulfilled' ? { span } : { reason: r.reason },
+            )
         })
     }
 
@@ -92,9 +98,14 @@ export async function startStressChat(opts: {
         )
         results.forEach((r, index) => {
             if (r.status === 'rejected') {
-                logger.error(`${span[index].logId} error calling updateProfile`, r.reason)
                 errors.push(r.reason)
             }
+            logStep(
+                span[index],
+                'UPDATE_PROFILE',
+                r.status === 'fulfilled',
+                r.status === 'fulfilled' ? { span } : { reason: r.reason },
+            )
         })
     }
 
@@ -102,17 +113,22 @@ export async function startStressChat(opts: {
     const results = await Promise.allSettled(clients.map((client) => chitChat(client, chatConfig)))
     results.forEach((r, index) => {
         if (r.status === 'rejected') {
-            logger.error(`${clients[index].logId} error calling chitChat`, r.reason)
             errors.push(r.reason)
         }
+        logStep(
+            clients[index],
+            'CHIT_CHAT',
+            r.status === 'fulfilled',
+            r.status === 'fulfilled' ? {} : { reason: r.reason },
+        )
     })
 
-    logger.log('sumarizeChat')
-    const summary = await sumarizeChat(clients, chatConfig, errors)
+    logger.log('summarizeChat')
+    const summary = await summarizeChat(clients, chatConfig, errors)
 
     logger.log('done', { summary })
 
-    cancelStatsReporting?.()
+    cancelReactionCounter?.()
 
     for (let i = 0; i < clients.length; i += 1) {
         const client = clients[i]
