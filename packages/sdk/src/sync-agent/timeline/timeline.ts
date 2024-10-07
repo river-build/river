@@ -1,12 +1,16 @@
 import { SnapshotCaseType } from '@river-build/proto'
 import { Stream } from '../../stream'
 import { StreamChange } from '../../streamEvents'
-import { TimelineEvent, toEvent } from './models/timelineEvent'
+import { toEvent } from './models/timelineEvent'
 import { LocalTimelineEvent } from '../../types'
 import { TimelineEvents } from './models/timelineEvents'
+import { Reactions } from './models/reactions'
+import type { TimelineEvent } from './models/timeline-types'
 
 export class Timeline {
     events = new TimelineEvents()
+    reactions = new Reactions()
+
     filterFn: (event: TimelineEvent, kind: SnapshotCaseType) => boolean = (_event, _kind) => {
         return true
     }
@@ -86,6 +90,9 @@ export class Timeline {
             }
             return newEvents
         })
+        for (const event of events) {
+            this.reactions.addEvent(event)
+        }
     }
 
     private updateEvent(event: TimelineEvent, userId: string, eventId: string) {
@@ -99,6 +106,7 @@ export class Timeline {
                 return current
             }
         })
+        this.reactions.addEvent(event)
     }
 
     private confirmEvents(
