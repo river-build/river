@@ -17,7 +17,6 @@ import { isDefined, logNever } from '../../../check'
 import {
     type TimelineEvent_OneOf,
     type Attachment,
-    Event,
     EventStatus,
     MessageType,
     type ChunkedMediaAttachment,
@@ -43,6 +42,7 @@ import {
     Membership,
     type RoomMessageEncryptedEvent,
     type RoomPropertiesEvent,
+    RiverEvent,
 } from './timeline-types'
 import type { PlainMessage } from '@bufbuild/protobuf'
 import { userIdFromAddress, streamIdFromBytes, streamIdAsString } from '../../../id'
@@ -252,7 +252,7 @@ function toTownsContent_MiniblockHeader(
 ): EventContentResult {
     return {
         content: {
-            kind: Event.MiniblockHeader,
+            kind: RiverEvent.MiniblockHeader,
             message: value,
         } satisfies MiniblockHeaderEvent,
     }
@@ -268,7 +268,7 @@ function toTownsContent_MemberPayload(
         case 'membership':
             return {
                 content: {
-                    kind: Event.RoomMember,
+                    kind: RiverEvent.RoomMember,
                     userId: userIdFromAddress(value.content.value.userAddress),
                     initiatorId: userIdFromAddress(value.content.value.initiatorAddress),
                     membership: toMembership(value.content.value.op),
@@ -277,7 +277,7 @@ function toTownsContent_MemberPayload(
         case 'keySolicitation':
             return {
                 content: {
-                    kind: Event.KeySolicitation,
+                    kind: RiverEvent.KeySolicitation,
                     sessionIds: value.content.value.sessionIds,
                     deviceKey: value.content.value.deviceKey,
                     isNewDevice: value.content.value.isNewDevice,
@@ -286,7 +286,7 @@ function toTownsContent_MemberPayload(
         case 'keyFulfillment':
             return {
                 content: {
-                    kind: Event.Fulfillment,
+                    kind: RiverEvent.Fulfillment,
                     sessionIds: value.content.value.sessionIds,
                     deviceKey: value.content.value.deviceKey,
                     to: userIdFromAddress(value.content.value.userAddress),
@@ -297,7 +297,7 @@ function toTownsContent_MemberPayload(
         case 'displayName':
             return {
                 content: {
-                    kind: Event.SpaceDisplayName,
+                    kind: RiverEvent.SpaceDisplayName,
                     userId: message.creatorUserId,
                     displayName:
                         event.decryptedContent?.kind === 'text'
@@ -309,7 +309,7 @@ function toTownsContent_MemberPayload(
         case 'username':
             return {
                 content: {
-                    kind: Event.SpaceUsername,
+                    kind: RiverEvent.SpaceUsername,
                     userId: message.creatorUserId,
                     username:
                         event.decryptedContent?.kind === 'text'
@@ -320,7 +320,7 @@ function toTownsContent_MemberPayload(
         case 'ensAddress':
             return {
                 content: {
-                    kind: Event.SpaceEnsAddress,
+                    kind: RiverEvent.SpaceEnsAddress,
                     userId: message.creatorUserId,
                     ensAddress: value.content.value,
                 } satisfies SpaceEnsAddressEvent,
@@ -328,7 +328,7 @@ function toTownsContent_MemberPayload(
         case 'nft':
             return {
                 content: {
-                    kind: Event.SpaceNft,
+                    kind: RiverEvent.SpaceNft,
                     userId: message.creatorUserId,
                     contractAddress: bin_toHexString(value.content.value.contractAddress),
                     tokenId: bin_toHexString(value.content.value.tokenId),
@@ -338,7 +338,7 @@ function toTownsContent_MemberPayload(
         case 'pin':
             return {
                 content: {
-                    kind: Event.Pin,
+                    kind: RiverEvent.Pin,
                     userId: message.creatorUserId,
                     pinnedEventId: bin_toHexString(value.content.value.eventId),
                 } satisfies PinEvent,
@@ -346,7 +346,7 @@ function toTownsContent_MemberPayload(
         case 'unpin':
             return {
                 content: {
-                    kind: Event.Unpin,
+                    kind: RiverEvent.Unpin,
                     userId: message.creatorUserId,
                     unpinnedEventId: bin_toHexString(value.content.value.eventId),
                 } satisfies UnpinEvent,
@@ -371,7 +371,7 @@ function toTownsContent_UserPayload(
         case 'inception': {
             return {
                 content: {
-                    kind: Event.RoomCreate,
+                    kind: RiverEvent.RoomCreate,
                     creatorId: message.creatorUserId,
                     type: message.event.payload.case,
                 } satisfies RoomCreateEvent,
@@ -382,7 +382,7 @@ function toTownsContent_UserPayload(
             const streamId = streamIdFromBytes(payload.streamId)
             return {
                 content: {
-                    kind: Event.RoomMember,
+                    kind: RiverEvent.RoomMember,
                     userId: '', // this is just the current user
                     initiatorId: '',
                     membership: toMembership(payload.op),
@@ -395,7 +395,7 @@ function toTownsContent_UserPayload(
             const payload = value.content.value
             return {
                 content: {
-                    kind: Event.RoomMember,
+                    kind: RiverEvent.RoomMember,
                     userId: userIdFromAddress(payload.userId),
                     initiatorId: event.remoteEvent.creatorUserId,
                     membership: toMembership(payload.op),
@@ -426,7 +426,7 @@ function toTownsContent_ChannelPayload(
         case 'inception': {
             return {
                 content: {
-                    kind: Event.RoomCreate,
+                    kind: RiverEvent.RoomCreate,
                     creatorId: message.creatorUserId,
                     type: message.event.payload.case,
                 } satisfies RoomCreateEvent,
@@ -454,7 +454,7 @@ function toTownsContent_ChannelPayload(
         case 'redaction':
             return {
                 content: {
-                    kind: Event.RedactionActionEvent,
+                    kind: RiverEvent.RedactionActionEvent,
                     refEventId: bin_toHexString(value.content.value.eventId),
                     adminRedaction: true,
                 } satisfies RedactionActionEvent,
@@ -488,7 +488,7 @@ function toTownsContent_FromChannelMessage(
         case 'reaction':
             return {
                 content: {
-                    kind: Event.Reaction,
+                    kind: RiverEvent.Reaction,
                     reaction: channelMessage.payload.value.reaction,
                     targetEventId: channelMessage.payload.value.refEventId,
                 } satisfies ReactionEvent,
@@ -496,7 +496,7 @@ function toTownsContent_FromChannelMessage(
         case 'redaction':
             return {
                 content: {
-                    kind: Event.RedactionActionEvent,
+                    kind: RiverEvent.RedactionActionEvent,
                     refEventId: channelMessage.payload.value.refEventId,
                     adminRedaction: false,
                 } satisfies RedactionActionEvent,
@@ -534,7 +534,7 @@ function toTownsContent_ChannelPayload_Message(
         if (payload.refEventId) {
             return {
                 content: {
-                    kind: Event.RoomMessageEncryptedWithRef,
+                    kind: RiverEvent.RoomMessageEncryptedWithRef,
                     refEventId: payload.refEventId,
                 },
             }
@@ -542,7 +542,7 @@ function toTownsContent_ChannelPayload_Message(
         return {
             // if payload is an EncryptedData message, than it is encrypted content kind
             content: {
-                kind: Event.RoomMessageEncrypted,
+                kind: RiverEvent.RoomMessageEncrypted,
                 error: timelineEvent.decryptedContentError,
             } satisfies RoomMessageEncryptedEvent,
         }
@@ -559,7 +559,7 @@ function toTownsContent_ChannelPayload_ChannelProperties(
     if (timelineEvent.decryptedContent?.kind === 'channelProperties') {
         return {
             content: {
-                kind: Event.RoomProperties,
+                kind: RiverEvent.RoomProperties,
                 properties: timelineEvent.decryptedContent.content,
             } satisfies RoomPropertiesEvent,
         }
@@ -578,7 +578,7 @@ function toTownsContent_ChannelPayload_Message_Post(
         case 'text':
             return {
                 content: {
-                    kind: Event.RoomMessage,
+                    kind: RiverEvent.RoomMessage,
                     body: value.content.value.body,
                     threadId: value.threadId,
                     threadPreview: value.threadPreview,
@@ -595,7 +595,7 @@ function toTownsContent_ChannelPayload_Message_Post(
         case 'image':
             return {
                 content: {
-                    kind: Event.RoomMessage,
+                    kind: RiverEvent.RoomMessage,
                     body: value.content.value.title,
                     threadId: value.threadId,
                     threadPreview: value.threadPreview,
@@ -613,7 +613,7 @@ function toTownsContent_ChannelPayload_Message_Post(
         // case 'gm':
         //     return {
         //         content: {
-        //             kind: Event.RoomMessage,
+        //             kind: RiverEvent.RoomMessage,
         //             body: value.content.value.typeUrl,
         //             threadId: value.threadId,
         //             threadPreview: value.threadPreview,
@@ -643,7 +643,7 @@ function toTownsContent_SpacePayload(
         case 'inception': {
             return {
                 content: {
-                    kind: Event.RoomCreate,
+                    kind: RiverEvent.RoomCreate,
                     creatorId: message.creatorUserId,
                     type: message.event.payload.case,
                 } satisfies RoomCreateEvent,
@@ -654,7 +654,7 @@ function toTownsContent_SpacePayload(
             const channelId = streamIdAsString(payload.channelId)
             return {
                 content: {
-                    kind: Event.ChannelCreate,
+                    kind: RiverEvent.ChannelCreate,
                     creatorId: message.creatorUserId,
                     channelId,
                     channelOp: payload.op,
@@ -668,7 +668,7 @@ function toTownsContent_SpacePayload(
         //     const channelId = streamIdAsString(payload.channelId)
         //     return {
         //         content: {
-        //             kind: Event.SpaceUpdateAutojoin,
+        //             kind: RiverEvent.SpaceUpdateAutojoin,
         //             autojoin: payload.autojoin,
         //             channelId: channelId,
         //         } satisfies SpaceUpdateAutojoinEvent,
@@ -679,7 +679,7 @@ function toTownsContent_SpacePayload(
         //     const channelId = streamIdAsString(payload.channelId)
         //     return {
         //         content: {
-        //             kind: Event.SpaceUpdateHideUserJoinLeaves,
+        //             kind: RiverEvent.SpaceUpdateHideUserJoinLeaves,
         //             hideUserJoinLeaves: payload.hideUserJoinLeaveEvents,
         //             channelId: channelId,
         //         } satisfies SpaceUpdateHideUserJoinLeavesEvent,
@@ -688,7 +688,7 @@ function toTownsContent_SpacePayload(
         // case 'spaceImage': {
         //     return {
         //         content: {
-        //             kind: Event.SpaceImage,
+        //             kind: RiverEvent.SpaceImage,
         //         } satisfies SpaceImageEvent,
         //     }
         // }
@@ -803,7 +803,7 @@ function toAttachment(
                 '',
             ).content
 
-            return roomMessageEvent?.kind === Event.RoomMessage
+            return roomMessageEvent?.kind === RiverEvent.RoomMessage
                 ? ({
                       type: 'embedded_message',
                       ...content,
@@ -857,84 +857,84 @@ export function getFallbackContent(
         throw new Error('Either content or error should be defined')
     }
     switch (content.kind) {
-        case Event.MiniblockHeader:
+        case RiverEvent.MiniblockHeader:
             return `Miniblock miniblockNum:${content.message.miniblockNum}, hasSnapshot:${(content
                 .message.snapshot
                 ? true
                 : false
             ).toString()}`
-        case Event.Reaction:
+        case RiverEvent.Reaction:
             return `${senderDisplayName} reacted with ${content.reaction} to ${content.targetEventId}`
-        // case Event.RoomAvatar:
+        // case RiverEvent.RoomAvatar:
         //     return `url: ${content.url ?? 'undefined'}`
-        // case Event.RoomCanonicalAlias: {
+        // case RiverEvent.RoomCanonicalAlias: {
         //     const alt = (content.altAliases ?? []).join(', ')
         //     return `alias: ${content.alias}, alt alaises: ${alt}`
         // }
-        case Event.RoomCreate:
+        case RiverEvent.RoomCreate:
             return content.type ? `type: ${content.type}` : ''
-        // case Event.RoomEncryption:
+        // case RiverEvent.RoomEncryption:
         //     return `algorithm: ${content.roomEncryption.algorithm} rotationMs: ${
         //         content.roomEncryption.rotationPeriodMs?.toString() ?? 'N/A'
         //     } rotationMsgs: ${content.roomEncryption.rotationPeriodMsgs?.toString() ?? 'N/A'}`
-        // case Event.RoomMessageEncrypted:
-        //     return `Decrypting...`
-        // case Event.RoomMember: {
-        //     return `[${content.membership}] userId: ${content.userId} initiatorId: ${content.initiatorId}`
-        // }
-        case Event.RoomMessage:
+        case RiverEvent.RoomMessageEncrypted:
+            return `Decrypting...`
+        case RiverEvent.RoomMember: {
+            return `[${content.membership}] userId: ${content.userId} initiatorId: ${content.initiatorId}`
+        }
+        case RiverEvent.RoomMessage:
             return `${senderDisplayName}: ${content.body}`
-        // case Event.RoomName:
+        // case RiverEvent.RoomName:
         //     return `newValue: ${content.name}`
-        // case Event.RoomProperties:
-        //     return `properties: ${content.properties.name ?? ''} ${content.properties.topic ?? ''}`
-        case Event.SpaceUsername:
+        case RiverEvent.RoomProperties:
+            return `properties: ${content.properties.name ?? ''} ${content.properties.topic ?? ''}`
+        case RiverEvent.SpaceUsername:
             return `username: ${content.username}`
-        case Event.SpaceDisplayName:
+        case RiverEvent.SpaceDisplayName:
             return `username: ${content.displayName}`
-        case Event.SpaceEnsAddress:
+        case RiverEvent.SpaceEnsAddress:
             return `ensAddress: ${bin_toHexString(content.ensAddress)}`
-        case Event.SpaceNft:
+        case RiverEvent.SpaceNft:
             return `contractAddress: ${content.contractAddress}, tokenId: ${content.tokenId}, chainId: ${content.chainId}`
-        // case Event.RoomTopic:
+        // case RiverEvent.RoomTopic:
         //     return `newValue: ${content.topic}`
-        case Event.RedactedEvent:
+        case RiverEvent.RedactedEvent:
             return `~Redacted~`
-        case Event.RedactionActionEvent:
+        case RiverEvent.RedactionActionEvent:
             return `Redacts ${content.refEventId} adminRedaction: ${content.adminRedaction}`
-        case Event.ChannelCreate:
+        case RiverEvent.ChannelCreate:
             if (content.channelSettings !== undefined) {
                 return `channelId: ${content.channelId} autojoin: ${content.channelSettings.autojoin} hideUserJoinLeaves: ${content.channelSettings.hideUserJoinLeaveEvents}`
             }
             return `channelId: ${content.channelId}`
-        // case Event.SpaceUpdateAutojoin:
+        // case RiverEvent.SpaceUpdateAutojoin:
         //     return `channelId: ${content.channelId} autojoin: ${content.autojoin}`
-        // case Event.SpaceUpdateHideUserJoinLeaves:
+        // case RiverEvent.SpaceUpdateHideUserJoinLeaves:
         //     return `channelId: ${content.channelId} hideUserJoinLeaves: ${content.hideUserJoinLeaves}`
-        // case Event.SpaceImage:
+        // case RiverEvent.SpaceImage:
         //     return `SpaceImage`
-        // case Event.SpaceParent:
+        // case RiverEvent.SpaceParent:
         //     return `parentId: ${content.parentId}`
-        // case Event.Notice:
+        // case RiverEvent.Notice:
         //     return `Notice: msgType: ${content.contentKind ?? 'unknown'}, message: ${
         //         content.message
         //     }`
-        case Event.Fulfillment:
+        case RiverEvent.Fulfillment:
             return `Fulfillment sessionIds: ${
                 content.sessionIds.length ? content.sessionIds.join(',') : 'forNewDevice: true'
             }, from: ${content.from} to: ${content.deviceKey}`
-        case Event.KeySolicitation:
+        case RiverEvent.KeySolicitation:
             if (content.isNewDevice) {
                 return `KeySolicitation deviceKey: ${content.deviceKey}, newDevice: true`
             }
             return `KeySolicitation deviceKey: ${content.deviceKey} sessionIds: ${content.sessionIds.length}`
-        // case Event.RoomMessageMissing:
+        // case RiverEvent.RoomMessageMissing:
         //     return `eventId: ${content.eventId}`
-        case Event.RoomMessageEncryptedWithRef:
+        case RiverEvent.RoomMessageEncryptedWithRef:
             return `refEventId: ${content.refEventId}`
-        case Event.Pin:
+        case RiverEvent.Pin:
             return `pinnedEventId: ${content.pinnedEventId} by: ${content.userId}`
-        case Event.Unpin:
+        case RiverEvent.Unpin:
             return `unpinnedEventId: ${content.unpinnedEventId} by: ${content.userId}`
     }
 }
@@ -1036,28 +1036,28 @@ export function transformAttachments(attachments?: Attachment[]): ChannelMessage
 }
 
 // function getEditsId(content: TimelineEvent_OneOf | undefined): string | undefined {
-//     return content?.kind === Event.RoomMessage ? content.editsEventId : undefined
+//     return content?.kind === RiverEvent.RoomMessage ? content.editsEventId : undefined
 // }
 
 // function getRedactsId(content: TimelineEvent_OneOf | undefined): string | undefined {
-//     return content?.kind === Event.RedactionActionEvent ? content.refEventId : undefined
+//     return content?.kind === RiverEvent.RedactionActionEvent ? content.refEventId : undefined
 // }
 
 function getThreadParentId(content: TimelineEvent_OneOf | undefined): string | undefined {
-    return content?.kind === Event.RoomMessage ? content.threadId : undefined
+    return content?.kind === RiverEvent.RoomMessage ? content.threadId : undefined
 }
 
 function getReplyParentId(content: TimelineEvent_OneOf | undefined): string | undefined {
-    return content?.kind === Event.RoomMessage ? content.replyId : undefined
+    return content?.kind === RiverEvent.RoomMessage ? content.replyId : undefined
 }
 
 function getReactionParentId(content: TimelineEvent_OneOf | undefined): string | undefined {
-    return content?.kind === Event.Reaction ? content.targetEventId : undefined
+    return content?.kind === RiverEvent.Reaction ? content.targetEventId : undefined
 }
 
 function getIsMentioned(content: TimelineEvent_OneOf | undefined, userId: string): boolean {
     //TODO: comparison below should be changed as soon as this HNT-1576 will be resolved
-    return content?.kind === Event.RoomMessage
+    return content?.kind === RiverEvent.RoomMessage
         ? content.mentions.findIndex(
               (x) =>
                   (x.userId ?? '')

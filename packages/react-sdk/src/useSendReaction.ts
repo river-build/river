@@ -5,7 +5,7 @@ import { useMemo } from 'react'
 import { type ActionConfig, useAction } from './internals/useAction'
 import { useSyncAgent } from './useSyncAgent'
 
-export const useReaction = (
+export const useSendReaction = (
     spaceId: string,
     channelId: string,
     config?: ActionConfig<Channel['sendReaction']>,

@@ -92,7 +92,7 @@ export type TimelineEvent_OneOf =
     | RoomMessageEncryptedRefEvent
     | UnpinEvent
 
-export enum Event {
+export enum RiverEvent {
     BlockchainTransaction = 'blockchain.transaction',
     MiniblockHeader = 'm.miniblockheader',
     Notice = 'm.notice',
@@ -129,12 +129,12 @@ export enum Event {
 }
 
 export interface MiniblockHeaderEvent {
-    kind: Event.MiniblockHeader
+    kind: RiverEvent.MiniblockHeader
     message: MiniblockHeader
 }
 
 export interface FulfillmentEvent {
-    kind: Event.Fulfillment
+    kind: RiverEvent.Fulfillment
     sessionIds: string[]
     deviceKey: string
     to: string
@@ -142,52 +142,52 @@ export interface FulfillmentEvent {
 }
 
 export interface KeySolicitationEvent {
-    kind: Event.KeySolicitation
+    kind: RiverEvent.KeySolicitation
     sessionIds: string[]
     deviceKey: string
     isNewDevice: boolean
 }
 
 export interface RoomCreateEvent {
-    kind: Event.RoomCreate
+    kind: RiverEvent.RoomCreate
     creatorId: string
     type?: PayloadCaseType
     spaceId?: string // valid on casablanca channel streams
 }
 
 export interface ChannelCreateEvent {
-    kind: Event.ChannelCreate
+    kind: RiverEvent.ChannelCreate
     creatorId: string
     channelId: string
     channelOp?: ChannelOp
     channelSettings?: SpacePayload_ChannelSettings
 }
 export interface ReactionEvent {
-    kind: Event.Reaction
+    kind: RiverEvent.Reaction
     targetEventId: string
     reaction: string
 }
 
 export interface SpaceUsernameEvent {
-    kind: Event.SpaceUsername
+    kind: RiverEvent.SpaceUsername
     userId: string
     username: string
 }
 
 export interface SpaceDisplayNameEvent {
-    kind: Event.SpaceDisplayName
+    kind: RiverEvent.SpaceDisplayName
     userId: string
     displayName: string
 }
 
 export interface SpaceEnsAddressEvent {
-    kind: Event.SpaceEnsAddress
+    kind: RiverEvent.SpaceEnsAddress
     userId: string
     ensAddress: Uint8Array
 }
 
 export interface SpaceNftEvent {
-    kind: Event.SpaceNft
+    kind: RiverEvent.SpaceNft
     userId: string
     contractAddress: string
     tokenId: string
@@ -195,29 +195,29 @@ export interface SpaceNftEvent {
 }
 
 export interface PinEvent {
-    kind: Event.Pin
+    kind: RiverEvent.Pin
     userId: string
     pinnedEventId: string
 }
 
 export interface UnpinEvent {
-    kind: Event.Unpin
+    kind: RiverEvent.Unpin
     userId: string
     unpinnedEventId: string
 }
 
 export interface RoomMessageEncryptedEvent {
-    kind: Event.RoomMessageEncrypted
+    kind: RiverEvent.RoomMessageEncrypted
     error?: DecryptionSessionError
 }
 
 export interface RoomMessageEncryptedRefEvent {
-    kind: Event.RoomMessageEncryptedWithRef
+    kind: RiverEvent.RoomMessageEncryptedWithRef
     refEventId: string
 }
 
 export interface RoomPropertiesEvent {
-    kind: Event.RoomProperties
+    kind: RiverEvent.RoomProperties
     properties: ChannelProperties
 }
 
@@ -232,7 +232,7 @@ export enum Membership {
 }
 
 export interface RoomMemberEvent {
-    kind: Event.RoomMember
+    kind: RiverEvent.RoomMember
     userId: string
     initiatorId: string
     membership: Membership
@@ -272,7 +272,7 @@ export type RoomMessageEventContentOneOf =
     | RoomMessageEventContent_Text
 
 export interface RoomMessageEvent {
-    kind: Event.RoomMessage
+    kind: RiverEvent.RoomMessage
     threadId?: string
     threadPreview?: string
     replyId?: string
@@ -289,13 +289,13 @@ export interface RoomMessageEvent {
 
 // original event: the event that was redacted
 export interface RedactedEvent {
-    kind: Event.RedactedEvent
+    kind: RiverEvent.RedactedEvent
     isAdminRedaction: boolean
 }
 
 // the event that redacted the original event
 export interface RedactionActionEvent {
-    kind: Event.RedactionActionEvent
+    kind: RiverEvent.RedactionActionEvent
     refEventId: string
     adminRedaction: boolean
 }

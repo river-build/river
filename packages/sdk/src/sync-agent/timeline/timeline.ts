@@ -6,11 +6,24 @@ import { LocalTimelineEvent } from '../../types'
 import { TimelineEvents } from './models/timelineEvents'
 import { Reactions } from './models/reactions'
 import type { TimelineEvent } from './models/timeline-types'
+import { Observable } from '../../observable/observable'
 
 export class Timeline {
     events = new TimelineEvents()
-    reactions = new Reactions()
+    replacedEvents: Observable<
+        Record<string, { oldEvent: TimelineEvent; newEvent: TimelineEvent }>
+    > = new Observable({})
+    // eventId -> TimelineEvent
+    pendingReplacedEvents: Observable<Record<string, TimelineEvent>> = new Observable({})
+    // TODO: thread support
+    // threadsStats: Record<string, ThreadData> =
+    // threads: Record<string, TimelineEvents> = {}
 
+    reactions = new Reactions()
+    // NOTE: for now, we dont need to track this
+    // lastestEventByUser = new TimelineEvents()
+
+    // TODO: we probably wont need this for a while
     filterFn: (event: TimelineEvent, kind: SnapshotCaseType) => boolean = (_event, _kind) => {
         return true
     }
@@ -73,10 +86,16 @@ export class Timeline {
 
     private prependEvents(events: TimelineEvent[], _userId: string) {
         this.events.update((current) => [...events, ...current])
+        for (const event of events) {
+            this.reactions.addEvent(event)
+        }
     }
 
     private appendEvents(events: TimelineEvent[], _userId: string) {
         this.events.update((current) => [...current, ...events])
+        for (const event of events) {
+            this.reactions.addEvent(event)
+        }
     }
 
     private updateEvents(events: TimelineEvent[], _userId: string) {
