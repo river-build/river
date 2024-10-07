@@ -22,20 +22,19 @@ import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Vo
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 import {VotesEnumerable} from "contracts/src/diamond/facets/governance/votes/enumerable/VotesEnumerable.sol";
-import {IntrospectionBase} from "contracts/src/diamond/facets/introspection/IntrospectionBase.sol";
-import {LockBase} from "contracts/src/tokens/lock/LockBase.sol";
+import {IntrospectionFacet} from "contracts/src/diamond/facets/introspection/IntrospectionFacet.sol";
+import {LockFacet} from "contracts/src/tokens/lock/LockFacet.sol";
 
 contract River is
   IOptimismMintableERC20,
   ILegacyMintableERC20,
   ISemver,
-  ILock,
+  Ownable,
   ERC20Permit,
   ERC20Votes,
-  Ownable,
   VotesEnumerable,
-  IntrospectionBase,
-  LockBase
+  LockFacet,
+  IntrospectionFacet
 {
   // =============================================================
   //                           Errors
@@ -144,7 +143,8 @@ contract River is
   // =============================================================
   //                           Votes
   // =============================================================
-  /// @notice Clock used for flagging checkpoints, overriden to implement timestamp based
+
+  /// @notice Clock used for flagging checkpoints, overridden to implement timestamp based
   /// checkpoints (and voting).
   function clock() public view override returns (uint48) {
     return uint48(block.timestamp);
@@ -157,7 +157,7 @@ contract River is
 
   function nonces(
     address owner
-  ) public view virtual override(ERC20Permit, Nonces) returns (uint256) {
+  ) public view override(ERC20Permit, Nonces) returns (uint256) {
     return super.nonces(owner);
   }
 
@@ -166,56 +166,31 @@ contract River is
   // =============================================================
 
   /// @inheritdoc ILock
-  function isLockEnabled(address account) external view virtual returns (bool) {
-    return _lockEnabled(account);
-  }
-
-  function lockCooldown(
-    address account
-  ) external view virtual returns (uint256) {
-    return _lockCooldown(account);
-  }
+  function enableLock(address account) external override onlyOwner {}
 
   /// @inheritdoc ILock
-  function enableLock(address account) external virtual onlyOwner {}
+  function disableLock(address account) external override onlyOwner {}
 
   /// @inheritdoc ILock
-  function disableLock(address account) external virtual onlyOwner {}
-
-  /// @inheritdoc ILock
-  function setLockCooldown(uint256 cooldown) external virtual onlyOwner {
+  function setLockCooldown(uint256 cooldown) external override onlyOwner {
     _setDefaultCooldown(cooldown);
-  }
-
-  // =============================================================
-  //                           IERC165
-  // =============================================================
-
-  /// @inheritdoc IERC165
-  function supportsInterface(bytes4 interfaceId) public view returns (bool) {
-    return _supportsInterface(interfaceId);
   }
 
   // =============================================================
   //                           Hooks
   // =============================================================
+
   function _update(
     address from,
     address to,
     uint256 value
-  ) internal virtual override(ERC20, ERC20Votes) {
+  ) internal override(ERC20, ERC20Votes) {
     if (from != address(0) && _lockEnabled(from)) {
-      // allow transfering at minting time
+      // allow transferring at minting time
       revert River__TransferLockEnabled();
     }
 
     super._update(from, to, value);
-  }
-
-  function _getVotingUnits(
-    address account
-  ) internal view override returns (uint256) {
-    return balanceOf(account);
   }
 
   /// @dev Hook that gets called before any external enable and disable lock function
@@ -223,10 +198,7 @@ contract River is
     return msg.sender == owner();
   }
 
-  function _delegate(
-    address account,
-    address delegatee
-  ) internal virtual override {
+  function _delegate(address account, address delegatee) internal override {
     // revert if the delegatee is the same as the current delegatee
     if (delegates(account) == delegatee) revert River__DelegateeSameAsCurrent();
 
