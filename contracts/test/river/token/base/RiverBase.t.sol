@@ -22,12 +22,10 @@ contract RiverBaseTest is BaseSetup, ILockBase, IOwnableBase {
     0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
 
   River riverFacet;
-  uint256 stakeRequirement;
 
   function setUp() public override {
     super.setUp();
     riverFacet = River(riverToken);
-    stakeRequirement = riverFacet.MIN_TOKEN_THRESHOLD();
   }
 
   function test_init() external view {
@@ -41,7 +39,7 @@ contract RiverBaseTest is BaseSetup, ILockBase, IOwnableBase {
 
   modifier givenCallerHasBridgedTokens(address caller, uint256 amount) {
     vm.assume(caller != address(0));
-    amount = bound(amount, stakeRequirement, type(uint208).max);
+    amount = bound(amount, 0, type(uint208).max);
 
     vm.prank(bridge);
     riverFacet.mint(caller, amount);
@@ -215,8 +213,8 @@ contract RiverBaseTest is BaseSetup, ILockBase, IOwnableBase {
     vm.assume(alice != address(0));
     vm.assume(bob != address(0));
 
-    amountA = bound(amountA, 1, type(uint208).max - stakeRequirement);
-    amountB = bound(amountB, stakeRequirement, type(uint208).max - amountA);
+    amountA = bound(amountA, 1, type(uint208).max - 1);
+    amountB = bound(amountB, 1, type(uint208).max - amountA);
 
     vm.prank(bridge);
     riverFacet.mint(alice, amountA);

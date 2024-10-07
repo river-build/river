@@ -42,7 +42,6 @@ contract River is
   // =============================================================
   error River__TransferLockEnabled();
   error River__DelegateeSameAsCurrent();
-  error River__InvalidTokenAmount();
 
   // =============================================================
   //                           Events
@@ -61,11 +60,6 @@ contract River is
 
   /// @notice Address of the StandardBridge on this network.
   address public immutable BRIDGE;
-
-  // =============================================================
-  //                           Variables
-  // =============================================================
-  uint256 public MIN_TOKEN_THRESHOLD = 10 ether;
 
   // =============================================================
   //                           Modifiers
@@ -203,15 +197,6 @@ contract River is
   }
 
   // =============================================================
-  //                           Token
-  // =============================================================
-  function setTokenThreshold(uint256 threshold) external onlyOwner {
-    if (threshold > totalSupply()) revert River__InvalidTokenAmount();
-    MIN_TOKEN_THRESHOLD = threshold;
-    emit TokenThresholdSet(threshold);
-  }
-
-  // =============================================================
   //                           Hooks
   // =============================================================
   function _update(
@@ -244,10 +229,6 @@ contract River is
   ) internal virtual override {
     // revert if the delegatee is the same as the current delegatee
     if (delegates(account) == delegatee) revert River__DelegateeSameAsCurrent();
-
-    // revert if the balance is below the threshold
-    if (balanceOf(account) < MIN_TOKEN_THRESHOLD)
-      revert River__InvalidTokenAmount();
 
     // if the delegatee is the zero address, initialize disable lock
     if (delegatee == address(0)) {
