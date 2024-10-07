@@ -4489,7 +4489,7 @@ __metadata:
     browser-or-node: ^3.0.0
     debug: ^4.3.4
     dexie: ^4.0.7
-    effect: ^3.8.3
+    effect: ^3.9.0
     eslint: ^8.53.0
     eslint-import-resolver-typescript: ^3.5.5
     eslint-plugin-import: ^2.27.5
@@ -10069,10 +10069,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"effect@npm:^3.8.3":
-  version: 3.8.3
-  resolution: "effect@npm:3.8.3"
-  checksum: 30f967ebc1979f460243c7aa341e14dad0efec78eb266a6e0bbdebf9d10e47dd5f8c84c597f13d1b61b87693f50e8d52c640d2a24c3d1385eae9db56567106db
+"effect@npm:^3.9.0":
+  version: 3.9.0
+  resolution: "effect@npm:3.9.0"
+  checksum: 638df178c5cd29094594ac8d7927e900190f2876686eea895bd669b0be6a2426bf223cc40809430d9a748bada5dd307ec6a58911327ec770c616e857f3f41501
   languageName: node
   linkType: hard
 

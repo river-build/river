@@ -1,3 +1,5 @@
+// Actually, lets use the existing one.
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import type { TODO } from './utils'
 
 type TxRiver = TODO<`Transactional River Client
@@ -8,13 +10,13 @@ type TxRiver = TODO<`Transactional River Client
 
 type OneOf_SpecificInstruction = TODO<'OneOf_SpecificInstruction'>
 
-type I = {
-    listen: (streamId: string) => E.Effect<void, never, never>
-    send: (streamId: string, data: OneOf_SpecificInstruction) => E.Effect<void, never, never>
-}
+// type I = {
+//     listen: (streamId: string) => E.Effect<void, never, never>
+//     send: (streamId: string, data: OneOf_SpecificInstruction) => E.Effect<void, never, never>
+// }
 
-class RiverClient extends Context.Tag('RiverClient')<TODO, TxRiver> {}
+// class RiverClient extends Context.Tag('RiverClient')<TODO, TxRiver> {}
 
-const mkTxRiver = E.gen(function* () {
-    const riverClient = yield* RiverClient
-})
+// const mkTxRiver = E.gen(function* () {
+//     const riverClient = yield* RiverClient
+// })
