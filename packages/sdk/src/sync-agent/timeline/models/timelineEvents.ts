@@ -1,5 +1,5 @@
 import { Observable } from '../../../observable/observable'
-import { TimelineEvent } from './timelineEvent'
+import type { TimelineEvent } from './timeline-types'
 
 export class TimelineEvents extends Observable<TimelineEvent[]> {
     constructor(initialValue: TimelineEvent[] = []) {
