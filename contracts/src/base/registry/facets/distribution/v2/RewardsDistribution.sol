@@ -52,7 +52,8 @@ contract RewardsDistribution is IRewardsDistribution, OwnableBase, Facet {
 
   function stake(
     uint96 amount,
-    address delegatee
+    address delegatee,
+    address beneficiary
   ) external onlyOperatorOrSpace(delegatee) returns (uint256 depositId) {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
@@ -60,7 +61,7 @@ contract RewardsDistribution is IRewardsDistribution, OwnableBase, Facet {
       msg.sender,
       amount,
       delegatee,
-      msg.sender,
+      beneficiary,
       _getCommissionRate(delegatee)
     );
   }
