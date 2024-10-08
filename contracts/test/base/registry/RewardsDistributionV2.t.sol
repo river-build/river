@@ -43,14 +43,20 @@ contract RewardsDistributionV2Test is BaseSetup {
   function test_fuzz_stake(
     uint96 amount,
     address operator,
-    uint256 commissionRate
+    uint256 commissionRate,
+    address beneficiary
   ) public givenOperator(operator, commissionRate) {
+    vm.assume(beneficiary != address(0));
     amount = uint96(bound(amount, 1, type(uint96).max));
     commissionRate = bound(commissionRate, 0, 10000);
 
     bridgeTokensForUser(address(this), amount);
     river.approve(address(rewardsDistributionFacet), amount);
-    uint256 depositId = rewardsDistributionFacet.stake(amount, operator);
+    uint256 depositId = rewardsDistributionFacet.stake(
+      amount,
+      operator,
+      beneficiary
+    );
 
     verifyStake(
       address(this),
@@ -58,7 +64,7 @@ contract RewardsDistributionV2Test is BaseSetup {
       amount,
       operator,
       commissionRate,
-      address(this)
+      beneficiary
     );
   }
 
@@ -66,8 +72,10 @@ contract RewardsDistributionV2Test is BaseSetup {
     uint256 privateKey,
     uint96 amount,
     address operator,
-    uint256 commissionRate
+    uint256 commissionRate,
+    address beneficiary
   ) public givenOperator(operator, commissionRate) {
+    vm.assume(beneficiary != address(0));
     amount = uint96(bound(amount, 1, type(uint96).max));
     commissionRate = bound(commissionRate, 0, 10000);
 
@@ -88,20 +96,14 @@ contract RewardsDistributionV2Test is BaseSetup {
     uint256 depositId = rewardsDistributionFacet.permitAndStake(
       amount,
       operator,
-      user,
+      beneficiary,
       deadline,
       v,
       r,
       s
     );
 
-    verifyStake(user, depositId, amount, operator, commissionRate, user);
-  }
-
-  function bridgeTokensForUser(address user, uint256 amount) internal {
-    vm.assume(user != address(0));
-    vm.prank(bridge);
-    river.mint(user, amount);
+    verifyStake(user, depositId, amount, operator, commissionRate, beneficiary);
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -156,6 +158,12 @@ contract RewardsDistributionV2Test is BaseSetup {
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                           HELPER                           */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  function bridgeTokensForUser(address user, uint256 amount) internal {
+    vm.assume(user != address(0));
+    vm.prank(bridge);
+    river.mint(user, amount);
+  }
 
   function verifyStake(
     address depositor,
