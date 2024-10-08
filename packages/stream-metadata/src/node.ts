@@ -41,7 +41,7 @@ logger.info(
 		cloudfront: config.cloudfront,
 		openSea: config.openSea ? { ...config.openSea, apiKey: '***' } : undefined,
 	},
-	'config',
+	'starting server',
 )
 
 /*
