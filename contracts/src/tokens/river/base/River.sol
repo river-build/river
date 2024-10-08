@@ -199,8 +199,10 @@ contract River is
   }
 
   function _delegate(address account, address delegatee) internal override {
+    address currentDelegatee = delegates(account);
+
     // revert if the delegatee is the same as the current delegatee
-    if (delegates(account) == delegatee) revert River__DelegateeSameAsCurrent();
+    if (currentDelegatee == delegatee) revert River__DelegateeSameAsCurrent();
 
     // if the delegatee is the zero address, initialize disable lock
     if (delegatee == address(0)) {
@@ -209,7 +211,6 @@ contract River is
       if (!_lockEnabled(account)) _enableLock(account);
     }
 
-    address currentDelegatee = delegates(account);
     super._delegate(account, delegatee);
 
     _setDelegators(account, delegatee, currentDelegatee);
