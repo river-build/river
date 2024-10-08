@@ -38,22 +38,28 @@ export class Reactions extends Observable<ReactionsMap> {
 
     addEvent(event: TimelineEvent) {
         const parentId = event.reactionParentId
-        const content = event.content?.kind === RiverEvent.Reaction ? event.content : undefined
-        if (!content || !parentId) {
+        if (!parentId) {
             return
+        }
+        this.update((reactions) => ({
+            ...reactions,
+            [parentId]: this.addReaction(event, reactions[parentId]),
+        }))
+    }
+
+    private addReaction(event: TimelineEvent, entry?: MessageReactions): MessageReactions {
+        const content = event.content?.kind === RiverEvent.Reaction ? event.content : undefined
+        if (!content) {
+            return entry ?? {}
         }
         const reactionName = content.reaction
         const senderId = event.sender.id
-        this.update((current) => ({
-            ...current,
-            [parentId]: {
-                ...current[reactionName],
-                [reactionName]: {
-                    [senderId]: {
-                        eventId: event.eventId,
-                    },
-                },
+        return {
+            ...entry,
+            [reactionName]: {
+                ...entry?.[reactionName],
+                [senderId]: { eventId: event.eventId },
             },
-        }))
+        }
     }
 }

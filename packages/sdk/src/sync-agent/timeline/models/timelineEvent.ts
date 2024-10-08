@@ -43,6 +43,7 @@ import {
     type RoomMessageEncryptedEvent,
     type RoomPropertiesEvent,
     RiverEvent,
+    type RedactedEvent,
 } from './timeline-types'
 import type { PlainMessage } from '@bufbuild/protobuf'
 import { userIdFromAddress, streamIdFromBytes, streamIdAsString } from '../../../id'
@@ -1081,5 +1082,112 @@ export function toMembership(membershipOp?: MembershipOp): Membership {
             return Membership.None
         default:
             checkNever(membershipOp)
+    }
+}
+
+export function toReplacedMessageEvent(prev: TimelineEvent, next: TimelineEvent): TimelineEvent {
+    if (!canReplaceEvent(prev, next)) {
+        return prev
+    } else if (
+        next.content?.kind === RiverEvent.RoomMessage &&
+        prev.content?.kind === RiverEvent.RoomMessage
+    ) {
+        // when we replace an event, we copy the content up to the root event
+        // so we keep the prev id, but use the next content
+        const isLocalId = prev.eventId.startsWith('~')
+        const eventId = !isLocalId ? prev.eventId : next.eventId
+
+        return {
+            ...next,
+            eventId: eventId,
+            eventNum: prev.eventNum,
+            latestEventId: next.eventId,
+            latestEventNum: next.eventNum,
+            confirmedEventNum: prev.confirmedEventNum ?? next.confirmedEventNum,
+            confirmedInBlockNum: prev.confirmedInBlockNum ?? next.confirmedInBlockNum,
+            createdAtEpochMs: prev.createdAtEpochMs,
+            updatedAtEpochMs: next.createdAtEpochMs,
+            content: {
+                ...next.content,
+                threadId: prev.content.threadId,
+            },
+            threadParentId: prev.threadParentId,
+            reactionParentId: prev.reactionParentId,
+            sender: prev.sender,
+        }
+    } else if (next.content?.kind === RiverEvent.RedactedEvent) {
+        // for redacted events, carry over previous pointers to content
+        // we don't want to lose thread info
+        return {
+            ...next,
+            eventId: prev.eventId,
+            eventNum: prev.eventNum,
+            latestEventId: next.eventId,
+            latestEventNum: next.eventNum,
+            confirmedEventNum: prev.confirmedEventNum ?? next.confirmedEventNum,
+            confirmedInBlockNum: prev.confirmedInBlockNum ?? next.confirmedInBlockNum,
+            createdAtEpochMs: prev.createdAtEpochMs,
+            updatedAtEpochMs: next.createdAtEpochMs,
+            threadParentId: prev.threadParentId,
+            reactionParentId: prev.reactionParentId,
+        }
+    } else if (prev.content?.kind === RiverEvent.RedactedEvent) {
+        // replacing a redacted event should maintain the redacted state
+        return {
+            ...prev,
+            latestEventId: next.eventId,
+            latestEventNum: next.eventNum,
+            confirmedEventNum: prev.confirmedEventNum ?? next.confirmedEventNum,
+            confirmedInBlockNum: prev.confirmedInBlockNum ?? next.confirmedInBlockNum,
+        }
+    } else {
+        // make sure we carry the createdAtEpochMs of the previous event
+        // so we don't end up with a timeline that has events out of order.
+        return {
+            ...next,
+            eventId: prev.eventId,
+            eventNum: prev.eventNum,
+            latestEventId: next.eventId,
+            latestEventNum: next.eventNum,
+            confirmedEventNum: prev.confirmedEventNum ?? next.confirmedEventNum,
+            confirmedInBlockNum: prev.confirmedInBlockNum ?? next.confirmedInBlockNum,
+            createdAtEpochMs: prev.createdAtEpochMs,
+            updatedAtEpochMs: next.createdAtEpochMs,
+        }
+    }
+}
+
+function canReplaceEvent(prev: TimelineEvent, next: TimelineEvent): boolean {
+    if (next.content?.kind === RiverEvent.RedactedEvent && next.content.isAdminRedaction) {
+        return true
+    }
+    if (next.sender.id === prev.sender.id) {
+        return true
+    }
+    return false
+}
+
+export function getEditsId(content: TimelineEvent_OneOf | undefined): string | undefined {
+    return content?.kind === RiverEvent.RoomMessage ? content.editsEventId : undefined
+}
+
+export function getRedactsId(content: TimelineEvent_OneOf | undefined): string | undefined {
+    return content?.kind === RiverEvent.RedactionActionEvent ? content.refEventId : undefined
+}
+
+export function makeRedactionEvent(redactionAction: TimelineEvent): TimelineEvent {
+    if (redactionAction.content?.kind !== RiverEvent.RedactionActionEvent) {
+        throw new Error('makeRedactionEvent called with non-redaction action event')
+    }
+    const newContent = {
+        kind: RiverEvent.RedactedEvent,
+        isAdminRedaction: redactionAction.content.adminRedaction,
+    } satisfies RedactedEvent
+
+    return {
+        ...redactionAction,
+        content: newContent,
+        fallbackContent: getFallbackContent('', newContent),
+        isRedacted: true,
     }
 }
