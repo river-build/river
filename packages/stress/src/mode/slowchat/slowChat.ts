@@ -1,6 +1,7 @@
 import { dlogger } from '@river-build/dlog'
 import { StressClient } from '../../utils/stressClient'
 import { ChatConfig } from '../common/types'
+import { RiverEvent, type TimelineEvent } from '@river-build/sdk'
 
 export async function slowChat(client: StressClient, chatConfig: ChatConfig) {
     const logger = dlogger(`stress:slowChat:${client.logId}`)
@@ -54,12 +55,17 @@ export async function slowChat(client: StressClient, chatConfig: ChatConfig) {
             .getSpace(chatConfig.spaceId)
             .getChannel(channelId)
             .timeline.events.value.filter((event) =>
-                event.text.includes(`${chatConfig.sessionId}:`),
+                checkTextInMessageEvent(event, `${chatConfig.sessionId}:`),
             )
         for (const message of messages) {
-            if (!seenMessages.includes(message.text)) {
-                //logger.log(`I seen it: ${message.text}`)
-                seenMessages.push(message.text)
+            if (
+                !seenMessages.includes(
+                    message.content?.kind === RiverEvent.RoomMessage ? message.content?.body : '',
+                )
+            ) {
+                seenMessages.push(
+                    message.content?.kind === RiverEvent.RoomMessage ? message.content?.body : '',
+                )
             }
         }
 
@@ -82,3 +88,6 @@ export async function slowChat(client: StressClient, chatConfig: ChatConfig) {
 
     logger.log('result', { clientIndex: client.clientIndex, sentMessages, seenMessages })
 }
+
+const checkTextInMessageEvent = (event: TimelineEvent, message: string) =>
+    event.content?.kind === RiverEvent.RoomMessage && event.content?.body.includes(message)
