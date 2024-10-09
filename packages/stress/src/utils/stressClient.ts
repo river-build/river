@@ -10,7 +10,7 @@ import {
 } from '@river-build/sdk'
 import { type ExportedDevice } from '@river-build/encryption'
 import { LocalhostWeb3Provider, SpaceDapp } from '@river-build/web3'
-import { dlogger, shortenHexString } from '@river-build/dlog'
+import { shortenHexString } from '@river-build/dlog'
 import { Wallet } from 'ethers'
 import { PlainMessage } from '@bufbuild/protobuf'
 import { ChannelMessage_Post_Attachment, ChannelMessage_Post_Mention } from '@river-build/proto'
@@ -18,7 +18,9 @@ import { waitFor } from './waitFor'
 import { IStorage } from './storage'
 import { makeHttp2StreamRpcClient } from './rpc-http2'
 import { sha256 } from 'ethers/lib/utils'
-const logger = dlogger('stress:stressClient')
+import { getLogger } from './logger'
+
+const logger = getLogger('stressClient')
 
 export async function makeStressClient(
     config: RiverConfig,
@@ -80,7 +82,7 @@ export class StressClient {
         public globalPersistedStore: IStorage | undefined,
         public storageKey: string,
     ) {
-        logger.log('StressClient', {
+        logger.info('StressClient', {
             clientIndex,
             userId,
             logId: this.logId,
@@ -174,7 +176,7 @@ export class StressClient {
                     this.storageKey,
                     JSON.stringify(device, null, 2),
                 )
-                logger.log(`Device exported to ${this.storageKey}`)
+                logger.info(`Device exported to ${this.storageKey}`)
             } catch (e) {
                 logger.error('Failed to export device', e)
             }

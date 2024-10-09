@@ -1,19 +1,20 @@
-import { check, dlogger, shortenHexString } from '@river-build/dlog'
+import { check, shortenHexString } from '@river-build/dlog'
 import { StressClient } from '../../utils/stressClient'
 import { ChatConfig } from '../common/types'
 import { getSystemInfo } from '../../utils/systemInfo'
 import { channelMessagePostWhere } from '../../utils/timeline'
 import { isDefined } from '@river-build/sdk'
 import { makeCodeBlock } from '../../utils/messages'
+import { getLogger } from '../../utils/logger'
 
+const logger = getLogger('stress:summarizeChat')
 export async function sumarizeChat(
     localClients: StressClient[],
     cfg: ChatConfig,
     errors: unknown[],
 ) {
-    const logger = dlogger('stress:sumarizeChat')
     const processLeadClient = localClients[0]
-    logger.log('sumarizeChat', processLeadClient.userId)
+    logger.debug('sumarizeChat', processLeadClient.userId)
     const defaultChannel = processLeadClient.streamsClient.stream(cfg.announceChannelId)
     check(isDefined(defaultChannel), 'defaultChannel not found')
     // find the message in the default channel that contains the session id, this should already be there decrypted
@@ -22,7 +23,7 @@ export async function sumarizeChat(
     )
 
     if (!message) {
-        logger.error('message not found', { defaultChannel })
+        logger.error({ defaultChannel }, 'message not found')
         return {
             containerIndex: cfg.containerIndex,
             processIndex: cfg.processIndex,

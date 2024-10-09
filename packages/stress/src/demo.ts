@@ -1,22 +1,23 @@
 import 'fake-indexeddb/auto' // used to mock indexdb in dexie, don't remove
 import { isDecryptedEvent, makeRiverConfig, randomUrlSelector } from '@river-build/sdk'
-import { check, dlogger } from '@river-build/dlog'
+import { check } from '@river-build/dlog'
 import { InfoRequest } from '@river-build/proto'
 import { EncryptionDelegate } from '@river-build/encryption'
 import { makeStressClient } from './utils/stressClient'
 import { expect, isSet } from './utils/expect'
-import { printSystemInfo } from './utils/systemInfo'
+import { getSystemInfo } from './utils/systemInfo'
 import { waitFor } from './utils/waitFor'
 import { ethers, Wallet } from 'ethers'
 import { RedisStorage } from './utils/storage'
 import { makeHttp2StreamRpcClient } from './utils/rpc-http2'
 import { createRiverRegistry } from '@river-build/web3'
+import { getLogger } from './utils/logger'
 
 check(isSet(process.env.RIVER_ENV), 'process.env.RIVER_ENV')
 
-const logger = dlogger('stress:index')
+const logger = getLogger('stress:index')
 const config = makeRiverConfig(process.env.RIVER_ENV)
-logger.info('config', config)
+logger.info(config, 'config')
 
 function getRootWallet() {
     check(isSet(process.env.MNEMONIC), 'process.env.MNEMONIC')
@@ -34,22 +35,22 @@ async function spamInfo(count: number) {
         riverRegistry.getOperationalNodeUrls(),
     )
     for (let i = 0; i < count; i++) {
-        logger.log(`iteration ${i}`)
+        logger.info(`iteration ${i}`)
         const info = await rpcClient.info(new InfoRequest({}), {
             timeoutMs: 10000,
         })
-        printSystemInfo(logger)
-        logger.log(`info ${i}`, info)
+        logger.info(getSystemInfo(), 'system info')
+        logger.info(info, `info ${i}`)
     }
 }
 
 async function sendAMessage() {
-    logger.log('=======================send a message - start =======================')
+    logger.info('=======================send a message - start =======================')
     const bob = await makeStressClient(config, 0, getRootWallet(), undefined)
     const { spaceId, defaultChannelId } = await bob.createSpace("bob's space")
     await bob.sendMessage(defaultChannelId, 'hello')
 
-    logger.log('=======================send a message - make alice =======================')
+    logger.info('=======================send a message - make alice =======================')
     const alice = await makeStressClient(config, 1, undefined, undefined)
     await bob.spaceDapp.joinSpace(
         spaceId,
@@ -57,22 +58,22 @@ async function sendAMessage() {
         bob.baseProvider.wallet,
     )
     await alice.joinSpace(spaceId, { skipMintMembership: true })
-    logger.log('=======================send a message - alice join space =======================')
+    logger.info('=======================send a message - alice join space =======================')
     const channel = await alice.streamsClient.waitForStream(defaultChannelId)
-    logger.log('=======================send a message - alice wait =======================')
+    logger.info('=======================send a message - alice wait =======================')
     await waitFor(() => channel.view.timeline.filter(isDecryptedEvent).length > 0)
-    logger.log('alices sees: ', channel.view.timeline.filter(isDecryptedEvent))
-    logger.log('=======================send a message - alice sends =======================')
+    logger.info('alices sees: ', channel.view.timeline.filter(isDecryptedEvent))
+    logger.info('=======================send a message - alice sends =======================')
     await alice.sendMessage(defaultChannelId, 'hi bob')
-    logger.log('=======================send a message - alice sent =======================')
+    logger.info('=======================send a message - alice sent =======================')
     const bobChannel = await bob.streamsClient.waitForStream(defaultChannelId)
-    logger.log('=======================send a message - bob wait =======================')
+    logger.info('=======================send a message - bob wait =======================')
     await waitFor(() => bobChannel.view.timeline.filter(isDecryptedEvent).length > 0) // bob doesn't decrypt his own messages
-    logger.log('bob sees: ', bobChannel.view.timeline.filter(isDecryptedEvent))
+    logger.info('bob sees: ', bobChannel.view.timeline.filter(isDecryptedEvent))
 
     await bob.stop()
     await alice.stop()
-    logger.log('=======================send a message - done =======================')
+    logger.info('=======================send a message - done =======================')
 }
 
 async function encryptDecrypt() {
@@ -135,21 +136,21 @@ async function demoExternalStoreage() {
     }
 }
 
-printSystemInfo(logger)
+logger.info(getSystemInfo(), 'system info')
 
 const run = async () => {
-    logger.log('========================storage========================')
+    logger.info('========================storage========================')
     await demoExternalStoreage()
-    logger.log('==========================spamInfo==========================')
+    logger.info('==========================spamInfo==========================')
     await spamInfo(1)
-    logger.log('=======================encryptDecrypt=======================')
+    logger.info('=======================encryptDecrypt=======================')
     await encryptDecrypt()
-    logger.log('========================sendAMessage========================')
+    logger.info('========================sendAMessage========================')
     await sendAMessage()
     process.exit(0)
 }
 
 run().catch((e) => {
-    logger.error('unhandled error:', e)
+    logger.error(e, 'unhandled error:')
     process.exit(1)
 })

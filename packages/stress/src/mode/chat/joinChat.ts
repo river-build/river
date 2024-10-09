@@ -1,18 +1,18 @@
 import { StressClient } from '../../utils/stressClient'
 import { ChatConfig } from '../common/types'
-import { dlogger } from '@river-build/dlog'
 import { getRandomEmoji } from '../../utils/emoji'
 import { getSystemInfo } from '../../utils/systemInfo'
 import { channelMessagePostWhere } from '../../utils/timeline'
 import { makeSillyMessage } from '../../utils/messages'
+import { getLogger } from '../../utils/logger'
 
 export async function joinChat(client: StressClient, cfg: ChatConfig) {
-    const logger = dlogger(`stress:joinChat:${client.logId}}`)
+    const logger = getLogger('stress:joinChat', { logId: client.logId })
     // is user a member of all the channels?
     // is user a member of the space?
     // does user exist on the stream node?
 
-    logger.log('joinChat', client.userId)
+    logger.info(client.userId, 'joinChat')
 
     // wait for the user to have a membership nft
     await client.waitFor(
@@ -23,7 +23,7 @@ export async function joinChat(client: StressClient, cfg: ChatConfig) {
         },
     )
 
-    logger.log(`start client #${client.clientIndex}`)
+    logger.info({ clientIndex: client.clientIndex }, 'start client')
 
     const announceChannelId = cfg.announceChannelId
     // start up the client
@@ -43,8 +43,9 @@ export async function joinChat(client: StressClient, cfg: ChatConfig) {
                         v.remoteEvent?.event.payload.value?.content.case === 'message',
                 )
                 const decryptedCount = cms.filter((v) => v.decryptedContent).length
-                logger.log(
-                    `waiting for root message #${client.clientIndex} ${decryptedCount}/${cms.length}`,
+                logger.info(
+                    { clientIndex: client.clientIndex, decryptedCount, totalCount: cms.length },
+                    'waiting for root message',
                 )
             }
             count++
@@ -56,11 +57,11 @@ export async function joinChat(client: StressClient, cfg: ChatConfig) {
     )
 
     if (client.clientIndex === cfg.localClients.startIndex) {
-        logger.log('sharing keys')
+        logger.info({ clientIndex: client.clientIndex }, 'sharing keys')
         await client.streamsClient.cryptoBackend?.ensureOutboundSession(announceChannelId, {
             awaitInitialShareSession: true,
         })
-        logger.log('check in with root client')
+        logger.info('check in with root client')
         await client.sendMessage(
             announceChannelId,
             `c${cfg.containerIndex}p${cfg.processIndex} Starting up! freeMemory: ${
@@ -70,12 +71,12 @@ export async function joinChat(client: StressClient, cfg: ChatConfig) {
         )
     }
 
-    logger.log('emoji it')
+    logger.info('emoji it')
 
     // emoji it
     await client.sendReaction(announceChannelId, message.hashStr, getRandomEmoji())
 
-    logger.log('join channels')
+    logger.info('join channels')
     for (const channelId of cfg.channelIds) {
         if (
             !client.streamsClient.streams
@@ -95,7 +96,7 @@ export async function joinChat(client: StressClient, cfg: ChatConfig) {
         )
     }
 
-    logger.log('done')
+    logger.info('done')
 }
 
 // cruft we need to do for process leader
