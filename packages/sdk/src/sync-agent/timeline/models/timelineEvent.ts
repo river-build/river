@@ -1191,3 +1191,14 @@ export function makeRedactionEvent(redactionAction: TimelineEvent): TimelineEven
         isRedacted: true,
     }
 }
+
+export function getMessageSenderId(event: TimelineEvent): string | undefined {
+    if (!getRoomMessageContent(event)) {
+        return undefined
+    }
+    return event.sender.id
+}
+
+export function getRoomMessageContent(event?: TimelineEvent): RoomMessageEvent | undefined {
+    return event?.content?.kind === RiverEvent.RoomMessage ? event.content : undefined
+}

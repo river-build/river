@@ -15,17 +15,18 @@ import { Reactions } from './models/reactions'
 import type { TimelineEvent, TimelineEventConfirmation } from './models/timeline-types'
 import { PendingReplacedEvents } from './models/pendingReplacedEvents'
 import { ReplacedEvents } from './models/replacedEvents'
+import { ThreadStats } from './models/threadStats'
+import { Threads } from './models/threads'
 
 export class MessageTimeline {
     events = new TimelineEvents()
     replacedEvents = new ReplacedEvents()
     pendingReplacedEvents = new PendingReplacedEvents()
-    // TODO: thread support
-    // threadsStats: Record<string, ThreadData> =
-    // threads: Record<string, TimelineEvents> = {}
-
+    threadsStats = new ThreadStats()
+    threads = new Threads()
     reactions = new Reactions()
-    // NOTE: for now, we dont need to track this
+
+    // TODO: figure out a better way to do online check
     // lastestEventByUser = new TimelineEvents()
 
     // TODO: we probably wont need this for a while
@@ -50,6 +51,8 @@ export class MessageTimeline {
 
     private reset() {
         this.events.reset()
+        this.threads.reset()
+        this.threadsStats.reset()
         this.reactions.reset()
         // this.pendingReplacedEvents.reset()
         this.replacedEvents.reset()
@@ -126,11 +129,14 @@ export class MessageTimeline {
 
         this.events.prepend(timelineEvent)
         this.reactions.addEvent(timelineEvent)
-        // TODO: threads
+        this.threads.add(timelineEvent)
+        this.threadsStats.add(this.userId, timelineEvent, this.events.value)
     }
 
     private appendEvent(_userId: string, event: TimelineEvent) {
         this.events.append(event)
+        this.threads.add(event)
+        this.threadsStats.add(this.userId, event, this.events.value)
         this.reactions.addEvent(event)
     }
 
@@ -161,7 +167,23 @@ export class MessageTimeline {
         this.replacedEvents.add(event.eventId, oldEvent, newEvent)
         this.reactions.removeEvent(oldEvent)
         this.reactions.addEvent(newEvent)
-        // TODO: threads
+        this.threadsStats.remove(oldEvent)
+        this.threadsStats.add(this.userId, newEvent, this.events.value)
+
+        const threadTimeline = newEvent.threadParentId
+            ? this.threads.get(newEvent.threadParentId)
+            : undefined
+        const threadEventIndex =
+            threadTimeline?.findIndex(
+                (e) =>
+                    e.eventId === replacedEventId ||
+                    (e.localEventId && e.localEventId === newEvent.localEventId),
+            ) ?? -1
+        if (threadEventIndex !== -1) {
+            this.threads.replace(newEvent, threadEventIndex)
+        } else {
+            this.threads.add(newEvent)
+        }
     }
 
     private appendEvents(events: TimelineEvent[], _userId: string) {
@@ -240,8 +262,6 @@ export class MessageTimeline {
                 this.appendEvent(this.userId, event)
             }
         }
-
-        // TODO: update latestEventsByUser
     }
 
     private removeEvent(eventId: string) {
@@ -252,5 +272,7 @@ export class MessageTimeline {
         const event = this.events.value[eventIndex]
         this.events.removeByIndex(eventIndex)
         this.reactions.removeEvent(event)
+        this.threadsStats.remove(event)
+        this.threads.remove(event)
     }
 }
