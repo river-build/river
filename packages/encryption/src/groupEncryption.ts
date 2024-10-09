@@ -43,7 +43,7 @@ export class GroupEncryption extends EncryptionAlgorithm {
             if (opts?.awaitInitialShareSession === true) {
                 await promise
             } else {
-                // await the promise but timeout after 15 seconds
+                // await the promise but timeout after N seconds
                 const waitTimeBeforeMovingOn = 30000
                 await Promise.race([
                     promise,
