@@ -76,6 +76,7 @@ library StakingRewards {
   /*                           ERRORS                           */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
+  error StakingRewards__InvalidAmount();
   error StakingRewards__InvalidAddress();
   error StakingRewards__InvalidRewardRate();
   error StakingRewards__InsufficientReward();
@@ -163,10 +164,10 @@ library StakingRewards {
     address beneficiary,
     uint256 commissionRate
   ) internal returns (uint256 depositId) {
-    if (delegatee == address(0)) {
-      CustomRevert.revertWith(StakingRewards__InvalidAddress.selector);
+    if (amount == 0) {
+      CustomRevert.revertWith(StakingRewards__InvalidAmount.selector);
     }
-    if (beneficiary == address(0)) {
+    if (delegatee == address(0) || beneficiary == address(0)) {
       CustomRevert.revertWith(StakingRewards__InvalidAddress.selector);
     }
 
@@ -342,6 +343,7 @@ library StakingRewards {
     address oldProxy = ds.delegationProxies[oldDelegatee];
     deposit.delegatee = newDelegatee;
     address newProxy = retrieveOrDeployProxy(ds, newDelegatee);
+    // TODO: revise
     ds.stakeToken.safeTransferFrom(oldProxy, newProxy, amount);
   }
 

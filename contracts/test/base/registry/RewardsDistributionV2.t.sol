@@ -3,6 +3,7 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {IERC173} from "contracts/src/diamond/facets/ownable/IERC173.sol";
+import {IRewardsDistributionBase} from "contracts/src/base/registry/facets/distribution/v2/IRewardsDistribution.sol";
 
 // contracts
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
@@ -13,7 +14,7 @@ import {SpaceDelegationFacet} from "contracts/src/base/registry/facets/delegatio
 import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistribution.sol";
 import {StakingRewards} from "contracts/src/base/registry/facets/distribution/v2/StakingRewards.sol";
 
-contract RewardsDistributionV2Test is BaseSetup {
+contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
   bytes32 private constant PERMIT_TYPEHASH =
     keccak256(
       "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
@@ -24,6 +25,8 @@ contract RewardsDistributionV2Test is BaseSetup {
   MainnetDelegation internal mainnetDelegationFacet;
   RewardsDistribution internal rewardsDistributionFacet;
   SpaceDelegationFacet internal spaceDelegationFacet;
+
+  address internal OPERATOR = makeAddr("OPERATOR");
 
   function setUp() public override {
     super.setUp();
@@ -38,6 +41,27 @@ contract RewardsDistributionV2Test is BaseSetup {
 
     vm.prank(deployer);
     rewardsDistributionFacet.setStakeAndRewardTokens(riverToken, riverToken);
+  }
+
+  function test_stake_revertIf_notOperator() public {
+    vm.expectRevert(RewardsDistribution__NotOperatorOrSpace.selector);
+    rewardsDistributionFacet.stake(1, address(this), address(this));
+  }
+
+  function test_stake_revertIf_amountIsZero()
+    public
+    givenOperator(OPERATOR, 0)
+  {
+    vm.expectRevert(StakingRewards.StakingRewards__InvalidAmount.selector);
+    rewardsDistributionFacet.stake(0, OPERATOR, address(this));
+  }
+
+  function test_stake_revertIf_beneficiaryIsZero()
+    public
+    givenOperator(OPERATOR, 0)
+  {
+    vm.expectRevert(StakingRewards.StakingRewards__InvalidAddress.selector);
+    rewardsDistributionFacet.stake(1, OPERATOR, address(0));
   }
 
   function test_fuzz_stake(
