@@ -130,6 +130,61 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     verifyStake(user, depositId, amount, operator, commissionRate, beneficiary);
   }
 
+  function test_increaseStake_revertIf_notDepositor()
+    public
+    givenOperator(OPERATOR, 0)
+  {
+    uint96 amount = 1 ether;
+    bridgeTokensForUser(address(this), amount);
+    river.approve(address(rewardsDistributionFacet), amount);
+    uint256 depositId = rewardsDistributionFacet.stake(
+      amount,
+      OPERATOR,
+      address(this)
+    );
+
+    vm.prank(_randomAddress());
+    vm.expectRevert(RewardsDistribution__NotDepositOwner.selector);
+    rewardsDistributionFacet.increaseStake(depositId, 1);
+  }
+
+  function test_increaseStake_pokeOnly() public {
+    test_fuzz_increaseStake(1 ether, 0, OPERATOR, 0, address(this));
+  }
+
+  function test_fuzz_increaseStake(
+    uint96 amount0,
+    uint96 amount1,
+    address operator,
+    uint256 commissionRate,
+    address beneficiary
+  ) public givenOperator(operator, commissionRate) {
+    vm.assume(beneficiary != address(0));
+    amount0 = uint96(bound(amount0, 1, type(uint96).max));
+    amount1 = uint96(bound(amount1, 0, type(uint96).max - amount0));
+    commissionRate = bound(commissionRate, 0, 10000);
+
+    uint96 totalAmount = amount0 + amount1;
+    bridgeTokensForUser(address(this), totalAmount);
+    river.approve(address(rewardsDistributionFacet), totalAmount);
+    uint256 depositId = rewardsDistributionFacet.stake(
+      amount0,
+      operator,
+      beneficiary
+    );
+
+    rewardsDistributionFacet.increaseStake(depositId, amount1);
+
+    verifyStake(
+      address(this),
+      depositId,
+      totalAmount,
+      operator,
+      commissionRate,
+      beneficiary
+    );
+  }
+
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                          OPERATOR                          */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
