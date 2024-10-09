@@ -29,17 +29,17 @@ library RuleEntitlementUtil {
     returns (IRuleEntitlementBase.RuleDataV2 memory data)
   {
     data = IRuleEntitlementBase.RuleDataV2({
-      operations: new IRuleEntitlementBase.Operation[](0),
+      operations: new IRuleEntitlementBase.Operation[](1),
       checkOperations: new IRuleEntitlementBase.CheckOperationV2[](0),
       logicalOperations: new IRuleEntitlementBase.LogicalOperation[](0)
     });
-    // IRuleEntitlementBase.Operation memory noop = IRuleEntitlementBase
-    //   .Operation({
-    //     opType: IRuleEntitlementBase.CombinedOperationType.NONE,
-    //     index: 0
-    //   });
+    IRuleEntitlementBase.Operation memory noop = IRuleEntitlementBase
+      .Operation({
+        opType: IRuleEntitlementBase.CombinedOperationType.NONE,
+        index: 0
+      });
 
-    // data.operations[0] = noop;
+    data.operations[0] = noop;
   }
 
   function getMockERC721RuleData()
