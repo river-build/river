@@ -13,19 +13,24 @@ describe('syncAgents.test.ts', () => {
     logger.log('start')
     const bobUser = new Bot()
     const aliceUser = new Bot()
+    const charlieUser = new Bot()
     let bob: SyncAgent
     let alice: SyncAgent
+    let charlie: SyncAgent
 
     beforeEach(async () => {
         await bobUser.fundWallet()
         await aliceUser.fundWallet()
+        await charlieUser.fundWallet()
         bob = await bobUser.makeSyncAgent()
         alice = await aliceUser.makeSyncAgent()
+        charlie = await charlieUser.makeSyncAgent()
     })
 
     afterEach(async () => {
         await bob.stop()
         await alice.stop()
+        await charlie.stop()
     })
 
     test('syncAgents', async () => {
@@ -135,10 +140,10 @@ describe('syncAgents.test.ts', () => {
     })
 
     test('gdm', async () => {
-        await Promise.all([bob.start(), alice.start()])
-        const { streamId } = await bob.gdms.createGDM([alice.userId])
+        await Promise.all([bob.start(), alice.start(), charlie.start()])
+        const { streamId } = await bob.gdms.createGDM([alice.userId, charlie.userId])
         const aliceGdm = alice.gdms.getGdm(streamId)
-        expect(aliceGdm.members.data.userIds).toEqual([bob.userId, alice.userId])
+        expect(aliceGdm.members.data.userIds).toEqual([bob.userId, alice.userId, charlie.userId])
         await aliceGdm.sendMessage('Hello, World!')
         const bobGdm = bob.gdms.getGdm(streamId)
         expect(bobGdm.timeline.events.value.find((e) => e.text === 'Hello, World!')).toBeDefined()
