@@ -34,13 +34,17 @@ describe('syncAgents.test.ts', () => {
     })
 
     test('syncAgents', async () => {
-        await Promise.all([bob.start(), alice.start()])
+        await Promise.all([bob.start(), alice.start(), charlie.start()])
 
         const { spaceId } = await bob.spaces.createSpace({ spaceName: 'BlastOff' }, bobUser.signer)
         expect(bob.user.memberships.isJoined(spaceId)).toBe(true)
 
-        await alice.spaces.getSpace(spaceId).join(aliceUser.signer)
+        await Promise.all([
+            alice.spaces.getSpace(spaceId).join(aliceUser.signer),
+            charlie.spaces.getSpace(spaceId).join(charlieUser.signer),
+        ])
         expect(alice.user.memberships.isJoined(spaceId)).toBe(true)
+        expect(charlie.user.memberships.isJoined(spaceId)).toBe(true)
     })
 
     test('syncAgents load async', async () => {
