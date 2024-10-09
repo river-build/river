@@ -13,7 +13,6 @@ import { LocalTimelineEvent } from '../../types'
 import { TimelineEvents } from './models/timelineEvents'
 import { Reactions } from './models/reactions'
 import type { TimelineEvent, TimelineEventConfirmation } from './models/timeline-types'
-import { reverse } from 'lodash'
 import { PendingReplacedEvents } from './models/pendingReplacedEvents'
 import { ReplacedEvents } from './models/replacedEvents'
 
@@ -103,7 +102,7 @@ export class MessageTimeline {
     }
 
     private prependEvents(events: TimelineEvent[], userId: string) {
-        for (const event of reverse(events)) {
+        for (const event of events.reverse()) {
             const editsEventId = getEditsId(event.content)
             const redactsEventId = getRedactsId(event.content)
             if (redactsEventId) {
