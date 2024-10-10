@@ -64,12 +64,13 @@ library StakingRewards {
     mapping(address depositor => uint256 amount) stakedByDepositor;
     mapping(address beneficiary => Treasure) treasureByBeneficiary;
     mapping(uint256 depositId => Deposit) depositById;
-    mapping(address delegatee => address proxy) delegationProxies;
+    mapping(uint256 depositId => address proxy) proxyById;
   }
 
   event DelegationProxyDeployed(
-    address indexed delegatee,
-    address indexed proxy
+    uint256 depositId,
+    address delegatee,
+    address proxy
   );
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -143,19 +144,6 @@ library StakingRewards {
     treasure.rewardPerTokenAccumulated = ds.rewardPerTokenAccumulated;
   }
 
-  function retrieveOrDeployProxy(
-    Layout storage ds,
-    address delegatee
-  ) internal returns (address proxy) {
-    proxy = ds.delegationProxies[delegatee];
-
-    if (proxy == address(0)) {
-      proxy = address(new DelegationProxy(ds.stakeToken, delegatee));
-      ds.delegationProxies[delegatee] = proxy;
-      emit DelegationProxyDeployed(delegatee, proxy);
-    }
-  }
-
   function stake(
     Layout storage ds,
     address depositor,
@@ -203,13 +191,17 @@ library StakingRewards {
       commissionRate
     );
 
-    address proxy = retrieveOrDeployProxy(ds, delegatee);
+    address proxy = address(new DelegationProxy(ds.stakeToken, delegatee));
+    ds.proxyById[depositId] = proxy;
+    emit DelegationProxyDeployed(depositId, delegatee, proxy);
+
     ds.stakeToken.safeTransferFrom(depositor, proxy, amount);
   }
 
   function increaseStake(
     Layout storage ds,
     Deposit storage deposit,
+    uint256 depositId,
     uint96 amount,
     uint256 commissionRate
   ) internal {
@@ -244,7 +236,7 @@ library StakingRewards {
       commissionRate
     );
 
-    address proxy = ds.delegationProxies[delegatee];
+    address proxy = ds.proxyById[depositId];
     ds.stakeToken.safeTransferFrom(owner, proxy, amount);
   }
 
@@ -304,6 +296,7 @@ library StakingRewards {
   function redelegate(
     Layout storage ds,
     Deposit storage deposit,
+    uint256 depositId,
     address newDelegatee,
     uint256 commissionRate
   ) internal {
@@ -340,11 +333,9 @@ library StakingRewards {
       commissionRate
     );
 
-    address oldProxy = ds.delegationProxies[oldDelegatee];
+    address proxy = ds.proxyById[depositId];
+    DelegationProxy(proxy).redelegate(newDelegatee);
     deposit.delegatee = newDelegatee;
-    address newProxy = retrieveOrDeployProxy(ds, newDelegatee);
-    // TODO: revise
-    ds.stakeToken.safeTransferFrom(oldProxy, newProxy, amount);
   }
 
   function changeBeneficiary(
@@ -386,6 +377,7 @@ library StakingRewards {
   function withdraw(
     Layout storage ds,
     Deposit storage deposit,
+    uint256 depositId,
     uint96 amount
   ) internal {
     updateGlobalReward(ds);
@@ -406,11 +398,7 @@ library StakingRewards {
       // treasureByBeneficiary[beneficiary].earningPower >= deposit.amount
       beneficiaryTreasure.earningPower -= amount;
     }
-    ds.stakeToken.safeTransferFrom(
-      ds.delegationProxies[deposit.delegatee],
-      owner,
-      amount
-    );
+    ds.stakeToken.safeTransferFrom(ds.proxyById[depositId], owner, amount);
   }
 
   function claimReward(
