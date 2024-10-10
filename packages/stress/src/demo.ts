@@ -35,7 +35,7 @@ async function spamInfo(count: number) {
         riverRegistry.getOperationalNodeUrls(),
     )
     for (let i = 0; i < count; i++) {
-        logger.debug(i, 'iteration')
+        logger.debug({ iteration: i }, 'iteration')
         const info = await rpcClient.info(new InfoRequest({}), {
             timeoutMs: 10000,
         })
