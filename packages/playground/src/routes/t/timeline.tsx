@@ -9,7 +9,7 @@ export const TimelineRoute = () => {
     const spaceId = useCurrentSpaceId()
     const { data: channel } = useChannel(spaceId, channelId!)
     const { data: events } = useTimeline(spaceId, channelId!)
-    const { data: threadMap } = useThreadMap(spaceId, channelId)
+    const { data: threadMap } = useThreadMap(spaceId, channelId!)
 
     return (
         <ChannelProvider channelId={channelId}>

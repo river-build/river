@@ -135,7 +135,7 @@ const Message = ({
     event: TimelineEvent
     spaceId: string
     channelId: string
-    thread: TimelineEvent[]
+    thread: TimelineEvent[] | undefined
 }) => {
     const sync = useSyncAgent()
     const member = useMemo(
@@ -179,7 +179,7 @@ const Message = ({
                     </Button>
                 )}
 
-                {thread?.length > 0 && (
+                {thread && thread.length > 0 && (
                     <Dialog>
                         <DialogTrigger asChild>
                             <Button variant="ghost">+{thread.length} messages</Button>
