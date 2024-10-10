@@ -51,6 +51,7 @@ import {
     GroupEncryptionCrypto,
     GroupEncryptionSession,
     IGroupEncryptionClient,
+    OLM_ALGORITHM,
     UserDevice,
     UserDeviceCollection,
     makeSessionKeys,
@@ -2287,7 +2288,11 @@ export class Client
             throw new Error('crypto backend not initialized')
         }
         const cleartext = event.toJsonString()
-        return this.cryptoBackend.encryptGroupEvent(streamId, cleartext)
+        if (this.groupEncryptionType === GROUP_ENCRYPTION_ALGORITHM) {
+            return this.cryptoBackend.encryptGroupEvent(streamId, cleartext)
+        } else {
+            // mls!!!!
+        }
     }
 
     async encryptWithDeviceKeys(

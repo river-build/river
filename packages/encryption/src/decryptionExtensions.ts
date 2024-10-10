@@ -533,7 +533,17 @@ export abstract class BaseDecryptionExtensions {
         try {
             // do the work to decrypt the event
             this.log.debug('decrypting content')
-            await this.decryptGroupEvent(item.streamId, item.eventId, item.kind, item.encryptedData)
+            if (item.encryptedData.algorithm === GROUP_ENCRYPTION_ALGORITHM) {
+                await this.decryptGroupEvent(
+                    item.streamId,
+                    item.eventId,
+                    item.kind,
+                    item.encryptedData,
+                )
+            } else {
+                // mls!!!!
+                this.log.warn('unsupported encryption algorithm', item.encryptedData.algorithm)
+            }
         } catch (err: unknown) {
             const sessionNotFound = isSessionNotFoundError(err)
             this.log.debug('failed to decrypt', err, 'sessionNotFound', sessionNotFound)
@@ -570,7 +580,12 @@ export abstract class BaseDecryptionExtensions {
         const item = retryItem.event
         try {
             this.log.debug('retrying decryption', item)
-            await this.decryptGroupEvent(item.streamId, item.eventId, item.kind, item.encryptedData)
+            if (item.encryptedData.algorithm === GROUP_ENCRYPTION_ALGORITHM) {
+                await this.decryptGroupEvent(item.streamId, item.eventId, item.kind, item.encryptedData)
+            } else {
+                // mls!!!!
+                this.log.warn('unsupported encryption algorithm', item.encryptedData.algorithm)
+            }
         } catch (err) {
             const sessionNotFound = isSessionNotFoundError(err)
 

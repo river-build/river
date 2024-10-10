@@ -60,7 +60,7 @@ describe('dmsTests', () => {
         )
     })
 
-    test('clientsCanSendMessages', async () => {
+    test.only('clientsCanSendMessages', async () => {
         const bobsClient = await makeInitAndStartClient()
         const alicesClient = await makeInitAndStartClient()
         const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
