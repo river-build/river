@@ -349,7 +349,6 @@ library StakingRewards {
 
     updateGlobalReward(ds);
 
-    // TODO: measure gas
     (uint96 amount, address oldBeneficiary, uint96 commissionEarningPower) = (
       deposit.amount,
       deposit.beneficiary,

@@ -227,6 +227,54 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     );
   }
 
+  function test_changeBeneficiary_revertIf_notDepositor() public {
+    uint256 depositId = test_stake();
+
+    vm.prank(_randomAddress());
+    vm.expectRevert(RewardsDistribution__NotDepositOwner.selector);
+    rewardsDistributionFacet.changeBeneficiary(depositId, _randomAddress());
+  }
+
+  function test_changeBeneficiary_revertIf_newBeneficiaryIsZero() public {
+    uint256 depositId = test_stake();
+
+    vm.expectRevert(StakingRewards.StakingRewards__InvalidAddress.selector);
+    rewardsDistributionFacet.changeBeneficiary(depositId, address(0));
+  }
+
+  function test_changeBeneficiary() public {
+    test_fuzz_changeBeneficiary(1 ether, OPERATOR, 0, _randomAddress());
+  }
+
+  function test_fuzz_changeBeneficiary(
+    uint96 amount,
+    address operator,
+    uint256 commissionRate,
+    address beneficiary
+  ) public {
+    vm.assume(beneficiary != address(0));
+    amount = uint96(bound(amount, 1, type(uint96).max));
+    commissionRate = bound(commissionRate, 0, 10000);
+
+    uint256 depositId = test_fuzz_stake(
+      amount,
+      operator,
+      commissionRate,
+      address(this)
+    );
+
+    rewardsDistributionFacet.changeBeneficiary(depositId, beneficiary);
+
+    verifyStake(
+      address(this),
+      depositId,
+      amount,
+      operator,
+      commissionRate,
+      beneficiary
+    );
+  }
+
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                          OPERATOR                          */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
