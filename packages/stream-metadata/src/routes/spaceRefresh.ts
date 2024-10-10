@@ -14,6 +14,10 @@ const paramsSchema = z.object({
 		}),
 })
 
+const querySchema = z.object({
+	target: z.enum(['image', 'metadata', 'all']).default('all'),
+})
+
 // This route handler validates the refresh request and quickly returns a 200 response.
 export async function spaceRefresh(request: FastifyRequest, reply: FastifyReply) {
 	const logger = request.log.child({ name: spaceRefresh.name })
@@ -41,9 +45,17 @@ export async function spaceRefreshOnResponse(
 
 	logger.info({ spaceAddress }, 'Refreshing space')
 
+	const { target } = querySchema.parse(request.query)
+	const paths =
+		target === 'metadata'
+			? [`/space/${spaceAddress}`, `/space/${spaceAddress}/token/*`]
+			: target === 'image'
+			? [`/space/${spaceAddress}/image`]
+			: [`/space/${spaceAddress}/*`]
+
 	try {
 		await CloudfrontManager.createCloudfrontInvalidation({
-			paths: [`/space/${spaceAddress}/*`],
+			paths,
 			logger,
 			waitUntilFinished: true,
 		})
