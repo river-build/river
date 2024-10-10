@@ -185,6 +185,79 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     );
   }
 
+  function test_redelegate_revertIf_notOperator()
+    public
+    givenOperator(OPERATOR, 0)
+  {
+    uint96 amount = 1 ether;
+    bridgeTokensForUser(address(this), amount);
+    river.approve(address(rewardsDistributionFacet), amount);
+    uint256 depositId = rewardsDistributionFacet.stake(
+      amount,
+      OPERATOR,
+      address(this)
+    );
+
+    vm.expectRevert(RewardsDistribution__NotOperatorOrSpace.selector);
+    rewardsDistributionFacet.redelegate(depositId, _randomAddress());
+  }
+
+  function test_redelegate_revertIf_notDepositor()
+    public
+    givenOperator(OPERATOR, 0)
+  {
+    uint96 amount = 1 ether;
+    bridgeTokensForUser(address(this), amount);
+    river.approve(address(rewardsDistributionFacet), amount);
+    uint256 depositId = rewardsDistributionFacet.stake(
+      amount,
+      OPERATOR,
+      address(this)
+    );
+
+    address delegatee = _randomAddress();
+    registerOperator(delegatee);
+
+    vm.prank(_randomAddress());
+    vm.expectRevert(RewardsDistribution__NotDepositOwner.selector);
+    rewardsDistributionFacet.redelegate(depositId, delegatee);
+  }
+
+  function test_fuzz_redelegate(
+    uint96 amount,
+    address operator0,
+    uint256 commissionRate0,
+    address operator1,
+    uint256 commissionRate1
+  )
+    public
+    givenOperator(operator0, commissionRate0)
+    givenOperator(operator1, commissionRate1)
+  {
+    amount = uint96(bound(amount, 1, type(uint96).max));
+    commissionRate0 = bound(commissionRate0, 0, 10000);
+    commissionRate1 = bound(commissionRate1, 0, 10000);
+
+    bridgeTokensForUser(address(this), amount);
+    river.approve(address(rewardsDistributionFacet), amount);
+    uint256 depositId = rewardsDistributionFacet.stake(
+      amount,
+      operator0,
+      address(this)
+    );
+
+    rewardsDistributionFacet.redelegate(depositId, operator1);
+
+    verifyStake(
+      address(this),
+      depositId,
+      amount,
+      operator1,
+      commissionRate1,
+      address(this)
+    );
+  }
+
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                          OPERATOR                          */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
