@@ -14,7 +14,10 @@ import { chitChat } from './chitChat'
 import { summarizeChat } from './summarizeChat'
 import { statsReporter } from './statsReporter'
 import { getChatConfig } from '../common/common'
+import { gdmChat, getRandomClients } from './gdmChat'
 import { getLogger } from '../../utils/logger'
+
+const probability = (p: number) => Math.random() < p
 
 /*
  * Starts a chat stress test.
@@ -124,6 +127,22 @@ export async function startStressChat(opts: {
             r.status === 'fulfilled',
             r.status === 'fulfilled' ? {} : { reason: r.reason },
         )
+    })
+
+    logger.info('gdmChat')
+    const gdmRes = await Promise.allSettled(
+        clients
+            .filter(() => probability(chatConfig.gdmProbability))
+            .map((client) => {
+                const memberIds = getRandomClients(clients, 4).map((c) => c.userId)
+                return gdmChat(client, memberIds, chatConfig)
+            }),
+    )
+    gdmRes.forEach((r, index) => {
+        if (r.status === 'rejected') {
+            logger.error(`${clients[index].logId} error calling gdmChat`, r.reason)
+            errors.push(r.reason)
+        }
     })
 
     logger.info('summarizeChat')
