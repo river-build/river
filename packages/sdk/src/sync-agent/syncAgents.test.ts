@@ -152,6 +152,12 @@ describe('syncAgents.test.ts', () => {
         )
         await aliceGdm.sendMessage('Hello, World!')
         const bobGdm = bob.gdms.getGdm(streamId)
-        expect(bobGdm.timeline.events.value.find((e) => e.text === 'Hello, World!')).toBeDefined()
+        await waitFor(
+            () =>
+                expect(
+                    bobGdm.timeline.events.value.find((e) => e.text === 'Hello, World!'),
+                ).toBeDefined(),
+            { timeoutMS: 10000 },
+        )
     })
 })
