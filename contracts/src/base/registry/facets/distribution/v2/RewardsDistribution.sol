@@ -101,10 +101,11 @@ contract RewardsDistribution is IRewardsDistribution, OwnableBase, Facet {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     StakingRewards.Deposit storage deposit = ds.staking.depositById[depositId];
-    _revertIfNotDepositOwner(deposit);
+    _revertIfNotDepositOwner(deposit.owner);
 
     ds.staking.increaseStake(
       deposit,
+      depositId,
       amount,
       _getCommissionRate(deposit.delegatee)
     );
@@ -117,9 +118,14 @@ contract RewardsDistribution is IRewardsDistribution, OwnableBase, Facet {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     StakingRewards.Deposit storage deposit = ds.staking.depositById[depositId];
-    _revertIfNotDepositOwner(deposit);
+    _revertIfNotDepositOwner(deposit.owner);
 
-    ds.staking.redelegate(deposit, delegatee, _getCommissionRate(delegatee));
+    ds.staking.redelegate(
+      deposit,
+      depositId,
+      delegatee,
+      _getCommissionRate(delegatee)
+    );
   }
 
   function changeBeneficiary(
@@ -129,7 +135,7 @@ contract RewardsDistribution is IRewardsDistribution, OwnableBase, Facet {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     StakingRewards.Deposit storage deposit = ds.staking.depositById[depositId];
-    _revertIfNotDepositOwner(deposit);
+    _revertIfNotDepositOwner(deposit.owner);
 
     ds.staking.changeBeneficiary(deposit, newBeneficiary);
   }
@@ -138,9 +144,9 @@ contract RewardsDistribution is IRewardsDistribution, OwnableBase, Facet {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     StakingRewards.Deposit storage deposit = ds.staking.depositById[depositId];
-    _revertIfNotDepositOwner(deposit);
+    _revertIfNotDepositOwner(deposit.owner);
 
-    ds.staking.withdraw(deposit, amount);
+    ds.staking.withdraw(deposit, depositId, amount);
   }
 
   // TODO: transfer rewards when a space redelegates
@@ -241,12 +247,12 @@ contract RewardsDistribution is IRewardsDistribution, OwnableBase, Facet {
     return ds.staking.depositById[depositId];
   }
 
-  function delegationProxies(
-    address delegatee
+  function delegationProxyById(
+    uint256 depositId
   ) external view returns (address proxy) {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
-    return ds.staking.delegationProxies[delegatee];
+    return ds.staking.proxyById[depositId];
   }
 
   function isRewardNotifier(address notifier) external view returns (bool) {
@@ -330,10 +336,8 @@ contract RewardsDistribution is IRewardsDistribution, OwnableBase, Facet {
   }
 
   /// @dev Reverts if the caller is not the owner of the deposit
-  function _revertIfNotDepositOwner(
-    StakingRewards.Deposit storage deposit
-  ) internal view {
-    if (msg.sender != deposit.owner) {
+  function _revertIfNotDepositOwner(address owner) internal view {
+    if (msg.sender != owner) {
       CustomRevert.revertWith(RewardsDistribution__NotDepositOwner.selector);
     }
   }

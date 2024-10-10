@@ -256,6 +256,11 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
       commissionRate1,
       address(this)
     );
+
+    assertEq(
+      rewardsDistributionFacet.treasureByBeneficiary(operator0).earningPower,
+      0
+    );
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -344,6 +349,11 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
           .treasureByBeneficiary(beneficiary)
           .earningPower,
       amount
+    );
+
+    assertEq(
+      rewardsDistributionFacet.treasureByBeneficiary(operator).earningPower,
+      deposit.commissionEarningPower
     );
   }
 
