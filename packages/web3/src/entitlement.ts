@@ -793,7 +793,7 @@ export function createOperationsTree(
             case CheckOperationType.ERC20:
             case CheckOperationType.ERC721:
                 params = encodeThresholdParams({ threshold: op.threshold ?? BigInt(1) })
-                break;
+                break
             case CheckOperationType.ETH_BALANCE:
                 params = encodeThresholdParams({ threshold: op.threshold ?? BigInt(0) })
                 break
