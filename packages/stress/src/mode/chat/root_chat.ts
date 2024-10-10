@@ -78,11 +78,12 @@ export async function startStressChat(opts: {
         const span = clients.slice(i, i + PARALLEL_UPDATES)
         const results = await Promise.allSettled(span.map((client) => joinChat(client, chatConfig)))
         results.forEach((r, index) => {
+            const client = span[index]
             if (r.status === 'rejected') {
                 errors.push(r.reason)
             }
             logStep(
-                span[index],
+                client,
                 'JOIN_CHAT',
                 r.status === 'fulfilled',
                 r.status === 'fulfilled' ? { span } : { reason: r.reason },
@@ -97,11 +98,12 @@ export async function startStressChat(opts: {
             span.map((client) => updateProfile(client, chatConfig)),
         )
         results.forEach((r, index) => {
+            const client = span[index]
             if (r.status === 'rejected') {
                 errors.push(r.reason)
             }
             logStep(
-                span[index],
+                client,
                 'UPDATE_PROFILE',
                 r.status === 'fulfilled',
                 r.status === 'fulfilled' ? { span } : { reason: r.reason },
@@ -112,11 +114,12 @@ export async function startStressChat(opts: {
     logger.info('chitChat')
     const results = await Promise.allSettled(clients.map((client) => chitChat(client, chatConfig)))
     results.forEach((r, index) => {
+        const client = clients[index]
         if (r.status === 'rejected') {
             errors.push(r.reason)
         }
         logStep(
-            clients[index],
+            client,
             'CHIT_CHAT',
             r.status === 'fulfilled',
             r.status === 'fulfilled' ? {} : { reason: r.reason },
