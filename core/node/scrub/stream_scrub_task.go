@@ -178,7 +178,7 @@ func (tp *streamScrubTaskProcessorImpl) TryScheduleScrub(
 	streamId StreamId,
 	force bool,
 ) (bool, error) {
-	log := dlog.FromCtx(ctx).With("Func", "TryScheduleScrub").With("streamId", streamId)
+	log := dlog.FromCtx(ctx).With("Func", "TryScheduleScrub", "streamId", streamId)
 	// Note: This check ensures we are only scrubbing channels. If we ever scrub spaces,
 	// we'll need to make sure we kick the user from all channels in the space before
 	// kicking them out of the space.
@@ -188,7 +188,7 @@ func (tp *streamScrubTaskProcessorImpl) TryScheduleScrub(
 
 	stream, view, err := tp.cache.GetStream(ctx, streamId)
 	if err != nil {
-		log.Warn("Unable to get stream from cache")
+		log.Warn("Unable to get stream from cache", "error", err)
 		return false, err
 	}
 
@@ -199,7 +199,7 @@ func (tp *streamScrubTaskProcessorImpl) TryScheduleScrub(
 	task := &streamScrubTask{channelId: streamId, spaceId: *view.StreamParentId(), taskProcessor: tp}
 	_, alreadyScheduled := tp.pendingTasks.LoadOrStore(streamId, task)
 	if !alreadyScheduled {
-		log.Info("Scheduling scrub for stream", "lastScrubbedTime", stream.LastScrubbedTime())
+		log.Debug("Scheduling scrub for stream", "lastScrubbedTime", stream.LastScrubbedTime())
 		tp.workerPool.Submit(func() {
 			task.process()
 			tp.pendingTasks.Delete(task.channelId)

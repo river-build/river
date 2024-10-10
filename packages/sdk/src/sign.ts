@@ -1,5 +1,5 @@
 import { PlainMessage } from '@bufbuild/protobuf'
-import { bin_equal, bin_fromHexString, bin_toHexString, check } from '@river-build/dlog'
+import { bin_equal, bin_fromHexString, bin_toHexString, check, dlog } from '@river-build/dlog'
 import { isDefined, assert, hasElements } from './check'
 import {
     Envelope,
@@ -17,6 +17,8 @@ import { genIdBlob, streamIdAsBytes, streamIdAsString, userIdFromAddress } from 
 import { ParsedEvent, ParsedMiniblock, ParsedStreamAndCookie, ParsedStreamResponse } from './types'
 import { SignerContext, checkDelegateSig } from './signerContext'
 import { keccak256 } from 'ethereum-cryptography/keccak'
+
+const log = dlog('csb:sign')
 
 export const _impl_makeEvent_impl_ = async (
     context: SignerContext,
@@ -40,6 +42,8 @@ export const _impl_makeEvent_impl_ = async (
     const event = streamEvent.toBinary()
     const hash = riverHash(event)
     const signature = await riverSign(hash, context.signerPrivateKey())
+
+    log('makeEvent', 'hash', hash, 'prevMiniblockHash', prevMiniblockHash)
 
     return new Envelope({ hash, signature, event })
 }

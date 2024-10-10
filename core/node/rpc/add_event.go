@@ -63,6 +63,40 @@ func (s *Service) addParsedEvent(
 	if err != nil {
 		return err
 	}
+
+	err = s.addParsedEventToView(ctx, streamId, parsedEvent, nodes, localStream, streamView)
+	if err != nil {
+		var err *RiverErrorImpl = AsRiverError(err).Tag("prevMiniblockHash_Event", parsedEvent.PrevMiniblockHash)
+		mbs := streamView.Blocks()
+		index := len(mbs) - 1
+		if index >= 0 {
+			err.Tags("lastMiniblockHash_View", mbs[index].Hash,
+				"lastMiniblockNum_View", mbs[index].Num)
+		}
+		index--
+		if index >= 0 {
+			err.Tags("lastMiniblockHash_View_Prev", mbs[index].Hash,
+				"lastMiniblockNum_View_Prev", mbs[index].Num)
+		}
+		index--
+		if index >= 0 {
+			err.Tags("lastMiniblockHash_View_PrevPrev", mbs[index].Hash,
+				"lastMiniblockNum_View_PrevPrev", mbs[index].Num)
+		}
+		return err
+	}
+
+	return nil
+}
+
+func (s *Service) addParsedEventToView(
+	ctx context.Context,
+	streamId StreamId,
+	parsedEvent *ParsedEvent,
+	nodes StreamNodes,
+	localStream SyncStream,
+	streamView StreamView,
+) error {
 	_, _ = s.scrubTaskProcessor.TryScheduleScrub(ctx, streamId, false)
 
 	canAddEvent, chainAuthArgsList, sideEffects, err := rules.CanAddEvent(

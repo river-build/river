@@ -9,7 +9,6 @@ class TestDriver {
     readonly client: Client
     readonly num: number
     private log: DLogger
-    private stepNum?: number
     private testName: string
 
     expected?: Set<string>
@@ -20,7 +19,7 @@ class TestDriver {
         this.client = client
         this.num = num
         this.testName = testName
-        this.log = dlog(`test:${this.testName}:client:${this.num}:step:${this.stepNum}`)
+        this.log = dlog(`test:${this.testName}:client:${this.num}`)
     }
 
     async start(): Promise<void> {
@@ -43,8 +42,9 @@ class TestDriver {
     }
 
     async userInvitedToStream(streamId: string): Promise<void> {
-        this.log(`userInvitedToStream streamId=${streamId}`)
+        this.log(`userInvitedToStream: joinStream start streamId=${streamId}`)
         await this.client.joinStream(streamId)
+        this.log(`userInvitedToStream: joinStream end streamId=${streamId}`)
     }
 
     userJoinedStream(streamId: string): void {
@@ -56,48 +56,55 @@ class TestDriver {
         contentKind: SnapshotCaseType,
         event: DecryptedTimelineEvent,
     ): void {
-        const payload = event.decryptedContent
-        let content = ''
-        check(payload.kind === 'channelMessage')
-        if (
-            payload.content?.payload?.case !== 'post' ||
-            payload.content?.payload?.value.content.case !== 'text'
-        ) {
-            throw new Error(`eventDecrypted is not a post`)
-        }
-        content = payload.content?.payload?.value.content.value.body
-        this.log(
-            `eventDecrypted channelId=${streamId} message=${content}`,
-            this.expected ? [...this.expected] : undefined,
-        )
-        if (this.expected?.delete(content)) {
-            this.log(`eventDecrypted expected message Received, text=${content}`)
-
-            if (this.expected.size === 0) {
-                this.expected = undefined
-                if (this.allExpectedReceived === undefined) {
-                    throw new Error('allExpectedReceived is undefined')
-                }
-                this.log(`eventDecrypted all expected messages Received, text=${content}`)
-                this.allExpectedReceived()
-            } else {
-                this.log(`eventDecrypted still expecting messages`, this.expected)
+        this.log('eventDecrypted start', 'streamId=', streamId, 'contentKind=', contentKind)
+        try {
+            const payload = event.decryptedContent
+            let content = ''
+            check(payload.kind === 'channelMessage')
+            if (
+                payload.content?.payload?.case !== 'post' ||
+                payload.content?.payload?.value.content.case !== 'text'
+            ) {
+                throw new Error(`eventDecrypted is not a post`)
             }
-        } else {
-            if (this.badMessageReceived === undefined) {
-                throw new Error('badMessageReceived is undefined')
-            }
+            content = payload.content?.payload?.value.content.value.body
             this.log(
-                `channelNewMessage badMessageReceived text=${content}}, expected=${Array.from(
-                    this.expected?.values() ?? [],
-                ).join(', ')}`,
+                `eventDecrypted channelId=${streamId} message=${content}`,
+                this.expected ? [...this.expected] : undefined,
             )
-            this.badMessageReceived(
-                `badMessageReceived text=${content}, expected=${Array.from(
-                    this.expected?.values() ?? [],
-                ).join(', ')}`,
-            )
+            if (this.expected?.delete(content)) {
+                this.log(`eventDecrypted expected message Received, text=${content}`)
+
+                if (this.expected.size === 0) {
+                    this.expected = undefined
+                    if (this.allExpectedReceived === undefined) {
+                        throw new Error('allExpectedReceived is undefined')
+                    }
+                    this.log(`eventDecrypted all expected messages Received, text=${content}`)
+                    this.allExpectedReceived()
+                } else {
+                    this.log(`eventDecrypted still expecting messages`, this.expected)
+                }
+            } else {
+                if (this.badMessageReceived === undefined) {
+                    throw new Error('badMessageReceived is undefined')
+                }
+                this.log(
+                    `channelNewMessage badMessageReceived text=${content}}, expected=${Array.from(
+                        this.expected?.values() ?? [],
+                    ).join(', ')}`,
+                )
+                this.badMessageReceived(
+                    `badMessageReceived text=${content}, expected=${Array.from(
+                        this.expected?.values() ?? [],
+                    ).join(', ')}`,
+                )
+            }
+        } catch (e) {
+            this.log(`eventDecrypted ERROR`, e)
+            throw e
         }
+        this.log('eventDecrypted end', 'streamId=', streamId, 'contentKind=', contentKind)
     }
 
     async step(
@@ -106,30 +113,45 @@ class TestDriver {
         expected: Set<string>,
         message: string,
     ): Promise<void> {
-        this.stepNum = stepNum
-        this.log = dlog(`test:${this.testName} client:${this.num}:step:${this.stepNum}`)
+        this.log('step start', 'channelId=', channelId, 'stepNum=', stepNum, 'message=', message)
 
-        this.log(`step start`, message)
+        try {
+            this.expected = new Set(expected)
+            const ret = new Promise<void>((resolve, reject) => {
+                this.allExpectedReceived = resolve
+                this.badMessageReceived = reject
+            })
 
-        this.expected = new Set(expected)
-        const ret = new Promise<void>((resolve, reject) => {
-            this.allExpectedReceived = resolve
-            this.badMessageReceived = reject
-        })
+            if (message !== '') {
+                this.log(`step sending channelId=${channelId} message=${message}`)
+                await this.client.sendMessage(channelId, message)
+            }
+            if (expected.size > 0) {
+                await ret
+            }
 
-        if (message !== '') {
-            this.log(`step sending channelId=${channelId} message=${message}`)
-            await this.client.sendMessage(channelId, message)
+            this.allExpectedReceived = undefined
+            this.badMessageReceived = undefined
+            this.log(`step end`, message)
+        } catch (e) {
+            this.log(`step ERROR`, e)
+            const stream = this.client.stream(channelId)
+            if (stream !== undefined) {
+                this.log('step ERROR: memberships=', stream.view.getMembers())
+            } else {
+                this.log('step ERROR: faield to get stream from client')
+            }
+            throw e
         }
-        if (expected.size > 0) {
-            await ret
-        }
 
-        this.allExpectedReceived = undefined
-        this.badMessageReceived = undefined
         this.log(`step end`, message)
-        this.stepNum = undefined
-        this.log = dlog(`test:client:${this.num}:step:${this.stepNum}`)
+    }
+
+    async waitForMembership(streamId: string): Promise<void> {
+        this.log('waitForMembership start', 'streamId=', streamId, 'userId=', this.client.userId)
+        const stream = await this.client.waitForStream(streamId)
+        await stream.waitForMembership(MembershipOp.SO_JOIN)
+        this.log('waitForMembership end', 'streamId=', streamId)
     }
 }
 
@@ -175,14 +197,6 @@ export const converse = async (conversation: string[][], testName: string): Prom
 
         // Invite and join space.
         log(`inviting others to space`)
-        const allJoinedSpace = Promise.all(
-            others.map(async (d) => {
-                log(`awaiting userJoinedStream for`, d.client.userId)
-                const stream = await d.client.waitForStream(spaceId)
-                await stream.waitForMembership(MembershipOp.SO_JOIN)
-                log(`received userJoinedStream for`, d.client.userId)
-            }),
-        )
         await Promise.all(
             others.map(async (d) => {
                 log(`${alice.client.userId} inviting other to space`, d.client.userId)
@@ -191,7 +205,7 @@ export const converse = async (conversation: string[][], testName: string): Prom
             }),
         )
         log(`and wait for all to join space...`)
-        await allJoinedSpace
+        await Promise.all(others.map((d) => d.waitForMembership(spaceId)))
         log(`all joined space`)
         log(
             `${testName} inviting others to space after`,
@@ -211,14 +225,6 @@ export const converse = async (conversation: string[][], testName: string): Prom
             `${testName} inviting others to channel`,
             others.map((d) => ({ num: d.num, userStreamId: d.client.userStreamId })),
         )
-        const allJoined = Promise.all(
-            others.map(async (d) => {
-                log(`awaiting userJoinedStream channel for`, d.client.userId, channelId)
-                const stream = await d.client.waitForStream(channelId)
-                await stream.waitForMembership(MembershipOp.SO_JOIN)
-                log(`received userJoinedStream channel for`, d.client.userId, channelId)
-            }),
-        )
         await Promise.all(
             others.map(async (d) => {
                 log(`inviting user to channel`, d.client.userId, channelId)
@@ -227,8 +233,8 @@ export const converse = async (conversation: string[][], testName: string): Prom
             }),
         )
         log(`and wait for all to join...`)
-        await allJoined
-        log(`all joined`)
+        await Promise.all(others.map((d) => d.waitForMembership(channelId)))
+        log(`all joined channel`)
 
         for (const [conv_idx, conv] of conversation.entries()) {
             log(`conversation stepping start ${conv_idx}`, conv)
