@@ -4,11 +4,9 @@ import { BigNumber, Wallet } from 'ethers'
 import { ChatConfig } from '../common/types'
 import { check } from '@river-build/dlog'
 import { makeCodeBlock } from '../../utils/messages'
-import { getLogger } from '../../utils/logger'
-
-const logger = getLogger('stress:kickoffChat')
 
 export async function kickoffChat(rootClient: StressClient, cfg: ChatConfig) {
+    const logger = rootClient.logger.child({ name: 'kickoffChat' })
     logger.info('start kickoffChat')
     check(rootClient.clientIndex === 0, 'rootClient.clientIndex === 0')
     const globalRunIndex = parseInt(
@@ -67,14 +65,14 @@ export async function kickoffChat(rootClient: StressClient, cfg: ChatConfig) {
             spaceId,
             wallet.address,
         )
-        logger.debug('minting membership for', i, wallet.address, 'has', hasSpaceMembership)
+        logger.debug({ i, address: wallet.address, hasSpaceMembership }, 'minting membership')
         if (!hasSpaceMembership) {
             const result = await rootClient.spaceDapp.joinSpace(
                 spaceId,
                 wallet.address,
                 rootClient.baseProvider.wallet,
             )
-            logger.debug('minted membership', result)
+            logger.debug(result, 'minted membership')
             // sleep for > 1 second
             await new Promise((resolve) => setTimeout(resolve, 1100))
         }

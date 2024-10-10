@@ -35,22 +35,22 @@ async function spamInfo(count: number) {
         riverRegistry.getOperationalNodeUrls(),
     )
     for (let i = 0; i < count; i++) {
-        logger.info(`iteration ${i}`)
+        logger.debug(i, 'iteration')
         const info = await rpcClient.info(new InfoRequest({}), {
             timeoutMs: 10000,
         })
         logger.info(getSystemInfo(), 'system info')
-        logger.info(info, `info ${i}`)
+        logger.info({ info, iteration: i }, `info`)
     }
 }
 
 async function sendAMessage() {
-    logger.info('=======================send a message - start =======================')
+    logger.debug('=======================send a message - start =======================')
     const bob = await makeStressClient(config, 0, getRootWallet(), undefined)
     const { spaceId, defaultChannelId } = await bob.createSpace("bob's space")
     await bob.sendMessage(defaultChannelId, 'hello')
 
-    logger.info('=======================send a message - make alice =======================')
+    logger.debug('=======================send a message - make alice =======================')
     const alice = await makeStressClient(config, 1, undefined, undefined)
     await bob.spaceDapp.joinSpace(
         spaceId,
@@ -58,22 +58,22 @@ async function sendAMessage() {
         bob.baseProvider.wallet,
     )
     await alice.joinSpace(spaceId, { skipMintMembership: true })
-    logger.info('=======================send a message - alice join space =======================')
+    logger.debug('=======================send a message - alice join space =======================')
     const channel = await alice.streamsClient.waitForStream(defaultChannelId)
-    logger.info('=======================send a message - alice wait =======================')
+    logger.debug('=======================send a message - alice wait =======================')
     await waitFor(() => channel.view.timeline.filter(isDecryptedEvent).length > 0)
-    logger.info('alices sees: ', channel.view.timeline.filter(isDecryptedEvent))
-    logger.info('=======================send a message - alice sends =======================')
+    logger.debug('alices sees: ', channel.view.timeline.filter(isDecryptedEvent))
+    logger.debug('=======================send a message - alice sends =======================')
     await alice.sendMessage(defaultChannelId, 'hi bob')
-    logger.info('=======================send a message - alice sent =======================')
+    logger.debug('=======================send a message - alice sent =======================')
     const bobChannel = await bob.streamsClient.waitForStream(defaultChannelId)
-    logger.info('=======================send a message - bob wait =======================')
+    logger.debug('=======================send a message - bob wait =======================')
     await waitFor(() => bobChannel.view.timeline.filter(isDecryptedEvent).length > 0) // bob doesn't decrypt his own messages
-    logger.info('bob sees: ', bobChannel.view.timeline.filter(isDecryptedEvent))
+    logger.debug(bobChannel.view.timeline.filter(isDecryptedEvent), 'bob sees')
 
     await bob.stop()
     await alice.stop()
-    logger.info('=======================send a message - done =======================')
+    logger.debug('=======================send a message - done =======================')
 }
 
 async function encryptDecrypt() {
@@ -91,7 +91,8 @@ async function encryptDecrypt() {
     bobAccount.generate_one_time_keys(2)
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const bobOneTimeKeys = JSON.parse(bobAccount.one_time_keys()).curve25519
-    logger.info('bobOneTimeKeys', bobOneTimeKeys)
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    logger.debug({ keys: bobOneTimeKeys }, 'bobOneTimeKeys')
     bobAccount.mark_keys_as_published()
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
@@ -110,14 +111,14 @@ async function encryptDecrypt() {
     bobAccount.remove_one_time_keys(bobSession)
 
     let decrypted = bobSession.decrypt(encrypted.type, encrypted.body)
-    logger.info('bob decrypted ciphertext: ', decrypted)
+    logger.debug({ decrypted, from: 'bob' }, 'decrypted ciphertext')
     expect(decrypted).toEqual(TEST_TEXT)
 
     TEST_TEXT = 'test message for alice'
     encrypted = bobSession.encrypt(TEST_TEXT)
     expect(encrypted.type).toEqual(1)
     decrypted = aliceSession.decrypt(encrypted.type, encrypted.body)
-    logger.info('alice decrypted ciphertext: ', decrypted)
+    logger.debug({ decrypted, from: 'alice' }, 'decrypted ciphertext')
     expect(decrypted).toEqual(TEST_TEXT)
 
     aliceAccount.free()
@@ -128,24 +129,24 @@ async function demoExternalStoreage() {
     if (isSet(process.env.REDIS_HOST)) {
         const storage = new RedisStorage(process.env.REDIS_HOST)
         const value = await storage.get('demo_key')
-        logger.info('value', value)
+        logger.debug(value, 'value')
         const nextValue = value ? parseInt(value) + 1 : 1
         await storage.set('demo_key', nextValue.toString())
         const newValue = await storage.get('demo_key')
-        logger.info('value updated', { from: value, to: newValue })
+        logger.debug({ from: value, to: newValue }, 'value updated')
     }
 }
 
 logger.info(getSystemInfo(), 'system info')
 
 const run = async () => {
-    logger.info('========================storage========================')
+    logger.debug('========================storage========================')
     await demoExternalStoreage()
-    logger.info('==========================spamInfo==========================')
+    logger.debug('==========================spamInfo==========================')
     await spamInfo(1)
-    logger.info('=======================encryptDecrypt=======================')
+    logger.debug('=======================encryptDecrypt=======================')
     await encryptDecrypt()
-    logger.info('========================sendAMessage========================')
+    logger.debug('========================sendAMessage========================')
     await sendAMessage()
     process.exit(0)
 }

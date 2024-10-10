@@ -4,15 +4,15 @@ import { getRandomEmoji } from '../../utils/emoji'
 import { getSystemInfo } from '../../utils/systemInfo'
 import { channelMessagePostWhere } from '../../utils/timeline'
 import { makeSillyMessage } from '../../utils/messages'
-import { getLogger } from '../../utils/logger'
 
 export async function joinChat(client: StressClient, cfg: ChatConfig) {
-    const logger = getLogger('stress:joinChat', { logId: client.logId })
+    const logger = client.logger.child({ name: 'joinChat' })
+
     // is user a member of all the channels?
     // is user a member of the space?
     // does user exist on the stream node?
 
-    logger.info(client.userId, 'joinChat')
+    logger.info('start joinChat')
 
     // wait for the user to have a membership nft
     await client.waitFor(
@@ -23,7 +23,7 @@ export async function joinChat(client: StressClient, cfg: ChatConfig) {
         },
     )
 
-    logger.info({ clientIndex: client.clientIndex }, 'start client')
+    logger.info('start client')
 
     const announceChannelId = cfg.announceChannelId
     // start up the client
@@ -43,10 +43,7 @@ export async function joinChat(client: StressClient, cfg: ChatConfig) {
                         v.remoteEvent?.event.payload.value?.content.case === 'message',
                 )
                 const decryptedCount = cms.filter((v) => v.decryptedContent).length
-                logger.info(
-                    { clientIndex: client.clientIndex, decryptedCount, totalCount: cms.length },
-                    'waiting for root message',
-                )
+                logger.info({ decryptedCount, totalCount: cms.length }, 'waiting for root message')
             }
             count++
             return announceChannel.view.timeline.find(
@@ -57,7 +54,7 @@ export async function joinChat(client: StressClient, cfg: ChatConfig) {
     )
 
     if (client.clientIndex === cfg.localClients.startIndex) {
-        logger.info({ clientIndex: client.clientIndex }, 'sharing keys')
+        logger.info('sharing keys')
         await client.streamsClient.cryptoBackend?.ensureOutboundSession(announceChannelId, {
             awaitInitialShareSession: true,
         })

@@ -5,16 +5,15 @@ import { getSystemInfo } from '../../utils/systemInfo'
 import { channelMessagePostWhere } from '../../utils/timeline'
 import { isDefined } from '@river-build/sdk'
 import { makeCodeBlock } from '../../utils/messages'
-import { getLogger } from '../../utils/logger'
 
-const logger = getLogger('stress:summarizeChat')
 export async function sumarizeChat(
     localClients: StressClient[],
     cfg: ChatConfig,
     errors: unknown[],
 ) {
     const processLeadClient = localClients[0]
-    logger.debug('sumarizeChat', processLeadClient.userId)
+    const logger = processLeadClient.logger.child({ name: 'summarizeChat' })
+    logger.debug('summarizeChat')
     const defaultChannel = processLeadClient.streamsClient.stream(cfg.announceChannelId)
     check(isDefined(defaultChannel), 'defaultChannel not found')
     // find the message in the default channel that contains the session id, this should already be there decrypted

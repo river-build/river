@@ -26,7 +26,7 @@ export async function startStressChat(opts: {
     processIndex: number
     rootWallet: Wallet
 }) {
-    const logger = getLogger('stress:run', { processIndex: opts.processIndex })
+    const logger = getLogger('stress:run')
     const chatConfig = getChatConfig(opts)
     logger.info({ chatConfig }, 'make clients')
     const clients = await Promise.all(
@@ -78,7 +78,8 @@ export async function startStressChat(opts: {
         const results = await Promise.allSettled(span.map((client) => joinChat(client, chatConfig)))
         results.forEach((r, index) => {
             if (r.status === 'rejected') {
-                logger.error(`${span[index].logId} error calling joinChat`, r.reason)
+                const client = span[index]
+                client.logger.error(r, 'error joinChat')
                 errors.push(r.reason)
             }
         })
@@ -92,7 +93,8 @@ export async function startStressChat(opts: {
         )
         results.forEach((r, index) => {
             if (r.status === 'rejected') {
-                logger.error(`${span[index].logId} error calling updateProfile`, r.reason)
+                const client = span[index]
+                client.logger.error(r, 'error updateProfile')
                 errors.push(r.reason)
             }
         })
@@ -102,7 +104,8 @@ export async function startStressChat(opts: {
     const results = await Promise.allSettled(clients.map((client) => chitChat(client, chatConfig)))
     results.forEach((r, index) => {
         if (r.status === 'rejected') {
-            logger.error(`${clients[index].logId} error calling chitChat`, r.reason)
+            const client = clients[index]
+            client.logger.error(r, 'error chitChat')
             errors.push(r.reason)
         }
     })

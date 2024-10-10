@@ -1,7 +1,7 @@
 import Redis from 'ioredis'
 import { getLogger } from './logger'
 
-const logger = getLogger('storage')
+const logger = getLogger('stress:storage')
 
 export interface IStorage {
     get(key: string): Promise<string | null>

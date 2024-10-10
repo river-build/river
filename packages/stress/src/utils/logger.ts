@@ -32,6 +32,8 @@ const baseLogger = pino(pinoOptions)
 export function getLogger(name: string, meta: Record<string, unknown> = {}) {
     return baseLogger.child({
         name,
+        containerIndex: process.env.CONTAINER_INDEX,
+        processIndex: process.env.PROCESS_INDEX,
         ...meta,
     })
 }

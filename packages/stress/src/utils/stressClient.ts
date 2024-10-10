@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
     Client as StreamsClient,
     RiverConfig,
@@ -20,8 +17,6 @@ import { makeHttp2StreamRpcClient } from './rpc-http2'
 import { sha256 } from 'ethers/lib/utils'
 import { getLogger } from './logger'
 
-const logger = getLogger('stressClient')
-
 export async function makeStressClient(
     config: RiverConfig,
     clientIndex: number,
@@ -30,7 +25,11 @@ export async function makeStressClient(
 ) {
     const bot = new Bot(inWallet, config)
     const storageKey = `stressclient_${bot.userId}_${config.environmentId}`
-
+    const logger = getLogger('stress:makeStressClient', {
+        clientIndex,
+        userId: bot.userId,
+        storageKey,
+    })
     let device: ExportedDevice | undefined
     const rawDevice = await globalPersistedStore?.get(storageKey).catch(() => undefined)
     if (rawDevice) {
@@ -70,6 +69,8 @@ export async function makeStressClient(
 }
 
 export class StressClient {
+    logger: ReturnType<typeof getLogger>
+
     constructor(
         public config: RiverConfig,
         public clientIndex: number,
@@ -82,7 +83,7 @@ export class StressClient {
         public globalPersistedStore: IStorage | undefined,
         public storageKey: string,
     ) {
-        logger.info('StressClient', {
+        this.logger = getLogger('stress:stressClient', {
             clientIndex,
             userId,
             logId: this.logId,
@@ -176,9 +177,9 @@ export class StressClient {
                     this.storageKey,
                     JSON.stringify(device, null, 2),
                 )
-                logger.info(`Device exported to ${this.storageKey}`)
+                this.logger.info({ storageKey: this.storageKey }, 'device exported')
             } catch (e) {
-                logger.error('Failed to export device', e)
+                this.logger.error(e, 'failed to export device')
             }
         }
         return device
