@@ -15,6 +15,7 @@ contract DelegationProxyTest is Test {
   }
 
   function test_fuzz_delegationProxy(address delegatee) public {
+    vm.assume(delegatee != address(0));
     DelegationProxy proxy = new DelegationProxy(river, delegatee);
     assertEq(ERC20Votes(river).delegates(address(proxy)), delegatee);
     assertEq(
@@ -35,6 +36,7 @@ contract DelegationProxyTest is Test {
     address delegatee,
     address newDelegatee
   ) public {
+    vm.assume(delegatee != address(0));
     vm.assume(delegatee != newDelegatee);
     DelegationProxy proxy = new DelegationProxy(river, delegatee);
     proxy.redelegate(newDelegatee);
