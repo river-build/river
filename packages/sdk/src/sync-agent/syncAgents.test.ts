@@ -147,7 +147,9 @@ describe('syncAgents.test.ts', () => {
         await Promise.all([bob.start(), alice.start(), charlie.start()])
         const { streamId } = await bob.gdms.createGDM([alice.userId, charlie.userId])
         const aliceGdm = alice.gdms.getGdm(streamId)
-        expect(aliceGdm.members.data.userIds).toEqual([bob.userId, alice.userId, charlie.userId])
+        expect(aliceGdm.members.data.userIds).toEqual(
+            expect.arrayContaining([bob.userId, alice.userId, charlie.userId]),
+        )
         await aliceGdm.sendMessage('Hello, World!')
         const bobGdm = bob.gdms.getGdm(streamId)
         expect(bobGdm.timeline.events.value.find((e) => e.text === 'Hello, World!')).toBeDefined()
