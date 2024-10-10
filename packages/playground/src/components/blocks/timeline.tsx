@@ -5,7 +5,6 @@ import {
     useSendMessage,
     useSendReaction,
     useSyncAgent,
-    useTimeline,
     useUsername,
 } from '@river-build/react-sdk'
 import { useForm } from 'react-hook-form'
@@ -13,13 +12,12 @@ import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { type MessageReactions, RiverEvent, type TimelineEvent } from '@river-build/sdk'
 import { useCallback, useMemo } from 'react'
-import { useCurrentSpaceId } from '@/hooks/current-space'
-import { useCurrentChannelId } from '@/hooks/current-channel'
 import { cn } from '@/utils'
 import { Form, FormControl, FormField, FormItem, FormMessage } from '../ui/form'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { ScrollArea } from '../ui/scroll-area'
+import { Dialog, DialogContent, DialogTrigger } from '../ui/dialog'
 
 const useMessageReaction = (spaceId: string, channelId: string, eventId: string) => {
     const { data: reactionMap } = useReactions(spaceId, channelId)
@@ -53,30 +51,40 @@ const useMessageReaction = (spaceId: string, channelId: string, eventId: string)
     }
 }
 
-export const Timeline = () => {
-    const spaceId = useCurrentSpaceId()
-    const channelId = useCurrentChannelId()
-    const { data: timeline } = useTimeline(spaceId, channelId)
-
+export const Timeline = ({
+    spaceId,
+    channelId,
+    events,
+    threadMap,
+    showThreadMessages = false,
+}: {
+    spaceId: string
+    channelId: string
+    events: TimelineEvent[]
+    showThreadMessages?: boolean
+    threadMap?: Record<string, TimelineEvent[]>
+}) => {
     return (
         <div className="grid grid-rows-[auto,1fr] gap-2">
             <ScrollArea className="h-[calc(100dvh-172px)]">
                 <div className="flex flex-col gap-1.5">
-                    {timeline.flatMap((event) =>
-                        event.content?.kind === RiverEvent.RoomMessage
+                    {events.flatMap((event) =>
+                        event.content?.kind === RiverEvent.RoomMessage &&
+                        (showThreadMessages || !event.threadParentId)
                             ? [
                                   <Message
                                       key={event.eventId}
                                       event={event}
                                       spaceId={spaceId}
                                       channelId={channelId}
+                                      thread={threadMap?.[event.eventId]}
                                   />,
                               ]
                             : [],
                     )}
                 </div>
             </ScrollArea>
-            <SendMessage />
+            <SendMessage spaceId={spaceId} channelId={channelId} />
         </div>
     )
 }
@@ -85,9 +93,7 @@ const formSchema = z.object({
     message: z.string(),
 })
 
-export const SendMessage = () => {
-    const spaceId = useCurrentSpaceId()
-    const channelId = useCurrentChannelId()
+export const SendMessage = ({ spaceId, channelId }: { spaceId: string; channelId: string }) => {
     const { sendMessage, isPending } = useSendMessage(spaceId, channelId)
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -124,10 +130,12 @@ const Message = ({
     event,
     spaceId,
     channelId,
+    thread,
 }: {
     event: TimelineEvent
     spaceId: string
     channelId: string
+    thread: TimelineEvent[]
 }) => {
     const sync = useSyncAgent()
     const member = useMemo(
@@ -169,6 +177,22 @@ const Message = ({
                     <Button variant="ghost" onClick={() => redactEvent(event.eventId)}>
                         ❌
                     </Button>
+                )}
+
+                {thread?.length > 0 && (
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button variant="ghost">+{thread.length} messages</Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2x">
+                            <Timeline
+                                showThreadMessages
+                                events={thread}
+                                spaceId={spaceId}
+                                channelId={channelId}
+                            />
+                        </DialogContent>
+                    </Dialog>
                 )}
             </div>
         </div>

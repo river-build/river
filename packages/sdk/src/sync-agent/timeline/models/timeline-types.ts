@@ -306,7 +306,7 @@ export interface TimelineEventConfirmation {
     confirmedInBlockNum: bigint
 }
 
-export interface ThreadStats {
+export interface ThreadStatsData {
     /// Thread Parent
     replyEventIds: Set<string>
     userIds: Set<string>
@@ -322,7 +322,7 @@ export interface ThreadResult {
     isNew: boolean
     isUnread: boolean
     fullyReadMarker?: FullyReadMarker
-    thread: ThreadStats
+    thread: ThreadStatsData
     channelId: string // NOTE: dispreancy with useCasablancaTimeline, where channel is ChannelData
     timestamp: number
 }

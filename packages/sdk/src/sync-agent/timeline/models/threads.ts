@@ -1,6 +1,8 @@
 import { Observable } from '../../../observable/observable'
 import { type TimelineEvent } from './timeline-types'
 
+// TODO: make this a map of TimelineEvents (map of Observables)
+// this could reduce a few rerenders in the react app
 type ThreadsMap = Record<string, TimelineEvent[]>
 
 export class Threads extends Observable<ThreadsMap> {

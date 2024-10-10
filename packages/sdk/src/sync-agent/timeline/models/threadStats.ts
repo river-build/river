@@ -1,10 +1,9 @@
 import { Observable } from '../../../observable/observable'
-import { RiverEvent, TimelineEvent } from './timeline-types'
-import { type ThreadStats as ThreadStatsType } from './timeline-types'
+import { RiverEvent, TimelineEvent, ThreadStatsData } from './timeline-types'
 import { getMessageSenderId, getRoomMessageContent } from './timelineEvent'
 
 // eventId -> threadStats
-export type ThreadStatsMap = Record<string, ThreadStatsType>
+export type ThreadStatsMap = Record<string, ThreadStatsData>
 
 // TODO: better name
 export class ThreadStats extends Observable<ThreadStatsMap> {
@@ -20,7 +19,7 @@ export class ThreadStats extends Observable<ThreadStatsMap> {
         this.setValue({})
     }
 
-    get(eventId: string): ThreadStatsType | undefined {
+    get(eventId: string): ThreadStatsData | undefined {
         return this.value?.[eventId]
     }
 
@@ -81,7 +80,7 @@ export class ThreadStats extends Observable<ThreadStatsMap> {
         this.setValue(updated)
     }
 
-    private formatThreadStat(userId: string, event: TimelineEvent, threadStat: ThreadStatsType) {
+    private formatThreadStat(userId: string, event: TimelineEvent, threadStat: ThreadStatsData) {
         if (event.content?.kind === RiverEvent.RedactedEvent) {
             return threadStat
         }
@@ -104,7 +103,7 @@ function makeNewThreadStats(
     event: TimelineEvent,
     parentId: string,
     timeline?: TimelineEvent[],
-): ThreadStatsType {
+): ThreadStatsData {
     // one time lookup of the parent message for the first reply
     const parent = timeline?.find((t) => t.eventId === parentId)
     return {
