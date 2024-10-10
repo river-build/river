@@ -64,23 +64,23 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     rewardsDistributionFacet.stake(1, OPERATOR, address(0));
   }
 
+  function test_stake() public returns (uint256 depositId) {
+    depositId = test_fuzz_stake(1 ether, OPERATOR, 0, address(this));
+  }
+
   function test_fuzz_stake(
     uint96 amount,
     address operator,
     uint256 commissionRate,
     address beneficiary
-  ) public givenOperator(operator, commissionRate) {
+  ) public givenOperator(operator, commissionRate) returns (uint256 depositId) {
     vm.assume(beneficiary != address(0));
     amount = uint96(bound(amount, 1, type(uint96).max));
     commissionRate = bound(commissionRate, 0, 10000);
 
     bridgeTokensForUser(address(this), amount);
     river.approve(address(rewardsDistributionFacet), amount);
-    uint256 depositId = rewardsDistributionFacet.stake(
-      amount,
-      operator,
-      beneficiary
-    );
+    depositId = rewardsDistributionFacet.stake(amount, operator, beneficiary);
 
     verifyStake(
       address(this),
@@ -130,18 +130,8 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     verifyStake(user, depositId, amount, operator, commissionRate, beneficiary);
   }
 
-  function test_increaseStake_revertIf_notDepositor()
-    public
-    givenOperator(OPERATOR, 0)
-  {
-    uint96 amount = 1 ether;
-    bridgeTokensForUser(address(this), amount);
-    river.approve(address(rewardsDistributionFacet), amount);
-    uint256 depositId = rewardsDistributionFacet.stake(
-      amount,
-      OPERATOR,
-      address(this)
-    );
+  function test_increaseStake_revertIf_notDepositor() public {
+    uint256 depositId = test_stake();
 
     vm.prank(_randomAddress());
     vm.expectRevert(RewardsDistribution__NotDepositOwner.selector);
@@ -185,35 +175,15 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     );
   }
 
-  function test_redelegate_revertIf_notOperator()
-    public
-    givenOperator(OPERATOR, 0)
-  {
-    uint96 amount = 1 ether;
-    bridgeTokensForUser(address(this), amount);
-    river.approve(address(rewardsDistributionFacet), amount);
-    uint256 depositId = rewardsDistributionFacet.stake(
-      amount,
-      OPERATOR,
-      address(this)
-    );
+  function test_redelegate_revertIf_notOperator() public {
+    uint256 depositId = test_stake();
 
     vm.expectRevert(RewardsDistribution__NotOperatorOrSpace.selector);
     rewardsDistributionFacet.redelegate(depositId, _randomAddress());
   }
 
-  function test_redelegate_revertIf_notDepositor()
-    public
-    givenOperator(OPERATOR, 0)
-  {
-    uint96 amount = 1 ether;
-    bridgeTokensForUser(address(this), amount);
-    river.approve(address(rewardsDistributionFacet), amount);
-    uint256 depositId = rewardsDistributionFacet.stake(
-      amount,
-      OPERATOR,
-      address(this)
-    );
+  function test_redelegate_revertIf_notDepositor() public {
+    uint256 depositId = test_stake();
 
     address delegatee = _randomAddress();
     registerOperator(delegatee);
@@ -229,24 +199,23 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     uint256 commissionRate0,
     address operator1,
     uint256 commissionRate1
-  )
-    public
-    givenOperator(operator0, commissionRate0)
-    givenOperator(operator1, commissionRate1)
-  {
+  ) public givenOperator(operator1, commissionRate1) {
     amount = uint96(bound(amount, 1, type(uint96).max));
-    commissionRate0 = bound(commissionRate0, 0, 10000);
     commissionRate1 = bound(commissionRate1, 0, 10000);
 
-    bridgeTokensForUser(address(this), amount);
-    river.approve(address(rewardsDistributionFacet), amount);
-    uint256 depositId = rewardsDistributionFacet.stake(
+    uint256 depositId = test_fuzz_stake(
       amount,
       operator0,
+      commissionRate0,
       address(this)
     );
 
     rewardsDistributionFacet.redelegate(depositId, operator1);
+
+    assertEq(
+      rewardsDistributionFacet.treasureByBeneficiary(operator0).earningPower,
+      0
+    );
 
     verifyStake(
       address(this),
@@ -255,11 +224,6 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
       operator1,
       commissionRate1,
       address(this)
-    );
-
-    assertEq(
-      rewardsDistributionFacet.treasureByBeneficiary(operator0).earningPower,
-      0
     );
   }
 
@@ -355,6 +319,8 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
       rewardsDistributionFacet.treasureByBeneficiary(operator).earningPower,
       deposit.commissionEarningPower
     );
+
+    assertEq(river.getVotes(operator), amount);
   }
 
   function signPermit(
