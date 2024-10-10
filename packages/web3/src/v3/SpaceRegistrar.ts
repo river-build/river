@@ -6,8 +6,13 @@ import { ILegacySpaceArchitectShim } from './ILegacySpaceArchitectShim'
 import { Space } from './Space'
 import { ethers } from 'ethers'
 
+interface SpaceRecord {
+    space: Space | undefined
+    timeout: NodeJS.Timeout | undefined
+}
+
 interface SpaceMap {
-    [spaceId: string]: { space: Space | undefined; lastSeen: number }
+    [spaceId: string]: SpaceRecord
 }
 
 /**
@@ -44,27 +49,24 @@ export class SpaceRegistrar {
         // aellis 10/2024 we don't really need to cache spaces, but they instantiate a lot of objects
         // for the contracts and it's worth not wasting memory if we need to access the same space multiple times
         // this code is also used on the server so we don't want to cache spaces for too long
-        const space = this.spaces[spaceId]?.space || this.createSpace(spaceId)
-        this.pruneSpaces()
-        this.spaces[spaceId] = { lastSeen: new Date().getTime(), space }
-        return space
+        const spaceRecordTTL = 1000 * 5
+        const spaceRecord = this.spaces[spaceId] || this.createSpace(spaceId)
+        clearTimeout(spaceRecord.timeout)
+        spaceRecord.timeout = setTimeout(() => {
+            delete this.spaces[spaceId]
+        }, spaceRecordTTL)
+        this.spaces[spaceId] = spaceRecord
+        return spaceRecord.space
     }
 
-    private pruneSpaces(): void {
-        // clear out spaces that haven't been seen in 5 seconds
-        const fiveSecondsAgo = new Date().getTime() - 1000 * 5
-        for (const spaceId in this.spaces) {
-            if (this.spaces[spaceId].lastSeen < fiveSecondsAgo) {
-                delete this.spaces[spaceId]
-            }
-        }
-    }
-
-    private createSpace(spaceId: string): Space | undefined {
+    private createSpace(spaceId: string): SpaceRecord {
         const spaceAddress = SpaceAddressFromSpaceId(spaceId)
         if (!spaceAddress || spaceAddress === ethers.constants.AddressZero) {
-            return undefined // space is not found
+            return { space: undefined, timeout: undefined } // space is not found
         }
-        return new Space(spaceAddress, spaceId, this.config, this.provider)
+        return {
+            space: new Space(spaceAddress, spaceId, this.config, this.provider),
+            timeout: undefined,
+        }
     }
 }
