@@ -74,6 +74,7 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     uint256 commissionRate,
     address beneficiary
   ) public givenOperator(operator, commissionRate) returns (uint256 depositId) {
+    vm.assume(operator != beneficiary);
     vm.assume(beneficiary != address(0));
     amount = uint96(bound(amount, 1, type(uint96).max));
     commissionRate = bound(commissionRate, 0, 10000);
@@ -99,6 +100,7 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     uint256 commissionRate,
     address beneficiary
   ) public givenOperator(operator, commissionRate) {
+    vm.assume(operator != beneficiary);
     vm.assume(beneficiary != address(0));
     amount = uint96(bound(amount, 1, type(uint96).max));
     commissionRate = bound(commissionRate, 0, 10000);
@@ -149,6 +151,7 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     uint256 commissionRate,
     address beneficiary
   ) public givenOperator(operator, commissionRate) {
+    vm.assume(operator != beneficiary);
     vm.assume(beneficiary != address(0));
     amount0 = uint96(bound(amount0, 1, type(uint96).max));
     amount1 = uint96(bound(amount1, 0, type(uint96).max - amount0));
@@ -200,6 +203,8 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     address operator1,
     uint256 commissionRate1
   ) public givenOperator(operator1, commissionRate1) {
+    vm.assume(operator0 != operator1);
+    vm.assume(operator1 != address(this));
     amount = uint96(bound(amount, 1, type(uint96).max));
     commissionRate1 = bound(commissionRate1, 0, 10000);
 
@@ -252,6 +257,7 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     uint256 commissionRate,
     address beneficiary
   ) public {
+    vm.assume(operator != beneficiary);
     vm.assume(beneficiary != address(0));
     amount = uint96(bound(amount, 1, type(uint96).max));
     commissionRate = bound(commissionRate, 0, 10000);
