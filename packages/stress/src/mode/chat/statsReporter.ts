@@ -1,8 +1,8 @@
-import { dlogger } from '@river-build/dlog'
 import type { StressClient } from '../../utils/stressClient'
 import { ChatConfig } from '../common/types'
+import { getLogger } from '../../utils/logger'
 
-const logger = dlogger('stress:statsReporter')
+const logger = getLogger('stress:statsReporter')
 
 export function statsReporter(chatConfig: ChatConfig) {
     return {
@@ -12,13 +12,16 @@ export function statsReporter(chatConfig: ChatConfig) {
             isSuccess: boolean,
             metadata?: Record<string, unknown>,
         ) => {
-            logger.info({
-                sequence: 'STRESS_RESULT',
-                step,
-                result: isSuccess ? 'PASS' : 'FAIL',
-                sessionId: client.logId,
-                metadata,
-            })
+            logger.info(
+                {
+                    sequence: 'STRESS_RESULT',
+                    step,
+                    result: isSuccess ? 'PASS' : 'FAIL',
+                    sessionId: client.logId,
+                    metadata,
+                },
+                'stress step result',
+            )
         },
         reactionCounter: (rootClient: StressClient) => {
             let canceled = false
@@ -52,7 +55,7 @@ export function statsReporter(chatConfig: ChatConfig) {
                 })()
             }, 5000)
             return () => {
-                logger.info('canceled')
+                logger.debug('canceled')
                 clearInterval(interval)
                 canceled = true
             }
