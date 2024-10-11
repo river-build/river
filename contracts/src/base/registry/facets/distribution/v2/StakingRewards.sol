@@ -36,7 +36,7 @@ library StakingRewards {
   /// @param rewardPerTokenAccumulated The scaled amount of rewardToken that has been accumulated per staked token
   /// @param unclaimedRewardSnapshot The snapshot of the unclaimed reward scaled
   struct Treasure {
-    uint256 earningPower;
+    uint96 earningPower;
     uint256 rewardPerTokenAccumulated;
     uint256 unclaimedRewardSnapshot;
   }
@@ -249,39 +249,39 @@ library StakingRewards {
     uint256 commissionRate
   ) private {
     unchecked {
-      uint96 commissionEarningPower;
       if (commissionRate == 0) {
         beneficiaryTreasure.earningPower += amount;
       } else {
+        uint96 commissionEarningPower = uint96(
+          (uint256(amount) * commissionRate) / 10000
+        );
+        deposit.commissionEarningPower += commissionEarningPower;
+        beneficiaryTreasure.earningPower += amount - commissionEarningPower;
+
         Treasure storage delegateeTreasure = ds.treasureByBeneficiary[
           delegatee
         ];
         updateReward(ds, delegateeTreasure);
-
-        commissionEarningPower = uint96(
-          FixedPointMathLib.mulDiv(amount, commissionRate, SCALE_FACTOR)
-        );
-        beneficiaryTreasure.earningPower += amount - commissionEarningPower;
         delegateeTreasure.earningPower += commissionEarningPower;
       }
-      deposit.commissionEarningPower += commissionEarningPower;
     }
   }
 
   function _decreaseEarningPower(
     Layout storage ds,
     Deposit storage deposit,
-    Treasure storage beneficiaryTreasure,
-    uint96 amount,
-    address delegatee
+    Treasure storage beneficiaryTreasure
   ) private {
-    updateReward(ds, beneficiaryTreasure);
-
     unchecked {
-      uint96 commissionEarningPower = deposit.commissionEarningPower;
+      (uint96 amount, uint96 commissionEarningPower, address delegatee) = (
+        deposit.amount,
+        deposit.commissionEarningPower,
+        deposit.delegatee
+      );
       if (commissionEarningPower == 0) {
         beneficiaryTreasure.earningPower -= amount;
       } else {
+        deposit.commissionEarningPower = 0;
         beneficiaryTreasure.earningPower -= amount - commissionEarningPower;
 
         Treasure storage delegateeTreasure = ds.treasureByBeneficiary[
@@ -306,29 +306,18 @@ library StakingRewards {
 
     updateGlobalReward(ds);
 
-    // cache storage reads
-    (uint96 amount, address beneficiary, address oldDelegatee) = (
-      deposit.amount,
-      deposit.beneficiary,
-      deposit.delegatee
-    );
-
     Treasure storage beneficiaryTreasure = ds.treasureByBeneficiary[
-      beneficiary
+      deposit.beneficiary
     ];
-    _decreaseEarningPower(
-      ds,
-      deposit,
-      beneficiaryTreasure,
-      amount,
-      oldDelegatee
-    );
+    updateReward(ds, beneficiaryTreasure);
+
+    _decreaseEarningPower(ds, deposit, beneficiaryTreasure);
 
     _increaseEarningPower(
       ds,
       deposit,
       beneficiaryTreasure,
-      amount,
+      deposit.amount,
       newDelegatee,
       commissionRate
     );
