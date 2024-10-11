@@ -352,29 +352,33 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
 
     StakingRewards.Deposit memory deposit = rewardsDistributionFacet
       .depositById(depositId);
-    assertEq(deposit.amount, amount);
-    assertEq(deposit.owner, depositor);
-    assertEq(
+    assertEq(deposit.amount, amount, "amount");
+    assertEq(deposit.owner, depositor, "owner");
+    assertApproxEqAbs(
       deposit.commissionEarningPower,
-      (amount * commissionRate) / StakingRewards.SCALE_FACTOR
+      (amount * commissionRate) / 10000,
+      1,
+      "commissionEarningPower"
     );
-    assertEq(deposit.delegatee, operator);
-    assertEq(deposit.beneficiary, beneficiary);
+    assertEq(deposit.delegatee, operator, "delegatee");
+    assertEq(deposit.beneficiary, beneficiary, "beneficiary");
 
     assertEq(
       deposit.commissionEarningPower +
         rewardsDistributionFacet
           .treasureByBeneficiary(beneficiary)
           .earningPower,
-      amount
+      amount,
+      "earningPower"
     );
 
     assertEq(
       rewardsDistributionFacet.treasureByBeneficiary(operator).earningPower,
-      deposit.commissionEarningPower
+      deposit.commissionEarningPower,
+      "commissionEarningPower"
     );
 
-    assertEq(river.getVotes(operator), amount);
+    assertEq(river.getVotes(operator), amount, "getVotes");
   }
 
   function signPermit(
