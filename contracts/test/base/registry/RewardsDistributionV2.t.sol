@@ -5,6 +5,9 @@ pragma solidity ^0.8.23;
 import {IERC173} from "contracts/src/diamond/facets/ownable/IERC173.sol";
 import {IRewardsDistributionBase} from "contracts/src/base/registry/facets/distribution/v2/IRewardsDistribution.sol";
 
+// libraries
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+
 // contracts
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {NodeOperatorFacet} from "contracts/src/base/registry/facets/operator/NodeOperatorFacet.sol";
@@ -281,6 +284,79 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     );
   }
 
+  function test_initiateWithdraw_revertIf_notDepositor() public {
+    uint256 depositId = test_stake();
+
+    vm.prank(_randomAddress());
+    vm.expectRevert(RewardsDistribution__NotDepositOwner.selector);
+    rewardsDistributionFacet.initiateWithdraw(depositId);
+  }
+
+  function test_initiateWithdraw() public returns (uint256 depositId) {
+    return test_fuzz_initiateWithdraw(1 ether, OPERATOR, 0, address(this));
+  }
+
+  function test_fuzz_initiateWithdraw(
+    uint96 amount,
+    address operator,
+    uint256 commissionRate,
+    address beneficiary
+  ) public returns (uint256 depositId) {
+    amount = uint96(bound(amount, 1, type(uint96).max));
+    depositId = test_fuzz_stake(amount, operator, commissionRate, beneficiary);
+
+    rewardsDistributionFacet.initiateWithdraw(depositId);
+
+    verifyWithdraw(address(this), depositId, amount, operator, beneficiary);
+  }
+
+  function test_withdraw_revertIf_notDepositor() public {
+    uint256 depositId = test_initiateWithdraw();
+
+    vm.prank(_randomAddress());
+    vm.expectRevert(RewardsDistribution__NotDepositOwner.selector);
+    rewardsDistributionFacet.withdraw(depositId);
+  }
+
+  function test_withdraw_revertIf_stillLocked() public {
+    uint256 depositId = test_initiateWithdraw();
+
+    address proxy = rewardsDistributionFacet.delegationProxyById(depositId);
+    uint256 cd = river.lockCooldown(proxy);
+
+    vm.warp(cd - 1);
+
+    vm.expectRevert(SafeTransferLib.TransferFromFailed.selector);
+    rewardsDistributionFacet.withdraw(depositId);
+  }
+
+  function test_withdraw() public {
+    test_fuzz_withdraw(1 ether, OPERATOR, 0, address(this));
+  }
+
+  function test_fuzz_withdraw(
+    uint96 amount,
+    address operator,
+    uint256 commissionRate,
+    address beneficiary
+  ) public {
+    uint256 depositId = test_fuzz_initiateWithdraw(
+      amount,
+      operator,
+      commissionRate,
+      beneficiary
+    );
+
+    address proxy = rewardsDistributionFacet.delegationProxyById(depositId);
+    uint256 cd = river.lockCooldown(proxy);
+
+    vm.warp(cd);
+
+    rewardsDistributionFacet.withdraw(depositId);
+
+    verifyWithdraw(address(this), depositId, 0, operator, beneficiary);
+  }
+
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                          OPERATOR                          */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -378,7 +454,39 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
       "commissionEarningPower"
     );
 
-    assertEq(river.getVotes(operator), amount, "getVotes");
+    assertEq(river.getVotes(operator), amount, "votes");
+  }
+
+  function verifyWithdraw(
+    address depositor,
+    uint256 depositId,
+    uint96 amount,
+    address operator,
+    address beneficiary
+  ) internal view {
+    assertEq(rewardsDistributionFacet.stakedByDepositor(depositor), amount);
+
+    StakingRewards.Deposit memory deposit = rewardsDistributionFacet
+      .depositById(depositId);
+    assertEq(deposit.amount, amount, "amount");
+    assertEq(deposit.owner, depositor, "owner");
+    assertEq(deposit.commissionEarningPower, 0, "commissionEarningPower");
+    assertEq(deposit.delegatee, address(0), "delegatee");
+    assertEq(deposit.beneficiary, beneficiary, "beneficiary");
+
+    assertEq(
+      rewardsDistributionFacet.treasureByBeneficiary(beneficiary).earningPower,
+      0,
+      "earningPower"
+    );
+
+    assertEq(
+      rewardsDistributionFacet.treasureByBeneficiary(operator).earningPower,
+      0,
+      "commissionEarningPower"
+    );
+
+    assertEq(river.getVotes(operator), 0, "votes");
   }
 
   function signPermit(
