@@ -208,7 +208,7 @@ contract River is
     if (delegatee == address(0)) {
       _disableLock(account);
     } else {
-      if (!_lockEnabled(account)) _enableLock(account);
+      _enableLock(account);
     }
 
     super._delegate(account, delegatee);

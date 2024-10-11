@@ -24,10 +24,6 @@ abstract contract LockBase is ILockBase {
   function _enableLock(address caller) internal {
     LockStorage.Layout storage ds = LockStorage.layout();
 
-    if (ds.enabledByAddress[caller]) {
-      revert LockAlreadyEnabled();
-    }
-
     ds.enabledByAddress[caller] = true;
 
     emit LockUpdated(caller, true, 0, block.timestamp);
@@ -35,10 +31,6 @@ abstract contract LockBase is ILockBase {
 
   function _disableLock(address caller) internal {
     LockStorage.Layout storage ds = LockStorage.layout();
-
-    if (ds.enabledByAddress[caller] == false) {
-      revert LockAlreadyDisabled();
-    }
 
     ds.enabledByAddress[caller] = false;
     ds.cooldownByAddress[caller] = block.timestamp + ds.defaultCooldown;
