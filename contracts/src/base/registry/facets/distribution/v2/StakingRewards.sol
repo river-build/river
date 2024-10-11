@@ -362,31 +362,45 @@ library StakingRewards {
     }
   }
 
-  function withdraw(
+  function initiateWithdraw(
     Layout storage ds,
     Deposit storage deposit,
-    uint256 depositId,
-    uint96 amount
+    uint256 depositId
   ) internal {
     updateGlobalReward(ds);
-    // cache storage reads
-    (address beneficiary, address owner) = (deposit.beneficiary, deposit.owner);
 
     Treasure storage beneficiaryTreasure = ds.treasureByBeneficiary[
-      beneficiary
+      deposit.beneficiary
     ];
     updateReward(ds, beneficiaryTreasure);
 
-    deposit.amount -= amount;
+    _decreaseEarningPower(ds, deposit, beneficiaryTreasure);
+
+    address proxy = ds.proxyById[depositId];
+    DelegationProxy(proxy).redelegate(address(0));
+    deposit.delegatee = address(0);
+  }
+
+  function withdraw(
+    Layout storage ds,
+    Deposit storage deposit,
+    uint256 depositId
+  ) internal {
+    updateGlobalReward(ds);
+
+    // cache storage reads
+    (uint96 amount, address owner) = (deposit.amount, deposit.owner);
+
+    deposit.amount = 0;
     unchecked {
       // totalStaked >= deposit.amount
       ds.totalStaked -= amount;
       // stakedByDepositor[owner] >= deposit.amount
       ds.stakedByDepositor[owner] -= amount;
-      // treasureByBeneficiary[beneficiary].earningPower >= deposit.amount
-      beneficiaryTreasure.earningPower -= amount;
     }
-    ds.stakeToken.safeTransferFrom(ds.proxyById[depositId], owner, amount);
+
+    address proxy = ds.proxyById[depositId];
+    ds.stakeToken.safeTransferFrom(proxy, owner, amount);
   }
 
   function claimReward(
