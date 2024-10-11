@@ -140,13 +140,22 @@ contract RewardsDistribution is IRewardsDistribution, OwnableBase, Facet {
     ds.staking.changeBeneficiary(deposit, newBeneficiary);
   }
 
-  function withdraw(uint256 depositId, uint96 amount) external {
+  function initiateWithdraw(uint256 depositId) external {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     StakingRewards.Deposit storage deposit = ds.staking.depositById[depositId];
     _revertIfNotDepositOwner(deposit.owner);
 
-    ds.staking.withdraw(deposit, depositId, amount);
+    ds.staking.initiateWithdraw(deposit, depositId);
+  }
+
+  function withdraw(uint256 depositId) external {
+    RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
+      .layout();
+    StakingRewards.Deposit storage deposit = ds.staking.depositById[depositId];
+    _revertIfNotDepositOwner(deposit.owner);
+
+    ds.staking.withdraw(deposit, depositId);
   }
 
   // TODO: transfer rewards when a space redelegates
