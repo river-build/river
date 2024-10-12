@@ -200,6 +200,23 @@ func (r *streamViewImpl) copyAndAddEvent(event *ParsedEvent) (*streamViewImpl, e
 		return nil, RiverError(Err_BAD_EVENT, "streamViewImpl: block event not allowed")
 	}
 
+	for _, block := range r.blocks {
+		for _, e := range block.events {
+			if event.Hash == e.Hash {
+				return nil, RiverError(
+					Err_DUPLICATE_EVENT,
+					"streamViewImpl: previous block contains this event",
+					"blockNum",
+					block.Num,
+					"event",
+					event.ShortDebugStr(),
+					"streamId",
+					r.streamId,
+				).Func("copyAndAddEvent")
+			}
+		}
+	}
+
 	newMinipool := r.minipool.tryCopyAndAddEvent(event)
 	if newMinipool == nil {
 		return nil, RiverError(
@@ -259,7 +276,6 @@ func (r *streamViewImpl) makeMiniblockHeader(
 		)
 	}
 
-	log := dlog.FromCtx(ctx)
 	hashes := make([][]byte, 0, r.minipool.events.Len())
 	events := make([]*ParsedEvent, 0, r.minipool.events.Len())
 
@@ -295,7 +311,7 @@ func (r *streamViewImpl) makeMiniblockHeader(
 				offset := block.header().EventNumOffset
 				err := Update_Snapshot(snapshot, e, miniblockNum, offset+int64(j))
 				if err != nil {
-					log.Error("Failed to update snapshot",
+					dlog.FromCtx(ctx).Error("Failed to update snapshot",
 						"error", err,
 						"streamId", r.streamId,
 						"event", e.ShortDebugStr(),
@@ -303,11 +319,11 @@ func (r *streamViewImpl) makeMiniblockHeader(
 				}
 			}
 		}
-		// update with current events in minipool
+		// update with events from the new block
 		for i, e := range events {
 			err := Update_Snapshot(snapshot, e, nextMiniblockNum, eventNumOffset+int64(i))
 			if err != nil {
-				log.Error("Failed to update snapshot",
+				dlog.FromCtx(ctx).Error("Failed to update snapshot",
 					"error", err,
 					"streamId", r.streamId,
 					"event", e.ShortDebugStr(),
