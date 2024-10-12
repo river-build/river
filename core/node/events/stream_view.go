@@ -200,6 +200,15 @@ func (r *streamViewImpl) copyAndAddEvent(event *ParsedEvent) (*streamViewImpl, e
 		return nil, RiverError(Err_BAD_EVENT, "streamViewImpl: block event not allowed")
 	}
 
+	newMinipool := r.minipool.tryCopyAndAddEvent(event)
+	if newMinipool == nil {
+		return nil, RiverError(
+			Err_DUPLICATE_EVENT,
+			"streamViewImpl: duplicate event",
+		).Func("copyAndAddEvent").
+			Tags("event", event.ShortDebugStr(), "streamId", r.streamId)
+	}
+
 	for _, block := range r.blocks {
 		for _, e := range block.events {
 			if event.Hash == e.Hash {
@@ -215,15 +224,6 @@ func (r *streamViewImpl) copyAndAddEvent(event *ParsedEvent) (*streamViewImpl, e
 				).Func("copyAndAddEvent")
 			}
 		}
-	}
-
-	newMinipool := r.minipool.tryCopyAndAddEvent(event)
-	if newMinipool == nil {
-		return nil, RiverError(
-			Err_DUPLICATE_EVENT,
-			"streamViewImpl: duplicate event",
-		).Func("copyAndAddEvent").
-			Tags("event", event.ShortDebugStr(), "streamId", r.streamId)
 	}
 
 	ret := &streamViewImpl{
