@@ -5,15 +5,7 @@ import { ILegacySpaceArchitectShim } from './ILegacySpaceArchitectShim'
 
 import { Space } from './Space'
 import { ethers } from 'ethers'
-
-interface SpaceRecord {
-    space: Space | undefined
-    timeout: NodeJS.Timeout | undefined
-}
-
-interface SpaceMap {
-    [spaceId: string]: SpaceRecord
-}
+import { LRUCache } from 'lru-cache'
 
 /**
  * A class to manage the creation of space stubs
@@ -25,9 +17,15 @@ export class SpaceRegistrar {
     private readonly provider: ethers.providers.Provider
     private readonly spaceArchitect: ISpaceArchitectShim
     private readonly legacySpaceArchitect: ILegacySpaceArchitectShim
-    private readonly spaces: SpaceMap = {}
+    private readonly spaces: LRUCache<string, Space>
 
     constructor(config: BaseChainConfig, provider: ethers.providers.Provider) {
+        this.spaces = new LRUCache<string, Space>({
+            max: 100,
+            maxSize: 100,
+            updateAgeOnGet: true,
+            updateAgeOnHas: true,
+        })
         this.config = config
         this.provider = provider
         this.spaceArchitect = new ISpaceArchitectShim(config.addresses.spaceFactory, provider)
@@ -49,24 +47,16 @@ export class SpaceRegistrar {
         // aellis 10/2024 we don't really need to cache spaces, but they instantiate a lot of objects
         // for the contracts and it's worth not wasting memory if we need to access the same space multiple times
         // this code is also used on the server so we don't want to cache spaces for too long
-        const spaceRecordTTL = 1000 * 5
-        const spaceRecord = this.spaces[spaceId] || this.createSpace(spaceId)
-        clearTimeout(spaceRecord.timeout)
-        spaceRecord.timeout = setTimeout(() => {
-            delete this.spaces[spaceId]
-        }, spaceRecordTTL)
-        this.spaces[spaceId] = spaceRecord
-        return spaceRecord.space
-    }
-
-    private createSpace(spaceId: string): SpaceRecord {
-        const spaceAddress = SpaceAddressFromSpaceId(spaceId)
-        if (!spaceAddress || spaceAddress === ethers.constants.AddressZero) {
-            return { space: undefined, timeout: undefined } // space is not found
+        const space = this.spaces.get(spaceId)
+        if (!space) {
+            const spaceAddress = SpaceAddressFromSpaceId(spaceId)
+            if (!spaceAddress || spaceAddress === ethers.constants.AddressZero) {
+                return undefined
+            }
+            const space = new Space(spaceAddress, spaceId, this.config, this.provider)
+            this.spaces.set(spaceId, space)
+            return space
         }
-        return {
-            space: new Space(spaceAddress, spaceId, this.config, this.provider),
-            timeout: undefined,
-        }
+        return space
     }
 }
