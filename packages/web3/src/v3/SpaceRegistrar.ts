@@ -22,9 +22,6 @@ export class SpaceRegistrar {
     constructor(config: BaseChainConfig, provider: ethers.providers.Provider) {
         this.spaces = new LRUCache<string, Space>({
             max: 100,
-            maxSize: 100,
-            updateAgeOnGet: true,
-            updateAgeOnHas: true,
         })
         this.config = config
         this.provider = provider
