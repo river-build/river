@@ -25,10 +25,28 @@ contract RewardsDistribution is IRewardsDistribution, OwnableBase, Facet {
   /*                       ADMIN SETTERS                        */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-  function __RewardsDistribution_init() external onlyInitializing {
+  function __RewardsDistribution_init(
+    address stakeToken,
+    address rewardToken,
+    uint256 rewardDuration
+  ) external onlyInitializing {
     _addInterface(type(IRewardsDistribution).interfaceId);
+    StakingRewards.Layout storage ds = RewardsDistributionStorage
+      .layout()
+      .staking;
+    (ds.stakeToken, ds.rewardToken, ds.rewardDuration) = (
+      stakeToken,
+      rewardToken,
+      rewardDuration
+    );
+    emit RewardsDistributionInitialized(
+      stakeToken,
+      rewardToken,
+      rewardDuration
+    );
   }
 
+  /// @dev Should not be called after contract is in use
   function setStakeAndRewardTokens(
     address stakeToken,
     address rewardToken
@@ -44,6 +62,7 @@ contract RewardsDistribution is IRewardsDistribution, OwnableBase, Facet {
     bool enabled
   ) external onlyOwner {
     RewardsDistributionStorage.layout().isRewardNotifier[notifier] = enabled;
+    emit RewardNotifierSet(notifier, enabled);
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
