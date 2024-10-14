@@ -168,7 +168,12 @@ func (ctc *cacheTestContext) createReplStream() (StreamId, []common.Address, []b
 	return streamId, nodes, mb.Header.Hash
 }
 
-func (ctc *cacheTestContext) addReplEvent(streamId StreamId, prevMiniblockHash []byte, nodes []common.Address) {
+func (ctc *cacheTestContext) addReplEvent(
+	streamId StreamId,
+	prevMiniblockHash []byte,
+	prevMiniblockNum int64,
+	nodes []common.Address,
+) {
 	addr := crypto.GetTestAddress()
 	ev, err := MakeParsedEventWithPayload(
 		ctc.clientWallet,
@@ -180,6 +185,7 @@ func (ctc *cacheTestContext) addReplEvent(streamId StreamId, prevMiniblockHash [
 			},
 		),
 		prevMiniblockHash,
+		prevMiniblockNum,
 	)
 	ctc.require.NoError(err)
 

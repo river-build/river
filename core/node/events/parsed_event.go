@@ -18,6 +18,7 @@ type ParsedEvent struct {
 	Envelope          *Envelope
 	Hash              common.Hash
 	PrevMiniblockHash *common.Hash `dlog:"omit"`
+	PrevMiniblockNum  int64
 	SignerPubKey      []byte
 	shortDebugStr     string
 }
@@ -79,6 +80,7 @@ func ParseEvent(envelope *Envelope) (*ParsedEvent, error) {
 		Envelope:          envelope,
 		Hash:              common.BytesToHash(envelope.Hash),
 		PrevMiniblockHash: &PrevMiniblockHash,
+		PrevMiniblockNum:  streamEvent.PrevMiniblockNum,
 		SignerPubKey:      signerPubKey,
 	}, nil
 }

@@ -16,7 +16,7 @@ func TestReplicatedMbProduction(t *testing.T) {
 	streamId, streamNodes, prevMbHash := tc.createReplStream()
 
 	for range 20 {
-		tc.addReplEvent(streamId, prevMbHash, streamNodes)
+		tc.addReplEvent(streamId, prevMbHash, 0, streamNodes)
 	}
 
 	leaderAddr := streamNodes[0]

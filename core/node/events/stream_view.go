@@ -578,14 +578,27 @@ func (r *streamViewImpl) ValidateNextEvent(
 	}
 	// ensure that we found it
 	if foundBlockAt == -1 {
-		return RiverError(
-			Err_BAD_PREV_MINIBLOCK_HASH,
-			"prevMiniblockHash not found in recent blocks",
-			"event",
-			parsedEvent.ShortDebugStr(),
-			"expected",
-			FormatFullHash(r.LastBlock().headerEvent.Hash),
-		)
+		if parsedEvent.PrevMiniblockNum > r.LastBlock().Num {
+			return RiverError(
+				Err_MINIBLOCK_TOO_NEW,
+				"prevMiniblockNum is greater than the last miniblock number in the stream",
+				"lastBlockNum",
+				r.LastBlock().Num,
+				"eventPrevMiniblockNum",
+				parsedEvent.PrevMiniblockNum,
+				"streamId",
+				r.streamId,
+			)
+		} else {
+			return RiverError(
+				Err_BAD_PREV_MINIBLOCK_HASH,
+				"prevMiniblockHash not found in recent blocks",
+				"event",
+				parsedEvent.ShortDebugStr(),
+				"expected",
+				FormatFullHash(r.LastBlock().headerEvent.Hash),
+			)
+		}
 	}
 	// make sure we're recent
 	// if the user isn't adding the latest block, allow it if the block after was recently created

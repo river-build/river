@@ -226,6 +226,7 @@ func NewMiniblockInfoFromHeaderAndParsed(
 		wallet,
 		Make_MiniblockHeader(header),
 		header.PrevMiniblockHash,
+		max(header.MiniblockNum-1, 0),
 	)
 	if err != nil {
 		return nil, err

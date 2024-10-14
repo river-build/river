@@ -24,6 +24,7 @@ func MakeGenesisMiniblockForSpaceStream(
 		wallet,
 		Make_SpacePayload_Inception(streamId, nil),
 		nil,
+		0,
 	)
 	require.NoError(t, err)
 
@@ -42,6 +43,7 @@ func MakeGenesisMiniblockForUserSettingsStream(
 		wallet,
 		Make_UserSettingsPayload_Inception(streamId, nil),
 		nil,
+		0,
 	)
 	require.NoError(t, err)
 

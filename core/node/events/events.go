@@ -103,6 +103,7 @@ func MakeParsedEventWithPayload(
 	wallet *crypto.Wallet,
 	payload IsStreamEvent_Payload,
 	prevMiniblockHash []byte,
+	prevMiniblockNum int64,
 ) (*ParsedEvent, error) {
 	streamEvent, err := MakeStreamEvent(wallet, payload, prevMiniblockHash)
 	if err != nil {
@@ -120,6 +121,7 @@ func MakeParsedEventWithPayload(
 		Envelope:          envelope,
 		Hash:              common.BytesToHash(envelope.Hash),
 		PrevMiniblockHash: &prevMiniBlockHash,
+		PrevMiniblockNum:  prevMiniblockNum,
 	}, nil
 }
 

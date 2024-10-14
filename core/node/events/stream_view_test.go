@@ -205,6 +205,7 @@ func TestLoad(t *testing.T) {
 		userWallet,
 		Make_MiniblockHeader(miniblockHeader),
 		view.LastBlock().Hash[:],
+		view.LastBlock().Num,
 	)
 	assert.NoError(t, err)
 	miniblock, err := NewMiniblockInfoFromParsed(miniblockHeaderEvent, envelopes)
@@ -214,9 +215,9 @@ func TestLoad(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, len(newSV1.blocks), 2) // we should have both blocks in memory
 	assert.Empty(t, newEvents)
-	btc.SetConfigValue(t, ctx, crypto.StreamRecencyConstraintsGenerationsConfigKey, crypto.ABIEncodeInt64(0))
 
 	// with 0 generations (0 in memory block history)
+	btc.SetConfigValue(t, ctx, crypto.StreamRecencyConstraintsGenerationsConfigKey, crypto.ABIEncodeInt64(0))
 	newSV2, newEvents, err := view.copyAndApplyBlock(miniblock, btc.OnChainConfig)
 	assert.NoError(t, err)
 	assert.Equal(t, len(newSV2.blocks), 1) // we should only have the latest block in memory
@@ -246,4 +247,32 @@ func TestLoad(t *testing.T) {
 	err = newSV1.ValidateNextEvent(ctx, btc.OnChainConfig, nextEvent, time.Now())
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "BAD_PREV_MINIBLOCK_HASH")
+}
+
+func TestMbHashConstraints(t *testing.T) {
+	ctx, cancel := test.NewTestContext()
+	defer cancel()
+	require := require.New(t)
+	userWallet, _ := crypto.NewWallet(ctx)
+	// nodeWallet, _ := crypto.NewWallet(ctx)
+	streamId := UserSettingStreamIdFromAddr(userWallet.Address)
+
+	// userAddress := userWallet.Address[:]
+
+	genMb := MakeGenesisMiniblockForUserSettingsStream(t, userWallet, streamId)
+	genMbBytes, err := proto.Marshal(genMb)
+	genMbHash := common.BytesToHash(genMb.Header.Hash)
+	require.NoError(err)
+
+	view, err = MakeStreamView(
+		ctx,
+		&storage.ReadStreamFromLastSnapshotResult{
+			Miniblocks: [][]byte{genMbBytes},
+		},
+	)
+	require.NoError(err)
+
+	view.copyAndAddEvent
+	
+	
 }
