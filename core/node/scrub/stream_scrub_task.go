@@ -5,12 +5,19 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/gammazero/workerpool"
+	"github.com/prometheus/client_golang/prometheus"
+
+	"go.opentelemetry.io/otel/attribute"
+	otelCodes "go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/auth"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/infra"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
 )
@@ -40,6 +47,12 @@ type streamScrubTaskProcessorImpl struct {
 	eventAdder   EventAdder
 	chainAuth    auth.ChainAuth
 	config       *config.Config
+	tracer       trace.Tracer
+
+	streamsScrubbed         *prometheus.CounterVec
+	entitlementLosses       *prometheus.CounterVec
+	userBoots               *prometheus.CounterVec
+	scrubWaitingQueueLength *prometheus.Gauge
 }
 
 func NewStreamScrubTasksProcessor(
@@ -48,7 +61,17 @@ func NewStreamScrubTasksProcessor(
 	eventAdder EventAdder,
 	chainAuth auth.ChainAuth,
 	cfg *config.Config,
+	metrics infra.MetricsFactory,
+	tracer trace.Tracer,
+	nodeAddress common.Address,
 ) (StreamScrubTaskProcessor, error) {
+	streamsScrubbedCounter := metrics.NewCounterVecEx(
+		"streams_scrubbed",
+		"Number of streams scrubbed",
+		"space_id",
+		"node_address",
+	)
+
 	proc := &streamScrubTaskProcessorImpl{
 		ctx:        ctx,
 		cache:      cache,
@@ -56,8 +79,106 @@ func NewStreamScrubTasksProcessor(
 		eventAdder: eventAdder,
 		chainAuth:  chainAuth,
 		config:     cfg,
+
+		streamsScrubbed: streamsScrubbedCounter.MustCurryWith(
+			prometheus.Labels{"node_address": nodeAddress.String()},
+		),
+		tracer: tracer,
 	}
 	return proc, nil
+}
+
+func (tp *streamScrubTaskProcessorImpl) processMember(
+	task *streamScrubTask,
+	ctx context.Context,
+	member string,
+) {
+	log := dlog.FromCtx(ctx).
+		With("Func", "streamScrubTask.processMember").
+		With("channelId", task.channelId).
+		With("spaceId", task.spaceId).
+		With("userId", member)
+
+	var span trace.Span
+
+	if tp.tracer != nil {
+		ctx, span = tp.tracer.Start(ctx, "member_scrub")
+		span.SetAttributes(attribute.String("spaceId", task.spaceId.String()))
+		span.SetAttributes(attribute.String("channelId", task.channelId.String()))
+		span.SetAttributes(attribute.String("userId", member))
+		defer span.End()
+	}
+
+	isEntitled, err := tp.chainAuth.IsEntitled(
+		ctx,
+		tp.config,
+		auth.NewChainAuthArgsForChannel(
+			task.spaceId,
+			task.channelId,
+			member,
+			auth.PermissionRead,
+		),
+	)
+	if err != nil {
+		log.Error("Scrubbing error: unable to evaluate user entitlement",
+			"user",
+			member,
+			"error",
+			err,
+		)
+		return
+	}
+	if span != nil {
+		span.SetAttributes(attribute.Bool("isEntitled", isEntitled))
+	}
+
+	// In the case that the user is not entitled, they must have lost their entitlement
+	// after joining the channel, so let's go ahead and boot them.
+	if !isEntitled {
+		userId, err := AddressFromUserId(member)
+		if err != nil {
+			log.Error("Error converting user id into address", "member", member, "error", err)
+			return
+		}
+		userStreamId, err := UserStreamIdFromBytes(userId)
+		if err != nil {
+			log.Error(
+				"Error constructing user id stream from user address",
+				"userAddress",
+				userId,
+				"error",
+				err,
+			)
+		}
+		log.Info("Entitlement loss detected; adding LEAVE event for user",
+			"user",
+			member,
+			"userStreamId",
+			userStreamId,
+		)
+		err = tp.eventAdder.AddEventPayload(
+			ctx,
+			userStreamId,
+			events.Make_UserPayload_Membership(
+				MembershipOp_SO_LEAVE,
+				task.channelId,
+				&member,
+				task.spaceId[:],
+			),
+		)
+		if err != nil {
+			log.Error(
+				"scrub error: unable to add channel leave event to user stream",
+				"userStreamId",
+				userStreamId,
+				"error",
+				err,
+			)
+		}
+	}
+	if span != nil {
+		span.SetStatus(otelCodes.Ok, "")
+	}
 }
 
 func (tp *streamScrubTaskProcessorImpl) processTask(task *streamScrubTask) {
@@ -65,7 +186,17 @@ func (tp *streamScrubTaskProcessorImpl) processTask(task *streamScrubTask) {
 		With("Func", "streamScrubTask.process").
 		With("channelId", task.channelId).
 		With("spaceId", task.spaceId)
-	_, view, err := tp.cache.GetStream(tp.ctx, task.channelId)
+
+	var span trace.Span
+	ctx := tp.ctx
+	if tp.tracer != nil {
+		ctx, span = tp.tracer.Start(tp.ctx, "streamScrubTaskProcess.processTask")
+		span.SetAttributes(attribute.String("spaceId", task.spaceId.String()))
+		span.SetAttributes(attribute.String("channelId", task.channelId.String()))
+		defer span.End()
+	}
+
+	_, view, err := tp.cache.GetStream(ctx, task.channelId)
 	if err != nil {
 		log.Error(
 			"Unable to scrub stream; could not fetch stream view",
@@ -86,70 +217,13 @@ func (tp *streamScrubTaskProcessorImpl) processTask(task *streamScrubTask) {
 		log.Error("Failed to fetch stream members", "error", err)
 		return
 	}
+
 	for member := range (*members).Iter() {
-		isEntitled, err := tp.chainAuth.IsEntitled(
-			tp.ctx,
-			tp.config,
-			auth.NewChainAuthArgsForChannel(
-				task.spaceId,
-				task.channelId,
-				member,
-				auth.PermissionRead,
-			),
-		)
-		if err != nil {
-			log.Error("Scrubbing error: unable to evaluate user entitlement",
-				"user",
-				member,
-				"error",
-				err,
-			)
-			continue
-		}
-		// In the case that the user is not entitled, they must have lost their entitlement
-		// after joining the channel, so let's go ahead and boot them.
-		if !isEntitled {
-			userId, err := AddressFromUserId(member)
-			if err != nil {
-				log.Error("Error converting user id into address", "member", member, "error", err)
-				continue
-			}
-			userStreamId, err := UserStreamIdFromBytes(userId)
-			if err != nil {
-				log.Error(
-					"Error constructing user id stream from user address",
-					"userAddress",
-					userId,
-					"error",
-					err,
-				)
-			}
-			log.Info("Entitlement loss detected; adding LEAVE event for user",
-				"user",
-				member,
-				"userStreamId",
-				userStreamId,
-			)
-			err = tp.eventAdder.AddEventPayload(
-				tp.ctx,
-				userStreamId,
-				events.Make_UserPayload_Membership(
-					MembershipOp_SO_LEAVE,
-					task.channelId,
-					&member,
-					task.spaceId[:],
-				),
-			)
-			if err != nil {
-				log.Error(
-					"scrub error: unable to add channel leave event to user stream",
-					"userStreamId",
-					userStreamId,
-					"error",
-					err,
-				)
-			}
-		}
+		tp.processMember(task, ctx, member)
+	}
+
+	if span != nil {
+		span.SetStatus(otelCodes.Ok, "")
 	}
 }
 

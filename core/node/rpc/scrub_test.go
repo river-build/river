@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 
 	"github.com/river-build/river/core/config"
@@ -290,6 +291,9 @@ func TestScrubStreamTaskProcessor(t *testing.T) {
 				eventAdder,
 				tc.mockChainAuth,
 				service.config,
+				nil,
+				nil,
+				common.Address{},
 			)
 			require.NoError(err)
 
