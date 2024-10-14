@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/river-build/river/core/node/crypto"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
@@ -23,8 +21,7 @@ func MakeGenesisMiniblockForSpaceStream(
 	inception, err := MakeParsedEventWithPayload(
 		wallet,
 		Make_SpacePayload_Inception(streamId, nil),
-		nil,
-		0,
+		&MiniblockRef{},
 	)
 	require.NoError(t, err)
 
@@ -42,8 +39,7 @@ func MakeGenesisMiniblockForUserSettingsStream(
 	inception, err := MakeParsedEventWithPayload(
 		wallet,
 		Make_UserSettingsPayload_Inception(streamId, nil),
-		nil,
-		0,
+		&MiniblockRef{},
 	)
 	require.NoError(t, err)
 
@@ -57,9 +53,9 @@ func MakeEvent(
 	t *testing.T,
 	wallet *crypto.Wallet,
 	payload IsStreamEvent_Payload,
-	prevMiniblockHash []byte,
+	prevMiniblock *MiniblockRef,
 ) *ParsedEvent {
-	envelope, err := MakeEnvelopeWithPayload(wallet, payload, prevMiniblockHash)
+	envelope, err := MakeEnvelopeWithPayload(wallet, payload, prevMiniblock)
 	require.NoError(t, err)
 	return parsedEvent(t, envelope)
 }
@@ -70,7 +66,7 @@ func addEvent(
 	streamCacheParams *StreamCacheParams,
 	stream SyncStream,
 	data string,
-	mbHash common.Hash,
+	prevMiniblock *MiniblockRef,
 ) {
 	err := stream.AddEvent(
 		ctx,
@@ -78,7 +74,7 @@ func addEvent(
 			t,
 			streamCacheParams.Wallet,
 			Make_MemberPayload_Username(&EncryptedData{Ciphertext: data}),
-			mbHash.Bytes(),
+			prevMiniblock,
 		),
 	)
 	require.NoError(t, err)
@@ -102,8 +98,8 @@ func mbTest(
 
 	stream, view := tt.createStream(spaceStreamId, miniblockProto)
 
-	addEvent(t, ctx, tt.instances[0].params, stream, "1", view.LastBlock().Hash)
-	addEvent(t, ctx, tt.instances[0].params, stream, "2", view.LastBlock().Hash)
+	addEvent(t, ctx, tt.instances[0].params, stream, "1", view.LastBlock().Ref)
+	addEvent(t, ctx, tt.instances[0].params, stream, "2", view.LastBlock().Ref)
 
 	proposal, err := mbProduceCandiate(ctx, tt.instances[0].params, stream.(*streamImpl), false)
 	mb := proposal.headerEvent.Event.GetMiniblockHeader()
@@ -111,11 +107,11 @@ func mbTest(
 	require.NoError(err)
 	require.Equal(2, len(events))
 	require.Equal(2, len(mb.EventHashes))
-	require.EqualValues(view.LastBlock().Hash[:], mb.PrevMiniblockHash)
+	require.EqualValues(view.LastBlock().Ref.Hash[:], mb.PrevMiniblockHash)
 	require.Equal(int64(1), mb.MiniblockNum)
 
 	if params.addAfterProposal {
-		addEvent(t, ctx, tt.instances[0].params, stream, "3", view.LastBlock().Hash)
+		addEvent(t, ctx, tt.instances[0].params, stream, "3", view.LastBlock().Ref)
 	}
 
 	require.NoError(err)
@@ -129,7 +125,7 @@ func mbTest(
 	require.NoError(err)
 	stats := view2.GetStats()
 	require.Equal(params.eventsInMinipool, stats.EventsInMinipool)
-	addEvent(t, ctx, tt.instances[0].params, stream, "4", view2.LastBlock().Hash)
+	addEvent(t, ctx, tt.instances[0].params, stream, "4", view2.LastBlock().Ref)
 
 	view2, err = stream.GetView(ctx)
 	require.NoError(err)

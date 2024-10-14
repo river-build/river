@@ -133,13 +133,11 @@ func TestLoad(t *testing.T) {
 	assert.EqualValues(t, 2, cfg.MinSnapshotEvents.ForType(STREAM_USER_BIN))
 	assert.Equal(t, false, view.shouldSnapshot(ctx, cfg))
 
-	blockHash := view.LastBlock().Hash
-
 	// add one more event (just join again)
 	join2, err := MakeEnvelopeWithPayload(
 		userWallet,
 		Make_UserPayload_Membership(MembershipOp_SO_JOIN, streamId, nil, nil),
-		blockHash[:],
+		view.LastBlock().Ref,
 	)
 	assert.NoError(t, err)
 	nextEvent := parsedEvent(t, join2)
@@ -160,7 +158,7 @@ func TestLoad(t *testing.T) {
 	join3, err := MakeEnvelopeWithPayload(
 		userWallet,
 		Make_UserPayload_Membership(MembershipOp_SO_JOIN, streamId, nil, nil),
-		view.LastBlock().Hash[:],
+		view.LastBlock().Ref,
 	)
 	assert.NoError(t, err)
 	nextEvent = parsedEvent(t, join3)
@@ -203,8 +201,7 @@ func TestLoad(t *testing.T) {
 	miniblockHeaderEvent, err := MakeParsedEventWithPayload(
 		userWallet,
 		Make_MiniblockHeader(miniblockHeader),
-		view.LastBlock().Hash[:],
-		view.LastBlock().Num,
+		view.LastBlock().Ref,
 	)
 	assert.NoError(t, err)
 	miniblock, err := NewMiniblockInfoFromParsed(miniblockHeaderEvent, envelopes)
@@ -225,7 +222,7 @@ func TestLoad(t *testing.T) {
 	join4, err := MakeEnvelopeWithPayload(
 		userWallet,
 		Make_UserPayload_Membership(MembershipOp_SO_LEAVE, streamId, nil, nil),
-		newSV1.blocks[0].Hash[:],
+		newSV1.blocks[0].Ref,
 	)
 	assert.NoError(t, err)
 	nextEvent = parsedEvent(t, join4)
@@ -261,7 +258,7 @@ func TestMbHashConstraints(t *testing.T) {
 	genMbHash := common.BytesToHash(genMb.Header.Hash)
 	require.NoError(err)
 
-	view, err = MakeStreamView(
+	view, err := MakeStreamView(
 		ctx,
 		&storage.ReadStreamFromLastSnapshotResult{
 			Miniblocks: [][]byte{genMbBytes},
@@ -269,5 +266,17 @@ func TestMbHashConstraints(t *testing.T) {
 	)
 	require.NoError(err)
 
-	view.copyAndAddEvent
+	cfg := crypto.DefaultOnChainSettings()
+	err = view.ValidateNextEvent(
+		ctx,
+		cfg,
+		MakeEvent(
+			t,
+			userWallet,
+			Make_UserSettingsPayload_FullyReadMarkers(&UserSettingsPayload_FullyReadMarkers{}),
+			&MiniblockRef{Hash: genMbHash, Num: 0},
+		),
+		time.Now(),
+	)
+	require.NoError(err)
 }

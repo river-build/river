@@ -227,7 +227,7 @@ func createChannel(
 	spaceId StreamId,
 	channelStreamId StreamId,
 	streamSettings *protocol.StreamSettings,
-) (*protocol.SyncCookie, []byte, error) {
+) (*protocol.SyncCookie, *events.MiniblockRef, error) {
 	channel, err := events.MakeEnvelopeWithPayload(
 		wallet,
 		events.Make_ChannelPayload_Inception(
@@ -268,8 +268,11 @@ func createChannel(
 	if len(reschannel.Msg.Stream.Miniblocks) == 0 {
 		return nil, nil, fmt.Errorf("expected at least one miniblock")
 	}
-	miniblockHash := reschannel.Msg.Stream.Miniblocks[len(reschannel.Msg.Stream.Miniblocks)-1].Header.Hash
-	return reschannel.Msg.Stream.NextSyncCookie, miniblockHash, nil
+	lastMb := reschannel.Msg.Stream.Miniblocks[len(reschannel.Msg.Stream.Miniblocks)-1]
+	return reschannel.Msg.Stream.NextSyncCookie, &events.MiniblockRef{
+		Hash: common.BytesToHash(lastMb.Header.Hash),
+		Num:  0,
+	}, nil
 }
 
 func addUserBlockedFillerEvent(
@@ -277,16 +280,19 @@ func addUserBlockedFillerEvent(
 	wallet *crypto.Wallet,
 	client protocolconnect.StreamServiceClient,
 	streamId StreamId,
-	prevMiniblockHash []byte,
+	prevMiniblockRef *events.MiniblockRef,
 ) error {
-	if prevMiniblockHash == nil {
+	if prevMiniblockRef == nil {
 		resp, err := client.GetLastMiniblockHash(ctx, connect.NewRequest(&protocol.GetLastMiniblockHashRequest{
 			StreamId: streamId[:],
 		}))
 		if err != nil {
 			return err
 		}
-		prevMiniblockHash = resp.Msg.Hash
+		prevMiniblockRef = &events.MiniblockRef{
+			Hash: common.BytesToHash(resp.Msg.Hash),
+			Num:  resp.Msg.MiniblockNum,
+		}
 	}
 
 	addr := crypto.GetTestAddress()
@@ -299,7 +305,7 @@ func addUserBlockedFillerEvent(
 				EventNum:  22,
 			},
 		),
-		prevMiniblockHash,
+		prevMiniblockRef,
 	)
 	if err != nil {
 		return err
@@ -431,7 +437,10 @@ func testMethodsWithClient(tester *serviceTester, client protocolconnect.StreamS
 			nil,
 			spaceId[:],
 		),
-		resuser.PrevMiniblockHash,
+		&events.MiniblockRef{
+			Hash: common.BytesToHash(resuser.PrevMiniblockHash),
+			Num:  resuser.MinipoolGen - 1,
+		},
 	)
 	require.NoError(err)
 
@@ -1200,7 +1209,10 @@ func TestUnstableStreams(t *testing.T) {
 			userJoin, err := events.MakeEnvelopeWithPayload(
 				wallet,
 				events.Make_UserPayload_Membership(protocol.MembershipOp_SO_JOIN, channelId, nil, spaceID[:]),
-				miniBlockHashResp.Msg.GetHash(),
+				&events.MiniblockRef{
+					Hash: common.BytesToHash(miniBlockHashResp.Msg.GetHash()),
+					Num:  miniBlockHashResp.Msg.GetMiniblockNum(),
+				},
 			)
 			req.NoError(err)
 
@@ -1475,7 +1487,7 @@ func sendMessagesAndReceive(
 		message, err := events.MakeEnvelopeWithPayload(
 			wallet,
 			events.Make_ChannelPayload_Message(msgContents),
-			getStreamResp.Msg.GetStream().GetNextSyncCookie().GetPrevMiniblockHash(),
+			events.MiniblockRefFromCookie(getStreamResp.Msg.GetStream().GetNextSyncCookie()),
 		)
 		require.NoError(err)
 

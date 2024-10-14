@@ -568,24 +568,26 @@ func (r *streamViewImpl) ValidateNextEvent(
 	// the event should not already exist in any block after the preceding miniblock
 	// the event should not exist in the minipool
 	foundBlockAt := -1
+	var foundBlock *MiniblockInfo
 	// loop over blocks backwards to find block with preceding miniblock hash
 	for i := len(r.blocks) - 1; i >= 0; i-- {
 		block := r.blocks[i]
-		if bytes.Equal(block.headerEvent.Hash[:], parsedEvent.Event.PrevMiniblockHash) {
+		if block.headerEvent.Hash == parsedEvent.MiniblockRef.Hash {
 			foundBlockAt = i
+			foundBlock = block
 			break
 		}
 	}
-	// ensure that we found it
-	if foundBlockAt == -1 {
-		if parsedEvent.PrevMiniblockNum > r.LastBlock().Num {
+
+	if foundBlock == nil {
+		if parsedEvent.MiniblockRef.Num > r.LastBlock().Ref.Num {
 			return RiverError(
 				Err_MINIBLOCK_TOO_NEW,
 				"prevMiniblockNum is greater than the last miniblock number in the stream",
 				"lastBlockNum",
-				r.LastBlock().Num,
+				r.LastBlock().Ref.Num,
 				"eventPrevMiniblockNum",
-				parsedEvent.PrevMiniblockNum,
+				parsedEvent.MiniblockRef.Num,
 				"streamId",
 				r.streamId,
 			)
@@ -600,6 +602,25 @@ func (r *streamViewImpl) ValidateNextEvent(
 			)
 		}
 	}
+
+	// for backcompat, do not check that the number of miniblock matches if it's set to 0
+	if parsedEvent.MiniblockRef.Num != 0 {
+		if foundBlock.Ref.Num != parsedEvent.MiniblockRef.Num {
+			return RiverError(
+				Err_BAD_PREV_MINIBLOCK_HASH,
+				"prevMiniblockNum does not match the miniblock number in the block",
+				"blockNum",
+				foundBlock.Ref.Num,
+				"eventPrevMiniblockNum",
+				parsedEvent.MiniblockRef.Num,
+				"streamId",
+				r.streamId,
+				"blockHash",
+				foundBlock.headerEvent.Hash,
+			)
+		}
+	}
+
 	// make sure we're recent
 	// if the user isn't adding the latest block, allow it if the block after was recently created
 	if foundBlockAt < len(r.blocks)-1 && !r.isRecentBlock(ctx, cfg, r.blocks[foundBlockAt+1], currentTime) {
@@ -656,8 +677,8 @@ func (r *streamViewImpl) isRecentBlock(
 
 func (r *streamViewImpl) GetStats() StreamViewStats {
 	stats := StreamViewStats{
-		FirstMiniblockNum: r.blocks[0].Num,
-		LastMiniblockNum:  r.LastBlock().Num,
+		FirstMiniblockNum: r.blocks[0].Ref.Num,
+		LastMiniblockNum:  r.LastBlock().Ref.Num,
 		EventsInMinipool:  r.minipool.events.Len(),
 	}
 

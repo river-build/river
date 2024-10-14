@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
@@ -167,7 +168,7 @@ func (s *streamCacheImpl) onStreamLastMiniblockUpdated(
 	}
 
 	// Check if current state is beyond candidate. (Local candidates are applied immediately after tx).
-	if uint64(view.LastBlock().Num) >= event.LastMiniblockNum {
+	if uint64(view.LastBlock().Ref.Num) >= event.LastMiniblockNum {
 		return
 	}
 
