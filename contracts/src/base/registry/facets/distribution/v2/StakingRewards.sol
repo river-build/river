@@ -431,20 +431,22 @@ library StakingRewards {
       ds.rewardEndTime
     );
 
-    uint256 rewardRate;
-    if (block.timestamp >= rewardEndTime) {
-      rewardRate = FixedPointMathLib.mulDiv(
-        reward,
-        SCALE_FACTOR,
-        rewardDuration
-      );
-    } else {
+    uint256 rewardRate = FixedPointMathLib.fullMulDiv(
+      reward,
+      SCALE_FACTOR,
+      rewardDuration
+    );
+    // if the reward period hasn't ended, add the remaining reward to the reward rate
+    if (rewardEndTime > block.timestamp) {
       uint256 remainingTime;
       unchecked {
         remainingTime = rewardEndTime - block.timestamp;
       }
-      uint256 leftover = ds.rewardRate * remainingTime;
-      rewardRate = (leftover + reward * SCALE_FACTOR) / rewardDuration;
+      rewardRate += FixedPointMathLib.fullMulDiv(
+        ds.rewardRate,
+        remainingTime,
+        rewardDuration
+      );
     }
 
     // batch storage writes
@@ -459,7 +461,7 @@ library StakingRewards {
     }
 
     if (
-      FixedPointMathLib.mulDiv(rewardRate, rewardDuration, SCALE_FACTOR) >
+      FixedPointMathLib.fullMulDiv(rewardRate, rewardDuration, SCALE_FACTOR) >
       IERC20(ds.rewardToken).balanceOf(address(this))
     ) {
       CustomRevert.revertWith(StakingRewards__InsufficientReward.selector);
