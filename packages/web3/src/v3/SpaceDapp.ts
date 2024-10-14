@@ -463,6 +463,23 @@ export class SpaceDapp implements ISpaceDapp {
         return space.getChannels()
     }
 
+    public async tokenURI(spaceId: string) {
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+        const spaceInfo = await space.getSpaceInfo()
+        return space.SpaceOwnerErc721A.read.tokenURI(spaceInfo.tokenId)
+    }
+
+    public memberTokenURI(spaceId: string, tokenId: string) {
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+        return space.ERC721A.read.tokenURI(tokenId)
+    }
+
     public async getChannelDetails(
         spaceId: string,
         channelNetworkId: string,
@@ -521,8 +538,8 @@ export class SpaceDapp implements ISpaceDapp {
             owner,
             disabled,
             uri: (spaceInfo.uri as string) ?? '',
-            tokenId: spaceInfo.tokenId as ethers.BigNumber,
-            createdAt: spaceInfo.createdAt as ethers.BigNumber,
+            tokenId: ethers.BigNumber.from(spaceInfo.tokenId).toString(),
+            createdAt: ethers.BigNumber.from(spaceInfo.createdAt).toString(),
             shortDescription: (spaceInfo.shortDescription as string) ?? '',
             longDescription: (spaceInfo.longDescription as string) ?? '',
         }
@@ -1525,6 +1542,21 @@ export class SpaceDapp implements ISpaceDapp {
         params: UpdateRoleParams,
     ): Promise<IRolesBase.CreateEntitlementStruct[]> {
         return createEntitlementStruct(space, params.users, params.ruleData)
+    }
+
+    public async refreshMetadata(
+        spaceId: string,
+        signer: ethers.Signer,
+        txnOpts?: TransactionOpts,
+    ): Promise<ContractTransaction> {
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+        return wrapTransaction(
+            () => space.Membership.metadata.write(signer).refreshMetadata(),
+            txnOpts,
+        )
     }
 
     public getSpaceAddress(receipt: ContractReceipt): string | undefined {

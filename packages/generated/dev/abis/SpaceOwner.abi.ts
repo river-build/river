@@ -827,13 +827,13 @@ export default [
         "internalType": "address"
       },
       {
-        "name": "previousBalance",
+        "name": "previousVotes",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
       },
       {
-        "name": "newBalance",
+        "name": "newVotes",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -926,6 +926,19 @@ export default [
         "type": "bytes4",
         "indexed": true,
         "internalType": "bytes4"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "MetadataUpdate",
+    "inputs": [
+      {
+        "name": "_tokenId",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -1228,5 +1241,16 @@ export default [
     "type": "error",
     "name": "Validator__InvalidStringLength",
     "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "VotesExpiredSignature",
+    "inputs": [
+      {
+        "name": "expiry",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   }
 ] as const

@@ -9,7 +9,7 @@
         "watch": "tsc --watch",
         "build-esbuild": "node esbuild.config.mjs",
         "lint": "eslint . --ext .ts",
-        "my-jest": "NODE_TLS_REJECT_UNAUTHORIZED=0 yarn node -r ../../scripts/node-no-warn.js --experimental-vm-modules $(yarn bin jest)",
+        "my-jest": "NODE_EXTRA_CA_CERTS=${HOME}/river-ca-cert.pem NODE_TLS_REJECT_UNAUTHORIZED=0 yarn node -r ../../scripts/node-no-warn.js --experimental-vm-modules $(yarn bin jest)",
         "start": "node --enable-source-maps ./dist/start.cjs",
         "demo": "node --enable-source-maps ./dist/demo.cjs",
         "test:ci:with-entitlements": "RIVER_ENV=local_multi DEBUG='stress:*,csb:enc*,csb:dec*' DEBUG_DEPTH='10' yarn my-jest"
@@ -24,9 +24,12 @@
         "@river-build/proto": "workspace:^",
         "@river-build/sdk": "workspace:^",
         "@river-build/web3": "workspace:^",
+        "esbuild-plugin-pino": "^2.2.0",
         "ethers": "^5.7.2",
         "fake-indexeddb": "^4.0.1",
-        "ioredis": "^5.3.2"
+        "ioredis": "^5.3.2",
+        "pino": "^8.17.1",
+        "pino-pretty": "^10.2.3"
     },
     "devDependencies": {
         "@jest/globals": "^29.6.2",
