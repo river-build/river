@@ -4,7 +4,6 @@ pragma solidity ^0.8.23;
 // interfaces
 
 // libraries
-import {DropStorage} from "./DropStorage.sol";
 
 // contracts
 
@@ -14,17 +13,27 @@ interface IDropFacetBase {
   /// @param maxClaimableSupply The maximum claimable supply for the claim condition
   /// @param supplyClaimed The supply already claimed for the claim condition
   /// @param merkleRoot The merkle root for the claim condition
+  /// @param currency The currency to claim in
+  /// @param penaltyBps The penalty in basis points for early withdrawal
   struct ClaimCondition {
     uint256 startTimestamp;
     uint256 maxClaimableSupply;
     uint256 supplyClaimed;
     bytes32 merkleRoot;
+    address currency;
+    uint256 penaltyBps;
   }
 
   // =============================================================
   //                           Events
   // =============================================================
-  event DropFacet_Claimed(address indexed account, uint256 amount);
+  event DropFacet_Claimed_WithPenalty(
+    uint256 indexed conditionId,
+    address indexed claimer,
+    address indexed account,
+    uint256 amount
+  );
+
   event DropFacet_ClaimConditionsUpdated(
     ClaimCondition[] conditions,
     bool resetEligibility

@@ -27,6 +27,10 @@ library DropStorage {
     }
   }
 
+  function getClaimToken(Layout storage ds) internal view returns (address) {
+    return ds.claimToken;
+  }
+
   function getClaimConditionById(
     Layout storage ds,
     uint256 conditionId

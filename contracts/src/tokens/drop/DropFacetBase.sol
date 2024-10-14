@@ -15,10 +15,6 @@ abstract contract DropFacetBase is IDropFacetBase {
   using DropStorage for DropStorage.Layout;
   using MerkleProofLib for bytes32[];
 
-  function __DropFacetBase_init_unchained(address claimToken) internal {
-    DropStorage.layout().claimToken = claimToken;
-  }
-
   function _getActiveConditionId(
     DropStorage.Layout storage ds
   ) internal view returns (uint256) {
@@ -44,7 +40,7 @@ abstract contract DropFacetBase is IDropFacetBase {
     address account,
     uint256 quantity,
     bytes32[] calldata proof
-  ) internal view returns (bool) {
+  ) internal view {
     ClaimCondition memory condition = ds.getClaimConditionById(conditionId);
 
     if (condition.merkleRoot == bytes32(0)) {
@@ -74,8 +70,6 @@ abstract contract DropFacetBase is IDropFacetBase {
     if (!proof.verifyCalldata(condition.merkleRoot, leaf)) {
       CustomRevert.revertWith(IDropFacet__InvalidProof.selector);
     }
-
-    return true;
   }
 
   function _setClaimConditions(
@@ -146,24 +140,6 @@ abstract contract DropFacetBase is IDropFacetBase {
     ds.supplyClaimedByWallet[conditionId][account] += amount;
   }
 
-  function _claim(
-    address account,
-    uint256 amount,
-    bytes32[] calldata proof
-  ) internal {
-    DropStorage.Layout storage ds = DropStorage.layout();
-
-    uint256 conditionId = _getActiveConditionId(ds);
-
-    _verifyClaim(ds, conditionId, account, amount, proof);
-
-    _updateClaim(ds, conditionId, account, amount);
-
-    emit DropFacet_Claimed(account, amount);
-
-    _transferClaimToken(account, amount);
-  }
-
   // =============================================================
   //                        Utilities
   // =============================================================
@@ -182,13 +158,4 @@ abstract contract DropFacetBase is IDropFacetBase {
       leaf := keccak256(0, 0x20)
     }
   }
-
-  // =============================================================
-  //                           Overrides
-  // =============================================================
-
-  function _transferClaimToken(
-    address account,
-    uint256 amount
-  ) internal virtual;
 }

@@ -1,0 +1,90 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+
+// interfaces
+import {IDropFacet} from "contracts/src/tokens/drop/IDropFacet.sol";
+// libraries
+import {DropStorage} from "contracts/src/tokens/drop/DropStorage.sol";
+import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
+import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
+
+// contracts
+import {Facet} from "contracts/src/diamond/facets/Facet.sol";
+import {DropFacetBase} from "contracts/src/tokens/drop/DropFacetBase.sol";
+import {OwnableBase} from "contracts/src/diamond/facets/ownable/OwnableBase.sol";
+
+contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
+  using DropStorage for DropStorage.Layout;
+
+  function __DropFacet_init() external onlyInitializing {
+    _addInterface(type(IDropFacet).interfaceId);
+  }
+
+  function claimWithPenalty(
+    address account,
+    uint256 quantity,
+    bytes32[] calldata proof
+  ) external {
+    DropStorage.Layout storage ds = DropStorage.layout();
+    uint256 conditionId = _getActiveConditionId(ds);
+
+    _verifyClaim(ds, conditionId, account, quantity, proof);
+
+    ClaimCondition memory condition = ds.getClaimConditionById(conditionId);
+
+    uint256 amount = quantity;
+    uint256 penaltyBps = condition.penaltyBps;
+
+    if (penaltyBps > 0) {
+      uint256 penaltyAmount = BasisPoints.calculate(quantity, penaltyBps);
+      amount = quantity - penaltyAmount;
+    }
+
+    _updateClaim(ds, conditionId, account, amount);
+
+    CurrencyTransfer.safeTransferERC20(
+      condition.currency,
+      address(this),
+      account,
+      amount
+    );
+
+    emit DropFacet_Claimed_WithPenalty(
+      conditionId,
+      msg.sender,
+      account,
+      amount
+    );
+  }
+
+  function claimAndStake(
+    address account,
+    uint256 quantity,
+    bytes32[] calldata proof
+  ) external {}
+
+  function setClaimConditions(
+    ClaimCondition[] calldata conditions,
+    bool resetEligibility
+  ) external onlyOwner {
+    DropStorage.Layout storage ds = DropStorage.layout();
+    _setClaimConditions(ds, conditions, resetEligibility);
+  }
+
+  function getActiveClaimConditionId() external view returns (uint256) {
+    return _getActiveConditionId(DropStorage.layout());
+  }
+
+  function getClaimConditionById(
+    uint256 conditionId
+  ) external view returns (ClaimCondition memory) {
+    return DropStorage.layout().getClaimConditionById(conditionId);
+  }
+
+  function getSupplyClaimedByWallet(
+    address account,
+    uint256 conditionId
+  ) external view returns (uint256) {
+    return DropStorage.layout().getSupplyClaimedByWallet(conditionId, account);
+  }
+}

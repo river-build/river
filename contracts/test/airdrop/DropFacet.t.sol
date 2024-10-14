@@ -11,13 +11,13 @@ import {DeployDropFacet} from "contracts/scripts/deployments/facets/DeployDropFa
 //interfaces
 import {IDiamond} from "contracts/src/diamond/Diamond.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IDropFacetBase} from "contracts/src/diamond/facets/drop/IDropFacet.sol";
+import {IDropFacetBase} from "contracts/src/tokens/drop/IDropFacet.sol";
 
 //libraries
 import {MerkleTree} from "contracts/test/utils/MerkleTree.sol";
-
-import {DropFacet} from "contracts/src/diamond/facets/drop/DropFacet.sol";
+import {DropFacet} from "contracts/src/tokens/drop/DropFacet.sol";
 import {MockERC20} from "contracts/test/mocks/MockERC20.sol";
+import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 
 contract DropFacetTest is TestUtils, IDropFacetBase {
   uint256 internal constant TOTAL_TOKEN_AMOUNT = 1000;
@@ -39,13 +39,14 @@ contract DropFacetTest is TestUtils, IDropFacetBase {
 
   Vm.Wallet internal bob = vm.createWallet("bob");
   Vm.Wallet internal alice = vm.createWallet("alice");
+  address internal deployer;
 
   function setUp() public {
     // Create the Merkle tree with accounts and amounts
     _createTree();
 
     // Get the deployer address
-    address deployer = getDeployer();
+    deployer = getDeployer();
 
     // Deploy the mock ERC20 token
     address tokenAddress = tokenHelper.deploy(deployer);
@@ -57,46 +58,91 @@ contract DropFacetTest is TestUtils, IDropFacetBase {
     diamondHelper.addFacet(
       dropHelper.makeCut(dropAddress, IDiamond.FacetCutAction.Add),
       dropAddress,
-      dropHelper.makeInitData(tokenAddress)
+      dropHelper.makeInitData("")
     );
 
     // Deploy the diamond contract with the MerkleAirdrop facet
     address diamond = diamondHelper.deploy(deployer);
 
-    // Initialize the MerkleAirdrop and token contracts
-    // merkleAirdrop = MerkleAirdrop(diamond);
-    // eip712Facet = EIP712Facet(diamond);
+    // Initialize the Drop facet
     dropFacet = DropFacet(diamond);
 
     // Mint tokens to the diamond
     token = MockERC20(tokenAddress);
     token.mint(diamond, TOTAL_TOKEN_AMOUNT);
+  }
 
+  modifier givenClaimConditionSet() {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
     conditions[0] = ClaimCondition({
-      startTimestamp: block.timestamp,
+      startTimestamp: block.timestamp, // now
       maxClaimableSupply: TOTAL_TOKEN_AMOUNT,
       supplyClaimed: 0,
-      merkleRoot: root
+      merkleRoot: root,
+      currency: address(token),
+      penaltyBps: 5000 // 50%
     });
 
     vm.prank(deployer);
     dropFacet.setClaimConditions(conditions, false);
-  }
-
-  modifier givenWalletHasClaimed(Vm.Wallet memory _wallet, uint256 _amount) {
-    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[_wallet.addr]);
-
-    vm.prank(_randomAddress());
-    vm.expectEmit(address(dropFacet));
-    emit DropFacet_Claimed(_wallet.addr, _amount);
-    dropFacet.claim(_wallet.addr, _amount, proof);
     _;
   }
 
-  function test_getActiveClaimConditionId() external view {
+  modifier givenWalletHasClaimedWithPenalty(
+    uint256 conditionId,
+    Vm.Wallet memory _wallet
+  ) {
+    ClaimCondition memory condition = dropFacet.getClaimConditionById(
+      conditionId
+    );
+    uint256 penaltyBps = condition.penaltyBps;
+    uint256 merkleAmount = amounts[treeIndex[_wallet.addr]];
+    uint256 penaltyAmount = BasisPoints.calculate(merkleAmount, penaltyBps);
+    uint256 expectedAmount = merkleAmount - penaltyAmount;
+
+    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[_wallet.addr]);
+
+    address caller = _randomAddress();
+
+    vm.prank(caller);
+    vm.expectEmit(address(dropFacet));
+    emit DropFacet_Claimed_WithPenalty(
+      conditionId,
+      caller,
+      _wallet.addr,
+      expectedAmount
+    );
+    dropFacet.claimWithPenalty(_wallet.addr, merkleAmount, proof);
+    _;
+  }
+
+  function test_getActiveClaimConditionId() external givenClaimConditionSet {
     uint256 id = dropFacet.getActiveClaimConditionId();
     assertEq(id, 0);
+  }
+
+  function test_getClaimConditionById() external givenClaimConditionSet {
+    ClaimCondition memory condition = dropFacet.getClaimConditionById(0);
+    assertEq(condition.startTimestamp, block.timestamp);
+    assertEq(condition.maxClaimableSupply, TOTAL_TOKEN_AMOUNT);
+    assertEq(condition.supplyClaimed, 0);
+    assertEq(condition.merkleRoot, root);
+    assertEq(condition.currency, address(token));
+    assertEq(condition.penaltyBps, 5000);
+  }
+
+  function test_claimWithPenalty()
+    external
+    givenClaimConditionSet
+    givenWalletHasClaimedWithPenalty(0, bob)
+  {
+    ClaimCondition memory condition = dropFacet.getClaimConditionById(0);
+    uint256 penaltyBps = condition.penaltyBps;
+    uint256 bobAmount = amounts[treeIndex[bob.addr]];
+    uint256 penaltyAmount = BasisPoints.calculate(bobAmount, penaltyBps);
+    uint256 expectedAmount = bobAmount - penaltyAmount;
+
+    assertEq(token.balanceOf(bob.addr), expectedAmount);
   }
 
   // function test_getToken() external view {
@@ -109,9 +155,9 @@ contract DropFacetTest is TestUtils, IDropFacetBase {
   //   assertEq(_root, root);
   // }
 
-  function test_claim() external givenWalletHasClaimed(bob, 100) {
-    assertEq(token.balanceOf(bob.addr), 100);
-  }
+  // function test_claim() external givenWalletHasClaimedWithPenalty(bob, 100) {
+  //   assertEq(token.balanceOf(bob.addr), 100);
+  // }
 
   // function test_claimWithReceiver()
   //   external
@@ -122,7 +168,7 @@ contract DropFacetTest is TestUtils, IDropFacetBase {
 
   // function test_revertWhen_alreadyClaimed()
   //   external
-  //   givenWalletHasClaimed(bob, 100)
+  //   givenWalletHasClaimedWithPenalty(bob, 100)
   // {
   //   bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[bob.addr]);
   //   bytes memory signature = _signClaim(bob, bob.addr, 100, address(0));

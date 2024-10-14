@@ -8,12 +8,12 @@ pragma solidity ^0.8.23;
 //contracts
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 import {FacetHelper} from "contracts/test/diamond/Facet.t.sol";
-import {DropFacet} from "contracts/src/diamond/facets/drop/DropFacet.sol";
+import {DropFacet} from "contracts/src/tokens/drop/DropFacet.sol";
 
 contract DeployDropFacet is Deployer, FacetHelper {
   // FacetHelper
   constructor() {
-    addSelector(DropFacet.claim.selector);
+    addSelector(DropFacet.claimWithPenalty.selector);
     addSelector(DropFacet.setClaimConditions.selector);
     addSelector(DropFacet.getActiveClaimConditionId.selector);
     addSelector(DropFacet.getClaimConditionById.selector);
@@ -29,9 +29,9 @@ contract DeployDropFacet is Deployer, FacetHelper {
     return DropFacet.__DropFacet_init.selector;
   }
 
-  function makeInitData(address claimToken) public pure returns (bytes memory) {
-    return abi.encodeWithSelector(initializer(), claimToken);
-  }
+  // function makeInitData(address claimToken) public pure returns (bytes memory) {
+  //   return abi.encodeWithSelector(initializer(), claimToken);
+  // }
 
   function __deploy(address deployer) public override returns (address) {
     vm.startBroadcast(deployer);
