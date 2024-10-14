@@ -6,6 +6,7 @@ import {IERC173} from "contracts/src/diamond/facets/ownable/IERC173.sol";
 import {IRewardsDistributionBase} from "contracts/src/base/registry/facets/distribution/v2/IRewardsDistribution.sol";
 
 // libraries
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
 // contracts
@@ -31,6 +32,7 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
 
   address internal OPERATOR = makeAddr("OPERATOR");
   address internal NOTIFIER = makeAddr("NOTIFIER");
+  uint256 internal rewardDuration;
 
   function setUp() public override {
     super.setUp();
@@ -47,6 +49,8 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     rewardsDistributionFacet.setStakeAndRewardTokens(riverToken, riverToken);
     rewardsDistributionFacet.setRewardNotifier(NOTIFIER, true);
     vm.stopPrank();
+
+    (, , , rewardDuration, , , , , ) = rewardsDistributionFacet.stakingState();
   }
 
   function test_stake_revertIf_notOperator() public {
@@ -357,6 +361,68 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     verifyWithdraw(address(this), depositId, 0, amount, operator, beneficiary);
   }
 
+  function test_fuzz_notifyRewardAmount_revertIf_notNotifier(
+    address caller
+  ) public {
+    vm.assume(caller != NOTIFIER);
+    vm.prank(caller);
+    vm.expectRevert(RewardsDistribution__NotRewardNotifier.selector);
+    rewardsDistributionFacet.notifyRewardAmount(1);
+  }
+
+  function test_fuzz_notifyRewardAmount_revertIf_invalidRewardRate(
+    uint256 reward
+  ) public {
+    reward = bound(reward, 0, rewardDuration - 1);
+    vm.prank(NOTIFIER);
+    vm.expectRevert(StakingRewards.StakingRewards__InvalidRewardRate.selector);
+    rewardsDistributionFacet.notifyRewardAmount(reward);
+  }
+
+  function test_fuzz_notifyRewardAmount_revertIf_insufficientReward(
+    uint256 reward
+  ) public {
+    reward = boundReward(reward);
+    vm.prank(NOTIFIER);
+    vm.expectRevert(StakingRewards.StakingRewards__InsufficientReward.selector);
+    rewardsDistributionFacet.notifyRewardAmount(reward);
+  }
+
+  function test_notifyRewardAmount() public {
+    test_fuzz_notifyRewardAmount(1 ether);
+  }
+
+  function test_fuzz_notifyRewardAmount(uint256 reward) public {
+    reward = boundReward(reward);
+    bridgeTokensForUser(address(rewardsDistributionFacet), reward);
+
+    vm.prank(NOTIFIER);
+    rewardsDistributionFacet.notifyRewardAmount(reward);
+
+    (
+      ,
+      ,
+      ,
+      ,
+      uint256 rewardEndTime,
+      uint256 lastUpdateTime,
+      uint256 rewardRate,
+      ,
+
+    ) = rewardsDistributionFacet.stakingState();
+    assertEq(rewardEndTime, block.timestamp + rewardDuration, "rewardEndTime");
+    assertEq(lastUpdateTime, block.timestamp, "lastUpdateTime");
+    assertEq(
+      rewardRate,
+      FixedPointMathLib.fullMulDiv(
+        reward,
+        StakingRewards.SCALE_FACTOR,
+        rewardDuration
+      ),
+      "rewardRate"
+    );
+  }
+
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                          OPERATOR                          */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -409,6 +475,19 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                           HELPER                           */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  function boundReward(uint256 reward) internal view returns (uint256) {
+    return
+      bound(
+        reward,
+        rewardDuration,
+        FixedPointMathLib.fullMulDiv(
+          type(uint256).max,
+          rewardDuration,
+          StakingRewards.SCALE_FACTOR
+        )
+      );
+  }
 
   function bridgeTokensForUser(address user, uint256 amount) internal {
     vm.assume(user != address(0));
