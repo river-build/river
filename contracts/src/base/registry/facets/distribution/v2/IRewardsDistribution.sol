@@ -14,6 +14,13 @@ interface IRewardsDistributionBase {
   error RewardsDistribution__NotDepositOwner();
   error RewardsDistribution__NotRewardNotifier();
   error RewardsDistribution__NotOperatorOrSpace();
+
+  event RewardsDistributionInitialized(
+    address stakeToken,
+    address rewardToken,
+    uint256 rewardDuration
+  );
+  event RewardNotifierSet(address indexed notifier, bool enabled);
 }
 
 interface IRewardsDistribution is IRewardsDistributionBase {

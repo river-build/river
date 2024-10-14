@@ -38,6 +38,20 @@ contract DeployRewardsDistributionV2 is Deployer, FacetHelper {
     return RewardsDistribution.__RewardsDistribution_init.selector;
   }
 
+  function makeInitData(
+    address stakeToken,
+    address rewardToken,
+    uint256 rewardDuration
+  ) public pure returns (bytes memory) {
+    return
+      abi.encodeWithSelector(
+        initializer(),
+        stakeToken,
+        rewardToken,
+        rewardDuration
+      );
+  }
+
   function versionName() public pure override returns (string memory) {
     return "rewardsDistributionV2Facet";
   }

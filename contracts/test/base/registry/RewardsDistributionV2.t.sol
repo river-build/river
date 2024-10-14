@@ -30,6 +30,7 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
   SpaceDelegationFacet internal spaceDelegationFacet;
 
   address internal OPERATOR = makeAddr("OPERATOR");
+  address internal NOTIFIER = makeAddr("NOTIFIER");
 
   function setUp() public override {
     super.setUp();
@@ -42,8 +43,10 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
 
     messenger.setXDomainMessageSender(mainnetProxyDelegation);
 
-    vm.prank(deployer);
+    vm.startPrank(deployer);
     rewardsDistributionFacet.setStakeAndRewardTokens(riverToken, riverToken);
+    rewardsDistributionFacet.setRewardNotifier(NOTIFIER, true);
+    vm.stopPrank();
   }
 
   function test_stake_revertIf_notOperator() public {
@@ -79,7 +82,7 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
   ) public givenOperator(operator, commissionRate) returns (uint256 depositId) {
     vm.assume(operator != beneficiary);
     vm.assume(beneficiary != address(0));
-    amount = uint96(bound(amount, 1, type(uint96).max));
+    vm.assume(amount > 0);
     commissionRate = bound(commissionRate, 0, 10000);
 
     bridgeTokensForUser(address(this), amount);
@@ -105,7 +108,7 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
   ) public givenOperator(operator, commissionRate) {
     vm.assume(operator != beneficiary);
     vm.assume(beneficiary != address(0));
-    amount = uint96(bound(amount, 1, type(uint96).max));
+    vm.assume(amount > 0);
     commissionRate = bound(commissionRate, 0, 10000);
 
     privateKey = boundPrivateKey(privateKey);
@@ -208,7 +211,6 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
   ) public givenOperator(operator1, commissionRate1) {
     vm.assume(operator0 != operator1);
     vm.assume(operator1 != address(this));
-    amount = uint96(bound(amount, 1, type(uint96).max));
     commissionRate1 = bound(commissionRate1, 0, 10000);
 
     uint256 depositId = test_fuzz_stake(
@@ -262,7 +264,6 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
   ) public {
     vm.assume(operator != beneficiary);
     vm.assume(beneficiary != address(0));
-    amount = uint96(bound(amount, 1, type(uint96).max));
     commissionRate = bound(commissionRate, 0, 10000);
 
     uint256 depositId = test_fuzz_stake(
@@ -302,12 +303,11 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     uint256 commissionRate,
     address beneficiary
   ) public returns (uint256 depositId) {
-    amount = uint96(bound(amount, 1, type(uint96).max));
     depositId = test_fuzz_stake(amount, operator, commissionRate, beneficiary);
 
     rewardsDistributionFacet.initiateWithdraw(depositId);
 
-    verifyWithdraw(address(this), depositId, amount, operator, beneficiary);
+    verifyWithdraw(address(this), depositId, amount, 0, operator, beneficiary);
   }
 
   function test_withdraw_revertIf_notDepositor() public {
@@ -354,7 +354,7 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
 
     rewardsDistributionFacet.withdraw(depositId);
 
-    verifyWithdraw(address(this), depositId, 0, operator, beneficiary);
+    verifyWithdraw(address(this), depositId, 0, amount, operator, beneficiary);
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -424,7 +424,11 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     uint256 commissionRate,
     address beneficiary
   ) internal view {
-    assertEq(rewardsDistributionFacet.stakedByDepositor(depositor), amount);
+    assertEq(
+      rewardsDistributionFacet.stakedByDepositor(depositor),
+      amount,
+      "stakedByDepositor"
+    );
 
     StakingRewards.Deposit memory deposit = rewardsDistributionFacet
       .depositById(depositId);
@@ -460,15 +464,21 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
   function verifyWithdraw(
     address depositor,
     uint256 depositId,
-    uint96 amount,
+    uint96 depositAmount,
+    uint96 withdrawAmount,
     address operator,
     address beneficiary
   ) internal view {
-    assertEq(rewardsDistributionFacet.stakedByDepositor(depositor), amount);
+    assertEq(
+      rewardsDistributionFacet.stakedByDepositor(depositor),
+      depositAmount,
+      "stakedByDepositor"
+    );
+    assertEq(river.balanceOf(depositor), withdrawAmount, "withdrawAmount");
 
     StakingRewards.Deposit memory deposit = rewardsDistributionFacet
       .depositById(depositId);
-    assertEq(deposit.amount, amount, "amount");
+    assertEq(deposit.amount, depositAmount, "depositAmount");
     assertEq(deposit.owner, depositor, "owner");
     assertEq(deposit.commissionEarningPower, 0, "commissionEarningPower");
     assertEq(deposit.delegatee, address(0), "delegatee");

@@ -147,7 +147,11 @@ contract DeployBaseRegistry is DiamondHelper, Deployer {
     addFacet(
       distributionV2Helper.makeCut(distributionV2, IDiamond.FacetCutAction.Add),
       distributionV2,
-      distributionV2Helper.makeInitData("")
+      distributionV2Helper.makeInitData(
+        0x9172852305F32819469bf38A3772f29361d7b768,
+        0x9172852305F32819469bf38A3772f29361d7b768,
+        14 days
+      )
     );
     addFacet(
       spaceDelegationHelper.makeCut(
