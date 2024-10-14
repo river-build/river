@@ -21,7 +21,6 @@ export class SpaceRegistrar {
     private readonly createSpace: ICreateSpaceShim
     private readonly spaces: LRUCache<string, Space>
 
-
     constructor(config: BaseChainConfig, provider: ethers.providers.Provider) {
         this.spaces = new LRUCache<string, Space>({
             max: 100,
