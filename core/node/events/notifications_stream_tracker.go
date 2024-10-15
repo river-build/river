@@ -3,6 +3,7 @@ package events
 import (
 	"bytes"
 	"context"
+	mapset "github.com/deckarep/golang-set/v2"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -20,17 +21,15 @@ type (
 	UserPreferencesStore interface {
 		// BlockUser blocks the given blockedUser for the given user
 		BlockUser(
-			ctx context.Context,
 			user common.Address,
 			blockedUser common.Address,
-		) error
+		)
 
 		// UnblockUser unblocks the given blockedUser for the given user
 		UnblockUser(
-			ctx context.Context,
 			user common.Address,
 			blockedUser common.Address,
-		) error
+		)
 	}
 
 	TrackedNotificationStreamView struct {
@@ -43,8 +42,13 @@ type (
 	}
 
 	StreamEventListener interface {
-		// OnMessageEvent is called for each member, for each message event added to the stream
-		OnMessageEvent(streamID shared.StreamId, streamMembers map[common.Address]struct{}, event *ParsedEvent)
+		// OnMessageEvent must be called for message added to a DM, GDM or space channel.
+		OnMessageEvent(
+			streamID shared.StreamId,
+			parentStreamID *shared.StreamId, // only
+			members mapset.Set[string],
+			event *ParsedEvent,
+		)
 	}
 )
 
@@ -66,13 +70,27 @@ func NewNotificationsStreamTrackerFromStreamAndCookie(
 		return nil, err
 	}
 
-	return &TrackedNotificationStreamView{
+	// load the list of users that someone has blocked from their personal user settings stream into the user
+	// preference cache which is queried when determining if a notification must be send.
+	if view.streamId.Type() == shared.STREAM_USER_SETTINGS_BIN {
+		user := common.BytesToAddress(view.streamId[1:21])
+		if blockedUsers, err := view.BlockedUsers(); err == nil {
+			blockedUsers.Each(func(address common.Address) bool {
+				userPreferences.BlockUser(user, address)
+				return false
+			})
+		}
+	}
+
+	ts := &TrackedNotificationStreamView{
 		streamID:        streamID,
 		cfg:             cfg,
 		view:            view,
 		listener:        listener,
 		userPreferences: userPreferences,
-	}, nil
+	}
+
+	return ts, nil
 }
 
 func (ts *TrackedNotificationStreamView) HandleEvent(event *Envelope) error {
@@ -100,7 +118,7 @@ func (ts *TrackedNotificationStreamView) addEvent(event *ParsedEvent) error {
 	}
 	ts.view = view
 
-	// in case the event was blocking/unblocking a user update the users blocked list.
+	// in case the event was a block/unblock event update the users blocked list.
 	if ts.streamID.Type() == shared.STREAM_USER_SETTINGS_BIN {
 		if settings := event.Event.GetUserSettingsPayload(); settings != nil {
 			if userBlock := settings.GetUserBlock(); userBlock != nil {
@@ -108,11 +126,9 @@ func (ts *TrackedNotificationStreamView) addEvent(event *ParsedEvent) error {
 				blockedUser := common.BytesToAddress(userBlock.GetUserId())
 
 				if userBlock.GetIsBlocked() {
-					// lint:ignore context.Background() is fine here
-					_ = ts.userPreferences.BlockUser(context.Background(), userID, blockedUser)
+					ts.userPreferences.BlockUser(userID, blockedUser)
 				} else {
-					// lint:ignore context.Background() is fine here
-					_ = ts.userPreferences.UnblockUser(context.Background(), userID, blockedUser)
+					ts.userPreferences.UnblockUser(userID, blockedUser)
 				}
 			}
 		}
@@ -121,11 +137,12 @@ func (ts *TrackedNotificationStreamView) addEvent(event *ParsedEvent) error {
 	}
 
 	// otherwise for each member that is a member of the stream, or for anyone that is mentioned
-	participants := make(map[common.Address]struct{})
-	for _, participant := range ts.view.snapshot.Members.Joined {
-		participants[common.BytesToAddress(participant.UserAddress)] = struct{}{}
+	members, err := ts.view.GetChannelMembers()
+	if err != nil {
+		return err
 	}
-	ts.listener.OnMessageEvent(ts.streamID, participants, event)
+
+	ts.listener.OnMessageEvent(ts.streamID, view.StreamParentId(), *members, event)
 
 	return nil
 }

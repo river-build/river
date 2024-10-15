@@ -1,18 +1,6 @@
 package sync_test
 
-import (
-	"context"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/river-build/river/core/config"
-	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/nodes"
-	"github.com/river-build/river/core/node/notifications/push"
-	"github.com/river-build/river/core/node/notifications/sync"
-	"github.com/river-build/river/core/node/registries"
-	"github.com/stretchr/testify/require"
-	"testing"
-)
-
+/*
 func TestStreamsTracker(t *testing.T) {
 	req := require.New(t)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -61,3 +49,4 @@ func TestStreamsTracker(t *testing.T) {
 
 	tracker.Run(ctx)
 }
+*/

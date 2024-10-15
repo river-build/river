@@ -1,6 +1,20 @@
-CREATE TABLE IF NOT EXISTS usersettings (
-  user_id bytea PRIMARY KEY,
-  settings bytea NOT NULL);
+CREATE TABLE IF NOT EXISTS userpreferences (
+    user_id bytea PRIMARY KEY,
+    dm smallint,
+    gdm smallint);
+
+CREATE TABLE IF NOT EXISTS spaces (
+    user_id bytea,
+    space_id bytea,
+    setting smallint,
+    PRIMARY KEY (user_id, space_id));
+
+CREATE TABLE IF NOT EXISTS channels (
+    user_id bytea,
+    channel_id bytea,
+    space_id bytea,
+    setting smallint,
+    PRIMARY KEY (user_id, channel_id));
 
 CREATE TABLE IF NOT EXISTS webpushsubscriptions (
     key_auth varchar,

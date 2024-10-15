@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
 	"math"
 	"sync"
@@ -63,6 +64,20 @@ type (
 		streams sync.Map // map[shared.StreamId]*streamSyncProgress
 		// streamsDown keeps the set of streams that are reported as down
 		streamsDown sync.Map
+		// metrics holds metrics for telemetry purposes
+		metrics *streamsTrackerWorkerMetrics
+	}
+
+	streamsTrackerWorkerMetrics struct {
+		trackedStreamsMessageCounter   prometheus.Counter
+		trackedDMStreamsUp             prometheus.Gauge
+		trackedDMStreamsDown           prometheus.Gauge
+		trackedGDMStreamsUp            prometheus.Gauge
+		trackedGDMStreamsDown          prometheus.Gauge
+		trackedSpaceChannelStreamsUp   prometheus.Gauge
+		trackedSpaceChannelStreamsDown prometheus.Gauge
+		trackedUserSettingsStreamsUp   prometheus.Gauge
+		trackedUserSettingsStreamsDown prometheus.Gauge
 	}
 )
 
@@ -75,6 +90,7 @@ func newStreamsTrackerWorker(
 	streams []*registries.GetStreamResult,
 	listener events.StreamEventListener,
 	userPreferences events.UserPreferencesStore,
+	metrics *streamsTrackerWorkerMetrics,
 ) (*streamsTrackerWorker, error) {
 	worker := &streamsTrackerWorker{
 		ID:                id,
@@ -84,6 +100,7 @@ func newStreamsTrackerWorker(
 		listener:          listener,
 		userPreferences:   userPreferences,
 		streamAddRequests: make(chan *streamSyncProgress, 1024),
+		metrics:           metrics,
 	}
 
 	log := worker.logFromCtx(ctx)
@@ -132,7 +149,6 @@ func (w *streamsTrackerWorker) run(ctx context.Context) {
 		waitDuration = 15 * time.Second
 	)
 
-	go w.metrics(ctx)
 	go w.addDownStreamsAgain(ctx)
 
 	for keepOnGoing(ctx) {
@@ -251,6 +267,8 @@ func (w *streamsTrackerWorker) processAddStreamRequest(
 
 	w.SubscribedStreams.Add(1)
 
+	w.markStreamUp(request.streamID)
+
 	return nil
 }
 
@@ -268,9 +286,9 @@ func (w *streamsTrackerWorker) Send(msg *protocol.SyncStreamsResponse) error {
 			return err
 		}
 
-		reset := msg.GetStream().GetSyncReset()
+		w.metrics.trackedStreamsMessageCounter.Inc()
 
-		log.Debug("got stream update", "stream", streamID, "reset", reset)
+		reset := msg.GetStream().GetSyncReset()
 
 		// a reset is forced and the cookie contains the latest block with snapshot that is used to construct a view
 		// on which later events can be applied.
@@ -282,8 +300,6 @@ func (w *streamsTrackerWorker) Send(msg *protocol.SyncStreamsResponse) error {
 				log.Error("Unable to make remote stream view", "stream", streamID, "err", err)
 				return err
 			}
-
-			log.Debug("created view", "stream", streamID, "err")
 
 			// this could replace an existing tracked stream if the stream was reported as down before
 			w.trackedStreams.Store(streamID, trackedStream)
@@ -319,7 +335,6 @@ func (w *streamsTrackerWorker) Send(msg *protocol.SyncStreamsResponse) error {
 					return err
 				}
 
-				log.Debug("created view", "stream", streamID, "err")
 				w.trackedStreams.Store(streamID, view)
 			}
 		}
@@ -334,6 +349,7 @@ func (w *streamsTrackerWorker) Send(msg *protocol.SyncStreamsResponse) error {
 
 		log.Warn("Stream reported as down, reschedule to add again", "stream", msg.GetStreamId())
 		w.streamsDown.Store(streamID, struct{}{})
+		w.markStreamDown(streamID)
 
 	case protocol.SyncOp_SYNC_CLOSE:
 		log.Error("Sync stopped unexpected", "syncId", syncID)
@@ -346,6 +362,8 @@ func (w *streamsTrackerWorker) Send(msg *protocol.SyncStreamsResponse) error {
 	return nil
 }
 
+// addDownStreamsAgain tries to add streams that failed to be added to a sync session
+// or for which a down message was received.
 func (w *streamsTrackerWorker) addDownStreamsAgain(ctx context.Context) {
 	next := time.After(30 * time.Second)
 	for {
@@ -353,7 +371,9 @@ func (w *streamsTrackerWorker) addDownStreamsAgain(ctx context.Context) {
 		case <-next:
 			w.streamsDown.Range(func(key, value interface{}) bool {
 				streamID := key.(shared.StreamId)
-				nodes := value.([]common.Address)
+				v, _ := w.streams.Load(streamID)
+				progress := v.(*streamSyncProgress)
+				nodes := progress.nodes
 				w.streamAddRequests <- &streamSyncProgress{
 					streamID: streamID,
 					nodes:    nodes,
@@ -374,15 +394,28 @@ func (w *streamsTrackerWorker) addDownStreamsAgain(ctx context.Context) {
 	}
 }
 
-func (w *streamsTrackerWorker) metrics(ctx context.Context) {
-	log := w.logFromCtx(ctx)
-	ticker := time.NewTicker(time.Minute)
-	for {
-		select {
-		case <-ticker.C:
-			log.Debug("worker tracks streams", "worker", w.ID, "streamsCount", w.SubscribedStreams.Load())
-		case <-ctx.Done():
-			return
-		}
+func (w *streamsTrackerWorker) markStreamUp(streamID shared.StreamId) {
+	switch streamID.Type() {
+	case shared.STREAM_USER_SETTINGS_BIN:
+		w.metrics.trackedUserSettingsStreamsUp.Inc()
+	case shared.STREAM_CHANNEL_BIN:
+		w.metrics.trackedSpaceChannelStreamsUp.Inc()
+	case shared.STREAM_DM_CHANNEL_BIN:
+		w.metrics.trackedDMStreamsUp.Inc()
+	case shared.STREAM_GDM_CHANNEL_BIN:
+		w.metrics.trackedGDMStreamsUp.Inc()
+	}
+}
+
+func (w *streamsTrackerWorker) markStreamDown(streamID shared.StreamId) {
+	switch streamID.Type() {
+	case shared.STREAM_USER_SETTINGS_BIN:
+		w.metrics.trackedUserSettingsStreamsUp.Inc()
+	case shared.STREAM_CHANNEL_BIN:
+		w.metrics.trackedSpaceChannelStreamsUp.Inc()
+	case shared.STREAM_DM_CHANNEL_BIN:
+		w.metrics.trackedDMStreamsUp.Inc()
+	case shared.STREAM_GDM_CHANNEL_BIN:
+		w.metrics.trackedGDMStreamsUp.Inc()
 	}
 }

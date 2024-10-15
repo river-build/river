@@ -4,16 +4,17 @@ import (
 	"context"
 	"embed"
 	"errors"
+	"github.com/SherClockHolmes/webpush-go"
 	"time"
 
-	"github.com/SherClockHolmes/webpush-go"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jackc/pgx/v5"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
+	"github.com/river-build/river/core/node/notifications/types"
 	. "github.com/river-build/river/core/node/protocol"
-	"google.golang.org/protobuf/proto"
+	"github.com/river-build/river/core/node/shared"
 )
 
 type (
@@ -26,16 +27,37 @@ type (
 	}
 
 	NotificationStore interface {
-		SetSettings(
+		GetUserPreferences(
 			ctx context.Context,
 			userID common.Address,
-			settings *Settings,
+		) (*types.UserPreferences, error)
+
+		SetUserPreferences(
+			ctx context.Context,
+			preferences *types.UserPreferences,
 		) error
 
-		GetSettings(
+		SetGlobalDmGdm(
 			ctx context.Context,
 			userID common.Address,
-		) (*Settings, error)
+			dm DmChannelSettingValue,
+			gdm GdmChannelSettingValue,
+		) error
+
+		SetSpaceSettings(
+			ctx context.Context,
+			userID common.Address,
+			spaceID shared.StreamId,
+			value SpaceChannelSettingValue,
+		) error
+
+		SetChannelSetting(
+			ctx context.Context,
+			userID common.Address,
+			spaceID *shared.StreamId,
+			channelID shared.StreamId,
+			value SpaceChannelSettingValue,
+		) error
 
 		GetWebPushSubscriptions(
 			ctx context.Context,
@@ -313,97 +335,288 @@ func (s *PostgresNotificationStore) compareUUID(ctx context.Context, tx pgx.Tx) 
 	return err
 }
 
-func (s *PostgresNotificationStore) SetSettings(
+func (s *PostgresNotificationStore) SetUserPreferences(
 	ctx context.Context,
-	userID common.Address,
-	settings *Settings,
+	preferences *types.UserPreferences,
 ) error {
-	encoded, err := proto.Marshal(settings)
-	if err != nil {
-		return AsRiverError(err, Err_INTERNAL).
-			Message("Unable to proto serialize Settings").
-			Func("SetSettings")
-	}
-
 	return s.txRunnerWithUUIDCheck(
 		ctx,
-		"SetSettings",
+		"SetUserPreferences",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
-			return s.setSettingsTx(ctx, tx, userID, encoded)
+			return s.setUserPreferencesTx(ctx, tx, preferences)
+		},
+		nil,
+		"userID", preferences.UserID,
+	)
+}
+
+func (s *PostgresNotificationStore) setUserPreferencesTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	preferences *types.UserPreferences,
+) error {
+	batch := &pgx.Batch{}
+
+	batch.Queue(`DELETE FROM spaces WHERE user_id = $1`, preferences.UserID)
+	batch.Queue(`DELETE FROM channels WHERE user_id = $1`, preferences.UserID)
+
+	batch.Queue(`INSERT INTO userpreferences (user_id, dm, gdm) VALUES ($1,$2,$3) ON CONFLICT (user_id) DO UPDATE SET dm = $2, gdm = $3`, preferences.UserID, int16(preferences.DM), int16(preferences.GDM))
+
+	for spaceID, space := range preferences.Spaces {
+		batch.Queue(`INSERT INTO spaces (user_id, space_id, setting) VALUES ($1,$2,$3)`, preferences.UserID, spaceID, int16(space.Setting))
+		for channelID, pref := range space.Channels {
+			batch.Queue(`INSERT INTO channels (user_id, channel_id, space_id, setting) VALUES ($1,$2,$3,$4)`, preferences.UserID, channelID, spaceID, int16(pref))
+		}
+	}
+
+	for channelID, pref := range preferences.GDMChannels {
+		batch.Queue(`INSERT INTO channels (user_id, channel_id, setting) VALUES ($1,$2,$3)`, preferences.UserID, channelID, int16(pref))
+	}
+
+	br := tx.SendBatch(ctx, batch)
+
+	_, _ = br.Exec()
+	err := br.Close()
+
+	if err != nil {
+		return err // returns the cause why br.Exec failed
+	}
+
+	return nil
+}
+
+func (s *PostgresNotificationStore) SetGlobalDmGdm(
+	ctx context.Context,
+	userID common.Address,
+	dm DmChannelSettingValue,
+	gdm GdmChannelSettingValue,
+) error {
+	return s.txRunnerWithUUIDCheck(
+		ctx,
+		"SetGlobalDmGdm",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) error {
+			return s.setGlobalDmGdmTx(ctx, tx, userID, dm, gdm)
 		},
 		nil,
 		"userID", userID,
 	)
 }
 
-func (s *PostgresNotificationStore) setSettingsTx(
+func (s *PostgresNotificationStore) setGlobalDmGdmTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	userID common.Address,
-	settings []byte,
+	dm DmChannelSettingValue,
+	gdm GdmChannelSettingValue,
 ) error {
 	_, err := tx.Exec(
 		ctx,
-		`INSERT INTO usersettings (user_id, settings) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET settings = $2`,
+		`INSERT INTO userpreferences (user_id, dm, gdm) VALUES ($1, $2, $3) ON CONFLICT (user_id) DO UPDATE SET dm=$2, gdm = $3`,
 		userID,
-		settings,
+		int16(dm),
+		int16(gdm),
 	)
 
 	return err
 }
 
-func (s *PostgresNotificationStore) GetSettings(
+func (s *PostgresNotificationStore) SetSpaceSettings(
 	ctx context.Context,
 	userID common.Address,
-) (*Settings, error) {
-	var (
-		settings Settings
-		found    = false
+	spaceID shared.StreamId,
+	value SpaceChannelSettingValue,
+) error {
+	return s.txRunnerWithUUIDCheck(
+		ctx,
+		"SetSpaceSettings",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) error {
+			return s.setSpaceSettingsTx(ctx, tx, userID, spaceID, value)
+		},
+		nil,
+		"userID", userID,
 	)
+}
+
+func (s *PostgresNotificationStore) setSpaceSettingsTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	userID common.Address,
+	spaceID shared.StreamId,
+	value SpaceChannelSettingValue,
+) error {
+
+	_, err := tx.Exec(
+		ctx,
+		`INSERT INTO spaces (user_id, space_id, setting) VALUES ($1, $2, $3) ON CONFLICT (user_id, space_id) DO UPDATE SET setting = $3`,
+		userID,
+		spaceID,
+		int16(value),
+	)
+
+	return err
+}
+
+func (s *PostgresNotificationStore) SetChannelSetting(
+	ctx context.Context,
+	userID common.Address,
+	spaceID *shared.StreamId,
+	channelID shared.StreamId,
+	value SpaceChannelSettingValue,
+) error {
+	return s.txRunnerWithUUIDCheck(
+		ctx,
+		"SetChannelSetting",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) error {
+			return s.setChannelSettingTx(ctx, tx, userID, spaceID, channelID, value)
+		},
+		nil,
+		"userID", userID,
+		"channel", channelID,
+	)
+}
+
+func (s *PostgresNotificationStore) setChannelSettingTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	userID common.Address,
+	spaceID *shared.StreamId,
+	channelID shared.StreamId,
+	value SpaceChannelSettingValue,
+) error {
+	_, err := tx.Exec(
+		ctx,
+		`INSERT INTO channels (user_id, channel_id, space_id, setting) VALUES ($1, $2, $3, $4) ON CONFLICT (user_id, channel_id) DO UPDATE SET setting = $3`,
+		userID,
+		channelID,
+		spaceID,
+		int16(value),
+	)
+
+	return err
+}
+
+func (s *PostgresNotificationStore) GetUserPreferences(
+	ctx context.Context,
+	userID common.Address,
+) (*types.UserPreferences, error) {
+	var result *types.UserPreferences
+
 	err := s.txRunner(
 		ctx,
-		"GetSettings",
+		"GetUserPreferences",
 		pgx.ReadOnly,
 		func(ctx context.Context, tx pgx.Tx) error {
-			raw, err := s.getSettingsTx(ctx, tx, userID)
+			pref, err := s.getUserPreferencesTx(ctx, tx, userID)
 			if err != nil {
 				return err
 			}
-			if len(raw) == 0 {
-				return nil
-			}
-			found = true
-			return proto.Unmarshal(raw, &settings)
+			result = pref
+			return nil
 		},
 		nil,
 	)
+
 	if err != nil {
 		return nil, err
 	}
 
-	if !found {
-		return nil, RiverError(Err_NOT_FOUND, "settings not found", "userId", userID).
-			Func("GetSettings")
+	if result == nil {
+		return nil, RiverError(Err_NOT_FOUND, "User settings not found").Tag("user", userID)
 	}
 
-	return &settings, nil
+	return result, nil
 }
 
-func (s *PostgresNotificationStore) getSettingsTx(
+func (s *PostgresNotificationStore) getUserPreferencesTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	userID common.Address,
-) ([]byte, error) {
-	var settings []byte
-	row := tx.QueryRow(ctx, "SELECT settings FROM usersettings where user_id = $1", userID)
-
-	err := row.Scan(&settings)
-	if err == nil || errors.Is(err, pgx.ErrNoRows) {
-		return settings, nil
+) (*types.UserPreferences, error) {
+	userPref := &types.UserPreferences{
+		UserID:      userID,
+		Spaces:      make(types.SpacesMap),
+		DMChannels:  make(types.DMChannelsMap),
+		GDMChannels: make(types.GDMChannelsMap),
 	}
 
-	return nil, err
+	row := tx.QueryRow(ctx, "SELECT dm, gdm FROM userpreferences where user_id = $1", userID)
+
+	err := row.Scan(&userPref.DM, &userPref.GDM)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	spaceRows, err := tx.Query(
+		ctx,
+		`SELECT space_id, setting FROM spaces where user_id = $1`,
+		userID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer spaceRows.Close()
+
+	for spaceRows.Next() {
+		var spaceIDRaw []byte
+		space := &types.SpacePreferences{}
+
+		if err := spaceRows.Scan(&spaceIDRaw, &space.Setting); err != nil {
+			return nil, err
+		}
+
+		spaceID, _ := shared.StreamIdFromString(string(spaceIDRaw))
+		userPref.Spaces[spaceID] = space
+	}
+
+	channelRows, err := tx.Query(
+		ctx,
+		`SELECT channel_id, space_id, setting FROM channels where user_id = $1`,
+		userID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer channelRows.Close()
+
+	for channelRows.Next() {
+		var (
+			channelIDRaw []byte
+			spaceIDRaw   []byte
+			setting      SpaceChannelSettingValue
+		)
+
+		if err := channelRows.Scan(&channelIDRaw, &spaceIDRaw, &setting); err != nil {
+			return nil, err
+		}
+
+		channelID, _ := shared.StreamIdFromString(string(channelIDRaw))
+		spaceID, _ := shared.StreamIdFromString(string(spaceIDRaw))
+
+		if channelID.Type() == shared.STREAM_CHANNEL_BIN {
+			space, found := userPref.Spaces[spaceID]
+			if !found {
+				space = &types.SpacePreferences{
+					Setting:  SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_ONLY_MENTIONS_REPLIES_REACTIONS,
+					Channels: make(types.SpaceChannelsMap),
+				}
+				userPref.Spaces[spaceID] = space
+			}
+			space.Channels[channelID] = setting
+		} else if channelID.Type() == shared.STREAM_DM_CHANNEL_BIN {
+			userPref.DMChannels[channelID] = DmChannelSettingValue(setting)
+		} else if channelID.Type() == shared.STREAM_GDM_CHANNEL_BIN {
+			userPref.GDMChannels[channelID] = GdmChannelSettingValue(setting)
+		}
+	}
+
+	return userPref, nil
 }
 
 func (s *PostgresNotificationStore) GetWebPushSubscriptions(

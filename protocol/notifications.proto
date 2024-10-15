@@ -5,15 +5,19 @@ option go_package = "github.com/river-build/river/core/node/protocol";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 
+// NotificationService allows user to set notification related preferences for messages added to channels within a
+// space, DM and GDM channels.
 service NotificationService {
   // SetSettings sets the notification settings, overwriting all existing settings.
   rpc SetSettings(SetSettingsRequest) returns (SetSettingsResponse);
   // GetSettings returns user stored notification settings.
   rpc GetSettings(GetSettingsRequest) returns (GetSettingsResponse);
-  // UpdateSpaceSettings updates settings for all channels within a space.
-  rpc UpdateSpaceSettings(UpdateSpaceSettingsRequest) returns (UpdateSpaceSettingsResponse);
-  // UpdateChannelSettings updates settings for a particular channel.
-  rpc UpdateChannelSettings(UpdateChannelSettingsRequest) returns (UpdateChannelSettingsResponse);
+  // SetDmGdmSettings updates global settings for DM/GDM channels.
+  rpc SetDmGdmSettings(SetDmGdmSettingsRequest) returns (SetDmGdmSettingsResponse);
+  // SetSpaceSettings updates space setting that are applied to all channels within that stream.
+  rpc SetSpaceSettings(SetSpaceSettingsRequest) returns (SetSpaceSettingsResponse);
+  // SetChannelSettings updates settings for a channel.
+  rpc SetChannelSettings(SetChannelSettingsRequest) returns (SetChannelSettingsResponse);
   // SubscribeWebPush subscribes a client to receive notifications through web push.
   // If the given req.subscription is already associated with a web push subscription the user id is updated (upsert).
   rpc SubscribeWebPush(SubscribeWebPushRequest) returns (SubscribeWebPushResponse);
@@ -26,68 +30,110 @@ service NotificationService {
   rpc UnsubscribeAPN(UnsubscribeAPNRequest) returns (UnsubscribeAPNResponse);
 }
 
+// DmChannelSettingValue specifies if the user wants to receive notifications for DM streams.
+// This can be overwritten with DM channel specific configuration.
+enum DmChannelSettingValue {
+  // DM_UNSPECIFIED not set, assumes DM_MESSAGES_YES as a default.
+  DM_UNSPECIFIED = 0;
+  // DM_MESSAGES_YES indicates that the user wants to receive notifications for DM channels.
+  DM_MESSAGES_YES = 1;
+  // DM_MESSAGES_NO indicates that the user doesn't want to receive notifications for DM channels.
+  DM_MESSAGES_NO = 2;
+}
+
+// GdmChannelSettingValue is a default setting that is applied to all GDM streams a user is in and can be
+// overwritten by GDM channel specific settings.
+enum GdmChannelSettingValue {
+  // GDM_UNSPECIFIED not set, assumes GDM_MESSAGES_ALL as a default.
+  GDM_UNSPECIFIED = 0;
+  // GDM_NO_MESSAGES indicates that the user will not receive notifications for GDM channels.
+  GDM_NO_MESSAGES = 1;
+  // GDM_ONLY_MENTIONS_REPLIES_REACTIONS indicates that the user receives notifications for messages added to
+  // GDM channels that are either a direct reply or a reaction to his own messages.
+  GDM_ONLY_MENTIONS_REPLIES_REACTIONS = 2;
+  // GDM_MESSAGES_ALL indicates that the user receives notifications for all messages in GDM channels.
+  // This is the default.
+  GDM_MESSAGES_ALL = 3;
+}
+
+// SpaceSettingValue is a user specified setting that is applied to all channels in a space by default and can be
+// overwritten with channel specific settings.
+enum SpaceChannelSettingValue {
+  // SPACE_CHANNEL_SETTING_UNSPECIFIED not set, assumes SPACE_SETTING_ONLY_MENTIONS_REPLIES_REACTIONS as default.
+  SPACE_CHANNEL_SETTING_UNSPECIFIED = 0;
+  // SPACE_CHANNEL_SETTING_NO_MESSAGES indicates that the user won't receive notifications of any channel in the space.
+  SPACE_CHANNEL_SETTING_NO_MESSAGES = 1;
+  // SPACE_CHANNEL_SETTING_ONLY_MENTIONS_REPLIES_REACTIONS indicates that the user will receive notifications for
+  // messages that either the user is mentioned in or are a direct reply/reaction to his own message. This is the
+  // default.
+  SPACE_CHANNEL_SETTING_ONLY_MENTIONS_REPLIES_REACTIONS = 2;
+  // SPACE_CHANNEL_SETTING_MESSAGES_ALL indicates that the user will receive notifications for all types of
+  // messages/reactions for all channels in the space.
+  SPACE_CHANNEL_SETTING_MESSAGES_ALL = 3;
+}
+
 message GetSettingsRequest {
   // user id for which to retrieve settings
   bytes user_id = 1;
 }
 
 message GetSettingsResponse {
-  Settings settings = 1;
-}
-
-message Settings {
   // user id for which to retrieve settings
   bytes user_id = 1;
   // space holds specific settings for spaces and channels within a space
   repeated SpaceSetting space = 2;
-  // dm_gdm_channels holds specific settings for DM/GDM channels
-  repeated ChannelSetting dm_gdm_channels = 3;
+  // dm_global is the default setting that is applied to all DM channels and can be overwritten by channel specific
+  // settings with dm_gdm_channels.
+  DmChannelSettingValue dm_global = 3;
+  // gdm_global is the default setting that is applied to all GDM channels and can be overwritten by channel specific
+  // settings with dm_gdm_channels.
+  GdmChannelSettingValue gdm_global = 4;
+  // dm_channels holds specific settings for DM channels
+  repeated DmChannelSetting dm_channels = 5;
+  // gdm_channels holds specific settings for GDM channels
+  repeated GdmChannelSetting gdm_channels = 6;
 }
 
 message SetSettingsRequest {
-    Settings settings = 1;
+  // user id for which to retrieve settings
+  bytes user_id = 1;
+  // dm_global holds the default config setting that is applied to all DM channels unless overwritten by a DM specif
+  // preference.
+  DmChannelSettingValue dm_global = 2;
+  // dm_channels holds DM channel specific preferences that overwrite dm_global.
+  repeated DmChannelSetting dm_channels = 3;
+  // gdm_global is the default setting that is applied to all GDM channels and can be overwritten by channel specific
+  // settings with dm_gdm_channels.
+  GdmChannelSettingValue gdm_global = 4;
+  // dm_gdm_channels holds settings for GDM channels that overwrite the default setting in gdm_global.
+  repeated GdmChannelSetting gdm_channels = 5;
+  // spaces holds specific settings for spaces and their channels.
+  repeated SpaceSetting spaces = 6;
 }
 
 message SetSettingsResponse {}
 
-// ChannelSettingValue is a user configured indication if the user wants to receive notifications for a channel.
-enum ChannelSettingValue {
-  // CHANNEL_SETTING_VALUE_UNSPECIFIED value not set, for channels the default space setting are used
-  // (equivalent to CHANNEL_SETTING_VALUE_DEFAULT)
-  CHANNEL_SETTING_VALUE_UNSPECIFIED = 0;
-  // CHANNEL_SETTING_VALUE_DEFAULT indicates that the defaults are used from the space the channel is part of.
-  // For DM/GDM channels CHANNEL_SETTING_VALUE_DEFAULT is equivalent to CHANNEL_SETTING_VALUE_ALL.
-  CHANNEL_SETTING_VALUE_DEFAULT = 1;
-  // CHANNEL_SETTING_VALUE_MUTED indicates that the user won't receive notifications for a channel, or if set on a space
-  // level for none of the channels within that space unless a channel is explicit set to unmute.
-  CHANNEL_SETTING_VALUE_MUTED = 2;
-  // CHANNEL_SETTING_VALUE_UNMUTED indicates that the user will receive notifications for a channel, or if set on a
-  // space level for all channels that are not explicitly set to mute in a space.
-  CHANNEL_SETTING_VALUE_UNMUTED = 3;
-  // CHANNEL_SETTING_VALUE_ALL indicates that the user receives notifications for all messages/reactions/mentions
-  CHANNEL_SETTING_VALUE_ALL = 4;
-}
-
-// ChannelSetting hold settings specific for a DM, GDM or channel stream.
-message ChannelSetting {
+// DmChannelSetting hold settings specific for a DM.
+message DmChannelSetting {
   // channel_id points to the channel for which this setting applies.
   bytes channel_id = 1;
   // setting indicates if the user wants to receive notifications for the channel within the space.
-  ChannelSettingValue value = 3;
+  DmChannelSettingValue value = 2;
 }
 
-// SpaceNotificationSettingValue is a user specified setting that applies to all channels within a space.
-enum SpaceNotificationSettingValue {
-  // SPACE_UNSPECIFIED not set
-  SPACE_UNSPECIFIED = 0;
-  // SPACE_ONLY_MENTIONS_REPLIES_REACTIONS indicates that the user will receive notifications for messages that either
-  // the user is mentioned in, or is a reply/reaction to his message, unless the channel is muted (default).
-  SPACE_ONLY_MENTIONS_REPLIES_REACTIONS = 1;
-  // SPACE_ALL_MESSAGES indicates that the user will receive notifications for all messages for all channels in the
-  // space unless a channel is muted.
-  SPACE_ALL_MESSAGES = 2;
-  // SPACE_NO_MESSAGES indicates that the user won't receive notifications for any of the channels in the town.
-  SPACE_NO_MESSAGES = 3;
+// GdmChannelSetting hold settings specific for a GDM.
+message GdmChannelSetting {
+  // channel_id points to the channel for which this setting applies.
+  bytes channel_id = 1;
+  // setting indicates if the user wants to receive notifications for the channel.
+  GdmChannelSettingValue value = 2;
+}
+
+message SpaceChannelSetting {
+  // channel_id points to the channel for which this setting applies.
+  bytes channel_id = 1;
+  // setting indicates if the user wants to receive notifications for the channel.
+  SpaceChannelSettingValue value = 2;
 }
 
 // SpaceSettings hold settings that applied to all streams within the space.
@@ -96,34 +142,47 @@ message SpaceSetting {
   // space channel id
   bytes space_id = 1;
   // value is applied to all channels within the space unless overwritten by a channel specific setting.
-  SpaceNotificationSettingValue value = 2;
-  // channels holds specific settings that overwrite the space default setting
-  repeated ChannelSetting channels = 3;
+  SpaceChannelSettingValue value = 2;
+  // channels holds channel specific settings for channels within the space
+  repeated SpaceChannelSetting channels = 3;
 }
 
-message UpdateSpaceSettingsRequest {
+message SetDmGdmSettingsRequest {
+  // user_id
+  bytes user_id = 1;
+  // dm_global is the default setting that is applied to all DM channels and can be overwritten by channel specific
+  // settings
+  DmChannelSettingValue dm_global = 3;
+  // gdm_global is the default setting that is applied to all GDM channels and can be overwritten by channel specific
+  // settings
+  GdmChannelSettingValue gdm_global = 4;
+}
+
+message SetDmGdmSettingsResponse {}
+
+message SetSpaceSettingsRequest {
   // user_id
   bytes user_id = 1;
   // space channel id
   bytes space_id = 2;
   // value are applied to all channels within the space.
-  SpaceNotificationSettingValue value = 3;
+  SpaceChannelSettingValue value = 3;
 }
 
-message UpdateSpaceSettingsResponse {}
+message SetSpaceSettingsResponse {}
 
-message UpdateChannelSettingsRequest {
+message SetChannelSettingsRequest {
   bytes user_id = 1;
   // channel_id points to the channel for which this setting applies.
   bytes channel_id = 2;
   // space_id is required when channel_id points to a channel within a space.
-  // for GM and GDM channels space_id must not be set.
+  // for GM and GDM channels space_id is ignored.
   bytes space_id = 3;
   // value indicates the user overwritten value or a channel default must be used.
-  ChannelSettingValue value = 4;
+  SpaceChannelSettingValue value = 4;
 }
 
-message UpdateChannelSettingsResponse {}
+message SetChannelSettingsResponse {}
 
 message WebPushSubscriptionObjectKeys {
   // An Elliptic curve Diffie–Hellman public key on the P-256 curve (that is, the NIST
@@ -178,3 +237,4 @@ message UnsubscribeAPNRequest {
 }
 
 message UnsubscribeAPNResponse {}
+

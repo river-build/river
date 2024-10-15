@@ -3,6 +3,8 @@ package sync
 import (
 	"context"
 	"crypto/sha256"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/river-build/river/core/node/infra"
 	"math/big"
 	"slices"
 	"sync"
@@ -22,6 +24,7 @@ const DefaultStreamsTrackerWorkerCount = 50
 type StreamsTracker struct {
 	riverRegistry *registries.RiverRegistryContract
 	workers       []*streamsTrackerWorker
+	metrics       infra.MetricsFactory
 }
 
 // NewStreamsTracker create stream tracker instance.
@@ -33,6 +36,7 @@ func NewStreamsTracker(
 	nodes nodes.NodeRegistry,
 	listener events.StreamEventListener,
 	storage events.UserPreferencesStore,
+	metrics infra.MetricsFactory,
 ) (*StreamsTracker, error) {
 	if workersCount <= 0 {
 		workersCount = DefaultStreamsTrackerWorkerCount
@@ -41,9 +45,10 @@ func NewStreamsTracker(
 	tracker := &StreamsTracker{
 		riverRegistry: riverRegistry,
 		workers:       make([]*streamsTrackerWorker, workersCount),
+		metrics:       metrics,
 	}
 
-	// subscribe to stream events
+	// subscribe to stream events in river registry
 	tracker.riverRegistry.OnStreamEvent(
 		ctx,
 		tracker.riverRegistry.Blockchain.InitialBlockNum,
@@ -70,6 +75,7 @@ func NewStreamsTracker(
 				stream.Nodes = slices.DeleteFunc(stream.Nodes, func(address common.Address) bool {
 					return !slices.Contains(validNodes, address)
 				})
+
 				if len(stream.Nodes) == 0 {
 					log.Warn("Ignore stream, no valid node", "stream", stream.StreamId)
 					return true
@@ -100,11 +106,13 @@ func NewStreamsTracker(
 
 	defer cancel()
 
+	workerMetrics := createWorkerMetrics(metrics)
+
 	tasks.Add(int(workersCount))
 	for i := range workersCount {
 		go func() {
-			worker, err := newStreamsTrackerWorker(
-				initCtx, i, onChainConfig, tracker.riverRegistry, nodes, streamBuckets[i], listener, storage)
+			worker, err := newStreamsTrackerWorker(initCtx, i, onChainConfig, tracker.riverRegistry, nodes,
+				streamBuckets[i], listener, storage, workerMetrics)
 			if err == nil {
 				tracker.workers[i] = worker
 			} else {
@@ -126,6 +134,29 @@ func NewStreamsTracker(
 	return tracker, nil
 }
 
+func createWorkerMetrics(metrics infra.MetricsFactory) *streamsTrackerWorkerMetrics {
+	trackedStreamsGauge := metrics.NewGaugeVecEx(
+		"tracked_streams", "Number of tracked streams, grouped per type and if down or up",
+		"stream_type", "status",
+	)
+
+	return &streamsTrackerWorkerMetrics{
+		trackedStreamsMessageCounter: metrics.NewCounter(prometheus.CounterOpts{
+			Name: "tracked_streams_msg_count",
+			Help: "Received stream messages",
+		}),
+		trackedDMStreamsUp:             trackedStreamsGauge.With(prometheus.Labels{"stream_type": "dm", "status": "up"}),
+		trackedDMStreamsDown:           trackedStreamsGauge.With(prometheus.Labels{"stream_type": "dm", "status": "down"}),
+		trackedGDMStreamsUp:            trackedStreamsGauge.With(prometheus.Labels{"stream_type": "gdm", "status": "up"}),
+		trackedGDMStreamsDown:          trackedStreamsGauge.With(prometheus.Labels{"stream_type": "gdm", "status": "down"}),
+		trackedSpaceChannelStreamsUp:   trackedStreamsGauge.With(prometheus.Labels{"stream_type": "space_channel", "status": "up"}),
+		trackedSpaceChannelStreamsDown: trackedStreamsGauge.With(prometheus.Labels{"stream_type": "space_channel", "status": "down"}),
+		trackedUserSettingsStreamsUp:   trackedStreamsGauge.With(prometheus.Labels{"stream_type": "user_settings", "status": "up"}),
+		trackedUserSettingsStreamsDown: trackedStreamsGauge.With(prometheus.Labels{"stream_type": "user_settings", "status": "down"}),
+	}
+}
+
+// Run the stream tracker workers until the given ctx expires.
 func (tracker *StreamsTracker) Run(ctx context.Context) {
 	var (
 		log         = dlog.FromCtx(ctx)
@@ -151,7 +182,7 @@ func (tracker *StreamsTracker) TrackStreamForNotifications(streamID shared.Strea
 	return streamType == shared.STREAM_DM_CHANNEL_BIN ||
 		streamType == shared.STREAM_GDM_CHANNEL_BIN ||
 		streamType == shared.STREAM_CHANNEL_BIN ||
-		streamType == shared.STREAM_USER_SETTINGS_BIN /* user adds address of blocked users into his settings */
+		streamType == shared.STREAM_USER_SETTINGS_BIN // user adds address of blocked users into his settings stream
 }
 
 // workerID determines the worker index that is responsible for handling the stream. It calculates the sha256 hash over
@@ -174,8 +205,8 @@ func (tracker *StreamsTracker) StreamAllocated(
 ) {
 	streamID := shared.StreamId(event.StreamId)
 	if tracker.TrackStreamForNotifications(streamID) {
-		workerIdx := tracker.workerIndex(streamID)
 		go func() {
+			workerIdx := tracker.workerIndex(streamID)
 			worker := tracker.workers[workerIdx]
 			worker.streamAddRequests <- &streamSyncProgress{
 				streamID:  streamID,

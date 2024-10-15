@@ -3,10 +3,13 @@ package notifications
 import (
 	"context"
 	"errors"
+	"github.com/SherClockHolmes/webpush-go"
+	"github.com/river-build/river/core/node/infra"
+	"github.com/river-build/river/core/node/notifications/types"
+	"github.com/river-build/river/core/node/shared"
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/SherClockHolmes/webpush-go"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/river-build/river/core/config"
 	. "github.com/river-build/river/core/node/base"
@@ -17,7 +20,6 @@ import (
 	notificationssync "github.com/river-build/river/core/node/notifications/sync"
 	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/registries"
-	"github.com/river-build/river/core/node/shared"
 )
 
 type (
@@ -29,6 +31,7 @@ type (
 		nodes               nodes.NodeRegistry
 		listener            events.StreamEventListener
 		streamsTracker      *notificationssync.StreamsTracker
+		metrics             infra.MetricsFactory
 	}
 )
 
@@ -39,22 +42,32 @@ func NewService(
 	userPreferences UserPreferencesStore,
 	riverRegistry *registries.RiverRegistryContract,
 	nodes nodes.NodeRegistry,
+	metrics infra.MetricsFactory,
 	listener events.StreamEventListener,
 ) (*Service, error) {
 	tracker, err := notificationssync.NewStreamsTracker(
-		ctx, onChainConfig, notificationsConfig.Workers, riverRegistry, nodes, listener, userPreferences)
+		ctx,
+		onChainConfig,
+		notificationsConfig.Workers,
+		riverRegistry,
+		nodes,
+		listener,
+		userPreferences,
+		metrics,
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Service{
-		notificationsConfig,
-		onChainConfig,
-		userPreferences,
-		riverRegistry,
-		nodes,
-		listener,
-		tracker,
+		notificationsConfig: notificationsConfig,
+		onChainConfig:       onChainConfig,
+		userPreferences:     userPreferences,
+		riverRegistry:       riverRegistry,
+		nodes:               nodes,
+		listener:            listener,
+		streamsTracker:      tracker,
+		metrics:             metrics,
 	}, nil
 }
 
@@ -77,30 +90,7 @@ func (s *Service) Start(ctx context.Context) {
 	}()
 }
 
-// SetSettings sets the notification preferences, overwriting any existing preferences.
-func (s *Service) SetSettings(
-	ctx context.Context,
-	req *connect.Request[protocol.SetSettingsRequest],
-) (*connect.Response[protocol.SetSettingsResponse], error) {
-	var (
-		msg      = req.Msg
-		settings = msg.GetSettings()
-		userID   = common.BytesToAddress(settings.GetUserId())
-	)
-
-	if userID == (common.Address{}) {
-		return nil, RiverError(protocol.Err_INVALID_ARGUMENT, "Invalid user id")
-	}
-
-	// TODO: validate req
-	if err := s.userPreferences.SetSettings(ctx, userID, settings); err != nil {
-		return nil, AsRiverError(err).Func("SetSettings")
-	}
-
-	return connect.NewResponse(&protocol.SetSettingsResponse{}), nil
-}
-
-// GetSettings returns user stored notification preferences.
+// GetSettings returns user stored notification userPreferencesCache.
 func (s *Service) GetSettings(
 	ctx context.Context,
 	req *connect.Request[protocol.GetSettingsRequest],
@@ -114,42 +104,86 @@ func (s *Service) GetSettings(
 		return nil, RiverError(protocol.Err_INVALID_ARGUMENT, "Invalid user id")
 	}
 
-	settings, err := s.userPreferences.GetSettings(ctx, userID)
+	preferences, err := s.userPreferences.GetUserPreferences(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
 	return connect.NewResponse(&protocol.GetSettingsResponse{
-		Settings: settings,
+		UserId:      preferences.UserID[:],
+		Space:       preferences.Spaces.Protobuf(),
+		DmGlobal:    preferences.DM,
+		GdmGlobal:   preferences.GDM,
+		DmChannels:  preferences.DMChannels.Protobuf(),
+		GdmChannels: preferences.GDMChannels.Protobuf(),
 	}), nil
 }
 
-func (s *Service) UpdateSpaceSettings(
+// SetSettings sets the notification userPreferencesCache, overwriting any existing userPreferencesCache.
+func (s *Service) SetSettings(
 	ctx context.Context,
-	req *connect.Request[protocol.UpdateSpaceSettingsRequest],
-) (*connect.Response[protocol.UpdateSpaceSettingsResponse], error) {
+	req *connect.Request[protocol.SetSettingsRequest],
+) (*connect.Response[protocol.SetSettingsResponse], error) {
+	preferences, err := types.DecodeUserPreferenceFromMsg(req.Msg)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.userPreferences.SetUserPreferences(ctx, preferences); err != nil {
+		return nil, AsRiverError(err).Func("SetSettings").
+			Tag("userID", preferences.UserID)
+	}
+
+	return connect.NewResponse(&protocol.SetSettingsResponse{}), nil
+}
+
+func (s *Service) SetDmGdmSettings(
+	ctx context.Context,
+	req *connect.Request[protocol.SetDmGdmSettingsRequest],
+) (*connect.Response[protocol.SetDmGdmSettingsResponse], error) {
 	var (
 		msg    = req.Msg
 		userID = common.BytesToAddress(msg.GetUserId())
-		value  = msg.GetValue()
+		dm     = msg.GetDmGlobal()
+		gdm    = msg.GetGdmGlobal()
 	)
 
-	spaceID, err := shared.StreamIdFromBytes(msg.GetSpaceId())
+	err := s.userPreferences.SetGlobalDmGdm(ctx, userID, dm, gdm)
+	if err != nil {
+		return nil, AsRiverError(err).Func("SetDmGdmSettings")
+	}
+
+	return connect.NewResponse(&protocol.SetDmGdmSettingsResponse{}), nil
+}
+
+func (s *Service) SetSpaceSettings(
+	ctx context.Context,
+	req *connect.Request[protocol.SetSpaceSettingsRequest],
+) (*connect.Response[protocol.SetSpaceSettingsResponse], error) {
+	var (
+		msg          = req.Msg
+		userID       = common.BytesToAddress(msg.GetUserId())
+		spaceID, err = shared.StreamIdFromBytes(msg.GetSpaceId())
+		value        = msg.GetValue()
+	)
+
+	if err != nil {
+		return nil, RiverError(protocol.Err_INVALID_ARGUMENT, "Invalid spaceId").
+			Func("SetSpaceSettings")
+	}
+
+	err = s.userPreferences.SetSpaceSettings(ctx, userID, spaceID, value)
 	if err != nil {
 		return nil, AsRiverError(err).Func("UpdateSpaceSettings")
 	}
 
-	if err := s.userPreferences.UpdateSpaceSetting(ctx, userID, spaceID, value); err != nil {
-		return nil, AsRiverError(err).Func("UpdateSpaceSettings")
-	}
-
-	return connect.NewResponse(&protocol.UpdateSpaceSettingsResponse{}), nil
+	return connect.NewResponse(&protocol.SetSpaceSettingsResponse{}), nil
 }
 
-func (s *Service) UpdateChannelSettings(
+func (s *Service) SetChannelSettings(
 	ctx context.Context,
-	req *connect.Request[protocol.UpdateChannelSettingsRequest],
-) (*connect.Response[protocol.UpdateChannelSettingsResponse], error) {
+	req *connect.Request[protocol.SetChannelSettingsRequest],
+) (*connect.Response[protocol.SetChannelSettingsResponse], error) {
 	var (
 		msg     = req.Msg
 		userID  = common.BytesToAddress(msg.GetUserId())
@@ -159,25 +193,22 @@ func (s *Service) UpdateChannelSettings(
 
 	channelID, err := shared.StreamIdFromBytes(msg.GetChannelId())
 	if err != nil {
-		return nil, AsRiverError(err).Func("UpdateChannelSettings")
+		return nil, AsRiverError(err).Func("SetChannelSettings")
 	}
 
-	if len(msg.GetSpaceId()) > 0 {
-		if *spaceID, err = shared.StreamIdFromBytes(msg.GetSpaceId()); err != nil {
-			return nil, AsRiverError(err).Func("UpdateChannelSettings")
+	if channelID.Type() == shared.STREAM_CHANNEL_BIN {
+		spaceIDValue, err := shared.StreamIdFromBytes(msg.GetSpaceId())
+		if err != nil {
+			return nil, AsRiverError(err).Func("SetChannelSettings")
 		}
+		spaceID = &spaceIDValue
 	}
 
-	// space id is only required for streams are part of a space
-	if channelID.Type() == shared.STREAM_CHANNEL_BIN && (spaceID == nil || spaceID.Type() != shared.STREAM_SPACE_BIN) {
-		return nil, RiverError(protocol.Err_INVALID_ARGUMENT, "Missing/invalid space id")
+	if err := s.userPreferences.SetChannelSetting(ctx, userID, spaceID, channelID, value); err != nil {
+		return nil, AsRiverError(err).Func("SetChannelSettings")
 	}
 
-	if err := s.userPreferences.UpdateChannelSetting(ctx, userID, spaceID, channelID, value); err != nil {
-		return nil, AsRiverError(err).Func("UpdateChannelSettings")
-	}
-
-	return connect.NewResponse(&protocol.UpdateChannelSettingsResponse{}), nil
+	return connect.NewResponse(&protocol.SetChannelSettingsResponse{}), nil
 }
 
 func (s *Service) SubscribeWebPush(

@@ -51,6 +51,7 @@ func (s *Service) startNotificationMode() error {
 		s.notifications,
 		s.registryContract,
 		s.nodeRegistry,
+		s.metrics,
 		notifier,
 	)
 	if err != nil {

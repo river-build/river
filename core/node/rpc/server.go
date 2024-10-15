@@ -540,7 +540,7 @@ func (s *Service) initNotificationsStore() error {
 			return err
 		}
 
-		s.notifications = notifications.NewUserPreferencesCachedStore(pgstore)
+		s.notifications = notifications.NewUserPreferencesCache(pgstore)
 		s.onClose(pgstore.Close)
 
 		if !s.config.Log.Simplify {
