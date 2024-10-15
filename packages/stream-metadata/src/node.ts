@@ -3,7 +3,7 @@ import './tracer' // must come before importing any instrumented module.
 import { Server as HTTPServer, IncomingMessage, ServerResponse } from 'http'
 import { Server as HTTPSServer } from 'https'
 
-import Fastify, { FastifyInstance } from 'fastify'
+import Fastify, { FastifyInstance, FastifyRequest } from 'fastify'
 import cors from '@fastify/cors'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -60,8 +60,15 @@ const server = Fastify({
 })
 
 server.addHook('onRequest', (request, reply, done) => {
-	const reqId = request.id // Use Fastify's generated reqId, which is now a UUID
-	request.log = request.log.child({ reqId })
+	request.log = request.log.child({
+		request: {
+			id: request.id,
+			url: request.url,
+			query: request.query,
+			params: request.params,
+			routerPath: request.routerPath,
+		},
+	})
 	done()
 })
 
