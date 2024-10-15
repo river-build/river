@@ -13,6 +13,7 @@ import {IMembership} from "contracts/src/spaces/facets/membership/IMembership.so
 import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
 import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
 import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
 // contracts
 import {MembershipBase} from "contracts/src/spaces/facets/membership/MembershipBase.sol";
@@ -123,13 +124,13 @@ abstract contract MembershipJoin is
     uint256 fee = _getProtocolFee(price);
 
     // Return the higher of the price or fee to ensure at least the protocol fee is covered
-    return price > fee ? price : fee;
+    return FixedPointMathLib.max(price, fee);
   }
 
   function _validatePayment() internal view {
     if (msg.value > 0) {
       uint256 requiredAmount = _getRequiredAmount();
-      if (msg.value < requiredAmount) revert Membership__InvalidPayment();
+      if (msg.value != requiredAmount) revert Membership__InvalidPayment();
     }
   }
 

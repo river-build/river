@@ -70,17 +70,14 @@ abstract contract MembershipBase is IMembershipBase {
   function _getProtocolFee(
     uint256 membershipPrice
   ) internal view returns (uint256) {
-    MembershipStorage.Layout storage ds = MembershipStorage.layout();
-    IPlatformRequirements platform = IPlatformRequirements(ds.spaceFactory);
+    IPlatformRequirements platform = IPlatformRequirements(_getSpaceFactory());
 
     uint256 minPrice = platform.getMembershipMinPrice();
     uint256 fixedFee = platform.getMembershipFee();
 
-    if (membershipPrice < minPrice && membershipPrice < fixedFee)
-      return fixedFee;
+    if (membershipPrice < minPrice) return fixedFee;
 
-    uint16 bpsFee = platform.getMembershipBps();
-    return BasisPoints.calculate(membershipPrice, bpsFee);
+    return BasisPoints.calculate(membershipPrice, platform.getMembershipBps());
   }
 
   function _transferIn(
