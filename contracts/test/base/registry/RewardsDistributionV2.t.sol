@@ -8,6 +8,7 @@ import {IRewardsDistributionBase} from "contracts/src/base/registry/facets/distr
 // libraries
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {StakingRewards} from "contracts/src/base/registry/facets/distribution/v2/StakingRewards.sol";
 
 // contracts
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
@@ -16,7 +17,6 @@ import {River} from "contracts/src/tokens/river/base/River.sol";
 import {MainnetDelegation} from "contracts/src/tokens/river/base/delegation/MainnetDelegation.sol";
 import {SpaceDelegationFacet} from "contracts/src/base/registry/facets/delegation/SpaceDelegationFacet.sol";
 import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistribution.sol";
-import {StakingRewards} from "contracts/src/base/registry/facets/distribution/v2/StakingRewards.sol";
 
 contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
   bytes32 private constant PERMIT_TYPEHASH =

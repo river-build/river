@@ -12,10 +12,15 @@ import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 // contracts
 import {DelegationProxy} from "./DelegationProxy.sol";
 
+/// @notice Staking rewards library that encapsulates the minimal logic for staking and rewards distribution with
+/// delegation commission
+/// @dev The library is designed to be compatible with ERC-7201.
+/// @dev The data structures should be modified with caution.
 library StakingRewards {
   using SafeTransferLib for address;
 
   uint256 internal constant SCALE_FACTOR = 1e36;
+  uint256 internal constant MAX_COMMISSION_RATE = 10000;
 
   /// @notice The deposit information
   /// @param amount The amount of stakeToken that is staked
@@ -253,7 +258,7 @@ library StakingRewards {
         beneficiaryTreasure.earningPower += amount;
       } else {
         uint96 commissionEarningPower = uint96(
-          (uint256(amount) * commissionRate) / 10000
+          (uint256(amount) * commissionRate) / MAX_COMMISSION_RATE
         );
         deposit.commissionEarningPower += commissionEarningPower;
         beneficiaryTreasure.earningPower += amount - commissionEarningPower;
