@@ -3,7 +3,7 @@ import './tracer' // must come before importing any instrumented module.
 import { Server as HTTPServer, IncomingMessage, ServerResponse } from 'http'
 import { Server as HTTPSServer } from 'https'
 
-import Fastify, { FastifyInstance, FastifyRequest } from 'fastify'
+import Fastify, { FastifyInstance } from 'fastify'
 import cors from '@fastify/cors'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -118,6 +118,7 @@ export function getServerUrl(srv: Server) {
 
 process.on('SIGTERM', async () => {
 	try {
+		logger.warn('Received SIGTERM, shutting down server')
 		await server.close()
 		logger.info('Server closed gracefully')
 		process.exit(0)
