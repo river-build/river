@@ -38,14 +38,14 @@ type StreamView interface {
 	LastBlock() *MiniblockInfo
 	ValidateNextEvent(
 		ctx context.Context,
-		cfg crypto.OnChainConfiguration,
+		cfg *crypto.OnChainSettings,
 		parsedEvent *ParsedEvent,
 		currentTime time.Time,
 	) error
 	GetStats() StreamViewStats
 	ProposeNextMiniblock(
 		ctx context.Context,
-		cfg crypto.OnChainConfiguration,
+		cfg *crypto.OnChainSettings,
 		forceSnapshot bool,
 	) (*MiniblockProposal, error)
 	IsMember(userAddress []byte) (bool, error)
@@ -225,7 +225,7 @@ func (r *streamViewImpl) LastBlock() *MiniblockInfo {
 
 func (r *streamViewImpl) ProposeNextMiniblock(
 	ctx context.Context,
-	cfg crypto.OnChainConfiguration,
+	cfg *crypto.OnChainSettings,
 	forceSnapshot bool,
 ) (*MiniblockProposal, error) {
 	var hashes [][]byte
@@ -334,9 +334,9 @@ func (r *streamViewImpl) makeMiniblockHeader(
 // Returns the new view and the events that were in the applied miniblock, but not in the minipool.
 func (r *streamViewImpl) copyAndApplyBlock(
 	miniblock *MiniblockInfo,
-	cfg crypto.OnChainConfiguration,
+	cfg *crypto.OnChainSettings,
 ) (*streamViewImpl, []*Envelope, error) {
-	recencyConstraintsGenerations := int(cfg.Get().RecencyConstraintsGen)
+	recencyConstraintsGenerations := int(cfg.RecencyConstraintsGen)
 
 	header := miniblock.headerEvent.Event.GetMiniblockHeader()
 	if header == nil {
@@ -535,8 +535,8 @@ func (r *streamViewImpl) SyncCookie(localNodeAddress common.Address) *SyncCookie
 	}
 }
 
-func (r *streamViewImpl) shouldSnapshot(ctx context.Context, cfg crypto.OnChainConfiguration) bool {
-	minEventsPerSnapshot := int(cfg.Get().MinSnapshotEvents.ForType(r.streamId.Type()))
+func (r *streamViewImpl) shouldSnapshot(ctx context.Context, cfg *crypto.OnChainSettings) bool {
+	minEventsPerSnapshot := int(cfg.MinSnapshotEvents.ForType(r.streamId.Type()))
 
 	count := 0
 	// count the events in the minipool
@@ -560,7 +560,7 @@ func (r *streamViewImpl) shouldSnapshot(ctx context.Context, cfg crypto.OnChainC
 
 func (r *streamViewImpl) ValidateNextEvent(
 	ctx context.Context,
-	cfg crypto.OnChainConfiguration,
+	cfg *crypto.OnChainSettings,
 	parsedEvent *ParsedEvent,
 	currentTime time.Time,
 ) error {
@@ -632,11 +632,11 @@ func (r *streamViewImpl) ValidateNextEvent(
 
 func (r *streamViewImpl) isRecentBlock(
 	ctx context.Context,
-	cfg crypto.OnChainConfiguration,
+	cfg *crypto.OnChainSettings,
 	block *MiniblockInfo,
 	currentTime time.Time,
 ) bool {
-	maxAgeDuration := cfg.Get().RecencyConstraintsAge
+	maxAgeDuration := cfg.RecencyConstraintsAge
 	diff := currentTime.Sub(block.header().Timestamp.AsTime())
 	return diff <= maxAgeDuration
 }
