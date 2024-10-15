@@ -146,16 +146,16 @@ describe('syncAgents.test.ts', () => {
     test('gdm', async () => {
         await Promise.all([bob.start(), alice.start(), charlie.start()])
         const { streamId } = await bob.gdms.createGDM([alice.userId, charlie.userId])
-        const aliceGdm = alice.gdms.getGdm(streamId)
-        expect(aliceGdm.members.data.userIds).toEqual(
+        const bobGdm = bob.gdms.getGdm(streamId)
+        expect(bobGdm.members.data.userIds).toEqual(
             expect.arrayContaining([bob.userId, alice.userId, charlie.userId]),
         )
-        await aliceGdm.sendMessage('Hello, World!')
-        const bobGdm = bob.gdms.getGdm(streamId)
+        await bobGdm.sendMessage('Hello, World!')
+        const aliceGdm = alice.gdms.getGdm(streamId)
         await waitFor(
             () =>
                 expect(
-                    bobGdm.timeline.events.value.find((e) => e.text === 'Hello, World!'),
+                    aliceGdm.timeline.events.value.find((e) => e.text === 'Hello, World!'),
                 ).toBeDefined(),
             { timeoutMS: 10000 },
         )
