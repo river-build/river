@@ -21,6 +21,8 @@ contract RiverBaseTest is BaseSetup, ILockBase, IOwnableBase {
   bytes32 private constant _PERMIT_TYPEHASH =
     0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
 
+  address internal ALICE = makeAddr("ALICE");
+  address internal BOB = makeAddr("BOB");
   River internal riverFacet;
 
   function setUp() public override {
@@ -46,12 +48,16 @@ contract RiverBaseTest is BaseSetup, ILockBase, IOwnableBase {
     _;
   }
 
+  function test_allowance() public {
+    test_fuzz_allowance(ALICE, 1 ether, BOB);
+  }
+
   // Permit and Permit with Signature
   function test_fuzz_allowance(
     address alice,
     uint256 amount,
     address bob
-  ) external givenCallerHasBridgedTokens(alice, amount) {
+  ) public givenCallerHasBridgedTokens(alice, amount) {
     vm.assume(bob != address(0));
 
     assertEq(riverFacet.allowance(alice, bob), 0);
@@ -62,11 +68,15 @@ contract RiverBaseTest is BaseSetup, ILockBase, IOwnableBase {
     assertEq(riverFacet.allowance(alice, bob), amount);
   }
 
+  function test_permit() public {
+    test_fuzz_permit(makeAccount("ALICE").key, 1 ether, BOB);
+  }
+
   function test_fuzz_permit(
     uint256 alicePrivateKey,
     uint256 amount,
     address bob
-  ) external {
+  ) public {
     alicePrivateKey = boundPrivateKey(alicePrivateKey);
     vm.assume(bob != address(0));
     amount = bound(amount, 1, type(uint208).max);
@@ -156,15 +166,22 @@ contract RiverBaseTest is BaseSetup, ILockBase, IOwnableBase {
     assertEq(riverFacet.delegates(alice), address(0));
   }
 
+  function test_delegate_enableLock() public {
+    test_fuzz_delegate_enableLock(ALICE, 1 ether);
+  }
+
   function test_fuzz_delegate_enableLock(
     address alice,
     uint256 amount
   )
-    external
+    public
     givenCallerHasBridgedTokens(alice, amount)
     whenCallerDelegatesToASpace(alice)
   {
     assertEq(riverFacet.isLockEnabled(alice), true);
+
+    vm.expectEmit(riverToken);
+    emit LockUpdated(alice, false, block.timestamp + 30 days);
 
     vm.prank(alice);
     riverFacet.delegate(address(0));
@@ -218,6 +235,10 @@ contract RiverBaseTest is BaseSetup, ILockBase, IOwnableBase {
     riverFacet.transfer(bob, amount);
   }
 
+  function test_transfer_delegateVotesIsCorrect() public {
+    test_fuzz_transfer_delegateVotesIsCorrect(ALICE, 1 ether, BOB, 1 ether);
+  }
+
   function test_fuzz_transfer_delegateVotesIsCorrect(
     address alice,
     uint256 amountA,
@@ -237,8 +258,9 @@ contract RiverBaseTest is BaseSetup, ILockBase, IOwnableBase {
     vm.prank(bridge);
     riverFacet.mint(bob, amountB);
 
-    vm.expectEmit();
+    vm.expectEmit(riverToken);
     emit IVotes.DelegateVotesChanged(space, 0, amountB);
+    emit LockUpdated(bob, true, 0);
 
     vm.prank(bob);
     riverFacet.delegate(space);
@@ -251,7 +273,7 @@ contract RiverBaseTest is BaseSetup, ILockBase, IOwnableBase {
     );
     assertEq(riverFacet.getVotes(space), amountB);
 
-    vm.expectEmit();
+    vm.expectEmit(riverToken);
     emit IVotes.DelegateVotesChanged(space, amountB, amountA + amountB);
 
     vm.prank(alice);

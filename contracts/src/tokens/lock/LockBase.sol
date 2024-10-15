@@ -30,7 +30,7 @@ abstract contract LockBase is ILockBase {
 
     ds.enabledByAddress[caller] = true;
 
-    emit LockUpdated(caller, true, 0, block.timestamp);
+    emit LockUpdated(caller, true, 0);
   }
 
   function _disableLock(address caller) internal {
@@ -43,7 +43,7 @@ abstract contract LockBase is ILockBase {
     ds.enabledByAddress[caller] = false;
     ds.cooldownByAddress[caller] = cooldown;
 
-    emit LockUpdated(caller, false, cooldown, block.timestamp);
+    emit LockUpdated(caller, false, cooldown);
   }
 
   function _lockCooldown(address caller) internal view returns (uint256) {
