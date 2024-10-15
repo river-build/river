@@ -17,6 +17,7 @@ interface IDropFacetBase {
   /// @param penaltyBps The penalty in basis points for early withdrawal
   struct ClaimCondition {
     uint256 startTimestamp;
+    uint256 endTimestamp;
     uint256 maxClaimableSupply;
     uint256 supplyClaimed;
     bytes32 merkleRoot;
@@ -42,15 +43,44 @@ interface IDropFacetBase {
   // =============================================================
   //                           Errors
   // =============================================================
-  error IDropFacet__NoActiveClaimCondition();
-  error IDropFacet__MerkleRootNotSet();
-  error IDropFacet__QuantityMustBeGreaterThanZero();
-  error IDropFacet__ExceedsMaxClaimableSupply();
-  error IDropFacet__ClaimHasNotStarted();
-  error IDropFacet__AlreadyClaimed();
-  error IDropFacet__InvalidProof();
-  error IDropFacet__ClaimConditionsNotInAscendingOrder();
-  error IDropFacet__CannotSetClaimConditions();
+  error DropFacet__NoActiveClaimCondition();
+  error DropFacet__MerkleRootNotSet();
+  error DropFacet__QuantityMustBeGreaterThanZero();
+  error DropFacet__ExceedsMaxClaimableSupply();
+  error DropFacet__ClaimHasNotStarted();
+  error DropFacet__AlreadyClaimed();
+  error DropFacet__InvalidProof();
+  error DropFacet__ClaimConditionsNotInAscendingOrder();
+  error DropFacet__CannotSetClaimConditions();
+  error DropFacet__ClaimHasEnded();
 }
 
-interface IDropFacet is IDropFacetBase {}
+interface IDropFacet is IDropFacetBase {
+  /// @notice Sets the claim conditions for the drop
+  /// @param conditions An array of ClaimCondition structs defining the conditions
+  /// @param resetEligibility If true, resets the eligibility for all wallets under the new conditions
+  function setClaimConditions(
+    ClaimCondition[] calldata conditions,
+    bool resetEligibility
+  ) external;
+
+  /// @notice Gets the ID of the currently active claim condition
+  /// @return The ID of the active claim condition
+  function getActiveClaimConditionId() external view returns (uint256);
+
+  /// @notice Retrieves a specific claim condition by its ID
+  /// @param conditionId The ID of the claim condition to retrieve
+  /// @return The ClaimCondition struct for the specified ID
+  function getClaimConditionById(
+    uint256 conditionId
+  ) external view returns (ClaimCondition memory);
+
+  /// @notice Gets the amount of tokens claimed by a specific wallet for a given condition
+  /// @param account The address of the wallet to check
+  /// @param conditionId The ID of the claim condition
+  /// @return The number of tokens claimed by the wallet for the specified condition
+  function getSupplyClaimedByWallet(
+    address account,
+    uint256 conditionId
+  ) external view returns (uint256);
+}

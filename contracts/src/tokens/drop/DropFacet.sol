@@ -21,20 +21,19 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
   }
 
   function claimWithPenalty(
+    uint256 conditionId,
     address account,
     uint256 quantity,
-    bytes32[] calldata proof
+    bytes32[] calldata allowlistProof
   ) external {
     DropStorage.Layout storage ds = DropStorage.layout();
-    uint256 conditionId = _getActiveConditionId(ds);
 
-    _verifyClaim(ds, conditionId, account, quantity, proof);
+    _verifyClaim(ds, conditionId, account, quantity, allowlistProof);
 
-    ClaimCondition memory condition = ds.getClaimConditionById(conditionId);
+    ClaimCondition storage condition = ds.getClaimConditionById(conditionId);
 
     uint256 amount = quantity;
     uint256 penaltyBps = condition.penaltyBps;
-
     if (penaltyBps > 0) {
       uint256 penaltyAmount = BasisPoints.calculate(quantity, penaltyBps);
       amount = quantity - penaltyAmount;
@@ -60,9 +59,10 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
   function claimAndStake(
     address account,
     uint256 quantity,
-    bytes32[] calldata proof
+    bytes32[] calldata allowlistProof
   ) external {}
 
+  ///@inheritdoc IDropFacet
   function setClaimConditions(
     ClaimCondition[] calldata conditions,
     bool resetEligibility
@@ -71,16 +71,19 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
     _setClaimConditions(ds, conditions, resetEligibility);
   }
 
+  ///@inheritdoc IDropFacet
   function getActiveClaimConditionId() external view returns (uint256) {
     return _getActiveConditionId(DropStorage.layout());
   }
 
+  ///@inheritdoc IDropFacet
   function getClaimConditionById(
     uint256 conditionId
   ) external view returns (ClaimCondition memory) {
     return DropStorage.layout().getClaimConditionById(conditionId);
   }
 
+  ///@inheritdoc IDropFacet
   function getSupplyClaimedByWallet(
     address account,
     uint256 conditionId

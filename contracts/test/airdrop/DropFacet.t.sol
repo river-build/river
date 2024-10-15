@@ -76,6 +76,7 @@ contract DropFacetTest is TestUtils, IDropFacetBase {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
     conditions[0] = ClaimCondition({
       startTimestamp: block.timestamp, // now
+      endTimestamp: 0,
       maxClaimableSupply: TOTAL_TOKEN_AMOUNT,
       supplyClaimed: 0,
       merkleRoot: root,
@@ -110,15 +111,34 @@ contract DropFacetTest is TestUtils, IDropFacetBase {
       _wallet.addr,
       expectedAmount
     );
-    dropFacet.claimWithPenalty(_wallet.addr, merkleAmount, proof);
+    dropFacet.claimWithPenalty(conditionId, _wallet.addr, merkleAmount, proof);
     _;
   }
 
-  function test_getActiveClaimConditionId() external givenClaimConditionSet {
+  // getActiveClaimConditionId
+  function test_getActiveClaimConditionId() external {
+    ClaimCondition[] memory conditions = new ClaimCondition[](3);
+    conditions[0] = _createTimedClaimCondition(block.timestamp - 100); // expired
+    conditions[1] = _createTimedClaimCondition(block.timestamp); // active
+    conditions[2] = _createTimedClaimCondition(block.timestamp + 100); // future
+
+    vm.prank(deployer);
+    dropFacet.setClaimConditions(conditions, false);
+
     uint256 id = dropFacet.getActiveClaimConditionId();
-    assertEq(id, 0);
+    assertEq(id, 1);
+
+    vm.warp(block.timestamp + 100);
+    id = dropFacet.getActiveClaimConditionId();
+    assertEq(id, 2);
   }
 
+  function test_revertWhen_noActiveClaimCondition() external {
+    vm.expectRevert(DropFacet__NoActiveClaimCondition.selector);
+    dropFacet.getActiveClaimConditionId();
+  }
+
+  // getClaimConditionById
   function test_getClaimConditionById() external givenClaimConditionSet {
     ClaimCondition memory condition = dropFacet.getClaimConditionById(
       dropFacet.getActiveClaimConditionId()
@@ -131,74 +151,199 @@ contract DropFacetTest is TestUtils, IDropFacetBase {
     assertEq(condition.penaltyBps, 5000);
   }
 
+  // claimWithPenalty
   function test_claimWithPenalty()
     external
     givenClaimConditionSet
     givenWalletHasClaimedWithPenalty(bob)
   {
-    ClaimCondition memory condition = dropFacet.getClaimConditionById(
-      dropFacet.getActiveClaimConditionId()
-    );
-    uint256 penaltyBps = condition.penaltyBps;
-    uint256 bobAmount = amounts[treeIndex[bob.addr]];
-    uint256 penaltyAmount = BasisPoints.calculate(bobAmount, penaltyBps);
-    uint256 expectedAmount = bobAmount - penaltyAmount;
-
+    uint256 expectedAmount = _calculateExpectedAmount(bob.addr);
     assertEq(token.balanceOf(bob.addr), expectedAmount);
   }
 
-  // function test_getToken() external view {
-  //   IERC20 _token = merkleAirdrop.getToken();
-  //   assertEq(address(_token), address(token));
-  // }
+  function test_revertWhen_merkleRootNotSet() external {
+    ClaimCondition[] memory conditions = new ClaimCondition[](1);
+    conditions[0] = _createTimedClaimCondition(block.timestamp);
 
-  // function test_getMerkleRoot() external view {
-  //   bytes32 _root = merkleAirdrop.getMerkleRoot();
-  //   assertEq(_root, root);
-  // }
+    vm.prank(deployer);
+    dropFacet.setClaimConditions(conditions, false);
 
-  // function test_claim() external givenWalletHasClaimedWithPenalty(bob, 100) {
-  //   assertEq(token.balanceOf(bob.addr), 100);
-  // }
+    uint256 conditionId = dropFacet.getActiveClaimConditionId();
 
-  // function test_claimWithReceiver()
-  //   external
-  //   givenWalletHasClaimedWithReceiver(bob, 100, alice.addr)
-  // {
-  //   assertEq(token.balanceOf(alice.addr), 100);
-  // }
+    vm.expectRevert(DropFacet__MerkleRootNotSet.selector);
+    dropFacet.claimWithPenalty(conditionId, bob.addr, 100, new bytes32[](0));
+  }
 
-  // function test_revertWhen_alreadyClaimed()
-  //   external
-  //   givenWalletHasClaimedWithPenalty(bob, 100)
-  // {
-  //   bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[bob.addr]);
-  //   bytes memory signature = _signClaim(bob, bob.addr, 100, address(0));
+  function test_revertWhen_quantityIsZero() external {
+    ClaimCondition[] memory conditions = new ClaimCondition[](1);
+    conditions[0] = _createTimedClaimCondition(block.timestamp);
+    conditions[0].merkleRoot = root;
 
-  //   vm.prank(bob.addr);
-  //   vm.expectRevert(MerkleAirdrop__AlreadyClaimed.selector);
-  //   merkleAirdrop.claim(bob.addr, 100, proof, signature, address(0));
-  // }
+    vm.prank(deployer);
+    dropFacet.setClaimConditions(conditions, false);
 
-  // function test_revertWhen_invalidSignature() external {
-  //   bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[bob.addr]);
-  //   bytes memory signature = _signClaim(alice, bob.addr, 100, address(0));
+    uint256 conditionId = dropFacet.getActiveClaimConditionId();
 
-  //   vm.expectRevert(MerkleAirdrop__InvalidSignature.selector);
-  //   merkleAirdrop.claim(bob.addr, 100, proof, signature, address(0));
-  // }
+    vm.expectRevert(DropFacet__QuantityMustBeGreaterThanZero.selector);
+    dropFacet.claimWithPenalty({
+      conditionId: conditionId,
+      account: bob.addr,
+      quantity: 0,
+      allowlistProof: new bytes32[](0)
+    });
+  }
 
-  // function test_revertWhen_invalidProof() external {
-  //   bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[alice.addr]);
-  //   bytes memory signature = _signClaim(bob, bob.addr, 100, address(0));
+  function test_revertWhen_exceedsMaxClaimableSupply() external {
+    ClaimCondition[] memory conditions = new ClaimCondition[](1);
+    conditions[0] = _createTimedClaimCondition(block.timestamp);
+    conditions[0].merkleRoot = root;
+    conditions[0].maxClaimableSupply = 100; // 100 tokens in total for this condition
 
-  //   vm.expectRevert(MerkleAirdrop__InvalidProof.selector);
-  //   merkleAirdrop.claim(bob.addr, 100, proof, signature, address(0));
-  // }
+    vm.prank(deployer);
+    dropFacet.setClaimConditions(conditions, false);
+
+    uint256 conditionId = dropFacet.getActiveClaimConditionId();
+
+    vm.expectRevert(DropFacet__ExceedsMaxClaimableSupply.selector);
+    dropFacet.claimWithPenalty({
+      conditionId: conditionId,
+      account: bob.addr,
+      quantity: 101,
+      allowlistProof: new bytes32[](0)
+    });
+  }
+
+  function test_revertWhen_claimHasNotStarted() external {
+    ClaimCondition[] memory conditions = new ClaimCondition[](1);
+    conditions[0] = _createTimedClaimCondition(block.timestamp);
+    conditions[0].merkleRoot = root;
+    conditions[0].maxClaimableSupply = TOTAL_TOKEN_AMOUNT;
+
+    vm.prank(deployer);
+    dropFacet.setClaimConditions(conditions, false);
+
+    uint256 conditionId = dropFacet.getActiveClaimConditionId();
+
+    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[bob.addr]);
+
+    vm.warp(block.timestamp - 100);
+
+    vm.prank(bob.addr);
+    vm.expectRevert(DropFacet__ClaimHasNotStarted.selector);
+    dropFacet.claimWithPenalty({
+      conditionId: conditionId,
+      account: bob.addr,
+      quantity: amounts[treeIndex[bob.addr]],
+      allowlistProof: proof
+    });
+  }
+
+  function test_revertWhen_claimHasEnded() external {
+    ClaimCondition[] memory conditions = new ClaimCondition[](1);
+    conditions[0] = _createTimedClaimCondition(block.timestamp);
+    conditions[0].merkleRoot = root;
+    conditions[0].maxClaimableSupply = TOTAL_TOKEN_AMOUNT;
+    conditions[0].endTimestamp = block.timestamp + 100;
+
+    vm.prank(deployer);
+    dropFacet.setClaimConditions(conditions, false);
+
+    uint256 conditionId = dropFacet.getActiveClaimConditionId();
+
+    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[bob.addr]);
+
+    vm.warp(block.timestamp + 101);
+
+    vm.expectRevert(DropFacet__ClaimHasEnded.selector);
+    dropFacet.claimWithPenalty({
+      conditionId: conditionId,
+      account: bob.addr,
+      quantity: amounts[treeIndex[bob.addr]],
+      allowlistProof: proof
+    });
+  }
+
+  function test_revertWhen_alreadyClaimed() external {
+    ClaimCondition[] memory conditions = new ClaimCondition[](1);
+    conditions[0] = _createTimedClaimCondition(block.timestamp);
+    conditions[0].merkleRoot = root;
+    conditions[0].maxClaimableSupply = TOTAL_TOKEN_AMOUNT;
+
+    vm.prank(deployer);
+    dropFacet.setClaimConditions(conditions, false);
+
+    uint256 conditionId = dropFacet.getActiveClaimConditionId();
+
+    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[bob.addr]);
+
+    dropFacet.claimWithPenalty({
+      conditionId: conditionId,
+      account: bob.addr,
+      quantity: amounts[treeIndex[bob.addr]],
+      allowlistProof: proof
+    });
+
+    vm.expectRevert(DropFacet__AlreadyClaimed.selector);
+    dropFacet.claimWithPenalty({
+      conditionId: conditionId,
+      account: bob.addr,
+      quantity: amounts[treeIndex[bob.addr]],
+      allowlistProof: proof
+    });
+  }
+
+  function test_revertWhen_invalidProof() external {
+    ClaimCondition[] memory conditions = new ClaimCondition[](1);
+    conditions[0] = _createTimedClaimCondition(block.timestamp);
+    conditions[0].merkleRoot = root;
+    conditions[0].maxClaimableSupply = TOTAL_TOKEN_AMOUNT;
+
+    vm.prank(deployer);
+    dropFacet.setClaimConditions(conditions, false);
+
+    uint256 conditionId = dropFacet.getActiveClaimConditionId();
+
+    vm.expectRevert(DropFacet__InvalidProof.selector);
+    dropFacet.claimWithPenalty({
+      conditionId: conditionId,
+      account: bob.addr,
+      quantity: amounts[treeIndex[bob.addr]],
+      allowlistProof: new bytes32[](0)
+    });
+  }
 
   // =============================================================
   //                           Internal
   // =============================================================
+  function _createTimedClaimCondition(
+    uint256 _startTime
+  ) internal view returns (ClaimCondition memory) {
+    return
+      ClaimCondition({
+        startTimestamp: _startTime,
+        endTimestamp: 0,
+        maxClaimableSupply: 0,
+        supplyClaimed: 0,
+        merkleRoot: bytes32(0),
+        currency: address(token),
+        penaltyBps: 0
+      });
+  }
+
+  function _calculateExpectedAmount(
+    address _account
+  ) internal view returns (uint256) {
+    ClaimCondition memory condition = dropFacet.getClaimConditionById(
+      dropFacet.getActiveClaimConditionId()
+    );
+    uint256 penaltyBps = condition.penaltyBps;
+    uint256 bobAmount = amounts[treeIndex[_account]];
+    uint256 penaltyAmount = BasisPoints.calculate(bobAmount, penaltyBps);
+    uint256 expectedAmount = bobAmount - penaltyAmount;
+
+    return expectedAmount;
+  }
+
   function _createTree() internal {
     treeIndex[bob.addr] = 0;
     accounts.push(bob.addr);

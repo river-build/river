@@ -34,7 +34,7 @@ library DropStorage {
   function getClaimConditionById(
     Layout storage ds,
     uint256 conditionId
-  ) internal view returns (IDropFacetBase.ClaimCondition memory) {
+  ) internal view returns (IDropFacetBase.ClaimCondition storage) {
     return ds.conditionById[conditionId];
   }
 

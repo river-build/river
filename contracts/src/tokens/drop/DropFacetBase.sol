@@ -31,7 +31,7 @@ abstract contract DropFacetBase is IDropFacetBase {
       }
     }
 
-    CustomRevert.revertWith(IDropFacet__NoActiveClaimCondition.selector);
+    CustomRevert.revertWith(DropFacet__NoActiveClaimCondition.selector);
   }
 
   function _verifyClaim(
@@ -44,31 +44,38 @@ abstract contract DropFacetBase is IDropFacetBase {
     ClaimCondition memory condition = ds.getClaimConditionById(conditionId);
 
     if (condition.merkleRoot == bytes32(0)) {
-      CustomRevert.revertWith(IDropFacet__MerkleRootNotSet.selector);
+      CustomRevert.revertWith(DropFacet__MerkleRootNotSet.selector);
     }
 
     if (quantity == 0) {
       CustomRevert.revertWith(
-        IDropFacet__QuantityMustBeGreaterThanZero.selector
+        DropFacet__QuantityMustBeGreaterThanZero.selector
       );
     }
 
+    // Check if the total claimed supply (including the current claim) exceeds the maximum claimable supply
     if (condition.supplyClaimed + quantity > condition.maxClaimableSupply) {
-      CustomRevert.revertWith(IDropFacet__ExceedsMaxClaimableSupply.selector);
+      CustomRevert.revertWith(DropFacet__ExceedsMaxClaimableSupply.selector);
     }
 
     if (block.timestamp < condition.startTimestamp) {
-      CustomRevert.revertWith(IDropFacet__ClaimHasNotStarted.selector);
+      CustomRevert.revertWith(DropFacet__ClaimHasNotStarted.selector);
+    }
+
+    if (
+      condition.endTimestamp > 0 && block.timestamp > condition.endTimestamp
+    ) {
+      CustomRevert.revertWith(DropFacet__ClaimHasEnded.selector);
     }
 
     // check if already claimed
     if (ds.supplyClaimedByWallet[conditionId][account] > 0) {
-      CustomRevert.revertWith(IDropFacet__AlreadyClaimed.selector);
+      CustomRevert.revertWith(DropFacet__AlreadyClaimed.selector);
     }
 
     bytes32 leaf = _createLeaf(account, quantity);
     if (!proof.verifyCalldata(condition.merkleRoot, leaf)) {
-      CustomRevert.revertWith(IDropFacet__InvalidProof.selector);
+      CustomRevert.revertWith(DropFacet__InvalidProof.selector);
     }
   }
 
@@ -96,7 +103,7 @@ abstract contract DropFacetBase is IDropFacetBase {
     for (uint256 i = 0; i < newConditionCount; i++) {
       if (lastConditionTimestamp >= conditions[i].startTimestamp) {
         CustomRevert.revertWith(
-          IDropFacet__ClaimConditionsNotInAscendingOrder.selector
+          DropFacet__ClaimConditionsNotInAscendingOrder.selector
         );
       }
 
@@ -105,7 +112,7 @@ abstract contract DropFacetBase is IDropFacetBase {
         .conditionById[newStartId + i]
         .supplyClaimed;
       if (amountAlreadyClaimed > conditions[i].maxClaimableSupply) {
-        CustomRevert.revertWith(IDropFacet__CannotSetClaimConditions.selector);
+        CustomRevert.revertWith(DropFacet__CannotSetClaimConditions.selector);
       }
 
       ds.conditionById[newStartId + i] = conditions[i];
