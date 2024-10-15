@@ -5,6 +5,7 @@ pragma solidity ^0.8.23;
 import {ILockBase} from "./ILock.sol";
 
 // libraries
+import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 import {LockStorage} from "./LockStorage.sol";
 
 abstract contract LockBase is ILockBase {
@@ -24,6 +25,9 @@ abstract contract LockBase is ILockBase {
   function _enableLock(address caller) internal {
     LockStorage.Layout storage ds = LockStorage.layout();
 
+    if (ds.enabledByAddress[caller])
+      CustomRevert.revertWith(LockAlreadyEnabled.selector);
+
     ds.enabledByAddress[caller] = true;
 
     emit LockUpdated(caller, true, 0, block.timestamp);
@@ -32,15 +36,14 @@ abstract contract LockBase is ILockBase {
   function _disableLock(address caller) internal {
     LockStorage.Layout storage ds = LockStorage.layout();
 
-    ds.enabledByAddress[caller] = false;
-    ds.cooldownByAddress[caller] = block.timestamp + ds.defaultCooldown;
+    if (!ds.enabledByAddress[caller])
+      CustomRevert.revertWith(LockAlreadyDisabled.selector);
 
-    emit LockUpdated(
-      caller,
-      false,
-      block.timestamp + ds.defaultCooldown,
-      block.timestamp
-    );
+    uint256 cooldown = block.timestamp + ds.defaultCooldown;
+    ds.enabledByAddress[caller] = false;
+    ds.cooldownByAddress[caller] = cooldown;
+
+    emit LockUpdated(caller, false, cooldown, block.timestamp);
   }
 
   function _lockCooldown(address caller) internal view returns (uint256) {
@@ -50,9 +53,9 @@ abstract contract LockBase is ILockBase {
   function _lockEnabled(address caller) internal view returns (bool) {
     LockStorage.Layout storage ds = LockStorage.layout();
 
-    return
-      ds.enabledByAddress[caller] == true ||
-      block.timestamp < ds.cooldownByAddress[caller];
+    if (ds.enabledByAddress[caller]) return true;
+
+    return block.timestamp < ds.cooldownByAddress[caller];
   }
 
   function _canLock() internal view virtual returns (bool);
