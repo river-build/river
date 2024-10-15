@@ -259,6 +259,7 @@ func (up *UserPreferences) WantNotificationForSpaceChannelMessage(
 	space shared.StreamId,
 	channel shared.StreamId,
 	mentioned bool,
+	participating bool,
 	msgInteractionType MessageInteractionType,
 ) bool {
 	// by default only send notifications for mentions, replies or reactions for messages in space channels.
@@ -280,8 +281,8 @@ func (up *UserPreferences) WantNotificationForSpaceChannelMessage(
 		return false
 	case SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_ONLY_MENTIONS_REPLIES_REACTIONS:
 		return mentioned ||
-			msgInteractionType == MessageInteractionType_MESSAGE_INTERACTION_TYPE_REACTION ||
-			msgInteractionType == MessageInteractionType_MESSAGE_INTERACTION_TYPE_REPLY
+			(participating && msgInteractionType == MessageInteractionType_MESSAGE_INTERACTION_TYPE_REACTION) ||
+			(participating && msgInteractionType == MessageInteractionType_MESSAGE_INTERACTION_TYPE_REPLY)
 	case SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_MESSAGES_ALL:
 		return true
 	}

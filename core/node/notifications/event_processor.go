@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	mapset "github.com/deckarep/golang-set/v2"
 	"log/slog"
@@ -107,12 +108,12 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 
 		switch payload := event.Event.Payload.(type) {
 		case *StreamEvent_DmChannelPayload:
-			p.onDMChannelPayload(channelID, participant, pref, event, from, payload)
+			p.onDMChannelPayload(channelID, participant, pref, event, from, event.Event)
 		case *StreamEvent_GdmChannelPayload:
-			p.onGDMChannelPayload(channelID, participant, pref, event, from, payload)
+			p.onGDMChannelPayload(channelID, participant, pref, event, from, event.Event)
 		case *StreamEvent_ChannelPayload:
 			if spaceID != nil {
-				p.onSpaceChannelPayload(*spaceID, channelID, participant, pref, event, from, payload)
+				p.onSpaceChannelPayload(*spaceID, channelID, participant, pref, event, from, event.Event)
 			} else {
 				p.log.Error("Space channel misses spaceID", "channel", channelID)
 			}
@@ -133,7 +134,7 @@ func (p *MessageToNotificationsProcessor) onDMChannelPayload(
 	userPref *types.UserPreferences,
 	event *events.ParsedEvent,
 	eventCreator common.Address,
-	eventPayload *StreamEvent_DmChannelPayload,
+	streamEvent *StreamEvent,
 ) {
 	if !userPref.WantsNotificationForDMMessage(streamID) {
 		p.log.Debug("User has doesn't want to receive notification for DM message",
@@ -143,9 +144,13 @@ func (p *MessageToNotificationsProcessor) onDMChannelPayload(
 		return
 	}
 
-	notificationPayload := []byte("TODO") // TODO
+	streamEventJSON, err := json.Marshal(streamEvent)
+	if err != nil {
+		p.log.Error("Unable to marshal streamEvent", "error", err)
+		return
+	}
 
-	p.sendNotification(participant, userPref, streamID, event, notificationPayload)
+	p.sendNotification(participant, userPref, streamID, event, streamEventJSON)
 }
 
 func isMentioned(
@@ -177,7 +182,7 @@ func (p *MessageToNotificationsProcessor) onGDMChannelPayload(
 	userPref *types.UserPreferences,
 	event *events.ParsedEvent,
 	eventCreator common.Address,
-	eventPayload *StreamEvent_GdmChannelPayload,
+	streamEvent *StreamEvent,
 ) {
 	messageInteractionType := event.Tags.GetMessageInteractionType()
 	mentioned := isMentioned(participant, event.Tags.GetGroupMentionTypes(), event.Tags.GetMentionedUserAddresses())
@@ -193,11 +198,13 @@ func (p *MessageToNotificationsProcessor) onGDMChannelPayload(
 		return
 	}
 
-	// TODO: assembly notification payload
+	streamEventJSON, err := json.Marshal(streamEvent)
+	if err != nil {
+		p.log.Error("Unable to marshal streamEvent", "error", err)
+		return
+	}
 
-	notificationPayload := []byte("TODO") // TODO
-
-	p.sendNotification(participant, userPref, streamID, event, notificationPayload)
+	p.sendNotification(participant, userPref, streamID, event, streamEventJSON)
 }
 
 func (p *MessageToNotificationsProcessor) onSpaceChannelPayload(
@@ -207,13 +214,14 @@ func (p *MessageToNotificationsProcessor) onSpaceChannelPayload(
 	userPref *types.UserPreferences,
 	event *events.ParsedEvent,
 	eventCreator common.Address,
-	eventPayload *StreamEvent_ChannelPayload,
+	streamEvent *StreamEvent,
 ) {
 	messageInteractionType := event.Tags.GetMessageInteractionType()
 	mentioned := isMentioned(participant, event.Tags.GetGroupMentionTypes(), event.Tags.GetMentionedUserAddresses())
+	participating := isParticipating(participant, event.Tags.GetParticipatingUserAddresses())
 
 	// for non-reaction events send a notification to all users
-	if !userPref.WantNotificationForSpaceChannelMessage(spaceID, channelID, mentioned, messageInteractionType) {
+	if !userPref.WantNotificationForSpaceChannelMessage(spaceID, channelID, mentioned, participating, messageInteractionType) {
 		p.log.Warn("User don't want to receive notification for space channel message",
 			"user", participant,
 			"space", spaceID,
@@ -224,9 +232,13 @@ func (p *MessageToNotificationsProcessor) onSpaceChannelPayload(
 		return
 	}
 
-	notificationPayload := []byte("TODO") // TODO
+	streamEventJSON, err := json.Marshal(streamEvent)
+	if err != nil {
+		p.log.Error("Unable to marshal streamEvent", "error", err)
+		return
+	}
 
-	p.sendNotification(participant, userPref, channelID, event, notificationPayload)
+	p.sendNotification(participant, userPref, channelID, event, streamEventJSON)
 }
 
 func (p *MessageToNotificationsProcessor) sendNotification(
