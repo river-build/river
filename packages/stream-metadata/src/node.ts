@@ -47,21 +47,16 @@ logger.info(
 /*
  * Server setup
  */
-export type Server = FastifyInstance<
-	HTTPServer | HTTPSServer,
-	IncomingMessage,
-	ServerResponse,
-	typeof logger
->
+export type Server = FastifyInstance<HTTPServer | HTTPSServer, IncomingMessage, ServerResponse>
 
 const server = Fastify({
-	logger,
+	logger: false,
 	genReqId: () => uuidv4(),
 })
 
 server.addHook('onRequest', (request, reply, done) => {
-	request.log = request.log.child({
-		request: {
+	request.log = logger.child({
+		req: {
 			id: request.id,
 			url: request.url,
 			query: request.query,
@@ -69,6 +64,23 @@ server.addHook('onRequest', (request, reply, done) => {
 			routerPath: request.routerPath,
 		},
 	})
+
+	request.log.info('incoming request')
+
+	done()
+})
+
+server.addHook('onResponse', (request, reply, done) => {
+	request.log.info(
+		{
+			res: {
+				statusCode: reply.statusCode,
+				elapsedTime: reply.elapsedTime,
+			},
+		},
+		'request completed',
+	)
+
 	done()
 })
 
