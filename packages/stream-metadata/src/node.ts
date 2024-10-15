@@ -62,6 +62,7 @@ server.addHook('onRequest', (request, reply, done) => {
 			query: request.query,
 			params: request.params,
 			routerPath: request.routerPath,
+			method: request.method,
 		},
 	})
 
