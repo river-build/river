@@ -123,9 +123,10 @@ func TestStreamReconciliationFromGenesis(t *testing.T) {
 	mbChain := map[int64]common.Hash{0: common.BytesToHash(cookie.PrevMiniblockHash)}
 	latestMbNum := int64(0)
 
+	mbRef := events.MiniblockRefFromCookie(cookie)
 	for range N {
-		require.NoError(addUserBlockedFillerEvent(ctx, wallet, client, streamId, events.MiniblockRefFromCookie(cookie)))
-		mbRef, err := tt.nodes[2].service.mbProducer.TestMakeMiniblock(ctx, streamId, false)
+		require.NoError(addUserBlockedFillerEvent(ctx, wallet, client, streamId, mbRef))
+		mbRef, err = tt.nodes[2].service.mbProducer.TestMakeMiniblock(ctx, streamId, false)
 		require.NoError(err)
 
 		if mbChain[latestMbNum] != mbRef.Hash {
