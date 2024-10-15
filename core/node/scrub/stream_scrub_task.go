@@ -230,7 +230,7 @@ func (tp *streamScrubTaskProcessorImpl) processMember(
 				"error",
 				err,
 			)
-			err = fmt.Errorf("unable to dd channel leave event to user stream: %w", err)
+			err = fmt.Errorf("unable to add channel leave event to user stream: %w", err)
 			return
 		}
 	}
