@@ -115,6 +115,7 @@ export class Gdm extends PersistedObservable<GdmModel> {
                 isJoined: hasJoined,
                 metadata: view.channelMetadata.channelProperties,
             })
+            this.timeline.initialize(stream)
         }
     }
 
