@@ -22,9 +22,9 @@ import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 contract DropFacetTest is TestUtils, IDropFacetBase {
   uint256 internal constant TOTAL_TOKEN_AMOUNT = 1000;
 
-  DeployDiamond diamondHelper = new DeployDiamond();
-  DeployMockERC20 tokenHelper = new DeployMockERC20();
-  DeployDropFacet dropHelper = new DeployDropFacet();
+  DeployDiamond internal diamondHelper = new DeployDiamond();
+  DeployMockERC20 internal tokenHelper = new DeployMockERC20();
+  DeployDropFacet internal dropHelper = new DeployDropFacet();
   MerkleTree internal merkleTree = new MerkleTree();
 
   MockERC20 internal token;
@@ -88,10 +88,9 @@ contract DropFacetTest is TestUtils, IDropFacetBase {
     _;
   }
 
-  modifier givenWalletHasClaimedWithPenalty(
-    uint256 conditionId,
-    Vm.Wallet memory _wallet
-  ) {
+  modifier givenWalletHasClaimedWithPenalty(Vm.Wallet memory _wallet) {
+    uint256 conditionId = dropFacet.getActiveClaimConditionId();
+
     ClaimCondition memory condition = dropFacet.getClaimConditionById(
       conditionId
     );
@@ -99,7 +98,6 @@ contract DropFacetTest is TestUtils, IDropFacetBase {
     uint256 merkleAmount = amounts[treeIndex[_wallet.addr]];
     uint256 penaltyAmount = BasisPoints.calculate(merkleAmount, penaltyBps);
     uint256 expectedAmount = merkleAmount - penaltyAmount;
-
     bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[_wallet.addr]);
 
     address caller = _randomAddress();
@@ -122,7 +120,9 @@ contract DropFacetTest is TestUtils, IDropFacetBase {
   }
 
   function test_getClaimConditionById() external givenClaimConditionSet {
-    ClaimCondition memory condition = dropFacet.getClaimConditionById(0);
+    ClaimCondition memory condition = dropFacet.getClaimConditionById(
+      dropFacet.getActiveClaimConditionId()
+    );
     assertEq(condition.startTimestamp, block.timestamp);
     assertEq(condition.maxClaimableSupply, TOTAL_TOKEN_AMOUNT);
     assertEq(condition.supplyClaimed, 0);
@@ -134,9 +134,11 @@ contract DropFacetTest is TestUtils, IDropFacetBase {
   function test_claimWithPenalty()
     external
     givenClaimConditionSet
-    givenWalletHasClaimedWithPenalty(0, bob)
+    givenWalletHasClaimedWithPenalty(bob)
   {
-    ClaimCondition memory condition = dropFacet.getClaimConditionById(0);
+    ClaimCondition memory condition = dropFacet.getClaimConditionById(
+      dropFacet.getActiveClaimConditionId()
+    );
     uint256 penaltyBps = condition.penaltyBps;
     uint256 bobAmount = amounts[treeIndex[bob.addr]];
     uint256 penaltyAmount = BasisPoints.calculate(bobAmount, penaltyBps);
