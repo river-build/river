@@ -140,9 +140,9 @@ export async function startStressChat(opts: {
                 const memberIds = randomClients.map((c) => c.userId)
                 return client.agent.gdms
                     .createGDM(memberIds)
-                    .then((r) => {
-                        logStep(client, 'CREATE_GDM', true, { streamId: r.streamId })
-                        return { streamId: r.streamId, randomClients }
+                    .then(({ streamId }) => {
+                        logStep(client, 'CREATE_GDM', true, { streamId, memberIds })
+                        return { streamId, randomClients }
                     })
                     .catch((e) => {
                         logStep(client, 'CREATE_GDM', false, { reason: e })
@@ -169,8 +169,8 @@ export async function startStressChat(opts: {
             }
             const promises = randomClients.map((client) =>
                 gdmChat(client, streamId, chatConfig)
-                    .then(() => {
-                        logStep(client, 'GDM_CHAT', true)
+                    .then(({ eventId }) => {
+                        logStep(client, 'GDM_CHAT', true, { streamId, eventId })
                     })
                     .catch((e) => {
                         errors.push(e)
