@@ -13,8 +13,8 @@ export const gdmChat = async (
     const gdm = client.agent.gdms.getGdm(gdmStreamId)
     return client
         .waitFor(() => gdm.members.data.userIds.includes(client.userId), {
-            interval: 100,
-            timeoutMs: 1500,
+            interval: 200,
+            timeoutMs: chatConfig.averageWaitTimeout,
         })
         .catch(() => {})
         .then(() => gdm.sendMessage(`hello ${chatConfig.sessionId}`))

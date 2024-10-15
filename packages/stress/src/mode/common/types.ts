@@ -29,4 +29,5 @@ export interface ChatConfig {
     waitForChannelDecryptionTimeoutMs: number
     globalPersistedStore: IStorage | undefined
     gdmProbability: number
+    averageWaitTimeout: number
 }
