@@ -115,8 +115,10 @@ export async function startStressChat(opts: {
     }
 
     logger.info('chitChat')
-    const results = await Promise.allSettled(clients.map((client) => chitChat(client, chatConfig)))
-    results.forEach((r, index) => {
+    const chitChatResults = await Promise.allSettled(
+        clients.map((client) => chitChat(client, chatConfig)),
+    )
+    chitChatResults.forEach((r, index) => {
         const client = clients[index]
         if (r.status === 'rejected') {
             errors.push(r.reason)
@@ -129,21 +131,56 @@ export async function startStressChat(opts: {
         )
     })
 
-    logger.info('gdmChat')
-    const gdmRes = await Promise.allSettled(
+    logger.info('createGdm')
+    const createGdmResults = await Promise.allSettled(
         clients
             .filter(() => probability(chatConfig.gdmProbability))
             .map((client) => {
-                const memberIds = getRandomClients(clients, 4).map((c) => c.userId)
-                return gdmChat(client, memberIds, chatConfig)
+                const randomClients = getRandomClients(clients, 4)
+                const memberIds = randomClients.map((c) => c.userId)
+                return client.agent.gdms
+                    .createGDM(memberIds)
+                    .then((r) => {
+                        logStep(client, 'CREATE_GDM', true, { streamId: r.streamId })
+                        return { streamId: r.streamId, randomClients }
+                    })
+                    .catch((e) => {
+                        logStep(client, 'CREATE_GDM', false, { reason: e })
+                        throw e
+                    })
             }),
-    )
-    gdmRes.forEach((r, index) => {
-        if (r.status === 'rejected') {
-            logger.error(`${clients[index].logId} error calling gdmChat`, r.reason)
-            errors.push(r.reason)
-        }
+    ).then((results) => {
+        return results.flatMap((r) => {
+            if (r.status === 'rejected') {
+                errors.push(r.reason)
+            }
+            if (r.status === 'fulfilled') {
+                return r.value
+            }
+            return { streamId: undefined, randomClients: undefined }
+        })
     })
+
+    logger.info('gdmChat')
+    await Promise.all(
+        createGdmResults.map(({ streamId, randomClients }) => {
+            if (!streamId || !randomClients) {
+                return
+            }
+            const promises = randomClients.map((client) =>
+                gdmChat(client, streamId, chatConfig)
+                    .then(() => {
+                        logStep(client, 'GDM_CHAT', true)
+                    })
+                    .catch((e) => {
+                        errors.push(e)
+                        logStep(client, 'GDM_CHAT', false, { reason: e })
+                        throw e
+                    }),
+            )
+            return Promise.allSettled(promises)
+        }),
+    )
 
     logger.info('summarizeChat')
     const summary = await summarizeChat(clients, chatConfig, errors)
