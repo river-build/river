@@ -84,7 +84,7 @@ export const expiryInterceptor = (opts: { onTokenExpired?: () => void }): Interc
             const res = await next(req)
             return res
         } catch (e) {
-            if (errorContains(e, Err.PERMISSION_DENIED) && req.method.name === 'AddEvent') {
+            if (e instanceof Error && e.message.includes('event delegate has expired')) {
                 opts.onTokenExpired?.()
             }
             throw e
