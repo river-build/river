@@ -326,7 +326,7 @@ export class SpaceDapp implements ISpaceDapp {
         txnOpts?: TransactionOpts,
     ): Promise<ContractTransaction> {
         return wrapTransaction(() => {
-            return this.spaceRegistrar.SpaceArchitect.write(signer).createSpaceWithPrepay({
+            return this.spaceRegistrar.CreateSpace.write(signer).createSpaceWithPrepay({
                 channel: {
                     metadata: params.channelName || '',
                 },
@@ -1542,6 +1542,21 @@ export class SpaceDapp implements ISpaceDapp {
         params: UpdateRoleParams,
     ): Promise<IRolesBase.CreateEntitlementStruct[]> {
         return createEntitlementStruct(space, params.users, params.ruleData)
+    }
+
+    public async refreshMetadata(
+        spaceId: string,
+        signer: ethers.Signer,
+        txnOpts?: TransactionOpts,
+    ): Promise<ContractTransaction> {
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+        return wrapTransaction(
+            () => space.Membership.metadata.write(signer).refreshMetadata(),
+            txnOpts,
+        )
     }
 
     public getSpaceAddress(receipt: ContractReceipt): string | undefined {
