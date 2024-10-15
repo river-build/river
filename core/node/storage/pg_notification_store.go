@@ -370,6 +370,10 @@ func (s *PostgresNotificationStore) setUserPreferencesTx(
 		}
 	}
 
+	for channelID, pref := range preferences.DMChannels {
+		batch.Queue(`INSERT INTO channels (user_id, channel_id, setting) VALUES ($1,$2,$3)`, preferences.UserID, channelID, int16(pref))
+	}
+
 	for channelID, pref := range preferences.GDMChannels {
 		batch.Queue(`INSERT INTO channels (user_id, channel_id, setting) VALUES ($1,$2,$3)`, preferences.UserID, channelID, int16(pref))
 	}
@@ -565,7 +569,10 @@ func (s *PostgresNotificationStore) getUserPreferencesTx(
 
 	for spaceRows.Next() {
 		var spaceIDRaw []byte
-		space := &types.SpacePreferences{}
+		space := &types.SpacePreferences{
+			Setting:  SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_ONLY_MENTIONS_REPLIES_REACTIONS,
+			Channels: make(types.SpaceChannelsMap),
+		}
 
 		if err := spaceRows.Scan(&spaceIDRaw, &space.Setting); err != nil {
 			return nil, err

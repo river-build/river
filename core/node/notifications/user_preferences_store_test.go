@@ -99,8 +99,8 @@ func setAndRetrieveUserPreferences(req *require.Assertions, ctx context.Context,
 		DM:            protocol.DmChannelSettingValue_DM_MESSAGES_NO,
 		GDM:           protocol.GdmChannelSettingValue_GDM_ONLY_MENTIONS_REPLIES_REACTIONS,
 		Spaces:        make(types.SpacesMap),
-		DMChannels:    nil,
-		GDMChannels:   nil,
+		DMChannels:    make(types.DMChannelsMap),
+		GDMChannels:   make(types.GDMChannelsMap),
 		Subscriptions: types.Subscriptions{},
 	}
 
@@ -117,11 +117,23 @@ func setAndRetrieveUserPreferences(req *require.Assertions, ctx context.Context,
 
 		for c := 0; c < 150; c++ {
 			var channelID shared.StreamId
-			channelID[0] = shared.STREAM_CHANNEL_BIN
-			_, err = rand.Read(channelID[1:])
-			req.NoError(err)
-
-			space.Channels[channelID] = protocol.SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_MESSAGES_ALL
+			switch c % 3 {
+			case 0:
+				channelID[0] = shared.STREAM_DM_CHANNEL_BIN
+				_, err = rand.Read(channelID[1:])
+				req.NoError(err)
+				expected.DMChannels[channelID] = protocol.DmChannelSettingValue_DM_MESSAGES_YES
+			case 1:
+				channelID[0] = shared.STREAM_GDM_CHANNEL_BIN
+				_, err = rand.Read(channelID[1:])
+				req.NoError(err)
+				expected.GDMChannels[channelID] = protocol.GdmChannelSettingValue_GDM_MESSAGES_ALL
+			case 2:
+				channelID[0] = shared.STREAM_CHANNEL_BIN
+				_, err = rand.Read(channelID[1:])
+				req.NoError(err)
+				space.Channels[channelID] = protocol.SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_MESSAGES_ALL
+			}
 		}
 
 		expected.Spaces[spaceID] = space
