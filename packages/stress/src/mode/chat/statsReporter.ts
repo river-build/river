@@ -14,7 +14,6 @@ export function statsReporter(chatConfig: ChatConfig) {
                     sequence: 'STRESS_RESULT',
                     step,
                     result: isSuccess ? 'PASS' : 'FAIL',
-                    sessionId: client.logId,
                     metadata,
                 },
                 'stress step result',
