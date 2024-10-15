@@ -252,7 +252,7 @@ contract DropFacetTest is TestUtils, IDropFacetBase {
 
     bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[bob.addr]);
 
-    vm.warp(block.timestamp + 101);
+    vm.warp(conditions[0].endTimestamp);
 
     vm.expectRevert(DropFacet__ClaimHasEnded.selector);
     dropFacet.claimWithPenalty({

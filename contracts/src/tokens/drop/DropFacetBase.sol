@@ -63,7 +63,7 @@ abstract contract DropFacetBase is IDropFacetBase {
     }
 
     if (
-      condition.endTimestamp > 0 && block.timestamp > condition.endTimestamp
+      condition.endTimestamp > 0 && block.timestamp >= condition.endTimestamp
     ) {
       CustomRevert.revertWith(DropFacet__ClaimHasEnded.selector);
     }
