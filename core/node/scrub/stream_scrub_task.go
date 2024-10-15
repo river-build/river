@@ -2,6 +2,7 @@ package scrub
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -119,11 +120,14 @@ func NewStreamScrubTasksProcessor(
 	return proc, nil
 }
 
+// processMember checks the individual member for entitlement and attempts to boot them if
+// they no longer meet entitlement requirements. This method returns an error for the sake
+// of annotating the telemetry span, but in practice it is not used by the caller.
 func (tp *streamScrubTaskProcessorImpl) processMember(
 	task *streamScrubTask,
 	ctx context.Context,
 	member string,
-) {
+) (err error) {
 	log := dlog.FromCtx(ctx).
 		With("Func", "streamScrubTask.processMember").
 		With("channelId", task.channelId).
@@ -137,10 +141,19 @@ func (tp *streamScrubTaskProcessorImpl) processMember(
 		span.SetAttributes(attribute.String("spaceId", task.spaceId.String()))
 		span.SetAttributes(attribute.String("channelId", task.channelId.String()))
 		span.SetAttributes(attribute.String("userId", member))
-		defer span.End()
+		defer func() {
+			span.RecordError(err)
+			if err != nil {
+				span.SetStatus(otelCodes.Error, err.Error())
+			} else {
+				span.SetStatus(otelCodes.Ok, "")
+			}
+			span.End()
+		}()
 	}
 
-	isEntitled, err := tp.chainAuth.IsEntitled(
+	var isEntitled bool
+	if isEntitled, err = tp.chainAuth.IsEntitled(
 		ctx,
 		tp.config,
 		auth.NewChainAuthArgsForChannel(
@@ -149,14 +162,14 @@ func (tp *streamScrubTaskProcessorImpl) processMember(
 			member,
 			auth.PermissionRead,
 		),
-	)
-	if err != nil {
+	); err != nil {
 		log.Error("Scrubbing error: unable to evaluate user entitlement",
 			"user",
 			member,
 			"error",
 			err,
 		)
+		err = fmt.Errorf("unable to evaluate user entitlement: %w", err)
 		return
 	}
 	if span != nil {
@@ -173,14 +186,15 @@ func (tp *streamScrubTaskProcessorImpl) processMember(
 				"user_id":    member,
 			},
 		).Inc()
-
-		userId, err := AddressFromUserId(member)
-		if err != nil {
+		var userId []byte
+		if userId, err = AddressFromUserId(member); err != nil {
 			log.Error("Error converting user id into address", "member", member, "error", err)
+			err = fmt.Errorf("error converting user id into address: %w", err)
 			return
 		}
-		userStreamId, err := UserStreamIdFromBytes(userId)
-		if err != nil {
+
+		var userStreamId StreamId
+		if userStreamId, err = UserStreamIdFromBytes(userId); err != nil {
 			log.Error(
 				"Error constructing user id stream from user address",
 				"userAddress",
@@ -188,6 +202,8 @@ func (tp *streamScrubTaskProcessorImpl) processMember(
 				"error",
 				err,
 			)
+			err = fmt.Errorf("error constructing user id stream from address: %w", err)
+			return
 		}
 		log.Info("Entitlement loss detected; adding LEAVE event for user",
 			"user",
@@ -195,7 +211,7 @@ func (tp *streamScrubTaskProcessorImpl) processMember(
 			"userStreamId",
 			userStreamId,
 		)
-		err = tp.eventAdder.AddEventPayload(
+		if err = tp.eventAdder.AddEventPayload(
 			ctx,
 			userStreamId,
 			events.Make_UserPayload_Membership(
@@ -204,8 +220,7 @@ func (tp *streamScrubTaskProcessorImpl) processMember(
 				&member,
 				task.spaceId[:],
 			),
-		)
-		if err != nil {
+		); err != nil {
 			log.Error(
 				"scrub error: unable to add channel leave event to user stream",
 				"userStreamId",
@@ -213,6 +228,7 @@ func (tp *streamScrubTaskProcessorImpl) processMember(
 				"error",
 				err,
 			)
+			err = fmt.Errorf("unable to dd channel leave event to user stream: %w", err)
 		}
 	}
 
@@ -224,9 +240,7 @@ func (tp *streamScrubTaskProcessorImpl) processMember(
 		},
 	).Inc()
 
-	if span != nil {
-		span.SetStatus(otelCodes.Ok, "")
-	}
+	return err
 }
 
 func (tp *streamScrubTaskProcessorImpl) processTask(task *streamScrubTask) {
@@ -267,7 +281,7 @@ func (tp *streamScrubTaskProcessorImpl) processTask(task *streamScrubTask) {
 	}
 
 	for member := range (*members).Iter() {
-		tp.processMember(task, ctx, member)
+		_ = tp.processMember(task, ctx, member)
 	}
 
 	if span != nil {
