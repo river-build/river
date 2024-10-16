@@ -39,20 +39,24 @@ export type Env = (typeof environments)[number]
 
 export const RiverEnvSwitcher = () => {
     const { isAgentConnected } = useAgentConnection()
+    const [open, setOpen] = useState(false)
 
     return (
-        <Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" onClick={() => setOpen(true)}>
                     {isAgentConnected ? 'Switch environment or disconnect' : `Connect to River`}
                 </Button>
             </DialogTrigger>
-            <RiverEnvSwitcherContent allowBearerToken />
+            <RiverEnvSwitcherContent allowBearerToken onClose={() => setOpen(false)} />
         </Dialog>
     )
 }
 
-export const RiverEnvSwitcherContent = (props: { allowBearerToken: boolean }) => {
+export const RiverEnvSwitcherContent = (props: {
+    allowBearerToken: boolean
+    onClose: () => void
+}) => {
     const {
         connect,
         connectUsingBearerToken,
@@ -124,6 +128,7 @@ export const RiverEnvSwitcherContent = (props: { allowBearerToken: boolean }) =>
                                         })
                                     }
                                     navigate('/')
+                                    props.onClose()
                                 }}
                             >
                                 {name} {isAgentConnected && currentEnv === id && '(connected)'}
@@ -141,6 +146,7 @@ export const RiverEnvSwitcherContent = (props: { allowBearerToken: boolean }) =>
                             disconnectWallet()
                             deleteAuth()
                             navigate('/')
+                            props.onClose()
                         }}
                     >
                         Disconnect

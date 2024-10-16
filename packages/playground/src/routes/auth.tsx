@@ -37,7 +37,10 @@ export const AuthRoute = () => {
                     open={open.state}
                     onOpenChange={(open) => setOpen((prev) => ({ ...prev, state: open }))}
                 >
-                    <RiverEnvSwitcherContent allowBearerToken={open.from === 'bearer'} />
+                    <RiverEnvSwitcherContent
+                        allowBearerToken={open.from === 'bearer'}
+                        onClose={() => setOpen((prev) => ({ ...prev, state: false }))}
+                    />
                 </Dialog>
                 <ChainConnectButton
                     onWalletConnect={() => setOpen({ state: true, from: 'wallet' })}
