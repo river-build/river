@@ -4,6 +4,7 @@ import { Effect as E, pipe, SubscriptionRef } from 'effect'
 
 import type { TABLE_NAME } from './db'
 import { Store } from './store'
+import type { StreamEvents } from '../streamEvents'
 
 export namespace Model {
     export enum LoadPriority {
@@ -34,40 +35,56 @@ export namespace Model {
             client: TODO<'River Client'>,
             data: T,
         ) => E.Effect<void, never, TODO<'Pass a River TxClient'>>
-    }
+    } & Partial<{
+        [key in keyof StreamEvents]: (
+            ...args: Parameters<StreamEvents[key]>
+        ) => E.Effect<void, never, never>
+    }>
 
     /**
      * @category Model
      * A Persistable model, that is storable and syncable.
      * Usually you will want to use this model, to interact with the River protocol and store into a persistent storage.
      */
-    export type Persistent<T> = Storable<T> & Syncable<T>
+    export type Persistent<T, Actions = Record<string, never>> = Actions extends Record<
+        string,
+        never
+    >
+        ? {
+              storable: Storable<T>
+              syncable: Syncable<T>
+          }
+        : {
+              actions: Actions
+              storable: Storable<T>
+              syncable: Syncable<T>
+          }
 
     /**
      * @category Model
      * Creates a persistable model, that is [Storable] and [Syncable].
-     * You can pass specific options to the model, that can be used to interact with the River protocol.
+     * You can pass actions to the model, that can be used to interact.
      */
-    export const persistent = <T extends { id: string }, Specific = unknown>(
+    export const persistent = <T extends { id: string }, Actions = Record<string, never>>(
         data: T,
-        model: Persistent<T> & Specific,
+        // TODO: think about making this a function, so we can pass the persisted observable (?)
+        // or make use of effect services?
+        // we could also pass the initial data to the model, performing mutations + notifying the view?
+        model: Persistent<T, Actions>,
     ) =>
         pipe(
             data,
-            model.onInitialize,
-            () => Observable.persisted(data, model),
+            model.storable.onInitialize,
+            () => Observable.persisted(data, model.storable),
             () => model,
         )
 
     /**
      * @category Model
      * Creates a storable model, that is [Storable].
-     * You can pass specific options to the model, that can be used to interact with the River protocol.
+     * You can pass actions to the model, that can be used to interact.
      */
-    export const storable = <T extends { id: string }, Specific = unknown>(
-        data: T,
-        model: Storable<T> & Specific,
-    ) =>
+    export const storable = <T extends { id: string }>(data: T, model: Storable<T>) =>
         pipe(
             data,
             model.onInitialize,
@@ -78,12 +95,10 @@ export namespace Model {
     /**
      * @category Model
      * Creates a syncable model, that is [Syncable].
-     * You can pass specific options to the model, that can be used to interact with the River protocol.
+     * You can pass actions to the model, that can be used to interact.
      */
-    export const syncable = <T, Specific = unknown>(
-        streamId: string,
-        model: Syncable<T> & Specific,
-    ) => pipe(streamId, model.onStreamInitialized, () => model)
+    export const syncable = <T>(streamId: string, model: Syncable<T>) =>
+        pipe(streamId, model.onStreamInitialized, () => model)
 }
 
 namespace Observable {

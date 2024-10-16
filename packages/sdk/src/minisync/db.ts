@@ -4,7 +4,7 @@ import { NoSuchElementException } from 'effect/Cause'
 import type { Model } from './model'
 import Dexie from 'dexie'
 
-const TABLES = ['user', 'space'] as const
+const TABLES = ['user', 'space', 'channel'] as const
 export type TABLE_NAME = (typeof TABLES)[number]
 
 type DbShape = {

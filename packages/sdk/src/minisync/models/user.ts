@@ -1,29 +1,37 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { Model } from '../model'
 import { Effect as E } from 'effect'
 
-type User = {
-    id: number
+type UserDb = {
+    id: string
     username: string
-}
-
-type UserSpecificInstructions = {
-    onUsernameChange: (username: string) => E.Effect<void, never, never>
 }
 
 /**
  * @category Model
  * A User model, that is storable and syncable.
  */
-type UserModel = Model.Persistent<User> & UserSpecificInstructions
+type UserModel = Model.Persistent<
+    UserDb,
+    { setUsername: (username: string) => E.Effect<void, never, never> }
+>
 
-const mkUserModel = (data: User): UserModel => {
+const mkUserModel = (data: UserDb): UserModel => {
     return Model.persistent(data, {
-        loadPriority: Model.LoadPriority.high,
-        onUsernameChange: (username) => E.succeed(void username),
-        onStreamInitialized: (streamId) => E.succeed(void streamId),
-        onInitialize: (data) => E.succeed(data),
-        onLoaded: (data) => E.succeed(data),
-        onUpdate: (data) => E.succeed(data),
+        storable: {
+            loadPriority: Model.LoadPriority.high,
+            tableName: 'user',
+            onInitialize: (data) => E.succeed(data),
+            onLoaded: (data) => E.succeed(data),
+            onUpdate: (data) => E.succeed(data),
+        },
+        syncable: {
+            onStreamInitialized: (streamId) => E.succeed(void streamId),
+        },
+        actions: {
+            setUsername: (username) => E.succeed(username),
+        },
     })
 }
+
+const user = mkUserModel({ id: '72', username: 'John' })
+user.actions.setUsername('Jane')
