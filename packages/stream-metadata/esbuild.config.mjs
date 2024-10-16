@@ -1,9 +1,9 @@
 import { build } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
 
-build({
+// Common configuration
+const commonConfig = {
 	bundle: true,
-	entryPoints: { node_esbuild: "./src/node.ts" }, // Rename the entry point to control the output file name
 	format: "cjs",
 	logLevel: "info",
 	loader: {
@@ -21,6 +21,7 @@ build({
 		"graphql/language/visitor",
 		"graphql/language/printer",
 		"graphql/utilities",
+		"worker_threads", // Add this to ensure worker_threads is not bundled
 	],
 	outdir: "dist",
 	outExtension: { ".js": ".cjs" }, // Ensure the output file has .cjs extension
@@ -28,8 +29,23 @@ build({
 	plugins: [esbuildPluginPino({ transports: ["pino-pretty"] })],
 	sourcemap: true,
 	target: "es2022",
-	minify: false, // No minification for easier debugging. Add minification in production later
-	treeShaking: true, // Enable tree shaking to remove unused code
+	minify: false,
+	treeShaking: true,
+};
+
+// Main application build
+build({
+	...commonConfig,
+	entryPoints: { node_esbuild: "./src/node.ts" },
+}).catch((e) => {
+	console.error(e);
+	process.exit(1);
+});
+
+// Worker thread build
+build({
+	...commonConfig,
+	entryPoints: { unpackStreamWorker: "./src/unpackStreamWorker.ts" },
 }).catch((e) => {
 	console.error(e);
 	process.exit(1);

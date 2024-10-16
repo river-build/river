@@ -1,20 +1,26 @@
+import { Worker } from 'worker_threads'
+import path from 'path'
+import { log } from 'console'
+
 import {
 	ParsedStreamResponse,
 	StreamStateView,
+	assert,
 	decryptAESGCM,
 	retryInterceptor,
 	streamIdAsBytes,
 	streamIdAsString,
-	unpackStream,
 } from '@river-build/sdk'
 import { PromiseClient, createPromiseClient } from '@connectrpc/connect'
 import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-node'
-import { StreamService } from '@river-build/proto'
+import { StreamAndCookie, StreamService } from '@river-build/proto'
 import { filetypemime } from 'magic-bytes.js'
 import { FastifyBaseLogger } from 'fastify'
 
 import { MediaContent, StreamIdHex } from './types'
 import { getNodeForStream } from './streamRegistry'
+import { WorkerResponse } from './unpackStreamWorker'
+import { config } from './environment'
 
 const clients = new Map<string, StreamRpcClient>()
 
@@ -38,6 +44,7 @@ function makeStreamRpcClient(logger: FastifyBaseLogger, url: string): StreamRpcC
 }
 
 async function getStreamClient(logger: FastifyBaseLogger, streamId: `0x${string}`) {
+	logger.info({ config }, 'getStreamClient')
 	const node = await getNodeForStream(logger, streamId)
 	const client = clients.get(node.url) || makeStreamRpcClient(logger, node.url)
 	clients.set(node.url, client)
@@ -149,6 +156,38 @@ function stripHexPrefix(hexString: string): string {
 	return hexString
 }
 
+const workerPath = path.join(__dirname, 'unpackStreamWorker.cjs')
+
+async function runUnpackStreamInWorker(
+	logger: FastifyBaseLogger,
+	stream: StreamAndCookie,
+): Promise<ParsedStreamResponse> {
+	return new Promise((resolve, reject) => {
+		logger.info({ workerPath }, 'got workerPath')
+		const worker = new Worker(workerPath)
+
+		worker.on('message', async (result: WorkerResponse) => {
+			if ('error' in result) {
+				reject(new Error(result.error.message))
+			} else {
+				resolve(result.unpackedResponse)
+			}
+			await worker.terminate()
+		})
+
+		worker.on('error', reject)
+		worker.on('exit', (code) => {
+			logger.info({ code }, 'on exit')
+			if (code !== 0) {
+				reject(new Error(`Worker stopped with exit code ${code}`))
+			}
+		})
+
+		worker.postMessage({ stream })
+		logger.info({}, 'posted message')
+	})
+}
+
 export async function getStream(
 	logger: FastifyBaseLogger,
 	streamId: string,
@@ -178,7 +217,11 @@ export async function getStream(
 			'getStream finished',
 		)
 
-		const unpackedResponse = await unpackStream(response.stream)
+		const { stream } = response
+
+		assert(stream !== undefined, 'bad stream')
+
+		const unpackedResponse = await runUnpackStreamInWorker(logger, stream)
 		return streamViewFromUnpackedResponse(streamId, unpackedResponse)
 	} catch (e) {
 		logger.error(
