@@ -8,10 +8,10 @@ import "google/protobuf/empty.proto";
 // NotificationService allows user to set notification related preferences for messages added to channels within a
 // space, DM and GDM channels.
 service NotificationService {
-  // SetSettings sets the notification settings, overwriting all existing settings.
-  rpc SetSettings(SetSettingsRequest) returns (SetSettingsResponse);
   // GetSettings returns user stored notification settings.
   rpc GetSettings(GetSettingsRequest) returns (GetSettingsResponse);
+  // SetSettings sets the notification settings, overwriting all existing settings.
+  rpc SetSettings(SetSettingsRequest) returns (SetSettingsResponse);
   // SetDmGdmSettings updates global settings for DM/GDM channels.
   rpc SetDmGdmSettings(SetDmGdmSettingsRequest) returns (SetDmGdmSettingsResponse);
   // SetSpaceSettings updates space setting that are applied to all channels within that stream.

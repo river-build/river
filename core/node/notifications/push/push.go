@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/x509"
 	"encoding/pem"
+	"github.com/ethereum/go-ethereum/common"
 	"net/http"
 	"time"
 
@@ -26,6 +27,8 @@ type (
 			ctx context.Context,
 			// subscription object as returned by the browser on enabling subscriptions.
 			subscription *webpush.Subscription,
+			// event hash
+			eventHash common.Hash,
 			// payload of the message
 			payload []byte,
 		) error
@@ -35,6 +38,8 @@ type (
 			ctx context.Context,
 			// deviceToken as derive by the device for the APP
 			deviceToken string,
+			// event hash
+			eventHash common.Hash,
 			// payload is sent to the APP
 			payload *payload2.Payload,
 		) error
@@ -111,6 +116,7 @@ func NewMessageNotifier(cfg *config.NotificationsConfig) (*MessageNotifications,
 func (n *MessageNotifications) SendWebPushNotification(
 	ctx context.Context,
 	subscription *webpush.Subscription,
+	eventHash common.Hash,
 	payload []byte,
 ) error {
 	options := &webpush.Options{
@@ -143,6 +149,7 @@ func (n *MessageNotifications) SendWebPushNotification(
 func (n *MessageNotifications) SendApplePushNotification(
 	ctx context.Context,
 	deviceToken string,
+	eventHash common.Hash,
 	payload *payload2.Payload,
 ) error {
 	notification := &apns2.Notification{
@@ -183,6 +190,7 @@ func (n *MessageNotifications) SendApplePushNotification(
 func (n *MessageNotificationsSimulator) SendWebPushNotification(
 	ctx context.Context,
 	subscription *webpush.Subscription,
+	eventHash common.Hash,
 	payload []byte,
 ) error {
 	log := dlog.FromCtx(ctx)
@@ -200,6 +208,7 @@ func (n *MessageNotificationsSimulator) SendWebPushNotification(
 func (n *MessageNotificationsSimulator) SendApplePushNotification(
 	ctx context.Context,
 	deviceToken string,
+	eventHash common.Hash,
 	payload *payload2.Payload,
 ) error {
 	log := dlog.FromCtx(ctx)

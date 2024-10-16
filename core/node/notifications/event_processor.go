@@ -251,7 +251,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 	notificationPayload []byte,
 ) {
 	for _, sub := range userPref.Subscriptions.WebPush {
-		if err := p.sendWebPushNotification(sub, notificationPayload); err == nil {
+		if err := p.sendWebPushNotification(sub, event, notificationPayload); err == nil {
 			p.log.Debug("Successfully sent web push notification",
 				"user", user,
 				"event", event.Hash,
@@ -268,7 +268,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 	}
 
 	for _, sub := range userPref.Subscriptions.APNSubscriptionDeviceTokens {
-		if err := p.sendAPNNotification(sub, notificationPayload); err == nil {
+		if err := p.sendAPNNotification(sub, event, notificationPayload); err == nil {
 			p.log.Debug("Successfully sent APN notification",
 				"user", user,
 				"event", event.Hash,
@@ -285,20 +285,22 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 	}
 }
 
-func (p *MessageToNotificationsProcessor) sendWebPushNotification(sub *webpush.Subscription, content []byte) error {
+func (p *MessageToNotificationsProcessor) sendWebPushNotification(
+	sub *webpush.Subscription, event *events.ParsedEvent, content []byte) error {
 	// lint:ignore context.Background() is fine here
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	return p.notifier.SendWebPushNotification(ctx, sub, content)
+	return p.notifier.SendWebPushNotification(ctx, sub, event.Hash, content)
 }
 
-func (p *MessageToNotificationsProcessor) sendAPNNotification(deviceToken []byte, content []byte) error {
+func (p *MessageToNotificationsProcessor) sendAPNNotification(
+	deviceToken []byte, event *events.ParsedEvent, content []byte) error {
 	// lint:ignore context.Background() is fine here
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	notificationPayload := payload.NewPayload().Alert(string(content))
 
-	return p.notifier.SendApplePushNotification(ctx, hex.EncodeToString(deviceToken), notificationPayload)
+	return p.notifier.SendApplePushNotification(ctx, hex.EncodeToString(deviceToken), event.Hash, notificationPayload)
 }

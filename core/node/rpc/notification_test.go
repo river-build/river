@@ -13,7 +13,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/SherClockHolmes/webpush-go"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/river-build/river/core/node/base/test"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/events"
 	. "github.com/river-build/river/core/node/protocol"
@@ -25,31 +24,41 @@ import (
 )
 
 func TestSpaceChannelNotifications(t *testing.T) {
-	ctx, _ := test.NewTestContext()
+	// share the nodes and notification service among multiple tests
 	tester := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true})
+	ctx, cancel := context.WithCancel(tester.ctx)
+	defer cancel()
 
-	t.Run("TestAtChannelTag", func(t *testing.T) {
-		notificationService, notifications := initNotificationService(ctx, tester)
-		notificationClient := protocolconnect.NewNotificationServiceClient(
-			http.DefaultClient, "http://"+notificationService.listener.Addr().String())
+	notificationService, notifications := initNotificationService(ctx, tester)
+	notificationClient := protocolconnect.NewNotificationServiceClient(
+		http.DefaultClient, "http://"+notificationService.listener.Addr().String())
 
+	t.Run("TestPlainMessage", func(t *testing.T) {
 		test := setupSpaceChannelNotificationTest(ctx, tester, notificationClient)
-
-		testAtChannelTag(ctx, test, notifications)
+		testGDMPlainMessage(ctx, test, notifications)
 	})
 
-	t.Run("TestMentions", func(t *testing.T) {
-		notificationService, notifications := initNotificationService(ctx, tester)
-		notificationClient := protocolconnect.NewNotificationServiceClient(
-			http.DefaultClient, "http://"+notificationService.listener.Addr().String())
-
+	t.Run("TestAtChannelTag", func(t *testing.T) {
 		test := setupSpaceChannelNotificationTest(ctx, tester, notificationClient)
+		testGDMAtChannelTag(ctx, test, notifications)
+	})
 
-		testMentionTag(ctx, test, notifications)
+	t.Run("TestMentionsTag", func(t *testing.T) {
+		test := setupSpaceChannelNotificationTest(ctx, tester, notificationClient)
+		testGDMMentionTag(ctx, test, notifications)
 	})
 }
 
-func testAtChannelTag(
+// testGDMPlainMessage tests GDM message that isn't a reply, reaction nor includes a mention
+func testGDMPlainMessage(
+	ctx context.Context,
+	test *spaceChannelNotificationsTestContext,
+	nc *notificationCapture,
+) {
+
+}
+
+func testGDMAtChannelTag(
 	ctx context.Context,
 	test *spaceChannelNotificationsTestContext,
 	nc *notificationCapture,
@@ -93,45 +102,120 @@ func testAtChannelTag(
 	// send a message and ensure that all expected notification are captured
 	sender := test.wallets[0] // no notification for your own messages
 	delete(expectedUsersToReceiveNotification, sender.Address)
-	test.sendMessageWithTags(
+	event := test.sendMessageWithTags(
 		ctx, test.wallets[0], "hi!", &Tags{
 			GroupMentionTypes: []GroupMentionType{GroupMentionType_GROUP_MENTION_TYPE_AT_CHANNEL},
 		})
+	eventHash := common.BytesToHash(event.Hash)
 
 	test.req.Eventuallyf(func() bool {
 		nc.WebPushNotificationsMu.Lock()
-		webCount := len(nc.WebPushNotifications)
-		nc.WebPushNotificationsMu.Unlock()
+		defer nc.WebPushNotificationsMu.Unlock()
 
 		nc.ApnPushNotificationsMu.Lock()
-		apnCount := len(nc.ApnPushNotifications)
-		nc.ApnPushNotificationsMu.Unlock()
+		defer nc.ApnPushNotificationsMu.Unlock()
 
-		return webCount == len(expectedUsersToReceiveNotification) &&
-			apnCount == len(expectedUsersToReceiveNotification)
-	}, 10*time.Second, 100*time.Millisecond, "Didn't receive all notifications")
+		webNotifications := nc.WebPushNotifications[eventHash]
+		apnNotifications := nc.ApnPushNotifications[eventHash]
+
+		return len(webNotifications) == len(expectedUsersToReceiveNotification) &&
+			len(apnNotifications) == len(expectedUsersToReceiveNotification)
+	}, 20*time.Second, 100*time.Millisecond, "Didn't receive all notifications")
 
 	// Wait a bit to ensure that no more notifications come in
 	test.req.Never(func() bool {
 		nc.WebPushNotificationsMu.Lock()
-		webCount := len(nc.WebPushNotifications)
+		webCount := len(nc.WebPushNotifications[eventHash])
 		nc.WebPushNotificationsMu.Unlock()
 
 		nc.ApnPushNotificationsMu.Lock()
-		apnCount := len(nc.ApnPushNotifications)
+		apnCount := len(nc.ApnPushNotifications[eventHash])
 		nc.ApnPushNotificationsMu.Unlock()
 
 		return webCount != len(expectedUsersToReceiveNotification) ||
 			apnCount != len(expectedUsersToReceiveNotification)
-	}, 3*time.Second, 100*time.Millisecond, "Received too unexpected notifications")
+	}, 5*time.Second, 100*time.Millisecond, "Received too unexpected notifications")
 }
 
-func testMentionTag(
+func testGDMMentionTag(
 	ctx context.Context,
 	test *spaceChannelNotificationsTestContext,
 	nc *notificationCapture,
 ) {
+	// subscribe for notifications only on the first couple of wallets on both web and apn
+	expectedUsersToReceiveNotification := make(map[common.Address]struct{})
+	var mentionedUsers [][]byte
 
+	for _, wallet := range test.wallets[:10] {
+		test.subscribeWebPush(ctx, wallet.Address)
+		test.subscribeApnPush(ctx, wallet.Address)
+		expectedUsersToReceiveNotification[wallet.Address] = struct{}{}
+		mentionedUsers = append(mentionedUsers, wallet.Address[:])
+	}
+
+	// user disables all notifications for this channel
+	test.setSpaceChannelSetting(
+		ctx, test.wallets[1].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_NO_MESSAGES)
+	delete(expectedUsersToReceiveNotification, test.wallets[1].Address)
+
+	// user disables all notification on the space level
+	test.setSpaceSetting(
+		ctx, test.wallets[2].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_NO_MESSAGES)
+	delete(expectedUsersToReceiveNotification, test.wallets[2].Address)
+
+	// user wants to receive notifications for all messages for this channel
+	test.setSpaceChannelSetting(
+		ctx, test.wallets[3].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_MESSAGES_ALL)
+	expectedUsersToReceiveNotification[test.wallets[3].Address] = struct{}{}
+
+	// user wants to receive notifications for all messages on the space level
+	test.setSpaceSetting(
+		ctx, test.wallets[4].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_MESSAGES_ALL)
+	expectedUsersToReceiveNotification[test.wallets[4].Address] = struct{}{}
+
+	// user wants to receive notifications for messages that are either a reply/reaction on his own messages
+	// or when he is mentioned on the channel level. Because this is the default the space setting is overwritten
+	// to no messages to ensure that the channel setting overwrites the space default.
+	test.setSpaceSetting(ctx, test.wallets[5].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_NO_MESSAGES)
+	test.setSpaceChannelSetting(
+		ctx, test.wallets[5].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_ONLY_MENTIONS_REPLIES_REACTIONS)
+	expectedUsersToReceiveNotification[test.wallets[5].Address] = struct{}{}
+
+	// send a message and ensure that all expected notification are captured
+	sender := test.wallets[0] // no notification for your own messages
+	delete(expectedUsersToReceiveNotification, sender.Address)
+	event := test.sendMessageWithTags(
+		ctx, test.wallets[0], "hi!", &Tags{
+			MentionedUserAddresses: mentionedUsers,
+		})
+	eventHash := common.BytesToHash(event.Hash)
+
+	test.req.Eventuallyf(func() bool {
+		nc.WebPushNotificationsMu.Lock()
+		webCount := len(nc.WebPushNotifications[eventHash])
+		nc.WebPushNotificationsMu.Unlock()
+
+		nc.ApnPushNotificationsMu.Lock()
+		apnCount := len(nc.ApnPushNotifications[eventHash])
+		nc.ApnPushNotificationsMu.Unlock()
+
+		return webCount == len(expectedUsersToReceiveNotification) ||
+			apnCount == len(expectedUsersToReceiveNotification)
+	}, 20*time.Second, 100*time.Millisecond, "Didn't receive all notifications")
+
+	// Wait a bit to ensure that no more notifications come in
+	test.req.Never(func() bool {
+		nc.WebPushNotificationsMu.Lock()
+		webCount := len(nc.WebPushNotifications[eventHash])
+		nc.WebPushNotificationsMu.Unlock()
+
+		nc.ApnPushNotificationsMu.Lock()
+		apnCount := len(nc.ApnPushNotifications[eventHash])
+		nc.ApnPushNotificationsMu.Unlock()
+
+		return webCount != len(expectedUsersToReceiveNotification) ||
+			apnCount != len(expectedUsersToReceiveNotification)
+	}, 5*time.Second, 100*time.Millisecond, "Received too unexpected notifications")
 }
 
 func initNotificationService(ctx context.Context, tester *serviceTester) (*Service, *notificationCapture) {
@@ -139,8 +223,8 @@ func initNotificationService(ctx context.Context, tester *serviceTester) (*Servi
 	tester.require.NoError(err)
 
 	nc := &notificationCapture{
-		WebPushNotifications: make(map[string]int),
-		ApnPushNotifications: make(map[string]int),
+		WebPushNotifications: make(map[common.Hash]map[string]int),
+		ApnPushNotifications: make(map[common.Hash]map[string]int),
 	}
 
 	service, err := StartServerInNotificationMode(ctx, tester.getConfig(), tester.btc.DeployerBlockchain, listener, nc)
@@ -222,7 +306,7 @@ func (tc *spaceChannelNotificationsTestContext) sendMessageWithTags(
 	from *crypto.Wallet,
 	messageContent string,
 	tags *Tags,
-) {
+) *Envelope {
 	resp, err := tc.streamClient.GetLastMiniblockHash(ctx, connect.NewRequest(
 		&GetLastMiniblockHashRequest{
 			StreamId: tc.channelID[:],
@@ -244,6 +328,8 @@ func (tc *spaceChannelNotificationsTestContext) sendMessageWithTags(
 	}))
 
 	tc.req.NoError(err)
+
+	return event
 }
 
 func (tc *spaceChannelNotificationsTestContext) subscribeWebPush(
@@ -313,20 +399,26 @@ func (tc *spaceChannelNotificationsTestContext) setSpaceSetting(
 
 type notificationCapture struct {
 	WebPushNotificationsMu sync.Mutex
-	WebPushNotifications   map[string]int // key=endpoint
+	WebPushNotifications   map[common.Hash]map[string]int // event hash -> key=endpoint:count
 	ApnPushNotificationsMu sync.Mutex
-	ApnPushNotifications   map[string]int // key=device_token
+	ApnPushNotifications   map[common.Hash]map[string]int // event hash -> key=device_token:count
 }
 
 func (nc *notificationCapture) SendWebPushNotification(
 	_ context.Context,
 	subscription *webpush.Subscription,
+	eventHash common.Hash,
 	_ []byte,
 ) error {
 	nc.WebPushNotificationsMu.Lock()
 	defer nc.WebPushNotificationsMu.Unlock()
 
-	nc.WebPushNotifications[subscription.Endpoint] = nc.WebPushNotifications[subscription.Endpoint] + 1
+	events, found := nc.WebPushNotifications[eventHash]
+	if !found {
+		events = make(map[string]int)
+	}
+	events[subscription.Endpoint]++
+	nc.WebPushNotifications[eventHash] = events
 
 	return nil
 }
@@ -334,12 +426,19 @@ func (nc *notificationCapture) SendWebPushNotification(
 func (nc *notificationCapture) SendApplePushNotification(
 	_ context.Context,
 	deviceToken string,
+	eventHash common.Hash,
 	_ *payload2.Payload,
 ) error {
 	nc.ApnPushNotificationsMu.Lock()
 	defer nc.ApnPushNotificationsMu.Unlock()
 
-	nc.ApnPushNotifications[deviceToken] = nc.ApnPushNotifications[deviceToken] + 1
+	events, found := nc.ApnPushNotifications[eventHash]
+	if !found {
+		events = make(map[string]int)
+	}
+
+	events[deviceToken]++
+	nc.ApnPushNotifications[eventHash] = events
 
 	return nil
 }
