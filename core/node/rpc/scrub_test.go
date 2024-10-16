@@ -39,7 +39,10 @@ func addUserToChannel(
 			nil,
 			spaceId[:],
 		),
-		resUser.PrevMiniblockHash,
+		&events.MiniblockRef{
+			Hash: common.BytesToHash(resUser.PrevMiniblockHash),
+			Num:  resUser.MinipoolGen - 1,
+		},
 	)
 	require.NoError(err)
 
@@ -267,7 +270,7 @@ func TestScrubStreamTaskProcessor(t *testing.T) {
 			service := tester.nodes[0].service
 			streamCache := service.cache
 
-			stream, _, err := streamCache.GetStream(ctx, channelId)
+			stream, err := streamCache.GetStream(ctx, channelId)
 			require.NoError(err)
 
 			view, err := stream.GetView(ctx)
@@ -302,7 +305,7 @@ func TestScrubStreamTaskProcessor(t *testing.T) {
 			// a scrub on the stream, so this value is already nonzero.
 			now := time.Now()
 
-			scheduled, err := taskScrubber.TryScheduleScrub(ctx, channelId, true)
+			scheduled, err := taskScrubber.TryScheduleScrub(ctx, stream, true)
 			require.Nil(err, "task scheduling error")
 			require.True(scheduled)
 
