@@ -10,16 +10,15 @@ import {DeployDropFacet} from "contracts/scripts/deployments/facets/DeployDropFa
 
 //interfaces
 import {IDiamond} from "contracts/src/diamond/Diamond.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IDropFacetBase} from "contracts/src/tokens/drop/IDropFacet.sol";
-
+import {IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
 //libraries
 import {MerkleTree} from "contracts/test/utils/MerkleTree.sol";
 import {DropFacet} from "contracts/src/tokens/drop/DropFacet.sol";
 import {MockERC20} from "contracts/test/mocks/MockERC20.sol";
 import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 
-contract DropFacetTest is TestUtils, IDropFacetBase {
+contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
   uint256 internal constant TOTAL_TOKEN_AMOUNT = 1000;
 
   DeployDiamond internal diamondHelper = new DeployDiamond();
@@ -74,15 +73,8 @@ contract DropFacetTest is TestUtils, IDropFacetBase {
 
   modifier givenClaimConditionSet() {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
-    conditions[0] = ClaimCondition({
-      startTimestamp: block.timestamp, // now
-      endTimestamp: 0,
-      maxClaimableSupply: TOTAL_TOKEN_AMOUNT,
-      supplyClaimed: 0,
-      merkleRoot: root,
-      currency: address(token),
-      penaltyBps: 5000 // 50%
-    });
+    conditions[0] = _createClaimCondition(block.timestamp, root);
+    conditions[0].penaltyBps = 5000;
 
     vm.prank(deployer);
     dropFacet.setClaimConditions(conditions, false);
@@ -118,9 +110,9 @@ contract DropFacetTest is TestUtils, IDropFacetBase {
   // getActiveClaimConditionId
   function test_getActiveClaimConditionId() external {
     ClaimCondition[] memory conditions = new ClaimCondition[](3);
-    conditions[0] = _createTimedClaimCondition(block.timestamp - 100); // expired
-    conditions[1] = _createTimedClaimCondition(block.timestamp); // active
-    conditions[2] = _createTimedClaimCondition(block.timestamp + 100); // future
+    conditions[0] = _createClaimCondition(block.timestamp - 100, root); // expired
+    conditions[1] = _createClaimCondition(block.timestamp, root); // active
+    conditions[2] = _createClaimCondition(block.timestamp + 100, root); // future
 
     vm.prank(deployer);
     dropFacet.setClaimConditions(conditions, false);
@@ -163,7 +155,7 @@ contract DropFacetTest is TestUtils, IDropFacetBase {
 
   function test_revertWhen_merkleRootNotSet() external {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
-    conditions[0] = _createTimedClaimCondition(block.timestamp);
+    conditions[0] = _createClaimCondition(block.timestamp, bytes32(0));
 
     vm.prank(deployer);
     dropFacet.setClaimConditions(conditions, false);
@@ -176,8 +168,7 @@ contract DropFacetTest is TestUtils, IDropFacetBase {
 
   function test_revertWhen_quantityIsZero() external {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
-    conditions[0] = _createTimedClaimCondition(block.timestamp);
-    conditions[0].merkleRoot = root;
+    conditions[0] = _createClaimCondition(block.timestamp, root);
 
     vm.prank(deployer);
     dropFacet.setClaimConditions(conditions, false);
@@ -195,8 +186,7 @@ contract DropFacetTest is TestUtils, IDropFacetBase {
 
   function test_revertWhen_exceedsMaxClaimableSupply() external {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
-    conditions[0] = _createTimedClaimCondition(block.timestamp);
-    conditions[0].merkleRoot = root;
+    conditions[0] = _createClaimCondition(block.timestamp, root);
     conditions[0].maxClaimableSupply = 100; // 100 tokens in total for this condition
 
     vm.prank(deployer);
@@ -215,9 +205,7 @@ contract DropFacetTest is TestUtils, IDropFacetBase {
 
   function test_revertWhen_claimHasNotStarted() external {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
-    conditions[0] = _createTimedClaimCondition(block.timestamp);
-    conditions[0].merkleRoot = root;
-    conditions[0].maxClaimableSupply = TOTAL_TOKEN_AMOUNT;
+    conditions[0] = _createClaimCondition(block.timestamp, root);
 
     vm.prank(deployer);
     dropFacet.setClaimConditions(conditions, false);
@@ -240,9 +228,7 @@ contract DropFacetTest is TestUtils, IDropFacetBase {
 
   function test_revertWhen_claimHasEnded() external {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
-    conditions[0] = _createTimedClaimCondition(block.timestamp);
-    conditions[0].merkleRoot = root;
-    conditions[0].maxClaimableSupply = TOTAL_TOKEN_AMOUNT;
+    conditions[0] = _createClaimCondition(block.timestamp, root);
     conditions[0].endTimestamp = block.timestamp + 100;
 
     vm.prank(deployer);
@@ -265,9 +251,7 @@ contract DropFacetTest is TestUtils, IDropFacetBase {
 
   function test_revertWhen_alreadyClaimed() external {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
-    conditions[0] = _createTimedClaimCondition(block.timestamp);
-    conditions[0].merkleRoot = root;
-    conditions[0].maxClaimableSupply = TOTAL_TOKEN_AMOUNT;
+    conditions[0] = _createClaimCondition(block.timestamp, root);
 
     vm.prank(deployer);
     dropFacet.setClaimConditions(conditions, false);
@@ -294,9 +278,7 @@ contract DropFacetTest is TestUtils, IDropFacetBase {
 
   function test_revertWhen_invalidProof() external {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
-    conditions[0] = _createTimedClaimCondition(block.timestamp);
-    conditions[0].merkleRoot = root;
-    conditions[0].maxClaimableSupply = TOTAL_TOKEN_AMOUNT;
+    conditions[0] = _createClaimCondition(block.timestamp, root);
 
     vm.prank(deployer);
     dropFacet.setClaimConditions(conditions, false);
@@ -312,19 +294,40 @@ contract DropFacetTest is TestUtils, IDropFacetBase {
     });
   }
 
+  // setClaimConditions
+  function test_setClaimConditions() external {
+    ClaimCondition[] memory conditions = new ClaimCondition[](1);
+    conditions[0] = _createClaimCondition(block.timestamp, root);
+
+    vm.prank(deployer);
+    dropFacet.setClaimConditions(conditions, false);
+
+    uint256 conditionId = dropFacet.getActiveClaimConditionId();
+    assertEq(conditionId, 0);
+  }
+
+  function test_revertWhen_setClaimConditions_onlyOwner() external {
+    address caller = _randomAddress();
+
+    vm.prank(caller);
+    vm.expectRevert(abi.encodeWithSelector(Ownable__NotOwner.selector, caller));
+    dropFacet.setClaimConditions(new ClaimCondition[](0), false);
+  }
+
   // =============================================================
   //                           Internal
   // =============================================================
-  function _createTimedClaimCondition(
-    uint256 _startTime
+  function _createClaimCondition(
+    uint256 _startTime,
+    bytes32 _merkleRoot
   ) internal view returns (ClaimCondition memory) {
     return
       ClaimCondition({
         startTimestamp: _startTime,
         endTimestamp: 0,
-        maxClaimableSupply: 0,
+        maxClaimableSupply: TOTAL_TOKEN_AMOUNT,
         supplyClaimed: 0,
-        merkleRoot: bytes32(0),
+        merkleRoot: _merkleRoot,
         currency: address(token),
         penaltyBps: 0
       });
