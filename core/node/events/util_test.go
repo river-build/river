@@ -161,7 +161,9 @@ func (ctc *cacheTestContext) createReplStream() (StreamId, []common.Address, *Mi
 	ctc.require.Len(nodes, ctc.testParams.replFactor)
 
 	for _, n := range nodes {
-		_, _, err = ctc.instancesByAddr[n].cache.GetStream(ctc.ctx, streamId)
+		s, err := ctc.instancesByAddr[n].cache.GetStream(ctc.ctx, streamId)
+		ctc.require.NoError(err)
+		_, err = s.GetView(ctc.ctx)
 		ctc.require.NoError(err)
 	}
 
@@ -188,7 +190,7 @@ func (ctc *cacheTestContext) addReplEvent(
 	ctc.require.NoError(err)
 
 	for _, n := range nodes {
-		stream, err := ctc.instancesByAddr[n].cache.GetSyncStream(ctc.ctx, streamId)
+		stream, err := ctc.instancesByAddr[n].cache.GetStream(ctc.ctx, streamId)
 		ctc.require.NoError(err)
 
 		err = stream.AddEvent(ctc.ctx, ev)
@@ -219,7 +221,9 @@ func (ctc *cacheTestContext) createStream(
 	genesisMiniblock *Miniblock,
 ) (SyncStream, StreamView) {
 	ctc.createStreamNoCache(streamId, genesisMiniblock)
-	s, v, err := ctc.instances[0].cache.GetStream(ctc.ctx, streamId)
+	s, err := ctc.instances[0].cache.GetStream(ctc.ctx, streamId)
+	ctc.require.NoError(err)
+	v, err := s.GetView(ctc.ctx)
 	ctc.require.NoError(err)
 	return s, v
 }

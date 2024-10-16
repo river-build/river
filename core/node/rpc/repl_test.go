@@ -150,12 +150,9 @@ func TestStreamReconciliationFromGenesis(t *testing.T) {
 
 	// make sure that node loaded the stream and synced up its local database with the stream registry.
 	// this happens as a background task, therefore wait till all mini-blocks are imported.
-	var (
-		stream events.Stream
-		view   events.StreamView
-	)
+	var stream events.SyncStream
 	require.Eventuallyf(func() bool {
-		stream, view, err = lastStartedNode.service.cache.GetStream(ctx, streamId)
+		stream, err = lastStartedNode.service.cache.GetStream(ctx, streamId)
 		if err == nil {
 			if miniBlocks, _, err := stream.GetMiniblocks(ctx, 0, latestMbNum+1); err == nil {
 				return len(miniBlocks) == len(mbChain)
@@ -173,6 +170,9 @@ func TestStreamReconciliationFromGenesis(t *testing.T) {
 	}
 
 	require.Equal(mbChain, fetchedMbChain, "unexpected mini-block chain")
+
+	view, err := stream.GetView(ctx)
+	require.NoError(err, "get view")
 	require.Equal(latestMbNum, view.LastBlock().Ref.Num, "unexpected last mini-block num")
 	require.Equal(mbChain[latestMbNum], view.LastBlock().Ref.Hash, "unexpected last mini-block hash")
 }
@@ -222,7 +222,9 @@ func TestStreamReconciliationForKnownStreams(t *testing.T) {
 
 	// ensure that the node we bring down has at least 1 mini-block for the test stream
 	require.Eventuallyf(func() bool {
-		_, view, err := tt.nodes[opts.numNodes-1].service.cache.GetStream(ctx, streamId)
+		stream, err := tt.nodes[opts.numNodes-1].service.cache.GetStream(ctx, streamId)
+		require.NoError(err)
+		view, err := stream.GetView(ctx)
 		require.NoError(err)
 		return view.LastBlock().Ref.Num >= 1
 	}, 20*time.Second, 100*time.Millisecond, "expected to receive latest miniblock")
@@ -261,7 +263,7 @@ func TestStreamReconciliationForKnownStreams(t *testing.T) {
 	require.NoError(tt.startSingle(len(tt.nodes) - 1))
 	restartedNode := tt.nodes[opts.numNodes-1]
 
-	_, _, err = restartedNode.service.cache.GetStream(ctx, streamId)
+	_, err = restartedNode.service.cache.GetStream(ctx, streamId)
 	require.NoError(err)
 
 	// create a new instance of a stream cache for the last node and ensure that when it is created it syncs stream
@@ -270,19 +272,19 @@ func TestStreamReconciliationForKnownStreams(t *testing.T) {
 
 	// wait till stream cache has finish reconciliation for the stream
 	var (
-		stream             events.Stream
+		stream             events.SyncStream
 		receivedMiniblocks []*protocol.Miniblock
 	)
 
 	// grab mini-blocks from node that is already up and running and ensure that the just restarted node has the
 	// same miniblocks after it catches up.
-	stream, _, err = tt.nodes[opts.numNodes-2].service.cache.GetStream(ctx, streamId)
+	stream, err = tt.nodes[opts.numNodes-2].service.cache.GetStream(ctx, streamId)
 	require.NoError(err)
 	expectedMiniblocks, _, err := stream.GetMiniblocks(ctx, 0, latestMbNum+1)
 	require.NoError(err)
 
 	require.Eventuallyf(func() bool {
-		syncStream, err := streamCache.GetSyncStream(ctx, streamId)
+		syncStream, err := streamCache.GetStream(ctx, streamId)
 		if err != nil {
 			return false
 		}
@@ -301,7 +303,9 @@ func TestStreamReconciliationForKnownStreams(t *testing.T) {
 		fetchedMbChain[int64(i)] = common.BytesToHash(blk.GetHeader().GetHash())
 	}
 
-	_, view, err := streamCache.GetStream(ctx, streamId)
+	stream, err = streamCache.GetStream(ctx, streamId)
+	require.NoError(err)
+	view, err := stream.GetView(ctx)
 	require.NoError(err)
 
 	require.Equal(mbChain, fetchedMbChain, "unexpected mini-block chain")
