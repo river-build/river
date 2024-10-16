@@ -44,7 +44,6 @@ function makeStreamRpcClient(logger: FastifyBaseLogger, url: string): StreamRpcC
 }
 
 async function getStreamClient(logger: FastifyBaseLogger, streamId: `0x${string}`) {
-	logger.info({ config }, 'getStreamClient')
 	const node = await getNodeForStream(logger, streamId)
 	const client = clients.get(node.url) || makeStreamRpcClient(logger, node.url)
 	clients.set(node.url, client)
