@@ -147,14 +147,14 @@ func (ctc *cacheTestContext) initAllCaches(opts *MiniblockProducerOpts) {
 
 func (ctc *cacheTestContext) createReplStream() (StreamId, []common.Address, *MiniblockRef) {
 	streamId := testutils.FakeStreamId(STREAM_USER_SETTINGS_BIN)
-	mb := MakeGenesisMiniblockForUserSettingsStream(ctc.t, ctc.clientWallet, streamId)
-	mbBytes, err := proto.Marshal(mb)
+	mb := MakeGenesisMiniblockForUserSettingsStream(ctc.t, ctc.clientWallet, ctc.instances[0].params.Wallet, streamId)
+	mbBytes, err := mb.ToBytes()
 	ctc.require.NoError(err)
 
 	nodes, err := ctc.instances[0].streamRegistry.AllocateStream(
 		ctc.ctx,
 		streamId,
-		common.BytesToHash(mb.Header.Hash),
+		common.BytesToHash(mb.Proto.Header.Hash),
 		mbBytes,
 	)
 	ctc.require.NoError(err)
@@ -165,7 +165,7 @@ func (ctc *cacheTestContext) createReplStream() (StreamId, []common.Address, *Mi
 		ctc.require.NoError(err)
 	}
 
-	return streamId, nodes, &MiniblockRef{Hash: common.Hash(mb.Header.Hash), Num: 0}
+	return streamId, nodes, &MiniblockRef{Hash: common.Hash(mb.Proto.Header.Hash), Num: 0}
 }
 
 func (ctc *cacheTestContext) addReplEvent(
@@ -239,12 +239,12 @@ func (ctc *cacheTestContext) allocateStreams(count int) map[StreamId]*Miniblock 
 			defer wg.Done()
 
 			streamID := testutils.FakeStreamId(STREAM_SPACE_BIN)
-			mb := MakeGenesisMiniblockForSpaceStream(ctc.t, ctc.clientWallet, streamID)
-			ctc.createStreamNoCache(streamID, mb)
+			mb := MakeGenesisMiniblockForSpaceStream(ctc.t, ctc.clientWallet, ctc.instances[0].params.Wallet, streamID)
+			ctc.createStreamNoCache(streamID, mb.Proto)
 
 			mu.Lock()
 			defer mu.Unlock()
-			genesisBlocks[streamID] = mb
+			genesisBlocks[streamID] = mb.Proto
 		}()
 	}
 	wg.Wait()

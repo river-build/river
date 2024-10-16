@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"google.golang.org/protobuf/types/known/emptypb"
+
 	"github.com/river-build/river/core/node/crypto"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
@@ -15,35 +17,79 @@ import (
 
 func MakeGenesisMiniblockForSpaceStream(
 	t *testing.T,
-	wallet *crypto.Wallet,
+	userWallet *crypto.Wallet,
+	nodeWallet *crypto.Wallet,
 	streamId StreamId,
-) *Miniblock {
+) *MiniblockInfo {
 	inception, err := MakeParsedEventWithPayload(
-		wallet,
+		userWallet,
 		Make_SpacePayload_Inception(streamId, nil),
 		&MiniblockRef{},
 	)
 	require.NoError(t, err)
 
-	mb, err := MakeGenesisMiniblock(wallet, []*ParsedEvent{inception})
+	mb, err := MakeGenesisMiniblock(nodeWallet, []*ParsedEvent{inception})
 	require.NoError(t, err)
 
-	return mb
+	mbInfo, err := NewMiniblockInfoFromProto(
+		mb,
+		NewMiniblockInfoFromProtoOpts{ExpectedBlockNumber: 0, DontParseEvents: true},
+	)
+	require.NoError(t, err)
+	return mbInfo
 }
 
 func MakeGenesisMiniblockForUserSettingsStream(
 	t *testing.T,
-	wallet *crypto.Wallet,
+	userWallet *crypto.Wallet,
+	nodeWallet *crypto.Wallet,
 	streamId StreamId,
-) *Miniblock {
+) *MiniblockInfo {
 	inception, err := MakeParsedEventWithPayload(
-		wallet,
+		userWallet,
 		Make_UserSettingsPayload_Inception(streamId, nil),
 		&MiniblockRef{},
 	)
 	require.NoError(t, err)
 
-	mb, err := MakeGenesisMiniblock(wallet, []*ParsedEvent{inception})
+	mb, err := MakeGenesisMiniblock(nodeWallet, []*ParsedEvent{inception})
+	require.NoError(t, err)
+
+	mbInfo, err := NewMiniblockInfoFromProto(
+		mb,
+		NewMiniblockInfoFromProtoOpts{ExpectedBlockNumber: 0, DontParseEvents: true},
+	)
+	require.NoError(t, err)
+
+	return mbInfo
+}
+
+func MakeTestBlockForUserSettingsStream(
+	t *testing.T,
+	userWallet *crypto.Wallet,
+	nodeWallet *crypto.Wallet,
+	prevBlock *MiniblockInfo,
+) *MiniblockInfo {
+	event := MakeEvent(
+		t,
+		userWallet,
+		Make_UserSettingsPayload_FullyReadMarkers(&UserSettingsPayload_FullyReadMarkers{}),
+		prevBlock.Ref,
+	)
+
+	header := &MiniblockHeader{
+		MiniblockNum:             prevBlock.Ref.Num + 1,
+		Timestamp:                NextMiniblockTimestamp(prevBlock.header().Timestamp),
+		EventHashes:              [][]byte{event.Hash[:]},
+		PrevMiniblockHash:        prevBlock.Ref.Hash[:],
+		EventNumOffset:           prevBlock.header().EventNumOffset + 2,
+		PrevSnapshotMiniblockNum: prevBlock.header().PrevSnapshotMiniblockNum,
+		Content: &MiniblockHeader_None{
+			None: &emptypb.Empty{},
+		},
+	}
+
+	mb, err := NewMiniblockInfoFromHeaderAndParsed(nodeWallet, header, []*ParsedEvent{event})
 	require.NoError(t, err)
 
 	return mb
@@ -94,9 +140,14 @@ func mbTest(
 	require := require.New(t)
 
 	spaceStreamId := testutils.FakeStreamId(STREAM_SPACE_BIN)
-	miniblockProto := MakeGenesisMiniblockForSpaceStream(t, tt.instances[0].params.Wallet, spaceStreamId)
+	genesisMb := MakeGenesisMiniblockForSpaceStream(
+		t,
+		tt.instances[0].params.Wallet,
+		tt.instances[0].params.Wallet,
+		spaceStreamId,
+	)
 
-	stream, view := tt.createStream(spaceStreamId, miniblockProto)
+	stream, view := tt.createStream(spaceStreamId, genesisMb.Proto)
 
 	addEvent(t, ctx, tt.instances[0].params, stream, "1", view.LastBlock().Ref)
 	addEvent(t, ctx, tt.instances[0].params, stream, "2", view.LastBlock().Ref)
