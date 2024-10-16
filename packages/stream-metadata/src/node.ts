@@ -63,6 +63,8 @@ server.addHook('onRequest', (request, reply, done) => {
 			params: request.params,
 			routerPath: request.routerPath,
 			method: request.method,
+			ip: request.ip,
+			ips: request.ips,
 		},
 	})
 
@@ -77,6 +79,9 @@ server.addHook('onResponse', (request, reply, done) => {
 			res: {
 				statusCode: reply.statusCode,
 				elapsedTime: reply.elapsedTime,
+				headers: {
+					'cache-control': reply.getHeader('cache-control'),
+				},
 			},
 		},
 		'request completed',
