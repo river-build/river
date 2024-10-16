@@ -60,8 +60,15 @@ const server = Fastify({
 })
 
 server.addHook('onRequest', (request, reply, done) => {
-	const reqId = request.id // Use Fastify's generated reqId, which is now a UUID
-	request.log = request.log.child({ reqId })
+	request.log = request.log.child({
+		request: {
+			id: request.id,
+			url: request.url,
+			query: request.query,
+			params: request.params,
+			routerPath: request.routerPath,
+		},
+	})
 	done()
 })
 
@@ -111,6 +118,7 @@ export function getServerUrl(srv: Server) {
 
 process.on('SIGTERM', async () => {
 	try {
+		logger.warn('Received SIGTERM, shutting down server')
 		await server.close()
 		logger.info('Server closed gracefully')
 		process.exit(0)
