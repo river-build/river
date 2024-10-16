@@ -332,7 +332,7 @@ func (tp *streamScrubTaskProcessorImpl) TryScheduleScrub(
 	task := &streamScrubTask{channelId: *streamId, spaceId: *view.StreamParentId(), taskProcessor: tp}
 	_, alreadyScheduled := tp.pendingTasks.LoadOrStore(streamId, task)
 	if !alreadyScheduled {
-		log.Info("Scheduling scrub for stream", "lastScrubbedTime", stream.LastScrubbedTime())
+		log.Debug("Scheduling scrub for stream", "lastScrubbedTime", stream.LastScrubbedTime())
 		tp.workerPool.Submit(func() {
 			task.process()
 			tp.pendingTasks.Delete(task.channelId)
