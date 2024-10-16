@@ -6,22 +6,20 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	mapset "github.com/deckarep/golang-set/v2"
 	"log/slog"
 	"slices"
 	"time"
 
-	"github.com/river-build/river/core/node/notifications/types"
-
 	"github.com/SherClockHolmes/webpush-go"
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/ethereum/go-ethereum/common"
-	payload2 "github.com/sideshow/apns2/payload"
-
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/notifications/push"
+	"github.com/river-build/river/core/node/notifications/types"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"
+	"github.com/sideshow/apns2/payload"
 )
 
 // MessageToNotificationsProcessor implements events.StreamEventListener and for each stream event determines
@@ -70,7 +68,7 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 	}
 	l.Info("OnMessageEvent")
 
-	// TODO: send a notification to someone when mentioned in a stream he is not a member of??
+	// TODO: send a notification to someone when mentioned in a stream he is not a member of
 	members.Each(func(member string) bool {
 		var (
 			participant = common.HexToAddress(member)
@@ -87,6 +85,13 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 			return false
 		}
 
+		//
+		// There are 3 global rules that apply to DM, GDM, and Space channels
+		// 1. never receive a notification from your own message
+		// 2. never receive a notification when the user hasn't subscribed (web/apn push)
+		// 3. never receive a notification from a blocked user
+		//
+
 		// never send notification for your own messages
 		if from == participant {
 			return false
@@ -94,7 +99,7 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 
 		// user isn't subscribed for notifications
 		if !pref.HasSubscriptions() {
-			p.log.Debug("User hasn't subscribed for notifications",
+			p.log.Warn("User hasn't subscribed for notifications",
 				"user", participant, "event", event.Hash)
 			return false
 		}
@@ -102,18 +107,18 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 		// if the message creator is blocked by stream participant don't send notification
 		blocked := p.cache.IsBlocked(participant, from)
 		if blocked {
-			p.log.Debug("Message creator was blocked", "user", participant, "blocked_user", from)
+			p.log.Warn("Message creator was blocked", "user", participant, "blocked_user", from)
 			return false
 		}
 
 		switch payload := event.Event.Payload.(type) {
 		case *StreamEvent_DmChannelPayload:
-			p.onDMChannelPayload(channelID, participant, pref, event, from, event.Event)
+			p.onDMChannelPayload(channelID, participant, pref, event, event.Event)
 		case *StreamEvent_GdmChannelPayload:
-			p.onGDMChannelPayload(channelID, participant, pref, event, from, event.Event)
+			p.onGDMChannelPayload(channelID, participant, pref, event, event.Event)
 		case *StreamEvent_ChannelPayload:
 			if spaceID != nil {
-				p.onSpaceChannelPayload(*spaceID, channelID, participant, pref, event, from, event.Event)
+				p.onSpaceChannelPayload(*spaceID, channelID, participant, pref, event, event.Event)
 			} else {
 				p.log.Error("Space channel misses spaceID", "channel", channelID)
 			}
@@ -133,11 +138,10 @@ func (p *MessageToNotificationsProcessor) onDMChannelPayload(
 	participant common.Address,
 	userPref *types.UserPreferences,
 	event *events.ParsedEvent,
-	eventCreator common.Address,
 	streamEvent *StreamEvent,
 ) {
 	if !userPref.WantsNotificationForDMMessage(streamID) {
-		p.log.Debug("User has doesn't want to receive notification for DM message",
+		p.log.Warn("User has doesn't want to receive notification for DM message",
 			"user", participant,
 			"channel", streamID,
 			"event", event.Hash)
@@ -181,7 +185,6 @@ func (p *MessageToNotificationsProcessor) onGDMChannelPayload(
 	participant common.Address,
 	userPref *types.UserPreferences,
 	event *events.ParsedEvent,
-	eventCreator common.Address,
 	streamEvent *StreamEvent,
 ) {
 	messageInteractionType := event.Tags.GetMessageInteractionType()
@@ -213,7 +216,6 @@ func (p *MessageToNotificationsProcessor) onSpaceChannelPayload(
 	participant common.Address,
 	userPref *types.UserPreferences,
 	event *events.ParsedEvent,
-	eventCreator common.Address,
 	streamEvent *StreamEvent,
 ) {
 	messageInteractionType := event.Tags.GetMessageInteractionType()
@@ -283,20 +285,20 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 	}
 }
 
-func (p *MessageToNotificationsProcessor) sendWebPushNotification(sub *webpush.Subscription, payload []byte) error {
+func (p *MessageToNotificationsProcessor) sendWebPushNotification(sub *webpush.Subscription, content []byte) error {
 	// lint:ignore context.Background() is fine here
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	return p.notifier.SendWebPushNotification(ctx, sub, payload)
+	return p.notifier.SendWebPushNotification(ctx, sub, content)
 }
 
-func (p *MessageToNotificationsProcessor) sendAPNNotification(deviceToken []byte, payload []byte) error {
+func (p *MessageToNotificationsProcessor) sendAPNNotification(deviceToken []byte, content []byte) error {
 	// lint:ignore context.Background() is fine here
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	notificationPayload := payload2.NewPayload().Alert(string(payload))
+	notificationPayload := payload.NewPayload().Alert(string(content))
 
 	return p.notifier.SendApplePushNotification(ctx, hex.EncodeToString(deviceToken), notificationPayload)
 }

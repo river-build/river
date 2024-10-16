@@ -2,24 +2,23 @@ package notifications
 
 import (
 	"context"
-	"errors"
-	"github.com/SherClockHolmes/webpush-go"
-	"github.com/river-build/river/core/node/infra"
-	"github.com/river-build/river/core/node/notifications/types"
-	"github.com/river-build/river/core/node/shared"
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/SherClockHolmes/webpush-go"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/river-build/river/core/config"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/nodes"
 	notificationssync "github.com/river-build/river/core/node/notifications/sync"
+	"github.com/river-build/river/core/node/notifications/types"
 	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/registries"
+	"github.com/river-build/river/core/node/shared"
 )
 
 type (
@@ -285,11 +284,11 @@ func (s *Service) SubscribeAPN(
 		return nil, RiverError(protocol.Err_INVALID_ARGUMENT, "Invalid user id")
 	}
 
-	if err := s.userPreferences.AddAPNSubscription(ctx, deviceToken, userID); err != nil {
+	if err := s.userPreferences.AddAPNSubscription(ctx, userID, deviceToken); err != nil {
 		return nil, err
 	}
 
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("SubscribeAPN not implemented"))
+	return connect.NewResponse(&protocol.SubscribeAPNResponse{}), nil
 }
 
 func (s *Service) UnsubscribeAPN(
@@ -312,5 +311,5 @@ func (s *Service) UnsubscribeAPN(
 		return nil, err
 	}
 
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("UnsubscribeAPN not implemented"))
+	return connect.NewResponse(&protocol.UnsubscribeAPNResponse{}), nil
 }

@@ -111,7 +111,7 @@ func NewStreamsTracker(
 	tasks.Add(int(workersCount))
 	for i := range workersCount {
 		go func() {
-			worker, err := newStreamsTrackerWorker(initCtx, i, onChainConfig, tracker.riverRegistry, nodes,
+			worker, err := NewStreamsTrackerWorker(initCtx, i, onChainConfig, tracker.riverRegistry, nodes,
 				streamBuckets[i], listener, storage, workerMetrics)
 			if err == nil {
 				tracker.workers[i] = worker

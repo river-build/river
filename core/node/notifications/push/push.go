@@ -186,7 +186,10 @@ func (n *MessageNotificationsSimulator) SendWebPushNotification(
 	payload []byte,
 ) error {
 	log := dlog.FromCtx(ctx)
-	log.Info("SendWebPushNotification %s:%s", subscription.Keys.P256dh, subscription.Keys.Auth)
+	log.Info("SendWebPushNotification",
+		"keys.p256dh", subscription.Keys.P256dh,
+		"keys.auth", subscription.Keys.Auth,
+		"payload", payload)
 
 	n.WebPushNotificationsByEndpoint[subscription.Endpoint] = append(
 		n.WebPushNotificationsByEndpoint[subscription.Endpoint], payload)
@@ -200,7 +203,7 @@ func (n *MessageNotificationsSimulator) SendApplePushNotification(
 	payload *payload2.Payload,
 ) error {
 	log := dlog.FromCtx(ctx)
-	log.Info("SendApplePushNotification", "deviceToken", deviceToken)
+	log.Info("SendApplePushNotification", "deviceToken", deviceToken, "payload", payload)
 
 	return nil
 }

@@ -17,7 +17,7 @@ import (
 	"github.com/river-build/river/core/node/notifications/push"
 )
 
-func (s *Service) startNotificationMode() error {
+func (s *Service) startNotificationMode(notifier push.MessageNotifier) error {
 	var err error
 	s.startTime = time.Now()
 
@@ -38,10 +38,14 @@ func (s *Service) startNotificationMode() error {
 		return AsRiverError(err).Message("Failed to init store").LogError(s.defaultLogger)
 	}
 
-	notifier := notifications.NewNotificationMessageProcessor(
+	if notifier == nil {
+		notifier = push.NewMessageNotificationsSimulator()
+	}
+
+	processor := notifications.NewNotificationMessageProcessor(
 		s.serverCtx,
 		s.notifications,
-		push.NewMessageNotificationsSimulator(), // TODO: from config
+		notifier,
 	)
 
 	s.NotificationService, err = notifications.NewService(
@@ -52,7 +56,7 @@ func (s *Service) startNotificationMode() error {
 		s.registryContract,
 		s.nodeRegistry,
 		s.metrics,
-		notifier,
+		processor,
 	)
 	if err != nil {
 		return AsRiverError(err).Message("Failed to instantiate notification service").LogError(s.defaultLogger)
@@ -88,6 +92,7 @@ func StartServerInNotificationMode(
 	cfg *config.Config,
 	riverChain *crypto.Blockchain,
 	listener net.Listener,
+	notifier push.MessageNotifier,
 ) (*Service, error) {
 	notificationService := &Service{
 		serverCtx:  ctx,
@@ -97,7 +102,7 @@ func StartServerInNotificationMode(
 		exitSignal: make(chan error, 1),
 	}
 
-	err := notificationService.startNotificationMode()
+	err := notificationService.startNotificationMode(notifier)
 	if err != nil {
 		notificationService.Close()
 		return nil, err
@@ -112,7 +117,7 @@ func RunNotificationService(ctx context.Context, cfg *config.Config) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	service, err := StartServerInNotificationMode(ctx, cfg, nil, nil)
+	service, err := StartServerInNotificationMode(ctx, cfg, nil, nil, nil)
 	if err != nil {
 		log.Error("Failed to start server", "error", err)
 		return err

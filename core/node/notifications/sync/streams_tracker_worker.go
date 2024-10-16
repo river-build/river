@@ -81,7 +81,7 @@ type (
 	}
 )
 
-func newStreamsTrackerWorker(
+func NewStreamsTrackerWorker(
 	ctx context.Context,
 	id uint,
 	onChainConfig crypto.OnChainConfiguration,
@@ -327,7 +327,7 @@ func (w *streamsTrackerWorker) Send(msg *protocol.SyncStreamsResponse) error {
 			} else {
 				// resumed sync from last known position, load view and apply updates.
 				log.Debug("not loaded view", "stream", streamID)
-				view, err := events.NewNotificationsStreamTrackerFromStreamAndCookie(
+				trackedStream, err := events.NewNotificationsStreamTrackerFromStreamAndCookie(
 					streamID, w.onChainConfig, msg.GetStream(), w.listener, w.userPreferences)
 
 				if err != nil {
@@ -335,7 +335,16 @@ func (w *streamsTrackerWorker) Send(msg *protocol.SyncStreamsResponse) error {
 					return err
 				}
 
-				w.trackedStreams.Store(streamID, view)
+				w.trackedStreams.Store(streamID, trackedStream)
+
+				for _, event := range msg.GetStream().GetEvents() {
+					if err := trackedStream.HandleEvent(event); err != nil {
+						log.Error("Unable to handle event", "stream", streamID, "err", err)
+					} else {
+						log.Debug("Applied event to stream",
+							"stream", streamID, "event", fmt.Sprintf("%x", event.Hash))
+					}
+				}
 			}
 		}
 

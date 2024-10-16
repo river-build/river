@@ -275,10 +275,10 @@ func (up *UserPreferencesCache) GetAPNSubscriptions(
 
 func (up *UserPreferencesCache) AddAPNSubscription(
 	ctx context.Context,
-	deviceToken []byte,
 	userID common.Address,
+	deviceToken []byte,
 ) error {
-	err := up.persistent.AddAPNSubscription(ctx, deviceToken, userID)
+	err := up.persistent.AddAPNSubscription(ctx, userID, deviceToken)
 	if err != nil {
 		return err
 	}

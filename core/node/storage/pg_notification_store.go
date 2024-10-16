@@ -87,8 +87,8 @@ type (
 
 		AddAPNSubscription(
 			ctx context.Context,
-			deviceToken []byte,
 			userID common.Address,
+			deviceToken []byte,
 		) error
 
 		RemoveAPNSubscription(ctx context.Context,
@@ -493,7 +493,7 @@ func (s *PostgresNotificationStore) setChannelSettingTx(
 ) error {
 	_, err := tx.Exec(
 		ctx,
-		`INSERT INTO channels (user_id, channel_id, space_id, setting) VALUES ($1, $2, $3, $4) ON CONFLICT (user_id, channel_id) DO UPDATE SET setting = $3`,
+		`INSERT INTO channels (user_id, channel_id, space_id, setting) VALUES ($1, $2, $3, $4) ON CONFLICT (user_id, channel_id) DO UPDATE SET setting = $4`,
 		userID,
 		channelID,
 		spaceID,
@@ -552,9 +552,11 @@ func (s *PostgresNotificationStore) getUserPreferencesTx(
 	err := row.Scan(&userPref.DM, &userPref.GDM)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
+			userPref.DM = DmChannelSettingValue_DM_MESSAGES_YES
+			userPref.GDM = GdmChannelSettingValue_GDM_ONLY_MENTIONS_REPLIES_REACTIONS
+		} else {
+			return nil, err
 		}
-		return nil, err
 	}
 
 	spaceRows, err := tx.Query(
@@ -621,6 +623,15 @@ func (s *PostgresNotificationStore) getUserPreferencesTx(
 		} else if channelID.Type() == shared.STREAM_GDM_CHANNEL_BIN {
 			userPref.GDMChannels[channelID] = GdmChannelSettingValue(setting)
 		}
+	}
+
+	userPref.Subscriptions.APNSubscriptionDeviceTokens, err = s.getAPNSubscriptions(ctx, tx, userID)
+	if err != nil {
+		return nil, err
+	}
+	userPref.Subscriptions.WebPush, err = s.getWebPushSubscriptions(ctx, tx, userID)
+	if err != nil {
+		return nil, err
 	}
 
 	return userPref, nil
@@ -700,8 +711,6 @@ func (s *PostgresNotificationStore) AddWebPushSubscription(
 		nil,
 		"userID", userID,
 	)
-
-	return nil
 }
 
 func (s *PostgresNotificationStore) addWebPushSubscription(
@@ -738,8 +747,6 @@ func (s *PostgresNotificationStore) RemoveWebPushSubscription(
 		nil,
 		"userID", userID,
 	)
-
-	return nil
 }
 
 func (s *PostgresNotificationStore) removeWebPushSubscription(
@@ -810,8 +817,8 @@ func (s *PostgresNotificationStore) getAPNSubscriptions(
 
 func (s *PostgresNotificationStore) AddAPNSubscription(
 	ctx context.Context,
-	deviceToken []byte,
 	userID common.Address,
+	deviceToken []byte,
 ) error {
 	return s.txRunnerWithUUIDCheck(
 		ctx,
@@ -823,8 +830,6 @@ func (s *PostgresNotificationStore) AddAPNSubscription(
 		nil,
 		"userID", userID,
 	)
-
-	return nil
 }
 
 func (s *PostgresNotificationStore) addAPNSubscription(
@@ -857,8 +862,6 @@ func (s *PostgresNotificationStore) RemoveAPNSubscription(ctx context.Context,
 		nil,
 		"userID", userID,
 	)
-
-	return nil
 }
 
 func (s *PostgresNotificationStore) removeAPNSubscription(
