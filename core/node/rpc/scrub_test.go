@@ -302,7 +302,7 @@ func TestScrubStreamTaskProcessor(t *testing.T) {
 			// a scrub on the stream, so this value is already nonzero.
 			now := time.Now()
 
-			scheduled, err := taskScrubber.TryScheduleScrub(ctx, channelId, true)
+			scheduled, err := taskScrubber.TryScheduleScrub(ctx, stream, true)
 			require.Nil(err, "task scheduling error")
 			require.True(scheduled)
 

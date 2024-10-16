@@ -25,7 +25,7 @@ type StreamScrubTaskProcessor interface {
 	// - there is no pending scrub for the given stream.
 	//
 	// If force is set to true, a scrub will be scheduled even if the stream was recently scrubbed.
-	TryScheduleScrub(ctx context.Context, streamId StreamId, force bool) (bool, error)
+	TryScheduleScrub(ctx context.Context, stream events.SyncStream, force bool) (bool, error)
 }
 
 type EventAdder interface {
@@ -181,34 +181,32 @@ func (t *streamScrubTask) process() {
 // in the space before kicking them out of the space.
 func (tp *streamScrubTaskProcessorImpl) TryScheduleScrub(
 	ctx context.Context,
-	streamId StreamId,
+	stream events.SyncStream,
 	force bool,
 ) (bool, error) {
-	log := dlog.FromCtx(ctx).With("Func", "TryScheduleScrub").With("streamId", streamId)
-	// Note: This check ensures we are only scrubbing channels. If we ever scrub spaces,
-	// we'll need to make sure we kick the user from all channels in the space before
-	// kicking them out of the space.
-	if !ValidChannelStreamId(&streamId) {
-		return false, nil
-	}
-
-	stream, err := tp.cache.GetStream(ctx, streamId)
-	if err != nil {
-		log.Warn("Unable to get stream from cache")
-		return false, err
-	}
+	log := dlog.FromCtx(ctx).With("Func", "TryScheduleScrub")
 
 	view, err := stream.GetView(ctx)
 	if err != nil {
-		log.Warn("Unable to get view from stream")
+		log.Warn("Unable to get view from SyncStream", "stream", stream)
 		return false, err
+	}
+
+	streamId := view.StreamId()
+	log = log.With("streamId", streamId)
+
+	// Note: This check ensures we are only scrubbing channels. If we ever scrub spaces,
+	// we'll need to make sure we kick the user from all channels in the space before
+	// kicking them out of the space.
+	if !ValidChannelStreamId(streamId) {
+		return false, nil
 	}
 
 	if !force && time.Since(stream.LastScrubbedTime()) < tp.config.Scrubbing.ScrubEligibleDuration {
 		return false, nil
 	}
 
-	task := &streamScrubTask{channelId: streamId, spaceId: *view.StreamParentId(), taskProcessor: tp}
+	task := &streamScrubTask{channelId: *streamId, spaceId: *view.StreamParentId(), taskProcessor: tp}
 	_, alreadyScheduled := tp.pendingTasks.LoadOrStore(streamId, task)
 	if !alreadyScheduled {
 		log.Info("Scheduling scrub for stream", "lastScrubbedTime", stream.LastScrubbedTime())

@@ -71,7 +71,7 @@ func (s *Service) addParsedEvent(
 		return err
 	}
 
-	_, _ = s.scrubTaskProcessor.TryScheduleScrub(ctx, streamId, false)
+	_, _ = s.scrubTaskProcessor.TryScheduleScrub(ctx, localStream, false)
 
 	canAddEvent, chainAuthArgsList, sideEffects, err := rules.CanAddEvent(
 		ctx,
