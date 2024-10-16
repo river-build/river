@@ -624,6 +624,7 @@ func (s *streamImpl) Sub(ctx context.Context, cookie *SyncCookie, receiver SyncR
 		if err != nil {
 			// The user's sync cookie is out of date. Send a sync reset and return an up-to-date StreamAndCookie.
 			log.Warn("Stream.Sub: out of date cookie.MiniblockNum. Sending sync reset.", "error", err.Error())
+
 			receiver.OnUpdate(
 				&StreamAndCookie{
 					Events:         s.view.MinipoolEnvelopes(),

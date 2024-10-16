@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"github.com/river-build/river/core/node/notifications"
 	"log/slog"
 	"net"
 	"net/http"
@@ -44,6 +45,7 @@ type Service struct {
 	// Storage
 	storagePoolInfo *storage.PgxPoolInfo
 	storage         storage.StreamStorage
+	notifications   notifications.UserPreferencesStore
 
 	// Streams
 	cache              events.StreamCache
@@ -75,6 +77,8 @@ type Service struct {
 
 	// Archiver is not nil if running in archive mode
 	Archiver *Archiver
+
+	NotificationService *notifications.Service
 
 	// Metrics
 	metrics               infra.MetricsFactory
