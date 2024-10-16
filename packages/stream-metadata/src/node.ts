@@ -63,6 +63,8 @@ server.addHook('onRequest', (request, reply, done) => {
 			params: request.params,
 			routerPath: request.routerPath,
 			method: request.method,
+			ip: request.ip,
+			ips: request.ips,
 		},
 	})
 
