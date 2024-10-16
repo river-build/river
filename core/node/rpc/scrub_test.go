@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 
 	"github.com/river-build/river/core/config"
@@ -38,7 +39,10 @@ func addUserToChannel(
 			nil,
 			spaceId[:],
 		),
-		resUser.PrevMiniblockHash,
+		&events.MiniblockRef{
+			Hash: common.BytesToHash(resUser.PrevMiniblockHash),
+			Num:  resUser.MinipoolGen - 1,
+		},
 	)
 	require.NoError(err)
 
