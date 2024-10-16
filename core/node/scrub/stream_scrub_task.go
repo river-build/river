@@ -2,7 +2,6 @@ package scrub
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/auth"
+	"github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/infra"
@@ -50,10 +50,10 @@ type streamScrubTaskProcessorImpl struct {
 	config       *config.Config
 	tracer       trace.Tracer
 
-	streamsScrubbed   *prometheus.CounterVec
-	entitlementLosses *prometheus.CounterVec
-	userBoots         *prometheus.CounterVec
-	scrubQueueLength  *prometheus.GaugeFunc
+	streamsScrubbed   prometheus.Counter
+	entitlementLosses prometheus.Counter
+	userBoots         prometheus.Counter
+	scrubQueueLength  prometheus.GaugeFunc
 }
 
 func NewStreamScrubTasksProcessor(
@@ -78,30 +78,18 @@ func NewStreamScrubTasksProcessor(
 	}
 
 	if metrics != nil {
-		sharedLabels := prometheus.Labels{"node_address": nodeAddress.String()}
-		streamsScrubbedCounter := metrics.NewCounterVecEx(
+		streamsScrubbed := metrics.NewCounterEx(
 			"streams_scrubbed",
 			"Number of streams scrubbed",
-			"space_id",
-			"channel_id",
-			"node_address",
-		).MustCurryWith(sharedLabels)
-		entitlementLossesCounter := metrics.NewCounterVecEx(
+		)
+		entitlementLosses := metrics.NewCounterEx(
 			"entitlement_losses",
 			"Number of entitlement losses detected",
-			"space_id",
-			"channel_id",
-			"user_id",
-			"node_address",
-		).MustCurryWith(sharedLabels)
-		userBootsCounter := metrics.NewCounterVecEx(
+		)
+		userBoots := metrics.NewCounterEx(
 			"user_boots",
 			"Number of users booted due to stream scrubbing",
-			"space_id",
-			"channel_id",
-			"user_id",
-			"node_address",
-		).MustCurryWith(sharedLabels)
+		)
 		scrubQueueLength := metrics.NewGaugeFunc(
 			prometheus.GaugeOpts{
 				Name: "scrub_queue_length",
@@ -111,10 +99,10 @@ func NewStreamScrubTasksProcessor(
 				return float64(proc.workerPool.WaitingQueueSize())
 			},
 		)
-		proc.scrubQueueLength = &scrubQueueLength
-		proc.streamsScrubbed = streamsScrubbedCounter
-		proc.entitlementLosses = entitlementLossesCounter
-		proc.userBoots = userBootsCounter
+		proc.scrubQueueLength = scrubQueueLength
+		proc.streamsScrubbed = streamsScrubbed
+		proc.entitlementLosses = entitlementLosses
+		proc.userBoots = userBoots
 	}
 
 	return proc, nil
@@ -138,9 +126,11 @@ func (tp *streamScrubTaskProcessorImpl) processMember(
 
 	if tp.tracer != nil {
 		ctx, span = tp.tracer.Start(ctx, "member_scrub")
-		span.SetAttributes(attribute.String("spaceId", task.spaceId.String()))
-		span.SetAttributes(attribute.String("channelId", task.channelId.String()))
-		span.SetAttributes(attribute.String("userId", member))
+		span.SetAttributes(
+			attribute.String("spaceId", task.spaceId.String()),
+			attribute.String("channelId", task.channelId.String()),
+			attribute.String("userId", member),
+		)
 		defer func() {
 			span.RecordError(err)
 			if err != nil {
@@ -163,15 +153,14 @@ func (tp *streamScrubTaskProcessorImpl) processMember(
 			auth.PermissionRead,
 		),
 	); err != nil {
-		log.Error("Scrubbing error: unable to evaluate user entitlement",
-			"user",
-			member,
-			"error",
-			err,
-		)
-		err = fmt.Errorf("unable to evaluate user entitlement: %w", err)
+		err = base.AsRiverError(err).
+			Message("unable to evaluate user entitlement").
+			Func("StreamScrubTaskProcessor.processMember").
+			Tag("user", member).
+			LogError(log)
 		return
 	}
+
 	if span != nil {
 		span.SetAttributes(attribute.Bool("isEntitled", isEntitled))
 	}
@@ -180,39 +169,36 @@ func (tp *streamScrubTaskProcessorImpl) processMember(
 	// after joining the channel, so let's go ahead and boot them.
 	if !isEntitled {
 		if tp.entitlementLosses != nil {
-			tp.entitlementLosses.With(
-				prometheus.Labels{
-					"space_id":   task.spaceId.String(),
-					"channel_id": task.channelId.String(),
-					"user_id":    member,
-				},
-			).Inc()
+			tp.entitlementLosses.Inc()
 		}
+
 		var userId []byte
 		if userId, err = AddressFromUserId(member); err != nil {
-			log.Error("Error converting user id into address", "member", member, "error", err)
-			err = fmt.Errorf("error converting user id into address: %w", err)
+			err = base.AsRiverError(err).
+				Message("error converting user id into address").
+				Func("StreamScrubTaskProcessor.processMember").
+				Tag("user", member).
+				LogError(log)
 			return
 		}
 
 		var userStreamId StreamId
 		if userStreamId, err = UserStreamIdFromBytes(userId); err != nil {
-			log.Error(
-				"Error constructing user id stream from user address",
-				"userAddress",
-				userId,
-				"error",
-				err,
-			)
-			err = fmt.Errorf("error constructing user id stream from address: %w", err)
+			err = base.AsRiverError(err).
+				Message("error constructing userid stream from user address").
+				Func("StreamScrubTaskProcessor.processMember").
+				Tag("userId", userId).
+				LogError(log)
 			return
 		}
+
 		log.Info("Entitlement loss detected; adding LEAVE event for user",
 			"user",
 			member,
 			"userStreamId",
 			userStreamId,
 		)
+
 		if err = tp.eventAdder.AddEventPayload(
 			ctx,
 			userStreamId,
@@ -223,26 +209,17 @@ func (tp *streamScrubTaskProcessorImpl) processMember(
 				task.spaceId[:],
 			),
 		); err != nil {
-			log.Error(
-				"scrub error: unable to add channel leave event to user stream",
-				"userStreamId",
-				userStreamId,
-				"error",
-				err,
-			)
-			err = fmt.Errorf("unable to add channel leave event to user stream: %w", err)
+			err = base.AsRiverError(err).
+				Message("unable to add channel leave event to user stream").
+				Func("StreamScrubTaskProcessor.processMember").
+				Tag("userStreamId", userStreamId).
+				LogError(log)
 			return
 		}
 	}
 
 	if tp.userBoots != nil {
-		tp.userBoots.With(
-			prometheus.Labels{
-				"space_id":   task.spaceId.String(),
-				"channel_id": task.channelId.String(),
-				"user_id":    member,
-			},
-		).Inc()
+		tp.userBoots.Inc()
 	}
 
 	return err
@@ -258,8 +235,10 @@ func (tp *streamScrubTaskProcessorImpl) processTask(task *streamScrubTask) {
 	ctx := tp.ctx
 	if tp.tracer != nil {
 		ctx, span = tp.tracer.Start(tp.ctx, "streamScrubTaskProcess.processTask")
-		span.SetAttributes(attribute.String("spaceId", task.spaceId.String()))
-		span.SetAttributes(attribute.String("channelId", task.channelId.String()))
+		span.SetAttributes(
+			attribute.String("spaceId", task.spaceId.String()),
+			attribute.String("channelId", task.channelId.String()),
+		)
 		defer span.End()
 	}
 
@@ -294,12 +273,7 @@ func (tp *streamScrubTaskProcessorImpl) processTask(task *streamScrubTask) {
 	}
 
 	if tp.streamsScrubbed != nil {
-		tp.streamsScrubbed.With(
-			prometheus.Labels{
-				"space_id":   task.spaceId.String(),
-				"channel_id": task.channelId.String(),
-			},
-		).Inc()
+		tp.streamsScrubbed.Inc()
 	}
 }
 
