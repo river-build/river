@@ -18,7 +18,7 @@ export type JoinSpaceParams = z.infer<typeof joinSpaceParamsSchema>
 export type JoinSpaceCommand = z.infer<typeof joinSpaceCommand>
 
 // joins space and announcement channel
-// idempotent, fine to run if user is already a space member
+// this command is idempotent, fine to run if user is already a space member
 export async function joinSpace(client: StressClient, cfg: ChatConfig, params: JoinSpaceParams) {
     const logger = client.logger.child({
         name: 'joinSpace',
