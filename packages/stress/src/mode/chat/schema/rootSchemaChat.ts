@@ -8,6 +8,8 @@ import { getLogger } from '../../../utils/logger'
 import { testSchema, TestPlan } from './testPlanSchema'
 import { executeCommand } from './executeCommand'
 import { RedisStorage } from '../../../utils/storage'
+import { MintMembershipsCommand } from './commands/mintMembershipCommand'
+import { JoinSpaceCommand } from './commands/joinSpaceCommand'
 
 export async function setupSchemaChat(opts: {
     config: RiverConfig
@@ -38,13 +40,20 @@ export async function setupSchemaChat(opts: {
         JSON.stringify({
             commands: [
                 {
+                    name: 'mintMemberships',
+                    params: {
+                        spaceId,
+                        timeoutS: 400,
+                    },
+                } as MintMembershipsCommand,
+                {
                     name: 'joinSpace',
                     params: {
                         spaceId,
                         announceChannelId,
                         skipMintMembership: true,
                     },
-                },
+                } as JoinSpaceCommand,
             ],
         } as TestPlan),
     )

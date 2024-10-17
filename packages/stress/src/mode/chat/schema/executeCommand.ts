@@ -4,6 +4,7 @@ import { Command } from './testPlanSchema'
 import { getLogger } from '../../../utils/logger'
 import { joinSpace } from './commands/joinSpaceCommand'
 import { check } from '@river-build/dlog'
+import { mintMemberships } from './commands/mintMembershipCommand'
 
 export async function executeCommand(
     command: Command,
@@ -34,26 +35,32 @@ export async function executeCommand(
     let execute: execFn | undefined = undefined
 
     switch (command.name) {
+        case 'mintMemberships':
+            {
+                execute = async (client: StressClient, cfg: ChatConfig) => {
+                    await mintMemberships(client, cfg, command.params)
+                }
+            }
+            break
         case 'joinSpace':
             {
                 execute = async (client: StressClient, cfg: ChatConfig) =>
                     await joinSpace(client, cfg, command.params)
             }
             break
-        case 'expectRootMessage':
+        case 'expectChannelMessage':
             break
-        case 'sendRootMessage':
+        case 'sendChannelMessage':
             break
         default: {
             logger.error({ command }, 'unrecognized command type')
         }
     }
 
-    check(!!execute, 'Unrecognized command type')
-
+    check(!!execute, 'Unimplemented command type')
     await Promise.all(
         targetClients.map(async (client) => {
-            await execute!(client, chatConfig)
+            await execute(client, chatConfig)
         }),
     )
 }
