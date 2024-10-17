@@ -155,7 +155,7 @@ describe('syncAgents.test.ts', () => {
         await waitFor(
             () =>
                 expect(
-                    aliceGdm.timeline.events.value.find((e) => e.text === 'Hello, World!'),
+                    findMessageByText(aliceGdm.timeline.events.value, 'Hello, World!'),
                 ).toBeDefined(),
             { timeoutMS: 10000 },
         )
