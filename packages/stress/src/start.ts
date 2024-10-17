@@ -5,6 +5,7 @@ import { exit } from 'process'
 import { Wallet } from 'ethers'
 import { isSet } from './utils/expect'
 import { setupChat, startStressChat } from './mode/chat/root_chat'
+import { setupSchemaChat, startSchemaChat } from './mode/chat/schema/rootSchemaChat'
 import { startStressSlowChat } from './mode/slowchat/root_slowchat'
 import { getLogger } from './utils/logger'
 
@@ -57,6 +58,20 @@ const run = async () => {
             break
         case 'slowchat':
             await startStressSlowChat({
+                config,
+                processIndex,
+                rootWallet: getRootWallet().wallet,
+            })
+            break
+
+        case 'setup_schemachat':
+            await setupSchemaChat({
+                config,
+                rootWallet: getRootWallet().wallet,
+            })
+            break
+        case 'schemachat':
+            await startSchemaChat({
                 config,
                 processIndex,
                 rootWallet: getRootWallet().wallet,

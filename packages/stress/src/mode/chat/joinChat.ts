@@ -97,7 +97,7 @@ export async function joinChat(client: StressClient, cfg: ChatConfig) {
 }
 
 // cruft we need to do for process leader
-async function startFollowerClient(
+export async function startFollowerClient(
     client: StressClient,
     spaceId: string,
     announceChannelId: string,
