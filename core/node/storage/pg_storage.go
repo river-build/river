@@ -44,6 +44,8 @@ type PostgresEventStore struct {
 
 	txCounter  *infra.StatusCounterVec
 	txDuration *prometheus.HistogramVec
+
+	isolationLevel pgx.TxIsoLevel
 }
 
 // var _ StreamStorage = (*PostgresEventStore)(nil)
@@ -131,7 +133,7 @@ func (s *PostgresEventStore) txRunnerInner(
 	}
 	defer release()
 
-	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.Serializable, AccessMode: accessMode})
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: s.isolationLevel, AccessMode: accessMode})
 	if err != nil {
 		return err
 	}
@@ -573,6 +575,21 @@ func (s *PostgresEventStore) init(
 		infra.DefaultDurationBucketsSeconds,
 		"name",
 	)
+
+	switch strings.ToLower(poolInfo.Config.IsolationLevel) {
+	case "serializable":
+		s.isolationLevel = pgx.Serializable
+	case "repeatable read", "repeatable_read", "repeatableread":
+		s.isolationLevel = pgx.RepeatableRead
+	case "read committed", "read_committed", "readcommitted":
+		s.isolationLevel = pgx.ReadCommitted
+	default:
+		s.isolationLevel = pgx.Serializable
+	}
+
+	if s.isolationLevel != pgx.Serializable {
+		log.Info("PostgresEventStore: using isolation level", "level", s.isolationLevel)
+	}
 
 	err := s.InitStorage(ctx)
 	if err != nil {
