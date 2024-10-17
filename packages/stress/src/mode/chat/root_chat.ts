@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { check } from '@river-build/dlog'
 import { promises as fs } from 'node:fs'
 import {
@@ -227,11 +228,11 @@ export async function setupChat(opts: {
         `ANNOUNCE_CHANNEL_ID=${announceChannelId}`,
         `CHANNEL_IDS=${channelIds.join(',')}`,
     ]
-    logger.info(envVars.join('\n'))
+    console.log(envVars.join('\n'))
     await fs.writeFile('scripts/.env.localhost_chat', envVars.join('\n'))
-    logger.info('join at', `http://localhost:3000/t/${spaceId}/?invite`)
-    logger.info('or', `http://localhost:3001/spaces/${spaceId}/?invite`)
-    logger.info('done')
+    console.log('join at', `http://localhost:3000/t/${spaceId}/?invite`)
+    console.log('or', `http://localhost:3001/spaces/${spaceId}/?invite`)
+    console.log('done')
 
     return {
         spaceId,
