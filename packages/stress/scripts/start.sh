@@ -12,9 +12,9 @@ export RIVER_CHAIN_RPC_URL="${RIVER_CHAIN_RPC_URL}"
 export MNEMONIC="${MNEMONIC}"
 export REDIS_HOST="${REDIS_HOST:-}"
 # stress
-export SPACE_ID="${SPACE_ID}"
+export SPACE_ID="${SPACE_ID:-}"
 export ANNOUNCE_CHANNEL_ID="${ANNOUNCE_CHANNEL_ID:-}"
-export CHANNEL_IDS="${CHANNEL_IDS}"
+export CHANNEL_IDS="${CHANNEL_IDS:-}"
 export SESSION_ID="${SESSION_ID}" # used to identify metrics across multiple containers in the same run
 export STRESS_MODE="${STRESS_MODE}" # values are chat, info
 export STRESS_DURATION="${STRESS_DURATION:-600}"
