@@ -39,7 +39,7 @@ export STRESS_DURATION="${STRESS_DURATION:-180}"
 export SESSION_ID="${SESSION_ID:-$(uuidgen)}"
 
 export PROCESSES_PER_CONTAINER="${PROCESSES_PER_CONTAINER:-4}"
-export CLIENTS_COUNT="${CLIENTS_COUNT:-100}"
+export CLIENTS_COUNT="${CLIENTS_COUNT:-8}"
 export RANDOM_CLIENTS_COUNT="${RANDOM_CLIENTS_COUNT:-5}"
 
 export MNEMONIC="toy alien remain valid print employ age multiply claim student story aware" 

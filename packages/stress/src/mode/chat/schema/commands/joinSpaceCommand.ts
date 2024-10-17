@@ -18,17 +18,13 @@ export type JoinSpaceParams = z.infer<typeof joinSpaceParamsSchema>
 export type JoinSpaceCommand = z.infer<typeof joinSpaceCommand>
 
 // joins space and announcement channel
+// idempotent, fine to run if user is already a space member
 export async function joinSpace(client: StressClient, cfg: ChatConfig, params: JoinSpaceParams) {
     const logger = client.logger.child({
         name: 'joinSpace',
-        clientIndex: client.clientIndex,
+        logId: client.logId,
         params,
     })
-
-    // is user a member of the space?
-    // does user exist on the stream node?
-
-    logger.info('start joinSpace')
 
     // start up the client, join space and announcement channel
     const userExists = client.userExists()
@@ -49,14 +45,18 @@ export async function joinSpace(client: StressClient, cfg: ChatConfig, params: J
     }
 
     // wait for the user to have a membership nft
-    await client.waitFor(
-        () =>
-            client.spaceDapp.hasSpaceMembership(params.spaceId, client.baseProvider.wallet.address),
-        {
-            interval: 1000 + Math.random() * 1000,
-            timeoutMs: cfg.waitForSpaceMembershipTimeoutMs,
-        },
-    )
-
-    logger.info('start client')
+    if (!params.skipMintMembership) {
+        await client.waitFor(
+            () =>
+                client.spaceDapp.hasSpaceMembership(
+                    params.spaceId,
+                    client.baseProvider.wallet.address,
+                ),
+            {
+                interval: 1000 + Math.random() * 1000,
+                timeoutMs: cfg.waitForSpaceMembershipTimeoutMs,
+            },
+        )
+    }
+    logger.info('client joined space and announcement channel')
 }

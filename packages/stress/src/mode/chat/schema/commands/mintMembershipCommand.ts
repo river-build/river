@@ -21,6 +21,19 @@ export type MintMembershipsCommand = z.infer<typeof mintMembershipsCommand>
 
 async function waitForMint(client: StressClient, cfg: ChatConfig, params: MintMembershipsParams) {
     const key = cfg.sessionId + ':mintMemberships'
+    const logger = client.logger.child({
+        name: 'mintMemberships',
+        logId: client.logId,
+        params,
+    })
+    logger.debug(
+        {
+            clientIndex: client.clientIndex,
+            processIndex: cfg.processIndex,
+        },
+        'Waiting for memberships to mint...',
+    )
+
     await waitFor(
         async () => {
             const val = await cfg.globalPersistedStore?.get(key)
@@ -32,10 +45,18 @@ async function waitForMint(client: StressClient, cfg: ChatConfig, params: MintMe
             logId: client.logId,
         },
     )
+
+    logger.debug(
+        {
+            clientIndex: client.clientIndex,
+            processIndex: cfg.processIndex,
+        },
+        'All memberships minted, moving forward...',
+    )
 }
 
 // Space owner to mint memberships for all other clients. Other clients wait for client 0 to finish
-// minting.
+// minting. clients are orchestrated via an entry in redis which is keyed by session id.
 export async function mintMemberships(
     client: StressClient,
     cfg: ChatConfig,
@@ -43,10 +64,16 @@ export async function mintMemberships(
 ) {
     const logger = client.logger.child({
         name: 'mintMemberships',
-        clientIndex: client.clientIndex,
+        logId: client.logId,
         params,
     })
 
+    if (client.clientIndex % cfg.clientsPerProcess !== 0) {
+        return
+    }
+
+    // Have a single client on each process wait for the redis key to be set in order
+    // to ensure all memberships are minted before proceeding.
     if (client.clientIndex !== 0) {
         return await waitForMint(client, cfg, params)
     }
