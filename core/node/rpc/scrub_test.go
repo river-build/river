@@ -294,6 +294,9 @@ func TestScrubStreamTaskProcessor(t *testing.T) {
 				eventAdder,
 				tc.mockChainAuth,
 				service.config,
+				nil,
+				nil,
+				common.Address{},
 			)
 			require.NoError(err)
 
