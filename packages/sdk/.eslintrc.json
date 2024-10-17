@@ -4,8 +4,8 @@
         "eslint:recommended",
         "plugin:import/recommended",
         "plugin:import/typescript",
-        "plugin:@typescript-eslint/recommended",
-        "plugin:@typescript-eslint/recommended-requiring-type-checking",
+
+        "plugin:@typescript-eslint/recommended-type-checked",
         "plugin:prettier/recommended",
         "plugin:jest/recommended"
     ],
@@ -48,8 +48,9 @@
                 "allow": ["arrowFunctions"]
             }
         ],
-
-        "@typescript-eslint/ban-ts-comment": "off"
+        "@typescript-eslint/ban-ts-comment": "off",
+        "@typescript-eslint/no-empty-object-type": "off",
+        "@typescript-eslint/no-restricted-types": "error"
     },
     "overrides": [
         {

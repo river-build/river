@@ -202,6 +202,7 @@ class MicroTask {
         }
         if (this.isStarted && state === this.endState) {
             this.resolve()
+            // eslint-disable-next-line @typescript-eslint/no-unused-expressions
             this._isCompleted
         }
     }
