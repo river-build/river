@@ -6,9 +6,9 @@ const paramsSchema = z.object({
     timeoutMs: z.number().nonnegative(),
 })
 
-export const expectMessage = baseCommand.extend({
-    name: z.literal('expectRootMessage'),
+export const expectChannelMessage = baseCommand.extend({
+    name: z.literal('expectChannelMessage'),
     params: paramsSchema,
 })
 
-export type ExpectMessageParams = z.infer<typeof paramsSchema>
+export type ExpectChannelMessageParams = z.infer<typeof paramsSchema>

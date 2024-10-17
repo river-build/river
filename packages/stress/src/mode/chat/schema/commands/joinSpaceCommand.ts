@@ -2,7 +2,6 @@ import { StressClient } from '../../../../utils/stressClient'
 import { ChatConfig } from '../../../common/types'
 import { z } from 'zod'
 import { baseCommand } from './baseCommand'
-import { startFollowerClient } from '../../joinChat'
 
 const joinSpaceParamsSchema = z.object({
     spaceId: z.string(),
@@ -16,7 +15,9 @@ export const joinSpaceCommand = baseCommand.extend({
 })
 
 export type JoinSpaceParams = z.infer<typeof joinSpaceParamsSchema>
+export type JoinSpaceCommand = z.infer<typeof joinSpaceCommand>
 
+// joins space and announcement channel
 export async function joinSpace(client: StressClient, cfg: ChatConfig, params: JoinSpaceParams) {
     const logger = client.logger.child({
         name: 'joinSpace',
@@ -29,6 +30,24 @@ export async function joinSpace(client: StressClient, cfg: ChatConfig, params: J
 
     logger.info('start joinSpace')
 
+    // start up the client, join space and announcement channel
+    const userExists = client.userExists()
+    if (!userExists) {
+        await client.joinSpace(params.spaceId, { skipMintMembership: params.skipMintMembership })
+    } else {
+        const isMember = await client.isMemberOf(params.spaceId)
+        if (!isMember) {
+            await client.joinSpace(params.spaceId, {
+                skipMintMembership: params.skipMintMembership,
+            })
+        }
+    }
+
+    const isChannelMember = await client.isMemberOf(params.announceChannelId)
+    if (!isChannelMember) {
+        await client.streamsClient.joinStream(params.announceChannelId)
+    }
+
     // wait for the user to have a membership nft
     await client.waitFor(
         () =>
@@ -40,7 +59,4 @@ export async function joinSpace(client: StressClient, cfg: ChatConfig, params: J
     )
 
     logger.info('start client')
-
-    // start up the client
-    await startFollowerClient(client, params.spaceId, params.announceChannelId)
 }
