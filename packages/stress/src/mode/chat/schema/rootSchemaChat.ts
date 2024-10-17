@@ -91,7 +91,7 @@ export async function startSchemaChat(opts: {
 
     check(!!rawTestPlan, 'Test plan not found in redis')
 
-    var plan: TestPlan | undefined = undefined
+    let plan: TestPlan | undefined = undefined
     try {
         plan = testSchema.parse(JSON.parse(rawTestPlan))
     } catch (err) {
@@ -100,7 +100,9 @@ export async function startSchemaChat(opts: {
     }
     check(!!plan, 'Test plan did not parse')
 
-    plan.commands.forEach(async (command, index) => {
-        await executeCommand(command, command.name + index, chatConfig, clients)
-    })
+    // Execute commands in lockstep
+    for (let i = 0; i < plan.commands.length; i++) {
+        const command = plan.commands[i]
+        await executeCommand(command, i + '_' + command.name, chatConfig, clients)
+    }
 }

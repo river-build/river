@@ -31,7 +31,7 @@ export async function executeCommand(
 
     logger.debug({ commandId, targetClientIndices }, 'Executing command for clients', 'command')
     type execFn = (client: StressClient, cfg: ChatConfig) => Promise<void>
-    var execute: execFn | undefined = undefined
+    let execute: execFn | undefined = undefined
 
     switch (command.name) {
         case 'joinSpace':
@@ -41,12 +41,8 @@ export async function executeCommand(
             }
             break
         case 'expectRootMessage':
-            {
-            }
             break
         case 'sendRootMessage':
-            {
-            }
             break
         default: {
             logger.error({ command }, 'unrecognized command type')
@@ -54,6 +50,7 @@ export async function executeCommand(
     }
 
     check(!!execute, 'Unrecognized command type')
+
     await Promise.all(
         targetClients.map(async (client) => {
             await execute!(client, chatConfig)
