@@ -1,15 +1,15 @@
 import { z } from 'zod'
 
 import { joinSpaceCommand } from './commands/joinSpaceCommand'
-import { sendChannelMessage } from './commands/sendChannelMessage'
-import { expectChannelMessage } from './commands/expectChannelMessage'
+import { sendChannelMessageCommand } from './commands/sendChannelMessageCommand'
+import { expectChannelMessageCommand } from './commands/expectChannelMessageCommand'
 import { mintMembershipsCommand } from './commands/mintMembershipCommand'
 
 const commands = z.union([
     joinSpaceCommand,
-    sendChannelMessage,
-    expectChannelMessage,
+    sendChannelMessageCommand,
     mintMembershipsCommand,
+    expectChannelMessageCommand,
 ])
 
 export const testSchema = z.object({

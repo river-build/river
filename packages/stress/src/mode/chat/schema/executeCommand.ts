@@ -5,6 +5,8 @@ import { getLogger } from '../../../utils/logger'
 import { joinSpace } from './commands/joinSpaceCommand'
 import { check } from '@river-build/dlog'
 import { mintMemberships } from './commands/mintMembershipCommand'
+import { sendChannelMessage } from './commands/sendChannelMessageCommand'
+import { expectChannelMessages } from './commands/expectChannelMessageCommand'
 
 export async function executeCommand(
     command: Command,
@@ -13,7 +15,7 @@ export async function executeCommand(
     clients: StressClient[],
 ) {
     const logger = getLogger('stress:run', { function: 'executeCommand' })
-    logger.info({ command }, 'executing command')
+    logger.info({ command }, '--------------- executing command ---------------')
 
     const range = (start: number, end: number) =>
         Array.from({ length: end - start }, (v, k) => k + start)
@@ -49,8 +51,17 @@ export async function executeCommand(
             }
             break
         case 'expectChannelMessage':
+            {
+                execute = async (client: StressClient, cfg: ChatConfig) =>
+                    await expectChannelMessages(client, cfg, command.params)
+            }
             break
         case 'sendChannelMessage':
+            {
+                execute = async (client: StressClient, cfg: ChatConfig) => {
+                    await sendChannelMessage(client, cfg, command.params)
+                }
+            }
             break
         default: {
             logger.error({ command }, 'unrecognized command type')
@@ -60,7 +71,10 @@ export async function executeCommand(
     check(!!execute, 'Unimplemented command type')
     await Promise.all(
         targetClients.map(async (client) => {
-            await execute(client, chatConfig)
+            // Should not be an issue due to the check line above, but sometimes
+            // tsc complains that execute may be undefined.
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            await execute!(client, chatConfig)
         }),
     )
 }

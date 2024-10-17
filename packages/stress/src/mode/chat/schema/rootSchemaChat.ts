@@ -10,6 +10,8 @@ import { executeCommand } from './executeCommand'
 import { RedisStorage } from '../../../utils/storage'
 import { MintMembershipsCommand } from './commands/mintMembershipCommand'
 import { JoinSpaceCommand } from './commands/joinSpaceCommand'
+import { SendChannelMessageCommand } from './commands/sendChannelMessageCommand'
+import { ExpectChannelMessageCommand } from './commands/expectChannelMessageCommand'
 
 export async function setupSchemaChat(opts: {
     config: RiverConfig
@@ -54,6 +56,25 @@ export async function setupSchemaChat(opts: {
                         skipMintMembership: true,
                     },
                 } as JoinSpaceCommand,
+                {
+                    name: 'sendChannelMessage',
+                    params: {
+                        channelId: channelIds[0],
+                        messages: ['${SESSION_ID} ${CLIENT_ID} Hello, world!'],
+                    },
+                    targetClients: [0],
+                } as SendChannelMessageCommand,
+                {
+                    name: 'expectChannelMessage',
+                    params: {
+                        channelId: channelIds[0],
+                        messages: [
+                            {
+                                content: '${SESSION_ID}'
+                            }
+                        ],
+                    },
+                } as ExpectChannelMessageCommand,
             ],
         } as TestPlan),
     )
@@ -95,10 +116,8 @@ export async function startSchemaChat(opts: {
     )
 
     const rawTestPlan = await chatConfig.globalPersistedStore?.get('testPlan')
-
-    logger.info({ rawTestPlan }, 'fetched test plan from redis')
-
     check(!!rawTestPlan, 'Test plan not found in redis')
+    logger.info({ rawTestPlan }, 'fetched test plan from redis')
 
     let plan: TestPlan | undefined = undefined
     try {
@@ -112,6 +131,35 @@ export async function startSchemaChat(opts: {
     // Execute commands in lockstep
     for (let i = 0; i < plan.commands.length; i++) {
         const command = plan.commands[i]
-        await executeCommand(command, i + '_' + command.name, chatConfig, clients)
+        try {
+            await executeCommand(command, i + '_' + command.name, chatConfig, clients)
+        } catch (err) {
+            // Datadog
+            logger.error(
+                {
+                    command,
+                    index: i,
+                    err,
+                    sessionId: chatConfig.sessionId,
+                    processId: chatConfig.processIndex,
+                },
+                'Test failure: error executing command',
+            )
+
+            // persist
+            chatConfig.globalPersistedStore?.set(
+                chatConfig.sessionId + ':failure',
+                String({
+                    processId: chatConfig.processIndex,
+                    command,
+                    index: i,
+                    err,
+                }),
+            )
+            throw err
+        }
     }
+
+    // Key exchange for observer
+    await new Promise(resolve => setTimeout(resolve, 60000));
 }
