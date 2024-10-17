@@ -202,10 +202,10 @@ type DatabaseConfig struct {
 	// If set to 0, then default value is used. To disable the delay set to 1ms or less.
 	StartupDelay time.Duration
 
-	// IsolationLevel is the transaction isolation level to use for the database oprations.
+	// IsolationLevel is the transaction isolation level to use for the database operations.
 	// Allowed values: "serializable", "repeatable read", "read committed".
 	// If not set or value can't be parsed, defaults to "serializable".
-	// Interntion is to migrate to "read committed" for performance reasons after testing is complete.
+	// Intention is to migrate to "read committed" for performance reasons after testing is complete.
 	IsolationLevel string
 }
 
