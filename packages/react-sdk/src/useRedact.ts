@@ -5,20 +5,21 @@ import { useMemo } from 'react'
 import { type ActionConfig, useAction } from './internals/useAction'
 import { useSyncAgent } from './useSyncAgent'
 
-export const useReaction = (
+// TODO: make this a hook that takes a roomId (any channel, dm/gdm etc)
+export const useRedact = (
     spaceId: string,
     channelId: string,
-    config?: ActionConfig<Channel['sendReaction']>,
+    config?: ActionConfig<Channel['redactEvent']>,
 ) => {
     const sync = useSyncAgent()
-    const channel = useMemo(
+    const room = useMemo(
         () => sync.spaces.getSpace(spaceId).getChannel(channelId),
         [sync.spaces, spaceId, channelId],
     )
-    const { action: sendReaction, ...rest } = useAction(channel, 'sendReaction', config)
+    const { action: redactEvent, ...rest } = useAction(room, 'redactEvent', config)
 
     return {
-        sendReaction,
+        redactEvent,
         ...rest,
     }
 }

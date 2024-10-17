@@ -10,7 +10,7 @@ import type {
     ChannelProperties,
 } from '@river-build/proto'
 import type { PlainMessage } from '@bufbuild/protobuf'
-import { Timeline } from '../../timeline/timeline'
+import { MessageTimeline } from '../../timeline/timeline'
 
 const logger = dlogger('csb:gdm')
 
@@ -23,11 +23,11 @@ export interface GdmModel extends Identifiable {
 
 @persistedObservable({ tableName: 'gdm' })
 export class Gdm extends PersistedObservable<GdmModel> {
-    timeline: Timeline
+    timeline: MessageTimeline
     members: Members
     constructor(id: string, private riverConnection: RiverConnection, store: Store) {
         super({ id, isJoined: false, initialized: false }, store, LoadPriority.high)
-        this.timeline = new Timeline(riverConnection.userId)
+        this.timeline = new MessageTimeline(riverConnection.userId)
         this.members = new Members(id, riverConnection, store)
     }
 
