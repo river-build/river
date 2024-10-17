@@ -70,8 +70,8 @@ export async function setupSchemaChat(opts: {
                         channelId: channelIds[0],
                         messages: [
                             {
-                                content: '${SESSION_ID}'
-                            }
+                                content: '${SESSION_ID}',
+                            },
                         ],
                     },
                 } as ExpectChannelMessageCommand,
@@ -130,6 +130,23 @@ export async function startSchemaChat(opts: {
 
     // Execute commands in lockstep
     for (let i = 0; i < plan.commands.length; i++) {
+        const failure = await chatConfig.globalPersistedStore?.get(
+            chatConfig.sessionId + ':failure',
+        )
+        if (failure) {
+            chatConfig.globalPersistedStore?.set(
+                chatConfig.sessionId + ':' + chatConfig.processIndex + ':status',
+                'detected_failure',
+            )
+            logger.info(
+                {
+                    failure,
+                },
+                'Detected failure in another stress test process, exiting',
+            )
+            return
+        }
+
         const command = plan.commands[i]
         try {
             await executeCommand(command, i + '_' + command.name, chatConfig, clients)
@@ -146,20 +163,30 @@ export async function startSchemaChat(opts: {
                 'Test failure: error executing command',
             )
 
-            // persist
+            // persist global test run failure
             chatConfig.globalPersistedStore?.set(
                 chatConfig.sessionId + ':failure',
-                String({
+                JSON.stringify({
                     processId: chatConfig.processIndex,
                     command,
                     index: i,
                     err,
                 }),
             )
+
+            chatConfig.globalPersistedStore?.set(
+                chatConfig.sessionId + ':' + chatConfig.processIndex + ':status',
+                'failed',
+            )
+
             throw err
         }
     }
 
+    chatConfig.globalPersistedStore?.set(
+        chatConfig.sessionId + ':' + chatConfig.processIndex + ':status',
+        'success',
+    )
     // Key exchange for observer
-    await new Promise(resolve => setTimeout(resolve, 60000));
+    await new Promise((resolve) => setTimeout(resolve, 60000))
 }

@@ -61,12 +61,15 @@ async function waitForMessage(
         { interval: 1000, timeoutMs: cfg.waitForChannelDecryptionTimeoutMs },
     )
     if (client.clientIndex % cfg.clientsPerProcess === 0) {
-        logger.info({
-            processIndex: cfg.processIndex,
-            clientIndex: client.clientIndex,
-            channel: channel.streamId,
-            text,
-        }, "Detected message in channel")
+        logger.info(
+            {
+                processIndex: cfg.processIndex,
+                clientIndex: client.clientIndex,
+                channel: channel.streamId,
+                text,
+            },
+            'Detected message in channel',
+        )
     }
 }
 
