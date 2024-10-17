@@ -17,6 +17,30 @@ import { User } from './collections/user'
 import { Gdms } from './collections/gdms'
 import { Gdm } from './models/gdm'
 
+const TABLE_NAMES = [
+    'channel',
+    'space',
+    'spaces',
+    'riverChain',
+    'riverConnection',
+    'user',
+    'userMetadata',
+    'userInbox',
+    'userMemberships',
+    'userSettings',
+    'members',
+    'memberUsername',
+    'memberDisplayName',
+    'memberEnsAddress',
+    'memberNft',
+    'memberMembership',
+    'gdm',
+    'gdms',
+    'timeline',
+] as const
+
+export type TABLE_NAME = (typeof TABLE_NAMES)[number]
+
 export const DB_VERSION = 1
 export const DB_MODELS = [
     Channel,
