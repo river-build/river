@@ -71,7 +71,7 @@ export async function executeCommand(
     check(!!execute, 'Unimplemented command type')
     await Promise.all(
         targetClients.map(async (client) => {
-            // Should not be an issue due to the check line above, but sometimes
+            // A null `execute` should not be an issue due to the check line above, but sometimes
             // tsc complains that execute may be undefined.
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
             await execute!(client, chatConfig)
