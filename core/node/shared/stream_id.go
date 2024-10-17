@@ -109,6 +109,14 @@ func (id StreamId) Compare(other StreamId) int {
 	return bytes.Compare(id[:], other[:])
 }
 
+// SpaceID returns the space id that this stream is part of.
+// (only works for stream id's of type STREAM_CHANNEL_BIN)
+func (id StreamId) SpaceID() StreamId {
+	spaceID := StreamId{STREAM_SPACE_BIN}
+	copy(spaceID[1:], id[1:21])
+	return spaceID
+}
+
 // user streams are expected to have 20 bytes of address, so the expected content length is 21 when including the prefix
 func StreamIdContentLengthForType(t byte) (int, error) {
 	switch t {

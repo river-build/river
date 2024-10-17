@@ -33,12 +33,12 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// NotificationServiceSetSettingsProcedure is the fully-qualified name of the NotificationService's
-	// SetSettings RPC.
-	NotificationServiceSetSettingsProcedure = "/river.NotificationService/SetSettings"
 	// NotificationServiceGetSettingsProcedure is the fully-qualified name of the NotificationService's
 	// GetSettings RPC.
 	NotificationServiceGetSettingsProcedure = "/river.NotificationService/GetSettings"
+	// NotificationServiceSetSettingsProcedure is the fully-qualified name of the NotificationService's
+	// SetSettings RPC.
+	NotificationServiceSetSettingsProcedure = "/river.NotificationService/SetSettings"
 	// NotificationServiceSetDmGdmSettingsProcedure is the fully-qualified name of the
 	// NotificationService's SetDmGdmSettings RPC.
 	NotificationServiceSetDmGdmSettingsProcedure = "/river.NotificationService/SetDmGdmSettings"
@@ -65,8 +65,8 @@ const (
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
 	notificationServiceServiceDescriptor                  = protocol.File_notifications_proto.Services().ByName("NotificationService")
-	notificationServiceSetSettingsMethodDescriptor        = notificationServiceServiceDescriptor.Methods().ByName("SetSettings")
 	notificationServiceGetSettingsMethodDescriptor        = notificationServiceServiceDescriptor.Methods().ByName("GetSettings")
+	notificationServiceSetSettingsMethodDescriptor        = notificationServiceServiceDescriptor.Methods().ByName("SetSettings")
 	notificationServiceSetDmGdmSettingsMethodDescriptor   = notificationServiceServiceDescriptor.Methods().ByName("SetDmGdmSettings")
 	notificationServiceSetSpaceSettingsMethodDescriptor   = notificationServiceServiceDescriptor.Methods().ByName("SetSpaceSettings")
 	notificationServiceSetChannelSettingsMethodDescriptor = notificationServiceServiceDescriptor.Methods().ByName("SetChannelSettings")
@@ -78,10 +78,10 @@ var (
 
 // NotificationServiceClient is a client for the river.NotificationService service.
 type NotificationServiceClient interface {
-	// SetSettings sets the notification settings, overwriting all existing settings.
-	SetSettings(context.Context, *connect.Request[protocol.SetSettingsRequest]) (*connect.Response[protocol.SetSettingsResponse], error)
 	// GetSettings returns user stored notification settings.
 	GetSettings(context.Context, *connect.Request[protocol.GetSettingsRequest]) (*connect.Response[protocol.GetSettingsResponse], error)
+	// SetSettings sets the notification settings, overwriting all existing settings.
+	SetSettings(context.Context, *connect.Request[protocol.SetSettingsRequest]) (*connect.Response[protocol.SetSettingsResponse], error)
 	// SetDmGdmSettings updates global settings for DM/GDM channels.
 	SetDmGdmSettings(context.Context, *connect.Request[protocol.SetDmGdmSettingsRequest]) (*connect.Response[protocol.SetDmGdmSettingsResponse], error)
 	// SetSpaceSettings updates space setting that are applied to all channels within that stream.
@@ -110,16 +110,16 @@ type NotificationServiceClient interface {
 func NewNotificationServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) NotificationServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
 	return &notificationServiceClient{
-		setSettings: connect.NewClient[protocol.SetSettingsRequest, protocol.SetSettingsResponse](
-			httpClient,
-			baseURL+NotificationServiceSetSettingsProcedure,
-			connect.WithSchema(notificationServiceSetSettingsMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
 		getSettings: connect.NewClient[protocol.GetSettingsRequest, protocol.GetSettingsResponse](
 			httpClient,
 			baseURL+NotificationServiceGetSettingsProcedure,
 			connect.WithSchema(notificationServiceGetSettingsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		setSettings: connect.NewClient[protocol.SetSettingsRequest, protocol.SetSettingsResponse](
+			httpClient,
+			baseURL+NotificationServiceSetSettingsProcedure,
+			connect.WithSchema(notificationServiceSetSettingsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		setDmGdmSettings: connect.NewClient[protocol.SetDmGdmSettingsRequest, protocol.SetDmGdmSettingsResponse](
@@ -169,8 +169,8 @@ func NewNotificationServiceClient(httpClient connect.HTTPClient, baseURL string,
 
 // notificationServiceClient implements NotificationServiceClient.
 type notificationServiceClient struct {
-	setSettings        *connect.Client[protocol.SetSettingsRequest, protocol.SetSettingsResponse]
 	getSettings        *connect.Client[protocol.GetSettingsRequest, protocol.GetSettingsResponse]
+	setSettings        *connect.Client[protocol.SetSettingsRequest, protocol.SetSettingsResponse]
 	setDmGdmSettings   *connect.Client[protocol.SetDmGdmSettingsRequest, protocol.SetDmGdmSettingsResponse]
 	setSpaceSettings   *connect.Client[protocol.SetSpaceSettingsRequest, protocol.SetSpaceSettingsResponse]
 	setChannelSettings *connect.Client[protocol.SetChannelSettingsRequest, protocol.SetChannelSettingsResponse]
@@ -180,14 +180,14 @@ type notificationServiceClient struct {
 	unsubscribeAPN     *connect.Client[protocol.UnsubscribeAPNRequest, protocol.UnsubscribeAPNResponse]
 }
 
-// SetSettings calls river.NotificationService.SetSettings.
-func (c *notificationServiceClient) SetSettings(ctx context.Context, req *connect.Request[protocol.SetSettingsRequest]) (*connect.Response[protocol.SetSettingsResponse], error) {
-	return c.setSettings.CallUnary(ctx, req)
-}
-
 // GetSettings calls river.NotificationService.GetSettings.
 func (c *notificationServiceClient) GetSettings(ctx context.Context, req *connect.Request[protocol.GetSettingsRequest]) (*connect.Response[protocol.GetSettingsResponse], error) {
 	return c.getSettings.CallUnary(ctx, req)
+}
+
+// SetSettings calls river.NotificationService.SetSettings.
+func (c *notificationServiceClient) SetSettings(ctx context.Context, req *connect.Request[protocol.SetSettingsRequest]) (*connect.Response[protocol.SetSettingsResponse], error) {
+	return c.setSettings.CallUnary(ctx, req)
 }
 
 // SetDmGdmSettings calls river.NotificationService.SetDmGdmSettings.
@@ -227,10 +227,10 @@ func (c *notificationServiceClient) UnsubscribeAPN(ctx context.Context, req *con
 
 // NotificationServiceHandler is an implementation of the river.NotificationService service.
 type NotificationServiceHandler interface {
-	// SetSettings sets the notification settings, overwriting all existing settings.
-	SetSettings(context.Context, *connect.Request[protocol.SetSettingsRequest]) (*connect.Response[protocol.SetSettingsResponse], error)
 	// GetSettings returns user stored notification settings.
 	GetSettings(context.Context, *connect.Request[protocol.GetSettingsRequest]) (*connect.Response[protocol.GetSettingsResponse], error)
+	// SetSettings sets the notification settings, overwriting all existing settings.
+	SetSettings(context.Context, *connect.Request[protocol.SetSettingsRequest]) (*connect.Response[protocol.SetSettingsResponse], error)
 	// SetDmGdmSettings updates global settings for DM/GDM channels.
 	SetDmGdmSettings(context.Context, *connect.Request[protocol.SetDmGdmSettingsRequest]) (*connect.Response[protocol.SetDmGdmSettingsResponse], error)
 	// SetSpaceSettings updates space setting that are applied to all channels within that stream.
@@ -255,16 +255,16 @@ type NotificationServiceHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewNotificationServiceHandler(svc NotificationServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	notificationServiceSetSettingsHandler := connect.NewUnaryHandler(
-		NotificationServiceSetSettingsProcedure,
-		svc.SetSettings,
-		connect.WithSchema(notificationServiceSetSettingsMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
 	notificationServiceGetSettingsHandler := connect.NewUnaryHandler(
 		NotificationServiceGetSettingsProcedure,
 		svc.GetSettings,
 		connect.WithSchema(notificationServiceGetSettingsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	notificationServiceSetSettingsHandler := connect.NewUnaryHandler(
+		NotificationServiceSetSettingsProcedure,
+		svc.SetSettings,
+		connect.WithSchema(notificationServiceSetSettingsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	notificationServiceSetDmGdmSettingsHandler := connect.NewUnaryHandler(
@@ -311,10 +311,10 @@ func NewNotificationServiceHandler(svc NotificationServiceHandler, opts ...conne
 	)
 	return "/river.NotificationService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case NotificationServiceSetSettingsProcedure:
-			notificationServiceSetSettingsHandler.ServeHTTP(w, r)
 		case NotificationServiceGetSettingsProcedure:
 			notificationServiceGetSettingsHandler.ServeHTTP(w, r)
+		case NotificationServiceSetSettingsProcedure:
+			notificationServiceSetSettingsHandler.ServeHTTP(w, r)
 		case NotificationServiceSetDmGdmSettingsProcedure:
 			notificationServiceSetDmGdmSettingsHandler.ServeHTTP(w, r)
 		case NotificationServiceSetSpaceSettingsProcedure:
@@ -338,12 +338,12 @@ func NewNotificationServiceHandler(svc NotificationServiceHandler, opts ...conne
 // UnimplementedNotificationServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedNotificationServiceHandler struct{}
 
-func (UnimplementedNotificationServiceHandler) SetSettings(context.Context, *connect.Request[protocol.SetSettingsRequest]) (*connect.Response[protocol.SetSettingsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.NotificationService.SetSettings is not implemented"))
-}
-
 func (UnimplementedNotificationServiceHandler) GetSettings(context.Context, *connect.Request[protocol.GetSettingsRequest]) (*connect.Response[protocol.GetSettingsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.NotificationService.GetSettings is not implemented"))
+}
+
+func (UnimplementedNotificationServiceHandler) SetSettings(context.Context, *connect.Request[protocol.SetSettingsRequest]) (*connect.Response[protocol.SetSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.NotificationService.SetSettings is not implemented"))
 }
 
 func (UnimplementedNotificationServiceHandler) SetDmGdmSettings(context.Context, *connect.Request[protocol.SetDmGdmSettingsRequest]) (*connect.Response[protocol.SetDmGdmSettingsResponse], error) {

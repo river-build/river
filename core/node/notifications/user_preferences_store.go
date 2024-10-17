@@ -3,11 +3,11 @@ package notifications
 import (
 	"context"
 	"errors"
+	"github.com/ethereum/go-ethereum/common"
 	"sync"
 
 	"github.com/SherClockHolmes/webpush-go"
 	mapset "github.com/deckarep/golang-set/v2"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/notifications/types"
 	. "github.com/river-build/river/core/node/protocol"
@@ -277,8 +277,9 @@ func (up *UserPreferencesCache) AddAPNSubscription(
 	ctx context.Context,
 	userID common.Address,
 	deviceToken []byte,
+	environment APNEnvironment,
 ) error {
-	err := up.persistent.AddAPNSubscription(ctx, userID, deviceToken)
+	err := up.persistent.AddAPNSubscription(ctx, userID, deviceToken, environment)
 	if err != nil {
 		return err
 	}

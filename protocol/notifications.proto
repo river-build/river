@@ -72,6 +72,16 @@ enum SpaceChannelSettingValue {
   SPACE_CHANNEL_SETTING_MESSAGES_ALL = 3;
 }
 
+enum APNEnvironment {
+  // APN_ENVIRONMENT_UNSPECIFIED is invalid.
+  APN_ENVIRONMENT_UNSPECIFIED = 0;
+  // APN_ENVIRONMENT_PRODUCTION uses Apple's APN service to deliver notifications.
+  APN_ENVIRONMENT_PRODUCTION = 1;
+  // APN_ENVIRONMENT_SANDBOX uses Apple's sandbox environment to send notifications.
+  // Only used for development purposes.
+  APN_ENVIRONMENT_SANDBOX = 2;
+}
+
 message GetSettingsRequest {
   // user id for which to retrieve settings
   bytes user_id = 1;
@@ -92,6 +102,10 @@ message GetSettingsResponse {
   repeated DmChannelSetting dm_channels = 5;
   // gdm_channels holds specific settings for GDM channels
   repeated GdmChannelSetting gdm_channels = 6;
+  // web_subscriptions is the list of web push subscriptions
+  repeated WebPushSubscriptionObject web_subscriptions = 7;
+  // apn_subscriptions is the list of APN push subscriptions
+  repeated APNSubscription apn_subscriptions = 8;
 }
 
 message SetSettingsRequest {
@@ -195,11 +209,9 @@ message WebPushSubscriptionObjectKeys {
 message WebPushSubscriptionObject {
   // A string containing the endpoint associated with the push subscription.
   string endpoint = 1;
-  // subscription expiration time associated with the push subscription (in milliseconds)
-  int64 expirationTime = 2;
   // keys obtained from the browser when subscribing for notifications. The notifications
   // service uses these details to protect the notifications content.
-  WebPushSubscriptionObjectKeys keys = 3;
+  WebPushSubscriptionObjectKeys keys = 2;
 }
 
 message SubscribeWebPushRequest {
@@ -225,6 +237,17 @@ message SubscribeAPNRequest {
   bytes device_token = 1;
   // user id that wants to subscribe
   bytes user_id = 2;
+  // environment indicates what type of environment the subscription is target.
+  APNEnvironment environment = 3;
+}
+
+message APNSubscription {
+  // APN device token
+  bytes device_token = 1;
+  // user id that wants to subscribe
+  bytes user_id = 2;
+  // environment indicates what type of environment the subscription is target.
+  APNEnvironment environment = 3;
 }
 
 message SubscribeAPNResponse {}

@@ -257,6 +257,12 @@ func createAndValidatePgxPool(
 		return nil, err
 	}
 
+	poolConf.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		conn.TypeMap().RegisterDefaultPgType(UserID{}, "CHAR(40)")
+
+		return nil
+	}
+
 	// In general, it should be possible to add database schema name into database url as a parameter search_path (&search_path=database_schema_name)
 	// For some reason it doesn't work so have to put it into config explicitly
 	poolConf.ConnConfig.RuntimeParams["search_path"] = databaseSchemaName

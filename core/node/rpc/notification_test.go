@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"net"
@@ -13,6 +14,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/SherClockHolmes/webpush-go"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/google/go-cmp/cmp"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/events"
 	. "github.com/river-build/river/core/node/protocol"
@@ -23,12 +25,31 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSpaceChannelNotifications(t *testing.T) {
-	// share the nodes and notification service among multiple tests
+// TestNotifications is designed in such a way that all tests are run in parallel
+// and share the same set of nodes and notification service.
+func TestNotifications(t *testing.T) {
 	tester := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true})
 	ctx, cancel := context.WithCancel(tester.ctx)
 	defer cancel()
 
+	t.Run("SpaceChannelNotifications", func(t *testing.T) {
+		testSpaceChannelNotifications(t, ctx, tester)
+	})
+
+	t.Run("DMNotifications", func(t *testing.T) {
+		t.Skip() // TODO
+	})
+
+	t.Run("GDMNotifications", func(t *testing.T) {
+		t.Skip() // TODO
+	})
+}
+
+func testSpaceChannelNotifications(
+	t *testing.T,
+	ctx context.Context,
+	tester *serviceTester,
+) {
 	notificationService, notifications := initNotificationService(ctx, tester)
 	notificationClient := protocolconnect.NewNotificationServiceClient(
 		http.DefaultClient, "http://"+notificationService.listener.Addr().String())
@@ -64,46 +85,46 @@ func testGDMAtChannelTag(
 	nc *notificationCapture,
 ) {
 	// subscribe for notifications only on the first couple of wallets on both web and apn
-	expectedUsersToReceiveNotification := make(map[common.Address]struct{})
-	for _, wallet := range test.wallets[:10] {
+	expectedUsersToReceiveNotification := make(map[common.Address]int)
+	for _, wallet := range test.members[:10] {
 		test.subscribeWebPush(ctx, wallet.Address)
 		test.subscribeApnPush(ctx, wallet.Address)
-		expectedUsersToReceiveNotification[wallet.Address] = struct{}{}
+		expectedUsersToReceiveNotification[wallet.Address] = 1
 	}
 
 	// user disables all notifications for this channel
 	test.setSpaceChannelSetting(
-		ctx, test.wallets[1].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_NO_MESSAGES)
-	delete(expectedUsersToReceiveNotification, test.wallets[1].Address)
+		ctx, test.members[1].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_NO_MESSAGES)
+	delete(expectedUsersToReceiveNotification, test.members[1].Address)
 
 	// user disables all notification on the space level
 	test.setSpaceSetting(
-		ctx, test.wallets[2].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_NO_MESSAGES)
-	delete(expectedUsersToReceiveNotification, test.wallets[2].Address)
+		ctx, test.members[2].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_NO_MESSAGES)
+	delete(expectedUsersToReceiveNotification, test.members[2].Address)
 
 	// user wants to receive notifications for all messages for this channel
 	test.setSpaceChannelSetting(
-		ctx, test.wallets[3].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_MESSAGES_ALL)
-	expectedUsersToReceiveNotification[test.wallets[3].Address] = struct{}{}
+		ctx, test.members[3].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_MESSAGES_ALL)
+	expectedUsersToReceiveNotification[test.members[3].Address] = 1
 
 	// user wants to receive notifications for all messages on the space level
 	test.setSpaceSetting(
-		ctx, test.wallets[4].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_MESSAGES_ALL)
-	expectedUsersToReceiveNotification[test.wallets[4].Address] = struct{}{}
+		ctx, test.members[4].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_MESSAGES_ALL)
+	expectedUsersToReceiveNotification[test.members[4].Address] = 1
 
 	// user wants to receive notifications for messages that are either a reply/reaction on his own messages
 	// or when he is mentioned on the channel level. Because this is the default the space setting is overwritten
 	// to no messages to ensure that the channel setting overwrites the space default.
-	test.setSpaceSetting(ctx, test.wallets[5].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_NO_MESSAGES)
+	test.setSpaceSetting(ctx, test.members[5].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_NO_MESSAGES)
 	test.setSpaceChannelSetting(
-		ctx, test.wallets[5].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_ONLY_MENTIONS_REPLIES_REACTIONS)
-	expectedUsersToReceiveNotification[test.wallets[5].Address] = struct{}{}
+		ctx, test.members[5].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_ONLY_MENTIONS_REPLIES_REACTIONS)
+	expectedUsersToReceiveNotification[test.members[5].Address] = 1
 
 	// send a message and ensure that all expected notification are captured
-	sender := test.wallets[0] // no notification for your own messages
+	sender := test.members[0] // no notification for your own messages
 	delete(expectedUsersToReceiveNotification, sender.Address)
 	event := test.sendMessageWithTags(
-		ctx, test.wallets[0], "hi!", &Tags{
+		ctx, test.members[0], "hi!", &Tags{
 			GroupMentionTypes: []GroupMentionType{GroupMentionType_GROUP_MENTION_TYPE_AT_CHANNEL},
 		})
 	eventHash := common.BytesToHash(event.Hash)
@@ -118,9 +139,9 @@ func testGDMAtChannelTag(
 		webNotifications := nc.WebPushNotifications[eventHash]
 		apnNotifications := nc.ApnPushNotifications[eventHash]
 
-		return len(webNotifications) == len(expectedUsersToReceiveNotification) &&
-			len(apnNotifications) == len(expectedUsersToReceiveNotification)
-	}, 20*time.Second, 100*time.Millisecond, "Didn't receive all notifications")
+		return cmp.Equal(webNotifications, expectedUsersToReceiveNotification) &&
+			cmp.Equal(apnNotifications, expectedUsersToReceiveNotification)
+	}, 20*time.Second, 1000*time.Millisecond, "Didn't receive all notifications")
 
 	// Wait a bit to ensure that no more notifications come in
 	test.req.Never(func() bool {
@@ -134,7 +155,7 @@ func testGDMAtChannelTag(
 
 		return webCount != len(expectedUsersToReceiveNotification) ||
 			apnCount != len(expectedUsersToReceiveNotification)
-	}, 5*time.Second, 100*time.Millisecond, "Received too unexpected notifications")
+	}, 5*time.Second, 1000*time.Millisecond, "Received too unexpected notifications")
 }
 
 func testGDMMentionTag(
@@ -146,7 +167,7 @@ func testGDMMentionTag(
 	expectedUsersToReceiveNotification := make(map[common.Address]struct{})
 	var mentionedUsers [][]byte
 
-	for _, wallet := range test.wallets[:10] {
+	for _, wallet := range test.members[:10] {
 		test.subscribeWebPush(ctx, wallet.Address)
 		test.subscribeApnPush(ctx, wallet.Address)
 		expectedUsersToReceiveNotification[wallet.Address] = struct{}{}
@@ -155,37 +176,37 @@ func testGDMMentionTag(
 
 	// user disables all notifications for this channel
 	test.setSpaceChannelSetting(
-		ctx, test.wallets[1].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_NO_MESSAGES)
-	delete(expectedUsersToReceiveNotification, test.wallets[1].Address)
+		ctx, test.members[1].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_NO_MESSAGES)
+	delete(expectedUsersToReceiveNotification, test.members[1].Address)
 
 	// user disables all notification on the space level
 	test.setSpaceSetting(
-		ctx, test.wallets[2].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_NO_MESSAGES)
-	delete(expectedUsersToReceiveNotification, test.wallets[2].Address)
+		ctx, test.members[2].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_NO_MESSAGES)
+	delete(expectedUsersToReceiveNotification, test.members[2].Address)
 
 	// user wants to receive notifications for all messages for this channel
 	test.setSpaceChannelSetting(
-		ctx, test.wallets[3].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_MESSAGES_ALL)
-	expectedUsersToReceiveNotification[test.wallets[3].Address] = struct{}{}
+		ctx, test.members[3].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_MESSAGES_ALL)
+	expectedUsersToReceiveNotification[test.members[3].Address] = struct{}{}
 
 	// user wants to receive notifications for all messages on the space level
 	test.setSpaceSetting(
-		ctx, test.wallets[4].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_MESSAGES_ALL)
-	expectedUsersToReceiveNotification[test.wallets[4].Address] = struct{}{}
+		ctx, test.members[4].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_MESSAGES_ALL)
+	expectedUsersToReceiveNotification[test.members[4].Address] = struct{}{}
 
 	// user wants to receive notifications for messages that are either a reply/reaction on his own messages
 	// or when he is mentioned on the channel level. Because this is the default the space setting is overwritten
 	// to no messages to ensure that the channel setting overwrites the space default.
-	test.setSpaceSetting(ctx, test.wallets[5].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_NO_MESSAGES)
+	test.setSpaceSetting(ctx, test.members[5].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_NO_MESSAGES)
 	test.setSpaceChannelSetting(
-		ctx, test.wallets[5].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_ONLY_MENTIONS_REPLIES_REACTIONS)
-	expectedUsersToReceiveNotification[test.wallets[5].Address] = struct{}{}
+		ctx, test.members[5].Address, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_ONLY_MENTIONS_REPLIES_REACTIONS)
+	expectedUsersToReceiveNotification[test.members[5].Address] = struct{}{}
 
 	// send a message and ensure that all expected notification are captured
-	sender := test.wallets[0] // no notification for your own messages
+	sender := test.members[0] // no notification for your own messages
 	delete(expectedUsersToReceiveNotification, sender.Address)
 	event := test.sendMessageWithTags(
-		ctx, test.wallets[0], "hi!", &Tags{
+		ctx, test.members[0], "hi!", &Tags{
 			MentionedUserAddresses: mentionedUsers,
 		})
 	eventHash := common.BytesToHash(event.Hash)
@@ -223,8 +244,8 @@ func initNotificationService(ctx context.Context, tester *serviceTester) (*Servi
 	tester.require.NoError(err)
 
 	nc := &notificationCapture{
-		WebPushNotifications: make(map[common.Hash]map[string]int),
-		ApnPushNotifications: make(map[common.Hash]map[string]int),
+		WebPushNotifications: make(map[common.Hash]map[common.Address]int),
+		ApnPushNotifications: make(map[common.Hash]map[common.Address]int),
 	}
 
 	service, err := StartServerInNotificationMode(ctx, tester.getConfig(), tester.btc.DeployerBlockchain, listener, nc)
@@ -245,7 +266,7 @@ func setupSpaceChannelNotificationTest(
 	}
 
 	wallet, _ := crypto.NewWallet(ctx)
-	testCtx.wallets = []*crypto.Wallet{wallet}
+	testCtx.members = []*crypto.Wallet{wallet}
 
 	ctx = tester.ctx
 	require := tester.require
@@ -263,7 +284,10 @@ func setupSpaceChannelNotificationTest(
 	require.NoError(err)
 	require.NotNil(space)
 
-	testCtx.channelID = testutils.FakeStreamId(STREAM_CHANNEL_BIN)
+	channelID := StreamId{STREAM_CHANNEL_BIN}
+	copy(channelID[1:21], testCtx.spaceID[1:21])
+	rand.Read(channelID[21:])
+	testCtx.channelID = channelID
 	channel, _, err := createChannel(ctx, wallet, client, testCtx.spaceID, testCtx.channelID, nil)
 	require.NoError(err)
 	require.NotNil(channel)
@@ -282,7 +306,7 @@ func setupSpaceChannelNotificationTest(
 
 		addUserToChannel(require, ctx, client, syncCookie, wallet, testCtx.spaceID, testCtx.channelID)
 
-		testCtx.wallets = append(testCtx.wallets, wallet)
+		testCtx.members = append(testCtx.members, wallet)
 	}
 
 	_, newMbNum, err := makeMiniblock(ctx, client, testCtx.channelID, true, 0)
@@ -294,7 +318,7 @@ func setupSpaceChannelNotificationTest(
 
 type spaceChannelNotificationsTestContext struct {
 	req                *require.Assertions
-	wallets            []*crypto.Wallet
+	members            []*crypto.Wallet
 	spaceID            StreamId
 	channelID          StreamId
 	streamClient       protocolconnect.StreamServiceClient
@@ -399,9 +423,9 @@ func (tc *spaceChannelNotificationsTestContext) setSpaceSetting(
 
 type notificationCapture struct {
 	WebPushNotificationsMu sync.Mutex
-	WebPushNotifications   map[common.Hash]map[string]int // event hash -> key=endpoint:count
+	WebPushNotifications   map[common.Hash]map[common.Address]int // event hash -> key=endpoint:count
 	ApnPushNotificationsMu sync.Mutex
-	ApnPushNotifications   map[common.Hash]map[string]int // event hash -> key=device_token:count
+	ApnPushNotifications   map[common.Hash]map[common.Address]int // event hash -> key=device_token:count
 }
 
 func (nc *notificationCapture) SendWebPushNotification(
@@ -415,9 +439,10 @@ func (nc *notificationCapture) SendWebPushNotification(
 
 	events, found := nc.WebPushNotifications[eventHash]
 	if !found {
-		events = make(map[string]int)
+		events = make(map[common.Address]int)
 	}
-	events[subscription.Endpoint]++
+	// for testing purposes the users address is included in the endpoint
+	events[common.HexToAddress(subscription.Endpoint)]++
 	nc.WebPushNotifications[eventHash] = events
 
 	return nil
@@ -434,10 +459,11 @@ func (nc *notificationCapture) SendApplePushNotification(
 
 	events, found := nc.ApnPushNotifications[eventHash]
 	if !found {
-		events = make(map[string]int)
+		events = make(map[common.Address]int)
 	}
 
-	events[deviceToken]++
+	// for test purposes the users address is the device token
+	events[common.HexToAddress(deviceToken)]++
 	nc.ApnPushNotifications[eventHash] = events
 
 	return nil

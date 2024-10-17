@@ -531,7 +531,6 @@ func (s *Service) initNotificationsStore() error {
 		pgstore, err := storage.NewPostgresNotificationStore(
 			ctx,
 			s.storagePoolInfo,
-			s.instanceId,
 			s.exitSignal,
 			s.metrics,
 		)

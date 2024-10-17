@@ -2,6 +2,7 @@ package push_test
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/common"
 	"os"
 	"testing"
 	"time"
@@ -47,7 +48,7 @@ func TestAPNSPushNotification(t *testing.T) {
 
 	payload := payload2.NewPayload().Alert("Sry to bother you if this works...")
 
-	req.NoError(notifier.SendApplePushNotification(ctx, deviceToken, payload), "send APN notification")
+	req.NoError(notifier.SendApplePushNotification(ctx, deviceToken, common.Hash{1}, payload), "send APN notification")
 }
 
 func TestWebPushWithVapid(t *testing.T) {
@@ -92,5 +93,5 @@ func TestWebPushWithVapid(t *testing.T) {
 
 	//payload := payload2.NewPayload().Alert("Sry to bother you if this works...")
 
-	req.NoError(notifier.SendWebPushNotification(ctx, subscription, payload), "send APN notification")
+	req.NoError(notifier.SendWebPushNotification(ctx, subscription, common.Hash{1}, payload), "send APN notification")
 }

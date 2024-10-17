@@ -275,6 +275,7 @@ func (s *Service) SubscribeAPN(
 	var (
 		msg         = req.Msg
 		deviceToken = msg.GetDeviceToken()
+		environment = msg.GetEnvironment()
 		userID      = common.BytesToAddress(msg.GetUserId())
 	)
 	if len(deviceToken) == 0 {
@@ -284,7 +285,7 @@ func (s *Service) SubscribeAPN(
 		return nil, RiverError(protocol.Err_INVALID_ARGUMENT, "Invalid user id")
 	}
 
-	if err := s.userPreferences.AddAPNSubscription(ctx, userID, deviceToken); err != nil {
+	if err := s.userPreferences.AddAPNSubscription(ctx, userID, deviceToken, environment); err != nil {
 		return nil, err
 	}
 

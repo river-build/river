@@ -2,15 +2,15 @@ package storage
 
 import (
 	"context"
+	"database/sql/driver"
 	"embed"
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"github.com/SherClockHolmes/webpush-go"
-	"time"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jackc/pgx/v5"
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/notifications/types"
 	. "github.com/river-build/river/core/node/protocol"
@@ -18,12 +18,12 @@ import (
 )
 
 type (
+	UserID common.Address
+
 	PostgresNotificationStore struct {
 		PostgresEventStore
 
-		exitSignal        chan error
-		nodeUUID          string
-		cleanupListenFunc func()
+		exitSignal chan error
 	}
 
 	NotificationStore interface {
@@ -89,6 +89,7 @@ type (
 			ctx context.Context,
 			userID common.Address,
 			deviceToken []byte,
+			environment APNEnvironment,
 		) error
 
 		RemoveAPNSubscription(ctx context.Context,
@@ -103,16 +104,18 @@ var _ NotificationStore = (*PostgresNotificationStore)(nil)
 //go:embed notification_migrations/*.sql
 var notificationMigrationsDir embed.FS
 
+func (uid UserID) Value() (driver.Value, error) {
+	return hex.EncodeToString(uid[:]), nil
+}
+
 // NewPostgresNotificationStore instantiates a new PostgreSQL persistent storage for the notification service.
 func NewPostgresNotificationStore(
 	ctx context.Context,
 	poolInfo *PgxPoolInfo,
-	instanceId string,
 	exitSignal chan error,
 	metrics infra.MetricsFactory,
 ) (*PostgresNotificationStore, error) {
 	store := &PostgresNotificationStore{
-		nodeUUID:   instanceId,
 		exitSignal: exitSignal,
 	}
 
@@ -126,220 +129,20 @@ func NewPostgresNotificationStore(
 		return nil, AsRiverError(err).Func("NewPostgresNotificationStore")
 	}
 
-	if err := store.initStorage(ctx); err != nil {
-		return nil, AsRiverError(err).Func("NewPostgresNotificationStore")
-	}
-
-	cancelCtx, cancel := context.WithCancel(ctx)
-	store.cleanupListenFunc = cancel
-	go store.listenForNewNodes(cancelCtx)
-
 	return store, nil
-}
-
-func (s *PostgresNotificationStore) initStorage(ctx context.Context) error {
-	err := s.txRunner(
-		ctx,
-		"listOtherInstances",
-		pgx.ReadOnly,
-		s.listOtherInstancesTx,
-		nil,
-	)
-	if err != nil {
-		return err
-	}
-
-	return s.txRunner(
-		ctx,
-		"initializeSingleNodeKey",
-		pgx.ReadWrite,
-		s.initializeSingleNodeKeyTx,
-		nil,
-	)
-}
-
-// Call with a cancellable context and pgx should terminate when the context is
-// cancelled. Call after storage has been initialized in order to not receive a
-// notification when this node updates the table.
-func (s *PostgresNotificationStore) listenForNewNodes(ctx context.Context) {
-	conn := s.acquireListeningConnection(ctx)
-	if conn == nil {
-		return
-	}
-	defer conn.Release()
-
-	for {
-		notification, err := conn.Conn().WaitForNotification(ctx)
-
-		// Cancellation indicates a valid exit.
-		if err == context.Canceled {
-			return
-		}
-
-		// Unexpected.
-		if err != nil {
-			// Ok to call Release multiple times
-			conn.Release()
-			conn = s.acquireListeningConnection(ctx)
-			if conn == nil {
-				return
-			}
-			defer conn.Release()
-			continue
-		}
-
-		// Listen only for changes to our schema.
-		if notification.Payload == s.schemaName {
-			err = RiverError(Err_RESOURCE_EXHAUSTED, "No longer a current node, shutting down").
-				Func("listenForNewNodes").
-				Tag("schema", s.schemaName).
-				LogWarn(dlog.FromCtx(ctx))
-
-			// In the event of detecting node conflict, send the error to the main thread to shut down.
-			s.exitSignal <- err
-			return
-		}
-	}
-}
-
-func (s *PostgresNotificationStore) listOtherInstancesTx(ctx context.Context, tx pgx.Tx) error {
-	log := dlog.FromCtx(ctx)
-
-	rows, err := tx.Query(ctx, "SELECT uuid, storage_connection_time, info FROM singlenodekey")
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	found := false
-	for rows.Next() {
-		var storedUUID string
-		var storedTimestamp time.Time
-		var storedInfo string
-		err := rows.Scan(&storedUUID, &storedTimestamp, &storedInfo)
-		if err != nil {
-			return err
-		}
-		log.Info(
-			"Found UUID during startup",
-			"uuid",
-			storedUUID,
-			"timestamp",
-			storedTimestamp,
-			"storedInfo",
-			storedInfo,
-		)
-		found = true
-	}
-
-	if found {
-		delay := s.config.StartupDelay
-		if delay == 0 {
-			delay = 2 * time.Second
-		} else if delay <= time.Millisecond {
-			delay = 0
-		}
-		if delay > 0 {
-			log.Info("singlenodekey is not empty; Delaying startup to let other instance exit", "delay", delay)
-			time.Sleep(delay)
-		}
-	}
-
-	return nil
-}
-
-func (s *PostgresNotificationStore) initializeSingleNodeKeyTx(ctx context.Context, tx pgx.Tx) error {
-	_, err := tx.Exec(ctx, "DELETE FROM singlenodekey")
-	if err != nil {
-		return err
-	}
-
-	_, err = tx.Exec(
-		ctx,
-		"INSERT INTO singlenodekey (uuid, storage_connection_time, info) VALUES ($1, $2, $3)",
-		s.nodeUUID,
-		time.Now(),
-		getCurrentNodeProcessInfo(s.schemaName),
-	)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // Close removes instance record from singlenodekey table, releases the listener connection, and
 // closes the postgres connection pool
 func (s *PostgresNotificationStore) Close(ctx context.Context) {
-	// Cancel the notify listening func to release the listener connection before closing the pool.
-	s.cleanupListenFunc()
-
 	s.PostgresEventStore.Close(ctx)
-}
-
-// txRunnerWithUUIDCheck conditionally run the transaction only if a check against the
-// singlenodekey table shows that this is still the only node writing to the database.
-func (s *PostgresNotificationStore) txRunnerWithUUIDCheck(
-	ctx context.Context,
-	name string,
-	accessMode pgx.TxAccessMode,
-	txFn func(context.Context, pgx.Tx) error,
-	opts *txRunnerOpts,
-	tags ...any,
-) error {
-	return s.txRunner(
-		ctx,
-		name,
-		accessMode,
-		func(ctx context.Context, txn pgx.Tx) error {
-			if err := s.compareUUID(ctx, txn); err != nil {
-				return err
-			}
-			return txFn(ctx, txn)
-		},
-		opts,
-		tags...,
-	)
-}
-
-func (s *PostgresNotificationStore) compareUUID(ctx context.Context, tx pgx.Tx) error {
-	log := dlog.FromCtx(ctx)
-
-	rows, err := tx.Query(ctx, "SELECT uuid FROM singlenodekey")
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	var allIds []string
-	for rows.Next() {
-		var id string
-		err = rows.Scan(&id)
-		if err != nil {
-			return err
-		}
-		allIds = append(allIds, id)
-	}
-
-	if len(allIds) == 1 && allIds[0] == s.nodeUUID {
-		return nil
-	}
-
-	err = RiverError(Err_RESOURCE_EXHAUSTED, "No longer a current node, shutting down").
-		Func("pg.compareUUID").
-		Tag("currentUUID", s.nodeUUID).
-		Tag("schema", s.schemaName).
-		Tag("newUUIDs", allIds).
-		LogError(log)
-	s.exitSignal <- err
-	return err
 }
 
 func (s *PostgresNotificationStore) SetUserPreferences(
 	ctx context.Context,
 	preferences *types.UserPreferences,
 ) error {
-	return s.txRunnerWithUUIDCheck(
+	return s.txRunner(
 		ctx,
 		"SetUserPreferences",
 		pgx.ReadWrite,
@@ -358,24 +161,26 @@ func (s *PostgresNotificationStore) setUserPreferencesTx(
 ) error {
 	batch := &pgx.Batch{}
 
-	batch.Queue(`DELETE FROM spaces WHERE user_id = $1`, preferences.UserID)
-	batch.Queue(`DELETE FROM channels WHERE user_id = $1`, preferences.UserID)
+	userID := UserID(preferences.UserID)
 
-	batch.Queue(`INSERT INTO userpreferences (user_id, dm, gdm) VALUES ($1,$2,$3) ON CONFLICT (user_id) DO UPDATE SET dm = $2, gdm = $3`, preferences.UserID, int16(preferences.DM), int16(preferences.GDM))
+	batch.Queue(`DELETE FROM spaces WHERE user_id = $1`, userID)
+	batch.Queue(`DELETE FROM channels WHERE user_id = $1`, userID)
+
+	batch.Queue(`INSERT INTO userpreferences (user_id, dm, gdm) VALUES ($1,$2,$3) ON CONFLICT (user_id) DO UPDATE SET dm = $2, gdm = $3`, userID, int16(preferences.DM), int16(preferences.GDM))
 
 	for spaceID, space := range preferences.Spaces {
-		batch.Queue(`INSERT INTO spaces (user_id, space_id, setting) VALUES ($1,$2,$3)`, preferences.UserID, spaceID, int16(space.Setting))
+		batch.Queue(`INSERT INTO spaces (user_id, space_id, setting) VALUES ($1,$2,$3)`, userID, spaceID, int16(space.Setting))
 		for channelID, pref := range space.Channels {
-			batch.Queue(`INSERT INTO channels (user_id, channel_id, space_id, setting) VALUES ($1,$2,$3,$4)`, preferences.UserID, channelID, spaceID, int16(pref))
+			batch.Queue(`INSERT INTO channels (user_id, channel_id, setting) VALUES ($1,$2,$3)`, userID, channelID, int16(pref))
 		}
 	}
 
 	for channelID, pref := range preferences.DMChannels {
-		batch.Queue(`INSERT INTO channels (user_id, channel_id, setting) VALUES ($1,$2,$3)`, preferences.UserID, channelID, int16(pref))
+		batch.Queue(`INSERT INTO channels (user_id, channel_id, setting) VALUES ($1,$2,$3)`, userID, channelID, int16(pref))
 	}
 
 	for channelID, pref := range preferences.GDMChannels {
-		batch.Queue(`INSERT INTO channels (user_id, channel_id, setting) VALUES ($1,$2,$3)`, preferences.UserID, channelID, int16(pref))
+		batch.Queue(`INSERT INTO channels (user_id, channel_id, setting) VALUES ($1,$2,$3)`, userID, channelID, int16(pref))
 	}
 
 	br := tx.SendBatch(ctx, batch)
@@ -396,12 +201,12 @@ func (s *PostgresNotificationStore) SetGlobalDmGdm(
 	dm DmChannelSettingValue,
 	gdm GdmChannelSettingValue,
 ) error {
-	return s.txRunnerWithUUIDCheck(
+	return s.txRunner(
 		ctx,
 		"SetGlobalDmGdm",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
-			return s.setGlobalDmGdmTx(ctx, tx, userID, dm, gdm)
+			return s.setGlobalDmGdmTx(ctx, tx, UserID(userID), dm, gdm)
 		},
 		nil,
 		"userID", userID,
@@ -411,7 +216,7 @@ func (s *PostgresNotificationStore) SetGlobalDmGdm(
 func (s *PostgresNotificationStore) setGlobalDmGdmTx(
 	ctx context.Context,
 	tx pgx.Tx,
-	userID common.Address,
+	userID UserID,
 	dm DmChannelSettingValue,
 	gdm GdmChannelSettingValue,
 ) error {
@@ -432,12 +237,12 @@ func (s *PostgresNotificationStore) SetSpaceSettings(
 	spaceID shared.StreamId,
 	value SpaceChannelSettingValue,
 ) error {
-	return s.txRunnerWithUUIDCheck(
+	return s.txRunner(
 		ctx,
 		"SetSpaceSettings",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
-			return s.setSpaceSettingsTx(ctx, tx, userID, spaceID, value)
+			return s.setSpaceSettingsTx(ctx, tx, UserID(userID), spaceID, value)
 		},
 		nil,
 		"userID", userID,
@@ -447,7 +252,7 @@ func (s *PostgresNotificationStore) SetSpaceSettings(
 func (s *PostgresNotificationStore) setSpaceSettingsTx(
 	ctx context.Context,
 	tx pgx.Tx,
-	userID common.Address,
+	userID UserID,
 	spaceID shared.StreamId,
 	value SpaceChannelSettingValue,
 ) error {
@@ -470,12 +275,12 @@ func (s *PostgresNotificationStore) SetChannelSetting(
 	channelID shared.StreamId,
 	value SpaceChannelSettingValue,
 ) error {
-	return s.txRunnerWithUUIDCheck(
+	return s.txRunner(
 		ctx,
 		"SetChannelSetting",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
-			return s.setChannelSettingTx(ctx, tx, userID, spaceID, channelID, value)
+			return s.setChannelSettingTx(ctx, tx, UserID(userID), spaceID, channelID, value)
 		},
 		nil,
 		"userID", userID,
@@ -486,17 +291,16 @@ func (s *PostgresNotificationStore) SetChannelSetting(
 func (s *PostgresNotificationStore) setChannelSettingTx(
 	ctx context.Context,
 	tx pgx.Tx,
-	userID common.Address,
+	userID UserID,
 	spaceID *shared.StreamId,
 	channelID shared.StreamId,
 	value SpaceChannelSettingValue,
 ) error {
 	_, err := tx.Exec(
 		ctx,
-		`INSERT INTO channels (user_id, channel_id, space_id, setting) VALUES ($1, $2, $3, $4) ON CONFLICT (user_id, channel_id) DO UPDATE SET setting = $4`,
+		`INSERT INTO channels (user_id, channel_id, setting) VALUES ($1, $2, $3) ON CONFLICT (user_id, channel_id) DO UPDATE SET setting = $3`,
 		userID,
 		channelID,
-		spaceID,
 		int16(value),
 	)
 
@@ -547,7 +351,7 @@ func (s *PostgresNotificationStore) getUserPreferencesTx(
 		GDMChannels: make(types.GDMChannelsMap),
 	}
 
-	row := tx.QueryRow(ctx, "SELECT dm, gdm FROM userpreferences where user_id = $1", userID)
+	row := tx.QueryRow(ctx, "SELECT dm, gdm FROM userpreferences where user_id = $1", UserID(userID))
 
 	err := row.Scan(&userPref.DM, &userPref.GDM)
 	if err != nil {
@@ -562,7 +366,7 @@ func (s *PostgresNotificationStore) getUserPreferencesTx(
 	spaceRows, err := tx.Query(
 		ctx,
 		`SELECT space_id, setting FROM spaces where user_id = $1`,
-		userID,
+		UserID(userID),
 	)
 	if err != nil {
 		return nil, err
@@ -570,24 +374,23 @@ func (s *PostgresNotificationStore) getUserPreferencesTx(
 	defer spaceRows.Close()
 
 	for spaceRows.Next() {
-		var spaceIDRaw []byte
+		var spaceID shared.StreamId
 		space := &types.SpacePreferences{
 			Setting:  SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_ONLY_MENTIONS_REPLIES_REACTIONS,
 			Channels: make(types.SpaceChannelsMap),
 		}
 
-		if err := spaceRows.Scan(&spaceIDRaw, &space.Setting); err != nil {
+		if err := spaceRows.Scan(&spaceID, &space.Setting); err != nil {
 			return nil, err
 		}
 
-		spaceID, _ := shared.StreamIdFromString(string(spaceIDRaw))
 		userPref.Spaces[spaceID] = space
 	}
 
 	channelRows, err := tx.Query(
 		ctx,
-		`SELECT channel_id, space_id, setting FROM channels where user_id = $1`,
-		userID,
+		`SELECT channel_id, setting FROM channels where user_id = $1`,
+		UserID(userID),
 	)
 	if err != nil {
 		return nil, err
@@ -597,18 +400,18 @@ func (s *PostgresNotificationStore) getUserPreferencesTx(
 	for channelRows.Next() {
 		var (
 			channelIDRaw []byte
-			spaceIDRaw   []byte
 			setting      SpaceChannelSettingValue
 		)
 
-		if err := channelRows.Scan(&channelIDRaw, &spaceIDRaw, &setting); err != nil {
+		if err := channelRows.Scan(&channelIDRaw, &setting); err != nil {
 			return nil, err
 		}
 
 		channelID, _ := shared.StreamIdFromString(string(channelIDRaw))
-		spaceID, _ := shared.StreamIdFromString(string(spaceIDRaw))
 
 		if channelID.Type() == shared.STREAM_CHANNEL_BIN {
+			spaceID := channelID.SpaceID()
+			fmt.Printf("%s) load space %s\n", userID, spaceID)
 			space, found := userPref.Spaces[spaceID]
 			if !found {
 				space = &types.SpacePreferences{
@@ -625,11 +428,11 @@ func (s *PostgresNotificationStore) getUserPreferencesTx(
 		}
 	}
 
-	userPref.Subscriptions.APNSubscriptionDeviceTokens, err = s.getAPNSubscriptions(ctx, tx, userID)
+	userPref.Subscriptions.APNSubscriptionDeviceTokens, err = s.getAPNSubscriptions(ctx, tx, UserID(userID))
 	if err != nil {
 		return nil, err
 	}
-	userPref.Subscriptions.WebPush, err = s.getWebPushSubscriptions(ctx, tx, userID)
+	userPref.Subscriptions.WebPush, err = s.getWebPushSubscriptions(ctx, tx, UserID(userID))
 	if err != nil {
 		return nil, err
 	}
@@ -646,12 +449,12 @@ func (s *PostgresNotificationStore) GetWebPushSubscriptions(
 		subs []*webpush.Subscription
 	)
 
-	err = s.txRunnerWithUUIDCheck(
+	err = s.txRunner(
 		ctx,
 		"GetWebPushSubscriptions",
 		pgx.ReadOnly,
 		func(ctx context.Context, tx pgx.Tx) error {
-			subs, err = s.getWebPushSubscriptions(ctx, tx, userID)
+			subs, err = s.getWebPushSubscriptions(ctx, tx, UserID(userID))
 			return err
 		},
 		nil,
@@ -663,7 +466,7 @@ func (s *PostgresNotificationStore) GetWebPushSubscriptions(
 func (s *PostgresNotificationStore) getWebPushSubscriptions(
 	ctx context.Context,
 	tx pgx.Tx,
-	userID common.Address,
+	userID UserID,
 ) ([]*webpush.Subscription, error) {
 	var subs []*webpush.Subscription
 	rows, err := tx.Query(
@@ -681,7 +484,6 @@ func (s *PostgresNotificationStore) getWebPushSubscriptions(
 
 	for rows.Next() {
 		var sub webpush.Subscription
-
 		err = rows.Scan(&sub.Keys.Auth, &sub.Keys.P256dh, &sub.Endpoint)
 		if err != nil {
 			return nil, err
@@ -701,12 +503,12 @@ func (s *PostgresNotificationStore) AddWebPushSubscription(
 	userID common.Address,
 	webPushSubscription *webpush.Subscription,
 ) error {
-	return s.txRunnerWithUUIDCheck(
+	return s.txRunner(
 		ctx,
 		"AddWebPushSubscription",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
-			return s.addWebPushSubscription(ctx, tx, userID, webPushSubscription)
+			return s.addWebPushSubscription(ctx, tx, UserID(userID), webPushSubscription)
 		},
 		nil,
 		"userID", userID,
@@ -716,7 +518,7 @@ func (s *PostgresNotificationStore) AddWebPushSubscription(
 func (s *PostgresNotificationStore) addWebPushSubscription(
 	ctx context.Context,
 	tx pgx.Tx,
-	userID common.Address,
+	userID UserID,
 	webPushSubscription *webpush.Subscription,
 ) error {
 	_, err := tx.Exec(
@@ -737,7 +539,7 @@ func (s *PostgresNotificationStore) RemoveWebPushSubscription(
 	userID common.Address,
 	webPushSubscription *webpush.Subscription,
 ) error {
-	return s.txRunnerWithUUIDCheck(
+	return s.txRunner(
 		ctx,
 		"RemoveWebPushSubscription",
 		pgx.ReadWrite,
@@ -773,12 +575,12 @@ func (s *PostgresNotificationStore) GetAPNSubscriptions(
 		deviceTokens [][]byte
 	)
 
-	err = s.txRunnerWithUUIDCheck(
+	err = s.txRunner(
 		ctx,
 		"GetAPNSubscriptions",
 		pgx.ReadOnly,
 		func(ctx context.Context, tx pgx.Tx) error {
-			deviceTokens, err = s.getAPNSubscriptions(ctx, tx, userID)
+			deviceTokens, err = s.getAPNSubscriptions(ctx, tx, UserID(userID))
 			return err
 		},
 		nil,
@@ -790,10 +592,10 @@ func (s *PostgresNotificationStore) GetAPNSubscriptions(
 func (s *PostgresNotificationStore) getAPNSubscriptions(
 	ctx context.Context,
 	tx pgx.Tx,
-	userID common.Address,
+	userID UserID,
 ) ([][]byte, error) {
 	var deviceTokens [][]byte
-	rows, err := tx.Query(ctx, "select device_token from apnpushsubscriptions where user_id=$1", userID)
+	rows, err := tx.Query(ctx, "select device_token, environment from apnpushsubscriptions where user_id=$1", userID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return deviceTokens, nil
@@ -803,8 +605,11 @@ func (s *PostgresNotificationStore) getAPNSubscriptions(
 	defer rows.Close()
 
 	for rows.Next() {
-		var deviceToken []byte
-		err = rows.Scan(&deviceToken)
+		var (
+			deviceToken []byte
+			environment APNEnvironment
+		)
+		err = rows.Scan(&deviceToken, &environment)
 		if err != nil {
 			return nil, err
 		}
@@ -819,13 +624,14 @@ func (s *PostgresNotificationStore) AddAPNSubscription(
 	ctx context.Context,
 	userID common.Address,
 	deviceToken []byte,
+	environment APNEnvironment,
 ) error {
-	return s.txRunnerWithUUIDCheck(
+	return s.txRunner(
 		ctx,
 		"AddAPNSubscription",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
-			return s.addAPNSubscription(ctx, tx, deviceToken, userID)
+			return s.addAPNSubscription(ctx, tx, deviceToken, environment, UserID(userID))
 		},
 		nil,
 		"userID", userID,
@@ -836,12 +642,14 @@ func (s *PostgresNotificationStore) addAPNSubscription(
 	ctx context.Context,
 	tx pgx.Tx,
 	deviceToken []byte,
-	userID common.Address,
+	environment APNEnvironment,
+	userID UserID,
 ) error {
 	_, err := tx.Exec(
 		ctx,
-		`INSERT INTO apnpushsubscriptions (device_token, user_id) VALUES ($1, $2) ON CONFLICT (device_token) DO UPDATE SET user_id = $2`,
+		`INSERT INTO apnpushsubscriptions (device_token, environment, user_id) VALUES ($1, $2, $3) ON CONFLICT (device_token) DO UPDATE SET environment = $2, user_id = $3`,
 		deviceToken,
+		int16(environment),
 		userID,
 	)
 
@@ -852,7 +660,7 @@ func (s *PostgresNotificationStore) RemoveAPNSubscription(ctx context.Context,
 	deviceToken []byte,
 	userID common.Address,
 ) error {
-	return s.txRunnerWithUUIDCheck(
+	return s.txRunner(
 		ctx,
 		"RemoveAPNSubscription",
 		pgx.ReadWrite,

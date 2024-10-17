@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 
-	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/testutils/dbtestutils"
 )
@@ -29,7 +28,6 @@ func NewTestNotificationStore(ctx context.Context) *TestNotificationStore {
 	streamStorage, err := NewPostgresNotificationStore(
 		ctx,
 		pool,
-		GenShortNanoid(),
 		exitChan,
 		infra.NewMetricsFactory(nil, "", ""),
 	)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
 	"log/slog"
 	"math"
 	"sync"
@@ -13,6 +12,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
@@ -58,11 +58,11 @@ type (
 		userPreferences events.UserPreferencesStore
 		// streamAddRequests is used to add new streams to track
 		streamAddRequests chan *streamSyncProgress
-		// muStreams guards streams against concurrent access
-		//muStreams sync.RWMutex
-		// streams is used to keep a mapping of stream id to streamSyncProgress for streams this worker is tracking
+		// streams is used to keep a mapping of stream id to streamSyncProgress for all streams this worker is tracking
+		// regardless if they are up or down
 		streams sync.Map // map[shared.StreamId]*streamSyncProgress
-		// streamsDown keeps the set of streams that are reported as down
+		// streamsDown keeps the set of streams that are reported as down and need to be added again when the stream
+		// becomes available again
 		streamsDown sync.Map
 		// metrics holds metrics for telemetry purposes
 		metrics *streamsTrackerWorkerMetrics

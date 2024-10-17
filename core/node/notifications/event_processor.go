@@ -68,7 +68,8 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 	}
 	l.Info("OnMessageEvent")
 
-	// TODO: send a notification to someone when mentioned in a stream he is not a member of
+	usersToNotify := make(map[common.Address]*types.UserPreferences)
+
 	members.Each(func(member string) bool {
 		var (
 			participant = common.HexToAddress(member)
@@ -87,24 +88,21 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 
 		//
 		// There are 3 global rules that apply to DM, GDM, and Space channels
-		// 1. never receive a notification from your own message
+		// 1. never receive a notification for your own message
 		// 2. never receive a notification when the user hasn't subscribed (web/apn push)
-		// 3. never receive a notification from a blocked user
+		// 3. never receive a notification for a message from a blocked user
 		//
 
-		// never send notification for your own messages
 		if from == participant {
 			return false
 		}
 
-		// user isn't subscribed for notifications
 		if !pref.HasSubscriptions() {
 			p.log.Warn("User hasn't subscribed for notifications",
 				"user", participant, "event", event.Hash)
 			return false
 		}
 
-		// if the message creator is blocked by stream participant don't send notification
 		blocked := p.cache.IsBlocked(participant, from)
 		if blocked {
 			p.log.Warn("Message creator was blocked", "user", participant, "blocked_user", from)
@@ -113,12 +111,18 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 
 		switch payload := event.Event.Payload.(type) {
 		case *StreamEvent_DmChannelPayload:
-			p.onDMChannelPayload(channelID, participant, pref, event, event.Event)
+			if p.onDMChannelPayload(channelID, participant, pref, event) {
+				usersToNotify[participant] = pref
+			}
 		case *StreamEvent_GdmChannelPayload:
-			p.onGDMChannelPayload(channelID, participant, pref, event, event.Event)
+			if p.onGDMChannelPayload(channelID, participant, pref, event) {
+				usersToNotify[participant] = pref
+			}
 		case *StreamEvent_ChannelPayload:
 			if spaceID != nil {
-				p.onSpaceChannelPayload(*spaceID, channelID, participant, pref, event, event.Event)
+				if p.onSpaceChannelPayload(*spaceID, channelID, participant, pref, event) {
+					usersToNotify[participant] = pref
+				}
 			} else {
 				p.log.Error("Space channel misses spaceID", "channel", channelID)
 			}
@@ -130,6 +134,11 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 		return false
 	})
 
+	streamEventJSON, _ := json.Marshal(event)
+	for user, userPref := range usersToNotify {
+		p.sendNotification(user, userPref, channelID, event, streamEventJSON)
+	}
+
 	return
 }
 
@@ -138,23 +147,17 @@ func (p *MessageToNotificationsProcessor) onDMChannelPayload(
 	participant common.Address,
 	userPref *types.UserPreferences,
 	event *events.ParsedEvent,
-	streamEvent *StreamEvent,
-) {
-	if !userPref.WantsNotificationForDMMessage(streamID) {
-		p.log.Warn("User has doesn't want to receive notification for DM message",
-			"user", participant,
-			"channel", streamID,
-			"event", event.Hash)
-		return
+) bool {
+	if userPref.WantsNotificationForDMMessage(streamID) {
+		return true
 	}
 
-	streamEventJSON, err := json.Marshal(streamEvent)
-	if err != nil {
-		p.log.Error("Unable to marshal streamEvent", "error", err)
-		return
-	}
+	p.log.Warn("User has doesn't want to receive notification for DM message",
+		"user", participant,
+		"channel", streamID,
+		"event", event.Hash)
 
-	p.sendNotification(participant, userPref, streamID, event, streamEventJSON)
+	return false
 }
 
 func isMentioned(
@@ -185,29 +188,23 @@ func (p *MessageToNotificationsProcessor) onGDMChannelPayload(
 	participant common.Address,
 	userPref *types.UserPreferences,
 	event *events.ParsedEvent,
-	streamEvent *StreamEvent,
-) {
+) bool {
 	messageInteractionType := event.Tags.GetMessageInteractionType()
 	mentioned := isMentioned(participant, event.Tags.GetGroupMentionTypes(), event.Tags.GetMentionedUserAddresses())
 	participating := isParticipating(participant, event.Tags.GetParticipatingUserAddresses())
 
-	if !userPref.WantsNotificationForGDMMessage(streamID, mentioned, participating, messageInteractionType) {
-		p.log.Debug("User don't want to receive notification for GDM message",
-			"user", participant,
-			"channel", streamID,
-			"event", event.Hash,
-			"mentioned", mentioned,
-			"messageType", messageInteractionType)
-		return
+	if userPref.WantsNotificationForGDMMessage(streamID, mentioned, participating, messageInteractionType) {
+		return true
 	}
 
-	streamEventJSON, err := json.Marshal(streamEvent)
-	if err != nil {
-		p.log.Error("Unable to marshal streamEvent", "error", err)
-		return
-	}
+	p.log.Debug("User don't want to receive notification for GDM message",
+		"user", participant,
+		"channel", streamID,
+		"event", event.Hash,
+		"mentioned", mentioned,
+		"messageType", messageInteractionType)
 
-	p.sendNotification(participant, userPref, streamID, event, streamEventJSON)
+	return false
 }
 
 func (p *MessageToNotificationsProcessor) onSpaceChannelPayload(
@@ -216,31 +213,28 @@ func (p *MessageToNotificationsProcessor) onSpaceChannelPayload(
 	participant common.Address,
 	userPref *types.UserPreferences,
 	event *events.ParsedEvent,
-	streamEvent *StreamEvent,
-) {
+) bool {
 	messageInteractionType := event.Tags.GetMessageInteractionType()
 	mentioned := isMentioned(participant, event.Tags.GetGroupMentionTypes(), event.Tags.GetMentionedUserAddresses())
 	participating := isParticipating(participant, event.Tags.GetParticipatingUserAddresses())
 
 	// for non-reaction events send a notification to all users
-	if !userPref.WantNotificationForSpaceChannelMessage(spaceID, channelID, mentioned, participating, messageInteractionType) {
-		p.log.Warn("User don't want to receive notification for space channel message",
-			"user", participant,
-			"space", spaceID,
-			"channel", channelID,
-			"event", event.Hash,
-			"mentioned", mentioned,
-			"messageType", messageInteractionType)
-		return
+	if userPref.WantNotificationForSpaceChannelMessage(spaceID, channelID, mentioned, participating, messageInteractionType) {
+		fmt.Printf("user: %s mentioned: %v / participating: %v => %v\n", participant, mentioned, participating, true)
+		return true
 	}
 
-	streamEventJSON, err := json.Marshal(streamEvent)
-	if err != nil {
-		p.log.Error("Unable to marshal streamEvent", "error", err)
-		return
-	}
+	p.log.Warn("User don't want to receive notification for space channel message",
+		"user", participant,
+		"space", spaceID,
+		"channel", channelID,
+		"event", event.Hash,
+		"mentioned", mentioned,
+		"messageType", messageInteractionType)
 
-	p.sendNotification(participant, userPref, channelID, event, streamEventJSON)
+	fmt.Printf("user: %s mentioned: %v / participating: %v => %v\n", participant, mentioned, participating, false)
+	
+	return false
 }
 
 func (p *MessageToNotificationsProcessor) sendNotification(
