@@ -25,22 +25,21 @@ echo "stress/scripts/localhost_schemachat.sh"
 #
 # stress mode=schemachat requires the following environment variables
 # RIVER_ENV (default=local_multi) 
-# STRESS_MODE (default=chat)
-# STRESS_DURATION (default=120)
 #
 # this script provides a MNEMONIC, this user should ether be a member of the space or be entitled to join
 #
 
-export REDIS_HOST="${REDIS_HOST:-}"
-
+# Kruft to construct test config
 export RIVER_ENV="${RIVER_ENV:-local_multi}"
 export STRESS_MODE="${STRESS_MODE:-schemachat}"
 export STRESS_DURATION="${STRESS_DURATION:-180}"
 export SESSION_ID="${SESSION_ID:-$(uuidgen)}"
+export RANDOM_CLIENTS_COUNT="${RANDOM_CLIENTS_COUNT:-5}"
 
+# Actual used variables
+export REDIS_HOST="${REDIS_HOST:-}"
 export PROCESSES_PER_CONTAINER="${PROCESSES_PER_CONTAINER:-4}"
 export CLIENTS_COUNT="${CLIENTS_COUNT:-8}"
-export RANDOM_CLIENTS_COUNT="${RANDOM_CLIENTS_COUNT:-5}"
 
 export MNEMONIC="toy alien remain valid print employ age multiply claim student story aware" 
 export WALLET_ADDRESS="0x95D7701A0Faa5F514B4c5B49bf66580fCE9ffbf7"
