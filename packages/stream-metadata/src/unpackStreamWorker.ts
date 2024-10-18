@@ -1,4 +1,6 @@
 // unpackStreamWorker.js
+import './tracer' // must come before importing any instrumented module.
+
 import { parentPort } from 'worker_threads'
 
 import { ParsedStreamResponse, unpackStream } from '@river-build/sdk'
