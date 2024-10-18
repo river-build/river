@@ -103,6 +103,14 @@ export class Gdm extends PersistedObservable<GdmModel> {
         return eventId
     }
 
+    async redactEvent(eventId: string) {
+        const channelId = this.data.id
+        const result = await this.riverConnection
+            .withStream(channelId)
+            .call((client) => client.redactMessage(channelId, eventId))
+        return result
+    }
+
     private onStreamInitialized = (streamId: string) => {
         if (this.data.id === streamId) {
             logger.info('gdm stream initialized', streamId)

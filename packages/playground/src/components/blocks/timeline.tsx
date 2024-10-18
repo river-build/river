@@ -78,6 +78,7 @@ type TimelineProps =
           spaceId: string
           channelId: string
       }
+
 export const Timeline = (props: TimelineProps) => {
     return (
         <div className="grid grid-rows-[auto,1fr] gap-2">
@@ -92,8 +93,6 @@ export const Timeline = (props: TimelineProps) => {
                                       event={event}
                                       thread={props.threadMap?.[event.eventId]}
                                       {...props}
-                                      //   spaceId={spaceId}
-                                      //   channelId={channelId}
                                   />,
                               ]
                             : [],

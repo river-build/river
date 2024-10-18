@@ -5,18 +5,32 @@ import { useMemo } from 'react'
 import { type ActionConfig, useAction } from './internals/useAction'
 import { useSyncAgent } from './useSyncAgent'
 
-// TODO: make this a hook that takes a roomId (any channel, dm/gdm etc)
+// This hook isnt following the convention, but lets see how it goes
+type SendRedactProps =
+    | {
+          type: 'gdm'
+          streamId: string
+      }
+    | {
+          type: 'channel'
+          spaceId: string
+          channelId: string
+      }
+
 export const useRedact = (
-    spaceId: string,
-    channelId: string,
+    props: SendRedactProps,
     config?: ActionConfig<Channel['redactEvent']>,
 ) => {
     const sync = useSyncAgent()
-    const room = useMemo(
-        () => sync.spaces.getSpace(spaceId).getChannel(channelId),
-        [sync.spaces, spaceId, channelId],
-    )
-    const { action: redactEvent, ...rest } = useAction(room, 'redactEvent', config)
+    const namespace = useMemo(() => {
+        if (props.type === 'gdm') {
+            return sync.gdms.getGdm(props.streamId)
+        } else if (props.type === 'channel') {
+            return sync.spaces.getSpace(props.spaceId).getChannel(props.channelId)
+        }
+        return
+    }, [props, sync.gdms, sync.spaces])
+    const { action: redactEvent, ...rest } = useAction(namespace, 'redactEvent', config)
 
     return {
         redactEvent,

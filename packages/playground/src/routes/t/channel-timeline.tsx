@@ -17,6 +17,7 @@ export const ChannelTimelineRoute = () => {
             </h2>
             {channelId && (
                 <Timeline
+                    type="channel"
                     events={events}
                     threadMap={threadMap}
                     spaceId={spaceId}
