@@ -92,7 +92,7 @@ export type TimelineEvent_OneOf =
     | RoomMessageEncryptedRefEvent
     | UnpinEvent
 
-export enum RiverEvent {
+export enum RiverTimelineEvent {
     BlockchainTransaction = 'blockchain.transaction',
     MiniblockHeader = 'm.miniblockheader',
     Notice = 'm.notice',
@@ -129,12 +129,12 @@ export enum RiverEvent {
 }
 
 export interface MiniblockHeaderEvent {
-    kind: RiverEvent.MiniblockHeader
+    kind: RiverTimelineEvent.MiniblockHeader
     message: MiniblockHeader
 }
 
 export interface FulfillmentEvent {
-    kind: RiverEvent.Fulfillment
+    kind: RiverTimelineEvent.Fulfillment
     sessionIds: string[]
     deviceKey: string
     to: string
@@ -142,52 +142,52 @@ export interface FulfillmentEvent {
 }
 
 export interface KeySolicitationEvent {
-    kind: RiverEvent.KeySolicitation
+    kind: RiverTimelineEvent.KeySolicitation
     sessionIds: string[]
     deviceKey: string
     isNewDevice: boolean
 }
 
 export interface RoomCreateEvent {
-    kind: RiverEvent.RoomCreate
+    kind: RiverTimelineEvent.RoomCreate
     creatorId: string
     type?: PayloadCaseType
     spaceId?: string // valid on casablanca channel streams
 }
 
 export interface ChannelCreateEvent {
-    kind: RiverEvent.ChannelCreate
+    kind: RiverTimelineEvent.ChannelCreate
     creatorId: string
     channelId: string
     channelOp?: ChannelOp
     channelSettings?: SpacePayload_ChannelSettings
 }
 export interface ReactionEvent {
-    kind: RiverEvent.Reaction
+    kind: RiverTimelineEvent.Reaction
     targetEventId: string
     reaction: string
 }
 
 export interface SpaceUsernameEvent {
-    kind: RiverEvent.SpaceUsername
+    kind: RiverTimelineEvent.SpaceUsername
     userId: string
     username: string
 }
 
 export interface SpaceDisplayNameEvent {
-    kind: RiverEvent.SpaceDisplayName
+    kind: RiverTimelineEvent.SpaceDisplayName
     userId: string
     displayName: string
 }
 
 export interface SpaceEnsAddressEvent {
-    kind: RiverEvent.SpaceEnsAddress
+    kind: RiverTimelineEvent.SpaceEnsAddress
     userId: string
     ensAddress: Uint8Array
 }
 
 export interface SpaceNftEvent {
-    kind: RiverEvent.SpaceNft
+    kind: RiverTimelineEvent.SpaceNft
     userId: string
     contractAddress: string
     tokenId: string
@@ -195,29 +195,29 @@ export interface SpaceNftEvent {
 }
 
 export interface PinEvent {
-    kind: RiverEvent.Pin
+    kind: RiverTimelineEvent.Pin
     userId: string
     pinnedEventId: string
 }
 
 export interface UnpinEvent {
-    kind: RiverEvent.Unpin
+    kind: RiverTimelineEvent.Unpin
     userId: string
     unpinnedEventId: string
 }
 
 export interface RoomMessageEncryptedEvent {
-    kind: RiverEvent.RoomMessageEncrypted
+    kind: RiverTimelineEvent.RoomMessageEncrypted
     error?: DecryptionSessionError
 }
 
 export interface RoomMessageEncryptedRefEvent {
-    kind: RiverEvent.RoomMessageEncryptedWithRef
+    kind: RiverTimelineEvent.RoomMessageEncryptedWithRef
     refEventId: string
 }
 
 export interface RoomPropertiesEvent {
-    kind: RiverEvent.RoomProperties
+    kind: RiverTimelineEvent.RoomProperties
     properties: ChannelProperties
 }
 
@@ -232,7 +232,7 @@ export enum Membership {
 }
 
 export interface RoomMemberEvent {
-    kind: RiverEvent.RoomMember
+    kind: RiverTimelineEvent.RoomMember
     userId: string
     initiatorId: string
     membership: Membership
@@ -272,7 +272,7 @@ export type RoomMessageEventContentOneOf =
     | RoomMessageEventContent_Text
 
 export interface RoomMessageEvent {
-    kind: RiverEvent.RoomMessage
+    kind: RiverTimelineEvent.RoomMessage
     threadId?: string
     threadPreview?: string
     replyId?: string
@@ -289,13 +289,13 @@ export interface RoomMessageEvent {
 
 // original event: the event that was redacted
 export interface RedactedEvent {
-    kind: RiverEvent.RedactedEvent
+    kind: RiverTimelineEvent.RedactedEvent
     isAdminRedaction: boolean
 }
 
 // the event that redacted the original event
 export interface RedactionActionEvent {
-    kind: RiverEvent.RedactionActionEvent
+    kind: RiverTimelineEvent.RedactionActionEvent
     refEventId: string
     adminRedaction: boolean
 }

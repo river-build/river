@@ -1,5 +1,5 @@
 import { Observable } from '../../../observable/observable'
-import { RiverEvent, TimelineEvent, ThreadStatsData } from './timeline-types'
+import { RiverTimelineEvent, TimelineEvent, ThreadStatsData } from './timeline-types'
 import { getMessageSenderId, getRoomMessageContent } from './timelineEvent'
 
 // eventId -> threadStats
@@ -48,7 +48,7 @@ export class ThreadStats extends Observable<ThreadStatsMap> {
                     parentMessageContent: getRoomMessageContent(event),
                     isParticipating:
                         this.value?.[event.eventId]?.isParticipating ||
-                        (event.content?.kind !== RiverEvent.RedactedEvent &&
+                        (event.content?.kind !== RiverTimelineEvent.RedactedEvent &&
                             this.value?.[event.eventId]?.replyEventIds.size > 0 &&
                             (event.sender.id === userId || event.isMentioned)),
                 },
@@ -81,7 +81,7 @@ export class ThreadStats extends Observable<ThreadStatsMap> {
     }
 
     private formatThreadStat(userId: string, event: TimelineEvent, threadStat: ThreadStatsData) {
-        if (event.content?.kind === RiverEvent.RedactedEvent) {
+        if (event.content?.kind === RiverTimelineEvent.RedactedEvent) {
             return threadStat
         }
         threadStat.replyEventIds.add(event.eventId)

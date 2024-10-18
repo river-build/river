@@ -42,7 +42,7 @@ import {
     Membership,
     type RoomMessageEncryptedEvent,
     type RoomPropertiesEvent,
-    RiverEvent,
+    RiverTimelineEvent,
     type RedactedEvent,
 } from './timeline-types'
 import type { PlainMessage } from '@bufbuild/protobuf'
@@ -253,7 +253,7 @@ function toTownsContent_MiniblockHeader(
 ): EventContentResult {
     return {
         content: {
-            kind: RiverEvent.MiniblockHeader,
+            kind: RiverTimelineEvent.MiniblockHeader,
             message: value,
         } satisfies MiniblockHeaderEvent,
     }
@@ -269,7 +269,7 @@ function toTownsContent_MemberPayload(
         case 'membership':
             return {
                 content: {
-                    kind: RiverEvent.RoomMember,
+                    kind: RiverTimelineEvent.RoomMember,
                     userId: userIdFromAddress(value.content.value.userAddress),
                     initiatorId: userIdFromAddress(value.content.value.initiatorAddress),
                     membership: toMembership(value.content.value.op),
@@ -278,7 +278,7 @@ function toTownsContent_MemberPayload(
         case 'keySolicitation':
             return {
                 content: {
-                    kind: RiverEvent.KeySolicitation,
+                    kind: RiverTimelineEvent.KeySolicitation,
                     sessionIds: value.content.value.sessionIds,
                     deviceKey: value.content.value.deviceKey,
                     isNewDevice: value.content.value.isNewDevice,
@@ -287,7 +287,7 @@ function toTownsContent_MemberPayload(
         case 'keyFulfillment':
             return {
                 content: {
-                    kind: RiverEvent.Fulfillment,
+                    kind: RiverTimelineEvent.Fulfillment,
                     sessionIds: value.content.value.sessionIds,
                     deviceKey: value.content.value.deviceKey,
                     to: userIdFromAddress(value.content.value.userAddress),
@@ -298,7 +298,7 @@ function toTownsContent_MemberPayload(
         case 'displayName':
             return {
                 content: {
-                    kind: RiverEvent.SpaceDisplayName,
+                    kind: RiverTimelineEvent.SpaceDisplayName,
                     userId: message.creatorUserId,
                     displayName:
                         event.decryptedContent?.kind === 'text'
@@ -310,7 +310,7 @@ function toTownsContent_MemberPayload(
         case 'username':
             return {
                 content: {
-                    kind: RiverEvent.SpaceUsername,
+                    kind: RiverTimelineEvent.SpaceUsername,
                     userId: message.creatorUserId,
                     username:
                         event.decryptedContent?.kind === 'text'
@@ -321,7 +321,7 @@ function toTownsContent_MemberPayload(
         case 'ensAddress':
             return {
                 content: {
-                    kind: RiverEvent.SpaceEnsAddress,
+                    kind: RiverTimelineEvent.SpaceEnsAddress,
                     userId: message.creatorUserId,
                     ensAddress: value.content.value,
                 } satisfies SpaceEnsAddressEvent,
@@ -329,7 +329,7 @@ function toTownsContent_MemberPayload(
         case 'nft':
             return {
                 content: {
-                    kind: RiverEvent.SpaceNft,
+                    kind: RiverTimelineEvent.SpaceNft,
                     userId: message.creatorUserId,
                     contractAddress: bin_toHexString(value.content.value.contractAddress),
                     tokenId: bin_toHexString(value.content.value.tokenId),
@@ -339,7 +339,7 @@ function toTownsContent_MemberPayload(
         case 'pin':
             return {
                 content: {
-                    kind: RiverEvent.Pin,
+                    kind: RiverTimelineEvent.Pin,
                     userId: message.creatorUserId,
                     pinnedEventId: bin_toHexString(value.content.value.eventId),
                 } satisfies PinEvent,
@@ -347,7 +347,7 @@ function toTownsContent_MemberPayload(
         case 'unpin':
             return {
                 content: {
-                    kind: RiverEvent.Unpin,
+                    kind: RiverTimelineEvent.Unpin,
                     userId: message.creatorUserId,
                     unpinnedEventId: bin_toHexString(value.content.value.eventId),
                 } satisfies UnpinEvent,
@@ -372,7 +372,7 @@ function toTownsContent_UserPayload(
         case 'inception': {
             return {
                 content: {
-                    kind: RiverEvent.RoomCreate,
+                    kind: RiverTimelineEvent.RoomCreate,
                     creatorId: message.creatorUserId,
                     type: message.event.payload.case,
                 } satisfies RoomCreateEvent,
@@ -383,7 +383,7 @@ function toTownsContent_UserPayload(
             const streamId = streamIdFromBytes(payload.streamId)
             return {
                 content: {
-                    kind: RiverEvent.RoomMember,
+                    kind: RiverTimelineEvent.RoomMember,
                     userId: '', // this is just the current user
                     initiatorId: '',
                     membership: toMembership(payload.op),
@@ -396,7 +396,7 @@ function toTownsContent_UserPayload(
             const payload = value.content.value
             return {
                 content: {
-                    kind: RiverEvent.RoomMember,
+                    kind: RiverTimelineEvent.RoomMember,
                     userId: userIdFromAddress(payload.userId),
                     initiatorId: event.remoteEvent.creatorUserId,
                     membership: toMembership(payload.op),
@@ -427,7 +427,7 @@ function toTownsContent_ChannelPayload(
         case 'inception': {
             return {
                 content: {
-                    kind: RiverEvent.RoomCreate,
+                    kind: RiverTimelineEvent.RoomCreate,
                     creatorId: message.creatorUserId,
                     type: message.event.payload.case,
                 } satisfies RoomCreateEvent,
@@ -455,7 +455,7 @@ function toTownsContent_ChannelPayload(
         case 'redaction':
             return {
                 content: {
-                    kind: RiverEvent.RedactionActionEvent,
+                    kind: RiverTimelineEvent.RedactionActionEvent,
                     refEventId: bin_toHexString(value.content.value.eventId),
                     adminRedaction: true,
                 } satisfies RedactionActionEvent,
@@ -489,7 +489,7 @@ function toTownsContent_FromChannelMessage(
         case 'reaction':
             return {
                 content: {
-                    kind: RiverEvent.Reaction,
+                    kind: RiverTimelineEvent.Reaction,
                     reaction: channelMessage.payload.value.reaction,
                     targetEventId: channelMessage.payload.value.refEventId,
                 } satisfies ReactionEvent,
@@ -497,7 +497,7 @@ function toTownsContent_FromChannelMessage(
         case 'redaction':
             return {
                 content: {
-                    kind: RiverEvent.RedactionActionEvent,
+                    kind: RiverTimelineEvent.RedactionActionEvent,
                     refEventId: channelMessage.payload.value.refEventId,
                     adminRedaction: false,
                 } satisfies RedactionActionEvent,
@@ -535,7 +535,7 @@ function toTownsContent_ChannelPayload_Message(
         if (payload.refEventId) {
             return {
                 content: {
-                    kind: RiverEvent.RoomMessageEncryptedWithRef,
+                    kind: RiverTimelineEvent.RoomMessageEncryptedWithRef,
                     refEventId: payload.refEventId,
                 },
             }
@@ -543,7 +543,7 @@ function toTownsContent_ChannelPayload_Message(
         return {
             // if payload is an EncryptedData message, than it is encrypted content kind
             content: {
-                kind: RiverEvent.RoomMessageEncrypted,
+                kind: RiverTimelineEvent.RoomMessageEncrypted,
                 error: timelineEvent.decryptedContentError,
             } satisfies RoomMessageEncryptedEvent,
         }
@@ -560,7 +560,7 @@ function toTownsContent_ChannelPayload_ChannelProperties(
     if (timelineEvent.decryptedContent?.kind === 'channelProperties') {
         return {
             content: {
-                kind: RiverEvent.RoomProperties,
+                kind: RiverTimelineEvent.RoomProperties,
                 properties: timelineEvent.decryptedContent.content,
             } satisfies RoomPropertiesEvent,
         }
@@ -579,7 +579,7 @@ function toTownsContent_ChannelPayload_Message_Post(
         case 'text':
             return {
                 content: {
-                    kind: RiverEvent.RoomMessage,
+                    kind: RiverTimelineEvent.RoomMessage,
                     body: value.content.value.body,
                     threadId: value.threadId,
                     threadPreview: value.threadPreview,
@@ -596,7 +596,7 @@ function toTownsContent_ChannelPayload_Message_Post(
         case 'image':
             return {
                 content: {
-                    kind: RiverEvent.RoomMessage,
+                    kind: RiverTimelineEvent.RoomMessage,
                     body: value.content.value.title,
                     threadId: value.threadId,
                     threadPreview: value.threadPreview,
@@ -644,7 +644,7 @@ function toTownsContent_SpacePayload(
         case 'inception': {
             return {
                 content: {
-                    kind: RiverEvent.RoomCreate,
+                    kind: RiverTimelineEvent.RoomCreate,
                     creatorId: message.creatorUserId,
                     type: message.event.payload.case,
                 } satisfies RoomCreateEvent,
@@ -655,7 +655,7 @@ function toTownsContent_SpacePayload(
             const channelId = streamIdAsString(payload.channelId)
             return {
                 content: {
-                    kind: RiverEvent.ChannelCreate,
+                    kind: RiverTimelineEvent.ChannelCreate,
                     creatorId: message.creatorUserId,
                     channelId,
                     channelOp: payload.op,
@@ -804,7 +804,7 @@ function toAttachment(
                 '',
             ).content
 
-            return roomMessageEvent?.kind === RiverEvent.RoomMessage
+            return roomMessageEvent?.kind === RiverTimelineEvent.RoomMessage
                 ? ({
                       type: 'embedded_message',
                       ...content,
@@ -858,13 +858,13 @@ export function getFallbackContent(
         throw new Error('Either content or error should be defined')
     }
     switch (content.kind) {
-        case RiverEvent.MiniblockHeader:
+        case RiverTimelineEvent.MiniblockHeader:
             return `Miniblock miniblockNum:${content.message.miniblockNum}, hasSnapshot:${(content
                 .message.snapshot
                 ? true
                 : false
             ).toString()}`
-        case RiverEvent.Reaction:
+        case RiverTimelineEvent.Reaction:
             return `${senderDisplayName} reacted with ${content.reaction} to ${content.targetEventId}`
         // case RiverEvent.RoomAvatar:
         //     return `url: ${content.url ?? 'undefined'}`
@@ -872,38 +872,38 @@ export function getFallbackContent(
         //     const alt = (content.altAliases ?? []).join(', ')
         //     return `alias: ${content.alias}, alt alaises: ${alt}`
         // }
-        case RiverEvent.RoomCreate:
+        case RiverTimelineEvent.RoomCreate:
             return content.type ? `type: ${content.type}` : ''
         // case RiverEvent.RoomEncryption:
         //     return `algorithm: ${content.roomEncryption.algorithm} rotationMs: ${
         //         content.roomEncryption.rotationPeriodMs?.toString() ?? 'N/A'
         //     } rotationMsgs: ${content.roomEncryption.rotationPeriodMsgs?.toString() ?? 'N/A'}`
-        case RiverEvent.RoomMessageEncrypted:
+        case RiverTimelineEvent.RoomMessageEncrypted:
             return `Decrypting...`
-        case RiverEvent.RoomMember: {
+        case RiverTimelineEvent.RoomMember: {
             return `[${content.membership}] userId: ${content.userId} initiatorId: ${content.initiatorId}`
         }
-        case RiverEvent.RoomMessage:
+        case RiverTimelineEvent.RoomMessage:
             return `${senderDisplayName}: ${content.body}`
         // case RiverEvent.RoomName:
         //     return `newValue: ${content.name}`
-        case RiverEvent.RoomProperties:
+        case RiverTimelineEvent.RoomProperties:
             return `properties: ${content.properties.name ?? ''} ${content.properties.topic ?? ''}`
-        case RiverEvent.SpaceUsername:
+        case RiverTimelineEvent.SpaceUsername:
             return `username: ${content.username}`
-        case RiverEvent.SpaceDisplayName:
+        case RiverTimelineEvent.SpaceDisplayName:
             return `username: ${content.displayName}`
-        case RiverEvent.SpaceEnsAddress:
+        case RiverTimelineEvent.SpaceEnsAddress:
             return `ensAddress: ${bin_toHexString(content.ensAddress)}`
-        case RiverEvent.SpaceNft:
+        case RiverTimelineEvent.SpaceNft:
             return `contractAddress: ${content.contractAddress}, tokenId: ${content.tokenId}, chainId: ${content.chainId}`
         // case RiverEvent.RoomTopic:
         //     return `newValue: ${content.topic}`
-        case RiverEvent.RedactedEvent:
+        case RiverTimelineEvent.RedactedEvent:
             return `~Redacted~`
-        case RiverEvent.RedactionActionEvent:
+        case RiverTimelineEvent.RedactionActionEvent:
             return `Redacts ${content.refEventId} adminRedaction: ${content.adminRedaction}`
-        case RiverEvent.ChannelCreate:
+        case RiverTimelineEvent.ChannelCreate:
             if (content.channelSettings !== undefined) {
                 return `channelId: ${content.channelId} autojoin: ${content.channelSettings.autojoin} hideUserJoinLeaves: ${content.channelSettings.hideUserJoinLeaveEvents}`
             }
@@ -920,22 +920,22 @@ export function getFallbackContent(
         //     return `Notice: msgType: ${content.contentKind ?? 'unknown'}, message: ${
         //         content.message
         //     }`
-        case RiverEvent.Fulfillment:
+        case RiverTimelineEvent.Fulfillment:
             return `Fulfillment sessionIds: ${
                 content.sessionIds.length ? content.sessionIds.join(',') : 'forNewDevice: true'
             }, from: ${content.from} to: ${content.deviceKey}`
-        case RiverEvent.KeySolicitation:
+        case RiverTimelineEvent.KeySolicitation:
             if (content.isNewDevice) {
                 return `KeySolicitation deviceKey: ${content.deviceKey}, newDevice: true`
             }
             return `KeySolicitation deviceKey: ${content.deviceKey} sessionIds: ${content.sessionIds.length}`
         // case RiverEvent.RoomMessageMissing:
         //     return `eventId: ${content.eventId}`
-        case RiverEvent.RoomMessageEncryptedWithRef:
+        case RiverTimelineEvent.RoomMessageEncryptedWithRef:
             return `refEventId: ${content.refEventId}`
-        case RiverEvent.Pin:
+        case RiverTimelineEvent.Pin:
             return `pinnedEventId: ${content.pinnedEventId} by: ${content.userId}`
-        case RiverEvent.Unpin:
+        case RiverTimelineEvent.Unpin:
             return `unpinnedEventId: ${content.unpinnedEventId} by: ${content.userId}`
     }
 }
@@ -1045,20 +1045,20 @@ export function transformAttachments(attachments?: Attachment[]): ChannelMessage
 // }
 
 function getThreadParentId(content: TimelineEvent_OneOf | undefined): string | undefined {
-    return content?.kind === RiverEvent.RoomMessage ? content.threadId : undefined
+    return content?.kind === RiverTimelineEvent.RoomMessage ? content.threadId : undefined
 }
 
 function getReplyParentId(content: TimelineEvent_OneOf | undefined): string | undefined {
-    return content?.kind === RiverEvent.RoomMessage ? content.replyId : undefined
+    return content?.kind === RiverTimelineEvent.RoomMessage ? content.replyId : undefined
 }
 
 function getReactionParentId(content: TimelineEvent_OneOf | undefined): string | undefined {
-    return content?.kind === RiverEvent.Reaction ? content.targetEventId : undefined
+    return content?.kind === RiverTimelineEvent.Reaction ? content.targetEventId : undefined
 }
 
 function getIsMentioned(content: TimelineEvent_OneOf | undefined, userId: string): boolean {
     //TODO: comparison below should be changed as soon as this HNT-1576 will be resolved
-    return content?.kind === RiverEvent.RoomMessage
+    return content?.kind === RiverTimelineEvent.RoomMessage
         ? content.mentions.findIndex(
               (x) =>
                   (x.userId ?? '')
@@ -1089,8 +1089,8 @@ export function toReplacedMessageEvent(prev: TimelineEvent, next: TimelineEvent)
     if (!canReplaceEvent(prev, next)) {
         return prev
     } else if (
-        next.content?.kind === RiverEvent.RoomMessage &&
-        prev.content?.kind === RiverEvent.RoomMessage
+        next.content?.kind === RiverTimelineEvent.RoomMessage &&
+        prev.content?.kind === RiverTimelineEvent.RoomMessage
     ) {
         // when we replace an event, we copy the content up to the root event
         // so we keep the prev id, but use the next content
@@ -1115,7 +1115,7 @@ export function toReplacedMessageEvent(prev: TimelineEvent, next: TimelineEvent)
             reactionParentId: prev.reactionParentId,
             sender: prev.sender,
         }
-    } else if (next.content?.kind === RiverEvent.RedactedEvent) {
+    } else if (next.content?.kind === RiverTimelineEvent.RedactedEvent) {
         // for redacted events, carry over previous pointers to content
         // we don't want to lose thread info
         return {
@@ -1131,7 +1131,7 @@ export function toReplacedMessageEvent(prev: TimelineEvent, next: TimelineEvent)
             threadParentId: prev.threadParentId,
             reactionParentId: prev.reactionParentId,
         }
-    } else if (prev.content?.kind === RiverEvent.RedactedEvent) {
+    } else if (prev.content?.kind === RiverTimelineEvent.RedactedEvent) {
         // replacing a redacted event should maintain the redacted state
         return {
             ...prev,
@@ -1158,7 +1158,7 @@ export function toReplacedMessageEvent(prev: TimelineEvent, next: TimelineEvent)
 }
 
 function canReplaceEvent(prev: TimelineEvent, next: TimelineEvent): boolean {
-    if (next.content?.kind === RiverEvent.RedactedEvent && next.content.isAdminRedaction) {
+    if (next.content?.kind === RiverTimelineEvent.RedactedEvent && next.content.isAdminRedaction) {
         return true
     }
     if (next.sender.id === prev.sender.id) {
@@ -1168,19 +1168,21 @@ function canReplaceEvent(prev: TimelineEvent, next: TimelineEvent): boolean {
 }
 
 export function getEditsId(content: TimelineEvent_OneOf | undefined): string | undefined {
-    return content?.kind === RiverEvent.RoomMessage ? content.editsEventId : undefined
+    return content?.kind === RiverTimelineEvent.RoomMessage ? content.editsEventId : undefined
 }
 
 export function getRedactsId(content: TimelineEvent_OneOf | undefined): string | undefined {
-    return content?.kind === RiverEvent.RedactionActionEvent ? content.refEventId : undefined
+    return content?.kind === RiverTimelineEvent.RedactionActionEvent
+        ? content.refEventId
+        : undefined
 }
 
 export function makeRedactionEvent(redactionAction: TimelineEvent): TimelineEvent {
-    if (redactionAction.content?.kind !== RiverEvent.RedactionActionEvent) {
+    if (redactionAction.content?.kind !== RiverTimelineEvent.RedactionActionEvent) {
         throw new Error('makeRedactionEvent called with non-redaction action event')
     }
     const newContent = {
-        kind: RiverEvent.RedactedEvent,
+        kind: RiverTimelineEvent.RedactedEvent,
         isAdminRedaction: redactionAction.content.adminRedaction,
     } satisfies RedactedEvent
 
@@ -1200,5 +1202,5 @@ export function getMessageSenderId(event: TimelineEvent): string | undefined {
 }
 
 export function getRoomMessageContent(event?: TimelineEvent): RoomMessageEvent | undefined {
-    return event?.content?.kind === RiverEvent.RoomMessage ? event.content : undefined
+    return event?.content?.kind === RiverTimelineEvent.RoomMessage ? event.content : undefined
 }

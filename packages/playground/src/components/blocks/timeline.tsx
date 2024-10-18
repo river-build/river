@@ -10,7 +10,7 @@ import {
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { type MessageReactions, RiverEvent, type TimelineEvent } from '@river-build/sdk'
+import { type MessageReactions, RiverTimelineEvent, type TimelineEvent } from '@river-build/sdk'
 import { useCallback, useMemo } from 'react'
 import { cn } from '@/utils'
 import { Form, FormControl, FormField, FormItem, FormMessage } from '../ui/form'
@@ -69,7 +69,7 @@ export const Timeline = ({
             <ScrollArea className="h-[calc(100dvh-172px)]">
                 <div className="flex flex-col gap-1.5">
                     {events.flatMap((event) =>
-                        event.content?.kind === RiverEvent.RoomMessage &&
+                        event.content?.kind === RiverTimelineEvent.RoomMessage &&
                         (showThreadMessages || !event.threadParentId)
                             ? [
                                   <Message
@@ -161,7 +161,9 @@ const Message = ({
                     {prettyDisplayName || event.sender.id}:
                 </span>
                 <span>
-                    {event.content?.kind === RiverEvent.RoomMessage ? event.content.body : ''}
+                    {event.content?.kind === RiverTimelineEvent.RoomMessage
+                        ? event.content.body
+                        : ''}
                 </span>
             </div>
             <div className="flex items-center gap-1">

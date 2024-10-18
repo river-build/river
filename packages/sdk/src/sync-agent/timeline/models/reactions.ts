@@ -1,5 +1,5 @@
 import { Observable } from '../../../observable/observable'
-import { TimelineEvent, RiverEvent, type MessageReactions } from './timeline-types'
+import { TimelineEvent, RiverTimelineEvent, type MessageReactions } from './timeline-types'
 
 // { parentEventId -> { reactionName: { userId: { eventId: string } } } }
 export type ReactionsMap = Record<string, MessageReactions>
@@ -18,7 +18,8 @@ export class Reactions extends Observable<ReactionsMap> {
 
     removeEvent(event: TimelineEvent) {
         const parentId = event.reactionParentId
-        const content = event.content?.kind === RiverEvent.Reaction ? event.content : undefined
+        const content =
+            event.content?.kind === RiverTimelineEvent.Reaction ? event.content : undefined
         if (!content || !parentId || !this.value[parentId]) {
             return
         }
@@ -48,7 +49,8 @@ export class Reactions extends Observable<ReactionsMap> {
     }
 
     private addReaction(event: TimelineEvent, entry?: MessageReactions): MessageReactions {
-        const content = event.content?.kind === RiverEvent.Reaction ? event.content : undefined
+        const content =
+            event.content?.kind === RiverTimelineEvent.Reaction ? event.content : undefined
         if (!content) {
             return entry ?? {}
         }

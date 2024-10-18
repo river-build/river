@@ -77,7 +77,7 @@ import {
     XchainConfig,
     UpdateRoleParams,
 } from '@river-build/web3'
-import { RiverEvent, type TimelineEvent } from './sync-agent/timeline/models/timeline-types'
+import { RiverTimelineEvent, type TimelineEvent } from './sync-agent/timeline/models/timeline-types'
 
 const log = dlog('csb:test:util')
 
@@ -1301,6 +1301,7 @@ export const findMessageByText = (
     text: string,
 ): TimelineEvent | undefined => {
     return events.find(
-        (event) => event.content?.kind === RiverEvent.RoomMessage && event.content.body === text,
+        (event) =>
+            event.content?.kind === RiverTimelineEvent.RoomMessage && event.content.body === text,
     )
 }
