@@ -4619,6 +4619,7 @@ __metadata:
     jest: ^29.6.2
     jest-extended: ^4.0.1
     lodash: ^4.17.21
+    lru-cache: ^11.0.1
     nanoid: ^4.0.0
     ts-jest: ^29.1.1
     ts-node: ^10.9.1
@@ -15050,6 +15051,13 @@ __metadata:
   version: 10.2.0
   resolution: "lru-cache@npm:10.2.0"
   checksum: eee7ddda4a7475deac51ac81d7dd78709095c6fa46e8350dc2d22462559a1faa3b81ed931d5464b13d48cbd7e08b46100b6f768c76833912bc444b99c37e25db
+  languageName: node
+  linkType: hard
+
+"lru-cache@npm:^11.0.1":
+  version: 11.0.1
+  resolution: "lru-cache@npm:11.0.1"
+  checksum: 6056230a99fb399234e82368b99586bd4740079e80649102f681b19337b7d8c6bc8dd7f8b8c59377c31d26deb89f548b717ae932e139b4b795879d920fccf820
   languageName: node
   linkType: hard
 
