@@ -17,6 +17,25 @@ interface IArchitectBase {
   //                           STRUCTS
   // =============================================================
 
+  struct MembershipRequirementsOld {
+    bool everyone;
+    address[] users;
+    bytes ruleData;
+  }
+
+  struct MembershipOld {
+    IMembershipBase.Membership settings;
+    MembershipRequirementsOld requirements;
+    string[] permissions;
+  }
+
+  struct CreateSpaceOld {
+    Metadata metadata;
+    MembershipOld membership;
+    ChannelInfo channel;
+    Prepay prepay;
+  }
+
   // Latest
   struct MembershipRequirements {
     bool everyone;
@@ -92,16 +111,6 @@ interface IArchitect is IArchitectBase {
   ) external view returns (address space);
 
   function getTokenIdBySpace(address space) external view returns (uint256);
-
-  /// @notice Creates a new space
-  /// @param SpaceInfo Space information
-  function createSpace(SpaceInfo memory SpaceInfo) external returns (address);
-
-  /// @notice Creates a new space with a prepayment
-  /// @param createSpace Space information
-  function createSpaceWithPrepay(
-    CreateSpace memory createSpace
-  ) external payable returns (address);
 
   // =============================================================
   //                         Implementations
