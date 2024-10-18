@@ -227,7 +227,6 @@ export enum Membership {
     Invite = 'invite',
     Leave = 'leave',
     Ban = 'ban',
-    // NOTE: 'Knock' got removed, isnt used anywhere
     None = '',
 }
 
