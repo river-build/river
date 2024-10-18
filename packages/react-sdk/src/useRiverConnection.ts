@@ -4,18 +4,26 @@ import type { ethers } from 'ethers'
 import { connectRiverWithBearerToken, signAndConnect } from './connectRiver'
 import { useRiverSync } from './internals/useRiverSync'
 
+type RiverConnectConfig = Omit<SyncAgentConfig, 'context' | 'onTokenExpired'>
 export const useRiverConnection = () => {
     const [isConnecting, setConnecting] = useState(false)
     const river = useRiverSync()
 
     const connect = useCallback(
-        async (signer: ethers.Signer, config: Omit<SyncAgentConfig, 'context'>) => {
+        async (signer: ethers.Signer, config: RiverConnectConfig) => {
             if (river?.syncAgent) {
                 return
             }
-
+            const mergedConfig = {
+                ...config,
+                ...river?.config,
+                onTokenExpired: () => {
+                    river?.config?.onTokenExpired?.()
+                    river?.setSyncAgent(undefined)
+                },
+            }
             setConnecting(true)
-            return signAndConnect(signer, config)
+            return signAndConnect(signer, mergedConfig)
                 .then((syncAgent) => {
                     river?.setSyncAgent(syncAgent)
                     return syncAgent
@@ -26,12 +34,20 @@ export const useRiverConnection = () => {
     )
 
     const connectUsingBearerToken = useCallback(
-        async (bearerToken: string, config: Omit<SyncAgentConfig, 'context'>) => {
+        async (bearerToken: string, config: RiverConnectConfig) => {
             if (river?.syncAgent) {
                 return
             }
+            const mergedConfig = {
+                ...config,
+                ...river?.config,
+                onTokenExpired: () => {
+                    river?.config?.onTokenExpired?.()
+                    river?.setSyncAgent(undefined)
+                },
+            }
             setConnecting(true)
-            return connectRiverWithBearerToken(bearerToken, config)
+            return connectRiverWithBearerToken(bearerToken, mergedConfig)
                 .then((syncAgent) => {
                     river?.setSyncAgent(syncAgent)
                     return syncAgent
