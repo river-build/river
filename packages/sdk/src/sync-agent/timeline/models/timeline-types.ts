@@ -62,29 +62,22 @@ export interface TimelineEvent {
 /// a timeline event should have one or none of the following fields set
 export type TimelineEvent_OneOf =
     | MiniblockHeaderEvent
-    // | NoticeEvent // TODO: understand
     | ReactionEvent
     | FulfillmentEvent
     | KeySolicitationEvent
     | PinEvent
     | RedactedEvent
     | RedactionActionEvent
-    // | RoomCanonicalAliasEvent // TODO: understand
-    // | RoomEncryptionEvent // TODO: understand
-    // | RoomAvatarEvent // TODO: understand
     | RoomCreateEvent
     | RoomMessageEncryptedEvent
-    // | RoomMessageMissingEvent // TODO: understand
-    | RoomMemberEvent // TODO: understand
+    | RoomMessageMissingEvent
+    | RoomMemberEvent
     | RoomMessageEvent
-    // | RoomNameEvent // TODO: understand
-    | RoomPropertiesEvent // TODO: understand (can we change the name to ChannelPropertiesEvent?)
-    // | RoomTopicEvent // TODO: understand
-    | ChannelCreateEvent // NOTE: prev SpaceChild
+    | RoomPropertiesEvent // TODO: maybe change this to ChannelPropertiesEvent (?)
+    | ChannelCreateEvent
     | SpaceUpdateAutojoinEvent
     | SpaceUpdateHideUserJoinLeavesEvent
     | SpaceImageEvent
-    // | SpaceParentEvent // TODO: understand
     | SpaceUsernameEvent
     | SpaceDisplayNameEvent
     | SpaceEnsAddressEvent
@@ -95,32 +88,24 @@ export type TimelineEvent_OneOf =
 export enum RiverTimelineEvent {
     BlockchainTransaction = 'blockchain.transaction',
     MiniblockHeader = 'm.miniblockheader',
-    Notice = 'm.notice',
     Reaction = 'm.reaction',
     Fulfillment = 'm.fulfillment',
     KeySolicitation = 'm.key_solicitation',
     Pin = 'm.pin',
     RedactedEvent = 'm.redacted_event',
     RedactionActionEvent = 'm.redaction_action',
-    RoomAvatar = 'm.room.avatar',
-    RoomCanonicalAlias = 'm.room.canonical_alias',
     RoomCreate = 'm.room.create', // TODO: would be great to name this after space / channel name
-    RoomEncryption = 'm.room.encryption',
-    RoomHistoryVisibility = 'm.room.history_visibility',
     RoomJoinRules = 'm.room.join_rules',
     RoomMember = 'm.room.member',
     RoomMessage = 'm.room.message',
     RoomMessageEncrypted = 'm.room.encrypted',
     RoomMessageEncryptedWithRef = 'm.room.encrypted_with_ref',
     RoomMessageMissing = 'm.room.missing',
-    RoomName = 'm.room.name',
     RoomProperties = 'm.room.properties',
-    RoomTopic = 'm.room.topic',
-    ChannelCreate = 'm.space.child',
+    ChannelCreate = 'm.channel.create',
     SpaceUpdateAutojoin = 'm.space.update_autojoin',
     SpaceUpdateHideUserJoinLeaves = 'm.space.update_channel_hide_user_join_leaves',
     SpaceImage = 'm.space.image',
-    SpaceParent = 'm.space.parent',
     SpaceUsername = 'm.space.username',
     SpaceDisplayName = 'm.space.display_name',
     SpaceEnsAddress = 'm.space.ens_name',
@@ -236,6 +221,11 @@ export interface RoomMessageEncryptedRefEvent {
 export interface RoomPropertiesEvent {
     kind: RiverTimelineEvent.RoomProperties
     properties: ChannelProperties
+}
+
+export interface RoomMessageMissingEvent {
+    kind: RiverTimelineEvent.RoomMessageMissing
+    eventId: string
 }
 
 // TODO: membership here doenst map 1-1 to MembershipOp

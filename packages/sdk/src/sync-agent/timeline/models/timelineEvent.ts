@@ -867,18 +867,8 @@ export function getFallbackContent(
             ).toString()}`
         case RiverTimelineEvent.Reaction:
             return `${senderDisplayName} reacted with ${content.reaction} to ${content.targetEventId}`
-        // case RiverEvent.RoomAvatar:
-        //     return `url: ${content.url ?? 'undefined'}`
-        // case RiverEvent.RoomCanonicalAlias: {
-        //     const alt = (content.altAliases ?? []).join(', ')
-        //     return `alias: ${content.alias}, alt alaises: ${alt}`
-        // }
         case RiverTimelineEvent.RoomCreate:
             return content.type ? `type: ${content.type}` : ''
-        // case RiverEvent.RoomEncryption:
-        //     return `algorithm: ${content.roomEncryption.algorithm} rotationMs: ${
-        //         content.roomEncryption.rotationPeriodMs?.toString() ?? 'N/A'
-        //     } rotationMsgs: ${content.roomEncryption.rotationPeriodMsgs?.toString() ?? 'N/A'}`
         case RiverTimelineEvent.RoomMessageEncrypted:
             return `Decrypting...`
         case RiverTimelineEvent.RoomMember: {
@@ -886,8 +876,6 @@ export function getFallbackContent(
         }
         case RiverTimelineEvent.RoomMessage:
             return `${senderDisplayName}: ${content.body}`
-        // case RiverEvent.RoomName:
-        //     return `newValue: ${content.name}`
         case RiverTimelineEvent.RoomProperties:
             return `properties: ${content.properties.name ?? ''} ${content.properties.topic ?? ''}`
         case RiverTimelineEvent.SpaceUsername:
@@ -898,8 +886,6 @@ export function getFallbackContent(
             return `ensAddress: ${bin_toHexString(content.ensAddress)}`
         case RiverTimelineEvent.SpaceNft:
             return `contractAddress: ${content.contractAddress}, tokenId: ${content.tokenId}, chainId: ${content.chainId}`
-        // case RiverEvent.RoomTopic:
-        //     return `newValue: ${content.topic}`
         case RiverTimelineEvent.RedactedEvent:
             return `~Redacted~`
         case RiverTimelineEvent.RedactionActionEvent:
@@ -915,12 +901,6 @@ export function getFallbackContent(
             return `channelId: ${content.channelId} hideUserJoinLeaves: ${content.hideUserJoinLeaves}`
         case RiverTimelineEvent.SpaceImage:
             return `SpaceImage`
-        // case RiverEvent.SpaceParent:
-        //     return `parentId: ${content.parentId}`
-        // case RiverEvent.Notice:
-        //     return `Notice: msgType: ${content.contentKind ?? 'unknown'}, message: ${
-        //         content.message
-        //     }`
         case RiverTimelineEvent.Fulfillment:
             return `Fulfillment sessionIds: ${
                 content.sessionIds.length ? content.sessionIds.join(',') : 'forNewDevice: true'
@@ -930,8 +910,8 @@ export function getFallbackContent(
                 return `KeySolicitation deviceKey: ${content.deviceKey}, newDevice: true`
             }
             return `KeySolicitation deviceKey: ${content.deviceKey} sessionIds: ${content.sessionIds.length}`
-        // case RiverEvent.RoomMessageMissing:
-        //     return `eventId: ${content.eventId}`
+        case RiverTimelineEvent.RoomMessageMissing:
+            return `eventId: ${content.eventId}`
         case RiverTimelineEvent.RoomMessageEncryptedWithRef:
             return `refEventId: ${content.refEventId}`
         case RiverTimelineEvent.Pin:
