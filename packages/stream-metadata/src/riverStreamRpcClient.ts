@@ -1,20 +1,40 @@
 import {
 	ParsedStreamResponse,
 	StreamStateView,
+	assert,
 	decryptAESGCM,
 	retryInterceptor,
 	streamIdAsBytes,
 	streamIdAsString,
-	unpackStream,
 } from '@river-build/sdk'
 import { PromiseClient, createPromiseClient } from '@connectrpc/connect'
 import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-node'
-import { StreamService } from '@river-build/proto'
+import { StreamAndCookie, StreamService } from '@river-build/proto'
 import { filetypemime } from 'magic-bytes.js'
 import { FastifyBaseLogger } from 'fastify'
 
 import { MediaContent, StreamIdHex } from './types'
 import { getNodeForStream } from './streamRegistry'
+import { getUnpackWorkerPool } from './unpackWorkerPool'
+
+// Helper function to safely extract error details
+function getErrorDetails(error: unknown): { message: string; stack?: string } {
+	if (error instanceof Error) {
+		return {
+			message: error.message,
+			stack: error.stack,
+		}
+	} else if (typeof error === 'object' && error !== null) {
+		return {
+			message: String((error as { message?: unknown }).message || 'Unknown error'),
+			stack: String((error as { stack?: unknown }).stack || ''),
+		}
+	} else {
+		return {
+			message: String(error),
+		}
+	}
+}
 
 const clients = new Map<string, StreamRpcClient>()
 
@@ -149,6 +169,14 @@ function stripHexPrefix(hexString: string): string {
 	return hexString
 }
 
+async function runUnpackStreamInWorker(
+	logger: FastifyBaseLogger,
+	stream: StreamAndCookie,
+): Promise<ParsedStreamResponse> {
+	const workerPool = getUnpackWorkerPool(logger)
+	return await workerPool.runTask(stream)
+}
+
 export async function getStream(
 	logger: FastifyBaseLogger,
 	streamId: string,
@@ -178,11 +206,16 @@ export async function getStream(
 			'getStream finished',
 		)
 
-		const unpackedResponse = await unpackStream(response.stream)
+		const { stream } = response
+
+		assert(stream !== undefined, 'bad stream')
+
+		const unpackedResponse = await runUnpackStreamInWorker(logger, stream)
 		return streamViewFromUnpackedResponse(streamId, unpackedResponse)
-	} catch (e) {
+	} catch (e: unknown) {
+		const errpr = getErrorDetails(e)
 		logger.error(
-			{ url: client.url, streamId, error: e },
+			{ url: client.url, streamId, errpr },
 			'getStream failed, removing client from cache',
 		)
 		removeClient(logger, client)
