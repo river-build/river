@@ -1,7 +1,3 @@
-import { Worker } from 'worker_threads'
-import path from 'path'
-import { log } from 'console'
-
 import {
 	ParsedStreamResponse,
 	StreamStateView,
@@ -19,8 +15,26 @@ import { FastifyBaseLogger } from 'fastify'
 
 import { MediaContent, StreamIdHex } from './types'
 import { getNodeForStream } from './streamRegistry'
-import { WorkerResponse } from './unpackStreamWorker'
-import { config } from './environment'
+import { getUnpackWorkerPool } from './unpackWorkerPool'
+
+// Helper function to safely extract error details
+function getErrorDetails(error: unknown): { message: string; stack?: string } {
+	if (error instanceof Error) {
+		return {
+			message: error.message,
+			stack: error.stack,
+		}
+	} else if (typeof error === 'object' && error !== null) {
+		return {
+			message: String((error as { message?: unknown }).message || 'Unknown error'),
+			stack: String((error as { stack?: unknown }).stack || ''),
+		}
+	} else {
+		return {
+			message: String(error),
+		}
+	}
+}
 
 const clients = new Map<string, StreamRpcClient>()
 
@@ -155,36 +169,12 @@ function stripHexPrefix(hexString: string): string {
 	return hexString
 }
 
-const workerPath = path.join(__dirname, 'unpackStreamWorker.cjs')
-
 async function runUnpackStreamInWorker(
 	logger: FastifyBaseLogger,
 	stream: StreamAndCookie,
 ): Promise<ParsedStreamResponse> {
-	return new Promise((resolve, reject) => {
-		logger.info({ workerPath }, 'got workerPath')
-		const worker = new Worker(workerPath)
-
-		worker.on('message', async (result: WorkerResponse) => {
-			if ('error' in result) {
-				reject(new Error(result.error.message))
-			} else {
-				resolve(result.unpackedResponse)
-			}
-			await worker.terminate()
-		})
-
-		worker.on('error', reject)
-		worker.on('exit', (code) => {
-			logger.info({ code }, 'on exit')
-			if (code !== 0) {
-				reject(new Error(`Worker stopped with exit code ${code}`))
-			}
-		})
-
-		worker.postMessage({ stream })
-		logger.info({}, 'posted message')
-	})
+	const workerPool = getUnpackWorkerPool(logger)
+	return await workerPool.runTask(stream)
 }
 
 export async function getStream(
@@ -222,9 +212,10 @@ export async function getStream(
 
 		const unpackedResponse = await runUnpackStreamInWorker(logger, stream)
 		return streamViewFromUnpackedResponse(streamId, unpackedResponse)
-	} catch (e) {
+	} catch (e: unknown) {
+		const errpr = getErrorDetails(e)
 		logger.error(
-			{ url: client.url, streamId, error: e },
+			{ url: client.url, streamId, errpr },
 			'getStream failed, removing client from cache',
 		)
 		removeClient(logger, client)
