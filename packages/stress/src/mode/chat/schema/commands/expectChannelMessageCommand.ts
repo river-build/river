@@ -5,7 +5,7 @@ import { ChatConfig } from '../../../common/types'
 import { channelMessagePostWhere } from '../../../../utils/timeline'
 import { Stream } from '@river-build/sdk'
 import { Logger } from 'pino'
-import { CodeException } from '@river-build/dlog'
+import { ExecutionError } from './ExecutionError'
 
 const expectedMessage = z.object({
     content: z.string(),
@@ -27,8 +27,7 @@ export type ExpectChannelMessageParams = z.infer<typeof paramsSchema>
 export type ExpectChannelMessageCommand = z.infer<typeof expectChannelMessageCommand>
 
 function escapeMessage(template: string, client: StressClient, cfg: ChatConfig): string {
-    let escaped = template.replaceAll('${SESSION_ID}', cfg.sessionId)
-    return escaped
+    return template.replaceAll('${SESSION_ID}', cfg.sessionId)
 }
 
 async function waitForMessage(
@@ -67,6 +66,7 @@ async function waitForMessage(
                 clientIndex: client.clientIndex,
                 channel: channel.streamId,
                 text,
+                message,
             },
             'Detected message in channel',
         )

@@ -134,7 +134,7 @@ export async function startSchemaChat(opts: {
             chatConfig.sessionId + ':failure',
         )
         if (failure) {
-            chatConfig.globalPersistedStore?.set(
+            await chatConfig.globalPersistedStore?.set(
                 chatConfig.sessionId + ':' + chatConfig.processIndex + ':status',
                 'detected_failure',
             )
@@ -164,7 +164,7 @@ export async function startSchemaChat(opts: {
             )
 
             // persist global test run failure
-            chatConfig.globalPersistedStore?.set(
+            await chatConfig.globalPersistedStore?.set(
                 chatConfig.sessionId + ':failure',
                 JSON.stringify({
                     processId: chatConfig.processIndex,
@@ -174,7 +174,7 @@ export async function startSchemaChat(opts: {
                 }),
             )
 
-            chatConfig.globalPersistedStore?.set(
+            await chatConfig.globalPersistedStore?.set(
                 chatConfig.sessionId + ':' + chatConfig.processIndex + ':status',
                 'failed',
             )
@@ -183,7 +183,7 @@ export async function startSchemaChat(opts: {
         }
     }
 
-    chatConfig.globalPersistedStore?.set(
+    await chatConfig.globalPersistedStore?.set(
         chatConfig.sessionId + ':' + chatConfig.processIndex + ':status',
         'success',
     )
