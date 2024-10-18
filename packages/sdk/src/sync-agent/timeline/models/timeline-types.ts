@@ -81,9 +81,9 @@ export type TimelineEvent_OneOf =
     | RoomPropertiesEvent // TODO: understand (can we change the name to ChannelPropertiesEvent?)
     // | RoomTopicEvent // TODO: understand
     | ChannelCreateEvent // NOTE: prev SpaceChild
-    // | SpaceUpdateAutojoinEvent  // TODO: implement
-    // | SpaceUpdateHideUserJoinLeavesEvent // TODO: implement
-    // | SpaceImageEvent // TODO: implement
+    | SpaceUpdateAutojoinEvent
+    | SpaceUpdateHideUserJoinLeavesEvent
+    | SpaceImageEvent
     // | SpaceParentEvent // TODO: understand
     | SpaceUsernameEvent
     | SpaceDisplayNameEvent
@@ -162,6 +162,23 @@ export interface ChannelCreateEvent {
     channelOp?: ChannelOp
     channelSettings?: SpacePayload_ChannelSettings
 }
+
+export interface SpaceUpdateAutojoinEvent {
+    kind: RiverTimelineEvent.SpaceUpdateAutojoin
+    channelId: string
+    autojoin: boolean
+}
+
+export interface SpaceUpdateHideUserJoinLeavesEvent {
+    kind: RiverTimelineEvent.SpaceUpdateHideUserJoinLeaves
+    channelId: string
+    hideUserJoinLeaves: boolean
+}
+
+export interface SpaceImageEvent {
+    kind: RiverTimelineEvent.SpaceImage
+}
+
 export interface ReactionEvent {
     kind: RiverTimelineEvent.Reaction
     targetEventId: string

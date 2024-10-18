@@ -44,6 +44,9 @@ import {
     type RoomPropertiesEvent,
     RiverTimelineEvent,
     type RedactedEvent,
+    type SpaceUpdateAutojoinEvent,
+    type SpaceUpdateHideUserJoinLeavesEvent,
+    type SpaceImageEvent,
 } from './timeline-types'
 import type { PlainMessage } from '@bufbuild/protobuf'
 import { userIdFromAddress, streamIdFromBytes, streamIdAsString } from '../../../id'
@@ -628,7 +631,7 @@ function toTownsContent_ChannelPayload_Message_Post(
         case undefined:
             return { error: `Undefined payload case: ${description}` }
         default:
-            // logNever(value.content)
+            logNever(value.content)
             return { error: `Unknown payload case: ${description}` }
     }
 }
@@ -662,40 +665,39 @@ function toTownsContent_SpacePayload(
                 } satisfies ChannelCreateEvent,
             }
         }
-        // TODO: finish those
-        // case 'updateChannelAutojoin': {
-        //     const payload = value.content.value
-        //     const channelId = streamIdAsString(payload.channelId)
-        //     return {
-        //         content: {
-        //             kind: RiverEvent.SpaceUpdateAutojoin,
-        //             autojoin: payload.autojoin,
-        //             channelId: channelId,
-        //         } satisfies SpaceUpdateAutojoinEvent,
-        //     }
-        // }
-        // case 'updateChannelHideUserJoinLeaveEvents': {
-        //     const payload = value.content.value
-        //     const channelId = streamIdAsString(payload.channelId)
-        //     return {
-        //         content: {
-        //             kind: RiverEvent.SpaceUpdateHideUserJoinLeaves,
-        //             hideUserJoinLeaves: payload.hideUserJoinLeaveEvents,
-        //             channelId: channelId,
-        //         } satisfies SpaceUpdateHideUserJoinLeavesEvent,
-        //     }
-        // }
-        // case 'spaceImage': {
-        //     return {
-        //         content: {
-        //             kind: RiverEvent.SpaceImage,
-        //         } satisfies SpaceImageEvent,
-        //     }
-        // }
+        case 'updateChannelAutojoin': {
+            const payload = value.content.value
+            const channelId = streamIdAsString(payload.channelId)
+            return {
+                content: {
+                    kind: RiverTimelineEvent.SpaceUpdateAutojoin,
+                    autojoin: payload.autojoin,
+                    channelId: channelId,
+                } satisfies SpaceUpdateAutojoinEvent,
+            }
+        }
+        case 'updateChannelHideUserJoinLeaveEvents': {
+            const payload = value.content.value
+            const channelId = streamIdAsString(payload.channelId)
+            return {
+                content: {
+                    kind: RiverTimelineEvent.SpaceUpdateHideUserJoinLeaves,
+                    hideUserJoinLeaves: payload.hideUserJoinLeaveEvents,
+                    channelId: channelId,
+                } satisfies SpaceUpdateHideUserJoinLeavesEvent,
+            }
+        }
+        case 'spaceImage': {
+            return {
+                content: {
+                    kind: RiverTimelineEvent.SpaceImage,
+                } satisfies SpaceImageEvent,
+            }
+        }
         case undefined:
             return { error: `Undefined payload case: ${description}` }
         default:
-            // logNever(value.content)
+            logNever(value.content)
             return { error: `Unknown payload case: ${description}` }
     }
 }
@@ -907,12 +909,12 @@ export function getFallbackContent(
                 return `channelId: ${content.channelId} autojoin: ${content.channelSettings.autojoin} hideUserJoinLeaves: ${content.channelSettings.hideUserJoinLeaveEvents}`
             }
             return `channelId: ${content.channelId}`
-        // case RiverEvent.SpaceUpdateAutojoin:
-        //     return `channelId: ${content.channelId} autojoin: ${content.autojoin}`
-        // case RiverEvent.SpaceUpdateHideUserJoinLeaves:
-        //     return `channelId: ${content.channelId} hideUserJoinLeaves: ${content.hideUserJoinLeaves}`
-        // case RiverEvent.SpaceImage:
-        //     return `SpaceImage`
+        case RiverTimelineEvent.SpaceUpdateAutojoin:
+            return `channelId: ${content.channelId} autojoin: ${content.autojoin}`
+        case RiverTimelineEvent.SpaceUpdateHideUserJoinLeaves:
+            return `channelId: ${content.channelId} hideUserJoinLeaves: ${content.hideUserJoinLeaves}`
+        case RiverTimelineEvent.SpaceImage:
+            return `SpaceImage`
         // case RiverEvent.SpaceParent:
         //     return `parentId: ${content.parentId}`
         // case RiverEvent.Notice:
