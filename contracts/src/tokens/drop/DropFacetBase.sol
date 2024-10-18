@@ -26,7 +26,12 @@ abstract contract DropFacetBase is IDropFacetBase {
       i > conditionStartId;
       i--
     ) {
-      if (block.timestamp >= ds.conditionById[i - 1].startTimestamp) {
+      ClaimCondition memory condition = ds.conditionById[i - 1];
+      if (
+        block.timestamp >= condition.startTimestamp &&
+        (condition.endTimestamp == 0 ||
+          block.timestamp < condition.endTimestamp)
+      ) {
         return i - 1;
       }
     }
@@ -111,6 +116,7 @@ abstract contract DropFacetBase is IDropFacetBase {
       uint256 amountAlreadyClaimed = ds
         .conditionById[newStartId + i]
         .supplyClaimed;
+
       if (amountAlreadyClaimed > conditions[i].maxClaimableSupply) {
         CustomRevert.revertWith(DropFacet__CannotSetClaimConditions.selector);
       }
