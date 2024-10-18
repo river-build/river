@@ -46,12 +46,18 @@ export class SyncedStream extends Stream implements ISyncedStream {
             return false
         }
 
-        const prependedMiniblocks = hasTopLevelRenderableEvent(miniblocks)
-            ? []
-            : await this.cachedScrollback(
-                  miniblocks[0].header.prevSnapshotMiniblockNum,
-                  miniblocks[0].header.miniblockNum,
-              )
+        const isChannelStream =
+            isChannelStreamId(this.streamId) ||
+            isDMChannelStreamId(this.streamId) ||
+            isGDMChannelStreamId(this.streamId)
+        const prependedMiniblocks = isChannelStream
+            ? hasTopLevelRenderableEvent(miniblocks)
+                ? []
+                : await this.cachedScrollback(
+                      miniblocks[0].header.prevSnapshotMiniblockNum,
+                      miniblocks[0].header.miniblockNum,
+                  )
+            : []
 
         const snapshotEventIds = eventIdsFromSnapshot(snapshot)
         const eventIds = miniblocks.flatMap((mb) => mb.events.map((e) => e.hashStr))
