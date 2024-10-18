@@ -6,7 +6,7 @@ import type { RiverConnection } from '../../river-connection/riverConnection'
 import { MembershipOp } from '@river-build/proto'
 import type { Address } from '@river-build/web3'
 
-type MemberModel = {
+export type MemberModel = {
     id: string
     userId: string
     streamId: string

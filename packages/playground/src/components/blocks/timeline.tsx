@@ -1,10 +1,4 @@
-import {
-    useDisplayName,
-    useSendMessage,
-    useSyncAgent,
-    useTimeline,
-    useUsername,
-} from '@river-build/react-sdk'
+import { useMember, useSendMessage, useSyncAgent, useTimeline } from '@river-build/react-sdk'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -82,8 +76,7 @@ const Message = ({ event }: { event: TimelineEvent }) => {
         () => sync.spaces.getSpace(spaceId).members.get(event.creatorUserId),
         [sync, spaceId, event.creatorUserId],
     )
-    const { username } = useUsername(member)
-    const { displayName } = useDisplayName(member)
+    const { displayName, username } = useMember(member)
     const prettyDisplayName = displayName || username
 
     return (
