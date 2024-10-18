@@ -238,12 +238,10 @@ export interface RoomMemberEvent {
     streamId?: string // in a case of an invitation to a channel with a streamId
 }
 
-// TODO: understand, what is Message.GM?
-// TODO: better naming maybe?
 export enum MessageType {
     Text = 'm.text',
-    // GM = 'm.gm',
-    Image = 'm.Image',
+    GM = 'm.gm',
+    Image = 'm.image',
 }
 
 export interface RoomMessageEventContent_Image {
@@ -256,10 +254,10 @@ export interface RoomMessageEventContent_Image {
         | PlainMessage<ChannelMessage_Post_Content_Image_Info>
 }
 
-// export interface RoomMessageEventContent_GM {
-//     msgType: MessageType.GM
-//     data?: Uint8Array
-// }
+export interface RoomMessageEventContent_GM {
+    msgType: MessageType.GM
+    data?: Uint8Array
+}
 
 export interface RoomMessageEventContent_Text {
     msgType: MessageType.Text
@@ -267,7 +265,7 @@ export interface RoomMessageEventContent_Text {
 
 export type RoomMessageEventContentOneOf =
     | RoomMessageEventContent_Image
-    // | RoomMessageEventContent_GM // TODO: add it back, need to understand
+    | RoomMessageEventContent_GM
     | RoomMessageEventContent_Text
 
 export interface RoomMessageEvent {

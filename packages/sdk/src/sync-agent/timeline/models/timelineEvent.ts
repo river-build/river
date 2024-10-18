@@ -610,22 +610,21 @@ function toTownsContent_ChannelPayload_Message_Post(
                 } satisfies RoomMessageEvent,
             }
 
-        // TODO: understand messagetype GM
-        // case 'gm':
-        //     return {
-        //         content: {
-        //             kind: RiverEvent.RoomMessage,
-        //             body: value.content.value.typeUrl,
-        //             threadId: value.threadId,
-        //             threadPreview: value.threadPreview,
-        //             mentions: [],
-        //             editsEventId: editsEventId,
-        //             content: {
-        //                 msgType: MessageType.GM,
-        //                 data: value.content.value.value,
-        //             },
-        //         } satisfies RoomMessageEvent,
-        //     }
+        case 'gm':
+            return {
+                content: {
+                    kind: RiverTimelineEvent.RoomMessage,
+                    body: value.content.value.typeUrl,
+                    threadId: value.threadId,
+                    threadPreview: value.threadPreview,
+                    mentions: [],
+                    editsEventId: editsEventId,
+                    content: {
+                        msgType: MessageType.GM,
+                        data: value.content.value.value,
+                    },
+                } satisfies RoomMessageEvent,
+            }
         case undefined:
             return { error: `Undefined payload case: ${description}` }
         default:
