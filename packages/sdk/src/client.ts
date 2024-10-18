@@ -1266,7 +1266,7 @@ export class Client
                     if (stream.view.syncCookie) {
                         await this.streams.addStreamToSync(stream.view.syncCookie)
                     }
-                } catch (err) {
+                } catch {
                     this.logError('Failed to initialize stream', streamId)
                     this.streams.delete(streamId)
                 }
