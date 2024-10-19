@@ -19,6 +19,8 @@ import {SpaceDelegationFacet} from "contracts/src/base/registry/facets/delegatio
 import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistribution.sol";
 
 contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
+  using FixedPointMathLib for uint256;
+
   bytes32 private constant PERMIT_TYPEHASH =
     keccak256(
       "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
@@ -51,6 +53,8 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     vm.stopPrank();
 
     (, , , rewardDuration, , , , , ) = rewardsDistributionFacet.stakingState();
+
+    vm.label(baseRegistry, "RewardsDistribution");
   }
 
   function test_stake_revertIf_notOperator() public {
@@ -75,29 +79,75 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
   }
 
   function test_stake() public returns (uint256 depositId) {
-    depositId = test_fuzz_stake(1 ether, OPERATOR, 0, address(this));
+    depositId = test_fuzz_stake(
+      address(this),
+      1 ether,
+      OPERATOR,
+      0,
+      address(this)
+    );
   }
 
   function test_fuzz_stake(
+    address depositor,
     uint96 amount,
     address operator,
     uint256 commissionRate,
     address beneficiary
   ) public givenOperator(operator, commissionRate) returns (uint256 depositId) {
-    vm.assume(operator != beneficiary);
-    vm.assume(beneficiary != address(0));
+    vm.assume(beneficiary != address(0) && beneficiary != operator);
     vm.assume(amount > 0);
     commissionRate = bound(commissionRate, 0, 10000);
 
-    bridgeTokensForUser(address(this), amount);
+    bridgeTokensForUser(depositor, amount);
+
+    vm.startPrank(depositor);
     river.approve(address(rewardsDistributionFacet), amount);
     depositId = rewardsDistributionFacet.stake(amount, operator, beneficiary);
+    vm.stopPrank();
 
     verifyStake(
-      address(this),
+      depositor,
       depositId,
       amount,
       operator,
+      commissionRate,
+      beneficiary
+    );
+  }
+
+  function test_fuzz_stake_toSpace(
+    address depositor,
+    uint96 amount,
+    address operator,
+    uint256 commissionRate,
+    address beneficiary
+  )
+    public
+    givenOperator(operator, commissionRate)
+    givenSpaceHasPointedToOperator(space, operator)
+    returns (uint256 depositId)
+  {
+    vm.assume(
+      beneficiary != address(0) &&
+        beneficiary != operator &&
+        beneficiary != space
+    );
+    vm.assume(amount > 0);
+    commissionRate = bound(commissionRate, 0, 10000);
+
+    bridgeTokensForUser(depositor, amount);
+
+    vm.startPrank(depositor);
+    river.approve(address(rewardsDistributionFacet), amount);
+    depositId = rewardsDistributionFacet.stake(amount, space, beneficiary);
+    vm.stopPrank();
+
+    verifyStake(
+      depositor,
+      depositId,
+      amount,
+      space,
       commissionRate,
       beneficiary
     );
@@ -110,8 +160,7 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     uint256 commissionRate,
     address beneficiary
   ) public givenOperator(operator, commissionRate) {
-    vm.assume(operator != beneficiary);
-    vm.assume(beneficiary != address(0));
+    vm.assume(beneficiary != address(0) && beneficiary != operator);
     vm.assume(amount > 0);
     commissionRate = bound(commissionRate, 0, 10000);
 
@@ -161,8 +210,7 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     uint256 commissionRate,
     address beneficiary
   ) public givenOperator(operator, commissionRate) {
-    vm.assume(operator != beneficiary);
-    vm.assume(beneficiary != address(0));
+    vm.assume(beneficiary != address(0) && beneficiary != operator);
     amount0 = uint96(bound(amount0, 1, type(uint96).max));
     amount1 = uint96(bound(amount1, 0, type(uint96).max - amount0));
     commissionRate = bound(commissionRate, 0, 10000);
@@ -218,6 +266,7 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     commissionRate1 = bound(commissionRate1, 0, 10000);
 
     uint256 depositId = test_fuzz_stake(
+      address(this),
       amount,
       operator0,
       commissionRate0,
@@ -266,11 +315,11 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     uint256 commissionRate,
     address beneficiary
   ) public {
-    vm.assume(operator != beneficiary);
-    vm.assume(beneficiary != address(0));
+    vm.assume(beneficiary != address(0) && beneficiary != operator);
     commissionRate = bound(commissionRate, 0, 10000);
 
     uint256 depositId = test_fuzz_stake(
+      address(this),
       amount,
       operator,
       commissionRate,
@@ -307,7 +356,13 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     uint256 commissionRate,
     address beneficiary
   ) public returns (uint256 depositId) {
-    depositId = test_fuzz_stake(amount, operator, commissionRate, beneficiary);
+    depositId = test_fuzz_stake(
+      address(this),
+      amount,
+      operator,
+      commissionRate,
+      beneficiary
+    );
 
     rewardsDistributionFacet.initiateWithdraw(depositId);
 
@@ -414,11 +469,7 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     assertEq(lastUpdateTime, block.timestamp, "lastUpdateTime");
     assertEq(
       rewardRate,
-      FixedPointMathLib.fullMulDiv(
-        reward,
-        StakingRewards.SCALE_FACTOR,
-        rewardDuration
-      ),
+      reward.fullMulDiv(StakingRewards.SCALE_FACTOR, rewardDuration),
       "rewardRate"
     );
   }
@@ -452,6 +503,7 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
   function setOperatorClaimAddress(address operator, address claimer) internal {
     vm.assume(operator != address(0));
     vm.assume(claimer != address(0));
+    vm.assume(claimer != operator);
     vm.prank(operator);
     operatorFacet.setClaimAddressForOperator(claimer, operator);
   }
@@ -463,6 +515,7 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
   function pointSpaceToOperator(address space, address operator) internal {
     vm.assume(space != address(0));
     vm.assume(operator != address(0));
+    vm.assume(space != operator);
     vm.prank(IERC173(space).owner());
     spaceDelegationFacet.addSpaceDelegation(space, operator);
   }
@@ -481,9 +534,8 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
       bound(
         reward,
         rewardDuration,
-        FixedPointMathLib.fullMulDiv(
+        rewardDuration.fullMulDiv(
           type(uint256).max,
-          rewardDuration,
           StakingRewards.SCALE_FACTOR
         )
       );
@@ -499,7 +551,7 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     address depositor,
     uint256 depositId,
     uint96 amount,
-    address operator,
+    address delegatee,
     uint256 commissionRate,
     address beneficiary
   ) internal view {
@@ -513,14 +565,14 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
       .depositById(depositId);
     assertEq(deposit.amount, amount, "amount");
     assertEq(deposit.owner, depositor, "owner");
+    assertEq(deposit.delegatee, delegatee, "delegatee");
+    assertEq(deposit.beneficiary, beneficiary, "beneficiary");
     assertApproxEqAbs(
       deposit.commissionEarningPower,
       (amount * commissionRate) / 10000,
       1,
       "commissionEarningPower"
     );
-    assertEq(deposit.delegatee, operator, "delegatee");
-    assertEq(deposit.beneficiary, beneficiary, "beneficiary");
 
     assertEq(
       deposit.commissionEarningPower +
@@ -532,12 +584,12 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     );
 
     assertEq(
-      rewardsDistributionFacet.treasureByBeneficiary(operator).earningPower,
+      rewardsDistributionFacet.treasureByBeneficiary(delegatee).earningPower,
       deposit.commissionEarningPower,
       "commissionEarningPower"
     );
 
-    assertEq(river.getVotes(operator), amount, "votes");
+    assertEq(river.getVotes(delegatee), amount, "votes");
   }
 
   function verifyWithdraw(
