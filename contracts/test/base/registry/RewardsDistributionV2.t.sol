@@ -474,6 +474,147 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     );
   }
 
+  function test_fuzz_claimReward_revertIf_notBeneficiary(
+    address beneficiary
+  ) public {
+    vm.assume(beneficiary != address(this));
+    vm.expectRevert(RewardsDistribution__NotBeneficiary.selector);
+    rewardsDistributionFacet.claimReward(beneficiary, address(this));
+  }
+
+  function test_fuzz_claimReward_revertIf_notOperatorClaimer(
+    address claimer,
+    address operator
+  )
+    public
+    givenOperator(operator, 0)
+    givenSpaceHasPointedToOperator(space, operator)
+  {
+    vm.assume(claimer != address(this));
+    setOperatorClaimAddress(operator, claimer);
+
+    vm.expectRevert(RewardsDistribution__NotClaimer.selector);
+    rewardsDistributionFacet.claimReward(operator, address(this));
+
+    vm.expectRevert(RewardsDistribution__NotClaimer.selector);
+    rewardsDistributionFacet.claimReward(space, address(this));
+  }
+
+  function test_fuzz_claimReward_byBeneficiary(
+    address depositor,
+    uint96 amount,
+    address operator,
+    uint256 commissionRate,
+    address beneficiary,
+    uint256 rewardAmount,
+    uint256 timeLapse
+  ) public {
+    vm.assume(depositor != address(this));
+    vm.assume(operator != OPERATOR && operator != address(this));
+    vm.assume(
+      beneficiary != operator &&
+        beneficiary != OPERATOR &&
+        beneficiary != address(this) &&
+        beneficiary != address(rewardsDistributionFacet)
+    );
+    commissionRate = bound(commissionRate, 0, 10000);
+    timeLapse = bound(timeLapse, 0, rewardDuration);
+    rewardAmount = boundReward(rewardAmount);
+
+    test_fuzz_notifyRewardAmount(rewardAmount);
+    test_stake();
+    test_fuzz_stake(depositor, amount, operator, commissionRate, beneficiary);
+
+    vm.warp(block.timestamp + timeLapse);
+
+    uint256 currentUnclaimedReward = rewardsDistributionFacet
+      .currentUnclaimedReward(beneficiary);
+
+    vm.prank(beneficiary);
+    uint256 reward = rewardsDistributionFacet.claimReward(
+      beneficiary,
+      beneficiary
+    );
+
+    verifyClaim(
+      beneficiary,
+      beneficiary,
+      reward,
+      currentUnclaimedReward,
+      timeLapse
+    );
+  }
+
+  function test_fuzz_claimReward_byOperator(
+    uint96 amount,
+    address operator,
+    uint256 commissionRate,
+    uint256 rewardAmount,
+    uint256 timeLapse
+  ) public {
+    vm.assume(
+      operator != address(this) && operator != address(rewardsDistributionFacet)
+    );
+    commissionRate = bound(commissionRate, 0, 10000);
+    timeLapse = bound(timeLapse, 0, rewardDuration);
+    amount = uint96(bound(amount, 1 ether, type(uint96).max));
+    rewardAmount = boundReward(rewardAmount);
+
+    test_fuzz_notifyRewardAmount(rewardAmount);
+    test_fuzz_stake(
+      address(this),
+      amount,
+      operator,
+      commissionRate,
+      address(this)
+    );
+
+    vm.warp(block.timestamp + timeLapse);
+
+    uint256 currentUnclaimedReward = rewardsDistributionFacet
+      .currentUnclaimedReward(operator);
+
+    vm.prank(operator);
+    uint256 reward = rewardsDistributionFacet.claimReward(operator, operator);
+
+    verifyClaim(operator, operator, reward, currentUnclaimedReward, timeLapse);
+  }
+
+  function test_fuzz_claimReward_bySpaceOperator(
+    uint96 amount,
+    address operator,
+    uint256 commissionRate,
+    uint256 rewardAmount,
+    uint256 timeLapse
+  ) public {
+    vm.assume(
+      operator != address(this) && operator != address(rewardsDistributionFacet)
+    );
+    commissionRate = bound(commissionRate, 0, 10000);
+    timeLapse = bound(timeLapse, 0, rewardDuration);
+    amount = uint96(bound(amount, 1 ether, type(uint96).max));
+    rewardAmount = boundReward(rewardAmount);
+
+    test_fuzz_notifyRewardAmount(rewardAmount);
+    test_fuzz_stake_toSpace(
+      address(this),
+      amount,
+      operator,
+      commissionRate,
+      address(this)
+    );
+
+    vm.warp(block.timestamp + timeLapse);
+
+    uint256 currentUnclaimedReward = rewardsDistributionFacet
+      .currentUnclaimedReward(space);
+
+    vm.prank(operator);
+    uint256 reward = rewardsDistributionFacet.claimReward(space, operator);
+
+    verifyClaim(space, operator, reward, currentUnclaimedReward, timeLapse);
+  }
+
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                          OPERATOR                          */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -628,6 +769,41 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     );
 
     assertEq(river.getVotes(operator), 0, "votes");
+  }
+
+  function verifyClaim(
+    address beneficiary,
+    address claimer,
+    uint256 reward,
+    uint256 currentUnclaimedReward,
+    uint256 timeLapse
+  ) internal view {
+    assertEq(reward, currentUnclaimedReward, "reward");
+    assertEq(river.balanceOf(claimer), reward, "reward balance");
+
+    (
+      ,
+      ,
+      uint256 totalStaked,
+      ,
+      ,
+      ,
+      uint256 rewardRate,
+      ,
+
+    ) = rewardsDistributionFacet.stakingState();
+    uint256 earningPower = rewardsDistributionFacet
+      .treasureByBeneficiary(beneficiary)
+      .earningPower;
+
+    assertEq(
+      rewardRate.fullMulDiv(timeLapse, totalStaked).fullMulDiv(
+        earningPower,
+        StakingRewards.SCALE_FACTOR
+      ),
+      reward,
+      "expected reward"
+    );
   }
 
   function signPermit(
