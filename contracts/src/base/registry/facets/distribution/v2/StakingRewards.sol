@@ -39,7 +39,7 @@ library StakingRewards {
   /// @notice The account information for a beneficiary
   /// @param earningPower The amount of stakeToken that is yielding rewards
   /// @param rewardPerTokenAccumulated The scaled amount of rewardToken that has been accumulated per staked token
-  /// @param unclaimedRewardSnapshot The snapshot of the unclaimed reward scaled
+  /// @param unclaimedRewardSnapshot The snapshot of the unclaimed reward
   struct Treasure {
     uint96 earningPower;
     uint256 rewardPerTokenAccumulated;
@@ -114,24 +114,32 @@ library StakingRewards {
       );
     if (totalStaked == 0) return rewardPerTokenAccumulated;
 
+    uint256 elapsedTime;
+    unchecked {
+      elapsedTime = lastTimeRewardDistributed(ds) - lastUpdateTime;
+    }
     return
       rewardPerTokenAccumulated +
-      FixedPointMathLib.fullMulDiv(
-        rewardRate,
-        lastTimeRewardDistributed(ds) - lastUpdateTime,
-        totalStaked
-      );
+      FixedPointMathLib.fullMulDiv(rewardRate, elapsedTime, totalStaked);
   }
 
   function currentUnclaimedReward(
     Layout storage ds,
     Treasure storage treasure
   ) internal view returns (uint256) {
+    uint256 rewardPerTokenGrowth;
+    unchecked {
+      rewardPerTokenGrowth =
+        currentRewardPerTokenAccumulated(ds) -
+        treasure.rewardPerTokenAccumulated;
+    }
     return
       treasure.unclaimedRewardSnapshot +
-      (treasure.earningPower *
-        (currentRewardPerTokenAccumulated(ds) -
-          treasure.rewardPerTokenAccumulated));
+      FixedPointMathLib.fullMulDiv(
+        treasure.earningPower,
+        rewardPerTokenGrowth,
+        SCALE_FACTOR
+      );
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -418,11 +426,9 @@ library StakingRewards {
     Treasure storage treasure = ds.treasureByBeneficiary[beneficiary];
     updateReward(ds, treasure);
 
-    reward = treasure.unclaimedRewardSnapshot / SCALE_FACTOR;
+    reward = treasure.unclaimedRewardSnapshot;
     if (reward != 0) {
-      unchecked {
-        treasure.unclaimedRewardSnapshot -= reward * SCALE_FACTOR;
-      }
+      treasure.unclaimedRewardSnapshot = 0;
       ds.rewardToken.safeTransfer(recipient, reward);
     }
   }
