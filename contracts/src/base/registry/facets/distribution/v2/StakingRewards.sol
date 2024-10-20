@@ -160,6 +160,7 @@ library StakingRewards {
   function stake(
     Layout storage ds,
     address depositor,
+    address owner,
     uint96 amount,
     address delegatee,
     address beneficiary,
@@ -184,16 +185,16 @@ library StakingRewards {
     // batch storage writes
     (deposit.amount, deposit.owner, deposit.beneficiary, deposit.delegatee) = (
       amount,
-      depositor,
+      owner,
       beneficiary,
       delegatee
     );
 
     ds.totalStaked += amount;
     unchecked {
-      // because totalStaked >= stakedByDepositor[depositor]
+      // because totalStaked >= stakedByDepositor[owner]
       // if totalStaked doesn't overflow, they won't
-      ds.stakedByDepositor[depositor] += amount;
+      ds.stakedByDepositor[owner] += amount;
     }
     _increaseEarningPower(
       ds,
