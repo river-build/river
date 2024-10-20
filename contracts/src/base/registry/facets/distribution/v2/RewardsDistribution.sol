@@ -7,6 +7,7 @@ import {IRewardsDistribution} from "./IRewardsDistribution.sol";
 
 // libraries
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 import {NodeOperatorStorage} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
 import {SpaceDelegationStorage} from "contracts/src/base/registry/facets/delegation/SpaceDelegationStorage.sol";
@@ -16,10 +17,23 @@ import {RewardsDistributionStorage} from "./RewardsDistributionStorage.sol";
 // contracts
 import {Facet} from "contracts/src/diamond/facets/Facet.sol";
 import {OwnableBase} from "contracts/src/diamond/facets/ownable/OwnableBase.sol";
+import {Nonces} from "contracts/src/diamond/utils/Nonces.sol";
+import {EIP712Base} from "contracts/src/diamond/utils/cryptography/signature/EIP712Base.sol";
 
-contract RewardsDistribution is IRewardsDistribution, OwnableBase, Facet {
+contract RewardsDistribution is
+  IRewardsDistribution,
+  OwnableBase,
+  EIP712Base,
+  Nonces,
+  Facet
+{
   using EnumerableSet for EnumerableSet.AddressSet;
   using StakingRewards for StakingRewards.Layout;
+
+  bytes32 internal constant STAKE_TYPEHASH =
+    keccak256(
+      "Stake(uint96 amount,address delegatee,address beneficiary,address owner,uint256 nonce,uint256 deadline)"
+    );
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                       ADMIN SETTERS                        */
@@ -78,6 +92,7 @@ contract RewardsDistribution is IRewardsDistribution, OwnableBase, Facet {
       .layout();
     depositId = ds.staking.stake(
       msg.sender,
+      msg.sender,
       amount,
       delegatee,
       beneficiary,
@@ -109,6 +124,44 @@ contract RewardsDistribution is IRewardsDistribution, OwnableBase, Facet {
     {} catch {}
     depositId = ds.staking.stake(
       msg.sender,
+      msg.sender,
+      amount,
+      delegatee,
+      beneficiary,
+      _getCommissionRate(delegatee)
+    );
+  }
+
+  function stakeOnBehalf(
+    uint96 amount,
+    address delegatee,
+    address beneficiary,
+    address owner,
+    uint256 deadline,
+    bytes calldata signature
+  ) external returns (uint256 depositId) {
+    _revertIfPastDeadline(deadline);
+    bytes32 structHash = keccak256(
+      abi.encode(
+        STAKE_TYPEHASH,
+        amount,
+        delegatee,
+        beneficiary,
+        owner,
+        _useNonce(owner),
+        deadline
+      )
+    );
+    _revertIfSignatureIsNotValidNow(
+      owner,
+      _hashTypedDataV4(structHash),
+      signature
+    );
+    RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
+      .layout();
+    depositId = ds.staking.stake(
+      msg.sender,
+      owner,
       amount,
       delegatee,
       beneficiary,
@@ -367,6 +420,27 @@ contract RewardsDistribution is IRewardsDistribution, OwnableBase, Facet {
   function _revertIfNotDepositOwner(address owner) internal view {
     if (msg.sender != owner) {
       CustomRevert.revertWith(RewardsDistribution__NotDepositOwner.selector);
+    }
+  }
+
+  function _revertIfPastDeadline(uint256 deadline) internal view {
+    if (block.timestamp > deadline) {
+      CustomRevert.revertWith(RewardsDistribution__ExpiredDeadline.selector);
+    }
+  }
+
+  function _revertIfSignatureIsNotValidNow(
+    address signer,
+    bytes32 hash,
+    bytes calldata signature
+  ) internal view {
+    bool _isValid = SignatureCheckerLib.isValidSignatureNowCalldata(
+      signer,
+      hash,
+      signature
+    );
+    if (!_isValid) {
+      CustomRevert.revertWith(RewardsDistribution__InvalidSignature.selector);
     }
   }
 }

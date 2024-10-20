@@ -32,6 +32,7 @@ import {DeployRewardsDistribution} from "contracts/scripts/deployments/facets/De
 import {DeployRewardsDistributionV2} from "contracts/scripts/deployments/facets/DeployRewardsDistributionV2.s.sol";
 import {DeployERC721ANonTransferable} from "contracts/scripts/deployments/facets/DeployERC721ANonTransferable.s.sol";
 import {DeployMockMessenger} from "contracts/scripts/deployments/facets/DeployMockMessenger.s.sol";
+import {DeployEIP712Facet} from "contracts/scripts/deployments/facets/DeployEIP712Facet.s.sol";
 
 contract DeployBaseRegistry is DiamondHelper, Deployer {
   DeployERC721ANonTransferable deployNFT = new DeployERC721ANonTransferable();
@@ -53,6 +54,7 @@ contract DeployBaseRegistry is DiamondHelper, Deployer {
   DeployRewardsDistributionV2 distributionV2Helper =
     new DeployRewardsDistributionV2();
   DeployMockMessenger messengerHelper = new DeployMockMessenger();
+  DeployEIP712Facet eip712Helper = new DeployEIP712Facet();
 
   address multiInit;
   address diamondCut;
@@ -64,6 +66,7 @@ contract DeployBaseRegistry is DiamondHelper, Deployer {
   address operator;
 
   address nft;
+  address eip712;
   address distribution;
   address distributionV2;
   address spaceDelegation;
@@ -116,6 +119,7 @@ contract DeployBaseRegistry is DiamondHelper, Deployer {
     spaceDelegation = spaceDelegationHelper.deploy(deployer);
     nft = deployNFT.deploy(deployer);
     messenger = messengerHelper.deploy(deployer);
+    eip712 = eip712Helper.deploy(deployer);
 
     addFacet(
       deployNFT.makeCut(nft, IDiamond.FacetCutAction.Add),
@@ -170,6 +174,11 @@ contract DeployBaseRegistry is DiamondHelper, Deployer {
       ),
       mainnetDelegation,
       mainnetDelegationHelper.makeInitData(messenger)
+    );
+    addFacet(
+      eip712Helper.makeCut(eip712, IDiamond.FacetCutAction.Add),
+      eip712,
+      eip712Helper.makeInitData("BaseRegistry", "1")
     );
 
     return
@@ -276,6 +285,13 @@ contract DeployBaseRegistry is DiamondHelper, Deployer {
           deployNFT.makeCut(nft, IDiamond.FacetCutAction.Add),
           nft,
           deployNFT.makeInitData("Operator", "OPR")
+        );
+      } else if (facetNameHash == keccak256(abi.encodePacked("EIP712Facet"))) {
+        eip712 = eip712Helper.deploy(deployer);
+        addFacet(
+          eip712Helper.makeCut(eip712, IDiamond.FacetCutAction.Add),
+          eip712,
+          eip712Helper.makeInitData("BaseRegistry", "1")
         );
       }
     }

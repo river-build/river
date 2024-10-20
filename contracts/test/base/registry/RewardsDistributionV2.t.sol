@@ -6,12 +6,14 @@ import {IERC173} from "contracts/src/diamond/facets/ownable/IERC173.sol";
 import {IRewardsDistributionBase} from "contracts/src/base/registry/facets/distribution/v2/IRewardsDistribution.sol";
 
 // libraries
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {StakingRewards} from "contracts/src/base/registry/facets/distribution/v2/StakingRewards.sol";
 
 // contracts
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
+import {EIP712Facet} from "contracts/src/diamond/utils/cryptography/signature/EIP712Facet.sol";
 import {NodeOperatorFacet} from "contracts/src/base/registry/facets/operator/NodeOperatorFacet.sol";
 import {River} from "contracts/src/tokens/river/base/River.sol";
 import {MainnetDelegation} from "contracts/src/tokens/river/base/delegation/MainnetDelegation.sol";
@@ -25,6 +27,10 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     keccak256(
       "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
     );
+  bytes32 internal constant STAKE_TYPEHASH =
+    keccak256(
+      "Stake(uint96 amount,address delegatee,address beneficiary,address owner,uint256 nonce,uint256 deadline)"
+    );
 
   NodeOperatorFacet internal operatorFacet;
   River internal river;
@@ -35,10 +41,12 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
   address internal OPERATOR = makeAddr("OPERATOR");
   address internal NOTIFIER = makeAddr("NOTIFIER");
   uint256 internal rewardDuration;
+  bytes32 internal DOMAIN_SEPARATOR;
 
   function setUp() public override {
     super.setUp();
 
+    eip712Facet = EIP712Facet(baseRegistry);
     operatorFacet = NodeOperatorFacet(baseRegistry);
     river = River(riverToken);
     mainnetDelegationFacet = MainnetDelegation(baseRegistry);
@@ -53,6 +61,7 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     vm.stopPrank();
 
     (, , , rewardDuration, , , , , ) = rewardsDistributionFacet.stakingState();
+    DOMAIN_SEPARATOR = eip712Facet.DOMAIN_SEPARATOR();
 
     vm.label(baseRegistry, "RewardsDistribution");
   }
@@ -158,17 +167,18 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     uint96 amount,
     address operator,
     uint256 commissionRate,
-    address beneficiary
+    address beneficiary,
+    uint256 deadline
   ) public givenOperator(operator, commissionRate) {
     vm.assume(beneficiary != address(0) && beneficiary != operator);
     vm.assume(amount > 0);
     commissionRate = bound(commissionRate, 0, 10000);
+    deadline = bound(deadline, block.timestamp, type(uint256).max);
 
     privateKey = boundPrivateKey(privateKey);
     address user = vm.addr(privateKey);
     bridgeTokensForUser(user, amount);
 
-    uint256 deadline = block.timestamp + 100;
     (uint8 v, bytes32 r, bytes32 s) = signPermit(
       privateKey,
       user,
@@ -189,6 +199,84 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     );
 
     verifyStake(user, depositId, amount, operator, commissionRate, beneficiary);
+  }
+
+  function test_fuzz_stakeOnBehalf_revertIf_pastDeadline(
+    uint256 deadline
+  ) public {
+    deadline = bound(deadline, 0, block.timestamp - 1);
+    vm.expectRevert(RewardsDistribution__ExpiredDeadline.selector);
+    rewardsDistributionFacet.stakeOnBehalf(
+      1,
+      OPERATOR,
+      address(this),
+      address(this),
+      deadline,
+      ""
+    );
+  }
+
+  function test_stakeOnBehalf_revertIf_invalidSignature() public {
+    vm.expectRevert(RewardsDistribution__InvalidSignature.selector);
+    rewardsDistributionFacet.stakeOnBehalf(
+      1,
+      OPERATOR,
+      address(this),
+      address(this),
+      block.timestamp,
+      ""
+    );
+  }
+
+  function test_fuzz_stakeOnBehalf(
+    uint256 privateKey,
+    uint96 amount,
+    address operator,
+    uint256 commissionRate,
+    address beneficiary,
+    uint256 deadline
+  ) public givenOperator(operator, commissionRate) returns (uint256 depositId) {
+    vm.assume(beneficiary != address(0) && beneficiary != operator);
+    vm.assume(amount > 0);
+    commissionRate = bound(commissionRate, 0, 10000);
+    deadline = bound(deadline, block.timestamp, type(uint256).max);
+
+    privateKey = boundPrivateKey(privateKey);
+    address owner = vm.addr(privateKey);
+
+    bridgeTokensForUser(address(this), amount);
+
+    bytes32 structHash = keccak256(
+      abi.encode(
+        STAKE_TYPEHASH,
+        amount,
+        operator,
+        beneficiary,
+        owner,
+        eip712Facet.nonces(owner),
+        deadline
+      )
+    );
+    bytes memory signature = signIntent(privateKey, structHash);
+
+    river.approve(address(rewardsDistributionFacet), amount);
+    depositId = rewardsDistributionFacet.stakeOnBehalf(
+      amount,
+      operator,
+      beneficiary,
+      owner,
+      deadline,
+      signature
+    );
+
+    verifyStake(
+      owner,
+      depositId,
+      amount,
+      operator,
+      commissionRate,
+      beneficiary
+    );
   }
 
   function test_increaseStake_revertIf_notDepositor() public {
@@ -825,5 +913,17 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     );
 
     (v, r, s) = vm.sign(privateKey, typeDataHash);
+  }
+
+  function signIntent(
+    uint256 privateKey,
+    bytes32 structHash
+  ) internal view returns (bytes memory signature) {
+    bytes32 typeDataHash = MessageHashUtils.toTypedDataHash(
+      DOMAIN_SEPARATOR,
+      structHash
+    );
+    (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, typeDataHash);
+    signature = abi.encodePacked(r, s, v);
   }
 }
