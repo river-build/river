@@ -216,20 +216,25 @@ export const unpackEnvelope = async (
         }
     }
 
-    return makeParsedEvent(event, envelope.hash)
+    return makeParsedEvent(event, envelope.hash, envelope.signature)
 }
 
-export function makeParsedEvent(event: StreamEvent, hash?: Uint8Array) {
+export function makeParsedEvent(
+    event: StreamEvent,
+    hash: Uint8Array | undefined,
+    signature: Uint8Array | undefined,
+) {
     hash = hash ?? riverHash(event.toBinary())
     return {
         event,
         hash,
         hashStr: bin_toHexString(hash),
+        signature,
         prevMiniblockHashStr: event.prevMiniblockHash
             ? bin_toHexString(event.prevMiniblockHash)
             : undefined,
         creatorUserId: userIdFromAddress(event.creatorAddress),
-    }
+    } satisfies ParsedEvent
 }
 
 export const unpackEnvelopes = async (
