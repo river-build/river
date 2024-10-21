@@ -1881,7 +1881,11 @@ export class Client
             const unpackedMiniblock = await unpackMiniblock(miniblock, this.unpackEnvelopeOpts)
             unpackedMiniblocks.push(unpackedMiniblock)
         }
-        await this.persistenceStore.saveMiniblocks(streamIdAsString(streamId), unpackedMiniblocks)
+        await this.persistenceStore.saveMiniblocks(
+            streamIdAsString(streamId),
+            unpackedMiniblocks,
+            'backward',
+        )
         return {
             terminus: response.terminus,
             miniblocks: [...unpackedMiniblocks, ...cachedMiniblocks],
