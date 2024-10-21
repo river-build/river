@@ -104,6 +104,9 @@ type Config struct {
 	// Scrubbing
 	Scrubbing ScrubbingConfig
 
+	// Stream reconciliation
+	StreamReconciliation StreamReconciliationConfig
+
 	// Network configuration
 	Network NetworkConfig
 
@@ -399,6 +402,17 @@ type ScrubbingConfig struct {
 	// to be re-scrubbed.
 	// If unset, it defaults to 1 hour.
 	ScrubEligibleDuration time.Duration
+}
+
+type StreamReconciliationConfig struct {
+	WorkerPoolSize int // If 0, default to 8.
+}
+
+func (s *StreamReconciliationConfig) GetWorkerPoolSize() int {
+	if s.WorkerPoolSize <= 0 {
+		return 8
+	}
+	return s.WorkerPoolSize
 }
 
 type FilterConfig struct {
