@@ -4,7 +4,7 @@
 import { dlogger } from '@river-build/dlog'
 import { SyncAgent } from './syncAgent'
 import { Bot } from './utils/bot'
-import { waitFor } from '../util.test'
+import { findMessageByText, waitFor } from '../util.test'
 import { NoopRuleData, Permission } from '@river-build/web3'
 
 const logger = dlogger('csb:test:syncAgents')
@@ -72,7 +72,7 @@ describe('syncAgents.test.ts', () => {
         const space = bob.spaces.getSpace(spaceId)
         const channel = space.getDefaultChannel()
         await channel.sendMessage('Hello, World!')
-        expect(channel.timeline.events.value.find((e) => e.text === 'Hello, World!')).toBeDefined()
+        expect(findMessageByText(channel.timeline.events.value, 'Hello, World!')).toBeDefined()
 
         // sleep for a bit, then check if alice got the message
         const aliceChannel = alice.spaces.getSpace(spaceId).getChannel(channel.data.id)
@@ -80,7 +80,7 @@ describe('syncAgents.test.ts', () => {
         await waitFor(
             () =>
                 expect(
-                    aliceChannel.timeline.events.value.find((e) => e.text === 'Hello, World!'),
+                    findMessageByText(aliceChannel.timeline.events.value, 'Hello, World!'),
                 ).toBeDefined(),
             { timeoutMS: 10000 },
         )
@@ -95,7 +95,7 @@ describe('syncAgents.test.ts', () => {
         const space = bob.spaces.getSpace(spaceId)
         const channel = space.getDefaultChannel()
         const channelId = channel.data.id
-        const event = channel.timeline.events.value.find((e) => e.text === 'Hello, World!')
+        const event = findMessageByText(channel.timeline.events.value, 'Hello, World!')
         expect(event).toBeDefined()
         // bob can pin
         const result = await channel.pin(event!.eventId)
@@ -155,7 +155,7 @@ describe('syncAgents.test.ts', () => {
         await waitFor(
             () =>
                 expect(
-                    aliceGdm.timeline.events.value.find((e) => e.text === 'Hello, World!'),
+                    findMessageByText(aliceGdm.timeline.events.value, 'Hello, World!'),
                 ).toBeDefined(),
             { timeoutMS: 10000 },
         )
