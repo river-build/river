@@ -1,21 +1,6 @@
-import { z } from 'zod'
-import { baseCommand } from './baseCommand'
-import { StressClient } from '../../../../utils/stressClient'
-import { ChatConfig } from '../../../common/types'
-
-export const sendChannelMessageParams = z.object({
-    channelId: z.string(),
-    messages: z.array(z.string()),
-})
-
-export const sendChannelMessageCommand = baseCommand.extend({
-    name: z.literal('sendChannelMessage'),
-    params: sendChannelMessageParams,
-})
-
-export type SendChannelMessageParams = z.infer<typeof sendChannelMessageParams>
-
-export type SendChannelMessageCommand = z.infer<typeof sendChannelMessageCommand>
+import { StressClient } from '../utils/stressClient'
+import { ChatConfig } from '../mode/common/types'
+import { Job } from 'bullmq'
 
 function escapeMessage(template: string, client: StressClient, cfg: ChatConfig): string {
     let escaped = template.replaceAll('${SESSION_ID}', cfg.sessionId)
@@ -25,10 +10,15 @@ function escapeMessage(template: string, client: StressClient, cfg: ChatConfig):
 }
 
 export async function sendChannelMessage(
+    job: Job,
     client: StressClient,
     cfg: ChatConfig,
-    params: SendChannelMessageParams,
 ) {
+    const params: {
+        channelId: string,
+        messages: string[],
+    } = job.data
+
     const logger = client.logger.child({
         name: 'sendChannelMessage',
         logId: client.logId,

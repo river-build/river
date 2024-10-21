@@ -12,7 +12,9 @@
         "start": "node --enable-source-maps ./dist/start.cjs",
         "test:ci:with-entitlements": "RIVER_ENV=local_multi DEBUG='stress:*,csb:enc*,csb:dec*' DEBUG_DEPTH='10' yarn my-jest",
         "typecheck": "tsc --noEmit",
-        "watch": "tsc --watch"
+        "watch": "tsc --watch",
+        "demo": "node --enable-source-maps ./dist/demo.cjs",
+        "schema": "node --enable-source-maps ./dist/queueDemo.cjs"
     },
     "dependencies": {
         "@babel/node": "^7.23.9",
@@ -24,6 +26,7 @@
         "@river-build/proto": "workspace:^",
         "@river-build/sdk": "workspace:^",
         "@river-build/web3": "workspace:^",
+        "bullmq": "^5.21.1",
         "esbuild-plugin-pino": "^2.2.0",
         "ethers": "^5.7.2",
         "fake-indexeddb": "^4.0.1",

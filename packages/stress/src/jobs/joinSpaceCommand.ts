@@ -1,25 +1,21 @@
-import { StressClient } from '../../../../utils/stressClient'
-import { ChatConfig } from '../../../common/types'
-import { z } from 'zod'
-import { baseCommand } from './baseCommand'
+import { StressClient } from '../utils/stressClient'
+import { ChatConfig } from '../mode/common/types'
+import { Job } from 'bullmq'
 
-const joinSpaceParamsSchema = z.object({
-    spaceId: z.string(),
-    announceChannelId: z.string(),
-    skipMintMembership: z.boolean().optional(),
-})
-
-export const joinSpaceCommand = baseCommand.extend({
-    name: z.literal('joinSpace'),
-    params: joinSpaceParamsSchema,
-})
-
-export type JoinSpaceParams = z.infer<typeof joinSpaceParamsSchema>
-export type JoinSpaceCommand = z.infer<typeof joinSpaceCommand>
 
 // joins space and announcement channel
 // this command is idempotent, fine to run if user is already a space member
-export async function joinSpace(client: StressClient, cfg: ChatConfig, params: JoinSpaceParams) {
+export async function joinSpace(
+    job: Job,
+    client: StressClient,
+    cfg: ChatConfig,
+) {
+    const params: {
+        spaceId: string,
+        announceChannelId: string,
+        skipMintMembership: boolean,
+    } = job.data
+
     const logger = client.logger.child({
         name: 'joinSpace',
         logId: client.logId,

@@ -5,7 +5,6 @@ import { exit } from 'process'
 import { Wallet } from 'ethers'
 import { isSet } from './utils/expect'
 import { setupChat, startStressChat } from './mode/chat/root_chat'
-import { setupSchemaChat, startSchemaChat } from './mode/chat/schema/rootSchemaChat'
 import { startStressSlowChat } from './mode/slowchat/root_slowchat'
 import { getLogger } from './utils/logger'
 
@@ -29,7 +28,7 @@ if (processIndex === 0) {
     )
 }
 
-function getRootWallet(): { wallet: Wallet; mnemonic: string } {
+export function getRootWallet(): { wallet: Wallet; mnemonic: string } {
     check(isSet(process.env.MNEMONIC), 'process.env.MNEMONIC')
     const mnemonic = process.env.MNEMONIC
     const wallet = Wallet.fromMnemonic(mnemonic)
@@ -58,20 +57,6 @@ const run = async () => {
             break
         case 'slowchat':
             await startStressSlowChat({
-                config,
-                processIndex,
-                rootWallet: getRootWallet().wallet,
-            })
-            break
-
-        case 'setup_schemachat':
-            await setupSchemaChat({
-                config,
-                rootWallet: getRootWallet().wallet,
-            })
-            break
-        case 'schemachat':
-            await startSchemaChat({
                 config,
                 processIndex,
                 rootWallet: getRootWallet().wallet,

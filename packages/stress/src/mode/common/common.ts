@@ -13,7 +13,7 @@ function getStressDuration(): number {
     return parseInt(process.env.STRESS_DURATION)
 }
 
-function getSessionId(): string {
+export function getSessionId(): string {
     check(isSet(process.env.SESSION_ID), 'process.env.SESSION_ID')
     check(process.env.SESSION_ID.length > 0, 'process.env.SESSION_ID.length > 0')
     return process.env.SESSION_ID
@@ -23,10 +23,8 @@ export function getChatConfig(opts: { processIndex: number; rootWallet: Wallet }
     const startedAtMs = Date.now()
     check(isSet(process.env.CLIENTS_PER_PROCESS), 'process.env.CLIENTS_PER_PROCESS')
     check(isSet(process.env.CLIENTS_COUNT), 'process.env.CLIENTS_COUNT')
-    if (process.env.STRESS_MODE !== 'schemachat') {
-        check(isSet(process.env.SPACE_ID), 'process.env.SPACE_ID')
-        check(isSet(process.env.CHANNEL_IDS), 'process.env.CHANNEL_IDS')
-    }
+    check(isSet(process.env.SPACE_ID), 'process.env.SPACE_ID')
+    check(isSet(process.env.CHANNEL_IDS), 'process.env.CHANNEL_IDS')
     check(isSet(process.env.CONTAINER_INDEX), 'process.env.CONTAINER_INDEX')
     check(isSet(process.env.CONTAINER_COUNT), 'process.env.CONTAINER_COUNT')
     check(isSet(process.env.PROCESSES_PER_CONTAINER), 'process.env.PROCESSES_PER_CONTAINER')

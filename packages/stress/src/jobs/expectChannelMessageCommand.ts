@@ -1,30 +1,11 @@
 import { z } from 'zod'
-import { baseCommand } from './baseCommand'
-import { StressClient } from '../../../../utils/stressClient'
-import { ChatConfig } from '../../../common/types'
-import { channelMessagePostWhere } from '../../../../utils/timeline'
+import { StressClient } from '../utils/stressClient'
+import { ChatConfig } from '../mode/common/types'
+import { channelMessagePostWhere } from '../utils/timeline'
 import { Stream } from '@river-build/sdk'
 import { Logger } from 'pino'
 import { ExecutionError } from './ExecutionError'
-
-const expectedMessage = z.object({
-    content: z.string(),
-    sender: z.string().optional(),
-})
-
-const paramsSchema = z.object({
-    channelId: z.string(),
-    timeoutMs: z.number().nonnegative().optional(),
-    messages: z.array(expectedMessage),
-})
-
-export const expectChannelMessageCommand = baseCommand.extend({
-    name: z.literal('expectChannelMessage'),
-    params: paramsSchema,
-})
-
-export type ExpectChannelMessageParams = z.infer<typeof paramsSchema>
-export type ExpectChannelMessageCommand = z.infer<typeof expectChannelMessageCommand>
+import { Job } from 'bullmq'
 
 function escapeMessage(template: string, client: StressClient, cfg: ChatConfig): string {
     return template.replaceAll('${SESSION_ID}', cfg.sessionId)
@@ -74,10 +55,17 @@ async function waitForMessage(
 }
 
 export async function expectChannelMessages(
+    job: Job,
     client: StressClient,
     cfg: ChatConfig,
-    params: ExpectChannelMessageParams,
 ) {
+    const params: {
+        channelId: string,
+        messages: [{
+            content: string,
+        }]
+    } = job.data
+
     const logger = client.logger.child({
         name: 'expectChannelMessages',
         logId: client.logId,
