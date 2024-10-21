@@ -13,6 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { type MessageReactions, RiverTimelineEvent, type TimelineEvent } from '@river-build/sdk'
 import { useCallback, useMemo } from 'react'
 import { cn } from '@/utils'
+import { getNativeEmojiFromName } from '@/utils/emojis'
 import { Form, FormControl, FormField, FormItem, FormMessage } from '../ui/form'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -254,7 +255,7 @@ const Reaction = ({
         <button
             type="button"
             className={cn(
-                'w-ful flex h-8 items-center justify-center gap-2 rounded-sm border border-neutral-200 bg-neutral-100',
+                'flex h-8 w-full items-center justify-center gap-2 rounded-sm border border-neutral-200 bg-neutral-100 px-2',
                 isMyReaction && 'border-lime-200 bg-lime-100',
             )}
             onClick={() => {
@@ -265,7 +266,7 @@ const Reaction = ({
                 }
             }}
         >
-            <span className="text-sm">{reaction}</span>
+            <span className="text-sm">{getNativeEmojiFromName(reaction)}</span>
             <span className="text-xs">{Object.keys(users).length}</span>
         </button>
     )
