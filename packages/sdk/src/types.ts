@@ -138,6 +138,7 @@ export function makeRemoteTimelineEvent(params: {
 export interface ParsedMiniblock {
     hash: Uint8Array
     header: MiniblockHeader
+    headerEvent: ParsedEvent
     events: ParsedEvent[]
 }
 

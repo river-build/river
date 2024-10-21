@@ -559,7 +559,15 @@ export class StreamStateView implements IStreamStateView {
         check(miniblocks.length > 0, `Stream has no miniblocks ${this.streamId}`, Err.STREAM_EMPTY)
         // parse the blocks
         // initialize from snapshot data, this gets all memberships and channel data, etc
-        this.applySnapshot(bin_toHexString(miniblocks[0].hash), snapshot, cleartexts, emitter)
+        this.applySnapshot(miniblocks[0].headerEvent.hashStr, snapshot, cleartexts, emitter)
+        // save off the header event
+        const headerEvent = makeRemoteTimelineEvent({
+            parsedEvent: miniblocks[0].headerEvent,
+            eventNum: miniblocks[0].header.eventNumOffset + BigInt(miniblocks[0].events.length),
+            miniblockNum: miniblocks[0].header.miniblockNum,
+            confirmedEventNum:
+                miniblocks[0].header.eventNumOffset + BigInt(miniblocks[0].events.length),
+        })
         // initialize from miniblocks, the first minblock is the snapshot block, it's events are accounted for
         const block0Events = miniblocks[0].events.map((parsedEvent, i) => {
             const eventNum = miniblocks[0].header.eventNumOffset + BigInt(i)
@@ -571,8 +579,8 @@ export class StreamStateView implements IStreamStateView {
             })
         })
         // the rest need to be added to the timeline
-        const rest = miniblocks.slice(1).flatMap((mb) =>
-            mb.events.map((parsedEvent, i) => {
+        const rest = miniblocks.slice(1).flatMap((mb) => {
+            const events = mb.events.map((parsedEvent, i) => {
                 const eventNum = mb.header.eventNumOffset + BigInt(i)
                 return makeRemoteTimelineEvent({
                     parsedEvent,
@@ -580,12 +588,20 @@ export class StreamStateView implements IStreamStateView {
                     miniblockNum: mb.header.miniblockNum,
                     confirmedEventNum: eventNum,
                 })
-            }),
-        )
+            })
+            const header = makeRemoteTimelineEvent({
+                parsedEvent: mb.headerEvent,
+                eventNum: mb.header.eventNumOffset + BigInt(mb.events.length),
+                miniblockNum: mb.header.miniblockNum,
+                confirmedEventNum: mb.header.eventNumOffset + BigInt(mb.events.length),
+            })
+            return [...events, header]
+        })
         // initialize our event hashes
         check(block0Events.length > 0)
         // prepend the snapshotted block in reverse order
         this.timeline.push(...block0Events)
+        this.timeline.push(headerEvent)
         for (let i = block0Events.length - 1; i >= 0; i--) {
             const event = block0Events[i]
             this.processPrependedEvent(event, cleartexts?.[event.hashStr], emitter, undefined)

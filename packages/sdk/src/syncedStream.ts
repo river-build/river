@@ -177,6 +177,7 @@ export class SyncedStream extends Stream implements ISyncedStream {
         const miniblock: ParsedMiniblock = {
             hash: hash,
             header: miniblockHeader,
+            headerEvent: miniblockEvent,
             events: [...events, miniblockEvent],
         }
         await this.persistenceStore.saveMiniblock(this.streamId, miniblock)

@@ -26,12 +26,17 @@ export function persistedEventToParsedEvent(event: PersistedEvent): ParsedEvent 
 export function persistedMiniblockToParsedMiniblock(
     miniblock: PersistedMiniblock,
 ): ParsedMiniblock | undefined {
-    if (!miniblock.header) {
+    if (!miniblock.header || !miniblock.headerEvent) {
+        return undefined
+    }
+    const headerEvent = persistedEventToParsedEvent(miniblock.headerEvent)
+    if (!headerEvent) {
         return undefined
     }
     return {
         hash: miniblock.hash,
         header: miniblock.header,
+        headerEvent,
         events: miniblock.events.map(persistedEventToParsedEvent).filter(isDefined),
     }
 }
@@ -40,6 +45,7 @@ export function parsedMiniblockToPersistedMiniblock(miniblock: ParsedMiniblock) 
     return new PersistedMiniblock({
         hash: miniblock.hash,
         header: miniblock.header,
+        headerEvent: parsedEventToPersistedEvent(miniblock.headerEvent),
         events: miniblock.events.map(parsedEventToPersistedEvent),
     })
 }

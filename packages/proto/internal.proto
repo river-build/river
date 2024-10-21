@@ -16,6 +16,7 @@ message PersistedMiniblock {
     bytes hash = 1;
     MiniblockHeader header = 2;
     repeated PersistedEvent events = 3;
+    PersistedEvent header_event = 4;
 }
 
 message PersistedSyncedStream {
