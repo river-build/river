@@ -38,7 +38,7 @@ func (s *Service) NewMetricsInterceptor() connect.Interceptor {
 		),
 		unaryInflight: s.metrics.NewGaugeVecEx("grpc_unary_inflight", "gRPC unary calls in flight", "method"),
 		unaryStatusCode: s.metrics.NewCounterVecEx(
-			"grpc_unary_status_code",
+			"grpc_unary_status_code_counter",
 			"gRPC unary status code",
 			"method",
 			"status",
@@ -54,7 +54,7 @@ func (s *Service) NewMetricsInterceptor() connect.Interceptor {
 			"method",
 		),
 		serverStreamsStatusCode: s.metrics.NewCounterVecEx(
-			"grpc_server_stream_status_code",
+			"grpc_server_stream_status_code_counter",
 			"gRPC server stream status code",
 			"method",
 			"status",
