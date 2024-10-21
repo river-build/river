@@ -14,7 +14,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"golang.org/x/crypto/sha3"
+
+	"github.com/cespare/xxhash"
 
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
@@ -159,12 +160,9 @@ func (s *PostgresStreamStore) createStreamStorageTx(
 ) error {
 	tableSuffix := createTableSuffix(streamId)
 	sql := fmt.Sprintf(
-		`INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, 0);
-		CREATE TABLE miniblocks_%[1]s PARTITION OF miniblocks FOR VALUES IN ($1);
-		CREATE TABLE minipools_%[1]s PARTITION OF minipools FOR VALUES IN ($1);
-		CREATE TABLE miniblock_candidates_%[1]s PARTITION OF miniblock_candidates for values in ($1);
-		INSERT INTO miniblocks (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
-		INSERT INTO minipools (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
+		`INSERT INTO es (stream_id, latest_snapshot_miniblock, migrated) VALUES ($1, 0, true);
+		INSERT INTO miniblocks_%[1]s (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
+		INSERT INTO minipools_%[1]s (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
 		tableSuffix,
 	)
 	_, err := tx.Exec(ctx, sql, streamId, genesisMiniblock)
@@ -500,7 +498,7 @@ func (s *PostgresStreamStore) WriteEvent(
 // 1. Minipool has proper number of records including service one (equal to minipoolSlot)
 // 2. There are no gaps in seqNums and they start from 0 execpt service record with seqNum = -1
 // 3. All events in minipool have proper generation
-func (s *PostgresEventStore) writeEventTx(
+func (s *PostgresStreamStore) writeEventTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
@@ -1116,7 +1114,7 @@ func (s *PostgresStreamStore) initializeSingleNodeKeyTx(ctx context.Context, tx 
 // acquireListeningConnection returns a connection that listens for changes to the schema, or
 // a nil connection if the context is cancelled. In the event of failure to acquire a connection
 // or listen, it will retry indefinitely until success.
-func (s *PostgresEventStore) acquireListeningConnection(ctx context.Context) *pgxpool.Conn {
+func (s *PostgresStreamStore) acquireListeningConnection(ctx context.Context) *pgxpool.Conn {
 	var err error
 	var conn *pgxpool.Conn
 	log := dlog.FromCtx(ctx)
@@ -1465,9 +1463,10 @@ func (s *PostgresStreamStore) importMiniblocksTx(
 	return err
 }
 
-func createTableSuffix(streamId StreamId) string {
-	sum := sha3.Sum224([]byte(streamId.String()))
-	return hex.EncodeToString(sum[:])
+func createPartitionSuffix(streamId StreamId) string {
+	hash := xxhash.Sum64String(streamId.String())
+	hexEncoding := fmt.Sprintf("%016x", hash)
+	return hexEncoding[0:2]
 }
 
 func getCurrentNodeProcessInfo(currentSchemaName string) string {

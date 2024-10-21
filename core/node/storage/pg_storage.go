@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"embed"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -24,11 +25,14 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/crypto/sha3"
 	"golang.org/x/sync/semaphore"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
+
+	. "github.com/river-build/river/core/node/shared"
 )
 
 type PostgresEventStore struct {
@@ -730,4 +734,9 @@ func (s *PostgresEventStore) initStorage(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func createTableSuffix(streamId StreamId) string {
+	sum := sha3.Sum224([]byte(streamId.String()))
+	return hex.EncodeToString(sum[:])
 }

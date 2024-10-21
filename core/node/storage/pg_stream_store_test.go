@@ -16,6 +16,7 @@ import (
 	"github.com/river-build/river/core/node/base/test"
 	"github.com/river-build/river/core/node/infra"
 	. "github.com/river-build/river/core/node/protocol"
+	"github.com/river-build/river/core/node/shared"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/testutils"
 	"github.com/river-build/river/core/node/testutils/dbtestutils"
@@ -74,6 +75,29 @@ func setupStreamStorageTest() (context.Context, *PostgresStreamStore, *testStrea
 	}
 
 	return ctx, store, params
+}
+
+func TestPartitionSuffix(t *testing.T) {
+	streamIdString1 := "204ed935f2555b5f835879d70ed591deff0cf763479b81767a11ceaf4ee5e7fc"
+	streamIdString2 := "20c1f8beef399d3bf80c65a79334aca8bde290750f27f5f64dccda8a57e1fcff"
+	streamIdString3 := "2079e7e6cc3b78cbe80c6ff0cbbad8701a3431a8f2cd24f2be1fe1560b260fc5"
+
+	streamId1, err := shared.StreamIdFromString(streamIdString1)
+	require.NoError(t, err)
+
+	streamId2, err := shared.StreamIdFromString(streamIdString2)
+	require.NoError(t, err)
+
+	streamId3, err := shared.StreamIdFromString(streamIdString3)
+	require.NoError(t, err)
+
+	suffix1 := createPartitionSuffix(streamId1)
+	suffix2 := createPartitionSuffix(streamId2)
+	suffix3 := createPartitionSuffix(streamId3)
+
+	require.Equal(t, suffix1, "f7")
+	require.Equal(t, suffix2, "cd")
+	require.Equal(t, suffix3, "ef")
 }
 
 func TestPostgresStreamStore(t *testing.T) {
