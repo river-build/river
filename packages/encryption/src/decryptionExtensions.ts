@@ -63,6 +63,7 @@ export interface KeySolicitationContent {
 
 export interface KeySolicitationItem {
     streamId: string
+    eventId: string
     fromUserId: string
     fromUserAddress: Uint8Array
     solicitation: KeySolicitationContent
@@ -194,6 +195,10 @@ export abstract class BaseDecryptionExtensions {
         userId: string,
         opts?: { skipOnChainValidation: boolean },
     ): Promise<boolean>
+    public abstract isValidEvent(
+        streamId: string,
+        eventId: string,
+    ): { isValid: boolean; reason?: string }
     public abstract isUserInboxStreamUpToDate(upToDateStreams: Set<string>): boolean
     public abstract onDecryptionError(item: EncryptedContentItem, err: DecryptionSessionError): void
     public abstract sendKeySolicitation(args: KeySolicitationData): Promise<void>
@@ -234,6 +239,7 @@ export abstract class BaseDecryptionExtensions {
 
     public enqueueKeySolicitation(
         streamId: string,
+        eventId: string,
         fromUserId: string,
         fromUserAddress: Uint8Array,
         keySolicitation: KeySolicitationContent,
@@ -255,6 +261,7 @@ export abstract class BaseDecryptionExtensions {
                 this.queues.keySolicitations,
                 {
                     streamId,
+                    eventId,
                     fromUserId,
                     fromUserAddress,
                     solicitation: keySolicitation,
@@ -674,6 +681,16 @@ export abstract class BaseDecryptionExtensions {
         check(this.hasStream(streamId), 'stream not found')
         const knownSessionIds =
             (await this.crypto.encryptionDevice.getInboundGroupSessionIds(streamId)) ?? []
+
+        const { isValid, reason } = this.isValidEvent(streamId, item.eventId)
+        if (!isValid) {
+            this.log.error('processing key solicitation: invalid event id', {
+                streamId,
+                eventId: item.eventId,
+                reason,
+            })
+            return
+        }
 
         knownSessionIds.sort()
         const requestedSessionIds = new Set(item.solicitation.sessionIds.sort())
