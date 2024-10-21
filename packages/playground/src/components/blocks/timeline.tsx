@@ -18,7 +18,7 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from '../ui/form'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { ScrollArea } from '../ui/scroll-area'
-import { Dialog, DialogContent, DialogTrigger } from '../ui/dialog'
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '../ui/dialog'
 
 const useMessageReaction = (props: GdmOrChannel, eventId: string) => {
     const { data: reactionMap } = useReactions(props)
@@ -91,9 +91,9 @@ export const Timeline = (props: TimelineProps) => {
                             ? [
                                   <Message
                                       key={event.eventId}
+                                      {...props}
                                       event={event}
                                       thread={props.threadMap?.[event.eventId]}
-                                      {...props}
                                   />,
                               ]
                             : [],
@@ -197,7 +197,8 @@ const Message = ({
                             <Button variant="ghost">+{props.thread.length} messages</Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-2x">
-                            <Timeline showThreadMessages events={props.thread} {...props} />
+                            <DialogTitle>Thread</DialogTitle>
+                            <Timeline {...props} showThreadMessages events={props.thread} />
                         </DialogContent>
                     </Dialog>
                 )}
