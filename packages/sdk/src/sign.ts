@@ -174,6 +174,7 @@ export const unpackMiniblock = async (
     return {
         hash: miniblock.header.hash,
         header: header.event.payload.value,
+        headerEvent: header,
         events: [...events, header],
     }
 }
