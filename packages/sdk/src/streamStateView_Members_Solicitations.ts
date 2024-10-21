@@ -3,6 +3,7 @@ import { MemberPayload_KeyFulfillment, MemberPayload_KeySolicitation } from '@ri
 import { StreamEncryptionEvents } from './streamEvents'
 import { StreamMember } from './streamStateView_Members'
 import { removeCommon } from './utils'
+import { KeySolicitationContent } from '@river-build/encryption'
 
 export class StreamStateView_Members_Solicitations {
     constructor(readonly streamId: string) {}
@@ -26,6 +27,7 @@ export class StreamStateView_Members_Solicitations {
 
     applySolicitation(
         user: StreamMember,
+        eventId: string,
         solicitation: MemberPayload_KeySolicitation,
         encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
     ): void {
@@ -37,7 +39,8 @@ export class StreamStateView_Members_Solicitations {
             fallbackKey: solicitation.fallbackKey,
             isNewDevice: solicitation.isNewDevice,
             sessionIds: solicitation.sessionIds.toSorted(),
-        }
+            srcEventId: eventId,
+        } satisfies KeySolicitationContent
         user.solicitations.push(newSolicitation)
         encryptionEmitter?.emit(
             'newKeySolicitation',
@@ -63,7 +66,8 @@ export class StreamStateView_Members_Solicitations {
             fallbackKey: prev.fallbackKey,
             isNewDevice: false,
             sessionIds: [...removeCommon(prev.sessionIds, fulfillment.sessionIds.toSorted())],
-        }
+            srcEventId: prev.srcEventId,
+        } satisfies KeySolicitationContent
         user.solicitations[index] = newEvent
         encryptionEmitter?.emit(
             'updatedKeySolicitation',
