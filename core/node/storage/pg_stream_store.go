@@ -549,6 +549,7 @@ func (s *PostgresEventStore) writeEventTx(
 			"SELECT generation, slot_num FROM {{minipools}} WHERE stream_id = $1 ORDER BY generation, slot_num",
 			streamId,
 		),
+		streamId,
 	)
 	if err != nil {
 		return err
