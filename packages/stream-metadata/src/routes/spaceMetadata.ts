@@ -79,7 +79,7 @@ export async function fetchSpaceMetadata(request: FastifyRequest, reply: Fastify
 		) {
 			imageEventId = streamView.spaceContent.encryptedSpaceImage.eventId
 		}
-	} catch (error) {
+	} catch (_error) {
 		// no-op
 	}
 
