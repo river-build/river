@@ -73,8 +73,14 @@ contract DeployBaseRegistry is DiamondHelper, Deployer {
   address mainnetDelegation;
   address public messenger;
 
+  address riverToken = 0x9172852305F32819469bf38A3772f29361d7b768;
+
   function versionName() public pure override returns (string memory) {
     return "baseRegistry";
+  }
+
+  function setDependencies(address riverToken_) external {
+    riverToken = riverToken_;
   }
 
   function addImmutableCuts(address deployer) internal {
@@ -151,11 +157,7 @@ contract DeployBaseRegistry is DiamondHelper, Deployer {
     addFacet(
       distributionV2Helper.makeCut(distributionV2, IDiamond.FacetCutAction.Add),
       distributionV2,
-      distributionV2Helper.makeInitData(
-        0x9172852305F32819469bf38A3772f29361d7b768,
-        0x9172852305F32819469bf38A3772f29361d7b768,
-        14 days
-      )
+      distributionV2Helper.makeInitData(riverToken, riverToken, 14 days)
     );
     addFacet(
       spaceDelegationHelper.makeCut(
@@ -163,9 +165,7 @@ contract DeployBaseRegistry is DiamondHelper, Deployer {
         IDiamond.FacetCutAction.Add
       ),
       spaceDelegation,
-      spaceDelegationHelper.makeInitData(
-        0x9172852305F32819469bf38A3772f29361d7b768
-      )
+      spaceDelegationHelper.makeInitData(riverToken)
     );
     addFacet(
       mainnetDelegationHelper.makeCut(
@@ -273,9 +273,7 @@ contract DeployBaseRegistry is DiamondHelper, Deployer {
             IDiamond.FacetCutAction.Add
           ),
           spaceDelegation,
-          spaceDelegationHelper.makeInitData(
-            0x9172852305F32819469bf38A3772f29361d7b768
-          )
+          spaceDelegationHelper.makeInitData(riverToken)
         );
       } else if (
         facetNameHash == keccak256(abi.encodePacked("ERC721ANonTransferable"))
