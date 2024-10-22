@@ -77,6 +77,10 @@ func setupStreamStorageTest() (context.Context, *PostgresStreamStore, *testStrea
 	return ctx, store, params
 }
 
+// This test is here to define/ensure parity between node partition mappings and what we would
+// compute on postgres directly if needed. To compute the mapping on pg, try e.g.:
+//
+// select left(md5('204ed935f2555b5f835879d70ed591deff0cf763479b81767a11ceaf4ee5e7fc'), 2)
 func TestPartitionSuffix(t *testing.T) {
 	streamIdString1 := "204ed935f2555b5f835879d70ed591deff0cf763479b81767a11ceaf4ee5e7fc"
 	streamIdString2 := "20c1f8beef399d3bf80c65a79334aca8bde290750f27f5f64dccda8a57e1fcff"
@@ -95,9 +99,9 @@ func TestPartitionSuffix(t *testing.T) {
 	suffix2 := createPartitionSuffix(streamId2)
 	suffix3 := createPartitionSuffix(streamId3)
 
-	require.Equal(t, suffix1, "f7")
-	require.Equal(t, suffix2, "cd")
-	require.Equal(t, suffix3, "ef")
+	require.Equal(t, suffix1, "9b")
+	require.Equal(t, suffix2, "56")
+	require.Equal(t, suffix3, "60")
 }
 
 func TestPostgresStreamStore(t *testing.T) {

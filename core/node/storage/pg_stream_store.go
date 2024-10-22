@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"crypto/md5"
 	"embed"
 	"encoding/hex"
 	"fmt"
@@ -14,8 +15,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-
-	"github.com/cespare/xxhash"
 
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
@@ -1463,10 +1462,17 @@ func (s *PostgresStreamStore) importMiniblocksTx(
 	return err
 }
 
+// createPartitionSuffix determines the partition mapping for a particular stream id using
+// the first byte of the md5 hash of the hex-encoded stream id. We use the hex-encoded stream
+// id so that the mapping can be reproduced on postgres, for convenience. To compute a partition
+// mapping on pg, try:
+//
+// left(md5('204ed935f2555b5f835879d70ed591deff0cf763479b81767a11ceaf4ee5e7fc'), 2)
 func createPartitionSuffix(streamId StreamId) string {
-	hash := xxhash.Sum64String(streamId.String())
-	hexEncoding := fmt.Sprintf("%016x", hash)
-	return hexEncoding[0:2]
+	// Do not hash the stream bytes directly, but hash the hex encoding of the stream id, which is
+	// what we store in the database.
+	hash := md5.Sum([]byte(streamId.String()))
+	return hex.EncodeToString(hash[:])[0:2]
 }
 
 func getCurrentNodeProcessInfo(currentSchemaName string) string {
