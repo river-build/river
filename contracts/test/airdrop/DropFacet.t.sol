@@ -141,7 +141,9 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
     assertEq(id, 2);
   }
 
-  function test_revertWhen_noActiveClaimCondition() external {
+  function test_getActiveClaimConditionId_revertWhen_noActiveClaimCondition()
+    external
+  {
     vm.expectRevert(DropFacet__NoActiveClaimCondition.selector);
     dropFacet.getActiveClaimConditionId();
   }
@@ -160,21 +162,20 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
   }
 
   struct ClaimData {
-    Vm.Wallet claimer;
+    address claimer;
     uint16 amount;
   }
 
   // claimWithPenalty
   function test_claimWithPenalty_fuzz(ClaimData[] memory claimData) external {
     vm.assume(claimData.length > 0);
-    vm.assume(claimData.length <= 10000);
 
     uint256 totalAmount;
     address[] memory claimers = new address[](claimData.length);
     uint256[] memory claimAmounts = new uint256[](claimData.length);
 
     for (uint256 i = 0; i < claimData.length; i++) {
-      claimers[i] = claimData[i].claimer.addr;
+      claimers[i] = claimData[i].claimer;
       claimAmounts[i] = claimData[i].amount == 0 ? 1 : claimData[i].amount;
       claimData[i].amount = uint16(claimAmounts[i]);
       totalAmount += claimAmounts[i];
@@ -199,34 +200,43 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
     dropFacet.setClaimConditions(conditions, false);
 
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
+    ClaimCondition memory condition = dropFacet.getClaimConditionById(
+      conditionId
+    );
 
     for (uint256 i = 0; i < claimData.length; i++) {
-      Vm.Wallet memory claimer = claimData[i].claimer;
+      address claimer = claimData[i].claimer;
       uint16 amount = claimData[i].amount;
 
-      if (dropFacet.getSupplyClaimedByWallet(claimer.addr, conditionId) > 0) {
+      uint256 penaltyBps = condition.penaltyBps;
+      uint256 penaltyAmount = BasisPoints.calculate(amount, penaltyBps);
+      uint256 expectedAmount = amount - penaltyAmount;
+
+      if (dropFacet.getSupplyClaimedByWallet(claimer, conditionId) > 0) {
         continue;
       }
 
       bytes32[] memory proof = merkleTree.getProof(tree, i);
+
+      vm.prank(claimer);
+      vm.expectEmit(address(dropFacet));
+      emit DropFacet_Claimed_WithPenalty(
+        conditionId,
+        claimer,
+        claimer,
+        expectedAmount
+      );
       dropFacet.claimWithPenalty(
         Claim({
           conditionId: conditionId,
-          account: claimer.addr,
+          account: claimer,
           quantity: amount,
           proof: proof
         })
       );
 
-      ClaimCondition memory condition = dropFacet.getClaimConditionById(
-        dropFacet.getActiveClaimConditionId()
-      );
-      uint256 penaltyBps = condition.penaltyBps;
-      uint256 penaltyAmount = BasisPoints.calculate(amount, penaltyBps);
-      uint256 expectedAmount = amount - penaltyAmount;
-
       assertEq(
-        dropFacet.getSupplyClaimedByWallet(claimer.addr, conditionId),
+        dropFacet.getSupplyClaimedByWallet(claimer, conditionId),
         expectedAmount
       );
     }
@@ -436,8 +446,10 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
     assertEq(dropFacet.getSupplyClaimedByWallet(bob.addr, newConditionId), 0);
   }
 
-  function test_revertWhen_setClaimConditions_onlyOwner() external {
-    address caller = _randomAddress();
+  function test_fuzz_setClaimConditions_revertWhen_notOwner(
+    address caller
+  ) external {
+    vm.assume(caller != deployer);
 
     vm.prank(caller);
     vm.expectRevert(abi.encodeWithSelector(Ownable__NotOwner.selector, caller));
