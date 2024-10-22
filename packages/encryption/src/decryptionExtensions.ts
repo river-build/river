@@ -691,7 +691,7 @@ export abstract class BaseDecryptionExtensions {
 
         const { isValid, reason } = this.isValidEvent(streamId, item.solicitation.srcEventId)
         if (!isValid) {
-            this.log.debug('processing key solicitation: invalid event id', {
+            this.log.error('processing key solicitation: invalid event id', {
                 streamId,
                 eventId: item.solicitation.srcEventId,
                 reason,
