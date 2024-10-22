@@ -26,41 +26,33 @@ abstract contract MainnetDelegationBase is IMainnetDelegationBase {
     emit DelegationRemoved(delegator);
   }
 
-  function _removeDelegations(address[] calldata delegators) internal {
-    for (uint256 i; i < delegators.length; ++i) {
-      _removeDelegation(delegators[i]);
-    }
-  }
-
+  /// @dev Caller must ensure that operator != address(0)
   function _replaceDelegation(
     address delegator,
-    address claimer,
     address operator,
     uint256 quantity
   ) internal {
     MainnetDelegationStorage.Layout storage ds = MainnetDelegationStorage
       .layout();
 
-    // add the delegator to the set of delegators regardless of whether they are already in the set
-    ds.delegators.add(delegator);
-
     Delegation storage delegation = ds.delegationByDelegator[delegator];
     address currentOperator = delegation.operator;
 
-    if (currentOperator != operator) {
-      ds.delegatorsByOperator[currentOperator].remove(delegator);
-      delegation.operator = operator;
-      delegation.quantity = quantity;
-      delegation.delegator = delegator;
-      delegation.delegationTime = block.timestamp;
-      if (operator != address(0)) {
+    if (currentOperator == address(0)) {
+      _addDelegation(delegator, operator, quantity);
+    } else {
+      if (currentOperator != operator) {
+        ds.delegatorsByOperator[currentOperator].remove(delegator);
         ds.delegatorsByOperator[operator].add(delegator);
+        delegation.operator = operator;
+        delegation.delegationTime = block.timestamp;
+      } else if (delegation.quantity != quantity) {
+        delegation.delegationTime = block.timestamp;
       }
-    } else if (delegation.quantity != quantity) {
-      delegation.delegationTime = block.timestamp;
-    }
+      delegation.quantity = quantity;
 
-    _setAuthorizedClaimer(delegator, claimer);
+      emit DelegationSet(delegator, operator, quantity);
+    }
   }
 
   function _addDelegation(
@@ -89,13 +81,10 @@ abstract contract MainnetDelegationBase is IMainnetDelegationBase {
     address operator,
     uint256 quantity
   ) internal {
-    MainnetDelegationStorage.Layout storage ds = MainnetDelegationStorage
-      .layout();
-
     if (operator == address(0)) {
       _removeDelegation(delegator);
     } else {
-      _addDelegation(delegator, operator, quantity);
+      _replaceDelegation(delegator, operator, quantity);
     }
   }
 

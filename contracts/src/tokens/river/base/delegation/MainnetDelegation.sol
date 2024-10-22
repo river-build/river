@@ -67,7 +67,9 @@ contract MainnetDelegation is
   function removeDelegations(
     address[] calldata delegators
   ) external onlyCrossDomainMessenger {
-    _removeDelegations(delegators);
+    for (uint256 i; i < delegators.length; ++i) {
+      _removeDelegation(delegators[i]);
+    }
   }
 
   // =============================================================
@@ -103,12 +105,9 @@ contract MainnetDelegation is
     );
 
     for (uint256 i; i < delegatorsLen; ++i) {
-      _replaceDelegation(
-        delegators[i],
-        claimers[i],
-        delegates[i],
-        quantities[i]
-      );
+      address delegator = delegators[i];
+      _setDelegation(delegator, delegates[i], quantities[i]);
+      _setAuthorizedClaimer(delegator, claimers[i]);
     }
   }
 
