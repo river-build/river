@@ -109,7 +109,11 @@ contract BaseSetup is TestUtils, SpaceHelper {
       IEntryPoint(_randomAddress())
     );
 
+    // River Token
+    riverToken = deployRiverTokenBase.deploy(deployer);
+
     // Base Registry
+    deployBaseRegistry.setDependencies({riverToken_: riverToken});
     baseRegistry = deployBaseRegistry.deploy(deployer);
     entitlementChecker = IEntitlementChecker(baseRegistry);
     nodeOperator = INodeOperator(baseRegistry);
@@ -139,7 +143,7 @@ contract BaseSetup is TestUtils, SpaceHelper {
     eip712Facet = EIP712Facet(spaceFactory);
 
     // Base Registry Diamond
-    riverToken = deployRiverTokenBase.deploy(deployer);
+
     bridge = deployRiverTokenBase.bridgeBase();
 
     // POST DEPLOY
