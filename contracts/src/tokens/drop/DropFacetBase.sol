@@ -133,7 +133,7 @@ abstract contract DropFacetBase is IDropFacetBase {
       lastConditionTimestamp = newCondition.startTimestamp;
     }
 
-    // if _resetEligibility is true, we assign new uids to the claim conditions
+    // if resetEligibility is true, we assign new uids to the claim conditions
     // so we delete claim conditions with UID < newStartId
     if (resetEligibility) {
       for (uint256 i = existingStartId; i < newStartId; i++) {

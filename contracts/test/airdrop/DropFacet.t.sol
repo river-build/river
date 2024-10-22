@@ -17,9 +17,7 @@ import {MerkleTree} from "contracts/test/utils/MerkleTree.sol";
 import {DropFacet} from "contracts/src/tokens/drop/DropFacet.sol";
 import {MockERC20} from "contracts/test/mocks/MockERC20.sol";
 import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
-
-// debuggging
-import {console} from "forge-std/console.sol";
+import {DropStorage} from "contracts/src/tokens/drop/DropStorage.sol";
 
 contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
   uint256 internal constant TOTAL_TOKEN_AMOUNT = 1000;
@@ -455,6 +453,13 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
       dropFacet.getSupplyClaimedByWallet(alice.addr, conditionId),
       _calculateExpectedAmount(alice.addr)
     );
+  }
+
+  function test_storage_slot() external pure {
+    bytes32 slot = keccak256(
+      abi.encode(uint256(keccak256("diamond.facets.drop.storage")) - 1)
+    ) & ~bytes32(uint256(0xff));
+    assertEq(slot, DropStorage.STORAGE_SLOT, "slot");
   }
 
   // =============================================================
