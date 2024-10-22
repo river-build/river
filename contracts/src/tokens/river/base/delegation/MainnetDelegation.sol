@@ -21,6 +21,7 @@ contract MainnetDelegation is
   // =============================================================
   //                           Initializers
   // =============================================================
+
   function __MainnetDelegation_init(
     address messenger
   ) external onlyInitializing {
@@ -35,6 +36,7 @@ contract MainnetDelegation is
   // =============================================================
   //                           Modifiers
   // =============================================================
+
   modifier onlyCrossDomainMessenger() {
     ICrossDomainMessenger messenger = _getMessenger();
 
@@ -49,6 +51,7 @@ contract MainnetDelegation is
   // =============================================================
   //                           Getters
   // =============================================================
+
   function getMessenger() external view returns (address) {
     return address(_getMessenger());
   }
@@ -60,6 +63,7 @@ contract MainnetDelegation is
   // =============================================================
   //                       Remove Delegators
   // =============================================================
+
   function removeDelegations(
     address[] calldata delegators
   ) external onlyCrossDomainMessenger {
@@ -69,12 +73,14 @@ contract MainnetDelegation is
   // =============================================================
   //                  Batch Authorized Claimers
   // =============================================================
+
   function setBatchAuthorizedClaimers(
     address[] calldata delegators,
     address[] calldata claimers
   ) external onlyCrossDomainMessenger {
     uint256 delegatorsLen = delegators.length;
-    for (uint256 i; i < delegatorsLen; i++) {
+    require(delegatorsLen == claimers.length);
+    for (uint256 i; i < delegatorsLen; ++i) {
       _setAuthorizedClaimer(delegators[i], claimers[i]);
     }
   }
@@ -82,6 +88,7 @@ contract MainnetDelegation is
   // =============================================================
   //                           Batch Delegation
   // =============================================================
+
   function setBatchDelegation(
     address[] calldata delegators,
     address[] calldata delegates,
@@ -89,8 +96,13 @@ contract MainnetDelegation is
     uint256[] calldata quantities
   ) external onlyCrossDomainMessenger {
     uint256 delegatorsLen = delegators.length;
+    require(
+      delegatorsLen == delegates.length &&
+        delegatorsLen == claimers.length &&
+        delegatorsLen == quantities.length
+    );
 
-    for (uint256 i; i < delegatorsLen; i++) {
+    for (uint256 i; i < delegatorsLen; ++i) {
       _replaceDelegation(
         delegators[i],
         claimers[i],
@@ -103,6 +115,7 @@ contract MainnetDelegation is
   // =============================================================
   //                           Delegation
   // =============================================================
+
   function setProxyDelegation(address proxyDelegation) external onlyOwner {
     _setProxyDelegation(proxyDelegation);
   }
@@ -141,6 +154,7 @@ contract MainnetDelegation is
   // =============================================================
   //                           Claimer
   // =============================================================
+
   function setAuthorizedClaimer(
     address owner,
     address claimer
