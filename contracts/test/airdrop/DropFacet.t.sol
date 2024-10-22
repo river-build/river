@@ -232,7 +232,7 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
   function test_revertWhen_claimHasEnded() external {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
     conditions[0] = _createClaimCondition(block.timestamp, root);
-    conditions[0].endTimestamp = block.timestamp + 100;
+    conditions[0].endTimestamp = uint40(block.timestamp + 100);
 
     vm.prank(deployer);
     dropFacet.setClaimConditions(conditions, false);
@@ -401,7 +401,7 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
     conditions[0] = _createClaimCondition(block.timestamp, root); // endless claim condition
 
     conditions[1] = _createClaimCondition(block.timestamp + 100, root);
-    conditions[1].endTimestamp = block.timestamp + 200; // ends at block.timestamp + 200
+    conditions[1].endTimestamp = uint40(block.timestamp + 200); // ends at block.timestamp + 200
 
     vm.prank(deployer);
     dropFacet.setClaimConditions(conditions, false);
@@ -466,7 +466,7 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
   ) internal view returns (ClaimCondition memory) {
     return
       ClaimCondition({
-        startTimestamp: _startTime,
+        startTimestamp: uint40(_startTime),
         endTimestamp: 0,
         maxClaimableSupply: TOTAL_TOKEN_AMOUNT,
         supplyClaimed: 0,

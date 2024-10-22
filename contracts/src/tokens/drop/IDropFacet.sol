@@ -9,20 +9,21 @@ pragma solidity ^0.8.23;
 
 interface IDropFacetBase {
   /// @notice A struct representing a claim condition
+  /// @param currency The currency to claim in
   /// @param startTimestamp The timestamp at which the claim condition starts
+  /// @param endTimestamp The timestamp at which the claim condition ends
+  /// @param penaltyBps The penalty in basis points for early withdrawal
   /// @param maxClaimableSupply The maximum claimable supply for the claim condition
   /// @param supplyClaimed The supply already claimed for the claim condition
   /// @param merkleRoot The merkle root for the claim condition
-  /// @param currency The currency to claim in
-  /// @param penaltyBps The penalty in basis points for early withdrawal
   struct ClaimCondition {
-    uint256 startTimestamp;
-    uint256 endTimestamp;
+    address currency;
+    uint40 startTimestamp;
+    uint40 endTimestamp;
+    uint16 penaltyBps;
     uint256 maxClaimableSupply;
     uint256 supplyClaimed;
     bytes32 merkleRoot;
-    address currency;
-    uint256 penaltyBps;
   }
 
   // =============================================================

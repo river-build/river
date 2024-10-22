@@ -25,15 +25,14 @@ abstract contract DropFacetBase is IDropFacetBase {
       CustomRevert.revertWith(DropFacet__NoActiveClaimCondition.selector);
     }
 
-    uint256 currentTimestamp = block.timestamp;
     uint256 lastConditionId = conditionStartId + conditionCount - 1;
 
-    for (uint256 i = lastConditionId; i >= conditionStartId; i--) {
+    for (uint256 i = lastConditionId; i >= conditionStartId; --i) {
       ClaimCondition storage condition = ds.conditionById[i];
+      uint256 endTimestamp = condition.endTimestamp;
       if (
-        currentTimestamp >= condition.startTimestamp &&
-        (condition.endTimestamp == 0 ||
-          currentTimestamp < condition.endTimestamp)
+        block.timestamp >= condition.startTimestamp &&
+        (endTimestamp == 0 || block.timestamp < endTimestamp)
       ) {
         return i;
       }
@@ -49,7 +48,7 @@ abstract contract DropFacetBase is IDropFacetBase {
     uint256 quantity,
     bytes32[] calldata proof
   ) internal view {
-    ClaimCondition memory condition = ds.getClaimConditionById(conditionId);
+    ClaimCondition storage condition = ds.getClaimConditionById(conditionId);
 
     if (condition.merkleRoot == bytes32(0)) {
       CustomRevert.revertWith(DropFacet__MerkleRootNotSet.selector);
@@ -100,7 +99,6 @@ abstract contract DropFacetBase is IDropFacetBase {
     /// which ends up resetting the eligibility of the claim conditions in `supplyClaimedByWallet`.
     uint256 newConditionCount = conditions.length;
     uint256 newStartId = existingStartId;
-
     if (resetEligibility) {
       newStartId = existingStartId + existingConditionCount;
     }
@@ -109,25 +107,30 @@ abstract contract DropFacetBase is IDropFacetBase {
     ds.conditionStartId = newStartId;
 
     uint256 lastConditionTimestamp;
-    for (uint256 i = 0; i < newConditionCount; i++) {
-      if (lastConditionTimestamp >= conditions[i].startTimestamp) {
+    for (uint256 i; i < newConditionCount; ++i) {
+      ClaimCondition calldata newCondition = conditions[i];
+      if (lastConditionTimestamp >= newCondition.startTimestamp) {
         CustomRevert.revertWith(
           DropFacet__ClaimConditionsNotInAscendingOrder.selector
         );
       }
 
       // check that amount already claimed is less than or equal to the max claimable supply
-      uint256 amountAlreadyClaimed = ds
-        .conditionById[newStartId + i]
-        .supplyClaimed;
+      ClaimCondition storage condition = ds.conditionById[newStartId + i];
+      uint256 amountAlreadyClaimed = condition.supplyClaimed;
 
-      if (amountAlreadyClaimed > conditions[i].maxClaimableSupply) {
+      if (amountAlreadyClaimed > newCondition.maxClaimableSupply) {
         CustomRevert.revertWith(DropFacet__CannotSetClaimConditions.selector);
       }
 
-      ds.conditionById[newStartId + i] = conditions[i];
-      ds.conditionById[newStartId + i].supplyClaimed = amountAlreadyClaimed;
-      lastConditionTimestamp = conditions[i].startTimestamp;
+      // copy the new condition to the storage except `supplyClaimed`
+      condition.startTimestamp = newCondition.startTimestamp;
+      condition.endTimestamp = newCondition.endTimestamp;
+      condition.maxClaimableSupply = newCondition.maxClaimableSupply;
+      condition.merkleRoot = newCondition.merkleRoot;
+      condition.currency = newCondition.currency;
+      condition.penaltyBps = newCondition.penaltyBps;
+      lastConditionTimestamp = newCondition.startTimestamp;
     }
 
     // if _resetEligibility is true, we assign new uids to the claim conditions
@@ -154,7 +157,9 @@ abstract contract DropFacetBase is IDropFacetBase {
     uint256 amount
   ) internal {
     ds.conditionById[conditionId].supplyClaimed += amount;
-    ds.supplyClaimedByWallet[conditionId][account] += amount;
+    unchecked {
+      ds.supplyClaimedByWallet[conditionId][account] += amount;
+    }
   }
 
   // =============================================================
