@@ -68,7 +68,7 @@ func NewStreamCache(
 	syncTasks, err := NewStreamSyncTasksProcessor(
 		ctx,
 		&StreamSyncTaskProcessorParams{
-			WorkerPoolSize: params.Config.StreamReconciliation.GetWorkerPoolSize(),
+			WorkerPoolSize: params.Config.StreamReconciliation.WorkerPoolSize,
 		},
 	)
 	if err != nil {

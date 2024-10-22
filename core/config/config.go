@@ -37,6 +37,9 @@ func GetDefaultConfig() *Config {
 		},
 		// TODO: ArchitectContract: ContractConfig{},
 		// TODO: RegistryContract:  ContractConfig{},
+		StreamReconciliation: StreamReconciliationConfig{
+			WorkerPoolSize: 8,
+		},
 		Log: LogConfig{
 			Level:   "info", // NOTE: this default is replaced by flag value
 			Console: true,   // NOTE: this default is replaced by flag value
@@ -406,13 +409,6 @@ type ScrubbingConfig struct {
 
 type StreamReconciliationConfig struct {
 	WorkerPoolSize int // If 0, default to 8.
-}
-
-func (s *StreamReconciliationConfig) GetWorkerPoolSize() int {
-	if s.WorkerPoolSize <= 0 {
-		return 8
-	}
-	return s.WorkerPoolSize
 }
 
 type FilterConfig struct {
