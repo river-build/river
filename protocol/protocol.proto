@@ -629,6 +629,14 @@ message EncryptedData {
     */
     optional string ref_event_id = 6;
 
+    /**
+    * Optional mls message.  If this is set, all other strings are empty.
+    */
+    optional MlsMessage mls_message = 7;
+}
+
+message MlsMessage {
+  bytes payload = 1;
 }
 
 message WrappedEncryptedData {

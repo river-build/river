@@ -1377,6 +1377,26 @@ export class Client
         return super.emit(event, ...args)
     }
 
+    async sendMlsMessage(streamId: string, payload: Uint8Array): Promise<{ eventId: string }> {
+        // TODO: Add skipped permission checks
+        const message: EncryptedData = new EncryptedData({
+            mlsMessage: {
+                payload,
+            },
+        })
+
+        if (!isDMChannelStreamId(streamId)) {
+            throw new Error('unsupported stream type')
+        }
+
+        // TODO: Add localId
+        // TODO: Add clearText
+        // TODO: Add tags
+        return this.makeEventAndAddToStream(streamId, make_DMChannelPayload_Message(message), {
+            method: 'sendMessageDM',
+        })
+    }
+
     async sendMessage(
         streamId: string,
         body: string,
