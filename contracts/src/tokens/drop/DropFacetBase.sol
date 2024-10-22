@@ -43,25 +43,26 @@ abstract contract DropFacetBase is IDropFacetBase {
 
   function _verifyClaim(
     DropStorage.Layout storage ds,
-    uint256 conditionId,
-    address account,
-    uint256 quantity,
-    bytes32[] calldata proof
+    Claim calldata claim
   ) internal view {
-    ClaimCondition storage condition = ds.getClaimConditionById(conditionId);
+    ClaimCondition storage condition = ds.getClaimConditionById(
+      claim.conditionId
+    );
 
     if (condition.merkleRoot == bytes32(0)) {
       CustomRevert.revertWith(DropFacet__MerkleRootNotSet.selector);
     }
 
-    if (quantity == 0) {
+    if (claim.quantity == 0) {
       CustomRevert.revertWith(
         DropFacet__QuantityMustBeGreaterThanZero.selector
       );
     }
 
     // Check if the total claimed supply (including the current claim) exceeds the maximum claimable supply
-    if (condition.supplyClaimed + quantity > condition.maxClaimableSupply) {
+    if (
+      condition.supplyClaimed + claim.quantity > condition.maxClaimableSupply
+    ) {
       CustomRevert.revertWith(DropFacet__ExceedsMaxClaimableSupply.selector);
     }
 
@@ -76,12 +77,14 @@ abstract contract DropFacetBase is IDropFacetBase {
     }
 
     // check if already claimed
-    if (ds.supplyClaimedByWallet[conditionId][account] > 0) {
+    if (
+      ds.supplyClaimedByWallet[claim.conditionId][claim.account].claimed > 0
+    ) {
       CustomRevert.revertWith(DropFacet__AlreadyClaimed.selector);
     }
 
-    bytes32 leaf = _createLeaf(account, quantity);
-    if (!proof.verifyCalldata(condition.merkleRoot, leaf)) {
+    bytes32 leaf = _createLeaf(claim.account, claim.quantity);
+    if (!claim.proof.verifyCalldata(condition.merkleRoot, leaf)) {
       CustomRevert.revertWith(DropFacet__InvalidProof.selector);
     }
   }
@@ -158,7 +161,7 @@ abstract contract DropFacetBase is IDropFacetBase {
   ) internal {
     ds.conditionById[conditionId].supplyClaimed += amount;
     unchecked {
-      ds.supplyClaimedByWallet[conditionId][account] += amount;
+      ds.supplyClaimedByWallet[conditionId][account].claimed += amount;
     }
   }
 

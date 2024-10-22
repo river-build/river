@@ -8,6 +8,17 @@ pragma solidity ^0.8.23;
 // contracts
 
 interface IDropFacetBase {
+  /// @notice A struct representing a claim
+  /// @param conditionId The ID of the claim condition
+  /// @param account The address of the account that claimed
+  /// @param quantity The quantity of tokens claimed
+  struct Claim {
+    uint256 conditionId;
+    address account;
+    uint256 quantity;
+    bytes32[] proof;
+  }
+
   /// @notice A struct representing a claim condition
   /// @param currency The currency to claim in
   /// @param startTimestamp The timestamp at which the claim condition starts
@@ -34,6 +45,13 @@ interface IDropFacetBase {
     address indexed claimer,
     address indexed account,
     uint256 amount
+  );
+
+  event DropFacet_Claimed_And_Staked(
+    uint256 indexed conditionId,
+    address indexed claimer,
+    address indexed account,
+    uint256 depositId
   );
 
   event DropFacet_ClaimConditionsUpdated(
@@ -84,4 +102,20 @@ interface IDropFacet is IDropFacetBase {
     address account,
     uint256 conditionId
   ) external view returns (uint256);
+
+  /// @notice Claims tokens with a penalty
+  /// @param claim The claim to process
+  function claimWithPenalty(Claim calldata claim) external;
+
+  /// @notice Claims tokens and stakes them in the staking contract
+  /// @param claim The claim to process
+  /// @param delegatee The address of the delegatee
+  /// @param deadline The deadline for the transaction
+  /// @param signature The signature of the delegatee
+  function claimAndStake(
+    Claim calldata claim,
+    address delegatee,
+    uint256 deadline,
+    bytes calldata signature
+  ) external;
 }

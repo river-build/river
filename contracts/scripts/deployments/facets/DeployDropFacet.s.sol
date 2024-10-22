@@ -29,9 +29,11 @@ contract DeployDropFacet is Deployer, FacetHelper {
     return DropFacet.__DropFacet_init.selector;
   }
 
-  // function makeInitData(address claimToken) public pure returns (bytes memory) {
-  //   return abi.encodeWithSelector(initializer(), claimToken);
-  // }
+  function makeInitData(
+    address stakingContract
+  ) public pure returns (bytes memory) {
+    return abi.encodeWithSelector(initializer(), stakingContract);
+  }
 
   function __deploy(address deployer) public override returns (address) {
     vm.startBroadcast(deployer);

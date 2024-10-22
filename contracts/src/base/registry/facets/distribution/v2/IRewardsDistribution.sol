@@ -79,4 +79,13 @@ interface IRewardsDistribution is IRewardsDistributionBase {
   function depositById(
     uint256 depositId
   ) external view returns (StakingRewards.Deposit memory);
+
+  function stakeOnBehalf(
+    uint96 amount,
+    address delegatee,
+    address beneficiary,
+    address owner,
+    uint256 deadline,
+    bytes calldata signature
+  ) external returns (uint256 depositId);
 }

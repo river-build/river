@@ -3,6 +3,8 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {IDropFacet} from "contracts/src/tokens/drop/IDropFacet.sol";
+import {IRewardsDistribution} from "contracts/src/base/registry/facets/distribution/v2/IRewardsDistribution.sol";
+
 // libraries
 import {DropStorage} from "contracts/src/tokens/drop/DropStorage.sol";
 import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
@@ -16,53 +18,82 @@ import {OwnableBase} from "contracts/src/diamond/facets/ownable/OwnableBase.sol"
 contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
   using DropStorage for DropStorage.Layout;
 
-  function __DropFacet_init() external onlyInitializing {
+  function __DropFacet_init(address stakingContract) external onlyInitializing {
     _addInterface(type(IDropFacet).interfaceId);
+    __DropFacet_init_unchained(stakingContract);
   }
 
-  function claimWithPenalty(
-    uint256 conditionId,
-    address account,
-    uint256 quantity,
-    bytes32[] calldata allowlistProof
-  ) external {
+  function __DropFacet_init_unchained(address stakingContract) internal {
+    DropStorage.layout().stakingContract = stakingContract;
+  }
+
+  ///@inheritdoc IDropFacet
+  function claimWithPenalty(Claim calldata claim) external {
     DropStorage.Layout storage ds = DropStorage.layout();
 
-    _verifyClaim(ds, conditionId, account, quantity, allowlistProof);
+    _verifyClaim(ds, claim);
 
-    ClaimCondition storage condition = ds.getClaimConditionById(conditionId);
+    ClaimCondition storage condition = ds.getClaimConditionById(
+      claim.conditionId
+    );
 
-    uint256 amount = quantity;
+    uint256 amount = claim.quantity;
     uint256 penaltyBps = condition.penaltyBps;
     if (penaltyBps > 0) {
       unchecked {
-        uint256 penaltyAmount = BasisPoints.calculate(quantity, penaltyBps);
-        amount = quantity - penaltyAmount;
+        uint256 penaltyAmount = BasisPoints.calculate(
+          claim.quantity,
+          penaltyBps
+        );
+        amount = claim.quantity - penaltyAmount;
       }
     }
 
-    _updateClaim(ds, conditionId, account, amount);
+    _updateClaim(ds, claim.conditionId, claim.account, amount);
 
     CurrencyTransfer.safeTransferERC20(
       condition.currency,
       address(this),
-      account,
+      claim.account,
       amount
     );
 
     emit DropFacet_Claimed_WithPenalty(
-      conditionId,
+      claim.conditionId,
       msg.sender,
-      account,
+      claim.account,
       amount
     );
   }
 
   function claimAndStake(
-    address account,
-    uint256 quantity,
-    bytes32[] calldata allowlistProof
-  ) external {}
+    Claim calldata claim,
+    address delegatee,
+    uint256 deadline,
+    bytes calldata signature
+  ) external {
+    DropStorage.Layout storage ds = DropStorage.layout();
+
+    _verifyClaim(ds, claim);
+    _updateClaim(ds, claim.conditionId, claim.account, claim.quantity);
+
+    // deposit id
+    uint256 depositId = IRewardsDistribution(ds.stakingContract).stakeOnBehalf(
+      uint96(claim.quantity),
+      delegatee,
+      claim.account,
+      claim.account,
+      deadline,
+      signature
+    );
+
+    emit DropFacet_Claimed_And_Staked(
+      claim.conditionId,
+      msg.sender,
+      claim.account,
+      depositId
+    );
+  }
 
   ///@inheritdoc IDropFacet
   function setClaimConditions(
@@ -90,6 +121,10 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
     address account,
     uint256 conditionId
   ) external view returns (uint256) {
-    return DropStorage.layout().getSupplyClaimedByWallet(conditionId, account);
+    return
+      DropStorage
+        .layout()
+        .getSupplyClaimedByWallet(conditionId, account)
+        .claimed;
   }
 }
