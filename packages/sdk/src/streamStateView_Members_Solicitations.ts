@@ -12,17 +12,15 @@ export class StreamStateView_Members_Solicitations {
         members: StreamMember[],
         encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
     ): void {
-        for (const member of members) {
-            for (const event of member.solicitations) {
-                encryptionEmitter?.emit(
-                    'newKeySolicitation',
-                    this.streamId,
-                    member.userId,
-                    member.userAddress,
-                    event,
-                )
-            }
-        }
+        encryptionEmitter?.emit(
+            'initKeySolicitations',
+            this.streamId,
+            members.map((member) => ({
+                userId: member.userId,
+                userAddress: member.userAddress,
+                solicitations: member.solicitations,
+            })),
+        )
     }
 
     applySolicitation(
