@@ -19,6 +19,9 @@ import {MockERC20} from "contracts/test/mocks/MockERC20.sol";
 import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 import {DropStorage} from "contracts/src/tokens/drop/DropStorage.sol";
 
+// debuggging
+import {console} from "forge-std/console.sol";
+
 contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
   uint256 internal constant TOTAL_TOKEN_AMOUNT = 1000;
 
@@ -156,17 +159,77 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
     assertEq(condition.penaltyBps, 5000);
   }
 
+  struct ClaimData {
+    Vm.Wallet claimer;
+    uint16 amount;
+  }
+
   // claimWithPenalty
-  function test_claimWithPenalty_fuzz(
-    Vm.Wallet[] memory wallets,
-    uint256[] memory amounts
-  ) external {
-    address[] memory accounts = new address[](wallets.length);
-    for (uint256 i = 0; i < wallets.length; i++) {
-      accounts[i] = wallets[i].addr;
+  function test_claimWithPenalty_fuzz(ClaimData[] memory claimData) external {
+    vm.assume(claimData.length > 0);
+    vm.assume(claimData.length <= 10000);
+
+    uint256 totalAmount;
+    address[] memory claimers = new address[](claimData.length);
+    uint256[] memory claimAmounts = new uint256[](claimData.length);
+
+    for (uint256 i = 0; i < claimData.length; i++) {
+      claimers[i] = claimData[i].claimer.addr;
+      claimAmounts[i] = claimData[i].amount == 0 ? 1 : claimData[i].amount;
+      claimData[i].amount = uint16(claimAmounts[i]);
+      totalAmount += claimAmounts[i];
     }
 
-    (root, tree) = merkleTree.constructTree(accounts, amounts);
+    token.mint(address(dropFacet), totalAmount);
+
+    (root, tree) = merkleTree.constructTree(claimers, claimAmounts);
+
+    ClaimCondition[] memory conditions = new ClaimCondition[](1);
+    conditions[0] = ClaimCondition({
+      startTimestamp: uint40(block.timestamp),
+      endTimestamp: 0,
+      maxClaimableSupply: totalAmount,
+      supplyClaimed: 0,
+      merkleRoot: root,
+      currency: address(token),
+      penaltyBps: 5000
+    });
+
+    vm.prank(deployer);
+    dropFacet.setClaimConditions(conditions, false);
+
+    uint256 conditionId = dropFacet.getActiveClaimConditionId();
+
+    for (uint256 i = 0; i < claimData.length; i++) {
+      Vm.Wallet memory claimer = claimData[i].claimer;
+      uint16 amount = claimData[i].amount;
+
+      if (dropFacet.getSupplyClaimedByWallet(claimer.addr, conditionId) > 0) {
+        continue;
+      }
+
+      bytes32[] memory proof = merkleTree.getProof(tree, i);
+      dropFacet.claimWithPenalty(
+        Claim({
+          conditionId: conditionId,
+          account: claimer.addr,
+          quantity: amount,
+          proof: proof
+        })
+      );
+
+      ClaimCondition memory condition = dropFacet.getClaimConditionById(
+        dropFacet.getActiveClaimConditionId()
+      );
+      uint256 penaltyBps = condition.penaltyBps;
+      uint256 penaltyAmount = BasisPoints.calculate(amount, penaltyBps);
+      uint256 expectedAmount = amount - penaltyAmount;
+
+      assertEq(
+        dropFacet.getSupplyClaimedByWallet(claimer.addr, conditionId),
+        expectedAmount
+      );
+    }
   }
 
   function test_claimWithPenalty()
