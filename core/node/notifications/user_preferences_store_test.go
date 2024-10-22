@@ -85,11 +85,11 @@ func userPreferencesNotExists(req *require.Assertions, ctx context.Context, stor
 
 	req.Equal(wallet.Address, preferences.UserID)
 	req.Equal(preferences.DM, DmChannelSettingValue_DM_MESSAGES_YES)
-	req.Equal(preferences.GDM, GdmChannelSettingValue_GDM_ONLY_MENTIONS_REPLIES_REACTIONS)
+	req.Equal(preferences.GDM, GdmChannelSettingValue_GDM_MESSAGES_ALL)
 	req.Empty(preferences.DMChannels)
 	req.Empty(preferences.GDMChannels)
 	req.Empty(preferences.Subscriptions.WebPush)
-	req.Empty(preferences.Subscriptions.APNSubscriptionDeviceTokens)
+	req.Empty(preferences.Subscriptions.APNPush)
 }
 
 func setAndRetrieveUserPreferences(req *require.Assertions, ctx context.Context, store *storage.PostgresNotificationStore) {
@@ -104,17 +104,20 @@ func setAndRetrieveUserPreferences(req *require.Assertions, ctx context.Context,
 		DMChannels:  make(types.DMChannelsMap),
 		GDMChannels: make(types.GDMChannelsMap),
 		Subscriptions: types.Subscriptions{
-			WebPush: []*webpush.Subscription{
+			WebPush: []*types.WebPushSubscription{
 				{
-					Endpoint: "https://test.test.1",
-					Keys: webpush.Keys{
-						Auth:   "test.auth.1",
-						P256dh: "p256dh.test.1",
+					Sub: &webpush.Subscription{
+						Endpoint: "https://test.test.1",
+						Keys: webpush.Keys{
+							Auth:   "test.auth.1",
+							P256dh: "p256dh.test.1",
+						},
 					},
+					LastSeen: time.Now(),
 				},
 			},
-			APNSubscriptionDeviceTokens: [][]byte{
-				{0, 0},
+			APNPush: []*types.APNPushSubscription{
+				{DeviceToken: []byte{0, 1, 2, 3, 4}, LastSeen: time.Now()},
 			},
 		},
 	}
@@ -157,14 +160,18 @@ func setAndRetrieveUserPreferences(req *require.Assertions, ctx context.Context,
 
 	req.NoError(store.SetUserPreferences(ctx, expected))
 	for _, webSub := range expected.Subscriptions.WebPush {
-		req.NoError(store.AddWebPushSubscription(ctx, expected.UserID, webSub))
+		req.NoError(store.AddWebPushSubscription(ctx, expected.UserID, webSub.Sub))
 	}
-	for _, deviceToken := range expected.Subscriptions.APNSubscriptionDeviceTokens {
-		req.NoError(store.AddAPNSubscription(ctx, expected.UserID, deviceToken))
+	for _, apnSub := range expected.Subscriptions.APNPush {
+		req.NoError(store.AddAPNSubscription(ctx, expected.UserID, apnSub.DeviceToken, APNEnvironment_APN_ENVIRONMENT_SANDBOX))
 	}
 
 	got, err := store.GetUserPreferences(ctx, expected.UserID)
 	req.NoError(err)
+
+	// lastSeen is updated when the sub was added
+	expected.Subscriptions.WebPush[0].LastSeen = got.Subscriptions.WebPush[0].LastSeen
+	expected.Subscriptions.APNPush[0].LastSeen = got.Subscriptions.APNPush[0].LastSeen
 
 	req.Equal(expected, got)
 }
@@ -198,14 +205,14 @@ func subscribeWebPush(req *require.Assertions, ctx context.Context, store *stora
 	req.NoError(err)
 
 	req.Equal(2, len(got))
-	if exp1.Endpoint == got[0].Endpoint {
-		req.Equal(exp1, *got[0])
+	if exp1.Endpoint == got[0].Sub.Endpoint {
+		req.Equal(exp1, *got[0].Sub)
 	} else {
-		req.Equal(exp1, *got[1])
+		req.Equal(exp1, *got[1].Sub)
 	}
-	if exp2.Endpoint == got[0].Endpoint {
-		req.Equal(exp2, *got[0])
+	if exp2.Endpoint == got[0].Sub.Endpoint {
+		req.Equal(exp2, *got[0].Sub)
 	} else {
-		req.Equal(exp2, *got[1])
+		req.Equal(exp2, *got[1].Sub)
 	}
 }

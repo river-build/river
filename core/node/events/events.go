@@ -203,6 +203,40 @@ func Make_MemberPayload_DisplayName(displayName *EncryptedData) *StreamEvent_Mem
 	}
 }
 
+func Make_DmChannelPayload_Inception(
+	streamId StreamId,
+	firstPartyAddress common.Address,
+	secondPartyAddress common.Address,
+	settings *StreamSettings,
+) *StreamEvent_DmChannelPayload {
+	return &StreamEvent_DmChannelPayload{
+		DmChannelPayload: &DmChannelPayload{
+			Content: &DmChannelPayload_Inception_{
+				Inception: &DmChannelPayload_Inception{
+					StreamId:           streamId[:],
+					FirstPartyAddress:  firstPartyAddress[:],
+					SecondPartyAddress: secondPartyAddress[:],
+					Settings:           settings,
+				},
+			},
+		}}
+}
+
+func Make_GdmChannelPayload_Inception(
+	streamId StreamId,
+	settings *StreamSettings,
+) *StreamEvent_GdmChannelPayload {
+	return &StreamEvent_GdmChannelPayload{
+		GdmChannelPayload: &GdmChannelPayload{
+			Content: &GdmChannelPayload_Inception_{
+				Inception: &GdmChannelPayload_Inception{
+					StreamId: streamId[:],
+					Settings: settings,
+				}},
+		},
+	}
+}
+
 func Make_ChannelPayload_Inception(
 	streamId StreamId,
 	spaceId StreamId,
@@ -246,6 +280,30 @@ func Make_ChannelPayload_Membership(
 		spaceIdBytes = nil
 	}
 	return Make_MemberPayload_Membership(op, userAddress, initiatorAddress, spaceIdBytes)
+}
+
+func Make_DMChannelPayload_Message(content string) *StreamEvent_DmChannelPayload {
+	return &StreamEvent_DmChannelPayload{
+		DmChannelPayload: &DmChannelPayload{
+			Content: &DmChannelPayload_Message{
+				Message: &EncryptedData{
+					Ciphertext: content,
+				},
+			},
+		},
+	}
+}
+
+func Make_GDMChannelPayload_Message(content string) *StreamEvent_GdmChannelPayload {
+	return &StreamEvent_GdmChannelPayload{
+		GdmChannelPayload: &GdmChannelPayload{
+			Content: &GdmChannelPayload_Message{
+				Message: &EncryptedData{
+					Ciphertext: content,
+				},
+			},
+		},
+	}
 }
 
 func Make_ChannelPayload_Message(content string) *StreamEvent_ChannelPayload {

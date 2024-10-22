@@ -6,7 +6,8 @@ import (
 	"embed"
 	"encoding/hex"
 	"errors"
-	"fmt"
+	"time"
+
 	"github.com/SherClockHolmes/webpush-go"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jackc/pgx/v5"
@@ -51,18 +52,43 @@ type (
 			value SpaceChannelSettingValue,
 		) error
 
+		RemoveSpaceSettings(
+			ctx context.Context,
+			userID common.Address,
+			spaceID shared.StreamId,
+		) error
+
+		SetDMChannelSetting(
+			ctx context.Context,
+			userID common.Address,
+			channelID shared.StreamId,
+			value DmChannelSettingValue,
+		) error
+
+		SetGDMChannelSetting(
+			ctx context.Context,
+			userID common.Address,
+			channelID shared.StreamId,
+			value GdmChannelSettingValue,
+		) error
+
 		SetChannelSetting(
 			ctx context.Context,
 			userID common.Address,
-			spaceID *shared.StreamId,
 			channelID shared.StreamId,
 			value SpaceChannelSettingValue,
+		) error
+
+		RemoveChannelSetting(
+			ctx context.Context,
+			userID common.Address,
+			channelID shared.StreamId,
 		) error
 
 		GetWebPushSubscriptions(
 			ctx context.Context,
 			userID common.Address,
-		) ([]*webpush.Subscription, error)
+		) ([]*types.WebPushSubscription, error)
 
 		// AddWebPushSubscription does an upsert for the given userID and webPushSubscription.
 		// This is an upsert because a browser can be shared among multiple users and the active userID needs to
@@ -83,7 +109,7 @@ type (
 		GetAPNSubscriptions(
 			ctx context.Context,
 			userID common.Address,
-		) ([][]byte, error)
+		) ([]*types.APNPushSubscription, error)
 
 		AddAPNSubscription(
 			ctx context.Context,
@@ -268,10 +294,42 @@ func (s *PostgresNotificationStore) setSpaceSettingsTx(
 	return err
 }
 
+func (s *PostgresNotificationStore) RemoveSpaceSettings(
+	ctx context.Context,
+	userID common.Address,
+	spaceID shared.StreamId,
+) error {
+	return s.txRunner(
+		ctx,
+		"RemoveSpaceSettings",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) error {
+			return s.removeSpaceSettings(ctx, tx, UserID(userID), spaceID)
+		},
+		nil,
+		"userID", userID,
+	)
+}
+
+func (s *PostgresNotificationStore) removeSpaceSettings(
+	ctx context.Context,
+	tx pgx.Tx,
+	userID UserID,
+	spaceID shared.StreamId,
+) error {
+	_, err := tx.Exec(
+		ctx,
+		`DELETE from spaces WHERE user_id = $1 AND space_id = $2`,
+		userID,
+		spaceID,
+	)
+
+	return err
+}
+
 func (s *PostgresNotificationStore) SetChannelSetting(
 	ctx context.Context,
 	userID common.Address,
-	spaceID *shared.StreamId,
 	channelID shared.StreamId,
 	value SpaceChannelSettingValue,
 ) error {
@@ -280,7 +338,7 @@ func (s *PostgresNotificationStore) SetChannelSetting(
 		"SetChannelSetting",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
-			return s.setChannelSettingTx(ctx, tx, UserID(userID), spaceID, channelID, value)
+			return s.setChannelSettingTx(ctx, tx, UserID(userID), channelID, value)
 		},
 		nil,
 		"userID", userID,
@@ -292,7 +350,6 @@ func (s *PostgresNotificationStore) setChannelSettingTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	userID UserID,
-	spaceID *shared.StreamId,
 	channelID shared.StreamId,
 	value SpaceChannelSettingValue,
 ) error {
@@ -307,6 +364,39 @@ func (s *PostgresNotificationStore) setChannelSettingTx(
 	return err
 }
 
+func (s *PostgresNotificationStore) RemoveChannelSetting(
+	ctx context.Context,
+	userID common.Address,
+	channelID shared.StreamId,
+) error {
+	return s.txRunner(
+		ctx,
+		"RemoveChannelSetting",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) error {
+			return s.removeChannelSetting(ctx, tx, UserID(userID), channelID)
+		},
+		nil,
+		"userID", userID,
+		"channel", channelID,
+	)
+}
+
+func (s *PostgresNotificationStore) removeChannelSetting(
+	ctx context.Context,
+	tx pgx.Tx,
+	userID UserID,
+	channelID shared.StreamId,
+) error {
+	_, err := tx.Exec(
+		ctx,
+		`DELETE FROM channels WHERE user_id = $1 AND channel_id = $2`,
+		userID,
+		channelID,
+	)
+
+	return err
+}
 func (s *PostgresNotificationStore) GetUserPreferences(
 	ctx context.Context,
 	userID common.Address,
@@ -356,8 +446,8 @@ func (s *PostgresNotificationStore) getUserPreferencesTx(
 	err := row.Scan(&userPref.DM, &userPref.GDM)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			userPref.DM = DmChannelSettingValue_DM_MESSAGES_YES
-			userPref.GDM = GdmChannelSettingValue_GDM_ONLY_MENTIONS_REPLIES_REACTIONS
+			userPref.DM = DmChannelSettingValue_DM_MESSAGES_YES    // default
+			userPref.GDM = GdmChannelSettingValue_GDM_MESSAGES_ALL // default
 		} else {
 			return nil, err
 		}
@@ -411,7 +501,6 @@ func (s *PostgresNotificationStore) getUserPreferencesTx(
 
 		if channelID.Type() == shared.STREAM_CHANNEL_BIN {
 			spaceID := channelID.SpaceID()
-			fmt.Printf("%s) load space %s\n", userID, spaceID)
 			space, found := userPref.Spaces[spaceID]
 			if !found {
 				space = &types.SpacePreferences{
@@ -428,7 +517,7 @@ func (s *PostgresNotificationStore) getUserPreferencesTx(
 		}
 	}
 
-	userPref.Subscriptions.APNSubscriptionDeviceTokens, err = s.getAPNSubscriptions(ctx, tx, UserID(userID))
+	userPref.Subscriptions.APNPush, err = s.getAPNSubscriptions(ctx, tx, UserID(userID))
 	if err != nil {
 		return nil, err
 	}
@@ -443,10 +532,10 @@ func (s *PostgresNotificationStore) getUserPreferencesTx(
 func (s *PostgresNotificationStore) GetWebPushSubscriptions(
 	ctx context.Context,
 	userID common.Address,
-) ([]*webpush.Subscription, error) {
+) ([]*types.WebPushSubscription, error) {
 	var (
 		err  error
-		subs []*webpush.Subscription
+		subs []*types.WebPushSubscription
 	)
 
 	err = s.txRunner(
@@ -467,11 +556,11 @@ func (s *PostgresNotificationStore) getWebPushSubscriptions(
 	ctx context.Context,
 	tx pgx.Tx,
 	userID UserID,
-) ([]*webpush.Subscription, error) {
-	var subs []*webpush.Subscription
+) ([]*types.WebPushSubscription, error) {
+	var subs []*types.WebPushSubscription
 	rows, err := tx.Query(
 		ctx,
-		"select key_auth, key_p256dh, endpoint from webpushsubscriptions where user_id=$1",
+		"select key_auth, key_p256dh, endpoint, last_seen from webpushsubscriptions where user_id=$1",
 		userID,
 	)
 	if err != nil {
@@ -484,12 +573,16 @@ func (s *PostgresNotificationStore) getWebPushSubscriptions(
 
 	for rows.Next() {
 		var sub webpush.Subscription
-		err = rows.Scan(&sub.Keys.Auth, &sub.Keys.P256dh, &sub.Endpoint)
+		var lastSeen time.Time
+		err = rows.Scan(&sub.Keys.Auth, &sub.Keys.P256dh, &sub.Endpoint, &lastSeen)
 		if err != nil {
 			return nil, err
 		}
 
-		subs = append(subs, &sub)
+		subs = append(subs, &types.WebPushSubscription{
+			Sub:      &sub,
+			LastSeen: lastSeen,
+		})
 	}
 
 	return subs, nil
@@ -523,7 +616,7 @@ func (s *PostgresNotificationStore) addWebPushSubscription(
 ) error {
 	_, err := tx.Exec(
 		ctx,
-		`INSERT INTO webpushsubscriptions (key_auth, key_p256dh, endpoint, user_id) VALUES ($1, $2, $3, $4) ON CONFLICT (key_auth, key_p256dh) DO UPDATE SET endpoint=$3, user_id = $4`,
+		`INSERT INTO webpushsubscriptions (key_auth, key_p256dh, endpoint, user_id, last_seen) VALUES ($1, $2, $3, $4, NOW()) ON CONFLICT (key_auth, key_p256dh) DO UPDATE SET endpoint=$3, user_id = $4, last_seen = NOW()`,
 		webPushSubscription.Keys.Auth,
 		webPushSubscription.Keys.P256dh,
 		webPushSubscription.Endpoint,
@@ -569,10 +662,10 @@ func (s *PostgresNotificationStore) removeWebPushSubscription(
 func (s *PostgresNotificationStore) GetAPNSubscriptions(
 	ctx context.Context,
 	userID common.Address,
-) ([][]byte, error) {
+) ([]*types.APNPushSubscription, error) {
 	var (
-		err          error
-		deviceTokens [][]byte
+		err  error
+		subs []*types.APNPushSubscription
 	)
 
 	err = s.txRunner(
@@ -580,25 +673,25 @@ func (s *PostgresNotificationStore) GetAPNSubscriptions(
 		"GetAPNSubscriptions",
 		pgx.ReadOnly,
 		func(ctx context.Context, tx pgx.Tx) error {
-			deviceTokens, err = s.getAPNSubscriptions(ctx, tx, UserID(userID))
+			subs, err = s.getAPNSubscriptions(ctx, tx, UserID(userID))
 			return err
 		},
 		nil,
 	)
 
-	return deviceTokens, err
+	return subs, err
 }
 
 func (s *PostgresNotificationStore) getAPNSubscriptions(
 	ctx context.Context,
 	tx pgx.Tx,
 	userID UserID,
-) ([][]byte, error) {
-	var deviceTokens [][]byte
-	rows, err := tx.Query(ctx, "select device_token, environment from apnpushsubscriptions where user_id=$1", userID)
+) ([]*types.APNPushSubscription, error) {
+	var subs []*types.APNPushSubscription
+	rows, err := tx.Query(ctx, "select device_token, environment, last_seen from apnpushsubscriptions where user_id=$1", userID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return deviceTokens, nil
+			return subs, nil
 		}
 		return nil, err
 	}
@@ -608,16 +701,20 @@ func (s *PostgresNotificationStore) getAPNSubscriptions(
 		var (
 			deviceToken []byte
 			environment APNEnvironment
+			lastSeen    time.Time
 		)
-		err = rows.Scan(&deviceToken, &environment)
+		err = rows.Scan(&deviceToken, &environment, &lastSeen)
 		if err != nil {
 			return nil, err
 		}
 
-		deviceTokens = append(deviceTokens, deviceToken)
+		subs = append(subs, &types.APNPushSubscription{
+			DeviceToken: deviceToken,
+			LastSeen:    lastSeen,
+		})
 	}
 
-	return deviceTokens, nil
+	return subs, nil
 }
 
 func (s *PostgresNotificationStore) AddAPNSubscription(
@@ -647,7 +744,7 @@ func (s *PostgresNotificationStore) addAPNSubscription(
 ) error {
 	_, err := tx.Exec(
 		ctx,
-		`INSERT INTO apnpushsubscriptions (device_token, environment, user_id) VALUES ($1, $2, $3) ON CONFLICT (device_token) DO UPDATE SET environment = $2, user_id = $3`,
+		`INSERT INTO apnpushsubscriptions (device_token, environment, user_id, last_seen) VALUES ($1, $2, $3, NOW()) ON CONFLICT (device_token) DO UPDATE SET environment = $2, user_id = $3, last_seen = NOW()`,
 		deviceToken,
 		int16(environment),
 		userID,
@@ -681,6 +778,78 @@ func (s *PostgresNotificationStore) removeAPNSubscription(
 		ctx,
 		`DELETE FROM apnpushsubscriptions where device_token=$1`,
 		deviceToken,
+	)
+
+	return err
+}
+
+func (s *PostgresNotificationStore) SetDMChannelSetting(
+	ctx context.Context,
+	userID common.Address,
+	channelID shared.StreamId,
+	value DmChannelSettingValue,
+) error {
+	return s.txRunner(
+		ctx,
+		"SetDMChannelSetting",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) error {
+			return s.setDMChannelSetting(ctx, tx, UserID(userID), channelID, value)
+		},
+		nil,
+		"userID", userID,
+	)
+}
+
+func (s *PostgresNotificationStore) setDMChannelSetting(
+	ctx context.Context,
+	tx pgx.Tx,
+	userID UserID,
+	channelID shared.StreamId,
+	value DmChannelSettingValue,
+) error {
+	_, err := tx.Exec(
+		ctx,
+		`INSERT INTO channels (user_id, channel_id, setting) VALUES ($1, $2, $3) ON CONFLICT (user_id, channel_id) DO UPDATE SET setting = $3`,
+		userID,
+		channelID,
+		int16(value),
+	)
+
+	return err
+}
+
+func (s *PostgresNotificationStore) SetGDMChannelSetting(
+	ctx context.Context,
+	userID common.Address,
+	channelID shared.StreamId,
+	value GdmChannelSettingValue,
+) error {
+	return s.txRunner(
+		ctx,
+		"SetGDMChannelSetting",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) error {
+			return s.setGDMChannelSetting(ctx, tx, UserID(userID), channelID, value)
+		},
+		nil,
+		"userID", userID,
+	)
+}
+
+func (s *PostgresNotificationStore) setGDMChannelSetting(
+	ctx context.Context,
+	tx pgx.Tx,
+	userID UserID,
+	channelID shared.StreamId,
+	value GdmChannelSettingValue,
+) error {
+	_, err := tx.Exec(
+		ctx,
+		`INSERT INTO channels (user_id, channel_id, setting) VALUES ($1, $2, $3) ON CONFLICT (user_id, channel_id) DO UPDATE SET setting = $3`,
+		userID,
+		channelID,
+		int16(value),
 	)
 
 	return err

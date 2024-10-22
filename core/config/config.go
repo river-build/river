@@ -353,6 +353,9 @@ type NotificationsConfig struct {
 	// Workers holds the number of parallel worker tasks that collect, process stream
 	// events and send notifications. Default is 10.
 	Workers uint
+	// SubscriptionExpirationDuration if the client isn't seen within this duration stop sending
+	// notifications to it. Defaults to 90 days.
+	SubscriptionExpirationDuration time.Duration `mapstructure:"subscription_expiration_duration"`
 	// Simulate if set to true uses the simulator notification backend that doesn't
 	// send notifications to the client but only logs them. This is intended for development
 	// purposes. Default is false.

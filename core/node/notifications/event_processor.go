@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/river-build/river/core/config"
 	"log/slog"
 	"slices"
 	"time"
@@ -25,10 +26,11 @@ import (
 // MessageToNotificationsProcessor implements events.StreamEventListener and for each stream event determines
 // if it needs to send a notification, to who and sends it.
 type MessageToNotificationsProcessor struct {
-	ctx      context.Context
-	cache    UserPreferencesStore
-	notifier push.MessageNotifier
-	log      *slog.Logger
+	ctx                    context.Context
+	cache                  UserPreferencesStore
+	subscriptionExpiration time.Duration
+	notifier               push.MessageNotifier
+	log                    *slog.Logger
 }
 
 // NewNotificationMessageProcessor processes incoming messages, determines when and to whom to send a notification
@@ -36,13 +38,20 @@ type MessageToNotificationsProcessor struct {
 func NewNotificationMessageProcessor(
 	ctx context.Context,
 	userPreferences UserPreferencesStore,
+	config config.NotificationsConfig,
 	notifier push.MessageNotifier,
 ) *MessageToNotificationsProcessor {
+	subscriptionExpiration := 90 * 24 * time.Hour // 90 days default
+	if config.SubscriptionExpirationDuration != time.Duration(0) {
+		subscriptionExpiration = config.SubscriptionExpirationDuration
+	}
+
 	return &MessageToNotificationsProcessor{
-		ctx:      ctx,
-		notifier: notifier,
-		cache:    userPreferences,
-		log:      dlog.FromCtx(ctx),
+		ctx:                    ctx,
+		notifier:               notifier,
+		cache:                  userPreferences,
+		subscriptionExpiration: subscriptionExpiration,
+		log:                    dlog.FromCtx(ctx),
 	}
 }
 
@@ -220,7 +229,6 @@ func (p *MessageToNotificationsProcessor) onSpaceChannelPayload(
 
 	// for non-reaction events send a notification to all users
 	if userPref.WantNotificationForSpaceChannelMessage(spaceID, channelID, mentioned, participating, messageInteractionType) {
-		fmt.Printf("user: %s mentioned: %v / participating: %v => %v\n", participant, mentioned, participating, true)
 		return true
 	}
 
@@ -232,8 +240,6 @@ func (p *MessageToNotificationsProcessor) onSpaceChannelPayload(
 		"mentioned", mentioned,
 		"messageType", messageInteractionType)
 
-	fmt.Printf("user: %s mentioned: %v / participating: %v => %v\n", participant, mentioned, participating, false)
-	
 	return false
 }
 
@@ -245,7 +251,11 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 	notificationPayload []byte,
 ) {
 	for _, sub := range userPref.Subscriptions.WebPush {
-		if err := p.sendWebPushNotification(sub, event, notificationPayload); err == nil {
+		if time.Since(sub.LastSeen) >= p.subscriptionExpiration {
+			continue
+		}
+
+		if err := p.sendWebPushNotification(sub.Sub, event, notificationPayload); err == nil {
 			p.log.Debug("Successfully sent web push notification",
 				"user", user,
 				"event", event.Hash,
@@ -261,8 +271,12 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 		}
 	}
 
-	for _, sub := range userPref.Subscriptions.APNSubscriptionDeviceTokens {
-		if err := p.sendAPNNotification(sub, event, notificationPayload); err == nil {
+	for _, sub := range userPref.Subscriptions.APNPush {
+		if time.Since(sub.LastSeen) >= p.subscriptionExpiration {
+			continue
+		}
+
+		if err := p.sendAPNNotification(sub.DeviceToken, event, notificationPayload); err == nil {
 			p.log.Debug("Successfully sent APN notification",
 				"user", user,
 				"event", event.Hash,

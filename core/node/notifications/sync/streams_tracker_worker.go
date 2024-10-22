@@ -165,7 +165,7 @@ func (w *streamsTrackerWorker) run(ctx context.Context) {
 		// therefor it is safe to pass a nil stream cache as long as an address is used that isn't used by any of the
 		// stream nodes.
 		syncOp, err := riversync.NewStreamsSyncOperation(
-			syncCtx, syncID, common.Address{8, 1, 4, 0, 7, 3, 2, 2, 0, 5, 7, 3, 44, 8, 32}, nil, w.nodes)
+			syncCtx, syncID, common.Address{8, 1, 4, 0, 7, 3, 2, 2, 0, 5, 7, 3, 44, 8, 32, 56, 92, 33}, nil, w.nodes)
 		if err != nil {
 			log.Error("Unable to create streams sync session", "err", err)
 			waitOrCtxExpires(ctx, waitDuration)

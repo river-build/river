@@ -1,13 +1,15 @@
 package notifications
 
 import (
+	"bytes"
 	"context"
 	"errors"
-	"github.com/ethereum/go-ethereum/common"
 	"sync"
+	"time"
 
 	"github.com/SherClockHolmes/webpush-go"
 	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/notifications/types"
 	. "github.com/river-build/river/core/node/protocol"
@@ -56,6 +58,10 @@ type (
 		mu    sync.RWMutex
 		users mapset.Set[common.Address]
 	}
+)
+
+var (
+	SubscriptionTimeout = 5 * time.Minute
 )
 
 var _ UserPreferencesStore = (*UserPreferencesCache)(nil)
@@ -116,6 +122,38 @@ func (up *UserPreferencesCache) SetUserPreferences(
 	return nil
 }
 
+func (up *UserPreferencesCache) SetDMChannelSetting(
+	ctx context.Context,
+	userID common.Address,
+	channelID shared.StreamId,
+	value DmChannelSettingValue,
+) error {
+	if err := up.persistent.SetDMChannelSetting(ctx, userID, channelID, value); err != nil {
+		return err
+	}
+
+	// force a reload next time user preferences are requested
+	up.userPreferencesCache.Delete(userID)
+
+	return nil
+}
+
+func (up *UserPreferencesCache) SetGDMChannelSetting(
+	ctx context.Context,
+	userID common.Address,
+	channelID shared.StreamId,
+	value GdmChannelSettingValue,
+) error {
+	if err := up.persistent.SetGDMChannelSetting(ctx, userID, channelID, value); err != nil {
+		return err
+	}
+
+	// force a reload next time user preferences are requested
+	up.userPreferencesCache.Delete(userID)
+
+	return nil
+}
+
 func (up *UserPreferencesCache) SetGlobalDmGdm(
 	ctx context.Context,
 	userID common.Address,
@@ -148,20 +186,43 @@ func (up *UserPreferencesCache) SetSpaceSettings(
 	return nil
 }
 
+func (up *UserPreferencesCache) RemoveSpaceSettings(
+	ctx context.Context,
+	userID common.Address,
+	spaceID shared.StreamId,
+) error {
+	if err := up.persistent.RemoveSpaceSettings(ctx, userID, spaceID); err != nil {
+		return err
+	}
+
+	// force a reload next time user preferences are requested
+	up.userPreferencesCache.Delete(userID)
+
+	return nil
+}
+
+func (up *UserPreferencesCache) RemoveChannelSetting(
+	ctx context.Context,
+	userID common.Address,
+	channelID shared.StreamId,
+) error {
+	if err := up.persistent.RemoveChannelSetting(ctx, userID, channelID); err != nil {
+		return err
+	}
+
+	// force a reload next time user preferences are requested
+	up.userPreferencesCache.Delete(userID)
+
+	return nil
+}
+
 func (up *UserPreferencesCache) SetChannelSetting(
 	ctx context.Context,
 	userID common.Address,
-	spaceID *shared.StreamId,
 	channelID shared.StreamId,
 	value SpaceChannelSettingValue,
 ) error {
-	// space id is required for streams that are part of a space
-	if channelID.Type() == shared.STREAM_CHANNEL_BIN && (spaceID == nil || spaceID.Type() != shared.STREAM_SPACE_BIN) {
-		return base.WrapRiverError(Err_INVALID_ARGUMENT, errors.New("missing or invalid space id")).
-			Func("SetChannelSettings")
-	}
-
-	if err := up.persistent.SetChannelSetting(ctx, userID, spaceID, channelID, value); err != nil {
+	if err := up.persistent.SetChannelSetting(ctx, userID, channelID, value); err != nil {
 		return err
 	}
 
@@ -216,7 +277,7 @@ func (up *UserPreferencesCache) IsBlocked(userID common.Address, user common.Add
 func (up *UserPreferencesCache) GetWebPushSubscriptions(
 	ctx context.Context,
 	userID common.Address,
-) ([]*webpush.Subscription, error) {
+) ([]*types.WebPushSubscription, error) {
 	pref, err := up.GetUserPreferences(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -233,7 +294,22 @@ func (up *UserPreferencesCache) AddWebPushSubscription(
 	userID common.Address,
 	webPushSubscription *webpush.Subscription,
 ) error {
-	err := up.persistent.AddWebPushSubscription(ctx, userID, webPushSubscription)
+	pref, err := up.GetUserPreferences(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	// if nothing has changed and last seen was recently don't update the DB.
+	// this method is expected to be called often by the client.
+	for _, sub := range pref.Subscriptions.WebPush {
+		if sub.Sub.Keys == webPushSubscription.Keys &&
+			sub.Sub.Endpoint == webPushSubscription.Endpoint &&
+			time.Since(sub.LastSeen) < SubscriptionTimeout {
+			return nil
+		}
+	}
+
+	err = up.persistent.AddWebPushSubscription(ctx, userID, webPushSubscription)
 	if err != nil {
 		return err
 	}
@@ -264,13 +340,13 @@ func (up *UserPreferencesCache) RemoveWebPushSubscription(
 func (up *UserPreferencesCache) GetAPNSubscriptions(
 	ctx context.Context,
 	userID common.Address,
-) ([][]byte, error) {
+) ([]*types.APNPushSubscription, error) {
 	pref, err := up.GetUserPreferences(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	return pref.Subscriptions.APNSubscriptionDeviceTokens, nil
+	return pref.Subscriptions.APNPush, nil
 }
 
 func (up *UserPreferencesCache) AddAPNSubscription(
@@ -279,7 +355,20 @@ func (up *UserPreferencesCache) AddAPNSubscription(
 	deviceToken []byte,
 	environment APNEnvironment,
 ) error {
-	err := up.persistent.AddAPNSubscription(ctx, userID, deviceToken, environment)
+	pref, err := up.GetUserPreferences(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	// if it already exists and last seen was recently no need to update the database.
+	// this method is expected to be called often by the client.
+	for _, apnPush := range pref.Subscriptions.APNPush {
+		if bytes.Equal(apnPush.DeviceToken, deviceToken) && time.Since(apnPush.LastSeen) < SubscriptionTimeout {
+			return nil
+		}
+	}
+
+	err = up.persistent.AddAPNSubscription(ctx, userID, deviceToken, environment)
 	if err != nil {
 		return err
 	}

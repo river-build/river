@@ -6,6 +6,7 @@ import (
 	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"
+	"time"
 )
 
 // UserPreferences are all user cache and web/APN subscriptions a user has configured through the API.
@@ -36,9 +37,19 @@ type (
 		Subscriptions Subscriptions
 	}
 
+	WebPushSubscription struct {
+		Sub      *webpush.Subscription
+		LastSeen time.Time
+	}
+
+	APNPushSubscription struct {
+		DeviceToken []byte
+		LastSeen    time.Time
+	}
+
 	Subscriptions struct {
-		WebPush                     []*webpush.Subscription
-		APNSubscriptionDeviceTokens [][]byte
+		WebPush []*WebPushSubscription
+		APNPush []*APNPushSubscription
 	}
 
 	SpacePreferences struct {
@@ -89,8 +100,8 @@ func (up *UserPreferences) Clone() *UserPreferences {
 		cpy.Subscriptions.WebPush = append(cpy.Subscriptions.WebPush, webPush)
 	}
 
-	for _, apn := range up.Subscriptions.APNSubscriptionDeviceTokens {
-		cpy.Subscriptions.APNSubscriptionDeviceTokens = append(cpy.Subscriptions.APNSubscriptionDeviceTokens, apn)
+	for _, apn := range up.Subscriptions.APNPush {
+		cpy.Subscriptions.APNPush = append(cpy.Subscriptions.APNPush, apn)
 	}
 
 	return &cpy
@@ -99,7 +110,7 @@ func (up *UserPreferences) Clone() *UserPreferences {
 // HasSubscriptions returns an indication if the user has specified to receive notifications on at least 1 type.
 func (up *UserPreferences) HasSubscriptions() bool {
 	return len(up.Subscriptions.WebPush) > 0 ||
-		len(up.Subscriptions.APNSubscriptionDeviceTokens) > 0
+		len(up.Subscriptions.APNPush) > 0
 }
 
 // DecodeUserPreferenceFromMsg decodes the given msg into a UserPreference instance.
@@ -263,12 +274,12 @@ func (up *UserPreferences) WantNotificationForSpaceChannelMessage(
 	msgInteractionType MessageInteractionType,
 ) bool {
 	// by default only send notifications for mentions, replies or reactions for messages in space channels.
-	// the default is only for mentions, replies and reactions.
 	setting := SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_ONLY_MENTIONS_REPLIES_REACTIONS
 
 	if spacePreferences, found := up.Spaces[space]; found {
 		// global default is overwritten with space level specific config
 		setting = spacePreferences.Setting
+
 		// if there is a channel specific setting use that
 		if chanSetting, found := spacePreferences.Channels[channel]; found {
 			setting = chanSetting

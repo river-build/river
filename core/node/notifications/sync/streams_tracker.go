@@ -77,7 +77,7 @@ func NewStreamsTracker(
 				})
 
 				if len(stream.Nodes) == 0 {
-					log.Warn("Ignore stream, no valid node", "stream", stream.StreamId)
+					log.Warn("Ignore stream, no valid node found", "stream", stream.StreamId)
 					return true
 				}
 

@@ -42,12 +42,18 @@ const (
 	// NotificationServiceSetDmGdmSettingsProcedure is the fully-qualified name of the
 	// NotificationService's SetDmGdmSettings RPC.
 	NotificationServiceSetDmGdmSettingsProcedure = "/river.NotificationService/SetDmGdmSettings"
+	// NotificationServiceSetDmChannelSettingProcedure is the fully-qualified name of the
+	// NotificationService's SetDmChannelSetting RPC.
+	NotificationServiceSetDmChannelSettingProcedure = "/river.NotificationService/SetDmChannelSetting"
+	// NotificationServiceSetGdmChannelSettingProcedure is the fully-qualified name of the
+	// NotificationService's SetGdmChannelSetting RPC.
+	NotificationServiceSetGdmChannelSettingProcedure = "/river.NotificationService/SetGdmChannelSetting"
 	// NotificationServiceSetSpaceSettingsProcedure is the fully-qualified name of the
 	// NotificationService's SetSpaceSettings RPC.
 	NotificationServiceSetSpaceSettingsProcedure = "/river.NotificationService/SetSpaceSettings"
-	// NotificationServiceSetChannelSettingsProcedure is the fully-qualified name of the
-	// NotificationService's SetChannelSettings RPC.
-	NotificationServiceSetChannelSettingsProcedure = "/river.NotificationService/SetChannelSettings"
+	// NotificationServiceSetSpaceChannelSettingsProcedure is the fully-qualified name of the
+	// NotificationService's SetSpaceChannelSettings RPC.
+	NotificationServiceSetSpaceChannelSettingsProcedure = "/river.NotificationService/SetSpaceChannelSettings"
 	// NotificationServiceSubscribeWebPushProcedure is the fully-qualified name of the
 	// NotificationService's SubscribeWebPush RPC.
 	NotificationServiceSubscribeWebPushProcedure = "/river.NotificationService/SubscribeWebPush"
@@ -64,16 +70,18 @@ const (
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
-	notificationServiceServiceDescriptor                  = protocol.File_notifications_proto.Services().ByName("NotificationService")
-	notificationServiceGetSettingsMethodDescriptor        = notificationServiceServiceDescriptor.Methods().ByName("GetSettings")
-	notificationServiceSetSettingsMethodDescriptor        = notificationServiceServiceDescriptor.Methods().ByName("SetSettings")
-	notificationServiceSetDmGdmSettingsMethodDescriptor   = notificationServiceServiceDescriptor.Methods().ByName("SetDmGdmSettings")
-	notificationServiceSetSpaceSettingsMethodDescriptor   = notificationServiceServiceDescriptor.Methods().ByName("SetSpaceSettings")
-	notificationServiceSetChannelSettingsMethodDescriptor = notificationServiceServiceDescriptor.Methods().ByName("SetChannelSettings")
-	notificationServiceSubscribeWebPushMethodDescriptor   = notificationServiceServiceDescriptor.Methods().ByName("SubscribeWebPush")
-	notificationServiceUnsubscribeWebPushMethodDescriptor = notificationServiceServiceDescriptor.Methods().ByName("UnsubscribeWebPush")
-	notificationServiceSubscribeAPNMethodDescriptor       = notificationServiceServiceDescriptor.Methods().ByName("SubscribeAPN")
-	notificationServiceUnsubscribeAPNMethodDescriptor     = notificationServiceServiceDescriptor.Methods().ByName("UnsubscribeAPN")
+	notificationServiceServiceDescriptor                       = protocol.File_notifications_proto.Services().ByName("NotificationService")
+	notificationServiceGetSettingsMethodDescriptor             = notificationServiceServiceDescriptor.Methods().ByName("GetSettings")
+	notificationServiceSetSettingsMethodDescriptor             = notificationServiceServiceDescriptor.Methods().ByName("SetSettings")
+	notificationServiceSetDmGdmSettingsMethodDescriptor        = notificationServiceServiceDescriptor.Methods().ByName("SetDmGdmSettings")
+	notificationServiceSetDmChannelSettingMethodDescriptor     = notificationServiceServiceDescriptor.Methods().ByName("SetDmChannelSetting")
+	notificationServiceSetGdmChannelSettingMethodDescriptor    = notificationServiceServiceDescriptor.Methods().ByName("SetGdmChannelSetting")
+	notificationServiceSetSpaceSettingsMethodDescriptor        = notificationServiceServiceDescriptor.Methods().ByName("SetSpaceSettings")
+	notificationServiceSetSpaceChannelSettingsMethodDescriptor = notificationServiceServiceDescriptor.Methods().ByName("SetSpaceChannelSettings")
+	notificationServiceSubscribeWebPushMethodDescriptor        = notificationServiceServiceDescriptor.Methods().ByName("SubscribeWebPush")
+	notificationServiceUnsubscribeWebPushMethodDescriptor      = notificationServiceServiceDescriptor.Methods().ByName("UnsubscribeWebPush")
+	notificationServiceSubscribeAPNMethodDescriptor            = notificationServiceServiceDescriptor.Methods().ByName("SubscribeAPN")
+	notificationServiceUnsubscribeAPNMethodDescriptor          = notificationServiceServiceDescriptor.Methods().ByName("UnsubscribeAPN")
 )
 
 // NotificationServiceClient is a client for the river.NotificationService service.
@@ -84,10 +92,14 @@ type NotificationServiceClient interface {
 	SetSettings(context.Context, *connect.Request[protocol.SetSettingsRequest]) (*connect.Response[protocol.SetSettingsResponse], error)
 	// SetDmGdmSettings updates global settings for DM/GDM channels.
 	SetDmGdmSettings(context.Context, *connect.Request[protocol.SetDmGdmSettingsRequest]) (*connect.Response[protocol.SetDmGdmSettingsResponse], error)
+	// SetDmChannelSetting updates settings for a DM channel
+	SetDmChannelSetting(context.Context, *connect.Request[protocol.SetDmChannelSettingRequest]) (*connect.Response[protocol.SetDmChannelSettingResponse], error)
+	// SetGdmChannelSetting updates settings for a GDM channel
+	SetGdmChannelSetting(context.Context, *connect.Request[protocol.SetGdmChannelSettingRequest]) (*connect.Response[protocol.SetGdmChannelSettingResponse], error)
 	// SetSpaceSettings updates space setting that are applied to all channels within that stream.
 	SetSpaceSettings(context.Context, *connect.Request[protocol.SetSpaceSettingsRequest]) (*connect.Response[protocol.SetSpaceSettingsResponse], error)
-	// SetChannelSettings updates settings for a channel.
-	SetChannelSettings(context.Context, *connect.Request[protocol.SetChannelSettingsRequest]) (*connect.Response[protocol.SetChannelSettingsResponse], error)
+	// SetSpaceChannelSettings updates settings for a channel that is part of a space.
+	SetSpaceChannelSettings(context.Context, *connect.Request[protocol.SetSpaceChannelSettingsRequest]) (*connect.Response[protocol.SetSpaceChannelSettingsResponse], error)
 	// SubscribeWebPush subscribes a client to receive notifications through web push.
 	// If the given req.subscription is already associated with a web push subscription the user id is updated (upsert).
 	SubscribeWebPush(context.Context, *connect.Request[protocol.SubscribeWebPushRequest]) (*connect.Response[protocol.SubscribeWebPushResponse], error)
@@ -128,16 +140,28 @@ func NewNotificationServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(notificationServiceSetDmGdmSettingsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		setDmChannelSetting: connect.NewClient[protocol.SetDmChannelSettingRequest, protocol.SetDmChannelSettingResponse](
+			httpClient,
+			baseURL+NotificationServiceSetDmChannelSettingProcedure,
+			connect.WithSchema(notificationServiceSetDmChannelSettingMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		setGdmChannelSetting: connect.NewClient[protocol.SetGdmChannelSettingRequest, protocol.SetGdmChannelSettingResponse](
+			httpClient,
+			baseURL+NotificationServiceSetGdmChannelSettingProcedure,
+			connect.WithSchema(notificationServiceSetGdmChannelSettingMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		setSpaceSettings: connect.NewClient[protocol.SetSpaceSettingsRequest, protocol.SetSpaceSettingsResponse](
 			httpClient,
 			baseURL+NotificationServiceSetSpaceSettingsProcedure,
 			connect.WithSchema(notificationServiceSetSpaceSettingsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		setChannelSettings: connect.NewClient[protocol.SetChannelSettingsRequest, protocol.SetChannelSettingsResponse](
+		setSpaceChannelSettings: connect.NewClient[protocol.SetSpaceChannelSettingsRequest, protocol.SetSpaceChannelSettingsResponse](
 			httpClient,
-			baseURL+NotificationServiceSetChannelSettingsProcedure,
-			connect.WithSchema(notificationServiceSetChannelSettingsMethodDescriptor),
+			baseURL+NotificationServiceSetSpaceChannelSettingsProcedure,
+			connect.WithSchema(notificationServiceSetSpaceChannelSettingsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		subscribeWebPush: connect.NewClient[protocol.SubscribeWebPushRequest, protocol.SubscribeWebPushResponse](
@@ -169,15 +193,17 @@ func NewNotificationServiceClient(httpClient connect.HTTPClient, baseURL string,
 
 // notificationServiceClient implements NotificationServiceClient.
 type notificationServiceClient struct {
-	getSettings        *connect.Client[protocol.GetSettingsRequest, protocol.GetSettingsResponse]
-	setSettings        *connect.Client[protocol.SetSettingsRequest, protocol.SetSettingsResponse]
-	setDmGdmSettings   *connect.Client[protocol.SetDmGdmSettingsRequest, protocol.SetDmGdmSettingsResponse]
-	setSpaceSettings   *connect.Client[protocol.SetSpaceSettingsRequest, protocol.SetSpaceSettingsResponse]
-	setChannelSettings *connect.Client[protocol.SetChannelSettingsRequest, protocol.SetChannelSettingsResponse]
-	subscribeWebPush   *connect.Client[protocol.SubscribeWebPushRequest, protocol.SubscribeWebPushResponse]
-	unsubscribeWebPush *connect.Client[protocol.UnsubscribeWebPushRequest, protocol.UnsubscribeWebPushResponse]
-	subscribeAPN       *connect.Client[protocol.SubscribeAPNRequest, protocol.SubscribeAPNResponse]
-	unsubscribeAPN     *connect.Client[protocol.UnsubscribeAPNRequest, protocol.UnsubscribeAPNResponse]
+	getSettings             *connect.Client[protocol.GetSettingsRequest, protocol.GetSettingsResponse]
+	setSettings             *connect.Client[protocol.SetSettingsRequest, protocol.SetSettingsResponse]
+	setDmGdmSettings        *connect.Client[protocol.SetDmGdmSettingsRequest, protocol.SetDmGdmSettingsResponse]
+	setDmChannelSetting     *connect.Client[protocol.SetDmChannelSettingRequest, protocol.SetDmChannelSettingResponse]
+	setGdmChannelSetting    *connect.Client[protocol.SetGdmChannelSettingRequest, protocol.SetGdmChannelSettingResponse]
+	setSpaceSettings        *connect.Client[protocol.SetSpaceSettingsRequest, protocol.SetSpaceSettingsResponse]
+	setSpaceChannelSettings *connect.Client[protocol.SetSpaceChannelSettingsRequest, protocol.SetSpaceChannelSettingsResponse]
+	subscribeWebPush        *connect.Client[protocol.SubscribeWebPushRequest, protocol.SubscribeWebPushResponse]
+	unsubscribeWebPush      *connect.Client[protocol.UnsubscribeWebPushRequest, protocol.UnsubscribeWebPushResponse]
+	subscribeAPN            *connect.Client[protocol.SubscribeAPNRequest, protocol.SubscribeAPNResponse]
+	unsubscribeAPN          *connect.Client[protocol.UnsubscribeAPNRequest, protocol.UnsubscribeAPNResponse]
 }
 
 // GetSettings calls river.NotificationService.GetSettings.
@@ -195,14 +221,24 @@ func (c *notificationServiceClient) SetDmGdmSettings(ctx context.Context, req *c
 	return c.setDmGdmSettings.CallUnary(ctx, req)
 }
 
+// SetDmChannelSetting calls river.NotificationService.SetDmChannelSetting.
+func (c *notificationServiceClient) SetDmChannelSetting(ctx context.Context, req *connect.Request[protocol.SetDmChannelSettingRequest]) (*connect.Response[protocol.SetDmChannelSettingResponse], error) {
+	return c.setDmChannelSetting.CallUnary(ctx, req)
+}
+
+// SetGdmChannelSetting calls river.NotificationService.SetGdmChannelSetting.
+func (c *notificationServiceClient) SetGdmChannelSetting(ctx context.Context, req *connect.Request[protocol.SetGdmChannelSettingRequest]) (*connect.Response[protocol.SetGdmChannelSettingResponse], error) {
+	return c.setGdmChannelSetting.CallUnary(ctx, req)
+}
+
 // SetSpaceSettings calls river.NotificationService.SetSpaceSettings.
 func (c *notificationServiceClient) SetSpaceSettings(ctx context.Context, req *connect.Request[protocol.SetSpaceSettingsRequest]) (*connect.Response[protocol.SetSpaceSettingsResponse], error) {
 	return c.setSpaceSettings.CallUnary(ctx, req)
 }
 
-// SetChannelSettings calls river.NotificationService.SetChannelSettings.
-func (c *notificationServiceClient) SetChannelSettings(ctx context.Context, req *connect.Request[protocol.SetChannelSettingsRequest]) (*connect.Response[protocol.SetChannelSettingsResponse], error) {
-	return c.setChannelSettings.CallUnary(ctx, req)
+// SetSpaceChannelSettings calls river.NotificationService.SetSpaceChannelSettings.
+func (c *notificationServiceClient) SetSpaceChannelSettings(ctx context.Context, req *connect.Request[protocol.SetSpaceChannelSettingsRequest]) (*connect.Response[protocol.SetSpaceChannelSettingsResponse], error) {
+	return c.setSpaceChannelSettings.CallUnary(ctx, req)
 }
 
 // SubscribeWebPush calls river.NotificationService.SubscribeWebPush.
@@ -233,10 +269,14 @@ type NotificationServiceHandler interface {
 	SetSettings(context.Context, *connect.Request[protocol.SetSettingsRequest]) (*connect.Response[protocol.SetSettingsResponse], error)
 	// SetDmGdmSettings updates global settings for DM/GDM channels.
 	SetDmGdmSettings(context.Context, *connect.Request[protocol.SetDmGdmSettingsRequest]) (*connect.Response[protocol.SetDmGdmSettingsResponse], error)
+	// SetDmChannelSetting updates settings for a DM channel
+	SetDmChannelSetting(context.Context, *connect.Request[protocol.SetDmChannelSettingRequest]) (*connect.Response[protocol.SetDmChannelSettingResponse], error)
+	// SetGdmChannelSetting updates settings for a GDM channel
+	SetGdmChannelSetting(context.Context, *connect.Request[protocol.SetGdmChannelSettingRequest]) (*connect.Response[protocol.SetGdmChannelSettingResponse], error)
 	// SetSpaceSettings updates space setting that are applied to all channels within that stream.
 	SetSpaceSettings(context.Context, *connect.Request[protocol.SetSpaceSettingsRequest]) (*connect.Response[protocol.SetSpaceSettingsResponse], error)
-	// SetChannelSettings updates settings for a channel.
-	SetChannelSettings(context.Context, *connect.Request[protocol.SetChannelSettingsRequest]) (*connect.Response[protocol.SetChannelSettingsResponse], error)
+	// SetSpaceChannelSettings updates settings for a channel that is part of a space.
+	SetSpaceChannelSettings(context.Context, *connect.Request[protocol.SetSpaceChannelSettingsRequest]) (*connect.Response[protocol.SetSpaceChannelSettingsResponse], error)
 	// SubscribeWebPush subscribes a client to receive notifications through web push.
 	// If the given req.subscription is already associated with a web push subscription the user id is updated (upsert).
 	SubscribeWebPush(context.Context, *connect.Request[protocol.SubscribeWebPushRequest]) (*connect.Response[protocol.SubscribeWebPushResponse], error)
@@ -273,16 +313,28 @@ func NewNotificationServiceHandler(svc NotificationServiceHandler, opts ...conne
 		connect.WithSchema(notificationServiceSetDmGdmSettingsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	notificationServiceSetDmChannelSettingHandler := connect.NewUnaryHandler(
+		NotificationServiceSetDmChannelSettingProcedure,
+		svc.SetDmChannelSetting,
+		connect.WithSchema(notificationServiceSetDmChannelSettingMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	notificationServiceSetGdmChannelSettingHandler := connect.NewUnaryHandler(
+		NotificationServiceSetGdmChannelSettingProcedure,
+		svc.SetGdmChannelSetting,
+		connect.WithSchema(notificationServiceSetGdmChannelSettingMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	notificationServiceSetSpaceSettingsHandler := connect.NewUnaryHandler(
 		NotificationServiceSetSpaceSettingsProcedure,
 		svc.SetSpaceSettings,
 		connect.WithSchema(notificationServiceSetSpaceSettingsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	notificationServiceSetChannelSettingsHandler := connect.NewUnaryHandler(
-		NotificationServiceSetChannelSettingsProcedure,
-		svc.SetChannelSettings,
-		connect.WithSchema(notificationServiceSetChannelSettingsMethodDescriptor),
+	notificationServiceSetSpaceChannelSettingsHandler := connect.NewUnaryHandler(
+		NotificationServiceSetSpaceChannelSettingsProcedure,
+		svc.SetSpaceChannelSettings,
+		connect.WithSchema(notificationServiceSetSpaceChannelSettingsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	notificationServiceSubscribeWebPushHandler := connect.NewUnaryHandler(
@@ -317,10 +369,14 @@ func NewNotificationServiceHandler(svc NotificationServiceHandler, opts ...conne
 			notificationServiceSetSettingsHandler.ServeHTTP(w, r)
 		case NotificationServiceSetDmGdmSettingsProcedure:
 			notificationServiceSetDmGdmSettingsHandler.ServeHTTP(w, r)
+		case NotificationServiceSetDmChannelSettingProcedure:
+			notificationServiceSetDmChannelSettingHandler.ServeHTTP(w, r)
+		case NotificationServiceSetGdmChannelSettingProcedure:
+			notificationServiceSetGdmChannelSettingHandler.ServeHTTP(w, r)
 		case NotificationServiceSetSpaceSettingsProcedure:
 			notificationServiceSetSpaceSettingsHandler.ServeHTTP(w, r)
-		case NotificationServiceSetChannelSettingsProcedure:
-			notificationServiceSetChannelSettingsHandler.ServeHTTP(w, r)
+		case NotificationServiceSetSpaceChannelSettingsProcedure:
+			notificationServiceSetSpaceChannelSettingsHandler.ServeHTTP(w, r)
 		case NotificationServiceSubscribeWebPushProcedure:
 			notificationServiceSubscribeWebPushHandler.ServeHTTP(w, r)
 		case NotificationServiceUnsubscribeWebPushProcedure:
@@ -350,12 +406,20 @@ func (UnimplementedNotificationServiceHandler) SetDmGdmSettings(context.Context,
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.NotificationService.SetDmGdmSettings is not implemented"))
 }
 
+func (UnimplementedNotificationServiceHandler) SetDmChannelSetting(context.Context, *connect.Request[protocol.SetDmChannelSettingRequest]) (*connect.Response[protocol.SetDmChannelSettingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.NotificationService.SetDmChannelSetting is not implemented"))
+}
+
+func (UnimplementedNotificationServiceHandler) SetGdmChannelSetting(context.Context, *connect.Request[protocol.SetGdmChannelSettingRequest]) (*connect.Response[protocol.SetGdmChannelSettingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.NotificationService.SetGdmChannelSetting is not implemented"))
+}
+
 func (UnimplementedNotificationServiceHandler) SetSpaceSettings(context.Context, *connect.Request[protocol.SetSpaceSettingsRequest]) (*connect.Response[protocol.SetSpaceSettingsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.NotificationService.SetSpaceSettings is not implemented"))
 }
 
-func (UnimplementedNotificationServiceHandler) SetChannelSettings(context.Context, *connect.Request[protocol.SetChannelSettingsRequest]) (*connect.Response[protocol.SetChannelSettingsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.NotificationService.SetChannelSettings is not implemented"))
+func (UnimplementedNotificationServiceHandler) SetSpaceChannelSettings(context.Context, *connect.Request[protocol.SetSpaceChannelSettingsRequest]) (*connect.Response[protocol.SetSpaceChannelSettingsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("river.NotificationService.SetSpaceChannelSettings is not implemented"))
 }
 
 func (UnimplementedNotificationServiceHandler) SubscribeWebPush(context.Context, *connect.Request[protocol.SubscribeWebPushRequest]) (*connect.Response[protocol.SubscribeWebPushResponse], error) {

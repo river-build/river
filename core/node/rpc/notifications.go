@@ -39,12 +39,21 @@ func (s *Service) startNotificationMode(notifier push.MessageNotifier) error {
 	}
 
 	if notifier == nil {
-		notifier = push.NewMessageNotificationsSimulator()
+		if s.config.Notifications.Simulate {
+			dlog.FromCtx(s.serverCtx).Warn("Simulate sending notifications (dev mode)")
+			notifier = push.NewMessageNotificationsSimulator()
+		} else {
+			notifier, err = push.NewMessageNotifier(&s.config.Notifications)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	processor := notifications.NewNotificationMessageProcessor(
 		s.serverCtx,
 		s.notifications,
+		s.config.Notifications,
 		notifier,
 	)
 

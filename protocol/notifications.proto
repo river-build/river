@@ -14,10 +14,14 @@ service NotificationService {
   rpc SetSettings(SetSettingsRequest) returns (SetSettingsResponse);
   // SetDmGdmSettings updates global settings for DM/GDM channels.
   rpc SetDmGdmSettings(SetDmGdmSettingsRequest) returns (SetDmGdmSettingsResponse);
+  // SetDmChannelSetting updates settings for a DM channel
+  rpc SetDmChannelSetting(SetDmChannelSettingRequest) returns (SetDmChannelSettingResponse);
+  // SetGdmChannelSetting updates settings for a GDM channel
+  rpc SetGdmChannelSetting(SetGdmChannelSettingRequest) returns (SetGdmChannelSettingResponse);
   // SetSpaceSettings updates space setting that are applied to all channels within that stream.
   rpc SetSpaceSettings(SetSpaceSettingsRequest) returns (SetSpaceSettingsResponse);
-  // SetChannelSettings updates settings for a channel.
-  rpc SetChannelSettings(SetChannelSettingsRequest) returns (SetChannelSettingsResponse);
+  // SetSpaceChannelSettings updates settings for a channel that is part of a space.
+  rpc SetSpaceChannelSettings(SetSpaceChannelSettingsRequest) returns (SetSpaceChannelSettingsResponse);
   // SubscribeWebPush subscribes a client to receive notifications through web push.
   // If the given req.subscription is already associated with a web push subscription the user id is updated (upsert).
   rpc SubscribeWebPush(SubscribeWebPushRequest) returns (SubscribeWebPushResponse);
@@ -174,6 +178,28 @@ message SetDmGdmSettingsRequest {
 
 message SetDmGdmSettingsResponse {}
 
+message SetDmChannelSettingRequest {
+  // user_id
+  bytes user_id = 1;
+  // dm channel id
+  bytes dm_channel_id = 2;
+  // dm setting
+  DmChannelSettingValue value = 3;
+}
+
+message SetDmChannelSettingResponse {}
+
+message SetGdmChannelSettingRequest{
+  // user_id
+  bytes user_id = 1;
+  // gdm channel id
+  bytes gdm_channel_id = 2;
+  // dm setting
+  GdmChannelSettingValue value = 3;
+}
+
+message SetGdmChannelSettingResponse {}
+
 message SetSpaceSettingsRequest {
   // user_id
   bytes user_id = 1;
@@ -185,18 +211,17 @@ message SetSpaceSettingsRequest {
 
 message SetSpaceSettingsResponse {}
 
-message SetChannelSettingsRequest {
+message SetSpaceChannelSettingsRequest {
   bytes user_id = 1;
   // channel_id points to the channel for which this setting applies.
   bytes channel_id = 2;
-  // space_id is required when channel_id points to a channel within a space.
-  // for GM and GDM channels space_id is ignored.
+  // space_id this channel is part of
   bytes space_id = 3;
   // value indicates the user overwritten value or a channel default must be used.
   SpaceChannelSettingValue value = 4;
 }
 
-message SetChannelSettingsResponse {}
+message SetSpaceChannelSettingsResponse {}
 
 message WebPushSubscriptionObjectKeys {
   // An Elliptic curve Diffie–Hellman public key on the P-256 curve (that is, the NIST

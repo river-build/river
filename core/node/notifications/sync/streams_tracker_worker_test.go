@@ -1,10 +1,9 @@
 package sync_test
 
 import (
-	"github.com/river-build/river/core/node/notifications/sync"
-	"github.com/river-build/river/core/node/protocol"
-	"github.com/river-build/river/core/node/storage"
+	"github.com/stretchr/testify/require"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/river-build/river/core/config"
@@ -13,8 +12,10 @@ import (
 	"github.com/river-build/river/core/node/nodes"
 	"github.com/river-build/river/core/node/notifications"
 	"github.com/river-build/river/core/node/notifications/push"
+	"github.com/river-build/river/core/node/notifications/sync"
+	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/registries"
-	"github.com/stretchr/testify/require"
+	"github.com/river-build/river/core/node/storage"
 )
 
 func TestNotifications(t *testing.T) {
@@ -48,7 +49,11 @@ func TestNotifications(t *testing.T) {
 
 	cache := notifications.NewUserPreferencesCache(persistent.Storage)
 	notifier := push.NewMessageNotificationsSimulator()
-	proc := notifications.NewNotificationMessageProcessor(ctx, cache, notifier)
+	proc := notifications.NewNotificationMessageProcessor(ctx, cache, config.NotificationsConfig{
+		Workers:                        5,
+		SubscriptionExpirationDuration: time.Minute,
+		Simulate:                       true,
+	}, notifier)
 
 	worker, err := sync.NewStreamsTrackerWorker(
 		ctx,

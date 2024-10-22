@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS webpushsubscriptions (
     key_p256dh VARCHAR NOT NULL,
     endpoint VARCHAR NOT NULL,
     user_id CHAR(40) NOT NULL,
+    last_seen TIMESTAMP NOT NULL,
     PRIMARY KEY (key_auth, key_p256dh));
 
 CREATE INDEX WEB_SUB_USER_ID_IDX ON webpushsubscriptions USING hash (user_id);
@@ -27,6 +28,7 @@ CREATE INDEX WEB_SUB_USER_ID_IDX ON webpushsubscriptions USING hash (user_id);
 CREATE TABLE IF NOT EXISTS apnpushsubscriptions (
     device_token bytea PRIMARY KEY NOT NULL,
     environment SMALLINT NOT NULL,
-    user_id CHAR(40) NOT NULL);
+    user_id CHAR(40) NOT NULL,
+    last_seen TIMESTAMP NOT NULL);
 
 CREATE INDEX APN_SUB_USER_ID_IDX ON apnpushsubscriptions USING hash (user_id);

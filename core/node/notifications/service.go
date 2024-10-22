@@ -179,35 +179,80 @@ func (s *Service) SetSpaceSettings(
 	return connect.NewResponse(&protocol.SetSpaceSettingsResponse{}), nil
 }
 
-func (s *Service) SetChannelSettings(
+func (s *Service) SetDmChannelSetting(
 	ctx context.Context,
-	req *connect.Request[protocol.SetChannelSettingsRequest],
-) (*connect.Response[protocol.SetChannelSettingsResponse], error) {
+	req *connect.Request[protocol.SetDmChannelSettingRequest],
+) (*connect.Response[protocol.SetDmChannelSettingResponse], error) {
 	var (
-		msg     = req.Msg
-		userID  = common.BytesToAddress(msg.GetUserId())
-		value   = msg.GetValue()
-		spaceID *shared.StreamId
+		msg    = req.Msg
+		userID = common.BytesToAddress(msg.GetUserId())
+		value  = msg.GetValue()
+	)
+
+	channelID, err := shared.StreamIdFromBytes(msg.GetDmChannelId())
+	if err != nil {
+		return nil, AsRiverError(err).Func("SetSpaceChannelSettings")
+	}
+
+	if channelID.Type() != shared.STREAM_DM_CHANNEL_BIN {
+		return nil, RiverError(protocol.Err_INVALID_ARGUMENT, "channel must be a DM channel").
+			Func("SetGdmChannelSetting")
+	}
+
+	if err := s.userPreferences.SetDMChannelSetting(ctx, userID, channelID, value); err != nil {
+		return nil, AsRiverError(err).Func("SetDMChannelSetting")
+	}
+
+	return connect.NewResponse(&protocol.SetDmChannelSettingResponse{}), nil
+}
+
+func (s *Service) SetGdmChannelSetting(
+	ctx context.Context,
+	req *connect.Request[protocol.SetGdmChannelSettingRequest],
+) (*connect.Response[protocol.SetGdmChannelSettingResponse], error) {
+	var (
+		msg    = req.Msg
+		userID = common.BytesToAddress(msg.GetUserId())
+		value  = msg.GetValue()
+	)
+
+	channelID, err := shared.StreamIdFromBytes(msg.GetGdmChannelId())
+	if err != nil {
+		return nil, AsRiverError(err).Func("SetGdmChannelSetting")
+	}
+
+	if channelID.Type() != shared.STREAM_GDM_CHANNEL_BIN {
+		return nil, RiverError(protocol.Err_INVALID_ARGUMENT, "channel must be a GDM channel").
+			Func("SetGDMChannelSetting")
+	}
+
+	if err := s.userPreferences.SetGDMChannelSetting(ctx, userID, channelID, value); err != nil {
+		return nil, AsRiverError(err).Func("SetDMChannelSetting")
+	}
+
+	return connect.NewResponse(&protocol.SetGdmChannelSettingResponse{}), nil
+}
+
+func (s *Service) SetSpaceChannelSettings(
+	ctx context.Context,
+	req *connect.Request[protocol.SetSpaceChannelSettingsRequest],
+) (*connect.Response[protocol.SetSpaceChannelSettingsResponse], error) {
+	var (
+		msg    = req.Msg
+		userID = common.BytesToAddress(msg.GetUserId())
+		value  = msg.GetValue()
 	)
 
 	channelID, err := shared.StreamIdFromBytes(msg.GetChannelId())
 	if err != nil {
+		return nil, AsRiverError(err).Func("SetSpaceChannelSettings")
+	}
+
+	if err := s.userPreferences.SetChannelSetting(ctx, userID, channelID, value); err != nil {
 		return nil, AsRiverError(err).Func("SetChannelSettings")
 	}
 
-	if channelID.Type() == shared.STREAM_CHANNEL_BIN {
-		spaceIDValue, err := shared.StreamIdFromBytes(msg.GetSpaceId())
-		if err != nil {
-			return nil, AsRiverError(err).Func("SetChannelSettings")
-		}
-		spaceID = &spaceIDValue
-	}
-
-	if err := s.userPreferences.SetChannelSetting(ctx, userID, spaceID, channelID, value); err != nil {
-		return nil, AsRiverError(err).Func("SetChannelSettings")
-	}
-
-	return connect.NewResponse(&protocol.SetChannelSettingsResponse{}), nil
+	return connect.NewResponse(&protocol.SetSpaceChannelSettingsResponse{}), nil
 }
 
 func (s *Service) SubscribeWebPush(
