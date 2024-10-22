@@ -2,6 +2,8 @@ package rpc
 
 import (
 	"context"
+	"errors"
+	"log/slog"
 	"runtime/pprof"
 	"time"
 
@@ -9,6 +11,7 @@ import (
 
 	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/protocol"
+	"github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/utils"
 )
 
@@ -32,21 +35,41 @@ func (s *Service) SyncStreams(
 	ctx, log := utils.CtxAndLogForRequest(ctx, req)
 	startTime := time.Now()
 	syncId := GenNanoid()
-	log.Info("SyncStreams START", "syncId", syncId)
+	log.Debug("SyncStreams START", "syncId", syncId)
 
 	var err error
 	runWithLabels(ctx, syncId, func(ctx context.Context) {
 		err = s.syncHandler.SyncStreams(ctx, syncId, req, res)
 	})
 	if err != nil {
+		level := slog.LevelWarn
+		if errors.Is(err, context.Canceled) {
+			level = slog.LevelDebug
+		}
 		err = AsRiverError(
 			err,
 		).Func("SyncStreams").
 			Tags("syncId", syncId, "duration", time.Since(startTime)).
-			LogWarn(log).
+			LogLevel(log, level).
 			AsConnectError()
 	} else {
-		log.Info("SyncStreams DONE", "syncId", syncId, "duration", time.Since(startTime))
+		for _, cookie := range req.Msg.SyncPos {
+			streamId, err := shared.StreamIdFromBytes(cookie.StreamId)
+			if err != nil {
+				log.Error(
+					"Unable to derive stream id from sync cookie for scrubbing",
+					"rawStreamId",
+					cookie.StreamId,
+				)
+				continue
+			}
+
+			// If the added stream is local, schedule a scrub.
+			if stream, _ := s.cache.GetStream(ctx, streamId); stream != nil {
+				_, _ = s.scrubTaskProcessor.TryScheduleScrub(ctx, stream, false)
+			}
+		}
+		log.Debug("SyncStreams DONE", "syncId", syncId, "duration", time.Since(startTime))
 	}
 	return err
 }
@@ -68,6 +91,20 @@ func (s *Service) AddStreamToSync(
 			Tags("syncId", req.Msg.GetSyncId(), "streamId", req.Msg.GetSyncPos().GetStreamId()).
 			LogWarn(log).
 			AsConnectError()
+	} else {
+		streamId, err := shared.StreamIdFromBytes(req.Msg.SyncPos.StreamId)
+		if err != nil {
+			log.Error(
+				"Unable to derive stream id from sync cookie for scrubbing",
+				"rawStreamId",
+				req.Msg.SyncPos.StreamId,
+			)
+		} else {
+			// If the stream is local, schedule a scrub.
+			if stream, _ := s.cache.GetStream(ctx, streamId); stream != nil {
+				_, _ = s.scrubTaskProcessor.TryScheduleScrub(ctx, stream, false)
+			}
+		}
 	}
 	return res, err
 }

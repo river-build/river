@@ -63,6 +63,9 @@ func GetDefaultConfig() *Config {
 			StacksMaxSizeKb: 5 * 1024,
 			TxPool:          true,
 		},
+		Scrubbing: ScrubbingConfig{
+			ScrubEligibleDuration: time.Hour,
+		},
 	}
 }
 
@@ -97,6 +100,9 @@ type Config struct {
 	// Metrics
 	Metrics             MetricsConfig
 	PerformanceTracking PerformanceTrackingConfig
+
+	// Scrubbing
+	Scrubbing ScrubbingConfig
 
 	// Network configuration
 	Network NetworkConfig
@@ -195,6 +201,12 @@ type DatabaseConfig struct {
 	// If StandByOnStart is true, it's recommended to set it to the double of Config.ShutdownTimeout.
 	// If set to 0, then default value is used. To disable the delay set to 1ms or less.
 	StartupDelay time.Duration
+
+	// IsolationLevel is the transaction isolation level to use for the database operations.
+	// Allowed values: "serializable", "repeatable read", "read committed".
+	// If not set or value can't be parsed, defaults to "serializable".
+	// Intention is to migrate to "read committed" for performance reasons after testing is complete.
+	IsolationLevel string
 }
 
 func (c DatabaseConfig) GetUrl() string {
@@ -380,6 +392,13 @@ func (ac *ArchiveConfig) GetStreamsContractCallPageSize() int64 {
 		return 5000
 	}
 	return ac.StreamsContractCallPageSize
+}
+
+type ScrubbingConfig struct {
+	// ScrubEligibleDuration is the minimum length of time that must pass before a stream is eligible
+	// to be re-scrubbed.
+	// If unset, it defaults to 1 hour.
+	ScrubEligibleDuration time.Duration
 }
 
 type FilterConfig struct {

@@ -289,6 +289,11 @@ export function decodeRuleData(entitlementData: Hex): IRuleEntitlementBase.RuleD
 }
 
 export function encodeRuleDataV2(ruleData: IRuleEntitlementV2Base.RuleDataV2Struct): Hex {
+    // If we encounter a no-op rule data, just encode as empty bytes.
+    if (ruleData.operations.length === 0) {
+        return '0x'
+    }
+
     const getRuleDataV2Abi: ExtractAbiFunction<typeof IRuleEntitlementV2Abi, 'getRuleDataV2'> =
         getAbiItem({
             abi: IRuleEntitlementV2Abi,
@@ -303,6 +308,14 @@ export function encodeRuleDataV2(ruleData: IRuleEntitlementV2Base.RuleDataV2Stru
 }
 
 export function decodeRuleDataV2(entitlementData: Hex): IRuleEntitlementV2Base.RuleDataV2Struct {
+    if (entitlementData === '0x') {
+        return {
+            operations: [],
+            checkOperations: [],
+            logicalOperations: [],
+        } as IRuleEntitlementV2Base.RuleDataV2Struct
+    }
+
     const getRuleDataV2Abi: ExtractAbiFunction<typeof IRuleEntitlementV2Abi, 'getRuleDataV2'> =
         getAbiItem({
             abi: IRuleEntitlementV2Abi,
@@ -779,8 +792,10 @@ export function createOperationsTree(
         switch (op.type) {
             case CheckOperationType.ERC20:
             case CheckOperationType.ERC721:
-            case CheckOperationType.ETH_BALANCE:
                 params = encodeThresholdParams({ threshold: op.threshold ?? BigInt(1) })
+                break
+            case CheckOperationType.ETH_BALANCE:
+                params = encodeThresholdParams({ threshold: op.threshold ?? BigInt(0) })
                 break
             case CheckOperationType.ERC1155:
                 params = encodeERC1155Params({
@@ -844,7 +859,8 @@ export function createDecodedCheckOperationFromTree(
                 })
             } else if (
                 operation.checkType === CheckOperationType.ERC20 ||
-                operation.checkType === CheckOperationType.ERC721
+                operation.checkType === CheckOperationType.ERC721 ||
+                operation.checkType === CheckOperationType.ETH_BALANCE
             ) {
                 const { threshold } = decodeThresholdParams(operation.params)
                 checkOpSubsets.push({

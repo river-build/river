@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"time"
 
 	. "github.com/river-build/river/core/node/events"
 	. "github.com/river-build/river/core/node/protocol"
@@ -14,14 +15,15 @@ import (
 type remoteStream struct {
 	streamId StreamId
 	stub     StreamServiceClient
+	view     StreamView
 }
 
 var _ Stream = (*remoteStream)(nil)
 
-func (s *Service) loadStream(ctx context.Context, streamId StreamId) (Stream, StreamView, error) {
+func (s *Service) loadStream(ctx context.Context, streamId StreamId) (Stream, error) {
 	nodes, err := s.streamRegistry.GetStreamInfo(ctx, streamId)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if nodes.IsLocal() {
@@ -31,26 +33,31 @@ func (s *Service) loadStream(ctx context.Context, streamId StreamId) (Stream, St
 	targetNode := nodes.GetStickyPeer()
 	stub, err := s.nodeRegistry.GetStreamServiceClientForAddress(targetNode)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	resp, err := stub.GetStream(ctx, connect.NewRequest(&GetStreamRequest{
 		StreamId: streamId[:],
 	}))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	streamView, err := MakeRemoteStreamView(ctx, resp.Msg)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	return &remoteStream{
 		streamId: streamId,
 		stub:     stub,
-	}, streamView, nil
+		view:     streamView,
+	}, nil
 }
+
+// We never scrub remote streams
+func (s *remoteStream) LastScrubbedTime() time.Time    { return time.Time{} }
+func (s *remoteStream) MarkScrubbed(_ context.Context) {}
 
 func (s *remoteStream) GetMiniblocks(
 	ctx context.Context,
@@ -81,4 +88,8 @@ func (s *remoteStream) AddEvent(ctx context.Context, event *ParsedEvent) error {
 	}
 
 	return nil
+}
+
+func (s *remoteStream) GetView(ctx context.Context) (StreamView, error) {
+	return s.view, nil
 }

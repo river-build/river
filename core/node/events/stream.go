@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
 	. "github.com/river-build/river/core/node/nodes"
@@ -25,9 +26,21 @@ type MiniblockStream interface {
 	GetMiniblocks(ctx context.Context, fromInclusive int64, ToExclusive int64) ([]*Miniblock, bool, error)
 }
 
+// A ScrubTrackable tracks and updates the last time a stream was scrubbed. Scrubbing is a
+// process where the stream node analyzes stream membership for members that have lost
+// membership entitlements and generates LEAVE events to boot them from the stream. At this
+// time, we only apply scrubbing to channels, which are a subset of joinable streams.
+type ScrubTrackable interface {
+	LastScrubbedTime() time.Time
+	MarkScrubbed(ctx context.Context)
+}
+
 type Stream interface {
+	ScrubTrackable
 	AddableStream
 	MiniblockStream
+
+	GetView(ctx context.Context) (StreamView, error)
 }
 
 type SyncResultReceiver interface {
@@ -42,8 +55,6 @@ type SyncResultReceiver interface {
 // TODO: refactor interfaces.
 type SyncStream interface {
 	Stream
-
-	GetView(ctx context.Context) (StreamView, error)
 
 	Sub(ctx context.Context, cookie *SyncCookie, receiver SyncResultReceiver) error
 	Unsub(receiver SyncResultReceiver)
@@ -77,14 +88,31 @@ type streamImpl struct {
 	mu   sync.RWMutex
 	view *streamViewImpl
 
-	// lastAccessedTime keeps track when the stream was last used by a client
+	// lastAccessedTime keeps track of when the stream was last used by a client
 	lastAccessedTime time.Time
+	// lastScrubbedTime keeps track of when the stream was last scrubbed. Streams that
+	// are never scrubbed will not have this value modified.
+	lastScrubbedTime time.Time
 
 	// TODO: perf optimization: support subs on unloaded streams.
 	receivers mapset.Set[SyncResultReceiver]
 }
 
 var _ SyncStream = (*streamImpl)(nil)
+
+func (s *streamImpl) LastScrubbedTime() time.Time {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.lastScrubbedTime
+}
+
+func (s *streamImpl) MarkScrubbed(ctx context.Context) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.lastScrubbedTime = time.Now()
+}
 
 // Should be called with lock held
 // Either view or loadError will be set in Stream.
@@ -123,10 +151,8 @@ func (s *streamImpl) ApplyMiniblock(ctx context.Context, miniblock *MiniblockInf
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.view == nil {
-		if err := s.loadInternal(ctx); err != nil {
-			return err
-		}
+	if err := s.loadInternal(ctx); err != nil {
+		return err
 	}
 
 	return s.applyMiniblockImplNoLock(ctx, miniblock)
@@ -150,7 +176,7 @@ func (s *streamImpl) importMiniblocks(
 
 		blocksToWriteToStorage[i] = &storage.MiniblockData{
 			StreamID:      s.streamId,
-			Number:        miniblock.Num,
+			Number:        miniblock.Ref.Num,
 			MiniBlockInfo: bytes,
 		}
 	}
@@ -180,16 +206,20 @@ func (s *streamImpl) importMiniblocks(
 		view = s.view
 	)
 
+	allNewEvents := []*Envelope{}
 	for _, miniblock := range miniblocks {
-		if miniblock.Num <= view.LastBlock().Num {
+		if miniblock.Ref.Num <= view.LastBlock().Ref.Num {
 			blocksToWriteToStorage = blocksToWriteToStorage[1:]
 			continue
 		}
 
-		view, err = view.copyAndApplyBlock(miniblock, s.params.ChainConfig, true)
+		var newEvents []*Envelope
+		view, newEvents, err = view.copyAndApplyBlock(miniblock, s.params.ChainConfig.Get())
 		if err != nil {
 			return err
 		}
+		allNewEvents = append(allNewEvents, newEvents...)
+		allNewEvents = append(allNewEvents, miniblock.headerEvent.Envelope)
 	}
 
 	err = s.params.Storage.ImportMiniblocks(ctx, blocksToWriteToStorage)
@@ -197,15 +227,16 @@ func (s *streamImpl) importMiniblocks(
 		return err
 	}
 
+	prevSyncCookie := s.view.SyncCookie(s.params.Wallet.Address)
 	s.view = view
-
-	// TODO: inform subscribes with rate throttling?
+	newSyncCookie := s.view.SyncCookie(s.params.Wallet.Address)
+	s.notifySubscribers(allNewEvents, newSyncCookie, prevSyncCookie)
 	return nil
 }
 
 func (s *streamImpl) applyMiniblockImplNoLock(ctx context.Context, miniblock *MiniblockInfo) error {
 	// Check if the miniblock is already applied.
-	if miniblock.Num <= s.view.LastBlock().Num {
+	if miniblock.Ref.Num <= s.view.LastBlock().Ref.Num {
 		return nil
 	}
 
@@ -213,7 +244,7 @@ func (s *streamImpl) applyMiniblockImplNoLock(ctx context.Context, miniblock *Mi
 	// TODO: tests for this.
 
 	// Lets see if this miniblock can be applied.
-	newSV, err := s.view.copyAndApplyBlock(miniblock, s.params.ChainConfig, false)
+	newSV, newEvents, err := s.view.copyAndApplyBlock(miniblock, s.params.ChainConfig.Get())
 	if err != nil {
 		return err
 	}
@@ -231,7 +262,7 @@ func (s *streamImpl) applyMiniblockImplNoLock(ctx context.Context, miniblock *Mi
 		ctx,
 		s.streamId,
 		s.view.minipool.generation,
-		miniblock.Hash,
+		miniblock.Ref.Hash,
 		miniblock.headerEvent.Event.GetMiniblockHeader().GetSnapshot() != nil,
 		newMinipool,
 	)
@@ -243,7 +274,8 @@ func (s *streamImpl) applyMiniblockImplNoLock(ctx context.Context, miniblock *Mi
 	s.view = newSV
 	newSyncCookie := s.view.SyncCookie(s.params.Wallet.Address)
 
-	s.notifySubscribers([]*Envelope{miniblock.headerEvent.Envelope}, newSyncCookie, prevSyncCookie)
+	newEvents = append(newEvents, miniblock.headerEvent.Envelope)
+	s.notifySubscribers(newEvents, newSyncCookie, prevSyncCookie)
 	return nil
 }
 
@@ -251,23 +283,21 @@ func (s *streamImpl) PromoteCandidate(ctx context.Context, mbHash common.Hash, m
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.view == nil {
-		if err := s.loadInternal(ctx); err != nil {
-			return err
-		}
+	if err := s.loadInternal(ctx); err != nil {
+		return err
 	}
 
 	// Check if the miniblock is already applied.
-	if mbNum <= s.view.LastBlock().Num {
+	if mbNum <= s.view.LastBlock().Ref.Num {
 		// Log error if hash doesn't match.
 		mb, _ := s.view.blockWithNum(mbNum)
-		if mb != nil && mbHash != mb.Hash {
+		if mb != nil && mbHash != mb.Ref.Hash {
 			dlog.FromCtx(ctx).Error("PromoteCandidate: Miniblock is already applied",
 				"streamId", s.streamId,
 				"blockNum", mbNum,
 				"blockHash", mbHash,
-				"lastBlockNum", s.view.LastBlock().Num,
-				"lastBlockHash", s.view.LastBlock().Hash,
+				"lastBlockNum", s.view.LastBlock().Ref.Num,
+				"lastBlockHash", s.view.LastBlock().Ref.Hash,
 			)
 		}
 		return nil
@@ -300,9 +330,9 @@ func (s *streamImpl) initFromGenesis(
 		return err
 	}
 
-	if registeredGenesisHash != genesisInfo.Hash {
+	if registeredGenesisHash != genesisInfo.Ref.Hash {
 		return RiverError(Err_BAD_BLOCK, "Invalid genesis block hash").
-			Tags("registryHash", registeredGenesisHash, "blockHash", genesisInfo.Hash).
+			Tags("registryHash", registeredGenesisHash, "blockHash", genesisInfo.Ref.Hash).
 			Func("initFromGenesis")
 	}
 
@@ -387,8 +417,7 @@ func (s *streamImpl) getView(ctx context.Context) (*streamViewImpl, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.lastAccessedTime = time.Now()
-	err := s.loadInternal(ctx)
-	if err != nil {
+	if err := s.loadInternal(ctx); err != nil {
 		return nil, err
 	}
 	return s.view, nil
@@ -469,8 +498,7 @@ func (s *streamImpl) GetMiniblocks(
 func (s *streamImpl) AddEvent(ctx context.Context, event *ParsedEvent) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	err := s.loadInternal(ctx)
-	if err != nil {
+	if err := s.loadInternal(ctx); err != nil {
 		return err
 	}
 
@@ -556,8 +584,7 @@ func (s *streamImpl) Sub(ctx context.Context, cookie *SyncCookie, receiver SyncR
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	err := s.loadInternal(ctx)
-	if err != nil {
+	if err := s.loadInternal(ctx); err != nil {
 		return err
 	}
 
@@ -708,15 +735,15 @@ func (s *streamImpl) SaveMiniblockCandidate(ctx context.Context, mb *Miniblock) 
 		return err
 	}
 
-	if mbInfo.Num <= view.LastBlock().Num {
+	if mbInfo.Ref.Num <= view.LastBlock().Ref.Num {
 		// TODO: better error code.
 		return RiverError(
 			Err_INTERNAL,
 			"Miniblock is too old",
 			"candidate.Num",
-			mbInfo.Num,
+			mbInfo.Ref.Num,
 			"lastBlock.Num",
-			view.LastBlock().Num,
+			view.LastBlock().Ref.Num,
 			"streamId",
 			s.streamId,
 		)
@@ -725,8 +752,8 @@ func (s *streamImpl) SaveMiniblockCandidate(ctx context.Context, mb *Miniblock) 
 	return s.params.Storage.WriteMiniblockCandidate(
 		ctx,
 		s.streamId,
-		mbInfo.Hash,
-		mbInfo.Num,
+		mbInfo.Ref.Hash,
+		mbInfo.Ref.Num,
 		serialized,
 	)
 }

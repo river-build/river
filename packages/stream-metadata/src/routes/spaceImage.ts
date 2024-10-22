@@ -1,4 +1,4 @@
-import { FastifyReply, FastifyRequest } from 'fastify'
+import { FastifyReply, FastifyRequest, type FastifyBaseLogger } from 'fastify'
 import { ChunkedMedia } from '@river-build/proto'
 import { StreamPrefix, StreamStateView, makeStreamId } from '@river-build/sdk'
 import { z } from 'zod'
@@ -16,11 +16,15 @@ const paramsSchema = z.object({
 		.refine(isValidEthereumAddress, {
 			message: 'Invalid spaceAddress format',
 		}),
+	eventId: z.string().optional(),
 })
 
 const CACHE_CONTROL = {
-	307: 'public, max-age=30, s-maxage=3600, stale-while-revalidate=3600',
-	'4xx': 'public, max-age=30, s-maxage=3600',
+	// Client caches for 30s, uses cached version for up to 7 days while revalidating in background
+	307: 'public, max-age=30, s-maxage=3600, stale-while-revalidate=604800',
+	400: 'public, max-age=30, s-maxage=3600',
+	404: 'public, max-age=5, s-maxage=3600', // 5s max-age to avoid client's rendering broken images during town creation flow
+	422: 'public, max-age=30, s-maxage=3600',
 }
 
 export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyReply) {
@@ -33,12 +37,12 @@ export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyRep
 		logger.info(errorMessage)
 		return reply
 			.code(400)
-			.header('Cache-Control', CACHE_CONTROL['4xx'])
+			.header('Cache-Control', CACHE_CONTROL[400])
 			.send({ error: 'Bad Request', message: errorMessage })
 	}
 
-	const { spaceAddress } = parseResult.data
-	logger.info({ spaceAddress }, 'Fetching space image')
+	const { spaceAddress, eventId } = parseResult.data
+	logger.info({ spaceAddress, eventId }, 'Fetching space image')
 
 	let stream: StreamStateView
 	try {
@@ -52,18 +56,16 @@ export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyRep
 			},
 			'Failed to get stream',
 		)
-		return reply
-			.code(404)
-			.header('Cache-Control', CACHE_CONTROL['4xx'])
-			.send('Stream not found')
+		return reply.code(404).header('Cache-Control', CACHE_CONTROL[404]).send('Stream not found')
 	}
 
 	// get the image metatdata from the stream
-	const spaceImage = await getSpaceImage(stream)
+	const spaceImage = await getSpaceImage(logger, stream)
 	if (!spaceImage) {
+		logger.error({ spaceAddress, streamId: stream.streamId }, 'spaceImage not found')
 		return reply
 			.code(404)
-			.header('Cache-Control', CACHE_CONTROL['4xx'])
+			.header('Cache-Control', CACHE_CONTROL[400])
 			.send('spaceImage not found')
 	}
 
@@ -81,7 +83,7 @@ export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyRep
 			)
 			return reply
 				.code(422)
-				.header('Cache-Control', CACHE_CONTROL['4xx'])
+				.header('Cache-Control', CACHE_CONTROL[422])
 				.send('Failed to get encryption key or iv')
 		}
 		const redirectUrl = `${config.streamMetadataBaseUrl}/media/${
@@ -100,15 +102,17 @@ export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyRep
 		)
 		return reply
 			.code(422)
-			.header('Cache-Control', CACHE_CONTROL['4xx'])
+			.header('Cache-Control', CACHE_CONTROL['422'])
 			.send('Failed to get encryption key or iv')
 	}
 }
 
 export async function getSpaceImage(
+	logger: FastifyBaseLogger,
 	streamView: StreamStateView,
 ): Promise<ChunkedMedia | undefined> {
 	if (streamView.contentKind !== 'spaceContent') {
+		logger.error({ streamView }, 'stream view is not a space content')
 		return undefined
 	}
 	return streamView.spaceContent.getSpaceImage()

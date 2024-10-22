@@ -85,6 +85,12 @@ message StreamEvent {
     /** DelegateExpiry is the time when the delegate signature expires. */
     int64 delegate_expiry_epoch_ms = 6;
 
+    /** Tags are optional, used for external systems to deliver notifications. */
+    Tags tags = 7;
+
+    /** prev_miniblock_num contains miniblock number for prev_miniblock_hash. */
+    int64 prev_miniblock_num = 8;
+
     /** Variable-type payload. 
       * Payloads should obey the following rules:
       * - payloads should have their own unique type
@@ -137,9 +143,6 @@ message MiniblockHeader {
 
     // pointer to block with previous snapshot
     int64 prev_snapshot_miniblock_num = 7;
-
-    // optional metadata tags for external systems
-    Tags tags = 8;
 
     // stream payloads are required to have a content field
     oneof content {
@@ -659,7 +662,10 @@ message Minipool {
 }
 
 message Tags {
-    map<string, string> tags = 1;
+    MessageInteractionType message_interaction_type = 1;
+    repeated GroupMentionType group_mention_types = 2;
+    repeated bytes mentioned_user_addresses = 3;
+    repeated bytes participating_user_addresses = 4;
 }
 
 // GetStreamExResponse is a stream of raw data that represents the current state of the requested stream.
@@ -875,6 +881,18 @@ enum ChannelOp {
     CO_UPDATED = 4;
 }
 
+enum MessageInteractionType {
+    MESSAGE_INTERACTION_TYPE_UNSPECIFIED = 0;
+    MESSAGE_INTERACTION_TYPE_REPLY = 1;
+    MESSAGE_INTERACTION_TYPE_REACTION = 2;
+}
+
+enum GroupMentionType {
+    GROUP_MENTION_TYPE_UNSPECIFIED = 0;
+    GROUP_MENTION_TYPE_AT_CHANNEL = 1;
+}
+
+
 // Codes from 1 to 16 match gRPC/Connect codes.
 enum Err {
     ERR_UNSPECIFIED = 0;
@@ -990,4 +1008,9 @@ enum Err {
     MINIPOOL_MISSING_EVENTS = 60;
     STREAM_LAST_BLOCK_MISMATCH = 61;
     DOWNSTREAM_NETWORK_ERROR = 62;
+
+    // Stream replica on the local node does not have miniblock with given number yet.
+    // This is a temporary state and the node will have the miniblock at a later point in time.
+    // The client should retry with an increasing delay, starting at 100ms.
+    MINIBLOCK_TOO_NEW = 63;
 }

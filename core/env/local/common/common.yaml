@@ -2,6 +2,7 @@
 
 database:
     url: postgres://postgres:postgres@localhost:5433/river?sslmode=disable&pool_max_conns=1000
+    isolationLevel: 'read committed'
 
 # Certificates for TLS
 TLSConfig:
@@ -46,3 +47,6 @@ xChainBlockchains: '31337,31338,84532,11155111'
 enableDebugEndpoints: true
 
 standByOnStart: false
+
+scrubbing:
+    scrubEligibleDuration: 5s

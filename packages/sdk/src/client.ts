@@ -29,6 +29,7 @@ import {
     AddEventResponse_Error,
     ChunkedMedia,
     UserBio,
+    Tags,
 } from '@river-build/proto'
 import {
     bin_fromHexString,
@@ -81,7 +82,14 @@ import {
     contractAddressFromSpaceId,
     isUserId,
 } from './id'
-import { makeEvent, unpackMiniblock, unpackStream, unpackStreamEx } from './sign'
+import {
+    checkEventSignature,
+    makeEvent,
+    UnpackEnvelopeOpts,
+    unpackMiniblock,
+    unpackStream,
+    unpackStreamEx,
+} from './sign'
 import { StreamEvents } from './streamEvents'
 import { IStreamStateView, StreamStateView } from './streamStateView'
 import {
@@ -140,12 +148,14 @@ import { SyncedStream } from './syncedStream'
 import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
 import { decryptAESGCM, deriveKeyAndIV, encryptAESGCM, uint8ArrayToBase64 } from './crypto_utils'
+import { makeTags } from './tags'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
 type SendChannelMessageOptions = {
     beforeSendEventHook?: Promise<void>
     onLocalEventAppended?: (localId: string) => void
+    disableTags?: boolean // if true, tags will not be added to the message
 }
 
 export class Client
@@ -156,6 +166,7 @@ export class Client
     readonly rpcClient: StreamRpcClient
     readonly userId: string
     readonly streams: SyncedStreams
+    readonly unpackEnvelopeOpts: UnpackEnvelopeOpts | undefined
 
     userStreamId?: string
     userSettingsStreamId?: string
@@ -182,6 +193,7 @@ export class Client
     private decryptionExtensions?: BaseDecryptionExtensions
     private syncedStreamsExtensions?: SyncedStreamsExtension
     private persistenceStore: IPersistenceStore
+    private validatedEvents: Record<string, { isValid: boolean; reason?: string }> = {}
 
     constructor(
         signerContext: SignerContext,
@@ -191,6 +203,7 @@ export class Client
         persistenceStoreName?: string,
         logNamespaceFilter?: string,
         highPriorityStreamIds?: string[],
+        unpackEnvelopeOpts?: UnpackEnvelopeOpts,
     ) {
         super()
         if (logNamespaceFilter) {
@@ -208,7 +221,7 @@ export class Client
         this.entitlementsDelegate = entitlementsDelegate
         this.signerContext = signerContext
         this.rpcClient = rpcClient
-
+        this.unpackEnvelopeOpts = unpackEnvelopeOpts
         this.userId = userIdFromAddress(signerContext.creatorAddress)
 
         const shortId = shortenHexString(
@@ -291,6 +304,45 @@ export class Client
         )
         this.streams.set(streamId, stream)
         return stream
+    }
+
+    isValidEvent(streamId: string, eventId: string): { isValid: boolean; reason?: string } {
+        // if we didn't disable signature validation, we can assume the event is valid
+        if (this.unpackEnvelopeOpts?.disableSignatureValidation !== true) {
+            return { isValid: true }
+        }
+        const stream = this.stream(streamId)
+        if (!stream) {
+            return { isValid: false, reason: 'stream not found' }
+        }
+        const event = stream.view.events.get(eventId)
+        if (!event) {
+            return { isValid: false, reason: 'event not found' }
+        }
+        if (!event.remoteEvent) {
+            return { isValid: false, reason: 'remote event not found' }
+        }
+        if (!event.remoteEvent.signature) {
+            return { isValid: false, reason: 'remote event signature not found' }
+        }
+        if (this.validatedEvents[eventId]) {
+            return this.validatedEvents[eventId]
+        }
+        try {
+            checkEventSignature(
+                event.remoteEvent.event,
+                event.remoteEvent.hash,
+                event.remoteEvent.signature,
+            )
+            const result = { isValid: true }
+            this.validatedEvents[eventId] = result
+            return result
+        } catch (err) {
+            // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+            const result = { isValid: false, reason: `error: ${err}` }
+            this.validatedEvents[eventId] = result
+            return result
+        }
     }
 
     private async initUserJoinedStreams() {
@@ -404,7 +456,7 @@ export class Client
             optional: true,
         })
         if (response.stream) {
-            return unpackStream(response.stream)
+            return unpackStream(response.stream, this.unpackEnvelopeOpts)
         } else {
             return undefined
         }
@@ -427,7 +479,7 @@ export class Client
             streamId: streamIdAsBytes(userStreamId),
             metadata: metadata,
         })
-        return unpackStream(response.stream)
+        return unpackStream(response.stream, this.unpackEnvelopeOpts)
     }
 
     private async createUserMetadataStream(
@@ -448,7 +500,7 @@ export class Client
             streamId: streamIdAsBytes(userMetadataStreamId),
             metadata: metadata,
         })
-        return unpackStream(response.stream)
+        return unpackStream(response.stream, this.unpackEnvelopeOpts)
     }
 
     private async createUserInboxStream(
@@ -469,7 +521,7 @@ export class Client
             streamId: streamIdAsBytes(userInboxStreamId),
             metadata: metadata,
         })
-        return unpackStream(response.stream)
+        return unpackStream(response.stream, this.unpackEnvelopeOpts)
     }
 
     private async createUserSettingsStream(
@@ -491,7 +543,7 @@ export class Client
             streamId: userSettingsStreamId,
             metadata: metadata,
         })
-        return unpackStream(response.stream)
+        return unpackStream(response.stream, this.unpackEnvelopeOpts)
     }
 
     private async createStreamAndSync(
@@ -510,7 +562,7 @@ export class Client
                 // fetch the stream to get the client in the rigth state
                 response = await this.rpcClient.getStream({ streamId: request.streamId })
             }
-            const unpacked = await unpackStream(response.stream)
+            const unpacked = await unpackStream(response.stream, this.unpackEnvelopeOpts)
             await stream.initializeFromResponse(unpacked)
             if (stream.view.syncCookie) {
                 await this.streams.addStreamToSync(stream.view.syncCookie)
@@ -727,7 +779,7 @@ export class Client
             streamId: streamIdAsBytes(streamId),
         })
 
-        const unpackedResponse = await unpackStream(response.stream)
+        const unpackedResponse = await unpackStream(response.stream, this.unpackEnvelopeOpts)
         const streamView = new StreamStateView(this.userId, streamId)
         streamView.initialize(
             unpackedResponse.streamAndCookie.nextSyncCookie,
@@ -1132,7 +1184,7 @@ export class Client
             const response = await this.rpcClient.getStream({
                 streamId: streamIdAsBytes(streamId),
             })
-            const unpackedResponse = await unpackStream(response.stream)
+            const unpackedResponse = await unpackStream(response.stream, this.unpackEnvelopeOpts)
             return this.streamViewFromUnpackedResponse(streamId, unpackedResponse)
         } catch (err) {
             this.logCall('getStream', streamId, 'ERROR', err)
@@ -1207,7 +1259,7 @@ export class Client
                     )}.`,
                 )
             }
-            const unpackedResponse = await unpackStreamEx(miniblocks)
+            const unpackedResponse = await unpackStreamEx(miniblocks, this.unpackEnvelopeOpts)
             return this.streamViewFromUnpackedResponse(streamId, unpackedResponse)
         } catch (err) {
             this.logCall('getStreamEx', streamId, 'ERROR', err)
@@ -1257,7 +1309,7 @@ export class Client
                     const response = await this.rpcClient.getStream({
                         streamId: streamIdAsBytes(streamId),
                     })
-                    const unpacked = await unpackStream(response.stream)
+                    const unpacked = await unpackStream(response.stream, this.unpackEnvelopeOpts)
                     this.logCall('initStream calling initializingFromResponse', streamId)
                     await stream.initializeFromResponse(unpacked)
                     if (stream.view.syncCookie) {
@@ -1297,7 +1349,9 @@ export class Client
     private onStreamInitialized = (streamId: string): void => {
         const scrollbackUntilContentFound = async () => {
             const stream = this.streams.get(streamId)
-            check(isDefined(stream), 'stream not found')
+            if (!stream) {
+                return
+            }
             while (stream.view.getContent().needsScrollback()) {
                 const scrollback = await this.scrollback(streamId)
                 if (scrollback.terminus) {
@@ -1351,13 +1405,16 @@ export class Client
         if (opts?.beforeSendEventHook) {
             await opts?.beforeSendEventHook
         }
-        return this.makeAndSendChannelMessageEvent(streamId, payload, localId)
+        return this.makeAndSendChannelMessageEvent(streamId, payload, localId, {
+            disableTags: opts?.disableTags,
+        })
     }
 
     private async makeAndSendChannelMessageEvent(
         streamId: string,
         payload: ChannelMessage,
         localId?: string,
+        opts?: { disableTags?: boolean },
     ) {
         const stream = this.stream(streamId)
         check(isDefined(stream), 'stream not found')
@@ -1402,6 +1459,7 @@ export class Client
             }
         }
 
+        const tags = opts?.disableTags === true ? undefined : makeTags(payload, stream.view)
         const cleartext = payload.toJsonString()
         const message = await this.encryptGroupEvent(payload, streamId)
         message.refEventId = getRefEventIdFromChannelMessage(payload)
@@ -1413,19 +1471,22 @@ export class Client
             return this.makeEventAndAddToStream(streamId, make_ChannelPayload_Message(message), {
                 method: 'sendMessage',
                 localId,
-                cleartext: cleartext,
+                cleartext,
+                tags,
             })
         } else if (isDMChannelStreamId(streamId)) {
             return this.makeEventAndAddToStream(streamId, make_DMChannelPayload_Message(message), {
                 method: 'sendMessageDM',
                 localId,
-                cleartext: cleartext,
+                cleartext,
+                tags,
             })
         } else if (isGDMChannelStreamId(streamId)) {
             return this.makeEventAndAddToStream(streamId, make_GDMChannelPayload_Message(message), {
                 method: 'sendMessageGDM',
                 localId,
-                cleartext: cleartext,
+                cleartext,
+                tags,
             })
         } else {
             throw new Error(`invalid streamId: ${streamId}`)
@@ -1817,10 +1878,14 @@ export class Client
 
         const unpackedMiniblocks: ParsedMiniblock[] = []
         for (const miniblock of response.miniblocks) {
-            const unpackedMiniblock = await unpackMiniblock(miniblock)
+            const unpackedMiniblock = await unpackMiniblock(miniblock, this.unpackEnvelopeOpts)
             unpackedMiniblocks.push(unpackedMiniblock)
         }
-        await this.persistenceStore.saveMiniblocks(streamIdAsString(streamId), unpackedMiniblocks)
+        await this.persistenceStore.saveMiniblocks(
+            streamIdAsString(streamId),
+            unpackedMiniblocks,
+            'backward',
+        )
         return {
             terminus: response.terminus,
             miniblocks: [...unpackedMiniblocks, ...cachedMiniblocks],
@@ -1978,7 +2043,13 @@ export class Client
     async makeEventAndAddToStream(
         streamId: string | Uint8Array,
         payload: PlainMessage<StreamEvent>['payload'],
-        options: { method?: string; localId?: string; cleartext?: string; optional?: boolean } = {},
+        options: {
+            method?: string
+            localId?: string
+            cleartext?: string
+            optional?: boolean
+            tags?: PlainMessage<Tags>
+        } = {},
     ): Promise<{ eventId: string; error?: AddEventResponse_Error }> {
         // TODO: filter this.logged payload for PII reasons
         this.logCall(
@@ -2006,6 +2077,7 @@ export class Client
             options.optional,
             options.localId,
             options.cleartext,
+            options.tags,
         )
         return { eventId, error }
     }
@@ -2017,6 +2089,7 @@ export class Client
         optional?: boolean,
         localId?: string,
         cleartext?: string,
+        tags?: PlainMessage<Tags>,
         retryCount?: number,
     ): Promise<{ prevMiniblockHash: Uint8Array; eventId: string; error?: AddEventResponse_Error }> {
         const event = await makeEvent(this.signerContext, payload, prevMiniblockHash)
@@ -2066,6 +2139,7 @@ export class Client
                     optional,
                     isDefined(localId) ? eventId : undefined,
                     cleartext,
+                    tags,
                     retryCount + 1,
                 )
             } else {
