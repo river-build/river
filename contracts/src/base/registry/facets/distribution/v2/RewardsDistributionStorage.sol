@@ -11,7 +11,7 @@ import {StakingRewards} from "./StakingRewards.sol";
 library RewardsDistributionStorage {
   // keccak256(abi.encode(uint256(keccak256("facets.registry.rewards.distribution.v2.storage")) - 1)) & ~bytes32(uint256(0xff))
   bytes32 internal constant STORAGE_SLOT =
-    0x9aed53e346ef79853612b4c863c4eb308de8a5e84e0fd7d00dad88eb5ff1ea00;
+    0x7b071c8e0da733b969167f083e1913dbb26456aeda63d64176fc92d3926ff300;
 
   struct Layout {
     StakingRewards.Layout staking;

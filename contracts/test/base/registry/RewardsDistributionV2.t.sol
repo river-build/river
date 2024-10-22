@@ -10,6 +10,7 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {StakingRewards} from "contracts/src/base/registry/facets/distribution/v2/StakingRewards.sol";
+import {RewardsDistributionStorage} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistributionStorage.sol";
 
 // contracts
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
@@ -64,6 +65,16 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     DOMAIN_SEPARATOR = eip712Facet.DOMAIN_SEPARATOR();
 
     vm.label(baseRegistry, "RewardsDistribution");
+  }
+
+  function test_storageSlot() public {
+    bytes32 slot = keccak256(
+      abi.encode(
+        uint256(keccak256("facets.registry.rewards.distribution.v2.storage")) -
+          1
+      )
+    ) & ~bytes32(uint256(0xff));
+    assertEq(slot, RewardsDistributionStorage.STORAGE_SLOT, "slot");
   }
 
   function test_stake_revertIf_notOperator() public {
