@@ -179,6 +179,10 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
         return true
     }
 
+    public isValidEvent(streamId: string, eventId: string): { isValid: boolean; reason?: string } {
+        return this.client.isValidEvent(streamId, eventId)
+    }
+
     public onDecryptionError(item: EncryptedContentItem, err: DecryptionSessionError): void {
         this.client.stream(item.streamId)?.updateDecryptedContentError(item.eventId, {
             missingSession: err.missingSession,

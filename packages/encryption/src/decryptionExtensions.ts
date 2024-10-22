@@ -59,6 +59,7 @@ export interface KeySolicitationContent {
     fallbackKey: string
     isNewDevice: boolean
     sessionIds: string[]
+    srcEventId: string
 }
 
 export interface KeySolicitationItem {
@@ -194,6 +195,10 @@ export abstract class BaseDecryptionExtensions {
         userId: string,
         opts?: { skipOnChainValidation: boolean },
     ): Promise<boolean>
+    public abstract isValidEvent(
+        streamId: string,
+        eventId: string,
+    ): { isValid: boolean; reason?: string }
     public abstract isUserInboxStreamUpToDate(upToDateStreams: Set<string>): boolean
     public abstract onDecryptionError(item: EncryptedContentItem, err: DecryptionSessionError): void
     public abstract sendKeySolicitation(args: KeySolicitationData): Promise<void>
@@ -674,6 +679,16 @@ export abstract class BaseDecryptionExtensions {
         check(this.hasStream(streamId), 'stream not found')
         const knownSessionIds =
             (await this.crypto.encryptionDevice.getInboundGroupSessionIds(streamId)) ?? []
+
+        const { isValid, reason } = this.isValidEvent(streamId, item.solicitation.srcEventId)
+        if (!isValid) {
+            this.log.error('processing key solicitation: invalid event id', {
+                streamId,
+                eventId: item.solicitation.srcEventId,
+                reason,
+            })
+            return
+        }
 
         knownSessionIds.sort()
         const requestedSessionIds = new Set(item.solicitation.sessionIds.sort())
