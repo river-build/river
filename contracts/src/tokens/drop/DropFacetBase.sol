@@ -21,18 +21,21 @@ abstract contract DropFacetBase is IDropFacetBase {
     uint256 conditionStartId = ds.conditionStartId;
     uint256 conditionCount = ds.conditionCount;
 
-    for (
-      uint256 i = conditionStartId + conditionCount;
-      i > conditionStartId;
-      i--
-    ) {
-      ClaimCondition memory condition = ds.conditionById[i - 1];
+    if (conditionCount == 0) {
+      CustomRevert.revertWith(DropFacet__NoActiveClaimCondition.selector);
+    }
+
+    uint256 currentTimestamp = block.timestamp;
+    uint256 lastConditionId = conditionStartId + conditionCount - 1;
+
+    for (uint256 i = lastConditionId; i >= conditionStartId; i--) {
+      ClaimCondition storage condition = ds.conditionById[i];
       if (
-        block.timestamp >= condition.startTimestamp &&
+        currentTimestamp >= condition.startTimestamp &&
         (condition.endTimestamp == 0 ||
-          block.timestamp < condition.endTimestamp)
+          currentTimestamp < condition.endTimestamp)
       ) {
-        return i - 1;
+        return i;
       }
     }
 
@@ -97,6 +100,7 @@ abstract contract DropFacetBase is IDropFacetBase {
     /// which ends up resetting the eligibility of the claim conditions in `supplyClaimedByWallet`.
     uint256 newConditionCount = conditions.length;
     uint256 newStartId = existingStartId;
+
     if (resetEligibility) {
       newStartId = existingStartId + existingConditionCount;
     }
