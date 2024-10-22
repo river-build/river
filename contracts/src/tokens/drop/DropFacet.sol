@@ -35,8 +35,10 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
     uint256 amount = quantity;
     uint256 penaltyBps = condition.penaltyBps;
     if (penaltyBps > 0) {
-      uint256 penaltyAmount = BasisPoints.calculate(quantity, penaltyBps);
-      amount = quantity - penaltyAmount;
+      unchecked {
+        uint256 penaltyAmount = BasisPoints.calculate(quantity, penaltyBps);
+        amount = quantity - penaltyAmount;
+      }
     }
 
     _updateClaim(ds, conditionId, account, amount);
