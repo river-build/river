@@ -17,6 +17,11 @@ import { FastifyBaseLogger } from 'fastify'
 import { MediaContent, StreamIdHex } from './types'
 import { getNodeForStream } from './streamRegistry'
 
+const STREAM_METADATA_SERVICE_DEFAULT_UNPACK_OPTS: UnpackEnvelopeOpts = {
+	disableHashValidation: true,
+	disableSignatureValidation: true,
+}
+
 const clients = new Map<string, StreamRpcClient>()
 
 export type StreamRpcClient = PromiseClient<typeof StreamService> & { url?: string }
@@ -180,7 +185,10 @@ export async function getStream(
 			'getStream finished',
 		)
 
-		const unpackedResponse = await unpackStream(response.stream, opts)
+		const unpackedResponse = await unpackStream(
+			response.stream,
+			opts ?? STREAM_METADATA_SERVICE_DEFAULT_UNPACK_OPTS,
+		)
 		return streamViewFromUnpackedResponse(streamId, unpackedResponse)
 	} catch (e) {
 		logger.error(
