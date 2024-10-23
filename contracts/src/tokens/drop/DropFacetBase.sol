@@ -165,6 +165,15 @@ abstract contract DropFacetBase is IDropFacetBase {
     }
   }
 
+  function _updateDepositId(
+    DropStorage.Layout storage ds,
+    uint256 conditionId,
+    address account,
+    uint256 depositId
+  ) internal {
+    ds.supplyClaimedByWallet[conditionId][account].depositId = depositId;
+  }
+
   // =============================================================
   //                        Utilities
   // =============================================================

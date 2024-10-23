@@ -103,9 +103,18 @@ interface IDropFacet is IDropFacetBase {
     uint256 conditionId
   ) external view returns (uint256);
 
+  /// @notice Gets the deposit ID of a specific wallet for a given condition
+  /// @param account The address of the wallet to check
+  /// @param conditionId The ID of the claim condition
+  /// @return The deposit ID of the wallet for the specified condition
+  function getDepositIdByWallet(
+    address account,
+    uint256 conditionId
+  ) external view returns (uint256);
+
   /// @notice Claims tokens with a penalty
   /// @param claim The claim to process
-  function claimWithPenalty(Claim calldata claim) external;
+  function claimWithPenalty(Claim calldata claim) external returns (uint256);
 
   /// @notice Claims tokens and stakes them in the staking contract
   /// @param claim The claim to process
@@ -117,5 +126,5 @@ interface IDropFacet is IDropFacetBase {
     address delegatee,
     uint256 deadline,
     bytes calldata signature
-  ) external;
+  ) external returns (uint256);
 }

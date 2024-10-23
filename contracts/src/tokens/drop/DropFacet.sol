@@ -9,6 +9,7 @@ import {IRewardsDistribution} from "contracts/src/base/registry/facets/distribut
 import {DropStorage} from "contracts/src/tokens/drop/DropStorage.sol";
 import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
 import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
 // contracts
 import {Facet} from "contracts/src/diamond/facets/Facet.sol";
@@ -28,7 +29,7 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
   }
 
   ///@inheritdoc IDropFacet
-  function claimWithPenalty(Claim calldata claim) external {
+  function claimWithPenalty(Claim calldata claim) external returns (uint256) {
     DropStorage.Layout storage ds = DropStorage.layout();
 
     _verifyClaim(ds, claim);
@@ -64,6 +65,8 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
       claim.account,
       amount
     );
+
+    return amount;
   }
 
   function claimAndStake(
@@ -71,15 +74,14 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
     address delegatee,
     uint256 deadline,
     bytes calldata signature
-  ) external {
+  ) external returns (uint256) {
     DropStorage.Layout storage ds = DropStorage.layout();
 
     _verifyClaim(ds, claim);
     _updateClaim(ds, claim.conditionId, claim.account, claim.quantity);
 
-    // deposit id
     uint256 depositId = IRewardsDistribution(ds.stakingContract).stakeOnBehalf(
-      uint96(claim.quantity),
+      SafeCast.toUint96(claim.quantity),
       delegatee,
       claim.account,
       claim.account,
@@ -87,12 +89,16 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
       signature
     );
 
+    _updateDepositId(ds, claim.conditionId, claim.account, depositId);
+
     emit DropFacet_Claimed_And_Staked(
       claim.conditionId,
       msg.sender,
       claim.account,
       depositId
     );
+
+    return claim.quantity;
   }
 
   ///@inheritdoc IDropFacet
@@ -126,5 +132,17 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
         .layout()
         .getSupplyClaimedByWallet(conditionId, account)
         .claimed;
+  }
+
+  ///@inheritdoc IDropFacet
+  function getDepositIdByWallet(
+    address account,
+    uint256 conditionId
+  ) external view returns (uint256) {
+    return
+      DropStorage
+        .layout()
+        .getSupplyClaimedByWallet(conditionId, account)
+        .depositId;
   }
 }
