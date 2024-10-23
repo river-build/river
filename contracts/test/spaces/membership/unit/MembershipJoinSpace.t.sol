@@ -8,16 +8,14 @@ import {MembershipBaseSetup} from "../MembershipBaseSetup.sol";
 import {IEntitlementGated} from "contracts/src/spaces/facets/gated/IEntitlementGated.sol";
 import {IEntitlementGatedBase} from "contracts/src/spaces/facets/gated/IEntitlementGated.sol";
 import {IEntitlementCheckerBase} from "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol";
-import {IArchitect, IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.sol";
+import {IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.sol";
+import {ICreateSpace} from "contracts/src/factory/facets/create/ICreateSpace.sol";
 
 //libraries
 import {Vm} from "forge-std/Test.sol";
 
 //contracts
 import {MembershipFacet} from "contracts/src/spaces/facets/membership/MembershipFacet.sol";
-
-// debuggging
-import {console} from "forge-std/console.sol";
 
 contract MembershipJoinSpaceTest is
   MembershipBaseSetup,
@@ -546,7 +544,7 @@ contract MembershipJoinSpaceTest is
     freeAllocationInfo.membership.settings.freeAllocation = 1;
 
     vm.prank(founder);
-    address freeAllocationSpace = IArchitect(spaceFactory).createSpace(
+    address freeAllocationSpace = ICreateSpace(spaceFactory).createSpace(
       freeAllocationInfo
     );
 
@@ -557,5 +555,18 @@ contract MembershipJoinSpaceTest is
     vm.prank(bob);
     vm.expectRevert(Membership__InsufficientPayment.selector);
     freeAllocationMembership.joinSpace(bob);
+  }
+
+  function test_joinSpace_withFeeOnlyPrice() external {
+    uint256 fee = platformReqs.getMembershipFee();
+
+    vm.prank(founder);
+    membership.setMembershipPrice(fee);
+
+    vm.deal(alice, fee);
+    vm.prank(alice);
+    membership.joinSpace{value: fee}(alice);
+
+    assertEq(membershipToken.balanceOf(alice), 1);
   }
 }

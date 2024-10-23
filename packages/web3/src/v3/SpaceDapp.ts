@@ -326,7 +326,11 @@ export class SpaceDapp implements ISpaceDapp {
         txnOpts?: TransactionOpts,
     ): Promise<ContractTransaction> {
         return wrapTransaction(() => {
-            return this.spaceRegistrar.SpaceArchitect.write(signer).createSpaceWithPrepay({
+            const createSpaceFunction = this.spaceRegistrar.CreateSpace.write(signer)[
+                'createSpaceWithPrepay(((string,string,string,string),((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],bytes,bool),string[]),(string),(uint256)))'
+            ] as (arg: any) => Promise<ContractTransaction>
+
+            return createSpaceFunction({
                 channel: {
                     metadata: params.channelName || '',
                 },
@@ -1544,6 +1548,21 @@ export class SpaceDapp implements ISpaceDapp {
         return createEntitlementStruct(space, params.users, params.ruleData)
     }
 
+    public async refreshMetadata(
+        spaceId: string,
+        signer: ethers.Signer,
+        txnOpts?: TransactionOpts,
+    ): Promise<ContractTransaction> {
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+        return wrapTransaction(
+            () => space.Membership.metadata.write(signer).refreshMetadata(),
+            txnOpts,
+        )
+    }
+
     public getSpaceAddress(receipt: ContractReceipt): string | undefined {
         const eventName = 'SpaceCreated'
         if (receipt.status !== 1) {
@@ -1564,6 +1583,14 @@ export class SpaceDapp implements ISpaceDapp {
             }
         }
         return undefined
+    }
+
+    public withdrawSpaceFunds(spaceId: string, recipient: string, signer: ethers.Signer) {
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+        return space.Membership.write(signer).withdraw(recipient)
     }
 
     // If the caller doesn't provide an abort controller, listenForMembershipToken will create one

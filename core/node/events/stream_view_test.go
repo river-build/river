@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 
+	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/base/test"
 	"github.com/river-build/river/core/node/crypto"
 	. "github.com/river-build/river/core/node/protocol"
@@ -119,41 +120,38 @@ func TestLoad(t *testing.T) {
 	// Check minipool, should be empty
 	assert.Equal(t, 0, len(view.minipool.events.Values))
 
-	btc, err := crypto.NewBlockchainTestContext(ctx, crypto.TestParams{MineOnTx: true, AutoMine: true})
-	require.NoError(t, err)
+	cfg := crypto.DefaultOnChainSettings()
 
 	// check for invalid config
-	num := btc.OnChainConfig.Get().MinSnapshotEvents.ForType(0)
+	num := cfg.MinSnapshotEvents.ForType(0)
 	assert.EqualValues(t, num, 100) // hard coded default
 
 	// check snapshot generation
-	assert.Equal(t, false, view.shouldSnapshot(ctx, btc.OnChainConfig))
+	assert.Equal(t, false, view.shouldSnapshot(ctx, cfg))
 
 	// check per stream snapshot generation
-	btc.SetConfigValue(t, ctx, crypto.StreamMinEventsPerSnapshotUserConfigKey, crypto.ABIEncodeUint64(2))
-	assert.EqualValues(t, 2, btc.OnChainConfig.Get().MinSnapshotEvents.ForType(STREAM_USER_BIN))
-	assert.Equal(t, false, view.shouldSnapshot(ctx, btc.OnChainConfig))
-
-	blockHash := view.LastBlock().Hash
+	cfg.MinSnapshotEvents.User = 2
+	assert.EqualValues(t, 2, cfg.MinSnapshotEvents.ForType(STREAM_USER_BIN))
+	assert.Equal(t, false, view.shouldSnapshot(ctx, cfg))
 
 	// add one more event (just join again)
 	join2, err := MakeEnvelopeWithPayload(
 		userWallet,
 		Make_UserPayload_Membership(MembershipOp_SO_JOIN, streamId, nil, nil),
-		blockHash[:],
+		view.LastBlock().Ref,
 	)
 	assert.NoError(t, err)
 	nextEvent := parsedEvent(t, join2)
-	err = view.ValidateNextEvent(ctx, btc.OnChainConfig, nextEvent, time.Now())
+	err = view.ValidateNextEvent(ctx, cfg, nextEvent, time.Now())
 	assert.NoError(t, err)
 	view, err = view.copyAndAddEvent(nextEvent)
 	assert.NoError(t, err)
 
 	// with one new event, we shouldn't snapshot yet
-	assert.Equal(t, false, view.shouldSnapshot(ctx, btc.OnChainConfig))
+	assert.Equal(t, false, view.shouldSnapshot(ctx, cfg))
 
 	// and miniblocks should have nil snapshots
-	proposal, _ := view.ProposeNextMiniblock(ctx, btc.OnChainConfig, false)
+	proposal, _ := view.ProposeNextMiniblock(ctx, cfg, false)
 	miniblockHeader, _, _ = view.makeMiniblockHeader(ctx, proposal)
 	assert.Nil(t, miniblockHeader.Snapshot)
 
@@ -161,22 +159,22 @@ func TestLoad(t *testing.T) {
 	join3, err := MakeEnvelopeWithPayload(
 		userWallet,
 		Make_UserPayload_Membership(MembershipOp_SO_JOIN, streamId, nil, nil),
-		view.LastBlock().Hash[:],
+		view.LastBlock().Ref,
 	)
 	assert.NoError(t, err)
 	nextEvent = parsedEvent(t, join3)
 	assert.NoError(t, err)
-	err = view.ValidateNextEvent(ctx, btc.OnChainConfig, nextEvent, time.Now())
+	err = view.ValidateNextEvent(ctx, cfg, nextEvent, time.Now())
 	assert.NoError(t, err)
 	view, err = view.copyAndAddEvent(nextEvent)
 	assert.NoError(t, err)
 	// with two new events, we should snapshot
-	assert.Equal(t, true, view.shouldSnapshot(ctx, btc.OnChainConfig))
+	assert.Equal(t, true, view.shouldSnapshot(ctx, cfg))
 	assert.Equal(t, 1, len(view.blocks))
 	assert.Equal(t, 2, len(view.blocks[0].events))
 	// and miniblocks should have non - nil snapshots
 
-	proposal, _ = view.ProposeNextMiniblock(ctx, btc.OnChainConfig, false)
+	proposal, _ = view.ProposeNextMiniblock(ctx, cfg, false)
 	miniblockHeader, envelopes, _ := view.makeMiniblockHeader(ctx, proposal)
 	assert.NotNil(t, miniblockHeader.Snapshot)
 
@@ -204,20 +202,20 @@ func TestLoad(t *testing.T) {
 	miniblockHeaderEvent, err := MakeParsedEventWithPayload(
 		userWallet,
 		Make_MiniblockHeader(miniblockHeader),
-		view.LastBlock().Hash[:],
+		view.LastBlock().Ref,
 	)
 	assert.NoError(t, err)
 	miniblock, err := NewMiniblockInfoFromParsed(miniblockHeaderEvent, envelopes)
 	assert.NoError(t, err)
 	// with 5 generations (5 blocks kept in memory)
-	newSV1, newEvents, err := view.copyAndApplyBlock(miniblock, btc.OnChainConfig)
+	newSV1, newEvents, err := view.copyAndApplyBlock(miniblock, cfg)
 	assert.NoError(t, err)
 	assert.Equal(t, len(newSV1.blocks), 2) // we should have both blocks in memory
 	assert.Empty(t, newEvents)
-	btc.SetConfigValue(t, ctx, crypto.StreamRecencyConstraintsGenerationsConfigKey, crypto.ABIEncodeInt64(0))
 
 	// with 0 generations (0 in memory block history)
-	newSV2, newEvents, err := view.copyAndApplyBlock(miniblock, btc.OnChainConfig)
+	cfg.RecencyConstraintsGen = 0
+	newSV2, newEvents, err := view.copyAndApplyBlock(miniblock, cfg)
 	assert.NoError(t, err)
 	assert.Equal(t, len(newSV2.blocks), 1) // we should only have the latest block in memory
 	assert.Empty(t, newEvents)
@@ -225,12 +223,12 @@ func TestLoad(t *testing.T) {
 	join4, err := MakeEnvelopeWithPayload(
 		userWallet,
 		Make_UserPayload_Membership(MembershipOp_SO_LEAVE, streamId, nil, nil),
-		newSV1.blocks[0].Hash[:],
+		newSV1.blocks[0].Ref,
 	)
 	assert.NoError(t, err)
 	nextEvent = parsedEvent(t, join4)
 	assert.NoError(t, err)
-	err = newSV1.ValidateNextEvent(ctx, btc.OnChainConfig, nextEvent, time.Now())
+	err = newSV1.ValidateNextEvent(ctx, cfg, nextEvent, time.Now())
 	assert.NoError(t, err)
 	_, err = newSV1.copyAndAddEvent(nextEvent)
 	assert.NoError(t, err)
@@ -238,12 +236,103 @@ func TestLoad(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	// try with tighter recency constraints
-	setOnChainStreamConfig(t, ctx, btc, testParams{
-		recencyConstraintsGenerations: 5,
-		recencyConstraintsAgeSec:      1,
-	})
+	cfg.RecencyConstraintsGen = 5
+	cfg.RecencyConstraintsAge = 1 * time.Second
 
-	err = newSV1.ValidateNextEvent(ctx, btc.OnChainConfig, nextEvent, time.Now())
+	err = newSV1.ValidateNextEvent(ctx, cfg, nextEvent, time.Now())
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "BAD_PREV_MINIBLOCK_HASH")
+}
+
+func toBytes(t *testing.T, mb *MiniblockInfo) []byte {
+	mbBytes, err := mb.ToBytes()
+	require.NoError(t, err)
+	return mbBytes
+}
+
+func TestMbHashConstraints(t *testing.T) {
+	ctx, cancel := test.NewTestContext()
+	defer cancel()
+	require := require.New(t)
+	userWallet, _ := crypto.NewWallet(ctx)
+	nodeWallet, _ := crypto.NewWallet(ctx)
+	streamId := UserSettingStreamIdFromAddr(userWallet.Address)
+
+	timeNow := time.Now()
+	var mbBytes [][]byte
+	var mbs []*MiniblockInfo
+
+	genMb := MakeGenesisMiniblockForUserSettingsStream(t, userWallet, nodeWallet, streamId)
+	mbBytes = append(mbBytes, toBytes(t, genMb))
+	mbs = append(mbs, genMb)
+
+	prevMb := genMb
+	for range 10 {
+		mb := MakeTestBlockForUserSettingsStream(t, userWallet, nodeWallet, prevMb)
+		mbBytes = append(mbBytes, toBytes(t, mb))
+		mbs = append(mbs, mb)
+		prevMb = mb
+	}
+
+	view, err := MakeStreamView(
+		ctx,
+		&storage.ReadStreamFromLastSnapshotResult{
+			Miniblocks: mbBytes,
+		},
+	)
+	require.NoError(err)
+
+	cfg := crypto.DefaultOnChainSettings()
+
+	for i, mb := range mbs {
+		err = view.ValidateNextEvent(
+			ctx,
+			cfg,
+			MakeEvent(
+				t,
+				userWallet,
+				Make_UserSettingsPayload_FullyReadMarkers(&UserSettingsPayload_FullyReadMarkers{}),
+				mb.Ref,
+			),
+			timeNow,
+		)
+		// TODO: this should only be 5 last blocks
+		require.NoError(err, "Any block recent enough should be good %d", i)
+	}
+
+	for i, mb := range mbs {
+		err = view.ValidateNextEvent(
+			ctx,
+			cfg,
+			MakeEvent(
+				t,
+				userWallet,
+				Make_UserSettingsPayload_FullyReadMarkers(&UserSettingsPayload_FullyReadMarkers{}),
+				mb.Ref,
+			),
+			timeNow.Add(60*time.Second),
+		)
+		// only 2 last blocks are good enough if all blocks are old.
+		if i <= 9 {
+			require.Error(err, "Shouldn't be able to add with too old block %d", i)
+			require.EqualValues(AsRiverError(err).Code, Err_BAD_PREV_MINIBLOCK_HASH)
+		} else {
+			require.NoError(err, "Should be able to add with last block ref %d", i)
+		}
+	}
+
+	newMb := MakeTestBlockForUserSettingsStream(t, userWallet, nodeWallet, prevMb)
+	err = view.ValidateNextEvent(
+		ctx,
+		cfg,
+		MakeEvent(
+			t,
+			userWallet,
+			Make_UserSettingsPayload_FullyReadMarkers(&UserSettingsPayload_FullyReadMarkers{}),
+			newMb.Ref,
+		),
+		timeNow,
+	)
+	require.Error(err)
+	require.EqualValues(AsRiverError(err).Code, Err_MINIBLOCK_TOO_NEW)
 }

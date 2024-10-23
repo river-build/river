@@ -565,6 +565,7 @@ func (s *Service) initCacheAndSync() error {
 			RiverChain:              s.riverChain,
 			Registry:                s.registryContract,
 			ChainConfig:             s.chainConfig,
+			Config:                  s.config,
 			AppliedBlockNum:         s.riverChain.InitialBlockNum,
 			ChainMonitor:            s.riverChain.ChainMonitor,
 			Metrics:                 s.metrics,
@@ -597,6 +598,9 @@ func (s *Service) initScrubbing(ctx context.Context) (err error) {
 		s,
 		s.chainAuth,
 		s.config,
+		s.metrics,
+		s.otelTracer,
+		s.wallet.Address,
 	)
 	if err != nil {
 		return AsRiverError(err, Err_BAD_CONFIG).Message("Unable to instantiate stream scrub task processor")

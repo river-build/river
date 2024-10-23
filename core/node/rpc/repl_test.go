@@ -1,14 +1,16 @@
 package rpc
 
 import (
+	"testing"
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/river-build/river/core/contracts/river"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/testutils"
-	"testing"
-	"time"
 )
 
 func TestReplCreate(t *testing.T) {
@@ -50,7 +52,7 @@ func TestReplAdd(t *testing.T) {
 	)
 	require.NoError(err)
 
-	require.NoError(addUserBlockedFillerEvent(ctx, wallet, client, streamId, cookie.PrevMiniblockHash))
+	require.NoError(addUserBlockedFillerEvent(ctx, wallet, client, streamId, events.MiniblockRefFromCookie(cookie)))
 
 	tt.eventuallyCompareStreamDataInStorage(streamId, 1, 1)
 }
@@ -77,14 +79,14 @@ func TestReplMiniblock(t *testing.T) {
 	require.NoError(err)
 
 	for range 100 {
-		require.NoError(addUserBlockedFillerEvent(ctx, wallet, client, streamId, cookie.PrevMiniblockHash))
+		require.NoError(addUserBlockedFillerEvent(ctx, wallet, client, streamId, events.MiniblockRefFromCookie(cookie)))
 	}
 
 	tt.eventuallyCompareStreamDataInStorage(streamId, 1, 100)
 
-	_, mbNum, err := tt.nodes[0].service.mbProducer.TestMakeMiniblock(ctx, streamId, false)
+	mbRef, err := tt.nodes[0].service.mbProducer.TestMakeMiniblock(ctx, streamId, false)
 	require.NoError(err)
-	require.EqualValues(1, mbNum)
+	require.EqualValues(1, mbRef.Num)
 	tt.eventuallyCompareStreamDataInStorage(streamId, 2, 0)
 }
 
@@ -121,14 +123,15 @@ func TestStreamReconciliationFromGenesis(t *testing.T) {
 	mbChain := map[int64]common.Hash{0: common.BytesToHash(cookie.PrevMiniblockHash)}
 	latestMbNum := int64(0)
 
+	mbRef := events.MiniblockRefFromCookie(cookie)
 	for range N {
-		require.NoError(addUserBlockedFillerEvent(ctx, wallet, client, streamId, mbChain[latestMbNum].Bytes()))
-		mbHash, mbNum, err := tt.nodes[2].service.mbProducer.TestMakeMiniblock(ctx, streamId, false)
+		require.NoError(addUserBlockedFillerEvent(ctx, wallet, client, streamId, mbRef))
+		mbRef, err = tt.nodes[2].service.mbProducer.TestMakeMiniblock(ctx, streamId, false)
 		require.NoError(err)
 
-		if mbChain[latestMbNum] != mbHash {
-			latestMbNum = mbNum
-			mbChain[mbNum] = mbHash
+		if mbChain[latestMbNum] != mbRef.Hash {
+			latestMbNum = mbRef.Num
+			mbChain[mbRef.Num] = mbRef.Hash
 		} else {
 			N += 1
 		}
@@ -147,12 +150,9 @@ func TestStreamReconciliationFromGenesis(t *testing.T) {
 
 	// make sure that node loaded the stream and synced up its local database with the stream registry.
 	// this happens as a background task, therefore wait till all mini-blocks are imported.
-	var (
-		stream events.Stream
-		view   events.StreamView
-	)
+	var stream events.SyncStream
 	require.Eventuallyf(func() bool {
-		stream, view, err = lastStartedNode.service.cache.GetStream(ctx, streamId)
+		stream, err = lastStartedNode.service.cache.GetStream(ctx, streamId)
 		if err == nil {
 			if miniBlocks, _, err := stream.GetMiniblocks(ctx, 0, latestMbNum+1); err == nil {
 				return len(miniBlocks) == len(mbChain)
@@ -170,8 +170,11 @@ func TestStreamReconciliationFromGenesis(t *testing.T) {
 	}
 
 	require.Equal(mbChain, fetchedMbChain, "unexpected mini-block chain")
-	require.Equal(latestMbNum, view.LastBlock().Num, "unexpected last mini-block num")
-	require.Equal(mbChain[latestMbNum], view.LastBlock().Hash, "unexpected last mini-block hash")
+
+	view, err := stream.GetView(ctx)
+	require.NoError(err, "get view")
+	require.Equal(latestMbNum, view.LastBlock().Ref.Num, "unexpected last mini-block num")
+	require.Equal(mbChain[latestMbNum], view.LastBlock().Ref.Hash, "unexpected last mini-block hash")
 }
 
 // TestStreamReconciliationForKnownStreams ensures that a node reconciles local streams that it already knows
@@ -205,13 +208,13 @@ func TestStreamReconciliationForKnownStreams(t *testing.T) {
 	latestMbNum := int64(0)
 
 	for range N {
-		require.NoError(addUserBlockedFillerEvent(ctx, wallet, client, streamId, mbChain[latestMbNum].Bytes()))
-		mbHash, mbNum, err := tt.nodes[2].service.mbProducer.TestMakeMiniblock(ctx, streamId, false)
+		require.NoError(addUserBlockedFillerEvent(ctx, wallet, client, streamId, events.MiniblockRefFromCookie(cookie)))
+		mbRef, err := tt.nodes[2].service.mbProducer.TestMakeMiniblock(ctx, streamId, false)
 		require.NoError(err)
 
-		if mbChain[latestMbNum] != mbHash {
-			latestMbNum = mbNum
-			mbChain[mbNum] = mbHash
+		if mbChain[latestMbNum] != mbRef.Hash {
+			latestMbNum = mbRef.Num
+			mbChain[mbRef.Num] = mbRef.Hash
 		} else {
 			N += 1
 		}
@@ -219,9 +222,11 @@ func TestStreamReconciliationForKnownStreams(t *testing.T) {
 
 	// ensure that the node we bring down has at least 1 mini-block for the test stream
 	require.Eventuallyf(func() bool {
-		_, view, err := tt.nodes[opts.numNodes-1].service.cache.GetStream(ctx, streamId)
+		stream, err := tt.nodes[opts.numNodes-1].service.cache.GetStream(ctx, streamId)
 		require.NoError(err)
-		return view.LastBlock().Num >= 1
+		view, err := stream.GetView(ctx)
+		require.NoError(err)
+		return view.LastBlock().Ref.Num >= 1
 	}, 20*time.Second, 100*time.Millisecond, "expected to receive latest miniblock")
 
 	// bring node down
@@ -233,13 +238,16 @@ func TestStreamReconciliationForKnownStreams(t *testing.T) {
 	// create extra mini-blocks
 	N = 10
 	for range N {
-		require.NoError(addUserBlockedFillerEvent(ctx, wallet, client, streamId, mbChain[latestMbNum].Bytes()))
-		mbHash, mbNum, err := tt.nodes[2].service.mbProducer.TestMakeMiniblock(ctx, streamId, false)
+		require.NoError(addUserBlockedFillerEvent(ctx, wallet, client, streamId, &events.MiniblockRef{
+			Hash: mbChain[latestMbNum],
+			Num:  latestMbNum,
+		}))
+		mbRef, err := tt.nodes[2].service.mbProducer.TestMakeMiniblock(ctx, streamId, false)
 		require.NoError(err)
 
-		if mbChain[latestMbNum] != mbHash {
-			latestMbNum = mbNum
-			mbChain[mbNum] = mbHash
+		if mbChain[latestMbNum] != mbRef.Hash {
+			latestMbNum = mbRef.Num
+			mbChain[mbRef.Num] = mbRef.Hash
 		} else {
 			N += 1
 		}
@@ -255,7 +263,7 @@ func TestStreamReconciliationForKnownStreams(t *testing.T) {
 	require.NoError(tt.startSingle(len(tt.nodes) - 1))
 	restartedNode := tt.nodes[opts.numNodes-1]
 
-	_, _, err = restartedNode.service.cache.GetStream(ctx, streamId)
+	_, err = restartedNode.service.cache.GetStream(ctx, streamId)
 	require.NoError(err)
 
 	// create a new instance of a stream cache for the last node and ensure that when it is created it syncs stream
@@ -264,19 +272,19 @@ func TestStreamReconciliationForKnownStreams(t *testing.T) {
 
 	// wait till stream cache has finish reconciliation for the stream
 	var (
-		stream             events.Stream
+		stream             events.SyncStream
 		receivedMiniblocks []*protocol.Miniblock
 	)
 
 	// grab mini-blocks from node that is already up and running and ensure that the just restarted node has the
 	// same miniblocks after it catches up.
-	stream, _, err = tt.nodes[opts.numNodes-2].service.cache.GetStream(ctx, streamId)
+	stream, err = tt.nodes[opts.numNodes-2].service.cache.GetStream(ctx, streamId)
 	require.NoError(err)
 	expectedMiniblocks, _, err := stream.GetMiniblocks(ctx, 0, latestMbNum+1)
 	require.NoError(err)
 
 	require.Eventuallyf(func() bool {
-		syncStream, err := streamCache.GetSyncStream(ctx, streamId)
+		syncStream, err := streamCache.GetStream(ctx, streamId)
 		if err != nil {
 			return false
 		}
@@ -288,17 +296,19 @@ func TestStreamReconciliationForKnownStreams(t *testing.T) {
 	}, 20*time.Second, 100*time.Millisecond, "expected to sync stream")
 
 	// make sure that node loaded the stream and synced up its local database with the streams registry
-	//miniBlocks, _, err := stream.GetMiniblocks(ctx, 0, latestMbNum+1)
-	//require.NoError(err, "unable to get mini-blocks")
+	// miniBlocks, _, err := stream.GetMiniblocks(ctx, 0, latestMbNum+1)
+	// require.NoError(err, "unable to get mini-blocks")
 	fetchedMbChain := make(map[int64]common.Hash)
 	for i, blk := range receivedMiniblocks {
 		fetchedMbChain[int64(i)] = common.BytesToHash(blk.GetHeader().GetHash())
 	}
 
-	_, view, err := streamCache.GetStream(ctx, streamId)
+	stream, err = streamCache.GetStream(ctx, streamId)
+	require.NoError(err)
+	view, err := stream.GetView(ctx)
 	require.NoError(err)
 
 	require.Equal(mbChain, fetchedMbChain, "unexpected mini-block chain")
-	require.Equal(latestMbNum, view.LastBlock().Num, "unexpected last mini-block num")
-	require.Equal(mbChain[latestMbNum], view.LastBlock().Hash, "unexpected last mini-block hash")
+	require.Equal(latestMbNum, view.LastBlock().Ref.Num, "unexpected last mini-block num")
+	require.Equal(mbChain[latestMbNum], view.LastBlock().Ref.Hash, "unexpected last mini-block hash")
 }

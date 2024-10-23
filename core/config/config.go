@@ -37,6 +37,9 @@ func GetDefaultConfig() *Config {
 		},
 		// TODO: ArchitectContract: ContractConfig{},
 		// TODO: RegistryContract:  ContractConfig{},
+		StreamReconciliation: StreamReconciliationConfig{
+			WorkerPoolSize: 8,
+		},
 		Log: LogConfig{
 			Level:   "info", // NOTE: this default is replaced by flag value
 			Console: true,   // NOTE: this default is replaced by flag value
@@ -103,6 +106,9 @@ type Config struct {
 
 	// Scrubbing
 	Scrubbing ScrubbingConfig
+
+	// Stream reconciliation
+	StreamReconciliation StreamReconciliationConfig
 
 	// Network configuration
 	Network NetworkConfig
@@ -201,6 +207,12 @@ type DatabaseConfig struct {
 	// If StandByOnStart is true, it's recommended to set it to the double of Config.ShutdownTimeout.
 	// If set to 0, then default value is used. To disable the delay set to 1ms or less.
 	StartupDelay time.Duration
+
+	// IsolationLevel is the transaction isolation level to use for the database operations.
+	// Allowed values: "serializable", "repeatable read", "read committed".
+	// If not set or value can't be parsed, defaults to "serializable".
+	// Intention is to migrate to "read committed" for performance reasons after testing is complete.
+	IsolationLevel string
 }
 
 func (c DatabaseConfig) GetUrl() string {
@@ -393,6 +405,10 @@ type ScrubbingConfig struct {
 	// to be re-scrubbed.
 	// If unset, it defaults to 1 hour.
 	ScrubEligibleDuration time.Duration
+}
+
+type StreamReconciliationConfig struct {
+	WorkerPoolSize int // If 0, default to 8.
 }
 
 type FilterConfig struct {

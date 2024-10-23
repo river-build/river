@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
@@ -25,6 +27,7 @@ type StreamCacheParams struct {
 	RiverChain              *crypto.Blockchain
 	Registry                *registries.RiverRegistryContract
 	ChainConfig             crypto.OnChainConfiguration
+	Config                  *config.Config
 	AppliedBlockNum         crypto.BlockNumber
 	ChainMonitor            crypto.ChainMonitor // TODO: delete and use RiverChain.ChainMonitor
 	Metrics                 infra.MetricsFactory
@@ -33,8 +36,7 @@ type StreamCacheParams struct {
 
 type StreamCache interface {
 	Params() *StreamCacheParams
-	GetStream(ctx context.Context, streamId StreamId) (SyncStream, StreamView, error)
-	GetSyncStream(ctx context.Context, streamId StreamId) (SyncStream, error)
+	GetStream(ctx context.Context, streamId StreamId) (SyncStream, error)
 	ForceFlushAll(ctx context.Context)
 	GetLoadedViews(ctx context.Context) []StreamView
 	GetMbCandidateStreams(ctx context.Context) []*streamImpl
@@ -63,7 +65,12 @@ func NewStreamCache(
 	ctx context.Context,
 	params *StreamCacheParams,
 ) (*streamCacheImpl, error) {
-	syncTasks, err := NewStreamSyncTasksProcessor()
+	syncTasks, err := NewStreamSyncTasksProcessor(
+		ctx,
+		&StreamSyncTaskProcessorParams{
+			WorkerPoolSize: params.Config.StreamReconciliation.WorkerPoolSize,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +174,7 @@ func (s *streamCacheImpl) onStreamLastMiniblockUpdated(
 	}
 
 	// Check if current state is beyond candidate. (Local candidates are applied immediately after tx).
-	if uint64(view.LastBlock().Num) >= event.LastMiniblockNum {
+	if uint64(view.LastBlock().Ref.Num) >= event.LastMiniblockNum {
 		return
 	}
 
@@ -355,19 +362,12 @@ func (s *streamCacheImpl) createStreamStorage(
 	}
 }
 
-func (s *streamCacheImpl) GetStream(ctx context.Context, streamId StreamId) (SyncStream, StreamView, error) {
+func (s *streamCacheImpl) GetStream(ctx context.Context, streamId StreamId) (SyncStream, error) {
 	stream, err := s.getStreamImpl(ctx, streamId)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-
-	streamView, err := stream.GetView(ctx)
-
-	if err == nil {
-		return stream, streamView, nil
-	} else {
-		return nil, nil, err
-	}
+	return stream, nil
 }
 
 func (s *streamCacheImpl) getStreamImpl(ctx context.Context, streamId StreamId) (*streamImpl, error) {
@@ -376,14 +376,6 @@ func (s *streamCacheImpl) getStreamImpl(ctx context.Context, streamId StreamId) 
 		return s.tryLoadStreamRecord(ctx, streamId)
 	}
 	return entry.(*streamImpl), nil
-}
-
-func (s *streamCacheImpl) GetSyncStream(ctx context.Context, streamId StreamId) (SyncStream, error) {
-	stream, err := s.getStreamImpl(ctx, streamId)
-	if err != nil {
-		return nil, err
-	}
-	return stream, nil
 }
 
 func (s *streamCacheImpl) ForceFlushAll(ctx context.Context) {

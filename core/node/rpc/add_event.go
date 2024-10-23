@@ -6,6 +6,8 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
 	. "github.com/river-build/river/core/node/events"
@@ -59,29 +61,34 @@ func (s *Service) addParsedEvent(
 	parsedEvent *ParsedEvent,
 	nodes StreamNodes,
 ) error {
-	localStream, streamView, err := s.cache.GetStream(ctx, streamId)
+	localStream, err := s.cache.GetStream(ctx, streamId)
+	if err != nil {
+		return err
+	}
+
+	streamView, err := localStream.GetView(ctx)
 	if err != nil {
 		return err
 	}
 
 	err = s.addParsedEventToView(ctx, streamId, parsedEvent, nodes, localStream, streamView)
 	if err != nil {
-		var err *RiverErrorImpl = AsRiverError(err).Tag("prevMiniblockHash_Event", parsedEvent.PrevMiniblockHash)
+		var err *RiverErrorImpl = AsRiverError(err).Tag("prevMiniblockHash_Event", parsedEvent.MiniblockRef.Hash)
 		mbs := streamView.Blocks()
 		index := len(mbs) - 1
 		if index >= 0 {
-			err.Tags("lastMiniblockHash_View", mbs[index].Hash,
-				"lastMiniblockNum_View", mbs[index].Num)
+			err.Tags("lastMiniblockHash_View", mbs[index].Ref.Hash,
+				"lastMiniblockNum_View", mbs[index].Ref.Num)
 		}
 		index--
 		if index >= 0 {
-			err.Tags("lastMiniblockHash_View_Prev", mbs[index].Hash,
-				"lastMiniblockNum_View_Prev", mbs[index].Num)
+			err.Tags("lastMiniblockHash_View_Prev", mbs[index].Ref.Hash,
+				"lastMiniblockNum_View_Prev", mbs[index].Ref.Num)
 		}
 		index--
 		if index >= 0 {
-			err.Tags("lastMiniblockHash_View_PrevPrev", mbs[index].Hash,
-				"lastMiniblockNum_View_PrevPrev", mbs[index].Num)
+			err.Tags("lastMiniblockHash_View_PrevPrev", mbs[index].Ref.Hash,
+				"lastMiniblockNum_View_PrevPrev", mbs[index].Ref.Num)
 		}
 		return err
 	}
@@ -97,7 +104,7 @@ func (s *Service) addParsedEventToView(
 	localStream SyncStream,
 	streamView StreamView,
 ) error {
-	_, _ = s.scrubTaskProcessor.TryScheduleScrub(ctx, streamId, false)
+	_, _ = s.scrubTaskProcessor.TryScheduleScrub(ctx, localStream, false)
 
 	canAddEvent, chainAuthArgsList, sideEffects, err := rules.CanAddEvent(
 		ctx,
@@ -176,7 +183,10 @@ func (s *Service) AddEventPayload(ctx context.Context, streamId StreamId, payloa
 	if err != nil {
 		return err
 	}
-	envelope, err := MakeEnvelopeWithPayload(s.wallet, payload, hashResponse.Msg.Hash)
+	envelope, err := MakeEnvelopeWithPayload(s.wallet, payload, &MiniblockRef{
+		Hash: common.BytesToHash(hashResponse.Msg.Hash),
+		Num:  hashResponse.Msg.MiniblockNum,
+	})
 	if err != nil {
 		return err
 	}

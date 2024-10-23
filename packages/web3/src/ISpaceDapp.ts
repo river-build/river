@@ -191,6 +191,11 @@ export interface ISpaceDapp {
         signer: SignerType,
         txnOpts?: TransactionOpts,
     ): Promise<TransactionType>
+    refreshMetadata(
+        spaceId: string,
+        signer: ethers.Signer,
+        txnOpts?: TransactionOpts,
+    ): Promise<ContractTransaction>
     encodedUpdateChannelData(space: Space, params: UpdateChannelParams): Promise<BytesLike[]>
     getChannels: (spaceId: string) => Promise<ChannelMetadata[]>
     getChannelDetails: (spaceId: string, channelId: string) => Promise<ChannelDetails | null>
@@ -318,4 +323,9 @@ export interface ISpaceDapp {
         abortController?: AbortController,
     ) => Promise<{ issued: true; tokenId: string } | { issued: false; tokenId: undefined }>
     getMembershipFreeAllocation: (spaceId: string) => Promise<BigNumber>
+    withdrawSpaceFunds: (
+        spaceId: string,
+        recipient: string,
+        signer: SignerType,
+    ) => Promise<TransactionType>
 }
