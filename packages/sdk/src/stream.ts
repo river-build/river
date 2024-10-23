@@ -120,18 +120,24 @@ export class Stream extends (EventEmitter as new () => TypedEmitter<StreamEvents
      * Memberships are processed on block boundaries, so we need to wait for the next block to be processed
      * passing an undefined userId will wait for the membership to be updated for the current user
      */
-    public async waitForMembership(membership: MembershipOp, userId?: string) {
+    public async waitForMembership(membership: MembershipOp, userId_?: string) {
+        const userId = userId_ ?? this.userId
+        this.logEmitFromStream('waitForMembership start', userId, membership)
         // check to see if we're already in that state
-        if (this._view.getMembers().isMember(membership, userId ?? this.userId)) {
+        if (this._view.getMembers().isMember(membership, userId)) {
+            this.logEmitFromStream(
+                'waitForMembership already a member',
+                this.streamId,
+                userId,
+                membership,
+            )
             return
         }
         // wait for a membership updated event, event, check again
-        await this.waitFor('streamMembershipUpdated', (_streamId: string, iUserId: string) => {
-            return (
-                (userId === undefined || userId === iUserId) &&
-                this._view.getMembers().isMember(membership, userId ?? this.userId)
-            )
+        await this.waitFor('streamMembershipUpdated', (_streamId: string, _userId: string) => {
+            return this._view.getMembers().isMember(membership, userId)
         })
+        this.logEmitFromStream('waitForMembership end', userId, membership)
     }
 
     /**
