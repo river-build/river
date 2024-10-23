@@ -9,7 +9,7 @@ import {IRewardsDistribution} from "contracts/src/base/registry/facets/distribut
 import {DropStorage} from "contracts/src/tokens/drop/DropStorage.sol";
 import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
 import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
-import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
+import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
 
 // contracts
 import {Facet} from "contracts/src/diamond/facets/Facet.sol";
@@ -29,7 +29,9 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
   }
 
   ///@inheritdoc IDropFacet
-  function claimWithPenalty(Claim calldata claim) external returns (uint256) {
+  function claimWithPenalty(
+    Claim calldata claim
+  ) external returns (uint256 amount) {
     DropStorage.Layout storage ds = DropStorage.layout();
 
     _verifyClaim(ds, claim);
@@ -38,7 +40,7 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
       claim.conditionId
     );
 
-    uint256 amount = claim.quantity;
+    amount = claim.quantity;
     uint256 penaltyBps = condition.penaltyBps;
     if (penaltyBps > 0) {
       unchecked {
@@ -81,7 +83,7 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
     _updateClaim(ds, claim.conditionId, claim.account, claim.quantity);
 
     uint256 depositId = IRewardsDistribution(ds.stakingContract).stakeOnBehalf(
-      SafeCast.toUint96(claim.quantity),
+      SafeCastLib.toUint96(claim.quantity),
       delegatee,
       claim.account,
       claim.account,
