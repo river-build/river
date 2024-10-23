@@ -59,7 +59,7 @@ contract RewardsDistributionV2Test is
     vm.prank(deployer);
     rewardsDistributionFacet.setRewardNotifier(NOTIFIER, true);
 
-    (, , , rewardDuration, , , , , ) = rewardsDistributionFacet.stakingState();
+    rewardDuration = rewardsDistributionFacet.stakingState().rewardDuration;
 
     vm.label(baseRegistry, "RewardsDistribution");
   }
@@ -519,17 +519,9 @@ contract RewardsDistributionV2Test is
     uint256 currentUnclaimedReward = rewardsDistributionFacet
       .currentUnclaimedReward(depositors[1]);
 
-    (
-      ,
-      ,
-      ,
-      ,
-      ,
-      ,
-      uint256 rewardRate,
-      uint256 rewardPerTokenAccumulated,
-
-    ) = rewardsDistributionFacet.stakingState();
+    StakingState memory state = rewardsDistributionFacet.stakingState();
+    uint256 rewardRate = state.rewardRate;
+    uint256 rewardPerTokenAccumulated = state.rewardPerTokenAccumulated;
 
     // verify the second depositor receives all the rewards
     assertEq(
@@ -636,21 +628,16 @@ contract RewardsDistributionV2Test is
     vm.prank(NOTIFIER);
     rewardsDistributionFacet.notifyRewardAmount(reward);
 
-    (
-      ,
-      ,
-      ,
-      ,
-      uint256 rewardEndTime,
-      uint256 lastUpdateTime,
-      uint256 rewardRate,
-      ,
+    StakingState memory state = rewardsDistributionFacet.stakingState();
 
-    ) = rewardsDistributionFacet.stakingState();
-    assertEq(rewardEndTime, block.timestamp + rewardDuration, "rewardEndTime");
-    assertEq(lastUpdateTime, block.timestamp, "lastUpdateTime");
     assertEq(
-      rewardRate,
+      state.rewardEndTime,
+      block.timestamp + rewardDuration,
+      "rewardEndTime"
+    );
+    assertEq(state.lastUpdateTime, block.timestamp, "lastUpdateTime");
+    assertEq(
+      state.rewardRate,
       reward.fullMulDiv(StakingRewards.SCALE_FACTOR, rewardDuration),
       "rewardRate"
     );
@@ -965,23 +952,13 @@ contract RewardsDistributionV2Test is
     assertEq(reward, currentUnclaimedReward, "reward");
     assertEq(river.balanceOf(claimer), reward, "reward balance");
 
-    (
-      ,
-      ,
-      uint256 totalStaked,
-      ,
-      ,
-      ,
-      uint256 rewardRate,
-      ,
-
-    ) = rewardsDistributionFacet.stakingState();
+    StakingState memory state = rewardsDistributionFacet.stakingState();
     uint256 earningPower = rewardsDistributionFacet
       .treasureByBeneficiary(beneficiary)
       .earningPower;
 
     assertEq(
-      rewardRate.fullMulDiv(timeLapse, totalStaked).fullMulDiv(
+      state.rewardRate.fullMulDiv(timeLapse, state.totalStaked).fullMulDiv(
         earningPower,
         StakingRewards.SCALE_FACTOR
       ),

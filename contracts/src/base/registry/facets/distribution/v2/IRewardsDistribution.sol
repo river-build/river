@@ -9,6 +9,17 @@ import {StakingRewards} from "./StakingRewards.sol";
 // contracts
 
 interface IRewardsDistributionBase {
+  struct StakingState {
+    address riverToken;
+    uint256 totalStaked;
+    uint256 rewardDuration;
+    uint256 rewardEndTime;
+    uint256 lastUpdateTime;
+    uint256 rewardRate;
+    uint256 rewardPerTokenAccumulated;
+    uint256 nextDepositId;
+  }
+
   error RewardsDistribution__NotBeneficiary();
   error RewardsDistribution__NotClaimer();
   error RewardsDistribution__NotDepositOwner();
@@ -27,29 +38,16 @@ interface IRewardsDistributionBase {
 
 interface IRewardsDistribution is IRewardsDistributionBase {
   /// @notice Returns the current state of the staking rewards contract
-  /// @return rewardToken The token that is being distributed as rewards
-  /// @return stakeToken The token that is being staked
-  /// @return totalStaked The total amount of stakeToken that is staked
-  /// @return rewardDuration The duration of the reward distribution
-  /// @return rewardEndTime The time at which the reward distribution ends
-  /// @return lastUpdateTime The time at which the reward was last updated
-  /// @return rewardRate The scaled rate of reward distributed per second
-  /// @return rewardPerTokenAccumulated The scaled amount of rewardToken that has been accumulated per staked token
-  /// @return nextDepositId The next deposit ID that will be used
-  function stakingState()
-    external
-    view
-    returns (
-      address rewardToken,
-      address stakeToken,
-      uint256 totalStaked,
-      uint256 rewardDuration,
-      uint256 rewardEndTime,
-      uint256 lastUpdateTime,
-      uint256 rewardRate,
-      uint256 rewardPerTokenAccumulated,
-      uint256 nextDepositId
-    );
+  /// @return Staking state variables
+  /// riverToken The token that is being staked and used for rewards
+  /// totalStaked The total amount of stakeToken that is staked
+  /// rewardDuration The duration of the reward distribution
+  /// rewardEndTime The time at which the reward distribution ends
+  /// lastUpdateTime The time at which the reward was last updated
+  /// rewardRate The scaled rate of reward distributed per second
+  /// rewardPerTokenAccumulated The scaled amount of rewardToken that has been accumulated per staked token
+  /// nextDepositId The next deposit ID that will be used
+  function stakingState() external view returns (StakingState memory);
 
   /// @notice Returns the amount of stakeToken that is staked by a particular depositor
   /// @param depositor The address of the depositor
