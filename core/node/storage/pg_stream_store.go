@@ -867,13 +867,16 @@ func (s *PostgresStreamStore) promoteBlockTxn(
 ) error {
 	var seqNum *int64
 
-	err := tx.QueryRow(
+	if err := tx.QueryRow(
 		ctx,
-		// TODO: why can we not target the partition here?
-		"SELECT MAX(seq_num) as latest_blocks_number FROM miniblocks WHERE stream_id = $1",
+		// NOTE: This query could not be targeted to the specific partition without producing deadlocks
+		// with the CreateStreamStorage transaction above. I think there may be a race condition in our
+		// logic where a go routine is attempting to make a miniblock while a stream is being created
+		// that only causes a deadlock if we are attempting to read from a table that is in the middle of
+		// being created.
+		"SELECT MAX(seq_num) as latest_block_number FROM miniblocks WHERE stream_id = $1",
 		streamId,
-	).Scan(&seqNum)
-	if err != nil {
+	).Scan(&seqNum); err != nil {
 		return err
 	}
 	if seqNum == nil {
