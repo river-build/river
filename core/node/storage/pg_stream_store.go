@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 
@@ -135,23 +134,26 @@ func (s *PostgresStreamStore) txRunnerWithUUIDCheck(
 	)
 }
 
-func sqlForStream(template string, streamId StreamId) string {
+func sqlForStream(sql string, streamId StreamId) string {
 	suffix := createTableSuffix(streamId)
 
-	re := regexp.MustCompile(`\{\{(\w+)\}\}`)
+	sql = strings.ReplaceAll(
+		sql,
+		"{{miniblocks}}",
+		"miniblocks_"+suffix,
+	)
+	sql = strings.ReplaceAll(
+		sql,
+		"{{minipools}}",
+		"minipools_"+suffix,
+	)
+	sql = strings.ReplaceAll(
+		sql,
+		"{{miniblock_candidates}}",
+		"miniblock_candidates_"+suffix,
+	)
 
-	matches := re.FindAllStringSubmatch(template, -1)
-	result := template
-
-	for _, match := range matches {
-		if len(match) == 2 {
-			placeholder := match[0]
-			tableName := match[1] + "_" + suffix
-			result = strings.ReplaceAll(result, placeholder, tableName)
-		}
-	}
-
-	return result
+	return sql
 }
 
 func (s *PostgresStreamStore) CreateStreamStorage(
