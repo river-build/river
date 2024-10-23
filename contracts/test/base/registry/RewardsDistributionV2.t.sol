@@ -59,7 +59,7 @@ contract RewardsDistributionV2Test is
     vm.prank(deployer);
     rewardsDistributionFacet.setRewardNotifier(NOTIFIER, true);
 
-    (, , , rewardDuration, , , , , ) = rewardsDistributionFacet.stakingState();
+    rewardDuration = rewardsDistributionFacet.stakingState().rewardDuration;
 
     vm.label(baseRegistry, "RewardsDistribution");
   }
@@ -474,6 +474,68 @@ contract RewardsDistributionV2Test is
     verifyWithdraw(address(this), depositId, amount, 0, operator, beneficiary);
   }
 
+  function test_fuzz_initiateWithdraw_rewardsNotDiluted(
+    address[2] memory depositors,
+    uint96[2] memory amounts,
+    address operator,
+    uint256 timeLapse
+  ) public {
+    vm.assume(depositors[0] != depositors[1]);
+    vm.assume(
+      operator != OPERATOR &&
+        operator != depositors[0] &&
+        operator != depositors[1]
+    );
+    vm.assume(OPERATOR != depositors[0] && OPERATOR != depositors[1]);
+    timeLapse = bound(timeLapse, 0, rewardDuration);
+
+    test_notifyRewardAmount();
+
+    uint256 depositId0 = test_fuzz_stake(
+      depositors[0],
+      amounts[0],
+      operator,
+      0,
+      depositors[0]
+    );
+    uint256 depositId1 = test_fuzz_stake(
+      depositors[1],
+      amounts[1],
+      OPERATOR,
+      0,
+      depositors[1]
+    );
+
+    // immediately initiate withdraw for the first depositor
+    vm.prank(depositors[0]);
+    rewardsDistributionFacet.initiateWithdraw(depositId0);
+
+    vm.warp(block.timestamp + timeLapse);
+
+    // poke the second depositor
+    vm.prank(depositors[1]);
+    rewardsDistributionFacet.increaseStake(depositId1, 0);
+
+    uint256 currentUnclaimedReward = rewardsDistributionFacet
+      .currentUnclaimedReward(depositors[1]);
+
+    StakingState memory state = rewardsDistributionFacet.stakingState();
+    uint256 rewardRate = state.rewardRate;
+    uint256 rewardPerTokenAccumulated = state.rewardPerTokenAccumulated;
+
+    // verify the second depositor receives all the rewards
+    assertEq(
+      rewardPerTokenAccumulated,
+      rewardRate.fullMulDiv(timeLapse, amounts[1]),
+      "rewardPerTokenAccumulated"
+    );
+    assertEq(
+      currentUnclaimedReward,
+      rewardRate.fullMulDiv(timeLapse, StakingRewards.SCALE_FACTOR),
+      "currentUnclaimedReward"
+    );
+  }
+
   function test_withdraw_revertIf_notDepositor() public {
     uint256 depositId = test_initiateWithdraw();
 
@@ -518,7 +580,14 @@ contract RewardsDistributionV2Test is
 
     rewardsDistributionFacet.withdraw(depositId);
 
-    verifyWithdraw(address(this), depositId, 0, amount, operator, beneficiary);
+    verifyWithdraw(
+      address(this),
+      depositId,
+      amount,
+      amount,
+      operator,
+      beneficiary
+    );
   }
 
   function test_fuzz_notifyRewardAmount_revertIf_notNotifier(
@@ -559,21 +628,16 @@ contract RewardsDistributionV2Test is
     vm.prank(NOTIFIER);
     rewardsDistributionFacet.notifyRewardAmount(reward);
 
-    (
-      ,
-      ,
-      ,
-      ,
-      uint256 rewardEndTime,
-      uint256 lastUpdateTime,
-      uint256 rewardRate,
-      ,
+    StakingState memory state = rewardsDistributionFacet.stakingState();
 
-    ) = rewardsDistributionFacet.stakingState();
-    assertEq(rewardEndTime, block.timestamp + rewardDuration, "rewardEndTime");
-    assertEq(lastUpdateTime, block.timestamp, "lastUpdateTime");
     assertEq(
-      rewardRate,
+      state.rewardEndTime,
+      block.timestamp + rewardDuration,
+      "rewardEndTime"
+    );
+    assertEq(state.lastUpdateTime, block.timestamp, "lastUpdateTime");
+    assertEq(
+      state.rewardRate,
       reward.fullMulDiv(StakingRewards.SCALE_FACTOR, rewardDuration),
       "rewardRate"
     );
@@ -605,6 +669,7 @@ contract RewardsDistributionV2Test is
     rewardsDistributionFacet.claimReward(space, address(this));
   }
 
+  // TODO: fuzz more depositors
   function test_fuzz_claimReward_byBeneficiary(
     address depositor,
     uint96 amount,
@@ -848,17 +913,18 @@ contract RewardsDistributionV2Test is
   ) internal view {
     assertEq(
       rewardsDistributionFacet.stakedByDepositor(depositor),
-      depositAmount,
+      0,
       "stakedByDepositor"
     );
     assertEq(river.balanceOf(depositor), withdrawAmount, "withdrawAmount");
 
     StakingRewards.Deposit memory deposit = rewardsDistributionFacet
       .depositById(depositId);
-    assertEq(deposit.amount, depositAmount, "depositAmount");
+    assertEq(deposit.amount, 0, "depositAmount");
     assertEq(deposit.owner, depositor, "owner");
     assertEq(deposit.commissionEarningPower, 0, "commissionEarningPower");
     assertEq(deposit.delegatee, address(0), "delegatee");
+    assertEq(deposit.pendingWithdrawal, depositAmount, "pendingWithdrawal");
     assertEq(deposit.beneficiary, beneficiary, "beneficiary");
 
     assertEq(
@@ -886,23 +952,13 @@ contract RewardsDistributionV2Test is
     assertEq(reward, currentUnclaimedReward, "reward");
     assertEq(river.balanceOf(claimer), reward, "reward balance");
 
-    (
-      ,
-      ,
-      uint256 totalStaked,
-      ,
-      ,
-      ,
-      uint256 rewardRate,
-      ,
-
-    ) = rewardsDistributionFacet.stakingState();
+    StakingState memory state = rewardsDistributionFacet.stakingState();
     uint256 earningPower = rewardsDistributionFacet
       .treasureByBeneficiary(beneficiary)
       .earningPower;
 
     assertEq(
-      rewardRate.fullMulDiv(timeLapse, totalStaked).fullMulDiv(
+      state.rewardRate.fullMulDiv(timeLapse, state.totalStaked).fullMulDiv(
         earningPower,
         StakingRewards.SCALE_FACTOR
       ),

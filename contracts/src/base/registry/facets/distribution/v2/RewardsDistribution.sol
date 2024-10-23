@@ -259,35 +259,21 @@ contract RewardsDistribution is
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   /// @inheritdoc IRewardsDistribution
-  function stakingState()
-    external
-    view
-    returns (
-      address rewardToken,
-      address stakeToken,
-      uint256 totalStaked,
-      uint256 rewardDuration,
-      uint256 rewardEndTime,
-      uint256 lastUpdateTime,
-      uint256 rewardRate,
-      uint256 rewardPerTokenAccumulated,
-      uint256 nextDepositId
-    )
-  {
+  function stakingState() external view returns (StakingState memory) {
     StakingRewards.Layout storage staking = RewardsDistributionStorage
       .layout()
       .staking;
-    return (
-      staking.rewardToken,
-      staking.stakeToken,
-      staking.totalStaked,
-      staking.rewardDuration,
-      staking.rewardEndTime,
-      staking.lastUpdateTime,
-      staking.rewardRate,
-      staking.rewardPerTokenAccumulated,
-      staking.nextDepositId
-    );
+    return
+      StakingState(
+        staking.stakeToken,
+        staking.totalStaked,
+        staking.rewardDuration,
+        staking.rewardEndTime,
+        staking.lastUpdateTime,
+        staking.rewardRate,
+        staking.rewardPerTokenAccumulated,
+        staking.nextDepositId
+      );
   }
 
   /// @inheritdoc IRewardsDistribution
