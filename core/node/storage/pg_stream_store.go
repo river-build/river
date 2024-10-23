@@ -888,7 +888,7 @@ func (s *PostgresStreamStore) promoteBlockTxn(
 	}
 
 	// clean up minipool
-	if _, err = tx.Exec(
+	if _, err := tx.Exec(
 		ctx,
 		sqlForStream(
 			"DELETE FROM {{minipools}} WHERE slot_num > -1 AND stream_id = $1",
@@ -900,7 +900,7 @@ func (s *PostgresStreamStore) promoteBlockTxn(
 	}
 
 	// update -1 record of minipools table to minipoolGeneration + 1
-	_, err = tx.Exec(
+	_, err := tx.Exec(
 		ctx,
 		sqlForStream(
 			"UPDATE {{minipools}} SET generation = $1 WHERE slot_num = -1 AND stream_id = $2",
