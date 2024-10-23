@@ -18,6 +18,8 @@ import { ParsedEvent, ParsedMiniblock, ParsedStreamAndCookie, ParsedStreamRespon
 import { SignerContext, checkDelegateSig } from './signerContext'
 import { keccak256 } from 'ethereum-cryptography/keccak'
 
+const log = dlog('csb:sign')
+
 export interface UnpackEnvelopeOpts {
     // the client recreates the hash from the event bytes in the envelope
     // and compares it to the hash in the envelope.
