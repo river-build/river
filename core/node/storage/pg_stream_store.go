@@ -182,8 +182,8 @@ func (s *PostgresStreamStore) createStreamStorageTx(
 		CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);
 		CREATE TABLE {{minipools}} PARTITION OF minipools FOR VALUES IN ($1);
 		CREATE TABLE {{miniblock_candidates}} PARTITION OF miniblock_candidates for values in ($1);
-		INSERT INTO miniblocks (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
-		INSERT INTO minipools (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
+		INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
+		INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
 		streamId,
 	)
 	_, err := tx.Exec(ctx, sql, streamId, genesisMiniblock)
@@ -217,12 +217,6 @@ func (s *PostgresStreamStore) createStreamArchiveStorageTx(
 	tx pgx.Tx,
 	streamId StreamId,
 ) error {
-	// tableSuffix := createTableSuffix(streamId)
-	// sql := fmt.Sprintf(
-	// 	`INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
-	// 	CREATE TABLE miniblocks_%[1]s PARTITION OF miniblocks FOR VALUES IN ($1);`,
-	// 	tableSuffix,
-	// )
 	sql := sqlForStream(
 		`INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
 		CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);`,
@@ -394,10 +388,7 @@ func (s *PostgresStreamStore) readStreamFromLastSnapshotTx(
 
 	var lastMiniblockIndex int64
 	err = tx.
-		QueryRow(
-			ctx,
-			"SELECT MAX(seq_num) FROM miniblocks WHERE stream_id = $1",
-			streamId).
+		QueryRow(ctx, "SELECT MAX(seq_num) FROM miniblocks WHERE stream_id = $1", streamId).
 		Scan(&lastMiniblockIndex)
 	if err != nil {
 		return nil, WrapRiverError(Err_INTERNAL, err).Message("db inconsistency: failed to get last miniblock index")
