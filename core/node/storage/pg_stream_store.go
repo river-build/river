@@ -135,14 +135,12 @@ func (s *PostgresStreamStore) txRunnerWithUUIDCheck(
 	)
 }
 
-const PgxCode_TableDoesNotExist = "42P01"
-
 // processErrorForMissingPartition looks for the specific error type returned when a table is not found
 // and returns that as a NOT_FOUND river error for the specified stream.
 func processErrorForMissingPartition(err error, streamId StreamId) error {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
-		if pgErr.Code == PgxCode_TableDoesNotExist {
+		if pgErr.Code == pgerrcode.UndefinedTable {
 			return RiverError(Err_NOT_FOUND, "stream not found in local storage", "streamId", streamId)
 		}
 	}
