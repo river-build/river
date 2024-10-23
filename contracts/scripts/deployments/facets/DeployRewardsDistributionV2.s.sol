@@ -12,7 +12,6 @@ import {RewardsDistribution} from "contracts/src/base/registry/facets/distributi
 
 contract DeployRewardsDistributionV2 is Deployer, FacetHelper {
   constructor() {
-    addSelector(RewardsDistribution.setStakeAndRewardTokens.selector);
     addSelector(RewardsDistribution.setRewardNotifier.selector);
     addSelector(RewardsDistribution.stake.selector);
     addSelector(RewardsDistribution.permitAndStake.selector);

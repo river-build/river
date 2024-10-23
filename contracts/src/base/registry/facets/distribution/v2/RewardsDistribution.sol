@@ -60,17 +60,6 @@ contract RewardsDistribution is
     );
   }
 
-  /// @dev Should not be called after contract is in use
-  function setStakeAndRewardTokens(
-    address stakeToken,
-    address rewardToken
-  ) external onlyOwner {
-    RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
-      .layout();
-    ds.staking.stakeToken = stakeToken;
-    ds.staking.rewardToken = rewardToken;
-  }
-
   function setRewardNotifier(
     address notifier,
     bool enabled
