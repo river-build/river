@@ -14,6 +14,7 @@ import {RewardsDistributionStorage} from "contracts/src/base/registry/facets/dis
 
 // contracts
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
+import {EIP712Utils} from "contracts/test/utils/EIP712Utils.sol";
 import {EIP712Facet} from "contracts/src/diamond/utils/cryptography/signature/EIP712Facet.sol";
 import {NodeOperatorFacet} from "contracts/src/base/registry/facets/operator/NodeOperatorFacet.sol";
 import {River} from "contracts/src/tokens/river/base/River.sol";
@@ -21,13 +22,13 @@ import {MainnetDelegation} from "contracts/src/tokens/river/base/delegation/Main
 import {SpaceDelegationFacet} from "contracts/src/base/registry/facets/delegation/SpaceDelegationFacet.sol";
 import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistribution.sol";
 
-contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
+contract RewardsDistributionV2Test is
+  BaseSetup,
+  EIP712Utils,
+  IRewardsDistributionBase
+{
   using FixedPointMathLib for uint256;
 
-  bytes32 private constant PERMIT_TYPEHASH =
-    keccak256(
-      "Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"
-    );
   bytes32 internal constant STAKE_TYPEHASH =
     keccak256(
       "Stake(uint96 amount,address delegatee,address beneficiary,address owner,uint256 nonce,uint256 deadline)"
@@ -42,7 +43,6 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
   address internal OPERATOR = makeAddr("OPERATOR");
   address internal NOTIFIER = makeAddr("NOTIFIER");
   uint256 internal rewardDuration;
-  bytes32 internal DOMAIN_SEPARATOR;
 
   function setUp() public override {
     super.setUp();
@@ -62,12 +62,11 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
     vm.stopPrank();
 
     (, , , rewardDuration, , , , , ) = rewardsDistributionFacet.stakingState();
-    DOMAIN_SEPARATOR = eip712Facet.DOMAIN_SEPARATOR();
 
     vm.label(baseRegistry, "RewardsDistribution");
   }
 
-  function test_storageSlot() public {
+  function test_storageSlot() public pure {
     bytes32 slot = keccak256(
       abi.encode(
         uint256(keccak256("facets.registry.rewards.distribution.v2.storage")) -
@@ -192,6 +191,7 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
 
     (uint8 v, bytes32 r, bytes32 s) = signPermit(
       privateKey,
+      riverToken,
       user,
       address(rewardsDistributionFacet),
       amount,
@@ -257,18 +257,26 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
 
     bridgeTokensForUser(address(this), amount);
 
-    bytes32 structHash = keccak256(
-      abi.encode(
-        STAKE_TYPEHASH,
-        amount,
-        operator,
-        beneficiary,
-        owner,
-        eip712Facet.nonces(owner),
-        deadline
-      )
-    );
-    bytes memory signature = signIntent(privateKey, structHash);
+    bytes memory signature;
+    {
+      bytes32 structHash = keccak256(
+        abi.encode(
+          STAKE_TYPEHASH,
+          amount,
+          operator,
+          beneficiary,
+          owner,
+          eip712Facet.nonces(owner),
+          deadline
+        )
+      );
+      (uint8 v, bytes32 r, bytes32 s) = signIntent(
+        privateKey,
+        address(eip712Facet),
+        structHash
+      );
+      signature = abi.encodePacked(r, s, v);
+    }
 
     river.approve(address(rewardsDistributionFacet), amount);
     depositId = rewardsDistributionFacet.stakeOnBehalf(
@@ -903,38 +911,5 @@ contract RewardsDistributionV2Test is BaseSetup, IRewardsDistributionBase {
       reward,
       "expected reward"
     );
-  }
-
-  function signPermit(
-    uint256 privateKey,
-    address owner,
-    address spender,
-    uint256 value,
-    uint256 deadline
-  ) internal view returns (uint8 v, bytes32 r, bytes32 s) {
-    bytes32 domainSeparator = river.DOMAIN_SEPARATOR();
-    uint256 nonces = river.nonces(owner);
-
-    bytes32 structHash = keccak256(
-      abi.encode(PERMIT_TYPEHASH, owner, spender, value, nonces, deadline)
-    );
-
-    bytes32 typeDataHash = keccak256(
-      abi.encodePacked("\x19\x01", domainSeparator, structHash)
-    );
-
-    (v, r, s) = vm.sign(privateKey, typeDataHash);
-  }
-
-  function signIntent(
-    uint256 privateKey,
-    bytes32 structHash
-  ) internal view returns (bytes memory signature) {
-    bytes32 typeDataHash = MessageHashUtils.toTypedDataHash(
-      DOMAIN_SEPARATOR,
-      structHash
-    );
-    (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, typeDataHash);
-    signature = abi.encodePacked(r, s, v);
   }
 }
