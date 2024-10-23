@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -134,6 +135,22 @@ func (s *PostgresStreamStore) txRunnerWithUUIDCheck(
 	)
 }
 
+const PgxCode_TableDoesNotExist = "42P01"
+
+// processErrorForMissingPartition looks for the specific error type returned when a table is not found
+// and returns that as a NOT_FOUND river error for the specified stream.
+func processErrorForMissingPartition(err error, streamId StreamId) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		if pgErr.Code == PgxCode_TableDoesNotExist {
+			return RiverError(Err_NOT_FOUND, "stream not found in local storage", "streamId", streamId)
+		}
+	}
+	return err
+}
+
+// sqlForStream escapes references to partitioned tables to the specific partition where the stream
+// is assigned whenever they are surrounded by double curly brackets.
 func sqlForStream(sql string, streamId StreamId) string {
 	suffix := createTableSuffix(streamId)
 
@@ -263,13 +280,16 @@ func (s *PostgresStreamStore) getMaxArchivedMiniblockNumberTx(
 ) error {
 	err := tx.QueryRow(
 		ctx,
-		// Do not query the specific partition as it may not exist
-		"SELECT COALESCE(MAX(seq_num), -1) FROM miniblocks WHERE stream_id = $1",
+		sqlForStream(
+			"SELECT COALESCE(MAX(seq_num), -1) FROM {{miniblocks}} WHERE stream_id = $1",
+			streamId,
+		),
 		streamId,
 	).Scan(maxArchivedMiniblockNumber)
 	if err != nil {
-		return err
+		return processErrorForMissingPartition(err, streamId)
 	}
+
 	if *maxArchivedMiniblockNumber == -1 {
 		var exists bool
 		err = tx.QueryRow(
@@ -644,7 +664,10 @@ func (s *PostgresStreamStore) readMiniblocksTx(
 ) ([][]byte, error) {
 	miniblocksRow, err := tx.Query(
 		ctx,
-		// Do not escape this query as the specific partition may not exist
+		// NOTE: this method returns a nil result if stream does not exist, not an error.
+		// For this reason we do not target the partition in this query, because a missing
+		// partition will put the transaction into a bad state and result in an unexpected
+		// rollback.
 		"SELECT blockdata, seq_num FROM miniblocks WHERE seq_num >= $1 AND seq_num < $2 AND stream_id = $3 ORDER BY seq_num",
 		fromInclusive,
 		toExclusive,
@@ -717,13 +740,15 @@ func (s *PostgresStreamStore) writeBlockProposalTxn(
 
 	err := tx.QueryRow(
 		ctx,
-		// Do not escape the following sql as the specific miniblocks partition may not exist
-		"SELECT MAX(seq_num) as latest_blocks_number FROM miniblocks WHERE stream_id = $1",
+		sqlForStream(
+			"SELECT MAX(seq_num) as latest_blocks_number FROM {{miniblocks}} WHERE stream_id = $1",
+			streamId,
+		),
 		streamId,
 	).
 		Scan(&seqNum)
 	if err != nil {
-		return err
+		return processErrorForMissingPartition(err, streamId)
 	}
 	if seqNum == nil {
 		return RiverError(Err_NOT_FOUND, "No blocks for the stream found in block storage")
@@ -846,7 +871,7 @@ func (s *PostgresStreamStore) promoteBlockTxn(
 
 	err := tx.QueryRow(
 		ctx,
-		// Do not escape this sql as the specific miniblocks partition may not exist
+		// TODO: why can we not target the partition here?
 		"SELECT MAX(seq_num) as latest_blocks_number FROM miniblocks WHERE stream_id = $1",
 		streamId,
 	).Scan(&seqNum)
@@ -1407,38 +1432,32 @@ func (s *PostgresStreamStore) streamLastMiniBlockTx(
 	tx pgx.Tx,
 	streamID StreamId,
 ) (*MiniblockData, error) {
-	miniblockNumsRow, err := tx.Query(
-		ctx,
-		// Do not escape this sql as the miniblocks partition may not exist
-		"SELECT seq_num, blockdata FROM miniblocks WHERE stream_id = $1 ORDER BY seq_num DESC LIMIT 1",
-		streamID,
+	var (
+		maxSeqNum int64
+		blockData []byte
 	)
+	err := tx.QueryRow(
+		ctx,
+		sqlForStream(
+			"SELECT seq_num, blockdata FROM {{miniblocks}} WHERE stream_id = $1 ORDER BY seq_num DESC LIMIT 1",
+			streamID,
+		),
+		streamID,
+	).Scan(&maxSeqNum, &blockData)
 	if err != nil {
-		return nil, err
-	}
-
-	defer miniblockNumsRow.Close()
-
-	if miniblockNumsRow.Next() {
-		var (
-			maxSeqNum int64
-			blockData []byte
-		)
-
-		if err = miniblockNumsRow.Scan(&maxSeqNum, &blockData); err != nil {
-			return nil, err
+		if err == pgx.ErrNoRows {
+			return nil, RiverError(Err_NOT_FOUND, "latest miniblock in DB not found for stream").
+				Tags("stream", streamID).
+				Func("lastMiniBlockForStream")
 		}
-
-		return &MiniblockData{
-			StreamID:      streamID,
-			Number:        maxSeqNum,
-			MiniBlockInfo: blockData,
-		}, nil
+		return nil, processErrorForMissingPartition(err, streamID)
 	}
 
-	return nil, RiverError(Err_NOT_FOUND, "latest miniblock in DB not found for stream").
-		Tags("stream", streamID).
-		Func("lastMiniBlockForStream")
+	return &MiniblockData{
+		StreamID:      streamID,
+		Number:        maxSeqNum,
+		MiniBlockInfo: blockData,
+	}, nil
 }
 
 func (s *PostgresStreamStore) ImportMiniblocks(ctx context.Context, miniBlocks []*MiniblockData) error {
