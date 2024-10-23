@@ -135,23 +135,6 @@ func (s *PostgresStreamStore) txRunnerWithUUIDCheck(
 	)
 }
 
-func (s *PostgresStreamStore) CreateStreamStorage(
-	ctx context.Context,
-	streamId StreamId,
-	genesisMiniblock []byte,
-) error {
-	return s.txRunnerWithUUIDCheck(
-		ctx,
-		"CreateStreamStorage",
-		pgx.ReadWrite,
-		func(ctx context.Context, tx pgx.Tx) error {
-			return s.createStreamStorageTx(ctx, tx, streamId, genesisMiniblock)
-		},
-		nil,
-		"streamId", streamId,
-	)
-}
-
 func sqlForStream(template string, streamId StreamId) string {
 	suffix := createTableSuffix(streamId)
 
@@ -171,6 +154,23 @@ func sqlForStream(template string, streamId StreamId) string {
 	return result
 }
 
+func (s *PostgresStreamStore) CreateStreamStorage(
+	ctx context.Context,
+	streamId StreamId,
+	genesisMiniblock []byte,
+) error {
+	return s.txRunnerWithUUIDCheck(
+		ctx,
+		"CreateStreamStorage",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) error {
+			return s.createStreamStorageTx(ctx, tx, streamId, genesisMiniblock)
+		},
+		nil,
+		"streamId", streamId,
+	)
+}
+
 func (s *PostgresStreamStore) createStreamStorageTx(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -182,8 +182,8 @@ func (s *PostgresStreamStore) createStreamStorageTx(
 		CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);
 		CREATE TABLE {{minipools}} PARTITION OF minipools FOR VALUES IN ($1);
 		CREATE TABLE {{miniblock_candidates}} PARTITION OF miniblock_candidates for values in ($1);
-		INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
-		INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
+		INSERT INTO miniblocks (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
+		INSERT INTO minipools (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
 		streamId,
 	)
 	_, err := tx.Exec(ctx, sql, streamId, genesisMiniblock)
@@ -217,6 +217,12 @@ func (s *PostgresStreamStore) createStreamArchiveStorageTx(
 	tx pgx.Tx,
 	streamId StreamId,
 ) error {
+	// tableSuffix := createTableSuffix(streamId)
+	// sql := fmt.Sprintf(
+	// 	`INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
+	// 	CREATE TABLE miniblocks_%[1]s PARTITION OF miniblocks FOR VALUES IN ($1);`,
+	// 	tableSuffix,
+	// )
 	sql := sqlForStream(
 		`INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
 		CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);`,
@@ -261,6 +267,7 @@ func (s *PostgresStreamStore) getMaxArchivedMiniblockNumberTx(
 ) error {
 	err := tx.QueryRow(
 		ctx,
+		// Do not query the specific partition as it may not exist
 		"SELECT COALESCE(MAX(seq_num), -1) FROM miniblocks WHERE stream_id = $1",
 		streamId,
 	).Scan(maxArchivedMiniblockNumber)
@@ -326,15 +333,13 @@ func (s *PostgresStreamStore) writeArchiveMiniblocksTx(
 		)
 	}
 
-	sql := sqlForStream(
-		"INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, $2, $3)",
-		streamId,
-	)
-
 	for i, miniblock := range miniblocks {
 		_, err := tx.Exec(
 			ctx,
-			sql,
+			sqlForStream(
+				"INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, $2, $3)",
+				streamId,
+			),
 			streamId,
 			startMiniblockNum+int64(i),
 			miniblock)
@@ -391,10 +396,8 @@ func (s *PostgresStreamStore) readStreamFromLastSnapshotTx(
 	err = tx.
 		QueryRow(
 			ctx,
-			// Do not escape the partition here because it may not exist
 			"SELECT MAX(seq_num) FROM miniblocks WHERE stream_id = $1",
-			streamId,
-		).
+			streamId).
 		Scan(&lastMiniblockIndex)
 	if err != nil {
 		return nil, WrapRiverError(Err_INTERNAL, err).Message("db inconsistency: failed to get last miniblock index")
@@ -642,10 +645,8 @@ func (s *PostgresStreamStore) readMiniblocksTx(
 ) ([][]byte, error) {
 	miniblocksRow, err := tx.Query(
 		ctx,
-		sqlForStream(
-			"SELECT blockdata, seq_num FROM {{miniblocks}} WHERE seq_num >= $1 AND seq_num < $2 AND stream_id = $3 ORDER BY seq_num",
-			streamId,
-		),
+		// Do not escape this query as the specific partition may not exist
+		"SELECT blockdata, seq_num FROM miniblocks WHERE seq_num >= $1 AND seq_num < $2 AND stream_id = $3 ORDER BY seq_num",
 		fromInclusive,
 		toExclusive,
 		streamId,
@@ -717,10 +718,8 @@ func (s *PostgresStreamStore) writeBlockProposalTxn(
 
 	err := tx.QueryRow(
 		ctx,
-		sqlForStream(
-			"SELECT MAX(seq_num) as latest_blocks_number FROM {{miniblocks}} WHERE stream_id = $1",
-			streamId,
-		),
+		// Do not escape the following sql as the specific miniblocks partition may not exist
+		"SELECT MAX(seq_num) as latest_blocks_number FROM miniblocks WHERE stream_id = $1",
 		streamId,
 	).
 		Scan(&seqNum)
@@ -845,14 +844,13 @@ func (s *PostgresStreamStore) promoteBlockTxn(
 	envelopes [][]byte,
 ) error {
 	var seqNum *int64
+
 	err := tx.QueryRow(
 		ctx,
-		sqlForStream(
-			"SELECT MAX(seq_num) as latest_blocks_number FROM {{miniblocks}} WHERE stream_id = $1",
-			streamId,
-		),
-		streamId).
-		Scan(&seqNum)
+		// Do not escape this sql as the specific miniblocks partition may not exist
+		"SELECT MAX(seq_num) as latest_blocks_number FROM miniblocks WHERE stream_id = $1",
+		streamId,
+	).Scan(&seqNum)
 	if err != nil {
 		return err
 	}
@@ -1412,10 +1410,8 @@ func (s *PostgresStreamStore) streamLastMiniBlockTx(
 ) (*MiniblockData, error) {
 	miniblockNumsRow, err := tx.Query(
 		ctx,
-		sqlForStream(
-			"SELECT seq_num, blockdata FROM {{miniblocks}} WHERE stream_id = $1 ORDER BY seq_num DESC LIMIT 1",
-			streamID,
-		),
+		// Do not escape this sql as the miniblocks partition may not exist
+		"SELECT seq_num, blockdata FROM miniblocks WHERE stream_id = $1 ORDER BY seq_num DESC LIMIT 1",
 		streamID,
 	)
 	if err != nil {
@@ -1486,12 +1482,8 @@ func (s *PostgresStreamStore) importMiniblocksTx(
 
 	err := tx.QueryRow(
 		ctx,
-		sqlForStream(
-			"SELECT MAX(seq_num) as latest_blocks_number FROM {{miniblocks}} WHERE stream_id = $1",
-			streamID,
-		),
-		streamID,
-	).
+		// Do not escape as specific miniblocks partition may not exist
+		"SELECT MAX(seq_num) as latest_blocks_number FROM miniblocks WHERE stream_id = $1", streamID).
 		Scan(&seqNum)
 	if err != nil {
 		return err
@@ -1503,14 +1495,9 @@ func (s *PostgresStreamStore) importMiniblocksTx(
 	}
 
 	// clean up minipool
-	if _, err = tx.Exec(
-		ctx,
-		sqlForStream(
-			"DELETE FROM {{minipools}} WHERE slot_num > -1 AND stream_id = $1",
-			streamID,
-		),
-		streamID,
-	); err != nil {
+	// Do not escape as specific minipools partition may not exist
+	_, err = tx.Exec(ctx, "DELETE FROM minipools WHERE slot_num > -1 AND stream_id = $1", streamID)
+	if err != nil {
 		return err
 	}
 
@@ -1545,6 +1532,7 @@ func (s *PostgresStreamStore) importMiniblocksTx(
 				ctx,
 				sqlForStream(
 					"INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) values ($1, $2, $3)",
+					//"INSERT INTO {{miniblocks}} SELECT stream_id, seq_num, blockdata FROM {{miniblock_candidates}} WHERE stream_id = $1 AND seq_num = $2 AND {{miniblock_candidates}}.block_hash = $3",
 					streamID,
 				),
 				streamID,
@@ -1561,7 +1549,10 @@ func (s *PostgresStreamStore) importMiniblocksTx(
 
 	_, err = tx.Exec(
 		ctx,
-		"UPDATE minipools SET generation = $1 WHERE slot_num = -1 AND stream_id = $2",
+		sqlForStream(
+			"UPDATE {{minipools}} SET generation = $1 WHERE slot_num = -1 AND stream_id = $2",
+			streamID,
+		),
 		miniBlocks[len(miniBlocks)-1].Number+1,
 		streamID,
 	)
