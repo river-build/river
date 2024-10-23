@@ -27,12 +27,14 @@ library StakingRewards {
   /// @param owner The address of the depositor
   /// @param commissionEarningPower The amount of stakeToken assigned to the commission
   /// @param delegatee The address of the delegatee
+  /// @param pendingWithdrawal The amount of stakeToken that is pending withdrawal
   /// @param beneficiary The address of the beneficiary
   struct Deposit {
     uint96 amount;
     address owner;
     uint96 commissionEarningPower;
     address delegatee;
+    uint96 pendingWithdrawal;
     address beneficiary;
   }
 
@@ -237,7 +239,7 @@ library StakingRewards {
 
     ds.totalStaked += amount;
     unchecked {
-      // because totalStaked >= stakedByDepositor[depositor]
+      // because totalStaked >= stakedByDepositor[owner]
       // if totalStaked doesn't overflow, they won't
       ds.stakedByDepositor[owner] += amount;
     }
@@ -252,59 +254,6 @@ library StakingRewards {
 
     address proxy = ds.proxyById[depositId];
     ds.stakeToken.safeTransferFrom(owner, proxy, amount);
-  }
-
-  function _increaseEarningPower(
-    Layout storage ds,
-    Deposit storage deposit,
-    Treasure storage beneficiaryTreasure,
-    uint96 amount,
-    address delegatee,
-    uint256 commissionRate
-  ) private {
-    unchecked {
-      if (commissionRate == 0) {
-        beneficiaryTreasure.earningPower += amount;
-      } else {
-        uint96 commissionEarningPower = uint96(
-          (uint256(amount) * commissionRate) / MAX_COMMISSION_RATE
-        );
-        deposit.commissionEarningPower += commissionEarningPower;
-        beneficiaryTreasure.earningPower += amount - commissionEarningPower;
-
-        Treasure storage delegateeTreasure = ds.treasureByBeneficiary[
-          delegatee
-        ];
-        updateReward(ds, delegateeTreasure);
-        delegateeTreasure.earningPower += commissionEarningPower;
-      }
-    }
-  }
-
-  function _decreaseEarningPower(
-    Layout storage ds,
-    Deposit storage deposit,
-    Treasure storage beneficiaryTreasure
-  ) private {
-    unchecked {
-      (uint96 amount, uint96 commissionEarningPower, address delegatee) = (
-        deposit.amount,
-        deposit.commissionEarningPower,
-        deposit.delegatee
-      );
-      if (commissionEarningPower == 0) {
-        beneficiaryTreasure.earningPower -= amount;
-      } else {
-        deposit.commissionEarningPower = 0;
-        beneficiaryTreasure.earningPower -= amount - commissionEarningPower;
-
-        Treasure storage delegateeTreasure = ds.treasureByBeneficiary[
-          delegatee
-        ];
-        updateReward(ds, delegateeTreasure);
-        delegateeTreasure.earningPower -= commissionEarningPower;
-      }
-    }
   }
 
   function redelegate(
@@ -376,6 +325,7 @@ library StakingRewards {
     }
   }
 
+  // TODO: state changes after initiateWithdraw
   function initiateWithdraw(
     Layout storage ds,
     Deposit storage deposit,
@@ -388,11 +338,25 @@ library StakingRewards {
     ];
     updateReward(ds, beneficiaryTreasure);
 
+    // cache storage reads
+    (uint96 amount, address owner) = (deposit.amount, deposit.owner);
+
+    unchecked {
+      // totalStaked >= deposit.amount
+      ds.totalStaked -= amount;
+      // stakedByDepositor[owner] >= deposit.amount
+      ds.stakedByDepositor[owner] -= amount;
+    }
     _decreaseEarningPower(ds, deposit, beneficiaryTreasure);
+
+    (deposit.amount, deposit.delegatee, deposit.pendingWithdrawal) = (
+      0,
+      address(0),
+      amount
+    );
 
     address proxy = ds.proxyById[depositId];
     DelegationProxy(proxy).redelegate(address(0));
-    deposit.delegatee = address(0);
   }
 
   function withdraw(
@@ -400,21 +364,12 @@ library StakingRewards {
     Deposit storage deposit,
     uint256 depositId
   ) internal {
-    updateGlobalReward(ds);
-
-    // cache storage reads
-    (uint96 amount, address owner) = (deposit.amount, deposit.owner);
-
-    deposit.amount = 0;
-    unchecked {
-      // totalStaked >= deposit.amount
-      ds.totalStaked -= amount;
-      // stakedByDepositor[owner] >= deposit.amount
-      ds.stakedByDepositor[owner] -= amount;
-    }
-
     address proxy = ds.proxyById[depositId];
-    ds.stakeToken.safeTransferFrom(proxy, owner, amount);
+    ds.stakeToken.safeTransferFrom(
+      proxy,
+      deposit.owner,
+      deposit.pendingWithdrawal
+    );
   }
 
   function claimReward(
@@ -477,6 +432,59 @@ library StakingRewards {
       IERC20(ds.rewardToken).balanceOf(address(this))
     ) {
       CustomRevert.revertWith(StakingRewards__InsufficientReward.selector);
+    }
+  }
+
+  function _increaseEarningPower(
+    Layout storage ds,
+    Deposit storage deposit,
+    Treasure storage beneficiaryTreasure,
+    uint96 amount,
+    address delegatee,
+    uint256 commissionRate
+  ) private {
+    unchecked {
+      if (commissionRate == 0) {
+        beneficiaryTreasure.earningPower += amount;
+      } else {
+        uint96 commissionEarningPower = uint96(
+          (uint256(amount) * commissionRate) / MAX_COMMISSION_RATE
+        );
+        deposit.commissionEarningPower += commissionEarningPower;
+        beneficiaryTreasure.earningPower += amount - commissionEarningPower;
+
+        Treasure storage delegateeTreasure = ds.treasureByBeneficiary[
+          delegatee
+        ];
+        updateReward(ds, delegateeTreasure);
+        delegateeTreasure.earningPower += commissionEarningPower;
+      }
+    }
+  }
+
+  function _decreaseEarningPower(
+    Layout storage ds,
+    Deposit storage deposit,
+    Treasure storage beneficiaryTreasure
+  ) private {
+    unchecked {
+      (uint96 amount, uint96 commissionEarningPower, address delegatee) = (
+        deposit.amount,
+        deposit.commissionEarningPower,
+        deposit.delegatee
+      );
+      if (commissionEarningPower == 0) {
+        beneficiaryTreasure.earningPower -= amount;
+      } else {
+        deposit.commissionEarningPower = 0;
+        beneficiaryTreasure.earningPower -= amount - commissionEarningPower;
+
+        Treasure storage delegateeTreasure = ds.treasureByBeneficiary[
+          delegatee
+        ];
+        updateReward(ds, delegateeTreasure);
+        delegateeTreasure.earningPower -= commissionEarningPower;
+      }
     }
   }
 }
