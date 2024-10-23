@@ -56,10 +56,8 @@ contract RewardsDistributionV2Test is
 
     messenger.setXDomainMessageSender(mainnetProxyDelegation);
 
-    vm.startPrank(deployer);
-    rewardsDistributionFacet.setStakeAndRewardTokens(riverToken, riverToken);
+    vm.prank(deployer);
     rewardsDistributionFacet.setRewardNotifier(NOTIFIER, true);
-    vm.stopPrank();
 
     (, , , rewardDuration, , , , , ) = rewardsDistributionFacet.stakingState();
 
