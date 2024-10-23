@@ -3,6 +3,7 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {IDropFacetBase} from "./IDropFacet.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // libraries
 import {DropStorage} from "./DropStorage.sol";
@@ -172,6 +173,16 @@ abstract contract DropFacetBase is IDropFacetBase {
     uint256 depositId
   ) internal {
     ds.supplyClaimedByWallet[conditionId][account].depositId = depositId;
+  }
+
+  function _approveClaimToken(
+    DropStorage.Layout storage ds,
+    uint256 conditionId,
+    uint256 amount
+  ) internal {
+    ClaimCondition storage condition = ds.conditionById[conditionId];
+
+    IERC20(condition.currency).approve(ds.rewardsDistribution, amount);
   }
 
   // =============================================================

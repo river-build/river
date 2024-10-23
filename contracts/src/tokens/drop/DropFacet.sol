@@ -19,13 +19,15 @@ import {OwnableBase} from "contracts/src/diamond/facets/ownable/OwnableBase.sol"
 contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
   using DropStorage for DropStorage.Layout;
 
-  function __DropFacet_init(address stakingContract) external onlyInitializing {
+  function __DropFacet_init(
+    address rewardsDistribution
+  ) external onlyInitializing {
     _addInterface(type(IDropFacet).interfaceId);
-    __DropFacet_init_unchained(stakingContract);
+    __DropFacet_init_unchained(rewardsDistribution);
   }
 
-  function __DropFacet_init_unchained(address stakingContract) internal {
-    DropStorage.layout().stakingContract = stakingContract;
+  function __DropFacet_init_unchained(address rewardsDistribution) internal {
+    DropStorage.layout().rewardsDistribution = rewardsDistribution;
   }
 
   ///@inheritdoc IDropFacet
@@ -81,15 +83,17 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
 
     _verifyClaim(ds, claim);
     _updateClaim(ds, claim.conditionId, claim.account, claim.quantity);
+    _approveClaimToken(ds, claim.conditionId, claim.quantity);
 
-    uint256 depositId = IRewardsDistribution(ds.stakingContract).stakeOnBehalf(
-      SafeCastLib.toUint96(claim.quantity),
-      delegatee,
-      claim.account,
-      claim.account,
-      deadline,
-      signature
-    );
+    uint256 depositId = IRewardsDistribution(ds.rewardsDistribution)
+      .stakeOnBehalf(
+        SafeCastLib.toUint96(claim.quantity),
+        delegatee,
+        claim.account,
+        claim.account,
+        deadline,
+        signature
+      );
 
     _updateDepositId(ds, claim.conditionId, claim.account, depositId);
 
@@ -97,7 +101,7 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
       claim.conditionId,
       msg.sender,
       claim.account,
-      depositId
+      claim.quantity
     );
 
     return claim.quantity;

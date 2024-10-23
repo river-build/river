@@ -7,29 +7,49 @@ import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 import {DeployDiamond} from "contracts/scripts/deployments/utils/DeployDiamond.s.sol";
 import {DeployMockERC20} from "contracts/scripts/deployments/utils/DeployMockERC20.s.sol";
 import {DeployDropFacet} from "contracts/scripts/deployments/facets/DeployDropFacet.s.sol";
+import {DeployRewardsDistributionV2} from "contracts/scripts/deployments/facets/DeployRewardsDistributionV2.s.sol";
 
 //interfaces
 import {IDiamond} from "contracts/src/diamond/Diamond.sol";
 import {IDropFacetBase} from "contracts/src/tokens/drop/IDropFacet.sol";
 import {IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
+
 //libraries
 import {MerkleTree} from "contracts/test/utils/MerkleTree.sol";
 import {DropFacet} from "contracts/src/tokens/drop/DropFacet.sol";
-import {MockERC20} from "contracts/test/mocks/MockERC20.sol";
+import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistribution.sol";
 import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 import {DropStorage} from "contracts/src/tokens/drop/DropStorage.sol";
+import {EIP712Utils} from "contracts/test/utils/EIP712Utils.sol";
+import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
+import {River} from "contracts/src/tokens/river/base/River.sol";
+import {NodeOperatorFacet} from "contracts/src/base/registry/facets/operator/NodeOperatorFacet.sol";
+import {EIP712Facet} from "contracts/src/diamond/utils/cryptography/signature/EIP712Facet.sol";
 
-contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
+contract DropFacetTest is BaseSetup, EIP712Utils, IDropFacetBase, IOwnableBase {
+  bytes32 internal constant STAKE_TYPEHASH =
+    keccak256(
+      "Stake(uint96 amount,address delegatee,address beneficiary,address owner,uint256 nonce,uint256 deadline)"
+    );
+  struct ClaimData {
+    address claimer;
+    uint16 amount;
+  }
+
   uint256 internal constant TOTAL_TOKEN_AMOUNT = 1000;
 
-  DeployDiamond internal diamondHelper = new DeployDiamond();
+  DeployDiamond internal rewardsDistributionDiamondHelper = new DeployDiamond();
+  DeployDiamond internal aidropDiamondHelper = new DeployDiamond();
   DeployMockERC20 internal tokenHelper = new DeployMockERC20();
   DeployDropFacet internal dropHelper = new DeployDropFacet();
+  DeployRewardsDistributionV2 internal rewardsDistributionHelper =
+    new DeployRewardsDistributionV2();
   MerkleTree internal merkleTree = new MerkleTree();
 
-  MockERC20 internal token;
+  River internal river;
   DropFacet internal dropFacet;
-  address internal stakingAddress;
+  RewardsDistribution internal rewardsDistribution;
+  NodeOperatorFacet internal operatorFacet;
 
   mapping(address => uint256) internal treeIndex;
   address[] internal accounts;
@@ -38,45 +58,50 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
   bytes32[][] internal tree;
   bytes32 internal root;
 
-  address internal bob = makeAddr("bob");
-  address internal alice = makeAddr("alice");
-  address internal deployer;
+  address internal bob;
+  uint256 internal bobKey;
+  address internal alice;
+  uint256 internal aliceKey;
 
-  function setUp() public {
+  function setUp() public override {
+    super.setUp();
+
+    (bob, bobKey) = makeAddrAndKey("bob");
+    (alice, aliceKey) = makeAddrAndKey("alice");
+
     // Create the Merkle tree with accounts and amounts
     _createTree();
 
-    // Get the deployer address
-    deployer = getDeployer();
-
-    // Deploy the staking contract
-    stakingAddress = _randomAddress();
-
-    // Deploy the mock ERC20 token
-    address tokenAddress = tokenHelper.deploy(deployer);
-
-    // Deploy the Drop facet
+    // Add the Drop facet to its own diamond
     address dropAddress = dropHelper.deploy(deployer);
-
-    // Add the Drop facet to the diamond
-    diamondHelper.addFacet(
+    aidropDiamondHelper.addFacet(
       dropHelper.makeCut(dropAddress, IDiamond.FacetCutAction.Add),
       dropAddress,
-      dropHelper.makeInitData(stakingAddress)
+      dropHelper.makeInitData(baseRegistry)
     );
 
     // Deploy the diamond contract with the MerkleAirdrop facet
-    address diamond = diamondHelper.deploy(deployer);
+    address diamond = aidropDiamondHelper.deploy(deployer);
 
     // Initialize the Drop facet
     dropFacet = DropFacet(diamond);
 
-    // Initialize the token
-    token = MockERC20(tokenAddress);
+    // Initialize the River river
+    river = River(riverToken);
+
+    // Operator
+    operatorFacet = NodeOperatorFacet(baseRegistry);
+
+    // EIP712
+    eip712Facet = EIP712Facet(baseRegistry);
+
+    // RewardsDistribution
+    rewardsDistribution = RewardsDistribution(baseRegistry);
   }
 
   modifier givenTokensMinted(uint256 amount) {
-    token.mint(address(dropFacet), amount);
+    vm.prank(bridge);
+    river.mint(address(dropFacet), amount);
     _;
   }
 
@@ -173,13 +198,8 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
     assertEq(condition.maxClaimableSupply, TOTAL_TOKEN_AMOUNT);
     assertEq(condition.supplyClaimed, 0);
     assertEq(condition.merkleRoot, root);
-    assertEq(condition.currency, address(token));
+    assertEq(condition.currency, address(river));
     assertEq(condition.penaltyBps, penaltyBps);
-  }
-
-  struct ClaimData {
-    address claimer;
-    uint16 amount;
   }
 
   // claimWithPenalty
@@ -191,13 +211,15 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
     uint256[] memory claimAmounts = new uint256[](claimData.length);
 
     for (uint256 i = 0; i < claimData.length; i++) {
+      vm.assume(claimData[i].claimer != address(0));
       claimers[i] = claimData[i].claimer;
       claimAmounts[i] = claimData[i].amount == 0 ? 1 : claimData[i].amount;
       claimData[i].amount = uint16(claimAmounts[i]);
       totalAmount += claimAmounts[i];
     }
 
-    token.mint(address(dropFacet), totalAmount);
+    vm.prank(bridge);
+    river.mint(address(dropFacet), totalAmount);
 
     (root, tree) = merkleTree.constructTree(claimers, claimAmounts);
 
@@ -208,7 +230,7 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
       maxClaimableSupply: totalAmount,
       supplyClaimed: 0,
       merkleRoot: root,
-      currency: address(token),
+      currency: address(river),
       penaltyBps: 5000
     });
 
@@ -265,7 +287,7 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
     givenWalletHasClaimedWithPenalty(bob, bob)
   {
     uint256 expectedAmount = _calculateExpectedAmount(bob);
-    assertEq(token.balanceOf(bob), expectedAmount);
+    assertEq(river.balanceOf(bob), expectedAmount);
   }
 
   function test_revertWhen_merkleRootNotSet() external {
@@ -451,6 +473,56 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
         quantity: amounts[treeIndex[bob]],
         proof: new bytes32[](0)
       })
+    );
+  }
+
+  // claimAndStake
+  function test_claimAndStake(
+    address caller,
+    address operator,
+    uint256 commissionRate
+  )
+    external
+    givenTokensMinted(TOTAL_TOKEN_AMOUNT)
+    givenClaimConditionSet(5000)
+  {
+    vm.assume(caller != address(0));
+    vm.assume(operator != address(0));
+    vm.assume(commissionRate > 0);
+    commissionRate = bound(commissionRate, 0, 10000);
+
+    vm.startPrank(operator);
+    operatorFacet.registerOperator(operator);
+    operatorFacet.setCommissionRate(commissionRate);
+    vm.stopPrank();
+
+    uint256 conditionId = dropFacet.getActiveClaimConditionId();
+    uint256 amount = amounts[treeIndex[bob]];
+
+    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[bob]);
+
+    uint256 deadline = block.timestamp + 100;
+    bytes memory signature = _signStake(operator, bob, deadline);
+
+    vm.prank(caller);
+    vm.expectEmit(address(dropFacet));
+    emit DropFacet_Claimed_And_Staked(conditionId, caller, bob, amount);
+    dropFacet.claimAndStake(
+      Claim({
+        conditionId: conditionId,
+        account: bob,
+        quantity: amounts[treeIndex[bob]],
+        proof: proof
+      }),
+      operator,
+      deadline,
+      signature
+    );
+
+    assertEq(
+      rewardsDistribution.stakedByDepositor(bob),
+      amount,
+      "stakedByDepositor"
     );
   }
 
@@ -696,7 +768,7 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
         maxClaimableSupply: _maxClaimableSupply,
         supplyClaimed: 0,
         merkleRoot: _merkleRoot,
-        currency: address(token),
+        currency: address(river),
         penaltyBps: 0
       });
   }
@@ -726,7 +798,27 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
     (root, tree) = merkleTree.constructTree(accounts, amounts);
   }
 
-  function _mintTokens(uint256 amount) internal {
-    token.mint(address(dropFacet), amount);
+  function _signStake(
+    address operator,
+    address beneficiary,
+    uint256 deadline
+  ) internal view returns (bytes memory) {
+    bytes32 structHash = keccak256(
+      abi.encode(
+        STAKE_TYPEHASH,
+        amounts[treeIndex[beneficiary]],
+        operator,
+        beneficiary,
+        beneficiary,
+        eip712Facet.nonces(beneficiary),
+        deadline
+      )
+    );
+    (uint8 v, bytes32 r, bytes32 s) = signIntent(
+      bobKey,
+      address(eip712Facet),
+      structHash
+    );
+    return abi.encodePacked(r, s, v);
   }
 }

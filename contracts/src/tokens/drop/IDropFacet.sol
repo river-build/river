@@ -12,6 +12,7 @@ interface IDropFacetBase {
   /// @param conditionId The ID of the claim condition
   /// @param account The address of the account that claimed
   /// @param quantity The quantity of tokens claimed
+  /// @param proof The proof of the claim
   struct Claim {
     uint256 conditionId;
     address account;
@@ -51,7 +52,7 @@ interface IDropFacetBase {
     uint256 indexed conditionId,
     address indexed claimer,
     address indexed account,
-    uint256 depositId
+    uint256 amount
   );
 
   event DropFacet_ClaimConditionsUpdated(
@@ -114,6 +115,7 @@ interface IDropFacet is IDropFacetBase {
 
   /// @notice Claims tokens with a penalty
   /// @param claim The claim to process
+  /// @return The amount of tokens claimed
   function claimWithPenalty(Claim calldata claim) external returns (uint256);
 
   /// @notice Claims tokens and stakes them in the staking contract
@@ -121,6 +123,7 @@ interface IDropFacet is IDropFacetBase {
   /// @param delegatee The address of the delegatee
   /// @param deadline The deadline for the transaction
   /// @param signature The signature of the delegatee
+  /// @return The amount of tokens claimed
   function claimAndStake(
     Claim calldata claim,
     address delegatee,

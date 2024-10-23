@@ -20,7 +20,7 @@ library DropStorage {
 
   struct Layout {
     address claimToken;
-    address stakingContract;
+    address rewardsDistribution;
     uint256 conditionStartId;
     uint256 conditionCount;
     mapping(uint256 conditionId => mapping(address => SupplyClaim)) supplyClaimedByWallet;
