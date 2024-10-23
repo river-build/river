@@ -1500,7 +1500,10 @@ func (s *PostgresStreamStore) importMiniblocksTx(
 
 	err := tx.QueryRow(
 		ctx,
-		// Do not escape as specific miniblocks partition may not exist
+		// NOTE: we do not target the specific partition here because a failed query would
+		// put the transaction into a bad state, resulting in a rollback. The caller of this
+		// method does not need to assume that the stream exists in local storage. If it
+		// does not exist, it will be created below.
 		"SELECT MAX(seq_num) as latest_blocks_number FROM miniblocks WHERE stream_id = $1", streamID).
 		Scan(&seqNum)
 	if err != nil {
@@ -1513,7 +1516,8 @@ func (s *PostgresStreamStore) importMiniblocksTx(
 	}
 
 	// clean up minipool
-	// Do not escape as specific minipools partition may not exist
+	// NOTE: as above, we do not escape the query here because a failed query would put the
+	// transaction into a bad state, resulting in a rollback.
 	_, err = tx.Exec(ctx, "DELETE FROM minipools WHERE slot_num > -1 AND stream_id = $1", streamID)
 	if err != nil {
 		return err
