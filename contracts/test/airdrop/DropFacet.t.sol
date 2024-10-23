@@ -19,9 +19,6 @@ import {MockERC20} from "contracts/test/mocks/MockERC20.sol";
 import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 import {DropStorage} from "contracts/src/tokens/drop/DropStorage.sol";
 
-// debuggging
-import {console} from "forge-std/console.sol";
-
 contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
   uint256 internal constant TOTAL_TOKEN_AMOUNT = 1000;
 
@@ -41,8 +38,8 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
   bytes32[][] internal tree;
   bytes32 internal root;
 
-  Vm.Wallet internal bob = vm.createWallet("bob");
-  Vm.Wallet internal alice = vm.createWallet("alice");
+  address internal bob = makeAddr("bob");
+  address internal alice = makeAddr("alice");
   address internal deployer;
 
   function setUp() public {
@@ -74,48 +71,53 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
     // Initialize the Drop facet
     dropFacet = DropFacet(diamond);
 
-    // Mint tokens to the diamond
+    // Initialize the token
     token = MockERC20(tokenAddress);
-    token.mint(diamond, TOTAL_TOKEN_AMOUNT);
   }
 
-  modifier givenClaimConditionSet() {
+  modifier givenTokensMinted(uint256 amount) {
+    token.mint(address(dropFacet), amount);
+    _;
+  }
+
+  modifier givenClaimConditionSet(uint16 penaltyBps) {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
-    conditions[0] = _createClaimCondition(block.timestamp, root);
-    conditions[0].penaltyBps = 5000;
+    conditions[0] = _createClaimCondition(
+      block.timestamp,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
+    conditions[0].penaltyBps = penaltyBps;
 
     vm.prank(deployer);
     dropFacet.setClaimConditions(conditions, false);
     _;
   }
 
-  modifier givenWalletHasClaimedWithPenalty(
-    Vm.Wallet memory _wallet,
-    address caller
-  ) {
+  modifier givenWalletHasClaimedWithPenalty(address wallet, address caller) {
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
 
     ClaimCondition memory condition = dropFacet.getClaimConditionById(
       conditionId
     );
     uint256 penaltyBps = condition.penaltyBps;
-    uint256 merkleAmount = amounts[treeIndex[_wallet.addr]];
+    uint256 merkleAmount = amounts[treeIndex[wallet]];
     uint256 penaltyAmount = BasisPoints.calculate(merkleAmount, penaltyBps);
     uint256 expectedAmount = merkleAmount - penaltyAmount;
-    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[_wallet.addr]);
+    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[wallet]);
 
     vm.prank(caller);
     vm.expectEmit(address(dropFacet));
     emit DropFacet_Claimed_WithPenalty(
       conditionId,
       caller,
-      _wallet.addr,
+      wallet,
       expectedAmount
     );
     dropFacet.claimWithPenalty(
       Claim({
         conditionId: conditionId,
-        account: _wallet.addr,
+        account: wallet,
         quantity: merkleAmount,
         proof: proof
       })
@@ -126,9 +128,21 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
   // getActiveClaimConditionId
   function test_getActiveClaimConditionId() external {
     ClaimCondition[] memory conditions = new ClaimCondition[](3);
-    conditions[0] = _createClaimCondition(block.timestamp - 100, root); // expired
-    conditions[1] = _createClaimCondition(block.timestamp, root); // active
-    conditions[2] = _createClaimCondition(block.timestamp + 100, root); // future
+    conditions[0] = _createClaimCondition(
+      block.timestamp - 100,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    ); // expired
+    conditions[1] = _createClaimCondition(
+      block.timestamp,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    ); // active
+    conditions[2] = _createClaimCondition(
+      block.timestamp + 100,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    ); // future
 
     vm.prank(deployer);
     dropFacet.setClaimConditions(conditions, false);
@@ -149,7 +163,9 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
   }
 
   // getClaimConditionById
-  function test_getClaimConditionById() external givenClaimConditionSet {
+  function test_getClaimConditionById(
+    uint16 penaltyBps
+  ) external givenClaimConditionSet(penaltyBps) {
     ClaimCondition memory condition = dropFacet.getClaimConditionById(
       dropFacet.getActiveClaimConditionId()
     );
@@ -158,7 +174,7 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
     assertEq(condition.supplyClaimed, 0);
     assertEq(condition.merkleRoot, root);
     assertEq(condition.currency, address(token));
-    assertEq(condition.penaltyBps, 5000);
+    assertEq(condition.penaltyBps, penaltyBps);
   }
 
   struct ClaimData {
@@ -244,16 +260,21 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
 
   function test_claimWithPenalty()
     external
-    givenClaimConditionSet
-    givenWalletHasClaimedWithPenalty(bob, bob.addr)
+    givenTokensMinted(TOTAL_TOKEN_AMOUNT)
+    givenClaimConditionSet(5000)
+    givenWalletHasClaimedWithPenalty(bob, bob)
   {
-    uint256 expectedAmount = _calculateExpectedAmount(bob.addr);
-    assertEq(token.balanceOf(bob.addr), expectedAmount);
+    uint256 expectedAmount = _calculateExpectedAmount(bob);
+    assertEq(token.balanceOf(bob), expectedAmount);
   }
 
   function test_revertWhen_merkleRootNotSet() external {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
-    conditions[0] = _createClaimCondition(block.timestamp, bytes32(0));
+    conditions[0] = _createClaimCondition(
+      block.timestamp,
+      bytes32(0),
+      TOTAL_TOKEN_AMOUNT
+    );
 
     vm.prank(deployer);
     dropFacet.setClaimConditions(conditions, false);
@@ -264,7 +285,7 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
     dropFacet.claimWithPenalty(
       Claim({
         conditionId: conditionId,
-        account: bob.addr,
+        account: bob,
         quantity: 100,
         proof: new bytes32[](0)
       })
@@ -273,7 +294,11 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
 
   function test_revertWhen_quantityIsZero() external {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
-    conditions[0] = _createClaimCondition(block.timestamp, root);
+    conditions[0] = _createClaimCondition(
+      block.timestamp,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
 
     vm.prank(deployer);
     dropFacet.setClaimConditions(conditions, false);
@@ -284,7 +309,7 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
     dropFacet.claimWithPenalty(
       Claim({
         conditionId: conditionId,
-        account: bob.addr,
+        account: bob,
         quantity: 0,
         proof: new bytes32[](0)
       })
@@ -293,7 +318,11 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
 
   function test_revertWhen_exceedsMaxClaimableSupply() external {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
-    conditions[0] = _createClaimCondition(block.timestamp, root);
+    conditions[0] = _createClaimCondition(
+      block.timestamp,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
     conditions[0].maxClaimableSupply = 100; // 100 tokens in total for this condition
 
     vm.prank(deployer);
@@ -305,7 +334,7 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
     dropFacet.claimWithPenalty(
       Claim({
         conditionId: conditionId,
-        account: bob.addr,
+        account: bob,
         quantity: 101,
         proof: new bytes32[](0)
       })
@@ -314,24 +343,28 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
 
   function test_revertWhen_claimHasNotStarted() external {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
-    conditions[0] = _createClaimCondition(block.timestamp, root);
+    conditions[0] = _createClaimCondition(
+      block.timestamp,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
 
     vm.prank(deployer);
     dropFacet.setClaimConditions(conditions, false);
 
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
 
-    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[bob.addr]);
+    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[bob]);
 
     vm.warp(block.timestamp - 100);
 
-    vm.prank(bob.addr);
+    vm.prank(bob);
     vm.expectRevert(DropFacet__ClaimHasNotStarted.selector);
     dropFacet.claimWithPenalty(
       Claim({
         conditionId: conditionId,
-        account: bob.addr,
-        quantity: amounts[treeIndex[bob.addr]],
+        account: bob,
+        quantity: amounts[treeIndex[bob]],
         proof: proof
       })
     );
@@ -339,7 +372,11 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
 
   function test_revertWhen_claimHasEnded() external {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
-    conditions[0] = _createClaimCondition(block.timestamp, root);
+    conditions[0] = _createClaimCondition(
+      block.timestamp,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
     conditions[0].endTimestamp = uint40(block.timestamp + 100);
 
     vm.prank(deployer);
@@ -347,7 +384,7 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
 
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
 
-    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[bob.addr]);
+    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[bob]);
 
     vm.warp(conditions[0].endTimestamp);
 
@@ -355,29 +392,36 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
     dropFacet.claimWithPenalty(
       Claim({
         conditionId: conditionId,
-        account: bob.addr,
-        quantity: amounts[treeIndex[bob.addr]],
+        account: bob,
+        quantity: amounts[treeIndex[bob]],
         proof: proof
       })
     );
   }
 
-  function test_revertWhen_alreadyClaimed() external {
+  function test_revertWhen_alreadyClaimed()
+    external
+    givenTokensMinted(TOTAL_TOKEN_AMOUNT)
+  {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
-    conditions[0] = _createClaimCondition(block.timestamp, root);
+    conditions[0] = _createClaimCondition(
+      block.timestamp,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
 
     vm.prank(deployer);
     dropFacet.setClaimConditions(conditions, false);
 
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
 
-    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[bob.addr]);
+    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[bob]);
 
     dropFacet.claimWithPenalty(
       Claim({
         conditionId: conditionId,
-        account: bob.addr,
-        quantity: amounts[treeIndex[bob.addr]],
+        account: bob,
+        quantity: amounts[treeIndex[bob]],
         proof: proof
       })
     );
@@ -386,22 +430,25 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
     dropFacet.claimWithPenalty(
       Claim({
         conditionId: conditionId,
-        account: bob.addr,
-        quantity: amounts[treeIndex[bob.addr]],
+        account: bob,
+        quantity: amounts[treeIndex[bob]],
         proof: proof
       })
     );
   }
 
-  function test_revertWhen_invalidProof() external givenClaimConditionSet {
+  function test_revertWhen_invalidProof()
+    external
+    givenClaimConditionSet(5000)
+  {
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
 
     vm.expectRevert(DropFacet__InvalidProof.selector);
     dropFacet.claimWithPenalty(
       Claim({
         conditionId: conditionId,
-        account: bob.addr,
-        quantity: amounts[treeIndex[bob.addr]],
+        account: bob,
+        quantity: amounts[treeIndex[bob]],
         proof: new bytes32[](0)
       })
     );
@@ -410,7 +457,11 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
   // setClaimConditions
   function test_setClaimConditions() external {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
-    conditions[0] = _createClaimCondition(block.timestamp, root);
+    conditions[0] = _createClaimCondition(
+      block.timestamp,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
 
     vm.prank(deployer);
     dropFacet.setClaimConditions(conditions, false);
@@ -421,21 +472,26 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
 
   function test_setClaimConditions_resetEligibility()
     external
-    givenClaimConditionSet
-    givenWalletHasClaimedWithPenalty(bob, bob.addr)
+    givenTokensMinted(TOTAL_TOKEN_AMOUNT)
+    givenClaimConditionSet(5000)
+    givenWalletHasClaimedWithPenalty(bob, bob)
   {
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
-    uint256 expectedAmount = _calculateExpectedAmount(bob.addr);
+    uint256 expectedAmount = _calculateExpectedAmount(bob);
 
     assertEq(
-      dropFacet.getSupplyClaimedByWallet(bob.addr, conditionId),
+      dropFacet.getSupplyClaimedByWallet(bob, conditionId),
       expectedAmount
     );
 
     vm.warp(block.timestamp + 100);
 
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
-    conditions[0] = _createClaimCondition(block.timestamp, root);
+    conditions[0] = _createClaimCondition(
+      block.timestamp,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
 
     vm.prank(deployer);
     dropFacet.setClaimConditions(conditions, true);
@@ -443,7 +499,7 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
     uint256 newConditionId = dropFacet.getActiveClaimConditionId();
     assertEq(newConditionId, 1);
 
-    assertEq(dropFacet.getSupplyClaimedByWallet(bob.addr, newConditionId), 0);
+    assertEq(dropFacet.getSupplyClaimedByWallet(bob, newConditionId), 0);
   }
 
   function test_fuzz_setClaimConditions_revertWhen_notOwner(
@@ -458,8 +514,16 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
 
   function test_revertWhen_setClaimConditions_notInAscendingOrder() external {
     ClaimCondition[] memory conditions = new ClaimCondition[](2);
-    conditions[0] = _createClaimCondition(block.timestamp, root);
-    conditions[1] = _createClaimCondition(block.timestamp - 100, root);
+    conditions[0] = _createClaimCondition(
+      block.timestamp,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
+    conditions[1] = _createClaimCondition(
+      block.timestamp - 100,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
 
     vm.expectRevert(DropFacet__ClaimConditionsNotInAscendingOrder.selector);
     vm.prank(deployer);
@@ -468,11 +532,11 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
 
   function test_revertWhen_setClaimConditions_exceedsMaxClaimableSupply()
     external
+    givenTokensMinted(TOTAL_TOKEN_AMOUNT)
   {
     // Create a single claim condition
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
-    conditions[0] = _createClaimCondition(block.timestamp, root);
-    conditions[0].maxClaimableSupply = 100; // Set max claimable supply to 100 tokens
+    conditions[0] = _createClaimCondition(block.timestamp, root, 100);
 
     // Set the claim conditions as the deployer
     vm.prank(deployer);
@@ -482,15 +546,15 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
 
     // Generate Merkle proof for Bob
-    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[bob.addr]);
+    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[bob]);
 
     // Simulate Bob claiming tokens
-    vm.prank(bob.addr);
+    vm.prank(bob);
     dropFacet.claimWithPenalty(
       Claim({
         conditionId: conditionId,
-        account: bob.addr,
-        quantity: amounts[treeIndex[bob.addr]],
+        account: bob,
+        quantity: amounts[treeIndex[bob]],
         proof: proof
       })
     );
@@ -516,11 +580,22 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
   // we claim some more tokens from the second condition
   // we try to claim from the first condition by alice, this should pass
   // we reach the end of the second condition, and try to claim from it, this should fail
-  function test_endToEnd_claimWithPenalty() external {
+  function test_endToEnd_claimWithPenalty()
+    external
+    givenTokensMinted(TOTAL_TOKEN_AMOUNT)
+  {
     ClaimCondition[] memory conditions = new ClaimCondition[](2);
-    conditions[0] = _createClaimCondition(block.timestamp, root); // endless claim condition
+    conditions[0] = _createClaimCondition(
+      block.timestamp,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    ); // endless claim condition
 
-    conditions[1] = _createClaimCondition(block.timestamp + 100, root);
+    conditions[1] = _createClaimCondition(
+      block.timestamp + 100,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
     conditions[1].endTimestamp = uint40(block.timestamp + 200); // ends at block.timestamp + 200
 
     vm.prank(deployer);
@@ -529,38 +604,41 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
 
     // bob claims from the first condition
-    uint256 bobIndex = treeIndex[bob.addr];
+    uint256 bobIndex = treeIndex[bob];
     bytes32[] memory proof = merkleTree.getProof(tree, bobIndex);
-    vm.prank(bob.addr);
+    vm.prank(bob);
     dropFacet.claimWithPenalty(
       Claim({
         conditionId: conditionId,
-        account: bob.addr,
+        account: bob,
         quantity: amounts[bobIndex],
         proof: proof
       })
     );
-    assertEq(token.balanceOf(bob.addr), _calculateExpectedAmount(bob.addr));
+    assertEq(
+      dropFacet.getSupplyClaimedByWallet(bob, conditionId),
+      _calculateExpectedAmount(bob)
+    );
 
     // activate the second condition
     vm.warp(block.timestamp + 100);
 
     // alice claims from the second condition
     conditionId = dropFacet.getActiveClaimConditionId();
-    uint256 aliceIndex = treeIndex[alice.addr];
+    uint256 aliceIndex = treeIndex[alice];
     proof = merkleTree.getProof(tree, aliceIndex);
-    vm.prank(alice.addr);
+    vm.prank(alice);
     dropFacet.claimWithPenalty(
       Claim({
         conditionId: conditionId,
-        account: alice.addr,
+        account: alice,
         quantity: amounts[aliceIndex],
         proof: proof
       })
     );
     assertEq(
-      dropFacet.getSupplyClaimedByWallet(alice.addr, conditionId),
-      _calculateExpectedAmount(alice.addr)
+      dropFacet.getSupplyClaimedByWallet(alice, conditionId),
+      _calculateExpectedAmount(alice)
     );
 
     // finalize the second condition
@@ -568,11 +646,11 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
 
     // bob tries to claim from the second condition, this should fail
     vm.expectRevert(DropFacet__ClaimHasEnded.selector);
-    vm.prank(bob.addr);
+    vm.prank(bob);
     dropFacet.claimWithPenalty(
       Claim({
         conditionId: conditionId,
-        account: bob.addr,
+        account: bob,
         quantity: amounts[bobIndex],
         proof: proof
       })
@@ -580,18 +658,18 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
 
     // alice is still able to claim from the first condition
     conditionId = dropFacet.getActiveClaimConditionId();
-    vm.prank(alice.addr);
+    vm.prank(alice);
     dropFacet.claimWithPenalty(
       Claim({
         conditionId: conditionId,
-        account: alice.addr,
+        account: alice,
         quantity: amounts[aliceIndex],
         proof: proof
       })
     );
     assertEq(
-      dropFacet.getSupplyClaimedByWallet(alice.addr, conditionId),
-      _calculateExpectedAmount(alice.addr)
+      dropFacet.getSupplyClaimedByWallet(alice, conditionId),
+      _calculateExpectedAmount(alice)
     );
   }
 
@@ -605,15 +683,17 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
   // =============================================================
   //                           Internal
   // =============================================================
+
   function _createClaimCondition(
     uint256 _startTime,
-    bytes32 _merkleRoot
+    bytes32 _merkleRoot,
+    uint256 _maxClaimableSupply
   ) internal view returns (ClaimCondition memory) {
     return
       ClaimCondition({
         startTimestamp: uint40(_startTime),
         endTimestamp: 0,
-        maxClaimableSupply: TOTAL_TOKEN_AMOUNT,
+        maxClaimableSupply: _maxClaimableSupply,
         supplyClaimed: 0,
         merkleRoot: _merkleRoot,
         currency: address(token),
@@ -628,22 +708,25 @@ contract DropFacetTest is TestUtils, IDropFacetBase, IOwnableBase {
       dropFacet.getActiveClaimConditionId()
     );
     uint256 penaltyBps = condition.penaltyBps;
-    uint256 bobAmount = amounts[treeIndex[_account]];
-    uint256 penaltyAmount = BasisPoints.calculate(bobAmount, penaltyBps);
-    uint256 expectedAmount = bobAmount - penaltyAmount;
-
+    uint256 amount = amounts[treeIndex[_account]];
+    uint256 penaltyAmount = BasisPoints.calculate(amount, penaltyBps);
+    uint256 expectedAmount = amount - penaltyAmount;
     return expectedAmount;
   }
 
   function _createTree() internal {
-    treeIndex[bob.addr] = 0;
-    accounts.push(bob.addr);
+    // Create the Merkle tree with accounts and amounts
+    accounts.push(bob);
     amounts.push(100);
-
-    treeIndex[alice.addr] = 1;
-    accounts.push(alice.addr);
+    accounts.push(alice);
     amounts.push(200);
 
+    treeIndex[bob] = 0;
+    treeIndex[alice] = 1;
     (root, tree) = merkleTree.constructTree(accounts, amounts);
+  }
+
+  function _mintTokens(uint256 amount) internal {
+    token.mint(address(dropFacet), amount);
   }
 }
