@@ -43,7 +43,7 @@ export async function spaceRefreshOnResponse(
 
 	try {
 		await CloudfrontManager.createCloudfrontInvalidation({
-			paths: [`/space/${spaceAddress}/image`],
+			paths: [`/space/${spaceAddress}/image*`],
 			logger,
 			waitUntilFinished: true,
 		})
@@ -51,7 +51,7 @@ export async function spaceRefreshOnResponse(
 	} catch (error) {
 		logger.error(
 			{
-				error,
+				err: error,
 				spaceAddress,
 			},
 			'Failed to refresh space',

@@ -1,12 +1,11 @@
 import {
-    useDisplayName,
+    useMember,
     useReactions,
     useRedact,
     useScrollback,
     useSendMessage,
     useSendReaction,
     useSyncAgent,
-    useUsername,
 } from '@river-build/react-sdk'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -159,8 +158,7 @@ const Message = ({
         }
         return sync.spaces.getSpace(props.spaceId).members.get(event.sender.id)
     }, [props, sync.gdms, sync.spaces, event.sender.id])
-    const { username } = useUsername(member)
-    const { displayName } = useDisplayName(member)
+    const { username, displayName } = useMember(member)
     const prettyDisplayName = displayName || username
     const isMyMessage = event.sender.id === sync.userId
     const { reactions, onReact } = useMessageReaction(props, event.eventId)
