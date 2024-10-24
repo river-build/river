@@ -379,6 +379,26 @@ func mbProduceCandiate(
 		return nil, RiverError(Err_INTERNAL, "Not a local stream")
 	}
 
+	mbInfo, err := mbProduceCandiate_Make(ctx, params, stream, forceSnapshot, remoteNodes)
+	if err != nil {
+		return nil, err
+	}
+
+	err = mbProduceCandiate_Save(ctx, params, stream, mbInfo, remoteNodes)
+	if err != nil {
+		return nil, err
+	}
+
+	return mbInfo, nil
+}
+
+func mbProduceCandiate_Make(
+	ctx context.Context,
+	params *StreamCacheParams,
+	stream *streamImpl,
+	forceSnapshot bool,
+	remoteNodes []common.Address,
+) (*MiniblockInfo, error) {
 	view, err := stream.getView(ctx)
 	if err != nil {
 		return nil, err
@@ -445,6 +465,16 @@ func mbProduceCandiate(
 		return nil, err
 	}
 
+	return mbInfo, nil
+}
+
+func mbProduceCandiate_Save(
+	ctx context.Context,
+	params *StreamCacheParams,
+	stream *streamImpl,
+	mbInfo *MiniblockInfo,
+	remoteNodes []common.Address,
+) error {
 	qp := NewQuorumPool(len(remoteNodes))
 
 	qp.GoLocal(func() error {
@@ -468,12 +498,7 @@ func mbProduceCandiate(
 		})
 	}
 
-	err = qp.Wait()
-	if err != nil {
-		return nil, err
-	}
-
-	return mbInfo, nil
+	return qp.Wait()
 }
 
 func (p *miniblockProducer) jobStart(ctx context.Context, j *mbJob, forceSnapshot bool) {

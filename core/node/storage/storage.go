@@ -23,7 +23,7 @@ type StreamStorage interface {
 	// CreateStreamStorage creates a new stream with the given genesis miniblock at index 0.
 	// Last snapshot minblock index is set to 0.
 	// Minipool is set to generation number 1 (i.e. number of miniblock that is going to be produced next) and is empty.
-	CreateStreamStorage(ctx context.Context, streamId StreamId, genesisMiniblock []byte) error
+	CreateStreamStorage(ctx context.Context, stream StreamId, genesisMiniblock []byte) error
 
 	// ReadStreamFromLastSnapshot reads last stream miniblocks and gurantees that last snapshot miniblock is included.
 	// It attempts to read at least numToRead miniblocks, but may return less if there are not enough miniblocks in storage,
@@ -36,14 +36,14 @@ type StreamStorage interface {
 	) (*ReadStreamFromLastSnapshotResult, error)
 
 	// Returns miniblocks with miniblockNum or "generation" from fromInclusive, to toExlusive.
-	ReadMiniblocks(ctx context.Context, streamId StreamId, fromInclusive int64, toExclusive int64) ([][]byte, error)
+	ReadMiniblocks(ctx context.Context, stream StreamId, fromInclusive int64, toExclusive int64) ([][]byte, error)
 
 	// Adds event to the given minipool.
 	// Current generation of minipool should match minipoolGeneration,
 	// and there should be exactly minipoolSlot events in the minipool.
 	WriteEvent(
 		ctx context.Context,
-		streamId StreamId,
+		stream StreamId,
 		minipoolGeneration int64,
 		minipoolSlot int,
 		envelope []byte,
@@ -52,7 +52,7 @@ type StreamStorage interface {
 	// WriteMiniblockCandidate adds a proposal candidate for future miniblock.
 	WriteMiniblockCandidate(
 		ctx context.Context,
-		streamId StreamId,
+		stream StreamId,
 		blockHash common.Hash,
 		blockNumber int64,
 		miniblock []byte,
@@ -60,7 +60,7 @@ type StreamStorage interface {
 
 	ReadMiniblockCandidate(
 		ctx context.Context,
-		streamId StreamId,
+		stream StreamId,
 		blockHash common.Hash,
 		blockNumber int64,
 	) ([]byte, error)
@@ -73,7 +73,7 @@ type StreamStorage interface {
 	// stores envelopes in the new minipool in slots starting with 0.
 	PromoteMiniblockCandidate(
 		ctx context.Context,
-		streamId StreamId,
+		stream StreamId,
 		minipoolGeneration int64,
 		candidateBlockHash common.Hash,
 		snapshotMiniblock bool,
@@ -84,26 +84,26 @@ type StreamStorage interface {
 	// Unlike regular CreateStreamStorage, only entry in es table and partition table for miniblocks are created.
 	CreateStreamArchiveStorage(
 		ctx context.Context,
-		streamId StreamId,
+		stream StreamId,
 	) error
 
 	// GetMaxArchivedMiniblockNumber returns the maximum miniblock number that has been archived for the given stream.
 	// If stream record is created, but no miniblocks are archived, returns -1.
-	GetMaxArchivedMiniblockNumber(ctx context.Context, streamId StreamId) (int64, error)
+	GetMaxArchivedMiniblockNumber(ctx context.Context, stream StreamId) (int64, error)
 
 	// WriteArchiveMiniblocks writes miniblocks to the archive storage.
 	// Miniblocks are written starting from startMiniblockNum.
 	// It checks that startMiniblockNum - 1 miniblock exists in storage.
 	WriteArchiveMiniblocks(
 		ctx context.Context,
-		streamId StreamId,
+		stream StreamId,
 		startMiniblockNum int64,
 		miniblocks [][]byte,
 	) error
 
 	DebugReadStreamData(
 		ctx context.Context,
-		streamId StreamId,
+		stream StreamId,
 	) (*DebugReadStreamDataResult, error)
 
 	// StreamLastMiniBlock returns the last mini-block number for the given stream from storage.

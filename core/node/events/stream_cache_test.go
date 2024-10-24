@@ -46,7 +46,7 @@ func TestStreamCacheViewEviction(t *testing.T) {
 	streamWithLoadedViewCount := 0
 	streamCache.cache.Range(func(key, value any) bool {
 		stream := value.(*streamImpl)
-		if stream.view == nil {
+		if stream.view() == nil {
 			streamWithoutLoadedView++
 		} else {
 			streamWithLoadedViewCount++
@@ -73,7 +73,7 @@ func TestStreamCacheViewEviction(t *testing.T) {
 	streamWithLoadedViewCount = 0
 	streamCache.cache.Range(func(key, value any) bool {
 		stream := value.(*streamImpl)
-		if stream.view == nil {
+		if stream.view() == nil {
 			streamWithoutLoadedView++
 		} else {
 			streamWithLoadedViewCount++
@@ -96,7 +96,7 @@ func TestStreamCacheViewEviction(t *testing.T) {
 	streamWithLoadedViewCount = 0
 	streamCache.cache.Range(func(key, value any) bool {
 		stream := value.(*streamImpl)
-		if stream.view == nil {
+		if stream.view() == nil {
 			streamWithoutLoadedView++
 		} else {
 			streamWithLoadedViewCount++
@@ -115,7 +115,7 @@ func TestStreamCacheViewEviction(t *testing.T) {
 	streamWithLoadedViewCount = 0
 	streamCache.cache.Range(func(key, value any) bool {
 		stream := value.(*streamImpl)
-		if stream.view == nil {
+		if stream.view() == nil {
 			streamWithoutLoadedView++
 		} else {
 			streamWithLoadedViewCount++
@@ -156,7 +156,7 @@ func TestCacheEvictionWithFilledMiniBlockPool(t *testing.T) {
 	streamWithLoadedViewCount := 0
 	streamCache.cache.Range(func(key, value any) bool {
 		stream := value.(*streamImpl)
-		if stream.view == nil {
+		if stream.view() == nil {
 			streamWithoutLoadedView++
 		} else {
 			streamWithLoadedViewCount++
@@ -172,7 +172,7 @@ func TestCacheEvictionWithFilledMiniBlockPool(t *testing.T) {
 	streamCache.CacheCleanup(ctxShort, true, time.Millisecond)
 	cancelShort()
 	loadedStream, _ := streamCache.cache.Load(streamID)
-	require.Nil(loadedStream.(*streamImpl).view, "view not unloaded")
+	require.Nil(loadedStream.(*streamImpl).view(), "view not unloaded")
 
 	// try to create a miniblock, pool is empty so it should not fail but also should not create a miniblock
 	_ = tc.makeMiniblock(0, streamID, false)
@@ -193,7 +193,7 @@ func TestCacheEvictionWithFilledMiniBlockPool(t *testing.T) {
 	streamCache.CacheCleanup(ctxShort, true, time.Millisecond)
 	cancelShort()
 	loadedStream, _ = streamCache.cache.Load(streamID)
-	require.NotNil(loadedStream.(*streamImpl).view, "view unloaded")
+	require.NotNil(loadedStream.(*streamImpl).view(), "view unloaded")
 
 	// now it should be possible to create a miniblock
 	mbRef := tc.makeMiniblock(0, streamID, false)
@@ -206,7 +206,7 @@ func TestCacheEvictionWithFilledMiniBlockPool(t *testing.T) {
 	streamCache.CacheCleanup(ctxShort, true, time.Millisecond)
 	cancelShort()
 	loadedStream, _ = streamCache.cache.Load(streamID)
-	require.Nil(loadedStream.(*streamImpl).view, "view loaded in cache")
+	require.Nil(loadedStream.(*streamImpl).view(), "view loaded in cache")
 }
 
 type testStreamCacheViewEvictionSub struct {

@@ -743,8 +743,7 @@ func (s *PostgresStreamStore) writeBlockProposalTxn(
 			streamId,
 		),
 		streamId,
-	).
-		Scan(&seqNum)
+	).Scan(&seqNum)
 	if err != nil {
 		return processErrorForMissingPartition(err, streamId)
 	}
@@ -761,7 +760,7 @@ func (s *PostgresStreamStore) writeBlockProposalTxn(
 	_, err = tx.Exec(
 		ctx,
 		sqlForStream(
-			"INSERT INTO {{miniblock_candidates}} (stream_id, seq_num, block_hash, blockdata) VALUES ($1, $2, $3, $4) ON CONFLICT(stream_id, seq_num, block_hash) DO NOTHING",
+			"INSERT INTO {{miniblock_candidates}} (stream_id, seq_num, block_hash, blockdata) VALUES ($1, $2, $3, $4)",
 			streamId,
 		),
 		streamId,
@@ -769,7 +768,13 @@ func (s *PostgresStreamStore) writeBlockProposalTxn(
 		hex.EncodeToString(blockHash.Bytes()), // avoid leading '0x'
 		miniblock,
 	)
-	return err
+	if err != nil {
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
+			return RiverError(Err_ALREADY_EXISTS, "Miniblock candidate already exists")
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *PostgresStreamStore) ReadMiniblockCandidate(
@@ -818,6 +823,9 @@ func (s *PostgresStreamStore) readMiniblockCandidateTx(
 		hex.EncodeToString(blockHash.Bytes()), // avoid leading '0x'
 	).Scan(&miniblock)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, RiverError(Err_NOT_FOUND, "No candidate block found")
+		}
 		return nil, err
 	}
 	return miniblock, nil

@@ -7,6 +7,7 @@ import (
 
 	"google.golang.org/protobuf/types/known/emptypb"
 
+	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
@@ -198,4 +199,81 @@ func TestMiniblockProduction(t *testing.T) {
 			mbTest(t, c)
 		})
 	}
+}
+
+func TestCandidatePromotionCandidateInPlace(t *testing.T) {
+	ctx, tt := makeCacheTestContext(t, testParams{replFactor: 1})
+	_ = tt.initCache(0, nil)
+	require := require.New(t)
+
+	spaceStreamId := testutils.FakeStreamId(STREAM_SPACE_BIN)
+	genesisMb := MakeGenesisMiniblockForSpaceStream(
+		t,
+		tt.instances[0].params.Wallet,
+		tt.instances[0].params.Wallet,
+		spaceStreamId,
+	)
+
+	syncStream, view := tt.createStream(spaceStreamId, genesisMb.Proto)
+	stream := syncStream.(*streamImpl)
+
+	addEvent(t, ctx, tt.instances[0].params, stream, "1", view.LastBlock().Ref)
+	addEvent(t, ctx, tt.instances[0].params, stream, "2", view.LastBlock().Ref)
+
+	proposal, err := mbProduceCandiate_Make(ctx, tt.instances[0].params, stream, false, stream.nodes.GetRemotes())
+	mb := proposal.headerEvent.Event.GetMiniblockHeader()
+	events := proposal.events
+	require.NoError(err)
+	require.Equal(2, len(events))
+	require.Equal(2, len(mb.EventHashes))
+	require.EqualValues(view.LastBlock().Ref.Hash[:], mb.PrevMiniblockHash)
+	require.Equal(int64(1), mb.MiniblockNum)
+
+	require.NoError(stream.SaveMiniblockCandidate(ctx, proposal.Proto))
+
+	err = stream.SaveMiniblockCandidate(ctx, proposal.Proto)
+	require.ErrorIs(err, RiverError(Err_ALREADY_EXISTS, ""))
+
+	require.NoError(stream.promoteCandidate(ctx, proposal.Ref))
+
+	view2, err := stream.GetView(ctx)
+	require.NoError(err)
+	require.EqualValues(proposal.Ref, view2.LastBlock().Ref)
+}
+
+func TestCandidatePromotionCandidateIsDelayed(t *testing.T) {
+	ctx, tt := makeCacheTestContext(t, testParams{replFactor: 1})
+	_ = tt.initCache(0, nil)
+	require := require.New(t)
+
+	spaceStreamId := testutils.FakeStreamId(STREAM_SPACE_BIN)
+	genesisMb := MakeGenesisMiniblockForSpaceStream(
+		t,
+		tt.instances[0].params.Wallet,
+		tt.instances[0].params.Wallet,
+		spaceStreamId,
+	)
+
+	syncStream, view := tt.createStream(spaceStreamId, genesisMb.Proto)
+	stream := syncStream.(*streamImpl)
+
+	addEvent(t, ctx, tt.instances[0].params, stream, "1", view.LastBlock().Ref)
+	addEvent(t, ctx, tt.instances[0].params, stream, "2", view.LastBlock().Ref)
+
+	proposal, err := mbProduceCandiate_Make(ctx, tt.instances[0].params, stream, false, stream.nodes.GetRemotes())
+	mb := proposal.headerEvent.Event.GetMiniblockHeader()
+	events := proposal.events
+	require.NoError(err)
+	require.Equal(2, len(events))
+	require.Equal(2, len(mb.EventHashes))
+	require.EqualValues(view.LastBlock().Ref.Hash[:], mb.PrevMiniblockHash)
+	require.Equal(int64(1), mb.MiniblockNum)
+
+	require.NoError(stream.promoteCandidate(ctx, proposal.Ref))
+
+	require.NoError(stream.SaveMiniblockCandidate(ctx, proposal.Proto))
+
+	view2, err := stream.GetView(ctx)
+	require.NoError(err)
+	require.EqualValues(proposal.Ref, view2.LastBlock().Ref)
 }
