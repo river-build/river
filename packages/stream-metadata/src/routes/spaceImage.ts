@@ -47,7 +47,9 @@ export async function fetchSpaceImage(request: FastifyRequest, reply: FastifyRep
 	let stream: StreamStateView
 	try {
 		const streamId = makeStreamId(StreamPrefix.Space, spaceAddress)
-		stream = await getStream(logger, streamId)
+		stream = await getStream(logger, streamId, {
+			skipCache: !!eventId, // when an event id is provided, we skip the cache
+		})
 	} catch (error) {
 		logger.error(
 			{
