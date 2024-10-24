@@ -10,7 +10,6 @@ import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 
 // contracts
-import {DelegationProxy} from "./DelegationProxy.sol";
 
 /// @notice Staking rewards library that encapsulates the minimal logic for staking and rewards distribution with
 /// delegation commission
@@ -58,6 +57,9 @@ library StakingRewards {
   /// @param rewardRate The scaled rate of reward distributed per second
   /// @param rewardPerTokenAccumulated The scaled amount of rewardToken that has been accumulated per staked token
   /// @param nextDepositId The next deposit ID that will be used
+  /// @param stakedByDepositor The mapping of the amount of stakeToken that is staked by a particular depositor
+  /// @param treasureByBeneficiary The mapping of the account information for a beneficiary
+  /// @param depositById The mapping of the information for a deposit
   struct Layout {
     address rewardToken;
     address stakeToken;
@@ -71,14 +73,7 @@ library StakingRewards {
     mapping(address depositor => uint256 amount) stakedByDepositor;
     mapping(address beneficiary => Treasure) treasureByBeneficiary;
     mapping(uint256 depositId => Deposit) depositById;
-    mapping(uint256 depositId => address proxy) proxyById;
   }
-
-  event DelegationProxyDeployed(
-    uint256 depositId,
-    address delegatee,
-    address proxy
-  );
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                       CUSTOM ERRORS                        */
@@ -161,7 +156,6 @@ library StakingRewards {
 
   function stake(
     Layout storage ds,
-    address depositor,
     address owner,
     uint96 amount,
     address delegatee,
@@ -206,18 +200,11 @@ library StakingRewards {
       delegatee,
       commissionRate
     );
-
-    address proxy = address(new DelegationProxy(ds.stakeToken, delegatee));
-    ds.proxyById[depositId] = proxy;
-    emit DelegationProxyDeployed(depositId, delegatee, proxy);
-
-    ds.stakeToken.safeTransferFrom(depositor, proxy, amount);
   }
 
   function increaseStake(
     Layout storage ds,
     Deposit storage deposit,
-    uint256 depositId,
     uint96 amount,
     uint256 commissionRate
   ) internal {
@@ -251,15 +238,11 @@ library StakingRewards {
       delegatee,
       commissionRate
     );
-
-    address proxy = ds.proxyById[depositId];
-    ds.stakeToken.safeTransferFrom(owner, proxy, amount);
   }
 
   function redelegate(
     Layout storage ds,
     Deposit storage deposit,
-    uint256 depositId,
     address newDelegatee,
     uint256 commissionRate
   ) internal {
@@ -285,8 +268,6 @@ library StakingRewards {
       commissionRate
     );
 
-    address proxy = ds.proxyById[depositId];
-    DelegationProxy(proxy).redelegate(newDelegatee);
     deposit.delegatee = newDelegatee;
   }
 
@@ -326,11 +307,10 @@ library StakingRewards {
   }
 
   // TODO: state changes after initiateWithdraw
-  function initiateWithdraw(
+  function withdraw(
     Layout storage ds,
-    Deposit storage deposit,
-    uint256 depositId
-  ) internal {
+    Deposit storage deposit
+  ) internal returns (uint96) {
     updateGlobalReward(ds);
 
     Treasure storage beneficiaryTreasure = ds.treasureByBeneficiary[
@@ -354,22 +334,7 @@ library StakingRewards {
       address(0),
       amount
     );
-
-    address proxy = ds.proxyById[depositId];
-    DelegationProxy(proxy).redelegate(address(0));
-  }
-
-  function withdraw(
-    Layout storage ds,
-    Deposit storage deposit,
-    uint256 depositId
-  ) internal {
-    address proxy = ds.proxyById[depositId];
-    ds.stakeToken.safeTransferFrom(
-      proxy,
-      deposit.owner,
-      deposit.pendingWithdrawal
-    );
+    return amount;
   }
 
   function claimReward(

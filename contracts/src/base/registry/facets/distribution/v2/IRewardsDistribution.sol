@@ -50,6 +50,13 @@ interface IRewardsDistributionBase {
     address rewardToken,
     uint256 rewardDuration
   );
+
+  event DelegationProxyDeployed(
+    uint256 depositId,
+    address delegatee,
+    address proxy
+  );
+
   event RewardNotifierSet(address indexed notifier, bool enabled);
 }
 
