@@ -3651,6 +3651,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@openzeppelin/merkle-tree@npm:^1.0.7":
+  version: 1.0.7
+  resolution: "@openzeppelin/merkle-tree@npm:1.0.7"
+  dependencies:
+    "@ethersproject/abi": ^5.7.0
+    "@ethersproject/bytes": ^5.7.0
+    "@ethersproject/constants": ^5.7.0
+    "@ethersproject/keccak256": ^5.7.0
+  checksum: 75ca8ecddcff36964a74222a40abec7def1a873f47b1e15fb905c7daa516c495d2b05bbc8601ea465c7e13baa72546958049c158e94103f3eac7b611882988e8
+  languageName: node
+  linkType: hard
+
 "@parcel/watcher-android-arm64@npm:2.4.1":
   version: 2.4.1
   resolution: "@parcel/watcher-android-arm64@npm:2.4.1"
@@ -15937,6 +15949,7 @@ __metadata:
   dependencies:
     "@cloudflare/vitest-pool-workers": ^0.5.2
     "@cloudflare/workers-types": ^4.20241022.0
+    "@openzeppelin/merkle-tree": ^1.0.7
     eslint: ^8.53.0
     prettier: ^2.8.8
     typescript: ^5.5.2

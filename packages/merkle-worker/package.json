@@ -22,5 +22,8 @@
         "typescript": "^5.5.2",
         "vitest": "2.0.5",
         "wrangler": "^3.60.3"
+    },
+    "dependencies": {
+        "@openzeppelin/merkle-tree": "^1.0.7"
     }
 }
