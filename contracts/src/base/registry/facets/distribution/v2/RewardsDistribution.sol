@@ -7,8 +7,10 @@ import {IRewardsDistribution} from "./IRewardsDistribution.sol";
 
 // libraries
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {LibClone} from "solady/utils/LibClone.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
+import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 import {NodeOperatorStorage} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
 import {SpaceDelegationStorage} from "contracts/src/base/registry/facets/delegation/SpaceDelegationStorage.sol";
@@ -39,7 +41,7 @@ contract RewardsDistribution is
     );
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-  /*                       ADMIN SETTERS                        */
+  /*                       ADMIN FUNCTIONS                      */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   function __RewardsDistribution_init(
@@ -48,14 +50,20 @@ contract RewardsDistribution is
     uint256 rewardDuration
   ) external onlyInitializing {
     _addInterface(type(IRewardsDistribution).interfaceId);
-    StakingRewards.Layout storage ds = RewardsDistributionStorage
-      .layout()
-      .staking;
-    (ds.stakeToken, ds.rewardToken, ds.rewardDuration) = (
+    RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
+      .layout();
+    StakingRewards.Layout storage staking = ds.staking;
+    (staking.stakeToken, staking.rewardToken, staking.rewardDuration) = (
       stakeToken,
       rewardToken,
       rewardDuration
     );
+    UpgradeableBeacon _beacon = new UpgradeableBeacon(
+      address(this),
+      address(new DelegationProxy())
+    );
+    ds.beacon = address(_beacon);
+
     emit RewardsDistributionInitialized(
       stakeToken,
       rewardToken,
@@ -63,11 +71,21 @@ contract RewardsDistribution is
     );
   }
 
+  function upgradeDelegationProxy(
+    address newImplementation
+  ) external onlyOwner {
+    address _beacon = RewardsDistributionStorage.layout().beacon;
+    UpgradeableBeacon(_beacon).upgradeTo(newImplementation);
+
+    emit DelegationProxyUpgraded(newImplementation);
+  }
+
   function setRewardNotifier(
     address notifier,
     bool enabled
   ) external onlyOwner {
     RewardsDistributionStorage.layout().isRewardNotifier[notifier] = enabled;
+
     emit RewardNotifierSet(notifier, enabled);
   }
 
@@ -370,6 +388,11 @@ contract RewardsDistribution is
     // TODO: implement
   }
 
+  /// @inheritdoc IRewardsDistribution
+  function beacon() external view returns (address) {
+    return RewardsDistributionStorage.layout().beacon;
+  }
+
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                          INTERNAL                          */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -450,8 +473,12 @@ contract RewardsDistribution is
   ) internal returns (address proxy) {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
-    proxy = address(new DelegationProxy(ds.staking.stakeToken, delegatee));
+    proxy = LibClone.deployDeterministicERC1967BeaconProxy(
+      ds.beacon,
+      bytes32(depositId)
+    );
     ds.proxyById[depositId] = proxy;
+    DelegationProxy(proxy).initialize(ds.staking.stakeToken, delegatee);
 
     emit DelegationProxyDeployed(depositId, delegatee, proxy);
   }

@@ -51,6 +51,8 @@ interface IRewardsDistributionBase {
     uint256 rewardDuration
   );
 
+  event DelegationProxyUpgraded(address newImplementation);
+
   event DelegationProxyDeployed(
     uint256 depositId,
     address delegatee,
@@ -134,4 +136,8 @@ interface IRewardsDistribution is IRewardsDistributionBase {
   function currentSpaceDelegationReward(
     address operator
   ) external view returns (uint256);
+
+  /// @notice The upgradeable beacon of delegation proxies
+  /// @return The address of the upgradeable beacon
+  function beacon() external view returns (address);
 }

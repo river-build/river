@@ -12,6 +12,7 @@ import {RewardsDistribution} from "contracts/src/base/registry/facets/distributi
 
 contract DeployRewardsDistributionV2 is Deployer, FacetHelper {
   constructor() {
+    addSelector(RewardsDistribution.upgradeDelegationProxy.selector);
     addSelector(RewardsDistribution.setRewardNotifier.selector);
     addSelector(RewardsDistribution.stake.selector);
     addSelector(RewardsDistribution.permitAndStake.selector);
@@ -32,6 +33,7 @@ contract DeployRewardsDistributionV2 is Deployer, FacetHelper {
     addSelector(RewardsDistribution.lastTimeRewardDistributed.selector);
     addSelector(RewardsDistribution.currentRewardPerTokenAccumulated.selector);
     addSelector(RewardsDistribution.currentReward.selector);
+    addSelector(RewardsDistribution.beacon.selector);
   }
 
   function initializer() public pure override returns (bytes4) {

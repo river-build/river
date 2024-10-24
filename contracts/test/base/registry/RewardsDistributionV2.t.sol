@@ -2,13 +2,14 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {IERC173} from "contracts/src/diamond/facets/ownable/IERC173.sol";
+import {IERC173, IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
 import {IRewardsDistributionBase} from "contracts/src/base/registry/facets/distribution/v2/IRewardsDistribution.sol";
 
 // libraries
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
 import {StakingRewards} from "contracts/src/base/registry/facets/distribution/v2/StakingRewards.sol";
 import {RewardsDistributionStorage} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistributionStorage.sol";
 
@@ -21,10 +22,12 @@ import {River} from "contracts/src/tokens/river/base/River.sol";
 import {MainnetDelegation} from "contracts/src/tokens/river/base/delegation/MainnetDelegation.sol";
 import {SpaceDelegationFacet} from "contracts/src/base/registry/facets/delegation/SpaceDelegationFacet.sol";
 import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistribution.sol";
+import {DelegationProxy} from "contracts/src/base/registry/facets/distribution/v2/DelegationProxy.sol";
 
 contract RewardsDistributionV2Test is
   BaseSetup,
   EIP712Utils,
+  IOwnableBase,
   IRewardsDistributionBase
 {
   using FixedPointMathLib for uint256;
@@ -72,6 +75,31 @@ contract RewardsDistributionV2Test is
       )
     ) & ~bytes32(uint256(0xff));
     assertEq(slot, RewardsDistributionStorage.STORAGE_SLOT, "slot");
+  }
+
+  function test_fuzz_upgradeDelegationProxy_revertIf_notOwner(
+    address caller
+  ) public {
+    vm.assume(caller != deployer);
+    vm.expectRevert(abi.encodeWithSelector(Ownable__NotOwner.selector, caller));
+    vm.prank(caller);
+    rewardsDistributionFacet.upgradeDelegationProxy(address(this));
+  }
+
+  function test_fuzz_upgradeDelegationProxy(address newImplementation) public {
+    vm.assume(uint160(newImplementation) > 10);
+    vm.assume(newImplementation.code.length == 0);
+    vm.etch(newImplementation, type(DelegationProxy).runtimeCode);
+
+    vm.expectEmit(address(rewardsDistributionFacet));
+    emit DelegationProxyUpgraded(newImplementation);
+    vm.prank(deployer);
+    rewardsDistributionFacet.upgradeDelegationProxy(newImplementation);
+
+    assertEq(
+      UpgradeableBeacon(rewardsDistributionFacet.beacon()).implementation(),
+      newImplementation
+    );
   }
 
   function test_stake_revertIf_notOperator() public {
