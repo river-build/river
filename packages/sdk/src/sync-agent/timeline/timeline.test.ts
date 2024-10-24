@@ -190,15 +190,15 @@ describe('timeline.test.ts', () => {
         await waitFor(async () => {
             const reaction = bobChannel.timeline.reactions.get(messageEvent!.eventId)
             expect(reaction).toBeTruthy()
-            expect(reaction['👍']).toBeTruthy()
-            expect(reaction['👍'][alice.userId].eventId).toEqual(reactionEventId)
+            expect(reaction?.['👍']).toBeTruthy()
+            expect(reaction?.['👍'][alice.userId].eventId).toEqual(reactionEventId)
         })
         // alice deletes the reaction
         await aliceChannel.redactEvent(reactionEventId)
         // wait for bob to no longer see the reaction
         await waitFor(() => {
             const reaction = bobChannel.timeline.reactions.get(messageEvent!.eventId)
-            expect(reaction).toBeFalsy()
+            expect(reaction).toBeUndefined()
         })
     })
 

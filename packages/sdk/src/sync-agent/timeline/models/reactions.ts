@@ -8,8 +8,10 @@ export class Reactions extends Observable<ReactionsMap> {
         super(initialValue)
     }
 
-    get(parentId: string) {
-        return this.value[parentId] ?? {}
+    get(parentId: string): MessageReactions | undefined {
+        // due to delete, removeEvent can leave empty keys in the map, so we need to check for that
+        const reactions = this.value[parentId]
+        return reactions && Object.keys(reactions).length > 0 ? reactions : undefined
     }
 
     update(fn: (current: ReactionsMap) => ReactionsMap): void {
@@ -31,11 +33,16 @@ export class Reactions extends Observable<ReactionsMap> {
         const senderId = event.sender.id
 
         const mutation = { ...this.value }
-        const entry = mutation[reactionName]
-        if (entry) {
-            delete entry[senderId]
-            if (Object.keys(entry).length === 0) {
-                delete this.value[reactionName]
+        if (mutation[parentId]?.[reactionName]?.[senderId]) {
+            // delete sender entry
+            delete mutation[parentId][reactionName][senderId]
+            // if reaction is empty, delete it
+            if (Object.keys(mutation[parentId][reactionName]).length === 0) {
+                delete mutation[parentId][reactionName]
+            }
+            // if parent has no reactions, delete it
+            if (Object.keys(mutation[parentId]).length === 0) {
+                delete mutation[parentId]
             }
         }
         this.setValue(mutation)

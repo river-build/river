@@ -132,7 +132,6 @@ export class MessageTimeline {
                 this.prependEvent(userId, event)
             }
         }
-        // TODO: can we reset pendingReplacedEvents after?
     }
 
     private prependEvent = (_userId: string, inTimelineEvent: TimelineEvent) => {
@@ -176,7 +175,6 @@ export class MessageTimeline {
             return
         }
         const newEvent = toReplacedMessageEvent(oldEvent, event)
-
         this.events.replace(event, eventIndex, this.events.value)
         this.replacedEvents.add(event.eventId, oldEvent, newEvent)
         this.reactions.removeEvent(oldEvent)
