@@ -209,9 +209,10 @@ async function getStreamInner(
 export async function getStream(
 	logger: FastifyBaseLogger,
 	streamId: string,
-	skipCache = false,
-	unpackOpts: UnpackEnvelopeOpts = STREAM_METADATA_SERVICE_DEFAULT_UNPACK_OPTS,
+	opts?: { skipCache?: boolean; unpackOpts?: UnpackEnvelopeOpts },
 ): Promise<StreamStateView> {
+	const skipCache = opts?.skipCache ?? false
+	const unpackOpts = opts?.unpackOpts ?? STREAM_METADATA_SERVICE_DEFAULT_UNPACK_OPTS
 	logger.info({ streamId, skipCache }, 'getStream called')
 	if (!skipCache) {
 		const existingStreamPromise = streamPromiseLRUCache.get(streamId)
