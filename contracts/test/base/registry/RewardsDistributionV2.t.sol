@@ -516,8 +516,9 @@ contract RewardsDistributionV2Test is
     vm.prank(depositors[1]);
     rewardsDistributionFacet.increaseStake(depositId1, 0);
 
-    uint256 currentUnclaimedReward = rewardsDistributionFacet
-      .currentUnclaimedReward(depositors[1]);
+    uint256 currentReward = rewardsDistributionFacet.currentReward(
+      depositors[1]
+    );
 
     StakingState memory state = rewardsDistributionFacet.stakingState();
     uint256 rewardRate = state.rewardRate;
@@ -530,9 +531,9 @@ contract RewardsDistributionV2Test is
       "rewardPerTokenAccumulated"
     );
     assertEq(
-      currentUnclaimedReward,
+      currentReward,
       rewardRate.fullMulDiv(timeLapse, StakingRewards.SCALE_FACTOR),
-      "currentUnclaimedReward"
+      "currentReward"
     );
   }
 
@@ -697,8 +698,7 @@ contract RewardsDistributionV2Test is
 
     vm.warp(block.timestamp + timeLapse);
 
-    uint256 currentUnclaimedReward = rewardsDistributionFacet
-      .currentUnclaimedReward(beneficiary);
+    uint256 currentReward = rewardsDistributionFacet.currentReward(beneficiary);
 
     vm.prank(beneficiary);
     uint256 reward = rewardsDistributionFacet.claimReward(
@@ -706,13 +706,7 @@ contract RewardsDistributionV2Test is
       beneficiary
     );
 
-    verifyClaim(
-      beneficiary,
-      beneficiary,
-      reward,
-      currentUnclaimedReward,
-      timeLapse
-    );
+    verifyClaim(beneficiary, beneficiary, reward, currentReward, timeLapse);
   }
 
   function test_fuzz_claimReward_byOperator(
@@ -741,13 +735,12 @@ contract RewardsDistributionV2Test is
 
     vm.warp(block.timestamp + timeLapse);
 
-    uint256 currentUnclaimedReward = rewardsDistributionFacet
-      .currentUnclaimedReward(operator);
+    uint256 currentReward = rewardsDistributionFacet.currentReward(operator);
 
     vm.prank(operator);
     uint256 reward = rewardsDistributionFacet.claimReward(operator, operator);
 
-    verifyClaim(operator, operator, reward, currentUnclaimedReward, timeLapse);
+    verifyClaim(operator, operator, reward, currentReward, timeLapse);
   }
 
   function test_fuzz_claimReward_bySpaceOperator(
@@ -776,13 +769,12 @@ contract RewardsDistributionV2Test is
 
     vm.warp(block.timestamp + timeLapse);
 
-    uint256 currentUnclaimedReward = rewardsDistributionFacet
-      .currentUnclaimedReward(space);
+    uint256 currentReward = rewardsDistributionFacet.currentReward(space);
 
     vm.prank(operator);
     uint256 reward = rewardsDistributionFacet.claimReward(space, operator);
 
-    verifyClaim(space, operator, reward, currentUnclaimedReward, timeLapse);
+    verifyClaim(space, operator, reward, currentReward, timeLapse);
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -946,10 +938,10 @@ contract RewardsDistributionV2Test is
     address beneficiary,
     address claimer,
     uint256 reward,
-    uint256 currentUnclaimedReward,
+    uint256 currentReward,
     uint256 timeLapse
   ) internal view {
-    assertEq(reward, currentUnclaimedReward, "reward");
+    assertEq(reward, currentReward, "reward");
     assertEq(river.balanceOf(claimer), reward, "reward balance");
 
     StakingState memory state = rewardsDistributionFacet.stakingState();

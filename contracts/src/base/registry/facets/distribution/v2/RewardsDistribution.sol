@@ -72,6 +72,11 @@ contract RewardsDistribution is
   /*                       STATE MUTATING                       */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
+  modifier onlyOperatorOrSpace(address delegatee) {
+    _onlyOperatorOrSpace(delegatee);
+    _;
+  }
+
   function stake(
     uint96 amount,
     address delegatee,
@@ -282,7 +287,7 @@ contract RewardsDistribution is
   ) external view returns (uint256 amount) {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
-    return ds.staking.stakedByDepositor[depositor];
+    amount = ds.staking.stakedByDepositor[depositor];
   }
 
   /// @inheritdoc IRewardsDistribution
@@ -303,41 +308,49 @@ contract RewardsDistribution is
     return ds.staking.depositById[depositId];
   }
 
+  /// @inheritdoc IRewardsDistribution
   function delegationProxyById(
     uint256 depositId
-  ) external view returns (address proxy) {
+  ) external view returns (address) {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     return ds.staking.proxyById[depositId];
   }
 
+  /// @inheritdoc IRewardsDistribution
   function isRewardNotifier(address notifier) external view returns (bool) {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     return ds.isRewardNotifier[notifier];
   }
 
+  /// @inheritdoc IRewardsDistribution
   function lastTimeRewardDistributed() external view returns (uint256) {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     return ds.staking.lastTimeRewardDistributed();
   }
 
+  /// @inheritdoc IRewardsDistribution
   function currentRewardPerTokenAccumulated() external view returns (uint256) {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     return ds.staking.currentRewardPerTokenAccumulated();
   }
 
-  function currentUnclaimedReward(
-    address beneficiary
-  ) external view returns (uint256) {
+  /// @inheritdoc IRewardsDistribution
+  function currentReward(address beneficiary) external view returns (uint256) {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     return
-      ds.staking.currentUnclaimedReward(
-        ds.staking.treasureByBeneficiary[beneficiary]
-      );
+      ds.staking.currentReward(ds.staking.treasureByBeneficiary[beneficiary]);
+  }
+
+  /// @inheritdoc IRewardsDistribution
+  function currentSpaceDelegationReward(
+    address operator
+  ) external view returns (uint256) {
+    // TODO: implement
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -377,11 +390,6 @@ contract RewardsDistribution is
   function _isSpace(address delegatee) internal view returns (bool) {
     SpaceDelegationStorage.Layout storage sd = SpaceDelegationStorage.layout();
     return sd.operatorBySpace[delegatee] != address(0);
-  }
-
-  modifier onlyOperatorOrSpace(address delegatee) {
-    _onlyOperatorOrSpace(delegatee);
-    _;
   }
 
   /// @dev Reverts if the delegatee is not an operator or space

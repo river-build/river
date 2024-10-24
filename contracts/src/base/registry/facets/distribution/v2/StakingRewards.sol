@@ -81,7 +81,7 @@ library StakingRewards {
   );
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-  /*                           ERRORS                           */
+  /*                       CUSTOM ERRORS                        */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   error StakingRewards__InvalidAmount();
@@ -125,7 +125,7 @@ library StakingRewards {
       FixedPointMathLib.fullMulDiv(rewardRate, elapsedTime, totalStaked);
   }
 
-  function currentUnclaimedReward(
+  function currentReward(
     Layout storage ds,
     Treasure storage treasure
   ) internal view returns (uint256) {
@@ -155,7 +155,7 @@ library StakingRewards {
 
   /// @dev Must be called after updating the global reward.
   function updateReward(Layout storage ds, Treasure storage treasure) internal {
-    treasure.unclaimedRewardSnapshot = currentUnclaimedReward(ds, treasure);
+    treasure.unclaimedRewardSnapshot = currentReward(ds, treasure);
     treasure.rewardPerTokenAccumulated = ds.rewardPerTokenAccumulated;
   }
 

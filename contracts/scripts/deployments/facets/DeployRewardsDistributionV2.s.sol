@@ -31,7 +31,7 @@ contract DeployRewardsDistributionV2 is Deployer, FacetHelper {
     addSelector(RewardsDistribution.isRewardNotifier.selector);
     addSelector(RewardsDistribution.lastTimeRewardDistributed.selector);
     addSelector(RewardsDistribution.currentRewardPerTokenAccumulated.selector);
-    addSelector(RewardsDistribution.currentUnclaimedReward.selector);
+    addSelector(RewardsDistribution.currentReward.selector);
   }
 
   function initializer() public pure override returns (bytes4) {
