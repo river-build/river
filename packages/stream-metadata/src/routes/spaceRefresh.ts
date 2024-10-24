@@ -51,7 +51,7 @@ export async function spaceRefreshOnResponse(
 			? [`/space/${spaceAddress}`, `/space/${spaceAddress}/token/*`]
 			: target === 'image'
 			? [`/space/${spaceAddress}/image`]
-			: [`/space/${spaceAddress}/*`]
+			: [`/space/${spaceAddress}*`]
 
 	try {
 		await CloudfrontManager.createCloudfrontInvalidation({
