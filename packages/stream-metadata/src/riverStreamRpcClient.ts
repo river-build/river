@@ -176,7 +176,7 @@ async function getStreamInner(
 			streamId,
 			lastMiniblockNum: lastMiniblockNum.toString(),
 		},
-		'getStream',
+		'getStreamInner called',
 	)
 
 	try {
@@ -191,7 +191,7 @@ async function getStreamInner(
 			{
 				duration_ms,
 			},
-			'getStream finished',
+			'getStreamInner finished',
 		)
 
 		const unpackedResponse = await unpackStream(response.stream, opts)
@@ -199,7 +199,7 @@ async function getStreamInner(
 	} catch (e) {
 		logger.error(
 			{ url: client.url, streamId, err: e },
-			'getStream failed, removing client from cache',
+			'getStreamInner failed, removing client from cache',
 		)
 		removeClient(logger, client)
 		throw e
@@ -209,18 +209,22 @@ async function getStreamInner(
 export async function getStream(
 	logger: FastifyBaseLogger,
 	streamId: string,
-	opts: UnpackEnvelopeOpts = STREAM_METADATA_SERVICE_DEFAULT_UNPACK_OPTS,
+	skipCache = false,
+	unpackOpts: UnpackEnvelopeOpts = STREAM_METADATA_SERVICE_DEFAULT_UNPACK_OPTS,
 ): Promise<StreamStateView> {
-	const existingStreamPromise = streamPromiseLRUCache.get(streamId)
-	if (existingStreamPromise) {
-		logger.info({ streamId }, 'getStream found in cache')
-		return existingStreamPromise
-	} else {
-		logger.info({ streamId }, 'getStream not found in cache')
-		const newStreamPromise = getStreamInner(logger, streamId, opts)
-		streamPromiseLRUCache.set(streamId, newStreamPromise)
-		return newStreamPromise
+	logger.info({ streamId, skipCache }, 'getStream called')
+	if (!skipCache) {
+		const existingStreamPromise = streamPromiseLRUCache.get(streamId)
+		if (existingStreamPromise) {
+			logger.info({ streamId }, 'getStream found in cache')
+			return existingStreamPromise
+		} else {
+			logger.info({ streamId }, 'getStream not found in cache')
+		}
 	}
+	const newStreamPromise = getStreamInner(logger, streamId, unpackOpts)
+	streamPromiseLRUCache.set(streamId, newStreamPromise)
+	return newStreamPromise
 }
 
 export async function getMediaStreamContent(
