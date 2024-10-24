@@ -56,6 +56,11 @@ export interface UpdateChannelParams {
     disabled?: boolean
 }
 
+export interface RemoveChannelParams {
+    spaceId: string
+    channelId: string
+}
+
 export interface LegacyUpdateRoleParams {
     spaceNetworkId: string
     roleId: number
@@ -233,6 +238,11 @@ export interface ISpaceDapp {
         signer: SignerType,
         txnOpts?: TransactionOpts,
     ) => Promise<TransactionType>
+    removeChannel: (
+        params: RemoveChannelParams,
+        signer: SignerType,
+        txnOpts?: TransactionOpts,
+    ) => Promise<TransactionType>
     legacyUpdateRole: (
         params: LegacyUpdateRoleParams,
         signer: SignerType,
@@ -323,4 +333,9 @@ export interface ISpaceDapp {
         abortController?: AbortController,
     ) => Promise<{ issued: true; tokenId: string } | { issued: false; tokenId: undefined }>
     getMembershipFreeAllocation: (spaceId: string) => Promise<BigNumber>
+    withdrawSpaceFunds: (
+        spaceId: string,
+        recipient: string,
+        signer: SignerType,
+    ) => Promise<TransactionType>
 }

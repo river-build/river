@@ -21,6 +21,7 @@ import {
     UpdateRoleParams,
     SetChannelPermissionOverridesParams,
     ClearChannelPermissionOverridesParams,
+    RemoveChannelParams,
 } from '../ISpaceDapp'
 import { LOCALHOST_CHAIN_ID } from '../Web3Constants'
 import { IRolesBase } from './IRolesShim'
@@ -326,7 +327,11 @@ export class SpaceDapp implements ISpaceDapp {
         txnOpts?: TransactionOpts,
     ): Promise<ContractTransaction> {
         return wrapTransaction(() => {
-            return this.spaceRegistrar.CreateSpace.write(signer).createSpaceWithPrepay({
+            const createSpaceFunction = this.spaceRegistrar.CreateSpace.write(signer)[
+                'createSpaceWithPrepay(((string,string,string,string),((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],bytes,bool),string[]),(string),(uint256)))'
+            ] as (arg: any) => Promise<ContractTransaction>
+
+            return createSpaceFunction({
                 channel: {
                     metadata: params.channelName || '',
                 },
@@ -1055,6 +1060,21 @@ export class SpaceDapp implements ISpaceDapp {
         return encodedCallData
     }
 
+    public async removeChannel(
+        params: RemoveChannelParams,
+        signer: ethers.Signer,
+        txnOpts?: TransactionOpts,
+    ): Promise<ContractTransaction> {
+        const space = this.getSpace(params.spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${params.spaceId}" is not found.`)
+        }
+        return wrapTransaction(
+            () => space.Channels.write(signer).removeChannel(params.channelId),
+            txnOpts,
+        )
+    }
+
     public async legacyUpdateRole(
         params: LegacyUpdateRoleParams,
         signer: ethers.Signer,
@@ -1579,6 +1599,14 @@ export class SpaceDapp implements ISpaceDapp {
             }
         }
         return undefined
+    }
+
+    public withdrawSpaceFunds(spaceId: string, recipient: string, signer: ethers.Signer) {
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+        return space.Membership.write(signer).withdraw(recipient)
     }
 
     // If the caller doesn't provide an abort controller, listenForMembershipToken will create one

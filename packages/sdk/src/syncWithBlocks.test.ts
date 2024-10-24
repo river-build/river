@@ -115,9 +115,9 @@ describe('syncWithBlocks', () => {
         expect(channel.stream?.nextSyncCookie?.streamId).toEqual(channelId)
 
         // Last event must be a genesis miniblock header.
-        const events = (await unpackStream(channel.stream)).streamAndCookie.miniblocks.flatMap(
-            (mb) => mb.events,
-        )
+        const events = (
+            await unpackStream(channel.stream, undefined)
+        ).streamAndCookie.miniblocks.flatMap((mb) => mb.events)
         const lastEvent = events.at(-1)
         const miniblockHeader = getMiniblockHeader(lastEvent)
         expect(miniblockHeader).toBeDefined()
@@ -145,9 +145,12 @@ describe('syncWithBlocks', () => {
         log('addEvent response', { resp })
 
         // Bob starts sync on the channel
-        const syncStream = bob.syncStreams({
-            syncPos: [channel.stream!.nextSyncCookie!],
-        })
+        const syncStream = bob.syncStreams(
+            {
+                syncPos: [channel.stream!.nextSyncCookie!],
+            },
+            { timeoutMs: -1 },
+        )
 
         // If there is a message, next expect a miniblock header, and vise versa.
         let expectMessage = true
@@ -164,7 +167,7 @@ describe('syncWithBlocks', () => {
             }
             const stream: StreamAndCookie | undefined = res.stream
             expect(stream).toBeDefined()
-            const parsed = await unpackStreamEnvelopes(res.stream)
+            const parsed = await unpackStreamEnvelopes(res.stream, undefined)
             log('===================sunk===================', { parsed })
             for (const p of parsed) {
                 if (knownHashes.has(p.hashStr)) {

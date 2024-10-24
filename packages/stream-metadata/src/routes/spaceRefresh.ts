@@ -63,7 +63,7 @@ export async function spaceRefreshOnResponse(
 	} catch (error) {
 		logger.error(
 			{
-				error,
+				err: error,
 				spaceAddress,
 			},
 			'Failed to refresh space',
