@@ -59,6 +59,7 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
 
     // initialization
     applySnapshot(
+        eventId: string,
         snapshot: Snapshot,
         cleartexts: Record<string, string> | undefined,
         encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
@@ -80,6 +81,7 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
                             fallbackKey: s.fallbackKey,
                             isNewDevice: s.isNewDevice,
                             sessionIds: [...s.sessionIds],
+                            srcEventId: eventId,
                         } satisfies KeySolicitationContent),
                 ),
                 encryptedUsername: member.username,
@@ -132,7 +134,11 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
 
         snapshot.members?.pins.forEach((snappedPin) => {
             if (snappedPin.pin?.event) {
-                const parsedEvent = makeParsedEvent(snappedPin.pin.event, snappedPin.pin.eventId)
+                const parsedEvent = makeParsedEvent(
+                    snappedPin.pin.event,
+                    snappedPin.pin.eventId,
+                    undefined,
+                )
                 const remoteEvent = makeRemoteTimelineEvent({ parsedEvent, eventNum: 0n })
                 const cleartext = cleartexts?.[remoteEvent.hashStr]
                 this.addPin(
@@ -204,6 +210,7 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
                     check(isDefined(stateMember), 'key solicitation from non-member')
                     this.solicitHelper.applySolicitation(
                         stateMember,
+                        event.hashStr,
                         payload.content.value,
                         encryptionEmitter,
                     )
@@ -281,7 +288,7 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
                 {
                     const pin = payload.content.value
                     check(isDefined(pin.event), 'invalid pin event')
-                    const parsedEvent = makeParsedEvent(pin.event, pin.eventId)
+                    const parsedEvent = makeParsedEvent(pin.event, pin.eventId, undefined)
                     const remoteEvent = makeRemoteTimelineEvent({ parsedEvent, eventNum: 0n })
                     this.addPin(
                         event.creatorUserId,

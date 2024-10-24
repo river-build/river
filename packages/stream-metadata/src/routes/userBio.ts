@@ -10,8 +10,8 @@ const paramsSchema = z.object({
 })
 
 const CACHE_CONTROL = {
-	// cache for 1 year, allow data usage for 1 hour while revalidating
-	200: 'public, max-age=31536000, stale-while-revalidate=3600',
+	200: 'public, max-age=30, s-maxage=3600, stale-while-revalidate=3600',
+	404: 'public, max-age=5, s-maxage=3600',
 }
 
 export async function fetchUserBio(request: FastifyRequest, reply: FastifyReply) {
@@ -40,18 +40,18 @@ export async function fetchUserBio(request: FastifyRequest, reply: FastifyReply)
 	} catch (error) {
 		logger.error(
 			{
-				error,
+				err: error,
 				userId,
 			},
 			'Failed to get stream',
 		)
-		return reply.code(404).send('Stream not found')
+		return reply.code(404).header('Cache-Control', CACHE_CONTROL[404]).send('Stream not found')
 	}
 
 	const protobufBio = await getUserBio(stream)
 	if (!protobufBio) {
 		logger.info({ userId, streamId: stream.streamId }, 'bio not found')
-		return reply.code(404).send('bio not found')
+		return reply.code(404).header('Cache-Control', CACHE_CONTROL[404]).send('bio not found')
 	}
 	const bio = protobufBio.bio
 

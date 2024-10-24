@@ -18,6 +18,19 @@ import { ParsedEvent, ParsedMiniblock, ParsedStreamAndCookie, ParsedStreamRespon
 import { SignerContext, checkDelegateSig } from './signerContext'
 import { keccak256 } from 'ethereum-cryptography/keccak'
 
+export interface UnpackEnvelopeOpts {
+    // the client recreates the hash from the event bytes in the envelope
+    // and compares it to the hash in the envelope.
+    // if this is true, we skip the hash check
+    // this operation is cheap, but it can be useful to skip if you can trust the source of the envelope
+    disableHashValidation?: boolean
+    // the client derives the creator address from the signature in the envelope
+    // and compares it to the creator address on the event.
+    // if this is true, we skip the signature check
+    // this operation is relatively expensive, and can be evaluated later
+    disableSignatureValidation?: boolean
+}
+
 export const _impl_makeEvent_impl_ = async (
     context: SignerContext,
     payload: PlainMessage<StreamEvent>['payload'],
@@ -82,9 +95,12 @@ export const makeEvents = async (
     return events
 }
 
-export const unpackStream = async (stream?: StreamAndCookie): Promise<ParsedStreamResponse> => {
+export const unpackStream = async (
+    stream: StreamAndCookie | undefined,
+    opts: UnpackEnvelopeOpts | undefined,
+): Promise<ParsedStreamResponse> => {
     assert(stream !== undefined, 'bad stream')
-    const streamAndCookie = await unpackStreamAndCookie(stream)
+    const streamAndCookie = await unpackStreamAndCookie(stream, opts)
     assert(
         stream.miniblocks.length > 0,
         `bad stream: no blocks ${streamIdAsString(streamAndCookie.nextSyncCookie.streamId)}`,
@@ -113,7 +129,10 @@ export const unpackStream = async (stream?: StreamAndCookie): Promise<ParsedStre
     }
 }
 
-export const unpackStreamEx = async (miniblocks: Miniblock[]): Promise<ParsedStreamResponse> => {
+export const unpackStreamEx = async (
+    miniblocks: Miniblock[],
+    opts: UnpackEnvelopeOpts | undefined,
+): Promise<ParsedStreamResponse> => {
     const streamAndCookie: StreamAndCookie = new StreamAndCookie()
     streamAndCookie.events = []
     streamAndCookie.miniblocks = miniblocks
@@ -122,18 +141,19 @@ export const unpackStreamEx = async (miniblocks: Miniblock[]): Promise<ParsedStr
     // need to be non-null to avoid runtime errors when unpacking the stream into a StreamStateView,
     // which parses content by type.
     streamAndCookie.nextSyncCookie = new SyncCookie()
-    return unpackStream(streamAndCookie)
+    return unpackStream(streamAndCookie, opts)
 }
 
 export const unpackStreamAndCookie = async (
     streamAndCookie: StreamAndCookie,
+    opts: UnpackEnvelopeOpts | undefined,
 ): Promise<ParsedStreamAndCookie> => {
     assert(streamAndCookie.nextSyncCookie !== undefined, 'bad stream: no cookie')
     const miniblocks = await Promise.all(
-        streamAndCookie.miniblocks.map(async (mb) => await unpackMiniblock(mb)),
+        streamAndCookie.miniblocks.map(async (mb) => await unpackMiniblock(mb, opts)),
     )
     return {
-        events: await unpackEnvelopes(streamAndCookie.events),
+        events: await unpackEnvelopes(streamAndCookie.events, opts),
         nextSyncCookie: streamAndCookie.nextSyncCookie,
         miniblocks: miniblocks,
     }
@@ -142,7 +162,7 @@ export const unpackStreamAndCookie = async (
 // returns all events + the header event and pointer to header content
 export const unpackMiniblock = async (
     miniblock: Miniblock,
-    opts?: { disableChecks: boolean },
+    opts: UnpackEnvelopeOpts | undefined,
 ): Promise<ParsedMiniblock> => {
     check(isDefined(miniblock.header), 'Miniblock header is not set')
     const header = await unpackEnvelope(miniblock.header, opts)
@@ -160,66 +180,70 @@ export const unpackMiniblock = async (
 
 export const unpackEnvelope = async (
     envelope: Envelope,
-    opts?: { disableChecks: boolean },
+    opts: UnpackEnvelopeOpts | undefined,
 ): Promise<ParsedEvent> => {
     check(hasElements(envelope.event), 'Event base is not set', Err.BAD_EVENT)
     check(hasElements(envelope.hash), 'Event hash is not set', Err.BAD_EVENT)
     check(hasElements(envelope.signature), 'Event signature is not set', Err.BAD_EVENT)
 
     const event = StreamEvent.fromBinary(envelope.event)
+    let hash = envelope.hash
 
-    const runChecks = opts?.disableChecks !== true
-    if (runChecks) {
-        const hash = riverHash(envelope.event)
+    const doCheckEventHash = opts?.disableHashValidation !== true
+    if (doCheckEventHash) {
+        hash = riverHash(envelope.event)
         check(bin_equal(hash, envelope.hash), 'Event id is not valid', Err.BAD_EVENT_ID)
-
-        const recoveredPubKey = riverRecoverPubKey(hash, envelope.signature)
-
-        if (!hasElements(event.delegateSig)) {
-            const address = publicKeyToAddress(recoveredPubKey)
-            check(
-                bin_equal(address, event.creatorAddress),
-                'Event signature is not valid',
-                Err.BAD_EVENT_SIGNATURE,
-            )
-        } else {
-            checkDelegateSig({
-                delegatePubKey: recoveredPubKey,
-                creatorAddress: event.creatorAddress,
-                delegateSig: event.delegateSig,
-                expiryEpochMs: event.delegateExpiryEpochMs,
-            })
-        }
-
-        if (event.prevMiniblockHash) {
-            // TODO replace with a proper check
-            // check(
-            //     bin_equal(e.prevEvents[0], prevEventHash),
-            //     'prevEvents[0] is not valid',
-            //     Err.BAD_PREV_EVENTS,
-            // )
-        }
     }
 
-    return makeParsedEvent(event, envelope.hash)
+    const doCheckEventSignature = opts?.disableSignatureValidation !== true
+    if (doCheckEventSignature) {
+        checkEventSignature(event, hash, envelope.signature)
+    }
+
+    return makeParsedEvent(event, envelope.hash, envelope.signature)
 }
 
-export function makeParsedEvent(event: StreamEvent, hash?: Uint8Array) {
+export function checkEventSignature(event: StreamEvent, hash: Uint8Array, signature: Uint8Array) {
+    const recoveredPubKey = riverRecoverPubKey(hash, signature)
+
+    if (!hasElements(event.delegateSig)) {
+        const address = publicKeyToAddress(recoveredPubKey)
+        check(
+            bin_equal(address, event.creatorAddress),
+            'Event signature is not valid',
+            Err.BAD_EVENT_SIGNATURE,
+        )
+    } else {
+        checkDelegateSig({
+            delegatePubKey: recoveredPubKey,
+            creatorAddress: event.creatorAddress,
+            delegateSig: event.delegateSig,
+            expiryEpochMs: event.delegateExpiryEpochMs,
+        })
+    }
+}
+
+export function makeParsedEvent(
+    event: StreamEvent,
+    hash: Uint8Array | undefined,
+    signature: Uint8Array | undefined,
+) {
     hash = hash ?? riverHash(event.toBinary())
     return {
         event,
         hash,
         hashStr: bin_toHexString(hash),
+        signature,
         prevMiniblockHashStr: event.prevMiniblockHash
             ? bin_toHexString(event.prevMiniblockHash)
             : undefined,
         creatorUserId: userIdFromAddress(event.creatorAddress),
-    }
+    } satisfies ParsedEvent
 }
 
 export const unpackEnvelopes = async (
     event: Envelope[],
-    opts?: { disableChecks: boolean },
+    opts: UnpackEnvelopeOpts | undefined,
 ): Promise<ParsedEvent[]> => {
     const ret: ParsedEvent[] = []
     //let prevEventHash: Uint8Array | undefined = undefined
@@ -233,15 +257,18 @@ export const unpackEnvelopes = async (
 }
 
 // First unpacks miniblocks, including header events, then unpacks events from the minipool
-export const unpackStreamEnvelopes = async (stream: StreamAndCookie): Promise<ParsedEvent[]> => {
+export const unpackStreamEnvelopes = async (
+    stream: StreamAndCookie,
+    opts: UnpackEnvelopeOpts | undefined,
+): Promise<ParsedEvent[]> => {
     const ret: ParsedEvent[] = []
 
     for (const mb of stream.miniblocks) {
-        ret.push(...(await unpackEnvelopes(mb.events)))
-        ret.push(await unpackEnvelope(mb.header!))
+        ret.push(...(await unpackEnvelopes(mb.events, opts)))
+        ret.push(await unpackEnvelope(mb.header!, opts))
     }
 
-    ret.push(...(await unpackEnvelopes(stream.events)))
+    ret.push(...(await unpackEnvelopes(stream.events, opts)))
     return ret
 }
 

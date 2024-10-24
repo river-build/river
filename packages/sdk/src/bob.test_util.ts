@@ -120,7 +120,7 @@ export const bobTalksToHimself = async (
     // Now there must be "channel created" event in the space stream.
     const spaceResponse = await bob.getStream({ streamId: spacedStreamId })
     const channelCreatePayload = lastEventFiltered(
-        await unpackStreamEnvelopes(spaceResponse.stream!),
+        await unpackStreamEnvelopes(spaceResponse.stream!, undefined),
         getChannelUpdatePayload,
     )
     expect(channelCreatePayload).toBeDefined()
@@ -149,9 +149,12 @@ export const bobTalksToHimself = async (
     log('Bob starts sync with sync cookie=', channel.stream?.nextSyncCookie)
 
     let syncCookie = channel.stream!.nextSyncCookie!
-    const bobSyncStreamIterable: AsyncIterable<SyncStreamsResponse> = bob.syncStreams({
-        syncPos: [syncCookie],
-    })
+    const bobSyncStreamIterable: AsyncIterable<SyncStreamsResponse> = bob.syncStreams(
+        {
+            syncPos: [syncCookie],
+        },
+        { timeoutMs: -1 },
+    )
     await expect(
         waitForSyncStreams(
             bobSyncStreamIterable,

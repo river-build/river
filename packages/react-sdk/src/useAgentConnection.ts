@@ -4,13 +4,14 @@ import type { ethers } from 'ethers'
 import { connectRiverWithBearerToken, signAndConnect } from './connectRiver'
 import { useRiverSync } from './internals/useRiverSync'
 
-type RiverConnectConfig = Omit<SyncAgentConfig, 'context' | 'onTokenExpired'>
-export const useRiverConnection = () => {
-    const [isConnecting, setConnecting] = useState(false)
+type AgentConnectConfig = Omit<SyncAgentConfig, 'context' | 'onTokenExpired'>
+
+export const useAgentConnection = () => {
+    const [isAgentConnecting, setConnecting] = useState(false)
     const river = useRiverSync()
 
     const connect = useCallback(
-        async (signer: ethers.Signer, config: RiverConnectConfig) => {
+        async (signer: ethers.Signer, config: AgentConnectConfig) => {
             if (river?.syncAgent) {
                 return
             }
@@ -34,7 +35,7 @@ export const useRiverConnection = () => {
     )
 
     const connectUsingBearerToken = useCallback(
-        async (bearerToken: string, config: RiverConnectConfig) => {
+        async (bearerToken: string, config: AgentConnectConfig) => {
             if (river?.syncAgent) {
                 return
             }
@@ -59,14 +60,14 @@ export const useRiverConnection = () => {
 
     const disconnect = useCallback(() => river?.setSyncAgent(undefined), [river])
 
-    const isConnected = useMemo(() => !!river?.syncAgent, [river])
+    const isAgentConnected = useMemo(() => !!river?.syncAgent, [river])
 
     return {
         connect,
         connectUsingBearerToken,
         disconnect,
-        isConnecting,
-        isConnected,
+        isAgentConnecting,
+        isAgentConnected,
         env: river?.syncAgent?.config.riverConfig.environmentId,
     }
 }
