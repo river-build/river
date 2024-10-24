@@ -50,13 +50,18 @@ export class StreamStateView_DMChannel extends StreamStateView_AbstractContent {
                 break
 
             case 'message':
-                this.decryptEvent(
-                    'channelMessage',
-                    event,
-                    payload.content.value,
-                    cleartext,
-                    encryptionEmitter,
-                )
+                if (payload.content.value.algorithm === 'MLS 1.0') {
+                    // MLS
+                    // TODO: Handle MLS
+                } else {
+                    this.decryptEvent(
+                        'channelMessage',
+                        event,
+                        payload.content.value,
+                        cleartext,
+                        encryptionEmitter,
+                    )
+                }
                 this.updateLastEvent(event.remoteEvent, stateEmitter)
                 break
 
