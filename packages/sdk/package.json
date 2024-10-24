@@ -38,7 +38,7 @@
         "ethers": "^5.7.2",
         "lodash": "^4.17.21",
         "nanoid": "^4.0.0",
-        "p-limit": "^5.0.0"
+        "p-limit": "^6.1.0"
     },
     "devDependencies": {
         "@jest/globals": "^29.6.2",
