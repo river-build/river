@@ -6,12 +6,13 @@
 import { makeTestClient } from './util.test'
 import { Client } from './client'
 import { Client as MlsClient } from '@river-build/mls-rs-wasm'
+import { MlsEvent } from '@river-build/proto'
 // import { addressFromUserId, makeDMStreamId, streamIdAsBytes } from './id'
 // import { makeEvent } from './sign'
 // import { make_DMChannelPayload_Inception, make_MemberPayload_Membership2 } from './types'
 // import { MembershipOp } from '@river-build/proto'
 
-describe('dmsTests', () => {
+describe('mlsTests', () => {
     let clients: Client[] = []
     const makeInitAndStartClient = async () => {
         const client = await makeTestClient()
@@ -70,5 +71,20 @@ describe('dmsTests', () => {
 
         await expect(alicesClient.waitForStream(streamId)).toResolve()
         await expect(alicesClient.sendMlsMessage(streamId, utf8Encoder.encode('hello'))).toResolve()
+    })
+
+    test('clientsCanSendMlsEvents', async () => {
+        const bobsClient = await makeInitAndStartClient()
+        const alicesClient = await makeInitAndStartClient()
+        const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
+        const mlsEvent = new MlsEvent({
+            content: {
+                case: 'join',
+                value: {
+                    keyPackage: new Uint8Array([1, 2, 3, 4]),
+                },
+            },
+        })
+        await expect(bobsClient.addMlsEvent(streamId, mlsEvent)).toResolve()
     })
 })

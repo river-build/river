@@ -30,6 +30,7 @@ import {
     ChunkedMedia,
     UserBio,
     Tags,
+    MlsEvent,
 } from '@river-build/proto'
 import {
     bin_fromHexString,
@@ -134,6 +135,7 @@ import {
     make_SpacePayload_SpaceImage,
     make_UserMetadataPayload_ProfileImage,
     make_UserMetadataPayload_Bio,
+    make_MemberPayload_Mls,
 } from './types'
 
 import debug from 'debug'
@@ -2400,5 +2402,10 @@ export class Client
 
     public async debugDropStream(syncId: string, streamId: string): Promise<void> {
         await this.rpcClient.info({ debug: ['drop_stream', syncId, streamId] })
+    }
+
+    public async addMlsEvent(streamId: string, event: MlsEvent): Promise<void> {
+        const memberPayload = make_MemberPayload_Mls(event)
+        await this.makeEventAndAddToStream(streamId, memberPayload)
     }
 }

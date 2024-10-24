@@ -4,6 +4,7 @@ import "fmt"
 
 type IsStreamEvent_Payload = isStreamEvent_Payload
 type IsMiniblockHeader_Content = isMiniblockHeader_Content
+type IsMlsEvent_Content = isMlsEvent_Content
 type IsMemberPayload_Content = isMemberPayload_Content
 type IsSpacePayload_Content = isSpacePayload_Content
 type IsChannelPayload_Content = isChannelPayload_Content

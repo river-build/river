@@ -513,6 +513,16 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 				check(params.creatorIsMember).
 				check(unpinRules.validUnpin)
 		}
+	case *MemberPayload_Mls:
+		if shared.ValidChannelStreamId(params.streamView.StreamId()) {
+			return aeBuilder().
+				checkOneOf(params.creatorIsMember).
+				requireChainAuth(params.channelEntitlements(auth.PermissionRead)).
+				onChainAuthFailure(params.onEntitlementFailureForUserEvent)
+		} else {
+			return aeBuilder().
+				checkOneOf(params.creatorIsMember)
+		}
 	default:
 		return aeBuilder().
 			fail(unknownContentType(content))

@@ -150,6 +150,24 @@ message MiniblockHeader {
     }
 }
 
+message MlsEvent {
+    message Join {
+        string identity = 1;
+        bytes key_package = 2;
+    }
+
+    message Welcome {
+        bytes commit = 1;
+        bytes welcome = 2;
+        repeated string identities = 3;
+    }
+
+    oneof content {
+        Join join = 1;
+        Welcome welcome = 2;
+    }
+}
+
 /**
 * MemberPayload
 * can appear in any stream
@@ -166,9 +184,14 @@ message MemberPayload {
             bytes ens_address = 7;
             Nft nft = 8;
         }
+
+        message Keys {
+            repeated bytes commits = 1;
+        }
         
         repeated Member joined = 1;
         repeated SnappedPin pins = 2;
+        Keys keys = 3;
     }
 
     message Membership {
@@ -221,6 +244,7 @@ message MemberPayload {
         Nft nft = 7;
         Pin pin = 8;
         Unpin unpin = 9;
+        MlsEvent mls = 10;
     }
 }
 
