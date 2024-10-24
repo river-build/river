@@ -8,6 +8,10 @@ export class Reactions extends Observable<ReactionsMap> {
         super(initialValue)
     }
 
+    get(parentId: string) {
+        return this.value[parentId] ?? {}
+    }
+
     update(fn: (current: ReactionsMap) => ReactionsMap): void {
         this.setValue(fn(this.value))
     }

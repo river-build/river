@@ -17,6 +17,7 @@ import { PendingReplacedEvents } from './models/pendingReplacedEvents'
 import { ReplacedEvents } from './models/replacedEvents'
 import { ThreadStats } from './models/threadStats'
 import { Threads } from './models/threads'
+import type { RiverConnection } from '../river-connection/riverConnection'
 
 export class MessageTimeline {
     events = new TimelineEvents()
@@ -33,7 +34,11 @@ export class MessageTimeline {
     filterFn: (event: TimelineEvent, kind: SnapshotCaseType) => boolean = (_event, _kind) => {
         return true
     }
-    constructor(private userId: string) {
+    constructor(
+        private streamId: string,
+        private userId: string,
+        private riverConnection: RiverConnection,
+    ) {
         //
     }
 
@@ -49,12 +54,21 @@ export class MessageTimeline {
         this.appendEvents(events, this.userId)
     }
 
+    async scrollback(): Promise<{ terminus: boolean; firstEvent?: TimelineEvent }> {
+        return this.riverConnection.callWithStream(this.streamId, async (client) => {
+            return client.scrollback(this.streamId).then(({ terminus, firstEvent }) => ({
+                terminus,
+                firstEvent: firstEvent ? toEvent(firstEvent, this.userId) : undefined,
+            }))
+        })
+    }
+
     private reset() {
         this.events.reset()
         this.threads.reset()
         this.threadsStats.reset()
         this.reactions.reset()
-        // this.pendingReplacedEvents.reset()
+        this.pendingReplacedEvents.reset()
         this.replacedEvents.reset()
     }
 

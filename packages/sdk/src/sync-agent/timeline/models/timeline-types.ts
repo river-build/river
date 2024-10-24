@@ -283,8 +283,12 @@ export interface RoomMessageEvent {
     replyPreview?: string
     body: string
     mentions: {
-        // TODO: would be great to remove undefined from here
+        // mentions should always have a user id, but it's data over the wire
+        // and we can't guarantee that it will be there (we have issues in prod as i write this)
+        // TODO: would be nice to preprocess and dont add the mention if the user id is not there
         userId: string | undefined
+        displayName: string
+        atChannel?: boolean
     }[]
     editsEventId?: string
     content: RoomMessageEventContentOneOf

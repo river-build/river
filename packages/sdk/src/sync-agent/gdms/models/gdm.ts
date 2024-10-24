@@ -27,7 +27,7 @@ export class Gdm extends PersistedObservable<GdmModel> {
     members: Members
     constructor(id: string, private riverConnection: RiverConnection, store: Store) {
         super({ id, isJoined: false, initialized: false }, store, LoadPriority.high)
-        this.timeline = new MessageTimeline(riverConnection.userId)
+        this.timeline = new MessageTimeline(id, riverConnection.userId, riverConnection)
         this.members = new Members(id, riverConnection, store)
     }
 

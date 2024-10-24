@@ -1,9 +1,16 @@
 import { Observable } from '../../../observable/observable'
-import { type TimelineEvent } from './timeline-types'
+import { type TimelineEvent, type RiverTimelineEvent } from './timeline-types'
 
 export class TimelineEvents extends Observable<TimelineEvent[]> {
     constructor(initialValue: TimelineEvent[] = []) {
         super(initialValue)
+    }
+
+    getLatestEvent(kind?: RiverTimelineEvent): TimelineEvent | undefined {
+        if (kind) {
+            return this.value.find((event) => event.content?.kind === kind)
+        }
+        return this.value[this.value.length - 1]
     }
 
     update(fn: (current: TimelineEvent[]) => TimelineEvent[]): void {

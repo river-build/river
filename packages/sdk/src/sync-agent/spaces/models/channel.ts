@@ -30,7 +30,7 @@ export class Channel extends PersistedObservable<ChannelModel> {
         store: Store,
     ) {
         super({ id, spaceId, isJoined: false }, store, LoadPriority.high)
-        this.timeline = new MessageTimeline(riverConnection.userId)
+        this.timeline = new MessageTimeline(id, riverConnection.userId, riverConnection)
         this.members = new Members(id, riverConnection, store)
     }
 
