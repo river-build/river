@@ -12,7 +12,7 @@ import {DeployRewardsDistributionV2} from "contracts/scripts/deployments/facets/
 import {IDiamond} from "contracts/src/diamond/Diamond.sol";
 import {IDropFacetBase} from "contracts/src/tokens/drop/IDropFacet.sol";
 import {IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
-
+import {IRewardsDistributionBase} from "contracts/src/base/registry/facets/distribution/v2/IRewardsDistribution.sol";
 //libraries
 import {MerkleTree} from "contracts/test/utils/MerkleTree.sol";
 import {DropFacet} from "contracts/src/tokens/drop/DropFacet.sol";
@@ -21,16 +21,27 @@ import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 import {DropStorage} from "contracts/src/tokens/drop/DropStorage.sol";
 import {EIP712Utils} from "contracts/test/utils/EIP712Utils.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+
 // contracts
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {River} from "contracts/src/tokens/river/base/River.sol";
 import {NodeOperatorFacet} from "contracts/src/base/registry/facets/operator/NodeOperatorFacet.sol";
 import {EIP712Facet} from "contracts/src/diamond/utils/cryptography/signature/EIP712Facet.sol";
+import {StakingRewards} from "contracts/src/base/registry/facets/distribution/v2/StakingRewards.sol";
 
 // debuggging
 import {console} from "forge-std/console.sol";
 
-contract DropFacetTest is BaseSetup, EIP712Utils, IDropFacetBase, IOwnableBase {
+contract DropFacetTest is
+  BaseSetup,
+  EIP712Utils,
+  IDropFacetBase,
+  IOwnableBase,
+  IRewardsDistributionBase
+{
+  using FixedPointMathLib for uint256;
+
   bytes32 internal constant STAKE_TYPEHASH =
     keccak256(
       "Stake(uint96 amount,address delegatee,address beneficiary,address owner,uint256 nonce,uint256 deadline)"
@@ -67,6 +78,10 @@ contract DropFacetTest is BaseSetup, EIP712Utils, IDropFacetBase, IOwnableBase {
   address internal alice;
   uint256 internal aliceKey;
 
+  address internal NOTIFIER = makeAddr("NOTIFIER");
+  uint256 internal rewardDuration;
+  uint256 internal timeLapse;
+
   function setUp() public override {
     super.setUp();
 
@@ -101,6 +116,18 @@ contract DropFacetTest is BaseSetup, EIP712Utils, IDropFacetBase, IOwnableBase {
 
     // RewardsDistribution
     rewardsDistribution = RewardsDistribution(baseRegistry);
+
+    vm.prank(deployer);
+    rewardsDistribution.setRewardNotifier(NOTIFIER, true);
+
+    vm.prank(bridge);
+    river.mint(address(rewardsDistribution), 1 ether);
+
+    vm.prank(NOTIFIER);
+    rewardsDistribution.notifyRewardAmount(1 ether);
+
+    rewardDuration = rewardsDistribution.stakingState().rewardDuration;
+    timeLapse = 1 days;
   }
 
   // =============================================================
@@ -552,26 +579,34 @@ contract DropFacetTest is BaseSetup, EIP712Utils, IDropFacetBase, IOwnableBase {
   {
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
     uint256 depositId = dropFacet.getDepositIdByWallet(bob, conditionId);
-
     uint256 depositAmount = amounts[treeIndex[bob]];
+
     assertEq(rewardsDistribution.stakedByDepositor(bob), depositAmount);
 
     vm.prank(bob);
     vm.expectRevert(SafeTransferLib.TransferFromFailed.selector);
     rewardsDistribution.withdraw(depositId);
 
+    // move time forward
+    vm.warp(block.timestamp + timeLapse);
+
+    uint256 currentReward = rewardsDistribution.currentReward(bob);
+
+    vm.prank(bob);
+    uint256 claimReward = rewardsDistribution.claimReward(bob, bob);
+    _verifyClaim(bob, bob, claimReward, currentReward);
+
     vm.prank(bob);
     rewardsDistribution.initiateWithdraw(depositId);
-
-    address proxy = rewardsDistribution.delegationProxyById(depositId);
-    uint256 lockCooldown = river.lockCooldown(proxy);
-
-    vm.warp(block.timestamp + lockCooldown);
+    uint256 lockCooldown = river.lockCooldown(
+      rewardsDistribution.delegationProxyById(depositId)
+    );
+    vm.warp(lockCooldown);
 
     vm.prank(bob);
     rewardsDistribution.withdraw(depositId);
 
-    assertEq(river.balanceOf(bob), depositAmount);
+    assertEq(river.balanceOf(bob), depositAmount + claimReward);
   }
 
   // setClaimConditions
@@ -868,5 +903,29 @@ contract DropFacetTest is BaseSetup, EIP712Utils, IDropFacetBase, IOwnableBase {
       structHash
     );
     return abi.encodePacked(r, s, v);
+  }
+
+  function _verifyClaim(
+    address beneficiary,
+    address claimer,
+    uint256 reward,
+    uint256 currentReward
+  ) internal view {
+    assertEq(reward, currentReward, "reward");
+    assertEq(river.balanceOf(claimer), reward, "reward balance");
+
+    StakingState memory state = rewardsDistribution.stakingState();
+    uint256 earningPower = rewardsDistribution
+      .treasureByBeneficiary(beneficiary)
+      .earningPower;
+
+    assertEq(
+      state.rewardRate.fullMulDiv(timeLapse, state.totalStaked).fullMulDiv(
+        earningPower,
+        StakingRewards.SCALE_FACTOR
+      ),
+      reward,
+      "expected reward"
+    );
   }
 }
