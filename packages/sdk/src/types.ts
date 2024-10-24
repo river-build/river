@@ -55,6 +55,7 @@ export interface ParsedEvent {
     event: StreamEvent
     hash: Uint8Array
     hashStr: string
+    signature: Uint8Array | undefined
     prevMiniblockHashStr?: string
     creatorUserId: string
 }
@@ -154,6 +155,7 @@ export interface ParsedStreamResponse {
 }
 
 export type ClientInitStatus = {
+    isHighPriorityDataLoaded: boolean
     isLocalDataLoaded: boolean
     isRemoteDataLoaded: boolean
     progress: number
