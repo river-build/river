@@ -1,0 +1,26 @@
+{
+    "name": "merkle-worker",
+    "version": "0.0.0",
+    "private": true,
+    "scripts": {
+        "publish": "wrangler deploy --env $CF_ENV",
+        "dev": "echo use dev:local for now - see wrangler.toml",
+        "dev:local": "wrangler dev --port ${PORT:-8686}",
+        "dev:remote": "wrangler dev --remote",
+        "prettier:check": "prettier --check .",
+        "prettier:fix": "prettier --write .",
+        "lint": "yarn eslint --format unix ./src",
+        "start": "wrangler dev",
+        "test": "vitest",
+        "cf-typegen": "wrangler types"
+    },
+    "devDependencies": {
+        "@cloudflare/vitest-pool-workers": "^0.5.2",
+        "@cloudflare/workers-types": "^4.20241022.0",
+        "eslint": "^8.53.0",
+        "prettier": "^2.8.8",
+        "typescript": "^5.5.2",
+        "vitest": "2.0.5",
+        "wrangler": "^3.60.3"
+    }
+}
