@@ -134,4 +134,21 @@ interface IRewardsDistribution is IRewardsDistributionBase {
   function currentSpaceDelegationReward(
     address operator
   ) external view returns (uint256);
+
+  /// @notice Stakes stakeToken on behalf of an owner
+  /// @param amount The amount of stakeToken to stake
+  /// @param delegatee The address of the delegatee
+  /// @param beneficiary The address of the beneficiary
+  /// @param owner The address of the owner
+  /// @param deadline The deadline for the stake
+  /// @param signature The signature of the owner
+  /// @return depositId The ID of the deposit
+  function stakeOnBehalf(
+    uint96 amount,
+    address delegatee,
+    address beneficiary,
+    address owner,
+    uint256 deadline,
+    bytes calldata signature
+  ) external returns (uint256 depositId);
 }
