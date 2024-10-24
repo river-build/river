@@ -29,7 +29,7 @@
     "typings": "./dist/types/index.d.ts",
     "peerDependencies": {
         "react": "^18.2.0",
-        "typescript": "^5.1.6"
+        "typescript": "^5.6.3"
     },
     "dependencies": {
         "@river-build/sdk": "workspace:^",
@@ -39,15 +39,15 @@
         "@testing-library/react": "^14.2.1",
         "@types/react": "^18.2.11",
         "@types/react-dom": "^18.2.4",
-        "@typescript-eslint/eslint-plugin": "^6.10.0",
-        "@typescript-eslint/parser": "^7.14.1",
+        "@typescript-eslint/eslint-plugin": "^8.11.0",
+        "@typescript-eslint/parser": "^8.11.0",
         "eslint": "^8.53.0",
-        "eslint-plugin-import": "^2.27.5",
-        "eslint-plugin-react": "^7.32.2",
+        "eslint-plugin-import": "^2.30.0",
+        "eslint-plugin-react": "^7.36.1",
         "eslint-plugin-react-hooks": "^4.6.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
-        "typescript": "^5.1.6"
+        "typescript": "^5.6.3"
     },
     "keywords": [
         "react",

@@ -82,7 +82,7 @@ const getSpaceMemberMetadata = async (
 		) {
 			imageEventId = streamView.spaceContent.encryptedSpaceImage.eventId
 		}
-	} catch (error) {
+	} catch (_error) {
 		// no-op
 	}
 

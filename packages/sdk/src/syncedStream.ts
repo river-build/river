@@ -89,6 +89,8 @@ export class SyncedStream extends Stream implements ISyncedStream {
         return true
     }
 
+    // TODO: Check this behaviour. Stream interface expect void and not Promise<void>
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     async initialize(
         nextSyncCookie: SyncCookie,
         events: ParsedEvent[],

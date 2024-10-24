@@ -142,7 +142,7 @@ export function parseChannelMetadataJSON(metadataStr: string): {
         ) {
             return result as { name: string; description: string }
         }
-    } catch (error) {
+    } catch {
         /* empty */
     }
     return {

@@ -25,6 +25,8 @@ module.exports = {
     curly: "warn",
     "@typescript-eslint/no-base-to-string": "error",
     "@typescript-eslint/no-unused-vars": ["warn", { args: "none" }],
+    "@typescript-eslint/no-empty-object-type": "off",
+    "@typescript-eslint/no-restricted-types": "error",
     "no-unused-vars": "off",
     "import/no-named-as-default-member": "off",
     "react/display-name": "off",
@@ -83,4 +85,5 @@ module.exports = {
     node: true,
     jest: true,
   },
+  ignorePatterns: ["vite.config.ts"],
 };

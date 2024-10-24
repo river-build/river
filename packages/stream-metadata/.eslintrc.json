@@ -5,8 +5,7 @@
 		"eslint:recommended",
 		"plugin:import/recommended",
 		"plugin:import/typescript",
-		"plugin:@typescript-eslint/recommended",
-		"plugin:@typescript-eslint/recommended-requiring-type-checking",
+		"plugin:@typescript-eslint/recommended-type-checked",
 		"plugin:prettier/recommended",
 		"plugin:jest/recommended"
 	],
@@ -37,6 +36,7 @@
 				"@typescript-eslint/no-unsafe-call": "off",
 				"@typescript-eslint/no-non-null-assertion": "off",
 				"@typescript-eslint/no-unsafe-argument": "off",
+				"@typescript-eslint/no-restricted-types": "error",
 				"no-console": "off" // Allow console.log in tests
 			}
 		}

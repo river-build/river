@@ -759,7 +759,7 @@ export function waitFor<T>(
     return new Promise((resolve, reject) => {
         const timeoutMS = options.timeoutMS
         const pollIntervalMS = Math.min(timeoutMS / 2, 100)
-        let lastError: any = undefined
+        let lastError: Error | undefined = undefined
         let promiseStatus: 'none' | 'pending' | 'resolved' | 'rejected' = 'none'
         const intervalId = setInterval(checkCallback, pollIntervalMS)
         const timeoutId = setInterval(onTimeout, timeoutMS)
@@ -769,7 +769,7 @@ export function waitFor<T>(
             if (result || promiseStatus === 'resolved') {
                 resolve(result)
             } else {
-                reject(lastError)
+                reject(lastError ?? timeoutContext)
             }
         }
         function onTimeout() {
@@ -1269,7 +1269,7 @@ export async function expectUserCanJoinChannel(
 
     // Stream node should allow the join
     await expect(client.joinStream(channelId)).toResolve()
-    const userStreamView = (await client.waitForStream(makeUserStreamId(client.userId))!).view
+    const userStreamView = (await client.waitForStream(makeUserStreamId(client.userId))).view
     // Wait for alice's user stream to have the join
     await waitFor(() => userStreamView.userContent.isMember(channelId, MembershipOp.SO_JOIN))
 }

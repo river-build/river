@@ -1594,7 +1594,7 @@ export class SpaceDapp implements ISpaceDapp {
                     logger.log(`Event ${eventName} found: `, parsedLog.args)
                     return parsedLog.args.space as string
                 }
-            } catch (error) {
+            } catch {
                 // This log wasn't from the contract we're interested in
             }
         }

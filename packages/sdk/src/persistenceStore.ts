@@ -1,5 +1,5 @@
 import { PersistedMiniblock, PersistedSyncedStream, SyncCookie } from '@river-build/proto'
-import Dexie, { Table } from 'dexie'
+import { default as Dexie, Table } from 'dexie'
 import { ParsedEvent, ParsedMiniblock } from './types'
 import {
     persistedSyncedStreamToParsedSyncedStream,

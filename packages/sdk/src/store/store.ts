@@ -1,5 +1,5 @@
 import { check, dlog } from '@river-build/dlog'
-import Dexie from 'dexie'
+import { default as Dexie } from 'dexie'
 
 const log = dlog('csb:dataStore')
 

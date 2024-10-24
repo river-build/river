@@ -1,7 +1,7 @@
 /**
  * @group main
  */
-import Dexie from 'dexie'
+import { default as Dexie } from 'dexie'
 
 describe('datastore tests', () => {
     // new test with description "decorator tests"

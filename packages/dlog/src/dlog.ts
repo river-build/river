@@ -169,14 +169,14 @@ const makeDlog = (d: Debugger, opts?: DLogOpts): DLogger => {
                 newArgs.push(c)
             } else if (typeof c === 'object' && c !== null) {
                 if (c instanceof Error) {
-                    isSingleLineLogsMode ? fmt.push('%o\n') : fmt.push('%O\n')
+                    fmt.push(isSingleLineLogsMode ? '%o\n' : '%O\n')
                     tailArgs.push(c)
                 } else {
-                    isSingleLineLogsMode ? fmt.push('%o\n') : fmt.push('%O\n')
+                    fmt.push(isSingleLineLogsMode ? '%o\n' : '%O\n')
                     newArgs.push(cloneAndFormat(c, { shortenHex: true }))
                 }
             } else {
-                isSingleLineLogsMode ? fmt.push('%o ') : fmt.push('%O ')
+                fmt.push(isSingleLineLogsMode ? '%o ' : '%O ')
                 newArgs.push(c)
             }
         }

@@ -336,8 +336,9 @@ export class SyncedStreamsLoop {
                                             this.log('forceStopSyncStreams called')
                                             resolve()
                                         }
-                                        this.interruptSync = (e: unknown) => {
+                                        this.interruptSync = (e) => {
                                             this.logError('sync interrupted', e)
+                                            // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
                                             reject(e)
                                         }
                                     },
