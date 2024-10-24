@@ -1396,6 +1396,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@emoji-mart/data@npm:^1.1.2":
+  version: 1.2.1
+  resolution: "@emoji-mart/data@npm:1.2.1"
+  checksum: 70e861cd7e13acbe9d5592d613954c7235fa5b4d149555700aca30295b80589279df8c44307292a16b5d196c4b64e14cfa34e712cb1139741b9d4e2ede4bc712
+  languageName: node
+  linkType: hard
+
 "@esbuild/aix-ppc64@npm:0.21.5":
   version: 0.21.5
   resolution: "@esbuild/aix-ppc64@npm:0.21.5"
@@ -4343,6 +4350,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@river-build/playground@workspace:packages/playground"
   dependencies:
+    "@emoji-mart/data": ^1.1.2
     "@hookform/resolvers": ^3.6.0
     "@radix-ui/react-dialog": ^1.1.1
     "@radix-ui/react-hover-card": ^1.1.1
