@@ -13,8 +13,13 @@ library RewardsDistributionStorage {
   bytes32 internal constant STORAGE_SLOT =
     0x7b071c8e0da733b969167f083e1913dbb26456aeda63d64176fc92d3926ff300;
 
+  /// @notice The layout of the rewards distribution storage
+  /// @param staking The storage of the staking rewards logic
+  /// @param proxyById The mapping of deposit ID to proxy address
+  /// @param isRewardNotifier The mapping of reward notifier whitelist
   struct Layout {
     StakingRewards.Layout staking;
+    mapping(uint256 depositId => address proxy) proxyById;
     mapping(address rewardNotifier => bool) isRewardNotifier;
   }
 
