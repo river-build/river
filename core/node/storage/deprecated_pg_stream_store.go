@@ -2,12 +2,8 @@ package storage
 
 import (
 	"context"
-	"crypto/md5"
-	"embed"
 	"encoding/hex"
-	"fmt"
-	"os"
-	"strings"
+	"errors"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -15,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"golang.org/x/crypto/sha3"
 
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
@@ -24,7 +19,12 @@ import (
 	. "github.com/river-build/river/core/node/shared"
 )
 
-type PostgresStreamStore struct {
+// DeprecatedPostgesStreamStore is a legacy implementation of the PostgresStreamStore that
+// allocates a miniblocks, minipools, and miniblock_candidates table for each stream instead
+// of assigning the stream data to one of a fixed number of partitions. This legacy code copy
+// is kept for the sake of testing migration logic and will be removed once all external networks
+// are confirmed to be migrated. Naturally, do not use it in production!
+type DeprecatedPostgresStreamStore struct {
 	PostgresEventStore
 
 	exitSignal        chan error
@@ -32,19 +32,16 @@ type PostgresStreamStore struct {
 	cleanupListenFunc func()
 }
 
-var _ StreamStorage = (*PostgresStreamStore)(nil)
+var _ StreamStorage = (*DeprecatedPostgresStreamStore)(nil)
 
-//go:embed migrations/*.sql
-var migrationsDir embed.FS
-
-func NewPostgresStreamStore(
+func NewDeprecatedPostgresStreamStore(
 	ctx context.Context,
 	poolInfo *PgxPoolInfo,
 	instanceId string,
 	exitSignal chan error,
 	metrics infra.MetricsFactory,
-) (*PostgresStreamStore, error) {
-	store := &PostgresStreamStore{
+) (*DeprecatedPostgresStreamStore, error) {
+	store := &DeprecatedPostgresStreamStore{
 		nodeUUID:   instanceId,
 		exitSignal: exitSignal,
 	}
@@ -68,7 +65,7 @@ func NewPostgresStreamStore(
 	return store, nil
 }
 
-func (s *PostgresStreamStore) initStreamStorage(ctx context.Context) error {
+func (s *DeprecatedPostgresStreamStore) initStreamStorage(ctx context.Context) error {
 	err := s.txRunner(
 		ctx,
 		"listOtherInstances",
@@ -91,7 +88,7 @@ func (s *PostgresStreamStore) initStreamStorage(ctx context.Context) error {
 
 // txRunner runs transactions against the underlying postgres store. This override
 // adds logging tags for the node's UUID.
-func (s *PostgresStreamStore) txRunner(
+func (s *DeprecatedPostgresStreamStore) txRunner(
 	ctx context.Context,
 	name string,
 	accessMode pgx.TxAccessMode,
@@ -112,7 +109,7 @@ func (s *PostgresStreamStore) txRunner(
 
 // txRunnerWithUUIDCheck conditionally run the transaction only if a check against the
 // singlenodekey table shows that this is still the only node writing to the database.
-func (s *PostgresStreamStore) txRunnerWithUUIDCheck(
+func (s *DeprecatedPostgresStreamStore) txRunnerWithUUIDCheck(
 	ctx context.Context,
 	name string,
 	accessMode pgx.TxAccessMode,
@@ -135,96 +132,19 @@ func (s *PostgresStreamStore) txRunnerWithUUIDCheck(
 	)
 }
 
-// createPartitionSuffix determines the partition mapping for a particular stream id using
-// the first byte of the md5 hash of the hex-encoded stream id. We use the hex-encoded stream
-// id so that the mapping can be reproduced on postgres, for convenience. To compute a partition
-// mapping on pg, try:
-//
-// left(md5('204ed935f2555b5f835879d70ed591deff0cf763479b81767a11ceaf4ee5e7fc'), 2)
-func createPartitionSuffix(streamId StreamId) string {
-	// Do not hash the stream bytes directly, but hash the hex encoding of the stream id, which is
-	// what we store in the database.
-	hash := md5.Sum([]byte(streamId.String()))
-	return hex.EncodeToString(hash[:])[0:2]
-}
-
-// sqlForStream escapes references to partitioned tables to the specific partition where the stream
-// is assigned whenever they are surrounded by double curly brackets.
-func sqlForStream(sql string, streamId StreamId, migrated bool) string {
-	var suffix string
-	if migrated {
-		suffix = createPartitionSuffix(streamId)
-	} else {
-		suffix = createTableSuffix(streamId)
+// processErrorForMissingPartition looks for the specific error type returned when a table is not found
+// and returns that as a NOT_FOUND river error for the specified stream.
+func processErrorForMissingPartition(err error, streamId StreamId) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		if pgErr.Code == pgerrcode.UndefinedTable {
+			return RiverError(Err_NOT_FOUND, "stream not found in local storage", "streamId", streamId)
+		}
 	}
-
-	sql = strings.ReplaceAll(
-		sql,
-		"{{miniblocks}}",
-		"miniblocks_"+suffix,
-	)
-	sql = strings.ReplaceAll(
-		sql,
-		"{{minipools}}",
-		"minipools_"+suffix,
-	)
-	sql = strings.ReplaceAll(
-		sql,
-		"{{miniblock_candidates}}",
-		"miniblock_candidates_"+suffix,
-	)
-
-	return sql
+	return err
 }
 
-// isStreamMigrated checks the es table to see if the stream has been migrated to a fixed partition,
-// or if the data exists on it's own set of tables, according to the previous schema. If the
-// ignoreIfUnfound flag is set, a missing stream will be considered migrated and will not produce an
-// error.
-func (s *PostgresStreamStore) isStreamMigrated(
-	ctx context.Context,
-	tx pgx.Tx,
-	streamId StreamId,
-	ignoreIfUnfound bool,
-) (migrated bool, err error) {
-	if ignoreIfUnfound {
-		// Use the Query interface in order not to put the transaction into an error state if the row
-		// does not exist in the es table. The API of this method is to return en empty result for
-		// nonexistent streams.
-		esRows, err := tx.Query(ctx, "SELECT migrated FROM es WHERE stream_id = $1", streamId)
-		if err != nil {
-			return false, err
-		}
-		defer esRows.Close()
-
-		// If no such stream exists, consider the stream migrated.
-		if !esRows.Next() {
-			return true, nil
-		}
-
-		err = esRows.Scan(&migrated)
-		if err != nil {
-			return false, err
-		}
-
-		// Duplicate rows per stream id should never happen due to constraints on the es table.
-		if esRows.Next() {
-			return false, RiverError(Err_UNKNOWN, ">1 row in es table for stream id").Tag("streamId", streamId)
-		}
-
-		return migrated, nil
-	} else {
-		if err = tx.QueryRow(ctx, "SELECT migrated FROM es WHERE stream_id = $1", streamId).Scan(&migrated); err != nil {
-			if err == pgx.ErrNoRows {
-				return false, WrapRiverError(Err_NOT_FOUND, err).Message("stream not found in local storage")
-			}
-			return false, err
-		}
-		return migrated, nil
-	}
-}
-
-func (s *PostgresStreamStore) CreateStreamStorage(
+func (s *DeprecatedPostgresStreamStore) CreateStreamStorage(
 	ctx context.Context,
 	streamId StreamId,
 	genesisMiniblock []byte,
@@ -241,21 +161,22 @@ func (s *PostgresStreamStore) CreateStreamStorage(
 	)
 }
 
-func (s *PostgresStreamStore) createStreamStorageTx(
+func (s *DeprecatedPostgresStreamStore) createStreamStorageTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
 	genesisMiniblock []byte,
 ) error {
 	sql := sqlForStream(
-		`INSERT INTO es (stream_id, latest_snapshot_miniblock, migrated) VALUES ($1, 0, true);
+		`INSERT INTO es (stream_id, latest_snapshot_miniblock, migrated) VALUES ($1, 0, false);
+		CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);
+		CREATE TABLE {{minipools}} PARTITION OF minipools FOR VALUES IN ($1);
+		CREATE TABLE {{miniblock_candidates}} PARTITION OF miniblock_candidates for values in ($1);
 		INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
 		INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
 		streamId,
-		true,
+		false,
 	)
-	log := dlog.FromCtx(ctx)
-	log.Info("CreateStreamStorageTx sql", "sql", sql)
 	_, err := tx.Exec(ctx, sql, streamId, genesisMiniblock)
 	if err != nil {
 		if pgerr, ok := err.(*pgconn.PgError); ok && pgerr.Code == pgerrcode.UniqueViolation {
@@ -266,7 +187,7 @@ func (s *PostgresStreamStore) createStreamStorageTx(
 	return nil
 }
 
-func (s *PostgresStreamStore) CreateStreamArchiveStorage(
+func (s *DeprecatedPostgresStreamStore) CreateStreamArchiveStorage(
 	ctx context.Context,
 	streamId StreamId,
 ) error {
@@ -282,15 +203,16 @@ func (s *PostgresStreamStore) CreateStreamArchiveStorage(
 	)
 }
 
-func (s *PostgresStreamStore) createStreamArchiveStorageTx(
+func (s *DeprecatedPostgresStreamStore) createStreamArchiveStorageTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
 ) error {
 	sql := sqlForStream(
-		`INSERT INTO es (stream_id, latest_snapshot_miniblock, migrated) VALUES ($1, -1, true);`,
+		`INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
+		CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);`,
 		streamId,
-		true,
+		false,
 	)
 	_, err := tx.Exec(ctx, sql, streamId)
 	if err != nil {
@@ -302,7 +224,7 @@ func (s *PostgresStreamStore) createStreamArchiveStorageTx(
 	return nil
 }
 
-func (s *PostgresStreamStore) GetMaxArchivedMiniblockNumber(
+func (s *DeprecatedPostgresStreamStore) GetMaxArchivedMiniblockNumber(
 	ctx context.Context,
 	streamId StreamId,
 ) (int64, error) {
@@ -323,28 +245,23 @@ func (s *PostgresStreamStore) GetMaxArchivedMiniblockNumber(
 	return maxArchivedMiniblockNumber, nil
 }
 
-func (s *PostgresStreamStore) getMaxArchivedMiniblockNumberTx(
+func (s *DeprecatedPostgresStreamStore) getMaxArchivedMiniblockNumberTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
 	maxArchivedMiniblockNumber *int64,
 ) error {
-	migrated, err := s.isStreamMigrated(ctx, tx, streamId, false)
-	if err != nil {
-		return err
-	}
-
-	err = tx.QueryRow(
+	err := tx.QueryRow(
 		ctx,
 		sqlForStream(
 			"SELECT COALESCE(MAX(seq_num), -1) FROM {{miniblocks}} WHERE stream_id = $1",
 			streamId,
-			migrated,
+			false,
 		),
 		streamId,
 	).Scan(maxArchivedMiniblockNumber)
 	if err != nil {
-		return err
+		return processErrorForMissingPartition(err, streamId)
 	}
 
 	if *maxArchivedMiniblockNumber == -1 {
@@ -364,7 +281,7 @@ func (s *PostgresStreamStore) getMaxArchivedMiniblockNumberTx(
 	return nil
 }
 
-func (s *PostgresStreamStore) WriteArchiveMiniblocks(
+func (s *DeprecatedPostgresStreamStore) WriteArchiveMiniblocks(
 	ctx context.Context,
 	streamId StreamId,
 	startMiniblockNum int64,
@@ -384,7 +301,7 @@ func (s *PostgresStreamStore) WriteArchiveMiniblocks(
 	)
 }
 
-func (s *PostgresStreamStore) writeArchiveMiniblocksTx(
+func (s *DeprecatedPostgresStreamStore) writeArchiveMiniblocksTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
@@ -406,18 +323,13 @@ func (s *PostgresStreamStore) writeArchiveMiniblocksTx(
 		)
 	}
 
-	migrated, err := s.isStreamMigrated(ctx, tx, streamId, false)
-	if err != nil {
-		return err
-	}
-
 	for i, miniblock := range miniblocks {
 		_, err := tx.Exec(
 			ctx,
 			sqlForStream(
 				"INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, $2, $3)",
 				streamId,
-				migrated,
+				false,
 			),
 			streamId,
 			startMiniblockNum+int64(i),
@@ -429,7 +341,7 @@ func (s *PostgresStreamStore) writeArchiveMiniblocksTx(
 	return nil
 }
 
-func (s *PostgresStreamStore) ReadStreamFromLastSnapshot(
+func (s *DeprecatedPostgresStreamStore) ReadStreamFromLastSnapshot(
 	ctx context.Context,
 	streamId StreamId,
 	numToRead int,
@@ -453,17 +365,16 @@ func (s *PostgresStreamStore) ReadStreamFromLastSnapshot(
 	return ret, nil
 }
 
-func (s *PostgresStreamStore) readStreamFromLastSnapshotTx(
+func (s *DeprecatedPostgresStreamStore) readStreamFromLastSnapshotTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
 	numToRead int,
 ) (*ReadStreamFromLastSnapshotResult, error) {
 	var snapshotMiniblockIndex int64
-	var migrated bool
 	err := tx.
-		QueryRow(ctx, "SELECT latest_snapshot_miniblock, migrated FROM es WHERE stream_id = $1", streamId).
-		Scan(&snapshotMiniblockIndex, &migrated)
+		QueryRow(ctx, "SELECT latest_snapshot_miniblock FROM es WHERE stream_id = $1", streamId).
+		Scan(&snapshotMiniblockIndex)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, WrapRiverError(Err_NOT_FOUND, err).Message("stream not found in local storage")
@@ -479,7 +390,7 @@ func (s *PostgresStreamStore) readStreamFromLastSnapshotTx(
 			sqlForStream(
 				"SELECT MAX(seq_num) FROM {{miniblocks}} WHERE stream_id = $1",
 				streamId,
-				migrated,
+				false,
 			),
 			streamId).
 		Scan(&lastMiniblockIndex)
@@ -496,7 +407,7 @@ func (s *PostgresStreamStore) readStreamFromLastSnapshotTx(
 		sqlForStream(
 			"SELECT blockdata, seq_num FROM {{miniblocks}} WHERE seq_num >= $1 AND stream_id = $2 ORDER BY seq_num",
 			streamId,
-			migrated,
+			false,
 		),
 		startSeqNum,
 		streamId,
@@ -544,7 +455,7 @@ func (s *PostgresStreamStore) readStreamFromLastSnapshotTx(
 		sqlForStream(
 			"SELECT envelope, generation, slot_num FROM {{minipools}} WHERE stream_id = $1 ORDER BY generation, slot_num",
 			streamId,
-			migrated,
+			false,
 		),
 		streamId,
 	)
@@ -598,7 +509,7 @@ func (s *PostgresStreamStore) readStreamFromLastSnapshotTx(
 // Adds event to the given minipool.
 // Current generation of minipool should match minipoolGeneration,
 // and there should be exactly minipoolSlot events in the minipool.
-func (s *PostgresStreamStore) WriteEvent(
+func (s *DeprecatedPostgresStreamStore) WriteEvent(
 	ctx context.Context,
 	streamId StreamId,
 	minipoolGeneration int64,
@@ -623,7 +534,7 @@ func (s *PostgresStreamStore) WriteEvent(
 // 1. Minipool has proper number of records including service one (equal to minipoolSlot)
 // 2. There are no gaps in seqNums and they start from 0 execpt service record with seqNum = -1
 // 3. All events in minipool have proper generation
-func (s *PostgresStreamStore) writeEventTx(
+func (s *DeprecatedPostgresStreamStore) writeEventTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
@@ -631,18 +542,13 @@ func (s *PostgresStreamStore) writeEventTx(
 	minipoolSlot int,
 	envelope []byte,
 ) error {
-	migrated, err := s.isStreamMigrated(ctx, tx, streamId, false)
-	if err != nil {
-		return err
-	}
-
 	envelopesRow, err := tx.Query(
 		ctx,
 		// Ordering by generation, slot_num allows this to be an index only query
 		sqlForStream(
 			"SELECT generation, slot_num FROM {{minipools}} WHERE stream_id = $1 ORDER BY generation, slot_num",
 			streamId,
-			migrated,
+			false,
 		),
 		streamId,
 	)
@@ -686,7 +592,7 @@ func (s *PostgresStreamStore) writeEventTx(
 		sqlForStream(
 			"INSERT INTO {{minipools}} (stream_id, envelope, generation, slot_num) VALUES ($1, $2, $3, $4)",
 			streamId,
-			migrated,
+			false,
 		),
 		streamId,
 		envelope,
@@ -704,7 +610,7 @@ func (s *PostgresStreamStore) writeEventTx(
 // TODO: Do we want to check that if we get miniblocks an toIndex is greater or equal block with latest snapshot, than in results we will have at least
 // miniblock with latest snapshot?
 // This functional is not transactional as it consists of only one SELECT query
-func (s *PostgresStreamStore) ReadMiniblocks(
+func (s *DeprecatedPostgresStreamStore) ReadMiniblocks(
 	ctx context.Context,
 	streamId StreamId,
 	fromInclusive int64,
@@ -729,25 +635,20 @@ func (s *PostgresStreamStore) ReadMiniblocks(
 	return miniblocks, nil
 }
 
-func (s *PostgresStreamStore) readMiniblocksTx(
+func (s *DeprecatedPostgresStreamStore) readMiniblocksTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
 	fromInclusive int64,
 	toExclusive int64,
 ) ([][]byte, error) {
-	migrated, err := s.isStreamMigrated(ctx, tx, streamId, true)
-	if err != nil {
-		return nil, err
-	}
-
 	miniblocksRow, err := tx.Query(
 		ctx,
-		sqlForStream(
-			"SELECT blockdata, seq_num FROM {{miniblocks}} WHERE seq_num >= $1 AND seq_num < $2 AND stream_id = $3 ORDER BY seq_num",
-			streamId,
-			migrated,
-		),
+		// NOTE: this method returns a nil result if stream does not exist, not an error.
+		// For this reason we do not target the partition in this query, because a missing
+		// partition will put the transaction into a bad state and result in an unexpected
+		// commit failure.
+		"SELECT blockdata, seq_num FROM miniblocks WHERE seq_num >= $1 AND seq_num < $2 AND stream_id = $3 ORDER BY seq_num",
 		fromInclusive,
 		toExclusive,
 		streamId,
@@ -784,7 +685,7 @@ func (s *PostgresStreamStore) readMiniblocksTx(
 
 // WriteMiniblockCandidate adds a miniblock proposal candidate. When the miniblock is finalized, the node will promote the
 // candidate with the correct hash.
-func (s *PostgresStreamStore) WriteMiniblockCandidate(
+func (s *DeprecatedPostgresStreamStore) WriteMiniblockCandidate(
 	ctx context.Context,
 	streamId StreamId,
 	blockHash common.Hash,
@@ -807,7 +708,7 @@ func (s *PostgresStreamStore) WriteMiniblockCandidate(
 
 // Supported consistency checks:
 // 1. Proposal block number is current miniblock block number + 1
-func (s *PostgresStreamStore) writeBlockProposalTxn(
+func (s *DeprecatedPostgresStreamStore) writeBlockProposalTxn(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
@@ -817,23 +718,18 @@ func (s *PostgresStreamStore) writeBlockProposalTxn(
 ) error {
 	var seqNum *int64
 
-	migrated, err := s.isStreamMigrated(ctx, tx, streamId, false)
-	if err != nil {
-		return err
-	}
-
-	err = tx.QueryRow(
+	err := tx.QueryRow(
 		ctx,
 		sqlForStream(
 			"SELECT MAX(seq_num) as latest_blocks_number FROM {{miniblocks}} WHERE stream_id = $1",
 			streamId,
-			migrated,
+			false,
 		),
 		streamId,
 	).
 		Scan(&seqNum)
 	if err != nil {
-		return err
+		return processErrorForMissingPartition(err, streamId)
 	}
 	if seqNum == nil {
 		return RiverError(Err_NOT_FOUND, "No blocks for the stream found in block storage")
@@ -850,7 +746,7 @@ func (s *PostgresStreamStore) writeBlockProposalTxn(
 		sqlForStream(
 			"INSERT INTO {{miniblock_candidates}} (stream_id, seq_num, block_hash, blockdata) VALUES ($1, $2, $3, $4) ON CONFLICT(stream_id, seq_num, block_hash) DO NOTHING",
 			streamId,
-			migrated,
+			false,
 		),
 		streamId,
 		blockNumber,
@@ -860,7 +756,7 @@ func (s *PostgresStreamStore) writeBlockProposalTxn(
 	return err
 }
 
-func (s *PostgresStreamStore) ReadMiniblockCandidate(
+func (s *DeprecatedPostgresStreamStore) ReadMiniblockCandidate(
 	ctx context.Context,
 	streamId StreamId,
 	blockHash common.Hash,
@@ -887,25 +783,20 @@ func (s *PostgresStreamStore) ReadMiniblockCandidate(
 	return miniblock, nil
 }
 
-func (s *PostgresStreamStore) readMiniblockCandidateTx(
+func (s *DeprecatedPostgresStreamStore) readMiniblockCandidateTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
 	blockHash common.Hash,
 	blockNumber int64,
 ) ([]byte, error) {
-	migrated, err := s.isStreamMigrated(ctx, tx, streamId, false)
-	if err != nil {
-		return nil, err
-	}
-
 	var miniblock []byte
-	err = tx.QueryRow(
+	err := tx.QueryRow(
 		ctx,
 		sqlForStream(
 			"SELECT blockdata FROM {{miniblock_candidates}} WHERE stream_id = $1 AND seq_num = $2 AND block_hash = $3",
 			streamId,
-			migrated,
+			false,
 		),
 		streamId,
 		blockNumber,
@@ -917,7 +808,7 @@ func (s *PostgresStreamStore) readMiniblockCandidateTx(
 	return miniblock, nil
 }
 
-func (s *PostgresStreamStore) PromoteMiniblockCandidate(
+func (s *DeprecatedPostgresStreamStore) PromoteMiniblockCandidate(
 	ctx context.Context,
 	streamId StreamId,
 	minipoolGeneration int64,
@@ -950,7 +841,7 @@ func (s *PostgresStreamStore) PromoteMiniblockCandidate(
 	)
 }
 
-func (s *PostgresStreamStore) promoteBlockTxn(
+func (s *DeprecatedPostgresStreamStore) promoteBlockTxn(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
@@ -961,19 +852,14 @@ func (s *PostgresStreamStore) promoteBlockTxn(
 ) error {
 	var seqNum *int64
 
-	migrated, err := s.isStreamMigrated(ctx, tx, streamId, false)
-	if err != nil {
-		return err
-	}
-
 	if err := tx.QueryRow(
 		ctx,
-		// Note: this particular migration may have failed, we'll see.
-		sqlForStream(
-			"SELECT MAX(seq_num) as latest_block_number FROM {{miniblocks}} WHERE stream_id = $1",
-			streamId,
-			migrated,
-		),
+		// NOTE: This query could not be targeted to the specific partition without producing deadlocks
+		// with the CreateStreamStorage transaction above. I think there may be a race condition in our
+		// logic where a go routine is attempting to make a miniblock while a stream is being created
+		// that only causes a deadlock if we are attempting to read from a table that is in the middle of
+		// being created.
+		"SELECT MAX(seq_num) as latest_block_number FROM miniblocks WHERE stream_id = $1",
 		streamId,
 	).Scan(&seqNum); err != nil {
 		return err
@@ -992,7 +878,7 @@ func (s *PostgresStreamStore) promoteBlockTxn(
 		sqlForStream(
 			"DELETE FROM {{minipools}} WHERE slot_num > -1 AND stream_id = $1",
 			streamId,
-			migrated,
+			false,
 		),
 		streamId,
 	); err != nil {
@@ -1000,12 +886,12 @@ func (s *PostgresStreamStore) promoteBlockTxn(
 	}
 
 	// update -1 record of minipools table to minipoolGeneration + 1
-	_, err = tx.Exec(
+	_, err := tx.Exec(
 		ctx,
 		sqlForStream(
 			"UPDATE {{minipools}} SET generation = $1 WHERE slot_num = -1 AND stream_id = $2",
 			streamId,
-			migrated,
+			false,
 		),
 		minipoolGeneration+1,
 		streamId,
@@ -1034,7 +920,7 @@ func (s *PostgresStreamStore) promoteBlockTxn(
 			sqlForStream(
 				"INSERT INTO {{minipools}} (stream_id, slot_num, generation, envelope) VALUES ($1, $2, $3, $4)",
 				streamId,
-				migrated,
+				false,
 			),
 			streamId,
 			i,
@@ -1052,7 +938,7 @@ func (s *PostgresStreamStore) promoteBlockTxn(
 		sqlForStream(
 			"INSERT INTO {{miniblocks}} SELECT stream_id, seq_num, blockdata FROM {{miniblock_candidates}} WHERE stream_id = $1 AND seq_num = $2 AND {{miniblock_candidates}}.block_hash = $3",
 			streamId,
-			migrated,
+			false,
 		),
 		streamId,
 		minipoolGeneration,
@@ -1072,7 +958,7 @@ func (s *PostgresStreamStore) promoteBlockTxn(
 		sqlForStream(
 			"DELETE FROM {{miniblock_candidates}} WHERE stream_id = $1 and seq_num <= $2",
 			streamId,
-			migrated,
+			false,
 		),
 		streamId,
 		minipoolGeneration,
@@ -1080,7 +966,7 @@ func (s *PostgresStreamStore) promoteBlockTxn(
 	return err
 }
 
-func (s *PostgresStreamStore) GetStreamsNumber(ctx context.Context) (int, error) {
+func (s *DeprecatedPostgresStreamStore) GetStreamsNumber(ctx context.Context) (int, error) {
 	var count int
 	err := s.txRunnerWithUUIDCheck(
 		ctx,
@@ -1099,7 +985,7 @@ func (s *PostgresStreamStore) GetStreamsNumber(ctx context.Context) (int, error)
 	return count, nil
 }
 
-func (s *PostgresStreamStore) getStreamsNumberTx(ctx context.Context, tx pgx.Tx) (int, error) {
+func (s *DeprecatedPostgresStreamStore) getStreamsNumberTx(ctx context.Context, tx pgx.Tx) (int, error) {
 	var count int
 	row := tx.QueryRow(ctx, "SELECT COUNT(stream_id) FROM es")
 	err := row.Scan(&count)
@@ -1110,7 +996,7 @@ func (s *PostgresStreamStore) getStreamsNumberTx(ctx context.Context, tx pgx.Tx)
 	return count, nil
 }
 
-func (s *PostgresStreamStore) compareUUID(ctx context.Context, tx pgx.Tx) error {
+func (s *DeprecatedPostgresStreamStore) compareUUID(ctx context.Context, tx pgx.Tx) error {
 	log := dlog.FromCtx(ctx)
 
 	rows, err := tx.Query(ctx, "SELECT uuid FROM singlenodekey")
@@ -1145,7 +1031,7 @@ func (s *PostgresStreamStore) compareUUID(ctx context.Context, tx pgx.Tx) error 
 
 // Close removes instance record from singlenodekey table, releases the listener connection, and
 // closes the postgres connection pool
-func (s *PostgresStreamStore) Close(ctx context.Context) {
+func (s *DeprecatedPostgresStreamStore) Close(ctx context.Context) {
 	err := s.CleanupStreamStorage(ctx)
 	if err != nil {
 		log := dlog.FromCtx(ctx)
@@ -1158,7 +1044,7 @@ func (s *PostgresStreamStore) Close(ctx context.Context) {
 	s.PostgresEventStore.Close(ctx)
 }
 
-func (s *PostgresStreamStore) CleanupStreamStorage(ctx context.Context) error {
+func (s *DeprecatedPostgresStreamStore) CleanupStreamStorage(ctx context.Context) error {
 	return s.txRunner(
 		ctx,
 		"CleanupStreamStorage",
@@ -1168,13 +1054,13 @@ func (s *PostgresStreamStore) CleanupStreamStorage(ctx context.Context) error {
 	)
 }
 
-func (s *PostgresStreamStore) cleanupStreamStorageTx(ctx context.Context, tx pgx.Tx) error {
+func (s *DeprecatedPostgresStreamStore) cleanupStreamStorageTx(ctx context.Context, tx pgx.Tx) error {
 	_, err := tx.Exec(ctx, "DELETE FROM singlenodekey WHERE uuid = $1", s.nodeUUID)
 	return err
 }
 
 // GetStreams returns a list of all event streams
-func (s *PostgresStreamStore) GetStreams(ctx context.Context) ([]StreamId, error) {
+func (s *DeprecatedPostgresStreamStore) GetStreams(ctx context.Context) ([]StreamId, error) {
 	var streams []StreamId
 	err := s.txRunnerWithUUIDCheck(
 		ctx,
@@ -1193,7 +1079,7 @@ func (s *PostgresStreamStore) GetStreams(ctx context.Context) ([]StreamId, error
 	return streams, nil
 }
 
-func (s *PostgresStreamStore) getStreamsTx(ctx context.Context, tx pgx.Tx) ([]StreamId, error) {
+func (s *DeprecatedPostgresStreamStore) getStreamsTx(ctx context.Context, tx pgx.Tx) ([]StreamId, error) {
 	streams := []string{}
 	rows, err := tx.Query(ctx, "SELECT stream_id FROM es")
 	if err != nil {
@@ -1219,7 +1105,7 @@ func (s *PostgresStreamStore) getStreamsTx(ctx context.Context, tx pgx.Tx) ([]St
 	return ret, nil
 }
 
-func (s *PostgresStreamStore) DeleteStream(ctx context.Context, streamId StreamId) error {
+func (s *DeprecatedPostgresStreamStore) DeleteStream(ctx context.Context, streamId StreamId) error {
 	return s.txRunnerWithUUIDCheck(
 		ctx,
 		"DeleteStream",
@@ -1232,51 +1118,21 @@ func (s *PostgresStreamStore) DeleteStream(ctx context.Context, streamId StreamI
 	)
 }
 
-func (s *PostgresStreamStore) deleteStreamTx(ctx context.Context, tx pgx.Tx, streamId StreamId) error {
-	migrated, err := s.isStreamMigrated(ctx, tx, streamId, false)
-	if err != nil {
-		return err
-	}
-
-	if migrated {
-		_, err = tx.Exec(
-			ctx,
-			sqlForStream(
-				`DELETE from {{miniblocks}} WHERE stream_id = $1;
-				DELETE from {{minipools}} WHERE stream_id = $1;
-				DELETE from {{miniblock_candidates}} where stream_id = $1;
-				DELETE FROM es WHERE stream_id = $1`,
-				streamId,
-				true,
-			),
+func (s *DeprecatedPostgresStreamStore) deleteStreamTx(ctx context.Context, tx pgx.Tx, streamId StreamId) error {
+	_, err := tx.Exec(
+		ctx,
+		sqlForStream(
+			`DROP TABLE {{miniblocks}};
+			DROP TABLE {{minipools}};
+			DELETE FROM es WHERE stream_id = $1`,
 			streamId,
-		)
-		return err
-	} else {
-		_, err = tx.Exec(
-			ctx,
-			sqlForStream(
-				`DROP TABLE {{miniblocks}};
-				DROP TABLE {{minipools}};
-				DROP TABLE {{miniblock_candidates}}
-				DELETE FROM es WHERE stream_id = $1`,
-				streamId,
-				false,
-			),
-			streamId)
-		return err
-	}
+			false,
+		),
+		streamId)
+	return err
 }
 
-func DbSchemaNameFromAddress(address string) string {
-	return "s" + strings.ToLower(address)
-}
-
-func DbSchemaNameForArchive(archiveId string) string {
-	return "arch" + strings.ToLower(archiveId)
-}
-
-func (s *PostgresStreamStore) listOtherInstancesTx(ctx context.Context, tx pgx.Tx) error {
+func (s *DeprecatedPostgresStreamStore) listOtherInstancesTx(ctx context.Context, tx pgx.Tx) error {
 	log := dlog.FromCtx(ctx)
 
 	rows, err := tx.Query(ctx, "SELECT uuid, storage_connection_time, info FROM singlenodekey")
@@ -1322,7 +1178,7 @@ func (s *PostgresStreamStore) listOtherInstancesTx(ctx context.Context, tx pgx.T
 	return nil
 }
 
-func (s *PostgresStreamStore) initializeSingleNodeKeyTx(ctx context.Context, tx pgx.Tx) error {
+func (s *DeprecatedPostgresStreamStore) initializeSingleNodeKeyTx(ctx context.Context, tx pgx.Tx) error {
 	_, err := tx.Exec(ctx, "DELETE FROM singlenodekey")
 	if err != nil {
 		return err
@@ -1345,7 +1201,7 @@ func (s *PostgresStreamStore) initializeSingleNodeKeyTx(ctx context.Context, tx 
 // acquireListeningConnection returns a connection that listens for changes to the schema, or
 // a nil connection if the context is cancelled. In the event of failure to acquire a connection
 // or listen, it will retry indefinitely until success.
-func (s *PostgresStreamStore) acquireListeningConnection(ctx context.Context) *pgxpool.Conn {
+func (s *DeprecatedPostgresStreamStore) acquireListeningConnection(ctx context.Context) *pgxpool.Conn {
 	var err error
 	var conn *pgxpool.Conn
 	log := dlog.FromCtx(ctx)
@@ -1373,7 +1229,7 @@ func (s *PostgresStreamStore) acquireListeningConnection(ctx context.Context) *p
 // Call with a cancellable context and pgx should terminate when the context is
 // cancelled. Call after storage has been initialized in order to not receive a
 // notification when this node updates the table.
-func (s *PostgresStreamStore) listenForNewNodes(ctx context.Context) {
+func (s *DeprecatedPostgresStreamStore) listenForNewNodes(ctx context.Context) {
 	conn := s.acquireListeningConnection(ctx)
 	if conn == nil {
 		return
@@ -1414,7 +1270,7 @@ func (s *PostgresStreamStore) listenForNewNodes(ctx context.Context) {
 	}
 }
 
-func (s *PostgresStreamStore) DebugReadStreamData(
+func (s *DeprecatedPostgresStreamStore) DebugReadStreamData(
 	ctx context.Context,
 	streamId StreamId,
 ) (*DebugReadStreamDataResult, error) {
@@ -1437,7 +1293,7 @@ func (s *PostgresStreamStore) DebugReadStreamData(
 	return ret, nil
 }
 
-func (s *PostgresStreamStore) debugReadStreamData(
+func (s *DeprecatedPostgresStreamStore) debugReadStreamData(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
@@ -1447,8 +1303,8 @@ func (s *PostgresStreamStore) debugReadStreamData(
 	}
 
 	err := tx.
-		QueryRow(ctx, "SELECT latest_snapshot_miniblock, migrated FROM es WHERE stream_id = $1", streamId).
-		Scan(&result.LatestSnapshotMiniblockNum, &result.Migrated)
+		QueryRow(ctx, "SELECT latest_snapshot_miniblock FROM es WHERE stream_id = $1", streamId).
+		Scan(&result.LatestSnapshotMiniblockNum)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, WrapRiverError(Err_NOT_FOUND, err).Message("stream not found in local storage")
@@ -1462,7 +1318,7 @@ func (s *PostgresStreamStore) debugReadStreamData(
 		sqlForStream(
 			"SELECT seq_num, blockdata FROM {{miniblocks}} WHERE stream_id = $1 ORDER BY seq_num",
 			streamId,
-			result.Migrated,
+			false,
 		),
 		streamId,
 	)
@@ -1486,7 +1342,7 @@ func (s *PostgresStreamStore) debugReadStreamData(
 		sqlForStream(
 			"SELECT generation, slot_num, envelope FROM {{minipools}} WHERE stream_id = $1 ORDER BY generation, slot_num",
 			streamId,
-			result.Migrated,
+			false,
 		),
 		streamId,
 	)
@@ -1509,7 +1365,7 @@ func (s *PostgresStreamStore) debugReadStreamData(
 		sqlForStream(
 			"SELECT seq_num, block_hash, blockdata FROM {{miniblock_candidates}} WHERE stream_id = $1 ORDER BY seq_num",
 			streamId,
-			result.Migrated,
+			false,
 		),
 		streamId,
 	)
@@ -1536,7 +1392,7 @@ func (s *PostgresStreamStore) debugReadStreamData(
 	return result, nil
 }
 
-func (s *PostgresStreamStore) StreamLastMiniBlock(
+func (s *DeprecatedPostgresStreamStore) StreamLastMiniBlock(
 	ctx context.Context,
 	streamID StreamId,
 ) (*MiniblockData, error) {
@@ -1558,26 +1414,21 @@ func (s *PostgresStreamStore) StreamLastMiniBlock(
 	return ret, nil
 }
 
-func (s *PostgresStreamStore) streamLastMiniBlockTx(
+func (s *DeprecatedPostgresStreamStore) streamLastMiniBlockTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamID StreamId,
 ) (*MiniblockData, error) {
-	migrated, err := s.isStreamMigrated(ctx, tx, streamID, false)
-	if err != nil {
-		return nil, err
-	}
-
 	var (
 		maxSeqNum int64
 		blockData []byte
 	)
-	err = tx.QueryRow(
+	err := tx.QueryRow(
 		ctx,
 		sqlForStream(
 			"SELECT seq_num, blockdata FROM {{miniblocks}} WHERE stream_id = $1 ORDER BY seq_num DESC LIMIT 1",
 			streamID,
-			migrated,
+			false,
 		),
 		streamID,
 	).Scan(&maxSeqNum, &blockData)
@@ -1587,7 +1438,7 @@ func (s *PostgresStreamStore) streamLastMiniBlockTx(
 				Tags("stream", streamID).
 				Func("lastMiniBlockForStream")
 		}
-		return nil, err
+		return nil, processErrorForMissingPartition(err, streamID)
 	}
 
 	return &MiniblockData{
@@ -1597,7 +1448,7 @@ func (s *PostgresStreamStore) streamLastMiniBlockTx(
 	}, nil
 }
 
-func (s *PostgresStreamStore) ImportMiniblocks(ctx context.Context, miniBlocks []*MiniblockData) error {
+func (s *DeprecatedPostgresStreamStore) ImportMiniblocks(ctx context.Context, miniBlocks []*MiniblockData) error {
 	if len(miniBlocks) == 0 {
 		return nil
 	}
@@ -1621,7 +1472,7 @@ func (s *PostgresStreamStore) ImportMiniblocks(ctx context.Context, miniBlocks [
 	)
 }
 
-func (s *PostgresStreamStore) importMiniblocksTx(
+func (s *DeprecatedPostgresStreamStore) importMiniblocksTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	miniBlocks []*MiniblockData,
@@ -1635,24 +1486,13 @@ func (s *PostgresStreamStore) importMiniblocksTx(
 		seqNum   *int64
 	)
 
-	migrated, err := s.isStreamMigrated(ctx, tx, streamID, true)
-	if err != nil {
-		return err
-	}
-
-	err = tx.QueryRow(
+	err := tx.QueryRow(
 		ctx,
 		// NOTE: we do not target the specific partition here because a failed query would
 		// put the transaction into a bad state, resulting in a failed commit. The caller of this
 		// method does not need to assume that the stream exists in local storage. If it
 		// does not exist, it will be created below.
-		// Note: did this work?
-		sqlForStream(
-			"SELECT MAX(seq_num) as latest_blocks_number FROM {{miniblocks}} WHERE stream_id = $1",
-			streamID,
-			migrated,
-		),
-		streamID).
+		"SELECT MAX(seq_num) as latest_blocks_number FROM miniblocks WHERE stream_id = $1", streamID).
 		Scan(&seqNum)
 	if err != nil {
 		return err
@@ -1666,15 +1506,7 @@ func (s *PostgresStreamStore) importMiniblocksTx(
 	// clean up minipool
 	// NOTE: as above, we do not escape the query here because a failed query would put the
 	// transaction into a bad state, resulting in a failed commit.
-	// NOTE: did this work?
-	_, err = tx.Exec(
-		ctx,
-		sqlForStream(
-			"DELETE FROM {{minipools}} WHERE slot_num > -1 AND stream_id = $1",
-			streamID,
-			migrated,
-		),
-		streamID)
+	_, err = tx.Exec(ctx, "DELETE FROM minipools WHERE slot_num > -1 AND stream_id = $1", streamID)
 	if err != nil {
 		return err
 	}
@@ -1688,10 +1520,8 @@ func (s *PostgresStreamStore) importMiniblocksTx(
 		if expBlockNum != miniBlock.Number {
 			return RiverError(
 				Err_BAD_BLOCK,
-				fmt.Sprintf("Expected block %d to import but got block %d", expBlockNum, miniBlock.Number),
-				"ExpectedBlockNumber",
+				"Expected block %d to import but got block %d",
 				expBlockNum,
-				"ActualBlockNumber",
 				miniBlock.Number,
 			)
 		}
@@ -1714,7 +1544,7 @@ func (s *PostgresStreamStore) importMiniblocksTx(
 					"INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) values ($1, $2, $3)",
 					//"INSERT INTO {{miniblocks}} SELECT stream_id, seq_num, blockdata FROM {{miniblock_candidates}} WHERE stream_id = $1 AND seq_num = $2 AND {{miniblock_candidates}}.block_hash = $3",
 					streamID,
-					migrated,
+					false,
 				),
 				streamID,
 				miniBlock.Number,
@@ -1733,25 +1563,11 @@ func (s *PostgresStreamStore) importMiniblocksTx(
 		sqlForStream(
 			"UPDATE {{minipools}} SET generation = $1 WHERE slot_num = -1 AND stream_id = $2",
 			streamID,
-			migrated,
+			false,
 		),
 		miniBlocks[len(miniBlocks)-1].Number+1,
 		streamID,
 	)
 
 	return err
-}
-
-func createTableSuffix(streamId StreamId) string {
-	sum := sha3.Sum224([]byte(streamId.String()))
-	return hex.EncodeToString(sum[:])
-}
-
-func getCurrentNodeProcessInfo(currentSchemaName string) string {
-	currentHostname, err := os.Hostname()
-	if err != nil {
-		currentHostname = "unknown"
-	}
-	currentPID := os.Getpid()
-	return fmt.Sprintf("hostname=%s, pid=%d, schema=%s", currentHostname, currentPID, currentSchemaName)
 }

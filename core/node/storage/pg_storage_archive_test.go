@@ -16,6 +16,14 @@ func mbDataForNumb(n int64) []byte {
 	return []byte(fmt.Sprintf("data-%d", n))
 }
 
+func TestLegacyArchiveDataAfterStoreMigration(t *testing.T) {
+	// After loading migrated store, legacy streams should:
+	// - GetMaxArchivedBlockNumber accurate
+	// - ReadMiniblocks accurate
+	// - Be writable via WriteArchiveMiniblocks (validate with max block #, Read miniblocks)
+	// - New streams should be written to new format
+}
+
 func TestArchive(t *testing.T) {
 	require := require.New(t)
 

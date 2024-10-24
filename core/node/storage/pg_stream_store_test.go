@@ -116,11 +116,101 @@ func TestSqlForStream(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			sql := sqlForStream(tc.template, streamId)
+			sql := sqlForStream(tc.template, streamId, false)
 			require.Equal(t, tc.expected, sql)
 		})
 	}
 }
+
+// Check various APIs on the store to validate the expected state of the stream
+func checkStreamState(
+	t *testing.T,
+	ctx context.Context,
+	store *PostgresStreamStore,
+	expected *DebugReadStreamDataResult,
+) {
+	// 1. compare to actual debug read stream data
+	actual, err := store.DebugReadStreamData(ctx, expected.StreamId)
+	require.NoError(t, err)
+	require.Equal(t, expected.StreamId, actual.StreamId)
+	require.Equal(t, expected.LatestSnapshotMiniblockNum, actual.LatestSnapshotMiniblockNum)
+	require.Equal(t, expected.Migrated, actual.Migrated)
+
+	require.Len(t, actual.Miniblocks, len(expected.Miniblocks))
+	for i := 0; i < len(expected.Miniblocks); i++ {
+		require.Equal(t, expected.Miniblocks[i].MiniblockNumber, actual.Miniblocks[i].MiniblockNumber)
+		require.Equal(t, expected.Miniblocks[i].Data, actual.Miniblocks[i].Data)
+	}
+
+	require.Len(t, actual.Events, len(expected.Events))
+	for i := 0; i < len(expected.Events); i++ {
+		require.Equal(t, expected.Events[i].Generation, actual.Events[i].Generation)
+		require.Equal(t, expected.Events[i].Slot, actual.Events[i].Slot)
+		require.Equal(t, expected.Events[i].Data, actual.Events[i].Data)
+	}
+
+	require.Len(t, actual.MbCandidates, len(expected.MbCandidates))
+	for i := 0; i < len(expected.MbCandidates); i++ {
+		require.Equal(t, expected.MbCandidates[i].MiniblockNumber, actual.MbCandidates[i].MiniblockNumber)
+		require.Equal(t, expected.MbCandidates[i].Data, actual.MbCandidates[i].Data)
+		require.Equal(t, expected.MbCandidates[i].Hash, actual.MbCandidates[i].Hash)
+	}
+
+	// 2. ReadStreamFromLastSnapshot
+	expectedSnapshotMiniblocks := expected.Miniblocks[len(expected.Miniblocks)-1].MiniblockNumber - expected.LatestSnapshotMiniblockNum + 1
+	readFromLastSnapshotResult, err := store.ReadStreamFromLastSnapshot(
+		ctx,
+		expected.StreamId,
+		int(expectedSnapshotMiniblocks),
+	)
+	require.NoError(t, err)
+	require.Len(t, readFromLastSnapshotResult.Miniblocks, int(expectedSnapshotMiniblocks))
+
+	require.Equal(t, expected.LatestSnapshotMiniblockNum, readFromLastSnapshotResult.StartMiniblockNumber)
+	require.Equal(t, 0, readFromLastSnapshotResult.SnapshotMiniblockOffset)
+
+	// validate miniblock content
+	for i := 0; i < int(expectedSnapshotMiniblocks); i = i + 1 {
+		require.Equal(
+			t,
+			expected.Miniblocks[int(expected.LatestSnapshotMiniblockNum)+i].Data,
+			readFromLastSnapshotResult.Miniblocks[i],
+		)
+	}
+
+	// validate minipool content
+	// Ignore generation record with slot_num=-1
+	require.Len(t, readFromLastSnapshotResult.MinipoolEnvelopes, len(expected.Events)-1)
+	for i := 0; i < len(expected.Events)-1; i = i + 1 {
+		require.Equal(t, expected.Events[i+1].Data, readFromLastSnapshotResult.MinipoolEnvelopes[i])
+	}
+
+	// 3. ReadMiniblocks
+	miniblocks, err := store.ReadMiniblocks(
+		ctx,
+		expected.StreamId,
+		0,
+		int64(len(expected.Miniblocks)),
+	)
+	require.NoError(t, err)
+	require.Len(t, miniblocks, len(expected.Miniblocks))
+	for i := 0; i < len(expected.Miniblocks); i++ {
+		require.Equal(t, expected.Miniblocks[i].Data, miniblocks[i])
+	}
+
+	// 4. Miniblock candidates
+	for _, mbCandidate := range expected.MbCandidates {
+		actualData, err := store.ReadMiniblockCandidate(
+			ctx,
+			expected.StreamId,
+			mbCandidate.Hash,
+			mbCandidate.MiniblockNumber,
+		)
+		require.NoError(t, err, "Expected miniblock candidate")
+		require.Equal(t, mbCandidate.Data, actualData)
+	}
+}
+
 
 func TestPostgresStreamStore(t *testing.T) {
 	require := require.New(t)
@@ -357,7 +447,14 @@ func TestAddEventConsistencyChecksImproperGeneration(t *testing.T) {
 	prepareTestDataForAddEventConsistencyCheck(ctx, pgStreamStore, streamId)
 
 	// Corrupt record in minipool
-	_, _ = pgStreamStore.pool.Exec(ctx, "UPDATE minipools SET generation = 777 WHERE slot_num = 1")
+	_, _ = pgStreamStore.pool.Exec(
+		ctx,
+		sqlForStream(
+			"UPDATE {{minipools}} SET generation = 777 WHERE slot_num = 1",
+			streamId,
+			true,
+		),
+	)
 	err := pgStreamStore.WriteEvent(ctx, streamId, 1, 3, []byte("event4"))
 
 	require.NotNil(err)
@@ -377,7 +474,14 @@ func TestAddEventConsistencyChecksGaps(t *testing.T) {
 	prepareTestDataForAddEventConsistencyCheck(ctx, pgStreamStore, streamId)
 
 	// Corrupt record in minipool
-	_, _ = pgStreamStore.pool.Exec(ctx, "DELETE FROM minipools WHERE slot_num = 1")
+	_, _ = pgStreamStore.pool.Exec(
+		ctx,
+		sqlForStream(
+			"DELETE FROM {{minipools}} WHERE slot_num = 1",
+			streamId,
+			true,
+		),
+	)
 	err := pgStreamStore.WriteEvent(ctx, streamId, 1, 3, []byte("event4"))
 
 	require.NotNil(err)
@@ -397,7 +501,14 @@ func TestAddEventConsistencyChecksEventsNumberMismatch(t *testing.T) {
 	prepareTestDataForAddEventConsistencyCheck(ctx, pgStreamStore, streamId)
 
 	// Corrupt record in minipool
-	_, _ = pgStreamStore.pool.Exec(ctx, "DELETE FROM minipools WHERE slot_num = 2")
+	_, _ = pgStreamStore.pool.Exec(
+		ctx,
+		sqlForStream(
+			"DELETE FROM {{minipools}} WHERE slot_num = 2",
+			streamId,
+			true,
+		),
+	)
 	err := pgStreamStore.WriteEvent(ctx, streamId, 1, 3, []byte("event4"))
 
 	require.NotNil(err)
@@ -475,7 +586,7 @@ func TestPromoteBlockConsistencyChecksProperNewMinipoolGeneration(t *testing.T) 
 
 	_ = pgStreamStore.WriteMiniblockCandidate(ctx, streamId, blockHash3, 3, []byte("block3"))
 
-	_, _ = pgStreamStore.pool.Exec(ctx, "DELETE FROM miniblocks WHERE seq_num = 2")
+	_, _ = pgStreamStore.pool.Exec(ctx, sqlForStream("DELETE FROM {{miniblocks}} WHERE seq_num = 2", streamId, true))
 	err := pgStreamStore.PromoteMiniblockCandidate(ctx, streamId, 3, blockHash3, false, testEnvelopes3)
 
 	// TODO(crystal): tune these
@@ -494,7 +605,14 @@ func TestCreateBlockProposalNoSuchStreamError(t *testing.T) {
 	genesisMiniblock := []byte("genesisMiniblock")
 	_ = pgStreamStore.CreateStreamStorage(ctx, streamId, genesisMiniblock)
 
-	_, _ = pgStreamStore.pool.Exec(ctx, "DELETE FROM miniblocks")
+	_, _ = pgStreamStore.pool.Exec(
+		ctx,
+		sqlForStream(
+			"DELETE FROM {{miniblocks}}",
+			streamId,
+			true,
+		),
+	)
 
 	err := pgStreamStore.WriteMiniblockCandidate(
 		ctx,
@@ -524,7 +642,7 @@ func TestPromoteBlockNoSuchStreamError(t *testing.T) {
 	block_hash := common.BytesToHash([]byte("block_hash"))
 	_ = pgStreamStore.WriteMiniblockCandidate(ctx, streamId, block_hash, 1, []byte("block1"))
 
-	_, _ = pgStreamStore.pool.Exec(ctx, "DELETE FROM miniblocks")
+	_, _ = pgStreamStore.pool.Exec(ctx, sqlForStream("DELETE FROM {{miniblocks}}", streamId, true))
 
 	err := pgStreamStore.PromoteMiniblockCandidate(ctx, streamId, 1, block_hash, true, testEnvelopes1)
 
@@ -643,7 +761,7 @@ func TestGetStreamFromLastSnapshotConsistencyChecksMissingBlockFailure(t *testin
 		testEnvelopes3,
 	)
 
-	_, _ = pgStreamStore.pool.Exec(ctx, "DELETE FROM miniblocks WHERE seq_num = 2")
+	_, _ = pgStreamStore.pool.Exec(ctx, sqlForStream("DELETE FROM {{miniblocks}} WHERE seq_num = 2", streamId, true))
 
 	_, err := pgStreamStore.ReadStreamFromLastSnapshot(ctx, streamId, 0)
 
@@ -700,7 +818,10 @@ func TestGetStreamFromLastSnapshotConsistencyCheckWrongEnvelopeGeneration(t *tes
 		testEnvelopes2,
 	)
 
-	_, _ = pgStreamStore.pool.Exec(ctx, "UPDATE minipools SET generation = 777 WHERE slot_num = 1")
+	_, _ = pgStreamStore.pool.Exec(
+		ctx,
+		sqlForStream("UPDATE {{minipools}} SET generation = 777 WHERE slot_num = 1", streamId, true),
+	)
 
 	_, err := pgStreamStore.ReadStreamFromLastSnapshot(ctx, streamId, 0)
 
@@ -756,7 +877,7 @@ func TestGetStreamFromLastSnapshotConsistencyCheckNoZeroIndexEnvelope(t *testing
 		testEnvelopes2,
 	)
 
-	_, _ = pgStreamStore.pool.Exec(ctx, "DELETE FROM minipools WHERE slot_num = 0")
+	_, _ = pgStreamStore.pool.Exec(ctx, sqlForStream("DELETE FROM {{minipools}} WHERE slot_num = 0", streamId, true))
 
 	_, err := pgStreamStore.ReadStreamFromLastSnapshot(ctx, streamId, 0)
 
@@ -812,7 +933,7 @@ func TestGetStreamFromLastSnapshotConsistencyCheckGapInEnvelopesIndexes(t *testi
 		testEnvelopes2,
 	)
 
-	_, _ = pgStreamStore.pool.Exec(ctx, "DELETE FROM minipools WHERE slot_num = 1")
+	_, _ = pgStreamStore.pool.Exec(ctx, sqlForStream("DELETE FROM {{minipools}} WHERE slot_num = 1", streamId, true))
 
 	_, err := pgStreamStore.ReadStreamFromLastSnapshot(ctx, streamId, 0)
 
@@ -882,7 +1003,7 @@ func TestGetMiniblocksConsistencyChecks(t *testing.T) {
 		testEnvelopes3,
 	)
 
-	_, _ = pgStreamStore.pool.Exec(ctx, "DELETE FROM miniblocks WHERE seq_num = 2")
+	_, _ = pgStreamStore.pool.Exec(ctx, sqlForStream("DELETE FROM {{miniblocks}} WHERE seq_num = 2", streamId, true))
 
 	_, err := pgStreamStore.ReadMiniblocks(ctx, streamId, 1, 4)
 
