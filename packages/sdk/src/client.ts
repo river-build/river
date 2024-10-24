@@ -1380,6 +1380,7 @@ export class Client
     async sendMlsMessage(streamId: string, payload: Uint8Array): Promise<{ eventId: string }> {
         // TODO: Add skipped permission checks
         const message: EncryptedData = new EncryptedData({
+            algorithm: 'MLS 1.0',
             mlsMessage: {
                 payload,
             },
