@@ -19,7 +19,6 @@ library DropStorage {
   }
 
   struct Layout {
-    address claimToken;
     address rewardsDistribution;
     uint256 conditionStartId;
     uint256 conditionCount;
@@ -31,10 +30,6 @@ library DropStorage {
     assembly {
       l.slot := STORAGE_SLOT
     }
-  }
-
-  function getClaimToken(Layout storage ds) internal view returns (address) {
-    return ds.claimToken;
   }
 
   function getClaimConditionById(

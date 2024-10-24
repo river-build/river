@@ -19,6 +19,7 @@ contract DeployDropFacet is Deployer, FacetHelper {
     addSelector(DropFacet.getActiveClaimConditionId.selector);
     addSelector(DropFacet.getClaimConditionById.selector);
     addSelector(DropFacet.getSupplyClaimedByWallet.selector);
+    addSelector(DropFacet.getDepositIdByWallet.selector);
   }
 
   // Deploying

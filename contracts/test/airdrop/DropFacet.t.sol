@@ -20,10 +20,15 @@ import {RewardsDistribution} from "contracts/src/base/registry/facets/distributi
 import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 import {DropStorage} from "contracts/src/tokens/drop/DropStorage.sol";
 import {EIP712Utils} from "contracts/test/utils/EIP712Utils.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+// contracts
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {River} from "contracts/src/tokens/river/base/River.sol";
 import {NodeOperatorFacet} from "contracts/src/base/registry/facets/operator/NodeOperatorFacet.sol";
 import {EIP712Facet} from "contracts/src/diamond/utils/cryptography/signature/EIP712Facet.sol";
+
+// debuggging
+import {console} from "forge-std/console.sol";
 
 contract DropFacetTest is BaseSetup, EIP712Utils, IDropFacetBase, IOwnableBase {
   bytes32 internal constant STAKE_TYPEHASH =
@@ -98,6 +103,10 @@ contract DropFacetTest is BaseSetup, EIP712Utils, IDropFacetBase, IOwnableBase {
     rewardsDistribution = RewardsDistribution(baseRegistry);
   }
 
+  // =============================================================
+  //                        MODIFIERS
+  // =============================================================
+
   modifier givenTokensMinted(uint256 amount) {
     vm.prank(bridge);
     river.mint(address(dropFacet), amount);
@@ -148,6 +157,53 @@ contract DropFacetTest is BaseSetup, EIP712Utils, IDropFacetBase, IOwnableBase {
     );
     _;
   }
+
+  modifier givenOperatorRegistered(address operator, uint256 commissionRate) {
+    vm.assume(operator != address(0));
+    vm.assume(commissionRate > 0);
+    commissionRate = bound(commissionRate, 0, 10000);
+
+    vm.startPrank(operator);
+    operatorFacet.registerOperator(operator);
+    operatorFacet.setCommissionRate(commissionRate);
+    vm.stopPrank();
+    _;
+  }
+
+  modifier givenWalletHasClaimedAndStaked(
+    address caller,
+    address operator,
+    address wallet,
+    uint256 amount
+  ) {
+    vm.assume(caller != address(0));
+    uint256 conditionId = dropFacet.getActiveClaimConditionId();
+
+    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[wallet]);
+
+    uint256 deadline = block.timestamp + 100;
+    bytes memory signature = _signStake(operator, wallet, deadline);
+
+    vm.prank(caller);
+    vm.expectEmit(address(dropFacet));
+    emit DropFacet_Claimed_And_Staked(conditionId, caller, wallet, amount);
+    dropFacet.claimAndStake(
+      Claim({
+        conditionId: conditionId,
+        account: wallet,
+        quantity: amount,
+        proof: proof
+      }),
+      operator,
+      deadline,
+      signature
+    );
+    _;
+  }
+
+  // =============================================================
+  //                        TESTS
+  // =============================================================
 
   // getActiveClaimConditionId
   function test_getActiveClaimConditionId() external {
@@ -484,47 +540,38 @@ contract DropFacetTest is BaseSetup, EIP712Utils, IDropFacetBase, IOwnableBase {
     uint256 commissionRate
   )
     external
+    givenOperatorRegistered(operator, commissionRate)
     givenTokensMinted(TOTAL_TOKEN_AMOUNT)
     givenClaimConditionSet(5000)
-  {
-    vm.assume(caller != address(0));
-    vm.assume(operator != address(0));
-    vm.assume(commissionRate > 0);
-    commissionRate = bound(commissionRate, 0, 10000);
-
-    vm.startPrank(operator);
-    operatorFacet.registerOperator(operator);
-    operatorFacet.setCommissionRate(commissionRate);
-    vm.stopPrank();
-
-    uint256 conditionId = dropFacet.getActiveClaimConditionId();
-    uint256 amount = amounts[treeIndex[bob]];
-
-    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[bob]);
-
-    uint256 deadline = block.timestamp + 100;
-    bytes memory signature = _signStake(operator, bob, deadline);
-
-    vm.prank(caller);
-    vm.expectEmit(address(dropFacet));
-    emit DropFacet_Claimed_And_Staked(conditionId, caller, bob, amount);
-    dropFacet.claimAndStake(
-      Claim({
-        conditionId: conditionId,
-        account: bob,
-        quantity: amounts[treeIndex[bob]],
-        proof: proof
-      }),
+    givenWalletHasClaimedAndStaked(
+      caller,
       operator,
-      deadline,
-      signature
-    );
+      bob,
+      amounts[treeIndex[bob]]
+    )
+  {
+    uint256 conditionId = dropFacet.getActiveClaimConditionId();
+    uint256 depositId = dropFacet.getDepositIdByWallet(bob, conditionId);
 
-    assertEq(
-      rewardsDistribution.stakedByDepositor(bob),
-      amount,
-      "stakedByDepositor"
-    );
+    uint256 depositAmount = amounts[treeIndex[bob]];
+    assertEq(rewardsDistribution.stakedByDepositor(bob), depositAmount);
+
+    vm.prank(bob);
+    vm.expectRevert(SafeTransferLib.TransferFromFailed.selector);
+    rewardsDistribution.withdraw(depositId);
+
+    vm.prank(bob);
+    rewardsDistribution.initiateWithdraw(depositId);
+
+    address proxy = rewardsDistribution.delegationProxyById(depositId);
+    uint256 lockCooldown = river.lockCooldown(proxy);
+
+    vm.warp(block.timestamp + lockCooldown);
+
+    vm.prank(bob);
+    rewardsDistribution.withdraw(depositId);
+
+    assertEq(river.balanceOf(bob), depositAmount);
   }
 
   // setClaimConditions
