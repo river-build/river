@@ -2,6 +2,7 @@ import {
     useDisplayName,
     useReactions,
     useRedact,
+    useScrollback,
     useSendMessage,
     useSendReaction,
     useSyncAgent,
@@ -81,10 +82,16 @@ type TimelineProps =
       }
 
 export const Timeline = (props: TimelineProps) => {
+    const { scrollback, isPending } = useScrollback(props)
     return (
         <div className="grid grid-rows-[auto,1fr] gap-2">
             <ScrollArea className="h-[calc(100dvh-172px)]">
                 <div className="flex flex-col gap-1.5">
+                    {!props.showThreadMessages && (
+                        <Button disabled={isPending} variant="outline" onClick={scrollback}>
+                            {isPending ? 'Loading more...' : 'Scrollback'}
+                        </Button>
+                    )}
                     {props.events.flatMap((event) =>
                         event.content?.kind === RiverTimelineEvent.RoomMessage &&
                         (props.showThreadMessages || !event.threadParentId)
