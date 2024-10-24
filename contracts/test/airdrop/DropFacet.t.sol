@@ -3,7 +3,6 @@ pragma solidity ^0.8.19;
 
 // utils
 import {Vm} from "forge-std/Test.sol";
-import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 import {DeployDiamond} from "contracts/scripts/deployments/utils/DeployDiamond.s.sol";
 import {DeployMockERC20} from "contracts/scripts/deployments/utils/DeployMockERC20.s.sol";
 import {DeployDropFacet} from "contracts/scripts/deployments/facets/DeployDropFacet.s.sol";
@@ -204,14 +203,16 @@ contract DropFacetTest is BaseSetup, EIP712Utils, IDropFacetBase, IOwnableBase {
 
   // claimWithPenalty
   function test_claimWithPenalty_fuzz(ClaimData[] memory claimData) external {
-    vm.assume(claimData.length > 0);
+    vm.assume(claimData.length > 0 && claimData.length <= 1000);
 
     uint256 totalAmount;
     address[] memory claimers = new address[](claimData.length);
     uint256[] memory claimAmounts = new uint256[](claimData.length);
 
     for (uint256 i = 0; i < claimData.length; i++) {
-      vm.assume(claimData[i].claimer != address(0));
+      claimData[i].claimer = claimData[i].claimer == address(0)
+        ? _randomAddress()
+        : claimData[i].claimer;
       claimers[i] = claimData[i].claimer;
       claimAmounts[i] = claimData[i].amount == 0 ? 1 : claimData[i].amount;
       claimData[i].amount = uint16(claimAmounts[i]);
