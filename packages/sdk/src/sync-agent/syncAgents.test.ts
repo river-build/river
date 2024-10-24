@@ -110,9 +110,7 @@ describe('syncAgents.test.ts', () => {
         await waitFor(
             () =>
                 expect(
-                    aliceChannel.timeline.events.value.find(
-                        (e) => e.text === 'Hello, World again!',
-                    ),
+                    findMessageByText(aliceChannel.timeline.events.value, 'Hello, World again!'),
                 ).toBeDefined(),
             { timeoutMS: 10000 },
         )
