@@ -6,6 +6,7 @@
 import { makeTestClient } from './util.test'
 import { Client } from './client'
 import { Client as MlsClient } from '@river-build/mls-rs-wasm'
+import { MlsPayload } from '@river-build/proto'
 // import { addressFromUserId, makeDMStreamId, streamIdAsBytes } from './id'
 // import { makeEvent } from './sign'
 // import { make_DMChannelPayload_Inception, make_MemberPayload_Membership2 } from './types'
@@ -66,9 +67,28 @@ describe('dmsTests', () => {
         const alicesClient = await makeInitAndStartClient()
         const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
         await expect(bobsClient.waitForStream(streamId)).toResolve()
-        await expect(bobsClient.sendMlsMessage(streamId, utf8Encoder.encode('hello'))).toResolve()
+        await expect(
+            bobsClient.sendMlsMessage(streamId, utf8Encoder.encode('Hello Alice')),
+        ).toResolve()
 
-        await expect(alicesClient.waitForStream(streamId)).toResolve()
-        await expect(alicesClient.sendMlsMessage(streamId, utf8Encoder.encode('hello'))).toResolve()
+        const stream = await alicesClient.waitForStream(streamId)
+
+        const mlsMessages: MlsPayload[] = []
+        stream.view.timeline.forEach((e) => {
+            const payload = e.remoteEvent?.event.payload
+            if (payload && payload.case === 'dmChannelPayload') {
+                const content = payload.value.content
+                if (content && content.case === 'message') {
+                    const message = content.value
+                    if (message.algorithm === 'MLS 1.0' && message.mlsMessage) {
+                        mlsMessages.push(message.mlsMessage)
+                    }
+                }
+            }
+            return false
+        })
+
+        expect(mlsMessages.length).toBe(1)
+        expect(utf8Decoder.decode(mlsMessages[0].payload)).toBe('Hello Alice')
     })
 })
