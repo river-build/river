@@ -7,5 +7,8 @@ export default defineWorkersConfig({
         wrangler: { configPath: "./wrangler.toml" },
       },
     },
+    deps: {
+      inline: ["@openzeppelin/merkle-tree"],
+    },
   },
 });
