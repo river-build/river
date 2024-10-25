@@ -810,12 +810,19 @@ func applyMlsPayload(
 			GroupInfo: payload.InitialGroupInfo,
 		}
 	case *protocol.MemberPayload_MlsPayload_Join_:
+		// add device keys
 		mlsGroup.Commits = append(mlsGroup.Commits, payload.Join.Commit)
 	case *protocol.MemberPayload_MlsPayload_CommitLeave_:
 		// remove pending leave
+		mlsGroup.PendingLeaves = removeSorted(mlsGroup.PendingLeaves,
+			payload.CommitLeave.UserAddress,
+			bytes.Compare,
+			func(leave *MemberPayload_MlsPayload_ProposeLeave) []byte {
+				return leave.UserAddress
+			})
 		mlsGroup.Commits = append(mlsGroup.Commits, payload.CommitLeave.Commit)
 	case *protocol.MemberPayload_MlsPayload_ExternalJoin_:
-
+		// add device keys
 		mlsGroup.Commits = append(mlsGroup.Commits, payload.ExternalJoin.Commit)
 	case *MemberPayload_MlsPayload_ProposeLeave_:
 		mlsGroup.PendingLeaves = insertSorted(mlsGroup.PendingLeaves,
