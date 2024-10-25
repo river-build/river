@@ -196,18 +196,7 @@ func (r *streamViewImpl) GetMlsGroup() (*protocol.MemberPayload_Snapshot_MlsGrou
 		case *protocol.StreamEvent_MemberPayload:
 			switch payload := payload.MemberPayload.Content.(type) {
 			case *protocol.MemberPayload_Mls:
-				switch payload := payload.Mls.Content.(type) {
-				case *protocol.MemberPayload_MlsPayload_InitialGroupInfo:
-					groupState = &protocol.MemberPayload_Snapshot_MlsGroup{
-						GroupInfo: payload.InitialGroupInfo,
-					}
-				case *protocol.MemberPayload_MlsPayload_Join_:
-					groupState.Commits = append(groupState.Commits, payload.Join.Commit)
-				case *protocol.MemberPayload_MlsPayload_CommitLeave_:
-					groupState.Commits = append(groupState.Commits, payload.CommitLeave.Commit)
-				case *protocol.MemberPayload_MlsPayload_ExternalJoin_:
-					groupState.Commits = append(groupState.Commits, payload.ExternalJoin.Commit)
-				}
+				applyMlsPayload(groupState, payload.Mls)
 			default:
 				break
 			}

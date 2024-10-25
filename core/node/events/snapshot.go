@@ -8,6 +8,7 @@ import (
 
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/events/migrations"
+	"github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"
 )
@@ -544,6 +545,9 @@ func update_Snapshot_Member(
 		}
 		snapshot.Pins = snapPins
 		return nil
+	case *MemberPayload_Mls:
+		snapshot.MlsGroup = applyMlsPayload(snapshot.MlsGroup, content.Mls)
+		return nil
 	default:
 		return RiverError(Err_INVALID_ARGUMENT, "unknown membership payload type %T", memberPayload.Content)
 	}
@@ -794,4 +798,32 @@ func applyKeyFulfillment(member *MemberPayload_Snapshot_Member, keyFulfillment *
 			}
 		}
 	}
+}
+
+func applyMlsPayload(
+	mlsGroup *MemberPayload_Snapshot_MlsGroup,
+	payload *MemberPayload_MlsPayload,
+) *MemberPayload_Snapshot_MlsGroup {
+	switch payload := payload.Content.(type) {
+	case *protocol.MemberPayload_MlsPayload_InitialGroupInfo:
+		mlsGroup = &protocol.MemberPayload_Snapshot_MlsGroup{
+			GroupInfo: payload.InitialGroupInfo,
+		}
+	case *protocol.MemberPayload_MlsPayload_Join_:
+		mlsGroup.Commits = append(mlsGroup.Commits, payload.Join.Commit)
+	case *protocol.MemberPayload_MlsPayload_CommitLeave_:
+		// remove pending leave
+		mlsGroup.Commits = append(mlsGroup.Commits, payload.CommitLeave.Commit)
+	case *protocol.MemberPayload_MlsPayload_ExternalJoin_:
+
+		mlsGroup.Commits = append(mlsGroup.Commits, payload.ExternalJoin.Commit)
+	case *MemberPayload_MlsPayload_ProposeLeave_:
+		mlsGroup.PendingLeaves = insertSorted(mlsGroup.PendingLeaves,
+			payload.ProposeLeave,
+			bytes.Compare,
+			func(leave *MemberPayload_MlsPayload_ProposeLeave) []byte {
+				return leave.UserAddress
+			})
+	}
+	return mlsGroup
 }
