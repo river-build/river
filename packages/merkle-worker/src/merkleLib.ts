@@ -1,6 +1,6 @@
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree'
-
-interface Claim {
+import { HexString } from '@openzeppelin/merkle-tree/src/bytes'
+export interface Claim {
     address: string
     amount: string
 }
@@ -13,7 +13,7 @@ export function createMerkleRoot(claims: Claim[]): string {
     return tree.root
 }
 
-export function generateMerkleProof(address: string, amount: string, claims: Claim[]): string[] {
+export function generateMerkleProof(address: string, amount: string, claims: Claim[]): HexString[] {
     const tree = StandardMerkleTree.of(
         claims.map((claim) => [claim.address, claim.amount]),
         ['address', 'uint256'],
@@ -25,5 +25,5 @@ export function generateMerkleProof(address: string, amount: string, claims: Cla
         }
     }
 
-    throw new Error('Claim not found in the Merkle tree')
+    return []
 }
