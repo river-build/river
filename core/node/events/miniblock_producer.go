@@ -379,12 +379,17 @@ func mbProduceCandiate(
 		return nil, RiverError(Err_INTERNAL, "Not a local stream")
 	}
 
-	mbInfo, err := mbProduceCandiate_Make(ctx, params, stream, forceSnapshot, remoteNodes)
+	view, err := stream.getView(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	err = mbProduceCandiate_Save(ctx, params, stream, mbInfo, remoteNodes)
+	mbInfo, err := mbProduceCandiate_Make(ctx, params, view, forceSnapshot, remoteNodes)
+	if err != nil {
+		return nil, err
+	}
+
+	err = mbProduceCandiate_Save(ctx, params, stream.streamId, mbInfo, remoteNodes)
 	if err != nil {
 		return nil, err
 	}
@@ -395,15 +400,10 @@ func mbProduceCandiate(
 func mbProduceCandiate_Make(
 	ctx context.Context,
 	params *StreamCacheParams,
-	stream *streamImpl,
+	view *streamViewImpl,
 	forceSnapshot bool,
 	remoteNodes []common.Address,
 ) (*MiniblockInfo, error) {
-	view, err := stream.getView(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	localProposal, err := view.ProposeNextMiniblock(ctx, params.ChainConfig.Get(), forceSnapshot)
 	if err != nil {
 		return nil, err
@@ -419,7 +419,7 @@ func mbProduceCandiate_Make(
 			ctx,
 			params,
 			remoteNodes,
-			stream.streamId,
+			view.streamId,
 			forceSnapshot,
 		)
 		if err != nil {
@@ -471,7 +471,7 @@ func mbProduceCandiate_Make(
 func mbProduceCandiate_Save(
 	ctx context.Context,
 	params *StreamCacheParams,
-	stream *streamImpl,
+	streamId StreamId,
 	mbInfo *MiniblockInfo,
 	remoteNodes []common.Address,
 ) error {
@@ -485,7 +485,7 @@ func mbProduceCandiate_Save(
 
 		return params.Storage.WriteMiniblockCandidate(
 			ctx,
-			stream.streamId,
+			streamId,
 			mbInfo.Ref.Hash,
 			mbInfo.Ref.Num,
 			miniblockBytes,
@@ -494,7 +494,7 @@ func mbProduceCandiate_Save(
 
 	for _, node := range remoteNodes {
 		qp.GoRemote(node, func(node common.Address) error {
-			return params.RemoteMiniblockProvider.SaveMbCandidate(ctx, node, stream.streamId, mbInfo.Proto)
+			return params.RemoteMiniblockProvider.SaveMbCandidate(ctx, node, streamId, mbInfo.Proto)
 		})
 	}
 

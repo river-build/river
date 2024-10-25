@@ -59,3 +59,7 @@ func (m *minipoolInstance) lastEvent() *ParsedEvent {
 func (m *minipoolInstance) nextSlotNumber() int {
 	return m.events.Len()
 }
+
+func (m *minipoolInstance) size() int {
+	return m.events.Len()
+}

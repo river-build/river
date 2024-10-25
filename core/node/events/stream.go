@@ -385,6 +385,7 @@ func (s *streamImpl) initFromGenesis(
 		return RiverError(Err_BAD_BLOCK, "init from genesis must be from block with num 0")
 	}
 
+	// TODO: move this call out of the lock
 	_, registeredGenesisHash, _, err := s.params.Registry.GetStreamWithGenesis(ctx, genesis.StreamID)
 	if err != nil {
 		return err
@@ -779,7 +780,7 @@ func (s *streamImpl) getStatus() *streamImplStatus {
 func (s *streamImpl) SaveMiniblockCandidate(ctx context.Context, mb *Miniblock) error {
 	mbInfo, err := NewMiniblockInfoFromProto(
 		mb,
-		NewMiniblockInfoFromProtoOpts{DontParseEvents: true, ExpectedBlockNumber: -1},
+		NewMiniblockInfoFromProtoOpts{ExpectedBlockNumber: -1},
 	)
 	if err != nil {
 		return err
@@ -835,15 +836,43 @@ func (s *streamImpl) tryApplyCandidate(ctx context.Context, mb *MiniblockInfo) (
 	}
 
 	if len(s.pendingCandidates) > 0 {
-		firstPending := s.pendingCandidates[0]
-		if mb.Ref.Num == firstPending.Num && mb.Ref.Hash == firstPending.Hash {
+		pending := s.pendingCandidates[0]
+		if mb.Ref.Num == pending.Num && mb.Ref.Hash == pending.Hash {
 			err = s.importMiniblocksNoLock(ctx, []*MiniblockInfo{mb})
 			if err != nil {
 				return false, err
 			}
+
+			for len(s.pendingCandidates) > 0 {
+				pending = s.pendingCandidates[0]
+				ok := s.tryReadAndApplyCandidateNoLock(ctx, pending)
+				if !ok {
+					break
+				}
+			}
+
 			return true, nil
 		}
 	}
 
 	return false, nil
+}
+
+func (s *streamImpl) tryReadAndApplyCandidateNoLock(ctx context.Context, mbRef *MiniblockRef) bool {
+	miniblockBytes, err := s.params.Storage.ReadMiniblockCandidate(ctx, s.streamId, mbRef.Hash, mbRef.Num)
+	if err == nil {
+		miniblock, err := NewMiniblockInfoFromBytes(miniblockBytes, mbRef.Num)
+		if err == nil {
+			err = s.importMiniblocksNoLock(ctx, []*MiniblockInfo{miniblock})
+			if err == nil {
+				return true
+			}
+		}
+	}
+
+	if !IsRiverErrorCode(err, Err_NOT_FOUND) {
+		dlog.FromCtx(ctx).
+			Error("Stream.tryReadAndApplyCandidateNoLock: failed to read miniblock candidate", "error", err)
+	}
+	return false
 }

@@ -178,7 +178,7 @@ func TestCacheEvictionWithFilledMiniBlockPool(t *testing.T) {
 	_ = tc.makeMiniblock(0, streamID, false)
 
 	// add event to stream with unloaded view, view should be loaded in cache and minipool must contain event
-	addEvent(
+	addEventToStream(
 		t,
 		ctx,
 		tc.instances[0].params,
@@ -282,7 +282,7 @@ func TestStreamMiniblockBatchProduction(t *testing.T) {
 			// add several events to the stream
 			numToAdd := 1 + int(streamID[3]%50)
 			for i := range numToAdd {
-				addEvent(t, ctx, streamCache.params, streamSync,
+				addEventToStream(t, ctx, streamCache.params, streamSync,
 					fmt.Sprintf("msg# %d", i), &MiniblockRef{Hash: common.BytesToHash(genesis.Header.Hash), Num: 0})
 			}
 
@@ -431,7 +431,7 @@ func Disabled_TestStreamUnloadWithSubscribers(t *testing.T) {
 			streamSync, err := streamCache.GetStream(ctx, streamID)
 			require.NoError(err, "get sync stream")
 			for i := 0; i < 1+int(streamID[3]%50); i++ {
-				addEvent(t, ctx, streamCache.params, streamSync,
+				addEventToStream(t, ctx, streamCache.params, streamSync,
 					fmt.Sprintf("msg# %d", i), &MiniblockRef{Hash: common.BytesToHash(genesis.Header.Hash), Num: 0})
 			}
 			streamsWithEvents[streamID] = 1 + int(streamID[3]%50)
