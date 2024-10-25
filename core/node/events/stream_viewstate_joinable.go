@@ -16,6 +16,7 @@ type JoinableStreamView interface {
 	GetMembership(userAddress []byte) (protocol.MembershipOp, error)
 	GetKeySolicitations(userAddress []byte) ([]*protocol.MemberPayload_KeySolicitation, error)
 	GetPinnedMessages() ([]*protocol.MemberPayload_SnappedPin, error)
+	GetMlsGroupState() (*protocol.MemberPayload_MlsPayload_GroupState, error)
 }
 
 var _ JoinableStreamView = (*streamViewImpl)(nil)
@@ -181,4 +182,38 @@ func (r *streamViewImpl) GetPinnedMessages() ([]*protocol.MemberPayload_SnappedP
 		return nil, err
 	}
 	return pins, nil
+}
+
+func (r *streamViewImpl) GetMlsGroupState() (*protocol.MemberPayload_MlsPayload_GroupState, error) {
+	groupState := r.snapshot.GetMembers().GroupState
+	// clone so we don't modify the snapshot
+	if groupState != nil {
+		groupState = proto.Clone(groupState).(*protocol.MemberPayload_MlsPayload_GroupState)
+	}
+
+	updateFn := func(e *ParsedEvent, miniblockNum int64, eventNum int64) (bool, error) {
+		switch payload := e.Event.Payload.(type) {
+		case *protocol.StreamEvent_MemberPayload:
+			switch payload := payload.MemberPayload.Content.(type) {
+			case *protocol.MemberPayload_Mls:
+				switch payload := payload.Mls.Content.(type) {
+				case *protocol.MemberPayload_MlsPayload_GroupState_:
+					groupState = payload.GroupState
+				case *protocol.MemberPayload_MlsPayload_Welcome_:
+					groupState.Commits = append(groupState.Commits, payload.Welcome.Commit)
+				}
+			default:
+				break
+			}
+		default:
+			break
+		}
+		return true, nil
+	}
+
+	err := r.forEachEvent(r.snapshotIndex+1, updateFn)
+	if err != nil {
+		return nil, err
+	}
+	return groupState, nil
 }

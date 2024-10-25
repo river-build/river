@@ -4,7 +4,6 @@ import "fmt"
 
 type IsStreamEvent_Payload = isStreamEvent_Payload
 type IsMiniblockHeader_Content = isMiniblockHeader_Content
-type IsMlsEvent_Content = isMlsEvent_Content
 type IsMemberPayload_Content = isMemberPayload_Content
 type IsSpacePayload_Content = isSpacePayload_Content
 type IsChannelPayload_Content = isChannelPayload_Content
@@ -17,6 +16,7 @@ type IsUserMetadataPayload_Content = isUserMetadataPayload_Content
 type IsMediaPayload_Content = isMediaPayload_Content
 type IsSnapshot_Content = isSnapshot_Content
 type IsGetStreamExResponse_Data = isGetStreamExResponse_Data
+type IsMemberPayload_MlsPayload_Content = isMemberPayload_MlsPayload_Content
 
 type IsInceptionPayload interface {
 	isInceptionPayload()

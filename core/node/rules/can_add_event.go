@@ -62,6 +62,11 @@ type aeUnpinRules struct {
 	unpin  *MemberPayload_Unpin
 }
 
+type aeMlsRules struct {
+	params  *aeParams
+	payload *MemberPayload_MlsPayload
+}
+
 type aeMediaPayloadChunkRules struct {
 	params *aeParams
 	chunk  *MediaPayload_Chunk
@@ -514,14 +519,24 @@ func (params *aeParams) canAddMemberPayload(payload *StreamEvent_MemberPayload) 
 				check(unpinRules.validUnpin)
 		}
 	case *MemberPayload_Mls:
-		if shared.ValidChannelStreamId(params.streamView.StreamId()) {
+		mlsRules := &aeMlsRules{
+			params:  params,
+			payload: content,
+		}
+		if shared.ValidSpaceStreamId(params.streamView.StreamId()) {
 			return aeBuilder().
-				checkOneOf(params.creatorIsMember).
-				requireChainAuth(params.channelEntitlements(auth.PermissionRead)).
-				onChainAuthFailure(params.onEntitlementFailureForUserEvent)
+				check(params.creatorIsMember).
+				check(mlsRules.validMls).
+				requireChainAuth(params.spaceEntitlements(auth.PermissionRead)) // is this correct?
+		} else if shared.ValidChannelStreamId(params.streamView.StreamId()) {
+			return aeBuilder().
+				check(params.creatorIsMember).
+				check(mlsRules.validMls).
+				requireChainAuth(params.channelEntitlements(auth.PermissionRead))
 		} else {
 			return aeBuilder().
-				checkOneOf(params.creatorIsMember)
+				check(params.creatorIsMember).
+				check(mlsRules.validMls)
 		}
 	default:
 		return aeBuilder().
@@ -1222,6 +1237,30 @@ func (ru *aeUnpinRules) validUnpin() (bool, error) {
 		}
 	}
 	return false, RiverError(Err_INVALID_ARGUMENT, "message is not pinned")
+}
+
+func (ru *aeMlsRules) validMls() (bool, error) {
+	switch ru.payload.Content.(type) {
+	case *MemberPayload_MlsPayload_GroupState_:
+		view := ru.params.streamView.(events.JoinableStreamView)
+		groupState, err := view.GetMlsGroupState()
+		if err != nil {
+			return false, RiverError(Err_INTERNAL, "failed to get group state")
+		}
+		if groupState != nil {
+			return false, RiverError(Err_INVALID_ARGUMENT, "group state already exists")
+		}
+	case *MemberPayload_MlsPayload_Welcome_:
+		// check if welcome message is applicable to current group state
+		break
+
+	case *MemberPayload_MlsPayload_Join_:
+		// check if identity is already added
+		break
+	default:
+		return false, RiverError(Err_INVALID_ARGUMENT, "invalid mls payload")
+	}
+	return true, nil
 }
 
 type HasChannelIdBytes interface {

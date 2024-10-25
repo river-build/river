@@ -150,35 +150,36 @@ message MiniblockHeader {
     }
 }
 
-message MlsEvent {
-
-    message Join {
-        string identity = 1;
-        bytes key_package = 2;
-    }
-
-    message Welcome {
-        bytes commit = 1;
-        bytes welcome = 2;
-        repeated string identities = 3;
-    }
-    
-    message Group {
-        bytes payload = 1;
-    }
-
-    oneof content {
-        Bootstrap bootstrap = 1;
-        Join join = 2;
-        Welcome welcome = 3;
-    }
-}
-
 /**
 * MemberPayload
 * can appear in any stream
 */
 message MemberPayload {
+
+    message MlsPayload {
+        message Join {
+            string identity = 1;
+            bytes key_package = 2;
+        }
+    
+        message Welcome {
+            bytes commit = 1;
+            bytes welcome = 2;
+            repeated string identities = 3;
+        }
+
+        message GroupState {
+            bytes group = 1;
+            repeated bytes commits = 2;
+        }
+        
+        oneof content {
+            GroupState groupState = 1;
+            Join join = 2;
+            Welcome welcome = 3;
+        }
+    }
+
     message Snapshot {
         message Member {
             bytes user_address = 1;
@@ -190,15 +191,10 @@ message MemberPayload {
             bytes ens_address = 7;
             Nft nft = 8;
         }
-
-        message GroupState {
-            bytes group = 1;
-            repeated bytes commits = 2;
-        }
         
         repeated Member joined = 1;
         repeated SnappedPin pins = 2;
-        GroupState group_state = 3;
+        MlsPayload.GroupState group_state = 3;
     }
 
     message Membership {
@@ -251,7 +247,7 @@ message MemberPayload {
         Nft nft = 7;
         Pin pin = 8;
         Unpin unpin = 9;
-        MlsEvent mls = 10;
+        MlsPayload mls = 10;
     }
 }
 
