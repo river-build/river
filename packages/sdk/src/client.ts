@@ -151,6 +151,7 @@ import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
 import { decryptAESGCM, deriveKeyAndIV, encryptAESGCM, uint8ArrayToBase64 } from './crypto_utils'
 import { makeTags } from './tags'
+import { MlsCrypto } from './mls'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
@@ -186,7 +187,7 @@ export class Client
 
     public cryptoBackend?: GroupEncryptionCrypto
     public cryptoStore: CryptoStore
-
+    public mls: MlsCrypto
     private getStreamRequests: Map<string, Promise<StreamStateView>> = new Map()
     private getStreamExRequests: Map<string, Promise<StreamStateView>> = new Map()
     private getScrollbackRequests: Map<string, ReturnType<typeof this.scrollback>> = new Map()
@@ -225,7 +226,7 @@ export class Client
         this.rpcClient = rpcClient
         this.unpackEnvelopeOpts = unpackEnvelopeOpts
         this.userId = userIdFromAddress(signerContext.creatorAddress)
-
+        this.mls = new MlsCrypto(this.userId)
         const shortId = shortenHexString(
             this.userId.startsWith('0x') ? this.userId.slice(2) : this.userId,
         )
@@ -2200,6 +2201,8 @@ export class Client
             this.userId,
             this.userDeviceKey(),
         )
+
+        await this.mls.initialize()
     }
 
     /**

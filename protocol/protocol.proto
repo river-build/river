@@ -151,6 +151,7 @@ message MiniblockHeader {
 }
 
 message MlsEvent {
+
     message Join {
         string identity = 1;
         bytes key_package = 2;
@@ -161,10 +162,15 @@ message MlsEvent {
         bytes welcome = 2;
         repeated string identities = 3;
     }
+    
+    message Group {
+        bytes payload = 1;
+    }
 
     oneof content {
-        Join join = 1;
-        Welcome welcome = 2;
+        Bootstrap bootstrap = 1;
+        Join join = 2;
+        Welcome welcome = 3;
     }
 }
 
@@ -185,13 +191,14 @@ message MemberPayload {
             Nft nft = 8;
         }
 
-        message Keys {
-            repeated bytes commits = 1;
+        message GroupState {
+            bytes group = 1;
+            repeated bytes commits = 2;
         }
         
         repeated Member joined = 1;
         repeated SnappedPin pins = 2;
-        Keys keys = 3;
+        GroupState group_state = 3;
     }
 
     message Membership {
