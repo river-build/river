@@ -13,15 +13,16 @@ import {IDiamond} from "contracts/src/diamond/Diamond.sol";
 import {IDropFacetBase} from "contracts/src/tokens/drop/IDropFacet.sol";
 import {IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
 import {IRewardsDistributionBase} from "contracts/src/base/registry/facets/distribution/v2/IRewardsDistribution.sol";
+
 //libraries
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {MerkleTree} from "contracts/test/utils/MerkleTree.sol";
 import {DropFacet} from "contracts/src/tokens/drop/DropFacet.sol";
 import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistribution.sol";
 import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 import {DropStorage} from "contracts/src/tokens/drop/DropStorage.sol";
 import {EIP712Utils} from "contracts/test/utils/EIP712Utils.sol";
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 
 // contracts
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
@@ -187,7 +188,6 @@ contract DropFacetTest is
 
   modifier givenOperatorRegistered(address operator, uint256 commissionRate) {
     vm.assume(operator != address(0));
-    vm.assume(commissionRate > 0);
     commissionRate = bound(commissionRate, 0, 10000);
 
     vm.startPrank(operator);
