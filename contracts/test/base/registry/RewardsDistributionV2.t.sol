@@ -240,7 +240,7 @@ contract RewardsDistributionV2Test is
 
   function test_fuzz_stakeOnBehalf_revertIf_pastDeadline(
     uint256 deadline
-  ) public {
+  ) public givenOperator(OPERATOR, 0) {
     deadline = bound(deadline, 0, block.timestamp - 1);
     vm.expectRevert(RewardsDistribution__ExpiredDeadline.selector);
     rewardsDistributionFacet.stakeOnBehalf(
@@ -253,7 +253,10 @@ contract RewardsDistributionV2Test is
     );
   }
 
-  function test_stakeOnBehalf_revertIf_invalidSignature() public {
+  function test_stakeOnBehalf_revertIf_invalidSignature()
+    public
+    givenOperator(OPERATOR, 0)
+  {
     vm.expectRevert(RewardsDistribution__InvalidSignature.selector);
     rewardsDistributionFacet.stakeOnBehalf(
       1,

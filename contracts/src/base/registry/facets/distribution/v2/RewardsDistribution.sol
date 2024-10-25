@@ -158,7 +158,7 @@ contract RewardsDistribution is
     address owner,
     uint256 deadline,
     bytes calldata signature
-  ) external returns (uint256 depositId) {
+  ) external onlyOperatorOrSpace(delegatee) returns (uint256 depositId) {
     _revertIfPastDeadline(deadline);
     bytes32 structHash = keccak256(
       abi.encode(
@@ -233,6 +233,7 @@ contract RewardsDistribution is
     ds.staking.changeBeneficiary(deposit, newBeneficiary);
   }
 
+  // TODO: state changes after initiateWithdraw
   function initiateWithdraw(
     uint256 depositId
   ) external returns (uint96 amount) {

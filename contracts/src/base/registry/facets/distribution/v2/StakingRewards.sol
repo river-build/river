@@ -306,7 +306,6 @@ library StakingRewards {
     }
   }
 
-  // TODO: state changes after initiateWithdraw
   function withdraw(
     Layout storage ds,
     Deposit storage deposit
