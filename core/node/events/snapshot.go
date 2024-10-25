@@ -816,12 +816,14 @@ func applyMlsPayload(
 			GroupInfo: payload.InitialGroupInfo,
 		}
 	case *protocol.MemberPayload_MlsPayload_Join_:
-		// check if group info exists
-		// add device keys
+		// TODO:
+		// - check if group info exists
+		// - add device keys
 		mlsGroup.Commits = append(mlsGroup.Commits, payload.Join.Commit)
 	case *protocol.MemberPayload_MlsPayload_CommitLeave_:
-		// check if group info exists
-		// remove pending leave
+		// TODO:
+		// - check if group info exists
+		// - remove pending leaves
 		mlsGroup.PendingLeaves = removeSorted(mlsGroup.PendingLeaves,
 			payload.CommitLeave.UserAddress,
 			bytes.Compare,
