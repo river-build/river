@@ -14,6 +14,7 @@ import {IArchitect} from "contracts/src/factory/facets/architect/IArchitect.sol"
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {SpaceDelegationStorage} from "contracts/src/base/registry/facets/delegation/SpaceDelegationStorage.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
+import {NodeOperatorStorage} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
 
 // contracts
 import {OwnableBase} from "contracts/src/diamond/facets/ownable/OwnableBase.sol";
@@ -52,6 +53,10 @@ contract SpaceDelegationFacet is ISpaceDelegation, OwnableBase, Facet {
 
     if (currentOperator != address(0) && currentOperator == operator)
       CustomRevert.revertWith(SpaceDelegation__AlreadyDelegated.selector);
+
+    // check if the operator is valid
+    if (!NodeOperatorStorage.layout().operators.contains(operator))
+      CustomRevert.revertWith(SpaceDelegation__InvalidOperator.selector);
 
     //remove the space from the current operator
     ds.spacesByOperator[currentOperator].remove(space);
