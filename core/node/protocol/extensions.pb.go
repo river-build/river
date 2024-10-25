@@ -16,6 +16,7 @@ type IsUserMetadataPayload_Content = isUserMetadataPayload_Content
 type IsMediaPayload_Content = isMediaPayload_Content
 type IsSnapshot_Content = isSnapshot_Content
 type IsGetStreamExResponse_Data = isGetStreamExResponse_Data
+type IsMemberPayload_MlsPayload_Content = isMemberPayload_MlsPayload_Content
 
 type IsInceptionPayload interface {
 	isInceptionPayload()

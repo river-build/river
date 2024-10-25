@@ -155,7 +155,51 @@ message MiniblockHeader {
 * can appear in any stream
 */
 message MemberPayload {
+
+    message MlsPayload {
+
+        message Join {
+            bytes user_address = 1;
+            bytes device_key = 2;
+            bytes commit = 3;
+        }
+
+        message ExternalJoin {
+            bytes user_address = 1;
+            bytes device_key = 2;
+            bytes commit = 3;
+        }
+    
+        message ProposeLeave {
+            bytes user_address = 1;
+        }
+
+        message CommitLeave {
+            bytes user_address = 1;
+            bytes commit = 2;
+        }
+
+        oneof content {
+            bytes initial_group_info = 1;
+            Join join = 2;
+            ProposeLeave propose_leave = 3;
+            CommitLeave commit_leave = 4;
+            ExternalJoin external_join = 5;
+        }
+    }
+
     message Snapshot {
+        
+        message MlsGroup {
+            message DeviceKeys {
+                repeated bytes device_keys = 1;
+            }
+            bytes group_info = 1;
+            repeated bytes commits = 2;
+            map<string, DeviceKeys> device_keys = 3;
+            repeated MlsPayload.ProposeLeave pending_leaves = 4;
+        }
+
         message Member {
             bytes user_address = 1;
             int64 miniblock_num = 2;
@@ -169,6 +213,7 @@ message MemberPayload {
         
         repeated Member joined = 1;
         repeated SnappedPin pins = 2;
+        MlsGroup mls_group = 3;
     }
 
     message Membership {
@@ -221,6 +266,7 @@ message MemberPayload {
         Nft nft = 7;
         Pin pin = 8;
         Unpin unpin = 9;
+        MlsPayload mls = 10;
     }
 }
 
