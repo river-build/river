@@ -800,19 +800,27 @@ func applyKeyFulfillment(member *MemberPayload_Snapshot_Member, keyFulfillment *
 	}
 }
 
+/*
+For now: we trust that the commits do what the clients say it does.
+we will augment this with proper MLS verification very soon
+*/
+
 func applyMlsPayload(
 	mlsGroup *MemberPayload_Snapshot_MlsGroup,
 	payload *MemberPayload_MlsPayload,
 ) *MemberPayload_Snapshot_MlsGroup {
 	switch payload := payload.Content.(type) {
 	case *protocol.MemberPayload_MlsPayload_InitialGroupInfo:
+		// group info can only be set exactly once
 		mlsGroup = &protocol.MemberPayload_Snapshot_MlsGroup{
 			GroupInfo: payload.InitialGroupInfo,
 		}
 	case *protocol.MemberPayload_MlsPayload_Join_:
+		// check if group info exists
 		// add device keys
 		mlsGroup.Commits = append(mlsGroup.Commits, payload.Join.Commit)
 	case *protocol.MemberPayload_MlsPayload_CommitLeave_:
+		// check if group info exists
 		// remove pending leave
 		mlsGroup.PendingLeaves = removeSorted(mlsGroup.PendingLeaves,
 			payload.CommitLeave.UserAddress,
