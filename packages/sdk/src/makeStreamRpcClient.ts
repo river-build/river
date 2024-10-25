@@ -1,4 +1,4 @@
-import { PromiseClient, createPromiseClient } from '@connectrpc/connect'
+import { PromiseClient, createPromiseClient, type Interceptor } from '@connectrpc/connect'
 import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-web'
 import { StreamService } from '@river-build/proto'
 import { dlog } from '@river-build/dlog'
@@ -15,6 +15,8 @@ export function makeStreamRpcClient(
     dest: string,
     retryParams: RetryParams = { maxAttempts: 3, initialRetryDelay: 2000, maxRetryDelay: 6000 },
     refreshNodeUrl?: () => Promise<string>,
+    interceptors?: Interceptor[],
+    defaultTimeoutMs?: number,
 ): StreamRpcClient {
     const transportId = nextRpcClientNum++
     logInfo('makeStreamRpcClient, transportId =', transportId)
@@ -25,8 +27,9 @@ export function makeStreamRpcClient(
         interceptors: [
             retryInterceptor({ ...retryParams, refreshNodeUrl }),
             loggingInterceptor(transportId),
+            ...(interceptors ?? []),
         ],
-        defaultTimeoutMs: 30000, // this is a massive timeout, but we have very long requests that can take > 10 seconds to create a stream for example
+        defaultTimeoutMs,
     }
     if (getEnvVar('RIVER_DEBUG_TRANSPORT') !== 'true') {
         options.useBinaryFormat = true
