@@ -257,7 +257,8 @@ library StakingRewards {
   function changeBeneficiary(
     Layout storage ds,
     Deposit storage deposit,
-    address newBeneficiary
+    address newBeneficiary,
+    uint256 commissionRate
   ) internal {
     if (newBeneficiary == address(0)) {
       CustomRevert.revertWith(StakingRewards__InvalidAddress.selector);
@@ -265,28 +266,29 @@ library StakingRewards {
 
     updateGlobalReward(ds);
 
-    (uint96 amount, address oldBeneficiary, uint96 commissionEarningPower) = (
+    (uint96 amount, address oldBeneficiary, address delegatee) = (
       deposit.amount,
       deposit.beneficiary,
-      deposit.commissionEarningPower
+      deposit.delegatee
     );
     deposit.beneficiary = newBeneficiary;
 
-    unchecked {
-      uint96 amountMinusCommission = amount - commissionEarningPower;
+    Treasure storage oldTreasure = ds.treasureByBeneficiary[oldBeneficiary];
+    updateReward(ds, oldTreasure);
 
-      Treasure storage oldTreasure = ds.treasureByBeneficiary[oldBeneficiary];
-      updateReward(ds, oldTreasure);
+    _decreaseEarningPower(ds, deposit, oldTreasure);
 
-      oldTreasure.earningPower -= amountMinusCommission;
+    Treasure storage newTreasure = ds.treasureByBeneficiary[newBeneficiary];
+    updateReward(ds, newTreasure);
 
-      Treasure storage newTreasure = ds.treasureByBeneficiary[newBeneficiary];
-      updateReward(ds, newTreasure);
-
-      // the invariant totalStaked >= treasureByBeneficiary[beneficiary].earningPower is ensured on stake and increaseStake
-      // the following won't overflow
-      newTreasure.earningPower += amountMinusCommission;
-    }
+    _increaseEarningPower(
+      ds,
+      deposit,
+      newTreasure,
+      amount,
+      delegatee,
+      commissionRate
+    );
   }
 
   function withdraw(
@@ -381,6 +383,10 @@ library StakingRewards {
       CustomRevert.revertWith(StakingRewards__InsufficientReward.selector);
     }
   }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                         ACCOUNTING                         */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   function _increaseEarningPower(
     Layout storage ds,

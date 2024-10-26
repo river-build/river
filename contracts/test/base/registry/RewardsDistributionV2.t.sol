@@ -474,6 +474,38 @@ contract RewardsDistributionV2Test is
     );
   }
 
+  function test_fuzz_changeBeneficiary_sameBeneficiary(
+    uint96 amount,
+    address operator,
+    uint256 commissionRate0,
+    uint256 commissionRate1,
+    address beneficiary
+  ) public {
+    vm.assume(beneficiary != address(0) && beneficiary != operator);
+    commissionRate1 = bound(commissionRate1, 0, 10000);
+
+    uint256 depositId = test_fuzz_stake(
+      address(this),
+      amount,
+      operator,
+      commissionRate0,
+      beneficiary
+    );
+
+    setOperatorCommissionRate(operator, commissionRate1);
+
+    rewardsDistributionFacet.changeBeneficiary(depositId, beneficiary);
+
+    verifyStake(
+      address(this),
+      depositId,
+      amount,
+      operator,
+      commissionRate1,
+      beneficiary
+    );
+  }
+
   function test_initiateWithdraw_revertIf_notDepositor() public {
     uint256 depositId = test_stake();
 

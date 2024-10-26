@@ -196,7 +196,11 @@ contract RewardsDistribution is
     StakingRewards.Deposit storage deposit = ds.staking.depositById[depositId];
     _revertIfNotDepositOwner(deposit.owner);
 
-    ds.staking.changeBeneficiary(deposit, newBeneficiary);
+    ds.staking.changeBeneficiary(
+      deposit,
+      newBeneficiary,
+      _getCommissionRate(deposit.delegatee)
+    );
   }
 
   // TODO: state changes after initiateWithdraw
