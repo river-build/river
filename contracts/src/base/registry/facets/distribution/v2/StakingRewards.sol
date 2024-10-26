@@ -169,35 +169,23 @@ library StakingRewards {
       CustomRevert.revertWith(StakingRewards__InvalidAddress.selector);
     }
 
-    updateGlobalReward(ds);
-
-    Treasure storage beneficiaryTreasure = ds.treasureByBeneficiary[
-      beneficiary
-    ];
-    updateReward(ds, beneficiaryTreasure);
-
     depositId = ds.nextDepositId++;
     Deposit storage deposit = ds.depositById[depositId];
+
     // batch storage writes
-    (deposit.amount, deposit.owner, deposit.beneficiary, deposit.delegatee) = (
-      amount,
+    (deposit.owner, deposit.beneficiary, deposit.delegatee) = (
       owner,
       beneficiary,
       delegatee
     );
 
-    ds.totalStaked += amount;
-    unchecked {
-      // because totalStaked >= stakedByDepositor[owner]
-      // if totalStaked doesn't overflow, they won't
-      ds.stakedByDepositor[owner] += amount;
-    }
-    _increaseEarningPower(
+    increaseStake(
       ds,
       deposit,
-      beneficiaryTreasure,
+      owner,
       amount,
       delegatee,
+      beneficiary,
       commissionRate
     );
   }
@@ -205,18 +193,12 @@ library StakingRewards {
   function increaseStake(
     Layout storage ds,
     Deposit storage deposit,
+    address owner,
     uint96 amount,
+    address delegatee,
+    address beneficiary,
     uint256 commissionRate
   ) internal {
-    // cache storage reads
-    (
-      uint96 currentAmount,
-      address owner,
-      address beneficiary,
-      address delegatee
-    ) = (deposit.amount, deposit.owner, deposit.beneficiary, deposit.delegatee);
-    deposit.amount = currentAmount + amount;
-
     updateGlobalReward(ds);
 
     Treasure storage beneficiaryTreasure = ds.treasureByBeneficiary[
@@ -226,9 +208,10 @@ library StakingRewards {
 
     ds.totalStaked += amount;
     unchecked {
-      // because totalStaked >= stakedByDepositor[owner]
+      // because totalStaked >= stakedByDepositor[owner] >= deposit.amount
       // if totalStaked doesn't overflow, they won't
       ds.stakedByDepositor[owner] += amount;
+      deposit.amount += amount;
     }
     _increaseEarningPower(
       ds,

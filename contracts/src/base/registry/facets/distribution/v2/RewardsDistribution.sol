@@ -156,12 +156,18 @@ contract RewardsDistribution is
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     StakingRewards.Deposit storage deposit = ds.staking.depositById[depositId];
-    _revertIfNotDepositOwner(deposit.owner);
+    address owner = deposit.owner;
+    _revertIfNotDepositOwner(owner);
+
+    address delegatee = deposit.delegatee;
 
     ds.staking.increaseStake(
       deposit,
+      owner,
       amount,
-      _getCommissionRate(deposit.delegatee)
+      delegatee,
+      deposit.beneficiary,
+      _getCommissionRate(delegatee)
     );
 
     address proxy = ds.proxyById[depositId];
