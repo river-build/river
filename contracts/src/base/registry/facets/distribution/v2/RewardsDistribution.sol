@@ -300,21 +300,26 @@ contract RewardsDistribution is
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   /// @inheritdoc IRewardsDistribution
-  function stakingState() external view returns (StakingState memory) {
+  function stakingState() external view returns (StakingState memory state) {
     StakingRewards.Layout storage staking = RewardsDistributionStorage
       .layout()
       .staking;
-    return
-      StakingState(
-        staking.stakeToken,
-        staking.totalStaked,
-        staking.rewardDuration,
-        staking.rewardEndTime,
-        staking.lastUpdateTime,
-        staking.rewardRate,
-        staking.rewardPerTokenAccumulated,
-        staking.nextDepositId
-      );
+    assembly ("memory-safe") {
+      // By default, memory has been implicitly allocated for `state`.
+      // But we don't need this implicitly allocated memory.
+      // So we just set the free memory pointer to what it was before `state` has been allocated.
+      mstore(0x40, state)
+    }
+    state = StakingState(
+      staking.stakeToken,
+      staking.totalStaked,
+      staking.rewardDuration,
+      staking.rewardEndTime,
+      staking.lastUpdateTime,
+      staking.rewardRate,
+      staking.rewardPerTokenAccumulated,
+      staking.nextDepositId
+    );
   }
 
   /// @inheritdoc IRewardsDistribution
