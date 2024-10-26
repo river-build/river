@@ -61,6 +61,7 @@ contract RewardsDistributionV2Test is
 
     vm.prank(deployer);
     rewardsDistributionFacet.setRewardNotifier(NOTIFIER, true);
+    registerOperator(OPERATOR);
 
     rewardDuration = rewardsDistributionFacet.stakingState().rewardDuration;
 
@@ -107,18 +108,12 @@ contract RewardsDistributionV2Test is
     rewardsDistributionFacet.stake(1, address(this), address(this));
   }
 
-  function test_stake_revertIf_amountIsZero()
-    public
-    givenOperator(OPERATOR, 0)
-  {
+  function test_stake_revertIf_amountIsZero() public {
     vm.expectRevert(StakingRewards.StakingRewards__InvalidAmount.selector);
     rewardsDistributionFacet.stake(0, OPERATOR, address(this));
   }
 
-  function test_stake_revertIf_beneficiaryIsZero()
-    public
-    givenOperator(OPERATOR, 0)
-  {
+  function test_stake_revertIf_beneficiaryIsZero() public {
     vm.expectRevert(StakingRewards.StakingRewards__InvalidAddress.selector);
     rewardsDistributionFacet.stake(1, OPERATOR, address(0));
   }
@@ -240,7 +235,7 @@ contract RewardsDistributionV2Test is
 
   function test_fuzz_stakeOnBehalf_revertIf_pastDeadline(
     uint256 deadline
-  ) public givenOperator(OPERATOR, 0) {
+  ) public {
     deadline = bound(deadline, 0, block.timestamp - 1);
     vm.expectRevert(RewardsDistribution__ExpiredDeadline.selector);
     rewardsDistributionFacet.stakeOnBehalf(
@@ -253,10 +248,7 @@ contract RewardsDistributionV2Test is
     );
   }
 
-  function test_stakeOnBehalf_revertIf_invalidSignature()
-    public
-    givenOperator(OPERATOR, 0)
-  {
+  function test_stakeOnBehalf_revertIf_invalidSignature() public {
     vm.expectRevert(RewardsDistribution__InvalidSignature.selector);
     rewardsDistributionFacet.stakeOnBehalf(
       1,
@@ -710,7 +702,7 @@ contract RewardsDistributionV2Test is
   function test_fuzz_claimReward_revertIf_notBeneficiary(
     address beneficiary
   ) public {
-    vm.assume(beneficiary != address(this));
+    vm.assume(beneficiary != address(this) && beneficiary != OPERATOR);
     vm.expectRevert(RewardsDistribution__NotBeneficiary.selector);
     rewardsDistributionFacet.claimReward(beneficiary, address(this));
   }
@@ -840,6 +832,22 @@ contract RewardsDistributionV2Test is
     verifyClaim(space, operator, reward, currentReward, timeLapse);
   }
 
+  /// forge-config: default.fuzz.runs = 256
+  function test_fuzz_getDepositsByDepositor(uint8 count) public {
+    bridgeTokensForUser(address(this), 1 ether * uint256(count));
+    river.approve(address(rewardsDistributionFacet), type(uint256).max);
+    for (uint256 i; i < count; ++i) {
+      rewardsDistributionFacet.stake(1 ether, OPERATOR, address(this));
+    }
+    uint256[] memory deposits = rewardsDistributionFacet.getDepositsByDepositor(
+      address(this)
+    );
+    assertEq(deposits.length, count, "length");
+    for (uint256 i; i < count; ++i) {
+      assertEq(deposits[i], i, "depositId");
+    }
+  }
+
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                          OPERATOR                          */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -852,8 +860,10 @@ contract RewardsDistributionV2Test is
 
   function registerOperator(address operator) internal {
     vm.assume(operator != address(0));
-    vm.prank(operator);
-    operatorFacet.registerOperator(operator);
+    if (!operatorFacet.isOperator(operator)) {
+      vm.prank(operator);
+      operatorFacet.registerOperator(operator);
+    }
   }
 
   function setOperatorCommissionRate(

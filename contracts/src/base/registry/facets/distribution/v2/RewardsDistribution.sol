@@ -6,6 +6,7 @@ import {IERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/IERC2
 import {IRewardsDistribution} from "./IRewardsDistribution.sol";
 
 // libraries
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
@@ -28,6 +29,7 @@ contract RewardsDistribution is
   Nonces,
   Facet
 {
+  using EnumerableSet for EnumerableSet.UintSet;
   using SafeTransferLib for address;
   using StakingRewards for StakingRewards.Layout;
 
@@ -297,6 +299,15 @@ contract RewardsDistribution is
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     amount = ds.staking.stakedByDepositor[depositor];
+  }
+
+  /// @inheritdoc IRewardsDistribution
+  function getDepositsByDepositor(
+    address depositor
+  ) external view returns (uint256[] memory) {
+    RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
+      .layout();
+    return ds.depositsByDepositor[depositor].values();
   }
 
   /// @inheritdoc IRewardsDistribution

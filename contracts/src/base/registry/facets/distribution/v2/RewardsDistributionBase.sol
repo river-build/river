@@ -20,6 +20,7 @@ import {DelegationProxy} from "./DelegationProxy.sol";
 
 abstract contract RewardsDistributionBase is IRewardsDistributionBase {
   using EnumerableSet for EnumerableSet.AddressSet;
+  using EnumerableSet for EnumerableSet.UintSet;
   using SafeTransferLib for address;
   using StakingRewards for StakingRewards.Layout;
 
@@ -46,6 +47,8 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
     );
 
     address proxy = _deployDelegationProxy(depositId, delegatee);
+    ds.depositsByDepositor[owner].add(depositId);
+
     ds.staking.stakeToken.safeTransferFrom(msg.sender, proxy, amount);
   }
 
