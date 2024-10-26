@@ -313,19 +313,25 @@ contract RewardsDistribution is
   /// @inheritdoc IRewardsDistribution
   function treasureByBeneficiary(
     address beneficiary
-  ) external view returns (StakingRewards.Treasure memory) {
+  ) external view returns (StakingRewards.Treasure memory treasure) {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
-    return ds.staking.treasureByBeneficiary[beneficiary];
+    assembly ("memory-safe") {
+      mstore(0x40, treasure)
+    }
+    treasure = ds.staking.treasureByBeneficiary[beneficiary];
   }
 
   /// @inheritdoc IRewardsDistribution
   function depositById(
     uint256 depositId
-  ) external view returns (StakingRewards.Deposit memory) {
+  ) external view returns (StakingRewards.Deposit memory deposit) {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
-    return ds.staking.depositById[depositId];
+    assembly ("memory-safe") {
+      mstore(0x40, deposit)
+    }
+    deposit = ds.staking.depositById[depositId];
   }
 
   /// @inheritdoc IRewardsDistribution
