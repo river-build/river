@@ -22,18 +22,18 @@ CREATE TRIGGER notify_on_singlenodekey_upserts
     EXECUTE PROCEDURE notify_on_upsert();
 
 CREATE TABLE IF NOT EXISTS es (
-  stream_id CHAR(64) PRIMARY KEY STORAGE PLAIN,
+  stream_id CHAR(64) STORAGE PLAIN PRIMARY KEY,
   latest_snapshot_miniblock BIGINT NOT NULL);
 
 CREATE TABLE IF NOT EXISTS miniblocks (
-  stream_id CHAR(64) NOT NULL STORAGE PLAIN,
+  stream_id CHAR(64) STORAGE PLAIN NOT NULL,
   seq_num BIGINT NOT NULL,
-  blockdata BYTEA NOT NULL STORAGE EXTERNAL,
+  blockdata BYTEA STORAGE EXTERNAL NOT NULL,
   PRIMARY KEY (stream_id, seq_num)
   ) PARTITION BY LIST (stream_id);
 
 CREATE TABLE IF NOT EXISTS minipools (
-  stream_id CHAR(64) NOT NULL STORAGE PLAIN,
+  stream_id CHAR(64) STORAGE PLAIN NOT NULL,
   generation BIGINT NOT NULL ,
   slot_num BIGINT NOT NULL ,
   envelope BYTEA STORAGE EXTERNAL,
@@ -42,9 +42,9 @@ CREATE TABLE IF NOT EXISTS minipools (
 
 
 CREATE TABLE IF NOT EXISTS miniblock_candidates (
-  stream_id CHAR(64) NOT NULL STORAGE PLAIN,
+  stream_id CHAR(64) STORAGE PLAIN NOT NULL,
   seq_num BIGINT NOT NULL,
-  block_hash CHAR(64) NOT NULL STORAGE PLAIN,
-  blockdata BYTEA NOT NULL STORAGE EXTERNAL,
+  block_hash CHAR(64) STORAGE PLAIN NOT NULL,
+  blockdata BYTEA STORAGE EXTERNAL NOT NULL,
   PRIMARY KEY (stream_id, seq_num, block_hash)
 ) PARTITION BY LIST (stream_id);
