@@ -40,7 +40,6 @@ CREATE TABLE IF NOT EXISTS minipools (
   PRIMARY KEY (stream_id, generation, slot_num)
   ) PARTITION BY LIST (stream_id);
 
-
 CREATE TABLE IF NOT EXISTS miniblock_candidates (
   stream_id CHAR(64) STORAGE PLAIN NOT NULL,
   seq_num BIGINT NOT NULL,
