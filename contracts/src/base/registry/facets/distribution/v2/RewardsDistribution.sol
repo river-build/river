@@ -162,6 +162,7 @@ contract RewardsDistribution is
     _revertIfNotDepositOwner(owner);
 
     address delegatee = deposit.delegatee;
+    _revertIfNotOperatorOrSpace(delegatee);
 
     ds.staking.increaseStake(
       deposit,
@@ -180,10 +181,27 @@ contract RewardsDistribution is
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     StakingRewards.Deposit storage deposit = ds.staking.depositById[depositId];
-    _revertIfNotDepositOwner(deposit.owner);
+    address owner = deposit.owner;
+
+    _revertIfNotDepositOwner(owner);
     _revertIfNotOperatorOrSpace(delegatee);
 
-    ds.staking.redelegate(deposit, delegatee, _getCommissionRate(delegatee));
+    uint96 pendingWithdrawal = deposit.pendingWithdrawal;
+
+    if (pendingWithdrawal == 0) {
+      ds.staking.redelegate(deposit, delegatee, _getCommissionRate(delegatee));
+    } else {
+      ds.staking.increaseStake(
+        deposit,
+        owner,
+        pendingWithdrawal,
+        delegatee,
+        deposit.beneficiary,
+        _getCommissionRate(delegatee)
+      );
+      deposit.delegatee = delegatee;
+      deposit.pendingWithdrawal = 0;
+    }
 
     address proxy = ds.proxyById[depositId];
     DelegationProxy(proxy).redelegate(delegatee);

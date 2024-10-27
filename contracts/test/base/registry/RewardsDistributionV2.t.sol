@@ -78,12 +78,14 @@ contract RewardsDistributionV2Test is
     assertEq(slot, RewardsDistributionStorage.STORAGE_SLOT, "slot");
   }
 
-  function test_fuzz_upgradeDelegationProxy_revertIf_notOwner(
-    address caller
-  ) public {
-    vm.assume(caller != deployer);
-    vm.expectRevert(abi.encodeWithSelector(Ownable__NotOwner.selector, caller));
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                      DELEGATION PROXY                      */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  function test_upgradeDelegationProxy_revertIf_notOwner() public {
+    address caller = _randomAddress();
     vm.prank(caller);
+    vm.expectRevert(abi.encodeWithSelector(Ownable__NotOwner.selector, caller));
     rewardsDistributionFacet.upgradeDelegationProxy(address(this));
   }
 
@@ -102,6 +104,10 @@ contract RewardsDistributionV2Test is
       newImplementation
     );
   }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           STAKING                          */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   function test_stake_revertIf_notOperator() public {
     vm.expectRevert(RewardsDistribution__NotOperatorOrSpace.selector);
@@ -364,6 +370,10 @@ contract RewardsDistributionV2Test is
     );
   }
 
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                         REDELEGATE                         */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   function test_redelegate_revertIf_notOperator() public {
     uint256 depositId = test_stake();
 
@@ -417,6 +427,10 @@ contract RewardsDistributionV2Test is
       address(this)
     );
   }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                     CHANGE BENEFICIARY                     */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   function test_changeBeneficiary_revertIf_notDepositor() public {
     uint256 depositId = test_stake();
@@ -497,6 +511,10 @@ contract RewardsDistributionV2Test is
       beneficiary
     );
   }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                          WITHDRAW                          */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   function test_initiateWithdraw_revertIf_notDepositor() public {
     uint256 depositId = test_stake();
@@ -592,6 +610,65 @@ contract RewardsDistributionV2Test is
     );
   }
 
+  function test_initiateWithdraw_revertIf_initiateWithdrawAgain() public {
+    uint256 depositId = test_initiateWithdraw();
+
+    vm.expectRevert(River.River__DelegateeSameAsCurrent.selector);
+    rewardsDistributionFacet.initiateWithdraw(depositId);
+  }
+
+  function test_fuzz_initiateWithdraw_revertIf_increaseStake(
+    uint96 amount
+  ) public {
+    uint256 depositId = test_initiateWithdraw();
+
+    vm.expectRevert(RewardsDistribution__NotOperatorOrSpace.selector);
+    rewardsDistributionFacet.increaseStake(depositId, amount);
+  }
+
+  function test_fuzz_initiateWithdraw_redelegate(
+    uint96 amount,
+    address operator,
+    uint256 commissionRate,
+    address beneficiary
+  ) public givenOperator(operator, commissionRate) {
+    commissionRate = bound(commissionRate, 0, 10000);
+
+    uint256 depositId = test_fuzz_initiateWithdraw(
+      amount,
+      OPERATOR,
+      0,
+      beneficiary
+    );
+
+    rewardsDistributionFacet.redelegate(depositId, operator);
+
+    verifyStake(
+      address(this),
+      depositId,
+      amount,
+      operator,
+      commissionRate,
+      beneficiary
+    );
+  }
+
+  function test_initiateWithdraw_changeBeneficiary() public {
+    uint256 depositId = test_initiateWithdraw();
+
+    address newBeneficiary = _randomAddress();
+    rewardsDistributionFacet.changeBeneficiary(depositId, newBeneficiary);
+
+    verifyWithdraw(
+      address(this),
+      depositId,
+      1 ether,
+      0,
+      OPERATOR,
+      newBeneficiary
+    );
+  }
+
   function test_withdraw_revertIf_notDepositor() public {
     uint256 depositId = test_initiateWithdraw();
 
@@ -646,11 +723,12 @@ contract RewardsDistributionV2Test is
     );
   }
 
-  function test_fuzz_notifyRewardAmount_revertIf_notNotifier(
-    address caller
-  ) public {
-    vm.assume(caller != NOTIFIER);
-    vm.prank(caller);
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                        NOTIFY REWARD                       */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  function test_notifyRewardAmount_revertIf_notNotifier() public {
+    vm.prank(_randomAddress());
     vm.expectRevert(RewardsDistribution__NotRewardNotifier.selector);
     rewardsDistributionFacet.notifyRewardAmount(1);
   }
@@ -698,6 +776,10 @@ contract RewardsDistributionV2Test is
       "rewardRate"
     );
   }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                        CLAIM REWARD                        */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   function test_fuzz_claimReward_revertIf_notBeneficiary(
     address beneficiary
@@ -965,6 +1047,11 @@ contract RewardsDistributionV2Test is
       "commissionEarningPower"
     );
 
+    assertEq(
+      river.delegates(rewardsDistributionFacet.delegationProxyById(depositId)),
+      delegatee,
+      "proxy delegatee"
+    );
     assertEq(river.getVotes(delegatee), amount, "votes");
   }
 
@@ -1004,6 +1091,11 @@ contract RewardsDistributionV2Test is
       "commissionEarningPower"
     );
 
+    assertEq(
+      river.delegates(rewardsDistributionFacet.delegationProxyById(depositId)),
+      address(0),
+      "proxy delegatee"
+    );
     assertEq(river.getVotes(operator), 0, "votes");
   }
 

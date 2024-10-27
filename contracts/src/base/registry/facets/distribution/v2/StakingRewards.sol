@@ -229,10 +229,6 @@ library StakingRewards {
     address newDelegatee,
     uint256 commissionRate
   ) internal {
-    if (newDelegatee == address(0)) {
-      CustomRevert.revertWith(StakingRewards__InvalidAddress.selector);
-    }
-
     updateGlobalReward(ds);
 
     Treasure storage beneficiaryTreasure = ds.treasureByBeneficiary[
