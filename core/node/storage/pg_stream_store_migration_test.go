@@ -18,6 +18,9 @@ import (
 )
 
 // Check various APIs on the store to validate the expected state of the stream.
+// This heavy-weight check is used for testing legacy stream views after migrating
+// the db schema and business logic and can be removed if desired once we confirm
+// that all streams on public networks are fully migrated.
 func checkStreamState(
 	t *testing.T,
 	ctx context.Context,
