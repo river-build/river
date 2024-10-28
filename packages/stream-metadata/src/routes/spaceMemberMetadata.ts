@@ -1,11 +1,9 @@
-import { FastifyReply, FastifyRequest, type FastifyBaseLogger } from 'fastify'
+import { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
-import { StreamPrefix, makeStreamId } from '@river-build/sdk'
 
 import { config } from '../environment'
 import { isValidEthereumAddress } from '../validators'
 import { spaceDapp } from '../contract-utils'
-import { getStream } from '../riverStreamRpcClient'
 
 const paramsSchema = z.object({
 	spaceAddress: z
@@ -48,7 +46,7 @@ export async function fetchSpaceMemberMetadata(request: FastifyRequest, reply: F
 	const { spaceAddress, tokenId } = parseResult.data
 
 	try {
-		const metadata = await getSpaceMemberMetadata(logger, spaceAddress, tokenId)
+		const metadata = await getSpaceMemberMetadata(spaceAddress, tokenId)
 		return reply
 			.header('Content-Type', 'application/json')
 			.header('Cache-Control', CACHE_CONTROL[200])
@@ -63,27 +61,12 @@ export async function fetchSpaceMemberMetadata(request: FastifyRequest, reply: F
 }
 
 const getSpaceMemberMetadata = async (
-	logger: FastifyBaseLogger,
 	spaceAddress: string,
 	tokenId: string,
 ): Promise<SpaceMemberMetadataResponse> => {
 	const space = spaceDapp.getSpace(spaceAddress)
 	if (!space) {
 		throw new Error('Space contract not found')
-	}
-
-	let imageEventId: string = 'default'
-	try {
-		const streamId = makeStreamId(StreamPrefix.Space, spaceAddress)
-		const streamView = await getStream(logger, streamId)
-		if (
-			streamView.contentKind === 'spaceContent' &&
-			streamView.spaceContent.encryptedSpaceImage?.eventId
-		) {
-			imageEventId = streamView.spaceContent.encryptedSpaceImage.eventId
-		}
-	} catch (error) {
-		// no-op
 	}
 
 	const [name, renewalPrice, membershipExpiration, isBanned] = await Promise.all([
@@ -96,7 +79,7 @@ const getSpaceMemberMetadata = async (
 	return {
 		name: `${name} - Member`,
 		description: `Member of ${name}`,
-		image: `${config.streamMetadataBaseUrl}/space/${spaceAddress}/image/${imageEventId}`,
+		image: `${config.streamMetadataBaseUrl}/space/${spaceAddress}/image`,
 		attributes: [
 			{
 				trait_type: 'Renewal Price',

@@ -1,12 +1,10 @@
 import { FastifyReply, FastifyRequest } from 'fastify'
 import { SpaceInfo } from '@river-build/web3'
 import { z } from 'zod'
-import { makeStreamId, StreamPrefix } from '@river-build/sdk'
 
 import { config } from '../environment'
 import { isValidEthereumAddress } from '../validators'
 import { spaceDapp } from '../contract-utils'
-import { getStream } from '../riverStreamRpcClient'
 
 export const spaceMetadataBaseUrl = `${config.streamMetadataBaseUrl}/space`.toLowerCase()
 
@@ -69,24 +67,10 @@ export async function fetchSpaceMetadata(request: FastifyRequest, reply: Fastify
 			.send({ error: 'Not Found', message: 'Space contract not found' })
 	}
 
-	let imageEventId: string = 'default'
-	try {
-		const streamId = makeStreamId(StreamPrefix.Space, spaceAddress)
-		const streamView = await getStream(logger, streamId)
-		if (
-			streamView.contentKind === 'spaceContent' &&
-			streamView.spaceContent.encryptedSpaceImage?.eventId
-		) {
-			imageEventId = streamView.spaceContent.encryptedSpaceImage.eventId
-		}
-	} catch (error) {
-		// no-op
-	}
-
 	// Normalize the contractUri for case-insensitive comparison and handle empty string
 	const defaultSpaceTokenUri = `${spaceMetadataBaseUrl}/${spaceAddress}`
 
-	const image = `${defaultSpaceTokenUri}/image/${imageEventId}`
+	const image = `${defaultSpaceTokenUri}/image`
 	const spaceMetadata: SpaceMetadataResponse = {
 		name: spaceInfo.name,
 		description: getSpaceDecription(spaceInfo),
