@@ -126,6 +126,7 @@ func checkStreamState(
 // - ReadMiniblocks
 // - Read, write, and promote miniblock candidates, with appropriate changes in stream state
 // - ImportMiniblocks on top of the stream
+// Additionally, legacy streams should still update appropriately in response to mutations.
 func TestLegacyStreamDataAfterStoreMigration(t *testing.T) {
 	ctx, ctxCloser := test.NewTestContext()
 	defer ctxCloser()
@@ -161,9 +162,7 @@ func TestLegacyStreamDataAfterStoreMigration(t *testing.T) {
 	streamId2 := testutils.FakeStreamId(STREAM_CHANNEL_BIN)
 	streamId3 := testutils.FakeStreamId(STREAM_CHANNEL_BIN)
 
-	// Set up a stream with a genesis miniblock. This stream will have a single miniblock and en
-	// empty minipool.
-	// example streams:
+	// Set up streams.
 	// stream 1: genesis miniblock, empty minipool
 	// stream 2: genesis miniblock, miniblock candidate, single event in the minipool
 	// stream 3: stream with multiple blocks and a snapshot, candidates, events in the pool
@@ -639,6 +638,7 @@ func TestLegacyStreamArchiveDataAfterStoreMigration(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	// Stream 1 will be empty when the store migrates. Stream 2 will have a few miniblocks.
 	streamId1 := testutils.FakeStreamId(STREAM_CHANNEL_BIN)
 	streamId2 := testutils.FakeStreamId(STREAM_CHANNEL_BIN)
 
@@ -676,6 +676,7 @@ func TestLegacyStreamArchiveDataAfterStoreMigration(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, int64(-1), maxArchivedMiniblockStream1)
 
+	// Stream 1 and stream 2 should show the correct state and respond correctly to mutations.
 	maxArchivedMiniblockStream2, err := store.GetMaxArchivedMiniblockNumber(ctx, streamId2)
 	require.NoError(t, err)
 	require.Equal(t, int64(2), maxArchivedMiniblockStream2)
