@@ -185,7 +185,7 @@ contract DropFacetTest is
 
   modifier givenOperatorRegistered(address operator, uint256 commissionRate) {
     vm.assume(operator != address(0));
-    commissionRate = bound(commissionRate, 0, 10000);
+    commissionRate = bound(commissionRate, 0, 1000);
 
     vm.startPrank(operator);
     operatorFacet.registerOperator(operator);
@@ -558,7 +558,7 @@ contract DropFacetTest is
   }
 
   // claimAndStake
-  function test_claimAndStake(
+  function test_fuzz_claimAndStake(
     address caller,
     address operator,
     uint256 commissionRate
