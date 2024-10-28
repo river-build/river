@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { isValidEthereumAddress } from '../validators'
 import { CloudfrontManager } from '../aws'
 import { refreshOpenSea } from '../opensea'
-import { config } from '../environment'
+import { HEADER_INVALIDATION_ID } from '../constants'
 
 const paramsSchema = z.object({
 	spaceAddress: z
@@ -36,7 +36,7 @@ export async function spaceRefresh(request: FastifyRequest, reply: FastifyReply)
 
 		return reply
 			.code(200)
-			.header(config.headers.invalidationId, invalidationId)
+			.header(HEADER_INVALIDATION_ID, invalidationId)
 			.send({ ok: true, invalidationId })
 	} catch (error) {
 		logger.error({ err: error }, 'Failed to create CloudFront invalidation')
@@ -53,7 +53,7 @@ export async function spaceRefreshOnResponse(
 	const logger = request.log.child({ name: spaceRefreshOnResponse.name })
 	const { spaceAddress } = paramsSchema.parse(request.params)
 	try {
-		const invalidationId = z.string().parse(reply.getHeader(config.headers.invalidationId))
+		const invalidationId = z.string().parse(reply.getHeader(HEADER_INVALIDATION_ID))
 		await CloudfrontManager.waitForInvalidation({ invalidationId, logger })
 		await refreshOpenSea({ spaceAddress, logger })
 	} catch (error) {

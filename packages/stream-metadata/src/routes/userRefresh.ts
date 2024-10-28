@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 import { isValidEthereumAddress } from '../validators'
 import { CloudfrontManager } from '../aws'
-import { config } from '../environment'
+import { HEADER_INVALIDATION_ID } from '../constants'
 
 const paramsSchema = z.object({
 	userId: z.string().min(1, 'userId parameter is required').refine(isValidEthereumAddress, {
@@ -50,7 +50,7 @@ export async function userRefresh(request: FastifyRequest, reply: FastifyReply) 
 		const invalidationId = invalidation?.Invalidation?.Id
 		return reply
 			.code(200)
-			.header(config.headers.invalidationId, invalidationId)
+			.header(HEADER_INVALIDATION_ID, invalidationId)
 			.send({ ok: true, invalidationId })
 	} catch (error) {
 		logger.error(

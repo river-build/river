@@ -79,9 +79,6 @@ function makeConfig() {
 		healthCheck: {
 			timeout: 5000, // 5 seconds
 		},
-		headers: {
-			invalidationId: 'X-StreamMetadata-Invalidation-Id',
-		},
 	}
 }
 
