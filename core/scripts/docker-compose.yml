@@ -2,13 +2,12 @@ services:
     postgres:
         image: postgres:latest
         restart: always
-        shm_size: '1g'
         environment:
             - PGDATA=/var/lib/postgresql/data
             - POSTGRES_USER=postgres
             - POSTGRES_PASSWORD=postgres
             - PGUSER=postgres
-        command: postgres -c max_connections=30000 -c max_pred_locks_per_transaction=256
+        command: postgres -c max_connections=30000
         logging:
             options:
                 max-size: 10m
