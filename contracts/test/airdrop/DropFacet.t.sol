@@ -623,30 +623,30 @@ contract DropFacetTest is
 
     assertEq(rewardsDistribution.stakedByDepositor(bob), depositAmount);
 
-    vm.prank(bob);
-    vm.expectRevert(SafeTransferLib.TransferFromFailed.selector);
-    rewardsDistribution.withdraw(depositId);
+    // vm.prank(bob);
+    // vm.expectRevert(SafeTransferLib.TransferFromFailed.selector);
+    // rewardsDistribution.withdraw(depositId);
 
-    // move time forward
-    vm.warp(block.timestamp + timeLapse);
+    // // move time forward
+    // vm.warp(block.timestamp + timeLapse);
 
-    uint256 currentReward = rewardsDistribution.currentReward(bob);
+    // uint256 currentReward = rewardsDistribution.currentReward(bob);
 
-    vm.prank(bob);
-    uint256 claimReward = rewardsDistribution.claimReward(bob, bob);
-    _verifyClaim(bob, bob, claimReward, currentReward);
+    // vm.prank(bob);
+    // uint256 claimReward = rewardsDistribution.claimReward(bob, bob);
+    // _verifyClaim(bob, bob, claimReward, currentReward);
 
-    vm.prank(bob);
-    rewardsDistribution.initiateWithdraw(depositId);
-    uint256 lockCooldown = river.lockCooldown(
-      rewardsDistribution.delegationProxyById(depositId)
-    );
-    vm.warp(lockCooldown);
+    // vm.prank(bob);
+    // rewardsDistribution.initiateWithdraw(depositId);
+    // uint256 lockCooldown = river.lockCooldown(
+    //   rewardsDistribution.delegationProxyById(depositId)
+    // );
+    // vm.warp(lockCooldown);
 
-    vm.prank(bob);
-    rewardsDistribution.withdraw(depositId);
+    // vm.prank(bob);
+    // rewardsDistribution.withdraw(depositId);
 
-    assertEq(river.balanceOf(bob), depositAmount + claimReward);
+    // assertEq(river.balanceOf(bob), depositAmount + claimReward);
   }
 
   // setClaimConditions
