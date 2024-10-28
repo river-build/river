@@ -281,8 +281,6 @@ func (s *PostgresStreamStore) createStreamStorageTx(
 			testMode: s.config.TestMode,
 		},
 	)
-	log := dlog.FromCtx(ctx)
-	log.Info("CreateStreamStorageTx sql", "sql", sql)
 	_, err := tx.Exec(ctx, sql, streamId, genesisMiniblock)
 	if err != nil {
 		if pgerr, ok := err.(*pgconn.PgError); ok && pgerr.Code == pgerrcode.UniqueViolation {
