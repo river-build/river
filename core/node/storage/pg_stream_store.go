@@ -1739,11 +1739,6 @@ func (s *PostgresStreamStore) importMiniblocksTx(
 
 	err = tx.QueryRow(
 		ctx,
-		// NOTE: we do not target the specific partition here because a failed query would
-		// put the transaction into a bad state, resulting in a failed commit. The caller of this
-		// method does not need to assume that the stream exists in local storage. If it
-		// does not exist, it will be created below.
-		// Note: did this work?
 		sqlForStream(
 			"SELECT MAX(seq_num) as latest_blocks_number FROM {{miniblocks}} WHERE stream_id = $1",
 			streamID,
@@ -1764,9 +1759,6 @@ func (s *PostgresStreamStore) importMiniblocksTx(
 	}
 
 	// clean up minipool
-	// NOTE: as above, we do not escape the query here because a failed query would put the
-	// transaction into a bad state, resulting in a failed commit.
-	// NOTE: did this work?
 	_, err = tx.Exec(
 		ctx,
 		sqlForStream(
