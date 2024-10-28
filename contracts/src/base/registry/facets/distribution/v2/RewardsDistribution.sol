@@ -223,7 +223,6 @@ contract RewardsDistribution is
     );
   }
 
-  // TODO: state changes after initiateWithdraw
   function initiateWithdraw(
     uint256 depositId
   ) external returns (uint96 amount) {
@@ -251,6 +250,7 @@ contract RewardsDistribution is
   }
 
   // TODO: transfer rewards when a space redelegates
+  // TODO: add hook to transfer space rewards
   function claimReward(
     address beneficiary,
     address recipient
@@ -394,7 +394,7 @@ contract RewardsDistribution is
   function currentSpaceDelegationReward(
     address operator
   ) external view returns (uint256) {
-    // TODO: implement
+    return _currentSpaceDelegationReward(operator);
   }
 
   /// @inheritdoc IRewardsDistribution

@@ -6,6 +6,7 @@ import {IRewardsDistributionBase} from "./IRewardsDistribution.sol";
 
 // libraries
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {LibClone} from "solady/utils/LibClone.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
@@ -107,6 +108,39 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
     operator = sd.operatorBySpace[space];
     if (!_isOperator(operator)) {
       CustomRevert.revertWith(RewardsDistribution__NotOperatorOrSpace.selector);
+    }
+  }
+
+  function _currentSpaceDelegationReward(
+    address operator
+  ) internal view returns (uint256 total) {
+    StakingRewards.Layout storage staking = RewardsDistributionStorage
+      .layout()
+      .staking;
+    address[] memory spaces = SpaceDelegationStorage
+      .layout()
+      .spacesByOperator[operator]
+      .values();
+
+    uint256 currentRewardPerTokenAccumulated = staking
+      .currentRewardPerTokenAccumulated();
+    uint256 rewardPerTokenGrowth;
+    for (uint256 i; i < spaces.length; ++i) {
+      StakingRewards.Treasure storage treasure = staking.treasureByBeneficiary[
+        spaces[i]
+      ];
+      unchecked {
+        rewardPerTokenGrowth =
+          currentRewardPerTokenAccumulated -
+          treasure.rewardPerTokenAccumulated;
+      }
+      total +=
+        treasure.unclaimedRewardSnapshot +
+        FixedPointMathLib.fullMulDiv(
+          treasure.earningPower,
+          rewardPerTokenGrowth,
+          StakingRewards.SCALE_FACTOR
+        );
     }
   }
 

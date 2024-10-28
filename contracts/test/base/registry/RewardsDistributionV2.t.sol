@@ -3,6 +3,8 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {IERC173, IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
+import {IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.sol";
+import {ICreateSpace} from "contracts/src/factory/facets/create/ICreateSpace.sol";
 import {IRewardsDistributionBase} from "contracts/src/base/registry/facets/distribution/v2/IRewardsDistribution.sol";
 
 // libraries
@@ -632,6 +634,7 @@ contract RewardsDistributionV2Test is
     uint256 commissionRate,
     address beneficiary
   ) public givenOperator(operator, commissionRate) {
+    vm.assume(operator != beneficiary && operator != OPERATOR);
     commissionRate = bound(commissionRate, 0, 10000);
 
     uint256 depositId = test_fuzz_initiateWithdraw(
@@ -667,6 +670,10 @@ contract RewardsDistributionV2Test is
       OPERATOR,
       newBeneficiary
     );
+  }
+
+  function test_initiateWithdraw_claimReward() public {
+    // TODO: implement
   }
 
   function test_withdraw_revertIf_notDepositor() public {
@@ -914,8 +921,13 @@ contract RewardsDistributionV2Test is
     verifyClaim(space, operator, reward, currentReward, timeLapse);
   }
 
-  /// forge-config: default.fuzz.runs = 256
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                          GETTERS                           */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  /// forge-config: default.fuzz.runs = 64
   function test_fuzz_getDepositsByDepositor(uint8 count) public {
+    vm.assume(count != 0);
     bridgeTokensForUser(address(this), 1 ether * uint256(count));
     river.approve(address(rewardsDistributionFacet), type(uint256).max);
     for (uint256 i; i < count; ++i) {
@@ -928,6 +940,39 @@ contract RewardsDistributionV2Test is
     for (uint256 i; i < count; ++i) {
       assertEq(deposits[i], i, "depositId");
     }
+  }
+
+  function test_currentSpaceDelegationReward() public {
+    test_fuzz_currentSpaceDelegationReward(255);
+  }
+
+  /// forge-config: default.fuzz.runs = 64
+  function test_fuzz_currentSpaceDelegationReward(uint8 count) public {
+    vm.assume(count != 0);
+    uint256 commissionRate = 1000;
+    setOperatorCommissionRate(OPERATOR, commissionRate);
+
+    bridgeTokensForUser(address(this), 1 ether * uint256(count));
+    river.approve(address(rewardsDistributionFacet), type(uint256).max);
+    for (uint256 i; i < count; ++i) {
+      address _space = deploySpace();
+      pointSpaceToOperator(_space, OPERATOR);
+      rewardsDistributionFacet.stake(1 ether, _space, address(this));
+    }
+
+    test_notifyRewardAmount();
+
+    StakingState memory state = rewardsDistributionFacet.stakingState();
+    uint256 rewardRate = state.rewardRate;
+
+    vm.warp(block.timestamp + rewardDuration);
+
+    assertApproxEqRel(
+      rewardsDistributionFacet.currentSpaceDelegationReward(OPERATOR),
+      (rewardRate.fullMulDiv(rewardDuration, StakingRewards.SCALE_FACTOR) *
+        commissionRate) / 10000,
+      1e15
+    );
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -969,6 +1014,21 @@ contract RewardsDistributionV2Test is
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                           SPACE                            */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  function deploySpace() internal returns (address _space) {
+    IArchitectBase.SpaceInfo memory spaceInfo = _createSpaceInfo(
+      string(abi.encode(_randomUint256()))
+    );
+    spaceInfo.membership.settings.pricingModule = pricingModule;
+    vm.prank(deployer);
+    _space = ICreateSpace(spaceFactory).createSpace(spaceInfo);
+    space = _space;
+  }
+
+  modifier givenSpaceIsDeployed() {
+    deploySpace();
+    _;
+  }
 
   function pointSpaceToOperator(address space, address operator) internal {
     vm.assume(space != address(0));
