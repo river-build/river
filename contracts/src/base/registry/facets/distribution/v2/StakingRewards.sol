@@ -169,35 +169,23 @@ library StakingRewards {
       CustomRevert.revertWith(StakingRewards__InvalidAddress.selector);
     }
 
-    updateGlobalReward(ds);
-
-    Treasure storage beneficiaryTreasure = ds.treasureByBeneficiary[
-      beneficiary
-    ];
-    updateReward(ds, beneficiaryTreasure);
-
     depositId = ds.nextDepositId++;
     Deposit storage deposit = ds.depositById[depositId];
+
     // batch storage writes
-    (deposit.amount, deposit.owner, deposit.beneficiary, deposit.delegatee) = (
-      amount,
+    (deposit.owner, deposit.beneficiary, deposit.delegatee) = (
       owner,
       beneficiary,
       delegatee
     );
 
-    ds.totalStaked += amount;
-    unchecked {
-      // because totalStaked >= stakedByDepositor[owner]
-      // if totalStaked doesn't overflow, they won't
-      ds.stakedByDepositor[owner] += amount;
-    }
-    _increaseEarningPower(
+    increaseStake(
       ds,
       deposit,
-      beneficiaryTreasure,
+      owner,
       amount,
       delegatee,
+      beneficiary,
       commissionRate
     );
   }
@@ -205,18 +193,12 @@ library StakingRewards {
   function increaseStake(
     Layout storage ds,
     Deposit storage deposit,
+    address owner,
     uint96 amount,
+    address delegatee,
+    address beneficiary,
     uint256 commissionRate
   ) internal {
-    // cache storage reads
-    (
-      uint96 currentAmount,
-      address owner,
-      address beneficiary,
-      address delegatee
-    ) = (deposit.amount, deposit.owner, deposit.beneficiary, deposit.delegatee);
-    deposit.amount = currentAmount + amount;
-
     updateGlobalReward(ds);
 
     Treasure storage beneficiaryTreasure = ds.treasureByBeneficiary[
@@ -226,9 +208,10 @@ library StakingRewards {
 
     ds.totalStaked += amount;
     unchecked {
-      // because totalStaked >= stakedByDepositor[owner]
+      // because totalStaked >= stakedByDepositor[owner] >= deposit.amount
       // if totalStaked doesn't overflow, they won't
       ds.stakedByDepositor[owner] += amount;
+      deposit.amount += amount;
     }
     _increaseEarningPower(
       ds,
@@ -246,10 +229,6 @@ library StakingRewards {
     address newDelegatee,
     uint256 commissionRate
   ) internal {
-    if (newDelegatee == address(0)) {
-      CustomRevert.revertWith(StakingRewards__InvalidAddress.selector);
-    }
-
     updateGlobalReward(ds);
 
     Treasure storage beneficiaryTreasure = ds.treasureByBeneficiary[
@@ -274,7 +253,8 @@ library StakingRewards {
   function changeBeneficiary(
     Layout storage ds,
     Deposit storage deposit,
-    address newBeneficiary
+    address newBeneficiary,
+    uint256 commissionRate
   ) internal {
     if (newBeneficiary == address(0)) {
       CustomRevert.revertWith(StakingRewards__InvalidAddress.selector);
@@ -282,31 +262,31 @@ library StakingRewards {
 
     updateGlobalReward(ds);
 
-    (uint96 amount, address oldBeneficiary, uint96 commissionEarningPower) = (
+    (uint96 amount, address oldBeneficiary, address delegatee) = (
       deposit.amount,
       deposit.beneficiary,
-      deposit.commissionEarningPower
+      deposit.delegatee
     );
     deposit.beneficiary = newBeneficiary;
 
-    unchecked {
-      uint96 amountMinusCommission = amount - commissionEarningPower;
+    Treasure storage oldTreasure = ds.treasureByBeneficiary[oldBeneficiary];
+    updateReward(ds, oldTreasure);
 
-      Treasure storage oldTreasure = ds.treasureByBeneficiary[oldBeneficiary];
-      updateReward(ds, oldTreasure);
+    _decreaseEarningPower(ds, deposit, oldTreasure);
 
-      oldTreasure.earningPower -= amountMinusCommission;
+    Treasure storage newTreasure = ds.treasureByBeneficiary[newBeneficiary];
+    updateReward(ds, newTreasure);
 
-      Treasure storage newTreasure = ds.treasureByBeneficiary[newBeneficiary];
-      updateReward(ds, newTreasure);
-
-      // the invariant totalStaked >= treasureByBeneficiary[beneficiary].earningPower is ensured on stake and increaseStake
-      // the following won't overflow
-      newTreasure.earningPower += amountMinusCommission;
-    }
+    _increaseEarningPower(
+      ds,
+      deposit,
+      newTreasure,
+      amount,
+      delegatee,
+      commissionRate
+    );
   }
 
-  // TODO: state changes after initiateWithdraw
   function withdraw(
     Layout storage ds,
     Deposit storage deposit
@@ -399,6 +379,10 @@ library StakingRewards {
       CustomRevert.revertWith(StakingRewards__InsufficientReward.selector);
     }
   }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                         ACCOUNTING                         */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   function _increaseEarningPower(
     Layout storage ds,

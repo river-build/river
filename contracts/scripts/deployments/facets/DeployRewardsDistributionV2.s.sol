@@ -26,6 +26,7 @@ contract DeployRewardsDistributionV2 is Deployer, FacetHelper {
     addSelector(RewardsDistribution.notifyRewardAmount.selector);
     addSelector(RewardsDistribution.stakingState.selector);
     addSelector(RewardsDistribution.stakedByDepositor.selector);
+    addSelector(RewardsDistribution.getDepositsByDepositor.selector);
     addSelector(RewardsDistribution.treasureByBeneficiary.selector);
     addSelector(RewardsDistribution.depositById.selector);
     addSelector(RewardsDistribution.delegationProxyById.selector);
@@ -33,6 +34,7 @@ contract DeployRewardsDistributionV2 is Deployer, FacetHelper {
     addSelector(RewardsDistribution.lastTimeRewardDistributed.selector);
     addSelector(RewardsDistribution.currentRewardPerTokenAccumulated.selector);
     addSelector(RewardsDistribution.currentReward.selector);
+    addSelector(RewardsDistribution.currentSpaceDelegationReward.selector);
     addSelector(RewardsDistribution.beacon.selector);
   }
 

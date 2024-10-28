@@ -82,6 +82,13 @@ interface IRewardsDistribution is IRewardsDistributionBase {
     address depositor
   ) external view returns (uint256 amount);
 
+  /// @notice Returns the deposit IDs for a particular depositor
+  /// @param depositor The address of the depositor
+  /// @return The deposit IDs for the depositor
+  function getDepositsByDepositor(
+    address depositor
+  ) external view returns (uint256[] memory);
+
   /// @notice Returns the account information for a beneficiary
   /// @param beneficiary The address of the beneficiary
   /// @return The account information for the beneficiary

@@ -3,6 +3,8 @@ pragma solidity ^0.8.23;
 
 // interfaces
 import {IERC173, IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
+import {IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.sol";
+import {ICreateSpace} from "contracts/src/factory/facets/create/ICreateSpace.sol";
 import {IRewardsDistributionBase} from "contracts/src/base/registry/facets/distribution/v2/IRewardsDistribution.sol";
 
 // libraries
@@ -10,6 +12,7 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
+import {NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
 import {StakingRewards} from "contracts/src/base/registry/facets/distribution/v2/StakingRewards.sol";
 import {RewardsDistributionStorage} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistributionStorage.sol";
 
@@ -61,6 +64,9 @@ contract RewardsDistributionV2Test is
 
     vm.prank(deployer);
     rewardsDistributionFacet.setRewardNotifier(NOTIFIER, true);
+    registerOperator(OPERATOR);
+    setOperatorStatus(OPERATOR, NodeOperatorStatus.Approved);
+    setOperatorStatus(OPERATOR, NodeOperatorStatus.Active);
 
     rewardDuration = rewardsDistributionFacet.stakingState().rewardDuration;
 
@@ -77,12 +83,14 @@ contract RewardsDistributionV2Test is
     assertEq(slot, RewardsDistributionStorage.STORAGE_SLOT, "slot");
   }
 
-  function test_fuzz_upgradeDelegationProxy_revertIf_notOwner(
-    address caller
-  ) public {
-    vm.assume(caller != deployer);
-    vm.expectRevert(abi.encodeWithSelector(Ownable__NotOwner.selector, caller));
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                      DELEGATION PROXY                      */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  function test_upgradeDelegationProxy_revertIf_notOwner() public {
+    address caller = _randomAddress();
     vm.prank(caller);
+    vm.expectRevert(abi.encodeWithSelector(Ownable__NotOwner.selector, caller));
     rewardsDistributionFacet.upgradeDelegationProxy(address(this));
   }
 
@@ -102,23 +110,21 @@ contract RewardsDistributionV2Test is
     );
   }
 
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           STAKING                          */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   function test_stake_revertIf_notOperator() public {
     vm.expectRevert(RewardsDistribution__NotOperatorOrSpace.selector);
     rewardsDistributionFacet.stake(1, address(this), address(this));
   }
 
-  function test_stake_revertIf_amountIsZero()
-    public
-    givenOperator(OPERATOR, 0)
-  {
+  function test_stake_revertIf_amountIsZero() public {
     vm.expectRevert(StakingRewards.StakingRewards__InvalidAmount.selector);
     rewardsDistributionFacet.stake(0, OPERATOR, address(this));
   }
 
-  function test_stake_revertIf_beneficiaryIsZero()
-    public
-    givenOperator(OPERATOR, 0)
-  {
+  function test_stake_revertIf_beneficiaryIsZero() public {
     vm.expectRevert(StakingRewards.StakingRewards__InvalidAddress.selector);
     rewardsDistributionFacet.stake(1, OPERATOR, address(0));
   }
@@ -369,6 +375,10 @@ contract RewardsDistributionV2Test is
     );
   }
 
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                         REDELEGATE                         */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   function test_redelegate_revertIf_notOperator() public {
     uint256 depositId = test_stake();
 
@@ -423,6 +433,10 @@ contract RewardsDistributionV2Test is
     );
   }
 
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                     CHANGE BENEFICIARY                     */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   function test_changeBeneficiary_revertIf_notDepositor() public {
     uint256 depositId = test_stake();
 
@@ -470,6 +484,42 @@ contract RewardsDistributionV2Test is
       beneficiary
     );
   }
+
+  function test_fuzz_changeBeneficiary_sameBeneficiary(
+    uint96 amount,
+    address operator,
+    uint256 commissionRate0,
+    uint256 commissionRate1,
+    address beneficiary
+  ) public {
+    vm.assume(beneficiary != address(0) && beneficiary != operator);
+    commissionRate1 = bound(commissionRate1, 0, 10000);
+
+    uint256 depositId = test_fuzz_stake(
+      address(this),
+      amount,
+      operator,
+      commissionRate0,
+      beneficiary
+    );
+
+    resetOperatorCommissionRate(operator, commissionRate1);
+
+    rewardsDistributionFacet.changeBeneficiary(depositId, beneficiary);
+
+    verifyStake(
+      address(this),
+      depositId,
+      amount,
+      operator,
+      commissionRate1,
+      beneficiary
+    );
+  }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                          WITHDRAW                          */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   function test_initiateWithdraw_revertIf_notDepositor() public {
     uint256 depositId = test_stake();
@@ -565,6 +615,70 @@ contract RewardsDistributionV2Test is
     );
   }
 
+  function test_initiateWithdraw_revertIf_initiateWithdrawAgain() public {
+    uint256 depositId = test_initiateWithdraw();
+
+    vm.expectRevert(River.River__DelegateeSameAsCurrent.selector);
+    rewardsDistributionFacet.initiateWithdraw(depositId);
+  }
+
+  function test_fuzz_initiateWithdraw_revertIf_increaseStake(
+    uint96 amount
+  ) public {
+    uint256 depositId = test_initiateWithdraw();
+
+    vm.expectRevert(RewardsDistribution__NotOperatorOrSpace.selector);
+    rewardsDistributionFacet.increaseStake(depositId, amount);
+  }
+
+  function test_fuzz_initiateWithdraw_redelegate(
+    uint96 amount,
+    address operator,
+    uint256 commissionRate,
+    address beneficiary
+  ) public givenOperator(operator, commissionRate) {
+    vm.assume(operator != beneficiary && operator != OPERATOR);
+    commissionRate = bound(commissionRate, 0, 10000);
+
+    uint256 depositId = test_fuzz_initiateWithdraw(
+      amount,
+      OPERATOR,
+      0,
+      beneficiary
+    );
+
+    rewardsDistributionFacet.redelegate(depositId, operator);
+
+    verifyStake(
+      address(this),
+      depositId,
+      amount,
+      operator,
+      commissionRate,
+      beneficiary
+    );
+  }
+
+  function test_initiateWithdraw_changeBeneficiary() public {
+    uint256 depositId = test_initiateWithdraw();
+
+    address newBeneficiary = _randomAddress();
+    rewardsDistributionFacet.changeBeneficiary(depositId, newBeneficiary);
+
+    verifyWithdraw(
+      address(this),
+      depositId,
+      1 ether,
+      0,
+      OPERATOR,
+      newBeneficiary
+    );
+  }
+
+  function test_initiateWithdraw_claimReward() public {
+    // TODO: implement
+  }
+
   function test_withdraw_revertIf_notDepositor() public {
     uint256 depositId = test_initiateWithdraw();
 
@@ -619,11 +733,12 @@ contract RewardsDistributionV2Test is
     );
   }
 
-  function test_fuzz_notifyRewardAmount_revertIf_notNotifier(
-    address caller
-  ) public {
-    vm.assume(caller != NOTIFIER);
-    vm.prank(caller);
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                        NOTIFY REWARD                       */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  function test_notifyRewardAmount_revertIf_notNotifier() public {
+    vm.prank(_randomAddress());
     vm.expectRevert(RewardsDistribution__NotRewardNotifier.selector);
     rewardsDistributionFacet.notifyRewardAmount(1);
   }
@@ -672,10 +787,14 @@ contract RewardsDistributionV2Test is
     );
   }
 
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                        CLAIM REWARD                        */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   function test_fuzz_claimReward_revertIf_notBeneficiary(
     address beneficiary
   ) public {
-    vm.assume(beneficiary != address(this));
+    vm.assume(beneficiary != address(this) && beneficiary != OPERATOR);
     vm.expectRevert(RewardsDistribution__NotBeneficiary.selector);
     rewardsDistributionFacet.claimReward(beneficiary, address(this));
   }
@@ -806,42 +925,132 @@ contract RewardsDistributionV2Test is
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                          GETTERS                           */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  /// forge-config: default.fuzz.runs = 64
+  function test_fuzz_getDepositsByDepositor(uint8 count) public {
+    vm.assume(count != 0);
+    bridgeTokensForUser(address(this), 1 ether * uint256(count));
+    river.approve(address(rewardsDistributionFacet), type(uint256).max);
+    for (uint256 i; i < count; ++i) {
+      rewardsDistributionFacet.stake(1 ether, OPERATOR, address(this));
+    }
+    uint256[] memory deposits = rewardsDistributionFacet.getDepositsByDepositor(
+      address(this)
+    );
+    assertEq(deposits.length, count, "length");
+    for (uint256 i; i < count; ++i) {
+      assertEq(deposits[i], i, "depositId");
+    }
+  }
+
+  function test_currentSpaceDelegationReward() public {
+    test_fuzz_currentSpaceDelegationReward(255);
+  }
+
+  /// forge-config: default.fuzz.runs = 64
+  function test_fuzz_currentSpaceDelegationReward(uint8 count) public {
+    vm.assume(count != 0);
+    uint256 commissionRate = 1000;
+    resetOperatorCommissionRate(OPERATOR, commissionRate);
+
+    bridgeTokensForUser(address(this), 1 ether * uint256(count));
+    river.approve(address(rewardsDistributionFacet), type(uint256).max);
+    for (uint256 i; i < count; ++i) {
+      address _space = deploySpace();
+      pointSpaceToOperator(_space, OPERATOR);
+      rewardsDistributionFacet.stake(1 ether, _space, address(this));
+    }
+
+    test_notifyRewardAmount();
+
+    StakingState memory state = rewardsDistributionFacet.stakingState();
+    uint256 rewardRate = state.rewardRate;
+
+    vm.warp(block.timestamp + rewardDuration);
+
+    assertApproxEqRel(
+      rewardsDistributionFacet.currentSpaceDelegationReward(OPERATOR),
+      (rewardRate.fullMulDiv(rewardDuration, StakingRewards.SCALE_FACTOR) *
+        commissionRate) / 10000,
+      1e15
+    );
+  }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                          OPERATOR                          */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   modifier givenOperator(address operator, uint256 commissionRate) {
     registerOperator(operator);
     setOperatorCommissionRate(operator, commissionRate);
+    setOperatorStatus(operator, NodeOperatorStatus.Approved);
+    setOperatorStatus(operator, NodeOperatorStatus.Active);
     _;
   }
 
   function registerOperator(address operator) internal {
     vm.assume(operator != address(0));
-    vm.prank(operator);
-    operatorFacet.registerOperator(operator);
+    if (!operatorFacet.isOperator(operator)) {
+      vm.prank(operator);
+      operatorFacet.registerOperator(operator);
+    }
   }
 
   function setOperatorCommissionRate(
     address operator,
     uint256 commissionRate
   ) internal {
-    vm.assume(operator != address(0));
     commissionRate = bound(commissionRate, 0, 10000);
     vm.prank(operator);
     operatorFacet.setCommissionRate(commissionRate);
   }
 
   function setOperatorClaimAddress(address operator, address claimer) internal {
-    vm.assume(operator != address(0));
     vm.assume(claimer != address(0));
     vm.assume(claimer != operator);
     vm.prank(operator);
     operatorFacet.setClaimAddressForOperator(claimer, operator);
   }
 
+  function setOperatorStatus(
+    address operator,
+    NodeOperatorStatus newStatus
+  ) internal {
+    vm.prank(deployer);
+    NodeOperatorFacet(baseRegistry).setOperatorStatus(operator, newStatus);
+  }
+
+  function resetOperatorCommissionRate(
+    address operator,
+    uint256 commissionRate
+  ) internal {
+    setOperatorStatus(operator, NodeOperatorStatus.Exiting);
+    setOperatorStatus(operator, NodeOperatorStatus.Standby);
+    setOperatorCommissionRate(operator, commissionRate);
+    setOperatorStatus(operator, NodeOperatorStatus.Approved);
+    setOperatorStatus(operator, NodeOperatorStatus.Active);
+  }
+
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                           SPACE                            */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  function deploySpace() internal returns (address _space) {
+    IArchitectBase.SpaceInfo memory spaceInfo = _createSpaceInfo(
+      string(abi.encode(_randomUint256()))
+    );
+    spaceInfo.membership.settings.pricingModule = pricingModule;
+    vm.prank(deployer);
+    _space = ICreateSpace(spaceFactory).createSpace(spaceInfo);
+    space = _space;
+  }
+
+  modifier givenSpaceIsDeployed() {
+    deploySpace();
+    _;
+  }
 
   function pointSpaceToOperator(address space, address operator) internal {
     vm.assume(space != address(0));
@@ -920,6 +1129,11 @@ contract RewardsDistributionV2Test is
       "commissionEarningPower"
     );
 
+    assertEq(
+      river.delegates(rewardsDistributionFacet.delegationProxyById(depositId)),
+      delegatee,
+      "proxy delegatee"
+    );
     assertEq(river.getVotes(delegatee), amount, "votes");
   }
 
@@ -959,6 +1173,11 @@ contract RewardsDistributionV2Test is
       "commissionEarningPower"
     );
 
+    assertEq(
+      river.delegates(rewardsDistributionFacet.delegationProxyById(depositId)),
+      address(0),
+      "proxy delegatee"
+    );
     assertEq(river.getVotes(operator), 0, "votes");
   }
 
