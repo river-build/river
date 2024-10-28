@@ -31,9 +31,6 @@ import {NodeOperatorFacet} from "contracts/src/base/registry/facets/operator/Nod
 import {EIP712Facet} from "contracts/src/diamond/utils/cryptography/signature/EIP712Facet.sol";
 import {StakingRewards} from "contracts/src/base/registry/facets/distribution/v2/StakingRewards.sol";
 
-// debuggging
-import {console} from "forge-std/console.sol";
-
 contract DropFacetTest is
   BaseSetup,
   EIP712Utils,
