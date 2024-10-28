@@ -675,6 +675,7 @@ message EncryptedData {
     */
     optional string ref_event_id = 6;
 
+    optional bytes mls_payload = 7;
 }
 
 message WrappedEncryptedData {

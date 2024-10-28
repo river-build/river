@@ -79,6 +79,15 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
             }[],
         ) => this.enqueueInitKeySolicitations(streamId, members)
 
+        const onMlsGroupInfo = (streamId: string, commit: Uint8Array) => {
+            //
+            console.log('GOT MLS GROUP INFO', streamId, commit.length)
+        }
+
+        const onMlsCommit = (streamId: string, commit: Uint8Array) => {
+            console.log('GOT MLS COMMIT', streamId, commit.length)
+        }
+
         client.on('streamUpToDate', onStreamUpToDate)
         client.on('newGroupSessions', onNewGroupSessions)
         client.on('newEncryptedContent', onNewEncryptedContent)
@@ -86,6 +95,8 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
         client.on('updatedKeySolicitation', onKeySolicitation)
         client.on('initKeySolicitations', onInitKeySolicitations)
         client.on('streamNewUserJoined', onMembershipChange)
+        client.on('mlsGroupInfo', onMlsGroupInfo)
+        client.on('mlsCommit', onMlsCommit)
 
         this._onStopFn = () => {
             client.off('streamUpToDate', onStreamUpToDate)
@@ -95,6 +106,8 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
             client.off('updatedKeySolicitation', onKeySolicitation)
             client.off('initKeySolicitations', onInitKeySolicitations)
             client.off('streamNewUserJoined', onMembershipChange)
+            client.off('mlsGroupInfo', onMlsGroupInfo)
+            client.off('mlsCommit', onMlsCommit)
         }
         this.log.debug('new ClientDecryptionExtensions', { userDevice })
     }

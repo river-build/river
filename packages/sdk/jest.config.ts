@@ -66,7 +66,7 @@ const config: JestConfigWithTsJest = {
         '\\bhash\\.js\\b': 'hash.js',
         '(.+)\\.js': '$1',
         // need for encryption
-        '\\.(wasm)$': require.resolve('../encryption/src/mock-wasm-file.js'),
+        'olm.wasm': require.resolve('../encryption/src/mock-wasm-file.js'),
         msgpackr: `${MSGPACKR_FOLDER}/dist/node.cjs`,
     },
     collectCoverage: true,

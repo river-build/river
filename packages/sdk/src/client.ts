@@ -134,6 +134,7 @@ import {
     make_SpacePayload_SpaceImage,
     make_UserMetadataPayload_ProfileImage,
     make_UserMetadataPayload_Bio,
+    make_MemberPayload_Mls,
 } from './types'
 
 import debug from 'debug'
@@ -149,6 +150,7 @@ import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
 import { decryptAESGCM, deriveKeyAndIV, encryptAESGCM, uint8ArrayToBase64 } from './crypto_utils'
 import { makeTags } from './tags'
+import { MlsCrypto } from './mls'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
@@ -185,6 +187,7 @@ export class Client
 
     public cryptoBackend?: GroupEncryptionCrypto
     public cryptoStore: CryptoStore
+    public mlsCrypto?: MlsCrypto
 
     private getStreamRequests: Map<string, Promise<StreamStateView>> = new Map()
     private getStreamExRequests: Map<string, Promise<StreamStateView>> = new Map()
@@ -2180,6 +2183,11 @@ export class Client
         const crypto = new GroupEncryptionCrypto(this, this.cryptoStore)
         await crypto.init(opts)
         this.cryptoBackend = crypto
+
+        const mlsCrypto = new MlsCrypto(this.userId)
+        await mlsCrypto.initialize()
+        this.mlsCrypto = mlsCrypto
+
         this.decryptionExtensions = new ClientDecryptionExtensions(
             this,
             crypto,
@@ -2353,12 +2361,21 @@ export class Client
     }
 
     // Encrypt event using MLS.
-    public encryptGroupEventMls(event: Message, streamId: string): Promise<EncryptedData> {
-        if (!this.cryptoBackend) {
-            throw new Error('crypto backend not initialized')
+    async encryptGroupEventMls(event: Message, streamId: string): Promise<EncryptedData> {
+        if (!this.mlsCrypto) {
+            throw new Error('mls backend not initialized')
         }
-        const cleartext = event.toJsonString()
-        return this.cryptoBackend.encryptGroupEvent(streamId, cleartext)
+
+        if (!this.mlsCrypto.hasGroup(streamId)) {
+            const groupInfo = await this.mlsCrypto.createGroup(streamId)
+            await this.makeEventAndAddToStream(
+                streamId,
+                make_MemberPayload_Mls({ content: { case: 'initialGroupInfo', value: groupInfo } }),
+            )
+        }
+
+        const plaintext = event.toBinary()
+        return this.mlsCrypto.encrypt(streamId, plaintext)
     }
 
     async encryptWithDeviceKeys(
