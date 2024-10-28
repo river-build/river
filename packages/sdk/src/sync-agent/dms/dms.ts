@@ -38,7 +38,7 @@ export class Dms extends PersistedObservable<DmsModel> {
         )
     }
 
-    getDmByStreamId(streamId: string): Dm {
+    byStreamId(streamId: string): Dm {
         check(isDMChannelStreamId(streamId), 'Invalid streamId')
         if (!this.dms[streamId]) {
             this.dms[streamId] = new Dm(streamId, this.riverConnection, this.store)
@@ -46,22 +46,20 @@ export class Dms extends PersistedObservable<DmsModel> {
         return this.dms[streamId]
     }
 
-    getDmByUserId(userId: string): Dm {
+    byUserId(userId: string): Dm {
         const streamId = makeDMStreamId(this.riverConnection.userId, userId)
-        return this.getDmByStreamId(streamId)
+        return this.byStreamId(streamId)
     }
 
     private onUserMembershipsChanged(value: PersistedModel<UserMembershipsModel>) {
         if (value.status === 'loading') {
             return
         }
-
         const streamIds = Object.values(value.data.memberships)
             .filter((m) => isDMChannelStreamId(m.streamId) && m.op === MembershipOp.SO_JOIN)
             .map((m) => m.streamId)
 
         this.setData({ streamIds })
-
         for (const streamId of streamIds) {
             if (!this.dms[streamId]) {
                 this.dms[streamId] = new Dm(streamId, this.riverConnection, this.store)

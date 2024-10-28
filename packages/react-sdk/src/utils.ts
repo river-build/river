@@ -31,7 +31,7 @@ export const getRoom = (sync: SyncAgent, props: RiverRoom): Gdm | Channel | Dm =
     } else if (props.type === 'channel') {
         return sync.spaces.getSpace(props.spaceId).getChannel(props.channelId)
     } else if (props.type === 'dm') {
-        return sync.dms.getDmByStreamId(props.streamId)
+        return sync.dms.byStreamId(props.streamId)
     }
     throw new Error('Invalid room type')
 }

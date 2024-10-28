@@ -5,6 +5,6 @@ import { type ObservableConfig, useObservable } from './useObservable'
 
 export const useDm = (streamId: string, config?: ObservableConfig.FromObservable<Dm>) => {
     const sync = useSyncAgent()
-    const dm = useMemo(() => sync.dms.getDmByStreamId(streamId), [streamId, sync])
+    const dm = useMemo(() => sync.dms.byStreamId(streamId), [streamId, sync])
     return useObservable(dm, config)
 }
