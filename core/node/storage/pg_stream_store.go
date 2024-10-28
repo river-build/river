@@ -157,7 +157,7 @@ func createPartitionSuffix(streamId StreamId, reducedParitions bool) string {
 	// what we store in the database. This leaves the door open for installing xxhash on postgres
 	// and debugging this way in the future.
 	hash := xxhash.Sum64String(streamId.String())
-	// For test installations, grab expect 8 partitions, taking 8 bits from the hash
+	// For test installations, expect 8 partitions, taking 8 bits from the hash
 	if reducedParitions {
 		bt := hash % 8
 		return fmt.Sprintf("%02x", bt)
