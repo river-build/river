@@ -10,6 +10,7 @@ import {DropStorage} from "./DropStorage.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 import {MerkleProofLib} from "solady/utils/MerkleProofLib.sol";
 import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
+import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 
 abstract contract DropFacetBase is IDropFacetBase {
   using DropStorage for DropStorage.Layout;
@@ -87,6 +88,31 @@ abstract contract DropFacetBase is IDropFacetBase {
     if (!claim.proof.verifyCalldata(condition.merkleRoot, leaf)) {
       CustomRevert.revertWith(DropFacet__InvalidProof.selector);
     }
+  }
+
+  function _verifyPenaltyBps(
+    ClaimCondition storage condition,
+    Claim calldata claim,
+    uint16 expectedPenaltyBps
+  ) internal view returns (uint256 amount) {
+    if (condition.penaltyBps != expectedPenaltyBps) {
+      CustomRevert.revertWith(DropFacet__UnexpectedPenaltyBps.selector);
+    }
+
+    amount = claim.quantity;
+
+    uint16 penaltyBps = condition.penaltyBps;
+    if (penaltyBps > 0) {
+      unchecked {
+        uint256 penaltyAmount = BasisPoints.calculate(
+          claim.quantity,
+          penaltyBps
+        );
+        amount = claim.quantity - penaltyAmount;
+      }
+    }
+
+    return amount;
   }
 
   function _setClaimConditions(

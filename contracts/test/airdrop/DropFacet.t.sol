@@ -23,6 +23,7 @@ import {RewardsDistribution} from "contracts/src/base/registry/facets/distributi
 import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 import {DropStorage} from "contracts/src/tokens/drop/DropStorage.sol";
 import {EIP712Utils} from "contracts/test/utils/EIP712Utils.sol";
+import {NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
 
 // contracts
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
@@ -50,6 +51,7 @@ contract DropFacetTest is
   }
 
   uint256 internal constant TOTAL_TOKEN_AMOUNT = 1000;
+  uint16 internal constant PENALTY_BPS = 5000;
 
   DeployDiamond internal rewardsDistributionDiamondHelper = new DeployDiamond();
   DeployDiamond internal aidropDiamondHelper = new DeployDiamond();
@@ -158,7 +160,7 @@ contract DropFacetTest is
     ClaimCondition memory condition = dropFacet.getClaimConditionById(
       conditionId
     );
-    uint256 penaltyBps = condition.penaltyBps;
+    uint16 penaltyBps = condition.penaltyBps;
     uint256 merkleAmount = amounts[treeIndex[wallet]];
     uint256 penaltyAmount = BasisPoints.calculate(merkleAmount, penaltyBps);
     uint256 expectedAmount = merkleAmount - penaltyAmount;
@@ -178,7 +180,8 @@ contract DropFacetTest is
         account: wallet,
         quantity: merkleAmount,
         proof: proof
-      })
+      }),
+      penaltyBps
     );
     _;
   }
@@ -190,6 +193,11 @@ contract DropFacetTest is
     vm.startPrank(operator);
     operatorFacet.registerOperator(operator);
     operatorFacet.setCommissionRate(commissionRate);
+    vm.stopPrank();
+
+    vm.startPrank(deployer);
+    operatorFacet.setOperatorStatus(operator, NodeOperatorStatus.Approved);
+    operatorFacet.setOperatorStatus(operator, NodeOperatorStatus.Active);
     vm.stopPrank();
     _;
   }
@@ -312,7 +320,7 @@ contract DropFacetTest is
       supplyClaimed: 0,
       merkleRoot: root,
       currency: address(river),
-      penaltyBps: 5000
+      penaltyBps: PENALTY_BPS
     });
 
     vm.prank(deployer);
@@ -327,7 +335,7 @@ contract DropFacetTest is
       address claimer = claimData[i].claimer;
       uint16 amount = claimData[i].amount;
 
-      uint256 penaltyBps = condition.penaltyBps;
+      uint16 penaltyBps = condition.penaltyBps;
       uint256 penaltyAmount = BasisPoints.calculate(amount, penaltyBps);
       uint256 expectedAmount = amount - penaltyAmount;
 
@@ -351,7 +359,8 @@ contract DropFacetTest is
           account: claimer,
           quantity: amount,
           proof: proof
-        })
+        }),
+        penaltyBps
       );
 
       assertEq(
@@ -391,7 +400,8 @@ contract DropFacetTest is
         account: bob,
         quantity: 100,
         proof: new bytes32[](0)
-      })
+      }),
+      PENALTY_BPS
     );
   }
 
@@ -415,7 +425,8 @@ contract DropFacetTest is
         account: bob,
         quantity: 0,
         proof: new bytes32[](0)
-      })
+      }),
+      PENALTY_BPS
     );
   }
 
@@ -440,7 +451,8 @@ contract DropFacetTest is
         account: bob,
         quantity: 101,
         proof: new bytes32[](0)
-      })
+      }),
+      PENALTY_BPS
     );
   }
 
@@ -469,7 +481,8 @@ contract DropFacetTest is
         account: bob,
         quantity: amounts[treeIndex[bob]],
         proof: proof
-      })
+      }),
+      PENALTY_BPS
     );
   }
 
@@ -498,7 +511,8 @@ contract DropFacetTest is
         account: bob,
         quantity: amounts[treeIndex[bob]],
         proof: proof
-      })
+      }),
+      PENALTY_BPS
     );
   }
 
@@ -526,7 +540,8 @@ contract DropFacetTest is
         account: bob,
         quantity: amounts[treeIndex[bob]],
         proof: proof
-      })
+      }),
+      0
     );
 
     vm.expectRevert(DropFacet__AlreadyClaimed.selector);
@@ -536,7 +551,8 @@ contract DropFacetTest is
         account: bob,
         quantity: amounts[treeIndex[bob]],
         proof: proof
-      })
+      }),
+      0
     );
   }
 
@@ -553,7 +569,8 @@ contract DropFacetTest is
         account: bob,
         quantity: amounts[treeIndex[bob]],
         proof: new bytes32[](0)
-      })
+      }),
+      PENALTY_BPS
     );
   }
 
@@ -708,7 +725,8 @@ contract DropFacetTest is
         account: bob,
         quantity: amounts[treeIndex[bob]],
         proof: proof
-      })
+      }),
+      0
     );
 
     // Move time forward
@@ -765,7 +783,8 @@ contract DropFacetTest is
         account: bob,
         quantity: amounts[bobIndex],
         proof: proof
-      })
+      }),
+      0
     );
     assertEq(
       dropFacet.getSupplyClaimedByWallet(bob, conditionId),
@@ -786,7 +805,8 @@ contract DropFacetTest is
         account: alice,
         quantity: amounts[aliceIndex],
         proof: proof
-      })
+      }),
+      0
     );
     assertEq(
       dropFacet.getSupplyClaimedByWallet(alice, conditionId),
@@ -805,7 +825,8 @@ contract DropFacetTest is
         account: bob,
         quantity: amounts[bobIndex],
         proof: proof
-      })
+      }),
+      0
     );
 
     // alice is still able to claim from the first condition
@@ -817,7 +838,8 @@ contract DropFacetTest is
         account: alice,
         quantity: amounts[aliceIndex],
         proof: proof
-      })
+      }),
+      0
     );
     assertEq(
       dropFacet.getSupplyClaimedByWallet(alice, conditionId),
@@ -871,7 +893,8 @@ contract DropFacetTest is
         account: bob,
         quantity: amounts[bobIndex],
         proof: proof
-      })
+      }),
+      0
     );
 
     // Bob claim is now higher than zero
@@ -933,7 +956,8 @@ contract DropFacetTest is
         account: bob,
         quantity: amounts[bobIndex],
         proof: proof
-      })
+      }),
+      PENALTY_BPS
     );
   }
 

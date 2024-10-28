@@ -8,7 +8,7 @@ import {IRewardsDistribution} from "contracts/src/base/registry/facets/distribut
 // libraries
 import {DropStorage} from "contracts/src/tokens/drop/DropStorage.sol";
 import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
-import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
+
 import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
 
 // contracts
@@ -32,7 +32,8 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
 
   ///@inheritdoc IDropFacet
   function claimWithPenalty(
-    Claim calldata claim
+    Claim calldata claim,
+    uint16 expectedPenaltyBps
   ) external returns (uint256 amount) {
     DropStorage.Layout storage ds = DropStorage.layout();
 
@@ -42,17 +43,7 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
       claim.conditionId
     );
 
-    amount = claim.quantity;
-    uint256 penaltyBps = condition.penaltyBps;
-    if (penaltyBps > 0) {
-      unchecked {
-        uint256 penaltyAmount = BasisPoints.calculate(
-          claim.quantity,
-          penaltyBps
-        );
-        amount = claim.quantity - penaltyAmount;
-      }
-    }
+    amount = _verifyPenaltyBps(condition, claim, expectedPenaltyBps);
 
     _updateClaim(ds, claim.conditionId, claim.account, amount);
 

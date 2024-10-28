@@ -73,6 +73,7 @@ interface IDropFacetBase {
   error DropFacet__ClaimConditionsNotInAscendingOrder();
   error DropFacet__CannotSetClaimConditions();
   error DropFacet__ClaimHasEnded();
+  error DropFacet__UnexpectedPenaltyBps();
 }
 
 interface IDropFacet is IDropFacetBase {
@@ -115,8 +116,12 @@ interface IDropFacet is IDropFacetBase {
 
   /// @notice Claims tokens with a penalty
   /// @param claim The claim to process
+  /// @param expectedPenaltyBps The expected penalty in basis points
   /// @return The amount of tokens claimed
-  function claimWithPenalty(Claim calldata claim) external returns (uint256);
+  function claimWithPenalty(
+    Claim calldata claim,
+    uint16 expectedPenaltyBps
+  ) external returns (uint256);
 
   /// @notice Claims tokens and stakes them in the staking contract
   /// @param claim The claim to process
