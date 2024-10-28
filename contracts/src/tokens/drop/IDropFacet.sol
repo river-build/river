@@ -60,6 +60,8 @@ interface IDropFacetBase {
     bool resetEligibility
   );
 
+  event DropFacet_ClaimConditionAdded(ClaimCondition condition);
+
   // =============================================================
   //                           Errors
   // =============================================================
@@ -74,6 +76,9 @@ interface IDropFacetBase {
   error DropFacet__CannotSetClaimConditions();
   error DropFacet__ClaimHasEnded();
   error DropFacet__UnexpectedPenaltyBps();
+  error DropFacet__CurrencyNotSet();
+  error DropFacet__RewardsDistributionNotSet();
+  error DropFacet__InsufficientBalance();
 }
 
 interface IDropFacet is IDropFacetBase {
@@ -84,6 +89,10 @@ interface IDropFacet is IDropFacetBase {
     ClaimCondition[] calldata conditions,
     bool resetEligibility
   ) external;
+
+  /// @notice Adds a new claim condition
+  /// @param condition The ClaimCondition struct defining the condition
+  function addClaimCondition(ClaimCondition calldata condition) external;
 
   /// @notice Gets the ID of the currently active claim condition
   /// @return The ID of the active claim condition

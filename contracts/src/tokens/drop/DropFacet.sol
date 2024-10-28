@@ -27,7 +27,7 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
   }
 
   function __DropFacet_init_unchained(address rewardsDistribution) internal {
-    DropStorage.layout().rewardsDistribution = rewardsDistribution;
+    _setRewardsDistribution(DropStorage.layout(), rewardsDistribution);
   }
 
   ///@inheritdoc IDropFacet
@@ -105,6 +105,14 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
   ) external onlyOwner {
     DropStorage.Layout storage ds = DropStorage.layout();
     _setClaimConditions(ds, conditions, resetEligibility);
+  }
+
+  ///@inheritdoc IDropFacet
+  function addClaimCondition(
+    ClaimCondition calldata condition
+  ) external onlyOwner {
+    DropStorage.Layout storage ds = DropStorage.layout();
+    _addClaimCondition(ds, condition);
   }
 
   ///@inheritdoc IDropFacet

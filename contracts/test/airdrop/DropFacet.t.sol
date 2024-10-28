@@ -238,7 +238,10 @@ contract DropFacetTest is
   // =============================================================
 
   // getActiveClaimConditionId
-  function test_getActiveClaimConditionId() external {
+  function test_getActiveClaimConditionId()
+    external
+    givenTokensMinted(TOTAL_TOKEN_AMOUNT)
+  {
     ClaimCondition[] memory conditions = new ClaimCondition[](3);
     conditions[0] = _createClaimCondition(
       block.timestamp - 100,
@@ -277,7 +280,11 @@ contract DropFacetTest is
   // getClaimConditionById
   function test_getClaimConditionById(
     uint16 penaltyBps
-  ) external givenClaimConditionSet(penaltyBps) {
+  )
+    external
+    givenTokensMinted(TOTAL_TOKEN_AMOUNT)
+    givenClaimConditionSet(penaltyBps)
+  {
     ClaimCondition memory condition = dropFacet.getClaimConditionById(
       dropFacet.getActiveClaimConditionId()
     );
@@ -380,7 +387,10 @@ contract DropFacetTest is
     assertEq(river.balanceOf(bob), expectedAmount);
   }
 
-  function test_revertWhen_merkleRootNotSet() external {
+  function test_revertWhen_merkleRootNotSet()
+    external
+    givenTokensMinted(TOTAL_TOKEN_AMOUNT)
+  {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
     conditions[0] = _createClaimCondition(
       block.timestamp,
@@ -405,7 +415,10 @@ contract DropFacetTest is
     );
   }
 
-  function test_revertWhen_quantityIsZero() external {
+  function test_revertWhen_quantityIsZero()
+    external
+    givenTokensMinted(TOTAL_TOKEN_AMOUNT)
+  {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
     conditions[0] = _createClaimCondition(
       block.timestamp,
@@ -430,7 +443,10 @@ contract DropFacetTest is
     );
   }
 
-  function test_revertWhen_exceedsMaxClaimableSupply() external {
+  function test_revertWhen_exceedsMaxClaimableSupply()
+    external
+    givenTokensMinted(TOTAL_TOKEN_AMOUNT)
+  {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
     conditions[0] = _createClaimCondition(
       block.timestamp,
@@ -456,7 +472,10 @@ contract DropFacetTest is
     );
   }
 
-  function test_revertWhen_claimHasNotStarted() external {
+  function test_revertWhen_claimHasNotStarted()
+    external
+    givenTokensMinted(TOTAL_TOKEN_AMOUNT)
+  {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
     conditions[0] = _createClaimCondition(
       block.timestamp,
@@ -486,7 +505,10 @@ contract DropFacetTest is
     );
   }
 
-  function test_revertWhen_claimHasEnded() external {
+  function test_revertWhen_claimHasEnded()
+    external
+    givenTokensMinted(TOTAL_TOKEN_AMOUNT)
+  {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
     conditions[0] = _createClaimCondition(
       block.timestamp,
@@ -558,6 +580,7 @@ contract DropFacetTest is
 
   function test_revertWhen_invalidProof()
     external
+    givenTokensMinted(TOTAL_TOKEN_AMOUNT)
     givenClaimConditionSet(5000)
   {
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
@@ -624,7 +647,10 @@ contract DropFacetTest is
   }
 
   // setClaimConditions
-  function test_setClaimConditions() external {
+  function test_setClaimConditions()
+    external
+    givenTokensMinted(TOTAL_TOKEN_AMOUNT)
+  {
     ClaimCondition[] memory conditions = new ClaimCondition[](1);
     conditions[0] = _createClaimCondition(
       block.timestamp,
@@ -641,7 +667,7 @@ contract DropFacetTest is
 
   function test_setClaimConditions_resetEligibility()
     external
-    givenTokensMinted(TOTAL_TOKEN_AMOUNT)
+    givenTokensMinted(TOTAL_TOKEN_AMOUNT * 2)
     givenClaimConditionSet(5000)
     givenWalletHasClaimedWithPenalty(bob, bob)
   {
@@ -681,7 +707,10 @@ contract DropFacetTest is
     dropFacet.setClaimConditions(new ClaimCondition[](0), false);
   }
 
-  function test_revertWhen_setClaimConditions_notInAscendingOrder() external {
+  function test_revertWhen_setClaimConditions_notInAscendingOrder()
+    external
+    givenTokensMinted(TOTAL_TOKEN_AMOUNT)
+  {
     ClaimCondition[] memory conditions = new ClaimCondition[](2);
     conditions[0] = _createClaimCondition(
       block.timestamp,
@@ -739,6 +768,44 @@ contract DropFacetTest is
     vm.expectRevert(DropFacet__CannotSetClaimConditions.selector);
     vm.prank(deployer);
     dropFacet.setClaimConditions(conditions, false);
+  }
+
+  // addClaimCondition
+  function test_addClaimCondition()
+    external
+    givenTokensMinted(TOTAL_TOKEN_AMOUNT)
+  {
+    ClaimCondition memory condition = _createClaimCondition(
+      block.timestamp,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
+
+    vm.prank(deployer);
+    dropFacet.addClaimCondition(condition);
+
+    uint256 conditionId = dropFacet.getActiveClaimConditionId();
+    assertEq(conditionId, 0);
+  }
+
+  function test_revertWhen_addClaimCondition_notInAscendingOrder()
+    external
+    givenTokensMinted(TOTAL_TOKEN_AMOUNT)
+  {
+    ClaimCondition memory condition = _createClaimCondition(
+      block.timestamp,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
+
+    vm.prank(deployer);
+    vm.expectEmit(address(dropFacet));
+    emit DropFacet_ClaimConditionAdded(condition);
+    dropFacet.addClaimCondition(condition);
+
+    vm.prank(deployer);
+    vm.expectRevert(DropFacet__ClaimConditionsNotInAscendingOrder.selector);
+    dropFacet.addClaimCondition(condition);
   }
 
   // =============================================================
@@ -856,7 +923,7 @@ contract DropFacetTest is
 
   function test_IncompleteEligibilityReset()
     external
-    givenTokensMinted(TOTAL_TOKEN_AMOUNT)
+    givenTokensMinted(TOTAL_TOKEN_AMOUNT * 2)
   {
     // Setup initial conditions
     ClaimCondition[] memory initialConditions = new ClaimCondition[](3);
