@@ -222,6 +222,7 @@ func (st *serviceTester) getConfig(opts ...startOpts) *config.Config {
 		Database: config.DatabaseConfig{
 			Url:          st.dbUrl,
 			StartupDelay: 2 * time.Millisecond,
+			TestMode:     true,
 		},
 		StorageType: "postgres",
 		Network: config.NetworkConfig{

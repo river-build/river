@@ -213,6 +213,12 @@ type DatabaseConfig struct {
 	// If not set or value can't be parsed, defaults to "serializable".
 	// Intention is to migrate to "read committed" for performance reasons after testing is complete.
 	IsolationLevel string
+
+	// TestMode indicates that the database is being constructed under test conditions and indicates
+	// that certain internal configurations should be applied for the sake of test setup performance.
+	// As an example, the stream storage service will run unit tests with 8 partitions, while the
+	// production setting for the node is 256 partitions.
+	TestMode bool
 }
 
 func (c DatabaseConfig) GetUrl() string {

@@ -41,6 +41,9 @@ func NewDeprecatedPostgresStreamStore(
 	exitSignal chan error,
 	metrics infra.MetricsFactory,
 ) (*DeprecatedPostgresStreamStore, error) {
+	// This setting does not apply to the deprecated store, so skip the logic.
+	poolInfo.Config.TestMode = false
+
 	store := &DeprecatedPostgresStreamStore{
 		nodeUUID:   instanceId,
 		exitSignal: exitSignal,
@@ -175,7 +178,9 @@ func (s *DeprecatedPostgresStreamStore) createStreamStorageTx(
 		INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
 		INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
 		streamId,
-		false,
+		escapeSqlOpts{
+			migrated: false,
+		},
 	)
 	_, err := tx.Exec(ctx, sql, streamId, genesisMiniblock)
 	if err != nil {
@@ -212,7 +217,9 @@ func (s *DeprecatedPostgresStreamStore) createStreamArchiveStorageTx(
 		`INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
 		CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);`,
 		streamId,
-		false,
+		escapeSqlOpts{
+			migrated: false,
+		},
 	)
 	_, err := tx.Exec(ctx, sql, streamId)
 	if err != nil {
@@ -256,7 +263,9 @@ func (s *DeprecatedPostgresStreamStore) getMaxArchivedMiniblockNumberTx(
 		sqlForStream(
 			"SELECT COALESCE(MAX(seq_num), -1) FROM {{miniblocks}} WHERE stream_id = $1",
 			streamId,
-			false,
+			escapeSqlOpts{
+				migrated: false,
+			},
 		),
 		streamId,
 	).Scan(maxArchivedMiniblockNumber)
@@ -329,7 +338,9 @@ func (s *DeprecatedPostgresStreamStore) writeArchiveMiniblocksTx(
 			sqlForStream(
 				"INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, $2, $3)",
 				streamId,
-				false,
+				escapeSqlOpts{
+					migrated: false,
+				},
 			),
 			streamId,
 			startMiniblockNum+int64(i),
@@ -390,7 +401,9 @@ func (s *DeprecatedPostgresStreamStore) readStreamFromLastSnapshotTx(
 			sqlForStream(
 				"SELECT MAX(seq_num) FROM {{miniblocks}} WHERE stream_id = $1",
 				streamId,
-				false,
+				escapeSqlOpts{
+					migrated: false,
+				},
 			),
 			streamId).
 		Scan(&lastMiniblockIndex)
@@ -407,7 +420,9 @@ func (s *DeprecatedPostgresStreamStore) readStreamFromLastSnapshotTx(
 		sqlForStream(
 			"SELECT blockdata, seq_num FROM {{miniblocks}} WHERE seq_num >= $1 AND stream_id = $2 ORDER BY seq_num",
 			streamId,
-			false,
+			escapeSqlOpts{
+				migrated: false,
+			},
 		),
 		startSeqNum,
 		streamId,
@@ -455,7 +470,9 @@ func (s *DeprecatedPostgresStreamStore) readStreamFromLastSnapshotTx(
 		sqlForStream(
 			"SELECT envelope, generation, slot_num FROM {{minipools}} WHERE stream_id = $1 ORDER BY generation, slot_num",
 			streamId,
-			false,
+			escapeSqlOpts{
+				migrated: false,
+			},
 		),
 		streamId,
 	)
@@ -548,7 +565,9 @@ func (s *DeprecatedPostgresStreamStore) writeEventTx(
 		sqlForStream(
 			"SELECT generation, slot_num FROM {{minipools}} WHERE stream_id = $1 ORDER BY generation, slot_num",
 			streamId,
-			false,
+			escapeSqlOpts{
+				migrated: false,
+			},
 		),
 		streamId,
 	)
@@ -592,7 +611,9 @@ func (s *DeprecatedPostgresStreamStore) writeEventTx(
 		sqlForStream(
 			"INSERT INTO {{minipools}} (stream_id, envelope, generation, slot_num) VALUES ($1, $2, $3, $4)",
 			streamId,
-			false,
+			escapeSqlOpts{
+				migrated: false,
+			},
 		),
 		streamId,
 		envelope,
@@ -723,7 +744,9 @@ func (s *DeprecatedPostgresStreamStore) writeBlockProposalTxn(
 		sqlForStream(
 			"SELECT MAX(seq_num) as latest_blocks_number FROM {{miniblocks}} WHERE stream_id = $1",
 			streamId,
-			false,
+			escapeSqlOpts{
+				migrated: false,
+			},
 		),
 		streamId,
 	).
@@ -746,7 +769,9 @@ func (s *DeprecatedPostgresStreamStore) writeBlockProposalTxn(
 		sqlForStream(
 			"INSERT INTO {{miniblock_candidates}} (stream_id, seq_num, block_hash, blockdata) VALUES ($1, $2, $3, $4) ON CONFLICT(stream_id, seq_num, block_hash) DO NOTHING",
 			streamId,
-			false,
+			escapeSqlOpts{
+				migrated: false,
+			},
 		),
 		streamId,
 		blockNumber,
@@ -796,7 +821,9 @@ func (s *DeprecatedPostgresStreamStore) readMiniblockCandidateTx(
 		sqlForStream(
 			"SELECT blockdata FROM {{miniblock_candidates}} WHERE stream_id = $1 AND seq_num = $2 AND block_hash = $3",
 			streamId,
-			false,
+			escapeSqlOpts{
+				migrated: false,
+			},
 		),
 		streamId,
 		blockNumber,
@@ -878,7 +905,9 @@ func (s *DeprecatedPostgresStreamStore) promoteBlockTxn(
 		sqlForStream(
 			"DELETE FROM {{minipools}} WHERE slot_num > -1 AND stream_id = $1",
 			streamId,
-			false,
+			escapeSqlOpts{
+				migrated: false,
+			},
 		),
 		streamId,
 	); err != nil {
@@ -891,7 +920,9 @@ func (s *DeprecatedPostgresStreamStore) promoteBlockTxn(
 		sqlForStream(
 			"UPDATE {{minipools}} SET generation = $1 WHERE slot_num = -1 AND stream_id = $2",
 			streamId,
-			false,
+			escapeSqlOpts{
+				migrated: false,
+			},
 		),
 		minipoolGeneration+1,
 		streamId,
@@ -920,7 +951,9 @@ func (s *DeprecatedPostgresStreamStore) promoteBlockTxn(
 			sqlForStream(
 				"INSERT INTO {{minipools}} (stream_id, slot_num, generation, envelope) VALUES ($1, $2, $3, $4)",
 				streamId,
-				false,
+				escapeSqlOpts{
+					migrated: false,
+				},
 			),
 			streamId,
 			i,
@@ -938,7 +971,9 @@ func (s *DeprecatedPostgresStreamStore) promoteBlockTxn(
 		sqlForStream(
 			"INSERT INTO {{miniblocks}} SELECT stream_id, seq_num, blockdata FROM {{miniblock_candidates}} WHERE stream_id = $1 AND seq_num = $2 AND {{miniblock_candidates}}.block_hash = $3",
 			streamId,
-			false,
+			escapeSqlOpts{
+				migrated: false,
+			},
 		),
 		streamId,
 		minipoolGeneration,
@@ -958,7 +993,9 @@ func (s *DeprecatedPostgresStreamStore) promoteBlockTxn(
 		sqlForStream(
 			"DELETE FROM {{miniblock_candidates}} WHERE stream_id = $1 and seq_num <= $2",
 			streamId,
-			false,
+			escapeSqlOpts{
+				migrated: false,
+			},
 		),
 		streamId,
 		minipoolGeneration,
@@ -1126,7 +1163,9 @@ func (s *DeprecatedPostgresStreamStore) deleteStreamTx(ctx context.Context, tx p
 			DROP TABLE {{minipools}};
 			DELETE FROM es WHERE stream_id = $1`,
 			streamId,
-			false,
+			escapeSqlOpts{
+				migrated: false,
+			},
 		),
 		streamId)
 	return err
@@ -1318,7 +1357,9 @@ func (s *DeprecatedPostgresStreamStore) debugReadStreamData(
 		sqlForStream(
 			"SELECT seq_num, blockdata FROM {{miniblocks}} WHERE stream_id = $1 ORDER BY seq_num",
 			streamId,
-			false,
+			escapeSqlOpts{
+				migrated: false,
+			},
 		),
 		streamId,
 	)
@@ -1342,7 +1383,9 @@ func (s *DeprecatedPostgresStreamStore) debugReadStreamData(
 		sqlForStream(
 			"SELECT generation, slot_num, envelope FROM {{minipools}} WHERE stream_id = $1 ORDER BY generation, slot_num",
 			streamId,
-			false,
+			escapeSqlOpts{
+				migrated: false,
+			},
 		),
 		streamId,
 	)
@@ -1365,7 +1408,9 @@ func (s *DeprecatedPostgresStreamStore) debugReadStreamData(
 		sqlForStream(
 			"SELECT seq_num, block_hash, blockdata FROM {{miniblock_candidates}} WHERE stream_id = $1 ORDER BY seq_num",
 			streamId,
-			false,
+			escapeSqlOpts{
+				migrated: false,
+			},
 		),
 		streamId,
 	)
@@ -1428,7 +1473,9 @@ func (s *DeprecatedPostgresStreamStore) streamLastMiniBlockTx(
 		sqlForStream(
 			"SELECT seq_num, blockdata FROM {{miniblocks}} WHERE stream_id = $1 ORDER BY seq_num DESC LIMIT 1",
 			streamID,
-			false,
+			escapeSqlOpts{
+				migrated: false,
+			},
 		),
 		streamID,
 	).Scan(&maxSeqNum, &blockData)
@@ -1544,7 +1591,9 @@ func (s *DeprecatedPostgresStreamStore) importMiniblocksTx(
 					"INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) values ($1, $2, $3)",
 					//"INSERT INTO {{miniblocks}} SELECT stream_id, seq_num, blockdata FROM {{miniblock_candidates}} WHERE stream_id = $1 AND seq_num = $2 AND {{miniblock_candidates}}.block_hash = $3",
 					streamID,
-					false,
+					escapeSqlOpts{
+						migrated: false,
+					},
 				),
 				streamID,
 				miniBlock.Number,
@@ -1563,7 +1612,9 @@ func (s *DeprecatedPostgresStreamStore) importMiniblocksTx(
 		sqlForStream(
 			"UPDATE {{minipools}} SET generation = $1 WHERE slot_num = -1 AND stream_id = $2",
 			streamID,
-			false,
+			escapeSqlOpts{
+				migrated: false,
+			},
 		),
 		miniBlocks[len(miniBlocks)-1].Number+1,
 		streamID,

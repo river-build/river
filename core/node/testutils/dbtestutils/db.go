@@ -84,6 +84,7 @@ func ConfigureDB(ctx context.Context) (*config.DatabaseConfig, string, func(), e
 			Extra:                     "?sslmode=disable&pool_max_conns=1000",
 			StreamingConnectionsRatio: 0.1,
 			StartupDelay:              2 * time.Millisecond,
+			TestMode:                  true,
 		}
 		return cfg,
 			dbSchemaName,

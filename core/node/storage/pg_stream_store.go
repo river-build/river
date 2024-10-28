@@ -2,14 +2,15 @@ package storage
 
 import (
 	"context"
-	"crypto/md5"
 	"embed"
 	"encoding/hex"
 	"fmt"
+	"io/fs"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/cespare/xxhash/v2"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
@@ -37,6 +38,9 @@ var _ StreamStorage = (*PostgresStreamStore)(nil)
 //go:embed migrations/*.sql
 var migrationsDir embed.FS
 
+//go:embed testdata/migrations/*.sql
+var testMigrationsDir embed.FS
+
 func NewPostgresStreamStore(
 	ctx context.Context,
 	poolInfo *PgxPoolInfo,
@@ -48,11 +52,22 @@ func NewPostgresStreamStore(
 		nodeUUID:   instanceId,
 		exitSignal: exitSignal,
 	}
+
+	// Test configurations of the database use a reduce partition count to speed up test setup.
+	// The normal 256 partition scheme takes up to ~2s to create locally and makes unit testing
+	// a bit unfeasable.
+	var migrations fs.FS
+	if poolInfo.Config.TestMode {
+		migrations = testMigrationsDir
+	} else {
+		migrations = migrationsDir
+	}
+
 	if err := store.PostgresEventStore.init(
 		ctx,
 		poolInfo,
 		metrics,
-		migrationsDir,
+		migrations,
 	); err != nil {
 		return nil, AsRiverError(err).Func("NewPostgresStreamStore")
 	}
@@ -135,25 +150,34 @@ func (s *PostgresStreamStore) txRunnerWithUUIDCheck(
 	)
 }
 
-// createPartitionSuffix determines the partition mapping for a particular stream id using
-// the first byte of the md5 hash of the hex-encoded stream id. We use the hex-encoded stream
-// id so that the mapping can be reproduced on postgres, for convenience. To compute a partition
-// mapping on pg, try:
-//
-// left(md5('204ed935f2555b5f835879d70ed591deff0cf763479b81767a11ceaf4ee5e7fc'), 2)
-func createPartitionSuffix(streamId StreamId) string {
+// createPartitionSuffix determines the partition mapping for a particular stream id the
+// hex encoding of the first byte of the xxHash of the stream ID.
+func createPartitionSuffix(streamId StreamId, reducedParitions bool) string {
 	// Do not hash the stream bytes directly, but hash the hex encoding of the stream id, which is
-	// what we store in the database.
-	hash := md5.Sum([]byte(streamId.String()))
-	return hex.EncodeToString(hash[:])[0:2]
+	// what we store in the database. This leaves the door open for installing xxhash on postgres
+	// and debugging this way in the future.
+	hash := xxhash.Sum64String(streamId.String())
+	// For test installations, grab expect 8 partitions, taking 8 bits from the hash
+	if reducedParitions {
+		bt := hash % 8
+		return fmt.Sprintf("%02x", bt)
+	}
+	return fmt.Sprintf("%016x", hash)[:2]
+}
+
+type escapeSqlOpts struct {
+	migrated bool
+	// When test are running, the migrated database schema is created with 8 partitions instead of
+	// 256. In this case, expect only 8 partitions.
+	testMode bool
 }
 
 // sqlForStream escapes references to partitioned tables to the specific partition where the stream
 // is assigned whenever they are surrounded by double curly brackets.
-func sqlForStream(sql string, streamId StreamId, migrated bool) string {
+func sqlForStream(sql string, streamId StreamId, opts escapeSqlOpts) string {
 	var suffix string
-	if migrated {
-		suffix = createPartitionSuffix(streamId)
+	if opts.migrated {
+		suffix = createPartitionSuffix(streamId, opts.testMode)
 	} else {
 		suffix = createTableSuffix(streamId)
 	}
@@ -252,7 +276,10 @@ func (s *PostgresStreamStore) createStreamStorageTx(
 		INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
 		INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
 		streamId,
-		true,
+		escapeSqlOpts{
+			migrated: true,
+			testMode: s.config.TestMode,
+		},
 	)
 	log := dlog.FromCtx(ctx)
 	log.Info("CreateStreamStorageTx sql", "sql", sql)
@@ -290,7 +317,10 @@ func (s *PostgresStreamStore) createStreamArchiveStorageTx(
 	sql := sqlForStream(
 		`INSERT INTO es (stream_id, latest_snapshot_miniblock, migrated) VALUES ($1, -1, true);`,
 		streamId,
-		true,
+		escapeSqlOpts{
+			migrated: true,
+			testMode: s.config.TestMode,
+		},
 	)
 	_, err := tx.Exec(ctx, sql, streamId)
 	if err != nil {
@@ -339,7 +369,10 @@ func (s *PostgresStreamStore) getMaxArchivedMiniblockNumberTx(
 		sqlForStream(
 			"SELECT COALESCE(MAX(seq_num), -1) FROM {{miniblocks}} WHERE stream_id = $1",
 			streamId,
-			migrated,
+			escapeSqlOpts{
+				migrated: migrated,
+				testMode: s.config.TestMode,
+			},
 		),
 		streamId,
 	).Scan(maxArchivedMiniblockNumber)
@@ -417,7 +450,10 @@ func (s *PostgresStreamStore) writeArchiveMiniblocksTx(
 			sqlForStream(
 				"INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, $2, $3)",
 				streamId,
-				migrated,
+				escapeSqlOpts{
+					migrated: migrated,
+					testMode: s.config.TestMode,
+				},
 			),
 			streamId,
 			startMiniblockNum+int64(i),
@@ -479,7 +515,10 @@ func (s *PostgresStreamStore) readStreamFromLastSnapshotTx(
 			sqlForStream(
 				"SELECT MAX(seq_num) FROM {{miniblocks}} WHERE stream_id = $1",
 				streamId,
-				migrated,
+				escapeSqlOpts{
+					migrated: migrated,
+					testMode: s.config.TestMode,
+				},
 			),
 			streamId).
 		Scan(&lastMiniblockIndex)
@@ -496,7 +535,10 @@ func (s *PostgresStreamStore) readStreamFromLastSnapshotTx(
 		sqlForStream(
 			"SELECT blockdata, seq_num FROM {{miniblocks}} WHERE seq_num >= $1 AND stream_id = $2 ORDER BY seq_num",
 			streamId,
-			migrated,
+			escapeSqlOpts{
+				migrated: migrated,
+				testMode: s.config.TestMode,
+			},
 		),
 		startSeqNum,
 		streamId,
@@ -544,7 +586,10 @@ func (s *PostgresStreamStore) readStreamFromLastSnapshotTx(
 		sqlForStream(
 			"SELECT envelope, generation, slot_num FROM {{minipools}} WHERE stream_id = $1 ORDER BY generation, slot_num",
 			streamId,
-			migrated,
+			escapeSqlOpts{
+				migrated: migrated,
+				testMode: s.config.TestMode,
+			},
 		),
 		streamId,
 	)
@@ -642,7 +687,10 @@ func (s *PostgresStreamStore) writeEventTx(
 		sqlForStream(
 			"SELECT generation, slot_num FROM {{minipools}} WHERE stream_id = $1 ORDER BY generation, slot_num",
 			streamId,
-			migrated,
+			escapeSqlOpts{
+				migrated: migrated,
+				testMode: s.config.TestMode,
+			},
 		),
 		streamId,
 	)
@@ -686,7 +734,10 @@ func (s *PostgresStreamStore) writeEventTx(
 		sqlForStream(
 			"INSERT INTO {{minipools}} (stream_id, envelope, generation, slot_num) VALUES ($1, $2, $3, $4)",
 			streamId,
-			migrated,
+			escapeSqlOpts{
+				migrated: migrated,
+				testMode: s.config.TestMode,
+			},
 		),
 		streamId,
 		envelope,
@@ -746,7 +797,10 @@ func (s *PostgresStreamStore) readMiniblocksTx(
 		sqlForStream(
 			"SELECT blockdata, seq_num FROM {{miniblocks}} WHERE seq_num >= $1 AND seq_num < $2 AND stream_id = $3 ORDER BY seq_num",
 			streamId,
-			migrated,
+			escapeSqlOpts{
+				migrated: migrated,
+				testMode: s.config.TestMode,
+			},
 		),
 		fromInclusive,
 		toExclusive,
@@ -827,7 +881,10 @@ func (s *PostgresStreamStore) writeBlockProposalTxn(
 		sqlForStream(
 			"SELECT MAX(seq_num) as latest_blocks_number FROM {{miniblocks}} WHERE stream_id = $1",
 			streamId,
-			migrated,
+			escapeSqlOpts{
+				migrated: migrated,
+				testMode: s.config.TestMode,
+			},
 		),
 		streamId,
 	).
@@ -850,7 +907,10 @@ func (s *PostgresStreamStore) writeBlockProposalTxn(
 		sqlForStream(
 			"INSERT INTO {{miniblock_candidates}} (stream_id, seq_num, block_hash, blockdata) VALUES ($1, $2, $3, $4) ON CONFLICT(stream_id, seq_num, block_hash) DO NOTHING",
 			streamId,
-			migrated,
+			escapeSqlOpts{
+				migrated: migrated,
+				testMode: s.config.TestMode,
+			},
 		),
 		streamId,
 		blockNumber,
@@ -905,7 +965,10 @@ func (s *PostgresStreamStore) readMiniblockCandidateTx(
 		sqlForStream(
 			"SELECT blockdata FROM {{miniblock_candidates}} WHERE stream_id = $1 AND seq_num = $2 AND block_hash = $3",
 			streamId,
-			migrated,
+			escapeSqlOpts{
+				migrated: migrated,
+				testMode: s.config.TestMode,
+			},
 		),
 		streamId,
 		blockNumber,
@@ -972,7 +1035,10 @@ func (s *PostgresStreamStore) promoteBlockTxn(
 		sqlForStream(
 			"SELECT MAX(seq_num) as latest_block_number FROM {{miniblocks}} WHERE stream_id = $1",
 			streamId,
-			migrated,
+			escapeSqlOpts{
+				migrated: migrated,
+				testMode: s.config.TestMode,
+			},
 		),
 		streamId,
 	).Scan(&seqNum); err != nil {
@@ -992,7 +1058,10 @@ func (s *PostgresStreamStore) promoteBlockTxn(
 		sqlForStream(
 			"DELETE FROM {{minipools}} WHERE slot_num > -1 AND stream_id = $1",
 			streamId,
-			migrated,
+			escapeSqlOpts{
+				migrated: migrated,
+				testMode: s.config.TestMode,
+			},
 		),
 		streamId,
 	); err != nil {
@@ -1005,7 +1074,10 @@ func (s *PostgresStreamStore) promoteBlockTxn(
 		sqlForStream(
 			"UPDATE {{minipools}} SET generation = $1 WHERE slot_num = -1 AND stream_id = $2",
 			streamId,
-			migrated,
+			escapeSqlOpts{
+				migrated: migrated,
+				testMode: s.config.TestMode,
+			},
 		),
 		minipoolGeneration+1,
 		streamId,
@@ -1034,7 +1106,10 @@ func (s *PostgresStreamStore) promoteBlockTxn(
 			sqlForStream(
 				"INSERT INTO {{minipools}} (stream_id, slot_num, generation, envelope) VALUES ($1, $2, $3, $4)",
 				streamId,
-				migrated,
+				escapeSqlOpts{
+					migrated: migrated,
+					testMode: s.config.TestMode,
+				},
 			),
 			streamId,
 			i,
@@ -1052,7 +1127,10 @@ func (s *PostgresStreamStore) promoteBlockTxn(
 		sqlForStream(
 			"INSERT INTO {{miniblocks}} SELECT stream_id, seq_num, blockdata FROM {{miniblock_candidates}} WHERE stream_id = $1 AND seq_num = $2 AND {{miniblock_candidates}}.block_hash = $3",
 			streamId,
-			migrated,
+			escapeSqlOpts{
+				migrated: migrated,
+				testMode: s.config.TestMode,
+			},
 		),
 		streamId,
 		minipoolGeneration,
@@ -1072,7 +1150,10 @@ func (s *PostgresStreamStore) promoteBlockTxn(
 		sqlForStream(
 			"DELETE FROM {{miniblock_candidates}} WHERE stream_id = $1 and seq_num <= $2",
 			streamId,
-			migrated,
+			escapeSqlOpts{
+				migrated: migrated,
+				testMode: s.config.TestMode,
+			},
 		),
 		streamId,
 		minipoolGeneration,
@@ -1247,7 +1328,10 @@ func (s *PostgresStreamStore) deleteStreamTx(ctx context.Context, tx pgx.Tx, str
 				DELETE from {{miniblock_candidates}} where stream_id = $1;
 				DELETE FROM es WHERE stream_id = $1`,
 				streamId,
-				true,
+				escapeSqlOpts{
+					migrated: true,
+					testMode: s.config.TestMode,
+				},
 			),
 			streamId,
 		)
@@ -1261,7 +1345,10 @@ func (s *PostgresStreamStore) deleteStreamTx(ctx context.Context, tx pgx.Tx, str
 				DROP TABLE {{miniblock_candidates}}
 				DELETE FROM es WHERE stream_id = $1`,
 				streamId,
-				false,
+				escapeSqlOpts{
+					migrated: false,
+					testMode: s.config.TestMode,
+				},
 			),
 			streamId)
 		return err
@@ -1462,7 +1549,10 @@ func (s *PostgresStreamStore) debugReadStreamData(
 		sqlForStream(
 			"SELECT seq_num, blockdata FROM {{miniblocks}} WHERE stream_id = $1 ORDER BY seq_num",
 			streamId,
-			result.Migrated,
+			escapeSqlOpts{
+				migrated: result.Migrated,
+				testMode: s.config.TestMode,
+			},
 		),
 		streamId,
 	)
@@ -1486,7 +1576,10 @@ func (s *PostgresStreamStore) debugReadStreamData(
 		sqlForStream(
 			"SELECT generation, slot_num, envelope FROM {{minipools}} WHERE stream_id = $1 ORDER BY generation, slot_num",
 			streamId,
-			result.Migrated,
+			escapeSqlOpts{
+				migrated: result.Migrated,
+				testMode: s.config.TestMode,
+			},
 		),
 		streamId,
 	)
@@ -1509,7 +1602,10 @@ func (s *PostgresStreamStore) debugReadStreamData(
 		sqlForStream(
 			"SELECT seq_num, block_hash, blockdata FROM {{miniblock_candidates}} WHERE stream_id = $1 ORDER BY seq_num",
 			streamId,
-			result.Migrated,
+			escapeSqlOpts{
+				migrated: result.Migrated,
+				testMode: s.config.TestMode,
+			},
 		),
 		streamId,
 	)
@@ -1577,7 +1673,10 @@ func (s *PostgresStreamStore) streamLastMiniBlockTx(
 		sqlForStream(
 			"SELECT seq_num, blockdata FROM {{miniblocks}} WHERE stream_id = $1 ORDER BY seq_num DESC LIMIT 1",
 			streamID,
-			migrated,
+			escapeSqlOpts{
+				migrated: migrated,
+				testMode: s.config.TestMode,
+			},
 		),
 		streamID,
 	).Scan(&maxSeqNum, &blockData)
@@ -1650,7 +1749,10 @@ func (s *PostgresStreamStore) importMiniblocksTx(
 		sqlForStream(
 			"SELECT MAX(seq_num) as latest_blocks_number FROM {{miniblocks}} WHERE stream_id = $1",
 			streamID,
-			migrated,
+			escapeSqlOpts{
+				migrated: migrated,
+				testMode: s.config.TestMode,
+			},
 		),
 		streamID).
 		Scan(&seqNum)
@@ -1672,7 +1774,10 @@ func (s *PostgresStreamStore) importMiniblocksTx(
 		sqlForStream(
 			"DELETE FROM {{minipools}} WHERE slot_num > -1 AND stream_id = $1",
 			streamID,
-			migrated,
+			escapeSqlOpts{
+				migrated: migrated,
+				testMode: s.config.TestMode,
+			},
 		),
 		streamID)
 	if err != nil {
@@ -1714,7 +1819,10 @@ func (s *PostgresStreamStore) importMiniblocksTx(
 					"INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) values ($1, $2, $3)",
 					//"INSERT INTO {{miniblocks}} SELECT stream_id, seq_num, blockdata FROM {{miniblock_candidates}} WHERE stream_id = $1 AND seq_num = $2 AND {{miniblock_candidates}}.block_hash = $3",
 					streamID,
-					migrated,
+					escapeSqlOpts{
+						migrated: migrated,
+						testMode: s.config.TestMode,
+					},
 				),
 				streamID,
 				miniBlock.Number,
@@ -1733,7 +1841,10 @@ func (s *PostgresStreamStore) importMiniblocksTx(
 		sqlForStream(
 			"UPDATE {{minipools}} SET generation = $1 WHERE slot_num = -1 AND stream_id = $2",
 			streamID,
-			migrated,
+			escapeSqlOpts{
+				migrated: migrated,
+				testMode: s.config.TestMode,
+			},
 		),
 		miniBlocks[len(miniBlocks)-1].Number+1,
 		streamID,

@@ -78,27 +78,38 @@ func setupStreamStorageTest() (context.Context, *PostgresStreamStore, *testStrea
 
 func TestSqlForStream(t *testing.T) {
 	streamIdString := "20864dd5d959460eec194e629507ab14403e86877549f4a5d6b3eb728adf75d1"
+	streamIdString2 := "20abcdd5d959460eec194e629507ab14403e86877549f4a5d6b3eb728adf75d1"
+
 	streamId := testutils.StreamIdFromString(streamIdString)
+	streamId2 := testutils.StreamIdFromString(streamIdString2)
 	suffix := createTableSuffix(streamId)
+	partition := createPartitionSuffix(streamId, false)
+	reducedCountPartition := createPartitionSuffix(streamId, true)
+	reducedCountPartition2 := createPartitionSuffix(streamId2, true)
 
 	// Sanity check
 	require.Equal(t, "80a8e1d562992f654ab5d6fd57bb1a545f12dadb6500c87fa02a897a", suffix)
+	require.Equal(t, "c9", partition)
+	require.Equal(t, "00", reducedCountPartition)
+	require.Equal(t, "03", reducedCountPartition2)
 
 	tests := map[string]struct {
 		template string
 		expected string
+		migrated bool
+		testMode bool
 	}{
-		"simple example": {
+		"simple example (legacy)": {
 			template: "SELECT COALESCE(MAX(seq_num), -1) FROM {{miniblocks}} WHERE stream_id = $1",
 			expected: "SELECT COALESCE(MAX(seq_num), -1) FROM miniblocks_80a8e1d562992f654ab5d6fd57bb1a545f12dadb6500c87fa02a897a WHERE stream_id = $1",
 		},
-		"table name is a substring within other ranges of the query": {
+		"table name is a substring within other ranges of the query (legacy)": {
 			template: `INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
 			CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);`,
 			expected: `INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
 			CREATE TABLE miniblocks_80a8e1d562992f654ab5d6fd57bb1a545f12dadb6500c87fa02a897a PARTITION OF miniblocks FOR VALUES IN ($1);`,
 		},
-		"query containing non-templated references to table names": {
+		"query containing non-templated references to table names (legacy)": {
 			template: `select * from INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, 0);
 			CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);
 			CREATE TABLE {{minipools}} PARTITION OF minipools FOR VALUES IN ($1);
@@ -112,11 +123,75 @@ func TestSqlForStream(t *testing.T) {
 			INSERT INTO miniblocks_80a8e1d562992f654ab5d6fd57bb1a545f12dadb6500c87fa02a897a (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
 			INSERT INTO minipools_80a8e1d562992f654ab5d6fd57bb1a545f12dadb6500c87fa02a897a (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
 		},
+		"simple example": {
+			migrated: true,
+			template: "SELECT COALESCE(MAX(seq_num), -1) FROM {{miniblocks}} WHERE stream_id = $1",
+			expected: "SELECT COALESCE(MAX(seq_num), -1) FROM miniblocks_c9 WHERE stream_id = $1",
+		},
+		"table name is a substring within other ranges of the query": {
+			migrated: true,
+			template: `INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
+			CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);`,
+			expected: `INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
+			CREATE TABLE miniblocks_c9 PARTITION OF miniblocks FOR VALUES IN ($1);`,
+		},
+		"query containing non-templated references to table names": {
+			migrated: true,
+			template: `select * from INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, 0);
+			CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);
+			CREATE TABLE {{minipools}} PARTITION OF minipools FOR VALUES IN ($1);
+			CREATE TABLE {{miniblock_candidates}} PARTITION OF miniblock_candidates for values in ($1);
+			INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
+			INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
+			expected: `select * from INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, 0);
+			CREATE TABLE miniblocks_c9 PARTITION OF miniblocks FOR VALUES IN ($1);
+			CREATE TABLE minipools_c9 PARTITION OF minipools FOR VALUES IN ($1);
+			CREATE TABLE miniblock_candidates_c9 PARTITION OF miniblock_candidates for values in ($1);
+			INSERT INTO miniblocks_c9 (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
+			INSERT INTO minipools_c9 (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
+		},
+		"simple example (test)": {
+			migrated: true,
+			testMode: true,
+			template: "SELECT COALESCE(MAX(seq_num), -1) FROM {{miniblocks}} WHERE stream_id = $1",
+			expected: "SELECT COALESCE(MAX(seq_num), -1) FROM miniblocks_00 WHERE stream_id = $1",
+		},
+		"table name is a substring within other ranges of the query (test)": {
+			migrated: true,
+			testMode: true,
+			template: `INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
+			CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);`,
+			expected: `INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
+			CREATE TABLE miniblocks_00 PARTITION OF miniblocks FOR VALUES IN ($1);`,
+		},
+		"query containing non-templated references to table names (test)": {
+			migrated: true,
+			testMode: true,
+			template: `select * from INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, 0);
+			CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);
+			CREATE TABLE {{minipools}} PARTITION OF minipools FOR VALUES IN ($1);
+			CREATE TABLE {{miniblock_candidates}} PARTITION OF miniblock_candidates for values in ($1);
+			INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
+			INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
+			expected: `select * from INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, 0);
+			CREATE TABLE miniblocks_00 PARTITION OF miniblocks FOR VALUES IN ($1);
+			CREATE TABLE minipools_00 PARTITION OF minipools FOR VALUES IN ($1);
+			CREATE TABLE miniblock_candidates_00 PARTITION OF miniblock_candidates for values in ($1);
+			INSERT INTO miniblocks_00 (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
+			INSERT INTO minipools_00 (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
+		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			sql := sqlForStream(tc.template, streamId, false)
+			sql := sqlForStream(
+				tc.template,
+				streamId,
+				escapeSqlOpts{
+					migrated: tc.migrated,
+					testMode: tc.testMode,
+				},
+			)
 			require.Equal(t, tc.expected, sql)
 		})
 	}
@@ -210,7 +285,6 @@ func checkStreamState(
 		require.Equal(t, mbCandidate.Data, actualData)
 	}
 }
-
 
 func TestPostgresStreamStore(t *testing.T) {
 	require := require.New(t)
@@ -452,7 +526,10 @@ func TestAddEventConsistencyChecksImproperGeneration(t *testing.T) {
 		sqlForStream(
 			"UPDATE {{minipools}} SET generation = 777 WHERE slot_num = 1",
 			streamId,
-			true,
+			escapeSqlOpts{
+				migrated: true,
+				testMode: true,
+			},
 		),
 	)
 	err := pgStreamStore.WriteEvent(ctx, streamId, 1, 3, []byte("event4"))
@@ -479,7 +556,10 @@ func TestAddEventConsistencyChecksGaps(t *testing.T) {
 		sqlForStream(
 			"DELETE FROM {{minipools}} WHERE slot_num = 1",
 			streamId,
-			true,
+			escapeSqlOpts{
+				migrated: true,
+				testMode: true,
+			},
 		),
 	)
 	err := pgStreamStore.WriteEvent(ctx, streamId, 1, 3, []byte("event4"))
@@ -506,7 +586,10 @@ func TestAddEventConsistencyChecksEventsNumberMismatch(t *testing.T) {
 		sqlForStream(
 			"DELETE FROM {{minipools}} WHERE slot_num = 2",
 			streamId,
-			true,
+			escapeSqlOpts{
+				migrated: true,
+				testMode: true,
+			},
 		),
 	)
 	err := pgStreamStore.WriteEvent(ctx, streamId, 1, 3, []byte("event4"))
@@ -586,7 +669,17 @@ func TestPromoteBlockConsistencyChecksProperNewMinipoolGeneration(t *testing.T) 
 
 	_ = pgStreamStore.WriteMiniblockCandidate(ctx, streamId, blockHash3, 3, []byte("block3"))
 
-	_, _ = pgStreamStore.pool.Exec(ctx, sqlForStream("DELETE FROM {{miniblocks}} WHERE seq_num = 2", streamId, true))
+	_, _ = pgStreamStore.pool.Exec(
+		ctx,
+		sqlForStream(
+			"DELETE FROM {{miniblocks}} WHERE seq_num = 2",
+			streamId,
+			escapeSqlOpts{
+				migrated: true,
+				testMode: true,
+			},
+		),
+	)
 	err := pgStreamStore.PromoteMiniblockCandidate(ctx, streamId, 3, blockHash3, false, testEnvelopes3)
 
 	// TODO(crystal): tune these
@@ -610,7 +703,10 @@ func TestCreateBlockProposalNoSuchStreamError(t *testing.T) {
 		sqlForStream(
 			"DELETE FROM {{miniblocks}}",
 			streamId,
-			true,
+			escapeSqlOpts{
+				migrated: true,
+				testMode: true,
+			},
 		),
 	)
 
@@ -642,7 +738,17 @@ func TestPromoteBlockNoSuchStreamError(t *testing.T) {
 	block_hash := common.BytesToHash([]byte("block_hash"))
 	_ = pgStreamStore.WriteMiniblockCandidate(ctx, streamId, block_hash, 1, []byte("block1"))
 
-	_, _ = pgStreamStore.pool.Exec(ctx, sqlForStream("DELETE FROM {{miniblocks}}", streamId, true))
+	_, _ = pgStreamStore.pool.Exec(
+		ctx,
+		sqlForStream(
+			"DELETE FROM {{miniblocks}}",
+			streamId,
+			escapeSqlOpts{
+				migrated: true,
+				testMode: true,
+			},
+		),
+	)
 
 	err := pgStreamStore.PromoteMiniblockCandidate(ctx, streamId, 1, block_hash, true, testEnvelopes1)
 
@@ -761,7 +867,17 @@ func TestGetStreamFromLastSnapshotConsistencyChecksMissingBlockFailure(t *testin
 		testEnvelopes3,
 	)
 
-	_, _ = pgStreamStore.pool.Exec(ctx, sqlForStream("DELETE FROM {{miniblocks}} WHERE seq_num = 2", streamId, true))
+	_, _ = pgStreamStore.pool.Exec(
+		ctx,
+		sqlForStream(
+			"DELETE FROM {{miniblocks}} WHERE seq_num = 2",
+			streamId,
+			escapeSqlOpts{
+				migrated: true,
+				testMode: true,
+			},
+		),
+	)
 
 	_, err := pgStreamStore.ReadStreamFromLastSnapshot(ctx, streamId, 0)
 
@@ -820,7 +936,14 @@ func TestGetStreamFromLastSnapshotConsistencyCheckWrongEnvelopeGeneration(t *tes
 
 	_, _ = pgStreamStore.pool.Exec(
 		ctx,
-		sqlForStream("UPDATE {{minipools}} SET generation = 777 WHERE slot_num = 1", streamId, true),
+		sqlForStream(
+			"UPDATE {{minipools}} SET generation = 777 WHERE slot_num = 1",
+			streamId,
+			escapeSqlOpts{
+				migrated: true,
+				testMode: true,
+			},
+		),
 	)
 
 	_, err := pgStreamStore.ReadStreamFromLastSnapshot(ctx, streamId, 0)
@@ -877,7 +1000,17 @@ func TestGetStreamFromLastSnapshotConsistencyCheckNoZeroIndexEnvelope(t *testing
 		testEnvelopes2,
 	)
 
-	_, _ = pgStreamStore.pool.Exec(ctx, sqlForStream("DELETE FROM {{minipools}} WHERE slot_num = 0", streamId, true))
+	_, _ = pgStreamStore.pool.Exec(
+		ctx,
+		sqlForStream(
+			"DELETE FROM {{minipools}} WHERE slot_num = 0",
+			streamId,
+			escapeSqlOpts{
+				migrated: true,
+				testMode: true,
+			},
+		),
+	)
 
 	_, err := pgStreamStore.ReadStreamFromLastSnapshot(ctx, streamId, 0)
 
@@ -933,7 +1066,17 @@ func TestGetStreamFromLastSnapshotConsistencyCheckGapInEnvelopesIndexes(t *testi
 		testEnvelopes2,
 	)
 
-	_, _ = pgStreamStore.pool.Exec(ctx, sqlForStream("DELETE FROM {{minipools}} WHERE slot_num = 1", streamId, true))
+	_, _ = pgStreamStore.pool.Exec(
+		ctx,
+		sqlForStream(
+			"DELETE FROM {{minipools}} WHERE slot_num = 1",
+			streamId,
+			escapeSqlOpts{
+				migrated: true,
+				testMode: true,
+			},
+		),
+	)
 
 	_, err := pgStreamStore.ReadStreamFromLastSnapshot(ctx, streamId, 0)
 
@@ -1003,7 +1146,17 @@ func TestGetMiniblocksConsistencyChecks(t *testing.T) {
 		testEnvelopes3,
 	)
 
-	_, _ = pgStreamStore.pool.Exec(ctx, sqlForStream("DELETE FROM {{miniblocks}} WHERE seq_num = 2", streamId, true))
+	_, _ = pgStreamStore.pool.Exec(
+		ctx,
+		sqlForStream(
+			"DELETE FROM {{miniblocks}} WHERE seq_num = 2",
+			streamId,
+			escapeSqlOpts{
+				migrated: true,
+				testMode: true,
+			},
+		),
+	)
 
 	_, err := pgStreamStore.ReadMiniblocks(ctx, streamId, 1, 4)
 

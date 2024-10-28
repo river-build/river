@@ -2,8 +2,8 @@ package storage
 
 import (
 	"context"
-	"embed"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"strings"
 	"sync"
@@ -36,7 +36,7 @@ type PostgresEventStore struct {
 	pool         *pgxpool.Pool
 	schemaName   string
 	dbUrl        string
-	migrationDir embed.FS
+	migrationDir fs.FS
 
 	regularConnections   *semaphore.Weighted
 	streamingConnections *semaphore.Weighted
@@ -458,7 +458,7 @@ func (s *PostgresEventStore) init(
 	ctx context.Context,
 	poolInfo *PgxPoolInfo,
 	metrics infra.MetricsFactory,
-	migrations embed.FS,
+	migrations fs.FS,
 ) error {
 	log := dlog.FromCtx(ctx)
 
@@ -612,7 +612,11 @@ func getSSLMode(dbURL string) string {
 
 func (s *PostgresEventStore) runMigrations(ctx context.Context) error {
 	// Run migrations
-	iofsMigrationsDir, err := iofs.New(s.migrationDir, "migrations")
+	migrationsPath := "migrations"
+	if s.config.TestMode {
+		migrationsPath = "testdata/migrations"
+	}
+	iofsMigrationsDir, err := iofs.New(s.migrationDir, migrationsPath)
 	if err != nil {
 		return WrapRiverError(Err_DB_OPERATION_FAILURE, err).Message("Error loading migrations")
 	}
