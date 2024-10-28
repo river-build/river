@@ -52,6 +52,8 @@ export type StreamEncryptionEvents = {
         }[],
     ) => void
     userDeviceKeyMessage: (streamId: string, userId: string, userDevice: UserDevice) => void
+    mlsGroupInfo: (streamId: string, commit: Uint8Array) => void
+    mlsCommit: (streamId: string, commit: Uint8Array) => void
 }
 
 export type SyncedStreamEvents = {

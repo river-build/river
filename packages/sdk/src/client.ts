@@ -156,6 +156,7 @@ type SendChannelMessageOptions = {
     beforeSendEventHook?: Promise<void>
     onLocalEventAppended?: (localId: string) => void
     disableTags?: boolean // if true, tags will not be added to the message
+    useMls?: boolean
 }
 
 export class Client
@@ -1382,14 +1383,19 @@ export class Client
         body: string,
         mentions?: ChannelMessage_Post_Mention[],
         attachments: ChannelMessage_Post_Attachment[] = [],
+        opts?: SendChannelMessageOptions,
     ): Promise<{ eventId: string }> {
-        return this.sendChannelMessage_Text(streamId, {
-            content: {
-                body,
-                mentions: mentions ?? [],
-                attachments: attachments,
+        return this.sendChannelMessage_Text(
+            streamId,
+            {
+                content: {
+                    body,
+                    mentions: mentions ?? [],
+                    attachments: attachments,
+                },
             },
-        })
+            opts,
+        )
     }
 
     async sendChannelMessage(
@@ -1407,6 +1413,7 @@ export class Client
         }
         return this.makeAndSendChannelMessageEvent(streamId, payload, localId, {
             disableTags: opts?.disableTags,
+            useMls: opts?.useMls,
         })
     }
 
@@ -1414,7 +1421,7 @@ export class Client
         streamId: string,
         payload: ChannelMessage,
         localId?: string,
-        opts?: { disableTags?: boolean },
+        opts?: { disableTags?: boolean; useMls?: boolean },
     ) {
         const stream = this.stream(streamId)
         check(isDefined(stream), 'stream not found')
@@ -1461,7 +1468,9 @@ export class Client
 
         const tags = opts?.disableTags === true ? undefined : makeTags(payload, stream.view)
         const cleartext = payload.toJsonString()
-        const message = await this.encryptGroupEvent(payload, streamId)
+        const message = opts?.useMls
+            ? await this.encryptGroupEventMls(payload, streamId)
+            : await this.encryptGroupEvent(payload, streamId)
         message.refEventId = getRefEventIdFromChannelMessage(payload)
 
         if (!message) {
@@ -2336,6 +2345,15 @@ export class Client
 
     // Encrypt event using GroupEncryption.
     public encryptGroupEvent(event: Message, streamId: string): Promise<EncryptedData> {
+        if (!this.cryptoBackend) {
+            throw new Error('crypto backend not initialized')
+        }
+        const cleartext = event.toJsonString()
+        return this.cryptoBackend.encryptGroupEvent(streamId, cleartext)
+    }
+
+    // Encrypt event using MLS.
+    public encryptGroupEventMls(event: Message, streamId: string): Promise<EncryptedData> {
         if (!this.cryptoBackend) {
             throw new Error('crypto backend not initialized')
         }
