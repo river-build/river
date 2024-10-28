@@ -9,8 +9,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {DropStorage} from "./DropStorage.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 import {MerkleProofLib} from "solady/utils/MerkleProofLib.sol";
-
-// contracts
+import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
 
 abstract contract DropFacetBase is IDropFacetBase {
   using DropStorage for DropStorage.Layout;
@@ -96,22 +95,25 @@ abstract contract DropFacetBase is IDropFacetBase {
     bool resetEligibility
   ) internal {
     // get the existing claim condition count and start id
-    uint256 existingStartId = ds.conditionStartId;
-    uint256 existingConditionCount = ds.conditionCount;
+    (uint48 existingStartId, uint48 existingConditionCount) = (
+      ds.conditionStartId,
+      ds.conditionCount
+    );
 
     /// @dev If the claim conditions are being reset, we assign a new uid to the claim conditions.
     /// which ends up resetting the eligibility of the claim conditions in `supplyClaimedByWallet`.
     uint256 newConditionCount = conditions.length;
-    uint256 newStartId = existingStartId;
+    uint48 newStartId = existingStartId;
     if (resetEligibility) {
-      newStartId = existingStartId + existingConditionCount;
+      // Use highest condition id + 1 as the new start id when resetting
+      newStartId = ds.highestConditionId + 1;
     }
 
-    ds.conditionCount = newConditionCount;
+    ds.conditionCount = SafeCastLib.toUint48(newConditionCount);
     ds.conditionStartId = newStartId;
 
-    uint256 lastConditionTimestamp;
-    for (uint256 i; i < newConditionCount; ++i) {
+    uint48 lastConditionTimestamp;
+    for (uint48 i; i < newConditionCount; ++i) {
       ClaimCondition calldata newCondition = conditions[i];
       if (lastConditionTimestamp >= newCondition.startTimestamp) {
         CustomRevert.revertWith(
@@ -137,10 +139,16 @@ abstract contract DropFacetBase is IDropFacetBase {
       lastConditionTimestamp = newCondition.startTimestamp;
     }
 
+    // Update highest condition id if needed
+    uint256 lastConditionId = newStartId + newConditionCount - 1;
+    if (lastConditionId > ds.highestConditionId) {
+      ds.highestConditionId = SafeCastLib.toUint48(lastConditionId);
+    }
+
     // if resetEligibility is true, we assign new uids to the claim conditions
     // so we delete claim conditions with UID < newStartId
     if (resetEligibility) {
-      for (uint256 i = existingStartId; i < newStartId; i++) {
+      for (uint48 i = existingStartId; i < newStartId; i++) {
         delete ds.conditionById[i];
       }
     } else {

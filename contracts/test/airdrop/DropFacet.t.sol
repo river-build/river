@@ -835,6 +835,111 @@ contract DropFacetTest is
     assertEq(slot, DropStorage.STORAGE_SLOT, "slot");
   }
 
+  function test_IncompleteEligibilityReset()
+    external
+    givenTokensMinted(TOTAL_TOKEN_AMOUNT)
+  {
+    // Setup initial conditions
+    ClaimCondition[] memory initialConditions = new ClaimCondition[](3);
+    initialConditions[0] = _createClaimCondition(
+      block.timestamp,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
+    initialConditions[1] = _createClaimCondition(
+      block.timestamp + 1 days,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
+    initialConditions[2] = _createClaimCondition(
+      block.timestamp + 2 days,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
+    vm.prank(deployer);
+    dropFacet.setClaimConditions(initialConditions, false);
+
+    // Sanity check
+    uint256 supplyClaimed = dropFacet.getSupplyClaimedByWallet(bob, 2);
+    assertEq(supplyClaimed, 0, "Bob has not claimed yet");
+
+    // Simulate a claim for condition id 2
+    uint256 bobIndex = treeIndex[bob];
+    bytes32[] memory proof = merkleTree.getProof(tree, bobIndex);
+    vm.warp(block.timestamp + 2 days + 1);
+    vm.prank(bob);
+    dropFacet.claimWithPenalty(
+      Claim({
+        conditionId: 2,
+        account: bob,
+        quantity: amounts[bobIndex],
+        proof: proof
+      })
+    );
+
+    // Bob claim is now higher than zero
+    supplyClaimed = dropFacet.getSupplyClaimedByWallet(bob, 2);
+    assertGt(supplyClaimed, 0, "Bob succesfully claimed");
+
+    // Set new conditions without resetting eligibility
+    ClaimCondition[] memory intermediateConditions = new ClaimCondition[](2);
+    intermediateConditions[0] = _createClaimCondition(
+      block.timestamp + 3 days,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
+    intermediateConditions[1] = _createClaimCondition(
+      block.timestamp + 4 days,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
+    vm.prank(deployer);
+    dropFacet.setClaimConditions(intermediateConditions, false);
+
+    // Verify that condition 2 was deleted after setting intermediateConditions
+    ClaimCondition memory condition = dropFacet.getClaimConditionById(2);
+    assertEq(condition.merkleRoot, bytes32(0), "Condition should be empty");
+    assertEq(condition.supplyClaimed, 0, "Condition should be empty");
+    assertEq(condition.maxClaimableSupply, 0, "Condition should be empty");
+    assertEq(condition.penaltyBps, 0, "Condition should be empty");
+    assertEq(condition.endTimestamp, 0, "Condition should be empty");
+    assertEq(condition.startTimestamp, 0, "Condition should be empty");
+    assertEq(condition.currency, address(0), "Condition should be empty");
+
+    // Set final conditions with resetEligibility true
+    ClaimCondition[] memory finalConditions = new ClaimCondition[](3);
+    finalConditions[0] = _createClaimCondition(
+      block.timestamp + 5 days,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
+    finalConditions[1] = _createClaimCondition(
+      block.timestamp + 6 days,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
+    finalConditions[2] = _createClaimCondition(
+      block.timestamp + 7 days,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
+    vm.prank(deployer);
+    dropFacet.setClaimConditions(finalConditions, true);
+
+    // Attempt to claim again for the new condition id 2
+    vm.warp(block.timestamp + 7 days + 1);
+    vm.prank(bob);
+    vm.expectRevert(DropFacet__MerkleRootNotSet.selector);
+    dropFacet.claimWithPenalty(
+      Claim({
+        conditionId: 2,
+        account: bob,
+        quantity: amounts[bobIndex],
+        proof: proof
+      })
+    );
+  }
+
   // =============================================================
   //                           Internal
   // =============================================================
