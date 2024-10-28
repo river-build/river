@@ -699,8 +699,8 @@ contract RewardsDistributionV2Test is
     rewardsDistributionFacet.withdraw(depositId);
   }
 
-  function test_withdraw() public {
-    test_fuzz_withdraw(1 ether, OPERATOR, 0, address(this));
+  function test_withdraw() public returns (uint256 depositId) {
+    return test_fuzz_withdraw(1 ether, OPERATOR, 0, address(this));
   }
 
   function test_fuzz_withdraw(
@@ -708,8 +708,8 @@ contract RewardsDistributionV2Test is
     address operator,
     uint256 commissionRate,
     address beneficiary
-  ) public {
-    uint256 depositId = test_fuzz_initiateWithdraw(
+  ) public returns (uint256 depositId) {
+    depositId = test_fuzz_initiateWithdraw(
       amount,
       operator,
       commissionRate,
@@ -723,13 +723,29 @@ contract RewardsDistributionV2Test is
 
     rewardsDistributionFacet.withdraw(depositId);
 
+    verifyWithdraw(address(this), depositId, 0, amount, operator, beneficiary);
+  }
+
+  function test_withdraw_redelegate_shouldResultInZeroStake() public {
+    uint256 depositId = test_withdraw();
+
+    rewardsDistributionFacet.redelegate(depositId, OPERATOR);
+
+    verifyStake(address(this), depositId, 0, OPERATOR, 0, address(this));
+  }
+
+  function test_withdraw_withdrawAgain() public {
+    uint256 depositId = test_withdraw();
+
+    rewardsDistributionFacet.withdraw(depositId);
+
     verifyWithdraw(
       address(this),
       depositId,
-      amount,
-      amount,
-      operator,
-      beneficiary
+      0,
+      1 ether,
+      OPERATOR,
+      address(this)
     );
   }
 
@@ -1106,6 +1122,7 @@ contract RewardsDistributionV2Test is
     assertEq(deposit.amount, amount, "amount");
     assertEq(deposit.owner, depositor, "owner");
     assertEq(deposit.delegatee, delegatee, "delegatee");
+    assertEq(deposit.pendingWithdrawal, 0, "pendingWithdrawal");
     assertEq(deposit.beneficiary, beneficiary, "beneficiary");
     assertApproxEqAbs(
       deposit.commissionEarningPower,
@@ -1140,7 +1157,7 @@ contract RewardsDistributionV2Test is
   function verifyWithdraw(
     address depositor,
     uint256 depositId,
-    uint96 depositAmount,
+    uint96 pendingWithdrawal,
     uint96 withdrawAmount,
     address operator,
     address beneficiary
@@ -1158,7 +1175,7 @@ contract RewardsDistributionV2Test is
     assertEq(deposit.owner, depositor, "owner");
     assertEq(deposit.commissionEarningPower, 0, "commissionEarningPower");
     assertEq(deposit.delegatee, address(0), "delegatee");
-    assertEq(deposit.pendingWithdrawal, depositAmount, "pendingWithdrawal");
+    assertEq(deposit.pendingWithdrawal, pendingWithdrawal, "pendingWithdrawal");
     assertEq(deposit.beneficiary, beneficiary, "beneficiary");
 
     assertEq(

@@ -244,9 +244,13 @@ contract RewardsDistribution is
     address owner = deposit.owner;
     _revertIfNotDepositOwner(owner);
 
-    address proxy = ds.proxyById[depositId];
     amount = deposit.pendingWithdrawal;
-    ds.staking.stakeToken.safeTransferFrom(proxy, owner, amount);
+    deposit.pendingWithdrawal = 0;
+
+    if (amount != 0) {
+      address proxy = ds.proxyById[depositId];
+      ds.staking.stakeToken.safeTransferFrom(proxy, owner, amount);
+    }
   }
 
   // TODO: transfer rewards when a space redelegates
