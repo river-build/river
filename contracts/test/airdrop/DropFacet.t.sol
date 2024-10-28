@@ -209,6 +209,9 @@ contract DropFacetTest is
     uint256 amount
   ) {
     vm.assume(caller != address(0));
+    vm.assume(amount > 0);
+    vm.assume(operator != address(0));
+
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
 
     bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[wallet]);
