@@ -1,5 +1,5 @@
 import { Outlet, useNavigate } from 'react-router-dom'
-import { useCallback, useMemo } from 'react'
+import { Suspense, useCallback, useMemo } from 'react'
 import {
     useDm,
     useGdm,
@@ -10,11 +10,14 @@ import {
     useUserGdms,
     useUserSpaces,
 } from '@river-build/react-sdk'
+import { suspend } from 'suspend-react'
 import { GridSidePanel } from '@/components/layout/grid-side-panel'
 import { Button } from '@/components/ui/button'
 import { CreateSpace } from '@/components/form/space/create'
 import { JoinSpace } from '@/components/form/space/join'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Avatar } from '@/components/ui/avatar'
+import { shortenAddress } from '@/utils/address'
 
 export const DashboardRoute = () => {
     const navigate = useNavigate()
@@ -98,13 +101,15 @@ export const DashboardRoute = () => {
 
                     <span className="text-xs">Your direct messages</span>
                     <ScrollArea className="flex h-[calc(100dvh-18rem-1/4%)]">
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-2">
                             {dmStreamIds.map((dmStreamId) => (
-                                <DmInfo
-                                    key={dmStreamId}
-                                    dmStreamId={dmStreamId}
-                                    onDmChange={navigateToDm}
-                                />
+                                <Suspense key={dmStreamId} fallback={<div>Loading...</div>}>
+                                    <DmInfo
+                                        key={dmStreamId}
+                                        dmStreamId={dmStreamId}
+                                        onDmChange={navigateToDm}
+                                    />
+                                </Suspense>
                             ))}
                         </div>
                     </ScrollArea>
@@ -163,24 +168,28 @@ const DmInfo = ({
 }) => {
     const sync = useSyncAgent()
     const { data: dm } = useDm(dmStreamId)
-
-    // geez
     const member = useMemo(() => {
-        const dm = sync.dms.getDmByStreamId(dmStreamId)
-        const userIds = dm.members.data.userIds
-        const myself = dm.members.myself
-        const other = dm.members.get(
-            userIds.find((userId) => userId !== myself.userId) ?? myself.userId,
-        )
-        return other ? other : myself
-    }, [dmStreamId, sync.dms])
+        const dm = sync.dms.byStreamId(dmStreamId)
+        // TODO: We may want to move this to the core of react-sdk
+        // Adding a `suspense` option to the `useObservable` hook would make this easier.
+        const members = suspend(async () => {
+            await dm.members.when((x) => x.data.initialized === true)
+            return dm.members
+        }, [dmStreamId, sync, dm])
+        const other = members.data.userIds.find((userId) => userId !== sync.userId)
+        if (!other) {
+            return members.myself
+        }
+        return members.get(other)
+    }, [dmStreamId, sync])
+    const { userId, username, displayName } = useMember(member)
 
-    const { username } = useMember(member)
     return (
-        <div>
-            <Button variant="outline" onClick={() => onDmChange(dm.id)}>
-                {username || 'Unnamed DM'}
-            </Button>
-        </div>
+        <button className="flex items-center gap-2" onClick={() => onDmChange(dm.id)}>
+            <Avatar userId={userId} className="h-10 w-10 rounded-full border border-neutral-200" />
+            <p className="font-mono text-sm font-medium">
+                {userId === sync.userId ? 'You' : displayName || username || shortenAddress(userId)}
+            </p>
+        </button>
     )
 }
