@@ -263,7 +263,7 @@ contract RewardsDistribution is
       _revertIfNotClaimer(operator);
     }
     // If the beneficiary is an operator, only the claimer can claim the reward
-    else if (_isOperator(beneficiary)) {
+    else if (_isActiveOperator(beneficiary)) {
       _revertIfNotClaimer(beneficiary);
     }
     // If the beneficiary is not an operator or space, only the beneficiary can claim the reward

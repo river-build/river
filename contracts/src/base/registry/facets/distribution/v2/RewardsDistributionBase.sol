@@ -11,7 +11,7 @@ import {LibClone} from "solady/utils/LibClone.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
-import {NodeOperatorStorage} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
+import {NodeOperatorStorage, NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
 import {SpaceDelegationStorage} from "contracts/src/base/registry/facets/delegation/SpaceDelegationStorage.sol";
 import {StakingRewards} from "./StakingRewards.sol";
 import {RewardsDistributionStorage} from "./RewardsDistributionStorage.sol";
@@ -87,11 +87,11 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
     return nos.commissionByOperator[delegatee];
   }
 
-  /// @dev Checks if the delegatee is an operator
-  function _isOperator(address delegatee) internal view returns (bool) {
+  /// @dev Checks if the delegatee is an active operator
+  function _isActiveOperator(address delegatee) internal view returns (bool) {
     NodeOperatorStorage.Layout storage nos = NodeOperatorStorage.layout();
-    // TODO: check operator status
-    return nos.operators.contains(delegatee);
+    if (!nos.operators.contains(delegatee)) return false;
+    return nos.statusByOperator[delegatee] == NodeOperatorStatus.Active;
   }
 
   /// @dev Checks if the delegatee is a space
@@ -106,7 +106,7 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
   ) internal view returns (address operator) {
     SpaceDelegationStorage.Layout storage sd = SpaceDelegationStorage.layout();
     operator = sd.operatorBySpace[space];
-    if (!_isOperator(operator)) {
+    if (!_isActiveOperator(operator)) {
       CustomRevert.revertWith(RewardsDistribution__NotOperatorOrSpace.selector);
     }
   }
@@ -150,7 +150,7 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
 
   /// @dev Reverts if the delegatee is not an operator or space
   function _revertIfNotOperatorOrSpace(address delegatee) internal view {
-    if (!(_isOperator(delegatee) || _isSpace(delegatee))) {
+    if (!(_isActiveOperator(delegatee) || _isSpace(delegatee))) {
       CustomRevert.revertWith(RewardsDistribution__NotOperatorOrSpace.selector);
     }
   }

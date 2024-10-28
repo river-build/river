@@ -12,6 +12,7 @@ import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/Messa
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
+import {NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
 import {StakingRewards} from "contracts/src/base/registry/facets/distribution/v2/StakingRewards.sol";
 import {RewardsDistributionStorage} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistributionStorage.sol";
 
@@ -64,6 +65,8 @@ contract RewardsDistributionV2Test is
     vm.prank(deployer);
     rewardsDistributionFacet.setRewardNotifier(NOTIFIER, true);
     registerOperator(OPERATOR);
+    setOperatorStatus(OPERATOR, NodeOperatorStatus.Approved);
+    setOperatorStatus(OPERATOR, NodeOperatorStatus.Active);
 
     rewardDuration = rewardsDistributionFacet.stakingState().rewardDuration;
 
@@ -500,7 +503,7 @@ contract RewardsDistributionV2Test is
       beneficiary
     );
 
-    setOperatorCommissionRate(operator, commissionRate1);
+    resetOperatorCommissionRate(operator, commissionRate1);
 
     rewardsDistributionFacet.changeBeneficiary(depositId, beneficiary);
 
@@ -950,7 +953,7 @@ contract RewardsDistributionV2Test is
   function test_fuzz_currentSpaceDelegationReward(uint8 count) public {
     vm.assume(count != 0);
     uint256 commissionRate = 1000;
-    setOperatorCommissionRate(OPERATOR, commissionRate);
+    resetOperatorCommissionRate(OPERATOR, commissionRate);
 
     bridgeTokensForUser(address(this), 1 ether * uint256(count));
     river.approve(address(rewardsDistributionFacet), type(uint256).max);
@@ -982,6 +985,8 @@ contract RewardsDistributionV2Test is
   modifier givenOperator(address operator, uint256 commissionRate) {
     registerOperator(operator);
     setOperatorCommissionRate(operator, commissionRate);
+    setOperatorStatus(operator, NodeOperatorStatus.Approved);
+    setOperatorStatus(operator, NodeOperatorStatus.Active);
     _;
   }
 
@@ -997,18 +1002,35 @@ contract RewardsDistributionV2Test is
     address operator,
     uint256 commissionRate
   ) internal {
-    vm.assume(operator != address(0));
     commissionRate = bound(commissionRate, 0, 10000);
     vm.prank(operator);
     operatorFacet.setCommissionRate(commissionRate);
   }
 
   function setOperatorClaimAddress(address operator, address claimer) internal {
-    vm.assume(operator != address(0));
     vm.assume(claimer != address(0));
     vm.assume(claimer != operator);
     vm.prank(operator);
     operatorFacet.setClaimAddressForOperator(claimer, operator);
+  }
+
+  function setOperatorStatus(
+    address operator,
+    NodeOperatorStatus newStatus
+  ) internal {
+    vm.prank(deployer);
+    NodeOperatorFacet(baseRegistry).setOperatorStatus(operator, newStatus);
+  }
+
+  function resetOperatorCommissionRate(
+    address operator,
+    uint256 commissionRate
+  ) internal {
+    setOperatorStatus(operator, NodeOperatorStatus.Exiting);
+    setOperatorStatus(operator, NodeOperatorStatus.Standby);
+    setOperatorCommissionRate(operator, commissionRate);
+    setOperatorStatus(operator, NodeOperatorStatus.Approved);
+    setOperatorStatus(operator, NodeOperatorStatus.Active);
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
