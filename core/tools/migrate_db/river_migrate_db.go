@@ -107,6 +107,15 @@ func getTargetDbPool(ctx context.Context, requireSchema bool) (*pgxpool.Pool, *d
 	return pool, &info, nil
 }
 
+func getStreamCount(ctx context.Context, pool *pgxpool.Pool) (int, error) {
+	var streamCount int
+	err := pool.QueryRow(ctx, "SELECT count(*) FROM es").Scan(&streamCount)
+	if err != nil {
+		return 0, wrapError("Failed to count streams in es table(wrong schema?)", err)
+	}
+	return streamCount, nil
+}
+
 func testDbConnection(ctx context.Context, pool *pgxpool.Pool, info *dbInfo) error {
 	var version string
 	err := pool.QueryRow(ctx, "SELECT version()").Scan(&version)
@@ -117,12 +126,10 @@ func testDbConnection(ctx context.Context, pool *pgxpool.Pool, info *dbInfo) err
 	fmt.Println("Database version:", version)
 
 	if info.schema != "" {
-		var streamCount int
-		err = pool.QueryRow(ctx, "SELECT count(*) FROM es").Scan(&streamCount)
+		streamCount, err := getStreamCount(ctx, pool)
 		if err != nil {
-			return wrapError("Failed to count streams (wrong schema?)", err)
+			return err
 		}
-
 		fmt.Println("Stream count:", streamCount)
 	}
 
@@ -766,6 +773,93 @@ var (
 func init() {
 	rootCmd.AddCommand(copyCmd)
 	copyCmd.Flags().BoolVar(&copyCmdForce, "force", false, "Force copy even if target already has data")
+}
+
+func compareTableCounts(
+	ctx context.Context,
+	source *pgxpool.Pool,
+	target *pgxpool.Pool,
+	streamId string,
+	table string,
+) error {
+	partition := getPartitionName(table, streamId)
+
+	var sourceCount int
+	err := source.QueryRow(ctx, fmt.Sprintf("SELECT count(*) FROM %s", partition)).Scan(&sourceCount)
+	if err != nil {
+		return fmt.Errorf("failed to read count of %s for stream %s from source: %w", partition, streamId, err)
+	}
+
+	var targetCount int
+	err = target.QueryRow(ctx, fmt.Sprintf("SELECT count(*) FROM %s", partition)).Scan(&targetCount)
+	if err != nil {
+		return fmt.Errorf("failed to read count of %s for stream %s from target: %w", partition, streamId, err)
+	}
+
+	if sourceCount != targetCount {
+		return fmt.Errorf(
+			"count mismatch: source %d, target %d, partition %s, stream %s",
+			sourceCount,
+			targetCount,
+			partition,
+			streamId,
+		)
+	}
+	return nil
+}
+
+var validateCmd = &cobra.Command{
+	Use:   "validate",
+	Short: "Validate target database by comparinng counts of objects in each table",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
+
+		sourcePool, _, err := getSourceDbPool(ctx, true)
+		if err != nil {
+			return err
+		}
+
+		targetPool, _, err := getTargetDbPool(ctx, true)
+		if err != nil {
+			return err
+		}
+
+		sourceStreamCount, err := getStreamCount(ctx, sourcePool)
+		if err != nil {
+			return err
+		}
+
+		streamIds, err := getStreamIds(ctx, targetPool)
+		if err != nil {
+			return err
+		}
+
+		if sourceStreamCount != len(streamIds) {
+			return fmt.Errorf("stream count mismatch: source %d, target %d", sourceStreamCount, len(streamIds))
+		}
+
+		for _, id := range streamIds {
+			err = compareTableCounts(ctx, sourcePool, targetPool, id, "minipools")
+			if err != nil {
+				return err
+			}
+			err = compareTableCounts(ctx, sourcePool, targetPool, id, "miniblocks")
+			if err != nil {
+				return err
+			}
+			err = compareTableCounts(ctx, sourcePool, targetPool, id, "miniblock_candidates")
+			if err != nil {
+				return err
+			}
+		}
+
+		fmt.Println("All tables have matching stream counts")
+		return nil
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(validateCmd)
 }
 
 func main() {
