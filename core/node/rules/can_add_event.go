@@ -1247,19 +1247,20 @@ func (ru *aeMlsPayloadRules) validMls() (bool, error) {
 	}
 	switch payload := ru.mls.Content.(type) {
 	case *MemberPayload_MlsPayload_InitializeGroup_:
+		// the initial group state must only be set exactly once
 		if len(groupState.InitialGroupInfo) > 0 {
-			return false, RiverError(Err_INVALID_ARGUMENT, "group state already exists")
+			return false, RiverError(Err_INVALID_ARGUMENT, "initial group state already exists")
 		}
 	case *MemberPayload_MlsPayload_ExternalJoin_:
-		if groupState == nil {
-			return false, RiverError(Err_INVALID_ARGUMENT, "no group state")
+		if len(groupState.InitialGroupInfo) == 0 {
+			return false, RiverError(Err_INVALID_ARGUMENT, "initial group state not set")
 		}
 		if groupState.DeviceKeys[string(payload.ExternalJoin.DeviceKey)] != nil {
 			return false, RiverError(Err_INVALID_ARGUMENT, "device key already exists")
 		}
 	case *MemberPayload_MlsPayload_ProposeLeave_:
-		if groupState == nil {
-			return false, RiverError(Err_INVALID_ARGUMENT, "no group state 2")
+		if len(groupState.InitialGroupInfo) == 0 {
+			return false, RiverError(Err_INVALID_ARGUMENT, "initial group state not set")
 		}
 		if groupState.DeviceKeys[string(payload.ProposeLeave.UserAddress)] == nil {
 			return false, RiverError(Err_INVALID_ARGUMENT, "user is not part of the group")
@@ -1271,8 +1272,8 @@ func (ru *aeMlsPayloadRules) validMls() (bool, error) {
 			return false, RiverError(Err_INVALID_ARGUMENT, "user is already pending")
 		}
 	case *MemberPayload_MlsPayload_CommitLeave_:
-		if groupState == nil {
-			return false, RiverError(Err_INVALID_ARGUMENT, "no group state 3")
+		if len(groupState.InitialGroupInfo) == 0 {
+			return false, RiverError(Err_INVALID_ARGUMENT, "initial group state not set")
 		}
 		hasPendingLeave := slices.ContainsFunc(groupState.PendingLeaves, func(e *MemberPayload_MlsPayload_ProposeLeave) bool {
 			return bytes.Equal(e.UserAddress, payload.CommitLeave.UserAddress)
@@ -1285,8 +1286,8 @@ func (ru *aeMlsPayloadRules) validMls() (bool, error) {
 			return false, RiverError(Err_INVALID_ARGUMENT, "user is not part of the group")
 		}
 	case *MemberPayload_MlsPayload_KeyAnnouncement_:
-		if groupState == nil {
-			return false, RiverError(Err_INVALID_ARGUMENT, "no group state")
+		if len(groupState.InitialGroupInfo) == 0 {
+			return false, RiverError(Err_INVALID_ARGUMENT, "initial group state not set")
 		}
 		for _, keyAndEpoch := range payload.KeyAnnouncement.Keys {
 			if groupState.DeviceKeys[string(keyAndEpoch.Key)] != nil {

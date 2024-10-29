@@ -546,7 +546,7 @@ func update_Snapshot_Member(
 		snapshot.Pins = snapPins
 		return nil
 	case *MemberPayload_Mls:
-		snapshot.MlsGroup = applyMlsPayload(snapshot.MlsGroup, content.Mls)
+		applyMlsPayload(snapshot.MlsGroup, content.Mls)
 		return nil
 	default:
 		return RiverError(Err_INVALID_ARGUMENT, "unknown membership payload type %T", memberPayload.Content)
@@ -809,16 +809,11 @@ func applyMlsPayload(
 	mlsGroup *MemberPayload_Snapshot_MlsGroup,
 	payload *MemberPayload_MlsPayload,
 ) *MemberPayload_Snapshot_MlsGroup {
-	if mlsGroup == nil {
-		mlsGroup = &MemberPayload_Snapshot_MlsGroup{}
-	}
 	switch payload := payload.Content.(type) {
 	case *protocol.MemberPayload_MlsPayload_InitializeGroup_:
 		// group info can only be set exactly once
-		mlsGroup = &protocol.MemberPayload_Snapshot_MlsGroup{
-			InitialGroupInfo: payload.InitializeGroup.GroupInfoWithExternalKey,
-			LatestGroupInfo:  payload.InitializeGroup.GroupInfoWithExternalKey,
-		}
+		mlsGroup.InitialGroupInfo = payload.InitializeGroup.GroupInfoWithExternalKey
+		mlsGroup.LatestGroupInfo = payload.InitializeGroup.GroupInfoWithExternalKey
 	case *protocol.MemberPayload_MlsPayload_CommitLeave_:
 		mlsGroup.DeviceKeys[string(payload.CommitLeave.UserAddress)] = nil
 		mlsGroup.PendingLeaves = removeSorted(mlsGroup.PendingLeaves,
