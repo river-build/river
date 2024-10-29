@@ -613,9 +613,6 @@ func getSSLMode(dbURL string) string {
 func (s *PostgresEventStore) runMigrations(ctx context.Context) error {
 	// Run migrations
 	migrationsPath := "migrations"
-	if s.config.TestMode {
-		migrationsPath = "testdata/migrations"
-	}
 	iofsMigrationsDir, err := iofs.New(s.migrationDir, migrationsPath)
 	if err != nil {
 		return WrapRiverError(Err_DB_OPERATION_FAILURE, err).Message("Error loading migrations")

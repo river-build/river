@@ -58,7 +58,11 @@ func NewPostgresStreamStore(
 	// a bit unfeasable.
 	var migrations fs.FS
 	if poolInfo.Config.TestMode {
-		migrations = testMigrationsDir
+		testMigrations, err := fs.Sub(testMigrationsDir, "testdata")
+		if err != nil {
+			return nil, AsRiverError(err).Func("NewPostgresStreamStore")
+		}
+		migrations = NewLayeredFS(testMigrations.(ReadDirFileFS), migrationsDir)
 	} else {
 		migrations = migrationsDir
 	}
