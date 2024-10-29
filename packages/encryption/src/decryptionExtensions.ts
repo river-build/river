@@ -786,6 +786,7 @@ export abstract class BaseDecryptionExtensions {
     }
 
     private async processMls(mls: MlsGroupInfo | MlsCommit): Promise<void> {
+        console.log('PROCESS MLS', mls)
         if (isMlsGroupInfo(mls)) {
             await this.didReceiveMlsGroupInfo(mls)
         } else {

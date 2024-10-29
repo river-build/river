@@ -81,13 +81,11 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
             }[],
         ) => this.enqueueInitKeySolicitations(streamId, members)
 
-        const onMlsGroupInfo = (streamId: string, commit: Uint8Array) => {
-            console.log('GOT MLS GROUP INFO', streamId, commit.length)
-        }
+        const onMlsGroupInfo = (streamId: string, groupInfo: Uint8Array) =>
+            this.enqueueMls({ streamId, groupInfo })
 
-        const onMlsCommit = (streamId: string, commit: Uint8Array) => {
-            console.log('GOT MLS COMMIT', streamId, commit.length)
-        }
+        const onMlsCommit = (streamId: string, commit: Uint8Array) =>
+            this.enqueueMls({ streamId, commit })
 
         client.on('streamUpToDate', onStreamUpToDate)
         client.on('newGroupSessions', onNewGroupSessions)
@@ -274,10 +272,12 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
     }
 
     public async didReceiveMlsCommit(args: MlsCommit): Promise<void> {
+        console.log('didReceiveMlsCommit')
         // return this.client.didReceiveMlsCommit(args)
     }
 
     public async didReceiveMlsGroupInfo(args: MlsGroupInfo): Promise<void> {
+        console.log('didReceiveMlsGroupInfo')
         await this.client.mls_didReceiveGroupInfo(args.streamId, args.groupInfo)
     }
 

@@ -58,17 +58,18 @@ export class MlsCrypto {
     public async handleGroupInfo(
         streamId: string,
         groupInfo: Uint8Array,
-    ): Promise<Uint8Array | undefined> {
+    ): Promise<{ groupInfo: Uint8Array; commit: Uint8Array } | undefined> {
         if (this.groups.has(streamId)) {
-            return
+            return undefined
         }
-
-        const externalClient = new ExternalClient()
-        const externalGroup = await externalClient.observeGroup(groupInfo)
-
+        console.log('CREATING GROUP FROM BYTES', groupInfo.length)
         const { group, commit } = await this.client.commitExternal(MlsMessage.fromBytes(groupInfo))
         this.groups.set(streamId, group)
-        return commit.toBytes()
+        const updatedGroupInfo = await group.groupInfoMessageAllowingExtCommit(true)
+        return {
+            groupInfo: updatedGroupInfo.toBytes(),
+            commit: commit.toBytes(),
+        }
     }
 
     public hasGroup(streamId: string): boolean {

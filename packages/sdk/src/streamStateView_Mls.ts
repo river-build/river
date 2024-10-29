@@ -34,7 +34,9 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
         this.pendingLeaves = new Set(snapshot.pendingLeaves.map((leave) => leave.userAddress))
         this.commits = snapshot.commits
         this.deviceKeys = snapshot.deviceKeys
-        encryptionEmitter?.emit('mlsGroupInfo', this.streamId, this.latestGroupInfo)
+        if (this.latestGroupInfo.length > 0) {
+            encryptionEmitter?.emit('mlsGroupInfo', this.streamId, this.latestGroupInfo)
+        }
         for (const commit of snapshot.commits) {
             encryptionEmitter?.emit('mlsCommit', this.streamId, commit)
         }
@@ -55,6 +57,7 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
             case 'initializeGroup':
                 this.initialGroupInfo = payload.content.value.groupInfoWithExternalKey
                 encryptionEmitter?.emit('mlsGroupInfo', this.streamId, this.initialGroupInfo)
+                console.log('GOT INITIALIZE GROUP')
                 break
             case 'commitLeave': {
                 const userId = userIdFromAddress(payload.content.value.userAddress)

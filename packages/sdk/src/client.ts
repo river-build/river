@@ -2441,7 +2441,24 @@ export class Client
         if (!this.mlsCrypto) {
             throw new Error('mls backend not initialized')
         }
-        // const w = await this.mlsCrypto.handleGroupInfo(streamId, groupInfo)
-        console.log('GOT GROUP INFO!!!')
+        const groupJoinResult = await this.mlsCrypto.handleGroupInfo(streamId, groupInfo)
+        if (groupJoinResult) {
+            console.log('Performing external join', groupJoinResult)
+            await this.makeEventAndAddToStream(
+                streamId,
+                make_MemberPayload_Mls({
+                    content: {
+                        case: 'externalJoin',
+                        value: {
+                            userAddress: addressFromUserId(this.userId),
+                            deviceKey: this.mlsCrypto.deviceKey,
+                            groupInfoWithExternalKey: groupJoinResult.groupInfo,
+                            commit: groupJoinResult.commit,
+                        },
+                    },
+                }),
+            )
+            console.log('DId perform external join')
+        }
     }
 }
