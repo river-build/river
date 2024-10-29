@@ -1036,7 +1036,7 @@ contract RewardsDistributionV2Test is
     NodeOperatorStatus newStatus
   ) internal {
     vm.prank(deployer);
-    NodeOperatorFacet(baseRegistry).setOperatorStatus(operator, newStatus);
+    operatorFacet.setOperatorStatus(operator, newStatus);
   }
 
   function resetOperatorCommissionRate(
