@@ -26,15 +26,14 @@ const clients = new Map<string, StreamRpcClient>()
 
 export type StreamRpcClient = PromiseClient<typeof StreamService> & { url?: string }
 
-function makeStreamRpcClient(logger: FastifyBaseLogger, url: string): StreamRpcClient {
-	logger.info({ url }, 'Connecting')
-
+export function makeStreamRpcClient(url: string): StreamRpcClient {
 	const options: ConnectTransportOptions = {
 		httpVersion: '2',
 		baseUrl: url,
 		interceptors: [
 			retryInterceptor({ maxAttempts: 3, initialRetryDelay: 2000, maxRetryDelay: 6000 }),
 		],
+		defaultTimeoutMs: 30000,
 	}
 
 	const transport = createConnectTransport(options)
@@ -45,8 +44,12 @@ function makeStreamRpcClient(logger: FastifyBaseLogger, url: string): StreamRpcC
 
 async function getStreamClient(logger: FastifyBaseLogger, streamId: `0x${string}`) {
 	const node = await getNodeForStream(logger, streamId)
-	const client = clients.get(node.url) || makeStreamRpcClient(logger, node.url)
-	clients.set(node.url, client)
+	let client = clients.get(node.url)
+	if (!client) {
+		logger.info({ url: node.url }, 'Connecting')
+		client = makeStreamRpcClient(node.url)
+		clients.set(node.url, client)
+	}
 
 	logger.info({ url: node.url }, 'client connected to node')
 
@@ -189,7 +192,7 @@ export async function getStream(
 		return streamViewFromUnpackedResponse(streamId, unpackedResponse)
 	} catch (e) {
 		logger.error(
-			{ url: client.url, streamId, error: e },
+			{ url: client.url, streamId, err: e },
 			'getStream failed, removing client from cache',
 		)
 		removeClient(logger, client)
