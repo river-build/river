@@ -100,6 +100,16 @@ export interface DecryptionSessionError {
     error?: unknown
 }
 
+export interface MlsGroupInfo {
+    streamId: string
+    groupInfo: Uint8Array
+}
+
+export interface MlsCommit {
+    streamId: string
+    commit: Uint8Array
+}
+
 /**
  *
  * Responsibilities:
@@ -124,6 +134,7 @@ export abstract class BaseDecryptionExtensions {
     private queues = {
         priorityTasks: new Array<() => Promise<void>>(),
         newGroupSession: new Array<NewGroupSessionItem>(),
+        mls: new Array<MlsGroupInfo | MlsCommit>(),
         encryptedContent: new Array<EncryptedContentItem>(),
         missingKeys: new Array<MissingKeysItem>(),
         keySolicitations: new Array<KeySolicitationItem>(),
@@ -205,6 +216,9 @@ export abstract class BaseDecryptionExtensions {
         args: KeyFulfilmentData,
     ): Promise<{ error?: AddEventResponse_Error }>
     public abstract encryptAndShareGroupSessions(args: GroupSessionsData): Promise<void>
+    public abstract didReceiveMlsGroupInfo(args: MlsGroupInfo): Promise<void>
+    public abstract didReceiveMlsCommit(args: MlsCommit): Promise<void>
+
     public abstract shouldPauseTicking(): boolean
     /**
      * uploadDeviceKeys
@@ -302,6 +316,11 @@ export abstract class BaseDecryptionExtensions {
         } else if (index > -1) {
             this.log.debug('cleared key solicitation', keySolicitation)
         }
+    }
+
+    public enqueueMls(mls: MlsGroupInfo | MlsCommit): void {
+        this.queues.mls.push(mls)
+        this.checkStartTicking()
     }
 
     public setStreamUpToDate(streamId: string): void {
@@ -435,6 +454,11 @@ export abstract class BaseDecryptionExtensions {
         if (priorityTask) {
             this.setStatus(DecryptionStatus.updating)
             return priorityTask()
+        }
+
+        const mls = this.queues.mls.shift()
+        if (mls) {
+            return this.processMls(mls)
         }
 
         // update any new group sessions
@@ -585,6 +609,8 @@ export abstract class BaseDecryptionExtensions {
             this.log.debug('retrying decryption', item)
             await this.decryptGroupEvent(item.streamId, item.eventId, item.kind, item.encryptedData)
         } catch (err) {
+            console.log('FAILED TO DECRYPT', err)
+
             const sessionNotFound = isSessionNotFoundError(err)
 
             this.onDecryptionError(item, {
@@ -759,6 +785,13 @@ export abstract class BaseDecryptionExtensions {
         }
     }
 
+    private async processMls(mls: MlsGroupInfo | MlsCommit): Promise<void> {
+        if (isMlsGroupInfo(mls)) {
+            await this.didReceiveMlsGroupInfo(mls)
+        } else {
+            await this.didReceiveMlsCommit(mls)
+        }
+    }
     /**
      * can be overridden to add a delay to the key solicitation response
      */
@@ -874,4 +907,8 @@ function generateLogId(userId: string, deviceKey: string): string {
     const shortKey = shortenHexString(deviceKey)
     const logId = `${shortId}:${shortKey}`
     return logId
+}
+
+function isMlsGroupInfo(item: MlsGroupInfo | MlsCommit): item is MlsGroupInfo {
+    return 'groupInfo' in item
 }

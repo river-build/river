@@ -3,7 +3,17 @@
  */
 
 import { Client } from './client'
-import { makeTestClient } from './util.test'
+import { createEventDecryptedPromise, makeTestClient } from './util.test'
+import {
+    ExternalClient,
+    ExternalGroup,
+    Group,
+    Client as MlsClient,
+    MlsMessage,
+} from '@river-build/mls-rs-wasm'
+
+const utf8Encoder = new TextEncoder()
+const utf8Decoder = new TextDecoder()
 
 describe('dmsMlsTests', () => {
     let clients: Client[] = []
@@ -28,9 +38,12 @@ describe('dmsMlsTests', () => {
         const alicesClient = await makeInitAndStartClient()
         const bobsClient = await makeInitAndStartClient()
         const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
-        const stream = await bobsClient.waitForStream(streamId)
+
+        const bobEventDecryptedPromise = createEventDecryptedPromise(alicesClient, 'hello')
         await expect(
             alicesClient.sendMessage(streamId, 'hello', [], [], { useMls: true }),
         ).toResolve()
+
+        await expect(Promise.all([bobEventDecryptedPromise])).toResolve()
     })
 })

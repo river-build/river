@@ -2290,13 +2290,22 @@ export class Client
         }
         this.logDebug('Cache miss for cleartext', eventId)
 
-        if (!this.cryptoBackend) {
-            throw new Error('crypto backend not initialized')
-        }
-        const cleartext = await this.cryptoBackend.decryptGroupEvent(streamId, encryptedData)
+        if (encryptedData.mlsPayload !== undefined) {
+            if (!this.mlsCrypto) {
+                throw new Error('mls backend not initialized')
+            }
+            const cleartext = await this.mlsCrypto.decrypt(streamId, encryptedData)
+            const string = new TextDecoder().decode(cleartext)
+            return string
+        } else {
+            if (!this.cryptoBackend) {
+                throw new Error('crypto backend not initialized')
+            }
+            const cleartext = await this.cryptoBackend.decryptGroupEvent(streamId, encryptedData)
 
-        await this.persistenceStore.saveCleartext(eventId, cleartext)
-        return cleartext
+            await this.persistenceStore.saveCleartext(eventId, cleartext)
+            return cleartext
+        }
     }
 
     public async encryptAndShareGroupSessions(
@@ -2368,9 +2377,20 @@ export class Client
 
         if (!this.mlsCrypto.hasGroup(streamId)) {
             const groupInfo = await this.mlsCrypto.createGroup(streamId)
+            const deviceKey = this.mlsCrypto.deviceKey
+
             await this.makeEventAndAddToStream(
                 streamId,
-                make_MemberPayload_Mls({ content: { case: 'initialGroupInfo', value: groupInfo } }),
+                make_MemberPayload_Mls({
+                    content: {
+                        case: 'initializeGroup',
+                        value: {
+                            groupInfoWithExternalKey: groupInfo,
+                            userAddress: addressFromUserId(this.userId),
+                            deviceKey: deviceKey,
+                        },
+                    },
+                }),
             )
         }
 
@@ -2415,5 +2435,13 @@ export class Client
 
     public async debugDropStream(syncId: string, streamId: string): Promise<void> {
         await this.rpcClient.info({ debug: ['drop_stream', syncId, streamId] })
+    }
+
+    public async mls_didReceiveGroupInfo(streamId: string, groupInfo: Uint8Array) {
+        if (!this.mlsCrypto) {
+            throw new Error('mls backend not initialized')
+        }
+        // const w = await this.mlsCrypto.handleGroupInfo(streamId, groupInfo)
+        console.log('GOT GROUP INFO!!!')
     }
 }

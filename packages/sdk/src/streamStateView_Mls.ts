@@ -13,8 +13,10 @@ import { logNever } from './check'
 
 export class StreamStateView_Mls extends StreamStateView_AbstractContent {
     readonly streamId: string
-    private groupInfo: Uint8Array | undefined
+    private initialGroupInfo: Uint8Array | undefined
+    private latestGroupInfo: Uint8Array | undefined
     private pendingLeaves: Set<Uint8Array> = new Set()
+    private keys: Map<bigint, Uint8Array> = new Map()
     private commits: Uint8Array[] = []
     private deviceKeys: { [key: string]: MemberPayload_Snapshot_MlsGroup_DeviceKeys } = {}
 
@@ -27,11 +29,12 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
         snapshot: MemberPayload_Snapshot_MlsGroup,
         encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
     ) {
-        this.groupInfo = snapshot.groupInfo
+        this.initialGroupInfo = snapshot.initialGroupInfo
+        this.latestGroupInfo = snapshot.latestGroupInfo
         this.pendingLeaves = new Set(snapshot.pendingLeaves.map((leave) => leave.userAddress))
         this.commits = snapshot.commits
         this.deviceKeys = snapshot.deviceKeys
-        encryptionEmitter?.emit('mlsGroupInfo', this.streamId, this.groupInfo)
+        encryptionEmitter?.emit('mlsGroupInfo', this.streamId, this.latestGroupInfo)
         for (const commit of snapshot.commits) {
             encryptionEmitter?.emit('mlsCommit', this.streamId, commit)
         }
@@ -49,15 +52,16 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
             event.remoteEvent.event.payload.value.content.value
 
         switch (payload.content.case) {
-            case 'initialGroupInfo':
-                this.groupInfo = payload.content.value
-                encryptionEmitter?.emit('mlsGroupInfo', this.streamId, this.groupInfo)
+            case 'initializeGroup':
+                this.initialGroupInfo = payload.content.value.groupInfoWithExternalKey
+                encryptionEmitter?.emit('mlsGroupInfo', this.streamId, this.initialGroupInfo)
                 break
             case 'commitLeave': {
                 const userId = userIdFromAddress(payload.content.value.userAddress)
                 delete this.deviceKeys[userId]
                 this.pendingLeaves.delete(payload.content.value.userAddress)
                 this.commits.push(payload.content.value.commit)
+                this.latestGroupInfo = payload.content.value.groupInfoWithExternalKey
                 this.emitCommit(payload.content.value.commit, encryptionEmitter)
                 break
             }
@@ -72,12 +76,14 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
                 }
                 this.deviceKeys[userId].deviceKeys.push(payload.content.value.deviceKey)
                 this.commits.push(payload.content.value.commit)
+                this.latestGroupInfo = payload.content.value.groupInfoWithExternalKey
                 this.emitCommit(payload.content.value.commit, encryptionEmitter)
                 break
             }
-            case 'join':
-                this.commits.push(payload.content.value.commit)
-                this.emitCommit(payload.content.value.commit, encryptionEmitter)
+            case 'keyAnnouncement':
+                for (const key of payload.content.value.keys) {
+                    this.keys.set(key.epoch, key.key)
+                }
                 break
             case undefined:
                 break

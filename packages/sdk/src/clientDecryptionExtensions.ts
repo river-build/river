@@ -8,6 +8,8 @@ import {
     KeyFulfilmentData,
     KeySolicitationContent,
     KeySolicitationData,
+    MlsCommit,
+    MlsGroupInfo,
     UserDevice,
 } from '@river-build/encryption'
 import {
@@ -80,7 +82,6 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
         ) => this.enqueueInitKeySolicitations(streamId, members)
 
         const onMlsGroupInfo = (streamId: string, commit: Uint8Array) => {
-            //
             console.log('GOT MLS GROUP INFO', streamId, commit.length)
         }
 
@@ -270,6 +271,14 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
             optional: true,
         })
         return { error }
+    }
+
+    public async didReceiveMlsCommit(args: MlsCommit): Promise<void> {
+        // return this.client.didReceiveMlsCommit(args)
+    }
+
+    public async didReceiveMlsGroupInfo(args: MlsGroupInfo): Promise<void> {
+        await this.client.mls_didReceiveGroupInfo(args.streamId, args.groupInfo)
     }
 
     public async uploadDeviceKeys(): Promise<void> {
