@@ -361,7 +361,7 @@ func getMissingPartitionsSql(
 	var ret []string
 	parts, err := queryPartitions(ctx, pool, table)
 	if err != nil {
-		return nil, wrapError("Failed to query partitions for "+table, err)
+		return nil, err
 	}
 	pp := map[string]bool{}
 	for _, p := range parts {
@@ -425,7 +425,7 @@ func getStreamIds(ctx context.Context, pool *pgxpool.Pool) ([]string, error) {
 	rows, _ := pool.Query(ctx, "SELECT stream_id FROM es")
 	stream_ids, err := pgx.CollectRows(rows, pgx.RowTo[string])
 	if err != nil {
-		return nil, wrapError("Failed to read es table f", err)
+		return nil, wrapError("Failed to read es table", err)
 	}
 	return stream_ids, nil
 }
