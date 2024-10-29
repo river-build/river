@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync/atomic"
+	"time"
 
 	"github.com/gammazero/workerpool"
 	"github.com/golang-migrate/migrate/v4"
@@ -404,7 +406,7 @@ func rollbackTx(ctx context.Context, tx pgx.Tx) {
 	_ = tx.Rollback(ctx)
 }
 
-func executeSqlInTx(ctx context.Context, pool *pgxpool.Pool, sql []string) error {
+func executeSqlInTx(ctx context.Context, pool *pgxpool.Pool, sql []string, progressCounter *atomic.Int64) error {
 	tx, err := pool.BeginTx(ctx, pgx.TxOptions{
 		IsoLevel:   pgx.ReadCommitted,
 		AccessMode: pgx.ReadWrite,
@@ -414,16 +416,41 @@ func executeSqlInTx(ctx context.Context, pool *pgxpool.Pool, sql []string) error
 	}
 	defer rollbackTx(ctx, tx)
 
+	batch := &pgx.Batch{}
 	for _, s := range sql {
-		_, err = tx.Exec(ctx, s)
-		if err != nil {
-			return wrapError("Failed to execute SQL", err)
-		}
+		batch.Queue(s)
 	}
+
+	err = tx.SendBatch(ctx, batch).Close()
+	if err != nil {
+		return fmt.Errorf("failed to execute SQL batch for %d queries %v: %w", len(sql), sql, err)
+	}
+
+	progressCounter.Add(int64(len(sql)))
 
 	err = tx.Commit(ctx)
 	if err != nil {
 		return wrapError("Failed to commit transaction", err)
+	}
+
+	progressCounter.Add(int64(len(sql)))
+
+	return nil
+}
+
+func executeSql(ctx context.Context, pool *pgxpool.Pool, sql []string, progressCounter *atomic.Int64) error {
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return wrapError("Failed to acquire connection", err)
+	}
+	defer conn.Release()
+
+	for _, s := range sql {
+		_, err = conn.Exec(ctx, s)
+		if err != nil {
+			return fmt.Errorf("failed to execute SQL '%s': %w", s, err)
+		}
+		progressCounter.Add(1)
 	}
 
 	return nil
@@ -436,6 +463,57 @@ func getStreamIds(ctx context.Context, pool *pgxpool.Pool) ([]string, error) {
 		return nil, wrapError("Failed to read es table", err)
 	}
 	return stream_ids, nil
+}
+
+func reportProgress(ctx context.Context, message string, progressCounter *atomic.Int64) {
+	lastProgress := progressCounter.Load()
+	startTime := time.Now()
+	interval := viper.GetDuration("RIVER_DB_PROGRESS_REPORT_INTERVAL")
+	if interval <= 0 {
+		interval = 10 * time.Second
+	}
+	for {
+		time.Sleep(interval)
+		currentProgress := progressCounter.Load()
+		if currentProgress != lastProgress {
+			fmt.Println(message, currentProgress, "in", time.Since(startTime))
+			lastProgress = currentProgress
+		}
+	}
+}
+
+func executeSqlInParallel(ctx context.Context, pool *pgxpool.Pool, sql []string, message string, inTx bool) error {
+	numWorkers := viper.GetInt("RIVER_DB_NUM_WORKERS")
+	txSize := viper.GetInt("RIVER_DB_TX_SIZE")
+	if txSize <= 0 {
+		txSize = 1
+	}
+
+	workerPool := workerpool.New(numWorkers)
+
+	workItems := chunk(sql, txSize)
+
+	progressCounter := &atomic.Int64{}
+	for _, workItem := range workItems {
+		workerPool.Submit(func() {
+			var err error
+			if inTx {
+				err = executeSqlInTx(ctx, pool, workItem, progressCounter)
+			} else {
+				err = executeSql(ctx, pool, workItem, progressCounter)
+			}
+			if err != nil {
+				fmt.Println("ERROR:", err)
+				os.Exit(1)
+			}
+		})
+	}
+
+	go reportProgress(ctx, message, progressCounter)
+
+	workerPool.StopWait()
+
+	return nil
 }
 
 func createPartitions(
@@ -472,29 +550,7 @@ func createPartitions(
 	}
 	fmt.Println("Creating partitions:", len(sql))
 
-	numWorkers := viper.GetInt("RIVER_DB_NUM_WORKERS")
-	txSize := viper.GetInt("RIVER_DB_TX_SIZE")
-	if txSize <= 0 {
-		txSize = 1
-	}
-
-	workerPool := workerpool.New(numWorkers)
-
-	workItems := chunk(sql, txSize)
-
-	for _, workItem := range workItems {
-		workerPool.Submit(func() {
-			err := executeSqlInTx(ctx, targetPool, workItem)
-			if err != nil {
-				fmt.Println("ERROR:", err)
-				os.Exit(1)
-			}
-		})
-	}
-
-	workerPool.StopWait()
-
-	return nil
+	return executeSqlInParallel(ctx, targetPool, sql, "Partitions created:", true)
 }
 
 var targetPartitionCmd = &cobra.Command{
@@ -589,15 +645,20 @@ var targetDropCmd = &cobra.Command{
 			return wrapError("Failed to list tables in target schema", err)
 		}
 
+		sql := []string{}
 		for _, table := range tables {
 			if strings.HasPrefix(table, "miniblock_candidates_") || strings.HasPrefix(table, "miniblocks_") ||
 				strings.HasPrefix(table, "minipools_") {
-				fmt.Println("Dropping table", table)
-				_, err = pool.Exec(ctx, fmt.Sprintf("DROP TABLE IF EXISTS \"%s\" CASCADE", table))
-				if err != nil {
-					return fmt.Errorf("failed to drop table %s: %w", table, err)
-				}
+				sql = append(sql, fmt.Sprintf("DROP TABLE IF EXISTS \"%s\"", table))
 			}
+		}
+
+		if len(sql) != 0 {
+			err = executeSqlInParallel(ctx, pool, sql, "Tables dropped:", false)
+			if err != nil {
+				return err
+			}
+			fmt.Println("Finished dropping partitions:", len(sql))
 		}
 
 		fmt.Println("Dropping schema and top tables", info.schema)
@@ -688,6 +749,7 @@ func copyStreams(
 	target *pgxpool.Pool,
 	streamIds []string,
 	force bool,
+	progressCounter *atomic.Int64,
 ) error {
 	sourceConn, err := source.Acquire(ctx)
 	if err != nil {
@@ -716,9 +778,7 @@ func copyStreams(
 		return wrapError("Failed to commit transaction", err)
 	}
 
-	for _, s := range streamIds {
-		fmt.Println("Copied stream", s)
-	}
+	progressCounter.Add(int64(len(streamIds)))
 
 	return nil
 }
@@ -762,15 +822,18 @@ func copyData(ctx context.Context, source *pgxpool.Pool, target *pgxpool.Pool, f
 
 	workItems := chunk(newStreamIds, txSize)
 
+	var progressCounter atomic.Int64
 	for _, workItem := range workItems {
 		workerPool.Submit(func() {
-			err := copyStreams(ctx, source, target, workItem, force)
+			err := copyStreams(ctx, source, target, workItem, force, &progressCounter)
 			if err != nil {
 				fmt.Println("ERROR:", err)
 				os.Exit(1)
 			}
 		})
 	}
+
+	go reportProgress(ctx, "Streams copied:", &progressCounter)
 
 	workerPool.StopWait()
 

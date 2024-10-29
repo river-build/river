@@ -28,3 +28,4 @@ List of env vars or settings in `river_migrate_db.env`:
     RIVER_DB_SCHEMA_TARGET_OVERWRITE
     RIVER_DB_NUM_WORKERS
     RIVER_DB_TX_SIZE
+    RIVER_DB_PROGRESS_REPORT_INTERVAL  # duration, i.e. `10s`
