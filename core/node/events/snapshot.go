@@ -814,8 +814,10 @@ func applyMlsPayload(
 		// group info can only be set exactly once
 		mlsGroup = &protocol.MemberPayload_Snapshot_MlsGroup{
 			InitialGroupInfo: payload.InitializeGroup.GroupInfoWithExternalKey,
+			LatestGroupInfo:  payload.InitializeGroup.GroupInfoWithExternalKey,
 		}
 	case *protocol.MemberPayload_MlsPayload_CommitLeave_:
+		mlsGroup.DeviceKeys[string(payload.CommitLeave.UserAddress)] = nil
 		mlsGroup.PendingLeaves = removeSorted(mlsGroup.PendingLeaves,
 			payload.CommitLeave.UserAddress,
 			bytes.Compare,

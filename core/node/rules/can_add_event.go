@@ -1240,28 +1240,59 @@ func (ru *aeUnpinRules) validUnpin() (bool, error) {
 }
 
 func (ru *aeMlsPayloadRules) validMls() (bool, error) {
-	switch ru.mls.Content.(type) {
+	view := ru.params.streamView.(events.JoinableStreamView)
+	groupState, err := view.GetMlsGroup()
+	if err != nil {
+		return false, RiverError(Err_INTERNAL, "failed to get group state")
+	}
+	switch payload := ru.mls.Content.(type) {
 	case *MemberPayload_MlsPayload_InitializeGroup_:
-		view := ru.params.streamView.(events.JoinableStreamView)
-		groupState, err := view.GetMlsGroup()
-		if err != nil {
-			return false, RiverError(Err_INTERNAL, "failed to get group state")
-		}
 		if groupState != nil {
 			return false, RiverError(Err_INVALID_ARGUMENT, "group state already exists")
 		}
-	case *MemberPayload_MlsPayload_CommitLeave_:
-		// check if welcome message is applicable to current group state
-		break
-
 	case *MemberPayload_MlsPayload_ExternalJoin_:
-		break
-
+		if groupState == nil {
+			return false, RiverError(Err_INVALID_ARGUMENT, "no group state")
+		}
+		if groupState.DeviceKeys[string(payload.ExternalJoin.DeviceKey)] != nil {
+			return false, RiverError(Err_INVALID_ARGUMENT, "device key already exists")
+		}
 	case *MemberPayload_MlsPayload_ProposeLeave_:
-
-		break
+		if groupState == nil {
+			return false, RiverError(Err_INVALID_ARGUMENT, "no group state")
+		}
+		if groupState.DeviceKeys[string(payload.ProposeLeave.UserAddress)] == nil {
+			return false, RiverError(Err_INVALID_ARGUMENT, "user is not part of the group")
+		}
+		hasPendingLeave := slices.ContainsFunc(groupState.PendingLeaves, func(e *MemberPayload_MlsPayload_ProposeLeave) bool {
+			return bytes.Equal(e.UserAddress, payload.ProposeLeave.UserAddress)
+		})
+		if hasPendingLeave {
+			return false, RiverError(Err_INVALID_ARGUMENT, "user is already pending")
+		}
+	case *MemberPayload_MlsPayload_CommitLeave_:
+		if groupState == nil {
+			return false, RiverError(Err_INVALID_ARGUMENT, "no group state")
+		}
+		hasPendingLeave := slices.ContainsFunc(groupState.PendingLeaves, func(e *MemberPayload_MlsPayload_ProposeLeave) bool {
+			return bytes.Equal(e.UserAddress, payload.CommitLeave.UserAddress)
+		})
+		if !hasPendingLeave {
+			return false, RiverError(Err_INVALID_ARGUMENT, "user has not proposed to leave")
+		}
+		hasDeviceKeys := groupState.DeviceKeys[string(payload.CommitLeave.UserAddress)] != nil
+		if !hasDeviceKeys {
+			return false, RiverError(Err_INVALID_ARGUMENT, "user is not part of the group")
+		}
 	case *MemberPayload_MlsPayload_KeyAnnouncement_:
-		break
+		if groupState == nil {
+			return false, RiverError(Err_INVALID_ARGUMENT, "no group state")
+		}
+		for _, keyAndEpoch := range payload.KeyAnnouncement.Keys {
+			if groupState.DeviceKeys[string(keyAndEpoch.Key)] != nil {
+				return false, RiverError(Err_INVALID_ARGUMENT, "key for epoch already exists")
+			}
+		}
 	default:
 		return false, RiverError(Err_INVALID_ARGUMENT, "invalid mls payload")
 	}
