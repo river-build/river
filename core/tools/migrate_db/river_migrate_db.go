@@ -426,8 +426,6 @@ func executeSqlInTx(ctx context.Context, pool *pgxpool.Pool, sql []string, progr
 		return fmt.Errorf("failed to execute SQL batch for %d queries %v: %w", len(sql), sql, err)
 	}
 
-	progressCounter.Add(int64(len(sql)))
-
 	err = tx.Commit(ctx)
 	if err != nil {
 		return wrapError("Failed to commit transaction", err)
