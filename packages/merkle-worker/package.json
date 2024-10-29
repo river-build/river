@@ -14,7 +14,8 @@
         "start": "wrangler dev",
         "test": "yarn test:unit",
         "test:unit": "yarn node --experimental-vm-modules $(yarn bin jest)",
-        "cf-typegen": "wrangler types"
+        "cf-typegen": "wrangler types",
+        "generate-merkle": "tsx src/scripts/generateMerkleRoot.ts"
     },
     "devDependencies": {
         "@cloudflare/workers-types": "^4.20241022.0",
@@ -25,6 +26,7 @@
         "miniflare": "^3.20240524.1",
         "prettier": "^2.8.8",
         "ts-jest": "^29.1.1",
+        "tsx": "^4.7.1",
         "typescript": "^5.5.2",
         "wrangler": "^3.60.3"
     },
