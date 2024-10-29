@@ -439,6 +439,8 @@ contract RewardsDistributionV2Test is
     );
   }
 
+  // TODO: test redelegate to the same operator
+
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                     CHANGE BENEFICIARY                     */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/

@@ -38,6 +38,7 @@ interface IRewardsDistributionBase {
   error RewardsDistribution__NotDepositOwner();
   error RewardsDistribution__NotRewardNotifier();
   error RewardsDistribution__NotOperatorOrSpace();
+  error RewardsDistribution__NotActiveOperator();
   error RewardsDistribution__ExpiredDeadline();
   error RewardsDistribution__InvalidSignature();
   error RewardsDistribution__CannotWithdrawFromSelf();

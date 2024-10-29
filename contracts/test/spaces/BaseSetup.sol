@@ -173,6 +173,8 @@ contract BaseSetup is TestUtils, SpaceHelper {
     everyoneSpaceInfo.membership.settings.pricingModule = fixedPricingModule;
 
     vm.startPrank(founder);
+    // create a dummy space so the next one starts at 1
+    ICreateSpace(spaceFactory).createSpace(spaceInfo);
     space = ICreateSpace(spaceFactory).createSpace(spaceInfo);
     everyoneSpace = ICreateSpace(spaceFactory).createSpace(everyoneSpaceInfo);
     vm.stopPrank();
