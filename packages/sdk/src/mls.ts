@@ -72,6 +72,14 @@ export class MlsCrypto {
         }
     }
 
+    public async handleCommit(streamId: string, commit: Uint8Array): Promise<void> {
+        const group = this.groups.get(streamId)
+        if (!group) {
+            throw new Error('Group not found')
+        }
+        await group.processIncomingMessage(MlsMessage.fromBytes(commit))
+    }
+
     public hasGroup(streamId: string): boolean {
         return this.groups.has(streamId)
     }

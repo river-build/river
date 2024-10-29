@@ -809,6 +809,9 @@ func applyMlsPayload(
 	mlsGroup *MemberPayload_Snapshot_MlsGroup,
 	payload *MemberPayload_MlsPayload,
 ) *MemberPayload_Snapshot_MlsGroup {
+	if mlsGroup == nil {
+		mlsGroup = &MemberPayload_Snapshot_MlsGroup{}
+	}
 	switch payload := payload.Content.(type) {
 	case *protocol.MemberPayload_MlsPayload_InitializeGroup_:
 		// group info can only be set exactly once

@@ -2295,7 +2295,9 @@ export class Client
                 throw new Error('mls backend not initialized')
             }
             const cleartext = await this.mlsCrypto.decrypt(streamId, encryptedData)
+            console.log('CLEARTEXT', cleartext)
             const string = new TextDecoder().decode(cleartext)
+            console.log(`DID DECRYPT MLS ${string}`)
             return string
         } else {
             if (!this.cryptoBackend) {
@@ -2394,8 +2396,9 @@ export class Client
             )
         }
 
-        const plaintext = event.toBinary()
-        return this.mlsCrypto.encrypt(streamId, plaintext)
+        const plaintext = event.toJsonString()
+        const binary = new TextEncoder().encode(plaintext)
+        return this.mlsCrypto.encrypt(streamId, binary)
     }
 
     async encryptWithDeviceKeys(
@@ -2444,21 +2447,33 @@ export class Client
         const groupJoinResult = await this.mlsCrypto.handleGroupInfo(streamId, groupInfo)
         if (groupJoinResult) {
             console.log('Performing external join', groupJoinResult)
-            await this.makeEventAndAddToStream(
-                streamId,
-                make_MemberPayload_Mls({
-                    content: {
-                        case: 'externalJoin',
-                        value: {
-                            userAddress: addressFromUserId(this.userId),
-                            deviceKey: this.mlsCrypto.deviceKey,
-                            groupInfoWithExternalKey: groupJoinResult.groupInfo,
-                            commit: groupJoinResult.commit,
+            try {
+                await this.makeEventAndAddToStream(
+                    streamId,
+                    make_MemberPayload_Mls({
+                        content: {
+                            case: 'externalJoin',
+                            value: {
+                                userAddress: addressFromUserId(this.userId),
+                                deviceKey: this.mlsCrypto.deviceKey,
+                                groupInfoWithExternalKey: groupJoinResult.groupInfo,
+                                commit: groupJoinResult.commit,
+                            },
                         },
-                    },
-                }),
-            )
+                    }),
+                )
+            } catch (error) {
+                console.log('ERROR performing external join', error)
+            }
             console.log('DId perform external join')
         }
+    }
+
+    public async mls_didReceiveCommit(streamId: string, commit: Uint8Array) {
+        if (!this.mlsCrypto) {
+            throw new Error('mls backend not initialized')
+        }
+        console.log('Handling commit')
+        await this.mlsCrypto.handleCommit(streamId, commit)
     }
 }

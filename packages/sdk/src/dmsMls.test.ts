@@ -38,12 +38,18 @@ describe('dmsMlsTests', () => {
         const alicesClient = await makeInitAndStartClient()
         const bobsClient = await makeInitAndStartClient()
         const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
+        await expect(bobsClient.waitForStream(streamId)).toResolve()
+        await expect(alicesClient.waitForStream(streamId)).toResolve()
 
-        const bobEventDecryptedPromise = createEventDecryptedPromise(alicesClient, 'hello')
+        const aliceEventDecryptedPromise = createEventDecryptedPromise(alicesClient, 'hello')
         await expect(
             alicesClient.sendMessage(streamId, 'hello', [], [], { useMls: true }),
         ).toResolve()
 
-        await expect(Promise.all([bobEventDecryptedPromise])).toResolve()
+        await expect(
+            bobsClient.sendMessage(streamId, 'hello', [], [], { useMls: true }),
+        ).toResolve()
+
+        await expect(Promise.all([aliceEventDecryptedPromise])).toResolve()
     })
 })

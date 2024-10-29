@@ -189,6 +189,8 @@ func (r *streamViewImpl) GetMlsGroup() (*protocol.MemberPayload_Snapshot_MlsGrou
 	// clone so we don't modify the snapshot
 	if groupState != nil {
 		groupState = proto.Clone(groupState).(*protocol.MemberPayload_Snapshot_MlsGroup)
+	} else {
+		groupState = &protocol.MemberPayload_Snapshot_MlsGroup{}
 	}
 
 	updateFn := func(e *ParsedEvent, miniblockNum int64, eventNum int64) (bool, error) {

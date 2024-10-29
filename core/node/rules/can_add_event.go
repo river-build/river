@@ -1247,7 +1247,7 @@ func (ru *aeMlsPayloadRules) validMls() (bool, error) {
 	}
 	switch payload := ru.mls.Content.(type) {
 	case *MemberPayload_MlsPayload_InitializeGroup_:
-		if groupState != nil {
+		if len(groupState.InitialGroupInfo) > 0 {
 			return false, RiverError(Err_INVALID_ARGUMENT, "group state already exists")
 		}
 	case *MemberPayload_MlsPayload_ExternalJoin_:
@@ -1259,7 +1259,7 @@ func (ru *aeMlsPayloadRules) validMls() (bool, error) {
 		}
 	case *MemberPayload_MlsPayload_ProposeLeave_:
 		if groupState == nil {
-			return false, RiverError(Err_INVALID_ARGUMENT, "no group state")
+			return false, RiverError(Err_INVALID_ARGUMENT, "no group state 2")
 		}
 		if groupState.DeviceKeys[string(payload.ProposeLeave.UserAddress)] == nil {
 			return false, RiverError(Err_INVALID_ARGUMENT, "user is not part of the group")
@@ -1272,7 +1272,7 @@ func (ru *aeMlsPayloadRules) validMls() (bool, error) {
 		}
 	case *MemberPayload_MlsPayload_CommitLeave_:
 		if groupState == nil {
-			return false, RiverError(Err_INVALID_ARGUMENT, "no group state")
+			return false, RiverError(Err_INVALID_ARGUMENT, "no group state 3")
 		}
 		hasPendingLeave := slices.ContainsFunc(groupState.PendingLeaves, func(e *MemberPayload_MlsPayload_ProposeLeave) bool {
 			return bytes.Equal(e.UserAddress, payload.CommitLeave.UserAddress)

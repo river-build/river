@@ -273,7 +273,7 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
 
     public async didReceiveMlsCommit(args: MlsCommit): Promise<void> {
         console.log('didReceiveMlsCommit')
-        // return this.client.didReceiveMlsCommit(args)
+        await this.client.mls_didReceiveCommit(args.streamId, args.commit)
     }
 
     public async didReceiveMlsGroupInfo(args: MlsGroupInfo): Promise<void> {

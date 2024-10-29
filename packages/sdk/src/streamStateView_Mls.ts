@@ -52,7 +52,7 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
         check(event.remoteEvent.event.payload.value.content.case === 'mls')
         const payload: MemberPayload_MlsPayload =
             event.remoteEvent.event.payload.value.content.value
-
+        console.log('GOT Payload', payload.content.case)
         switch (payload.content.case) {
             case 'initializeGroup':
                 this.initialGroupInfo = payload.content.value.groupInfoWithExternalKey
