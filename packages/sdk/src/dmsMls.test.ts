@@ -41,7 +41,13 @@ describe('dmsMlsTests', () => {
         await expect(bobsClient.waitForStream(streamId)).toResolve()
         await expect(alicesClient.waitForStream(streamId)).toResolve()
 
+        // HEAVY WIP — DON*T WORRY
         const aliceEventDecryptedPromise = createEventDecryptedPromise(alicesClient, 'hello')
+
+        // alice's message will:
+        // - trigger a group initialization by alice
+        // - trigger Bob's client to join the group using an external join
+        // by design, bob can _never_ read alice's message until we have external keys in place
         await expect(
             alicesClient.sendMessage(streamId, 'hello', [], [], { useMls: true }),
         ).toResolve()
