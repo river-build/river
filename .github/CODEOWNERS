@@ -26,7 +26,7 @@
 ##
 
 # Order is important; the last matching pattern takes the most
-# precedence. 
+# precedence.
 
 /*.* @brianathere @texuf
 /.github/ @mechanical-turk
@@ -34,8 +34,7 @@
 /.vscode/ @texuf
 /.yarn/ @brianathere
 /assets/ @texuf
-/contracts/ @pfives @giuseppecrj @brianathere @jterzis
-/contracts/src/node-network/ @pfives @giuseppecrj @mechanical-turk
+/contracts/ @pfives @giuseppecrj @jterzis @shuhuiluo
 /core/ @sergekh2
 /core/node/ @sergekh2 @bas-vk
 /core/node/events/ @sergekh2 @texuf
