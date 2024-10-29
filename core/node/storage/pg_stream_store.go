@@ -167,7 +167,7 @@ func createPartitionSuffix(streamId StreamId, reducedParitions bool) string {
 	hash := xxhash.Sum64String(streamId.String())
 	// For test installations, expect 8 partitions, taking 8 bits from the hash
 	if reducedParitions {
-		bt := hash % 8
+		bt := hash % 4
 		return fmt.Sprintf("%v%02x", streamType, bt)
 	}
 	return fmt.Sprintf("%v%016x", streamType, hash)[:3]

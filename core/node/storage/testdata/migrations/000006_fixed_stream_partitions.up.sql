@@ -6,8 +6,8 @@ DO $$
 
 	BEGIN
 
-    -- For test postgres schemas, create 8 partitions instead of the normal 256.
-	FOR i IN 0..7 LOOP
+    -- For test postgres schemas, create 4 partitions instead of the normal 256.
+	FOR i IN 0..3 LOOP
 		suffix = LPAD(TO_HEX(i), 2, '0');
 
         -- Media stream partitions
