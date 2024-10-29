@@ -1241,7 +1241,7 @@ func (ru *aeUnpinRules) validUnpin() (bool, error) {
 
 func (ru *aeMlsPayloadRules) validMls() (bool, error) {
 	switch ru.mls.Content.(type) {
-	case *MemberPayload_MlsPayload_InitialGroupInfo:
+	case *MemberPayload_MlsPayload_InitializeGroup_:
 		view := ru.params.streamView.(events.JoinableStreamView)
 		groupState, err := view.GetMlsGroup()
 		if err != nil {
@@ -1258,10 +1258,9 @@ func (ru *aeMlsPayloadRules) validMls() (bool, error) {
 		break
 
 	case *MemberPayload_MlsPayload_ProposeLeave_:
-		// check if identity is already added
+
 		break
-	case *MemberPayload_MlsPayload_Join_:
-		// check if identity is already added
+	case *MemberPayload_MlsPayload_KeyAnnouncement_:
 		break
 	default:
 		return false, RiverError(Err_INVALID_ARGUMENT, "invalid mls payload")

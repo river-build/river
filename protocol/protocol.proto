@@ -190,7 +190,7 @@ message MemberPayload {
         message KeyAnnouncement {
             message KeyAndEpoch {
                 bytes key = 1;
-                int64 epoch = 2;
+                uint64 epoch = 2;
             }
             repeated KeyAndEpoch keys = 1;
         }
