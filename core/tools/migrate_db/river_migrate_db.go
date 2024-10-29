@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/gammazero/workerpool"
 	"github.com/golang-migrate/migrate/v4"
@@ -570,6 +571,47 @@ var targetListPCmd = &cobra.Command{
 
 func init() {
 	targetCmd.AddCommand(targetListPCmd)
+}
+
+var targetDropCmd = &cobra.Command{
+	Use:   "drop_drop_drop",
+	Short: "Advanced: Destructive: Drop target database schema",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
+		pool, info, err := getTargetDbPool(ctx, true)
+		if err != nil {
+			return err
+		}
+
+		rows, _ := pool.Query(ctx, "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = $1", info.schema)
+		tables, err := pgx.CollectRows(rows, pgx.RowTo[string])
+		if err != nil {
+			return wrapError("Failed to list tables in target schema", err)
+		}
+
+		for _, table := range tables {
+			if strings.HasPrefix(table, "miniblock_candidates_") || strings.HasPrefix(table, "miniblocks_") ||
+				strings.HasPrefix(table, "minipools_") {
+				fmt.Println("Dropping table", table)
+				_, err = pool.Exec(ctx, fmt.Sprintf("DROP TABLE IF EXISTS \"%s\" CASCADE", table))
+				if err != nil {
+					return fmt.Errorf("failed to drop table %s: %w", table, err)
+				}
+			}
+		}
+
+		fmt.Println("Dropping schema and top tables", info.schema)
+		_, err = pool.Exec(ctx, fmt.Sprintf("DROP SCHEMA IF EXISTS \"%s\" CASCADE", info.schema))
+		if err != nil {
+			return fmt.Errorf("failed to drop schema %s: %w", info.schema, err)
+		}
+
+		return nil
+	},
+}
+
+func init() {
+	targetCmd.AddCommand(targetDropCmd)
 }
 
 func copyPart(ctx context.Context, source *pgxpool.Conn, tx pgx.Tx, streamId string, table string, force bool) error {
