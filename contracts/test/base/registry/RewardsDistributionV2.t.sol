@@ -65,8 +65,6 @@ contract RewardsDistributionV2Test is
     vm.prank(deployer);
     rewardsDistributionFacet.setRewardNotifier(NOTIFIER, true);
     registerOperator(OPERATOR);
-    setOperatorStatus(OPERATOR, NodeOperatorStatus.Approved);
-    setOperatorStatus(OPERATOR, NodeOperatorStatus.Active);
 
     rewardDuration = rewardsDistributionFacet.stakingState().rewardDuration;
 
@@ -119,12 +117,18 @@ contract RewardsDistributionV2Test is
     rewardsDistributionFacet.stake(1, address(this), address(this));
   }
 
-  function test_stake_revertIf_amountIsZero() public {
+  function test_stake_revertIf_amountIsZero()
+    public
+    givenOperator(OPERATOR, 0)
+  {
     vm.expectRevert(StakingRewards.StakingRewards__InvalidAmount.selector);
     rewardsDistributionFacet.stake(0, OPERATOR, address(this));
   }
 
-  function test_stake_revertIf_beneficiaryIsZero() public {
+  function test_stake_revertIf_beneficiaryIsZero()
+    public
+    givenOperator(OPERATOR, 0)
+  {
     vm.expectRevert(StakingRewards.StakingRewards__InvalidAddress.selector);
     rewardsDistributionFacet.stake(1, OPERATOR, address(0));
   }
@@ -146,6 +150,7 @@ contract RewardsDistributionV2Test is
     uint256 commissionRate,
     address beneficiary
   ) public givenOperator(operator, commissionRate) returns (uint256 depositId) {
+    vm.assume(depositor != baseRegistry);
     vm.assume(beneficiary != address(0) && beneficiary != operator);
     vm.assume(amount > 0);
     commissionRate = bound(commissionRate, 0, 10000);
@@ -179,6 +184,7 @@ contract RewardsDistributionV2Test is
     givenSpaceHasPointedToOperator(space, operator)
     returns (uint256 depositId)
   {
+    vm.assume(depositor != baseRegistry);
     vm.assume(
       beneficiary != address(0) &&
         beneficiary != operator &&
@@ -734,19 +740,11 @@ contract RewardsDistributionV2Test is
     verifyStake(address(this), depositId, 0, OPERATOR, 0, address(this));
   }
 
-  function test_withdraw_withdrawAgain() public {
+  function test_withdraw_revertIf_withdrawAgain() public {
     uint256 depositId = test_withdraw();
 
+    vm.expectRevert(RewardsDistribution__NoPendingWithdrawal.selector);
     rewardsDistributionFacet.withdraw(depositId);
-
-    verifyWithdraw(
-      address(this),
-      depositId,
-      0,
-      1 ether,
-      OPERATOR,
-      address(this)
-    );
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -843,7 +841,7 @@ contract RewardsDistributionV2Test is
     uint256 rewardAmount,
     uint256 timeLapse
   ) public {
-    vm.assume(depositor != address(this));
+    vm.assume(depositor != address(this) && depositor != baseRegistry);
     vm.assume(operator != OPERATOR && operator != address(this));
     vm.assume(
       beneficiary != operator &&
@@ -945,7 +943,9 @@ contract RewardsDistributionV2Test is
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   /// forge-config: default.fuzz.runs = 64
-  function test_fuzz_getDepositsByDepositor(uint8 count) public {
+  function test_fuzz_getDepositsByDepositor(
+    uint8 count
+  ) public givenOperator(OPERATOR, 0) {
     vm.assume(count != 0);
     bridgeTokensForUser(address(this), 1 ether * uint256(count));
     river.approve(address(rewardsDistributionFacet), type(uint256).max);
@@ -966,10 +966,11 @@ contract RewardsDistributionV2Test is
   }
 
   /// forge-config: default.fuzz.runs = 64
-  function test_fuzz_currentSpaceDelegationReward(uint8 count) public {
+  function test_fuzz_currentSpaceDelegationReward(
+    uint8 count
+  ) public givenOperator(OPERATOR, 1000) {
     vm.assume(count != 0);
     uint256 commissionRate = 1000;
-    resetOperatorCommissionRate(OPERATOR, commissionRate);
 
     bridgeTokensForUser(address(this), 1 ether * uint256(count));
     river.approve(address(rewardsDistributionFacet), type(uint256).max);

@@ -173,8 +173,10 @@ contract RewardsDistribution is
       _getCommissionRate(delegatee)
     );
 
-    address proxy = ds.proxyById[depositId];
-    ds.staking.stakeToken.safeTransferFrom(msg.sender, proxy, amount);
+    if (owner != address(this)) {
+      address proxy = ds.proxyById[depositId];
+      ds.staking.stakeToken.safeTransferFrom(msg.sender, proxy, amount);
+    }
   }
 
   function redelegate(uint256 depositId, address delegatee) external {
@@ -187,9 +189,10 @@ contract RewardsDistribution is
     _revertIfNotOperatorOrSpace(delegatee);
 
     uint96 pendingWithdrawal = deposit.pendingWithdrawal;
+    uint256 commissionRate = _getCommissionRate(delegatee);
 
     if (pendingWithdrawal == 0) {
-      ds.staking.redelegate(deposit, delegatee, _getCommissionRate(delegatee));
+      ds.staking.redelegate(deposit, delegatee, commissionRate);
     } else {
       ds.staking.increaseStake(
         deposit,
@@ -197,14 +200,16 @@ contract RewardsDistribution is
         pendingWithdrawal,
         delegatee,
         deposit.beneficiary,
-        _getCommissionRate(delegatee)
+        commissionRate
       );
       deposit.delegatee = delegatee;
       deposit.pendingWithdrawal = 0;
     }
 
-    address proxy = ds.proxyById[depositId];
-    DelegationProxy(proxy).redelegate(delegatee);
+    if (owner != address(this)) {
+      address proxy = ds.proxyById[depositId];
+      DelegationProxy(proxy).redelegate(delegatee);
+    }
   }
 
   function changeBeneficiary(
@@ -229,12 +234,17 @@ contract RewardsDistribution is
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     StakingRewards.Deposit storage deposit = ds.staking.depositById[depositId];
-    _revertIfNotDepositOwner(deposit.owner);
+    address owner = deposit.owner;
+    _revertIfNotDepositOwner(owner);
 
     amount = ds.staking.withdraw(deposit);
 
-    address proxy = ds.proxyById[depositId];
-    DelegationProxy(proxy).redelegate(address(0));
+    if (owner != address(this)) {
+      address proxy = ds.proxyById[depositId];
+      DelegationProxy(proxy).redelegate(address(0));
+    } else {
+      deposit.pendingWithdrawal = 0;
+    }
   }
 
   function withdraw(uint256 depositId) external returns (uint96 amount) {
@@ -244,10 +254,19 @@ contract RewardsDistribution is
     address owner = deposit.owner;
     _revertIfNotDepositOwner(owner);
 
-    amount = deposit.pendingWithdrawal;
-    deposit.pendingWithdrawal = 0;
+    if (owner == address(this)) {
+      CustomRevert.revertWith(
+        RewardsDistribution__CannotWithdrawFromSelf.selector
+      );
+    }
 
-    if (amount != 0) {
+    amount = deposit.pendingWithdrawal;
+    if (amount == 0) {
+      CustomRevert.revertWith(
+        RewardsDistribution__NoPendingWithdrawal.selector
+      );
+    } else {
+      deposit.pendingWithdrawal = 0;
       address proxy = ds.proxyById[depositId];
       ds.staking.stakeToken.safeTransferFrom(proxy, owner, amount);
     }

@@ -47,10 +47,12 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
       _getCommissionRate(delegatee)
     );
 
-    address proxy = _deployDelegationProxy(depositId, delegatee);
-    ds.depositsByDepositor[owner].add(depositId);
+    if (owner != address(this)) {
+      address proxy = _deployDelegationProxy(depositId, delegatee);
+      ds.depositsByDepositor[owner].add(depositId);
 
-    ds.staking.stakeToken.safeTransferFrom(msg.sender, proxy, amount);
+      ds.staking.stakeToken.safeTransferFrom(msg.sender, proxy, amount);
+    }
   }
 
   function _deployDelegationProxy(
@@ -182,12 +184,9 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
     bytes32 hash,
     bytes calldata signature
   ) internal view {
-    bool _isValid = SignatureCheckerLib.isValidSignatureNowCalldata(
-      signer,
-      hash,
-      signature
-    );
-    if (!_isValid) {
+    if (
+      !SignatureCheckerLib.isValidSignatureNowCalldata(signer, hash, signature)
+    ) {
       CustomRevert.revertWith(RewardsDistribution__InvalidSignature.selector);
     }
   }
