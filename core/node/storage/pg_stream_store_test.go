@@ -77,39 +77,48 @@ func setupStreamStorageTest() (context.Context, *PostgresStreamStore, *testStrea
 }
 
 func TestSqlForStream(t *testing.T) {
-	streamIdString := "20864dd5d959460eec194e629507ab14403e86877549f4a5d6b3eb728adf75d1"
+	streamIdString1 := "20864dd5d959460eec194e629507ab14403e86877549f4a5d6b3eb728adf75d1"
 	streamIdString2 := "20abcdd5d959460eec194e629507ab14403e86877549f4a5d6b3eb728adf75d1"
+	streamIdString_Media := "ff2328dd0e3a8ea52f4f26a5188d3bf7b702d0d8c019cb80fb7d35783d75217e"
 
-	streamId := testutils.StreamIdFromString(streamIdString)
+	streamId1 := testutils.StreamIdFromString(streamIdString1)
 	streamId2 := testutils.StreamIdFromString(streamIdString2)
-	suffix := createTableSuffix(streamId)
-	partition := createPartitionSuffix(streamId, false)
-	reducedCountPartition := createPartitionSuffix(streamId, true)
-	reducedCountPartition2 := createPartitionSuffix(streamId2, true)
+	streamId_Media := testutils.StreamIdFromString(streamIdString_Media)
 
 	// Sanity check
-	require.Equal(t, "80a8e1d562992f654ab5d6fd57bb1a545f12dadb6500c87fa02a897a", suffix)
-	require.Equal(t, "c9", partition)
-	require.Equal(t, "00", reducedCountPartition)
-	require.Equal(t, "03", reducedCountPartition2)
+	// Table suffix:
+	require.Equal(t, "80a8e1d562992f654ab5d6fd57bb1a545f12dadb6500c87fa02a897a", createTableSuffix(streamId1))
+
+	// Partition suffix for regular streams
+	require.Equal(t, "rc9", createPartitionSuffix(streamId1, false))
+	require.Equal(t, "r00", createPartitionSuffix(streamId1, true))
+	require.Equal(t, "r03", createPartitionSuffix(streamId2, true))
+
+	// Partition suffix for media streams
+	require.Equal(t, "md5", createPartitionSuffix(streamId_Media, false))
+	require.Equal(t, "m01", createPartitionSuffix(streamId_Media, true))
 
 	tests := map[string]struct {
 		template string
 		expected string
+		streamId StreamId
 		migrated bool
 		testMode bool
 	}{
 		"simple example (legacy)": {
+			streamId: streamId1,
 			template: "SELECT COALESCE(MAX(seq_num), -1) FROM {{miniblocks}} WHERE stream_id = $1",
 			expected: "SELECT COALESCE(MAX(seq_num), -1) FROM miniblocks_80a8e1d562992f654ab5d6fd57bb1a545f12dadb6500c87fa02a897a WHERE stream_id = $1",
 		},
 		"table name is a substring within other ranges of the query (legacy)": {
+			streamId: streamId1,
 			template: `INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
 			CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);`,
 			expected: `INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
 			CREATE TABLE miniblocks_80a8e1d562992f654ab5d6fd57bb1a545f12dadb6500c87fa02a897a PARTITION OF miniblocks FOR VALUES IN ($1);`,
 		},
 		"query containing non-templated references to table names (legacy)": {
+			streamId: streamId1,
 			template: `select * from INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, 0);
 			CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);
 			CREATE TABLE {{minipools}} PARTITION OF minipools FOR VALUES IN ($1);
@@ -124,18 +133,21 @@ func TestSqlForStream(t *testing.T) {
 			INSERT INTO minipools_80a8e1d562992f654ab5d6fd57bb1a545f12dadb6500c87fa02a897a (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
 		},
 		"simple example": {
+			streamId: streamId1,
 			migrated: true,
 			template: "SELECT COALESCE(MAX(seq_num), -1) FROM {{miniblocks}} WHERE stream_id = $1",
-			expected: "SELECT COALESCE(MAX(seq_num), -1) FROM miniblocks_c9 WHERE stream_id = $1",
+			expected: "SELECT COALESCE(MAX(seq_num), -1) FROM miniblocks_rc9 WHERE stream_id = $1",
 		},
 		"table name is a substring within other ranges of the query": {
+			streamId: streamId1,
 			migrated: true,
 			template: `INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
 			CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);`,
 			expected: `INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
-			CREATE TABLE miniblocks_c9 PARTITION OF miniblocks FOR VALUES IN ($1);`,
+			CREATE TABLE miniblocks_rc9 PARTITION OF miniblocks FOR VALUES IN ($1);`,
 		},
 		"query containing non-templated references to table names": {
+			streamId: streamId1,
 			migrated: true,
 			template: `select * from INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, 0);
 			CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);
@@ -144,27 +156,30 @@ func TestSqlForStream(t *testing.T) {
 			INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
 			INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
 			expected: `select * from INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, 0);
-			CREATE TABLE miniblocks_c9 PARTITION OF miniblocks FOR VALUES IN ($1);
-			CREATE TABLE minipools_c9 PARTITION OF minipools FOR VALUES IN ($1);
-			CREATE TABLE miniblock_candidates_c9 PARTITION OF miniblock_candidates for values in ($1);
-			INSERT INTO miniblocks_c9 (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
-			INSERT INTO minipools_c9 (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
+			CREATE TABLE miniblocks_rc9 PARTITION OF miniblocks FOR VALUES IN ($1);
+			CREATE TABLE minipools_rc9 PARTITION OF minipools FOR VALUES IN ($1);
+			CREATE TABLE miniblock_candidates_rc9 PARTITION OF miniblock_candidates for values in ($1);
+			INSERT INTO miniblocks_rc9 (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
+			INSERT INTO minipools_rc9 (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
 		},
 		"simple example (test)": {
+			streamId: streamId1,
 			migrated: true,
 			testMode: true,
 			template: "SELECT COALESCE(MAX(seq_num), -1) FROM {{miniblocks}} WHERE stream_id = $1",
-			expected: "SELECT COALESCE(MAX(seq_num), -1) FROM miniblocks_00 WHERE stream_id = $1",
+			expected: "SELECT COALESCE(MAX(seq_num), -1) FROM miniblocks_r00 WHERE stream_id = $1",
 		},
 		"table name is a substring within other ranges of the query (test)": {
+			streamId: streamId1,
 			migrated: true,
 			testMode: true,
 			template: `INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
 			CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);`,
 			expected: `INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
-			CREATE TABLE miniblocks_00 PARTITION OF miniblocks FOR VALUES IN ($1);`,
+			CREATE TABLE miniblocks_r00 PARTITION OF miniblocks FOR VALUES IN ($1);`,
 		},
 		"query containing non-templated references to table names (test)": {
+			streamId: streamId1,
 			migrated: true,
 			testMode: true,
 			template: `select * from INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, 0);
@@ -174,11 +189,74 @@ func TestSqlForStream(t *testing.T) {
 			INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
 			INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
 			expected: `select * from INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, 0);
-			CREATE TABLE miniblocks_00 PARTITION OF miniblocks FOR VALUES IN ($1);
-			CREATE TABLE minipools_00 PARTITION OF minipools FOR VALUES IN ($1);
-			CREATE TABLE miniblock_candidates_00 PARTITION OF miniblock_candidates for values in ($1);
-			INSERT INTO miniblocks_00 (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
-			INSERT INTO minipools_00 (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
+			CREATE TABLE miniblocks_r00 PARTITION OF miniblocks FOR VALUES IN ($1);
+			CREATE TABLE minipools_r00 PARTITION OF minipools FOR VALUES IN ($1);
+			CREATE TABLE miniblock_candidates_r00 PARTITION OF miniblock_candidates for values in ($1);
+			INSERT INTO miniblocks_r00 (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
+			INSERT INTO minipools_r00 (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
+		},
+		"simple example (media)": {
+			streamId: streamId_Media,
+			migrated: true,
+			template: "SELECT COALESCE(MAX(seq_num), -1) FROM {{miniblocks}} WHERE stream_id = $1",
+			expected: "SELECT COALESCE(MAX(seq_num), -1) FROM miniblocks_md5 WHERE stream_id = $1",
+		},
+		"table name is a substring within other ranges of the query (media)": {
+			streamId: streamId_Media,
+			migrated: true,
+			template: `INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
+			CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);`,
+			expected: `INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
+			CREATE TABLE miniblocks_md5 PARTITION OF miniblocks FOR VALUES IN ($1);`,
+		},
+		"query containing non-templated references to table names (media)": {
+			streamId: streamId_Media,
+			migrated: true,
+			template: `select * from INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, 0);
+			CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);
+			CREATE TABLE {{minipools}} PARTITION OF minipools FOR VALUES IN ($1);
+			CREATE TABLE {{miniblock_candidates}} PARTITION OF miniblock_candidates for values in ($1);
+			INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
+			INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
+			expected: `select * from INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, 0);
+			CREATE TABLE miniblocks_md5 PARTITION OF miniblocks FOR VALUES IN ($1);
+			CREATE TABLE minipools_md5 PARTITION OF minipools FOR VALUES IN ($1);
+			CREATE TABLE miniblock_candidates_md5 PARTITION OF miniblock_candidates for values in ($1);
+			INSERT INTO miniblocks_md5 (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
+			INSERT INTO minipools_md5 (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
+		},
+		"simple example (media, test)": {
+			streamId: streamId_Media,
+			migrated: true,
+			testMode: true,
+			template: "SELECT COALESCE(MAX(seq_num), -1) FROM {{miniblocks}} WHERE stream_id = $1",
+			expected: "SELECT COALESCE(MAX(seq_num), -1) FROM miniblocks_m01 WHERE stream_id = $1",
+		},
+		"table name is a substring within other ranges of the query (media, test)": {
+			streamId: streamId_Media,
+			migrated: true,
+			testMode: true,
+			template: `INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
+			CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);`,
+			expected: `INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
+			CREATE TABLE miniblocks_m01 PARTITION OF miniblocks FOR VALUES IN ($1);`,
+		},
+		"query containing non-templated references to table names (media, test)": {
+			streamId: streamId_Media,
+			migrated: true,
+			testMode: true,
+			template: `select * from INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, 0);
+			CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);
+			CREATE TABLE {{minipools}} PARTITION OF minipools FOR VALUES IN ($1);
+			CREATE TABLE {{miniblock_candidates}} PARTITION OF miniblock_candidates for values in ($1);
+			INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
+			INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
+			expected: `select * from INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, 0);
+			CREATE TABLE miniblocks_m01 PARTITION OF miniblocks FOR VALUES IN ($1);
+			CREATE TABLE minipools_m01 PARTITION OF minipools FOR VALUES IN ($1);
+			CREATE TABLE miniblock_candidates_m01 PARTITION OF miniblock_candidates for values in ($1);
+			INSERT INTO miniblocks_m01 (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
+			INSERT INTO minipools_m01 (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
 		},
 	}
 
@@ -186,7 +264,7 @@ func TestSqlForStream(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			sql := sqlForStream(
 				tc.template,
-				streamId,
+				tc.streamId,
 				escapeSqlOpts{
 					migrated: tc.migrated,
 					testMode: tc.testMode,

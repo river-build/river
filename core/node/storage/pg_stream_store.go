@@ -153,6 +153,14 @@ func (s *PostgresStreamStore) txRunnerWithUUIDCheck(
 // createPartitionSuffix determines the partition mapping for a particular stream id the
 // hex encoding of the first byte of the xxHash of the stream ID.
 func createPartitionSuffix(streamId StreamId, reducedParitions bool) string {
+	// Media streams have separate partitions to handle the different data shapes and access
+	// patterns. The partition suffix is prefixed with an "m". Regular streams are assigned to
+	// partitions prefixed with "r", e.g. "miniblocks_ra4".
+	streamType := "r"
+	if streamId.Type() == STREAM_MEDIA_BIN {
+		streamType = "m"
+	}
+
 	// Do not hash the stream bytes directly, but hash the hex encoding of the stream id, which is
 	// what we store in the database. This leaves the door open for installing xxhash on postgres
 	// and debugging this way in the future.
@@ -160,9 +168,9 @@ func createPartitionSuffix(streamId StreamId, reducedParitions bool) string {
 	// For test installations, expect 8 partitions, taking 8 bits from the hash
 	if reducedParitions {
 		bt := hash % 8
-		return fmt.Sprintf("%02x", bt)
+		return fmt.Sprintf("%v%02x", streamType, bt)
 	}
-	return fmt.Sprintf("%016x", hash)[:2]
+	return fmt.Sprintf("%v%016x", streamType, hash)[:3]
 }
 
 type escapeSqlOpts struct {
