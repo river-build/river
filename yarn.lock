@@ -4339,6 +4339,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@river-build/mls-rs-wasm@portal:./../../../mls-rs-wasm/pkg::locator=%40river-build%2Fsdk%40workspace%3Apackages%2Fsdk":
+  version: 0.0.0-use.local
+  resolution: "@river-build/mls-rs-wasm@portal:./../../../mls-rs-wasm/pkg::locator=%40river-build%2Fsdk%40workspace%3Apackages%2Fsdk"
+  languageName: node
+  linkType: soft
+
 "@river-build/playground@workspace:packages/playground":
   version: 0.0.0-use.local
   resolution: "@river-build/playground@workspace:packages/playground"
@@ -4463,6 +4469,7 @@ __metadata:
     "@jest/globals": ^29.6.2
     "@river-build/dlog": "workspace:^"
     "@river-build/encryption": "workspace:^"
+    "@river-build/mls-rs-wasm": "portal:./../../../mls-rs-wasm/pkg"
     "@river-build/proto": "workspace:^"
     "@river-build/web3": "workspace:^"
     "@testing-library/jest-dom": ^5.16.5
