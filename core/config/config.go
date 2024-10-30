@@ -214,9 +214,15 @@ type DatabaseConfig struct {
 	// Intention is to migrate to "read committed" for performance reasons after testing is complete.
 	IsolationLevel string
 
+	// MigrateStreamCreation indicates to the database that all new streams should be allocated
+	// in one of the 256 pre-allocated stream partitions for either regular or media streams instead
+	// of allocating new tables per stream according to the legacy schema. If this flag is unset, a
+	// node will continue to allocate new tables for each stream as it is created.
+	MigrateStreamCreation bool
+
 	// TestMode indicates that the database is being constructed under test conditions and indicates
 	// that certain internal configurations should be applied for the sake of test setup performance.
-	// As an example, the stream storage service will run unit tests with 8 partitions, while the
+	// As an example, the stream storage service will run unit tests with 4 stream partitions, while the
 	// production setting for the node is 256 partitions.
 	TestMode bool
 }

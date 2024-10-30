@@ -140,6 +140,7 @@ func TestLegacyStreamDataAfterStoreMigration(t *testing.T) {
 
 	dbCfg.StartupDelay = 2 * time.Millisecond
 	dbCfg.Extra = strings.Replace(dbCfg.Extra, "pool_max_conns=1000", "pool_max_conns=10", 1)
+	dbCfg.MigrateStreamCreation = false
 
 	pool, err := CreateAndValidatePgxPool(
 		ctx,
@@ -149,7 +150,7 @@ func TestLegacyStreamDataAfterStoreMigration(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	deprecatedStore, err := NewDeprecatedPostgresStreamStore(
+	deprecatedStore, err := NewPostgresStreamStore(
 		ctx,
 		pool,
 		GenShortNanoid(),
@@ -244,7 +245,8 @@ func TestLegacyStreamDataAfterStoreMigration(t *testing.T) {
 
 	deprecatedStore.Close(ctx)
 
-	// Create store
+	// Create migrated store
+	dbCfg.MigrateStreamCreation = true
 	pool, err = CreateAndValidatePgxPool(
 		ctx,
 		dbCfg,
@@ -620,6 +622,7 @@ func TestLegacyStreamArchiveDataAfterStoreMigration(t *testing.T) {
 
 	dbCfg.StartupDelay = 2 * time.Millisecond
 	dbCfg.Extra = strings.Replace(dbCfg.Extra, "pool_max_conns=1000", "pool_max_conns=10", 1)
+	dbCfg.MigrateStreamCreation = false
 
 	pool, err := CreateAndValidatePgxPool(
 		ctx,
@@ -629,7 +632,7 @@ func TestLegacyStreamArchiveDataAfterStoreMigration(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	deprecatedStore, err := NewDeprecatedPostgresStreamStore(
+	deprecatedStore, err := NewPostgresStreamStore(
 		ctx,
 		pool,
 		GenShortNanoid(),
@@ -654,7 +657,8 @@ func TestLegacyStreamArchiveDataAfterStoreMigration(t *testing.T) {
 
 	deprecatedStore.Close(ctx)
 
-	// Create store
+	// Create migrated store
+	dbCfg.MigrateStreamCreation = true
 	pool, err = CreateAndValidatePgxPool(
 		ctx,
 		dbCfg,
