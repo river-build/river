@@ -13,7 +13,10 @@ export class MlsCrypto {
     private client!: MlsClient
     private userAddress: string
     private groups: Map<string, MlsGroup> = new Map()
+    // temp, same for all groups for now
+    private keys: { epoch: bigint; key: Uint8Array }[] = []
     public deviceKey: Uint8Array
+
     constructor(userAddress: string) {
         this.userAddress = userAddress
         this.deviceKey = hexToBytes(userAddress)
@@ -26,6 +29,8 @@ export class MlsCrypto {
     public async createGroup(streamId: string): Promise<Uint8Array> {
         const group = await this.client.createGroup()
         this.groups.set(streamId, group)
+        const epochSecret = await group.currentEpochSecret()
+        this.keys.push({ epoch: 0n, key: epochSecret.toBytes() })
         return (await group.groupInfoMessageAllowingExtCommit(true)).toBytes()
     }
 
@@ -52,12 +57,18 @@ export class MlsCrypto {
             throw new Error('Not an MLS payload')
         }
 
-        const cipherSuite = new CipherSuite()
-        const epochSecret = await group.currentEpochSecret()
-        const keys = await cipherSuite.kemDerive(epochSecret)
-        const ciphertext = HpkeCiphertext.fromBytes(encryptedData.mlsPayload)
-        const plaintext = await cipherSuite.open(ciphertext, keys.secretKey, keys.publicKey)
-        return plaintext
+        for (const key of this.keys) {
+            try {
+                const cipherSuite = new CipherSuite()
+                const epochSecret = await group.currentEpochSecret()
+                const keys = await cipherSuite.kemDerive(epochSecret)
+                const ciphertext = HpkeCiphertext.fromBytes(encryptedData.mlsPayload)
+                return await cipherSuite.open(ciphertext, keys.secretKey, keys.publicKey)
+            } catch (e) {
+                console.log(`error decrypting using epoch ${key.epoch}`)
+            }
+        }
+        throw new Error('Failed to decrypt')
     }
 
     public async externalJoin(
@@ -95,24 +106,10 @@ export class MlsCrypto {
         return this.groups.has(streamId)
     }
 
-    public async processOutstandingEvents(streamId: string) {
-        const group = this.groups.get(streamId)
-        if (!group) {
-            throw new Error('Group not found')
-        }
-
-        // 1. Clear pending leaves -> Commit?
-        // look inside stream view, look inside the pending leaves dictionary, clear it
-        const commits: Uint8Array[] = []
-        for (const commit of commits) {
-            await group.processIncomingMessage(MlsMessage.fromBytes(commit))
-        }
-    }
-
     public async handleKeyAnnouncement(
         streamId: string,
         keys: { epoch: bigint; key: Uint8Array }[],
     ) {
-        //
+        this.keys.push(...keys)
     }
 }

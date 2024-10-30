@@ -617,6 +617,7 @@ export abstract class BaseDecryptionExtensions {
 
             if (isMlsGroupNotFoundError(err)) {
                 this.queues.mls.push({ streamId: item.streamId })
+                return
             }
 
             const sessionNotFound = isSessionNotFoundError(err)
@@ -916,6 +917,13 @@ function isSessionNotFoundError(err: unknown): boolean {
 function isMlsGroupNotFoundError(err: unknown): boolean {
     if (err !== null && typeof err === 'object' && 'message' in err) {
         return (err.message as string).includes('MLS group not found')
+    }
+    return false
+}
+
+function isMlsMissingEpochError(err: unknown): boolean {
+    if (err !== null && typeof err === 'object' && 'message' in err) {
+        return (err.message as string).includes('MLS epoch not found')
     }
     return false
 }
