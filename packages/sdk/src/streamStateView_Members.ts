@@ -70,6 +70,13 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
         if (!snapshot.members) {
             return
         }
+
+        if (snapshot.members.mlsGroup) {
+            this.mls.applySnapshot(snapshot.members.mlsGroup, encryptionEmitter)
+        } else {
+            console.log('NO MLS GROUP')
+        }
+
         for (const member of snapshot.members.joined) {
             const userId = userIdFromAddress(member.userAddress)
             this.joined.set(userId, {
@@ -133,10 +140,6 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
             cleartexts,
             encryptionEmitter,
         )
-
-        if (snapshot.members.mlsGroup) {
-            this.mls.applySnapshot(snapshot.members.mlsGroup, encryptionEmitter)
-        }
 
         this.solicitHelper.initSolicitations(Array.from(this.joined.values()), encryptionEmitter)
 

@@ -5,6 +5,7 @@ import {
     Client as MlsClient,
     Group as MlsGroup,
     MlsMessage,
+    Secret,
 } from '@river-build/mls-rs-wasm'
 import { EncryptedData } from '@river-build/proto'
 import { hexToBytes } from 'ethereum-cryptography/utils'
@@ -14,7 +15,7 @@ export class MlsCrypto {
     private userAddress: string
     private groups: Map<string, MlsGroup> = new Map()
     // temp, same for all groups for now
-    private keys: { epoch: bigint; key: Uint8Array }[] = []
+    public keys: { epoch: bigint; key: Uint8Array }[] = []
     public deviceKey: Uint8Array
 
     constructor(userAddress: string) {
@@ -30,7 +31,7 @@ export class MlsCrypto {
         const group = await this.client.createGroup()
         this.groups.set(streamId, group)
         const epochSecret = await group.currentEpochSecret()
-        this.keys.push({ epoch: 0n, key: epochSecret.toBytes() })
+        this.keys.push({ epoch: group.currentEpoch, key: epochSecret.toBytes() })
         return (await group.groupInfoMessageAllowingExtCommit(true)).toBytes()
     }
 
@@ -44,6 +45,8 @@ export class MlsCrypto {
         const epochSecret = await group.currentEpochSecret()
         const keys = await cipherSuite.kemDerive(epochSecret)
         const ciphertext = await cipherSuite.seal(keys.publicKey, message)
+
+        console.log(`ENCRYPTING USING ${group.currentEpoch} ${keys.secretKey.toBytes()}`)
         return new EncryptedData({ algorithm: 'mls', mlsPayload: ciphertext.toBytes() })
     }
 
@@ -60,8 +63,7 @@ export class MlsCrypto {
         for (const key of this.keys) {
             try {
                 const cipherSuite = new CipherSuite()
-                const epochSecret = await group.currentEpochSecret()
-                const keys = await cipherSuite.kemDerive(epochSecret)
+                const keys = await cipherSuite.kemDerive(Secret.fromBytes(key.key))
                 const ciphertext = HpkeCiphertext.fromBytes(encryptedData.mlsPayload)
                 return await cipherSuite.open(ciphertext, keys.secretKey, keys.publicKey)
             } catch (e) {
@@ -81,6 +83,8 @@ export class MlsCrypto {
 
         const { group, commit } = await this.client.commitExternal(MlsMessage.fromBytes(groupInfo))
         this.groups.set(streamId, group)
+        const epochSecret = await group.currentEpochSecret()
+        this.keys.push({ epoch: group.currentEpoch, key: epochSecret.toBytes() })
         const updatedGroupInfo = await group.groupInfoMessageAllowingExtCommit(true)
         return {
             groupInfo: updatedGroupInfo.toBytes(),
@@ -96,9 +100,10 @@ export class MlsCrypto {
         if (!group) {
             throw new Error('Group not found')
         }
-        await group.processIncomingMessage(MlsMessage.fromBytes(commit))
         const secret = await group.currentEpochSecret()
         const epoch = group.currentEpoch
+        console.log('COMMIT PROCESSED', epoch)
+        await group.processIncomingMessage(MlsMessage.fromBytes(commit))
         return { key: secret.toBytes(), epoch: epoch }
     }
 
@@ -110,6 +115,7 @@ export class MlsCrypto {
         streamId: string,
         keys: { epoch: bigint; key: Uint8Array }[],
     ) {
+        console.log('GOT KEY ANNOUNCEMENT', keys)
         this.keys.push(...keys)
     }
 }

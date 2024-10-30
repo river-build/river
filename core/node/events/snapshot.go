@@ -845,6 +845,9 @@ func applyMlsPayload(
 				return leave.UserAddress
 			})
 	case *MemberPayload_MlsPayload_KeyAnnouncement_:
+		if mlsGroup.GetEpochKeys() == nil {
+			mlsGroup.EpochKeys = make(map[uint64][]byte)
+		}
 		for _, keyAndEpoch := range payload.KeyAnnouncement.Keys {
 			mlsGroup.EpochKeys[keyAndEpoch.Epoch] = keyAndEpoch.Key
 		}

@@ -283,7 +283,6 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
 
     public async keyAnnouncementMls(args: MlsKeyAnnouncement): Promise<void> {
         await this.client.mls_didReceiveKeyAnnouncement(args.streamId, args.keys)
-        // await this.client.mls_didReceiveKeyAnnouncement(streamId, keys)
     }
 
     public async uploadDeviceKeys(): Promise<void> {

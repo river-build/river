@@ -2296,7 +2296,9 @@ export class Client
                 throw new Error('mls backend not initialized')
             }
             const cleartext = await this.mlsCrypto.decrypt(streamId, encryptedData)
+
             const string = new TextDecoder().decode(cleartext)
+            console.log('GOT CLEARTEXT', string)
             return string
         } else {
             if (!this.cryptoBackend) {
@@ -2491,9 +2493,20 @@ export class Client
         if (!this.mlsCrypto) {
             throw new Error('mls backend not initialized')
         }
-        const result = await this.mlsCrypto.handleCommit(streamId, commit)
-        if (result) {
-            console.log(`Announcing KEY + EPOCH ${result.epoch}`)
+        const stream = this.streams.get(streamId)
+        if (!stream) {
+            throw new Error('stream not found')
+        }
+        try {
+            const result = await this.mlsCrypto.handleCommit(streamId, commit)
+        } catch (error) {
+            console.log('Error handling commit', error)
+        }
+        const keys = this.mlsCrypto.keys.filter(
+            (key) => !stream.view.membershipContent.mls.keys.has(key.epoch),
+        )
+        if (keys.length > 0) {
+            console.log('SENDING KEYS', keys)
             try {
                 await this.makeEventAndAddToStream(
                     streamId,
@@ -2501,7 +2514,7 @@ export class Client
                         content: {
                             case: 'keyAnnouncement',
                             value: {
-                                keys: [{ key: result.key, epoch: result.epoch }],
+                                keys: keys,
                             },
                         },
                     }),
@@ -2520,5 +2533,8 @@ export class Client
             throw new Error('mls backend not initialized')
         }
         await this.mlsCrypto.handleKeyAnnouncement(streamId, keys)
+        const user = this.userId
+        const k = this.mlsCrypto.keys
+        console.log(`GOT KEYS ${user}`, k)
     }
 }

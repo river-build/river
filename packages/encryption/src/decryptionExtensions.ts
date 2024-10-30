@@ -613,13 +613,25 @@ export abstract class BaseDecryptionExtensions {
             this.log.debug('retrying decryption', item)
             await this.decryptGroupEvent(item.streamId, item.eventId, item.kind, item.encryptedData)
         } catch (err) {
-            // console.log('FAILED TO DECRYPT', err)
+            console.log('FAILED TO DECRYPT', err)
 
-            if (isMlsGroupNotFoundError(err)) {
-                this.queues.mls.push({ streamId: item.streamId })
+            if (item.encryptedData.mlsPayload !== undefined) {
+                const streamId = item.streamId
+                const sessionId = 'all-the-same'
+                if (!this.decryptionFailures[streamId]) {
+                    this.decryptionFailures[streamId] = { [sessionId]: [item] }
+                } else if (!this.decryptionFailures[streamId][sessionId]) {
+                    this.decryptionFailures[streamId][sessionId] = [item]
+                } else if (!this.decryptionFailures[streamId][sessionId].includes(item)) {
+                    this.decryptionFailures[streamId][sessionId].push(item)
+                }
+                if (isMlsGroupNotFoundError(err)) {
+                    this.queues.mls.push({ streamId: item.streamId })
+                } else if (isMlsMissingEpochError(err)) {
+                    console.log('Was missing epoch...')
+                }
                 return
             }
-
             const sessionNotFound = isSessionNotFoundError(err)
 
             this.onDecryptionError(item, {
@@ -799,6 +811,12 @@ export abstract class BaseDecryptionExtensions {
             await this.didReceiveMlsCommit(cmd)
         } else if (isKeyAnnouncement(cmd)) {
             await this.keyAnnouncementMls(cmd)
+
+            console.log('HAD FAILURES?', this.decryptionFailures[cmd.streamId]['all-the-same'])
+            for (const item of this.decryptionFailures[cmd.streamId]['all-the-same']) {
+                this.log.debug('retrying decryption', item)
+                await this.processEncryptedContentItem(item)
+            }
         } else {
             await this.externalJoinMls(cmd)
         }

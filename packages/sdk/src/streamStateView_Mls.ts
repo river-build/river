@@ -16,7 +16,7 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
     public initialGroupInfo: Uint8Array | undefined
     public latestGroupInfo: Uint8Array | undefined
     private pendingLeaves: Set<Uint8Array> = new Set()
-    private keys: Map<bigint, Uint8Array> = new Map()
+    public keys: Map<bigint, Uint8Array> = new Map()
     private commits: Uint8Array[] = []
     private deviceKeys: { [key: string]: MemberPayload_Snapshot_MlsGroup_DeviceKeys } = {}
 
@@ -34,9 +34,12 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
         this.pendingLeaves = new Set(snapshot.pendingLeaves.map((leave) => leave.userAddress))
         this.commits = snapshot.commits
         this.deviceKeys = snapshot.deviceKeys
+
         for (const commit of snapshot.commits) {
             encryptionEmitter?.emit('mlsCommit', this.streamId, commit)
         }
+
+        console.log('GOT KEYVALS', snapshot.epochKeys)
     }
 
     appendEvent(
