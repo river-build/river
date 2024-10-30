@@ -544,8 +544,8 @@ func (s *PostgresEventStore) runMigrations(ctx context.Context) error {
 		return WrapRiverError(Err_DB_OPERATION_FAILURE, err).Message("Error loading migrations")
 	}
 
-	// Create new pool with same config to run migrations,
-	// it seems that pgxmigrate.WithInstance assumes ownership of the pool.
+	// Create a new connection pool with the same configuration for migrations.
+	// Note: pgxmigrate.WithInstance takes ownership of the provided pool.
 	pool, err := pgxpool.NewWithConfig(ctx, s.poolConfig)
 	if err != nil {
 		return WrapRiverError(Err_DB_OPERATION_FAILURE, err).Message("Failed to create pool for migrations")
