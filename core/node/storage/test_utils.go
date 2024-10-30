@@ -17,7 +17,7 @@ type LayeredFS struct {
 	fallback ReadDirFileFS
 }
 
-var _ fs.FS = (*LayeredFS)(nil)
+var _ ReadDirFileFS = (*LayeredFS)(nil)
 
 // New creates a new LayeredFS with the given primary and fallback filesystems
 func NewLayeredFS(primary, fallback ReadDirFileFS) *LayeredFS {
