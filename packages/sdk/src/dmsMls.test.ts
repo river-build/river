@@ -59,7 +59,6 @@ describe('dmsMlsTests', () => {
         ).toResolve()
 
         await waitFor(() => {
-            console.log('CHECKING...')
             const stream = bobsClient.streams.get(streamId)
             check(stream?._view.membershipContent.mls.latestGroupInfo !== undefined)
         })
