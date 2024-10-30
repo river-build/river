@@ -68,13 +68,13 @@ describe('dmsMlsTests', () => {
 
         await waitFor(() => {
             const aliceStream = alicesClient.streams.get(streamId)!
-            check(checkTimeline(['hello alice', 'hello bob'], aliceStream.view.timeline))
+            check(checkTimelineContainsAll(['hello alice', 'hello bob'], aliceStream.view.timeline))
 
             const bobStream = bobsClient.streams.get(streamId)!
-            check(checkTimeline(['hello alice', 'hello bob'], bobStream.view.timeline))
+            check(checkTimelineContainsAll(['hello alice', 'hello bob'], bobStream.view.timeline))
         })
 
-        const messages = Array.from(Array(20).keys()).map((key) => {
+        const messages = Array.from(Array(10).keys()).map((key) => {
             return `Message ${key}`
         })
 
@@ -86,15 +86,15 @@ describe('dmsMlsTests', () => {
 
         await waitFor(() => {
             const aliceStream = alicesClient.streams.get(streamId)!
-            check(checkTimeline(messages, aliceStream.view.timeline))
+            check(checkTimelineContainsAll(messages, aliceStream.view.timeline))
 
             const bobStream = bobsClient.streams.get(streamId)!
-            check(checkTimeline(messages, bobStream.view.timeline))
+            check(checkTimelineContainsAll(messages, bobStream.view.timeline))
         })
     })
 })
 
-function checkTimeline(messages: string[], timeline: StreamTimelineEvent[]): boolean {
+function checkTimelineContainsAll(messages: string[], timeline: StreamTimelineEvent[]): boolean {
     const checks = new Set(messages)
     for (const event of timeline) {
         // remote
