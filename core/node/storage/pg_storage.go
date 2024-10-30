@@ -32,6 +32,7 @@ import (
 type PostgresEventStore struct {
 	config       *config.DatabaseConfig
 	pool         *pgxpool.Pool
+	poolConfig   *pgxpool.Config
 	schemaName   string
 	dbUrl        string
 	migrationDir embed.FS
@@ -169,10 +170,11 @@ func (s *PostgresEventStore) txRunner(
 }
 
 type PgxPoolInfo struct {
-	Pool   *pgxpool.Pool
-	Url    string
-	Schema string
-	Config *config.DatabaseConfig
+	Pool       *pgxpool.Pool
+	PoolConfig *pgxpool.Config
+	Url        string
+	Schema     string
+	Config     *config.DatabaseConfig
 }
 
 func createAndValidatePgxPool(
@@ -213,10 +215,11 @@ func createAndValidatePgxPool(
 	}
 
 	return &PgxPoolInfo{
-		Pool:   pool,
-		Url:    databaseUrl,
-		Schema: databaseSchemaName,
-		Config: cfg,
+		Pool:       pool,
+		PoolConfig: poolConf,
+		Url:        databaseUrl,
+		Schema:     databaseSchemaName,
+		Config:     cfg,
 	}, nil
 }
 
@@ -458,6 +461,7 @@ func (s *PostgresEventStore) init(
 
 	s.config = poolInfo.Config
 	s.pool = poolInfo.Pool
+	s.poolConfig = poolInfo.PoolConfig
 	s.schemaName = poolInfo.Schema
 	s.dbUrl = poolInfo.Url
 	s.migrationDir = migrations
@@ -541,8 +545,16 @@ func (s *PostgresEventStore) runMigrations(ctx context.Context) error {
 		return WrapRiverError(Err_DB_OPERATION_FAILURE, err).Message("Error loading migrations")
 	}
 
+	// Create new pool with same config to run migrations,
+	// it seems that pgxmigrate.WithInstance assumes ownership of the pool.
+	pool, err := pgxpool.NewWithConfig(ctx, s.poolConfig)
+	if err != nil {
+		return WrapRiverError(Err_DB_OPERATION_FAILURE, err).Message("Failed to create pool for migrations")
+	}
+	defer pool.Close()
+
 	pgxDriver, err := pgxmigrate.WithInstance(
-		stdlib.OpenDBFromPool(s.pool),
+		stdlib.OpenDBFromPool(pool),
 		&pgxmigrate.Config{
 			SchemaName: s.schemaName,
 		})
@@ -551,6 +563,10 @@ func (s *PostgresEventStore) runMigrations(ctx context.Context) error {
 	}
 
 	migration, err := migrate.NewWithInstance("iofs", iofsMigrationsDir, "pgx", pgxDriver)
+	defer func() {
+		_, _ = migration.Close()
+	}()
+
 	if err != nil {
 		return WrapRiverError(Err_DB_OPERATION_FAILURE, err).Message("Error creating migration instance")
 	}
