@@ -177,13 +177,6 @@ func createPartitionSuffix(streamId StreamId, reducedParitions bool) string {
 	return fmt.Sprintf("%v%016x", streamType, hash)[:3]
 }
 
-type escapeSqlOpts struct {
-	migrated bool
-	// When test are running, the migrated database schema is created with 8 partitions instead of
-	// 256. In this case, expect only 8 partitions.
-	testMode bool
-}
-
 // sqlForStream escapes references to partitioned tables to the specific partition where the stream
 // is assigned whenever they are surrounded by double curly brackets.
 func (s *PostgresStreamStore) sqlForStream(sql string, streamId StreamId, migrated bool) string {
@@ -235,7 +228,7 @@ func (s *PostgresStreamStore) isStreamMigrated(
 
 		// If no such stream exists, consider the stream migrated.
 		if !esRows.Next() {
-			return true, nil
+			return false, WrapRiverError(Err_NOT_FOUND, err).Message("stream not found in local storage")
 		}
 
 		err = esRows.Scan(&migrated)
