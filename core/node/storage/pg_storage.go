@@ -10,25 +10,23 @@ import (
 	"time"
 
 	"github.com/exaring/otelpgx"
-	"github.com/prometheus/client_golang/prometheus"
-	"go.opentelemetry.io/otel/trace"
-
-	"github.com/river-build/river/core/config"
-	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/infra"
-	. "github.com/river-build/river/core/node/protocol"
-
-	"github.com/river-build/river/core/node/dlog"
-
+	"github.com/golang-migrate/migrate/v4"
+	pgxmigrate "github.com/golang-migrate/migrate/v4/database/pgx/v5"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/prometheus/client_golang/prometheus"
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/sync/semaphore"
 
-	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	"github.com/golang-migrate/migrate/v4/source/iofs"
+	"github.com/river-build/river/core/config"
+	. "github.com/river-build/river/core/node/base"
+	"github.com/river-build/river/core/node/dlog"
+	"github.com/river-build/river/core/node/infra"
+	. "github.com/river-build/river/core/node/protocol"
 )
 
 type PostgresEventStore struct {
@@ -596,20 +594,6 @@ func (s *PostgresEventStore) createSchemaTx(ctx context.Context, tx pgx.Tx) erro
 	return nil
 }
 
-func getSSLMode(dbURL string) string {
-	if strings.Contains(dbURL, "sslmode=") {
-		startIndex := strings.Index(dbURL, "sslmode=") + len("sslmode=")
-		endIndex := strings.Index(dbURL[startIndex:], "&")
-		if endIndex == -1 {
-			endIndex = len(dbURL)
-		} else {
-			endIndex += startIndex
-		}
-		return dbURL[startIndex:endIndex]
-	}
-	return "disable"
-}
-
 func (s *PostgresEventStore) runMigrations(ctx context.Context) error {
 	// Run migrations
 	iofsMigrationsDir, err := iofs.New(s.migrationDir, "migrations")
@@ -617,12 +601,16 @@ func (s *PostgresEventStore) runMigrations(ctx context.Context) error {
 		return WrapRiverError(Err_DB_OPERATION_FAILURE, err).Message("Error loading migrations")
 	}
 
-	dbUrlWithSchema := strings.Split(s.dbUrl, "?")[0] + fmt.Sprintf(
-		"?sslmode=%s&search_path=%v,public",
-		getSSLMode(s.dbUrl),
-		s.schemaName,
-	)
-	migration, err := migrate.NewWithSourceInstance("iofs", iofsMigrationsDir, dbUrlWithSchema)
+	pgxDriver, err := pgxmigrate.WithInstance(
+		stdlib.OpenDBFromPool(s.pool),
+		&pgxmigrate.Config{
+			SchemaName: s.schemaName,
+		})
+	if err != nil {
+		return WrapRiverError(Err_DB_OPERATION_FAILURE, err).Message("Failed to initialize pgx driver for migration")
+	}
+
+	migration, err := migrate.NewWithInstance("iofs", iofsMigrationsDir, "pgx", pgxDriver)
 	if err != nil {
 		return WrapRiverError(Err_DB_OPERATION_FAILURE, err).Message("Error creating migration instance")
 	}
