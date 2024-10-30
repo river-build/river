@@ -46,6 +46,7 @@ export async function fetchSpaceMemberMetadata(request: FastifyRequest, reply: F
 	}
 
 	const { spaceAddress, tokenId } = parseResult.data
+	logger.info({ spaceAddress, tokenId }, 'Fetching space member metadata')
 
 	try {
 		const metadata = await getSpaceMemberMetadata(logger, spaceAddress, tokenId)

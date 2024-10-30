@@ -11,7 +11,12 @@ import { getStream } from '../riverStreamRpcClient'
 export const spaceMetadataBaseUrl = `${config.streamMetadataBaseUrl}/space`.toLowerCase()
 
 const paramsSchema = z.object({
-	spaceAddress: z.string().min(1, 'spaceAddress parameter is required'),
+	spaceAddress: z
+		.string()
+		.min(1, 'spaceAddress parameter is required')
+		.refine(isValidEthereumAddress, {
+			message: 'Invalid spaceAddress format',
+		}),
 })
 
 export interface SpaceMetadataResponse {
@@ -40,15 +45,7 @@ export async function fetchSpaceMetadata(request: FastifyRequest, reply: Fastify
 	}
 
 	const { spaceAddress } = parseResult.data
-
-	// Validate spaceAddress format using the helper function
-	if (!isValidEthereumAddress(spaceAddress)) {
-		logger.info({ spaceAddress }, 'Invalid spaceAddress format')
-		return reply
-			.code(400)
-			.header('Cache-Control', CACHE_CONTROL['4xx'])
-			.send({ error: 'Bad Request', message: 'Invalid spaceAddress format' })
-	}
+	logger.info({ spaceAddress }, 'Fetching space metadata')
 
 	let spaceInfo: SpaceInfo | undefined
 	try {

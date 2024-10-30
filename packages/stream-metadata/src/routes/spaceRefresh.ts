@@ -48,7 +48,7 @@ export async function spaceRefresh(request: FastifyRequest, reply: FastifyReply)
 			: [`/space/${spaceAddress}*`]
 
 	try {
-		logger.info({ spaceAddress }, 'Refreshing space')
+		logger.info({ spaceAddress, target }, 'Refreshing space')
 		const invalidationId = await CloudfrontManager.createCloudfrontInvalidation({
 			paths,
 			logger,
