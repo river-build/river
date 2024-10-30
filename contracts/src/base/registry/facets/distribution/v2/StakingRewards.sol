@@ -6,18 +6,16 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // libraries
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 
 // contracts
 
 /// @notice Staking rewards library that encapsulates the minimal logic for staking and rewards distribution with
 /// delegation commission
+/// @dev The library does not handle the transfer of stakeToken and rewardToken.
 /// @dev The library is designed to be compatible with ERC-7201.
 /// @dev The data structures should be modified with caution.
 library StakingRewards {
-  using SafeTransferLib for address;
-
   uint256 internal constant SCALE_FACTOR = 1e36;
   uint256 internal constant MAX_COMMISSION_RATE = 10000;
 
@@ -319,8 +317,7 @@ library StakingRewards {
 
   function claimReward(
     Layout storage ds,
-    address beneficiary,
-    address recipient
+    address beneficiary
   ) internal returns (uint256 reward) {
     updateGlobalReward(ds);
 
@@ -330,7 +327,6 @@ library StakingRewards {
     reward = treasure.unclaimedRewardSnapshot;
     if (reward != 0) {
       treasure.unclaimedRewardSnapshot = 0;
-      ds.rewardToken.safeTransfer(recipient, reward);
     }
   }
 

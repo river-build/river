@@ -79,9 +79,9 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
   function _getCommissionRate(
     address delegatee
   ) internal view returns (uint256) {
-    // If the delegatee is a space, get the operator
+    // if the delegatee is a space, get the active operator or revert
     if (_isSpace(delegatee)) {
-      delegatee = _getOperatorBySpace(delegatee);
+      delegatee = _getActiveOperatorOrRevert(delegatee);
     }
     NodeOperatorStorage.Layout storage nos = NodeOperatorStorage.layout();
     return nos.commissionByOperator[delegatee];
@@ -100,12 +100,19 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
     return sd.operatorBySpace[delegatee] != address(0);
   }
 
-  /// @dev Returns the operator of the space if it exists
+  /// @dev Returns the operator of the space
   function _getOperatorBySpace(
     address space
   ) internal view returns (address operator) {
     SpaceDelegationStorage.Layout storage sd = SpaceDelegationStorage.layout();
     operator = sd.operatorBySpace[space];
+  }
+
+  /// @dev Returns the active operator of the space or reverts
+  function _getActiveOperatorOrRevert(
+    address space
+  ) internal view returns (address operator) {
+    operator = _getOperatorBySpace(space);
     if (!_isActiveOperator(operator)) {
       CustomRevert.revertWith(RewardsDistribution__NotActiveOperator.selector);
     }

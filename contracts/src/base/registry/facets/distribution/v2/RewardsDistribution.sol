@@ -273,27 +273,31 @@ contract RewardsDistribution is
   }
 
   // TODO: transfer rewards when a space redelegates
-  // TODO: add hook to transfer space rewards
   function claimReward(
     address beneficiary,
     address recipient
-  ) external returns (uint256) {
+  ) external returns (uint256 reward) {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
-    // If the beneficiary is a space, only the operator can claim the reward
-    if (_isSpace(beneficiary)) {
-      address operator = _getOperatorBySpace(beneficiary);
-      _revertIfNotClaimer(operator);
+    // If the beneficiary is the caller (user or operator), they can claim the reward
+    if (msg.sender != beneficiary) {
+      // If the beneficiary is a space, only the operator can claim the reward
+      if (_isSpace(beneficiary)) {
+        // the operator may not be active but is still allowed to claim the reward
+        address operator = _getOperatorBySpace(beneficiary);
+        _revertIfNotClaimer(operator);
+      }
+      // If the beneficiary is an operator, only the claimer can claim the reward
+      else if (_isActiveOperator(beneficiary)) {
+        _revertIfNotClaimer(beneficiary);
+      } else {
+        CustomRevert.revertWith(RewardsDistribution__NotBeneficiary.selector);
+      }
     }
-    // If the beneficiary is an operator, only the claimer can claim the reward
-    else if (_isActiveOperator(beneficiary)) {
-      _revertIfNotClaimer(beneficiary);
+    reward = ds.staking.claimReward(beneficiary);
+    if (reward != 0) {
+      ds.staking.rewardToken.safeTransfer(recipient, reward);
     }
-    // If the beneficiary is not an operator or space, only the beneficiary can claim the reward
-    else if (msg.sender != beneficiary) {
-      CustomRevert.revertWith(RewardsDistribution__NotBeneficiary.selector);
-    }
-    return ds.staking.claimReward(beneficiary, recipient);
   }
 
   function notifyRewardAmount(uint256 reward) external {

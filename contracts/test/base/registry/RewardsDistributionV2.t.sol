@@ -8,7 +8,6 @@ import {ICreateSpace} from "contracts/src/factory/facets/create/ICreateSpace.sol
 import {IRewardsDistributionBase} from "contracts/src/base/registry/facets/distribution/v2/IRewardsDistribution.sol";
 
 // libraries
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
@@ -831,6 +830,18 @@ contract RewardsDistributionV2Test is
 
     vm.expectRevert(RewardsDistribution__NotClaimer.selector);
     rewardsDistributionFacet.claimReward(space, address(this));
+  }
+
+  function test_claimReward_byBeneficiary() public {
+    test_fuzz_claimReward_byBeneficiary(
+      makeAddr("depositor"),
+      1 ether,
+      makeAddr("operator"),
+      0,
+      makeAddr("beneficiary"),
+      1 ether,
+      rewardDuration
+    );
   }
 
   // TODO: fuzz more depositors
