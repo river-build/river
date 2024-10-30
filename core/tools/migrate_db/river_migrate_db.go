@@ -1006,6 +1006,7 @@ var validateCmd = &cobra.Command{
 					fmt.Println("ERROR:", err)
 					os.Exit(1)
 				}
+				progressCounter.Add(1)
 			})
 		}
 
