@@ -2464,7 +2464,6 @@ export class Client
         }
 
         const groupJoinResult = await this.mlsCrypto.externalJoin(streamId, latestGroupInfo)
-
         console.log('Performing external join', groupJoinResult)
         try {
             await this.makeEventAndAddToStream(
@@ -2484,43 +2483,13 @@ export class Client
         } catch (error) {
             console.log('ERROR performing external join', error)
         }
-        console.log('DId perform external join')
+        console.log('Did perform external join')
     }
-
-    // public async mls_didReceiveGroupInfo(streamId: string, groupInfo: Uint8Array) {
-    //     if (!this.mlsCrypto) {
-    //         throw new Error('mls backend not initialized')
-    //     }
-    //     const groupJoinResult = await this.mlsCrypto.handleGroupInfo(streamId, groupInfo)
-    //     if (groupJoinResult) {
-    //         console.log('Performing external join', groupJoinResult)
-    //         try {
-    //             await this.makeEventAndAddToStream(
-    //                 streamId,
-    //                 make_MemberPayload_Mls({
-    //                     content: {
-    //                         case: 'externalJoin',
-    //                         value: {
-    //                             userAddress: addressFromUserId(this.userId),
-    //                             deviceKey: this.mlsCrypto.deviceKey,
-    //                             groupInfoWithExternalKey: groupJoinResult.groupInfo,
-    //                             commit: groupJoinResult.commit,
-    //                         },
-    //                     },
-    //                 }),
-    //             )
-    //         } catch (error) {
-    //             console.log('ERROR performing external join', error)
-    //         }
-    //         console.log('DId perform external join')
-    //     }
-    // }
 
     public async mls_didReceiveCommit(streamId: string, commit: Uint8Array) {
         if (!this.mlsCrypto) {
             throw new Error('mls backend not initialized')
         }
-        console.log('Handling commit')
         await this.mlsCrypto.handleCommit(streamId, commit)
     }
 }
