@@ -1,9 +1,4 @@
-import {
-    ExternalClient,
-    Client as MlsClient,
-    Group as MlsGroup,
-    MlsMessage,
-} from '@river-build/mls-rs-wasm'
+import { Client as MlsClient, Group as MlsGroup, MlsMessage } from '@river-build/mls-rs-wasm'
 import { EncryptedData } from '@river-build/proto'
 import { hexToBytes } from 'ethereum-cryptography/utils'
 
