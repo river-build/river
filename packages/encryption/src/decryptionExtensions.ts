@@ -610,8 +610,9 @@ export abstract class BaseDecryptionExtensions {
     private async processEncryptedContentItem(item: EncryptedContentItem): Promise<void> {
         this.log.debug('processEncryptedContentItem', item)
         try {
-            this.log.debug('retrying decryption', item)
+            console.log('retrying decryption', item)
             await this.decryptGroupEvent(item.streamId, item.eventId, item.kind, item.encryptedData)
+            console.log('SUCCESS decryption', item)
         } catch (err) {
             console.log('FAILED TO DECRYPT', err)
 
@@ -814,7 +815,7 @@ export abstract class BaseDecryptionExtensions {
 
             console.log('HAD FAILURES?', this.decryptionFailures[cmd.streamId]['all-the-same'])
             for (const item of this.decryptionFailures[cmd.streamId]['all-the-same']) {
-                this.log.debug('retrying decryption', item)
+                console.log('retrying decryption', item)
                 await this.processEncryptedContentItem(item)
             }
         } else {

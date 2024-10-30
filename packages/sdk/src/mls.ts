@@ -100,10 +100,11 @@ export class MlsCrypto {
         if (!group) {
             throw new Error('Group not found')
         }
+        await group.processIncomingMessage(MlsMessage.fromBytes(commit))
         const secret = await group.currentEpochSecret()
         const epoch = group.currentEpoch
+        this.keys.push({ epoch, key: secret.toBytes() })
         console.log('COMMIT PROCESSED', epoch)
-        await group.processIncomingMessage(MlsMessage.fromBytes(commit))
         return { key: secret.toBytes(), epoch: epoch }
     }
 

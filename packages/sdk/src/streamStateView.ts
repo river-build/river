@@ -521,6 +521,7 @@ export class StreamStateView implements IStreamStateView {
                 isDecryptedEvent(timelineEvent),
                 `Event is not decrypted, programmer error ${eventId}`,
             )
+            console.log('EMITTING', this.userId, timelineEvent.decryptedContent.content)
             emitter.emit('streamUpdated', this.streamId, this.contentKind, {
                 updated: [timelineEvent],
             })

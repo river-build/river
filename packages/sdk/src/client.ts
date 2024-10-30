@@ -1410,12 +1410,12 @@ export class Client
         const stream = this.stream(streamId)
 
         check(stream !== undefined, 'stream not found')
-        const localId = stream.appendLocalEvent(payload, 'sending')
-        opts?.onLocalEventAppended?.(localId)
-        if (opts?.beforeSendEventHook) {
-            await opts?.beforeSendEventHook
-        }
-        return this.makeAndSendChannelMessageEvent(streamId, payload, localId, {
+        // const localId = stream.appendLocalEvent(payload, 'sending')
+        // opts?.onLocalEventAppended?.(localId)
+        // if (opts?.beforeSendEventHook) {
+        //     await opts?.beforeSendEventHook
+        // }
+        return this.makeAndSendChannelMessageEvent(streamId, payload, undefined, {
             disableTags: opts?.disableTags,
             useMls: opts?.useMls,
         })
@@ -2296,7 +2296,6 @@ export class Client
                 throw new Error('mls backend not initialized')
             }
             const cleartext = await this.mlsCrypto.decrypt(streamId, encryptedData)
-
             const string = new TextDecoder().decode(cleartext)
             console.log('GOT CLEARTEXT', string)
             return string

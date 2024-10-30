@@ -6,6 +6,7 @@ import { check } from '@river-build/dlog'
 import { Client } from './client'
 import {
     createEventDecryptedPromise,
+    getChannelMessagePayload,
     makeTestClient,
     waitFor,
     waitForSyncStreams,
@@ -17,6 +18,7 @@ import {
     Client as MlsClient,
     MlsMessage,
 } from '@river-build/mls-rs-wasm'
+import { StreamTimelineEvent } from './types'
 
 const utf8Encoder = new TextEncoder()
 const utf8Decoder = new TextDecoder()
@@ -47,9 +49,6 @@ describe('dmsMlsTests', () => {
         await expect(bobsClient.waitForStream(streamId)).toResolve()
         await expect(alicesClient.waitForStream(streamId)).toResolve()
 
-        // HEAVY WIP — DON*T WORRY
-        const aliceEventDecryptedPromise = createEventDecryptedPromise(alicesClient, 'hello alice')
-
         // alice's message will:
         // - trigger a group initialization by alice
         // - trigger Bob's client to join the group using an external join
@@ -67,6 +66,25 @@ describe('dmsMlsTests', () => {
             bobsClient.sendMessage(streamId, 'hello alice', [], [], { useMls: true }),
         ).toResolve()
 
-        await expect(Promise.all([aliceEventDecryptedPromise])).toResolve()
+        await waitFor(() => {
+            const stream = alicesClient.streams.get(streamId)!
+            check(checkTimeline(['hello alice', 'hello bob'], stream.view.timeline))
+        })
     })
 })
+
+function checkTimeline(messages: string[], timeline: StreamTimelineEvent[]): boolean {
+    const checks = new Set(messages)
+    for (const event of timeline) {
+        const content = event.decryptedContent
+        if (content?.kind !== 'channelMessage') {
+            continue
+        }
+        const payload = getChannelMessagePayload(content.content)
+        console.log(payload)
+        if (payload) {
+            checks.delete(payload)
+        }
+    }
+    return checks.size === 0
+}
