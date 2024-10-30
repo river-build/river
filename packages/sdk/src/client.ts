@@ -134,6 +134,7 @@ import {
     make_SpacePayload_SpaceImage,
     make_UserMetadataPayload_ProfileImage,
     make_UserMetadataPayload_Bio,
+    make_MemberPayload_Mls,
 } from './types'
 
 import debug from 'debug'
@@ -149,6 +150,7 @@ import { SyncedStreamsExtension } from './syncedStreamsExtension'
 import { SignerContext } from './signerContext'
 import { decryptAESGCM, deriveKeyAndIV, encryptAESGCM, uint8ArrayToBase64 } from './crypto_utils'
 import { makeTags } from './tags'
+import { MlsCrypto } from './mls'
 
 export type ClientEvents = StreamEvents & DecryptionEvents
 
@@ -156,6 +158,7 @@ type SendChannelMessageOptions = {
     beforeSendEventHook?: Promise<void>
     onLocalEventAppended?: (localId: string) => void
     disableTags?: boolean // if true, tags will not be added to the message
+    useMls?: boolean
 }
 
 export class Client
@@ -184,6 +187,7 @@ export class Client
 
     public cryptoBackend?: GroupEncryptionCrypto
     public cryptoStore: CryptoStore
+    public mlsCrypto?: MlsCrypto
 
     private getStreamRequests: Map<string, Promise<StreamStateView>> = new Map()
     private getStreamExRequests: Map<string, Promise<StreamStateView>> = new Map()
@@ -1382,14 +1386,19 @@ export class Client
         body: string,
         mentions?: ChannelMessage_Post_Mention[],
         attachments: ChannelMessage_Post_Attachment[] = [],
+        opts?: SendChannelMessageOptions,
     ): Promise<{ eventId: string }> {
-        return this.sendChannelMessage_Text(streamId, {
-            content: {
-                body,
-                mentions: mentions ?? [],
-                attachments: attachments,
+        return this.sendChannelMessage_Text(
+            streamId,
+            {
+                content: {
+                    body,
+                    mentions: mentions ?? [],
+                    attachments: attachments,
+                },
             },
-        })
+            opts,
+        )
     }
 
     async sendChannelMessage(
@@ -1407,6 +1416,7 @@ export class Client
         }
         return this.makeAndSendChannelMessageEvent(streamId, payload, localId, {
             disableTags: opts?.disableTags,
+            useMls: opts?.useMls,
         })
     }
 
@@ -1414,7 +1424,7 @@ export class Client
         streamId: string,
         payload: ChannelMessage,
         localId?: string,
-        opts?: { disableTags?: boolean },
+        opts?: { disableTags?: boolean; useMls?: boolean },
     ) {
         const stream = this.stream(streamId)
         check(isDefined(stream), 'stream not found')
@@ -1461,7 +1471,9 @@ export class Client
 
         const tags = opts?.disableTags === true ? undefined : makeTags(payload, stream.view)
         const cleartext = payload.toJsonString()
-        const message = await this.encryptGroupEvent(payload, streamId)
+        const message = opts?.useMls
+            ? await this.encryptGroupEventMls(payload, streamId)
+            : await this.encryptGroupEvent(payload, streamId)
         message.refEventId = getRefEventIdFromChannelMessage(payload)
 
         if (!message) {
@@ -2171,6 +2183,11 @@ export class Client
         const crypto = new GroupEncryptionCrypto(this, this.cryptoStore)
         await crypto.init(opts)
         this.cryptoBackend = crypto
+
+        const mlsCrypto = new MlsCrypto(this.userId)
+        await mlsCrypto.initialize()
+        this.mlsCrypto = mlsCrypto
+
         this.decryptionExtensions = new ClientDecryptionExtensions(
             this,
             crypto,
@@ -2273,13 +2290,24 @@ export class Client
         }
         this.logDebug('Cache miss for cleartext', eventId)
 
-        if (!this.cryptoBackend) {
-            throw new Error('crypto backend not initialized')
-        }
-        const cleartext = await this.cryptoBackend.decryptGroupEvent(streamId, encryptedData)
+        if (encryptedData.mlsPayload !== undefined) {
+            if (!this.mlsCrypto) {
+                throw new Error('mls backend not initialized')
+            }
+            const cleartext = await this.mlsCrypto.decrypt(streamId, encryptedData)
+            console.log('CLEARTEXT', cleartext)
+            const string = new TextDecoder().decode(cleartext)
+            console.log(`DID DECRYPT MLS ${string}`)
+            return string
+        } else {
+            if (!this.cryptoBackend) {
+                throw new Error('crypto backend not initialized')
+            }
+            const cleartext = await this.cryptoBackend.decryptGroupEvent(streamId, encryptedData)
 
-        await this.persistenceStore.saveCleartext(eventId, cleartext)
-        return cleartext
+            await this.persistenceStore.saveCleartext(eventId, cleartext)
+            return cleartext
+        }
     }
 
     public async encryptAndShareGroupSessions(
@@ -2343,6 +2371,36 @@ export class Client
         return this.cryptoBackend.encryptGroupEvent(streamId, cleartext)
     }
 
+    // Encrypt event using MLS.
+    async encryptGroupEventMls(event: Message, streamId: string): Promise<EncryptedData> {
+        if (!this.mlsCrypto) {
+            throw new Error('mls backend not initialized')
+        }
+
+        if (!this.mlsCrypto.hasGroup(streamId)) {
+            const groupInfo = await this.mlsCrypto.createGroup(streamId)
+            const deviceKey = this.mlsCrypto.deviceKey
+
+            await this.makeEventAndAddToStream(
+                streamId,
+                make_MemberPayload_Mls({
+                    content: {
+                        case: 'initializeGroup',
+                        value: {
+                            groupInfoWithExternalKey: groupInfo,
+                            userAddress: addressFromUserId(this.userId),
+                            deviceKey: deviceKey,
+                        },
+                    },
+                }),
+            )
+        }
+
+        const plaintext = event.toJsonString()
+        const binary = new TextEncoder().encode(plaintext)
+        return this.mlsCrypto.encrypt(streamId, binary)
+    }
+
     async encryptWithDeviceKeys(
         payload: Message,
         deviceKeys: UserDevice[],
@@ -2380,5 +2438,42 @@ export class Client
 
     public async debugDropStream(syncId: string, streamId: string): Promise<void> {
         await this.rpcClient.info({ debug: ['drop_stream', syncId, streamId] })
+    }
+
+    public async mls_didReceiveGroupInfo(streamId: string, groupInfo: Uint8Array) {
+        if (!this.mlsCrypto) {
+            throw new Error('mls backend not initialized')
+        }
+        const groupJoinResult = await this.mlsCrypto.handleGroupInfo(streamId, groupInfo)
+        if (groupJoinResult) {
+            console.log('Performing external join', groupJoinResult)
+            try {
+                await this.makeEventAndAddToStream(
+                    streamId,
+                    make_MemberPayload_Mls({
+                        content: {
+                            case: 'externalJoin',
+                            value: {
+                                userAddress: addressFromUserId(this.userId),
+                                deviceKey: this.mlsCrypto.deviceKey,
+                                groupInfoWithExternalKey: groupJoinResult.groupInfo,
+                                commit: groupJoinResult.commit,
+                            },
+                        },
+                    }),
+                )
+            } catch (error) {
+                console.log('ERROR performing external join', error)
+            }
+            console.log('DId perform external join')
+        }
+    }
+
+    public async mls_didReceiveCommit(streamId: string, commit: Uint8Array) {
+        if (!this.mlsCrypto) {
+            throw new Error('mls backend not initialized')
+        }
+        console.log('Handling commit')
+        await this.mlsCrypto.handleCommit(streamId, commit)
     }
 }

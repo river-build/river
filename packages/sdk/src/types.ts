@@ -36,6 +36,7 @@ import {
     MemberPayload_KeySolicitation,
     MemberPayload,
     MemberPayload_Nft,
+    MemberPayload_MlsPayload,
 } from '@river-build/proto'
 import { keccak256 } from 'ethereum-cryptography/keccak'
 import { bin_toHexString } from '@river-build/dlog'
@@ -324,6 +325,20 @@ export const make_MemberPayload_Unpin = (
             content: {
                 case: 'unpin',
                 value: { eventId },
+            },
+        },
+    }
+}
+
+export const make_MemberPayload_Mls = (
+    payload: PlainMessage<MemberPayload_MlsPayload>,
+): PlainMessage<StreamEvent>['payload'] => {
+    return {
+        case: 'memberPayload',
+        value: {
+            content: {
+                case: 'mls',
+                value: payload,
             },
         },
     }

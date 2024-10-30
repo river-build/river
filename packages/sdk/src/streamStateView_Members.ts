@@ -23,6 +23,7 @@ import { StreamStateView_MemberMetadata } from './streamStateView_MemberMetadata
 import { KeySolicitationContent } from '@river-build/encryption'
 import { makeParsedEvent } from './sign'
 import { StreamStateView_AbstractContent } from './streamStateView_AbstractContent'
+import { StreamStateView_Mls } from './streamStateView_Mls'
 
 export type StreamMember = {
     userId: string
@@ -47,6 +48,7 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
     readonly membership: StreamStateView_Members_Membership
     readonly solicitHelper: StreamStateView_Members_Solicitations
     readonly memberMetadata: StreamStateView_MemberMetadata
+    readonly mls: StreamStateView_Mls
     readonly pins: Pin[] = []
 
     constructor(streamId: string) {
@@ -55,6 +57,7 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
         this.membership = new StreamStateView_Members_Membership(streamId)
         this.solicitHelper = new StreamStateView_Members_Solicitations(streamId)
         this.memberMetadata = new StreamStateView_MemberMetadata(streamId)
+        this.mls = new StreamStateView_Mls(streamId)
     }
 
     // initialization
@@ -130,6 +133,11 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
             cleartexts,
             encryptionEmitter,
         )
+
+        if (snapshot.members.mlsGroup) {
+            this.mls.applySnapshot(snapshot.members.mlsGroup, encryptionEmitter)
+        }
+
         this.solicitHelper.initSolicitations(Array.from(this.joined.values()), encryptionEmitter)
 
         snapshot.members?.pins.forEach((snappedPin) => {
@@ -305,6 +313,9 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
                     this.removePin(eventId, stateEmitter)
                 }
                 break
+            case 'mls':
+                this.mls.appendEvent(event, cleartext, encryptionEmitter, stateEmitter)
+                break
             case undefined:
                 break
             default:
@@ -353,6 +364,8 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
             case 'pin':
                 break
             case 'unpin':
+                break
+            case 'mls':
                 break
             case undefined:
                 break
