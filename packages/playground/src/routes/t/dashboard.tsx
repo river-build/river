@@ -169,7 +169,7 @@ const DmInfo = ({
     const sync = useSyncAgent()
     const { data: dm } = useDm(dmStreamId)
     const member = useMemo(() => {
-        const dm = sync.dms.byStreamId(dmStreamId)
+        const dm = sync.dms.getDm(dmStreamId)
         // TODO: We may want to move this to the core of react-sdk
         // Adding a `suspense` option to the `useObservable` hook would make this easier.
         const members = suspend(async () => {

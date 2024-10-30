@@ -8,7 +8,7 @@ export const useDmTimeline = (
     config?: ObservableConfig.FromObservable<TimelineEvents>,
 ) => {
     const view = useCallback(
-        (sync: SyncAgent) => sync.dms.byStreamId(streamId).timeline.events,
+        (sync: SyncAgent) => sync.dms.getDm(streamId).timeline.events,
         [streamId],
     )
     return useTimeline(view, config)
