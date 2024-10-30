@@ -19,7 +19,7 @@ const querySchema = z.object({
 	target: z.enum(['image', 'metadata', 'all']).default('all'),
 })
 
-// This route handler validates the refresh request and quickly returns a 200 response.
+// This route handler validates the refresh request, initiates the CloudFront invalidation, and returns a 200 response.
 export async function spaceRefresh(request: FastifyRequest, reply: FastifyReply) {
 	const logger = request.log.child({ name: spaceRefresh.name })
 
