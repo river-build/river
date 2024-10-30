@@ -8,6 +8,7 @@ import (
 
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/events/migrations"
+	"github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"
 )
@@ -544,6 +545,9 @@ func update_Snapshot_Member(
 		}
 		snapshot.Pins = snapPins
 		return nil
+	case *MemberPayload_Mls:
+		applyMlsPayload(snapshot.MlsGroup, content.Mls)
+		return nil
 	default:
 		return RiverError(Err_INVALID_ARGUMENT, "unknown membership payload type %T", memberPayload.Content)
 	}
@@ -794,4 +798,52 @@ func applyKeyFulfillment(member *MemberPayload_Snapshot_Member, keyFulfillment *
 			}
 		}
 	}
+}
+
+/*
+For now: we trust that the commits do what the clients say it does.
+we will augment this with proper MLS verification very soon
+*/
+
+func applyMlsPayload(
+	mlsGroup *MemberPayload_Snapshot_MlsGroup,
+	payload *MemberPayload_MlsPayload,
+) *MemberPayload_Snapshot_MlsGroup {
+	switch payload := payload.Content.(type) {
+	case *protocol.MemberPayload_MlsPayload_InitializeGroup_:
+		// group info can only be set exactly once
+		mlsGroup.InitialGroupInfo = payload.InitializeGroup.GroupInfoWithExternalKey
+		mlsGroup.LatestGroupInfo = payload.InitializeGroup.GroupInfoWithExternalKey
+	case *protocol.MemberPayload_MlsPayload_CommitLeave_:
+		mlsGroup.DeviceKeys[string(payload.CommitLeave.UserAddress)] = nil
+		mlsGroup.PendingLeaves = removeSorted(mlsGroup.PendingLeaves,
+			payload.CommitLeave.UserAddress,
+			bytes.Compare,
+			func(leave *MemberPayload_MlsPayload_ProposeLeave) []byte {
+				return leave.UserAddress
+			})
+		mlsGroup.Commits = append(mlsGroup.Commits, payload.CommitLeave.Commit)
+		mlsGroup.LatestGroupInfo = payload.CommitLeave.GroupInfoWithExternalKey
+	case *protocol.MemberPayload_MlsPayload_ExternalJoin_:
+		// add device keys
+		mlsGroup.Commits = append(mlsGroup.Commits, payload.ExternalJoin.Commit)
+		mlsGroup.LatestGroupInfo = payload.ExternalJoin.GroupInfoWithExternalKey
+		key := string(payload.ExternalJoin.UserAddress)
+		if mlsGroup.DeviceKeys[key] == nil {
+			mlsGroup.DeviceKeys[key] = &protocol.MemberPayload_Snapshot_MlsGroup_DeviceKeys{}
+		}
+		mlsGroup.DeviceKeys[key].DeviceKeys = append(mlsGroup.DeviceKeys[key].DeviceKeys, payload.ExternalJoin.DeviceKey)
+	case *MemberPayload_MlsPayload_ProposeLeave_:
+		mlsGroup.PendingLeaves = insertSorted(mlsGroup.PendingLeaves,
+			payload.ProposeLeave,
+			bytes.Compare,
+			func(leave *MemberPayload_MlsPayload_ProposeLeave) []byte {
+				return leave.UserAddress
+			})
+	case *MemberPayload_MlsPayload_KeyAnnouncement_:
+		for _, keyAndEpoch := range payload.KeyAnnouncement.Keys {
+			mlsGroup.EpochKeys[keyAndEpoch.Epoch] = keyAndEpoch.Key
+		}
+	}
+	return mlsGroup
 }
