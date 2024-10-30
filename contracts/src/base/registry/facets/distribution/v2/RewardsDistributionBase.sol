@@ -47,6 +47,8 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
       _getCommissionRate(delegatee)
     );
 
+    _sweepSpaceRewardsIfNecessary(delegatee);
+
     if (owner != address(this)) {
       address proxy = _deployDelegationProxy(depositId, delegatee);
       ds.depositsByDepositor[owner].add(depositId);
@@ -55,6 +57,7 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
     }
   }
 
+  /// @dev Deploys a beacon proxy for the delegation
   function _deployDelegationProxy(
     uint256 depositId,
     address delegatee
@@ -103,6 +106,31 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                      SPACE DELEGATION                      */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  /// @dev Sweeps the rewards in the space delegation to the operator if necessary
+  /// @dev Must be called after `StakingRewards.updateGlobalReward`
+  function _sweepSpaceRewardsIfNecessary(address space) internal {
+    if (!_isSpace(space)) return;
+
+    StakingRewards.Layout storage staking = RewardsDistributionStorage
+      .layout()
+      .staking;
+    StakingRewards.Treasure storage spaceTreasure = staking
+      .treasureByBeneficiary[space];
+    staking.updateReward(spaceTreasure);
+
+    uint256 reward = spaceTreasure.unclaimedRewardSnapshot;
+    if (reward == 0) return;
+
+    address operator = _getOperatorBySpace(space);
+    StakingRewards.Treasure storage operatorTreasure = staking
+      .treasureByBeneficiary[operator];
+
+    operatorTreasure.unclaimedRewardSnapshot += reward;
+    spaceTreasure.unclaimedRewardSnapshot = 0;
+
+    emit SpaceRewardsSwept(space, operator, reward);
+  }
 
   /// @dev Checks if the delegatee is a space
   function _isSpace(address delegatee) internal view returns (bool) {

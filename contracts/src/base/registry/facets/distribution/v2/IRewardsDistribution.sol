@@ -57,12 +57,18 @@ interface IRewardsDistributionBase {
   event DelegationProxyUpgraded(address newImplementation);
 
   event DelegationProxyDeployed(
-    uint256 depositId,
-    address delegatee,
+    uint256 indexed depositId,
+    address indexed delegatee,
     address proxy
   );
 
   event RewardNotifierSet(address indexed notifier, bool enabled);
+
+  event SpaceRewardsSwept(
+    address indexed space,
+    address indexed operator,
+    uint256 amount
+  );
 }
 
 interface IRewardsDistribution is IRewardsDistributionBase {

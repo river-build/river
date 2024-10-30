@@ -173,6 +173,8 @@ contract RewardsDistribution is
       _getCommissionRate(delegatee)
     );
 
+    _sweepSpaceRewardsIfNecessary(delegatee);
+
     if (owner != address(this)) {
       address proxy = ds.proxyById[depositId];
       ds.staking.stakeToken.safeTransferFrom(msg.sender, proxy, amount);
@@ -206,6 +208,8 @@ contract RewardsDistribution is
       deposit.pendingWithdrawal = 0;
     }
 
+    _sweepSpaceRewardsIfNecessary(delegatee);
+
     if (owner != address(this)) {
       address proxy = ds.proxyById[depositId];
       DelegationProxy(proxy).redelegate(delegatee);
@@ -229,6 +233,8 @@ contract RewardsDistribution is
       newBeneficiary,
       _getCommissionRate(delegatee)
     );
+
+    _sweepSpaceRewardsIfNecessary(delegatee);
   }
 
   function initiateWithdraw(
@@ -240,6 +246,9 @@ contract RewardsDistribution is
     address owner = deposit.owner;
     _revertIfNotDepositOwner(owner);
 
+    // cache the delegatee before it's set to address(0)
+    address delegatee = deposit.delegatee;
+
     amount = ds.staking.withdraw(deposit);
 
     if (owner != address(this)) {
@@ -248,6 +257,8 @@ contract RewardsDistribution is
     } else {
       deposit.pendingWithdrawal = 0;
     }
+
+    _sweepSpaceRewardsIfNecessary(delegatee);
   }
 
   function withdraw(uint256 depositId) external returns (uint96 amount) {
