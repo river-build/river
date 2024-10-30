@@ -41,6 +41,10 @@ var migrationsDir embed.FS
 //go:embed testdata/migrations/*.sql
 var testMigrationsDir embed.FS
 
+func GetRiverNodeDbMigrationSchemaFS() *embed.FS {
+	return &migrationsDir
+}
+
 func NewPostgresStreamStore(
 	ctx context.Context,
 	poolInfo *PgxPoolInfo,
