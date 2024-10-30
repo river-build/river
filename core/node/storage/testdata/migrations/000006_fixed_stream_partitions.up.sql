@@ -16,7 +16,7 @@ DO $$
             seq_num BIGINT NOT NULL,
             blockdata BYTEA NOT NULL,
             PRIMARY KEY (stream_id, seq_num)
-  		)';
+        )';
 
         EXECUTE 'CREATE TABLE IF NOT EXISTS minipools_m' || suffix || ' (
             stream_id CHAR(64) NOT NULL,
@@ -40,7 +40,7 @@ DO $$
             seq_num BIGINT NOT NULL,
             blockdata BYTEA NOT NULL,
             PRIMARY KEY (stream_id, seq_num)
-  		)';
+        )';
 
         EXECUTE 'CREATE TABLE IF NOT EXISTS minipools_r' || suffix || ' (
             stream_id CHAR(64) NOT NULL,
