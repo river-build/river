@@ -2295,9 +2295,7 @@ export class Client
                 throw new Error('mls backend not initialized')
             }
             const cleartext = await this.mlsCrypto.decrypt(streamId, encryptedData)
-            console.log('CLEARTEXT', cleartext)
             const string = new TextDecoder().decode(cleartext)
-            console.log(`DID DECRYPT MLS ${string}`)
             return string
         } else {
             if (!this.cryptoBackend) {
