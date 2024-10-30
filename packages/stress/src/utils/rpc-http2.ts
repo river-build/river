@@ -1,18 +1,13 @@
-import { PromiseClient, createPromiseClient } from '@connectrpc/connect'
+import { createPromiseClient } from '@connectrpc/connect'
 import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-node'
 import { StreamService } from '@river-build/proto'
 import {
     loggingInterceptor,
     randomUrlSelector,
     retryInterceptor,
-    StreamRpcClientOptions,
+    StreamRpcClient,
     type RetryParams,
 } from '@river-build/sdk'
-
-export type StreamHttp2RpcClient = PromiseClient<typeof StreamService> & {
-    url: string
-    opts: StreamRpcClientOptions
-}
 
 let nextRpcClientNum = 0
 
@@ -20,7 +15,7 @@ export function makeHttp2StreamRpcClient(
     urls: string,
     retryParams: RetryParams = { maxAttempts: 3, initialRetryDelay: 2000, maxRetryDelay: 6000 },
     refreshNodeUrl?: () => Promise<string>,
-): StreamHttp2RpcClient {
+): StreamRpcClient {
     const transportId = nextRpcClientNum++
     const url = randomUrlSelector(urls)
     const options: ConnectTransportOptions = {
@@ -43,10 +38,7 @@ export function makeHttp2StreamRpcClient(
     }
     const transport = createConnectTransport(options)
 
-    const client: StreamHttp2RpcClient = createPromiseClient(
-        StreamService,
-        transport,
-    ) as StreamHttp2RpcClient
+    const client = createPromiseClient(StreamService, transport) as StreamRpcClient
     client.url = url
     client.opts = { retryParams, defaultTimeoutMs: options.defaultTimeoutMs }
     return client
