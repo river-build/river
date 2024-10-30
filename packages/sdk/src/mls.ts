@@ -14,7 +14,7 @@ export class MlsCrypto {
     private client!: MlsClient
     private userAddress: string
     private groups: Map<string, MlsGroup> = new Map()
-    // temp, same for all groups for now
+    // temp, same for all groups for now // not encrypted for now
     public keys: { epoch: bigint; key: Uint8Array }[] = []
     public deviceKey: Uint8Array
 
