@@ -185,6 +185,8 @@ contract RewardsDistribution is
       address proxy = ds.proxyById[depositId];
       ds.staking.stakeToken.safeTransferFrom(msg.sender, proxy, amount);
     }
+
+    emit IncreaseStake(depositId, amount);
   }
 
   /// @inheritdoc IRewardsDistribution
@@ -221,6 +223,8 @@ contract RewardsDistribution is
       address proxy = ds.proxyById[depositId];
       DelegationProxy(proxy).redelegate(delegatee);
     }
+
+    emit Redelegate(depositId, delegatee);
   }
 
   /// @inheritdoc IRewardsDistribution
@@ -243,6 +247,8 @@ contract RewardsDistribution is
     );
 
     _sweepSpaceRewardsIfNecessary(delegatee);
+
+    emit ChangeBeneficiary(depositId, newBeneficiary);
   }
 
   /// @inheritdoc IRewardsDistribution
@@ -268,6 +274,8 @@ contract RewardsDistribution is
     }
 
     _sweepSpaceRewardsIfNecessary(delegatee);
+
+    emit InitiateWithdraw(depositId, amount);
   }
 
   /// @inheritdoc IRewardsDistribution
@@ -294,6 +302,8 @@ contract RewardsDistribution is
       address proxy = ds.proxyById[depositId];
       ds.staking.stakeToken.safeTransferFrom(proxy, owner, amount);
     }
+
+    emit Withdraw(depositId, amount);
   }
 
   /// @inheritdoc IRewardsDistribution
@@ -323,6 +333,8 @@ contract RewardsDistribution is
     if (reward != 0) {
       ds.staking.rewardToken.safeTransfer(recipient, reward);
     }
+
+    emit ClaimReward(beneficiary, recipient, reward);
   }
 
   /// @inheritdoc IRewardsDistribution
@@ -334,6 +346,8 @@ contract RewardsDistribution is
     }
 
     ds.staking.notifyRewardAmount(reward);
+
+    emit NotifyRewardAmount(msg.sender, reward);
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/

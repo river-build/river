@@ -33,6 +33,7 @@ interface IRewardsDistributionBase {
   /*                       CUSTOM ERRORS                        */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
+  /// @dev Self-explanatory
   error RewardsDistribution__NotBeneficiary();
   error RewardsDistribution__NotClaimer();
   error RewardsDistribution__NotDepositOwner();
@@ -48,22 +49,94 @@ interface IRewardsDistributionBase {
   /*                           EVENTS                           */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
+  /// @notice Emitted when the rewards distribution facet is initialized
+  /// @param stakeToken The token that is being staked
+  /// @param rewardToken The token that is being distributed as rewards
+  /// @param rewardDuration The duration of each reward distribution period
   event RewardsDistributionInitialized(
     address stakeToken,
     address rewardToken,
     uint256 rewardDuration
   );
 
+  /// @notice Emitted when the delegation proxy implementation is upgraded in the beacon
+  /// @param newImplementation The address of the new implementation
   event DelegationProxyUpgraded(address newImplementation);
 
+  /// @notice Emitted when a delegation proxy is deployed
+  /// @param depositId The ID of the deposit
+  /// @param delegatee The address of the delegatee
+  /// @param proxy The address of the delegation proxy
   event DelegationProxyDeployed(
     uint256 indexed depositId,
     address indexed delegatee,
     address proxy
   );
 
+  /// @notice Emitted when a reward notifier is set
+  /// @param notifier The address of the notifier
+  /// @param enabled The whitelist status
   event RewardNotifierSet(address indexed notifier, bool enabled);
 
+  /// @notice Emitted when a deposit is staked
+  /// @param depositId The ID of the deposit
+  /// @param delegatee The address of the delegatee
+  /// @param beneficiary The address of the beneficiary
+  /// @param amount The amount of stakeToken that is staked
+  event Stake(
+    uint256 indexed depositId,
+    address indexed delegatee,
+    address indexed beneficiary,
+    uint96 amount
+  );
+
+  /// @notice Emitted when the stake of a deposit is increased
+  /// @param depositId The ID of the deposit
+  /// @param amount The amount of stakeToken that is staked
+  event IncreaseStake(uint256 indexed depositId, uint96 amount);
+
+  /// @notice Emitted when a deposit is redelegated
+  /// @param depositId The ID of the deposit
+  /// @param delegatee The address of the delegatee
+  event Redelegate(uint256 indexed depositId, address indexed delegatee);
+
+  /// @notice Emitted when the beneficiary of a deposit is changed
+  /// @param depositId The ID of the deposit
+  /// @param newBeneficiary The address of the new beneficiary
+  event ChangeBeneficiary(
+    uint256 indexed depositId,
+    address indexed newBeneficiary
+  );
+
+  /// @notice Emitted when the withdrawal of a deposit is initiated
+  /// @param depositId The ID of the deposit
+  /// @param amount The amount of stakeToken that will be withdrawn
+  event InitiateWithdraw(uint256 indexed depositId, uint96 amount);
+
+  /// @notice Emitted when the stakeToken is withdrawn from a deposit
+  /// @param depositId The ID of the deposit
+  /// @param amount The amount of stakeToken that is withdrawn
+  event Withdraw(uint256 indexed depositId, uint96 amount);
+
+  /// @notice Emitted when a reward is claimed
+  /// @param beneficiary The address of the beneficiary
+  /// @param recipient The address of the recipient
+  /// @param reward The amount of rewardToken that is claimed
+  event ClaimReward(
+    address indexed beneficiary,
+    address indexed recipient,
+    uint256 reward
+  );
+
+  /// @notice Emitted when a reward is notified
+  /// @param notifier The address of the notifier
+  /// @param reward The amount of rewardToken that is added
+  event NotifyRewardAmount(address indexed notifier, uint256 reward);
+
+  /// @notice Emitted when space delegation rewards are swept to the operator
+  /// @param space The address of the space
+  /// @param operator The address of the operator
+  /// @param amount The amount of rewardToken that is swept
   event SpaceRewardsSwept(
     address indexed space,
     address indexed operator,
@@ -71,6 +144,8 @@ interface IRewardsDistributionBase {
   );
 }
 
+/// @title IRewardsDistribution
+/// @notice The interface for the rewards distribution facet
 interface IRewardsDistribution is IRewardsDistributionBase {
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                       ADMIN FUNCTIONS                      */
