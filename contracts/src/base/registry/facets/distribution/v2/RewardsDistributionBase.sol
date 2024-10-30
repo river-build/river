@@ -87,6 +87,12 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
     return nos.commissionByOperator[delegatee];
   }
 
+  /// @dev Checks if the delegatee is an operator
+  function _isOperator(address delegatee) internal view returns (bool) {
+    NodeOperatorStorage.Layout storage nos = NodeOperatorStorage.layout();
+    return nos.operators.contains(delegatee);
+  }
+
   /// @dev Checks if the delegatee is an active operator
   function _isActiveOperator(address delegatee) internal view returns (bool) {
     NodeOperatorStorage.Layout storage nos = NodeOperatorStorage.layout();
@@ -94,10 +100,13 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
     return nos.statusByOperator[delegatee] == NodeOperatorStatus.Active;
   }
 
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                      SPACE DELEGATION                      */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   /// @dev Checks if the delegatee is a space
   function _isSpace(address delegatee) internal view returns (bool) {
-    SpaceDelegationStorage.Layout storage sd = SpaceDelegationStorage.layout();
-    return sd.operatorBySpace[delegatee] != address(0);
+    return _getOperatorBySpace(delegatee) != address(0);
   }
 
   /// @dev Returns the operator of the space

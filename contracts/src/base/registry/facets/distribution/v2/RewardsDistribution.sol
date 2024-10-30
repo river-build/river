@@ -221,10 +221,13 @@ contract RewardsDistribution is
     StakingRewards.Deposit storage deposit = ds.staking.depositById[depositId];
     _revertIfNotDepositOwner(deposit.owner);
 
+    address delegatee = deposit.delegatee;
+    _revertIfNotOperatorOrSpace(delegatee);
+
     ds.staking.changeBeneficiary(
       deposit,
       newBeneficiary,
-      _getCommissionRate(deposit.delegatee)
+      _getCommissionRate(delegatee)
     );
   }
 
@@ -288,7 +291,7 @@ contract RewardsDistribution is
         _revertIfNotClaimer(operator);
       }
       // If the beneficiary is an operator, only the claimer can claim the reward
-      else if (_isActiveOperator(beneficiary)) {
+      else if (_isOperator(beneficiary)) {
         _revertIfNotClaimer(beneficiary);
       } else {
         CustomRevert.revertWith(RewardsDistribution__NotBeneficiary.selector);

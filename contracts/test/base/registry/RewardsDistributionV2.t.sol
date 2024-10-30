@@ -666,20 +666,12 @@ contract RewardsDistributionV2Test is
     );
   }
 
-  function test_initiateWithdraw_changeBeneficiary() public {
+  function test_initiateWithdraw_revertIf_changeBeneficiary() public {
     uint256 depositId = test_initiateWithdraw();
 
     address newBeneficiary = _randomAddress();
+    vm.expectRevert(RewardsDistribution__NotOperatorOrSpace.selector);
     rewardsDistributionFacet.changeBeneficiary(depositId, newBeneficiary);
-
-    verifyWithdraw(
-      address(this),
-      depositId,
-      1 ether,
-      0,
-      OPERATOR,
-      newBeneficiary
-    );
   }
 
   function test_initiateWithdraw_claimReward() public {
