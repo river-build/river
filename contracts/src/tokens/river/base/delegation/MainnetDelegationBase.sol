@@ -11,7 +11,7 @@ import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
 import {MainnetDelegationStorage} from "./MainnetDelegationStorage.sol";
 
 // contracts
-import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistribution.sol";
+import {IRewardsDistribution} from "contracts/src/base/registry/facets/distribution/v2/IRewardsDistribution.sol";
 
 abstract contract MainnetDelegationBase is IMainnetDelegationBase {
   using EnumerableSet for EnumerableSet.AddressSet;
@@ -108,15 +108,15 @@ abstract contract MainnetDelegationBase is IMainnetDelegationBase {
 
     uint256 depositId = ds.depositIdByDelegator[delegator];
     if (depositId == 0) {
-      depositId = RewardsDistribution(address(this)).stake(
+      depositId = IRewardsDistribution(address(this)).stake(
         SafeCastLib.toUint96(quantity),
         operator,
         delegator
       );
       ds.depositIdByDelegator[delegator] = depositId;
     } else {
-      RewardsDistribution(address(this)).redelegate(depositId, operator);
-      RewardsDistribution(address(this)).increaseStake(
+      IRewardsDistribution(address(this)).redelegate(depositId, operator);
+      IRewardsDistribution(address(this)).increaseStake(
         depositId,
         SafeCastLib.toUint96(quantity)
       );
@@ -130,7 +130,7 @@ abstract contract MainnetDelegationBase is IMainnetDelegationBase {
 
     uint256 depositId = ds.depositIdByDelegator[delegator];
     if (depositId != 0) {
-      RewardsDistribution(address(this)).initiateWithdraw(depositId);
+      IRewardsDistribution(address(this)).initiateWithdraw(depositId);
     }
   }
 

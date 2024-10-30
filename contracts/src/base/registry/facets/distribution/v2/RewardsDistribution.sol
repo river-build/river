@@ -69,6 +69,7 @@ contract RewardsDistribution is
     );
   }
 
+  /// @inheritdoc IRewardsDistribution
   function upgradeDelegationProxy(
     address newImplementation
   ) external onlyOwner {
@@ -78,6 +79,7 @@ contract RewardsDistribution is
     emit DelegationProxyUpgraded(newImplementation);
   }
 
+  /// @inheritdoc IRewardsDistribution
   function setRewardNotifier(
     address notifier,
     bool enabled
@@ -91,6 +93,7 @@ contract RewardsDistribution is
   /*                       STATE MUTATING                       */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
+  /// @inheritdoc IRewardsDistribution
   function stake(
     uint96 amount,
     address delegatee,
@@ -99,6 +102,7 @@ contract RewardsDistribution is
     depositId = _stake(amount, delegatee, beneficiary, msg.sender);
   }
 
+  /// @inheritdoc IRewardsDistribution
   function permitAndStake(
     uint96 amount,
     address delegatee,
@@ -124,6 +128,7 @@ contract RewardsDistribution is
     depositId = _stake(amount, delegatee, beneficiary, msg.sender);
   }
 
+  /// @inheritdoc IRewardsDistribution
   function stakeOnBehalf(
     uint96 amount,
     address delegatee,
@@ -154,6 +159,7 @@ contract RewardsDistribution is
     depositId = _stake(amount, delegatee, beneficiary, owner);
   }
 
+  /// @inheritdoc IRewardsDistribution
   function increaseStake(uint256 depositId, uint96 amount) external {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
@@ -181,6 +187,7 @@ contract RewardsDistribution is
     }
   }
 
+  /// @inheritdoc IRewardsDistribution
   function redelegate(uint256 depositId, address delegatee) external {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
@@ -216,6 +223,7 @@ contract RewardsDistribution is
     }
   }
 
+  /// @inheritdoc IRewardsDistribution
   function changeBeneficiary(
     uint256 depositId,
     address newBeneficiary
@@ -237,6 +245,7 @@ contract RewardsDistribution is
     _sweepSpaceRewardsIfNecessary(delegatee);
   }
 
+  /// @inheritdoc IRewardsDistribution
   function initiateWithdraw(
     uint256 depositId
   ) external returns (uint96 amount) {
@@ -261,6 +270,7 @@ contract RewardsDistribution is
     _sweepSpaceRewardsIfNecessary(delegatee);
   }
 
+  /// @inheritdoc IRewardsDistribution
   function withdraw(uint256 depositId) external returns (uint96 amount) {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
@@ -286,6 +296,7 @@ contract RewardsDistribution is
     }
   }
 
+  /// @inheritdoc IRewardsDistribution
   // TODO: transfer rewards when a space redelegates
   function claimReward(
     address beneficiary,
@@ -314,6 +325,7 @@ contract RewardsDistribution is
     }
   }
 
+  /// @inheritdoc IRewardsDistribution
   function notifyRewardAmount(uint256 reward) external {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
@@ -325,7 +337,7 @@ contract RewardsDistribution is
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-  /*                          VIEWERS                           */
+  /*                          GETTERS                           */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   /// @inheritdoc IRewardsDistribution

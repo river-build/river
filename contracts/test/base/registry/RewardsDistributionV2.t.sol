@@ -814,7 +814,7 @@ contract RewardsDistributionV2Test is
     givenOperator(operator, 0)
     givenSpaceHasPointedToOperator(space, operator)
   {
-    vm.assume(claimer != address(this));
+    vm.assume(address(this) != claimer && address(this) != operator);
     setOperatorClaimAddress(operator, claimer);
 
     vm.expectRevert(RewardsDistribution__NotClaimer.selector);

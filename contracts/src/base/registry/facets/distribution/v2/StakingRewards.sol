@@ -141,12 +141,13 @@ library StakingRewards {
   /*                       STATE MUTATING                       */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
+  /// @dev Must be called before any storage updates.
   function updateGlobalReward(Layout storage ds) internal {
     ds.rewardPerTokenAccumulated = currentRewardPerTokenAccumulated(ds);
     ds.lastUpdateTime = lastTimeRewardDistributed(ds);
   }
 
-  /// @dev Must be called after updating the global reward.
+  /// @dev Must be called after `updateGlobalReward` and before changing the earning power.
   function updateReward(Layout storage ds, Treasure storage treasure) internal {
     treasure.unclaimedRewardSnapshot = currentReward(ds, treasure);
     treasure.rewardPerTokenAccumulated = ds.rewardPerTokenAccumulated;
@@ -380,6 +381,8 @@ library StakingRewards {
   /*                         ACCOUNTING                         */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
+  /// @dev Increases the earning power of the beneficiary and the delegatee, taking into account the commission rate
+  /// @dev Must be called after `updateReward(ds, beneficiaryTreasure)`
   function _increaseEarningPower(
     Layout storage ds,
     Deposit storage deposit,
@@ -407,6 +410,8 @@ library StakingRewards {
     }
   }
 
+  /// @dev Decreases the earning power of the beneficiary and the delegatee, taking into account the commission rate
+  /// @dev Must be called after `updateReward(ds, beneficiaryTreasure)`
   function _decreaseEarningPower(
     Layout storage ds,
     Deposit storage deposit,

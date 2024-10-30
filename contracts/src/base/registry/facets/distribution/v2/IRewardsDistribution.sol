@@ -72,6 +72,129 @@ interface IRewardsDistributionBase {
 }
 
 interface IRewardsDistribution is IRewardsDistributionBase {
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                       ADMIN FUNCTIONS                      */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  /// @notice Upgrades the delegation proxy implementation in the beacon
+  /// @dev Only the owner can call this function
+  /// @param newImplementation The address of the new implementation
+  function upgradeDelegationProxy(address newImplementation) external;
+
+  /// @notice Sets whitelist status for reward notifiers
+  /// @dev Only the owner can call this function
+  /// @param notifier The address of the notifier
+  /// @param enabled The whitelist status
+  function setRewardNotifier(address notifier, bool enabled) external;
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                       STATE MUTATING                       */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  /// @notice Stakes the stakeToken for rewards
+  /// @dev The caller must approve the contract to spend the stakeToken
+  /// @param amount The amount of stakeToken to stake
+  /// @param delegatee The address of the delegatee
+  /// @param beneficiary The address of the beneficiary
+  /// @return depositId The ID of the deposit
+  function stake(
+    uint96 amount,
+    address delegatee,
+    address beneficiary
+  ) external returns (uint256 depositId);
+
+  /// @notice Approves the contract to spend the stakeToken with an EIP-2612 permit and stakes the
+  /// stakeToken for rewards
+  /// @param amount The amount of stakeToken to stake
+  /// @param delegatee The address of the delegatee
+  /// @param beneficiary The address of the beneficiary
+  /// @param deadline The deadline for the permit
+  /// @param v The recovery byte of the permit
+  /// @param r The R signature of the permit
+  /// @param s The S signature of the permit
+  /// @return depositId The ID of the deposit
+  function permitAndStake(
+    uint96 amount,
+    address delegatee,
+    address beneficiary,
+    uint256 deadline,
+    uint8 v,
+    bytes32 r,
+    bytes32 s
+  ) external returns (uint256 depositId);
+
+  /// @notice Stakes on behalf of a user with an EIP-712 signature
+  /// @dev The caller must approve the contract to spend the stakeToken
+  /// @param amount The amount of stakeToken to stake
+  /// @param delegatee The address of the delegatee
+  /// @param beneficiary The address of the beneficiary
+  /// @param owner The address of the deposit owner
+  /// @param deadline The deadline for the signature
+  /// @param signature The EIP-712 signature
+  /// @return depositId The ID of the deposit
+  function stakeOnBehalf(
+    uint96 amount,
+    address delegatee,
+    address beneficiary,
+    address owner,
+    uint256 deadline,
+    bytes calldata signature
+  ) external returns (uint256 depositId);
+
+  /// @notice Increases the stake of an existing deposit
+  /// @dev The caller must be the owner of the deposit
+  /// @dev The caller must approve the contract to spend the stakeToken
+  /// @param depositId The ID of the deposit
+  /// @param amount The amount of stakeToken to stake
+  function increaseStake(uint256 depositId, uint96 amount) external;
+
+  /// @notice Redelegates an existing deposit to a new delegatee or reactivates a pending withdrawal
+  /// @dev The caller must be the owner of the deposit
+  /// @param depositId The ID of the deposit
+  /// @param delegatee The address of the new delegatee
+  function redelegate(uint256 depositId, address delegatee) external;
+
+  /// @notice Changes the beneficiary of a deposit
+  /// @dev The caller must be the owner of the deposit
+  /// @param depositId The ID of the deposit
+  /// @param newBeneficiary The address of the new beneficiary
+  function changeBeneficiary(
+    uint256 depositId,
+    address newBeneficiary
+  ) external;
+
+  /// @notice Initiates the withdrawal of a deposit, subject to the lockup period
+  /// @dev The caller must be the owner of the deposit
+  /// @param depositId The ID of the deposit
+  /// @return amount The amount of stakeToken that will be withdrawn
+  function initiateWithdraw(uint256 depositId) external returns (uint96 amount);
+
+  /// @notice Withdraws the stakeToken from a deposit
+  /// @dev The caller must be the owner of the deposit
+  /// @param depositId The ID of the deposit
+  /// @return amount The amount of stakeToken that is withdrawn
+  function withdraw(uint256 depositId) external returns (uint96 amount);
+
+  /// @notice Claims the reward for a beneficiary
+  /// @dev The beneficiary may be the caller. If not, the beneficiary must be a space or operator
+  /// while the caller must be the authorized claimer.
+  /// @param beneficiary The address of the beneficiary
+  /// @param recipient The address of the recipient
+  /// @return reward The amount of rewardToken that is claimed
+  function claimReward(
+    address beneficiary,
+    address recipient
+  ) external returns (uint256 reward);
+
+  /// @notice Notifies the contract of an incoming reward
+  /// @dev The caller must be a reward notifier
+  /// @param reward The amount of rewardToken that has been added
+  function notifyRewardAmount(uint256 reward) external;
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                          GETTERS                           */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   /// @notice Returns the current state of the staking rewards contract
   /// @return Staking state variables
   /// riverToken The token that is being staked and used for rewards
