@@ -226,7 +226,6 @@ func (s *PostgresStreamStore) isStreamMigrated(
 		}
 		defer esRows.Close()
 
-		// If no such stream exists, consider the stream migrated.
 		if !esRows.Next() {
 			return false, WrapRiverError(Err_NOT_FOUND, err).Message("stream not found in local storage")
 		}
