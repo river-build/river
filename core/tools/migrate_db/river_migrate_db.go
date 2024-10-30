@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -454,13 +455,22 @@ func executeSql(ctx context.Context, pool *pgxpool.Pool, sql []string, progressC
 	return nil
 }
 
-func getStreamIds(ctx context.Context, pool *pgxpool.Pool) ([]string, error) {
-	rows, _ := pool.Query(ctx, "SELECT stream_id FROM es")
-	stream_ids, err := pgx.CollectRows(rows, pgx.RowTo[string])
+func getStreamIds(ctx context.Context, pool *pgxpool.Pool) ([]string, []int64, error) {
+	rows, _ := pool.Query(ctx, "SELECT stream_id, latest_snapshot_miniblock FROM es ORDER BY stream_id")
+
+	var ids []string
+	var miniblocks []int64
+	var id string
+	var miniblock int64
+	_, err := pgx.ForEachRow(rows, []any{&id, &miniblock}, func() error {
+		ids = append(ids, id)
+		miniblocks = append(miniblocks, miniblock)
+		return nil
+	})
 	if err != nil {
-		return nil, wrapError("Failed to read es table", err)
+		return nil, nil, wrapError("Failed to read es table", err)
 	}
-	return stream_ids, nil
+	return ids, miniblocks, nil
 }
 
 func reportProgress(ctx context.Context, message string, progressCounter *atomic.Int64) {
@@ -519,7 +529,7 @@ func createPartitions(
 	sourcePool *pgxpool.Pool,
 	targetPool *pgxpool.Pool,
 ) error {
-	stream_ids, err := getStreamIds(ctx, sourcePool)
+	stream_ids, _, err := getStreamIds(ctx, sourcePool)
 	if err != nil {
 		return wrapError("Failed to get stream ids from source", err)
 	}
@@ -782,12 +792,12 @@ func copyStreams(
 }
 
 func copyData(ctx context.Context, source *pgxpool.Pool, target *pgxpool.Pool, force bool) error {
-	sourceStreamIds, err := getStreamIds(ctx, source)
+	sourceStreamIds, _, err := getStreamIds(ctx, source)
 	if err != nil {
 		return wrapError("Failed to get stream ids from source", err)
 	}
 
-	existingStreamIds, err := getStreamIds(ctx, target)
+	existingStreamIds, _, err := getStreamIds(ctx, target)
 	if err != nil {
 		return wrapError("Failed to get stream ids from target", err)
 	}
@@ -880,8 +890,8 @@ func init() {
 
 func compareTableCounts(
 	ctx context.Context,
-	source *pgxpool.Pool,
-	target *pgxpool.Pool,
+	source *pgxpool.Conn,
+	target *pgxpool.Conn,
 	streamId string,
 	table string,
 ) error {
@@ -911,6 +921,39 @@ func compareTableCounts(
 	return nil
 }
 
+func compareAllTableCounts(
+	ctx context.Context,
+	sourcePool *pgxpool.Pool,
+	targetPool *pgxpool.Pool,
+	streamId string,
+) error {
+	sourceConn, err := sourcePool.Acquire(ctx)
+	if err != nil {
+		return wrapError("Failed to acquire source connection", err)
+	}
+	defer sourceConn.Release()
+
+	targetConn, err := targetPool.Acquire(ctx)
+	if err != nil {
+		return wrapError("Failed to acquire target connection", err)
+	}
+	defer targetConn.Release()
+
+	err = compareTableCounts(ctx, sourceConn, targetConn, streamId, "minipools")
+	if err != nil {
+		return err
+	}
+	err = compareTableCounts(ctx, sourceConn, targetConn, streamId, "miniblocks")
+	if err != nil {
+		return err
+	}
+	err = compareTableCounts(ctx, sourceConn, targetConn, streamId, "miniblock_candidates")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 var validateCmd = &cobra.Command{
 	Use:   "validate",
 	Short: "Validate target database by comparinng counts of objects in each table",
@@ -927,34 +970,48 @@ var validateCmd = &cobra.Command{
 			return err
 		}
 
-		sourceStreamCount, err := getStreamCount(ctx, sourcePool)
+		sourceStreamIds, sourceLatest, err := getStreamIds(ctx, sourcePool)
 		if err != nil {
 			return err
 		}
 
-		streamIds, err := getStreamIds(ctx, targetPool)
+		targetStreamIds, targetLatest, err := getStreamIds(ctx, targetPool)
 		if err != nil {
 			return err
 		}
 
-		if sourceStreamCount != len(streamIds) {
-			return fmt.Errorf("stream count mismatch: source %d, target %d", sourceStreamCount, len(streamIds))
+		if len(sourceStreamIds) != len(targetStreamIds) {
+			return fmt.Errorf("stream count mismatch: source %d, target %d", len(sourceStreamIds), len(targetStreamIds))
 		}
 
-		for _, id := range streamIds {
-			err = compareTableCounts(ctx, sourcePool, targetPool, id, "minipools")
-			if err != nil {
-				return err
-			}
-			err = compareTableCounts(ctx, sourcePool, targetPool, id, "miniblocks")
-			if err != nil {
-				return err
-			}
-			err = compareTableCounts(ctx, sourcePool, targetPool, id, "miniblock_candidates")
-			if err != nil {
-				return err
-			}
+		if !slices.Equal(sourceStreamIds, targetStreamIds) {
+			return errors.New("stream ids mismatch")
 		}
+
+		if !slices.Equal(sourceLatest, targetLatest) {
+			return errors.New("latest snapshot miniblock value mismatch")
+		}
+
+		fmt.Println("All streams in es table match")
+
+		numWorkers := viper.GetInt("RIVER_DB_NUM_WORKERS")
+
+		workerPool := workerpool.New(numWorkers)
+
+		progressCounter := &atomic.Int64{}
+		for _, id := range targetStreamIds {
+			workerPool.Submit(func() {
+				err := compareAllTableCounts(ctx, sourcePool, targetPool, id)
+				if err != nil {
+					fmt.Println("ERROR:", err)
+					os.Exit(1)
+				}
+			})
+		}
+
+		go reportProgress(ctx, "Compared streams:", progressCounter)
+
+		workerPool.StopWait()
 
 		fmt.Println("All tables have matching stream counts")
 		return nil
