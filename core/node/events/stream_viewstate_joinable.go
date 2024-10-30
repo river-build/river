@@ -16,6 +16,7 @@ type JoinableStreamView interface {
 	GetMembership(userAddress []byte) (protocol.MembershipOp, error)
 	GetKeySolicitations(userAddress []byte) ([]*protocol.MemberPayload_KeySolicitation, error)
 	GetPinnedMessages() ([]*protocol.MemberPayload_SnappedPin, error)
+	GetMlsGroup() (*protocol.MemberPayload_Snapshot_MlsGroup, error)
 }
 
 var _ JoinableStreamView = (*streamViewImpl)(nil)
@@ -181,4 +182,35 @@ func (r *streamViewImpl) GetPinnedMessages() ([]*protocol.MemberPayload_SnappedP
 		return nil, err
 	}
 	return pins, nil
+}
+
+func (r *streamViewImpl) GetMlsGroup() (*protocol.MemberPayload_Snapshot_MlsGroup, error) {
+	groupState := r.snapshot.GetMembers().MlsGroup
+	// clone so we don't modify the snapshot
+	if groupState != nil {
+		groupState = proto.Clone(groupState).(*protocol.MemberPayload_Snapshot_MlsGroup)
+	} else {
+		groupState = &protocol.MemberPayload_Snapshot_MlsGroup{}
+	}
+
+	updateFn := func(e *ParsedEvent, miniblockNum int64, eventNum int64) (bool, error) {
+		switch payload := e.Event.Payload.(type) {
+		case *protocol.StreamEvent_MemberPayload:
+			switch payload := payload.MemberPayload.Content.(type) {
+			case *protocol.MemberPayload_Mls:
+				applyMlsPayload(groupState, payload.Mls)
+			default:
+				break
+			}
+		default:
+			break
+		}
+		return true, nil
+	}
+
+	err := r.forEachEvent(r.snapshotIndex+1, updateFn)
+	if err != nil {
+		return nil, err
+	}
+	return groupState, nil
 }
