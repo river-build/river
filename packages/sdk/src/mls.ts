@@ -1,5 +1,7 @@
 import {
+    CipherSuite,
     ExternalClient,
+    HpkeCiphertext,
     Client as MlsClient,
     Group as MlsGroup,
     MlsMessage,
@@ -32,8 +34,12 @@ export class MlsCrypto {
         if (!group) {
             throw new Error('Group not found')
         }
-        const ciphertext = (await group.encryptApplicationMessage(message)).toBytes()
-        return new EncryptedData({ algorithm: 'mls', mlsPayload: ciphertext })
+
+        const cipherSuite = new CipherSuite()
+        const epochSecret = await group.currentEpochSecret()
+        const keys = await cipherSuite.kemDerive(epochSecret)
+        const ciphertext = await cipherSuite.seal(keys.publicKey, message)
+        return new EncryptedData({ algorithm: 'mls', mlsPayload: ciphertext.toBytes() })
     }
 
     public async decrypt(streamId: string, encryptedData: EncryptedData): Promise<Uint8Array> {
@@ -46,13 +52,12 @@ export class MlsCrypto {
             throw new Error('Not an MLS payload')
         }
 
-        const message = MlsMessage.fromBytes(encryptedData.mlsPayload)
-
-        const plaintext = (await group.processIncomingMessage(message)).asApplicationMessage()
-        if (!plaintext) {
-            throw new Error('unable to decrypt message')
-        }
-        return plaintext.data()
+        const cipherSuite = new CipherSuite()
+        const epochSecret = await group.currentEpochSecret()
+        const keys = await cipherSuite.kemDerive(epochSecret)
+        const ciphertext = HpkeCiphertext.fromBytes(encryptedData.mlsPayload)
+        const plaintext = await cipherSuite.open(ciphertext, keys.secretKey, keys.publicKey)
+        return plaintext
     }
 
     public async externalJoin(
