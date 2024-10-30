@@ -58,8 +58,8 @@ describe('dmsMlsTests', () => {
         ).toResolve()
 
         await waitFor(() => {
-            const stream = bobsClient.streams.get(streamId)
-            check(stream?._view.membershipContent.mls.latestGroupInfo !== undefined)
+            const bobStream = bobsClient.streams.get(streamId)
+            check(bobStream?._view.membershipContent.mls.latestGroupInfo !== undefined)
         })
 
         await expect(
@@ -67,8 +67,29 @@ describe('dmsMlsTests', () => {
         ).toResolve()
 
         await waitFor(() => {
-            const stream = alicesClient.streams.get(streamId)!
-            check(checkTimeline(['hello alice', 'hello bob'], stream.view.timeline))
+            const aliceStream = alicesClient.streams.get(streamId)!
+            check(checkTimeline(['hello alice', 'hello bob'], aliceStream.view.timeline))
+
+            const bobStream = bobsClient.streams.get(streamId)!
+            check(checkTimeline(['hello alice', 'hello bob'], bobStream.view.timeline))
+        })
+
+        const messages = Array.from(Array(20).keys()).map((key) => {
+            return `Message ${key}`
+        })
+
+        for (const message of messages) {
+            await expect(
+                bobsClient.sendMessage(streamId, message, [], [], { useMls: true }),
+            ).toResolve()
+        }
+
+        await waitFor(() => {
+            const aliceStream = alicesClient.streams.get(streamId)!
+            check(checkTimeline(messages, aliceStream.view.timeline))
+
+            const bobStream = bobsClient.streams.get(streamId)!
+            check(checkTimeline(messages, bobStream.view.timeline))
         })
     })
 })
@@ -76,14 +97,24 @@ describe('dmsMlsTests', () => {
 function checkTimeline(messages: string[], timeline: StreamTimelineEvent[]): boolean {
     const checks = new Set(messages)
     for (const event of timeline) {
-        const content = event.decryptedContent
-        if (content?.kind !== 'channelMessage') {
-            continue
+        // remote
+        {
+            const content = event.decryptedContent
+            if (content?.kind !== 'channelMessage') {
+                continue
+            }
+            const payload = getChannelMessagePayload(content.content)
+            if (payload) {
+                checks.delete(payload)
+            }
         }
-        const payload = getChannelMessagePayload(content.content)
-        console.log(payload)
-        if (payload) {
-            checks.delete(payload)
+        // local
+        {
+            const content = event.localEvent?.channelMessage
+            const payload = getChannelMessagePayload(content)
+            if (payload) {
+                checks.delete(payload)
+            }
         }
     }
     return checks.size === 0

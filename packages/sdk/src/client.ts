@@ -1410,11 +1410,11 @@ export class Client
         const stream = this.stream(streamId)
 
         check(stream !== undefined, 'stream not found')
-        // const localId = stream.appendLocalEvent(payload, 'sending')
-        // opts?.onLocalEventAppended?.(localId)
-        // if (opts?.beforeSendEventHook) {
-        //     await opts?.beforeSendEventHook
-        // }
+        const localId = stream.appendLocalEvent(payload, 'sending')
+        opts?.onLocalEventAppended?.(localId)
+        if (opts?.beforeSendEventHook) {
+            await opts?.beforeSendEventHook
+        }
         return this.makeAndSendChannelMessageEvent(streamId, payload, undefined, {
             disableTags: opts?.disableTags,
             useMls: opts?.useMls,
