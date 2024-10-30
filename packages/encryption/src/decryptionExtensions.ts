@@ -100,14 +100,13 @@ export interface DecryptionSessionError {
     error?: unknown
 }
 
-export interface MlsGroupInfo {
-    streamId: string
-    groupInfo: Uint8Array
-}
-
 export interface MlsCommit {
     streamId: string
     commit: Uint8Array
+}
+
+export interface MlsJoinExternal {
+    streamId: string
 }
 
 /**
@@ -134,7 +133,7 @@ export abstract class BaseDecryptionExtensions {
     private queues = {
         priorityTasks: new Array<() => Promise<void>>(),
         newGroupSession: new Array<NewGroupSessionItem>(),
-        mls: new Array<MlsGroupInfo | MlsCommit>(),
+        mls: new Array<MlsJoinExternal | MlsCommit>(),
         encryptedContent: new Array<EncryptedContentItem>(),
         missingKeys: new Array<MissingKeysItem>(),
         keySolicitations: new Array<KeySolicitationItem>(),
@@ -216,9 +215,8 @@ export abstract class BaseDecryptionExtensions {
         args: KeyFulfilmentData,
     ): Promise<{ error?: AddEventResponse_Error }>
     public abstract encryptAndShareGroupSessions(args: GroupSessionsData): Promise<void>
-    public abstract didReceiveMlsGroupInfo(args: MlsGroupInfo): Promise<void>
     public abstract didReceiveMlsCommit(args: MlsCommit): Promise<void>
-
+    public abstract externalJoinMls(args: MlsJoinExternal): Promise<void>
     public abstract shouldPauseTicking(): boolean
     /**
      * uploadDeviceKeys
@@ -318,8 +316,8 @@ export abstract class BaseDecryptionExtensions {
         }
     }
 
-    public enqueueMls(mls: MlsGroupInfo | MlsCommit): void {
-        this.queues.mls.push(mls)
+    public enqueueMls(commit: MlsCommit): void {
+        this.queues.mls.push(commit)
         this.checkStartTicking()
     }
 
@@ -609,7 +607,11 @@ export abstract class BaseDecryptionExtensions {
             this.log.debug('retrying decryption', item)
             await this.decryptGroupEvent(item.streamId, item.eventId, item.kind, item.encryptedData)
         } catch (err) {
-            console.log('FAILED TO DECRYPT', err)
+            // console.log('FAILED TO DECRYPT', err)
+
+            if (isMlsGroupNotFoundError(err)) {
+                this.queues.mls.push({ streamId: item.streamId })
+            }
 
             const sessionNotFound = isSessionNotFoundError(err)
 
@@ -785,14 +787,14 @@ export abstract class BaseDecryptionExtensions {
         }
     }
 
-    private async processMls(mls: MlsGroupInfo | MlsCommit): Promise<void> {
-        console.log('PROCESS MLS', mls)
-        if (isMlsGroupInfo(mls)) {
-            await this.didReceiveMlsGroupInfo(mls)
+    private async processMls(cmd: MlsJoinExternal | MlsCommit): Promise<void> {
+        if (isMlsCommit(cmd)) {
+            await this.didReceiveMlsCommit(cmd)
         } else {
-            await this.didReceiveMlsCommit(mls)
+            await this.externalJoinMls(cmd)
         }
     }
+
     /**
      * can be overridden to add a delay to the key solicitation response
      */
@@ -903,6 +905,13 @@ function isSessionNotFoundError(err: unknown): boolean {
     return false
 }
 
+function isMlsGroupNotFoundError(err: unknown): boolean {
+    if (err !== null && typeof err === 'object' && 'message' in err) {
+        return (err.message as string).includes('MLS group not found')
+    }
+    return false
+}
+
 function generateLogId(userId: string, deviceKey: string): string {
     const shortId = shortenHexString(userId.startsWith('0x') ? userId.slice(2) : userId)
     const shortKey = shortenHexString(deviceKey)
@@ -910,6 +919,6 @@ function generateLogId(userId: string, deviceKey: string): string {
     return logId
 }
 
-function isMlsGroupInfo(item: MlsGroupInfo | MlsCommit): item is MlsGroupInfo {
-    return 'groupInfo' in item
+function isMlsCommit(item: MlsJoinExternal | MlsCommit): item is MlsCommit {
+    return 'commit' in item
 }
