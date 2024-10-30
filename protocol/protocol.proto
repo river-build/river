@@ -155,7 +155,73 @@ message MiniblockHeader {
 * can appear in any stream
 */
 message MemberPayload {
+
+    message MlsPayload {
+
+        // can only be called once per stream
+        message InitializeGroup {
+            bytes user_address = 1;
+            bytes device_key = 2;
+            bytes group_info_with_external_key = 3;
+        }
+
+        // other users add themselves to the group
+        message ExternalJoin {
+            bytes user_address = 1;
+            bytes device_key = 2;
+            bytes commit = 3;
+            bytes group_info_with_external_key = 4;
+        }
+
+        // can be called automatically by the node when a user leaves
+        message ProposeLeave {
+            bytes user_address = 1;
+        }
+
+        // when members see pending ProposeLeaves, they can commit them
+        message CommitLeave {
+            bytes user_address = 1;
+            bytes commit = 2;
+            bytes group_info_with_external_key = 3;
+            KeyAnnouncement key_announcement = 4;
+        }
+
+        // when a user has performed an ExternalJoin commit
+        message KeyAnnouncement {
+            message KeyAndEpoch {
+                bytes key = 1;
+                uint64 epoch = 2;
+            }
+            repeated KeyAndEpoch keys = 1;
+        }
+
+        oneof content {
+            InitializeGroup initialize_group = 1;
+            ExternalJoin external_join = 2;
+            ProposeLeave propose_leave = 3;
+            CommitLeave commit_leave = 4;
+            KeyAnnouncement key_announcement = 5;
+        }
+    }
+
     message Snapshot {
+
+        message MlsGroup {
+            message DeviceKeys {
+                repeated bytes device_keys = 1;
+            }
+
+            bytes initial_group_info = 1;
+            bytes latest_group_info = 2; // <- always latest (for now includes ratched tree)
+            // bytes ratchet_tree = 3; // <- ratchet_tree + commits replayed
+            repeated bytes commits = 4; // <- all commits from start
+            map<uint64, bytes> epoch_keys = 5; // <- epoch to commit
+            // when a new user wants to join, they grab the ratchet tree + latest group info
+            // combine using ExternalCommitBuilder and commit_external themselves into the group
+            map<string, DeviceKeys> device_keys = 6;
+            repeated MlsPayload.ProposeLeave pending_leaves = 7;
+        }
+
         message Member {
             bytes user_address = 1;
             int64 miniblock_num = 2;
@@ -169,6 +235,7 @@ message MemberPayload {
         
         repeated Member joined = 1;
         repeated SnappedPin pins = 2;
+        MlsGroup mls_group = 3;
     }
 
     message Membership {
@@ -221,6 +288,7 @@ message MemberPayload {
         Nft nft = 7;
         Pin pin = 8;
         Unpin unpin = 9;
+        MlsPayload mls = 10;
     }
 }
 
@@ -629,6 +697,7 @@ message EncryptedData {
     */
     optional string ref_event_id = 6;
 
+    optional bytes mls_payload = 7;
 }
 
 message WrappedEncryptedData {
