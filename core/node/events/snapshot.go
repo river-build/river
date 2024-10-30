@@ -829,7 +829,11 @@ func applyMlsPayload(
 		mlsGroup.Commits = append(mlsGroup.Commits, payload.ExternalJoin.Commit)
 		mlsGroup.LatestGroupInfo = payload.ExternalJoin.GroupInfoWithExternalKey
 		key := string(payload.ExternalJoin.UserAddress)
-		if mlsGroup.DeviceKeys[key] == nil {
+		if mlsGroup.GetDeviceKeys() == nil {
+			mlsGroup.DeviceKeys = make(map[string]*protocol.MemberPayload_Snapshot_MlsGroup_DeviceKeys)
+		}
+		_, ok := mlsGroup.GetDeviceKeys()[key]
+		if !ok {
 			mlsGroup.DeviceKeys[key] = &protocol.MemberPayload_Snapshot_MlsGroup_DeviceKeys{}
 		}
 		mlsGroup.DeviceKeys[key].DeviceKeys = append(mlsGroup.DeviceKeys[key].DeviceKeys, payload.ExternalJoin.DeviceKey)

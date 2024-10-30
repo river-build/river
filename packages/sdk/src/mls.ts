@@ -72,12 +72,18 @@ export class MlsCrypto {
         }
     }
 
-    public async handleCommit(streamId: string, commit: Uint8Array): Promise<void> {
+    public async handleCommit(
+        streamId: string,
+        commit: Uint8Array,
+    ): Promise<{ key: Uint8Array; epoch: bigint } | undefined> {
         const group = this.groups.get(streamId)
         if (!group) {
             throw new Error('Group not found')
         }
         await group.processIncomingMessage(MlsMessage.fromBytes(commit))
+        const secret = await group.currentEpochSecret()
+        const epoch = group.currentEpoch
+        return { key: secret.toBytes(), epoch: epoch }
     }
 
     public hasGroup(streamId: string): boolean {
@@ -96,5 +102,12 @@ export class MlsCrypto {
         for (const commit of commits) {
             await group.processIncomingMessage(MlsMessage.fromBytes(commit))
         }
+    }
+
+    public async handleKeyAnnouncement(
+        streamId: string,
+        keys: { epoch: bigint; key: Uint8Array }[],
+    ) {
+        //
     }
 }

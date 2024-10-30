@@ -51,6 +51,7 @@ import {
     GroupEncryptionCrypto,
     GroupEncryptionSession,
     IGroupEncryptionClient,
+    MlsKeyAnnouncement,
     UserDevice,
     UserDeviceCollection,
     makeSessionKeys,
@@ -2490,6 +2491,34 @@ export class Client
         if (!this.mlsCrypto) {
             throw new Error('mls backend not initialized')
         }
-        await this.mlsCrypto.handleCommit(streamId, commit)
+        const result = await this.mlsCrypto.handleCommit(streamId, commit)
+        if (result) {
+            console.log(`Announcing KEY + EPOCH ${result.epoch}`)
+            try {
+                await this.makeEventAndAddToStream(
+                    streamId,
+                    make_MemberPayload_Mls({
+                        content: {
+                            case: 'keyAnnouncement',
+                            value: {
+                                keys: [{ key: result.key, epoch: result.epoch }],
+                            },
+                        },
+                    }),
+                )
+            } catch (error) {
+                console.log('ERROR announcing key', error)
+            }
+        }
+    }
+
+    public async mls_didReceiveKeyAnnouncement(
+        streamId: string,
+        keys: { epoch: bigint; key: Uint8Array }[],
+    ) {
+        if (!this.mlsCrypto) {
+            throw new Error('mls backend not initialized')
+        }
+        await this.mlsCrypto.handleKeyAnnouncement(streamId, keys)
     }
 }

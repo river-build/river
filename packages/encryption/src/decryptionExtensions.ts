@@ -109,6 +109,11 @@ export interface MlsJoinExternal {
     streamId: string
 }
 
+export interface MlsKeyAnnouncement {
+    streamId: string
+    keys: { epoch: bigint; key: Uint8Array }[]
+}
+
 /**
  *
  * Responsibilities:
@@ -133,7 +138,7 @@ export abstract class BaseDecryptionExtensions {
     private queues = {
         priorityTasks: new Array<() => Promise<void>>(),
         newGroupSession: new Array<NewGroupSessionItem>(),
-        mls: new Array<MlsJoinExternal | MlsCommit>(),
+        mls: new Array<MlsJoinExternal | MlsCommit | MlsKeyAnnouncement>(),
         encryptedContent: new Array<EncryptedContentItem>(),
         missingKeys: new Array<MissingKeysItem>(),
         keySolicitations: new Array<KeySolicitationItem>(),
@@ -217,6 +222,7 @@ export abstract class BaseDecryptionExtensions {
     public abstract encryptAndShareGroupSessions(args: GroupSessionsData): Promise<void>
     public abstract didReceiveMlsCommit(args: MlsCommit): Promise<void>
     public abstract externalJoinMls(args: MlsJoinExternal): Promise<void>
+    public abstract keyAnnouncementMls(args: MlsKeyAnnouncement): Promise<void>
     public abstract shouldPauseTicking(): boolean
     /**
      * uploadDeviceKeys
@@ -316,7 +322,7 @@ export abstract class BaseDecryptionExtensions {
         }
     }
 
-    public enqueueMls(commit: MlsCommit): void {
+    public enqueueMls(commit: MlsCommit | MlsKeyAnnouncement): void {
         this.queues.mls.push(commit)
         this.checkStartTicking()
     }
@@ -787,9 +793,11 @@ export abstract class BaseDecryptionExtensions {
         }
     }
 
-    private async processMls(cmd: MlsJoinExternal | MlsCommit): Promise<void> {
+    private async processMls(cmd: MlsJoinExternal | MlsCommit | MlsKeyAnnouncement): Promise<void> {
         if (isMlsCommit(cmd)) {
             await this.didReceiveMlsCommit(cmd)
+        } else if (isKeyAnnouncement(cmd)) {
+            await this.keyAnnouncementMls(cmd)
         } else {
             await this.externalJoinMls(cmd)
         }
@@ -921,4 +929,10 @@ function generateLogId(userId: string, deviceKey: string): string {
 
 function isMlsCommit(item: MlsJoinExternal | MlsCommit): item is MlsCommit {
     return 'commit' in item
+}
+
+function isKeyAnnouncement(
+    item: MlsJoinExternal | MlsCommit | MlsKeyAnnouncement,
+): item is MlsKeyAnnouncement {
+    return 'keys' in item
 }
