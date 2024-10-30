@@ -11,7 +11,7 @@ import {
     KeySolicitationData,
     makeSessionKeys,
     MlsCommit,
-    MlsGroupInfo,
+    MlsJoinExternal,
 } from '../decryptionExtensions'
 import {
     AddEventResponse_Error,
@@ -366,10 +366,11 @@ class MockDecryptionExtensions extends BaseDecryptionExtensions {
         })
     }
 
-    public async didReceiveMlsGroupInfo(_args: MlsGroupInfo): Promise<void> {
+    public async didReceiveMlsCommit(_args: MlsCommit): Promise<void> {
         //
     }
-    public async didReceiveMlsCommit(_args: MlsCommit): Promise<void> {
+
+    public async externalJoinMls(_args: MlsJoinExternal): Promise<void> {
         //
     }
 }

@@ -9,7 +9,7 @@ import {
     KeySolicitationContent,
     KeySolicitationData,
     MlsCommit,
-    MlsGroupInfo,
+    MlsJoinExternal,
     UserDevice,
 } from '@river-build/encryption'
 import {
@@ -81,9 +81,6 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
             }[],
         ) => this.enqueueInitKeySolicitations(streamId, members)
 
-        const onMlsGroupInfo = (streamId: string, groupInfo: Uint8Array) =>
-            this.enqueueMls({ streamId, groupInfo })
-
         const onMlsCommit = (streamId: string, commit: Uint8Array) =>
             this.enqueueMls({ streamId, commit })
 
@@ -94,7 +91,6 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
         client.on('updatedKeySolicitation', onKeySolicitation)
         client.on('initKeySolicitations', onInitKeySolicitations)
         client.on('streamNewUserJoined', onMembershipChange)
-        client.on('mlsGroupInfo', onMlsGroupInfo)
         client.on('mlsCommit', onMlsCommit)
 
         this._onStopFn = () => {
@@ -105,7 +101,6 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
             client.off('updatedKeySolicitation', onKeySolicitation)
             client.off('initKeySolicitations', onInitKeySolicitations)
             client.off('streamNewUserJoined', onMembershipChange)
-            client.off('mlsGroupInfo', onMlsGroupInfo)
             client.off('mlsCommit', onMlsCommit)
         }
         this.log.debug('new ClientDecryptionExtensions', { userDevice })
@@ -271,14 +266,13 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
         return { error }
     }
 
+    public async externalJoinMls(args: MlsJoinExternal): Promise<void> {
+        await this.client.mls_joinGroup(args.streamId)
+    }
+
     public async didReceiveMlsCommit(args: MlsCommit): Promise<void> {
         console.log('didReceiveMlsCommit')
         await this.client.mls_didReceiveCommit(args.streamId, args.commit)
-    }
-
-    public async didReceiveMlsGroupInfo(args: MlsGroupInfo): Promise<void> {
-        console.log('didReceiveMlsGroupInfo')
-        await this.client.mls_didReceiveGroupInfo(args.streamId, args.groupInfo)
     }
 
     public async uploadDeviceKeys(): Promise<void> {

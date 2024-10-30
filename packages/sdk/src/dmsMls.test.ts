@@ -2,8 +2,14 @@
  * @group main
  */
 
+import { check } from '@river-build/dlog'
 import { Client } from './client'
-import { createEventDecryptedPromise, makeTestClient } from './util.test'
+import {
+    createEventDecryptedPromise,
+    makeTestClient,
+    waitFor,
+    waitForSyncStreams,
+} from './util.test'
 import {
     ExternalClient,
     ExternalGroup,
@@ -51,6 +57,12 @@ describe('dmsMlsTests', () => {
         await expect(
             alicesClient.sendMessage(streamId, 'hello bob', [], [], { useMls: true }),
         ).toResolve()
+
+        await waitFor(() => {
+            console.log('CHECKING...')
+            const stream = bobsClient.streams.get(streamId)
+            check(stream?._view.membershipContent.mls.latestGroupInfo !== undefined)
+        })
 
         await expect(
             bobsClient.sendMessage(streamId, 'hello alice', [], [], { useMls: true }),

@@ -55,14 +55,14 @@ export class MlsCrypto {
         return plaintext.data()
     }
 
-    public async handleGroupInfo(
+    public async externalJoin(
         streamId: string,
         groupInfo: Uint8Array,
-    ): Promise<{ groupInfo: Uint8Array; commit: Uint8Array } | undefined> {
+    ): Promise<{ groupInfo: Uint8Array; commit: Uint8Array }> {
         if (this.groups.has(streamId)) {
-            return undefined
+            throw new Error('Group already exists')
         }
-        console.log('CREATING GROUP FROM BYTES', groupInfo.length)
+
         const { group, commit } = await this.client.commitExternal(MlsMessage.fromBytes(groupInfo))
         this.groups.set(streamId, group)
         const updatedGroupInfo = await group.groupInfoMessageAllowingExtCommit(true)

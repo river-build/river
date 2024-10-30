@@ -2378,22 +2378,30 @@ export class Client
         }
 
         if (!this.mlsCrypto.hasGroup(streamId)) {
-            const groupInfo = await this.mlsCrypto.createGroup(streamId)
-            const deviceKey = this.mlsCrypto.deviceKey
+            const stream = this.streams.get(streamId)
+            if (!stream) {
+                throw new Error('stream not found')
+            }
+            if (stream.view.membershipContent.mls.latestGroupInfo) {
+                await this.mls_joinGroup(streamId)
+            } else {
+                const groupInfo = await this.mlsCrypto.createGroup(streamId)
+                const deviceKey = this.mlsCrypto.deviceKey
 
-            await this.makeEventAndAddToStream(
-                streamId,
-                make_MemberPayload_Mls({
-                    content: {
-                        case: 'initializeGroup',
-                        value: {
-                            groupInfoWithExternalKey: groupInfo,
-                            userAddress: addressFromUserId(this.userId),
-                            deviceKey: deviceKey,
+                await this.makeEventAndAddToStream(
+                    streamId,
+                    make_MemberPayload_Mls({
+                        content: {
+                            case: 'initializeGroup',
+                            value: {
+                                groupInfoWithExternalKey: groupInfo,
+                                userAddress: addressFromUserId(this.userId),
+                                deviceKey: deviceKey,
+                            },
                         },
-                    },
-                }),
-            )
+                    }),
+                )
+            }
         }
 
         const plaintext = event.toJsonString()
@@ -2440,34 +2448,75 @@ export class Client
         await this.rpcClient.info({ debug: ['drop_stream', syncId, streamId] })
     }
 
-    public async mls_didReceiveGroupInfo(streamId: string, groupInfo: Uint8Array) {
+    public async mls_joinGroup(streamId: string): Promise<void> {
         if (!this.mlsCrypto) {
             throw new Error('mls backend not initialized')
         }
-        const groupJoinResult = await this.mlsCrypto.handleGroupInfo(streamId, groupInfo)
-        if (groupJoinResult) {
-            console.log('Performing external join', groupJoinResult)
-            try {
-                await this.makeEventAndAddToStream(
-                    streamId,
-                    make_MemberPayload_Mls({
-                        content: {
-                            case: 'externalJoin',
-                            value: {
-                                userAddress: addressFromUserId(this.userId),
-                                deviceKey: this.mlsCrypto.deviceKey,
-                                groupInfoWithExternalKey: groupJoinResult.groupInfo,
-                                commit: groupJoinResult.commit,
-                            },
-                        },
-                    }),
-                )
-            } catch (error) {
-                console.log('ERROR performing external join', error)
-            }
-            console.log('DId perform external join')
+        if (this.mlsCrypto.hasGroup(streamId)) {
+            return
         }
+        const stream = this.streams.get(streamId)
+        if (!stream) {
+            throw new Error('stream not found')
+        }
+
+        const latestGroupInfo = stream.view.membershipContent.mls.latestGroupInfo
+        if (!latestGroupInfo) {
+            throw new Error('latestGroupInfo not found')
+        }
+
+        const groupJoinResult = await this.mlsCrypto.externalJoin(streamId, latestGroupInfo)
+
+        console.log('Performing external join', groupJoinResult)
+        try {
+            await this.makeEventAndAddToStream(
+                streamId,
+                make_MemberPayload_Mls({
+                    content: {
+                        case: 'externalJoin',
+                        value: {
+                            userAddress: addressFromUserId(this.userId),
+                            deviceKey: this.mlsCrypto.deviceKey,
+                            groupInfoWithExternalKey: groupJoinResult.groupInfo,
+                            commit: groupJoinResult.commit,
+                        },
+                    },
+                }),
+            )
+        } catch (error) {
+            console.log('ERROR performing external join', error)
+        }
+        console.log('DId perform external join')
     }
+
+    // public async mls_didReceiveGroupInfo(streamId: string, groupInfo: Uint8Array) {
+    //     if (!this.mlsCrypto) {
+    //         throw new Error('mls backend not initialized')
+    //     }
+    //     const groupJoinResult = await this.mlsCrypto.handleGroupInfo(streamId, groupInfo)
+    //     if (groupJoinResult) {
+    //         console.log('Performing external join', groupJoinResult)
+    //         try {
+    //             await this.makeEventAndAddToStream(
+    //                 streamId,
+    //                 make_MemberPayload_Mls({
+    //                     content: {
+    //                         case: 'externalJoin',
+    //                         value: {
+    //                             userAddress: addressFromUserId(this.userId),
+    //                             deviceKey: this.mlsCrypto.deviceKey,
+    //                             groupInfoWithExternalKey: groupJoinResult.groupInfo,
+    //                             commit: groupJoinResult.commit,
+    //                         },
+    //                     },
+    //                 }),
+    //             )
+    //         } catch (error) {
+    //             console.log('ERROR performing external join', error)
+    //         }
+    //         console.log('DId perform external join')
+    //     }
+    // }
 
     public async mls_didReceiveCommit(streamId: string, commit: Uint8Array) {
         if (!this.mlsCrypto) {
