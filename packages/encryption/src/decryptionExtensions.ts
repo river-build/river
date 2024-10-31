@@ -627,6 +627,7 @@ export abstract class BaseDecryptionExtensions {
                     this.decryptionFailures[streamId][sessionId].push(item)
                 }
                 if (isMlsGroupNotFoundError(err)) {
+                    console.log('PUSHING JOIN EXTERNAL')
                     this.queues.mls.push({ streamId: item.streamId })
                 } else if (isMlsMissingEpochError(err)) {
                     console.log('Was missing epoch...')
@@ -810,6 +811,11 @@ export abstract class BaseDecryptionExtensions {
     private async processMls(cmd: MlsJoinExternal | MlsCommit | MlsKeyAnnouncement): Promise<void> {
         if (isMlsCommit(cmd)) {
             await this.didReceiveMlsCommit(cmd)
+            console.log('HAD FAILURES?', this.decryptionFailures[cmd.streamId]['all-the-same'])
+            for (const item of this.decryptionFailures[cmd.streamId]['all-the-same']) {
+                console.log('retrying decryption', item)
+                await this.processEncryptedContentItem(item)
+            }
         } else if (isKeyAnnouncement(cmd)) {
             await this.keyAnnouncementMls(cmd)
 
@@ -819,6 +825,7 @@ export abstract class BaseDecryptionExtensions {
                 await this.processEncryptedContentItem(item)
             }
         } else {
+            console.log('JOINING EXTERNALLY')
             await this.externalJoinMls(cmd)
         }
     }

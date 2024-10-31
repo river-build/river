@@ -73,8 +73,6 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
 
         if (snapshot.members.mlsGroup) {
             this.mls.applySnapshot(snapshot.members.mlsGroup, encryptionEmitter)
-        } else {
-            console.log('NO MLS GROUP')
         }
 
         for (const member of snapshot.members.joined) {

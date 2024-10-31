@@ -38,7 +38,7 @@ export class MlsCrypto {
     public async encrypt(streamId: string, message: Uint8Array): Promise<EncryptedData> {
         const group = this.groups.get(streamId)
         if (!group) {
-            throw new Error('Group not found')
+            throw new Error('MLS group not found')
         }
 
         const cipherSuite = new CipherSuite()
@@ -53,7 +53,7 @@ export class MlsCrypto {
     public async decrypt(streamId: string, encryptedData: EncryptedData): Promise<Uint8Array> {
         const group = this.groups.get(streamId)
         if (!group) {
-            throw new Error('Group not found')
+            throw new Error('MLS group not found')
         }
 
         if (!encryptedData.mlsPayload) {
