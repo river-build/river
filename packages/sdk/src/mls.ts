@@ -76,7 +76,7 @@ export class MlsCrypto {
     public async externalJoin(
         streamId: string,
         groupInfo: Uint8Array,
-    ): Promise<{ groupInfo: Uint8Array; commit: Uint8Array }> {
+    ): Promise<{ groupInfo: Uint8Array; commit: Uint8Array; epoch: bigint }> {
         if (this.groups.has(streamId)) {
             throw new Error('Group already exists')
         }
@@ -89,7 +89,12 @@ export class MlsCrypto {
         return {
             groupInfo: updatedGroupInfo.toBytes(),
             commit: commit.toBytes(),
+            epoch: group.currentEpoch,
         }
+    }
+
+    public async externalJoinFailed(streamId: string) {
+        this.groups.delete(streamId)
     }
 
     public async handleCommit(
@@ -118,5 +123,13 @@ export class MlsCrypto {
     ) {
         console.log('GOT KEY ANNOUNCEMENT', keys)
         this.keys.push(...keys)
+    }
+
+    public epochFor(streamId: string): bigint {
+        const group = this.groups.get(streamId)
+        if (!group) {
+            throw new Error('Group not found')
+        }
+        return group.currentEpoch
     }
 }

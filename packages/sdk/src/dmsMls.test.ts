@@ -143,9 +143,8 @@ describe('dmsMlsTests', () => {
         const channelId = makeUniqueChannelStreamId(spaceId)
         await expect(bobsClient.createChannel(spaceId, 'Channel', 'Topic', channelId)).toResolve()
 
-        const clients: Client[] = []
         await Promise.all(
-            Array.from(Array(10).keys()).map(async (n) => {
+            Array.from(Array(12).keys()).map(async (n) => {
                 console.log(`JOINING CLIENT ${n}`)
                 const client = await makeInitAndStartClient()
                 await expect(client.joinStream(channelId)).toResolve()
@@ -164,23 +163,31 @@ describe('dmsMlsTests', () => {
             messages.push(msg)
         }
 
-        await waitFor(() => {
-            for (const client of clients) {
-                const stream = client.streams.get(channelId)!
-                check(
-                    checkTimelineContainsAll(
-                        ['hello everyone'].concat(messages),
-                        stream.view.timeline,
-                    ),
-                )
-            }
-        })
+        await expect(
+            await waitFor(
+                () => {
+                    for (const client of clients) {
+                        const stream = client.streams.get(channelId)!
+                        check(
+                            checkTimelineContainsAll(
+                                ['hello everyone'].concat(messages),
+                                stream.view.timeline,
+                            ),
+                        )
+                    }
+                },
+                { timeoutMS: 10000 },
+            ),
+        ).toResolve()
 
-        await waitFor(() => {
-            for (const client of clients) {
-                check(client.mlsCrypto!.hasGroup(channelId))
-            }
-        })
+        await expect(
+            await waitFor(() => {
+                for (const client of clients) {
+                    check(client.mlsCrypto!.hasGroup(channelId))
+                    check(client.mlsCrypto!.epochFor(channelId) === BigInt(clients.length - 1))
+                }
+            }),
+        ).toResolve()
     })
 })
 

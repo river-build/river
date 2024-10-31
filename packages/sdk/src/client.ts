@@ -2448,7 +2448,7 @@ export class Client
         await this.rpcClient.info({ debug: ['drop_stream', syncId, streamId] })
     }
 
-    public async mls_joinGroup(streamId: string): Promise<void> {
+    public async mls_joinGroup(streamId: string, retry: number = 5): Promise<void> {
         if (!this.mlsCrypto) {
             throw new Error('mls backend not initialized')
         }
@@ -2478,16 +2478,29 @@ export class Client
                             deviceKey: this.mlsCrypto.deviceKey,
                             groupInfoWithExternalKey: groupJoinResult.groupInfo,
                             commit: groupJoinResult.commit,
+                            epoch: groupJoinResult.epoch,
                         },
                     },
                 }),
             )
+            console.log('Did perform external join')
         } catch (error) {
+            const asyncTimeout = (ms: number) => {
+                return new Promise((resolve) => {
+                    setTimeout(resolve, ms)
+                })
+            }
+            await this.mlsCrypto.externalJoinFailed(streamId)
             console.log('ERROR performing external join', error)
+            if (retry > 0) {
+                await asyncTimeout(1000) // should go back on the work stack
+                return await this.mls_joinGroup(streamId, retry - 1)
+            } else {
+                console.log('PERMANENT FAILURE')
+                throw error
+            }
         }
-        console.log('Did perform external join')
     }
-
     public async mls_didReceiveCommit(streamId: string, commit: Uint8Array) {
         if (!this.mlsCrypto) {
             throw new Error('mls backend not initialized')
