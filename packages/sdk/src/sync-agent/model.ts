@@ -161,7 +161,7 @@ export namespace Model {
             storable: (ctx: Ctx<T>) => Storable<T>
             syncable: (ctx: Ctx<T>) => Syncable
             actions: (ctx: Ctx<T>) => Actions
-            dependencies?: ReturnType<typeof mkPersistent>[]
+            dependencies?: ReturnType<typeof mkPersistent>[] // ?
         }
 
         /**

@@ -107,8 +107,25 @@ export const ChannelModel = Model.Recipe.mkPersistent<ChannelDb, ChannelActions>
     },
 })
 
+// We can compose recipes, merging their data and actions.
+// This is useful for creating more complex models, while keeping things modular and reusable
+// Type of composed is
+// ```ts
+// Model.Recipe.Persistent<
+//     ChannelDb & {
+//         id: string
+//         streamId: string
+//         events: TimelineEvent[]
+//     },
+//     ChannelActions & {
+//         ask: (question: string) => Promise<{
+//             answer: string
+//         }>
+//     }
+// >
+// ```
 const composed = Model.Recipe.compose(
-    Model.Recipe.empty<ChannelDb, ChannelActions>(),
+    ChannelModel,
     Model.Recipe.empty<
         {
             id: string
