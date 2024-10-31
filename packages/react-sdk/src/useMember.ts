@@ -1,4 +1,4 @@
-import { Member, type MemberModel, Myself } from '@river-build/sdk'
+import { Member, Myself } from '@river-build/sdk'
 import { useMemo } from 'react'
 import { useObservable } from './useObservable'
 
@@ -7,7 +7,7 @@ import { type ActionConfig, useAction } from './internals/useAction'
 
 export const useMember = (
     member: Member | Myself,
-    config?: ObservableConfig.FromObservable<MemberModel>,
+    config?: ObservableConfig.FromObservable<Member>,
 ) => {
     const observable = useMemo(() => (member instanceof Myself ? member.member : member), [member])
     const { data, ...rest } = useObservable(observable, config)

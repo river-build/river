@@ -1,9 +1,11 @@
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Outlet, useNavigate, useParams } from 'react-router-dom'
 import { Suspense, useCallback, useMemo } from 'react'
 import {
     useDm,
     useGdm,
     useMember,
+    useRoomMember,
+    useRoomMemberList,
     useSpace,
     useSyncAgent,
     useUserDms,
@@ -104,7 +106,7 @@ export const DashboardRoute = () => {
                         <div className="flex flex-col gap-2">
                             {dmStreamIds.map((dmStreamId) => (
                                 <Suspense key={dmStreamId} fallback={<div>Loading...</div>}>
-                                    <DmInfo
+                                    <NoSuspenseDmInfo
                                         key={dmStreamId}
                                         dmStreamId={dmStreamId}
                                         onDmChange={navigateToDm}
@@ -159,6 +161,7 @@ const GdmInfo = ({
     )
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const DmInfo = ({
     dmStreamId,
     onDmChange,
@@ -187,6 +190,37 @@ const DmInfo = ({
     return (
         <button className="flex items-center gap-2" onClick={() => onDmChange(dm.id)}>
             <Avatar userId={userId} className="h-10 w-10 rounded-full border border-neutral-200" />
+            <p className="font-mono text-sm font-medium">
+                {userId === sync.userId ? 'You' : displayName || username || shortenAddress(userId)}
+            </p>
+        </button>
+    )
+}
+
+// Without suspense, we can't wait for initialization.
+// In this case, we will default user to be ourselves until the dm is initialized so we can get the correct user
+const NoSuspenseDmInfo = ({
+    dmStreamId,
+    onDmChange,
+}: {
+    dmStreamId: string
+    onDmChange: (dmStreamId: string) => void
+}) => {
+    const sync = useSyncAgent()
+    const { data: dm } = useDm(dmStreamId)
+    const { data: members } = useRoomMemberList(dmStreamId)
+    const { userId, username, displayName } = useRoomMember({
+        streamId: dmStreamId,
+        userId: members.userIds.find((userId) => userId !== sync.userId) || sync.userId,
+    })
+
+    return (
+        <button className="flex items-center gap-2" onClick={() => onDmChange(dm.id)}>
+            <Avatar
+                key={userId}
+                userId={userId}
+                className="h-10 w-10 rounded-full border border-neutral-200"
+            />
             <p className="font-mono text-sm font-medium">
                 {userId === sync.userId ? 'You' : displayName || username || shortenAddress(userId)}
             </p>
