@@ -5,4 +5,5 @@ echo
 echo "Launching Postgres..."
 echo 
 
+docker compose pull
 docker compose --project-name river up --detach --wait
