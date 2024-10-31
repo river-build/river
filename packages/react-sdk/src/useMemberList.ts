@@ -4,7 +4,7 @@ import { type ObservableConfig, useObservable } from './useObservable'
 import { useSyncAgent } from './useSyncAgent'
 import { getRoom } from './utils'
 
-export const useRoomMemberList = (
+export const useMemberList = (
     streamId: string,
     config?: ObservableConfig.FromObservable<Members>,
 ) => {

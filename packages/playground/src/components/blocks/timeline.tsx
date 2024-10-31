@@ -1,4 +1,4 @@
-import { useRoomMember, useSendMessage, useSyncAgent } from '@river-build/react-sdk'
+import { useMember, useSendMessage, useSyncAgent } from '@river-build/react-sdk'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -70,7 +70,7 @@ const Message = ({ event, streamId }: { event: TimelineEvent; streamId: string }
     const preferSpaceMember = isChannelStreamId(streamId)
         ? spaceIdFromChannelId(streamId)
         : streamId
-    const { username, displayName } = useRoomMember({
+    const { username, displayName } = useMember({
         streamId: preferSpaceMember,
         userId: event.creatorUserId,
     })

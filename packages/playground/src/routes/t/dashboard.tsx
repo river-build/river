@@ -4,8 +4,8 @@ import {
     useDm,
     useGdm,
     useMember,
-    useRoomMember,
-    useRoomMemberList,
+    useMemberList,
+    useObservable,
     useSpace,
     useSyncAgent,
     useUserDms,
@@ -13,6 +13,7 @@ import {
     useUserSpaces,
 } from '@river-build/react-sdk'
 import { suspend } from 'suspend-react'
+import { Myself } from '@river-build/sdk'
 import { GridSidePanel } from '@/components/layout/grid-side-panel'
 import { Button } from '@/components/ui/button'
 import { CreateSpace } from '@/components/form/space/create'
@@ -185,7 +186,9 @@ const DmInfo = ({
         }
         return members.get(other)
     }, [dmStreamId, sync])
-    const { userId, username, displayName } = useMember(member)
+    const {
+        data: { userId, username, displayName },
+    } = useObservable(member instanceof Myself ? member.member : member)
 
     return (
         <button className="flex items-center gap-2" onClick={() => onDmChange(dm.id)}>
@@ -208,8 +211,8 @@ const NoSuspenseDmInfo = ({
 }) => {
     const sync = useSyncAgent()
     const { data: dm } = useDm(dmStreamId)
-    const { data: members } = useRoomMemberList(dmStreamId)
-    const { userId, username, displayName } = useRoomMember({
+    const { data: members } = useMemberList(dmStreamId)
+    const { userId, username, displayName } = useMember({
         streamId: dmStreamId,
         userId: members.userIds.find((userId) => userId !== sync.userId) || sync.userId,
     })
