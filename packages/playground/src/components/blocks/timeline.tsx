@@ -1,4 +1,6 @@
 import {
+    type RiverRoom,
+    getRoom,
     useMember,
     useReactions,
     useRedact,
@@ -7,11 +9,11 @@ import {
     useSendReaction,
     useSyncAgent,
 } from '@river-build/react-sdk'
-import { useForm } from 'react-hook-form'
-import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { type MessageReactions, RiverTimelineEvent, type TimelineEvent } from '@river-build/sdk'
 import { useCallback, useMemo } from 'react'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
 import { cn } from '@/utils'
 import { getNativeEmojiFromName } from '@/utils/emojis'
 import { Form, FormControl, FormField, FormItem, FormMessage } from '../ui/form'
@@ -20,7 +22,7 @@ import { Input } from '../ui/input'
 import { ScrollArea } from '../ui/scroll-area'
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '../ui/dialog'
 
-const useMessageReaction = (props: GdmOrChannel, eventId: string) => {
+const useMessageReaction = (props: RiverRoom, eventId: string) => {
     const { data: reactionMap } = useReactions(props)
     const reactions = reactionMap?.[eventId]
     const { sendReaction } = useSendReaction(props)
@@ -52,33 +54,11 @@ const useMessageReaction = (props: GdmOrChannel, eventId: string) => {
     }
 }
 
-type GdmOrChannel =
-    | {
-          type: 'gdm'
-          streamId: string
-      }
-    | {
-          type: 'channel'
-          spaceId: string
-          channelId: string
-      }
-
-type TimelineProps =
-    | {
-          type: 'gdm'
-          events: TimelineEvent[]
-          showThreadMessages?: boolean
-          threadMap?: Record<string, TimelineEvent[]>
-          streamId: string
-      }
-    | {
-          type: 'channel'
-          events: TimelineEvent[]
-          showThreadMessages?: boolean
-          threadMap?: Record<string, TimelineEvent[]>
-          spaceId: string
-          channelId: string
-      }
+type TimelineProps = RiverRoom & {
+    events: TimelineEvent[]
+    showThreadMessages?: boolean
+    threadMap?: Record<string, TimelineEvent[]>
+}
 
 export const Timeline = (props: TimelineProps) => {
     const { scrollback, isPending } = useScrollback(props)
@@ -115,7 +95,7 @@ const formSchema = z.object({
     message: z.string(),
 })
 
-export const SendMessage = (props: GdmOrChannel) => {
+export const SendMessage = (props: RiverRoom) => {
     const { sendMessage, isPending } = useSendMessage(props)
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -150,14 +130,12 @@ export const SendMessage = (props: GdmOrChannel) => {
 const Message = ({
     event,
     ...props
-}: { event: TimelineEvent; thread: TimelineEvent[] | undefined } & GdmOrChannel) => {
+}: { event: TimelineEvent; thread: TimelineEvent[] | undefined } & RiverRoom) => {
     const sync = useSyncAgent()
-    const member = useMemo(() => {
-        if (props.type === 'gdm') {
-            return sync.gdms.getGdm(props.streamId).members.get(event.sender.id)
-        }
-        return sync.spaces.getSpace(props.spaceId).members.get(event.sender.id)
-    }, [props, sync.gdms, sync.spaces, event.sender.id])
+    const member = useMemo(
+        () => getRoom(sync, props).members.get(event.sender.id),
+        [props, sync, event.sender.id],
+    )
     const { username, displayName } = useMember(member)
     const prettyDisplayName = displayName || username
     const isMyMessage = event.sender.id === sync.userId

@@ -1,4 +1,4 @@
-import { check, dlogger } from '@river-build/dlog'
+import { check } from '@river-build/dlog'
 import { isDefined } from '../../../check'
 import { PersistedObservable, persistedObservable } from '../../../observable/persistedObservable'
 import { Identifiable, LoadPriority, Store } from '../../../store/store'
@@ -11,8 +11,6 @@ import type {
 } from '@river-build/proto'
 import type { PlainMessage } from '@bufbuild/protobuf'
 import { MessageTimeline } from '../../timeline/timeline'
-
-const logger = dlogger('csb:gdm')
 
 export interface GdmModel extends Identifiable {
     id: string
@@ -113,7 +111,6 @@ export class Gdm extends PersistedObservable<GdmModel> {
 
     private onStreamInitialized = (streamId: string) => {
         if (this.data.id === streamId) {
-            logger.info('gdm stream initialized', streamId)
             const stream = this.riverConnection.client?.stream(streamId)
             check(isDefined(stream), 'stream is not defined')
             const view = stream.view.gdmChannelContent
