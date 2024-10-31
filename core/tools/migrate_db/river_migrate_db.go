@@ -170,6 +170,7 @@ func init() {
 
 	viper.SetDefault("RIVER_DB_PARTITION_TX_SIZE", 16)
 	viper.SetDefault("RIVER_DB_PARTITION_WORKERS", 8)
+	viper.SetDefault("RIVER_DB_ATTACH_WORKERS", 1)
 }
 
 var sourceCmd = &cobra.Command{
@@ -702,9 +703,13 @@ func createPartitionsWorker(
 	if numWorkers <= 0 {
 		numWorkers = 8
 	}
+	numAttachWorkers := viper.GetInt("RIVER_DB_ATTACH_WORKERS")
+	if numAttachWorkers <= 0 {
+		numAttachWorkers = 1
+	}
 
 	workerPool := workerpool.New(numWorkers)
-	attachWorkerPool := workerpool.New(1)
+	attachWorkerPool := workerpool.New(numAttachWorkers)
 
 	workItems := chunkParts(parts, txSize)
 	for _, workItem := range workItems {
