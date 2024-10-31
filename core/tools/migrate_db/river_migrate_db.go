@@ -414,42 +414,18 @@ func getMissingPartitionsSql(
 		pp[p] = true
 	}
 
-	var fastSql string
-	if partitionsUseFastCreate {
-		switch table {
-		case "minipools":
-			fastSql = minipoolsSql
-		case "miniblocks":
-			fastSql = miniblocksSql
-		case "miniblock_candidates":
-			fastSql = miniblockCandidatesSql
-		default:
-			panic("Unknown table: " + table)
-		}
-	}
-
 	for _, id := range stream_ids {
 		partName := getPartitionName(table, id)
 		if !pp[partName] {
-			if !partitionsUseFastCreate {
-				ret = append(
-					ret,
-					[]string{fmt.Sprintf(
-						"CREATE TABLE IF NOT EXISTS %s PARTITION OF %s FOR VALUES IN ('%s')",
-						partName,
-						table,
-						id,
-					)},
-				)
-			} else {
-				ret = append(
-					ret,
-					[]string{
-						fmt.Sprintf(fastSql, partName),
-						fmt.Sprintf("ALTER TABLE %s ATTACH PARTITION %s FOR VALUES IN ('%s')", table, partName, id),
-					},
-				)
-			}
+			ret = append(
+				ret,
+				[]string{fmt.Sprintf(
+					"CREATE TABLE IF NOT EXISTS %s PARTITION OF %s FOR VALUES IN ('%s')",
+					partName,
+					table,
+					id,
+				)},
+			)
 		}
 	}
 	return ret, nil
