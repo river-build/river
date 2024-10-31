@@ -112,18 +112,15 @@ describe('dmsMlsTests', () => {
 
         // add 3 more users
         for (let i = 0; i < 2; i++) {
-            console.log('adding user', i)
             const client = await makeInitAndStartClient()
             await expect(bobsClient.joinUser(streamId, client.userId)).toResolve()
             addedClients.push(client)
         }
 
-        console.log('waiting for streams')
         for (const client of addedClients) {
             await expect(client.waitForStream(streamId)).toResolve()
         }
 
-        console.log('all streams ok')
         await waitFor(() => {
             for (const client of clients) {
                 const stream = client.streams.get(streamId)!
