@@ -4,9 +4,15 @@
 
 import { check } from '@river-build/dlog'
 import { Client } from './client'
-import { getChannelMessagePayload, makeTestClient, waitFor } from './util.test'
+import {
+    getChannelMessagePayload,
+    makeTestClient,
+    makeUniqueSpaceStreamId,
+    waitFor,
+} from './util.test'
 
 import { StreamTimelineEvent } from './types'
+import { makeUniqueChannelStreamId } from './id'
 
 describe('dmsMlsTests', () => {
     let clients: Client[] = []
@@ -125,6 +131,54 @@ describe('dmsMlsTests', () => {
             for (const client of clients) {
                 const stream = client.streams.get(streamId)!
                 check(checkTimelineContainsAll(['hello alice', 'hello bob'], stream.view.timeline))
+            }
+        })
+    })
+
+    test('manyClientsInChannel', async () => {
+        const spaceId = makeUniqueSpaceStreamId()
+        const bobsClient = await makeInitAndStartClient()
+        await expect(bobsClient.createSpace(spaceId)).toResolve()
+
+        const channelId = makeUniqueChannelStreamId(spaceId)
+        await expect(bobsClient.createChannel(spaceId, 'Channel', 'Topic', channelId)).toResolve()
+
+        const clients: Client[] = []
+        await Promise.all(
+            Array.from(Array(10).keys()).map(async (n) => {
+                console.log(`JOINING CLIENT ${n}`)
+                const client = await makeInitAndStartClient()
+                await expect(client.joinStream(channelId)).toResolve()
+                await expect(client.waitForStream(channelId)).toResolve()
+            }),
+        )
+
+        await expect(
+            bobsClient.sendMessage(channelId, 'hello everyone', [], [], { useMls: true }),
+        ).toResolve()
+
+        const messages: string[] = []
+        for (const [idx, client] of clients.entries()) {
+            const msg = `hello ${idx}`
+            await expect(client.sendMessage(channelId, msg, [], [], { useMls: true })).toResolve()
+            messages.push(msg)
+        }
+
+        await waitFor(() => {
+            for (const client of clients) {
+                const stream = client.streams.get(channelId)!
+                check(
+                    checkTimelineContainsAll(
+                        ['hello everyone'].concat(messages),
+                        stream.view.timeline,
+                    ),
+                )
+            }
+        })
+
+        await waitFor(() => {
+            for (const client of clients) {
+                check(client.mlsCrypto!.hasGroup(channelId))
             }
         })
     })
