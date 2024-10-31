@@ -10,7 +10,7 @@ import type {
     ChannelProperties,
 } from '@river-build/proto'
 import type { PlainMessage } from '@bufbuild/protobuf'
-import { Timeline } from '../../timeline/timeline'
+import { MessageTimeline } from '../../timeline/timeline'
 
 const logger = dlogger('csb:dm')
 
@@ -23,11 +23,11 @@ export interface DmModel extends Identifiable {
 
 @persistedObservable({ tableName: 'dm' })
 export class Dm extends PersistedObservable<DmModel> {
-    timeline: Timeline
+    timeline: MessageTimeline
     members: Members
     constructor(id: string, private riverConnection: RiverConnection, store: Store) {
         super({ id, isJoined: false, initialized: false }, store, LoadPriority.high)
-        this.timeline = new Timeline(riverConnection.userId)
+        this.timeline = new MessageTimeline(id, riverConnection.userId, riverConnection)
         this.members = new Members(id, riverConnection, store)
     }
 
@@ -101,6 +101,14 @@ export class Dm extends PersistedObservable<DmModel> {
             }),
         )
         return eventId
+    }
+
+    async redactEvent(eventId: string) {
+        const channelId = this.data.id
+        const result = await this.riverConnection
+            .withStream(channelId)
+            .call((client) => client.redactMessage(channelId, eventId))
+        return result
     }
 
     private onStreamInitialized = (streamId: string) => {

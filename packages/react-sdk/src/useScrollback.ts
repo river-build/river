@@ -16,6 +16,10 @@ type ScrollbackProps =
           spaceId: string
           channelId: string
       }
+    | {
+          type: 'dm'
+          streamId: string
+      }
 
 export const useScrollback = (
     props: ScrollbackProps,
@@ -28,8 +32,11 @@ export const useScrollback = (
         } else if (props.type === 'channel') {
             return sync.spaces.getSpace(props.spaceId).getChannel(props.channelId).timeline
         }
-        return
-    }, [props, sync.gdms, sync.spaces])
+        if (props.type === 'dm') {
+            return sync.dms.getDm(props.streamId).timeline
+        }
+        throw new Error('Invalid props')
+    }, [props, sync.dms, sync.gdms, sync.spaces])
     const { action: scrollback, ...rest } = useAction(namespace, 'scrollback', config)
 
     return {

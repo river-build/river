@@ -16,6 +16,10 @@ type SendRedactProps =
           spaceId: string
           channelId: string
       }
+    | {
+          type: 'dm'
+          streamId: string
+      }
 
 export const useRedact = (
     props: SendRedactProps,
@@ -25,11 +29,15 @@ export const useRedact = (
     const namespace = useMemo(() => {
         if (props.type === 'gdm') {
             return sync.gdms.getGdm(props.streamId)
-        } else if (props.type === 'channel') {
+        }
+        if (props.type === 'channel') {
             return sync.spaces.getSpace(props.spaceId).getChannel(props.channelId)
         }
-        return
-    }, [props, sync.gdms, sync.spaces])
+        if (props.type === 'dm') {
+            return sync.dms.getDm(props.streamId)
+        }
+        throw new Error('Invalid props')
+    }, [props, sync.dms, sync.gdms, sync.spaces])
     const { action: redactEvent, ...rest } = useAction(namespace, 'redactEvent', config)
 
     return {

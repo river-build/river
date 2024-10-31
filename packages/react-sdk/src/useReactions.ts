@@ -14,6 +14,10 @@ type UseReactionsProps =
           spaceId: string
           channelId: string
       }
+    | {
+          type: 'dm'
+          streamId: string
+      }
 
 export const useReactions = (
     props: UseReactionsProps,
@@ -24,8 +28,14 @@ export const useReactions = (
         if (props.type === 'gdm') {
             return sync.gdms.getGdm(props.streamId)
         }
-        return sync.spaces.getSpace(props.spaceId).getChannel(props.channelId)
-    }, [props, sync.gdms, sync.spaces])
+        if (props.type === 'channel') {
+            return sync.spaces.getSpace(props.spaceId).getChannel(props.channelId)
+        }
+        if (props.type === 'dm') {
+            return sync.dms.getDm(props.streamId)
+        }
+        throw new Error('Invalid props')
+    }, [props, sync.dms, sync.gdms, sync.spaces])
 
     return useObservable(room.timeline.reactions, config)
 }

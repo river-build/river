@@ -188,9 +188,7 @@ describe('syncAgents.test.ts', () => {
         const aliceAndBobDm = alice.dms.getDmWithUserId(bob.userId)
         await waitFor(
             () =>
-                expect(
-                    aliceAndBobDm.timeline.events.value.find((e) => e.text === 'hi'),
-                ).toBeDefined(),
+                expect(findMessageByText(aliceAndBobDm.timeline.events.value, 'hi')).toBeDefined(),
             { timeoutMS: 10000 },
         )
     })

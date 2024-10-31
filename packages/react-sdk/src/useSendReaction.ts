@@ -16,6 +16,10 @@ type SendReactionProps =
           spaceId: string
           channelId: string
       }
+    | {
+          type: 'dm'
+          streamId: string
+      }
 
 export const useSendReaction = (
     props: SendReactionProps,
@@ -28,8 +32,11 @@ export const useSendReaction = (
         } else if (props.type === 'channel') {
             return sync.spaces.getSpace(props.spaceId).getChannel(props.channelId)
         }
-        return
-    }, [props, sync.gdms, sync.spaces])
+        if (props.type === 'dm') {
+            return sync.dms.getDm(props.streamId)
+        }
+        throw new Error('Invalid props')
+    }, [props, sync.dms, sync.gdms, sync.spaces])
     const { action: sendReaction, ...rest } = useAction(namespace, 'sendReaction', config)
 
     return {
