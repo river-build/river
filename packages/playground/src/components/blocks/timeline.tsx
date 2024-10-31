@@ -179,7 +179,7 @@ const Message = ({
                         <DialogTrigger asChild>
                             <Button variant="ghost">+{props.thread.length} messages</Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-2x">
+                        <DialogContent className="max-w-full sm:max-w-[calc(100dvw-20%)]">
                             <DialogTitle>Thread</DialogTitle>
                             <Timeline {...props} showThreadMessages events={props.thread} />
                         </DialogContent>
