@@ -545,6 +545,7 @@ func getStreamIds(ctx context.Context, pool *pgxpool.Pool) ([]string, []int64, e
 func reportProgress(ctx context.Context, message string, progressCounter *atomic.Int64) {
 	lastProgress := progressCounter.Load()
 	startTime := time.Now()
+	lastTime := startTime
 	interval := viper.GetDuration("RIVER_DB_PROGRESS_REPORT_INTERVAL")
 	if interval <= 0 {
 		interval = 10 * time.Second
@@ -553,8 +554,18 @@ func reportProgress(ctx context.Context, message string, progressCounter *atomic
 		time.Sleep(interval)
 		currentProgress := progressCounter.Load()
 		if currentProgress != lastProgress {
-			fmt.Println(message, currentProgress, "in", time.Since(startTime))
+			delta := currentProgress - lastProgress
+			now := time.Now()
+			fmt.Println(
+				message,
+				currentProgress,
+				"in",
+				now.Sub(lastTime),
+				float64(delta)/now.Sub(lastTime).Seconds(),
+				"per second",
+			)
 			lastProgress = currentProgress
+			lastTime = now
 		}
 	}
 }
