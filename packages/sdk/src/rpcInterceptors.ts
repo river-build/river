@@ -337,6 +337,8 @@ function getRetryDelay(error: unknown, attempts: number, retryParams: RetryParam
             return retryDelay
         } else if (errorContains(error, Err.DB_OPERATION_FAILURE)) {
             return retryDelay
+        } else if (errorContains(error, Err.DEADLINE_EXCEEDED)) {
+            return retryDelay
         }
     }
 
