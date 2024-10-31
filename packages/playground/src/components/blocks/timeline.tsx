@@ -21,6 +21,7 @@ import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { ScrollArea } from '../ui/scroll-area'
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '../ui/dialog'
+import { Avatar } from '../ui/avatar'
 
 const useMessageReaction = (props: RiverRoom, eventId: string) => {
     const { data: reactionMap } = useReactions(props)
@@ -65,7 +66,7 @@ export const Timeline = (props: TimelineProps) => {
     return (
         <div className="grid grid-rows-[auto,1fr] gap-2">
             <ScrollArea className="h-[calc(100dvh-172px)]">
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-6">
                     {!props.showThreadMessages && (
                         <Button disabled={isPending} variant="outline" onClick={scrollback}>
                             {isPending ? 'Loading more...' : 'Scrollback'}
@@ -143,48 +144,53 @@ const Message = ({
     const { redactEvent } = useRedact(props)
 
     return (
-        <div className="flex flex-col gap-1">
-            <div className="flex flex-wrap items-center gap-1">
-                <span
-                    className={cn(
-                        'font-semibold',
-                        isMyMessage ? 'text-sky-500' : 'text-purple-500',
-                    )}
-                >
-                    {prettyDisplayName || event.sender.id}:
-                </span>
-                <span>
-                    {event.content?.kind === RiverTimelineEvent.RoomMessage
-                        ? event.content.body
-                        : ''}
-                </span>
-            </div>
-            <div className="flex items-center gap-1">
-                {reactions && <ReactionRow reactions={reactions} onReact={onReact} />}
-                <Button
-                    variant="outline"
-                    className="aspect-square p-1"
-                    onClick={() => onReact({ type: 'add', reaction: '👍' })}
-                >
-                    👍
-                </Button>
-                {isMyMessage && (
-                    <Button variant="ghost" onClick={() => redactEvent(event.eventId)}>
-                        ❌
+        <div className="flex w-full gap-3.5">
+            <Avatar className="size-9 shadow" userId={event.sender.id} />
+            <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-1">
+                        <span
+                            className={cn(
+                                'font-semibold',
+                                isMyMessage ? 'text-sky-500' : 'text-purple-500',
+                            )}
+                        >
+                            {prettyDisplayName || event.sender.id}
+                        </span>
+                    </div>
+                    <span>
+                        {event.content?.kind === RiverTimelineEvent.RoomMessage
+                            ? event.content.body
+                            : ''}
+                    </span>
+                </div>
+                <div className="flex items-center gap-1">
+                    {reactions && <ReactionRow reactions={reactions} onReact={onReact} />}
+                    <Button
+                        variant="outline"
+                        className="aspect-square p-1"
+                        onClick={() => onReact({ type: 'add', reaction: '👍' })}
+                    >
+                        👍
                     </Button>
-                )}
+                    {isMyMessage && (
+                        <Button variant="ghost" onClick={() => redactEvent(event.eventId)}>
+                            ❌
+                        </Button>
+                    )}
 
-                {props.thread && props.thread.length > 0 && (
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <Button variant="ghost">+{props.thread.length} messages</Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-full sm:max-w-[calc(100dvw-20%)]">
-                            <DialogTitle>Thread</DialogTitle>
-                            <Timeline {...props} showThreadMessages events={props.thread} />
-                        </DialogContent>
-                    </Dialog>
-                )}
+                    {props.thread && props.thread.length > 0 && (
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <Button variant="ghost">+{props.thread.length} messages</Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-full sm:max-w-[calc(100dvw-20%)]">
+                                <DialogTitle>Thread</DialogTitle>
+                                <Timeline {...props} showThreadMessages events={props.thread} />
+                            </DialogContent>
+                        </Dialog>
+                    )}
+                </div>
             </div>
         </div>
     )
