@@ -363,13 +363,44 @@ func queryPartitions(ctx context.Context, pool *pgxpool.Pool, table string) ([]s
 	return parts, nil
 }
 
+var createPartitionsFast = false
+
+const miniblocksSql = `
+CREATE TABLE IF NOT EXISTS %[1]s (
+  stream_id CHAR(64) STORAGE PLAIN NOT NULL,
+  seq_num BIGINT NOT NULL,
+  blockdata BYTEA STORAGE EXTERNAL NOT NULL,
+  PRIMARY KEY (stream_id, seq_num)
+  )
+`
+
+const minipoolsSql = `
+CREATE TABLE IF NOT EXISTS %[1]s (
+  stream_id CHAR(64) STORAGE PLAIN NOT NULL,
+  generation BIGINT NOT NULL,
+  slot_num BIGINT NOT NULL,
+  envelope BYTEA STORAGE EXTERNAL NOT NULL,
+  PRIMARY KEY (stream_id, generation, slot_num)
+  )
+`
+
+const miniblockCandidatesSql = `
+CREATE TABLE IF NOT EXISTS %[1]s (
+  stream_id CHAR(64) STORAGE PLAIN NOT NULL,
+  seq_num BIGINT NOT NULL,
+  block_hash CHAR(64) STORAGE PLAIN NOT NULL,
+  blockdata BYTEA STORAGE EXTERNAL NOT NULL,
+  PRIMARY KEY (stream_id, seq_num, block_hash)
+  )
+`
+
 func getMissingPartitionsSql(
 	ctx context.Context,
 	stream_ids []string,
 	pool *pgxpool.Pool,
 	table string,
-) ([]string, error) {
-	var ret []string
+) ([][]string, error) {
+	var ret [][]string
 	parts, err := queryPartitions(ctx, pool, table)
 	if err != nil {
 		return nil, err
@@ -378,24 +409,62 @@ func getMissingPartitionsSql(
 	for _, p := range parts {
 		pp[p] = true
 	}
+
+	var fastSql string
+	if createPartitionsFast {
+		switch table {
+		case "minipools":
+			fastSql = minipoolsSql
+		case "miniblocks":
+			fastSql = miniblocksSql
+		case "miniblock_candidates":
+			fastSql = miniblockCandidatesSql
+		default:
+			panic("Unknown table: " + table)
+		}
+	}
+
 	for _, id := range stream_ids {
 		partName := getPartitionName(table, id)
 		if !pp[partName] {
-			ret = append(
-				ret,
-				fmt.Sprintf(
-					"CREATE TABLE IF NOT EXISTS %s PARTITION OF %s FOR VALUES IN ('%s')",
-					partName,
-					table,
-					id,
-				),
-			)
+			if !createPartitionsFast {
+				ret = append(
+					ret,
+					[]string{fmt.Sprintf(
+						"CREATE TABLE IF NOT EXISTS %s PARTITION OF %s FOR VALUES IN ('%s')",
+						partName,
+						table,
+						id,
+					)},
+				)
+			} else {
+				ret = append(
+					ret,
+					[]string{
+						fmt.Sprintf(fastSql, partName),
+						fmt.Sprintf("ALTER TABLE %s ATTACH PARTITION %s FOR VALUES IN ('%s')", table, partName, id),
+					},
+				)
+			}
 		}
 	}
 	return ret, nil
 }
 
-func chunk(slice []string, size int) [][]string {
+func chunk(slice [][]string, size int) [][]string {
+	var ret [][]string
+	for i := 0; i < len(slice); i += size {
+		c := slice[i:min(len(slice), i+size)]
+		singleChunk := []string{}
+		for _, s := range c {
+			singleChunk = append(singleChunk, s...)
+		}
+		ret = append(ret, singleChunk)
+	}
+	return ret
+}
+
+func chunk2(slice []string, size int) [][]string {
 	var ret [][]string
 	for i := 0; i < len(slice); i += size {
 		ret = append(ret, slice[i:min(len(slice), i+size)])
@@ -490,7 +559,7 @@ func reportProgress(ctx context.Context, message string, progressCounter *atomic
 	}
 }
 
-func executeSqlInParallel(ctx context.Context, pool *pgxpool.Pool, sql []string, message string, inTx bool) error {
+func executeSqlInParallel(ctx context.Context, pool *pgxpool.Pool, sql [][]string, message string, inTx bool) error {
 	numWorkers := viper.GetInt("RIVER_DB_NUM_WORKERS")
 	txSize := viper.GetInt("RIVER_DB_TX_SIZE")
 	if txSize <= 0 {
@@ -590,6 +659,7 @@ var targetPartitionCmd = &cobra.Command{
 
 func init() {
 	targetCmd.AddCommand(targetPartitionCmd)
+	targetPartitionCmd.Flags().BoolVar(&createPartitionsFast, "fast", false, "Use fast partition creation")
 }
 
 func printPartitions(ctx context.Context, pool *pgxpool.Pool) error {
@@ -653,11 +723,11 @@ var targetDropCmd = &cobra.Command{
 			return wrapError("Failed to list tables in target schema", err)
 		}
 
-		sql := []string{}
+		sql := [][]string{}
 		for _, table := range tables {
 			if strings.HasPrefix(table, "miniblock_candidates_") || strings.HasPrefix(table, "miniblocks_") ||
 				strings.HasPrefix(table, "minipools_") {
-				sql = append(sql, fmt.Sprintf("DROP TABLE IF EXISTS \"%s\"", table))
+				sql = append(sql, []string{fmt.Sprintf("DROP TABLE IF EXISTS \"%s\"", table)})
 			}
 		}
 
@@ -828,7 +898,7 @@ func copyData(ctx context.Context, source *pgxpool.Pool, target *pgxpool.Pool, f
 
 	workerPool := workerpool.New(numWorkers)
 
-	workItems := chunk(newStreamIds, txSize)
+	workItems := chunk2(newStreamIds, txSize)
 
 	var progressCounter atomic.Int64
 	for _, workItem := range workItems {
