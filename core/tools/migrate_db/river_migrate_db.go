@@ -583,8 +583,8 @@ func reportProgress(ctx context.Context, message string, progressCounter *atomic
 				message,
 				currentProgress,
 				"in",
-				now.Sub(lastTime),
-				float64(delta)/now.Sub(lastTime).Seconds(),
+				now.Sub(startTime).Round(time.Second),
+				fmt.Sprintf("%.1f", float64(delta)/now.Sub(lastTime).Seconds()),
 				"per second",
 			)
 			lastProgress = currentProgress
