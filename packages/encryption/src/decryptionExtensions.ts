@@ -17,6 +17,11 @@ import {
 import { GROUP_ENCRYPTION_ALGORITHM, GroupEncryptionSession, UserDevice } from './olmLib'
 import { GroupEncryptionCrypto } from './groupEncryptionCrypto'
 
+function logNever(value: never, message?: string): void {
+    // eslint-disable-next-line no-console
+    console.warn(message ?? `Unhandled switch value: ${value}`)
+}
+
 export interface EntitlementsDelegate {
     isEntitled(
         spaceId: string | undefined,
@@ -101,14 +106,46 @@ export interface DecryptionSessionError {
 }
 
 export interface MlsGroupInfo {
+    tag: 'MlsGroupInfo'
     streamId: string
     groupInfo: Uint8Array
 }
 
 export interface MlsCommit {
+    tag: 'MlsCommit'
     streamId: string
     commit: Uint8Array
 }
+
+export interface MlsInitializeGroup {
+    tag: 'MlsInitializeGroup'
+    streamId: string
+    userAddress: string
+    deviceKey: Uint8Array
+    groupInfoWithExternalKey: Uint8Array
+}
+
+export interface MlsExternalJoin {
+    tag: 'MlsExternalJoin'
+    streamId: string
+    userAddress: string
+    deviceKey: Uint8Array
+    commit: Uint8Array
+    groupInfoWithExternalKey: Uint8Array
+}
+
+export interface MlsKeyAnnouncement {
+    tag: 'MlsKeyAnnouncement'
+    streamId: string
+    keys: { epoch: bigint; key: Uint8Array }[]
+}
+
+export type MlsEncryptionEvent =
+    | MlsGroupInfo
+    | MlsCommit
+    | MlsInitializeGroup
+    | MlsExternalJoin
+    | MlsKeyAnnouncement
 
 /**
  *
@@ -134,7 +171,7 @@ export abstract class BaseDecryptionExtensions {
     private queues = {
         priorityTasks: new Array<() => Promise<void>>(),
         newGroupSession: new Array<NewGroupSessionItem>(),
-        mls: new Array<MlsGroupInfo | MlsCommit>(),
+        mls: new Array<MlsEncryptionEvent>(),
         encryptedContent: new Array<EncryptedContentItem>(),
         missingKeys: new Array<MissingKeysItem>(),
         keySolicitations: new Array<KeySolicitationItem>(),
@@ -218,6 +255,9 @@ export abstract class BaseDecryptionExtensions {
     public abstract encryptAndShareGroupSessions(args: GroupSessionsData): Promise<void>
     public abstract didReceiveMlsGroupInfo(args: MlsGroupInfo): Promise<void>
     public abstract didReceiveMlsCommit(args: MlsCommit): Promise<void>
+    public abstract didReceiveMlsInitializeGroup(args: MlsInitializeGroup): Promise<void>
+    public abstract didReceiveMlsExternalJoin(args: MlsExternalJoin): Promise<void>
+    public abstract didReceiveMlsKeyAnnouncement(args: MlsKeyAnnouncement): Promise<void>
 
     public abstract shouldPauseTicking(): boolean
     /**
@@ -318,7 +358,7 @@ export abstract class BaseDecryptionExtensions {
         }
     }
 
-    public enqueueMls(mls: MlsGroupInfo | MlsCommit): void {
+    public enqueueMls(mls: MlsEncryptionEvent): void {
         this.queues.mls.push(mls)
         this.checkStartTicking()
     }
@@ -784,12 +824,21 @@ export abstract class BaseDecryptionExtensions {
         }
     }
 
-    private async processMls(mls: MlsGroupInfo | MlsCommit): Promise<void> {
+    private async processMls(mls: MlsEncryptionEvent): Promise<void> {
         console.log('PROCESS MLS', mls)
-        if (isMlsGroupInfo(mls)) {
-            await this.didReceiveMlsGroupInfo(mls)
-        } else {
-            await this.didReceiveMlsCommit(mls)
+        switch (mls.tag) {
+            case 'MlsCommit':
+                return this.didReceiveMlsCommit(mls)
+            case 'MlsGroupInfo':
+                return this.didReceiveMlsGroupInfo(mls)
+            case 'MlsInitializeGroup':
+                return this.didReceiveMlsInitializeGroup(mls)
+            case 'MlsExternalJoin':
+                return this.didReceiveMlsExternalJoin(mls)
+            case 'MlsKeyAnnouncement':
+                return this.didReceiveMlsKeyAnnouncement(mls)
+            default:
+                logNever(mls, `Unhandled MLS event ${mls}`)
         }
     }
     /**
@@ -907,8 +956,4 @@ function generateLogId(userId: string, deviceKey: string): string {
     const shortKey = shortenHexString(deviceKey)
     const logId = `${shortId}:${shortKey}`
     return logId
-}
-
-function isMlsGroupInfo(item: MlsGroupInfo | MlsCommit): item is MlsGroupInfo {
-    return 'groupInfo' in item
 }

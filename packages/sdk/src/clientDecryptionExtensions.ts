@@ -9,7 +9,10 @@ import {
     KeySolicitationContent,
     KeySolicitationData,
     MlsCommit,
+    MlsExternalJoin,
     MlsGroupInfo,
+    MlsInitializeGroup,
+    MlsKeyAnnouncement,
     UserDevice,
 } from '@river-build/encryption'
 import {
@@ -82,10 +85,45 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
         ) => this.enqueueInitKeySolicitations(streamId, members)
 
         const onMlsGroupInfo = (streamId: string, groupInfo: Uint8Array) =>
-            this.enqueueMls({ streamId, groupInfo })
+            this.enqueueMls({ tag: 'MlsGroupInfo', streamId, groupInfo })
 
         const onMlsCommit = (streamId: string, commit: Uint8Array) =>
-            this.enqueueMls({ streamId, commit })
+            this.enqueueMls({ tag: 'MlsCommit', streamId, commit })
+
+        const onMlsInitializeGroup = (
+            streamId: string,
+            userAddress: string,
+            deviceKey: Uint8Array,
+            groupInfoWithExternalKey: Uint8Array,
+        ) =>
+            this.enqueueMls({
+                tag: 'MlsInitializeGroup',
+                streamId,
+                userAddress,
+                deviceKey,
+                groupInfoWithExternalKey,
+            })
+
+        const onMlsExternalJoin = (
+            streamId: string,
+            userAddress: string,
+            deviceKey: Uint8Array,
+            commit: Uint8Array,
+            groupInfoWithExternalKey: Uint8Array,
+        ) =>
+            this.enqueueMls({
+                tag: 'MlsExternalJoin',
+                streamId,
+                userAddress,
+                deviceKey,
+                commit,
+                groupInfoWithExternalKey,
+            })
+
+        const onMlsKeyAnnouncement = (
+            streamId: string,
+            keys: { epoch: bigint; key: Uint8Array }[],
+        ) => this.enqueueMls({ tag: 'MlsKeyAnnouncement', streamId, keys })
 
         client.on('streamUpToDate', onStreamUpToDate)
         client.on('newGroupSessions', onNewGroupSessions)
@@ -96,6 +134,9 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
         client.on('streamNewUserJoined', onMembershipChange)
         client.on('mlsGroupInfo', onMlsGroupInfo)
         client.on('mlsCommit', onMlsCommit)
+        client.on('mlsInitializeGroup', onMlsInitializeGroup)
+        client.on('mlsExternalJoin', onMlsExternalJoin)
+        client.on('mlsKeyAnnouncement', onMlsKeyAnnouncement)
 
         this._onStopFn = () => {
             client.off('streamUpToDate', onStreamUpToDate)
@@ -107,6 +148,9 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
             client.off('streamNewUserJoined', onMembershipChange)
             client.off('mlsGroupInfo', onMlsGroupInfo)
             client.off('mlsCommit', onMlsCommit)
+            client.off('mlsInitializeGroup', onMlsInitializeGroup)
+            client.off('mlsExternalJoin', onMlsExternalJoin)
+            client.off('mlsKeyAnnouncement', onMlsKeyAnnouncement)
         }
         this.log.debug('new ClientDecryptionExtensions', { userDevice })
     }
@@ -273,12 +317,27 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
 
     public async didReceiveMlsCommit(args: MlsCommit): Promise<void> {
         console.log('didReceiveMlsCommit')
-        await this.client.mls_didReceiveCommit(args.streamId, args.commit)
+        await this.client.mls_didReceiveCommit(args)
     }
 
     public async didReceiveMlsGroupInfo(args: MlsGroupInfo): Promise<void> {
         console.log('didReceiveMlsGroupInfo')
-        await this.client.mls_didReceiveGroupInfo(args.streamId, args.groupInfo)
+        await this.client.mls_didReceiveGroupInfo(args)
+    }
+
+    public async didReceiveMlsInitializeGroup(args: MlsInitializeGroup): Promise<void> {
+        console.log('didReceiveMlsInitializeGroup')
+        await this.client.mls_didReceiveInitializeGroup(args)
+    }
+
+    public async didReceiveMlsExternalJoin(args: MlsExternalJoin): Promise<void> {
+        console.log('didReceiveMlsExternalJoin')
+        await this.client.mls_didReceiveExternalJoin(args)
+    }
+
+    public async didReceiveMlsKeyAnnouncement(args: MlsKeyAnnouncement): Promise<void> {
+        console.log('didReceiveKeyAnnouncement')
+        await this.client.mls_didReceiveKeyAnnouncement(args)
     }
 
     public async uploadDeviceKeys(): Promise<void> {

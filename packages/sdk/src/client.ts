@@ -55,6 +55,11 @@ import {
     UserDeviceCollection,
     makeSessionKeys,
     type EncryptionDeviceInitOpts,
+    MlsCommit,
+    MlsGroupInfo,
+    MlsInitializeGroup,
+    MlsExternalJoin,
+    MlsKeyAnnouncement,
 } from '@river-build/encryption'
 import { StreamRpcClient } from './makeStreamRpcClient'
 import { errorContains, getRpcErrorProperty } from './rpcInterceptors'
@@ -2440,7 +2445,7 @@ export class Client
         await this.rpcClient.info({ debug: ['drop_stream', syncId, streamId] })
     }
 
-    public async mls_didReceiveGroupInfo(streamId: string, groupInfo: Uint8Array) {
+    public async mls_didReceiveGroupInfo({ streamId, groupInfo }: MlsGroupInfo): Promise<void> {
         if (!this.mlsCrypto) {
             throw new Error('mls backend not initialized')
         }
@@ -2469,11 +2474,17 @@ export class Client
         }
     }
 
-    public async mls_didReceiveCommit(streamId: string, commit: Uint8Array) {
+    public async mls_didReceiveCommit({ streamId, commit }: MlsCommit): Promise<void> {
         if (!this.mlsCrypto) {
             throw new Error('mls backend not initialized')
         }
         console.log('Handling commit')
         await this.mlsCrypto.handleCommit(streamId, commit)
     }
+
+    public async mls_didReceiveInitializeGroup({}: MlsInitializeGroup): Promise<void> {}
+
+    public async mls_didReceiveExternalJoin({}: MlsExternalJoin): Promise<void> {}
+
+    public async mls_didReceiveKeyAnnouncement({}: MlsKeyAnnouncement): Promise<void> {}
 }
