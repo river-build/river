@@ -108,7 +108,7 @@ export class MlsCrypto {
         await group.processIncomingMessage(MlsMessage.fromBytes(commit))
         const secret = await group.currentEpochSecret()
         const epoch = group.currentEpoch
-        this.keys.push({ epoch, key: secret.toBytes() })
+        this.keys.push({ epoch, key: secret.toBytes() }) // should be encrypted
         console.log('COMMIT PROCESSED', epoch)
         return { key: secret.toBytes(), epoch: epoch }
     }
