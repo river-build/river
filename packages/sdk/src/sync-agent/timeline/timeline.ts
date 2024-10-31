@@ -78,21 +78,18 @@ export class MessageTimeline {
             const events = prepended
                 .map((event) => toEvent(event, this.userId))
                 .filter((event) => this.filterFn(event, kind))
-            console.log('prepended', events)
             this.prependEvents(events, this.userId)
         }
         if (appended) {
             const events = appended
                 .map((event) => toEvent(event, this.userId))
                 .filter((event) => this.filterFn(event, kind))
-            console.log('appended', events)
             this.appendEvents(events, this.userId)
         }
         if (updated) {
             const events = updated
                 .map((event) => toEvent(event, this.userId))
                 .filter((event) => this.filterFn(event, kind))
-            console.log('updated', events)
             this.updateEvents(events, this.userId)
         }
         if (confirmed) {
@@ -101,7 +98,6 @@ export class MessageTimeline {
                 confirmedInBlockNum: event.miniblockNum,
                 confirmedEventNum: event.confirmedEventNum,
             }))
-            console.log('confirmed', confirmations)
             this.confirmEvents(confirmations)
         }
     }
@@ -163,7 +159,11 @@ export class MessageTimeline {
         if (eventIndex === -1) {
             // if we didn't find an event to replace..
             const pendingReplace = this.pendingReplacedEvents.get(replacedEventId)
-            if (pendingReplace && pendingReplace.latestEventNum > event.latestEventNum) {
+            if (
+                pendingReplace?.latestEventNum &&
+                event?.latestEventNum &&
+                pendingReplace.latestEventNum > event.latestEventNum
+            ) {
                 return
             }
 
@@ -171,7 +171,11 @@ export class MessageTimeline {
             this.pendingReplacedEvents.add(replacedEventId, event)
         }
         const oldEvent = this.events.value[eventIndex]
-        if (event.latestEventNum < oldEvent.latestEventNum) {
+        if (
+            event?.latestEventNum &&
+            oldEvent?.latestEventNum &&
+            event.latestEventNum < oldEvent.latestEventNum
+        ) {
             return
         }
         const newEvent = toReplacedMessageEvent(oldEvent, event)
