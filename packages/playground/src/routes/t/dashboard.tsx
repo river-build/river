@@ -1,4 +1,4 @@
-import { Outlet, useNavigate, useParams } from 'react-router-dom'
+import { Outlet, useNavigate } from 'react-router-dom'
 import { Suspense, useCallback, useMemo } from 'react'
 import {
     useDm,
