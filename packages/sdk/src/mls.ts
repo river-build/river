@@ -1,6 +1,5 @@
 import {
     CipherSuite,
-    ExternalClient,
     HpkeCiphertext,
     Client as MlsClient,
     Group as MlsGroup,
