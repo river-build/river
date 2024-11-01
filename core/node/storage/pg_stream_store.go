@@ -273,6 +273,31 @@ func (s *PostgresStreamStore) CreateStreamStorage(
 	)
 }
 
+func (s *PostgresStreamStore) lockStream(
+	ctx context.Context,
+	tx pgx.Tx,
+	streamId StreamId,
+	write bool,
+) error {
+	var tag pgconn.CommandTag
+	var err error
+	if write {
+		tag, err = tx.Exec(ctx, "SELECT * from es WHERE stream_id = $1 FOR UPDATE", streamId)
+	} else {
+		tag, err = tx.Exec(ctx, "SELECT * from es WHERE stream_id = $1 FOR SHARE", streamId)
+	}
+	if err != nil {
+		return err
+	}
+
+	// Exactly one row should be locked.
+	if tag.RowsAffected() < 1 {
+		return RiverError(Err_NOT_FOUND, "Stream not found")
+	}
+
+	return nil
+}
+
 func (s *PostgresStreamStore) createStreamStorageTx(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -282,7 +307,8 @@ func (s *PostgresStreamStore) createStreamStorageTx(
 	var sql string
 	if s.config.MigrateStreamCreation {
 		sql = s.sqlForStream(
-			`INSERT INTO es (stream_id, latest_snapshot_miniblock, migrated) VALUES ($1, 0, true);
+			`
+			INSERT INTO es (stream_id, latest_snapshot_miniblock, migrated) VALUES ($1, 0, true);
 			INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
 			INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
 			streamId,
@@ -290,7 +316,9 @@ func (s *PostgresStreamStore) createStreamStorageTx(
 		)
 	} else {
 		sql = s.sqlForStream(
-			`INSERT INTO es (stream_id, latest_snapshot_miniblock, migrated) VALUES ($1, 0, false);
+			`
+			INSERT INTO es (stream_id, latest_snapshot_miniblock, migrated) VALUES ($1, 0, false);
+
 			CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);
 			CREATE TABLE {{minipools}} PARTITION OF minipools FOR VALUES IN ($1);
 			CREATE TABLE {{miniblock_candidates}} PARTITION OF miniblock_candidates for values in ($1);
@@ -360,7 +388,7 @@ func (s *PostgresStreamStore) GetMaxArchivedMiniblockNumber(
 	err := s.txRunnerWithUUIDCheck(
 		ctx,
 		"GetMaxArchivedMiniblockNumber",
-		pgx.ReadOnly,
+		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
 			return s.getMaxArchivedMiniblockNumberTx(ctx, tx, streamId, &maxArchivedMiniblockNumber)
 		},
@@ -379,6 +407,10 @@ func (s *PostgresStreamStore) getMaxArchivedMiniblockNumberTx(
 	streamId StreamId,
 	maxArchivedMiniblockNumber *int64,
 ) error {
+	if err := s.lockStream(ctx, tx, streamId, false); err != nil {
+		return err
+	}
+
 	migrated, err := s.isStreamMigrated(ctx, tx, streamId, false)
 	if err != nil {
 		return err
@@ -441,6 +473,10 @@ func (s *PostgresStreamStore) writeArchiveMiniblocksTx(
 	startMiniblockNum int64,
 	miniblocks [][]byte,
 ) error {
+	if err := s.lockStream(ctx, tx, streamId, true); err != nil {
+		return err
+	}
+
 	var lastKnownMiniblockNum int64
 	err := s.getMaxArchivedMiniblockNumberTx(ctx, tx, streamId, &lastKnownMiniblockNum)
 	if err != nil {
@@ -488,7 +524,7 @@ func (s *PostgresStreamStore) ReadStreamFromLastSnapshot(
 	err := s.txRunnerWithUUIDCheck(
 		ctx,
 		"ReadStreamFromLastSnapshot",
-		pgx.ReadOnly,
+		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
 			var err error
 			ret, err = s.readStreamFromLastSnapshotTx(ctx, tx, streamId, numToRead)
@@ -509,6 +545,10 @@ func (s *PostgresStreamStore) readStreamFromLastSnapshotTx(
 	streamId StreamId,
 	numToRead int,
 ) (*ReadStreamFromLastSnapshotResult, error) {
+	if err := s.lockStream(ctx, tx, streamId, false); err != nil {
+		return nil, err
+	}
+
 	var snapshotMiniblockIndex int64
 	var migrated bool
 	err := tx.
@@ -681,6 +721,10 @@ func (s *PostgresStreamStore) writeEventTx(
 	minipoolSlot int,
 	envelope []byte,
 ) error {
+	if err := s.lockStream(ctx, tx, streamId, true); err != nil {
+		return err
+	}
+
 	migrated, err := s.isStreamMigrated(ctx, tx, streamId, false)
 	if err != nil {
 		return err
@@ -764,7 +808,7 @@ func (s *PostgresStreamStore) ReadMiniblocks(
 	err := s.txRunnerWithUUIDCheck(
 		ctx,
 		"ReadMiniblocks",
-		pgx.ReadOnly,
+		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
 			var err error
 			miniblocks, err = s.readMiniblocksTx(ctx, tx, streamId, fromInclusive, toExclusive)
@@ -786,6 +830,10 @@ func (s *PostgresStreamStore) readMiniblocksTx(
 	fromInclusive int64,
 	toExclusive int64,
 ) ([][]byte, error) {
+	if err := s.lockStream(ctx, tx, streamId, false); err != nil {
+		return nil, err
+	}
+
 	migrated, err := s.isStreamMigrated(ctx, tx, streamId, true)
 	if err != nil {
 		return nil, err
@@ -865,6 +913,10 @@ func (s *PostgresStreamStore) writeBlockProposalTxn(
 	blockNumber int64,
 	miniblock []byte,
 ) error {
+	if err := s.lockStream(ctx, tx, streamId, true); err != nil {
+		return err
+	}
+
 	var seqNum *int64
 
 	migrated, err := s.isStreamMigrated(ctx, tx, streamId, false)
@@ -920,7 +972,7 @@ func (s *PostgresStreamStore) ReadMiniblockCandidate(
 	err := s.txRunnerWithUUIDCheck(
 		ctx,
 		"ReadMiniblockCandidate",
-		pgx.ReadOnly,
+		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
 			var err error
 			miniblock, err = s.readMiniblockCandidateTx(ctx, tx, streamId, blockHash, blockNumber)
@@ -944,6 +996,10 @@ func (s *PostgresStreamStore) readMiniblockCandidateTx(
 	blockHash common.Hash,
 	blockNumber int64,
 ) ([]byte, error) {
+	if err := s.lockStream(ctx, tx, streamId, false); err != nil {
+		return nil, err
+	}
+
 	migrated, err := s.isStreamMigrated(ctx, tx, streamId, false)
 	if err != nil {
 		return nil, err
@@ -1009,9 +1065,23 @@ func (s *PostgresStreamStore) promoteBlockTxn(
 	snapshotMiniblock bool,
 	envelopes [][]byte,
 ) error {
+	if err := s.lockStream(ctx, tx, streamId, true); err != nil {
+		return err
+	}
+
 	var seqNum *int64
 
 	migrated, err := s.isStreamMigrated(ctx, tx, streamId, false)
+	if err != nil {
+		return err
+	}
+
+	// To prevent deadlock with stream creation, pre-emptively take a read lock on miniblocks.
+	// This lock will not be taken on the parent table otherwise until the insert happens on
+	// the partition, and causes lock contention because stream creation takes access share on
+	// miniblocks, then minipools, and this transaction was taking the same locks first on
+	// minipools, then miniblocks.
+	_, err = tx.Exec(ctx, "LOCK TABLE miniblocks IN ACCESS SHARE MODE")
 	if err != nil {
 		return err
 	}
@@ -1282,6 +1352,10 @@ func (s *PostgresStreamStore) DeleteStream(ctx context.Context, streamId StreamI
 }
 
 func (s *PostgresStreamStore) deleteStreamTx(ctx context.Context, tx pgx.Tx, streamId StreamId) error {
+	if err := s.lockStream(ctx, tx, streamId, true); err != nil {
+		return err
+	}
+
 	migrated, err := s.isStreamMigrated(ctx, tx, streamId, false)
 	if err != nil {
 		return err
@@ -1471,7 +1545,7 @@ func (s *PostgresStreamStore) DebugReadStreamData(
 	err := s.txRunnerWithUUIDCheck(
 		ctx,
 		"DebugReadStreamData",
-		pgx.ReadOnly,
+		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
 			var err error
 			ret, err = s.debugReadStreamData(ctx, tx, streamId)
@@ -1491,6 +1565,10 @@ func (s *PostgresStreamStore) debugReadStreamData(
 	tx pgx.Tx,
 	streamId StreamId,
 ) (*DebugReadStreamDataResult, error) {
+	if err := s.lockStream(ctx, tx, streamId, false); err != nil {
+		return nil, err
+	}
+
 	result := &DebugReadStreamDataResult{
 		StreamId: streamId,
 	}
@@ -1593,7 +1671,7 @@ func (s *PostgresStreamStore) StreamLastMiniBlock(
 	err := s.txRunnerWithUUIDCheck(
 		ctx,
 		"StreamLastMiniBlock",
-		pgx.ReadOnly,
+		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
 			var err error
 			ret, err = s.streamLastMiniBlockTx(ctx, tx, streamID)
@@ -1612,6 +1690,10 @@ func (s *PostgresStreamStore) streamLastMiniBlockTx(
 	tx pgx.Tx,
 	streamID StreamId,
 ) (*MiniblockData, error) {
+	if err := s.lockStream(ctx, tx, streamID, false); err != nil {
+		return nil, err
+	}
+
 	migrated, err := s.isStreamMigrated(ctx, tx, streamID, false)
 	if err != nil {
 		return nil, err
@@ -1683,6 +1765,10 @@ func (s *PostgresStreamStore) importMiniblocksTx(
 		streamID = miniBlocks[0].StreamID
 		seqNum   *int64
 	)
+
+	if err := s.lockStream(ctx, tx, streamID, true); err != nil {
+		return err
+	}
 
 	migrated, err := s.isStreamMigrated(ctx, tx, streamID, true)
 	if err != nil {
