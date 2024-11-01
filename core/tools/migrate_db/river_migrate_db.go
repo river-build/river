@@ -989,6 +989,8 @@ func copyPart(ctx context.Context, source *pgxpool.Conn, tx pgx.Tx, streamId str
 
 	_, err = tx.CopyFrom(ctx, pgx.Identifier{partition}, columnNames, rows)
 	if err != nil {
+		fmt.Println("DEBUG: columns", columnNames)
+		fmt.Println("DEBUG: rows", rows)
 		return fmt.Errorf("failed to copy from %s for stream %s: %w", partition, streamId, err)
 	}
 	return nil
