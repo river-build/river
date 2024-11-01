@@ -384,7 +384,7 @@ CREATE TABLE IF NOT EXISTS %[1]s (
   stream_id CHAR(64) STORAGE PLAIN NOT NULL,
   generation BIGINT NOT NULL,
   slot_num BIGINT NOT NULL,
-  envelope BYTEA STORAGE EXTERNAL NOT NULL,
+  envelope BYTEA STORAGE EXTERNAL,
   PRIMARY KEY (stream_id, generation, slot_num)
   )
 `
