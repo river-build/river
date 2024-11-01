@@ -962,6 +962,8 @@ func init() {
 	targetCmd.AddCommand(targetDropCmd)
 }
 
+var copySlow = false
+
 func copyPart(ctx context.Context, source *pgxpool.Conn, tx pgx.Tx, streamId string, table string, force bool) error {
 	partition := getPartitionName(table, streamId)
 
@@ -987,10 +989,22 @@ func copyPart(ctx context.Context, source *pgxpool.Conn, tx pgx.Tx, streamId str
 		columnNames = append(columnNames, desc.Name)
 	}
 
-	_, err = tx.CopyFrom(ctx, pgx.Identifier{partition}, columnNames, rows)
+	var rowData [][]any
+	if !copySlow {
+		_, err = tx.CopyFrom(ctx, pgx.Identifier{partition}, columnNames, rows)
+	} else {
+		rowData, err = pgx.CollectRows(rows, func(r pgx.CollectableRow) ([]any, error) {
+			return r.Values()
+		})
+		if err != nil {
+			_, err = tx.CopyFrom(ctx, pgx.Identifier{partition}, columnNames, pgx.CopyFromRows(rowData))
+		}
+	}
 	if err != nil {
 		fmt.Println("DEBUG: columns", columnNames)
-		fmt.Println("DEBUG: rows", rows)
+		if rowData != nil {
+			fmt.Println("DEBUG: rows", rowData)
+		}
 		return fmt.Errorf("failed to copy from %s for stream %s: %w", partition, streamId, err)
 	}
 	return nil
@@ -1167,6 +1181,7 @@ var (
 func init() {
 	rootCmd.AddCommand(copyCmd)
 	copyCmd.Flags().BoolVar(&copyCmdForce, "force", false, "Force copy even if target already has data")
+	copyCmd.Flags().BoolVar(&copySlow, "slow", false, "Use slow copy method that reads data into memory")
 }
 
 func compareTableCounts(
