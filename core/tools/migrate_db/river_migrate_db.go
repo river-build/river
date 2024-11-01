@@ -480,8 +480,8 @@ func chunk(slice [][]string, size int) [][]string {
 	return ret
 }
 
-func chunk2(slice []string, size int) [][]string {
-	var ret [][]string
+func chunk2[T any](slice []T, size int) [][]T {
+	var ret [][]T
 	for i := 0; i < len(slice); i += size {
 		ret = append(ret, slice[i:min(len(slice), i+size)])
 	}
@@ -624,6 +624,43 @@ func executeSqlInParallel(ctx context.Context, pool *pgxpool.Pool, sql [][]strin
 	go reportProgress(ctx, message, progressCounter)
 
 	workerPool.StopWait()
+
+	return nil
+}
+
+func executeInParallel[T any](
+	ctx context.Context,
+	workitems []T,
+	message string,
+	fn func(ctx context.Context, items []T) error,
+) error {
+	numWorkers := viper.GetInt("RIVER_DB_NUM_WORKERS")
+	txSize := viper.GetInt("RIVER_DB_TX_SIZE")
+	if txSize <= 0 {
+		txSize = 1
+	}
+
+	workerPool := workerpool.New(numWorkers)
+
+	workItems := chunk2(workitems, txSize)
+
+	progressCounter := &atomic.Int64{}
+	for _, workitem := range workItems {
+		workerPool.Submit(func() {
+			err := fn(ctx, workitem)
+			if err != nil {
+				fmt.Println("ERROR:", err)
+				os.Exit(1)
+			}
+			progressCounter.Add(int64(len(workitem)))
+		})
+	}
+
+	go reportProgress(ctx, message, progressCounter)
+
+	workerPool.StopWait()
+
+	fmt.Println("Final:", message, progressCounter.Load())
 
 	return nil
 }
@@ -962,7 +999,84 @@ func init() {
 	targetCmd.AddCommand(targetDropCmd)
 }
 
-var copySlow = false
+func deleteStream(ctx context.Context, tx pgx.Tx, streamId string) error {
+	_, err := tx.Exec(ctx, "DELETE FROM es WHERE stream_id = $1", streamId)
+	if err != nil {
+		return fmt.Errorf("failed to delete stream %s: %w", streamId, err)
+	}
+
+	mp_part := getPartitionName("minipools", streamId)
+	_, err = tx.Exec(ctx, "DELETE FROM "+mp_part+" WHERE stream_id = $1", streamId)
+	if err != nil {
+		return fmt.Errorf("failed to delete minipools partition %s: %w", mp_part, err)
+	}
+
+	mb_part := getPartitionName("miniblocks", streamId)
+	_, err = tx.Exec(ctx, "DELETE FROM "+mb_part+" WHERE stream_id = $1", streamId)
+	if err != nil {
+		return fmt.Errorf("failed to delete miniblocks partition %s: %w", mb_part, err)
+	}
+
+	cand_part := getPartitionName("miniblock_candidates", streamId)
+	_, err = tx.Exec(ctx, "DELETE FROM "+cand_part+" WHERE stream_id = $1", streamId)
+	if err != nil {
+		return fmt.Errorf("failed to delete miniblock_candidates partition %s: %w", cand_part, err)
+	}
+
+	return nil
+}
+
+var targetWipeCmd = &cobra.Command{
+	Use:   "wipe_wipe_wipe",
+	Short: "Advanced: Destructive: Delete all data from target database",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
+		pool, _, err := getTargetDbPool(ctx, true)
+		if err != nil {
+			return err
+		}
+
+		streamIds, _, err := getStreamIds(ctx, pool)
+		if err != nil {
+			return wrapError("Failed to get stream ids from target", err)
+		}
+
+		return executeInParallel(
+			ctx,
+			streamIds,
+			"Streams deleted:",
+			func(ctx context.Context, streamIds []string) error {
+				for _, id := range streamIds {
+					tx, err := pool.BeginTx(ctx, pgx.TxOptions{
+						IsoLevel:   pgx.ReadCommitted,
+						AccessMode: pgx.ReadWrite,
+					})
+					defer rollbackTx(ctx, tx)
+
+					if err != nil {
+						return wrapError("Failed to begin transaction", err)
+					}
+					err = deleteStream(ctx, tx, id)
+					if err != nil {
+						return err
+					}
+
+					err = tx.Commit(ctx)
+					if err != nil {
+						return wrapError("Failed to commit transaction", err)
+					}
+				}
+				return nil
+			},
+		)
+	},
+}
+
+func init() {
+	targetCmd.AddCommand(targetWipeCmd)
+}
+
+var copyBypass = false
 
 func copyPart(ctx context.Context, source *pgxpool.Conn, tx pgx.Tx, streamId string, table string, force bool) error {
 	partition := getPartitionName(table, streamId)
@@ -990,13 +1104,13 @@ func copyPart(ctx context.Context, source *pgxpool.Conn, tx pgx.Tx, streamId str
 	}
 
 	var rowData [][]any
-	if !copySlow {
+	if copyBypass {
 		_, err = tx.CopyFrom(ctx, pgx.Identifier{partition}, columnNames, rows)
 	} else {
 		rowData, err = pgx.CollectRows(rows, func(r pgx.CollectableRow) ([]any, error) {
 			return r.Values()
 		})
-		if err != nil {
+		if err == nil {
 			_, err = tx.CopyFrom(ctx, pgx.Identifier{partition}, columnNames, pgx.CopyFromRows(rowData))
 		}
 	}
@@ -1140,6 +1254,8 @@ func copyData(ctx context.Context, source *pgxpool.Pool, target *pgxpool.Pool, f
 
 	workerPool.StopWait()
 
+	fmt.Println("Final: Streams copied:", progressCounter.Load())
+
 	return nil
 }
 
@@ -1181,7 +1297,7 @@ var (
 func init() {
 	rootCmd.AddCommand(copyCmd)
 	copyCmd.Flags().BoolVar(&copyCmdForce, "force", false, "Force copy even if target already has data")
-	copyCmd.Flags().BoolVar(&copySlow, "slow", false, "Use slow copy method that reads data into memory")
+	copyCmd.Flags().BoolVar(&copyBypass, "bypass", false, "Bypass reading data into memory (another copy method)")
 }
 
 func compareTableCounts(
