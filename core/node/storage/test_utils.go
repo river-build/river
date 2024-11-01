@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"embed"
 	"io/fs"
 )
 
@@ -20,7 +21,10 @@ type LayeredFS struct {
 var _ ReadDirFileFS = (*LayeredFS)(nil)
 
 // New creates a new LayeredFS with the given primary and fallback filesystems
-func NewLayeredFS(primary, fallback ReadDirFileFS) *LayeredFS {
+// This struct is not extensively tested and should not be used in production. It's main
+// use it to layer test migration files over the standard migration directory for custom
+// migrations in unit testing.
+func NewLayeredFS(primary ReadDirFileFS, fallback embed.FS) *LayeredFS {
 	return &LayeredFS{
 		primary:  primary,
 		fallback: fallback,
@@ -30,23 +34,33 @@ func NewLayeredFS(primary, fallback ReadDirFileFS) *LayeredFS {
 // Open implements fs.FS interface
 func (l *LayeredFS) Open(name string) (fs.File, error) {
 	// Try to open from primary first
-	if file, err := l.primary.Open(name); err == nil {
+	file, err := l.primary.Open(name)
+	if err == nil {
 		return file, nil
 	}
 
-	// If not found in primary, try fallback
-	return l.fallback.Open(name)
+	if err.(*fs.PathError).Err == fs.ErrNotExist {
+		// If not found in primary, try fallback
+		return l.fallback.Open(name)
+	}
+
+	return nil, err
 }
 
 // ReadFile reads the named file from the layered filesystem
 func (l *LayeredFS) ReadFile(name string) ([]byte, error) {
 	// Try to read from primary first
-	if data, err := l.primary.ReadFile(name); err == nil {
+	data, err := l.primary.ReadFile(name)
+	if err == nil {
 		return data, nil
 	}
 
-	// If not found in primary, try fallback
-	return l.fallback.ReadFile(name)
+	if err.(*fs.PathError).Err == fs.ErrNotExist {
+		// If not found in primary, try fallback
+		return l.fallback.ReadFile(name)
+	}
+
+	return nil, err
 }
 
 // ReadDir reads the named directory from the layered filesystem
