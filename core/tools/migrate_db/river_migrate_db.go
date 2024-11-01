@@ -665,6 +665,36 @@ func executeInParallel[T any](
 	return nil
 }
 
+func executeInParallelInTx[T any](
+	ctx context.Context,
+	pool *pgxpool.Pool,
+	workitems []T,
+	message string,
+	fn func(ctx context.Context, tx pgx.Tx, items []T) error,
+) error {
+	return executeInParallel(ctx, workitems, message, func(ctx context.Context, items []T) error {
+		tx, err := pool.BeginTx(ctx, pgx.TxOptions{
+			IsoLevel:   pgx.ReadCommitted,
+			AccessMode: pgx.ReadWrite,
+		})
+		defer rollbackTx(ctx, tx)
+
+		if err != nil {
+			return wrapError("Failed to begin transaction", err)
+		}
+		err = fn(ctx, tx, items)
+		if err != nil {
+			return err
+		}
+
+		err = tx.Commit(ctx)
+		if err != nil {
+			return wrapError("Failed to commit transaction", err)
+		}
+		return nil
+	})
+}
+
 func createPartitionTables(
 	ctx context.Context,
 	pool *pgxpool.Pool,
@@ -1041,29 +1071,16 @@ var targetWipeCmd = &cobra.Command{
 			return wrapError("Failed to get stream ids from target", err)
 		}
 
-		return executeInParallel(
+		return executeInParallelInTx(
 			ctx,
+			pool,
 			streamIds,
 			"Streams deleted:",
-			func(ctx context.Context, streamIds []string) error {
+			func(ctx context.Context, tx pgx.Tx, streamIds []string) error {
 				for _, id := range streamIds {
-					tx, err := pool.BeginTx(ctx, pgx.TxOptions{
-						IsoLevel:   pgx.ReadCommitted,
-						AccessMode: pgx.ReadWrite,
-					})
-					defer rollbackTx(ctx, tx)
-
-					if err != nil {
-						return wrapError("Failed to begin transaction", err)
-					}
 					err = deleteStream(ctx, tx, id)
 					if err != nil {
 						return err
-					}
-
-					err = tx.Commit(ctx)
-					if err != nil {
-						return wrapError("Failed to commit transaction", err)
 					}
 				}
 				return nil
@@ -1074,6 +1091,53 @@ var targetWipeCmd = &cobra.Command{
 
 func init() {
 	targetCmd.AddCommand(targetWipeCmd)
+}
+
+func fixSchema(ctx context.Context, tx pgx.Tx, partition string) error {
+	_, err := tx.Exec(ctx, "ALTER TABLE "+partition+" ALTER COLUMN envelope DROP NOT NULL")
+	if err != nil {
+		return fmt.Errorf("failed to alter partition %s: %w", partition, err)
+	}
+	return nil
+}
+
+var targetFixSchemaCmd = &cobra.Command{
+	Use:   "fix_schema",
+	Short: "Advanced: Fix target database schema broken by previous migrations",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
+		pool, _, err := getTargetDbPool(ctx, true)
+		if err != nil {
+			return err
+		}
+
+		partitions, err := queryPartitions(ctx, pool, "minipools")
+		if err != nil {
+			return wrapError("Failed to get partitions from target", err)
+		}
+
+		fmt.Println("Fixing schema for", len(partitions), "partitions")
+
+		return executeInParallelInTx(
+			ctx,
+			pool,
+			partitions,
+			"Partitions fixed:",
+			func(ctx context.Context, tx pgx.Tx, partitions []string) error {
+				for _, partition := range partitions {
+					err = fixSchema(ctx, tx, partition)
+					if err != nil {
+						return err
+					}
+				}
+				return nil
+			},
+		)
+	},
+}
+
+func init() {
+	targetCmd.AddCommand(targetFixSchemaCmd)
 }
 
 var copyBypass = false
