@@ -220,14 +220,16 @@ type DatabaseConfig struct {
 	MigrateStreamCreation bool
 
 	// NumPartitions specifies the number of partitions to use when creating the schema for stream
-	// data storage. If <= 0, a default value of 256 will be used.
+	// data storage. If <= 0, a default value of 256 will be used. No more than 256 partitions is
+	// supported at this time.
 	NumPartitions int
 }
 
 func (c *DatabaseConfig) Init() error {
-	if c.NumPartitions <= 0 {
+	if c.NumPartitions <= 0 || c.NumPartitions > 256 {
 		c.NumPartitions = 256
 	}
+
 	return nil
 }
 
