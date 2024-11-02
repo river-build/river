@@ -3,6 +3,7 @@ package registries
 import (
 	"context"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -291,6 +292,10 @@ func (c *RiverRegistryContract) ForAllStreams(
 ) error {
 	// TODO: setting
 	const pageSize = int64(1000)
+
+	// Add a lengthier timeout for this call in excess of rpc node timeout
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
 
 	lastPage := false
 	var err error
