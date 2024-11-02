@@ -5,7 +5,6 @@ import (
 	"embed"
 	"encoding/hex"
 	"fmt"
-	"io/fs"
 	"os"
 	"strings"
 	"time"
@@ -38,11 +37,54 @@ var _ StreamStorage = (*PostgresStreamStore)(nil)
 //go:embed migrations/*.sql
 var migrationsDir embed.FS
 
-//go:embed testdata/migrations/*.sql
-var testMigrationsDir embed.FS
-
 func GetRiverNodeDbMigrationSchemaFS() *embed.FS {
 	return &migrationsDir
+}
+
+type txnFn func(ctx context.Context, tx pgx.Tx) error
+
+func createSettingsTable(partitions int) txnFn {
+	return func(ctx context.Context, tx pgx.Tx) error {
+		log := dlog.FromCtx(ctx)
+		log.Info("Creating settings table")
+		_, err := tx.Exec(
+			ctx,
+			`CREATE TABLE IF NOT EXISTS stream_settings (
+				name VARCHAR NOT NULL,
+				value VARCHAR NOT NULL,
+				PRIMARY KEY (name)
+			)`,
+		)
+		if err != nil {
+			log.Error("Error creating settings table", "error", err)
+			return err
+		}
+
+		log.Info("Inserting partitions setting", "numPartitions", partitions)
+		_, err = tx.Exec(
+			ctx,
+			`INSERT INTO stream_settings (name, value) VALUES ('num_partitions', cast($1 AS VARCHAR))
+			ON CONFLICT (name) DO NOTHING`,
+			partitions,
+		)
+		if err != nil {
+			log.Error("Error setting partition count", "error", err)
+			return err
+		}
+
+		var numPartitions int
+		err = tx.QueryRow(
+			ctx,
+			`SELECT CAST(value as INTEGER) from stream_settings where name = 'num_partitions'`,
+		).Scan(&numPartitions)
+		if err != nil {
+			return err
+		}
+
+		log.Info("Creating stream storage schema with partition count", "numPartitions", numPartitions)
+
+		return nil
+	}
 }
 
 func NewPostgresStreamStore(
@@ -57,25 +99,12 @@ func NewPostgresStreamStore(
 		exitSignal: exitSignal,
 	}
 
-	// Test configurations of the database use a reduce partition count to speed up test setup.
-	// The normal 256 partition scheme takes up to ~2s to create locally and makes unit testing
-	// a bit unfeasable.
-	var migrations fs.FS
-	if poolInfo.Config.TestMode {
-		testMigrations, err := fs.Sub(testMigrationsDir, "testdata")
-		if err != nil {
-			return nil, AsRiverError(err).Func("NewPostgresStreamStore")
-		}
-		migrations = NewLayeredFS(testMigrations.(ReadDirFileFS), migrationsDir)
-	} else {
-		migrations = migrationsDir
-	}
-
 	if err := store.PostgresEventStore.init(
 		ctx,
 		poolInfo,
 		metrics,
-		migrations,
+		createSettingsTable(poolInfo.Config.NumPartitions),
+		migrationsDir,
 	); err != nil {
 		return nil, AsRiverError(err).Func("NewPostgresStreamStore")
 	}
@@ -160,7 +189,7 @@ func (s *PostgresStreamStore) txRunnerWithUUIDCheck(
 
 // createPartitionSuffix determines the partition mapping for a particular stream id the
 // hex encoding of the first byte of the xxHash of the stream ID.
-func createPartitionSuffix(streamId StreamId, reducedParitions bool) string {
+func createPartitionSuffix(streamId StreamId, numPartitions int) string {
 	// Media streams have separate partitions to handle the different data shapes and access
 	// patterns. The partition suffix is prefixed with an "m". Regular streams are assigned to
 	// partitions prefixed with "r", e.g. "miniblocks_ra4".
@@ -173,12 +202,8 @@ func createPartitionSuffix(streamId StreamId, reducedParitions bool) string {
 	// what we store in the database. This leaves the door open for installing xxhash on postgres
 	// and debugging this way in the future.
 	hash := xxhash.Sum64String(streamId.String())
-	// For test installations, expect 4 partitions
-	if reducedParitions {
-		bt := hash % 4
-		return fmt.Sprintf("%v%02x", streamType, bt)
-	}
-	return fmt.Sprintf("%v%016x", streamType, hash)[:3]
+	bt := hash % uint64(numPartitions) & 255
+	return fmt.Sprintf("%s%02x", streamType, bt)
 }
 
 // sqlForStream escapes references to partitioned tables to the specific partition where the stream
@@ -186,7 +211,7 @@ func createPartitionSuffix(streamId StreamId, reducedParitions bool) string {
 func (s *PostgresStreamStore) sqlForStream(sql string, streamId StreamId, migrated bool) string {
 	var suffix string
 	if migrated {
-		suffix = createPartitionSuffix(streamId, s.config.TestMode)
+		suffix = createPartitionSuffix(streamId, s.config.NumPartitions)
 	} else {
 		suffix = createTableSuffix(streamId)
 	}

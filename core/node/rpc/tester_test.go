@@ -221,9 +221,9 @@ func (st *serviceTester) getConfig(opts ...startOpts) *config.Config {
 		DisableHttps:     true,
 		RegistryContract: st.btc.RegistryConfig(),
 		Database: config.DatabaseConfig{
-			Url:          st.dbUrl,
-			StartupDelay: 2 * time.Millisecond,
-			TestMode:     true,
+			Url:           st.dbUrl,
+			StartupDelay:  2 * time.Millisecond,
+			NumPartitions: 4,
 		},
 		StorageType: "postgres",
 		Network: config.NetworkConfig{

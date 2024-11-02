@@ -28,11 +28,13 @@ import (
 )
 
 type PostgresEventStore struct {
-	config       *config.DatabaseConfig
-	pool         *pgxpool.Pool
-	schemaName   string
-	dbUrl        string
-	migrationDir fs.FS
+	config     *config.DatabaseConfig
+	pool       *pgxpool.Pool
+	schemaName string
+	dbUrl      string
+
+	preMigrationTx func(context.Context, pgx.Tx) error
+	migrationDir   fs.FS
 
 	txCounter  *infra.StatusCounterVec
 	txDuration *prometheus.HistogramVec
@@ -238,7 +240,7 @@ func NewPostgresEventStore(
 	metrics infra.MetricsFactory,
 ) (*PostgresEventStore, error) {
 	store := &PostgresEventStore{}
-	if err := store.init(ctx, poolInfo, metrics, migrationsDir); err != nil {
+	if err := store.init(ctx, poolInfo, metrics, nil, migrationsDir); err != nil {
 		return nil, AsRiverError(err).Func("NewPostgresEventStore")
 	}
 	return store, nil
@@ -448,6 +450,7 @@ func (s *PostgresEventStore) init(
 	ctx context.Context,
 	poolInfo *PgxPoolInfo,
 	metrics infra.MetricsFactory,
+	preMigrationTxn func(context.Context, pgx.Tx) error,
 	migrations fs.FS,
 ) error {
 	log := dlog.FromCtx(ctx)
@@ -458,7 +461,10 @@ func (s *PostgresEventStore) init(
 	s.pool = poolInfo.Pool
 	s.schemaName = poolInfo.Schema
 	s.dbUrl = poolInfo.Url
+
+	s.preMigrationTx = preMigrationTxn
 	s.migrationDir = migrations
+
 	s.txCounter = metrics.NewStatusCounterVecEx("dbtx_status", "PG transaction status", "name")
 	s.txDuration = metrics.NewHistogramVecEx(
 		"dbtx_duration_seconds",
@@ -581,6 +587,21 @@ func (s *PostgresEventStore) initStorage(ctx context.Context) error {
 	)
 	if err != nil {
 		return err
+	}
+
+	// Optionally run a transaction before the migrations are applied
+	if s.preMigrationTx != nil {
+		log := dlog.FromCtx(ctx)
+		log.Info("Running pre-migration transaction")
+		if err := s.txRunner(
+			ctx,
+			"preMigrationTx",
+			pgx.ReadWrite,
+			s.preMigrationTx,
+			&txRunnerOpts{},
+		); err != nil {
+			return err
+		}
 	}
 
 	err = s.runMigrations(ctx)

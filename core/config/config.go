@@ -219,11 +219,16 @@ type DatabaseConfig struct {
 	// node will continue to allocate new tables for each stream as it is created.
 	MigrateStreamCreation bool
 
-	// TestMode indicates that the database is being constructed under test conditions and indicates
-	// that certain internal configurations should be applied for the sake of test setup performance.
-	// As an example, the stream storage service will run unit tests with 4 stream partitions, while the
-	// production setting for the node is 256 partitions.
-	TestMode bool
+	// NumPartitions specifies the number of partitions to use when creating the schema for stream
+	// data storage. If <= 0, a default value of 256 will be used.
+	NumPartitions int
+}
+
+func (c *DatabaseConfig) Init() error {
+	if c.NumPartitions <= 0 {
+		c.NumPartitions = 256
+	}
+	return nil
 }
 
 func (c DatabaseConfig) GetUrl() string {
@@ -457,7 +462,11 @@ func (c *Config) GetTestEntitlementContractAddress() common.Address {
 }
 
 func (c *Config) Init() error {
-	return c.parseChains()
+	if err := c.parseChains(); err != nil {
+		return err
+	}
+
+	return c.Database.Init()
 }
 
 // Return the schema to use for accessing the node.

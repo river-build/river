@@ -30,6 +30,7 @@ func TestDatabaseConfig_UrlAndPasswordDoesNotLog(t *testing.T) {
 		Database: "testdb",
 		Extra:    "extra",
 	}
+	require.NoError(t, cfg.Init())
 
 	tests := map[string]struct {
 		logCreator      func() (*slog.Logger, *bytes.Buffer)
