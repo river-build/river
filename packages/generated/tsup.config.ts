@@ -12,11 +12,8 @@ export default defineConfig({
   format: ['esm'],
   dts: true,
   clean: true,
-  esbuildOptions(options) {
-      options.loader = {
-          ...options.loader,
-          '.json': 'copy', // Copy JSON files to the dist folder
-      }
+  loader: {
+    '.json': 'copy'
   },
 })
 
