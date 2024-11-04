@@ -163,11 +163,14 @@ type GroupState =
       }
 
 export class GroupStore {
-    private groups: Map<EpochIdentifier, GroupState> = new Map()
+    private groups: Map<string, GroupState> = new Map()
 
-    public getGroupStatus(streamId: string, epoch: bigint): GroupStatus {
-        const epochId = epochIdentifier(streamId, epoch)
-        const group = this.groups.get(epochId)
+    public hasGroup(streamId: string): boolean {
+        return this.groups.has(streamId)
+    }
+
+    public getGroupStatus(streamId: string): GroupStatus {
+        const group = this.groups.get(streamId)
         if (!group) {
             return 'GROUP_MISSING'
         }
@@ -176,12 +179,10 @@ export class GroupStore {
 
     public addGroupViaCreate(
         streamId: string,
-        epoch: bigint,
         group: MlsGroup,
         groupInfoWithExternalKey: Uint8Array,
     ): void {
-        const epochId = epochIdentifier(streamId, epoch)
-        if (this.groups.has(epochId)) {
+        if (this.groups.has(streamId)) {
             throw new Error('Group already exists')
         }
 
@@ -191,27 +192,26 @@ export class GroupStore {
             groupInfoWithExternalKey,
         }
 
-        this.groups.set(epochId, groupState)
+        this.groups.set(streamId, groupState)
     }
 
     public addGroupViaExternalJoin(
         streamId: string,
-        epoch: bigint,
         group: MlsGroup,
+        commit: Uint8Array,
         groupInfoWithExternalKey: Uint8Array,
     ): void {
-        const epochId = epochIdentifier(streamId, epoch)
-        if (this.groups.has(epochId)) {
+        if (this.groups.has(streamId)) {
             throw new Error('Group already exists')
         }
 
         const groupState: GroupState = {
             state: 'GROUP_PENDING_JOIN',
             group,
+            commit,
             groupInfoWithExternalKey,
         }
-
-
+        this.groups.set(streamId, groupState)
     }
 }
 
@@ -219,9 +219,9 @@ export class MlsCrypto {
     private client!: MlsClient
     private userAddress: string
     private groups: Map<string, MlsGroup> = new Map()
-    // temp, same for all groups for now // not encrypted for now
-    public keys: { epoch: bigint; key: Uint8Array }[] = []
     public deviceKey: Uint8Array
+    epochKeyStore = new EpochKeyStore(new CipherSuite())
+    groupStore: GroupStore = new GroupStore()
 
     constructor(userAddress: string) {
         this.userAddress = userAddress
@@ -236,7 +236,7 @@ export class MlsCrypto {
         const group = await this.client.createGroup()
         this.groups.set(streamId, group)
         const epochSecret = await group.currentEpochSecret()
-        this.keys.push({ epoch: group.currentEpoch, key: epochSecret.toBytes() })
+        this.epochKeyStore.addOpenEpochSecret(streamId, group.currentEpoch, epochSecret.toBytes())
         return (await group.groupInfoMessageAllowingExtCommit(true)).toBytes()
     }
 
@@ -280,17 +280,22 @@ export class MlsCrypto {
         streamId: string,
         groupInfo: Uint8Array,
     ): Promise<{ groupInfo: Uint8Array; commit: Uint8Array; epoch: bigint }> {
-        if (this.groups.has(streamId)) {
+        if (this.groupStore.hasGroup(streamId)) {
             throw new Error('Group already exists')
         }
 
         const { group, commit } = await this.client.commitExternal(MlsMessage.fromBytes(groupInfo))
-        this.groups.set(streamId, group)
-        const epochSecret = await group.currentEpochSecret()
-        this.keys.push({ epoch: group.currentEpoch, key: epochSecret.toBytes() })
-        const updatedGroupInfo = await group.groupInfoMessageAllowingExtCommit(true)
+        const groupInfoWithExternalKey = (
+            await group.groupInfoMessageAllowingExtCommit(true)
+        ).toBytes()
+        this.groupStore.addGroupViaExternalJoin(
+            streamId,
+            group,
+            commit.toBytes(),
+            groupInfoWithExternalKey,
+        )
         return {
-            groupInfo: updatedGroupInfo.toBytes(),
+            groupInfo: groupInfoWithExternalKey,
             commit: commit.toBytes(),
             epoch: group.currentEpoch,
         }
@@ -300,10 +305,7 @@ export class MlsCrypto {
         this.groups.delete(streamId)
     }
 
-    public async handleCommit(
-        streamId: string,
-        commit: Uint8Array,
-    ): Promise<{ key: Uint8Array; epoch: bigint } | undefined> {
+    public async handleCommit(streamId: string, commit: Uint8Array): Promise<void> {
         const group = this.groups.get(streamId)
         if (!group) {
             throw new Error('Group not found')
@@ -311,20 +313,11 @@ export class MlsCrypto {
         await group.processIncomingMessage(MlsMessage.fromBytes(commit))
         const secret = await group.currentEpochSecret()
         const epoch = group.currentEpoch
-        this.keys.push({ epoch, key: secret.toBytes() }) // should be encrypted
-        return { key: secret.toBytes(), epoch: epoch }
+        this.epochKeyStore.addOpenEpochSecret(streamId, epoch, secret.toBytes())
     }
 
     public hasGroup(streamId: string): boolean {
         return this.groups.has(streamId)
-    }
-
-    public epochFor(streamId: string): bigint {
-        const group = this.groups.get(streamId)
-        if (!group) {
-            throw new Error('Group not found')
-        }
-        return group.currentEpoch
     }
 
     public async handleGroupInfo(
@@ -354,7 +347,7 @@ export class MlsCrypto {
     public async handleExternalJoin(
         streamId: string,
         userAddress: string,
-        deviceKey: string,
+        deviceKey: Uint8Array,
         commit: Uint8Array,
         groupInfoWithExternalKey: Uint8Array,
     ): Promise<void> {
@@ -370,9 +363,17 @@ export class MlsCrypto {
     }
 
     public async handleKeyAnnouncement(
-        _streamId: string,
+        streamId: string,
         key: { epoch: bigint; key: Uint8Array },
     ): Promise<void> {
-        this.keys.push(key)
+        this.epochKeyStore.addSealedEpochSecret(streamId, key.epoch, key.key)
+    }
+
+    public epochFor(streamId: string): bigint {
+        const group = this.groups.get(streamId)
+        if (!group) {
+            throw new Error('Group not found')
+        }
+        return group.currentEpoch
     }
 }

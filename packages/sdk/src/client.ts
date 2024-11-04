@@ -2516,6 +2516,9 @@ export class Client
         } catch (error) {
             console.log('Error handling commit', error)
         }
+
+        const epoch = this.mlsCrypto.epochFor(args.streamId)
+
         const keys = this.mlsCrypto.keys.filter(
             (key) => !stream.view.membershipContent.mls.keys.has(key.epoch),
         )
@@ -2562,10 +2565,17 @@ export class Client
         }
     }
 
-    public async mls_didReceiveExternalJoin(_externalJoin: MlsExternalJoin): Promise<void> {
+    public async mls_didReceiveExternalJoin(externalJoin: MlsExternalJoin): Promise<void> {
         if (!this.mlsCrypto) {
             throw new Error('mls backend not initialized')
         }
-    }
 
+        await this.mlsCrypto?.handleExternalJoin(
+            externalJoin.streamId,
+            externalJoin.userAddress,
+            externalJoin.deviceKey,
+            externalJoin.commit,
+            externalJoin.groupInfoWithExternalKey,
+        )
+    }
 }
