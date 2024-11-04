@@ -5,8 +5,19 @@
     "type": "module",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        },
+        "./v3": {
+            "types": "./dist/v3/index.d.ts",
+            "default": "./dist/v3/index.js"
+        },
+        "./package.json": "./package.json"
+    },
     "scripts": {
-        "build": "tsc",
+        "build": "tsup",
         "cb": "yarn clean && yarn build",
         "clean": "rm -rf dist",
         "lint": "yarn eslint --format unix ./src",
@@ -45,11 +56,11 @@
         "jest-extended": "^4.0.1",
         "ts-jest": "^29.1.1",
         "ts-node": "^10.9.1",
+        "tsup": "^8.3.5",
         "typed-emitter": "^2.1.0",
         "typescript": "^5.1.6"
     },
     "files": [
-        "/dist",
-        "/v4"
+        "/dist"
     ]
 }
