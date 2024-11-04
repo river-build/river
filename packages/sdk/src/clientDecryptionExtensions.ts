@@ -12,6 +12,7 @@ import {
     MlsExternalJoin,
     MlsGroupInfo,
     MlsInitializeGroup,
+    MlsJoinGroupEvent,
     MlsKeyAnnouncement,
     UserDevice,
 } from '@river-build/encryption'
@@ -120,10 +121,8 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
                 groupInfoWithExternalKey,
             })
 
-        const onMlsKeyAnnouncement = (
-            streamId: string,
-            keys: { epoch: bigint; key: Uint8Array }[],
-        ) => this.enqueueMls({ tag: 'MlsKeyAnnouncement', streamId, keys })
+        const onMlsKeyAnnouncement = (streamId: string, key: { epoch: bigint; key: Uint8Array }) =>
+            this.enqueueMls({ tag: 'MlsKeyAnnouncement', streamId, key })
 
         client.on('streamUpToDate', onStreamUpToDate)
         client.on('newGroupSessions', onNewGroupSessions)
@@ -338,6 +337,11 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
     public async didReceiveMlsKeyAnnouncement(args: MlsKeyAnnouncement): Promise<void> {
         console.log('didReceiveKeyAnnouncement')
         await this.client.mls_didReceiveKeyAnnouncement(args)
+    }
+
+    public async didReceiveMlsJoinGroupEvent(args: MlsJoinGroupEvent): Promise<void> {
+        console.log('didReceiveMlsJoinGroupEvent')
+        await this.client.mls_joinGroup(args.streamId)
     }
 
     public async uploadDeviceKeys(): Promise<void> {

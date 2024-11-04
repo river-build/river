@@ -1255,6 +1255,9 @@ func (ru *aeMlsPayloadRules) validMls() (bool, error) {
 		if len(groupState.InitialGroupInfo) == 0 {
 			return false, RiverError(Err_INVALID_ARGUMENT, "initial group state not set")
 		}
+		if payload.ExternalJoin.Epoch != groupState.CurrentEpoch+1 {
+			return false, RiverError(Err_INVALID_ARGUMENT, "invalid epoch") // temp, instead we should add commit validation
+		}
 		if groupState.DeviceKeys[string(payload.ExternalJoin.DeviceKey)] != nil {
 			return false, RiverError(Err_INVALID_ARGUMENT, "device key already exists")
 		}
@@ -1289,11 +1292,12 @@ func (ru *aeMlsPayloadRules) validMls() (bool, error) {
 		if len(groupState.InitialGroupInfo) == 0 {
 			return false, RiverError(Err_INVALID_ARGUMENT, "initial group state not set")
 		}
-		for _, keyAndEpoch := range payload.KeyAnnouncement.Keys {
-			if groupState.DeviceKeys[string(keyAndEpoch.Key)] != nil {
-				return false, RiverError(Err_INVALID_ARGUMENT, "key for epoch already exists")
-			}
+
+		_, ok := groupState.GetEpochKeys()[payload.KeyAnnouncement.Epoch]
+		if ok {
+			return false, RiverError(Err_INVALID_ARGUMENT, "key for epoch already exists")
 		}
+
 	default:
 		return false, RiverError(Err_INVALID_ARGUMENT, "invalid mls payload")
 	}

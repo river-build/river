@@ -4,7 +4,11 @@ import {
     MlsMessage,
     CipherSuite as MlsCipherSuite,
     Secret as MlsSecret,
-    HpkeCiphertext, HpkePublicKey, HpkeSecretKey,
+    HpkeCiphertext,
+    HpkePublicKey,
+    HpkeSecretKey,
+    CipherSuite,
+    Secret,
 } from '@river-build/mls-rs-wasm'
 import { EncryptedData } from '@river-build/proto'
 import { hexToBytes } from 'ethereum-cryptography/utils'
@@ -147,6 +151,8 @@ export class MlsCrypto {
     private client!: MlsClient
     private userAddress: string
     private groups: Map<string, MlsGroup> = new Map()
+    // temp, same for all groups for now // not encrypted for now
+    public keys: { epoch: bigint; key: Uint8Array }[] = []
     public deviceKey: Uint8Array
 
     constructor(userAddress: string) {
@@ -161,41 +167,109 @@ export class MlsCrypto {
     public async createGroup(streamId: string): Promise<Uint8Array> {
         const group = await this.client.createGroup()
         this.groups.set(streamId, group)
+        const epochSecret = await group.currentEpochSecret()
+        this.keys.push({ epoch: group.currentEpoch, key: epochSecret.toBytes() })
         return (await group.groupInfoMessageAllowingExtCommit(true)).toBytes()
     }
 
     public async encrypt(streamId: string, message: Uint8Array): Promise<EncryptedData> {
         const group = this.groups.get(streamId)
         if (!group) {
-            throw new Error('Group not found')
+            throw new Error('MLS group not found')
         }
-        const ciphertext = (await group.encryptApplicationMessage(message)).toBytes()
-        return new EncryptedData({ algorithm: 'mls', mlsPayload: ciphertext })
+
+        const cipherSuite = new CipherSuite()
+        const epochSecret = await group.currentEpochSecret()
+        const keys = await cipherSuite.kemDerive(epochSecret)
+        const ciphertext = await cipherSuite.seal(keys.publicKey, message)
+        return new EncryptedData({ algorithm: 'mls', mlsPayload: ciphertext.toBytes() })
     }
 
     public async decrypt(streamId: string, encryptedData: EncryptedData): Promise<Uint8Array> {
         const group = this.groups.get(streamId)
         if (!group) {
-            throw new Error('Group not found')
+            throw new Error('MLS group not found')
         }
 
         if (!encryptedData.mlsPayload) {
             throw new Error('Not an MLS payload')
         }
 
-        const message = MlsMessage.fromBytes(encryptedData.mlsPayload)
-
-        const plaintext = (await group.processIncomingMessage(message)).asApplicationMessage()
-        if (!plaintext) {
-            throw new Error('unable to decrypt message')
+        for (const key of this.keys) {
+            try {
+                const cipherSuite = new CipherSuite()
+                const keys = await cipherSuite.kemDerive(Secret.fromBytes(key.key))
+                const ciphertext = HpkeCiphertext.fromBytes(encryptedData.mlsPayload)
+                return await cipherSuite.open(ciphertext, keys.secretKey, keys.publicKey)
+            } catch (e) {
+                console.error(`error decrypting using epoch ${key.epoch}`)
+            }
         }
-        return plaintext.data()
+        throw new Error('Failed to decrypt')
+    }
+
+    public async externalJoin(
+        streamId: string,
+        groupInfo: Uint8Array,
+    ): Promise<{ groupInfo: Uint8Array; commit: Uint8Array; epoch: bigint }> {
+        if (this.groups.has(streamId)) {
+            throw new Error('Group already exists')
+        }
+
+        const { group, commit } = await this.client.commitExternal(MlsMessage.fromBytes(groupInfo))
+        this.groups.set(streamId, group)
+        const epochSecret = await group.currentEpochSecret()
+        this.keys.push({ epoch: group.currentEpoch, key: epochSecret.toBytes() })
+        const updatedGroupInfo = await group.groupInfoMessageAllowingExtCommit(true)
+        return {
+            groupInfo: updatedGroupInfo.toBytes(),
+            commit: commit.toBytes(),
+            epoch: group.currentEpoch,
+        }
+    }
+
+    public async externalJoinFailed(streamId: string) {
+        this.groups.delete(streamId)
+    }
+
+    public async handleCommit(
+        streamId: string,
+        commit: Uint8Array,
+    ): Promise<{ key: Uint8Array; epoch: bigint } | undefined> {
+        const group = this.groups.get(streamId)
+        if (!group) {
+            throw new Error('Group not found')
+        }
+        await group.processIncomingMessage(MlsMessage.fromBytes(commit))
+        const secret = await group.currentEpochSecret()
+        const epoch = group.currentEpoch
+        this.keys.push({ epoch, key: secret.toBytes() }) // should be encrypted
+        return { key: secret.toBytes(), epoch: epoch }
+    }
+
+    public hasGroup(streamId: string): boolean {
+        return this.groups.has(streamId)
+    }
+
+    public epochFor(streamId: string): bigint {
+        const group = this.groups.get(streamId)
+        if (!group) {
+            throw new Error('Group not found')
+        }
+        return group.currentEpoch
     }
 
     public async handleGroupInfo(
         streamId: string,
         groupInfo: Uint8Array,
     ): Promise<{ groupInfo: Uint8Array; commit: Uint8Array } | undefined> {
+        // - If we have a group in PENDING_CREATE, and
+        //   - we sent the message,
+        //     then we can switch that group into a confirmed state; or
+        //   - and we did not sent the message,
+        //     then we clear it, and request to join using external join
+        // - Any other state should be impossible
+
         if (this.groups.has(streamId)) {
             return undefined
         }
@@ -207,47 +281,6 @@ export class MlsCrypto {
             groupInfo: updatedGroupInfo.toBytes(),
             commit: commit.toBytes(),
         }
-    }
-
-    public async handleCommit(streamId: string, commit: Uint8Array): Promise<void> {
-        const group = this.groups.get(streamId)
-        if (!group) {
-            throw new Error('Group not found')
-        }
-        await group.processIncomingMessage(MlsMessage.fromBytes(commit))
-    }
-
-    public hasGroup(streamId: string): boolean {
-        return this.groups.has(streamId)
-    }
-
-    public async processOutstandingEvents(streamId: string) {
-        const group = this.groups.get(streamId)
-        if (!group) {
-            throw new Error('Group not found')
-        }
-
-        // 1. Clear pending leaves -> Commit?
-        // look inside stream view, look inside the pending leaves dictionary, clear it
-        const commits: Uint8Array[] = []
-        for (const commit of commits) {
-            await group.processIncomingMessage(MlsMessage.fromBytes(commit))
-        }
-    }
-
-    // We observed InitializeGroup payload in an event
-    public async handleInitializeGroup(
-        streamId: string,
-        userAddress: string,
-        deviceKey: Uint8Array,
-        groupInfoWithExternalKey: Uint8Array,
-    ): Promise<void> {
-        // - If we have a group in PENDING_CREATE, and
-        //   - we sent the message,
-        //     then we can switch that group into a confirmed state; or
-        //   - and we did not sent the message,
-        //     then we clear it, and request to join using external join
-        // - Any other state should be impossible
     }
 
     public async handleExternalJoin(
@@ -269,9 +302,9 @@ export class MlsCrypto {
     }
 
     public async handleKeyAnnouncement(
-        streamId: string,
-        keys: { epoch: bigint; key: Uint8Array }[],
+        _streamId: string,
+        key: { epoch: bigint; key: Uint8Array },
     ): Promise<void> {
-        // Add keys to the epoch store
+        this.keys.push(key)
     }
 }

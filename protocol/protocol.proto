@@ -171,6 +171,7 @@ message MemberPayload {
             bytes device_key = 2;
             bytes commit = 3;
             bytes group_info_with_external_key = 4;
+            int64 epoch = 5; // temp until we have node validation in place
         }
 
         // can be called automatically by the node when a user leaves
@@ -185,14 +186,11 @@ message MemberPayload {
             bytes group_info_with_external_key = 3;
             KeyAnnouncement key_announcement = 4;
         }
-
+        
         // when a user has performed an ExternalJoin commit
         message KeyAnnouncement {
-            message KeyAndEpoch {
-                bytes key = 1;
-                uint64 epoch = 2;
-            }
-            repeated KeyAndEpoch keys = 1;
+            bytes key = 1;
+            uint64 epoch = 2;
         }
 
         oneof content {
@@ -205,12 +203,12 @@ message MemberPayload {
     }
 
     message Snapshot {
-
+        
         message MlsGroup {
             message DeviceKeys {
                 repeated bytes device_keys = 1;
             }
-
+            
             bytes initial_group_info = 1;
             bytes latest_group_info = 2; // <- always latest (for now includes ratched tree)
             // bytes ratchet_tree = 3; // <- ratchet_tree + commits replayed
@@ -220,6 +218,8 @@ message MemberPayload {
             // combine using ExternalCommitBuilder and commit_external themselves into the group
             map<string, DeviceKeys> device_keys = 6;
             repeated MlsPayload.ProposeLeave pending_leaves = 7;
+
+            uint64 current_epoch = 8; // temp until we have node validation in place
         }
 
         message Member {

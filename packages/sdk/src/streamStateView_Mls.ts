@@ -13,10 +13,10 @@ import { logNever } from './check'
 
 export class StreamStateView_Mls extends StreamStateView_AbstractContent {
     readonly streamId: string
-    private initialGroupInfo: Uint8Array | undefined
-    private latestGroupInfo: Uint8Array | undefined
+    public initialGroupInfo: Uint8Array | undefined
+    public latestGroupInfo: Uint8Array | undefined
     private pendingLeaves: Set<Uint8Array> = new Set()
-    private keys: Map<bigint, Uint8Array> = new Map()
+    public keys: Map<bigint, Uint8Array> = new Map()
     private commits: Uint8Array[] = []
     private deviceKeys: { [key: string]: MemberPayload_Snapshot_MlsGroup_DeviceKeys } = {}
 
@@ -34,12 +34,12 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
         this.pendingLeaves = new Set(snapshot.pendingLeaves.map((leave) => leave.userAddress))
         this.commits = snapshot.commits
         this.deviceKeys = snapshot.deviceKeys
-        if (this.latestGroupInfo.length > 0) {
-            encryptionEmitter?.emit('mlsGroupInfo', this.streamId, this.latestGroupInfo)
-        }
+
         for (const commit of snapshot.commits) {
             encryptionEmitter?.emit('mlsCommit', this.streamId, commit)
         }
+
+        console.log('GOT KEYVALS', snapshot.epochKeys)
     }
 
     appendEvent(
@@ -52,12 +52,10 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
         check(event.remoteEvent.event.payload.value.content.case === 'mls')
         const payload: MemberPayload_MlsPayload =
             event.remoteEvent.event.payload.value.content.value
-        console.log('GOT Payload', payload.content.case)
         switch (payload.content.case) {
             case 'initializeGroup':
                 this.initialGroupInfo = payload.content.value.groupInfoWithExternalKey
-                encryptionEmitter?.emit('mlsGroupInfo', this.streamId, this.initialGroupInfo)
-                console.log('GOT INITIALIZE GROUP')
+                this.latestGroupInfo = payload.content.value.groupInfoWithExternalKey
                 break
             case 'commitLeave': {
                 const userId = userIdFromAddress(payload.content.value.userAddress)
@@ -84,9 +82,8 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
                 break
             }
             case 'keyAnnouncement':
-                for (const key of payload.content.value.keys) {
-                    this.keys.set(key.epoch, key.key)
-                }
+                this.keys.set(payload.content.value.epoch, payload.content.value.key)
+                encryptionEmitter?.emit('mlsKeyAnnouncement', this.streamId, payload.content.value)
                 break
             case undefined:
                 break

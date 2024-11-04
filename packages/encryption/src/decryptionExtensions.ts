@@ -137,7 +137,12 @@ export interface MlsExternalJoin {
 export interface MlsKeyAnnouncement {
     tag: 'MlsKeyAnnouncement'
     streamId: string
-    keys: { epoch: bigint; key: Uint8Array }[]
+    key: { epoch: bigint; key: Uint8Array }
+}
+
+export interface MlsJoinGroupEvent {
+    tag: 'MlsJoinGroupEvent'
+    streamId: string
 }
 
 export type MlsEncryptionEvent =
@@ -146,6 +151,7 @@ export type MlsEncryptionEvent =
     | MlsInitializeGroup
     | MlsExternalJoin
     | MlsKeyAnnouncement
+    | MlsJoinGroupEvent
 
 /**
  *
@@ -258,6 +264,7 @@ export abstract class BaseDecryptionExtensions {
     public abstract didReceiveMlsInitializeGroup(args: MlsInitializeGroup): Promise<void>
     public abstract didReceiveMlsExternalJoin(args: MlsExternalJoin): Promise<void>
     public abstract didReceiveMlsKeyAnnouncement(args: MlsKeyAnnouncement): Promise<void>
+    public abstract didReceiveMlsJoinGroupEvent(args: MlsJoinGroupEvent): Promise<void>
 
     public abstract shouldPauseTicking(): boolean
     /**
@@ -648,8 +655,23 @@ export abstract class BaseDecryptionExtensions {
         try {
             await this.decryptGroupEvent(item.streamId, item.eventId, item.kind, item.encryptedData)
         } catch (err) {
-            console.log('FAILED TO DECRYPT', err)
-
+            if (item.encryptedData.mlsPayload !== undefined) {
+                const streamId = item.streamId
+                const sessionId = 'all-the-same'
+                if (!this.decryptionFailures[streamId]) {
+                    this.decryptionFailures[streamId] = { [sessionId]: [item] }
+                } else if (!this.decryptionFailures[streamId][sessionId]) {
+                    this.decryptionFailures[streamId][sessionId] = [item]
+                } else if (!this.decryptionFailures[streamId][sessionId].includes(item)) {
+                    this.decryptionFailures[streamId][sessionId].push(item)
+                }
+                if (isMlsGroupNotFoundError(err)) {
+                    this.queues.mls.push({ tag: 'MlsJoinGroupEvent', streamId: item.streamId })
+                } else if (isMlsMissingEpochError(err)) {
+                    console.log('Was missing epoch...')
+                }
+                return
+            }
             const sessionNotFound = isSessionNotFoundError(err)
 
             this.onDecryptionError(item, {
@@ -835,8 +857,15 @@ export abstract class BaseDecryptionExtensions {
                 return this.didReceiveMlsInitializeGroup(mls)
             case 'MlsExternalJoin':
                 return this.didReceiveMlsExternalJoin(mls)
-            case 'MlsKeyAnnouncement':
-                return this.didReceiveMlsKeyAnnouncement(mls)
+            case 'MlsKeyAnnouncement': {
+                await this.didReceiveMlsKeyAnnouncement(mls)
+                for (const item of this.decryptionFailures[mls.streamId]['all-the-same']) {
+                    await this.processEncryptedContentItem(item)
+                }
+                break
+            }
+            case 'MlsJoinGroupEvent':
+                return this.didReceiveMlsJoinGroupEvent(mls)
             default:
                 logNever(mls, `Unhandled MLS event ${mls}`)
         }
@@ -947,6 +976,20 @@ function takeFirst<T>(count: number, array: T[]): T[] {
 function isSessionNotFoundError(err: unknown): boolean {
     if (err !== null && typeof err === 'object' && 'message' in err) {
         return (err.message as string).includes('Session not found')
+    }
+    return false
+}
+
+function isMlsGroupNotFoundError(err: unknown): boolean {
+    if (err !== null && typeof err === 'object' && 'message' in err) {
+        return (err.message as string).includes('MLS group not found')
+    }
+    return false
+}
+
+function isMlsMissingEpochError(err: unknown): boolean {
+    if (err !== null && typeof err === 'object' && 'message' in err) {
+        return (err.message as string).includes('MLS epoch not found')
     }
     return false
 }
