@@ -8,7 +8,6 @@ import {IRewardsDistribution} from "./IRewardsDistribution.sol";
 // libraries
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 import {StakingRewards} from "./StakingRewards.sol";
 import {RewardsDistributionStorage} from "./RewardsDistributionStorage.sol";
@@ -16,6 +15,7 @@ import {RewardsDistributionStorage} from "./RewardsDistributionStorage.sol";
 // contracts
 import {Facet} from "contracts/src/diamond/facets/Facet.sol";
 import {OwnableBase} from "contracts/src/diamond/facets/ownable/OwnableBase.sol";
+import {UpgradeableBeaconBase} from "contracts/src/diamond/facets/beacon/UpgradeableBeacon.sol";
 import {Nonces} from "contracts/src/diamond/utils/Nonces.sol";
 import {EIP712Base} from "contracts/src/diamond/utils/cryptography/signature/EIP712Base.sol";
 import {DelegationProxy} from "./DelegationProxy.sol";
@@ -25,6 +25,7 @@ contract RewardsDistribution is
   IRewardsDistribution,
   RewardsDistributionBase,
   OwnableBase,
+  UpgradeableBeaconBase,
   EIP712Base,
   Nonces,
   Facet
@@ -56,11 +57,7 @@ contract RewardsDistribution is
       rewardToken,
       rewardDuration
     );
-    UpgradeableBeacon _beacon = new UpgradeableBeacon(
-      address(this),
-      address(new DelegationProxy())
-    );
-    ds.beacon = address(_beacon);
+    __UpgradeableBeacon_init_unchained(address(new DelegationProxy()));
 
     emit RewardsDistributionInitialized(
       stakeToken,
@@ -73,10 +70,7 @@ contract RewardsDistribution is
   function upgradeDelegationProxy(
     address newImplementation
   ) external onlyOwner {
-    address _beacon = RewardsDistributionStorage.layout().beacon;
-    UpgradeableBeacon(_beacon).upgradeTo(newImplementation);
-
-    emit DelegationProxyUpgraded(newImplementation);
+    _setImplementation(newImplementation);
   }
 
   /// @inheritdoc IRewardsDistribution
@@ -465,7 +459,12 @@ contract RewardsDistribution is
   }
 
   /// @inheritdoc IRewardsDistribution
-  function beacon() external view returns (address) {
-    return RewardsDistributionStorage.layout().beacon;
+  /// @dev Returns the implementation stored in the beacon
+  /// See: https://eips.ethereum.org/EIPS/eip-1967#beacon-contract-address
+  function implementation() external view returns (address result) {
+    /// @solidity memory-safe-assembly
+    assembly {
+      result := sload(_UPGRADEABLE_BEACON_IMPLEMENTATION_SLOT)
+    }
   }
 }

@@ -10,7 +10,6 @@ import {IRewardsDistributionBase} from "contracts/src/base/registry/facets/distr
 // libraries
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
 import {NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
 import {StakingRewards} from "contracts/src/base/registry/facets/distribution/v2/StakingRewards.sol";
 import {RewardsDistributionStorage} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistributionStorage.sol";
@@ -25,6 +24,7 @@ import {MainnetDelegation} from "contracts/src/tokens/river/base/delegation/Main
 import {SpaceDelegationFacet} from "contracts/src/base/registry/facets/delegation/SpaceDelegationFacet.sol";
 import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistribution.sol";
 import {DelegationProxy} from "contracts/src/base/registry/facets/distribution/v2/DelegationProxy.sol";
+import {UpgradeableBeaconBase} from "contracts/src/diamond/facets/beacon/UpgradeableBeacon.sol";
 
 contract RewardsDistributionV2Test is
   BaseSetup,
@@ -97,14 +97,11 @@ contract RewardsDistributionV2Test is
     vm.etch(newImplementation, type(DelegationProxy).runtimeCode);
 
     vm.expectEmit(address(rewardsDistributionFacet));
-    emit DelegationProxyUpgraded(newImplementation);
+    emit UpgradeableBeaconBase.Upgraded(newImplementation);
     vm.prank(deployer);
     rewardsDistributionFacet.upgradeDelegationProxy(newImplementation);
 
-    assertEq(
-      UpgradeableBeacon(rewardsDistributionFacet.beacon()).implementation(),
-      newImplementation
-    );
+    assertEq(rewardsDistributionFacet.implementation(), newImplementation);
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/

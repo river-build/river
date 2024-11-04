@@ -59,10 +59,6 @@ interface IRewardsDistributionBase {
     uint256 rewardDuration
   );
 
-  /// @notice Emitted when the delegation proxy implementation is upgraded in the beacon
-  /// @param newImplementation The address of the new implementation
-  event DelegationProxyUpgraded(address newImplementation);
-
   /// @notice Emitted when a delegation proxy is deployed
   /// @param depositId The ID of the deposit
   /// @param delegatee The address of the delegatee
@@ -351,7 +347,6 @@ interface IRewardsDistribution is IRewardsDistributionBase {
     address operator
   ) external view returns (uint256);
 
-  /// @notice The upgradeable beacon of delegation proxies
-  /// @return The address of the upgradeable beacon
-  function beacon() external view returns (address);
+  /// @notice Returns the implementation stored in the beacon
+  function implementation() external view returns (address);
 }

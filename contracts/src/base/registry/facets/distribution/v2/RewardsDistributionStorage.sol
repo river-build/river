@@ -16,13 +16,11 @@ library RewardsDistributionStorage {
 
   /// @notice The layout of the rewards distribution storage
   /// @param staking The storage of the staking rewards logic
-  /// @param beacon The address of the upgradeable beacon
   /// @param proxyById The mapping of deposit ID to proxy address
   /// @param isRewardNotifier The mapping of reward notifier whitelist
   /// @param depositsByDepositor The mapping of deposit IDs by depositor
   struct Layout {
     StakingRewards.Layout staking;
-    address beacon;
     mapping(uint256 depositId => address proxy) proxyById;
     mapping(address rewardNotifier => bool) isRewardNotifier;
     mapping(address depositor => EnumerableSet.UintSet) depositsByDepositor;

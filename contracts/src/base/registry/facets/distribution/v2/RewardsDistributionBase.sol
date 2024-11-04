@@ -67,7 +67,7 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     proxy = LibClone.deployDeterministicERC1967BeaconProxy(
-      ds.beacon,
+      address(this),
       bytes32(depositId)
     );
     ds.proxyById[depositId] = proxy;
