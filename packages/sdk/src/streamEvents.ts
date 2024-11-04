@@ -5,7 +5,6 @@ import {
     UserSettingsPayload_UserBlock,
     UserPayload_UserMembership,
     UserInboxPayload_Snapshot_DeviceSummary,
-    MemberPayload_MlsPayload_KeyAnnouncement_KeyAndEpoch,
 } from '@river-build/proto'
 
 import {
@@ -54,7 +53,7 @@ export type StreamEncryptionEvents = {
     ) => void
     userDeviceKeyMessage: (streamId: string, userId: string, userDevice: UserDevice) => void
     mlsCommit: (streamId: string, commit: Uint8Array) => void
-    mlsKeyAnnouncement: (streamId: string, keys: { epoch: bigint; key: Uint8Array }[]) => void
+    mlsKeyAnnouncement: (streamId: string, key: { epoch: bigint; key: Uint8Array }) => void
 }
 
 export type SyncedStreamEvents = {

@@ -111,7 +111,7 @@ export interface MlsJoinExternal {
 
 export interface MlsKeyAnnouncement {
     streamId: string
-    keys: { epoch: bigint; key: Uint8Array }[]
+    key: { epoch: bigint; key: Uint8Array }
 }
 
 /**
@@ -968,5 +968,5 @@ function isMlsCommit(item: MlsJoinExternal | MlsCommit): item is MlsCommit {
 function isKeyAnnouncement(
     item: MlsJoinExternal | MlsCommit | MlsKeyAnnouncement,
 ): item is MlsKeyAnnouncement {
-    return 'keys' in item
+    return 'key' in item
 }

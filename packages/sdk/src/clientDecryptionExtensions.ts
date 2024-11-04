@@ -84,10 +84,8 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
 
         const onMlsCommit = (streamId: string, commit: Uint8Array) =>
             this.enqueueMls({ streamId, commit })
-        const onMlsKeyAnnouncement = (
-            streamId: string,
-            keys: { key: Uint8Array; epoch: bigint }[],
-        ) => this.enqueueMls({ streamId, keys })
+        const onMlsKeyAnnouncement = (streamId: string, key: { key: Uint8Array; epoch: bigint }) =>
+            this.enqueueMls({ streamId, key })
 
         client.on('streamUpToDate', onStreamUpToDate)
         client.on('newGroupSessions', onNewGroupSessions)
@@ -282,7 +280,7 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
     }
 
     public async keyAnnouncementMls(args: MlsKeyAnnouncement): Promise<void> {
-        await this.client.mls_didReceiveKeyAnnouncement(args.streamId, args.keys)
+        await this.client.mls_didReceiveKeyAnnouncement(args.streamId, args.key)
     }
 
     public async uploadDeviceKeys(): Promise<void> {

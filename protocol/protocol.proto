@@ -186,14 +186,11 @@ message MemberPayload {
             bytes group_info_with_external_key = 3;
             KeyAnnouncement key_announcement = 4;
         }
-
+        
         // when a user has performed an ExternalJoin commit
         message KeyAnnouncement {
-            message KeyAndEpoch {
-                bytes key = 1;
-                uint64 epoch = 2;
-            }
-            repeated KeyAndEpoch keys = 1;
+            bytes key = 1;
+            uint64 epoch = 2;
         }
 
         oneof content {

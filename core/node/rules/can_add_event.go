@@ -1292,12 +1292,12 @@ func (ru *aeMlsPayloadRules) validMls() (bool, error) {
 		if len(groupState.InitialGroupInfo) == 0 {
 			return false, RiverError(Err_INVALID_ARGUMENT, "initial group state not set")
 		}
-		for _, keyAndEpoch := range payload.KeyAnnouncement.Keys {
-			_, ok := groupState.GetDeviceKeys()[string(keyAndEpoch.Key)]
-			if ok {
-				return false, RiverError(Err_INVALID_ARGUMENT, "key for epoch already exists")
-			}
+
+		_, ok := groupState.GetEpochKeys()[payload.KeyAnnouncement.Epoch]
+		if ok {
+			return false, RiverError(Err_INVALID_ARGUMENT, "key for epoch already exists")
 		}
+
 	default:
 		return false, RiverError(Err_INVALID_ARGUMENT, "invalid mls payload")
 	}

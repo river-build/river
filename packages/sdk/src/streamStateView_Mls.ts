@@ -83,14 +83,8 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
             }
             case 'keyAnnouncement':
                 console.log('GOT GROUP KEY ANNOUNCEMENT')
-                for (const key of payload.content.value.keys) {
-                    this.keys.set(key.epoch, key.key)
-                }
-                encryptionEmitter?.emit(
-                    'mlsKeyAnnouncement',
-                    this.streamId,
-                    payload.content.value.keys,
-                )
+                this.keys.set(payload.content.value.epoch, payload.content.value.key)
+                encryptionEmitter?.emit('mlsKeyAnnouncement', this.streamId, payload.content.value)
                 break
             case undefined:
                 break

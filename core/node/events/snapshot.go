@@ -850,9 +850,7 @@ func applyMlsPayload(
 		if mlsGroup.GetEpochKeys() == nil {
 			mlsGroup.EpochKeys = make(map[uint64][]byte)
 		}
-		for _, keyAndEpoch := range payload.KeyAnnouncement.Keys {
-			mlsGroup.EpochKeys[keyAndEpoch.Epoch] = keyAndEpoch.Key
-		}
+		mlsGroup.EpochKeys[payload.KeyAnnouncement.Epoch] = payload.KeyAnnouncement.Key
 	}
 	return mlsGroup
 }

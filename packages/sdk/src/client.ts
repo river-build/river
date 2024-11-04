@@ -2510,27 +2510,25 @@ export class Client
             throw new Error('stream not found')
         }
         try {
-            const result = await this.mlsCrypto.handleCommit(streamId, commit)
+            await this.mlsCrypto.handleCommit(streamId, commit)
         } catch (error) {
             console.log('Error handling commit', error)
         }
         const keys = this.mlsCrypto.keys.filter(
             (key) => !stream.view.membershipContent.mls.keys.has(key.epoch),
         )
-        if (keys.length > 0) {
-            console.log('SENDING KEYS', keys)
+        for (const key of keys) {
             try {
                 await this.makeEventAndAddToStream(
                     streamId,
                     make_MemberPayload_Mls({
                         content: {
                             case: 'keyAnnouncement',
-                            value: {
-                                keys: keys,
-                            },
+                            value: key,
                         },
                     }),
                 )
+                console.log('SENT Keys', key)
             } catch (error) {
                 console.log('ERROR announcing key', error)
             }
@@ -2539,12 +2537,12 @@ export class Client
 
     public async mls_didReceiveKeyAnnouncement(
         streamId: string,
-        keys: { epoch: bigint; key: Uint8Array }[],
+        key: { epoch: bigint; key: Uint8Array },
     ) {
         if (!this.mlsCrypto) {
             throw new Error('mls backend not initialized')
         }
-        await this.mlsCrypto.handleKeyAnnouncement(streamId, keys)
+        await this.mlsCrypto.handleKeyAnnouncement(streamId, key)
         const user = this.userId
         const k = this.mlsCrypto.keys
         console.log(`GOT KEYS ${user}`, k)

@@ -116,12 +116,9 @@ export class MlsCrypto {
         return this.groups.has(streamId)
     }
 
-    public async handleKeyAnnouncement(
-        streamId: string,
-        keys: { epoch: bigint; key: Uint8Array }[],
-    ) {
-        console.log('GOT KEY ANNOUNCEMENT', keys)
-        this.keys.push(...keys)
+    public async handleKeyAnnouncement(streamId: string, key: { epoch: bigint; key: Uint8Array }) {
+        console.log('GOT KEY ANNOUNCEMENT', key)
+        this.keys.push(key)
     }
 
     public epochFor(streamId: string): bigint {
