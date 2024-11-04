@@ -33,36 +33,239 @@ interface IRewardsDistributionBase {
   /*                       CUSTOM ERRORS                        */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
+  /// @dev Self-explanatory
   error RewardsDistribution__NotBeneficiary();
   error RewardsDistribution__NotClaimer();
   error RewardsDistribution__NotDepositOwner();
-  error RewardsDistribution__ExpiredDeadline();
-  error RewardsDistribution__InvalidSignature();
   error RewardsDistribution__NotRewardNotifier();
   error RewardsDistribution__NotOperatorOrSpace();
+  error RewardsDistribution__NotActiveOperator();
+  error RewardsDistribution__ExpiredDeadline();
+  error RewardsDistribution__InvalidSignature();
+  error RewardsDistribution__CannotWithdrawFromSelf();
+  error RewardsDistribution__NoPendingWithdrawal();
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                           EVENTS                           */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
+  /// @notice Emitted when the rewards distribution facet is initialized
+  /// @param stakeToken The token that is being staked
+  /// @param rewardToken The token that is being distributed as rewards
+  /// @param rewardDuration The duration of each reward distribution period
   event RewardsDistributionInitialized(
     address stakeToken,
     address rewardToken,
     uint256 rewardDuration
   );
 
-  event DelegationProxyUpgraded(address newImplementation);
-
+  /// @notice Emitted when a delegation proxy is deployed
+  /// @param depositId The ID of the deposit
+  /// @param delegatee The address of the delegatee
+  /// @param proxy The address of the delegation proxy
   event DelegationProxyDeployed(
-    uint256 depositId,
-    address delegatee,
+    uint256 indexed depositId,
+    address indexed delegatee,
     address proxy
   );
 
+  /// @notice Emitted when a reward notifier is set
+  /// @param notifier The address of the notifier
+  /// @param enabled The whitelist status
   event RewardNotifierSet(address indexed notifier, bool enabled);
+
+  /// @notice Emitted when a deposit is staked
+  /// @param depositId The ID of the deposit
+  /// @param delegatee The address of the delegatee
+  /// @param beneficiary The address of the beneficiary
+  /// @param amount The amount of stakeToken that is staked
+  event Stake(
+    uint256 indexed depositId,
+    address indexed delegatee,
+    address indexed beneficiary,
+    uint96 amount
+  );
+
+  /// @notice Emitted when the stake of a deposit is increased
+  /// @param depositId The ID of the deposit
+  /// @param amount The amount of stakeToken that is staked
+  event IncreaseStake(uint256 indexed depositId, uint96 amount);
+
+  /// @notice Emitted when a deposit is redelegated
+  /// @param depositId The ID of the deposit
+  /// @param delegatee The address of the delegatee
+  event Redelegate(uint256 indexed depositId, address indexed delegatee);
+
+  /// @notice Emitted when the beneficiary of a deposit is changed
+  /// @param depositId The ID of the deposit
+  /// @param newBeneficiary The address of the new beneficiary
+  event ChangeBeneficiary(
+    uint256 indexed depositId,
+    address indexed newBeneficiary
+  );
+
+  /// @notice Emitted when the withdrawal of a deposit is initiated
+  /// @param depositId The ID of the deposit
+  /// @param amount The amount of stakeToken that will be withdrawn
+  event InitiateWithdraw(uint256 indexed depositId, uint96 amount);
+
+  /// @notice Emitted when the stakeToken is withdrawn from a deposit
+  /// @param depositId The ID of the deposit
+  /// @param amount The amount of stakeToken that is withdrawn
+  event Withdraw(uint256 indexed depositId, uint96 amount);
+
+  /// @notice Emitted when a reward is claimed
+  /// @param beneficiary The address of the beneficiary
+  /// @param recipient The address of the recipient
+  /// @param reward The amount of rewardToken that is claimed
+  event ClaimReward(
+    address indexed beneficiary,
+    address indexed recipient,
+    uint256 reward
+  );
+
+  /// @notice Emitted when a reward is notified
+  /// @param notifier The address of the notifier
+  /// @param reward The amount of rewardToken that is added
+  event NotifyRewardAmount(address indexed notifier, uint256 reward);
+
+  /// @notice Emitted when space delegation rewards are swept to the operator
+  /// @param space The address of the space
+  /// @param operator The address of the operator
+  /// @param amount The amount of rewardToken that is swept
+  event SpaceRewardsSwept(
+    address indexed space,
+    address indexed operator,
+    uint256 amount
+  );
 }
 
+/// @title IRewardsDistribution
+/// @notice The interface for the rewards distribution facet
 interface IRewardsDistribution is IRewardsDistributionBase {
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                       ADMIN FUNCTIONS                      */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  /// @notice Upgrades the delegation proxy implementation in the beacon
+  /// @dev Only the owner can call this function
+  /// @param newImplementation The address of the new implementation
+  function upgradeDelegationProxy(address newImplementation) external;
+
+  /// @notice Sets whitelist status for reward notifiers
+  /// @dev Only the owner can call this function
+  /// @param notifier The address of the notifier
+  /// @param enabled The whitelist status
+  function setRewardNotifier(address notifier, bool enabled) external;
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                       STATE MUTATING                       */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  /// @notice Stakes the stakeToken for rewards
+  /// @dev The caller must approve the contract to spend the stakeToken
+  /// @param amount The amount of stakeToken to stake
+  /// @param delegatee The address of the delegatee
+  /// @param beneficiary The address of the beneficiary
+  /// @return depositId The ID of the deposit
+  function stake(
+    uint96 amount,
+    address delegatee,
+    address beneficiary
+  ) external returns (uint256 depositId);
+
+  /// @notice Approves the contract to spend the stakeToken with an EIP-2612 permit and stakes the
+  /// stakeToken for rewards
+  /// @param amount The amount of stakeToken to stake
+  /// @param delegatee The address of the delegatee
+  /// @param beneficiary The address of the beneficiary
+  /// @param deadline The deadline for the permit
+  /// @param v The recovery byte of the permit
+  /// @param r The R signature of the permit
+  /// @param s The S signature of the permit
+  /// @return depositId The ID of the deposit
+  function permitAndStake(
+    uint96 amount,
+    address delegatee,
+    address beneficiary,
+    uint256 deadline,
+    uint8 v,
+    bytes32 r,
+    bytes32 s
+  ) external returns (uint256 depositId);
+
+  /// @notice Stakes on behalf of a user with an EIP-712 signature
+  /// @dev The caller must approve the contract to spend the stakeToken
+  /// @param amount The amount of stakeToken to stake
+  /// @param delegatee The address of the delegatee
+  /// @param beneficiary The address of the beneficiary
+  /// @param owner The address of the deposit owner
+  /// @param deadline The deadline for the signature
+  /// @param signature The EIP-712 signature
+  /// @return depositId The ID of the deposit
+  function stakeOnBehalf(
+    uint96 amount,
+    address delegatee,
+    address beneficiary,
+    address owner,
+    uint256 deadline,
+    bytes calldata signature
+  ) external returns (uint256 depositId);
+
+  /// @notice Increases the stake of an existing deposit
+  /// @dev The caller must be the owner of the deposit
+  /// @dev The caller must approve the contract to spend the stakeToken
+  /// @param depositId The ID of the deposit
+  /// @param amount The amount of stakeToken to stake
+  function increaseStake(uint256 depositId, uint96 amount) external;
+
+  /// @notice Redelegates an existing deposit to a new delegatee or reactivates a pending withdrawal
+  /// @dev The caller must be the owner of the deposit
+  /// @param depositId The ID of the deposit
+  /// @param delegatee The address of the new delegatee
+  function redelegate(uint256 depositId, address delegatee) external;
+
+  /// @notice Changes the beneficiary of a deposit
+  /// @dev The caller must be the owner of the deposit
+  /// @param depositId The ID of the deposit
+  /// @param newBeneficiary The address of the new beneficiary
+  function changeBeneficiary(
+    uint256 depositId,
+    address newBeneficiary
+  ) external;
+
+  /// @notice Initiates the withdrawal of a deposit, subject to the lockup period
+  /// @dev The caller must be the owner of the deposit
+  /// @param depositId The ID of the deposit
+  /// @return amount The amount of stakeToken that will be withdrawn
+  function initiateWithdraw(uint256 depositId) external returns (uint96 amount);
+
+  /// @notice Withdraws the stakeToken from a deposit
+  /// @dev The caller must be the owner of the deposit
+  /// @param depositId The ID of the deposit
+  /// @return amount The amount of stakeToken that is withdrawn
+  function withdraw(uint256 depositId) external returns (uint96 amount);
+
+  /// @notice Claims the reward for a beneficiary
+  /// @dev The beneficiary may be the caller. If not, the beneficiary must be a space or operator
+  /// while the caller must be the authorized claimer.
+  /// @param beneficiary The address of the beneficiary
+  /// @param recipient The address of the recipient
+  /// @return reward The amount of rewardToken that is claimed
+  function claimReward(
+    address beneficiary,
+    address recipient
+  ) external returns (uint256 reward);
+
+  /// @notice Notifies the contract of an incoming reward
+  /// @dev The caller must be a reward notifier
+  /// @param reward The amount of rewardToken that has been added
+  function notifyRewardAmount(uint256 reward) external;
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                          GETTERS                           */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
   /// @notice Returns the current state of the staking rewards contract
   /// @return Staking state variables
   /// riverToken The token that is being staked and used for rewards
@@ -144,24 +347,6 @@ interface IRewardsDistribution is IRewardsDistributionBase {
     address operator
   ) external view returns (uint256);
 
-  /// @notice Stakes stakeToken on behalf of an owner
-  /// @param amount The amount of stakeToken to stake
-  /// @param delegatee The address of the delegatee
-  /// @param beneficiary The address of the beneficiary
-  /// @param owner The address of the owner
-  /// @param deadline The deadline for the stake
-  /// @param signature The signature of the owner
-  /// @return depositId The ID of the deposit
-  function stakeOnBehalf(
-    uint96 amount,
-    address delegatee,
-    address beneficiary,
-    address owner,
-    uint256 deadline,
-    bytes calldata signature
-  ) external returns (uint256 depositId);
-
-  /// @notice The upgradeable beacon of delegation proxies
-  /// @return The address of the upgradeable beacon
-  function beacon() external view returns (address);
+  /// @notice Returns the implementation stored in the beacon
+  function implementation() external view returns (address);
 }

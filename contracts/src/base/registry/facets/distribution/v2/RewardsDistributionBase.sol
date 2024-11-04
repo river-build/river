@@ -47,12 +47,19 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
       _getCommissionRate(delegatee)
     );
 
-    address proxy = _deployDelegationProxy(depositId, delegatee);
-    ds.depositsByDepositor[owner].add(depositId);
+    _sweepSpaceRewardsIfNecessary(delegatee);
 
-    ds.staking.stakeToken.safeTransferFrom(msg.sender, proxy, amount);
+    if (owner != address(this)) {
+      address proxy = _deployDelegationProxy(depositId, delegatee);
+      ds.depositsByDepositor[owner].add(depositId);
+
+      ds.staking.stakeToken.safeTransferFrom(msg.sender, proxy, amount);
+    }
+
+    emit Stake(depositId, delegatee, beneficiary, amount);
   }
 
+  /// @dev Deploys a beacon proxy for the delegation
   function _deployDelegationProxy(
     uint256 depositId,
     address delegatee
@@ -60,7 +67,7 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     proxy = LibClone.deployDeterministicERC1967BeaconProxy(
-      ds.beacon,
+      address(this),
       bytes32(depositId)
     );
     ds.proxyById[depositId] = proxy;
@@ -77,14 +84,18 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
   function _getCommissionRate(
     address delegatee
   ) internal view returns (uint256) {
-    // If the delegatee is a space, get the operator
+    // if the delegatee is a space, get the active operator or revert
     if (_isSpace(delegatee)) {
-      SpaceDelegationStorage.Layout storage sd = SpaceDelegationStorage
-        .layout();
-      delegatee = sd.operatorBySpace[delegatee];
+      delegatee = _getActiveOperatorOrRevert(delegatee);
     }
     NodeOperatorStorage.Layout storage nos = NodeOperatorStorage.layout();
     return nos.commissionByOperator[delegatee];
+  }
+
+  /// @dev Checks if the delegatee is an operator
+  function _isOperator(address delegatee) internal view returns (bool) {
+    NodeOperatorStorage.Layout storage nos = NodeOperatorStorage.layout();
+    return nos.operators.contains(delegatee);
   }
 
   /// @dev Checks if the delegatee is an active operator
@@ -94,20 +105,55 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
     return nos.statusByOperator[delegatee] == NodeOperatorStatus.Active;
   }
 
-  /// @dev Checks if the delegatee is a space
-  function _isSpace(address delegatee) internal view returns (bool) {
-    SpaceDelegationStorage.Layout storage sd = SpaceDelegationStorage.layout();
-    return sd.operatorBySpace[delegatee] != address(0);
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                      SPACE DELEGATION                      */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  /// @dev Sweeps the rewards in the space delegation to the operator if necessary
+  /// @dev Must be called after `StakingRewards.updateGlobalReward`
+  function _sweepSpaceRewardsIfNecessary(address space) internal {
+    if (!_isSpace(space)) return;
+
+    StakingRewards.Layout storage staking = RewardsDistributionStorage
+      .layout()
+      .staking;
+    StakingRewards.Treasure storage spaceTreasure = staking
+      .treasureByBeneficiary[space];
+    staking.updateReward(spaceTreasure);
+
+    uint256 reward = spaceTreasure.unclaimedRewardSnapshot;
+    if (reward == 0) return;
+
+    address operator = _getOperatorBySpace(space);
+    StakingRewards.Treasure storage operatorTreasure = staking
+      .treasureByBeneficiary[operator];
+
+    operatorTreasure.unclaimedRewardSnapshot += reward;
+    spaceTreasure.unclaimedRewardSnapshot = 0;
+
+    emit SpaceRewardsSwept(space, operator, reward);
   }
 
-  /// @dev Returns the operator of the space if it exists
+  /// @dev Checks if the delegatee is a space
+  function _isSpace(address delegatee) internal view returns (bool) {
+    return _getOperatorBySpace(delegatee) != address(0);
+  }
+
+  /// @dev Returns the operator of the space
   function _getOperatorBySpace(
     address space
   ) internal view returns (address operator) {
     SpaceDelegationStorage.Layout storage sd = SpaceDelegationStorage.layout();
     operator = sd.operatorBySpace[space];
+  }
+
+  /// @dev Returns the active operator of the space or reverts
+  function _getActiveOperatorOrRevert(
+    address space
+  ) internal view returns (address operator) {
+    operator = _getOperatorBySpace(space);
     if (!_isActiveOperator(operator)) {
-      CustomRevert.revertWith(RewardsDistribution__NotOperatorOrSpace.selector);
+      CustomRevert.revertWith(RewardsDistribution__NotActiveOperator.selector);
     }
   }
 
@@ -150,7 +196,8 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
 
   /// @dev Reverts if the delegatee is not an operator or space
   function _revertIfNotOperatorOrSpace(address delegatee) internal view {
-    if (!(_isActiveOperator(delegatee) || _isSpace(delegatee))) {
+    if (_isSpace(delegatee)) return;
+    if (!_isActiveOperator(delegatee)) {
       CustomRevert.revertWith(RewardsDistribution__NotOperatorOrSpace.selector);
     }
   }
@@ -182,12 +229,9 @@ abstract contract RewardsDistributionBase is IRewardsDistributionBase {
     bytes32 hash,
     bytes calldata signature
   ) internal view {
-    bool _isValid = SignatureCheckerLib.isValidSignatureNowCalldata(
-      signer,
-      hash,
-      signature
-    );
-    if (!_isValid) {
+    if (
+      !SignatureCheckerLib.isValidSignatureNowCalldata(signer, hash, signature)
+    ) {
       CustomRevert.revertWith(RewardsDistribution__InvalidSignature.selector);
     }
   }
