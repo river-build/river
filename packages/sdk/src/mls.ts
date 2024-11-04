@@ -251,13 +251,6 @@ export class MlsCrypto {
         return this.groups.has(streamId)
     }
 
-    public async handleKeyAnnouncement(
-        _streamId: string,
-        key: { epoch: bigint; key: Uint8Array },
-    ): Promise<void> {
-        this.keys.push(key)
-    }
-
     public epochFor(streamId: string): bigint {
         const group = this.groups.get(streamId)
         if (!group) {
@@ -270,6 +263,13 @@ export class MlsCrypto {
         streamId: string,
         groupInfo: Uint8Array,
     ): Promise<{ groupInfo: Uint8Array; commit: Uint8Array } | undefined> {
+        // - If we have a group in PENDING_CREATE, and
+        //   - we sent the message,
+        //     then we can switch that group into a confirmed state; or
+        //   - and we did not sent the message,
+        //     then we clear it, and request to join using external join
+        // - Any other state should be impossible
+
         if (this.groups.has(streamId)) {
             return undefined
         }
@@ -299,5 +299,12 @@ export class MlsCrypto {
         //     then we clear it, and request to join using external join
         // - If we have a group in ACTIVE,
         //   then we process the commit,
+    }
+
+    public async handleKeyAnnouncement(
+        _streamId: string,
+        key: { epoch: bigint; key: Uint8Array },
+    ): Promise<void> {
+        this.keys.push(key)
     }
 }
