@@ -860,7 +860,6 @@ export abstract class BaseDecryptionExtensions {
             case 'MlsKeyAnnouncement': {
                 await this.didReceiveMlsKeyAnnouncement(mls)
                 for (const item of this.decryptionFailures[mls.streamId]['all-the-same']) {
-                    console.log('retrying decryption', item)
                     await this.processEncryptedContentItem(item)
                 }
                 break
