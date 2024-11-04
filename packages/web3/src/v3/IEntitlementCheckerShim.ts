@@ -3,7 +3,7 @@ import {
     IEntitlementCheckerInterface as DevInterface,
 } from '@river-build/generated/dev/typings/IEntitlementChecker'
 
-import DevAbi from '@river-build/generated/dev/abis/IEntitlementChecker.abi.json' assert { type: 'json' }
+import DevAbi from '@river-build/generated/dev/abis/IEntitlementChecker.abi'
 
 import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'

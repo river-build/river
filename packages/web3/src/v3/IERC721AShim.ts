@@ -3,7 +3,7 @@ import {
     IERC721AInterface as DevInterface,
 } from '@river-build/generated/dev/typings/IERC721A'
 
-import DevAbi from '@river-build/generated/dev/abis/IERC721A.abi.json' assert { type: 'json' }
+import DevAbi from '@river-build/generated/dev/abis/IERC721A.abi'
 
 import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'

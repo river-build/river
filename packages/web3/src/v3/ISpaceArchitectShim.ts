@@ -3,7 +3,7 @@ import {
     IArchitectInterface as LocalhostInterface,
 } from '@river-build/generated/dev/typings/IArchitect'
 
-import LocalhostAbi from '@river-build/generated/dev/abis/Architect.abi.json' assert { type: 'json' }
+import LocalhostAbi from '@river-build/generated/dev/abis/Architect.abi'
 
 import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'

@@ -3,7 +3,7 @@ import {
     INodeRegistryInterface as DevInterface,
 } from '@river-build/generated/dev/typings/INodeRegistry'
 
-import DevAbi from '@river-build/generated/dev/abis/NodeRegistry.abi.json' assert { type: 'json' }
+import DevAbi from '@river-build/generated/dev/abis/NodeRegistry.abi'
 
 import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'

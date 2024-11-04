@@ -3,15 +3,15 @@ import { defineConfig } from "tsup";
 export default defineConfig({
   entry: [
     "./dev/**/*.ts",
-    "./dev/**/*.json",
+    // "./dev/**/*.json",
     './deployments/**/*.ts',
     './deployments/**/*.json',
-    './config/**/*.ts',
     './config/**/*.json',
   ],
   outDir: './dist',
   format: ['esm'],
   dts: true,
+  clean: true,
   esbuildOptions(options) {
       options.loader = {
           ...options.loader,

@@ -6,7 +6,7 @@ import {
 import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'
 
-import LocalhostAbi from '@river-build/generated/dev/abis/PlatformRequirementsFacet.abi.json' assert { type: 'json' }
+import LocalhostAbi from '@river-build/generated/dev/abis/PlatformRequirementsFacet.abi'
 
 export class PlatformRequirements extends BaseContractShim<LocalhostContract, LocalhostInterface> {
     constructor(address: string, provider: ethers.providers.Provider | undefined) {

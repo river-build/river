@@ -7,17 +7,13 @@
         "dist"
     ],
     "exports": {
-        "./deployments/*": {
-            "types": "./dist/deployments/**/*.d.ts",
-            "default": "./dist/deployments/**/*"
+        "./*.json": {
+            "types": "./dist/*.d.ts",
+            "default": "./dist/*.json"
         },
-        "./dev/*": {
-            "types": "./dist/dev/**/*.d.ts",
-            "default": "./dist/dev/**/*"
-        },
-        "./config/*": {
-            "types": "./dist/config/**/*.d.ts",
-            "default": "./dist/config/**/*"
+        "./*": {
+            "types": "./dist/*.d.ts",
+            "default": "./dist/*.js"
         },
         "./package.json": "./package.json"
     },

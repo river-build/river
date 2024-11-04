@@ -3,7 +3,7 @@ import {
     TokenPausableFacetInterface as LocalhostInterface,
 } from '@river-build/generated/dev/typings/TokenPausableFacet'
 
-import LocalhostAbi from '@river-build/generated/dev/abis/TokenPausableFacet.abi.json' assert { type: 'json' }
+import LocalhostAbi from '@river-build/generated/dev/abis/TokenPausableFacet.abi'
 
 import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'

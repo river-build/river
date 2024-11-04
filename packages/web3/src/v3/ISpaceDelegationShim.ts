@@ -3,7 +3,7 @@ import {
     ISpaceDelegationInterface as DevInterface,
 } from '@river-build/generated/dev/typings/ISpaceDelegation'
 
-import DevAbi from '@river-build/generated/dev/abis/ISpaceDelegation.abi.json' assert { type: 'json' }
+import DevAbi from '@river-build/generated/dev/abis/ISpaceDelegation.abi'
 
 import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'

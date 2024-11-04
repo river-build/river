@@ -4,7 +4,7 @@ import {
     IChannelInterface as LocalhostInterface,
 } from '@river-build/generated/dev/typings/IChannel'
 
-import LocalhostAbi from '@river-build/generated/dev/abis/Channels.abi.json' assert { type: 'json' }
+import LocalhostAbi from '@river-build/generated/dev/abis/Channels.abi'
 
 import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'

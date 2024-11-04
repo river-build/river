@@ -3,7 +3,7 @@ import {
     IWalletLinkInterface as LocalhostInterface,
 } from '@river-build/generated/dev/typings/IWalletLink'
 
-import LocalhostAbi from '@river-build/generated/dev/abis/WalletLink.abi.json' assert { type: 'json' }
+import LocalhostAbi from '@river-build/generated/dev/abis/WalletLink.abi'
 
 import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'

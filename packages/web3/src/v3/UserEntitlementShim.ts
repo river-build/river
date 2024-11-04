@@ -3,7 +3,7 @@ import {
     UserEntitlementInterface as LocalhostInterface,
 } from '@river-build/generated/dev/typings/UserEntitlement'
 
-import LocalhostAbi from '@river-build/generated/dev/abis/UserEntitlement.abi.json' assert { type: 'json' }
+import LocalhostAbi from '@river-build/generated/dev/abis/UserEntitlement.abi'
 
 import { BaseContractShim } from './BaseContractShim'
 import { BigNumberish, ethers } from 'ethers'

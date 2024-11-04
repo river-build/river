@@ -3,7 +3,7 @@ import {
     OwnableFacetInterface as LocalhostInterface,
 } from '@river-build/generated/dev/typings/OwnableFacet'
 
-import LocalhostAbi from '@river-build/generated/dev/abis/OwnableFacet.abi.json' assert { type: 'json' }
+import LocalhostAbi from '@river-build/generated/dev/abis/OwnableFacet.abi'
 
 import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'
