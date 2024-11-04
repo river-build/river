@@ -43,7 +43,7 @@ export type { PrepayFacet } from "./PrepayFacet";
 export type { TokenPausableFacet } from "./TokenPausableFacet";
 export type { UserEntitlement } from "./UserEntitlement";
 export * as factories from "./factories";
-export type { IERC5267 } from "./cryptography/IERC5267";
+// export type { IERC5267 } from "./cryptography/IERC5267";
 export { IERC5267__factory } from "./factories/cryptography/IERC5267__factory";
 export { IArchitect__factory } from "./factories/IArchitect__factory";
 export { IBanning__factory } from "./factories/IBanning__factory";

@@ -2,8 +2,33 @@
     "name": "@river-build/generated",
     "version": "0.0.97",
     "packageManager": "yarn@3.8.0",
+    "type": "module",
+    "files": [
+        "dist"
+    ],
+    "exports": {
+        "./deployments": {
+            "import": "./deployments/**/*",
+            "types": "./deployments/**/*"
+        },
+        "./abis": {
+            "import": "./dev/abis/**/*",
+            "types": "./dev/abis/**/*"
+        },
+        "./typings": {
+            "import": "./dev/typings/*.ts",
+            "types": "./dev/typings/*.ts"
+        },
+        "./package.json": "./package.json"
+    },
     "scripts": {
+        "build": "tsup",
         "preinstall": "node ./scripts/make-config.js",
         "make-config": "node ./scripts/make-config.js"
+    },
+    "devDependencies": {
+        "@ethersproject/providers": "5.7.2",
+        "ethers": "5.7.2",
+        "tsup": "^8.3.5"
     }
 }
