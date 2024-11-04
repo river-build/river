@@ -65,7 +65,9 @@ contract MembershipWithdraw is MembershipBaseSetup {
       IPlatformRequirements(spaceFactory).getMembershipBps()
     );
 
-    assertEq(founder.balance, MEMBERSHIP_PRICE - protocolFee);
+    uint256 expectedBalance = MEMBERSHIP_PRICE - protocolFee;
+
+    assertEq(founder.balance, expectedBalance);
 
     vm.startPrank(charlie);
     vm.deal(charlie, MEMBERSHIP_PRICE);
@@ -76,6 +78,6 @@ contract MembershipWithdraw is MembershipBaseSetup {
     vm.prank(founder);
     membership.withdraw(founder);
 
-    // assertEq(founder.balance, MEMBERSHIP_PRICE - protocolFee);
+    assertEq(founder.balance, expectedBalance * 2);
   }
 }
