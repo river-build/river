@@ -12,5 +12,11 @@ export default class JSDOMEnvironmentWithBuffer extends JSDOMEnvironment {
         this.global.TextDecoder = TextDecoder
         this.global.fetch = fetch
         this.global.ReadableStream = ReadableStream
+        
+        // Expose SubtleCrypto as it is not defined by default in JSDOM
+        Object.defineProperty(this.global.crypto, 'subtle', {
+            value: globalThis.crypto.subtle,
+            writable: false,
+        })
     }
 }
