@@ -2295,7 +2295,7 @@ export class Client
         }
         this.logDebug('Cache miss for cleartext', eventId)
 
-        if (encryptedData.mlsPayload !== undefined) {
+        if (encryptedData.mlsCiphertext !== undefined) {
             if (!this.mlsCrypto) {
                 throw new Error('mls backend not initialized')
             }

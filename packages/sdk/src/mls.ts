@@ -182,7 +182,7 @@ export class MlsCrypto {
         const epochSecret = await group.currentEpochSecret()
         const keys = await cipherSuite.kemDerive(epochSecret)
         const ciphertext = await cipherSuite.seal(keys.publicKey, message)
-        return new EncryptedData({ algorithm: 'mls', mlsPayload: ciphertext.toBytes() })
+        return new EncryptedData({ algorithm: 'mls', mlsCiphertext: ciphertext.toBytes() })
     }
 
     public async decrypt(streamId: string, encryptedData: EncryptedData): Promise<Uint8Array> {
@@ -191,7 +191,7 @@ export class MlsCrypto {
             throw new Error('MLS group not found')
         }
 
-        if (!encryptedData.mlsPayload) {
+        if (!encryptedData.mlsCiphertext) {
             throw new Error('Not an MLS payload')
         }
 
@@ -199,7 +199,7 @@ export class MlsCrypto {
             try {
                 const cipherSuite = new CipherSuite()
                 const keys = await cipherSuite.kemDerive(Secret.fromBytes(key.key))
-                const ciphertext = HpkeCiphertext.fromBytes(encryptedData.mlsPayload)
+                const ciphertext = HpkeCiphertext.fromBytes(encryptedData.mlsCiphertext)
                 return await cipherSuite.open(ciphertext, keys.secretKey, keys.publicKey)
             } catch (e) {
                 console.error(`error decrypting using epoch ${key.epoch}`)
