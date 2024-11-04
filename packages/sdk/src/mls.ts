@@ -26,13 +26,13 @@ function epochIdentifier(streamId: string, epoch: bigint): EpochIdentifier {
 }
 
 type DerivedKeys = {
-    secretKey: Uint8Array
-    publicKey: Uint8Array
+    secretKey: HpkeSecretKey
+    publicKey: HpkePublicKey
 }
 
 export class EpochKeyStore {
-    private sealedEpochSecrets: Map<EpochIdentifier, Uint8Array> = new Map()
-    private openEpochSecrets: Map<EpochIdentifier, Uint8Array> = new Map()
+    private sealedEpochSecrets: Map<EpochIdentifier, HpkeCiphertext> = new Map()
+    private openEpochSecrets: Map<EpochIdentifier, MlsSecret> = new Map()
     private derivedKeys: Map<EpochIdentifier, DerivedKeys> = new Map()
     private cipherSuite: MlsCipherSuite
 
@@ -54,22 +54,28 @@ export class EpochKeyStore {
         return 'EPOCH_KEY_MISSING'
     }
 
-    public addSealedEpochSecret(streamId: string, epoch: bigint, sealedEpochSecret: Uint8Array) {
+    public addSealedEpochSecret(
+        streamId: string,
+        epoch: bigint,
+        sealedEpochSecretBytes: Uint8Array,
+    ) {
         const epochId = epochIdentifier(streamId, epoch)
+        const sealedEpochSecret = HpkeCiphertext.fromBytes(sealedEpochSecretBytes)
         this.sealedEpochSecrets.set(epochId, sealedEpochSecret)
     }
 
-    public getSealedEpochSecret(streamId: string, epoch: bigint): Uint8Array | undefined {
+    public getSealedEpochSecret(streamId: string, epoch: bigint): HpkeCiphertext | undefined {
         const epochId = epochIdentifier(streamId, epoch)
         return this.sealedEpochSecrets.get(epochId)
     }
 
-    public addOpenEpochSecret(streamId: string, epoch: bigint, openEpochSecret: Uint8Array) {
+    public addOpenEpochSecret(streamId: string, epoch: bigint, openEpochSecretBytes: Uint8Array) {
         const epochId = epochIdentifier(streamId, epoch)
+        const openEpochSecret = Secret.fromBytes(openEpochSecretBytes)
         this.openEpochSecrets.set(epochId, openEpochSecret)
     }
 
-    public getOpenEpochSecret(streamId: string, epoch: bigint): Uint8Array | undefined {
+    public getOpenEpochSecret(streamId: string, epoch: bigint): Secret | undefined {
         const epochId = epochIdentifier(streamId, epoch)
         return this.openEpochSecrets.get(epochId)
     }
@@ -77,8 +83,8 @@ export class EpochKeyStore {
     public addDerivedKeys(
         streamId: string,
         epoch: bigint,
-        secretKey: Uint8Array,
-        publicKey: Uint8Array,
+        secretKey: HpkeSecretKey,
+        publicKey: HpkePublicKey,
     ) {
         const epochId = epochIdentifier(streamId, epoch)
         this.derivedKeys.set(epochId, { secretKey, publicKey })
@@ -87,7 +93,7 @@ export class EpochKeyStore {
     public getDerivedKeys(
         streamId: string,
         epoch: bigint,
-    ): { publicKey: Uint8Array; secretKey: Uint8Array } | undefined {
+    ): { publicKey: HpkePublicKey; secretKey: HpkeSecretKey } | undefined {
         const epochId = epochIdentifier(streamId, epoch)
         const keys = this.derivedKeys.get(epochId)
         if (keys) {
@@ -98,15 +104,8 @@ export class EpochKeyStore {
 
     private async openEpochSecret(streamId: string, epoch: bigint) {
         const sealedEpochSecret = this.getSealedEpochSecret(streamId, epoch)!
-        const nextEpochKeys = this.getDerivedKeys(streamId, epoch + 1n)!
-        const hpkeCiphertext = HpkeCiphertext.fromBytes(sealedEpochSecret)
-        const hpkePublicKey = HpkePublicKey.fromBytes(nextEpochKeys.publicKey)
-        const hpkeSecretKey = HpkeSecretKey.fromBytes(nextEpochKeys.secretKey)
-        const openEpochSecret = await this.cipherSuite.open(
-            hpkeCiphertext,
-            hpkeSecretKey,
-            hpkePublicKey,
-        )
+        const { publicKey, secretKey } = this.getDerivedKeys(streamId, epoch + 1n)!
+        const openEpochSecret = await this.cipherSuite.open(sealedEpochSecret, secretKey, publicKey)
         this.addOpenEpochSecret(streamId, epoch, openEpochSecret)
     }
 
@@ -126,10 +125,7 @@ export class EpochKeyStore {
 
     private async deriveKeys(streamId: string, epoch: bigint) {
         const openEpochSecret = this.getOpenEpochSecret(streamId, epoch)!
-        const mlsSecret = MlsSecret.fromBytes(openEpochSecret)
-        const derivedKeys = await this.cipherSuite.kemDerive(mlsSecret)
-        const publicKey = derivedKeys.publicKey.toBytes()
-        const secretKey = derivedKeys.secretKey.toBytes()
+        const { publicKey, secretKey } = await this.cipherSuite.kemDerive(openEpochSecret)
         this.addDerivedKeys(streamId, epoch, secretKey, publicKey)
     }
 
