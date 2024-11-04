@@ -7,17 +7,17 @@
         "dist"
     ],
     "exports": {
-        "./deployments": {
-            "import": "./deployments/**/*",
-            "types": "./deployments/**/*"
+        "./deployments/*": {
+            "types": "./dist/deployments/**/*.d.ts",
+            "default": "./dist/deployments/**/*"
         },
-        "./abis": {
-            "import": "./dev/abis/**/*",
-            "types": "./dev/abis/**/*"
+        "./dev/*": {
+            "types": "./dist/dev/**/*.d.ts",
+            "default": "./dist/dev/**/*"
         },
-        "./typings": {
-            "import": "./dev/typings/*.ts",
-            "types": "./dev/typings/*.ts"
+        "./config/*": {
+            "types": "./dist/config/**/*.d.ts",
+            "default": "./dist/config/**/*"
         },
         "./package.json": "./package.json"
     },
