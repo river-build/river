@@ -841,9 +841,7 @@ func applyMlsPayload(
 				return leave.UserAddress
 			})
 	case *MemberPayload_MlsPayload_KeyAnnouncement_:
-		for _, keyAndEpoch := range payload.KeyAnnouncement.Keys {
-			mlsGroup.EpochKeys[keyAndEpoch.Epoch] = keyAndEpoch.Key
-		}
+		mlsGroup.EpochKeys[payload.KeyAnnouncement.Epoch] = payload.KeyAnnouncement.Key
 	}
 	return mlsGroup
 }

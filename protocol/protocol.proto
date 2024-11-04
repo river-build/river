@@ -171,7 +171,7 @@ message MemberPayload {
             bytes device_key = 2;
             bytes commit = 3;
             bytes group_info_with_external_key = 4;
-            int64 epoch = 5; // temp until we have node validation in place
+            uint64 epoch = 5; // temp until we have node validation in place
         }
 
         // can be called automatically by the node when a user leaves
