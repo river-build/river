@@ -25,6 +25,7 @@ import {
     createOperationsTree,
     XchainConfig,
     EncodedNoopRuleData,
+    DecodedCheckOperationBuilder,
 } from './entitlement'
 import { MOCK_ADDRESS, MOCK_ADDRESS_2, MOCK_ADDRESS_3 } from './Utils'
 import { zeroAddress } from 'viem'
@@ -1138,6 +1139,37 @@ describe('createOperationsTree', () => {
         assertOperationsEqual(operations, [NoopOperation])
     })
 
+    test('custom entitlement check', () => {
+        const checkOp: DecodedCheckOperation[] = [
+            {
+                type: CheckOperationType.ISENTITLED,
+                chainId: 1234n,
+                address: MOCK_ADDRESS,
+                byteEncodedParams: `0xdeadbeefdeadbeef12341234`,
+            },
+        ]
+        const tree = createOperationsTree(checkOp)
+
+        // Validate the constructed rule data
+        assertRuleDatasEqual(tree, {
+            operations: [
+                {
+                    opType: OperationType.CHECK,
+                    index: 0,
+                },
+            ],
+            checkOperations: [
+                {
+                    opType: CheckOperationType.ISENTITLED,
+                    chainId: 1234n,
+                    contractAddress: MOCK_ADDRESS,
+                    params: `0xdeadbeefdeadbeef12341234`,
+                },
+            ],
+            logicalOperations: [],
+        })
+    })
+
     test('single check', () => {
         const checkOp: DecodedCheckOperation[] = [
             {
@@ -1260,6 +1292,7 @@ describe('createOperationsTree', () => {
                 type: CheckOperationType.ISENTITLED,
                 chainId: 1n,
                 address: MOCK_ADDRESS,
+                byteEncodedParams: `0xabcdef`
             },
             {
                 type: CheckOperationType.ERC721,
@@ -1306,7 +1339,7 @@ describe('createOperationsTree', () => {
                     opType: CheckOperationType.ISENTITLED,
                     chainId: 1n,
                     contractAddress: MOCK_ADDRESS,
-                    params: '0x',
+                    params: '0xabcdef',
                 },
                 {
                     opType: CheckOperationType.ERC721,
@@ -1343,7 +1376,7 @@ describe('createOperationsTree', () => {
             checkType: CheckOperationType.ISENTITLED,
             chainId: 1n,
             contractAddress: MOCK_ADDRESS,
-            params: '0x',
+            params: '0xabcdef',
         }
         const check2: CheckOperationV2 = {
             opType: OperationType.CHECK,
@@ -1376,4 +1409,65 @@ describe('createOperationsTree', () => {
 
         assertOperationsEqual(operations, [check1, check2, logical1, check3, logical2])
     })
+})
+
+describe("DecodedCheckOpBuilder", () => {
+    test.only("ERC20s", () => {
+        expect(() => {
+            new DecodedCheckOperationBuilder().
+                setType(CheckOperationType.ERC20).
+                setAddress(zeroAddress).
+                setThreshold(1n).
+                build()
+        }
+        ).toThrow("DecodedCheckOperation of type ERC20 requires a chainId")
+
+        expect(() => {
+            new DecodedCheckOperationBuilder().
+                setType(CheckOperationType.ERC20).
+                setChainId(1n).
+                setThreshold(1n).
+                build()
+        }
+        ).toThrow("DecodedCheckOperation of type ERC20 requires an address")
+
+        expect(() => {
+            new DecodedCheckOperationBuilder().
+                setType(CheckOperationType.ERC20).
+                setChainId(1n).
+                setAddress(zeroAddress).
+                build()
+        }
+        ).toThrow("DecodedCheckOperation of type ERC20 requires a threshold")
+    })
+
+    test.only("ERC721s", () => {
+        expect(() => {
+            new DecodedCheckOperationBuilder().
+                setType(CheckOperationType.ERC721).
+                setAddress(zeroAddress).
+                setThreshold(1n).
+                build()
+        }
+        ).toThrow("DecodedCheckOperation of type ERC721 requires a chainId")
+
+        expect(() => {
+            new DecodedCheckOperationBuilder().
+                setType(CheckOperationType.ERC721).
+                setChainId(1n).
+                setThreshold(1n).
+                build()
+        }
+        ).toThrow("DecodedCheckOperation of type ERC721 requires an address")
+
+        expect(() => {
+            new DecodedCheckOperationBuilder().
+                setType(CheckOperationType.ERC721).
+                setChainId(1n).
+                setAddress(zeroAddress).
+                build()
+        }
+        ).toThrow("DecodedCheckOperation of type ERC721 requires a threshold")
+    })
+
 })
