@@ -11,7 +11,11 @@ import {
     KeySolicitationData,
     makeSessionKeys,
     MlsCommit,
-    MlsJoinExternal,
+    MlsExternalJoin,
+    MlsGroupInfo,
+    MlsInitializeGroup,
+    MlsJoinGroupEvent,
+    MlsKeyAnnouncement,
 } from '../decryptionExtensions'
 import {
     AddEventResponse_Error,
@@ -366,11 +370,23 @@ class MockDecryptionExtensions extends BaseDecryptionExtensions {
         })
     }
 
+    public async didReceiveMlsGroupInfo(_args: MlsGroupInfo): Promise<void> {
+        //
+    }
     public async didReceiveMlsCommit(_args: MlsCommit): Promise<void> {
         //
     }
+    public async didReceiveMlsInitializeGroup(_args: MlsInitializeGroup): Promise<void> {
+        //
+    }
+    public async didReceiveMlsExternalJoin(_args: MlsExternalJoin): Promise<void> {
+        //
+    }
+    public async didReceiveMlsKeyAnnouncement(_args: MlsKeyAnnouncement): Promise<void> {
+        //
+    }
 
-    public async externalJoinMls(_args: MlsJoinExternal): Promise<void> {
+    public async didReceiveMlsJoinGroupEvent(_args: MlsJoinGroupEvent): Promise<void> {
         //
     }
 }

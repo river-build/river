@@ -219,7 +219,7 @@ message MemberPayload {
             map<string, DeviceKeys> device_keys = 6;
             repeated MlsPayload.ProposeLeave pending_leaves = 7;
 
-            int64 current_epoch = 8; // temp until we have node validation in place
+            uint64 current_epoch = 8; // temp until we have node validation in place
         }
 
         message Member {

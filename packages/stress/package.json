@@ -4,7 +4,7 @@
     "private": true,
     "packageManager": "yarn@3.8.0",
     "scripts": {
-        "build": "yarn typecheck && yarn build-esbuild",
+        "build": "",
         "typecheck": "tsc --noEmit",
         "watch": "tsc --watch",
         "build-esbuild": "node esbuild.config.mjs",

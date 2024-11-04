@@ -1,13 +1,151 @@
 import {
-    CipherSuite,
-    HpkeCiphertext,
     Client as MlsClient,
     Group as MlsGroup,
     MlsMessage,
+    CipherSuite as MlsCipherSuite,
+    Secret as MlsSecret,
+    HpkeCiphertext,
+    HpkePublicKey,
+    HpkeSecretKey,
+    CipherSuite,
     Secret,
 } from '@river-build/mls-rs-wasm'
 import { EncryptedData } from '@river-build/proto'
 import { hexToBytes } from 'ethereum-cryptography/utils'
+
+type EpochKeyStatus =
+    | 'EPOCH_KEY_MISSING'
+    | 'EPOCH_KEY_SEALED'
+    | 'EPOCH_KEY_OPEN'
+    | 'EPOCH_KEY_DERIVED'
+
+type EpochIdentifier = string & { __brand: 'EPOCH_IDENTIFIER' }
+
+function epochIdentifier(streamId: string, epoch: bigint): EpochIdentifier {
+    return `${streamId}:${epoch}` as EpochIdentifier
+}
+
+type DerivedKeys = {
+    secretKey: Uint8Array
+    publicKey: Uint8Array
+}
+
+export class EpochKeyStore {
+    private sealedEpochSecrets: Map<EpochIdentifier, Uint8Array> = new Map()
+    private openEpochSecrets: Map<EpochIdentifier, Uint8Array> = new Map()
+    private derivedKeys: Map<EpochIdentifier, DerivedKeys> = new Map()
+    private cipherSuite: MlsCipherSuite
+
+    public constructor(cipherSuite: MlsCipherSuite) {
+        this.cipherSuite = cipherSuite
+    }
+
+    public getEpochKeyStatus(streamId: string, epoch: bigint): EpochKeyStatus {
+        const epochId = epochIdentifier(streamId, epoch)
+        if (this.derivedKeys.has(epochId)) {
+            return 'EPOCH_KEY_DERIVED'
+        }
+        if (this.openEpochSecrets.has(epochId)) {
+            return 'EPOCH_KEY_OPEN'
+        }
+        if (this.sealedEpochSecrets.has(epochId)) {
+            return 'EPOCH_KEY_SEALED'
+        }
+        return 'EPOCH_KEY_MISSING'
+    }
+
+    public addSealedEpochSecret(streamId: string, epoch: bigint, sealedEpochSecret: Uint8Array) {
+        const epochId = epochIdentifier(streamId, epoch)
+        this.sealedEpochSecrets.set(epochId, sealedEpochSecret)
+    }
+
+    public getSealedEpochSecret(streamId: string, epoch: bigint): Uint8Array | undefined {
+        const epochId = epochIdentifier(streamId, epoch)
+        return this.sealedEpochSecrets.get(epochId)
+    }
+
+    public addOpenEpochSecret(streamId: string, epoch: bigint, openEpochSecret: Uint8Array) {
+        const epochId = epochIdentifier(streamId, epoch)
+        this.openEpochSecrets.set(epochId, openEpochSecret)
+    }
+
+    public getOpenEpochSecret(streamId: string, epoch: bigint): Uint8Array | undefined {
+        const epochId = epochIdentifier(streamId, epoch)
+        return this.openEpochSecrets.get(epochId)
+    }
+
+    public addDerivedKeys(
+        streamId: string,
+        epoch: bigint,
+        secretKey: Uint8Array,
+        publicKey: Uint8Array,
+    ) {
+        const epochId = epochIdentifier(streamId, epoch)
+        this.derivedKeys.set(epochId, { secretKey, publicKey })
+    }
+
+    public getDerivedKeys(
+        streamId: string,
+        epoch: bigint,
+    ): { publicKey: Uint8Array; secretKey: Uint8Array } | undefined {
+        const epochId = epochIdentifier(streamId, epoch)
+        const keys = this.derivedKeys.get(epochId)
+        if (keys) {
+            return { ...keys }
+        }
+        return undefined
+    }
+
+    private async openEpochSecret(streamId: string, epoch: bigint) {
+        const sealedEpochSecret = this.getSealedEpochSecret(streamId, epoch)!
+        const nextEpochKeys = this.getDerivedKeys(streamId, epoch + 1n)!
+        const hpkeCiphertext = HpkeCiphertext.fromBytes(sealedEpochSecret)
+        const hpkePublicKey = HpkePublicKey.fromBytes(nextEpochKeys.publicKey)
+        const hpkeSecretKey = HpkeSecretKey.fromBytes(nextEpochKeys.secretKey)
+        const openEpochSecret = await this.cipherSuite.open(
+            hpkeCiphertext,
+            hpkeSecretKey,
+            hpkePublicKey,
+        )
+        this.addOpenEpochSecret(streamId, epoch, openEpochSecret)
+    }
+
+    public async tryOpenEpochSecret(streamId: string, epoch: bigint): Promise<EpochKeyStatus> {
+        let status = this.getEpochKeyStatus(streamId, epoch)
+        if (status === 'EPOCH_KEY_SEALED') {
+            const nextEpochStatus = this.getEpochKeyStatus(streamId, epoch + 1n)
+            if (nextEpochStatus === 'EPOCH_KEY_DERIVED') {
+                await this.openEpochSecret(streamId, epoch)
+
+                // Update the status
+                status = this.getEpochKeyStatus(streamId, epoch)
+            }
+        }
+        return Promise.resolve(status)
+    }
+
+    private async deriveKeys(streamId: string, epoch: bigint) {
+        const openEpochSecret = this.getOpenEpochSecret(streamId, epoch)!
+        const mlsSecret = MlsSecret.fromBytes(openEpochSecret)
+        const derivedKeys = await this.cipherSuite.kemDerive(mlsSecret)
+        const publicKey = derivedKeys.publicKey.toBytes()
+        const secretKey = derivedKeys.secretKey.toBytes()
+        this.addDerivedKeys(streamId, epoch, secretKey, publicKey)
+    }
+
+    public async tryDeriveKeys(streamId: string, epoch: bigint): Promise<EpochKeyStatus> {
+        let status = this.getEpochKeyStatus(streamId, epoch)
+
+        if (status === 'EPOCH_KEY_OPEN') {
+            await this.deriveKeys(streamId, epoch)
+
+            // Update the status
+            status = this.getEpochKeyStatus(streamId, epoch)
+        }
+
+        return Promise.resolve(status)
+    }
+}
 
 export class MlsCrypto {
     private client!: MlsClient
@@ -44,8 +182,6 @@ export class MlsCrypto {
         const epochSecret = await group.currentEpochSecret()
         const keys = await cipherSuite.kemDerive(epochSecret)
         const ciphertext = await cipherSuite.seal(keys.publicKey, message)
-
-        console.log(`ENCRYPTING USING ${group.currentEpoch} ${keys.secretKey.toBytes()}`)
         return new EncryptedData({ algorithm: 'mls', mlsPayload: ciphertext.toBytes() })
     }
 
@@ -66,7 +202,7 @@ export class MlsCrypto {
                 const ciphertext = HpkeCiphertext.fromBytes(encryptedData.mlsPayload)
                 return await cipherSuite.open(ciphertext, keys.secretKey, keys.publicKey)
             } catch (e) {
-                console.log(`error decrypting using epoch ${key.epoch}`)
+                console.error(`error decrypting using epoch ${key.epoch}`)
             }
         }
         throw new Error('Failed to decrypt')
@@ -108,7 +244,6 @@ export class MlsCrypto {
         const secret = await group.currentEpochSecret()
         const epoch = group.currentEpoch
         this.keys.push({ epoch, key: secret.toBytes() }) // should be encrypted
-        console.log('COMMIT PROCESSED', epoch)
         return { key: secret.toBytes(), epoch: epoch }
     }
 
@@ -116,8 +251,10 @@ export class MlsCrypto {
         return this.groups.has(streamId)
     }
 
-    public async handleKeyAnnouncement(streamId: string, key: { epoch: bigint; key: Uint8Array }) {
-        console.log('GOT KEY ANNOUNCEMENT', key)
+    public async handleKeyAnnouncement(
+        _streamId: string,
+        key: { epoch: bigint; key: Uint8Array },
+    ): Promise<void> {
         this.keys.push(key)
     }
 
@@ -127,5 +264,40 @@ export class MlsCrypto {
             throw new Error('Group not found')
         }
         return group.currentEpoch
+    }
+
+    public async handleGroupInfo(
+        streamId: string,
+        groupInfo: Uint8Array,
+    ): Promise<{ groupInfo: Uint8Array; commit: Uint8Array } | undefined> {
+        if (this.groups.has(streamId)) {
+            return undefined
+        }
+        console.log('CREATING GROUP FROM BYTES', groupInfo.length)
+        const { group, commit } = await this.client.commitExternal(MlsMessage.fromBytes(groupInfo))
+        this.groups.set(streamId, group)
+        const updatedGroupInfo = await group.groupInfoMessageAllowingExtCommit(true)
+        return {
+            groupInfo: updatedGroupInfo.toBytes(),
+            commit: commit.toBytes(),
+        }
+    }
+
+    public async handleExternalJoin(
+        streamId: string,
+        userAddress: string,
+        deviceKey: string,
+        commit: Uint8Array,
+        groupInfoWithExternalKey: Uint8Array,
+    ): Promise<void> {
+        // - If we have a group in PENDING_CREATE,
+        //   then we clear it, and request to join using external join
+        // - If we have a group in PENDING_JOIN, and
+        //   - we sent the message,
+        //     then we can switch that group into a confirmed state; or
+        //   - we did not send the message,
+        //     then we clear it, and request to join using external join
+        // - If we have a group in ACTIVE,
+        //   then we process the commit,
     }
 }
