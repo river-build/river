@@ -8,7 +8,7 @@
         "directory": "packages/react"
     },
     "scripts": {
-        "build": "yarn run clean && yarn run build:esm+types",
+        "build": "tsup",
         "build:esm+types": "tsc --project tsconfig.build.json --outDir ./dist/esm --declaration --declarationMap --declarationDir ./dist/types",
         "clean": "rm -rf dist tsconfig.tsbuildinfo",
         "watch": "yarn build -w",
@@ -19,8 +19,7 @@
         "dist/**",
         "!dist/**/*.tsbuildinfo",
         "src/**/*.ts",
-        "!src/**/*.test.ts",
-        "!src/**/*.test-d.ts"
+        "!src/**/*.test.ts"
     ],
     "sideEffects": false,
     "type": "module",
@@ -28,11 +27,11 @@
     "types": "./dist/types/index.d.ts",
     "typings": "./dist/types/index.d.ts",
     "peerDependencies": {
+        "@river-build/sdk": "workspace:^",
         "react": "^18.2.0",
         "typescript": "^5.1.6"
     },
     "dependencies": {
-        "@river-build/sdk": "workspace:^",
         "ethers": "^5.7.2"
     },
     "devDependencies": {
@@ -47,6 +46,7 @@
         "eslint-plugin-react-hooks": "^4.6.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
+        "tsup": "^8.3.5",
         "typescript": "^5.1.6"
     },
     "keywords": [
