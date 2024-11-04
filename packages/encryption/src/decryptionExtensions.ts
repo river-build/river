@@ -655,7 +655,7 @@ export abstract class BaseDecryptionExtensions {
         try {
             await this.decryptGroupEvent(item.streamId, item.eventId, item.kind, item.encryptedData)
         } catch (err) {
-            if (item.encryptedData.mlsPayload !== undefined) {
+            if (item.encryptedData.mlsCiphertext !== undefined) {
                 const streamId = item.streamId
                 const sessionId = 'all-the-same'
                 if (!this.decryptionFailures[streamId]) {
