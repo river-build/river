@@ -2557,10 +2557,15 @@ export class Client
     }
 
     public async mls_didReceiveInitializeGroup(_group: MlsInitializeGroup): Promise<void> {
-        //
+        if (!this.mlsCrypto) {
+            throw new Error('mls backend not initialized')
+        }
     }
 
     public async mls_didReceiveExternalJoin(_externalJoin: MlsExternalJoin): Promise<void> {
-        //
+        if (!this.mlsCrypto) {
+            throw new Error('mls backend not initialized')
+        }
     }
+
 }
