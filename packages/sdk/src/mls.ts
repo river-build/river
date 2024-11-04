@@ -26,13 +26,13 @@ function epochIdentifier(streamId: string, epoch: bigint): EpochIdentifier {
 }
 
 type DerivedKeys = {
-    secretKey: Uint8Array
-    publicKey: Uint8Array
+    secretKey: HpkeSecretKey
+    publicKey: HpkePublicKey
 }
 
 export class EpochKeyStore {
-    private sealedEpochSecrets: Map<EpochIdentifier, Uint8Array> = new Map()
-    private openEpochSecrets: Map<EpochIdentifier, Uint8Array> = new Map()
+    private sealedEpochSecrets: Map<EpochIdentifier, HpkeCiphertext> = new Map()
+    private openEpochSecrets: Map<EpochIdentifier, MlsSecret> = new Map()
     private derivedKeys: Map<EpochIdentifier, DerivedKeys> = new Map()
     private cipherSuite: MlsCipherSuite
 
@@ -54,22 +54,28 @@ export class EpochKeyStore {
         return 'EPOCH_KEY_MISSING'
     }
 
-    public addSealedEpochSecret(streamId: string, epoch: bigint, sealedEpochSecret: Uint8Array) {
+    public addSealedEpochSecret(
+        streamId: string,
+        epoch: bigint,
+        sealedEpochSecretBytes: Uint8Array,
+    ) {
         const epochId = epochIdentifier(streamId, epoch)
+        const sealedEpochSecret = HpkeCiphertext.fromBytes(sealedEpochSecretBytes)
         this.sealedEpochSecrets.set(epochId, sealedEpochSecret)
     }
 
-    public getSealedEpochSecret(streamId: string, epoch: bigint): Uint8Array | undefined {
+    public getSealedEpochSecret(streamId: string, epoch: bigint): HpkeCiphertext | undefined {
         const epochId = epochIdentifier(streamId, epoch)
         return this.sealedEpochSecrets.get(epochId)
     }
 
-    public addOpenEpochSecret(streamId: string, epoch: bigint, openEpochSecret: Uint8Array) {
+    public addOpenEpochSecret(streamId: string, epoch: bigint, openEpochSecretBytes: Uint8Array) {
         const epochId = epochIdentifier(streamId, epoch)
+        const openEpochSecret = Secret.fromBytes(openEpochSecretBytes)
         this.openEpochSecrets.set(epochId, openEpochSecret)
     }
 
-    public getOpenEpochSecret(streamId: string, epoch: bigint): Uint8Array | undefined {
+    public getOpenEpochSecret(streamId: string, epoch: bigint): Secret | undefined {
         const epochId = epochIdentifier(streamId, epoch)
         return this.openEpochSecrets.get(epochId)
     }
@@ -77,8 +83,8 @@ export class EpochKeyStore {
     public addDerivedKeys(
         streamId: string,
         epoch: bigint,
-        secretKey: Uint8Array,
-        publicKey: Uint8Array,
+        secretKey: HpkeSecretKey,
+        publicKey: HpkePublicKey,
     ) {
         const epochId = epochIdentifier(streamId, epoch)
         this.derivedKeys.set(epochId, { secretKey, publicKey })
@@ -87,7 +93,7 @@ export class EpochKeyStore {
     public getDerivedKeys(
         streamId: string,
         epoch: bigint,
-    ): { publicKey: Uint8Array; secretKey: Uint8Array } | undefined {
+    ): { publicKey: HpkePublicKey; secretKey: HpkeSecretKey } | undefined {
         const epochId = epochIdentifier(streamId, epoch)
         const keys = this.derivedKeys.get(epochId)
         if (keys) {
@@ -98,15 +104,8 @@ export class EpochKeyStore {
 
     private async openEpochSecret(streamId: string, epoch: bigint) {
         const sealedEpochSecret = this.getSealedEpochSecret(streamId, epoch)!
-        const nextEpochKeys = this.getDerivedKeys(streamId, epoch + 1n)!
-        const hpkeCiphertext = HpkeCiphertext.fromBytes(sealedEpochSecret)
-        const hpkePublicKey = HpkePublicKey.fromBytes(nextEpochKeys.publicKey)
-        const hpkeSecretKey = HpkeSecretKey.fromBytes(nextEpochKeys.secretKey)
-        const openEpochSecret = await this.cipherSuite.open(
-            hpkeCiphertext,
-            hpkeSecretKey,
-            hpkePublicKey,
-        )
+        const { publicKey, secretKey } = this.getDerivedKeys(streamId, epoch + 1n)!
+        const openEpochSecret = await this.cipherSuite.open(sealedEpochSecret, secretKey, publicKey)
         this.addOpenEpochSecret(streamId, epoch, openEpochSecret)
     }
 
@@ -126,10 +125,7 @@ export class EpochKeyStore {
 
     private async deriveKeys(streamId: string, epoch: bigint) {
         const openEpochSecret = this.getOpenEpochSecret(streamId, epoch)!
-        const mlsSecret = MlsSecret.fromBytes(openEpochSecret)
-        const derivedKeys = await this.cipherSuite.kemDerive(mlsSecret)
-        const publicKey = derivedKeys.publicKey.toBytes()
-        const secretKey = derivedKeys.secretKey.toBytes()
+        const { publicKey, secretKey } = await this.cipherSuite.kemDerive(openEpochSecret)
         this.addDerivedKeys(streamId, epoch, secretKey, publicKey)
     }
 
@@ -144,6 +140,78 @@ export class EpochKeyStore {
         }
 
         return Promise.resolve(status)
+    }
+}
+
+type GroupStatus = 'GROUP_MISSING' | 'GROUP_PENDING_CREATE' | 'GROUP_PENDING_JOIN' | 'GROUP_ACTIVE'
+
+type GroupState =
+    | {
+          state: 'GROUP_PENDING_CREATE'
+          group: MlsGroup
+          groupInfoWithExternalKey: Uint8Array
+      }
+    | {
+          state: 'GROUP_PENDING_JOIN'
+          group: MlsGroup
+          commit: Uint8Array
+          groupInfoWithExternalKey: Uint8Array
+      }
+    | {
+          state: 'GROUP_ACTIVE'
+          group: MlsGroup
+      }
+
+export class GroupStore {
+    private groups: Map<EpochIdentifier, GroupState> = new Map()
+
+    public getGroupStatus(streamId: string, epoch: bigint): GroupStatus {
+        const epochId = epochIdentifier(streamId, epoch)
+        const group = this.groups.get(epochId)
+        if (!group) {
+            return 'GROUP_MISSING'
+        }
+        return group.state
+    }
+
+    public addGroupViaCreate(
+        streamId: string,
+        epoch: bigint,
+        group: MlsGroup,
+        groupInfoWithExternalKey: Uint8Array,
+    ): void {
+        const epochId = epochIdentifier(streamId, epoch)
+        if (this.groups.has(epochId)) {
+            throw new Error('Group already exists')
+        }
+
+        const groupState: GroupState = {
+            state: 'GROUP_PENDING_CREATE',
+            group,
+            groupInfoWithExternalKey,
+        }
+
+        this.groups.set(epochId, groupState)
+    }
+
+    public addGroupViaExternalJoin(
+        streamId: string,
+        epoch: bigint,
+        group: MlsGroup,
+        groupInfoWithExternalKey: Uint8Array,
+    ): void {
+        const epochId = epochIdentifier(streamId, epoch)
+        if (this.groups.has(epochId)) {
+            throw new Error('Group already exists')
+        }
+
+        const groupState: GroupState = {
+            state: 'GROUP_PENDING_JOIN',
+            group,
+            groupInfoWithExternalKey,
+        }
+
+
     }
 }
 
