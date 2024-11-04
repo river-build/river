@@ -131,6 +131,7 @@ abstract contract MainnetDelegationBase is IMainnetDelegationBase {
     uint256 depositId = ds.depositIdByDelegator[delegator];
     if (depositId != 0) {
       IRewardsDistribution(address(this)).initiateWithdraw(depositId);
+      // do not reset depositIdByDelegator[delegator] as we recycle deposit IDs for delegators
     }
   }
 

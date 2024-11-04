@@ -70,4 +70,15 @@ contract DelegationProxyTest is Test {
     DelegationProxy(proxy).redelegate(newDelegatee);
     assertEq(ERC20Votes(river).delegates(proxy), newDelegatee);
   }
+
+  function test_upgradeBeacon() public {
+    address proxy = LibClone.deployERC1967BeaconProxy(beacon);
+    DelegationProxy(proxy).initialize(river, address(this));
+
+    DelegationProxy newImpl = new DelegationProxy();
+    UpgradeableBeacon(beacon).upgradeTo(address(newImpl));
+
+    // Verify proxy still works with new implementation
+    DelegationProxy(proxy).redelegate(address(1));
+  }
 }
