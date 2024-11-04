@@ -828,8 +828,12 @@ func applyMlsPayload(
 		// add device keys
 		mlsGroup.Commits = append(mlsGroup.Commits, payload.ExternalJoin.Commit)
 		mlsGroup.LatestGroupInfo = payload.ExternalJoin.GroupInfoWithExternalKey
+		mlsGroup.CurrentEpoch = payload.ExternalJoin.Epoch
 		key := string(payload.ExternalJoin.UserAddress)
-		if mlsGroup.DeviceKeys[key] == nil {
+		if mlsGroup.GetDeviceKeys() == nil {
+			mlsGroup.DeviceKeys = map[string]*protocol.MemberPayload_Snapshot_MlsGroup_DeviceKeys{}
+		}
+		if mlsGroup.GetDeviceKeys()[key] == nil {
 			mlsGroup.DeviceKeys[key] = &protocol.MemberPayload_Snapshot_MlsGroup_DeviceKeys{}
 		}
 		mlsGroup.DeviceKeys[key].DeviceKeys = append(mlsGroup.DeviceKeys[key].DeviceKeys, payload.ExternalJoin.DeviceKey)
@@ -841,6 +845,9 @@ func applyMlsPayload(
 				return leave.UserAddress
 			})
 	case *MemberPayload_MlsPayload_KeyAnnouncement_:
+		if mlsGroup.GetEpochKeys() == nil {
+			mlsGroup.EpochKeys = map[uint64][]byte{}
+		}
 		mlsGroup.EpochKeys[payload.KeyAnnouncement.Epoch] = payload.KeyAnnouncement.Key
 	}
 	return mlsGroup
