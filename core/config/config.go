@@ -17,7 +17,8 @@ func GetDefaultConfig() *Config {
 	return &Config{
 		Port: 443,
 		Database: DatabaseConfig{
-			StartupDelay: 2 * time.Second,
+			StartupDelay:  2 * time.Second,
+			NumPartitions: 256,
 		},
 		StorageType:  "postgres",
 		DisableHttps: false,
@@ -223,14 +224,6 @@ type DatabaseConfig struct {
 	// data storage. If <= 0, a default value of 256 will be used. No more than 256 partitions is
 	// supported at this time.
 	NumPartitions int
-}
-
-func (c *DatabaseConfig) Init() error {
-	if c.NumPartitions <= 0 || c.NumPartitions > 256 {
-		c.NumPartitions = 256
-	}
-
-	return nil
 }
 
 func (c DatabaseConfig) GetUrl() string {
@@ -464,11 +457,7 @@ func (c *Config) GetTestEntitlementContractAddress() common.Address {
 }
 
 func (c *Config) Init() error {
-	if err := c.parseChains(); err != nil {
-		return err
-	}
-
-	return c.Database.Init()
+	return c.parseChains()
 }
 
 // Return the schema to use for accessing the node.
