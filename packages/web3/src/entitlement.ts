@@ -873,10 +873,6 @@ export class DecodedCheckOperationBuilder {
                 return {
                     type: CheckOperationType.ETH_BALANCE,
                     threshold: this.decodedCheckOp.threshold!,
-
-                    // The following values are unused by the check but must be set
-                    address: zeroAddress,
-                    chainId: 1n,
                 }
             
             case CheckOperationType.ISENTITLED:
@@ -895,8 +891,8 @@ export class DecodedCheckOperationBuilder {
 
 export type DecodedCheckOperation = {
     type: CheckOperationType
-    chainId: bigint
-    address: Address
+    chainId?: bigint
+    address?: Address
     threshold?: bigint
     tokenId?: bigint
     byteEncodedParams?: Hex
@@ -940,8 +936,8 @@ export function createOperationsTree(
         return {
             opType: OperationType.CHECK,
             checkType: op.type,
-            chainId: op.chainId,
-            contractAddress: op.address,
+            chainId: op.chainId ?? 0n,
+            contractAddress: op.address ?? zeroAddress,
             params,
         }
     })
