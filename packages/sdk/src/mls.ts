@@ -143,6 +143,78 @@ export class EpochKeyStore {
     }
 }
 
+type GroupStatus = 'GROUP_MISSING' | 'GROUP_PENDING_CREATE' | 'GROUP_PENDING_JOIN' | 'GROUP_ACTIVE'
+
+type GroupState =
+    | {
+          state: 'GROUP_PENDING_CREATE'
+          group: MlsGroup
+          groupInfoWithExternalKey: Uint8Array
+      }
+    | {
+          state: 'GROUP_PENDING_JOIN'
+          group: MlsGroup
+          commit: Uint8Array
+          groupInfoWithExternalKey: Uint8Array
+      }
+    | {
+          state: 'GROUP_ACTIVE'
+          group: MlsGroup
+      }
+
+export class GroupStore {
+    private groups: Map<EpochIdentifier, GroupState> = new Map()
+
+    public getGroupStatus(streamId: string, epoch: bigint): GroupStatus {
+        const epochId = epochIdentifier(streamId, epoch)
+        const group = this.groups.get(epochId)
+        if (!group) {
+            return 'GROUP_MISSING'
+        }
+        return group.state
+    }
+
+    public addGroupViaCreate(
+        streamId: string,
+        epoch: bigint,
+        group: MlsGroup,
+        groupInfoWithExternalKey: Uint8Array,
+    ): void {
+        const epochId = epochIdentifier(streamId, epoch)
+        if (this.groups.has(epochId)) {
+            throw new Error('Group already exists')
+        }
+
+        const groupState: GroupState = {
+            state: 'GROUP_PENDING_CREATE',
+            group,
+            groupInfoWithExternalKey,
+        }
+
+        this.groups.set(epochId, groupState)
+    }
+
+    public addGroupViaExternalJoin(
+        streamId: string,
+        epoch: bigint,
+        group: MlsGroup,
+        groupInfoWithExternalKey: Uint8Array,
+    ): void {
+        const epochId = epochIdentifier(streamId, epoch)
+        if (this.groups.has(epochId)) {
+            throw new Error('Group already exists')
+        }
+
+        const groupState: GroupState = {
+            state: 'GROUP_PENDING_JOIN',
+            group,
+            groupInfoWithExternalKey,
+        }
+
+
+    }
+}
+
 export class MlsCrypto {
     private client!: MlsClient
     private userAddress: string
