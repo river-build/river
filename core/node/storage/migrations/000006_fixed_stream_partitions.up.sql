@@ -1,12 +1,10 @@
 -- This table may already exist in the schema and, if so, use the setting
 -- stored in the table to determine partition count.
-CREATE TABLE IF NOT EXISTS stream_settings (
-	name VARCHAR NOT NULL,
-	value VARCHAR NOT NULL,
-	PRIMARY KEY (name)
-);
-
-INSERT INTO stream_settings (name, value) VALUES ('num_partitions', '256') on CONFLICT (name) DO NOTHING;
+CREATE TABLE IF NOT EXISTS settings (
+single_row_key BOOL PRIMARY KEY DEFAULT TRUE,
+num_partitions INT DEFAULT 256 NOT NULL);
+-- Create only setting row that should be in this table.
+INSERT INTO settings (single_row_key, num_partitions) VALUES (TRUE, 256) on conflict do nothing;
 
 DO $$
 	DECLARE
@@ -18,7 +16,7 @@ DO $$
 
 	BEGIN
 
-    SELECT CAST(value as INTEGER) from stream_settings where name = 'num_partitions' into numPartitions;
+    SELECT num_partitions from settings where single_row_key=true into numPartitions;
 
 	FOR i IN 0.. numPartitions LOOP
 		suffix = LPAD(TO_HEX(i), 2, '0');

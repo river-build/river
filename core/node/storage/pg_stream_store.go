@@ -49,22 +49,20 @@ func createSettingsTable(partitions int) txnFn {
 		log.Info("Creating settings table")
 		_, err := tx.Exec(
 			ctx,
-			`CREATE TABLE IF NOT EXISTS stream_settings (
-				name VARCHAR NOT NULL,
-				value VARCHAR NOT NULL,
-				PRIMARY KEY (name)
-			)`,
+			`CREATE TABLE IF NOT EXISTS settings (
+				single_row_key BOOL PRIMARY KEY DEFAULT TRUE,
+				num_partitions INT DEFAULT 256 NOT NULL);`,
 		)
 		if err != nil {
 			log.Error("Error creating settings table", "error", err)
 			return err
 		}
 
-		log.Info("Inserting partitions setting", "numPartitions", partitions)
+		log.Info("Inserting partition setting", "numPartitions", partitions)
 		_, err = tx.Exec(
 			ctx,
-			`INSERT INTO stream_settings (name, value) VALUES ('num_partitions', cast($1 AS VARCHAR))
-			ON CONFLICT (name) DO NOTHING`,
+			`INSERT INTO settings (single_row_key, num_partitions) VALUES (true, $1)
+			ON CONFLICT DO NOTHING`,
 			partitions,
 		)
 		if err != nil {
@@ -75,7 +73,7 @@ func createSettingsTable(partitions int) txnFn {
 		var numPartitions int
 		err = tx.QueryRow(
 			ctx,
-			`SELECT CAST(value as INTEGER) from stream_settings where name = 'num_partitions'`,
+			`SELECT num_partitions FROM settings WHERE single_row_key=true;`,
 		).Scan(&numPartitions)
 		if err != nil {
 			return err
