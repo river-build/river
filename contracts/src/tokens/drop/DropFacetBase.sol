@@ -99,13 +99,12 @@ abstract contract DropFacetBase is IDropFacetBase {
     Claim calldata claim,
     uint16 expectedPenaltyBps
   ) internal view returns (uint256 amount) {
-    if (condition.penaltyBps != expectedPenaltyBps) {
+    uint16 penaltyBps = condition.penaltyBps;
+    if (penaltyBps != expectedPenaltyBps) {
       CustomRevert.revertWith(DropFacet__UnexpectedPenaltyBps.selector);
     }
 
     amount = claim.quantity;
-
-    uint16 penaltyBps = condition.penaltyBps;
     if (penaltyBps > 0) {
       unchecked {
         uint256 penaltyAmount = BasisPoints.calculate(
@@ -131,9 +130,10 @@ abstract contract DropFacetBase is IDropFacetBase {
 
     // Check timestamp order
     if (existingCount > 0) {
-      ClaimCondition storage lastCondition = ds.conditionById[
-        newConditionId - 1
-      ];
+      ClaimCondition storage lastCondition;
+      unchecked {
+        lastCondition = ds.conditionById[newConditionId - 1];
+      }
       if (lastCondition.startTimestamp >= newCondition.startTimestamp) {
         CustomRevert.revertWith(
           DropFacet__ClaimConditionsNotInAscendingOrder.selector
@@ -229,7 +229,10 @@ abstract contract DropFacetBase is IDropFacetBase {
     uint256 conditionId,
     ClaimCondition calldata newCondition
   ) internal {
-    _verifyEnoughBalance(newCondition, newCondition.maxClaimableSupply);
+    _verifyEnoughBalance(
+      newCondition.currency,
+      newCondition.maxClaimableSupply
+    );
 
     ClaimCondition storage condition = ds.conditionById[conditionId];
     condition.startTimestamp = newCondition.startTimestamp;
@@ -262,10 +265,10 @@ abstract contract DropFacetBase is IDropFacetBase {
   }
 
   function _verifyEnoughBalance(
-    ClaimCondition calldata condition,
+    address currency,
     uint256 amount
   ) internal view {
-    if (amount > IERC20(condition.currency).balanceOf(address(this))) {
+    if (amount > IERC20(currency).balanceOf(address(this))) {
       CustomRevert.revertWith(DropFacet__InsufficientBalance.selector);
     }
   }
