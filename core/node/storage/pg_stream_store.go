@@ -59,7 +59,7 @@ func createSettingsTable(partitions int) txnFn {
 		}
 
 		log.Info("Inserting partition setting", "numPartitions", partitions)
-		_, err = tx.Exec(
+		tags, err := tx.Exec(
 			ctx,
 			`INSERT INTO settings (single_row_key, num_partitions) VALUES (true, $1)
 			ON CONFLICT DO NOTHING`,
@@ -68,6 +68,13 @@ func createSettingsTable(partitions int) txnFn {
 		if err != nil {
 			log.Error("Error setting partition count", "error", err)
 			return err
+		}
+		if tags.RowsAffected() < 1 {
+			log.Warn(
+				"Ignoring numPartitions config, previous setting detected",
+				"numPartitionsConfig",
+				partitions,
+			)
 		}
 
 		var numPartitions int
