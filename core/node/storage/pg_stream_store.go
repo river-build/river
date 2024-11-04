@@ -69,13 +69,6 @@ func createSettingsTable(partitions int) txnFn {
 			log.Error("Error setting partition count", "error", err)
 			return err
 		}
-		if tags.RowsAffected() < 1 {
-			log.Warn(
-				"Ignoring numPartitions config, previous setting detected",
-				"numPartitionsConfig",
-				partitions,
-			)
-		}
 
 		var numPartitions int
 		err = tx.QueryRow(
@@ -87,6 +80,16 @@ func createSettingsTable(partitions int) txnFn {
 		}
 
 		log.Info("Creating stream storage schema with partition count", "numPartitions", numPartitions)
+
+		if tags.RowsAffected() < 1 {
+			log.Warn(
+				"Ignoring numPartitions config, previous setting detected",
+				"numPartitionsConfig",
+				partitions,
+				"actualPartitions",
+				numPartitions,
+			)
+		}
 
 		return nil
 	}
