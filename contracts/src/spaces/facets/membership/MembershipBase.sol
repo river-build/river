@@ -108,8 +108,21 @@ abstract contract MembershipBase is IMembershipBase {
     return finalAmount;
   }
 
-  function _getCreatorBalance() internal view returns (uint256) {
-    return MembershipStorage.layout().tokenBalance;
+  function _getCreatorBalance() internal returns (uint256) {
+    MembershipStorage.Layout storage ds = MembershipStorage.layout();
+    uint256 contractBalance = address(this).balance;
+
+    // Rebalance stored balance if it doesn't match actual balance
+    // only if the contract balance is less than the stored balance
+    if (contractBalance < ds.tokenBalance) {
+      ds.tokenBalance = contractBalance;
+    }
+
+    return ds.tokenBalance;
+  }
+
+  function _setCreatorBalance(uint256 newBalance) internal {
+    MembershipStorage.layout().tokenBalance = newBalance;
   }
 
   // =============================================================

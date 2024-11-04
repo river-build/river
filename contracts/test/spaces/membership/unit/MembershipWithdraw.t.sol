@@ -49,4 +49,33 @@ contract MembershipWithdraw is MembershipBaseSetup {
     vm.expectRevert(Membership__InsufficientPayment.selector);
     membership.withdraw(founder);
   }
+
+  // Integration
+  // test withdraw a second time
+  function test_withdrawSecondTime()
+    external
+    givenMembershipHasPrice
+    givenAliceHasPaidMembership
+  {
+    vm.prank(founder);
+    membership.withdraw(founder);
+
+    uint256 protocolFee = BasisPoints.calculate(
+      MEMBERSHIP_PRICE,
+      IPlatformRequirements(spaceFactory).getMembershipBps()
+    );
+
+    assertEq(founder.balance, MEMBERSHIP_PRICE - protocolFee);
+
+    vm.startPrank(charlie);
+    vm.deal(charlie, MEMBERSHIP_PRICE);
+    membership.joinSpace{value: MEMBERSHIP_PRICE}(charlie);
+    assertEq(membershipToken.balanceOf(charlie), 1);
+    vm.stopPrank();
+
+    vm.prank(founder);
+    membership.withdraw(founder);
+
+    // assertEq(founder.balance, MEMBERSHIP_PRICE - protocolFee);
+  }
 }
