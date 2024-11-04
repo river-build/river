@@ -5,6 +5,13 @@
     "type": "module",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "default": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        },
+        "./package.json": "./package.json"
+    },
     "scripts": {
         "build": "tsc",
         "cb": "yarn clean && yarn build",
