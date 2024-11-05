@@ -4,6 +4,7 @@ import {
     ChannelMetadata,
     EntitlementModuleType,
     isPermission,
+    isUpdateChannelStatusParams,
     MembershipInfo,
     Permission,
     PricingModuleStruct,
@@ -16,11 +17,12 @@ import {
     CreateSpaceParams,
     ISpaceDapp,
     TransactionOpts,
-    UpdateChannelParams,
     LegacyUpdateRoleParams,
     UpdateRoleParams,
     SetChannelPermissionOverridesParams,
     ClearChannelPermissionOverridesParams,
+    RemoveChannelParams,
+    UpdateChannelParams,
 } from '../ISpaceDapp'
 import { LOCALHOST_CHAIN_ID } from '../Web3Constants'
 import { IRolesBase } from './IRolesShim'
@@ -1032,10 +1034,19 @@ export class SpaceDapp implements ISpaceDapp {
     }
 
     public async encodedUpdateChannelData(space: Space, params: UpdateChannelParams) {
+        const channelId = ensureHexPrefix(params.channelId)
+
+        if (isUpdateChannelStatusParams(params)) {
+            // When enabling or disabling channels, passing names and roles is not required.
+            // To ensure the contract accepts this exception, the metadata argument should be left empty.
+            return [
+                space.Channels.interface.encodeFunctionData('updateChannel', [channelId, '', true]),
+            ]
+        }
+
         // data for the multicall
         const encodedCallData: BytesLike[] = []
 
-        const channelId = ensureHexPrefix(params.channelId)
         // update the channel metadata
         encodedCallData.push(
             space.Channels.interface.encodeFunctionData('updateChannel', [
@@ -1057,6 +1068,21 @@ export class SpaceDapp implements ISpaceDapp {
             encodedCallData.push(callData)
         }
         return encodedCallData
+    }
+
+    public async removeChannel(
+        params: RemoveChannelParams,
+        signer: ethers.Signer,
+        txnOpts?: TransactionOpts,
+    ): Promise<ContractTransaction> {
+        const space = this.getSpace(params.spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${params.spaceId}" is not found.`)
+        }
+        return wrapTransaction(
+            () => space.Channels.write(signer).removeChannel(params.channelId),
+            txnOpts,
+        )
     }
 
     public async legacyUpdateRole(
@@ -1563,23 +1589,23 @@ export class SpaceDapp implements ISpaceDapp {
         )
     }
 
-    public getSpaceAddress(receipt: ContractReceipt): string | undefined {
-        const eventName = 'SpaceCreated'
+    /**
+     * Get the space address from the receipt and sender address
+     * @param receipt - The receipt from the transaction
+     * @param senderAddress - The address of the sender. Required for the case of a receipt containing multiple events of the same type.
+     * @returns The space address or undefined if the receipt is not successful
+     */
+    public getSpaceAddress(receipt: ContractReceipt, senderAddress: string): string | undefined {
         if (receipt.status !== 1) {
             return undefined
         }
         for (const receiptLog of receipt.logs) {
-            try {
-                // Parse the log with the contract interface
-                const parsedLog = this.spaceRegistrar.SpaceArchitect.interface.parseLog(receiptLog)
-                if (parsedLog.name === eventName) {
-                    // If the log matches the event we're looking for, do something with it
-                    // parsedLog.args contains the event arguments as an object
-                    logger.log(`Event ${eventName} found: `, parsedLog.args)
-                    return parsedLog.args.space as string
-                }
-            } catch (error) {
-                // This log wasn't from the contract we're interested in
+            const spaceAddress = this.spaceRegistrar.SpaceArchitect.getSpaceAddressFromLog(
+                receiptLog,
+                senderAddress,
+            )
+            if (spaceAddress) {
+                return spaceAddress
             }
         }
         return undefined

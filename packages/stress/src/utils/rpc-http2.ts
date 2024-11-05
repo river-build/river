@@ -1,14 +1,13 @@
-import { PromiseClient, createPromiseClient } from '@connectrpc/connect'
+import { createPromiseClient } from '@connectrpc/connect'
 import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-node'
 import { StreamService } from '@river-build/proto'
 import {
     loggingInterceptor,
     randomUrlSelector,
     retryInterceptor,
+    StreamRpcClient,
     type RetryParams,
 } from '@river-build/sdk'
-
-export type StreamRpcClient = PromiseClient<typeof StreamService> & { url?: string }
 
 let nextRpcClientNum = 0
 
@@ -26,6 +25,7 @@ export function makeHttp2StreamRpcClient(
             loggingInterceptor(transportId),
             retryInterceptor({ ...retryParams, refreshNodeUrl }),
         ],
+        defaultTimeoutMs: 20000,
     }
     if (!process.env.RIVER_DEBUG_TRANSPORT) {
         options.useBinaryFormat = true
@@ -38,7 +38,8 @@ export function makeHttp2StreamRpcClient(
     }
     const transport = createConnectTransport(options)
 
-    const client: StreamRpcClient = createPromiseClient(StreamService, transport) as StreamRpcClient
+    const client = createPromiseClient(StreamService, transport) as StreamRpcClient
     client.url = url
+    client.opts = { retryParams, defaultTimeoutMs: options.defaultTimeoutMs }
     return client
 }
