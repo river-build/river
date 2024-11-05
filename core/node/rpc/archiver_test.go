@@ -361,6 +361,43 @@ func TestArchive100Streams(t *testing.T) {
 	require.Zero(stats.FailedOpsCount)
 }
 
+func TestArchive1000StreamsWithData(t *testing.T) {
+	tester := newServiceTester(t, serviceTesterOpts{numNodes: 10, start: true})
+	ctx := tester.ctx
+	require := tester.require
+
+	numStreams := 1000
+	_, streamIds, err := createUserSettingsStreamsWithData(ctx, tester.testClient(0), numStreams, 10, 5)
+	require.NoError(err)
+
+	archiveCfg := tester.getConfig()
+	archiveCfg.Archive.ArchiveId = "arch" + GenShortNanoid()
+	archiveCfg.Archive.ReadMiniblocksSize = 3
+
+	listener, err := net.Listen("tcp", "localhost:0")
+	require.NoError(err)
+
+	archiverBC := tester.btc.NewWalletAndBlockchain(ctx)
+	serverCtx, serverCancel := context.WithCancel(ctx)
+	arch, err := StartServerInArchiveMode(serverCtx, archiveCfg, archiverBC, listener, true)
+	require.NoError(err)
+
+	arch.Archiver.WaitForStart()
+	require.Len(arch.ExitSignal(), 0)
+
+	arch.Archiver.WaitForTasks()
+
+	require.NoError(compareStreamsMiniblocks(t, ctx, streamIds, arch.Storage(), tester.testClient(5)))
+
+	serverCancel()
+	arch.Archiver.WaitForWorkers()
+
+	stats := arch.Archiver.GetStats()
+	require.Equal(uint64(numStreams), stats.StreamsExamined)
+	require.GreaterOrEqual(stats.SuccessOpsCount, uint64(100))
+	require.Zero(stats.FailedOpsCount)
+}
+
 func TestArchive100StreamsWithData(t *testing.T) {
 	tester := newServiceTester(t, serviceTesterOpts{numNodes: 10, start: true})
 	ctx := tester.ctx

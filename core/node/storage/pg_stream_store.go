@@ -30,6 +30,8 @@ type PostgresStreamStore struct {
 	exitSignal        chan error
 	nodeUUID          string
 	cleanupListenFunc func()
+
+	numPartitions int
 }
 
 var _ StreamStorage = (*PostgresStreamStore)(nil)
@@ -43,7 +45,7 @@ func GetRiverNodeDbMigrationSchemaFS() *embed.FS {
 
 type txnFn func(ctx context.Context, tx pgx.Tx) error
 
-func createSettingsTable(partitions int) txnFn {
+func createSettingsTable(store *PostgresStreamStore, partitions int) txnFn {
 	return func(ctx context.Context, tx pgx.Tx) error {
 		log := dlog.FromCtx(ctx)
 		log.Info("Creating settings table")
@@ -58,7 +60,7 @@ func createSettingsTable(partitions int) txnFn {
 			return err
 		}
 
-		log.Info("Inserting partition setting", "numPartitions", partitions)
+		log.Info("Inserting config partitions", partitions)
 		tags, err := tx.Exec(
 			ctx,
 			`INSERT INTO settings (single_row_key, num_partitions) VALUES (true, $1)
@@ -79,6 +81,7 @@ func createSettingsTable(partitions int) txnFn {
 			return err
 		}
 
+		store.numPartitions = numPartitions
 		log.Info("Creating stream storage schema with partition count", "numPartitions", numPartitions)
 
 		if tags.RowsAffected() < 1 {
@@ -111,7 +114,7 @@ func NewPostgresStreamStore(
 		ctx,
 		poolInfo,
 		metrics,
-		createSettingsTable(poolInfo.Config.NumPartitions),
+		createSettingsTable(store, poolInfo.Config.NumPartitions),
 		migrationsDir,
 	); err != nil {
 		return nil, AsRiverError(err).Func("NewPostgresStreamStore")
@@ -219,7 +222,7 @@ func createPartitionSuffix(streamId StreamId, numPartitions int) string {
 func (s *PostgresStreamStore) sqlForStream(sql string, streamId StreamId, migrated bool) string {
 	var suffix string
 	if migrated {
-		suffix = createPartitionSuffix(streamId, s.config.NumPartitions)
+		suffix = createPartitionSuffix(streamId, s.numPartitions)
 	} else {
 		suffix = createTableSuffix(streamId)
 	}
