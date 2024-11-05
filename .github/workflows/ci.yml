@@ -311,7 +311,6 @@ jobs:
                     # Maps tcp port 5433 on service container to the host
                     - 5433:5432
                 options: >-
-                    log_statement=all
                     --health-cmd pg_isready
                     --health-interval 10s
                     --health-timeout 5s
