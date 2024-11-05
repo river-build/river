@@ -5,6 +5,7 @@
     "type": "module",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
+    "sideEffects": false,
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
@@ -26,7 +27,7 @@
         "test": "yarn my-jest",
         "test:ci": "yarn test",
         "test:debug": "DEBUG=test yarn my-jest",
-        "watch": "tsc --watch"
+        "watch": "tsup --watch"
     },
     "dependencies": {
         "@isaacs/ttlcache": "^1.4.1",

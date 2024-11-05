@@ -5,6 +5,7 @@
     "type": "module",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
+    "sideEffects": false,
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
@@ -33,7 +34,7 @@
         "test:ci:multi:ent": "RIVER_ENV=local_multi yarn my-jest --group=with-entitlements --group=with-v2-entitlements",
         "test:ci:multi:ne": "RIVER_ENV=local_multi_ne yarn my-jest --group=main",
         "test:ci:with-entitlements": "yarn test:ci:multi:ent",
-        "watch": "tsc --watch"
+        "watch": "tsup --watch"
     },
     "dependencies": {
         "@bufbuild/protobuf": "^1.9.0",
