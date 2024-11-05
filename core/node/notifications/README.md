@@ -33,7 +33,7 @@ Every call expected the session token to be passed through the `Authorization` h
 If the session token is missing or invalid `Err_UNAUTHENTICATED` (code=16) is returned.
 
 ## Run service
-The river node has can be run in notification mode with the `notification` sub command.
+The river node has can be run in notification mode with the `notifications` sub command.
 
 It reads the streams from the stream registry contract and for streams that it needs to track
 it starts a stream sync session. It monitors these sync session and when a session goes down
