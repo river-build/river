@@ -7,17 +7,6 @@
     "files": [
         "dist"
     ],
-    "exports": {
-        "./*.json": {
-            "types": "./dist/*.d.ts",
-            "default": "./dist/*.json"
-        },
-        "./*": {
-            "types": "./dist/*.d.ts",
-            "default": "./dist/*.js"
-        },
-        "./package.json": "./package.json"
-    },
     "scripts": {
         "build": "tsup",
         "preinstall": "node ./scripts/make-config.cjs",

@@ -25,13 +25,6 @@
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "typings": "dist/index.d.ts",
-    "exports": {
-        ".": {
-            "types": "./dist/index.d.ts",
-            "default": "./dist/index.js"
-        },
-        "./package.json": "./package.json"
-    },
     "peerDependencies": {
         "@river-build/sdk": "workspace:^",
         "react": "^18.2.0"
