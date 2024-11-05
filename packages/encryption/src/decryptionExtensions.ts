@@ -120,7 +120,7 @@ export interface MlsCommit {
 export interface MlsInitializeGroup {
     tag: 'MlsInitializeGroup'
     streamId: string
-    userAddress: string
+    userAddress: Uint8Array
     deviceKey: Uint8Array
     groupInfoWithExternalKey: Uint8Array
 }
@@ -128,7 +128,7 @@ export interface MlsInitializeGroup {
 export interface MlsExternalJoin {
     tag: 'MlsExternalJoin'
     streamId: string
-    userAddress: string
+    userAddress: Uint8Array
     deviceKey: Uint8Array
     commit: Uint8Array
     groupInfoWithExternalKey: Uint8Array

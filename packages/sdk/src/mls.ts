@@ -27,6 +27,21 @@ type DerivedKeys = {
     publicKey: HpkePublicKey
 }
 
+function uint8ArrayEqual(a: Uint8Array, b: Uint8Array): boolean {
+    if (a === b) {
+        return true
+    }
+    if (a.length !== b.length) {
+        return false
+    }
+    for (const [i, byte] of a.entries()) {
+        if (byte !== b[i]) {
+            return false
+        }
+    }
+    return true
+}
+
 export class EpochKeyStore {
     private sealedEpochSecrets: Map<EpochIdentifier, HpkeCiphertext> = new Map()
     private openEpochSecrets: Map<EpochIdentifier, MlsSecret> = new Map()
@@ -231,14 +246,14 @@ export class GroupStore {
 
 export class MlsCrypto {
     private client!: MlsClient
-    private userAddress: string
+    private userAddress: Uint8Array
     public deviceKey: Uint8Array
     awaitingGroupActive: Map<string, { promise: Promise<void>; resolve: () => void }> = new Map()
     cipherSuite: MlsCipherSuite = new MlsCipherSuite()
     epochKeyStore = new EpochKeyStore(this.cipherSuite)
     groupStore: GroupStore = new GroupStore()
 
-    constructor(userAddress: string, deviceKey: Uint8Array) {
+    constructor(userAddress: Uint8Array, deviceKey: Uint8Array) {
         this.userAddress = userAddress
         this.deviceKey = deviceKey
     }
@@ -377,7 +392,7 @@ export class MlsCrypto {
 
     public async handleInitializeGroup(
         streamId: string,
-        userAddress: string,
+        userAddress: Uint8Array,
         deviceKey: Uint8Array,
         groupInfoWithExternalKey: Uint8Array,
     ): Promise<GroupStatus> {
@@ -401,9 +416,9 @@ export class MlsCrypto {
         const ourGroupInfoWithExternalKey = groupState.groupInfoWithExternalKey
 
         const ourOwnInitializeGroup: boolean =
-            userAddress === this.userAddress &&
-            deviceKey === this.deviceKey &&
-            groupInfoWithExternalKey === ourGroupInfoWithExternalKey
+            uint8ArrayEqual(userAddress, this.userAddress) &&
+            uint8ArrayEqual(deviceKey, this.deviceKey) &&
+            uint8ArrayEqual(groupInfoWithExternalKey, ourGroupInfoWithExternalKey)
 
         if (ourOwnInitializeGroup) {
             this.groupStore.setGroupState(streamId, {
@@ -425,7 +440,7 @@ export class MlsCrypto {
 
     public async handleExternalJoin(
         streamId: string,
-        userAddress: string,
+        userAddress: Uint8Array,
         deviceKey: Uint8Array,
         commit: Uint8Array,
         groupInfoWithExternalKey: Uint8Array,
@@ -449,10 +464,10 @@ export class MlsCrypto {
                 return 'GROUP_MISSING'
             case 'GROUP_PENDING_JOIN': {
                 const ownPendingJoin: boolean =
-                    userAddress === this.userAddress &&
-                    deviceKey === this.deviceKey &&
-                    commit === groupState.commit &&
-                    groupInfoWithExternalKey === groupState.groupInfoWithExternalKey
+                    uint8ArrayEqual(userAddress, this.userAddress) &&
+                    uint8ArrayEqual(deviceKey, this.deviceKey) &&
+                    uint8ArrayEqual(commit, groupState.commit) &&
+                    uint8ArrayEqual(groupInfoWithExternalKey, groupState.groupInfoWithExternalKey)
                 if (!ownPendingJoin) {
                     this.groupStore.clear(streamId)
                     return 'GROUP_MISSING'

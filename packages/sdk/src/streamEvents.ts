@@ -57,13 +57,13 @@ export type StreamEncryptionEvents = {
     mlsCommit: (streamId: string, commit: Uint8Array) => void
     mlsInitializeGroup: (
         streamId: string,
-        userAddress: string,
+        userAddress: Uint8Array,
         deviceKey: Uint8Array,
         groupInfoWithExternalKey: Uint8Array,
     ) => void
     mlsExternalJoin: (
         streamId: string,
-        userAddress: string,
+        userAddress: Uint8Array,
         deviceKey: Uint8Array,
         commit: Uint8Array,
         groupInfoWithExternalKey: Uint8Array,

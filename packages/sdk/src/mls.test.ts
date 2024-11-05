@@ -4,14 +4,17 @@
 
 import { MlsCrypto } from './mls'
 
-async function initializeCrypto(userAddress: string, deviceKey: Uint8Array): Promise<MlsCrypto> {
+async function initializeCrypto(
+    userAddress: Uint8Array,
+    deviceKey: Uint8Array,
+): Promise<MlsCrypto> {
     const crypto = new MlsCrypto(userAddress, deviceKey)
     await crypto.initialize()
     return crypto
 }
 
 async function initializeOtherGroup(
-    userAddress: string,
+    userAddress: Uint8Array,
     deviceKey: Uint8Array,
     streamId: string,
 ): Promise<Uint8Array> {
@@ -30,10 +33,10 @@ async function initializeOtherGroup(
 
 describe('CreateGroup', () => {
     const streamId = 'stream'
-    const userAddress = 'userAddress'
     const textEncoder = new TextEncoder()
+    const userAddress = textEncoder.encode('userAddress')
     const deviceKey = textEncoder.encode('deviceKey')
-    const otherAddress = 'other user'
+    const otherAddress = textEncoder.encode('other user')
     const otherDeviceKey = textEncoder.encode('other deviceKey')
 
     it('createGroup gets a group in a pending state', async () => {

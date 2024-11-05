@@ -93,7 +93,7 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
 
         const onMlsInitializeGroup = (
             streamId: string,
-            userAddress: string,
+            userAddress: Uint8Array,
             deviceKey: Uint8Array,
             groupInfoWithExternalKey: Uint8Array,
         ) =>
@@ -107,7 +107,7 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
 
         const onMlsExternalJoin = (
             streamId: string,
-            userAddress: string,
+            userAddress: Uint8Array,
             deviceKey: Uint8Array,
             commit: Uint8Array,
             groupInfoWithExternalKey: Uint8Array,

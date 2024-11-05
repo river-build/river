@@ -2190,7 +2190,7 @@ export class Client
         this.cryptoBackend = crypto
 
         const encoder = new TextEncoder()
-        const mlsCrypto = new MlsCrypto(this.userId, encoder.encode(this.userId))
+        const mlsCrypto = new MlsCrypto(addressFromUserId(this.userId), encoder.encode(this.userId))
         await mlsCrypto.initialize()
         this.mlsCrypto = mlsCrypto
 
