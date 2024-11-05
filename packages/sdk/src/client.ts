@@ -2382,6 +2382,10 @@ export class Client
         if (!this.mlsCrypto) {
             throw new Error('mls backend not initialized')
         }
+        const groupStatus = this.mlsCrypto.groupStore.getGroupStatus(streamId)
+
+
+
 
         if (!this.mlsCrypto.hasGroup(streamId)) {
             const stream = this.streams.get(streamId)
@@ -2494,7 +2498,7 @@ export class Client
                     setTimeout(resolve, ms)
                 })
             }
-            await this.mlsCrypto.externalJoinFailed(streamId)
+            // await this.mlsCrypto.externalJoinFailed(streamId)
             if (retry > 0) {
                 await asyncTimeout(1000) // should go back on the work stack
                 return await this.mls_joinGroup(streamId, retry - 1)

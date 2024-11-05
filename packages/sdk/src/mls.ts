@@ -233,7 +233,6 @@ export class GroupStore {
 export class MlsCrypto {
     private client!: MlsClient
     private userAddress: string
-    private groups: Map<string, MlsGroup> = new Map()
     public deviceKey: Uint8Array
     cipherSuite: MlsCipherSuite = new MlsCipherSuite()
     epochKeyStore = new EpochKeyStore(this.cipherSuite)
@@ -250,10 +249,11 @@ export class MlsCrypto {
 
     public async createGroup(streamId: string): Promise<Uint8Array> {
         const group = await this.client.createGroup()
-        this.groups.set(streamId, group)
-        const epochSecret = await group.currentEpochSecret()
-        this.epochKeyStore.addOpenEpochSecret(streamId, group.currentEpoch, epochSecret)
-        return (await group.groupInfoMessageAllowingExtCommit(true)).toBytes()
+        const groupInfoWithExternalKey = (
+            await group.groupInfoMessageAllowingExtCommit(true)
+        ).toBytes()
+        this.groupStore.addGroupViaCreate(streamId, group, groupInfoWithExternalKey)
+        return groupInfoWithExternalKey
     }
 
     public async encrypt(streamId: string, message: Uint8Array): Promise<EncryptedData> {
@@ -349,7 +349,7 @@ export class MlsCrypto {
     }
 
     public hasGroup(streamId: string): boolean {
-        return this.groups.has(streamId)
+        return this.groupStore.hasGroup(streamId)
     }
 
     public async handleInitializeGroup(
@@ -371,7 +371,7 @@ export class MlsCrypto {
         if (!groupState) {
             return 'GROUP_MISSING'
         }
-        if (groupState.state !== 'GROUP_PENDING_JOIN') {
+        if (groupState.state !== 'GROUP_PENDING_CREATE') {
             return groupState.state
         }
 
@@ -451,10 +451,13 @@ export class MlsCrypto {
     }
 
     public epochFor(streamId: string): bigint {
-        const group = this.groups.get(streamId)
-        if (!group) {
+        const groupState = this.groupStore.getGroup(streamId)
+        if (!groupState) {
             throw new Error('Group not found')
         }
-        return group.currentEpoch
+        if (groupState.state !== 'GROUP_ACTIVE') {
+            throw new Error('Group not in active state')
+        }
+        return groupState.group.currentEpoch
     }
 }
