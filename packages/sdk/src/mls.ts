@@ -425,9 +425,15 @@ export class MlsCrypto {
                 state: 'GROUP_ACTIVE',
                 group: groupState.group,
             })
+            // add a key to the epoch store
+            const epoch = groupState.group.currentEpoch
+            this.epochKeyStore.addOpenEpochSecret(
+                streamId,
+                epoch,
+                await groupState.group.currentEpochSecret(),
+            )
             // check if anyone is waiting for it
             this.awaitingGroupActive.get(streamId)?.resolve()
-
             return 'GROUP_ACTIVE'
         } else {
             // Someone else created a group
@@ -472,10 +478,18 @@ export class MlsCrypto {
                     this.groupStore.clear(streamId)
                     return 'GROUP_MISSING'
                 }
+
                 this.groupStore.setGroupState(streamId, {
                     state: 'GROUP_ACTIVE',
                     group: groupState.group,
                 })
+                // add a key to the epoch store
+                const epoch = groupState.group.currentEpoch
+                this.epochKeyStore.addOpenEpochSecret(
+                    streamId,
+                    epoch,
+                    await groupState.group.currentEpochSecret(),
+                )
                 this.awaitingGroupActive.get(streamId)?.resolve()
                 return 'GROUP_ACTIVE'
             }
