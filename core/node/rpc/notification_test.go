@@ -18,7 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	eth_crypto "github.com/ethereum/go-ethereum/crypto"
-	go_crypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/google/go-cmp/cmp"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/events"
@@ -850,7 +849,7 @@ func authorize[T any](
 	deviceWallet, err := crypto.NewWallet(ctx)
 	req.NoError(err)
 
-	devicePubKey := go_crypto.FromECDSAPub(&deviceWallet.PrivateKeyStruct.PublicKey)
+	devicePubKey := eth_crypto.FromECDSAPub(&deviceWallet.PrivateKeyStruct.PublicKey)
 
 	delegateExpiryEpochMs := 1000 * time.Now().Unix()
 	// create the delegate signature by signing it with the primary wallet

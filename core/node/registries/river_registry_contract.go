@@ -289,17 +289,6 @@ func (c *RiverRegistryContract) ForAllStreams(
 	blockNum crypto.BlockNumber,
 	cb func(*GetStreamResult) bool,
 ) error {
-	//callOpts := c.callOptsWithBlockNum(ctx, blockNum)
-	//streamID, _ := StreamIdFromString("204ace0a68bcf486ce25bde001cd8185685a8e24ba0000000000000000000000")
-	//stream, err := c.StreamRegistry.GetStream(callOpts, streamID)
-	//if err != nil {
-	//	return err
-	//}
-	//if !cb(makeGetStreamResult(streamID, &stream)) {
-	//	return nil
-	//}
-	//return nil
-
 	// TODO: setting
 	const pageSize = int64(1000)
 

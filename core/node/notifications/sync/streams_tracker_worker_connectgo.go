@@ -102,7 +102,7 @@ func (s *StreamTrackerConnectGo) Run(
 			MinipoolSlot:      0,
 			PrevMiniblockHash: common.Hash{}.Bytes(),
 		}}
-
+		
 		streamUpdates, err := client.SyncStreams(syncCtx, connect.NewRequest(&protocol.SyncStreamsRequest{
 			SyncPos: syncPos,
 		}))
@@ -189,6 +189,7 @@ func (s *StreamTrackerConnectGo) Run(
 					reset  = update.GetStream().GetSyncReset()
 					labels = prometheus.Labels{"reset": "false"}
 				)
+
 				if reset {
 					gotSyncResetUpdate.Store(true)
 					labels["reset"] = "true"
@@ -318,6 +319,16 @@ func (s *StreamTrackerConnectGo) liveness(
 			// is considered dead -> cancel it.
 			if !gotSyncResetUpdate.Load() {
 				cancelSyncSession()
+
+				// TODO: this loads the stream in the nodes cache and seem to be a workaround
+				// for an issue that no sync reset was received during the previous run.
+				if err := workerPool.Acquire(ctx, 1); err == nil {
+					_, _ = client.GetStream(ctx, connect.NewRequest(&protocol.GetStreamRequest{
+						StreamId: streamID[:],
+						Optional: false,
+					}))
+				}
+				workerPool.Release(1)
 				return
 			}
 

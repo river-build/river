@@ -231,19 +231,6 @@ func CreateAndValidatePgxPool(
 	return r, nil
 }
 
-func NewPostgresEventStore(
-	ctx context.Context,
-	poolInfo *PgxPoolInfo,
-	instanceId string,
-	metrics infra.MetricsFactory,
-) (*PostgresEventStore, error) {
-	store := &PostgresEventStore{}
-	if err := store.init(ctx, poolInfo, metrics, migrationsDir, "migrations"); err != nil {
-		return nil, AsRiverError(err).Func("NewPostgresEventStore")
-	}
-	return store, nil
-}
-
 type PostgresStatusResult struct {
 	TotalConns              int32         `json:"total_conns"`
 	AcquiredConns           int32         `json:"acquired_conns"`
