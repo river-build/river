@@ -4608,6 +4608,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@river-build/react-sdk@workspace:packages/react-sdk"
   dependencies:
+    "@river-build/sdk": "workspace:^"
     "@testing-library/react": ^14.2.1
     "@types/react": ^18.2.11
     "@types/react-dom": ^18.2.4
@@ -4618,6 +4619,7 @@ __metadata:
     eslint-plugin-react: ^7.32.2
     eslint-plugin-react-hooks: ^4.6.0
     ethers: ^5.7.2
+    react: ^18.2.0
     tsup: ^8.3.5
     typescript: ^5.1.6
   peerDependencies:
