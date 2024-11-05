@@ -57,6 +57,19 @@ func (s *Service) startNotificationMode(notifier push.MessageNotifier) error {
 		notifier,
 	)
 
+	err = s.runHttpServer()
+	if err != nil {
+		return AsRiverError(err).Message("Failed to run http server").LogError(s.defaultLogger)
+	}
+
+	s.mux.HandleFunc("/status", s.handleStatus)
+
+	if err := s.initNotificationHandlers(); err != nil {
+		return err
+	}
+
+	s.SetStatus("OK")
+
 	s.NotificationService, err = notifications.NewService(
 		s.serverCtx,
 		s.config.Notifications,
@@ -71,19 +84,8 @@ func (s *Service) startNotificationMode(notifier push.MessageNotifier) error {
 		return AsRiverError(err).Message("Failed to instantiate notification service").LogError(s.defaultLogger)
 	}
 
-	err = s.runHttpServer()
-	if err != nil {
-		return AsRiverError(err).Message("Failed to run http server").LogError(s.defaultLogger)
-	}
-
 	s.riverChain.StartChainMonitor(s.serverCtx)
 	s.NotificationService.Start(s.serverCtx)
-
-	if err := s.initNotificationHandlers(); err != nil {
-		return err
-	}
-
-	s.SetStatus("OK")
 
 	// Retrieve the TCP address of the listener
 	tcpAddr := s.listener.Addr().(*net.TCPAddr)
