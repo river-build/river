@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -822,6 +823,9 @@ func (s *PostgresStreamStore) readMiniblockCandidateTx(
 		hex.EncodeToString(blockHash.Bytes()), // avoid leading '0x'
 	).Scan(&miniblock)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, RiverError(Err_NOT_FOUND, "Miniblock candidate not found")
+		}
 		return nil, err
 	}
 	return miniblock, nil
@@ -840,7 +844,7 @@ func (s *PostgresStreamStore) WriteMiniblocks(
 	if len(miniblocks) == 0 {
 		return RiverError(Err_INTERNAL, "No miniblocks to write").Func("pg.WriteMiniblocks")
 	}
-	if prevMinipoolGeneration != miniblocks[0].Number-1 {
+	if prevMinipoolGeneration != miniblocks[0].Number {
 		return RiverError(Err_INTERNAL, "Previous minipool generation mismatch").Func("pg.WriteMiniblocks")
 	}
 	if newMinipoolGeneration != miniblocks[len(miniblocks)-1].Number+1 {
@@ -912,48 +916,78 @@ func (s *PostgresStreamStore) writeMiniblocksTx(
 		return err
 	}
 	if lastMbNumInStorage == nil {
-		return RiverError(Err_INTERNAL, "No blocks for the stream found in block storage")
+		return RiverError(
+			Err_INTERNAL,
+			"DB data consistency check failed: No blocks for the stream found in block storage",
+		)
 	}
 
 	if *lastMbNumInStorage+1 != prevMinipoolGeneration {
-		return RiverError(Err_INTERNAL, "Previous minipool generation mismatch", "lastMbInStorage", *lastMbNumInStorage)
+		return RiverError(
+			Err_INTERNAL,
+			"DB data consistency check failed: Previous minipool generation mismatch",
+			"lastMbInStorage",
+			*lastMbNumInStorage,
+		)
 	}
 
 	// Delete old minipool and check old data for consistency.
+	type mpRow struct {
+		generation int64
+		slot       int64
+	}
 	rows, _ := tx.Query(
 		ctx,
 		sqlForStream(
-			"DELETE FROM {{minipools}} WHERE stream_id = $1 RETURNING generation, slot_num ORDER BY generation ASC, slot_num ASC",
+			"DELETE FROM {{minipools}} WHERE stream_id = $1 RETURNING generation, slot_num",
 			streamId,
 		),
 		streamId,
 	)
-	expectedSlot := int64(-1)
-	var gen, slot int64
-	_, err = pgx.ForEachRow(rows, []any{&gen, &slot}, func() error {
-		if gen != prevMinipoolGeneration {
-			return RiverError(Err_INTERNAL, "Previous minipool generation mismatch", "generation", gen)
+	mpRows, err := pgx.CollectRows(
+		rows,
+		func(row pgx.CollectableRow) (mpRow, error) {
+			var gen, slot int64
+			err := row.Scan(&gen, &slot)
+			return mpRow{generation: gen, slot: slot}, err
+		},
+	)
+	if err != nil {
+		return err
+	}
+	slices.SortFunc(mpRows, func(a, b mpRow) int {
+		if a.generation != b.generation {
+			return int(a.generation - b.generation)
+		} else {
+			return int(a.slot - b.slot)
 		}
-		if slot != expectedSlot {
+	})
+	expectedSlot := int64(-1)
+	for _, mp := range mpRows {
+		if mp.generation != prevMinipoolGeneration {
 			return RiverError(
 				Err_INTERNAL,
-				"Previous minipool slot number mismatch",
+				"DB data consistency check failed: Minipool contains unexpected generation",
+				"generation",
+				mp.generation,
+			)
+		}
+		if mp.slot != expectedSlot {
+			return RiverError(
+				Err_INTERNAL,
+				"DB data consistency check failed: Minipool contains unexpected slot number",
 				"slot_num",
-				slot,
+				mp.slot,
 				"expected_slot_num",
 				expectedSlot,
 			)
 		}
 		expectedSlot++
-		return nil
-	})
-	if err != nil {
-		return err
 	}
-	if expectedSlot != int64(prevMinipoolSize) {
+	if prevMinipoolSize != -1 && expectedSlot != int64(prevMinipoolSize) {
 		return RiverError(
 			Err_INTERNAL,
-			"Previous minipool size mismatch",
+			"DB data consistency check failed: Previous minipool size mismatch",
 			"actual_size",
 			expectedSlot,
 		)
