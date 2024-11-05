@@ -56,8 +56,8 @@ import {
     UserDeviceCollection,
     makeSessionKeys,
     type EncryptionDeviceInitOpts,
-    MlsCommit,
-    MlsGroupInfo,
+    // MlsCommit,
+    // MlsGroupInfo,
     MlsInitializeGroup,
     MlsExternalJoin,
 } from '@river-build/encryption'
@@ -2503,54 +2503,54 @@ export class Client
         }
     }
 
-    public async mls_didReceiveCommit(args: MlsCommit) {
-        if (!this.mlsCrypto) {
-            throw new Error('mls backend not initialized')
-        }
-        const stream = this.streams.get(args.streamId)
-        if (!stream) {
-            throw new Error('stream not found')
-        }
-        try {
-            await this.mlsCrypto.handleCommit(args.streamId, args.commit)
-        } catch (error) {
-            console.log('Error handling commit', error)
-        }
+    // public async mls_didReceiveCommit(args: MlsCommit) {
+    //     if (!this.mlsCrypto) {
+    //         throw new Error('mls backend not initialized')
+    //     }
+    //     const stream = this.streams.get(args.streamId)
+    //     if (!stream) {
+    //         throw new Error('stream not found')
+    //     }
+    //     try {
+    //         await this.mlsCrypto.handleCommit(args.streamId, args.commit)
+    //     } catch (error) {
+    //         console.log('Error handling commit', error)
+    //     }
+    //
+    //     const epoch = this.mlsCrypto.epochFor(args.streamId)
+    //
+    //     const keys = this.mlsCrypto.keys.filter(
+    //         (key) => !stream.view.membershipContent.mls.keys.has(key.epoch),
+    //     )
+    //
+    //     try {
+    //         for (const key of keys) {
+    //             await this.makeEventAndAddToStream(
+    //                 args.streamId,
+    //                 make_MemberPayload_Mls({
+    //                     content: {
+    //                         case: 'keyAnnouncement',
+    //                         value: key,
+    //                     },
+    //                 }),
+    //             )
+    //             console.log('SENT Keys', key)
+    //         }
+    //     } catch (error) {
+    //         console.log('ERROR announcing key', error)
+    //     }
+    // }
 
-        const epoch = this.mlsCrypto.epochFor(args.streamId)
-
-        const keys = this.mlsCrypto.keys.filter(
-            (key) => !stream.view.membershipContent.mls.keys.has(key.epoch),
-        )
-
-        try {
-            for (const key of keys) {
-                await this.makeEventAndAddToStream(
-                    args.streamId,
-                    make_MemberPayload_Mls({
-                        content: {
-                            case: 'keyAnnouncement',
-                            value: key,
-                        },
-                    }),
-                )
-                console.log('SENT Keys', key)
-            }
-        } catch (error) {
-            console.log('ERROR announcing key', error)
-        }
-    }
-
-    public async mls_didReceiveGroupInfo({ streamId, groupInfo }: MlsGroupInfo): Promise<void> {
-        if (!this.mlsCrypto) {
-            throw new Error('mls backend not initialized')
-        }
-
-        const groupJoinResult = await this.mlsCrypto.handleGroupInfo(streamId, groupInfo)
-        if (groupJoinResult) {
-            console.log('Performing external join', groupJoinResult)
-        }
-    }
+    // public async mls_didReceiveGroupInfo({ streamId, groupInfo }: MlsGroupInfo): Promise<void> {
+    //     if (!this.mlsCrypto) {
+    //         throw new Error('mls backend not initialized')
+    //     }
+    //
+    //     const groupJoinResult = await this.mlsCrypto.handleGroupInfo(streamId, groupInfo)
+    //     if (groupJoinResult) {
+    //         console.log('Performing external join', groupJoinResult)
+    //     }
+    // }
 
     public async mls_didReceiveKeyAnnouncement(announcement: MlsKeyAnnouncement) {
         if (!this.mlsCrypto) {

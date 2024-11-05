@@ -8,9 +8,9 @@ import {
     KeyFulfilmentData,
     KeySolicitationContent,
     KeySolicitationData,
-    MlsCommit,
+    // MlsCommit,
     MlsExternalJoin,
-    MlsGroupInfo,
+    // MlsGroupInfo,
     MlsInitializeGroup,
     MlsJoinGroupEvent,
     MlsKeyAnnouncement,
@@ -85,11 +85,11 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
             }[],
         ) => this.enqueueInitKeySolicitations(streamId, members)
 
-        const onMlsGroupInfo = (streamId: string, groupInfo: Uint8Array) =>
-            this.enqueueMls({ tag: 'MlsGroupInfo', streamId, groupInfo })
-
-        const onMlsCommit = (streamId: string, commit: Uint8Array) =>
-            this.enqueueMls({ tag: 'MlsCommit', streamId, commit })
+        // const onMlsGroupInfo = (streamId: string, groupInfo: Uint8Array) =>
+        //     this.enqueueMls({ tag: 'MlsGroupInfo', streamId, groupInfo })
+        //
+        // const onMlsCommit = (streamId: string, commit: Uint8Array) =>
+        //     this.enqueueMls({ tag: 'MlsCommit', streamId, commit })
 
         const onMlsInitializeGroup = (
             streamId: string,
@@ -131,8 +131,8 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
         client.on('updatedKeySolicitation', onKeySolicitation)
         client.on('initKeySolicitations', onInitKeySolicitations)
         client.on('streamNewUserJoined', onMembershipChange)
-        client.on('mlsGroupInfo', onMlsGroupInfo)
-        client.on('mlsCommit', onMlsCommit)
+        // client.on('mlsGroupInfo', onMlsGroupInfo)
+        // client.on('mlsCommit', onMlsCommit)
         client.on('mlsInitializeGroup', onMlsInitializeGroup)
         client.on('mlsExternalJoin', onMlsExternalJoin)
         client.on('mlsKeyAnnouncement', onMlsKeyAnnouncement)
@@ -145,8 +145,8 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
             client.off('updatedKeySolicitation', onKeySolicitation)
             client.off('initKeySolicitations', onInitKeySolicitations)
             client.off('streamNewUserJoined', onMembershipChange)
-            client.off('mlsGroupInfo', onMlsGroupInfo)
-            client.off('mlsCommit', onMlsCommit)
+            // client.off('mlsGroupInfo', onMlsGroupInfo)
+            // client.off('mlsCommit', onMlsCommit)
             client.off('mlsInitializeGroup', onMlsInitializeGroup)
             client.off('mlsExternalJoin', onMlsExternalJoin)
             client.off('mlsKeyAnnouncement', onMlsKeyAnnouncement)
@@ -314,15 +314,15 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
         return { error }
     }
 
-    public async didReceiveMlsCommit(args: MlsCommit): Promise<void> {
-        console.log('didReceiveMlsCommit')
-        await this.client.mls_didReceiveCommit(args)
-    }
+    // public async didReceiveMlsCommit(args: MlsCommit): Promise<void> {
+    //     console.log('didReceiveMlsCommit')
+    //     await this.client.mls_didReceiveCommit(args)
+    // }
 
-    public async didReceiveMlsGroupInfo(args: MlsGroupInfo): Promise<void> {
-        console.log('didReceiveMlsGroupInfo')
-        await this.client.mls_didReceiveGroupInfo(args)
-    }
+    // public async didReceiveMlsGroupInfo(args: MlsGroupInfo): Promise<void> {
+    //     console.log('didReceiveMlsGroupInfo')
+    //     await this.client.mls_didReceiveGroupInfo(args)
+    // }
 
     public async didReceiveMlsInitializeGroup(args: MlsInitializeGroup): Promise<void> {
         console.log('didReceiveMlsInitializeGroup')

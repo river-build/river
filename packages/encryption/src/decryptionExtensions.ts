@@ -146,12 +146,9 @@ export interface MlsJoinGroupEvent {
 }
 
 export type MlsEncryptionEvent =
-    | MlsGroupInfo
-    | MlsCommit
-    | MlsInitializeGroup
-    | MlsExternalJoin
-    | MlsKeyAnnouncement
-    | MlsJoinGroupEvent
+    // | MlsGroupInfo
+    // | MlsCommit
+    MlsInitializeGroup | MlsExternalJoin | MlsKeyAnnouncement | MlsJoinGroupEvent
 
 /**
  *
@@ -259,8 +256,8 @@ export abstract class BaseDecryptionExtensions {
         args: KeyFulfilmentData,
     ): Promise<{ error?: AddEventResponse_Error }>
     public abstract encryptAndShareGroupSessions(args: GroupSessionsData): Promise<void>
-    public abstract didReceiveMlsGroupInfo(args: MlsGroupInfo): Promise<void>
-    public abstract didReceiveMlsCommit(args: MlsCommit): Promise<void>
+    // public abstract didReceiveMlsGroupInfo(args: MlsGroupInfo): Promise<void>
+    // public abstract didReceiveMlsCommit(args: MlsCommit): Promise<void>
     public abstract didReceiveMlsInitializeGroup(args: MlsInitializeGroup): Promise<void>
     public abstract didReceiveMlsExternalJoin(args: MlsExternalJoin): Promise<void>
     public abstract didReceiveMlsKeyAnnouncement(args: MlsKeyAnnouncement): Promise<void>
@@ -849,10 +846,10 @@ export abstract class BaseDecryptionExtensions {
     private async processMls(mls: MlsEncryptionEvent): Promise<void> {
         console.log('PROCESS MLS', mls)
         switch (mls.tag) {
-            case 'MlsCommit':
-                return this.didReceiveMlsCommit(mls)
-            case 'MlsGroupInfo':
-                return this.didReceiveMlsGroupInfo(mls)
+            // case 'MlsCommit':
+            //     return this.didReceiveMlsCommit(mls)
+            // case 'MlsGroupInfo':
+            //     return this.didReceiveMlsGroupInfo(mls)
             case 'MlsInitializeGroup':
                 return this.didReceiveMlsInitializeGroup(mls)
             case 'MlsExternalJoin':
