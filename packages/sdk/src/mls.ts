@@ -160,7 +160,11 @@ export class EpochKeyStore {
     }
 }
 
-type GroupStatus = 'GROUP_MISSING' | 'GROUP_PENDING_CREATE' | 'GROUP_PENDING_JOIN' | 'GROUP_ACTIVE'
+export type GroupStatus =
+    | 'GROUP_MISSING'
+    | 'GROUP_PENDING_CREATE'
+    | 'GROUP_PENDING_JOIN'
+    | 'GROUP_ACTIVE'
 
 type GroupState =
     | {
