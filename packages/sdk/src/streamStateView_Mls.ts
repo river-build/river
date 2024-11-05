@@ -56,14 +56,21 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
             case 'initializeGroup':
                 this.initialGroupInfo = payload.content.value.groupInfoWithExternalKey
                 this.latestGroupInfo = payload.content.value.groupInfoWithExternalKey
+                encryptionEmitter?.emit(
+                    'mlsInitializeGroup',
+                    this.streamId,
+                    payload.content.value.userAddress,
+                    payload.content.value.deviceKey,
+                    payload.content.value.groupInfoWithExternalKey,
+                )
                 break
             case 'commitLeave': {
-                const userId = userIdFromAddress(payload.content.value.userAddress)
-                delete this.deviceKeys[userId]
-                this.pendingLeaves.delete(payload.content.value.userAddress)
-                this.commits.push(payload.content.value.commit)
-                this.latestGroupInfo = payload.content.value.groupInfoWithExternalKey
-                this.emitCommit(payload.content.value.commit, encryptionEmitter)
+                // const userId = userIdFromAddress(payload.content.value.userAddress)
+                // delete this.deviceKeys[userId]
+                // this.pendingLeaves.delete(payload.content.value.userAddress)
+                // this.commits.push(payload.content.value.commit)
+                // this.latestGroupInfo = payload.content.value.groupInfoWithExternalKey
+                // this.emitCommit(payload.content.value.commit, encryptionEmitter)
                 break
             }
             case 'proposeLeave':
@@ -78,7 +85,14 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
                 this.deviceKeys[userId].deviceKeys.push(payload.content.value.deviceKey)
                 this.commits.push(payload.content.value.commit)
                 this.latestGroupInfo = payload.content.value.groupInfoWithExternalKey
-                this.emitCommit(payload.content.value.commit, encryptionEmitter)
+                encryptionEmitter?.emit(
+                    'mlsExternalJoin',
+                    this.streamId,
+                    payload.content.value.userAddress,
+                    payload.content.value.deviceKey,
+                    payload.content.value.commit,
+                    payload.content.value.groupInfoWithExternalKey,
+                )
                 break
             }
             case 'keyAnnouncement':
@@ -101,10 +115,10 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
         //
     }
 
-    private emitCommit(
-        commit: Uint8Array,
-        encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
-    ) {
-        encryptionEmitter?.emit('mlsCommit', this.streamId, commit)
-    }
+    // private emitCommit(
+    //     commit: Uint8Array,
+    //     encryptionEmitter: TypedEmitter<StreamEncryptionEvents> | undefined,
+    // ) {
+    //     encryptionEmitter?.emit('mlsCommit', this.streamId, commit)
+    // }
 }
