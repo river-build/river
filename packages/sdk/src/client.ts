@@ -2377,41 +2377,85 @@ export class Client
         return this.cryptoBackend.encryptGroupEvent(streamId, cleartext)
     }
 
+    async mls_joinOrCreateGroup(streamId: string): Promise<void> {
+        if (!this.mlsCrypto) {
+            throw new Error('mls backend not initialized')
+        }
+
+        if (this.mlsCrypto.groupStore.getGroupStatus(streamId) !== 'GROUP_MISSING') {
+            return
+        }
+
+        const stream = this.streams.get(streamId)
+        if (!stream) {
+            throw new Error('stream not found')
+        }
+        const latestGroupInfo = stream.view.membershipContent.mls.latestGroupInfo
+        if (!latestGroupInfo) {
+            // join via group create
+            const groupInfoWithExternalKey = await this.mlsCrypto.createGroup(streamId)
+            const deviceKey = this.mlsCrypto.deviceKey
+            await this.makeEventAndAddToStream(
+                streamId,
+                make_MemberPayload_Mls({
+                    content: {
+                        case: 'initializeGroup',
+                        value: {
+                            groupInfoWithExternalKey: groupInfoWithExternalKey,
+                            userAddress: addressFromUserId(this.userId),
+                            deviceKey: deviceKey,
+                        },
+                    },
+                }),
+            )
+        } else {
+            // join via external join
+            const groupJoinResult = await this.mlsCrypto.externalJoin(streamId, latestGroupInfo)
+            await this.makeEventAndAddToStream(
+                streamId,
+                make_MemberPayload_Mls({
+                    content: {
+                        case: 'externalJoin',
+                        value: {
+                            userAddress: addressFromUserId(this.userId),
+                            deviceKey: this.mlsCrypto.deviceKey,
+                            groupInfoWithExternalKey: groupJoinResult.groupInfo,
+                            commit: groupJoinResult.commit,
+                            epoch: groupJoinResult.epoch,
+                        },
+                    },
+                }),
+            )
+        }
+    }
+
     // Encrypt event using MLS.
     async encryptGroupEventMls(event: Message, streamId: string): Promise<EncryptedData> {
         if (!this.mlsCrypto) {
             throw new Error('mls backend not initialized')
         }
+        if (this.mlsCrypto.groupStore.getGroupStatus(streamId) === 'GROUP_MISSING') {
+            await this.mls_joinOrCreateGroup(streamId)
+        }
+        // NOTE: We recheck the group status
         const groupStatus = this.mlsCrypto.groupStore.getGroupStatus(streamId)
+        if (groupStatus !== 'GROUP_ACTIVE') {
+            await this.mlsCrypto.awaitGroupActive(streamId)
+        }
 
+        // Get group
+        const groupState = this.mlsCrypto.groupStore.getGroup(streamId)
+        if (!groupState) {
+            throw new Error('group not found')
+        }
 
-
-
-        if (!this.mlsCrypto.hasGroup(streamId)) {
-            const stream = this.streams.get(streamId)
-            if (!stream) {
-                throw new Error('stream not found')
-            }
-            if (stream.view.membershipContent.mls.latestGroupInfo) {
-                await this.mls_joinGroup(streamId)
-            } else {
-                const groupInfo = await this.mlsCrypto.createGroup(streamId)
-                const deviceKey = this.mlsCrypto.deviceKey
-
-                await this.makeEventAndAddToStream(
-                    streamId,
-                    make_MemberPayload_Mls({
-                        content: {
-                            case: 'initializeGroup',
-                            value: {
-                                groupInfoWithExternalKey: groupInfo,
-                                userAddress: addressFromUserId(this.userId),
-                                deviceKey: deviceKey,
-                            },
-                        },
-                    }),
-                )
-            }
+        // Ensure epoch keys are derived
+        const keyStatus = await this.mlsCrypto.epochKeyStore.tryDeriveKeys(
+            streamId,
+            groupState.group.currentEpoch,
+        )
+        if (keyStatus !== 'EPOCH_KEY_DERIVED') {
+            throw new Error('epoch keys not derived')
         }
 
         const plaintext = event.toJsonString()
@@ -2458,55 +2502,55 @@ export class Client
         await this.rpcClient.info({ debug: ['drop_stream', syncId, streamId] })
     }
 
-    public async mls_joinGroup(streamId: string, retry: number = 5): Promise<void> {
-        if (!this.mlsCrypto) {
-            throw new Error('mls backend not initialized')
-        }
-        if (this.mlsCrypto.hasGroup(streamId)) {
-            return
-        }
-        const stream = this.streams.get(streamId)
-        if (!stream) {
-            throw new Error('stream not found')
-        }
-
-        const latestGroupInfo = stream.view.membershipContent.mls.latestGroupInfo
-        if (!latestGroupInfo) {
-            throw new Error('latestGroupInfo not found')
-        }
-
-        const groupJoinResult = await this.mlsCrypto.externalJoin(streamId, latestGroupInfo)
-        try {
-            await this.makeEventAndAddToStream(
-                streamId,
-                make_MemberPayload_Mls({
-                    content: {
-                        case: 'externalJoin',
-                        value: {
-                            userAddress: addressFromUserId(this.userId),
-                            deviceKey: this.mlsCrypto.deviceKey,
-                            groupInfoWithExternalKey: groupJoinResult.groupInfo,
-                            commit: groupJoinResult.commit,
-                            epoch: groupJoinResult.epoch,
-                        },
-                    },
-                }),
-            )
-        } catch (error) {
-            const asyncTimeout = (ms: number) => {
-                return new Promise((resolve) => {
-                    setTimeout(resolve, ms)
-                })
-            }
-            // await this.mlsCrypto.externalJoinFailed(streamId)
-            if (retry > 0) {
-                await asyncTimeout(1000) // should go back on the work stack
-                return await this.mls_joinGroup(streamId, retry - 1)
-            } else {
-                throw error
-            }
-        }
-    }
+    // public async mls_joinGroup(streamId: string, retry: number = 5): Promise<void> {
+    //     if (!this.mlsCrypto) {
+    //         throw new Error('mls backend not initialized')
+    //     }
+    //     if (this.mlsCrypto.hasGroup(streamId)) {
+    //         return
+    //     }
+    //     const stream = this.streams.get(streamId)
+    //     if (!stream) {
+    //         throw new Error('stream not found')
+    //     }
+    //
+    //     const latestGroupInfo = stream.view.membershipContent.mls.latestGroupInfo
+    //     if (!latestGroupInfo) {
+    //         throw new Error('latestGroupInfo not found')
+    //     }
+    //
+    //     const groupJoinResult = await this.mlsCrypto.externalJoin(streamId, latestGroupInfo)
+    //     try {
+    //         await this.makeEventAndAddToStream(
+    //             streamId,
+    //             make_MemberPayload_Mls({
+    //                 content: {
+    //                     case: 'externalJoin',
+    //                     value: {
+    //                         userAddress: addressFromUserId(this.userId),
+    //                         deviceKey: this.mlsCrypto.deviceKey,
+    //                         groupInfoWithExternalKey: groupJoinResult.groupInfo,
+    //                         commit: groupJoinResult.commit,
+    //                         epoch: groupJoinResult.epoch,
+    //                     },
+    //                 },
+    //             }),
+    //         )
+    //     } catch (error) {
+    //         const asyncTimeout = (ms: number) => {
+    //             return new Promise((resolve) => {
+    //                 setTimeout(resolve, ms)
+    //             })
+    //         }
+    //         // await this.mlsCrypto.externalJoinFailed(streamId)
+    //         if (retry > 0) {
+    //             await asyncTimeout(1000) // should go back on the work stack
+    //             return await this.mls_joinGroup(streamId, retry - 1)
+    //         } else {
+    //             throw error
+    //         }
+    //     }
+    // }
 
     // public async mls_didReceiveCommit(args: MlsCommit) {
     //     if (!this.mlsCrypto) {
@@ -2564,10 +2608,20 @@ export class Client
         await this.mlsCrypto.handleKeyAnnouncement(announcement.streamId, announcement.key)
     }
 
-    public async mls_didReceiveInitializeGroup(_group: MlsInitializeGroup): Promise<void> {
+    public async mls_didReceiveInitializeGroup(group: MlsInitializeGroup): Promise<void> {
         if (!this.mlsCrypto) {
             throw new Error('mls backend not initialized')
         }
+
+        const streamId = group.streamId
+        const before = this.mlsCrypto.groupStore.getGroupStatus(streamId)
+        const after = await this.mlsCrypto?.handleInitializeGroup(
+            group.streamId,
+            group.userAddress,
+            group.deviceKey,
+            group.groupInfoWithExternalKey,
+        )
+        console.log(`Initialize Group ${before} -> ${after} @ ${streamId}`)
     }
 
     public async mls_didReceiveExternalJoin(externalJoin: MlsExternalJoin): Promise<void> {

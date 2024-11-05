@@ -341,7 +341,7 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
 
     public async didReceiveMlsJoinGroupEvent(args: MlsJoinGroupEvent): Promise<void> {
         console.log('didReceiveMlsJoinGroupEvent')
-        await this.client.mls_joinGroup(args.streamId)
+        await this.client.mls_joinOrCreateGroup(args.streamId)
     }
 
     public async uploadDeviceKeys(): Promise<void> {
