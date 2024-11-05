@@ -311,6 +311,7 @@ jobs:
                     # Maps tcp port 5433 on service container to the host
                     - 5433:5432
                 options: >-
+                    --log_statement=all
                     --health-cmd pg_isready
                     --health-interval 10s
                     --health-timeout 5s
@@ -421,6 +422,10 @@ jobs:
 
             - name: Run Stress Test Demo (node) (with entitlements)
               run: ./packages/stress/scripts/localhost_demo.sh
+
+            - name: Postgres logs
+              if: always() # run even on failure
+              run: docker logs "${{ job.services.postgres-core.id }}"
 
             - name: Archive River Node Logs and Settings
               if: always()
@@ -551,6 +556,10 @@ jobs:
             - name: Run River Tests Against Legacy Spaces (with entitlements)
               run: yarn workspace @river-build/sdk run test:ci:multi:ent:legacy
 
+            - name: Postgres logs
+              if: always() # run even on failure
+              run: docker logs "${{ job.services.postgres-core.id }}"
+
             - name: Archive River Node Logs and Settings
               if: always()
               uses: actions/upload-artifact@v4
@@ -656,6 +665,10 @@ jobs:
             - name: Run node tests
               run: go test -race -timeout 12m ./...
               working-directory: core
+
+            - name: Postgres logs
+              if: always() # run even on failure
+              run: docker logs "${{ job.services.postgres-core.id }}"
 
     XChain_Integration:
         permissions: write-all
