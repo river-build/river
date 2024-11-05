@@ -21,6 +21,7 @@ import {
     twoNftRuleData,
     waitFor,
     createRole,
+    createSpaceAndDefaultChannel,
 } from './util.test'
 import { dlog } from '@river-build/dlog'
 import { MembershipOp } from '@river-build/proto'
@@ -170,24 +171,28 @@ describe('spaceWithEntitlements', () => {
     test('user with banning permission can ban other users', async () => {
         log('start user with banning permission can ban other users')
         const {
-            alice,
             bob,
-            carol,
-            bobSpaceDapp,
             bobProvider,
+            bobSpaceDapp,
+            alice,
             aliceSpaceDapp,
             aliceProvider,
             alicesWallet,
-            spaceId,
-            channelId,
-            carolSpaceDapp,
-            carolProvider,
+            carol,
             carolsWallet,
-        } = await createTownWithRequirements({
-            everyone: true,
-            users: [],
-            ruleData: NoopRuleData,
-        })
+            carolProvider,
+            carolSpaceDapp,
+        } = await setupWalletsAndContexts()
+
+        const everyoneMembership = await everyoneMembershipStruct(bobSpaceDapp, bob)
+
+        const { spaceId, defaultChannelId: channelId } = await createSpaceAndDefaultChannel(
+            bob,
+            bobSpaceDapp,
+            bobProvider.wallet,
+            "bob's town",
+            everyoneMembership,
+        )
 
         log('Alice should be able to join space')
         await expectUserCanJoin(
