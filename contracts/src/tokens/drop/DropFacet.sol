@@ -129,6 +129,7 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
     return _getActiveConditionId(DropStorage.layout());
   }
 
+  ///@inheritdoc IDropFacet
   function getClaimConditions()
     external
     view
