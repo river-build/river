@@ -119,11 +119,11 @@ enum DmChannelSettingValue {
 enum GdmChannelSettingValue {
   // GDM_UNSPECIFIED not set, assumes GDM_MESSAGES_ALL as a default.
   GDM_UNSPECIFIED = 0;
-  // GDM_NO_MESSAGES indicates that the user will not receive notifications for GDM channels.
-  GDM_NO_MESSAGES = 1;
-  // GDM_NO_MESSAGES_AND_MUTE indicates that the user doesn't want to receive notifications for GDM channels
+  // GDM_MESSAGES_NO indicates that the user will not receive notifications for GDM channels.
+  GDM_MESSAGES_NO = 1;
+  // GDM_MESSAGES_NO_AND_MUTE indicates that the user doesn't want to receive notifications for GDM channels
   // and the UI should not render any feedback that a message was received.
-  GDM_NO_MESSAGES_AND_MUTE = 2;
+  GDM_MESSAGES_NO_AND_MUTE = 2;
   // GDM_ONLY_MENTIONS_REPLIES_REACTIONS indicates that the user receives notifications for messages added to
   // GDM channels that are either a direct reply or a reaction to his own messages.
   GDM_ONLY_MENTIONS_REPLIES_REACTIONS = 3;

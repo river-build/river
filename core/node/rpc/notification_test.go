@@ -87,22 +87,22 @@ func testGDMMessageWithNoMentionsRepliesAndReaction(
 
 	// member disabled all GDM messages on the global level and should not get a notification
 	member := test.members[1]
-	test.setGlobalGDMSetting(ctx, member, GdmChannelSettingValue_GDM_NO_MESSAGES)
+	test.setGlobalGDMSetting(ctx, member, GdmChannelSettingValue_GDM_MESSAGES_NO)
 	delete(expectedUsersToReceiveNotification, member.Address)
 
 	// member disabled GDM message on this particular channel and should not get a notification
 	member = test.members[2]
-	test.setGDMChannelSetting(ctx, member, GdmChannelSettingValue_GDM_NO_MESSAGES)
+	test.setGDMChannelSetting(ctx, member, GdmChannelSettingValue_GDM_MESSAGES_NO)
 	delete(expectedUsersToReceiveNotification, member.Address)
 
 	// member disabled all GDM messages on the global level and should not get a notification
 	member = test.members[3]
-	test.setGlobalGDMSetting(ctx, member, GdmChannelSettingValue_GDM_NO_MESSAGES_AND_MUTE)
+	test.setGlobalGDMSetting(ctx, member, GdmChannelSettingValue_GDM_MESSAGES_NO_AND_MUTE)
 	delete(expectedUsersToReceiveNotification, member.Address)
 
 	// member disabled GDM message on this particular channel and should not get a notification
 	member = test.members[4]
-	test.setGDMChannelSetting(ctx, member, GdmChannelSettingValue_GDM_NO_MESSAGES_AND_MUTE)
+	test.setGDMChannelSetting(ctx, member, GdmChannelSettingValue_GDM_MESSAGES_NO_AND_MUTE)
 	delete(expectedUsersToReceiveNotification, member.Address)
 
 	// member only wants a notification for GDM message he is mentioned or are a reply/reaction to his own message

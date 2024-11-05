@@ -247,9 +247,9 @@ func (up *UserPreferences) WantsNotificationForGDMMessage(
 		return mentioned ||
 			(isParticipating && msgInteractionType == MessageInteractionType_MESSAGE_INTERACTION_TYPE_REACTION) ||
 			(isParticipating && msgInteractionType == MessageInteractionType_MESSAGE_INTERACTION_TYPE_REPLY)
-	case GdmChannelSettingValue_GDM_NO_MESSAGES: // disabled notifications for all GDM channels
+	case GdmChannelSettingValue_GDM_MESSAGES_NO: // disabled notifications for all GDM channels
 		return false
-	case GdmChannelSettingValue_GDM_NO_MESSAGES_AND_MUTE: // disabled notifications for all GDM channels
+	case GdmChannelSettingValue_GDM_MESSAGES_NO_AND_MUTE: // disabled notifications for all GDM channels
 		return false
 	case GdmChannelSettingValue_GDM_UNSPECIFIED:
 		return false
