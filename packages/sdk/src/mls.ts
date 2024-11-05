@@ -239,9 +239,9 @@ export class MlsCrypto {
     epochKeyStore = new EpochKeyStore(this.cipherSuite)
     groupStore: GroupStore = new GroupStore()
 
-    constructor(userAddress: string) {
+    constructor(userAddress: string, deviceKey: Uint8Array) {
         this.userAddress = userAddress
-        this.deviceKey = hexToBytes(userAddress)
+        this.deviceKey = deviceKey
     }
 
     async initialize() {
