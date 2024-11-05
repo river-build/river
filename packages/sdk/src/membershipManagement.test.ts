@@ -28,7 +28,7 @@ import { makeBaseChainConfig } from './riverConfig'
 const log = dlog('csb:test:membershipManagement')
 
 describe('membershipManagement', () => {
-    test('annoint memberships', async () => {
+    test('anoint memberships', async () => {
         // make a space and mint some memberships for friends
 
         log('start')
@@ -82,7 +82,7 @@ describe('membershipManagement', () => {
         const receipt = await transaction.wait()
         log('transaction receipt')
         expect(receipt.status).toEqual(1)
-        const spaceAddress = spaceDapp.getSpaceAddress(receipt)
+        const spaceAddress = spaceDapp.getSpaceAddress(receipt, bobProvider.wallet.address)
         expect(spaceAddress).toBeDefined()
         const spaceId = makeSpaceStreamId(spaceAddress!)
         expect(isValidStreamId(spaceId)).toBe(true)

@@ -47,7 +47,7 @@ export interface CreateSpaceParams {
     prepaySupply?: number
 }
 
-export interface UpdateChannelParams {
+export interface UpdateChannelMetadataParams {
     spaceId: string
     channelId: string
     channelName: string
@@ -55,6 +55,14 @@ export interface UpdateChannelParams {
     roleIds: number[]
     disabled?: boolean
 }
+
+export interface UpdateChannelStatusParams {
+    spaceId: string
+    channelId: string
+    disabled: boolean
+}
+
+export type UpdateChannelParams = UpdateChannelMetadataParams | UpdateChannelStatusParams
 
 export interface RemoveChannelParams {
     spaceId: string
@@ -234,7 +242,7 @@ export interface ISpaceDapp {
         logs: ethers.providers.Log[],
     ) => Promise<(ethers.utils.LogDescription | undefined)[]>
     updateChannel: (
-        params: UpdateChannelParams,
+        params: UpdateChannelMetadataParams,
         signer: SignerType,
         txnOpts?: TransactionOpts,
     ) => Promise<TransactionType>
@@ -299,7 +307,7 @@ export interface ISpaceDapp {
     getMembershipSupply: (spaceId: string) => Promise<TotalSupplyInfo>
     getMembershipInfo: (spaceId: string) => Promise<MembershipInfo>
     getWalletLink: () => WalletLinkV3
-    getSpaceAddress: (receipt: ContractReceipt) => string | undefined
+    getSpaceAddress: (receipt: ContractReceipt, senderAddress: string) => string | undefined
     listPricingModules: () => Promise<PricingModuleStruct[]>
     setMembershipPrice: (
         spaceId: string,

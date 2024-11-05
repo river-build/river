@@ -23,6 +23,7 @@ import { ethers } from 'ethers'
 import { makeStreamRpcClient, type MakeRpcClientType } from '../makeStreamRpcClient'
 import type { EncryptionDeviceInitOpts } from '@river-build/encryption'
 import { Gdms, type GdmsModel } from './gdms/gdms'
+import { Dms, DmsModel } from './dms/dms'
 
 export interface SyncAgentConfig {
     context: SignerContext
@@ -35,6 +36,7 @@ export interface SyncAgentConfig {
     baseProvider?: ethers.providers.Provider
     makeRpcClient?: MakeRpcClientType
     encryptionDevice?: EncryptionDeviceInitOpts
+    onTokenExpired?: () => void
 }
 
 export class SyncAgent {
@@ -45,6 +47,7 @@ export class SyncAgent {
     user: User
     spaces: Spaces
     gdms: Gdms
+    dms: Dms
     private stopped = false
 
     // flattened observables - just pointers to the observable objects in the models
@@ -59,6 +62,7 @@ export class SyncAgent {
         userMetadata: PersistedObservable<UserMetadataModel>
         userSettings: PersistedObservable<UserSettingsModel>
         gdms: PersistedObservable<GdmsModel>
+        dms: PersistedObservable<DmsModel>
     }
 
     constructor(config: SyncAgentConfig) {
@@ -87,12 +91,14 @@ export class SyncAgent {
                 highPriorityStreamIds: this.config.highPriorityStreamIds,
                 rpcRetryParams: config.retryParams,
                 encryptionDevice: config.encryptionDevice,
+                onTokenExpired: config.onTokenExpired,
             },
         )
 
         this.user = new User(this.userId, this.store, this.riverConnection)
         this.spaces = new Spaces(this.store, this.riverConnection, this.user.memberships, spaceDapp)
         this.gdms = new Gdms(this.store, this.riverConnection, this.user.memberships)
+        this.dms = new Dms(this.store, this.riverConnection, this.user.memberships)
         // flatten out the observables
         this.observables = {
             riverAuthStatus: this.riverConnection.authStatus,
@@ -105,6 +111,7 @@ export class SyncAgent {
             userMetadata: this.user.deviceKeys,
             userSettings: this.user.settings,
             gdms: this.gdms,
+            dms: this.dms,
         }
     }
 
