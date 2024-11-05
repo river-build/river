@@ -60,7 +60,7 @@ func createSettingsTable(store *PostgresStreamStore, partitions int) txnFn {
 			return err
 		}
 
-		log.Info("Inserting config partitions", partitions)
+		log.Info("Inserting config partitions", "partitions", partitions)
 		tags, err := tx.Exec(
 			ctx,
 			`INSERT INTO settings (single_row_key, num_partitions) VALUES (true, $1)
