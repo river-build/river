@@ -156,8 +156,7 @@ abstract contract DropFacetBase is IDropFacetBase {
 
   function _setClaimConditions(
     DropStorage.Layout storage ds,
-    ClaimCondition[] calldata conditions,
-    bool resetEligibility
+    ClaimCondition[] calldata conditions
   ) internal {
     // get the existing claim condition count and start id
     (uint48 existingStartId, uint48 existingConditionCount) = (
@@ -169,10 +168,6 @@ abstract contract DropFacetBase is IDropFacetBase {
     /// which ends up resetting the eligibility of the claim conditions in `supplyClaimedByWallet`.
     uint48 newStartId = existingStartId;
     uint48 newConditionCount = SafeCastLib.toUint48(conditions.length);
-    if (resetEligibility) {
-      // Use highest condition id + 1 as the new start id when resetting
-      newStartId = ds.highestConditionId + 1;
-    }
 
     uint48 lastConditionTimestamp;
     for (uint48 i; i < newConditionCount; ++i) {
@@ -207,21 +202,13 @@ abstract contract DropFacetBase is IDropFacetBase {
       ds.highestConditionId = SafeCastLib.toUint48(lastConditionId);
     }
 
-    // if resetEligibility is true, we assign new uids to the claim conditions
-    // so we delete claim conditions with UID < newStartId
-    if (resetEligibility) {
-      for (uint48 i = existingStartId; i < newStartId; i++) {
-        delete ds.conditionById[i];
-      }
-    } else {
-      if (existingConditionCount > newConditionCount) {
-        for (uint256 i = newConditionCount; i < existingConditionCount; i++) {
-          delete ds.conditionById[newStartId + i];
-        }
+    if (existingConditionCount > newConditionCount) {
+      for (uint256 i = newConditionCount; i < existingConditionCount; i++) {
+        delete ds.conditionById[newStartId + i];
       }
     }
 
-    emit DropFacet_ClaimConditionsUpdated(conditions, resetEligibility);
+    emit DropFacet_ClaimConditionsUpdated(conditions);
   }
 
   function _updateClaimCondition(

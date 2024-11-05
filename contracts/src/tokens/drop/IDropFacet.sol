@@ -55,10 +55,7 @@ interface IDropFacetBase {
     uint256 amount
   );
 
-  event DropFacet_ClaimConditionsUpdated(
-    ClaimCondition[] conditions,
-    bool resetEligibility
-  );
+  event DropFacet_ClaimConditionsUpdated(ClaimCondition[] conditions);
 
   event DropFacet_ClaimConditionAdded(ClaimCondition condition);
 
@@ -84,11 +81,7 @@ interface IDropFacetBase {
 interface IDropFacet is IDropFacetBase {
   /// @notice Sets the claim conditions for the drop
   /// @param conditions An array of ClaimCondition structs defining the conditions
-  /// @param resetEligibility If true, resets the eligibility for all wallets under the new conditions
-  function setClaimConditions(
-    ClaimCondition[] calldata conditions,
-    bool resetEligibility
-  ) external;
+  function setClaimConditions(ClaimCondition[] calldata conditions) external;
 
   /// @notice Adds a new claim condition
   /// @param condition The ClaimCondition struct defining the condition

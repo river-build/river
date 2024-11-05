@@ -100,11 +100,10 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
 
   ///@inheritdoc IDropFacet
   function setClaimConditions(
-    ClaimCondition[] calldata conditions,
-    bool resetEligibility
+    ClaimCondition[] calldata conditions
   ) external onlyOwner {
     DropStorage.Layout storage ds = DropStorage.layout();
-    _setClaimConditions(ds, conditions, resetEligibility);
+    _setClaimConditions(ds, conditions);
   }
 
   ///@inheritdoc IDropFacet
