@@ -215,8 +215,6 @@ contract SpaceDelegationFacet is
     address space,
     address currentOperator
   ) internal {
-    if (currentOperator == address(0)) return;
-
     StakingRewards.Layout storage staking = RewardsDistributionStorage
       .layout()
       .staking;
@@ -229,10 +227,12 @@ contract SpaceDelegationFacet is
     uint256 reward = spaceTreasure.unclaimedRewardSnapshot;
     if (reward == 0) return;
 
-    StakingRewards.Treasure storage operatorTreasure = staking
-      .treasureByBeneficiary[currentOperator];
-
-    operatorTreasure.unclaimedRewardSnapshot += reward;
+    // forfeit the rewards if the space has undelegated
+    if (currentOperator != address(0)) {
+      StakingRewards.Treasure storage operatorTreasure = staking
+        .treasureByBeneficiary[currentOperator];
+      operatorTreasure.unclaimedRewardSnapshot += reward;
+    }
     spaceTreasure.unclaimedRewardSnapshot = 0;
 
     emit SpaceRewardsSwept(space, currentOperator, reward);
