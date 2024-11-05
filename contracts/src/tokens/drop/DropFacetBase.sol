@@ -154,6 +154,16 @@ abstract contract DropFacetBase is IDropFacetBase {
     emit DropFacet_ClaimConditionAdded(newCondition);
   }
 
+  function _getClaimConditions(
+    DropStorage.Layout storage ds
+  ) internal view returns (ClaimCondition[] memory conditions) {
+    conditions = new ClaimCondition[](ds.conditionCount);
+    for (uint48 i; i < ds.conditionCount; ++i) {
+      conditions[i] = ds.conditionById[ds.conditionStartId + i];
+    }
+    return conditions;
+  }
+
   function _setClaimConditions(
     DropStorage.Layout storage ds,
     ClaimCondition[] calldata conditions

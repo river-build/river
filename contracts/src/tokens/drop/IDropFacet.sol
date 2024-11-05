@@ -79,6 +79,10 @@ interface IDropFacetBase {
 }
 
 interface IDropFacet is IDropFacetBase {
+  /// @notice Gets all claim conditions
+  /// @return An array of ClaimCondition structs
+  function getClaimConditions() external view returns (ClaimCondition[] memory);
+
   /// @notice Sets the claim conditions for the drop
   /// @param conditions An array of ClaimCondition structs defining the conditions
   function setClaimConditions(ClaimCondition[] calldata conditions) external;

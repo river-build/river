@@ -768,6 +768,37 @@ contract DropFacetTest is
     dropFacet.setClaimConditions(conditions);
   }
 
+  // getClaimConditions
+  function test_getClaimConditions(
+    uint16 penaltyBps
+  ) external givenTokensMinted(TOTAL_TOKEN_AMOUNT) {
+    ClaimCondition[] memory currentConditions = dropFacet.getClaimConditions();
+    assertEq(currentConditions.length, 0);
+
+    ClaimCondition[] memory conditions = new ClaimCondition[](1);
+    conditions[0] = _createClaimCondition(
+      block.timestamp,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
+    conditions[0].penaltyBps = penaltyBps;
+
+    vm.prank(deployer);
+    dropFacet.setClaimConditions(conditions);
+
+    currentConditions = dropFacet.getClaimConditions();
+    assertEq(currentConditions.length, 1);
+    assertEq(currentConditions[0].startTimestamp, conditions[0].startTimestamp);
+    assertEq(currentConditions[0].endTimestamp, conditions[0].endTimestamp);
+    assertEq(
+      currentConditions[0].maxClaimableSupply,
+      conditions[0].maxClaimableSupply
+    );
+    assertEq(currentConditions[0].supplyClaimed, conditions[0].supplyClaimed);
+    assertEq(currentConditions[0].merkleRoot, conditions[0].merkleRoot);
+    assertEq(currentConditions[0].penaltyBps, penaltyBps);
+  }
+
   // addClaimCondition
   function test_addClaimCondition()
     external
