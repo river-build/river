@@ -4493,7 +4493,7 @@ __metadata:
   resolution: "@river-build/generated@workspace:packages/generated"
   dependencies:
     "@ethersproject/providers": 5.7.2
-    ethers: 5.7.2
+    ethers: ^5.7.2
     tsup: ^8.3.5
   languageName: unknown
   linkType: soft
@@ -11507,7 +11507,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ethers@npm:5.7.2, ethers@npm:^5.5.3, ethers@npm:^5.7.0, ethers@npm:^5.7.2":
+"ethers@npm:^5.5.3, ethers@npm:^5.7.0, ethers@npm:^5.7.2":
   version: 5.7.2
   resolution: "ethers@npm:5.7.2"
   dependencies:

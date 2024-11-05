@@ -24,7 +24,7 @@
     },
     "devDependencies": {
         "@ethersproject/providers": "5.7.2",
-        "ethers": "5.7.2",
+        "ethers": "^5.7.2",
         "tsup": "^8.3.5"
     }
 }
