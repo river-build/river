@@ -139,7 +139,6 @@ func NewStreamsTracker(
 			// start stream sync session for stream if it hasn't seen before
 			_, loaded := tracker.tracked.LoadOrStore(stream.StreamId, struct{}{})
 			if !loaded {
-				tracker.tasks.Add(1)
 				sticky := nodes.NewStreamNodes(stream.Nodes, common.Address{}).GetStickyPeer()
 
 				// worker pool is a semaphore that prevents making too many concurrent requests
@@ -165,6 +164,7 @@ func NewStreamsTracker(
 				log.Info("Progress stream loading", "count", streamsLoaded)
 				streamsLoadedProgress = streamsLoaded
 			}
+
 			return true
 		})
 

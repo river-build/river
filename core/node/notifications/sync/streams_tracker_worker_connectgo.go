@@ -102,7 +102,7 @@ func (s *StreamTrackerConnectGo) Run(
 			MinipoolSlot:      0,
 			PrevMiniblockHash: common.Hash{}.Bytes(),
 		}}
-		
+
 		streamUpdates, err := client.SyncStreams(syncCtx, connect.NewRequest(&protocol.SyncStreamsRequest{
 			SyncPos: syncPos,
 		}))
