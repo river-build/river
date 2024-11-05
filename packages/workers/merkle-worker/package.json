@@ -31,6 +31,8 @@
         "wrangler": "^3.60.3"
     },
     "dependencies": {
-        "@openzeppelin/merkle-tree": "^1.0.7"
+        "@openzeppelin/merkle-tree": "^1.0.7",
+        "itty-router": "^2.6.6",
+        "worker-common": "workspace:^"
     }
 }

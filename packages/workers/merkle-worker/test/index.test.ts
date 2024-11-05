@@ -25,7 +25,7 @@ describe('Return merkle root worker', () => {
 
         const result = await worker.fetch(
             ...generateRequest(
-                'merkle-root',
+                'admin/api/merkle-root',
                 'POST',
                 {
                     'Content-Type': 'application/json',

@@ -2,57 +2,14 @@ import { Environment } from './environment'
 
 export function getAllowedOrigins(env: Environment): string[] {
     switch (env) {
-        // todo: test-beta should reflect name of logical app environment, gamma
-        case 'test-beta':
         case 'development':
-        case 'alpha':
-            /*
-                Everything except for production
-            */
-            return [
-                'https://app-test.towns.com',
-                'https://app.towns.com',
-                'https://fast-app.towns.com',
-                'https://app.alpha.towns.com',
-                'https://server.omega.towns.com', // TODO: remove after migrating omega off the static app
-                'https://app-test-beta.towns.com',
-                'https://app.gamma.towns.com',
-                'https://harmony-web-pr-*.onrender.com',
-                'http://localhost:3000',
-                'http://localhost:3002', // local app prod builds
-                'https://localhost:3000',
-                'http://localhost:8787',
-                'https://notifications-gamma.towns.com',
-                'https://river1-test-beta.towns.com',
-                'https://*.nodes.gamma.towns.com',
-                'https://test-harmony-web-pr-*.onrender.com',
-            ]
+            return ['http://localhost:8686']
+        case 'gamma':
         case 'omega':
-            return [
-                'https://app.towns.com',
-                'https://server.omega.towns.com', // TODO: remove after migrating omega off the static app
-                'https://fast-app.towns.com',
-                'https://harmony-web-pr-*.onrender.com',
-                'http://localhost:3000',
-                'https://localhost:3000',
-            ]
+            return ['https://river.build']
         default:
             return []
     }
-}
-
-export function getOnRenderOrigin(origin: string): string | undefined {
-    if (origin.includes('onrender.com') && origin.includes('harmony-web')) {
-        return origin
-    }
-    return undefined
-}
-
-export function getTownsOrigin(origin: string): string | undefined {
-    if (origin.includes('.towns.com')) {
-        return origin
-    }
-    return undefined
 }
 
 export function getLocalDomainOrigin(origin: string, env: Environment): string | undefined {
@@ -60,8 +17,7 @@ export function getLocalDomainOrigin(origin: string, env: Environment): string |
     const rExp = /https:\/\/(\w+).local:3000/
     switch (env) {
         case 'development':
-        case 'test':
-        case 'test-beta':
+        case 'gamma':
             return rExp.test(origin) ? origin : undefined
         default:
             return undefined
@@ -87,8 +43,6 @@ function getOriginForCors(request: Request, env: Environment): string {
     if (origin) {
         foundOrigin =
             allowedOrigins.find((allowedOrigin) => allowedOrigin.includes(origin)) ||
-            getOnRenderOrigin(origin) ||
-            getTownsOrigin(origin) ||
             getLocalDomainOrigin(origin, env)
     }
     return foundOrigin ?? ''
@@ -98,8 +52,7 @@ export function isAllowedOrigin(request: Request, env: Environment): boolean {
     const corsOrigin = getOriginForCors(request, env)
     switch (env) {
         case 'development':
-        case 'test-beta':
-        case 'test': {
+        case 'gamma': {
             const origin = request.headers.get('Origin')
             // RFC Origin: https://www.rfc-editor.org/rfc/rfc6454
             // The RFC states that the origin is null is allowed:
