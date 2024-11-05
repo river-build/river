@@ -66,11 +66,11 @@ but only writes a log statement for which events it will send a notification and
 simulate set to true APN and WebPush settings are not required.
 - `notifications.subscription_expiration_duration`, if a device hasn't seen within the last
 `subscription_expiration_duration` stop sending notifications to it (default=90 days)
-- `notifications.authentication.sessionToken.lifetime`, how long an issued session token is valid (default=30m)
-- `notifications.authentication.sessionToken.key.algorithm`, only `HS256` is supported currently
-- `notifications.authentication.sessionToken.key.key`, 256 bit random key (in hex format, no 0x prefix)
+- `notifications.authentication.session_token.lifetime`, how long an issued session token is valid (default=30m)
+- `notifications.authentication.session_token.key.algorithm`, only `HS256` is supported currently
+- `notifications.authentication.session_token.key.key`, 256 bit random key (in hex format, no 0x prefix)
 
-To generate a `notifications.authentication.sessionToken.key.key`:
+To generate a `notifications.authentication.session_token.key.key`:
 ```shell
 $ openssl rand -hex 32
 bec97df03d2c3515aa2a5eb87ee1834838186a5f08fa88558667bcdd0d2dde01

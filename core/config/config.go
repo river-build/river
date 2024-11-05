@@ -387,7 +387,7 @@ type NotificationsConfig struct {
 				// Key holds the hex encoded key
 				Key string
 			}
-		}
+		} `mapstructure:"session_token"`
 	}
 }
 
