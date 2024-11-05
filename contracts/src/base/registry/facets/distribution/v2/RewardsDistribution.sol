@@ -272,7 +272,7 @@ contract RewardsDistribution is
 
     _sweepSpaceRewardsIfNecessary(delegatee);
 
-    emit InitiateWithdraw(depositId, amount);
+    emit InitiateWithdraw(owner, depositId, amount);
   }
 
   /// @inheritdoc IRewardsDistribution
