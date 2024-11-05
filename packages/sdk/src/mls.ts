@@ -9,7 +9,6 @@ import {
     HpkeSecretKey,
 } from '@river-build/mls-rs-wasm'
 import { EncryptedData } from '@river-build/proto'
-import { hexToBytes } from 'ethereum-cryptography/utils'
 
 type EpochKeyStatus =
     | 'EPOCH_KEY_MISSING'
@@ -234,6 +233,7 @@ export class MlsCrypto {
     private client!: MlsClient
     private userAddress: string
     public deviceKey: Uint8Array
+    awaitingGroupActive: Map<string, { promise: Promise<void>; resolve: () => void }> = new Map()
     cipherSuite: MlsCipherSuite = new MlsCipherSuite()
     epochKeyStore = new EpochKeyStore(this.cipherSuite)
     groupStore: GroupStore = new GroupStore()
@@ -320,15 +320,16 @@ export class MlsCrypto {
         const groupInfoWithExternalKey = (
             await group.groupInfoMessageAllowingExtCommit(true)
         ).toBytes()
+        const commitBytes = commit.toBytes()
         this.groupStore.addGroupViaExternalJoin(
             streamId,
             group,
-            commit.toBytes(),
+            commitBytes,
             groupInfoWithExternalKey,
         )
         return {
             groupInfo: groupInfoWithExternalKey,
-            commit: commit.toBytes(),
+            commit: commitBytes,
             epoch: group.currentEpoch,
         }
     }
@@ -350,6 +351,28 @@ export class MlsCrypto {
 
     public hasGroup(streamId: string): boolean {
         return this.groupStore.hasGroup(streamId)
+    }
+
+    public async awaitGroupActive(streamId: string): Promise<void> {
+        const awaiting = this.awaitingGroupActive.get(streamId)
+        if (awaiting) {
+            return await awaiting.promise
+        }
+        if (this.groupStore.getGroupStatus(streamId) === 'GROUP_ACTIVE') {
+            return Promise.resolve()
+        }
+        let promiseResolve: (() => void) | undefined
+        const promise: Promise<void> = new Promise((resolve, _reject) => {
+            promiseResolve = resolve
+        })
+        if (!promiseResolve) {
+            throw new Error('No promise resolve')
+        }
+        this.awaitingGroupActive.set(streamId, { promise, resolve: promiseResolve })
+        await promise
+        this.awaitingGroupActive.delete(streamId)
+
+        return promise
     }
 
     public async handleInitializeGroup(
@@ -387,6 +410,8 @@ export class MlsCrypto {
                 state: 'GROUP_ACTIVE',
                 group: groupState.group,
             })
+            // check if anyone is waiting for it
+            this.awaitingGroupActive.get(streamId)?.resolve()
 
             return 'GROUP_ACTIVE'
         } else {
@@ -436,6 +461,7 @@ export class MlsCrypto {
                     state: 'GROUP_ACTIVE',
                     group: groupState.group,
                 })
+                this.awaitingGroupActive.get(streamId)?.resolve()
                 return 'GROUP_ACTIVE'
             }
             case 'GROUP_ACTIVE':
