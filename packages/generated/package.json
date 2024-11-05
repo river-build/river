@@ -19,8 +19,8 @@
     },
     "scripts": {
         "build": "tsup",
-        "preinstall": "node ./scripts/make-config.js",
-        "make-config": "node ./scripts/make-config.js"
+        "preinstall": "node ./scripts/make-config.cjs",
+        "make-config": "node ./scripts/make-config.cjs"
     },
     "devDependencies": {
         "@ethersproject/providers": "5.7.2",
