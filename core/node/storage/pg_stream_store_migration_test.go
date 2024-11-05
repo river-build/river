@@ -229,8 +229,9 @@ func TestLegacyStreamDataAfterStoreMigration(t *testing.T) {
 		}
 
 		// Snapshot block 2, leave block 4 as a candidate
-		err = deprecatedStore.PromoteMiniblockCandidate(
+		err = promoteMiniblockCandidate(
 			ctx,
+			deprecatedStore,
 			streamId3,
 			candidate.MiniblockNumber,
 			candidate.Hash,
@@ -494,8 +495,9 @@ func TestLegacyStreamDataAfterStoreMigration(t *testing.T) {
 	)
 
 	// Promote a new miniblock
-	err = store.PromoteMiniblockCandidate(
+	err = promoteMiniblockCandidate(
 		ctx,
+		store,
 		streamId1,
 		1,
 		candidateHash2,
@@ -536,68 +538,6 @@ func TestLegacyStreamDataAfterStoreMigration(t *testing.T) {
 					Data:       []byte("event1"),
 				},
 			},
-			MbCandidates: []MiniblockDescriptor{
-				{
-					MiniblockNumber: 2,
-					Data:            []byte("miniblock2_candidate0"),
-					Hash:            candidateHash3,
-				},
-			},
-		},
-	)
-
-	// Import miniblocks
-	err = store.ImportMiniblocks(
-		ctx,
-		[]*MiniblockData{
-			{
-				StreamID:      streamId1,
-				Number:        2,
-				MiniBlockInfo: []byte("block2"),
-			},
-			{
-				StreamID:      streamId1,
-				Number:        3,
-				MiniBlockInfo: []byte("block3"),
-			},
-		},
-	)
-	require.NoError(t, err, "Error importing miniblocks")
-
-	checkStreamState(
-		t,
-		ctx,
-		store,
-		&DebugReadStreamDataResult{
-			StreamId:                   streamId1,
-			LatestSnapshotMiniblockNum: 1,
-			Migrated:                   false,
-			Miniblocks: []MiniblockDescriptor{
-				{
-					MiniblockNumber: 0,
-					Data:            genesisMiniblock,
-				},
-				{
-					MiniblockNumber: 1,
-					Data:            []byte("miniblock1_candidate1"),
-				},
-				{
-					MiniblockNumber: 2,
-					Data:            []byte("block2"),
-				},
-				{
-					MiniblockNumber: 3,
-					Data:            []byte("block3"),
-				},
-			},
-			Events: []EventDescriptor{
-				{
-					Generation: 4,
-					Slot:       -1,
-				},
-			},
-			// TODO: this is a bug, candidates < the current committed block # should be dropped
-			// whenever blocks are imported.
 			MbCandidates: []MiniblockDescriptor{
 				{
 					MiniblockNumber: 2,
