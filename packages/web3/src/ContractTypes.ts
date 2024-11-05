@@ -26,7 +26,7 @@ export const Permission = {
     Invite: 'Invite',
     JoinSpace: 'JoinSpace',
     Redact: 'Redact',
-    Ban: 'Ban',
+    ModifyBanning: 'ModifyBanning',
     PinMessage: 'PinMessage',
     AddRemoveChannels: 'AddRemoveChannels',
     ModifySpaceSettings: 'ModifySpaceSettings',

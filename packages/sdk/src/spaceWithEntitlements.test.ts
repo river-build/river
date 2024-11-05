@@ -20,6 +20,7 @@ import {
     twoEth,
     twoNftRuleData,
     waitFor,
+    createRole,
 } from './util.test'
 import { dlog } from '@river-build/dlog'
 import { MembershipOp } from '@river-build/proto'
@@ -36,6 +37,7 @@ import {
     treeToRuleData,
     encodeThresholdParams,
     createExternalNFTStruct,
+    Permission,
 } from '@river-build/web3'
 
 const log = dlog('csb:test:spaceWithEntitlements')
@@ -162,6 +164,99 @@ describe('spaceWithEntitlements', () => {
         // kill the clients
         await bob.stopSync()
         await alice.stopSync()
+        log('Done')
+    })
+
+    test('user with banning permission can ban other users', async () => {
+        log('start user with banning permission can ban other users')
+        const {
+            alice,
+            bob,
+            carol,
+            bobSpaceDapp,
+            bobProvider,
+            aliceSpaceDapp,
+            aliceProvider,
+            alicesWallet,
+            spaceId,
+            channelId,
+            carolSpaceDapp,
+            carolProvider,
+            carolsWallet,
+        } = await createTownWithRequirements({
+            everyone: true,
+            users: [],
+            ruleData: NoopRuleData,
+        })
+
+        log('Alice should be able to join space')
+        await expectUserCanJoin(
+            spaceId,
+            channelId,
+            'alice',
+            alice,
+            aliceSpaceDapp,
+            alicesWallet.address,
+            aliceProvider.wallet,
+        )
+        await expectUserCanJoin(
+            spaceId,
+            channelId,
+            'carol',
+            carol,
+            carolSpaceDapp,
+            carolsWallet.address,
+            carolProvider.wallet,
+        )
+
+        // Alice cannot kick Carol yet
+        log('Alice cannot kick Carol')
+        await expect(alice.removeUser(spaceId, carol.userId)).rejects.toThrow(/7:PERMISSION_DENIED/)
+
+        let carolUserStreamView = carol.stream(carol.userStreamId!)!.view
+        // Carol is still a member
+        await waitFor(() => {
+            expect(
+                carolUserStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN),
+            ).toBeTrue()
+            expect(
+                carolUserStreamView.userContent.isMember(channelId, MembershipOp.SO_JOIN),
+            ).toBeTrue()
+        })
+
+        // Create an admin role for Alice that has permission to modify banning
+        const { error: roleError } = await createRole(
+            bobSpaceDapp,
+            bobProvider,
+            spaceId,
+            'admin role',
+            [Permission.ModifyBanning],
+            [alice.userId],
+            NoopRuleData,
+            bobProvider.wallet,
+        )
+        expect(roleError).toBeUndefined()
+        // Wait 2 seconds for the banning cache to expire on the stream node
+        await new Promise((f) => setTimeout(f, 2000))
+
+        log('Alice kicks Carol')
+        await expect(alice.removeUser(spaceId, carol.userId)).toResolve()
+
+        log('Carol is no longer a member of the space or channel')
+        carolUserStreamView = carol.stream(carol.userStreamId!)!.view
+        await waitFor(() => {
+            expect(
+                carolUserStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN),
+            ).toBeFalse()
+            expect(
+                carolUserStreamView.userContent.isMember(channelId, MembershipOp.SO_JOIN),
+            ).toBeFalse()
+        })
+
+        // kill the clients
+        await bob.stopSync()
+        await alice.stopSync()
+        await carol.stopSync()
         log('Done')
     })
 
