@@ -144,12 +144,8 @@ abstract contract DropFacetBase is IDropFacetBase {
     // Store the new condition
     _updateClaimCondition(ds, newConditionId, newCondition);
 
-    // Update condition count and highest ID
+    // Update condition count
     ds.conditionCount = existingCount + 1;
-
-    if (newConditionId > ds.highestConditionId) {
-      ds.highestConditionId = newConditionId;
-    }
 
     emit DropFacet_ClaimConditionAdded(newCondition);
   }
@@ -158,7 +154,7 @@ abstract contract DropFacetBase is IDropFacetBase {
     DropStorage.Layout storage ds
   ) internal view returns (ClaimCondition[] memory conditions) {
     conditions = new ClaimCondition[](ds.conditionCount);
-    for (uint48 i; i < ds.conditionCount; ++i) {
+    for (uint256 i; i < ds.conditionCount; ++i) {
       conditions[i] = ds.conditionById[ds.conditionStartId + i];
     }
     return conditions;
@@ -180,7 +176,7 @@ abstract contract DropFacetBase is IDropFacetBase {
     uint48 newConditionCount = SafeCastLib.toUint48(conditions.length);
 
     uint48 lastConditionTimestamp;
-    for (uint48 i; i < newConditionCount; ++i) {
+    for (uint256 i; i < newConditionCount; ++i) {
       ClaimCondition calldata newCondition = conditions[i];
       if (lastConditionTimestamp >= newCondition.startTimestamp) {
         CustomRevert.revertWith(
@@ -203,14 +199,8 @@ abstract contract DropFacetBase is IDropFacetBase {
       lastConditionTimestamp = newCondition.startTimestamp;
     }
 
-    ds.conditionCount = SafeCastLib.toUint48(newConditionCount);
+    ds.conditionCount = newConditionCount;
     ds.conditionStartId = newStartId;
-
-    // Update highest condition id if needed
-    uint256 lastConditionId = newStartId + newConditionCount - 1;
-    if (lastConditionId > ds.highestConditionId) {
-      ds.highestConditionId = SafeCastLib.toUint48(lastConditionId);
-    }
 
     if (existingConditionCount > newConditionCount) {
       for (uint256 i = newConditionCount; i < existingConditionCount; i++) {
