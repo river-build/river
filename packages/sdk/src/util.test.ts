@@ -496,6 +496,10 @@ export async function createVersionedSpaceFromMembership(
             },
             wallet,
         )
+    } else if (useLegacySpaces()) {
+        // Escalate if this test case should have produced a legacy space
+        // but did not.
+        throw new Error('Cannot create legacy space with V2 membership')
     } else {
         if (isLegacyMembershipType(membership)) {
             // Convert legacy space params to current space params
@@ -1057,7 +1061,7 @@ export async function createTownWithRequirements(requirements: {
     }
     requirements.users = requirements.users.map((user) => userNameToWallet[user])
 
-    const membershipInfo: MembershipStruct = {
+    const membershipInfo: LegacyMembershipStruct = {
         settings: {
             name: 'Everyone',
             symbol: 'MEMBER',
@@ -1073,7 +1077,7 @@ export async function createTownWithRequirements(requirements: {
         requirements: {
             everyone: requirements.everyone,
             users: requirements.users,
-            ruleData: encodeRuleDataV2(requirements.ruleData),
+            ruleData: convertRuleDataV2ToV1(requirements.ruleData),
             syncEntitlements: false,
         },
     }
