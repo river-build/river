@@ -78,6 +78,7 @@ import {
     UpdateRoleParams,
 } from '@river-build/web3'
 import { RiverTimelineEvent, type TimelineEvent } from './sync-agent/timeline/models/timeline-types'
+import { SyncState } from './syncedStreamsLoop'
 
 const log = dlog('csb:test:util')
 
@@ -634,6 +635,8 @@ export async function expectUserCanJoin(
 
     await client.initializeUser({ spaceId })
     client.startSync()
+
+    await waitFor(() => client.streams.syncState === SyncState.Syncing)
 
     await expect(client.joinStream(spaceId)).toResolve()
     await expect(client.joinStream(channelId)).toResolve()
