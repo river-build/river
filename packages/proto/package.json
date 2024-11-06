@@ -3,8 +3,9 @@
     "version": "0.0.97",
     "packageManager": "yarn@3.8.0",
     "type": "module",
-    "main": "dist/index.js",
-    "types": "dist/index.d.ts",
+    "main": "./dist/index.cjs",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
     "sideEffects": false,
     "scripts": {
         "buf:clean": "rm -rf ./src/gen/*",
@@ -42,5 +43,18 @@
     "files": [
         "dist/**",
         "!dist/**/*.tsbuildinfo"
-    ]
+    ],
+    "exports": {
+        ".": {
+            "import": {
+                "types": "./dist/index.d.ts",
+                "default": "./dist/index.js"
+            },
+            "require": {
+                "types": "./dist/index.d.cts",
+                "default": "./dist/index.cjs"
+            }
+        },
+        "./package.json": "./package.json"
+    }
 }
