@@ -6,6 +6,13 @@
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "sideEffects": false,
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+        },
+        "./package.json": "./package.json"
+    },
     "scripts": {
         "build": "tsup",
         "cb": "yarn clean && yarn build",

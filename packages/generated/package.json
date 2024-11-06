@@ -4,6 +4,17 @@
     "packageManager": "yarn@3.8.0",
     "type": "module",
     "sideEffects": false,
+    "exports": {
+        "./*.json": {
+            "types": "./dist/*.d.ts",
+            "default": "./dist/*.json"
+        },
+        "./*": {
+            "types": "./dist/*.d.ts",
+            "default": "./dist/*.js"
+        },
+        "./package.json": "./package.json"
+    },
     "files": [
         "dist"
     ],
