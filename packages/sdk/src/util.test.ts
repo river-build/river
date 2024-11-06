@@ -499,18 +499,17 @@ export async function createVersionedSpaceFromMembership(
                 wallet,
             )
         } else {
-            const currentMembership = membership as MembershipStruct
             // Convert space params to legacy space params
             const legacyMembership = {
-                settings: currentMembership.settings,
-                permissions: currentMembership.permissions,
+                settings: membership.settings,
+                permissions: membership.permissions,
                 requirements: {
-                    everyone: currentMembership.requirements.everyone,
-                    users: [],
-                    syncEntitlements: false,
+                    everyone: membership.requirements.everyone,
+                    users: membership.requirements.users,
+                    syncEntitlements: membership.requirements.syncEntitlements,
                     ruleData: convertRuleDataV2ToV1(
-                        decodeRuleDataV2(currentMembership.requirements.ruleData),
-                    ) as IRuleEntitlementBase.RuleDataStruct,
+                        decodeRuleDataV2(membership.requirements.ruleData as `0x${string}`),
+                    ),
                 },
             } as LegacyMembershipStruct
             return await spaceDapp.createLegacySpace(
@@ -518,15 +517,11 @@ export async function createVersionedSpaceFromMembership(
                     spaceName: `${name}-space`,
                     uri: `${name}-space-metadata`,
                     channelName: 'general',
-                    legacyMembership,
+                    membership: legacyMembership,
                 },
                 wallet,
             )
         }
-    } else if (useLegacySpaces()) {
-        // Escalate if this test case should have produced a legacy space
-        // but did not.
-        throw new Error('Cannot create legacy space with V2 membership')
     } else {
         if (isLegacyMembershipType(membership)) {
             // Convert legacy space params to current space params
