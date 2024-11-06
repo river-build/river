@@ -376,7 +376,7 @@ type NotificationsConfig struct {
 	// Authentication holds configuration for the Client API authentication service.
 	Authentication struct {
 		// ChallengeTimeout is the lifetime an authentication challenge is valid (default=30s).
-		ChallengeTimeout time.Duration
+		ChallengeTimeout time.Duration `mapstructure:"challenge_timeout"`
 		// SessionTokenKey contains the configuration for the JWT session token.
 		SessionToken struct {
 			// Lifetime indicates how long a session token is valid (default=30m).

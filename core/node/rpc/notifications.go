@@ -57,17 +57,6 @@ func (s *Service) startNotificationMode(notifier push.MessageNotifier) error {
 		notifier,
 	)
 
-	err = s.runHttpServer()
-	if err != nil {
-		return AsRiverError(err).Message("Failed to run http server").LogError(s.defaultLogger)
-	}
-
-	s.mux.HandleFunc("/status", s.handleStatus)
-
-	if err := s.initNotificationHandlers(); err != nil {
-		return err
-	}
-
 	s.SetStatus("OK")
 
 	s.NotificationService, err = notifications.NewService(
@@ -82,6 +71,17 @@ func (s *Service) startNotificationMode(notifier push.MessageNotifier) error {
 	)
 	if err != nil {
 		return AsRiverError(err).Message("Failed to instantiate notification service").LogError(s.defaultLogger)
+	}
+
+	err = s.runHttpServer()
+	if err != nil {
+		return AsRiverError(err).Message("Failed to run http server").LogError(s.defaultLogger)
+	}
+
+	s.mux.HandleFunc("/status", s.handleStatus)
+
+	if err := s.initNotificationHandlers(); err != nil {
+		return err
 	}
 
 	s.riverChain.StartChainMonitor(s.serverCtx)
