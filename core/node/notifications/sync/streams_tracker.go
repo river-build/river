@@ -183,7 +183,8 @@ func (tracker *StreamsTracker) Run(ctx context.Context) error {
 
 	log.Info("Loaded streams from streams registry",
 		"count", streamsLoaded,
-		"took", time.Since(start))
+		"total", totalStreams,
+		"took", time.Since(start).String())
 
 	// wait for all tracked streams to finish
 	tracker.tasks.Wait()
