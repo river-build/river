@@ -281,7 +281,7 @@ func (n *MessageNotificationsSimulator) SendApplePushNotification(
 	payload *payload2.Payload,
 ) error {
 	log := dlog.FromCtx(ctx)
-	log.Info("SendApplePushNotification",
+	log.Debug("SendApplePushNotification",
 		"deviceToken", sub.DeviceToken,
 		"env", sub.Environment,
 		"payload", payload)
