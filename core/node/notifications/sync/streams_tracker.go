@@ -116,6 +116,7 @@ func (tracker *StreamsTracker) Run(ctx context.Context) error {
 		log                   = dlog.FromCtx(ctx)
 		validNodes            = tracker.nodeRegistry.GetValidNodeAddresses()
 		streamsLoaded         = 0
+		totalStreams          = 0
 		streamsLoadedProgress = 0
 		start                 = time.Now()
 	)
@@ -124,6 +125,14 @@ func (tracker *StreamsTracker) Run(ctx context.Context) error {
 		ctx,
 		tracker.riverRegistry.Blockchain.InitialBlockNum,
 		func(stream *registries.GetStreamResult) bool {
+			// print progress report every 50k streams that are added to track
+			if streamsLoaded > 0 && streamsLoaded%50_000 == 0 && streamsLoadedProgress != streamsLoaded {
+				log.Info("Progress stream loading", "tracked", streamsLoaded, "total", totalStreams)
+				streamsLoadedProgress = streamsLoaded
+			}
+
+			totalStreams++
+
 			if !tracker.TrackStreamForNotifications(stream.StreamId) {
 				return true
 			}
@@ -163,11 +172,6 @@ func (tracker *StreamsTracker) Run(ctx context.Context) error {
 					)
 					tracker.tasks.Done()
 				}()
-			}
-
-			if streamsLoaded > 0 && streamsLoaded%50_000 == 0 && streamsLoadedProgress != streamsLoaded {
-				log.Info("Progress stream loading", "count", streamsLoaded)
-				streamsLoadedProgress = streamsLoaded
 			}
 
 			return true
