@@ -4,7 +4,9 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/pem"
+	"github.com/river-build/river/core/node/notifications/types"
 	"net/http"
 	"time"
 
@@ -38,10 +40,8 @@ type (
 		// SendApplePushNotification sends a push notification to the iOS app
 		SendApplePushNotification(
 			ctx context.Context,
-			// deviceToken as derive by the device for the APP
-			deviceToken string,
-			// env to send notification to
-			env protocol.APNEnvironment,
+			// sub APN
+			sub *types.APNPushSubscription,
 			// event hash
 			eventHash common.Hash,
 			// payload is sent to the APP
@@ -199,13 +199,12 @@ func (n *MessageNotifications) SendWebPushNotification(
 
 func (n *MessageNotifications) SendApplePushNotification(
 	ctx context.Context,
-	deviceToken string,
-	env protocol.APNEnvironment,
+	sub *types.APNPushSubscription,
 	eventHash common.Hash,
 	payload *payload2.Payload,
 ) error {
 	notification := &apns2.Notification{
-		DeviceToken: deviceToken,
+		DeviceToken: hex.EncodeToString(sub.DeviceToken),
 		Topic:       n.apnsAppBundleID,
 		Payload:     payload,
 		Priority:    apns2.PriorityHigh,
@@ -220,7 +219,7 @@ func (n *MessageNotifications) SendApplePushNotification(
 	}
 
 	client := apns2.NewTokenClient(token).Production()
-	if env == protocol.APNEnvironment_APN_ENVIRONMENT_SANDBOX {
+	if sub.Environment == protocol.APNEnvironment_APN_ENVIRONMENT_SANDBOX {
 		client = client.Development()
 	}
 
@@ -234,12 +233,14 @@ func (n *MessageNotifications) SendApplePushNotification(
 
 	if res.Sent() {
 		n.apnSend.With(prometheus.Labels{"result": StatusSuccess}).Inc()
+		log := dlog.FromCtx(ctx).With("event", eventHash, "apnsID", res.ApnsID)
 		// ApnsUniqueID only available on development/sandbox,
 		// use it to check in Apple's Delivery Logs to see the status.
-		if env == protocol.APNEnvironment_APN_ENVIRONMENT_SANDBOX {
-			dlog.FromCtx(ctx).
-				Info("APN notification sent", "event", eventHash, "uniqueApnsID", res.ApnsUniqueID)
+		if sub.Environment == protocol.APNEnvironment_APN_ENVIRONMENT_SANDBOX {
+			log = log.With("uniqueApnsID", res.ApnsUniqueID)
 		}
+		log.Info("APN notification sent")
+
 		return nil
 	}
 
@@ -249,7 +250,7 @@ func (n *MessageNotifications) SendApplePushNotification(
 		"statusCode", res.StatusCode,
 		"apnsID", res.ApnsID,
 		"reason", res.Reason,
-		"deviceToken", deviceToken,
+		"deviceToken", sub.DeviceToken,
 	).Func("SendAPNNotification")
 }
 
@@ -275,13 +276,15 @@ func (n *MessageNotificationsSimulator) SendWebPushNotification(
 
 func (n *MessageNotificationsSimulator) SendApplePushNotification(
 	ctx context.Context,
-	deviceToken string,
-	env protocol.APNEnvironment,
+	sub *types.APNPushSubscription,
 	eventHash common.Hash,
 	payload *payload2.Payload,
 ) error {
 	log := dlog.FromCtx(ctx)
-	log.Info("SendApplePushNotification", "deviceToken", deviceToken, "env", env, "payload", payload)
+	log.Info("SendApplePushNotification",
+		"deviceToken", sub.DeviceToken,
+		"env", sub.Environment,
+		"payload", payload)
 
 	n.apnSend.With(prometheus.Labels{"result": StatusSuccess}).Inc()
 

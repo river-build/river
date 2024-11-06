@@ -3,7 +3,6 @@ package notifications
 import (
 	"bytes"
 	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -78,11 +77,13 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 	l.Debug("Process event")
 
 	usersToNotify := make(map[common.Address]*types.UserPreferences)
+	kind := "new_message"
+	recipients := mapset.NewSet[common.Address]()
+	sender := common.BytesToAddress(event.Event.CreatorAddress)
 
 	members.Each(func(member string) bool {
 		var (
 			participant = common.HexToAddress(member)
-			sender      = common.BytesToAddress(event.Event.CreatorAddress)
 			pref, err   = p.cache.GetUserPreferences(context.Background(), participant) // lint:ignore context.Background() is fine here
 		)
 
@@ -118,34 +119,62 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 			return false
 		}
 
-		switch payload := event.Event.Payload.(type) {
+		switch event.Event.Payload.(type) {
 		case *StreamEvent_DmChannelPayload:
 			if p.onDMChannelPayload(channelID, participant, pref, event) {
 				usersToNotify[participant] = pref
+				kind = "direct_message"
+				recipients.Add(participant)
 			}
 		case *StreamEvent_GdmChannelPayload:
 			if p.onGDMChannelPayload(channelID, participant, pref, event) {
 				usersToNotify[participant] = pref
+				kind = "direct_message"
+				recipients.Add(participant)
 			}
 		case *StreamEvent_ChannelPayload:
 			if spaceID != nil {
 				if p.onSpaceChannelPayload(*spaceID, channelID, participant, pref, event) {
 					usersToNotify[participant] = pref
+					kind = "reply_to"
 				}
 			} else {
 				p.log.Error("Space channel misses spaceID", "channel", channelID)
 			}
-		default:
-			p.log.Debug("unsupported payload, skip", "channel", channelID, "type", fmt.Sprintf("%T", payload))
-			return false
 		}
 
 		return false
 	})
 
-	streamEventJSON, _ := json.Marshal(event)
+	recipients.Remove(sender)
+
+	/*Kind one of
+	  Mention = 'mention',
+	  NewMessage = 'new_message',
+	  ReplyTo = 'reply_to',
+	  AtChannel = '@channel',
+	  Reaction = 'reaction',
+	*/
+
+	// spaceID if available
+
+	eventData, _ := json.Marshal(event.Event)
+	payload := map[string]interface{}{
+		"event":      eventData,
+		"channelId":  channelID.String(),
+		"kind":       kind,
+		"senderId":   fmt.Sprintf("0x%x", event.Event.CreatorAddress),
+		"recipients": recipients.ToSlice(),
+		"threadId":   channelID.String(),
+		//"attachmentOnly": "",   // image, gif, file optional
+		//"reaction": true, // optional
+	}
+	if spaceID != nil {
+		payload["spaceId"] = spaceID.String()
+	}
+
 	for user, userPref := range usersToNotify {
-		p.sendNotification(user, userPref, channelID, event, streamEventJSON)
+		p.sendNotification(user, userPref, channelID, event, payload)
 	}
 }
 
@@ -246,14 +275,14 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 	userPref *types.UserPreferences,
 	streamID shared.StreamId,
 	event *events.ParsedEvent,
-	notificationPayload []byte,
+	payload map[string]interface{},
 ) {
 	for _, sub := range userPref.Subscriptions.WebPush {
 		if time.Since(sub.LastSeen) >= p.subscriptionExpiration {
 			continue
 		}
 
-		if err := p.sendWebPushNotification(sub.Sub, event, notificationPayload); err == nil {
+		if err := p.sendWebPushNotification(sub.Sub, event, payload); err == nil {
 			p.log.Debug("Successfully sent web push notification",
 				"user", user,
 				"event", event.Hash,
@@ -274,7 +303,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 			continue
 		}
 
-		if err := p.sendAPNNotification(sub.DeviceToken, sub.Environment, event, notificationPayload); err == nil {
+		if err := p.sendAPNNotification(streamID, sub, event, payload); err == nil {
 			p.log.Debug("Successfully sent APN notification",
 				"user", user,
 				"event", event.Hash,
@@ -296,21 +325,32 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 }
 
 func (p *MessageToNotificationsProcessor) sendWebPushNotification(
-	sub *webpush.Subscription, event *events.ParsedEvent, content []byte) error {
+	sub *webpush.Subscription, event *events.ParsedEvent, content map[string]interface{}) error {
 	// lint:ignore context.Background() is fine here
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	return p.notifier.SendWebPushNotification(ctx, sub, event.Hash, content)
+	payload, _ := json.Marshal(content)
+
+	return p.notifier.SendWebPushNotification(ctx, sub, event.Hash, payload)
 }
 
 func (p *MessageToNotificationsProcessor) sendAPNNotification(
-	deviceToken []byte, env APNEnvironment, event *events.ParsedEvent, content []byte) error {
+	streamID shared.StreamId,
+	sub *types.APNPushSubscription, event *events.ParsedEvent, content map[string]interface{}) error {
 	// lint:ignore context.Background() is fine here
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	notificationPayload := payload.NewPayload().Alert(string(content))
+	notificationPayload := payload.NewPayload().
+		AlertTitle("You have a new message").
+		ThreadID(streamID.String()).
+		ContentAvailable().
+		SetContentState(map[string]interface{}{
+			"content": content,
+		}).
+		MutableContent().
+		Sound("Default.caf")
 
-	return p.notifier.SendApplePushNotification(ctx, hex.EncodeToString(deviceToken), env, event.Hash, notificationPayload)
+	return p.notifier.SendApplePushNotification(ctx, sub, event.Hash, notificationPayload)
 }
