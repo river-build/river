@@ -808,7 +808,6 @@ export class DecodedCheckOperationBuilder {
 
         const opStr = checkOpString(this.decodedCheckOp.type)
 
-
         // For contract-related checks, assert set values for chain id and contract address
         switch (this.decodedCheckOp.type) {
             case CheckOperationType.ERC1155:
