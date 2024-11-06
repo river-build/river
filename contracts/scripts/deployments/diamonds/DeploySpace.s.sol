@@ -201,7 +201,7 @@ contract DeploySpace is DiamondHelper, Deployer {
     for (uint256 i = 0; i < facets.length; i++) {
       bytes32 facetNameHash = keccak256(abi.encodePacked(facets[i]));
 
-      if (facetNameHash == keccak256(abi.encodePacked("ERC721A"))) {
+      if (facetNameHash == keccak256(abi.encodePacked("MembershipToken"))) {
         membershipToken = membershipTokenHelper.deploy(deployer);
         membershipTokenHelper.removeSelector(IERC721A.tokenURI.selector);
         addCut(
