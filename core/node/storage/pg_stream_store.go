@@ -248,52 +248,6 @@ func (s *PostgresStreamStore) sqlForStream(sql string, streamId StreamId, migrat
 	return sql
 }
 
-// isStreamMigrated checks the es table to see if the stream has been migrated to a fixed partition,
-// or if the data exists on it's own set of tables, according to the previous schema. If the
-// ignoreIfUnfound flag is set, a missing stream will be considered migrated and will not produce an
-// error.
-func (s *PostgresStreamStore) isStreamMigrated(
-	ctx context.Context,
-	tx pgx.Tx,
-	streamId StreamId,
-	ignoreIfUnfound bool,
-) (migrated bool, err error) {
-	if ignoreIfUnfound {
-		// Use the Query interface in order not to put the transaction into an error state if the row
-		// does not exist in the es table. The API of this method is to return en empty result for
-		// nonexistent streams.
-		esRows, err := tx.Query(ctx, "SELECT migrated FROM es WHERE stream_id = $1", streamId)
-		if err != nil {
-			return false, err
-		}
-		defer esRows.Close()
-
-		if !esRows.Next() {
-			return false, WrapRiverError(Err_NOT_FOUND, err).Message("stream not found in local storage")
-		}
-
-		err = esRows.Scan(&migrated)
-		if err != nil {
-			return false, err
-		}
-
-		// Duplicate rows per stream id should never happen due to constraints on the es table.
-		if esRows.Next() {
-			return false, RiverError(Err_UNKNOWN, ">1 row in es table for stream id").Tag("streamId", streamId)
-		}
-
-		return migrated, nil
-	} else {
-		if err = tx.QueryRow(ctx, "SELECT migrated FROM es WHERE stream_id = $1", streamId).Scan(&migrated); err != nil {
-			if err == pgx.ErrNoRows {
-				return false, WrapRiverError(Err_NOT_FOUND, err).Message("stream not found in local storage")
-			}
-			return false, err
-		}
-		return migrated, nil
-	}
-}
-
 func (s *PostgresStreamStore) CreateStreamStorage(
 	ctx context.Context,
 	streamId StreamId,
