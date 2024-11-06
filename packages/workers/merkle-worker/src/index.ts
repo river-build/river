@@ -15,6 +15,7 @@ import { handleRequest } from './router'
 
 export interface Env extends AuthEnv {
     ENVIRONMENT: Environment
+    MERKLE_OBJECTS_R2: R2Bucket
 }
 
 export const worker = {

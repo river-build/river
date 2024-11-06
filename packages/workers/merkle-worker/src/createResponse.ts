@@ -1,22 +1,14 @@
 import { toJson } from './utils'
+import { ApiSuccessResponse, ApiErrorResponse } from './types'
 
 export enum ErrorCode {
     BAD_REQUEST = 'BAD_REQUEST',
+    ALREADY_EXISTS = 'ALREADY_EXISTS',
     UNKNOWN_ERROR = 'UNKNOWN_ERROR',
+    MERKLE_TREE_NOT_FOUND = 'MERKLE_TREE_NOT_FOUND',
+    CLAIM_NOT_FOUND = 'CLAIM_NOT_FOUND',
     NOT_FOUND = 'NOT_FOUND',
     INTERNAL_SERVER_ERROR = 'INTERNAL_SERVER_ERROR',
-}
-
-type ApiResponse<T> = {
-    success: boolean
-    message: string
-    errorDetail?: ApiErrorDetail
-    data?: T
-}
-
-export type ApiErrorDetail = {
-    code: ErrorCode // Application-specific error code (e.g., "VALIDATION_ERROR")
-    description: string // Description of the error for developers
 }
 
 export function createSuccessResponse<T>(status: number, message: string, data?: T) {
@@ -25,13 +17,8 @@ export function createSuccessResponse<T>(status: number, message: string, data?:
             success: true,
             message,
             data,
-            /**
-             * @deprecated
-             * backwards compatibility for fields added directly in response
-             * clients should migrate to data field
-             */
             ...data,
-        } satisfies ApiResponse<T>),
+        } satisfies ApiSuccessResponse<T>),
         {
             status,
         },
@@ -47,13 +34,8 @@ export function createErrorResponse(status: number, message: string, code: Error
                 code,
                 description: message,
             },
-            /**
-             * @deprecated
-             * backwards compatibility for old error string
-             * clients should migrate to errorDetail field
-             */
             error: message,
-        } satisfies ApiResponse<null> & { error: string }),
+        } satisfies ApiErrorResponse),
         {
             status,
         },
