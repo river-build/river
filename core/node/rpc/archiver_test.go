@@ -243,9 +243,9 @@ func TestArchiveOneStream(t *testing.T) {
 	)
 	require.NoError(err)
 
-	dbCfg, schema, _, err := dbtestutils.ConfigureDB(ctx)
+	dbCfg, schema, schemaDeleter, err := dbtestutils.ConfigureDB(ctx)
 	require.NoError(err)
-	// defer schemaDeleter()
+	defer schemaDeleter()
 
 	pool, err := storage.CreateAndValidatePgxPool(ctx, dbCfg, schema, nil)
 	require.NoError(err)
