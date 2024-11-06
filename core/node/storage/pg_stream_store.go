@@ -47,7 +47,7 @@ func GetRiverNodeDbMigrationSchemaFS() *embed.FS {
 
 type txnFn func(ctx context.Context, tx pgx.Tx) error
 
-func createSettingsTable(store *PostgresStreamStore, partitions int) txnFn {
+func (s *PostgresStreamStore) createSettingsTable(partitions int) txnFn {
 	return func(ctx context.Context, tx pgx.Tx) error {
 		log := dlog.FromCtx(ctx)
 		log.Info("Creating settings table")
@@ -83,7 +83,7 @@ func createSettingsTable(store *PostgresStreamStore, partitions int) txnFn {
 			return err
 		}
 
-		store.numPartitions = numPartitions
+		s.numPartitions = numPartitions
 		log.Info("Creating stream storage schema with partition count", "numPartitions", numPartitions)
 
 		if tags.RowsAffected() < 1 {
@@ -116,7 +116,7 @@ func NewPostgresStreamStore(
 		ctx,
 		poolInfo,
 		metrics,
-		createSettingsTable(store, poolInfo.Config.NumPartitions),
+		store.createSettingsTable(poolInfo.Config.NumPartitions),
 		migrationsDir,
 	); err != nil {
 		return nil, AsRiverError(err).Func("NewPostgresStreamStore")
