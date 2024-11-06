@@ -699,7 +699,7 @@ message EncryptedData {
 
     optional bytes mls_ciphertext = 7;
 
-    optional bytes mls_epoch = 8;
+    optional uint64 mls_epoch = 8;
 }
 
 message WrappedEncryptedData {
