@@ -3,6 +3,7 @@
     "version": "0.0.0",
     "license": "MIT",
     "packageManager": "yarn@3.8.0",
+    "type": "module",
     "scripts": {
         "anvil": "yarn workspace @river-build/contracts exec anvil",
         "build": "turbo build",
@@ -34,6 +35,7 @@
         "syncpack:check": "syncpack list-mismatches",
         "syncpack:fix": "syncpack fix-mismatches && syncpack format",
         "test": "turbo test",
+        "test:vitest": "vitest",
         "test:unit": "turbo test:unit -- --silent",
         "test:react": "vitest --project @river-build/react-sdk",
         "test:build": "turbo test:build"
@@ -58,7 +60,7 @@
         "turbo": "^2.0.12",
         "typechain": "^8.1.1",
         "typescript": "^5.1.6",
-        "vitest": "^1.6.0",
+        "vitest": "^2.1.4",
         "wait-on": "^7.0.1"
     },
     "husky": {
