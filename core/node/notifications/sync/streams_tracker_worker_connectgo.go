@@ -329,8 +329,8 @@ func (s *StreamTrackerConnectGo) liveness(
 						StreamId: streamID[:],
 						Optional: false,
 					}))
+					workerPool.Release(1)
 				}
-				workerPool.Release(1)
 				return
 			}
 
