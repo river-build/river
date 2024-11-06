@@ -68,6 +68,7 @@ import {
     isCreateLegacySpaceParams,
     convertRuleDataV1ToV2,
     encodeRuleDataV2,
+    decodeRuleDataV2,
     SignerType,
     IRuleEntitlementV2Base,
     isRuleDataV1,
@@ -486,16 +487,42 @@ export async function createVersionedSpaceFromMembership(
     name: string,
     membership: LegacyMembershipStruct | MembershipStruct,
 ): Promise<ethers.ContractTransaction> {
-    if (useLegacySpaces() && isLegacyMembershipType(membership)) {
-        return await spaceDapp.createLegacySpace(
-            {
-                spaceName: `${name}-space`,
-                uri: `${name}-space-metadata`,
-                channelName: 'general',
-                membership,
-            },
-            wallet,
-        )
+    if (useLegacySpaces()) {
+        if (isLegacyMembershipType(membership)) {
+            return await spaceDapp.createLegacySpace(
+                {
+                    spaceName: `${name}-space`,
+                    uri: `${name}-space-metadata`,
+                    channelName: 'general',
+                    membership,
+                },
+                wallet,
+            )
+        } else {
+            const currentMembership = membership as MembershipStruct
+            // Convert space params to legacy space params
+            const legacyMembership = {
+                settings: currentMembership.settings,
+                permissions: currentMembership.permissions,
+                requirements: {
+                    everyone: currentMembership.requirements.everyone,
+                    users: [],
+                    syncEntitlements: false,
+                    ruleData: convertRuleDataV2ToV1(
+                        decodeRuleDataV2(currentMembership.requirements.ruleData),
+                    ) as IRuleEntitlementBase.RuleDataStructV1,
+                },
+            } as LegacyMembershipStruct
+            return await spaceDapp.createLegacySpace(
+                {
+                    spaceName: `${name}-space`,
+                    uri: `${name}-space-metadata`,
+                    channelName: 'general',
+                    legacyMembership,
+                },
+                wallet,
+            )
+        }
     } else if (useLegacySpaces()) {
         // Escalate if this test case should have produced a legacy space
         // but did not.
@@ -1061,7 +1088,7 @@ export async function createTownWithRequirements(requirements: {
     }
     requirements.users = requirements.users.map((user) => userNameToWallet[user])
 
-    const membershipInfo: LegacyMembershipStruct = {
+    const membershipInfo: MembershipStruct = {
         settings: {
             name: 'Everyone',
             symbol: 'MEMBER',
@@ -1077,7 +1104,7 @@ export async function createTownWithRequirements(requirements: {
         requirements: {
             everyone: requirements.everyone,
             users: requirements.users,
-            ruleData: convertRuleDataV2ToV1(requirements.ruleData),
+            ruleData: encodeRuleDataV2(requirements.ruleData),
             syncEntitlements: false,
         },
     }
