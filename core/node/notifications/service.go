@@ -104,7 +104,9 @@ func (s *Service) Start(ctx context.Context) {
 		for {
 			log.Info("Start notification streams tracker")
 
-			s.streamsTracker.Run(ctx)
+			if err := s.streamsTracker.Run(ctx); err != nil {
+				log.Error("tracking streams failed", "err", err)
+			}
 
 			select {
 			case <-time.After(10 * time.Second):

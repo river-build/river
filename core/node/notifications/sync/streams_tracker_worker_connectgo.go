@@ -92,7 +92,7 @@ func (s *StreamTrackerConnectGo) Run(
 		restartSyncSessionCounter++
 
 		if restartSyncSessionCounter > 1 {
-			log.Info("Restart sync session", "times", restartSyncSessionCounter)
+			log.Info("restart sync session", "times", restartSyncSessionCounter)
 		}
 
 		syncPos := []*protocol.SyncCookie{{
@@ -111,7 +111,9 @@ func (s *StreamTrackerConnectGo) Run(
 
 		if err != nil {
 			syncCancel()
-			log.Error("unable to start stream sync session", "err", err)
+			if !errors.Is(err, context.Canceled) {
+				log.Error("unable to start stream sync session", "err", err)
+			}
 			if s.waitMaxOrUntilCancel(ctx, time.Minute, 2*time.Minute) {
 				return
 			}

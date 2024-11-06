@@ -105,11 +105,16 @@ func NewStreamsTracker(
 		return nil, err
 	}
 
+	return tracker, nil
+}
+
+// Run the stream tracker workers until the given ctx expires.
+func (tracker *StreamsTracker) Run(ctx context.Context) error {
 	// load streams and distribute streams by hashing the stream id over buckets and assign each bucket
 	// to a worker to process stream updates.
 	var (
 		log                   = dlog.FromCtx(ctx)
-		validNodes            = nodeRegistry.GetValidNodeAddresses()
+		validNodes            = tracker.nodeRegistry.GetValidNodeAddresses()
 		streamsLoaded         = 0
 		streamsLoadedProgress = 0
 		start                 = time.Now()
@@ -169,23 +174,19 @@ func NewStreamsTracker(
 		})
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	log.Info("Loaded streams from streams registry",
 		"count", streamsLoaded,
 		"took", time.Since(start))
 
-	return tracker, nil
-}
-
-// Run the stream tracker workers until the given ctx expires.
-func (tracker *StreamsTracker) Run(ctx context.Context) {
 	// wait for all tracked streams to finish
 	tracker.tasks.Wait()
 
-	log := dlog.FromCtx(ctx)
 	log.Info("stream tracker stopped")
+
+	return nil
 }
 
 // TrackStreamForNotifications returns true if the given streamID must be tracked for notifications.
