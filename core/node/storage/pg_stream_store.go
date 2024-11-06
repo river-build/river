@@ -47,7 +47,11 @@ func GetRiverNodeDbMigrationSchemaFS() *embed.FS {
 
 type txnFn func(ctx context.Context, tx pgx.Tx) error
 
-func (s *PostgresStreamStore) createSettingsTable(partitions int) txnFn {
+// createSettingsTableTxnWithPartitions creates a txnFn that can be ran on the
+// postgres store before migrations are applied. Our migrations actually check this
+// table and use the partitions setting in order to determine how many partitions
+// to use when creating the schema for stream data storage.
+func (s *PostgresStreamStore) createSettingsTableTxnWithPartitions(partitions int) txnFn {
 	return func(ctx context.Context, tx pgx.Tx) error {
 		log := dlog.FromCtx(ctx)
 		log.Info("Creating settings table")
@@ -83,6 +87,9 @@ func (s *PostgresStreamStore) createSettingsTable(partitions int) txnFn {
 			return err
 		}
 
+		// Assign the true partitions used to the store, which may be different than what
+		// is specified in the config, if the config does not match what is already in the
+		// database.
 		s.numPartitions = numPartitions
 		log.Info("Creating stream storage schema with partition count", "numPartitions", numPartitions)
 
@@ -116,7 +123,7 @@ func NewPostgresStreamStore(
 		ctx,
 		poolInfo,
 		metrics,
-		store.createSettingsTable(poolInfo.Config.NumPartitions),
+		store.createSettingsTableTxnWithPartitions(poolInfo.Config.NumPartitions),
 		migrationsDir,
 	); err != nil {
 		return nil, AsRiverError(err).Func("NewPostgresStreamStore")
