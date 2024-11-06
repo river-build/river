@@ -243,9 +243,9 @@ func TestArchiveOneStream(t *testing.T) {
 	)
 	require.NoError(err)
 
-	dbCfg, schema, schemaDeleter, err := dbtestutils.ConfigureDB(ctx)
+	dbCfg, schema, _, err := dbtestutils.ConfigureDB(ctx)
 	require.NoError(err)
-	defer schemaDeleter()
+	// defer schemaDeleter()
 
 	pool, err := storage.CreateAndValidatePgxPool(ctx, dbCfg, schema, nil)
 	require.NoError(err)
@@ -446,7 +446,7 @@ func TestArchiveContinuous(t *testing.T) {
 			assert.NoError(c, err)
 			assert.Zero(c, num)
 		},
-		5*time.Second,
+		10*time.Second,
 		10*time.Millisecond,
 	)
 
@@ -459,7 +459,7 @@ func TestArchiveContinuous(t *testing.T) {
 			assert.NoError(c, err)
 			assert.Equal(c, lastMB.Num, num)
 		},
-		5*time.Second,
+		10*time.Second,
 		10*time.Millisecond,
 	)
 
@@ -482,7 +482,7 @@ func TestArchiveContinuous(t *testing.T) {
 			assert.NoError(c, err)
 			assert.Equal(c, lastMB2.Num, num)
 		},
-		5*time.Second,
+		10*time.Second,
 		10*time.Millisecond,
 	)
 

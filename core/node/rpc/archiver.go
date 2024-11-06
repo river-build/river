@@ -181,17 +181,42 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 	}
 
 	for mbsInDb < mbsInContract {
+
 		toBlock := min(mbsInDb+int64(a.config.GetReadMiniblocksSize()), mbsInContract)
-		resp, err := stub.GetMiniblocks(
-			ctx,
-			connect.NewRequest(&GetMiniblocksRequest{
-				StreamId:      stream.streamId[:],
-				FromInclusive: mbsInDb,
-				ToExclusive:   toBlock,
-			}),
-		)
+
+		retries := 3
+		var resp *connect.Response[GetMiniblocksResponse]
+		for retries > 0 {
+			resp, err = stub.GetMiniblocks(
+				ctx,
+				connect.NewRequest(&GetMiniblocksRequest{
+					StreamId:      stream.streamId[:],
+					FromInclusive: mbsInDb,
+					ToExclusive:   toBlock,
+				}),
+			)
+			if err != nil {
+				log.Warn(
+					"Error when calling GetMiniblocks on server",
+					"error",
+					err,
+					"streamId",
+					stream.streamId,
+					"retries",
+					retries,
+				)
+				stream.nodes.AdvanceStickyPeer(nodeAddr)
+
+				if AsRiverError(err).Code != Err_NOT_FOUND {
+					return err
+				}
+			}
+			// Wait half a second before retrying
+			time.Sleep(time.Millisecond * 500)
+			retries = retries - 1
+		}
+
 		if err != nil {
-			stream.nodes.AdvanceStickyPeer(nodeAddr)
 			return err
 		}
 
@@ -301,6 +326,8 @@ func (a *Archiver) startImpl(ctx context.Context, once bool) error {
 			if a.tasksWG != nil {
 				a.tasksWG.Add(1)
 			}
+			log := dlog.FromCtx(ctx)
+			log.Debug("Adding stream via detecting presence in stream registry", "streamId", stream.Id)
 			a.addNewStream(ctx, stream.Id, &stream.Stream.Nodes, stream.Stream.LastMiniblockNum)
 		}
 	}
