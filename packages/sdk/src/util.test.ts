@@ -77,6 +77,7 @@ import {
     XchainConfig,
     UpdateRoleParams,
 } from '@river-build/web3'
+import { SyncState } from './syncedStreamsLoop'
 
 const log = dlog('csb:test:util')
 
@@ -633,6 +634,8 @@ export async function expectUserCanJoin(
 
     await client.initializeUser({ spaceId })
     client.startSync()
+
+    await waitFor(() => client.streams.syncState === SyncState.Syncing)
 
     await expect(client.joinStream(spaceId)).toResolve()
     await expect(client.joinStream(channelId)).toResolve()
