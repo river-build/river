@@ -510,7 +510,7 @@ export async function createVersionedSpaceFromMembership(
                     syncEntitlements: false,
                     ruleData: convertRuleDataV2ToV1(
                         decodeRuleDataV2(currentMembership.requirements.ruleData),
-                    ) as IRuleEntitlementBase.RuleDataStructV1,
+                    ) as IRuleEntitlementBase.RuleDataStruct,
                 },
             } as LegacyMembershipStruct
             return await spaceDapp.createLegacySpace(
