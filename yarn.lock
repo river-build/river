@@ -14576,6 +14576,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"itty-router@npm:^2.6.6":
+  version: 2.6.6
+  resolution: "itty-router@npm:2.6.6"
+  checksum: 2117cba792e7a131f12af8e4f18ed7fddf643d632a440f235e4a3478eac4e4158272a859d160969e0d76e96f5a8659bd090f714afabdb95cffb7964c29d4a89f
+  languageName: node
+  linkType: hard
+
 "itty-time@npm:^1.0.6":
   version: 1.0.6
   resolution: "itty-time@npm:1.0.6"
@@ -16294,14 +16301,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"merkle-worker@workspace:packages/merkle-worker":
+"merkle-worker@workspace:packages/workers/merkle-worker":
   version: 0.0.0-use.local
-  resolution: "merkle-worker@workspace:packages/merkle-worker"
+  resolution: "merkle-worker@workspace:packages/workers/merkle-worker"
   dependencies:
     "@cloudflare/workers-types": ^4.20241022.0
     "@openzeppelin/merkle-tree": ^1.0.7
     "@types/jest": ^29.5.3
     eslint: ^8.53.0
+    itty-router: ^2.6.6
     jest: ^29.6.2
     jest-environment-miniflare: ^2.14.2
     miniflare: ^3.20240524.1
@@ -16309,6 +16317,7 @@ __metadata:
     ts-jest: ^29.1.1
     tsx: ^4.7.1
     typescript: ^5.1.6
+    worker-common: "workspace:^"
     wrangler: ^3.60.3
   languageName: unknown
   linkType: soft
@@ -23285,6 +23294,28 @@ __metadata:
   checksum: 3d927f3c95d0ad990968da54c0ad8cde2801d8e91006cd7474c26e6b742cc8557250ce495c9732b2f9db1f903601cb74ec282e0f122ee0d02d7abe81e150eea8
   languageName: node
   linkType: hard
+
+"worker-common@workspace:^, worker-common@workspace:packages/workers/worker-common":
+  version: 0.0.0-use.local
+  resolution: "worker-common@workspace:packages/workers/worker-common"
+  dependencies:
+    "@cloudflare/workers-types": ^4.20241022.0
+    "@river-build/generated": "workspace:^"
+    "@river-build/web3": "workspace:^"
+    "@types/jest": ^29.5.3
+    "@typescript-eslint/eslint-plugin": ^6.10.0
+    "@typescript-eslint/parser": ^7.14.1
+    eslint: ^8.53.0
+    ethers: ^5.7.2
+    jest: ^29.6.2
+    jest-environment-miniflare: ^2.14.2
+    miniflare: ^3.20240524.1
+    prettier: ^2.8.8
+    ts-jest: ^29.1.1
+    typescript: ^5.1.6
+    wrangler: ^3.60.3
+  languageName: unknown
+  linkType: soft
 
 "workerd@npm:1.20241022.0":
   version: 1.20241022.0
