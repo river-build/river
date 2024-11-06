@@ -2622,6 +2622,11 @@ export class Client
             group.groupInfoWithExternalKey,
         )
         console.log(`Initialize Group ${before} -> ${after} @ ${streamId}`)
+        if (after === 'GROUP_MISSING') {
+            // Try rejoining the group
+            console.log(`Rejoining group ${streamId}`)
+            await this.mls_joinOrCreateGroup(streamId)
+        }
     }
 
     public async mls_didReceiveExternalJoin(externalJoin: MlsExternalJoin): Promise<void> {
@@ -2629,12 +2634,20 @@ export class Client
             throw new Error('mls backend not initialized')
         }
 
-        await this.mlsCrypto?.handleExternalJoin(
+        const streamId = externalJoin.streamId
+        const before = this.mlsCrypto.groupStore.getGroupStatus(streamId)
+        const after = await this.mlsCrypto?.handleExternalJoin(
             externalJoin.streamId,
             externalJoin.userAddress,
             externalJoin.deviceKey,
             externalJoin.commit,
             externalJoin.groupInfoWithExternalKey,
         )
+        console.log(`External Join ${before} -> ${after} @ ${streamId}`)
+        if (after === 'GROUP_MISSING') {
+            // Try rejoining the group
+            console.log(`Rejoining group ${streamId}`)
+            await this.mls_joinOrCreateGroup(streamId)
+        }
     }
 }
