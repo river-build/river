@@ -1231,7 +1231,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@cloudflare/workers-types@npm:^4.20221111.1, @cloudflare/workers-types@npm:^4.20240529.0, @cloudflare/workers-types@npm:^4.20241022.0":
+"@cloudflare/workers-types@npm:^4.20221111.1, @cloudflare/workers-types@npm:^4.20241022.0":
   version: 4.20241022.0
   resolution: "@cloudflare/workers-types@npm:4.20241022.0"
   checksum: 44e00e33ceafcef448b47bfc0740d9649e2f5f1d76487008a7eec56d0e28f3189ecb09fd2d595df62c67fad008c7f3d34ae55c953fcc14e5ddb312935aab11ca
@@ -22334,18 +22334,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"unenv@npm:unenv-nightly@2.0.0-20241024-111401-d4156ac":
-  version: 2.0.0-20241024-111401-d4156ac
-  resolution: "unenv-nightly@npm:2.0.0-20241024-111401-d4156ac"
-  dependencies:
-    defu: ^6.1.4
-    ohash: ^1.1.4
-    pathe: ^1.1.2
-    ufo: ^1.5.4
-  checksum: 57ceabd99ae22cfa1ec0cc87f9e1c0b835c33df98b6332fbd97c5e3e909fa8e12b9b18198e7c7cc821f1e70139f12821f6d8873d3e82a909b0fa32237215b7cc
-  languageName: node
-  linkType: hard
-
 "unfetch@npm:^4.2.0":
   version: 4.2.0
   resolution: "unfetch@npm:4.2.0"
@@ -23311,7 +23299,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "worker-common@workspace:packages/workers/worker-common"
   dependencies:
-    "@cloudflare/workers-types": ^4.20240529.0
+    "@cloudflare/workers-types": ^4.20241022.0
     "@river-build/generated": "workspace:^"
     "@river-build/web3": "workspace:^"
     "@types/jest": ^29.5.3
@@ -23325,7 +23313,7 @@ __metadata:
     prettier: ^2.8.8
     ts-jest: ^29.1.1
     typescript: ^5.1.6
-    wrangler: ^3.58.0
+    wrangler: ^3.60.3
   languageName: unknown
   linkType: soft
 
@@ -23359,45 +23347,6 @@ __metadata:
   version: 6.2.1
   resolution: "workerpool@npm:6.2.1"
   checksum: c2c6eebbc5225f10f758d599a5c016fa04798bcc44e4c1dffb34050cd361d7be2e97891aa44419e7afe647b1f767b1dc0b85a5e046c409d890163f655028b09d
-  languageName: node
-  linkType: hard
-
-"wrangler@npm:^3.58.0":
-  version: 3.84.1
-  resolution: "wrangler@npm:3.84.1"
-  dependencies:
-    "@cloudflare/kv-asset-handler": 0.3.4
-    "@cloudflare/workers-shared": 0.7.0
-    "@esbuild-plugins/node-globals-polyfill": ^0.2.3
-    "@esbuild-plugins/node-modules-polyfill": ^0.2.2
-    blake3-wasm: ^2.1.5
-    chokidar: ^3.5.3
-    date-fns: ^4.1.0
-    esbuild: 0.17.19
-    fsevents: ~2.3.2
-    itty-time: ^1.0.6
-    miniflare: 3.20241022.0
-    nanoid: ^3.3.3
-    path-to-regexp: ^6.3.0
-    resolve: ^1.22.8
-    resolve.exports: ^2.0.2
-    selfsigned: ^2.0.1
-    source-map: ^0.6.1
-    unenv: "npm:unenv-nightly@2.0.0-20241024-111401-d4156ac"
-    workerd: 1.20241022.0
-    xxhash-wasm: ^1.0.1
-  peerDependencies:
-    "@cloudflare/workers-types": ^4.20241022.0
-  dependenciesMeta:
-    fsevents:
-      optional: true
-  peerDependenciesMeta:
-    "@cloudflare/workers-types":
-      optional: true
-  bin:
-    wrangler: bin/wrangler.js
-    wrangler2: bin/wrangler.js
-  checksum: 40402fc05082aa9b3ff860365161831b8b389631061fa24d17911c66f71484bd7dd08db2b2bb53858f1e848490386762fb1fd949aeea7edb3046a804bb9e1e2d
   languageName: node
   linkType: hard
 
