@@ -184,46 +184,30 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 
 		toBlock := min(mbsInDb+int64(a.config.GetReadMiniblocksSize()), mbsInContract)
 
-		retries := 3
-		var resp *connect.Response[GetMiniblocksResponse]
-		for retries > 0 {
-			resp, err = stub.GetMiniblocks(
-				ctx,
-				connect.NewRequest(&GetMiniblocksRequest{
-					StreamId:      stream.streamId[:],
-					FromInclusive: mbsInDb,
-					ToExclusive:   toBlock,
-				}),
+		resp, err := stub.GetMiniblocks(
+			ctx,
+			connect.NewRequest(&GetMiniblocksRequest{
+				StreamId:      stream.streamId[:],
+				FromInclusive: mbsInDb,
+				ToExclusive:   toBlock,
+			}),
+		)
+		if err != nil && AsRiverError(err).Code != Err_NOT_FOUND {
+			log.Warn(
+				"Error when calling GetMiniblocks on server",
+				"error",
+				err,
+				"streamId",
+				stream.streamId,
 			)
-			if err != nil {
-				log.Warn(
-					"Error when calling GetMiniblocks on server",
-					"error",
-					err,
-					"streamId",
-					stream.streamId,
-					"retries",
-					retries,
-				)
-				stream.nodes.AdvanceStickyPeer(nodeAddr)
-
-				if AsRiverError(err).Code != Err_NOT_FOUND {
-					return err
-				}
-			}
-			// Wait half a second before retrying
-			time.Sleep(time.Millisecond * 500)
-			retries = retries - 1
-		}
-
-		if err != nil {
+			stream.nodes.AdvanceStickyPeer(nodeAddr)
 			return err
 		}
 
 		msg := resp.Msg
-		if len(msg.Miniblocks) == 0 {
+		if (err != nil && AsRiverError(err).Code == Err_NOT_FOUND) || len(msg.Miniblocks) == 0 {
 			log.Info(
-				"ArchiveStream: GetMiniblocks returned empty miniblocks, remote storage is not up-to-date with contract yet",
+				"ArchiveStream: GetMiniblocks did not return data, remote storage is not up-to-date with contract yet",
 				"streamId",
 				stream.streamId,
 				"fromInclusive",
