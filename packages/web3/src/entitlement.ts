@@ -824,7 +824,7 @@ export class DecodedCheckOperationBuilder {
 
         // threshold check
         switch (this.decodedCheckOp.type) {
-            case CheckOperationType.ERC1155: 
+            case CheckOperationType.ERC1155:
             case CheckOperationType.ETH_BALANCE:
             case CheckOperationType.ERC20:
             case CheckOperationType.ERC721:
@@ -856,7 +856,7 @@ export class DecodedCheckOperationBuilder {
                     type: this.decodedCheckOp.type,
                     chainId: this.decodedCheckOp.chainId!,
                     address: this.decodedCheckOp.address!,
-                    threshold: this.decodedCheckOp.threshold!
+                    threshold: this.decodedCheckOp.threshold!,
                 }
 
             case CheckOperationType.ERC1155:
@@ -867,23 +867,25 @@ export class DecodedCheckOperationBuilder {
                     threshold: this.decodedCheckOp.threshold!,
                     tokenId: this.decodedCheckOp.tokenId!,
                 }
-    
+
             case CheckOperationType.ETH_BALANCE:
                 return {
                     type: CheckOperationType.ETH_BALANCE,
                     threshold: this.decodedCheckOp.threshold!,
                 }
-            
+
             case CheckOperationType.ISENTITLED:
                 return {
                     type: CheckOperationType.ISENTITLED,
                     address: this.decodedCheckOp.address!,
                     chainId: this.decodedCheckOp.chainId!,
-                    byteEncodedParams: this.decodedCheckOp.byteEncodedParams!
+                    byteEncodedParams: this.decodedCheckOp.byteEncodedParams!,
                 }
 
             default:
-                throw new Error(`Check operation type ${opStr} unrecognized or not used in production`)
+                throw new Error(
+                    `Check operation type ${opStr} unrecognized or not used in production`,
+                )
         }
     }
 }
@@ -927,7 +929,7 @@ export function createOperationsTree(
                 break
             case CheckOperationType.ISENTITLED:
                 params = op.byteEncodedParams ?? `0x`
-                break;
+                break
             default:
                 params = '0x'
         }

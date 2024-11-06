@@ -1292,7 +1292,7 @@ describe('createOperationsTree', () => {
                 type: CheckOperationType.ISENTITLED,
                 chainId: 1n,
                 address: MOCK_ADDRESS,
-                byteEncodedParams: `0xabcdef`
+                byteEncodedParams: `0xabcdef`,
             },
             {
                 type: CheckOperationType.ERC721,
@@ -1411,150 +1411,140 @@ describe('createOperationsTree', () => {
     })
 })
 
-describe("DecodedCheckOpBuilder", () => {
-    test("Untyped", () => {
+describe('DecodedCheckOpBuilder', () => {
+    test('Untyped', () => {
         expect(() => {
             new DecodedCheckOperationBuilder().build()
-        }).toThrow("DecodedCheckOperation requires a type")
+        }).toThrow('DecodedCheckOperation requires a type')
     })
 
-    test("ERC20s", () => {
+    test('ERC20s', () => {
         expect(() => {
-            new DecodedCheckOperationBuilder().
-                setType(CheckOperationType.ERC20).
-                setAddress(zeroAddress).
-                setThreshold(1n).
-                build()
-        }
-        ).toThrow("DecodedCheckOperation of type ERC20 requires a chainId")
+            new DecodedCheckOperationBuilder()
+                .setType(CheckOperationType.ERC20)
+                .setAddress(zeroAddress)
+                .setThreshold(1n)
+                .build()
+        }).toThrow('DecodedCheckOperation of type ERC20 requires a chainId')
 
         expect(() => {
-            new DecodedCheckOperationBuilder().
-                setType(CheckOperationType.ERC20).
-                setChainId(1n).
-                setThreshold(1n).
-                build()
-        }
-        ).toThrow("DecodedCheckOperation of type ERC20 requires an address")
+            new DecodedCheckOperationBuilder()
+                .setType(CheckOperationType.ERC20)
+                .setChainId(1n)
+                .setThreshold(1n)
+                .build()
+        }).toThrow('DecodedCheckOperation of type ERC20 requires an address')
 
         expect(() => {
-            new DecodedCheckOperationBuilder().
-                setType(CheckOperationType.ERC20).
-                setChainId(1n).
-                setAddress(zeroAddress).
-                build()
-        }
-        ).toThrow("DecodedCheckOperation of type ERC20 requires a threshold")
+            new DecodedCheckOperationBuilder()
+                .setType(CheckOperationType.ERC20)
+                .setChainId(1n)
+                .setAddress(zeroAddress)
+                .build()
+        }).toThrow('DecodedCheckOperation of type ERC20 requires a threshold')
 
         // Valid example
-        const decoded = new DecodedCheckOperationBuilder().
-            setType(CheckOperationType.ERC20).
-            setChainId(1n).
-            setAddress(zeroAddress).
-            setThreshold(5n).
-            build()
+        const decoded = new DecodedCheckOperationBuilder()
+            .setType(CheckOperationType.ERC20)
+            .setChainId(1n)
+            .setAddress(zeroAddress)
+            .setThreshold(5n)
+            .build()
 
         expect(decoded).toEqual({
             type: CheckOperationType.ERC20,
             chainId: 1n,
             address: zeroAddress,
-            threshold: 5n
+            threshold: 5n,
         } as DecodedCheckOperation)
     })
 
-    test("ERC721s", () => {
+    test('ERC721s', () => {
         expect(() => {
-            new DecodedCheckOperationBuilder().
-                setType(CheckOperationType.ERC721).
-                setAddress(zeroAddress).
-                setThreshold(1n).
-                build()
-        }
-        ).toThrow("DecodedCheckOperation of type ERC721 requires a chainId")
+            new DecodedCheckOperationBuilder()
+                .setType(CheckOperationType.ERC721)
+                .setAddress(zeroAddress)
+                .setThreshold(1n)
+                .build()
+        }).toThrow('DecodedCheckOperation of type ERC721 requires a chainId')
 
         expect(() => {
-            new DecodedCheckOperationBuilder().
-                setType(CheckOperationType.ERC721).
-                setChainId(1n).
-                setThreshold(1n).
-                build()
-        }
-        ).toThrow("DecodedCheckOperation of type ERC721 requires an address")
+            new DecodedCheckOperationBuilder()
+                .setType(CheckOperationType.ERC721)
+                .setChainId(1n)
+                .setThreshold(1n)
+                .build()
+        }).toThrow('DecodedCheckOperation of type ERC721 requires an address')
 
         expect(() => {
-            new DecodedCheckOperationBuilder().
-                setType(CheckOperationType.ERC721).
-                setChainId(1n).
-                setAddress(zeroAddress).
-                build()
-        }
-        ).toThrow("DecodedCheckOperation of type ERC721 requires a threshold")
+            new DecodedCheckOperationBuilder()
+                .setType(CheckOperationType.ERC721)
+                .setChainId(1n)
+                .setAddress(zeroAddress)
+                .build()
+        }).toThrow('DecodedCheckOperation of type ERC721 requires a threshold')
 
         // Valid example
-        const decoded = new DecodedCheckOperationBuilder().
-            setType(CheckOperationType.ERC721).
-            setChainId(1n).
-            setAddress(zeroAddress).
-            setThreshold(5n).
-            build()
+        const decoded = new DecodedCheckOperationBuilder()
+            .setType(CheckOperationType.ERC721)
+            .setChainId(1n)
+            .setAddress(zeroAddress)
+            .setThreshold(5n)
+            .build()
 
         expect(decoded).toEqual({
             type: CheckOperationType.ERC721,
             chainId: 1n,
             address: zeroAddress,
-            threshold: 5n
+            threshold: 5n,
         } as DecodedCheckOperation)
     })
 
-    test("ERC1155s", () => {
+    test('ERC1155s', () => {
         expect(() => {
-            new DecodedCheckOperationBuilder().
-                setType(CheckOperationType.ERC1155).
-                setAddress(zeroAddress).
-                setThreshold(1n).
-                setTokenId(5n).
-                build()
-        }
-        ).toThrow("DecodedCheckOperation of type ERC1155 requires a chainId")
+            new DecodedCheckOperationBuilder()
+                .setType(CheckOperationType.ERC1155)
+                .setAddress(zeroAddress)
+                .setThreshold(1n)
+                .setTokenId(5n)
+                .build()
+        }).toThrow('DecodedCheckOperation of type ERC1155 requires a chainId')
 
         expect(() => {
-            new DecodedCheckOperationBuilder().
-                setType(CheckOperationType.ERC1155).
-                setChainId(1n).
-                setThreshold(1n).
-                setTokenId(5n).
-                build()
-        }
-        ).toThrow("DecodedCheckOperation of type ERC1155 requires an address")
+            new DecodedCheckOperationBuilder()
+                .setType(CheckOperationType.ERC1155)
+                .setChainId(1n)
+                .setThreshold(1n)
+                .setTokenId(5n)
+                .build()
+        }).toThrow('DecodedCheckOperation of type ERC1155 requires an address')
 
         expect(() => {
-            new DecodedCheckOperationBuilder().
-                setType(CheckOperationType.ERC1155).
-                setChainId(1n).
-                setAddress(zeroAddress).
-                setTokenId(5n).
-                build()
-        }
-        ).toThrow("DecodedCheckOperation of type ERC1155 requires a threshold")
+            new DecodedCheckOperationBuilder()
+                .setType(CheckOperationType.ERC1155)
+                .setChainId(1n)
+                .setAddress(zeroAddress)
+                .setTokenId(5n)
+                .build()
+        }).toThrow('DecodedCheckOperation of type ERC1155 requires a threshold')
 
         expect(() => {
-            new DecodedCheckOperationBuilder().
-                setType(CheckOperationType.ERC1155).
-                setChainId(1n).
-                setAddress(zeroAddress).
-                setThreshold(3n).
-                build()
-        }
-        ).toThrow("DecodedCheckOperation of type ERC1155 requires a tokenId")
+            new DecodedCheckOperationBuilder()
+                .setType(CheckOperationType.ERC1155)
+                .setChainId(1n)
+                .setAddress(zeroAddress)
+                .setThreshold(3n)
+                .build()
+        }).toThrow('DecodedCheckOperation of type ERC1155 requires a tokenId')
 
         // Valid example
-        const decoded = new DecodedCheckOperationBuilder().
-            setType(CheckOperationType.ERC1155).
-            setChainId(1n).
-            setAddress(zeroAddress).
-            setThreshold(5n).
-            setTokenId(9n).
-            build()
+        const decoded = new DecodedCheckOperationBuilder()
+            .setType(CheckOperationType.ERC1155)
+            .setChainId(1n)
+            .setAddress(zeroAddress)
+            .setThreshold(5n)
+            .setTokenId(9n)
+            .build()
 
         expect(decoded).toEqual({
             type: CheckOperationType.ERC1155,
@@ -1565,61 +1555,55 @@ describe("DecodedCheckOpBuilder", () => {
         } as DecodedCheckOperation)
     })
 
-    test("ETH_BALANCE", () => {
+    test('ETH_BALANCE', () => {
         expect(() => {
-            new DecodedCheckOperationBuilder().
-                setType(CheckOperationType.ETH_BALANCE).
-                build()
-        }
-        ).toThrow("DecodedCheckOperation of type ETH_BALANCE requires a threshold")
+            new DecodedCheckOperationBuilder().setType(CheckOperationType.ETH_BALANCE).build()
+        }).toThrow('DecodedCheckOperation of type ETH_BALANCE requires a threshold')
 
         // Valid example
-        const decoded = new DecodedCheckOperationBuilder().
-            setType(CheckOperationType.ETH_BALANCE).
-            setThreshold(5n).
-            build()
+        const decoded = new DecodedCheckOperationBuilder()
+            .setType(CheckOperationType.ETH_BALANCE)
+            .setThreshold(5n)
+            .build()
 
         expect(decoded).toEqual({
             type: CheckOperationType.ETH_BALANCE,
-            threshold: 5n
+            threshold: 5n,
         } as DecodedCheckOperation)
     })
 
-    test("ISENTITLED", () => {
+    test('ISENTITLED', () => {
         expect(() => {
-            new DecodedCheckOperationBuilder().
-                setType(CheckOperationType.ISENTITLED).
-                setAddress(zeroAddress).
-                setByteEncodedParams('0xabcdef1234').
-                build()
-        }
-        ).toThrow("DecodedCheckOperation of type ISENTITLED requires a chainId")
+            new DecodedCheckOperationBuilder()
+                .setType(CheckOperationType.ISENTITLED)
+                .setAddress(zeroAddress)
+                .setByteEncodedParams('0xabcdef1234')
+                .build()
+        }).toThrow('DecodedCheckOperation of type ISENTITLED requires a chainId')
 
         expect(() => {
-            new DecodedCheckOperationBuilder().
-                setType(CheckOperationType.ISENTITLED).
-                setChainId(1n).
-                setByteEncodedParams('0xabcdef1234').
-                build()
-        }
-        ).toThrow("DecodedCheckOperation of type ISENTITLED requires an address")
+            new DecodedCheckOperationBuilder()
+                .setType(CheckOperationType.ISENTITLED)
+                .setChainId(1n)
+                .setByteEncodedParams('0xabcdef1234')
+                .build()
+        }).toThrow('DecodedCheckOperation of type ISENTITLED requires an address')
 
         expect(() => {
-            new DecodedCheckOperationBuilder().
-                setType(CheckOperationType.ISENTITLED).
-                setChainId(1n).
-                setAddress(zeroAddress).
-                build()
-        }
-        ).toThrow("DecodedCheckOperation of type ISENTITLED requires byteEncodedParams")
+            new DecodedCheckOperationBuilder()
+                .setType(CheckOperationType.ISENTITLED)
+                .setChainId(1n)
+                .setAddress(zeroAddress)
+                .build()
+        }).toThrow('DecodedCheckOperation of type ISENTITLED requires byteEncodedParams')
 
         // Valid example
-        const decoded = new DecodedCheckOperationBuilder().
-            setType(CheckOperationType.ISENTITLED).
-            setChainId(1n).
-            setAddress(zeroAddress).
-            setByteEncodedParams('0xabcdef1234').
-            build()
+        const decoded = new DecodedCheckOperationBuilder()
+            .setType(CheckOperationType.ISENTITLED)
+            .setChainId(1n)
+            .setAddress(zeroAddress)
+            .setByteEncodedParams('0xabcdef1234')
+            .build()
 
         expect(decoded).toEqual({
             type: CheckOperationType.ISENTITLED,
