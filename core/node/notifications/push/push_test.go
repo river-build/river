@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/river-build/river/core/node/infra"
+	"github.com/river-build/river/core/node/protocol"
 	"os"
 	"testing"
 	"time"
@@ -49,7 +50,9 @@ func TestAPNSPushNotification(t *testing.T) {
 
 	payload := payload2.NewPayload().Alert("Sry to bother you if this works...")
 
-	req.NoError(notifier.SendApplePushNotification(ctx, deviceToken, common.Hash{1}, payload), "send APN notification")
+	req.NoError(notifier.SendApplePushNotification(
+		ctx, deviceToken, protocol.APNEnvironment_APN_ENVIRONMENT_SANDBOX,
+		common.Hash{1}, payload), "send APN notification")
 }
 
 func TestWebPushWithVapid(t *testing.T) {

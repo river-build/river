@@ -274,11 +274,13 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 			continue
 		}
 
-		if err := p.sendAPNNotification(sub.DeviceToken, event, notificationPayload); err == nil {
+		if err := p.sendAPNNotification(sub.DeviceToken, sub.Environment, event, notificationPayload); err == nil {
 			p.log.Debug("Successfully sent APN notification",
 				"user", user,
 				"event", event.Hash,
 				"streamID", streamID,
+				"deviceToken", sub.DeviceToken,
+				"env", sub.Environment,
 			)
 		} else {
 			p.log.Error("Unable to send APN notification",
@@ -286,6 +288,8 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 				"user", user,
 				"event", event.Hash,
 				"streamID", streamID,
+				"deviceToken", sub.DeviceToken,
+				"env", sub.Environment,
 				"err", err)
 		}
 	}
@@ -301,12 +305,12 @@ func (p *MessageToNotificationsProcessor) sendWebPushNotification(
 }
 
 func (p *MessageToNotificationsProcessor) sendAPNNotification(
-	deviceToken []byte, event *events.ParsedEvent, content []byte) error {
+	deviceToken []byte, env APNEnvironment, event *events.ParsedEvent, content []byte) error {
 	// lint:ignore context.Background() is fine here
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	notificationPayload := payload.NewPayload().Alert(string(content))
 
-	return p.notifier.SendApplePushNotification(ctx, hex.EncodeToString(deviceToken), event.Hash, notificationPayload)
+	return p.notifier.SendApplePushNotification(ctx, hex.EncodeToString(deviceToken), env, event.Hash, notificationPayload)
 }

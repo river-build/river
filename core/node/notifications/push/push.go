@@ -40,6 +40,8 @@ type (
 			ctx context.Context,
 			// deviceToken as derive by the device for the APP
 			deviceToken string,
+			// env to send notification to
+			env protocol.APNEnvironment,
 			// event hash
 			eventHash common.Hash,
 			// payload is sent to the APP
@@ -175,7 +177,7 @@ func (n *MessageNotifications) SendWebPushNotification(
 
 	res, err := webpush.SendNotificationWithContext(ctx, payload, subscription, options)
 	if err != nil {
-		n.webPushSend.With(prometheus.Labels{"status": StatusFailure}).Inc()
+		n.webPushSend.With(prometheus.Labels{"result": StatusFailure}).Inc()
 		return AsRiverError(err).
 			Message("Send notification with WebPush failed").
 			Func("SendAPNNotification")
@@ -183,11 +185,11 @@ func (n *MessageNotifications) SendWebPushNotification(
 	defer res.Body.Close()
 
 	if res.StatusCode == http.StatusCreated {
-		n.webPushSend.With(prometheus.Labels{"status": StatusSuccess}).Inc()
+		n.webPushSend.With(prometheus.Labels{"result": StatusSuccess}).Inc()
 		return nil
 	}
 
-	n.webPushSend.With(prometheus.Labels{"status": StatusFailure}).Inc()
+	n.webPushSend.With(prometheus.Labels{"result": StatusFailure}).Inc()
 	return RiverError(protocol.Err_UNAVAILABLE,
 		"Send notification with web push vapid failed",
 		"statusCode", res.StatusCode,
@@ -198,6 +200,7 @@ func (n *MessageNotifications) SendWebPushNotification(
 func (n *MessageNotifications) SendApplePushNotification(
 	ctx context.Context,
 	deviceToken string,
+	env protocol.APNEnvironment,
 	eventHash common.Hash,
 	payload *payload2.Payload,
 ) error {
@@ -216,26 +219,37 @@ func (n *MessageNotifications) SendApplePushNotification(
 		TeamID:  n.apnTeamID,
 	}
 
-	client := apns2.NewTokenClient(token)
+	client := apns2.NewTokenClient(token).Production()
+	if env == protocol.APNEnvironment_APN_ENVIRONMENT_SANDBOX {
+		client = client.Development()
+	}
+
 	res, err := client.PushWithContext(ctx, notification)
 	if err != nil {
-		n.apnSend.With(prometheus.Labels{"status": StatusFailure}).Inc()
+		n.apnSend.With(prometheus.Labels{"result": StatusFailure}).Inc()
 		return AsRiverError(err).
 			Message("Send notification to APNS failed").
 			Func("SendAPNNotification")
 	}
 
 	if res.Sent() {
-		n.apnSend.With(prometheus.Labels{"status": StatusSuccess}).Inc()
+		n.apnSend.With(prometheus.Labels{"result": StatusSuccess}).Inc()
+		// ApnsUniqueID only available on development/sandbox,
+		// use it to check in Apple's Delivery Logs to see the status.
+		if env == protocol.APNEnvironment_APN_ENVIRONMENT_SANDBOX {
+			dlog.FromCtx(ctx).
+				Info("APN notification sent", "event", eventHash, "uniqueApnsID", res.ApnsUniqueID)
+		}
 		return nil
 	}
 
-	n.apnSend.With(prometheus.Labels{"status": StatusFailure}).Inc()
+	n.apnSend.With(prometheus.Labels{"result": StatusFailure}).Inc()
 	return RiverError(protocol.Err_UNAVAILABLE,
 		"Send notification to APNS failed",
 		"statusCode", res.StatusCode,
 		"apnsID", res.ApnsID,
 		"reason", res.Reason,
+		"deviceToken", deviceToken,
 	).Func("SendAPNNotification")
 }
 
@@ -254,7 +268,7 @@ func (n *MessageNotificationsSimulator) SendWebPushNotification(
 	n.WebPushNotificationsByEndpoint[subscription.Endpoint] = append(
 		n.WebPushNotificationsByEndpoint[subscription.Endpoint], payload)
 
-	n.webPushSend.With(prometheus.Labels{"status": StatusSuccess}).Inc()
+	n.webPushSend.With(prometheus.Labels{"result": StatusSuccess}).Inc()
 
 	return nil
 }
@@ -262,13 +276,14 @@ func (n *MessageNotificationsSimulator) SendWebPushNotification(
 func (n *MessageNotificationsSimulator) SendApplePushNotification(
 	ctx context.Context,
 	deviceToken string,
+	env protocol.APNEnvironment,
 	eventHash common.Hash,
 	payload *payload2.Payload,
 ) error {
 	log := dlog.FromCtx(ctx)
-	log.Info("SendApplePushNotification", "deviceToken", deviceToken, "payload", payload)
+	log.Info("SendApplePushNotification", "deviceToken", deviceToken, "env", env, "payload", payload)
 
-	n.apnSend.With(prometheus.Labels{"status": StatusSuccess}).Inc()
+	n.apnSend.With(prometheus.Labels{"result": StatusSuccess}).Inc()
 
 	return nil
 }
