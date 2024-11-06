@@ -1585,7 +1585,7 @@ describe("DecodedCheckOpBuilder", () => {
         } as DecodedCheckOperation)
     })
 
-    test.only("ISENTITLED", () => {
+    test("ISENTITLED", () => {
         expect(() => {
             new DecodedCheckOperationBuilder().
                 setType(CheckOperationType.ISENTITLED).
