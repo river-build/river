@@ -129,7 +129,7 @@ export class MlsCrypto {
         }
     }
 
-    public async handleCommit(streamId: string, commit: Uint8Array): Promise<void> {
+    private async handleCommit(streamId: string, commit: Uint8Array): Promise<void> {
         const groupState = this.groupStore.getGroup(streamId)
         if (!groupState) {
             throw new Error('Group not found')
@@ -274,6 +274,7 @@ export class MlsCrypto {
                 return 'GROUP_ACTIVE'
             }
             case 'GROUP_ACTIVE':
+                await this.handleCommit(streamId, commit)
                 return 'GROUP_ACTIVE'
         }
     }
