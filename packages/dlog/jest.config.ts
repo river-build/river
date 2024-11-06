@@ -17,6 +17,9 @@ const config: JestConfigWithTsJest = {
             },
         ],
     },
+    moduleNameMapper: {
+        '^(\\.{1,2}/.*)\\.js$': '$1',
+    },
     collectCoverage: true,
     coverageProvider: 'v8',
     coverageReporters: ['json', 'html'],

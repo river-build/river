@@ -23,6 +23,7 @@ const config: JestConfigWithTsJest = {
         ],
     },
     moduleNameMapper: {
+        '^(\\.{1,2}/.*)\\.js$': '$1',
         'bn.js': 'bn.js',
         'hash.js': 'hash.js',
         '\\.(wasm)$': require.resolve('./src/mock-wasm-file.js'),
