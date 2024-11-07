@@ -4,7 +4,6 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "publish": "wrangler deploy --env $CF_ENV",
         "dev": "echo use dev:local for now - see wrangler.toml",
         "dev:local": "wrangler dev --port ${PORT:-8686}",
         "dev:remote": "wrangler dev --remote",
@@ -14,6 +13,8 @@
         "start": "wrangler dev",
         "test": "yarn test:unit",
         "test:unit": "yarn node --experimental-vm-modules $(yarn bin jest)",
+        "publish": "wrangler deploy --env $CF_ENV",
+        "tail": "wrangler tail merkle-worker --env $CF_ENV",
         "cf-typegen": "wrangler types",
         "generate-merkle": "tsx src/scripts/generateMerkleRoot.ts"
     },
