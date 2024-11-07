@@ -16,7 +16,7 @@ describe('bobFlushes', () => {
         bobsContext = await makeRandomUserContext()
     })
 
-    test('bobTalksToHimself-noflush-nopresync', async () => {
+    it('bobTalksToHimself-noflush-nopresync', async () => {
         await bobTalksToHimself(
             baseLog.extend('bobTalksToHimself-noflush-nopresync'),
             bobsContext,
@@ -24,7 +24,7 @@ describe('bobFlushes', () => {
             false,
         )
     })
-    test('bobTalksToHimself-noflush-presync', async () => {
+    it('bobTalksToHimself-noflush-presync', async () => {
         await bobTalksToHimself(
             baseLog.extend('bobTalksToHimself-noflush-presync'),
             bobsContext,

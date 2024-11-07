@@ -6,7 +6,7 @@ import { MembershipStruct, convertRuleDataV1ToV2, encodeRuleDataV2 } from '@rive
 import { setupWalletsAndContexts, everyoneMembershipStruct } from './util.test'
 
 describe('Legacy Space Detection', () => {
-    test('Detect Legacy Space', async () => {
+    it('Detect Legacy Space', async () => {
         const { alice, aliceSpaceDapp, aliceProvider } = await setupWalletsAndContexts()
         const membership = await everyoneMembershipStruct(aliceSpaceDapp, alice)
 
@@ -27,7 +27,7 @@ describe('Legacy Space Detection', () => {
         await expect(aliceSpaceDapp.isLegacySpace(spaceAddress!)).resolves.toBeTruthy()
     })
 
-    test('Detect V2 space', async () => {
+    it('Detect V2 space', async () => {
         const { alice, aliceSpaceDapp, aliceProvider } = await setupWalletsAndContexts()
         const legacyMembership = await everyoneMembershipStruct(aliceSpaceDapp, alice)
         const membership: MembershipStruct = {

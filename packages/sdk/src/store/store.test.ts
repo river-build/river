@@ -5,7 +5,7 @@ import Dexie from 'dexie'
 
 describe('datastore tests', () => {
     // new test with description "decorator tests"
-    test('dexie expectations', async () => {
+    it('dexie expectations', async () => {
         interface AAA {
             id: string
             name: string

@@ -24,10 +24,10 @@ describe('clientCrypto', () => {
         await alicesClient.stop()
     })
 
-    test('clientCanEncryptDecryptEvent', async () => {
-        await expect(bobsClient.initializeUser()).toResolve()
+    it('clientCanEncryptDecryptEvent', async () => {
+        await expect(bobsClient.initializeUser()).resolves.not.toThrow()
         bobsClient.startSync()
-        await expect(alicesClient.initializeUser()).toResolve()
+        await expect(alicesClient.initializeUser()).resolves.not.toThrow()
         expect(
             alicesClient.encryptionDevice.deviceCurve25519Key !==
                 bobsClient.encryptionDevice.deviceCurve25519Key,
@@ -50,10 +50,10 @@ describe('clientCrypto', () => {
         expect(keys2.keys[0]).toEqual('hi!')
     })
 
-    test('clientCanEncryptDecryptInboxMultipleEventObjects', async () => {
-        await expect(bobsClient.initializeUser()).toResolve()
+    it('clientCanEncryptDecryptInboxMultipleEventObjects', async () => {
+        await expect(bobsClient.initializeUser()).resolves.not.toThrow()
         bobsClient.startSync()
-        await expect(alicesClient.initializeUser()).toResolve()
+        await expect(alicesClient.initializeUser()).resolves.not.toThrow()
         expect(
             alicesClient.encryptionDevice.deviceCurve25519Key !==
                 bobsClient.encryptionDevice.deviceCurve25519Key,

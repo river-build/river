@@ -37,7 +37,7 @@ describe('syncWithBlocks', () => {
         bobsContext = await makeRandomUserContext()
     })
 
-    test('blocksGetGeneratedAndSynced', async () => {
+    it('blocksGetGeneratedAndSynced', async () => {
         log('start')
 
         const bob = await makeTestRpcClient()

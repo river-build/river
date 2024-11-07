@@ -43,12 +43,12 @@ describe('sign', () => {
         bin_fromHexString('0x8dc27dbd6fc775e3a05c509c6eb1c63c4ab5bc6e7010bf9a9a80a42ae1ea56'),
     ]
 
-    test('i-need-buffer', () => {
+    it('i-need-buffer', () => {
         const buffer = Buffer.from('hello world', 'ascii')
         expect(buffer).toBeInstanceOf(Uint8Array)
     })
 
-    test('delegate-sig', async () => {
+    it('delegate-sig', async () => {
         // one user has two delegates (two devices, A and B)
         const user = keys[0]
         const delegateA = keys[1]
@@ -141,7 +141,7 @@ describe('sign', () => {
         ).toThrow()
     })
 
-    test('delegate-sig-2', async () => {
+    it('delegate-sig-2', async () => {
         const primary = keys[0]
         const primaryWallet = new ethers.Wallet(primary.privateKey)
 
@@ -163,7 +163,7 @@ describe('sign', () => {
         ).not.toThrow()
     })
 
-    test('make-signer-delegate', async () => {
+    it('make-signer-delegate', async () => {
         const user = keys[0]
         const userWallet = new ethers.Wallet(user.privateKey)
 

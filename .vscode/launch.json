@@ -14,6 +14,43 @@
       "processId": "river_node"
     },
     {
+      "name": "Vitest: current file (multi_ne)",
+      "type": "node",
+      "request": "launch",
+      "env": { "RIVER_ENV": "local_multi_ne" },
+      "program": "${workspaceFolder}/node_modules/.bin/vitest",
+      "args": ["${file}"],
+      "console": "integratedTerminal",
+    },
+      {
+      "name": "Vitest: current file (multi)",
+      "type": "node",
+      "request": "launch",
+      "env": { "RIVER_ENV": "local_multi" },
+      "program": "${workspaceFolder}/node_modules/.bin/vitest",
+      "args": ["${file}"],
+      "console": "integratedTerminal",
+    },
+      {
+      "name": "Vitest: debug current file (multi_ne)",
+      "type": "node",
+      "request": "launch",
+      "env": { "RIVER_ENV": "local_multi", "DEBUG": "csb:*,test:*",  "DEBUG_DEPTH":"10" },
+      "program": "${workspaceFolder}/node_modules/.bin/vitest",
+      "args": ["${file}"],
+      "console": "integratedTerminal",
+    },
+    {
+      "name": "Vitest: debug current file (multi)",
+      "type": "node",
+      "request": "launch",
+      "env": { "RIVER_ENV": "local_multi_ne", "DEBUG": "csb:*,test:*",  "DEBUG_DEPTH":"10" },
+      "program": "${workspaceFolder}/node_modules/.bin/vitest",
+      "args": ["${file}"],
+      "console": "integratedTerminal",
+    },
+    
+    {
       "name": "Jest: current file in 'packages/dlog/'",
       "type": "node",
       "request": "launch",

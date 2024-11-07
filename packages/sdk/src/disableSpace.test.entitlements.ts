@@ -11,7 +11,7 @@ import {
 } from './util.test'
 
 describe('disableSpace', () => {
-    test('User cannot join a space after it is disabled', async () => {
+    it('User cannot join a space after it is disabled', async () => {
         const {
             alice,
             carol,

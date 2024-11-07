@@ -9,7 +9,7 @@ import { makeDefaultChannelStreamId, makeUniqueChannelStreamId, streamIdAsBytes 
 import { check } from '@river-build/dlog'
 
 describe('snapshotMigration0002', () => {
-    test('run migration', () => {
+    it('run migration', () => {
         const spaceId = makeUniqueSpaceStreamId()
         const defaultChannelId = makeDefaultChannelStreamId(spaceId)
         const channelId = makeUniqueChannelStreamId(spaceId)

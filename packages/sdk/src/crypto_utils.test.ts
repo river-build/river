@@ -6,7 +6,7 @@ import crypto from 'crypto'
 import { deriveKeyAndIV, encryptAESGCM } from './crypto_utils'
 
 describe('crypto_utils', () => {
-    test('derivedKeyAndIV', async () => {
+    it('derivedKeyAndIV', async () => {
         const spaceId = generateRandomSpaceId()
 
         const { key: key1, iv: iv1 } = await deriveKeyAndIV(spaceId)
@@ -17,7 +17,7 @@ describe('crypto_utils', () => {
         expect(iv1.toString()).toEqual(iv2.toString())
     })
 
-    test('aesGcmEncryption', async () => {
+    it('aesGcmEncryption', async () => {
         const keyPhrase = '0xaabbccddeeff00112233445566778899'
         const { key, iv } = await deriveKeyAndIV(keyPhrase)
 

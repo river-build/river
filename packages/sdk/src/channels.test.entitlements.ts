@@ -47,7 +47,7 @@ const twoEth = oneEth * BigInt(2)
 const gtTwoEth = twoEth + BigInt(1)
 
 describe('channelsWithEntitlements', () => {
-    test('User who satisfies only one role ruledata requirement can join channel', async () => {
+    it('User who satisfies only one role ruledata requirement can join channel', async () => {
         const {
             alice,
             bob,
@@ -170,7 +170,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('READ + REACT user can react and redact reactions, but cannot write (top-level or reply)', async () => {
+    it('READ + REACT user can react and redact reactions, but cannot write (top-level or reply)', async () => {
         const { alice, bob, aliceSpaceDapp, spaceId, channelId } = await setupChannelWithCustomRole(
             ['alice'],
             NoopRuleData,
@@ -192,7 +192,7 @@ describe('channelsWithEntitlements', () => {
             alice.sendChannelMessage_Redaction(channelId!, {
                 refEventId: eventId,
             }),
-        ).toResolve()
+        ).resolves.not.toThrow()
 
         // Replying to Bob's message should not be allowed.
         await expect(
@@ -220,7 +220,7 @@ describe('channelsWithEntitlements', () => {
 
     // In practice we would never have a user with only write permissions, but this is a good test
     // to make sure our permissions are non-overlapping.
-    test('WRITE user can write (top-level plus reply), react', async () => {
+    it('WRITE user can write (top-level plus reply), react', async () => {
         const { alice, bob, aliceSpaceDapp, spaceId, channelId } = await setupChannelWithCustomRole(
             ['alice'],
             NoopRuleData,
@@ -242,7 +242,7 @@ describe('channelsWithEntitlements', () => {
             alice.sendChannelMessage_Redaction(channelId!, {
                 refEventId: eventId,
             }),
-        ).toResolve()
+        ).resolves.not.toThrow()
 
         // Replying to Bob's message should be allowed.
         await expect(
@@ -254,10 +254,10 @@ describe('channelsWithEntitlements', () => {
                 },
                 threadId: refEventId, // reply to Bob's message
             }),
-        ).toResolve()
+        ).resolves.not.toThrow()
 
         // Top-level post currently allowed.
-        await expect(alice.sendMessage(channelId!, 'Hello, world!')).toResolve()
+        await expect(alice.sendMessage(channelId!, 'Hello, world!')).resolves.not.toThrow()
 
         const doneStart = Date.now()
         // kill the clients
@@ -266,7 +266,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('REACT + WRITE user can do all WRITE user can do', async () => {
+    it('REACT + WRITE user can do all WRITE user can do', async () => {
         const { alice, bob, aliceSpaceDapp, spaceId, channelId } = await setupChannelWithCustomRole(
             ['alice'],
             NoopRuleData,
@@ -288,7 +288,7 @@ describe('channelsWithEntitlements', () => {
             alice.sendChannelMessage_Redaction(channelId!, {
                 refEventId: eventId,
             }),
-        ).toResolve()
+        ).resolves.not.toThrow()
 
         // Replying to Bob's message should be allowed.
         await expect(
@@ -300,10 +300,10 @@ describe('channelsWithEntitlements', () => {
                 },
                 threadId: refEventId, // reply to Bob's message
             }),
-        ).toResolve()
+        ).resolves.not.toThrow()
 
         // Top-level post currently allowed.
-        await expect(alice.sendMessage(channelId!, 'Hello, world!')).toResolve()
+        await expect(alice.sendMessage(channelId!, 'Hello, world!')).resolves.not.toThrow()
 
         const doneStart = Date.now()
         // kill the clients
@@ -312,7 +312,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('userEntitlementPass', async () => {
+    it('userEntitlementPass', async () => {
         const { alice, bob, aliceSpaceDapp, spaceId, channelId } = await setupChannelWithCustomRole(
             ['alice'],
             NoopRuleData,
@@ -328,7 +328,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('userEntitlementFail', async () => {
+    it('userEntitlementFail', async () => {
         const { alice, aliceSpaceDapp, bob, spaceId, channelId } = await setupChannelWithCustomRole(
             ['carol'],
             NoopRuleData,
@@ -343,7 +343,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('banned user not entitled to channel', async () => {
+    it('banned user not entitled to channel', async () => {
         const {
             alice,
             alicesWallet,
@@ -384,7 +384,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('userEntitlementPass - join as root, linked wallet whitelisted', async () => {
+    it('userEntitlementPass - join as root, linked wallet whitelisted', async () => {
         const { alice, aliceSpaceDapp, aliceProvider, carolProvider, bob, spaceId, channelId } =
             await setupChannelWithCustomRole(['carol'], NoopRuleData)
 
@@ -401,7 +401,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('userEntitlementPass - join as linked wallet, root wallet whitelisted', async () => {
+    it('userEntitlementPass - join as linked wallet, root wallet whitelisted', async () => {
         const {
             alice,
             aliceSpaceDapp,
@@ -426,7 +426,7 @@ describe('channelsWithEntitlements', () => {
         log('Done linked-wallet-whitelist', Date.now() - doneStart)
     })
 
-    test('oneNftGateJoinPass - join as root, asset in linked wallet', async () => {
+    it('oneNftGateJoinPass - join as root, asset in linked wallet', async () => {
         const testNft1Address = await TestERC721.getContractAddress('TestNFT1')
         const {
             alice,
@@ -462,7 +462,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('oneNftGateJoinPass - join as linked wallet, asset in root wallet', async () => {
+    it('oneNftGateJoinPass - join as linked wallet, asset in root wallet', async () => {
         const testNft1Address = await TestERC721.getContractAddress('TestNFT1')
         const {
             alice,
@@ -493,7 +493,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('oneNftGateJoinPass', async () => {
+    it('oneNftGateJoinPass', async () => {
         const testNftAddress = await TestERC721.getContractAddress('TestNFT')
         const { alice, alicesWallet, aliceSpaceDapp, bob, spaceId, channelId } =
             await setupChannelWithCustomRole([], getNftRuleData(testNftAddress))
@@ -514,7 +514,7 @@ describe('channelsWithEntitlements', () => {
         await alice.stopSync()
     })
 
-    test('user with only one entitlement from 3-nested NFT rule data can join channel', async () => {
+    it('user with only one entitlement from 3-nested NFT rule data can join channel', async () => {
         const testNft1 = 'TestNft1'
         const testNft2 = 'TestNft2'
         const testNft3 = 'TestNft3'
@@ -585,7 +585,7 @@ describe('channelsWithEntitlements', () => {
         await dave.stopSync()
     })
 
-    test('user booted on key request after entitlement loss', async () => {
+    it('user booted on key request after entitlement loss', async () => {
         const testNftAddress = await TestERC721.getContractAddress('TestNFT')
         const { alice, alicesWallet, aliceSpaceDapp, bob, spaceId, channelId } =
             await setupChannelWithCustomRole([], getNftRuleData(testNftAddress))
@@ -646,7 +646,7 @@ describe('channelsWithEntitlements', () => {
         await alice.stopSync()
     })
 
-    test('user cannot post after entitlement loss', async () => {
+    it('user cannot post after entitlement loss', async () => {
         const testNftAddress = await TestERC721.getContractAddress('TestNFT')
         const { alice, alicesWallet, aliceSpaceDapp, bob, spaceId, channelId } =
             await setupChannelWithCustomRole([], getNftRuleData(testNftAddress), [
@@ -687,7 +687,7 @@ describe('channelsWithEntitlements', () => {
         await alice.stopSync()
     })
 
-    test('oneNftGateJoinFail', async () => {
+    it('oneNftGateJoinFail', async () => {
         const testNft1Address = await TestERC721.getContractAddress('TestNFT1')
         const { alice, aliceSpaceDapp, bob, spaceId, channelId } = await setupChannelWithCustomRole(
             [],
@@ -702,7 +702,7 @@ describe('channelsWithEntitlements', () => {
         await alice.stopSync()
     })
 
-    test('twoNftGateJoinPass', async () => {
+    it('twoNftGateJoinPass', async () => {
         const testNft1Address = await TestERC721.getContractAddress('TestNFT1')
         const testNft2Address = await TestERC721.getContractAddress('TestNFT2')
         const { alice, bob, alicesWallet, aliceSpaceDapp, spaceId, channelId } =
@@ -725,7 +725,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('twoNftGateJoinPass - acrossLinkedWallets', async () => {
+    it('twoNftGateJoinPass - acrossLinkedWallets', async () => {
         const testNft1Address = await TestERC721.getContractAddress('TestNFT1')
         const testNft2Address = await TestERC721.getContractAddress('TestNFT2')
         const {
@@ -759,7 +759,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('twoNftGateJoinFail', async () => {
+    it('twoNftGateJoinFail', async () => {
         const testNft1Address = await TestERC721.getContractAddress('TestNFT1')
         const testNft2Address = await TestERC721.getContractAddress('TestNFT2')
         const { alice, aliceSpaceDapp, bob, alicesWallet, spaceId, channelId } =
@@ -777,7 +777,7 @@ describe('channelsWithEntitlements', () => {
         await alice.stopSync()
     })
 
-    test('OrOfTwoNftGateJoinPass', async () => {
+    it('OrOfTwoNftGateJoinPass', async () => {
         const testNft1Address = await TestERC721.getContractAddress('TestNFT1')
         const testNft2Address = await TestERC721.getContractAddress('TestNFT2')
         const { alice, bob, alicesWallet, aliceSpaceDapp, spaceId, channelId } =
@@ -799,7 +799,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('orOfTwoNftOrOneNftGateJoinPass', async () => {
+    it('orOfTwoNftOrOneNftGateJoinPass', async () => {
         const testNft1Address = await TestERC721.getContractAddress('TestNFT1')
         const testNft2Address = await TestERC721.getContractAddress('TestNFT2')
         const testNft3Address = await TestERC721.getContractAddress('TestNFT3')
@@ -858,7 +858,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('erc20 gate join pass', async () => {
+    it('erc20 gate join pass', async () => {
         const ruleData = treeToRuleData(await erc20CheckOp('TestERC20', 50n))
 
         const { alice, bob, alicesWallet, aliceSpaceDapp, spaceId, channelId } =
@@ -876,7 +876,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('erc20 gate join fail', async () => {
+    it('erc20 gate join fail', async () => {
         const ruleData = treeToRuleData(await erc20CheckOp('TestERC20', 50n))
 
         const { alice, bob, aliceSpaceDapp, spaceId, channelId } = await setupChannelWithCustomRole(
@@ -894,7 +894,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('ERC20 gate join pass - join as root, asset in linked wallet', async () => {
+    it('ERC20 gate join pass - join as root, asset in linked wallet', async () => {
         const ruleData = treeToRuleData(await erc20CheckOp('TestERC20', 50n))
         const {
             alice,
@@ -930,7 +930,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('ERC20 Gate Join Pass - join as linked wallet, assets in root wallet', async () => {
+    it('ERC20 Gate Join Pass - join as linked wallet, assets in root wallet', async () => {
         const ruleData = treeToRuleData(await erc20CheckOp('TestERC20', 50n))
         const {
             alice,
@@ -961,7 +961,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('ERC20 Gate Join Pass - assets split across wallets', async () => {
+    it('ERC20 Gate Join Pass - assets split across wallets', async () => {
         const ruleData = treeToRuleData(await erc20CheckOp('TestERC20', 50n))
         const {
             alice,
@@ -993,7 +993,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('eth balance gate pass', async () => {
+    it('eth balance gate pass', async () => {
         const ruleData = treeToRuleData(ethBalanceCheckOp(oneEth))
 
         const { alice, bob, alicesWallet, aliceSpaceDapp, spaceId, channelId } =
@@ -1011,7 +1011,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('eth balance gate pass - across networks', async () => {
+    it('eth balance gate pass - across networks', async () => {
         const ruleData = treeToRuleData(ethBalanceCheckOp(oneEth))
 
         const { alice, bob, alicesWallet, aliceSpaceDapp, spaceId, channelId } =
@@ -1032,7 +1032,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('eth balance gate fail', async () => {
+    it('eth balance gate fail', async () => {
         const ruleData = treeToRuleData(ethBalanceCheckOp(oneEth))
 
         const { alice, bob, alicesWallet, aliceSpaceDapp, spaceId, channelId } =
@@ -1052,7 +1052,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('eth balance gate join pass - join as root, linked wallet entitled', async () => {
+    it('eth balance gate join pass - join as root, linked wallet entitled', async () => {
         const ruleData = treeToRuleData(ethBalanceCheckOp(oneEth))
         const {
             alice,
@@ -1096,7 +1096,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('eth balance gated join pass - join as linked wallet, assets in root wallet', async () => {
+    it('eth balance gated join pass - join as linked wallet, assets in root wallet', async () => {
         const ruleData = treeToRuleData(ethBalanceCheckOp(twoEth))
         const {
             alice,
@@ -1134,7 +1134,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('eth balance gate join pass - assets across wallets and networks', async () => {
+    it('eth balance gate join pass - assets across wallets and networks', async () => {
         const ruleData = treeToRuleData(ethBalanceCheckOp(twoEth))
         const {
             alice,
@@ -1170,7 +1170,7 @@ describe('channelsWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('eth balance gate join fail - insufficient assets across wallets', async () => {
+    it('eth balance gate join fail - insufficient assets across wallets', async () => {
         const ruleData = treeToRuleData(ethBalanceCheckOp(gtTwoEth))
         const {
             alice,
@@ -1209,7 +1209,7 @@ describe('channelsWithEntitlements', () => {
     })
 
     // Banning with entitlements — users need permission to ban other users.
-    test('adminsCanRedactChannelMessages', async () => {
+    it('adminsCanRedactChannelMessages', async () => {
         // log('start adminsCanRedactChannelMessages')
         // // set up the web3 provider and spacedapp
         const {
@@ -1258,7 +1258,7 @@ describe('channelsWithEntitlements', () => {
         expect(stream).toBeDefined()
         expect(eventId).toBeDefined()
 
-        await expect(bob.redactMessage(defaultChannelId, eventId!)).toResolve()
+        await expect(bob.redactMessage(defaultChannelId, eventId!)).resolves.not.toThrow()
         await expect(alice.redactMessage(defaultChannelId, eventId!)).rejects.toThrow(
             /PERMISSION_DENIED/,
         )

@@ -18,7 +18,7 @@ import {
 import { makeRandomUserContext, makeUniqueSpaceStreamId } from './util.test'
 
 describe('idTest', () => {
-    test('validStreamId', () => {
+    it('validStreamId', () => {
         expect(isValidStreamId('10b6cd7a587ea499f57bfdc820b8c57ef654e38bc4' + '0'.repeat(22))).toBe(
             true,
         )
@@ -53,13 +53,13 @@ describe('idTest', () => {
         expect(isValidStreamId('0x10aa')).toBe(false)
     })
 
-    test('checkStreamId', () => {
+    it('checkStreamId', () => {
         expect(() => {
             checkStreamId('')
         }).toThrow('Invalid stream id: ')
     })
 
-    test('makeDMStreamId', () => {
+    it('makeDMStreamId', () => {
         const userId1 = '0x376eC15Fa24A76A18EB980629093cFFd559333Bb'
         const userId2 = '0x6d58a6597Eb5F849Fb46604a81Ee31654D6a4B44'
         const expectedId = '88b6cd7a587ea499f57bfdc820b8c57ef654e38bc4572e7843df05321dd74c2f'
@@ -73,7 +73,7 @@ describe('idTest', () => {
         expect(reverseOrderId).toBe(expectedId)
     })
 
-    test('makeUnique', () => {
+    it('makeUnique', () => {
         const spaceId = makeUniqueSpaceStreamId()
         expect(isValidStreamId(spaceId)).toBe(true)
         expect(isValidStreamId(makeUniqueChannelStreamId(spaceId))).toBe(true)
@@ -81,20 +81,20 @@ describe('idTest', () => {
         expect(isValidStreamId(makeUniqueMediaStreamId())).toBe(true)
     })
 
-    test('makeUserStreamId', () => {
+    it('makeUserStreamId', () => {
         expect(makeUserStreamId('0x376eC15Fa24A76A18EB980629093cFFd559333Bb')).toBe(
             'a8376ec15fa24a76a18eb980629093cffd559333bb' + '0'.repeat(22),
         )
     })
 
-    test('userIdFromAddress-addressFromUserId', async () => {
+    it('userIdFromAddress-addressFromUserId', async () => {
         const usrCtx = await makeRandomUserContext()
         const userId = userIdFromAddress(usrCtx.creatorAddress)
         const address = addressFromUserId(userId)
         expect(address).toStrictEqual(usrCtx.creatorAddress)
     })
 
-    test('userIdFromUserStreamId', async () => {
+    it('userIdFromUserStreamId', async () => {
         const usrCtx = await makeRandomUserContext()
         const userId = userIdFromAddress(usrCtx.creatorAddress)
         const userStreamId = makeUserStreamId(userId)

@@ -13,7 +13,7 @@ describe('memberMetadata_UsernamesTests', () => {
         usernames = new MemberMetadata_Usernames(streamId)
     })
 
-    test('clientCanSetUsername', async () => {
+    it('clientCanSetUsername', async () => {
         const username = 'bob-username1'
         const checksum = usernameChecksum(username, streamId)
         const encryptedData = new EncryptedData({
@@ -34,7 +34,7 @@ describe('memberMetadata_UsernamesTests', () => {
         expect(usernames.plaintextUsernames).toEqual(new Map([['userid-1', username]]))
     })
 
-    test('clientCannotSetDuplicateUsername', async () => {
+    it('clientCannotSetDuplicateUsername', async () => {
         const username = 'bob-username1'
         const checksum = usernameChecksum(username, streamId)
         const encryptedData = new EncryptedData({
@@ -67,7 +67,7 @@ describe('memberMetadata_UsernamesTests', () => {
         expect(usernames.plaintextUsernames).toEqual(new Map([['userid-1', username]]))
     })
 
-    test('duplicateUsernamesAreCaseInsensitive', async () => {
+    it('duplicateUsernamesAreCaseInsensitive', async () => {
         const username = 'bob-username1'
         const checksum = usernameChecksum(username, streamId)
         const encryptedData = new EncryptedData({
@@ -107,7 +107,7 @@ describe('memberMetadata_UsernamesTests', () => {
         expect(usernames.plaintextUsernames).toEqual(new Map([['userid-1', username]]))
     })
 
-    test('usernameIsAvailableAfterChange', async () => {
+    it('usernameIsAvailableAfterChange', async () => {
         const username = 'bob-username1'
         const checksum = usernameChecksum(username, streamId)
         const encryptedData = new EncryptedData({
@@ -167,7 +167,7 @@ describe('memberMetadata_UsernamesTests', () => {
         )
     })
 
-    test('clientCannotFakeChecksum', async () => {
+    it('clientCannotFakeChecksum', async () => {
         const username = 'bob-username1'
         const checksum = 'invalid-checksum'
         const encryptedData = new EncryptedData({
@@ -188,7 +188,7 @@ describe('memberMetadata_UsernamesTests', () => {
         expect(usernames.plaintextUsernames).toEqual(new Map([]))
     })
 
-    test('encryptedFlagsAreReturnedWhenEncrypted', async () => {
+    it('encryptedFlagsAreReturnedWhenEncrypted', async () => {
         const username = 'bob-username1'
         const checksum = usernameChecksum(username, streamId)
         const encryptedData = new EncryptedData({

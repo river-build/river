@@ -13,7 +13,7 @@ describe('memberMetadata_EnsAddressesTests', () => {
         ensAddresses = new MemberMetadata_EnsAddresses(streamId)
     })
 
-    test('clientCanSetEnsAddress', async () => {
+    it('clientCanSetEnsAddress', async () => {
         const ensAddress = makeRandomUserAddress()
         ensAddresses.addEnsAddressEvent('event-id-1', ensAddress, 'userid-1', true, undefined)
 
@@ -26,7 +26,7 @@ describe('memberMetadata_EnsAddressesTests', () => {
         )
     })
 
-    test('clientCanClearEnsAddress', async () => {
+    it('clientCanClearEnsAddress', async () => {
         const ensAddress = makeRandomUserAddress()
         ensAddresses.addEnsAddressEvent('event-id-1', ensAddress, 'userid-1', true, undefined)
 

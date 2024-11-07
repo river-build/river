@@ -14,7 +14,7 @@ describe('memberMetadata_NftTests', () => {
         nfts = new MemberMetadata_Nft(streamId)
     })
 
-    test('clientCanSetNft', async () => {
+    it('clientCanSetNft', async () => {
         const tokenId = bin_fromString('11111111122222222223333333333')
         const nft = new MemberPayload_Nft({
             chainId: 1,
@@ -33,7 +33,7 @@ describe('memberMetadata_NftTests', () => {
         expect(info.tokenId).toEqual('11111111122222222223333333333')
     })
 
-    test('clientCanClearNft', async () => {
+    it('clientCanClearNft', async () => {
         const tokenId = bin_fromString('11111111122222222223333333333')
         const nft = new MemberPayload_Nft({
             chainId: 1,

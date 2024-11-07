@@ -8,7 +8,7 @@ import { converse } from './testDriver.test_util'
 const log = dlog('test:aliceAndFriends')
 
 describe('aliceAndBobAndFriends10for10', () => {
-    test('10for10', async () => {
+    it('10for10', async () => {
         const conversation: string[][] = []
         for (let i = 0; i < 10; i++) {
             const step: string[] = []

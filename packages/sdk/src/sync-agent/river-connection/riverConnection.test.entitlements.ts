@@ -13,7 +13,7 @@ describe('RiverConnection.test.ts', () => {
     })
 
     // test that a riverConnection will eventually be defined if passed valid config
-    test('riverConnection initializes from empty', async () => {
+    it('riverConnection initializes from empty', async () => {
         const syncAgent = await testUser.makeSyncAgent()
         const riverConnection = syncAgent.riverConnection
 
@@ -38,7 +38,7 @@ describe('RiverConnection.test.ts', () => {
         await syncAgent.stop()
     })
     // test that a riverConnection will instantly be defined if data exists in local store
-    test('riverConnection loads from db', async () => {
+    it('riverConnection loads from db', async () => {
         // init
         const syncAgent = await testUser.makeSyncAgent()
         const riverConnection = syncAgent.riverConnection

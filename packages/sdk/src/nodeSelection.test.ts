@@ -10,7 +10,7 @@ import { makeRiverChainConfig } from './riverConfig'
 const log = dlog('csb:test')
 
 describe('nodeSelectionsTests', () => {
-    test('TestRiverRegistryNodeRetrieval', async () => {
+    it('TestRiverRegistryNodeRetrieval', async () => {
         // set up the web3 provider and riverRegistry
         const riverConfig = makeRiverChainConfig()
         const bobsWallet = ethers.Wallet.createRandom()

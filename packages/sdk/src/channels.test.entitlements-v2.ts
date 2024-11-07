@@ -18,7 +18,7 @@ const log = dlog('csb:test:channelsWithV2Entitlements')
 const test1155Name = 'TestERC1155'
 
 describe('channelsWithV2Enitlements', () => {
-    test('erc1155 gate join pass', async () => {
+    it('erc1155 gate join pass', async () => {
         const ruleData = treeToRuleData(
             await erc1155CheckOp(test1155Name, BigInt(TestERC1155.TestTokenId.Bronze), 1n),
         )
@@ -43,7 +43,7 @@ describe('channelsWithV2Enitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('erc1155 gate join fail', async () => {
+    it('erc1155 gate join fail', async () => {
         const ruleData = treeToRuleData(
             await erc1155CheckOp(test1155Name, BigInt(TestERC1155.TestTokenId.Bronze), 1n),
         )
@@ -63,7 +63,7 @@ describe('channelsWithV2Enitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('ERC1155 gate join pass - join as root, asset in linked wallet', async () => {
+    it('ERC1155 gate join pass - join as root, asset in linked wallet', async () => {
         const ruleData = treeToRuleData(
             await erc1155CheckOp(test1155Name, BigInt(TestERC1155.TestTokenId.Bronze), 1n),
         )
@@ -105,7 +105,7 @@ describe('channelsWithV2Enitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('ERC1155 Gate Join Pass - join as linked wallet, assets in root wallet', async () => {
+    it('ERC1155 Gate Join Pass - join as linked wallet, assets in root wallet', async () => {
         const ruleData = treeToRuleData(
             await erc1155CheckOp(test1155Name, BigInt(TestERC1155.TestTokenId.Bronze), 1n),
         )
@@ -142,7 +142,7 @@ describe('channelsWithV2Enitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('ERC1155 Gate Join Pass - assets split across wallets', async () => {
+    it('ERC1155 Gate Join Pass - assets split across wallets', async () => {
         const ruleData = treeToRuleData(
             await erc1155CheckOp(test1155Name, BigInt(TestERC1155.TestTokenId.Bronze), 2n),
         )
@@ -184,7 +184,7 @@ describe('channelsWithV2Enitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('cross chain entitlement gate pass', async () => {
+    it('cross chain entitlement gate pass', async () => {
         const idParam = 1n
         const contractName = 'TestCrossChain'
         const ruleData = treeToRuleData(await mockCrossChainCheckOp(contractName, idParam))
@@ -209,7 +209,7 @@ describe('channelsWithV2Enitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('cross chain entitlement gate fail', async () => {
+    it('cross chain entitlement gate fail', async () => {
         const idParam = 1n
         const contractName = 'TestCrossChain'
         const ruleData = treeToRuleData(await mockCrossChainCheckOp(contractName, idParam))
@@ -234,7 +234,7 @@ describe('channelsWithV2Enitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('cross chain entitlement gate join pass - join as root, linked wallet entitled', async () => {
+    it('cross chain entitlement gate join pass - join as root, linked wallet entitled', async () => {
         const idParam = 1n
         const contractName = 'TestCrossChain'
         const ruleData = treeToRuleData(await mockCrossChainCheckOp(contractName, idParam))
@@ -277,7 +277,7 @@ describe('channelsWithV2Enitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('cross chain entitlement gated join - join as linked wallet, assets in root wallet', async () => {
+    it('cross chain entitlement gated join - join as linked wallet, assets in root wallet', async () => {
         const idParam = 1n
         const contractName = 'TestCrossChain'
         const ruleData = treeToRuleData(await mockCrossChainCheckOp(contractName, idParam))

@@ -6,6 +6,7 @@ import { bin_fromHexString, bin_toHexString, dlog } from '@river-build/dlog'
 import { getPublicKey, utils } from 'ethereum-cryptography/secp256k1'
 import { readFileSync, writeFileSync } from 'fs'
 import { riverHash, riverRecoverPubKey, riverSign, riverVerifySignature } from './sign'
+import path from 'path'
 
 const log = dlog('test:encryption')
 
@@ -15,8 +16,8 @@ const log = dlog('test:encryption')
 //
 
 describe('crypto', () => {
-    const KEYS_FILE = '../test/crypto/keys.csv'
-    const DATA_FILE = '../test/crypto/test_data.csv'
+    const KEYS_FILE = path.resolve(__dirname, '../../test/crypto/keys.csv')
+    const DATA_FILE = path.resolve(__dirname, '../../test/crypto/test_data.csv')
 
     const generateData = async () => {
         const keys = Array.from({ length: 5 }, () => {
@@ -56,7 +57,7 @@ describe('crypto', () => {
     }
 
     if (process.env.GENERATE_DATA === '1') {
-        test('generateData', async () => {
+        it('generateData', async () => {
             await generateData()
         })
     } else {
@@ -65,7 +66,7 @@ describe('crypto', () => {
             .filter((x) => x)
             .map((x) => x.split(',').map(bin_fromHexString))
 
-        test('keys', () => {
+        it('keys', () => {
             log('Loaded keys, num =', keys.length)
             keys.forEach(([pr, pu]) => {
                 expect(getPublicKey(pr)).toEqual(pu)

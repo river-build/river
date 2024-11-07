@@ -6,7 +6,7 @@ import { NoopRuleData } from '@river-build/web3'
 import { expectUserCanJoinChannel, setupChannelWithCustomRole } from './util.test'
 
 describe('disableChannel', () => {
-    test('User cannot post events to a channel after it is disabled', async () => {
+    it('User cannot post events to a channel after it is disabled', async () => {
         const { alice, carol, bobProvider, aliceSpaceDapp, bobSpaceDapp, spaceId, channelId } =
             await setupChannelWithCustomRole(['alice', 'carol'], NoopRuleData)
 

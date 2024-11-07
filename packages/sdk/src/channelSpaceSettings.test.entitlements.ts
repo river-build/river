@@ -15,7 +15,7 @@ import { check } from '@river-build/dlog'
 import { Permission, NoopRuleData } from '@river-build/web3'
 
 describe('channelSpaceSettingsTests', () => {
-    test('channel creation with default settings', async () => {
+    it('channel creation with default settings', async () => {
         const { bob, bobProvider, bobSpaceDapp } = await setupWalletsAndContexts()
         const everyoneMembership = await everyoneMembershipStruct(bobSpaceDapp, bob)
 
@@ -71,7 +71,7 @@ describe('channelSpaceSettingsTests', () => {
         })
     })
 
-    test('create announcement channel (autojoin, hide user join/leave events)', async () => {
+    it('create announcement channel (autojoin, hide user join/leave events)', async () => {
         const { bob, bobProvider, bobSpaceDapp } = await setupWalletsAndContexts()
         const everyoneMembership = await everyoneMembershipStruct(bobSpaceDapp, bob)
 
@@ -119,7 +119,7 @@ describe('channelSpaceSettingsTests', () => {
         })
     })
 
-    test('set autojoin for channel', async () => {
+    it('set autojoin for channel', async () => {
         const { bob, bobProvider, bobSpaceDapp } = await setupWalletsAndContexts()
         const everyoneMembership = await everyoneMembershipStruct(bobSpaceDapp, bob)
 
@@ -192,7 +192,7 @@ describe('channelSpaceSettingsTests', () => {
         })
     })
 
-    test('unpermitted user cannot update channel autojoin', async () => {
+    it('unpermitted user cannot update channel autojoin', async () => {
         const {
             bob,
             bobProvider,
@@ -268,7 +268,9 @@ describe('channelSpaceSettingsTests', () => {
         )
 
         // Carol's update should succeed
-        await expect(carol.updateChannelAutojoin(spaceId, defaultChannelId, false)).toResolve()
+        await expect(
+            carol.updateChannelAutojoin(spaceId, defaultChannelId, false),
+        ).resolves.not.toThrow()
 
         // Validate autojoin event was applied on client
         await waitFor(() => {
@@ -278,7 +280,7 @@ describe('channelSpaceSettingsTests', () => {
         })
     })
 
-    test('set hideUserJoinLeaveEvents on channels', async () => {
+    it('set hideUserJoinLeaveEvents on channels', async () => {
         const { bob, bobProvider, bobSpaceDapp } = await setupWalletsAndContexts()
         const everyoneMembership = await everyoneMembershipStruct(bobSpaceDapp, bob)
 
@@ -333,7 +335,7 @@ describe('channelSpaceSettingsTests', () => {
         })
     })
 
-    test('unpermitted user cannot update channel hideUserJoinLeaveEvents', async () => {
+    it('unpermitted user cannot update channel hideUserJoinLeaveEvents', async () => {
         const {
             bob,
             bobProvider,
@@ -411,7 +413,7 @@ describe('channelSpaceSettingsTests', () => {
         // Carol's update should succeed
         await expect(
             carol.updateChannelHideUserJoinLeaveEvents(spaceId, defaultChannelId, true),
-        ).toResolve()
+        ).resolves.not.toThrow()
 
         // Validate updateHideUserJoinLeaveEvents event was applied on client
         await waitFor(() => {

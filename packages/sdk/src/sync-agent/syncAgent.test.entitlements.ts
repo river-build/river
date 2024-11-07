@@ -20,7 +20,7 @@ describe('syncAgent.test.ts', () => {
         await testUser.fundWallet()
     })
 
-    test('syncAgent', async () => {
+    it('syncAgent', async () => {
         const syncAgent = await testUser.makeSyncAgent()
         expect(syncAgent.user.value.status).toBe('loading')
         expect(syncAgent.riverConnection.authStatus.value).toBe(AuthStatus.Initializing)
@@ -50,7 +50,7 @@ describe('syncAgent.test.ts', () => {
         expect(syncAgent.spaces.data.spaceIds.length).toBe(1)
         await syncAgent.stop()
     })
-    test('syncAgent loads again', async () => {
+    it('syncAgent loads again', async () => {
         const syncAgent = await testUser.makeSyncAgent()
         expect(syncAgent.user.value.status).toBe('loading')
         await syncAgent.start()
@@ -61,7 +61,7 @@ describe('syncAgent.test.ts', () => {
         await waitFor(() => expect(syncAgent.spaces.data.spaceIds.length).toBe(1))
         await syncAgent.stop()
     })
-    test('logIn with delegate', async () => {
+    it('logIn with delegate', async () => {
         const bearerToken = await makeBearerToken(testUser.signer, { days: 1 })
         logger.log('bearerTokenStr', bearerToken)
         const signerContext = await makeSignerContextFromBearerToken(bearerToken)
