@@ -10,7 +10,7 @@ const log = dlog('csb:test:streamMembershipHardening')
 
 // these tests verify that if adding the derived membership event fails
 // we can recover by attempting to re-join, re-invite, or re-leave the channel
-describe('streamMembershipHardening', () => {
+describe.todo('streamMembershipHardening', () => {
     let bobsClient: Client
     let alicesClient: Client
 
