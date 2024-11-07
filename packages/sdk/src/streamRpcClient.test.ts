@@ -54,15 +54,8 @@ async function readSyncStreams(
 }
 
 describe('streamRpcClient using v2 sync', () => {
-    let alicesContext: SignerContext
-    let bobsContext: SignerContext
-
-    beforeEach(async () => {
-        alicesContext = await makeRandomUserContext()
-        bobsContext = await makeRandomUserContext()
-    })
-
-    test('syncStreamsGetsSyncId', async () => {
+    it('syncStreamsGetsSyncId', async () => {
+        const [alicesContext] = await Promise.all([makeRandomUserContext()])
         /** Arrange */
         const alice = await makeTestRpcClient()
         const alicesUserId = userIdFromAddress(alicesContext.creatorAddress)
@@ -140,7 +133,7 @@ describe('streamRpcClient using v2 sync', () => {
                 syncId = res.syncId
                 return res.syncOp === SyncOp.SYNC_NEW && res.syncId !== undefined
             }),
-        ).toResolve()
+        ).resolves.not.toThrow()
 
         await alice.cancelSync({ syncId })
 
@@ -148,7 +141,11 @@ describe('streamRpcClient using v2 sync', () => {
         expect(syncId).toBeDefined()
     })
 
-    test('addStreamToSyncGetsEvents', async () => {
+    it('addStreamToSyncGetsEvents', async () => {
+        const [alicesContext, bobsContext] = await Promise.all([
+            makeRandomUserContext(),
+            makeRandomUserContext(),
+        ])
         /** Arrange */
         const alice = await makeTestRpcClient()
         const alicesUserId = userIdFromAddress(alicesContext.creatorAddress)
@@ -295,15 +292,7 @@ describe('streamRpcClient using v2 sync', () => {
 })
 
 describe('streamRpcClient', () => {
-    let bobsContext: SignerContext
-    let alicesContext: SignerContext
-
-    beforeEach(async () => {
-        bobsContext = await makeRandomUserContext()
-        alicesContext = await makeRandomUserContext()
-    })
-
-    test('makeStreamRpcClient', async () => {
+    it('makeStreamRpcClient', async () => {
         const client = await makeTestRpcClient()
         log('makeStreamRpcClient', 'url', client.url)
         expect(client).toBeDefined()
@@ -312,7 +301,7 @@ describe('streamRpcClient', () => {
         expect(result.graffiti).toEqual('River Node welcomes you!')
     })
 
-    test('error', async () => {
+    it('error', async () => {
         const client = await makeTestRpcClient()
         expect(client).toBeDefined()
 
@@ -329,7 +318,7 @@ describe('streamRpcClient', () => {
         expect(err!.toString()).toContain('Error requested through Info request')
     })
 
-    test('error_untyped', async () => {
+    it('error_untyped', async () => {
         const client = await makeTestRpcClient()
         expect(client).toBeDefined()
 
@@ -346,7 +335,7 @@ describe('streamRpcClient', () => {
         expect(err!.toString()).toContain('[unknown] error requested through Info request')
     })
 
-    test('charlieUsesRegularOldWallet', async () => {
+    it('charlieUsesRegularOldWallet', async () => {
         const wallet = ethers.Wallet.createRandom()
         const charliesContext = await makeUserContextFromWallet(wallet)
 
@@ -367,7 +356,8 @@ describe('streamRpcClient', () => {
         })
     })
 
-    test('bobSendsMismatchedPayloadCase', async () => {
+    it('bobSendsMismatchedPayloadCase', async () => {
+        const [bobsContext] = await Promise.all([makeRandomUserContext()])
         log('bobSendsMismatchedPayloadCase', 'start')
         const bob = await makeTestRpcClient()
         const bobsUserId = userIdFromAddress(bobsContext.creatorAddress)
@@ -412,10 +402,15 @@ describe('streamRpcClient', () => {
         ['bobTalksToHimself-noflush-nopresync', false],
         ['bobTalksToHimself-noflush-presync', true],
     ])('%s', async (name: string, presync: boolean) => {
+        const [bobsContext] = await Promise.all([makeRandomUserContext()])
         await bobTalksToHimself(log.extend(name), bobsContext, false, presync)
     })
 
-    test('aliceTalksToBob', async () => {
+    it('aliceTalksToBob', async () => {
+        const [alicesContext, bobsContext] = await Promise.all([
+            makeRandomUserContext(),
+            makeRandomUserContext(),
+        ])
         log('bobAndAliceConverse start')
 
         const bob = await makeTestRpcClient()
@@ -555,7 +550,7 @@ describe('streamRpcClient', () => {
                 syncId = res.syncId
                 return res.syncOp === SyncOp.SYNC_NEW && res.syncId !== undefined
             }),
-        ).toResolve()
+        ).resolves.not.toThrow()
 
         // Bob invites Alice to the channel
         log('Bob invites Alice to the channel')
@@ -685,7 +680,7 @@ describe('streamRpcClient', () => {
                     e.event.payload?.value.content.case === 'message' &&
                     e.event.payload?.value.content.value.ciphertext === 'Hello, Alice!',
             ),
-        ).toResolve()
+        ).resolves.not.toThrow()
 
         await alice.cancelSync({ syncId })
     })
@@ -732,7 +727,7 @@ describe('streamRpcClient', () => {
                 message: expect.stringContaining('7:PERMISSION_DENIED'),
             }),
         )
-        await expect(makeUserStreamWith(jimmysGoodContext)).toResolve()
+        await expect(makeUserStreamWith(jimmysGoodContext)).resolves.not.toThrow()
 
         // create a space
         const spacedStreamId = streamIdToBytes(makeUniqueSpaceStreamId())
@@ -776,10 +771,11 @@ describe('streamRpcClient', () => {
                 message: expect.stringContaining('7:PERMISSION_DENIED'),
             }),
         )
-        await expect(addEventWith(jimmysGoodContext)).toResolve()
+        await expect(addEventWith(jimmysGoodContext)).resolves.not.toThrow()
     })
 
-    test('cantAddWithBadHash', async () => {
+    it('cantAddWithBadHash', async () => {
+        const [bobsContext] = await Promise.all([makeRandomUserContext()])
         const bob = await makeTestRpcClient()
         const bobsUserId = userIdFromAddress(bobsContext.creatorAddress)
         const bobsUserStreamIdStr = makeUserStreamId(bobsUserId)
@@ -796,7 +792,7 @@ describe('streamRpcClient', () => {
                 ],
                 streamId: bobsUserStreamId,
             }),
-        ).toResolve()
+        ).resolves.not.toThrow()
         log('Bob created user, about to create space')
 
         // Bob creates space and channel
@@ -887,7 +883,7 @@ describe('streamRpcClient', () => {
                 streamId: channelId,
                 event: messageEvent,
             }),
-        ).toResolve()
+        ).resolves.not.toThrow()
 
         log('Bob fails to add event with empty hash')
         await expect(
@@ -908,7 +904,8 @@ describe('streamRpcClient', () => {
         )
     })
 
-    test('cantAddWithBadSignature', async () => {
+    it('cantAddWithBadSignature', async () => {
+        const [bobsContext] = await Promise.all([makeRandomUserContext()])
         const bob = await makeTestRpcClient()
         const bobsUserId = userIdFromAddress(bobsContext.creatorAddress)
         const bobsUserStreamIdStr = makeUserStreamId(bobsUserId)
@@ -926,7 +923,7 @@ describe('streamRpcClient', () => {
                 ],
                 streamId: bobsUserStreamId,
             }),
-        ).toResolve()
+        ).resolves.not.toThrow()
         log('Bob created user, about to create space')
 
         // Bob creates space and channel
@@ -984,7 +981,7 @@ describe('streamRpcClient', () => {
                 streamId: channelId,
                 event: messageEvent,
             }),
-        ).toResolve()
+        ).resolves.not.toThrow()
 
         log('Bob fails to add message twice')
         await expect(

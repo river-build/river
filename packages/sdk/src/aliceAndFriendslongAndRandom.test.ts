@@ -9,7 +9,7 @@ import { converse } from './testDriver.test_util'
 const log = dlog('test:aliceAndFriends')
 
 describe('aliceAndBobAndFriendslongAndRandom', () => {
-    test('longAndRandom', async () => {
+    it('longAndRandom', async () => {
         const rng = seedrandom('this is not a random')
         const conversation: string[][] = []
         for (let i = 0; i < 100; i++) {

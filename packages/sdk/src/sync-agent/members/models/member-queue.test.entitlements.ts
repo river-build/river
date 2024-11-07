@@ -4,7 +4,7 @@
 import { Bot } from '../../utils/bot'
 
 describe('member.test.ts - queue update', () => {
-    test('queue update metadata', async () => {
+    it('queue update metadata', async () => {
         const testMetadata = {
             username: 'bob123',
             displayName: 'Bob',

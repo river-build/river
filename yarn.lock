@@ -3578,6 +3578,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@polka/url@npm:^1.0.0-next.24":
+  version: 1.0.0-next.28
+  resolution: "@polka/url@npm:1.0.0-next.28"
+  checksum: 7402aaf1de781d0eb0870d50cbcd394f949aee11b38a267a5c3b4e3cfee117e920693e6e93ce24c87ae2d477a59634f39d9edde8e86471cae756839b07c79af7
+  languageName: node
+  linkType: hard
+
 "@prb/math@npm:^4.0.3":
   version: 4.0.3
   resolution: "@prb/math@npm:4.0.3"
@@ -6618,6 +6625,23 @@ __metadata:
   dependencies:
     tinyspy: ^3.0.2
   checksum: c91874b7e4f42cbdd4bd71a5afb9a4f25da72bf076f7e011d9f600749ef50d8baf7cbf32b0f3d7a418e0923ba402e2f8835041f950d449fe40faef335c6a07f8
+  languageName: node
+  linkType: hard
+
+"@vitest/ui@npm:2.1.4":
+  version: 2.1.4
+  resolution: "@vitest/ui@npm:2.1.4"
+  dependencies:
+    "@vitest/utils": 2.1.4
+    fflate: ^0.8.2
+    flatted: ^3.3.1
+    pathe: ^1.1.2
+    sirv: ^3.0.0
+    tinyglobby: ^0.2.9
+    tinyrainbow: ^1.2.0
+  peerDependencies:
+    vitest: 2.1.4
+  checksum: 6bb8643c914680945d94104e77474cc5c3bae17badfa48924aef0d792f5dcd4a11788a68f4de817f35d9268a3ddbf7435e2f0e90b59195f198a5dfe12a409f1d
   languageName: node
   linkType: hard
 
@@ -11675,6 +11699,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"flatted@npm:^3.3.1":
+  version: 3.3.1
+  resolution: "flatted@npm:3.3.1"
+  checksum: 85ae7181650bb728c221e7644cbc9f4bf28bc556f2fc89bb21266962bdf0ce1029cc7acc44bb646cd469d9baac7c317f64e841c4c4c00516afa97320cdac7f94
+  languageName: node
+  linkType: hard
+
 "fmix@npm:^0.1.0":
   version: 0.1.0
   resolution: "fmix@npm:0.1.0"
@@ -15767,6 +15798,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"mrmime@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "mrmime@npm:2.0.0"
+  checksum: f6fe11ec667c3d96f1ce5fd41184ed491d5f0a5f4045e82446a471ccda5f84c7f7610dff61d378b73d964f73a320bd7f89788f9e6b9403e32cc4be28ba99f569
+  languageName: node
+  linkType: hard
+
 "ms@npm:2.1.2":
   version: 2.1.2
   resolution: "ms@npm:2.1.2"
@@ -18766,6 +18804,7 @@ __metadata:
     "@arethetypeswrong/cli": ^0.15.3
     "@typechain/ethers-v5": ^10.1.1
     "@types/node": ^20.5.0
+    "@vitest/ui": 2.1.4
     eslint: ^8.53.0
     eslint-config-prettier: ^8.8.0
     eslint-plugin-mocha: ^10.1.0
@@ -19260,6 +19299,17 @@ __metadata:
     "@sigstore/tuf": ^2.3.4
     "@sigstore/verify": ^1.2.1
   checksum: 9e8c5e60dbe56591770fb26a0d0e987f1859d47d519532578540380d6464499bcd1f1765291d6a360d3ffe9aba171fc8b0c3e559931b0ea262140aff7e892296
+  languageName: node
+  linkType: hard
+
+"sirv@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "sirv@npm:3.0.0"
+  dependencies:
+    "@polka/url": ^1.0.0-next.24
+    mrmime: ^2.0.0
+    totalist: ^3.0.0
+  checksum: 04b8036cab13971737dbb12b184a88f3d9aba955eed5600d27250f3dfd0a0ad1ff7a343537511b54d4fda36f629e2ffe25813f900d84cf4e3c08a7292f458af1
   languageName: node
   linkType: hard
 
@@ -20444,6 +20494,13 @@ __metadata:
   version: 1.0.6
   resolution: "toggle-selection@npm:1.0.6"
   checksum: a90dc80ed1e7b18db8f4e16e86a5574f87632dc729cfc07d9ea3ced50021ad42bb4e08f22c0913e0b98e3837b0b717e0a51613c65f30418e21eb99da6556a74c
+  languageName: node
+  linkType: hard
+
+"totalist@npm:^3.0.0":
+  version: 3.0.1
+  resolution: "totalist@npm:3.0.1"
+  checksum: 5132d562cf88ff93fd710770a92f31dbe67cc19b5c6ccae2efc0da327f0954d211bbfd9456389655d726c624f284b4a23112f56d1da931ca7cfabbe1f45e778a
   languageName: node
   linkType: hard
 

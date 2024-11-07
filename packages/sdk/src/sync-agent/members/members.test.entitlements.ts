@@ -27,7 +27,7 @@ describe('members.test.ts', () => {
         await syncAgent.stop()
     })
 
-    test('member should be defined in a new space', async () => {
+    it('member should be defined in a new space', async () => {
         expect(syncAgent.spaces.value.status).not.toBe('loading')
         await waitFor(() => expect(space.value.status).not.toBe('loading'))
         await waitFor(() => expect(space.data.channelIds.length).toBe(1))
@@ -37,7 +37,7 @@ describe('members.test.ts', () => {
         expect(members.userIds[0]).toBe(testUser.userId)
     })
 
-    test('Members.getMember always return a member, even if not in the space/channel yet', async () => {
+    it('Members.getMember always return a member, even if not in the space/channel yet', async () => {
         const newMember = new Bot()
         const member = space.members.get(newMember.userId)
         expect(member.membership).toBe(MembershipOp.SO_UNSPECIFIED)

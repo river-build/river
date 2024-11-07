@@ -36,7 +36,7 @@ describe('workflows', () => {
         bobsContext = await makeRandomUserContext()
     })
 
-    test('creationSideEffects', async () => {
+    it('creationSideEffects', async () => {
         const log = base_log.extend('creationSideEffects')
         log('start')
 

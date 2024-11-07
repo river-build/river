@@ -30,8 +30,8 @@ describe('streamMembershipHardening', () => {
         await alicesClient.stop()
     })
 
-    test('broken space membership', async () => {})
-    test('broken channel membership', async () => {})
-    test('broken dm membership', async () => {})
-    test('broken gdm membership', async () => {})
+    it('broken space membership', async () => {})
+    it('broken channel membership', async () => {})
+    it('broken dm membership', async () => {})
+    it('broken gdm membership', async () => {})
 })

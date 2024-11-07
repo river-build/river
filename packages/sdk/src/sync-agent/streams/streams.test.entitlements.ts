@@ -15,7 +15,7 @@ describe('streams.test.ts', () => {
         await testUser.fundWallet()
     })
 
-    test('stream exists', async () => {
+    it('stream exists', async () => {
         const syncAgent = await testUser.makeSyncAgent()
         await syncAgent.start()
         const { spaceId, defaultChannelId } = await syncAgent.spaces.createSpace(

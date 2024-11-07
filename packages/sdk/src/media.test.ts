@@ -25,10 +25,12 @@ describe('mediaTests', () => {
         chunkCount: number,
     ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array }> {
         const spaceId = makeUniqueSpaceStreamId()
-        await expect(bobsClient.createSpace(spaceId)).toResolve()
+        await expect(bobsClient.createSpace(spaceId)).resolves.not.toThrow()
 
         const channelId = makeUniqueChannelStreamId(spaceId)
-        await expect(bobsClient.createChannel(spaceId, 'Channel', 'Topic', channelId)).toResolve()
+        await expect(
+            bobsClient.createChannel(spaceId, 'Channel', 'Topic', channelId),
+        ).resolves.not.toThrow()
 
         return bobsClient.createMediaStream(channelId, spaceId, undefined, chunkCount)
     }
@@ -77,7 +79,7 @@ describe('mediaTests', () => {
         spaceId: string,
         chunkCount: number,
     ): Promise<{ streamId: string; prevMiniblockHash: Uint8Array }> {
-        await expect(bobsClient.createSpace(spaceId)).toResolve()
+        await expect(bobsClient.createSpace(spaceId)).resolves.not.toThrow()
         const mediaInfo = await bobsClient.createMediaStream(
             undefined,
             spaceId,
@@ -87,29 +89,29 @@ describe('mediaTests', () => {
         return mediaInfo
     }
 
-    test('clientCanCreateMediaStream', async () => {
-        await expect(bobCreateMediaStream(10)).toResolve()
+    it('clientCanCreateMediaStream', async () => {
+        await expect(bobCreateMediaStream(10)).resolves.not.toThrow()
     })
 
-    test('clientCanCreateSpaceMediaStream', async () => {
+    it('clientCanCreateSpaceMediaStream', async () => {
         const spaceId = makeUniqueSpaceStreamId()
-        await expect(bobCreateSpaceMediaStream(spaceId, 10)).toResolve()
+        await expect(bobCreateSpaceMediaStream(spaceId, 10)).resolves.not.toThrow()
     })
 
-    test('clientCanSendMediaPayload', async () => {
+    it('clientCanSendMediaPayload', async () => {
         const mediaStreamInfo = await bobCreateMediaStream(10)
         await bobSendMediaPayloads(mediaStreamInfo.streamId, 10, mediaStreamInfo.prevMiniblockHash)
     })
 
-    test('clientCanSendSpaceMediaPayload', async () => {
+    it('clientCanSendSpaceMediaPayload', async () => {
         const spaceId = makeUniqueSpaceStreamId()
         const mediaStreamInfo = await bobCreateSpaceMediaStream(spaceId, 10)
         await expect(
             bobSendMediaPayloads(mediaStreamInfo.streamId, 10, mediaStreamInfo.prevMiniblockHash),
-        ).toResolve()
+        ).resolves.not.toThrow()
     })
 
-    test('clientCanSendEncryptedDerivedAesGmPayload', async () => {
+    it('clientCanSendEncryptedDerivedAesGmPayload', async () => {
         const spaceId = makeUniqueSpaceStreamId()
         const mediaStreamInfo = await bobCreateSpaceMediaStream(spaceId, 3)
         const { iv, key } = await deriveKeyAndIV(spaceId)
@@ -122,10 +124,10 @@ describe('mediaTests', () => {
                 iv,
                 mediaStreamInfo.prevMiniblockHash,
             ),
-        ).toResolve()
+        ).resolves.not.toThrow()
     })
 
-    test('clientCanDownloadEncryptedDerivedAesGmPayload', async () => {
+    it('clientCanDownloadEncryptedDerivedAesGmPayload', async () => {
         const spaceId = makeUniqueSpaceStreamId()
         const mediaStreamInfo = await bobCreateSpaceMediaStream(spaceId, 2)
         const { iv, key } = await deriveKeyAndIV(spaceId)
@@ -141,38 +143,38 @@ describe('mediaTests', () => {
         expect(decryptedChunks).toEqual(data)
     })
 
-    test('chunkIndexNeedsToBeWithinBounds', async () => {
+    it('chunkIndexNeedsToBeWithinBounds', async () => {
         const result = await bobCreateMediaStream(10)
         const chunk = new Uint8Array(100)
         await expect(
             bobsClient.sendMediaPayload(result.streamId, chunk, -1, result.prevMiniblockHash),
-        ).toReject()
+        ).rejects.toThrow()
         await expect(
             bobsClient.sendMediaPayload(result.streamId, chunk, 11, result.prevMiniblockHash),
-        ).toReject()
+        ).rejects.toThrow()
     })
 
-    test('chunkSizeCanBeAtLimit', async () => {
+    it('chunkSizeCanBeAtLimit', async () => {
         const result = await bobCreateMediaStream(10)
         const chunk = new Uint8Array(500000)
         await expect(
             bobsClient.sendMediaPayload(result.streamId, chunk, 0, result.prevMiniblockHash),
-        ).toResolve()
+        ).resolves.not.toThrow()
     })
 
-    test('chunkSizeNeedsToBeWithinLimit', async () => {
+    it('chunkSizeNeedsToBeWithinLimit', async () => {
         const result = await bobCreateMediaStream(10)
         const chunk = new Uint8Array(500001)
         await expect(
             bobsClient.sendMediaPayload(result.streamId, chunk, 0, result.prevMiniblockHash),
-        ).toReject()
+        ).rejects.toThrow()
     })
 
-    test('chunkCountNeedsToBeWithinLimit', async () => {
-        await expect(bobCreateMediaStream(11)).toReject()
+    it('chunkCountNeedsToBeWithinLimit', async () => {
+        await expect(bobCreateMediaStream(11)).rejects.toThrow()
     })
 
-    test('clientCanOnlyPostToTheirOwnMediaStream', async () => {
+    it('clientCanOnlyPostToTheirOwnMediaStream', async () => {
         const result = await bobCreateMediaStream(10)
         const chunk = new Uint8Array(100)
 
@@ -182,11 +184,11 @@ describe('mediaTests', () => {
 
         await expect(
             alicesClient.sendMediaPayload(result.streamId, chunk, 5, result.prevMiniblockHash),
-        ).toReject()
+        ).rejects.toThrow()
         await alicesClient.stop()
     })
 
-    test('clientCanOnlyPostToTheirOwnPublicMediaStream', async () => {
+    it('clientCanOnlyPostToTheirOwnPublicMediaStream', async () => {
         const spaceId = makeUniqueSpaceStreamId()
         const result = await bobCreateSpaceMediaStream(spaceId, 10)
         const chunk = new Uint8Array(100)
@@ -197,19 +199,19 @@ describe('mediaTests', () => {
 
         await expect(
             alicesClient.sendMediaPayload(result.streamId, chunk, 5, result.prevMiniblockHash),
-        ).toReject()
+        ).rejects.toThrow()
         await alicesClient.stop()
     })
 
-    test('channelNeedsToExistBeforeCreatingMediaStream', async () => {
+    it('channelNeedsToExistBeforeCreatingMediaStream', async () => {
         const nonExistentSpaceId = makeUniqueSpaceStreamId()
         const nonExistentChannelId = makeUniqueChannelStreamId(nonExistentSpaceId)
         await expect(
             bobsClient.createMediaStream(nonExistentChannelId, nonExistentSpaceId, undefined, 10),
-        ).toReject()
+        ).rejects.toThrow()
     })
 
-    test('dmChannelNeedsToExistBeforeCreatingMediaStream', async () => {
+    it('dmChannelNeedsToExistBeforeCreatingMediaStream', async () => {
         const alicesClient = await makeTestClient()
         await alicesClient.initializeUser()
         alicesClient.startSync()
@@ -217,22 +219,26 @@ describe('mediaTests', () => {
         const nonExistentChannelId = makeDMStreamId(bobsClient.userId, alicesClient.userId)
         await expect(
             bobsClient.createMediaStream(nonExistentChannelId, undefined, undefined, 10),
-        ).toReject()
+        ).rejects.toThrow()
         await alicesClient.stop()
     })
 
-    test('userCanUploadMediaToDmIfMember', async () => {
+    it('userCanUploadMediaToDmIfMember', async () => {
         const alicesClient = await makeTestClient()
         await alicesClient.initializeUser()
         alicesClient.startSync()
 
         const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
-        await expect(bobsClient.createMediaStream(streamId, undefined, undefined, 10)).toResolve()
-        await expect(alicesClient.createMediaStream(streamId, undefined, undefined, 10)).toResolve()
+        await expect(
+            bobsClient.createMediaStream(streamId, undefined, undefined, 10),
+        ).resolves.not.toThrow()
+        await expect(
+            alicesClient.createMediaStream(streamId, undefined, undefined, 10),
+        ).resolves.not.toThrow()
         await alicesClient.stop()
     })
 
-    test('userCanUploadMediaToGdmIfMember', async () => {
+    it('userCanUploadMediaToGdmIfMember', async () => {
         const alicesClient = await makeTestClient()
         await alicesClient.initializeUser()
         alicesClient.startSync()
@@ -245,12 +251,14 @@ describe('mediaTests', () => {
             alicesClient.userId,
             charliesClient.userId,
         ])
-        await expect(bobsClient.createMediaStream(streamId, undefined, undefined, 10)).toResolve()
+        await expect(
+            bobsClient.createMediaStream(streamId, undefined, undefined, 10),
+        ).resolves.not.toThrow()
         await alicesClient.stop()
         await charliesClient.stop()
     })
 
-    test('userCannotUploadMediaToDmUnlessMember', async () => {
+    it('userCannotUploadMediaToDmUnlessMember', async () => {
         const alicesClient = await makeTestClient()
         await alicesClient.initializeUser()
         alicesClient.startSync()
@@ -263,7 +271,7 @@ describe('mediaTests', () => {
 
         await expect(
             charliesClient.createMediaStream(streamId, undefined, undefined, 10),
-        ).toReject()
+        ).rejects.toThrow()
         await alicesClient.stop()
         await charliesClient.stop()
     })
@@ -302,12 +310,12 @@ describe('mediaTests', () => {
         expect(stream.mediaContent).toEqual(streamEx.mediaContent)
     })
 
-    test('userMediaStream', async () => {
+    it('userMediaStream', async () => {
         const alicesClient = await makeTestClient()
         await alicesClient.initializeUser()
         alicesClient.startSync()
         await expect(
             alicesClient.createMediaStream(undefined, undefined, alicesClient.userId, 10),
-        ).toResolve()
+        ).resolves.not.toThrow()
     })
 })

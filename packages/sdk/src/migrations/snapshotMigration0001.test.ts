@@ -11,7 +11,7 @@ import { check } from '@river-build/dlog'
 
 // a no-op migration test for the initial snapshot, use as a template for new migrations
 describe('snapshotMigration0001', () => {
-    test('run migration', () => {
+    it('run migration', () => {
         const wallet = ethers.Wallet.createRandom()
         const userAddress = addressFromUserId(wallet.address)
         const spaceIdStr = makeUniqueSpaceStreamId()

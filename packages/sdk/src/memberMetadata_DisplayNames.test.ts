@@ -12,7 +12,7 @@ describe('memberMetadata_DisplayNamesTests', () => {
         displayNames = new MemberMetadata_DisplayNames(streamId)
     })
 
-    test('clientCanSetDisplayName', async () => {
+    it('clientCanSetDisplayName', async () => {
         const displayName = 'Bob Display Name'
         const encryptedData = new EncryptedData({
             ciphertext: displayName,
@@ -33,7 +33,7 @@ describe('memberMetadata_DisplayNamesTests', () => {
         expect(displayNames.plaintextDisplayNames).toEqual(new Map([['userid-1', displayName]]))
     })
 
-    test('clientCanUseSameDisplayName', async () => {
+    it('clientCanUseSameDisplayName', async () => {
         const displayName = 'Bob Display Name'
         const encryptedData = new EncryptedData({
             ciphertext: displayName,
@@ -71,7 +71,7 @@ describe('memberMetadata_DisplayNamesTests', () => {
         )
     })
 
-    test('encryptedFlagsAreReturnedWhenEncrypted', async () => {
+    it('encryptedFlagsAreReturnedWhenEncrypted', async () => {
         const displayName = 'bob-username1'
         const encryptedData = new EncryptedData({
             ciphertext: displayName,

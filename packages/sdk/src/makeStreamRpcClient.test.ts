@@ -10,7 +10,7 @@ import { LocalhostWeb3Provider } from '@river-build/web3'
 import { makeRiverChainConfig } from './riverConfig'
 
 describe('protocol 1', () => {
-    test('info using makeStreamRpcClient', async () => {
+    it('info using makeStreamRpcClient', async () => {
         const client = await makeTestRpcClient()
         expect(client).toBeDefined()
 
@@ -21,7 +21,7 @@ describe('protocol 1', () => {
         expect(response.graffiti).toEqual('River Node welcomes you!')
     })
 
-    test('info-error using makeStreamRpcClient', async () => {
+    it('info-error using makeStreamRpcClient', async () => {
         const client = await makeTestRpcClient()
         expect(client).toBeDefined()
 
@@ -42,7 +42,7 @@ describe('protocol 1', () => {
             provider = new LocalhostWeb3Provider(riverConfig.rpcUrl)
         })
 
-        test('info using makeRiverRpcClient', async () => {
+        it('info using makeRiverRpcClient', async () => {
             const client = await makeRiverRpcClient(provider, riverConfig.chainConfig)
             expect(client).toBeDefined()
 
@@ -53,7 +53,7 @@ describe('protocol 1', () => {
             expect(response.graffiti).toEqual('River Node welcomes you!')
         })
 
-        test('info-error using makeRiverRpcClient', async () => {
+        it('info-error using makeRiverRpcClient', async () => {
             const client = await makeRiverRpcClient(provider, riverConfig.chainConfig)
             expect(client).toBeDefined()
 

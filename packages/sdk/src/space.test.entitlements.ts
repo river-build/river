@@ -53,7 +53,7 @@ describe('spaceWithEntitlements', () => {
         ])
     })
 
-    test('banned user not entitled to join space', async () => {
+    it('banned user not entitled to join space', async () => {
         const {
             alice,
             alicesWallet,
@@ -106,7 +106,7 @@ describe('spaceWithEntitlements', () => {
     })
 
     // Banning with entitlements — users need permission to ban other users.
-    test('ownerCanBanOtherUsers', async () => {
+    it('ownerCanBanOtherUsers', async () => {
         log('start ownerCanBanOtherUsers')
         const {
             alice,
@@ -140,26 +140,26 @@ describe('spaceWithEntitlements', () => {
 
         // Bob is still a a member — Alice can't kick him because he's the owner
         await waitFor(() => {
-            expect(bobUserStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN)).toBeTrue()
-            expect(
-                bobUserStreamView.userContent.isMember(channelId, MembershipOp.SO_JOIN),
-            ).toBeTrue()
+            expect(bobUserStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN)).toBe(true)
+            expect(bobUserStreamView.userContent.isMember(channelId, MembershipOp.SO_JOIN)).toBe(
+                true,
+            )
         })
 
         // Bob kicks Alice!
         log('Bob kicks Alice')
-        await expect(bob.removeUser(spaceId, alice.userId)).toResolve()
+        await expect(bob.removeUser(spaceId, alice.userId)).resolves.not.toThrow()
 
         // Alice is no longer a member of the space or channel
         log('Alice is no longer a member of the space or channel')
         const aliceUserStreamView = alice.stream(alice.userStreamId!)!.view
         await waitFor(() => {
-            expect(
-                aliceUserStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN),
-            ).toBeFalse()
-            expect(
-                aliceUserStreamView.userContent.isMember(channelId, MembershipOp.SO_JOIN),
-            ).toBeFalse()
+            expect(aliceUserStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN)).toBe(
+                false,
+            )
+            expect(aliceUserStreamView.userContent.isMember(channelId, MembershipOp.SO_JOIN)).toBe(
+                false,
+            )
         })
 
         // kill the clients
@@ -168,7 +168,7 @@ describe('spaceWithEntitlements', () => {
         log('Done')
     })
 
-    test('user with banning permission can ban other users', async () => {
+    it('user with banning permission can ban other users', async () => {
         log('start user with banning permission can ban other users')
         const {
             bob,
@@ -221,12 +221,12 @@ describe('spaceWithEntitlements', () => {
         let carolUserStreamView = carol.stream(carol.userStreamId!)!.view
         // Carol is still a member
         await waitFor(() => {
-            expect(
-                carolUserStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN),
-            ).toBeTrue()
-            expect(
-                carolUserStreamView.userContent.isMember(channelId, MembershipOp.SO_JOIN),
-            ).toBeTrue()
+            expect(carolUserStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN)).toBe(
+                true,
+            )
+            expect(carolUserStreamView.userContent.isMember(channelId, MembershipOp.SO_JOIN)).toBe(
+                true,
+            )
         })
 
         // Create an admin role for Alice that has permission to modify banning
@@ -245,17 +245,17 @@ describe('spaceWithEntitlements', () => {
         await new Promise((f) => setTimeout(f, 2000))
 
         log('Alice kicks Carol')
-        await expect(alice.removeUser(spaceId, carol.userId)).toResolve()
+        await expect(alice.removeUser(spaceId, carol.userId)).resolves.not.toThrow()
 
         log('Carol is no longer a member of the space or channel')
         carolUserStreamView = carol.stream(carol.userStreamId!)!.view
         await waitFor(() => {
-            expect(
-                carolUserStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN),
-            ).toBeFalse()
-            expect(
-                carolUserStreamView.userContent.isMember(channelId, MembershipOp.SO_JOIN),
-            ).toBeFalse()
+            expect(carolUserStreamView.userContent.isMember(spaceId, MembershipOp.SO_JOIN)).toBe(
+                false,
+            )
+            expect(carolUserStreamView.userContent.isMember(channelId, MembershipOp.SO_JOIN)).toBe(
+                false,
+            )
         })
 
         // kill the clients
@@ -265,7 +265,7 @@ describe('spaceWithEntitlements', () => {
         log('Done')
     })
 
-    test('userEntitlementPass', async () => {
+    it('userEntitlementPass', async () => {
         const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId, channelId } =
             await createTownWithRequirements({
                 everyone: false,
@@ -290,7 +290,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('userEntitlementFail', async () => {
+    it('userEntitlementFail', async () => {
         const { alice, bob, aliceSpaceDapp, alicesWallet, aliceProvider, spaceId } =
             await createTownWithRequirements({
                 everyone: false,
@@ -328,7 +328,7 @@ describe('spaceWithEntitlements', () => {
 
     // This test is commented out as the membership joinSpace does not check linked wallets
     // against the user entitlement.
-    test('userEntitlementPass - join as root, linked wallet whitelisted', async () => {
+    it('userEntitlementPass - join as root, linked wallet whitelisted', async () => {
         const {
             alice,
             bob,
@@ -366,7 +366,7 @@ describe('spaceWithEntitlements', () => {
 
     // This test is commented out as the membership joinSpace does not check linked wallets
     // against the user entitlement.
-    test('userEntitlementPass - join as linked wallet, root wallet whitelisted', async () => {
+    it('userEntitlementPass - join as linked wallet, root wallet whitelisted', async () => {
         const {
             alice,
             bob,
@@ -404,7 +404,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('oneNftGateJoinPass - join as root, asset in linked wallet', async () => {
+    it('oneNftGateJoinPass - join as root, asset in linked wallet', async () => {
         const {
             alice,
             bob,
@@ -444,7 +444,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('oneNftGateJoinPass - join as linked wallet, asset in root wallet', async () => {
+    it('oneNftGateJoinPass - join as linked wallet, asset in root wallet', async () => {
         const {
             alice,
             bob,
@@ -487,7 +487,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('oneNftGateJoinPass', async () => {
+    it('oneNftGateJoinPass', async () => {
         const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId, channelId } =
             await createTownWithRequirements({
                 everyone: false,
@@ -516,7 +516,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('oneNftGateJoinFail', async () => {
+    it('oneNftGateJoinFail', async () => {
         const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId } =
             await createTownWithRequirements({
                 everyone: false,
@@ -550,7 +550,7 @@ describe('spaceWithEntitlements', () => {
         await alice.stopSync()
     })
 
-    test('twoNftGateJoinPass', async () => {
+    it('twoNftGateJoinPass', async () => {
         const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId, channelId } =
             await createTownWithRequirements({
                 everyone: false,
@@ -582,7 +582,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('twoNftGateJoinPass - acrossLinkedWallets', async () => {
+    it('twoNftGateJoinPass - acrossLinkedWallets', async () => {
         const {
             alice,
             bob,
@@ -626,7 +626,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('twoNftGateJoinFail', async () => {
+    it('twoNftGateJoinFail', async () => {
         const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId } =
             await createTownWithRequirements({
                 everyone: false,
@@ -666,7 +666,7 @@ describe('spaceWithEntitlements', () => {
         await alice.stopSync()
     })
 
-    test('OrOfTwoNftGateJoinPass', async () => {
+    it('OrOfTwoNftGateJoinPass', async () => {
         const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId, channelId } =
             await createTownWithRequirements({
                 everyone: false,
@@ -697,7 +697,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('orOfTwoNftOrOneNftGateJoinPass', async () => {
+    it('orOfTwoNftOrOneNftGateJoinPass', async () => {
         const params = encodeThresholdParams({ threshold: 1n })
         const leftOperation: Operation = {
             opType: OperationType.CHECK,
@@ -765,7 +765,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('user with only one entitlement from 3-nested NFT rule data can join space', async () => {
+    it('user with only one entitlement from 3-nested NFT rule data can join space', async () => {
         const testNft1 = 'TestNft1'
         const testNft2 = 'TestNft2'
         const testNft3 = 'TestNft3'
@@ -858,7 +858,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('erc20GateJoinPass', async () => {
+    it('erc20GateJoinPass', async () => {
         const ruleData = treeToRuleData(await erc20CheckOp('TestERC20', 50n))
 
         const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId, channelId } =
@@ -889,7 +889,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('erc20GateJoinFail', async () => {
+    it('erc20GateJoinFail', async () => {
         const ruleData = treeToRuleData(await erc20CheckOp('TestERC20', 50n))
 
         const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId } =
@@ -918,7 +918,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('erc20GateJoinPass - join as root, asset in linked wallet', async () => {
+    it('erc20GateJoinPass - join as root, asset in linked wallet', async () => {
         const ruleData = treeToRuleData(await erc20CheckOp('TestERC20', 50n))
         const {
             alice,
@@ -959,7 +959,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('erc20GateJoinPass - join as linked wallet, asset in root wallet', async () => {
+    it('erc20GateJoinPass - join as linked wallet, asset in root wallet', async () => {
         const ruleData = treeToRuleData(await erc20CheckOp('TestERC20', 50n))
         const {
             alice,
@@ -1003,7 +1003,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('erc20GateJoinPass - assets across wallets', async () => {
+    it('erc20GateJoinPass - assets across wallets', async () => {
         const ruleData = treeToRuleData(await erc20CheckOp('TestERC20', 50n))
         const {
             alice,
@@ -1048,7 +1048,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('ethBalanceGateJoinPass', async () => {
+    it('ethBalanceGateJoinPass', async () => {
         const ruleData = treeToRuleData(ethBalanceCheckOp(oneEth))
 
         const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId, channelId } =
@@ -1077,7 +1077,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('ethBalanceGateJoinPass - across networks', async () => {
+    it('ethBalanceGateJoinPass - across networks', async () => {
         const ruleData = treeToRuleData(ethBalanceCheckOp(twoEth))
 
         const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId, channelId } =
@@ -1110,7 +1110,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('ethBalanceGateJoinFail', async () => {
+    it('ethBalanceGateJoinFail', async () => {
         const ruleData = treeToRuleData(ethBalanceCheckOp(oneEth))
 
         const { alice, bob, aliceSpaceDapp, aliceProvider, alicesWallet, spaceId } =
@@ -1144,7 +1144,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('eth balance gate join pass - join as root, linked wallet entitled', async () => {
+    it('eth balance gate join pass - join as root, linked wallet entitled', async () => {
         const ruleData = treeToRuleData(ethBalanceCheckOp(threeEth))
         const {
             alice,
@@ -1191,7 +1191,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('eth balance gated join pass - join as linked wallet, assets in root wallet', async () => {
+    it('eth balance gated join pass - join as linked wallet, assets in root wallet', async () => {
         const ruleData = treeToRuleData(ethBalanceCheckOp(twoEth))
         const {
             alice,
@@ -1240,7 +1240,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('eth balance gated join pass - assets must accumulate across wallets', async () => {
+    it('eth balance gated join pass - assets must accumulate across wallets', async () => {
         const ruleData = treeToRuleData(ethBalanceCheckOp(twoEth))
         const {
             alice,
@@ -1290,7 +1290,7 @@ describe('spaceWithEntitlements', () => {
         log('Done', Date.now() - doneStart)
     })
 
-    test('eth balance gate join fail - insufficient assets across wallets', async () => {
+    it('eth balance gate join fail - insufficient assets across wallets', async () => {
         const ruleData = treeToRuleData(ethBalanceCheckOp(threeEth))
         const {
             alice,

@@ -11,6 +11,8 @@ const logger = dlogger('csb:test:syncAgents')
 
 describe('syncAgents.test.ts', () => {
     logger.log('start')
+    console.log('process.env.RIVER_ENV', process.env.RIVER_ENV)
+    console.log('process.env.NODE_EXTRA_CA_CERTS', process.env.NODE_EXTRA_CA_CERTS)
     const bobUser = new Bot()
     const aliceUser = new Bot()
     const charlieUser = new Bot()
@@ -33,7 +35,7 @@ describe('syncAgents.test.ts', () => {
         await charlie.stop()
     })
 
-    test('syncAgents', async () => {
+    it('syncAgents', async () => {
         await Promise.all([bob.start(), alice.start(), charlie.start()])
 
         const { spaceId } = await bob.spaces.createSpace({ spaceName: 'BlastOff' }, bobUser.signer)
@@ -47,7 +49,7 @@ describe('syncAgents.test.ts', () => {
         expect(charlie.user.memberships.isJoined(spaceId)).toBe(true)
     })
 
-    test('syncAgents load async', async () => {
+    it('syncAgents load async', async () => {
         await bob.start()
 
         const { spaceId } = await bob.spaces.createSpace(
@@ -63,7 +65,7 @@ describe('syncAgents.test.ts', () => {
         expect(alice.user.memberships.isJoined(spaceId)).toBe(true)
     })
 
-    test('syncAgents send a message', async () => {
+    it('syncAgents send a message', async () => {
         await Promise.all([bob.start(), alice.start()])
         await waitFor(() => bob.spaces.value.status === 'loaded')
         expect(bob.spaces.data.spaceIds.length).toBeGreaterThan(0)
@@ -86,7 +88,7 @@ describe('syncAgents.test.ts', () => {
         )
     })
 
-    test('syncAgents send a message with disableSignatureValidation=true', async () => {
+    it('syncAgents send a message with disableSignatureValidation=true', async () => {
         const prevBobOpts = bob.riverConnection.clientParams.unpackEnvelopeOpts
         const prevAliceOpts = alice.riverConnection.clientParams.unpackEnvelopeOpts
         bob.riverConnection.clientParams.unpackEnvelopeOpts = {
@@ -121,7 +123,7 @@ describe('syncAgents.test.ts', () => {
         alice.riverConnection.clientParams.unpackEnvelopeOpts = prevAliceOpts
     })
 
-    test('syncAgents pin a message', async () => {
+    it('syncAgents pin a message', async () => {
         await Promise.all([bob.start(), alice.start()])
         await waitFor(() => bob.spaces.value.status === 'loaded')
         expect(bob.spaces.data.spaceIds.length).toBeGreaterThan(0)
@@ -178,7 +180,7 @@ describe('syncAgents.test.ts', () => {
         expect(result3.error).toBeUndefined()
     })
 
-    test('dm', async () => {
+    it('dm', async () => {
         await Promise.all([bob.start(), alice.start()])
         const { streamId } = await bob.dms.createDM(alice.userId)
         const bobAndAliceDm = bob.dms.getDm(streamId)
@@ -197,7 +199,7 @@ describe('syncAgents.test.ts', () => {
         )
     })
 
-    test('gdm', async () => {
+    it('gdm', async () => {
         await Promise.all([bob.start(), alice.start(), charlie.start()])
         const { streamId } = await bob.gdms.createGDM([alice.userId, charlie.userId])
         const bobGdm = bob.gdms.getGdm(streamId)

@@ -31,7 +31,7 @@ describe('syncStreams', () => {
         log('afterEach')
     })
 
-    test('waitForSyncingStateTransitions', () => {
+    it('waitForSyncingStateTransitions', () => {
         // the syncing, canceling, and not syncing state should not be able to transition to itself, otherwise waitForSyncingState will break
         expect(stateConstraints[SyncState.Syncing].has(SyncState.Syncing)).toBe(false)
         expect(stateConstraints[SyncState.Canceling].has(SyncState.Syncing)).toBe(false)
@@ -42,7 +42,7 @@ describe('syncStreams', () => {
         expect(stateConstraints[SyncState.Retrying].has(SyncState.Syncing)).toBe(true) // if this breaks, we just need to change the two conditions in waitForSyncingState
     })
 
-    test('starting->syncing->canceling->notSyncing', async () => {
+    it('starting->syncing->canceling->notSyncing', async () => {
         log('starting->syncing->canceling->notSyncing')
 
         // globals setup
@@ -280,7 +280,7 @@ describe('syncStreams', () => {
 //         await alicesSyncedStreams.addStreamToSync(streamAndCookie.nextSyncCookie)
 
 //         /** Assert */
-//         await expect(done.expectToSucceed()).toResolve()
+//         await expect(done.expectToSucceed()).resolves.not.toThrow()
 //         expect(syncId).toBeDefined()
 //         expect(endedSyncId).toEqual(syncId)
 //         expect(statesSeen).toEqual(
@@ -294,7 +294,7 @@ describe('syncStreams', () => {
 //         )
 //     }, 1000000)
 
-//     test('addStreamToSync', async () => {
+//     it('addStreamToSync', async () => {
 //         /** Arrange */
 //         const alice = await makeTestRpcClient()
 //         const alicesUserId = userIdFromAddress(alicesContext.creatorAddress)
@@ -425,7 +425,7 @@ describe('syncStreams', () => {
 //         expect(bobReceived).toBeDefined()
 //     })
 
-//     test('removeStreamFromSync', async () => {
+//     it('removeStreamFromSync', async () => {
 //         /** Arrange */
 //         const alice = await makeTestRpcClient()
 //         const alicesUserId = userIdFromAddress(alicesContext.creatorAddress)

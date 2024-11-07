@@ -6,7 +6,7 @@ import { createTownWithRequirements, updateRole } from './util.test'
 import { NoopRuleData, UpdateRoleParams, Permission, EVERYONE_ADDRESS } from '@river-build/web3'
 
 describe('updateRole', () => {
-    test('user-gated space created with no-op ruleData allows updates on minter role', async () => {
+    it('user-gated space created with no-op ruleData allows updates on minter role', async () => {
         const { bobSpaceDapp, bobProvider, spaceId } = await createTownWithRequirements({
             everyone: false,
             users: ['alice'],

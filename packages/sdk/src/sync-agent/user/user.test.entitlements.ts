@@ -15,7 +15,7 @@ describe('User.test.ts', () => {
         await testUser.fundWallet()
     })
 
-    test('User initializes', async () => {
+    it('User initializes', async () => {
         const syncAgent = await testUser.makeSyncAgent()
         const riverConnection = syncAgent.riverConnection
         const user = syncAgent.user
@@ -45,7 +45,7 @@ describe('User.test.ts', () => {
         expect(user.settings.data.initialized).toBe(true)
         await syncAgent.stop()
     })
-    test('User loads from db', async () => {
+    it('User loads from db', async () => {
         const syncAgent = await testUser.makeSyncAgent()
         const riverConnection = syncAgent.riverConnection
         const user = syncAgent.user

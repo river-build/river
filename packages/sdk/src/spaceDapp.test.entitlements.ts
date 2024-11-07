@@ -13,7 +13,7 @@ import { linkWallets, unlinkCaller } from './util.test'
 const log = dlog('csb:test:spaceDapp')
 
 describe('spaceDappTests', () => {
-    test('spaceDapp URI', async () => {
+    it('spaceDapp URI', async () => {
         log('spaceDapp URI')
         const wallet = ethers.Wallet.createRandom()
         const wallet2 = ethers.Wallet.createRandom()

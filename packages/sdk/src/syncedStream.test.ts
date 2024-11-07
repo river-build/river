@@ -7,7 +7,7 @@ import { makeTestClient, waitFor } from './util.test'
 import { genShortId } from './id'
 
 describe('syncedStream', () => {
-    test('clientRefreshesStreamOnBadSyncCookie', async () => {
+    it('clientRefreshesStreamOnBadSyncCookie', async () => {
         const bobDeviceId = genShortId()
         const bob = await makeTestClient({ deviceId: bobDeviceId })
         await bob.initializeUser()

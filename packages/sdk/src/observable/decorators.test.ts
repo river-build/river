@@ -45,7 +45,7 @@ class MyOtherClass extends Something {
 }
 
 describe('decorator tests', () => {
-    test('decorated with', () => {
+    it('decorated with', () => {
         const myClass = new MyClass('hello world')
         expect(myClass.baseName).toBe('foo')
         expect((MyClass as any).fancyName).toBe('foo')
