@@ -13,6 +13,20 @@
         "test:build": {
             "dependsOn": ["build"]
         },
+        "test:watch": {
+            "dependsOn": ["build"],
+            "cache": false,
+            "persistent": true
+        },
+        "test:multi:ne": {
+            "dependsOn": ["build"]
+        },
+        "test:multi:ent": {
+            "dependsOn": ["build"]
+        },
+        "test:multi:ent-legacy": {
+            "dependsOn": ["build"]
+        },
         "build": {
             // note: output globs are relative to each package's `package.json`
             // (and not the monorepo root

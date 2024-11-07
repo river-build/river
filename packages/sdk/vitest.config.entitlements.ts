@@ -5,7 +5,10 @@ export default mergeConfig(
     rootConfig,
     defineConfig({
         test: {
-            setupFiles: ['./vitest.setup.ts'],
+            include: ['./src/**/*.test.entitlements.ts', './src/**/*.test.entitlements-v2.ts'],
+            hookTimeout: 120_000,
+            testTimeout: 120_000,
+            setupFiles: './vitest.setup.ts',
         },
     }),
 )

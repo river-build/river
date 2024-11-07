@@ -14,8 +14,7 @@ export const rootConfig = defineConfig({
         env: {
             NODE_EXTRA_CA_CERTS: path.join(os.homedir(), 'river-ca-cert.pem'),
             NODE_TLS_REJECT_UNAUTHORIZED: '0',
-            NODE_ENV: 'development',
-            RIVER_ENV: 'local_multi_ne',
+            RIVER_ENV: process.env.RIVER_ENV,
             BASE_CHAIN_ID: process.env.BASE_CHAIN_ID,
             BASE_CHAIN_RPC_URL: process.env.BASE_CHAIN_RPC_URL,
             BASE_REGISTRY_ADDRESS: process.env.BASE_REGISTRY_ADDRESS,
