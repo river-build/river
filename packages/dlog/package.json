@@ -26,7 +26,7 @@
         "clean": "rm -rf dist",
         "lint": "yarn eslint --format unix ./src",
         "lint:fix": "yarn lint --fix",
-        "test": "vitest",
+        "test": "vitest run",
         "test:watch": "vitest --watch",
         "test:ci": "yarn test",
         "watch": "tsup --watch"

@@ -34,9 +34,9 @@
         "lint:fix": "yarn lint --fix",
         "test": "yarn test:ci:multi:ne",
         "test:ci": "yarn test:multi:ne",
-        "test:multi:ent-legacy": "vitest --config vitest.config.entitlements-legacy.ts",
-        "test:multi:ent": "vitest --config vitest.config.entitlements.ts",
-        "test:multi:ne": "vitest",
+        "test:multi:ent-legacy": "vitest run --config vitest.config.entitlements-legacy.ts",
+        "test:multi:ent": "vitest run --config vitest.config.entitlements.ts",
+        "test:multi:ne": "vitest run",
         "test:ci:with-entitlements": "yarn test:ci:multi:ent",
         "watch": "tsup --watch"
     },
