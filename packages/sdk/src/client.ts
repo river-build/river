@@ -2450,11 +2450,11 @@ export class Client
         }
 
         // Ensure epoch keys are derived
-        const keyStatus = await this.mlsCrypto.epochKeyStore.tryDeriveKeys(
+        const keyStatus = this.mlsCrypto.epochKeyService.getEpochKeyState(
             streamId,
             groupState.group.currentEpoch,
         )
-        if (keyStatus !== 'EPOCH_KEY_DERIVED') {
+        if (keyStatus.status !== 'EPOCH_KEY_DERIVED') {
             throw new Error('epoch keys not derived')
         }
 

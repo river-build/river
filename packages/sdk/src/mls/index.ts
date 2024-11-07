@@ -5,7 +5,7 @@ import {
     HpkeCiphertext,
 } from '@river-build/mls-rs-wasm'
 import { EncryptedData } from '@river-build/proto'
-import { EpochKeyStore } from './epochKeyStore'
+import { EpochKeyService } from './epochKeyStore'
 import { GroupStore, GroupStatus } from './groupStore'
 
 function uint8ArrayEqual(a: Uint8Array, b: Uint8Array): boolean {
@@ -30,7 +30,7 @@ export class MlsCrypto {
     public deviceKey: Uint8Array
     awaitingGroupActive: Map<string, { promise: Promise<void>; resolve: () => void }> = new Map()
     cipherSuite: MlsCipherSuite = new MlsCipherSuite()
-    epochKeyStore = new EpochKeyStore(this.cipherSuite)
+    epochKeyService = new EpochKeyService(this.cipherSuite)
     groupStore: GroupStore = new GroupStore()
 
     constructor(userAddress: Uint8Array, deviceKey: Uint8Array) {
@@ -65,14 +65,12 @@ export class MlsCrypto {
         const epoch = group.currentEpoch
 
         // Check if we have derived keys, if not try deriving them
-        const epochKeyStatus = await this.epochKeyStore.tryDeriveKeys(streamId, epoch)
-        if (epochKeyStatus !== 'EPOCH_KEY_DERIVED') {
+        const epochKeyState = this.epochKeyService.getEpochKeyState(streamId, epoch)
+        if (epochKeyState.status !== 'EPOCH_KEY_DERIVED') {
             throw new Error('Epoch keys not derived')
         }
 
-        const keys = this.epochKeyStore.getDerivedKeys(streamId, epoch)!
-
-        const ciphertext = await this.cipherSuite.seal(keys.publicKey, message)
+        const ciphertext = await this.cipherSuite.seal(epochKeyState.publicKey, message)
         return new EncryptedData({ algorithm: 'mls', mlsCiphertext: ciphertext.toBytes() })
     }
 
@@ -92,15 +90,18 @@ export class MlsCrypto {
 
         const group = groupState.group
         const epoch = group.currentEpoch
-        const epochKeyStatus = await this.epochKeyStore.tryDeriveKeys(streamId, epoch)
+        const epochKeyState = this.epochKeyService.getEpochKeyState(streamId, epoch)
 
-        if (epochKeyStatus !== 'EPOCH_KEY_DERIVED') {
+        if (epochKeyState.status !== 'EPOCH_KEY_DERIVED') {
             throw new Error('Epoch keys not derived')
         }
 
-        const keys = this.epochKeyStore.getDerivedKeys(streamId, epoch)!
         const ciphertext = HpkeCiphertext.fromBytes(encryptedData.mlsCiphertext)
-        return await this.cipherSuite.open(ciphertext, keys.secretKey, keys.publicKey)
+        return await this.cipherSuite.open(
+            ciphertext,
+            epochKeyState.secretKey,
+            epochKeyState.publicKey,
+        )
     }
 
     public async externalJoin(
@@ -141,7 +142,7 @@ export class MlsCrypto {
         await group.processIncomingMessage(MlsMessage.fromBytes(commit))
         const secret = await group.currentEpochSecret()
         const epoch = group.currentEpoch
-        this.epochKeyStore.addOpenEpochSecret(streamId, epoch, secret)
+        await this.epochKeyService.addOpenEpochSecret(streamId, epoch, secret.toBytes())
     }
 
     public hasGroup(streamId: string): boolean {
@@ -207,11 +208,8 @@ export class MlsCrypto {
             })
             // add a key to the epoch store
             const epoch = groupState.group.currentEpoch
-            this.epochKeyStore.addOpenEpochSecret(
-                streamId,
-                epoch,
-                await groupState.group.currentEpochSecret(),
-            )
+            const epochSecret = await groupState.group.currentEpochSecret()
+            await this.epochKeyService.addOpenEpochSecret(streamId, epoch, epochSecret.toBytes())
             // check if anyone is waiting for it
             this.awaitingGroupActive.get(streamId)?.resolve()
             return 'GROUP_ACTIVE'
@@ -265,10 +263,11 @@ export class MlsCrypto {
                 })
                 // add a key to the epoch store
                 const epoch = groupState.group.currentEpoch
-                this.epochKeyStore.addOpenEpochSecret(
+                const epochSecret = await groupState.group.currentEpochSecret()
+                await this.epochKeyService.addOpenEpochSecret(
                     streamId,
                     epoch,
-                    await groupState.group.currentEpochSecret(),
+                    epochSecret.toBytes(),
                 )
                 this.awaitingGroupActive.get(streamId)?.resolve()
                 return 'GROUP_ACTIVE'
@@ -283,7 +282,7 @@ export class MlsCrypto {
         streamId: string,
         key: { epoch: bigint; key: Uint8Array },
     ): Promise<void> {
-        this.epochKeyStore.addSealedEpochSecret(streamId, key.epoch, key.key)
+        await this.epochKeyService.addSealedEpochSecret(streamId, key.epoch, key.key)
     }
 
     public epochFor(streamId: string): bigint {
