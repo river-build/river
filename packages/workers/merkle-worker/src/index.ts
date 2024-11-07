@@ -25,21 +25,6 @@ export const worker = {
                 return getOptionsResponse(request, env.ENVIRONMENT)
             }
             if (env.ENVIRONMENT !== 'development') {
-                if (!isAuthedRequest(request, env)) {
-                    return new Response('Unauthorised', {
-                        status: 401,
-                        headers: withCorsHeaders(request, env.ENVIRONMENT),
-                    })
-                }
-
-                if (!isAllowedOrigin(request, env.ENVIRONMENT)) {
-                    console.error(`Origin is not allowed in Env: ${env.ENVIRONMENT})`)
-                    return new Response('Forbidden', {
-                        status: 403,
-                        headers: withCorsHeaders(request, env.ENVIRONMENT),
-                    })
-                }
-
                 // auth if admin request
                 const path = new URL(request.url).pathname
                 if (path.startsWith('/admin')) {
@@ -48,6 +33,23 @@ export const worker = {
                             status: 401,
                             headers: withCorsHeaders(request, env.ENVIRONMENT),
                         })
+                    }
+                } else {
+                    // auth if paymaster request
+                    if (!isAuthedRequest(request, env)) {
+                        return new Response('Unauthorised', {
+                            status: 401,
+                            headers: withCorsHeaders(request, env.ENVIRONMENT),
+                        })
+                    }
+                    if (env.ENVIRONMENT == 'omega') {
+                        if (!isAllowedOrigin(request, env.ENVIRONMENT)) {
+                            console.error(`Origin is not allowed in Env: ${env.ENVIRONMENT})`)
+                            return new Response('Forbidden', {
+                                status: 403,
+                                headers: withCorsHeaders(request, env.ENVIRONMENT),
+                            })
+                        }
                     }
                 }
             }

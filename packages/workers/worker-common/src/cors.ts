@@ -13,7 +13,7 @@ export function getAllowedOrigins(env: Environment): string[] {
 }
 
 export function getLocalDomainOrigin(origin: string, env: Environment): string | undefined {
-    // Matches a local domain like https://towns.local:3000
+    // Matches a local domain like https://*.local:3000
     const rExp = /https:\/\/(\w+).local:3000/
     switch (env) {
         case 'development':
