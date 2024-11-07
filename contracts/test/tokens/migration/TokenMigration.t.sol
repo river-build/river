@@ -44,35 +44,43 @@ contract TokenMigrationTest is TestUtils, IPausableBase {
 
   // modifiers
 
-  function givenAccountHasOldTokens(address account, uint256 amount) internal {
+  modifier givenAccountHasOldTokens(address account, uint256 amount) {
     vm.prank(deployer);
     oldToken.mint(account, amount);
+    _;
   }
 
-  function givenContractHasNewTokens(uint256 amount) internal {
+  modifier givenContractHasNewTokens(uint256 amount) {
     vm.prank(deployer);
     newToken.mint(address(tokenMigration), amount);
+    _;
   }
 
-  function givenContractIsUnpaused() internal {
+  modifier givenContractIsUnpaused() {
     vm.prank(deployer);
     pausable.unpause();
+    _;
   }
 
-  function givenAllowanceIsSet(address account, uint256 amount) internal {
+  modifier givenAllowanceIsSet(address account, uint256 amount) {
     vm.prank(account);
     oldToken.approve(address(tokenMigration), amount);
+    _;
   }
 
   // tests
-  function test_migrate(address account, uint256 amount) external {
+  function test_migrate(
+    address account,
+    uint256 amount
+  )
+    external
+    givenAccountHasOldTokens(account, amount)
+    givenAllowanceIsSet(account, amount)
+    givenContractHasNewTokens(amount)
+    givenContractIsUnpaused
+  {
     vm.assume(account != address(0));
     vm.assume(amount > 0);
-
-    givenAccountHasOldTokens(account, amount);
-    givenAllowanceIsSet(account, amount);
-    givenContractHasNewTokens(amount);
-    givenContractIsUnpaused();
 
     vm.prank(account);
     tokenMigration.migrate(account);
