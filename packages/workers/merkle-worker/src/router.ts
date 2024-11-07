@@ -3,7 +3,7 @@ import { createErrorResponse, createSuccessResponse, ErrorCode } from './createR
 import { Env } from '.'
 import { WorkerRequest } from './utils'
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree'
-import { Claim, MerkleData, MerkleTreeDump, MerkleProofResponse } from './types'
+import { Claim, MerkleData, MerkleTreeDump, MerkleProofResponse, VerifyProofRequest } from './types'
 
 const router = Router()
 
@@ -111,6 +111,40 @@ router.post('/api/merkle-proof', async (request: WorkerRequest, env: Env) => {
         }
 
         return createSuccessResponse(200, 'Proof generated successfully', response)
+    } catch (error) {
+        console.error(error)
+        return createErrorResponse(500, 'Error processing request', ErrorCode.INTERNAL_SERVER_ERROR)
+    }
+})
+
+router.post('/api/verify-proof', async (request: WorkerRequest, env: Env) => {
+    try {
+        const { conditionId, merkleRoot, proof, leaf }: VerifyProofRequest = await request.json()
+
+        if (!conditionId || !merkleRoot || !Array.isArray(proof) || !Array.isArray(leaf)) {
+            return createErrorResponse(400, 'Missing or invalid parameters', ErrorCode.BAD_REQUEST)
+        }
+
+        // Get merkle data from R2
+        const key = `${conditionId}-${merkleRoot}`
+        const merkleDataObj = await env.MERKLE_OBJECTS_R2.get(key)
+
+        if (!merkleDataObj) {
+            return createErrorResponse(
+                404,
+                'Merkle data not found',
+                ErrorCode.MERKLE_TREE_NOT_FOUND,
+            )
+        }
+
+        // Verify the proof with properly formatted leaf
+        const isValid = StandardMerkleTree.verify(merkleRoot, ['address', 'uint256'], leaf, proof)
+
+        if (!isValid) {
+            return createErrorResponse(400, 'Invalid merkle proof', ErrorCode.INVALID_PROOF)
+        }
+
+        return createSuccessResponse(200, 'Proof verified successfully', { verified: true })
     } catch (error) {
         console.error(error)
         return createErrorResponse(500, 'Error processing request', ErrorCode.INTERNAL_SERVER_ERROR)

@@ -5,6 +5,13 @@ export interface Claim {
     amount: string
 }
 
+export interface VerifyProofRequest {
+    conditionId: string
+    merkleRoot: string
+    proof: string[]
+    leaf: [Claim['address'], Claim['amount']]
+}
+
 export interface MerkleTreeDump {
     format: string
     tree: string[]

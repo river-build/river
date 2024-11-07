@@ -9,6 +9,7 @@ export enum ErrorCode {
     CLAIM_NOT_FOUND = 'CLAIM_NOT_FOUND',
     NOT_FOUND = 'NOT_FOUND',
     INTERNAL_SERVER_ERROR = 'INTERNAL_SERVER_ERROR',
+    INVALID_PROOF = 'INVALID_PROOF',
 }
 
 export function createSuccessResponse<T>(status: number, message: string, data?: T) {
@@ -16,7 +17,6 @@ export function createSuccessResponse<T>(status: number, message: string, data?:
         toJson({
             success: true,
             message,
-            data,
             ...data,
         } satisfies ApiSuccessResponse<T>),
         {
