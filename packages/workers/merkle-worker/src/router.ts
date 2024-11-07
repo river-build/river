@@ -48,6 +48,7 @@ router.post('/admin/api/merkle-root', async (request: WorkerRequest, env: Env) =
             merkleRoot: merkleData.merkleRoot,
         })
     } catch (error) {
+        console.error(error)
         return createErrorResponse(500, `Error processing request`, ErrorCode.INTERNAL_SERVER_ERROR)
     }
 })
@@ -111,6 +112,7 @@ router.post('/api/merkle-proof', async (request: WorkerRequest, env: Env) => {
 
         return createSuccessResponse(200, 'Proof generated successfully', response)
     } catch (error) {
+        console.error(error)
         return createErrorResponse(500, 'Error processing request', ErrorCode.INTERNAL_SERVER_ERROR)
     }
 })
