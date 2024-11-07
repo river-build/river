@@ -232,6 +232,7 @@ func (st *serviceTester) getConfig(opts ...startOpts) *config.Config {
 		StreamReconciliation: config.StreamReconciliationConfig{
 			WorkerPoolSize: 8,
 		},
+		RiverRegistry: config.GetDefaultConfig().RiverRegistry,
 	}
 
 	if options.configUpdater != nil {

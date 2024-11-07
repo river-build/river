@@ -69,6 +69,13 @@ func GetDefaultConfig() *Config {
 		Scrubbing: ScrubbingConfig{
 			ScrubEligibleDuration: time.Hour,
 		},
+		RiverRegistry: RiverRegistryConfig{
+			PageSize:               1000,
+			MaxRetries:             100,
+			MaxRetryElapsedTime:    5 * time.Minute,
+			SingleCallTimeout:      30 * time.Second, // geth internal timeout is 30 seconds
+			ProgressReportInterval: 10 * time.Second,
+		},
 	}
 }
 
@@ -168,6 +175,9 @@ type Config struct {
 	EnableDebugEndpoints bool
 
 	DebugEndpoints DebugEndpointsConfig
+
+	// RiverRegistry contains settings for calling registry contract on River chain.
+	RiverRegistry RiverRegistryConfig
 }
 
 type TLSConfig struct {
@@ -359,6 +369,23 @@ type DebugEndpointsConfig struct {
 	Stacks          bool
 	StacksMaxSizeKb int
 	TxPool          bool
+}
+
+type RiverRegistryConfig struct {
+	// PageSize is the number of streams to read from the contract at once using GetPaginatedStreams.
+	PageSize int
+
+	// If not 0, stop retrying failed GetPaginatedStreams calls after this number of retries.
+	MaxRetries int
+
+	// Stop retrying failed GetPaginatedStreams calls after this duration.
+	MaxRetryElapsedTime time.Duration
+
+	// Timeout for a singe call to GetPaginatedStreams.
+	SingleCallTimeout time.Duration
+
+	// ProgressReportInterval is the interval at which to report progress of the GetPaginatedStreams calls.
+	ProgressReportInterval time.Duration
 }
 
 func (ac *ArchiveConfig) GetReadMiniblocksSize() uint64 {
