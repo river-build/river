@@ -4470,6 +4470,7 @@ __metadata:
     ethereum-cryptography: ^1.2.0
     ethers: ^5.7.2
     fake-indexeddb: ^4.0.1
+    happy-dom: ^15.11.0
     ioredis: ^5.3.2
     jsdom: ^25.0.1
     lodash: ^4.17.21
@@ -12246,6 +12247,17 @@ __metadata:
   bin:
     handlebars: bin/handlebars
   checksum: 00e68bb5c183fd7b8b63322e6234b5ac8fbb960d712cb3f25587d559c2951d9642df83c04a1172c918c41bcfc81bfbd7a7718bbce93b893e0135fc99edea93ff
+  languageName: node
+  linkType: hard
+
+"happy-dom@npm:^15.11.0":
+  version: 15.11.0
+  resolution: "happy-dom@npm:15.11.0"
+  dependencies:
+    entities: ^4.5.0
+    webidl-conversions: ^7.0.0
+    whatwg-mimetype: ^3.0.0
+  checksum: b382ba38d5e26974aa26b11a6e8a13d5afcddc79e663d2e65362cdebeaa7081531c3627fd7903ea08bb1e99155211a48d21512f196482076fd995373eba71630
   languageName: node
   linkType: hard
 
@@ -21727,6 +21739,13 @@ __metadata:
   dependencies:
     iconv-lite: 0.6.3
   checksum: f75a61422421d991e4aec775645705beaf99a16a88294d68404866f65e92441698a4f5b9fa11dd609017b132d7b286c3c1534e2de5b3e800333856325b549e3c
+  languageName: node
+  linkType: hard
+
+"whatwg-mimetype@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "whatwg-mimetype@npm:3.0.0"
+  checksum: ce08bbb36b6aaf64f3a84da89707e3e6a31e5ab1c1a2379fd68df79ba712a4ab090904f0b50e6693b0dafc8e6343a6157e40bf18fdffd26e513cf95ee2a59824
   languageName: node
   linkType: hard
 
