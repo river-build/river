@@ -71,7 +71,11 @@ export class MlsCrypto {
         }
 
         const ciphertext = await this.cipherSuite.seal(epochKeyState.publicKey, message)
-        return new EncryptedData({ algorithm: 'mls', mlsCiphertext: ciphertext.toBytes() })
+        return new EncryptedData({
+            algorithm: 'mls',
+            mlsCiphertext: ciphertext.toBytes(),
+            mlsEpoch: epoch,
+        })
     }
 
     public async decrypt(streamId: string, encryptedData: EncryptedData): Promise<Uint8Array> {
@@ -88,8 +92,10 @@ export class MlsCrypto {
             throw new Error('Not an MLS payload')
         }
 
-        const group = groupState.group
-        const epoch = group.currentEpoch
+        const epoch = encryptedData.mlsEpoch
+        if (epoch === undefined) {
+            throw new Error('No epoch specified')
+        }
         const epochKeyState = this.epochKeyService.getEpochKeyState(streamId, epoch)
 
         if (epochKeyState.status !== 'EPOCH_KEY_DERIVED') {
