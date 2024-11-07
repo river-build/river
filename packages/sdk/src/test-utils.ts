@@ -349,10 +349,12 @@ class DonePromise {
     }
 
     async expectToSucceed(): Promise<void> {
+        // eslint-disable-next-line jest/no-standalone-expect
         await expect(this.promise).resolves.toBe('done')
     }
 
     async expectToFail(): Promise<void> {
+        // eslint-disable-next-line jest/no-standalone-expect
         await expect(this.promise).rejects.toThrow()
     }
 

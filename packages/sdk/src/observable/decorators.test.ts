@@ -4,7 +4,6 @@
 
 import { check } from '@river-build/dlog'
 
-
 const ALL_NAMES = new Set<string>()
 
 function decoratedWith(options: { fancyName: string }) {
