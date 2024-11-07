@@ -6,18 +6,20 @@ import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 
 //interfaces
 import {IPausableBase} from "contracts/src/diamond/facets/pausable/IPausable.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ITokenMigrationBase} from "contracts/src/tokens/migration/ITokenMigration.sol";
 
 //libraries
+import {Validator__InvalidAddress} from "contracts/src/utils/Validator.sol";
 
 //contracts
 import {DeployRiverMigration} from "contracts/scripts/deployments/diamonds/DeployRiverMigration.s.sol";
 import {MockERC20} from "contracts/test/mocks/MockERC20.sol";
 
+// facets
 import {TokenMigrationFacet} from "contracts/src/tokens/migration/TokenMigration.sol";
 import {PausableFacet} from "contracts/src/diamond/facets/pausable/PausableFacet.sol";
 
-contract TokenMigrationTest is TestUtils, IPausableBase {
+contract TokenMigrationTest is TestUtils, IPausableBase, ITokenMigrationBase {
   DeployRiverMigration internal riverMigrationHelper;
   MockERC20 internal oldToken;
   MockERC20 internal newToken;
@@ -43,8 +45,8 @@ contract TokenMigrationTest is TestUtils, IPausableBase {
   }
 
   // modifiers
-
   modifier givenAccountHasOldTokens(address account, uint256 amount) {
+    vm.assume(amount > 0);
     vm.prank(deployer);
     oldToken.mint(account, amount);
     _;
@@ -68,30 +70,62 @@ contract TokenMigrationTest is TestUtils, IPausableBase {
     _;
   }
 
+  modifier assumeEOA(address account) {
+    vm.assume(account != address(0) && account.code.length == 0);
+    _;
+  }
+
+  modifier givenAccountMigrated(address account, uint256 amount) {
+    vm.prank(account);
+    tokenMigration.migrate(account);
+    _;
+  }
+
   // tests
-  function test_migrate(
+  function testFuzz_migrate(
     address account,
     uint256 amount
   )
     external
+    assumeEOA(account)
+    givenContractIsUnpaused
     givenAccountHasOldTokens(account, amount)
     givenAllowanceIsSet(account, amount)
     givenContractHasNewTokens(amount)
-    givenContractIsUnpaused
+    givenAccountMigrated(account, amount)
   {
-    vm.assume(account != address(0));
-    vm.assume(amount > 0);
-
-    vm.prank(account);
-    tokenMigration.migrate(account);
-
     assertEq(oldToken.balanceOf(account), 0);
     assertEq(newToken.balanceOf(account), amount);
   }
 
-  function test_revertWhen_migratePaused() external {
+  function test_revertWhen_migrationPaused() external {
     vm.prank(deployer);
     vm.expectRevert(Pausable__Paused.selector);
     tokenMigration.migrate(address(0));
+  }
+
+  function test_revertWhen_addressIsZero() external givenContractIsUnpaused {
+    vm.expectRevert(Validator__InvalidAddress.selector);
+    tokenMigration.migrate(address(0));
+  }
+
+  function test_revertWhen_balanceIsZero(
+    address account
+  ) external givenContractIsUnpaused assumeEOA(account) {
+    vm.expectRevert(TokenMigration__InvalidBalance.selector);
+    tokenMigration.migrate(account);
+  }
+
+  function test_revertWhen_invalidAllowance(
+    address account,
+    uint256 amount
+  )
+    external
+    givenContractIsUnpaused
+    assumeEOA(account)
+    givenAccountHasOldTokens(account, amount)
+  {
+    vm.expectRevert(TokenMigration__InvalidAllowance.selector);
+    tokenMigration.migrate(account);
   }
 }

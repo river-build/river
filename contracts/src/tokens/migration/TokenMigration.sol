@@ -41,8 +41,12 @@ contract TokenMigrationFacet is
     TokenMigrationStorage.Layout storage ds = TokenMigrationStorage.layout();
 
     uint256 currentBalance = ds.oldToken.balanceOf(account);
+
     if (currentBalance == 0)
       CustomRevert.revertWith(TokenMigration__InvalidBalance.selector);
+
+    if (ds.oldToken.allowance(account, address(this)) < currentBalance)
+      CustomRevert.revertWith(TokenMigration__InvalidAllowance.selector);
 
     address(ds.oldToken).safeTransferFrom(
       account,

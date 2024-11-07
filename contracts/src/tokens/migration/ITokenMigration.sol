@@ -10,7 +10,7 @@ pragma solidity ^0.8.23;
 interface ITokenMigrationBase {
   // Errors
   error TokenMigration__InvalidBalance();
-
+  error TokenMigration__InvalidAllowance();
   // Events
   event TokensMigrated(address indexed account, uint256 amount);
 }
