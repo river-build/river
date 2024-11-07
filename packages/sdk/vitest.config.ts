@@ -5,7 +5,7 @@ export default mergeConfig(
     rootConfig,
     defineConfig({
         test: {
-            environment: './vitest.environment.ts',
+            environment: 'happy-dom',
             env: {
                 RIVER_ENV: 'local_multi_ne',
             },
