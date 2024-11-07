@@ -2606,6 +2606,10 @@ export class Client
             throw new Error('mls backend not initialized')
         }
         await this.mlsCrypto.handleKeyAnnouncement(announcement.streamId, announcement.key)
+        // Eagerly try to decrypt messages
+        if (this.decryptionExtensions) {
+            await this.decryptionExtensions.retryMls(announcement.streamId)
+        }
     }
 
     public async mls_didReceiveInitializeGroup(group: MlsInitializeGroup): Promise<void> {

@@ -884,6 +884,14 @@ export abstract class BaseDecryptionExtensions {
         )
         this.keySolicitationsNeedsSort = false
     }
+
+    public async retryMls(streamId: string): Promise<void> {
+        const streamFailures = this.decryptionFailures[streamId]['all-the-same']
+        this.decryptionFailures[streamId]['all-the-same'] = []
+        for (const failure of streamFailures) {
+            await this.processEncryptedContentItem(failure)
+        }
+    }
 }
 
 export function makeSessionKeys(sessions: GroupEncryptionSession[]): SessionKeys {
