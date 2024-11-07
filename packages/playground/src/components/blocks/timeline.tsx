@@ -1,6 +1,4 @@
 import {
-    type RiverRoom,
-    getRoom,
     useMember,
     useReactions,
     useRedact,
@@ -9,11 +7,17 @@ import {
     useSendReaction,
     useSyncAgent,
 } from '@river-build/react-sdk'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { type MessageReactions, RiverTimelineEvent, type TimelineEvent } from '@river-build/sdk'
-import { useCallback, useMemo } from 'react'
-import { useForm } from 'react-hook-form'
+import {
+    type MessageReactions,
+    RiverTimelineEvent,
+    type TimelineEvent,
+    isChannelStreamId,
+    spaceIdFromChannelId,
+} from '@river-build/sdk'
+import { useCallback } from 'react'
 import { z } from 'zod'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { cn } from '@/utils'
 import { getNativeEmojiFromName } from '@/utils/emojis'
 import { Form, FormControl, FormField, FormItem, FormMessage } from '../ui/form'
@@ -23,11 +27,11 @@ import { ScrollArea } from '../ui/scroll-area'
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '../ui/dialog'
 import { Avatar } from '../ui/avatar'
 
-const useMessageReaction = (props: RiverRoom, eventId: string) => {
-    const { data: reactionMap } = useReactions(props)
+const useMessageReaction = (streamId: string, eventId: string) => {
+    const { data: reactionMap } = useReactions(streamId)
     const reactions = reactionMap?.[eventId]
-    const { sendReaction } = useSendReaction(props)
-    const { redactEvent } = useRedact(props)
+    const { sendReaction } = useSendReaction(streamId)
+    const { redactEvent } = useRedact(streamId)
     const onReact = useCallback(
         (
             params:
@@ -55,39 +59,40 @@ const useMessageReaction = (props: RiverRoom, eventId: string) => {
     }
 }
 
-type TimelineProps = RiverRoom & {
+type TimelineProps = {
     events: TimelineEvent[]
     showThreadMessages?: boolean
     threadMap?: Record<string, TimelineEvent[]>
+    streamId: string
 }
 
-export const Timeline = (props: TimelineProps) => {
-    const { scrollback, isPending } = useScrollback(props)
+export const Timeline = ({ streamId, showThreadMessages, threadMap, events }: TimelineProps) => {
+    const { scrollback, isPending } = useScrollback(streamId)
     return (
         <div className="grid grid-rows-[auto,1fr] gap-2">
             <ScrollArea className="h-[calc(100dvh-172px)]">
                 <div className="flex flex-col gap-6">
-                    {!props.showThreadMessages && (
+                    {!showThreadMessages && (
                         <Button disabled={isPending} variant="outline" onClick={scrollback}>
                             {isPending ? 'Loading more...' : 'Scrollback'}
                         </Button>
                     )}
-                    {props.events.flatMap((event) =>
+                    {events.flatMap((event) =>
                         event.content?.kind === RiverTimelineEvent.RoomMessage &&
-                        (props.showThreadMessages || !event.threadParentId)
+                        (showThreadMessages || !event.threadParentId)
                             ? [
                                   <Message
+                                      streamId={streamId}
                                       key={event.eventId}
-                                      {...props}
                                       event={event}
-                                      thread={props.threadMap?.[event.eventId]}
+                                      thread={threadMap?.[event.eventId]}
                                   />,
                               ]
                             : [],
                     )}
                 </div>
             </ScrollArea>
-            <SendMessage {...props} />
+            <SendMessage streamId={streamId} />
         </div>
     )
 }
@@ -96,8 +101,8 @@ const formSchema = z.object({
     message: z.string(),
 })
 
-export const SendMessage = (props: RiverRoom) => {
-    const { sendMessage, isPending } = useSendMessage(props)
+export const SendMessage = ({ streamId }: { streamId: string }) => {
+    const { sendMessage, isPending } = useSendMessage(streamId)
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: { message: '' },
@@ -130,18 +135,26 @@ export const SendMessage = (props: RiverRoom) => {
 
 const Message = ({
     event,
-    ...props
-}: { event: TimelineEvent; thread: TimelineEvent[] | undefined } & RiverRoom) => {
+    streamId,
+    thread,
+}: {
+    event: TimelineEvent
+    thread: TimelineEvent[] | undefined
+    streamId: string
+}) => {
     const sync = useSyncAgent()
-    const member = useMemo(
-        () => getRoom(sync, props).members.get(event.sender.id),
-        [props, sync, event.sender.id],
-    )
-    const { username, displayName } = useMember(member)
+    const preferSpaceMember = isChannelStreamId(streamId)
+        ? spaceIdFromChannelId(streamId)
+        : streamId
+
+    const { username, displayName } = useMember({
+        streamId: preferSpaceMember,
+        userId: event.sender.id,
+    })
     const prettyDisplayName = displayName || username
     const isMyMessage = event.sender.id === sync.userId
-    const { reactions, onReact } = useMessageReaction(props, event.eventId)
-    const { redactEvent } = useRedact(props)
+    const { reactions, onReact } = useMessageReaction(streamId, event.eventId)
+    const { redactEvent } = useRedact(streamId)
 
     return (
         <div className="flex w-full gap-3.5">
@@ -179,14 +192,14 @@ const Message = ({
                         </Button>
                     )}
 
-                    {props.thread && props.thread.length > 0 && (
+                    {thread && thread.length > 0 && (
                         <Dialog>
                             <DialogTrigger asChild>
-                                <Button variant="ghost">+{props.thread.length} messages</Button>
+                                <Button variant="ghost">+{thread.length} messages</Button>
                             </DialogTrigger>
                             <DialogContent className="max-w-full sm:max-w-[calc(100dvw-20%)]">
                                 <DialogTitle>Thread</DialogTitle>
-                                <Timeline {...props} showThreadMessages events={props.thread} />
+                                <Timeline showThreadMessages streamId={streamId} events={thread} />
                             </DialogContent>
                         </Dialog>
                     )}
