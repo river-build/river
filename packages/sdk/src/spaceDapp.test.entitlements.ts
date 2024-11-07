@@ -8,7 +8,7 @@ import { makeBaseChainConfig, makeRiverConfig } from './riverConfig'
 import { createSpaceDapp, LocalhostWeb3Provider, SpaceDapp } from '@river-build/web3'
 import { ethers } from 'ethers'
 import { makeDefaultMembershipInfo } from './sync-agent/utils/spaceUtils'
-import { linkWallets, unlinkCaller } from './util.test'
+import { linkWallets, unlinkCaller } from './test-utils'
 
 const log = dlog('csb:test:spaceDapp')
 
