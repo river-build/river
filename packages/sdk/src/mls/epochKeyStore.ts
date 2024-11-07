@@ -14,6 +14,8 @@ type EpochKeyState =
           status: 'EPOCH_KEY_DERIVED'
           secretKey: HpkeSecretKey
           publicKey: HpkePublicKey
+          openEpochSecret: MlsSecret
+          sealedEpochSecret: HpkeCiphertext | undefined
       }
 
 type DerivedKeys = {
@@ -41,21 +43,27 @@ export class EpochKeyService {
     public getEpochKeyState(streamId: string, epoch: bigint): EpochKeyState {
         const epochKeyStore = this.getEpochKeyStore(streamId)
         const derivedKeys = epochKeyStore.getDerivedKeys(epoch)
+        const openEpochSecret = epochKeyStore.getOpenEpochSecret(epoch)
+        const sealedEpochSecret = epochKeyStore.getSealedEpochSecret(epoch)
+
         if (derivedKeys) {
+            if (!openEpochSecret) {
+                throw new Error('Derived keys without open epoch secret')
+            }
             return {
                 status: 'EPOCH_KEY_DERIVED',
                 secretKey: derivedKeys.secretKey,
                 publicKey: derivedKeys.publicKey,
+                openEpochSecret,
+                sealedEpochSecret,
             }
         }
-        const openEpochSecret = epochKeyStore.getOpenEpochSecret(epoch)
         if (openEpochSecret) {
             return {
                 status: 'EPOCH_KEY_OPEN',
                 openEpochSecret,
             }
         }
-        const sealedEpochSecret = epochKeyStore.getSealedEpochSecret(epoch)
         if (sealedEpochSecret) {
             return {
                 status: 'EPOCH_KEY_SEALED',
@@ -67,13 +75,17 @@ export class EpochKeyService {
         }
     }
 
-    public addSealedEpochSecret(
+    public async addSealedEpochSecret(
         streamId: string,
         epoch: bigint,
         sealedEpochSecretBytes: Uint8Array,
     ): Promise<EpochKeyState> {
         const epochKeyStore = this.getEpochKeyStore(streamId)
         epochKeyStore.addSealedEpochSecret(epoch, sealedEpochSecretBytes)
+        const nextEpochState = this.getEpochKeyState(streamId, epoch + 1n)
+        if (nextEpochState.status === 'EPOCH_KEY_DERIVED') {
+            await this.openSealedEpochSecret(streamId, epoch, nextEpochState)
+        }
         return Promise.resolve(this.getEpochKeyState(streamId, epoch))
     }
 
@@ -115,7 +127,7 @@ export class EpochKeyService {
             const keys = await this.cipherSuite.kemDerive(openEpochSecret)
             epochKeyStore.addDerivedKeys(epoch, keys)
             // TODO: try opening
-            // await this.openSealedEpochSecret(streamId, epoch, keys)
+            await this.openSealedEpochSecret(streamId, epoch, keys)
         }
         return Promise.resolve(this.getEpochKeyState(streamId, epoch))
     }

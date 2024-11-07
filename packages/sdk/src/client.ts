@@ -2648,6 +2648,56 @@ export class Client
             // Try rejoining the group
             console.log(`Rejoining group ${streamId}`)
             await this.mls_joinOrCreateGroup(streamId)
+        } else {
+            // NOTE: We can announce the key as we are now switching to a new epoch
+            const groupState = this.mlsCrypto.groupStore.getGroup(streamId)
+            if (
+                groupState &&
+                groupState.state === 'GROUP_ACTIVE' &&
+                groupState.group.currentEpoch > 0
+            ) {
+                const currentEpoch = groupState.group.currentEpoch
+                const previousEpoch = groupState.group.currentEpoch - 1n
+                const currentEpochKeyState = this.mlsCrypto.epochKeyService.getEpochKeyState(
+                    streamId,
+                    currentEpoch,
+                )
+                const previousEpochKeyState = this.mlsCrypto.epochKeyService.getEpochKeyState(
+                    streamId,
+                    previousEpoch,
+                )
+                if (
+                    currentEpochKeyState.status === 'EPOCH_KEY_DERIVED' &&
+                    previousEpochKeyState.status === 'EPOCH_KEY_DERIVED'
+                ) {
+                    if (!previousEpochKeyState.sealedEpochSecret) {
+                        previousEpochKeyState.sealedEpochSecret =
+                            await this.mlsCrypto.cipherSuite.seal(
+                                currentEpochKeyState.publicKey,
+                                previousEpochKeyState.openEpochSecret.toBytes(),
+                            )
+                    }
+
+                    // Announcing previous epoch secret
+                    try {
+                        await this.makeEventAndAddToStream(
+                            streamId,
+                            make_MemberPayload_Mls({
+                                content: {
+                                    case: 'keyAnnouncement',
+                                    value: {
+                                        key: previousEpochKeyState.sealedEpochSecret.toBytes(),
+                                        epoch: previousEpoch,
+                                    },
+                                },
+                            }),
+                        )
+                        console.log('SENT Keys', previousEpochKeyState.sealedEpochSecret.toBytes())
+                    } catch (error) {
+                        console.log('ERROR announcing key', error)
+                    }
+                }
+            }
         }
     }
 }
