@@ -1,7 +1,7 @@
-import { parseAbiParameters, type ExtractAbiFunction } from 'abitype'
+import { type ExtractAbiFunction } from 'abitype'
 import { IRuleEntitlementBase, IRuleEntitlementAbi } from './v3/IRuleEntitlementShim'
 import { IRuleEntitlementV2Base, IRuleEntitlementV2Abi } from './v3/IRuleEntitlementV2Shim'
-import { check, dlogger } from '@river-build/dlog'
+import { dlogger } from '@river-build/dlog'
 
 import {
     encodeAbiParameters,
@@ -14,7 +14,6 @@ import {
 import { ethers } from 'ethers'
 import { Address } from './ContractTypes'
 import { MOCK_ADDRESS } from './Utils'
-import { add } from 'lodash'
 
 const log = dlogger('csb:entitlement')
 
