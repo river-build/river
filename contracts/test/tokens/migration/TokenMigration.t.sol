@@ -7,6 +7,7 @@ import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 //interfaces
 import {IPausableBase} from "contracts/src/diamond/facets/pausable/IPausable.sol";
 import {ITokenMigrationBase} from "contracts/src/tokens/migration/ITokenMigration.sol";
+import {IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
 
 //libraries
 import {Validator__InvalidAddress} from "contracts/src/utils/Validator.sol";
@@ -19,7 +20,12 @@ import {MockERC20} from "contracts/test/mocks/MockERC20.sol";
 import {TokenMigrationFacet} from "contracts/src/tokens/migration/TokenMigration.sol";
 import {PausableFacet} from "contracts/src/diamond/facets/pausable/PausableFacet.sol";
 
-contract TokenMigrationTest is TestUtils, IPausableBase, ITokenMigrationBase {
+contract TokenMigrationTest is
+  TestUtils,
+  IPausableBase,
+  ITokenMigrationBase,
+  IOwnableBase
+{
   DeployRiverMigration internal riverMigrationHelper;
   MockERC20 internal oldToken;
   MockERC20 internal newToken;
@@ -70,13 +76,10 @@ contract TokenMigrationTest is TestUtils, IPausableBase, ITokenMigrationBase {
     _;
   }
 
-  modifier assumeEOA(address account) {
-    vm.assume(account != address(0) && account.code.length == 0);
-    _;
-  }
-
   modifier givenAccountMigrated(address account, uint256 amount) {
     vm.prank(account);
+    vm.expectEmit(address(tokenMigration));
+    emit TokensMigrated(account, amount);
     tokenMigration.migrate(account);
     _;
   }
@@ -127,5 +130,39 @@ contract TokenMigrationTest is TestUtils, IPausableBase, ITokenMigrationBase {
   {
     vm.expectRevert(TokenMigration__InvalidAllowance.selector);
     tokenMigration.migrate(account);
+  }
+
+  // withdrawTokens
+  function test_withdrawTokens(
+    address account,
+    uint256 amount
+  )
+    external
+    assumeEOA(account)
+    givenContractIsUnpaused
+    givenAccountHasOldTokens(account, amount)
+    givenAllowanceIsSet(account, amount)
+    givenContractHasNewTokens(amount)
+    givenAccountMigrated(account, amount)
+  {
+    vm.prank(deployer);
+    tokenMigration.withdrawTokens();
+
+    assertEq(oldToken.balanceOf(address(tokenMigration)), 0);
+    assertEq(newToken.balanceOf(address(tokenMigration)), 0);
+    assertEq(oldToken.balanceOf(deployer), amount);
+  }
+
+  function test_revertWhen_withdrawTokensNotOwner() external {
+    address randomAddress = _randomAddress();
+
+    vm.prank(randomAddress);
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        IOwnableBase.Ownable__NotOwner.selector,
+        randomAddress
+      )
+    );
+    tokenMigration.withdrawTokens();
   }
 }

@@ -15,12 +15,10 @@ import {Validator} from "contracts/src/utils/Validator.sol";
 import {PausableBase} from "contracts/src/diamond/facets/pausable/PausableBase.sol";
 import {OwnableBase} from "contracts/src/diamond/facets/ownable/OwnableBase.sol";
 import {Facet} from "contracts/src/diamond/facets/Facet.sol";
-import {ReentrancyGuard} from "contracts/src/diamond/facets/reentrancy/ReentrancyGuard.sol";
 
 contract TokenMigrationFacet is
   OwnableBase,
   PausableBase,
-  ReentrancyGuard,
   Facet,
   ITokenMigration
 {
@@ -35,7 +33,8 @@ contract TokenMigrationFacet is
     _pause();
   }
 
-  function migrate(address account) external whenNotPaused nonReentrant {
+  /// @inheritdoc ITokenMigration
+  function migrate(address account) external whenNotPaused {
     Validator.checkAddress(account);
 
     TokenMigrationStorage.Layout storage ds = TokenMigrationStorage.layout();
@@ -58,6 +57,7 @@ contract TokenMigrationFacet is
     emit TokensMigrated(account, currentBalance);
   }
 
+  /// @inheritdoc ITokenMigration
   function withdrawTokens() external onlyOwner {
     TokenMigrationStorage.Layout storage ds = TokenMigrationStorage.layout();
 
@@ -66,13 +66,5 @@ contract TokenMigrationFacet is
 
     uint256 newTokenBalance = ds.newToken.balanceOf(address(this));
     if (newTokenBalance > 0) ds.newToken.transfer(_owner(), newTokenBalance);
-  }
-
-  function pauseMigration() external onlyOwner {
-    _pause();
-  }
-
-  function resumeMigration() external onlyOwner {
-    _unpause();
   }
 }

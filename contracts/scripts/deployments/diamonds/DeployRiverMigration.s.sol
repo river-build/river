@@ -22,6 +22,9 @@ import {DeployPausable} from "contracts/scripts/deployments/facets/DeployPausabl
 import {DeployTokenMigration} from "contracts/scripts/deployments/facets/DeployTokenMigration.s.sol";
 
 contract DeployRiverMigration is DiamondHelper, Deployer {
+  address OLD_TOKEN = 0x0000000000000000000000000000000000000000;
+  address NEW_TOKEN = 0x0000000000000000000000000000000000000001;
+
   DeployMultiInit deployMultiInit = new DeployMultiInit();
   DeployDiamondCut diamondCutHelper = new DeployDiamondCut();
   DeployDiamondLoupe diamondLoupeHelper = new DeployDiamondLoupe();
@@ -38,16 +41,13 @@ contract DeployRiverMigration is DiamondHelper, Deployer {
   address pausable;
   address tokenMigration;
 
-  address oldToken;
-  address newToken;
-
   function versionName() public pure override returns (string memory) {
     return "riverMigration";
   }
 
   function setTokens(address _oldToken, address _newToken) external {
-    oldToken = _oldToken;
-    newToken = _newToken;
+    OLD_TOKEN = _oldToken;
+    NEW_TOKEN = _newToken;
   }
 
   function addImmutableCuts(address deployer) internal {
@@ -93,7 +93,7 @@ contract DeployRiverMigration is DiamondHelper, Deployer {
     addFacet(
       tokenMigrationHelper.makeCut(tokenMigration, IDiamond.FacetCutAction.Add),
       tokenMigration,
-      tokenMigrationHelper.makeInitData(oldToken, newToken)
+      tokenMigrationHelper.makeInitData(OLD_TOKEN, NEW_TOKEN)
     );
 
     return
