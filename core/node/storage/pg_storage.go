@@ -284,20 +284,33 @@ func PreparePostgresStatus(ctx context.Context, pool PgxPoolInfo) PostgresStatus
 		systemId = fmt.Sprintf("Error: %v", err)
 	}
 
+	// Note: the following statistics apply to stream stores, and not to pg stores generally.
+	// These tables may also not exist until migrations are run.
 	var migratedStreams, unmigratedStreams, numPartitions int64
 	err = pool.Pool.QueryRow(ctx, "SELECT count(*) FROM es WHERE migrated=false").Scan(&unmigratedStreams)
 	if err != nil {
-		log.Error("Error calculating unmigrated stream count", "error", err)
+		// Ignore nonexistent table or missing column, which occurs when stats are collected before migration completes
+		if pgerr, ok := err.(*pgconn.PgError); ok && pgerr.Code != pgerrcode.UndefinedTable &&
+			pgerr.Code != pgerrcode.UndefinedColumn {
+			log.Error("Error calculating unmigrated stream count", "error", err)
+		}
 	}
 
 	err = pool.Pool.QueryRow(ctx, "SELECT count(*) FROM es WHERE migrated=true").Scan(&migratedStreams)
 	if err != nil {
-		log.Error("Error calculating migrated stream count", "error", err)
+		// Ignore nonexistent table or missing column, which occurs when stats are collected before migration completes
+		if pgerr, ok := err.(*pgconn.PgError); ok && pgerr.Code != pgerrcode.UndefinedTable &&
+			pgerr.Code != pgerrcode.UndefinedColumn {
+			log.Error("Error calculating migrated stream count", "error", err)
+		}
 	}
 
 	err = pool.Pool.QueryRow(ctx, "SELECT num_partitions FROM settings WHERE single_row_key=true").Scan(&numPartitions)
 	if err != nil {
-		log.Error("Error calculating partition count", "error", err)
+		// Ignore nonexistent table, which occurs when stats are collected before migration
+		if pgerr, ok := err.(*pgconn.PgError); ok && pgerr.Code != pgerrcode.UndefinedTable {
+			log.Error("Error calculating partition count", "error", err)
+		}
 	}
 
 	return PostgresStatusResult{
