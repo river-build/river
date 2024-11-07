@@ -7,7 +7,7 @@ import {
     makeTestClient,
     getDynamicPricingModule,
     createVersionedSpace,
-} from './util.test'
+} from './test-utils'
 import { makeDefaultChannelStreamId, makeSpaceStreamId } from './id'
 import { ethers, Wallet } from 'ethers'
 import { Client } from './client'

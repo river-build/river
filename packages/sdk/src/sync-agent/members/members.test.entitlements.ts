@@ -2,7 +2,7 @@
  * @group with-entitlements
  */
 import { Bot } from '../utils/bot'
-import { waitFor } from '../../util.test'
+import { waitFor } from '../../test-utils'
 import type { SyncAgent } from '../syncAgent'
 import type { Space } from '../spaces/models/space'
 import { MembershipOp } from '@river-build/proto'

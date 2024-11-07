@@ -2,7 +2,7 @@
  * @group with-v2-entitlements
  */
 
-import { createTownWithRequirements, updateRole } from './util.test'
+import { createTownWithRequirements, updateRole } from './test-utils'
 import { NoopRuleData, UpdateRoleParams, Permission, EVERYONE_ADDRESS } from '@river-build/web3'
 
 describe('updateRole', () => {

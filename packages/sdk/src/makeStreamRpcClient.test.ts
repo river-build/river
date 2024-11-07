@@ -3,7 +3,7 @@
  */
 
 import { Err, InfoRequest, InfoResponse } from '@river-build/proto'
-import { makeTestRpcClient } from './util.test'
+import { makeTestRpcClient } from './test-utils'
 import { errorContains } from './rpcInterceptors'
 import { makeRiverRpcClient } from './makeRiverRpcClient'
 import { LocalhostWeb3Provider } from '@river-build/web3'

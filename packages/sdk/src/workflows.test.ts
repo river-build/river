@@ -10,7 +10,7 @@ import {
     makeRandomUserContext,
     makeTestRpcClient,
     makeUniqueSpaceStreamId,
-} from './util.test'
+} from './test-utils'
 import {
     makeUniqueChannelStreamId,
     makeUserStreamId,

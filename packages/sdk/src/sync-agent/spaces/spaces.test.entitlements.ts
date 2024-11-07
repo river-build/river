@@ -3,7 +3,7 @@
  */
 import { dlogger } from '@river-build/dlog'
 import { Bot } from '../utils/bot'
-import { waitFor } from '../../util.test'
+import { waitFor } from '../../test-utils'
 
 const logger = dlogger('csb:test:spaces')
 

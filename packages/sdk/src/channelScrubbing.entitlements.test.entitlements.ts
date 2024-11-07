@@ -11,7 +11,7 @@ import {
     setupChannelWithCustomRole,
     expectUserCanJoinChannel,
     waitFor,
-} from './util.test'
+} from './test-utils'
 import { dlog } from '@river-build/dlog'
 import { Address, TestERC721 } from '@river-build/web3'
 

@@ -11,7 +11,7 @@ import {
     makeTestClient,
     makeUniqueSpaceStreamId,
     waitFor,
-} from './util.test'
+} from './test-utils'
 import { make_MemberPayload_Nft } from './types'
 import { bin_fromString, bin_toString } from '@river-build/dlog'
 

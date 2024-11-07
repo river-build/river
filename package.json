@@ -36,7 +36,7 @@
         "syncpack:fix": "syncpack fix-mismatches && syncpack format",
         "test": "turbo test",
         "test:unit": "turbo test:unit -- --silent",
-        "test:ci:multi:ne": "vitest --project sdk-ne",
+        "test:ci:multi:ne": "vitest --project sdk-ne --silent",
         "test:react": "vitest --project @river-build/react-sdk",
         "test:build": "turbo test:build"
     },

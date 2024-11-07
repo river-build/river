@@ -2,7 +2,7 @@
  * @group main
  */
 
-import { isEncryptedData, makeTestClient, makeUniqueSpaceStreamId, waitFor } from './util.test'
+import { isEncryptedData, makeTestClient, makeUniqueSpaceStreamId, waitFor } from './test-utils'
 import { Client } from './client'
 import { dlog } from '@river-build/dlog'
 import { AES_GCM_DERIVED_ALGORITHM } from '@river-build/encryption'

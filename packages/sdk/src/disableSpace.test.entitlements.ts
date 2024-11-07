@@ -8,7 +8,7 @@ import {
     createTownWithRequirements,
     createUserStreamAndSyncClient,
     everyoneMembershipStruct,
-} from './util.test'
+} from './test-utils'
 
 describe('disableSpace', () => {
     it('User cannot join a space after it is disabled', async () => {

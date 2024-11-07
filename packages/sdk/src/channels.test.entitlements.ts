@@ -20,7 +20,7 @@ import {
     expectUserCanJoinChannel,
     expectUserCannotJoinChannel,
     ethBalanceCheckOp,
-} from './util.test'
+} from './test-utils'
 import { MembershipOp } from '@river-build/proto'
 import { dlog } from '@river-build/dlog'
 import {

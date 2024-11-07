@@ -12,7 +12,7 @@ import {
     mockCrossChainCheckOp,
     createTownWithRequirements,
     expectUserCannotJoinSpace,
-} from './util.test'
+} from './test-utils'
 import { dlog } from '@river-build/dlog'
 import { TestERC1155, TestCrossChainEntitlement, Address, treeToRuleData } from '@river-build/web3'
 

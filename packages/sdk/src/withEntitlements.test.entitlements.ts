@@ -9,7 +9,7 @@ import {
     makeDonePromise,
     getDynamicPricingModule,
     createVersionedSpace,
-} from './util.test'
+} from './test-utils'
 import {
     isValidStreamId,
     makeDefaultChannelStreamId,

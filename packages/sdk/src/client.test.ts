@@ -22,7 +22,7 @@ import {
     waitFor,
     getChannelMessagePayload,
     makeRandomUserAddress,
-} from './util.test'
+} from './test-utils'
 import {
     CancelSyncRequest,
     CancelSyncResponse,
@@ -46,6 +46,7 @@ import {
 import { SignerContext } from './signerContext'
 import { deriveKeyAndIV } from './crypto_utils'
 import { nanoid } from 'nanoid'
+// eslint-disable-next-line
 import { vi } from 'vitest'
 
 const log = dlog('csb:test')
@@ -700,8 +701,7 @@ describe('clientTest', () => {
                             clearEvent.content.payload?.value?.content?.case === 'text'
                         ) {
                             const body = clearEvent.content.payload?.value?.content.value?.body
-                            // @ts-ignore
-                            expect(body).toBeOneOf(conversation)
+                            expect(conversation).toContain(body)
                             if (body === 'Hello, Alice!') {
                                 await alicesClient.sendMessage(channelId, 'Hello, Bob!')
                             } else if (body === 'Weather nice?') {
@@ -741,8 +741,7 @@ describe('clientTest', () => {
                             clearEvent.content?.payload?.value?.content?.case === 'text'
                         ) {
                             const body = clearEvent.content?.payload?.value?.content.value?.body
-                            // @ts-ignore
-                            expect(body).toBeOneOf(conversation)
+                            expect(conversation).toContain(body)
                             if (body === 'Hello, Bob!') {
                                 await bobsClient.sendMessage(channelId, 'Weather nice?')
                             } else if (body === 'Sun and rain!') {

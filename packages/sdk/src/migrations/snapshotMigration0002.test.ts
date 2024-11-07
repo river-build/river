@@ -4,7 +4,7 @@
 
 import { Snapshot } from '@river-build/proto'
 import { snapshotMigration0002 } from './snapshotMigration0002'
-import { makeUniqueSpaceStreamId } from '../util.test'
+import { makeUniqueSpaceStreamId } from '../test-utils'
 import { makeDefaultChannelStreamId, makeUniqueChannelStreamId, streamIdAsBytes } from '../id'
 import { check } from '@river-build/dlog'
 

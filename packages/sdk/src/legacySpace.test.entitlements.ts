@@ -3,7 +3,7 @@
  */
 
 import { MembershipStruct, convertRuleDataV1ToV2, encodeRuleDataV2 } from '@river-build/web3'
-import { setupWalletsAndContexts, everyoneMembershipStruct } from './util.test'
+import { setupWalletsAndContexts, everyoneMembershipStruct } from './test-utils'
 
 describe('Legacy Space Detection', () => {
     it('Detect Legacy Space', async () => {

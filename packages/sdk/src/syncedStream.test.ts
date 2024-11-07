@@ -3,7 +3,7 @@
  */
 
 import { MembershipOp } from '@river-build/proto'
-import { makeTestClient, waitFor } from './util.test'
+import { makeTestClient, waitFor } from './test-utils'
 import { genShortId } from './id'
 
 describe('syncedStream', () => {
