@@ -2,7 +2,7 @@
  * @group with-entitlements
  */
 import { dlogger } from '@river-build/dlog'
-import { waitFor } from '../util.test'
+import { waitFor } from '../test-utils'
 import { MembershipOp } from '@river-build/proto'
 import { Bot } from './utils/bot'
 import { AuthStatus } from './river-connection/models/authStatus'

@@ -4,7 +4,7 @@
 
 import { assert } from './check'
 import { Client } from './client'
-import { makeTestClient } from './util.test'
+import { makeTestClient } from './test-utils'
 import { SessionKeys } from '@river-build/proto'
 import { dlog } from '@river-build/dlog'
 

@@ -10,7 +10,7 @@ import {
     TEST_ENCRYPTED_MESSAGE_PROPS,
     waitForSyncStreams,
     waitForSyncStreamsMessage,
-} from './util.test'
+} from './test-utils'
 import {
     makeUniqueChannelStreamId,
     makeUserStreamId,

@@ -28,7 +28,7 @@ import {
     makeRandomUserContext,
     makeTestRpcClient,
     makeUniqueSpaceStreamId,
-} from './util.test'
+} from './test-utils'
 import { SignerContext } from './signerContext'
 
 const log = dlog('csb:test:nodeRestart')

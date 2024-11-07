@@ -15,7 +15,7 @@ import {
     getUserIdFromStreamId,
     getUserAddressFromStreamId,
 } from './id'
-import { makeRandomUserContext, makeUniqueSpaceStreamId } from './util.test'
+import { makeRandomUserContext, makeUniqueSpaceStreamId } from './test-utils'
 
 describe('idTest', () => {
     it('validStreamId', () => {

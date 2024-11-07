@@ -2,7 +2,7 @@
  * @group main
  */
 
-import { makeTestClient } from './util.test'
+import { makeTestClient } from './test-utils'
 import { Client } from './client'
 import { dlog } from '@river-build/dlog'
 

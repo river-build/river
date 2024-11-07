@@ -10,7 +10,7 @@ import {
     expectUserCannotJoinChannel,
     linkWallets,
     mockCrossChainCheckOp,
-} from './util.test'
+} from './test-utils'
 import { dlog } from '@river-build/dlog'
 import { Address, treeToRuleData, TestERC1155, TestCrossChainEntitlement } from '@river-build/web3'
 

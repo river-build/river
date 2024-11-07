@@ -2,7 +2,7 @@
  * @group with-entitlements
  */
 
-import { waitFor } from '../../util.test'
+import { waitFor } from '../../test-utils'
 import { Bot } from '../utils/bot'
 
 describe('RiverConnection.test.ts', () => {

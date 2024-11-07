@@ -4,7 +4,7 @@
 
 import { userIdFromAddress } from './id'
 import { MemberMetadata_EnsAddresses } from './memberMetadata_EnsAddresses'
-import { makeRandomUserAddress } from './util.test'
+import { makeRandomUserAddress } from './test-utils'
 
 describe('memberMetadata_EnsAddressesTests', () => {
     const streamId = 'streamid1'

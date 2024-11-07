@@ -3,7 +3,7 @@
  */
 
 import { Client } from './client'
-import { makeDonePromise, makeTestClient, makeUniqueSpaceStreamId } from './util.test'
+import { makeDonePromise, makeTestClient, makeUniqueSpaceStreamId } from './test-utils'
 import { dlog } from '@river-build/dlog'
 import { UserDeviceCollection } from '@river-build/encryption'
 import { UserInboxPayload_GroupEncryptionSessions } from '@river-build/proto'

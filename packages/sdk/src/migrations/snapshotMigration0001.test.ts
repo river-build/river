@@ -5,7 +5,7 @@
 import { Snapshot } from '@river-build/proto'
 import { snapshotMigration0001 } from './snapshotMigration0001'
 import { ethers } from 'ethers'
-import { makeUniqueSpaceStreamId } from '../util.test'
+import { makeUniqueSpaceStreamId } from '../test-utils'
 import { addressFromUserId, makeUniqueChannelStreamId, streamIdAsBytes } from '../id'
 import { check } from '@river-build/dlog'
 

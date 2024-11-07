@@ -2,7 +2,7 @@
  * @group main
  */
 
-import { makeTestClient, waitFor } from './util.test'
+import { makeTestClient, waitFor } from './test-utils'
 import { Client } from './client'
 import { check } from '@river-build/dlog'
 

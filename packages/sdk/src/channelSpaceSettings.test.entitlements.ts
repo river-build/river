@@ -10,7 +10,7 @@ import {
     waitFor,
     expectUserCanJoin,
     createRole,
-} from './util.test'
+} from './test-utils'
 import { check } from '@river-build/dlog'
 import { Permission, NoopRuleData } from '@river-build/web3'
 

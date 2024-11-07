@@ -2,7 +2,7 @@
  * @group main
  */
 
-import { makeTestClient, createEventDecryptedPromise, waitFor } from './util.test'
+import { makeTestClient, createEventDecryptedPromise, waitFor } from './test-utils'
 import { Client } from './client'
 import { addressFromUserId, makeDMStreamId, streamIdAsBytes } from './id'
 import { makeEvent } from './sign'

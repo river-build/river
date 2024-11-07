@@ -22,7 +22,7 @@ import {
     waitFor,
     createRole,
     createSpaceAndDefaultChannel,
-} from './util.test'
+} from './test-utils'
 import { dlog } from '@river-build/dlog'
 import { MembershipOp } from '@river-build/proto'
 import {

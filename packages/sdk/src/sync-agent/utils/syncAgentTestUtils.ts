@@ -1,6 +1,6 @@
 import { SyncAgentConfig } from '../syncAgent'
 import { ClientParams } from '../river-connection/riverConnection'
-import { makeRandomUserContext } from '../../util.test'
+import { makeRandomUserContext } from '../../test-utils'
 import { makeRiverConfig } from '../../riverConfig'
 import { RiverDbManager } from '../../riverDbManager'
 import { userIdFromAddress } from '../../id'

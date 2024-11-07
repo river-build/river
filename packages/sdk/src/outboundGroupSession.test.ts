@@ -2,7 +2,7 @@
  * @group main
  */
 
-import { makeTestClient, makeUniqueSpaceStreamId } from './util.test'
+import { makeTestClient, makeUniqueSpaceStreamId } from './test-utils'
 import { Client } from './client'
 
 import { genShortId, makeUniqueChannelStreamId } from './id'

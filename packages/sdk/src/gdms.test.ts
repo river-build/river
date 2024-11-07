@@ -2,7 +2,7 @@
  * @group main
  */
 
-import { makeTestClient, createEventDecryptedPromise, waitFor, makeDonePromise } from './util.test'
+import { makeTestClient, createEventDecryptedPromise, waitFor, makeDonePromise } from './test-utils'
 import { Client } from './client'
 import { MembershipOp } from '@river-build/proto'
 import { dlog } from '@river-build/dlog'

@@ -6,7 +6,7 @@
  * we can't export and describe(...) in a .test file, so this is tests for util.test.ts
  */
 
-import { waitFor } from './util.test'
+import { waitFor } from './test-utils'
 import { hashString } from './utils'
 
 function stripAnsiColors(input: string): string {

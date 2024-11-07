@@ -2,9 +2,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 // new test with description "decorator tests"
 
-import { check, dlogger } from '@river-build/dlog'
+import { check } from '@river-build/dlog'
 
-const logger = dlogger('csb:test:decorators')
 
 const ALL_NAMES = new Set<string>()
 
@@ -26,7 +25,6 @@ class Something {
     baseName: string
     constructor() {
         this.baseName = ''
-        logger.log(name)
     }
 }
 

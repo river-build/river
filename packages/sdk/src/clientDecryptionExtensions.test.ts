@@ -5,7 +5,7 @@
 import { Client } from './client'
 import { dlog } from '@river-build/dlog'
 import { isDefined } from './check'
-import { TestClientOpts, makeTestClient, makeUniqueSpaceStreamId, waitFor } from './util.test'
+import { TestClientOpts, makeTestClient, makeUniqueSpaceStreamId, waitFor } from './test-utils'
 import { Stream } from './stream'
 import { DecryptionSessionError } from '@river-build/encryption'
 import { makeUniqueChannelStreamId } from './id'

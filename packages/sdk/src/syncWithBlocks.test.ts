@@ -25,7 +25,7 @@ import {
     makeTestRpcClient,
     makeUniqueSpaceStreamId,
     iterableWrapper,
-} from './util.test'
+} from './test-utils'
 import { SignerContext } from './signerContext'
 
 const log = dlog('csb:test:syncWithBlocks')

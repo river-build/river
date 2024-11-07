@@ -14,7 +14,7 @@ import {
     iterableWrapper,
     TEST_ENCRYPTED_MESSAGE_PROPS,
     waitForSyncStreams,
-} from './util.test'
+} from './test-utils'
 import {
     addressFromUserId,
     makeUniqueChannelStreamId,

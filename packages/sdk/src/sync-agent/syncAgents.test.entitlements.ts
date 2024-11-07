@@ -4,7 +4,7 @@
 import { dlogger } from '@river-build/dlog'
 import { SyncAgent } from './syncAgent'
 import { Bot } from './utils/bot'
-import { waitFor } from '../util.test'
+import { waitFor } from '../test-utils'
 import { NoopRuleData, Permission } from '@river-build/web3'
 
 const logger = dlogger('csb:test:syncAgents')

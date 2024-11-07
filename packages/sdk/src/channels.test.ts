@@ -7,7 +7,7 @@ import {
     makeTestClient,
     makeUniqueSpaceStreamId,
     waitFor,
-} from './util.test'
+} from './test-utils'
 import { Client } from './client'
 
 import { makeUniqueChannelStreamId } from './id'
