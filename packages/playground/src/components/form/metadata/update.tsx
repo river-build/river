@@ -1,5 +1,5 @@
 import {
-    useMyself,
+    useMyMember,
     useSetDisplayName,
     useSetEnsAddress,
     useSetNft,
@@ -44,7 +44,7 @@ export const UpdateMetadata = (props: {
 }) => {
     const { spaceId, use, channelId } = props
     const streamId = use === 'space' ? spaceId : channelId!
-    const { username, displayName, ensAddress, nft } = useMyself(streamId)
+    const { username, displayName, ensAddress, nft } = useMyMember(streamId)
     const { setUsername, isPending: isPendingUsername } = useSetUsername(streamId)
     const { setDisplayName, isPending: isPendingDisplayName } = useSetDisplayName(streamId)
     const { setEnsAddress, isPending: isPendingEnsAddress } = useSetEnsAddress(streamId)
