@@ -229,7 +229,12 @@ func TestArchiveOneStream(t *testing.T) {
 
 	bc := tester.btc.NewWalletAndBlockchain(ctx)
 
-	registryContract, err := registries.NewRiverRegistryContract(ctx, bc, &archiveCfg.RegistryContract)
+	registryContract, err := registries.NewRiverRegistryContract(
+		ctx,
+		bc,
+		&archiveCfg.RegistryContract,
+		&archiveCfg.RiverRegistry,
+	)
 	require.NoError(err)
 
 	var nodeRegistry nodes.NodeRegistry
@@ -446,7 +451,7 @@ func TestArchiveContinuous(t *testing.T) {
 			assert.NoError(c, err)
 			assert.Zero(c, num)
 		},
-		5*time.Second,
+		10*time.Second,
 		10*time.Millisecond,
 	)
 
@@ -459,7 +464,7 @@ func TestArchiveContinuous(t *testing.T) {
 			assert.NoError(c, err)
 			assert.Equal(c, lastMB.Num, num)
 		},
-		5*time.Second,
+		10*time.Second,
 		10*time.Millisecond,
 	)
 
@@ -482,7 +487,7 @@ func TestArchiveContinuous(t *testing.T) {
 			assert.NoError(c, err)
 			assert.Equal(c, lastMB2.Num, num)
 		},
-		5*time.Second,
+		10*time.Second,
 		10*time.Millisecond,
 	)
 

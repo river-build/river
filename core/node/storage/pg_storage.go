@@ -2,44 +2,39 @@ package storage
 
 import (
 	"context"
-	"embed"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/exaring/otelpgx"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/river-build/river/core/config"
 	. "github.com/river-build/river/core/node/base"
+	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
 	. "github.com/river-build/river/core/node/protocol"
-
-	"github.com/river-build/river/core/node/dlog"
-
-	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"golang.org/x/sync/semaphore"
-
-	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	"github.com/golang-migrate/migrate/v4/source/iofs"
 )
 
 type PostgresEventStore struct {
-	config       *config.DatabaseConfig
-	pool         *pgxpool.Pool
-	schemaName   string
-	dbUrl        string
-	migrationDir embed.FS
+	config     *config.DatabaseConfig
+	pool       *pgxpool.Pool
+	schemaName string
+	dbUrl      string
 
-	regularConnections   *semaphore.Weighted
-	streamingConnections *semaphore.Weighted
+	preMigrationTx func(context.Context, pgx.Tx) error
+	migrationDir   fs.FS
 
 	txCounter  *infra.StatusCounterVec
 	txDuration *prometheus.HistogramVec
@@ -129,7 +124,7 @@ func (s *PostgresEventStore) txRunner(
 			pass := false
 
 			if pgErr, ok := err.(*pgconn.PgError); ok {
-				if pgErr.Code == pgerrcode.SerializationFailure {
+				if pgErr.Code == pgerrcode.SerializationFailure || pgErr.Code == pgerrcode.DeadlockDetected {
 					backoffErr := backoff.wait(ctx)
 					if backoffErr != nil {
 						return AsRiverError(backoffErr).Func(name).Message("Timed out waiting for backoff")
@@ -245,7 +240,7 @@ func NewPostgresEventStore(
 	metrics infra.MetricsFactory,
 ) (*PostgresEventStore, error) {
 	store := &PostgresEventStore{}
-	if err := store.init(ctx, poolInfo, metrics, migrationsDir); err != nil {
+	if err := store.init(ctx, poolInfo, metrics, nil, migrationsDir); err != nil {
 		return nil, AsRiverError(err).Func("NewPostgresEventStore")
 	}
 	return store, nil
@@ -451,57 +446,25 @@ func SetupPostgresMetrics(ctx context.Context, pool PgxPoolInfo, factory infra.M
 	}()
 }
 
-// Disallow allocating more than 30% of connections for streaming connections.
-var MaxStreamingConnectionsRatio float32 = 0.3
-
 func (s *PostgresEventStore) init(
 	ctx context.Context,
 	poolInfo *PgxPoolInfo,
 	metrics infra.MetricsFactory,
-	migrations embed.FS,
+	preMigrationTxn func(context.Context, pgx.Tx) error,
+	migrations fs.FS,
 ) error {
 	log := dlog.FromCtx(ctx)
 
-	streamingConnectionRatio := poolInfo.Config.StreamingConnectionsRatio
-	// Bounds check the streaming connection ratio
-	// TODO: when we add streaming calls, we should make the minimum larger, perhaps 5%.
-	if streamingConnectionRatio < 0 {
-		log.Info(
-			"Invalid streaming connection ratio, setting to 0",
-			"streamingConnectionRatio",
-			streamingConnectionRatio,
-		)
-		streamingConnectionRatio = 0
-	}
-	// Limit the ratio of available connections reserved for streaming to 30%
-	if streamingConnectionRatio > MaxStreamingConnectionsRatio {
-		log.Info(
-			"Invalid streaming connection ratio, setting to maximum of 30%",
-			"streamingConnectionRatio",
-			streamingConnectionRatio,
-		)
-		streamingConnectionRatio = MaxStreamingConnectionsRatio
-	}
-
-	var totalReservableConns int64 = int64(poolInfo.Pool.Config().MaxConns) - 1 // reserve one connection for creating listeners
-	var numRegularConnections int64 = int64(float32(totalReservableConns) * (1 - streamingConnectionRatio))
-	var numStreamingConnections int64 = totalReservableConns - numRegularConnections
-
-	// Ensure there is at least one connection set aside for streaming queries even though we're not using them at
-	// this time.
-	if numStreamingConnections < 1 {
-		numStreamingConnections += 1
-		numRegularConnections -= 1
-	}
 	SetupPostgresMetrics(ctx, *poolInfo, metrics)
 
 	s.config = poolInfo.Config
 	s.pool = poolInfo.Pool
 	s.schemaName = poolInfo.Schema
 	s.dbUrl = poolInfo.Url
+
+	s.preMigrationTx = preMigrationTxn
 	s.migrationDir = migrations
-	s.regularConnections = semaphore.NewWeighted(numRegularConnections)
-	s.streamingConnections = semaphore.NewWeighted(numStreamingConnections)
+
 	s.txCounter = metrics.NewStatusCounterVecEx("dbtx_status", "PG transaction status", "name")
 	s.txDuration = metrics.NewHistogramVecEx(
 		"dbtx_duration_seconds",
@@ -529,27 +492,6 @@ func (s *PostgresEventStore) init(
 	if err != nil {
 		return err
 	}
-
-	// TODO: publish these as metrics
-	// stats thread
-	// go func() {
-	// 	for {
-	// 		timer := time.NewTimer(PG_REPORT_INTERVAL)
-	// 		select {
-	// 		case <-ctx.Done():
-	// 			timer.Stop()
-	// 			return
-	// 		case <-timer.C:
-	// 			stats := pool.Stat()
-	// 			log.Debug("PG pool stats",
-	// 				"acquireCount", stats.AcquireCount(),
-	// 				"acquiredConns", stats.AcquiredConns(),
-	// 				"idleConns", stats.IdleConns(),
-	// 				"totalConns", stats.TotalConns(),
-	// 			)
-	// 		}
-	// 	}
-	// }()
 
 	return nil
 }
@@ -612,7 +554,8 @@ func getSSLMode(dbURL string) string {
 
 func (s *PostgresEventStore) runMigrations(ctx context.Context) error {
 	// Run migrations
-	iofsMigrationsDir, err := iofs.New(s.migrationDir, "migrations")
+	migrationsPath := "migrations"
+	iofsMigrationsDir, err := iofs.New(s.migrationDir, migrationsPath)
 	if err != nil {
 		return WrapRiverError(Err_DB_OPERATION_FAILURE, err).Message("Error loading migrations")
 	}
@@ -644,6 +587,21 @@ func (s *PostgresEventStore) initStorage(ctx context.Context) error {
 	)
 	if err != nil {
 		return err
+	}
+
+	// Optionally run a transaction before the migrations are applied
+	if s.preMigrationTx != nil {
+		log := dlog.FromCtx(ctx)
+		log.Info("Running pre-migration transaction")
+		if err := s.txRunner(
+			ctx,
+			"preMigrationTx",
+			pgx.ReadWrite,
+			s.preMigrationTx,
+			&txRunnerOpts{},
+		); err != nil {
+			return err
+		}
 	}
 
 	err = s.runMigrations(ctx)
