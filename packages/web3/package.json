@@ -11,10 +11,9 @@
         "clean": "rm -rf dist",
         "lint": "yarn eslint --format unix ./src",
         "lint:fix": "yarn lint --fix",
-        "my-jest": "NODE_EXTRA_CA_CERTS=${HOME}/river-ca-cert.pem yarn node --trace-warnings -r ../../scripts/node-no-warn.js --experimental-vm-modules --experimental-wasm-modules $(yarn bin jest)",
-        "test": "yarn my-jest",
+        "test": "vitest",
         "test:ci": "yarn test",
-        "test:debug": "DEBUG=test yarn my-jest",
+        "test:debug": "DEBUG=test yarn test",
         "watch": "tsc --watch"
     },
     "dependencies": {
