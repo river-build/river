@@ -1,8 +1,4 @@
-import { defineProject } from 'vitest/config'
+import { defineConfig, mergeConfig } from 'vitest/config'
+import { rootConfig } from '../../vitest.shared'
 
-export default defineProject({
-    test: {
-        environment: 'node',
-        globals: true,
-    },
-})
+export default mergeConfig(rootConfig, defineConfig({}))
