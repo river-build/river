@@ -1,6 +1,6 @@
 import { keccak256 } from 'ethereum-cryptography/keccak'
 import { Permission } from '@river-build/web3'
-import { bin_toHexString, isJest, isNodeEnv } from '@river-build/dlog'
+import { bin_toHexString, isVitest, isNodeEnv } from '@river-build/dlog'
 import { isBrowser, isNode } from 'browser-or-node'
 
 export function unsafeProp<K extends keyof any | undefined>(prop: K): boolean {
@@ -86,7 +86,7 @@ export function removeCommon(x: string[], y: string[]): string[] {
 }
 
 export function getEnvVar(key: string, defaultValue: string = ''): string {
-    if (isNode || isJest()) {
+    if (isNode || isVitest()) {
         return process.env[key] ?? defaultValue
     }
 

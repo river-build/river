@@ -40,7 +40,7 @@ import {
     UserEntitlementShim,
 } from './index'
 import { PricingModules } from './PricingModules'
-import { dlogger, isJest } from '@river-build/dlog'
+import { dlogger, isVitest } from '@river-build/dlog'
 import { EVERYONE_ADDRESS, stringifyChannelMetadataJSON, NoEntitledWalletError } from '../Utils'
 import {
     XchainConfig,
@@ -181,7 +181,7 @@ export class SpaceDapp implements ISpaceDapp {
             provider.pollingInterval = 250
         }
 
-        const isLocalDev = isJest() || config.chainId === LOCALHOST_CHAIN_ID
+        const isLocalDev = isVitest() || config.chainId === LOCALHOST_CHAIN_ID
         const cacheOpts = {
             positiveCacheTTLSeconds: isLocalDev ? 5 : 15 * 60,
             negativeCacheTTLSeconds: 2,
@@ -1648,7 +1648,7 @@ async function wrapTransaction(
     txFn: () => Promise<ContractTransaction>,
     txnOpts?: TransactionOpts,
 ): Promise<ContractTransaction> {
-    const retryLimit = txnOpts?.retryCount ?? isJest() ? 3 : 0
+    const retryLimit = txnOpts?.retryCount ?? isVitest() ? 3 : 0
 
     const runTx = async () => {
         let retryCount = 0

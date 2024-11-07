@@ -275,7 +275,7 @@ jobs:
               run: just RUN_ENV=multi_ne config-and-start
 
             - name: Run SDK Tests (without entitlements)
-              run: yarn test:ci:multi:ne
+              run: yarn turbo run test:multi:ne --filter @river-build/sdk
 
             - name: Run Stream Metadata Nodes
               run: |
@@ -413,7 +413,7 @@ jobs:
               run: yarn csb:turbo-no-sdk
 
             - name: Run River Tests (with entitlements)
-              run: yarn workspace @river-build/sdk run test:ci:multi:ent
+              run: yarn turbo run test:multi:ent --filter @river-build/sdk
 
             - name: Run Stress Test Tests (yarn) (with entitlements)
               run: yarn workspace @river-build/stress run test:ci:with-entitlements
@@ -548,7 +548,7 @@ jobs:
               run: yarn csb:turbo-no-sdk
 
             - name: Run River Tests Against Legacy Spaces (with entitlements)
-              run: yarn workspace @river-build/sdk run test:ci:multi:ent:legacy
+              run: yarn turbo run test:multi:ent-legacy --filter @river-build/sdk
 
             - name: Archive River Node Logs and Settings
               if: always()
