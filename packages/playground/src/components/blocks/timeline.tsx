@@ -1,9 +1,8 @@
-import { getRoom, useMember, useSendMessage, useSyncAgent } from '@river-build/react-sdk'
+import { useMember, useSendMessage, useSyncAgent } from '@river-build/react-sdk'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { type TimelineEvent, isChannelStreamId, spaceIdFromChannelId } from '@river-build/sdk'
-import { useMemo } from 'react'
 import { cn } from '@/utils'
 import { Form, FormControl, FormField, FormItem, FormMessage } from '../ui/form'
 import { Button } from '../ui/button'
@@ -71,11 +70,10 @@ const Message = ({ event, streamId }: { event: TimelineEvent; streamId: string }
     const preferSpaceMember = isChannelStreamId(streamId)
         ? spaceIdFromChannelId(streamId)
         : streamId
-    const member = useMemo(
-        () => getRoom(sync, preferSpaceMember).members.get(event.creatorUserId),
-        [sync, preferSpaceMember, event.creatorUserId],
-    )
-    const { username, displayName } = useMember(member)
+    const { username, displayName } = useMember({
+        streamId: preferSpaceMember,
+        userId: event.creatorUserId,
+    })
     const prettyDisplayName = displayName || username
     return (
         <div className="flex gap-1">
