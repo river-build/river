@@ -3,7 +3,6 @@
     "version": "0.0.0",
     "license": "MIT",
     "packageManager": "yarn@3.8.0",
-    "type": "module",
     "scripts": {
         "anvil": "yarn workspace @river-build/contracts exec anvil",
         "build": "turbo build",
