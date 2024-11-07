@@ -11,8 +11,6 @@ const logger = dlogger('csb:test:syncAgents')
 
 describe('syncAgents.test.ts', () => {
     logger.log('start')
-    console.log('process.env.RIVER_ENV', process.env.RIVER_ENV)
-    console.log('process.env.NODE_EXTRA_CA_CERTS', process.env.NODE_EXTRA_CA_CERTS)
     const bobUser = new Bot()
     const aliceUser = new Bot()
     const charlieUser = new Bot()
