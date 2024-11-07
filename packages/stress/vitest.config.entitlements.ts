@@ -8,7 +8,7 @@ export default mergeConfig(
             env: {
                 RIVER_ENV: 'local_multi',
             },
-            include: ['./src/**/*.test.entitlements.ts', './src/**/*.test.entitlements-v2.ts'],
+            include: ['./src/**/*.test.ts'],
             hookTimeout: 120_000,
             testTimeout: 120_000,
             setupFiles: './vitest.setup.ts',
