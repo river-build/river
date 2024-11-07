@@ -4,7 +4,7 @@ import {
     IRuleEntitlementInterface as LocalhostInterface,
 } from '@river-build/generated/dev/typings/IRuleEntitlement'
 
-import LocalhostAbi from '@river-build/generated/dev/abis/IRuleEntitlement.abi.json' assert { type: 'json' }
+import LocalhostAbi from '@river-build/generated/dev/abis/IRuleEntitlement.abi'
 
 import { BaseContractShim } from './BaseContractShim'
 import { BigNumberish, ethers } from 'ethers'

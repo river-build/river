@@ -4,7 +4,7 @@ import {
     ISpaceOwnerInterface as LocalhostInterface,
 } from '@river-build/generated/dev/typings/ISpaceOwner'
 
-import LocalhostAbi from '@river-build/generated/dev/abis/SpaceOwner.abi.json' assert { type: 'json' }
+import LocalhostAbi from '@river-build/generated/dev/abis/SpaceOwner.abi'
 
 import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'

@@ -4,7 +4,7 @@ import {
     ILegacyArchitectInterface as LocalhostInterface,
 } from '@river-build/generated/dev/typings/IMockLegacyArchitect.sol/ILegacyArchitect'
 
-import LocalhostAbi from '@river-build/generated/dev/abis/MockLegacyArchitect.abi.json' assert { type: 'json' }
+import LocalhostAbi from '@river-build/generated/dev/abis/MockLegacyArchitect.abi'
 
 import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'

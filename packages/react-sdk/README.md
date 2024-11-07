@@ -4,10 +4,8 @@ React Hooks for River SDK.
 
 # Installation
 
-in the future:
-
 ```sh
-yarn add @river-build/react-sdk
+yarn add @river-build/react-sdk @river-build/sdk
 ```
 
 # Usage

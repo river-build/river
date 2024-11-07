@@ -2,8 +2,31 @@
     "name": "@river-build/generated",
     "version": "0.0.99",
     "packageManager": "yarn@3.8.0",
+    "type": "module",
+    "sideEffects": false,
+    "exports": {
+        "./*.json": {
+            "types": "./dist/*.d.ts",
+            "default": "./dist/*.json"
+        },
+        "./*": {
+            "types": "./dist/*.d.ts",
+            "default": "./dist/*.js"
+        },
+        "./package.json": "./package.json"
+    },
+    "files": [
+        "dist"
+    ],
     "scripts": {
-        "preinstall": "node ./scripts/make-config.js",
-        "make-config": "node ./scripts/make-config.js"
+        "build": "tsup",
+        "preinstall": "node ./scripts/make-config.cjs",
+        "postinstall": "yarn build",
+        "make-config": "node ./scripts/make-config.cjs && yarn build"
+    },
+    "devDependencies": {
+        "@ethersproject/providers": "5.7.2",
+        "ethers": "^5.7.2",
+        "tsup": "^8.3.5"
     }
 }

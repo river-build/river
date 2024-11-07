@@ -61,10 +61,10 @@ const config: JestConfigWithTsJest = {
         ],
     },
     moduleNameMapper: {
+        '^(\\.{1,2}/.*)\\.js$': '$1',
         'bn.js': 'bn.js',
         // match "hash.js" but not whateverHash.js - viem has many of these which should not be
         '\\bhash\\.js\\b': 'hash.js',
-        '(.+)\\.js': '$1',
         // need for encryption
         '\\.(wasm)$': require.resolve('../encryption/src/mock-wasm-file.js'),
         msgpackr: `${MSGPACKR_FOLDER}/dist/node.cjs`,

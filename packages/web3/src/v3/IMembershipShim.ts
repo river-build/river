@@ -8,7 +8,7 @@ import { IERC721AShim } from './IERC721AShim'
 import { BigNumber, BigNumberish, ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'
 
-import LocalhostAbi from '@river-build/generated/dev/abis/MembershipFacet.abi.json' assert { type: 'json' }
+import LocalhostAbi from '@river-build/generated/dev/abis/MembershipFacet.abi'
 import { dlogger } from '@river-build/dlog'
 import { IMembershipMetadataShim } from './IMembershipMetadataShim'
 

@@ -3,7 +3,7 @@ import {
     IMulticallInterface as LocalhostInterface,
 } from '@river-build/generated/dev/typings/IMulticall'
 
-import LocalhostAbi from '@river-build/generated/dev/abis/IMulticall.abi.json' assert { type: 'json' }
+import LocalhostAbi from '@river-build/generated/dev/abis/IMulticall.abi'
 
 import { ethers } from 'ethers'
 import { BaseContractShim } from './BaseContractShim'

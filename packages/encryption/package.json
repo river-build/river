@@ -3,10 +3,25 @@
     "version": "0.0.99",
     "packageManager": "yarn@3.8.0",
     "type": "module",
-    "main": "dist/index.js",
+    "main": "./dist/index.cjs",
+    "module": "./dist/index.js",
     "types": "dist/index.d.ts",
+    "sideEffects": false,
+    "exports": {
+        ".": {
+            "import": {
+                "types": "./dist/index.d.ts",
+                "default": "./dist/index.js"
+            },
+            "require": {
+                "types": "./dist/index.d.cts",
+                "default": "./dist/index.cjs"
+            }
+        },
+        "./package.json": "./package.json"
+    },
     "scripts": {
-        "build": "tsc",
+        "build": "tsup",
         "cb": "yarn clean && yarn build",
         "clean": "rm -rf dist",
         "lint": "yarn eslint --format unix ./src",
@@ -15,7 +30,7 @@
         "test": "yarn my-jest",
         "test:ci": "yarn test",
         "test:debug": "DEBUG=test yarn my-jest",
-        "watch": "tsc --watch"
+        "watch": "tsup --watch"
     },
     "dependencies": {
         "@bufbuild/protobuf": "^1.9.0",
@@ -45,9 +60,13 @@
         "jest-extended": "^4.0.1",
         "ts-jest": "^29.1.1",
         "ts-node": "^10.9.1",
+        "tsup": "^8.3.5",
         "typescript": "^5.1.6"
     },
     "files": [
-        "dist"
+        "dist/**",
+        "!dist/**/*.tsbuildinfo",
+        "src/**/*",
+        "!src/**/*.test.ts"
     ]
 }

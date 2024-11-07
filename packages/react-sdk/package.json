@@ -8,10 +8,9 @@
         "directory": "packages/react"
     },
     "scripts": {
-        "build": "yarn run clean && yarn run build:esm+types",
-        "build:esm+types": "tsc --project tsconfig.build.json --outDir ./dist/esm --declaration --declarationMap --declarationDir ./dist/types",
+        "build": "tsup",
         "clean": "rm -rf dist tsconfig.tsbuildinfo",
-        "watch": "yarn build -w",
+        "watch": "tsup --watch",
         "test:build": "publint --strict && attw --pack --ignore-rules cjs-resolves-to-esm",
         "typecheck": "tsc --noEmit"
     },
@@ -19,23 +18,36 @@
         "dist/**",
         "!dist/**/*.tsbuildinfo",
         "src/**/*.ts",
-        "!src/**/*.test.ts",
-        "!src/**/*.test-d.ts"
+        "!src/**/*.test.ts"
     ],
     "sideEffects": false,
     "type": "module",
-    "main": "./dist/esm/index.js",
-    "types": "./dist/types/index.d.ts",
-    "typings": "./dist/types/index.d.ts",
+    "main": "./dist/index.cjs",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "import": {
+                "types": "./dist/index.d.ts",
+                "default": "./dist/index.js"
+            },
+            "require": {
+                "types": "./dist/index.d.cts",
+                "default": "./dist/index.cjs"
+            }
+        },
+        "./package.json": "./package.json"
+    },
     "peerDependencies": {
-        "react": "^18.2.0",
-        "typescript": "^5.1.6"
+        "@river-build/sdk": "workspace:^",
+        "react": "^18.2.0"
     },
     "dependencies": {
-        "@river-build/sdk": "workspace:^",
         "ethers": "^5.7.2"
     },
     "devDependencies": {
+        "@arethetypeswrong/cli": "^0.16.4",
+        "@river-build/sdk": "workspace:^",
         "@testing-library/react": "^14.2.1",
         "@types/react": "^18.2.11",
         "@types/react-dom": "^18.2.4",
@@ -45,8 +57,9 @@
         "eslint-plugin-import": "^2.27.5",
         "eslint-plugin-react": "^7.32.2",
         "eslint-plugin-react-hooks": "^4.6.0",
+        "publint": "^0.2.12",
         "react": "^18.2.0",
-        "react-dom": "^18.2.0",
+        "tsup": "^8.3.5",
         "typescript": "^5.1.6"
     },
     "keywords": [
