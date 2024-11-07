@@ -5,6 +5,7 @@ export default mergeConfig(
     rootConfig,
     defineConfig({
         test: {
+            environment: 'jsdom',
             env: {
                 RIVER_ENV: 'local_multi_ne',
             },

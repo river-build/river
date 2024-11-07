@@ -5,6 +5,7 @@ export default mergeConfig(
     rootConfig,
     defineConfig({
         test: {
+            environment: 'jsdom',
             env: {
                 USE_LEGACY_SPACES: 'true',
                 RIVER_ENV: 'local_multi',

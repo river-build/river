@@ -51,6 +51,7 @@
         "eslint-plugin-import": "^2.27.5",
         "fake-indexeddb": "^4.0.1",
         "ioredis": "^5.3.2",
+        "jsdom": "^25.0.1",
         "msgpackr": "^1.10.1",
         "seedrandom": "^3.0.5",
         "typed-emitter": "^2.1.0",
