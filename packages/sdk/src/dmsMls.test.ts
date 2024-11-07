@@ -53,6 +53,14 @@ describe('dmsMlsTests', () => {
             bobsClient.sendMessage(streamId, 'hello alice', [], [], { useMls: true }),
         ).toResolve()
 
+        // Not sure both are active
+        await waitFor(() => {
+            const aliceEpoch = alicesClient.mlsCrypto!.epochFor(streamId)
+            const bobEpoch = bobsClient.mlsCrypto!.epochFor(streamId)
+            check(aliceEpoch === bobEpoch)
+            check(aliceEpoch === BigInt(1))
+        })
+
         await waitFor(() => {
             const aliceStream = alicesClient.streams.get(streamId)!
             check(checkTimelineContainsAll(['hello alice', 'hello bob'], aliceStream.view.timeline))
@@ -191,27 +199,34 @@ describe('dmsMlsTests', () => {
     })
 })
 
+function getPayloadRemoteEvent(event: StreamTimelineEvent): string | undefined {
+    if (event.decryptedContent?.kind === 'channelMessage') {
+        return getChannelMessagePayload(event.decryptedContent.content)
+    }
+    return undefined
+}
+
+function getPayloadLocalEvent(event: StreamTimelineEvent): string | undefined {
+    if (event.localEvent?.channelMessage) {
+        return getChannelMessagePayload(event.localEvent.channelMessage)
+    }
+    return undefined
+}
+
+function getPayload(event: StreamTimelineEvent): string | undefined {
+    const payload = getPayloadRemoteEvent(event)
+    if (payload) {
+        return payload
+    }
+    return getPayloadLocalEvent(event)
+}
+
 function checkTimelineContainsAll(messages: string[], timeline: StreamTimelineEvent[]): boolean {
     const checks = new Set(messages)
     for (const event of timeline) {
-        // remote
-        {
-            const content = event.decryptedContent
-            if (content?.kind !== 'channelMessage') {
-                continue
-            }
-            const payload = getChannelMessagePayload(content.content)
-            if (payload) {
-                checks.delete(payload)
-            }
-        }
-        // local
-        {
-            const content = event.localEvent?.channelMessage
-            const payload = getChannelMessagePayload(content)
-            if (payload) {
-                checks.delete(payload)
-            }
+        const payload = getPayload(event)
+        if (payload) {
+            checks.delete(payload)
         }
     }
     return checks.size === 0
