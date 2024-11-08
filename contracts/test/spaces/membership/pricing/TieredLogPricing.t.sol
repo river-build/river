@@ -22,32 +22,51 @@ contract TieredLogPricingTest is TestUtils {
       address(new TieredLogPricingOracle(address(oracle)))
     );
 
-    // tier 0 < 1000
+    // tier 0 -> 100
     uint256 price0 = pricingModule.getPrice({
       freeAllocation: 0,
       totalMinted: 0
     });
     assertEq(_getCentsFromWei(price0), 100); // $1 USD
 
-    uint256 price1 = pricingModule.getPrice({
+    uint256 price100 = pricingModule.getPrice({
       freeAllocation: 0,
-      totalMinted: 2
+      totalMinted: 100
     });
-    assertEq(_getCentsFromWei(price1), 115); // $1.15 USD
+    assertEq(_getCentsFromWei(price100), 200); // $2.00 USD
 
-    // tier 1 > 1000
+    // tier 101 -> 1000
+    uint256 price101 = pricingModule.getPrice({
+      freeAllocation: 0,
+      totalMinted: 101
+    });
+    assertEq(_getCentsFromWei(price101), 700); // $7.00 USD
+
     uint256 price1000 = pricingModule.getPrice({
       freeAllocation: 0,
       totalMinted: 1000
     });
-    assertEq(_getCentsFromWei(price1000), 985); // $9.85 USD
+    assertEq(_getCentsFromWei(price1000), 1000); // $10.00 USD
 
-    // tier 2 > 10000
+    // tier 1001 -> 10000
+    uint256 price1001 = pricingModule.getPrice({
+      freeAllocation: 0,
+      totalMinted: 1001
+    });
+    assertEq(_getCentsFromWei(price1001), 7600); // $98.00 USD
+
     uint256 price10000 = pricingModule.getPrice({
       freeAllocation: 0,
       totalMinted: 10000
     });
-    assertEq(_getCentsFromWei(price10000), 9690); // $96.90 USD
+    assertEq(_getCentsFromWei(price10000), 9800); // $98.00 USD
+
+    // tier 10_000+
+    uint256 price10001 = pricingModule.getPrice({
+      freeAllocation: 0,
+      totalMinted: 10001
+    });
+    assertEq(_getCentsFromWei(price10001), 10000); // $100.00 USD
   }
 
   // =============================================================
