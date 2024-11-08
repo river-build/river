@@ -12,6 +12,7 @@ import {IMembershipPricing} from "contracts/src/spaces/facets/membership/pricing
 //contracts
 import {MockAggregatorV3} from "contracts/test/mocks/MockAggregatorV3.sol";
 import {TieredLogPricingOracle} from "contracts/src/spaces/facets/membership/pricing/tiered/TieredLogPricingOracle.sol";
+import {console} from "forge-std/console.sol";
 
 contract TieredLogPricingTest is TestUtils {
   int256 public constant EXCHANGE_RATE = 222616000000;
@@ -67,6 +68,23 @@ contract TieredLogPricingTest is TestUtils {
       totalMinted: 10001
     });
     assertEq(_getCentsFromWei(price10001), 10000); // $100.00 USD
+  }
+
+  function test_pricingModuleMonotonicIncrease() external {
+    MockAggregatorV3 oracle = _setupOracle();
+    IMembershipPricing pricingModule = IMembershipPricing(
+      address(new TieredLogPricingOracle(address(oracle)))
+    );
+
+    uint256 lastPrice = 0;
+    for (uint256 i = 0; i <= 15000; i++) {
+      uint256 price = pricingModule.getPrice({
+        freeAllocation: 0,
+        totalMinted: i
+      });
+      assertGe(price, lastPrice, "Price should be increasing");
+      lastPrice = price;
+    }
   }
 
   // =============================================================
