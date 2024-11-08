@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang-jwt/jwt/v5"
 	. "github.com/river-build/river/core/node/base"
@@ -36,15 +35,16 @@ type (
 )
 
 func (c authenticationChallenge) Verify(
+	ctx context.Context,
 	challenge [challengeLength]byte,
 	signature []byte,
 	delegateSig []byte,
 	delegateExpiryEpochMs int64,
-) bool {
+) error {
 	// ensure that the auth challenge nor the delegateExpiryEpoch hasn't expired.
 	now := time.Now()
-	if now.After(c.expires) { // ignored for now || now.After(time.Unix(delegateExpiryEpochMs/1000, 0)) {
-		return false // expired
+	if now.After(c.expires) || (len(delegateSig) > 0 && now.After(time.Unix(delegateExpiryEpochMs/1000, 0))) {
+		return RiverError(Err_UNAUTHENTICATED, "authentication expired").Tag("expires", c.expires).Tag("delegateExpiryEpochMs", delegateExpiryEpochMs)
 	}
 
 	// ensure that the signature that was calculated with:
@@ -60,22 +60,25 @@ func (c authenticationChallenge) Verify(
 	buf.Write(c.userID.Bytes())
 	buf.Write(expires.Bytes())
 	buf.Write(challenge[:])
-
-	b := sha256.Sum256(buf.Bytes())
-	hash := accounts.TextHash(b[:])
-
-	signerPubKey, err := crypto.RecoverSignerPublicKey(hash[:], signature)
+	hash := sha256.Sum256(buf.Bytes())
+	
+	signerPubKey, err := crypto.RecoverEthereumMessageSignerPublicKey(hash[:], signature)
 	if err != nil {
-		return false
+		return RiverError(Err_UNAUTHENTICATED, "error recovering signer public key").Tag("user", c.userID).Tag("error", err)
 	}
 
 	signerAddress := crypto.PublicKeyToAddress(signerPubKey)
 
 	if len(delegateSig) == 0 {
-		return c.userID == signerAddress
+		if ( c.userID == signerAddress) {
+			return nil 
+		} else {
+			return RiverError(Err_UNAUTHENTICATED, "user id mismatch").Tag("user", c.userID).Tag("signer", signerAddress)
+		}
+
 	}
 
-	return crypto.CheckDelegateSig(c.userID[:], signerPubKey, delegateSig, delegateExpiryEpochMs) == nil
+	return crypto.CheckDelegateSig(c.userID[:], signerPubKey, delegateSig, delegateExpiryEpochMs)
 }
 
 func (s *Service) StartAuthentication(
@@ -136,8 +139,9 @@ func (s *Service) FinishAuthentication(
 
 	// make sure that the caller has access to the private key from which user id was derived
 	chal := raw.(*authenticationChallenge)
-	if !chal.Verify(challenge, msg.GetSignature(), msg.GetDelegateSig(), msg.GetDelegateExpiryEpochMs()) {
-		return nil, RiverError(Err_PERMISSION_DENIED, "bad signature").Tag("user", userID)
+	err := chal.Verify(ctx, challenge, msg.GetSignature(), msg.GetDelegateSig(), msg.GetDelegateExpiryEpochMs())
+	if err != nil {
+		return nil, RiverError(Err_PERMISSION_DENIED, "bad signature").Tag("user", userID).Tag("error", err)
 	}
 
 	// create a JWT session token that the client can use to make notification service rpc and send it to the client
