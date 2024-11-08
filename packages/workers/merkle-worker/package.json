@@ -4,19 +4,24 @@
     "private": true,
     "type": "module",
     "scripts": {
+        "cf-typegen": "wrangler types",
         "dev": "echo use dev:local for now - see wrangler.toml",
         "dev:local": "wrangler dev --port ${PORT:-8686}",
         "dev:remote": "wrangler dev --remote",
+        "generate-merkle": "tsx src/scripts/generateMerkleRoot.ts",
+        "lint": "yarn eslint --format unix ./src",
         "prettier:check": "prettier --check .",
         "prettier:fix": "prettier --write .",
-        "lint": "yarn eslint --format unix ./src",
-        "start": "wrangler dev",
-        "test": "yarn test:unit",
-        "test:unit": "yarn node --experimental-vm-modules $(yarn bin jest)",
         "publish": "wrangler deploy --env $CF_ENV",
+        "start": "wrangler dev",
         "tail": "wrangler tail merkle-worker --env $CF_ENV",
-        "cf-typegen": "wrangler types",
-        "generate-merkle": "tsx src/scripts/generateMerkleRoot.ts"
+        "test": "yarn test:unit",
+        "test:unit": "yarn node --experimental-vm-modules $(yarn bin jest)"
+    },
+    "dependencies": {
+        "@openzeppelin/merkle-tree": "^1.0.7",
+        "itty-router": "^2.6.6",
+        "worker-common": "workspace:^"
     },
     "devDependencies": {
         "@cloudflare/workers-types": "^4.20241022.0",
@@ -31,10 +36,5 @@
         "tsx": "^4.7.1",
         "typescript": "^5.1.6",
         "wrangler": "^3.60.3"
-    },
-    "dependencies": {
-        "@openzeppelin/merkle-tree": "^1.0.7",
-        "itty-router": "^2.6.6",
-        "worker-common": "workspace:^"
     }
 }

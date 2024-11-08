@@ -5,13 +5,13 @@
     "packageManager": "yarn@3.8.0",
     "scripts": {
         "build": "yarn typecheck && yarn build-esbuild",
-        "typecheck": "tsc --noEmit",
-        "watch": "tsc --watch",
         "build-esbuild": "node esbuild.config.mjs",
+        "demo": "node --enable-source-maps ./dist/demo.cjs",
         "lint": "eslint . --ext .ts",
         "start": "node --enable-source-maps ./dist/start.cjs",
-        "demo": "node --enable-source-maps ./dist/demo.cjs",
-        "test:ci:with-entitlements": "vitest run --config ./vitest.config.entitlements.ts --silent"
+        "test:ci:with-entitlements": "vitest run --config ./vitest.config.entitlements.ts --silent",
+        "typecheck": "tsc --noEmit",
+        "watch": "tsc --watch"
     },
     "dependencies": {
         "@babel/node": "^7.23.9",
