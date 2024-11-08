@@ -2,6 +2,8 @@ package rpc
 
 import (
 	"context"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/river-build/river/core/node/nodes"
 	"net"
 	"os"
 	"os/signal"
@@ -57,7 +59,18 @@ func (s *Service) startNotificationMode(notifier push.MessageNotifier) error {
 		notifier,
 	)
 
-	s.SetStatus("OK")
+	registries, err := nodes.LoadNodeRegistryMultiClient(
+		s.serverCtx,
+		s.registryContract,
+		common.Address{},
+		s.riverChain.InitialBlockNum,
+		s.riverChain.ChainMonitor,
+		s.otelConnectIterceptor,
+		10)
+
+	if err != nil {
+		return err
+	}
 
 	s.NotificationService, err = notifications.NewService(
 		s.serverCtx,
@@ -65,13 +78,15 @@ func (s *Service) startNotificationMode(notifier push.MessageNotifier) error {
 		s.chainConfig,
 		s.notifications,
 		s.registryContract,
-		s.nodeRegistry,
+		registries,
 		s.metrics,
 		processor,
 	)
 	if err != nil {
 		return AsRiverError(err).Message("Failed to instantiate notification service").LogError(s.defaultLogger)
 	}
+
+	s.SetStatus("OK")
 
 	err = s.runHttpServer()
 	if err != nil {

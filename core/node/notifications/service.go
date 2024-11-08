@@ -29,7 +29,7 @@ type (
 		onChainConfig                 crypto.OnChainConfiguration
 		userPreferences               UserPreferencesStore
 		riverRegistry                 *registries.RiverRegistryContract
-		nodes                         nodes.NodeRegistry
+		nodes                         []nodes.NodeRegistry
 		listener                      events.StreamEventListener
 		streamsTracker                *notificationssync.StreamsTracker
 		metrics                       infra.MetricsFactory
@@ -45,7 +45,7 @@ func NewService(
 	onChainConfig crypto.OnChainConfiguration,
 	userPreferences UserPreferencesStore,
 	riverRegistry *registries.RiverRegistryContract,
-	nodes nodes.NodeRegistry,
+	nodes []nodes.NodeRegistry,
 	metrics infra.MetricsFactory,
 	listener events.StreamEventListener,
 ) (*Service, error) {

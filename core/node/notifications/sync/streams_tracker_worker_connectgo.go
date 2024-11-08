@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math"
 	"math/rand"
 	"strconv"
@@ -103,6 +104,8 @@ func (s *StreamTrackerConnectGo) Run(
 			PrevMiniblockHash: common.Hash{}.Bytes(),
 		}}
 
+		log.Debug("Start sync stream session")
+
 		streamUpdates, err := client.SyncStreams(syncCtx, connect.NewRequest(&protocol.SyncStreamsRequest{
 			SyncPos: syncPos,
 		}))
@@ -123,7 +126,7 @@ func (s *StreamTrackerConnectGo) Run(
 		// ensure that the first message is received within 30 seconds.
 		// if not cancel the sync session and restart a new one.
 		syncIDCtx, syncIDGot := context.WithTimeout(syncCtx, time.Minute)
-		go func() {
+		go func(log *slog.Logger) {
 			select {
 			case <-time.After(30 * time.Second):
 				log.Warn("Didn't receive sync id within 30s, cancel sync session")
@@ -135,7 +138,7 @@ func (s *StreamTrackerConnectGo) Run(
 			case <-ctx.Done():
 				return
 			}
-		}()
+		}(log)
 
 		if streamUpdates.Receive() {
 			firstMsg := streamUpdates.Msg()
@@ -151,7 +154,9 @@ func (s *StreamTrackerConnectGo) Run(
 		}
 
 		if err := streamUpdates.Err(); err != nil {
-			log.Error("Unable to receive first sync message", "err", err)
+			if !errors.Is(err, context.Canceled) {
+				log.Error("Unable to receive first sync message", "err", err)
+			}
 			syncCancel()
 			if s.waitMaxOrUntilCancel(syncCtx, time.Minute, 2*time.Minute) {
 				return
@@ -161,7 +166,7 @@ func (s *StreamTrackerConnectGo) Run(
 
 		if syncID == "" {
 			syncCancel()
-			log.Error("invalid sync id")
+			log.Error("Received empty syncID")
 			if s.waitMaxOrUntilCancel(syncCtx, time.Minute, 2*time.Minute) {
 				return
 			}
@@ -170,6 +175,8 @@ func (s *StreamTrackerConnectGo) Run(
 
 		// indicate that the sync ID was received
 		syncIDGot()
+
+		log = log.With("syncID", syncID)
 
 		metrics.ActiveStreamSyncSessions.Inc()
 
@@ -189,12 +196,12 @@ func (s *StreamTrackerConnectGo) Run(
 			case protocol.SyncOp_SYNC_UPDATE:
 				var (
 					reset  = update.GetStream().GetSyncReset()
-					labels = prometheus.Labels{"reset": "false"}
+					labels = prometheus.Labels{"reset": fmt.Sprintf("%v", reset)}
 				)
 
 				if reset {
 					gotSyncResetUpdate.Store(true)
-					labels["reset"] = "true"
+					log.Debug("Received sync reset update")
 				}
 
 				metrics.SyncUpdate.With(labels).Inc()
@@ -213,7 +220,7 @@ func (s *StreamTrackerConnectGo) Run(
 				}
 
 				if reset {
-					newTrackedStream, err := events.NewNotificationsStreamTrackerFromStreamAndCookie(
+					trackedStream, err = events.NewNotificationsStreamTrackerFromStreamAndCookie(
 						syncCtx, streamID, onChainConfig, update.GetStream(), listener, userPreferences)
 					if err != nil {
 						syncCancel()
@@ -221,13 +228,8 @@ func (s *StreamTrackerConnectGo) Run(
 						continue
 					}
 
-					if trackedStream == nil { // if non-nil -> was already tracked
-						metrics.TrackedStreams.With(promLabels).Inc()
-					} else {
-						log.Warn("Got sync reset for tracked stream")
-					}
+					metrics.TrackedStreams.With(promLabels).Inc()
 
-					trackedStream = newTrackedStream
 					continue
 				}
 
@@ -259,6 +261,7 @@ func (s *StreamTrackerConnectGo) Run(
 				log.Warn("Got stream new")
 				syncCancel()
 			case protocol.SyncOp_SYNC_PONG:
+				// lastReceivedPong is used in the liveness check to check that pong reply is received
 				metrics.SyncPong.Inc()
 				receivedPong, err := strconv.ParseInt(update.GetPongNonce(), 0, 64)
 				if err == nil {
@@ -272,7 +275,6 @@ func (s *StreamTrackerConnectGo) Run(
 
 		metrics.ActiveStreamSyncSessions.Dec()
 
-		syncCancel()
 		if trackedStream != nil {
 			metrics.TrackedStreams.With(promLabels).Dec()
 			trackedStream = nil
@@ -281,6 +283,7 @@ func (s *StreamTrackerConnectGo) Run(
 		if err := streamUpdates.Err(); err != nil {
 			select {
 			case <-ctx.Done(): // if parent ctx is cancelled -> service shutdown is initiated
+				syncCancel()
 				return
 			default:
 				if !errors.Is(err, context.Canceled) {
@@ -289,14 +292,18 @@ func (s *StreamTrackerConnectGo) Run(
 			}
 		}
 
+		syncCancel()
+
 		if s.waitMaxOrUntilCancel(ctx, 10*time.Second, 30*time.Second) {
 			return
 		}
 	}
 }
 
+// liveness periodically checks the status of a stream sync session to determine if it's still active.
+// if not it cancels the session which forces a restart.
 func (s *StreamTrackerConnectGo) liveness(
-	ctx context.Context,
+	syncCtx context.Context,
 	cancelSyncSession context.CancelFunc,
 	gotSyncResetUpdate *atomic.Bool,
 	workerPool *semaphore.Weighted,
@@ -307,39 +314,50 @@ func (s *StreamTrackerConnectGo) liveness(
 	metrics *streamsTrackerWorkerMetrics,
 ) {
 	var (
+		log         = dlog.FromCtx(syncCtx).With("stream", streamID, "syncID", syncID)
 		pongTimeout = 30 * time.Second
-		log         = dlog.FromCtx(ctx).With("stream", streamID)
 	)
+
+	// if liveness loop stops always cancel associated sync session since its considered dead
+	defer cancelSyncSession()
 
 	// ensure that a pong reply on a ping is received within pongTimeout. If pong replay is not
 	// received cancel the stream sync session. This will initiate a new stream sync session.
 	for {
 		pingInterval := time.Minute + time.Duration(rand.Int63n(int64(time.Minute)))
+
 		select {
 		case <-time.After(pingInterval):
 			// first update must be a sync update reset, if not received the sync session
 			// is considered dead -> cancel it.
 			if !gotSyncResetUpdate.Load() {
-				cancelSyncSession()
-
+				log.Warn("Sync reset not received for sync session within reasonable time")
 				// TODO: this loads the stream in the nodes cache and seem to be a workaround
 				// for an issue that no sync reset was received during the previous run.
-				if err := workerPool.Acquire(ctx, 1); err == nil {
-					_, _ = client.GetStream(ctx, connect.NewRequest(&protocol.GetStreamRequest{
+				err := workerPool.Acquire(syncCtx, 1)
+				if err == nil {
+					reqCtx, reqCancel := context.WithTimeout(syncCtx, 10*time.Second)
+					_, err = client.GetStream(reqCtx, connect.NewRequest(&protocol.GetStreamRequest{
 						StreamId: streamID[:],
 						Optional: false,
 					}))
 					workerPool.Release(1)
+					reqCancel()
+
+					if err != nil {
+						log.Warn("Unable to retrieve stream")
+					}
 				}
+
 				return
 			}
 
-			if err := workerPool.Acquire(ctx, 1); err != nil {
+			if err := workerPool.Acquire(syncCtx, 1); err != nil {
 				continue
 			}
 
 			ping := time.Now().Unix()
-			pingReqCtx, pingReqCancel := context.WithTimeout(ctx, 30*time.Second)
+			pingReqCtx, pingReqCancel := context.WithTimeout(syncCtx, 30*time.Second)
 			metrics.SyncPingInFlight.Inc()
 			_, err := client.PingSync(pingReqCtx, connect.NewRequest(&protocol.PingSyncRequest{
 				SyncId: syncID,
@@ -354,14 +372,13 @@ func (s *StreamTrackerConnectGo) liveness(
 				if !errors.Is(err, context.Canceled) {
 					log.Error("Unable to ping stream session", "err", err)
 				}
-				cancelSyncSession()
 				return
 			}
 
 			metrics.SyncPing.With(prometheus.Labels{"status": "success"}).Inc()
 
 			// expect to receive the pong reply from remote within pongTimeout
-			pongCtx, cancelPong := context.WithTimeout(ctx, pongTimeout)
+			pongCtx, cancelPong := context.WithTimeout(syncCtx, pongTimeout)
 
 		pingReceiveLoop:
 			for {
@@ -377,12 +394,11 @@ func (s *StreamTrackerConnectGo) liveness(
 
 					// stream sync session considered dead
 					// cancel existing stream sync session and start a new sync session
-					if ctx.Err() == nil {
-						cancelSyncSession()
+					if syncCtx.Err() == nil {
 						log.Warn("Stream sync session timeout")
 					}
 					return
-				case <-ctx.Done():
+				case <-syncCtx.Done():
 					cancelPong()
 					return
 				}
@@ -390,8 +406,7 @@ func (s *StreamTrackerConnectGo) liveness(
 
 			cancelPong()
 
-		case <-ctx.Done():
-			cancelSyncSession()
+		case <-syncCtx.Done():
 			return
 		}
 	}

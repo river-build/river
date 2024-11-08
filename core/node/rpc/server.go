@@ -220,12 +220,17 @@ func (s *Service) initInstance(mode string) {
 			"port", port,
 		)
 	}
+
 	s.serverCtx = dlog.CtxWithLog(s.serverCtx, s.defaultLogger)
+	notificationAuthSessionTokenKey := s.config.Notifications.Authentication.SessionToken.Key.Key
+	s.config.Notifications.Authentication.SessionToken.Key.Key = "<hidden>"
+
 	s.defaultLogger.Info(
 		"Starting server",
 		"config", s.config,
 		"mode", mode,
 	)
+	s.config.Notifications.Authentication.SessionToken.Key.Key = notificationAuthSessionTokenKey
 
 	subsystem := mode
 	if mode == ServerModeFull {

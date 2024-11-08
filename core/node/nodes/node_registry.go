@@ -9,7 +9,6 @@ import (
 	"connectrpc.com/otelconnect"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
@@ -47,6 +46,32 @@ type nodeRegistryImpl struct {
 }
 
 var _ NodeRegistry = (*nodeRegistryImpl)(nil)
+
+// LoadNodeRegistryMultiClient creates clientCount NodeRegistry instances with each
+// their own client http2 connection pool.
+func LoadNodeRegistryMultiClient(
+	ctx context.Context,
+	contract *registries.RiverRegistryContract,
+	localNodeAddress common.Address,
+	appliedBlockNum crypto.BlockNumber,
+	chainMonitor crypto.ChainMonitor,
+	connectOtelIterceptor *otelconnect.Interceptor,
+	clientCount int,
+) ([]NodeRegistry, error) {
+	var registries []NodeRegistry
+
+	for range clientCount {
+		// each instance creates has its own http2 connection pool
+		registry, err := LoadNodeRegistry(
+			ctx, contract, localNodeAddress, appliedBlockNum, chainMonitor, connectOtelIterceptor)
+		if err != nil {
+			return nil, err
+		}
+		registries = append(registries, registry)
+	}
+
+	return registries, nil
+}
 
 func LoadNodeRegistry(
 	ctx context.Context,

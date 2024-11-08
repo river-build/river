@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"math/rand"
 	"slices"
 	"sync"
 	"time"
@@ -24,9 +25,9 @@ import (
 const maxConcurrentNodeRequests = 50
 
 type StreamsTracker struct {
-	tasks         sync.WaitGroup
-	nodeRegistry  nodes.NodeRegistry
-	riverRegistry *registries.RiverRegistryContract
+	tasks          sync.WaitGroup
+	nodeRegistries []nodes.NodeRegistry
+	riverRegistry  *registries.RiverRegistryContract
 	// prevent making too many requests at the same time to a remote.
 	// keep per remote a worker pool that limits the number of concurrent requests.
 	workerPool    map[common.Address]*semaphore.Weighted
@@ -42,7 +43,7 @@ func NewStreamsTracker(
 	ctx context.Context,
 	onChainConfig crypto.OnChainConfiguration,
 	riverRegistry *registries.RiverRegistryContract,
-	nodeRegistry nodes.NodeRegistry,
+	nodeRegistries []nodes.NodeRegistry,
 	listener events.StreamEventListener,
 	storage events.UserPreferencesStore,
 	metricsFactory infra.MetricsFactory,
@@ -85,13 +86,13 @@ func NewStreamsTracker(
 	}
 
 	tracker := &StreamsTracker{
-		riverRegistry: riverRegistry,
-		nodeRegistry:  nodeRegistry,
-		onChainConfig: onChainConfig,
-		workerPool:    make(map[common.Address]*semaphore.Weighted),
-		listener:      listener,
-		storage:       storage,
-		metrics:       metrics,
+		riverRegistry:  riverRegistry,
+		onChainConfig:  onChainConfig,
+		nodeRegistries: nodeRegistries,
+		workerPool:     make(map[common.Address]*semaphore.Weighted),
+		listener:       listener,
+		storage:        storage,
+		metrics:        metrics,
 	}
 
 	// subscribe to stream events in river registry
@@ -114,7 +115,7 @@ func (tracker *StreamsTracker) Run(ctx context.Context) error {
 	// to a worker to process stream updates.
 	var (
 		log                   = dlog.FromCtx(ctx)
-		validNodes            = tracker.nodeRegistry.GetValidNodeAddresses()
+		validNodes            = tracker.nodeRegistries[0].GetValidNodeAddresses()
 		streamsLoaded         = 0
 		totalStreams          = 0
 		streamsLoadedProgress = 0
@@ -167,7 +168,8 @@ func (tracker *StreamsTracker) Run(ctx context.Context) error {
 				tracker.tasks.Add(1)
 				go func() {
 					st := StreamTrackerConnectGo{}
-					st.Run(ctx, stream, tracker.nodeRegistry, workerPool, tracker.onChainConfig,
+					idx := rand.Int63n(int64(len(tracker.nodeRegistries)))
+					st.Run(ctx, stream, tracker.nodeRegistries[idx], workerPool, tracker.onChainConfig,
 						tracker.listener, tracker.storage, tracker.metrics,
 					)
 					tracker.tasks.Done()
@@ -232,7 +234,8 @@ func (tracker *StreamsTracker) OnStreamAllocated(
 				Nodes:    event.Nodes,
 			}
 
-			st.Run(ctx, stream, tracker.nodeRegistry, workerPool,
+			idx := rand.Int63n(int64(len(tracker.nodeRegistries)))
+			st.Run(ctx, stream, tracker.nodeRegistries[idx], workerPool,
 				tracker.onChainConfig, tracker.listener, tracker.storage, tracker.metrics)
 
 			tracker.tasks.Done()
