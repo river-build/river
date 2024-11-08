@@ -7,9 +7,9 @@ export default mergeConfig(
         test: {
             environment: 'happy-dom',
             env: {
-                RIVER_ENV: 'local_multi',
+                RIVER_ENV: 'local_multi_ne',
             },
-            include: ['./src/**/*.test.multi.ts', './src/**/*.test.multi.v2.ts'],
+            include: ['./src/**/*.test.multi_ne.ts'],
             hookTimeout: 120_000,
             testTimeout: 120_000,
             setupFiles: './vitest.setup.ts',

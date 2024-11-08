@@ -7,9 +7,10 @@ export default mergeConfig(
         test: {
             environment: 'happy-dom',
             env: {
+                USE_LEGACY_SPACES: 'true',
                 RIVER_ENV: 'local_multi',
             },
-            include: ['./src/**/*.test.entitlements.ts', './src/**/*.test.entitlements-v2.ts'],
+            include: ['./src/**/*.test.multi.ts'],
             hookTimeout: 120_000,
             testTimeout: 120_000,
             setupFiles: './vitest.setup.ts',
