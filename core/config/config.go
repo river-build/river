@@ -283,6 +283,9 @@ type ChainConfig struct {
 
 	TransactionPool TransactionPoolConfig
 
+	// DisableReplacePendingTransactionOnBoot will not try to replace transaction that are pending after start.
+	DisableReplacePendingTransactionOnBoot bool
+
 	// TODO: these need to be removed from here
 	LinkedWalletsLimit                        int
 	ContractCallsTimeoutMs                    int
