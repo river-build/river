@@ -76,8 +76,6 @@ servers/workers/*/dist/*
 bin/gen-bindings-remove-struct
 /core/**/run_files/
 
-go.work.sum
-
 /packages/stress-testing/.env
 /packages/stress/*/.env*
 
