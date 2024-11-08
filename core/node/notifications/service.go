@@ -71,16 +71,16 @@ func NewService(
 	}
 
 	if len(notificationsConfig.Authentication.SessionToken.Key.Key) != 64 {
-		return nil, RiverError(Err_BAD_CONFIG, "Invalid session token key").Func("NewService")
+		return nil, RiverError(Err_BAD_CONFIG, "Invalid session token key length", "len", len(notificationsConfig.Authentication.SessionToken.Key.Key)).Func("NewService")
 	}
 
 	key, err := hex.DecodeString(notificationsConfig.Authentication.SessionToken.Key.Key)
 	if err != nil {
-		return nil, RiverError(Err_BAD_CONFIG, "Invalid session token key").Func("NewService")
+		return nil, RiverError(Err_BAD_CONFIG, "Invalid session token key (not hex)").Func("NewService")
 	}
 
 	if len(key) != 32 {
-		return nil, RiverError(Err_BAD_CONFIG, "Invalid session token key length").Func("NewService")
+		return nil, RiverError(Err_BAD_CONFIG, "Invalid session token key decoded length").Func("NewService")
 	}
 
 	return &Service{
