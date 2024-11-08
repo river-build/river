@@ -207,9 +207,9 @@ func (s *PostgresStreamStore) txRunnerWithUUIDCheck(
 	)
 }
 
-// createPartitionSuffix determines the partition mapping for a particular stream id the
+// CreatePartitionSuffix determines the partition mapping for a particular stream id the
 // hex encoding of the first byte of the xxHash of the stream ID.
-func createPartitionSuffix(streamId StreamId, numPartitions int) string {
+func CreatePartitionSuffix(streamId StreamId, numPartitions int) string {
 	// Media streams have separate partitions to handle the different data shapes and access
 	// patterns. The partition suffix is prefixed with an "m". Regular streams are assigned to
 	// partitions prefixed with "r", e.g. "miniblocks_ra4".
@@ -231,9 +231,9 @@ func createPartitionSuffix(streamId StreamId, numPartitions int) string {
 func (s *PostgresStreamStore) sqlForStream(sql string, streamId StreamId, migrated bool) string {
 	var suffix string
 	if migrated {
-		suffix = createPartitionSuffix(streamId, s.numPartitions)
+		suffix = CreatePartitionSuffix(streamId, s.numPartitions)
 	} else {
-		suffix = createTableSuffix(streamId)
+		suffix = CreateTableSuffix(streamId)
 	}
 
 	sql = strings.ReplaceAll(
@@ -1753,7 +1753,7 @@ func (s *PostgresStreamStore) streamLastMiniBlockTx(
 	}, nil
 }
 
-func createTableSuffix(streamId StreamId) string {
+func CreateTableSuffix(streamId StreamId) string {
 	sum := sha3.Sum224([]byte(streamId.String()))
 	return hex.EncodeToString(sum[:])
 }
