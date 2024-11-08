@@ -219,9 +219,6 @@ func (s *streamImpl) importMiniblocksNoLock(
 		blocksToWriteToStorage[i] = mb
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	if s.view() == nil {
 		// Do we have genesis miniblock?
 		if miniblocks[0].header().MiniblockNum == 0 {
