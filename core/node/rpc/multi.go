@@ -309,8 +309,11 @@ func GetRiverNetworkStatus(
 			go getEthBalance(ctx, &r.BaseEthBalance, baseChain, n.Address(), &wg)
 		}
 
-		// Report PostgresStatusResult for local node
-		if n.Address() == riverChain.Wallet.Address && storagePoolInfo != nil {
+		// Report PostgresStatusResult for local node only iff storage debug endpoint is enabled
+		if n.Address() == riverChain.Wallet.Address &&
+			storagePoolInfo != nil &&
+			cfg.EnableDebugEndpoints &&
+			cfg.DebugEndpoints.EnableStorageEndpoint {
 			wg.Add(1)
 
 			r.PostgresStatus = &storage.PostgresStatusResult{}

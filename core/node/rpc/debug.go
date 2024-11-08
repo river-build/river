@@ -63,10 +63,13 @@ func (s *Service) registerDebugHandlers(enableDebugEndpoints bool, cfg config.De
 	mux := s.mux
 	handler := debugHandler{}
 	mux.HandleFunc("/debug", handler.ServeHTTP)
-	handler.HandleFunc(mux, "/debug/storage", s.handleDebugStorage)
 	handler.HandleFunc(mux, "/debug/multi", s.handleDebugMulti)
 	handler.HandleFunc(mux, "/debug/multi/json", s.handleDebugMultiJson)
 	handler.Handle(mux, "/debug/config", &onChainConfigHandler{onChainConfig: s.chainConfig})
+
+	if enableDebugEndpoints && cfg.EnableStorageEndpoint {
+		handler.HandleFunc(mux, "/debug/storage", s.handleDebugStorage)
+	}
 
 	if cfg.Cache || enableDebugEndpoints {
 		handler.Handle(mux, "/debug/cache", &cacheHandler{cache: s.cache})
