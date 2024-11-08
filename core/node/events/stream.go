@@ -542,14 +542,20 @@ func (s *streamImpl) tryCleanup(expiration time.Duration) bool {
 		return true
 	}
 
-	expired := time.Since(s.lastAccessedTime) >= expiration
-
-	// unload if there is no activity within expiration
-	if expired && s.view().minipool.events.Len() == 0 {
-		s.setView(nil)
-		return true
+	if time.Since(s.lastAccessedTime) < expiration {
+		return false
 	}
-	return false
+
+	if s.view().minipool.size() != 0 {
+		return false
+	}
+
+	if len(s.pendingCandidates) != 0 {
+		return false
+	}
+
+	s.setView(nil)
+	return true
 }
 
 // Returns
