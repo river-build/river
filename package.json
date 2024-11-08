@@ -7,8 +7,8 @@
         "anvil": "yarn workspace @river-build/contracts exec anvil",
         "build": "turbo build",
         "cast": "yarn workspace @river-build/contracts exec cast",
-        "csb:build": "turbo build --filter @river-build/sdk",
         "clean": "./scripts/yarn-clean.sh",
+        "csb:build": "turbo build --filter @river-build/sdk",
         "csb:cb": "yarn csb:clean && yarn csb:build",
         "csb:clean": "yarn csb:command run clean",
         "csb:command": "bash -c 'yarn workspaces foreach --verbose $(yarn csb:list:include) $0 $@'",
@@ -34,9 +34,9 @@
         "syncpack:check": "syncpack list-mismatches",
         "syncpack:fix": "syncpack fix-mismatches && syncpack format",
         "test": "turbo test",
-        "test:unit": "turbo test:unit -- --silent",
+        "test:build": "turbo test:build",
         "test:react": "vitest --project @river-build/react-sdk",
-        "test:build": "turbo test:build"
+        "test:unit": "turbo test:unit -- --silent"
     },
     "devDependencies": {
         "@arethetypeswrong/cli": "^0.15.3",
