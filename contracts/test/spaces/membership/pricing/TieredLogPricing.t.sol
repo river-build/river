@@ -53,7 +53,7 @@ contract TieredLogPricingTest is TestUtils {
       freeAllocation: 0,
       totalMinted: 1001
     });
-    assertEq(_getCentsFromWei(price1001), 7600); // $98.00 USD
+    assertEq(_getCentsFromWei(price1001), 7600); // $76.00 USD
 
     uint256 price10000 = pricingModule.getPrice({
       freeAllocation: 0,
