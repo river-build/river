@@ -126,33 +126,6 @@ func addEventToStream(
 	require.NoError(t, err)
 }
 
-func addEventToView(
-	t *testing.T,
-	streamCacheParams *StreamCacheParams,
-	view *streamViewImpl,
-	data string,
-	prevMiniblock *MiniblockRef,
-) *streamViewImpl {
-	view, err := view.copyAndAddEvent(
-		MakeEvent(
-			t,
-			streamCacheParams.Wallet,
-			Make_MemberPayload_Username(&EncryptedData{Ciphertext: data}),
-			prevMiniblock,
-		),
-	)
-	require.NoError(t, err)
-	require.NotNil(t, view)
-	return view
-}
-
-func getView(t *testing.T, ctx context.Context, stream *streamImpl) *streamViewImpl {
-	view, err := stream.getView(ctx)
-	require.NoError(t, err)
-	require.NotNil(t, view)
-	return view
-}
-
 type mbTestParams struct {
 	addAfterProposal bool
 	eventsInMinipool int
