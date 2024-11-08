@@ -116,6 +116,7 @@
     "workspaces": [
         "protocol",
         "packages/*",
+        "packages/workers/*",
         "contracts",
         "services/*"
     ]
