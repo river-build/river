@@ -388,6 +388,9 @@ func mbProduceCandidate(
 	if err != nil {
 		return nil, err
 	}
+	if mbInfo == nil {
+		return nil, nil
+	}
 
 	err = mbProduceCandiate_Save(ctx, params, stream.streamId, mbInfo, remoteNodes)
 	if err != nil {

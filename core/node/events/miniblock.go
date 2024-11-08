@@ -93,7 +93,7 @@ func NextMiniblockTimestamp(prevBlockTimestamp *timestamppb.Timestamp) *timestam
 type MiniblockInfo struct {
 	Ref                *MiniblockRef
 	headerEvent        *ParsedEvent
-	useGetterForEvents []*ParsedEvent // Use events(). Getter check if events have been initialized.
+	useGetterForEvents []*ParsedEvent // Use events(). Getter checks if events have been initialized.
 	Proto              *Miniblock
 }
 
