@@ -416,6 +416,11 @@ func SetupPostgresMetrics(ctx context.Context, pool PgxPoolInfo, factory infra.M
 			"Total streams stored in fixed partition schema layout",
 			func(s PostgresStatusResult) float64 { return float64(s.MigratedStreams) },
 		},
+		{
+			"postgres_num_stream_partitions",
+			"Total partitions used in fixed partition schema layout",
+			func(s PostgresStatusResult) float64 { return float64(s.NumPartitions) },
+		},
 	}
 
 	for _, metric := range numericMetrics {
