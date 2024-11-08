@@ -46,6 +46,14 @@ contract DeployRiverAirdrop is DiamondHelper, Deployer {
     STAKING_CONTRACT = stakingContract;
   }
 
+  function getStakingContract() internal returns (address) {
+    if (STAKING_CONTRACT != address(0)) {
+      return STAKING_CONTRACT;
+    }
+
+    return getDeployment("baseRegistry");
+  }
+
   function addImmutableCuts(address deployer) internal {
     multiInit = deployMultiInit.deploy(deployer);
     diamondCut = diamondCutHelper.deploy(deployer);
@@ -83,7 +91,7 @@ contract DeployRiverAirdrop is DiamondHelper, Deployer {
     addFacet(
       dropHelper.makeCut(dropFacet, IDiamond.FacetCutAction.Add),
       dropFacet,
-      dropHelper.makeInitData(STAKING_CONTRACT)
+      dropHelper.makeInitData(getStakingContract())
     );
 
     return
