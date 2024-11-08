@@ -6,13 +6,14 @@ import { isDefined } from './check'
 import { Signer } from 'ethers'
 import { RpcOptions } from './rpcOptions'
 import { SignerContext } from './signerContext'
+import { hashPersonalMessage } from '@ethereumjs/util'
 
 export class NotificationServiceUtils {
     private static async _authenticateCommon(
         userId: Uint8Array,
         serviceUrl: string,
         opts: RpcOptions | undefined,
-        getSignature: (hash: string) => Promise<Uint8Array>,
+        getSignature: (hash: Buffer) => Promise<Uint8Array>,
         extraFinishAuthParams: Record<string, any>,
     ) {
         const authenticationRpcClient = makeAuthenticationRpcClient(serviceUrl, opts)
@@ -60,9 +61,9 @@ export class NotificationServiceUtils {
             userId,
             serviceUrl,
             opts,
-            async (hash) => {
-                const hashBin = bin_fromHexString(hash)
-                return await riverSign(hashBin, signerContext.signerPrivateKey())
+            async (hashSrc) => {
+                const hash = hashPersonalMessage(hashSrc)
+                return await riverSign(hash, signerContext.signerPrivateKey())
             },
             {
                 delegateSig: signerContext.delegateSig,

@@ -18,6 +18,7 @@ import { ParsedEvent, ParsedMiniblock, ParsedStreamAndCookie, ParsedStreamRespon
 import { SignerContext, checkDelegateSig } from './signerContext'
 import { keccak256 } from 'ethereum-cryptography/keccak'
 import { sha256 } from 'ethers/lib/utils'
+import { createHash } from 'crypto'
 
 export interface UnpackEnvelopeOpts {
     // the client recreates the hash from the event bytes in the envelope
@@ -305,6 +306,24 @@ function bigintToUint8Array64(num: bigint, endianMode: 'bigEndian' | 'littleEndi
     return new Uint8Array(buffer)
 }
 
+// Returns the absolute value of this BigInt as a big-endian byte array
+function bigIntToBytes(value: bigint): Uint8Array {
+    const abs = value < 0n ? -value : value
+    // Calculate the byte length needed to represent the BigInt
+    const byteLength = Math.ceil(abs.toString(16).length / 2)
+
+    // Create a buffer of the required length
+    const buffer = new Uint8Array(byteLength)
+
+    // Fill the buffer with the big-endian representation of the BigInt
+    let temp = abs
+    for (let i = byteLength - 1; i >= 0; i--) {
+        buffer[i] = Number(temp & 0xffn) // Extract last 8 bits
+        temp >>= 8n // Shift right by 8 bits
+    }
+    return buffer
+}
+
 function pushByteToUint8Array(arr: Uint8Array, byte: number): Uint8Array {
     const ret = new Uint8Array(arr.length + 1)
     ret.set(arr)
@@ -355,15 +374,16 @@ export function notificationServiceHash(
 ) {
     const PREFIX = 'NS_AUTH:'
     const prefixBytes = new TextEncoder().encode(PREFIX)
-    const expirationBytes = bigintToUint8Array64(expiration, 'bigEndian')
-    const retVal = new Uint8Array(
-        prefixBytes.length + userId.length + challenge.length + expirationBytes.length,
-    )
-    retVal.set(prefixBytes)
-    retVal.set(userId, prefixBytes.length)
-    retVal.set(expirationBytes, prefixBytes.length + userId.length)
-    retVal.set(challenge, prefixBytes.length + userId.length + expirationBytes.length)
-    return sha256(retVal)
+    const expirationBytes = bigIntToBytes(expiration)
+    // aellis - i don't understand why we need to slice here, the go and ios code both truncate the leading 0's
+    check(userId.length === 20, 'User ID should be 20 bytes')
+    check(challenge.length === 16, 'Challenge should be 16 bytes')
+    return createHash('sha256')
+        .update(prefixBytes)
+        .update(userId)
+        .update(expirationBytes)
+        .update(challenge)
+        .digest()
 }
 
 export async function riverSign(

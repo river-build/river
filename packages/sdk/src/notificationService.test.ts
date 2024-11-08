@@ -1,9 +1,7 @@
 import { env } from 'process'
-import { makeRiverConfig } from './riverConfig'
 import { dlogger } from '@river-build/dlog'
 import { NotificationServiceUtils } from './notificationService'
 import { ethers } from 'ethers'
-import { LocalhostWeb3Provider } from '@river-build/web3'
 import {
     DmChannelSettingValue,
     GdmChannelSettingValue,
@@ -16,7 +14,7 @@ const logger = dlogger('notificationService.test')
 
 describe('notificationServicetest', () => {
     test('login with primary key', async () => {
-        const notificationServiceUrl = env.NOTIFICATION_SERVICE_URL ?? 'http://localhost:3000'
+        const notificationServiceUrl = env.NOTIFICATION_SERVICE_URL
         if (!notificationServiceUrl) {
             logger.info('NOTIFICATION_SERVICE_URL is not set')
             return
@@ -40,14 +38,14 @@ describe('notificationServicetest', () => {
         const newSettings = await notificationRpcClient.setDmGdmSettings(
             new SetDmGdmSettingsRequest({
                 dmGlobal: DmChannelSettingValue.DM_MESSAGES_NO,
-                gdmGlobal: GdmChannelSettingValue.GDM_NO_MESSAGES,
+                gdmGlobal: GdmChannelSettingValue.GDM_MESSAGES_NO,
             }),
         )
         logger.info('new settings', newSettings)
     })
 
     test('login with delegate key', async () => {
-        const notificationServiceUrl = env.NOTIFICATION_SERVICE_URL ?? 'http://localhost:3000'
+        const notificationServiceUrl = env.NOTIFICATION_SERVICE_URL
         if (!notificationServiceUrl) {
             logger.info('NOTIFICATION_SERVICE_URL is not set')
             return
@@ -72,7 +70,7 @@ describe('notificationServicetest', () => {
         const newSettings = await notificationRpcClient.setDmGdmSettings(
             new SetDmGdmSettingsRequest({
                 dmGlobal: DmChannelSettingValue.DM_MESSAGES_NO,
-                gdmGlobal: GdmChannelSettingValue.GDM_NO_MESSAGES,
+                gdmGlobal: GdmChannelSettingValue.GDM_MESSAGES_NO,
             }),
         )
         logger.info('new settings', newSettings)
