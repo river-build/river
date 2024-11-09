@@ -1,0 +1,2 @@
+database:
+    url: postgres://postgres:postgres@localhost:5433/river?sslmode=disable&pool_max_conns=50
