@@ -230,7 +230,7 @@ func TestMiniblockProduction(t *testing.T) {
 
 func TestCandidatePromotionCandidateInPlace(t *testing.T) {
 	ctx, tt := makeCacheTestContext(t, testParams{replFactor: 1})
-	_ = tt.initCache(0, nil)
+	_ = tt.initCache(0, &MiniblockProducerOpts{TestDisableMbProdcutionOnBlock: true})
 	require := require.New(t)
 
 	spaceStreamId := testutils.FakeStreamId(STREAM_SPACE_BIN)
@@ -278,7 +278,7 @@ func TestCandidatePromotionCandidateInPlace(t *testing.T) {
 
 func TestCandidatePromotionCandidateIsDelayed(t *testing.T) {
 	ctx, tt := makeCacheTestContext(t, testParams{replFactor: 1})
-	_ = tt.initCache(0, nil)
+	_ = tt.initCache(0, &MiniblockProducerOpts{TestDisableMbProdcutionOnBlock: true})
 	require := require.New(t)
 	params := tt.instances[0].params
 	chainConfig := tt.instances[0].params.ChainConfig.Get()
