@@ -193,9 +193,9 @@
       }
     },
     {
-      "label": "Configure Casablanca-Multinode ",
+      "label": "Build Casablanca",
       "type": "shell",
-      "command": "cd ./core && just RUN_ENV=multi config build",
+      "command": "cd ./core && just RUN_ENV=multi build",
       "isBackground": true,
       "problemMatcher": [],
       "presentation": {
@@ -205,35 +205,15 @@
       }
     },
     {
-      "label": "Configure Casablanca-Multinode-No-Entitlements",
+      "label": "Build Casablanca-No-Entitlements",
       "type": "shell",
-      "command": "cd ./core && just RUN_ENV=multi_ne config build",
+      "command": "cd ./core && just RUN_ENV=multi_ne build",
       "isBackground": true,
       "problemMatcher": [],
       "presentation": {
         "group": "ephemeral",
         "focus": true,
         "panel": "shared",
-      }
-    },
-    {
-      "label": "Casablanca-Multinode",
-      "type": "shell",
-      "command": "cd ./core && just RUN_ENV=multi run-and-tail",
-      "isBackground": true,
-      "problemMatcher": [],
-      "presentation": {
-        "group": "local-servers"
-      }
-    },
-    {
-      "label": "Casablanca-Multinode-No-Entitlements",
-      "type": "shell",
-      "command": "cd ./core && just RUN_ENV=multi_ne run-and-tail",
-      "isBackground": true,
-      "problemMatcher": [],
-      "presentation": {
-        "group": "local-servers"
       }
     },
     {
@@ -264,6 +244,8 @@
       "dependsOn": [
         "Stop Casablanca",
         "DummyTask",
+        "Build Casablanca",
+        "Build Casablanca-No-Entitlements",
         "Both Casablancas"
       ],
       "group": {

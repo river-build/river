@@ -183,6 +183,11 @@
       {
         "inputs": [],
         "type": "error",
+        "name": "Membership__Banned"
+      },
+      {
+        "inputs": [],
+        "type": "error",
         "name": "Membership__InsufficientAllowance"
       },
       {
@@ -1855,10 +1860,10 @@
       "license": "MIT"
     },
     "contracts/src/factory/facets/wallet-link/IWalletLink.sol": {
-      "keccak256": "0x1c9084570c24d5297c09ae2ced5a7cc74b0d4525d82c50ab4837073d371492ee",
+      "keccak256": "0x5ed1537dfea0969be2cef70cfd3858695fa7c736a1df677db6c85c0180a0ea0c",
       "urls": [
-        "bzz-raw://c5a554705b2dd0483babbb512ac97bdfc24dfc9c0bc5ea80c6781c056fd03df0",
-        "dweb:/ipfs/QmNdURhnWUeSs5294Puz2FZq2bRikgPgfi4oNppd6pJSH5"
+        "bzz-raw://0305e0d8ba95c608fd848ce99c288bf80892cc61bc01d53bf8d6f79a4a6a550d",
+        "dweb:/ipfs/QmQoBXVdpRraU2BcA1Usw5HZB7e6cdnHvNyVhETKRUg4XC"
       ],
       "license": "MIT"
     },
@@ -2015,10 +2020,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/facets/membership/IMembership.sol": {
-      "keccak256": "0x68c31487d49212facd5c95dc351c8b652e866d58d6e17178f0afce69ac4e3895",
+      "keccak256": "0xdc9ee426c15ebb66d1b2a622d59262633ff21fb7a4f4d371a817008fd5a8a0f2",
       "urls": [
-        "bzz-raw://89c20a832f53340918762d956646fcd6c4676cbdd58656134e59e8d2bf8c3870",
-        "dweb:/ipfs/QmUDMbiFv29AGCfPNGQNppphXddf5a7mhkatJDSQ4KvUD3"
+        "bzz-raw://6b69760674835f4f36c07f7cde972bad1fab317b8a03ae962f2fd2581209214e",
+        "dweb:/ipfs/QmPa5yoeqyASESKQGs7jjR5YzhtKm8mAmyp2BavS9q6YCG"
       ],
       "license": "MIT"
     },
