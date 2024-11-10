@@ -27,7 +27,7 @@ interface ISampleBase {
   event ValueSet(uint256 value);
 }
 
-inteface ISample is ISampleBase {
+interface ISample is ISampleBase {
   function setValue(uint256) external;
 }
 
