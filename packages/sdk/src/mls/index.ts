@@ -7,6 +7,7 @@ import {
 import { EncryptedData } from '@river-build/proto'
 import { EpochKeyService } from './epochKeyStore'
 import { GroupStore, GroupStatus } from './groupStore'
+import { MlsStore } from './mlsStore'
 
 function uint8ArrayEqual(a: Uint8Array, b: Uint8Array): boolean {
     if (a === b) {
@@ -23,19 +24,23 @@ function uint8ArrayEqual(a: Uint8Array, b: Uint8Array): boolean {
     return true
 }
 
-
 export class MlsCrypto {
     private client!: MlsClient
     private userAddress: Uint8Array
     public deviceKey: Uint8Array
+    private mlsStore: MlsStore
+
     awaitingGroupActive: Map<string, { promise: Promise<void>; resolve: () => void }> = new Map()
     cipherSuite: MlsCipherSuite = new MlsCipherSuite()
-    epochKeyService = new EpochKeyService(this.cipherSuite)
-    groupStore: GroupStore = new GroupStore()
+    epochKeyService: EpochKeyService
+    groupStore: GroupStore
 
     constructor(userAddress: Uint8Array, deviceKey: Uint8Array) {
         this.userAddress = userAddress
         this.deviceKey = deviceKey
+        this.mlsStore = new MlsStore(deviceKey)
+        this.groupStore = new GroupStore(this.mlsStore)
+        this.epochKeyService = new EpochKeyService(this.cipherSuite, this.mlsStore)
     }
 
     async initialize() {

@@ -5,6 +5,7 @@ import {
     HpkeSecretKey,
     Secret as MlsSecret,
 } from '@river-build/mls-rs-wasm'
+import { MlsStore } from './mlsStore'
 
 type DerivedKeys = {
     secretKey: HpkeSecretKey
@@ -14,15 +15,17 @@ type DerivedKeys = {
 export class EpochKeyService {
     private epochKeyStores: Map<string, EpochKeyStore> = new Map()
     private cipherSuite: MlsCipherSuite
+    private mlsStore: MlsStore
 
-    public constructor(cipherSuite: MlsCipherSuite) {
+    public constructor(cipherSuite: MlsCipherSuite, mlsStore: MlsStore) {
         this.cipherSuite = cipherSuite
+        this.mlsStore = mlsStore
     }
 
     private getEpochKeyStore(streamId: string): EpochKeyStore {
         let epochKeyStore = this.epochKeyStores.get(streamId)
         if (!epochKeyStore) {
-            epochKeyStore = new EpochKeyStore()
+            epochKeyStore = new EpochKeyStore(streamId, this.mlsStore)
             this.epochKeyStores.set(streamId, epochKeyStore)
         }
         return epochKeyStore
@@ -184,6 +187,13 @@ export class EpochKeyStore {
     private openEpochSecrets: Map<bigint, MlsSecretBytes> = new Map()
     private secretKeys: Map<bigint, HpkeSecretKeyBytes> = new Map()
     private publicKeys: Map<bigint, HpkePublicKeyBytes> = new Map()
+    private streamId: string
+    private mlsStore: MlsStore
+
+    constructor(streamId: string, mlsStore: MlsStore) {
+        this.streamId = streamId
+        this.mlsStore = mlsStore
+    }
 
     private getEpochKeyState(epoch: bigint): EpochKeyState {
         const derivedKeys = this.getDerivedKeys(epoch)
