@@ -120,33 +120,33 @@ export class Stream extends (EventEmitter as new () => TypedEmitter<StreamEvents
      * Memberships are processed on block boundaries, so we need to wait for the next block to be processed
      * passing an undefined userId will wait for the membership to be updated for the current user
      */
-    public async waitForMembership(membership: MembershipOp, userId_?: string) {
-        const userId = userId_ ?? this.userId
-        this.logEmitFromStream('waitForMembership start', userId, membership)
+    public async waitForMembership(membership: MembershipOp, inUserId?: string) {
         // check to see if we're already in that state
-        if (this._view.getMembers().isMember(membership, userId)) {
-            this.logEmitFromStream(
-                'waitForMembership already a member',
-                this.streamId,
-                userId,
-                membership,
-            )
-            return
-        }
+        const userId = inUserId ?? this.userId
         // wait for a membership updated event, event, check again
-        await this.waitFor('streamMembershipUpdated', (_streamId: string, _userId: string) => {
-            return this._view.getMembers().isMember(membership, userId)
-        })
-        this.logEmitFromStream('waitForMembership end', userId, membership)
+        await this.waitFor('streamMembershipUpdated', () =>
+            this._view.getMembers().isMember(membership, userId),
+        )
     }
 
-    // public async waitForMembership(membership: MembershipOp, inUserId?: string) {
+    // public async waitForMembership(membership: MembershipOp, userId_?: string) {
+    //     const userId = userId_ ?? this.userId
+    //     this.logEmitFromStream('waitForMembership start', userId, membership)
     //     // check to see if we're already in that state
-    //     const userId = inUserId ?? this.userId
+    //     if (this._view.getMembers().isMember(membership, userId)) {
+    //         this.logEmitFromStream(
+    //             'waitForMembership already a member',
+    //             this.streamId,
+    //             userId,
+    //             membership,
+    //         )
+    //         return
+    //     }
     //     // wait for a membership updated event, event, check again
-    //     await this.waitFor('streamMembershipUpdated', () =>
-    //         this._view.getMembers().isMember(membership, userId),
-    //     )
+    //     await this.waitFor('streamMembershipUpdated', (_streamId: string, _userId: string) => {
+    //         return this._view.getMembers().isMember(membership, userId)
+    //     })
+    //     this.logEmitFromStream('waitForMembership end', userId, membership)
     // }
 
     /**
