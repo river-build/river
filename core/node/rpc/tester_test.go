@@ -215,19 +215,26 @@ func (st *serviceTester) getConfig(opts ...startOpts) *config.Config {
 		options = &opts[0]
 	}
 
+	// TODO: derive this config from the default config.
 	cfg := &config.Config{
 		DisableBaseChain: true,
 		DisableHttps:     true,
 		RegistryContract: st.btc.RegistryConfig(),
 		Database: config.DatabaseConfig{
-			Url:          st.dbUrl,
-			StartupDelay: 2 * time.Millisecond,
+			Url:                   st.dbUrl,
+			StartupDelay:          2 * time.Millisecond,
+			NumPartitions:         4,
+			MigrateStreamCreation: true,
 		},
 		StorageType: "postgres",
 		Network: config.NetworkConfig{
 			NumRetries: 3,
 		},
 		ShutdownTimeout: 2 * time.Millisecond,
+		StreamReconciliation: config.StreamReconciliationConfig{
+			WorkerPoolSize: 8,
+		},
+		RiverRegistry: config.GetDefaultConfig().RiverRegistry,
 	}
 
 	if options.configUpdater != nil {

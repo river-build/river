@@ -140,35 +140,51 @@ export class Stream extends (EventEmitter as new () => TypedEmitter<StreamEvents
         this.logEmitFromStream('waitForMembership end', userId, membership)
     }
 
+    // public async waitForMembership(membership: MembershipOp, inUserId?: string) {
+    //     // check to see if we're already in that state
+    //     const userId = inUserId ?? this.userId
+    //     // wait for a membership updated event, event, check again
+    //     await this.waitFor('streamMembershipUpdated', () =>
+    //         this._view.getMembers().isMember(membership, userId),
+    //     )
+    // }
+
     /**
      * Wait for a stream event to be emitted
      * optionally pass a condition function to check the event args
      */
     public async waitFor<E extends keyof StreamEvents>(
         event: E,
-        fn?: (...args: Parameters<StreamEvents[E]>) => boolean,
+        condition: () => boolean,
         opts: { timeoutMs: number } = { timeoutMs: 20000 },
     ): Promise<void> {
+        if (condition()) {
+            return
+        }
         this.logEmitFromStream('waitFor', this.streamId, event)
         return new Promise((resolve, reject) => {
             // Set up the event listener
-            const handler = (...args: Parameters<StreamEvents[E]>): void => {
-                if (!fn || fn(...args)) {
+            const handler = (): void => {
+                if (condition()) {
                     this.logEmitFromStream('waitFor success', this.streamId, event)
-                    this.off(event, handler as StreamEvents[E])
+                    this.off(event, handler)
+                    this.off('streamInitialized', handler)
                     clearTimeout(timeout)
                     resolve()
                 }
             }
+
             const timeoutError = new Error(`waitFor timeout waiting for ${event}`)
             // Set up the timeout
             const timeout = setTimeout(() => {
                 this.logEmitFromStream('waitFor timeout', this.streamId, event)
-                this.off(event, handler as StreamEvents[E])
+                this.off(event, handler)
+                this.off('streamInitialized', handler)
                 reject(timeoutError)
             }, opts.timeoutMs)
 
-            this.on(event, handler as StreamEvents[E])
+            this.on(event, handler)
+            this.on('streamInitialized', handler)
         })
     }
 }

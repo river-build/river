@@ -10,7 +10,7 @@ export function makeTags(
     return {
         messageInteractionType: getMessageInteractionType(message),
         groupMentionTypes: getGroupMentionTypes(message),
-        mentionedUserAddresses: getMentionedUserIds(message),
+        mentionedUserAddresses: getMentionedUserAddresses(message),
         participatingUserAddresses: getParticipatingUserAddresses(message, streamView),
     } satisfies PlainMessage<Tags>
 }
@@ -25,8 +25,12 @@ function getMessageInteractionType(message: PlainMessage<ChannelMessage>): Messa
             } else if (message.payload.value.replyId) {
                 return MessageInteractionType.REPLY
             } else {
-                return MessageInteractionType.UNSPECIFIED
+                return MessageInteractionType.POST
             }
+        case 'edit':
+            return MessageInteractionType.EDIT
+        case 'redaction':
+            return MessageInteractionType.REDACTION
         default:
             return MessageInteractionType.UNSPECIFIED
     }
@@ -46,7 +50,7 @@ function getGroupMentionTypes(message: PlainMessage<ChannelMessage>): GroupMenti
     return types
 }
 
-function getMentionedUserIds(message: PlainMessage<ChannelMessage>): Uint8Array[] {
+function getMentionedUserAddresses(message: PlainMessage<ChannelMessage>): Uint8Array[] {
     if (message.payload.case === 'post' && message.payload.value.content.case === 'text') {
         return message.payload.value.content.value.mentions
             .filter((m) => m.mentionBehavior.case === undefined && m.userId.length > 0)

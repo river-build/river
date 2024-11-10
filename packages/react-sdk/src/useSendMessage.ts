@@ -1,38 +1,21 @@
 'use client'
 
-import type { Channel, Gdm } from '@river-build/sdk'
+import { type Channel, Space, assert } from '@river-build/sdk'
 import { useMemo } from 'react'
 import { type ActionConfig, useAction } from './internals/useAction'
 import { useSyncAgent } from './useSyncAgent'
-
-// This hook isnt following the convention, but lets see how it goes
-type SendMessageProps =
-    | {
-          type: 'gdm'
-          streamId: string
-      }
-    | {
-          type: 'channel'
-          spaceId: string
-          channelId: string
-      }
+import { getRoom } from './utils'
 
 export const useSendMessage = (
-    props: SendMessageProps,
-    config?: (typeof props)['type'] extends 'gdm'
-        ? ActionConfig<Gdm['sendMessage']>
-        : ActionConfig<Channel['sendMessage']>,
+    streamId: string,
+    // TODO: now that we're using runtime check for room type, Gdm/Dm will have the same config as Channel.
+    // Its not a problem, both should be the same, but we need more abstractions around this on the SyncAgent
+    config?: ActionConfig<Channel['sendMessage']>,
 ) => {
     const sync = useSyncAgent()
-    const namespace = useMemo(() => {
-        if (props.type === 'gdm') {
-            return sync.gdms.getGdm(props.streamId)
-        } else if (props.type === 'channel') {
-            return sync.spaces.getSpace(props.spaceId).getChannel(props.channelId)
-        }
-        return
-    }, [props, sync.gdms, sync.spaces])
-    const { action: sendMessage, ...rest } = useAction(namespace, 'sendMessage', config)
+    const room = useMemo(() => getRoom(sync, streamId), [streamId, sync])
+    assert(!(room instanceof Space), 'room cant be a space')
+    const { action: sendMessage, ...rest } = useAction(room, 'sendMessage', config)
 
     return {
         sendMessage,

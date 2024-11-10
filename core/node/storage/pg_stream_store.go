@@ -4,11 +4,14 @@ import (
 	"context"
 	"embed"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
+	"github.com/cespare/xxhash/v2"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
@@ -29,12 +32,80 @@ type PostgresStreamStore struct {
 	exitSignal        chan error
 	nodeUUID          string
 	cleanupListenFunc func()
+
+	numPartitions int
 }
 
 var _ StreamStorage = (*PostgresStreamStore)(nil)
 
 //go:embed migrations/*.sql
 var migrationsDir embed.FS
+
+func GetRiverNodeDbMigrationSchemaFS() *embed.FS {
+	return &migrationsDir
+}
+
+type txnFn func(ctx context.Context, tx pgx.Tx) error
+
+// createSettingsTableTxnWithPartitions creates a txnFn that can be ran on the
+// postgres store before migrations are applied. Our migrations actually check this
+// table and use the partitions setting in order to determine how many partitions
+// to use when creating the schema for stream data storage.
+func (s *PostgresStreamStore) createSettingsTableTxnWithPartitions(partitions int) txnFn {
+	return func(ctx context.Context, tx pgx.Tx) error {
+		log := dlog.FromCtx(ctx)
+		log.Info("Creating settings table")
+		_, err := tx.Exec(
+			ctx,
+			`CREATE TABLE IF NOT EXISTS settings (
+				single_row_key BOOL PRIMARY KEY DEFAULT TRUE,
+				num_partitions INT DEFAULT 256 NOT NULL);`,
+		)
+		if err != nil {
+			log.Error("Error creating settings table", "error", err)
+			return err
+		}
+
+		log.Info("Inserting config partitions", "partitions", partitions)
+		tags, err := tx.Exec(
+			ctx,
+			`INSERT INTO settings (single_row_key, num_partitions) VALUES (true, $1)
+			ON CONFLICT DO NOTHING`,
+			partitions,
+		)
+		if err != nil {
+			log.Error("Error setting partition count", "error", err)
+			return err
+		}
+
+		var numPartitions int
+		err = tx.QueryRow(
+			ctx,
+			`SELECT num_partitions FROM settings WHERE single_row_key=true;`,
+		).Scan(&numPartitions)
+		if err != nil {
+			return err
+		}
+
+		// Assign the true partitions used to the store, which may be different than what
+		// is specified in the config, if the config does not match what is already in the
+		// database.
+		s.numPartitions = numPartitions
+		log.Info("Creating stream storage schema with partition count", "numPartitions", numPartitions)
+
+		if tags.RowsAffected() < 1 {
+			log.Warn(
+				"Ignoring numPartitions config, previous setting detected",
+				"numPartitionsConfig",
+				partitions,
+				"actualPartitions",
+				numPartitions,
+			)
+		}
+
+		return nil
+	}
+}
 
 func NewPostgresStreamStore(
 	ctx context.Context,
@@ -47,10 +118,12 @@ func NewPostgresStreamStore(
 		nodeUUID:   instanceId,
 		exitSignal: exitSignal,
 	}
+
 	if err := store.PostgresEventStore.init(
 		ctx,
 		poolInfo,
 		metrics,
+		store.createSettingsTableTxnWithPartitions(poolInfo.Config.NumPartitions),
 		migrationsDir,
 	); err != nil {
 		return nil, AsRiverError(err).Func("NewPostgresStreamStore")
@@ -134,6 +207,54 @@ func (s *PostgresStreamStore) txRunnerWithUUIDCheck(
 	)
 }
 
+// createPartitionSuffix determines the partition mapping for a particular stream id the
+// hex encoding of the first byte of the xxHash of the stream ID.
+func createPartitionSuffix(streamId StreamId, numPartitions int) string {
+	// Media streams have separate partitions to handle the different data shapes and access
+	// patterns. The partition suffix is prefixed with an "m". Regular streams are assigned to
+	// partitions prefixed with "r", e.g. "miniblocks_ra4".
+	streamType := "r"
+	if streamId.Type() == STREAM_MEDIA_BIN {
+		streamType = "m"
+	}
+
+	// Do not hash the stream bytes directly, but hash the hex encoding of the stream id, which is
+	// what we store in the database. This leaves the door open for installing xxhash on postgres
+	// and debugging this way in the future.
+	hash := xxhash.Sum64String(streamId.String())
+	bt := hash % uint64(numPartitions) & 255
+	return fmt.Sprintf("%s%02x", streamType, bt)
+}
+
+// sqlForStream escapes references to partitioned tables to the specific partition where the stream
+// is assigned whenever they are surrounded by double curly brackets.
+func (s *PostgresStreamStore) sqlForStream(sql string, streamId StreamId, migrated bool) string {
+	var suffix string
+	if migrated {
+		suffix = createPartitionSuffix(streamId, s.numPartitions)
+	} else {
+		suffix = createTableSuffix(streamId)
+	}
+
+	sql = strings.ReplaceAll(
+		sql,
+		"{{miniblocks}}",
+		"miniblocks_"+suffix,
+	)
+	sql = strings.ReplaceAll(
+		sql,
+		"{{minipools}}",
+		"minipools_"+suffix,
+	)
+	sql = strings.ReplaceAll(
+		sql,
+		"{{miniblock_candidates}}",
+		"miniblock_candidates_"+suffix,
+	)
+
+	return sql
+}
+
 func (s *PostgresStreamStore) CreateStreamStorage(
 	ctx context.Context,
 	streamId StreamId,
@@ -151,22 +272,70 @@ func (s *PostgresStreamStore) CreateStreamStorage(
 	)
 }
 
+func (s *PostgresStreamStore) lockStream(
+	ctx context.Context,
+	tx pgx.Tx,
+	streamId StreamId,
+	write bool,
+) (
+	lastSnapshotMiniblock int64,
+	migrated bool,
+	err error,
+) {
+	if write {
+		err = tx.QueryRow(
+			ctx,
+			"SELECT latest_snapshot_miniblock, migrated from es WHERE stream_id = $1 FOR UPDATE",
+			streamId,
+		).Scan(&lastSnapshotMiniblock, &migrated)
+	} else {
+		err = tx.QueryRow(
+			ctx,
+			"SELECT latest_snapshot_miniblock, migrated from es WHERE stream_id = $1 FOR SHARE",
+			streamId,
+		).Scan(&lastSnapshotMiniblock, &migrated)
+	}
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, false, RiverError(Err_NOT_FOUND, "Stream not found", "streamId", streamId)
+		}
+		return 0, false, err
+	}
+
+	return lastSnapshotMiniblock, migrated, nil
+}
+
 func (s *PostgresStreamStore) createStreamStorageTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
 	genesisMiniblock []byte,
 ) error {
-	tableSuffix := createTableSuffix(streamId)
-	sql := fmt.Sprintf(
-		`INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, 0);
-		CREATE TABLE miniblocks_%[1]s PARTITION OF miniblocks FOR VALUES IN ($1);
-		CREATE TABLE minipools_%[1]s PARTITION OF minipools FOR VALUES IN ($1);
-		CREATE TABLE miniblock_candidates_%[1]s PARTITION OF miniblock_candidates for values in ($1);
-		INSERT INTO miniblocks (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
-		INSERT INTO minipools (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
-		tableSuffix,
-	)
+	var sql string
+	if s.config.MigrateStreamCreation {
+		sql = s.sqlForStream(
+			`
+			INSERT INTO es (stream_id, latest_snapshot_miniblock, migrated) VALUES ($1, 0, true);
+			INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
+			INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
+			streamId,
+			true,
+		)
+	} else {
+		sql = s.sqlForStream(
+			`
+			INSERT INTO es (stream_id, latest_snapshot_miniblock, migrated) VALUES ($1, 0, false);
+
+			CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);
+			CREATE TABLE {{minipools}} PARTITION OF minipools FOR VALUES IN ($1);
+			CREATE TABLE {{miniblock_candidates}} PARTITION OF miniblock_candidates for values in ($1);
+			INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
+			INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
+			streamId,
+			false,
+		)
+	}
 	_, err := tx.Exec(ctx, sql, streamId, genesisMiniblock)
 	if err != nil {
 		if pgerr, ok := err.(*pgconn.PgError); ok && pgerr.Code == pgerrcode.UniqueViolation {
@@ -198,12 +367,17 @@ func (s *PostgresStreamStore) createStreamArchiveStorageTx(
 	tx pgx.Tx,
 	streamId StreamId,
 ) error {
-	tableSuffix := createTableSuffix(streamId)
-	sql := fmt.Sprintf(
-		`INSERT INTO es (stream_id, latest_snapshot_miniblock) VALUES ($1, -1);
-		CREATE TABLE miniblocks_%[1]s PARTITION OF miniblocks FOR VALUES IN ($1);`,
-		tableSuffix,
-	)
+	var sql string
+	if s.config.MigrateStreamCreation {
+		sql = `INSERT INTO es (stream_id, latest_snapshot_miniblock, migrated) VALUES ($1, -1, true);`
+	} else {
+		sql = s.sqlForStream(
+			`INSERT INTO es (stream_id, latest_snapshot_miniblock, migrated) VALUES ($1, -1, false);
+			CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);`,
+			streamId,
+			false,
+		)
+	}
 	_, err := tx.Exec(ctx, sql, streamId)
 	if err != nil {
 		if pgerr, ok := err.(*pgconn.PgError); ok && pgerr.Code == pgerrcode.UniqueViolation {
@@ -222,7 +396,7 @@ func (s *PostgresStreamStore) GetMaxArchivedMiniblockNumber(
 	err := s.txRunnerWithUUIDCheck(
 		ctx,
 		"GetMaxArchivedMiniblockNumber",
-		pgx.ReadOnly,
+		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
 			return s.getMaxArchivedMiniblockNumberTx(ctx, tx, streamId, &maxArchivedMiniblockNumber)
 		},
@@ -241,14 +415,24 @@ func (s *PostgresStreamStore) getMaxArchivedMiniblockNumberTx(
 	streamId StreamId,
 	maxArchivedMiniblockNumber *int64,
 ) error {
-	err := tx.QueryRow(
+	_, migrated, err := s.lockStream(ctx, tx, streamId, false)
+	if err != nil {
+		return err
+	}
+
+	err = tx.QueryRow(
 		ctx,
-		"SELECT COALESCE(MAX(seq_num), -1) FROM miniblocks WHERE stream_id = $1",
+		s.sqlForStream(
+			"SELECT COALESCE(MAX(seq_num), -1) FROM {{miniblocks}} WHERE stream_id = $1",
+			streamId,
+			migrated,
+		),
 		streamId,
 	).Scan(maxArchivedMiniblockNumber)
 	if err != nil {
 		return err
 	}
+
 	if *maxArchivedMiniblockNumber == -1 {
 		var exists bool
 		err = tx.QueryRow(
@@ -293,8 +477,13 @@ func (s *PostgresStreamStore) writeArchiveMiniblocksTx(
 	startMiniblockNum int64,
 	miniblocks [][]byte,
 ) error {
+	_, migrated, err := s.lockStream(ctx, tx, streamId, true)
+	if err != nil {
+		return err
+	}
+
 	var lastKnownMiniblockNum int64
-	err := s.getMaxArchivedMiniblockNumberTx(ctx, tx, streamId, &lastKnownMiniblockNum)
+	err = s.getMaxArchivedMiniblockNumberTx(ctx, tx, streamId, &lastKnownMiniblockNum)
 	if err != nil {
 		return err
 	}
@@ -311,7 +500,11 @@ func (s *PostgresStreamStore) writeArchiveMiniblocksTx(
 	for i, miniblock := range miniblocks {
 		_, err := tx.Exec(
 			ctx,
-			"INSERT INTO miniblocks (stream_id, seq_num, blockdata) VALUES ($1, $2, $3)",
+			s.sqlForStream(
+				"INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, $2, $3)",
+				streamId,
+				migrated,
+			),
 			streamId,
 			startMiniblockNum+int64(i),
 			miniblock)
@@ -331,7 +524,7 @@ func (s *PostgresStreamStore) ReadStreamFromLastSnapshot(
 	err := s.txRunnerWithUUIDCheck(
 		ctx,
 		"ReadStreamFromLastSnapshot",
-		pgx.ReadOnly,
+		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
 			var err error
 			ret, err = s.readStreamFromLastSnapshotTx(ctx, tx, streamId, numToRead)
@@ -352,21 +545,21 @@ func (s *PostgresStreamStore) readStreamFromLastSnapshotTx(
 	streamId StreamId,
 	numToRead int,
 ) (*ReadStreamFromLastSnapshotResult, error) {
-	var snapshotMiniblockIndex int64
-	err := tx.
-		QueryRow(ctx, "SELECT latest_snapshot_miniblock FROM es WHERE stream_id = $1", streamId).
-		Scan(&snapshotMiniblockIndex)
+	snapshotMiniblockIndex, migrated, err := s.lockStream(ctx, tx, streamId, false)
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, WrapRiverError(Err_NOT_FOUND, err).Message("stream not found in local storage")
-		} else {
-			return nil, err
-		}
+		return nil, err
 	}
 
 	var lastMiniblockIndex int64
 	err = tx.
-		QueryRow(ctx, "SELECT MAX(seq_num) FROM miniblocks WHERE stream_id = $1", streamId).
+		QueryRow(
+			ctx,
+			s.sqlForStream(
+				"SELECT MAX(seq_num) FROM {{miniblocks}} WHERE stream_id = $1",
+				streamId,
+				migrated,
+			),
+			streamId).
 		Scan(&lastMiniblockIndex)
 	if err != nil {
 		return nil, WrapRiverError(Err_INTERNAL, err).Message("db inconsistency: failed to get last miniblock index")
@@ -378,7 +571,11 @@ func (s *PostgresStreamStore) readStreamFromLastSnapshotTx(
 
 	miniblocksRow, err := tx.Query(
 		ctx,
-		"SELECT blockdata, seq_num FROM miniblocks WHERE seq_num >= $1 AND stream_id = $2 ORDER BY seq_num",
+		s.sqlForStream(
+			"SELECT blockdata, seq_num FROM {{miniblocks}} WHERE seq_num >= $1 AND stream_id = $2 ORDER BY seq_num",
+			streamId,
+			migrated,
+		),
 		startSeqNum,
 		streamId,
 	)
@@ -422,7 +619,11 @@ func (s *PostgresStreamStore) readStreamFromLastSnapshotTx(
 
 	rows, err := tx.Query(
 		ctx,
-		"SELECT envelope, generation, slot_num FROM minipools WHERE stream_id = $1 ORDER BY generation, slot_num",
+		s.sqlForStream(
+			"SELECT envelope, generation, slot_num FROM {{minipools}} WHERE stream_id = $1 ORDER BY generation, slot_num",
+			streamId,
+			migrated,
+		),
 		streamId,
 	)
 	if err != nil {
@@ -500,7 +701,7 @@ func (s *PostgresStreamStore) WriteEvent(
 // 1. Minipool has proper number of records including service one (equal to minipoolSlot)
 // 2. There are no gaps in seqNums and they start from 0 execpt service record with seqNum = -1
 // 3. All events in minipool have proper generation
-func (s *PostgresEventStore) writeEventTx(
+func (s *PostgresStreamStore) writeEventTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
@@ -508,10 +709,19 @@ func (s *PostgresEventStore) writeEventTx(
 	minipoolSlot int,
 	envelope []byte,
 ) error {
+	_, migrated, err := s.lockStream(ctx, tx, streamId, true)
+	if err != nil {
+		return err
+	}
+
 	envelopesRow, err := tx.Query(
 		ctx,
 		// Ordering by generation, slot_num allows this to be an index only query
-		"SELECT generation, slot_num FROM minipools WHERE stream_id = $1 ORDER BY generation, slot_num",
+		s.sqlForStream(
+			"SELECT generation, slot_num FROM {{minipools}} WHERE stream_id = $1 ORDER BY generation, slot_num",
+			streamId,
+			migrated,
+		),
 		streamId,
 	)
 	if err != nil {
@@ -551,7 +761,11 @@ func (s *PostgresEventStore) writeEventTx(
 	// All checks passed - we need to insert event into minipool
 	_, err = tx.Exec(
 		ctx,
-		"INSERT INTO minipools (stream_id, envelope, generation, slot_num) VALUES ($1, $2, $3, $4)",
+		s.sqlForStream(
+			"INSERT INTO {{minipools}} (stream_id, envelope, generation, slot_num) VALUES ($1, $2, $3, $4)",
+			streamId,
+			migrated,
+		),
 		streamId,
 		envelope,
 		minipoolGeneration,
@@ -578,7 +792,7 @@ func (s *PostgresStreamStore) ReadMiniblocks(
 	err := s.txRunnerWithUUIDCheck(
 		ctx,
 		"ReadMiniblocks",
-		pgx.ReadOnly,
+		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
 			var err error
 			miniblocks, err = s.readMiniblocksTx(ctx, tx, streamId, fromInclusive, toExclusive)
@@ -600,9 +814,18 @@ func (s *PostgresStreamStore) readMiniblocksTx(
 	fromInclusive int64,
 	toExclusive int64,
 ) ([][]byte, error) {
+	_, migrated, err := s.lockStream(ctx, tx, streamId, false)
+	if err != nil {
+		return nil, err
+	}
+
 	miniblocksRow, err := tx.Query(
 		ctx,
-		"SELECT blockdata, seq_num FROM miniblocks WHERE seq_num >= $1 AND seq_num < $2 AND stream_id = $3 ORDER BY seq_num",
+		s.sqlForStream(
+			"SELECT blockdata, seq_num FROM {{miniblocks}} WHERE seq_num >= $1 AND seq_num < $2 AND stream_id = $3 ORDER BY seq_num",
+			streamId,
+			migrated,
+		),
 		fromInclusive,
 		toExclusive,
 		streamId,
@@ -670,9 +893,21 @@ func (s *PostgresStreamStore) writeBlockProposalTxn(
 	blockNumber int64,
 	miniblock []byte,
 ) error {
-	var seqNum *int64
+	_, migrated, err := s.lockStream(ctx, tx, streamId, true)
+	if err != nil {
+		return err
+	}
 
-	err := tx.QueryRow(ctx, "SELECT MAX(seq_num) as latest_blocks_number FROM miniblocks WHERE stream_id = $1", streamId).
+	var seqNum *int64
+	err = tx.QueryRow(
+		ctx,
+		s.sqlForStream(
+			"SELECT MAX(seq_num) as latest_blocks_number FROM {{miniblocks}} WHERE stream_id = $1",
+			streamId,
+			migrated,
+		),
+		streamId,
+	).
 		Scan(&seqNum)
 	if err != nil {
 		return err
@@ -689,7 +924,11 @@ func (s *PostgresStreamStore) writeBlockProposalTxn(
 	// insert miniblock proposal into miniblock_candidates table
 	_, err = tx.Exec(
 		ctx,
-		"INSERT INTO miniblock_candidates (stream_id, seq_num, block_hash, blockdata) VALUES ($1, $2, $3, $4) ON CONFLICT(stream_id, seq_num, block_hash) DO NOTHING",
+		s.sqlForStream(
+			"INSERT INTO {{miniblock_candidates}} (stream_id, seq_num, block_hash, blockdata) VALUES ($1, $2, $3, $4) ON CONFLICT(stream_id, seq_num, block_hash) DO NOTHING",
+			streamId,
+			migrated,
+		),
 		streamId,
 		blockNumber,
 		hex.EncodeToString(blockHash.Bytes()), // avoid leading '0x'
@@ -708,7 +947,7 @@ func (s *PostgresStreamStore) ReadMiniblockCandidate(
 	err := s.txRunnerWithUUIDCheck(
 		ctx,
 		"ReadMiniblockCandidate",
-		pgx.ReadOnly,
+		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
 			var err error
 			miniblock, err = s.readMiniblockCandidateTx(ctx, tx, streamId, blockHash, blockNumber)
@@ -732,100 +971,254 @@ func (s *PostgresStreamStore) readMiniblockCandidateTx(
 	blockHash common.Hash,
 	blockNumber int64,
 ) ([]byte, error) {
+	_, migrated, err := s.lockStream(ctx, tx, streamId, false)
+	if err != nil {
+		return nil, err
+	}
+
 	var miniblock []byte
-	err := tx.QueryRow(
+	err = tx.QueryRow(
 		ctx,
-		"SELECT blockdata FROM miniblock_candidates WHERE stream_id = $1 AND seq_num = $2 AND block_hash = $3",
+		s.sqlForStream(
+			"SELECT blockdata FROM {{miniblock_candidates}} WHERE stream_id = $1 AND seq_num = $2 AND block_hash = $3",
+			streamId,
+			migrated,
+		),
 		streamId,
 		blockNumber,
 		hex.EncodeToString(blockHash.Bytes()), // avoid leading '0x'
 	).Scan(&miniblock)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, RiverError(Err_NOT_FOUND, "Miniblock candidate not found")
+		}
 		return nil, err
 	}
 	return miniblock, nil
 }
 
-func (s *PostgresStreamStore) PromoteMiniblockCandidate(
+func (s *PostgresStreamStore) WriteMiniblocks(
 	ctx context.Context,
 	streamId StreamId,
-	minipoolGeneration int64,
-	candidateBlockHash common.Hash,
-	snapshotMiniblock bool,
-	envelopes [][]byte,
+	miniblocks []*WriteMiniblockData,
+	newMinipoolGeneration int64,
+	newMinipoolEnvelopes [][]byte,
+	prevMinipoolGeneration int64,
+	prevMinipoolSize int,
 ) error {
+	// Check redundant data in arguments is consistent.
+	if len(miniblocks) == 0 {
+		return RiverError(Err_INTERNAL, "No miniblocks to write").Func("pg.WriteMiniblocks")
+	}
+	if prevMinipoolGeneration != miniblocks[0].Number {
+		return RiverError(Err_INTERNAL, "Previous minipool generation mismatch").Func("pg.WriteMiniblocks")
+	}
+	if newMinipoolGeneration != miniblocks[len(miniblocks)-1].Number+1 {
+		return RiverError(Err_INTERNAL, "New minipool generation mismatch").Func("pg.WriteMiniblocks")
+	}
+	firstMbNum := miniblocks[0].Number
+	for i, mb := range miniblocks {
+		if mb.Number != firstMbNum+int64(i) {
+			return RiverError(Err_INTERNAL, "Miniblock number mismatch").Func("pg.WriteMiniblocks")
+		}
+	}
+
+	// This function is also called from background goroutines, set additional timeout.
+	// TODO: config
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
+
 	return s.txRunnerWithUUIDCheck(
 		ctx,
-		"PromoteMiniblockCandidate",
+		"WriteMiniblocks",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
-			return s.promoteBlockTxn(
+			return s.writeMiniblocksTx(
 				ctx,
 				tx,
 				streamId,
-				minipoolGeneration,
-				candidateBlockHash,
-				snapshotMiniblock,
-				envelopes,
+				miniblocks,
+				newMinipoolGeneration,
+				newMinipoolEnvelopes,
+				prevMinipoolGeneration,
+				prevMinipoolSize,
 			)
 		},
 		nil,
 		"streamId", streamId,
-		"minipoolGeneration", minipoolGeneration,
-		"candidateBlockHash", candidateBlockHash,
-		"snapshotMiniblock", snapshotMiniblock,
+		"newMinipoolGeneration", newMinipoolGeneration,
+		"newMinipoolSize", len(newMinipoolEnvelopes),
+		"prevMinipoolGeneration", prevMinipoolGeneration,
+		"prevMinipoolSize", prevMinipoolSize,
+		"miniblockSize", len(miniblocks),
+		"firstMiniblockNumber", miniblocks[0].Number,
+		"lastMiniblockNumber", miniblocks[len(miniblocks)-1].Number,
 	)
 }
 
-func (s *PostgresStreamStore) promoteBlockTxn(
+func (s *PostgresStreamStore) writeMiniblocksTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
-	minipoolGeneration int64,
-	candidateBlockHash common.Hash,
-	snapshotMiniblock bool,
-	envelopes [][]byte,
+	miniblocks []*WriteMiniblockData,
+	newMinipoolGeneration int64,
+	newMinipoolEnvelopes [][]byte,
+	prevMinipoolGeneration int64,
+	prevMinipoolSize int,
 ) error {
-	var seqNum *int64
-
-	err := tx.QueryRow(ctx, "SELECT MAX(seq_num) as latest_blocks_number FROM miniblocks WHERE stream_id = $1", streamId).
-		Scan(&seqNum)
-	if err != nil {
-		return err
-	}
-	if seqNum == nil {
-		return RiverError(Err_NOT_FOUND, "No blocks for the stream found in block storage")
-	}
-	if minipoolGeneration != *seqNum+1 {
-		return RiverError(Err_MINIBLOCKS_STORAGE_FAILURE, "Minipool generation mismatch").
-			Tag("ExpectedNewMinipoolGeneration", minipoolGeneration).Tag("ActualNewMinipoolGeneration", *seqNum+1)
-	}
-
-	// clean up minipool
-	_, err = tx.Exec(ctx, "DELETE FROM minipools WHERE slot_num > -1 AND stream_id = $1", streamId)
+	_, migrated, err := s.lockStream(ctx, tx, streamId, true)
 	if err != nil {
 		return err
 	}
 
-	// update -1 record of minipools table to minipoolGeneration + 1
+	var lastMbNumInStorage *int64
+
+	err = tx.QueryRow(
+		ctx,
+		s.sqlForStream(
+			"SELECT MAX(seq_num) FROM {{miniblocks}} WHERE stream_id = $1",
+			streamId,
+			migrated,
+		),
+		streamId,
+	).Scan(&lastMbNumInStorage)
+	if err != nil {
+		return err
+	}
+	if lastMbNumInStorage == nil {
+		return RiverError(
+			Err_INTERNAL,
+			"DB data consistency check failed: No blocks for the stream found in block storage",
+		)
+	}
+
+	if *lastMbNumInStorage+1 != prevMinipoolGeneration {
+		return RiverError(
+			Err_INTERNAL,
+			"DB data consistency check failed: Previous minipool generation mismatch",
+			"lastMbInStorage",
+			*lastMbNumInStorage,
+		)
+	}
+
+	// Delete old minipool and check old data for consistency.
+	type mpRow struct {
+		generation int64
+		slot       int64
+	}
+	rows, _ := tx.Query(
+		ctx,
+		s.sqlForStream(
+			"DELETE FROM {{minipools}} WHERE stream_id = $1 RETURNING generation, slot_num",
+			streamId,
+			migrated,
+		),
+		streamId,
+	)
+	mpRows, err := pgx.CollectRows(
+		rows,
+		func(row pgx.CollectableRow) (mpRow, error) {
+			var gen, slot int64
+			err := row.Scan(&gen, &slot)
+			return mpRow{generation: gen, slot: slot}, err
+		},
+	)
+	if err != nil {
+		return err
+	}
+	slices.SortFunc(mpRows, func(a, b mpRow) int {
+		if a.generation != b.generation {
+			return int(a.generation - b.generation)
+		} else {
+			return int(a.slot - b.slot)
+		}
+	})
+	expectedSlot := int64(-1)
+	for _, mp := range mpRows {
+		if mp.generation != prevMinipoolGeneration {
+			return RiverError(
+				Err_INTERNAL,
+				"DB data consistency check failed: Minipool contains unexpected generation",
+				"generation",
+				mp.generation,
+			)
+		}
+		if mp.slot != expectedSlot {
+			return RiverError(
+				Err_INTERNAL,
+				"DB data consistency check failed: Minipool contains unexpected slot number",
+				"slot_num",
+				mp.slot,
+				"expected_slot_num",
+				expectedSlot,
+			)
+		}
+		expectedSlot++
+	}
+	if prevMinipoolSize != -1 && expectedSlot != int64(prevMinipoolSize) {
+		return RiverError(
+			Err_INTERNAL,
+			"DB data consistency check failed: Previous minipool size mismatch",
+			"actual_size",
+			expectedSlot,
+		)
+	}
+
+	// Insert -1 marker and all new minipool events into minipool.
 	_, err = tx.Exec(
 		ctx,
-		"UPDATE minipools SET generation = $1 WHERE slot_num = -1 AND stream_id = $2",
-		minipoolGeneration+1,
+		s.sqlForStream(
+			"INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, $2, -1)",
+			streamId,
+			migrated,
+		),
 		streamId,
+		newMinipoolGeneration,
+	)
+	if err != nil {
+		return err
+	}
+	_, err = tx.CopyFrom(
+		ctx,
+		pgx.Identifier{s.sqlForStream("{{minipools}}", streamId, migrated)},
+		[]string{"stream_id", "generation", "slot_num", "envelope"},
+		pgx.CopyFromSlice(
+			len(newMinipoolEnvelopes),
+			func(i int) ([]any, error) {
+				return []any{streamId, newMinipoolGeneration, i, newMinipoolEnvelopes[i]}, nil
+			},
+		),
 	)
 	if err != nil {
 		return err
 	}
 
-	// update stream_snapshots_index if needed
-	if snapshotMiniblock {
+	// Insert all miniblocks into miniblocks table.
+	newLastSnapshotMiniblock := int64(-1)
+	_, err = tx.CopyFrom(
+		ctx,
+		pgx.Identifier{s.sqlForStream("{{miniblocks}}", streamId, migrated)},
+		[]string{"stream_id", "seq_num", "blockdata"},
+		pgx.CopyFromSlice(
+			len(miniblocks),
+			func(i int) ([]any, error) {
+				if miniblocks[i].Snapshot {
+					newLastSnapshotMiniblock = miniblocks[i].Number
+				}
+				return []any{streamId, miniblocks[i].Number, miniblocks[i].Data}, nil
+			},
+		),
+	)
+	if err != nil {
+		return err
+	}
+
+	// Update stream_snapshots_index if needed.
+	if newLastSnapshotMiniblock > -1 {
 		_, err := tx.Exec(
 			ctx,
 			`UPDATE es SET latest_snapshot_miniblock = $1 WHERE stream_id = $2`,
-			minipoolGeneration,
+			newLastSnapshotMiniblock,
 			streamId,
 		)
 		if err != nil {
@@ -833,43 +1226,16 @@ func (s *PostgresStreamStore) promoteBlockTxn(
 		}
 	}
 
-	// insert all minipool events into minipool
-	for i, envelope := range envelopes {
-		_, err = tx.Exec(
-			ctx,
-			"INSERT INTO minipools (stream_id, slot_num, generation, envelope) VALUES ($1, $2, $3, $4)",
-			streamId,
-			i,
-			minipoolGeneration+1,
-			envelope,
-		)
-		if err != nil {
-			return err
-		}
-	}
-
-	// promote miniblock candidate into miniblocks table
-	tag, err := tx.Exec(
-		ctx,
-		"INSERT INTO miniblocks SELECT stream_id, seq_num, blockdata FROM miniblock_candidates WHERE stream_id = $1 AND seq_num = $2 AND miniblock_candidates.block_hash = $3",
-		streamId,
-		minipoolGeneration,
-		hex.EncodeToString(candidateBlockHash.Bytes()), // avoid leading '0x'
-	)
-	if err != nil {
-		return err
-	}
-	// Exactly one row should be copied. (stream_id, seq_num, blockhash) is a unique key, so we expect 0 or 1 copies.
-	if tag.RowsAffected() < 1 {
-		return RiverError(Err_NOT_FOUND, "No candidate block found")
-	}
-
-	// clean up miniblock proposals for stream id
+	// Delete miniblock candidates up to the last miniblock number.
 	_, err = tx.Exec(
 		ctx,
-		"DELETE FROM miniblock_candidates WHERE stream_id = $1 and seq_num <= $2",
+		s.sqlForStream(
+			"DELETE FROM {{miniblock_candidates}} WHERE stream_id = $1 and seq_num < $2",
+			streamId,
+			migrated,
+		),
 		streamId,
-		minipoolGeneration,
+		newMinipoolGeneration,
 	)
 	return err
 }
@@ -1027,16 +1393,39 @@ func (s *PostgresStreamStore) DeleteStream(ctx context.Context, streamId StreamI
 }
 
 func (s *PostgresStreamStore) deleteStreamTx(ctx context.Context, tx pgx.Tx, streamId StreamId) error {
-	_, err := tx.Exec(
-		ctx,
-		fmt.Sprintf(
-			`DROP TABLE miniblocks_%[1]s;
-			DROP TABLE minipools_%[1]s;
-			DELETE FROM es WHERE stream_id = $1`,
-			createTableSuffix(streamId),
-		),
-		streamId)
-	return err
+	_, migrated, err := s.lockStream(ctx, tx, streamId, true)
+	if err != nil {
+		return err
+	}
+
+	if migrated {
+		_, err = tx.Exec(
+			ctx,
+			s.sqlForStream(
+				`DELETE from {{miniblocks}} WHERE stream_id = $1;
+				DELETE from {{minipools}} WHERE stream_id = $1;
+				DELETE from {{miniblock_candidates}} where stream_id = $1;
+				DELETE FROM es WHERE stream_id = $1`,
+				streamId,
+				true,
+			),
+			streamId,
+		)
+		return err
+	} else {
+		_, err = tx.Exec(
+			ctx,
+			s.sqlForStream(
+				`DROP TABLE {{miniblocks}};
+				DROP TABLE {{minipools}};
+				DROP TABLE {{miniblock_candidates}};
+				DELETE FROM es WHERE stream_id = $1`,
+				streamId,
+				false,
+			),
+			streamId)
+		return err
+	}
 }
 
 func DbSchemaNameFromAddress(address string) string {
@@ -1116,7 +1505,7 @@ func (s *PostgresStreamStore) initializeSingleNodeKeyTx(ctx context.Context, tx 
 // acquireListeningConnection returns a connection that listens for changes to the schema, or
 // a nil connection if the context is cancelled. In the event of failure to acquire a connection
 // or listen, it will retry indefinitely until success.
-func (s *PostgresEventStore) acquireListeningConnection(ctx context.Context) *pgxpool.Conn {
+func (s *PostgresStreamStore) acquireListeningConnection(ctx context.Context) *pgxpool.Conn {
 	var err error
 	var conn *pgxpool.Conn
 	log := dlog.FromCtx(ctx)
@@ -1193,7 +1582,7 @@ func (s *PostgresStreamStore) DebugReadStreamData(
 	err := s.txRunnerWithUUIDCheck(
 		ctx,
 		"DebugReadStreamData",
-		pgx.ReadOnly,
+		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
 			var err error
 			ret, err = s.debugReadStreamData(ctx, tx, streamId)
@@ -1213,24 +1602,24 @@ func (s *PostgresStreamStore) debugReadStreamData(
 	tx pgx.Tx,
 	streamId StreamId,
 ) (*DebugReadStreamDataResult, error) {
-	result := &DebugReadStreamDataResult{
-		StreamId: streamId,
+	lastSnapshotMiniblock, migrated, err := s.lockStream(ctx, tx, streamId, false)
+	if err != nil {
+		return nil, err
 	}
 
-	err := tx.
-		QueryRow(ctx, "SELECT latest_snapshot_miniblock FROM es WHERE stream_id = $1", streamId).
-		Scan(&result.LatestSnapshotMiniblockNum)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, WrapRiverError(Err_NOT_FOUND, err).Message("stream not found in local storage")
-		} else {
-			return nil, err
-		}
+	result := &DebugReadStreamDataResult{
+		StreamId:                   streamId,
+		LatestSnapshotMiniblockNum: lastSnapshotMiniblock,
+		Migrated:                   migrated,
 	}
 
 	miniblocksRow, err := tx.Query(
 		ctx,
-		"SELECT seq_num, blockdata FROM miniblocks WHERE stream_id = $1 ORDER BY seq_num",
+		s.sqlForStream(
+			"SELECT seq_num, blockdata FROM {{miniblocks}} WHERE stream_id = $1 ORDER BY seq_num",
+			streamId,
+			result.Migrated,
+		),
 		streamId,
 	)
 	if err != nil {
@@ -1250,7 +1639,11 @@ func (s *PostgresStreamStore) debugReadStreamData(
 
 	rows, err := tx.Query(
 		ctx,
-		"SELECT generation, slot_num, envelope FROM minipools WHERE stream_id = $1 ORDER BY generation, slot_num",
+		s.sqlForStream(
+			"SELECT generation, slot_num, envelope FROM {{minipools}} WHERE stream_id = $1 ORDER BY generation, slot_num",
+			streamId,
+			result.Migrated,
+		),
 		streamId,
 	)
 	if err != nil {
@@ -1269,7 +1662,11 @@ func (s *PostgresStreamStore) debugReadStreamData(
 
 	candRows, err := tx.Query(
 		ctx,
-		"SELECT seq_num, block_hash, blockdata FROM miniblock_candidates WHERE stream_id = $1 ORDER BY seq_num",
+		s.sqlForStream(
+			"SELECT seq_num, block_hash, blockdata FROM {{miniblock_candidates}} WHERE stream_id = $1 ORDER BY seq_num",
+			streamId,
+			result.Migrated,
+		),
 		streamId,
 	)
 	if err != nil {
@@ -1303,7 +1700,7 @@ func (s *PostgresStreamStore) StreamLastMiniBlock(
 	err := s.txRunnerWithUUIDCheck(
 		ctx,
 		"StreamLastMiniBlock",
-		pgx.ReadOnly,
+		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
 			var err error
 			ret, err = s.streamLastMiniBlockTx(ctx, tx, streamID)
@@ -1322,147 +1719,38 @@ func (s *PostgresStreamStore) streamLastMiniBlockTx(
 	tx pgx.Tx,
 	streamID StreamId,
 ) (*MiniblockData, error) {
-	miniblockNumsRow, err := tx.Query(
-		ctx,
-		"SELECT seq_num, blockdata FROM miniblocks WHERE stream_id = $1 ORDER BY seq_num DESC LIMIT 1",
-		streamID,
-	)
+	_, migrated, err := s.lockStream(ctx, tx, streamID, false)
 	if err != nil {
 		return nil, err
 	}
 
-	defer miniblockNumsRow.Close()
-
-	if miniblockNumsRow.Next() {
-		var (
-			maxSeqNum int64
-			blockData []byte
-		)
-
-		if err = miniblockNumsRow.Scan(&maxSeqNum, &blockData); err != nil {
-			return nil, err
-		}
-
-		return &MiniblockData{
-			StreamID:      streamID,
-			Number:        maxSeqNum,
-			MiniBlockInfo: blockData,
-		}, nil
-	}
-
-	return nil, RiverError(Err_NOT_FOUND, "latest miniblock in DB not found for stream").
-		Tags("stream", streamID).
-		Func("lastMiniBlockForStream")
-}
-
-func (s *PostgresStreamStore) ImportMiniblocks(ctx context.Context, miniBlocks []*MiniblockData) error {
-	if len(miniBlocks) == 0 {
-		return nil
-	}
-
-	return s.txRunnerWithUUIDCheck(
-		ctx,
-		"ImportMiniBlocks",
-		pgx.ReadWrite,
-		func(ctx context.Context, tx pgx.Tx) error {
-			if miniBlocks[0].Number == 0 {
-				if err := s.createStreamStorageTx(ctx, tx, miniBlocks[0].StreamID, miniBlocks[0].MiniBlockInfo); err != nil {
-					return err
-				}
-				miniBlocks = miniBlocks[1:]
-			}
-
-			return s.importMiniblocksTx(ctx, tx, miniBlocks)
-		},
-		nil,
-		"streamId", miniBlocks[0].StreamID,
-	)
-}
-
-func (s *PostgresStreamStore) importMiniblocksTx(
-	ctx context.Context,
-	tx pgx.Tx,
-	miniBlocks []*MiniblockData,
-) error {
-	if len(miniBlocks) == 0 {
-		return nil
-	}
-
 	var (
-		streamID = miniBlocks[0].StreamID
-		seqNum   *int64
+		maxSeqNum int64
+		blockData []byte
 	)
-
-	err := tx.QueryRow(
+	err = tx.QueryRow(
 		ctx,
-		"SELECT MAX(seq_num) as latest_blocks_number FROM miniblocks WHERE stream_id = $1", streamID).
-		Scan(&seqNum)
-	if err != nil {
-		return err
-	}
-
-	if seqNum == nil {
-		seqNum = new(int64)
-		*seqNum = -1
-	}
-
-	// clean up minipool
-	_, err = tx.Exec(ctx, "DELETE FROM minipools WHERE slot_num > -1 AND stream_id = $1", streamID)
-	if err != nil {
-		return err
-	}
-
-	for _, miniBlock := range miniBlocks {
-		var (
-			expBlockNum = *seqNum + 1
-			err         error
-		)
-
-		if expBlockNum != miniBlock.Number {
-			return RiverError(
-				Err_BAD_BLOCK,
-				"Expected block %d to import but got block %d",
-				expBlockNum,
-				miniBlock.Number,
-			)
-		}
-
-		if expBlockNum == 0 {
-			err = s.txRunnerWithUUIDCheck(
-				ctx,
-				"CreateStreamStorage",
-				pgx.ReadWrite,
-				func(ctx context.Context, tx pgx.Tx) error {
-					return s.createStreamStorageTx(ctx, tx, streamID, miniBlock.MiniBlockInfo)
-				},
-				nil,
-				"streamId", streamID,
-			)
-		} else {
-			_, err = tx.Exec(
-				ctx,
-				"INSERT INTO miniblocks (stream_id, seq_num, blockdata) values ($1, $2, $3)",
-				//"INSERT INTO miniblocks SELECT stream_id, seq_num, blockdata FROM miniblock_candidates WHERE stream_id = $1 AND seq_num = $2 AND miniblock_candidates.block_hash = $3",
-				streamID,
-				miniBlock.Number,
-				miniBlock.MiniBlockInfo, // avoid leading '0x'
-			)
-		}
-		if err != nil {
-			return err
-		}
-
-		*seqNum = *seqNum + 1
-	}
-
-	_, err = tx.Exec(
-		ctx,
-		"UPDATE minipools SET generation = $1 WHERE slot_num = -1 AND stream_id = $2",
-		miniBlocks[len(miniBlocks)-1].Number+1,
+		s.sqlForStream(
+			"SELECT seq_num, blockdata FROM {{miniblocks}} WHERE stream_id = $1 ORDER BY seq_num DESC LIMIT 1",
+			streamID,
+			migrated,
+		),
 		streamID,
-	)
+	).Scan(&maxSeqNum, &blockData)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, RiverError(Err_NOT_FOUND, "latest miniblock in DB not found for stream").
+				Tags("stream", streamID).
+				Func("lastMiniBlockForStream")
+		}
+		return nil, err
+	}
 
-	return err
+	return &MiniblockData{
+		StreamID:      streamID,
+		Number:        maxSeqNum,
+		MiniBlockInfo: blockData,
+	}, nil
 }
 
 func createTableSuffix(streamId StreamId) string {

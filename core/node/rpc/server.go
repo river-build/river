@@ -302,7 +302,12 @@ func (s *Service) initRiverChain() error {
 		}
 	}
 
-	s.registryContract, err = registries.NewRiverRegistryContract(ctx, s.riverChain, &s.config.RegistryContract)
+	s.registryContract, err = registries.NewRiverRegistryContract(
+		ctx,
+		s.riverChain,
+		&s.config.RegistryContract,
+		&s.config.RiverRegistry,
+	)
 	if err != nil {
 		return err
 	}
@@ -424,6 +429,7 @@ func (s *Service) runHttpServer() error {
 			"X-User-Agent",
 			"User-Agent",
 			"Connect-Protocol-Version",
+			"Connect-Timeout-Ms",
 			"x-river-request-id",
 		},
 	})
