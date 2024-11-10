@@ -418,6 +418,23 @@ contract RewardsDistributionV2Test is
     rewardsDistributionFacet.redelegate(depositId, delegatee);
   }
 
+  function test_fuzz_redelegate_revertIf_sameOperator(
+    uint96 amount,
+    address operator,
+    uint256 commissionRate
+  ) public {
+    uint256 depositId = test_fuzz_stake(
+      address(this),
+      amount,
+      operator,
+      commissionRate,
+      address(this)
+    );
+
+    vm.expectRevert(River.River__DelegateeSameAsCurrent.selector);
+    rewardsDistributionFacet.redelegate(depositId, operator);
+  }
+
   function test_fuzz_redelegate(
     uint96 amount,
     address operator0,
@@ -456,8 +473,6 @@ contract RewardsDistributionV2Test is
       address(this)
     );
   }
-
-  // TODO: test redelegate to the same operator
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                     CHANGE BENEFICIARY                     */
@@ -702,8 +717,42 @@ contract RewardsDistributionV2Test is
     rewardsDistributionFacet.changeBeneficiary(depositId, newBeneficiary);
   }
 
-  function test_initiateWithdraw_claimReward() public {
-    // TODO: implement
+  function test_initiateWithdraw_claimReward(
+    uint96 amount,
+    uint256 commissionRate,
+    address beneficiary,
+    uint256 timeLapse
+  ) public {
+    timeLapse = bound(timeLapse, 0, rewardDuration);
+
+    test_notifyRewardAmount();
+    uint256 depositId = test_fuzz_stake(
+      address(this),
+      amount,
+      OPERATOR,
+      commissionRate,
+      beneficiary
+    );
+
+    vm.warp(block.timestamp + timeLapse);
+
+    vm.expectEmit(address(rewardsDistributionFacet));
+    emit InitiateWithdraw(address(this), depositId, amount);
+
+    rewardsDistributionFacet.initiateWithdraw(depositId);
+
+    uint256 currentReward = rewardsDistributionFacet.currentReward(beneficiary);
+
+    vm.expectEmit(address(rewardsDistributionFacet));
+    emit ClaimReward(beneficiary, beneficiary, currentReward);
+
+    vm.prank(beneficiary);
+    uint256 reward = rewardsDistributionFacet.claimReward(
+      beneficiary,
+      beneficiary
+    );
+
+    assertEq(reward, currentReward, "reward");
   }
 
   function test_withdraw_revertIf_notDepositor() public {
@@ -870,7 +919,6 @@ contract RewardsDistributionV2Test is
     );
   }
 
-  // TODO: fuzz more depositors
   function test_fuzz_claimReward_byBeneficiary(
     address depositor,
     uint96 amount,
@@ -891,12 +939,51 @@ contract RewardsDistributionV2Test is
         beneficiary != address(this) &&
         beneficiary != address(rewardsDistributionFacet)
     );
-    commissionRate = bound(commissionRate, 0, 10000);
     timeLapse = bound(timeLapse, 0, rewardDuration);
 
     test_fuzz_notifyRewardAmount(rewardAmount);
     test_stake();
     test_fuzz_stake(depositor, amount, operator, commissionRate, beneficiary);
+
+    vm.warp(block.timestamp + timeLapse);
+
+    uint256 currentReward = rewardsDistributionFacet.currentReward(beneficiary);
+
+    vm.expectEmit(address(rewardsDistributionFacet));
+    emit ClaimReward(beneficiary, beneficiary, currentReward);
+
+    vm.prank(beneficiary);
+    uint256 reward = rewardsDistributionFacet.claimReward(
+      beneficiary,
+      beneficiary
+    );
+
+    verifyClaim(beneficiary, beneficiary, reward, currentReward, timeLapse);
+  }
+
+  /// forge-config: default.fuzz.runs = 64
+  function test_fuzz_claimReward_multipleDepositors(
+    address[32] memory depositors,
+    uint96[32] memory amounts,
+    address beneficiary,
+    uint256 rewardAmount,
+    uint256 timeLapse
+  ) public givenOperator(OPERATOR, 0) {
+    depositors[0] = beneficiary;
+    timeLapse = bound(timeLapse, 0, rewardDuration);
+
+    test_fuzz_notifyRewardAmount(rewardAmount);
+
+    for (uint256 i; i < 32; ++i) {
+      amounts[i] = uint96(bound(amounts[i], 1, type(uint88).max));
+
+      bridgeTokensForUser(depositors[i], amounts[i]);
+
+      vm.startPrank(depositors[i]);
+      river.approve(address(rewardsDistributionFacet), amounts[i]);
+      rewardsDistributionFacet.stake(amounts[i], OPERATOR, depositors[i]);
+      vm.stopPrank();
+    }
 
     vm.warp(block.timestamp + timeLapse);
 
@@ -924,7 +1011,6 @@ contract RewardsDistributionV2Test is
     vm.assume(
       operator != address(this) && operator != address(rewardsDistributionFacet)
     );
-    commissionRate = bound(commissionRate, 0, 10000);
     timeLapse = bound(timeLapse, 0, rewardDuration);
     amount = uint96(bound(amount, 1 ether, type(uint96).max));
 
@@ -960,7 +1046,6 @@ contract RewardsDistributionV2Test is
     vm.assume(
       operator != address(this) && operator != address(rewardsDistributionFacet)
     );
-    commissionRate = bound(commissionRate, 0, 10000);
     timeLapse = bound(timeLapse, 0, rewardDuration);
     amount = uint96(bound(amount, 1 ether, type(uint96).max));
 
