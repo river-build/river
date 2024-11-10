@@ -27,6 +27,13 @@ export class MlsStore extends Dexie {
     constructor(deviceKey: Uint8Array) {
         const databaseName = `mlsStore-${bin_toString(deviceKey)}`
         super(databaseName)
+
+        this.version(1).stores({
+            secretKeys: '[streamId+epoch]',
+            publicKeys: '[streamId+epoch]',
+            groups: 'streamId',
+            epochSecrets: '[streamId+epoch]',
+        })
     }
 
     async saveSecretKey(streamId: string, epoch: bigint, secretKey: Uint8Array): Promise<void> {
