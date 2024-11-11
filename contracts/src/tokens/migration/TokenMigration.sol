@@ -39,20 +39,22 @@ contract TokenMigrationFacet is
 
     TokenMigrationStorage.Layout storage ds = TokenMigrationStorage.layout();
 
-    uint256 currentBalance = ds.oldToken.balanceOf(account);
+    IERC20 oldToken = ds.oldToken;
+    IERC20 newToken = ds.newToken;
+
+    uint256 currentBalance = oldToken.balanceOf(account);
 
     if (currentBalance == 0)
       CustomRevert.revertWith(TokenMigration__InvalidBalance.selector);
 
-    if (ds.oldToken.allowance(account, address(this)) < currentBalance)
+    if (oldToken.allowance(account, address(this)) < currentBalance)
       CustomRevert.revertWith(TokenMigration__InvalidAllowance.selector);
 
-    address(ds.oldToken).safeTransferFrom(
-      account,
-      address(this),
-      currentBalance
-    );
-    address(ds.newToken).safeTransfer(account, currentBalance);
+    // Transfer old tokens from user to zero address (burn)
+    address(oldToken).safeTransferFrom(account, address(0), currentBalance);
+
+    // Transfer new tokens to user
+    address(newToken).safeTransfer(account, currentBalance);
 
     emit TokensMigrated(account, currentBalance);
   }
@@ -61,10 +63,15 @@ contract TokenMigrationFacet is
   function withdrawTokens() external onlyOwner {
     TokenMigrationStorage.Layout storage ds = TokenMigrationStorage.layout();
 
-    uint256 oldTokenBalance = ds.oldToken.balanceOf(address(this));
-    if (oldTokenBalance > 0) ds.oldToken.transfer(_owner(), oldTokenBalance);
+    (IERC20 oldToken, IERC20 newToken) = (ds.oldToken, ds.newToken);
+    address owner = _owner();
 
-    uint256 newTokenBalance = ds.newToken.balanceOf(address(this));
-    if (newTokenBalance > 0) ds.newToken.transfer(_owner(), newTokenBalance);
+    uint256 oldTokenBalance = oldToken.balanceOf(address(this));
+    if (oldTokenBalance > 0)
+      address(oldToken).safeTransfer(owner, oldTokenBalance);
+
+    uint256 newTokenBalance = newToken.balanceOf(address(this));
+    if (newTokenBalance > 0)
+      address(newToken).safeTransfer(owner, newTokenBalance);
   }
 }

@@ -150,7 +150,7 @@ contract TokenMigrationTest is
 
     assertEq(oldToken.balanceOf(address(tokenMigration)), 0);
     assertEq(newToken.balanceOf(address(tokenMigration)), 0);
-    assertEq(oldToken.balanceOf(deployer), amount);
+    assertEq(oldToken.balanceOf(address(0)), amount);
   }
 
   function test_revertWhen_withdrawTokensNotOwner() external {
