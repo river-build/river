@@ -16,6 +16,22 @@ After updating `river_migrate_db.env` with correct parameters, migration tool ca
 
     # reconfigure container to use target db
 
+To run a stream data migration simultaneously, run the migration tool like so:
+
+    ./river_migrate_db target create # create target schema
+    
+    ./river_migrate_db target init # Run sql migrations on target to apply the current schema
+
+    # No need to partition the target as the migrated schema consists of a fixed
+    # set of pre-allocated tables created by `init`
+    
+    # Copy source data to target, copying stream data into the migrated schema on the target database
+    ./river_migrate_db copy --migrate_stream_schema
+
+    # Validate target data against source database, searching for target stream
+    # data in migrated schema
+    ./river_migrate_db validate --migrated
+
 For command-line options use `help` command.
 
 List of env vars or settings in `river_migrate_db.env`:
