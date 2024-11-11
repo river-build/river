@@ -77,17 +77,17 @@ func (s *Service) addParsedEvent(
 		mbs := streamView.Blocks()
 		index := len(mbs) - 1
 		if index >= 0 {
-			err.Tags("lastMiniblockHash_View", mbs[index].Ref.Hash,
+			err = err.Tags("lastMiniblockHash_View", mbs[index].Ref.Hash,
 				"lastMiniblockNum_View", mbs[index].Ref.Num)
 		}
 		index--
 		if index >= 0 {
-			err.Tags("lastMiniblockHash_View_Prev", mbs[index].Ref.Hash,
+			err = err.Tags("lastMiniblockHash_View_Prev", mbs[index].Ref.Hash,
 				"lastMiniblockNum_View_Prev", mbs[index].Ref.Num)
 		}
 		index--
 		if index >= 0 {
-			err.Tags("lastMiniblockHash_View_PrevPrev", mbs[index].Ref.Hash,
+			err = err.Tags("lastMiniblockHash_View_PrevPrev", mbs[index].Ref.Hash,
 				"lastMiniblockNum_View_PrevPrev", mbs[index].Ref.Num)
 		}
 		return err
