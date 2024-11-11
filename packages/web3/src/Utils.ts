@@ -113,7 +113,11 @@ export const getFixedPricingModule = async (spaceDapp: ISpaceDapp | undefined) =
 }
 
 export const findDynamicPricingModule = (pricingModules: PricingModuleStruct[]) =>
-    pricingModules.find((module) => module.name === TIERED_PRICING_ORACLE)
+    // TODO: reverse() is a temporary fix to find the most recently deployed pricing module
+    // but it's not a great solution, we need to filter the array by address
+    // which requires adding env var and reading it here
+    // or we need some other identifier for pricing module
+    [...pricingModules].reverse().find((module) => module.name === TIERED_PRICING_ORACLE)
 
 export const findFixedPricingModule = (pricingModules: PricingModuleStruct[]) =>
     pricingModules.find((module) => module.name === FIXED_PRICING)
