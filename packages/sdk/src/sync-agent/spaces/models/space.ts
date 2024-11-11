@@ -16,9 +16,13 @@ import { Members } from '../../members/members'
 const logger = dlogger('csb:space')
 
 export interface SpaceModel extends Identifiable {
+    /** The River `spaceId` of the space. */
     id: string
+    /** Whether the SyncAgent has loaded this space data. */
     initialized: boolean
+    /** The ids of the channels in the space. */
     channelIds: string[]
+    /** The space metadata {@link SpaceInfo}. */
     metadata?: SpaceInfo
 }
 
