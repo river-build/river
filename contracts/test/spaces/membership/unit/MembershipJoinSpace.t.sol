@@ -43,6 +43,15 @@ contract MembershipJoinSpaceTest is
     assertEq(membershipToken.balanceOf(alice), 1);
   }
 
+  function test_joinDynamicSpace() external {
+    uint256 membershipFee = platformReqs.getMembershipFee();
+
+    vm.deal(alice, membershipFee);
+    vm.startPrank(alice);
+    MembershipFacet(dynamicSpace).joinSpace{value: membershipFee}(alice);
+    vm.stopPrank();
+  }
+
   function test_joinSpaceMultipleTimes()
     external
     givenAliceHasMintedMembership

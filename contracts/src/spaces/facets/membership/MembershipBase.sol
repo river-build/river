@@ -30,9 +30,6 @@ abstract contract MembershipBase is IMembershipBase {
     if (info.freeAllocation > 0) {
       _verifyFreeAllocation(info.freeAllocation);
       ds.freeAllocation = info.freeAllocation;
-    } else {
-      ds.freeAllocation = IPlatformRequirements(ds.spaceFactory)
-        .getMembershipMintLimit();
     }
 
     ds.freeAllocationEnabled = true;
