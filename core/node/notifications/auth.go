@@ -44,7 +44,7 @@ func (c authenticationChallenge) Verify(
 	// ensure that the auth challenge nor the delegateExpiryEpoch hasn't expired.
 	now := time.Now()
 	if now.After(c.expires) || (len(delegateSig) > 0 && now.After(time.Unix(delegateExpiryEpochMs/1000, 0))) {
-		return RiverError(Err_UNAUTHENTICATED, "authentication expired").Tag("expires", c.expires).Tag("delegateExpiryEpochMs", delegateExpiryEpochMs)
+		return RiverError(Err_UNAUTHENTICATED, "authentication expired", "expires", c.expires, "delegateExpiryEpochMs", delegateExpiryEpochMs)
 	}
 
 	// ensure that the signature that was calculated with:
@@ -64,16 +64,16 @@ func (c authenticationChallenge) Verify(
 	
 	signerPubKey, err := crypto.RecoverEthereumMessageSignerPublicKey(hash[:], signature)
 	if err != nil {
-		return RiverError(Err_UNAUTHENTICATED, "error recovering signer public key").Tag("user", c.userID).Tag("error", err)
+		return RiverError(Err_UNAUTHENTICATED, "error recovering signer public key", "user", c.userID, "error", err)
 	}
 
 	signerAddress := crypto.PublicKeyToAddress(signerPubKey)
 
 	if len(delegateSig) == 0 {
-		if ( c.userID == signerAddress) {
+		if c.userID == signerAddress {
 			return nil 
 		} else {
-			return RiverError(Err_UNAUTHENTICATED, "user id mismatch").Tag("user", c.userID).Tag("signer", signerAddress)
+			return RiverError(Err_UNAUTHENTICATED, "user id mismatch", "user", c.userID, "signer", signerAddress)
 		}
 
 	}
@@ -124,14 +124,14 @@ func (s *Service) FinishAuthentication(
 	)
 
 	if len(msg.GetChallenge()) != challengeLength {
-		return nil, RiverError(Err_NOT_FOUND, "invalid challenge").Tag("user", userID)
+		return nil, RiverError(Err_NOT_FOUND, "invalid challenge", "user", userID)
 	}
 
 	copy(challenge[:], msg.GetChallenge())
 
 	raw, found := s.pendingAuthenticationRequests.Load(challenge)
 	if !found {
-		return nil, RiverError(Err_NOT_FOUND, "no pending authentication challenge").Tag("user", userID)
+		return nil, RiverError(Err_NOT_FOUND, "no pending authentication challenge", "user", userID)
 	}
 
 	// challenge is valid for one attempt, user must start a new authentication process for a second attempt
@@ -141,7 +141,7 @@ func (s *Service) FinishAuthentication(
 	chal := raw.(*authenticationChallenge)
 	err := chal.Verify(ctx, challenge, msg.GetSignature(), msg.GetDelegateSig(), msg.GetDelegateExpiryEpochMs())
 	if err != nil {
-		return nil, RiverError(Err_PERMISSION_DENIED, "bad signature").Tag("user", userID).Tag("error", err)
+		return nil, RiverError(Err_PERMISSION_DENIED, "bad signature", "user", userID, "error", err)
 	}
 
 	// create a JWT session token that the client can use to make notification service rpc and send it to the client
