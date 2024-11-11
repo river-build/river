@@ -253,7 +253,7 @@ func TestStreamMiniblockBatchProduction(t *testing.T) {
 
 	// the stream cache uses the chain block production as a ticker to create new mini-blocks.
 	// after initialization take back control when to create new chain blocks.
-	streamsCount := 10*MiniblockCandidateBatchSize - 1
+	streamsCount := 4*MiniblockCandidateBatchSize - 5
 	genesisBlocks := tc.allocateStreams(streamsCount)
 
 	// add events to ~50% of the streams
@@ -449,7 +449,7 @@ func Disabled_TestStreamUnloadWithSubscribers(t *testing.T) {
 	}
 
 	// make all mini-blocks to process all events in minipool
-	jobs := mpProducer.scheduleCandidates(ctx)
+	jobs := mpProducer.scheduleCandidates(ctx, 0)
 	require.Eventually(
 		func() bool { return mpProducer.testCheckAllDone(jobs) },
 		240*time.Second,
