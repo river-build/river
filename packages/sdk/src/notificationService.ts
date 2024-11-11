@@ -47,15 +47,8 @@ export class NotificationServiceUtils {
         }
     }
 
-    static async authenticateWithSignerContext(
-        userId: string | Uint8Array,
-        signerContext: SignerContext,
-        serviceUrl: string,
-        opts?: RpcOptions,
-    ) {
-        if (typeof userId === 'string') {
-            userId = bin_fromHexString(userId)
-        }
+    static async authenticate(signerContext: SignerContext, serviceUrl: string, opts?: RpcOptions) {
+        const userId = signerContext.creatorAddress
 
         return this._authenticateCommon(
             userId,

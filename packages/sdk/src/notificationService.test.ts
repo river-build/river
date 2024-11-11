@@ -14,7 +14,8 @@ const logger = dlogger('notificationService.test')
 
 describe('notificationServicetest', () => {
     test('login with primary key', async () => {
-        const notificationServiceUrl = env.NOTIFICATION_SERVICE_URL
+        const notificationServiceUrl =
+            env.NOTIFICATION_SERVICE_URL ?? 'https://river-notification-service-alpha.towns.com/' // ?? 'http://localhost:4040
         if (!notificationServiceUrl) {
             logger.info('NOTIFICATION_SERVICE_URL is not set')
             return
@@ -45,7 +46,8 @@ describe('notificationServicetest', () => {
     })
 
     test('login with delegate key', async () => {
-        const notificationServiceUrl = env.NOTIFICATION_SERVICE_URL
+        const notificationServiceUrl =
+            env.NOTIFICATION_SERVICE_URL ?? 'https://river-notification-service-alpha.towns.com/' // ?? 'http://localhost:4040
         if (!notificationServiceUrl) {
             logger.info('NOTIFICATION_SERVICE_URL is not set')
             return
@@ -53,15 +55,10 @@ describe('notificationServicetest', () => {
 
         const wallet = ethers.Wallet.createRandom()
         const delegateWallet = ethers.Wallet.createRandom()
-        const userId = wallet.address
         const signerContext = await makeSignerContext(wallet, delegateWallet, { days: 1 })
 
         const { startResponse, finishResponse, notificationRpcClient } =
-            await NotificationServiceUtils.authenticateWithSignerContext(
-                userId,
-                signerContext,
-                notificationServiceUrl,
-            )
+            await NotificationServiceUtils.authenticate(signerContext, notificationServiceUrl)
         logger.info('authenticated', { startResponse, finishResponse })
 
         const settings = await notificationRpcClient.getSettings(new GetSettingsRequest())
