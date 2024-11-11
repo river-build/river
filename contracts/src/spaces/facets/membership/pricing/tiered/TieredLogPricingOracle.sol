@@ -107,7 +107,7 @@ contract TieredLogPricingOracle is IMembershipPricing, IntrospectionFacet {
   }
 
   function _calculateStablePrice(
-    uint256 freeAllocation,
+    uint256,
     uint256 totalMinted
   ) internal pure returns (uint256) {
     // Define minted tiers
@@ -120,23 +120,20 @@ contract TieredLogPricingOracle is IMembershipPricing, IntrospectionFacet {
     uint256 basePriceTier2 = 1000; // $10.00
     uint256 basePriceTier3 = 10000; // $100.00
 
-    if (totalMinted > tier3) {
-      return basePriceTier3;
-    } else if (totalMinted > tier2) {
+    if (totalMinted <= tier1) {
+      // Logarithmic scaling for tier 1
+      uint256 logScale = _calculateLogScale(totalMinted == 0 ? 1 : totalMinted);
+      return logScale / 2 + basePriceTier1; // Dividing by 2 is an arbitrary scaling factor
+    } else if (totalMinted <= tier2) {
       // Logarithmic scaling for tier 2
       uint256 logScale = _calculateLogScale(totalMinted);
-      return logScale * 22 + basePriceTier2;
-    } else if (totalMinted > tier1) {
-      // Logarithmic scaling for tier 1
-      uint256 logScale = _calculateLogScale(totalMinted);
       return logScale * 3 + basePriceTier1;
+    } else if (totalMinted <= tier3) {
+      // Logarithmic scaling for tier 3
+      uint256 logScale = _calculateLogScale(totalMinted);
+      return logScale * 22 + basePriceTier2;
     } else {
-      // Below tier 1
-      if (freeAllocation > totalMinted) return 0;
-
-      // Logarithmic scaling for tier 0
-      uint256 logScale = _calculateLogScale(totalMinted == 0 ? 1 : totalMinted);
-      return logScale / 2 + basePriceTier1; // // Dividing by 2 is an arbitrary scaling factor
+      return basePriceTier3;
     }
   }
 
