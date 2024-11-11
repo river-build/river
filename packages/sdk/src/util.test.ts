@@ -481,6 +481,8 @@ export async function createSpaceAndDefaultChannel(
     }
 }
 
+export const DefaultFreeAllocation = 1000
+
 export async function createVersionedSpaceFromMembership(
     client: Client,
     spaceDapp: ISpaceDapp,
@@ -488,6 +490,7 @@ export async function createVersionedSpaceFromMembership(
     name: string,
     membership: LegacyMembershipStruct | MembershipStruct,
 ): Promise<ethers.ContractTransaction> {
+    membership.settings.freeAllocation = DefaultFreeAllocation
     if (useLegacySpaces()) {
         if (isLegacyMembershipType(membership)) {
             return await spaceDapp.createLegacySpace(
