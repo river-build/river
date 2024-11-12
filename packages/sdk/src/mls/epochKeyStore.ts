@@ -31,6 +31,11 @@ export class EpochKeyService {
         return epochKeyStore
     }
 
+    public getEpochKey(streamId: string, epoch: bigint): EpochKey {
+        const epochKeyStore = this.getEpochKeyStore(streamId)
+        return epochKeyStore.getEpochKey(epoch)
+    }
+
     public async addSealedEpochSecret(
         streamId: string,
         epoch: bigint,

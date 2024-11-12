@@ -70,12 +70,12 @@ export class MlsCrypto {
         const epoch = group.currentEpoch
 
         // Check if we have derived keys, if not try deriving them
-        const epochKeyState = this.epochKeyService.getEpochKeyState(streamId, epoch)
-        if (epochKeyState.status !== 'EPOCH_KEY_DERIVED') {
+        const epochKey = this.epochKeyService.getEpochKey(streamId, epoch)
+        if (epochKey.state.status !== 'EPOCH_KEY_DERIVED') {
             throw new Error('Epoch keys not derived')
         }
 
-        const ciphertext = await this.cipherSuite.seal(epochKeyState.publicKey, message)
+        const ciphertext = await this.cipherSuite.seal(epochKey.state.publicKey, message)
         return new EncryptedData({
             algorithm: 'mls',
             mlsCiphertext: ciphertext.toBytes(),
@@ -101,17 +101,17 @@ export class MlsCrypto {
         if (epoch === undefined) {
             throw new Error('No epoch specified')
         }
-        const epochKeyState = this.epochKeyService.getEpochKeyState(streamId, epoch)
+        const epochKey = this.epochKeyService.getEpochKey(streamId, epoch)
 
-        if (epochKeyState.status !== 'EPOCH_KEY_DERIVED') {
+        if (epochKey.state.status !== 'EPOCH_KEY_DERIVED') {
             throw new Error('Epoch keys not derived')
         }
 
         const ciphertext = HpkeCiphertext.fromBytes(encryptedData.mlsCiphertext)
         return await this.cipherSuite.open(
             ciphertext,
-            epochKeyState.secretKey,
-            epochKeyState.publicKey,
+            epochKey.state.secretKey,
+            epochKey.state.publicKey,
         )
     }
 

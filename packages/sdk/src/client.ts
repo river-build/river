@@ -2450,11 +2450,11 @@ export class Client
         }
 
         // Ensure epoch keys are derived
-        const keyStatus = this.mlsCrypto.epochKeyService.getEpochKeyState(
+        const epochKey = this.mlsCrypto.epochKeyService.getEpochKey(
             streamId,
             groupState.group.currentEpoch,
         )
-        if (keyStatus.status !== 'EPOCH_KEY_DERIVED') {
+        if (epochKey.state.status !== 'EPOCH_KEY_DERIVED') {
             throw new Error('epoch keys not derived')
         }
 
@@ -2662,23 +2662,23 @@ export class Client
             ) {
                 const currentEpoch = groupState.group.currentEpoch
                 const previousEpoch = groupState.group.currentEpoch - 1n
-                const currentEpochKeyState = this.mlsCrypto.epochKeyService.getEpochKeyState(
+                const currentEpochKey = this.mlsCrypto.epochKeyService.getEpochKey(
                     streamId,
                     currentEpoch,
                 )
-                const previousEpochKeyState = this.mlsCrypto.epochKeyService.getEpochKeyState(
+                const previousEpochKey = this.mlsCrypto.epochKeyService.getEpochKey(
                     streamId,
                     previousEpoch,
                 )
                 if (
-                    currentEpochKeyState.status === 'EPOCH_KEY_DERIVED' &&
-                    previousEpochKeyState.status === 'EPOCH_KEY_DERIVED'
+                    currentEpochKey.state.status === 'EPOCH_KEY_DERIVED' &&
+                    previousEpochKey.state.status === 'EPOCH_KEY_DERIVED'
                 ) {
-                    if (!previousEpochKeyState.sealedEpochSecret) {
-                        previousEpochKeyState.sealedEpochSecret =
+                    if (!previousEpochKey.state.sealedEpochSecret) {
+                        previousEpochKey.state.sealedEpochSecret =
                             await this.mlsCrypto.cipherSuite.seal(
-                                currentEpochKeyState.publicKey,
-                                previousEpochKeyState.openEpochSecret.toBytes(),
+                                currentEpochKey.state.publicKey,
+                                previousEpochKey.state.openEpochSecret.toBytes(),
                             )
                     }
 
@@ -2690,13 +2690,13 @@ export class Client
                                 content: {
                                     case: 'keyAnnouncement',
                                     value: {
-                                        key: previousEpochKeyState.sealedEpochSecret.toBytes(),
+                                        key: previousEpochKey.state.sealedEpochSecret.toBytes(),
                                         epoch: previousEpoch,
                                     },
                                 },
                             }),
                         )
-                        console.log('SENT Keys', previousEpochKeyState.sealedEpochSecret.toBytes())
+                        console.log('SENT Keys', previousEpochKey.state.sealedEpochSecret.toBytes())
                     } catch (error) {
                         console.log('ERROR announcing key', error)
                     }
