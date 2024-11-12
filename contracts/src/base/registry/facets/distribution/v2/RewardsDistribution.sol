@@ -272,7 +272,7 @@ contract RewardsDistribution is
 
     _sweepSpaceRewardsIfNecessary(delegatee);
 
-    emit InitiateWithdraw(depositId, amount);
+    emit InitiateWithdraw(owner, depositId, amount);
   }
 
   /// @inheritdoc IRewardsDistribution
@@ -451,7 +451,9 @@ contract RewardsDistribution is
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     return
-      ds.staking.currentReward(ds.staking.treasureByBeneficiary[beneficiary]);
+      ds.staking.currentRewardScaled(
+        ds.staking.treasureByBeneficiary[beneficiary]
+      ) / StakingRewards.SCALE_FACTOR;
   }
 
   /// @inheritdoc IRewardsDistribution
