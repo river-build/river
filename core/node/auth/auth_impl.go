@@ -770,7 +770,7 @@ func (ca *chainAuth) checkEntitlement(
 	isMemberCtx, isMemberCancel := context.WithCancel(ctx)
 	defer isMemberCancel()
 
-	isMemberResults := make(chan bool, 1)
+	isMemberResults := make(chan bool, len(wallets))
 	isMemberError := make(chan error, len(wallets))
 
 	var isMemberWg sync.WaitGroup
@@ -803,19 +803,30 @@ func (ca *chainAuth) checkEntitlement(
 	// Look for any returned errors. If at least one check was positive, then we ignore any subsequent
 	// errors. Otherwise we will report an error result since we could not conclusively determine that
 	// the user was not a space member.
-	for err := range isMemberError {
-		// Once we encounter a positive entitlement result, we cancel all other request, which should result
-		// in context cancellation errors being returned for those checks, even though the check itself was
-		// not faulty. However, a context cancellation error can also occur if a server request times out, so
-		// not all cancellations can be ignored.
-		// Here, we collect all errors and report them, assuming that when the isMember result is false,
-		// no contexts were cancelled by us and therefore any errors that occur at all are informative.
-		if err != nil {
-			if membershipError != nil {
-				membershipError = fmt.Errorf("%w; %w", membershipError, err)
-			} else {
-				membershipError = err
+	if !isMember {
+		for err := range isMemberError {
+			// Once we encounter a positive entitlement result, we cancel all other request, which should result
+			// in context cancellation errors being returned for those checks, even though the check itself was
+			// not faulty. However, a context cancellation error can also occur if a server request times out, so
+			// not all cancellations can be ignored.
+			// Here, we collect all errors and report them, assuming that when the isMember result is false,
+			// no contexts were cancelled by us and therefore any errors that occur at all are informative.
+			if err != nil {
+				if membershipError != nil {
+					membershipError = fmt.Errorf("%w; %w", membershipError, err)
+				} else {
+					membershipError = err
+				}
 			}
+		}
+		if membershipError != nil {
+			membershipError = AsRiverError(membershipError, Err_INTERNAL).
+				Message("Error(s) evaluating user space membership").
+				Func("checkEntitlement").
+				Tag("principal", args.principal).
+				Tag("permission", args.permission).
+				Tag("wallets", args.linkedWallets).
+				Tag("spaceId", args.spaceId)
 		}
 	}
 
