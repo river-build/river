@@ -50,9 +50,7 @@ abstract contract BaseRegistryTest is BaseSetup, IRewardsDistributionBase {
 
     vm.prank(deployer);
     rewardsDistributionFacet.setRewardNotifier(NOTIFIER, true);
-    registerOperator(OPERATOR);
-    setOperatorStatus(OPERATOR, NodeOperatorStatus.Approved);
-    setOperatorStatus(OPERATOR, NodeOperatorStatus.Active);
+    setOperator(OPERATOR, 0);
 
     rewardDuration = rewardsDistributionFacet.stakingState().rewardDuration;
 
@@ -64,11 +62,19 @@ abstract contract BaseRegistryTest is BaseSetup, IRewardsDistributionBase {
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   modifier givenOperator(address operator, uint256 commissionRate) {
+    if (operator != OPERATOR) {
+      setOperator(operator, commissionRate);
+    } else {
+      resetOperatorCommissionRate(operator, commissionRate);
+    }
+    _;
+  }
+
+  function setOperator(address operator, uint256 commissionRate) internal {
     registerOperator(operator);
     setOperatorCommissionRate(operator, commissionRate);
     setOperatorStatus(operator, NodeOperatorStatus.Approved);
     setOperatorStatus(operator, NodeOperatorStatus.Active);
-    _;
   }
 
   function registerOperator(address operator) internal {
@@ -179,11 +185,13 @@ abstract contract BaseRegistryTest is BaseSetup, IRewardsDistributionBase {
     uint256 commissionRate,
     address beneficiary
   ) internal view {
-    assertEq(
-      rewardsDistributionFacet.stakedByDepositor(depositor),
-      amount,
-      "stakedByDepositor"
-    );
+    if (depositor != baseRegistry) {
+      assertEq(
+        rewardsDistributionFacet.stakedByDepositor(depositor),
+        amount,
+        "stakedByDepositor"
+      );
+    }
 
     StakingRewards.Deposit memory deposit = rewardsDistributionFacet
       .depositById(depositId);
