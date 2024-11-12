@@ -693,7 +693,19 @@ func (ca *chainAuth) checkMembership(
 	defer wg.Done()
 	isMember, err := ca.spaceContract.IsMember(ctx, spaceId, address)
 	if err != nil {
-		log.Error("Error checking membership", "err", err, "address", address.Hex(), "spaceId", spaceId)
+		// Errors here could be due to context cancellation if another wallet evaluates as a member.
+		// However, these can also be informative. Anything that is not a context cancellation is
+		// an actual error, however the entitlement check may still be successful if at least one
+		// linked wallet resulted in a positive membership check.
+		log.Warn(
+			"Error checking membership (due to early termination?)",
+			"err",
+			err,
+			"address",
+			address.Hex(),
+			"spaceId",
+			spaceId,
+		)
 		errors <- err
 	} else if isMember {
 		results <- true
