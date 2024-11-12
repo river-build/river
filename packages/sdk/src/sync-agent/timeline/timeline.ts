@@ -164,11 +164,13 @@ export class MessageTimeline {
                 event?.latestEventNum &&
                 pendingReplace.latestEventNum > event.latestEventNum
             ) {
+                // if we already have a replacement here, leave it, because we sync backwards, we assume the first one is the correct one
+                return
+            } else {
+                // otherwise add it to the pending list
+                this.pendingReplacedEvents.add(replacedEventId, event)
                 return
             }
-
-            // otherwise add it to the pending list
-            this.pendingReplacedEvents.add(replacedEventId, event)
         }
         const oldEvent = this.events.value[eventIndex]
         if (
