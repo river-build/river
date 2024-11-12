@@ -77,6 +77,7 @@ import {
     convertRuleDataV2ToV1,
     XchainConfig,
     UpdateRoleParams,
+    getFixedPricingModule,
 } from '@river-build/web3'
 import { SyncState } from './syncedStreamsLoop'
 
@@ -680,21 +681,21 @@ export async function everyoneMembershipStruct(
     spaceDapp: ISpaceDapp,
     client: Client,
 ): Promise<LegacyMembershipStruct> {
-    const pricingModules = await spaceDapp.listPricingModules()
-    const dynamicPricingModule = getDynamicPricingModule(pricingModules)
-    expect(dynamicPricingModule).toBeDefined()
+    const { fixedPricingModuleAddress, freeAllocation, price } = await getFreeSpacePricingSetup(
+        spaceDapp,
+    )
 
     return {
         settings: {
             name: 'Everyone',
             symbol: 'MEMBER',
-            price: 0,
+            price,
             maxSupply: 1000,
             duration: 0,
             currency: ETH_ADDRESS,
             feeRecipient: client.userId,
-            freeAllocation: 0,
-            pricingModule: dynamicPricingModule!.module,
+            freeAllocation,
+            pricingModule: fixedPricingModuleAddress,
         },
         permissions: [Permission.Read, Permission.Write],
         requirements: {
@@ -703,6 +704,20 @@ export async function everyoneMembershipStruct(
             ruleData: NoopRuleData,
             syncEntitlements: false,
         },
+    }
+}
+
+export async function getFreeSpacePricingSetup(spaceDapp: ISpaceDapp): Promise<{
+    fixedPricingModuleAddress: string
+    freeAllocation: number
+    price: number
+}> {
+    const fixedPricingModule = getFixedPricingModule(spaceDapp)
+    expect(fixedPricingModule).toBeDefined()
+    return {
+        price: 0,
+        fixedPricingModuleAddress: await (await fixedPricingModule).module,
+        freeAllocation: DefaultFreeAllocation,
     }
 }
 
@@ -925,17 +940,6 @@ export function isValidEthAddress(address: string): boolean {
     return ethAddressRegex.test(address)
 }
 
-export const TIERED_PRICING_ORACLE = 'TieredLogPricingOracleV2'
-export const FIXED_PRICING = 'FixedPricing'
-
-export const getDynamicPricingModule = (pricingModules: PricingModuleStruct[]) => {
-    return pricingModules.find((module) => module.name === TIERED_PRICING_ORACLE)
-}
-
-export const getFixedPricingModule = (pricingModules: PricingModuleStruct[]) => {
-    return pricingModules.find((module) => module.name === FIXED_PRICING)
-}
-
 export function getNftRuleData(testNftAddress: Address): IRuleEntitlementV2Base.RuleDataV2Struct {
     return createExternalNFTStruct([testNftAddress])
 }
@@ -1100,9 +1104,9 @@ export async function createTownWithRequirements(requirements: {
         carolsWallet,
     } = await setupWalletsAndContexts()
 
-    const pricingModules = await bobSpaceDapp.listPricingModules()
-    const dynamicPricingModule = getDynamicPricingModule(pricingModules)
-    expect(dynamicPricingModule).toBeDefined()
+    const { fixedPricingModuleAddress, freeAllocation, price } = await getFreeSpacePricingSetup(
+        bobSpaceDapp,
+    )
 
     const userNameToWallet: Record<string, string> = {
         alice: alicesWallet.address,
@@ -1115,13 +1119,13 @@ export async function createTownWithRequirements(requirements: {
         settings: {
             name: 'Everyone',
             symbol: 'MEMBER',
-            price: 0,
+            price,
             maxSupply: 1000,
             duration: 0,
             currency: ETH_ADDRESS,
             feeRecipient: bob.userId,
-            freeAllocation: 0,
-            pricingModule: dynamicPricingModule!.module,
+            freeAllocation,
+            pricingModule: fixedPricingModuleAddress,
         },
         permissions: [Permission.Read, Permission.Write],
         requirements: {
