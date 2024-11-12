@@ -834,8 +834,8 @@ func (ca *chainAuth) checkEntitlement(
 			)
 			return &boolCacheResult{allowed: false}, membershipError
 		} else {
-			// It is expected that some membership checks will fail when the requested
-			// action is not valid, so this log statement is for debugging only.
+			// It is expected that some membership checks will fail when the user is legitimately
+			// not entitled, so this log statement is for debugging only.
 			log.Debug(
 				"User is not a member of the space",
 				"userId",
