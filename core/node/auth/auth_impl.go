@@ -790,7 +790,8 @@ func (ca *chainAuth) checkEntitlement(
 	isMember := false
 	var membershipError error = nil
 
-	// This loop will wait on at least one true result, and will exit when the channel is closed.
+	// This loop will wait on at least one true result, and will exit if the channel is closed,
+	// meaning all checks have terminated, or if at least one check was positive.
 	for result := range isMemberResults {
 		if result {
 			isMember = true
