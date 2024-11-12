@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
@@ -168,7 +169,15 @@ func (ctc *cacheTestContext) createReplStream() (StreamId, []common.Address, *Mi
 	ctc.require.Len(nodes, ctc.testParams.replFactor)
 
 	for _, n := range nodes {
-		s, err := ctc.instancesByAddr[n].cache.GetStream(ctc.ctx, streamId)
+		var s SyncStream
+		var err error
+		for {
+			s, err = ctc.instancesByAddr[n].cache.GetStream(ctc.ctx, streamId)
+			if !IsRiverErrorCode(err, Err_NOT_FOUND) {
+				break
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
 		ctc.require.NoError(err)
 		_, err = s.GetView(ctc.ctx)
 		ctc.require.NoError(err)
