@@ -42,7 +42,6 @@ import { SignerContext, makeSignerContext } from './signerContext'
 import {
     Address,
     LocalhostWeb3Provider,
-    PricingModuleStruct,
     createExternalNFTStruct,
     createRiverRegistry,
     createSpaceDapp,
@@ -77,6 +76,7 @@ import {
     convertRuleDataV2ToV1,
     XchainConfig,
     UpdateRoleParams,
+    findDynamicPricingModule,
 } from '@river-build/web3'
 import { SyncState } from './syncedStreamsLoop'
 
@@ -678,7 +678,7 @@ export async function everyoneMembershipStruct(
     client: Client,
 ): Promise<LegacyMembershipStruct> {
     const pricingModules = await spaceDapp.listPricingModules()
-    const dynamicPricingModule = getDynamicPricingModule(pricingModules)
+    const dynamicPricingModule = findDynamicPricingModule(pricingModules)
     expect(dynamicPricingModule).toBeDefined()
 
     return {
@@ -922,17 +922,6 @@ export function isValidEthAddress(address: string): boolean {
     return ethAddressRegex.test(address)
 }
 
-export const TIERED_PRICING_ORACLE = 'TieredLogPricingOracleV2'
-export const FIXED_PRICING = 'FixedPricing'
-
-export const getDynamicPricingModule = (pricingModules: PricingModuleStruct[]) => {
-    return pricingModules.find((module) => module.name === TIERED_PRICING_ORACLE)
-}
-
-export const getFixedPricingModule = (pricingModules: PricingModuleStruct[]) => {
-    return pricingModules.find((module) => module.name === FIXED_PRICING)
-}
-
 export function getNftRuleData(testNftAddress: Address): IRuleEntitlementV2Base.RuleDataV2Struct {
     return createExternalNFTStruct([testNftAddress])
 }
@@ -1098,7 +1087,7 @@ export async function createTownWithRequirements(requirements: {
     } = await setupWalletsAndContexts()
 
     const pricingModules = await bobSpaceDapp.listPricingModules()
-    const dynamicPricingModule = getDynamicPricingModule(pricingModules)
+    const dynamicPricingModule = findDynamicPricingModule(pricingModules)
     expect(dynamicPricingModule).toBeDefined()
 
     const userNameToWallet: Record<string, string> = {
