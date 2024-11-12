@@ -2,35 +2,26 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {IERC173, IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
-import {IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.sol";
-import {ICreateSpace} from "contracts/src/factory/facets/create/ICreateSpace.sol";
-import {IRewardsDistributionBase} from "contracts/src/base/registry/facets/distribution/v2/IRewardsDistribution.sol";
+import {IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
 
 // libraries
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import {NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
 import {StakingRewards} from "contracts/src/base/registry/facets/distribution/v2/StakingRewards.sol";
 import {RewardsDistributionStorage} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistributionStorage.sol";
 
 // contracts
-import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {EIP712Utils} from "contracts/test/utils/EIP712Utils.sol";
-import {EIP712Facet} from "contracts/src/diamond/utils/cryptography/signature/EIP712Facet.sol";
-import {NodeOperatorFacet} from "contracts/src/base/registry/facets/operator/NodeOperatorFacet.sol";
 import {River} from "contracts/src/tokens/river/base/River.sol";
-import {MainnetDelegation} from "contracts/src/tokens/river/base/delegation/MainnetDelegation.sol";
-import {SpaceDelegationFacet} from "contracts/src/base/registry/facets/delegation/SpaceDelegationFacet.sol";
 import {RewardsDistribution} from "contracts/src/base/registry/facets/distribution/v2/RewardsDistribution.sol";
 import {DelegationProxy} from "contracts/src/base/registry/facets/distribution/v2/DelegationProxy.sol";
 import {UpgradeableBeaconBase} from "contracts/src/diamond/facets/beacon/UpgradeableBeacon.sol";
+import {BaseRegistryTest} from "./BaseRegistry.t.sol";
 
 contract RewardsDistributionV2Test is
-  BaseSetup,
+  BaseRegistryTest,
   EIP712Utils,
-  IOwnableBase,
-  IRewardsDistributionBase
+  IOwnableBase
 {
   using FixedPointMathLib for uint256;
 
@@ -38,38 +29,6 @@ contract RewardsDistributionV2Test is
     keccak256(
       "Stake(uint96 amount,address delegatee,address beneficiary,address owner,uint256 nonce,uint256 deadline)"
     );
-  uint256 internal constant REASONABLE_TOKEN_SUPPLY = 1e38;
-
-  NodeOperatorFacet internal operatorFacet;
-  River internal river;
-  MainnetDelegation internal mainnetDelegationFacet;
-  RewardsDistribution internal rewardsDistributionFacet;
-  SpaceDelegationFacet internal spaceDelegationFacet;
-
-  address internal OPERATOR = makeAddr("OPERATOR");
-  address internal NOTIFIER = makeAddr("NOTIFIER");
-  uint256 internal rewardDuration;
-
-  function setUp() public override {
-    super.setUp();
-
-    eip712Facet = EIP712Facet(baseRegistry);
-    operatorFacet = NodeOperatorFacet(baseRegistry);
-    river = River(riverToken);
-    mainnetDelegationFacet = MainnetDelegation(baseRegistry);
-    rewardsDistributionFacet = RewardsDistribution(baseRegistry);
-    spaceDelegationFacet = SpaceDelegationFacet(baseRegistry);
-
-    messenger.setXDomainMessageSender(mainnetProxyDelegation);
-
-    vm.prank(deployer);
-    rewardsDistributionFacet.setRewardNotifier(NOTIFIER, true);
-    registerOperator(OPERATOR);
-
-    rewardDuration = rewardsDistributionFacet.stakingState().rewardDuration;
-
-    vm.label(baseRegistry, "RewardsDistribution");
-  }
 
   function test_storageSlot() public pure {
     bytes32 slot = keccak256(
@@ -114,18 +73,12 @@ contract RewardsDistributionV2Test is
     rewardsDistributionFacet.stake(1, address(this), address(this));
   }
 
-  function test_stake_revertIf_amountIsZero()
-    public
-    givenOperator(OPERATOR, 0)
-  {
+  function test_stake_revertIf_amountIsZero() public {
     vm.expectRevert(StakingRewards.StakingRewards__InvalidAmount.selector);
     rewardsDistributionFacet.stake(0, OPERATOR, address(this));
   }
 
-  function test_stake_revertIf_beneficiaryIsZero()
-    public
-    givenOperator(OPERATOR, 0)
-  {
+  function test_stake_revertIf_beneficiaryIsZero() public {
     vm.expectRevert(StakingRewards.StakingRewards__InvalidAddress.selector);
     rewardsDistributionFacet.stake(1, OPERATOR, address(0));
   }
@@ -719,6 +672,7 @@ contract RewardsDistributionV2Test is
 
   function test_initiateWithdraw_claimReward(
     uint96 amount,
+    address operator,
     uint256 commissionRate,
     address beneficiary,
     uint256 timeLapse
@@ -729,7 +683,7 @@ contract RewardsDistributionV2Test is
     uint256 depositId = test_fuzz_stake(
       address(this),
       amount,
-      OPERATOR,
+      operator,
       commissionRate,
       beneficiary
     );
@@ -968,7 +922,7 @@ contract RewardsDistributionV2Test is
     address beneficiary,
     uint256 rewardAmount,
     uint256 timeLapse
-  ) public givenOperator(OPERATOR, 0) {
+  ) public {
     depositors[0] = beneficiary;
     timeLapse = bound(timeLapse, 0, rewardDuration);
 
@@ -1076,9 +1030,7 @@ contract RewardsDistributionV2Test is
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   /// forge-config: default.fuzz.runs = 64
-  function test_fuzz_getDepositsByDepositor(
-    uint8 count
-  ) public givenOperator(OPERATOR, 0) {
+  function test_fuzz_getDepositsByDepositor(uint8 count) public {
     vm.assume(count != 0);
     bridgeTokensForUser(address(this), 1 ether * uint256(count));
     river.approve(address(rewardsDistributionFacet), type(uint256).max);
@@ -1099,11 +1051,10 @@ contract RewardsDistributionV2Test is
   }
 
   /// forge-config: default.fuzz.runs = 64
-  function test_fuzz_currentSpaceDelegationReward(
-    uint8 count
-  ) public givenOperator(OPERATOR, 1000) {
+  function test_fuzz_currentSpaceDelegationReward(uint8 count) public {
     vm.assume(count != 0);
     uint256 commissionRate = 1000;
+    resetOperatorCommissionRate(OPERATOR, commissionRate);
 
     bridgeTokensForUser(address(this), 1 ether * uint256(count));
     river.approve(address(rewardsDistributionFacet), type(uint256).max);
@@ -1125,238 +1076,6 @@ contract RewardsDistributionV2Test is
       (rewardRate.fullMulDiv(rewardDuration, StakingRewards.SCALE_FACTOR) *
         commissionRate) / 10000,
       1e15
-    );
-  }
-
-  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-  /*                          OPERATOR                          */
-  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
-
-  modifier givenOperator(address operator, uint256 commissionRate) {
-    registerOperator(operator);
-    setOperatorCommissionRate(operator, commissionRate);
-    setOperatorStatus(operator, NodeOperatorStatus.Approved);
-    setOperatorStatus(operator, NodeOperatorStatus.Active);
-    _;
-  }
-
-  function registerOperator(address operator) internal {
-    vm.assume(operator != address(0));
-    if (!operatorFacet.isOperator(operator)) {
-      vm.prank(operator);
-      operatorFacet.registerOperator(operator);
-    }
-  }
-
-  function setOperatorCommissionRate(
-    address operator,
-    uint256 commissionRate
-  ) internal {
-    commissionRate = bound(commissionRate, 0, 10000);
-    vm.prank(operator);
-    operatorFacet.setCommissionRate(commissionRate);
-  }
-
-  function setOperatorClaimAddress(address operator, address claimer) internal {
-    vm.assume(claimer != address(0));
-    vm.assume(claimer != operator);
-    vm.prank(operator);
-    operatorFacet.setClaimAddressForOperator(claimer, operator);
-  }
-
-  function setOperatorStatus(
-    address operator,
-    NodeOperatorStatus newStatus
-  ) internal {
-    vm.prank(deployer);
-    operatorFacet.setOperatorStatus(operator, newStatus);
-  }
-
-  function resetOperatorCommissionRate(
-    address operator,
-    uint256 commissionRate
-  ) internal {
-    setOperatorStatus(operator, NodeOperatorStatus.Exiting);
-    setOperatorStatus(operator, NodeOperatorStatus.Standby);
-    setOperatorCommissionRate(operator, commissionRate);
-    setOperatorStatus(operator, NodeOperatorStatus.Approved);
-    setOperatorStatus(operator, NodeOperatorStatus.Active);
-  }
-
-  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-  /*                           SPACE                            */
-  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
-
-  function deploySpace() internal returns (address _space) {
-    IArchitectBase.SpaceInfo memory spaceInfo = _createSpaceInfo(
-      string(abi.encode(_randomUint256()))
-    );
-    spaceInfo.membership.settings.pricingModule = pricingModule;
-    vm.prank(deployer);
-    _space = ICreateSpace(spaceFactory).createSpace(spaceInfo);
-    space = _space;
-  }
-
-  modifier givenSpaceIsDeployed() {
-    deploySpace();
-    _;
-  }
-
-  function pointSpaceToOperator(address space, address operator) internal {
-    vm.assume(space != address(0));
-    vm.assume(operator != address(0));
-    vm.assume(space != operator);
-    vm.prank(IERC173(space).owner());
-    spaceDelegationFacet.addSpaceDelegation(space, operator);
-  }
-
-  modifier givenSpaceHasPointedToOperator(address space, address operator) {
-    pointSpaceToOperator(space, operator);
-    _;
-  }
-
-  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-  /*                           HELPER                           */
-  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
-
-  function boundReward(uint256 reward) internal view returns (uint256) {
-    return
-      bound(
-        reward,
-        rewardDuration,
-        FixedPointMathLib.min(
-          rewardDuration.fullMulDiv(
-            type(uint256).max,
-            StakingRewards.SCALE_FACTOR
-          ),
-          REASONABLE_TOKEN_SUPPLY
-        )
-      );
-  }
-
-  function bridgeTokensForUser(address user, uint256 amount) internal {
-    vm.assume(user != address(0));
-    vm.prank(bridge);
-    river.mint(user, amount);
-  }
-
-  function verifyStake(
-    address depositor,
-    uint256 depositId,
-    uint96 amount,
-    address delegatee,
-    uint256 commissionRate,
-    address beneficiary
-  ) internal view {
-    assertEq(
-      rewardsDistributionFacet.stakedByDepositor(depositor),
-      amount,
-      "stakedByDepositor"
-    );
-
-    StakingRewards.Deposit memory deposit = rewardsDistributionFacet
-      .depositById(depositId);
-    assertEq(deposit.amount, amount, "amount");
-    assertEq(deposit.owner, depositor, "owner");
-    assertEq(deposit.delegatee, delegatee, "delegatee");
-    assertEq(deposit.pendingWithdrawal, 0, "pendingWithdrawal");
-    assertEq(deposit.beneficiary, beneficiary, "beneficiary");
-    assertApproxEqAbs(
-      deposit.commissionEarningPower,
-      (amount * commissionRate) / 10000,
-      1,
-      "commissionEarningPower"
-    );
-
-    assertEq(
-      deposit.commissionEarningPower +
-        rewardsDistributionFacet
-          .treasureByBeneficiary(beneficiary)
-          .earningPower,
-      amount,
-      "earningPower"
-    );
-
-    assertEq(
-      rewardsDistributionFacet.treasureByBeneficiary(delegatee).earningPower,
-      deposit.commissionEarningPower,
-      "commissionEarningPower"
-    );
-
-    assertEq(
-      river.delegates(rewardsDistributionFacet.delegationProxyById(depositId)),
-      delegatee,
-      "proxy delegatee"
-    );
-    assertEq(river.getVotes(delegatee), amount, "votes");
-  }
-
-  function verifyWithdraw(
-    address depositor,
-    uint256 depositId,
-    uint96 pendingWithdrawal,
-    uint96 withdrawAmount,
-    address operator,
-    address beneficiary
-  ) internal view {
-    assertEq(
-      rewardsDistributionFacet.stakedByDepositor(depositor),
-      0,
-      "stakedByDepositor"
-    );
-    assertEq(river.balanceOf(depositor), withdrawAmount, "withdrawAmount");
-
-    StakingRewards.Deposit memory deposit = rewardsDistributionFacet
-      .depositById(depositId);
-    assertEq(deposit.amount, 0, "depositAmount");
-    assertEq(deposit.owner, depositor, "owner");
-    assertEq(deposit.commissionEarningPower, 0, "commissionEarningPower");
-    assertEq(deposit.delegatee, address(0), "delegatee");
-    assertEq(deposit.pendingWithdrawal, pendingWithdrawal, "pendingWithdrawal");
-    assertEq(deposit.beneficiary, beneficiary, "beneficiary");
-
-    assertEq(
-      rewardsDistributionFacet.treasureByBeneficiary(beneficiary).earningPower,
-      0,
-      "earningPower"
-    );
-
-    assertEq(
-      rewardsDistributionFacet.treasureByBeneficiary(operator).earningPower,
-      0,
-      "commissionEarningPower"
-    );
-
-    assertEq(
-      river.delegates(rewardsDistributionFacet.delegationProxyById(depositId)),
-      address(0),
-      "proxy delegatee"
-    );
-    assertEq(river.getVotes(operator), 0, "votes");
-  }
-
-  function verifyClaim(
-    address beneficiary,
-    address claimer,
-    uint256 reward,
-    uint256 currentReward,
-    uint256 timeLapse
-  ) internal view {
-    assertEq(reward, currentReward, "reward");
-    assertEq(river.balanceOf(claimer), reward, "reward balance");
-
-    StakingState memory state = rewardsDistributionFacet.stakingState();
-    uint256 earningPower = rewardsDistributionFacet
-      .treasureByBeneficiary(beneficiary)
-      .earningPower;
-
-    assertEq(
-      state.rewardRate.fullMulDiv(timeLapse, state.totalStaked).fullMulDiv(
-        earningPower,
-        StakingRewards.SCALE_FACTOR
-      ),
-      reward,
-      "expected reward"
     );
   }
 }
