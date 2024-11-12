@@ -6,7 +6,7 @@
   "scripts": {
     "docs:dev": "mintlify dev",
     "docs:broken-links": "mintlify broken-links",
-    "spellcheck": "npx cspell ."
+    "spellcheck": "cspell ."
   },
   "devDependencies": {
     "cspell": "^8.8.1",
