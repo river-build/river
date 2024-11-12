@@ -43,7 +43,7 @@ func (c authenticationChallenge) Verify(
 ) error {
 	// ensure that the auth challenge nor the delegateExpiryEpoch hasn't expired.
 	now := time.Now()
-	if now.After(c.expires) || (len(delegateSig) > 0 && now.After(time.Unix(delegateExpiryEpochMs/1000, 0))) {
+	if now.After(c.expires) || (len(delegateSig) > 0 && delegateExpiryEpochMs > 0 && now.After(time.Unix(delegateExpiryEpochMs/1000, 0))) {
 		return RiverError(Err_UNAUTHENTICATED, "authentication expired", "expires", c.expires, "delegateExpiryEpochMs", delegateExpiryEpochMs)
 	}
 
