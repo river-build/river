@@ -843,7 +843,7 @@ func (ca *chainAuth) checkEntitlement(
 				"aggregateError",
 				membershipError,
 			)
-			return &boolCacheResult{allowed: false}, membershipError
+			return nil, membershipError
 		} else {
 			// It is expected that some membership checks will fail when the user is legitimately
 			// not entitled, so this log statement is for debugging only.
