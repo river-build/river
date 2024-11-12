@@ -697,7 +697,7 @@ func (ca *chainAuth) checkMembership(
 		// However, these can also be informative. Anything that is not a context cancellation is
 		// an actual error, however the entitlement check may still be successful if at least one
 		// linked wallet resulted in a positive membership check.
-		log.Warn(
+		log.Info(
 			"Error checking membership (due to early termination?)",
 			"err",
 			err,
