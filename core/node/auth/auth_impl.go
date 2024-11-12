@@ -709,9 +709,9 @@ func (ca *chainAuth) checkMembership(
 		errors <- err
 	} else if isMember {
 		results <- true
-	} else {
-		log.Debug("User linked wallet does not contain space membership token", "walletAddress", address.Hex(), "spaceId", spaceId)
 	}
+	// We expect that all linked wallets except the membership wallet will evaluate to false here
+	// and don't bother logging here.
 }
 
 func (ca *chainAuth) checkStreamIsEnabled(
