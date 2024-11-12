@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -263,6 +264,59 @@ func init() {
 	sourceCmd.AddCommand(sourceListCmd)
 }
 
+var (
+	sourceListStreamsCmd = &cobra.Command{
+		Use:   "list_streams",
+		Short: "List source database streams",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			pool, _, err := getSourceDbPool(ctx, false)
+			if err != nil {
+				return err
+			}
+
+			streamIds, _, err := getStreamIds(ctx, pool)
+
+			fmt.Println("Stream Ids")
+			fmt.Println("==========")
+			for _, id := range streamIds {
+				fmt.Println(id)
+			}
+			fmt.Println()
+
+			return nil
+		},
+	}
+
+	targetListStreamsCmd = &cobra.Command{
+		Use:   "list_streams",
+		Short: "List target database streams",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			pool, _, err := getTargetDbPool(ctx, false)
+			if err != nil {
+				return err
+			}
+
+			streamIds, _, err := getStreamIds(ctx, pool)
+
+			fmt.Println("Stream Ids")
+			fmt.Println("==========")
+			for _, id := range streamIds {
+				fmt.Println(id)
+			}
+			fmt.Println()
+
+			return nil
+		},
+	}
+)
+
+func init() {
+	sourceCmd.AddCommand(sourceListStreamsCmd)
+	targetCmd.AddCommand(targetListStreamsCmd)
+}
+
 var sourceListPCmd = &cobra.Command{
 	Use:   "list_partitions",
 	Short: "List source database partitions",
@@ -372,6 +426,200 @@ var targetInitCmd = &cobra.Command{
 
 func init() {
 	targetCmd.AddCommand(targetInitCmd)
+}
+
+func escapedSql(sql string, streamId string, metadata schemaMetadata) string {
+	var suffix string
+	if metadata.migrated {
+		suffix = getPartitionName("", streamId, metadata.numPartitions)
+	} else {
+		suffix = getTableName("", streamId)
+	}
+
+	sql = strings.ReplaceAll(
+		sql,
+		"{{miniblocks}}",
+		"miniblocks"+suffix,
+	)
+	sql = strings.ReplaceAll(
+		sql,
+		"{{minipools}}",
+		"minipools"+suffix,
+	)
+	sql = strings.ReplaceAll(
+		sql,
+		"{{miniblock_candidates}}",
+		"miniblock_candidates"+suffix,
+	)
+
+	return sql
+}
+
+func inspectStream(ctx context.Context, pool *pgxpool.Pool, streamId string) error {
+	var migrated bool
+	var latestSnapshotMiniblock int
+
+	err := pool.QueryRow(
+		ctx,
+		"SELECT latest_snapshot_miniblock, migrated from es where stream_id = $1",
+		streamId,
+	).Scan(&latestSnapshotMiniblock, &migrated)
+	if err != nil {
+		fmt.Println("Error reading stream from es table:", err)
+		os.Exit(-1)
+	}
+
+	metadata := schemaMetadata{
+		migrated: migrated,
+	}
+	if migrated {
+		numPartitions, err := getNumPartitionSettings(ctx, pool)
+		if err != nil {
+			fmt.Println("Error reading schema numPartitions setting:", err)
+			os.Exit(-1)
+		}
+		metadata.numPartitions = numPartitions
+	}
+
+	rows, err := pool.Query(
+		ctx,
+		escapedSql(
+			`SELECT stream_id, seq_num, blockdata from {{miniblocks}}
+			WHERE stream_id = $1 order by seq_num `,
+			streamId,
+			metadata,
+		),
+		streamId,
+	)
+	if err != nil {
+		fmt.Println("Error reading stream miniblocks:", err)
+		os.Exit(-1)
+	}
+
+	fmt.Println("Miniblocks (stream_id, seq_num, blockdata)")
+	fmt.Println("==========================================")
+	for rows.Next() {
+		var id string
+		var seqNum int64
+		var blockData []byte
+		if err := rows.Scan(&id, &seqNum, &blockData); err != nil {
+			fmt.Println("Error scanning miniblock row:", err)
+			os.Exit(-1)
+		}
+		fmt.Printf("%v %v %v\n", id, seqNum, hex.EncodeToString(blockData))
+	}
+	fmt.Println()
+
+	rows, err = pool.Query(
+		ctx,
+		escapedSql(
+			`SELECT stream_id, seq_num, block_hash, blockdata from {{miniblock_candidates}}
+			WHERE stream_id = $1 order by seq_num, block_hash`,
+			streamId,
+			metadata,
+		),
+		streamId,
+	)
+	if err != nil {
+		fmt.Println("Error reading stream miniblock candidates:", err)
+		os.Exit(-1)
+	}
+
+	fmt.Println("Miniblock Candidates (stream_id, seq_num, block_hash, block_data)")
+	fmt.Println("==================================================================")
+	for rows.Next() {
+		var id string
+		var seqNum int64
+		var hashStr string
+		var blockData []byte
+		if err := rows.Scan(&id, &seqNum, &hashStr, &blockData); err != nil {
+			fmt.Println("Error scanning miniblock candidate row:", err)
+			os.Exit(-1)
+		}
+		fmt.Printf("%v %v %v %v\n", id, seqNum, hashStr, hex.EncodeToString(blockData))
+	}
+	fmt.Println()
+
+	rows, err = pool.Query(
+		ctx,
+		escapedSql(
+			`SELECT stream_id, generation, slot_num, envelope from {{minipools}}
+			WHERE stream_id = $1 order by generation, slot_num`,
+			streamId,
+			metadata,
+		),
+		streamId,
+	)
+	if err != nil {
+		fmt.Println("Error reading stream minipools:", err)
+		os.Exit(-1)
+	}
+
+	fmt.Println("Minipools (stream_id, generation, slot_num, envelope)")
+	fmt.Println("=====================================================")
+	for rows.Next() {
+		var id string
+		var generation int64
+		var slotNum int64
+		var envelope []byte
+		if err := rows.Scan(&id, &generation, &slotNum, &envelope); err != nil {
+			fmt.Println("Error scanning miniblock row:", err)
+			os.Exit(-1)
+		}
+		fmt.Printf("%v %v %v %v\n", id, generation, slotNum, hex.EncodeToString(envelope))
+	}
+	fmt.Println()
+
+	return nil
+}
+
+var srcInspectCmd = &cobra.Command{
+	Use:   "inspect",
+	Short: "Inspect stream data on source database",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
+
+		// Valid stream id?
+		streamId, err := shared.StreamIdFromString(args[0])
+		if err != nil {
+			return fmt.Errorf("could not parse streamId: %w", err)
+		}
+
+		pool, _, err := getSourceDbPool(ctx, true)
+		if err != nil {
+			return wrapError("Failed to initialize source database pool", err)
+		}
+
+		return inspectStream(ctx, pool, streamId.String())
+	},
+}
+
+var targetInspectCmd = &cobra.Command{
+	Use:   "inspect",
+	Short: "Inspect stream data on target database",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx := cmd.Context()
+
+		// Valid stream id?
+		streamId, err := shared.StreamIdFromString(args[0])
+		if err != nil {
+			return fmt.Errorf("could not parse streamId: %w", err)
+		}
+
+		pool, _, err := getTargetDbPool(ctx, true)
+		if err != nil {
+			return wrapError("Failed to initialize target database pool", err)
+		}
+
+		return inspectStream(ctx, pool, streamId.String())
+	},
+}
+
+func init() {
+	targetCmd.AddCommand(targetInspectCmd)
+	sourceCmd.AddCommand(srcInspectCmd)
 }
 
 func queryPartitions(ctx context.Context, pool *pgxpool.Pool, table string) ([]string, error) {
