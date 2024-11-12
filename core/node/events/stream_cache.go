@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gammazero/workerpool"
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/river-build/river/core/config"
@@ -51,12 +52,12 @@ type streamCacheImpl struct {
 	// streamImpl can be in unloaded state, in which case it will be loaded on first GetStream call.
 	cache sync.Map
 
-	syncTasks *StreamSyncTasksProcessor
-
 	chainConfig crypto.OnChainConfiguration
 
 	streamCacheSizeGauge     prometheus.Gauge
 	streamCacheUnloadedGauge prometheus.Gauge
+
+	onlineSyncWorkerPool *workerpool.WorkerPool
 }
 
 var _ StreamCache = (*streamCacheImpl)(nil)
@@ -65,16 +66,6 @@ func NewStreamCache(
 	ctx context.Context,
 	params *StreamCacheParams,
 ) (*streamCacheImpl, error) {
-	syncTasks, err := NewStreamSyncTasksProcessor(
-		ctx,
-		&StreamSyncTaskProcessorParams{
-			WorkerPoolSize: params.Config.StreamReconciliation.WorkerPoolSize,
-		},
-	)
-	if err != nil {
-		return nil, err
-	}
-
 	s := &streamCacheImpl{
 		params: params,
 		streamCacheSizeGauge: params.Metrics.NewGaugeVecEx(
@@ -91,40 +82,48 @@ func NewStreamCache(
 			params.RiverChain.ChainId.String(),
 			params.Wallet.Address.String(),
 		),
-		chainConfig: params.ChainConfig,
-		syncTasks:   syncTasks,
+		chainConfig:          params.ChainConfig,
+		onlineSyncWorkerPool: workerpool.New(params.Config.StreamReconciliation.OnlineWorkerPoolSize),
 	}
 
 	// schedule sync tasks for all streams that are local to this node.
 	// these tasks sync up the local db with the latest block in the registry.
 	var localStreamResults []*registries.GetStreamResult
-	if err := params.Registry.ForAllStreams(ctx, params.AppliedBlockNum, func(stream *registries.GetStreamResult) bool {
+	err := params.Registry.ForAllStreams(ctx, params.AppliedBlockNum, func(stream *registries.GetStreamResult) bool {
 		if slices.Contains(stream.Nodes, params.Wallet.Address) {
 			localStreamResults = append(localStreamResults, stream)
 		}
 		return true
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	// schedule sync tasks for all local streams in the background
-	if params.Config.StreamReconciliation.WorkerPoolSize > 0 {
-		go func() {
-			for _, stream := range localStreamResults {
-				s.syncTasks.Submit(ctx, stream, s)
-			}
-		}()
-	}
-
 	// load local streams in-memory cache
+	initialSyncWorkerPool := workerpool.New(params.Config.StreamReconciliation.WorkerPoolSize)
 	for _, stream := range localStreamResults {
 		s.cache.Store(stream.StreamId, &streamImpl{
-			params:           params,
-			streamId:         stream.StreamId,
-			nodes:            NewStreamNodes(stream.Nodes, params.Wallet.Address),
-			lastAccessedTime: time.Now(),
+			params:   params,
+			streamId: stream.StreamId,
+			nodes:    NewStreamNodes(stream.Nodes, params.Wallet.Address),
 		})
+		if params.Config.StreamReconciliation.WorkerPoolSize > 0 {
+			s.submitSyncStreamTask(
+				ctx,
+				initialSyncWorkerPool,
+				stream.StreamId,
+				&MiniblockRef{
+					Hash: stream.LastMiniblockHash,
+					Num:  int64(stream.LastMiniblockNum),
+				},
+			)
+		}
 	}
+
+	// Close initial worker pool after all tasks are executed.
+	go func() {
+		initialSyncWorkerPool.StopWait()
+	}()
 
 	err = params.Registry.OnStreamEvent(
 		ctx,
@@ -252,73 +251,73 @@ func (s *streamCacheImpl) CacheCleanup(ctx context.Context, enabled bool, expira
 	return result
 }
 
-func (s *streamCacheImpl) tryLoadStreamRecord(
-	ctx context.Context,
-	streamId StreamId,
-) (*streamImpl, error) {
-	// For GetStream the fact that record is not in cache means that there is race to get it during creation:
-	// Blockchain record is already created, but this fact is not reflected yet in local storage.
-	// This may happen if somebody observes record allocation on blockchain and tries to get stream
-	// while local storage is being initialized.
-	record, _, mb, err := s.params.Registry.GetStreamWithGenesis(ctx, streamId)
-	if err != nil {
-		// Loop here waiting for record to be created.
-		// This is less optimal than implementing pub/sub, but given that this is rare codepath,
-		// it is not worth over-engineering.
-		ctx, cancel := context.WithTimeout(ctx, time.Second*10)
-		defer cancel()
-		delay := time.Millisecond * 20
-	forLoop:
-		for {
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			case <-time.After(delay):
-				entry, _ := s.cache.Load(streamId)
-				if entry != nil {
-					return entry.(*streamImpl), nil
-				}
-				record, _, mb, err = s.params.Registry.GetStreamWithGenesis(ctx, streamId)
-				if err == nil {
-					break forLoop
-				}
-				delay *= 2
-			}
-		}
-	}
+// func (s *streamCacheImpl) tryLoadStreamRecord(
+// 	ctx context.Context,
+// 	streamId StreamId,
+// ) (*streamImpl, error) {
+// 	// For GetStream the fact that record is not in cache means that there is race to get it during creation:
+// 	// Blockchain record is already created, but this fact is not reflected yet in local storage.
+// 	// This may happen if somebody observes record allocation on blockchain and tries to get stream
+// 	// while local storage is being initialized.
+// 	record, _, mb, err := s.params.Registry.GetStreamWithGenesis(ctx, streamId)
+// 	if err != nil {
+// 		// Loop here waiting for record to be created.
+// 		// This is less optimal than implementing pub/sub, but given that this is rare codepath,
+// 		// it is not worth over-engineering.
+// 		ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+// 		defer cancel()
+// 		delay := time.Millisecond * 20
+// 	forLoop:
+// 		for {
+// 			select {
+// 			case <-ctx.Done():
+// 				return nil, ctx.Err()
+// 			case <-time.After(delay):
+// 				entry, _ := s.cache.Load(streamId)
+// 				if entry != nil {
+// 					return entry.(*streamImpl), nil
+// 				}
+// 				record, _, mb, err = s.params.Registry.GetStreamWithGenesis(ctx, streamId)
+// 				if err == nil {
+// 					break forLoop
+// 				}
+// 				delay *= 2
+// 			}
+// 		}
+// 	}
 
-	nodes := NewStreamNodes(record.Nodes, s.params.Wallet.Address)
-	if !nodes.IsLocal() {
-		return nil, RiverError(
-			Err_INTERNAL,
-			"tryLoadStreamRecord: Stream is not local",
-			"streamId", streamId,
-			"nodes", record.Nodes,
-			"localNode", s.params.Wallet,
-		)
-	}
+// 	nodes := NewStreamNodes(record.Nodes, s.params.Wallet.Address)
+// 	if !nodes.IsLocal() {
+// 		return nil, RiverError(
+// 			Err_INTERNAL,
+// 			"tryLoadStreamRecord: Stream is not local",
+// 			"streamId", streamId,
+// 			"nodes", record.Nodes,
+// 			"localNode", s.params.Wallet,
+// 		)
+// 	}
 
-	if record.LastMiniblockNum > 0 {
-		// TODO: reconcile from other nodes.
-		return nil, RiverError(
-			Err_INTERNAL,
-			"tryLoadStreamRecord: Stream is past genesis",
-			"streamId",
-			streamId,
-			"record",
-			record,
-		)
-	}
+// 	if record.LastMiniblockNum > 0 {
+// 		// TODO: reconcile from other nodes.
+// 		return nil, RiverError(
+// 			Err_INTERNAL,
+// 			"tryLoadStreamRecord: Stream is past genesis",
+// 			"streamId",
+// 			streamId,
+// 			"record",
+// 			record,
+// 		)
+// 	}
 
-	stream := &streamImpl{
-		params:           s.params,
-		streamId:         streamId,
-		nodes:            nodes,
-		lastAccessedTime: time.Now(),
-	}
+// 	stream := &streamImpl{
+// 		params:           s.params,
+// 		streamId:         streamId,
+// 		nodes:            nodes,
+// 		lastAccessedTime: time.Now(),
+// 	}
 
-	return s.createStreamStorage(ctx, stream, mb)
-}
+// 	return s.createStreamStorage(ctx, stream, mb)
+// }
 
 func (s *streamCacheImpl) createStreamStorage(
 	ctx context.Context,
@@ -378,7 +377,7 @@ func (s *streamCacheImpl) GetStream(ctx context.Context, streamId StreamId) (Syn
 func (s *streamCacheImpl) getStreamImpl(ctx context.Context, streamId StreamId) (*streamImpl, error) {
 	entry, _ := s.cache.Load(streamId)
 	if entry == nil {
-		return s.tryLoadStreamRecord(ctx, streamId)
+		return nil, RiverError(Err_NOT_FOUND, "Stream not found in cache", "streamId", streamId)
 	}
 	return entry.(*streamImpl), nil
 }

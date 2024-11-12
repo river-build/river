@@ -40,18 +40,13 @@ func (s *Service) allocateStream(ctx context.Context, req *AllocateStreamRequest
 
 	// TODO: check request is signed by correct node
 	// TODO: all checks that should be done on create?
-	stream, err := s.cache.GetStream(ctx, streamId)
-	if err != nil {
-		return nil, err
-	}
-
-	view, err := stream.GetView(ctx)
+	_, _, cookie, err := s.waitForLocalStream(ctx, streamId)
 	if err != nil {
 		return nil, err
 	}
 
 	return &AllocateStreamResponse{
-		SyncCookie: view.SyncCookie(s.wallet.Address),
+		SyncCookie: cookie,
 	}, nil
 }
 

@@ -168,6 +168,7 @@ func testPostgresStreamStore(params *testStreamStoreParams) {
 	streamId1 := testutils.FakeStreamId(STREAM_CHANNEL_BIN)
 	streamId2 := testutils.FakeStreamId(STREAM_CHANNEL_BIN)
 	streamId3 := testutils.FakeStreamId(STREAM_CHANNEL_BIN)
+	nonExistentStreamId := testutils.FakeStreamId(STREAM_CHANNEL_BIN)
 
 	// Test that created stream will have proper genesis miniblock
 	genesisMiniblock := []byte("genesisMiniblock")
@@ -277,6 +278,15 @@ func testPostgresStreamStore(params *testStreamStoreParams) {
 	if err != nil {
 		t.Fatal("error promoting block with snapshot", err)
 	}
+
+	lastMiniblockNumber, err := pgStreamStore.GetLastMiniblockNumber(ctx, streamId1)
+	require.NoError(err)
+	require.Equal(int64(2), lastMiniblockNumber)
+
+	lastMiniblockNumber, err = pgStreamStore.GetLastMiniblockNumber(ctx, nonExistentStreamId)
+	require.Error(err)
+	require.Equal(int64(0), lastMiniblockNumber)
+	require.True(IsRiverErrorCode(err, Err_NOT_FOUND))
 }
 
 func testPromoteMiniblockCandidate(params *testStreamStoreParams) {

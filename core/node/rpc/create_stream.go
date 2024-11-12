@@ -136,6 +136,42 @@ func (s *Service) createStream(ctx context.Context, req *CreateStreamRequest) (*
 	return resp, nil
 }
 
+func (s *Service) waitForLocalStream(
+	ctx context.Context,
+	streamId StreamId,
+) (SyncStream, StreamView, *SyncCookie, error) {
+	// TODO: better way to wait for stream to be initialized then polling
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	var st SyncStream
+	var err error
+	timeout := 10 * time.Millisecond
+	for {
+		err = ctx.Err()
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		st, err = s.cache.GetStream(ctx, streamId)
+		if err == nil {
+			break
+		}
+		if !IsRiverErrorCode(err, Err_NOT_FOUND) {
+			return nil, nil, nil, err
+		}
+		time.Sleep(timeout)
+		timeout = min(timeout*2, 160*time.Millisecond)
+	}
+
+	sv, err := st.GetView(ctx)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	cookie := sv.SyncCookie(s.wallet.Address)
+	return st, sv, cookie, nil
+}
+
 func (s *Service) createReplicatedStream(
 	ctx context.Context,
 	streamId StreamId,
@@ -162,16 +198,9 @@ func (s *Service) createReplicatedStream(
 	var localSyncCookie *SyncCookie
 	if nodes.IsLocal() {
 		sender.GoLocal(func() error {
-			st, err := s.cache.GetStream(ctx, streamId)
-			if err != nil {
-				return err
-			}
-			sv, err := st.GetView(ctx)
-			if err != nil {
-				return err
-			}
-			localSyncCookie = sv.SyncCookie(s.wallet.Address)
-			return nil
+			var err error
+			_, _, localSyncCookie, err = s.waitForLocalStream(ctx, streamId)
+			return err
 		})
 	}
 
