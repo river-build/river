@@ -15,7 +15,7 @@ import {IntrospectionFacet} from "contracts/src/diamond/facets/introspection/Int
  * @title TieredLogPricingOracle
  * @notice Network: Base (Sepolia)
  */
-contract TieredLogPricingOracle is IMembershipPricing, IntrospectionFacet {
+contract TieredLogPricingOracleV3 is IMembershipPricing, IntrospectionFacet {
   AggregatorV3Interface internal dataFeed;
 
   uint256 internal constant SCALE = 1e18; // 1 ether
