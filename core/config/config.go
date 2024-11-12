@@ -363,20 +363,20 @@ type WebPushNotificationConfig struct {
 type NotificationsConfig struct {
 	// SubscriptionExpirationDuration if the client isn't seen within this duration stop sending
 	// notifications to it. Defaults to 90 days.
-	SubscriptionExpirationDuration time.Duration `mapstructure:"subscription_expiration_duration"`
+	SubscriptionExpirationDuration time.Duration 
 	// Simulate if set to true uses the simulator notification backend that doesn't
 	// send notifications to the client but only logs them. This is intended for development
 	// purposes. Default is false.
 	Simulate bool
 	// APN holds the Apple Push notification settings
-	APN APNPushNotificationsConfig `mapstructure:"apn"`
+	APN APNPushNotificationsConfig
 	// Web holds the Web Push notification settings
 	Web WebPushNotificationConfig `mapstructure:"webpush"`
 
 	// Authentication holds configuration for the Client API authentication service.
 	Authentication struct {
 		// ChallengeTimeout is the lifetime an authentication challenge is valid (default=30s).
-		ChallengeTimeout time.Duration `mapstructure:"challenge_timeout"`
+		ChallengeTimeout time.Duration 
 		// SessionTokenKey contains the configuration for the JWT session token.
 		SessionToken struct {
 			// Lifetime indicates how long a session token is valid (default=30m).
@@ -387,7 +387,7 @@ type NotificationsConfig struct {
 				// Key holds the hex encoded key
 				Key string
 			}
-		} `mapstructure:"session_token"`
+		} 
 	}
 }
 
