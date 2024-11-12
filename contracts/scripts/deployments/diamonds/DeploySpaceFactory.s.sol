@@ -34,8 +34,8 @@ import {DeploySpaceOwner} from "contracts/scripts/deployments/diamonds/DeploySpa
 import {DeployRuleEntitlement} from "contracts/scripts/deployments/utils/DeployRuleEntitlement.s.sol";
 import {DeployRuleEntitlementV2} from "contracts/scripts/deployments/utils/DeployRuleEntitlementV2.s.sol";
 import {DeployWalletLink} from "contracts/scripts/deployments/facets/DeployWalletLink.s.sol";
-import {DeployTieredLogPricingV2} from "contracts/scripts/deployments/utils/pricing/DeployTieredLogPricingV2.s.sol";
-import {DeployTieredLogPricingV3} from "contracts/scripts/deployments/utils/pricing/DeployTieredLogPricingV3.s.sol";
+import {DeployTieredLogPricingV2} from "contracts/scripts/deployments/utils/DeployTieredLogPricingV2.s.sol";
+import {DeployTieredLogPricingV3} from "contracts/scripts/deployments/utils/DeployTieredLogPricingV3.s.sol";
 import {DeployFixedPricing} from "contracts/scripts/deployments/utils/DeployFixedPricing.s.sol";
 import {DeployPricingModules} from "contracts/scripts/deployments/facets/DeployPricingModules.s.sol";
 import {DeployImplementationRegistry} from "contracts/scripts/deployments/facets/DeployImplementationRegistry.s.sol";
