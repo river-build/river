@@ -686,17 +686,19 @@ func (ca *chainAuth) checkMembership(
 	address common.Address,
 	spaceId shared.StreamId,
 	results chan<- bool,
+	errors chan<- error,
 	wg *sync.WaitGroup,
 ) {
 	log := dlog.FromCtx(ctx)
 	defer wg.Done()
 	isMember, err := ca.spaceContract.IsMember(ctx, spaceId, address)
 	if err != nil {
-		log.Warn("Error checking membership", "err", err, "address", address.Hex(), "spaceId", spaceId)
+		log.Error("Error checking membership", "err", err, "address", address.Hex(), "spaceId", spaceId)
+		errors <- err
 	} else if isMember {
 		results <- true
 	} else {
-		log.Warn("User is not a member of the space", "userId", address.Hex(), "spaceId", spaceId)
+		log.Debug("User linked wallet does not contain space membership token", "walletAddress", address.Hex(), "spaceId", spaceId)
 	}
 }
 
@@ -755,22 +757,28 @@ func (ca *chainAuth) checkEntitlement(
 
 	isMemberCtx, isMemberCancel := context.WithCancel(ctx)
 	defer isMemberCancel()
+
 	isMemberResults := make(chan bool, 1)
+	isMemberError := make(chan error, len(wallets))
+
 	var isMemberWg sync.WaitGroup
 
 	for _, address := range wallets {
 		isMemberWg.Add(1)
-		go ca.checkMembership(isMemberCtx, address, args.spaceId, isMemberResults, &isMemberWg)
+		go ca.checkMembership(isMemberCtx, address, args.spaceId, isMemberResults, isMemberError, &isMemberWg)
 	}
 
 	// Wait for at least one true result or all to complete
 	go func() {
 		isMemberWg.Wait()
 		close(isMemberResults)
+		close(isMemberError)
 	}()
 
 	isMember := false
+	var membershipError error = nil
 
+	// This loop will wait on at least one true result, and will exit when the channel is closed.
 	for result := range isMemberResults {
 		if result {
 			isMember = true
@@ -779,9 +787,53 @@ func (ca *chainAuth) checkEntitlement(
 		}
 	}
 
+	// Look for any returned errors. If at least one check was positive, then we ignore any subsequent
+	// errors. Otherwise we will report an error result since we could not conclusively determine that
+	// the user was not a space member.
+	for err := range isMemberError {
+		// Once we encounter a positive entitlement result, we cancel all other request, which should result
+		// in context cancellation errors being returned for those checks, even though the check itself was
+		// not faulty. However, a context cancellation error can also occur if a server request times out, so
+		// not all cancellations can be ignored.
+		// Here, we collect all errors and report them, assuming that when the isMember result is false,
+		// no contexts were cancelled by us and therefore any errors that occur at all are informative.
+		if err != nil {
+			if membershipError != nil {
+				membershipError = fmt.Errorf("%w; %w", membershipError, err)
+			} else {
+				membershipError = err
+			}
+		}
+	}
+
 	if !isMember {
-		log.Warn("User is not a member of the space", "userId", args.principal, "spaceId", args.spaceId)
-		return &boolCacheResult{allowed: false}, nil
+		if membershipError != nil {
+			log.Error(
+				"User membership could not be evaluated",
+				"userId",
+				args.principal,
+				"spaceId",
+				args.spaceId,
+				"wallets",
+				wallets,
+				"aggregateError",
+				membershipError,
+			)
+			return &boolCacheResult{allowed: false}, membershipError
+		} else {
+			// It is expected that some membership checks will fail when the requested
+			// action is not valid, so this log statement is for debugging only.
+			log.Debug(
+				"User is not a member of the space",
+				"userId",
+				args.principal,
+				"spaceId",
+				args.spaceId,
+				"wallets",
+				wallets,
+			)
+			return &boolCacheResult{allowed: false}, nil
+		}
 	}
 
 	// Now that we know the user is a member of the space, we can check entitlements.
