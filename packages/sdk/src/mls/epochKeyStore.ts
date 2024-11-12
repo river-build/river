@@ -158,7 +158,8 @@ export class EpochKey {
             case 'EPOCH_KEY_OPEN':
                 this.state = {
                     status: 'EPOCH_KEY_DERIVED',
-                    ...derivedKeys,
+                    secretKey: derivedKeys.secretKey,
+                    publicKey: derivedKeys.publicKey,
                     openEpochSecret: this.state.openEpochSecret,
                     sealedEpochSecret: this.state.sealedEpochSecret,
                 }
