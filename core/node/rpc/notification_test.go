@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"github.com/river-build/river/core/node/notifications/types"
 	"math/big"
 	"net"
 	"net/http"
@@ -1267,7 +1268,7 @@ func (nc *notificationCapture) SendWebPushNotification(
 
 func (nc *notificationCapture) SendApplePushNotification(
 	_ context.Context,
-	deviceToken string,
+	sub *types.APNPushSubscription,
 	eventHash common.Hash,
 	_ *payload2.Payload,
 ) error {
@@ -1280,7 +1281,7 @@ func (nc *notificationCapture) SendApplePushNotification(
 	}
 
 	// for test purposes the users address is the device token
-	events[common.HexToAddress(deviceToken)]++
+	events[common.BytesToAddress(sub.DeviceToken)]++
 	nc.ApnPushNotifications[eventHash] = events
 
 	return nil
