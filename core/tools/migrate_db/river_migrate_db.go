@@ -1539,7 +1539,7 @@ func copyStream(
 
 type schemaMetadata struct {
 	// In practice, a schema may be partially migrated in production. This struct is intended
-	// to describe a schema that is either wholly migrated or unmigrated.
+	// to describe a schema copied into, that is either wholly migrated or unmigrated.
 	migrated      bool
 	numPartitions int
 }
