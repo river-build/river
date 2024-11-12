@@ -2,15 +2,17 @@ package push_test
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/river-build/river/core/node/infra"
+	"encoding/hex"
+	"github.com/river-build/river/core/node/notifications/types"
 	"github.com/river-build/river/core/node/protocol"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/SherClockHolmes/webpush-go"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/river-build/river/core/config"
+	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/notifications/push"
 	payload2 "github.com/sideshow/apns2/payload"
 	"github.com/stretchr/testify/require"
@@ -38,11 +40,11 @@ func TestAPNSPushNotification(t *testing.T) {
 				},
 			},
 		}
-		notifier, err = push.NewMessageNotifier(cfg, infra.NewMetricsFactory(nil, "", ""))
-		deviceToken   = os.Getenv("TEST_APN_APPLE_DEVICE_TOKEN")
+		notifier, err  = push.NewMessageNotifier(cfg, infra.NewMetricsFactory(nil, "", ""))
+		deviceTokenHex = os.Getenv("TEST_APN_APPLE_DEVICE_TOKEN")
 	)
 
-	if cfg.APN.KeyID == "" || cfg.APN.TeamID == "" || cfg.APN.AuthKey == "" || deviceToken == "" {
+	if cfg.APN.KeyID == "" || cfg.APN.TeamID == "" || cfg.APN.AuthKey == "" || deviceTokenHex == "" {
 		t.Skip("Missing required config to run this test")
 	}
 
@@ -50,9 +52,17 @@ func TestAPNSPushNotification(t *testing.T) {
 
 	payload := payload2.NewPayload().Alert("Sry to bother you if this works...")
 
+	deviceToken, err := hex.DecodeString(deviceTokenHex)
+	req.NoError(err)
+
+	sub := types.APNPushSubscription{
+		DeviceToken: deviceToken,
+		LastSeen:    time.Now(),
+		Environment: protocol.APNEnvironment_APN_ENVIRONMENT_SANDBOX,
+	}
+
 	req.NoError(notifier.SendApplePushNotification(
-		ctx, deviceToken, protocol.APNEnvironment_APN_ENVIRONMENT_SANDBOX,
-		common.Hash{1}, payload), "send APN notification")
+		ctx, &sub, common.Hash{1}, payload), "send APN notification")
 }
 
 func TestWebPushWithVapid(t *testing.T) {
