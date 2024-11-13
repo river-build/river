@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"time"
 
 	"github.com/river-build/river/core/node/utils"
 
@@ -40,13 +41,18 @@ func (s *Service) allocateStream(ctx context.Context, req *AllocateStreamRequest
 
 	// TODO: check request is signed by correct node
 	// TODO: all checks that should be done on create?
-	_, _, cookie, err := s.waitForLocalStream(ctx, streamId)
+	stream, err := s.cache.GetStreamWithWait(ctx, streamId, 10*time.Second)
+	if err != nil {
+		return nil, err
+	}
+
+	view, err := stream.GetView(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	return &AllocateStreamResponse{
-		SyncCookie: cookie,
+		SyncCookie: view.SyncCookie(s.wallet.Address),
 	}, nil
 }
 

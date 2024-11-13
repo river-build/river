@@ -37,7 +37,11 @@ type StreamCacheParams struct {
 
 type StreamCache interface {
 	Params() *StreamCacheParams
+
 	GetStream(ctx context.Context, streamId StreamId) (SyncStream, error)
+
+	GetStreamWithWait(ctx context.Context, streamId StreamId, timeout time.Duration) (SyncStream, error)
+
 	ForceFlushAll(ctx context.Context)
 	GetLoadedViews(ctx context.Context) []StreamView
 	GetMbCandidateStreams(ctx context.Context) []*streamImpl
@@ -380,6 +384,53 @@ func (s *streamCacheImpl) getStreamImpl(ctx context.Context, streamId StreamId) 
 		return nil, RiverError(Err_NOT_FOUND, "Stream not found in cache", "streamId", streamId)
 	}
 	return entry.(*streamImpl), nil
+}
+
+func (s *streamCacheImpl) GetStreamWithWait(
+	ctx context.Context,
+	streamId StreamId,
+	timeout time.Duration,
+) (SyncStream, error) {
+	stream, err := s.getStreamWithWaitImpl(ctx, streamId, timeout)
+	if err != nil {
+		return nil, err
+	}
+	return stream, nil
+}
+
+func (s *streamCacheImpl) getStreamWithWaitImpl(
+	ctx context.Context,
+	streamId StreamId,
+	timeout time.Duration,
+) (*streamImpl, error) {
+	// TODO: better way to wait for stream to be initialized than polling
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	var st *streamImpl
+	var err error
+	waitInterval := 10 * time.Millisecond
+	for {
+		ctxErr := ctx.Err()
+		if ctxErr != nil {
+			if err != nil {
+				return nil, err
+			} else {
+				return nil, ctxErr
+			}
+		}
+
+		st, err = s.getStreamImpl(ctx, streamId)
+		if err == nil {
+			break
+		}
+		if !IsRiverErrorCode(err, Err_NOT_FOUND) {
+			return nil, err
+		}
+		time.Sleep(waitInterval)
+		waitInterval = min(waitInterval*2, 160*time.Millisecond)
+	}
+	return st, nil
 }
 
 func (s *streamCacheImpl) ForceFlushAll(ctx context.Context) {
