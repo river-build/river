@@ -42,7 +42,6 @@ import { SignerContext, makeSignerContext } from './signerContext'
 import {
     Address,
     LocalhostWeb3Provider,
-    PricingModuleStruct,
     createExternalNFTStruct,
     createRiverRegistry,
     createSpaceDapp,
@@ -78,6 +77,7 @@ import {
     XchainConfig,
     UpdateRoleParams,
     getFixedPricingModule,
+    getDynamicPricingModule,
 } from '@river-build/web3'
 import { SyncState } from './syncedStreamsLoop'
 
@@ -491,7 +491,6 @@ export async function createVersionedSpaceFromMembership(
     name: string,
     membership: LegacyMembershipStruct | MembershipStruct,
 ): Promise<ethers.ContractTransaction> {
-    membership.settings.freeAllocation = DefaultFreeAllocation
     if (useLegacySpaces()) {
         if (isLegacyMembershipType(membership)) {
             return await spaceDapp.createLegacySpace(
@@ -707,16 +706,110 @@ export async function everyoneMembershipStruct(
     }
 }
 
+// should start charging after the first member joins
+export async function zeroPriceWithLimitedAllocationMembershipStruct(
+    spaceDapp: ISpaceDapp,
+    client: Client,
+    opts: { freeAllocation: number },
+): Promise<LegacyMembershipStruct> {
+    const { fixedPricingModuleAddress, price } = await getFreeSpacePricingSetup(spaceDapp)
+    const { freeAllocation } = opts
+    const settings = {
+        settings: {
+            name: 'Everyone',
+            symbol: 'MEMBER',
+            price,
+            maxSupply: 1000,
+            duration: 0,
+            currency: ETH_ADDRESS,
+            feeRecipient: client.userId,
+            freeAllocation,
+            pricingModule: fixedPricingModuleAddress,
+        },
+        permissions: [Permission.Read, Permission.Write],
+        requirements: {
+            everyone: true,
+            users: [],
+            ruleData: NoopRuleData,
+            syncEntitlements: false,
+        },
+    }
+
+    return settings
+}
+
+// should start charing for the first member
+export async function dynamicMembershipStruct(
+    spaceDapp: ISpaceDapp,
+    client: Client,
+): Promise<LegacyMembershipStruct> {
+    const dynamicPricingModule = await getDynamicPricingModule(spaceDapp)
+    expect(dynamicPricingModule).toBeDefined()
+    return {
+        settings: {
+            name: 'Everyone',
+            symbol: 'MEMBER',
+            price: 0,
+            maxSupply: 1000,
+            duration: 0,
+            currency: ETH_ADDRESS,
+            feeRecipient: client.userId,
+            freeAllocation: 0,
+            pricingModule: await dynamicPricingModule.module,
+        },
+        permissions: [Permission.Read, Permission.Write],
+        requirements: {
+            everyone: true,
+            users: [],
+            ruleData: NoopRuleData,
+            syncEntitlements: false,
+        },
+    }
+}
+
+// should start charging after the first member joins
+export async function fixedPriceMembershipStruct(
+    spaceDapp: ISpaceDapp,
+    client: Client,
+    opts: { price: number } = { price: 1 },
+): Promise<LegacyMembershipStruct> {
+    const fixedPricingModule = await getFixedPricingModule(spaceDapp)
+    expect(fixedPricingModule).toBeDefined()
+    const { price } = opts
+    const settings = {
+        settings: {
+            name: 'Everyone',
+            symbol: 'MEMBER',
+            price: ethers.utils.parseEther(price.toString()),
+            maxSupply: 1000,
+            duration: 0,
+            currency: ETH_ADDRESS,
+            feeRecipient: client.userId,
+            freeAllocation: 0,
+            pricingModule: fixedPricingModule.module,
+        },
+        permissions: [Permission.Read, Permission.Write],
+        requirements: {
+            everyone: true,
+            users: [],
+            ruleData: NoopRuleData,
+            syncEntitlements: false,
+        },
+    }
+
+    return settings
+}
+
 export async function getFreeSpacePricingSetup(spaceDapp: ISpaceDapp): Promise<{
     fixedPricingModuleAddress: string
     freeAllocation: number
     price: number
 }> {
-    const fixedPricingModule = getFixedPricingModule(spaceDapp)
+    const fixedPricingModule = await getFixedPricingModule(spaceDapp)
     expect(fixedPricingModule).toBeDefined()
     return {
         price: 0,
-        fixedPricingModuleAddress: await (await fixedPricingModule).module,
+        fixedPricingModuleAddress: await fixedPricingModule.module,
         freeAllocation: DefaultFreeAllocation,
     }
 }
