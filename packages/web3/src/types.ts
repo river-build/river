@@ -10,7 +10,7 @@ export interface SpaceInfo {
     networkId: string
     /** The name of the space. */
     name: string
-    /** The on-chain address of the space owner. */
+    /** The on-chain address of the space creator. */
     owner: string
     /** Whether the space is disabled. */
     disabled: boolean
