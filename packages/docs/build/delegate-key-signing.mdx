@@ -1,0 +1,153 @@
+---
+title: Delegate Key Signing
+description: ""
+---
+
+### Delegate Key Signing
+
+All events in the River Protocol are signed by an [ECDSA](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm) wallet key pair. Users and nodes can both send events using a process referred to as delegate signing that allows for events to be signed by a separate device linked to the primary wallet. Delegate signing therefore opens the protocol to allow events from linked devices the user has custody of. River Stream Nodes validate the signature prior to processing an event that is for example being added to a stream using `addEvent` RPC method.
+
+<Note>Why ECDSA ? First, [ECDSA](https://blog.cloudflare.com/ecdsa-the-digital-signature-algorithm-of-a-better-internet) elliptic curve derived keys have been proven to be less susceptible to breaking than earlier algorithms such as RSA. Secondly, ECDSA keys are smaller at 256-bytes and less cpu intensive to generate signatures than asymmetric or RSA keys. Since River Stream Nodes validate and store signatures in storage for each event, using ECDSA signatures saves on cpu and disk space. </Note>
+
+The rules and construction of the delegate key signature are the topic of this page.
+
+### Delegate Signature Protocol Rules
+
+The logic dictating how a River Stream Node should process delegate signatures on the critical path of a request are described in `protocol.proto` and defined in `delegate.go`.
+
+Events sent over RPC to a River Stream Node are sent with a message `Envelope` that includes several fields used to validate the sender.
+
+![Wire Payload](/images/wire-payload.png)
+
+- **signature** : For the event to be valid, the signature on the `Envelope` must match the `Event` creator_address or be signed by the same address implied by `Event` delegate_sig.
+- **creator_address** : This is the wallet address of the creator of the event, which can be a user or a River Stream Node.
+- **delegate_sig** : Optional field that allows events to be signed by a device keypair linked to the user's primary wallet.
+
+<Note>If a delegate signature is present on an event, the event is only valid if either the creator_address matches the delegate_sig's signer public key or if the delegate_sig signing public key matches the key implied by Envelope.signature.</Note>
+
+### Delegate Signature Validation
+
+Each event on a River Stream Node is parsed and validated as follows. 
+
+<Steps>
+  <Step title="Unmarshal Bytes">
+    Events are stored as bytes in River Stream Node storage and transmitted as bytes over the wire.
+    All events are unmarshalled first then parsed to run a series of validity checks prior to storing those events.
+    ```go
+    // stream_view.go example unpacking and parsing of events
+    var env Envelope
+    // e is [][]byte
+    err := proto.Unmarshal(e, &env)
+    if err != nil {
+        return nil, err
+    }
+    parsed, err := ParseEvent(&env)
+    if err != nil {
+        return nil, err
+    }
+    ```
+  </Step>
+  <Step title="River Hash">
+    The event hash is first validated using `RiverHash` function found in `sign.go`.
+    ```go
+    // sign.go
+    func RiverHash(buffer []byte) []byte {
+        hash := sha3.NewLegacyKeccak256()
+        writeOrPanic(hash, HASH_HEADER)
+        // Write length of buffer as 64-bit little endian uint.
+        err := binary.Write(hash, binary.LittleEndian, uint64(len(buffer)))
+        if err != nil {
+            panic(err)
+        }
+        writeOrPanic(hash, HASH_SEPARATOR)
+        writeOrPanic(hash, buffer)
+        writeOrPanic(hash, HASH_FOOTER)
+        return hash.Sum(nil)
+}
+
+    ```
+  </Step>
+  <Step title="Check Delegate Signature">
+    Once the hash is confirmed as valid for the event, the hash along with the envelope signature are used to recover the signer public key.
+    ```go
+    // parsed_event.go
+    func ParseEvent(envelope *Envelope) (*ParsedEvent, error) {
+        ...
+
+        signerPubKey, err := RecoverSignerPublicKey(hash, envelope.Signature)
+        if err != nil {
+            return nil, err
+        }
+
+        var streamEvent StreamEvent
+        err = proto.Unmarshal(envelope.Event, &streamEvent)
+        if err != nil {
+            return nil, err
+        }
+
+        if len(streamEvent.DelegateSig) > 0 {
+            err = CheckDelegateSig(streamEvent.CreatorAddress, signerPubKey, streamEvent.DelegateSig)
+            if err != nil {
+                // The old style signature is a standard ethereum message signature.
+                // TODO(HNT-1380): once we switch to the new signing model, remove this call
+                err2 := CheckEthereumMessageSignature(streamEvent.CreatorAddress, signerPubKey, streamEvent.DelegateSig)
+                if err2 != nil {
+                    return nil, WrapRiverError(Err_BAD_EVENT_SIGNATURE, err).Message("Bad signature").Func("ParseEvent").Tag("error2", err2)
+                }
+            }
+        } else {
+            address := PublicKeyToAddress(signerPubKey)
+            if !bytes.Equal(address.Bytes(), streamEvent.CreatorAddress) {
+                return nil, RiverError(Err_BAD_EVENT_SIGNATURE, "Bad signature provided", "computed address", address, "event creatorAddress", streamEvent.CreatorAddress)
+            }
+        }
+        ...
+    ```
+  </Step>
+  <Step title="Check Delegate Signature">
+  If the delegate signature is present on the event, the creator address is used in conjunction with the previously retrieved public key and delegate signature to prove that the signature was signed by the creator.
+  ```go
+  // delegate.go
+  func CheckDelegateSig(expectedAddress []byte, devicePubKey, delegateSig []byte) error {
+	recoveredAddress, err := RecoverDelegateSigAddress(devicePubKey, delegateSig)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(expectedAddress, recoveredAddress.Bytes()) {
+		return RiverError(Err_BAD_EVENT_SIGNATURE, "Bad signature provided", "computed_address", recoveredAddress, "event_creatorAddress", expectedAddress)
+	}
+	return nil
+}
+  ```
+  </Step>
+</Steps>
+
+<Note>Event creator wallets used to sign events are assumed to be created as Ethereum wallets. Therefore, `secp256k1` algorithm is used to validate signature and sign. River Stream Nodes use a hardened version of this algorithm found in [go-ethereum](https://github.com/ethereum/go-ethereum/tree/master/crypto/secp256k1) package. </Note>
+
+### Node Delegate Events
+
+River Stream Nodes are created with an ECDSA wallet used for identity and so can create events destined for streams in the network just like users using their Ethereum wallet as a primary wallet or another linked wallet created using [ECDSA](https://en.wikipedia.org/wiki/Elliptic_Curve_Digital_Signature_Algorithm). 
+
+Nodes create new wallets using `go-ethereum` crypto tools in the following function.
+
+```go
+// sign.go
+func NewWallet(ctx context.Context) (*Wallet, error) {
+	log := dlog.CtxLog(ctx)
+
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		return nil, err
+	}
+	address := crypto.PubkeyToAddress(key.PublicKey)
+
+	log.Info("New wallet generated.", "address", address.Hex(), "publicKey", crypto.FromECDSAPub(&key.PublicKey))
+	return &Wallet{
+			PrivateKeyStruct: key,
+			PrivateKey:       crypto.FromECDSA(key),
+			Address:          address,
+			AddressStr:       address.Hex(),
+		},
+		nil
+}
+```
