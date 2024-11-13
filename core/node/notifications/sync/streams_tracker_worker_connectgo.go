@@ -187,7 +187,7 @@ func (s *StreamTrackerConnectGo) Run(
 		// If it isn't received within reasonable time the liveness loop will
 		// cancel the sync session causing a new session to be started.
 		var gotSyncResetUpdate atomic.Bool
-		go s.liveness(syncCtx, syncCancel, &gotSyncResetUpdate,
+		go s.liveness(log, syncCtx, syncCancel, &gotSyncResetUpdate,
 			workerPool, stream.StreamId, syncID, client, &lastReceivedPong, metrics)
 
 		for streamUpdates.Receive() {
@@ -303,6 +303,7 @@ func (s *StreamTrackerConnectGo) Run(
 // liveness periodically checks the status of a stream sync session to determine if it's still active.
 // if not it cancels the session which forces a restart.
 func (s *StreamTrackerConnectGo) liveness(
+	log *slog.Logger,
 	syncCtx context.Context,
 	cancelSyncSession context.CancelFunc,
 	gotSyncResetUpdate *atomic.Bool,
@@ -313,10 +314,7 @@ func (s *StreamTrackerConnectGo) liveness(
 	lastReceivedPong *atomic.Int64,
 	metrics *streamsTrackerWorkerMetrics,
 ) {
-	var (
-		log         = dlog.FromCtx(syncCtx).With("stream", streamID, "syncID", syncID)
-		pongTimeout = 30 * time.Second
-	)
+	const pongTimeout = 30 * time.Second
 
 	// if liveness loop stops always cancel associated sync session since its considered dead
 	defer cancelSyncSession()
