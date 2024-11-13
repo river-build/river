@@ -202,8 +202,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 			return err
 		}
 
-		msg := resp.Msg
-		if (err != nil && AsRiverError(err).Code == Err_NOT_FOUND) || len(msg.Miniblocks) == 0 {
+		if err != nil || len(resp.Msg.GetMiniblocks()) == 0 {
 			log.Info(
 				"ArchiveStream: GetMiniblocks did not return data, remote storage is not up-to-date with contract yet",
 				"streamId",
@@ -221,6 +220,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 			return nil
 		}
 
+		msg := resp.Msg
 		// Validate miniblocks are sequential.
 		// TODO: validate miniblock signatures.
 		var serialized [][]byte
