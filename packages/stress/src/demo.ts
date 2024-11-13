@@ -27,7 +27,7 @@ import { getLogger } from './utils/logger'
 import { createConnectTransport, ConnectTransportOptions } from '@connectrpc/connect-node'
 
 check(isSet(process.env.RIVER_ENV), 'process.env.RIVER_ENV')
-console.log('process.env.RIVER_ENV', process.env.RIVER_ENV)
+
 const logger = getLogger('stress:index')
 const config = makeRiverConfig(process.env.RIVER_ENV)
 logger.info(config, 'config')
@@ -172,18 +172,20 @@ const registerNotificationService = async () => {
                 return createConnectTransport(options)
             },
         })
-    logger.info('authenticated', { startResponse, finishResponse })
+    logger.info({ startResponse, finishResponse }, 'authenticated')
 
-    const settings = await notificationRpcClient.getSettings(new GetSettingsRequest())
-    logger.info('settings', settings)
+    let settings = await notificationRpcClient.getSettings(new GetSettingsRequest())
+    logger.info(settings.toJson(), 'settings')
 
-    const newSettings = await notificationRpcClient.setDmGdmSettings(
+    const response = await notificationRpcClient.setDmGdmSettings(
         new SetDmGdmSettingsRequest({
             dmGlobal: DmChannelSettingValue.DM_MESSAGES_NO,
             gdmGlobal: GdmChannelSettingValue.GDM_MESSAGES_NO,
         }),
     )
-    logger.info('new settings', newSettings)
+    logger.info(response, 'set settings response')
+    settings = await notificationRpcClient.getSettings(new GetSettingsRequest())
+    logger.info(settings.toJson(), 'new settings')
 }
 
 logger.info(getSystemInfo(), 'system info')
