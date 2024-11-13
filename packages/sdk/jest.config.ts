@@ -74,4 +74,15 @@ const config: JestConfigWithTsJest = {
     coverageReporters: ['json', 'html'],
 }
 
+// instrument console.log with some Uint8Array handling logic
+// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-var-requires
+;(<any>Uint8Array).prototype[require('util').inspect.custom] = function() {
+    const that: Uint8Array = this
+    let hex = Buffer.from(that).toString('hex')
+    if (hex.length > 20) {
+        hex = hex.slice(0, 20) + '...'
+    }
+    return `${hex}`
+}
+
 export default config
