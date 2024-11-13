@@ -17,6 +17,7 @@ import (
 type ParsedEvent struct {
 	Event         *StreamEvent
 	Envelope      *Envelope
+	Tags          *Tags
 	Hash          common.Hash
 	MiniblockRef  *MiniblockRef
 	SignerPubKey  []byte
@@ -70,13 +71,16 @@ func ParseEvent(envelope *Envelope) (*ParsedEvent, error) {
 	} else {
 		address := PublicKeyToAddress(signerPubKey)
 		if !bytes.Equal(address.Bytes(), streamEvent.CreatorAddress) {
-			return nil, RiverError(Err_BAD_EVENT_SIGNATURE, "Bad signature provided", "computed address", address, "event creatorAddress", streamEvent.CreatorAddress)
+			return nil, RiverError(Err_BAD_EVENT_SIGNATURE, "Bad signature provided",
+				"computed address", address,
+				"event creatorAddress", streamEvent.CreatorAddress)
 		}
 	}
 
 	return &ParsedEvent{
 		Event:    &streamEvent,
 		Envelope: envelope,
+		Tags:     streamEvent.GetTags(),
 		Hash:     common.BytesToHash(envelope.Hash),
 		MiniblockRef: &MiniblockRef{
 			Hash: common.BytesToHash(streamEvent.PrevMiniblockHash),
