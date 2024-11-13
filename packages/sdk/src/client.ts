@@ -2306,9 +2306,8 @@ export class Client
                 throw new Error('mls backend not initialized')
             }
             const cleartext = await this.mlsCrypto.decrypt(streamId, encryptedData)
-            console.log('CLEARTEXT', cleartext)
             const string = new TextDecoder().decode(cleartext)
-            console.log(`DID DECRYPT MLS ${string}`)
+            this.mlsCrypto.log('decrypted', string)
             return string
         } else {
             if (!this.cryptoBackend) {
@@ -2388,6 +2387,7 @@ export class Client
         }
 
         if (this.mlsCrypto.groupStore.getGroupStatus(streamId) !== 'GROUP_MISSING') {
+            this.mlsCrypto.log('Group already exists')
             return
         }
 
@@ -2400,6 +2400,9 @@ export class Client
             // join via group create
             const groupInfoWithExternalKey = await this.mlsCrypto.createGroup(streamId)
             const deviceKey = this.mlsCrypto.deviceKey
+            this.mlsCrypto.log('trying to initialize a group', {
+                groupInfo: shortenHexString(bin_toHexString(groupInfoWithExternalKey)),
+            })
             await this.makeEventAndAddToStream(
                 streamId,
                 make_MemberPayload_Mls({
@@ -2416,6 +2419,11 @@ export class Client
         } else {
             // join via external join
             const groupJoinResult = await this.mlsCrypto.externalJoin(streamId, latestGroupInfo)
+            this.mlsCrypto.log('trying to externally add', {
+                epoch: groupJoinResult.epoch,
+                commit: shortenHexString(bin_toHexString(groupJoinResult.commit)),
+                groupInfo: shortenHexString(bin_toHexString(groupJoinResult.groupInfo)),
+            })
             await this.makeEventAndAddToStream(
                 streamId,
                 make_MemberPayload_Mls({
@@ -2630,10 +2638,10 @@ export class Client
             group.deviceKey,
             group.groupInfoWithExternalKey,
         )
-        console.log(`Initialize Group ${before} -> ${after} @ ${streamId}`)
+        this.mlsCrypto.log('handleInitializeGroup', before, after)
         if (after === 'GROUP_MISSING') {
             // Try rejoining the group
-            console.log(`Rejoining group ${streamId}`)
+            this.mlsCrypto.log('trying to join group')
             await this.mls_joinOrCreateGroup(streamId)
         }
     }
@@ -2651,11 +2659,12 @@ export class Client
             externalJoin.deviceKey,
             externalJoin.commit,
             externalJoin.groupInfoWithExternalKey,
+            externalJoin.epoch,
         )
-        console.log(`External Join ${before} -> ${after} @ ${streamId}`)
+        this.mlsCrypto.log('handleExternalJoin', before, after)
         if (after === 'GROUP_MISSING') {
             // Try rejoining the group
-            console.log(`Rejoining group ${streamId}`)
+            this.mlsCrypto.log('trying to rejoin group')
             await this.mls_joinOrCreateGroup(streamId)
         } else {
             // NOTE: We can announce the key as we are now switching to a new epoch
@@ -2689,21 +2698,25 @@ export class Client
 
                     // Announcing previous epoch secret
                     try {
+                        const sealedEpochSecret = previousEpochKey.state.sealedEpochSecret.toBytes()
+                        this.mlsCrypto.log('announcing key', {
+                            epoch: previousEpoch,
+                            key: shortenHexString(bin_toHexString(sealedEpochSecret)),
+                        })
                         await this.makeEventAndAddToStream(
                             streamId,
                             make_MemberPayload_Mls({
                                 content: {
                                     case: 'keyAnnouncement',
                                     value: {
-                                        key: previousEpochKey.state.sealedEpochSecret.toBytes(),
+                                        key: sealedEpochSecret,
                                         epoch: previousEpoch,
                                     },
                                 },
                             }),
                         )
-                        console.log('SENT Keys', previousEpochKey.state.sealedEpochSecret.toBytes())
                     } catch (error) {
-                        console.log('ERROR announcing key', error)
+                        this.mlsCrypto.log('error announcing key', error)
                     }
                 }
             }

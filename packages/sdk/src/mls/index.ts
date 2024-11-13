@@ -8,7 +8,7 @@ import { EncryptedData } from '@river-build/proto'
 import { EpochKeyService } from './epochKeyStore'
 import { GroupStore, GroupStatus } from './groupStore'
 import { MlsStore } from './mlsStore'
-import { dlog, DLogger, bin_toHexString } from '@river-build/dlog'
+import { dlog, DLogger, bin_toHexString, shortenHexString } from '@river-build/dlog'
 
 function uint8ArrayEqual(a: Uint8Array, b: Uint8Array): boolean {
     if (a === b) {
@@ -165,6 +165,7 @@ export class MlsCrypto {
         await group.processIncomingMessage(MlsMessage.fromBytes(commit))
         const secret = await group.currentEpochSecret()
         const epoch = group.currentEpoch
+        this.log('handleCommit', { epoch, commit: shortenHexString(bin_toHexString(commit)) })
         await this.epochKeyService.addOpenEpochSecret(streamId, epoch, secret.toBytes())
     }
 
@@ -251,6 +252,7 @@ export class MlsCrypto {
         deviceKey: Uint8Array,
         commit: Uint8Array,
         groupInfoWithExternalKey: Uint8Array,
+        epoch: bigint,
     ): Promise<GroupStatus> {
         // - If we have a group in PENDING_CREATE,
         //   then we clear it, and request to join using external join
@@ -276,6 +278,7 @@ export class MlsCrypto {
                     uint8ArrayEqual(commit, groupState.commit) &&
                     uint8ArrayEqual(groupInfoWithExternalKey, groupState.groupInfoWithExternalKey)
                 if (!ownPendingJoin) {
+                    this.log('someone else joined, clearing group', epoch)
                     this.groupStore.clear(streamId)
                     return 'GROUP_MISSING'
                 }
@@ -284,12 +287,13 @@ export class MlsCrypto {
                     state: 'GROUP_ACTIVE',
                     group: groupState.group,
                 })
+                const joinedEpoch = groupState.group.currentEpoch
+                this.log('joining group', joinedEpoch)
                 // add a key to the epoch store
-                const epoch = groupState.group.currentEpoch
                 const epochSecret = await groupState.group.currentEpochSecret()
                 await this.epochKeyService.addOpenEpochSecret(
                     streamId,
-                    epoch,
+                    joinedEpoch,
                     epochSecret.toBytes(),
                 )
                 this.awaitingGroupActive.get(streamId)?.resolve()

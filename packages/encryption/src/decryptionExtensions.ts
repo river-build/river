@@ -132,6 +132,7 @@ export interface MlsExternalJoin {
     deviceKey: Uint8Array
     commit: Uint8Array
     groupInfoWithExternalKey: Uint8Array
+    epoch: bigint
 }
 
 export interface MlsKeyAnnouncement {
@@ -845,7 +846,7 @@ export abstract class BaseDecryptionExtensions {
     }
 
     private async processMls(mls: MlsEncryptionEvent): Promise<void> {
-        console.log('PROCESS MLS', this.userId, mls)
+        // console.log('PROCESS MLS', this.userId, mls)
         switch (mls.tag) {
             // case 'MlsCommit':
             //     return this.didReceiveMlsCommit(mls)

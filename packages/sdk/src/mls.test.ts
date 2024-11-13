@@ -92,7 +92,7 @@ describe('CreateGroup', () => {
         const crypto = await initializeCrypto(userAddress, deviceKey)
         const { groupInfo, commit } = await crypto.externalJoin(streamId, groupInfoWithExternalKey)
         expect(crypto.groupStore.getGroupStatus(streamId)).toEqual('GROUP_PENDING_JOIN')
-        await crypto.handleExternalJoin(streamId, userAddress, deviceKey, commit, groupInfo)
+        await crypto.handleExternalJoin(streamId, userAddress, deviceKey, commit, groupInfo, 0n)
         expect(crypto.groupStore.getGroupStatus(streamId)).toEqual('GROUP_ACTIVE')
     })
 
@@ -132,7 +132,7 @@ describe('CreateGroup', () => {
         const crypto = await initializeCrypto(userAddress, deviceKey)
         const awaiting = crypto.awaitGroupActive(streamId)
         const { groupInfo, commit } = await crypto.externalJoin(streamId, groupInfoWithExternalKey)
-        await crypto.handleExternalJoin(streamId, userAddress, deviceKey, commit, groupInfo)
+        await crypto.handleExternalJoin(streamId, userAddress, deviceKey, commit, groupInfo, 0n)
         await expect(awaiting).toResolve()
     })
 })

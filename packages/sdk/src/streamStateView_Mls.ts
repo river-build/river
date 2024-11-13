@@ -19,6 +19,7 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
     public keys: Map<bigint, Uint8Array> = new Map()
     private commits: Uint8Array[] = []
     private deviceKeys: { [key: string]: MemberPayload_Snapshot_MlsGroup_DeviceKeys } = {}
+    public currentEpoch: bigint = 0n
 
     constructor(streamId: string) {
         super()
@@ -34,12 +35,13 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
         this.pendingLeaves = new Set(snapshot.pendingLeaves.map((leave) => leave.userAddress))
         this.commits = snapshot.commits
         this.deviceKeys = snapshot.deviceKeys
+        this.currentEpoch = snapshot.currentEpoch
 
         for (const commit of snapshot.commits) {
             encryptionEmitter?.emit('mlsCommit', this.streamId, commit)
         }
 
-        console.log('GOT KEYVALS', snapshot.epochKeys)
+        // console.log('GOT KEYVALS', snapshot.epochKeys)
     }
 
     appendEvent(
@@ -54,15 +56,17 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
             event.remoteEvent.event.payload.value.content.value
         switch (payload.content.case) {
             case 'initializeGroup':
-                this.initialGroupInfo = payload.content.value.groupInfoWithExternalKey
-                this.latestGroupInfo = payload.content.value.groupInfoWithExternalKey
-                encryptionEmitter?.emit(
-                    'mlsInitializeGroup',
-                    this.streamId,
-                    payload.content.value.userAddress,
-                    payload.content.value.deviceKey,
-                    payload.content.value.groupInfoWithExternalKey,
-                )
+                if (!this.initialGroupInfo) {
+                    this.initialGroupInfo = payload.content.value.groupInfoWithExternalKey
+                    this.latestGroupInfo = payload.content.value.groupInfoWithExternalKey
+                    encryptionEmitter?.emit(
+                        'mlsInitializeGroup',
+                        this.streamId,
+                        payload.content.value.userAddress,
+                        payload.content.value.deviceKey,
+                        payload.content.value.groupInfoWithExternalKey,
+                    )
+                }
                 break
             case 'commitLeave': {
                 // const userId = userIdFromAddress(payload.content.value.userAddress)
@@ -78,21 +82,25 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
                 // should this have a commit?
                 break
             case 'externalJoin': {
-                const userId = userIdFromAddress(payload.content.value.userAddress)
-                if (this.deviceKeys[userId] === undefined) {
-                    this.deviceKeys[userId] = new MemberPayload_Snapshot_MlsGroup_DeviceKeys()
+                if (this.currentEpoch + 1n === payload.content.value.epoch) {
+                    const userId = userIdFromAddress(payload.content.value.userAddress)
+                    if (this.deviceKeys[userId] === undefined) {
+                        this.deviceKeys[userId] = new MemberPayload_Snapshot_MlsGroup_DeviceKeys()
+                    }
+                    this.deviceKeys[userId].deviceKeys.push(payload.content.value.deviceKey)
+                    this.commits.push(payload.content.value.commit)
+                    this.latestGroupInfo = payload.content.value.groupInfoWithExternalKey
+                    this.currentEpoch = payload.content.value.epoch
+                    encryptionEmitter?.emit(
+                        'mlsExternalJoin',
+                        this.streamId,
+                        payload.content.value.userAddress,
+                        payload.content.value.deviceKey,
+                        payload.content.value.commit,
+                        payload.content.value.groupInfoWithExternalKey,
+                        payload.content.value.epoch,
+                    )
                 }
-                this.deviceKeys[userId].deviceKeys.push(payload.content.value.deviceKey)
-                this.commits.push(payload.content.value.commit)
-                this.latestGroupInfo = payload.content.value.groupInfoWithExternalKey
-                encryptionEmitter?.emit(
-                    'mlsExternalJoin',
-                    this.streamId,
-                    payload.content.value.userAddress,
-                    payload.content.value.deviceKey,
-                    payload.content.value.commit,
-                    payload.content.value.groupInfoWithExternalKey,
-                )
                 break
             }
             case 'keyAnnouncement':

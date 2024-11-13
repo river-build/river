@@ -37,8 +37,8 @@ describe('dmsMlsTests', () => {
     })
 
     test('clientCanSendMlsPayloadInDM', async () => {
-        const alicesClient = await makeInitAndStartClient()
-        const bobsClient = await makeInitAndStartClient()
+        const alicesClient = await makeInitAndStartClient('alice')
+        const bobsClient = await makeInitAndStartClient('bob')
         const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
         await expect(bobsClient.waitForStream(streamId)).toResolve()
         await expect(alicesClient.waitForStream(streamId)).toResolve()
@@ -47,30 +47,46 @@ describe('dmsMlsTests', () => {
             alicesClient.sendMessage(streamId, 'hello bob', [], [], { useMls: true }),
         ).toResolve()
 
-        await waitFor(() => {
-            const bobStream = bobsClient.streams.get(streamId)
-            check(bobStream?._view.membershipContent.mls.latestGroupInfo !== undefined)
-        })
+        await waitFor(
+            () => {
+                const bobStream = bobsClient.streams.get(streamId)
+                check(bobStream?._view.membershipContent.mls.latestGroupInfo !== undefined)
+            },
+            { timeoutMS: 1000 },
+        )
 
         await expect(
             bobsClient.sendMessage(streamId, 'hello alice', [], [], { useMls: true }),
         ).toResolve()
 
         // Not sure both are active
-        await waitFor(() => {
-            const aliceEpoch = alicesClient.mlsCrypto!.epochFor(streamId)
-            const bobEpoch = bobsClient.mlsCrypto!.epochFor(streamId)
-            check(aliceEpoch === bobEpoch)
-            check(aliceEpoch === BigInt(1))
-        })
+        await waitFor(
+            () => {
+                const aliceEpoch = alicesClient.mlsCrypto!.epochFor(streamId)
+                const bobEpoch = bobsClient.mlsCrypto!.epochFor(streamId)
+                check(aliceEpoch === bobEpoch)
+                check(aliceEpoch === BigInt(1))
+            },
+            { timeoutMS: 1000 },
+        )
 
-        await waitFor(() => {
-            const aliceStream = alicesClient.streams.get(streamId)!
-            check(checkTimelineContainsAll(['hello alice', 'hello bob'], aliceStream.view.timeline))
+        await waitFor(
+            () => {
+                const aliceStream = alicesClient.streams.get(streamId)!
+                check(
+                    checkTimelineContainsAll(
+                        ['hello alice', 'hello bob'],
+                        aliceStream.view.timeline,
+                    ),
+                )
 
-            const bobStream = bobsClient.streams.get(streamId)!
-            check(checkTimelineContainsAll(['hello alice', 'hello bob'], bobStream.view.timeline))
-        })
+                const bobStream = bobsClient.streams.get(streamId)!
+                check(
+                    checkTimelineContainsAll(['hello alice', 'hello bob'], bobStream.view.timeline),
+                )
+            },
+            { timeoutMS: 1000 },
+        )
 
         const messages = Array.from(Array(10).keys()).map((key) => {
             return `Message ${key}`
@@ -82,16 +98,19 @@ describe('dmsMlsTests', () => {
             ).toResolve()
         }
 
-        await waitFor(() => {
-            const aliceStream = alicesClient.streams.get(streamId)!
-            check(checkTimelineContainsAll(messages, aliceStream.view.timeline))
+        await waitFor(
+            () => {
+                const aliceStream = alicesClient.streams.get(streamId)!
+                check(checkTimelineContainsAll(messages, aliceStream.view.timeline))
 
-            const bobStream = bobsClient.streams.get(streamId)!
-            check(checkTimelineContainsAll(messages, bobStream.view.timeline))
-        })
+                const bobStream = bobsClient.streams.get(streamId)!
+                check(checkTimelineContainsAll(messages, bobStream.view.timeline))
+            },
+            { timeoutMS: 1000 },
+        )
     })
 
-    test.only('threeClientsCanJoin', async () => {
+    test('threeClientsCanJoin', async () => {
         const aliceClient = await makeInitAndStartClient('alice')
         const bobClient = await makeInitAndStartClient('bob')
         const charlieClient = await makeInitAndStartClient('charlie')
@@ -134,9 +153,9 @@ describe('dmsMlsTests', () => {
     })
 
     test('moreClientsCanJoin', async () => {
-        const alicesClient = await makeInitAndStartClient()
-        const bobsClient = await makeInitAndStartClient()
-        const charliesClient = await makeInitAndStartClient()
+        const alicesClient = await makeInitAndStartClient('alice')
+        const bobsClient = await makeInitAndStartClient('bob')
+        const charliesClient = await makeInitAndStartClient('charlie')
 
         const { streamId } = await bobsClient.createGDMChannel([
             alicesClient.userId,
@@ -170,33 +189,41 @@ describe('dmsMlsTests', () => {
             bobsClient.sendMessage(streamId, 'hello alice', [], [], { useMls: true }),
         ).toResolve()
 
-        // await waitFor(() => {
-        //     const aliceStream = alicesClient.streams.get(streamId)!
-        //     check(checkTimelineContainsAll(['hello alice', 'hello bob'], aliceStream.view.timeline))
-        //
-        //     const bobStream = bobsClient.streams.get(streamId)!
-        //     check(checkTimelineContainsAll(['hello alice', 'hello bob'], bobStream.view.timeline))
-        // })
+        await waitFor(() => {
+            const aliceStream = alicesClient.streams.get(streamId)!
+            check(checkTimelineContainsAll(['hello alice', 'hello bob'], aliceStream.view.timeline))
 
-        // const addedClients: Client[] = []
-        //
-        // // add 3 more users
-        // for (let i = 0; i < 2; i++) {
-        //     const client = await makeInitAndStartClient()
-        //     await expect(bobsClient.joinUser(streamId, client.userId)).toResolve()
-        //     addedClients.push(client)
-        // }
-        //
-        // for (const client of addedClients) {
-        //     await expect(client.waitForStream(streamId)).toResolve()
-        // }
-        //
-        // await waitFor(() => {
-        //     for (const client of clients) {
-        //         const stream = client.streams.get(streamId)!
-        //         check(checkTimelineContainsAll(['hello alice', 'hello bob'], stream.view.timeline))
-        //     }
-        // })
+            const bobStream = bobsClient.streams.get(streamId)!
+            check(checkTimelineContainsAll(['hello alice', 'hello bob'], bobStream.view.timeline))
+        })
+
+        const addedClients: Client[] = []
+
+        // add 3 more users
+        for (let i = 0; i < 2; i++) {
+            const client = await makeInitAndStartClient(`client-${i}`)
+            await expect(bobsClient.joinUser(streamId, client.userId)).toResolve()
+            addedClients.push(client)
+        }
+
+        for (const client of addedClients) {
+            await expect(client.waitForStream(streamId)).toResolve()
+        }
+
+        await waitFor(
+            () => {
+                for (const client of clients) {
+                    const stream = client.streams.get(streamId)!
+                    check(
+                        checkTimelineContainsAll(
+                            ['hello alice', 'hello bob'],
+                            stream.view.timeline,
+                        ),
+                    )
+                }
+            },
+            { timeoutMS: 5000 },
+        )
     })
 
     // NOTE: Currently broken

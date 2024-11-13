@@ -28,7 +28,7 @@ export class EpochKeyService {
     private getEpochKeyStore(streamId: string): EpochKeyStore {
         let epochKeyStore = this.epochKeyStores.get(streamId)
         if (!epochKeyStore) {
-            epochKeyStore = new EpochKeyStore(streamId, this.mlsStore)
+            epochKeyStore = new EpochKeyStore(streamId, this.mlsStore, this.log)
             this.epochKeyStores.set(streamId, epochKeyStore)
         }
         return epochKeyStore
@@ -93,8 +93,9 @@ export class EpochKeyService {
             const openEpochSecret = epochKey.state.openEpochSecret
             const keys = await this.cipherSuite.kemDerive(openEpochSecret)
             epochKey.addDerivedKeys(keys).persist()
-            // TODO: try opening
-            await this.openSealedEpochSecret(streamId, epoch, keys)
+            if (epoch > 0n) {
+                await this.openSealedEpochSecret(streamId, epoch - 1n, keys)
+            }
         }
         return Promise.resolve(epochKey.state)
     }
@@ -116,21 +117,26 @@ export class EpochKey {
     public readonly epoch: bigint
     private readonly store: EpochKeyStore
     public state: EpochKeyState
+    private log: DLogger
     constructor(
         store: EpochKeyStore,
         epoch: bigint,
+        log: DLogger,
         state: EpochKeyState = { status: 'EPOCH_KEY_MISSING' },
     ) {
         this.store = store
         this.epoch = epoch
+        this.log = log.extend('epoch-key')
         this.state = state
     }
 
     public persist() {
+        // this.log('EpochKey.persist', this.epoch, this.state)
         this.store.setEpochKeyState(this.epoch, this.state)
     }
 
     public addSealedEpochSecret(sealedEpochSecret: HpkeCiphertext): EpochKey {
+        const before = this.state.status
         switch (this.state.status) {
             case 'EPOCH_KEY_MISSING':
                 this.state = { status: 'EPOCH_KEY_SEALED', sealedEpochSecret }
@@ -138,11 +144,14 @@ export class EpochKey {
             default:
                 this.state.sealedEpochSecret = sealedEpochSecret
         }
+        const after = this.state.status
 
+        this.log('add sealed epoch secret', this.epoch, before, after)
         return this
     }
 
     public addOpenEpochSecret(openEpochSecret: HpkeSecretKey): EpochKey {
+        const before = this.state.status
         switch (this.state.status) {
             case 'EPOCH_KEY_MISSING':
                 this.state = { status: 'EPOCH_KEY_OPEN', openEpochSecret }
@@ -157,11 +166,14 @@ export class EpochKey {
             default:
                 this.state.openEpochSecret = openEpochSecret
         }
+        const after = this.state.status
 
+        this.log('add open epoch secret', this.epoch, before, after)
         return this
     }
 
     public addDerivedKeys(derivedKeys: DerivedKeys): EpochKey {
+        const before = this.state.status
         switch (this.state.status) {
             case 'EPOCH_KEY_OPEN':
                 this.state = {
@@ -181,7 +193,9 @@ export class EpochKey {
             default:
                 throw new Error(`Unexpected state ${this.state.status} for epoch ${this.epoch}`)
         }
+        const after = this.state.status
 
+        this.log('add derived keys', this.epoch, before, after)
         return this
     }
 }
@@ -198,10 +212,13 @@ export class EpochKeyStore {
     private publicKeys: Map<bigint, HpkePublicKeyBytes> = new Map()
     private streamId: string
     private mlsStore: MlsStore
+    log: DLogger
 
-    constructor(streamId: string, mlsStore: MlsStore) {
+    constructor(streamId: string, mlsStore: MlsStore, log: DLogger) {
         this.streamId = streamId
         this.mlsStore = mlsStore
+        // this.log = log.extend(shortenHexString(streamId))
+        this.log = log
     }
 
     private getEpochKeyState(epoch: bigint): EpochKeyState {
@@ -240,7 +257,7 @@ export class EpochKeyStore {
 
     public getEpochKey(epoch: bigint): EpochKey {
         const state = this.getEpochKeyState(epoch)
-        return new EpochKey(this, epoch, state)
+        return new EpochKey(this, epoch, this.log, state)
     }
 
     // TODO: Optimise this

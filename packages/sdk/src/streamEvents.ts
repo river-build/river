@@ -67,6 +67,7 @@ export type StreamEncryptionEvents = {
         deviceKey: Uint8Array,
         commit: Uint8Array,
         groupInfoWithExternalKey: Uint8Array,
+        epoch: bigint,
     ) => void
     mlsKeyAnnouncement: (streamId: string, keys: { epoch: bigint; key: Uint8Array }) => void
 }
