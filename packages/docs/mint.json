@@ -37,10 +37,6 @@
       "url": "https://github.com/river-build"
     }
   ],
-  "topbarCtaButton": {
-    "name": "Dashboard",
-    "url": "https://dashboard.mintlify.com"
-  },
   "tabs": [
   ],
   "navigation": [
