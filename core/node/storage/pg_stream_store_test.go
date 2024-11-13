@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -85,7 +84,8 @@ func setupStreamStorageTest(t *testing.T, migrateStreamCreation bool) *testStrea
 
 type testFunc func(*testStreamStoreParams)
 
-func TestStoreAgainstMigratedAndLegacySchemas(t *testing.T) {
+func TestStore(t *testing.T) {
+	t.Parallel()
 	tests := map[string]testFunc{
 		"TestPostgresStreamStore":                           testPostgresStreamStore,
 		"TestPromoteMiniblockCandidate":                     testPromoteMiniblockCandidate,
@@ -108,19 +108,25 @@ func TestStoreAgainstMigratedAndLegacySchemas(t *testing.T) {
 		"TestReadStreamFromLastSnapshot":                                       testReadStreamFromLastSnapshot,
 	}
 
-	for name, testFunc := range tests {
-		t.Run(fmt.Sprintf("%v_legacy", name), func(t *testing.T) {
-			params := setupStreamStorageTest(t, false)
-			testFunc(params)
-		})
-	}
+	t.Run("Legacy", func(t *testing.T) {
+		t.Parallel()
+		for name, testFunc := range tests {
+			t.Run(name, func(t *testing.T) {
+				params := setupStreamStorageTest(t, false)
+				testFunc(params)
+			})
+		}
+	})
 
-	for name, testFunc := range tests {
-		t.Run(fmt.Sprintf("%v_migrated", name), func(t *testing.T) {
-			params := setupStreamStorageTest(t, true)
-			testFunc(params)
-		})
-	}
+	t.Run("Migrated", func(t *testing.T) {
+		t.Parallel()
+		for name, testFunc := range tests {
+			t.Run(name, func(t *testing.T) {
+				params := setupStreamStorageTest(t, true)
+				testFunc(params)
+			})
+		}
+	})
 }
 
 func promoteMiniblockCandidate(
