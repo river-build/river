@@ -887,6 +887,14 @@ export abstract class BaseDecryptionExtensions {
     }
 
     public async retryMls(streamId: string): Promise<void> {
+        if (!this.decryptionFailures[streamId]) {
+            return
+        }
+
+        if (!this.decryptionFailures[streamId]['all-the-same']) {
+            return
+        }
+
         const streamFailures = this.decryptionFailures[streamId]['all-the-same']
         this.decryptionFailures[streamId]['all-the-same'] = []
         for (const failure of streamFailures) {
