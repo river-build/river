@@ -15,9 +15,13 @@ import { Timeline } from '../../timeline/timeline'
 const logger = dlogger('csb:dm')
 
 export interface DmModel extends Identifiable {
+    /** The id of the DM. */
     id: string
+    /** Whether the SyncAgent has loaded this data. */
     initialized: boolean
+    /** Whether the current user has joined the DM. */
     isJoined: boolean
+    /** The metadata of the DM. @see {@link ChannelProperties} */
     metadata?: ChannelProperties
 }
 
