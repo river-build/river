@@ -48,6 +48,14 @@ export class Gdm extends PersistedObservable<GdmModel> {
         })
     }
 
+    async leave() {
+        const streamId = this.data.id
+        if (this.data.isJoined) {
+            return this.riverConnection.call((client) => client.leaveStream(streamId))
+        }
+        return
+    }
+
     async sendMessage(
         message: string,
         options?: {
@@ -123,6 +131,7 @@ export class Gdm extends PersistedObservable<GdmModel> {
     }
 
     private onStreamUserLeft = (streamId: string, userId: string) => {
+        console.log('GDM -- onStreamUserLeft', streamId, userId)
         if (streamId === this.data.id && userId === this.riverConnection.userId) {
             this.setData({ isJoined: false })
         }

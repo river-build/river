@@ -67,4 +67,9 @@ export class Gdms extends PersistedObservable<GdmsModel> {
     async createGDM(...args: Parameters<Client['createGDMChannel']>) {
         return this.riverConnection.call((client) => client.createGDMChannel(...args))
     }
+
+    async leaveGdm(streamId: string) {
+        const gdm = this.getGdm(streamId)
+        return gdm.leave()
+    }
 }

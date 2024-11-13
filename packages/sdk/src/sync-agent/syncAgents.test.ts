@@ -4,8 +4,10 @@
 import { dlogger } from '@river-build/dlog'
 import { SyncAgent } from './syncAgent'
 import { Bot } from './utils/bot'
-import { waitFor } from '../util.test'
+import { makeUniqueSpaceStreamId, waitFor } from '../util.test'
 import { NoopRuleData, Permission } from '@river-build/web3'
+import { makeUniqueChannelStreamId } from '../id'
+import { MembershipOp } from '@river-build/proto'
 
 const logger = dlogger('csb:test:syncAgents')
 
@@ -214,5 +216,60 @@ describe('syncAgents.test.ts', () => {
                 ).toBeDefined(),
             { timeoutMS: 10000 },
         )
+    })
+
+    test('leave gdm', async () => {
+        await Promise.all([bob.start(), alice.start(), charlie.start()])
+        const { streamId } = await bob.gdms.createGDM([alice.userId, charlie.userId])
+        const bobGdm = bob.gdms.getGdm(streamId)
+        await waitFor(() => expect(bob.gdms.data.streamIds).toContain(streamId))
+        await waitFor(() => expect(bobGdm.data.isJoined).toBe(true))
+        await bobGdm.leave()
+        await waitFor(() => expect(bob.gdms.data.streamIds).not.toContain(streamId))
+        await waitFor(() => expect(bobGdm.data.isJoined).toBe(false))
+    })
+
+    test('leave channel', async () => {
+        await bob.start()
+        const spaceId = bob.spaces.data.spaceIds[0]
+        const space = bob.spaces.getSpace(spaceId)
+        const newChannelId = await space.createChannel('test', bobUser.signer)
+        const channel = space.getChannel(newChannelId)
+        await waitFor(() => expect(space.data.channelIds).toContain(newChannelId))
+        await waitFor(() => expect(channel.data.isJoined).toBe(true))
+        await channel.leave()
+        await waitFor(() => expect(space.data.channelIds).not.toContain(newChannelId))
+        await waitFor(() => expect(channel.data.isJoined).toBe(false))
+    })
+
+    test('leave space', async () => {
+        await Promise.all([bob.start()])
+        const spaceId = bob.spaces.data.spaceIds[0]
+        const space = bob.spaces.getSpace(spaceId)
+        await waitFor(() => expect(bob.spaces.data.spaceIds).toContain(spaceId))
+        await space.leave()
+        await waitFor(() => expect(bob.spaces.data.spaceIds).not.toContain(spaceId))
+    })
+
+    test('leave space that you are not in does nothing', async () => {
+        await Promise.all([bob.start()])
+        const randomSpaceId = makeUniqueSpaceStreamId()
+        const space = bob.spaces.getSpace(randomSpaceId)
+        await waitFor(() => expect(bob.spaces.data.spaceIds).not.toContain(randomSpaceId))
+        await waitFor(() => expect(space.members.myself.membership).toBe(undefined))
+        await space.leave()
+        await waitFor(() => expect(bob.spaces.data.spaceIds).not.toContain(randomSpaceId))
+        await waitFor(() => expect(space.members.myself.membership).not.toBe(MembershipOp.SO_LEAVE))
+    })
+
+    test('leave an unjoined channel does nothing', async () => {
+        await bob.start()
+        const spaceId = bob.spaces.data.spaceIds[0]
+        const space = bob.spaces.getSpace(spaceId)
+        const randomChannelId = makeUniqueChannelStreamId(spaceId)
+        const channel = space.getChannel(randomChannelId)
+        await waitFor(() => expect(channel.members.myself.membership).toBe(undefined))
+        await channel.leave()
+        await waitFor(() => expect(channel.members.myself.membership).toBe(undefined))
     })
 })

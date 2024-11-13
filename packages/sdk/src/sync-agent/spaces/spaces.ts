@@ -120,4 +120,9 @@ export class Spaces extends PersistedObservable<SpacesModel> {
         const space = this.getSpace(spaceId)
         return space.join(...args)
     }
+
+    async leaveSpace(spaceId: string) {
+        const space = this.getSpace(spaceId)
+        return space.leave()
+    }
 }

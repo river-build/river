@@ -74,6 +74,14 @@ export class Channel extends PersistedObservable<ChannelModel> {
         })
     }
 
+    async leave() {
+        const channelId = this.data.id
+        if (this.data.isJoined) {
+            return this.riverConnection.call((client) => client.leaveStream(channelId))
+        }
+        return
+    }
+
     async sendMessage(
         message: string,
         options?: {
