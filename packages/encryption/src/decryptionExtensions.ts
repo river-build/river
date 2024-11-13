@@ -148,7 +148,8 @@ export interface MlsJoinGroupEvent {
 export type MlsEncryptionEvent =
     // | MlsGroupInfo
     // | MlsCommit
-    MlsInitializeGroup | MlsExternalJoin | MlsKeyAnnouncement | MlsJoinGroupEvent
+    // | MlsJoinGroupEvent
+    MlsInitializeGroup | MlsExternalJoin | MlsKeyAnnouncement
 
 /**
  *
@@ -662,11 +663,11 @@ export abstract class BaseDecryptionExtensions {
                 } else if (!this.decryptionFailures[streamId][sessionId].includes(item)) {
                     this.decryptionFailures[streamId][sessionId].push(item)
                 }
-                if (isMlsGroupNotFoundError(err)) {
-                    this.queues.mls.push({ tag: 'MlsJoinGroupEvent', streamId: item.streamId })
-                } else if (isMlsMissingEpochError(err)) {
-                    console.log('Was missing epoch...')
-                }
+                // if (isMlsGroupNotFoundError(err)) {
+                //     this.queues.mls.push({ tag: 'MlsJoinGroupEvent', streamId: item.streamId })
+                // } else if (isMlsMissingEpochError(err)) {
+                //     console.log('Was missing epoch...')
+                // }
                 return
             }
             const sessionNotFound = isSessionNotFoundError(err)
@@ -856,13 +857,13 @@ export abstract class BaseDecryptionExtensions {
                 return this.didReceiveMlsExternalJoin(mls)
             case 'MlsKeyAnnouncement': {
                 await this.didReceiveMlsKeyAnnouncement(mls)
-                for (const item of this.decryptionFailures[mls.streamId]['all-the-same']) {
-                    await this.processEncryptedContentItem(item)
-                }
+                // for (const item of this.decryptionFailures[mls.streamId]['all-the-same']) {
+                //     await this.processEncryptedContentItem(item)
+                // }
                 break
             }
-            case 'MlsJoinGroupEvent':
-                return this.didReceiveMlsJoinGroupEvent(mls)
+            // case 'MlsJoinGroupEvent':
+            //     return this.didReceiveMlsJoinGroupEvent(mls)
             default:
                 logNever(mls, `Unhandled MLS event ${mls}`)
         }
