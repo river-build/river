@@ -1,9 +1,9 @@
 'use client'
 
 import type { Channel } from '@river-build/sdk'
+import { useMemo } from 'react'
 import { type ActionConfig, useAction } from './internals/useAction'
 import { useSyncAgent } from './useSyncAgent'
-import { useMemo } from 'react'
 
 export const useInviteChannel = (
     spaceId: string,
