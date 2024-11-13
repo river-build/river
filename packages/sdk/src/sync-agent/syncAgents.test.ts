@@ -6,6 +6,7 @@ import { SyncAgent } from './syncAgent'
 import { Bot } from './utils/bot'
 import { waitFor } from '../util.test'
 import { NoopRuleData, Permission } from '@river-build/web3'
+import { MembershipOp } from '@river-build/proto'
 
 const logger = dlogger('csb:test:syncAgents')
 
@@ -19,9 +20,7 @@ describe('syncAgents.test.ts', () => {
     let charlie: SyncAgent
 
     beforeEach(async () => {
-        await bobUser.fundWallet()
-        await aliceUser.fundWallet()
-        await charlieUser.fundWallet()
+        await Promise.all([bobUser.fundWallet(), aliceUser.fundWallet(), charlieUser.fundWallet()])
         bob = await bobUser.makeSyncAgent()
         alice = await aliceUser.makeSyncAgent()
         charlie = await charlieUser.makeSyncAgent()
@@ -213,6 +212,21 @@ describe('syncAgents.test.ts', () => {
                     aliceGdm.timeline.events.value.find((e) => e.text === 'Hello, World!'),
                 ).toBeDefined(),
             { timeoutMS: 10000 },
+        )
+    })
+
+    test('invite to channel', async () => {
+        await Promise.all([bob.start(), alice.start()])
+        const { spaceId } = await bob.spaces.createSpace(
+            { spaceName: 'Invite Test' },
+            bobUser.signer,
+        )
+        const space = bob.spaces.getSpace(spaceId)
+        const channelId = await space.createChannel('random', bobUser.signer)
+        const channel = space.getChannel(channelId)
+        await channel.invite(alice.userId)
+        await waitFor(() =>
+            expect(channel.members.get(alice.userId).membership).toEqual(MembershipOp.SO_INVITE),
         )
     })
 })
