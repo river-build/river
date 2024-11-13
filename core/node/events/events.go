@@ -43,6 +43,33 @@ func MakeStreamEvent(
 	return event, nil
 }
 
+func MakeStreamEventWithTags(
+	wallet *crypto.Wallet,
+	payload IsStreamEvent_Payload,
+	prevMiniblockHash []byte,
+	Tags *Tags,
+) (*StreamEvent, error) {
+	salt := make([]byte, 32)
+	_, err := rand.Read(salt)
+	if err != nil {
+		return nil, AsRiverError(err, Err_INTERNAL).
+			Message("Failed to create random salt").
+			Func("MakeStreamEvent")
+	}
+	epochMillis := time.Now().UnixNano() / int64(time.Millisecond)
+
+	event := &StreamEvent{
+		CreatorAddress:    wallet.Address.Bytes(),
+		Salt:              salt,
+		PrevMiniblockHash: prevMiniblockHash,
+		Payload:           payload,
+		CreatedAtEpochMs:  epochMillis,
+		Tags:              Tags,
+	}
+
+	return event, nil
+}
+
 func MakeDelegatedStreamEvent(
 	wallet *crypto.Wallet,
 	payload IsStreamEvent_Payload,
@@ -98,6 +125,19 @@ func MakeEnvelopeWithPayload(
 	prevMiniblock *MiniblockRef,
 ) (*Envelope, error) {
 	streamEvent, err := MakeStreamEvent(wallet, payload, prevMiniblock)
+	if err != nil {
+		return nil, err
+	}
+	return MakeEnvelopeWithEvent(wallet, streamEvent)
+}
+
+func MakeEnvelopeWithPayloadAndTags(
+	wallet *crypto.Wallet,
+	payload IsStreamEvent_Payload,
+	prevMiniblockHash []byte,
+	tags *Tags,
+) (*Envelope, error) {
+	streamEvent, err := MakeStreamEventWithTags(wallet, payload, prevMiniblockHash, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -167,6 +207,40 @@ func Make_MemberPayload_DisplayName(displayName *EncryptedData) *StreamEvent_Mem
 	}
 }
 
+func Make_DmChannelPayload_Inception(
+	streamId StreamId,
+	firstPartyAddress common.Address,
+	secondPartyAddress common.Address,
+	settings *StreamSettings,
+) *StreamEvent_DmChannelPayload {
+	return &StreamEvent_DmChannelPayload{
+		DmChannelPayload: &DmChannelPayload{
+			Content: &DmChannelPayload_Inception_{
+				Inception: &DmChannelPayload_Inception{
+					StreamId:           streamId[:],
+					FirstPartyAddress:  firstPartyAddress[:],
+					SecondPartyAddress: secondPartyAddress[:],
+					Settings:           settings,
+				},
+			},
+		}}
+}
+
+func Make_GdmChannelPayload_Inception(
+	streamId StreamId,
+	settings *StreamSettings,
+) *StreamEvent_GdmChannelPayload {
+	return &StreamEvent_GdmChannelPayload{
+		GdmChannelPayload: &GdmChannelPayload{
+			Content: &GdmChannelPayload_Inception_{
+				Inception: &GdmChannelPayload_Inception{
+					StreamId: streamId[:],
+					Settings: settings,
+				}},
+		},
+	}
+}
+
 func Make_ChannelPayload_Inception(
 	streamId StreamId,
 	spaceId StreamId,
@@ -210,6 +284,30 @@ func Make_ChannelPayload_Membership(
 		spaceIdBytes = nil
 	}
 	return Make_MemberPayload_Membership(op, userAddress, initiatorAddress, spaceIdBytes)
+}
+
+func Make_DMChannelPayload_Message(content string) *StreamEvent_DmChannelPayload {
+	return &StreamEvent_DmChannelPayload{
+		DmChannelPayload: &DmChannelPayload{
+			Content: &DmChannelPayload_Message{
+				Message: &EncryptedData{
+					Ciphertext: content,
+				},
+			},
+		},
+	}
+}
+
+func Make_GDMChannelPayload_Message(content string) *StreamEvent_GdmChannelPayload {
+	return &StreamEvent_GdmChannelPayload{
+		GdmChannelPayload: &GdmChannelPayload{
+			Content: &GdmChannelPayload_Message{
+				Message: &EncryptedData{
+					Ciphertext: content,
+				},
+			},
+		},
+	}
 }
 
 func Make_ChannelPayload_Message(content string) *StreamEvent_ChannelPayload {
