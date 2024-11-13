@@ -7,7 +7,7 @@ import type { ObservableConfig } from './useObservable'
 /**
  * Hook to get the auth status of the user connection with the River network.
  * @param config - Configuration options for the observable. @see {@link ObservableConfig.FromObservable}
- * @returns An object containing the current {@link AuthStatus status} and boolean flags for each possible status.
+ * @returns An object containing the current {@link AuthStatus} status and boolean flags for each possible status.
  */
 export const useRiverAuthStatus = (config?: ObservableConfig.FromObservable<AuthStatus>) => {
     const { data: status } = useRiver((s) => s.riverAuthStatus, config)
