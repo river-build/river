@@ -17,7 +17,6 @@ import { genIdBlob, streamIdAsBytes, streamIdAsString, userIdFromAddress } from 
 import { ParsedEvent, ParsedMiniblock, ParsedStreamAndCookie, ParsedStreamResponse } from './types'
 import { SignerContext, checkDelegateSig } from './signerContext'
 import { keccak256 } from 'ethereum-cryptography/keccak'
-import { sha256 } from 'ethers/lib/utils'
 import { createHash } from 'crypto'
 
 export interface UnpackEnvelopeOpts {
