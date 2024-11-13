@@ -845,7 +845,7 @@ export abstract class BaseDecryptionExtensions {
     }
 
     private async processMls(mls: MlsEncryptionEvent): Promise<void> {
-        console.log('PROCESS MLS', mls)
+        console.log('PROCESS MLS', this.userId, mls)
         switch (mls.tag) {
             // case 'MlsCommit':
             //     return this.didReceiveMlsCommit(mls)
