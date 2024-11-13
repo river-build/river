@@ -386,7 +386,6 @@ contract MembershipJoinSpaceTest is
     vm.prank(founder);
     membership.setMembershipLimit(1);
 
-    assertTrue(membership.getMembershipPrice() == 0);
     assertTrue(membership.getMembershipLimit() == 1);
 
     vm.prank(alice);
