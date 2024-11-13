@@ -45,8 +45,11 @@ export type MemberModel = {
 }
 
 export type NftModel = {
+    /** The contract address of the NFT. */
     contractAddress: string
+    /** The token id of the NFT. */
     tokenId: string
+    /** The chain id of the NFT. */
     chainId: number
 }
 
