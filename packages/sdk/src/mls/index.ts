@@ -8,6 +8,7 @@ import { EncryptedData } from '@river-build/proto'
 import { EpochKeyService } from './epochKeyStore'
 import { GroupStore, GroupStatus } from './groupStore'
 import { MlsStore } from './mlsStore'
+import { dlog, DLogger, bin_toHexString } from '@river-build/dlog'
 
 function uint8ArrayEqual(a: Uint8Array, b: Uint8Array): boolean {
     if (a === b) {
@@ -24,26 +25,37 @@ function uint8ArrayEqual(a: Uint8Array, b: Uint8Array): boolean {
     return true
 }
 
+const log = dlog('csb:mls')
+
 export class MlsCrypto {
     private client!: MlsClient
     private userAddress: Uint8Array
     public deviceKey: Uint8Array
     private mlsStore: MlsStore
+    private nickname: string | undefined
+    readonly log: DLogger
 
     awaitingGroupActive: Map<string, { promise: Promise<void>; resolve: () => void }> = new Map()
     cipherSuite: MlsCipherSuite = new MlsCipherSuite()
     epochKeyService: EpochKeyService
     groupStore: GroupStore
 
-    constructor(userAddress: Uint8Array, deviceKey: Uint8Array) {
+    constructor(userAddress: Uint8Array, deviceKey: Uint8Array, nickname?: string) {
         this.userAddress = userAddress
         this.deviceKey = deviceKey
-        this.mlsStore = new MlsStore(deviceKey)
-        this.groupStore = new GroupStore(this.mlsStore)
-        this.epochKeyService = new EpochKeyService(this.cipherSuite, this.mlsStore)
+        this.nickname = nickname
+        if (this.nickname) {
+            this.log = log.extend(this.nickname)
+        } else {
+            this.log = log.extend(bin_toHexString(this.userAddress))
+        }
+        this.mlsStore = new MlsStore(deviceKey, this.log)
+        this.groupStore = new GroupStore(this.mlsStore, this.log)
+        this.epochKeyService = new EpochKeyService(this.cipherSuite, this.mlsStore, this.log)
     }
 
     async initialize() {
+        this.log('initialize')
         this.client = await MlsClient.create(this.userAddress)
     }
 

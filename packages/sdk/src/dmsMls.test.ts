@@ -16,8 +16,11 @@ import { makeUniqueChannelStreamId } from './id'
 
 describe('dmsMlsTests', () => {
     let clients: Client[] = []
-    const makeInitAndStartClient = async () => {
+    const makeInitAndStartClient = async (nickname?: string) => {
         const client = await makeTestClient()
+        if (nickname) {
+            client.nickname = nickname
+        }
         await client.initializeUser()
         client.startSync()
         clients.push(client)
@@ -89,9 +92,9 @@ describe('dmsMlsTests', () => {
     })
 
     test.only('threeClientsCanJoin', async () => {
-        const aliceClient = await makeInitAndStartClient()
-        const bobClient = await makeInitAndStartClient()
-        const charlieClient = await makeInitAndStartClient()
+        const aliceClient = await makeInitAndStartClient('alice')
+        const bobClient = await makeInitAndStartClient('bob')
+        const charlieClient = await makeInitAndStartClient('charlie')
 
         const { streamId } = await aliceClient.createGDMChannel([
             bobClient.userId,

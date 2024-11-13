@@ -203,6 +203,7 @@ export class Client
     private syncedStreamsExtensions?: SyncedStreamsExtension
     private persistenceStore: IPersistenceStore
     private validatedEvents: Record<string, { isValid: boolean; reason?: string }> = {}
+    public nickname: string | undefined
 
     constructor(
         signerContext: SignerContext,
@@ -2190,7 +2191,11 @@ export class Client
         this.cryptoBackend = crypto
 
         const encoder = new TextEncoder()
-        const mlsCrypto = new MlsCrypto(addressFromUserId(this.userId), encoder.encode(this.userId))
+        const mlsCrypto = new MlsCrypto(
+            addressFromUserId(this.userId),
+            encoder.encode(this.userId),
+            this.nickname,
+        )
         await mlsCrypto.initialize()
         this.mlsCrypto = mlsCrypto
 

@@ -1,4 +1,4 @@
-import { bin_toString } from '@river-build/dlog'
+import { bin_toString, DLogger } from '@river-build/dlog'
 import Dexie, { Table } from 'dexie'
 
 interface Key {
@@ -23,10 +23,13 @@ export class MlsStore extends Dexie {
     publicKeys!: Table<Key>
     groups!: Table<Group>
     epochSecrets!: Table<EpochSecret>
+    log: DLogger
 
-    constructor(deviceKey: Uint8Array) {
+    constructor(deviceKey: Uint8Array, log: DLogger) {
         const databaseName = `mlsStore-${bin_toString(deviceKey)}`
         super(databaseName)
+
+        this.log = log
 
         this.version(1).stores({
             secretKeys: '[streamId+epoch]',

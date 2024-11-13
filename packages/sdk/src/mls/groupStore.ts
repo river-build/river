@@ -1,5 +1,6 @@
 import { Group as MlsGroup } from '@river-build/mls-rs-wasm'
 import { MlsStore } from './mlsStore'
+import { DLogger } from '@river-build/dlog'
 
 export type GroupStatus =
     | 'GROUP_MISSING'
@@ -27,8 +28,10 @@ type GroupState =
 export class GroupStore {
     private groups: Map<string, GroupState> = new Map()
     mlsStore: MlsStore
-    constructor(mlsStore: MlsStore) {
+    log: DLogger
+    constructor(mlsStore: MlsStore, log: DLogger) {
         this.mlsStore = mlsStore
+        this.log = log
     }
 
     public hasGroup(streamId: string): boolean {

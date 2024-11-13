@@ -6,6 +6,7 @@ import {
     Secret as MlsSecret,
 } from '@river-build/mls-rs-wasm'
 import { MlsStore } from './mlsStore'
+import { DLogger } from '@river-build/dlog'
 
 type DerivedKeys = {
     secretKey: HpkeSecretKey
@@ -16,10 +17,12 @@ export class EpochKeyService {
     private epochKeyStores: Map<string, EpochKeyStore> = new Map()
     private cipherSuite: MlsCipherSuite
     private mlsStore: MlsStore
+    log: DLogger
 
-    public constructor(cipherSuite: MlsCipherSuite, mlsStore: MlsStore) {
+    public constructor(cipherSuite: MlsCipherSuite, mlsStore: MlsStore, log: DLogger) {
         this.cipherSuite = cipherSuite
         this.mlsStore = mlsStore
+        this.log = log
     }
 
     private getEpochKeyStore(streamId: string): EpochKeyStore {
