@@ -16,3 +16,11 @@ Example using `yarn`:
 ```bash
 yarn create river-app
 ```
+
+This will create a new React River app in the current directory.
+
+If you want to create a new app in a different directory, you can specify the directory name as an argument:
+
+```bash
+yarn create river-app my-app
+```

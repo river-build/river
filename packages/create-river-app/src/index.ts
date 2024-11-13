@@ -23,18 +23,19 @@ async function init(targetDir: string) {
 
     const pkgManager = getPackageManager()
 
-    console.log(picocolors.blue(`\nScaffolding project in ${targetDir}...`))
+    console.log(picocolors.blue(`\nScaffolding project in ${packageName}...`))
 
     const createViteCommand = (() => {
+        const nameForViteScript = targetDir === '.' ? '.' : packageName
         switch (pkgManager) {
             case 'yarn':
-                return ['create', 'vite', packageName, '--template', 'react-ts']
+                return ['create', 'vite', nameForViteScript, '--template', 'react-ts']
             case 'pnpm':
-                return ['create', 'vite', packageName, '--template', 'react-ts']
+                return ['create', 'vite', nameForViteScript, '--template', 'react-ts']
             case 'bun':
-                return ['create', 'vite', packageName, '--template', 'react-ts']
+                return ['create', 'vite', nameForViteScript, '--template', 'react-ts']
             default:
-                return ['create', 'vite@latest', packageName, '--', '--template', 'react-ts']
+                return ['create', 'vite@latest', nameForViteScript, '--', '--template', 'react-ts']
         }
     })()
 
