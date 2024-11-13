@@ -159,14 +159,19 @@ abstract contract MembershipBase is IMembershipBase {
     // get free allocation
     uint256 freeAllocation = _getMembershipFreeAllocation();
 
-    if (ds.pricingModule != address(0))
-      return
-        IMembershipPricing(ds.pricingModule).getPrice(
-          freeAllocation,
-          totalSupply
-        );
+    uint256 membershipPrice = IMembershipPricing(ds.pricingModule).getPrice(
+      freeAllocation,
+      totalSupply
+    );
 
-    return IPlatformRequirements(ds.spaceFactory).getMembershipMinPrice();
+    IPlatformRequirements platform = IPlatformRequirements(_getSpaceFactory());
+
+    uint256 minPrice = platform.getMembershipMinPrice();
+    uint256 fixedFee = platform.getMembershipFee();
+
+    if (membershipPrice < minPrice) return fixedFee;
+
+    return membershipPrice;
   }
 
   function _setMembershipRenewalPrice(
