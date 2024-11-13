@@ -94,6 +94,16 @@ export class Space extends PersistedObservable<SpaceModel> {
         })
     }
 
+    async leave() {
+        const spaceId = this.data.id
+        return this.riverConnection.call((client) => client.leaveStream(spaceId))
+    }
+
+    async leaveChannel(channelId: string) {
+        const channel = this.getChannel(channelId)
+        return channel.leave()
+    }
+
     /** Creates a channel in the space.
      * @param channelName - The name of the channel.
      * @param signer - The signer to use to create the channel.
