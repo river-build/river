@@ -3,7 +3,7 @@ import { PersistedObservable, persistedObservable } from '../../../observable/pe
 import { Identifiable, LoadPriority, Store } from '../../../store/store'
 import { RiverConnection } from '../../river-connection/riverConnection'
 import { ChannelMessage_Post_Attachment, ChannelMessage_Post_Mention } from '@river-build/proto'
-import { Timeline } from '../../timeline/timeline'
+import { MessageTimeline } from '../../timeline/timeline'
 import { check, dlogger } from '@river-build/dlog'
 import { isDefined } from '../../../check'
 import { ChannelDetails, SpaceDapp } from '@river-build/web3'
@@ -20,7 +20,7 @@ export interface ChannelModel extends Identifiable {
 
 @persistedObservable({ tableName: 'channel' })
 export class Channel extends PersistedObservable<ChannelModel> {
-    timeline: Timeline
+    timeline: MessageTimeline
     members: Members
     constructor(
         id: string,
@@ -30,7 +30,7 @@ export class Channel extends PersistedObservable<ChannelModel> {
         store: Store,
     ) {
         super({ id, spaceId, isJoined: false }, store, LoadPriority.high)
-        this.timeline = new Timeline(riverConnection.userId)
+        this.timeline = new MessageTimeline(id, riverConnection.userId, riverConnection)
         this.members = new Members(id, riverConnection, store)
     }
 
@@ -125,6 +125,14 @@ export class Channel extends PersistedObservable<ChannelModel> {
             }),
         )
         return eventId
+    }
+
+    async redactEvent(eventId: string) {
+        const channelId = this.data.id
+        const result = await this.riverConnection
+            .withStream(channelId)
+            .call((client) => client.redactMessage(channelId, eventId))
+        return result
     }
 
     private onStreamInitialized = (streamId: string) => {
