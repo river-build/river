@@ -13,9 +13,13 @@ import type { PlainMessage } from '@bufbuild/protobuf'
 import { MessageTimeline } from '../../timeline/timeline'
 
 export interface GdmModel extends Identifiable {
+    /** The id of the DM. */
     id: string
+    /** Whether the SyncAgent has loaded this data. */
     initialized: boolean
+    /** Whether the current user has joined the DM. */
     isJoined: boolean
+    /** The metadata of the DM. @see {@link ChannelProperties} */
     metadata?: ChannelProperties
 }
 
