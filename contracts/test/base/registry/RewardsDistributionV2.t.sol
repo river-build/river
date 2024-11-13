@@ -580,6 +580,7 @@ contract RewardsDistributionV2Test is
         operator != depositors[1]
     );
     vm.assume(OPERATOR != depositors[0] && OPERATOR != depositors[1]);
+    amounts[1] = uint96(bound(amounts[1], 0, type(uint96).max - amounts[0]));
     timeLapse = bound(timeLapse, 0, rewardDuration);
 
     test_notifyRewardAmount();
@@ -905,6 +906,7 @@ contract RewardsDistributionV2Test is
         beneficiary != address(this) &&
         beneficiary != address(rewardsDistributionFacet)
     );
+    amount = uint96(bound(amount, 1, type(uint96).max - 1 ether));
     timeLapse = bound(timeLapse, 0, rewardDuration);
 
     test_fuzz_notifyRewardAmount(rewardAmount);
