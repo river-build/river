@@ -5,6 +5,7 @@ pragma solidity ^0.8.23;
 import {IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
 
 // libraries
+import {stdError} from "forge-std/StdError.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {StakingRewards} from "contracts/src/base/registry/facets/distribution/v2/StakingRewards.sol";
@@ -81,6 +82,17 @@ contract RewardsDistributionV2Test is
   function test_stake_revertIf_beneficiaryIsZero() public {
     vm.expectRevert(StakingRewards.StakingRewards__InvalidAddress.selector);
     rewardsDistributionFacet.stake(1, OPERATOR, address(0));
+  }
+
+  function test_stake_revertIf_overflow() public givenOperator(OPERATOR, 0) {
+    bridgeTokensForUser(address(this), 1 << 97);
+
+    river.approve(address(rewardsDistributionFacet), type(uint256).max);
+
+    rewardsDistributionFacet.stake(type(uint96).max, OPERATOR, address(this));
+
+    vm.expectRevert(stdError.arithmeticError);
+    rewardsDistributionFacet.stake(type(uint96).max, OPERATOR, address(this));
   }
 
   function test_stake() public returns (uint256 depositId) {
@@ -568,6 +580,7 @@ contract RewardsDistributionV2Test is
         operator != depositors[1]
     );
     vm.assume(OPERATOR != depositors[0] && OPERATOR != depositors[1]);
+    amounts[1] = uint96(bound(amounts[1], 0, type(uint96).max - amounts[0]));
     timeLapse = bound(timeLapse, 0, rewardDuration);
 
     test_notifyRewardAmount();
@@ -893,6 +906,7 @@ contract RewardsDistributionV2Test is
         beneficiary != address(this) &&
         beneficiary != address(rewardsDistributionFacet)
     );
+    amount = uint96(bound(amount, 1, type(uint96).max - 1 ether));
     timeLapse = bound(timeLapse, 0, rewardDuration);
 
     test_fuzz_notifyRewardAmount(rewardAmount);
@@ -918,24 +932,27 @@ contract RewardsDistributionV2Test is
   /// forge-config: default.fuzz.runs = 64
   function test_fuzz_claimReward_multipleDepositors(
     address[32] memory depositors,
-    uint96[32] memory amounts,
+    uint256[32] memory amounts,
     address beneficiary,
     uint256 rewardAmount,
     uint256 timeLapse
   ) public {
     depositors[0] = beneficiary;
+    sanitizeAmounts(amounts);
     timeLapse = bound(timeLapse, 0, rewardDuration);
 
     test_fuzz_notifyRewardAmount(rewardAmount);
 
     for (uint256 i; i < 32; ++i) {
-      amounts[i] = uint96(bound(amounts[i], 1, type(uint88).max));
-
       bridgeTokensForUser(depositors[i], amounts[i]);
 
       vm.startPrank(depositors[i]);
       river.approve(address(rewardsDistributionFacet), amounts[i]);
-      rewardsDistributionFacet.stake(amounts[i], OPERATOR, depositors[i]);
+      rewardsDistributionFacet.stake(
+        uint96(amounts[i]),
+        OPERATOR,
+        depositors[i]
+      );
       vm.stopPrank();
     }
 
