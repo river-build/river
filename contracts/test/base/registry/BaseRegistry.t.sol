@@ -125,18 +125,18 @@ abstract contract BaseRegistryTest is BaseSetup, IRewardsDistributionBase {
   /*                           SPACE                            */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-  function deploySpace() internal returns (address _space) {
+  function deploySpace(address _deployer) internal returns (address _space) {
     IArchitectBase.SpaceInfo memory spaceInfo = _createSpaceInfo(
       string(abi.encode(_randomUint256()))
     );
     spaceInfo.membership.settings.pricingModule = pricingModule;
-    vm.prank(deployer);
+    vm.prank(_deployer);
     _space = ICreateSpace(spaceFactory).createSpace(spaceInfo);
     space = _space;
   }
 
   modifier givenSpaceIsDeployed() {
-    deploySpace();
+    deploySpace(deployer);
     _;
   }
 
