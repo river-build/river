@@ -160,7 +160,16 @@ func validateStream(
 		return RiverError(Err_INTERNAL, "No miniblocks found", "node", nodeAddress)
 	}
 	if lastBlock.Num != expectedBlockNum {
-		return RiverError(Err_INTERNAL, "Block number mismatch", "expected", expectedBlockNum, "actual", lastBlock.Num, "node", nodeAddress)
+		return RiverError(
+			Err_INTERNAL,
+			"Block number mismatch",
+			"expected",
+			expectedBlockNum,
+			"actual",
+			lastBlock.Num,
+			"node",
+			nodeAddress,
+		)
 	}
 	if lastBlock.Hash != expectedBlockHash {
 		return RiverError(
