@@ -509,14 +509,15 @@ func (c *RiverRegistryContract) forAllStreamsParallel(
 		taskCounter.Add(1)
 		pool.Submit(func() {
 			streams, _, err := c.callGetPaginatedStreamsWithBackoff(ctx, blockNum, i, i+pageSize)
-			if ctx.Err() == nil {
-				if err == nil {
-					chResults <- streams
-				} else {
-					select {
-					case chErrors <- err:
-					default:
-					}
+			if err == nil {
+				select {
+				case chResults <- streams:
+				case <-ctx.Done():
+				}
+			} else {
+				select {
+				case chErrors <- err:
+				case <-ctx.Done():
 				}
 			}
 			taskCounter.Add(-1)
