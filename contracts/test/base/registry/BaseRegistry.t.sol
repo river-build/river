@@ -35,6 +35,7 @@ abstract contract BaseRegistryTest is BaseSetup, IRewardsDistributionBase {
   address internal OPERATOR = makeAddr("OPERATOR");
   address internal NOTIFIER = makeAddr("NOTIFIER");
   uint256 internal rewardDuration;
+  uint96 internal totalStaked;
 
   function setUp() public virtual override {
     super.setUp();
@@ -169,6 +170,50 @@ abstract contract BaseRegistryTest is BaseSetup, IRewardsDistributionBase {
           REASONABLE_TOKEN_SUPPLY
         )
       );
+  }
+
+  function sanitizeAmounts(uint256[32] memory amounts) internal {
+    uint256 len = amounts.length;
+    for (uint256 i; i < len; ++i) {
+      vm.assume(totalStaked < type(uint96).max);
+      amounts[i] = bound(amounts[i], 1, type(uint96).max - totalStaked);
+      totalStaked += uint96(amounts[i]);
+    }
+  }
+
+  function sanitizeAmounts(uint256[] memory amounts) internal {
+    uint256 len = amounts.length;
+    for (uint256 i; i < len; ++i) {
+      vm.assume(totalStaked < type(uint96).max);
+      amounts[i] = bound(amounts[i], 1, type(uint96).max - totalStaked);
+      totalStaked += uint96(amounts[i]);
+    }
+  }
+
+  function toDyn(
+    address[32] memory arr
+  ) internal returns (address[] memory res) {
+    assembly ("memory-safe") {
+      res := mload(0x40)
+      mstore(0x40, add(res, mul(33, 0x20)))
+      mstore(res, 32)
+      pop(
+        call(gas(), 0x04, 0, arr, mul(32, 0x20), add(res, 0x20), mul(32, 0x20))
+      )
+    }
+  }
+
+  function toDyn(
+    uint256[32] memory arr
+  ) internal returns (uint256[] memory res) {
+    assembly ("memory-safe") {
+      res := mload(0x40)
+      mstore(0x40, add(res, mul(33, 0x20)))
+      mstore(res, 32)
+      pop(
+        call(gas(), 0x04, 0, arr, mul(32, 0x20), add(res, 0x20), mul(32, 0x20))
+      )
+    }
   }
 
   function bridgeTokensForUser(address user, uint256 amount) internal {

@@ -932,24 +932,27 @@ contract RewardsDistributionV2Test is
   /// forge-config: default.fuzz.runs = 64
   function test_fuzz_claimReward_multipleDepositors(
     address[32] memory depositors,
-    uint96[32] memory amounts,
+    uint256[32] memory amounts,
     address beneficiary,
     uint256 rewardAmount,
     uint256 timeLapse
   ) public {
     depositors[0] = beneficiary;
+    sanitizeAmounts(amounts);
     timeLapse = bound(timeLapse, 0, rewardDuration);
 
     test_fuzz_notifyRewardAmount(rewardAmount);
 
     for (uint256 i; i < 32; ++i) {
-      amounts[i] = uint96(bound(amounts[i], 1, type(uint88).max));
-
       bridgeTokensForUser(depositors[i], amounts[i]);
 
       vm.startPrank(depositors[i]);
       river.approve(address(rewardsDistributionFacet), amounts[i]);
-      rewardsDistributionFacet.stake(amounts[i], OPERATOR, depositors[i]);
+      rewardsDistributionFacet.stake(
+        uint96(amounts[i]),
+        OPERATOR,
+        depositors[i]
+      );
       vm.stopPrank();
     }
 
