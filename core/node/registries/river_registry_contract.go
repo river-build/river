@@ -3,6 +3,7 @@ package registries
 import (
 	"context"
 	"math/big"
+	"sync/atomic"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -12,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/gammazero/workerpool"
-	"go.uber.org/atomic"
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/river"
@@ -366,12 +366,20 @@ func (c *RiverRegistryContract) ForAllStreams(
 ) error {
 	if c.Settings.ParallelReaders > 1 {
 		return c.forAllStreamsParallel(ctx, blockNum, cb)
+	} else {
+		return c.forAllStreamsSingle(ctx, blockNum, cb)
 	}
+}
 
+func (c *RiverRegistryContract) forAllStreamsSingle(
+	ctx context.Context,
+	blockNum crypto.BlockNumber,
+	cb func(*GetStreamResult) bool,
+) error {
 	log := dlog.FromCtx(ctx)
 	pageSize := int64(c.Settings.PageSize)
 	if pageSize <= 0 {
-		pageSize = 1000
+		pageSize = 5000
 	}
 
 	progressReportInterval := c.Settings.ProgressReportInterval
@@ -442,14 +450,14 @@ func (c *RiverRegistryContract) ForAllStreams(
 	return nil
 }
 
-// ForAllStreams calls the given cb for all streams that are registered in the river registry at the given block num.
-// If cb returns false forAllStreams returns.
 func (c *RiverRegistryContract) forAllStreamsParallel(
 	ctx context.Context,
 	blockNum crypto.BlockNumber,
 	cb func(*GetStreamResult) bool,
 ) error {
 	log := dlog.FromCtx(ctx)
+	ctx, cancelCtx := context.WithCancel(ctx)
+	defer cancelCtx()
 
 	numWorkers := c.Settings.ParallelReaders
 	if numWorkers <= 1 {
@@ -458,7 +466,7 @@ func (c *RiverRegistryContract) forAllStreamsParallel(
 
 	pageSize := int64(c.Settings.PageSize)
 	if pageSize <= 0 {
-		pageSize = 1000
+		pageSize = 5000
 	}
 
 	progressReportInterval := c.Settings.ProgressReportInterval
@@ -475,23 +483,27 @@ func (c *RiverRegistryContract) forAllStreamsParallel(
 	chErrors := make(chan error, numWorkers)
 
 	pool := workerpool.New(numWorkers)
-	defer pool.StopWait()
 
 	startTime := time.Now()
 	lastReport := time.Now()
 
 	numStreams := numStreamsBigInt.Int64()
-	taskCounter := atomic.NewInt64(0)
+	var taskCounter atomic.Int64
 	for i := int64(0); i < numStreams; i += pageSize {
-		taskCounter.Inc()
+		taskCounter.Add(1)
 		pool.Submit(func() {
 			streams, _, err := c.callGetPaginatedStreamsWithBackoff(ctx, blockNum, i, i+pageSize)
-			if err == nil {
-				chResults <- streams
-			} else {
-				chErrors <- err
+			if ctx.Err() == nil {
+				if err == nil {
+					chResults <- streams
+				} else {
+					select {
+					case chErrors <- err:
+					default:
+					}
+				}
 			}
-			taskCounter.Dec()
+			taskCounter.Add(-1)
 		})
 	}
 
@@ -537,8 +549,10 @@ OuterLoop:
 		}
 	}
 
+	cancelCtx()
+	go pool.Stop()
+
 	if err != nil {
-		pool.Stop()
 		return err
 	}
 
