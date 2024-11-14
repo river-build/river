@@ -6179,6 +6179,7 @@ __metadata:
     fastify: ^4.28.1
     jest: ^29.6.2
     jest-transform-stub: ^2.0.0
+    lru-cache: ^11.0.1
     magic-bytes.js: ^1.10.0
     pino: ^8.17.1
     pino-pretty: ^10.2.3

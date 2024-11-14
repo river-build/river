@@ -14,6 +14,7 @@ import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/con
 import { StreamService } from '@river-build/proto'
 import { filetypemime } from 'magic-bytes.js'
 import { FastifyBaseLogger } from 'fastify'
+import { LRUCache } from 'lru-cache'
 
 import { MediaContent, StreamIdHex } from './types'
 import { getNodeForStream } from './streamRegistry'
@@ -161,11 +162,16 @@ function stripHexPrefix(hexString: string): string {
 	return hexString
 }
 
-export async function getStream(
+const streamPromiseLRUCache = new LRUCache<string, Promise<StreamStateView>>({
+	max: 100, // keep at most 100 promises in the cache
+	ttl: 5 * 1000, // 5 seconds
+})
+
+async function getStreamInner(
 	logger: FastifyBaseLogger,
 	streamId: string,
-	opts: UnpackEnvelopeOpts = STREAM_METADATA_SERVICE_DEFAULT_UNPACK_OPTS,
-): Promise<StreamStateView> {
+	opts: UnpackEnvelopeOpts,
+) {
 	const { client, lastMiniblockNum } = await getStreamClient(logger, `0x${streamId}`)
 	logger.info(
 		{
@@ -173,7 +179,7 @@ export async function getStream(
 			streamId,
 			lastMiniblockNum: lastMiniblockNum.toString(),
 		},
-		'getStream',
+		'getStreamInner called',
 	)
 
 	try {
@@ -188,7 +194,7 @@ export async function getStream(
 			{
 				duration_ms,
 			},
-			'getStream finished',
+			'getStreamInner finished',
 		)
 
 		const unpackedResponse = await unpackStream(response.stream, opts)
@@ -196,11 +202,33 @@ export async function getStream(
 	} catch (e) {
 		logger.error(
 			{ url: client.url, streamId, err: e },
-			'getStream failed, removing client from cache',
+			'getStreamInner failed, removing client from cache',
 		)
 		removeClient(logger, client)
 		throw e
 	}
+}
+
+export async function getStream(
+	logger: FastifyBaseLogger,
+	streamId: string,
+	opts?: { skipCache?: boolean; unpackOpts?: UnpackEnvelopeOpts },
+): Promise<StreamStateView> {
+	const skipCache = opts?.skipCache ?? false
+	const unpackOpts = opts?.unpackOpts ?? STREAM_METADATA_SERVICE_DEFAULT_UNPACK_OPTS
+	logger.info({ streamId, skipCache }, 'getStream called')
+	if (!skipCache) {
+		const existingStreamPromise = streamPromiseLRUCache.get(streamId)
+		if (existingStreamPromise) {
+			logger.info({ streamId }, 'getStream found in cache')
+			return existingStreamPromise
+		} else {
+			logger.info({ streamId }, 'getStream not found in cache')
+		}
+	}
+	const newStreamPromise = getStreamInner(logger, streamId, unpackOpts)
+	streamPromiseLRUCache.set(streamId, newStreamPromise)
+	return newStreamPromise
 }
 
 export async function getMediaStreamContent(
