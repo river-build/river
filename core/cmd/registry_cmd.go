@@ -67,14 +67,16 @@ func srStreamDump(cfg *config.Config, countOnly, timeOnly bool) error {
 		}
 		i++
 		if timeOnly && i%50000 == 0 && i > 0 {
-			fmt.Printf("Processed %d streams in %s\n", i, time.Since(startTime))
+			elapsed := time.Since(startTime)
+			fmt.Printf("Received %d streams in %s (%.1f streams/s)\n", i, elapsed, float64(i)/elapsed.Seconds())
 		}
 		return true
 	})
 	if err != nil {
 		return err
 	}
-	fmt.Printf("TOTAL: %d ELAPSED: %s\n", i, time.Since(startTime))
+	elapsed := time.Since(startTime)
+	fmt.Printf("TOTAL: %d ELAPSED: %s (%.1f streams/s)\n", i, elapsed, float64(i)/elapsed.Seconds())
 
 	if streamNum != int64(i) {
 		return RiverError(

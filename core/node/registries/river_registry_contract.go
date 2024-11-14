@@ -362,11 +362,13 @@ func (c *RiverRegistryContract) ForAllStreams(
 	var streams []river.StreamWithId
 	startTime := time.Now()
 	lastReport := time.Now()
+	totalStreams := int64(0)
 	for i := int64(0); !lastPage; i += pageSize {
 		bo.Reset()
 		for {
 			now := time.Now()
 			if now.Sub(lastReport) > progressReportInterval {
+				elapsed := time.Since(startTime)
 				log.Info(
 					"RiverRegistryContract: GetPaginatedStreams in progress",
 					"pagesCompleted",
@@ -374,7 +376,9 @@ func (c *RiverRegistryContract) ForAllStreams(
 					"pageSize",
 					pageSize,
 					"elapsed",
-					time.Since(startTime),
+					elapsed,
+					"streamPerSecond",
+					float64(i)/elapsed.Seconds(),
 				)
 				lastReport = now
 			}
@@ -395,13 +399,21 @@ func (c *RiverRegistryContract) ForAllStreams(
 			if err != nil {
 				return err
 			}
+			totalStreams++
 			if !cb(makeGetStreamResult(streamId, &stream.Stream)) {
 				return nil
 			}
 		}
 	}
 
-	log.Info("RiverRegistryContract: GetPaginatedStreams completed", "elapsed", time.Since(startTime))
+	elapsed := time.Since(startTime)
+	log.Info(
+		"RiverRegistryContract: GetPaginatedStreams completed",
+		"elapsed",
+		elapsed,
+		"streamsPerSecond",
+		float64(totalStreams)/elapsed.Seconds(),
+	)
 
 	return nil
 }
