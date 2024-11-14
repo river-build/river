@@ -1,0 +1,76 @@
+---
+title: useUserSpaces
+---
+Hook to get the spaces of the current user.
+## Imports
+
+```ts
+import { useUserSpaces } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useUserSpaces(
+  config?: ObservableConfig.FromObservable<Spaces>,
+): {
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    spaceIds: string[];
+} | {
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    spaceIds: string[];
+} | {
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    spaceIds: string[];
+}
+```
+
+**Source:** [useUserSpaces](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useUserSpaces.ts)
+
+## Parameters
+
+### config
+
+- **Type:** `ObservableConfig.FromObservable<Spaces>`
+- **Optional**
+
+Configuration options for the observable.
+
+## Return Type
+
+```ts
+{
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    spaceIds: string[];
+} | {
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    spaceIds: string[];
+} | {
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    spaceIds: string[];
+}
+```

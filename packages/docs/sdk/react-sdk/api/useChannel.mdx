@@ -1,0 +1,90 @@
+---
+title: useChannel
+---
+Hook to get data about a channel. You can use this hook to get channel metadata and if the user has joined the channel.
+## Imports
+
+```ts
+import { useChannel } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useChannel(
+  spaceId: string,
+  channelId: string,
+  config?: ObservableConfig.FromObservable<Channel>,
+): {
+    data: import("@river-build/sdk").ChannelModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: import("@river-build/sdk").ChannelModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: import("@river-build/sdk").ChannelModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+}
+```
+
+**Source:** [useChannel](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useChannel.ts)
+
+## Parameters
+
+### spaceId
+
+- **Type:** `string`
+
+The id of the space the channel belongs to.
+
+### channelId
+
+- **Type:** `string`
+
+The id of the channel to get data about.
+
+### config
+
+- **Type:** `ObservableConfig.FromObservable<Channel>`
+- **Optional**
+
+Configuration options for the observable.
+
+## Return Type
+
+```ts
+{
+    data: import("@river-build/sdk").ChannelModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: import("@river-build/sdk").ChannelModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: import("@river-build/sdk").ChannelModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+}
+```

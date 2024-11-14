@@ -1,0 +1,51 @@
+---
+title: useGdmTimeline
+---
+
+## Imports
+
+```ts
+import { useGdmTimeline } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useGdmTimeline(
+  streamId: string,
+  config?: ObservableConfig.FromObservable<TimelineEvents>,
+): {
+    data: import("@river-build/sdk").TimelineEvent[];
+    error: undefined;
+    status: "loading" | "loaded";
+    isLoading: boolean;
+    isError: false;
+    isLoaded: boolean;
+}
+```
+
+**Source:** [useGdmTimeline](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useGdmTimeline.ts)
+
+## Parameters
+
+### streamId
+
+- **Type:** `string`
+
+### config
+
+- **Type:** `ObservableConfig.FromObservable<TimelineEvents>`
+- **Optional**
+
+## Return Type
+
+```ts
+{
+    data: import("@river-build/sdk").TimelineEvent[];
+    error: undefined;
+    status: "loading" | "loaded";
+    isLoading: boolean;
+    isError: false;
+    isLoaded: boolean;
+}
+```

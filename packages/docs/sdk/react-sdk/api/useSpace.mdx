@@ -1,0 +1,83 @@
+---
+title: useSpace
+---
+Hook to get data about a space. You can use this hook to get space metadata and ids of channels in the space.
+## Imports
+
+```ts
+import { useSpace } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useSpace(
+  spaceId: string,
+  config?: ObservableConfig.FromObservable<Space>,
+): {
+    data: import("@river-build/sdk").SpaceModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: import("@river-build/sdk").SpaceModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: import("@river-build/sdk").SpaceModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+}
+```
+
+**Source:** [useSpace](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useSpace.ts)
+
+## Parameters
+
+### spaceId
+
+- **Type:** `string`
+
+The id of the space to get data about.
+
+### config
+
+- **Type:** `ObservableConfig.FromObservable<Space>`
+- **Optional**
+
+Configuration options for the observable.
+
+## Return Type
+
+```ts
+{
+    data: import("@river-build/sdk").SpaceModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: import("@river-build/sdk").SpaceModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: import("@river-build/sdk").SpaceModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+}
+```

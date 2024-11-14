@@ -1,0 +1,55 @@
+---
+title: useSetEnsAddress
+---
+Hook to set the ENS address of the current user in a stream. You should be validating if the ENS address belongs to the user before setting it.
+## Imports
+
+```ts
+import { useSetEnsAddress } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useSetEnsAddress(
+  streamId: string,
+  config?: ActionConfig<Myself['setEnsAddress']>,
+): {
+    data: void | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    setEnsAddress: (ensAddress: `0x${string}`) => Promise<void>;
+}
+```
+
+**Source:** [useSetEnsAddress](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useMyMember.ts)
+
+## Parameters
+
+### streamId
+
+- **Type:** `string`
+
+The id of the stream to set the ENS address of.
+
+### config
+
+- **Type:** `ActionConfig<Myself['setEnsAddress']>`
+- **Optional**
+
+Configuration options for the action.
+
+## Return Type
+
+```ts
+{
+    data: void | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    setEnsAddress: (ensAddress: `0x${string}`) => Promise<void>;
+}
+```

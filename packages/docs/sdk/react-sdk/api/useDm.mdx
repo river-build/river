@@ -1,0 +1,83 @@
+---
+title: useDm
+---
+Hook to get the data of a DM. You can use this hook to get DM metadata and if the user has joined the DM.
+## Imports
+
+```ts
+import { useDm } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useDm(
+  streamId: string,
+  config?: ObservableConfig.FromData<DmModel>,
+): {
+    data: DmModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: DmModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: DmModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+}
+```
+
+**Source:** [useDm](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useDm.ts)
+
+## Parameters
+
+### streamId
+
+- **Type:** `string`
+
+The id of the DM to get the data of.
+
+### config
+
+- **Type:** `ObservableConfig.FromData<DmModel>`
+- **Optional**
+
+Configuration options for the observable.
+
+## Return Type
+
+```ts
+{
+    data: DmModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: DmModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: DmModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+}
+```

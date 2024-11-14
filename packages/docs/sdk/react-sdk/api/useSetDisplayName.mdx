@@ -1,0 +1,55 @@
+---
+title: useSetDisplayName
+---
+Hook to set the display name of the current user in a stream.
+## Imports
+
+```ts
+import { useSetDisplayName } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useSetDisplayName(
+  streamId: string,
+  config?: ActionConfig<Myself['setDisplayName']>,
+): {
+    data: void | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    setDisplayName: (displayName: string) => Promise<void>;
+}
+```
+
+**Source:** [useSetDisplayName](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useMyMember.ts)
+
+## Parameters
+
+### streamId
+
+- **Type:** `string`
+
+The id of the stream to set the display name of.
+
+### config
+
+- **Type:** `ActionConfig<Myself['setDisplayName']>`
+- **Optional**
+
+Configuration options for the action.
+
+## Return Type
+
+```ts
+{
+    data: void | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    setDisplayName: (displayName: string) => Promise<void>;
+}
+```

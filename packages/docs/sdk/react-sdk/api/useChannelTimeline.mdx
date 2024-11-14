@@ -1,0 +1,56 @@
+---
+title: useChannelTimeline
+---
+
+## Imports
+
+```ts
+import { useChannelTimeline } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useChannelTimeline(
+  spaceId: string,
+  channelId: string,
+  config?: ObservableConfig.FromObservable<TimelineEvents>,
+): {
+    data: import("@river-build/sdk").TimelineEvent[];
+    error: undefined;
+    status: "loading" | "loaded";
+    isLoading: boolean;
+    isError: false;
+    isLoaded: boolean;
+}
+```
+
+**Source:** [useChannelTimeline](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useChannelTimeline.ts)
+
+## Parameters
+
+### spaceId
+
+- **Type:** `string`
+
+### channelId
+
+- **Type:** `string`
+
+### config
+
+- **Type:** `ObservableConfig.FromObservable<TimelineEvents>`
+- **Optional**
+
+## Return Type
+
+```ts
+{
+    data: import("@river-build/sdk").TimelineEvent[];
+    error: undefined;
+    status: "loading" | "loaded";
+    isLoading: boolean;
+    isError: false;
+    isLoaded: boolean;
+}
+```

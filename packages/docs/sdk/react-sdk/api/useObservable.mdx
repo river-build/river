@@ -1,0 +1,62 @@
+---
+title: useObservable
+---
+This hook subscribes to an observable and returns the value of the observable.
+## Imports
+
+```ts
+import { useObservable } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useObservable<T>(
+  observable: Observable<T>,
+  config?: ObservableConfig.FromData<T>,
+): ObservableValue<T>
+```
+
+**Source:** [useObservable](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useObservable.ts)
+
+## Parameters
+
+### observable
+
+- **Type:** `Observable<T>`
+
+The observable to subscribe to.
+
+### config
+
+- **Type:** `ObservableConfig.FromData<T>`
+- **Optional**
+
+Configuration options for the observable.
+
+#### config.fireImmediately
+
+- **Type:** `boolean`
+- **Optional**
+
+Trigger the update immediately, without waiting for the first update.
+
+#### config.onError
+
+- **Type:** `(error: Error) => void`
+- **Optional**
+
+Callback function to be called when an error occurs.
+
+#### config.onUpdate
+
+- **Type:** `(data: Data) => void`
+- **Optional**
+
+Callback function to be called when the data is updated.
+
+## Return Type
+
+```ts
+ObservableValue<T>
+```

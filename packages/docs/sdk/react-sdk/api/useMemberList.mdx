@@ -1,0 +1,83 @@
+---
+title: useMemberList
+---
+Hook to get the members userIds of a Space, GDM, Channel, or DM. Used with useMember to get data from a specific member.
+## Imports
+
+```ts
+import { useMemberList } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useMemberList(
+  streamId: string,
+  config?: ObservableConfig.FromData<MembersModel>,
+): {
+    data: MembersModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: MembersModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: MembersModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+}
+```
+
+**Source:** [useMemberList](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useMemberList.ts)
+
+## Parameters
+
+### streamId
+
+- **Type:** `string`
+
+The id of the stream to get the members of.
+
+### config
+
+- **Type:** `ObservableConfig.FromData<MembersModel>`
+- **Optional**
+
+Configuration options for the observable.
+
+## Return Type
+
+```ts
+{
+    data: MembersModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: MembersModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: MembersModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+}
+```

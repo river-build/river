@@ -1,0 +1,55 @@
+---
+title: useSetUsername
+---
+Hook to set the username of the current user in a stream.
+## Imports
+
+```ts
+import { useSetUsername } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useSetUsername(
+  streamId: string,
+  config?: ActionConfig<Myself['setUsername']>,
+): {
+    data: void | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    setUsername: (username: string) => Promise<void>;
+}
+```
+
+**Source:** [useSetUsername](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useMyMember.ts)
+
+## Parameters
+
+### streamId
+
+- **Type:** `string`
+
+The id of the stream to set the username of.
+
+### config
+
+- **Type:** `ActionConfig<Myself['setUsername']>`
+- **Optional**
+
+Configuration options for the action.
+
+## Return Type
+
+```ts
+{
+    data: void | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    setUsername: (username: string) => Promise<void>;
+}
+```

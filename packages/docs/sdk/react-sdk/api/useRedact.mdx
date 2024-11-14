@@ -1,0 +1,59 @@
+---
+title: useRedact
+---
+
+## Imports
+
+```ts
+import { useRedact } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useRedact(
+  streamId: string,
+  config?: ActionConfig<Channel['redactEvent']>,
+): {
+    data: {
+        eventId: string;
+    } | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    redactEvent: (eventId: string) => Promise<{
+        eventId: string;
+    }>;
+}
+```
+
+**Source:** [useRedact](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useRedact.ts)
+
+## Parameters
+
+### streamId
+
+- **Type:** `string`
+
+### config
+
+- **Type:** `ActionConfig<Channel['redactEvent']>`
+- **Optional**
+
+## Return Type
+
+```ts
+{
+    data: {
+        eventId: string;
+    } | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    redactEvent: (eventId: string) => Promise<{
+        eventId: string;
+    }>;
+}
+```

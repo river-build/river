@@ -1,0 +1,63 @@
+---
+title: useScrollback
+---
+
+## Imports
+
+```ts
+import { useScrollback } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useScrollback(
+  streamId: string,
+  config?: ActionConfig<MessageTimeline['scrollback']>,
+): {
+    data: {
+        terminus: boolean;
+        firstEvent?: import("@river-build/sdk").TimelineEvent | undefined;
+    } | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    scrollback: () => Promise<{
+        terminus: boolean;
+        firstEvent?: import("@river-build/sdk").TimelineEvent | undefined;
+    }>;
+}
+```
+
+**Source:** [useScrollback](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useScrollback.ts)
+
+## Parameters
+
+### streamId
+
+- **Type:** `string`
+
+### config
+
+- **Type:** `ActionConfig<MessageTimeline['scrollback']>`
+- **Optional**
+
+## Return Type
+
+```ts
+{
+    data: {
+        terminus: boolean;
+        firstEvent?: import("@river-build/sdk").TimelineEvent | undefined;
+    } | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    scrollback: () => Promise<{
+        terminus: boolean;
+        firstEvent?: import("@river-build/sdk").TimelineEvent | undefined;
+    }>;
+}
+```
