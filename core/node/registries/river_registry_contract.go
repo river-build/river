@@ -478,6 +478,24 @@ func (c *RiverRegistryContract) forAllStreamsParallel(
 	if err != nil {
 		return WrapRiverError(Err_CANNOT_CALL_CONTRACT, err).Func("ForAllStreams")
 	}
+	numStreams := numStreamsBigInt.Int64()
+
+	if numStreams <= 0 {
+		log.Info("RiverRegistryContract: GetPaginatedStreams no streams found", "blockNum", blockNum)
+		return nil
+	}
+
+	log.Info(
+		"RiverRegistryContract: GetPaginatedStreams starting parallel read",
+		"numStreams",
+		numStreams,
+		"RiverRegistry.PageSize",
+		pageSize,
+		"RiverRegistry.ParallelReaders",
+		numWorkers,
+		"blockNum",
+		blockNum,
+	)
 
 	chResults := make(chan []river.StreamWithId, numWorkers)
 	chErrors := make(chan error, numWorkers)
@@ -486,8 +504,6 @@ func (c *RiverRegistryContract) forAllStreamsParallel(
 
 	startTime := time.Now()
 	lastReport := time.Now()
-
-	numStreams := numStreamsBigInt.Int64()
 	var taskCounter atomic.Int64
 	for i := int64(0); i < numStreams; i += pageSize {
 		taskCounter.Add(1)
