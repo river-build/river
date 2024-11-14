@@ -23,6 +23,7 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
     bridgeTokensForUser(address(this), 1 ether);
     river.approve(address(rewardsDistributionFacet), 1 ether);
     rewardsDistributionFacet.stake(1 ether, OPERATOR, _randomAddress());
+    totalStaked = 1 ether;
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -55,7 +56,7 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
   ) public givenOperator(operator, commissionRate) returns (uint256 depositId) {
     vm.assume(delegator != baseRegistry);
     vm.assume(delegator != address(0) && delegator != operator);
-    vm.assume(amount > 0);
+    amount = uint96(bound(amount, 1, type(uint96).max - totalStaked));
     commissionRate = bound(commissionRate, 0, 10000);
 
     vm.expectEmit(baseRegistry);
@@ -67,6 +68,8 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
     depositId = mainnetDelegationFacet.getDepositIdByDelegator(delegator);
     verifyDelegation(depositId, delegator, operator, amount, commissionRate);
   }
+
+  // TODO: test zero amount
 
   function test_fuzz_setDelegation_remove(
     address delegator,
@@ -90,6 +93,8 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
     verifyRemoval(delegator, depositId, commissionRate);
   }
 
+  // TODO: test remove then add again
+
   function test_fuzz_setDelegation_replace(
     address delegator,
     uint96[2] memory amounts,
@@ -98,7 +103,9 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
   ) public givenOperator(operators[1], commissionRates[1]) {
     vm.assume(operators[0] != operators[1]);
     vm.assume(delegator != operators[1]);
-    vm.assume(amounts[1] > 0);
+    amounts[0] = uint96(bound(amounts[0], 0, type(uint96).max - totalStaked));
+    totalStaked += amounts[0];
+    amounts[1] = uint96(bound(amounts[1], 0, type(uint96).max - totalStaked));
     commissionRates[1] = bound(commissionRates[1], 0, 10000);
 
     uint256 depositId = test_fuzz_setDelegation(
@@ -137,6 +144,8 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
     address[32] memory operators,
     uint256[32] memory commissionRates
   ) public {
+    sanitizeAmounts(quantities);
+
     for (uint256 i; i < 32; ++i) {
       // ensure delegators and operators are unique
       if (delegators[i] == address(0) || delegatorSet.contains(delegators[i])) {
@@ -156,13 +165,12 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
       operatorSet.add(operators[i]);
       commissionRates[i] = bound(commissionRates[i], 0, 10000);
       setOperator(operators[i], commissionRates[i]);
-      quantities[i] = bound(quantities[i], 1, type(uint96).max);
     }
 
-    address[] memory _delegators = _toDyn(delegators);
-    address[] memory _operators = _toDyn(operators);
-    address[] memory _claimers = _toDyn(claimers);
-    uint256[] memory _quantities = _toDyn(quantities);
+    address[] memory _delegators = toDyn(delegators);
+    address[] memory _operators = toDyn(operators);
+    address[] memory _claimers = toDyn(claimers);
+    uint256[] memory _quantities = toDyn(quantities);
 
     vm.prank(address(messenger));
     mainnetDelegationFacet.setBatchDelegation(
@@ -177,7 +185,7 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
       _claimers,
       _quantities,
       _operators,
-      _toDyn(commissionRates)
+      toDyn(commissionRates)
     );
   }
 
@@ -197,13 +205,19 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
       commissionRates
     );
 
-    address[] memory _delegators = _toDyn(delegators);
-    address[] memory _operators = _toDyn(operators);
-    address[] memory _claimers = _toDyn(claimers);
+    address[] memory _delegators = toDyn(delegators);
+    address[] memory _operators = toDyn(operators);
+    address[] memory _claimers = toDyn(claimers);
 
     uint256[] memory _quantities = new uint256[](32);
     for (uint256 i; i < 32; ++i) {
-      _quantities[i] = bound(_randomUint256(), 1, type(uint96).max);
+      totalStaked -= uint96(quantities[i]);
+      _quantities[i] = bound(
+        _randomUint256(),
+        1,
+        type(uint96).max - totalStaked
+      );
+      totalStaked += uint96(_quantities[i]);
     }
 
     vm.prank(address(messenger));
@@ -236,7 +250,7 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
     );
 
     vm.startPrank(address(messenger));
-    mainnetDelegationFacet.removeDelegations(_toDyn(delegators));
+    mainnetDelegationFacet.removeDelegations(toDyn(delegators));
 
     for (uint256 i; i < 32; ++i) {
       uint256 depositId = mainnetDelegationFacet.getDepositIdByDelegator(
@@ -319,32 +333,6 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
         mainnetDelegationFacet.getAuthorizedClaimer(delegators[i]),
         claimers[i]
       );
-    }
-  }
-
-  function _toDyn(
-    address[32] memory arr
-  ) internal returns (address[] memory res) {
-    assembly ("memory-safe") {
-      res := mload(0x40)
-      mstore(0x40, add(res, mul(33, 0x20)))
-      mstore(res, 32)
-      pop(
-        call(gas(), 0x04, 0, arr, mul(32, 0x20), add(res, 0x20), mul(32, 0x20))
-      )
-    }
-  }
-
-  function _toDyn(
-    uint256[32] memory arr
-  ) internal returns (uint256[] memory res) {
-    assembly ("memory-safe") {
-      res := mload(0x40)
-      mstore(0x40, add(res, mul(33, 0x20)))
-      mstore(res, 32)
-      pop(
-        call(gas(), 0x04, 0, arr, mul(32, 0x20), add(res, 0x20), mul(32, 0x20))
-      )
     }
   }
 }
