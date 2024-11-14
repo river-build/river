@@ -278,7 +278,10 @@ func (ca *chainAuth) isSpaceEnabledUncached(
 ) (CacheResult, error) {
 	// This is awkward as we want enabled to be cached for 15 minutes, but the API returns the inverse
 	isDisabled, err := ca.spaceContract.IsSpaceDisabled(ctx, args.spaceId)
-	return &boolCacheResult{allowed: !isDisabled}, err
+	if err != nil {
+		return nil, err
+	}
+	return boolCacheResult(!isDisabled), nil
 }
 
 func (ca *chainAuth) checkSpaceEnabled(ctx context.Context, cfg *config.Config, spaceId shared.StreamId) (bool, error) {
@@ -307,7 +310,10 @@ func (ca *chainAuth) isChannelEnabledUncached(
 ) (CacheResult, error) {
 	// This is awkward as we want enabled to be cached for 15 minutes, but the API returns the inverse
 	isDisabled, err := ca.spaceContract.IsChannelDisabled(ctx, args.spaceId, args.channelId)
-	return &boolCacheResult{allowed: !isDisabled}, err
+	if err != nil {
+		return nil, err
+	}
+	return boolCacheResult(!isDisabled), nil
 }
 
 func (ca *chainAuth) checkChannelEnabled(
@@ -415,12 +421,7 @@ func (ca *chainAuth) isEntitledToChannelUncached(
 		ca.getChannelEntitlementsForPermissionUncached,
 	)
 	if err != nil {
-		return &boolCacheResult{
-				allowed: false,
-			}, AsRiverError(
-				err,
-			).Func("isEntitledToChannel").
-				Message("Failed to get channel entitlements")
+		return nil, AsRiverError(err).Func("isEntitledToChannel").Message("Failed to get channel entitlements")
 	}
 
 	if cacheHit {
@@ -440,12 +441,12 @@ func (ca *chainAuth) isEntitledToChannelUncached(
 		entitlementData.entitlementData,
 	)
 	if err != nil {
-		err = AsRiverError(err).
+		return nil, AsRiverError(err).
 			Func("isEntitledToChannel").
 			Message("Failed to evaluate entitlements").
 			Tag("channelId", args.channelId)
 	}
-	return &boolCacheResult{allowed}, err
+	return boolCacheResult(allowed), nil
 }
 
 func deserializeWallets(serialized string) []common.Address {
@@ -560,9 +561,7 @@ func (ca *chainAuth) evaluateWithEntitlements(
 	// 2. Check if the user has been banned
 	banned, err := ca.spaceContract.IsBanned(ctx, args.spaceId, wallets)
 	if err != nil {
-		return false, AsRiverError(
-			err,
-		).Func("evaluateEntitlements").
+		return false, AsRiverError(err).Func("evaluateEntitlements").
 			Tag("spaceId", args.spaceId).
 			Tag("userId", args.principal)
 	}
@@ -602,12 +601,8 @@ func (ca *chainAuth) isEntitledToSpaceUncached(
 		ca.getSpaceEntitlementsForPermissionUncached,
 	)
 	if err != nil {
-		return &boolCacheResult{
-				allowed: false,
-			}, AsRiverError(
-				err,
-			).Func("isEntitledToSpace").
-				Message("Failed to get space entitlements")
+		return nil, AsRiverError(err).Func("isEntitledToSpace").
+			Message("Failed to get space entitlements")
 	}
 
 	if cacheHit {
@@ -621,11 +616,11 @@ func (ca *chainAuth) isEntitledToSpaceUncached(
 
 	allowed, err := ca.evaluateWithEntitlements(ctx, cfg, args, entitlementData.owner, entitlementData.entitlementData)
 	if err != nil {
-		err = AsRiverError(err).
+		return nil, AsRiverError(err).
 			Func("isEntitledToSpace").
 			Message("Failed to evaluate entitlements")
 	}
-	return &boolCacheResult{allowed}, err
+	return boolCacheResult(allowed), nil
 }
 
 func (ca *chainAuth) isEntitledToSpace(ctx context.Context, cfg *config.Config, args *ChainAuthArgs) (bool, error) {
@@ -754,15 +749,15 @@ func (ca *chainAuth) checkEntitlement(
 
 	isEnabled, err := ca.checkStreamIsEnabled(ctx, cfg, args)
 	if err != nil {
-		return &boolCacheResult{allowed: false}, err
+		return nil, err
 	} else if !isEnabled {
-		return &boolCacheResult{allowed: false}, nil
+		return boolCacheResult(false), nil
 	}
 
 	// Get all linked wallets.
 	wallets, err := ca.getLinkedWallets(ctx, args.principal)
 	if err != nil {
-		return &boolCacheResult{allowed: false}, err
+		return nil, err
 	}
 
 	args = args.withLinkedWallets(wallets)
@@ -820,7 +815,7 @@ func (ca *chainAuth) checkEntitlement(
 			}
 		}
 		if membershipError != nil {
-			membershipError = AsRiverError(membershipError, Err_INTERNAL).
+			membershipError = AsRiverError(membershipError, Err_CANNOT_CHECK_ENTITLEMENTS).
 				Message("Error(s) evaluating user space membership").
 				Func("checkEntitlement").
 				Tag("principal", args.principal).
@@ -851,25 +846,21 @@ func (ca *chainAuth) checkEntitlement(
 				"wallets",
 				wallets,
 			)
-			return &boolCacheResult{allowed: false}, nil
+			return boolCacheResult(false), nil
 		}
 	}
 
 	// Now that we know the user is a member of the space, we can check entitlements.
 	if len(wallets) > ca.linkedWalletsLimit {
-		log.Error("too many wallets linked to the root key", "rootKey", args.principal, "wallets", len(wallets))
-		return &boolCacheResult{
-				allowed: false,
-			}, fmt.Errorf(
-				"too many wallets linked to the root key: %d",
-				len(wallets)-1,
-			)
+		return nil, RiverError(Err_RESOURCE_EXHAUSTED,
+			"too many wallets linked to the root key",
+			"rootKey", args.principal, "wallets", len(wallets)).LogError(log)
 	}
 
 	result, err := ca.areLinkedWalletsEntitled(ctx, cfg, args)
 	if err != nil {
-		return &boolCacheResult{allowed: false}, err
+		return nil, err
 	}
 
-	return &boolCacheResult{allowed: result}, nil
+	return boolCacheResult(result), nil
 }
