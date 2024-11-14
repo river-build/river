@@ -14,7 +14,7 @@ import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/con
 import { StreamService } from '@river-build/proto'
 import { filetypemime } from 'magic-bytes.js'
 import { FastifyBaseLogger } from 'fastify'
-import { BigNumber } from 'ethers'
+import { LRUCache } from 'lru-cache'
 
 import { MediaContent, StreamIdHex } from './types'
 import { getNodeForStream } from './streamRegistry'
@@ -24,11 +24,9 @@ const STREAM_METADATA_SERVICE_DEFAULT_UNPACK_OPTS: UnpackEnvelopeOpts = {
 	disableSignatureValidation: true,
 }
 
+const streamLocationCache = new LRUCache<string, string>({ max: 5000 })
 const clients = new Map<string, StreamRpcClient>()
-const streamClientRequests = new Map<
-	string,
-	Promise<{ client: StreamRpcClient; lastMiniblockNum: BigNumber }>
->()
+const streamClientRequests = new Map<string, Promise<StreamRpcClient>>()
 const streamRequests = new Map<string, Promise<StreamStateView>>()
 const mediaRequests = new Map<string, Promise<MediaContent>>()
 
@@ -53,23 +51,25 @@ export function makeStreamRpcClient(url: string): StreamRpcClient {
 }
 
 async function _getStreamClient(logger: FastifyBaseLogger, streamId: `0x${string}`) {
-	const node = await getNodeForStream(logger, streamId)
-	let client = clients.get(node.url)
-	if (!client) {
-		logger.info({ url: node.url }, 'Connecting')
-		client = makeStreamRpcClient(node.url)
-		clients.set(node.url, client)
+	let url = streamLocationCache.get(streamId)
+	if (!url) {
+		const node = await getNodeForStream(logger, streamId)
+		url = node.url
+		streamLocationCache.set(streamId, url)
 	}
-
-	logger.info({ url: node.url }, 'client connected to node')
-
-	return { client, lastMiniblockNum: node.lastMiniblockNum }
+	let client = clients.get(url)
+	if (!client) {
+		logger.info({ url }, 'Connecting')
+		client = makeStreamRpcClient(url)
+		clients.set(url, client)
+	}
+	return client
 }
 
 async function getStreamClient(
 	logger: FastifyBaseLogger,
 	streamId: `0x${string}`,
-): Promise<{ client: StreamRpcClient; lastMiniblockNum: BigNumber }> {
+): Promise<StreamRpcClient> {
 	const existing = streamClientRequests.get(streamId)
 	if (existing) {
 		return existing
@@ -188,12 +188,11 @@ export async function _getStream(
 	streamId: string,
 	opts: UnpackEnvelopeOpts = STREAM_METADATA_SERVICE_DEFAULT_UNPACK_OPTS,
 ): Promise<StreamStateView> {
-	const { client, lastMiniblockNum } = await getStreamClient(logger, `0x${streamId}`)
+	const client = await getStreamClient(logger, `0x${streamId}`)
 	logger.info(
 		{
 			nodeUrl: client.url,
 			streamId,
-			lastMiniblockNum: lastMiniblockNum.toString(),
 		},
 		'getStream',
 	)
