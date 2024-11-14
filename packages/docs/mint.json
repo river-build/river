@@ -160,6 +160,19 @@
           ]
         }
       ]
+    },
+    {
+      "group": "React SDK",
+      "pages": [
+        "sdk/react-sdk/overview",
+        {
+          "group": "API",
+          "pages": [
+            "sdk/react-sdk/api/connectRiver", "sdk/react-sdk/api/connectRiverWithBearerToken", "sdk/react-sdk/api/getRoom", "sdk/react-sdk/api/RiverSyncProvider", "sdk/react-sdk/api/signAndConnect", "sdk/react-sdk/api/useAgentConnection", "sdk/react-sdk/api/useChannel", "sdk/react-sdk/api/useChannelTimeline", "sdk/react-sdk/api/useCreateChannel", "sdk/react-sdk/api/useCreateSpace", "sdk/react-sdk/api/useDm", "sdk/react-sdk/api/useDmTimeline", "sdk/react-sdk/api/useGdm", "sdk/react-sdk/api/useGdmTimeline", "sdk/react-sdk/api/useJoinSpace", "sdk/react-sdk/api/useMember", "sdk/react-sdk/api/useMemberList", "sdk/react-sdk/api/useMyMember", "sdk/react-sdk/api/useObservable", "sdk/react-sdk/api/useReactions", "sdk/react-sdk/api/useRedact", "sdk/react-sdk/api/useRiver", "sdk/react-sdk/api/useRiverAuthStatus", "sdk/react-sdk/api/useScrollback", "sdk/react-sdk/api/useSendMessage", "sdk/react-sdk/api/useSendReaction", "sdk/react-sdk/api/useSetDisplayName", "sdk/react-sdk/api/useSetEnsAddress", "sdk/react-sdk/api/useSetNft", "sdk/react-sdk/api/useSetUsername", "sdk/react-sdk/api/useSpace", "sdk/react-sdk/api/useSyncAgent", "sdk/react-sdk/api/useThreadMap", "sdk/react-sdk/api/useTimeline", "sdk/react-sdk/api/useUserDms", "sdk/react-sdk/api/useUserGdms", "sdk/react-sdk/api/useUserSpaces"
+          ]
+
+        }
+      ]
     }
   ],
   "footerSocials": {
