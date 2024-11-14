@@ -373,6 +373,8 @@ func (c *RiverRegistryContract) ForAllStreams(
 					i,
 					"pageSize",
 					pageSize,
+					"elapsed",
+					time.Since(startTime),
 				)
 				lastReport = now
 			}

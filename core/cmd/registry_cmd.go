@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -20,7 +21,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func srStreamDump(cfg *config.Config, countOnly bool) error {
+func srStreamDump(cfg *config.Config, countOnly, timeOnly bool) error {
 	ctx := context.Background() // lint:ignore context.Background() is fine here
 	blockchain, err := crypto.NewBlockchain(
 		ctx,
@@ -55,18 +56,25 @@ func srStreamDump(cfg *config.Config, countOnly bool) error {
 	}
 
 	i := 0
+	startTime := time.Now()
 	err = registryContract.ForAllStreams(ctx, blockchain.InitialBlockNum, func(strm *registries.GetStreamResult) bool {
-		s := fmt.Sprintf("%4d %s", i, strm.StreamId.String())
-		fmt.Printf("%-69s %4d, %s\n", s, strm.LastMiniblockNum, strm.LastMiniblockHash.Hex())
-		for _, node := range strm.Nodes {
-			fmt.Printf("        %s\n", node.Hex())
+		if !timeOnly {
+			s := fmt.Sprintf("%4d %s", i, strm.StreamId.String())
+			fmt.Printf("%-69s %4d, %s\n", s, strm.LastMiniblockNum, strm.LastMiniblockHash.Hex())
+			for _, node := range strm.Nodes {
+				fmt.Printf("        %s\n", node.Hex())
+			}
 		}
 		i++
+		if timeOnly && i%50000 == 0 && i > 0 {
+			fmt.Printf("Processed %d streams in %s\n", i, time.Since(startTime))
+		}
 		return true
 	})
 	if err != nil {
 		return err
 	}
+	fmt.Printf("TOTAL: %d ELAPSED: %s\n", i, time.Since(startTime))
 
 	if streamNum != int64(i) {
 		return RiverError(
@@ -255,10 +263,15 @@ func init() {
 			if err != nil {
 				return err
 			}
-			return srStreamDump(cmdConfig, countOnly)
+			timeOnly, err := cmd.Flags().GetBool("time")
+			if err != nil {
+				return err
+			}
+			return srStreamDump(cmdConfig, countOnly, timeOnly)
 		},
 	}
 	streamsCmd.Flags().Bool("count", false, "Only print the stream count")
+	streamsCmd.Flags().Bool("time", false, "Print only timing information")
 	srCmd.AddCommand(streamsCmd)
 
 	srCmd.AddCommand(&cobra.Command{
