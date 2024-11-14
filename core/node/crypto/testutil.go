@@ -451,9 +451,10 @@ func makeTestBlockchain(
 	bc, err := NewBlockchainWithClient(
 		ctx,
 		&config.ChainConfig{
-			ChainId:         chainID.Uint64(),
-			BlockTimeMs:     100,
-			TransactionPool: config.TransactionPoolConfig{}, // use defaults
+			ChainId:                                chainID.Uint64(),
+			BlockTimeMs:                            100,
+			TransactionPool:                        config.TransactionPoolConfig{}, // use defaults
+			DisableReplacePendingTransactionOnBoot: true,
 		},
 		wallet,
 		client,
