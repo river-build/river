@@ -11,6 +11,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/gammazero/workerpool"
+	"go.uber.org/atomic"
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/river"
@@ -291,7 +293,6 @@ var ZeroBytes32 = [32]byte{}
 func (c *RiverRegistryContract) callGetPaginatedStreams(
 	ctx context.Context,
 	blockNum crypto.BlockNumber,
-	cb func(*GetStreamResult) bool,
 	start int64,
 	end int64,
 ) ([]river.StreamWithId, bool, error) {
@@ -308,6 +309,25 @@ func (c *RiverRegistryContract) callGetPaginatedStreams(
 	}
 
 	return streams, lastPage, nil
+}
+
+func (c *RiverRegistryContract) callGetPaginatedStreamsWithBackoff(
+	ctx context.Context,
+	blockNum crypto.BlockNumber,
+	start int64,
+	end int64,
+) ([]river.StreamWithId, bool, error) {
+	bo := c.createBackoff()
+	bo.Reset()
+	for {
+		streams, lastPage, err := c.callGetPaginatedStreams(ctx, blockNum, start, end)
+		if err == nil {
+			return streams, lastPage, nil
+		}
+		if !waitForBackoff(ctx, bo) {
+			return nil, false, err
+		}
+	}
 }
 
 func (c *RiverRegistryContract) createBackoff() backoff.BackOff {
@@ -344,6 +364,10 @@ func (c *RiverRegistryContract) ForAllStreams(
 	blockNum crypto.BlockNumber,
 	cb func(*GetStreamResult) bool,
 ) error {
+	if c.Settings.ParallelReaders > 1 {
+		return c.forAllStreamsParallel(ctx, blockNum, cb)
+	}
+
 	log := dlog.FromCtx(ctx)
 	pageSize := int64(c.Settings.PageSize)
 	if pageSize <= 0 {
@@ -383,7 +407,7 @@ func (c *RiverRegistryContract) ForAllStreams(
 				lastReport = now
 			}
 
-			streams, lastPage, err = c.callGetPaginatedStreams(ctx, blockNum, cb, i, i+pageSize)
+			streams, lastPage, err = c.callGetPaginatedStreams(ctx, blockNum, i, i+pageSize)
 			if err == nil {
 				break
 			}
@@ -404,6 +428,118 @@ func (c *RiverRegistryContract) ForAllStreams(
 				return nil
 			}
 		}
+	}
+
+	elapsed := time.Since(startTime)
+	log.Info(
+		"RiverRegistryContract: GetPaginatedStreams completed",
+		"elapsed",
+		elapsed,
+		"streamsPerSecond",
+		float64(totalStreams)/elapsed.Seconds(),
+	)
+
+	return nil
+}
+
+// ForAllStreams calls the given cb for all streams that are registered in the river registry at the given block num.
+// If cb returns false forAllStreams returns.
+func (c *RiverRegistryContract) forAllStreamsParallel(
+	ctx context.Context,
+	blockNum crypto.BlockNumber,
+	cb func(*GetStreamResult) bool,
+) error {
+	log := dlog.FromCtx(ctx)
+
+	numWorkers := c.Settings.ParallelReaders
+	if numWorkers <= 1 {
+		numWorkers = 8
+	}
+
+	pageSize := int64(c.Settings.PageSize)
+	if pageSize <= 0 {
+		pageSize = 1000
+	}
+
+	progressReportInterval := c.Settings.ProgressReportInterval
+	if progressReportInterval <= 0 {
+		progressReportInterval = 10 * time.Second
+	}
+
+	numStreamsBigInt, err := c.StreamRegistry.GetStreamCount(c.callOptsWithBlockNum(ctx, blockNum))
+	if err != nil {
+		return WrapRiverError(Err_CANNOT_CALL_CONTRACT, err).Func("ForAllStreams")
+	}
+
+	chResults := make(chan []river.StreamWithId, numWorkers)
+	chErrors := make(chan error, numWorkers)
+
+	pool := workerpool.New(numWorkers)
+	defer pool.StopWait()
+
+	startTime := time.Now()
+	lastReport := time.Now()
+
+	numStreams := numStreamsBigInt.Int64()
+	taskCounter := atomic.NewInt64(0)
+	for i := int64(0); i < numStreams; i += pageSize {
+		taskCounter.Inc()
+		pool.Submit(func() {
+			streams, _, err := c.callGetPaginatedStreamsWithBackoff(ctx, blockNum, i, i+pageSize)
+			if err == nil {
+				chResults <- streams
+			} else {
+				chErrors <- err
+			}
+			taskCounter.Dec()
+		})
+	}
+
+	totalStreams := int64(0)
+OuterLoop:
+	for {
+		now := time.Now()
+		if now.Sub(lastReport) > progressReportInterval {
+			elapsed := time.Since(startTime)
+			log.Info(
+				"RiverRegistryContract: GetPaginatedStreams in progress",
+				"streamsRead",
+				totalStreams,
+				"elapsed",
+				elapsed,
+				"streamPerSecond",
+				float64(totalStreams)/elapsed.Seconds(),
+			)
+			lastReport = now
+		}
+		select {
+		case streams := <-chResults:
+			for _, stream := range streams {
+				if stream.Id == ZeroBytes32 {
+					continue
+				}
+				totalStreams++
+				if !cb(makeGetStreamResult(stream.Id, &stream.Stream)) {
+					break OuterLoop
+				}
+			}
+			if taskCounter.Load() == 0 {
+				break OuterLoop
+			}
+		case receivedErr := <-chErrors:
+			err = receivedErr
+			break OuterLoop
+		case <-ctx.Done():
+			err = ctx.Err()
+			break OuterLoop
+		case <-time.After(10 * time.Second):
+			continue
+		}
+	}
+
+	if err != nil {
+		pool.Stop()
+		return err
 	}
 
 	elapsed := time.Since(startTime)
