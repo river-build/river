@@ -272,13 +272,38 @@ export class MlsCrypto {
                 this.groupStore.clear(streamId)
                 return 'GROUP_MISSING'
             case 'GROUP_PENDING_JOIN': {
+                const groupEpoch = groupState.group.currentEpoch
+                if (epoch < groupEpoch) {
+                    this.log('skipping old join message', {
+                        epoch,
+                        groupEpoch,
+                        groupInfo: shortenHexString(bin_toHexString(groupInfoWithExternalKey)),
+                        commit: shortenHexString(bin_toHexString(commit)),
+                    })
+                    return 'GROUP_PENDING_JOIN'
+                }
+                if (epoch > groupEpoch) {
+                    this.log('group info was stale for join message, clearing group', {
+                        epoch,
+                        groupEpoch,
+                        groupInfo: shortenHexString(bin_toHexString(groupInfoWithExternalKey)),
+                        commit: shortenHexString(bin_toHexString(commit)),
+                    })
+                    this.groupStore.clear(streamId)
+                    return 'GROUP_MISSING'
+                }
+
                 const ownPendingJoin: boolean =
                     uint8ArrayEqual(userAddress, this.userAddress) &&
                     uint8ArrayEqual(deviceKey, this.deviceKey) &&
                     uint8ArrayEqual(commit, groupState.commit) &&
                     uint8ArrayEqual(groupInfoWithExternalKey, groupState.groupInfoWithExternalKey)
                 if (!ownPendingJoin) {
-                    this.log('someone else joined, clearing group', epoch)
+                    this.log('someone else joined, clearing group', {
+                        epoch,
+                        groupInfo: shortenHexString(bin_toHexString(groupInfoWithExternalKey)),
+                        commit: shortenHexString(bin_toHexString(commit)),
+                    })
                     this.groupStore.clear(streamId)
                     return 'GROUP_MISSING'
                 }
@@ -288,7 +313,11 @@ export class MlsCrypto {
                     group: groupState.group,
                 })
                 const joinedEpoch = groupState.group.currentEpoch
-                this.log('joining group', joinedEpoch)
+                this.log('joining group', {
+                    epoch: joinedEpoch,
+                    groupInfo: shortenHexString(bin_toHexString(groupInfoWithExternalKey)),
+                    commit: shortenHexString(bin_toHexString(commit)),
+                })
                 // add a key to the epoch store
                 const epochSecret = await groupState.group.currentEpochSecret()
                 await this.epochKeyService.addOpenEpochSecret(

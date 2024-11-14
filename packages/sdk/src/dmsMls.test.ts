@@ -2,7 +2,7 @@
  * @group main
  */
 
-import { check } from '@river-build/dlog'
+import { check, dlog } from '@river-build/dlog'
 import { Client } from './client'
 import {
     getChannelMessagePayload,
@@ -13,6 +13,8 @@ import {
 
 import { StreamTimelineEvent } from './types'
 import { makeUniqueChannelStreamId } from './id'
+
+const log = dlog('test:mls')
 
 describe('dmsMlsTests', () => {
     let clients: Client[] = []
@@ -226,10 +228,9 @@ describe('dmsMlsTests', () => {
         )
     })
 
-    // NOTE: Currently broken
-    test.skip('manyClientsInChannel', async () => {
+    test('manyClientsInChannel', async () => {
         const spaceId = makeUniqueSpaceStreamId()
-        const bobsClient = await makeInitAndStartClient()
+        const bobsClient = await makeInitAndStartClient('bob')
         await expect(bobsClient.createSpace(spaceId)).toResolve()
 
         const channelId = makeUniqueChannelStreamId(spaceId)
@@ -237,8 +238,8 @@ describe('dmsMlsTests', () => {
 
         await Promise.all(
             Array.from(Array(12).keys()).map(async (n) => {
-                console.log(`JOINING CLIENT ${n}`)
-                const client = await makeInitAndStartClient()
+                log(`JOINING client-${n}`)
+                const client = await makeInitAndStartClient(`client-${n}`)
                 await expect(client.joinStream(channelId)).toResolve()
                 await expect(client.waitForStream(channelId)).toResolve()
             }),
