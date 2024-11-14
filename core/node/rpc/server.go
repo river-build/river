@@ -456,6 +456,7 @@ func (s *Service) runHttpServer() error {
 			"Connect-Protocol-Version",
 			"Connect-Timeout-Ms",
 			"x-river-request-id",
+			"Authorization",
 		},
 	})
 
