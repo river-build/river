@@ -1,0 +1,170 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "River",
+  "feedback": {
+    "thumbsRating": true,
+    "suggestEdit": true
+  },
+  "modeToggle": {
+    "default": "dark",
+    "isHidden": true
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "favicon": "/favicon.png",
+  "colors": {
+    "primary": "#8c84f7",
+    "light": "#8c84f7",
+    "dark": "#8c84f7",
+    "anchors": {
+      "from": "#8c84f7",
+      "to": "#8c84f7"
+    },
+    "background": {
+      "light": "#02000A",
+      "dark": "#02000A"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "X (Ex. Twitter)",
+      "url": "https://twitter.com/buildonriver"
+    },
+    {
+      "name": "Github",
+      "url": "https://github.com/river-build"
+    }
+  ],
+  "tabs": [
+  ],
+  "navigation": [
+    {
+      "group": "Learn",
+      "pages": [
+        "introduction",
+        {
+          "group": "River Smart Contracts",
+          "pages": [
+            "river-smart-contracts/overview",
+            "river-smart-contracts/space-ownership",
+            "river-smart-contracts/space-membership",
+            "river-smart-contracts/pricing-modules",
+            "river-smart-contracts/roles-entitlements",
+            "river-smart-contracts/upgradeability",
+            "river-smart-contracts/contracts"
+          ]
+        },
+        {
+          "group": "River Messaging Protocol",
+          "pages": [
+            "river-messaging-protocol/overview",
+            "river-messaging-protocol/node-operators",
+            {
+              "group": "River Chain",
+              "pages": [
+                "river-messaging-protocol/river-chain/overview",
+                "river-messaging-protocol/river-chain/node-registry",
+                "river-messaging-protocol/river-chain/stream-registry"
+              ]
+            },
+            {
+              "group": "Stream Nodes",
+              "pages": [
+                "river-messaging-protocol/stream-nodes/overview",
+                "river-messaging-protocol/stream-nodes/stream-allocation",
+                "river-messaging-protocol/stream-nodes/event-lifecycle"
+              ]
+            },
+            {
+              "group": "Concepts",
+              "pages": [
+                "concepts/mini-blocks",
+                "concepts/stream-checkpointing",
+                "concepts/encryption",
+                "concepts/rebalancing",
+                "concepts/chunk-management",
+                "concepts/snapshotting",
+                "concepts/cross-chain-entitlement-checking",
+                "concepts/node-node-communication",
+                "concepts/network-partitioning"
+              ]
+            }
+          ]
+        },
+        {
+          "group": "River DAO",
+          "pages": [
+            "river-dao/overview",
+            "river-dao/governance-framework",
+            "river-dao/stakeholders",
+            "river-dao/proposals",
+            "river-dao/stages"
+          ]
+        },
+        {
+          "group": "RVR Token",
+          "pages": [
+            "rvr-token/utility",
+            "rvr-token/economics",
+            "rvr-token/mechanics",
+            "rvr-token/delegation",
+            "rvr-token/distribution",
+            "rvr-token/claiming"
+
+          ]
+        },
+        "FAQs"
+      ]
+    },
+    {
+      "group": "Run",
+      "pages": [
+        "run/introduction",
+        {
+          "group": "Node Operator Tutorials",
+          "pages": [
+            "run/node-operator/system-requirements-installation",
+            "run/node-operator/system-configuration-steps",
+            "run/node-operator/node-best-practices",
+            "run/node-operator/register-river-operator",
+            "run/node-operator/register-river-stream-node",
+            "run/node-operator/upgrade-river-stream-node",
+            "run/node-operator/node-observability"
+          ]
+        },
+        {
+          "group": "Run Tutorials",
+          "pages": ["run/river-stream-node"]
+        },
+        {
+          "group": "Resources",
+          "pages": [
+            "run/contracts",
+            "run/release-process"
+          ]
+        }
+      ]
+    },
+    {
+      "group": "Build",
+      "pages": [
+        "build/river-messaging-datastructures",
+        "build/delegate-key-signing",
+        "build/river-encryption",
+        {
+          "group": "Recipes",
+          "pages": [
+            "river-recipes/adding-events"
+          ]
+        }
+      ]
+    }
+  ],
+  "footerSocials": {
+    "twitter": "https://twitter.com/buildonriver",
+    "github": "https://github.com/river-build",
+    "website": "https://towns.com"
+  }
+}
