@@ -13,6 +13,7 @@ import {
 
 import { StreamTimelineEvent } from './types'
 import { makeUniqueChannelStreamId } from './id'
+import { MembershipOp } from '@river-build/proto'
 
 const log = dlog('test:mls')
 
@@ -282,7 +283,43 @@ describe('dmsMlsTests', () => {
             }),
         ).toResolve()
     })
+
+    test.only('manyClientsInChannelInterleaving', async () => {
+        const spaceId = makeUniqueSpaceStreamId()
+        const bobsClient = await makeInitAndStartClient('bob')
+        await expect(bobsClient.createSpace(spaceId)).toResolve()
+        const channelId = makeUniqueChannelStreamId(spaceId)
+        await expect(bobsClient.createChannel(spaceId, 'Channel', 'Topic', channelId)).toResolve()
+
+        const messagesInFlight: Promise<any>[] = []
+
+        messagesInFlight.push(
+            bobsClient.sendMessage(channelId, 'hello everyone', [], [], { useMls: true }),
+        )
+
+        await Promise.all(
+            Array.from(Array(2).keys()).map(async (n: number) => {
+                log(`joining client-${n}`)
+                const client = await makeInitAndStartClient(`client-${n}`)
+                await goBackToEventLoop()
+                await expect(client.joinStream(channelId)).toResolve()
+                await goBackToEventLoop()
+                // await expect(client.waitForStream(channelId)).toResolve()
+                const clientStream = await client.waitForStream(channelId)
+                await goBackToEventLoop()
+                await expect(clientStream.waitForMembership(MembershipOp.SO_JOIN)).toResolve()
+                await goBackToEventLoop()
+                await expect(
+                    client.sendMessage(channelId, `hello from ${n}`, [], [], { useMls: true }),
+                ).toResolve()
+            }),
+        )
+
+        await expect(Promise.all(messagesInFlight)).toResolve()
+    })
 })
+
+const goBackToEventLoop = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 function getPayloadRemoteEvent(event: StreamTimelineEvent): string | undefined {
     if (event.decryptedContent?.kind === 'channelMessage') {
