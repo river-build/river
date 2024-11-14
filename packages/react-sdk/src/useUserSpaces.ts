@@ -4,7 +4,7 @@ import { useRiver } from './useRiver'
 
 /**
  * Hook to get the spaces of the current user.
- * @param config - Configuration options for the observable. @see {@link ObservableConfig.FromObservable}
+ * @param config - Configuration options for the observable.
  * @returns The spaces of the current user.
  */
 export const useUserSpaces = (config?: ObservableConfig.FromObservable<Spaces>) => {
