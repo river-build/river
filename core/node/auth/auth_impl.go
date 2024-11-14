@@ -827,11 +827,6 @@ func (ca *chainAuth) checkEntitlement(
 				Tag("permission", args.permission).
 				Tag("wallets", args.linkedWallets).
 				Tag("spaceId", args.spaceId)
-		}
-	}
-
-	if !isMember {
-		if membershipError != nil {
 			log.Error(
 				"User membership could not be evaluated",
 				"userId",
