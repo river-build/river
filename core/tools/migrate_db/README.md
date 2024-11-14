@@ -14,6 +14,10 @@ After updating `river_migrate_db.env` with correct parameters, migration tool ca
     ./river_migrate_db target partition  # create missing target partitions matching source since last run
     ./river_migrate_db copy  # copy data from source to target
 
+    # Inspect specific stream content
+    ./river_migrate_db source inspect <streamId>
+    ./river_migrate_db target inspect <streamId>
+
     # reconfigure container to use target db
 
 To run a stream data migration simultaneously, run the migration tool like so:
@@ -30,7 +34,17 @@ To run a stream data migration simultaneously, run the migration tool like so:
 
     # Validate target data against source database, searching for target stream
     # data in migrated schema
-    ./river_migrate_db validate --migrated
+    ./river_migrate_db validate -m
+
+    # To validate with a binary comparison of stream contents:
+    ./river_migrate_db validate -m -b
+
+    #... with verbose log output:
+    ./river_migrate_db validate -m -b -v
+
+    # Inspect specific stream content
+    ./river_migrate_db source inspect <streamId>
+    ./river_migrate_db target inspect <streamId>
 
 For command-line options use `help` command.
 
