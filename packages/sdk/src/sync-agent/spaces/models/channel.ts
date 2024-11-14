@@ -74,19 +74,6 @@ export class Channel extends PersistedObservable<ChannelModel> {
         })
     }
 
-    /**
-     * Invites a user to the channel.
-     * @param userId - The River `userId` of the user to invite.
-     * @returns A promise that resolves to the result of the invite operation.
-     */
-    async invite(userId: string) {
-        const channelId = this.data.id
-        const result = await this.riverConnection.withStream(channelId).call((client) => {
-            return client.inviteUser(channelId, userId)
-        })
-        return result
-    }
-
     async sendMessage(
         message: string,
         options?: {

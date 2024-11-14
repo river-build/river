@@ -214,19 +214,4 @@ describe('syncAgents.test.ts', () => {
             { timeoutMS: 10000 },
         )
     })
-
-    test('invite to channel', async () => {
-        await Promise.all([bob.start(), alice.start()])
-        const { spaceId } = await bob.spaces.createSpace(
-            { spaceName: 'Invite Test' },
-            bobUser.signer,
-        )
-        const space = bob.spaces.getSpace(spaceId)
-        const channelId = await space.createChannel('random', bobUser.signer)
-        const channel = space.getChannel(channelId)
-        await channel.invite(alice.userId)
-        await waitFor(() =>
-            expect(channel.members.get(alice.userId).membership).toEqual(MembershipOp.SO_INVITE),
-        )
-    })
 })
