@@ -6,7 +6,6 @@ import { SyncAgent } from './syncAgent'
 import { Bot } from './utils/bot'
 import { waitFor } from '../util.test'
 import { NoopRuleData, Permission } from '@river-build/web3'
-import { MembershipOp } from '@river-build/proto'
 
 const logger = dlogger('csb:test:syncAgents')
 
