@@ -3,9 +3,9 @@ package nodes
 import (
 	"context"
 	"hash/fnv"
-	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/puzpuzpuz/xsync/v3"
 
 	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
@@ -27,13 +27,18 @@ type StreamRegistry interface {
 	) ([]common.Address, error)
 }
 
+type streamDescriptor struct {
+	nodes  StreamNodes
+	lastMb MiniblockRef
+}
+
 type streamRegistryImpl struct {
 	localNodeAddress common.Address
 	nodeRegistry     NodeRegistry
 	onChainConfig    crypto.OnChainConfiguration
 	contract         *registries.RiverRegistryContract
 
-	streamNodeCache sync.Map
+	streamNodeCache *xsync.MapOf[StreamId, *streamDescriptor]
 }
 
 var _ StreamRegistry = (*streamRegistryImpl)(nil)
