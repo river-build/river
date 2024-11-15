@@ -626,8 +626,19 @@ func TestOnBlockWithLogs(t *testing.T) {
 		return pastCollector.lastBlock() >= currentBlock
 	}, 10*time.Second, 10*time.Millisecond)
 
-	// TODO: this should work, but returns 0 instead.
-	// require.Len(pastCollector.logs(), nodeCount*2, "unexpected NodeAdded logs count")
+	require.Len(pastCollector.logs(), nodeCount*2, "unexpected NodeAdded logs count")
+
+	registerNodes(t, ctx, tc, owner, nodeCount)
+
+	currentBlock = tc.BlockNum(ctx)
+	require.Eventually(func() bool {
+		return pastCollector.lastBlock() >= currentBlock && futureCollector.lastBlock() >= currentBlock &&
+			collector.lastBlock() >= currentBlock
+	}, 10*time.Second, 10*time.Millisecond)
+
+	require.Len(pastCollector.logs(), nodeCount*3, "unexpected NodeAdded logs count")
+	require.Len(futureCollector.logs(), nodeCount*2, "unexpected NodeAdded logs count")
+	require.Len(collector.logs(), nodeCount*3, "unexpected NodeAdded logs count")
 }
 
 func TestContractEventsWithTopicsFromPast(t *testing.T) {
