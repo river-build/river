@@ -1,5 +1,5 @@
 {
-    "name": "create-river-app",
+    "name": "create-river-build-app",
     "version": "0.0.1",
     "type": "module",
     "bin": "index.js",

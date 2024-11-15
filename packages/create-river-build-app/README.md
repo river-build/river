@@ -1,4 +1,4 @@
-# Create River App
+# Create River Build App
 
 This package is used to scaffold a new React River app.
 
@@ -14,7 +14,7 @@ You can use your preferred package manager to run the command.
 Example using `yarn`:
 
 ```bash
-yarn create river-app
+yarn create river-build-app
 ```
 
 This will create a new React River app in the current directory.
@@ -22,5 +22,5 @@ This will create a new React River app in the current directory.
 If you want to create a new app in a different directory, you can specify the directory name as an argument:
 
 ```bash
-yarn create river-app my-app
+yarn create river-build-app my-app
 ```
