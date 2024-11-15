@@ -1508,7 +1508,7 @@ func copyPart(
 		streamId,
 	)
 	if err != nil {
-		return fmt.Errorf("ERROR: Failed to query %s on source db for stream %s: %w", srcPartition, streamId, err)
+		return fmt.Errorf("error: Failed to query %s on source db for stream %s: %w", srcPartition, streamId, err)
 	}
 	defer rows.Close()
 
@@ -1938,12 +1938,12 @@ func compareMiniblockContents(
 		var seqNum int64
 		var blockdata []byte
 		if err := rows.Scan(&seqNum, &blockdata); err != nil {
-			return fmt.Errorf("Error reading miniblock row from src: %w", err)
+			return fmt.Errorf("error reading miniblock row from src: %w", err)
 		}
 
 		if seqNum != int64(len(sourceMiniblocks)) {
 			return fmt.Errorf(
-				"Consistency error in source miniblocks; expected seqNum %d but saw %d\n",
+				"consistency error in source miniblocks; expected seqNum %d but saw %d\n",
 				len(sourceMiniblocks),
 				seqNum,
 			)
@@ -1968,11 +1968,11 @@ func compareMiniblockContents(
 		var seqNum int64
 		var blockdata []byte
 		if err := rows.Scan(&seqNum, &blockdata); err != nil {
-			return fmt.Errorf("Error reading miniblock row from target: %w", err)
+			return fmt.Errorf("E=error reading miniblock row from target: %w", err)
 		}
 		if seqNum != int64(len(targetMiniblocks)) {
 			return fmt.Errorf(
-				"Consistency error in target miniblocks; expected seqNum %d but saw %d\n",
+				"consistency error in target miniblocks; expected seqNum %d but saw %d\n",
 				len(targetMiniblocks),
 				seqNum,
 			)
@@ -1982,7 +1982,7 @@ func compareMiniblockContents(
 
 	if len(sourceMiniblocks) != len(targetMiniblocks) {
 		return fmt.Errorf(
-			"Source and target miniblock count do not match for stream %v, %d on %s v %d on %s",
+			"source and target miniblock count do not match for stream %v, %d on %s v %d on %s",
 			streamId,
 			len(sourceMiniblocks),
 			srcPartition,
@@ -1994,7 +1994,7 @@ func compareMiniblockContents(
 	for i, srcBlockdata := range sourceMiniblocks {
 		targetBlockdata := targetMiniblocks[i]
 		if !bytes.Equal(srcBlockdata, targetBlockdata) {
-			return fmt.Errorf("Miniblock content mismatch for seqNum %d on stream %s", i, streamId)
+			return fmt.Errorf("miniblock content mismatch for seqNum %d on stream %s", i, streamId)
 		}
 	}
 
@@ -2020,7 +2020,7 @@ func compareMiniblockCandidateContents(
 
 	exists, err := tableExists(ctx, source, sourceInfo, srcPartition)
 	if err != nil {
-		return fmt.Errorf("Error checking table '%v' existence: %w", srcPartition, err)
+		return fmt.Errorf("error checking table '%v' existence: %w", srcPartition, err)
 	}
 
 	// Multimap: seq_num -> hash -> block data
@@ -2050,7 +2050,7 @@ func compareMiniblockCandidateContents(
 			var blockHash string
 			var blockdata []byte
 			if err := rows.Scan(&seqNum, &blockHash, &blockdata); err != nil {
-				return fmt.Errorf("Error reading miniblock candidate row from src: %w", err)
+				return fmt.Errorf("error reading miniblock candidate row from src: %w", err)
 			}
 			if seqNum != int64(curSeqNum) {
 				if len(curHashMap) > 0 {
@@ -2095,7 +2095,7 @@ func compareMiniblockCandidateContents(
 		var blockHash string
 		var blockdata []byte
 		if err := rows.Scan(&seqNum, &blockHash, &blockdata); err != nil {
-			return fmt.Errorf("Error reading miniblock candidate row from src: %w", err)
+			return fmt.Errorf("error reading miniblock candidate row from src: %w", err)
 		}
 		if seqNum != int64(curSeqNum) {
 			if len(curHashMap) > 0 {
@@ -2124,7 +2124,7 @@ func compareMiniblockCandidateContents(
 
 	if len(srcSeqNums) != len(targetSeqNums) {
 		return fmt.Errorf(
-			"Source and target seq number sets do not overlap: %v from %v, %v from %v",
+			"source and target seq number sets do not overlap: %v from %v, %v from %v",
 			srcSeqNums,
 			srcPartition,
 			targetSeqNums,
@@ -2134,7 +2134,7 @@ func compareMiniblockCandidateContents(
 	for i, srcSeqNum := range srcSeqNums {
 		if srcSeqNum != targetSeqNums[i] {
 			return fmt.Errorf(
-				"Source and target seq number sets do not overlap: %v from %v, %v from %v",
+				"source and target seq number sets do not overlap: %v from %v, %v from %v",
 				srcSeqNums,
 				srcPartition,
 				targetSeqNums,
@@ -2149,7 +2149,7 @@ func compareMiniblockCandidateContents(
 
 		if len(srcHashes) != len(targetHashes) {
 			return fmt.Errorf(
-				"Source and target candidate sets for seq num %v do not overlap: %v from %v, %v from %v",
+				"source and target candidate sets for seq num %v do not overlap: %v from %v, %v from %v",
 				seqNum,
 				srcHashes,
 				srcPartition,
@@ -2163,7 +2163,7 @@ func compareMiniblockCandidateContents(
 
 			if !ok {
 				return fmt.Errorf(
-					"Source and target candidate sets for seq num %v do not overlap: %v from %v, %v from %v",
+					"source and target candidate sets for seq num %v do not overlap: %v from %v, %v from %v",
 					seqNum,
 					srcHashes,
 					srcPartition,
@@ -2173,7 +2173,7 @@ func compareMiniblockCandidateContents(
 			}
 			if !bytes.Equal(data, targetData) {
 				return fmt.Errorf(
-					"Source and target candidate block datas for streamId=%s, seqNum=%d, blockhash=%s do not overlap",
+					"source and target candidate block datas for streamId=%s, seqNum=%d, blockhash=%s do not overlap",
 					streamId,
 					seqNum,
 					hash,
@@ -2230,7 +2230,7 @@ func compareMinipoolContents(
 		var slotNum int64
 		var envelope []byte
 		if err := rows.Scan(&generation, &slotNum, &envelope); err != nil {
-			return fmt.Errorf("Error reading minipool row from src: %w", err)
+			return fmt.Errorf("error reading minipool row from src: %w", err)
 		}
 
 		if srcGeneration == -1 {
@@ -2239,7 +2239,7 @@ func compareMinipoolContents(
 
 		if srcGeneration != generation {
 			return fmt.Errorf(
-				"Minipool entry for stream %s on %s had unexpected generation: expected %d, saw %d",
+				"minipool entry for stream %s on %s had unexpected generation: expected %d, saw %d",
 				streamId,
 				srcPartition,
 				srcGeneration,
@@ -2249,7 +2249,7 @@ func compareMinipoolContents(
 
 		if expectedSlotNum != slotNum {
 			return fmt.Errorf(
-				"Minipool entry for stream %s on %s had unexpected slot num: expected %d, saw %d",
+				"minipool entry for stream %s on %s had unexpected slot num: expected %d, saw %d",
 				streamId,
 				srcPartition,
 				expectedSlotNum,
@@ -2258,7 +2258,7 @@ func compareMinipoolContents(
 		}
 		expectedSlotNum += 1
 		if len(srcEnvelopes) != int(slotNum)+1 {
-			return fmt.Errorf("Slot numbers for stream %s minipool %s nonconsecutive", streamId, srcPartition)
+			return fmt.Errorf("slot numbers for stream %s minipool %s nonconsecutive", streamId, srcPartition)
 		}
 
 		srcEnvelopes = append(srcEnvelopes, envelope)
@@ -2274,7 +2274,7 @@ func compareMinipoolContents(
 	)
 	if err != nil {
 		return fmt.Errorf(
-			"Failed to read minipool for stream %s from source %s: %w",
+			"failed to read minipool for stream %s from source %s: %w",
 			streamId,
 			targetPartition,
 			err,
@@ -2287,7 +2287,7 @@ func compareMinipoolContents(
 		var slotNum int64
 		var envelope []byte
 		if err := rows.Scan(&generation, &slotNum, &envelope); err != nil {
-			return fmt.Errorf("Error reading minipool row from src: %w", err)
+			return fmt.Errorf("error reading minipool row from src: %w", err)
 		}
 
 		if targetGeneration == -1 {
@@ -2296,7 +2296,7 @@ func compareMinipoolContents(
 
 		if srcGeneration != targetGeneration {
 			return fmt.Errorf(
-				"Unexpected generation on target partition %s: expected %d, saw %d",
+				"unexpected generation on target partition %s: expected %d, saw %d",
 				targetPartition,
 				srcGeneration,
 				targetGeneration,
@@ -2305,7 +2305,7 @@ func compareMinipoolContents(
 
 		if targetGeneration != generation {
 			return fmt.Errorf(
-				"Minipool entry for stream %s on %s had unexpected generation: expected %d, saw %d",
+				"minipool entry for stream %s on %s had unexpected generation: expected %d, saw %d",
 				streamId,
 				targetPartition,
 				targetGeneration,
@@ -2315,7 +2315,7 @@ func compareMinipoolContents(
 
 		if expectedSlotNum != slotNum {
 			return fmt.Errorf(
-				"Minipool entry for stream %s on %s had unexpected slot num: expected %d, saw %d",
+				"minipool entry for stream %s on %s had unexpected slot num: expected %d, saw %d",
 				streamId,
 				targetPartition,
 				expectedSlotNum,
@@ -2325,14 +2325,14 @@ func compareMinipoolContents(
 
 		expectedSlotNum += 1
 		if len(targetEnvelopes) != int(slotNum)+1 {
-			return fmt.Errorf("Slot numbers for stream %s minipool %s nonconsecutive", streamId, srcPartition)
+			return fmt.Errorf("slot numbers for stream %s minipool %s nonconsecutive", streamId, srcPartition)
 		}
 		targetEnvelopes = append(targetEnvelopes, envelope)
 	}
 
 	if len(srcEnvelopes) != len(targetEnvelopes) {
 		return fmt.Errorf(
-			"Source and target minipool sizes differ: %d on %s, %d on %s",
+			"source and target minipool sizes differ: %d on %s, %d on %s",
 			len(srcEnvelopes),
 			srcPartition,
 			len(targetEnvelopes),
@@ -2345,7 +2345,7 @@ func compareMinipoolContents(
 
 		if !bytes.Equal(srcEnvelope, targetEnvelope) {
 			return fmt.Errorf(
-				"Minipool contents for stream %s differ: envelopes at generation=%d, slot_num=%d differ",
+				"minipool contents for stream %s differ: envelopes at generation=%d, slot_num=%d differ",
 				streamId,
 				srcGeneration,
 				i-1,
