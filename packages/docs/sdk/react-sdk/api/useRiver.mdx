@@ -14,7 +14,7 @@ import { useRiver } from '@river-build/react-sdk'
 function useRiver<T>(
   selector: (sync: SyncSelector) => Observable<T>,
   config?: ObservableConfig.FromData<T>,
-): T extends import("@river-build/sdk").PersistedModel<infer UnwrappedData> ? {
+): T extends PersistedModel<infer UnwrappedData> ? {
     data: UnwrappedData;
     error: Error | undefined;
     status: "loading" | "loaded" | "error";
@@ -70,7 +70,7 @@ Callback function to be called when the data is updated.
 ## Return Type
 
 ```ts
-T extends import("@river-build/sdk").PersistedModel<infer UnwrappedData> ? {
+T extends PersistedModel<infer UnwrappedData> ? {
     data: UnwrappedData;
     error: Error | undefined;
     status: "loading" | "loaded" | "error";

@@ -16,21 +16,21 @@ function useChannel(
   channelId: string,
   config?: ObservableConfig.FromObservable<Channel>,
 ): {
-    data: import("@river-build/sdk").ChannelModel;
+    data: ChannelModel;
     error: Error | undefined;
     status: "loading" | "loaded" | "error";
     isLoading: boolean;
     isError: boolean;
     isLoaded: boolean;
 } | {
-    data: import("@river-build/sdk").ChannelModel;
+    data: ChannelModel;
     error: Error | undefined;
     status: "loading" | "loaded" | "error";
     isLoading: boolean;
     isError: boolean;
     isLoaded: boolean;
 } | {
-    data: import("@river-build/sdk").ChannelModel;
+    data: ChannelModel;
     error: Error | undefined;
     status: "loading" | "loaded" | "error";
     isLoading: boolean;
@@ -66,21 +66,21 @@ Configuration options for the observable.
 
 ```ts
 {
-    data: import("@river-build/sdk").ChannelModel;
+    data: ChannelModel;
     error: Error | undefined;
     status: "loading" | "loaded" | "error";
     isLoading: boolean;
     isError: boolean;
     isLoaded: boolean;
 } | {
-    data: import("@river-build/sdk").ChannelModel;
+    data: ChannelModel;
     error: Error | undefined;
     status: "loading" | "loaded" | "error";
     isLoading: boolean;
     isError: boolean;
     isLoaded: boolean;
 } | {
-    data: import("@river-build/sdk").ChannelModel;
+    data: ChannelModel;
     error: Error | undefined;
     status: "loading" | "loaded" | "error";
     isLoading: boolean;

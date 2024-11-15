@@ -15,21 +15,21 @@ function useSpace(
   spaceId: string,
   config?: ObservableConfig.FromObservable<Space>,
 ): {
-    data: import("@river-build/sdk").SpaceModel;
+    data: SpaceModel;
     error: Error | undefined;
     status: "loading" | "loaded" | "error";
     isLoading: boolean;
     isError: boolean;
     isLoaded: boolean;
 } | {
-    data: import("@river-build/sdk").SpaceModel;
+    data: SpaceModel;
     error: Error | undefined;
     status: "loading" | "loaded" | "error";
     isLoading: boolean;
     isError: boolean;
     isLoaded: boolean;
 } | {
-    data: import("@river-build/sdk").SpaceModel;
+    data: SpaceModel;
     error: Error | undefined;
     status: "loading" | "loaded" | "error";
     isLoading: boolean;
@@ -59,21 +59,21 @@ Configuration options for the observable.
 
 ```ts
 {
-    data: import("@river-build/sdk").SpaceModel;
+    data: SpaceModel;
     error: Error | undefined;
     status: "loading" | "loaded" | "error";
     isLoading: boolean;
     isError: boolean;
     isLoaded: boolean;
 } | {
-    data: import("@river-build/sdk").SpaceModel;
+    data: SpaceModel;
     error: Error | undefined;
     status: "loading" | "loaded" | "error";
     isLoading: boolean;
     isError: boolean;
     isLoaded: boolean;
 } | {
-    data: import("@river-build/sdk").SpaceModel;
+    data: SpaceModel;
     error: Error | undefined;
     status: "loading" | "loaded" | "error";
     isLoading: boolean;

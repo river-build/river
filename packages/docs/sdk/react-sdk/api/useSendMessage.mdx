@@ -25,8 +25,8 @@ function useSendMessage(
     sendMessage: (message: string, options?: {
         threadId?: string | undefined;
         replyId?: string | undefined;
-        mentions?: import("@bufbuild/protobuf").PlainMessage<import("@river-build/proto").ChannelMessage.Post.Mention>[] | undefined;
-        attachments?: import("@bufbuild/protobuf").PlainMessage<import("@river-build/proto").ChannelMessage.Post.Attachment>[] | undefined;
+        mentions?: PlainMessage<ChannelMessage.Post.Mention>[] | undefined;
+        attachments?: PlainMessage<ChannelMessage.Post.Attachment>[] | undefined;
     } | undefined) => Promise<{
         eventId: string;
     }>;
@@ -64,8 +64,8 @@ Configuration options for the action.
     sendMessage: (message: string, options?: {
         threadId?: string | undefined;
         replyId?: string | undefined;
-        mentions?: import("@bufbuild/protobuf").PlainMessage<import("@river-build/proto").ChannelMessage.Post.Mention>[] | undefined;
-        attachments?: import("@bufbuild/protobuf").PlainMessage<import("@river-build/proto").ChannelMessage.Post.Attachment>[] | undefined;
+        mentions?: PlainMessage<ChannelMessage.Post.Mention>[] | undefined;
+        attachments?: PlainMessage<ChannelMessage.Post.Attachment>[] | undefined;
     } | undefined) => Promise<{
         eventId: string;
     }>;

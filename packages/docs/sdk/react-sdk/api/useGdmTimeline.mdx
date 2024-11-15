@@ -15,7 +15,7 @@ function useGdmTimeline(
   streamId: string,
   config?: ObservableConfig.FromObservable<TimelineEvents>,
 ): {
-    data: import("@river-build/sdk").TimelineEvent[];
+    data: TimelineEvent[];
     error: undefined;
     status: "loading" | "loaded";
     isLoading: boolean;
@@ -41,7 +41,7 @@ function useGdmTimeline(
 
 ```ts
 {
-    data: import("@river-build/sdk").TimelineEvent[];
+    data: TimelineEvent[];
     error: undefined;
     status: "loading" | "loaded";
     isLoading: boolean;

@@ -12,8 +12,8 @@ import { useAgentConnection } from '@river-build/react-sdk'
 
 ```ts
 function useAgentConnection(): {
-    connect: (signer: ethers.Signer, config: AgentConnectConfig) => Promise<import("@river-build/sdk").SyncAgent | undefined>;
-    connectUsingBearerToken: (bearerToken: string, config: AgentConnectConfig) => Promise<import("@river-build/sdk").SyncAgent | undefined>;
+    connect: (signer: ethers.Signer, config: AgentConnectConfig) => Promise<SyncAgent | undefined>;
+    connectUsingBearerToken: (bearerToken: string, config: AgentConnectConfig) => Promise<SyncAgent | undefined>;
     disconnect: () => void | undefined;
     isAgentConnecting: boolean;
     isAgentConnected: boolean;
@@ -27,8 +27,8 @@ function useAgentConnection(): {
 
 ```ts
 {
-    connect: (signer: ethers.Signer, config: AgentConnectConfig) => Promise<import("@river-build/sdk").SyncAgent | undefined>;
-    connectUsingBearerToken: (bearerToken: string, config: AgentConnectConfig) => Promise<import("@river-build/sdk").SyncAgent | undefined>;
+    connect: (signer: ethers.Signer, config: AgentConnectConfig) => Promise<SyncAgent | undefined>;
+    connectUsingBearerToken: (bearerToken: string, config: AgentConnectConfig) => Promise<SyncAgent | undefined>;
     disconnect: () => void | undefined;
     isAgentConnecting: boolean;
     isAgentConnected: boolean;

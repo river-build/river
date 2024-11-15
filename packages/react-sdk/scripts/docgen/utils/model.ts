@@ -745,5 +745,5 @@ export function getId(item: model.ApiItem) {
 }
 
 function formatType(type: string) {
-    return type.replaceAll('_', '.')
+    return type.replaceAll('_', '.').replace(/import\("[^"]+"\)\./g, '')
 }

@@ -22,9 +22,9 @@ function useCreateSpace(
     isPending: boolean;
     isSuccess: boolean;
     isError: boolean;
-    createSpace: (params: Partial<Omit<import("@river-build/web3").CreateSpaceParams, "spaceName">> & {
+    createSpace: (params: Partial<Omit<CreateSpaceParams, "spaceName">> & {
         spaceName: string;
-    }, signer: import("ethers").Signer) => Promise<{
+    }, signer: Signer) => Promise<{
         spaceId: string;
         defaultChannelId: string;
     }>;
@@ -54,9 +54,9 @@ Configuration options for the action.
     isPending: boolean;
     isSuccess: boolean;
     isError: boolean;
-    createSpace: (params: Partial<Omit<import("@river-build/web3").CreateSpaceParams, "spaceName">> & {
+    createSpace: (params: Partial<Omit<CreateSpaceParams, "spaceName">> & {
         spaceName: string;
-    }, signer: import("ethers").Signer) => Promise<{
+    }, signer: Signer) => Promise<{
         spaceId: string;
         defaultChannelId: string;
     }>;

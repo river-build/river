@@ -20,7 +20,7 @@ function useCreateChannel(
     isPending: boolean;
     isSuccess: boolean;
     isError: boolean;
-    createChannel: (channelName: string, signer: import("ethers").Signer, opts?: {
+    createChannel: (channelName: string, signer: Signer, opts?: {
         topic?: string | undefined;
     } | undefined) => Promise<string>;
 }
@@ -50,7 +50,7 @@ Configuration options for the action.
     isPending: boolean;
     isSuccess: boolean;
     isError: boolean;
-    createChannel: (channelName: string, signer: import("ethers").Signer, opts?: {
+    createChannel: (channelName: string, signer: Signer, opts?: {
         topic?: string | undefined;
     } | undefined) => Promise<string>;
 }

@@ -19,7 +19,7 @@ function useJoinSpace(
     isPending: boolean;
     isSuccess: boolean;
     isError: boolean;
-    joinSpace: (spaceId: string, signer: import("ethers").Signer, opts?: {
+    joinSpace: (spaceId: string, signer: Signer, opts?: {
         skipMintMembership?: boolean | undefined;
     } | undefined) => Promise<void>;
 }
@@ -45,7 +45,7 @@ Configuration options for the action.
     isPending: boolean;
     isSuccess: boolean;
     isError: boolean;
-    joinSpace: (spaceId: string, signer: import("ethers").Signer, opts?: {
+    joinSpace: (spaceId: string, signer: Signer, opts?: {
         skipMintMembership?: boolean | undefined;
     } | undefined) => Promise<void>;
 }

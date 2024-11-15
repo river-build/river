@@ -17,7 +17,7 @@ function useThreadMap(
   config?: ObservableConfig.FromObservable<Threads>,
 ): {
     data: {
-        [x: string]: import("@river-build/sdk").TimelineEvent[];
+        [x: string]: TimelineEvent[];
     };
     error: undefined;
     status: "loading" | "loaded";
@@ -49,7 +49,7 @@ function useThreadMap(
 ```ts
 {
     data: {
-        [x: string]: import("@river-build/sdk").TimelineEvent[];
+        [x: string]: TimelineEvent[];
     };
     error: undefined;
     status: "loading" | "loaded";

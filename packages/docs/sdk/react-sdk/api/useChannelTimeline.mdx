@@ -16,7 +16,7 @@ function useChannelTimeline(
   channelId: string,
   config?: ObservableConfig.FromObservable<TimelineEvents>,
 ): {
-    data: import("@river-build/sdk").TimelineEvent[];
+    data: TimelineEvent[];
     error: undefined;
     status: "loading" | "loaded";
     isLoading: boolean;
@@ -46,7 +46,7 @@ function useChannelTimeline(
 
 ```ts
 {
-    data: import("@river-build/sdk").TimelineEvent[];
+    data: TimelineEvent[];
     error: undefined;
     status: "loading" | "loaded";
     isLoading: boolean;
