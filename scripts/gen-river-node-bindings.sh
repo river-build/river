@@ -6,6 +6,8 @@ if [ -z ${ABIGEN_VERSION+x} ]; then
   ABIGEN_VERSION="v1.14.5"
 fi
 
+go run github.com/ethereum/go-ethereum/cmd/abigen@${ABIGEN_VERSION} --version
+
 generate_go() {
     local DIR=$1
     local PACKAGE=$2
