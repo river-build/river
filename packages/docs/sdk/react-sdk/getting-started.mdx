@@ -1,0 +1,100 @@
+---
+title: Getting Started
+---
+
+
+## New Project
+
+You can use the `create-river-app` script to scaffold a new React River app.
+
+You can use your preferred package manager to run the command.
+Example using `yarn`:
+
+```bash
+yarn create river-app
+```
+
+This will create a new React River app in the current directory.
+
+If you want to create a new app in a different directory, you can specify the directory name as an argument:
+
+```bash
+yarn create river-app my-app
+```
+
+It will run `create-vite` to scaffold the project using `react-ts` template.
+
+Then, it will install the necessary dependencies: `@river-build/sdk` and `@river-build/react-sdk`.
+
+Finally, it will add the `vite-plugin-node-polyfills` to the `vite.config.ts` file to ensure compatibility with Node.js native modules that are used by the River SDK.
+
+
+## Manual Installation
+
+```bash
+yarn add @river-build/react-sdk @river-build/sdk vite-plugin-node-polyfills
+```
+
+Then, add the `vite-plugin-node-polyfills` to the `vite.config.ts` file to ensure compatibility with Node.js native modules that are used by the River SDK.
+
+```ts vite.config.ts {1,10}
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  // ...rest of your config
+  plugins: [
+    // ...rest of your plugins
+    react(),
+    nodePolyfills(),
+  ],
+})
+```
+
+# Usage
+
+## Connect to River
+
+We suggest you to use [Wagmi](https://wagmi.sh/) to connect to River.
+Wrap your app with `RiverSyncProvider` and use the `useAgentConnection` hook to connect to River.
+
+> You'll need to use `useEthersSigner` to get the signer from viem wallet client.
+> You can get the hook from [Wagmi docs](https://wagmi.sh/react/guides/ethers#usage-1).
+
+```tsx
+import { RiverSyncProvider, useAgentConnection } from "@river-build/react-sdk";
+import { makeRiverConfig } from "@river-build/sdk";
+import { WagmiProvider } from "wagmi";
+import { useEthersSigner } from "./utils/viem-to-ethers";
+
+const riverConfig = makeRiverConfig("gamma");
+
+const App = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <WagmiProvider config={wagmiConfig}>
+      <RiverSyncProvider>{children}</RiverSyncProvider>
+    </WagmiProvider>
+  );
+};
+
+const ConnectRiver = () => {
+  const { connect, isConnecting, isConnected } = useAgentConnection();
+  const signer = useEthersSigner();
+
+  return (
+    <>
+      <button
+        onClick={() => {
+          if (signer) {
+            connect(signer, { riverConfig });
+          }
+        }}
+      >
+        {isConnecting ? "Disconnect" : "Connect"}
+      </button>
+      {isConnected && <span>Connected!</span>}
+    </>
+  );
+};
+```

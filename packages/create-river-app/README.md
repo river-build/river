@@ -4,7 +4,7 @@ This package is used to scaffold a new React River app.
 
 It will run `create-vite` to scaffold the project using `react-ts` template.
 
-Then, it will install the necessary dependencies: `@river-build/sdk` and `@river-build/sdk-react`.
+Then, it will install the necessary dependencies: `@river-build/sdk` and `@river-build/react-sdk`.
 
 Finally, it will add the `vite-plugin-node-polyfills` to the `vite.config.ts` file to ensure compatibility with Node.js native modules that are used by the River SDK.
 
