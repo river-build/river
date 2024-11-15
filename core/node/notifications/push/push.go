@@ -102,8 +102,9 @@ func NewMessageNotificationsSimulator(metricsFactory infra.MetricsFactory) *Mess
 	)
 
 	return &MessageNotificationsSimulator{
-		webPushSend: webPushSend,
-		apnSend:     apnSend,
+		webPushSend:                    webPushSend,
+		apnSend:                        apnSend,
+		WebPushNotificationsByEndpoint: make(map[string][][]byte),
 	}
 }
 
