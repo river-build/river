@@ -186,9 +186,9 @@ func (ebc chainBlockWithLogsCallbacks) onBlockReceived(
 	logs []types.Log,
 	wg *sync.WaitGroup,
 ) {
-	l := []*types.Log{}
-	for _, log := range logs {
-		l = append(l, &log)
+	l := make([]*types.Log, len(logs))
+	for i := range logs {
+		l[i] = &logs[i]
 	}
 	for _, cb := range ebc {
 		if cb.nextBlock <= toBlock {
