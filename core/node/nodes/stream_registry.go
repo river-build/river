@@ -58,18 +58,29 @@ func NewStreamRegistry(
 }
 
 func (sr *streamRegistryImpl) GetStreamInfo(ctx context.Context, streamId StreamId) (StreamNodes, error) {
-	if streamNodes, ok := sr.streamNodeCache.Load(streamId); ok {
-		return streamNodes.(StreamNodes), nil
-	}
-
-	ret, err := sr.contract.GetStream(ctx, streamId)
+	var err error
+	d, _ := sr.streamNodeCache.LoadOrCompute(streamId, func() *streamDescriptor {
+		var result *registries.GetStreamResult
+		result, err = sr.contract.GetStream(ctx, streamId)
+		if err != nil {
+			return nil
+		}
+		return &streamDescriptor{
+			nodes: NewStreamNodes(result.Nodes, sr.localNodeAddress),
+		}
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	streamNodes := NewStreamNodes(ret.Nodes, sr.localNodeAddress)
-	sr.streamNodeCache.Store(streamId, streamNodes)
-	return streamNodes, nil
+	if d == nil {
+		return nil, RiverError(
+			Err_INTERNAL,
+			"Should not happen: no stream in cache",
+			"stream_id",
+			streamId,
+		).Func("GetStreamInfo")
+	}
+	return d.nodes, nil
 }
 
 func (sr *streamRegistryImpl) AllocateStream(
