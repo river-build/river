@@ -8,8 +8,6 @@ import { resolve } from 'node:path'
 
 const config = {
     projectName: 'react-sdk',
-    packageDir: '../../react-sdk',
-    entryFile: './src/index.ts', // with regards to the package
     pagesDir: '../../../docs/sdk/react-sdk',
     mintlifyJson: '../../../docs/mint.json',
 }

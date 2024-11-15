@@ -92,7 +92,7 @@ export function createDataLookup(apiItem: model.ApiItem) {
             displayName: apiItem.displayName,
             excerpt: apiItem.excerpt.text,
             file: {
-                lineNumber: 0,
+                lineNumber: 0, // TODO: get line number
                 path: sourceFilePath,
                 url: apiItem.sourceLocation.fileUrl,
             },

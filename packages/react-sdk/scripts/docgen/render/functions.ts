@@ -300,7 +300,7 @@ function renderReturnType(options: {
         content.push(comment)
     }
     const link = getTypeLink({ dataLookup, type: returnType })
-    const type = expandInlineType({ dataLookup, type: returnType })
+    const type = returnType.type
     const c = ['```ts', type, '```'].join('\n')
     content.push(link ? `[${c}](${link})` : c)
 
@@ -373,7 +373,7 @@ function resolveInlineParameterTypeForOverloads(options: {
         }
     }
 
-    return expandInlineType({ dataLookup, type: parameter })
+    return parameter.type
 }
 
 function resolveReturnTypeForOverloads(options: {
@@ -495,29 +495,4 @@ function getTypeLink(options: {
 
     const displayNameWithNamespace = `${data.module}.${data.displayName}`
     return `/api/${data.module}/types#${displayNameWithNamespace.toLowerCase().replace('.', '')}`
-}
-
-function expandInlineType(options: {
-    dataLookup: Record<string, Data>
-    type: Pick<
-        NonNullable<Data['returnType']>,
-        'primaryCanonicalReference' | 'primaryGenericArguments' | 'type'
-    >
-}) {
-    const { dataLookup, type } = options
-    // expand inline type to include namespace (e.g. `Address` => `Address.Address`)
-    const expandRegex = /^@river-build\/react-sdk!(?<type>.+)(_2):type/
-    if (
-        type.primaryCanonicalReference &&
-        expandRegex.test(type.primaryCanonicalReference) &&
-        !type.primaryGenericArguments
-    ) {
-        const groups = type.primaryCanonicalReference.match(expandRegex)?.groups ?? {}
-        if (groups.type) {
-            return groups.type.replace(/~(.*)_\d/, '$1')
-        }
-    } else if (dataLookup[`@river-build/react-sdk!${type.type}:type`]) {
-        return type.type
-    }
-    return type.type
 }

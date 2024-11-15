@@ -26,10 +26,8 @@
         "@microsoft/api-extractor-model": "^7.29.6",
         "@microsoft/tsdoc": "^0.15.0",
         "@microsoft/tsdoc-config": "^0.17.0",
-        "@types/node": "^20.5.0",
-        "ts-morph": "^24.0.0",
-        "tsx": "^4.19.2",
         "@testing-library/react": "^14.2.1",
+        "@types/node": "^20.5.0",
         "@types/react": "^18.2.11",
         "@types/react-dom": "^18.2.4",
         "@typescript-eslint/eslint-plugin": "^6.10.0",
@@ -41,6 +39,8 @@
         "eslint-plugin-tsdoc": "^0.3.0",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
+        "ts-morph": "^24.0.0",
+        "tsx": "^4.19.2",
         "typescript": "^5.1.6"
     },
     "files": [
