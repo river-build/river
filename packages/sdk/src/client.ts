@@ -2395,6 +2395,7 @@ export class Client
         if (!stream) {
             throw new Error('stream not found')
         }
+        await stream.waitForMembership(MembershipOp.SO_JOIN)
         const latestGroupInfo = stream.view.membershipContent.mls.latestGroupInfo
         if (!latestGroupInfo) {
             // join via group create
@@ -2453,6 +2454,7 @@ export class Client
         // NOTE: We recheck the group status
         const groupStatus = this.mlsCrypto.groupStore.getGroupStatus(streamId)
         if (groupStatus !== 'GROUP_ACTIVE') {
+            this.mlsCrypto.log('waiting for group to become active')
             await this.mlsCrypto.awaitGroupActive(streamId)
         }
 

@@ -298,7 +298,7 @@ describe('dmsMlsTests', () => {
         )
 
         await Promise.all(
-            Array.from(Array(2).keys()).map(async (n: number) => {
+            Array.from(Array(8).keys()).map(async (n: number) => {
                 log(`joining client-${n}`)
                 const client = await makeInitAndStartClient(`client-${n}`)
                 await goBackToEventLoop()
