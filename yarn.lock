@@ -11745,9 +11745,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"create-river-app@workspace:packages/create-river-app":
+"create-river-build-app@workspace:packages/create-river-build-app":
   version: 0.0.0-use.local
-  resolution: "create-river-app@workspace:packages/create-river-app"
+  resolution: "create-river-build-app@workspace:packages/create-river-build-app"
   dependencies:
     "@types/cross-spawn": ^6.0.6
     "@types/minimist": ^1.2.5
@@ -11758,7 +11758,7 @@ __metadata:
     prompts: ^2.4.2
     typescript: ^5.1.6
   bin:
-    create-river-app: index.js
+    create-river-build-app: index.js
   languageName: unknown
   linkType: soft
 
