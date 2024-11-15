@@ -283,7 +283,7 @@ var (
 			streamIds, _, err := getStreamIds(ctx, pool)
 			if err != nil {
 				fmt.Println("Error reading stream ids:", err)
-				os.Exit(-1)
+				os.Exit(1)
 			}
 
 			fmt.Println("Stream Ids")
@@ -310,7 +310,7 @@ var (
 			streamIds, _, err := getStreamIds(ctx, pool)
 			if err != nil {
 				fmt.Println("Error reading stream ids:", err)
-				os.Exit(-1)
+				os.Exit(1)
 			}
 
 			fmt.Println("Stream Ids")
@@ -479,7 +479,7 @@ func inspectStream(ctx context.Context, pool *pgxpool.Pool, streamId string) err
 	).Scan(&latestSnapshotMiniblock, &migrated)
 	if err != nil {
 		fmt.Println("Error reading stream from es table:", err)
-		os.Exit(-1)
+		os.Exit(1)
 	}
 
 	metadata := schemaMetadata{
@@ -489,7 +489,7 @@ func inspectStream(ctx context.Context, pool *pgxpool.Pool, streamId string) err
 		numPartitions, err := getNumPartitionSettings(ctx, pool)
 		if err != nil {
 			fmt.Println("Error reading schema numPartitions setting:", err)
-			os.Exit(-1)
+			os.Exit(1)
 		}
 		metadata.numPartitions = numPartitions
 	}
@@ -506,7 +506,7 @@ func inspectStream(ctx context.Context, pool *pgxpool.Pool, streamId string) err
 	)
 	if err != nil {
 		fmt.Println("Error reading stream miniblocks:", err)
-		os.Exit(-1)
+		os.Exit(1)
 	}
 
 	fmt.Println("Miniblocks (stream_id, seq_num, blockdata)")
@@ -517,7 +517,7 @@ func inspectStream(ctx context.Context, pool *pgxpool.Pool, streamId string) err
 		var blockData []byte
 		if err := rows.Scan(&id, &seqNum, &blockData); err != nil {
 			fmt.Println("Error scanning miniblock row:", err)
-			os.Exit(-1)
+			os.Exit(1)
 		}
 		fmt.Printf("%v %v %v\n", id, seqNum, hex.EncodeToString(blockData))
 	}
@@ -546,7 +546,7 @@ func inspectStream(ctx context.Context, pool *pgxpool.Pool, streamId string) err
 			var blockData []byte
 			if err := rows.Scan(&id, &seqNum, &hashStr, &blockData); err != nil {
 				fmt.Println("Error scanning miniblock candidate row:", err)
-				os.Exit(-1)
+				os.Exit(1)
 			}
 			fmt.Printf("%v %v %v %v\n", id, seqNum, hashStr, hex.EncodeToString(blockData))
 		}
@@ -565,7 +565,7 @@ func inspectStream(ctx context.Context, pool *pgxpool.Pool, streamId string) err
 	)
 	if err != nil {
 		fmt.Println("Error reading stream minipools:", err)
-		os.Exit(-1)
+		os.Exit(1)
 	}
 
 	fmt.Println("Minipools (stream_id, generation, slot_num, envelope)")
@@ -577,7 +577,7 @@ func inspectStream(ctx context.Context, pool *pgxpool.Pool, streamId string) err
 		var envelope []byte
 		if err := rows.Scan(&id, &generation, &slotNum, &envelope); err != nil {
 			fmt.Println("Error scanning miniblock row:", err)
-			os.Exit(-1)
+			os.Exit(1)
 		}
 		fmt.Printf("%v %v %v %v\n", id, generation, slotNum, hex.EncodeToString(envelope))
 	}
@@ -1488,7 +1488,7 @@ func copyPart(
 		exists, err := tableExists(ctx, source, sourceInfo, srcPartition)
 		if err != nil {
 			fmt.Println("Error determining table existence:", err)
-			os.Exit(-1)
+			os.Exit(1)
 		}
 		if !exists {
 			if verbose {
@@ -1938,16 +1938,15 @@ func compareMiniblockContents(
 		var seqNum int64
 		var blockdata []byte
 		if err := rows.Scan(&seqNum, &blockdata); err != nil {
-			fmt.Println("Error reading miniblock row from src:", err)
-			os.Exit(-1)
+			return fmt.Errorf("Error reading miniblock row from src: %w", err)
 		}
+
 		if seqNum != int64(len(sourceMiniblocks)) {
-			fmt.Printf(
+			return fmt.Errorf(
 				"Consistency error in source miniblocks; expected seqNum %d but saw %d\n",
 				len(sourceMiniblocks),
 				seqNum,
 			)
-			os.Exit(-1)
 		}
 		sourceMiniblocks = append(sourceMiniblocks, blockdata)
 	}
@@ -1969,16 +1968,14 @@ func compareMiniblockContents(
 		var seqNum int64
 		var blockdata []byte
 		if err := rows.Scan(&seqNum, &blockdata); err != nil {
-			fmt.Println("Error reading miniblock row from target:", err)
-			os.Exit(-1)
+			return fmt.Errorf("Error reading miniblock row from target: %w", err)
 		}
 		if seqNum != int64(len(targetMiniblocks)) {
-			fmt.Printf(
+			return fmt.Errorf(
 				"Consistency error in target miniblocks; expected seqNum %d but saw %d\n",
 				len(targetMiniblocks),
 				seqNum,
 			)
-			os.Exit(-1)
 		}
 		targetMiniblocks = append(targetMiniblocks, blockdata)
 	}
@@ -2053,8 +2050,7 @@ func compareMiniblockCandidateContents(
 			var blockHash string
 			var blockdata []byte
 			if err := rows.Scan(&seqNum, &blockHash, &blockdata); err != nil {
-				fmt.Println("Error reading miniblock candidate row from src:", err)
-				os.Exit(1)
+				return fmt.Errorf("Error reading miniblock candidate row from src: %w", err)
 			}
 			if seqNum != int64(curSeqNum) {
 				if len(curHashMap) > 0 {
@@ -2099,8 +2095,7 @@ func compareMiniblockCandidateContents(
 		var blockHash string
 		var blockdata []byte
 		if err := rows.Scan(&seqNum, &blockHash, &blockdata); err != nil {
-			fmt.Println("Error reading miniblock candidate row from src:", err)
-			os.Exit(1)
+			return fmt.Errorf("Error reading miniblock candidate row from src: %w", err)
 		}
 		if seqNum != int64(curSeqNum) {
 			if len(curHashMap) > 0 {
@@ -2414,7 +2409,7 @@ var validateCmd = &cobra.Command{
 			numPartitions, err := getNumPartitionSettings(ctx, targetPool)
 			if err != nil {
 				fmt.Println("Error reading num_partitions setting from target: ", err)
-				os.Exit(-1)
+				os.Exit(1)
 			}
 			targetSchemaMetadata.numPartitions = numPartitions
 		}
