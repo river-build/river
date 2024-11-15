@@ -125,4 +125,41 @@ content += '\n'
 
 fs.writeFileSync(resolve(import.meta.dirname, `${config.pagesDir}/overview.mdx`), content)
 
+console.log('Updating mint.json navigation for React SDK API pages')
+
+// Update mint.json navigation for React SDK API pages
+const mintJsonPath = resolve(import.meta.dirname, config.mintlifyJson)
+const mintJson = JSON.parse(fs.readFileSync(mintJsonPath, 'utf-8')) as MintJson
+
+type MintJson = {
+    navigation: {
+        group: string
+        pages: Array<
+            | string
+            | {
+                  group?: string
+                  pages: string[]
+              }
+        >
+    }[]
+}
+
+// Find React SDK navigation group
+const reactSdk = mintJson.navigation.find((group) => group.group === 'React SDK')
+if (!reactSdk) {
+    throw new Error('Could not find React SDK navigation group')
+}
+
+reactSdk.pages = [
+    ...reactSdk.pages.filter((page) => typeof page === 'string'), // add any other pages that arent groups
+    ...reactSdk.pages.filter((page) => typeof page !== 'string' && page.group !== 'API'), // add any other groups
+    {
+        group: 'API',
+        pages: Array.from(functionsMap.keys()).map((name) => `sdk/react-sdk/api/${name}`),
+    },
+]
+
+// Write updated mint.json
+fs.writeFileSync(mintJsonPath, JSON.stringify(mintJson, null, 2))
+
 console.log('Done.')
