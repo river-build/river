@@ -54,6 +54,7 @@ func NewStreamRegistry(
 		nodeRegistry:     nodeRegistry,
 		onChainConfig:    onChainConfig,
 		contract:         contract,
+		streamNodeCache:  xsync.NewMapOf[StreamId, *streamDescriptor](), // TODO: set custom hasher for effeciency?
 	}
 }
 
