@@ -546,6 +546,9 @@ func update_Snapshot_Member(
 		snapshot.Pins = snapPins
 		return nil
 	case *MemberPayload_Mls:
+		if snapshot.MlsGroup == nil {
+			snapshot.MlsGroup = &MemberPayload_Snapshot_MlsGroup{}
+		}
 		applyMlsPayload(snapshot.MlsGroup, content.Mls)
 		return nil
 	default:
