@@ -2399,7 +2399,7 @@ var validateCmd = &cobra.Command{
 
 		fmt.Println("All streams in es table match")
 
-		numWorkers := 1 // viper.GetInt("RIVER_DB_NUM_WORKERS")
+		numWorkers := viper.GetInt("RIVER_DB_NUM_WORKERS")
 
 		workerPool := workerpool.New(numWorkers)
 
