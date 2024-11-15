@@ -1943,7 +1943,7 @@ func compareMiniblockContents(
 
 		if seqNum != int64(len(sourceMiniblocks)) {
 			return fmt.Errorf(
-				"consistency error in source miniblocks; expected seqNum %d but saw %d\n",
+				"consistency error in source miniblocks; expected seqNum %d but saw %d",
 				len(sourceMiniblocks),
 				seqNum,
 			)
@@ -1968,11 +1968,11 @@ func compareMiniblockContents(
 		var seqNum int64
 		var blockdata []byte
 		if err := rows.Scan(&seqNum, &blockdata); err != nil {
-			return fmt.Errorf("E=error reading miniblock row from target: %w", err)
+			return fmt.Errorf("error reading miniblock row from target: %w", err)
 		}
 		if seqNum != int64(len(targetMiniblocks)) {
 			return fmt.Errorf(
-				"consistency error in target miniblocks; expected seqNum %d but saw %d\n",
+				"consistency error in target miniblocks; expected seqNum %d but saw %d",
 				len(targetMiniblocks),
 				seqNum,
 			)
