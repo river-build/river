@@ -3,6 +3,7 @@ package notifications
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -162,7 +163,7 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 		payload["spaceId"] = spaceID.String()
 	}
 	if threadID := event.Event.GetTags().GetThreadId(); len(threadID) > 0 {
-		payload["threadId"] = fmt.Sprintf("0x%x", threadID)
+		payload["threadId"] = hex.EncodeToString(threadID[:])
 	}
 
 	for user, userPref := range usersToNotify {
