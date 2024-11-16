@@ -1690,7 +1690,7 @@ func migratePart(
 		),
 	)
 	if err != nil {
-		return fmt.Errorf("Error deleting table %s: %w", partition, err)
+		return fmt.Errorf("error deleting table %s: %w", partition, err)
 	}
 
 	return nil
@@ -1783,7 +1783,7 @@ func migrateStream(
 		return wrapError("Failed to insert into es for stream "+streamId, err)
 	}
 	if tag.RowsAffected() != 1 {
-		return fmt.Errorf("Unexpected es update for stream %s: expected 1 row, saw %d", streamId, tag.RowsAffected())
+		return fmt.Errorf("unexpected es update for stream %s: expected 1 row, saw %d", streamId, tag.RowsAffected())
 	}
 
 	err = migratePart(ctx, pool, tx, streamId, "minipools", dbInfo, dbSchemaMetadata)
