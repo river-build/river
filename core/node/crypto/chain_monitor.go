@@ -180,6 +180,7 @@ func (cm *chainMonitor) OnBlockWithLogs(from BlockNumber, cb OnChainNewBlockWith
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 	cm.builder.OnBlockWithLogs(from, cb)
+	cm.setFromBlock(from.AsBigInt(), true)
 }
 
 func (cm *chainMonitor) OnAllEvents(from BlockNumber, cb OnChainEventCallback) {
