@@ -186,22 +186,26 @@ func (ebc chainBlockWithLogsCallbacks) onBlockReceived(
 	logs []types.Log,
 	wg *sync.WaitGroup,
 ) {
-	l := []*types.Log{}
-	for _, log := range logs {
-		l = append(l, &log)
+	l := make([]*types.Log, len(logs))
+	for i := range logs {
+		l[i] = &logs[i]
 	}
 	for _, cb := range ebc {
 		if cb.nextBlock <= toBlock {
-			// Filter logs for the blocks < cb.nextBlock
-			filteredLogs := slices.Clone(l)
-			filteredLogs = slices.DeleteFunc(filteredLogs, func(log *types.Log) bool {
-				return log.BlockNumber < cb.nextBlock.AsUint64()
-			})
 			wg.Add(1)
-			go func() {
+			go func(nextBlock uint64) {
 				defer wg.Done()
+				// Filter logs for the blocks < cb.nextBlock
+				shouldFilterOut := func(log *types.Log) bool {
+					return log.BlockNumber < nextBlock
+				}
+				filteredLogs := l
+				if slices.ContainsFunc(filteredLogs, shouldFilterOut) {
+					filteredLogs = slices.Clone(filteredLogs)
+					filteredLogs = slices.DeleteFunc(filteredLogs, shouldFilterOut)
+				}
 				cb.handler(ctx, toBlock, filteredLogs)
-			}()
+			}(cb.nextBlock.AsUint64())
 			cb.nextBlock = toBlock + 1
 		}
 	}
