@@ -3,15 +3,15 @@ package nodes
 import (
 	"context"
 	"hash/fnv"
-	"sync/atomic"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/puzpuzpuz/xsync/v3"
 
 	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
+	"github.com/river-build/river/core/node/dlog"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/registries"
 	. "github.com/river-build/river/core/node/shared"
@@ -40,8 +40,9 @@ type streamRegistryImpl struct {
 	onChainConfig    crypto.OnChainConfiguration
 	contract         *registries.RiverRegistryContract
 
-	onBlock         atomic.Uint64
-	streamNodeCache *xsync.MapOf[StreamId, *streamDescriptor]
+	mu              sync.RWMutex
+	onBlock         crypto.BlockNumber
+	streamNodeCache map[StreamId]*streamDescriptor
 }
 
 var _ StreamRegistry = (*streamRegistryImpl)(nil)
@@ -64,10 +65,9 @@ func NewStreamRegistry(
 		nodeRegistry:     nodeRegistry,
 		onChainConfig:    onChainConfig,
 		contract:         contract,
-		streamNodeCache:  xsync.NewMapOf[StreamId, *streamDescriptor](), // TODO: set custom hasher for effeciency?
+		onBlock:          blockNum,
+		streamNodeCache:  make(map[StreamId]*streamDescriptor),
 	}
-
-	impl.onBlock.Store(blockNum.AsUint64())
 
 	blockchain.ChainMonitor.OnBlockWithLogs(blockNum+1, impl.onBlockWithLogs)
 
@@ -75,27 +75,68 @@ func NewStreamRegistry(
 }
 
 func (sr *streamRegistryImpl) onBlockWithLogs(ctx context.Context, blockNum crypto.BlockNumber, logs []*types.Log) {
-	sr.onBlock.Store(blockNum.AsUint64())
+	streamEvents, errs := sr.contract.FilterStreamEvents(ctx, logs)
+	// Process parsed stream events even is some failed to parse
+	for _, err := range errs {
+		dlog.FromCtx(ctx).Error("Failed to parse stream event", "err", err)
+	}
+
+	if len(streamEvents) == 0 {
+		return
+	}
+
+	sr.mu.Lock()
+	defer sr.mu.Unlock()
+	for _, e := range streamEvents {
+		switch event := e.(type) {
+		case *river.StreamRegistryV1StreamLastMiniblockUpdated:
+			d, ok := sr.streamNodeCache[event.StreamId]
+			if ok {
+				d.lastMb = MiniblockRef{
+					Hash: event.LastMiniblockHash,
+					Num:  int64(event.LastMiniblockNum),
+				}
+			}
+		case *river.StreamRegistryV1StreamPlacementUpdated:
+			d, ok := sr.streamNodeCache[event.StreamId]
+			if ok {
+				d.nodes.Update(event.NodeAddress, event.IsAdded) // TODO: is there a deadlock here?
+			}
+		default:
+		}
+	}
+	sr.onBlock = blockNum
 }
 
 func (sr *streamRegistryImpl) GetStreamInfo(ctx context.Context, streamId StreamId) (StreamNodes, error) {
-	d, ok := sr.streamNodeCache.Load(streamId)
+	sr.mu.RLock()
+	d, ok := sr.streamNodeCache[streamId]
+	blockNum := sr.onBlock
+	sr.mu.RUnlock()
 	if ok {
 		return d.nodes, nil
 	}
 
-	result, err := sr.contract.GetStream(ctx, streamId, crypto.BlockNumber(sr.onBlock.Load()))
+	result, err := sr.contract.GetStream(ctx, streamId, blockNum)
 	if err != nil {
 		return nil, err
 	}
-	d, _ = sr.streamNodeCache.LoadOrStore(streamId, &streamDescriptor{
+
+	sr.mu.Lock()
+	defer sr.mu.Unlock()
+	d, ok = sr.streamNodeCache[streamId]
+	if ok {
+		return d.nodes, nil
+	}
+
+	sr.streamNodeCache[streamId] = &streamDescriptor{
 		nodes: NewStreamNodes(result.Nodes, sr.localNodeAddress),
 		lastMb: MiniblockRef{
 			Hash: result.LastMiniblockHash,
 			Num:  int64(result.LastMiniblockNum),
 		},
-	})
-	return d.nodes, nil
+	}
+	return sr.streamNodeCache[streamId].nodes, nil
 }
 
 func (sr *streamRegistryImpl) AllocateStream(

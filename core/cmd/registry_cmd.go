@@ -121,7 +121,7 @@ func srStream(cfg *config.Config, streamId string) error {
 		return err
 	}
 
-	stream, err := registryContract.GetStream(ctx, id)
+	stream, err := registryContract.GetStream(ctx, id, blockchain.InitialBlockNum)
 	if err != nil {
 		return err
 	}

@@ -3,6 +3,7 @@ package registries
 import (
 	"context"
 	"math/big"
+	"slices"
 	"sync/atomic"
 	"time"
 
@@ -808,7 +809,7 @@ func (c *RiverRegistryContract) GetNodeEventsForBlock(ctx context.Context, block
 	}
 	var ret []any
 	for _, log := range logs {
-		ee, err := c.ParseEvent(ctx, c.NodeRegistry.BoundContract(), c.NodeEventInfo, log)
+		ee, err := c.ParseEvent(ctx, c.NodeRegistry.BoundContract(), c.NodeEventInfo, &log)
 		if err != nil {
 			return nil, err
 		}
@@ -821,7 +822,7 @@ func (c *RiverRegistryContract) ParseEvent(
 	ctx context.Context,
 	boundContract *bind.BoundContract,
 	info map[common.Hash]*EventInfo,
-	log types.Log,
+	log *types.Log,
 ) (any, error) {
 	if len(log.Topics) == 0 {
 		return nil, RiverError(Err_INTERNAL, "Empty topics in log", "log", log).Func("ParseEvent")
@@ -831,7 +832,7 @@ func (c *RiverRegistryContract) ParseEvent(
 		return nil, RiverError(Err_INTERNAL, "Event not found", "id", log.Topics[0]).Func("ParseEvent")
 	}
 	ee := eventInfo.Maker()
-	err := boundContract.UnpackLog(ee, eventInfo.Name, log)
+	err := boundContract.UnpackLog(ee, eventInfo.Name, *log)
 	if err != nil {
 		return nil, WrapRiverError(
 			Err_CANNOT_CALL_CONTRACT,
@@ -854,7 +855,7 @@ func (c *RiverRegistryContract) OnStreamEvent(
 		c.Address,
 		c.StreamEventTopics,
 		func(ctx context.Context, log types.Log) {
-			parsed, err := c.ParseEvent(ctx, c.StreamRegistry.BoundContract(), c.StreamEventInfo, log)
+			parsed, err := c.ParseEvent(ctx, c.StreamRegistry.BoundContract(), c.StreamEventInfo, &log)
 			if err != nil {
 				dlog.FromCtx(ctx).Error("Failed to parse event", "err", err, "log", log)
 				return
@@ -871,4 +872,21 @@ func (c *RiverRegistryContract) OnStreamEvent(
 			}
 		})
 	return nil
+}
+
+func (c *RiverRegistryContract) FilterStreamEvents(ctx context.Context, logs []*types.Log) ([]any, []error) {
+	ret := []any{}
+	var finalErrs []error
+	for _, log := range logs {
+		if log.Address != c.Address || len(log.Topics) == 0 || !slices.Contains(c.StreamEventTopics[0], log.Topics[0]) {
+			continue
+		}
+		parsed, err := c.ParseEvent(ctx, c.StreamRegistry.BoundContract(), c.StreamEventInfo, log)
+		if err != nil {
+			finalErrs = append(finalErrs, err)
+			continue
+		}
+		ret = append(ret, parsed)
+	}
+	return ret, finalErrs
 }
