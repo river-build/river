@@ -64,12 +64,11 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
 
     vm.prank(address(messenger));
     mainnetDelegationFacet.setDelegation(delegator, operator, amount);
+    totalStaked += amount;
 
     depositId = mainnetDelegationFacet.getDepositIdByDelegator(delegator);
     verifyDelegation(depositId, delegator, operator, amount, commissionRate);
   }
-
-  // TODO: test zero amount
 
   function test_fuzz_setDelegation_remove(
     address delegator,
@@ -77,6 +76,9 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
     address operator,
     uint256 commissionRate
   ) public {
+    amount = uint96(bound(amount, 1, type(uint96).max - totalStaked));
+    commissionRate = bound(commissionRate, 0, 10000);
+
     uint256 depositId = test_fuzz_setDelegation(
       delegator,
       amount,
@@ -89,11 +91,10 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
 
     vm.prank(address(messenger));
     mainnetDelegationFacet.setDelegation(delegator, address(0), 0);
+    totalStaked -= amount;
 
-    verifyRemoval(delegator, depositId, commissionRate);
+    verifyRemoval(delegator, depositId);
   }
-
-  // TODO: test remove then add again
 
   function test_fuzz_setDelegation_replace(
     address delegator,
@@ -103,9 +104,10 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
   ) public givenOperator(operators[1], commissionRates[1]) {
     vm.assume(operators[0] != operators[1]);
     vm.assume(delegator != operators[1]);
-    amounts[0] = uint96(bound(amounts[0], 0, type(uint96).max - totalStaked));
-    totalStaked += amounts[0];
-    amounts[1] = uint96(bound(amounts[1], 0, type(uint96).max - totalStaked));
+    amounts[0] = uint96(bound(amounts[0], 1, type(uint96).max - totalStaked));
+    amounts[1] = uint96(
+      bound(amounts[1], 0, type(uint96).max - totalStaked - amounts[0])
+    );
     commissionRates[1] = bound(commissionRates[1], 0, 10000);
 
     uint256 depositId = test_fuzz_setDelegation(
@@ -122,6 +124,7 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
 
     vm.prank(address(messenger));
     mainnetDelegationFacet.setDelegation(delegator, operators[1], amounts[1]);
+    totalStaked = totalStaked - amounts[0] + amounts[1];
 
     verifyDelegation(
       depositId,
@@ -227,6 +230,14 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
       _claimers,
       _quantities
     );
+
+    verifyBatch(
+      _delegators,
+      _claimers,
+      _quantities,
+      _operators,
+      toDyn(commissionRates)
+    );
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -252,11 +263,13 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
     vm.startPrank(address(messenger));
     mainnetDelegationFacet.removeDelegations(toDyn(delegators));
 
+    totalStaked = 1 ether;
+
     for (uint256 i; i < 32; ++i) {
       uint256 depositId = mainnetDelegationFacet.getDepositIdByDelegator(
         delegators[i]
       );
-      verifyRemoval(delegators[i], depositId, commissionRates[i]);
+      verifyRemoval(delegators[i], depositId);
     }
   }
 
@@ -278,6 +291,11 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
     assertEq(delegation.delegator, delegator);
     assertEq(delegation.delegationTime, block.timestamp);
 
+    uint256 mainnetStake = rewardsDistributionFacet.stakedByDepositor(
+      address(rewardsDistributionFacet)
+    );
+    assertEq(mainnetStake, totalStaked - 1 ether, "mainnetStake");
+
     verifyStake(
       baseRegistry,
       depositId,
@@ -288,11 +306,7 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
     );
   }
 
-  function verifyRemoval(
-    address delegator,
-    uint256 depositId,
-    uint256 commissionRate
-  ) internal view {
+  function verifyRemoval(address delegator, uint256 depositId) internal view {
     Delegation memory delegation = mainnetDelegationFacet
       .getDelegationByDelegator(delegator);
     assertEq(delegation.operator, address(0));
@@ -300,14 +314,12 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
     assertEq(delegation.delegator, address(0));
     assertEq(delegation.delegationTime, 0);
 
-    verifyStake(
-      baseRegistry,
-      depositId,
-      0,
-      address(0),
-      commissionRate,
-      delegator
+    uint256 mainnetStake = rewardsDistributionFacet.stakedByDepositor(
+      address(rewardsDistributionFacet)
     );
+    assertEq(mainnetStake, totalStaked - 1 ether, "mainnetStake");
+
+    verifyStake(baseRegistry, depositId, 0, address(0), 0, delegator);
   }
 
   function verifyBatch(
