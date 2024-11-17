@@ -252,8 +252,12 @@ func makeGetStreamResult(streamId StreamId, stream *river.Stream) *GetStreamResu
 	}
 }
 
-func (c *RiverRegistryContract) GetStream(ctx context.Context, streamId StreamId) (*GetStreamResult, error) {
-	stream, err := c.StreamRegistry.GetStream(c.callOpts(ctx), streamId)
+func (c *RiverRegistryContract) GetStream(
+	ctx context.Context,
+	streamId StreamId,
+	blockNum crypto.BlockNumber,
+) (*GetStreamResult, error) {
+	stream, err := c.StreamRegistry.GetStream(c.callOptsWithBlockNum(ctx, blockNum), streamId)
 	if err != nil {
 		return nil, WrapRiverError(Err_CANNOT_CALL_CONTRACT, err).Func("GetStream").Message("Call failed")
 	}

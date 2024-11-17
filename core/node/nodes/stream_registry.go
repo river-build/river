@@ -3,8 +3,10 @@ package nodes
 import (
 	"context"
 	"hash/fnv"
+	"sync/atomic"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/puzpuzpuz/xsync/v3"
 
 	"github.com/river-build/river/core/contracts/river"
@@ -38,49 +40,61 @@ type streamRegistryImpl struct {
 	onChainConfig    crypto.OnChainConfiguration
 	contract         *registries.RiverRegistryContract
 
+	onBlock         atomic.Uint64
 	streamNodeCache *xsync.MapOf[StreamId, *streamDescriptor]
 }
 
 var _ StreamRegistry = (*streamRegistryImpl)(nil)
 
 func NewStreamRegistry(
+	ctx context.Context,
+	blockchain *crypto.Blockchain,
 	localNodeAddress common.Address,
 	nodeRegistry NodeRegistry,
 	contract *registries.RiverRegistryContract,
 	onChainConfig crypto.OnChainConfiguration,
-) *streamRegistryImpl {
-	return &streamRegistryImpl{
+) (*streamRegistryImpl, error) {
+	blockNum, err := blockchain.GetBlockNumber(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	impl := &streamRegistryImpl{
 		localNodeAddress: localNodeAddress,
 		nodeRegistry:     nodeRegistry,
 		onChainConfig:    onChainConfig,
 		contract:         contract,
 		streamNodeCache:  xsync.NewMapOf[StreamId, *streamDescriptor](), // TODO: set custom hasher for effeciency?
 	}
+
+	impl.onBlock.Store(blockNum.AsUint64())
+
+	blockchain.ChainMonitor.OnBlockWithLogs(blockNum+1, impl.onBlockWithLogs)
+
+	return impl, nil
+}
+
+func (sr *streamRegistryImpl) onBlockWithLogs(ctx context.Context, blockNum crypto.BlockNumber, logs []*types.Log) {
+	sr.onBlock.Store(blockNum.AsUint64())
 }
 
 func (sr *streamRegistryImpl) GetStreamInfo(ctx context.Context, streamId StreamId) (StreamNodes, error) {
-	var err error
-	d, _ := sr.streamNodeCache.LoadOrCompute(streamId, func() *streamDescriptor {
-		var result *registries.GetStreamResult
-		result, err = sr.contract.GetStream(ctx, streamId)
-		if err != nil {
-			return nil
-		}
-		return &streamDescriptor{
-			nodes: NewStreamNodes(result.Nodes, sr.localNodeAddress),
-		}
-	})
+	d, ok := sr.streamNodeCache.Load(streamId)
+	if ok {
+		return d.nodes, nil
+	}
+
+	result, err := sr.contract.GetStream(ctx, streamId, crypto.BlockNumber(sr.onBlock.Load()))
 	if err != nil {
 		return nil, err
 	}
-	if d == nil {
-		return nil, RiverError(
-			Err_INTERNAL,
-			"Should not happen: no stream in cache",
-			"stream_id",
-			streamId,
-		).Func("GetStreamInfo")
-	}
+	d, _ = sr.streamNodeCache.LoadOrStore(streamId, &streamDescriptor{
+		nodes: NewStreamNodes(result.Nodes, sr.localNodeAddress),
+		lastMb: MiniblockRef{
+			Hash: result.LastMiniblockHash,
+			Num:  int64(result.LastMiniblockNum),
+		},
+	})
 	return d.nodes, nil
 }
 
