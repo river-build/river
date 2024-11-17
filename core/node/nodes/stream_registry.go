@@ -130,7 +130,7 @@ func NewStreamRegistry(
 
 func (sr *streamRegistryImpl) onBlockWithLogs(ctx context.Context, blockNum crypto.BlockNumber, logs []*types.Log) {
 	streamEvents, errs := sr.contract.FilterStreamEvents(ctx, logs)
-	// Process parsed stream events even is some failed to parse
+	// Process parsed stream events even if some failed to parse
 	for _, err := range errs {
 		dlog.FromCtx(ctx).Error("Failed to parse stream event", "err", err)
 	}
