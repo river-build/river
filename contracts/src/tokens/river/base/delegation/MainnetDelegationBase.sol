@@ -91,7 +91,7 @@ abstract contract MainnetDelegationBase is IMainnetDelegationBase {
     Delegation storage delegation = ds.delegationByDelegator[delegator];
     address currentOperator = delegation.operator;
 
-    if (operator == address(0)) {
+    if (operator == address(0) || quantity == 0) {
       _removeDelegation(delegator);
     } else if (currentOperator == address(0)) {
       _addDelegation(delegation, delegator, operator, quantity);

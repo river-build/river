@@ -70,6 +70,16 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
     verifyDelegation(depositId, delegator, operator, amount, commissionRate);
   }
 
+  function test_setDelegation_zeroAmount() public givenOperator(OPERATOR, 0) {
+    address delegator = makeAddr("DELEGATOR");
+
+    vm.expectEmit(baseRegistry);
+    emit DelegationRemoved(delegator);
+
+    vm.prank(address(messenger));
+    mainnetDelegationFacet.setDelegation(delegator, OPERATOR, 0);
+  }
+
   function test_fuzz_setDelegation_remove(
     address delegator,
     uint96 amount,
@@ -94,6 +104,20 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
     totalStaked -= amount;
 
     verifyRemoval(delegator, depositId);
+
+    // test remove then add again
+    vm.expectEmit(baseRegistry);
+    emit DelegationSet(delegator, operator, amount);
+
+    vm.prank(address(messenger));
+    mainnetDelegationFacet.setDelegation(delegator, operator, amount);
+    totalStaked += amount;
+
+    uint256 newDepositId = mainnetDelegationFacet.getDepositIdByDelegator(
+      delegator
+    );
+    assertEq(newDepositId, depositId);
+    verifyDelegation(depositId, delegator, operator, amount, commissionRate);
   }
 
   function test_fuzz_setDelegation_replace(
@@ -104,9 +128,11 @@ contract MainnetDelegationTest is BaseRegistryTest, IMainnetDelegationBase {
   ) public givenOperator(operators[1], commissionRates[1]) {
     vm.assume(operators[0] != operators[1]);
     vm.assume(delegator != operators[1]);
-    amounts[0] = uint96(bound(amounts[0], 1, type(uint96).max - totalStaked));
+    amounts[0] = uint96(
+      bound(amounts[0], 1, type(uint96).max - totalStaked - 1)
+    );
     amounts[1] = uint96(
-      bound(amounts[1], 0, type(uint96).max - totalStaked - amounts[0])
+      bound(amounts[1], 1, type(uint96).max - totalStaked - amounts[0])
     );
     commissionRates[1] = bound(commissionRates[1], 0, 10000);
 
