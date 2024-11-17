@@ -694,6 +694,8 @@ message GetStreamRequest {
     bytes stream_id = 1;
     // if optional is true and stream doesn't exist, response will be a nil stream instead of ERROR NOT_FOUND
     bool optional = 2;
+    int64 knownRiverBlock = 3;
+    int64 knownMiniblockNum = 4;
 }
 
 message GetStreamResponse {
@@ -705,6 +707,8 @@ message GetMiniblocksRequest {
     bytes stream_id = 1;
     int64 fromInclusive = 2;
     int64 toExclusive = 3;
+    int64 knownRiverBlock = 4;
+    int64 knownMiniblockNum = 5;
 }
 
 message GetMiniblocksResponse {
