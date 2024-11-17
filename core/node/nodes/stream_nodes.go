@@ -155,7 +155,10 @@ func (s *streamNodesImpl) NumRemotes() int {
 func (s *streamNodesImpl) Update(n common.Address, isAdded bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.updateNoLock(n, isAdded)
+}
 
+func (s *streamNodesImpl) updateNoLock(n common.Address, isAdded bool) error {
 	var newNodes []common.Address
 	if isAdded {
 		if slices.Contains(s.nodes, n) {

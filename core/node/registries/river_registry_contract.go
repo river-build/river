@@ -52,7 +52,7 @@ type RiverRegistryContract struct {
 
 type EventInfo struct {
 	Name  string
-	Maker func() any
+	Maker func(*types.Log) any
 }
 
 func initContract[T any](
@@ -144,10 +144,13 @@ func NewRiverRegistryContract(
 		blockchain.Client,
 		river.NodeRegistryV1MetaData,
 		[]*EventInfo{
-			{"NodeAdded", func() any { return new(river.NodeRegistryV1NodeAdded) }},
-			{"NodeRemoved", func() any { return new(river.NodeRegistryV1NodeRemoved) }},
-			{"NodeStatusUpdated", func() any { return new(river.NodeRegistryV1NodeStatusUpdated) }},
-			{"NodeUrlUpdated", func() any { return new(river.NodeRegistryV1NodeUrlUpdated) }},
+			{"NodeAdded", func(log *types.Log) any { return &river.NodeRegistryV1NodeAdded{Raw: *log} }},
+			{"NodeRemoved", func(log *types.Log) any { return &river.NodeRegistryV1NodeRemoved{Raw: *log} }},
+			{
+				"NodeStatusUpdated",
+				func(log *types.Log) any { return &river.NodeRegistryV1NodeStatusUpdated{Raw: *log} },
+			},
+			{"NodeUrlUpdated", func(log *types.Log) any { return &river.NodeRegistryV1NodeUrlUpdated{Raw: *log} }},
 		},
 	)
 	if err != nil {
@@ -161,14 +164,17 @@ func NewRiverRegistryContract(
 		blockchain.Client,
 		river.StreamRegistryV1MetaData,
 		[]*EventInfo{
-			{river.Event_StreamAllocated, func() any { return new(river.StreamRegistryV1StreamAllocated) }},
+			{
+				river.Event_StreamAllocated,
+				func(log *types.Log) any { return &river.StreamRegistryV1StreamAllocated{Raw: *log} },
+			},
 			{
 				river.Event_StreamLastMiniblockUpdated,
-				func() any { return new(river.StreamRegistryV1StreamLastMiniblockUpdated) },
+				func(log *types.Log) any { return &river.StreamRegistryV1StreamLastMiniblockUpdated{Raw: *log} },
 			},
 			{
 				river.Event_StreamPlacementUpdated,
-				func() any { return new(river.StreamRegistryV1StreamPlacementUpdated) },
+				func(log *types.Log) any { return &river.StreamRegistryV1StreamPlacementUpdated{Raw: *log} },
 			},
 		},
 	)
@@ -831,7 +837,7 @@ func (c *RiverRegistryContract) ParseEvent(
 	if !ok {
 		return nil, RiverError(Err_INTERNAL, "Event not found", "id", log.Topics[0]).Func("ParseEvent")
 	}
-	ee := eventInfo.Maker()
+	ee := eventInfo.Maker(log)
 	err := boundContract.UnpackLog(ee, eventInfo.Name, *log)
 	if err != nil {
 		return nil, WrapRiverError(
