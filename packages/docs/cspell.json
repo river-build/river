@@ -43,7 +43,8 @@
         "degod",
         "sslmode",
         "chainid",
-        "nocolor"
+        "nocolor",
+        "gdms"
     ],
     "allowCompoundWords": true,
     "ignoreRegExpList": [
