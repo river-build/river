@@ -126,7 +126,7 @@ func validateStream(
 	stream := response.Msg.GetStream()
 
 	fmt.Printf("      Miniblocks: %d\n", len(stream.Miniblocks))
-	var lastBlock *events.MiniblockRef
+	var lastBlock *MiniblockRef
 	for _, mb := range stream.Miniblocks {
 		info, err := events.NewMiniblockInfoFromProto(mb, events.NewMiniblockInfoFromProtoOpts{
 			ExpectedBlockNumber: -1,
