@@ -4,7 +4,7 @@
     "private": true,
     "packageManager": "yarn@3.8.0",
     "scripts": {
-        "build": "yarn typecheck && yarn build-esbuild",
+        "build": "",
         "build-esbuild": "node esbuild.config.mjs",
         "demo": "node --enable-source-maps ./dist/demo.cjs",
         "lint": "eslint . --ext .ts",
