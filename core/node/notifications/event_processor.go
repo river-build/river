@@ -225,9 +225,10 @@ func (p *MessageToNotificationsProcessor) onGDMChannelPayload(
 	userPref *types.UserPreferences,
 	event *events.ParsedEvent,
 ) bool {
-	messageInteractionType := event.Tags.GetMessageInteractionType()
-	mentioned := isMentioned(participant, event.Tags.GetGroupMentionTypes(), event.Tags.GetMentionedUserAddresses())
-	participating := isParticipating(participant, event.Tags.GetParticipatingUserAddresses())
+	tags := event.Event.GetTags()
+	messageInteractionType := tags.GetMessageInteractionType()
+	mentioned := isMentioned(participant, tags.GetGroupMentionTypes(), tags.GetMentionedUserAddresses())
+	participating := isParticipating(participant, tags.GetParticipatingUserAddresses())
 
 	if userPref.WantsNotificationForGDMMessage(streamID, mentioned, participating, messageInteractionType) {
 		return true
@@ -250,9 +251,10 @@ func (p *MessageToNotificationsProcessor) onSpaceChannelPayload(
 	userPref *types.UserPreferences,
 	event *events.ParsedEvent,
 ) bool {
-	messageInteractionType := event.Tags.GetMessageInteractionType()
-	mentioned := isMentioned(participant, event.Tags.GetGroupMentionTypes(), event.Tags.GetMentionedUserAddresses())
-	participating := isParticipating(participant, event.Tags.GetParticipatingUserAddresses())
+	tags := event.Event.GetTags()
+	messageInteractionType := event.Event.GetTags().GetMessageInteractionType()
+	mentioned := isMentioned(participant, tags.GetGroupMentionTypes(), tags.GetMentionedUserAddresses())
+	participating := isParticipating(participant, tags.GetParticipatingUserAddresses())
 
 	// for non-reaction events send a notification to all users
 	if userPref.WantNotificationForSpaceChannelMessage(spaceID, channelID, mentioned, participating, messageInteractionType) {
