@@ -221,6 +221,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 		}
 
 		msg := resp.Msg
+
 		// Validate miniblocks are sequential.
 		// TODO: validate miniblock signatures.
 		var serialized [][]byte
