@@ -7,7 +7,6 @@ import {
     makeUserContextFromWallet,
     makeTestClient,
     makeDonePromise,
-    getDynamicPricingModule,
     createVersionedSpace,
 } from './util.test'
 import {
@@ -24,6 +23,7 @@ import {
     LegacyMembershipStruct,
     NoopRuleData,
     ETH_ADDRESS,
+    findDynamicPricingModule,
 } from '@river-build/web3'
 import { MembershipOp } from '@river-build/proto'
 import { makeBaseChainConfig } from './riverConfig'
@@ -49,7 +49,7 @@ describe('withEntitlements', () => {
         const bobsUserStreamId = makeUserStreamId(bob.userId)
 
         const pricingModules = await spaceDapp.listPricingModules()
-        const dynamicPricingModule = getDynamicPricingModule(pricingModules)
+        const dynamicPricingModule = findDynamicPricingModule(pricingModules)
         expect(dynamicPricingModule).toBeDefined()
 
         // create a space stream,

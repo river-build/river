@@ -44,7 +44,9 @@
         "sslmode",
         "chainid",
         "nocolor",
-        "gdms"
+        "gdms",
+        "wagmi",
+        "viem"
     ],
     "allowCompoundWords": true,
     "ignoreRegExpList": [

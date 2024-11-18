@@ -136,7 +136,7 @@ contract BaseSetup is TestUtils, SpaceHelper {
     legacyRuleEntitlement = deploySpaceFactory.legacyRuleEntitlement();
 
     spaceOwner = deploySpaceFactory.spaceOwner();
-    pricingModule = deploySpaceFactory.tieredLogPricing();
+    pricingModule = deploySpaceFactory.tieredLogPricingV3();
     fixedPricingModule = deploySpaceFactory.fixedPricing();
     walletLink = IWalletLink(spaceFactory);
     implementationRegistry = IImplementationRegistry(spaceFactory);

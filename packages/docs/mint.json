@@ -164,6 +164,7 @@
     {
       "group": "React SDK",
       "pages": [
+        "sdk/react-sdk/getting-started",
         "sdk/react-sdk/overview",
         {
           "group": "API",
