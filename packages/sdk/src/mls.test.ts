@@ -2,7 +2,7 @@
  * @group main
  */
 
-import { MlsCrypto } from './mls'
+import { Awaiter, MlsCrypto } from './mls'
 
 async function initializeCrypto(
     userAddress: Uint8Array,
@@ -30,6 +30,19 @@ async function initializeOtherGroup(
     expect(groupStatus).toEqual('GROUP_ACTIVE')
     return groupInfoWithExternalKey
 }
+
+describe('Awaiter', () => {
+    it('should be possible to resolve it', async () => {
+        const a = new Awaiter(1_000)
+        a.resolve()
+        await expect(a.promise).toResolve()
+    }, 1_000)
+
+    it('should timout if not resolved', async () => {
+        const a = new Awaiter(0)
+        await expect(a.promise).toReject()
+    }, 1_000)
+})
 
 describe('CreateGroup', () => {
     const streamId = 'stream'
@@ -135,4 +148,10 @@ describe('CreateGroup', () => {
         await crypto.handleExternalJoin(streamId, userAddress, deviceKey, commit, groupInfo, 1n)
         await expect(awaiting).toResolve()
     }, 1000)
+
+    it('awaitGroupActive should timeout', async () => {
+        const crypto = await initializeCrypto(userAddress, deviceKey)
+        crypto.awaitTimeoutMS = 0
+        await expect(crypto.awaitGroupActive(streamId)).toReject()
+    })
 })

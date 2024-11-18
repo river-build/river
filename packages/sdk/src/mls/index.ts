@@ -27,6 +27,29 @@ function uint8ArrayEqual(a: Uint8Array, b: Uint8Array): boolean {
 
 const log = dlog('csb:mls')
 
+export class Awaiter {
+    // top level promise
+    public promise: Promise<void>
+    // resolve handler to the inner promise
+    public resolve!: () => void
+    public constructor(timeoutMS: number) {
+        let timeout: NodeJS.Timeout
+        const timeoutPromise = new Promise<never>((_resolve, reject) => {
+            timeout = setTimeout(() => {
+                reject(new Error('timed out'))
+            }, timeoutMS)
+        })
+        const internalPromise: Promise<void> = new Promise(
+            (resolve: (value: void) => void, _reject) => {
+                this.resolve = resolve
+            },
+        ).finally(() => {
+            clearTimeout(timeout)
+        })
+        this.promise = Promise.race([internalPromise, timeoutPromise])
+    }
+}
+
 export class MlsCrypto {
     private client!: MlsClient
     private userAddress: Uint8Array
@@ -34,8 +57,9 @@ export class MlsCrypto {
     private mlsStore: MlsStore
     private nickname: string | undefined
     readonly log: DLogger
+    public awaitTimeoutMS: number = 5_000
 
-    awaitingGroupActive: Map<string, { promise: Promise<void>; resolve: () => void }> = new Map()
+    awaitingGroupActive: Map<string, Awaiter> = new Map()
     cipherSuite: MlsCipherSuite = new MlsCipherSuite()
     epochKeyService: EpochKeyService
     groupStore: GroupStore
@@ -179,20 +203,14 @@ export class MlsCrypto {
             return await awaiting.promise
         }
         if (this.groupStore.getGroupStatus(streamId) === 'GROUP_ACTIVE') {
-            return Promise.resolve()
+            return
         }
-        let promiseResolve: (() => void) | undefined
-        const promise: Promise<void> = new Promise((resolve, _reject) => {
-            promiseResolve = resolve
-        })
-        if (!promiseResolve) {
-            throw new Error('No promise resolve')
-        }
-        this.awaitingGroupActive.set(streamId, { promise, resolve: promiseResolve })
-        await promise
+        const awaiter = new Awaiter(this.awaitTimeoutMS)
+        this.awaitingGroupActive.set(streamId, awaiter)
+        await awaiter.promise
         this.awaitingGroupActive.delete(streamId)
 
-        return promise
+        return awaiter.promise
     }
 
     public async handleInitializeGroup(
