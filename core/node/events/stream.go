@@ -221,7 +221,7 @@ func (s *streamImpl) importMiniblocksNoLock(
 
 	if s.view() == nil {
 		// Do we have genesis miniblock?
-		if miniblocks[0].header().MiniblockNum == 0 {
+		if miniblocks[0].Header().MiniblockNum == 0 {
 			err := s.initFromGenesis(ctx, miniblocks[0], blocksToWriteToStorage[0].Data)
 			if err != nil {
 				return err
@@ -405,7 +405,7 @@ func (s *streamImpl) initFromGenesis(
 	genesisInfo *MiniblockInfo,
 	genesisBytes []byte,
 ) error {
-	if genesisInfo.header().MiniblockNum != 0 {
+	if genesisInfo.Header().MiniblockNum != 0 {
 		return RiverError(Err_BAD_BLOCK, "init from genesis must be from block with num 0")
 	}
 
@@ -579,7 +579,7 @@ func (s *streamImpl) GetMiniblocks(
 			return nil, false, err
 		}
 		if i == 0 {
-			startMiniblockNumber = miniblock.header().MiniblockNum
+			startMiniblockNumber = miniblock.Header().MiniblockNum
 		}
 		miniblocks[i] = miniblock.Proto
 	}
