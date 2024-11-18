@@ -3,7 +3,11 @@
  */
 
 import { dlog } from '@river-build/dlog'
-import { makeUserContextFromWallet, createVersionedSpace } from './util.test'
+import {
+    makeUserContextFromWallet,
+    createVersionedSpace,
+    getFreeSpacePricingSetup,
+} from './util.test'
 import {
     isValidStreamId,
     makeDefaultChannelStreamId,
@@ -18,7 +22,6 @@ import {
     LegacyMembershipStruct,
     NoopRuleData,
     ETH_ADDRESS,
-    findDynamicPricingModule,
 } from '@river-build/web3'
 import { makeBaseChainConfig } from './riverConfig'
 
@@ -37,9 +40,9 @@ describe('membershipManagement', () => {
         const spaceDapp = createSpaceDapp(bobProvider, baseConfig.chainConfig)
 
         // create a user stream
-        const pricingModules = await spaceDapp.listPricingModules()
-        const dynamicPricingModule = findDynamicPricingModule(pricingModules)
-        expect(dynamicPricingModule).toBeDefined()
+        const { fixedPricingModuleAddress, freeAllocation, price } = await getFreeSpacePricingSetup(
+            spaceDapp,
+        )
 
         // create a space stream,
         log('Bob created user, about to create space')
@@ -48,13 +51,13 @@ describe('membershipManagement', () => {
             settings: {
                 name: 'Everyone',
                 symbol: 'MEMBER',
-                price: 0,
+                price,
                 maxSupply: 1000,
                 duration: 0,
                 currency: ETH_ADDRESS,
                 feeRecipient: userIdFromAddress(bobsContext.creatorAddress),
-                freeAllocation: 0,
-                pricingModule: dynamicPricingModule!.module,
+                freeAllocation,
+                pricingModule: fixedPricingModuleAddress,
             },
             permissions: [Permission.Read, Permission.Write],
             requirements: {

@@ -2,7 +2,12 @@
  * @group with-entitlements
  */
 
-import { makeUserContextFromWallet, makeTestClient, createVersionedSpace } from './util.test'
+import {
+    makeUserContextFromWallet,
+    makeTestClient,
+    createVersionedSpace,
+    getFreeSpacePricingSetup,
+} from './util.test'
 import { makeDefaultChannelStreamId, makeSpaceStreamId } from './id'
 import { ethers, Wallet } from 'ethers'
 import { Client } from './client'
@@ -13,7 +18,6 @@ import {
     NoopRuleData,
     Permission,
     createSpaceDapp,
-    findDynamicPricingModule,
 } from '@river-build/web3'
 import { SignerContext } from './signerContext'
 import { makeBaseChainConfig } from './riverConfig'
@@ -55,22 +59,21 @@ describe('mediaWithEntitlements', () => {
         await provider.fundWallet()
         const spaceDapp = createSpaceDapp(provider, baseConfig.chainConfig)
 
-        const pricingModules = await spaceDapp.listPricingModules()
-        const dynamicPricingModule = findDynamicPricingModule(pricingModules)
-        expect(dynamicPricingModule).toBeDefined()
-
+        const { fixedPricingModuleAddress, freeAllocation, price } = await getFreeSpacePricingSetup(
+            spaceDapp,
+        )
         // create a space stream,
         const membershipInfo: LegacyMembershipStruct = {
             settings: {
                 name: 'Everyone',
                 symbol: 'MEMBER',
-                price: 0,
+                price,
                 maxSupply: 1000,
                 duration: 0,
                 currency: ETH_ADDRESS,
                 feeRecipient: bobClient.userId,
-                freeAllocation: 0,
-                pricingModule: dynamicPricingModule!.module,
+                freeAllocation,
+                pricingModule: fixedPricingModuleAddress,
             },
             permissions: [Permission.Read, Permission.Write],
             requirements: {
@@ -154,22 +157,22 @@ describe('mediaWithEntitlements', () => {
         await provider.fundWallet()
         const spaceDapp = createSpaceDapp(provider, baseConfig.chainConfig)
 
-        const pricingModules = await spaceDapp.listPricingModules()
-        const dynamicPricingModule = findDynamicPricingModule(pricingModules)
-        expect(dynamicPricingModule).toBeDefined()
+        const { fixedPricingModuleAddress, freeAllocation, price } = await getFreeSpacePricingSetup(
+            spaceDapp,
+        )
 
         // create a space stream,
         const membershipInfo: LegacyMembershipStruct = {
             settings: {
                 name: 'Everyone',
                 symbol: 'MEMBER',
-                price: 0,
+                price,
                 maxSupply: 1000,
                 duration: 0,
                 currency: ETH_ADDRESS,
                 feeRecipient: bobClient.userId,
-                freeAllocation: 0,
-                pricingModule: dynamicPricingModule!.module,
+                freeAllocation,
+                pricingModule: fixedPricingModuleAddress,
             },
             permissions: [Permission.Read, Permission.Write],
             requirements: {
