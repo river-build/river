@@ -2,14 +2,15 @@ package events
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	. "github.com/river-build/river/core/node/protocol"
-
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/timestamppb"
+	. "github.com/river-build/river/core/node/shared"
+	"github.com/river-build/river/core/node/storage"
 )
 
 func Make_GenesisMiniblockHeader(parsedEvents []*ParsedEvent) (*MiniblockHeader, error) {
@@ -90,28 +91,57 @@ func NextMiniblockTimestamp(prevBlockTimestamp *timestamppb.Timestamp) *timestam
 }
 
 type MiniblockInfo struct {
-	Ref         *MiniblockRef
-	headerEvent *ParsedEvent
-	events      []*ParsedEvent
-	Proto       *Miniblock
+	Ref                *MiniblockRef
+	headerEvent        *ParsedEvent
+	useGetterForEvents []*ParsedEvent // Use events(). Getter checks if events have been initialized.
+	Proto              *Miniblock
 }
 
-func (b *MiniblockInfo) header() *MiniblockHeader {
+func (b *MiniblockInfo) events() []*ParsedEvent {
+	if len(b.useGetterForEvents) == 0 && len(b.Proto.Events) > 0 {
+		panic("DontParseEvents option was used, events are not initialized")
+	}
+	return b.useGetterForEvents
+}
+
+func (b *MiniblockInfo) Header() *MiniblockHeader {
 	return b.headerEvent.Event.GetMiniblockHeader()
 }
 
 func (b *MiniblockInfo) lastEvent() *ParsedEvent {
-	if len(b.events) > 0 {
-		return b.events[len(b.events)-1]
+	events := b.events()
+	if len(events) > 0 {
+		return events[len(events)-1]
 	} else {
 		return nil
 	}
 }
 
+func (b *MiniblockInfo) IsSnapshot() bool {
+	return b.Header().GetSnapshot() != nil
+}
+
+func (b *MiniblockInfo) asStorageMb() (*storage.WriteMiniblockData, error) {
+	bytes, err := b.ToBytes()
+	if err != nil {
+		return nil, err
+	}
+	return b.asStorageMbWithData(bytes), nil
+}
+
+func (b *MiniblockInfo) asStorageMbWithData(bytes []byte) *storage.WriteMiniblockData {
+	return &storage.WriteMiniblockData{
+		Number:   b.Ref.Num,
+		Hash:     b.Ref.Hash,
+		Snapshot: b.IsSnapshot(),
+		Data:     bytes,
+	}
+}
+
 func (b *MiniblockInfo) forEachEvent(op func(e *ParsedEvent, minibockNum int64, eventNum int64) (bool, error)) error {
-	blockNum := b.header().MiniblockNum
-	eventNum := b.header().EventNumOffset
-	for _, event := range b.events {
+	blockNum := b.Header().MiniblockNum
+	eventNum := b.Header().EventNumOffset
+	for _, event := range b.events() {
 		c, err := op(event, blockNum, eventNum)
 		eventNum++
 		if !c {
@@ -190,9 +220,9 @@ func NewMiniblockInfoFromProto(pb *Miniblock, opts NewMiniblockInfoFromProtoOpts
 			Hash: headerEvent.Hash,
 			Num:  blockHeader.MiniblockNum,
 		},
-		headerEvent: headerEvent,
-		events:      events,
-		Proto:       pb,
+		headerEvent:        headerEvent,
+		useGetterForEvents: events,
+		Proto:              pb,
 	}, nil
 }
 
@@ -211,8 +241,8 @@ func NewMiniblockInfoFromParsed(headerEvent *ParsedEvent, events []*ParsedEvent)
 			Hash: headerEvent.Hash,
 			Num:  headerEvent.Event.GetMiniblockHeader().MiniblockNum,
 		},
-		headerEvent: headerEvent,
-		events:      events,
+		headerEvent:        headerEvent,
+		useGetterForEvents: events,
 		Proto: &Miniblock{
 			Header: headerEvent.Envelope,
 			Events: envelopes,

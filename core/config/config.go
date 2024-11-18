@@ -17,7 +17,8 @@ func GetDefaultConfig() *Config {
 	return &Config{
 		Port: 443,
 		Database: DatabaseConfig{
-			StartupDelay: 2 * time.Second,
+			StartupDelay:  2 * time.Second,
+			NumPartitions: 256,
 		},
 		StorageType:  "postgres",
 		DisableHttps: false,
@@ -38,7 +39,9 @@ func GetDefaultConfig() *Config {
 		// TODO: ArchitectContract: ContractConfig{},
 		// TODO: RegistryContract:  ContractConfig{},
 		StreamReconciliation: StreamReconciliationConfig{
-			WorkerPoolSize: 8,
+			InitialWorkerPoolSize: 4,
+			OnlineWorkerPoolSize:  32,
+			GetMiniblocksPageSize: 128,
 		},
 		Log: LogConfig{
 			Level:   "info", // NOTE: this default is replaced by flag value
@@ -59,15 +62,24 @@ func GetDefaultConfig() *Config {
 			PrintStatsPeriod: 10 * time.Second,
 		},
 		DebugEndpoints: DebugEndpointsConfig{
-			Cache:           true,
-			Memory:          true,
-			PProf:           false,
-			Stacks:          true,
-			StacksMaxSizeKb: 5 * 1024,
-			TxPool:          true,
+			Cache:                 true,
+			Memory:                true,
+			PProf:                 false,
+			Stacks:                true,
+			StacksMaxSizeKb:       5 * 1024,
+			TxPool:                true,
+			EnableStorageEndpoint: true,
 		},
 		Scrubbing: ScrubbingConfig{
 			ScrubEligibleDuration: time.Hour,
+		},
+		RiverRegistry: RiverRegistryConfig{
+			PageSize:               5000,
+			ParallelReaders:        8,
+			MaxRetries:             100,
+			MaxRetryElapsedTime:    5 * time.Minute,
+			SingleCallTimeout:      30 * time.Second, // geth internal timeout is 30 seconds
+			ProgressReportInterval: 10 * time.Second,
 		},
 	}
 }
@@ -168,6 +180,9 @@ type Config struct {
 	EnableDebugEndpoints bool
 
 	DebugEndpoints DebugEndpointsConfig
+
+	// RiverRegistry contains settings for calling registry contract on River chain.
+	RiverRegistry RiverRegistryConfig
 }
 
 type TLSConfig struct {
@@ -193,14 +208,13 @@ func (nc *NetworkConfig) GetHttpRequestTimeout() time.Duration {
 }
 
 type DatabaseConfig struct {
-	Url                       string `dlog:"omit" json:"-" yaml:"-"` // Sensitive data, omitted from logging.
-	Host                      string
-	Port                      int
-	User                      string
-	Password                  string `dlog:"omit" json:"-" yaml:"-"` // Sensitive data, omitted from logging.
-	Database                  string
-	Extra                     string
-	StreamingConnectionsRatio float32
+	Url      string `dlog:"omit" json:"-" yaml:"-"` // Sensitive data, omitted from logging.
+	Host     string
+	Port     int
+	User     string
+	Password string `dlog:"omit" json:"-" yaml:"-"` // Sensitive data, omitted from logging.
+	Database string
+	Extra    string
 
 	// StartupDelay is the time the node waits between taking control of the database and starting the server
 	// if other nodes' records are found in the database.
@@ -213,6 +227,17 @@ type DatabaseConfig struct {
 	// If not set or value can't be parsed, defaults to "serializable".
 	// Intention is to migrate to "read committed" for performance reasons after testing is complete.
 	IsolationLevel string
+
+	// MigrateStreamCreation indicates to the database that all new streams should be allocated
+	// in one of the 256 pre-allocated stream partitions for either regular or media streams instead
+	// of allocating new tables per stream according to the legacy schema. If this flag is unset, a
+	// node will continue to allocate new tables for each stream as it is created.
+	MigrateStreamCreation bool
+
+	// NumPartitions specifies the number of partitions to use when creating the schema for stream
+	// data storage. If <= 0, a default value of 256 will be used. No more than 256 partitions is
+	// supported at this time.
+	NumPartitions int
 }
 
 func (c DatabaseConfig) GetUrl() string {
@@ -260,6 +285,9 @@ type ChainConfig struct {
 	BlockTimeMs uint64
 
 	TransactionPool TransactionPoolConfig
+
+	// DisableReplacePendingTransactionOnBoot will not try to replace transaction that are pending after start.
+	DisableReplacePendingTransactionOnBoot bool
 
 	// TODO: these need to be removed from here
 	LinkedWalletsLimit                        int
@@ -360,6 +388,30 @@ type DebugEndpointsConfig struct {
 	Stacks          bool
 	StacksMaxSizeKb int
 	TxPool          bool
+
+	// Make storage statistics available via debug endpoints. This may involve running queries
+	// on the underlying database.
+	EnableStorageEndpoint bool
+}
+
+type RiverRegistryConfig struct {
+	// PageSize is the number of streams to read from the contract at once using GetPaginatedStreams.
+	PageSize int
+
+	// Number of parallel readers to use when reading streams from the contract.
+	ParallelReaders int
+
+	// If not 0, stop retrying failed GetPaginatedStreams calls after this number of retries.
+	MaxRetries int
+
+	// Stop retrying failed GetPaginatedStreams calls after this duration.
+	MaxRetryElapsedTime time.Duration
+
+	// Timeout for a singe call to GetPaginatedStreams.
+	SingleCallTimeout time.Duration
+
+	// ProgressReportInterval is the interval at which to report progress of the GetPaginatedStreams calls.
+	ProgressReportInterval time.Duration
 }
 
 func (ac *ArchiveConfig) GetReadMiniblocksSize() uint64 {
@@ -408,7 +460,14 @@ type ScrubbingConfig struct {
 }
 
 type StreamReconciliationConfig struct {
-	WorkerPoolSize int // If 0, default to 8.
+	// InitialWorkerPoolSize is the size of the worker pool for initial background stream reconciliation tasks on node start.
+	InitialWorkerPoolSize int
+
+	// OnlineWorkerPoolSize is the size of the worker pool for ongoing stream reconciliation tasks.
+	OnlineWorkerPoolSize int
+
+	// GetMiniblocksPageSize is the number of miniblocks to read at once from the remote node.
+	GetMiniblocksPageSize int64
 }
 
 type FilterConfig struct {

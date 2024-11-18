@@ -7,9 +7,11 @@ import {ICrossDomainMessenger} from "contracts/src/tokens/river/mainnet/delegati
 
 // libraries
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
 import {MainnetDelegationStorage} from "./MainnetDelegationStorage.sol";
 
 // contracts
+import {IRewardsDistribution} from "contracts/src/base/registry/facets/distribution/v2/IRewardsDistribution.sol";
 
 abstract contract MainnetDelegationBase is IMainnetDelegationBase {
   using EnumerableSet for EnumerableSet.AddressSet;
@@ -23,11 +25,62 @@ abstract contract MainnetDelegationBase is IMainnetDelegationBase {
     ds.delegatorsByOperator[currentOperator].remove(delegator);
     delete ds.delegationByDelegator[delegator];
 
+    _unstake(delegator);
+
     emit DelegationRemoved(delegator);
   }
 
   /// @dev Caller must ensure that operator != address(0)
   function _replaceDelegation(
+    Delegation storage delegation,
+    address currentOperator,
+    address delegator,
+    address operator,
+    uint256 quantity
+  ) internal {
+    MainnetDelegationStorage.Layout storage ds = MainnetDelegationStorage
+      .layout();
+
+    if (currentOperator != operator) {
+      ds.delegatorsByOperator[currentOperator].remove(delegator);
+      ds.delegatorsByOperator[operator].add(delegator);
+      delegation.operator = operator;
+      delegation.delegationTime = block.timestamp;
+    } else if (delegation.quantity != quantity) {
+      delegation.delegationTime = block.timestamp;
+    }
+    delegation.quantity = quantity;
+
+    _unstake(delegator);
+    _stake(delegator, operator, quantity);
+
+    emit DelegationSet(delegator, operator, quantity);
+  }
+
+  function _addDelegation(
+    Delegation storage delegation,
+    address delegator,
+    address operator,
+    uint256 quantity
+  ) internal {
+    MainnetDelegationStorage.Layout storage ds = MainnetDelegationStorage
+      .layout();
+
+    ds.delegators.add(delegator);
+    ds.delegatorsByOperator[operator].add(delegator);
+    (
+      delegation.operator,
+      delegation.quantity,
+      delegation.delegator,
+      delegation.delegationTime
+    ) = (operator, quantity, delegator, block.timestamp);
+
+    _stake(delegator, operator, quantity);
+
+    emit DelegationSet(delegator, operator, quantity);
+  }
+
+  function _setDelegation(
     address delegator,
     address operator,
     uint256 quantity
@@ -38,24 +91,23 @@ abstract contract MainnetDelegationBase is IMainnetDelegationBase {
     Delegation storage delegation = ds.delegationByDelegator[delegator];
     address currentOperator = delegation.operator;
 
-    if (currentOperator == address(0)) {
-      _addDelegation(delegator, operator, quantity);
+    if (operator == address(0) || quantity == 0) {
+      _removeDelegation(delegator);
+    } else if (currentOperator == address(0)) {
+      _addDelegation(delegation, delegator, operator, quantity);
     } else {
-      if (currentOperator != operator) {
-        ds.delegatorsByOperator[currentOperator].remove(delegator);
-        ds.delegatorsByOperator[operator].add(delegator);
-        delegation.operator = operator;
-        delegation.delegationTime = block.timestamp;
-      } else if (delegation.quantity != quantity) {
-        delegation.delegationTime = block.timestamp;
-      }
-      delegation.quantity = quantity;
-
-      emit DelegationSet(delegator, operator, quantity);
+      _replaceDelegation(
+        delegation,
+        currentOperator,
+        delegator,
+        operator,
+        quantity
+      );
     }
   }
 
-  function _addDelegation(
+  /// @dev Reuse the staking deposit if exists, otherwise create a new one
+  function _stake(
     address delegator,
     address operator,
     uint256 quantity
@@ -63,29 +115,39 @@ abstract contract MainnetDelegationBase is IMainnetDelegationBase {
     MainnetDelegationStorage.Layout storage ds = MainnetDelegationStorage
       .layout();
 
-    ds.delegators.add(delegator);
-    ds.delegatorsByOperator[operator].add(delegator);
-    Delegation storage delegation = ds.delegationByDelegator[delegator];
-    (
-      delegation.operator,
-      delegation.quantity,
-      delegation.delegator,
-      delegation.delegationTime
-    ) = (operator, quantity, delegator, block.timestamp);
-
-    emit DelegationSet(delegator, operator, quantity);
+    uint256 depositId = ds.depositIdByDelegator[delegator];
+    if (depositId == 0) {
+      depositId = IRewardsDistribution(address(this)).stake(
+        SafeCastLib.toUint96(quantity),
+        operator,
+        delegator
+      );
+      ds.depositIdByDelegator[delegator] = depositId;
+    } else {
+      IRewardsDistribution(address(this)).redelegate(depositId, operator);
+      IRewardsDistribution(address(this)).increaseStake(
+        depositId,
+        SafeCastLib.toUint96(quantity)
+      );
+    }
   }
 
-  function _setDelegation(
-    address delegator,
-    address operator,
-    uint256 quantity
-  ) internal {
-    if (operator == address(0)) {
-      _removeDelegation(delegator);
-    } else {
-      _replaceDelegation(delegator, operator, quantity);
+  /// @dev Unstake the delegation of the delegator if exists
+  function _unstake(address delegator) internal {
+    MainnetDelegationStorage.Layout storage ds = MainnetDelegationStorage
+      .layout();
+
+    uint256 depositId = ds.depositIdByDelegator[delegator];
+    if (depositId != 0) {
+      IRewardsDistribution(address(this)).initiateWithdraw(depositId);
+      // do not reset depositIdByDelegator[delegator] as we recycle deposit IDs for delegators
     }
+  }
+
+  function _getDepositIdByDelegator(
+    address delegator
+  ) internal view returns (uint256) {
+    return MainnetDelegationStorage.layout().depositIdByDelegator[delegator];
   }
 
   function _getDelegationByDelegator(

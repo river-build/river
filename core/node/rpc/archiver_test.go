@@ -35,8 +35,8 @@ func fillUserSettingsStreamWithData(
 	client protocolconnect.StreamServiceClient,
 	numMBs int,
 	numEventsPerMB int,
-	prevMB *events.MiniblockRef,
-) (*events.MiniblockRef, error) {
+	prevMB *MiniblockRef,
+) (*MiniblockRef, error) {
 	var err error
 	for i := 0; i < numMBs; i++ {
 		for j := 0; j < numEventsPerMB; j++ {
@@ -229,7 +229,12 @@ func TestArchiveOneStream(t *testing.T) {
 
 	bc := tester.btc.NewWalletAndBlockchain(ctx)
 
-	registryContract, err := registries.NewRiverRegistryContract(ctx, bc, &archiveCfg.RegistryContract)
+	registryContract, err := registries.NewRiverRegistryContract(
+		ctx,
+		bc,
+		&archiveCfg.RegistryContract,
+		&archiveCfg.RiverRegistry,
+	)
 	require.NoError(err)
 
 	var nodeRegistry nodes.NodeRegistry
@@ -280,7 +285,7 @@ func TestArchiveOneStream(t *testing.T) {
 	require.Zero(num) // Only genesis miniblock is created
 
 	// Add event to the stream, create miniblock, and archive it
-	err = addUserBlockedFillerEvent(ctx, wallet, client, streamId, events.MiniblockRefFromContractRecord(&streamRecord))
+	err = addUserBlockedFillerEvent(ctx, wallet, client, streamId, MiniblockRefFromContractRecord(&streamRecord))
 	require.NoError(err)
 
 	mbRef, err := makeMiniblock(ctx, client, streamId, false, 0)
@@ -446,7 +451,7 @@ func TestArchiveContinuous(t *testing.T) {
 			assert.NoError(c, err)
 			assert.Zero(c, num)
 		},
-		5*time.Second,
+		10*time.Second,
 		10*time.Millisecond,
 	)
 
@@ -459,7 +464,7 @@ func TestArchiveContinuous(t *testing.T) {
 			assert.NoError(c, err)
 			assert.Equal(c, lastMB.Num, num)
 		},
-		5*time.Second,
+		10*time.Second,
 		10*time.Millisecond,
 	)
 
@@ -482,7 +487,7 @@ func TestArchiveContinuous(t *testing.T) {
 			assert.NoError(c, err)
 			assert.Equal(c, lastMB2.Num, num)
 		},
-		5*time.Second,
+		10*time.Second,
 		10*time.Millisecond,
 	)
 

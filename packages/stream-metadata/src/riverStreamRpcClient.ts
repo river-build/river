@@ -1,5 +1,6 @@
 import {
 	ParsedStreamResponse,
+	StreamRpcClient,
 	StreamStateView,
 	UnpackEnvelopeOpts,
 	decryptAESGCM,
@@ -8,11 +9,12 @@ import {
 	streamIdAsString,
 	unpackStream,
 } from '@river-build/sdk'
-import { PromiseClient, createPromiseClient } from '@connectrpc/connect'
+import { createPromiseClient } from '@connectrpc/connect'
 import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-node'
 import { StreamService } from '@river-build/proto'
 import { filetypemime } from 'magic-bytes.js'
 import { FastifyBaseLogger } from 'fastify'
+import { LRUCache } from 'lru-cache'
 
 import { MediaContent, StreamIdHex } from './types'
 import { getNodeForStream } from './streamRegistry'
@@ -22,9 +24,11 @@ const STREAM_METADATA_SERVICE_DEFAULT_UNPACK_OPTS: UnpackEnvelopeOpts = {
 	disableSignatureValidation: true,
 }
 
+const streamLocationCache = new LRUCache<string, string>({ max: 5000 })
 const clients = new Map<string, StreamRpcClient>()
-
-export type StreamRpcClient = PromiseClient<typeof StreamService> & { url?: string }
+const streamClientRequests = new Map<string, Promise<StreamRpcClient>>()
+const streamRequests = new Map<string, Promise<StreamStateView>>()
+const mediaRequests = new Map<string, Promise<MediaContent>>()
 
 export function makeStreamRpcClient(url: string): StreamRpcClient {
 	const options: ConnectTransportOptions = {
@@ -37,23 +41,44 @@ export function makeStreamRpcClient(url: string): StreamRpcClient {
 	}
 
 	const transport = createConnectTransport(options)
-	const client: StreamRpcClient = createPromiseClient(StreamService, transport)
+	const client = createPromiseClient(StreamService, transport) as StreamRpcClient
 	client.url = url
+	client.opts = {
+		retryParams: { maxAttempts: 3, initialRetryDelay: 2000, maxRetryDelay: 6000 },
+		defaultTimeoutMs: options.defaultTimeoutMs,
+	}
 	return client
 }
 
-async function getStreamClient(logger: FastifyBaseLogger, streamId: `0x${string}`) {
-	const node = await getNodeForStream(logger, streamId)
-	let client = clients.get(node.url)
-	if (!client) {
-		logger.info({ url: node.url }, 'Connecting')
-		client = makeStreamRpcClient(node.url)
-		clients.set(node.url, client)
+async function _getStreamClient(logger: FastifyBaseLogger, streamId: `0x${string}`) {
+	let url = streamLocationCache.get(streamId)
+	if (!url) {
+		const node = await getNodeForStream(logger, streamId)
+		url = node.url
+		streamLocationCache.set(streamId, url)
 	}
+	let client = clients.get(url)
+	if (!client) {
+		logger.info({ url }, 'Connecting')
+		client = makeStreamRpcClient(url)
+		clients.set(url, client)
+	}
+	return client
+}
 
-	logger.info({ url: node.url }, 'client connected to node')
-
-	return { client, lastMiniblockNum: node.lastMiniblockNum }
+async function getStreamClient(
+	logger: FastifyBaseLogger,
+	streamId: `0x${string}`,
+): Promise<StreamRpcClient> {
+	const existing = streamClientRequests.get(streamId)
+	if (existing) {
+		return existing
+	}
+	const promise = _getStreamClient(logger, streamId)
+	streamClientRequests.set(streamId, promise)
+	const result = await promise
+	streamClientRequests.delete(streamId)
+	return result
 }
 
 function removeClient(logger: FastifyBaseLogger, clientToRemove: StreamRpcClient) {
@@ -158,17 +183,16 @@ function stripHexPrefix(hexString: string): string {
 	return hexString
 }
 
-export async function getStream(
+export async function _getStream(
 	logger: FastifyBaseLogger,
 	streamId: string,
 	opts: UnpackEnvelopeOpts = STREAM_METADATA_SERVICE_DEFAULT_UNPACK_OPTS,
 ): Promise<StreamStateView> {
-	const { client, lastMiniblockNum } = await getStreamClient(logger, `0x${streamId}`)
+	const client = await getStreamClient(logger, `0x${streamId}`)
 	logger.info(
 		{
 			nodeUrl: client.url,
 			streamId,
-			lastMiniblockNum: lastMiniblockNum.toString(),
 		},
 		'getStream',
 	)
@@ -200,7 +224,23 @@ export async function getStream(
 	}
 }
 
-export async function getMediaStreamContent(
+export async function getStream(
+	logger: FastifyBaseLogger,
+	streamId: string,
+	opts: UnpackEnvelopeOpts = STREAM_METADATA_SERVICE_DEFAULT_UNPACK_OPTS,
+): Promise<StreamStateView> {
+	const existing = streamRequests.get(streamId)
+	if (existing) {
+		return existing
+	}
+	const promise = _getStream(logger, streamId, opts)
+	streamRequests.set(streamId, promise)
+	const result = await promise
+	streamRequests.delete(streamId)
+	return result
+}
+
+export async function _getMediaStreamContent(
 	logger: FastifyBaseLogger,
 	fullStreamId: StreamIdHex,
 	secret: Uint8Array,
@@ -209,5 +249,22 @@ export async function getMediaStreamContent(
 	const streamId = stripHexPrefix(fullStreamId)
 	const sv = await getStream(logger, streamId)
 	const result = await mediaContentFromStreamView(logger, sv, secret, iv)
+	return result
+}
+
+export async function getMediaStreamContent(
+	logger: FastifyBaseLogger,
+	fullStreamId: StreamIdHex,
+	secret: Uint8Array,
+	iv: Uint8Array,
+): Promise<MediaContent> {
+	const existing = mediaRequests.get(fullStreamId)
+	if (existing) {
+		return existing
+	}
+	const promise = _getMediaStreamContent(logger, fullStreamId, secret, iv)
+	mediaRequests.set(fullStreamId, promise)
+	const result = await promise
+	mediaRequests.delete(fullStreamId)
 	return result
 }

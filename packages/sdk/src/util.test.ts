@@ -42,7 +42,6 @@ import { SignerContext, makeSignerContext } from './signerContext'
 import {
     Address,
     LocalhostWeb3Provider,
-    PricingModuleStruct,
     createExternalNFTStruct,
     createRiverRegistry,
     createSpaceDapp,
@@ -68,6 +67,7 @@ import {
     isCreateLegacySpaceParams,
     convertRuleDataV1ToV2,
     encodeRuleDataV2,
+    decodeRuleDataV2,
     SignerType,
     IRuleEntitlementV2Base,
     isRuleDataV1,
@@ -76,7 +76,11 @@ import {
     convertRuleDataV2ToV1,
     XchainConfig,
     UpdateRoleParams,
+    getFixedPricingModule,
+    getDynamicPricingModule,
 } from '@river-build/web3'
+import { RiverTimelineEvent, type TimelineEvent } from './sync-agent/timeline/models/timeline-types'
+import { SyncState } from './syncedStreamsLoop'
 
 const log = dlog('csb:test:util')
 
@@ -479,6 +483,8 @@ export async function createSpaceAndDefaultChannel(
     }
 }
 
+export const DefaultFreeAllocation = 1000
+
 export async function createVersionedSpaceFromMembership(
     client: Client,
     spaceDapp: ISpaceDapp,
@@ -486,16 +492,41 @@ export async function createVersionedSpaceFromMembership(
     name: string,
     membership: LegacyMembershipStruct | MembershipStruct,
 ): Promise<ethers.ContractTransaction> {
-    if (useLegacySpaces() && isLegacyMembershipType(membership)) {
-        return await spaceDapp.createLegacySpace(
-            {
-                spaceName: `${name}-space`,
-                uri: `${name}-space-metadata`,
-                channelName: 'general',
-                membership,
-            },
-            wallet,
-        )
+    if (useLegacySpaces()) {
+        if (isLegacyMembershipType(membership)) {
+            return await spaceDapp.createLegacySpace(
+                {
+                    spaceName: `${name}-space`,
+                    uri: `${name}-space-metadata`,
+                    channelName: 'general',
+                    membership,
+                },
+                wallet,
+            )
+        } else {
+            // Convert space params to legacy space params
+            const legacyMembership = {
+                settings: membership.settings,
+                permissions: membership.permissions,
+                requirements: {
+                    everyone: membership.requirements.everyone,
+                    users: membership.requirements.users,
+                    syncEntitlements: membership.requirements.syncEntitlements,
+                    ruleData: convertRuleDataV2ToV1(
+                        decodeRuleDataV2(membership.requirements.ruleData as `0x${string}`),
+                    ),
+                },
+            } as LegacyMembershipStruct
+            return await spaceDapp.createLegacySpace(
+                {
+                    spaceName: `${name}-space`,
+                    uri: `${name}-space-metadata`,
+                    channelName: 'general',
+                    membership: legacyMembership,
+                },
+                wallet,
+            )
+        }
     } else {
         if (isLegacyMembershipType(membership)) {
             // Convert legacy space params to current space params
@@ -634,6 +665,8 @@ export async function expectUserCanJoin(
     await client.initializeUser({ spaceId })
     client.startSync()
 
+    await waitFor(() => expect(client.streams.syncState).toBe(SyncState.Syncing))
+
     await expect(client.joinStream(spaceId)).toResolve()
     await expect(client.joinStream(channelId)).toResolve()
 
@@ -648,10 +681,71 @@ export async function everyoneMembershipStruct(
     spaceDapp: ISpaceDapp,
     client: Client,
 ): Promise<LegacyMembershipStruct> {
-    const pricingModules = await spaceDapp.listPricingModules()
-    const dynamicPricingModule = getDynamicPricingModule(pricingModules)
-    expect(dynamicPricingModule).toBeDefined()
+    const { fixedPricingModuleAddress, freeAllocation, price } = await getFreeSpacePricingSetup(
+        spaceDapp,
+    )
 
+    return {
+        settings: {
+            name: 'Everyone',
+            symbol: 'MEMBER',
+            price,
+            maxSupply: 1000,
+            duration: 0,
+            currency: ETH_ADDRESS,
+            feeRecipient: client.userId,
+            freeAllocation,
+            pricingModule: fixedPricingModuleAddress,
+        },
+        permissions: [Permission.Read, Permission.Write],
+        requirements: {
+            everyone: true,
+            users: [],
+            ruleData: NoopRuleData,
+            syncEntitlements: false,
+        },
+    }
+}
+
+// should start charging after the first member joins
+export async function zeroPriceWithLimitedAllocationMembershipStruct(
+    spaceDapp: ISpaceDapp,
+    client: Client,
+    opts: { freeAllocation: number },
+): Promise<LegacyMembershipStruct> {
+    const { fixedPricingModuleAddress, price } = await getFreeSpacePricingSetup(spaceDapp)
+    const { freeAllocation } = opts
+    const settings = {
+        settings: {
+            name: 'Everyone',
+            symbol: 'MEMBER',
+            price,
+            maxSupply: 1000,
+            duration: 0,
+            currency: ETH_ADDRESS,
+            feeRecipient: client.userId,
+            freeAllocation,
+            pricingModule: fixedPricingModuleAddress,
+        },
+        permissions: [Permission.Read, Permission.Write],
+        requirements: {
+            everyone: true,
+            users: [],
+            ruleData: NoopRuleData,
+            syncEntitlements: false,
+        },
+    }
+
+    return settings
+}
+
+// should start charing for the first member
+export async function dynamicMembershipStruct(
+    spaceDapp: ISpaceDapp,
+    client: Client,
+): Promise<LegacyMembershipStruct> {
+    const dynamicPricingModule = await getDynamicPricingModule(spaceDapp)
+    expect(dynamicPricingModule).toBeDefined()
     return {
         settings: {
             name: 'Everyone',
@@ -662,7 +756,7 @@ export async function everyoneMembershipStruct(
             currency: ETH_ADDRESS,
             feeRecipient: client.userId,
             freeAllocation: 0,
-            pricingModule: dynamicPricingModule!.module,
+            pricingModule: await dynamicPricingModule.module,
         },
         permissions: [Permission.Read, Permission.Write],
         requirements: {
@@ -671,6 +765,53 @@ export async function everyoneMembershipStruct(
             ruleData: NoopRuleData,
             syncEntitlements: false,
         },
+    }
+}
+
+// should start charging after the first member joins
+export async function fixedPriceMembershipStruct(
+    spaceDapp: ISpaceDapp,
+    client: Client,
+    opts: { price: number } = { price: 1 },
+): Promise<LegacyMembershipStruct> {
+    const fixedPricingModule = await getFixedPricingModule(spaceDapp)
+    expect(fixedPricingModule).toBeDefined()
+    const { price } = opts
+    const settings = {
+        settings: {
+            name: 'Everyone',
+            symbol: 'MEMBER',
+            price: ethers.utils.parseEther(price.toString()),
+            maxSupply: 1000,
+            duration: 0,
+            currency: ETH_ADDRESS,
+            feeRecipient: client.userId,
+            freeAllocation: 0,
+            pricingModule: fixedPricingModule.module,
+        },
+        permissions: [Permission.Read, Permission.Write],
+        requirements: {
+            everyone: true,
+            users: [],
+            ruleData: NoopRuleData,
+            syncEntitlements: false,
+        },
+    }
+
+    return settings
+}
+
+export async function getFreeSpacePricingSetup(spaceDapp: ISpaceDapp): Promise<{
+    fixedPricingModuleAddress: string
+    freeAllocation: number
+    price: number
+}> {
+    const fixedPricingModule = await getFixedPricingModule(spaceDapp)
+    expect(fixedPricingModule).toBeDefined()
+    return {
+        price: 0,
+        fixedPricingModuleAddress: await fixedPricingModule.module,
+        freeAllocation: DefaultFreeAllocation,
     }
 }
 
@@ -702,6 +843,28 @@ export function twoNftRuleData(
     }
 
     return treeToRuleData(root)
+}
+
+export async function unlinkCaller(
+    rootSpaceDapp: ISpaceDapp,
+    rootWallet: ethers.Wallet,
+    caller: ethers.Wallet,
+) {
+    const walletLink = rootSpaceDapp.getWalletLink()
+    let txn: ContractTransaction | undefined
+    try {
+        txn = await walletLink.removeCallerLink(caller)
+    } catch (err: any) {
+        const parsedError = walletLink.parseError(err)
+        log('linkWallets error', parsedError)
+    }
+
+    expect(txn).toBeDefined()
+    const receipt = await txn?.wait()
+    expect(receipt!.status).toEqual(1)
+
+    const linkedWallets = await walletLink.getLinkedWallets(rootWallet.address)
+    expect(linkedWallets).not.toContain(caller.address)
 }
 
 export async function unlinkWallet(
@@ -871,17 +1034,6 @@ export function isValidEthAddress(address: string): boolean {
     return ethAddressRegex.test(address)
 }
 
-export const TIERED_PRICING_ORACLE = 'TieredLogPricingOracleV2'
-export const FIXED_PRICING = 'FixedPricing'
-
-export const getDynamicPricingModule = (pricingModules: PricingModuleStruct[]) => {
-    return pricingModules.find((module) => module.name === TIERED_PRICING_ORACLE)
-}
-
-export const getFixedPricingModule = (pricingModules: PricingModuleStruct[]) => {
-    return pricingModules.find((module) => module.name === FIXED_PRICING)
-}
-
 export function getNftRuleData(testNftAddress: Address): IRuleEntitlementV2Base.RuleDataV2Struct {
     return createExternalNFTStruct([testNftAddress])
 }
@@ -1046,9 +1198,9 @@ export async function createTownWithRequirements(requirements: {
         carolsWallet,
     } = await setupWalletsAndContexts()
 
-    const pricingModules = await bobSpaceDapp.listPricingModules()
-    const dynamicPricingModule = getDynamicPricingModule(pricingModules)
-    expect(dynamicPricingModule).toBeDefined()
+    const { fixedPricingModuleAddress, freeAllocation, price } = await getFreeSpacePricingSetup(
+        bobSpaceDapp,
+    )
 
     const userNameToWallet: Record<string, string> = {
         alice: alicesWallet.address,
@@ -1061,13 +1213,13 @@ export async function createTownWithRequirements(requirements: {
         settings: {
             name: 'Everyone',
             symbol: 'MEMBER',
-            price: 0,
+            price,
             maxSupply: 1000,
             duration: 0,
             currency: ETH_ADDRESS,
             feeRecipient: bob.userId,
-            freeAllocation: 0,
-            pricingModule: dynamicPricingModule!.module,
+            freeAllocation,
+            pricingModule: fixedPricingModuleAddress,
         },
         permissions: [Permission.Read, Permission.Write],
         requirements: {
@@ -1293,4 +1445,14 @@ export async function expectUserCannotJoinChannel(
 
     // Stream node should not allow the join
     await expect(client.joinStream(channelId)).rejects.toThrow(/7:PERMISSION_DENIED/)
+}
+
+export const findMessageByText = (
+    events: TimelineEvent[],
+    text: string,
+): TimelineEvent | undefined => {
+    return events.find(
+        (event) =>
+            event.content?.kind === RiverTimelineEvent.RoomMessage && event.content.body === text,
+    )
 }

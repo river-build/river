@@ -61,7 +61,7 @@ import {
     MlsInitializeGroup,
     MlsExternalJoin,
 } from '@river-build/encryption'
-import { StreamRpcClient } from './makeStreamRpcClient'
+import { getMaxTimeoutMs, StreamRpcClient } from './makeStreamRpcClient'
 import { errorContains, getRpcErrorProperty } from './rpcInterceptors'
 import { assert, isDefined } from './check'
 import EventEmitter from 'events'
@@ -578,7 +578,7 @@ export class Client
                 await this.streams.addStreamToSync(stream.view.syncCookie)
             }
         } catch (err) {
-            this.logError('Failed to initialize stream', streamId)
+            this.logError('Failed to create stream', streamId)
             this.streams.delete(streamId)
             this.creatingStreamIds.delete(streamId)
             throw err
@@ -1131,7 +1131,7 @@ export class Client
         opts?: { timeoutMs?: number; logId?: string },
     ): Promise<Stream> {
         this.logCall('waitForStream', inStreamId)
-        const timeoutMs = opts?.timeoutMs ?? 15000
+        const timeoutMs = opts?.timeoutMs ?? getMaxTimeoutMs(this.rpcClient.opts)
         const streamId = streamIdAsString(inStreamId)
         let stream = this.stream(streamId)
         if (stream !== undefined && stream.view.isInitialized) {
@@ -1309,9 +1309,9 @@ export class Client
                     // We need to remove the stream from syncedStreams, since we added it above
                     this.streams.delete(streamId)
                     throw new Error(
-                        `Failed to initialize stream ${streamIdAsString(
+                        `Failed to initialize stream from persistence ${streamIdAsString(
                             streamId,
-                        )} from persistence`,
+                        )}`,
                     )
                 }
 
@@ -1326,8 +1326,9 @@ export class Client
                         await this.streams.addStreamToSync(stream.view.syncCookie)
                     }
                 } catch (err) {
-                    this.logError('Failed to initialize stream', streamId)
+                    this.logError('Failed to initialize stream', streamId, err)
                     this.streams.delete(streamId)
+                    throw err
                 }
                 return stream
             }
@@ -1841,7 +1842,15 @@ export class Client
                 if (
                     userStream.userContent.streamMemberships[channelId]?.op === MembershipOp.SO_JOIN
                 ) {
-                    await this.removeUser(channelId, userId)
+                    try {
+                        await this.removeUser(channelId, userId)
+                    } catch (error) {
+                        this.logError('Failed to remove user from channel', {
+                            channelId,
+                            userId,
+                            error,
+                        })
+                    }
                 }
             }
         }

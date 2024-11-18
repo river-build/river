@@ -2,44 +2,41 @@ package storage
 
 import (
 	"context"
-	"embed"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/exaring/otelpgx"
+	"github.com/golang-migrate/migrate/v4"
+	pgxmigrate "github.com/golang-migrate/migrate/v4/database/pgx/v5"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/river-build/river/core/config"
 	. "github.com/river-build/river/core/node/base"
+	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
 	. "github.com/river-build/river/core/node/protocol"
-
-	"github.com/river-build/river/core/node/dlog"
-
-	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"golang.org/x/sync/semaphore"
-
-	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	"github.com/golang-migrate/migrate/v4/source/iofs"
 )
 
 type PostgresEventStore struct {
-	config       *config.DatabaseConfig
-	pool         *pgxpool.Pool
-	schemaName   string
-	dbUrl        string
-	migrationDir embed.FS
+	config     *config.DatabaseConfig
+	pool       *pgxpool.Pool
+	poolConfig *pgxpool.Config
+	schemaName string
+	dbUrl      string
 
-	regularConnections   *semaphore.Weighted
-	streamingConnections *semaphore.Weighted
+	preMigrationTx func(context.Context, pgx.Tx) error
+	migrationDir   fs.FS
 
 	txCounter  *infra.StatusCounterVec
 	txDuration *prometheus.HistogramVec
@@ -129,7 +126,7 @@ func (s *PostgresEventStore) txRunner(
 			pass := false
 
 			if pgErr, ok := err.(*pgconn.PgError); ok {
-				if pgErr.Code == pgerrcode.SerializationFailure {
+				if pgErr.Code == pgerrcode.SerializationFailure || pgErr.Code == pgerrcode.DeadlockDetected {
 					backoffErr := backoff.wait(ctx)
 					if backoffErr != nil {
 						return AsRiverError(backoffErr).Func(name).Message("Timed out waiting for backoff")
@@ -174,10 +171,11 @@ func (s *PostgresEventStore) txRunner(
 }
 
 type PgxPoolInfo struct {
-	Pool   *pgxpool.Pool
-	Url    string
-	Schema string
-	Config *config.DatabaseConfig
+	Pool       *pgxpool.Pool
+	PoolConfig *pgxpool.Config
+	Url        string
+	Schema     string
+	Config     *config.DatabaseConfig
 }
 
 func createAndValidatePgxPool(
@@ -218,10 +216,11 @@ func createAndValidatePgxPool(
 	}
 
 	return &PgxPoolInfo{
-		Pool:   pool,
-		Url:    databaseUrl,
-		Schema: databaseSchemaName,
-		Config: cfg,
+		Pool:       pool,
+		PoolConfig: poolConf,
+		Url:        databaseUrl,
+		Schema:     databaseSchemaName,
+		Config:     cfg,
 	}, nil
 }
 
@@ -245,7 +244,7 @@ func NewPostgresEventStore(
 	metrics infra.MetricsFactory,
 ) (*PostgresEventStore, error) {
 	store := &PostgresEventStore{}
-	if err := store.init(ctx, poolInfo, metrics, migrationsDir); err != nil {
+	if err := store.init(ctx, poolInfo, metrics, nil, migrationsDir); err != nil {
 		return nil, AsRiverError(err).Func("NewPostgresEventStore")
 	}
 	return store, nil
@@ -266,22 +265,56 @@ type PostgresStatusResult struct {
 	MaxIdleDestroyCount     int64         `json:"max_idle_destroy_count"`
 	Version                 string        `json:"version"`
 	SystemId                string        `json:"system_id"`
+
+	MigratedStreams   int64
+	UnmigratedStreams int64
+	NumPartitions     int64
 }
 
 func PreparePostgresStatus(ctx context.Context, pool PgxPoolInfo) PostgresStatusResult {
+	log := dlog.FromCtx(ctx)
 	poolStat := pool.Pool.Stat()
 	// Query to get PostgreSQL version
 	var version string
 	err := pool.Pool.QueryRow(ctx, "SELECT version()").Scan(&version)
 	if err != nil {
 		version = fmt.Sprintf("Error: %v", err)
-		dlog.FromCtx(ctx).Error("failed to get PostgreSQL version", "err", err)
+		log.Error("failed to get PostgreSQL version", "err", err)
 	}
 
 	var systemId string
 	err = pool.Pool.QueryRow(ctx, "SELECT system_identifier FROM pg_control_system()").Scan(&systemId)
 	if err != nil {
 		systemId = fmt.Sprintf("Error: %v", err)
+	}
+
+	// Note: the following statistics apply to stream stores, and not to pg stores generally.
+	// These tables may also not exist until migrations are run.
+	var migratedStreams, unmigratedStreams, numPartitions int64
+	err = pool.Pool.QueryRow(ctx, "SELECT count(*) FROM es WHERE migrated=false").Scan(&unmigratedStreams)
+	if err != nil {
+		// Ignore nonexistent table or missing column, which occurs when stats are collected before migration completes
+		if pgerr, ok := err.(*pgconn.PgError); ok && pgerr.Code != pgerrcode.UndefinedTable &&
+			pgerr.Code != pgerrcode.UndefinedColumn {
+			log.Error("Error calculating unmigrated stream count", "error", err)
+		}
+	}
+
+	err = pool.Pool.QueryRow(ctx, "SELECT count(*) FROM es WHERE migrated=true").Scan(&migratedStreams)
+	if err != nil {
+		// Ignore nonexistent table or missing column, which occurs when stats are collected before migration completes
+		if pgerr, ok := err.(*pgconn.PgError); ok && pgerr.Code != pgerrcode.UndefinedTable &&
+			pgerr.Code != pgerrcode.UndefinedColumn {
+			log.Error("Error calculating migrated stream count", "error", err)
+		}
+	}
+
+	err = pool.Pool.QueryRow(ctx, "SELECT num_partitions FROM settings WHERE single_row_key=true").Scan(&numPartitions)
+	if err != nil {
+		// Ignore nonexistent table, which occurs when stats are collected before migration
+		if pgerr, ok := err.(*pgconn.PgError); ok && pgerr.Code != pgerrcode.UndefinedTable {
+			log.Error("Error calculating partition count", "error", err)
+		}
 	}
 
 	return PostgresStatusResult{
@@ -299,6 +332,9 @@ func PreparePostgresStatus(ctx context.Context, pool PgxPoolInfo) PostgresStatus
 		MaxIdleDestroyCount:     poolStat.MaxIdleDestroyCount(),
 		Version:                 version,
 		SystemId:                systemId,
+		MigratedStreams:         migratedStreams,
+		UnmigratedStreams:       unmigratedStreams,
+		NumPartitions:           numPartitions,
 	}
 }
 
@@ -373,6 +409,21 @@ func SetupPostgresMetrics(ctx context.Context, pool PgxPoolInfo, factory infra.M
 			"postgres_max_idle_destroy_count",
 			"Total number of connections destroyed due to MaxConnIdleTime",
 			func(s PostgresStatusResult) float64 { return float64(s.MaxIdleDestroyCount) },
+		},
+		{
+			"postgres_unmigrated_streams",
+			"Total streams stored in legacy schema layout",
+			func(s PostgresStatusResult) float64 { return float64(s.UnmigratedStreams) },
+		},
+		{
+			"postgres_migrated_streams",
+			"Total streams stored in fixed partition schema layout",
+			func(s PostgresStatusResult) float64 { return float64(s.MigratedStreams) },
+		},
+		{
+			"postgres_num_stream_partitions",
+			"Total partitions used in fixed partition schema layout",
+			func(s PostgresStatusResult) float64 { return float64(s.NumPartitions) },
 		},
 	}
 
@@ -451,57 +502,26 @@ func SetupPostgresMetrics(ctx context.Context, pool PgxPoolInfo, factory infra.M
 	}()
 }
 
-// Disallow allocating more than 30% of connections for streaming connections.
-var MaxStreamingConnectionsRatio float32 = 0.3
-
 func (s *PostgresEventStore) init(
 	ctx context.Context,
 	poolInfo *PgxPoolInfo,
 	metrics infra.MetricsFactory,
-	migrations embed.FS,
+	preMigrationTxn func(context.Context, pgx.Tx) error,
+	migrations fs.FS,
 ) error {
 	log := dlog.FromCtx(ctx)
 
-	streamingConnectionRatio := poolInfo.Config.StreamingConnectionsRatio
-	// Bounds check the streaming connection ratio
-	// TODO: when we add streaming calls, we should make the minimum larger, perhaps 5%.
-	if streamingConnectionRatio < 0 {
-		log.Info(
-			"Invalid streaming connection ratio, setting to 0",
-			"streamingConnectionRatio",
-			streamingConnectionRatio,
-		)
-		streamingConnectionRatio = 0
-	}
-	// Limit the ratio of available connections reserved for streaming to 30%
-	if streamingConnectionRatio > MaxStreamingConnectionsRatio {
-		log.Info(
-			"Invalid streaming connection ratio, setting to maximum of 30%",
-			"streamingConnectionRatio",
-			streamingConnectionRatio,
-		)
-		streamingConnectionRatio = MaxStreamingConnectionsRatio
-	}
-
-	var totalReservableConns int64 = int64(poolInfo.Pool.Config().MaxConns) - 1 // reserve one connection for creating listeners
-	var numRegularConnections int64 = int64(float32(totalReservableConns) * (1 - streamingConnectionRatio))
-	var numStreamingConnections int64 = totalReservableConns - numRegularConnections
-
-	// Ensure there is at least one connection set aside for streaming queries even though we're not using them at
-	// this time.
-	if numStreamingConnections < 1 {
-		numStreamingConnections += 1
-		numRegularConnections -= 1
-	}
 	SetupPostgresMetrics(ctx, *poolInfo, metrics)
 
 	s.config = poolInfo.Config
 	s.pool = poolInfo.Pool
+	s.poolConfig = poolInfo.PoolConfig
 	s.schemaName = poolInfo.Schema
 	s.dbUrl = poolInfo.Url
+
+	s.preMigrationTx = preMigrationTxn
 	s.migrationDir = migrations
-	s.regularConnections = semaphore.NewWeighted(numRegularConnections)
-	s.streamingConnections = semaphore.NewWeighted(numStreamingConnections)
+
 	s.txCounter = metrics.NewStatusCounterVecEx("dbtx_status", "PG transaction status", "name")
 	s.txDuration = metrics.NewHistogramVecEx(
 		"dbtx_duration_seconds",
@@ -529,27 +549,6 @@ func (s *PostgresEventStore) init(
 	if err != nil {
 		return err
 	}
-
-	// TODO: publish these as metrics
-	// stats thread
-	// go func() {
-	// 	for {
-	// 		timer := time.NewTimer(PG_REPORT_INTERVAL)
-	// 		select {
-	// 		case <-ctx.Done():
-	// 			timer.Stop()
-	// 			return
-	// 		case <-timer.C:
-	// 			stats := pool.Stat()
-	// 			log.Debug("PG pool stats",
-	// 				"acquireCount", stats.AcquireCount(),
-	// 				"acquiredConns", stats.AcquiredConns(),
-	// 				"idleConns", stats.IdleConns(),
-	// 				"totalConns", stats.TotalConns(),
-	// 			)
-	// 		}
-	// 	}
-	// }()
 
 	return nil
 }
@@ -596,33 +595,36 @@ func (s *PostgresEventStore) createSchemaTx(ctx context.Context, tx pgx.Tx) erro
 	return nil
 }
 
-func getSSLMode(dbURL string) string {
-	if strings.Contains(dbURL, "sslmode=") {
-		startIndex := strings.Index(dbURL, "sslmode=") + len("sslmode=")
-		endIndex := strings.Index(dbURL[startIndex:], "&")
-		if endIndex == -1 {
-			endIndex = len(dbURL)
-		} else {
-			endIndex += startIndex
-		}
-		return dbURL[startIndex:endIndex]
-	}
-	return "disable"
-}
-
 func (s *PostgresEventStore) runMigrations(ctx context.Context) error {
 	// Run migrations
-	iofsMigrationsDir, err := iofs.New(s.migrationDir, "migrations")
+	migrationsPath := "migrations"
+	iofsMigrationsDir, err := iofs.New(s.migrationDir, migrationsPath)
 	if err != nil {
 		return WrapRiverError(Err_DB_OPERATION_FAILURE, err).Message("Error loading migrations")
 	}
 
-	dbUrlWithSchema := strings.Split(s.dbUrl, "?")[0] + fmt.Sprintf(
-		"?sslmode=%s&search_path=%v,public",
-		getSSLMode(s.dbUrl),
-		s.schemaName,
-	)
-	migration, err := migrate.NewWithSourceInstance("iofs", iofsMigrationsDir, dbUrlWithSchema)
+	// Create a new connection pool with the same configuration for migrations.
+	// Note: pgxmigrate.WithInstance takes ownership of the provided pool.
+	pool, err := pgxpool.NewWithConfig(ctx, s.poolConfig)
+	if err != nil {
+		return WrapRiverError(Err_DB_OPERATION_FAILURE, err).Message("Failed to create pool for migrations")
+	}
+	defer pool.Close()
+
+	pgxDriver, err := pgxmigrate.WithInstance(
+		stdlib.OpenDBFromPool(pool),
+		&pgxmigrate.Config{
+			SchemaName: s.schemaName,
+		})
+	if err != nil {
+		return WrapRiverError(Err_DB_OPERATION_FAILURE, err).Message("Failed to initialize pgx driver for migration")
+	}
+
+	migration, err := migrate.NewWithInstance("iofs", iofsMigrationsDir, "pgx", pgxDriver)
+	defer func() {
+		_, _ = migration.Close()
+	}()
+
 	if err != nil {
 		return WrapRiverError(Err_DB_OPERATION_FAILURE, err).Message("Error creating migration instance")
 	}
@@ -644,6 +646,21 @@ func (s *PostgresEventStore) initStorage(ctx context.Context) error {
 	)
 	if err != nil {
 		return err
+	}
+
+	// Optionally run a transaction before the migrations are applied
+	if s.preMigrationTx != nil {
+		log := dlog.FromCtx(ctx)
+		log.Info("Running pre-migration transaction")
+		if err := s.txRunner(
+			ctx,
+			"preMigrationTx",
+			pgx.ReadWrite,
+			s.preMigrationTx,
+			&txRunnerOpts{},
+		); err != nil {
+			return err
+		}
 	}
 
 	err = s.runMigrations(ctx)

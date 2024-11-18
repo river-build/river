@@ -11,7 +11,7 @@ import {IPricingModules} from "contracts/src/factory/facets/architect/pricing/IP
 // libraries
 import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
 import {MembershipStorage} from "./MembershipStorage.sol";
-
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 // contracts
 import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 
@@ -30,9 +30,6 @@ abstract contract MembershipBase is IMembershipBase {
     if (info.freeAllocation > 0) {
       _verifyFreeAllocation(info.freeAllocation);
       ds.freeAllocation = info.freeAllocation;
-    } else {
-      ds.freeAllocation = IPlatformRequirements(ds.spaceFactory)
-        .getMembershipMintLimit();
     }
 
     ds.freeAllocationEnabled = true;
@@ -109,7 +106,13 @@ abstract contract MembershipBase is IMembershipBase {
   }
 
   function _getCreatorBalance() internal view returns (uint256) {
-    return MembershipStorage.layout().tokenBalance;
+    MembershipStorage.Layout storage ds = MembershipStorage.layout();
+    uint256 contractBalance = address(this).balance;
+    return FixedPointMathLib.min(contractBalance, ds.tokenBalance);
+  }
+
+  function _setCreatorBalance(uint256 newBalance) internal {
+    MembershipStorage.layout().tokenBalance = newBalance;
   }
 
   // =============================================================
@@ -156,14 +159,19 @@ abstract contract MembershipBase is IMembershipBase {
     // get free allocation
     uint256 freeAllocation = _getMembershipFreeAllocation();
 
-    if (ds.pricingModule != address(0))
-      return
-        IMembershipPricing(ds.pricingModule).getPrice(
-          freeAllocation,
-          totalSupply
-        );
+    uint256 membershipPrice = IMembershipPricing(ds.pricingModule).getPrice(
+      freeAllocation,
+      totalSupply
+    );
 
-    return IPlatformRequirements(ds.spaceFactory).getMembershipMinPrice();
+    IPlatformRequirements platform = IPlatformRequirements(_getSpaceFactory());
+
+    uint256 minPrice = platform.getMembershipMinPrice();
+    uint256 fixedFee = platform.getMembershipFee();
+
+    if (membershipPrice < minPrice) return fixedFee;
+
+    return membershipPrice;
   }
 
   function _setMembershipRenewalPrice(

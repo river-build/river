@@ -3,12 +3,17 @@ package registries
 import (
 	"context"
 	"math/big"
+	"slices"
+	"sync/atomic"
+	"time"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/gammazero/workerpool"
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/river"
@@ -40,12 +45,14 @@ type RiverRegistryContract struct {
 	Address   common.Address
 	Addresses []common.Address
 
+	Settings *config.RiverRegistryConfig
+
 	errDecoder *crypto.EvmErrorDecoder
 }
 
 type EventInfo struct {
 	Name  string
-	Maker func() any
+	Maker func(*types.Log) any
 }
 
 func initContract[T any](
@@ -108,11 +115,13 @@ func NewRiverRegistryContract(
 	ctx context.Context,
 	blockchain *crypto.Blockchain,
 	cfg *config.ContractConfig,
+	settings *config.RiverRegistryConfig,
 ) (*RiverRegistryContract, error) {
 	c := &RiverRegistryContract{
 		Blockchain: blockchain,
 		Address:    cfg.Address,
 		Addresses:  []common.Address{cfg.Address},
+		Settings:   settings,
 	}
 
 	var err error
@@ -135,10 +144,13 @@ func NewRiverRegistryContract(
 		blockchain.Client,
 		river.NodeRegistryV1MetaData,
 		[]*EventInfo{
-			{"NodeAdded", func() any { return new(river.NodeRegistryV1NodeAdded) }},
-			{"NodeRemoved", func() any { return new(river.NodeRegistryV1NodeRemoved) }},
-			{"NodeStatusUpdated", func() any { return new(river.NodeRegistryV1NodeStatusUpdated) }},
-			{"NodeUrlUpdated", func() any { return new(river.NodeRegistryV1NodeUrlUpdated) }},
+			{"NodeAdded", func(log *types.Log) any { return &river.NodeRegistryV1NodeAdded{Raw: *log} }},
+			{"NodeRemoved", func(log *types.Log) any { return &river.NodeRegistryV1NodeRemoved{Raw: *log} }},
+			{
+				"NodeStatusUpdated",
+				func(log *types.Log) any { return &river.NodeRegistryV1NodeStatusUpdated{Raw: *log} },
+			},
+			{"NodeUrlUpdated", func(log *types.Log) any { return &river.NodeRegistryV1NodeUrlUpdated{Raw: *log} }},
 		},
 	)
 	if err != nil {
@@ -152,14 +164,17 @@ func NewRiverRegistryContract(
 		blockchain.Client,
 		river.StreamRegistryV1MetaData,
 		[]*EventInfo{
-			{river.Event_StreamAllocated, func() any { return new(river.StreamRegistryV1StreamAllocated) }},
+			{
+				river.Event_StreamAllocated,
+				func(log *types.Log) any { return &river.StreamRegistryV1StreamAllocated{Raw: *log} },
+			},
 			{
 				river.Event_StreamLastMiniblockUpdated,
-				func() any { return new(river.StreamRegistryV1StreamLastMiniblockUpdated) },
+				func(log *types.Log) any { return &river.StreamRegistryV1StreamLastMiniblockUpdated{Raw: *log} },
 			},
 			{
 				river.Event_StreamPlacementUpdated,
-				func() any { return new(river.StreamRegistryV1StreamPlacementUpdated) },
+				func(log *types.Log) any { return &river.StreamRegistryV1StreamPlacementUpdated{Raw: *log} },
 			},
 		},
 	)
@@ -244,8 +259,12 @@ func makeGetStreamResult(streamId StreamId, stream *river.Stream) *GetStreamResu
 	}
 }
 
-func (c *RiverRegistryContract) GetStream(ctx context.Context, streamId StreamId) (*GetStreamResult, error) {
-	stream, err := c.StreamRegistry.GetStream(c.callOpts(ctx), streamId)
+func (c *RiverRegistryContract) GetStream(
+	ctx context.Context,
+	streamId StreamId,
+	blockNum crypto.BlockNumber,
+) (*GetStreamResult, error) {
+	stream, err := c.StreamRegistry.GetStream(c.callOptsWithBlockNum(ctx, blockNum), streamId)
 	if err != nil {
 		return nil, WrapRiverError(Err_CANNOT_CALL_CONTRACT, err).Func("GetStream").Message("Call failed")
 	}
@@ -282,6 +301,73 @@ func (c *RiverRegistryContract) GetStreamCount(ctx context.Context, blockNum cry
 
 var ZeroBytes32 = [32]byte{}
 
+func (c *RiverRegistryContract) callGetPaginatedStreams(
+	ctx context.Context,
+	blockNum crypto.BlockNumber,
+	start int64,
+	end int64,
+) ([]river.StreamWithId, bool, error) {
+	if c.Settings.SingleCallTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, c.Settings.SingleCallTimeout)
+		defer cancel()
+	}
+
+	callOpts := c.callOptsWithBlockNum(ctx, blockNum)
+	streams, lastPage, err := c.StreamRegistry.GetPaginatedStreams(callOpts, big.NewInt(start), big.NewInt(end))
+	if err != nil {
+		return nil, false, WrapRiverError(Err_CANNOT_CALL_CONTRACT, err).Func("ForAllStreams")
+	}
+
+	return streams, lastPage, nil
+}
+
+func (c *RiverRegistryContract) callGetPaginatedStreamsWithBackoff(
+	ctx context.Context,
+	blockNum crypto.BlockNumber,
+	start int64,
+	end int64,
+) ([]river.StreamWithId, bool, error) {
+	bo := c.createBackoff()
+	bo.Reset()
+	for {
+		streams, lastPage, err := c.callGetPaginatedStreams(ctx, blockNum, start, end)
+		if err == nil {
+			return streams, lastPage, nil
+		}
+		if !waitForBackoff(ctx, bo) {
+			return nil, false, err
+		}
+	}
+}
+
+func (c *RiverRegistryContract) createBackoff() backoff.BackOff {
+	var bo backoff.BackOff
+	bo = backoff.NewExponentialBackOff(
+		backoff.WithInitialInterval(100*time.Millisecond),
+		backoff.WithRandomizationFactor(0.2),
+		backoff.WithMaxElapsedTime(c.Settings.MaxRetryElapsedTime),
+		backoff.WithMaxInterval(5*time.Second),
+	)
+	if c.Settings.MaxRetries > 0 {
+		bo = backoff.WithMaxRetries(bo, uint64(c.Settings.MaxRetries))
+	}
+	return bo
+}
+
+func waitForBackoff(ctx context.Context, bo backoff.BackOff) bool {
+	b := bo.NextBackOff()
+	if b == backoff.Stop {
+		return false
+	}
+	select {
+	case <-ctx.Done():
+		return false
+	case <-time.After(b):
+		return true
+	}
+}
+
 // ForAllStreams calls the given cb for all streams that are registered in the river registry at the given block num.
 // If cb returns false ForAllStreams returns.
 func (c *RiverRegistryContract) ForAllStreams(
@@ -289,21 +375,64 @@ func (c *RiverRegistryContract) ForAllStreams(
 	blockNum crypto.BlockNumber,
 	cb func(*GetStreamResult) bool,
 ) error {
-	// TODO: setting
-	const pageSize = int64(5000)
+	if c.Settings.ParallelReaders > 1 {
+		return c.forAllStreamsParallel(ctx, blockNum, cb)
+	} else {
+		return c.forAllStreamsSingle(ctx, blockNum, cb)
+	}
+}
+
+func (c *RiverRegistryContract) forAllStreamsSingle(
+	ctx context.Context,
+	blockNum crypto.BlockNumber,
+	cb func(*GetStreamResult) bool,
+) error {
+	log := dlog.FromCtx(ctx)
+	pageSize := int64(c.Settings.PageSize)
+	if pageSize <= 0 {
+		pageSize = 5000
+	}
+
+	progressReportInterval := c.Settings.ProgressReportInterval
+	if progressReportInterval <= 0 {
+		progressReportInterval = 10 * time.Second
+	}
+
+	bo := c.createBackoff()
 
 	lastPage := false
 	var err error
 	var streams []river.StreamWithId
+	startTime := time.Now()
+	lastReport := time.Now()
+	totalStreams := int64(0)
 	for i := int64(0); !lastPage; i += pageSize {
-		callOpts := c.callOptsWithBlockNum(ctx, blockNum)
-		streams, lastPage, err = c.StreamRegistry.GetPaginatedStreams(callOpts, big.NewInt(i), big.NewInt(i+pageSize))
-		if err != nil {
-			return WrapRiverError(
-				Err_CANNOT_CALL_CONTRACT,
-				err,
-			).Func("GetStreamByIndex").
-				Message("Smart contract call failed")
+		bo.Reset()
+		for {
+			now := time.Now()
+			if now.Sub(lastReport) > progressReportInterval {
+				elapsed := time.Since(startTime)
+				log.Info(
+					"RiverRegistryContract: GetPaginatedStreams in progress",
+					"pagesCompleted",
+					i,
+					"pageSize",
+					pageSize,
+					"elapsed",
+					elapsed,
+					"streamPerSecond",
+					float64(i)/elapsed.Seconds(),
+				)
+				lastReport = now
+			}
+
+			streams, lastPage, err = c.callGetPaginatedStreams(ctx, blockNum, i, i+pageSize)
+			if err == nil {
+				break
+			}
+			if !waitForBackoff(ctx, bo) {
+				return err
+			}
 		}
 		for _, stream := range streams {
 			if stream.Id == ZeroBytes32 {
@@ -313,29 +442,158 @@ func (c *RiverRegistryContract) ForAllStreams(
 			if err != nil {
 				return err
 			}
+			totalStreams++
 			if !cb(makeGetStreamResult(streamId, &stream.Stream)) {
 				return nil
 			}
 		}
 	}
 
+	elapsed := time.Since(startTime)
+	log.Info(
+		"RiverRegistryContract: GetPaginatedStreams completed",
+		"elapsed",
+		elapsed,
+		"streamsPerSecond",
+		float64(totalStreams)/elapsed.Seconds(),
+	)
+
 	return nil
 }
 
-func (c *RiverRegistryContract) GetAllStreams(
+func (c *RiverRegistryContract) forAllStreamsParallel(
 	ctx context.Context,
 	blockNum crypto.BlockNumber,
-) ([]*GetStreamResult, error) {
-	ret := make([]*GetStreamResult, 0, 5000)
+	cb func(*GetStreamResult) bool,
+) error {
+	log := dlog.FromCtx(ctx)
+	ctx, cancelCtx := context.WithCancel(ctx)
+	defer cancelCtx()
 
-	if err := c.ForAllStreams(ctx, blockNum, func(r *GetStreamResult) bool {
-		ret = append(ret, r)
-		return true
-	}); err != nil {
-		return nil, err
+	numWorkers := c.Settings.ParallelReaders
+	if numWorkers <= 1 {
+		numWorkers = 8
 	}
 
-	return ret, nil
+	pageSize := int64(c.Settings.PageSize)
+	if pageSize <= 0 {
+		pageSize = 5000
+	}
+
+	progressReportInterval := c.Settings.ProgressReportInterval
+	if progressReportInterval <= 0 {
+		progressReportInterval = 10 * time.Second
+	}
+
+	numStreamsBigInt, err := c.StreamRegistry.GetStreamCount(c.callOptsWithBlockNum(ctx, blockNum))
+	if err != nil {
+		return WrapRiverError(Err_CANNOT_CALL_CONTRACT, err).Func("ForAllStreams")
+	}
+	numStreams := numStreamsBigInt.Int64()
+
+	if numStreams <= 0 {
+		log.Info("RiverRegistryContract: GetPaginatedStreams no streams found", "blockNum", blockNum)
+		return nil
+	}
+
+	log.Info(
+		"RiverRegistryContract: GetPaginatedStreams starting parallel read",
+		"numStreams",
+		numStreams,
+		"RiverRegistry.PageSize",
+		pageSize,
+		"RiverRegistry.ParallelReaders",
+		numWorkers,
+		"blockNum",
+		blockNum,
+	)
+
+	chResults := make(chan []river.StreamWithId, numWorkers)
+	chErrors := make(chan error, numWorkers)
+
+	pool := workerpool.New(numWorkers)
+
+	startTime := time.Now()
+	lastReport := time.Now()
+	var taskCounter atomic.Int64
+	for i := int64(0); i < numStreams; i += pageSize {
+		taskCounter.Add(1)
+		pool.Submit(func() {
+			streams, _, err := c.callGetPaginatedStreamsWithBackoff(ctx, blockNum, i, i+pageSize)
+			if err == nil {
+				select {
+				case chResults <- streams:
+				case <-ctx.Done():
+				}
+			} else {
+				select {
+				case chErrors <- err:
+				case <-ctx.Done():
+				}
+			}
+			taskCounter.Add(-1)
+		})
+	}
+
+	totalStreams := int64(0)
+OuterLoop:
+	for {
+		now := time.Now()
+		if now.Sub(lastReport) > progressReportInterval {
+			elapsed := time.Since(startTime)
+			log.Info(
+				"RiverRegistryContract: GetPaginatedStreams in progress",
+				"streamsRead",
+				totalStreams,
+				"elapsed",
+				elapsed,
+				"streamPerSecond",
+				float64(totalStreams)/elapsed.Seconds(),
+			)
+			lastReport = now
+		}
+		select {
+		case streams := <-chResults:
+			for _, stream := range streams {
+				if stream.Id == ZeroBytes32 {
+					continue
+				}
+				totalStreams++
+				if !cb(makeGetStreamResult(stream.Id, &stream.Stream)) {
+					break OuterLoop
+				}
+			}
+			if taskCounter.Load() == 0 {
+				break OuterLoop
+			}
+		case receivedErr := <-chErrors:
+			err = receivedErr
+			break OuterLoop
+		case <-ctx.Done():
+			err = ctx.Err()
+			break OuterLoop
+		case <-time.After(10 * time.Second):
+			continue
+		}
+	}
+
+	cancelCtx()
+	go pool.Stop()
+
+	if err != nil {
+		return err
+	}
+
+	elapsed := time.Since(startTime)
+	log.Info(
+		"RiverRegistryContract: GetPaginatedStreams completed",
+		"elapsed",
+		elapsed,
+		"streamsPerSecond",
+		float64(totalStreams)/elapsed.Seconds(),
+	)
+
+	return nil
 }
 
 // SetStreamLastMiniblockBatch sets the given block proposal in the RiverRegistry#StreamRegistry facet as the new
@@ -557,7 +815,7 @@ func (c *RiverRegistryContract) GetNodeEventsForBlock(ctx context.Context, block
 	}
 	var ret []any
 	for _, log := range logs {
-		ee, err := c.ParseEvent(ctx, c.NodeRegistry.BoundContract(), c.NodeEventInfo, log)
+		ee, err := c.ParseEvent(ctx, c.NodeRegistry.BoundContract(), c.NodeEventInfo, &log)
 		if err != nil {
 			return nil, err
 		}
@@ -570,7 +828,7 @@ func (c *RiverRegistryContract) ParseEvent(
 	ctx context.Context,
 	boundContract *bind.BoundContract,
 	info map[common.Hash]*EventInfo,
-	log types.Log,
+	log *types.Log,
 ) (any, error) {
 	if len(log.Topics) == 0 {
 		return nil, RiverError(Err_INTERNAL, "Empty topics in log", "log", log).Func("ParseEvent")
@@ -579,8 +837,8 @@ func (c *RiverRegistryContract) ParseEvent(
 	if !ok {
 		return nil, RiverError(Err_INTERNAL, "Event not found", "id", log.Topics[0]).Func("ParseEvent")
 	}
-	ee := eventInfo.Maker()
-	err := boundContract.UnpackLog(ee, eventInfo.Name, log)
+	ee := eventInfo.Maker(log)
+	err := boundContract.UnpackLog(ee, eventInfo.Name, *log)
 	if err != nil {
 		return nil, WrapRiverError(
 			Err_CANNOT_CALL_CONTRACT,
@@ -603,7 +861,7 @@ func (c *RiverRegistryContract) OnStreamEvent(
 		c.Address,
 		c.StreamEventTopics,
 		func(ctx context.Context, log types.Log) {
-			parsed, err := c.ParseEvent(ctx, c.StreamRegistry.BoundContract(), c.StreamEventInfo, log)
+			parsed, err := c.ParseEvent(ctx, c.StreamRegistry.BoundContract(), c.StreamEventInfo, &log)
 			if err != nil {
 				dlog.FromCtx(ctx).Error("Failed to parse event", "err", err, "log", log)
 				return
@@ -620,4 +878,21 @@ func (c *RiverRegistryContract) OnStreamEvent(
 			}
 		})
 	return nil
+}
+
+func (c *RiverRegistryContract) FilterStreamEvents(ctx context.Context, logs []*types.Log) ([]any, []error) {
+	ret := []any{}
+	var finalErrs []error
+	for _, log := range logs {
+		if log.Address != c.Address || len(log.Topics) == 0 || !slices.Contains(c.StreamEventTopics[0], log.Topics[0]) {
+			continue
+		}
+		parsed, err := c.ParseEvent(ctx, c.StreamRegistry.BoundContract(), c.StreamEventInfo, log)
+		if err != nil {
+			finalErrs = append(finalErrs, err)
+			continue
+		}
+		ret = append(ret, parsed)
+	}
+	return ret, finalErrs
 }
