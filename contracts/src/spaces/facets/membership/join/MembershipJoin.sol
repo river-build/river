@@ -79,13 +79,13 @@ abstract contract MembershipJoin is
       : IMembership.joinSpaceWithReferral.selector;
 
     bytes32 transactionId = _registerTransaction(
-      sender,
+      receiver,
       _encodeJoinSpaceData(selector, sender, receiver, referralData),
       msg.value
     );
 
     (bool isEntitled, bool isCrosschainPending) = _checkEntitlement(
-      sender,
+      receiver,
       transactionId
     );
 
