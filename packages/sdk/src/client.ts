@@ -2381,6 +2381,7 @@ export class Client
         return this.cryptoBackend.encryptGroupEvent(streamId, cleartext)
     }
 
+    // Sends an event
     async mls_joinOrCreateGroup(streamId: string): Promise<void> {
         if (!this.mlsCrypto) {
             throw new Error('mls backend not initialized')
@@ -2397,6 +2398,7 @@ export class Client
         }
         await stream.waitForMembership(MembershipOp.SO_JOIN)
         const latestGroupInfo = stream.view.membershipContent.mls.latestGroupInfo
+        let joinOrCreateEvent: PlainMessage<StreamEvent>['payload']
         if (!latestGroupInfo) {
             // join via group create
             const groupInfoWithExternalKey = await this.mlsCrypto.createGroup(streamId)
@@ -2404,19 +2406,16 @@ export class Client
             this.mlsCrypto.log('trying to initialize a group', {
                 groupInfo: shortenHexString(bin_toHexString(groupInfoWithExternalKey)),
             })
-            await this.makeEventAndAddToStream(
-                streamId,
-                make_MemberPayload_Mls({
-                    content: {
-                        case: 'initializeGroup',
-                        value: {
-                            groupInfoWithExternalKey: groupInfoWithExternalKey,
-                            userAddress: addressFromUserId(this.userId),
-                            deviceKey: deviceKey,
-                        },
+            joinOrCreateEvent = make_MemberPayload_Mls({
+                content: {
+                    case: 'initializeGroup',
+                    value: {
+                        groupInfoWithExternalKey: groupInfoWithExternalKey,
+                        userAddress: addressFromUserId(this.userId),
+                        deviceKey: deviceKey,
                     },
-                }),
-            )
+                },
+            })
         } else {
             // join via external join
             const groupJoinResult = await this.mlsCrypto.externalJoin(streamId, latestGroupInfo)
@@ -2425,22 +2424,20 @@ export class Client
                 commit: shortenHexString(bin_toHexString(groupJoinResult.commit)),
                 groupInfo: shortenHexString(bin_toHexString(groupJoinResult.groupInfo)),
             })
-            await this.makeEventAndAddToStream(
-                streamId,
-                make_MemberPayload_Mls({
-                    content: {
-                        case: 'externalJoin',
-                        value: {
-                            userAddress: addressFromUserId(this.userId),
-                            deviceKey: this.mlsCrypto.deviceKey,
-                            groupInfoWithExternalKey: groupJoinResult.groupInfo,
-                            commit: groupJoinResult.commit,
-                            epoch: groupJoinResult.epoch,
-                        },
+            joinOrCreateEvent = make_MemberPayload_Mls({
+                content: {
+                    case: 'externalJoin',
+                    value: {
+                        userAddress: addressFromUserId(this.userId),
+                        deviceKey: this.mlsCrypto.deviceKey,
+                        groupInfoWithExternalKey: groupJoinResult.groupInfo,
+                        commit: groupJoinResult.commit,
+                        epoch: groupJoinResult.epoch,
                     },
-                }),
-            )
+                },
+            })
         }
+        await this.makeEventAndAddToStream(streamId, joinOrCreateEvent)
     }
 
     // Encrypt event using MLS.
