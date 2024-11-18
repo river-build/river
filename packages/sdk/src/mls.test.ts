@@ -105,7 +105,7 @@ describe('CreateGroup', () => {
         await new Promise((resolve) => setTimeout(resolve, 500))
         const b = crypto.awaitGroupActive(streamId)
         expect(a).toEqual(b)
-    })
+    }, 1000)
 
     it('awaitGroupActive should block until group is active via creation', async () => {
         const crypto = await initializeCrypto(userAddress, deviceKey)
