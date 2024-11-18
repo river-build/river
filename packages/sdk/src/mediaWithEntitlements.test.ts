@@ -18,7 +18,6 @@ import {
     NoopRuleData,
     Permission,
     createSpaceDapp,
-    findDynamicPricingModule,
 } from '@river-build/web3'
 import { SignerContext } from './signerContext'
 import { makeBaseChainConfig } from './riverConfig'

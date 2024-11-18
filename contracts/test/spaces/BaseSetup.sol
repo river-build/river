@@ -137,7 +137,7 @@ contract BaseSetup is TestUtils, SpaceHelper {
     legacyRuleEntitlement = deploySpaceFactory.legacyRuleEntitlement();
 
     spaceOwner = deploySpaceFactory.spaceOwner();
-    pricingModule = deploySpaceFactory.tieredLogPricingV3();
+    pricingModule = deploySpaceFactory.tieredLogPricing();
     fixedPricingModule = deploySpaceFactory.fixedPricing();
     walletLink = IWalletLink(spaceFactory);
     implementationRegistry = IImplementationRegistry(spaceFactory);
@@ -180,6 +180,12 @@ contract BaseSetup is TestUtils, SpaceHelper {
     space = ICreateSpace(spaceFactory).createSpace(spaceInfo);
     everyoneSpace = ICreateSpace(spaceFactory).createSpace(everyoneSpaceInfo);
     vm.stopPrank();
+  }
+
+  /// @dev Skips the test run if the account is not an EOA
+  modifier assumeEOA(address account) {
+    vm.assume(account != address(0) && account.code.length == 0);
+    _;
   }
 
   function _registerOperators() internal {

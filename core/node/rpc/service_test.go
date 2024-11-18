@@ -156,7 +156,7 @@ func createUserSettingsStream(
 	wallet *crypto.Wallet,
 	client protocolconnect.StreamServiceClient,
 	streamSettings *protocol.StreamSettings,
-) (StreamId, *protocol.SyncCookie, *MiniblockRef, error) {
+) (StreamId, *protocol.SyncCookie, *events.MiniblockRef, error) {
 	streamdId := UserSettingStreamIdFromAddr(wallet.Address)
 	inception, err := events.MakeEnvelopeWithPayload(
 		wallet,
@@ -173,7 +173,7 @@ func createUserSettingsStream(
 	if err != nil {
 		return StreamId{}, nil, nil, err
 	}
-	return streamdId, res.Msg.Stream.NextSyncCookie, MiniblockRefFromCookie(res.Msg.Stream.NextSyncCookie), nil
+	return streamdId, res.Msg.Stream.NextSyncCookie, events.MiniblockRefFromCookie(res.Msg.Stream.NextSyncCookie), nil
 }
 
 func createSpace(
@@ -227,7 +227,7 @@ func createChannel(
 	spaceId StreamId,
 	channelStreamId StreamId,
 	streamSettings *protocol.StreamSettings,
-) (*protocol.SyncCookie, *MiniblockRef, error) {
+) (*protocol.SyncCookie, *events.MiniblockRef, error) {
 	channel, err := events.MakeEnvelopeWithPayload(
 		wallet,
 		events.Make_ChannelPayload_Inception(
@@ -269,7 +269,7 @@ func createChannel(
 		return nil, nil, fmt.Errorf("expected at least one miniblock")
 	}
 	lastMb := reschannel.Msg.Stream.Miniblocks[len(reschannel.Msg.Stream.Miniblocks)-1]
-	return reschannel.Msg.Stream.NextSyncCookie, &MiniblockRef{
+	return reschannel.Msg.Stream.NextSyncCookie, &events.MiniblockRef{
 		Hash: common.BytesToHash(lastMb.Header.Hash),
 		Num:  0,
 	}, nil
@@ -280,7 +280,7 @@ func addUserBlockedFillerEvent(
 	wallet *crypto.Wallet,
 	client protocolconnect.StreamServiceClient,
 	streamId StreamId,
-	prevMiniblockRef *MiniblockRef,
+	prevMiniblockRef *events.MiniblockRef,
 ) error {
 	addr := crypto.GetTestAddress()
 	ev, err := events.MakeEnvelopeWithPayload(
@@ -310,7 +310,7 @@ func makeMiniblock(
 	streamId StreamId,
 	forceSnapshot bool,
 	lastKnownMiniblockNum int64,
-) (*MiniblockRef, error) {
+) (*events.MiniblockRef, error) {
 	resp, err := client.Info(ctx, connect.NewRequest(&protocol.InfoRequest{
 		Debug: []string{
 			"make_miniblock",
@@ -330,7 +330,7 @@ func makeMiniblock(
 	if resp.Msg.Version != "" {
 		num, _ = strconv.ParseInt(resp.Msg.Version, 10, 64)
 	}
-	return &MiniblockRef{
+	return &events.MiniblockRef{
 		Hash: common.BytesToHash(hashBytes),
 		Num:  num,
 	}, nil
@@ -427,7 +427,7 @@ func testMethodsWithClient(tester *serviceTester, client protocolconnect.StreamS
 			nil,
 			spaceId[:],
 		),
-		&MiniblockRef{
+		&events.MiniblockRef{
 			Hash: common.BytesToHash(resuser.PrevMiniblockHash),
 			Num:  resuser.MinipoolGen - 1,
 		},
@@ -1199,7 +1199,7 @@ func TestUnstableStreams(t *testing.T) {
 			userJoin, err := events.MakeEnvelopeWithPayload(
 				wallet,
 				events.Make_UserPayload_Membership(protocol.MembershipOp_SO_JOIN, channelId, nil, spaceID[:]),
-				&MiniblockRef{
+				&events.MiniblockRef{
 					Hash: common.BytesToHash(miniBlockHashResp.Msg.GetHash()),
 					Num:  miniBlockHashResp.Msg.GetMiniblockNum(),
 				},
@@ -1477,7 +1477,7 @@ func sendMessagesAndReceive(
 		message, err := events.MakeEnvelopeWithPayload(
 			wallet,
 			events.Make_ChannelPayload_Message(msgContents),
-			MiniblockRefFromCookie(getStreamResp.Msg.GetStream().GetNextSyncCookie()),
+			events.MiniblockRefFromCookie(getStreamResp.Msg.GetStream().GetNextSyncCookie()),
 		)
 		require.NoError(err)
 
@@ -1660,7 +1660,7 @@ func TestSyncSubscriptionWithTooSlowClient(t *testing.T) {
 			userJoin, err := events.MakeEnvelopeWithPayload(
 				wallet,
 				events.Make_UserPayload_Membership(protocol.MembershipOp_SO_JOIN, channelId, nil, spaceID[:]),
-				MiniblockRefFromLastHash(miniBlockHashResp.Msg),
+				events.MiniblockRefFromLastHash(miniBlockHashResp.Msg),
 			)
 			req.NoError(err)
 
@@ -1698,7 +1698,7 @@ func TestSyncSubscriptionWithTooSlowClient(t *testing.T) {
 		message, err := events.MakeEnvelopeWithPayload(
 			wallet,
 			events.Make_ChannelPayload_Message(msgContents),
-			MiniblockRefFromCookie(getStreamResp.Msg.GetStream().GetNextSyncCookie()),
+			events.MiniblockRefFromCookie(getStreamResp.Msg.GetStream().GetNextSyncCookie()),
 		)
 		req.NoError(err)
 

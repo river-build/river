@@ -377,7 +377,7 @@ contract RewardsDistribution is
   /// @inheritdoc IRewardsDistribution
   function stakedByDepositor(
     address depositor
-  ) external view returns (uint96 amount) {
+  ) external view returns (uint256 amount) {
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     amount = ds.staking.stakedByDepositor[depositor];
@@ -451,9 +451,7 @@ contract RewardsDistribution is
     RewardsDistributionStorage.Layout storage ds = RewardsDistributionStorage
       .layout();
     return
-      ds.staking.currentRewardScaled(
-        ds.staking.treasureByBeneficiary[beneficiary]
-      ) / StakingRewards.SCALE_FACTOR;
+      ds.staking.currentReward(ds.staking.treasureByBeneficiary[beneficiary]);
   }
 
   /// @inheritdoc IRewardsDistribution

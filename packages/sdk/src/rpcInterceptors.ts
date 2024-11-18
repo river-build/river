@@ -97,21 +97,7 @@ export const expiryInterceptor = (opts: { onTokenExpired?: () => void }): Interc
     }
 }
 
-export const setHeaderInterceptor: (headers: Record<string, string>) => Interceptor = (
-    headers: Record<string, string>,
-) => {
-    return (next) => (req) => {
-        for (const [key, value] of Object.entries(headers)) {
-            req.header.set(key, value)
-        }
-        return next(req)
-    }
-}
-
-export const loggingInterceptor: (transportId: number, serviceName?: string) => Interceptor = (
-    transportId: number,
-    serviceName?: string,
-) => {
+export const loggingInterceptor: (transportId: number) => Interceptor = (transportId: number) => {
     // Histogram data structure
     const callHistogram: Record<string, { interval: number; total: number; error?: number }> = {}
 
@@ -144,9 +130,7 @@ export const loggingInterceptor: (transportId: number, serviceName?: string) => 
             }
             if (interval > 0) {
                 logCallsHistogram(
-                    'RPC stats for service=',
-                    serviceName ?? 'default',
-                    ' transportId=',
+                    'RPC stats for transportId=',
                     transportId,
                     'interval=',
                     interval,

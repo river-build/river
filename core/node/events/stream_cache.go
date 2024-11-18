@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gammazero/workerpool"
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/river-build/river/core/config"
@@ -52,12 +51,12 @@ type streamCacheImpl struct {
 	// streamImpl can be in unloaded state, in which case it will be loaded on first GetStream call.
 	cache sync.Map
 
+	syncTasks *StreamSyncTasksProcessor
+
 	chainConfig crypto.OnChainConfiguration
 
 	streamCacheSizeGauge     prometheus.Gauge
 	streamCacheUnloadedGauge prometheus.Gauge
-
-	onlineSyncWorkerPool *workerpool.WorkerPool
 }
 
 var _ StreamCache = (*streamCacheImpl)(nil)
@@ -66,6 +65,16 @@ func NewStreamCache(
 	ctx context.Context,
 	params *StreamCacheParams,
 ) (*streamCacheImpl, error) {
+	syncTasks, err := NewStreamSyncTasksProcessor(
+		ctx,
+		&StreamSyncTaskProcessorParams{
+			WorkerPoolSize: params.Config.StreamReconciliation.WorkerPoolSize,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	s := &streamCacheImpl{
 		params: params,
 		streamCacheSizeGauge: params.Metrics.NewGaugeVecEx(
@@ -82,48 +91,40 @@ func NewStreamCache(
 			params.RiverChain.ChainId.String(),
 			params.Wallet.Address.String(),
 		),
-		chainConfig:          params.ChainConfig,
-		onlineSyncWorkerPool: workerpool.New(params.Config.StreamReconciliation.OnlineWorkerPoolSize),
+		chainConfig: params.ChainConfig,
+		syncTasks:   syncTasks,
 	}
 
 	// schedule sync tasks for all streams that are local to this node.
 	// these tasks sync up the local db with the latest block in the registry.
 	var localStreamResults []*registries.GetStreamResult
-	err := params.Registry.ForAllStreams(ctx, params.AppliedBlockNum, func(stream *registries.GetStreamResult) bool {
+	if err := params.Registry.ForAllStreams(ctx, params.AppliedBlockNum, func(stream *registries.GetStreamResult) bool {
 		if slices.Contains(stream.Nodes, params.Wallet.Address) {
 			localStreamResults = append(localStreamResults, stream)
 		}
 		return true
-	})
-	if err != nil {
+	}); err != nil {
 		return nil, err
 	}
 
-	// load local streams in-memory cache
-	initialSyncWorkerPool := workerpool.New(params.Config.StreamReconciliation.InitialWorkerPoolSize)
-	for _, stream := range localStreamResults {
-		s.cache.Store(stream.StreamId, &streamImpl{
-			params:   params,
-			streamId: stream.StreamId,
-			nodes:    NewStreamNodes(stream.Nodes, params.Wallet.Address),
-		})
-		if params.Config.StreamReconciliation.InitialWorkerPoolSize > 0 {
-			s.submitSyncStreamTask(
-				ctx,
-				initialSyncWorkerPool,
-				stream.StreamId,
-				&MiniblockRef{
-					Hash: stream.LastMiniblockHash,
-					Num:  int64(stream.LastMiniblockNum),
-				},
-			)
-		}
+	// schedule sync tasks for all local streams in the background
+	if params.Config.StreamReconciliation.WorkerPoolSize > 0 {
+		go func() {
+			for _, stream := range localStreamResults {
+				s.syncTasks.Submit(ctx, stream, s)
+			}
+		}()
 	}
 
-	// Close initial worker pool after all tasks are executed.
-	go func() {
-		initialSyncWorkerPool.StopWait()
-	}()
+	// load local streams in-memory cache
+	for _, stream := range localStreamResults {
+		s.cache.Store(stream.StreamId, &streamImpl{
+			params:           params,
+			streamId:         stream.StreamId,
+			nodes:            NewStreamNodes(stream.Nodes, params.Wallet.Address),
+			lastAccessedTime: time.Now(),
+		})
+	}
 
 	err = params.Registry.OnStreamEvent(
 		ctx,

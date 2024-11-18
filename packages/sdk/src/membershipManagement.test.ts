@@ -22,7 +22,6 @@ import {
     LegacyMembershipStruct,
     NoopRuleData,
     ETH_ADDRESS,
-    findDynamicPricingModule,
 } from '@river-build/web3'
 import { makeBaseChainConfig } from './riverConfig'
 

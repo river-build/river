@@ -232,9 +232,7 @@ func (st *serviceTester) getConfig(opts ...startOpts) *config.Config {
 		},
 		ShutdownTimeout: 2 * time.Millisecond,
 		StreamReconciliation: config.StreamReconciliationConfig{
-			InitialWorkerPoolSize: 4,
-			OnlineWorkerPoolSize:  8,
-			GetMiniblocksPageSize: 4,
+			WorkerPoolSize: 8,
 		},
 		RiverRegistry: config.GetDefaultConfig().RiverRegistry,
 	}

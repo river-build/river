@@ -1,22 +1,24 @@
 'use client'
 
-import { useMemo } from 'react'
 import type { Channel } from '@river-build/sdk'
+import { useMemo } from 'react'
+import { type ActionConfig, useAction } from './internals/useAction'
 import { useSyncAgent } from './useSyncAgent'
-import { type ObservableConfig, useObservable } from './useObservable'
 
-/**
- *  Views a channel by its channelId and spaceId.
- */
-export const useChannel = (
+export const useReaction = (
     spaceId: string,
     channelId: string,
-    config?: ObservableConfig.FromObservable<Channel>,
+    config?: ActionConfig<Channel['sendReaction']>,
 ) => {
     const sync = useSyncAgent()
     const channel = useMemo(
         () => sync.spaces.getSpace(spaceId).getChannel(channelId),
         [sync.spaces, spaceId, channelId],
     )
-    return useObservable(channel, config)
+    const { action: sendReaction, ...rest } = useAction(channel, 'sendReaction', config)
+
+    return {
+        sendReaction,
+        ...rest,
+    }
 }

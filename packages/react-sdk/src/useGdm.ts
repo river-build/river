@@ -1,16 +1,9 @@
 import { useMemo } from 'react'
-import type { GdmModel } from '@river-build/sdk'
+import type { Gdm } from '@river-build/sdk'
 import { useSyncAgent } from './useSyncAgent'
 import { type ObservableConfig, useObservable } from './useObservable'
 
-/**
- * Hook to get the data of a Group DM.
- * You can use this hook to get Group DM metadata and if the user has joined the Group DM.
- * @param streamId - The id of the Group DM to get the data of.
- * @param config - Configuration options for the observable. @see {@link ObservableConfig.FromObservable}
- * @returns The {@link GdmModel} of the Group DM.
- */
-export const useGdm = (streamId: string, config?: ObservableConfig.FromData<GdmModel>) => {
+export const useGdm = (streamId: string, config?: ObservableConfig.FromObservable<Gdm>) => {
     const sync = useSyncAgent()
     const gdm = useMemo(() => sync.gdms.getGdm(streamId), [streamId, sync])
     return useObservable(gdm, config)

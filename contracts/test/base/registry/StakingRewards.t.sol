@@ -35,6 +35,6 @@ contract StakingRewardsTest is Test {
     assembly {
       length := sub(slotAfterLayout.slot, layout.slot)
     }
-    assertEq(length, 11);
+    assertEq(length, 12);
   }
 }

@@ -1,11 +1,9 @@
 package rpc
 
 import (
-	"context"
-
 	"connectrpc.com/connect"
+	"context"
 	"github.com/ethereum/go-ethereum/common"
-
 	. "github.com/river-build/river/core/node/events"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
@@ -60,27 +58,45 @@ func (s *Service) SaveMbCandidate(
 	return err
 }
 
-// GetMbs returns a range of miniblocks from the given stream.
-func (s *Service) GetMbs(
+// GetMiniBlocksStreamed returns a range of mini-blocks from the given stream.
+func (s *Service) GetMbsStreamed(
 	ctx context.Context,
 	node common.Address,
 	streamId StreamId,
-	fromInclusive int64,
-	toExclusive int64,
-) ([]*Miniblock, error) {
-	remote, err := s.nodeRegistry.GetStreamServiceClientForAddress(node)
-	if err != nil {
-		return nil, err
-	}
+	fromInclusive int64, // inclusive
+	toExclusive int64, // exclusive
+) <-chan *MbOrError {
+	miniBlocksOrError := make(chan *MbOrError)
 
-	resp, err := remote.GetMiniblocks(ctx, connect.NewRequest(&GetMiniblocksRequest{
-		StreamId:      streamId[:],
-		FromInclusive: fromInclusive,
-		ToExclusive:   toExclusive,
-	}))
-	if err != nil {
-		return nil, err
-	}
+	go func() {
+		defer close(miniBlocksOrError)
 
-	return resp.Msg.GetMiniblocks(), nil
+		remote, err := s.nodeRegistry.GetStreamServiceClientForAddress(node)
+		if err != nil {
+			miniBlocksOrError <- &MbOrError{Err: err}
+			return
+		}
+
+		for from := fromInclusive; from <= toExclusive; from += 128 {
+			to := min(from+128, toExclusive)
+
+			// TODO: consider to switch over to a streaming call for GetMiniblocks to support large block ranges
+			miniBlocksResp, err := remote.GetMiniblocks(ctx, connect.NewRequest(&GetMiniblocksRequest{
+				StreamId:      streamId[:],
+				FromInclusive: from,
+				ToExclusive:   to,
+			}))
+
+			if err != nil {
+				miniBlocksOrError <- &MbOrError{Err: err}
+				return
+			}
+
+			for _, blk := range miniBlocksResp.Msg.GetMiniblocks() {
+				miniBlocksOrError <- &MbOrError{Miniblock: blk}
+			}
+		}
+	}()
+
+	return miniBlocksOrError
 }

@@ -3,10 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"time"
 
-	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -15,18 +12,15 @@ import (
 	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/events"
-	"github.com/river-build/river/core/node/http_client"
 	"github.com/river-build/river/core/node/infra"
 	. "github.com/river-build/river/core/node/protocol"
-	. "github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/registries"
 	. "github.com/river-build/river/core/node/shared"
 
 	"github.com/spf13/cobra"
 )
 
-func srStreamDump(cfg *config.Config, countOnly, timeOnly bool) error {
+func srStreamDump(cfg *config.Config, countOnly bool) error {
 	ctx := context.Background() // lint:ignore context.Background() is fine here
 	blockchain, err := crypto.NewBlockchain(
 		ctx,
@@ -61,27 +55,18 @@ func srStreamDump(cfg *config.Config, countOnly, timeOnly bool) error {
 	}
 
 	i := 0
-	startTime := time.Now()
 	err = registryContract.ForAllStreams(ctx, blockchain.InitialBlockNum, func(strm *registries.GetStreamResult) bool {
-		if !timeOnly {
-			s := fmt.Sprintf("%4d %s", i, strm.StreamId.String())
-			fmt.Printf("%-69s %4d, %s\n", s, strm.LastMiniblockNum, strm.LastMiniblockHash.Hex())
-			for _, node := range strm.Nodes {
-				fmt.Printf("        %s\n", node.Hex())
-			}
+		s := fmt.Sprintf("%4d %s", i, strm.StreamId.String())
+		fmt.Printf("%-69s %4d, %s\n", s, strm.LastMiniblockNum, strm.LastMiniblockHash.Hex())
+		for _, node := range strm.Nodes {
+			fmt.Printf("        %s\n", node.Hex())
 		}
 		i++
-		if timeOnly && i%50000 == 0 && i > 0 {
-			elapsed := time.Since(startTime)
-			fmt.Printf("Received %d streams in %s (%.1f streams/s)\n", i, elapsed, float64(i)/elapsed.Seconds())
-		}
 		return true
 	})
 	if err != nil {
 		return err
 	}
-	elapsed := time.Since(startTime)
-	fmt.Printf("TOTAL: %d ELAPSED: %s (%.1f streams/s)\n", i, elapsed, float64(i)/elapsed.Seconds())
 
 	if streamNum != int64(i) {
 		return RiverError(
@@ -97,106 +82,8 @@ func srStreamDump(cfg *config.Config, countOnly, timeOnly bool) error {
 	return nil
 }
 
-func validateStream(
-	ctx context.Context,
-	httpClient *http.Client,
-	registryContract *registries.RiverRegistryContract,
-	streamId StreamId,
-	nodeAddress common.Address,
-	expectedBlockHash common.Hash,
-	expectedBlockNum int64,
-) error {
-	nodeRecord, err := registryContract.NodeRegistry.GetNode(&bind.CallOpts{
-		Context: ctx,
-	}, nodeAddress)
-	if err != nil {
-		return err
-	}
-
-	streamServiceClient := NewStreamServiceClient(httpClient, nodeRecord.Url, connect.WithGRPC())
-	response, err := streamServiceClient.GetStream(
-		ctx,
-		connect.NewRequest(&GetStreamRequest{
-			StreamId: streamId[:],
-		}),
-	)
-	if err != nil {
-		return err
-	}
-	stream := response.Msg.GetStream()
-
-	fmt.Printf("      Miniblocks: %d\n", len(stream.Miniblocks))
-	var lastBlock *MiniblockRef
-	for _, mb := range stream.Miniblocks {
-		info, err := events.NewMiniblockInfoFromProto(mb, events.NewMiniblockInfoFromProtoOpts{
-			ExpectedBlockNumber: -1,
-			DontParseEvents:     true,
-		})
-		if err != nil {
-			return err
-		}
-		lastBlock = info.Ref
-		header := info.Header()
-		var snapshot string
-		if header.GetSnapshot() != nil {
-			snapshot = "snapshot"
-		}
-		fmt.Printf(
-			"          %d %s num_events=%d %s\n",
-			info.Ref.Num,
-			info.Ref.Hash.Hex(),
-			len(header.EventHashes),
-			snapshot,
-		)
-	}
-	fmt.Printf("      Minipool: len=%d\n", len(stream.Events))
-	fmt.Printf(
-		"      Cookie: minipool_generation=%d prev_mb_hash=%s\n",
-		stream.NextSyncCookie.MinipoolGen,
-		common.BytesToHash(stream.NextSyncCookie.PrevMiniblockHash),
-	)
-
-	if lastBlock == nil {
-		return RiverError(Err_INTERNAL, "No miniblocks found", "node", nodeAddress)
-	}
-	if lastBlock.Num != expectedBlockNum {
-		return RiverError(
-			Err_INTERNAL,
-			"Block number mismatch",
-			"expected",
-			expectedBlockNum,
-			"actual",
-			lastBlock.Num,
-			"node",
-			nodeAddress,
-		)
-	}
-	if lastBlock.Hash != expectedBlockHash {
-		return RiverError(
-			Err_INTERNAL,
-			"Block hash mismatch",
-			"expected",
-			expectedBlockHash,
-			"actual",
-			lastBlock.Hash,
-			"node",
-			nodeAddress,
-		)
-	}
-	return nil
-}
-
-func srStream(cfg *config.Config, streamId string, validate bool) error {
+func srStream(cfg *config.Config, streamId string) error {
 	ctx := context.Background() // lint:ignore context.Background() is fine here
-
-	var httpClient *http.Client
-	var err error
-	if validate {
-		httpClient, err = http_client.GetHttpClient(ctx)
-		if err != nil {
-			return err
-		}
-	}
 
 	blockchain, err := crypto.NewBlockchain(
 		ctx,
@@ -224,7 +111,7 @@ func srStream(cfg *config.Config, streamId string, validate bool) error {
 		return err
 	}
 
-	stream, err := registryContract.GetStream(ctx, id, blockchain.InitialBlockNum)
+	stream, err := registryContract.GetStream(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -233,30 +120,11 @@ func srStream(cfg *config.Config, streamId string, validate bool) error {
 	fmt.Printf("Miniblock: %d %s\n", stream.LastMiniblockNum, stream.LastMiniblockHash.Hex())
 	fmt.Println("IsSealed: ", stream.IsSealed)
 	fmt.Println("Nodes:")
-	err = nil
 	for i, node := range stream.Nodes {
 		fmt.Printf("  %d %s\n", i, node)
-		if validate {
-			validateErr := validateStream(
-				ctx,
-				httpClient,
-				registryContract,
-				id,
-				node,
-				stream.LastMiniblockHash,
-				int64(stream.LastMiniblockNum),
-			)
-			if validateErr != nil {
-				if err == nil {
-					err = validateErr
-				}
-
-				fmt.Printf("      %s\n", validateErr)
-			}
-		}
 	}
 
-	return err
+	return nil
 }
 
 func nodesDump(cfg *config.Config) error {
@@ -387,31 +255,20 @@ func init() {
 			if err != nil {
 				return err
 			}
-			timeOnly, err := cmd.Flags().GetBool("time")
-			if err != nil {
-				return err
-			}
-			return srStreamDump(cmdConfig, countOnly, timeOnly)
+			return srStreamDump(cmdConfig, countOnly)
 		},
 	}
 	streamsCmd.Flags().Bool("count", false, "Only print the stream count")
-	streamsCmd.Flags().Bool("time", false, "Print only timing information")
 	srCmd.AddCommand(streamsCmd)
 
-	streamCmd := &cobra.Command{
+	srCmd.AddCommand(&cobra.Command{
 		Use:   "stream <stream-id>",
 		Short: "Get stream info from stream registry",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			validate, err := cmd.Flags().GetBool("validate")
-			if err != nil {
-				return err
-			}
-			return srStream(cmdConfig, args[0], validate)
+			return srStream(cmdConfig, args[0])
 		},
-	}
-	streamCmd.Flags().Bool("validate", false, "Fetch stream from each node and compare to the registry record")
-	srCmd.AddCommand(streamCmd)
+	})
 
 	srCmd.AddCommand(&cobra.Command{
 		Use:   "nodes",

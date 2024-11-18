@@ -57,12 +57,7 @@ type SyncStream interface {
 	Sub(ctx context.Context, cookie *SyncCookie, receiver SyncResultReceiver) error
 	Unsub(receiver SyncResultReceiver)
 
-	// ApplyMiniblock applies given miniblock, updating the cached stream view and storage.
 	ApplyMiniblock(ctx context.Context, miniblock *MiniblockInfo) error
-
-	// SaveMiniblockCandidate saves the given miniblock as a candidate.
-	// Once blockchain event making candidate canonical is observed,
-	// candidate is read and applied.
 	SaveMiniblockCandidate(
 		ctx context.Context,
 		mb *Miniblock,
@@ -99,16 +94,8 @@ type streamImpl struct {
 	// are never scrubbed will not have this value modified.
 	lastScrubbedTime time.Time
 
+	// TODO: perf optimization: support subs on unloaded streams.
 	receivers mapset.Set[SyncResultReceiver]
-
-	// pendingCandidates contains list of miniblocks that should be applied immdediately when candidate is received.
-	// When StreamLastMiniblockUpdated is recevied and promoteCandidate is called,
-	// if there is no candidate in local storage, request is stored in pendingCandidates.
-	// First element is the oldest candidate with block number view.LastBlock().Num + 1,
-	// second element is the next candidate with next block number and so on.
-	// If SaveMiniblockCandidate is called and it matched first element of pendingCandidates,
-	// it is removed from pendingCandidates and is applied immediately instead of being stored.
-	pendingCandidates []*MiniblockRef
 }
 
 var _ SyncStream = (*streamImpl)(nil)
@@ -118,17 +105,8 @@ func (s *streamImpl) view() *streamViewImpl {
 }
 
 func (s *streamImpl) setView(view *streamViewImpl) {
+	// NOTE: here is going to be code that updates pendingCandidates.
 	s.useGetterAndSetterToGetView = view
-	if view != nil && len(s.pendingCandidates) > 0 {
-		lastMbNum := view.LastBlock().Ref.Num
-		for i, candidate := range s.pendingCandidates {
-			if candidate.Num > lastMbNum {
-				s.pendingCandidates = s.pendingCandidates[i:]
-				return
-			}
-		}
-		s.pendingCandidates = nil
-	}
 }
 
 func (s *streamImpl) LastScrubbedTime() time.Time {
@@ -146,6 +124,7 @@ func (s *streamImpl) MarkScrubbed(ctx context.Context) {
 }
 
 // Should be called with lock held
+// Either view or loadError will be set in Stream.
 func (s *streamImpl) loadInternal(ctx context.Context) error {
 	if s.view() != nil {
 		return nil
@@ -176,7 +155,7 @@ func (s *streamImpl) loadInternal(ctx context.Context) error {
 	return nil
 }
 
-// ApplyMiniblock applies given miniblock, updating the cached stream view and storage.
+// ApplyMiniblock applies the selected miniblock candidate, updating the cached stream view and storage.
 func (s *streamImpl) ApplyMiniblock(ctx context.Context, miniblock *MiniblockInfo) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -197,15 +176,6 @@ func (s *streamImpl) importMiniblocks(
 		return nil
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.importMiniblocksNoLock(ctx, miniblocks)
-}
-
-func (s *streamImpl) importMiniblocksNoLock(
-	ctx context.Context,
-	miniblocks []*MiniblockInfo,
-) error {
 	firstMbNum := miniblocks[0].Ref.Num
 	blocksToWriteToStorage := make([]*storage.WriteMiniblockData, len(miniblocks))
 	for i, miniblock := range miniblocks {
@@ -219,9 +189,12 @@ func (s *streamImpl) importMiniblocksNoLock(
 		blocksToWriteToStorage[i] = mb
 	}
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if s.view() == nil {
 		// Do we have genesis miniblock?
-		if miniblocks[0].Header().MiniblockNum == 0 {
+		if miniblocks[0].header().MiniblockNum == 0 {
 			err := s.initFromGenesis(ctx, miniblocks[0], blocksToWriteToStorage[0].Data)
 			if err != nil {
 				return err
@@ -348,8 +321,7 @@ func (s *streamImpl) promoteCandidate(ctx context.Context, mb *MiniblockRef) err
 	}
 
 	// Check if the miniblock is already applied.
-	lastMbNum := s.view().LastBlock().Ref.Num
-	if mb.Num <= lastMbNum {
+	if mb.Num <= s.view().LastBlock().Ref.Num {
 		// Log error if hash doesn't match.
 		appliedMb, _ := s.view().blockWithNum(mb.Num)
 		if appliedMb != nil && appliedMb.Ref.Hash != mb.Hash {
@@ -364,15 +336,8 @@ func (s *streamImpl) promoteCandidate(ctx context.Context, mb *MiniblockRef) err
 		return nil
 	}
 
-	if mb.Num > lastMbNum+1 {
-		return s.schedulePromotionNoLock(ctx, mb)
-	}
-
 	miniblockBytes, err := s.params.Storage.ReadMiniblockCandidate(ctx, s.streamId, mb.Hash, mb.Num)
 	if err != nil {
-		if IsRiverErrorCode(err, Err_NOT_FOUND) {
-			return s.schedulePromotionNoLock(ctx, mb)
-		}
 		return err
 	}
 
@@ -384,32 +349,15 @@ func (s *streamImpl) promoteCandidate(ctx context.Context, mb *MiniblockRef) err
 	return s.applyMiniblockImplNoLock(ctx, miniblock, miniblockBytes)
 }
 
-func (s *streamImpl) schedulePromotionNoLock(ctx context.Context, mb *MiniblockRef) error {
-	if len(s.pendingCandidates) == 0 {
-		if mb.Num != s.view().LastBlock().Ref.Num+1 {
-			return RiverError(Err_INTERNAL, "schedulePromotionNoLock: next promotion is not for the next block")
-		}
-		s.pendingCandidates = append(s.pendingCandidates, mb)
-	} else {
-		lastPending := s.pendingCandidates[len(s.pendingCandidates)-1]
-		if mb.Num != lastPending.Num+1 {
-			return RiverError(Err_INTERNAL, "schedulePromotionNoLock: pending candidates are not consecutive")
-		}
-		s.pendingCandidates = append(s.pendingCandidates, mb)
-	}
-	return nil
-}
-
 func (s *streamImpl) initFromGenesis(
 	ctx context.Context,
 	genesisInfo *MiniblockInfo,
 	genesisBytes []byte,
 ) error {
-	if genesisInfo.Header().MiniblockNum != 0 {
+	if genesisInfo.header().MiniblockNum != 0 {
 		return RiverError(Err_BAD_BLOCK, "init from genesis must be from block with num 0")
 	}
 
-	// TODO: move this call out of the lock
 	_, registeredGenesisHash, _, err := s.params.Registry.GetStreamWithGenesis(ctx, s.streamId)
 	if err != nil {
 		return err
@@ -542,20 +490,14 @@ func (s *streamImpl) tryCleanup(expiration time.Duration) bool {
 		return true
 	}
 
-	if time.Since(s.lastAccessedTime) < expiration {
-		return false
-	}
+	expired := time.Since(s.lastAccessedTime) >= expiration
 
-	if s.view().minipool.size() != 0 {
-		return false
+	// unload if there is no activity within expiration
+	if expired && s.view().minipool.events.Len() == 0 {
+		s.setView(nil)
+		return true
 	}
-
-	if len(s.pendingCandidates) != 0 {
-		return false
-	}
-
-	s.setView(nil)
-	return true
+	return false
 }
 
 // Returns
@@ -579,7 +521,7 @@ func (s *streamImpl) GetMiniblocks(
 			return nil, false, err
 		}
 		if i == 0 {
-			startMiniblockNumber = miniblock.Header().MiniblockNum
+			startMiniblockNumber = miniblock.header().MiniblockNum
 		}
 		miniblocks[i] = miniblock.Proto
 	}
@@ -814,23 +756,34 @@ func (s *streamImpl) getStatus() *streamImplStatus {
 func (s *streamImpl) SaveMiniblockCandidate(ctx context.Context, mb *Miniblock) error {
 	mbInfo, err := NewMiniblockInfoFromProto(
 		mb,
-		NewMiniblockInfoFromProtoOpts{ExpectedBlockNumber: -1},
+		NewMiniblockInfoFromProtoOpts{DontParseEvents: true, ExpectedBlockNumber: -1},
 	)
 	if err != nil {
 		return err
 	}
 
-	applied, err := s.tryApplyCandidate(ctx, mbInfo)
-	if err != nil {
-		return err
-	}
-	if applied {
-		return nil
-	}
-
 	serialized, err := mbInfo.ToBytes()
 	if err != nil {
 		return err
+	}
+
+	view, err := s.getView(ctx)
+	if err != nil {
+		return err
+	}
+
+	if mbInfo.Ref.Num <= view.LastBlock().Ref.Num {
+		// TODO: better error code.
+		return RiverError(
+			Err_INTERNAL,
+			"Miniblock is too old",
+			"candidate.Num",
+			mbInfo.Ref.Num,
+			"lastBlock.Num",
+			view.LastBlock().Ref.Num,
+			"streamId",
+			s.streamId,
+		)
 	}
 
 	return s.params.Storage.WriteMiniblockCandidate(
@@ -840,87 +793,4 @@ func (s *streamImpl) SaveMiniblockCandidate(ctx context.Context, mb *Miniblock) 
 		mbInfo.Ref.Num,
 		serialized,
 	)
-}
-
-func (s *streamImpl) tryApplyCandidate(ctx context.Context, mb *MiniblockInfo) (bool, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	err := s.loadInternal(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	if mb.Ref.Num <= s.view().LastBlock().Ref.Num {
-		existing, err := s.view().blockWithNum(mb.Ref.Num)
-		if err == nil && existing.Ref.Hash == mb.Ref.Hash {
-			return true, nil
-		}
-
-		return false, RiverError(
-			Err_INTERNAL,
-			"Candidate miniblock is too old",
-			"candidate.Num",
-			mb.Ref.Num,
-			"lastBlock.Num",
-			s.view().LastBlock().Ref.Num,
-			"streamId",
-			s.streamId,
-		)
-	}
-
-	if len(s.pendingCandidates) > 0 {
-		pending := s.pendingCandidates[0]
-		if mb.Ref.Num == pending.Num && mb.Ref.Hash == pending.Hash {
-			err = s.importMiniblocksNoLock(ctx, []*MiniblockInfo{mb})
-			if err != nil {
-				return false, err
-			}
-
-			for len(s.pendingCandidates) > 0 {
-				pending = s.pendingCandidates[0]
-				ok := s.tryReadAndApplyCandidateNoLock(ctx, pending)
-				if !ok {
-					break
-				}
-			}
-
-			return true, nil
-		}
-	}
-
-	return false, nil
-}
-
-func (s *streamImpl) tryReadAndApplyCandidateNoLock(ctx context.Context, mbRef *MiniblockRef) bool {
-	miniblockBytes, err := s.params.Storage.ReadMiniblockCandidate(ctx, s.streamId, mbRef.Hash, mbRef.Num)
-	if err == nil {
-		miniblock, err := NewMiniblockInfoFromBytes(miniblockBytes, mbRef.Num)
-		if err == nil {
-			err = s.importMiniblocksNoLock(ctx, []*MiniblockInfo{miniblock})
-			if err == nil {
-				return true
-			}
-		}
-	}
-
-	if !IsRiverErrorCode(err, Err_NOT_FOUND) {
-		dlog.FromCtx(ctx).
-			Error("Stream.tryReadAndApplyCandidateNoLock: failed to read miniblock candidate", "error", err)
-	}
-	return false
-}
-
-// getLastMiniblockNumSkipLoad returns the last miniblock number for the given stream from the view if loaded,
-// or from storage otherwise.
-func (s *streamImpl) getLastMiniblockNumSkipLoad(ctx context.Context) (int64, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	view := s.view()
-	if view != nil {
-		return view.LastBlock().Ref.Num, nil
-	}
-
-	return s.params.Storage.GetLastMiniblockNumber(ctx, s.streamId)
 }

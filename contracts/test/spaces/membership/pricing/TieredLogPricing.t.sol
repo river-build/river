@@ -11,7 +11,8 @@ import {IMembershipPricing} from "contracts/src/spaces/facets/membership/pricing
 
 //contracts
 import {MockAggregatorV3} from "contracts/test/mocks/MockAggregatorV3.sol";
-import {TieredLogPricingOracleV3} from "contracts/src/spaces/facets/membership/pricing/tiered/TieredLogPricingOracleV3.sol";
+import {TieredLogPricingOracle} from "contracts/src/spaces/facets/membership/pricing/tiered/TieredLogPricingOracle.sol";
+import {console} from "forge-std/console.sol";
 
 contract TieredLogPricingTest is TestUtils {
   int256 public constant EXCHANGE_RATE = 222616000000;
@@ -19,7 +20,7 @@ contract TieredLogPricingTest is TestUtils {
   function test_pricingModule() external {
     MockAggregatorV3 oracle = _setupOracle();
     IMembershipPricing pricingModule = IMembershipPricing(
-      address(new TieredLogPricingOracleV3(address(oracle)))
+      address(new TieredLogPricingOracle(address(oracle)))
     );
 
     // tier 0 -> 100
@@ -72,7 +73,7 @@ contract TieredLogPricingTest is TestUtils {
   function test_pricingModuleMonotonicIncrease() external {
     MockAggregatorV3 oracle = _setupOracle();
     IMembershipPricing pricingModule = IMembershipPricing(
-      address(new TieredLogPricingOracleV3(address(oracle)))
+      address(new TieredLogPricingOracle(address(oracle)))
     );
 
     uint256 lastPrice = 0;

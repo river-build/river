@@ -936,7 +936,7 @@ export function createOperationsTree(
         return {
             opType: OperationType.CHECK,
             checkType: op.type,
-            chainId: op.chainId ?? 1n,
+            chainId: op.chainId ?? 0n,
             contractAddress: op.address ?? zeroAddress,
             params,
         }

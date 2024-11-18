@@ -8,12 +8,9 @@ import { isUserId } from '../../id'
 import { Myself } from './models/myself'
 import { MembershipOp } from '@river-build/proto'
 
-export type MembersModel = {
-    /** The id of the stream. */
+type MembersModel = {
     id: string
-    /** The ids of the users in the stream. */
     userIds: string[]
-    /** Whether the SyncAgent has loaded this data. */
     initialized: boolean
 }
 

@@ -13,7 +13,7 @@ module.exports = {
     project: path.resolve(__dirname, "tsconfig.json"),
     allowImportExportEverywhere: true,
   },
-  plugins: ["@typescript-eslint", "import", "react", "eslint-plugin-tsdoc"],
+  plugins: ["@typescript-eslint", "import", "react"],
   extends: [
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
@@ -63,7 +63,6 @@ module.exports = {
         ignoreMemberSort: false,
       },
     ],
-    "tsdoc/syntax": "warn",
   },
   settings: {
     "import/parsers": {

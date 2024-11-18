@@ -39,9 +39,7 @@ func GetDefaultConfig() *Config {
 		// TODO: ArchitectContract: ContractConfig{},
 		// TODO: RegistryContract:  ContractConfig{},
 		StreamReconciliation: StreamReconciliationConfig{
-			InitialWorkerPoolSize: 4,
-			OnlineWorkerPoolSize:  32,
-			GetMiniblocksPageSize: 128,
+			WorkerPoolSize: 8,
 		},
 		Log: LogConfig{
 			Level:   "info", // NOTE: this default is replaced by flag value
@@ -74,8 +72,7 @@ func GetDefaultConfig() *Config {
 			ScrubEligibleDuration: time.Hour,
 		},
 		RiverRegistry: RiverRegistryConfig{
-			PageSize:               5000,
-			ParallelReaders:        8,
+			PageSize:               1000,
 			MaxRetries:             100,
 			MaxRetryElapsedTime:    5 * time.Minute,
 			SingleCallTimeout:      30 * time.Second, // geth internal timeout is 30 seconds
@@ -286,9 +283,6 @@ type ChainConfig struct {
 
 	TransactionPool TransactionPoolConfig
 
-	// DisableReplacePendingTransactionOnBoot will not try to replace transaction that are pending after start.
-	DisableReplacePendingTransactionOnBoot bool
-
 	// TODO: these need to be removed from here
 	LinkedWalletsLimit                        int
 	ContractCallsTimeoutMs                    int
@@ -398,9 +392,6 @@ type RiverRegistryConfig struct {
 	// PageSize is the number of streams to read from the contract at once using GetPaginatedStreams.
 	PageSize int
 
-	// Number of parallel readers to use when reading streams from the contract.
-	ParallelReaders int
-
 	// If not 0, stop retrying failed GetPaginatedStreams calls after this number of retries.
 	MaxRetries int
 
@@ -460,14 +451,7 @@ type ScrubbingConfig struct {
 }
 
 type StreamReconciliationConfig struct {
-	// InitialWorkerPoolSize is the size of the worker pool for initial background stream reconciliation tasks on node start.
-	InitialWorkerPoolSize int
-
-	// OnlineWorkerPoolSize is the size of the worker pool for ongoing stream reconciliation tasks.
-	OnlineWorkerPoolSize int
-
-	// GetMiniblocksPageSize is the number of miniblocks to read at once from the remote node.
-	GetMiniblocksPageSize int64
+	WorkerPoolSize int // If 0, default to 8.
 }
 
 type FilterConfig struct {

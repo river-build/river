@@ -1,13 +1,7 @@
 import { useCallback, useState } from 'react'
 
-/**
- * Configuration options for an action.
- * It can be used to configure the behavior of the {@link useAction} hook.
- */
 export type ActionConfig<Action> = {
-    /** Callback function to be called when an error occurs while executing the action. */
     onError?: (err: Error) => void
-    /** Callback function to be called when the action is successful. */
     onSuccess?: (data: ReturnOf<Action>) => void
 }
 
@@ -20,14 +14,6 @@ type ActionFn<T> = T extends (...args: infer Args) => Promise<infer Return>
 type ParamsOf<T> = Parameters<ActionFn<T>>
 type ReturnOf<T> = Awaited<ReturnType<ActionFn<T>>>
 
-/**
- * Hook to create an action from a namespace.
- * @internal
- * @param namespace - The namespace to create the action from.
- * @param fnName - The name of the action to create. Example: `Namespace.fnName`
- * @param config - Configuration options for the action. @see {@link ActionConfig}
- * @returns The action and its loading state.
- */
 export const useAction = <Namespace, Key extends keyof Namespace, Fn extends Namespace[Key]>(
     namespace: Namespace | undefined,
     fnName: Key & string,
@@ -68,17 +54,11 @@ export const useAction = <Namespace, Key extends keyof Namespace, Fn extends Nam
         [config, fnName, namespace],
     )
     return {
-        /** The action to execute. */
         action,
-        /** The data returned by the action. */
         data,
-        /** The error that occurred while executing the action. */
         error,
-        /** Whether the action is pending. */
         isPending: status === 'loading',
-        /** Whether the action is successful. */
         isSuccess: status === 'success',
-        /** Whether the action is in error. */
         isError: status === 'error',
     }
 }

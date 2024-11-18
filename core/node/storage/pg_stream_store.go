@@ -907,7 +907,8 @@ func (s *PostgresStreamStore) writeBlockProposalTxn(
 			migrated,
 		),
 		streamId,
-	).Scan(&seqNum)
+	).
+		Scan(&seqNum)
 	if err != nil {
 		return err
 	}
@@ -924,7 +925,7 @@ func (s *PostgresStreamStore) writeBlockProposalTxn(
 	_, err = tx.Exec(
 		ctx,
 		s.sqlForStream(
-			"INSERT INTO {{miniblock_candidates}} (stream_id, seq_num, block_hash, blockdata) VALUES ($1, $2, $3, $4)",
+			"INSERT INTO {{miniblock_candidates}} (stream_id, seq_num, block_hash, blockdata) VALUES ($1, $2, $3, $4) ON CONFLICT(stream_id, seq_num, block_hash) DO NOTHING",
 			streamId,
 			migrated,
 		),
@@ -933,13 +934,7 @@ func (s *PostgresStreamStore) writeBlockProposalTxn(
 		hex.EncodeToString(blockHash.Bytes()), // avoid leading '0x'
 		miniblock,
 	)
-	if err != nil {
-		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == pgerrcode.UniqueViolation {
-			return RiverError(Err_ALREADY_EXISTS, "Miniblock candidate already exists")
-		}
-		return err
-	}
-	return nil
+	return err
 }
 
 func (s *PostgresStreamStore) ReadMiniblockCandidate(
@@ -1697,57 +1692,65 @@ func (s *PostgresStreamStore) debugReadStreamData(
 	return result, nil
 }
 
-func (s *PostgresStreamStore) GetLastMiniblockNumber(
+func (s *PostgresStreamStore) StreamLastMiniBlock(
 	ctx context.Context,
 	streamID StreamId,
-) (int64, error) {
-	var ret int64
+) (*MiniblockData, error) {
+	var ret *MiniblockData
 	err := s.txRunnerWithUUIDCheck(
 		ctx,
-		"GetLastMiniblockNumber",
+		"StreamLastMiniBlock",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
 			var err error
-			ret, err = s.getLastMiniblockNumberTx(ctx, tx, streamID)
+			ret, err = s.streamLastMiniBlockTx(ctx, tx, streamID)
 			return err
 		},
 		nil,
-		"streamId", streamID,
 	)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	return ret, nil
 }
 
-func (s *PostgresStreamStore) getLastMiniblockNumberTx(
+func (s *PostgresStreamStore) streamLastMiniBlockTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamID StreamId,
-) (int64, error) {
+) (*MiniblockData, error) {
 	_, migrated, err := s.lockStream(ctx, tx, streamID, false)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	var maxSeqNum int64
+	var (
+		maxSeqNum int64
+		blockData []byte
+	)
 	err = tx.QueryRow(
 		ctx,
 		s.sqlForStream(
-			"SELECT MAX(seq_num) FROM {{miniblocks}} WHERE stream_id = $1",
+			"SELECT seq_num, blockdata FROM {{miniblocks}} WHERE stream_id = $1 ORDER BY seq_num DESC LIMIT 1",
 			streamID,
 			migrated,
 		),
 		streamID,
-	).Scan(&maxSeqNum)
+	).Scan(&maxSeqNum, &blockData)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return 0, RiverError(Err_INTERNAL, "Stream exists in es table, but no miniblocks in DB")
+			return nil, RiverError(Err_NOT_FOUND, "latest miniblock in DB not found for stream").
+				Tags("stream", streamID).
+				Func("lastMiniBlockForStream")
 		}
-		return 0, err
+		return nil, err
 	}
 
-	return maxSeqNum, nil
+	return &MiniblockData{
+		StreamID:      streamID,
+		Number:        maxSeqNum,
+		MiniBlockInfo: blockData,
+	}, nil
 }
 
 func createTableSuffix(streamId StreamId) string {

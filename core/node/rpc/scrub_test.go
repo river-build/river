@@ -39,7 +39,7 @@ func addUserToChannel(
 			nil,
 			spaceId[:],
 		),
-		&MiniblockRef{
+		&events.MiniblockRef{
 			Hash: common.BytesToHash(resUser.PrevMiniblockHash),
 			Num:  resUser.MinipoolGen - 1,
 		},

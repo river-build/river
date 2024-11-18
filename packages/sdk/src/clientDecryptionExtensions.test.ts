@@ -9,7 +9,6 @@ import { TestClientOpts, makeTestClient, makeUniqueSpaceStreamId, waitFor } from
 import { Stream } from './stream'
 import { DecryptionSessionError } from '@river-build/encryption'
 import { makeUniqueChannelStreamId } from './id'
-import { SyncState } from './syncedStreamsLoop'
 
 const log = dlog('csb:test:decryptionExtensions')
 
@@ -19,7 +18,6 @@ describe('ClientDecryptionExtensions', () => {
         const client = await makeTestClient(opts)
         await client.initializeUser()
         client.startSync()
-        await waitFor(() => expect(client.streams.syncState).toBe(SyncState.Syncing))
         log('started client', client.userId, client.signerContext)
         clients.push(client)
         return client

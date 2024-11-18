@@ -15,7 +15,7 @@ interface IRewardsDistributionBase {
   /// @param nextDepositId The next deposit ID that will be used
   struct StakingState {
     address riverToken;
-    uint96 totalStaked;
+    uint256 totalStaked;
     uint256 rewardDuration;
     uint256 rewardEndTime;
     uint256 lastUpdateTime;
@@ -134,11 +134,11 @@ interface IRewardsDistributionBase {
   /// @notice Emitted when space delegation rewards are swept to the operator
   /// @param space The address of the space
   /// @param operator The address of the operator
-  /// @param scaledReward The scaled amount of rewardToken that is swept
+  /// @param amount The amount of rewardToken that is swept
   event SpaceRewardsSwept(
     address indexed space,
     address indexed operator,
-    uint256 scaledReward
+    uint256 amount
   );
 }
 
@@ -285,7 +285,7 @@ interface IRewardsDistribution is IRewardsDistributionBase {
   /// @return amount The amount of stakeToken that is staked by the depositor
   function stakedByDepositor(
     address depositor
-  ) external view returns (uint96 amount);
+  ) external view returns (uint256 amount);
 
   /// @notice Returns the deposit IDs for a particular depositor
   /// @param depositor The address of the depositor
