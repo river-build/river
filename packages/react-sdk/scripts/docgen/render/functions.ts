@@ -49,7 +49,7 @@ export function renderApiFunction(options: {
         )
     }
 
-    return content.join('\n\n').trim()
+    return content.filter(Boolean).join('\n\n').trim()
 }
 
 function renderImports(options: { module: string }) {
@@ -63,6 +63,9 @@ function renderImports(options: { module: string }) {
 
 function renderExamples(options: { examples: readonly string[] }) {
     const { examples } = options
+    if (!examples.length) {
+        return
+    }
     const content = ['## Examples']
     for (const example of examples) {
         content.push(example)

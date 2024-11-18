@@ -69,10 +69,7 @@ for (const module of apiEntryPoint.members) {
     const typeContent = ''
     if (module.kind === model.ApiItemKind.Function) {
         // Resolve overloads for function
-        const overloads = module
-            .getMergedSiblings()
-            .map(getId)
-            .filter((x) => !x.endsWith('namespace'))
+        const overloads = module.getMergedSiblings().map(getId)
         // Skip overloads without TSDoc attached
         if (overloads.length > 1 && overloads.find((x) => dataLookup[x]?.comment?.summary) !== id) {
             continue
@@ -98,7 +95,6 @@ for (const module of apiEntryPoint.members) {
                 description: f.description,
                 link: f.link,
             })
-            content.push(f.description)
             content.push(apiContent)
             content.push(typeContent)
         }

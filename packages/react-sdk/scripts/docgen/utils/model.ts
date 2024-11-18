@@ -11,24 +11,7 @@ export type Data = Pick<model.ApiItem, 'displayName' | 'kind'> &
         children: readonly string[]
         childrenIncompleteDetails?: string | undefined
         childrenIncomplete?: boolean | undefined
-        comment?:
-            | {
-                  alias: string
-                  alpha: boolean
-                  beta: boolean
-                  comment: string
-                  default: string
-                  deprecated: string
-                  docGroup: string
-                  examples: readonly string[]
-                  experimental: boolean
-                  remarks: string
-                  returns: string
-                  since: string
-                  summary: string
-                  throws: readonly string[]
-              }
-            | undefined
+        comment?: ReturnType<typeof processDocComment>
         description: string
         excerpt: string
         file: {
@@ -87,7 +70,7 @@ export function createDataLookup(apiItem: model.ApiItem) {
             id,
             ...extractChildren(apiItem),
             canonicalReference: apiItem.canonicalReference.toString(),
-            // comment,
+            comment,
             description: comment?.summary.split('\n')[0]?.trim() ?? '',
             displayName: apiItem.displayName,
             excerpt: apiItem.excerpt.text,
