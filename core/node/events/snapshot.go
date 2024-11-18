@@ -546,6 +546,9 @@ func update_Snapshot_Member(
 		snapshot.Pins = snapPins
 		return nil
 	case *MemberPayload_Mls:
+		if snapshot.MlsGroup == nil {
+			snapshot.MlsGroup = &MemberPayload_Snapshot_MlsGroup{}
+		}
 		applyMlsPayload(snapshot.MlsGroup, content.Mls)
 		return nil
 	default:
@@ -801,7 +804,7 @@ func applyKeyFulfillment(member *MemberPayload_Snapshot_Member, keyFulfillment *
 }
 
 /*
-For now: we trust that the commits do what the clients say it does.
+For now: we trust that the commits do what the clients say it does.
 we will augment this with proper MLS verification very soon
 */
 
