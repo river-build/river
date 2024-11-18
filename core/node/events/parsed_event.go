@@ -17,7 +17,6 @@ import (
 type ParsedEvent struct {
 	Event         *StreamEvent
 	Envelope      *Envelope
-	Tags          *Tags
 	Hash          common.Hash
 	MiniblockRef  *MiniblockRef
 	SignerPubKey  []byte
@@ -54,7 +53,6 @@ func ParseEvent(envelope *Envelope) (*ParsedEvent, error) {
 	}
 
 	if len(streamEvent.DelegateSig) > 0 {
-
 		err := CheckDelegateSig(
 			streamEvent.CreatorAddress,
 			signerPubKey,
@@ -80,7 +78,6 @@ func ParseEvent(envelope *Envelope) (*ParsedEvent, error) {
 	return &ParsedEvent{
 		Event:    &streamEvent,
 		Envelope: envelope,
-		Tags:     streamEvent.GetTags(),
 		Hash:     common.BytesToHash(envelope.Hash),
 		MiniblockRef: &MiniblockRef{
 			Hash: common.BytesToHash(streamEvent.PrevMiniblockHash),
