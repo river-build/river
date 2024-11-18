@@ -4,13 +4,14 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/river-build/river/core/config"
-	"github.com/river-build/river/core/node/base"
+	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/base/test"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/infra"
@@ -169,7 +170,15 @@ func (ctc *cacheTestContext) createReplStream() (StreamId, []common.Address, *Mi
 	ctc.require.Len(nodes, ctc.testParams.replFactor)
 
 	for _, n := range nodes {
-		s, err := ctc.instancesByAddr[n].cache.GetStream(ctc.ctx, streamId)
+		var s SyncStream
+		var err error
+		for {
+			s, err = ctc.instancesByAddr[n].cache.GetStreamWithWait(ctc.ctx, streamId, 5*time.Second)
+			if !IsRiverErrorCode(err, Err_NOT_FOUND) {
+				break
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
 		ctc.require.NoError(err)
 		_, err = s.GetView(ctc.ctx)
 		ctc.require.NoError(err)
@@ -198,7 +207,7 @@ func (ctc *cacheTestContext) addReplEvent(
 	ctc.require.NoError(err)
 
 	for _, n := range nodes {
-		stream, err := ctc.instancesByAddr[n].cache.GetStream(ctc.ctx, streamId)
+		stream, err := ctc.instancesByAddr[n].cache.GetStreamWithWait(ctc.ctx, streamId, 5*time.Second)
 		ctc.require.NoError(err)
 
 		err = stream.AddEvent(ctc.ctx, ev)
@@ -229,7 +238,7 @@ func (ctc *cacheTestContext) createStream(
 	genesisMiniblock *Miniblock,
 ) (SyncStream, StreamView) {
 	ctc.createStreamNoCache(streamId, genesisMiniblock)
-	s, err := ctc.instances[0].cache.GetStream(ctc.ctx, streamId)
+	s, err := ctc.instances[0].cache.GetStreamWithWait(ctc.ctx, streamId, 5*time.Second)
 	ctc.require.NoError(err)
 	v, err := s.GetView(ctc.ctx)
 	ctc.require.NoError(err)
@@ -310,44 +319,29 @@ func (ctc *cacheTestContext) SaveMbCandidate(
 	return stream.SaveMiniblockCandidate(ctx, mb)
 }
 
-// GetMiniBlocksStreamed returns a range of miniblocks from the given stream.
-func (ctc *cacheTestContext) GetMbsStreamed(
+func (ctc *cacheTestContext) GetMbs(
 	ctx context.Context,
 	node common.Address,
-	streamID StreamId,
-	fromMiniBlockNum int64, // inclusive
-	toMiniBlockNum int64, // exclusive
-) <-chan *MbOrError {
-	mbChanOrErr := make(chan *MbOrError)
-
-	go func() {
-		defer close(mbChanOrErr)
-
-		for _, instance := range ctc.instances {
-			if node == instance.params.Wallet.Address {
-				streamAny, ok := instance.cache.cache.Load(streamID)
-				if !ok {
-					mbChanOrErr <- &MbOrError{
-						Err: base.RiverError(Err_NOT_FOUND, "cacheTestContext::GetMbsStreamed stream not found"),
-					}
-					return
-				}
-				stream := streamAny.(*streamImpl)
-
-				miniBlocks, _, err := stream.GetMiniblocks(ctx, fromMiniBlockNum, toMiniBlockNum)
-				if err != nil {
-					mbChanOrErr <- &MbOrError{Err: err}
-					return
-				}
-
-				for _, miniBlock := range miniBlocks {
-					mbChanOrErr <- &MbOrError{Miniblock: miniBlock}
-				}
+	streamId StreamId,
+	fromInclusive int64,
+	toExclusive int64,
+) ([]*Miniblock, error) {
+	for _, instance := range ctc.instances {
+		if node == instance.params.Wallet.Address {
+			stream, err := instance.cache.getStreamImpl(ctx, streamId)
+			if err != nil {
+				return nil, err
 			}
-		}
-	}()
 
-	return mbChanOrErr
+			mbs, _, err := stream.GetMiniblocks(ctx, fromInclusive, toExclusive)
+			if err != nil {
+				return nil, err
+			}
+			return mbs, nil
+		}
+	}
+
+	return nil, RiverError(Err_INTERNAL, "TEST: cacheTestContext::GetMbs node not found")
 }
 
 func setOnChainStreamConfig(t *testing.T, ctx context.Context, btc *crypto.BlockchainTestContext, p testParams) {

@@ -910,3 +910,17 @@ func (s *streamImpl) tryReadAndApplyCandidateNoLock(ctx context.Context, mbRef *
 	}
 	return false
 }
+
+// getLastMiniblockNumSkipLoad returns the last miniblock number for the given stream from the view if loaded,
+// or from storage otherwise.
+func (s *streamImpl) getLastMiniblockNumSkipLoad(ctx context.Context) (int64, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	view := s.view()
+	if view != nil {
+		return view.LastBlock().Ref.Num, nil
+	}
+
+	return s.params.Storage.GetLastMiniblockNumber(ctx, s.streamId)
+}
