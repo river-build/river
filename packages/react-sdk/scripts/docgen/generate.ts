@@ -102,23 +102,6 @@ for (const module of apiEntryPoint.members) {
     }
 }
 
-////////////////////////////////////////////////////////////
-/// Generate "API Reference" page
-////////////////////////////////////////////////////////////
-
-let content = '# API Reference\n\n'
-
-content += '| Name | Description |\n'
-content += '| --- | --- |\n'
-
-for (const [name, info] of functionsMap) {
-    content += `| ${info.link ? `[${name}](${info.link})` : name} | ${info.description} |\n`
-}
-
-content += '\n'
-
-fs.writeFileSync(resolve(import.meta.dirname, `${config.pagesDir}/overview.mdx`), content)
-
 console.log('Updating mint.json navigation for React SDK API pages')
 
 // Update mint.json navigation for React SDK API pages
