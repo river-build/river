@@ -6125,7 +6125,7 @@ __metadata:
     react: ^18.2.0
     react-dom: ^18.2.0
     ts-morph: ^24.0.0
-    tsx: ^4.19.2
+    tsx: ^4.7.1
     typescript: ^5.1.6
   peerDependencies:
     react: ^18.2.0
@@ -19402,7 +19402,7 @@ __metadata:
     miniflare: ^3.20240524.1
     prettier: ^2.8.8
     ts-jest: ^29.1.1
-    tsx: ^4.19.2
+    tsx: ^4.7.1
     typescript: ^5.1.6
     worker-common: "workspace:^"
     wrangler: ^3.60.3
@@ -26136,7 +26136,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tsx@npm:^4.19.2":
+"tsx@npm:^4.7.1":
   version: 4.19.2
   resolution: "tsx@npm:4.19.2"
   dependencies:
