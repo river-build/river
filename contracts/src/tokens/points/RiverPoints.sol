@@ -4,8 +4,10 @@ pragma solidity ^0.8.23;
 // interfaces
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IArchitect} from "contracts/src/factory/facets/architect/IArchitect.sol";
 
 // libraries
+import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 import {RiverPointsStorage} from "./RiverPointsStorage.sol";
 
 // contracts
@@ -13,28 +15,47 @@ import {Facet} from "contracts/src/diamond/facets/Facet.sol";
 import {IntrospectionFacet} from "contracts/src/diamond/facets/introspection/IntrospectionFacet.sol";
 
 contract RiverPoints is Facet, IntrospectionFacet, IERC20Metadata {
-  function __RiverPoints_init(address river) external onlyInitializing {
+  error RiverPoints__InvalidSpace();
+
+  function __RiverPoints_init(address spaceFactory) external onlyInitializing {
     RiverPointsStorage.Layout storage ds = RiverPointsStorage.layout();
-    ds.river = river;
+    ds.spaceFactory = spaceFactory;
 
     _addInterface(type(IERC20).interfaceId);
     _addInterface(type(IERC20Metadata).interfaceId);
+  }
+
+  modifier onlySpace() {
+    address spaceFactory = RiverPointsStorage.layout().spaceFactory;
+    if (IArchitect(spaceFactory).getTokenIdBySpace(msg.sender) == 0) {
+      CustomRevert.revertWith(RiverPoints__InvalidSpace.selector);
+    }
+    _;
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                           ERC20                            */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
+  /// @inheritdoc IERC20
   function approve(address spender, uint256 value) external returns (bool) {
     RiverPointsStorage.layout().inner.approve(spender, value);
     return true;
   }
 
+  /// @notice Mint points to a user
+  /// @dev Only spaces can mint points
+  function mint(address to, uint256 value) external onlySpace {
+    RiverPointsStorage.layout().inner.mint(to, value);
+  }
+
+  /// @inheritdoc IERC20
   function transfer(address to, uint256 value) external returns (bool) {
     RiverPointsStorage.layout().inner.transfer(to, value);
     return true;
   }
 
+  /// @inheritdoc IERC20
   function transferFrom(
     address from,
     address to,

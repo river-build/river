@@ -22,6 +22,7 @@ import {Entitled} from "contracts/src/spaces/facets/Entitled.sol";
 import {PrepayBase} from "contracts/src/spaces/facets/prepay/PrepayBase.sol";
 import {ReferralsBase} from "contracts/src/spaces/facets/referrals/ReferralsBase.sol";
 import {EntitlementGatedBase} from "contracts/src/spaces/facets/gated/EntitlementGatedBase.sol";
+import {RiverPoints} from "contracts/src/tokens/points/RiverPoints.sol";
 
 /// @title MembershipJoin
 /// @notice Handles the logic for joining a space, including entitlement checks and payment processing
@@ -283,6 +284,31 @@ abstract contract MembershipJoin is
     );
   }
 
+  /// @notice Computes the points for the protocol fee
+  function _getPoints(uint256 protocolFee) internal pure returns (uint256) {
+    if (protocolFee <= 0.0003 ether) {
+      return protocolFee * 1_000_000;
+    } else if (protocolFee <= 0.001 ether) {
+      return protocolFee * 2_000_000;
+    } else {
+      return protocolFee * 3_000_000;
+    }
+  }
+
+  function _creditPoints(address receiver, uint256 points) internal {
+    // TODO: get `RiverPoints` from `spaceFactory`
+    RiverPoints pointsToken;
+    // Equivalent to `pointsToken.mint(receiver, points);`
+    bytes4 selector = RiverPoints.mint.selector;
+    assembly ("memory-safe") {
+      mstore(0, selector)
+      mstore(0x04, receiver)
+      mstore(0x24, points)
+      pop(call(gas(), pointsToken, 0, 0, 0x44, 0, 0))
+      mstore(0x24, 0)
+    }
+  }
+
   function _afterChargeForJoinSpace(
     bytes32 transactionId,
     address sender,
@@ -296,6 +322,11 @@ abstract contract MembershipJoin is
 
     _releaseCapturedValue(transactionId, payment);
     _captureData(transactionId, "");
+
+    // calculate points and credit them
+    uint256 points = _getPoints(protocolFee);
+    _creditPoints(sender, points);
+    _creditPoints(_owner(), points);
   }
 
   /// @notice Issues a membership token to the receiver

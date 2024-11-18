@@ -9,8 +9,8 @@ library RiverPointsStorage {
     0x25a22d57af6f735dc617e9781981413da3bc5a71376b4237270a04c144aaf700;
 
   struct Layout {
-    address river;
     MinimalERC20Storage inner;
+    address spaceFactory;
   }
 
   function layout() internal pure returns (Layout storage l) {
