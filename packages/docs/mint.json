@@ -160,6 +160,10 @@
           ]
         }
       ]
+    },
+    {
+      "group": "SDK",
+      "pages": ["sdk/react-sdk/getting-started"]
     }
   ],
   "footerSocials": {
