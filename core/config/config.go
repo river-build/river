@@ -39,7 +39,7 @@ func GetDefaultConfig() *Config {
 		// TODO: ArchitectContract: ContractConfig{},
 		// TODO: RegistryContract:  ContractConfig{},
 		StreamReconciliation: StreamReconciliationConfig{
-			WorkerPoolSize:        4,
+			InitialWorkerPoolSize: 4,
 			OnlineWorkerPoolSize:  32,
 			GetMiniblocksPageSize: 128,
 		},
@@ -460,8 +460,8 @@ type ScrubbingConfig struct {
 }
 
 type StreamReconciliationConfig struct {
-	// WorkerPoolSize is the size of the worker pool for initial background stream reconciliation tasks on node start.
-	WorkerPoolSize int
+	// InitialWorkerPoolSize is the size of the worker pool for initial background stream reconciliation tasks on node start.
+	InitialWorkerPoolSize int
 
 	// OnlineWorkerPoolSize is the size of the worker pool for ongoing stream reconciliation tasks.
 	OnlineWorkerPoolSize int

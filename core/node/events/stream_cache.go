@@ -104,14 +104,14 @@ func NewStreamCache(
 	}
 
 	// load local streams in-memory cache
-	initialSyncWorkerPool := workerpool.New(params.Config.StreamReconciliation.WorkerPoolSize)
+	initialSyncWorkerPool := workerpool.New(params.Config.StreamReconciliation.InitialWorkerPoolSize)
 	for _, stream := range localStreamResults {
 		s.cache.Store(stream.StreamId, &streamImpl{
 			params:   params,
 			streamId: stream.StreamId,
 			nodes:    NewStreamNodes(stream.Nodes, params.Wallet.Address),
 		})
-		if params.Config.StreamReconciliation.WorkerPoolSize > 0 {
+		if params.Config.StreamReconciliation.InitialWorkerPoolSize > 0 {
 			s.submitSyncStreamTask(
 				ctx,
 				initialSyncWorkerPool,
