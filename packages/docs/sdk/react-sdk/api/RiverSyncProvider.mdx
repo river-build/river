@@ -12,7 +12,13 @@ import { RiverSyncProvider } from '@river-build/react-sdk'
 
 ```ts
 function RiverSyncProvider(
-  props: RiverSyncProviderProps,
+  props: {
+    syncAgent?: SyncAgent;
+    config?: {
+        onTokenExpired?: () => void;
+    };
+    children?: React.ReactNode;
+},
 ): JSX.Element
 ```
 
@@ -22,7 +28,13 @@ function RiverSyncProvider(
 
 ### props
 
-- **Type:** [`RiverSyncProviderProps`](/api/undefined/types#undefinedriversyncproviderprops)
+- **Type:** `{
+    syncAgent?: SyncAgent;
+    config?: {
+        onTokenExpired?: () => void;
+    };
+    children?: React.ReactNode;
+}`
 
 ## Return Type
 

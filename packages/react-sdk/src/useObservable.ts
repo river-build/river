@@ -48,7 +48,7 @@ export declare namespace ObservableConfig {
 }
 
 /**
- * River SyncAgent models are wrapped in a PERISTED MODEL TODO LINK when they are persisted.
+ * River SyncAgent models are wrapped in a PersistedModel when they are persisted.
  * This type is used to extract the actual data from the model.
  */
 type ObservableValue<Data> = Data extends PersistedModel<infer UnwrappedData>
