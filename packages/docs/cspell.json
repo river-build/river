@@ -43,7 +43,9 @@
         "degod",
         "sslmode",
         "chainid",
-        "nocolor"
+        "nocolor",
+        "wagmi",
+        "viem"
     ],
     "allowCompoundWords": true,
     "ignoreRegExpList": [
