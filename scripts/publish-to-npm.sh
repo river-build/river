@@ -45,11 +45,11 @@ if [ $exit_status_yarn -ne 0 ]; then
     exit 1
 fi
 
-yarn workspace @river-build/react-sdk gen:docs
+yarn workspace @river-build/react-sdk gen
 exit_status_docgen=$?
 
 if [ $exit_status_docgen -ne 0 ]; then
-    echo "yarn workspace @river-build/react-sdk gen:docs failed."
+    echo "yarn workspace @river-build/react-sdk gen failed."
     exit 1
 fi
 

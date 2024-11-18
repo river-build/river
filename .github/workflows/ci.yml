@@ -140,7 +140,7 @@ jobs:
             - name: Generate react-sdk docs
               if: ${{ !cancelled() && steps.setup_success.outcome == 'success' }}
               working-directory: packages/react-sdk
-              run: yarn gen:docs
+              run: yarn gen
 
             - name: Docs checking broken links
               working-directory: packages/docs
