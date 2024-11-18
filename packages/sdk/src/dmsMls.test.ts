@@ -13,7 +13,6 @@ import {
 
 import { StreamTimelineEvent } from './types'
 import { makeUniqueChannelStreamId } from './id'
-import { MembershipOp } from '@river-build/proto'
 
 const log = dlog('test:mls')
 
@@ -21,10 +20,12 @@ describe('dmsMlsTests', () => {
     let clients: Client[] = []
     const makeInitAndStartClient = async (nickname?: string) => {
         const client = await makeTestClient()
+        await goBackToEventLoop()
         if (nickname) {
             client.nickname = nickname
         }
         await client.initializeUser()
+        await goBackToEventLoop()
         client.startSync()
         clients.push(client)
         return client
@@ -258,7 +259,7 @@ describe('dmsMlsTests', () => {
         }
 
         await expect(
-            await waitFor(
+            waitFor(
                 () => {
                     for (const client of clients) {
                         const stream = client.streams.get(channelId)!
@@ -284,7 +285,7 @@ describe('dmsMlsTests', () => {
         ).toResolve()
     })
 
-    test.only('manyClientsInChannelInterleaving', async () => {
+    test('manyClientsInChannelInterleaving', async () => {
         const spaceId = makeUniqueSpaceStreamId()
         const bobsClient = await makeInitAndStartClient('bob')
         await expect(bobsClient.createSpace(spaceId)).toResolve()
@@ -292,30 +293,40 @@ describe('dmsMlsTests', () => {
         await expect(bobsClient.createChannel(spaceId, 'Channel', 'Topic', channelId)).toResolve()
 
         const messagesInFlight: Promise<any>[] = []
+        const messages: string[] = []
 
-        messagesInFlight.push(
-            bobsClient.sendMessage(channelId, 'hello everyone', [], [], { useMls: true }),
-        )
+        const send = (client: Client, msg: string) => {
+            messages.push(msg)
+            messagesInFlight.push(client.sendMessage(channelId, msg, [], [], { useMls: true }))
+        }
+
+        send(bobsClient, 'hello everyone')
+
+        const NUM_CLIENTS = 4
+        const NUM_MESSAGES = 5
 
         await Promise.all(
-            Array.from(Array(8).keys()).map(async (n: number) => {
-                log(`joining client-${n}`)
+            Array.from(Array(NUM_CLIENTS).keys()).map(async (n: number) => {
+                log(`INIT client-${n}`)
                 const client = await makeInitAndStartClient(`client-${n}`)
-                await goBackToEventLoop()
                 await expect(client.joinStream(channelId)).toResolve()
-                await goBackToEventLoop()
-                // await expect(client.waitForStream(channelId)).toResolve()
-                const clientStream = await client.waitForStream(channelId)
-                await goBackToEventLoop()
-                await expect(clientStream.waitForMembership(MembershipOp.SO_JOIN)).toResolve()
-                await goBackToEventLoop()
-                await expect(
-                    client.sendMessage(channelId, `hello from ${n}`, [], [], { useMls: true }),
-                ).toResolve()
+                send(client, `hello from ${n}`)
+                for (let m = 0; m < NUM_MESSAGES; m++) {
+                    send(client, `message ${m} from ${n}`)
+                }
             }),
         )
 
         await expect(Promise.all(messagesInFlight)).toResolve()
+        await waitFor(
+            () => {
+                for (const client of clients) {
+                    const stream = client.streams.get(channelId)!
+                    check(checkTimelineContainsAll(messages, stream.view.timeline))
+                }
+            },
+            { timeoutMS: 10000 },
+        )
     })
 })
 
