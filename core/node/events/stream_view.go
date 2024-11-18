@@ -36,6 +36,7 @@ type StreamView interface {
 	MiniblocksFromLastSnapshot() []*Miniblock
 	SyncCookie(localNodeAddress common.Address) *SyncCookie
 	LastBlock() *MiniblockInfo
+	Blocks() []*MiniblockInfo
 	ValidateNextEvent(
 		ctx context.Context,
 		cfg *crypto.OnChainSettings,
@@ -221,6 +222,10 @@ func (r *streamViewImpl) copyAndAddEvent(event *ParsedEvent) (*streamViewImpl, e
 
 func (r *streamViewImpl) LastBlock() *MiniblockInfo {
 	return r.blocks[len(r.blocks)-1]
+}
+
+func (r *streamViewImpl) Blocks() []*MiniblockInfo {
+	return r.blocks
 }
 
 func (r *streamViewImpl) ProposeNextMiniblock(

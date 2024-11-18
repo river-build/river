@@ -39,20 +39,13 @@ type RemoteMiniblockProvider interface {
 		mb *Miniblock,
 	) error
 
-	// GetMiniBlocksStreamed returns a stream of mini-blocks or an error for the given stream in the range
-	// [fromMiniBlockNum..toMiniBlockNum).
-	GetMbsStreamed(
+	GetMbs(
 		ctx context.Context,
 		node common.Address,
-		stream StreamId,
-		fromMiniBlockNum int64, // inclusive
-		toMiniBlockNum int64, // exclusive
-	) <-chan *MbOrError
-}
-
-type MbOrError struct {
-	Miniblock *Miniblock
-	Err       error
+		streamId StreamId,
+		fromInclusive int64,
+		toExclusive int64,
+	) ([]*Miniblock, error)
 }
 
 type MiniblockProducer interface {
