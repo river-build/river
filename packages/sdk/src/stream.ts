@@ -129,6 +129,26 @@ export class Stream extends (EventEmitter as new () => TypedEmitter<StreamEvents
         )
     }
 
+    // public async waitForMembership(membership: MembershipOp, userId_?: string) {
+    //     const userId = userId_ ?? this.userId
+    //     this.logEmitFromStream('waitForMembership start', userId, membership)
+    //     // check to see if we're already in that state
+    //     if (this._view.getMembers().isMember(membership, userId)) {
+    //         this.logEmitFromStream(
+    //             'waitForMembership already a member',
+    //             this.streamId,
+    //             userId,
+    //             membership,
+    //         )
+    //         return
+    //     }
+    //     // wait for a membership updated event, event, check again
+    //     await this.waitFor('streamMembershipUpdated', (_streamId: string, _userId: string) => {
+    //         return this._view.getMembers().isMember(membership, userId)
+    //     })
+    //     this.logEmitFromStream('waitForMembership end', userId, membership)
+    // }
+
     /**
      * Wait for a stream event to be emitted
      * optionally pass a condition function to check the event args

@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"time"
 
 	"github.com/river-build/river/core/node/utils"
 
@@ -40,7 +41,7 @@ func (s *Service) allocateStream(ctx context.Context, req *AllocateStreamRequest
 
 	// TODO: check request is signed by correct node
 	// TODO: all checks that should be done on create?
-	stream, err := s.cache.GetStream(ctx, streamId)
+	stream, err := s.cache.GetStreamWithWait(ctx, streamId, 10*time.Second)
 	if err != nil {
 		return nil, err
 	}

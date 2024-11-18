@@ -162,15 +162,15 @@ func (s *Service) createReplicatedStream(
 	var localSyncCookie *SyncCookie
 	if nodes.IsLocal() {
 		sender.GoLocal(func() error {
-			st, err := s.cache.GetStream(ctx, streamId)
+			stream, err := s.cache.GetStreamWithWait(ctx, streamId, 10*time.Second)
 			if err != nil {
 				return err
 			}
-			sv, err := st.GetView(ctx)
+			view, err := stream.GetView(ctx)	
 			if err != nil {
 				return err
 			}
-			localSyncCookie = sv.SyncCookie(s.wallet.Address)
+			localSyncCookie = view.SyncCookie(s.wallet.Address)
 			return nil
 		})
 	}

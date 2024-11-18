@@ -37,7 +37,11 @@ type StreamCacheParams struct {
 
 type StreamCache interface {
 	Params() *StreamCacheParams
+
 	GetStream(ctx context.Context, streamId StreamId) (SyncStream, error)
+
+	GetStreamWithWait(ctx context.Context, streamId StreamId, timeout time.Duration) (SyncStream, error)
+
 	ForceFlushAll(ctx context.Context)
 	GetLoadedViews(ctx context.Context) []StreamView
 	GetMbCandidateStreams(ctx context.Context) []*streamImpl
@@ -251,73 +255,73 @@ func (s *streamCacheImpl) CacheCleanup(ctx context.Context, enabled bool, expira
 	return result
 }
 
-func (s *streamCacheImpl) tryLoadStreamRecord(
-	ctx context.Context,
-	streamId StreamId,
-) (*streamImpl, error) {
-	// For GetStream the fact that record is not in cache means that there is race to get it during creation:
-	// Blockchain record is already created, but this fact is not reflected yet in local storage.
-	// This may happen if somebody observes record allocation on blockchain and tries to get stream
-	// while local storage is being initialized.
-	record, _, mb, err := s.params.Registry.GetStreamWithGenesis(ctx, streamId)
-	if err != nil {
-		// Loop here waiting for record to be created.
-		// This is less optimal than implementing pub/sub, but given that this is rare codepath,
-		// it is not worth over-engineering.
-		ctx, cancel := context.WithTimeout(ctx, time.Second*10)
-		defer cancel()
-		delay := time.Millisecond * 20
-	forLoop:
-		for {
-			select {
-			case <-ctx.Done():
-				return nil, ctx.Err()
-			case <-time.After(delay):
-				entry, _ := s.cache.Load(streamId)
-				if entry != nil {
-					return entry.(*streamImpl), nil
-				}
-				record, _, mb, err = s.params.Registry.GetStreamWithGenesis(ctx, streamId)
-				if err == nil {
-					break forLoop
-				}
-				delay *= 2
-			}
-		}
-	}
+// func (s *streamCacheImpl) tryLoadStreamRecord(
+// 	ctx context.Context,
+// 	streamId StreamId,
+// ) (*streamImpl, error) {
+// 	// For GetStream the fact that record is not in cache means that there is race to get it during creation:
+// 	// Blockchain record is already created, but this fact is not reflected yet in local storage.
+// 	// This may happen if somebody observes record allocation on blockchain and tries to get stream
+// 	// while local storage is being initialized.
+// 	record, _, mb, err := s.params.Registry.GetStreamWithGenesis(ctx, streamId)
+// 	if err != nil {
+// 		// Loop here waiting for record to be created.
+// 		// This is less optimal than implementing pub/sub, but given that this is rare codepath,
+// 		// it is not worth over-engineering.
+// 		ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+// 		defer cancel()
+// 		delay := time.Millisecond * 20
+// 	forLoop:
+// 		for {
+// 			select {
+// 			case <-ctx.Done():
+// 				return nil, ctx.Err()
+// 			case <-time.After(delay):
+// 				entry, _ := s.cache.Load(streamId)
+// 				if entry != nil {
+// 					return entry.(*streamImpl), nil
+// 				}
+// 				record, _, mb, err = s.params.Registry.GetStreamWithGenesis(ctx, streamId)
+// 				if err == nil {
+// 					break forLoop
+// 				}
+// 				delay *= 2
+// 			}
+// 		}
+// 	}
 
-	nodes := NewStreamNodes(record.Nodes, s.params.Wallet.Address)
-	if !nodes.IsLocal() {
-		return nil, RiverError(
-			Err_INTERNAL,
-			"tryLoadStreamRecord: Stream is not local",
-			"streamId", streamId,
-			"nodes", record.Nodes,
-			"localNode", s.params.Wallet,
-		)
-	}
+// 	nodes := NewStreamNodes(record.Nodes, s.params.Wallet.Address)
+// 	if !nodes.IsLocal() {
+// 		return nil, RiverError(
+// 			Err_INTERNAL,
+// 			"tryLoadStreamRecord: Stream is not local",
+// 			"streamId", streamId,
+// 			"nodes", record.Nodes,
+// 			"localNode", s.params.Wallet,
+// 		)
+// 	}
 
-	if record.LastMiniblockNum > 0 {
-		// TODO: reconcile from other nodes.
-		return nil, RiverError(
-			Err_INTERNAL,
-			"tryLoadStreamRecord: Stream is past genesis",
-			"streamId",
-			streamId,
-			"record",
-			record,
-		)
-	}
+// 	if record.LastMiniblockNum > 0 {
+// 		// TODO: reconcile from other nodes.
+// 		return nil, RiverError(
+// 			Err_INTERNAL,
+// 			"tryLoadStreamRecord: Stream is past genesis",
+// 			"streamId",
+// 			streamId,
+// 			"record",
+// 			record,
+// 		)
+// 	}
 
-	stream := &streamImpl{
-		params:           s.params,
-		streamId:         streamId,
-		nodes:            nodes,
-		lastAccessedTime: time.Now(),
-	}
+// 	stream := &streamImpl{
+// 		params:           s.params,
+// 		streamId:         streamId,
+// 		nodes:            nodes,
+// 		lastAccessedTime: time.Now(),
+// 	}
 
-	return s.createStreamStorage(ctx, stream, mb)
-}
+// 	return s.createStreamStorage(ctx, stream, mb)
+// }
 
 func (s *streamCacheImpl) createStreamStorage(
 	ctx context.Context,
@@ -377,9 +381,56 @@ func (s *streamCacheImpl) GetStream(ctx context.Context, streamId StreamId) (Syn
 func (s *streamCacheImpl) getStreamImpl(ctx context.Context, streamId StreamId) (*streamImpl, error) {
 	entry, _ := s.cache.Load(streamId)
 	if entry == nil {
-		return s.tryLoadStreamRecord(ctx, streamId)
+		return nil, RiverError(Err_NOT_FOUND, "Stream not found in cache", "streamId", streamId)
 	}
 	return entry.(*streamImpl), nil
+}
+
+func (s *streamCacheImpl) GetStreamWithWait(
+	ctx context.Context,
+	streamId StreamId,
+	timeout time.Duration,
+) (SyncStream, error) {
+	stream, err := s.getStreamWithWaitImpl(ctx, streamId, timeout)
+	if err != nil {
+		return nil, err
+	}
+	return stream, nil
+}
+
+func (s *streamCacheImpl) getStreamWithWaitImpl(
+	ctx context.Context,
+	streamId StreamId,
+	timeout time.Duration,
+) (*streamImpl, error) {
+	// TODO: better way to wait for stream to be initialized than polling
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	var st *streamImpl
+	var err error
+	waitInterval := 10 * time.Millisecond
+	for {
+		ctxErr := ctx.Err()
+		if ctxErr != nil {
+			if err != nil {
+				return nil, err
+			} else {
+				return nil, ctxErr
+			}
+		}
+
+		st, err = s.getStreamImpl(ctx, streamId)
+		if err == nil {
+			break
+		}
+		if !IsRiverErrorCode(err, Err_NOT_FOUND) {
+			return nil, err
+		}
+		time.Sleep(waitInterval)
+		waitInterval = min(waitInterval*2, 160*time.Millisecond)
+	}
+	return st, nil
 }
 
 func (s *streamCacheImpl) ForceFlushAll(ctx context.Context) {
