@@ -1,0 +1,67 @@
+---
+title: useCreateSpace
+---
+Hook to create a space.
+
+## Imports
+
+```ts
+import { useCreateSpace } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useCreateSpace(
+  config?: ActionConfig<Spaces['createSpace']>,
+): {
+    data: {
+        spaceId: string;
+        defaultChannelId: string;
+    } | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    createSpace: (params: Partial<Omit<CreateSpaceParams, "spaceName">> & {
+        spaceName: string;
+    }, signer: Signer) => Promise<{
+        spaceId: string;
+        defaultChannelId: string;
+    }>;
+}
+```
+
+**Source:** [useCreateSpace](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useCreateSpace.ts)
+
+## Parameters
+
+### config
+
+- **Type:** `ActionConfig<Spaces['createSpace']>`
+- **Optional**
+
+Configuration options for the action.
+
+## Return Type
+
+The `createSpace` action and its loading state.
+
+```ts
+{
+    data: {
+        spaceId: string;
+        defaultChannelId: string;
+    } | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    createSpace: (params: Partial<Omit<CreateSpaceParams, "spaceName">> & {
+        spaceName: string;
+    }, signer: Signer) => Promise<{
+        spaceId: string;
+        defaultChannelId: string;
+    }>;
+}
+```

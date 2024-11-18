@@ -1,0 +1,86 @@
+---
+title: useGdm
+---
+Hook to get the data of a Group DM. You can use this hook to get Group DM metadata and if the user has joined the Group DM.
+
+## Imports
+
+```ts
+import { useGdm } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useGdm(
+  streamId: string,
+  config?: ObservableConfig.FromData<GdmModel>,
+): {
+    data: GdmModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: GdmModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: GdmModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+}
+```
+
+**Source:** [useGdm](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useGdm.ts)
+
+## Parameters
+
+### streamId
+
+- **Type:** `string`
+
+The id of the Group DM to get the data of.
+
+### config
+
+- **Type:** `ObservableConfig.FromData<GdmModel>`
+- **Optional**
+
+Configuration options for the observable.
+
+## Return Type
+
+The GdmModel of the Group DM.
+
+```ts
+{
+    data: GdmModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: GdmModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: GdmModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+}
+```

@@ -1,0 +1,35 @@
+---
+title: connectRiver
+---
+## Imports
+
+```ts
+import { connectRiver } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function connectRiver(
+  signerContext: SignerContext,
+  config: Omit<SyncAgentConfig, 'context'>,
+): Promise<SyncAgent>
+```
+
+**Source:** [connectRiver](https://github.com/river-build/river/blob/main/packages/react-sdk/src/connectRiver.ts)
+
+## Parameters
+
+### signerContext
+
+- **Type:** `SignerContext`
+
+### config
+
+- **Type:** `Omit<SyncAgentConfig, 'context'>`
+
+## Return Type
+
+```ts
+Promise<SyncAgent>
+```

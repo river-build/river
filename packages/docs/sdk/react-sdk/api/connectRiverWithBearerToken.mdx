@@ -1,0 +1,35 @@
+---
+title: connectRiverWithBearerToken
+---
+## Imports
+
+```ts
+import { connectRiverWithBearerToken } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function connectRiverWithBearerToken(
+  token: string,
+  config: Omit<SyncAgentConfig, 'context'>,
+): Promise<SyncAgent>
+```
+
+**Source:** [connectRiverWithBearerToken](https://github.com/river-build/river/blob/main/packages/react-sdk/src/connectRiver.ts)
+
+## Parameters
+
+### token
+
+- **Type:** `string`
+
+### config
+
+- **Type:** `Omit<SyncAgentConfig, 'context'>`
+
+## Return Type
+
+```ts
+Promise<SyncAgent>
+```

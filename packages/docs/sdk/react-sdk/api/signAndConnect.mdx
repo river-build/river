@@ -1,0 +1,35 @@
+---
+title: signAndConnect
+---
+## Imports
+
+```ts
+import { signAndConnect } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function signAndConnect(
+  signer: ethers.Signer,
+  config: Omit<SyncAgentConfig, 'context'>,
+): Promise<SyncAgent>
+```
+
+**Source:** [signAndConnect](https://github.com/river-build/river/blob/main/packages/react-sdk/src/connectRiver.ts)
+
+## Parameters
+
+### signer
+
+- **Type:** `ethers.Signer`
+
+### config
+
+- **Type:** `Omit<SyncAgentConfig, 'context'>`
+
+## Return Type
+
+```ts
+Promise<SyncAgent>
+```

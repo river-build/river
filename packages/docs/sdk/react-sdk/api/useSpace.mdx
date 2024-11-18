@@ -1,0 +1,96 @@
+---
+title: useSpace
+---
+Hook to get data about a space. You can use this hook to get space metadata and ids of channels in the space.
+
+## Imports
+
+```ts
+import { useSpace } from '@river-build/react-sdk'
+```
+
+## Examples
+
+You can use this hook to display the data about a space:
+```tsx
+const Space = ({ spaceId }: { spaceId: string }) => {
+    const { data: space } = useSpace(spaceId)
+    return <div>{space.metadata?.name || 'Unnamed Space'}</div>
+}
+```
+
+## Definition
+
+```ts
+function useSpace(
+  spaceId: string,
+  config?: ObservableConfig.FromObservable<Space>,
+): {
+    data: SpaceModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: SpaceModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: SpaceModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+}
+```
+
+**Source:** [useSpace](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useSpace.ts)
+
+## Parameters
+
+### spaceId
+
+- **Type:** `string`
+
+The id of the space to get data about.
+
+### config
+
+- **Type:** `ObservableConfig.FromObservable<Space>`
+- **Optional**
+
+Configuration options for the observable.
+
+## Return Type
+
+The SpaceModel data.
+
+```ts
+{
+    data: SpaceModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: SpaceModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+} | {
+    data: SpaceModel;
+    error: Error | undefined;
+    status: "loading" | "loaded" | "error";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+}
+```

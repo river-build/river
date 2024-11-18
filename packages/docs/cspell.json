@@ -44,6 +44,7 @@
         "sslmode",
         "chainid",
         "nocolor",
+        "gdms",
         "wagmi",
         "viem"
     ],
