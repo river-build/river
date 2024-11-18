@@ -45,6 +45,33 @@ if [ $exit_status_yarn -ne 0 ]; then
     exit 1
 fi
 
+yarn workspace @river-build/react-sdk gen:docs
+exit_status_docgen=$?
+
+if [ $exit_status_docgen -ne 0 ]; then
+    echo "yarn workspace @river-build/react-sdk gen:docs failed."
+    exit 1
+fi
+
+yarn workspace @river-build/docs spellcheck
+exit_status_spellcheck=$?
+
+if [ $exit_status_spellcheck -ne 0 ]; then
+    echo "yarn workspace @river-build/docs spellcheck failed."
+    exit 1
+fi
+
+yarn workspace @river-build/docs docs:broken-links
+exit_status_broken_links=$?
+
+if [ $exit_status_broken_links -ne 0 ]; then
+    echo "yarn workspace @river-build/docs docs:broken-links failed."
+    exit 1
+fi
+
+git add packages/docs/
+git commit -m "docs for version ${VERSION_PREFIX}"
+
 git push -u origin "${BRANCH_NAME}"
 
 # Get the new patch version from Lerna and tag it
