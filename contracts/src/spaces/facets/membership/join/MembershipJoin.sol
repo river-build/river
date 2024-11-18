@@ -2,7 +2,6 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 import {IPartnerRegistryBase, IPartnerRegistry} from "contracts/src/factory/facets/partner/IPartnerRegistry.sol";
 import {IRolesBase} from "contracts/src/spaces/facets/roles/IRoles.sol";
@@ -221,8 +220,8 @@ abstract contract MembershipJoin is
   /// @notice Processes the charge for joining a space without referral
   /// @param transactionId The unique identifier for this join transaction
   function _chargeForJoinSpace(bytes32 transactionId) internal {
-    uint256 membershipPrice = _getCapturedValue(transactionId);
-    if (membershipPrice == 0) revert Membership__InsufficientPayment();
+    uint256 payment = _getCapturedValue(transactionId);
+    if (payment == 0) revert Membership__InsufficientPayment();
 
     (bytes4 selector, address sender, , ) = abi.decode(
       _getCapturedData(transactionId),
@@ -233,21 +232,23 @@ abstract contract MembershipJoin is
       revert Membership__InvalidTransactionType();
     }
 
-    uint256 protocolFeeBps = _collectProtocolFee(sender, membershipPrice);
-    uint256 surplus = membershipPrice - protocolFeeBps;
-    if (surplus > 0) {
-      _transferIn(sender, surplus);
-    }
+    uint256 protocolFee = _collectProtocolFee(sender, payment);
+    uint256 surplus = payment - protocolFee;
 
-    _releaseCapturedValue(transactionId, membershipPrice);
-    _captureData(transactionId, "");
+    _afterChargeForJoinSpace(
+      transactionId,
+      sender,
+      payment,
+      surplus,
+      protocolFee
+    );
   }
 
   /// @notice Processes the charge for joining a space with referral
   /// @param transactionId The unique identifier for this join transaction
   function _chargeForJoinSpaceWithReferral(bytes32 transactionId) internal {
-    uint256 membershipPrice = _getCapturedValue(transactionId);
-    if (membershipPrice == 0) revert Membership__InsufficientPayment();
+    uint256 payment = _getCapturedValue(transactionId);
+    if (payment == 0) revert Membership__InsufficientPayment();
 
     (bytes4 selector, address sender, , bytes memory referralData) = abi.decode(
       _getCapturedData(transactionId),
@@ -260,31 +261,40 @@ abstract contract MembershipJoin is
 
     ReferralTypes memory referral = abi.decode(referralData, (ReferralTypes));
 
-    uint256 protocolFeeBps = _collectProtocolFee(sender, membershipPrice);
+    uint256 protocolFee = _collectProtocolFee(sender, payment);
 
-    uint256 partnerFeeBps = _collectPartnerFee(
-      sender,
-      referral.partner,
-      membershipPrice
-    );
+    uint256 partnerFee = _collectPartnerFee(sender, referral.partner, payment);
 
-    uint256 referralFeeBps = _collectReferralCodeFee(
+    uint256 referralFee = _collectReferralCodeFee(
       sender,
       referral.userReferral,
       referral.referralCode,
-      membershipPrice
+      payment
     );
 
-    uint256 surplus = membershipPrice -
-      protocolFeeBps -
-      partnerFeeBps -
-      referralFeeBps;
+    uint256 surplus = payment - protocolFee - partnerFee - referralFee;
 
+    _afterChargeForJoinSpace(
+      transactionId,
+      sender,
+      payment,
+      surplus,
+      protocolFee
+    );
+  }
+
+  function _afterChargeForJoinSpace(
+    bytes32 transactionId,
+    address sender,
+    uint256 payment,
+    uint256 surplus,
+    uint256 protocolFee
+  ) internal {
     if (surplus > 0) {
       _transferIn(sender, surplus);
     }
 
-    _releaseCapturedValue(transactionId, membershipPrice);
+    _releaseCapturedValue(transactionId, payment);
     _captureData(transactionId, "");
   }
 
