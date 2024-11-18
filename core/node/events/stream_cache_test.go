@@ -36,7 +36,7 @@ func TestStreamCacheViewEviction(t *testing.T) {
 
 	tc.createStreamNoCache(streamID, genesisMiniblock)
 
-	streamSync, err := streamCache.GetStreamWithWait(ctx, streamID, 5*time.Second)
+	streamSync, err := streamCache.GetStream(ctx, streamID)
 	require.NoError(err, "loading stream record")
 	streamView, err := streamSync.GetView(ctx)
 	require.NoError(err)
@@ -265,7 +265,7 @@ func TestStreamMiniblockBatchProduction(t *testing.T) {
 		go func(streamID StreamId, genesis *Miniblock) {
 			defer wg.Done()
 
-			streamSync, err := streamCache.GetStreamWithWait(ctx, streamID, 5*time.Second)
+			streamSync, err := streamCache.GetStream(ctx, streamID)
 			require.NoError(err, "get stream")
 
 			// unload view for half of the streams
