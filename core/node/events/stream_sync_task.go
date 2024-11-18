@@ -101,12 +101,12 @@ func (task *streamSyncTask) process() {
 
 func (task *streamSyncTask) lastBlockInDB() (int64, error) {
 	var (
-		lastMiniBlockInDB, err = task.cache.params.Storage.StreamLastMiniBlock(task.ctx, task.stream.StreamId)
+		lastMiniBlockInDB, err = task.cache.params.Storage.GetLastMiniblockNumber(task.ctx, task.stream.StreamId)
 		riverErr               *RiverErrorImpl
 	)
 
 	if err == nil {
-		return lastMiniBlockInDB.Number, nil
+		return lastMiniBlockInDB, nil
 	} else if errors.As(err, &riverErr) && riverErr.Code == Err_NOT_FOUND {
 		return -1, nil
 	}
