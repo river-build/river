@@ -49,20 +49,6 @@ export function renderApiFunction(options: {
         )
     }
 
-    const errorIds = resolveErrorData({
-        dataLookup,
-        id: `@river-build/react-sdk!${displayName}.ErrorType:type`,
-    })
-    if (errorIds.size) {
-        content.push(
-            renderErrors({
-                data,
-                dataLookup,
-                errorIds: Array.from(errorIds).sort((a, b) => (a > b ? 1 : -1)),
-            }),
-        )
-    }
-
     return content.join('\n\n').trim()
 }
 
@@ -307,49 +293,6 @@ function renderReturnType(options: {
     return content.join('\n\n')
 }
 
-function renderErrors(options: {
-    data: Data
-    dataLookup: Record<string, Data>
-    errorIds: string[]
-}) {
-    const { errorIds, data, dataLookup } = options
-
-    const namespaceMemberId = data.canonicalReference.split(':')[0]
-    const errorTypeData = dataLookup[`${namespaceMemberId}.ErrorType:type`]
-    const parseErrorData = dataLookup[`${namespaceMemberId}.parseError:function(1)`]
-
-    if (!(errorTypeData && parseErrorData)) {
-        return ''
-    }
-
-    const content = ['## Error Type']
-
-    const typeRegex = /^@river-build\/react-sdk!(?<type>.+):type/
-    const errorType = errorTypeData.canonicalReference.match(typeRegex)?.groups?.type
-    if (errorType) {
-        content.push(`\`${errorType}\``)
-    }
-
-    if (errorIds.length) {
-        const errorsContent = []
-        for (const errorId of errorIds) {
-            const errorData = dataLookup[errorId]
-            if (!errorData) {
-                continue
-            }
-            const name = errorData.module + '.' + errorData.displayName
-            errorsContent.push(
-                `- [\`${name}\`](/api/${errorData.module}/errors#${name
-                    .toLowerCase()
-                    .replace('.', '')})`,
-            )
-        }
-        content.push(errorsContent.join('\n'))
-    }
-
-    return content.join('\n\n')
-}
-
 function resolveInlineParameterTypeForOverloads(options: {
     dataLookup: Record<string, Data>
     index: number
@@ -396,44 +339,6 @@ function resolveReturnTypeForOverloads(options: {
     }
 
     return returnType?.type
-}
-
-function resolveErrorData(options: { dataLookup: Record<string, Data>; id: string }) {
-    const { id, dataLookup } = options
-
-    const errorData = dataLookup[id]
-    if (!errorData) {
-        return new Set([])
-    }
-    if (errorData.references.length === 0) {
-        return new Set([errorData.id])
-    }
-
-    const errors = new Set<string>()
-    for (const reference of errorData.references) {
-        const nextErrorData =
-            dataLookup[`@river-build/react-sdk!${reference.text}:type`] ??
-            (reference.canonicalReference
-                ? dataLookup[reference.canonicalReference?.toString()]
-                : null)
-        if (!nextErrorData) {
-            continue
-        }
-
-        if (nextErrorData.references.length && nextErrorData.kind !== model.ApiItemKind.Class) {
-            const resolved = resolveErrorData({
-                id: nextErrorData.id,
-                dataLookup,
-            })
-            for (const resolvedError of resolved) {
-                errors.add(resolvedError)
-            }
-        } else {
-            errors.add(nextErrorData.id)
-        }
-    }
-
-    return errors
 }
 
 function extractParameterDeclarations(data: Data) {
