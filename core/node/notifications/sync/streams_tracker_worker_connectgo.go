@@ -187,8 +187,9 @@ func (s *StreamTrackerConnectGo) Run(
 		// If it isn't received within reasonable time the liveness loop will
 		// cancel the sync session causing a new session to be started.
 		var gotSyncResetUpdate atomic.Bool
-		go s.liveness(log, syncCtx, syncCancel, &gotSyncResetUpdate,
-			workerPool, stream.StreamId, syncID, client, &lastReceivedPong, metrics)
+		// TODO: determine if this can be dropped now http2 pings are enabled
+		//go s.liveness(log, syncCtx, syncCancel, &gotSyncResetUpdate,
+		//	workerPool, stream.StreamId, syncID, client, &lastReceivedPong, metrics)
 
 		for streamUpdates.Receive() {
 			update := streamUpdates.Msg()

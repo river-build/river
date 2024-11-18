@@ -215,7 +215,7 @@ func (s *Service) initInstance(mode string) {
 
 	var (
 		vapidPrivateKey        = s.config.Notifications.Web.Vapid.PrivateKey
-		apnPrivateKey          = s.config.Notifications.APN.AuthKey
+		apnPrivateAuthKey      = s.config.Notifications.APN.AuthKey
 		sessionTokenPrivateKey = s.config.Notifications.Authentication.SessionToken.Key.Key
 	)
 	s.config.Notifications.Web.Vapid.PrivateKey = "<hidden>"
@@ -229,7 +229,7 @@ func (s *Service) initInstance(mode string) {
 	)
 
 	s.config.Notifications.Web.Vapid.PrivateKey = vapidPrivateKey
-	s.config.Notifications.APN.AuthKey = apnPrivateKey
+	s.config.Notifications.APN.AuthKey = apnPrivateAuthKey
 	s.config.Notifications.Authentication.SessionToken.Key.Key = sessionTokenPrivateKey
 
 	subsystem := mode

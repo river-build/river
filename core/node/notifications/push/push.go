@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/SherClockHolmes/webpush-go"
@@ -117,7 +118,11 @@ func NewMessageNotifier(
 		apnExpiration = cfg.APN.Expiration
 	}
 
-	blockPrivateKey, _ := pem.Decode([]byte(cfg.APN.AuthKey))
+	// in case the authkey was passed with "\n" instead of actual newlines
+	// pem.Decode fails. Replace these
+	authKey := strings.Replace(cfg.APN.AuthKey, "\\n", "\n", -1)
+
+	blockPrivateKey, _ := pem.Decode([]byte(authKey))
 	if blockPrivateKey == nil {
 		return nil, RiverError(protocol.Err_BAD_CONFIG, "Missing or invalid APN auth key").
 			Func("NewPushMessageNotifications")

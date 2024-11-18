@@ -153,12 +153,12 @@ func (ts *TrackedNotificationStreamView) applyMiniblockHeader(event *ParsedEvent
 	lastBlock := ts.view.LastBlock()
 	header := event.Event.GetMiniblockHeader()
 
-	if header.MiniblockNum != lastBlock.header().MiniblockNum+1 {
+	if header.MiniblockNum != lastBlock.Header().MiniblockNum+1 {
 		return RiverError(
 			Err_BAD_BLOCK,
 			"streamViewImpl: block number mismatch",
 			"expected",
-			lastBlock.header().MiniblockNum+1,
+			lastBlock.Header().MiniblockNum+1,
 			"actual",
 			header.MiniblockNum,
 		)
@@ -213,7 +213,7 @@ func (ts *TrackedNotificationStreamView) applyMiniblockHeader(event *ParsedEvent
 	eventNumOffset := header.EventNumOffset + int64(len(header.EventHashes)) + 1 // plus one for header
 
 	miniblock := &MiniblockInfo{
-		Ref: &MiniblockRef{
+		Ref: &shared.MiniblockRef{
 			Hash: event.Hash,
 			Num:  header.MiniblockNum,
 		},
