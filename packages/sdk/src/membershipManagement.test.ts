@@ -3,11 +3,7 @@
  */
 
 import { dlog } from '@river-build/dlog'
-import {
-    makeUserContextFromWallet,
-    getDynamicPricingModule,
-    createVersionedSpace,
-} from './util.test'
+import { makeUserContextFromWallet, createVersionedSpace } from './util.test'
 import {
     isValidStreamId,
     makeDefaultChannelStreamId,
@@ -22,6 +18,7 @@ import {
     LegacyMembershipStruct,
     NoopRuleData,
     ETH_ADDRESS,
+    findDynamicPricingModule,
 } from '@river-build/web3'
 import { makeBaseChainConfig } from './riverConfig'
 
@@ -41,7 +38,7 @@ describe('membershipManagement', () => {
 
         // create a user stream
         const pricingModules = await spaceDapp.listPricingModules()
-        const dynamicPricingModule = getDynamicPricingModule(pricingModules)
+        const dynamicPricingModule = findDynamicPricingModule(pricingModules)
         expect(dynamicPricingModule).toBeDefined()
 
         // create a space stream,

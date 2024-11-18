@@ -2,12 +2,7 @@
  * @group with-entitlements
  */
 
-import {
-    makeUserContextFromWallet,
-    makeTestClient,
-    getDynamicPricingModule,
-    createVersionedSpace,
-} from './util.test'
+import { makeUserContextFromWallet, makeTestClient, createVersionedSpace } from './util.test'
 import { makeDefaultChannelStreamId, makeSpaceStreamId } from './id'
 import { ethers, Wallet } from 'ethers'
 import { Client } from './client'
@@ -18,6 +13,7 @@ import {
     NoopRuleData,
     Permission,
     createSpaceDapp,
+    findDynamicPricingModule,
 } from '@river-build/web3'
 import { SignerContext } from './signerContext'
 import { makeBaseChainConfig } from './riverConfig'
@@ -60,7 +56,7 @@ describe('mediaWithEntitlements', () => {
         const spaceDapp = createSpaceDapp(provider, baseConfig.chainConfig)
 
         const pricingModules = await spaceDapp.listPricingModules()
-        const dynamicPricingModule = getDynamicPricingModule(pricingModules)
+        const dynamicPricingModule = findDynamicPricingModule(pricingModules)
         expect(dynamicPricingModule).toBeDefined()
 
         // create a space stream,
@@ -159,7 +155,7 @@ describe('mediaWithEntitlements', () => {
         const spaceDapp = createSpaceDapp(provider, baseConfig.chainConfig)
 
         const pricingModules = await spaceDapp.listPricingModules()
-        const dynamicPricingModule = getDynamicPricingModule(pricingModules)
+        const dynamicPricingModule = findDynamicPricingModule(pricingModules)
         expect(dynamicPricingModule).toBeDefined()
 
         // create a space stream,

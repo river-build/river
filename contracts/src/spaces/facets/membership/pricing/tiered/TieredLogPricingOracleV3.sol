@@ -15,7 +15,7 @@ import {IntrospectionFacet} from "contracts/src/diamond/facets/introspection/Int
  * @title TieredLogPricingOracle
  * @notice Network: Base (Sepolia)
  */
-contract TieredLogPricingOracle is IMembershipPricing, IntrospectionFacet {
+contract TieredLogPricingOracleV3 is IMembershipPricing, IntrospectionFacet {
   AggregatorV3Interface internal dataFeed;
 
   uint256 internal constant SCALE = 1e18; // 1 ether
@@ -42,16 +42,15 @@ contract TieredLogPricingOracle is IMembershipPricing, IntrospectionFacet {
   }
 
   function name() public pure override returns (string memory) {
-    return "TieredLogPricingOracleV2";
+    return "TieredLogPricingOracleV3";
   }
 
   function description() public pure override returns (string memory) {
-    return
-      "Free for the first 100 members, then logarithmically increasing price";
+    return "Logarithmically increasing price";
   }
 
   function setPrice(uint256) external pure {
-    revert("TieredLogPricingOracle: price is calculated");
+    revert("TieredLogPricingOracle: price is calculated logarithmically");
   }
 
   function getPrice(
