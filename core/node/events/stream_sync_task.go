@@ -42,8 +42,11 @@ func (s *streamCacheImpl) syncStreamFromPeers(
 
 	lastMiniblockNum, err := stream.getLastMiniblockNumSkipLoad(ctx)
 	if err != nil {
-		// TODO: create stream if not found
-		return err
+		if IsRiverErrorCode(err, Err_NOT_FOUND) {
+			lastMiniblockNum = -1
+		} else {
+			return err
+		}
 	}
 
 	if lastMbInContract.Num <= lastMiniblockNum {
