@@ -449,7 +449,7 @@ func Disabled_TestStreamUnloadWithSubscribers(t *testing.T) {
 	}
 
 	// make all mini-blocks to process all events in minipool
-	jobs := mpProducer.scheduleCandidates(ctx)
+	jobs := mpProducer.scheduleCandidates(ctx, blockNum)
 	require.Eventually(
 		func() bool { return mpProducer.testCheckAllDone(jobs) },
 		240*time.Second,
