@@ -47,7 +47,7 @@ describe('CreateGroup', () => {
         const groupInfoWithExternalKey = await crypto.createGroup(streamId)
         expect(groupInfoWithExternalKey).toBeDefined()
         expect(crypto.groupStore.getGroupStatus(streamId)).toEqual('GROUP_PENDING_CREATE')
-    })
+    }, 1000)
 
     it('handleInitializedGroup gets group from pending state into active state', async () => {
         const crypto = await initializeCrypto(userAddress, deviceKey)
@@ -64,7 +64,7 @@ describe('CreateGroup', () => {
         )
         expect(groupStatus).toEqual('GROUP_ACTIVE')
         expect(crypto.groupStore.getGroupStatus(streamId)).toEqual('GROUP_ACTIVE')
-    })
+    }, 1000)
 
     it('handleInitializedGroup gets group from pending state into missing state', async () => {
         const crypto = await initializeCrypto(userAddress, deviceKey)
@@ -80,7 +80,7 @@ describe('CreateGroup', () => {
 
         expect(groupStatus).toEqual('GROUP_MISSING')
         expect(crypto.groupStore.getGroupStatus(streamId)).toEqual('GROUP_MISSING')
-    })
+    }, 1000)
 
     it('handleExternalJoin gets group from pending state into active state', async () => {
         const groupInfoWithExternalKey = await initializeOtherGroup(
@@ -92,9 +92,9 @@ describe('CreateGroup', () => {
         const crypto = await initializeCrypto(userAddress, deviceKey)
         const { groupInfo, commit } = await crypto.externalJoin(streamId, groupInfoWithExternalKey)
         expect(crypto.groupStore.getGroupStatus(streamId)).toEqual('GROUP_PENDING_JOIN')
-        await crypto.handleExternalJoin(streamId, userAddress, deviceKey, commit, groupInfo, 0n)
+        await crypto.handleExternalJoin(streamId, userAddress, deviceKey, commit, groupInfo, 1n)
         expect(crypto.groupStore.getGroupStatus(streamId)).toEqual('GROUP_ACTIVE')
-    })
+    }, 1000)
 
     it('awaitGroupActive should block', async () => {
         const crypto = await initializeCrypto(userAddress, deviceKey)
@@ -120,7 +120,7 @@ describe('CreateGroup', () => {
         )
 
         await expect(awaiting).toResolve()
-    })
+    }, 1000)
 
     it('awaitGroupActive should block until group is active via external join', async () => {
         const groupInfoWithExternalKey = await initializeOtherGroup(
@@ -132,7 +132,7 @@ describe('CreateGroup', () => {
         const crypto = await initializeCrypto(userAddress, deviceKey)
         const awaiting = crypto.awaitGroupActive(streamId)
         const { groupInfo, commit } = await crypto.externalJoin(streamId, groupInfoWithExternalKey)
-        await crypto.handleExternalJoin(streamId, userAddress, deviceKey, commit, groupInfo, 0n)
+        await crypto.handleExternalJoin(streamId, userAddress, deviceKey, commit, groupInfo, 1n)
         await expect(awaiting).toResolve()
-    })
+    }, 1000)
 })
