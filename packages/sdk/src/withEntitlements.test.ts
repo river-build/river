@@ -8,6 +8,7 @@ import {
     makeTestClient,
     makeDonePromise,
     createVersionedSpace,
+    getFreeSpacePricingSetup,
 } from './util.test'
 import {
     isValidStreamId,
@@ -23,7 +24,6 @@ import {
     LegacyMembershipStruct,
     NoopRuleData,
     ETH_ADDRESS,
-    findDynamicPricingModule,
 } from '@river-build/web3'
 import { MembershipOp } from '@river-build/proto'
 import { makeBaseChainConfig } from './riverConfig'
@@ -48,9 +48,9 @@ describe('withEntitlements', () => {
         const bob = await makeTestClient({ context: bobsContext })
         const bobsUserStreamId = makeUserStreamId(bob.userId)
 
-        const pricingModules = await spaceDapp.listPricingModules()
-        const dynamicPricingModule = findDynamicPricingModule(pricingModules)
-        expect(dynamicPricingModule).toBeDefined()
+        const { fixedPricingModuleAddress, freeAllocation, price } = await getFreeSpacePricingSetup(
+            spaceDapp,
+        )
 
         // create a space stream,
         log('Bob created user, about to create space')
@@ -59,13 +59,13 @@ describe('withEntitlements', () => {
             settings: {
                 name: 'Everyone',
                 symbol: 'MEMBER',
-                price: 0,
+                price,
                 maxSupply: 1000,
                 duration: 0,
                 currency: ETH_ADDRESS,
                 feeRecipient: bob.userId,
-                freeAllocation: 0,
-                pricingModule: dynamicPricingModule!.module,
+                freeAllocation,
+                pricingModule: fixedPricingModuleAddress,
             },
             permissions: [Permission.Read, Permission.Write],
             requirements: {
