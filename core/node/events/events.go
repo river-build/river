@@ -46,25 +46,19 @@ func MakeStreamEvent(
 func MakeStreamEventWithTags(
 	wallet *crypto.Wallet,
 	payload IsStreamEvent_Payload,
-	prevMiniblockHash []byte,
-	Tags *Tags,
+	prevMiniblock *MiniblockRef,
+	tags *Tags,
 ) (*StreamEvent, error) {
-	salt := make([]byte, 32)
-	_, err := rand.Read(salt)
+	event, err := MakeStreamEvent(wallet, payload, prevMiniblock)
 	if err != nil {
-		return nil, AsRiverError(err, Err_INTERNAL).
-			Message("Failed to create random salt").
-			Func("MakeStreamEvent")
+		return nil, err
 	}
-	epochMillis := time.Now().UnixNano() / int64(time.Millisecond)
 
-	event := &StreamEvent{
-		CreatorAddress:    wallet.Address.Bytes(),
-		Salt:              salt,
-		PrevMiniblockHash: prevMiniblockHash,
-		Payload:           payload,
-		CreatedAtEpochMs:  epochMillis,
-		Tags:              Tags,
+	event.Tags = tags
+
+	if prevMiniblock != nil && prevMiniblock.Hash != (common.Hash{}) {
+		event.PrevMiniblockHash = prevMiniblock.Hash[:]
+		event.PrevMiniblockNum = prevMiniblock.Num
 	}
 
 	return event, nil
@@ -134,10 +128,10 @@ func MakeEnvelopeWithPayload(
 func MakeEnvelopeWithPayloadAndTags(
 	wallet *crypto.Wallet,
 	payload IsStreamEvent_Payload,
-	prevMiniblockHash []byte,
+	prevMiniblock *MiniblockRef,
 	tags *Tags,
 ) (*Envelope, error) {
-	streamEvent, err := MakeStreamEventWithTags(wallet, payload, prevMiniblockHash, tags)
+	streamEvent, err := MakeStreamEventWithTags(wallet, payload, prevMiniblock, tags)
 	if err != nil {
 		return nil, err
 	}

@@ -817,7 +817,10 @@ func (tc *gdmChannelNotificationsTestContext) sendMessageWithTags(
 	event, err := events.MakeEnvelopeWithPayloadAndTags(
 		from,
 		events.Make_GDMChannelPayload_Message(messageContent),
-		resp.Msg.GetHash(),
+		&MiniblockRef{
+			Num:  resp.Msg.GetMiniblockNum(),
+			Hash: common.BytesToHash(resp.Msg.GetHash()),
+		},
 		tags,
 	)
 	tc.req.NoError(err)
@@ -986,7 +989,10 @@ func (tc *dmChannelNotificationsTestContext) sendMessageWithTags(
 	event, err := events.MakeEnvelopeWithPayloadAndTags(
 		from,
 		events.Make_DMChannelPayload_Message(messageContent),
-		resp.Msg.GetHash(),
+		&MiniblockRef{
+			Num:  resp.Msg.GetMiniblockNum(),
+			Hash: common.BytesToHash(resp.Msg.GetHash()),
+		},
 		tags,
 	)
 	tc.req.NoError(err)
@@ -1022,7 +1028,7 @@ func (tc *dmChannelNotificationsTestContext) blockUser(
 			IsBlocked: blocked,
 			EventNum:  22,
 		}),
-		&events.MiniblockRef{
+		&MiniblockRef{
 			Hash: common.BytesToHash(resp.Msg.GetHash()),
 			Num:  resp.Msg.GetMiniblockNum(),
 		},
@@ -1143,7 +1149,10 @@ func (tc *spaceChannelNotificationsTestContext) sendMessageWithTags(
 	event, err := events.MakeEnvelopeWithPayloadAndTags(
 		from,
 		events.Make_ChannelPayload_Message(messageContent),
-		resp.Msg.GetHash(),
+		&MiniblockRef{
+			Num:  resp.Msg.GetMiniblockNum(),
+			Hash: common.BytesToHash(resp.Msg.GetHash()),
+		},
 		tags,
 	)
 	tc.req.NoError(err)
