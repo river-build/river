@@ -56,8 +56,10 @@ export default defineConfig({
 
 ## Connect to River
 
+### Using Signer: Wagmi + Viem
+
 We suggest you to use [Wagmi](https://wagmi.sh/) to connect to River.
-Wrap your app with `RiverSyncProvider` and use the `useAgentConnection` hook to connect to River.
+Wrap your app with `RiverSyncProvider` and use the `useAgentConnection` hook with the `connect` function to connect to River.
 
 > You'll need to use `useEthersSigner` to get the signer from viem wallet client.
 > You can get the hook from [Wagmi docs](https://wagmi.sh/react/guides/ethers#usage-1).
@@ -73,7 +75,9 @@ const riverConfig = makeRiverConfig("gamma");
 const App = ({ children }: { children: React.ReactNode }) => {
   return (
     <WagmiProvider config={wagmiConfig}>
-      <RiverSyncProvider>{children}</RiverSyncProvider>
+      <RiverSyncProvider>
+        <ConnectRiver />
+      </RiverSyncProvider>
     </WagmiProvider>
   );
 };
@@ -91,9 +95,46 @@ const ConnectRiver = () => {
           }
         }}
       >
-        {isConnecting ? "Disconnect" : "Connect"}
+        Connect
       </button>
-      {isConnected && <span>Connected!</span>}
+      {isAgentConnecting && <span>Connecting...</span>}
+      {isAgentConnected && <span>Connected!</span>}
+    </>
+  );
+};
+```
+
+### Using Bearer Token
+
+You can use a River bearer token to connect other apps to River without the need of a signer.
+Wrap your app with `RiverSyncProvider` and use the `useAgentConnection` hook with the `connectUsingBearerToken` function to connect to River.
+
+```tsx
+import { RiverSyncProvider, useAgentConnection } from "@river-build/react-sdk";
+import { makeRiverConfig } from "@river-build/sdk";
+
+const riverConfig = makeRiverConfig("gamma");
+
+const App = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <RiverSyncProvider>
+      <ConnectRiver />
+    </RiverSyncProvider>
+  );
+};
+
+const ConnectRiver = () => {
+  const { connectUsingBearerToken, isAgentConnecting, isAgentConnected } = useAgentConnection();
+  const [bearerToken, setBearerToken] = useState('');
+
+  return (
+    <>
+      <input value={bearerToken} onChange={(e) => setBearerToken(e.target.value)} />
+      <button onClick={() => connectUsingBearerToken(bearerToken, { riverConfig })}>
+        Connect
+      </button>
+      {isAgentConnecting && <span>Connecting...</span>}
+      {isAgentConnected && <span>Connected!</span>}
     </>
   );
 };
