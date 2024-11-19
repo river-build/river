@@ -63,8 +63,8 @@ type (
 		vapidSubject    string
 
 		// metrics
-		webPushSend *prometheus.CounterVec
-		apnSend     *prometheus.CounterVec
+		webPushSent *prometheus.CounterVec
+		apnSent     *prometheus.CounterVec
 	}
 
 	// MessageNotificationsSimulator implements MessageNotifier but doesn't send
@@ -74,8 +74,8 @@ type (
 		WebPushNotificationsByEndpoint map[string][][]byte
 
 		// metrics
-		webPushSend *prometheus.CounterVec
-		apnSend     *prometheus.CounterVec
+		webPushSent *prometheus.CounterVec
+		apnSent     *prometheus.CounterVec
 	}
 )
 
@@ -91,20 +91,20 @@ const (
 
 func NewMessageNotificationsSimulator(metricsFactory infra.MetricsFactory) *MessageNotificationsSimulator {
 	webPushSend := metricsFactory.NewCounterVecEx(
-		"webpush_send",
+		"webpush_sent",
 		"Number of notifications send over web push",
 		"result",
 	)
 
 	apnSend := metricsFactory.NewCounterVecEx(
-		"apn_send",
+		"apn_sent",
 		"Number of notifications send over APN",
 		"result",
 	)
 
 	return &MessageNotificationsSimulator{
-		webPushSend:                    webPushSend,
-		apnSend:                        apnSend,
+		webPushSent:                    webPushSend,
+		apnSent:                        apnSend,
 		WebPushNotificationsByEndpoint: make(map[string][][]byte),
 	}
 }
@@ -147,13 +147,13 @@ func NewMessageNotifier(
 	}
 
 	webPushSend := metricsFactory.NewCounterVecEx(
-		"webpush_send",
+		"webpush_sent",
 		"Number of notifications send over web push",
 		"result",
 	)
 
 	apnSend := metricsFactory.NewCounterVecEx(
-		"apn_send",
+		"apn_sent",
 		"Number of notifications send over APN",
 		"result",
 	)
@@ -167,8 +167,8 @@ func NewMessageNotifier(
 		vapidPrivateKey: cfg.Web.Vapid.PrivateKey,
 		vapidPublicKey:  cfg.Web.Vapid.PublicKey,
 		vapidSubject:    cfg.Web.Vapid.Subject,
-		webPushSend:     webPushSend,
-		apnSend:         apnSend,
+		webPushSent:     webPushSend,
+		apnSent:         apnSend,
 	}, nil
 }
 
@@ -188,7 +188,7 @@ func (n *MessageNotifications) SendWebPushNotification(
 
 	res, err := webpush.SendNotificationWithContext(ctx, payload, subscription, options)
 	if err != nil {
-		n.webPushSend.With(prometheus.Labels{"result": StatusFailure}).Inc()
+		n.webPushSent.With(prometheus.Labels{"result": StatusFailure}).Inc()
 		return AsRiverError(err).
 			Message("Send notification with WebPush failed").
 			Func("SendAPNNotification")
@@ -196,11 +196,11 @@ func (n *MessageNotifications) SendWebPushNotification(
 	defer res.Body.Close()
 
 	if res.StatusCode == http.StatusCreated {
-		n.webPushSend.With(prometheus.Labels{"result": StatusSuccess}).Inc()
+		n.webPushSent.With(prometheus.Labels{"result": StatusSuccess}).Inc()
 		return nil
 	}
 
-	n.webPushSend.With(prometheus.Labels{"result": StatusFailure}).Inc()
+	n.webPushSent.With(prometheus.Labels{"result": StatusFailure}).Inc()
 	return RiverError(protocol.Err_UNAVAILABLE,
 		"Send notification with web push vapid failed",
 		"statusCode", res.StatusCode,
@@ -236,14 +236,14 @@ func (n *MessageNotifications) SendApplePushNotification(
 
 	res, err := client.PushWithContext(ctx, notification)
 	if err != nil {
-		n.apnSend.With(prometheus.Labels{"result": StatusFailure}).Inc()
+		n.apnSent.With(prometheus.Labels{"result": StatusFailure}).Inc()
 		return AsRiverError(err).
 			Message("Send notification to APNS failed").
 			Func("SendAPNNotification")
 	}
 
 	if res.Sent() {
-		n.apnSend.With(prometheus.Labels{"result": StatusSuccess}).Inc()
+		n.apnSent.With(prometheus.Labels{"result": StatusSuccess}).Inc()
 		log := dlog.FromCtx(ctx).With("event", eventHash, "apnsID", res.ApnsID)
 		// ApnsUniqueID only available on development/sandbox,
 		// use it to check in Apple's Delivery Logs to see the status.
@@ -255,7 +255,7 @@ func (n *MessageNotifications) SendApplePushNotification(
 		return nil
 	}
 
-	n.apnSend.With(prometheus.Labels{"result": StatusFailure}).Inc()
+	n.apnSent.With(prometheus.Labels{"result": StatusFailure}).Inc()
 	return RiverError(protocol.Err_UNAVAILABLE,
 		"Send notification to APNS failed",
 		"statusCode", res.StatusCode,
@@ -280,7 +280,7 @@ func (n *MessageNotificationsSimulator) SendWebPushNotification(
 	n.WebPushNotificationsByEndpoint[subscription.Endpoint] = append(
 		n.WebPushNotificationsByEndpoint[subscription.Endpoint], payload)
 
-	n.webPushSend.With(prometheus.Labels{"result": StatusSuccess}).Inc()
+	n.webPushSent.With(prometheus.Labels{"result": StatusSuccess}).Inc()
 
 	return nil
 }
@@ -297,7 +297,7 @@ func (n *MessageNotificationsSimulator) SendApplePushNotification(
 		"env", sub.Environment,
 		"payload", payload)
 
-	n.apnSend.With(prometheus.Labels{"result": StatusSuccess}).Inc()
+	n.apnSent.With(prometheus.Labels{"result": StatusSuccess}).Inc()
 
 	return nil
 }
