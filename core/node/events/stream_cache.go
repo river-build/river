@@ -3,11 +3,11 @@ package events
 import (
 	"context"
 	"slices"
-	"sync"
 	"time"
 
 	"github.com/gammazero/workerpool"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/puzpuzpuz/xsync/v3"
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/river"
@@ -50,7 +50,7 @@ type streamCacheImpl struct {
 	// streamId -> *streamImpl
 	// cache is populated by getting all streams that should be on local node from River chain.
 	// streamImpl can be in unloaded state, in which case it will be loaded on first GetStream call.
-	cache sync.Map
+	cache *xsync.MapOf[StreamId, *streamImpl]
 
 	chainConfig crypto.OnChainConfiguration
 
@@ -68,6 +68,7 @@ func NewStreamCache(
 ) (*streamCacheImpl, error) {
 	s := &streamCacheImpl{
 		params: params,
+		cache:  xsync.NewMapOf[StreamId, *streamImpl](),
 		streamCacheSizeGauge: params.Metrics.NewGaugeVecEx(
 			"stream_cache_size", "Number of streams in stream cache",
 			"chain_id", "address",
@@ -160,13 +161,11 @@ func (s *streamCacheImpl) onStreamLastMiniblockUpdated(
 	ctx context.Context,
 	event *river.StreamRegistryV1StreamLastMiniblockUpdated,
 ) {
-	entry, _ := s.cache.Load(StreamId(event.StreamId))
-	if entry == nil {
+	stream, _ := s.cache.Load(StreamId(event.StreamId))
+	if stream == nil {
 		// Stream is not local, ignore.
 		return
 	}
-
-	stream := entry.(*streamImpl)
 
 	view, err := stream.getView(ctx)
 	if err != nil {
@@ -230,10 +229,10 @@ func (s *streamCacheImpl) CacheCleanup(ctx context.Context, enabled bool, expira
 
 	// TODO: add data structure that supports to loop over streams that have their view loaded instead of
 	// looping over all streams.
-	s.cache.Range(func(streamID, streamVal any) bool {
+	s.cache.Range(func(streamID StreamId, stream *streamImpl) bool {
 		result.TotalStreams++
 		if enabled {
-			if stream := streamVal.(*streamImpl); stream.tryCleanup(expiration) {
+			if stream.tryCleanup(expiration) {
 				result.UnloadedStreams++
 				log.Debug("stream view is unloaded from cache", "streamId", stream.streamId)
 			}
@@ -273,9 +272,9 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 			case <-ctx.Done():
 				return nil, ctx.Err()
 			case <-time.After(delay):
-				entry, _ := s.cache.Load(streamId)
-				if entry != nil {
-					return entry.(*streamImpl), nil
+				stream, _ := s.cache.Load(streamId)
+				if stream != nil {
+					return stream, nil
 				}
 				record, _, mb, err = s.params.Registry.GetStreamWithGenesis(ctx, streamId)
 				if err == nil {
@@ -361,8 +360,7 @@ func (s *streamCacheImpl) createStreamStorage(
 		if entry == nil {
 			return nil, RiverError(Err_INTERNAL, "tryLoadStreamRecord: Cache corruption", "streamId", stream.streamId)
 		}
-		stream = entry.(*streamImpl)
-		return stream, nil
+		return entry, nil
 	}
 }
 
@@ -375,16 +373,15 @@ func (s *streamCacheImpl) GetStream(ctx context.Context, streamId StreamId) (Syn
 }
 
 func (s *streamCacheImpl) getStreamImpl(ctx context.Context, streamId StreamId) (*streamImpl, error) {
-	entry, _ := s.cache.Load(streamId)
-	if entry == nil {
+	stream, _ := s.cache.Load(streamId)
+	if stream == nil {
 		return s.tryLoadStreamRecord(ctx, streamId)
 	}
-	return entry.(*streamImpl), nil
+	return stream, nil
 }
 
 func (s *streamCacheImpl) ForceFlushAll(ctx context.Context) {
-	s.cache.Range(func(key, value interface{}) bool {
-		stream := value.(*streamImpl)
+	s.cache.Range(func(streamID StreamId, stream *streamImpl) bool {
 		stream.ForceFlush(ctx)
 		return true
 	})
@@ -392,8 +389,7 @@ func (s *streamCacheImpl) ForceFlushAll(ctx context.Context) {
 
 func (s *streamCacheImpl) GetLoadedViews(ctx context.Context) []StreamView {
 	var result []StreamView
-	s.cache.Range(func(key, value interface{}) bool {
-		stream := value.(*streamImpl)
+	s.cache.Range(func(streamID StreamId, stream *streamImpl) bool {
 		view := stream.tryGetView()
 		if view != nil {
 			result = append(result, view)
@@ -405,8 +401,7 @@ func (s *streamCacheImpl) GetLoadedViews(ctx context.Context) []StreamView {
 
 func (s *streamCacheImpl) GetMbCandidateStreams(ctx context.Context) []*streamImpl {
 	var candidates []*streamImpl
-	s.cache.Range(func(key, value interface{}) bool {
-		stream := value.(*streamImpl)
+	s.cache.Range(func(streamID StreamId, stream *streamImpl) bool {
 		if stream.canCreateMiniblock() {
 			candidates = append(candidates, stream)
 		}
