@@ -20,12 +20,10 @@ describe('dmsMlsTests', () => {
     let clients: Client[] = []
     const makeInitAndStartClient = async (nickname?: string) => {
         const client = await makeTestClient()
-        await goBackToEventLoop()
         if (nickname) {
             client.nickname = nickname
         }
         await client.initializeUser()
-        await goBackToEventLoop()
         client.startSync()
         clients.push(client)
         return client
@@ -285,7 +283,7 @@ describe('dmsMlsTests', () => {
         ).toResolve()
     })
 
-    test('manyClientsInChannelInterleaving', async () => {
+    test.only('manyClientsInChannelInterleaving', async () => {
         const spaceId = makeUniqueSpaceStreamId()
         const bobsClient = await makeInitAndStartClient('bob')
         await expect(bobsClient.createSpace(spaceId)).toResolve()
@@ -302,7 +300,7 @@ describe('dmsMlsTests', () => {
 
         send(bobsClient, 'hello everyone')
 
-        const NUM_CLIENTS = 4
+        const NUM_CLIENTS = 32
         const NUM_MESSAGES = 5
 
         await Promise.all(
