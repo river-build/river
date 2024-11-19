@@ -6169,10 +6169,10 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@river-build/mls-rs-wasm@npm:^0.0.1":
-  version: 0.0.1
-  resolution: "@river-build/mls-rs-wasm@npm:0.0.1"
-  checksum: 641d87a4538f956f781321d2d1c5304e5b21fd96c95762f95e1894d96c3d66bce16ecab0725c18187a08bac35679848c62e33fb82097bdf0a473bfac693064bf
+"@river-build/mls-rs-wasm@npm:^0.0.2":
+  version: 0.0.2
+  resolution: "@river-build/mls-rs-wasm@npm:0.0.2"
+  checksum: 41c2e53f5b3d9c1d7506c4406e513b290086972e4455ad5bfb90e807e36687190dfa6d51bb26967ffc90a519daa77c1150d267ca7f76b1ceb91896adac2a68f7
   languageName: node
   linkType: hard
 
@@ -6303,7 +6303,7 @@ __metadata:
     "@jest/globals": ^29.6.2
     "@river-build/dlog": "workspace:^"
     "@river-build/encryption": "workspace:^"
-    "@river-build/mls-rs-wasm": ^0.0.1
+    "@river-build/mls-rs-wasm": ^0.0.2
     "@river-build/proto": "workspace:^"
     "@river-build/web3": "workspace:^"
     "@testing-library/jest-dom": ^5.16.5
