@@ -30,22 +30,22 @@ type (
 		// VAPID protocol to authenticate the message.
 		SendWebPushNotification(
 			ctx context.Context,
-			// subscription object as returned by the browser on enabling subscriptions.
+		// subscription object as returned by the browser on enabling subscriptions.
 			subscription *webpush.Subscription,
-			// event hash
+		// event hash
 			eventHash common.Hash,
-			// payload of the message
+		// payload of the message
 			payload []byte,
 		) error
 
 		// SendApplePushNotification sends a push notification to the iOS app
 		SendApplePushNotification(
 			ctx context.Context,
-			// sub APN
+		// sub APN
 			sub *types.APNPushSubscription,
-			// event hash
+		// event hash
 			eventHash common.Hash,
-			// payload is sent to the APP
+		// payload is sent to the APP
 			payload *payload2.Payload,
 		) error
 	}
@@ -120,11 +120,16 @@ func NewMessageNotifier(
 
 	// in case the authkey was passed with "\n" instead of actual newlines
 	// pem.Decode fails. Replace these
-	authKey := strings.Replace(cfg.APN.AuthKey, "\\n", "\n", -1)
+	authKey := strings.Replace(strings.TrimSpace(cfg.APN.AuthKey), "\\n", "\n", -1)
+
+	if authKey == "" {
+		return nil, RiverError(protocol.Err_BAD_CONFIG, "Missing APN auth key").
+			Func("NewPushMessageNotifications")
+	}
 
 	blockPrivateKey, _ := pem.Decode([]byte(authKey))
 	if blockPrivateKey == nil {
-		return nil, RiverError(protocol.Err_BAD_CONFIG, "Missing or invalid APN auth key").
+		return nil, RiverError(protocol.Err_BAD_CONFIG, "Invalid APN auth key").
 			Func("NewPushMessageNotifications")
 	}
 
