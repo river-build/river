@@ -3,7 +3,6 @@ package events
 import (
 	"bytes"
 	"context"
-
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/ethereum/go-ethereum/common"
 	. "github.com/river-build/river/core/node/base"
@@ -218,6 +217,7 @@ func (ts *TrackedNotificationStreamView) applyMiniblockHeader(event *ParsedEvent
 			Num:  header.MiniblockNum,
 		},
 		headerEvent: event,
+		Proto:       &Miniblock{}, // individual events are processed/tracked
 	}
 
 	ts.view = &streamViewImpl{
