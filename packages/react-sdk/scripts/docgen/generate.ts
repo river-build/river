@@ -127,14 +127,25 @@ if (!reactSdk) {
     throw new Error('Could not find React SDK navigation group')
 }
 
+const newPages = Array.from(functionsMap.keys()).map((name) => `sdk/react-sdk/api/${name}`)
+const oldPages = reactSdk.pages.flatMap((page) => (typeof page === 'string' ? [] : page.pages))
+
+const difference = new Set([...oldPages].filter((x) => !newPages.includes(x)))
+
 reactSdk.pages = [
     ...reactSdk.pages.filter((page) => typeof page === 'string'), // add any other pages that arent groups
     ...reactSdk.pages.filter((page) => typeof page !== 'string' && page.group !== 'API'), // add any other groups
     {
         group: 'API',
-        pages: Array.from(functionsMap.keys()).map((name) => `sdk/react-sdk/api/${name}`),
+        pages: newPages,
     },
 ]
+
+// delete files that are no longer in the new pages
+for (const page of difference) {
+    const fileName = page.split('/').pop()
+    fs.rmSync(resolve(import.meta.dirname, `${config.pagesDir}/api/${fileName}.mdx`))
+}
 
 // Write updated mint.json
 fs.writeFileSync(mintJsonPath, JSON.stringify(mintJson, null, 2))
