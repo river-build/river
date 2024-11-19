@@ -4,7 +4,7 @@ import "github.com/prometheus/client_golang/prometheus"
 
 type streamsTrackerWorkerMetrics struct {
 	ActiveStreamSyncSessions prometheus.Gauge
-	TotalStreams             *prometheus.CounterVec
+	TotalStreams             *prometheus.GaugeVec
 	TrackedStreams           *prometheus.GaugeVec
 	SyncSessionInFlight      prometheus.Gauge
 	SyncUpdate               *prometheus.CounterVec

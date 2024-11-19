@@ -51,7 +51,7 @@ func NewStreamsTracker(
 	metrics := &streamsTrackerWorkerMetrics{
 		ActiveStreamSyncSessions: metricsFactory.NewGaugeEx(
 			"sync_sessions_active", "Active stream sync sessions"),
-		TotalStreams: metricsFactory.NewCounterVec(prometheus.CounterOpts{
+		TotalStreams: metricsFactory.NewGaugeVec(prometheus.GaugeOpts{
 			Name: "total_streams",
 			Help: "Number of streams to track for notification events",
 		}, []string{"type"}), // type= dm, gdm, space_channel, user_settings
