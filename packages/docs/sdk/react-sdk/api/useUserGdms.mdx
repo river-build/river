@@ -14,21 +14,21 @@ function useUserGdms(
   config?: ObservableConfig.FromObservable<Gdms>,
 ): {
     error: Error | undefined;
-    status: "loading" | "loaded" | "error";
+    status: "error" | "loading" | "loaded";
     isLoading: boolean;
     isError: boolean;
     isLoaded: boolean;
     streamIds: string[];
 } | {
     error: Error | undefined;
-    status: "loading" | "loaded" | "error";
+    status: "error" | "loading" | "loaded";
     isLoading: boolean;
     isError: boolean;
     isLoaded: boolean;
     streamIds: string[];
 } | {
     error: Error | undefined;
-    status: "loading" | "loaded" | "error";
+    status: "error" | "loading" | "loaded";
     isLoading: boolean;
     isError: boolean;
     isLoaded: boolean;
@@ -50,21 +50,21 @@ function useUserGdms(
 ```ts
 {
     error: Error | undefined;
-    status: "loading" | "loaded" | "error";
+    status: "error" | "loading" | "loaded";
     isLoading: boolean;
     isError: boolean;
     isLoaded: boolean;
     streamIds: string[];
 } | {
     error: Error | undefined;
-    status: "loading" | "loaded" | "error";
+    status: "error" | "loading" | "loaded";
     isLoading: boolean;
     isError: boolean;
     isLoaded: boolean;
     streamIds: string[];
 } | {
     error: Error | undefined;
-    status: "loading" | "loaded" | "error";
+    status: "error" | "loading" | "loaded";
     isLoading: boolean;
     isError: boolean;
     isLoaded: boolean;
