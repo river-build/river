@@ -39,20 +39,9 @@ abstract contract ERC20 is IERC20, IERC20Metadata, ERC20PermitBase, Facet {
     __EIP712_init_unchained(name_, "1");
   }
 
-  /// @inheritdoc IERC20Metadata
-  function name() public view returns (string memory) {
-    return ERC20Storage.layout().name;
-  }
-
-  /// @inheritdoc IERC20Metadata
-  function symbol() public view returns (string memory) {
-    return ERC20Storage.layout().symbol;
-  }
-
-  /// @inheritdoc IERC20Metadata
-  function decimals() public view returns (uint8) {
-    return ERC20Storage.layout().decimals;
-  }
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           ERC20                            */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   /// @inheritdoc IERC20
   function totalSupply() public view returns (uint256) {
@@ -97,9 +86,28 @@ abstract contract ERC20 is IERC20, IERC20Metadata, ERC20PermitBase, Facet {
     return true;
   }
 
-  // =============================================================
-  //                           PERMIT
-  // =============================================================
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                       ERC20 METADATA                       */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  /// @inheritdoc IERC20Metadata
+  function name() public view returns (string memory) {
+    return ERC20Storage.layout().name;
+  }
+
+  /// @inheritdoc IERC20Metadata
+  function symbol() public view returns (string memory) {
+    return ERC20Storage.layout().symbol;
+  }
+
+  /// @inheritdoc IERC20Metadata
+  function decimals() public view returns (uint8) {
+    return ERC20Storage.layout().decimals;
+  }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           PERMIT                           */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   /// @inheritdoc IERC20Permit
   function nonces(address owner) external view returns (uint256 result) {
