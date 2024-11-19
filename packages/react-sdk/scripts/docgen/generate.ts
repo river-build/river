@@ -127,25 +127,38 @@ if (!reactSdk) {
     throw new Error('Could not find React SDK navigation group')
 }
 
-const newPages = Array.from(functionsMap.keys()).map((name) => `sdk/react-sdk/api/${name}`)
-const oldPages = reactSdk.pages.flatMap((page) => (typeof page === 'string' ? [] : page.pages))
+// Get list of current API doc files
+const apiDocsDir = resolve(import.meta.dirname, `${config.pagesDir}/api/`)
+const existingApiFiles = fs
+    .readdirSync(apiDocsDir)
+    .filter((file) => file.endsWith('.mdx'))
+    .map((file) => `sdk/react-sdk/api/${file.replace('.mdx', '')}`)
 
-const difference = new Set([...oldPages].filter((x) => !newPages.includes(x)))
+// Get current API pages from mint.json
+const apiGroup = reactSdk.pages.find((page) => typeof page !== 'string' && page.group === 'API') as
+    | { group: string; pages: string[] }
+    | undefined
+
+const currentApiPages = apiGroup?.pages || []
+
+// Find files that exist in folder but not in mint.json - these should be purged
+const filesToDelete = existingApiFiles.filter((file) => !currentApiPages.includes(file))
+
+// Delete the files
+for (const file of filesToDelete) {
+    const filename = `${apiDocsDir}/${file.split('/').pop()}.mdx`
+    console.log(`Deleting unused API doc: ${filename}`)
+    fs.rmSync(filename)
+}
 
 reactSdk.pages = [
     ...reactSdk.pages.filter((page) => typeof page === 'string'), // add any other pages that arent groups
     ...reactSdk.pages.filter((page) => typeof page !== 'string' && page.group !== 'API'), // add any other groups
     {
         group: 'API',
-        pages: newPages,
+        pages: Array.from(functionsMap.keys()).map((name) => `sdk/react-sdk/api/${name}`),
     },
 ]
-
-// delete files that are no longer in the new pages
-for (const page of difference) {
-    const fileName = page.split('/').pop()
-    fs.rmSync(resolve(import.meta.dirname, `${config.pagesDir}/api/${fileName}.mdx`))
-}
 
 // Write updated mint.json
 fs.writeFileSync(mintJsonPath, JSON.stringify(mintJson, null, 2))
