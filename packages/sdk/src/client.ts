@@ -203,7 +203,7 @@ export class Client
     private syncedStreamsExtensions?: SyncedStreamsExtension
     private persistenceStore: IPersistenceStore
     private validatedEvents: Record<string, { isValid: boolean; reason?: string }> = {}
-    public nickname: string | undefined
+    public nickname: string
 
     constructor(
         signerContext: SignerContext,
@@ -214,6 +214,7 @@ export class Client
         logNamespaceFilter?: string,
         highPriorityStreamIds?: string[],
         unpackEnvelopeOpts?: UnpackEnvelopeOpts,
+        nickname?: string,
     ) {
         super()
         if (logNamespaceFilter) {
@@ -233,6 +234,11 @@ export class Client
         this.rpcClient = rpcClient
         this.unpackEnvelopeOpts = unpackEnvelopeOpts
         this.userId = userIdFromAddress(signerContext.creatorAddress)
+        if (nickname) {
+            this.nickname = nickname
+        } else {
+            this.nickname = this.userId
+        }
 
         const shortId = shortenHexString(
             this.userId.startsWith('0x') ? this.userId.slice(2) : this.userId,
