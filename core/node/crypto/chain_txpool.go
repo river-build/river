@@ -217,13 +217,18 @@ func (pool *pendingTransactionPool) PendingTransactionsCount() int64 {
 }
 
 func (pool *pendingTransactionPool) run() {
+	//pool.onCheckPendingTransactionsMutex.RLock()
+	//defer pool.onCheckPendingTransactionsMutex.RUnlock()
+
 	for ptx := range pool.addPendingTx {
+		// Read it before it is sotred in pendingTxs, as it might get updated later
+		gasCap, _ := ptx.tx.GasFeeCap().Float64()
+		tipCap, _ := ptx.tx.GasTipCap().Float64()
+
 		pool.pendingTxs.Store(ptx.tx.Nonce(), ptx)
 		pool.pendingTxCount.Add(1)
 
 		// metrics
-		gasCap, _ := ptx.tx.GasFeeCap().Float64()
-		tipCap, _ := ptx.tx.GasTipCap().Float64()
 		pool.transactionsPending.Add(1)
 		pool.transactionGasCap.With(prometheus.Labels{"replacement": "false"}).Set(gasCap)
 		pool.transactionGasTip.With(prometheus.Labels{"replacement": "false"}).Set(tipCap)
