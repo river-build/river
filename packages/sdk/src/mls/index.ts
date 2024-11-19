@@ -55,7 +55,7 @@ export class MlsCrypto {
     private userAddress: Uint8Array
     public deviceKey: Uint8Array
     private mlsStore: MlsStore
-    private nickname: string | undefined
+    private nickname: string
     readonly log: DLogger
     public awaitTimeoutMS: number = 5_000
 
@@ -67,23 +67,25 @@ export class MlsCrypto {
     constructor(userAddress: Uint8Array, deviceKey: Uint8Array, nickname?: string) {
         this.userAddress = userAddress
         this.deviceKey = deviceKey
-        this.nickname = nickname
-        if (this.nickname) {
-            this.log = log.extend(this.nickname)
+        if (nickname) {
+            this.nickname = nickname
         } else {
-            this.log = log.extend(bin_toHexString(this.userAddress))
+            this.nickname = bin_toHexString(this.userAddress)
         }
+        this.log = log.extend(this.nickname)
         this.mlsStore = new MlsStore(deviceKey, this.log)
         this.groupStore = new GroupStore(this.mlsStore, this.log)
         this.epochKeyService = new EpochKeyService(this.cipherSuite, this.mlsStore, this.log)
     }
 
-    async initialize() {
+    public async initialize() {
+        log(`initialize ${this.nickname}`)
         this.log('initialize')
         this.client = await MlsClient.create(this.userAddress)
     }
 
     public async createGroup(streamId: string): Promise<Uint8Array> {
+        this.log(`createGroup ${streamId}`)
         const group = await this.client.createGroup()
         const groupInfoWithExternalKey = (
             await group.groupInfoMessageAllowingExtCommit(true)
@@ -93,6 +95,8 @@ export class MlsCrypto {
     }
 
     public async encrypt(streamId: string, message: Uint8Array): Promise<EncryptedData> {
+        log(`encrypt ${this.nickname} ${streamId}`)
+        this.log('encrypt', { message: shortenHexString(bin_toHexString(message)) })
         const groupState = this.groupStore.getGroup(streamId)
         if (!groupState) {
             throw new Error('MLS group not found')
@@ -120,6 +124,7 @@ export class MlsCrypto {
     }
 
     public async decrypt(streamId: string, encryptedData: EncryptedData): Promise<Uint8Array> {
+        log(`decrypt ${this.nickname} ${streamId}`)
         const groupState = this.groupStore.getGroup(streamId)
         if (!groupState) {
             throw new Error('MLS group not found')
@@ -155,6 +160,7 @@ export class MlsCrypto {
         streamId: string,
         groupInfo: Uint8Array,
     ): Promise<{ groupInfo: Uint8Array; commit: Uint8Array; epoch: bigint }> {
+        this.log(`externalJoin ${this.nickname} {streamId}`)
         if (this.groupStore.hasGroup(streamId)) {
             throw new Error('Group already exists')
         }
@@ -198,6 +204,7 @@ export class MlsCrypto {
     }
 
     public async awaitGroupActive(streamId: string): Promise<void> {
+        this.log(`awaitGroupActive ${streamId}`)
         const awaiting = this.awaitingGroupActive.get(streamId)
         if (awaiting) {
             return await awaiting.promise
