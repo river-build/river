@@ -16,7 +16,7 @@ function useRiver<T>(
 ): T extends PersistedModel<infer UnwrappedData> ? {
     data: UnwrappedData;
     error: Error | undefined;
-    status: "loading" | "loaded" | "error";
+    status: "error" | "loading" | "loaded";
     isLoading: boolean;
     isError: boolean;
     isLoaded: boolean;
@@ -72,7 +72,7 @@ Callback function to be called when the data is updated.
 T extends PersistedModel<infer UnwrappedData> ? {
     data: UnwrappedData;
     error: Error | undefined;
-    status: "loading" | "loaded" | "error";
+    status: "error" | "loading" | "loaded";
     isLoading: boolean;
     isError: boolean;
     isLoaded: boolean;
