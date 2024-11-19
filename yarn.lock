@@ -6169,11 +6169,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@river-build/mls-rs-wasm@portal:./../../../mls-rs-wasm/pkg::locator=%40river-build%2Fsdk%40workspace%3Apackages%2Fsdk":
-  version: 0.0.0-use.local
-  resolution: "@river-build/mls-rs-wasm@portal:./../../../mls-rs-wasm/pkg::locator=%40river-build%2Fsdk%40workspace%3Apackages%2Fsdk"
+"@river-build/mls-rs-wasm@npm:^0.0.1":
+  version: 0.0.1
+  resolution: "@river-build/mls-rs-wasm@npm:0.0.1"
+  checksum: 641d87a4538f956f781321d2d1c5304e5b21fd96c95762f95e1894d96c3d66bce16ecab0725c18187a08bac35679848c62e33fb82097bdf0a473bfac693064bf
   languageName: node
-  linkType: soft
+  linkType: hard
 
 "@river-build/playground@workspace:packages/playground":
   version: 0.0.0-use.local
@@ -6302,7 +6303,7 @@ __metadata:
     "@jest/globals": ^29.6.2
     "@river-build/dlog": "workspace:^"
     "@river-build/encryption": "workspace:^"
-    "@river-build/mls-rs-wasm": "portal:./../../../mls-rs-wasm/pkg"
+    "@river-build/mls-rs-wasm": ^0.0.1
     "@river-build/proto": "workspace:^"
     "@river-build/web3": "workspace:^"
     "@testing-library/jest-dom": ^5.16.5
