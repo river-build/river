@@ -53,10 +53,11 @@ func (s *StreamTrackerConnectGo) Run(
 	metrics *streamsTrackerWorkerMetrics,
 ) {
 	restartSyncSessionCounter := 0
+	remotes := nodes.NewStreamNodes(stream.Nodes, common.Address{})
 
 	for {
 		var (
-			sticky              = nodes.NewStreamNodes(stream.Nodes, common.Address{}).GetStickyPeer()
+			sticky              = remotes.GetStickyPeer()
 			log                 = dlog.FromCtx(ctx).With("stream", stream.StreamId, "remote", sticky)
 			syncCtx, syncCancel = context.WithCancel(ctx)
 			lastReceivedPong    atomic.Int64
@@ -67,8 +68,24 @@ func (s *StreamTrackerConnectGo) Run(
 
 		metrics.TotalStreams.With(promLabels).Inc()
 
-		client, err := nodeRegistry.GetStreamServiceClientForAddress(sticky)
-		if err != nil {
+		var (
+			client     protocolconnect.StreamServiceClient
+			remoteAddr common.Address
+			err        error
+		)
+
+		// loop over the nodes responsible for the stream and try to connect to one of them
+		for range remotes.NumRemotes() {
+			remoteAddr = remotes.GetStickyPeer()
+			client, err = nodeRegistry.GetStreamServiceClientForAddress(remoteAddr)
+			if client != nil {
+				break
+			}
+			remotes.AdvanceStickyPeer(remoteAddr)
+		}
+
+		// backoff, remote service client could not be created
+		if client == nil {
 			syncCancel()
 			log.Error("unable to obtain stream service client", "err", err)
 			if s.waitMaxOrUntilCancel(syncCtx, time.Minute, 2*time.Minute) {
@@ -113,6 +130,7 @@ func (s *StreamTrackerConnectGo) Run(
 		metrics.SyncSessionInFlight.Dec()
 
 		if err != nil {
+			remotes.AdvanceStickyPeer(remoteAddr)
 			syncCancel()
 			if !errors.Is(err, context.Canceled) {
 				log.Error("unable to start stream sync session", "err", err)
@@ -158,6 +176,7 @@ func (s *StreamTrackerConnectGo) Run(
 				log.Error("Unable to receive first sync message", "err", err)
 			}
 			syncCancel()
+			remotes.AdvanceStickyPeer(remoteAddr)
 			if s.waitMaxOrUntilCancel(syncCtx, time.Minute, 2*time.Minute) {
 				return
 			}
@@ -166,6 +185,7 @@ func (s *StreamTrackerConnectGo) Run(
 
 		if syncID == "" {
 			syncCancel()
+			remotes.AdvanceStickyPeer(remoteAddr)
 			log.Error("Received empty syncID")
 			if s.waitMaxOrUntilCancel(syncCtx, time.Minute, 2*time.Minute) {
 				return
@@ -294,6 +314,7 @@ func (s *StreamTrackerConnectGo) Run(
 		}
 
 		syncCancel()
+		remotes.AdvanceStickyPeer(remoteAddr)
 
 		if s.waitMaxOrUntilCancel(ctx, 10*time.Second, 30*time.Second) {
 			return
@@ -303,6 +324,7 @@ func (s *StreamTrackerConnectGo) Run(
 
 // liveness periodically checks the status of a stream sync session to determine if it's still active.
 // if not it cancels the session which forces a restart.
+//
 //nolint:unused
 //lint:ignore U1000 temporary disabled - pings are commented out
 func (s *StreamTrackerConnectGo) liveness(
