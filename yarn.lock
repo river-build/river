@@ -6260,6 +6260,7 @@ __metadata:
     vite: ^5.3.1
     vite-plugin-checker: ^0.8.0
     vite-plugin-node-polyfills: ^0.22.0
+    vite-plugin-replace: ^0.1.1
     wagmi: ^1.4.12
     zod: ^3.21.4
   languageName: unknown
@@ -29482,6 +29483,15 @@ __metadata:
   peerDependencies:
     vite: ^2.0.0 || ^3.0.0 || ^4.0.0 || ^5.0.0
   checksum: c08d3df0d5cc3102280483d3f7b216f92a18e0708fcb9f67f78f01ab865474254756bacee17caa90b3f46afe5834cb9d8de0dd0e58c1bbbdae1b949edc1e6b57
+  languageName: node
+  linkType: hard
+
+"vite-plugin-replace@npm:^0.1.1":
+  version: 0.1.1
+  resolution: "vite-plugin-replace@npm:0.1.1"
+  peerDependencies:
+    vite: ^2
+  checksum: 247ccdc61605f0a2e097e25fd31cc3528ecb8682dc691fdb5944cc67e427f2ca66864f3bdb21cfb80f835f62366fec8d86f38a2e427f11e016acdbc51219a117
   languageName: node
   linkType: hard
 
