@@ -14,21 +14,21 @@ function useUserDms(
   config?: ObservableConfig.FromObservable<Dms>,
 ): {
     error: Error | undefined;
-    status: "loading" | "loaded" | "error";
+    status: "error" | "loading" | "loaded";
     isLoading: boolean;
     isError: boolean;
     isLoaded: boolean;
     streamIds: string[];
 } | {
     error: Error | undefined;
-    status: "loading" | "loaded" | "error";
+    status: "error" | "loading" | "loaded";
     isLoading: boolean;
     isError: boolean;
     isLoaded: boolean;
     streamIds: string[];
 } | {
     error: Error | undefined;
-    status: "loading" | "loaded" | "error";
+    status: "error" | "loading" | "loaded";
     isLoading: boolean;
     isError: boolean;
     isLoaded: boolean;
@@ -50,21 +50,21 @@ function useUserDms(
 ```ts
 {
     error: Error | undefined;
-    status: "loading" | "loaded" | "error";
+    status: "error" | "loading" | "loaded";
     isLoading: boolean;
     isError: boolean;
     isLoaded: boolean;
     streamIds: string[];
 } | {
     error: Error | undefined;
-    status: "loading" | "loaded" | "error";
+    status: "error" | "loading" | "loaded";
     isLoading: boolean;
     isError: boolean;
     isLoaded: boolean;
     streamIds: string[];
 } | {
     error: Error | undefined;
-    status: "loading" | "loaded" | "error";
+    status: "error" | "loading" | "loaded";
     isLoading: boolean;
     isError: boolean;
     isLoaded: boolean;

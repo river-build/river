@@ -177,6 +177,8 @@
             "sdk/react-sdk/api/useChannel",
             "sdk/react-sdk/api/useChannelTimeline",
             "sdk/react-sdk/api/useCreateChannel",
+            "sdk/react-sdk/api/useCreateDm",
+            "sdk/react-sdk/api/useCreateGdm",
             "sdk/react-sdk/api/useCreateSpace",
             "sdk/react-sdk/api/useDm",
             "sdk/react-sdk/api/useDmTimeline",
