@@ -63,7 +63,12 @@ func (s *Service) info(
 		}
 
 		if s.config.EnableTestAPIs {
-			if debug == "panic" {
+			if debug == "ping" {
+				log.Info("PINGED")
+				return connect.NewResponse(&InfoResponse{
+					Graffiti: "pong",
+				}), nil
+			} else if debug == "panic" {
 				log.Error("panic requested through Info request")
 				panic("panic requested through Info request")
 			} else if debug == "flush_cache" {
