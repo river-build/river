@@ -304,7 +304,7 @@ func (s *StreamTrackerConnectGo) Run(
 // liveness periodically checks the status of a stream sync session to determine if it's still active.
 // if not it cancels the session which forces a restart.
 //nolint:unused
-//lint:ignore staticcheck # temporary disabled - pings are commented out
+//lint:ignore U1000 temporary disabled - pings are commented out
 func (s *StreamTrackerConnectGo) liveness(
 	log *slog.Logger,
 	syncCtx context.Context,
