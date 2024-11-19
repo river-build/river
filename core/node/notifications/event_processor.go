@@ -148,16 +148,6 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 
 	recipients.Remove(sender)
 
-	/*Kind one of
-	  Mention = 'mention',
-	  NewMessage = 'new_message',
-	  ReplyTo = 'reply_to',
-	  AtChannel = '@channel',
-	  Reaction = 'reaction',
-	*/
-
-	// spaceID if available
-
 	eventData, _ := json.Marshal(event.Event)
 	payload := map[string]interface{}{
 		"event":      eventData,
@@ -165,12 +155,14 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 		"kind":       kind,
 		"senderId":   fmt.Sprintf("0x%x", event.Event.CreatorAddress),
 		"recipients": recipients.ToSlice(),
-		"threadId":   channelID.String(),
 		//"attachmentOnly": "",   // image, gif, file optional
 		//"reaction": true, // optional
 	}
 	if spaceID != nil {
 		payload["spaceId"] = spaceID.String()
+	}
+	if threadID := event.Event.GetTags().GetThreadId(); len(threadID) > 0 {
+		payload["threadId"] = fmt.Sprintf("0x%x", threadID)
 	}
 
 	for user, userPref := range usersToNotify {
@@ -188,7 +180,7 @@ func (p *MessageToNotificationsProcessor) onDMChannelPayload(
 		return true
 	}
 
-	p.log.Warn("User has doesn't want to receive notification for DM message",
+	p.log.Debug("User has doesn't want to receive notification for DM message",
 		"user", participant,
 		"channel", streamID,
 		"event", event.Hash)
@@ -261,7 +253,7 @@ func (p *MessageToNotificationsProcessor) onSpaceChannelPayload(
 		return true
 	}
 
-	p.log.Warn("User don't want to receive notification for space channel message",
+	p.log.Debug("User don't want to receive notification for space channel message",
 		"user", participant,
 		"space", spaceID,
 		"channel", channelID,
