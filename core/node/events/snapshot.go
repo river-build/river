@@ -2,6 +2,7 @@ package events
 
 import (
 	"bytes"
+	"encoding/hex"
 	"slices"
 
 	"google.golang.org/protobuf/proto"
@@ -818,7 +819,8 @@ func applyMlsPayload(
 		mlsGroup.InitialGroupInfo = payload.InitializeGroup.GroupInfoWithExternalKey
 		mlsGroup.LatestGroupInfo = payload.InitializeGroup.GroupInfoWithExternalKey
 	case *protocol.MemberPayload_MlsPayload_CommitLeave_:
-		mlsGroup.DeviceKeys[string(payload.CommitLeave.UserAddress)] = nil
+		hexUserAddress := hex.EncodeToString(payload.CommitLeave.UserAddress)
+		delete(mlsGroup.DeviceKeys, hexUserAddress)
 		mlsGroup.PendingLeaves = removeSorted(mlsGroup.PendingLeaves,
 			payload.CommitLeave.UserAddress,
 			bytes.Compare,
@@ -832,14 +834,14 @@ func applyMlsPayload(
 		mlsGroup.Commits = append(mlsGroup.Commits, payload.ExternalJoin.Commit)
 		mlsGroup.LatestGroupInfo = payload.ExternalJoin.GroupInfoWithExternalKey
 		mlsGroup.CurrentEpoch = payload.ExternalJoin.Epoch
-		key := string(payload.ExternalJoin.UserAddress)
+		hexUserAddress := hex.EncodeToString(payload.ExternalJoin.UserAddress)
 		if mlsGroup.GetDeviceKeys() == nil {
 			mlsGroup.DeviceKeys = map[string]*protocol.MemberPayload_Snapshot_MlsGroup_DeviceKeys{}
 		}
-		if mlsGroup.GetDeviceKeys()[key] == nil {
-			mlsGroup.DeviceKeys[key] = &protocol.MemberPayload_Snapshot_MlsGroup_DeviceKeys{}
+		if mlsGroup.GetDeviceKeys()[hexUserAddress] == nil {
+			mlsGroup.DeviceKeys[hexUserAddress] = &protocol.MemberPayload_Snapshot_MlsGroup_DeviceKeys{}
 		}
-		mlsGroup.DeviceKeys[key].DeviceKeys = append(mlsGroup.DeviceKeys[key].DeviceKeys, payload.ExternalJoin.DeviceKey)
+		mlsGroup.DeviceKeys[hexUserAddress].DeviceKeys = append(mlsGroup.DeviceKeys[hexUserAddress].DeviceKeys, payload.ExternalJoin.DeviceKey)
 	case *MemberPayload_MlsPayload_ProposeLeave_:
 		mlsGroup.PendingLeaves = insertSorted(mlsGroup.PendingLeaves,
 			payload.ProposeLeave,
