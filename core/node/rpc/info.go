@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"time"
 
 	"github.com/river-build/river/core/node/rpc/sync"
 	"github.com/river-build/river/core/node/utils"
@@ -83,6 +84,23 @@ func (s *Service) info(
 				return connect.NewResponse(&InfoResponse{
 					Graffiti: "exiting...",
 				}), nil
+			} else if debug == "sleep" {
+				sleepDuration := 30 * time.Second 
+				log.Info("SLEEPING FOR", "sleepDuration", sleepDuration)
+				select {
+				case <-time.After(sleepDuration):
+					// Sleep completed
+					log.Info("Sleep completed")
+					return connect.NewResponse(&InfoResponse{
+						Graffiti: fmt.Sprintf("slept for %v", sleepDuration),
+					}), nil
+				case <-ctx.Done():
+					// Context was canceled
+					log.Info("Sleep canceled due to context cancellation")
+					return connect.NewResponse(&InfoResponse{
+						Graffiti: "Context canceled",
+					}), nil
+				}
 			}
 		}
 	}
