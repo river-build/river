@@ -6463,7 +6463,7 @@ __metadata:
     "@types/node": ^20.5.0
     "@typescript-eslint/eslint-plugin": ^6.10.0
     "@typescript-eslint/parser": ^7.14.1
-    bullmq: ^5.21.1
+    bullmq: ^5.28.1
     esbuild: ^0.21.5
     esbuild-plugin-pino: ^2.2.0
     esbuild-plugin-wasm: ^1.1.0
@@ -10991,18 +10991,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bullmq@npm:^5.21.1":
-  version: 5.21.1
-  resolution: "bullmq@npm:5.21.1"
+"bullmq@npm:^5.28.1":
+  version: 5.28.1
+  resolution: "bullmq@npm:5.28.1"
   dependencies:
     cron-parser: ^4.6.0
     ioredis: ^5.4.1
-    msgpackr: ^1.10.1
+    msgpackr: ^1.11.2
     node-abort-controller: ^3.1.1
     semver: ^7.5.4
     tslib: ^2.0.0
     uuid: ^9.0.0
-  checksum: 569d248adca212463624b684ae2bd8686d8fdd2561e01c474de13ade09c140d8f83759eff8dc7723706449483848a6e8a5437e46f579e882ba59928b16b49260
+  checksum: 16cd6d898686064ba6f5d5484f0dc6dd786a50692b1b994f17805a0465daa66fc7004b73a38747d6e6effd96ab3120b33a383e957bd6d402bb2c476f7be523c3
   languageName: node
   linkType: hard
 
@@ -22029,6 +22029,18 @@ __metadata:
     msgpackr-extract:
       optional: true
   checksum: e422d18b01051598b23701eebeb4b9e2c686b9c7826b20f564724837ba2b5cd4af74c91a549eaeaf8186645cc95e8196274a4a19442aa3286ac611b98069c194
+  languageName: node
+  linkType: hard
+
+"msgpackr@npm:^1.11.2":
+  version: 1.11.2
+  resolution: "msgpackr@npm:1.11.2"
+  dependencies:
+    msgpackr-extract: ^3.0.2
+  dependenciesMeta:
+    msgpackr-extract:
+      optional: true
+  checksum: 53b30ddd68fd98ae95690017787f3b54414191314f3d36329cc01c073ec35fece87c86de731ef521d1f1b8adeb294008184ad0266d3a0e62cf0867dc728dcbd1
   languageName: node
   linkType: hard
 
