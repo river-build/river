@@ -359,6 +359,15 @@ func (s *streamImpl) promoteCandidate(ctx context.Context, mb *MiniblockRef) err
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	if s.local == nil {
+		return RiverError(
+			Err_INTERNAL,
+			"promoteCandidate: stream is not local",
+			"streamId",
+			s.streamId,
+		).LogError(dlog.FromCtx(ctx))
+	}
+
 	if err := s.loadInternal(ctx); err != nil {
 		return err
 	}
@@ -426,7 +435,7 @@ func (s *streamImpl) initFromGenesis(
 	}
 
 	// TODO: move this call out of the lock
-	_, registeredGenesisHash, _, err := s.params.Registry.GetStreamWithGenesis(ctx, s.streamId)
+	_, registeredGenesisHash, _, blockNum, err := s.params.Registry.GetStreamWithGenesis(ctx, s.streamId)
 	if err != nil {
 		return err
 	}
@@ -445,6 +454,8 @@ func (s *streamImpl) initFromGenesis(
 		}
 	}
 
+	s.lastAppliedBlockNum = blockNum
+
 	view, err := MakeStreamView(
 		ctx,
 		&storage.ReadStreamFromLastSnapshotResult{
@@ -461,7 +472,7 @@ func (s *streamImpl) initFromGenesis(
 }
 
 func (s *streamImpl) initFromBlockchain(ctx context.Context) error {
-	record, _, mb, err := s.params.Registry.GetStreamWithGenesis(ctx, s.streamId)
+	record, _, mb, blockNum, err := s.params.Registry.GetStreamWithGenesis(ctx, s.streamId)
 	if err != nil {
 		return err
 	}
@@ -493,6 +504,8 @@ func (s *streamImpl) initFromBlockchain(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	s.lastAppliedBlockNum = blockNum
 
 	// Successfully put data into storage, init stream view.
 	view, err := MakeStreamView(
@@ -952,22 +965,6 @@ func (s *streamImpl) getLastMiniblockNumSkipLoad(ctx context.Context) (int64, er
 	return s.params.Storage.GetLastMiniblockNumber(ctx, s.streamId)
 }
 
-func (s *streamImpl) applyStreamEventsNoLock(
-	ctx context.Context,
-	events []river.EventWithStreamId,
-) {
-	for _, e := range events {
-		switch event := e.(type) {
-		case *river.StreamLastMiniblockUpdated:
-			s.onLastMiniblockUpdated(ctx, event)
-		case *river.StreamPlacementUpdated:
-			s.onPlacementUpdated(ctx, event)
-		default:
-			dlog.FromCtx(ctx).Error("applyStreamEventsNoLock: unknown event", "event", event, "streamId", s.streamId)
-		}
-	}
-}
-
 func (s *streamImpl) applyStreamEvents(
 	ctx context.Context,
 	events []river.EventWithStreamId,
@@ -977,48 +974,44 @@ func (s *streamImpl) applyStreamEvents(
 		return
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.lastAppliedBlockNum >= blockNum {
+	// Sanity check
+	s.mu.RLock()
+	lastAppliedBlockNum := s.lastAppliedBlockNum
+	s.mu.RUnlock()
+
+	if lastAppliedBlockNum >= blockNum {
 		dlog.FromCtx(ctx).
-			Error("applyStreamEvents: already applied events for block", "blockNum", blockNum, "streamId", s.streamId)
+			Error("applyStreamEvents: already applied events for block", "blockNum", blockNum, "streamId", s.streamId,
+				"lastAppliedBlockNum", lastAppliedBlockNum,
+			)
 		return
 	}
-	s.applyStreamEventsNoLock(ctx, events)
+
+	for _, e := range events {
+		switch event := e.(type) {
+		case *river.StreamLastMiniblockUpdated:
+			s.onLastMiniblockUpdated(ctx, event)
+		case *river.StreamPlacementUpdated:
+			s.nodes.Update(event.NodeAddress, event.IsAdded)
+		default:
+			dlog.FromCtx(ctx).Error("applyStreamEventsNoLock: unknown event", "event", event, "streamId", s.streamId)
+		}
+	}
+
+	s.mu.Lock()
 	s.lastAppliedBlockNum = blockNum
+	s.mu.Unlock()
 }
 
 func (s *streamImpl) onLastMiniblockUpdated(
 	ctx context.Context,
 	event *river.StreamLastMiniblockUpdated,
 ) {
-	if s.local == nil {
-		return
-	}
-
-	view, err := s.getView(ctx)
-	if err != nil {
-		dlog.FromCtx(ctx).Error("onStreamLastMiniblockUpdated: failed to get stream view", "err", err)
-		return
-	}
-
-	// Check if current state is beyond candidate. (Local candidates are applied immediately after tx).
-	if uint64(view.LastBlock().Ref.Num) >= event.LastMiniblockNum {
-		return
-	}
-
-	err = s.promoteCandidate(ctx, &MiniblockRef{
+	err := s.promoteCandidate(ctx, &MiniblockRef{
 		Hash: event.LastMiniblockHash,
 		Num:  int64(event.LastMiniblockNum),
 	})
 	if err != nil {
 		dlog.FromCtx(ctx).Error("onStreamLastMiniblockUpdated: failed to promote candidate", "err", err)
 	}
-}
-
-func (s *streamImpl) onPlacementUpdated(
-	ctx context.Context,
-	event *river.StreamPlacementUpdated,
-) {
-	s.nodes.Update(event.NodeAddress, event.IsAdded)
 }

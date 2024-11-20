@@ -14,6 +14,7 @@ import (
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/base/test"
 	"github.com/river-build/river/core/node/crypto"
+	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
 	. "github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
@@ -38,6 +39,7 @@ type cacheTestContext struct {
 var _ RemoteMiniblockProvider = (*cacheTestContext)(nil)
 
 type cacheTestInstance struct {
+	ctx            context.Context
 	params         *StreamCacheParams
 	streamRegistry StreamRegistry
 	cache          *streamCacheImpl
@@ -90,7 +92,12 @@ func makeCacheTestContext(t *testing.T, p testParams) (context.Context, *cacheTe
 
 	setOnChainStreamConfig(t, ctx, btc, p)
 
+	baseCtx := ctx
 	for i := range p.numInstances {
+		log := dlog.FromCtx(baseCtx)
+		log = log.With("instance", i)
+		ctx = dlog.CtxWithLog(baseCtx, log)
+
 		ctc.require.NoError(btc.InitNodeRecord(ctx, i, "fakeurl"))
 
 		bc := btc.GetBlockchain(ctx, i)
@@ -137,7 +144,7 @@ func makeCacheTestContext(t *testing.T, p testParams) (context.Context, *cacheTe
 		ctc.instancesByAddr[bc.Wallet.Address] = inst
 	}
 
-	return ctx, ctc
+	return baseCtx, ctc
 }
 
 func (ctc *cacheTestContext) initCache(n int, opts *MiniblockProducerOpts) *streamCacheImpl {
