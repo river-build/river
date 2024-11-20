@@ -304,19 +304,13 @@ describe('dmsMlsTests', () => {
         const NUM_MESSAGES = 0
 
         // TODO: Creating clients while others are sending messages seems to break the node
-        const extraClients = await Promise.all(
+        await Promise.all(
             Array.from(Array(NUM_CLIENTS).keys()).map(async (n: number) => {
                 log(`INIT client-${n}`)
                 const client = await makeInitAndStartClient(`client-${n}`)
                 if (client.mlsCrypto) {
                     client.mlsCrypto.awaitTimeoutMS = 30_000
                 }
-                return client
-            }),
-        )
-
-        await Promise.all(
-            extraClients.map(async (client: Client, n: number) => {
                 log(`JOIN client-${n}`)
                 await expect(client.joinStream(channelId)).toResolve()
                 if (NUM_MESSAGES > 0) {
