@@ -5187,19 +5187,26 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@openzeppelin/contracts-upgradeable@npm:^5.0.2":
-  version: 5.0.2
-  resolution: "@openzeppelin/contracts-upgradeable@npm:5.0.2"
+"@openzeppelin/contracts-upgradeable@npm:^5.1.0":
+  version: 5.1.0
+  resolution: "@openzeppelin/contracts-upgradeable@npm:5.1.0"
   peerDependencies:
-    "@openzeppelin/contracts": 5.0.2
-  checksum: 7d1dbd6bcb45fb6fccf2dc51253afd044b9f77b01d34e11f7cf4c3e17c860df31ddc2c831be7ac463e2955eaea9620cec1c38cdffed7fcf235eb1fdc7ceb3716
+    "@openzeppelin/contracts": 5.1.0
+  checksum: 6bbb2665d97714921a4c1e6d4a0ec03a285480d2a6b3f3944bfda514696d86ec3c3190cafb6206132574c95e46d6df185bcf21343ab7a4fddccf1191d42ad35a
   languageName: node
   linkType: hard
 
-"@openzeppelin/contracts@npm:^5.0.0, @openzeppelin/contracts@npm:^5.0.2":
+"@openzeppelin/contracts@npm:^5.0.0":
   version: 5.0.2
   resolution: "@openzeppelin/contracts@npm:5.0.2"
   checksum: 0cce6fc284bd1d89e2a447027832a62f1356b44ee31088899453e10349a63a62df2f07da63d76e4c41aad9c86b96b650b2b6fc85439ef276850dda1170a047fd
+  languageName: node
+  linkType: hard
+
+"@openzeppelin/contracts@npm:^5.1.0":
+  version: 5.1.0
+  resolution: "@openzeppelin/contracts@npm:5.1.0"
+  checksum: dd42b4b331912cc743bc7eb27c8cf9e78249909c065bb59513c00d66941444c085c4e3b2ebf1cdd89535c26497fc994a7ab028b3c88858b636694e3c9c2d622f
   languageName: node
   linkType: hard
 
@@ -5408,10 +5415,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@prb/math@npm:^4.0.3":
-  version: 4.0.3
-  resolution: "@prb/math@npm:4.0.3"
-  checksum: f8319b9eb0fd9d2089bd785c2d9468d9fbd04de903ea342461e3ccecda8ee1144f21c3641f5f3a422544a329ff66e410e5e83aa38f8de95e6e3baa410a9d21d8
+"@prb/math@npm:^4.1.0":
+  version: 4.1.0
+  resolution: "@prb/math@npm:4.1.0"
+  checksum: 97c8199dc754ffb9c14c408a801630cb8a4d3a8c03ffda2c6db1cb5176110006aa6923a6262100abb26c2d15b8d872bf7b8ad51a6ee6972da8a0d783bb40ea64
   languageName: node
   linkType: hard
 
@@ -6095,17 +6102,17 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@river-build/contracts@workspace:contracts"
   dependencies:
-    "@openzeppelin/contracts": ^5.0.2
-    "@openzeppelin/contracts-upgradeable": ^5.0.2
-    "@prb/math": ^4.0.3
+    "@openzeppelin/contracts": ^5.1.0
+    "@openzeppelin/contracts-upgradeable": ^5.1.0
+    "@prb/math": ^4.1.0
     "@prb/test": ^0.6.4
     account-abstraction: "github:eth-infinitism/account-abstraction"
     ds-test: "github:dapphub/ds-test"
-    forge-std: "github:foundry-rs/forge-std#v1.9.1"
+    forge-std: "github:foundry-rs/forge-std#v1.9.4"
     prettier: ^2.8.8
-    prettier-plugin-solidity: ^1.3.1
-    solady: ^0.0.228
-    solhint: ^5.0.2
+    prettier-plugin-solidity: ^1.4.1
+    solady: ^0.0.267
+    solhint: ^5.0.3
   languageName: unknown
   linkType: soft
 
@@ -6253,6 +6260,7 @@ __metadata:
     vite: ^5.3.1
     vite-plugin-checker: ^0.8.0
     vite-plugin-node-polyfills: ^0.22.0
+    vite-plugin-replace: ^0.1.1
     wagmi: ^1.4.12
     zod: ^3.21.4
   languageName: unknown
@@ -7599,13 +7607,6 @@ __metadata:
   version: 3.1.2
   resolution: "@socket.io/component-emitter@npm:3.1.2"
   checksum: 89888f00699eb34e3070624eb7b8161fa29f064aeb1389a48f02195d55dd7c52a504e52160016859f6d6dffddd54324623cdd47fd34b3d46f9ed96c18c456edc
-  languageName: node
-  linkType: hard
-
-"@solidity-parser/parser@npm:^0.17.0":
-  version: 0.17.0
-  resolution: "@solidity-parser/parser@npm:0.17.0"
-  checksum: 2f47732c9a4f6b264ce6c8a0544bd5a0805f824d3c40a8a253e59d5dbe9a98163f55c06460232f57a6b389bb5235c18d0563f94425202ec2f859d88f2378e0ac
   languageName: node
   linkType: hard
 
@@ -15477,10 +15478,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"forge-std@github:foundry-rs/forge-std#v1.9.1":
-  version: 1.9.1
-  resolution: "forge-std@https://github.com/foundry-rs/forge-std.git#commit=07263d193d621c4b2b0ce8b4d54af58f6957d97d"
-  checksum: 282ed0b5ff761edf536a8791fe182e847b610273c806fbc7b7d485831b3458ebafd69ba551b22751cb9d5c5f67db430e3ced37ef9ff0b9a292e2da2901eb0f71
+"forge-std@github:foundry-rs/forge-std#v1.9.4":
+  version: 1.9.4
+  resolution: "forge-std@https://github.com/foundry-rs/forge-std.git#commit=1eea5bae12ae557d589f9f0f0edae2faa47cb262"
+  checksum: a765a8797fb46808f476db6504d4192489a723d26764be73dde4c583ecfef0d8a453ee4f51e7f22be360670827814e5ed6260e085f19d4d9e9b973fb011f563c
   languageName: node
   linkType: hard
 
@@ -24029,16 +24030,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier-plugin-solidity@npm:^1.3.1":
-  version: 1.3.1
-  resolution: "prettier-plugin-solidity@npm:1.3.1"
+"prettier-plugin-solidity@npm:^1.4.1":
+  version: 1.4.1
+  resolution: "prettier-plugin-solidity@npm:1.4.1"
   dependencies:
-    "@solidity-parser/parser": ^0.17.0
+    "@solidity-parser/parser": ^0.18.0
     semver: ^7.5.4
-    solidity-comments-extractor: ^0.0.8
   peerDependencies:
     prettier: ">=2.3.0"
-  checksum: 286bf3b5899d7fad66e49c78ebac164bacfbf419f874a932ed99e491d97d77e91fa03ca068197939d3696ba7991db9e5258390dd42dee8d2184fa8c2e11921e4
+  checksum: ac9f3cc525553a45e70f60898da5d4a7b733128cdd9893686364790ff688c56dd6eb0234620759dc6fabad4dc354a27097927b29ea7761c5814c64613c07222f
   languageName: node
   linkType: hard
 
@@ -26480,16 +26480,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"solady@npm:^0.0.228":
-  version: 0.0.228
-  resolution: "solady@npm:0.0.228"
-  checksum: c8ddb50b23794de21aa4497fd1e9f92d439b4a8f9f40c3a6de3e6efead4a643f3f69829ccdc7380506f7930578bb712b5fcc6735a3fa4961e4e4ac08eee657b1
+"solady@npm:^0.0.267":
+  version: 0.0.267
+  resolution: "solady@npm:0.0.267"
+  checksum: 67726bf72e4e86d9dfad3998da0b3e5ef2ef5e72d496e374c18806b098d3d0383f0ded5bd358161e6fe5f518dc6b4b6dab28586c4c1074b51c8f2ec257a409a4
   languageName: node
   linkType: hard
 
-"solhint@npm:^5.0.2":
-  version: 5.0.2
-  resolution: "solhint@npm:5.0.2"
+"solhint@npm:^5.0.3":
+  version: 5.0.3
+  resolution: "solhint@npm:5.0.3"
   dependencies:
     "@solidity-parser/parser": ^0.18.0
     ajv: ^6.12.6
@@ -26515,7 +26515,7 @@ __metadata:
       optional: true
   bin:
     solhint: solhint.js
-  checksum: 8660c56f83121d0611823edde5ed1889d018272f4eebf1339f8f4667ea10619aeb60fac25688d780054898ce5414f7d5dcbe79c40f38f2f2c36c5eaa4fc4d809
+  checksum: 30361c0099cded492059719e477cecadcc7390f87a1737904411e8dbf15277344a5892e0762738a025cefd78467455601db1d7d6ffb3d489a6ab6e296c6a7b92
   languageName: node
   linkType: hard
 
@@ -26523,13 +26523,6 @@ __metadata:
   version: 0.4.46
   resolution: "solidity-ast@npm:0.4.46"
   checksum: 9c2ab90731fd23fdceef0e74ea626cc1810ec413daaa9b7d838f4fd9c342a63095fae0f0690ec0166db9f316ef6a06d7740a2c4f74cf5609831121389bf0cb7b
-  languageName: node
-  linkType: hard
-
-"solidity-comments-extractor@npm:^0.0.8":
-  version: 0.0.8
-  resolution: "solidity-comments-extractor@npm:0.0.8"
-  checksum: ad025fc968e2d744b4270710c2f7f55b43d8046ab3f155fd880a7768d6fd163a93ea98f62be3b1115a29ba815bd8b5736bb5ffd1feff79083eca1bf273108d07
   languageName: node
   linkType: hard
 
@@ -29490,6 +29483,15 @@ __metadata:
   peerDependencies:
     vite: ^2.0.0 || ^3.0.0 || ^4.0.0 || ^5.0.0
   checksum: c08d3df0d5cc3102280483d3f7b216f92a18e0708fcb9f67f78f01ab865474254756bacee17caa90b3f46afe5834cb9d8de0dd0e58c1bbbdae1b949edc1e6b57
+  languageName: node
+  linkType: hard
+
+"vite-plugin-replace@npm:^0.1.1":
+  version: 0.1.1
+  resolution: "vite-plugin-replace@npm:0.1.1"
+  peerDependencies:
+    vite: ^2
+  checksum: 247ccdc61605f0a2e097e25fd31cc3528ecb8682dc691fdb5944cc67e427f2ca66864f3bdb21cfb80f835f62366fec8d86f38a2e427f11e016acdbc51219a117
   languageName: node
   linkType: hard
 
