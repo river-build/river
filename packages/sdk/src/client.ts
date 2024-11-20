@@ -2402,7 +2402,7 @@ export class Client
             throw new Error('mls backend not initialized')
         }
 
-        if (this.mlsCrypto.groupStore.getGroupStatus(streamId) !== 'GROUP_MISSING') {
+        if (this.mlsCrypto.groupStore.hasGroup(streamId)) {
             this.mlsCrypto.log('Group already exists')
             return
         }
@@ -2460,26 +2460,28 @@ export class Client
         if (!this.mlsCrypto) {
             throw new Error('mls backend not initialized')
         }
-        if (this.mlsCrypto.groupStore.getGroupStatus(streamId) === 'GROUP_MISSING') {
+        if (!this.mlsCrypto.groupStore.hasGroup(streamId)) {
             await this.mls_joinOrCreateGroup(streamId)
         }
         // NOTE: We recheck the group status
-        const groupStatus = this.mlsCrypto.groupStore.getGroupStatus(streamId)
-        if (groupStatus !== 'GROUP_ACTIVE') {
+        let group = this.mlsCrypto.groupStore.getGroup(streamId)
+        if (group?.state.status !== 'GROUP_ACTIVE') {
             this.mlsCrypto.log('waiting for group to become active')
             await this.mlsCrypto.awaitGroupActive(streamId)
+            // Reload the group
+            group = this.mlsCrypto.groupStore.getGroup(streamId)
         }
 
-        // Get group
-        const groupState = this.mlsCrypto.groupStore.getGroup(streamId)
-        if (!groupState) {
-            throw new Error('group not found')
+        if (!group) {
+            throw new Error(
+                `Programmer error: group not found after becoming active for streamId ${streamId}`,
+            )
         }
 
         // Ensure epoch keys are derived
         const epochKey = this.mlsCrypto.epochKeyService.getEpochKey(
             streamId,
-            groupState.group.currentEpoch,
+            group.state.group.currentEpoch,
         )
         if (epochKey.state.status !== 'EPOCH_KEY_DERIVED') {
             throw new Error('epoch keys not derived')
@@ -2546,15 +2548,15 @@ export class Client
         }
 
         const streamId = group.streamId
-        const before = this.mlsCrypto.groupStore.getGroupStatus(streamId)
-        const after = await this.mlsCrypto?.handleInitializeGroup(
+        const before = this.mlsCrypto.groupStore.getGroup(streamId)
+        const after = await this.mlsCrypto.handleInitializeGroup(
             group.streamId,
             group.userAddress,
             group.deviceKey,
             group.groupInfoWithExternalKey,
         )
         this.mlsCrypto.log('handleInitializeGroup', before, after)
-        if (after === 'GROUP_MISSING') {
+        if (!after) {
             // Try rejoining the group
             this.mlsCrypto.log('trying to join group')
             await this.mls_joinOrCreateGroup(streamId)
@@ -2567,7 +2569,7 @@ export class Client
         }
 
         const streamId = externalJoin.streamId
-        const before = this.mlsCrypto.groupStore.getGroupStatus(streamId)
+        const before = this.mlsCrypto.groupStore.getGroup(streamId)
         const after = await this.mlsCrypto?.handleExternalJoin(
             externalJoin.streamId,
             externalJoin.userAddress,
@@ -2577,7 +2579,7 @@ export class Client
             externalJoin.epoch,
         )
         this.mlsCrypto.log('handleExternalJoin', before, after)
-        if (after === 'GROUP_MISSING') {
+        if (!after) {
             // Try rejoining the group
             this.mlsCrypto.log('trying to rejoin group')
             await this.mls_joinOrCreateGroup(streamId)
@@ -2586,11 +2588,11 @@ export class Client
             const groupState = this.mlsCrypto.groupStore.getGroup(streamId)
             if (
                 groupState &&
-                groupState.state === 'GROUP_ACTIVE' &&
-                groupState.group.currentEpoch > 0
+                groupState.state.status === 'GROUP_ACTIVE' &&
+                groupState.state.group.currentEpoch > 0
             ) {
-                const currentEpoch = groupState.group.currentEpoch
-                const previousEpoch = groupState.group.currentEpoch - 1n
+                const currentEpoch = groupState.state.group.currentEpoch
+                const previousEpoch = groupState.state.group.currentEpoch - 1n
                 const currentEpochKey = this.mlsCrypto.epochKeyService.getEpochKey(
                     streamId,
                     currentEpoch,

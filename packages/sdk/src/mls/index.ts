@@ -6,9 +6,10 @@ import {
 } from '@river-build/mls-rs-wasm'
 import { EncryptedData } from '@river-build/proto'
 import { EpochKeyService } from './epochKeyStore'
-import { GroupStore, GroupStatus } from './groupStore'
+import { GroupStore } from './groupStore'
 import { MlsStore } from './mlsStore'
 import { dlog, DLogger, bin_toHexString, shortenHexString } from '@river-build/dlog'
+import { Group } from './group'
 
 function uint8ArrayEqual(a: Uint8Array, b: Uint8Array): boolean {
     if (a === b) {
@@ -90,7 +91,7 @@ export class MlsCrypto {
         const groupInfoWithExternalKey = (
             await group.groupInfoMessageAllowingExtCommit(true)
         ).toBytes()
-        this.groupStore.addGroupViaCreate(streamId, group, groupInfoWithExternalKey)
+        this.groupStore.addGroup(Group.createGroup(streamId, group, groupInfoWithExternalKey))
         return groupInfoWithExternalKey
     }
 
@@ -102,11 +103,11 @@ export class MlsCrypto {
             throw new Error('MLS group not found')
         }
 
-        if (groupState.state !== 'GROUP_ACTIVE') {
+        if (groupState.state.status !== 'GROUP_ACTIVE') {
             throw new Error('MLS group not in active state')
         }
 
-        const group = groupState.group
+        const group = groupState.state.group
         const epoch = group.currentEpoch
 
         // Check if we have derived keys, if not try deriving them
@@ -130,7 +131,7 @@ export class MlsCrypto {
             throw new Error('MLS group not found')
         }
 
-        if (groupState.state !== 'GROUP_ACTIVE') {
+        if (groupState.state.status !== 'GROUP_ACTIVE') {
             throw new Error('MLS group not in active state')
         }
 
@@ -170,11 +171,8 @@ export class MlsCrypto {
             await group.groupInfoMessageAllowingExtCommit(true)
         ).toBytes()
         const commitBytes = commit.toBytes()
-        this.groupStore.addGroupViaExternalJoin(
-            streamId,
-            group,
-            commitBytes,
-            groupInfoWithExternalKey,
+        this.groupStore.addGroup(
+            Group.externalJoin(streamId, group, commitBytes, groupInfoWithExternalKey),
         )
         return {
             groupInfo: groupInfoWithExternalKey,
@@ -184,17 +182,17 @@ export class MlsCrypto {
     }
 
     private async handleCommit(streamId: string, commit: Uint8Array): Promise<void> {
-        const groupState = this.groupStore.getGroup(streamId)
-        if (!groupState) {
+        const group = this.groupStore.getGroup(streamId)
+        if (!group) {
             throw new Error('Group not found')
         }
-        if (groupState.state !== 'GROUP_ACTIVE') {
+        if (group.state.status !== 'GROUP_ACTIVE') {
             throw new Error('Group not in active state')
         }
-        const group = groupState.group
-        await group.processIncomingMessage(MlsMessage.fromBytes(commit))
-        const secret = await group.currentEpochSecret()
-        const epoch = group.currentEpoch
+        const mlsGroup = group.state.group
+        await mlsGroup.processIncomingMessage(MlsMessage.fromBytes(commit))
+        const secret = await mlsGroup.currentEpochSecret()
+        const epoch = mlsGroup.currentEpoch
         this.log('handleCommit', { epoch, commit: shortenHexString(bin_toHexString(commit)) })
         await this.epochKeyService.addOpenEpochSecret(streamId, epoch, secret.toBytes())
     }
@@ -209,7 +207,7 @@ export class MlsCrypto {
         if (awaiting) {
             return await awaiting.promise
         }
-        if (this.groupStore.getGroupStatus(streamId) === 'GROUP_ACTIVE') {
+        if (this.groupStore.getGroup(streamId)?.state.status === 'GROUP_ACTIVE') {
             return
         }
         const awaiter = new Awaiter(this.awaitTimeoutMS)
@@ -225,7 +223,7 @@ export class MlsCrypto {
         userAddress: Uint8Array,
         deviceKey: Uint8Array,
         groupInfoWithExternalKey: Uint8Array,
-    ): Promise<GroupStatus> {
+    ): Promise<Group | undefined> {
         // - If we have a group in PENDING_CREATE, and
         //   - we sent the message,
         //     then we can switch that group into a confirmed state; or
@@ -233,17 +231,17 @@ export class MlsCrypto {
         //     then we clear it, and request to join using external join
         // - Any other state should be impossible
 
-        const groupState = this.groupStore.getGroup(streamId)
+        const group = this.groupStore.getGroup(streamId)
 
         // TODO: Are other cases even possible?
-        if (!groupState) {
-            return 'GROUP_MISSING'
+        if (!group) {
+            return undefined
         }
-        if (groupState.state !== 'GROUP_PENDING_CREATE') {
-            return groupState.state
+        if (group.state.status !== 'GROUP_PENDING_CREATE') {
+            return group
         }
 
-        const ourGroupInfoWithExternalKey = groupState.groupInfoWithExternalKey
+        const ourGroupInfoWithExternalKey = group.state.groupInfoWithExternalKey
 
         const ourOwnInitializeGroup: boolean =
             uint8ArrayEqual(userAddress, this.userAddress) &&
@@ -251,23 +249,21 @@ export class MlsCrypto {
             uint8ArrayEqual(groupInfoWithExternalKey, ourGroupInfoWithExternalKey)
 
         if (ourOwnInitializeGroup) {
-            this.groupStore.setGroupState(streamId, {
-                state: 'GROUP_ACTIVE',
-                group: groupState.group,
-            })
+            group.markActive()
+            this.groupStore.updateGroup(group)
             // add a key to the epoch store
-            const epoch = groupState.group.currentEpoch
-            const epochSecret = await groupState.group.currentEpochSecret()
+            const epoch = group.state.group.currentEpoch
+            const epochSecret = await group.state.group.currentEpochSecret()
             await this.epochKeyService.addOpenEpochSecret(streamId, epoch, epochSecret.toBytes())
             // check if anyone is waiting for it
             this.awaitingGroupActive.get(streamId)?.resolve()
-            return 'GROUP_ACTIVE'
+            return group
         } else {
             // Someone else created a group
-            this.groupStore.clear(streamId)
+            this.groupStore.clearGroup(streamId)
 
             // let's initialise a new group
-            return 'GROUP_MISSING'
+            return undefined
         }
     }
 
@@ -278,7 +274,7 @@ export class MlsCrypto {
         commit: Uint8Array,
         groupInfoWithExternalKey: Uint8Array,
         epoch: bigint,
-    ): Promise<GroupStatus> {
+    ): Promise<Group | undefined> {
         // - If we have a group in PENDING_CREATE,
         //   then we clear it, and request to join using external join
         // - If we have a group in PENDING_JOIN, and
@@ -288,16 +284,16 @@ export class MlsCrypto {
         //     then we clear it, and request to join using external join
         // - If we have a group in ACTIVE,
         //   then we process the commit,
-        const groupState = this.groupStore.getGroup(streamId)
-        if (!groupState) {
-            return 'GROUP_MISSING'
+        const group = this.groupStore.getGroup(streamId)
+        if (!group) {
+            return undefined
         }
-        switch (groupState.state) {
+        switch (group.state.status) {
             case 'GROUP_PENDING_CREATE':
-                this.groupStore.clear(streamId)
-                return 'GROUP_MISSING'
+                this.groupStore.clearGroup(streamId)
+                return undefined
             case 'GROUP_PENDING_JOIN': {
-                const groupEpoch = groupState.group.currentEpoch
+                const groupEpoch = group.state.group.currentEpoch
                 if (epoch < groupEpoch) {
                     this.log('skipping old join message', {
                         epoch,
@@ -305,7 +301,7 @@ export class MlsCrypto {
                         groupInfo: shortenHexString(bin_toHexString(groupInfoWithExternalKey)),
                         commit: shortenHexString(bin_toHexString(commit)),
                     })
-                    return 'GROUP_PENDING_JOIN'
+                    return group
                 }
                 if (epoch > groupEpoch) {
                     this.log('group info was stale for join message, clearing group', {
@@ -314,48 +310,46 @@ export class MlsCrypto {
                         groupInfo: shortenHexString(bin_toHexString(groupInfoWithExternalKey)),
                         commit: shortenHexString(bin_toHexString(commit)),
                     })
-                    this.groupStore.clear(streamId)
-                    return 'GROUP_MISSING'
+                    this.groupStore.clearGroup(streamId)
+                    return undefined
                 }
 
                 const ownPendingJoin: boolean =
                     uint8ArrayEqual(userAddress, this.userAddress) &&
                     uint8ArrayEqual(deviceKey, this.deviceKey) &&
-                    uint8ArrayEqual(commit, groupState.commit) &&
-                    uint8ArrayEqual(groupInfoWithExternalKey, groupState.groupInfoWithExternalKey)
+                    uint8ArrayEqual(commit, group.state.commit) &&
+                    uint8ArrayEqual(groupInfoWithExternalKey, group.state.groupInfoWithExternalKey)
                 if (!ownPendingJoin) {
                     this.log('someone else joined, clearing group', {
                         epoch,
                         groupInfo: shortenHexString(bin_toHexString(groupInfoWithExternalKey)),
                         commit: shortenHexString(bin_toHexString(commit)),
                     })
-                    this.groupStore.clear(streamId)
-                    return 'GROUP_MISSING'
+                    this.groupStore.clearGroup(streamId)
+                    return undefined
                 }
 
-                this.groupStore.setGroupState(streamId, {
-                    state: 'GROUP_ACTIVE',
-                    group: groupState.group,
-                })
-                const joinedEpoch = groupState.group.currentEpoch
+                group.markActive()
+                this.groupStore.updateGroup(group)
+                const joinedEpoch = group.state.group.currentEpoch
                 this.log('joining group', {
                     epoch: joinedEpoch,
                     groupInfo: shortenHexString(bin_toHexString(groupInfoWithExternalKey)),
                     commit: shortenHexString(bin_toHexString(commit)),
                 })
                 // add a key to the epoch store
-                const epochSecret = await groupState.group.currentEpochSecret()
+                const epochSecret = await group.state.group.currentEpochSecret()
                 await this.epochKeyService.addOpenEpochSecret(
                     streamId,
                     joinedEpoch,
                     epochSecret.toBytes(),
                 )
                 this.awaitingGroupActive.get(streamId)?.resolve()
-                return 'GROUP_ACTIVE'
+                return group
             }
             case 'GROUP_ACTIVE':
                 await this.handleCommit(streamId, commit)
-                return 'GROUP_ACTIVE'
+                return group
         }
     }
 
@@ -367,13 +361,13 @@ export class MlsCrypto {
     }
 
     public epochFor(streamId: string): bigint {
-        const groupState = this.groupStore.getGroup(streamId)
-        if (!groupState) {
+        const group = this.groupStore.getGroup(streamId)
+        if (!group) {
             throw new Error('Group not found')
         }
-        if (groupState.state !== 'GROUP_ACTIVE') {
+        if (group.state.status !== 'GROUP_ACTIVE') {
             throw new Error('Group not in active state')
         }
-        return groupState.group.currentEpoch
+        return group.state.group.currentEpoch
     }
 }

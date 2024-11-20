@@ -21,13 +21,13 @@ async function initializeOtherGroup(
     const crypto = new MlsCrypto(userAddress, deviceKey)
     await crypto.initialize()
     const groupInfoWithExternalKey = await crypto.createGroup(streamId)
-    const groupStatus = await crypto.handleInitializeGroup(
+    const group = await crypto.handleInitializeGroup(
         streamId,
         userAddress,
         deviceKey,
         groupInfoWithExternalKey,
     )
-    expect(groupStatus).toEqual('GROUP_ACTIVE')
+    expect(group?.state.status).toEqual('GROUP_ACTIVE')
     return groupInfoWithExternalKey
 }
 
@@ -59,7 +59,9 @@ describe('CreateGroup', () => {
 
         const groupInfoWithExternalKey = await crypto.createGroup(streamId)
         expect(groupInfoWithExternalKey).toBeDefined()
-        expect(crypto.groupStore.getGroupStatus(streamId)).toEqual('GROUP_PENDING_CREATE')
+        const group = crypto.groupStore.getGroup(streamId)
+        expect(group).toBeDefined()
+        expect(group?.state?.status).toEqual('GROUP_PENDING_CREATE')
     }, 1000)
 
     it('handleInitializedGroup gets group from pending state into active state', async () => {
@@ -67,22 +69,22 @@ describe('CreateGroup', () => {
 
         const groupInfoWithExternalKey = await crypto.createGroup(streamId)
         expect(groupInfoWithExternalKey).toBeDefined()
-        expect(crypto.groupStore.getGroupStatus(streamId)).toEqual('GROUP_PENDING_CREATE')
+        expect(crypto.groupStore.getGroup(streamId)?.state.status).toEqual('GROUP_PENDING_CREATE')
 
-        const groupStatus = await crypto.handleInitializeGroup(
+        const group = await crypto.handleInitializeGroup(
             streamId,
             userAddress,
             deviceKey,
             groupInfoWithExternalKey,
         )
-        expect(groupStatus).toEqual('GROUP_ACTIVE')
-        expect(crypto.groupStore.getGroupStatus(streamId)).toEqual('GROUP_ACTIVE')
+        expect(group?.state.status).toEqual('GROUP_ACTIVE')
+        expect(crypto.groupStore.getGroup(streamId)?.state.status).toEqual('GROUP_ACTIVE')
     }, 1000)
 
     it('handleInitializedGroup gets group from pending state into missing state', async () => {
         const crypto = await initializeCrypto(userAddress, deviceKey)
         await crypto.createGroup(streamId)
-        expect(crypto.groupStore.getGroupStatus(streamId)).toEqual('GROUP_PENDING_CREATE')
+        expect(crypto.groupStore.getGroup(streamId)?.state.status).toEqual('GROUP_PENDING_CREATE')
 
         const groupStatus = await crypto.handleInitializeGroup(
             streamId,
@@ -91,8 +93,8 @@ describe('CreateGroup', () => {
             new Uint8Array(),
         )
 
-        expect(groupStatus).toEqual('GROUP_MISSING')
-        expect(crypto.groupStore.getGroupStatus(streamId)).toEqual('GROUP_MISSING')
+        expect(groupStatus).not.toBeDefined()
+        expect(crypto.groupStore.getGroup(streamId)).not.toBeDefined()
     }, 1000)
 
     it('handleExternalJoin gets group from pending state into active state', async () => {
@@ -104,9 +106,9 @@ describe('CreateGroup', () => {
 
         const crypto = await initializeCrypto(userAddress, deviceKey)
         const { groupInfo, commit } = await crypto.externalJoin(streamId, groupInfoWithExternalKey)
-        expect(crypto.groupStore.getGroupStatus(streamId)).toEqual('GROUP_PENDING_JOIN')
+        expect(crypto.groupStore.getGroup(streamId)?.state.status).toEqual('GROUP_PENDING_JOIN')
         await crypto.handleExternalJoin(streamId, userAddress, deviceKey, commit, groupInfo, 1n)
-        expect(crypto.groupStore.getGroupStatus(streamId)).toEqual('GROUP_ACTIVE')
+        expect(crypto.groupStore.getGroup(streamId)?.state.status).toEqual('GROUP_ACTIVE')
     }, 1000)
 
     it('awaitGroupActive should block', async () => {

@@ -1,29 +1,6 @@
-import { Group as MlsGroup } from '@river-build/mls-rs-wasm'
 import { MlsStore } from './mlsStore'
 import { DLogger } from '@river-build/dlog'
-
-export type GroupStatus =
-    | 'GROUP_MISSING'
-    | 'GROUP_PENDING_CREATE'
-    | 'GROUP_PENDING_JOIN'
-    | 'GROUP_ACTIVE'
-
-type GroupState =
-    | {
-          state: 'GROUP_PENDING_CREATE'
-          group: MlsGroup
-          groupInfoWithExternalKey: Uint8Array
-      }
-    | {
-          state: 'GROUP_PENDING_JOIN'
-          group: MlsGroup
-          commit: Uint8Array
-          groupInfoWithExternalKey: Uint8Array
-      }
-    | {
-          state: 'GROUP_ACTIVE'
-          group: MlsGroup
-      }
+import { GroupState, Group } from './group'
 
 export class GroupStore {
     private groups: Map<string, GroupState> = new Map()
@@ -38,60 +15,29 @@ export class GroupStore {
         return this.groups.has(streamId)
     }
 
-    public getGroupStatus(streamId: string): GroupStatus {
-        const group = this.groups.get(streamId)
-        if (!group) {
-            return 'GROUP_MISSING'
+    public getGroup(streamId: string): Group | undefined {
+        const state = this.groups.get(streamId)
+        if (!state) {
+            return undefined
         }
-        return group.state
+        return new Group(streamId, state)
     }
 
-    public addGroupViaCreate(
-        streamId: string,
-        group: MlsGroup,
-        groupInfoWithExternalKey: Uint8Array,
-    ): void {
-        if (this.groups.has(streamId)) {
-            throw new Error('Group already exists')
+    public addGroup(group: Group) {
+        if (this.groups.has(group.streamId)) {
+            throw new Error(`Group already exists for ${group.streamId}`)
         }
-
-        const groupState: GroupState = {
-            state: 'GROUP_PENDING_CREATE',
-            group,
-            groupInfoWithExternalKey,
-        }
-
-        this.groups.set(streamId, groupState)
+        this.groups.set(group.streamId, group.state)
     }
 
-    public addGroupViaExternalJoin(
-        streamId: string,
-        group: MlsGroup,
-        commit: Uint8Array,
-        groupInfoWithExternalKey: Uint8Array,
-    ): void {
-        if (this.groups.has(streamId)) {
-            throw new Error('Group already exists')
+    public updateGroup(group: Group) {
+        if (!this.groups.has(group.streamId)) {
+            throw new Error(`Group not found for ${group.streamId}`)
         }
-
-        const groupState: GroupState = {
-            state: 'GROUP_PENDING_JOIN',
-            group,
-            commit,
-            groupInfoWithExternalKey,
-        }
-        this.groups.set(streamId, groupState)
+        this.groups.set(group.streamId, group.state)
     }
 
-    public getGroup(streamId: string): GroupState | undefined {
-        return this.groups.get(streamId)
-    }
-
-    public setGroupState(streamId: string, state: GroupState): void {
-        this.groups.set(streamId, state)
-    }
-
-    public clear(streamId: string): void {
+    public clearGroup(streamId: string): void {
         this.groups.delete(streamId)
     }
 }
