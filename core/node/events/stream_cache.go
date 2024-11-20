@@ -38,6 +38,7 @@ type StreamCacheParams struct {
 type StreamCache interface {
 	Params() *StreamCacheParams
 	GetStream(ctx context.Context, streamId StreamId) (SyncStream, error)
+	GetStreamInfo(ctx context.Context, streamId StreamId) (StreamNodes, error) // TODO: to be unified with GetStream
 	ForceFlushAll(ctx context.Context)
 	GetLoadedViews(ctx context.Context) []StreamView
 	GetMbCandidateStreams(ctx context.Context) []*streamImpl
@@ -107,6 +108,7 @@ func NewStreamCache(
 			params:   params,
 			streamId: stream.StreamId,
 			nodes:    NewStreamNodes(stream.Nodes, params.Wallet.Address),
+			local:    &localStreamState{},
 		})
 		if params.Config.StreamReconciliation.InitialWorkerPoolSize > 0 {
 			s.submitSyncStreamTask(
@@ -149,6 +151,7 @@ func (s *streamCacheImpl) onStreamAllocated(ctx context.Context, event *river.St
 			streamId:         StreamId(event.StreamId),
 			nodes:            NewStreamNodes(event.Nodes, s.params.Wallet.Address),
 			lastAccessedTime: time.Now(),
+			local:            &localStreamState{},
 		}
 		_, err := s.createStreamStorage(ctx, stream, event.GenesisMiniblock)
 		if err != nil {
@@ -162,8 +165,7 @@ func (s *streamCacheImpl) onStreamLastMiniblockUpdated(
 	event *river.StreamRegistryV1StreamLastMiniblockUpdated,
 ) {
 	stream, _ := s.cache.Load(StreamId(event.StreamId))
-	if stream == nil {
-		// Stream is not local, ignore.
+	if stream == nil || !stream.isLocal() {
 		return
 	}
 
@@ -232,6 +234,7 @@ func (s *streamCacheImpl) CacheCleanup(ctx context.Context, enabled bool, expira
 	s.cache.Range(func(streamID StreamId, stream *streamImpl) bool {
 		result.TotalStreams++
 		if enabled {
+			// TODO: add purge from cache for non-local streams.
 			if stream.tryCleanup(expiration) {
 				result.UnloadedStreams++
 				log.Debug("stream view is unloaded from cache", "streamId", stream.streamId)
@@ -286,15 +289,20 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 	}
 
 	nodes := NewStreamNodes(record.Nodes, s.params.Wallet.Address)
-	if !nodes.IsLocal() {
-		return nil, RiverError(
-			Err_INTERNAL,
-			"tryLoadStreamRecord: Stream is not local",
-			"streamId", streamId,
-			"nodes", record.Nodes,
-			"localNode", s.params.Wallet,
-		)
+
+	stream := &streamImpl{
+		params:           s.params,
+		streamId:         streamId,
+		nodes:            nodes,
+		lastAccessedTime: time.Now(),
 	}
+
+	if !nodes.IsLocal() {
+		stream, _ = s.cache.LoadOrStore(streamId, stream)
+		return stream, nil
+	}
+
+	stream.local = &localStreamState{}
 
 	if record.LastMiniblockNum > 0 {
 		// TODO: reconcile from other nodes.
@@ -306,13 +314,6 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 			"record",
 			record,
 		)
-	}
-
-	stream := &streamImpl{
-		params:           s.params,
-		streamId:         streamId,
-		nodes:            nodes,
-		lastAccessedTime: time.Now(),
 	}
 
 	return s.createStreamStorage(ctx, stream, mb)
@@ -369,6 +370,11 @@ func (s *streamCacheImpl) GetStream(ctx context.Context, streamId StreamId) (Syn
 	if err != nil {
 		return nil, err
 	}
+	stream.mu.RLock()
+	defer stream.mu.RUnlock()
+	if stream.local == nil {
+		return nil, RiverError(Err_INTERNAL, "GetStream: Stream is not local", "streamId", streamId)
+	}
 	return stream, nil
 }
 
@@ -378,6 +384,14 @@ func (s *streamCacheImpl) getStreamImpl(ctx context.Context, streamId StreamId) 
 		return s.tryLoadStreamRecord(ctx, streamId)
 	}
 	return stream, nil
+}
+
+func (s *streamCacheImpl) GetStreamInfo(ctx context.Context, streamId StreamId) (StreamNodes, error) {
+	stream, err := s.getStreamImpl(ctx, streamId)
+	if err != nil {
+		return nil, err
+	}
+	return stream.nodes, nil
 }
 
 func (s *streamCacheImpl) ForceFlushAll(ctx context.Context) {
