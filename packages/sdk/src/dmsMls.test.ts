@@ -65,9 +65,9 @@ describe('dmsMlsTests', () => {
 
         // Not sure both are active
         await waitFor(
-            () => {
-                const aliceEpoch = alicesClient.mlsCrypto!.epochFor(streamId)
-                const bobEpoch = bobsClient.mlsCrypto!.epochFor(streamId)
+            async () => {
+                const aliceEpoch = await alicesClient.mlsCrypto!.epochFor(streamId)
+                const bobEpoch = await bobsClient.mlsCrypto!.epochFor(streamId)
                 check(aliceEpoch === bobEpoch)
                 check(aliceEpoch === BigInt(1))
             },
@@ -276,10 +276,13 @@ describe('dmsMlsTests', () => {
         ).toResolve()
 
         await expect(
-            await waitFor(() => {
+            await waitFor(async () => {
                 for (const client of clients) {
-                    check(client.mlsCrypto!.hasGroup(channelId))
-                    check(client.mlsCrypto!.epochFor(channelId) === BigInt(clients.length - 1))
+                    check(await client.mlsCrypto!.hasGroup(channelId))
+                    check(
+                        (await client.mlsCrypto!.epochFor(channelId)) ===
+                            BigInt(clients.length - 1),
+                    )
                 }
             }),
         ).toResolve()

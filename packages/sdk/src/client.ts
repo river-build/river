@@ -2402,7 +2402,7 @@ export class Client
             throw new Error('mls backend not initialized')
         }
 
-        if (this.mlsCrypto.groupStore.hasGroup(streamId)) {
+        if (await this.mlsCrypto.groupStore.hasGroup(streamId)) {
             this.mlsCrypto.log('Group already exists')
             return
         }
@@ -2460,16 +2460,16 @@ export class Client
         if (!this.mlsCrypto) {
             throw new Error('mls backend not initialized')
         }
-        if (!this.mlsCrypto.groupStore.hasGroup(streamId)) {
+        if (!(await this.mlsCrypto.groupStore.hasGroup(streamId))) {
             await this.mls_joinOrCreateGroup(streamId)
         }
         // NOTE: We recheck the group status
-        let group = this.mlsCrypto.groupStore.getGroup(streamId)
+        let group = await this.mlsCrypto.groupStore.getGroup(streamId)
         if (group?.state.status !== 'GROUP_ACTIVE') {
             this.mlsCrypto.log('waiting for group to become active')
             await this.mlsCrypto.awaitGroupActive(streamId)
             // Reload the group
-            group = this.mlsCrypto.groupStore.getGroup(streamId)
+            group = await this.mlsCrypto.groupStore.getGroup(streamId)
         }
 
         if (!group) {
@@ -2585,7 +2585,7 @@ export class Client
             await this.mls_joinOrCreateGroup(streamId)
         } else {
             // NOTE: We can announce the key as we are now switching to a new epoch
-            const groupState = this.mlsCrypto.groupStore.getGroup(streamId)
+            const groupState = await this.mlsCrypto.groupStore.getGroup(streamId)
             if (
                 groupState &&
                 groupState.state.status === 'GROUP_ACTIVE' &&

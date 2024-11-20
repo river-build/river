@@ -2,7 +2,15 @@ import { MlsStore } from './mlsStore'
 import { DLogger } from '@river-build/dlog'
 import { GroupState, Group } from './group'
 
-export class GroupStore {
+export interface IGroupStore {
+    hasGroup(streamId: string): Promise<boolean>
+    getGroup(streamId: string): Promise<Group | undefined>
+    addGroup(group: Group): Promise<void>
+    updateGroup(group: Group): Promise<void>
+    clearGroup(streamId: string): Promise<void>
+}
+
+export class GroupStore implements IGroupStore {
     private groups: Map<string, GroupState> = new Map()
     mlsStore: MlsStore
     log: DLogger
@@ -11,11 +19,11 @@ export class GroupStore {
         this.log = log
     }
 
-    public hasGroup(streamId: string): boolean {
+    public async hasGroup(streamId: string): Promise<boolean> {
         return this.groups.has(streamId)
     }
 
-    public getGroup(streamId: string): Group | undefined {
+    public async getGroup(streamId: string): Promise<Group | undefined> {
         const state = this.groups.get(streamId)
         if (!state) {
             return undefined
@@ -23,21 +31,21 @@ export class GroupStore {
         return new Group(streamId, state)
     }
 
-    public addGroup(group: Group) {
+    public async addGroup(group: Group): Promise<void> {
         if (this.groups.has(group.streamId)) {
             throw new Error(`Group already exists for ${group.streamId}`)
         }
         this.groups.set(group.streamId, group.state)
     }
 
-    public updateGroup(group: Group) {
+    public async updateGroup(group: Group): Promise<void> {
         if (!this.groups.has(group.streamId)) {
             throw new Error(`Group not found for ${group.streamId}`)
         }
         this.groups.set(group.streamId, group.state)
     }
 
-    public clearGroup(streamId: string): void {
+    public async clearGroup(streamId: string): Promise<void> {
         this.groups.delete(streamId)
     }
 }
