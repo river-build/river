@@ -4,6 +4,6 @@ export function isNodeEnv(): boolean {
     return isNode
 }
 
-export function isJest(): boolean {
-    return isNode && (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined)
+export function isVitest(): boolean {
+    return isNode && process.env.NODE_ENV === 'test'
 }
