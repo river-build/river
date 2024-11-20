@@ -31,6 +31,7 @@ type StreamCacheParams struct {
 	Registry                *registries.RiverRegistryContract
 	ChainConfig             crypto.OnChainConfiguration
 	Config                  *config.Config
+	AppliedBlockNum         crypto.BlockNumber
 	ChainMonitor            crypto.ChainMonitor // TODO: delete and use RiverChain.ChainMonitor
 	Metrics                 infra.MetricsFactory
 	RemoteMiniblockProvider RemoteMiniblockProvider
@@ -71,7 +72,6 @@ var _ StreamCache = (*streamCacheImpl)(nil)
 func NewStreamCache(
 	ctx context.Context,
 	params *StreamCacheParams,
-	initialBlockNum crypto.BlockNumber,
 ) (*streamCacheImpl, error) {
 	s := &streamCacheImpl{
 		params: params,
@@ -104,7 +104,7 @@ func NewStreamCache(
 	// schedule sync tasks for all streams that are local to this node.
 	// these tasks sync up the local db with the latest block in the registry.
 	var localStreamResults []*registries.GetStreamResult
-	err := params.Registry.ForAllStreams(ctx, initialBlockNum, func(stream *registries.GetStreamResult) bool {
+	err := params.Registry.ForAllStreams(ctx, s.params.AppliedBlockNum, func(stream *registries.GetStreamResult) bool {
 		if slices.Contains(stream.Nodes, params.Wallet.Address) {
 			localStreamResults = append(localStreamResults, stream)
 		}
@@ -136,7 +136,7 @@ func NewStreamCache(
 		}
 	}
 
-	s.appliedBlockNum.Store(uint64(initialBlockNum))
+	s.appliedBlockNum.Store(uint64(s.params.AppliedBlockNum))
 
 	// Close initial worker pool after all tasks are executed.
 	go func() {
@@ -145,7 +145,7 @@ func NewStreamCache(
 
 	// TODO: add buffered channel to avoid blocking ChainMonitor
 	params.RiverChain.ChainMonitor.OnBlockWithLogs(
-		initialBlockNum+1,
+		s.params.AppliedBlockNum+1,
 		s.onBlockWithLogs,
 	)
 
