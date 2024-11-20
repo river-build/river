@@ -78,13 +78,13 @@ abstract contract MembershipJoin is
       : IMembership.joinSpaceWithReferral.selector;
 
     bytes32 transactionId = _registerTransaction(
-      sender,
+      receiver,
       _encodeJoinSpaceData(selector, sender, receiver, referralData),
       msg.value
     );
 
     (bool isEntitled, bool isCrosschainPending) = _checkEntitlement(
-      sender,
+      receiver,
       transactionId
     );
 
@@ -157,18 +157,18 @@ abstract contract MembershipJoin is
 
   /// @notice Checks if a user is entitled to join the space and handles the entitlement process
   /// @dev This function checks both local and crosschain entitlements
-  /// @param sender The address of the user trying to join the space
+  /// @param receiver The address of the user trying to join the space
   /// @param transactionId The unique identifier for this join transaction
   /// @return isEntitled A boolean indicating whether the user is entitled to join
   /// @return isCrosschainPending A boolean indicating if a crosschain entitlement check is pending
   function _checkEntitlement(
-    address sender,
+    address receiver,
     bytes32 transactionId
   ) internal returns (bool isEntitled, bool isCrosschainPending) {
     IRolesBase.Role[] memory roles = _getRolesWithPermission(
       Permissions.JoinSpace
     );
-    address[] memory linkedWallets = _getLinkedWalletsWithUser(sender);
+    address[] memory linkedWallets = _getLinkedWalletsWithUser(receiver);
 
     uint256 totalRoles = roles.length;
 
@@ -186,6 +186,7 @@ abstract contract MembershipJoin is
 
         if (entitlement.isCrosschain()) {
           _requestEntitlementCheck(
+            receiver,
             transactionId,
             IRuleEntitlement(address(entitlement)),
             role.id
@@ -288,7 +289,7 @@ abstract contract MembershipJoin is
     address sender,
     uint256 payment,
     uint256 surplus,
-    uint256 protocolFee
+    uint256
   ) internal {
     if (surplus > 0) {
       _transferIn(sender, surplus);
