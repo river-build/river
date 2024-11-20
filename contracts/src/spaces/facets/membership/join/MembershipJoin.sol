@@ -299,9 +299,7 @@ abstract contract MembershipJoin is
   }
 
   function _creditPoints(address receiver, uint256 points) internal {
-    MembershipStorage.Layout storage ds = MembershipStorage.layout();
-
-    address pointsToken = IImplementationRegistry(ds.spaceFactory)
+    address pointsToken = IImplementationRegistry(_getSpaceFactory())
       .getLatestImplementation(bytes32("RiverAirdrop"));
 
     // Equivalent to `pointsToken.mint(receiver, points);`
@@ -320,7 +318,7 @@ abstract contract MembershipJoin is
     address sender,
     uint256 payment,
     uint256 surplus,
-    uint256
+    uint256 protocolFee
   ) internal {
     if (surplus > 0) {
       _transferIn(sender, surplus);
