@@ -186,6 +186,7 @@ abstract contract MembershipJoin is
 
         if (entitlement.isCrosschain()) {
           _requestEntitlementCheck(
+            sender,
             transactionId,
             IRuleEntitlement(address(entitlement)),
             role.id
