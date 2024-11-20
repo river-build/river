@@ -175,7 +175,7 @@ func (s *Service) debugInfoMakeMiniblock(
 		lastKnownMiniblockNum,
 	)
 
-	nodes, err := s.streamRegistry.GetStreamInfo(ctx, streamId)
+	nodes, err := s.cache.GetStreamInfo(ctx, streamId)
 	if err != nil {
 		return nil, err
 	}
