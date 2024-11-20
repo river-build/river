@@ -44,10 +44,6 @@ export function isIConnectError(obj: unknown): obj is { code: number } {
     return obj !== null && typeof obj === 'object' && 'code' in obj && typeof obj.code === 'number'
 }
 
-export function isTestEnv(): boolean {
-    return Boolean(process.env.JEST_WORKER_ID)
-}
-
 export class MockEntitlementsDelegate {
     async isEntitled(
         _spaceId: string | undefined,

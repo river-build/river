@@ -6140,7 +6140,7 @@ __metadata:
     ethereum-cryptography: ^1.2.0
     ts-node: ^10.9.1
     typescript: ^5.1.6
-    vitest: ^2.1.4
+    vitest: ^2.1.5
   languageName: unknown
   linkType: soft
 
@@ -29552,7 +29552,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vitest@npm:^2.1.4, vitest@npm:^2.1.5":
+"vitest@npm:^2.1.5":
   version: 2.1.5
   resolution: "vitest@npm:2.1.5"
   dependencies:
