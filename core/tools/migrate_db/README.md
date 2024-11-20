@@ -46,6 +46,10 @@ To run a stream data migration simultaneously, run the migration tool like so:
     ./river_migrate_db source inspect <streamId>
     ./river_migrate_db target inspect <streamId>
 
+To run an in-place migration on the source database,
+
+    ./river_migrate_db migrate
+
 For command-line options use `help` command.
 
 List of env vars or settings in `river_migrate_db.env`:
