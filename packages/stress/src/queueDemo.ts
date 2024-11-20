@@ -14,6 +14,8 @@ import { joinSpace } from './jobs/joinSpaceCommand';
 
 const startedAtMs = Date.now()
 
+console.log("queueDemo running...")
+
 // Test grid params
 check(isSet(process.env.CLIENTS_COUNT), 'process.env.CLIENTS_COUNT')
 check(isSet(process.env.CLIENTS_PER_PROCESS), 'process.env.CLIENTS_PER_PROCESS')

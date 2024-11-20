@@ -3,7 +3,7 @@ import { wasmLoader } from "esbuild-plugin-wasm";
 import esbuildPluginPino from "esbuild-plugin-pino";
 
 build({
-  entryPoints: ["./src/start.ts", "./src/demo.ts"],
+  entryPoints: ["./src/start.ts", "./src/demo.ts", "./src/queueDemo.ts"],
   bundle: true,
   sourcemap: "inline",
   platform: "node",
