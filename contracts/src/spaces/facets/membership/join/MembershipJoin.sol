@@ -4,6 +4,7 @@ pragma solidity ^0.8.23;
 // interfaces
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 import {IPartnerRegistryBase, IPartnerRegistry} from "contracts/src/factory/facets/partner/IPartnerRegistry.sol";
+import {IImplementationRegistry} from "contracts/src/factory/facets/registry/IImplementationRegistry.sol";
 import {IRolesBase} from "contracts/src/spaces/facets/roles/IRoles.sol";
 import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {IMembership} from "contracts/src/spaces/facets/membership/IMembership.sol";
@@ -13,6 +14,7 @@ import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
 import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
 import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+import {MembershipStorage} from "../MembershipStorage.sol";
 
 // contracts
 import {MembershipBase} from "contracts/src/spaces/facets/membership/MembershipBase.sol";
@@ -296,8 +298,11 @@ abstract contract MembershipJoin is
   }
 
   function _creditPoints(address receiver, uint256 points) internal {
-    // TODO: get `RiverPoints` from `spaceFactory`
-    RiverPoints pointsToken;
+    MembershipStorage.Layout storage ds = MembershipStorage.layout();
+
+    address pointsToken = IImplementationRegistry(ds.spaceFactory)
+      .getLatestImplementation(bytes32("RiverAirdrop"));
+
     // Equivalent to `pointsToken.mint(receiver, points);`
     bytes4 selector = RiverPoints.mint.selector;
     assembly ("memory-safe") {

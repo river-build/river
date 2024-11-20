@@ -13,9 +13,11 @@ import {RiverPointsStorage} from "./RiverPointsStorage.sol";
 // contracts
 import {Facet} from "contracts/src/diamond/facets/Facet.sol";
 import {IntrospectionFacet} from "contracts/src/diamond/facets/introspection/IntrospectionFacet.sol";
+import {OwnableBase} from "contracts/src/diamond/facets/ownable/OwnableBase.sol";
 
-contract RiverPoints is Facet, IntrospectionFacet, IERC20Metadata {
+contract RiverPoints is Facet, IntrospectionFacet, OwnableBase, IERC20Metadata {
   error RiverPoints__InvalidSpace();
+  error RiverPoints__InvalidArrayLength();
 
   function __RiverPoints_init(address spaceFactory) external onlyInitializing {
     RiverPointsStorage.Layout storage ds = RiverPointsStorage.layout();
@@ -31,6 +33,22 @@ contract RiverPoints is Facet, IntrospectionFacet, IERC20Metadata {
       CustomRevert.revertWith(RiverPoints__InvalidSpace.selector);
     }
     _;
+  }
+
+  /// @notice Batch mint points to multiple users
+  /// @dev Only callable by the owner
+  function batchMintPoints(
+    address[] calldata accounts,
+    uint256[] calldata values
+  ) external onlyOwner {
+    if (accounts.length != values.length) {
+      CustomRevert.revertWith(RiverPoints__InvalidArrayLength.selector);
+    }
+
+    RiverPointsStorage.Layout storage self = RiverPointsStorage.layout();
+    for (uint256 i; i < accounts.length; ++i) {
+      self.inner.mint(accounts[i], values[i]);
+    }
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
