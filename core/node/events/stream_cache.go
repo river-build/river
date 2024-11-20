@@ -38,6 +38,7 @@ type StreamCacheParams struct {
 type StreamCache interface {
 	Params() *StreamCacheParams
 	GetStream(ctx context.Context, streamId StreamId) (SyncStream, error)
+	GetStreamInfo(ctx context.Context, streamId StreamId) (StreamNodes, error) // TODO: to be unified with GetStream
 	ForceFlushAll(ctx context.Context)
 	GetLoadedViews(ctx context.Context) []StreamView
 	GetMbCandidateStreams(ctx context.Context) []*streamImpl
@@ -56,6 +57,7 @@ type streamCacheImpl struct {
 
 	streamCacheSizeGauge     prometheus.Gauge
 	streamCacheUnloadedGauge prometheus.Gauge
+	streamCacheRemoteGauge   prometheus.Gauge
 
 	onlineSyncWorkerPool *workerpool.WorkerPool
 }
@@ -78,6 +80,13 @@ func NewStreamCache(
 		),
 		streamCacheUnloadedGauge: params.Metrics.NewGaugeVecEx(
 			"stream_cache_unloaded", "Number of unloaded streams in stream cache",
+			"chain_id", "address",
+		).WithLabelValues(
+			params.RiverChain.ChainId.String(),
+			params.Wallet.Address.String(),
+		),
+		streamCacheRemoteGauge: params.Metrics.NewGaugeVecEx(
+			"stream_cache_remote", "Number of remote streams in stream cache",
 			"chain_id", "address",
 		).WithLabelValues(
 			params.RiverChain.ChainId.String(),
@@ -107,6 +116,7 @@ func NewStreamCache(
 			params:   params,
 			streamId: stream.StreamId,
 			nodes:    NewStreamNodes(stream.Nodes, params.Wallet.Address),
+			local:    &localStreamState{},
 		})
 		if params.Config.StreamReconciliation.InitialWorkerPoolSize > 0 {
 			s.submitSyncStreamTask(
@@ -149,6 +159,7 @@ func (s *streamCacheImpl) onStreamAllocated(ctx context.Context, event *river.St
 			streamId:         StreamId(event.StreamId),
 			nodes:            NewStreamNodes(event.Nodes, s.params.Wallet.Address),
 			lastAccessedTime: time.Now(),
+			local:            &localStreamState{},
 		}
 		_, err := s.createStreamStorage(ctx, stream, event.GenesisMiniblock)
 		if err != nil {
@@ -162,8 +173,7 @@ func (s *streamCacheImpl) onStreamLastMiniblockUpdated(
 	event *river.StreamRegistryV1StreamLastMiniblockUpdated,
 ) {
 	stream, _ := s.cache.Load(StreamId(event.StreamId))
-	if stream == nil {
-		// Stream is not local, ignore.
+	if stream == nil || !stream.isLocal() {
 		return
 	}
 
@@ -219,6 +229,7 @@ func (s *streamCacheImpl) runCacheCleanup(ctx context.Context) {
 type CacheCleanupResult struct {
 	TotalStreams    int
 	UnloadedStreams int
+	RemoteStreams   int
 }
 
 func (s *streamCacheImpl) CacheCleanup(ctx context.Context, enabled bool, expiration time.Duration) CacheCleanupResult {
@@ -230,8 +241,13 @@ func (s *streamCacheImpl) CacheCleanup(ctx context.Context, enabled bool, expira
 	// TODO: add data structure that supports to loop over streams that have their view loaded instead of
 	// looping over all streams.
 	s.cache.Range(func(streamID StreamId, stream *streamImpl) bool {
+		if !stream.isLocal() {
+			result.RemoteStreams++
+			return true
+		}
 		result.TotalStreams++
 		if enabled {
+			// TODO: add purge from cache for non-local streams.
 			if stream.tryCleanup(expiration) {
 				result.UnloadedStreams++
 				log.Debug("stream view is unloaded from cache", "streamId", stream.streamId)
@@ -246,13 +262,14 @@ func (s *streamCacheImpl) CacheCleanup(ctx context.Context, enabled bool, expira
 	} else {
 		s.streamCacheUnloadedGauge.Set(float64(-1))
 	}
-
+	s.streamCacheRemoteGauge.Set(float64(result.RemoteStreams))
 	return result
 }
 
 func (s *streamCacheImpl) tryLoadStreamRecord(
 	ctx context.Context,
 	streamId StreamId,
+	waitForLocal bool,
 ) (*streamImpl, error) {
 	// For GetStream the fact that record is not in cache means that there is race to get it during creation:
 	// Blockchain record is already created, but this fact is not reflected yet in local storage.
@@ -260,6 +277,10 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 	// while local storage is being initialized.
 	record, _, mb, err := s.params.Registry.GetStreamWithGenesis(ctx, streamId)
 	if err != nil {
+		if !waitForLocal {
+			return nil, err
+		}
+
 		// Loop here waiting for record to be created.
 		// This is less optimal than implementing pub/sub, but given that this is rare codepath,
 		// it is not worth over-engineering.
@@ -286,15 +307,20 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 	}
 
 	nodes := NewStreamNodes(record.Nodes, s.params.Wallet.Address)
-	if !nodes.IsLocal() {
-		return nil, RiverError(
-			Err_INTERNAL,
-			"tryLoadStreamRecord: Stream is not local",
-			"streamId", streamId,
-			"nodes", record.Nodes,
-			"localNode", s.params.Wallet,
-		)
+
+	stream := &streamImpl{
+		params:           s.params,
+		streamId:         streamId,
+		nodes:            nodes,
+		lastAccessedTime: time.Now(),
 	}
+
+	if !nodes.IsLocal() {
+		stream, _ = s.cache.LoadOrStore(streamId, stream)
+		return stream, nil
+	}
+
+	stream.local = &localStreamState{}
 
 	if record.LastMiniblockNum > 0 {
 		// TODO: reconcile from other nodes.
@@ -306,13 +332,6 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 			"record",
 			record,
 		)
-	}
-
-	stream := &streamImpl{
-		params:           s.params,
-		streamId:         streamId,
-		nodes:            nodes,
-		lastAccessedTime: time.Now(),
 	}
 
 	return s.createStreamStorage(ctx, stream, mb)
@@ -369,15 +388,32 @@ func (s *streamCacheImpl) GetStream(ctx context.Context, streamId StreamId) (Syn
 	if err != nil {
 		return nil, err
 	}
+	stream.mu.RLock()
+	defer stream.mu.RUnlock()
+	if stream.local == nil {
+		return nil, RiverError(Err_INTERNAL, "GetStream: Stream is not local", "streamId", streamId)
+	}
 	return stream, nil
 }
 
 func (s *streamCacheImpl) getStreamImpl(ctx context.Context, streamId StreamId) (*streamImpl, error) {
 	stream, _ := s.cache.Load(streamId)
 	if stream == nil {
-		return s.tryLoadStreamRecord(ctx, streamId)
+		return s.tryLoadStreamRecord(ctx, streamId, true)
 	}
 	return stream, nil
+}
+
+func (s *streamCacheImpl) GetStreamInfo(ctx context.Context, streamId StreamId) (StreamNodes, error) {
+	stream, _ := s.cache.Load(streamId)
+	if stream == nil {
+		var err error
+		stream, err = s.tryLoadStreamRecord(ctx, streamId, false)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return stream.nodes, nil
 }
 
 func (s *streamCacheImpl) ForceFlushAll(ctx context.Context) {
