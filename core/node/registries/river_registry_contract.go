@@ -880,8 +880,11 @@ func (c *RiverRegistryContract) OnStreamEvent(
 	return nil
 }
 
-func (c *RiverRegistryContract) FilterStreamEvents(ctx context.Context, logs []*types.Log) ([]any, []error) {
-	ret := []any{}
+func (c *RiverRegistryContract) FilterStreamEvents(
+	ctx context.Context,
+	logs []*types.Log,
+) (map[StreamId][]river.EventWithStreamId, []error) {
+	ret := map[StreamId][]river.EventWithStreamId{}
 	var finalErrs []error
 	for _, log := range logs {
 		if log.Address != c.Address || len(log.Topics) == 0 || !slices.Contains(c.StreamEventTopics[0], log.Topics[0]) {
@@ -892,7 +895,16 @@ func (c *RiverRegistryContract) FilterStreamEvents(ctx context.Context, logs []*
 			finalErrs = append(finalErrs, err)
 			continue
 		}
-		ret = append(ret, parsed)
+		withStreamId, ok := parsed.(river.EventWithStreamId)
+		if !ok {
+			finalErrs = append(
+				finalErrs,
+				RiverError(Err_INTERNAL, "Event does not implement EventWithStreamId", "event", parsed),
+			)
+			continue
+		}
+		streamId := withStreamId.GetStreamId()
+		ret[streamId] = append(ret[streamId], withStreamId)
 	}
 	return ret, finalErrs
 }

@@ -3,8 +3,10 @@ package events
 import (
 	"context"
 	"slices"
+	"sync/atomic"
 	"time"
 
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/gammazero/workerpool"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/puzpuzpuz/xsync/v3"
@@ -29,7 +31,6 @@ type StreamCacheParams struct {
 	Registry                *registries.RiverRegistryContract
 	ChainConfig             crypto.OnChainConfiguration
 	Config                  *config.Config
-	AppliedBlockNum         crypto.BlockNumber
 	ChainMonitor            crypto.ChainMonitor // TODO: delete and use RiverChain.ChainMonitor
 	Metrics                 infra.MetricsFactory
 	RemoteMiniblockProvider RemoteMiniblockProvider
@@ -53,6 +54,9 @@ type streamCacheImpl struct {
 	// streamImpl can be in unloaded state, in which case it will be loaded on first GetStream call.
 	cache *xsync.MapOf[StreamId, *streamImpl]
 
+	// appliedBlockNum is the number of the last block logs from which were applied to cache.
+	appliedBlockNum atomic.Uint64
+
 	chainConfig crypto.OnChainConfiguration
 
 	streamCacheSizeGauge     prometheus.Gauge
@@ -67,6 +71,7 @@ var _ StreamCache = (*streamCacheImpl)(nil)
 func NewStreamCache(
 	ctx context.Context,
 	params *StreamCacheParams,
+	initialBlockNum crypto.BlockNumber,
 ) (*streamCacheImpl, error) {
 	s := &streamCacheImpl{
 		params: params,
@@ -99,7 +104,7 @@ func NewStreamCache(
 	// schedule sync tasks for all streams that are local to this node.
 	// these tasks sync up the local db with the latest block in the registry.
 	var localStreamResults []*registries.GetStreamResult
-	err := params.Registry.ForAllStreams(ctx, params.AppliedBlockNum, func(stream *registries.GetStreamResult) bool {
+	err := params.Registry.ForAllStreams(ctx, initialBlockNum, func(stream *registries.GetStreamResult) bool {
 		if slices.Contains(stream.Nodes, params.Wallet.Address) {
 			localStreamResults = append(localStreamResults, stream)
 		}
@@ -131,28 +136,58 @@ func NewStreamCache(
 		}
 	}
 
+	s.appliedBlockNum.Store(uint64(initialBlockNum))
+
 	// Close initial worker pool after all tasks are executed.
 	go func() {
 		initialSyncWorkerPool.StopWait()
 	}()
 
-	err = params.Registry.OnStreamEvent(
-		ctx,
-		params.AppliedBlockNum+1,
-		s.onStreamAllocated,
-		s.onStreamLastMiniblockUpdated,
-		s.onStreamPlacementUpdated,
+	// TODO: add buffered channel to avoid blocking ChainMonitor
+	params.RiverChain.ChainMonitor.OnBlockWithLogs(
+		initialBlockNum+1,
+		s.onBlockWithLogs,
 	)
-	if err != nil {
-		return nil, err
-	}
 
 	go s.runCacheCleanup(ctx)
 
 	return s, nil
 }
 
-func (s *streamCacheImpl) onStreamAllocated(ctx context.Context, event *river.StreamRegistryV1StreamAllocated) {
+func (s *streamCacheImpl) onBlockWithLogs(ctx context.Context, blockNum crypto.BlockNumber, logs []*types.Log) {
+	streamEvents, errs := s.params.Registry.FilterStreamEvents(ctx, logs)
+	// Process parsed stream events even if some failed to parse
+	for _, err := range errs {
+		dlog.FromCtx(ctx).Error("Failed to parse stream event", "err", err)
+	}
+
+	// TODO: parallel processing?
+	for streamId, events := range streamEvents {
+		allocatedEvent, ok := events[0].(*river.StreamAllocated)
+		if ok {
+			err := s.onStreamAllocated(ctx, allocatedEvent, events[1:], blockNum)
+			if err != nil {
+				dlog.FromCtx(ctx).Error("Failed to allocate stream", "err", err, "streamId", streamId)
+			}
+			continue
+		}
+
+		stream, ok := s.cache.Load(streamId)
+		if !ok {
+			continue
+		}
+		stream.applyStreamEvents(ctx, events, blockNum)
+	}
+
+	s.appliedBlockNum.Store(uint64(blockNum))
+}
+
+func (s *streamCacheImpl) onStreamAllocated(
+	ctx context.Context,
+	event *river.StreamAllocated,
+	otherEvents []river.EventWithStreamId,
+	blockNum crypto.BlockNumber,
+) error {
 	if slices.Contains(event.Nodes, s.params.Wallet.Address) {
 		stream := &streamImpl{
 			params:           s.params,
@@ -161,46 +196,13 @@ func (s *streamCacheImpl) onStreamAllocated(ctx context.Context, event *river.St
 			lastAccessedTime: time.Now(),
 			local:            &localStreamState{},
 		}
-		_, err := s.createStreamStorage(ctx, stream, event.GenesisMiniblock)
+		var err error
+		stream, err = s.createStreamStorage(ctx, stream, event.GenesisMiniblock, otherEvents)
 		if err != nil {
-			dlog.FromCtx(ctx).Error("onStreamAllocated: failed to create stream", "err", err)
+			return err
 		}
 	}
-}
-
-func (s *streamCacheImpl) onStreamLastMiniblockUpdated(
-	ctx context.Context,
-	event *river.StreamRegistryV1StreamLastMiniblockUpdated,
-) {
-	stream, _ := s.cache.Load(StreamId(event.StreamId))
-	if stream == nil || !stream.isLocal() {
-		return
-	}
-
-	view, err := stream.getView(ctx)
-	if err != nil {
-		dlog.FromCtx(ctx).Error("onStreamLastMiniblockUpdated: failed to get stream view", "err", err)
-		return
-	}
-
-	// Check if current state is beyond candidate. (Local candidates are applied immediately after tx).
-	if uint64(view.LastBlock().Ref.Num) >= event.LastMiniblockNum {
-		return
-	}
-
-	err = stream.promoteCandidate(ctx, &MiniblockRef{
-		Hash: event.LastMiniblockHash,
-		Num:  int64(event.LastMiniblockNum),
-	})
-	if err != nil {
-		dlog.FromCtx(ctx).Error("onStreamLastMiniblockUpdated: failed to promote candidate", "err", err)
-	}
-}
-
-func (s *streamCacheImpl) onStreamPlacementUpdated(
-	ctx context.Context,
-	event *river.StreamRegistryV1StreamPlacementUpdated,
-) {
+	return nil
 }
 
 func (s *streamCacheImpl) Params() *StreamCacheParams {
@@ -334,13 +336,14 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 		)
 	}
 
-	return s.createStreamStorage(ctx, stream, mb)
+	return s.createStreamStorage(ctx, stream, mb, nil)
 }
 
 func (s *streamCacheImpl) createStreamStorage(
 	ctx context.Context,
 	stream *streamImpl,
 	mb []byte,
+	otherEvents []river.EventWithStreamId,
 ) (*streamImpl, error) {
 	// Lock stream, so parallel creators have to wait for the stream to be intialized.
 	stream.mu.Lock()
@@ -373,6 +376,8 @@ func (s *streamCacheImpl) createStreamStorage(
 			return nil, err
 		}
 		stream.setView(view)
+
+		stream.applyStreamEventsNoLock(ctx, otherEvents)
 		return stream, nil
 	} else {
 		// There was another record in the cache, use it.

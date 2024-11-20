@@ -6,7 +6,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
+	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	. "github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
@@ -88,6 +90,8 @@ type streamImpl struct {
 	// out of lock, which is immutable, so if there is a need to modify, lock is taken, copy
 	// of view is created, and copy is modified and stored.
 	mu sync.RWMutex
+
+	lastAppliedBlockNum crypto.BlockNumber
 
 	// lastAccessedTime keeps track of when the stream was last used by a client
 	lastAccessedTime time.Time
@@ -946,4 +950,75 @@ func (s *streamImpl) getLastMiniblockNumSkipLoad(ctx context.Context) (int64, er
 	}
 
 	return s.params.Storage.GetLastMiniblockNumber(ctx, s.streamId)
+}
+
+func (s *streamImpl) applyStreamEventsNoLock(
+	ctx context.Context,
+	events []river.EventWithStreamId,
+) {
+	for _, e := range events {
+		switch event := e.(type) {
+		case *river.StreamLastMiniblockUpdated:
+			s.onLastMiniblockUpdated(ctx, event)
+		case *river.StreamPlacementUpdated:
+			s.onPlacementUpdated(ctx, event)
+		default:
+			dlog.FromCtx(ctx).Error("applyStreamEventsNoLock: unknown event", "event", event, "streamId", s.streamId)
+		}
+	}
+}
+
+func (s *streamImpl) applyStreamEvents(
+	ctx context.Context,
+	events []river.EventWithStreamId,
+	blockNum crypto.BlockNumber,
+) {
+	if len(events) == 0 {
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.lastAppliedBlockNum >= blockNum {
+		dlog.FromCtx(ctx).
+			Error("applyStreamEvents: already applied events for block", "blockNum", blockNum, "streamId", s.streamId)
+		return
+	}
+	s.applyStreamEventsNoLock(ctx, events)
+	s.lastAppliedBlockNum = blockNum
+}
+
+func (s *streamImpl) onLastMiniblockUpdated(
+	ctx context.Context,
+	event *river.StreamLastMiniblockUpdated,
+) {
+	if s.local == nil {
+		return
+	}
+
+	view, err := s.getView(ctx)
+	if err != nil {
+		dlog.FromCtx(ctx).Error("onStreamLastMiniblockUpdated: failed to get stream view", "err", err)
+		return
+	}
+
+	// Check if current state is beyond candidate. (Local candidates are applied immediately after tx).
+	if uint64(view.LastBlock().Ref.Num) >= event.LastMiniblockNum {
+		return
+	}
+
+	err = s.promoteCandidate(ctx, &MiniblockRef{
+		Hash: event.LastMiniblockHash,
+		Num:  int64(event.LastMiniblockNum),
+	})
+	if err != nil {
+		dlog.FromCtx(ctx).Error("onStreamLastMiniblockUpdated: failed to promote candidate", "err", err)
+	}
+}
+
+func (s *streamImpl) onPlacementUpdated(
+	ctx context.Context,
+	event *river.StreamPlacementUpdated,
+) {
+	s.nodes.Update(event.NodeAddress, event.IsAdded)
 }
