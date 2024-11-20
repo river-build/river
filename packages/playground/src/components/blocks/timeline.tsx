@@ -258,8 +258,8 @@ const Reaction = ({
         <button
             type="button"
             className={cn(
-                'flex h-8 w-full items-center justify-center gap-2 rounded-sm border border-neutral-200 bg-neutral-100 px-2',
-                isMyReaction && 'border-lime-200 bg-lime-100',
+                'flex h-8 w-full items-center justify-center gap-2 rounded-sm border border-neutral-200 bg-neutral-100 px-2 dark:border-neutral-800 dark:bg-neutral-900',
+                isMyReaction && 'border-lime-200 bg-lime-100 dark:border-lime-800 dark:bg-lime-900',
             )}
             onClick={() => {
                 if (isMyReaction) {

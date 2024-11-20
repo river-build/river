@@ -1,0 +1,73 @@
+---
+title: useUserGdms
+---
+## Imports
+
+```ts
+import { useUserGdms } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useUserGdms(
+  config?: ObservableConfig.FromObservable<Gdms>,
+): {
+    error: Error | undefined;
+    status: "error" | "loading" | "loaded";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    streamIds: string[];
+} | {
+    error: Error | undefined;
+    status: "error" | "loading" | "loaded";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    streamIds: string[];
+} | {
+    error: Error | undefined;
+    status: "error" | "loading" | "loaded";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    streamIds: string[];
+}
+```
+
+**Source:** [useUserGdms](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useUserGdms.ts)
+
+## Parameters
+
+### config
+
+- **Type:** `ObservableConfig.FromObservable<Gdms>`
+- **Optional**
+
+## Return Type
+
+```ts
+{
+    error: Error | undefined;
+    status: "error" | "loading" | "loaded";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    streamIds: string[];
+} | {
+    error: Error | undefined;
+    status: "error" | "loading" | "loaded";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    streamIds: string[];
+} | {
+    error: Error | undefined;
+    status: "error" | "loading" | "loaded";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    streamIds: string[];
+}
+```

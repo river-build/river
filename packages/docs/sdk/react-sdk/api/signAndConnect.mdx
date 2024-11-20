@@ -1,0 +1,43 @@
+---
+title: signAndConnect
+---
+Sign and connect to River using a Signer and a random delegate wallet every time
+
+## Imports
+
+```ts
+import { signAndConnect } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function signAndConnect(
+  signer: ethers.Signer,
+  config: Omit<SyncAgentConfig, 'context'>,
+): Promise<SyncAgent>
+```
+
+**Source:** [signAndConnect](https://github.com/river-build/river/blob/main/packages/react-sdk/src/connectRiver.ts)
+
+## Parameters
+
+### signer
+
+- **Type:** `ethers.Signer`
+
+The signer to use
+
+### config
+
+- **Type:** `Omit<SyncAgentConfig, 'context'>`
+
+The configuration for the sync agent
+
+## Return Type
+
+The sync agent
+
+```ts
+Promise<SyncAgent>
+```

@@ -1,0 +1,50 @@
+---
+title: useTimeline
+---
+## Imports
+
+```ts
+import { useTimeline } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useTimeline(
+  timeline: (sync: SyncAgent) => TimelineEvents,
+  config?: ObservableConfig.FromObservable<TimelineEvents>,
+): {
+    data: TimelineEvent[];
+    error: undefined;
+    status: "loading" | "loaded";
+    isLoading: boolean;
+    isError: false;
+    isLoaded: boolean;
+}
+```
+
+**Source:** [useTimeline](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useTimeline.ts)
+
+## Parameters
+
+### timeline
+
+- **Type:** `(sync: SyncAgent) => TimelineEvents`
+
+### config
+
+- **Type:** `ObservableConfig.FromObservable<TimelineEvents>`
+- **Optional**
+
+## Return Type
+
+```ts
+{
+    data: TimelineEvent[];
+    error: undefined;
+    status: "loading" | "loaded";
+    isLoading: boolean;
+    isError: false;
+    isLoaded: boolean;
+}
+```

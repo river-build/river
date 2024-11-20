@@ -1,0 +1,55 @@
+---
+title: useJoinSpace
+---
+Hook to join a space.
+
+## Imports
+
+```ts
+import { useJoinSpace } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useJoinSpace(
+  config?: ActionConfig<Spaces['joinSpace']>,
+): {
+    data: void | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    joinSpace: (spaceId: string, signer: Signer, opts?: {
+        skipMintMembership?: boolean | undefined;
+    } | undefined) => Promise<void>;
+}
+```
+
+**Source:** [useJoinSpace](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useJoinSpace.ts)
+
+## Parameters
+
+### config
+
+- **Type:** `ActionConfig<Spaces['joinSpace']>`
+- **Optional**
+
+Configuration options for the action.
+
+## Return Type
+
+The joinSpace action and the status of the action.
+
+```ts
+{
+    data: void | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    joinSpace: (spaceId: string, signer: Signer, opts?: {
+        skipMintMembership?: boolean | undefined;
+    } | undefined) => Promise<void>;
+}
+```
