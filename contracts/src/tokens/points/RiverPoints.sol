@@ -107,12 +107,12 @@ contract RiverPoints is Facet, IntrospectionFacet, OwnableBase, IERC20Metadata {
 
   /// @inheritdoc IERC20Metadata
   function name() external pure returns (string memory) {
-    return "River Points";
+    return "Beaver Points";
   }
 
   /// @inheritdoc IERC20Metadata
   function symbol() external pure returns (string memory) {
-    return "RP";
+    return "BVRP";
   }
 
   /// @inheritdoc IERC20Metadata
