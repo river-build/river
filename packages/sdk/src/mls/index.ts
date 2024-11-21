@@ -33,11 +33,11 @@ export class Awaiter {
     public promise: Promise<void>
     // resolve handler to the inner promise
     public resolve!: () => void
-    public constructor(timeoutMS: number) {
+    public constructor(timeoutMS: number, msg: string = 'Awaiter timed out') {
         let timeout: NodeJS.Timeout
         const timeoutPromise = new Promise<never>((_resolve, reject) => {
             timeout = setTimeout(() => {
-                reject(new Error('timed out'))
+                reject(new Error(msg))
             }, timeoutMS)
         })
         const internalPromise: Promise<void> = new Promise(
@@ -210,7 +210,10 @@ export class MlsCrypto {
         if ((await this.groupStore.getGroup(streamId))?.state.status === 'GROUP_ACTIVE') {
             return
         }
-        const awaiter = new Awaiter(this.awaitTimeoutMS)
+        const awaiter = new Awaiter(
+            this.awaitTimeoutMS,
+            `Await group timed out for ${this.nickname} ${streamId}`,
+        )
         this.awaitingGroupActive.set(streamId, awaiter)
         await awaiter.promise
         this.awaitingGroupActive.delete(streamId)
