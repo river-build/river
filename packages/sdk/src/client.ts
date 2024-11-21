@@ -2479,11 +2479,11 @@ export class Client
         }
 
         // Ensure epoch keys are derived
-        const epochKey = this.mlsCrypto.epochKeyService.getEpochKey(
+        const epochKey = await this.mlsCrypto.epochKeyService.getEpochKey(
             streamId,
             group.state.group.currentEpoch,
         )
-        if (epochKey.state.status !== 'EPOCH_KEY_DERIVED') {
+        if (epochKey?.state.status !== 'EPOCH_KEY_DERIVED') {
             throw new Error('epoch keys not derived')
         }
 
@@ -2593,17 +2593,17 @@ export class Client
             ) {
                 const currentEpoch = groupState.state.group.currentEpoch
                 const previousEpoch = groupState.state.group.currentEpoch - 1n
-                const currentEpochKey = this.mlsCrypto.epochKeyService.getEpochKey(
+                const currentEpochKey = await this.mlsCrypto.epochKeyService.getEpochKey(
                     streamId,
                     currentEpoch,
                 )
-                const previousEpochKey = this.mlsCrypto.epochKeyService.getEpochKey(
+                const previousEpochKey = await this.mlsCrypto.epochKeyService.getEpochKey(
                     streamId,
                     previousEpoch,
                 )
                 if (
-                    currentEpochKey.state.status === 'EPOCH_KEY_DERIVED' &&
-                    previousEpochKey.state.status === 'EPOCH_KEY_DERIVED'
+                    currentEpochKey?.state.status === 'EPOCH_KEY_DERIVED' &&
+                    previousEpochKey?.state.status === 'EPOCH_KEY_DERIVED'
                 ) {
                     if (!previousEpochKey.state.sealedEpochSecret) {
                         previousEpochKey.state.sealedEpochSecret =

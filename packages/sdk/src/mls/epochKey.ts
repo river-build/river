@@ -1,4 +1,3 @@
-import { DLogger } from '@river-build/dlog'
 import {
     HpkeCiphertext,
     HpkePublicKey,
@@ -24,22 +23,25 @@ export type DerivedKeys = {
 }
 
 export class EpochKey {
+    public readonly streamId: string
     public readonly epoch: bigint
     public state: EpochKeyState
-    private readonly log: DLogger
 
     constructor(
+        streamId: string,
         epoch: bigint,
-        log: DLogger,
         state: EpochKeyState = { status: 'EPOCH_KEY_MISSING' },
     ) {
+        this.streamId = streamId
         this.epoch = epoch
-        this.log = log.extend('epoch-key')
         this.state = state
     }
 
-    public addSealedEpochSecret(sealedEpochSecret: HpkeCiphertext): EpochKey {
-        const before = this.state.status
+    public static missing(streamId: string, epoch: bigint): EpochKey {
+        return new EpochKey(streamId, epoch, { status: 'EPOCH_KEY_MISSING' })
+    }
+
+    public addSealedEpochSecret(sealedEpochSecret: HpkeCiphertext): void {
         switch (this.state.status) {
             case 'EPOCH_KEY_MISSING':
                 this.state = { status: 'EPOCH_KEY_SEALED', sealedEpochSecret }
@@ -47,14 +49,9 @@ export class EpochKey {
             default:
                 this.state.sealedEpochSecret = sealedEpochSecret
         }
-        const after = this.state.status
-
-        this.log('add sealed epoch secret', this.epoch, before, after)
-        return this
     }
 
-    public addOpenEpochSecret(openEpochSecret: HpkeSecretKey): EpochKey {
-        const before = this.state.status
+    public addOpenEpochSecret(openEpochSecret: HpkeSecretKey): void {
         switch (this.state.status) {
             case 'EPOCH_KEY_MISSING':
                 this.state = { status: 'EPOCH_KEY_OPEN', openEpochSecret }
@@ -69,14 +66,9 @@ export class EpochKey {
             default:
                 this.state.openEpochSecret = openEpochSecret
         }
-        const after = this.state.status
-
-        this.log('add open epoch secret', this.epoch, before, after)
-        return this
     }
 
-    public addDerivedKeys(derivedKeys: DerivedKeys): EpochKey {
-        const before = this.state.status
+    public addDerivedKeys(derivedKeys: DerivedKeys): void {
         switch (this.state.status) {
             case 'EPOCH_KEY_OPEN':
                 this.state = {
@@ -96,9 +88,5 @@ export class EpochKey {
             default:
                 throw new Error(`Unexpected state ${this.state.status} for epoch ${this.epoch}`)
         }
-        const after = this.state.status
-
-        this.log('add derived keys', this.epoch, before, after)
-        return this
     }
 }

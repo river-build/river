@@ -111,8 +111,8 @@ export class MlsCrypto {
         const epoch = group.currentEpoch
 
         // Check if we have derived keys, if not try deriving them
-        const epochKey = this.epochKeyService.getEpochKey(streamId, epoch)
-        if (epochKey.state.status !== 'EPOCH_KEY_DERIVED') {
+        const epochKey = await this.epochKeyService.getEpochKey(streamId, epoch)
+        if (epochKey?.state.status !== 'EPOCH_KEY_DERIVED') {
             throw new Error('Epoch keys not derived')
         }
 
