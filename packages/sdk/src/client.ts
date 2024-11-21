@@ -2200,6 +2200,8 @@ export class Client
             throw new Error('userId must be set to reset crypto')
         }
         this.cryptoBackend = undefined
+        await this.decryptionExtensions?.stop()
+        this.decryptionExtensions = undefined
         await this.cryptoStore.deleteAccount(this.userId)
         await this.initCrypto()
         await this.uploadDeviceKeys()
