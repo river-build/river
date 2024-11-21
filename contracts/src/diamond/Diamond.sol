@@ -13,7 +13,7 @@ import {Proxy} from "./proxy/Proxy.sol";
 import {DiamondLoupeBase} from "./facets/loupe/DiamondLoupeBase.sol";
 import {Initializable} from "./facets/initializable/Initializable.sol";
 
-contract Diamond is IDiamond, Proxy, DiamondLoupeBase, Initializable {
+contract Diamond is IDiamond, Proxy, Initializable {
   struct InitParams {
     FacetCut[] baseFacets;
     address init;
@@ -40,7 +40,7 @@ contract Diamond is IDiamond, Proxy, DiamondLoupeBase, Initializable {
     override
     returns (address facet)
   {
-    facet = _facetAddress(msg.sig);
+    facet = DiamondLoupeBase.facetAddress(msg.sig);
     if (facet == address(0)) revert Diamond_UnsupportedFunction();
   }
 }
