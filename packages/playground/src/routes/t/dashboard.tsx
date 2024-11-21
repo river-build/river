@@ -1,5 +1,5 @@
 import { Outlet, useNavigate } from 'react-router-dom'
-import { Suspense, useCallback, useMemo } from 'react'
+import { Suspense, useCallback, useMemo, useState } from 'react'
 import {
     useDm,
     useGdm,
@@ -14,6 +14,7 @@ import {
 } from '@river-build/react-sdk'
 import { suspend } from 'suspend-react'
 import { Myself } from '@river-build/sdk'
+import { DoorOpenIcon, PlusIcon } from 'lucide-react'
 import { GridSidePanel } from '@/components/layout/grid-side-panel'
 import { Button } from '@/components/ui/button'
 import { CreateSpace } from '@/components/form/space/create'
@@ -21,12 +22,16 @@ import { JoinSpace } from '@/components/form/space/join'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar } from '@/components/ui/avatar'
 import { shortenAddress } from '@/utils/address'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Tooltip } from '@/components/ui/tooltip'
 
 export const DashboardRoute = () => {
     const navigate = useNavigate()
     const { spaceIds } = useUserSpaces()
     const { streamIds: gdmStreamIds } = useUserGdms()
     const { streamIds: dmStreamIds } = useUserDms()
+    const [joinSpaceDialogOpen, setJoinSpaceDialogOpen] = useState(false)
+    const [createSpaceDialogOpen, setCreateSpaceDialogOpen] = useState(false)
 
     const navigateToSpace = useCallback(
         (spaceId: string) => {
@@ -53,13 +58,50 @@ export const DashboardRoute = () => {
         <GridSidePanel
             side={
                 <>
-                    <div className="space-y-2">
-                        <h2 className="text-lg font-medium">Create Space</h2>
-                        <CreateSpace onCreateSpace={navigateToSpace} />
-                    </div>
-                    <div className="space-y-2">
-                        <h2 className="text-lg font-medium">Join Space</h2>
-                        <JoinSpace onJoinSpace={navigateToSpace} />
+                    <div className="flex items-center justify-between gap-2">
+                        <h2 className="text-xs">Select a space to start messaging</h2>
+                        <div className="flex items-center gap-2">
+                            <Dialog
+                                open={createSpaceDialogOpen}
+                                onOpenChange={setCreateSpaceDialogOpen}
+                            >
+                                <Tooltip title="Create a space">
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => setCreateSpaceDialogOpen(true)}
+                                    >
+                                        <PlusIcon className="h-4 w-4" />
+                                    </Button>
+                                </Tooltip>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Create a space</DialogTitle>
+                                    </DialogHeader>
+                                    <CreateSpace onCreateSpace={navigateToSpace} />
+                                </DialogContent>
+                            </Dialog>
+                            <Dialog
+                                open={joinSpaceDialogOpen}
+                                onOpenChange={setJoinSpaceDialogOpen}
+                            >
+                                <Tooltip title="Join a space">
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => setJoinSpaceDialogOpen(true)}
+                                    >
+                                        <DoorOpenIcon className="h-4 w-4" />
+                                    </Button>
+                                </Tooltip>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Join a space</DialogTitle>
+                                    </DialogHeader>
+                                    <JoinSpace onJoinSpace={navigateToSpace} />
+                                </DialogContent>
+                            </Dialog>
+                        </div>
                     </div>
                     <ScrollArea className="flex min-h-max">
                         <div className="flex flex-col gap-1">
