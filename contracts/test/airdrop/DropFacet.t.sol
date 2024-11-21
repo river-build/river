@@ -3,13 +3,9 @@ pragma solidity ^0.8.19;
 
 // utils
 import {Vm} from "forge-std/Test.sol";
-import {DeployDiamond} from "contracts/scripts/deployments/utils/DeployDiamond.s.sol";
-import {DeployMockERC20} from "contracts/scripts/deployments/utils/DeployMockERC20.s.sol";
-import {DeployRewardsDistributionV2} from "contracts/scripts/deployments/facets/DeployRewardsDistributionV2.s.sol";
-import {DeployRiverAirdrop} from "contracts/scripts/deployments/diamonds/DeployRiverAirdrop.s.sol";
 
 //interfaces
-import {IDiamond} from "contracts/src/diamond/Diamond.sol";
+
 import {IDropFacetBase} from "contracts/src/tokens/drop/IDropFacet.sol";
 import {IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
 import {IRewardsDistributionBase} from "contracts/src/base/registry/facets/distribution/v2/IRewardsDistribution.sol";
@@ -52,12 +48,6 @@ contract DropFacetTest is
   uint256 internal constant TOTAL_TOKEN_AMOUNT = 1000;
   uint16 internal constant PENALTY_BPS = 5000;
 
-  DeployDiamond internal rewardsDistributionDiamondHelper = new DeployDiamond();
-  DeployDiamond internal aidropDiamondHelper = new DeployDiamond();
-  DeployMockERC20 internal tokenHelper = new DeployMockERC20();
-  DeployRiverAirdrop internal dropHelper = new DeployRiverAirdrop();
-  DeployRewardsDistributionV2 internal rewardsDistributionHelper =
-    new DeployRewardsDistributionV2();
   MerkleTree internal merkleTree = new MerkleTree();
 
   River internal river;
@@ -90,12 +80,8 @@ contract DropFacetTest is
     // Create the Merkle tree with accounts and amounts
     _createTree();
 
-    // Add the Drop facet to its own diamond
-    dropHelper.setStakingContract(baseRegistry);
-    address diamond = dropHelper.deploy(deployer);
-
     // Initialize the Drop facet
-    dropFacet = DropFacet(diamond);
+    dropFacet = DropFacet(riverAirdrop);
 
     // Initialize the River river
     river = River(riverToken);
@@ -142,7 +128,7 @@ contract DropFacetTest is
     conditions[0].penaltyBps = penaltyBps;
 
     vm.prank(deployer);
-    dropFacet.setClaimConditions(conditions, false);
+    dropFacet.setClaimConditions(conditions);
     _;
   }
 
@@ -257,7 +243,7 @@ contract DropFacetTest is
     ); // future
 
     vm.prank(deployer);
-    dropFacet.setClaimConditions(conditions, false);
+    dropFacet.setClaimConditions(conditions);
 
     uint256 id = dropFacet.getActiveClaimConditionId();
     assertEq(id, 1);
@@ -328,7 +314,7 @@ contract DropFacetTest is
     });
 
     vm.prank(deployer);
-    dropFacet.setClaimConditions(conditions, false);
+    dropFacet.setClaimConditions(conditions);
 
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
     ClaimCondition memory condition = dropFacet.getClaimConditionById(
@@ -396,7 +382,7 @@ contract DropFacetTest is
     );
 
     vm.prank(deployer);
-    dropFacet.setClaimConditions(conditions, false);
+    dropFacet.setClaimConditions(conditions);
 
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
 
@@ -424,7 +410,7 @@ contract DropFacetTest is
     );
 
     vm.prank(deployer);
-    dropFacet.setClaimConditions(conditions, false);
+    dropFacet.setClaimConditions(conditions);
 
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
 
@@ -453,7 +439,7 @@ contract DropFacetTest is
     conditions[0].maxClaimableSupply = 100; // 100 tokens in total for this condition
 
     vm.prank(deployer);
-    dropFacet.setClaimConditions(conditions, false);
+    dropFacet.setClaimConditions(conditions);
 
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
 
@@ -481,7 +467,7 @@ contract DropFacetTest is
     );
 
     vm.prank(deployer);
-    dropFacet.setClaimConditions(conditions, false);
+    dropFacet.setClaimConditions(conditions);
 
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
 
@@ -515,7 +501,7 @@ contract DropFacetTest is
     conditions[0].endTimestamp = uint40(block.timestamp + 100);
 
     vm.prank(deployer);
-    dropFacet.setClaimConditions(conditions, false);
+    dropFacet.setClaimConditions(conditions);
 
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
 
@@ -547,7 +533,7 @@ contract DropFacetTest is
     );
 
     vm.prank(deployer);
-    dropFacet.setClaimConditions(conditions, false);
+    dropFacet.setClaimConditions(conditions);
 
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
 
@@ -652,7 +638,7 @@ contract DropFacetTest is
     );
 
     vm.prank(deployer);
-    dropFacet.setClaimConditions(conditions, false);
+    dropFacet.setClaimConditions(conditions);
 
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
     assertEq(conditionId, 0);
@@ -682,12 +668,10 @@ contract DropFacetTest is
     );
 
     vm.prank(deployer);
-    dropFacet.setClaimConditions(conditions, true);
+    dropFacet.setClaimConditions(conditions);
 
     uint256 newConditionId = dropFacet.getActiveClaimConditionId();
-    assertEq(newConditionId, 1);
-
-    assertEq(dropFacet.getSupplyClaimedByWallet(bob, newConditionId), 0);
+    assertEq(newConditionId, 0);
   }
 
   function test_fuzz_setClaimConditions_revertWhen_notOwner(
@@ -697,7 +681,7 @@ contract DropFacetTest is
 
     vm.prank(caller);
     vm.expectRevert(abi.encodeWithSelector(Ownable__NotOwner.selector, caller));
-    dropFacet.setClaimConditions(new ClaimCondition[](0), false);
+    dropFacet.setClaimConditions(new ClaimCondition[](0));
   }
 
   function test_revertWhen_setClaimConditions_notInAscendingOrder()
@@ -718,7 +702,7 @@ contract DropFacetTest is
 
     vm.expectRevert(DropFacet__ClaimConditionsNotInAscendingOrder.selector);
     vm.prank(deployer);
-    dropFacet.setClaimConditions(conditions, false);
+    dropFacet.setClaimConditions(conditions);
   }
 
   function test_revertWhen_setClaimConditions_exceedsMaxClaimableSupply()
@@ -731,7 +715,7 @@ contract DropFacetTest is
 
     // Set the claim conditions as the deployer
     vm.prank(deployer);
-    dropFacet.setClaimConditions(conditions, false);
+    dropFacet.setClaimConditions(conditions);
 
     // Get the active condition ID
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
@@ -760,7 +744,38 @@ contract DropFacetTest is
     // Expect the transaction to revert when trying to set new claim conditions
     vm.expectRevert(DropFacet__CannotSetClaimConditions.selector);
     vm.prank(deployer);
-    dropFacet.setClaimConditions(conditions, false);
+    dropFacet.setClaimConditions(conditions);
+  }
+
+  // getClaimConditions
+  function test_getClaimConditions(
+    uint16 penaltyBps
+  ) external givenTokensMinted(TOTAL_TOKEN_AMOUNT) {
+    ClaimCondition[] memory currentConditions = dropFacet.getClaimConditions();
+    assertEq(currentConditions.length, 0);
+
+    ClaimCondition[] memory conditions = new ClaimCondition[](1);
+    conditions[0] = _createClaimCondition(
+      block.timestamp,
+      root,
+      TOTAL_TOKEN_AMOUNT
+    );
+    conditions[0].penaltyBps = penaltyBps;
+
+    vm.prank(deployer);
+    dropFacet.setClaimConditions(conditions);
+
+    currentConditions = dropFacet.getClaimConditions();
+    assertEq(currentConditions.length, 1);
+    assertEq(currentConditions[0].startTimestamp, conditions[0].startTimestamp);
+    assertEq(currentConditions[0].endTimestamp, conditions[0].endTimestamp);
+    assertEq(
+      currentConditions[0].maxClaimableSupply,
+      conditions[0].maxClaimableSupply
+    );
+    assertEq(currentConditions[0].supplyClaimed, conditions[0].supplyClaimed);
+    assertEq(currentConditions[0].merkleRoot, conditions[0].merkleRoot);
+    assertEq(currentConditions[0].penaltyBps, penaltyBps);
   }
 
   // addClaimCondition
@@ -829,7 +844,7 @@ contract DropFacetTest is
     conditions[1].endTimestamp = uint40(block.timestamp + 200); // ends at block.timestamp + 200
 
     vm.prank(deployer);
-    dropFacet.setClaimConditions(conditions, false);
+    dropFacet.setClaimConditions(conditions);
 
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
 
@@ -914,7 +929,7 @@ contract DropFacetTest is
     assertEq(slot, DropStorage.STORAGE_SLOT, "slot");
   }
 
-  function test_IncompleteEligibilityReset()
+  function test_resetClaimConditions()
     external
     givenTokensMinted(TOTAL_TOKEN_AMOUNT * 2)
   {
@@ -936,7 +951,7 @@ contract DropFacetTest is
       TOTAL_TOKEN_AMOUNT
     );
     vm.prank(deployer);
-    dropFacet.setClaimConditions(initialConditions, false);
+    dropFacet.setClaimConditions(initialConditions);
 
     // Sanity check
     uint256 supplyClaimed = dropFacet.getSupplyClaimedByWallet(bob, 2);
@@ -974,7 +989,7 @@ contract DropFacetTest is
       TOTAL_TOKEN_AMOUNT
     );
     vm.prank(deployer);
-    dropFacet.setClaimConditions(intermediateConditions, false);
+    dropFacet.setClaimConditions(intermediateConditions);
 
     // Verify that condition 2 was deleted after setting intermediateConditions
     ClaimCondition memory condition = dropFacet.getClaimConditionById(2);
@@ -985,40 +1000,6 @@ contract DropFacetTest is
     assertEq(condition.endTimestamp, 0, "Condition should be empty");
     assertEq(condition.startTimestamp, 0, "Condition should be empty");
     assertEq(condition.currency, address(0), "Condition should be empty");
-
-    // Set final conditions with resetEligibility true
-    ClaimCondition[] memory finalConditions = new ClaimCondition[](3);
-    finalConditions[0] = _createClaimCondition(
-      block.timestamp + 5 days,
-      root,
-      TOTAL_TOKEN_AMOUNT
-    );
-    finalConditions[1] = _createClaimCondition(
-      block.timestamp + 6 days,
-      root,
-      TOTAL_TOKEN_AMOUNT
-    );
-    finalConditions[2] = _createClaimCondition(
-      block.timestamp + 7 days,
-      root,
-      TOTAL_TOKEN_AMOUNT
-    );
-    vm.prank(deployer);
-    dropFacet.setClaimConditions(finalConditions, true);
-
-    // Attempt to claim again for the new condition id 2
-    vm.warp(block.timestamp + 7 days + 1);
-    vm.prank(bob);
-    vm.expectRevert(DropFacet__MerkleRootNotSet.selector);
-    dropFacet.claimWithPenalty(
-      Claim({
-        conditionId: 2,
-        account: bob,
-        quantity: amounts[bobIndex],
-        proof: proof
-      }),
-      PENALTY_BPS
-    );
   }
 
   // =============================================================

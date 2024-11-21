@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/protocol"
-	"github.com/river-build/river/core/node/shared"
+	. "github.com/river-build/river/core/node/protocol"
+	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/testutils"
 )
 
@@ -25,13 +25,10 @@ func TestStreamCacheViewEviction(t *testing.T) {
 
 	streamCache := tc.initCache(0, nil)
 
-	streamCache.cache.Range(func(key, value any) bool {
-		require.Fail("stream cache must be empty")
-		return true
-	})
+	require.Zero(streamCache.cache.Size(), "stream cache must be empty")
 
 	node := tc.getBC()
-	streamID := testutils.FakeStreamId(shared.STREAM_SPACE_BIN)
+	streamID := testutils.FakeStreamId(STREAM_SPACE_BIN)
 	_, genesisMiniblock := makeTestSpaceStream(t, node.Wallet, streamID, nil)
 
 	tc.createStreamNoCache(streamID, genesisMiniblock)
@@ -44,9 +41,8 @@ func TestStreamCacheViewEviction(t *testing.T) {
 	// stream just loaded and should be with view in cache
 	streamWithoutLoadedView := 0
 	streamWithLoadedViewCount := 0
-	streamCache.cache.Range(func(key, value any) bool {
-		stream := value.(*streamImpl)
-		if stream.view == nil {
+	streamCache.cache.Range(func(key StreamId, value *streamImpl) bool {
+		if value.view() == nil {
 			streamWithoutLoadedView++
 		} else {
 			streamWithLoadedViewCount++
@@ -71,9 +67,8 @@ func TestStreamCacheViewEviction(t *testing.T) {
 	// cache must have view dropped even there is a subscriber
 	streamWithoutLoadedView = 0
 	streamWithLoadedViewCount = 0
-	streamCache.cache.Range(func(key, value any) bool {
-		stream := value.(*streamImpl)
-		if stream.view == nil {
+	streamCache.cache.Range(func(key StreamId, value *streamImpl) bool {
+		if value.view() == nil {
 			streamWithoutLoadedView++
 		} else {
 			streamWithLoadedViewCount++
@@ -94,9 +89,8 @@ func TestStreamCacheViewEviction(t *testing.T) {
 
 	streamWithoutLoadedView = 0
 	streamWithLoadedViewCount = 0
-	streamCache.cache.Range(func(key, value any) bool {
-		stream := value.(*streamImpl)
-		if stream.view == nil {
+	streamCache.cache.Range(func(key StreamId, value *streamImpl) bool {
+		if value.view() == nil {
 			streamWithoutLoadedView++
 		} else {
 			streamWithLoadedViewCount++
@@ -113,9 +107,8 @@ func TestStreamCacheViewEviction(t *testing.T) {
 	require.NoError(err, "get view")
 	streamWithoutLoadedView = 0
 	streamWithLoadedViewCount = 0
-	streamCache.cache.Range(func(key, value any) bool {
-		stream := value.(*streamImpl)
-		if stream.view == nil {
+	streamCache.cache.Range(func(key StreamId, value *streamImpl) bool {
+		if value.view() == nil {
 			streamWithoutLoadedView++
 		} else {
 			streamWithLoadedViewCount++
@@ -135,13 +128,10 @@ func TestCacheEvictionWithFilledMiniBlockPool(t *testing.T) {
 
 	streamCache := tc.initCache(0, nil)
 
-	streamCache.cache.Range(func(key, value any) bool {
-		require.Fail("stream cache must be empty")
-		return true
-	})
+	require.Zero(streamCache.cache.Size(), "stream cache must be empty")
 
 	node := tc.getBC()
-	streamID := testutils.FakeStreamId(shared.STREAM_SPACE_BIN)
+	streamID := testutils.FakeStreamId(STREAM_SPACE_BIN)
 	_, genesisMiniblock := makeTestSpaceStream(t, node.Wallet, streamID, nil)
 
 	tc.createStreamNoCache(streamID, genesisMiniblock)
@@ -154,9 +144,8 @@ func TestCacheEvictionWithFilledMiniBlockPool(t *testing.T) {
 	// stream just loaded and should have view loaded
 	streamWithoutLoadedView := 0
 	streamWithLoadedViewCount := 0
-	streamCache.cache.Range(func(key, value any) bool {
-		stream := value.(*streamImpl)
-		if stream.view == nil {
+	streamCache.cache.Range(func(key StreamId, value *streamImpl) bool {
+		if value.view() == nil {
 			streamWithoutLoadedView++
 		} else {
 			streamWithLoadedViewCount++
@@ -172,13 +161,13 @@ func TestCacheEvictionWithFilledMiniBlockPool(t *testing.T) {
 	streamCache.CacheCleanup(ctxShort, true, time.Millisecond)
 	cancelShort()
 	loadedStream, _ := streamCache.cache.Load(streamID)
-	require.Nil(loadedStream.(*streamImpl).view, "view not unloaded")
+	require.Nil(loadedStream.view(), "view not unloaded")
 
 	// try to create a miniblock, pool is empty so it should not fail but also should not create a miniblock
 	_ = tc.makeMiniblock(0, streamID, false)
 
 	// add event to stream with unloaded view, view should be loaded in cache and minipool must contain event
-	addEvent(
+	addEventToStream(
 		t,
 		ctx,
 		tc.instances[0].params,
@@ -193,7 +182,7 @@ func TestCacheEvictionWithFilledMiniBlockPool(t *testing.T) {
 	streamCache.CacheCleanup(ctxShort, true, time.Millisecond)
 	cancelShort()
 	loadedStream, _ = streamCache.cache.Load(streamID)
-	require.NotNil(loadedStream.(*streamImpl).view, "view unloaded")
+	require.NotNil(loadedStream.view(), "view unloaded")
 
 	// now it should be possible to create a miniblock
 	mbRef := tc.makeMiniblock(0, streamID, false)
@@ -206,16 +195,16 @@ func TestCacheEvictionWithFilledMiniBlockPool(t *testing.T) {
 	streamCache.CacheCleanup(ctxShort, true, time.Millisecond)
 	cancelShort()
 	loadedStream, _ = streamCache.cache.Load(streamID)
-	require.Nil(loadedStream.(*streamImpl).view, "view loaded in cache")
+	require.Nil(loadedStream.view(), "view loaded in cache")
 }
 
 type testStreamCacheViewEvictionSub struct {
-	receivedStreamAndCookies []*protocol.StreamAndCookie
+	receivedStreamAndCookies []*StreamAndCookie
 	receivedErrors           []error
-	streamErrors             []shared.StreamId
+	streamErrors             []StreamId
 }
 
-func (sub *testStreamCacheViewEvictionSub) OnUpdate(sac *protocol.StreamAndCookie) {
+func (sub *testStreamCacheViewEvictionSub) OnUpdate(sac *StreamAndCookie) {
 	sub.receivedStreamAndCookies = append(sub.receivedStreamAndCookies, sac)
 }
 
@@ -223,7 +212,7 @@ func (sub *testStreamCacheViewEvictionSub) OnSyncError(err error) {
 	sub.receivedErrors = append(sub.receivedErrors, err)
 }
 
-func (sub *testStreamCacheViewEvictionSub) OnStreamSyncDown(streamID shared.StreamId) {
+func (sub *testStreamCacheViewEvictionSub) OnStreamSyncDown(streamID StreamId) {
 	sub.streamErrors = append(sub.streamErrors, streamID)
 }
 
@@ -246,31 +235,31 @@ func TestStreamMiniblockBatchProduction(t *testing.T) {
 
 	streamCache := tc.initCache(0, nil)
 
-	streamCache.cache.Range(func(key, value any) bool {
+	streamCache.cache.Range(func(key StreamId, value *streamImpl) bool {
 		require.Fail("stream cache must be empty")
 		return true
 	})
 
 	// the stream cache uses the chain block production as a ticker to create new mini-blocks.
 	// after initialization take back control when to create new chain blocks.
-	streamsCount := 10*MiniblockCandidateBatchSize - 1
+	streamsCount := 4*MiniblockCandidateBatchSize - 5
 	genesisBlocks := tc.allocateStreams(streamsCount)
 
 	// add events to ~50% of the streams
-	streamsWithEvents := make(map[shared.StreamId]int)
+	streamsWithEvents := make(map[StreamId]int)
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 	for streamID, genesis := range genesisBlocks {
 		wg.Add(1)
-		go func(streamID shared.StreamId, genesis *protocol.Miniblock) {
+		go func(streamID StreamId, genesis *Miniblock) {
 			defer wg.Done()
 
-			streamSync, err := streamCache.GetStream(ctx, streamID)
+			streamSync, err := streamCache.getStreamImpl(ctx, streamID)
 			require.NoError(err, "get stream")
 
 			// unload view for half of the streams
 			if streamID[1]%2 == 1 {
-				ss := streamSync.(*streamImpl)
+				ss := streamSync
 				ss.tryCleanup(time.Duration(0))
 			}
 
@@ -282,7 +271,7 @@ func TestStreamMiniblockBatchProduction(t *testing.T) {
 			// add several events to the stream
 			numToAdd := 1 + int(streamID[3]%50)
 			for i := range numToAdd {
-				addEvent(t, ctx, streamCache.params, streamSync,
+				addEventToStream(t, ctx, streamCache.params, streamSync,
 					fmt.Sprintf("msg# %d", i), &MiniblockRef{Hash: common.BytesToHash(genesis.Header.Hash), Num: 0})
 			}
 
@@ -292,6 +281,10 @@ func TestStreamMiniblockBatchProduction(t *testing.T) {
 		}(streamID, genesis)
 	}
 	wg.Wait()
+
+	if t.Failed() {
+		t.FailNow()
+	}
 
 	require.Eventually(
 		func() bool {
@@ -335,18 +328,13 @@ func TestStreamMiniblockBatchProduction(t *testing.T) {
 }
 
 func isCacheEmpty(streamCache *streamCacheImpl) bool {
-	empty := true
-	streamCache.cache.Range(func(key, value any) bool {
-		empty = false
-		return false
-	})
-	return empty
+	return streamCache.cache.Size() == 0
 }
 
 func cleanUpCache(streamCache *streamCacheImpl) bool {
 	cleanedUp := true
-	streamCache.cache.Range(func(key, streamVal any) bool {
-		cleanedUp = cleanedUp && streamVal.(*streamImpl).tryCleanup(0)
+	streamCache.cache.Range(func(key StreamId, streamVal *streamImpl) bool {
+		cleanedUp = cleanedUp && streamVal.tryCleanup(0)
 		return true
 	})
 	return cleanedUp
@@ -354,15 +342,15 @@ func cleanUpCache(streamCache *streamCacheImpl) bool {
 
 func areAllViewsDropped(streamCache *streamCacheImpl) bool {
 	allDropped := true
-	streamCache.cache.Range(func(key, streamVal any) bool {
-		st := streamVal.(*streamImpl).getStatus()
+	streamCache.cache.Range(func(key StreamId, streamVal *streamImpl) bool {
+		st := streamVal.getStatus()
 		allDropped = allDropped && !st.loaded
 		return true
 	})
 	return allDropped
 }
 
-// TODO: temp disable flacky test. Passes locally, often fails on CI.
+// TODO: temp disable flaky test. Passes locally, often fails on CI.
 func Disabled_TestStreamUnloadWithSubscribers(t *testing.T) {
 	require := require.New(t)
 	ctx, tc := makeCacheTestContext(t, testParams{})
@@ -383,8 +371,8 @@ func Disabled_TestStreamUnloadWithSubscribers(t *testing.T) {
 	var (
 		node                  = tc.getBC()
 		genesisBlocks         = tc.allocateStreams(streamsCount)
-		syncCookies           = make(map[shared.StreamId]*protocol.SyncCookie)
-		subscriptionReceivers = make(map[shared.StreamId]*testStreamCacheViewEvictionSub)
+		syncCookies           = make(map[StreamId]*SyncCookie)
+		subscriptionReceivers = make(map[StreamId]*testStreamCacheViewEvictionSub)
 	)
 
 	// obtain sync cookies for allocated streams
@@ -421,8 +409,8 @@ func Disabled_TestStreamUnloadWithSubscribers(t *testing.T) {
 	// add events to the first 2 streams and ensure that the receiver is notified even when the stream view is dropped.
 	var (
 		count                = 0
-		streamsWithEvents    = make(map[shared.StreamId]int)
-		streamsWithoutEvents = make(map[shared.StreamId]int)
+		streamsWithEvents    = make(map[StreamId]int)
+		streamsWithoutEvents = make(map[StreamId]int)
 	)
 
 	for streamID, genesis := range genesisBlocks {
@@ -431,7 +419,7 @@ func Disabled_TestStreamUnloadWithSubscribers(t *testing.T) {
 			streamSync, err := streamCache.GetStream(ctx, streamID)
 			require.NoError(err, "get sync stream")
 			for i := 0; i < 1+int(streamID[3]%50); i++ {
-				addEvent(t, ctx, streamCache.params, streamSync,
+				addEventToStream(t, ctx, streamCache.params, streamSync,
 					fmt.Sprintf("msg# %d", i), &MiniblockRef{Hash: common.BytesToHash(genesis.Header.Hash), Num: 0})
 			}
 			streamsWithEvents[streamID] = 1 + int(streamID[3]%50)
@@ -449,7 +437,7 @@ func Disabled_TestStreamUnloadWithSubscribers(t *testing.T) {
 	}
 
 	// make all mini-blocks to process all events in minipool
-	jobs := mpProducer.scheduleCandidates(ctx)
+	jobs := mpProducer.scheduleCandidates(ctx, blockNum)
 	require.Eventually(
 		func() bool { return mpProducer.testCheckAllDone(jobs) },
 		240*time.Second,

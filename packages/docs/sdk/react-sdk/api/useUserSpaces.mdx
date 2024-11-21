@@ -1,0 +1,94 @@
+---
+title: useUserSpaces
+---
+Hook to get the spaces of the current user.
+
+## Imports
+
+```ts
+import { useUserSpaces } from '@river-build/react-sdk'
+```
+
+## Examples
+
+You can combine this hook with the `useSpace` hook to get all spaces of the current user and render them:
+```tsx
+const AllSpaces = () => {
+    const { spaceIds } = useUserSpaces()
+    return <>{spaceIds.map((spaceId) => <Space key={spaceId} spaceId={spaceId} />)}</>
+}
+
+const Space = ({ spaceId }: { spaceId: string }) => {
+    const { data: space } = useSpace(spaceId)
+    return <div>{space.metadata?.name || 'Unnamed Space'}</div>
+}
+```
+
+## Definition
+
+```ts
+function useUserSpaces(
+  config?: ObservableConfig.FromObservable<Spaces>,
+): {
+    error: Error | undefined;
+    status: "error" | "loading" | "loaded";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    spaceIds: string[];
+} | {
+    error: Error | undefined;
+    status: "error" | "loading" | "loaded";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    spaceIds: string[];
+} | {
+    error: Error | undefined;
+    status: "error" | "loading" | "loaded";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    spaceIds: string[];
+}
+```
+
+**Source:** [useUserSpaces](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useUserSpaces.ts)
+
+## Parameters
+
+### config
+
+- **Type:** `ObservableConfig.FromObservable<Spaces>`
+- **Optional**
+
+Configuration options for the observable.
+
+## Return Type
+
+The spaces of the current user.
+
+```ts
+{
+    error: Error | undefined;
+    status: "error" | "loading" | "loaded";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    spaceIds: string[];
+} | {
+    error: Error | undefined;
+    status: "error" | "loading" | "loaded";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    spaceIds: string[];
+} | {
+    error: Error | undefined;
+    status: "error" | "loading" | "loaded";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    spaceIds: string[];
+}
+```

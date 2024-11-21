@@ -221,8 +221,10 @@ func (st *serviceTester) getConfig(opts ...startOpts) *config.Config {
 		DisableHttps:     true,
 		RegistryContract: st.btc.RegistryConfig(),
 		Database: config.DatabaseConfig{
-			Url:          st.dbUrl,
-			StartupDelay: 2 * time.Millisecond,
+			Url:                   st.dbUrl,
+			StartupDelay:          2 * time.Millisecond,
+			NumPartitions:         4,
+			MigrateStreamCreation: true,
 		},
 		StorageType: "postgres",
 		Network: config.NetworkConfig{
@@ -230,7 +232,9 @@ func (st *serviceTester) getConfig(opts ...startOpts) *config.Config {
 		},
 		ShutdownTimeout: 2 * time.Millisecond,
 		StreamReconciliation: config.StreamReconciliationConfig{
-			WorkerPoolSize: 8,
+			InitialWorkerPoolSize: 4,
+			OnlineWorkerPoolSize:  8,
+			GetMiniblocksPageSize: 4,
 		},
 		RiverRegistry: config.GetDefaultConfig().RiverRegistry,
 	}

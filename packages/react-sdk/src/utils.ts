@@ -1,37 +1,28 @@
-import type { Channel, Dm, Gdm, PersistedModel, SyncAgent } from '@river-build/sdk'
+import {
+    type Channel,
+    type Dm,
+    type Gdm,
+    Space,
+    type SyncAgent,
+    isChannelStreamId,
+    isDMChannelStreamId,
+    isGDMChannelStreamId,
+    isSpaceStreamId,
+    spaceIdFromChannelId,
+} from '@river-build/sdk'
 
-export const isPersistedModel = <T>(value: T | PersistedModel<T>): value is PersistedModel<T> => {
-    if (typeof value !== 'object') {
-        return false
+export const getRoom = (sync: SyncAgent, streamId: string): Gdm | Channel | Dm | Space => {
+    if (isChannelStreamId(streamId)) {
+        return sync.spaces.getSpace(spaceIdFromChannelId(streamId)).getChannel(streamId)
     }
-    if (value === null) {
-        return false
+    if (isGDMChannelStreamId(streamId)) {
+        return sync.gdms.getGdm(streamId)
     }
-    return 'status' in value && 'data' in value
-}
-
-export type RiverRoom =
-    | {
-          type: 'gdm'
-          streamId: string
-      }
-    | {
-          type: 'channel'
-          spaceId: string
-          channelId: string
-      }
-    | {
-          type: 'dm'
-          streamId: string
-      }
-
-export const getRoom = (sync: SyncAgent, props: RiverRoom): Gdm | Channel | Dm => {
-    if (props.type === 'gdm') {
-        return sync.gdms.getGdm(props.streamId)
-    } else if (props.type === 'channel') {
-        return sync.spaces.getSpace(props.spaceId).getChannel(props.channelId)
-    } else if (props.type === 'dm') {
-        return sync.dms.getDm(props.streamId)
+    if (isDMChannelStreamId(streamId)) {
+        return sync.dms.getDm(streamId)
+    }
+    if (isSpaceStreamId(streamId)) {
+        return sync.spaces.getSpace(streamId)
     }
     throw new Error('Invalid room type')
 }

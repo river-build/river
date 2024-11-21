@@ -17,7 +17,8 @@ func GetDefaultConfig() *Config {
 	return &Config{
 		Port: 443,
 		Database: DatabaseConfig{
-			StartupDelay: 2 * time.Second,
+			StartupDelay:  2 * time.Second,
+			NumPartitions: 256,
 		},
 		StorageType:  "postgres",
 		DisableHttps: false,
@@ -38,7 +39,9 @@ func GetDefaultConfig() *Config {
 		// TODO: ArchitectContract: ContractConfig{},
 		// TODO: RegistryContract:  ContractConfig{},
 		StreamReconciliation: StreamReconciliationConfig{
-			WorkerPoolSize: 8,
+			InitialWorkerPoolSize: 4,
+			OnlineWorkerPoolSize:  32,
+			GetMiniblocksPageSize: 128,
 		},
 		Log: LogConfig{
 			Level:   "info", // NOTE: this default is replaced by flag value
@@ -59,18 +62,20 @@ func GetDefaultConfig() *Config {
 			PrintStatsPeriod: 10 * time.Second,
 		},
 		DebugEndpoints: DebugEndpointsConfig{
-			Cache:           true,
-			Memory:          true,
-			PProf:           false,
-			Stacks:          true,
-			StacksMaxSizeKb: 5 * 1024,
-			TxPool:          true,
+			Cache:                 true,
+			Memory:                true,
+			PProf:                 false,
+			Stacks:                true,
+			StacksMaxSizeKb:       5 * 1024,
+			TxPool:                true,
+			EnableStorageEndpoint: true,
 		},
 		Scrubbing: ScrubbingConfig{
 			ScrubEligibleDuration: time.Hour,
 		},
 		RiverRegistry: RiverRegistryConfig{
-			PageSize:               1000,
+			PageSize:               5000,
+			ParallelReaders:        8,
 			MaxRetries:             100,
 			MaxRetryElapsedTime:    5 * time.Minute,
 			SingleCallTimeout:      30 * time.Second, // geth internal timeout is 30 seconds
@@ -137,6 +142,9 @@ type Config struct {
 
 	// Should be set if node is run in archive mode.
 	Archive ArchiveConfig
+
+	// Notifications must be set when run in notification mode.
+	Notifications NotificationsConfig
 
 	// Feature flags
 	// Used to disable functionality for some testing setups.
@@ -222,6 +230,17 @@ type DatabaseConfig struct {
 	// If not set or value can't be parsed, defaults to "serializable".
 	// Intention is to migrate to "read committed" for performance reasons after testing is complete.
 	IsolationLevel string
+
+	// MigrateStreamCreation indicates to the database that all new streams should be allocated
+	// in one of the 256 pre-allocated stream partitions for either regular or media streams instead
+	// of allocating new tables per stream according to the legacy schema. If this flag is unset, a
+	// node will continue to allocate new tables for each stream as it is created.
+	MigrateStreamCreation bool
+
+	// NumPartitions specifies the number of partitions to use when creating the schema for stream
+	// data storage. If <= 0, a default value of 256 will be used. No more than 256 partitions is
+	// supported at this time.
+	NumPartitions int
 }
 
 func (c DatabaseConfig) GetUrl() string {
@@ -269,6 +288,9 @@ type ChainConfig struct {
 	BlockTimeMs uint64
 
 	TransactionPool TransactionPoolConfig
+
+	// DisableReplacePendingTransactionOnBoot will not try to replace transaction that are pending after start.
+	DisableReplacePendingTransactionOnBoot bool
 
 	// TODO: these need to be removed from here
 	LinkedWalletsLimit                        int
@@ -334,6 +356,68 @@ type ArchiveConfig struct {
 	StreamsContractCallPageSize int64 // If 0, default to 5000.
 }
 
+type APNPushNotificationsConfig struct {
+	// IosAppBundleID is used as the topic ID for notifications.
+	AppBundleID string
+	// Expiration holds the duration in which the notification must be delivered. After that
+	// the server might drop the notification. If set to 0 a default of 12 hours is used.
+	Expiration time.Duration
+	// KeyID from developer account (Certificates, Identifiers & Profiles -> Keys)
+	KeyID string
+	// TeamID from developer account (View Account -> Membership)
+	TeamID string
+	// AuthKey contains the private key to authenticate the notification service with the APN service
+	AuthKey string
+}
+
+type WebPushVapidNotificationConfig struct {
+	// PrivateKey is the private key of the public key that is shared with the client
+	// and used to sign push notifications that allows the client to verify the incoming
+	// notification for origin and validity.
+	PrivateKey string
+	// PublicKey as shared with the client that is used for subscribing and verifying
+	// the incoming push notification.
+	PublicKey string
+	// Subject must either be a URL or a 'mailto:' address.
+	Subject string
+}
+
+type WebPushNotificationConfig struct {
+	Vapid WebPushVapidNotificationConfig
+}
+
+type NotificationsConfig struct {
+	// SubscriptionExpirationDuration if the client isn't seen within this duration stop sending
+	// notifications to it. Defaults to 90 days.
+	SubscriptionExpirationDuration time.Duration
+	// Simulate if set to true uses the simulator notification backend that doesn't
+	// send notifications to the client but only logs them.
+	// This is intended for development purposes. Defaults to false.
+	Simulate bool
+	// APN holds the Apple Push Notification settings
+	APN APNPushNotificationsConfig
+	// Web holds the Web Push notification settings
+	Web WebPushNotificationConfig `mapstructure:"webpush"`
+
+	// Authentication holds configuration for the Client API authentication service.
+	Authentication struct {
+		// ChallengeTimeout is the lifetime an authentication challenge is valid (default=30s).
+		ChallengeTimeout time.Duration
+		// SessionTokenKey contains the configuration for the JWT session token.
+		SessionToken struct {
+			// Lifetime indicates how long a session token is valid (default=30m).
+			Lifetime time.Duration
+			// Key holds the secret key that is used to sign the session token.
+			Key struct {
+				// Algorithm indicates how the session token is signed (only HS256 is supported)
+				Algorithm string
+				// Key holds the hex encoded key
+				Key string
+			}
+		}
+	}
+}
+
 type LogConfig struct {
 	Level        string // Used for both file and console if their levels not set explicitly
 	File         string // Path to log file
@@ -369,11 +453,18 @@ type DebugEndpointsConfig struct {
 	Stacks          bool
 	StacksMaxSizeKb int
 	TxPool          bool
+
+	// Make storage statistics available via debug endpoints. This may involve running queries
+	// on the underlying database.
+	EnableStorageEndpoint bool
 }
 
 type RiverRegistryConfig struct {
 	// PageSize is the number of streams to read from the contract at once using GetPaginatedStreams.
 	PageSize int
+
+	// Number of parallel readers to use when reading streams from the contract.
+	ParallelReaders int
 
 	// If not 0, stop retrying failed GetPaginatedStreams calls after this number of retries.
 	MaxRetries int
@@ -434,7 +525,14 @@ type ScrubbingConfig struct {
 }
 
 type StreamReconciliationConfig struct {
-	WorkerPoolSize int // If 0, default to 8.
+	// InitialWorkerPoolSize is the size of the worker pool for initial background stream reconciliation tasks on node start.
+	InitialWorkerPoolSize int
+
+	// OnlineWorkerPoolSize is the size of the worker pool for ongoing stream reconciliation tasks.
+	OnlineWorkerPoolSize int
+
+	// GetMiniblocksPageSize is the number of miniblocks to read at once from the remote node.
+	GetMiniblocksPageSize int64
 }
 
 type FilterConfig struct {

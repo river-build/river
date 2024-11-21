@@ -1,12 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
-// interfaces
-
-// libraries
 import {StakingRewards} from "./StakingRewards.sol";
-
-// contracts
 
 interface IRewardsDistributionBase {
   /// @notice The state of the staking rewards contract
@@ -20,7 +15,7 @@ interface IRewardsDistributionBase {
   /// @param nextDepositId The next deposit ID that will be used
   struct StakingState {
     address riverToken;
-    uint256 totalStaked;
+    uint96 totalStaked;
     uint256 rewardDuration;
     uint256 rewardEndTime;
     uint256 lastUpdateTime;
@@ -75,14 +70,16 @@ interface IRewardsDistributionBase {
   event RewardNotifierSet(address indexed notifier, bool enabled);
 
   /// @notice Emitted when a deposit is staked
-  /// @param depositId The ID of the deposit
+  /// @param owner The address of the depositor
   /// @param delegatee The address of the delegatee
   /// @param beneficiary The address of the beneficiary
+  /// @param depositId The ID of the deposit
   /// @param amount The amount of stakeToken that is staked
   event Stake(
-    uint256 indexed depositId,
+    address indexed owner,
     address indexed delegatee,
     address indexed beneficiary,
+    uint256 depositId,
     uint96 amount
   );
 
@@ -105,9 +102,14 @@ interface IRewardsDistributionBase {
   );
 
   /// @notice Emitted when the withdrawal of a deposit is initiated
+  /// @param owner The address of the depositor
   /// @param depositId The ID of the deposit
   /// @param amount The amount of stakeToken that will be withdrawn
-  event InitiateWithdraw(uint256 indexed depositId, uint96 amount);
+  event InitiateWithdraw(
+    address indexed owner,
+    uint256 indexed depositId,
+    uint96 amount
+  );
 
   /// @notice Emitted when the stakeToken is withdrawn from a deposit
   /// @param depositId The ID of the deposit
@@ -132,11 +134,11 @@ interface IRewardsDistributionBase {
   /// @notice Emitted when space delegation rewards are swept to the operator
   /// @param space The address of the space
   /// @param operator The address of the operator
-  /// @param amount The amount of rewardToken that is swept
+  /// @param scaledReward The scaled amount of rewardToken that is swept
   event SpaceRewardsSwept(
     address indexed space,
     address indexed operator,
-    uint256 amount
+    uint256 scaledReward
   );
 }
 
@@ -283,7 +285,7 @@ interface IRewardsDistribution is IRewardsDistributionBase {
   /// @return amount The amount of stakeToken that is staked by the depositor
   function stakedByDepositor(
     address depositor
-  ) external view returns (uint256 amount);
+  ) external view returns (uint96 amount);
 
   /// @notice Returns the deposit IDs for a particular depositor
   /// @param depositor The address of the depositor

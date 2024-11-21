@@ -8,38 +8,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
 )
-
-type MiniblockRef struct {
-	Hash common.Hash
-	Num  int64
-}
-
-func MiniblockRefFromCookie(cookie *SyncCookie) *MiniblockRef {
-	return &MiniblockRef{
-		Hash: common.BytesToHash(cookie.GetPrevMiniblockHash()),
-		Num:  max(cookie.GetMinipoolGen()-1, 0),
-	}
-}
-
-func MiniblockRefFromLastHash(resp *GetLastMiniblockHashResponse) *MiniblockRef {
-	return &MiniblockRef{
-		Hash: common.BytesToHash(resp.GetHash()),
-		Num:  resp.GetMiniblockNum(),
-	}
-}
-
-func MiniblockRefFromContractRecord(stream *river.Stream) *MiniblockRef {
-	return &MiniblockRef{
-		Hash: stream.LastMiniblockHash,
-		Num:  int64(stream.LastMiniblockNum),
-	}
-}
 
 func MakeStreamEvent(
 	wallet *crypto.Wallet,
@@ -61,6 +34,27 @@ func MakeStreamEvent(
 		Payload:          payload,
 		CreatedAtEpochMs: epochMillis,
 	}
+
+	if prevMiniblock != nil && prevMiniblock.Hash != (common.Hash{}) {
+		event.PrevMiniblockHash = prevMiniblock.Hash[:]
+		event.PrevMiniblockNum = prevMiniblock.Num
+	}
+
+	return event, nil
+}
+
+func MakeStreamEventWithTags(
+	wallet *crypto.Wallet,
+	payload IsStreamEvent_Payload,
+	prevMiniblock *MiniblockRef,
+	tags *Tags,
+) (*StreamEvent, error) {
+	event, err := MakeStreamEvent(wallet, payload, prevMiniblock)
+	if err != nil {
+		return nil, err
+	}
+
+	event.Tags = tags
 
 	if prevMiniblock != nil && prevMiniblock.Hash != (common.Hash{}) {
 		event.PrevMiniblockHash = prevMiniblock.Hash[:]
@@ -131,6 +125,19 @@ func MakeEnvelopeWithPayload(
 	return MakeEnvelopeWithEvent(wallet, streamEvent)
 }
 
+func MakeEnvelopeWithPayloadAndTags(
+	wallet *crypto.Wallet,
+	payload IsStreamEvent_Payload,
+	prevMiniblock *MiniblockRef,
+	tags *Tags,
+) (*Envelope, error) {
+	streamEvent, err := MakeStreamEventWithTags(wallet, payload, prevMiniblock, tags)
+	if err != nil {
+		return nil, err
+	}
+	return MakeEnvelopeWithEvent(wallet, streamEvent)
+}
+
 func MakeParsedEventWithPayload(
 	wallet *crypto.Wallet,
 	payload IsStreamEvent_Payload,
@@ -194,6 +201,40 @@ func Make_MemberPayload_DisplayName(displayName *EncryptedData) *StreamEvent_Mem
 	}
 }
 
+func Make_DmChannelPayload_Inception(
+	streamId StreamId,
+	firstPartyAddress common.Address,
+	secondPartyAddress common.Address,
+	settings *StreamSettings,
+) *StreamEvent_DmChannelPayload {
+	return &StreamEvent_DmChannelPayload{
+		DmChannelPayload: &DmChannelPayload{
+			Content: &DmChannelPayload_Inception_{
+				Inception: &DmChannelPayload_Inception{
+					StreamId:           streamId[:],
+					FirstPartyAddress:  firstPartyAddress[:],
+					SecondPartyAddress: secondPartyAddress[:],
+					Settings:           settings,
+				},
+			},
+		}}
+}
+
+func Make_GdmChannelPayload_Inception(
+	streamId StreamId,
+	settings *StreamSettings,
+) *StreamEvent_GdmChannelPayload {
+	return &StreamEvent_GdmChannelPayload{
+		GdmChannelPayload: &GdmChannelPayload{
+			Content: &GdmChannelPayload_Inception_{
+				Inception: &GdmChannelPayload_Inception{
+					StreamId: streamId[:],
+					Settings: settings,
+				}},
+		},
+	}
+}
+
 func Make_ChannelPayload_Inception(
 	streamId StreamId,
 	spaceId StreamId,
@@ -237,6 +278,30 @@ func Make_ChannelPayload_Membership(
 		spaceIdBytes = nil
 	}
 	return Make_MemberPayload_Membership(op, userAddress, initiatorAddress, spaceIdBytes)
+}
+
+func Make_DMChannelPayload_Message(content string) *StreamEvent_DmChannelPayload {
+	return &StreamEvent_DmChannelPayload{
+		DmChannelPayload: &DmChannelPayload{
+			Content: &DmChannelPayload_Message{
+				Message: &EncryptedData{
+					Ciphertext: content,
+				},
+			},
+		},
+	}
+}
+
+func Make_GDMChannelPayload_Message(content string) *StreamEvent_GdmChannelPayload {
+	return &StreamEvent_GdmChannelPayload{
+		GdmChannelPayload: &GdmChannelPayload{
+			Content: &GdmChannelPayload_Message{
+				Message: &EncryptedData{
+					Ciphertext: content,
+				},
+			},
+		},
+	}
 }
 
 func Make_ChannelPayload_Message(content string) *StreamEvent_ChannelPayload {

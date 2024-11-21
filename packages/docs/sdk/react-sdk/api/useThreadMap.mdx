@@ -1,0 +1,59 @@
+---
+title: useThreadMap
+---
+## Imports
+
+```ts
+import { useThreadMap } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useThreadMap(
+  spaceId: string,
+  channelId: string,
+  config?: ObservableConfig.FromObservable<Threads>,
+): {
+    data: {
+        [x: string]: TimelineEvent[];
+    };
+    error: undefined;
+    status: "loading" | "loaded";
+    isLoading: boolean;
+    isError: false;
+    isLoaded: boolean;
+}
+```
+
+**Source:** [useThreadMap](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useThreadMap.ts)
+
+## Parameters
+
+### spaceId
+
+- **Type:** `string`
+
+### channelId
+
+- **Type:** `string`
+
+### config
+
+- **Type:** `ObservableConfig.FromObservable<Threads>`
+- **Optional**
+
+## Return Type
+
+```ts
+{
+    data: {
+        [x: string]: TimelineEvent[];
+    };
+    error: undefined;
+    status: "loading" | "loaded";
+    isLoading: boolean;
+    isError: false;
+    isLoaded: boolean;
+}
+```

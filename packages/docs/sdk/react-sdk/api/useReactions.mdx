@@ -1,0 +1,50 @@
+---
+title: useReactions
+---
+## Imports
+
+```ts
+import { useReactions } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useReactions(
+  streamId: string,
+  config?: ObservableConfig.FromData<ReactionsMap>,
+): {
+    data: ReactionsMap;
+    error: undefined;
+    status: "loading" | "loaded";
+    isLoading: boolean;
+    isError: false;
+    isLoaded: boolean;
+}
+```
+
+**Source:** [useReactions](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useReactions.ts)
+
+## Parameters
+
+### streamId
+
+- **Type:** `string`
+
+### config
+
+- **Type:** `ObservableConfig.FromData<ReactionsMap>`
+- **Optional**
+
+## Return Type
+
+```ts
+{
+    data: ReactionsMap;
+    error: undefined;
+    status: "loading" | "loaded";
+    isLoading: boolean;
+    isError: false;
+    isLoaded: boolean;
+}
+```

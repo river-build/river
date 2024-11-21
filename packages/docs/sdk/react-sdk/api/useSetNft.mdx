@@ -1,0 +1,58 @@
+---
+title: useSetNft
+---
+Hook to set the NFT of the current user in a stream. You should be validating if the NFT belongs to the user before setting it.
+
+## Imports
+
+```ts
+import { useSetNft } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useSetNft(
+  streamId: string,
+  config?: ActionConfig<Myself['setNft']>,
+): {
+    data: void | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    setNft: (nft: NftModel) => Promise<void>;
+}
+```
+
+**Source:** [useSetNft](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useMyMember.ts)
+
+## Parameters
+
+### streamId
+
+- **Type:** `string`
+
+The id of the stream to set the NFT of.
+
+### config
+
+- **Type:** `ActionConfig<Myself['setNft']>`
+- **Optional**
+
+Configuration options for the action.
+
+## Return Type
+
+The `setNft` action and its loading state.
+
+```ts
+{
+    data: void | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    setNft: (nft: NftModel) => Promise<void>;
+}
+```
