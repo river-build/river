@@ -11,7 +11,7 @@ import { useTimeline } from '@river-build/react-sdk'
 
 ```ts
 function useTimeline(
-  timeline: (sync: SyncAgent) => TimelineEvents,
+  streamId: string,
   config?: ObservableConfig.FromObservable<TimelineEvents>,
 ): {
     data: TimelineEvent[];
@@ -27,9 +27,9 @@ function useTimeline(
 
 ## Parameters
 
-### timeline
+### streamId
 
-- **Type:** `(sync: SyncAgent) => TimelineEvents`
+- **Type:** `string`
 
 ### config
 
