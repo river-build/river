@@ -49,6 +49,6 @@ yarn create river-build-app my-app --template react-ts
 
 Available templates:
 
-- react-ts (default)
+- playground (default)
+- react-ts
 - react
-- playground
