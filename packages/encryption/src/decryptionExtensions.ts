@@ -263,7 +263,7 @@ export abstract class BaseDecryptionExtensions {
     public abstract didReceiveMlsInitializeGroup(args: MlsInitializeGroup): Promise<void>
     public abstract didReceiveMlsExternalJoin(args: MlsExternalJoin): Promise<void>
     public abstract didReceiveMlsKeyAnnouncement(args: MlsKeyAnnouncement): Promise<void>
-    public abstract didReceiveMlsJoinGroupEvent(args: MlsJoinGroupEvent): Promise<void>
+    // public abstract didReceiveMlsJoinGroupEvent(args: MlsJoinGroupEvent): Promise<void>
 
     public abstract shouldPauseTicking(): boolean
     /**

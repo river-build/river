@@ -12,7 +12,7 @@ import {
     MlsExternalJoin,
     // MlsGroupInfo,
     MlsInitializeGroup,
-    MlsJoinGroupEvent,
+    // MlsJoinGroupEvent,
     MlsKeyAnnouncement,
     UserDevice,
 } from '@river-build/encryption'
@@ -341,10 +341,10 @@ export class ClientDecryptionExtensions extends BaseDecryptionExtensions {
         await this.client.mls_didReceiveKeyAnnouncement(args)
     }
 
-    public async didReceiveMlsJoinGroupEvent(args: MlsJoinGroupEvent): Promise<void> {
-        // console.log('didReceiveMlsJoinGroupEvent')
-        await this.client.mls_joinOrCreateGroup(args.streamId)
-    }
+    // public async didReceiveMlsJoinGroupEvent(args: MlsJoinGroupEvent): Promise<void> {
+    //     // console.log('didReceiveMlsJoinGroupEvent')
+    //     await this.client.mls_joinOrCreateGroup(args.streamId)
+    // }
 
     public async uploadDeviceKeys(): Promise<void> {
         await this.client.uploadDeviceKeys()
