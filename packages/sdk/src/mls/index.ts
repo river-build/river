@@ -143,9 +143,9 @@ export class MlsCrypto {
         if (epoch === undefined) {
             throw new Error('No epoch specified')
         }
-        const epochKey = this.epochKeyService.getEpochKey(streamId, epoch)
+        const epochKey = await this.epochKeyService.getEpochKey(streamId, epoch)
 
-        if (epochKey.state.status !== 'EPOCH_KEY_DERIVED') {
+        if (epochKey?.state.status !== 'EPOCH_KEY_DERIVED') {
             throw new Error('Epoch keys not derived')
         }
 
