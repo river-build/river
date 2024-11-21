@@ -285,6 +285,14 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 	kind string,
 	members mapset.Set[string],
 ) {
+	eventBytes, err := proto.Marshal(event.Event)
+	if err != nil {
+		p.log.Error("Unable to marshal event", "error", err)
+		return
+	}
+
+	eventBytesHex := hex.EncodeToString(eventBytes)
+
 	var receivers []string
 	if channelID.Type() == shared.STREAM_DM_CHANNEL_BIN || channelID.Type() == shared.STREAM_GDM_CHANNEL_BIN {
 		receivers = members.ToSlice()
@@ -292,13 +300,10 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 
 	if len(userPref.Subscriptions.WebPush) > 0 {
 		webPayload := map[string]interface{}{
-			"event":     event.Event,
+			"event":     eventBytesHex,
 			"channelId": hex.EncodeToString(channelID[:]),
 			"kind":      kind,
 			"senderId":  hex.EncodeToString(event.Event.CreatorAddress),
-			//"recipients": rec,
-			//"attachmentOnly": "",   // image, gif, file optional
-			//"reaction": true, // optional
 		}
 
 		if len(receivers) > 0 {
@@ -335,15 +340,9 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 		}
 	}
 
-	eventBytes, err := proto.Marshal(event.Event)
-	if err != nil {
-		p.log.Error("Unable to marshal event", "error", err)
-		return
-	}
-
 	if len(userPref.Subscriptions.APNPush) > 0 {
 		apnPayload := map[string]interface{}{
-			"event":     hex.EncodeToString(eventBytes),
+			"event":     eventBytesHex,
 			"channelId": hex.EncodeToString(channelID[:]),
 			"kind":      kind,
 			"senderId":  hex.EncodeToString(event.Event.CreatorAddress),
