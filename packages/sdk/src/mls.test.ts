@@ -55,7 +55,7 @@ describe('CreateGroup', () => {
     it('createGroup gets a group in a pending state', async () => {
         const crypto = await initializeCrypto(userAddress, deviceKey)
 
-        expect(crypto.hasGroup(streamId)).toEqual(false)
+        await expect(crypto.hasGroup(streamId)).resolves.toEqual(false)
 
         const groupInfoWithExternalKey = await crypto.createGroup(streamId)
         expect(groupInfoWithExternalKey).toBeDefined()
@@ -98,7 +98,7 @@ describe('CreateGroup', () => {
         )
 
         expect(groupStatus).not.toBeDefined()
-        expect(crypto.groupStore.getGroup(streamId)).not.toBeDefined()
+        await expect(crypto.groupStore.getGroup(streamId)).resolves.not.toBeDefined()
     }, 1000)
 
     it('handleExternalJoin gets group from pending state into active state', async () => {
