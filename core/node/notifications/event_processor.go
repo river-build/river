@@ -3,8 +3,8 @@ package notifications
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"slices"
 	"time"
@@ -153,7 +153,7 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 		"event":      eventData,
 		"channelId":  channelID.String(),
 		"kind":       kind,
-		"senderId":   fmt.Sprintf("0x%x", event.Event.CreatorAddress),
+		"senderId":   hex.EncodeToString(event.Event.CreatorAddress),
 		"recipients": recipients.ToSlice(),
 		//"attachmentOnly": "",   // image, gif, file optional
 		//"reaction": true, // optional
@@ -162,7 +162,7 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 		payload["spaceId"] = spaceID.String()
 	}
 	if threadID := event.Event.GetTags().GetThreadId(); len(threadID) > 0 {
-		payload["threadId"] = fmt.Sprintf("0x%x", threadID)
+		payload["threadId"] = hex.EncodeToString(threadID)
 	}
 
 	for user, userPref := range usersToNotify {
