@@ -53,9 +53,7 @@ contract DropFacetTest is
   uint16 internal constant PENALTY_BPS = 5000;
 
   DeployDiamond internal rewardsDistributionDiamondHelper = new DeployDiamond();
-  DeployDiamond internal aidropDiamondHelper = new DeployDiamond();
   DeployMockERC20 internal tokenHelper = new DeployMockERC20();
-  DeployRiverAirdrop internal dropHelper = new DeployRiverAirdrop();
   DeployRewardsDistributionV2 internal rewardsDistributionHelper =
     new DeployRewardsDistributionV2();
   MerkleTree internal merkleTree = new MerkleTree();
@@ -90,12 +88,8 @@ contract DropFacetTest is
     // Create the Merkle tree with accounts and amounts
     _createTree();
 
-    // Add the Drop facet to its own diamond
-    dropHelper.setStakingContract(baseRegistry);
-    address diamond = dropHelper.deploy(deployer);
-
     // Initialize the Drop facet
-    dropFacet = DropFacet(diamond);
+    dropFacet = DropFacet(riverAirdrop);
 
     // Initialize the River river
     river = River(riverToken);
