@@ -112,8 +112,8 @@ export class MlsCrypto {
 
         // Check if we have derived keys, if not try deriving them
         const epochKey = await this.epochKeyService.getEpochKey(streamId, epoch)
-        if (epochKey?.state.status !== 'EPOCH_KEY_DERIVED') {
-            throw new Error('Epoch keys not derived')
+        if (epochKey?.state.status !== 'EPOCH_KEY_OPEN') {
+            throw new Error('Epoch keys not open')
         }
 
         const ciphertext = await this.cipherSuite.seal(epochKey.state.publicKey, message)
@@ -145,7 +145,7 @@ export class MlsCrypto {
         }
         const epochKey = await this.epochKeyService.getEpochKey(streamId, epoch)
 
-        if (epochKey?.state.status !== 'EPOCH_KEY_DERIVED') {
+        if (epochKey?.state.status !== 'EPOCH_KEY_OPEN') {
             throw new Error('Epoch keys not derived')
         }
 

@@ -6,7 +6,7 @@ import {
     Secret as MlsSecret,
 } from '@river-build/mls-rs-wasm'
 import { MlsStore } from './mlsStore'
-import { DLogger } from '@river-build/dlog'
+import { bin_toHexString, DLogger, shortenHexString } from '@river-build/dlog'
 import { DerivedKeys, EpochKey, EpochKeyState } from './epochKey'
 
 export class EpochKeyService {
@@ -29,17 +29,25 @@ export class EpochKeyService {
         epoch: bigint,
         sealedEpochSecretBytes: Uint8Array,
     ): Promise<void> {
+        this.log('addSealedEpochSecret', {
+            streamId,
+            epoch,
+            sealedEpochSecretBytes: shortenHexString(bin_toHexString(sealedEpochSecretBytes)),
+        })
         try {
+            const sealedEpochSecret = HpkeCiphertext.fromBytes(sealedEpochSecretBytes)
             let epochKey = await this.epochKeyStore.getEpochKey(streamId, epoch)
             if (!epochKey) {
-                epochKey = EpochKey.missing(streamId, epoch)
+                epochKey = EpochKey.fromSealedEpochSecret(streamId, epoch, sealedEpochSecret)
+            } else {
+                epochKey.addSealedEpochSecret(sealedEpochSecret)
             }
-            const sealedEpochSecret = HpkeCiphertext.fromBytes(sealedEpochSecretBytes)
-            epochKey.addSealedEpochSecret(sealedEpochSecret)
             await this.epochKeyStore.setEpochKeyState(epochKey)
-            const nextEpochKey = await this.epochKeyStore.getEpochKey(streamId, epoch + 1n)
-            if (nextEpochKey?.state.status === 'EPOCH_KEY_DERIVED') {
-                await this.openSealedEpochSecret(epochKey, nextEpochKey.state)
+            if (epochKey.state.status === 'EPOCH_KEY_SEALED') {
+                const nextEpochKey = await this.epochKeyStore.getEpochKey(streamId, epoch + 1n)
+                if (nextEpochKey?.state.status === 'EPOCH_KEY_OPEN') {
+                    await this.openSealedEpochSecret(epochKey, nextEpochKey.state)
+                }
             }
         } catch (e) {
             this.log('Error adding sealed epoch secret', e)
@@ -51,17 +59,25 @@ export class EpochKeyService {
         epoch: bigint,
         openEpochSecretBytes: Uint8Array,
     ): Promise<void> {
-        try {
-            const openEpochSecret = MlsSecret.fromBytes(openEpochSecretBytes)
-            let epochKey = await this.epochKeyStore.getEpochKey(streamId, epoch)
-            if (!epochKey) {
-                epochKey = EpochKey.missing(streamId, epoch)
-            }
-            epochKey.addOpenEpochSecret(openEpochSecret)
-            await this.epochKeyStore.setEpochKeyState(epochKey)
-            await this.deriveKeys(epochKey)
-        } catch (e) {
-            this.log('error adding open epoch secret', e)
+        this.log('addOpenEpochSecret', {
+            streamId,
+            epoch,
+            openEpochSecretBytes: shortenHexString(bin_toHexString(openEpochSecretBytes)),
+        })
+        const openEpochSecret = MlsSecret.fromBytes(openEpochSecretBytes)
+        const derivedKeys = await this.cipherSuite.kemDerive(openEpochSecret)
+
+        let epochKey = await this.epochKeyStore.getEpochKey(streamId, epoch)
+        if (!epochKey) {
+            epochKey = EpochKey.fromOpenEpochSecret(streamId, epoch, openEpochSecret, derivedKeys)
+        } else {
+            epochKey.addOpenEpochSecretAndKeys(openEpochSecret, derivedKeys)
+        }
+        await this.epochKeyStore.setEpochKeyState(epochKey)
+        // Try opening the previous one
+        const previousEpochKey = await this.epochKeyStore.getEpochKey(streamId, epoch - 1n)
+        if (previousEpochKey?.state.status === 'EPOCH_KEY_SEALED') {
+            await this.openSealedEpochSecret(previousEpochKey, derivedKeys)
         }
     }
 
@@ -69,6 +85,10 @@ export class EpochKeyService {
         epochKey: EpochKey,
         nextEpochKeys: DerivedKeys,
     ): Promise<void> {
+        this.log('openSealedEpochSecret', {
+            streamId: epochKey.streamId,
+            epoch: epochKey.epoch,
+        })
         if (epochKey?.state.status === 'EPOCH_KEY_SEALED') {
             const sealedEpochSecret = epochKey.state.sealedEpochSecret
             const unsealedBytes = await this.cipherSuite.open(
@@ -77,19 +97,6 @@ export class EpochKeyService {
                 nextEpochKeys.publicKey,
             )
             await this.addOpenEpochSecret(epochKey.streamId, epochKey.epoch, unsealedBytes)
-        }
-    }
-
-    private async deriveKeys(epochKey: EpochKey): Promise<void> {
-        if (epochKey.state.status === 'EPOCH_KEY_OPEN') {
-            const openEpochSecret = epochKey.state.openEpochSecret
-            const keys = await this.cipherSuite.kemDerive(openEpochSecret)
-            epochKey.addDerivedKeys(keys)
-            await this.epochKeyStore.setEpochKeyState(epochKey)
-            const previousEpoch = await this.getEpochKey(epochKey.streamId, epochKey.epoch - 1n)
-            if (previousEpoch) {
-                await this.openSealedEpochSecret(previousEpoch, keys)
-            }
         }
     }
 }
@@ -110,6 +117,7 @@ export class EpochKeyStore {
     private openEpochSecrets: Map<EpochKeyId, MlsSecretBytes> = new Map()
     private secretKeys: Map<EpochKeyId, HpkeSecretKeyBytes> = new Map()
     private publicKeys: Map<EpochKeyId, HpkePublicKeyBytes> = new Map()
+    private announceds: Map<EpochKeyId, boolean> = new Map()
     log: DLogger
 
     constructor(log: DLogger) {
@@ -121,29 +129,26 @@ export class EpochKeyStore {
         const derivedKeys = this.getDerivedKeys(epochId)
         const openEpochSecret = this.getOpenEpochSecret(epochId)
         const sealedEpochSecret = this.getSealedEpochSecret(epochId)
+        const announced = this.announceds.get(epochId) || false
 
         if (derivedKeys) {
             if (!openEpochSecret) {
                 throw new Error('Derived keys without open epoch secret')
             }
             return {
-                status: 'EPOCH_KEY_DERIVED',
+                status: 'EPOCH_KEY_OPEN',
                 secretKey: derivedKeys.secretKey,
                 publicKey: derivedKeys.publicKey,
                 openEpochSecret,
                 sealedEpochSecret,
-            }
-        }
-        if (openEpochSecret) {
-            return {
-                status: 'EPOCH_KEY_OPEN',
-                openEpochSecret,
+                announced,
             }
         }
         if (sealedEpochSecret) {
             return {
                 status: 'EPOCH_KEY_SEALED',
                 sealedEpochSecret,
+                announced,
             }
         }
         return undefined
@@ -165,23 +170,17 @@ export class EpochKeyStore {
         const state = epochKey.state
         const epochId = epochKeyId(streamId, epoch)
         switch (state.status) {
-            case 'EPOCH_KEY_MISSING':
-                break
             case 'EPOCH_KEY_SEALED':
                 this.addSealedEpochSecret(epochId, state.sealedEpochSecret)
+                this.announceds.set(epochId, state.announced)
                 break
             case 'EPOCH_KEY_OPEN':
-                this.addOpenEpochSecret(epochId, state.openEpochSecret)
-                if (state.sealedEpochSecret) {
-                    this.addSealedEpochSecret(epochId, state.sealedEpochSecret)
-                }
-                break
-            case 'EPOCH_KEY_DERIVED':
                 this.addOpenEpochSecret(epochId, state.openEpochSecret)
                 this.addDerivedKeys(epochId, state)
                 if (state.sealedEpochSecret) {
                     this.addSealedEpochSecret(epochId, state.sealedEpochSecret)
                 }
+                this.announceds.set(epochId, state.announced)
                 break
         }
     }

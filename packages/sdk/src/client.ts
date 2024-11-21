@@ -2483,7 +2483,7 @@ export class Client
             streamId,
             group.state.group.currentEpoch,
         )
-        if (epochKey?.state.status !== 'EPOCH_KEY_DERIVED') {
+        if (epochKey?.state.status !== 'EPOCH_KEY_OPEN') {
             throw new Error('epoch keys not derived')
         }
 
@@ -2535,6 +2535,10 @@ export class Client
         if (!this.mlsCrypto) {
             throw new Error('mls backend not initialized')
         }
+        this.mlsCrypto.log('didReceiveKeyAnnouncement', {
+            epoch: announcement.key.epoch,
+            key: shortenHexString(bin_toHexString(announcement.key.key)),
+        })
         await this.mlsCrypto.handleKeyAnnouncement(announcement.streamId, announcement.key)
         // Eagerly try to decrypt messages
         if (this.decryptionExtensions) {
@@ -2602,10 +2606,13 @@ export class Client
                     previousEpoch,
                 )
                 if (
-                    currentEpochKey?.state.status === 'EPOCH_KEY_DERIVED' &&
-                    previousEpochKey?.state.status === 'EPOCH_KEY_DERIVED'
+                    currentEpochKey?.state.status === 'EPOCH_KEY_OPEN' &&
+                    previousEpochKey?.state.status === 'EPOCH_KEY_OPEN'
                 ) {
                     if (!previousEpochKey.state.sealedEpochSecret) {
+                        this.mlsCrypto.log('sealing previous epoch', {
+                            epoch: groupState.state.group.currentEpoch,
+                        })
                         previousEpochKey.state.sealedEpochSecret =
                             await this.mlsCrypto.cipherSuite.seal(
                                 currentEpochKey.state.publicKey,

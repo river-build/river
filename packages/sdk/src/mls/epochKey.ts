@@ -6,15 +6,14 @@ import {
 } from '@river-build/mls-rs-wasm'
 
 export type EpochKeyState =
-    | { status: 'EPOCH_KEY_MISSING' }
-    | { status: 'EPOCH_KEY_SEALED'; sealedEpochSecret: HpkeCiphertext }
-    | { status: 'EPOCH_KEY_OPEN'; openEpochSecret: MlsSecret; sealedEpochSecret?: HpkeCiphertext }
+    | { status: 'EPOCH_KEY_SEALED'; sealedEpochSecret: HpkeCiphertext; announced: boolean }
     | {
-          status: 'EPOCH_KEY_DERIVED'
+          status: 'EPOCH_KEY_OPEN'
+          openEpochSecret: MlsSecret
           secretKey: HpkeSecretKey
           publicKey: HpkePublicKey
-          openEpochSecret: MlsSecret
           sealedEpochSecret?: HpkeCiphertext
+          announced: boolean
       }
 
 export type DerivedKeys = {
@@ -27,66 +26,51 @@ export class EpochKey {
     public readonly epoch: bigint
     public state: EpochKeyState
 
-    constructor(
-        streamId: string,
-        epoch: bigint,
-        state: EpochKeyState = { status: 'EPOCH_KEY_MISSING' },
-    ) {
+    constructor(streamId: string, epoch: bigint, state: EpochKeyState) {
         this.streamId = streamId
         this.epoch = epoch
         this.state = state
     }
 
-    public static missing(streamId: string, epoch: bigint): EpochKey {
-        return new EpochKey(streamId, epoch, { status: 'EPOCH_KEY_MISSING' })
+    public static fromSealedEpochSecret(
+        streamId: string,
+        epoch: bigint,
+        sealedEpochSecret: HpkeCiphertext,
+    ): EpochKey {
+        return new EpochKey(streamId, epoch, {
+            status: 'EPOCH_KEY_SEALED',
+            sealedEpochSecret,
+            announced: true,
+        })
     }
 
-    public addSealedEpochSecret(sealedEpochSecret: HpkeCiphertext): void {
-        switch (this.state.status) {
-            case 'EPOCH_KEY_MISSING':
-                this.state = { status: 'EPOCH_KEY_SEALED', sealedEpochSecret }
-                break
-            default:
-                this.state.sealedEpochSecret = sealedEpochSecret
-        }
+    public static fromOpenEpochSecret(
+        streamId: string,
+        epoch: bigint,
+        openEpochSecret: MlsSecret,
+        derivedKeys: DerivedKeys
+    ): EpochKey {
+        return new EpochKey(streamId, epoch, {
+            status: 'EPOCH_KEY_OPEN',
+            openEpochSecret,
+            secretKey: derivedKeys.secretKey,
+            publicKey: derivedKeys.publicKey,
+            announced: false,
+        })
     }
 
-    public addOpenEpochSecret(openEpochSecret: HpkeSecretKey): void {
-        switch (this.state.status) {
-            case 'EPOCH_KEY_MISSING':
-                this.state = { status: 'EPOCH_KEY_OPEN', openEpochSecret }
-                break
-            case 'EPOCH_KEY_SEALED':
-                this.state = {
-                    status: 'EPOCH_KEY_OPEN',
-                    openEpochSecret,
-                    sealedEpochSecret: this.state.sealedEpochSecret,
-                }
-                break
-            default:
-                this.state.openEpochSecret = openEpochSecret
-        }
+    public addSealedEpochSecret(sealedEpochSecret: HpkeCiphertext) {
+        this.state.sealedEpochSecret = sealedEpochSecret
     }
 
-    public addDerivedKeys(derivedKeys: DerivedKeys): void {
-        switch (this.state.status) {
-            case 'EPOCH_KEY_OPEN':
-                this.state = {
-                    status: 'EPOCH_KEY_DERIVED',
-                    secretKey: derivedKeys.secretKey,
-                    publicKey: derivedKeys.publicKey,
-                    openEpochSecret: this.state.openEpochSecret,
-                    sealedEpochSecret: this.state.sealedEpochSecret,
-                }
-                break
-
-            case 'EPOCH_KEY_DERIVED':
-                this.state.publicKey = derivedKeys.publicKey
-                this.state.secretKey = derivedKeys.secretKey
-                break
-
-            default:
-                throw new Error(`Unexpected state ${this.state.status} for epoch ${this.epoch}`)
+    public addOpenEpochSecretAndKeys(openEpochSecret: MlsSecret, keys: DerivedKeys) {
+        this.state = {
+            status: 'EPOCH_KEY_OPEN',
+            openEpochSecret,
+            secretKey: keys.secretKey,
+            publicKey: keys.publicKey,
+            sealedEpochSecret: this.state.sealedEpochSecret,
+            announced: this.state.announced,
         }
     }
 }
