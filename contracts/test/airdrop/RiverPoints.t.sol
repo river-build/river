@@ -16,19 +16,11 @@ import {RiverPoints} from "contracts/src/tokens/points/RiverPoints.sol";
 import {BaseRegistryTest} from "../base/registry/BaseRegistry.t.sol";
 
 contract RiverPointsTest is BaseRegistryTest, IOwnableBase, IDiamond {
-  DeployRiverAirdrop internal dropHelper = new DeployRiverAirdrop();
-
   RiverPoints internal pointsFacet;
 
   function setUp() public override {
     super.setUp();
-
-    // Add the Drop facet to its own diamond
-    dropHelper.setSpaceFactory(spaceFactory);
-    dropHelper.setStakingContract(baseRegistry);
-    address diamond = dropHelper.deploy(deployer);
-
-    pointsFacet = RiverPoints(diamond);
+    pointsFacet = RiverPoints(riverAirdrop);
   }
 
   function test_approve_reverts() public {

@@ -23,7 +23,7 @@ import {DeployRiverPoints} from "contracts/scripts/deployments/facets/DeployRive
 import {DeployMetadata} from "contracts/scripts/deployments/facets/DeployMetadata.s.sol";
 
 contract DeployRiverAirdrop is DiamondHelper, Deployer {
-  address internal STAKING_CONTRACT = address(0);
+  address internal BASE_REGISTRY = address(0);
   address internal SPACE_FACTORY = address(0);
 
   DeployMultiInit deployMultiInit = new DeployMultiInit();
@@ -61,13 +61,13 @@ contract DeployRiverAirdrop is DiamondHelper, Deployer {
     return getDeployment("spaceFactory");
   }
 
-  function setStakingContract(address stakingContract) external {
-    STAKING_CONTRACT = stakingContract;
+  function setBaseRegistry(address baseRegistry) external {
+    BASE_REGISTRY = baseRegistry;
   }
 
-  function getStakingContract() internal returns (address) {
-    if (STAKING_CONTRACT != address(0)) {
-      return STAKING_CONTRACT;
+  function getBaseRegistry() internal returns (address) {
+    if (BASE_REGISTRY != address(0)) {
+      return BASE_REGISTRY;
     }
 
     return getDeployment("baseRegistry");
@@ -112,7 +112,7 @@ contract DeployRiverAirdrop is DiamondHelper, Deployer {
     addFacet(
       dropHelper.makeCut(dropFacet, IDiamond.FacetCutAction.Add),
       dropFacet,
-      dropHelper.makeInitData(getStakingContract())
+      dropHelper.makeInitData(getBaseRegistry())
     );
     addFacet(
       pointsHelper.makeCut(pointsFacet, IDiamond.FacetCutAction.Add),

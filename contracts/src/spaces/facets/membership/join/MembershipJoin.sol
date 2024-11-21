@@ -303,14 +303,7 @@ abstract contract MembershipJoin is
       .getLatestImplementation(bytes32("RiverAirdrop"));
 
     // Equivalent to `pointsToken.mint(receiver, points);`
-    bytes4 selector = RiverPoints.mint.selector;
-    assembly ("memory-safe") {
-      mstore(0, selector)
-      mstore(0x04, receiver)
-      mstore(0x24, points)
-      pop(call(gas(), pointsToken, 0, 0, 0x44, 0, 0))
-      mstore(0x24, 0)
-    }
+    RiverPoints(pointsToken).mint(receiver, points);
   }
 
   function _afterChargeForJoinSpace(
