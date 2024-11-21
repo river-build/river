@@ -61,9 +61,7 @@ export const DashboardRoute = () => {
                         <h2 className="text-lg font-medium">Join Space</h2>
                         <JoinSpace onJoinSpace={navigateToSpace} />
                     </div>
-                    <span className="text-xs">Select a space to start messaging</span>
-
-                    <ScrollArea className="flex h-[calc(100dvh-18rem-2/4)]">
+                    <ScrollArea className="flex min-h-max">
                         <div className="flex flex-col gap-1">
                             {spaceIds.map((spaceId) => (
                                 <SpaceInfo
@@ -83,7 +81,7 @@ export const DashboardRoute = () => {
                     <hr className="my-2" />
 
                     <span className="text-xs">Your group chats</span>
-                    <ScrollArea className="flex h-[calc(100dvh-18rem-1/4%)]">
+                    <ScrollArea className="flex min-h-max">
                         <div className="flex flex-col gap-1">
                             {gdmStreamIds.map((gdmStreamId) => (
                                 <GdmInfo
@@ -103,7 +101,7 @@ export const DashboardRoute = () => {
                     <hr className="my-2" />
 
                     <span className="text-xs">Your direct messages</span>
-                    <ScrollArea className="flex h-[calc(100dvh-18rem-1/4%)]">
+                    <ScrollArea className="flex min-h-max">
                         <div className="flex flex-col gap-2">
                             {dmStreamIds.map((dmStreamId) => (
                                 <Suspense key={dmStreamId} fallback={<div>Loading...</div>}>
