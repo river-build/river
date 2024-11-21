@@ -11,14 +11,13 @@ import {IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
 //libraries
 
 // contracts
-import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 import {River} from "contracts/src/tokens/river/base/River.sol";
 import {RiverPoints} from "contracts/src/tokens/points/RiverPoints.sol";
+import {BaseRegistryTest} from "../base/registry/BaseRegistry.t.sol";
 
-contract RiverPointsTest is BaseSetup, IOwnableBase, IDiamond {
+contract RiverPointsTest is BaseRegistryTest, IOwnableBase, IDiamond {
   DeployRiverAirdrop internal dropHelper = new DeployRiverAirdrop();
 
-  River internal river;
   RiverPoints internal pointsFacet;
 
   function setUp() public override {
@@ -30,7 +29,6 @@ contract RiverPointsTest is BaseSetup, IOwnableBase, IDiamond {
     address diamond = dropHelper.deploy(deployer);
 
     pointsFacet = RiverPoints(diamond);
-    river = River(riverToken);
   }
 
   function test_approve_reverts() public {
@@ -72,11 +70,20 @@ contract RiverPointsTest is BaseSetup, IOwnableBase, IDiamond {
     pointsFacet.batchMintPoints(new address[](1), new uint256[](1));
   }
 
-  //  function test_fuzz_batchMintPoints(
-  //    address[32] calldata accounts,
-  //    uint256[32] calldata values
-  //  ) public {
-  //    vm.prank(deployer);
-  //    pointsFacet.batchMintPoints(toDyn(accounts), values);
-  //  }
+  function test_fuzz_batchMintPoints(
+    address[32] memory accounts,
+    uint256[32] memory values
+  ) public {
+    for (uint256 i; i < accounts.length; ++i) {
+      if (accounts[i] == address(0)) {
+        accounts[i] = _randomAddress();
+      }
+    }
+
+    sanitizeAmounts(values);
+    address[] memory _accounts = toDyn(accounts);
+    uint256[] memory _values = toDyn(values);
+    vm.prank(deployer);
+    pointsFacet.batchMintPoints(_accounts, _values);
+  }
 }
