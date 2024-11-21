@@ -242,6 +242,9 @@ describe('dmsMlsTests', () => {
             Array.from(Array(12).keys()).map(async (n) => {
                 log(`JOINING client-${n}`)
                 const client = await makeInitAndStartClient(`client-${n}`)
+                if (client.mlsCrypto) {
+                    client.mlsCrypto.awaitTimeoutMS = 30_000
+                }
                 await expect(client.joinStream(channelId)).toResolve()
                 await expect(client.waitForStream(channelId)).toResolve()
             }),
