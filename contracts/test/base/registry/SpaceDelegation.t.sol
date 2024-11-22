@@ -6,7 +6,6 @@ import {IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
 import {ISpaceDelegationBase} from "contracts/src/base/registry/facets/delegation/ISpaceDelegation.sol";
 
 // libraries
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {StakingRewards} from "contracts/src/base/registry/facets/distribution/v2/StakingRewards.sol";
 
@@ -19,17 +18,7 @@ contract SpaceDelegationTest is
   IOwnableBase,
   ISpaceDelegationBase
 {
-  using EnumerableSet for EnumerableSet.AddressSet;
   using FixedPointMathLib for uint256;
-
-  SpaceDelegationFacet internal spaceDelegation;
-  EnumerableSet.AddressSet internal spaceSet;
-  EnumerableSet.AddressSet internal operatorSet;
-
-  function setUp() public override {
-    super.setUp();
-    spaceDelegation = SpaceDelegationFacet(baseRegistry);
-  }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                       ADD DELEGATION                       */
@@ -37,24 +26,24 @@ contract SpaceDelegationTest is
 
   function test_addSpaceDelegation_revertIf_invalidSpace() public {
     vm.expectRevert(SpaceDelegation__InvalidSpace.selector);
-    spaceDelegation.addSpaceDelegation(address(this), OPERATOR);
+    spaceDelegationFacet.addSpaceDelegation(address(this), OPERATOR);
   }
 
   function test_addSpaceDelegation_revertIf_alreadyDelegated() public {
     space = deploySpace(deployer);
     vm.prank(deployer);
-    spaceDelegation.addSpaceDelegation(space, OPERATOR);
+    spaceDelegationFacet.addSpaceDelegation(space, OPERATOR);
 
     vm.expectRevert(SpaceDelegation__AlreadyDelegated.selector);
     vm.prank(deployer);
-    spaceDelegation.addSpaceDelegation(space, OPERATOR);
+    spaceDelegationFacet.addSpaceDelegation(space, OPERATOR);
   }
 
   function test_addSpaceDelegation_revertIf_invalidOperator() public {
     space = deploySpace(deployer);
     vm.expectRevert(SpaceDelegation__InvalidOperator.selector);
     vm.prank(deployer);
-    spaceDelegation.addSpaceDelegation(space, address(this));
+    spaceDelegationFacet.addSpaceDelegation(space, address(this));
   }
 
   function test_fuzz_addSpaceDelegation(
@@ -64,9 +53,9 @@ contract SpaceDelegationTest is
     space = deploySpace(deployer);
 
     vm.prank(deployer);
-    spaceDelegation.addSpaceDelegation(space, operator);
+    spaceDelegationFacet.addSpaceDelegation(space, operator);
 
-    address assignedOperator = spaceDelegation.getSpaceDelegation(space);
+    address assignedOperator = spaceDelegationFacet.getSpaceDelegation(space);
     assertEq(assignedOperator, operator, "Space delegation failed");
   }
 
@@ -102,11 +91,11 @@ contract SpaceDelegationTest is
     timeLapse = bound(timeLapse, 1, rewardDuration);
     vm.warp(block.timestamp + timeLapse);
 
-    vm.expectEmit(true, true, true, false, address(spaceDelegation));
+    vm.expectEmit(true, true, true, false, address(spaceDelegationFacet));
     emit SpaceRewardsSwept(space, operators[0], 0);
 
     vm.prank(deployer);
-    spaceDelegation.addSpaceDelegation(space, operators[1]);
+    spaceDelegationFacet.addSpaceDelegation(space, operators[1]);
 
     StakingState memory state = rewardsDistributionFacet.stakingState();
     StakingRewards.Treasure memory spaceTreasure = rewardsDistributionFacet
@@ -128,22 +117,84 @@ contract SpaceDelegationTest is
     );
   }
 
+  function test_fuzz_addSpaceDelegation_forfeitRewardsIfUndelegated(
+    address operator,
+    uint256 commissionRate,
+    uint256 rewardAmount,
+    uint256 timeLapse
+  ) public {
+    vm.assume(operator != OPERATOR);
+    commissionRate = bound(commissionRate, 1, 10000);
+    address space = test_fuzz_addSpaceDelegation(operator, commissionRate);
+
+    rewardAmount = boundReward(rewardAmount);
+    bridgeTokensForUser(address(rewardsDistributionFacet), rewardAmount);
+
+    vm.prank(NOTIFIER);
+    rewardsDistributionFacet.notifyRewardAmount(rewardAmount);
+
+    uint96 amount = 1 ether;
+    bridgeTokensForUser(address(this), amount);
+
+    river.approve(address(rewardsDistributionFacet), amount);
+    rewardsDistributionFacet.stake(amount, space, address(this));
+
+    // remove delegation and forfeit rewards
+    vm.prank(deployer);
+    spaceDelegationFacet.removeSpaceDelegation(space);
+
+    timeLapse = bound(timeLapse, 1, rewardDuration);
+    vm.warp(block.timestamp + timeLapse);
+
+    assertGe(rewardsDistributionFacet.currentReward(space), 0);
+
+    vm.prank(deployer);
+    spaceDelegationFacet.addSpaceDelegation(space, OPERATOR);
+
+    StakingState memory state = rewardsDistributionFacet.stakingState();
+    StakingRewards.Treasure memory spaceTreasure = rewardsDistributionFacet
+      .treasureByBeneficiary(space);
+
+    // verify forfeited rewards
+    assertEq(spaceTreasure.earningPower, (amount * commissionRate) / 10000);
+    assertEq(
+      spaceTreasure.rewardPerTokenAccumulated,
+      state.rewardPerTokenAccumulated
+    );
+    assertEq(spaceTreasure.unclaimedRewardSnapshot, 0);
+
+    assertEq(
+      rewardsDistributionFacet
+        .treasureByBeneficiary(operator)
+        .unclaimedRewardSnapshot,
+      0
+    );
+    assertEq(
+      rewardsDistributionFacet
+        .treasureByBeneficiary(OPERATOR)
+        .unclaimedRewardSnapshot,
+      0
+    );
+  }
+
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                      REMOVE DELEGATION                     */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
   function test_removeSpaceDelegation_revertIf_invalidSpace() public {
     vm.expectRevert(SpaceDelegation__InvalidSpace.selector);
-    spaceDelegation.removeSpaceDelegation(address(0));
+    spaceDelegationFacet.removeSpaceDelegation(address(0));
   }
 
   function test_fuzz_removeSpaceDelegation(address operator) public {
     address space = test_fuzz_addSpaceDelegation(operator, 0);
 
     vm.prank(deployer);
-    spaceDelegation.removeSpaceDelegation(space);
+    spaceDelegationFacet.removeSpaceDelegation(space);
 
-    address afterRemovalOperator = spaceDelegation.getSpaceDelegation(space);
+    address afterRemovalOperator = spaceDelegationFacet.getSpaceDelegation(
+      space
+    );
     assertEq(afterRemovalOperator, address(0), "Space removal failed");
   }
 
@@ -155,9 +206,8 @@ contract SpaceDelegationTest is
     address space1 = test_fuzz_addSpaceDelegation(operator, 0);
     address space2 = test_fuzz_addSpaceDelegation(operator, 0);
 
-    address[] memory spaces = spaceDelegation.getSpaceDelegationsByOperator(
-      operator
-    );
+    address[] memory spaces = spaceDelegationFacet
+      .getSpaceDelegationsByOperator(operator);
 
     assertEq(spaces.length, 2);
     assertEq(spaces[0], space1);
@@ -172,19 +222,19 @@ contract SpaceDelegationTest is
     vm.expectRevert(
       abi.encodeWithSelector(Ownable__NotOwner.selector, address(this))
     );
-    spaceDelegation.setRiverToken(address(0));
+    spaceDelegationFacet.setRiverToken(address(0));
   }
 
   function test_fuzz_setRiverToken(address newToken) public {
     vm.assume(newToken != address(0));
 
-    vm.expectEmit(address(spaceDelegation));
+    vm.expectEmit(address(spaceDelegationFacet));
     emit RiverTokenChanged(newToken);
 
     vm.prank(deployer);
-    spaceDelegation.setRiverToken(newToken);
+    spaceDelegationFacet.setRiverToken(newToken);
 
-    address retrievedToken = spaceDelegation.riverToken();
+    address retrievedToken = spaceDelegationFacet.riverToken();
     assertEq(retrievedToken, newToken);
   }
 
@@ -192,16 +242,16 @@ contract SpaceDelegationTest is
     vm.expectRevert(
       abi.encodeWithSelector(Ownable__NotOwner.selector, address(this))
     );
-    spaceDelegation.setSpaceFactory(address(0));
+    spaceDelegationFacet.setSpaceFactory(address(0));
   }
 
   function test_fuzz_setSpaceFactory(address newSpaceFactory) public {
     vm.assume(newSpaceFactory != address(0));
 
     vm.prank(deployer);
-    spaceDelegation.setSpaceFactory(newSpaceFactory);
+    spaceDelegationFacet.setSpaceFactory(newSpaceFactory);
 
-    address retrievedFactory = spaceDelegation.getSpaceFactory();
+    address retrievedFactory = spaceDelegationFacet.getSpaceFactory();
     assertEq(retrievedFactory, newSpaceFactory);
   }
 }
