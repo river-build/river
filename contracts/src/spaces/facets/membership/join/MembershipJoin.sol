@@ -303,15 +303,18 @@ abstract contract MembershipJoin is
     _captureData(transactionId, "");
 
     // calculate points and credit them
-    address pointsToken = IImplementationRegistry(_getSpaceFactory())
-      .getLatestImplementation(bytes32("RiverAirdrop"));
-    uint256 points = RiverPoints(pointsToken).getPoints(
+    RiverPoints pointsToken = RiverPoints(
+      IImplementationRegistry(_getSpaceFactory()).getLatestImplementation(
+        bytes32("RiverAirdrop")
+      )
+    );
+    uint256 points = pointsToken.getPoints(
       IRiverPointsBase.Action.JoinSpace,
       abi.encode(protocolFee)
     );
 
-    RiverPoints(pointsToken).mint(sender, points);
-    RiverPoints(pointsToken).mint(_owner(), points);
+    pointsToken.mint(sender, points);
+    pointsToken.mint(_owner(), points);
   }
 
   /// @notice Issues a membership token to the receiver
