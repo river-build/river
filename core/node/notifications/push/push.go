@@ -226,7 +226,7 @@ func (n *MessageNotifications) SendWebPushNotification(
 	).Func("SendWebPushNotification")
 
 	if resBody, err := io.ReadAll(res.Body); err == nil && len(resBody) > 0 {
-		riverErr.Tag("msg", string(resBody))
+		riverErr = riverErr.Tag("msg", string(resBody))
 	}
 
 	return riverErr
