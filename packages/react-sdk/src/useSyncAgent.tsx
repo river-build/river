@@ -1,6 +1,12 @@
 'use client'
 import { useRiverSync } from './internals/useRiverSync'
 
+/**
+ * Hook to get the sync agent from the RiverSyncProvider.
+ *
+ * @returns The sync agent in use, set in RiverSyncProvider.
+ * @throws If no sync agent is set, use RiverSyncProvider to set one or use useAgentConnection to check if connected.
+ */
 export const useSyncAgent = () => {
     const river = useRiverSync()
 

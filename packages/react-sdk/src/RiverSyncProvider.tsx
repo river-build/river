@@ -3,9 +3,16 @@ import type { SyncAgent } from '@river-build/sdk'
 import { useEffect, useState } from 'react'
 import { RiverSyncContext } from './internals/RiverSyncContext'
 
+/**
+ * A provider for the RiverSyncContext
+ * @param props - The props for the provider
+ * @returns The provider
+ */
 export const RiverSyncProvider = (props: {
+    /** A initial sync agent instance. Useful for persisting authentication. */
     syncAgent?: SyncAgent
     config?: {
+        /** A callback function that is called when the bearer token expires. */
         onTokenExpired?: () => void
     }
     children?: React.ReactNode
