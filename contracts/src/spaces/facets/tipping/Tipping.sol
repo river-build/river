@@ -22,17 +22,26 @@ contract Tipping is ITipping, ERC721ABase, Facet {
 
     _validateTipRequest(sender, receiver, tipRequest.amount);
 
-    TippingBase.tip(sender, receiver, tipRequest);
+    TippingBase.tip(
+      sender,
+      receiver,
+      tipRequest.tokenId,
+      tipRequest.currency,
+      tipRequest.amount
+    );
 
-    emit Tipped(
+    emit Tip(
       tipRequest.tokenId,
       tipRequest.currency,
       sender,
       receiver,
-      tipRequest.amount,
-      tipRequest.messageId,
-      tipRequest.channelId
+      tipRequest.amount
     );
+    emit TipMessage(tipRequest.messageId, tipRequest.channelId);
+  }
+
+  function tipCurrencies() external view returns (address[] memory) {
+    return TippingBase.currencies();
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/

@@ -16,15 +16,15 @@ interface ITippingBase {
     bytes32 channelId;
   }
 
-  event Tipped(
+  event Tip(
     uint256 indexed tokenId,
     address indexed currency,
     address sender,
     address receiver,
-    uint256 amount,
-    bytes32 messageId,
-    bytes32 channelId
+    uint256 amount
   );
+
+  event TipMessage(bytes32 indexed messageId, bytes32 indexed channelId);
 
   error TokenDoesNotExist();
   error SenderIsNotMember();

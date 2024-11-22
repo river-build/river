@@ -5,7 +5,6 @@ pragma solidity ^0.8.23;
 import {ITippingBase} from "contracts/src/spaces/facets/tipping/ITipping.sol";
 
 // libraries
-import {TippingStorage} from "contracts/src/spaces/facets/tipping/TippingStorage.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
 // contracts
@@ -13,22 +12,37 @@ import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.s
 library TippingBase {
   using EnumerableSet for EnumerableSet.AddressSet;
 
+  // keccak256(abi.encode(uint256(keccak256("spaces.facets.tipping.storage")) - 1)) & ~bytes32(uint256(0xff))
+  bytes32 internal constant STORAGE_SLOT =
+    0xb6cb334a9eea0cca2581db4520b45ac6f03de8e3927292302206bb82168be300;
+
+  struct Layout {
+    EnumerableSet.AddressSet currencies;
+    mapping(uint256 tokenId => mapping(address currency => uint256 amount)) tipsByCurrencyByTokenId;
+  }
+
+  function layout() internal pure returns (Layout storage l) {
+    assembly {
+      l.slot := STORAGE_SLOT
+    }
+  }
+
   function tip(
     address sender,
     address receiver,
-    ITippingBase.TipRequest calldata tipRequest
+    uint256 tokenId,
+    address currency,
+    uint256 amount
   ) internal {
-    TippingStorage.Layout storage ds = TippingStorage.layout();
-
-    (uint256 tokenId, address currency, uint256 amount) = (
-      tipRequest.tokenId,
-      tipRequest.currency,
-      tipRequest.amount
-    );
+    Layout storage ds = layout();
 
     ds.currencies.add(currency);
     ds.tipsByCurrencyByTokenId[tokenId][currency] += amount;
 
     CurrencyTransfer.transferCurrency(currency, sender, receiver, amount);
+  }
+
+  function currencies() internal view returns (address[] memory) {
+    return layout().currencies.values();
   }
 }
