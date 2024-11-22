@@ -4,12 +4,12 @@ import (
 	"context"
 
 	"github.com/ethereum/go-ethereum/common"
-
 	. "github.com/river-build/river/core/node/shared"
 )
 
 const (
-	StreamStorageTypePostgres = "postgres"
+	StreamStorageTypePostgres       = "postgres"
+	NotificationStorageTypePostgres = "postgres"
 )
 
 type ReadStreamFromLastSnapshotResult struct {
@@ -110,8 +110,8 @@ type StreamStorage interface {
 		streamId StreamId,
 	) (*DebugReadStreamDataResult, error)
 
-	// StreamLastMiniBlock returns the last mini-block number for the given stream from storage.
-	StreamLastMiniBlock(ctx context.Context, streamID StreamId) (*MiniblockData, error)
+	// GetLastMiniblockNumber returns the last miniblock number for the given stream from storage.
+	GetLastMiniblockNumber(ctx context.Context, streamID StreamId) (int64, error)
 
 	Close(ctx context.Context)
 }

@@ -1,0 +1,42 @@
+---
+title: RiverSyncProvider
+---
+## Imports
+
+```ts
+import { RiverSyncProvider } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function RiverSyncProvider(
+  props: {
+    syncAgent?: SyncAgent;
+    config?: {
+        onTokenExpired?: () => void;
+    };
+    children?: React.ReactNode;
+},
+): JSX.Element
+```
+
+**Source:** [RiverSyncProvider](https://github.com/river-build/river/blob/main/packages/react-sdk/src/RiverSyncProvider.tsx)
+
+## Parameters
+
+### props
+
+- **Type:** `{
+    syncAgent?: SyncAgent;
+    config?: {
+        onTokenExpired?: () => void;
+    };
+    children?: React.ReactNode;
+}`
+
+## Return Type
+
+```ts
+JSX.Element
+```

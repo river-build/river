@@ -1,0 +1,152 @@
+---
+title: useMember
+---
+Hook to get data from a specific member of a Space, GDM, Channel, or DM.
+
+## Imports
+
+```ts
+import { useMember } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useMember(
+  props: {
+    streamId: string;
+    userId: string;
+},
+  config?: ObservableConfig.FromObservable<Member>,
+): {
+    error: Error | undefined;
+    status: "error" | "loading" | "loaded";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    userId: string;
+    streamId: string;
+    initialized: boolean;
+    username: string;
+    isUsernameConfirmed: boolean;
+    isUsernameEncrypted: boolean;
+    displayName: string;
+    isDisplayNameEncrypted: boolean | undefined;
+    ensAddress: string | undefined;
+    nft: NftModel | undefined;
+    membership: MembershipOp | undefined;
+} | {
+    error: Error | undefined;
+    status: "error" | "loading" | "loaded";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    userId: string;
+    streamId: string;
+    initialized: boolean;
+    username: string;
+    isUsernameConfirmed: boolean;
+    isUsernameEncrypted: boolean;
+    displayName: string;
+    isDisplayNameEncrypted: boolean | undefined;
+    ensAddress: string | undefined;
+    nft: NftModel | undefined;
+    membership: MembershipOp | undefined;
+} | {
+    error: Error | undefined;
+    status: "error" | "loading" | "loaded";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    userId: string;
+    streamId: string;
+    initialized: boolean;
+    username: string;
+    isUsernameConfirmed: boolean;
+    isUsernameEncrypted: boolean;
+    displayName: string;
+    isDisplayNameEncrypted: boolean | undefined;
+    ensAddress: string | undefined;
+    nft: NftModel | undefined;
+    membership: MembershipOp | undefined;
+}
+```
+
+**Source:** [useMember](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useMember.ts)
+
+## Parameters
+
+### props
+
+- **Type:** `{
+    streamId: string;
+    userId: string;
+}`
+
+The streamId and userId of the member to get data from.
+
+### config
+
+- **Type:** `ObservableConfig.FromObservable<Member>`
+- **Optional**
+
+Configuration options for the observable.
+
+## Return Type
+
+The Member data.
+
+```ts
+{
+    error: Error | undefined;
+    status: "error" | "loading" | "loaded";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    userId: string;
+    streamId: string;
+    initialized: boolean;
+    username: string;
+    isUsernameConfirmed: boolean;
+    isUsernameEncrypted: boolean;
+    displayName: string;
+    isDisplayNameEncrypted: boolean | undefined;
+    ensAddress: string | undefined;
+    nft: NftModel | undefined;
+    membership: MembershipOp | undefined;
+} | {
+    error: Error | undefined;
+    status: "error" | "loading" | "loaded";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    userId: string;
+    streamId: string;
+    initialized: boolean;
+    username: string;
+    isUsernameConfirmed: boolean;
+    isUsernameEncrypted: boolean;
+    displayName: string;
+    isDisplayNameEncrypted: boolean | undefined;
+    ensAddress: string | undefined;
+    nft: NftModel | undefined;
+    membership: MembershipOp | undefined;
+} | {
+    error: Error | undefined;
+    status: "error" | "loading" | "loaded";
+    isLoading: boolean;
+    isError: boolean;
+    isLoaded: boolean;
+    userId: string;
+    streamId: string;
+    initialized: boolean;
+    username: string;
+    isUsernameConfirmed: boolean;
+    isUsernameEncrypted: boolean;
+    displayName: string;
+    isDisplayNameEncrypted: boolean | undefined;
+    ensAddress: string | undefined;
+    nft: NftModel | undefined;
+    membership: MembershipOp | undefined;
+}
+```

@@ -902,6 +902,19 @@ func getNumPartitionSettings(ctx context.Context, pool *pgxpool.Pool) (int, erro
 	return numPartitions, nil
 }
 
+func getNumPartitionSettings(ctx context.Context, pool *pgxpool.Pool) (int, error) {
+	var numPartitions int
+	err := pool.QueryRow(
+		ctx,
+		"select num_partitions from settings where single_row_key=true",
+	).Scan(&numPartitions)
+	if err != nil {
+		return 0, err
+	}
+
+	return numPartitions, nil
+}
+
 func reportProgress(ctx context.Context, message string, progressCounter *atomic.Int64) {
 	lastProgress := progressCounter.Load()
 	startTime := time.Now()

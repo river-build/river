@@ -1,0 +1,158 @@
+---
+title: Getting Started
+---
+
+
+## New Project
+
+You can use the `create-river-build-app` script to scaffold a new React River app.
+
+You can use your preferred package manager to run the command.
+Example using `yarn`:
+
+```bash
+yarn create river-build-app my-app
+```
+
+By default, this will create a new app using the Playground template - a full-featured example application that demonstrates River's capabilities.
+
+### Available Templates
+
+#### Playground Template (default)
+The playground template provides a complete example application with all River features implemented:
+
+```bash
+yarn create river-build-app my-app
+# or explicitly specify the template
+yarn create river-build-app my-app --template playground
+```
+
+#### React Templates
+You can also start with a minimal React setup using either TypeScript or JavaScript:
+
+```bash
+# TypeScript
+yarn create river-build-app my-app --template react-ts
+
+# JavaScript
+yarn create river-build-app my-app --template react
+```
+
+The React templates will:
+1. Run `create-vite` to scaffold the project
+2. Install the necessary dependencies: `@river-build/sdk` and `@river-build/react-sdk`
+3. Add `vite-plugin-node-polyfills` to ensure compatibility with Node.js native modules
+
+## Manual Installation
+
+If you prefer to set up your project manually, you can install the required dependencies:
+
+```bash
+yarn add @river-build/react-sdk @river-build/sdk vite-plugin-node-polyfills
+```
+
+Then, add the `vite-plugin-node-polyfills` to the `vite.config.ts` file:
+
+
+```ts vite.config.ts {1,10}
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  // ...rest of your config
+  plugins: [
+    // ...rest of your plugins
+    react(),
+    nodePolyfills(),
+  ],
+})
+```
+
+# Usage
+
+## Connect to River
+
+### Using Signer: Wagmi + Viem
+
+We suggest you to use [Wagmi](https://wagmi.sh/) to connect to River.
+Wrap your app with `RiverSyncProvider` and use the `useAgentConnection` hook with the `connect` function to connect to River.
+
+> You'll need to use `useEthersSigner` to get the signer from viem wallet client.
+> You can get the hook from [Wagmi docs](https://wagmi.sh/react/guides/ethers#usage-1).
+
+```tsx
+import { RiverSyncProvider, useAgentConnection } from "@river-build/react-sdk";
+import { makeRiverConfig } from "@river-build/sdk";
+import { WagmiProvider } from "wagmi";
+import { useEthersSigner } from "./utils/viem-to-ethers";
+
+const riverConfig = makeRiverConfig("gamma");
+
+const App = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <WagmiProvider config={wagmiConfig}>
+      <RiverSyncProvider>
+        <ConnectRiver />
+      </RiverSyncProvider>
+    </WagmiProvider>
+  );
+};
+
+const ConnectRiver = () => {
+  const { connect, isConnecting, isConnected } = useAgentConnection();
+  const signer = useEthersSigner();
+
+  return (
+    <>
+      <button
+        onClick={() => {
+          if (signer) {
+            connect(signer, { riverConfig });
+          }
+        }}
+      >
+        Connect
+      </button>
+      {isAgentConnecting && <span>Connecting...</span>}
+      {isAgentConnected && <span>Connected!</span>}
+    </>
+  );
+};
+```
+
+### Using Bearer Token
+
+You can use a River bearer token to connect other apps to River without the need of a signer.
+Wrap your app with `RiverSyncProvider` and use the `useAgentConnection` hook with the `connectUsingBearerToken` function to connect to River.
+
+```tsx
+import { RiverSyncProvider, useAgentConnection } from "@river-build/react-sdk";
+import { makeRiverConfig } from "@river-build/sdk";
+
+const riverConfig = makeRiverConfig("gamma");
+
+const App = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <RiverSyncProvider>
+      <ConnectRiver />
+    </RiverSyncProvider>
+  );
+};
+
+const ConnectRiver = () => {
+  const { connectUsingBearerToken, isAgentConnecting, isAgentConnected } = useAgentConnection();
+  const [bearerToken, setBearerToken] = useState('');
+
+  return (
+    <>
+      <input value={bearerToken} onChange={(e) => setBearerToken(e.target.value)} />
+      <button onClick={() => connectUsingBearerToken(bearerToken, { riverConfig })}>
+        Connect
+      </button>
+      {isAgentConnecting && <span>Connecting...</span>}
+      {isAgentConnected && <span>Connected!</span>}
+    </>
+  );
+};
+```

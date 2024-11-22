@@ -1,0 +1,54 @@
+---
+title: useThreads
+---
+## Imports
+
+```ts
+import { useThreads } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useThreads(
+  streamId: string,
+  config?: ObservableConfig.FromObservable<Threads>,
+): {
+    data: {
+        [x: string]: TimelineEvent[];
+    };
+    error: undefined;
+    status: "loading" | "loaded";
+    isLoading: boolean;
+    isError: false;
+    isLoaded: boolean;
+}
+```
+
+**Source:** [useThreads](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useThreads.ts)
+
+## Parameters
+
+### streamId
+
+- **Type:** `string`
+
+### config
+
+- **Type:** `ObservableConfig.FromObservable<Threads>`
+- **Optional**
+
+## Return Type
+
+```ts
+{
+    data: {
+        [x: string]: TimelineEvent[];
+    };
+    error: undefined;
+    status: "loading" | "loaded";
+    isLoading: boolean;
+    isError: false;
+    isLoaded: boolean;
+}
+```
