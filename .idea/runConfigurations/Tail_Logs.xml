@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Tail Logs" type="JustRunConfiguration" factoryName="JustRunConfiguration">
+    <option name="envVariables" value="RUN_ENV=multi_ne" />
+    <option name="fileName" value="core/justfile" />
+    <option name="recipeArgs" />
+    <option name="recipeName" value="tail-logs" />
+    <method v="2" />
+  </configuration>
+</component>

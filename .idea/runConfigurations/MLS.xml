@@ -1,0 +1,19 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="MLS" type="JavaScriptTestRunnerJest">
+    <config-file value="$PROJECT_DIR$/packages/sdk/jest.config.ts" />
+    <node-interpreter value="project" />
+    <node-options value="--experimental-vm-modules" />
+    <jest-package value="$PROJECT_DIR$/node_modules/jest" />
+    <working-dir value="$PROJECT_DIR$" />
+    <envs>
+      <env name="DEBUG" value="jest" />
+      <env name="NODE_ENV" value="development" />
+      <env name="NODE_EXTRA_CA_CERTS" value="$USER_HOME$/river-ca-cert.pem" />
+      <env name="NODE_TLS_REJECT_UNAUTHORIZED" value="0" />
+      <env name="RIVER_ENV" value="local_multi_ne" />
+    </envs>
+    <scope-kind value="TEST_FILE" />
+    <test-file value="$PROJECT_DIR$/packages/sdk/src/mls.test.ts" />
+    <method v="2" />
+  </configuration>
+</component>

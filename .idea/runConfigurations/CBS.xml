@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="CBS" type="JustRunConfiguration" factoryName="JustRunConfiguration">
+    <option name="envVariables" value="RUN_ENV=multi_ne" />
+    <option name="fileName" value="core/justfile" />
+    <option name="recipeArgs" />
+    <option name="recipeName" value="config-and-start" />
+    <method v="2" />
+  </configuration>
+</component>
