@@ -97,24 +97,7 @@ contract SpaceDelegationTest is
     vm.prank(deployer);
     spaceDelegationFacet.addSpaceDelegation(space, operators[1]);
 
-    StakingState memory state = rewardsDistributionFacet.stakingState();
-    StakingRewards.Treasure memory spaceTreasure = rewardsDistributionFacet
-      .treasureByBeneficiary(space);
-
-    assertEq(spaceTreasure.earningPower, (amount * commissionRates[0]) / 10000);
-    assertEq(
-      spaceTreasure.rewardPerTokenAccumulated,
-      state.rewardPerTokenAccumulated
-    );
-    assertEq(spaceTreasure.unclaimedRewardSnapshot, 0);
-
-    assertEq(
-      rewardsDistributionFacet
-        .treasureByBeneficiary(operators[0])
-        .unclaimedRewardSnapshot,
-      spaceTreasure.earningPower *
-        state.rewardRate.fullMulDiv(timeLapse, state.totalStaked)
-    );
+    verifySweep(space, operators[0], amount, commissionRates[0], timeLapse);
   }
 
   function test_fuzz_addSpaceDelegation_forfeitRewardsIfUndelegated(
@@ -186,8 +169,32 @@ contract SpaceDelegationTest is
     spaceDelegationFacet.removeSpaceDelegation(address(0));
   }
 
-  function test_fuzz_removeSpaceDelegation(address operator) public {
-    address space = test_fuzz_addSpaceDelegation(operator, 0);
+  function test_fuzz_removeSpaceDelegation(
+    address operator,
+    uint256 commissionRate,
+    uint256 rewardAmount,
+    uint256 timeLapse
+  ) public {
+    commissionRate = bound(commissionRate, 1, 10000);
+    address space = test_fuzz_addSpaceDelegation(operator, commissionRate);
+
+    rewardAmount = boundReward(rewardAmount);
+    bridgeTokensForUser(address(rewardsDistributionFacet), rewardAmount);
+
+    vm.prank(NOTIFIER);
+    rewardsDistributionFacet.notifyRewardAmount(rewardAmount);
+
+    uint96 amount = 1 ether;
+    bridgeTokensForUser(address(this), amount);
+
+    river.approve(address(rewardsDistributionFacet), amount);
+    rewardsDistributionFacet.stake(amount, space, address(this));
+
+    timeLapse = bound(timeLapse, 1, rewardDuration);
+    vm.warp(block.timestamp + timeLapse);
+
+    vm.expectEmit(true, true, true, false, address(spaceDelegationFacet));
+    emit SpaceRewardsSwept(space, operator, 0);
 
     vm.prank(deployer);
     spaceDelegationFacet.removeSpaceDelegation(space);
@@ -196,6 +203,8 @@ contract SpaceDelegationTest is
       space
     );
     assertEq(afterRemovalOperator, address(0), "Space removal failed");
+
+    verifySweep(space, operator, amount, commissionRate, timeLapse);
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/

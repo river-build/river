@@ -342,4 +342,31 @@ abstract contract BaseRegistryTest is BaseSetup, IRewardsDistributionBase {
       "expected reward"
     );
   }
+
+  function verifySweep(
+    address space,
+    address operator,
+    uint256 amount,
+    uint256 commissionRate,
+    uint256 timeLapse
+  ) internal view {
+    StakingState memory state = rewardsDistributionFacet.stakingState();
+    StakingRewards.Treasure memory spaceTreasure = rewardsDistributionFacet
+      .treasureByBeneficiary(space);
+
+    assertEq(spaceTreasure.earningPower, (amount * commissionRate) / 10000);
+    assertEq(
+      spaceTreasure.rewardPerTokenAccumulated,
+      state.rewardPerTokenAccumulated
+    );
+    assertEq(spaceTreasure.unclaimedRewardSnapshot, 0);
+
+    assertEq(
+      rewardsDistributionFacet
+        .treasureByBeneficiary(operator)
+        .unclaimedRewardSnapshot,
+      spaceTreasure.earningPower *
+        state.rewardRate.fullMulDiv(timeLapse, state.totalStaked)
+    );
+  }
 }
