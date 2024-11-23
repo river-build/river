@@ -685,10 +685,12 @@ func TestMainForLeaksIgnoreGeth() {
 		msg := err.Error()
 
 		stacks := strings.Split(msg, "Goroutine ")
+		if len(stacks) > 1 {
+			stacks = stacks[1:]
+		}
 		stacks = slices.DeleteFunc(stacks, func(s string) bool {
 			return strings.Contains(s, "created by github.com/ethereum/go-ethereum/") ||
-				strings.Contains(s, "created by github.com/syndtr/goleveldb/") ||
-				strings.HasPrefix(s, "found unexpected goroutines:")
+				strings.Contains(s, "created by github.com/syndtr/goleveldb/")
 		})
 
 		if len(stacks) > 0 {
@@ -698,7 +700,7 @@ func TestMainForLeaksIgnoreGeth() {
 			)
 			for _, s := range stacks {
 				fmt.Println()
-				fmt.Println(s)
+				fmt.Println("Goroutine", s)
 				fmt.Println()
 			}
 			os.Exit(1)
