@@ -360,12 +360,7 @@ func (s *streamImpl) promoteCandidate(ctx context.Context, mb *MiniblockRef) err
 	defer s.mu.Unlock()
 
 	if s.local == nil {
-		return RiverError(
-			Err_INTERNAL,
-			"promoteCandidate: stream is not local",
-			"streamId",
-			s.streamId,
-		).LogError(dlog.FromCtx(ctx))
+		return nil
 	}
 
 	if err := s.loadInternal(ctx); err != nil {
