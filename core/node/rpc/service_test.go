@@ -56,7 +56,11 @@ func setupTestHttpClient() {
 
 func TestMain(m *testing.M) {
 	setupTestHttpClient()
-	os.Exit(m.Run())
+	c := m.Run()
+	if c != 0 {
+		os.Exit(c)
+	}
+	crypto.TestMainForLeaksIgnoreGeth()
 }
 
 func createUserMetadataStream(
