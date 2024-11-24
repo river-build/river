@@ -35,8 +35,7 @@ import (
 // and share the same set of nodes, notification service and client.
 func TestNotifications(t *testing.T) {
 	tester := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true})
-	ctx, cancel := context.WithCancel(tester.ctx)
-	defer cancel()
+	ctx := tester.ctx
 
 	notificationService, notifications := initNotificationService(ctx, tester)
 	notificationClient := protocolconnect.NewNotificationServiceClient(
@@ -46,14 +45,17 @@ func TestNotifications(t *testing.T) {
 		testHttpClient(t, ctx), "http://"+notificationService.listener.Addr().String())
 
 	t.Run("DMNotifications", func(t *testing.T) {
+		t.Parallel()
 		testDMNotifications(t, ctx, tester, notificationClient, authClient, notifications)
 	})
 
 	t.Run("GDMNotifications", func(t *testing.T) {
+		t.Parallel()
 		testGDMNotifications(t, ctx, tester, notificationClient, authClient, notifications)
 	})
 
 	t.Run("SpaceChannelNotifications", func(t *testing.T) {
+		t.Parallel()
 		testSpaceChannelNotifications(t, ctx, tester, notificationClient, authClient, notifications)
 	})
 }
@@ -149,7 +151,7 @@ func testGDMMessageWithNoMentionsRepliesAndReaction(
 
 		return !cmp.Equal(nc.WebPushNotifications[eventHash], expectedUsersToReceiveNotification) ||
 			!cmp.Equal(nc.ApnPushNotifications[eventHash], expectedUsersToReceiveNotification)
-	}, 5*time.Second, 100*time.Millisecond, "Received unexpected notifications")
+	}, time.Second, 100*time.Millisecond, "Received unexpected notifications")
 }
 
 func testDMNotifications(
@@ -213,7 +215,7 @@ func testDMMessageWithNotificationsMutedOnDmChannel(
 		nc.ApnPushNotificationsMu.Unlock()
 
 		return webCount != expectedNotifications || apnCount != expectedNotifications
-	}, 5*time.Second, 100*time.Millisecond, "Received unexpected notifications")
+	}, time.Second, 100*time.Millisecond, "Received unexpected notifications")
 }
 
 func testDMMessageWithNotificationsMutedGlobal(
@@ -247,7 +249,7 @@ func testDMMessageWithNotificationsMutedGlobal(
 		nc.ApnPushNotificationsMu.Unlock()
 
 		return webCount != expectedUsersToReceiveNotification || apnCount != expectedUsersToReceiveNotification
-	}, 5*time.Second, 100*time.Millisecond, "Received unexpected notifications")
+	}, time.Second, 100*time.Millisecond, "Received unexpected notifications")
 }
 
 func testDMMessageWithDefaultUserNotificationsPreferences(
@@ -296,7 +298,7 @@ func testDMMessageWithDefaultUserNotificationsPreferences(
 
 		return webCount != len(expectedUsersToReceiveNotification) ||
 			apnCount != len(expectedUsersToReceiveNotification)
-	}, 5*time.Second, 100*time.Millisecond, "Received unexpected notifications")
+	}, time.Second, 100*time.Millisecond, "Received unexpected notifications")
 }
 
 func testDMMessageWithBlockedUser(
@@ -336,7 +338,7 @@ func testDMMessageWithBlockedUser(
 		nc.ApnPushNotificationsMu.Unlock()
 
 		return webCount != expectedNotifications || apnCount != expectedNotifications
-	}, 10*time.Second, 100*time.Millisecond, "Received unexpected notifications")
+	}, time.Second, 100*time.Millisecond, "Received unexpected notifications")
 }
 
 func testSpaceChannelNotifications(
@@ -423,7 +425,7 @@ func testSpaceChannelPlainMessage(
 
 		return webCount != len(expectedUsersToReceiveNotification) ||
 			apnCount != len(expectedUsersToReceiveNotification)
-	}, 5*time.Second, 100*time.Millisecond, "Received unexpected notifications")
+	}, time.Second, 100*time.Millisecond, "Received unexpected notifications")
 }
 
 func testSpaceChannelAtChannelTag(
@@ -502,7 +504,7 @@ func testSpaceChannelAtChannelTag(
 
 		return webCount != len(expectedUsersToReceiveNotification) ||
 			apnCount != len(expectedUsersToReceiveNotification)
-	}, 5*time.Second, 100*time.Millisecond, "Received unexpected notifications")
+	}, time.Second, 100*time.Millisecond, "Received unexpected notifications")
 }
 
 func testSpaceChannelMentionTag(
@@ -583,7 +585,7 @@ func testSpaceChannelMentionTag(
 
 		return webCount != len(expectedUsersToReceiveNotification) ||
 			apnCount != len(expectedUsersToReceiveNotification)
-	}, 5*time.Second, 100*time.Millisecond, "Received too unexpected notifications")
+	}, time.Second, 100*time.Millisecond, "Received too unexpected notifications")
 }
 
 func initNotificationService(ctx context.Context, tester *serviceTester) (*Service, *notificationCapture) {
