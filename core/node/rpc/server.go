@@ -16,6 +16,10 @@ import (
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rs/cors"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/auth"
 	. "github.com/river-build/river/core/node/base"
@@ -32,9 +36,6 @@ import (
 	"github.com/river-build/river/core/node/scrub"
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/xchain/entitlement"
-	"github.com/rs/cors"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 )
 
 const (
@@ -490,13 +491,6 @@ func (s *Service) runHttpServer() error {
 			}
 		}
 
-		// ensure that x/http2 is used
-		// https://github.com/golang/go/issues/42534
-		err = http2.ConfigureServer(s.httpServer, nil)
-		if err != nil {
-			return err
-		}
-
 		go s.serveTLS()
 	} else {
 		log.Info("Using H2C server")
@@ -599,7 +593,6 @@ func (s *Service) initNotificationsStore() error {
 			s.exitSignal,
 			s.metrics,
 		)
-
 		if err != nil {
 			return err
 		}
@@ -715,8 +708,14 @@ func (s *Service) initNotificationHandlers() error {
 	ii = append(ii, authInceptor)
 
 	interceptors := connect.WithInterceptors(ii...)
-	notificationServicePattern, notificationServiceHandler := protocolconnect.NewNotificationServiceHandler(s.NotificationService, interceptors)
-	notificationAuthServicePattern, notificationAuthServiceHandler := protocolconnect.NewAuthenticationServiceHandler(s.NotificationService, interceptors)
+	notificationServicePattern, notificationServiceHandler := protocolconnect.NewNotificationServiceHandler(
+		s.NotificationService,
+		interceptors,
+	)
+	notificationAuthServicePattern, notificationAuthServiceHandler := protocolconnect.NewAuthenticationServiceHandler(
+		s.NotificationService,
+		interceptors,
+	)
 
 	s.mux.Handle(notificationServicePattern, newHttpHandler(notificationServiceHandler, s.defaultLogger))
 	s.mux.Handle(notificationAuthServicePattern, newHttpHandler(notificationAuthServiceHandler, s.defaultLogger))
@@ -779,7 +778,7 @@ func createServerFromBase64(
 			Func("createServerFromStrings")
 	}
 
-	return &http.Server{
+	s := &http.Server{
 		Addr:    address,
 		Handler: handler,
 		TLSConfig: &tls.Config{
@@ -789,7 +788,15 @@ func createServerFromBase64(
 			return ctx
 		},
 		ErrorLog: newHttpLogger(ctx),
-	}, nil
+	}
+	// ensure that x/http2 is used
+	// https://github.com/golang/go/issues/42534
+	// TODO: pass config
+	err = http2.ConfigureServer(s, nil)
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 func createServerFromFile(
@@ -806,7 +813,7 @@ func createServerFromFile(
 			Func("createServerFromFile")
 	}
 
-	return &http.Server{
+	s := &http.Server{
 		Addr:    address,
 		Handler: handler,
 		TLSConfig: &tls.Config{
@@ -816,20 +823,34 @@ func createServerFromFile(
 			return ctx
 		},
 		ErrorLog: newHttpLogger(ctx),
-	}, nil
+	}
+	// ensure that x/http2 is used
+	// https://github.com/golang/go/issues/42534
+	// TODO: pass config
+	err = http2.ConfigureServer(s, nil)
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 func createH2CServer(ctx context.Context, address string, handler http.Handler) (*http.Server, error) {
 	// Create an HTTP/2 server without TLS
+	// TODO: init values in h2s
 	h2s := &http2.Server{}
-	return &http.Server{
+	s := &http.Server{
 		Addr:    address,
 		Handler: h2c.NewHandler(handler, h2s),
 		BaseContext: func(listener net.Listener) context.Context {
 			return ctx
 		},
 		ErrorLog: newHttpLogger(ctx),
-	}, nil
+	}
+	err := http2.ConfigureServer(s, h2s)
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 // Struct to match the JSON structure.
