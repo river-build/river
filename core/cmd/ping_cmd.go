@@ -8,6 +8,7 @@ import (
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/crypto"
+	"github.com/river-build/river/core/node/http_client"
 	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/nodes"
 	"github.com/river-build/river/core/node/registries"
@@ -51,8 +52,13 @@ func runPing(cfg *config.Config) error {
 		return err
 	}
 
+	httpClient, err := http_client.GetHttpClient(ctx)
+	if err != nil {
+		return err
+	}
+
 	nodeRegistry, err := nodes.LoadNodeRegistry(
-		ctx, registryContract, common.Address{}, riverChain.InitialBlockNum, riverChain.ChainMonitor, nil)
+		ctx, registryContract, common.Address{}, riverChain.InitialBlockNum, riverChain.ChainMonitor, httpClient, nil)
 	if err != nil {
 		return err
 	}

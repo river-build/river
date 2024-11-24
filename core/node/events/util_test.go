@@ -110,7 +110,10 @@ func makeCacheTestContext(t *testing.T, p testParams) (context.Context, *cacheTe
 
 		blockNumber := btc.BlockNum(ctx)
 
-		nr, err := LoadNodeRegistry(ctx, registry, bc.Wallet.Address, blockNumber, bc.ChainMonitor, nil)
+		httpClient, err := testutils.MakeTestHttpClientMaker(t)(ctx)
+		ctc.require.NoError(err)
+
+		nr, err := LoadNodeRegistry(ctx, registry, bc.Wallet.Address, blockNumber, bc.ChainMonitor, httpClient, nil)
 		ctc.require.NoError(err)
 
 		sr, err := NewStreamRegistry(ctx, bc, bc.Wallet.Address, nr, registry, btc.OnChainConfig)

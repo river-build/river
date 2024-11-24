@@ -2,12 +2,13 @@ package rpc
 
 import (
 	"context"
-	"github.com/river-build/river/core/node/notifications"
 	"log/slog"
 	"net"
 	"net/http"
 	"sync/atomic"
 	"time"
+
+	"github.com/river-build/river/core/node/notifications"
 
 	"connectrpc.com/otelconnect"
 	"github.com/prometheus/client_golang/prometheus"
@@ -70,9 +71,10 @@ type Service struct {
 	entitlementEvaluator *entitlement.Evaluator
 
 	// Network
-	listener   net.Listener
-	httpServer *http.Server
-	mux        httpMux
+	listener       net.Listener
+	httpServer     *http.Server
+	mux            httpMux
+	makeHttpClient func(context.Context) (*http.Client, error)
 
 	// Status string
 	status atomic.Pointer[string]

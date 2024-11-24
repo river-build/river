@@ -25,6 +25,7 @@ import (
 	"github.com/river-build/river/core/node/registries"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
+	"github.com/river-build/river/core/node/testutils"
 	"github.com/river-build/river/core/node/testutils/dbtestutils"
 )
 
@@ -244,6 +245,7 @@ func TestArchiveOneStream(t *testing.T) {
 		common.Address{},
 		bc.InitialBlockNum,
 		bc.ChainMonitor,
+		testHttpClient(t, ctx),
 		nil,
 	)
 	require.NoError(err)
@@ -347,7 +349,14 @@ func TestArchive100Streams(t *testing.T) {
 
 	archiverBC := tester.btc.NewWalletAndBlockchain(ctx)
 	serverCtx, serverCancel := context.WithCancel(ctx)
-	arch, err := StartServerInArchiveMode(serverCtx, archiveCfg, archiverBC, listener, true)
+	arch, err := StartServerInArchiveMode(
+		serverCtx,
+		archiveCfg,
+		archiverBC,
+		listener,
+		testutils.MakeTestHttpClientMaker(tester.t),
+		true,
+	)
 	require.NoError(err)
 
 	arch.Archiver.WaitForStart()
@@ -383,7 +392,14 @@ func TestArchive100StreamsWithData(t *testing.T) {
 
 	archiverBC := tester.btc.NewWalletAndBlockchain(ctx)
 	serverCtx, serverCancel := context.WithCancel(ctx)
-	arch, err := StartServerInArchiveMode(serverCtx, archiveCfg, archiverBC, listener, true)
+	arch, err := StartServerInArchiveMode(
+		serverCtx,
+		archiveCfg,
+		archiverBC,
+		listener,
+		testutils.MakeTestHttpClientMaker(tester.t),
+		true,
+	)
 	require.NoError(err)
 
 	arch.Archiver.WaitForStart()
@@ -436,7 +452,14 @@ func TestArchiveContinuous(t *testing.T) {
 
 	archiverBC := tester.btc.NewWalletAndBlockchain(ctx)
 	serverCtx, serverCancel := context.WithCancel(ctx)
-	arch, err := StartServerInArchiveMode(serverCtx, archiveCfg, archiverBC, listener, false)
+	arch, err := StartServerInArchiveMode(
+		serverCtx,
+		archiveCfg,
+		archiverBC,
+		listener,
+		testutils.MakeTestHttpClientMaker(tester.t),
+		false,
+	)
 	require.NoError(err)
 
 	arch.Archiver.WaitForStart()

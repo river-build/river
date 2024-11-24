@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/big"
 	"net"
+	"net/http"
 	"slices"
 	"testing"
 	"time"
@@ -22,10 +23,10 @@ import (
 	"github.com/river-build/river/core/contracts/river"
 	"github.com/river-build/river/core/node/base/test"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/nodes"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
+	"github.com/river-build/river/core/node/testutils"
 	"github.com/river-build/river/core/node/testutils/dbtestutils"
 )
 
@@ -260,7 +261,7 @@ func (st *serviceTester) startSingle(i int, opts ...startOpts) error {
 	}
 
 	bc := st.btc.GetBlockchain(st.ctx, i)
-	service, err := StartServer(st.ctx, cfg, bc, listener)
+	service, err := StartServer(st.ctx, cfg, bc, listener, testutils.MakeTestHttpClientMaker(st.t))
 	if err != nil {
 		if service != nil {
 			// Sanity check
@@ -280,11 +281,17 @@ func (st *serviceTester) startSingle(i int, opts ...startOpts) error {
 }
 
 func (st *serviceTester) testClient(i int) protocolconnect.StreamServiceClient {
-	return testClient(st.nodes[i].url)
+	return testClient(st.t, st.ctx, st.nodes[i].url)
 }
 
-func testClient(url string) protocolconnect.StreamServiceClient {
-	return protocolconnect.NewStreamServiceClient(nodes.TestHttpClientMaker(), url, connect.WithGRPCWeb())
+func testHttpClient(t *testing.T, ctx context.Context) *http.Client {
+	client, err := testutils.MakeTestHttpClientMaker(t)(ctx)
+	require.NoError(t, err)
+	return client
+}
+
+func testClient(t *testing.T, ctx context.Context, url string) protocolconnect.StreamServiceClient {
+	return protocolconnect.NewStreamServiceClient(testHttpClient(t, ctx), url, connect.WithGRPCWeb())
 }
 
 func bytesHash(b []byte) uint64 {

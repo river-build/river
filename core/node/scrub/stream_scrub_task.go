@@ -111,6 +111,11 @@ func NewStreamScrubTasksProcessor(
 		proc.userBoots = userBoots
 	}
 
+	go func() {
+		<-ctx.Done()
+		proc.workerPool.Stop()
+	}()
+
 	return proc, nil
 }
 

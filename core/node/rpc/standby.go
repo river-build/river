@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/river-build/river/core/node/http_client"
-	"github.com/river-build/river/core/node/nodes"
 	"github.com/river-build/river/core/node/rpc/statusinfo"
 )
 
@@ -33,15 +31,12 @@ func (s *Service) standby() error {
 		// TODO: make here client with disabled keep-alive.
 		var client *http.Client
 		var err error
-		if nodes.TestHttpClientMaker != nil {
-			client = nodes.TestHttpClientMaker()
-		} else {
-			client, err = http_client.GetHttpClient(ctx)
-			if err != nil {
-				return err
-			}
-			client.Timeout = s.config.Network.GetHttpRequestTimeout()
+		client, err = s.makeHttpClient(ctx)
+		if err != nil {
+			return err
 		}
+		client.Timeout = s.config.Network.GetHttpRequestTimeout()
+		defer client.CloseIdleConnections()
 
 		localNode, err := s.nodeRegistry.GetNode(s.wallet.Address)
 		if err != nil {

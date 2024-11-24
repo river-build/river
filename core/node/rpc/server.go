@@ -16,12 +16,17 @@ import (
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rs/cors"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/auth"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/http_client"
 	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/nodes"
 	"github.com/river-build/river/core/node/notifications"
@@ -32,9 +37,6 @@ import (
 	"github.com/river-build/river/core/node/scrub"
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/xchain/entitlement"
-	"github.com/rs/cors"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 )
 
 const (
@@ -211,6 +213,9 @@ func (s *Service) initInstance(mode string) {
 			"port", port,
 		)
 	}
+	if s.makeHttpClient == nil {
+		s.makeHttpClient = http_client.GetHttpClient
+	}
 	s.serverCtx = dlog.CtxWithLog(s.serverCtx, s.defaultLogger)
 
 	var (
@@ -330,6 +335,12 @@ func (s *Service) initRiverChain() error {
 		return err
 	}
 
+	httpClient, err := s.makeHttpClient(ctx)
+	if err != nil {
+		return err
+	}
+	s.onClose(httpClient.CloseIdleConnections)
+
 	var walletAddress common.Address
 	if s.wallet != nil {
 		walletAddress = s.wallet.Address
@@ -340,6 +351,7 @@ func (s *Service) initRiverChain() error {
 		walletAddress,
 		s.riverChain.InitialBlockNum,
 		s.riverChain.ChainMonitor,
+		httpClient,
 		s.otelConnectIterceptor,
 	)
 	if err != nil {
@@ -599,7 +611,6 @@ func (s *Service) initNotificationsStore() error {
 			s.exitSignal,
 			s.metrics,
 		)
-
 		if err != nil {
 			return err
 		}
@@ -715,8 +726,14 @@ func (s *Service) initNotificationHandlers() error {
 	ii = append(ii, authInceptor)
 
 	interceptors := connect.WithInterceptors(ii...)
-	notificationServicePattern, notificationServiceHandler := protocolconnect.NewNotificationServiceHandler(s.NotificationService, interceptors)
-	notificationAuthServicePattern, notificationAuthServiceHandler := protocolconnect.NewAuthenticationServiceHandler(s.NotificationService, interceptors)
+	notificationServicePattern, notificationServiceHandler := protocolconnect.NewNotificationServiceHandler(
+		s.NotificationService,
+		interceptors,
+	)
+	notificationAuthServicePattern, notificationAuthServiceHandler := protocolconnect.NewAuthenticationServiceHandler(
+		s.NotificationService,
+		interceptors,
+	)
 
 	s.mux.Handle(notificationServicePattern, newHttpHandler(notificationServiceHandler, s.defaultLogger))
 	s.mux.Handle(notificationAuthServicePattern, newHttpHandler(notificationAuthServiceHandler, s.defaultLogger))
@@ -735,15 +752,17 @@ func StartServer(
 	cfg *config.Config,
 	riverChain *crypto.Blockchain,
 	listener net.Listener,
+	makeHttpClient func(context.Context) (*http.Client, error),
 ) (*Service, error) {
 	ctx = config.CtxWithConfig(ctx, cfg)
 
 	streamService := &Service{
-		serverCtx:  ctx,
-		config:     cfg,
-		riverChain: riverChain,
-		listener:   listener,
-		exitSignal: make(chan error, 16),
+		serverCtx:      ctx,
+		config:         cfg,
+		riverChain:     riverChain,
+		listener:       listener,
+		makeHttpClient: makeHttpClient,
+		exitSignal:     make(chan error, 16),
 	}
 
 	err := streamService.start()

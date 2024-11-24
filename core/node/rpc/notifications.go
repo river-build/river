@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/river-build/river/core/config"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
@@ -59,6 +61,11 @@ func (s *Service) startNotificationMode(notifier push.MessageNotifier) error {
 		notifier,
 	)
 
+	httpClient, err := s.makeHttpClient(s.serverCtx)
+	if err != nil {
+		return AsRiverError(err).Message("Failed to get http client").LogError(s.defaultLogger)
+	}
+	s.onClose(httpClient.CloseIdleConnections)
 	var registries []nodes.NodeRegistry
 	for range 10 {
 		registry, err := nodes.LoadNodeRegistry(
@@ -67,8 +74,8 @@ func (s *Service) startNotificationMode(notifier push.MessageNotifier) error {
 			common.Address{},
 			s.riverChain.InitialBlockNum,
 			s.riverChain.ChainMonitor,
+			httpClient,
 			s.otelConnectIterceptor)
-
 		if err != nil {
 			return err
 		}
@@ -122,14 +129,16 @@ func StartServerInNotificationMode(
 	cfg *config.Config,
 	riverChain *crypto.Blockchain,
 	listener net.Listener,
+	makeHttpClient func(context.Context) (*http.Client, error),
 	notifier push.MessageNotifier,
 ) (*Service, error) {
 	notificationService := &Service{
-		serverCtx:  ctx,
-		config:     cfg,
-		riverChain: riverChain,
-		listener:   listener,
-		exitSignal: make(chan error, 1),
+		serverCtx:      ctx,
+		config:         cfg,
+		riverChain:     riverChain,
+		listener:       listener,
+		makeHttpClient: makeHttpClient,
+		exitSignal:     make(chan error, 1),
 	}
 
 	err := notificationService.startNotificationMode(notifier)
@@ -147,7 +156,7 @@ func RunNotificationService(ctx context.Context, cfg *config.Config) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	service, err := StartServerInNotificationMode(ctx, cfg, nil, nil, nil)
+	service, err := StartServerInNotificationMode(ctx, cfg, nil, nil, nil, nil)
 	if err != nil {
 		log.Error("Failed to start server", "error", err)
 		return err
@@ -163,6 +172,6 @@ func RunNotificationService(ctx context.Context, cfg *config.Config) error {
 	}()
 
 	err = <-service.exitSignal
-	//log.Info("Notification stats", "stats", service.Archiver.GetStats())
+	// log.Info("Notification stats", "stats", service.Archiver.GetStats())
 	return err
 }

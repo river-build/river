@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
@@ -79,14 +80,16 @@ func StartServerInArchiveMode(
 	cfg *config.Config,
 	riverChain *crypto.Blockchain,
 	listener net.Listener,
+	makeHttpClient func(context.Context) (*http.Client, error),
 	once bool,
 ) (*Service, error) {
 	streamService := &Service{
-		serverCtx:  ctx,
-		config:     cfg,
-		riverChain: riverChain,
-		listener:   listener,
-		exitSignal: make(chan error, 1),
+		serverCtx:      ctx,
+		config:         cfg,
+		riverChain:     riverChain,
+		listener:       listener,
+		makeHttpClient: makeHttpClient,
+		exitSignal:     make(chan error, 1),
 	}
 
 	err := streamService.startArchiveMode(once)
@@ -104,7 +107,7 @@ func RunArchive(ctx context.Context, cfg *config.Config, once bool) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	service, err := StartServerInArchiveMode(ctx, cfg, nil, nil, once)
+	service, err := StartServerInArchiveMode(ctx, cfg, nil, nil, nil, once)
 	if err != nil {
 		log.Error("Failed to start server", "error", err)
 		return err
