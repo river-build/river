@@ -3,7 +3,6 @@ package rpc
 import (
 	"context"
 	"io"
-	"net"
 	"net/http"
 	"sync"
 	"testing"
@@ -345,16 +344,13 @@ func TestArchive100Streams(t *testing.T) {
 	archiveCfg := tester.getConfig()
 	archiveCfg.Archive.ArchiveId = "arch" + GenShortNanoid()
 
-	listener, err := net.Listen("tcp", "localhost:0")
-	require.NoError(err)
-
 	archiverBC := tester.btc.NewWalletAndBlockchain(ctx)
 	serverCtx, serverCancel := context.WithCancel(ctx)
 	arch, err := StartServerInArchiveMode(
 		serverCtx,
 		archiveCfg,
 		archiverBC,
-		listener,
+		tester.getListener(),
 		testutils.MakeTestHttpClientMaker(tester.t),
 		true,
 	)
@@ -389,20 +385,18 @@ func TestArchive100StreamsWithData(t *testing.T) {
 	archiveCfg.Archive.ArchiveId = "arch" + GenShortNanoid()
 	archiveCfg.Archive.ReadMiniblocksSize = 3
 
-	listener, err := net.Listen("tcp", "localhost:0")
-	require.NoError(err)
-
 	archiverBC := tester.btc.NewWalletAndBlockchain(ctx)
 	serverCtx, serverCancel := context.WithCancel(ctx)
 	arch, err := StartServerInArchiveMode(
 		serverCtx,
 		archiveCfg,
 		archiverBC,
-		listener,
+		tester.getListener(),
 		testutils.MakeTestHttpClientMaker(tester.t),
 		true,
 	)
 	require.NoError(err)
+	t.Cleanup(arch.Close)
 
 	arch.Archiver.WaitForStart()
 	require.Len(arch.ExitSignal(), 0)
@@ -449,8 +443,7 @@ func TestArchiveContinuous(t *testing.T) {
 	archiveCfg.Archive.ArchiveId = "arch" + GenShortNanoid()
 	archiveCfg.Archive.ReadMiniblocksSize = 3
 
-	listener, err := net.Listen("tcp", "localhost:0")
-	require.NoError(err)
+	listener := tester.getListener()
 
 	archiverBC := tester.btc.NewWalletAndBlockchain(ctx)
 	serverCtx, serverCancel := context.WithCancel(ctx)
@@ -463,7 +456,7 @@ func TestArchiveContinuous(t *testing.T) {
 		false,
 	)
 	require.NoError(err)
-
+	t.Cleanup(arch.Close)
 	arch.Archiver.WaitForStart()
 	require.Len(arch.ExitSignal(), 0)
 

@@ -80,9 +80,7 @@ func TestStandbyEvictionByNlbSwitch(t *testing.T) {
 	tester.nodes[0].listener = nil
 	var redirectAddr atomic.Pointer[string]
 
-	firstListener, err := net.Listen("tcp", "localhost:0")
-	require.NoError(err)
-	t.Cleanup(func() { _ = firstListener.Close() })
+	firstListener := tester.getListener()
 	firstAddr := firstListener.Addr().String()
 	firstUrl := "http://" + firstAddr
 	redirectAddr.Store(&firstAddr)
@@ -104,9 +102,7 @@ func TestStandbyEvictionByNlbSwitch(t *testing.T) {
 		exitStatus <- firstExit
 	}()
 
-	secondListener, err := net.Listen("tcp", "localhost:0")
-	require.NoError(err)
-	t.Cleanup(func() { _ = secondListener.Close() })
+	secondListener := tester.getListener()
 	secondAddr := secondListener.Addr().String()
 	secondUrl := "http://" + secondAddr
 
@@ -167,8 +163,7 @@ func TestStandbyEvictionByUrlUpdate(t *testing.T) {
 		exitStatus <- firstExit
 	}()
 
-	secondListener, err := net.Listen("tcp", "localhost:0")
-	require.NoError(err)
+	secondListener := tester.getListener()
 	secondAddr := secondListener.Addr().String()
 	secondUrl := "http://" + secondAddr
 

@@ -22,7 +22,7 @@ func TestServerShutdown(t *testing.T) {
 	log := dlog.FromCtx(ctx)
 
 	stub := tester.testClient(0)
-	// url := tester.nodes[0].url
+	url := tester.nodes[0].url
 
 	_, err := stub.Info(ctx, connect.NewRequest(&protocol.InfoRequest{}))
 	require.NoError(err)
@@ -31,9 +31,9 @@ func TestServerShutdown(t *testing.T) {
 	tester.nodes[0].Close(ctx, tester.dbUrl)
 	log.Info("Server shut down")
 
-	// 	stub2 := testClient(url)
-	// 	_, err = stub2.Info(ctx, connect.NewRequest(&protocol.InfoRequest{}))
-	// 	require.Error(err)
+	stub2 := testClient(t, ctx, url)
+	_, err = stub2.Info(ctx, connect.NewRequest(&protocol.InfoRequest{}))
+	require.Error(err)
 }
 
 func createGDMChannel(

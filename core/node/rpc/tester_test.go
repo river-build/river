@@ -106,8 +106,7 @@ func newServiceTester(t *testing.T, opts serviceTesterOpts) *serviceTester {
 		// This is a hack to get the port number of the listener
 		// so we can register it in the contract before starting
 		// the server
-		listener, err := net.Listen("tcp", "localhost:0")
-		require.NoError(err)
+		listener := st.getListener()
 		st.nodes[i].listener = listener
 
 		port := listener.Addr().(*net.TCPAddr).Port
@@ -410,4 +409,11 @@ func (st *serviceTester) eventuallyCompareStreamDataInStorage(
 		20*time.Second,
 		100*time.Millisecond,
 	)
+}
+
+func (st *serviceTester) getListener() net.Listener {
+	listener, err := net.Listen("tcp", "localhost:0")
+	st.require.NoError(err)
+	st.t.Cleanup(func() { _ = listener.Close() })
+	return listener
 }

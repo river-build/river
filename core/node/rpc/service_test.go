@@ -461,6 +461,7 @@ func testMethodsWithClient(tester *serviceTester, client protocolconnect.StreamS
 	require.NoError(err)
 
 	syncCtx, syncCancel := context.WithCancel(ctx)
+	tester.t.Cleanup(syncCancel)
 	syncRes, err := client.SyncStreams(
 		syncCtx,
 		connect.NewRequest(
@@ -472,7 +473,7 @@ func testMethodsWithClient(tester *serviceTester, client protocolconnect.StreamS
 		),
 	)
 	require.NoError(err)
-
+	tester.t.Cleanup(func() { _ = syncRes.Close() })
 	syncRes.Receive()
 	// verify the first message is new a sync
 	syncRes.Receive()
@@ -481,6 +482,7 @@ func testMethodsWithClient(tester *serviceTester, client protocolconnect.StreamS
 	require.True(len(msg.SyncId) > 0, "expected non-empty sync id")
 	msg = syncRes.Msg()
 	syncCancel()
+	_ = syncRes.Close()
 
 	require.NotNil(msg.Stream, "expected non-nil stream")
 
@@ -611,6 +613,7 @@ func testSyncStreams(tester *serviceTester) {
 	*/
 	// sync streams
 	syncCtx, syncCancel := context.WithCancel(ctx)
+	tester.t.Cleanup(syncCancel)
 	syncRes, err := client.SyncStreams(
 		syncCtx,
 		connect.NewRequest(
@@ -621,7 +624,8 @@ func testSyncStreams(tester *serviceTester) {
 			},
 		),
 	)
-	require.Nilf(err, "error calling SyncStreams: %v", err)
+	require.NoError(err, "error calling SyncStreams")
+	tester.t.Cleanup(func() { _ = syncRes.Close() })
 	// get the syncId for requires later
 	syncRes.Receive()
 	syncId := syncRes.Msg().SyncId
@@ -700,6 +704,7 @@ func testAddStreamsToSync(tester *serviceTester) {
 	*/
 	// bob sync streams
 	syncCtx, syncCancel := context.WithCancel(ctx)
+	tester.t.Cleanup(syncCancel)
 	syncRes, err := bobClient.SyncStreams(
 		syncCtx,
 		connect.NewRequest(
@@ -708,7 +713,8 @@ func testAddStreamsToSync(tester *serviceTester) {
 			},
 		),
 	)
-	require.Nilf(err, "error calling SyncStreams: %v", err)
+	require.NoError(err, "error calling SyncStreams")
+	tester.t.Cleanup(func() { _ = syncRes.Close() })
 	// get the syncId for requires later
 	syncRes.Receive()
 	syncId := syncRes.Msg().SyncId
@@ -789,6 +795,7 @@ func testRemoveStreamsFromSync(tester *serviceTester) {
 	require.NotNil(channel1, "nil sync cookie")
 	// bob sync streams
 	syncCtx, syncCancel := context.WithCancel(ctx)
+	tester.t.Cleanup(syncCancel)
 	syncRes, err := bobClient.SyncStreams(
 		syncCtx,
 		connect.NewRequest(
@@ -797,10 +804,12 @@ func testRemoveStreamsFromSync(tester *serviceTester) {
 			},
 		),
 	)
-	require.Nilf(err, "error calling SyncStreams: %v", err)
+	require.NoError(err, "error calling SyncStreams")
+	tester.t.Cleanup(func() { _ = syncRes.Close() })
 	// get the syncId for requires later
 	syncRes.Receive()
 	syncId := syncRes.Msg().SyncId
+	require.NotEmpty(syncId, "expected non-empty sync id")
 
 	// add an event to verify that sync is working
 	message1, err := events.MakeEnvelopeWithPayload(
@@ -808,7 +817,7 @@ func testRemoveStreamsFromSync(tester *serviceTester) {
 		events.Make_ChannelPayload_Message("hello"),
 		channelHash,
 	)
-	require.Nilf(err, "error creating message event: %v", err)
+	require.NoError(err, "error creating message event")
 	_, err = aliceClient.AddEvent(
 		ctx,
 		connect.NewRequest(
@@ -818,7 +827,7 @@ func testRemoveStreamsFromSync(tester *serviceTester) {
 			},
 		),
 	)
-	require.Nilf(err, "error calling AddEvent: %v", err)
+	require.NoError(err, "error calling AddEvent")
 
 	// bob adds alice's stream to sync
 	resp, err := bobClient.AddStreamToSync(
@@ -870,6 +879,7 @@ OuterLoop:
 		),
 	)
 	require.Nilf(err, "error calling RemoveStreamsFromSync: %v", err)
+	require.NotNil(removeRes.Msg, "expected non-nil remove response")
 
 	// alice sends another message
 	message2, err := events.MakeEnvelopeWithPayload(
@@ -889,7 +899,7 @@ OuterLoop:
 	)
 	require.Nilf(err, "error calling AddEvent: %v", err)
 
-	gotUnexpectedMsg := make(chan *protocol.SyncStreamsResponse)
+	gotUnexpectedMsg := make(chan *protocol.SyncStreamsResponse, 1)
 	go func() {
 		if syncRes.Receive() {
 			gotUnexpectedMsg <- syncRes.Msg()
@@ -897,19 +907,17 @@ OuterLoop:
 	}()
 
 	select {
-	case <-time.After(3 * time.Second):
+	case <-time.After(1 * time.Second):
 		break
 	case <-gotUnexpectedMsg:
 		require.Fail("received message after stream was removed from sync")
 	}
 
-	syncCancel()
+	_, err = bobClient.CancelSync(ctx, connect.NewRequest(&protocol.CancelSyncRequest{SyncId: syncId}))
+	require.NoError(err, "error calling CancelSync")
 
-	/**
-	requires
-	*/
-	require.NotEmpty(syncId, "expected non-empty sync id")
-	require.NotNil(removeRes.Msg, "expected non-nil remove response")
+	syncRes.Close()
+	syncCancel()
 }
 
 type testFunc func(*serviceTester)
@@ -1532,7 +1540,7 @@ func TestStreamSyncPingPong(t *testing.T) {
 						)
 						req.NoError(err, "ping sync")
 					}
-					client.CancelSync(ctx, connect.NewRequest(&protocol.CancelSyncRequest{SyncId: syncID}))
+					_, _ = client.CancelSync(ctx, connect.NewRequest(&protocol.CancelSyncRequest{SyncId: syncID}))
 				}()
 			case protocol.SyncOp_SYNC_PONG:
 				req.NotEmpty(syncID, "expected non-empty sync id")

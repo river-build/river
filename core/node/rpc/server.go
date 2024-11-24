@@ -502,13 +502,6 @@ func (s *Service) runHttpServer() error {
 			}
 		}
 
-		// ensure that x/http2 is used
-		// https://github.com/golang/go/issues/42534
-		err = http2.ConfigureServer(s.httpServer, nil)
-		if err != nil {
-			return err
-		}
-
 		go s.serveTLS()
 	} else {
 		log.Info("Using H2C server")
@@ -798,7 +791,7 @@ func createServerFromBase64(
 			Func("createServerFromStrings")
 	}
 
-	return &http.Server{
+	s := &http.Server{
 		Addr:    address,
 		Handler: handler,
 		TLSConfig: &tls.Config{
@@ -808,7 +801,15 @@ func createServerFromBase64(
 			return ctx
 		},
 		ErrorLog: newHttpLogger(ctx),
-	}, nil
+	}
+	// ensure that x/http2 is used
+	// https://github.com/golang/go/issues/42534
+	// TODO: pass config
+	err = http2.ConfigureServer(s, nil)
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 func createServerFromFile(
@@ -825,7 +826,7 @@ func createServerFromFile(
 			Func("createServerFromFile")
 	}
 
-	return &http.Server{
+	s := &http.Server{
 		Addr:    address,
 		Handler: handler,
 		TLSConfig: &tls.Config{
@@ -835,20 +836,34 @@ func createServerFromFile(
 			return ctx
 		},
 		ErrorLog: newHttpLogger(ctx),
-	}, nil
+	}
+	// ensure that x/http2 is used
+	// https://github.com/golang/go/issues/42534
+	// TODO: pass config
+	err = http2.ConfigureServer(s, nil)
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 func createH2CServer(ctx context.Context, address string, handler http.Handler) (*http.Server, error) {
 	// Create an HTTP/2 server without TLS
 	h2s := &http2.Server{}
-	return &http.Server{
+	s := &http.Server{
 		Addr:    address,
 		Handler: h2c.NewHandler(handler, h2s),
 		BaseContext: func(listener net.Listener) context.Context {
 			return ctx
 		},
 		ErrorLog: newHttpLogger(ctx),
-	}, nil
+	}
+	// TODO: pass config
+	err := http2.ConfigureServer(s, nil)
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 // Struct to match the JSON structure.
