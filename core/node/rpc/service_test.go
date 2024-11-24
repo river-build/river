@@ -1516,12 +1516,6 @@ func TestStreamSyncPingPong(t *testing.T) {
 	req.NoError(err, "sync streams")
 
 	pings := []string{"ping1", "ping2", "ping3", "ping4", "ping5"}
-	sendPings := func() {
-		for _, ping := range pings {
-			_, err := client.PingSync(ctx, connect.NewRequest(&protocol.PingSyncRequest{SyncId: syncID, Nonce: ping}))
-			req.NoError(err, "ping sync")
-		}
-	}
 
 	go func() {
 		for syncRes.Receive() {
@@ -1530,7 +1524,16 @@ func TestStreamSyncPingPong(t *testing.T) {
 			case protocol.SyncOp_SYNC_NEW:
 				syncID = msg.GetSyncId()
 				// send some pings and ensure all pongs are received
-				sendPings()
+				go func() {
+					for _, ping := range pings {
+						_, err := client.PingSync(
+							ctx,
+							connect.NewRequest(&protocol.PingSyncRequest{SyncId: syncID, Nonce: ping}),
+						)
+						req.NoError(err, "ping sync")
+					}
+					client.CancelSync(ctx, connect.NewRequest(&protocol.CancelSyncRequest{SyncId: syncID}))
+				}()
 			case protocol.SyncOp_SYNC_PONG:
 				req.NotEmpty(syncID, "expected non-empty sync id")
 				req.Equal(syncID, msg.GetSyncId(), "sync id")
