@@ -265,6 +265,7 @@ func TestArchiveOneStream(t *testing.T) {
 		infra.NewMetricsFactory(nil, "", ""),
 	)
 	require.NoError(err)
+	t.Cleanup(func() { streamStorage.Close(ctx) })
 
 	arch := NewArchiver(&archiveCfg.Archive, registryContract, nodeRegistry, streamStorage)
 
@@ -358,6 +359,7 @@ func TestArchive100Streams(t *testing.T) {
 		true,
 	)
 	require.NoError(err)
+	t.Cleanup(arch.Close)
 
 	arch.Archiver.WaitForStart()
 	require.Len(arch.ExitSignal(), 0)

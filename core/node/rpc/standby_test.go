@@ -82,11 +82,12 @@ func TestStandbyEvictionByNlbSwitch(t *testing.T) {
 
 	firstListener, err := net.Listen("tcp", "localhost:0")
 	require.NoError(err)
+	t.Cleanup(func() { _ = firstListener.Close() })
 	firstAddr := firstListener.Addr().String()
 	firstUrl := "http://" + firstAddr
 	redirectAddr.Store(&firstAddr)
 
-	go redirect(redirector, &redirectAddr)
+	go redirect(t, redirector, &redirectAddr)
 
 	opts := stanbyStartOpts()
 	opts.listeners = []net.Listener{firstListener}
@@ -105,6 +106,7 @@ func TestStandbyEvictionByNlbSwitch(t *testing.T) {
 
 	secondListener, err := net.Listen("tcp", "localhost:0")
 	require.NoError(err)
+	t.Cleanup(func() { _ = secondListener.Close() })
 	secondAddr := secondListener.Addr().String()
 	secondUrl := "http://" + secondAddr
 
@@ -199,28 +201,32 @@ func TestStandbyEvictionByUrlUpdate(t *testing.T) {
 	require.Equal(Err_RESOURCE_EXHAUSTED, AsRiverError(firstErr).Code)
 }
 
-func redirect(listener net.Listener, redirectAddress *atomic.Pointer[string]) {
-	defer listener.Close()
+func redirect(t *testing.T, listener net.Listener, redirectAddress *atomic.Pointer[string]) {
+	t.Cleanup(func() { _ = listener.Close() })
 
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			panic(err)
+			if errors.Is(err, net.ErrClosed) {
+				return
+			}
+			require.FailNow(t, "Failed to accept connection", "error", err)
+			return
 		}
+		t.Cleanup(func() { _ = conn.Close() })
 
 		addr := *redirectAddress.Load()
-		go handleConnection(conn, addr)
+		go handleConnection(t, conn, addr)
 	}
 }
 
-func handleConnection(sourceConn net.Conn, targetAddr string) {
-	defer sourceConn.Close()
-
+func handleConnection(t *testing.T, sourceConn net.Conn, targetAddr string) {
 	targetConn, err := net.Dial("tcp", targetAddr)
 	if err != nil {
-		panic(err)
+		require.FailNow(t, "Failed to connect to target", "error", err)
+		return
 	}
-	defer targetConn.Close()
+	t.Cleanup(func() { _ = targetConn.Close() })
 
 	// Copy sourceConn's data to targetConn
 	go func() { _, _ = io.Copy(targetConn, sourceConn) }()
