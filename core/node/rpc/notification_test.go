@@ -7,7 +7,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"math/big"
-	"net"
 	"sync"
 	"testing"
 	"time"
@@ -589,8 +588,7 @@ func testSpaceChannelMentionTag(
 }
 
 func initNotificationService(ctx context.Context, tester *serviceTester) (*Service, *notificationCapture) {
-	listener, err := net.Listen("tcp", "localhost:0")
-	tester.require.NoError(err)
+	listener := tester.getListener()
 
 	nc := &notificationCapture{
 		WebPushNotifications: make(map[common.Hash]map[common.Address]int),
@@ -598,7 +596,7 @@ func initNotificationService(ctx context.Context, tester *serviceTester) (*Servi
 	}
 
 	var key [32]byte
-	_, err = rand.Read(key[:])
+	_, err := rand.Read(key[:])
 	tester.require.NoError(err)
 
 	cfg := tester.getConfig()
@@ -614,6 +612,7 @@ func initNotificationService(ctx context.Context, tester *serviceTester) (*Servi
 		nc,
 	)
 	tester.require.NoError(err)
+	tester.t.Cleanup(service.Close)
 
 	return service, nc
 }
