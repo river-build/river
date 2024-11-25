@@ -4,7 +4,14 @@ import { useEffect, useState } from 'react'
 import { RiverSyncContext } from './internals/RiverSyncContext'
 
 /**
- * A provider for the RiverSyncContext
+ * Provides the sync agent to all hooks usage that interacts with the River network.
+ *
+ * - If you want to interact with the sync agent directly, you can use the `useSyncAgent` hook.
+ * - If you want to interact with the River network using hooks provided by this SDK, you should wrap your App with this provider.
+ *
+ * You can pass an initial sync agent instance to the provider.
+ * This can be useful for persisting authentication.
+ *
  * @param props - The props for the provider
  * @returns The provider
  */
