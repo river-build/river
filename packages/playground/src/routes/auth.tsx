@@ -8,6 +8,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { RiverEnvSwitcherContent } from '@/components/dialog/env-switcher'
 import { Dialog } from '@/components/ui/dialog'
 import { Block } from '@/components/ui/block'
+import { RiverBeaver } from '@/components/river-beaver'
 
 export const AuthRoute = () => {
     const [open, setOpen] = useState<{ state: boolean; from: 'wallet' | 'bearer' }>({
@@ -35,11 +36,11 @@ export const AuthRoute = () => {
                     <a
                         href="https://river.build"
                         target="_blank"
-                        className="font-semibold underline-offset-4 hover:underline"
+                        className="inline-flex items-center font-semibold underline-offset-4 hover:underline"
                     >
                         River Protocol
+                        <RiverBeaver className="ml-2 size-4" />
                     </a>
-                    .
                 </p>
 
                 {/* Quick Links */}
