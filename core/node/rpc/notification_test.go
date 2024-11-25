@@ -6,7 +6,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"github.com/river-build/river/core/node/notifications/types"
 	"math/big"
 	"net"
 	"net/http"
@@ -22,6 +21,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/notifications/types"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	. "github.com/river-build/river/core/node/shared"
@@ -1259,7 +1259,7 @@ func (nc *notificationCapture) SendWebPushNotification(
 	subscription *webpush.Subscription,
 	eventHash common.Hash,
 	_ []byte,
-) error {
+) (bool, error) {
 	nc.WebPushNotificationsMu.Lock()
 	defer nc.WebPushNotificationsMu.Unlock()
 
@@ -1272,7 +1272,7 @@ func (nc *notificationCapture) SendWebPushNotification(
 	events[common.HexToAddress(subscription.Endpoint)]++
 	nc.WebPushNotifications[eventHash] = events
 
-	return nil
+	return false, nil
 }
 
 func (nc *notificationCapture) SendApplePushNotification(
@@ -1280,7 +1280,7 @@ func (nc *notificationCapture) SendApplePushNotification(
 	sub *types.APNPushSubscription,
 	eventHash common.Hash,
 	_ *payload2.Payload,
-) error {
+) (bool, error) {
 	nc.ApnPushNotificationsMu.Lock()
 	defer nc.ApnPushNotificationsMu.Unlock()
 
@@ -1293,5 +1293,5 @@ func (nc *notificationCapture) SendApplePushNotification(
 	events[common.BytesToAddress(sub.DeviceToken)]++
 	nc.ApnPushNotifications[eventHash] = events
 
-	return nil
+	return false, nil
 }
