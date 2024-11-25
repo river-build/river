@@ -117,7 +117,7 @@ func newLinkedWalletCache(ctx context.Context, cfg *config.ChainConfig) (*entitl
 	log := dlog.FromCtx(ctx)
 
 	positiveCacheSize := 50000
-	if cfg.PositiveLinkedWalletCacheSize > 0 {
+	if cfg.LinkedWalletCacheSize > 0 {
 		positiveCacheSize = cfg.PositiveEntitlementManagerCacheSize
 	}
 
@@ -138,7 +138,7 @@ func newLinkedWalletCache(ctx context.Context, cfg *config.ChainConfig) (*entitl
 	}
 
 	positiveCacheTTL := 15 * time.Second
-	if cfg.PositiveLinkedWalletCacheTTLSeconds > 0 {
+	if cfg.LinkedWalletCacheTTLSeconds > 0 {
 		positiveCacheTTL = time.Duration(cfg.PositiveEntitlementManagerCacheTTLSeconds) * time.Second
 	}
 	// This value is irrelevant as we don't use the negative cache for linked wallets but
