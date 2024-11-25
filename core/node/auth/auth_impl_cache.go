@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/river-build/river/core/config"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
@@ -55,6 +57,21 @@ func (b boolCacheResult) IsAllowed() bool {
 	return bool(b)
 }
 
+type linkedWalletCacheValue struct {
+	wallets []common.Address
+}
+
+func (lwcv *linkedWalletCacheValue) GetLinkedWallets() []common.Address {
+	return lwcv.wallets
+}
+
+// linked wallet cache entries are always retained the maximum amount of time unless
+// the node computes any entitlement result for that user which is negative. At that
+// time, the cache is cleared for this principal.
+func (lwcv *linkedWalletCacheValue) IsAllowed() bool {
+	return true
+}
+
 func newEntitlementCache(ctx context.Context, cfg *config.ChainConfig) (*entitlementCache, error) {
 	log := dlog.FromCtx(ctx)
 
@@ -87,6 +104,46 @@ func newEntitlementCache(ctx context.Context, cfg *config.ChainConfig) (*entitle
 	if cfg.NegativeEntitlementCacheTTLSeconds > 0 {
 		negativeCacheTTL = time.Duration(cfg.NegativeEntitlementCacheTTLSeconds) * time.Second
 	}
+
+	return &entitlementCache{
+		positiveCache,
+		negativeCache,
+		positiveCacheTTL,
+		negativeCacheTTL,
+	}, nil
+}
+
+func newLinkedWalletCache(ctx context.Context, cfg *config.ChainConfig) (*entitlementCache, error) {
+	log := dlog.FromCtx(ctx)
+
+	positiveCacheSize := 50000
+	if cfg.PositiveLinkedWalletCacheSize > 0 {
+		positiveCacheSize = cfg.PositiveEntitlementManagerCacheSize
+	}
+
+	// We do not use the negative entitlement cache for linked wallets but bust it manually
+	// whenever an entitlement computation comes back negative.
+	negativeCacheSize := 1
+
+	// Need to figure out how to determine the size of the cache
+	positiveCache, err := lru.NewARC[ChainAuthArgs, entitlementCacheValue](positiveCacheSize)
+	if err != nil {
+		log.Error("error creating auth_impl entitlement manager positive cache", "error", err)
+		return nil, WrapRiverError(protocol.Err_CANNOT_CONNECT, err)
+	}
+	negativeCache, err := lru.NewARC[ChainAuthArgs, entitlementCacheValue](negativeCacheSize)
+	if err != nil {
+		log.Error("error creating auth_impl entitlement manager negative cache", "error", err)
+		return nil, WrapRiverError(protocol.Err_CANNOT_CONNECT, err)
+	}
+
+	positiveCacheTTL := 15 * time.Second
+	if cfg.PositiveLinkedWalletCacheTTLSeconds > 0 {
+		positiveCacheTTL = time.Duration(cfg.PositiveEntitlementManagerCacheTTLSeconds) * time.Second
+	}
+	// This value is irrelevant as we don't use the negative cache for linked wallets but
+	// bust it manually whenever an entitlement result is negative
+	negativeCacheTTL := 2 * time.Second
 
 	return &entitlementCache{
 		positiveCache,
@@ -135,6 +192,19 @@ func newEntitlementManagerCache(ctx context.Context, cfg *config.ChainConfig) (*
 		positiveCacheTTL,
 		negativeCacheTTL,
 	}, nil
+}
+
+func (ec *entitlementCache) bust(
+	key *ChainAuthArgs,
+) {
+	if ok := ec.positiveCache.Contains(*key); ok {
+		ec.positiveCache.Remove(*key)
+	}
+
+	// Check negative cache
+	if ok := ec.negativeCache.Contains(*key); ok {
+		ec.negativeCache.Remove(*key)
+	}
 }
 
 func (ec *entitlementCache) executeUsingCache(

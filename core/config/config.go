@@ -303,6 +303,10 @@ type ChainConfig struct {
 	PositiveEntitlementManagerCacheTTLSeconds int
 	NegativeEntitlementManagerCacheSize       int
 	NegativeEntitlementManagerCacheTTLSeconds int
+	PositiveLinkedWalletCacheSize             int
+	PositiveLinkedWalletCacheTTLSeconds       int
+	NegativeLinkedWalletCacheSize             int
+	NegativeLinkedWalletCacheTTLSeconds       int
 }
 
 func (c ChainConfig) BlockTime() time.Duration {

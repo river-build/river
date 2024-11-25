@@ -144,6 +144,13 @@ func newArgsForEnabledChannel(spaceId shared.StreamId, channelId shared.StreamId
 	}
 }
 
+// Used as a cache key for linked wallets, which span multiple spaces and channels.
+func newArgsForLinkedWallets(principal common.Address) *ChainAuthArgs {
+	return &ChainAuthArgs{
+		principal: principal,
+	}
+}
+
 const (
 	DEFAULT_REQUEST_TIMEOUT_MS = 5000
 	DEFAULT_MAX_WALLETS        = 10
@@ -158,6 +165,7 @@ type chainAuth struct {
 	contractCallsTimeoutMs  int
 	entitlementCache        *entitlementCache
 	entitlementManagerCache *entitlementCache
+	linkedWalletCache       *entitlementCache
 
 	isEntitledToChannelCacheHit  prometheus.Counter
 	isEntitledToChannelCacheMiss prometheus.Counter
@@ -169,6 +177,9 @@ type chainAuth struct {
 	isChannelEnabledCacheMiss    prometheus.Counter
 	entitlementCacheHit          prometheus.Counter
 	entitlementCacheMiss         prometheus.Counter
+	linkedWalletCacheHit         prometheus.Counter
+	linkedWalletCacheMiss        prometheus.Counter
+	linkedWalletCacheBust        prometheus.Counter
 }
 
 var _ ChainAuth = (*chainAuth)(nil)
@@ -204,6 +215,11 @@ func NewChainAuth(
 		return nil, err
 	}
 
+	linkedWalletCache, err := newLinkedWalletCache(ctx, blockchain.Config)
+	if err != nil {
+		return nil, err
+	}
+
 	if linkedWalletsLimit <= 0 {
 		linkedWalletsLimit = DEFAULT_MAX_WALLETS
 	}
@@ -223,6 +239,7 @@ func NewChainAuth(
 		contractCallsTimeoutMs:  contractCallsTimeoutMs,
 		entitlementCache:        entitlementCache,
 		entitlementManagerCache: entitlementManagerCache,
+		linkedWalletCache:       linkedWalletCache,
 
 		isEntitledToChannelCacheHit:  counter.WithLabelValues("isEntitledToChannel", "hit"),
 		isEntitledToChannelCacheMiss: counter.WithLabelValues("isEntitledToChannel", "miss"),
@@ -234,6 +251,9 @@ func NewChainAuth(
 		isChannelEnabledCacheMiss:    counter.WithLabelValues("isChannelEnabled", "miss"),
 		entitlementCacheHit:          counter.WithLabelValues("entitlement", "hit"),
 		entitlementCacheMiss:         counter.WithLabelValues("entitlement", "miss"),
+		linkedWalletCacheHit:         counter.WithLabelValues("linkedWallet", "hit"),
+		linkedWalletCacheMiss:        counter.WithLabelValues("linkedWallet", "miss"),
+		linkedWalletCacheBust:        counter.WithLabelValues("linkedWallet", "bust"),
 	}, nil
 }
 
@@ -248,6 +268,13 @@ func (ca *chainAuth) IsEntitled(ctx context.Context, cfg *config.Config, args *C
 	if err != nil {
 		return false, AsRiverError(err).Func("IsEntitled")
 	}
+
+	// Clear linked wallet cache whenever any entitlement for a principal comes back
+	// as negative, even if cached.
+	if !result.IsAllowed() {
+		ca.linkedWalletCache.bust(newArgsForLinkedWallets(args.principal))
+	}
+
 	return result.IsAllowed(), nil
 }
 
@@ -659,7 +686,29 @@ func (ca *chainAuth) isEntitledToChannel(ctx context.Context, cfg *config.Config
 	return isEntitled.IsAllowed(), nil
 }
 
-func (ca *chainAuth) getLinkedWallets(ctx context.Context, wallet common.Address) ([]common.Address, error) {
+func (ca *chainAuth) getLinkedWalletsUncached(
+	ctx context.Context,
+	_ *config.Config,
+	args *ChainAuthArgs,
+) (CacheResult, error) {
+	log := dlog.FromCtx(ctx)
+
+	wallets, err := entitlement.GetLinkedWallets(ctx, args.principal, ca.walletLinkContract, nil, nil, nil)
+	if err != nil {
+		log.Error("Failed to get linked wallets", "err", err, "wallet", args.principal.Hex())
+		return nil, err
+	}
+
+	return &linkedWalletCacheValue{
+		wallets: wallets,
+	}, nil
+}
+
+func (ca *chainAuth) getLinkedWallets(
+	ctx context.Context,
+	cfg *config.Config,
+	wallet common.Address,
+) ([]common.Address, error) {
 	log := dlog.FromCtx(ctx)
 
 	if ca.walletLinkContract == nil {
@@ -667,13 +716,24 @@ func (ca *chainAuth) getLinkedWallets(ctx context.Context, wallet common.Address
 		return []common.Address{wallet}, nil
 	}
 
-	wallets, err := entitlement.GetLinkedWallets(ctx, wallet, ca.walletLinkContract, nil, nil, nil)
+	result, cacheHit, err := ca.linkedWalletCache.executeUsingCache(
+		ctx,
+		cfg,
+		newArgsForLinkedWallets(wallet),
+		ca.getLinkedWalletsUncached,
+	)
 	if err != nil {
 		log.Error("Failed to get linked wallets", "err", err, "wallet", wallet.Hex())
 		return nil, err
 	}
 
-	return wallets, nil
+	if cacheHit {
+		ca.linkedWalletCacheHit.Inc()
+	} else {
+		ca.linkedWalletCacheMiss.Inc()
+	}
+
+	return result.(*timestampedCacheValue).result.(*linkedWalletCacheValue).wallets, nil
 }
 
 func (ca *chainAuth) checkMembership(
@@ -755,7 +815,7 @@ func (ca *chainAuth) checkEntitlement(
 	}
 
 	// Get all linked wallets.
-	wallets, err := ca.getLinkedWallets(ctx, args.principal)
+	wallets, err := ca.getLinkedWallets(ctx, cfg, args.principal)
 	if err != nil {
 		return nil, err
 	}
