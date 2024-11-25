@@ -55,7 +55,7 @@ export async function fetchMedia(request: FastifyRequest, reply: FastifyReply) {
 	const { mediaStreamId } = paramsResult.data
 	const { key, iv } = queryResult.data
 	logger.info({ mediaStreamId, key, iv }, 'Fetching media stream content')
-	
+
 	try {
 		const { data, mimeType } = await getMediaStreamContent(logger, mediaStreamId, key, iv)
 		if (!data || !mimeType) {
