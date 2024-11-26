@@ -209,6 +209,8 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
     uint256 tokenId = token.tokensOfOwner(receiver)[0];
     amount = bound(amount, 0.01 ether, 1 ether);
 
+    vm.assume(notMember != sender);
+
     vm.expectRevert(SenderIsNotMember.selector);
     vm.prank(notMember);
     tipping.tip(
