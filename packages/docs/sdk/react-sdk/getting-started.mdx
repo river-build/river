@@ -2,63 +2,45 @@
 title: Getting Started
 ---
 
+This guide will help you get started with River's React SDK. You'll learn how to:
+1. [Install the React SDK](#installation)
+2. [Set up the necessary providers](#setting-up-providers)
+3. [Connect to River](#connecting-to-river)
+4. [Create a space](#creating-a-space)
+5. [Send your first message](#sending-your-first-message)
 
-## New Project
+## Installation
 
-You can use the `create-river-build-app` script to scaffold a new React River app.
+You can start a new River project in two ways:
 
-You can use your preferred package manager to run the command.
-Example using `yarn`:
+### Using create-river-build-app (Recommended)
+
+The easiest way to get started is using `create-river-build-app`. This will set up a new React project with all the necessary dependencies and configurations.
 
 ```bash
+# npm
+npm create river-build-app my-app
+
+# yarn
 yarn create river-build-app my-app
+
+# pnpm
+pnpm create river-build-app my-app
 ```
 
-By default, this will create a new app using the Playground template - a full-featured example application that demonstrates River's capabilities.
+By default, this will create a new app using the River Playground template - a full-featured example application that demonstrates River's capabilities.
 
-### Available Templates
+### Manual Installation
 
-#### Playground Template (default)
-
-The [River Playground](https://river-sample-app.vercel.app) is a full-featured example application that demonstrates River's capabilities and how to use the SDK.
-
-You can use it as a starting point to build your own application.
-
-```bash
-yarn create river-build-app my-app
-# or explicitly specify the template
-yarn create river-build-app my-app --template playground
-```
-
-#### React Templates
-
-You can also start with a minimal React setup using either TypeScript or JavaScript:
-
-```bash
-# TypeScript
-yarn create river-build-app my-app --template react-ts
-
-# JavaScript
-yarn create river-build-app my-app --template react
-```
-
-The React templates will:
-1. Run `create-vite` to scaffold the project
-2. Install the necessary dependencies: `@river-build/sdk` and `@river-build/react-sdk`
-3. Add `vite-plugin-node-polyfills` to ensure compatibility with Node.js native modules
-
-## Manual Installation
-
-If you prefer to set up your project manually, you can install the required dependencies:
+If you prefer to add the React SDK to an existing project, install the required dependencies:
 
 ```bash
 yarn add @river-build/react-sdk @river-build/sdk vite-plugin-node-polyfills
 ```
 
-Then, add the `vite-plugin-node-polyfills` to the `vite.config.ts` file:
+Then, add the `vite-plugin-node-polyfills` to your `vite.config.ts`:
 
-
-```ts vite.config.ts {1,10}
+```ts vite.config.ts {1,9}
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
@@ -67,99 +49,303 @@ export default defineConfig({
   // ...rest of your config
   plugins: [
     // ...rest of your plugins
-    react(),
     nodePolyfills(),
+    react(),
   ],
 })
 ```
 
-# Usage
+## Setting Up Providers
 
-## Connect to River
+River requires a few providers to be set up at the root of your application:
 
-In order to start interacting with River and its features, you'll need to connect to it.
+1. `WagmiProvider` - For Web3 wallet connection (recommended)
+2. `RiverSyncProvider` - For interacting with River Network
 
-### Using Signer: Wagmi + Viem
+Here's how to set them up:
 
-We suggest you to use [Wagmi](https://wagmi.sh/) to connect to River.
-Wrap your app with `RiverSyncProvider` and use the `useAgentConnection` hook with the `connect` function to connect to River.
+```tsx App.tsx
+import { RiverSyncProvider } from "@river-build/react-sdk";
+import { base, baseSepolia } from 'viem/chains'
+import { WagmiConfig, createConfig } from "wagmi";
+import { createPublicClient, http } from 'viem'
+
+// Configure Wagmi
+export const wagmiConfig = createConfig({
+  autoConnect: true,
+  publicClient: createPublicClient({
+    chain: [base, baseSepolia],
+    transport: http()
+  }),
+})
+
+function App() {
+  return (
+    <WagmiConfig config={wagmiConfig}>
+      <RiverSyncProvider>
+        {/* Your app content */}
+      </RiverSyncProvider>
+    </WagmiConfig>
+  );
+}
+```
+
+If you need any assistance with setting up Wagmi, check out the [Wagmi Getting Started Guide](https://wagmi.sh/react/getting-started).
+
+## Connecting to River
+
+You can connect to River using either a Web3 wallet (recommended) or a bearer token.
+
+River has three networks:
+- `omega` - The River mainnet, uses Base as the EVM chain
+- `gamma` - The River testnet, uses Base Sepolia as the EVM chain
+- `alpha` - The River testnet, uses Base Sepolia as the EVM chain
+
+If you're not sure which network to use, `alpha` is a good starting point.
 
 <Note>
-You'll need to use `getEthersSigner` to get the signer from viem wallet client.
-You can get the hook from [Wagmi docs](https://wagmi.sh/react/guides/ethers#usage-1).
+You can use other alpha clients like [Towns (alpha)](https://app.alpha.towns.com) or the [River Playground](https://river-sample-app.vercel.app) to help you inspect messages on the `alpha` network.
 </Note>
 
+### Using a Web3 Wallet
+
 ```tsx
-import { RiverSyncProvider, useAgentConnection } from "@river-build/react-sdk";
+import { useAgentConnection } from "@river-build/react-sdk";
 import { makeRiverConfig } from "@river-build/sdk";
-import { WagmiProvider } from "wagmi";
 import { getEthersSigner } from "./utils/viem-to-ethers";
 import { wagmiConfig } from "./config/wagmi";
 
-const riverConfig = makeRiverConfig("gamma");
+const riverConfig = makeRiverConfig("alpha");
 
-const App = ({ children }: { children: React.ReactNode }) => {
-  return (
-    <WagmiProvider config={wagmiConfig}>
-      <RiverSyncProvider>
-        <ConnectRiver />
-      </RiverSyncProvider>
-    </WagmiProvider>
-  );
-};
-
-const ConnectRiver = () => {
-  const { connect, isConnecting, isConnected } = useAgentConnection();
+function ConnectButton() {
+  const { connect, isAgentConnecting, isAgentConnected } = useAgentConnection();
 
   return (
-    <>
-      <button
-        onClick={async () => {
-          const signer = await getEthersSigner(wagmiConfig);
-          connect(signer, { riverConfig });
-        }}
-      >
-        Connect
-      </button>
-      {isAgentConnecting && <span>Connecting...</span>}
-      {isAgentConnected && <span>Connected!</span>}
-    </>
+    <button
+      onClick={async () => {
+        const signer = await getEthersSigner(wagmiConfig);
+        connect(signer, { riverConfig });
+      }}
+    >
+      {isAgentConnecting ? "Connecting..." : "Connect"}
+      {isAgentConnected && "Connected ✅"}
+    </button>
   );
-};
+}
 ```
 
-### Using Bearer Token
+<Note>
+You'll need to use `getEthersSigner` to get the signer from viem wallet client. 
+River SDK uses ethers under the hood, so you'll need to convert the viem wallet client to an ethers signer.
 
-You can use a River bearer token to connect other apps to River without the need of a signer.
-Wrap your app with `RiverSyncProvider` and use the `useAgentConnection` hook with the `connectUsingBearerToken` function to connect to River.
+You can get the `getEthersSigner` function from [Wagmi docs](https://wagmi.sh/core/guides/ethers#usage-1).
+</Note>
+
+### Using a Bearer Token
+
+You can connect to River using a pre-existing identity.
+This allows you to read and send messages, but you won't be able to create spaces or channels (on-chain actions).
+
+<Note>
+If you have a Towns account, you can get your bearer token from there. Type `/bearer-token` in any conversation to get your token.
+</Note>
 
 ```tsx
-import { RiverSyncProvider, useAgentConnection } from "@river-build/react-sdk";
+import { useAgentConnection } from "@river-build/react-sdk";
 import { makeRiverConfig } from "@river-build/sdk";
 
-const riverConfig = makeRiverConfig("gamma");
+const riverConfig = makeRiverConfig("alpha");
 
-const App = ({ children }: { children: React.ReactNode }) => {
-  return (
-    <RiverSyncProvider>
-      <ConnectRiver />
-    </RiverSyncProvider>
-  );
-};
-
-const ConnectRiver = () => {
+function ConnectButton() {
   const { connectUsingBearerToken, isAgentConnecting, isAgentConnected } = useAgentConnection();
   const [bearerToken, setBearerToken] = useState('');
 
   return (
-    <>
-      <input value={bearerToken} onChange={(e) => setBearerToken(e.target.value)} />
-      <button onClick={() => connectUsingBearerToken(bearerToken, { riverConfig })}>
-        Connect
+    <div>
+      <input 
+        value={bearerToken} 
+        onChange={(e) => setBearerToken(e.target.value)}
+        placeholder="Enter bearer token" 
+      />
+      <button 
+        onClick={() => connectUsingBearerToken(bearerToken, { riverConfig })}
+      >
+        {isAgentConnecting ? "Connecting..." : "Connect"}
+        {isAgentConnected && "Connected ✅"}
       </button>
-      {isAgentConnecting && <span>Connecting...</span>}
-      {isAgentConnected && <span>Connected!</span>}
-    </>
+    </div>
   );
-};
+}
 ```
+
+## Creating a Space
+
+Once connected, you can start interacting with River. Here's how to create a space:
+
+<Note>
+You can only create a space with a Web3 wallet. If you're using a bearer token, you can't create spaces.
+</Note>
+
+```tsx
+import { useCreateSpace } from "@river-build/react-sdk";
+import { getEthersSigner } from "@/utils/viem-to-ethers";
+import { wagmiConfig } from "@/config/wagmi";
+
+function CreateSpace({ onCreateSpace }: { onCreateSpace: (spaceId: string) => void }) {
+  const { createSpace, isPending } = useCreateSpace();
+  const [spaceName, setSpaceName] = useState('');
+
+  return (
+    <form
+      onSubmit={async (e) => {
+        e.preventDefault();
+        const signer = await getEthersSigner(wagmiConfig);
+        const { spaceId } = await createSpace({ spaceName }, signer);
+        // Let a parent component handle the spaceId, keep reading the guide! 
+        onCreateSpace(spaceId);
+        // Reset form
+        setSpaceName('');
+      }}
+    >
+      <div>
+        <input
+          value={spaceName}
+          onChange={(e) => setSpaceName(e.target.value)}
+          placeholder="Space name"
+          required
+        />
+      </div>
+      <button type="submit" disabled={isPending}>
+        {isPending ? "Creating..." : "Create Space"}
+      </button>
+    </form>
+  );
+}
+```
+
+## Sending Your First Message
+
+With the space created, we can send a message to the `#general` channel.
+Here's how to create a form 
+
+```tsx
+import {
+  useChannel,
+  useSendMessage,
+  useSpace,
+  useTimeline,
+  useUserSpaces,
+} from '@river-build/react-sdk'
+import { RiverTimelineEvent } from '@river-build/sdk'
+import { useState } from 'react'
+
+// Form to send a message to a channel
+function ChatInput({ spaceId, channelId }: { spaceId: string; channelId: string }) {
+  const { sendMessage, isPending } = useSendMessage(channelId)
+  const { data: channel } = useChannel(spaceId, channelId)
+  const [message, setMessage] = useState('')
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        sendMessage(message)
+        setMessage('')
+      }}
+    >
+      <input
+        value={message}
+        placeholder={`Type a message in ${channel?.metadata?.name || 'unnamed channel'}`}
+        onChange={(e) => setMessage(e.target.value)}
+      />
+      <button type="submit" disabled={isPending}>
+        {isPending ? 'Sending...' : 'Send'}
+      </button>
+    </form>
+  )
+}
+
+// Display messages from a channel
+function ChatMessages({ channelId }: { channelId: string }) {
+  const { data: events } = useTimeline(channelId)
+  return (
+    <div>
+      {/* Filter out non-message events */}
+      {events
+        ?.filter((event) => event.content?.kind === RiverTimelineEvent.RoomMessage)
+        .map((message) => (
+          <p key={message.eventId}>
+            {message.content?.kind === RiverTimelineEvent.RoomMessage
+              ? message.content?.body
+              : ''}
+          </p>
+        ))}
+    </div>
+  )
+}
+
+// Chat component that renders the chat input and messages, given a spaceId
+function Chat({ spaceId }: { spaceId: string }) {
+  const { data: space } = useSpace(spaceId)
+  const channelId = space?.channelIds?.[0] // Spaces have a default channel called `general`
+
+  return (
+    <>
+      {channelId && <ChatInput spaceId={spaceId} channelId={channelId} />}
+      {channelId && <ChatMessages channelId={channelId} />}
+    </>
+  )
+}
+
+// Renders the name of a space
+const SpaceName = ({ spaceId }: { spaceId: string }) => {
+  const { data: space } = useSpace(spaceId)
+  return <>{space?.metadata?.name}</>
+}
+
+// Chat app that renders the create space and chat components
+export const ChatApp = () => {
+  // Get the list of spaces we're a member of
+  const { spaceIds } = useUserSpaces()
+  const [spaceId, setSpaceId] = useState('')
+
+  return (
+    <div>
+      {/* Show a list of spaces we're a member of, click to select one */}
+      {spaceIds.map((spaceId) => (
+        <button type="button" key={spaceId} onClick={() => setSpaceId(spaceId)}>
+          <SpaceName spaceId={spaceId} />
+        </button>
+      ))}
+      {/* Show the create space form if we don't have a space */}
+      {!spaceId && <CreateSpace onCreateSpace={(spaceId) => setSpaceId(spaceId)} />}
+      {/* Render the chat component with the current selected space */}
+      {spaceId && (
+        <h1>
+          Chatting in <SpaceName spaceId={spaceId} />
+        </h1>
+      )}
+      {spaceId && <Chat spaceId={spaceId} />}
+    </div>
+  )
+}
+```
+
+Add the `ChatApp` component to your app and you're ready to start chatting!
+
+## Next Steps
+
+Now that you have the basics set up, you can:
+
+- [Create and join spaces](/sdk/react-sdk/api/useCreateSpace)
+- [Create channels](/sdk/react-sdk/api/useCreateChannel)
+- [Send messages](/sdk/react-sdk/api/useSendMessage)
+- [Read messages](/sdk/react-sdk/api/useTimeline)
+- [Send reactions](/sdk/react-sdk/api/useSendReaction)
+- [Set username](/sdk/react-sdk/api/useSetUsername)
+- [Send message threads](/sdk/react-sdk/api/useSendThreadMessage)
+- much more!
+You can find the full list of hooks in the [API Reference](/sdk/react-sdk/api).
+
+
+Check out our [Playground template](https://river-sample-app.vercel.app) for a full-featured example application.
