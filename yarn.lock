@@ -6455,6 +6455,7 @@ __metadata:
     "@jest/globals": ^29.6.2
     "@river-build/dlog": "workspace:^"
     "@river-build/encryption": "workspace:^"
+    "@river-build/generated": "workspace:^"
     "@river-build/proto": "workspace:^"
     "@river-build/web3": "workspace:^"
     "@testing-library/jest-dom": ^5.16.5

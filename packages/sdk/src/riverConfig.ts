@@ -8,6 +8,9 @@ import {
 } from '@river-build/web3'
 import { isDefined } from './check'
 import { check } from '@river-build/dlog'
+import type DeploymentsJson from '@river-build/generated/config/deployments.json'
+
+type EnvironmentId = keyof typeof DeploymentsJson
 
 function getEnvironmentId(): string {
     if (typeof process === 'object') {
@@ -117,7 +120,9 @@ export function makeBaseChainConfig(environmentId?: string) {
 
 export type RiverConfig = ReturnType<typeof makeRiverConfig>
 
-export function makeRiverConfig(inEnvironmentId?: string) {
+// trick to get autocomplete for environment ids while allowing any string
+// eslint-disable-next-line @typescript-eslint/ban-types
+export function makeRiverConfig(inEnvironmentId?: EnvironmentId | (string & {})) {
     const environmentId = inEnvironmentId ?? getEnvironmentId()
     const config = {
         environmentId,
