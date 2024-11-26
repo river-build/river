@@ -210,6 +210,8 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
     amount = bound(amount, 0.01 ether, 1 ether);
 
     vm.assume(notMember != sender);
+    vm.assume(notMember != receiver);
+    vm.assume(notMember != address(0) && notMember.code.length == 0);
 
     vm.expectRevert(SenderIsNotMember.selector);
     vm.prank(notMember);
