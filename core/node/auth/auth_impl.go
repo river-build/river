@@ -269,12 +269,6 @@ func (ca *chainAuth) IsEntitled(ctx context.Context, cfg *config.Config, args *C
 		return false, AsRiverError(err).Func("IsEntitled")
 	}
 
-	// Clear linked wallet cache whenever any entitlement for a principal comes back
-	// as negative, even if cached.
-	if !result.IsAllowed() {
-		ca.linkedWalletCache.bust(newArgsForLinkedWallets(args.principal))
-	}
-
 	return result.IsAllowed(), nil
 }
 
@@ -707,23 +701,28 @@ func (ca *chainAuth) getLinkedWalletsUncached(
 func (ca *chainAuth) getLinkedWallets(
 	ctx context.Context,
 	cfg *config.Config,
-	wallet common.Address,
+	args *ChainAuthArgs,
 ) ([]common.Address, error) {
 	log := dlog.FromCtx(ctx)
 
 	if ca.walletLinkContract == nil {
 		log.Warn("Wallet link contract is not setup properly, returning root key only")
-		return []common.Address{wallet}, nil
+		return []common.Address{args.principal}, nil
+	}
+
+	userCacheKey := newArgsForLinkedWallets(args.principal)
+	if args.permission == PermissionRead {
+		ca.linkedWalletCache.bust(userCacheKey)
 	}
 
 	result, cacheHit, err := ca.linkedWalletCache.executeUsingCache(
 		ctx,
 		cfg,
-		newArgsForLinkedWallets(wallet),
+		userCacheKey,
 		ca.getLinkedWalletsUncached,
 	)
 	if err != nil {
-		log.Error("Failed to get linked wallets", "err", err, "wallet", wallet.Hex())
+		log.Error("Failed to get linked wallets", "err", err, "wallet", args.principal.Hex())
 		return nil, err
 	}
 
@@ -815,7 +814,7 @@ func (ca *chainAuth) checkEntitlement(
 	}
 
 	// Get all linked wallets.
-	wallets, err := ca.getLinkedWallets(ctx, cfg, args.principal)
+	wallets, err := ca.getLinkedWallets(ctx, cfg, args)
 	if err != nil {
 		return nil, err
 	}
