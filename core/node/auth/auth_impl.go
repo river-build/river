@@ -711,7 +711,11 @@ func (ca *chainAuth) getLinkedWallets(
 	}
 
 	userCacheKey := newArgsForLinkedWallets(args.principal)
-	if args.permission == PermissionRead {
+	// We want fresh linked wallets when evaluating space and channel joins, key solicitations,
+	// and user scrubs, all of which request the Read permission.
+	// Note: space joins seem to request Read on the space, but they should probably actually
+	// be sending chain auth args with kind set to chainAuthKindIsSpaceMember.
+	if args.permission == PermissionRead || args.kind == chainAuthKindIsSpaceMember {
 		ca.linkedWalletCache.bust(userCacheKey)
 	}
 
