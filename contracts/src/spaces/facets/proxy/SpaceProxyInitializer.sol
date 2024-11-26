@@ -22,7 +22,6 @@ contract SpaceProxyInitializer is
   IntrospectionBase,
   TokenOwnableBase,
   ERC721ABase,
-  MembershipBase,
   EntitlementGatedBase,
   Initializable
 {
@@ -35,7 +34,7 @@ contract SpaceProxyInitializer is
     __IntrospectionBase_init();
     __TokenOwnableBase_init(tokenOwnable);
     __ERC721ABase_init(membership.name, membership.symbol);
-    __MembershipBase_init(membership, manager);
+    MembershipBase.MembershipBase_init(membership, manager);
 
     _safeMint(owner, 1);
     _setFallbackEntitlementChecker();

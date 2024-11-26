@@ -6,7 +6,7 @@ import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 import {IPartnerRegistryBase, IPartnerRegistry} from "contracts/src/factory/facets/partner/IPartnerRegistry.sol";
 import {IRolesBase} from "contracts/src/spaces/facets/roles/IRoles.sol";
 import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
-import {IMembership} from "contracts/src/spaces/facets/membership/IMembership.sol";
+import {IMembership, IMembershipBase} from "contracts/src/spaces/facets/membership/IMembership.sol";
 
 // libraries
 import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
@@ -27,9 +27,9 @@ import {EntitlementGatedBase} from "contracts/src/spaces/facets/gated/Entitlemen
 /// @notice Handles the logic for joining a space, including entitlement checks and payment processing
 /// @dev Inherits from multiple base contracts to provide comprehensive membership functionality
 abstract contract MembershipJoin is
+  IMembershipBase,
   IRolesBase,
   IPartnerRegistryBase,
-  MembershipBase,
   ReferralsBase,
   DispatcherBase,
   RolesBase,
@@ -116,11 +116,11 @@ abstract contract MembershipJoin is
     if (prepaidSupply > 0) return 0; // If prepaid memberships exist, no payment is required
 
     // Get the current membership price based on total supply
-    uint256 price = _getMembershipPrice(_totalSupply());
+    uint256 price = MembershipBase.getMembershipPrice(_totalSupply());
     if (price == 0) return 0; // If the price is zero, no payment is required
 
     // Calculate the protocol fee
-    uint256 fee = _getProtocolFee(price);
+    uint256 fee = MembershipBase.getProtocolFee(price);
 
     // Return the higher of the price or fee to ensure at least the protocol fee is covered
     return FixedPointMathLib.max(price, fee);
@@ -203,7 +203,7 @@ abstract contract MembershipJoin is
   /// @return shouldCharge A boolean indicating whether a charge should be applied
   function _shouldChargeForJoinSpace() internal returns (bool shouldCharge) {
     uint256 totalSupply = _totalSupply();
-    uint256 freeAllocation = _getMembershipFreeAllocation();
+    uint256 freeAllocation = MembershipBase.getMembershipFreeAllocation();
     uint256 prepaidSupply = _getPrepaidSupply();
 
     if (freeAllocation > totalSupply) {
@@ -233,7 +233,7 @@ abstract contract MembershipJoin is
       revert Membership__InvalidTransactionType();
     }
 
-    uint256 protocolFee = _collectProtocolFee(sender, payment);
+    uint256 protocolFee = MembershipBase.collectProtocolFee(sender, payment);
     uint256 surplus = payment - protocolFee;
 
     _afterChargeForJoinSpace(
@@ -262,7 +262,7 @@ abstract contract MembershipJoin is
 
     ReferralTypes memory referral = abi.decode(referralData, (ReferralTypes));
 
-    uint256 protocolFee = _collectProtocolFee(sender, payment);
+    uint256 protocolFee = MembershipBase.collectProtocolFee(sender, payment);
 
     uint256 partnerFee = _collectPartnerFee(sender, referral.partner, payment);
 
@@ -292,7 +292,7 @@ abstract contract MembershipJoin is
     uint256
   ) internal {
     if (surplus > 0) {
-      _transferIn(sender, surplus);
+      MembershipBase.transferIn(sender, surplus);
     }
 
     _releaseCapturedValue(transactionId, payment);
@@ -306,13 +306,16 @@ abstract contract MembershipJoin is
     uint256 tokenId = _nextTokenId();
 
     // set renewal price for token
-    _setMembershipRenewalPrice(tokenId, _getMembershipPrice(_totalSupply()));
+    MembershipBase.setMembershipRenewalPrice(
+      tokenId,
+      MembershipBase.getMembershipPrice(_totalSupply())
+    );
 
     // mint membership
     _safeMint(receiver, 1);
 
     // set expiration of membership
-    _renewSubscription(tokenId, _getMembershipDuration());
+    _renewSubscription(tokenId, MembershipBase.getMembershipDuration());
 
     // emit event
     emit MembershipTokenIssued(receiver, tokenId);
@@ -323,8 +326,8 @@ abstract contract MembershipJoin is
   function _validateJoinSpace(address receiver) internal view {
     if (receiver == address(0)) revert Membership__InvalidAddress();
     if (
-      _getMembershipSupplyLimit() != 0 &&
-      _totalSupply() >= _getMembershipSupplyLimit()
+      MembershipBase.getMembershipSupplyLimit() != 0 &&
+      _totalSupply() >= MembershipBase.getMembershipSupplyLimit()
     ) revert Membership__MaxSupplyReached();
   }
 
@@ -336,7 +339,7 @@ abstract contract MembershipJoin is
     if (userValue > 0) {
       _releaseCapturedValue(transactionId, userValue);
       CurrencyTransfer.transferCurrency(
-        _getMembershipCurrency(),
+        MembershipBase.getMembershipCurrency(),
         address(this),
         sender,
         userValue
@@ -367,7 +370,7 @@ abstract contract MembershipJoin is
       referralFeeBps = BasisPoints.calculate(membershipPrice, referralFee);
 
       CurrencyTransfer.transferCurrency(
-        _getMembershipCurrency(),
+        MembershipBase.getMembershipCurrency(),
         sender,
         referral.recipient,
         referralFeeBps
@@ -378,7 +381,7 @@ abstract contract MembershipJoin is
       referralFeeBps = BasisPoints.calculate(membershipPrice, _defaultBpsFee());
 
       CurrencyTransfer.transferCurrency(
-        _getMembershipCurrency(),
+        MembershipBase.getMembershipCurrency(),
         sender,
         userReferral,
         referralFeeBps
@@ -400,8 +403,9 @@ abstract contract MembershipJoin is
   ) internal returns (uint256) {
     if (partner == address(0)) return 0;
 
-    Partner memory partnerInfo = IPartnerRegistry(_getSpaceFactory())
-      .partnerInfo(partner);
+    Partner memory partnerInfo = IPartnerRegistry(
+      MembershipBase.getSpaceFactory()
+    ).partnerInfo(partner);
 
     if (partnerInfo.fee == 0) return 0;
 
@@ -411,7 +415,7 @@ abstract contract MembershipJoin is
     uint256 partnerFeeBps = BasisPoints.calculate(membershipPrice, partnerFee);
 
     CurrencyTransfer.transferCurrency(
-      _getMembershipCurrency(),
+      MembershipBase.getMembershipCurrency(),
       sender,
       recipient,
       partnerFeeBps
