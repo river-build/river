@@ -15,8 +15,12 @@ contract DeployRiverPoints is Deployer, FacetHelper {
   constructor() {
     addSelector(RiverPoints.mint.selector);
     addSelector(RiverPoints.batchMintPoints.selector);
+    addSelector(RiverPoints.getPoints.selector);
     addSelector(RiverPoints.balanceOf.selector);
     addSelector(RiverPoints.totalSupply.selector);
+    addSelector(RiverPoints.name.selector);
+    addSelector(RiverPoints.symbol.selector);
+    addSelector(RiverPoints.decimals.selector);
   }
 
   // Deploying

@@ -11,31 +11,52 @@ You can use your preferred package manager to run the command.
 Example using `yarn`:
 
 ```bash
-yarn create river-build-app
-```
-
-This will create a new React River app in the current directory.
-
-If you want to create a new app in a different directory, you can specify the directory name as an argument:
-
-```bash
 yarn create river-build-app my-app
 ```
 
-It will run `create-vite` to scaffold the project using `react-ts` template.
+By default, this will create a new app using the Playground template - a full-featured example application that demonstrates River's capabilities.
 
-Then, it will install the necessary dependencies: `@river-build/sdk` and `@river-build/react-sdk`.
+### Available Templates
 
-Finally, it will add the `vite-plugin-node-polyfills` to the `vite.config.ts` file to ensure compatibility with Node.js native modules that are used by the River SDK.
+#### Playground Template (default)
 
+The [River Playground](https://river-sample-app.vercel.app) is a full-featured example application that demonstrates River's capabilities and how to use the SDK.
+
+You can use it as a starting point to build your own application.
+
+```bash
+yarn create river-build-app my-app
+# or explicitly specify the template
+yarn create river-build-app my-app --template playground
+```
+
+#### React Templates
+
+You can also start with a minimal React setup using either TypeScript or JavaScript:
+
+```bash
+# TypeScript
+yarn create river-build-app my-app --template react-ts
+
+# JavaScript
+yarn create river-build-app my-app --template react
+```
+
+The React templates will:
+1. Run `create-vite` to scaffold the project
+2. Install the necessary dependencies: `@river-build/sdk` and `@river-build/react-sdk`
+3. Add `vite-plugin-node-polyfills` to ensure compatibility with Node.js native modules
 
 ## Manual Installation
+
+If you prefer to set up your project manually, you can install the required dependencies:
 
 ```bash
 yarn add @river-build/react-sdk @river-build/sdk vite-plugin-node-polyfills
 ```
 
-Then, add the `vite-plugin-node-polyfills` to the `vite.config.ts` file to ensure compatibility with Node.js native modules that are used by the River SDK.
+Then, add the `vite-plugin-node-polyfills` to the `vite.config.ts` file:
+
 
 ```ts vite.config.ts {1,10}
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
