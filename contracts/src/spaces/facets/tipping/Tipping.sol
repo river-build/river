@@ -17,10 +17,15 @@ contract Tipping is ITipping, ERC721ABase, Facet {
   }
 
   function tip(TipRequest calldata tipRequest) external payable {
-    address receiver = _ownerOf(tipRequest.tokenId);
     address sender = msg.sender;
+    address receiver = _ownerOf(tipRequest.tokenId);
 
-    _validateTipRequest(sender, receiver, tipRequest.amount);
+    _validateTipRequest(
+      sender,
+      receiver,
+      tipRequest.currency,
+      tipRequest.amount
+    );
 
     TippingBase.tip(
       sender,
@@ -37,6 +42,7 @@ contract Tipping is ITipping, ERC721ABase, Facet {
       receiver,
       tipRequest.amount
     );
+
     emit TipMessage(tipRequest.messageId, tipRequest.channelId);
   }
 
@@ -51,11 +57,12 @@ contract Tipping is ITipping, ERC721ABase, Facet {
   function _validateTipRequest(
     address sender,
     address receiver,
+    address currency,
     uint256 amount
   ) internal view {
-    if (receiver == address(0)) revert TokenDoesNotExist();
-    if (_balanceOf(sender) == 0) revert SenderIsNotMember();
-    if (sender == receiver) revert SenderIsOwner();
+    if (currency == address(0)) revert CurrencyIsZero();
+    if (sender == receiver) revert CannotTipSelf();
     if (amount == 0) revert AmountIsZero();
+    if (_balanceOf(sender) == 0) revert SenderIsNotMember();
   }
 }

@@ -8,6 +8,10 @@ pragma solidity ^0.8.23;
 // contracts
 
 interface ITippingBase {
+  // =============================================================
+  //                           Structs
+  // =============================================================
+
   struct TipRequest {
     uint256 tokenId;
     address currency;
@@ -15,6 +19,10 @@ interface ITippingBase {
     bytes32 messageId;
     bytes32 channelId;
   }
+
+  // =============================================================
+  //                           Events
+  // =============================================================
 
   event Tip(
     uint256 indexed tokenId,
@@ -26,10 +34,16 @@ interface ITippingBase {
 
   event TipMessage(bytes32 indexed messageId, bytes32 indexed channelId);
 
+  // =============================================================
+  //                           Errors
+  // =============================================================
+
   error TokenDoesNotExist();
   error SenderIsNotMember();
-  error SenderIsOwner();
+  error ReceiverIsNotMember();
+  error CannotTipSelf();
   error AmountIsZero();
+  error CurrencyIsZero();
 }
 
 interface ITipping is ITippingBase {
