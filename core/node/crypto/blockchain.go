@@ -2,11 +2,13 @@ package crypto
 
 import (
 	"context"
-	"go.opentelemetry.io/otel/trace"
 	"math/big"
 	"time"
 
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/river-build/river/core/config"
@@ -20,6 +22,7 @@ import (
 // go-ethereum splits functionality into multiple implicit interfaces,
 // but there is no explicit interface for client.
 type BlockchainClient interface {
+	bind.BlockHashContractCaller
 	ethereum.BlockNumberReader
 	ethereum.ChainReader
 	ethereum.ChainStateReader
@@ -75,12 +78,8 @@ func NewBlockchain(
 			Func("NewBlockchain")
 	}
 
-	if tracer != nil {
-		instrumentedClient := NewInstrumentedEthClient(client, tracer)
-		return NewBlockchainWithClient(ctx, cfg, wallet, instrumentedClient, instrumentedClient, metrics, tracer)
-	}
-
-	return NewBlockchainWithClient(ctx, cfg, wallet, client, client, metrics, tracer)
+	instrumentedClient := NewInstrumentedEthClient(client, metrics, tracer)
+	return NewBlockchainWithClient(ctx, cfg, wallet, instrumentedClient, instrumentedClient, metrics, tracer)
 }
 
 func NewBlockchainWithClient(
