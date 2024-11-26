@@ -332,16 +332,14 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 					"event", event.Hash,
 					"channelID", channelID,
 				)
-			} else {
+			} else if !subscriptionExpired {
 				p.log.Error("Unable to send web push notification",
 					"user",
 					user, "err", err,
 					"event", event.Hash,
 					"channelID", channelID,
 				)
-			}
-
-			if subscriptionExpired {
+			} else {
 				if err := p.cache.RemoveExpiredWebPushSubscription(ctx, userPref.UserID, sub.Sub); err != nil {
 					p.log.Error("Unable to remove expired webpush subscription from cache",
 						"user", userPref.UserID, "err", err)
@@ -387,7 +385,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 					"deviceToken", sub.DeviceToken,
 					"env", sub.Environment,
 				)
-			} else {
+			} else if !subscriptionExpired {
 				p.log.Error("Unable to send APN notification",
 					"user", user,
 					"user", user,
@@ -396,9 +394,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 					"deviceToken", sub.DeviceToken,
 					"env", sub.Environment,
 					"err", err)
-			}
-
-			if subscriptionExpired {
+			} else {
 				if err := p.cache.RemoveAPNSubscription(ctx, sub.DeviceToken, userPref.UserID); err != nil {
 					p.log.Error("Unable to remove expired APN subscription from cache",
 						"user", userPref.UserID, "deviceToken", sub.DeviceToken, "err", err)
