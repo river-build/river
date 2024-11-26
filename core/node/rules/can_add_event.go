@@ -942,11 +942,18 @@ func (ru *aeMembershipRules) spaceMembershipEntitlements() (*auth.ChainAuthArgs,
 		return nil, nil
 	}
 
-	chainAuthArgs := auth.NewChainAuthArgsForSpace(
-		*streamId,
-		permissionUser,
-		permission,
-	)
+	var chainAuthArgs *auth.ChainAuthArgs
+	// Space joins are a special case as they do not require an entitlement check. We simply
+	// verify that the user is a space member.
+	if ru.membership.Op == MembershipOp_SO_JOIN {
+		chainAuthArgs = auth.NewChainAuthArgsForIsSpaceMember(*streamId, permissionUser)
+	} else {
+		chainAuthArgs = auth.NewChainAuthArgsForSpace(
+			*streamId,
+			permissionUser,
+			permission,
+		)
+	}
 	return chainAuthArgs, nil
 }
 
@@ -969,7 +976,6 @@ func (ru *aeMembershipRules) channelMembershipEntitlements() (*auth.ChainAuthArg
 	if err != nil {
 		return nil, err
 	}
-
 
 	// ModifyBanning is a space level permission
 	// but users with this entitlement should also be entitled to kick users from the channel
