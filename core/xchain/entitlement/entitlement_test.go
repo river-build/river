@@ -568,7 +568,8 @@ func TestCheckOperation(t *testing.T) {
 	}
 }
 
-func TestCheckOperation_Untimed(t *testing.T) {
+// Disable this test case, which is relying on a public rpc endpoint.
+func _TestCheckOperation_Untimed(t *testing.T) {
 	testCases := map[string]struct {
 		op          Operation
 		wallets     []common.Address
@@ -934,7 +935,8 @@ var singleEtherChainBlockChainInfo = map[uint64]config.BlockchainInfo{
 	},
 }
 
-func Test_evaluateEthBalance_withConfig(t *testing.T) {
+// Disable this test case, which is relying on a public rpc endpoint.
+func _Test_evaluateEthBalance_withConfig(t *testing.T) {
 	tests := map[string]struct {
 		op          Operation
 		wallets     []common.Address
