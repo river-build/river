@@ -15,6 +15,8 @@ import (
 var (
 	supportedEnvironments = []string{"alpha", "gamma", "omega"}
 	baseRpcUrl            string
+	riverRpcUrl           string
+	riverTestnetRpcUrl    string
 	facetSourcePath       string
 	compiledFacetsPath    string
 	sourceDiffDir         string
@@ -35,6 +37,10 @@ var baseDiamonds = []utils.Diamond{
 	utils.SpaceOwner,
 }
 
+var riverDiamonds = []utils.Diamond{
+	utils.RiverRegistry,
+}
+
 func init() {
 	log := zerolog.New(os.Stderr).With().Timestamp().Logger()
 	utils.SetLogger(log)
@@ -43,6 +49,8 @@ func init() {
 		StringVar(&logLevel, "log-level", "info", "Set the logging level (debug, info, warn, error)")
 	rootCmd.Flags().StringVarP(&baseRpcUrl, "base-rpc", "b", "", "Base RPC provider URL")
 	rootCmd.Flags().StringVarP(&baseSepoliaRpcUrl, "base-sepolia-rpc", "", "", "Base Sepolia RPC provider URL")
+	rootCmd.Flags().StringVarP(&riverRpcUrl, "river-rpc", "r", "", "River RPC provider URL")
+	rootCmd.Flags().StringVarP(&riverTestnetRpcUrl, "river-testnet-rpc", "", "", "River Testnet RPC provider URL")
 	rootCmd.Flags().BoolVarP(&sourceDiff, "source-diff-only", "s", false, "Run source code diff")
 	rootCmd.Flags().StringVar(&sourceDiffDir, "source-diff-log", "source-diffs", "Path to diff log file")
 	rootCmd.Flags().StringVar(&compiledFacetsPath, "compiled-facets", "../../contracts/out", "Path to compiled facets")
@@ -154,7 +162,6 @@ var rootCmd = &cobra.Command{
 			}
 			return
 		}
-
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		verbose, _ := cmd.Flags().GetBool("verbose")
@@ -213,8 +220,13 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-func executeSourceDiff(verbose bool, baseConfig utils.BaseConfig, facetSourcePath, compiledFacetsPath string, reportOutDir string) error {
-	facetFiles, err := utils.GetFacetFiles(facetSourcePath)
+func executeSourceDiff(
+	verbose bool,
+	baseConfig utils.BaseConfig,
+	facetSourcePath, compiledFacetsPath string,
+	reportOutDir string,
+) error {
+	facetFiles, err := utils.GetFacetFiles(facetSourcePath, verbose)
 	if err != nil {
 		log.Error().
 			Str("facetSourcePath", facetSourcePath).
@@ -265,8 +277,14 @@ func executeSourceDiff(verbose bool, baseConfig utils.BaseConfig, facetSourcePat
 		alphaFacets[utils.DiamondName(diamondName)] = facets
 	}
 
-	err = utils.CreateFacetHashesReport(compiledFacetsPath, compiledHashes, alphaFacets, reportOutDir, sourceEnvironment, verbose)
-
+	err = utils.CreateFacetHashesReport(
+		compiledFacetsPath,
+		compiledHashes,
+		alphaFacets,
+		reportOutDir,
+		sourceEnvironment,
+		verbose,
+	)
 	if err != nil {
 		if verbose {
 			log.Info().
