@@ -728,6 +728,7 @@ func (ca *chainAuth) getLinkedWallets(
 	// be sending chain auth args with kind set to chainAuthKindIsSpaceMember.
 	if args.permission == PermissionRead || args.kind == chainAuthKindIsSpaceMember {
 		ca.linkedWalletCache.bust(userCacheKey)
+		ca.linkedWalletCacheBust.Inc()
 	}
 
 	result, cacheHit, err := ca.linkedWalletCache.executeUsingCache(
