@@ -976,7 +976,6 @@ func (ru *aeMembershipRules) channelMembershipEntitlements() (*auth.ChainAuthArg
 	if err != nil {
 		return nil, err
 	}
-
 	// ModifyBanning is a space level permission
 	// but users with this entitlement should also be entitled to kick users from the channel
 	if permission == auth.PermissionModifyBanning {
