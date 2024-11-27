@@ -77,19 +77,24 @@ export default defineConfig({
 
 ## Connect to River
 
+In order to start interacting with River and its features, you'll need to connect to it.
+
 ### Using Signer: Wagmi + Viem
 
 We suggest you to use [Wagmi](https://wagmi.sh/) to connect to River.
 Wrap your app with `RiverSyncProvider` and use the `useAgentConnection` hook with the `connect` function to connect to River.
 
-> You'll need to use `useEthersSigner` to get the signer from viem wallet client.
-> You can get the hook from [Wagmi docs](https://wagmi.sh/react/guides/ethers#usage-1).
+<Note>
+You'll need to use `getEthersSigner` to get the signer from viem wallet client.
+You can get the hook from [Wagmi docs](https://wagmi.sh/react/guides/ethers#usage-1).
+</Note>
 
 ```tsx
 import { RiverSyncProvider, useAgentConnection } from "@river-build/react-sdk";
 import { makeRiverConfig } from "@river-build/sdk";
 import { WagmiProvider } from "wagmi";
-import { useEthersSigner } from "./utils/viem-to-ethers";
+import { getEthersSigner } from "./utils/viem-to-ethers";
+import { wagmiConfig } from "./config/wagmi";
 
 const riverConfig = makeRiverConfig("gamma");
 
@@ -105,15 +110,13 @@ const App = ({ children }: { children: React.ReactNode }) => {
 
 const ConnectRiver = () => {
   const { connect, isConnecting, isConnected } = useAgentConnection();
-  const signer = useEthersSigner();
 
   return (
     <>
       <button
-        onClick={() => {
-          if (signer) {
-            connect(signer, { riverConfig });
-          }
+        onClick={async () => {
+          const signer = await getEthersSigner(wagmiConfig);
+          connect(signer, { riverConfig });
         }}
       >
         Connect
