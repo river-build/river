@@ -20,7 +20,7 @@
     "dependencies": {
         "@river-build/generated": "workspace:^",
         "@river-build/web3": "workspace:^",
-        "ethers": "^5.7.2",
+        "ethers": "^6.13.4",
         "zod": "^3.21.4"
     },
     "devDependencies": {

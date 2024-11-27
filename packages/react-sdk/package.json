@@ -19,7 +19,7 @@
     },
     "dependencies": {
         "@river-build/sdk": "workspace:^",
-        "ethers": "^5.7.2"
+        "ethers": "^6.13.4"
     },
     "devDependencies": {
         "@microsoft/api-extractor": "^7.47.7",

@@ -38,7 +38,7 @@
 		"dd-trace": "^5.19.0",
 		"dotenv": "^16.4.5",
 		"esbuild-plugin-pino": "^2.2.0",
-		"ethers": "^5.7.2",
+		"ethers": "^6.13.4",
 		"fastify": "^4.28.1",
 		"lru-cache": "^11.0.1",
 		"magic-bytes.js": "^1.10.0",

@@ -24,7 +24,7 @@
         "@river-build/sdk": "workspace:^",
         "@river-build/web3": "workspace:^",
         "esbuild-plugin-pino": "^2.2.0",
-        "ethers": "^5.7.2",
+        "ethers": "^6.13.4",
         "fake-indexeddb": "^4.0.1",
         "ioredis": "^5.3.2",
         "pino": "^8.17.1",
