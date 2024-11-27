@@ -13,8 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/river-build/river/core/node/notifications/types"
-
 	"connectrpc.com/connect"
 	"github.com/SherClockHolmes/webpush-go"
 	"github.com/ethereum/go-ethereum/accounts"
@@ -26,6 +24,7 @@ import (
 
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/notifications/types"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	. "github.com/river-build/river/core/node/shared"
