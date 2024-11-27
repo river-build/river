@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 
+	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
@@ -298,7 +299,9 @@ func makeMiniblock(
 		},
 	}))
 	if err != nil {
-		return nil, err
+		return nil, AsRiverError(err, protocol.Err_INTERNAL).
+			Message("client.Info make_miniblock failed").
+			Func("makeMiniblock")
 	}
 	var hashBytes []byte
 	if resp.Msg.Graffiti != "" {

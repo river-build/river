@@ -39,12 +39,20 @@ func fillUserSettingsStreamWithData(
 		for j := 0; j < numEventsPerMB; j++ {
 			err = addUserBlockedFillerEvent(ctx, wallet, client, streamId, prevMB)
 			if err != nil {
-				return nil, err
+				return nil, AsRiverError(
+					err,
+					Err_INTERNAL,
+				).Message("Failed to add event to stream").
+					Func("fillUserSettingsStreamWithData")
 			}
 		}
 		prevMB, err = makeMiniblock(ctx, client, streamId, false, prevMB.Num)
 		if err != nil {
-			return nil, err
+			return nil, AsRiverError(
+				err,
+				Err_INTERNAL,
+			).Message("Failed to create miniblock").
+				Func("fillUserSettingsStreamWithData")
 		}
 	}
 	return prevMB, nil
@@ -81,14 +89,14 @@ func createUserSettingsStreamsWithData(
 				&StreamSettings{DisableMiniblockCreation: true},
 			)
 			if err != nil {
-				errChan <- err
+				errChan <- AsRiverError(err, Err_INTERNAL).Message("Failed to create stream").Func("createUserSettingsStreamsWithData")
 				return
 			}
 			streamIds[i] = streamId
 
 			_, err = fillUserSettingsStreamWithData(ctx, streamId, wallet, client, numMBs, numEventsPerMB, mbRef)
 			if err != nil {
-				errChan <- err
+				errChan <- AsRiverError(err, Err_INTERNAL).Message("Failed to fill stream with data").Func("createUserSettingsStreamsWithData")
 				return
 			}
 		}(i)

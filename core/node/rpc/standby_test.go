@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -81,6 +82,7 @@ func TestStandbySingle(t *testing.T) {
 type childListener struct {
 	connChan chan net.Conn
 	addr     net.Addr
+	once     sync.Once
 }
 
 var _ net.Listener = &childListener{}
@@ -94,10 +96,9 @@ func (l *childListener) Accept() (net.Conn, error) {
 }
 
 func (l *childListener) Close() error {
-	if l.connChan != nil {
+	l.once.Do(func() {
 		close(l.connChan)
-		l.connChan = nil
-	}
+	})
 	return nil
 }
 
