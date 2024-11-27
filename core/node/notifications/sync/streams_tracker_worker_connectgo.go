@@ -263,7 +263,7 @@ func (s *StreamTrackerConnectGo) Run(
 
 				// apply update
 				for _, event := range update.GetStream().GetEvents() {
-					if err := trackedStream.HandleEvent(event); err != nil {
+					if err := trackedStream.HandleEvent(ctx, event); err != nil {
 						log.Error("Unable to handle event", "stream", streamID, "err", err)
 					}
 				}
