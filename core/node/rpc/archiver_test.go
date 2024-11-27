@@ -3,8 +3,6 @@ package rpc
 import (
 	"context"
 	"io"
-	"net"
-	"net/http"
 	"sync"
 	"testing"
 	"time"
@@ -26,6 +24,7 @@ import (
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/node/testutils/dbtestutils"
+	"github.com/river-build/river/core/node/testutils/testcert"
 )
 
 func fillUserSettingsStreamWithData(
@@ -237,6 +236,7 @@ func TestArchiveOneStream(t *testing.T) {
 	)
 	require.NoError(err)
 
+	httpClient, _ := testcert.GetHttp2LocalhostTLSClient(ctx, nil)
 	var nodeRegistry nodes.NodeRegistry
 	nodeRegistry, err = nodes.LoadNodeRegistry(
 		ctx,
@@ -244,6 +244,7 @@ func TestArchiveOneStream(t *testing.T) {
 		common.Address{},
 		bc.InitialBlockNum,
 		bc.ChainMonitor,
+		httpClient,
 		nil,
 	)
 	require.NoError(err)
@@ -326,6 +327,15 @@ func TestArchiveOneStream(t *testing.T) {
 	require.NoError(compareStreamMiniblocks(t, ctx, streamId, streamStorage, client))
 }
 
+func makeTestServerOpts(tester *serviceTester) *ServerStartOpts {
+	listener, _ := makeTestListener(tester.t)
+	return &ServerStartOpts{
+		RiverChain:      tester.btc.NewWalletAndBlockchain(tester.ctx),
+		Listener:        listener,
+		HttpClientMaker: testcert.GetHttp2LocalhostTLSClient,
+	}
+}
+
 func TestArchive100Streams(t *testing.T) {
 	tester := newServiceTester(t, serviceTesterOpts{numNodes: 10, start: true})
 	ctx := tester.ctx
@@ -342,12 +352,13 @@ func TestArchive100Streams(t *testing.T) {
 	archiveCfg := tester.getConfig()
 	archiveCfg.Archive.ArchiveId = "arch" + GenShortNanoid()
 
-	listener, err := net.Listen("tcp", "localhost:0")
-	require.NoError(err)
-
-	archiverBC := tester.btc.NewWalletAndBlockchain(ctx)
 	serverCtx, serverCancel := context.WithCancel(ctx)
-	arch, err := StartServerInArchiveMode(serverCtx, archiveCfg, archiverBC, listener, true)
+	arch, err := StartServerInArchiveMode(
+		serverCtx,
+		archiveCfg,
+		makeTestServerOpts(tester),
+		true,
+	)
 	require.NoError(err)
 
 	arch.Archiver.WaitForStart()
@@ -378,12 +389,8 @@ func TestArchive100StreamsWithData(t *testing.T) {
 	archiveCfg.Archive.ArchiveId = "arch" + GenShortNanoid()
 	archiveCfg.Archive.ReadMiniblocksSize = 3
 
-	listener, err := net.Listen("tcp", "localhost:0")
-	require.NoError(err)
-
-	archiverBC := tester.btc.NewWalletAndBlockchain(ctx)
 	serverCtx, serverCancel := context.WithCancel(ctx)
-	arch, err := StartServerInArchiveMode(serverCtx, archiveCfg, archiverBC, listener, true)
+	arch, err := StartServerInArchiveMode(serverCtx, archiveCfg, makeTestServerOpts(tester), true)
 	require.NoError(err)
 
 	arch.Archiver.WaitForStart()
@@ -403,7 +410,8 @@ func TestArchive100StreamsWithData(t *testing.T) {
 }
 
 func httpGet(t *testing.T, url string) string {
-	resp, err := http.Get(url)
+	httpClient, _ := testcert.GetHttp2LocalhostTLSClient(nil, nil)
+	resp, err := httpClient.Get(url)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
@@ -431,18 +439,14 @@ func TestArchiveContinuous(t *testing.T) {
 	archiveCfg.Archive.ArchiveId = "arch" + GenShortNanoid()
 	archiveCfg.Archive.ReadMiniblocksSize = 3
 
-	listener, err := net.Listen("tcp", "localhost:0")
-	require.NoError(err)
-
-	archiverBC := tester.btc.NewWalletAndBlockchain(ctx)
 	serverCtx, serverCancel := context.WithCancel(ctx)
-	arch, err := StartServerInArchiveMode(serverCtx, archiveCfg, archiverBC, listener, false)
+	arch, err := StartServerInArchiveMode(serverCtx, archiveCfg, makeTestServerOpts(tester), false)
 	require.NoError(err)
 
 	arch.Archiver.WaitForStart()
 	require.Len(arch.ExitSignal(), 0)
 
-	status := httpGet(t, "http://"+listener.Addr().String()+"/status")
+	status := httpGet(t, "https://"+arch.listener.Addr().String()+"/status")
 	require.Contains(status, "OK")
 
 	require.EventuallyWithT(

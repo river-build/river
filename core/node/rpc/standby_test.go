@@ -15,23 +15,26 @@ import (
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/rpc/statusinfo"
+	"github.com/river-build/river/core/node/testutils/testcert"
 )
 
 func stanbyStartOpts() startOpts {
 	return startOpts{
 		configUpdater: func(config *config.Config) {
 			config.StandByOnStart = true
+			config.StandByPollPeriod = 20 * time.Millisecond
+			config.ShutdownTimeout = 50 * time.Millisecond
+			config.Database.StartupDelay = 100 * time.Millisecond
 		},
 	}
 }
 
 func getNodeStatus(url string) (*statusinfo.StatusResponse, error) {
 	url = url + "/status"
-	client := nodes.TestHttpClientMaker()
-	resp, err := client.Get(url)
+	httpClient, _ := testcert.GetHttp2LocalhostTLSClient(nil, nil)
+	resp, err := httpClient.Get(url)
 	if err != nil {
 		return nil, err
 	}
@@ -52,8 +55,9 @@ func requireStatus(t *testing.T, url string, expected string) {
 		t,
 		func(t *assert.CollectT) {
 			st, err := getNodeStatus(url)
-			assert.NoError(t, err)
-			assert.Equal(t, expected, st.Status)
+			if assert.NoError(t, err) {
+				assert.Equal(t, expected, st.Status)
+			}
 		},
 		20*time.Second,
 		10*time.Millisecond,
@@ -80,10 +84,8 @@ func TestStandbyEvictionByNlbSwitch(t *testing.T) {
 	tester.nodes[0].listener = nil
 	var redirectAddr atomic.Pointer[string]
 
-	firstListener, err := net.Listen("tcp", "localhost:0")
-	require.NoError(err)
+	firstListener, firstUrl := makeTestListener(t)
 	firstAddr := firstListener.Addr().String()
-	firstUrl := "http://" + firstAddr
 	redirectAddr.Store(&firstAddr)
 
 	go redirect(redirector, &redirectAddr)
@@ -103,10 +105,8 @@ func TestStandbyEvictionByNlbSwitch(t *testing.T) {
 		exitStatus <- firstExit
 	}()
 
-	secondListener, err := net.Listen("tcp", "localhost:0")
-	require.NoError(err)
+	secondListener, secondUrl := makeTestListener(t)
 	secondAddr := secondListener.Addr().String()
-	secondUrl := "http://" + secondAddr
 
 	// Start the second node with same address
 	opts.listeners = []net.Listener{secondListener}
@@ -148,7 +148,7 @@ func TestStandbyEvictionByUrlUpdate(t *testing.T) {
 
 	firstListener := tester.nodes[0].listener
 	firstAddr := firstListener.Addr().String()
-	firstUrl := "http://" + firstAddr
+	firstUrl := "https://" + firstAddr
 
 	opts := stanbyStartOpts()
 	opts.listeners = []net.Listener{firstListener}
@@ -165,10 +165,7 @@ func TestStandbyEvictionByUrlUpdate(t *testing.T) {
 		exitStatus <- firstExit
 	}()
 
-	secondListener, err := net.Listen("tcp", "localhost:0")
-	require.NoError(err)
-	secondAddr := secondListener.Addr().String()
-	secondUrl := "http://" + secondAddr
+	secondListener, secondUrl := makeTestListener(t)
 
 	// Start the second node with same address
 	opts.listeners = []net.Listener{secondListener}

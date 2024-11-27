@@ -6,13 +6,13 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"github.com/river-build/river/core/node/notifications/types"
 	"math/big"
-	"net"
-	"net/http"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/river-build/river/core/node/notifications/types"
+	"github.com/river-build/river/core/node/testutils/testcert"
 
 	"connectrpc.com/connect"
 	"github.com/SherClockHolmes/webpush-go"
@@ -20,14 +20,15 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	eth_crypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/google/go-cmp/cmp"
+	payload2 "github.com/sideshow/apns2/payload"
+	"github.com/stretchr/testify/require"
+
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/events"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/testutils"
-	payload2 "github.com/sideshow/apns2/payload"
-	"github.com/stretchr/testify/require"
 )
 
 // TestNotifications is designed in such a way that all tests are run in parallel
@@ -37,12 +38,14 @@ func TestNotifications(t *testing.T) {
 	ctx, cancel := context.WithCancel(tester.ctx)
 	defer cancel()
 
+	httpClient, _ := testcert.GetHttp2LocalhostTLSClient(ctx, tester.getConfig())
+
 	notificationService, notifications := initNotificationService(ctx, tester)
 	notificationClient := protocolconnect.NewNotificationServiceClient(
-		http.DefaultClient, "http://"+notificationService.listener.Addr().String())
+		httpClient, "https://"+notificationService.listener.Addr().String())
 
 	authClient := protocolconnect.NewAuthenticationServiceClient(
-		http.DefaultClient, "http://"+notificationService.listener.Addr().String())
+		httpClient, "https://"+notificationService.listener.Addr().String())
 
 	t.Run("DMNotifications", func(t *testing.T) {
 		testDMNotifications(t, ctx, tester, notificationClient, authClient, notifications)
@@ -586,23 +589,20 @@ func testSpaceChannelMentionTag(
 }
 
 func initNotificationService(ctx context.Context, tester *serviceTester) (*Service, *notificationCapture) {
-	listener, err := net.Listen("tcp", "localhost:0")
-	tester.require.NoError(err)
-
 	nc := &notificationCapture{
 		WebPushNotifications: make(map[common.Hash]map[common.Address]int),
 		ApnPushNotifications: make(map[common.Hash]map[common.Address]int),
 	}
 
 	var key [32]byte
-	_, err = rand.Read(key[:])
+	_, err := rand.Read(key[:])
 	tester.require.NoError(err)
 
 	cfg := tester.getConfig()
 	cfg.Notifications.Authentication.SessionToken.Key.Algorithm = "HS256"
 	cfg.Notifications.Authentication.SessionToken.Key.Key = hex.EncodeToString(key[:])
 
-	service, err := StartServerInNotificationMode(ctx, cfg, tester.btc.DeployerBlockchain, listener, nc)
+	service, err := StartServerInNotificationMode(ctx, cfg, nc, makeTestServerOpts(tester))
 	tester.require.NoError(err)
 
 	return service, nc
@@ -795,7 +795,14 @@ func setupGDMNotificationTest(
 	}
 
 	testCtx.gdmStreamID = testutils.FakeStreamId(STREAM_GDM_CHANNEL_BIN)
-	_, _, err = createGDMChannel(ctx, testCtx.members[0], testCtx.members[1:], testCtx.streamClient, testCtx.gdmStreamID, nil)
+	_, _, err = createGDMChannel(
+		ctx,
+		testCtx.members[0],
+		testCtx.members[1:],
+		testCtx.streamClient,
+		testCtx.gdmStreamID,
+		nil,
+	)
 
 	testCtx.req.NoError(err)
 
@@ -900,7 +907,6 @@ func (tc *gdmChannelNotificationsTestContext) setGlobalGDMSetting(
 	user *crypto.Wallet,
 	setting GdmChannelSettingValue,
 ) {
-
 	req := connect.NewRequest(&SetDmGdmSettingsRequest{
 		DmGlobal:  DmChannelSettingValue_DM_MESSAGES_YES,
 		GdmGlobal: setting,
@@ -1051,7 +1057,6 @@ func (tc *dmChannelNotificationsTestContext) setChannel(
 	user *crypto.Wallet,
 	setting DmChannelSettingValue,
 ) {
-
 	request := connect.NewRequest(&SetDmChannelSettingRequest{
 		DmChannelId: tc.dmStreamID[:],
 		Value:       setting,
