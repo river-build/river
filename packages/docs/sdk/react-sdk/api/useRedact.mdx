@@ -1,10 +1,33 @@
 ---
 title: useRedact
 ---
+Hook to redact a message in a stream.
+
 ## Imports
 
 ```ts
 import { useRedact } from '@river-build/react-sdk'
+```
+
+## Examples
+
+### Redact a message
+
+You can use `redactEvent` to redact a message in a stream.
+```ts
+import { useRedact } from '@river-build/react-sdk'
+
+const { redactEvent } = useRedact(streamId)
+redactEvent({ eventId: messageEventId })
+```
+### Redact a message reaction
+
+You can also use `redactEvent` to redact a message reaction in a stream.
+```ts
+import { useRedact } from '@river-build/react-sdk'
+
+const { redactEvent } = useRedact(streamId)
+redactEvent({ eventId: reactionEventId })
 ```
 
 ## Definition
@@ -35,12 +58,18 @@ function useRedact(
 
 - **Type:** `string`
 
+The id of the stream to redact the message in.
+
 ### config
 
 - **Type:** `ActionConfig<Channel['redactEvent']>`
 - **Optional**
 
+Configuration options for the action.
+
 ## Return Type
+
+The `redactEvent` action and its loading state.
 
 ```ts
 {

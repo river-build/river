@@ -1,10 +1,23 @@
 ---
 title: useSendReaction
 ---
+Hook to send a reaction to a message in a stream.
+
+Reaction can be any string value, including emojis.
+
 ## Imports
 
 ```ts
 import { useSendReaction } from '@river-build/react-sdk'
+```
+
+## Examples
+
+```ts
+import { useSendReaction } from '@river-build/react-sdk'
+
+const { sendReaction } = useSendReaction('stream-id')
+sendReaction(messageEventId, '🔥')
 ```
 
 ## Definition
@@ -35,12 +48,18 @@ function useSendReaction(
 
 - **Type:** `string`
 
+The id of the stream to send the reaction to.
+
 ### config
 
 - **Type:** `ActionConfig<Channel['sendReaction']>`
 - **Optional**
 
+Configuration options for the action.
+
 ## Return Type
+
+The `sendReaction` action and its loading state.
 
 ```ts
 {

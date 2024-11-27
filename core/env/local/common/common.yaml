@@ -16,6 +16,8 @@ baseChain:
     networkUrl: 'http://127.0.0.1:8545'
     blockTimeMs: 1000
     positiveEntitlementCacheTTLSeconds: 5 # Short TTL for testing
+    linkedWalletCacheTTLSeconds: 5 # short TTL for testing
+
 riverChain:
     chainId: 31338
     networkUrl: 'http://127.0.0.1:8546'
