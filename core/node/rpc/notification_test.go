@@ -13,9 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/river-build/river/core/node/notifications/types"
-	"github.com/river-build/river/core/node/testutils/testcert"
-
 	"connectrpc.com/connect"
 	"github.com/SherClockHolmes/webpush-go"
 	"github.com/ethereum/go-ethereum/accounts"
@@ -33,6 +30,7 @@ import (
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/testutils"
+	"github.com/river-build/river/core/node/testutils/testcert"
 )
 
 // TestSubscriptionExpired ensures that web/apn subscriptions for which the notification API
