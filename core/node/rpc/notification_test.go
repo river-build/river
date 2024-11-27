@@ -6,7 +6,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"github.com/river-build/river/core/node/notifications/types"
 	"math/big"
 	"net"
 	"net/http"
@@ -14,20 +13,23 @@ import (
 	"testing"
 	"time"
 
+	"github.com/river-build/river/core/node/notifications/types"
+
 	"connectrpc.com/connect"
 	"github.com/SherClockHolmes/webpush-go"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	eth_crypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/google/go-cmp/cmp"
+	payload2 "github.com/sideshow/apns2/payload"
+	"github.com/stretchr/testify/require"
+
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/events"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/testutils"
-	payload2 "github.com/sideshow/apns2/payload"
-	"github.com/stretchr/testify/require"
 )
 
 // TestNotifications is designed in such a way that all tests are run in parallel
@@ -45,14 +47,17 @@ func TestNotifications(t *testing.T) {
 		http.DefaultClient, "http://"+notificationService.listener.Addr().String())
 
 	t.Run("DMNotifications", func(t *testing.T) {
+		t.Parallel()
 		testDMNotifications(t, ctx, tester, notificationClient, authClient, notifications)
 	})
 
 	t.Run("GDMNotifications", func(t *testing.T) {
+		t.Parallel()
 		testGDMNotifications(t, ctx, tester, notificationClient, authClient, notifications)
 	})
 
 	t.Run("SpaceChannelNotifications", func(t *testing.T) {
+		t.Parallel()
 		testSpaceChannelNotifications(t, ctx, tester, notificationClient, authClient, notifications)
 	})
 }
@@ -148,7 +153,7 @@ func testGDMMessageWithNoMentionsRepliesAndReaction(
 
 		return !cmp.Equal(nc.WebPushNotifications[eventHash], expectedUsersToReceiveNotification) ||
 			!cmp.Equal(nc.ApnPushNotifications[eventHash], expectedUsersToReceiveNotification)
-	}, 5*time.Second, 100*time.Millisecond, "Received unexpected notifications")
+	}, time.Second, 100*time.Millisecond, "Received unexpected notifications")
 }
 
 func testDMNotifications(
@@ -212,7 +217,7 @@ func testDMMessageWithNotificationsMutedOnDmChannel(
 		nc.ApnPushNotificationsMu.Unlock()
 
 		return webCount != expectedNotifications || apnCount != expectedNotifications
-	}, 5*time.Second, 100*time.Millisecond, "Received unexpected notifications")
+	}, time.Second, 100*time.Millisecond, "Received unexpected notifications")
 }
 
 func testDMMessageWithNotificationsMutedGlobal(
@@ -246,7 +251,7 @@ func testDMMessageWithNotificationsMutedGlobal(
 		nc.ApnPushNotificationsMu.Unlock()
 
 		return webCount != expectedUsersToReceiveNotification || apnCount != expectedUsersToReceiveNotification
-	}, 5*time.Second, 100*time.Millisecond, "Received unexpected notifications")
+	}, time.Second, 100*time.Millisecond, "Received unexpected notifications")
 }
 
 func testDMMessageWithDefaultUserNotificationsPreferences(
@@ -295,7 +300,7 @@ func testDMMessageWithDefaultUserNotificationsPreferences(
 
 		return webCount != len(expectedUsersToReceiveNotification) ||
 			apnCount != len(expectedUsersToReceiveNotification)
-	}, 5*time.Second, 100*time.Millisecond, "Received unexpected notifications")
+	}, time.Second, 100*time.Millisecond, "Received unexpected notifications")
 }
 
 func testDMMessageWithBlockedUser(
@@ -335,7 +340,7 @@ func testDMMessageWithBlockedUser(
 		nc.ApnPushNotificationsMu.Unlock()
 
 		return webCount != expectedNotifications || apnCount != expectedNotifications
-	}, 10*time.Second, 100*time.Millisecond, "Received unexpected notifications")
+	}, time.Second, 100*time.Millisecond, "Received unexpected notifications")
 }
 
 func testSpaceChannelNotifications(
@@ -422,7 +427,7 @@ func testSpaceChannelPlainMessage(
 
 		return webCount != len(expectedUsersToReceiveNotification) ||
 			apnCount != len(expectedUsersToReceiveNotification)
-	}, 5*time.Second, 100*time.Millisecond, "Received unexpected notifications")
+	}, time.Second, 100*time.Millisecond, "Received unexpected notifications")
 }
 
 func testSpaceChannelAtChannelTag(
@@ -501,7 +506,7 @@ func testSpaceChannelAtChannelTag(
 
 		return webCount != len(expectedUsersToReceiveNotification) ||
 			apnCount != len(expectedUsersToReceiveNotification)
-	}, 5*time.Second, 100*time.Millisecond, "Received unexpected notifications")
+	}, time.Second, 100*time.Millisecond, "Received unexpected notifications")
 }
 
 func testSpaceChannelMentionTag(
@@ -582,7 +587,7 @@ func testSpaceChannelMentionTag(
 
 		return webCount != len(expectedUsersToReceiveNotification) ||
 			apnCount != len(expectedUsersToReceiveNotification)
-	}, 5*time.Second, 100*time.Millisecond, "Received too unexpected notifications")
+	}, time.Second, 100*time.Millisecond, "Received too unexpected notifications")
 }
 
 func initNotificationService(ctx context.Context, tester *serviceTester) (*Service, *notificationCapture) {
@@ -795,7 +800,14 @@ func setupGDMNotificationTest(
 	}
 
 	testCtx.gdmStreamID = testutils.FakeStreamId(STREAM_GDM_CHANNEL_BIN)
-	_, _, err = createGDMChannel(ctx, testCtx.members[0], testCtx.members[1:], testCtx.streamClient, testCtx.gdmStreamID, nil)
+	_, _, err = createGDMChannel(
+		ctx,
+		testCtx.members[0],
+		testCtx.members[1:],
+		testCtx.streamClient,
+		testCtx.gdmStreamID,
+		nil,
+	)
 
 	testCtx.req.NoError(err)
 
@@ -900,7 +912,6 @@ func (tc *gdmChannelNotificationsTestContext) setGlobalGDMSetting(
 	user *crypto.Wallet,
 	setting GdmChannelSettingValue,
 ) {
-
 	req := connect.NewRequest(&SetDmGdmSettingsRequest{
 		DmGlobal:  DmChannelSettingValue_DM_MESSAGES_YES,
 		GdmGlobal: setting,
@@ -1051,7 +1062,6 @@ func (tc *dmChannelNotificationsTestContext) setChannel(
 	user *crypto.Wallet,
 	setting DmChannelSettingValue,
 ) {
-
 	request := connect.NewRequest(&SetDmChannelSettingRequest{
 		DmChannelId: tc.dmStreamID[:],
 		Value:       setting,
