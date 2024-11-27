@@ -6,7 +6,9 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"math/big"
+	"net/http"
 	"sync"
 	"testing"
 	"time"
@@ -25,11 +27,69 @@ import (
 
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/notifications/push"
+	"github.com/river-build/river/core/node/notifications/types"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/testutils"
 )
+
+// TestSubscriptionExpired ensures that web/apn subscriptions for which the notification API
+// returns 410 - Gone /expired are automatically purged.
+func TestSubscriptionExpired(t *testing.T) {
+	tester := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true})
+	ctx, cancel := context.WithCancel(tester.ctx)
+	defer cancel()
+
+	var notifications notificationExpired
+
+	notificationService := initNotificationService(ctx, tester, notifications)
+	notificationClient := protocolconnect.NewNotificationServiceClient(
+		http.DefaultClient, "http://"+notificationService.listener.Addr().String())
+	authClient := protocolconnect.NewAuthenticationServiceClient(
+		http.DefaultClient, "http://"+notificationService.listener.Addr().String())
+
+	t.Run("webpush", func(t *testing.T) {
+		test := setupDMNotificationTest(ctx, tester, notificationClient, authClient)
+		test.subscribeWebPush(ctx, test.initiator)
+		test.subscribeWebPush(ctx, test.member)
+
+		// ensure that subscription for member is dropped after subscription expired.
+		_ = test.sendMessageWithTags(
+			ctx, test.initiator, "hi!", &Tags{})
+
+		test.req.Eventuallyf(func() bool {
+			settings := test.getSettings(ctx, test.initiator)
+			if len(settings.WebSubscriptions) != 1 {
+				return false
+			}
+
+			settings = test.getSettings(ctx, test.member)
+			return len(settings.WebSubscriptions) == 0
+		}, 15*time.Second, 100*time.Millisecond, "webpush subscription not deleted")
+	})
+
+	t.Run("APN", func(t *testing.T) {
+		test := setupDMNotificationTest(ctx, tester, notificationClient, authClient)
+		test.subscribeApnPush(ctx, test.initiator)
+		test.subscribeApnPush(ctx, test.member)
+
+		// ensure that subscription for member is dropped after subscription expired.
+		_ = test.sendMessageWithTags(
+			ctx, test.initiator, "hi!", &Tags{})
+
+		test.req.Eventuallyf(func() bool {
+			settings := test.getSettings(ctx, test.initiator)
+			if len(settings.ApnSubscriptions) != 1 {
+				return false
+			}
+
+			settings = test.getSettings(ctx, test.member)
+			return len(settings.ApnSubscriptions) == 0
+		}, 15*time.Second, 100*time.Millisecond, "APN subscription not deleted")
+	})
+}
 
 // TestNotifications is designed in such a way that all tests are run in parallel
 // and share the same set of nodes, notification service and client.
@@ -38,9 +98,15 @@ func TestNotifications(t *testing.T) {
 	ctx, cancel := context.WithCancel(tester.ctx)
 	defer cancel()
 
+	notifications := &notificationCapture{
+		WebPushNotifications: make(map[common.Hash]map[common.Address]int),
+		ApnPushNotifications: make(map[common.Hash]map[common.Address]int),
+	}
+
+	notificationService := initNotificationService(ctx, tester, notifications)
+
 	httpClient, _ := testcert.GetHttp2LocalhostTLSClient(ctx, tester.getConfig())
 
-	notificationService, notifications := initNotificationService(ctx, tester)
 	notificationClient := protocolconnect.NewNotificationServiceClient(
 		httpClient, "https://"+notificationService.listener.Addr().String())
 
@@ -588,12 +654,11 @@ func testSpaceChannelMentionTag(
 	}, 5*time.Second, 100*time.Millisecond, "Received too unexpected notifications")
 }
 
-func initNotificationService(ctx context.Context, tester *serviceTester) (*Service, *notificationCapture) {
-	nc := &notificationCapture{
-		WebPushNotifications: make(map[common.Hash]map[common.Address]int),
-		ApnPushNotifications: make(map[common.Hash]map[common.Address]int),
-	}
-
+func initNotificationService(
+	ctx context.Context,
+	tester *serviceTester,
+	notifier push.MessageNotifier,
+) *Service {
 	var key [32]byte
 	_, err := rand.Read(key[:])
 	tester.require.NoError(err)
@@ -602,10 +667,10 @@ func initNotificationService(ctx context.Context, tester *serviceTester) (*Servi
 	cfg.Notifications.Authentication.SessionToken.Key.Algorithm = "HS256"
 	cfg.Notifications.Authentication.SessionToken.Key.Key = hex.EncodeToString(key[:])
 
-	service, err := StartServerInNotificationMode(ctx, cfg, nc, makeTestServerOpts(tester))
+	service, err := StartServerInNotificationMode(ctx, cfg, notifier, makeTestServerOpts(tester))
 	tester.require.NoError(err)
 
-	return service, nc
+	return service
 }
 
 func setupSpaceChannelNotificationTest(
@@ -1069,6 +1134,20 @@ func (tc *dmChannelNotificationsTestContext) setChannel(
 	tc.req.NoError(err, "setChannel failed")
 }
 
+func (tc *dmChannelNotificationsTestContext) getSettings(
+	ctx context.Context,
+	user *crypto.Wallet,
+) *GetSettingsResponse {
+	request := connect.NewRequest(&GetSettingsRequest{})
+
+	authorize(ctx, tc.req, tc.authClient, user, request)
+
+	response, err := tc.notificationClient.GetSettings(ctx, request)
+	tc.req.NoError(err, "getSettings failed")
+
+	return response.Msg
+}
+
 func (tc *dmChannelNotificationsTestContext) muteGlobal(
 	ctx context.Context,
 	user *crypto.Wallet,
@@ -1264,7 +1343,7 @@ func (nc *notificationCapture) SendWebPushNotification(
 	subscription *webpush.Subscription,
 	eventHash common.Hash,
 	_ []byte,
-) error {
+) (bool, error) {
 	nc.WebPushNotificationsMu.Lock()
 	defer nc.WebPushNotificationsMu.Unlock()
 
@@ -1277,7 +1356,7 @@ func (nc *notificationCapture) SendWebPushNotification(
 	events[common.HexToAddress(subscription.Endpoint)]++
 	nc.WebPushNotifications[eventHash] = events
 
-	return nil
+	return false, nil
 }
 
 func (nc *notificationCapture) SendApplePushNotification(
@@ -1285,7 +1364,7 @@ func (nc *notificationCapture) SendApplePushNotification(
 	sub *types.APNPushSubscription,
 	eventHash common.Hash,
 	_ *payload2.Payload,
-) error {
+) (bool, error) {
 	nc.ApnPushNotificationsMu.Lock()
 	defer nc.ApnPushNotificationsMu.Unlock()
 
@@ -1298,5 +1377,25 @@ func (nc *notificationCapture) SendApplePushNotification(
 	events[common.BytesToAddress(sub.DeviceToken)]++
 	nc.ApnPushNotifications[eventHash] = events
 
-	return nil
+	return false, nil
+}
+
+type notificationExpired struct{}
+
+func (notificationExpired) SendWebPushNotification(
+	_ context.Context,
+	_ *webpush.Subscription,
+	_ common.Hash,
+	_ []byte,
+) (bool, error) {
+	return true, fmt.Errorf("subscription expired")
+}
+
+func (notificationExpired) SendApplePushNotification(
+	_ context.Context,
+	_ *types.APNPushSubscription,
+	_ common.Hash,
+	_ *payload2.Payload,
+) (bool, error) {
+	return true, fmt.Errorf("subscription expired")
 }
