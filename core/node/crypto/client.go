@@ -24,10 +24,10 @@ type simulatedClientWrapper struct {
 
 var _ BlockchainClient = (*simulatedClientWrapper)(nil)
 
-// NewSimulatedClientWrapper returns a wrapped simulated client that implements missing methods
-// on the BlockchainClient interface. This allows us to pass a simulated.Client wherever a
-// BlockchainClient is expected.
-func NewClientWrapper(client simulated.Client) BlockchainClient {
+// NewWrappedSimulatedClient returns a wrapped client that implements methods
+// missing on the simulated client which are occasionally used by abi-genned
+// contract code.
+func NewWrappedSimulatedClient(client simulated.Client) BlockchainClient {
 	return &simulatedClientWrapper{
 		Client: client,
 	}

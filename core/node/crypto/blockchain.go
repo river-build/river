@@ -17,10 +17,14 @@ import (
 	. "github.com/river-build/river/core/node/protocol"
 )
 
-// BlockchainClient is an interface that covers common functionality
-// between ethclient.Client and simulated.Backend.
+// BlockchainClient is an interface that covers common functionality needed
+// between ethclient.Client and simulated.Backend to satisfy the requirements
+// of generated abi contract code and the chain monitor.
 // go-ethereum splits functionality into multiple implicit interfaces,
 // but there is no explicit interface for client.
+// Note: the simulated client does not implement the BlockHashContractCaller
+// interface, so we wrap it with NewWrappedSimulatedClient in tests to provide the
+// full suite of methods.
 type BlockchainClient interface {
 	bind.BlockHashContractCaller
 	ethereum.BlockNumberReader
