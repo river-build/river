@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/ethclient/simulated"
+	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
@@ -69,8 +70,8 @@ func (scw *simulatedClientWrapper) CodeAtHash(
 
 type otelEthClient struct {
 	*ethclient.Client
-	metrics infra.MetricsFactory
-	tracer  trace.Tracer
+	ethCalls *prometheus.CounterVec
+	tracer   trace.Tracer
 }
 
 var _ BlockchainClient = (*otelEthClient)(nil)
@@ -81,7 +82,16 @@ func NewInstrumentedEthClient(
 	metrics infra.MetricsFactory,
 	tracer trace.Tracer,
 ) *otelEthClient {
-	return &otelEthClient{Client: client, metrics: metrics, tracer: tracer}
+	var ethCalls *prometheus.CounterVec
+	if metrics != nil {
+		ethCalls = metrics.NewCounterVecEx(
+			"eth_calls",
+			"Number of eth_calls made by an instrumented client",
+			"method_name",
+		)
+	}
+
+	return &otelEthClient{Client: client, ethCalls: ethCalls, tracer: tracer}
 }
 
 func (ic *otelEthClient) ChainID(ctx context.Context) (*big.Int, error) {
@@ -111,9 +121,9 @@ func (ic *otelEthClient) SendTransaction(ctx context.Context, tx *types.Transact
 		defer span.End()
 
 		span.SetAttributes(attribute.String("tx_hash", tx.Hash().String()))
-		if len(tx.Data()) >= 4 {
-			span.SetAttributes(attribute.String("func_selector", hex.EncodeToString(tx.Data()[:4])))
-		}
+		data := tx.Data()
+		methodName := getMethodName(&data)
+		span.SetAttributes(attribute.String("method_name", methodName))
 	}
 
 	return ic.Client.SendTransaction(ctx, tx)
@@ -130,21 +140,45 @@ func (ic *otelEthClient) HeaderByNumber(ctx context.Context, number *big.Int) (*
 }
 
 func (ic *otelEthClient) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
-	ctx, span := ic.tracer.Start(ctx, "eth_getBlockByNumber")
-	defer span.End()
-
+	if ic.tracer != nil {
+		var span trace.Span
+		ctx, span = ic.tracer.Start(ctx, "eth_getBlockByNumber")
+		defer span.End()
+	}
 	return ic.Client.BlockByNumber(ctx, number)
 }
 
 func (ic *otelEthClient) CallContract(ctx context.Context, msg ethereum.CallMsg, blockNumber *big.Int) ([]byte, error) {
-	ctx, span := ic.tracer.Start(ctx, "eth_call")
-	defer span.End()
+	var methodName string
+	if ic.tracer != nil {
+		var span trace.Span
+		ctx, span = ic.tracer.Start(ctx, "eth_call")
+		defer span.End()
 
-	if len(msg.Data) >= 4 {
-		span.SetAttributes(attribute.String("func_selector", hex.EncodeToString(msg.Data[:4])))
+		methodName = getMethodName(&msg.Data)
+		span.SetAttributes(attribute.String("method_name", methodName))
+	}
+
+	if ic.ethCalls != nil {
+		if methodName == "" {
+			methodName = getMethodName(&msg.Data)
+		}
+		ic.ethCalls.With(prometheus.Labels{"method_name": methodName}).Inc()
 	}
 
 	return ic.Client.CallContract(ctx, msg, blockNumber)
+}
+
+func getMethodName(data *[]byte) (methodName string) {
+	if len(*data) > 4 {
+		selector := hex.EncodeToString((*data)[:4])
+		var defined bool
+		methodName, defined = GetSelectorMethodName(selector)
+		if !defined {
+			methodName = selector
+		}
+	}
+	return methodName
 }
 
 func (ic *otelEthClient) CallContractAtHash(
@@ -152,45 +186,66 @@ func (ic *otelEthClient) CallContractAtHash(
 	msg ethereum.CallMsg,
 	blockHash common.Hash,
 ) ([]byte, error) {
-	ctx, span := ic.tracer.Start(ctx, "eth_call")
-	defer span.End()
+	var methodName string
 
-	if len(msg.Data) >= 4 {
-		span.SetAttributes(attribute.String("func_selector", hex.EncodeToString(msg.Data[:4])))
+	if ic.tracer != nil {
+		var span trace.Span
+		ctx, span = ic.tracer.Start(ctx, "eth_call")
+		defer span.End()
+
+		methodName = getMethodName(&msg.Data)
+		span.SetAttributes(attribute.String("method_name", methodName))
 	}
 
-	span.SetAttributes(attribute.String("blockHash", hex.EncodeToString(blockHash[:])))
+	if ic.ethCalls != nil {
+		if methodName == "" {
+			methodName = getMethodName(&msg.Data)
+		}
+		ic.ethCalls.With(prometheus.Labels{"method_name": methodName}).Inc()
+	}
+
 	return ic.Client.CallContractAtHash(ctx, msg, blockHash)
 }
 
 func (ic *otelEthClient) PendingCallContract(ctx context.Context, msg ethereum.CallMsg) ([]byte, error) {
-	ctx, span := ic.tracer.Start(ctx, "eth_pendingCallContract")
-	defer span.End()
+	if ic.tracer != nil {
+		var span trace.Span
+		ctx, span = ic.tracer.Start(ctx, "eth_pendingCallContract")
+		defer span.End()
 
-	if len(msg.Data) >= 4 {
-		span.SetAttributes(attribute.String("func_selector", hex.EncodeToString(msg.Data[:4])))
+		methodName := getMethodName(&msg.Data)
+		span.SetAttributes(attribute.String("method_name", methodName))
 	}
 
 	return ic.Client.PendingCallContract(ctx, msg)
 }
 
 func (ic *otelEthClient) NonceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (uint64, error) {
-	ctx, span := ic.tracer.Start(ctx, "eth_nonceAt")
-	defer span.End()
+	if ic.tracer != nil {
+		var span trace.Span
+		ctx, span = ic.tracer.Start(ctx, "eth_nonceAt")
+		defer span.End()
+	}
 
 	return ic.Client.NonceAt(ctx, account, blockNumber)
 }
 
 func (ic *otelEthClient) PendingNonceAt(ctx context.Context, account common.Address) (uint64, error) {
-	ctx, span := ic.tracer.Start(ctx, "eth_pendingNonceAt")
-	defer span.End()
+	if ic.tracer != nil {
+		var span trace.Span
+		ctx, span = ic.tracer.Start(ctx, "eth_pendingNonceAt")
+		defer span.End()
+	}
 
 	return ic.Client.PendingNonceAt(ctx, account)
 }
 
 func (ic *otelEthClient) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
-	ctx, span := ic.tracer.Start(ctx, "eth_getTransactionReceipt")
-	defer span.End()
+	if ic.tracer != nil {
+		var span trace.Span
+		ctx, span = ic.tracer.Start(ctx, "eth_getTransactionReceipt")
+		defer span.End()
+	}
 
 	return ic.Client.TransactionReceipt(ctx, txHash)
 }
@@ -200,36 +255,47 @@ func (ic *otelEthClient) BalanceAt(
 	account common.Address,
 	blockNumber *big.Int,
 ) (*big.Int, error) {
-	ctx, span := ic.tracer.Start(ctx, "eth_balanceAt")
-	defer span.End()
+	if ic.tracer != nil {
+		var span trace.Span
+		ctx, span = ic.tracer.Start(ctx, "eth_balanceAt")
+		defer span.End()
+	}
 
 	return ic.Client.BalanceAt(ctx, account, blockNumber)
 }
 
 func (ic *otelEthClient) FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error) {
-	ctx, span := ic.tracer.Start(ctx, "eth_filterLogs")
-	defer span.End()
+	if ic.tracer != nil {
+		var span trace.Span
+		ctx, span = ic.tracer.Start(ctx, "eth_filterLogs")
+		defer span.End()
 
-	if q.FromBlock != nil {
-		span.SetAttributes(attribute.String("from", q.FromBlock.String()))
+		if q.FromBlock != nil {
+			span.SetAttributes(attribute.String("from", q.FromBlock.String()))
+		}
+		if q.ToBlock != nil {
+			span.SetAttributes(attribute.String("to", q.ToBlock.String()))
+		}
 	}
-	if q.ToBlock != nil {
-		span.SetAttributes(attribute.String("to", q.ToBlock.String()))
-	}
-
 	return ic.Client.FilterLogs(ctx, q)
 }
 
 func (ic *otelEthClient) BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
-	ctx, span := ic.tracer.Start(ctx, "eth_blockByHash")
-	defer span.End()
+	if ic.tracer != nil {
+		var span trace.Span
+		ctx, span = ic.tracer.Start(ctx, "eth_blockByHash")
+		defer span.End()
+	}
 
 	return ic.Client.BlockByHash(ctx, hash)
 }
 
 func (ic *otelEthClient) CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error) {
-	ctx, span := ic.tracer.Start(ctx, "eth_getCode")
-	defer span.End()
+	if ic.tracer != nil {
+		var span trace.Span
+		ctx, span = ic.tracer.Start(ctx, "eth_getCode")
+		defer span.End()
+	}
 
 	return ic.Client.CodeAt(ctx, account, blockNumber)
 }
@@ -242,16 +308,21 @@ func (ic *otelEthClient) CodeAtHash(
 	var bc BlockchainClient = ic.Client
 	bh, ok := bc.(bind.BlockHashContractCaller)
 	if ok {
-		ctx, span := ic.tracer.Start(ctx, "eth_getCode")
-		defer span.End()
-
+		if ic.tracer != nil {
+			var span trace.Span
+			ctx, span = ic.tracer.Start(ctx, "eth_getCode")
+			defer span.End()
+		}
 		return bh.CodeAtHash(ctx, contract, blockHash)
 	}
 
-	ctx, span := ic.tracer.Start(ctx, "CodeAtHash")
-	defer span.End()
+	if ic.tracer != nil {
+		var span trace.Span
+		ctx, span = ic.tracer.Start(ctx, "CodeAtHash")
+		defer span.End()
 
-	span.SetAttributes(attribute.String("blockHash", hex.EncodeToString(blockHash[:])))
+		span.SetAttributes(attribute.String("blockHash", hex.EncodeToString(blockHash[:])))
+	}
 
 	block, err := ic.BlockByHash(ctx, blockHash)
 	if err != nil {
@@ -262,27 +333,21 @@ func (ic *otelEthClient) CodeAtHash(
 }
 
 func (ic *otelEthClient) EstimateGas(ctx context.Context, call ethereum.CallMsg) (uint64, error) {
-	ctx, span := ic.tracer.Start(ctx, "eth_estimateGas")
-	defer span.End()
+	if ic.tracer != nil {
+		var span trace.Span
+		ctx, span = ic.tracer.Start(ctx, "eth_estimateGas")
+		defer span.End()
+	}
 
 	return ic.Client.EstimateGas(ctx, call)
 }
 
-func (ic *otelEthClient) FeeHistory(
-	ctx context.Context,
-	blockCount uint64,
-	lastBlock *big.Int,
-	rewardPercentiles []float64,
-) (*ethereum.FeeHistory, error) {
-	ctx, span := ic.tracer.Start(ctx, "eth_feeHistory")
-	defer span.End()
-
-	return ic.Client.FeeHistory(ctx, blockCount, lastBlock, rewardPercentiles)
-}
-
 func (ic *otelEthClient) HeaderByHash(ctx context.Context, hash common.Hash) (*types.Header, error) {
-	ctx, span := ic.tracer.Start(ctx, "eth_getBlockByHash")
-	defer span.End()
+	if ic.tracer != nil {
+		var span trace.Span
+		ctx, span = ic.tracer.Start(ctx, "eth_getBlockByHash")
+		defer span.End()
+	}
 
 	return ic.Client.HeaderByHash(ctx, hash)
 }
