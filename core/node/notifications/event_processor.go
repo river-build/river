@@ -437,7 +437,8 @@ func (p *MessageToNotificationsProcessor) sendAPNNotification(
 		Custom("content", content).
 		ThreadID(streamID.String()).
 		ContentAvailable().
-		MutableContent()
+		MutableContent().
+		Sound("default")
 
 	if p.log.Enabled(ctx, slog.LevelDebug) {
 		p.log.Debug("APN Notification",
