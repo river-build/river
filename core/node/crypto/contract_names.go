@@ -8,6 +8,9 @@ import (
 
 	"github.com/river-build/river/core/contracts/base"
 	"github.com/river-build/river/core/contracts/river"
+	"github.com/river-build/river/core/xchain/bindings/erc1155"
+	"github.com/river-build/river/core/xchain/bindings/erc20"
+	"github.com/river-build/river/core/xchain/bindings/erc721"
 )
 
 // ContractNameMap maps selectors found in contract ABI code to the contract's method name.
@@ -50,6 +53,7 @@ var (
 )
 
 func init() {
+	// Selectors for base contracts.
 	abi, _ := base.ArchitectMetaData.GetAbi()
 	baseNameMap.RegisterABI("Architect", abi)
 	abi, _ = base.BanningMetaData.GetAbi()
@@ -62,8 +66,6 @@ func init() {
 	baseNameMap.RegisterABI("EntitlementsManager", abi)
 	abi, _ = base.Erc721aQueryableMetaData.GetAbi()
 	baseNameMap.RegisterABI("Erc721aQueryable", abi)
-	abi, _ = base.ICrossChainEntitlementMetaData.GetAbi()
-	baseNameMap.RegisterABI("ICrossChainEntitlement", abi)
 	abi, _ = base.IEntitlementCheckerMetaData.GetAbi()
 	baseNameMap.RegisterABI("IEntitlementChecker", abi)
 	abi, _ = base.IEntitlementGatedMetaData.GetAbi()
@@ -81,6 +83,17 @@ func init() {
 	abi, _ = base.WalletLinkMetaData.GetAbi()
 	baseNameMap.RegisterABI("WalletLink", abi)
 
+	// Entitlement-related. These may also occur on other chains.
+	abi, _ = erc721.Erc721MetaData.GetAbi()
+	baseNameMap.RegisterABI("Erc721", abi)
+	abi, _ = erc1155.Erc1155MetaData.GetAbi()
+	baseNameMap.RegisterABI("Erc1155", abi)
+	abi, _ = erc20.Erc20MetaData.GetAbi()
+	baseNameMap.RegisterABI("Erc20", abi)
+	abi, _ = base.ICrossChainEntitlementMetaData.GetAbi()
+	baseNameMap.RegisterABI("ICrossChainEntitlement", abi)
+
+	// Selectors for river contracts.
 	abi, _ = river.NodeRegistryV1MetaData.GetAbi()
 	riverNameMap.RegisterABI("NodeRegistry", abi)
 	abi, _ = river.OperatorRegistryV1MetaData.GetAbi()
