@@ -1,10 +1,26 @@
 ---
 title: useTimeline
 ---
+Hook to get the timeline events from a stream.
+
+You can use the `useTimeline` hook to get the timeline events from a channel stream, dm stream or group dm stream
+
 ## Imports
 
 ```ts
 import { useTimeline } from '@river-build/react-sdk'
+```
+
+## Examples
+
+```ts
+import { useTimeline } from '@river-build/react-sdk'
+import { RiverTimelineEvent } from '@river-build/sdk'
+
+const { data: events } = useTimeline(streamId)
+
+// You can filter the events by their kind
+const messages = events.filter((event) => event.content?.kind === RiverTimelineEvent.RoomMessage)
 ```
 
 ## Definition
@@ -31,12 +47,18 @@ function useTimeline(
 
 - **Type:** `string`
 
+The id of the stream to get the timeline events from.
+
 ### config
 
 - **Type:** `ObservableConfig.FromObservable<TimelineEvents>`
 - **Optional**
 
+Configuration options for the observable.
+
 ## Return Type
+
+The timeline events of the stream as an observable.
 
 ```ts
 {

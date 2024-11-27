@@ -1,6 +1,10 @@
 ---
 title: useRiver
 ---
+Hook to get an observable from the sync agent.
+
+An alternative of our premade hooks, allowing the creation of custom abstractions.
+
 ## Imports
 
 ```ts
@@ -38,12 +42,16 @@ function useRiver<T>(
 
 - **Type:** `(sync: SyncSelector) => Observable<T>`
 
+A selector function to get a observable from the sync agent.
+
 
 
 ### config
 
 - **Type:** `ObservableConfig.FromData<T>`
 - **Optional**
+
+Configuration options for the observable.
 
 #### config.fireImmediately
 
@@ -67,6 +75,8 @@ Callback function to be called when an error occurs.
 Callback function to be called when the data is updated.
 
 ## Return Type
+
+The data from the selected observable.
 
 ```ts
 T extends PersistedModel<infer UnwrappedData> ? {
