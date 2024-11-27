@@ -25,7 +25,8 @@ type simulatedClientWrapper struct {
 var _ BlockchainClient = (*simulatedClientWrapper)(nil)
 
 // NewSimulatedClientWrapper returns a wrapped simulated client that implements missing methods
-// on the
+// on the BlockchainClient interface. This allows us to pass a simulated.Client wherever a
+// BlockchainClient is expected.
 func NewClientWrapper(client simulated.Client) BlockchainClient {
 	return &simulatedClientWrapper{
 		Client: client,
@@ -76,7 +77,8 @@ type otelEthClient struct {
 
 var _ BlockchainClient = (*otelEthClient)(nil)
 
-// NewInstrumentedEthClient wraps an Ethereum client and adds open-telemetry tracing.
+// NewInstrumentedEthClient wraps an Ethereum client and adds open-telemetry tracing and metrics
+// collection.
 func NewInstrumentedEthClient(
 	client *ethclient.Client,
 	metrics infra.MetricsFactory,
