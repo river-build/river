@@ -297,7 +297,7 @@ func (s *Service) initBaseChain() error {
 
 	if !s.config.DisableBaseChain {
 		var err error
-		s.baseChain, err = crypto.NewBlockchain(ctx, &s.config.BaseChain, nil, s.metrics, s.otelTracer)
+		s.baseChain, err = crypto.NewBlockchain(ctx, &s.config.BaseChain, s.wallet, s.metrics, s.otelTracer)
 		if err != nil {
 			return err
 		}
