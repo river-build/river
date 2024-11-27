@@ -146,12 +146,14 @@ export const AuthRoute = () => {
 
 const ChainConnectButton = (props: { onWalletConnect: () => void; className?: string }) => {
     const { connector: activeConnector } = useAccount()
-    const { connectors, connect, error, isLoading } = useConnect({
-        onSuccess: props.onWalletConnect,
+    const { connectors, connect, error, isPending } = useConnect({
+        mutation: {
+            onSuccess: props.onWalletConnect,
+        },
     })
 
     return (
-        <div>
+        <div className="space-y-1.5">
             {connectors.map((connector) => (
                 <Button
                     className={props.className}
@@ -167,7 +169,7 @@ const ChainConnectButton = (props: { onWalletConnect: () => void; className?: st
                     {activeConnector?.id === connector.id
                         ? `Continue with ${connector.name}`
                         : connector.name}
-                    {isLoading && ' (connecting)'}
+                    {isPending && ' (connecting)'}
                 </Button>
             ))}
             {error && <div>{error.message}</div>}

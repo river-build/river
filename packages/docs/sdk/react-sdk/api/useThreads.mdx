@@ -1,6 +1,8 @@
 ---
 title: useThreads
 ---
+Hook to get the threads from a stream.
+
 ## Imports
 
 ```ts
@@ -33,12 +35,18 @@ function useThreads(
 
 - **Type:** `string`
 
+The id of the stream to get the threads from.
+
 ### config
 
 - **Type:** `ObservableConfig.FromObservable<Threads>`
 - **Optional**
 
+Configuration options for the observable.
+
 ## Return Type
+
+The threads of the stream as a map from the message eventId to a thread.
 
 ```ts
 {
