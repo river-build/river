@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"io"
 	"sync"
 	"testing"
 	"time"
@@ -11,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
@@ -409,16 +407,6 @@ func TestArchive100StreamsWithData(t *testing.T) {
 	require.Zero(stats.FailedOpsCount)
 }
 
-func httpGet(t *testing.T, url string) string {
-	httpClient, _ := testcert.GetHttp2LocalhostTLSClient(nil, nil)
-	resp, err := httpClient.Get(url)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	return string(body)
-}
-
 func TestArchiveContinuous(t *testing.T) {
 	tester := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true})
 	ctx := tester.ctx
@@ -446,7 +434,7 @@ func TestArchiveContinuous(t *testing.T) {
 	arch.Archiver.WaitForStart()
 	require.Len(arch.ExitSignal(), 0)
 
-	status := httpGet(t, "https://"+arch.listener.Addr().String()+"/status")
+	status := tester.httpGet("https://" + arch.listener.Addr().String() + "/status")
 	require.Contains(status, "OK")
 
 	require.EventuallyWithT(

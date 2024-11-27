@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto/tls"
 	"hash/fnv"
+	"io"
 	"log"
 	"math/big"
 	"net"
+	"net/http"
 	"slices"
 	"testing"
 	"time"
@@ -274,24 +276,32 @@ func (st *serviceTester) startSingle(i int, opts ...startOpts) error {
 	st.nodes[i].service = service
 	st.nodes[i].address = bc.Wallet.Address
 
+	var nodeRecord testNodeRecord = *st.nodes[i]
+
 	st.t.Cleanup(func() {
 		// Cancel context here: t.Cleanup calls functions in reverse order,
 		// but it's better to cancel context first.
 		// Since it's ok to cancel context multiple times, it's safe to cancel it here.
 		st.ctxCancel()
-		st.nodes[i].Close(st.ctx, st.dbUrl)
+		nodeRecord.Close(st.ctx, st.dbUrl)
 	})
 
 	return nil
 }
 
 func (st *serviceTester) testClient(i int) protocolconnect.StreamServiceClient {
-	return testClient(st.nodes[i].url)
+	return st.testClientForUrl(st.nodes[i].url)
 }
 
-func testClient(url string) protocolconnect.StreamServiceClient {
-	httpClient, _ := testcert.GetHttp2LocalhostTLSClient(nil, nil)
+func (st *serviceTester) testClientForUrl(url string) protocolconnect.StreamServiceClient {
+	httpClient, _ := testcert.GetHttp2LocalhostTLSClient(st.ctx, st.getConfig())
 	return protocolconnect.NewStreamServiceClient(httpClient, url, connect.WithGRPCWeb())
+}
+
+func (st *serviceTester) httpClient() *http.Client {
+	c, err := testcert.GetHttp2LocalhostTLSClient(st.ctx, st.getConfig())
+	st.require.NoError(err)
+	return c
 }
 
 func bytesHash(b []byte) uint64 {
@@ -410,4 +420,13 @@ func (st *serviceTester) eventuallyCompareStreamDataInStorage(
 		20*time.Second,
 		100*time.Millisecond,
 	)
+}
+
+func (st *serviceTester) httpGet(url string) string {
+	resp, err := st.httpClient().Get(url)
+	st.require.NoError(err)
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	st.require.NoError(err)
+	return string(body)
 }

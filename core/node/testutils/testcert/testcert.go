@@ -6,6 +6,9 @@ import (
 	"crypto/x509"
 	"net/http"
 	"strings"
+	"time"
+
+	"golang.org/x/net/http2"
 
 	"github.com/river-build/river/core/config"
 )
@@ -96,11 +99,11 @@ func GetHttp2LocalhostTLSConfig() *tls.Config {
 
 func GetHttp2LocalhostTLSClient(ctx context.Context, cfg *config.Config) (*http.Client, error) {
 	return &http.Client{
-		Transport: &http.Transport{
+		Transport: &http2.Transport{
 			TLSClientConfig: &tls.Config{
 				RootCAs: LocalhostCertPool,
 			},
-			ForceAttemptHTTP2: true,
 		},
+		Timeout: 60 * time.Second,
 	}, nil
 }
