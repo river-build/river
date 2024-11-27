@@ -14,8 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/river-build/river/core/node/base"
-
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
@@ -1575,7 +1573,7 @@ func TestSyncSubscriptionWithTooSlowClient(t *testing.T) {
 		wallets  []*crypto.Wallet
 		users    []*protocol.SyncCookie
 		channels []*protocol.SyncCookie
-		syncID   = base.GenNanoid()
+		syncID   = GenNanoid()
 	)
 
 	// create users that will join and add messages to channels.
@@ -1701,7 +1699,7 @@ func TestSyncSubscriptionWithTooSlowClient(t *testing.T) {
 	req.Eventuallyf(func() bool {
 		select {
 		case err := <-syncOpResult:
-			var riverErr *base.RiverErrorImpl
+			var riverErr *RiverErrorImpl
 			if errors.As(err, &riverErr) {
 				req.Equal(riverErr.Code, protocol.Err_BUFFER_FULL, "unexpected error code")
 				return true
