@@ -52,8 +52,13 @@ func (s *StreamTrackerConnectGo) Run(
 	userPreferences events.UserPreferencesStore,
 	metrics *streamsTrackerWorkerMetrics,
 ) {
-	restartSyncSessionCounter := 0
-	remotes := nodes.NewStreamNodes(stream.Nodes, common.Address{})
+	var (
+		promLabels                = prometheus.Labels{"type": channelLabelType(stream.StreamId)}
+		remotes                   = nodes.NewStreamNodes(stream.Nodes, common.Address{})
+		restartSyncSessionCounter = 0
+	)
+
+	metrics.TotalStreams.With(promLabels).Inc()
 
 	for {
 		var (
@@ -63,10 +68,7 @@ func (s *StreamTrackerConnectGo) Run(
 			lastReceivedPong    atomic.Int64
 			syncID              string
 			trackedStream       *events.TrackedNotificationStreamView
-			promLabels          = prometheus.Labels{"type": channelLabelType(stream.StreamId)}
 		)
-
-		metrics.TotalStreams.With(promLabels).Inc()
 
 		var (
 			client     protocolconnect.StreamServiceClient
@@ -100,7 +102,9 @@ func (s *StreamTrackerConnectGo) Run(
 		if err := workerPool.Acquire(syncCtx, 1); err != nil {
 			metrics.SyncSessionInFlight.Dec()
 			syncCancel()
-			log.Error("unable to acquire worker pool task", "err", err)
+			if !errors.Is(err, context.Canceled) {
+				log.Error("unable to acquire worker pool task", "err", err)
+			}
 			if s.waitMaxOrUntilCancel(ctx, 10*time.Second, 30*time.Second) {
 				return
 			}
@@ -162,7 +166,9 @@ func (s *StreamTrackerConnectGo) Run(
 			firstMsg := streamUpdates.Msg()
 			if firstMsg.GetSyncOp() != protocol.SyncOp_SYNC_NEW {
 				syncCancel()
-				log.Error("Stream sync session didn't start with SyncOp_SYNC_NEW")
+				if !errors.Is(err, context.Canceled) {
+					log.Error("Stream sync session didn't start with SyncOp_SYNC_NEW")
+				}
 				if s.waitMaxOrUntilCancel(syncCtx, 10*time.Second, 30*time.Second) {
 					return
 				}
