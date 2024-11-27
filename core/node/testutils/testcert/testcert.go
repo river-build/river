@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"net/http"
 	"strings"
-	"time"
 
 	"golang.org/x/net/http2"
 
@@ -104,6 +103,5 @@ func GetHttp2LocalhostTLSClient(ctx context.Context, cfg *config.Config) (*http.
 				RootCAs: LocalhostCertPool,
 			},
 		},
-		Timeout: 60 * time.Second,
 	}, nil
 }
