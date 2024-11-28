@@ -99,7 +99,6 @@ func NewInstrumentedEthClient(
 			"chain_id",
 			"method_name",
 			"status",
-			"reason",
 		)
 	}
 
@@ -165,9 +164,10 @@ func (ic *otelEthClient) BlockByNumber(ctx context.Context, number *big.Int) (*t
 	return ic.Client.BlockByNumber(ctx, number)
 }
 
-// extractRevertReason extracts the revert reason from an error if it is a contract error
-// with a revert reason. Otherwise, it will return an empty string.
-func extractRevertReason(err error) string {
+// extractCallErrorStatus extracts the revert reason from an error if it is a contract error
+// with a revert reason. Otherwise, it will return "revert" for contract data errors, or
+// "fail" for other types of errors.
+func extractCallErrorStatus(err error) string {
 	if de, ok := err.(rpc.DataError); ok {
 		hexStr := de.ErrorData().(string)
 		hexStr = strings.TrimPrefix(hexStr, "0x")
@@ -178,8 +178,9 @@ func extractRevertReason(err error) string {
 				return reason
 			}
 		}
+		return "revert"
 	}
-	return ""
+	return "fail"
 }
 
 func getMethodName(data *[]byte) string {
@@ -214,15 +215,9 @@ func (ic *otelEthClient) makeEthCallWithTraceAndMetrics(
 	data, err := call()
 
 	if ic.ethCalls != nil {
-		 status := "ok"
-		var reason string
+		status := "ok"
 		if err != nil {
-			reason = extractRevertReason(err)
-			if reason == "" {
-				status = "fail"
-			} else {
-				status = "revert"
-			}
+			status = extractCallErrorStatus(err)
 		}
 
 		if methodName == "" {
@@ -233,7 +228,6 @@ func (ic *otelEthClient) makeEthCallWithTraceAndMetrics(
 				"chain_id":    ic.chainId,
 				"method_name": methodName,
 				"status":      status,
-				"reason":      reason,
 			},
 		).Inc()
 	}
