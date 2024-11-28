@@ -31,7 +31,7 @@ func runServices(ctx context.Context, cfg *config.Config, stream bool, xchain bo
 	var streamService *rpc.Service
 	var metricsRegistry *prometheus.Registry
 	if stream {
-		streamService, err = rpc.StartServer(ctx, cfg, nil, nil)
+		streamService, err = rpc.StartServer(ctx, cfg, nil)
 		if err != nil {
 			log.Error("Failed to start server", "error", err)
 			return err

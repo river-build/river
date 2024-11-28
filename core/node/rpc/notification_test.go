@@ -8,8 +8,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
-	"net"
-	"net/http"
 	"sync"
 	"testing"
 	"time"
@@ -20,6 +18,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	eth_crypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/google/go-cmp/cmp"
+	payload2 "github.com/sideshow/apns2/payload"
+	"github.com/stretchr/testify/require"
+
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/notifications/push"
@@ -28,8 +29,7 @@ import (
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/testutils"
-	payload2 "github.com/sideshow/apns2/payload"
-	"github.com/stretchr/testify/require"
+	"github.com/river-build/river/core/node/testutils/testcert"
 )
 
 // TestSubscriptionExpired ensures that web/apn subscriptions for which the notification API
@@ -42,10 +42,13 @@ func TestSubscriptionExpired(t *testing.T) {
 	var notifications notificationExpired
 
 	notificationService := initNotificationService(ctx, tester, notifications)
+
+	httpClient, _ := testcert.GetHttp2LocalhostTLSClient(ctx, tester.getConfig())
+
 	notificationClient := protocolconnect.NewNotificationServiceClient(
-		http.DefaultClient, "http://"+notificationService.listener.Addr().String())
+		httpClient, "https://"+notificationService.listener.Addr().String())
 	authClient := protocolconnect.NewAuthenticationServiceClient(
-		http.DefaultClient, "http://"+notificationService.listener.Addr().String())
+		httpClient, "https://"+notificationService.listener.Addr().String())
 
 	t.Run("webpush", func(t *testing.T) {
 		test := setupDMNotificationTest(ctx, tester, notificationClient, authClient)
@@ -101,11 +104,14 @@ func TestNotifications(t *testing.T) {
 	}
 
 	notificationService := initNotificationService(ctx, tester, notifications)
+
+	httpClient, _ := testcert.GetHttp2LocalhostTLSClient(ctx, tester.getConfig())
+
 	notificationClient := protocolconnect.NewNotificationServiceClient(
-		http.DefaultClient, "http://"+notificationService.listener.Addr().String())
+		httpClient, "https://"+notificationService.listener.Addr().String())
 
 	authClient := protocolconnect.NewAuthenticationServiceClient(
-		http.DefaultClient, "http://"+notificationService.listener.Addr().String())
+		httpClient, "https://"+notificationService.listener.Addr().String())
 
 	t.Run("DMNotifications", func(t *testing.T) {
 		testDMNotifications(t, ctx, tester, notificationClient, authClient, notifications)
@@ -653,18 +659,15 @@ func initNotificationService(
 	tester *serviceTester,
 	notifier push.MessageNotifier,
 ) *Service {
-	listener, err := net.Listen("tcp", "localhost:0")
-	tester.require.NoError(err)
-
 	var key [32]byte
-	_, err = rand.Read(key[:])
+	_, err := rand.Read(key[:])
 	tester.require.NoError(err)
 
 	cfg := tester.getConfig()
 	cfg.Notifications.Authentication.SessionToken.Key.Algorithm = "HS256"
 	cfg.Notifications.Authentication.SessionToken.Key.Key = hex.EncodeToString(key[:])
 
-	service, err := StartServerInNotificationMode(ctx, cfg, tester.btc.DeployerBlockchain, listener, notifier)
+	service, err := StartServerInNotificationMode(ctx, cfg, notifier, makeTestServerOpts(tester))
 	tester.require.NoError(err)
 
 	return service
@@ -857,7 +860,14 @@ func setupGDMNotificationTest(
 	}
 
 	testCtx.gdmStreamID = testutils.FakeStreamId(STREAM_GDM_CHANNEL_BIN)
-	_, _, err = createGDMChannel(ctx, testCtx.members[0], testCtx.members[1:], testCtx.streamClient, testCtx.gdmStreamID, nil)
+	_, _, err = createGDMChannel(
+		ctx,
+		testCtx.members[0],
+		testCtx.members[1:],
+		testCtx.streamClient,
+		testCtx.gdmStreamID,
+		nil,
+	)
 
 	testCtx.req.NoError(err)
 
@@ -962,7 +972,6 @@ func (tc *gdmChannelNotificationsTestContext) setGlobalGDMSetting(
 	user *crypto.Wallet,
 	setting GdmChannelSettingValue,
 ) {
-
 	req := connect.NewRequest(&SetDmGdmSettingsRequest{
 		DmGlobal:  DmChannelSettingValue_DM_MESSAGES_YES,
 		GdmGlobal: setting,
