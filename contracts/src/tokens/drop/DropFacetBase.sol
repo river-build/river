@@ -138,9 +138,19 @@ abstract contract DropFacetBase is IDropFacetBase {
           DropFacet__ClaimConditionsNotInAscendingOrder.selector
         );
       }
+      _verifyEnoughBalance(
+        newCondition.currency,
+        IERC20(newCondition.currency).balanceOf(address(this)) +
+          newCondition.maxClaimableSupply
+      );
+    } else {
+      // verify enough balance
+      _verifyEnoughBalance(
+        newCondition.currency,
+        newCondition.maxClaimableSupply
+      );
     }
 
-    // Store the new condition
     _updateClaimCondition(ds.conditionById[newConditionId], newCondition);
 
     // Update condition count
@@ -176,6 +186,8 @@ abstract contract DropFacetBase is IDropFacetBase {
     uint48 newConditionCount = uint48(conditions.length);
 
     uint48 lastConditionTimestamp;
+    uint256 totalClaimableSupply;
+
     for (uint256 i; i < newConditionCount; ++i) {
       ClaimCondition calldata newCondition = conditions[i];
       if (lastConditionTimestamp >= newCondition.startTimestamp) {
@@ -198,6 +210,8 @@ abstract contract DropFacetBase is IDropFacetBase {
       // copy the new condition to the storage except `supplyClaimed`
       _updateClaimCondition(condition, newCondition);
       lastConditionTimestamp = newCondition.startTimestamp;
+      totalClaimableSupply += newCondition.maxClaimableSupply;
+      _verifyEnoughBalance(newCondition.currency, totalClaimableSupply);
     }
 
     ds.conditionCount = newConditionCount;
@@ -217,11 +231,6 @@ abstract contract DropFacetBase is IDropFacetBase {
     ClaimCondition storage condition,
     ClaimCondition calldata newCondition
   ) internal {
-    _verifyEnoughBalance(
-      newCondition.currency,
-      newCondition.maxClaimableSupply
-    );
-
     condition.startTimestamp = newCondition.startTimestamp;
     condition.endTimestamp = newCondition.endTimestamp;
     condition.maxClaimableSupply = newCondition.maxClaimableSupply;
