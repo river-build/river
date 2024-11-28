@@ -82,7 +82,7 @@ func NewBlockchain(
 			Func("NewBlockchain")
 	}
 
-	instrumentedClient := NewInstrumentedEthClient(client, metrics, tracer)
+	instrumentedClient := NewInstrumentedEthClient(client, cfg.ChainId, metrics, tracer)
 	return NewBlockchainWithClient(ctx, cfg, wallet, instrumentedClient, instrumentedClient, metrics, tracer)
 }
 

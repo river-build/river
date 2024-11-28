@@ -2,15 +2,20 @@ package crypto
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/ethclient/simulated"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -73,6 +78,7 @@ type otelEthClient struct {
 	*ethclient.Client
 	ethCalls *prometheus.CounterVec
 	tracer   trace.Tracer
+	chainId  string
 }
 
 var _ BlockchainClient = (*otelEthClient)(nil)
@@ -81,6 +87,7 @@ var _ BlockchainClient = (*otelEthClient)(nil)
 // collection.
 func NewInstrumentedEthClient(
 	client *ethclient.Client,
+	chainId uint64,
 	metrics infra.MetricsFactory,
 	tracer trace.Tracer,
 ) *otelEthClient {
@@ -89,11 +96,19 @@ func NewInstrumentedEthClient(
 		ethCalls = metrics.NewCounterVecEx(
 			"eth_calls",
 			"Number of eth_calls made by an instrumented client",
+			"chain_id",
 			"method_name",
+			"status",
+			"reason",
 		)
 	}
 
-	return &otelEthClient{Client: client, ethCalls: ethCalls, tracer: tracer}
+	return &otelEthClient{
+		Client:   client,
+		chainId:  fmt.Sprintf("%d", chainId),
+		ethCalls: ethCalls,
+		tracer:   tracer,
+	}
 }
 
 func (ic *otelEthClient) ChainID(ctx context.Context) (*big.Int, error) {
@@ -150,37 +165,90 @@ func (ic *otelEthClient) BlockByNumber(ctx context.Context, number *big.Int) (*t
 	return ic.Client.BlockByNumber(ctx, number)
 }
 
-func (ic *otelEthClient) CallContract(ctx context.Context, msg ethereum.CallMsg, blockNumber *big.Int) ([]byte, error) {
+// extractRevertReason extracts the revert reason from an error if it is a contract error
+// with a revert reason. Otherwise, it will return an empty string.
+func extractRevertReason(err error) string {
+	if de, ok := err.(rpc.DataError); ok {
+		hexStr := de.ErrorData().(string)
+		hexStr = strings.TrimPrefix(hexStr, "0x")
+		revert, e := hex.DecodeString(hexStr)
+		if e == nil {
+			reason, e := abi.UnpackRevert(revert)
+			if e == nil {
+				return reason
+			}
+		}
+	}
+	return ""
+}
+
+func getMethodName(data *[]byte) string {
 	var methodName string
+	if len(*data) > 4 {
+		selector := binary.BigEndian.Uint32(*data)
+		var defined bool
+		methodName, defined = GetSelectorMethodName(selector)
+		if !defined {
+			return hex.EncodeToString((*data)[:4])
+		}
+	}
+	return methodName
+}
+
+func (ic *otelEthClient) makeEthCallWithTraceAndMetrics(
+	ctx context.Context,
+	msg ethereum.CallMsg,
+	call func() ([]byte, error),
+) ([]byte, error) {
+	var methodName string
+
 	if ic.tracer != nil {
 		var span trace.Span
-		ctx, span = ic.tracer.Start(ctx, "eth_call")
+		_, span = ic.tracer.Start(ctx, "eth_call")
 		defer span.End()
 
 		methodName = getMethodName(&msg.Data)
 		span.SetAttributes(attribute.String("method_name", methodName))
 	}
 
+	data, err := call()
+
 	if ic.ethCalls != nil {
+		 status := "ok"
+		var reason string
+		if err != nil {
+			reason = extractRevertReason(err)
+			if reason == "" {
+				status = "fail"
+			} else {
+				status = "revert"
+			}
+		}
+
 		if methodName == "" {
 			methodName = getMethodName(&msg.Data)
 		}
-		ic.ethCalls.With(prometheus.Labels{"method_name": methodName}).Inc()
+		ic.ethCalls.With(
+			prometheus.Labels{
+				"chain_id":    ic.chainId,
+				"method_name": methodName,
+				"status":      status,
+				"reason":      reason,
+			},
+		).Inc()
 	}
 
-	return ic.Client.CallContract(ctx, msg, blockNumber)
+	return data, err
 }
 
-func getMethodName(data *[]byte) (methodName string) {
-	if len(*data) > 4 {
-		selector := hex.EncodeToString((*data)[:4])
-		var defined bool
-		methodName, defined = GetSelectorMethodName(selector)
-		if !defined {
-			methodName = selector
-		}
-	}
-	return methodName
+func (ic *otelEthClient) CallContract(ctx context.Context, msg ethereum.CallMsg, blockNumber *big.Int) ([]byte, error) {
+	return ic.makeEthCallWithTraceAndMetrics(
+		ctx,
+		msg,
+		func() ([]byte, error) {
+			return ic.Client.CallContract(ctx, msg, blockNumber)
+		},
+	)
 }
 
 func (ic *otelEthClient) CallContractAtHash(
@@ -188,25 +256,13 @@ func (ic *otelEthClient) CallContractAtHash(
 	msg ethereum.CallMsg,
 	blockHash common.Hash,
 ) ([]byte, error) {
-	var methodName string
-
-	if ic.tracer != nil {
-		var span trace.Span
-		ctx, span = ic.tracer.Start(ctx, "eth_call")
-		defer span.End()
-
-		methodName = getMethodName(&msg.Data)
-		span.SetAttributes(attribute.String("method_name", methodName))
-	}
-
-	if ic.ethCalls != nil {
-		if methodName == "" {
-			methodName = getMethodName(&msg.Data)
-		}
-		ic.ethCalls.With(prometheus.Labels{"method_name": methodName}).Inc()
-	}
-
-	return ic.Client.CallContractAtHash(ctx, msg, blockHash)
+	return ic.makeEthCallWithTraceAndMetrics(
+		ctx,
+		msg,
+		func() ([]byte, error) {
+			return ic.Client.CallContractAtHash(ctx, msg, blockHash)
+		},
+	)
 }
 
 func (ic *otelEthClient) PendingCallContract(ctx context.Context, msg ethereum.CallMsg) ([]byte, error) {

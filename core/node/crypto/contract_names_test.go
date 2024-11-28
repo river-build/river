@@ -1,6 +1,8 @@
 package crypto_test
 
 import (
+	"encoding/binary"
+	"encoding/hex"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,12 +17,18 @@ func TestContractNameMap(t *testing.T) {
 	nameMap.RegisterABI("Erc721", abi)
 
 	balanceOfHash := "70a08231"
-	name, ok := nameMap.GetMethodName(balanceOfHash)
+	bytes, err := hex.DecodeString(balanceOfHash)
+	require.NoError(t, err)
+	balanceOfSelector := binary.BigEndian.Uint32(bytes)
+	name, ok := nameMap.GetMethodName(balanceOfSelector)
 	require.True(t, ok)
 	require.Equal(t, "Erc721.balanceOf", name)
 
 	transferFromHash := "23b872dd"
-	name, ok = nameMap.GetMethodName(transferFromHash)
+	bytes, err = hex.DecodeString(transferFromHash)
+	require.NoError(t, err)
+	transferFromSelector := binary.BigEndian.Uint32(bytes)
+	name, ok = nameMap.GetMethodName(transferFromSelector)
 	require.True(t, ok)
 	require.Equal(t, "Erc721.transferFrom", name)
 }
