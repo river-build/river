@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { MembersModel } from '@river-build/sdk'
+import type { Members } from '@river-build/sdk'
 import { type ObservableConfig, useObservable } from './useObservable'
 import { useSyncAgent } from './useSyncAgent'
 import { getRoom } from './utils'
@@ -13,7 +13,7 @@ import { getRoom } from './utils'
  */
 export const useMemberList = (
     streamId: string,
-    config?: ObservableConfig.FromData<MembersModel>,
+    config?: ObservableConfig.FromObservable<Members>,
 ) => {
     const sync = useSyncAgent()
     const members = useMemo(() => getRoom(sync, streamId).members, [sync, streamId])

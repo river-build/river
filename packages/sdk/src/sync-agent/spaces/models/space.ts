@@ -68,17 +68,6 @@ export class Space extends PersistedObservable<SpaceModel> {
                 client.off('spaceChannelUpdated', this.onSpaceChannelUpdated)
             }
         })
-        if (!this.data.metadata) {
-            // todo aellis this needs retries and batching
-            this.spaceDapp
-                .getSpaceInfo(this.data.id)
-                .then((spaceInfo) => {
-                    this.setData({ metadata: spaceInfo })
-                })
-                .catch((error) => {
-                    logger.error('getSpaceInfo error', error)
-                })
-        }
     }
 
     /** Joins the space.
@@ -176,6 +165,17 @@ export class Space extends PersistedObservable<SpaceModel> {
                         this.store,
                     )
                 }
+            }
+            if (!this.data.metadata) {
+                // todo aellis this needs retries and batching
+                this.spaceDapp
+                    .getSpaceInfo(this.data.id)
+                    .then((spaceInfo) => {
+                        this.setData({ metadata: spaceInfo })
+                    })
+                    .catch((error) => {
+                        logger.error('getSpaceInfo error', error)
+                    })
             }
             this.setData({ initialized: true, channelIds: channelIds })
         }

@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import { type Observable, type PersistedModel } from '@river-build/sdk'
+import { suspend } from 'suspend-react'
 import { isPersistedModel } from './internals/utils'
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -20,7 +21,7 @@ export declare namespace ObservableConfig {
      * Create configuration options for an observable from the data type.
      * It can be used to configure the behavior of the `useObservable` hook.
      */
-    export type FromData<Data> = Data extends PersistedModel<infer UnwrappedData>
+    type FromData<Data> = Data extends PersistedModel<infer UnwrappedData>
         ? {
               /**
                * Trigger the update immediately, without waiting for the first update.
@@ -32,6 +33,11 @@ export declare namespace ObservableConfig {
               // TODO: when an error occurs? store errors? river error?
               /** Callback function to be called when an error occurs. */
               onError?: (error: Error) => void
+              /**
+               * Suspend the component until the data is loaded.
+               * @defaultValue false
+               */
+              suspense?: boolean
           }
         : {
               /**
@@ -96,9 +102,31 @@ export function useObservable<T>(
         [config],
     ) as ObservableConfig.FromData<T>
 
+    const readyObservable = useMemo(() => {
+        if ('suspense' in opts && opts.suspense) {
+            if (isPersistedModel(observable.value)) {
+                return suspend(async () => {
+                    await observable.when(
+                        (x) =>
+                            // @ts-expect-error - we know it's a persisted model
+                            'data' in x && 'initialized' in x.data
+                                ? x.data.initialized
+                                : // @ts-expect-error - we know that a persisted model has a status property
+                                  x.status !== 'loading',
+                        { timeoutMs: 120_000 },
+                    )
+                    return observable
+                }, [observable])
+            }
+            return observable
+        }
+        return observable
+    }, [observable, opts])
+
     const value = useSyncExternalStore(
-        (subscriber) => observable.subscribe(subscriber, { fireImediately: opts?.fireImmediately }),
-        () => observable.value,
+        (subscriber) =>
+            readyObservable.subscribe(subscriber, { fireImediately: opts?.fireImmediately }),
+        () => readyObservable.value,
     )
 
     useEffect(() => {
@@ -112,7 +140,7 @@ export function useObservable<T>(
         } else {
             opts.onUpdate?.(value)
         }
-    }, [opts, value])
+    }, [observable, opts, value])
 
     const data = useMemo(() => {
         if (isPersistedModel(value)) {
