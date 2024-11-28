@@ -288,6 +288,8 @@ func (s *Service) initBaseChain() error {
 
 	if !s.config.DisableBaseChain {
 		var err error
+		// Initialize the base chain with a wallet so that a transaction pool is created. This is not used by
+		// the stream service, but it is used by the xchain service, which shares the same crypto.Blockchain.
 		s.baseChain, err = crypto.NewBlockchain(ctx, &s.config.BaseChain, s.wallet, s.metrics, s.otelTracer)
 		if err != nil {
 			return err
