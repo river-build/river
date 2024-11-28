@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
-	"net/http"
 	"sync"
 	"testing"
 	"time"
@@ -43,10 +42,13 @@ func TestSubscriptionExpired(t *testing.T) {
 	var notifications notificationExpired
 
 	notificationService := initNotificationService(ctx, tester, notifications)
+
+	httpClient, _ := testcert.GetHttp2LocalhostTLSClient(ctx, tester.getConfig())
+
 	notificationClient := protocolconnect.NewNotificationServiceClient(
-		http.DefaultClient, "http://"+notificationService.listener.Addr().String())
+		httpClient, "https://"+notificationService.listener.Addr().String())
 	authClient := protocolconnect.NewAuthenticationServiceClient(
-		http.DefaultClient, "http://"+notificationService.listener.Addr().String())
+		httpClient, "https://"+notificationService.listener.Addr().String())
 
 	t.Run("webpush", func(t *testing.T) {
 		test := setupDMNotificationTest(ctx, tester, notificationClient, authClient)
