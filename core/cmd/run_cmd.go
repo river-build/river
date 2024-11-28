@@ -18,7 +18,7 @@ import (
 
 func runServices(ctx context.Context, cfg *config.Config, stream bool, xchain bool) error {
 	var err error
-	err = setupProfiler(ctx, cfg)
+	err = setupProfiler(ctx, "river-node", cfg)
 	if err != nil {
 		return err
 	}
