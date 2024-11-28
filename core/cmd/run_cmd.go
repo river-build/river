@@ -45,7 +45,6 @@ func runServices(ctx context.Context, cfg *config.Config, stream bool, xchain bo
 		riverChain = streamService.RiverChain()
 	}
 
-	// TODO: wire blockchain and tracer to xchain
 	var xchainService server.XChain
 	var wg sync.WaitGroup
 	if xchain {
