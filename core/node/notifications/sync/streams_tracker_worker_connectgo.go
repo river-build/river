@@ -114,7 +114,7 @@ func (s *StreamTrackerConnectGo) Run(
 		restartSyncSessionCounter++
 
 		if restartSyncSessionCounter > 1 {
-			log.Info("restart sync session", "times", restartSyncSessionCounter)
+			log.Debug("restart sync session", "times", restartSyncSessionCounter)
 		}
 
 		syncPos := []*protocol.SyncCookie{{
@@ -137,7 +137,7 @@ func (s *StreamTrackerConnectGo) Run(
 			remotes.AdvanceStickyPeer(remoteAddr)
 			syncCancel()
 			if !errors.Is(err, context.Canceled) {
-				log.Error("unable to start stream sync session", "err", err)
+				log.Debug("unable to start stream sync session", "err", err)
 			}
 			if s.waitMaxOrUntilCancel(ctx, time.Minute, 2*time.Minute) {
 				return
@@ -151,7 +151,7 @@ func (s *StreamTrackerConnectGo) Run(
 		go func(log *slog.Logger) {
 			select {
 			case <-time.After(30 * time.Second):
-				log.Warn("Didn't receive sync id within 30s, cancel sync session")
+				log.Debug("Didn't receive sync id within 30s, cancel sync session")
 				syncCancel() // cancel sync session
 				syncIDGot()
 				return
@@ -179,7 +179,8 @@ func (s *StreamTrackerConnectGo) Run(
 
 		if err := streamUpdates.Err(); err != nil {
 			if !errors.Is(err, context.Canceled) {
-				log.Error("Unable to receive first sync message", "err", err)
+				// if remote node is down this gets fired
+				log.Debug("Unable to receive first sync message", "err", err)
 			}
 			syncCancel()
 			remotes.AdvanceStickyPeer(remoteAddr)
@@ -275,11 +276,11 @@ func (s *StreamTrackerConnectGo) Run(
 				}
 
 			case protocol.SyncOp_SYNC_DOWN:
-				log.Info("Stream reported as down")
+				log.Debug("Stream reported as down")
 				metrics.SyncDown.Inc()
 				syncCancel()
 			case protocol.SyncOp_SYNC_CLOSE:
-				log.Info("Got stream close")
+				log.Debug("Got stream close")
 				syncCancel()
 			case protocol.SyncOp_SYNC_UNSPECIFIED:
 				log.Warn("Got stream unspecified")
@@ -314,7 +315,7 @@ func (s *StreamTrackerConnectGo) Run(
 				return
 			default:
 				if !errors.Is(err, context.Canceled) {
-					log.Error("Stream sync session ended unexpected", "err", err)
+					log.Debug("Stream sync session ended unexpected", "err", err)
 				}
 			}
 		}
