@@ -12,7 +12,6 @@ import (
 
 	"github.com/river-build/river/core/config"
 	. "github.com/river-build/river/core/node/base"
-	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
 	. "github.com/river-build/river/core/node/protocol"
 )
@@ -133,8 +132,6 @@ func NewBlockchainWithClient(
 		Metrics:         metrics,
 	}
 
-	log := dlog.FromCtx(ctx)
-	log.Info("Init chain with wallet", "chain", chainId, "wallet", wallet)
 	if wallet != nil {
 		bc.Wallet = wallet
 		bc.TxPool, err = NewTransactionPoolWithPoliciesFromConfig(
@@ -143,7 +140,6 @@ func NewBlockchainWithClient(
 		if err != nil {
 			return nil, err
 		}
-		log.Info("Creating transaction pool for chain", "chainId", chainId, "wallet", wallet)
 	}
 
 	return bc, nil
