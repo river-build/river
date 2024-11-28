@@ -8,7 +8,6 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"os"
 	"slices"
 	"strings"
 	"time"
@@ -37,6 +36,7 @@ import (
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/river_node/version"
 	"github.com/river-build/river/core/xchain/entitlement"
+	"github.com/river-build/river/core/xchain/util"
 )
 
 const (
@@ -261,18 +261,9 @@ func (s *Service) initInstance(mode string) {
 func (s *Service) initWallet() error {
 	ctx := s.serverCtx
 	var wallet *crypto.Wallet
-	var err error
 	if s.riverChain == nil {
-		// Read env var WALLETPRIVATEKEY or PRIVATE_KEY
-		privKey := os.Getenv("WALLETPRIVATEKEY")
-		if privKey == "" {
-			privKey = os.Getenv("PRIVATE_KEY")
-		}
-		if privKey != "" {
-			wallet, err = crypto.NewWalletFromPrivKey(ctx, privKey)
-		} else {
-			wallet, err = crypto.LoadWallet(ctx, crypto.WALLET_PATH_PRIVATE_KEY)
-		}
+		var err error
+		wallet, err = util.LoadWallet(ctx)
 		if err != nil {
 			return err
 		}
@@ -740,7 +731,7 @@ func (s *Service) initNotificationHandlers() error {
 	s.mux.Handle(notificationAuthServicePattern, newHttpHandler(notificationAuthServiceHandler, s.defaultLogger))
 
 	s.registerDebugHandlers(s.config.EnableDebugEndpoints, s.config.DebugEndpoints)
-	
+
 	return nil
 }
 
