@@ -113,7 +113,15 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
     ClaimCondition[] calldata conditions
   ) external onlyOwner {
     DropStorage.Layout storage ds = DropStorage.layout();
-    _setClaimConditions(ds, conditions);
+    _setClaimConditions(ds, conditions, false);
+  }
+
+  ///@inheritdoc IDropFacet
+  function setClaimConditionsWithReset(
+    ClaimCondition[] calldata conditions
+  ) external onlyOwner {
+    DropStorage.Layout storage ds = DropStorage.layout();
+    _setClaimConditions(ds, conditions, true);
   }
 
   ///@inheritdoc IDropFacet
@@ -156,11 +164,13 @@ contract DropFacet is IDropFacet, DropFacetBase, OwnableBase, Facet {
     address account,
     uint256 conditionId
   ) external view returns (uint256) {
-    return
-      DropStorage
-        .layout()
-        .getSupplyClaimedByWallet(conditionId, account)
-        .claimed;
+    DropStorage.Layout storage ds = DropStorage.layout();
+
+    if (!_isValidClaim(ds, account, conditionId)) {
+      return 0;
+    }
+
+    return ds.getSupplyClaimedByWallet(conditionId, account).claimed;
   }
 
   ///@inheritdoc IDropFacet

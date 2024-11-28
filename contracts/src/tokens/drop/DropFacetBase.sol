@@ -10,7 +10,7 @@ import {DropStorage} from "./DropStorage.sol";
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 import {MerkleProofLib} from "solady/utils/MerkleProofLib.sol";
 import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
-
+import {SafeCastLib} from "solady/utils/SafeCastLib.sol";
 abstract contract DropFacetBase is IDropFacetBase {
   using DropStorage for DropStorage.Layout;
   using MerkleProofLib for bytes32[];
@@ -44,6 +44,19 @@ abstract contract DropFacetBase is IDropFacetBase {
     }
 
     CustomRevert.revertWith(DropFacet__NoActiveClaimCondition.selector);
+  }
+
+  function _isValidClaim(
+    DropStorage.Layout storage ds,
+    address wallet,
+    uint256 conditionId
+  ) internal view returns (bool) {
+    DropStorage.SupplyClaim storage claim = ds.getSupplyClaimedByWallet(
+      conditionId,
+      wallet
+    );
+    // Claims are only valid if they happened after the last reset
+    return claim.claimTimestamp > ds.lastResetTimestamp;
   }
 
   function _verifyClaim(
@@ -83,7 +96,10 @@ abstract contract DropFacetBase is IDropFacetBase {
     }
 
     // check if already claimed
-    if (claimed.claimed > 0) {
+    if (
+      claimed.claimed > 0 &&
+      claimed.claimTimestamp > DropStorage.layout().lastResetTimestamp
+    ) {
       CustomRevert.revertWith(DropFacet__AlreadyClaimed.selector);
     }
 
@@ -161,19 +177,31 @@ abstract contract DropFacetBase is IDropFacetBase {
 
   function _setClaimConditions(
     DropStorage.Layout storage ds,
-    ClaimCondition[] calldata conditions
+    ClaimCondition[] calldata conditions,
+    bool resetEligibility
   ) internal {
     // get the existing claim condition count and start id
-    (uint48 newStartId, uint48 existingConditionCount) = (
+    (uint48 existingStartId, uint48 existingConditionCount) = (
       ds.conditionStartId,
       ds.conditionCount
     );
 
-    if (uint256(newStartId) + conditions.length > type(uint48).max) {
-      CustomRevert.revertWith(DropFacet__CannotSetClaimConditions.selector);
+    uint48 newStartId = existingStartId;
+    uint48 newConditionCount = SafeCastLib.toUint48(conditions.length);
+
+    if (resetEligibility) {
+      if (existingConditionCount > 0) {
+        for (uint256 i = 0; i < existingConditionCount; ++i) {
+          delete ds.conditionById[existingStartId + i];
+        }
+      }
+      newStartId = 0;
+      ds.lastResetTimestamp = uint40(block.timestamp);
     }
 
-    uint48 newConditionCount = uint48(conditions.length);
+    if (uint256(newStartId) + newConditionCount > type(uint48).max) {
+      CustomRevert.revertWith(DropFacet__CannotSetClaimConditions.selector);
+    }
 
     uint48 lastConditionTimestamp;
     for (uint256 i; i < newConditionCount; ++i) {
@@ -201,11 +229,18 @@ abstract contract DropFacetBase is IDropFacetBase {
     }
 
     ds.conditionCount = newConditionCount;
+    ds.conditionStartId = newStartId;
 
-    if (existingConditionCount > newConditionCount) {
-      for (uint256 i = newConditionCount; i < existingConditionCount; ++i) {
-        unchecked {
-          delete ds.conditionById[newStartId + i];
+    if (resetEligibility) {
+      for (uint256 i = existingStartId; i < newStartId; ++i) {
+        delete ds.conditionById[i];
+      }
+    } else {
+      if (existingConditionCount > newConditionCount) {
+        for (uint256 i = newConditionCount; i < existingConditionCount; ++i) {
+          unchecked {
+            delete ds.conditionById[newStartId + i];
+          }
         }
       }
     }
@@ -232,20 +267,21 @@ abstract contract DropFacetBase is IDropFacetBase {
 
   function _updateClaim(
     ClaimCondition storage condition,
-    DropStorage.SupplyClaim storage claimed,
+    DropStorage.SupplyClaim storage claim,
     uint256 amount
   ) internal {
     condition.supplyClaimed += amount;
     unchecked {
-      claimed.claimed += amount;
+      claim.claimed += amount;
+      claim.claimTimestamp = SafeCastLib.toUint40(block.timestamp);
     }
   }
 
   function _updateDepositId(
-    DropStorage.SupplyClaim storage claimed,
+    DropStorage.SupplyClaim storage claim,
     uint256 depositId
   ) internal {
-    claimed.depositId = depositId;
+    claim.depositId = depositId;
   }
 
   function _verifyEnoughBalance(

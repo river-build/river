@@ -14,7 +14,7 @@ import {Interaction} from "contracts/scripts/common/Interaction.s.sol";
 import {DeployRiverAirdrop} from "contracts/scripts/deployments/diamonds/DeployRiverAirdrop.s.sol";
 import {DeployRiverBase} from "contracts/scripts/deployments/utils/DeployRiverBase.s.sol";
 
-uint256 constant MAX_CLAIMABLE_SUPPLY = 5 ether;
+uint256 constant MAX_CLAIMABLE_SUPPLY = 100 ether;
 
 contract InteractClaimCondition is IDropFacetBase, Interaction {
   // deployments
@@ -27,7 +27,7 @@ contract InteractClaimCondition is IDropFacetBase, Interaction {
 
   function setUp() public {
     wallets.push(0x86312a65B491CF25D9D265f6218AB013DaCa5e19);
-    amounts.push(1 ether); // equivalent to 1 token
+    amounts.push(1 ether); // the amount of tokens this wallet can claim
   }
 
   function __interact(address deployer) internal override {

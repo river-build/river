@@ -651,6 +651,7 @@ contract DropFacetTest is
     givenWalletHasClaimedWithPenalty(bob, bob)
   {
     uint256 conditionId = dropFacet.getActiveClaimConditionId();
+    uint256 merkleAmount = amounts[treeIndex[bob]];
     uint256 expectedAmount = _calculateExpectedAmount(bob);
 
     assertEq(
@@ -668,10 +669,26 @@ contract DropFacetTest is
     );
 
     vm.prank(deployer);
-    dropFacet.setClaimConditions(conditions);
+    dropFacet.setClaimConditionsWithReset(conditions);
 
     uint256 newConditionId = dropFacet.getActiveClaimConditionId();
     assertEq(newConditionId, 0);
+    assertEq(dropFacet.getSupplyClaimedByWallet(bob, newConditionId), 0);
+
+    bytes32[] memory proof = merkleTree.getProof(tree, treeIndex[bob]);
+    uint16 penaltyBps = conditions[0].penaltyBps;
+    uint256 penaltyAmount = BasisPoints.calculate(merkleAmount, penaltyBps);
+
+    vm.prank(bob);
+    dropFacet.claimWithPenalty(
+      Claim({
+        conditionId: newConditionId,
+        account: bob,
+        quantity: merkleAmount,
+        proof: proof
+      }),
+      penaltyBps
+    );
   }
 
   function test_fuzz_setClaimConditions_revertWhen_notOwner(

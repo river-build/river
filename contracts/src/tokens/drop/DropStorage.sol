@@ -16,6 +16,7 @@ library DropStorage {
   struct SupplyClaim {
     uint256 claimed;
     uint256 depositId;
+    uint40 claimTimestamp;
   }
 
   struct Layout {
@@ -24,6 +25,7 @@ library DropStorage {
     uint48 conditionCount;
     mapping(uint256 conditionId => mapping(address => SupplyClaim)) supplyClaimedByWallet;
     mapping(uint256 conditionId => IDropFacetBase.ClaimCondition) conditionById;
+    uint40 lastResetTimestamp;
   }
 
   function layout() internal pure returns (Layout storage l) {
