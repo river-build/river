@@ -261,6 +261,7 @@ func TestArchiveOneStream(t *testing.T) {
 
 	pool, err := storage.CreateAndValidatePgxPool(ctx, dbCfg, schema, nil)
 	require.NoError(err)
+	tester.cleanup(pool.Pool.Close)
 
 	streamStorage, err := storage.NewPostgresStreamStore(
 		ctx,
@@ -366,6 +367,7 @@ func TestArchive100Streams(t *testing.T) {
 		true,
 	)
 	require.NoError(err)
+	tester.cleanup(arch.Close)
 
 	arch.Archiver.WaitForStart()
 	require.Len(arch.ExitSignal(), 0)
@@ -398,6 +400,7 @@ func TestArchive100StreamsWithData(t *testing.T) {
 	serverCtx, serverCancel := context.WithCancel(ctx)
 	arch, err := StartServerInArchiveMode(serverCtx, archiveCfg, makeTestServerOpts(tester), true)
 	require.NoError(err)
+	tester.cleanup(arch.Close)
 
 	arch.Archiver.WaitForStart()
 	require.Len(arch.ExitSignal(), 0)
@@ -438,7 +441,7 @@ func TestArchiveContinuous(t *testing.T) {
 	serverCtx, serverCancel := context.WithCancel(ctx)
 	arch, err := StartServerInArchiveMode(serverCtx, archiveCfg, makeTestServerOpts(tester), false)
 	require.NoError(err)
-
+	tester.cleanup(arch.Close)
 	arch.Archiver.WaitForStart()
 	require.Len(arch.ExitSignal(), 0)
 

@@ -677,6 +677,7 @@ func initNotificationService(
 
 	service, err := StartServerInNotificationMode(ctx, cfg, notifier, makeTestServerOpts(tester))
 	tester.require.NoError(err)
+	tester.cleanup(service.Close)
 
 	return service
 }
