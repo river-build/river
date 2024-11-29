@@ -175,7 +175,7 @@ var _ = (*serviceTester).sequentialSubtest
 func (st *serviceTester) cleanup(f any) {
 	st.t.Cleanup(func() {
 		st.t.Helper()
-		// On first cleanup call for current test cancel context, so relevant shutdowns are started.
+		// On first cleanup call cancel context for the current test, so relevant shutdowns are started.
 		if st.ctxCancel != nil {
 			st.ctxCancel()
 			st.ctxCancel = nil
