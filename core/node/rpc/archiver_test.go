@@ -334,7 +334,7 @@ func TestArchiveOneStream(t *testing.T) {
 }
 
 func makeTestServerOpts(tester *serviceTester) *ServerStartOpts {
-	listener, _ := makeTestListener(tester.t)
+	listener, _ := tester.makeTestListener()
 	return &ServerStartOpts{
 		RiverChain:      tester.btc.NewWalletAndBlockchain(tester.ctx),
 		Listener:        listener,
