@@ -132,7 +132,7 @@ func testGDMNotifications(
 	authClient protocolconnect.AuthenticationServiceClient,
 	notifications *notificationCapture,
 ) {
-	tester.parallelSubtest("MessageWithNoMentionsRepliesAndReaction", func(tester *serviceTester) {
+	tester.sequentialSubtest("MessageWithNoMentionsRepliesAndReaction", func(tester *serviceTester) {
 		ctx := tester.ctx
 		test := setupGDMNotificationTest(ctx, tester, notificationClient, authClient)
 		testGDMMessageWithNoMentionsRepliesAndReaction(ctx, test, notifications)
@@ -225,25 +225,25 @@ func testDMNotifications(
 	authClient protocolconnect.AuthenticationServiceClient,
 	notifications *notificationCapture,
 ) {
-	tester.parallelSubtest("MessageWithDefaultUserNotificationsPreferences", func(tester *serviceTester) {
+	tester.sequentialSubtest("MessageWithDefaultUserNotificationsPreferences", func(tester *serviceTester) {
 		ctx := tester.ctx
 		test := setupDMNotificationTest(ctx, tester, notificationClient, authClient)
 		testDMMessageWithDefaultUserNotificationsPreferences(ctx, test, notifications)
 	})
 
-	tester.parallelSubtest("DMMessageWithNotificationsMutedOnDmChannel", func(tester *serviceTester) {
+	tester.sequentialSubtest("DMMessageWithNotificationsMutedOnDmChannel", func(tester *serviceTester) {
 		ctx := tester.ctx
 		test := setupDMNotificationTest(ctx, tester, notificationClient, authClient)
 		testDMMessageWithNotificationsMutedOnDmChannel(ctx, test, notifications)
 	})
 
-	tester.parallelSubtest("DMMessageWithNotificationsMutedGlobal", func(tester *serviceTester) {
+	tester.sequentialSubtest("DMMessageWithNotificationsMutedGlobal", func(tester *serviceTester) {
 		ctx := tester.ctx
 		test := setupDMNotificationTest(ctx, tester, notificationClient, authClient)
 		testDMMessageWithNotificationsMutedGlobal(ctx, test, notifications)
 	})
 
-	tester.parallelSubtest("MessageWithBlockedUser", func(tester *serviceTester) {
+	tester.sequentialSubtest("MessageWithBlockedUser", func(tester *serviceTester) {
 		ctx := tester.ctx
 		test := setupDMNotificationTest(ctx, tester, notificationClient, authClient)
 		testDMMessageWithBlockedUser(ctx, test, notifications)
@@ -414,25 +414,25 @@ func testSpaceChannelNotifications(
 	authClient protocolconnect.AuthenticationServiceClient,
 	notifications *notificationCapture,
 ) {
-	tester.parallelSubtest("TestPlainMessage", func(tester *serviceTester) {
+	tester.sequentialSubtest("TestPlainMessage", func(tester *serviceTester) {
 		ctx := tester.ctx
 		test := setupSpaceChannelNotificationTest(ctx, tester, notificationClient, authClient)
 		testSpaceChannelPlainMessage(ctx, test, notifications)
 	})
 
-	tester.parallelSubtest("TestAtChannelTag", func(tester *serviceTester) {
+	tester.sequentialSubtest("TestAtChannelTag", func(tester *serviceTester) {
 		ctx := tester.ctx
 		test := setupSpaceChannelNotificationTest(ctx, tester, notificationClient, authClient)
 		testSpaceChannelAtChannelTag(ctx, test, notifications)
 	})
 
-	tester.parallelSubtest("TestMentionsTag", func(tester *serviceTester) {
+	tester.sequentialSubtest("TestMentionsTag", func(tester *serviceTester) {
 		ctx := tester.ctx
 		test := setupSpaceChannelNotificationTest(ctx, tester, notificationClient, authClient)
 		testSpaceChannelMentionTag(ctx, test, notifications)
 	})
 
-	tester.parallelSubtest("Settings", func(tester *serviceTester) {
+	tester.sequentialSubtest("Settings", func(tester *serviceTester) {
 		ctx := tester.ctx
 		test := setupSpaceChannelNotificationTest(ctx, tester, notificationClient, authClient)
 		spaceChannelSettings(ctx, test)
