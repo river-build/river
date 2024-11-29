@@ -169,9 +169,6 @@ func (st *serviceTester) sequentialSubtest(name string, test func(*serviceTester
 	})
 }
 
-// TODO: remove once sequentialSubtest is used
-var _ = (*serviceTester).sequentialSubtest
-
 func (st *serviceTester) cleanup(f any) {
 	st.t.Cleanup(func() {
 		st.t.Helper()
