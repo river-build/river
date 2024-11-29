@@ -49,9 +49,8 @@ func TestSubscriptionExpired(t *testing.T) {
 	authClient := protocolconnect.NewAuthenticationServiceClient(
 		httpClient, "https://"+notificationService.listener.Addr().String())
 
-	t.Run("webpush", func(t *testing.T) {
-		t.Parallel()
-
+	tester.parallelSubtest("webpush", func(tester *serviceTester) {
+		ctx := tester.ctx
 		test := setupDMNotificationTest(ctx, tester, notificationClient, authClient)
 		test.subscribeWebPush(ctx, test.initiator)
 		test.subscribeWebPush(ctx, test.member)
@@ -71,8 +70,8 @@ func TestSubscriptionExpired(t *testing.T) {
 		}, 15*time.Second, 100*time.Millisecond, "webpush subscription not deleted")
 	})
 
-	t.Run("APN", func(t *testing.T) {
-		t.Parallel()
+	tester.parallelSubtest("APN", func(tester *serviceTester) {
+		ctx := tester.ctx
 
 		test := setupDMNotificationTest(ctx, tester, notificationClient, authClient)
 		test.subscribeApnPush(ctx, test.initiator)
@@ -114,31 +113,27 @@ func TestNotifications(t *testing.T) {
 	authClient := protocolconnect.NewAuthenticationServiceClient(
 		httpClient, "https://"+notificationService.listener.Addr().String())
 
-	t.Run("DMNotifications", func(t *testing.T) {
-		t.Parallel()
-		testDMNotifications(t, ctx, tester, notificationClient, authClient, notifications)
+	tester.parallelSubtest("DMNotifications", func(tester *serviceTester) {
+		testDMNotifications(tester, notificationClient, authClient, notifications)
 	})
 
-	t.Run("GDMNotifications", func(t *testing.T) {
-		t.Parallel()
-		testGDMNotifications(t, ctx, tester, notificationClient, authClient, notifications)
+	tester.parallelSubtest("GDMNotifications", func(tester *serviceTester) {
+		testGDMNotifications(tester, notificationClient, authClient, notifications)
 	})
 
-	t.Run("SpaceChannelNotification", func(t *testing.T) {
-		t.Parallel()
-		SpaceChannelNotification(t, ctx, tester, notificationClient, authClient, notifications)
+	tester.parallelSubtest("SpaceChannelNotification", func(tester *serviceTester) {
+		testSpaceChannelNotifications(tester, notificationClient, authClient, notifications)
 	})
 }
 
 func testGDMNotifications(
-	t *testing.T,
-	ctx context.Context,
 	tester *serviceTester,
 	notificationClient protocolconnect.NotificationServiceClient,
 	authClient protocolconnect.AuthenticationServiceClient,
 	notifications *notificationCapture,
 ) {
-	t.Run("MessageWithNoMentionsRepliesAndReaction", func(t *testing.T) {
+	tester.parallelSubtest("MessageWithNoMentionsRepliesAndReaction", func(tester *serviceTester) {
+		ctx := tester.ctx
 		test := setupGDMNotificationTest(ctx, tester, notificationClient, authClient)
 		testGDMMessageWithNoMentionsRepliesAndReaction(ctx, test, notifications)
 	})
@@ -225,29 +220,31 @@ func testGDMMessageWithNoMentionsRepliesAndReaction(
 }
 
 func testDMNotifications(
-	t *testing.T,
-	ctx context.Context,
 	tester *serviceTester,
 	notificationClient protocolconnect.NotificationServiceClient,
 	authClient protocolconnect.AuthenticationServiceClient,
 	notifications *notificationCapture,
 ) {
-	t.Run("MessageWithDefaultUserNotificationsPreferences", func(t *testing.T) {
+	tester.parallelSubtest("MessageWithDefaultUserNotificationsPreferences", func(tester *serviceTester) {
+		ctx := tester.ctx
 		test := setupDMNotificationTest(ctx, tester, notificationClient, authClient)
 		testDMMessageWithDefaultUserNotificationsPreferences(ctx, test, notifications)
 	})
 
-	t.Run("DMMessageWithNotificationsMutedOnDmChannel", func(t *testing.T) {
+	tester.parallelSubtest("DMMessageWithNotificationsMutedOnDmChannel", func(tester *serviceTester) {
+		ctx := tester.ctx
 		test := setupDMNotificationTest(ctx, tester, notificationClient, authClient)
 		testDMMessageWithNotificationsMutedOnDmChannel(ctx, test, notifications)
 	})
 
-	t.Run("DMMessageWithNotificationsMutedGlobal", func(t *testing.T) {
+	tester.parallelSubtest("DMMessageWithNotificationsMutedGlobal", func(tester *serviceTester) {
+		ctx := tester.ctx
 		test := setupDMNotificationTest(ctx, tester, notificationClient, authClient)
 		testDMMessageWithNotificationsMutedGlobal(ctx, test, notifications)
 	})
 
-	t.Run("MessageWithBlockedUser", func(t *testing.T) {
+	tester.parallelSubtest("MessageWithBlockedUser", func(tester *serviceTester) {
+		ctx := tester.ctx
 		test := setupDMNotificationTest(ctx, tester, notificationClient, authClient)
 		testDMMessageWithBlockedUser(ctx, test, notifications)
 	})
@@ -411,30 +408,32 @@ func testDMMessageWithBlockedUser(
 	}, time.Second, 100*time.Millisecond, "Received unexpected notifications")
 }
 
-func SpaceChannelNotification(
-	t *testing.T,
-	ctx context.Context,
+func testSpaceChannelNotifications(
 	tester *serviceTester,
 	notificationClient protocolconnect.NotificationServiceClient,
 	authClient protocolconnect.AuthenticationServiceClient,
 	notifications *notificationCapture,
 ) {
-	t.Run("TestPlainMessage", func(t *testing.T) {
+	tester.parallelSubtest("TestPlainMessage", func(tester *serviceTester) {
+		ctx := tester.ctx
 		test := setupSpaceChannelNotificationTest(ctx, tester, notificationClient, authClient)
 		testSpaceChannelPlainMessage(ctx, test, notifications)
 	})
 
-	t.Run("TestAtChannelTag", func(t *testing.T) {
+	tester.parallelSubtest("TestAtChannelTag", func(tester *serviceTester) {
+		ctx := tester.ctx
 		test := setupSpaceChannelNotificationTest(ctx, tester, notificationClient, authClient)
 		testSpaceChannelAtChannelTag(ctx, test, notifications)
 	})
 
-	t.Run("TestMentionsTag", func(t *testing.T) {
+	tester.parallelSubtest("TestMentionsTag", func(tester *serviceTester) {
+		ctx := tester.ctx
 		test := setupSpaceChannelNotificationTest(ctx, tester, notificationClient, authClient)
 		testSpaceChannelMentionTag(ctx, test, notifications)
 	})
 
-	t.Run("Settings", func(t *testing.T) {
+	tester.parallelSubtest("Settings", func(tester *serviceTester) {
+		ctx := tester.ctx
 		test := setupSpaceChannelNotificationTest(ctx, tester, notificationClient, authClient)
 		spaceChannelSettings(ctx, test)
 	})
