@@ -79,10 +79,13 @@ func StartServerInArchiveMode(
 	opts *ServerStartOpts,
 	once bool,
 ) (*Service, error) {
+	ctx, cancel := context.WithCancel(ctx)
+
 	streamService := &Service{
-		serverCtx:  ctx,
-		config:     cfg,
-		exitSignal: make(chan error, 1),
+		serverCtx:       ctx,
+		serverCtxCancel: cancel,
+		config:          cfg,
+		exitSignal:      make(chan error, 1),
 	}
 
 	err := streamService.startArchiveMode(opts, once)
