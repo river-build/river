@@ -18,9 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	eth_crypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/google/go-cmp/cmp"
-	payload2 "github.com/sideshow/apns2/payload"
-	"github.com/stretchr/testify/require"
-
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/notifications/push"
@@ -30,6 +27,8 @@ import (
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/testutils"
 	"github.com/river-build/river/core/node/testutils/testcert"
+	payload2 "github.com/sideshow/apns2/payload"
+	"github.com/stretchr/testify/require"
 )
 
 // TestSubscriptionExpired ensures that web/apn subscriptions for which the notification API
@@ -121,8 +120,8 @@ func TestNotifications(t *testing.T) {
 		testGDMNotifications(t, ctx, tester, notificationClient, authClient, notifications)
 	})
 
-	t.Run("SpaceChannelNotifications", func(t *testing.T) {
-		testSpaceChannelNotifications(t, ctx, tester, notificationClient, authClient, notifications)
+	t.Run("SpaceChannelNotification", func(t *testing.T) {
+		SpaceChannelNotification(t, ctx, tester, notificationClient, authClient, notifications)
 	})
 }
 
@@ -407,7 +406,7 @@ func testDMMessageWithBlockedUser(
 	}, 10*time.Second, 100*time.Millisecond, "Received unexpected notifications")
 }
 
-func testSpaceChannelNotifications(
+func SpaceChannelNotification(
 	t *testing.T,
 	ctx context.Context,
 	tester *serviceTester,
@@ -428,6 +427,11 @@ func testSpaceChannelNotifications(
 	t.Run("TestMentionsTag", func(t *testing.T) {
 		test := setupSpaceChannelNotificationTest(ctx, tester, notificationClient, authClient)
 		testSpaceChannelMentionTag(ctx, test, notifications)
+	})
+
+	t.Run("Settings", func(t *testing.T) {
+		test := setupSpaceChannelNotificationTest(ctx, tester, notificationClient, authClient)
+		spaceChannelSettings(ctx, test)
 	})
 }
 
@@ -1398,4 +1402,105 @@ func (notificationExpired) SendApplePushNotification(
 	_ *payload2.Payload,
 ) (bool, error) {
 	return true, fmt.Errorf("subscription expired")
+}
+
+func spaceChannelSettings(
+	ctx context.Context,
+	test *spaceChannelNotificationsTestContext,
+) {
+	user := test.members[0]
+
+	// create second channel in test space
+	channel2ID := StreamId{STREAM_CHANNEL_BIN}
+	copy(channel2ID[1:21], test.spaceID[1:21])
+	_, err := rand.Read(channel2ID[21:])
+	test.req.NoError(err)
+	channel, _, err := createChannel(ctx, user, test.streamClient, test.spaceID, channel2ID, nil)
+	test.req.NoError(err)
+	test.req.NotNil(channel)
+
+	request1 := connect.NewRequest(&GetSettingsRequest{})
+	authorize(ctx, test.req, test.authClient, user, request1)
+
+	// ensure that the initial settings are correct
+	initialSettingsResp, err := test.notificationClient.GetSettings(ctx, request1)
+	test.req.NoError(err, "GetSettings failed")
+
+	initialSettings := initialSettingsResp.Msg
+
+	test.req.Equal(initialSettings.GetUserId(), user.Address[:])
+	test.req.Equal(initialSettings.GetDmGlobal(), DmChannelSettingValue_DM_MESSAGES_YES)
+	test.req.Equal(initialSettings.GetGdmGlobal(), GdmChannelSettingValue_GDM_MESSAGES_ALL)
+
+	test.req.Empty(initialSettings.GetDmChannels())
+	test.req.Empty(initialSettings.GetGdmChannels())
+
+	test.req.Empty(initialSettings.GetWebSubscriptions())
+	test.req.Empty(initialSettings.GetApnSubscriptions())
+
+	test.req.Empty(initialSettings.GetSpace())
+
+	// set settings on the space and both space channels and ensure that all are stored
+	request2 := connect.NewRequest(&SetSpaceChannelSettingsRequest{
+		ChannelId: test.channelID[:],
+		SpaceId:   test.spaceID[:],
+		Value:     SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_MESSAGES_ALL,
+	})
+	authorize(ctx, test.req, test.authClient, user, request2)
+
+	_, err = test.notificationClient.SetSpaceChannelSettings(ctx, request2)
+	test.req.NoError(err, "SetSpaceChannelSettings failed")
+
+	request3 := connect.NewRequest(&SetSpaceChannelSettingsRequest{
+		ChannelId: channel2ID[:],
+		SpaceId:   test.spaceID[:],
+		Value:     SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_NO_MESSAGES,
+	})
+	authorize(ctx, test.req, test.authClient, user, request3)
+
+	_, err = test.notificationClient.SetSpaceChannelSettings(ctx, request3)
+	test.req.NoError(err, "SetSpaceChannelSettings failed")
+
+	request4 := connect.NewRequest(&SetSpaceSettingsRequest{
+		SpaceId: test.spaceID[:],
+		Value:   SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_NO_MESSAGES,
+	})
+
+	authorize(ctx, test.req, test.authClient, user, request4)
+
+	_, err = test.notificationClient.SetSpaceSettings(ctx, request4)
+	test.req.NoError(err, "SetSpaceSettings failed")
+
+	// ensure that the settings are correct applied
+	settingsResp, err := test.notificationClient.GetSettings(ctx, request1)
+	test.req.NoError(err, "GetSettings failed")
+
+	settings := settingsResp.Msg
+
+	test.req.Equal(settings.GetUserId(), user.Address[:])
+	test.req.Equal(settings.GetDmGlobal(), DmChannelSettingValue_DM_MESSAGES_YES)
+	test.req.Equal(settings.GetGdmGlobal(), GdmChannelSettingValue_GDM_MESSAGES_ALL)
+
+	test.req.Empty(settings.GetDmChannels())
+	test.req.Empty(settings.GetGdmChannels())
+
+	test.req.Empty(settings.GetWebSubscriptions())
+	test.req.Empty(settings.GetApnSubscriptions())
+
+	test.req.Equal(1, len(settings.GetSpace()))
+	space := settings.GetSpace()[0]
+	test.req.Equal(space.Value, SpaceChannelSettingValue_SPACE_CHANNEL_SETTING_NO_MESSAGES)
+	test.req.Equal(2, len(space.Channels))
+
+	channel1 := space.Channels[0]
+	channel2 := space.Channels[1]
+	if bytes.Equal(channel1.ChannelId, channel2ID[:]) {
+		channel1, channel2 = channel2, channel1
+	}
+
+	test.req.Equal(request2.Msg.ChannelId, channel1.ChannelId)
+	test.req.Equal(request2.Msg.Value, channel1.Value)
+
+	test.req.Equal(request3.Msg.ChannelId, channel2.ChannelId)
+	test.req.Equal(request3.Msg.Value, channel2.Value)
 }
