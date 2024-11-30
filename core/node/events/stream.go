@@ -6,7 +6,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
+	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	. "github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
@@ -88,6 +90,8 @@ type streamImpl struct {
 	// out of lock, which is immutable, so if there is a need to modify, lock is taken, copy
 	// of view is created, and copy is modified and stored.
 	mu sync.RWMutex
+
+	lastAppliedBlockNum crypto.BlockNumber
 
 	// lastAccessedTime keeps track of when the stream was last used by a client
 	lastAccessedTime time.Time
@@ -355,6 +359,10 @@ func (s *streamImpl) promoteCandidate(ctx context.Context, mb *MiniblockRef) err
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	if s.local == nil {
+		return nil
+	}
+
 	if err := s.loadInternal(ctx); err != nil {
 		return err
 	}
@@ -422,7 +430,7 @@ func (s *streamImpl) initFromGenesis(
 	}
 
 	// TODO: move this call out of the lock
-	_, registeredGenesisHash, _, err := s.params.Registry.GetStreamWithGenesis(ctx, s.streamId)
+	_, registeredGenesisHash, _, blockNum, err := s.params.Registry.GetStreamWithGenesis(ctx, s.streamId)
 	if err != nil {
 		return err
 	}
@@ -441,6 +449,8 @@ func (s *streamImpl) initFromGenesis(
 		}
 	}
 
+	s.lastAppliedBlockNum = blockNum
+
 	view, err := MakeStreamView(
 		ctx,
 		&storage.ReadStreamFromLastSnapshotResult{
@@ -457,7 +467,7 @@ func (s *streamImpl) initFromGenesis(
 }
 
 func (s *streamImpl) initFromBlockchain(ctx context.Context) error {
-	record, _, mb, err := s.params.Registry.GetStreamWithGenesis(ctx, s.streamId)
+	record, _, mb, blockNum, err := s.params.Registry.GetStreamWithGenesis(ctx, s.streamId)
 	if err != nil {
 		return err
 	}
@@ -489,6 +499,8 @@ func (s *streamImpl) initFromBlockchain(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	s.lastAppliedBlockNum = blockNum
 
 	// Successfully put data into storage, init stream view.
 	view, err := MakeStreamView(
@@ -946,4 +958,59 @@ func (s *streamImpl) getLastMiniblockNumSkipLoad(ctx context.Context) (int64, er
 	}
 
 	return s.params.Storage.GetLastMiniblockNumber(ctx, s.streamId)
+}
+
+func (s *streamImpl) applyStreamEvents(
+	ctx context.Context,
+	events []river.EventWithStreamId,
+	blockNum crypto.BlockNumber,
+) {
+	if len(events) == 0 {
+		return
+	}
+
+	// Sanity check
+	// TODO: refactor locking
+	s.mu.RLock()
+	lastAppliedBlockNum := s.lastAppliedBlockNum
+	s.mu.RUnlock()
+
+	if lastAppliedBlockNum >= blockNum {
+		dlog.FromCtx(ctx).
+			Error("applyStreamEvents: already applied events for block", "blockNum", blockNum, "streamId", s.streamId,
+				"lastAppliedBlockNum", lastAppliedBlockNum,
+			)
+		return
+	}
+
+	for _, e := range events {
+		switch event := e.(type) {
+		case *river.StreamLastMiniblockUpdated:
+			s.onLastMiniblockUpdated(ctx, event)
+		case *river.StreamPlacementUpdated:
+			err := s.nodes.Update(event.NodeAddress, event.IsAdded)
+			if err != nil {
+				dlog.FromCtx(ctx).Error("applyStreamEventsNoLock: failed to update nodes", "err", err, "streamId", s.streamId)
+			}
+		default:
+			dlog.FromCtx(ctx).Error("applyStreamEventsNoLock: unknown event", "event", event, "streamId", s.streamId)
+		}
+	}
+
+	s.mu.Lock()
+	s.lastAppliedBlockNum = blockNum
+	s.mu.Unlock()
+}
+
+func (s *streamImpl) onLastMiniblockUpdated(
+	ctx context.Context,
+	event *river.StreamLastMiniblockUpdated,
+) {
+	err := s.promoteCandidate(ctx, &MiniblockRef{
+		Hash: event.LastMiniblockHash,
+		Num:  int64(event.LastMiniblockNum),
+	})
+	if err != nil {
+		dlog.FromCtx(ctx).Error("onStreamLastMiniblockUpdated: failed to promote candidate", "err", err)
+	}
 }
