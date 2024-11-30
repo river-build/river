@@ -26,7 +26,8 @@ func peerNodeRequestWithRetries[T any](
 	makeStubRequest func(ctx context.Context, stub StreamServiceClient) (*connect.Response[T], error),
 	numRetries int,
 ) (*connect.Response[T], error) {
-	if nodes.NumRemotes() <= 0 {
+	remotes, _ := nodes.GetRemotesAndIsLocal()
+	if len(remotes) <= 0 {
 		return nil, RiverError(Err_INTERNAL, "Cannot make peer node requests: no nodes available").
 			Func("peerNodeRequestWithRetries")
 	}
@@ -40,7 +41,7 @@ func peerNodeRequestWithRetries[T any](
 	}
 
 	// Do not make more than one request to a single node
-	numRetries = min(numRetries, nodes.NumRemotes())
+	numRetries = min(numRetries, len(remotes))
 
 	for retry := 0; retry < numRetries; retry++ {
 		peer := nodes.GetStickyPeer()
@@ -100,7 +101,8 @@ func peerNodeStreamingResponseWithRetries(
 	makeStubRequest func(ctx context.Context, stub StreamServiceClient) (hasStreamed bool, err error),
 	numRetries int,
 ) error {
-	if nodes.NumRemotes() <= 0 {
+	remotes, _ := nodes.GetRemotesAndIsLocal()
+	if len(remotes) <= 0 {
 		return RiverError(Err_INTERNAL, "Cannot make peer node requests: no nodes available").
 			Func("peerNodeStreamingResponseWithRetries")
 	}
@@ -114,7 +116,7 @@ func peerNodeStreamingResponseWithRetries(
 	}
 
 	// Do not make more than one request to a single node
-	numRetries = min(numRetries, nodes.NumRemotes())
+	numRetries = min(numRetries, len(remotes))
 
 	for retry := 0; retry < numRetries; retry++ {
 		peer := nodes.GetStickyPeer()
@@ -241,32 +243,38 @@ func (s *Service) getStreamImpl(
 		return nil, err
 	}
 
-	nodes, err := s.cache.GetStreamInfo(ctx, streamId)
-	if err != nil && req.Msg.Optional && AsRiverError(err).Code == Err_NOT_FOUND {
-		return connect.NewResponse(&GetStreamResponse{}), nil
+	stream, err := s.cache.GetStream(ctx, streamId)
+	if err != nil {
+		if req.Msg.Optional && AsRiverError(err).Code == Err_NOT_FOUND {
+			return connect.NewResponse(&GetStreamResponse{}), nil
+		} else {
+			return nil, err
+		}
 	}
 
+	// Check that stream is marked as accessed in this case (i.e. timestamp is set)
+	view, err := stream.GetViewIfLocal(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	if nodes.IsLocal() {
-		return s.localGetStream(ctx, req)
+	if view != nil {
+		return s.localGetStream(ctx, stream, view)
+	} else {
+		return peerNodeRequestWithRetries(
+			ctx,
+			stream,
+			s,
+			func(ctx context.Context, stub StreamServiceClient) (*connect.Response[GetStreamResponse], error) {
+				ret, err := stub.GetStream(ctx, req)
+				if err != nil {
+					return nil, err
+				}
+				return connect.NewResponse(ret.Msg), nil
+			},
+			-1,
+		)
 	}
-
-	return peerNodeRequestWithRetries(
-		ctx,
-		nodes,
-		s,
-		func(ctx context.Context, stub StreamServiceClient) (*connect.Response[GetStreamResponse], error) {
-			ret, err := stub.GetStream(ctx, req)
-			if err != nil {
-				return nil, err
-			}
-			return connect.NewResponse(ret.Msg), nil
-		},
-		-1,
-	)
 }
 
 func (s *Service) getStreamExImpl(
@@ -279,7 +287,7 @@ func (s *Service) getStreamExImpl(
 		return err
 	}
 
-	nodes, err := s.cache.GetStreamInfo(ctx, streamId)
+	nodes, err := s.cache.GetStream(ctx, streamId)
 	if err != nil {
 		return err
 	}
@@ -363,18 +371,18 @@ func (s *Service) getMiniblocksImpl(
 		return nil, err
 	}
 
-	nodes, err := s.cache.GetStreamInfo(ctx, streamId)
+	stream, err := s.cache.GetStream(ctx, streamId)
 	if err != nil {
 		return nil, err
 	}
 
-	if nodes.IsLocal() {
-		return s.localGetMiniblocks(ctx, req)
+	if stream.IsLocal() {
+		return s.localGetMiniblocks(ctx, req, stream)
 	}
 
 	return peerNodeRequestWithRetries(
 		ctx,
-		nodes,
+		stream,
 		s,
 		func(ctx context.Context, stub StreamServiceClient) (*connect.Response[GetMiniblocksResponse], error) {
 			ret, err := stub.GetMiniblocks(ctx, req)
@@ -414,18 +422,23 @@ func (s *Service) getLastMiniblockHashImpl(
 		return nil, err
 	}
 
-	nodes, err := s.cache.GetStreamInfo(ctx, streamId)
+	stream, err := s.cache.GetStream(ctx, streamId)
 	if err != nil {
 		return nil, err
 	}
 
-	if nodes.IsLocal() {
-		return s.localGetLastMiniblockHash(ctx, req)
+	view, err := stream.GetViewIfLocal(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if view != nil {
+		return s.localGetLastMiniblockHash(ctx, view)
 	}
 
 	return peerNodeRequestWithRetries(
 		ctx,
-		nodes,
+		stream,
 		s,
 		func(ctx context.Context, stub StreamServiceClient) (*connect.Response[GetLastMiniblockHashResponse], error) {
 			ret, err := stub.GetLastMiniblockHash(ctx, req)
@@ -465,17 +478,22 @@ func (s *Service) addEventImpl(
 		return nil, err
 	}
 
-	nodes, err := s.cache.GetStreamInfo(ctx, streamId)
+	stream, err := s.cache.GetStream(ctx, streamId)
 	if err != nil {
 		return nil, err
 	}
 
-	if nodes.IsLocal() {
-		return s.localAddEvent(ctx, req, nodes)
+	view, err := stream.GetViewIfLocal(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if view != nil {
+		return s.localAddEvent(ctx, req, stream, view)
 	}
 
 	// TODO: smarter remote select? random?
-	firstRemote := nodes.GetStickyPeer()
+	firstRemote := stream.GetStickyPeer()
 	dlog.FromCtx(ctx).Debug("Forwarding request", "nodeAddress", firstRemote)
 	stub, err := s.nodeRegistry.GetStreamServiceClientForAddress(firstRemote)
 	if err != nil {

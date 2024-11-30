@@ -24,7 +24,7 @@ func TestReplicatedMbProduction(t *testing.T) {
 
 	stream, err := leader.cache.getStreamImpl(ctx, streamId)
 	require.NoError(err)
-	require.True(stream.isLocal())
+	require.True(stream.IsLocal())
 	job := leader.mbProducer.trySchedule(ctx, stream)
 	require.NotNil(job)
 	require.Eventually(
