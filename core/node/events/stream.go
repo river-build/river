@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/river-build/river/core/contracts/river"
@@ -18,8 +19,6 @@ import (
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
-
-	mapset "github.com/deckarep/golang-set/v2"
 )
 
 type AddableStream interface {
@@ -372,6 +371,10 @@ func (s *streamImpl) promoteCandidate(ctx context.Context, mb *MiniblockRef) err
 }
 
 func (s *streamImpl) promoteCandidateLocked(ctx context.Context, mb *MiniblockRef) error {
+	if s.local == nil {
+		return nil
+	}
+
 	if s.local == nil {
 		return nil
 	}
