@@ -1020,7 +1020,7 @@ func (s *streamImpl) applyStreamEvents(
 	for _, e := range events {
 		switch event := e.(type) {
 		case *river.StreamLastMiniblockUpdated:
-			err := s.promoteCandidate(ctx, &MiniblockRef{
+			err := s.promoteCandidateLocked(ctx, &MiniblockRef{
 				Hash: event.LastMiniblockHash,
 				Num:  int64(event.LastMiniblockNum),
 			})
