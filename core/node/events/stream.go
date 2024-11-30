@@ -201,7 +201,7 @@ func (s *streamImpl) ApplyMiniblock(ctx context.Context, miniblock *MiniblockInf
 		return err
 	}
 
-	return s.applyMiniblockImplNoLock(ctx, miniblock, nil)
+	return s.applyMiniblockImplLocked(ctx, miniblock, nil)
 }
 
 // importMiniblocks imports the given miniblocks.
@@ -215,10 +215,10 @@ func (s *streamImpl) importMiniblocks(
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.importMiniblocksNoLock(ctx, miniblocks)
+	return s.importMiniblocksLocked(ctx, miniblocks)
 }
 
-func (s *streamImpl) importMiniblocksNoLock(
+func (s *streamImpl) importMiniblocksLocked(
 	ctx context.Context,
 	miniblocks []*MiniblockInfo,
 ) error {
@@ -301,7 +301,7 @@ func (s *streamImpl) importMiniblocksNoLock(
 	return nil
 }
 
-func (s *streamImpl) applyMiniblockImplNoLock(
+func (s *streamImpl) applyMiniblockImplLocked(
 	ctx context.Context,
 	miniblock *MiniblockInfo,
 	miniblockBytes []byte,
@@ -385,13 +385,13 @@ func (s *streamImpl) promoteCandidate(ctx context.Context, mb *MiniblockRef) err
 	}
 
 	if mb.Num > lastMbNum+1 {
-		return s.schedulePromotionNoLock(ctx, mb)
+		return s.schedulePromotionLocked(ctx, mb)
 	}
 
 	miniblockBytes, err := s.params.Storage.ReadMiniblockCandidate(ctx, s.streamId, mb.Hash, mb.Num)
 	if err != nil {
 		if IsRiverErrorCode(err, Err_NOT_FOUND) {
-			return s.schedulePromotionNoLock(ctx, mb)
+			return s.schedulePromotionLocked(ctx, mb)
 		}
 		return err
 	}
@@ -401,10 +401,10 @@ func (s *streamImpl) promoteCandidate(ctx context.Context, mb *MiniblockRef) err
 		return err
 	}
 
-	return s.applyMiniblockImplNoLock(ctx, miniblock, miniblockBytes)
+	return s.applyMiniblockImplLocked(ctx, miniblock, miniblockBytes)
 }
 
-func (s *streamImpl) schedulePromotionNoLock(ctx context.Context, mb *MiniblockRef) error {
+func (s *streamImpl) schedulePromotionLocked(ctx context.Context, mb *MiniblockRef) error {
 	if len(s.local.pendingCandidates) == 0 {
 		if mb.Num != s.view().LastBlock().Ref.Num+1 {
 			return RiverError(Err_INTERNAL, "schedulePromotionNoLock: next promotion is not for the next block")
@@ -907,14 +907,14 @@ func (s *streamImpl) tryApplyCandidate(ctx context.Context, mb *MiniblockInfo) (
 	if len(s.local.pendingCandidates) > 0 {
 		pending := s.local.pendingCandidates[0]
 		if mb.Ref.Num == pending.Num && mb.Ref.Hash == pending.Hash {
-			err = s.importMiniblocksNoLock(ctx, []*MiniblockInfo{mb})
+			err = s.importMiniblocksLocked(ctx, []*MiniblockInfo{mb})
 			if err != nil {
 				return false, err
 			}
 
 			for len(s.local.pendingCandidates) > 0 {
 				pending = s.local.pendingCandidates[0]
-				ok := s.tryReadAndApplyCandidateNoLock(ctx, pending)
+				ok := s.tryReadAndApplyCandidateLocked(ctx, pending)
 				if !ok {
 					break
 				}
@@ -927,12 +927,12 @@ func (s *streamImpl) tryApplyCandidate(ctx context.Context, mb *MiniblockInfo) (
 	return false, nil
 }
 
-func (s *streamImpl) tryReadAndApplyCandidateNoLock(ctx context.Context, mbRef *MiniblockRef) bool {
+func (s *streamImpl) tryReadAndApplyCandidateLocked(ctx context.Context, mbRef *MiniblockRef) bool {
 	miniblockBytes, err := s.params.Storage.ReadMiniblockCandidate(ctx, s.streamId, mbRef.Hash, mbRef.Num)
 	if err == nil {
 		miniblock, err := NewMiniblockInfoFromBytes(miniblockBytes, mbRef.Num)
 		if err == nil {
-			err = s.importMiniblocksNoLock(ctx, []*MiniblockInfo{miniblock})
+			err = s.importMiniblocksLocked(ctx, []*MiniblockInfo{miniblock})
 			if err == nil {
 				return true
 			}
