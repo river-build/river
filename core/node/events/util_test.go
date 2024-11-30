@@ -39,7 +39,6 @@ type cacheTestContext struct {
 var _ RemoteMiniblockProvider = (*cacheTestContext)(nil)
 
 type cacheTestInstance struct {
-	ctx            context.Context
 	params         *StreamCacheParams
 	streamRegistry StreamRegistry
 	cache          *streamCacheImpl

@@ -970,6 +970,7 @@ func (s *streamImpl) applyStreamEvents(
 	}
 
 	// Sanity check
+	// TODO: refactor locking
 	s.mu.RLock()
 	lastAppliedBlockNum := s.lastAppliedBlockNum
 	s.mu.RUnlock()
@@ -987,7 +988,10 @@ func (s *streamImpl) applyStreamEvents(
 		case *river.StreamLastMiniblockUpdated:
 			s.onLastMiniblockUpdated(ctx, event)
 		case *river.StreamPlacementUpdated:
-			s.nodes.Update(event.NodeAddress, event.IsAdded)
+			err := s.nodes.Update(event.NodeAddress, event.IsAdded)
+			if err != nil {
+				dlog.FromCtx(ctx).Error("applyStreamEventsNoLock: failed to update nodes", "err", err, "streamId", s.streamId)
+			}
 		default:
 			dlog.FromCtx(ctx).Error("applyStreamEventsNoLock: unknown event", "event", event, "streamId", s.streamId)
 		}
