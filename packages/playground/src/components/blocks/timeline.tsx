@@ -62,11 +62,11 @@ const useMessageReaction = (streamId: string, eventId: string) => {
 type TimelineProps = {
     events: TimelineEvent[]
     showThreadMessages?: boolean
-    threadMap?: Record<string, TimelineEvent[]>
+    threads?: Record<string, TimelineEvent[]>
     streamId: string
 }
 
-export const Timeline = ({ streamId, showThreadMessages, threadMap, events }: TimelineProps) => {
+export const Timeline = ({ streamId, showThreadMessages, threads, events }: TimelineProps) => {
     const { scrollback, isPending } = useScrollback(streamId)
     return (
         <div className="grid grid-rows-[auto,1fr] gap-2">
@@ -85,7 +85,7 @@ export const Timeline = ({ streamId, showThreadMessages, threadMap, events }: Ti
                                       streamId={streamId}
                                       key={event.eventId}
                                       event={event}
-                                      thread={threadMap?.[event.eventId]}
+                                      thread={threads?.[event.eventId]}
                                   />,
                               ]
                             : [],

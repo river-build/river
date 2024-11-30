@@ -117,7 +117,7 @@ func makeCacheTestContext(t *testing.T, p testParams) (context.Context, *cacheTe
 
 		blockNumber := btc.BlockNum(ctx)
 
-		nr, err := LoadNodeRegistry(ctx, registry, bc.Wallet.Address, blockNumber, bc.ChainMonitor, nil)
+		nr, err := LoadNodeRegistry(ctx, registry, bc.Wallet.Address, blockNumber, bc.ChainMonitor, nil, nil)
 		ctc.require.NoError(err)
 
 		sr, err := NewStreamRegistry(ctx, bc, nr, registry, btc.OnChainConfig)
@@ -129,7 +129,7 @@ func makeCacheTestContext(t *testing.T, p testParams) (context.Context, *cacheTe
 			RiverChain:              bc,
 			Registry:                registry,
 			ChainConfig:             btc.OnChainConfig,
-			Config:                  &config.Config{},
+			Config:                  config.GetDefaultConfig(),
 			AppliedBlockNum:         blockNumber,
 			ChainMonitor:            bc.ChainMonitor,
 			Metrics:                 infra.NewMetricsFactory(nil, "", ""),

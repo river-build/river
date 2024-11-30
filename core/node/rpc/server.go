@@ -26,57 +26,71 @@ import (
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/http_client"
 	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/nodes"
+	"github.com/river-build/river/core/node/notifications"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/registries"
 	"github.com/river-build/river/core/node/rpc/sync"
 	"github.com/river-build/river/core/node/scrub"
 	"github.com/river-build/river/core/node/storage"
+	"github.com/river-build/river/core/river_node/version"
 	"github.com/river-build/river/core/xchain/entitlement"
 )
 
 const (
-	ServerModeFull    = "full"
-	ServerModeInfo    = "info"
-	ServerModeArchive = "archive"
+	ServerModeFull         = "full"
+	ServerModeInfo         = "info"
+	ServerModeArchive      = "archive"
+	ServerModeNotification = "notification"
 )
 
 func (s *Service) httpServerClose() {
 	timeout := s.config.ShutdownTimeout
-	if timeout == 0 {
-		timeout = time.Second
-	} else if timeout <= time.Millisecond {
+	if timeout < 0 {
 		timeout = 0
 	}
-	ctx := s.serverCtx
 	if timeout > 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(s.serverCtx, timeout)
+		ctx, cancel := context.WithTimeout(s.serverCtx, timeout)
 		defer cancel()
-	}
-	if !s.config.Log.Simplify {
-		s.defaultLogger.Info("Shutting down http server", "timeout", timeout)
-	}
-	err := s.httpServer.Shutdown(ctx)
-	if err != nil {
-		if err != context.DeadlineExceeded {
-			s.defaultLogger.Error("failed to shutdown http server", "error", err)
+		if !s.config.Log.Simplify {
+			s.defaultLogger.Info("Shutting down http server", "timeout", timeout)
 		}
-		s.defaultLogger.Warn("forcing http server close")
-		err = s.httpServer.Close()
+		err := s.httpServer.Shutdown(ctx)
 		if err != nil {
-			s.defaultLogger.Error("failed to close http server", "error", err)
+			if err != context.DeadlineExceeded {
+				s.defaultLogger.Error("failed to shutdown http server", "error", err)
+			}
+			s.defaultLogger.Warn("forcing http server close")
+			err = s.httpServer.Close()
+			if err != nil {
+				s.defaultLogger.Error("failed to close http server", "error", err)
+			}
+		} else {
+			if !s.config.Log.Simplify {
+				s.defaultLogger.Info("http server shutdown")
+			}
 		}
 	} else {
 		if !s.config.Log.Simplify {
-			s.defaultLogger.Info("http server shutdown")
+			s.defaultLogger.Info("shutting down http server immediately")
+		}
+		err := s.httpServer.Close()
+		if err != nil {
+			s.defaultLogger.Error("failed to close http server", "error", err)
+		}
+		if !s.config.Log.Simplify {
+			s.defaultLogger.Info("http server closed")
 		}
 	}
 }
 
 func (s *Service) Close() {
+	s.serverCtxCancel()
+
 	onClose := s.onCloseFuncs
 	slices.Reverse(onClose)
 	for _, f := range onClose {
@@ -111,10 +125,10 @@ func (s *Service) onClose(f any) {
 	}
 }
 
-func (s *Service) start() error {
+func (s *Service) start(opts *ServerStartOpts) error {
 	s.startTime = time.Now()
 
-	s.initInstance(ServerModeFull)
+	s.initInstance(ServerModeFull, opts)
 
 	err := s.initWallet()
 	if err != nil {
@@ -189,9 +203,20 @@ func (s *Service) start() error {
 	return nil
 }
 
-func (s *Service) initInstance(mode string) {
+func (s *Service) initInstance(mode string, opts *ServerStartOpts) {
 	s.mode = mode
 	s.instanceId = GenShortNanoid()
+
+	if opts != nil {
+		s.riverChain = opts.RiverChain
+		s.listener = opts.Listener
+		s.httpClientMaker = opts.HttpClientMaker
+	}
+
+	if s.httpClientMaker == nil {
+		s.httpClientMaker = http_client.GetHttpClient
+	}
+
 	port := s.config.Port
 	if port == 0 && s.listener != nil {
 		addr := s.listener.Addr().(*net.TCPAddr)
@@ -202,8 +227,8 @@ func (s *Service) initInstance(mode string) {
 	if !s.config.Log.Simplify {
 		s.defaultLogger = dlog.FromCtx(s.serverCtx).With(
 			"instanceId", s.instanceId,
-			"nodeType", "stream",
 			"mode", mode,
+			"nodeType", "stream",
 		)
 	} else {
 		s.defaultLogger = dlog.FromCtx(s.serverCtx).With(
@@ -211,16 +236,34 @@ func (s *Service) initInstance(mode string) {
 		)
 	}
 	s.serverCtx = dlog.CtxWithLog(s.serverCtx, s.defaultLogger)
+
+	var (
+		vapidPrivateKey        = s.config.Notifications.Web.Vapid.PrivateKey
+		apnPrivateAuthKey      = s.config.Notifications.APN.AuthKey
+		sessionTokenPrivateKey = s.config.Notifications.Authentication.SessionToken.Key.Key
+	)
+	s.config.Notifications.Web.Vapid.PrivateKey = "<hidden>"
+	s.config.Notifications.APN.AuthKey = "<hidden>"
+	s.config.Notifications.Authentication.SessionToken.Key.Key = "<hidden>"
+
 	s.defaultLogger.Info(
 		"Starting server",
 		"config", s.config,
 		"mode", mode,
+		"version", version.GetFullVersion(),
 	)
+
+	s.config.Notifications.Web.Vapid.PrivateKey = vapidPrivateKey
+	s.config.Notifications.APN.AuthKey = apnPrivateAuthKey
+	s.config.Notifications.Authentication.SessionToken.Key.Key = sessionTokenPrivateKey
 
 	subsystem := mode
 	if mode == ServerModeFull {
 		subsystem = "stream"
+	} else if mode == ServerModeNotification {
+		subsystem = "notification"
 	}
+
 	metricsRegistry := prometheus.NewRegistry()
 	s.metrics = infra.NewMetricsFactory(metricsRegistry, "river", subsystem)
 	s.metricsPublisher = infra.NewMetricsPublisher(metricsRegistry)
@@ -316,12 +359,17 @@ func (s *Service) initRiverChain() error {
 	if s.wallet != nil {
 		walletAddress = s.wallet.Address
 	}
+	httpClient, err := s.httpClientMaker(ctx, s.config)
+	if err != nil {
+		return err
+	}
 	s.nodeRegistry, err = nodes.LoadNodeRegistry(
 		ctx,
 		s.registryContract,
 		walletAddress,
 		s.riverChain.InitialBlockNum,
 		s.riverChain.ChainMonitor,
+		httpClient,
 		s.otelConnectIterceptor,
 	)
 	if err != nil {
@@ -357,6 +405,8 @@ func (s *Service) prepareStore() error {
 			schema = storage.DbSchemaNameFromAddress(s.wallet.Address.Hex())
 		case ServerModeArchive:
 			schema = storage.DbSchemaNameForArchive(s.config.Archive.ArchiveId)
+		case ServerModeNotification:
+			schema = storage.DbSchemaNameForNotifications(s.config.RiverChain.ChainId)
 		default:
 			return RiverError(
 				Err_BAD_CONFIG,
@@ -383,21 +433,63 @@ func (s *Service) prepareStore() error {
 	}
 }
 
+func (s *Service) loadTLSConfig() (*tls.Config, error) {
+	certStr := s.config.TLSConfig.Cert
+	keyStr := s.config.TLSConfig.Key
+	if (certStr == "") || (keyStr == "") {
+		return nil, RiverError(
+			Err_BAD_CONFIG, "TLSConfig.Cert and TLSConfig.Key must be set if HTTPS is enabled",
+		)
+	}
+
+	// Base 64 encoding can't contain ., if . is present then it's assumed it's a file path
+	var cert *tls.Certificate
+	var err error
+	if strings.Contains(certStr, ".") || strings.Contains(keyStr, ".") {
+		cert, err = loadCertFromFiles(certStr, keyStr)
+		if err != nil {
+			return nil, err
+		}
+
+	} else {
+		cert, err = loadCertFromBase64(certStr, keyStr)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &tls.Config{
+		Certificates: []tls.Certificate{*cert},
+		NextProtos:   []string{"h2"},
+	}, nil
+}
+
 func (s *Service) runHttpServer() error {
 	ctx := s.serverCtx
 	log := dlog.FromCtx(ctx)
 	cfg := s.config
 
+	var address string
 	var err error
 	if s.listener == nil {
 		if cfg.Port == 0 {
 			return RiverError(Err_BAD_CONFIG, "Port is not set")
 		}
-		address := fmt.Sprintf("%s:%d", cfg.Address, cfg.Port)
+
+		address = fmt.Sprintf("%s:%d", cfg.Address, cfg.Port)
 		s.listener, err = net.Listen("tcp", address)
 		if err != nil {
 			return err
 		}
+
+		if !cfg.DisableHttps {
+			tlsConfig, err := s.loadTLSConfig()
+			if err != nil {
+				return err
+			}
+			s.listener = tls.NewListener(s.listener, tlsConfig)
+		}
+
 		if !cfg.Log.Simplify {
 			log.Info("Listening", "addr", address)
 		}
@@ -435,80 +527,47 @@ func (s *Service) runHttpServer() error {
 			"Connect-Protocol-Version",
 			"Connect-Timeout-Ms",
 			"x-river-request-id",
+			"Authorization",
 		},
 	})
 
-	address := fmt.Sprintf("%s:%d", cfg.Address, cfg.Port)
-	if !cfg.DisableHttps {
-		if !s.config.Log.Simplify {
-			log.Info("Using TLS server")
-		}
-		if (cfg.TLSConfig.Cert == "") || (cfg.TLSConfig.Key == "") {
-			return RiverError(
-				Err_BAD_CONFIG, "TLSConfig.Cert and TLSConfig.Key must be set if HTTPS is enabled",
-			)
-		}
+	handler := corsMiddleware.Handler(mux)
 
-		// Base 64 encoding can't contain ., if . is present then it's assumed it's a file path
-		if strings.Contains(cfg.TLSConfig.Cert, ".") || strings.Contains(cfg.TLSConfig.Key, ".") {
-			s.httpServer, err = createServerFromFile(
-				ctx,
-				address,
-				corsMiddleware.Handler(mux),
-				cfg.TLSConfig.Cert,
-				cfg.TLSConfig.Key,
-			)
-			if err != nil {
-				return err
-			}
-		} else {
-			s.httpServer, err = createServerFromBase64(ctx, address, corsMiddleware.Handler(mux), cfg.TLSConfig.Cert, cfg.TLSConfig.Key)
-			if err != nil {
-				return err
-			}
-		}
+	// TODO: set http2 settings here
+	http2Server := &http2.Server{}
 
-		// ensure that x/http2 is used
-		// https://github.com/golang/go/issues/42534
-		err = http2.ConfigureServer(s.httpServer, nil)
-		if err != nil {
-			return err
-		}
-
-		go s.serveTLS()
-	} else {
-		log.Info("Using H2C server")
-		s.httpServer, err = createH2CServer(ctx, address, corsMiddleware.Handler(mux))
-		if err != nil {
-			return err
-		}
-
-		go s.serveH2C()
+	if cfg.DisableHttps {
+		handler = h2c.NewHandler(handler, http2Server)
+		log.Warn("Starting H2C server without TLS")
 	}
+
+	s.httpServer = &http.Server{
+		Addr:    address,
+		Handler: handler,
+		BaseContext: func(listener net.Listener) context.Context {
+			return ctx
+		},
+		ErrorLog: newHttpLogger(ctx),
+	}
+	// ensure that x/http2 is used
+	// https://github.com/golang/go/issues/42534
+	err = http2.ConfigureServer(s.httpServer, http2Server)
+	if err != nil {
+		return err
+	}
+
+	go s.serve()
 
 	s.onClose(s.httpServerClose)
 	return nil
 }
 
-func (s *Service) serveTLS() {
-	// Run the server with graceful shutdown
-	err := s.httpServer.ServeTLS(s.listener, "", "")
-	if err != nil && err != http.ErrServerClosed {
-		s.defaultLogger.Error("ServeTLS failed", "err", err)
-	} else {
-		if !s.config.Log.Simplify {
-			s.defaultLogger.Info("ServeTLS stopped")
-		}
-	}
-}
-
-func (s *Service) serveH2C() {
-	// Run the server with graceful shutdown
+func (s *Service) serve() {
 	err := s.httpServer.Serve(s.listener)
 	if err != nil && err != http.ErrServerClosed {
-		s.defaultLogger.Error("serveH2C failed", "err", err)
+		s.defaultLogger.Error("Serve failed", "err", err)
 	} else {
-		s.defaultLogger.Info("serveH2C stopped")
+		s.defaultLogger.Info("Serve stopped")
 	}
 }
 
@@ -552,6 +611,43 @@ func (s *Service) initStore() error {
 				s.storagePoolInfo.Schema,
 				"totalStreamsCount",
 				streamsCount,
+			)
+		}
+		return nil
+	default:
+		return RiverError(
+			Err_BAD_CONFIG,
+			"Unknown storage type",
+			"storageType",
+			s.config.StorageType,
+		).Func("createStore")
+	}
+}
+
+func (s *Service) initNotificationsStore() error {
+	ctx := s.serverCtx
+	log := s.defaultLogger
+
+	switch s.config.StorageType {
+	case storage.NotificationStorageTypePostgres:
+		pgstore, err := storage.NewPostgresNotificationStore(
+			ctx,
+			s.storagePoolInfo,
+			s.exitSignal,
+			s.metrics,
+		)
+		if err != nil {
+			return err
+		}
+
+		s.notifications = notifications.NewUserPreferencesCache(pgstore)
+		s.onClose(pgstore.Close)
+
+		if !s.config.Log.Simplify {
+			log.Info(
+				"Created postgres notifications store",
+				"schema",
+				s.storagePoolInfo.Schema,
 			)
 		}
 		return nil
@@ -636,8 +732,50 @@ func (s *Service) initHandlers() {
 	s.registerDebugHandlers(s.config.EnableDebugEndpoints, s.config.DebugEndpoints)
 }
 
+func (s *Service) initNotificationHandlers() error {
+	var ii []connect.Interceptor
+	if s.otelConnectIterceptor != nil {
+		ii = append(ii, s.otelConnectIterceptor)
+	}
+	ii = append(ii, s.NewMetricsInterceptor())
+	ii = append(ii, NewTimeoutInterceptor(s.config.Network.RequestTimeout))
+
+	authInceptor, err := notifications.NewAuthenticationInterceptor(
+		s.config.Notifications.Authentication.SessionToken.Key.Algorithm,
+		s.config.Notifications.Authentication.SessionToken.Key.Key,
+	)
+	if err != nil {
+		return err
+	}
+
+	ii = append(ii, authInceptor)
+
+	interceptors := connect.WithInterceptors(ii...)
+	notificationServicePattern, notificationServiceHandler := protocolconnect.NewNotificationServiceHandler(
+		s.NotificationService,
+		interceptors,
+	)
+	notificationAuthServicePattern, notificationAuthServiceHandler := protocolconnect.NewAuthenticationServiceHandler(
+		s.NotificationService,
+		interceptors,
+	)
+
+	s.mux.Handle(notificationServicePattern, newHttpHandler(notificationServiceHandler, s.defaultLogger))
+	s.mux.Handle(notificationAuthServicePattern, newHttpHandler(notificationAuthServiceHandler, s.defaultLogger))
+
+	s.registerDebugHandlers(s.config.EnableDebugEndpoints, s.config.DebugEndpoints)
+
+	return nil
+}
+
+type ServerStartOpts struct {
+	RiverChain      *crypto.Blockchain
+	Listener        net.Listener
+	HttpClientMaker HttpClientMakerFunc
+}
+
 // StartServer starts the server with the given configuration.
-// riverchain and listener can be provided for testing purposes.
+// opts can be provided for testing purposes.
 // Returns Service.
 // Service.Close should be called to close listener, db connection and stop the server.
 // Error is posted to Service.exitSignal if DB conflict is detected (newer instance is started)
@@ -645,20 +783,19 @@ func (s *Service) initHandlers() {
 func StartServer(
 	ctx context.Context,
 	cfg *config.Config,
-	riverChain *crypto.Blockchain,
-	listener net.Listener,
+	opts *ServerStartOpts,
 ) (*Service, error) {
 	ctx = config.CtxWithConfig(ctx, cfg)
+	ctx, ctxCancel := context.WithCancel(ctx)
 
 	streamService := &Service{
-		serverCtx:  ctx,
-		config:     cfg,
-		riverChain: riverChain,
-		listener:   listener,
-		exitSignal: make(chan error, 16),
+		serverCtx:       ctx,
+		serverCtxCancel: ctxCancel,
+		config:          cfg,
+		exitSignal:      make(chan error, 16),
 	}
 
-	err := streamService.start()
+	err := streamService.start(opts)
 	if err != nil {
 		streamService.Close()
 		return nil, err
@@ -667,13 +804,10 @@ func StartServer(
 	return streamService, nil
 }
 
-func createServerFromBase64(
-	ctx context.Context,
-	address string,
-	handler http.Handler,
+func loadCertFromBase64(
 	certStringBase64 string,
 	keyStringBase64 string,
-) (*http.Server, error) {
+) (*tls.Certificate, error) {
 	certBytes, err := base64.StdEncoding.DecodeString(certStringBase64)
 	if err != nil {
 		return nil, err
@@ -688,60 +822,24 @@ func createServerFromBase64(
 	if err != nil {
 		return nil, AsRiverError(err, Err_BAD_CONFIG).
 			Message("Failed to create X509KeyPair from strings").
-			Func("createServerFromStrings")
+			Func("loadCertFromBase64")
 	}
 
-	return &http.Server{
-		Addr:    address,
-		Handler: handler,
-		TLSConfig: &tls.Config{
-			Certificates: []tls.Certificate{cert},
-		},
-		BaseContext: func(listener net.Listener) context.Context {
-			return ctx
-		},
-		ErrorLog: newHttpLogger(ctx),
-	}, nil
+	return &cert, nil
 }
 
-func createServerFromFile(
-	ctx context.Context,
-	address string,
-	handler http.Handler,
-	certFile, keyFile string,
-) (*http.Server, error) {
+func loadCertFromFiles(
+	certFile string,
+	keyFile string,
+) (*tls.Certificate, error) {
 	// Read certificate and key from files
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
 		return nil, AsRiverError(err, Err_BAD_CONFIG).
 			Message("Failed to LoadX509KeyPair from files").
-			Func("createServerFromFile")
+			Func("loadCertFromFiles")
 	}
-
-	return &http.Server{
-		Addr:    address,
-		Handler: handler,
-		TLSConfig: &tls.Config{
-			Certificates: []tls.Certificate{cert},
-		},
-		BaseContext: func(listener net.Listener) context.Context {
-			return ctx
-		},
-		ErrorLog: newHttpLogger(ctx),
-	}, nil
-}
-
-func createH2CServer(ctx context.Context, address string, handler http.Handler) (*http.Server, error) {
-	// Create an HTTP/2 server without TLS
-	h2s := &http2.Server{}
-	return &http.Server{
-		Addr:    address,
-		Handler: h2c.NewHandler(handler, h2s),
-		BaseContext: func(listener net.Listener) context.Context {
-			return ctx
-		},
-		ErrorLog: newHttpLogger(ctx),
-	}, nil
+	return &cert, nil
 }
 
 // Struct to match the JSON structure.

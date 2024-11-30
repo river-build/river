@@ -4,15 +4,18 @@ pragma solidity ^0.8.23;
 // interfaces
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 import {IPartnerRegistryBase, IPartnerRegistry} from "contracts/src/factory/facets/partner/IPartnerRegistry.sol";
+import {IImplementationRegistry} from "contracts/src/factory/facets/registry/IImplementationRegistry.sol";
 import {IRolesBase} from "contracts/src/spaces/facets/roles/IRoles.sol";
 import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {IMembership} from "contracts/src/spaces/facets/membership/IMembership.sol";
+import {IRiverPointsBase} from "contracts/src/tokens/points/IRiverPoints.sol";
 
 // libraries
 import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
 import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
 import {BasisPoints} from "contracts/src/utils/libraries/BasisPoints.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
+import {MembershipStorage} from "../MembershipStorage.sol";
 
 // contracts
 import {MembershipBase} from "contracts/src/spaces/facets/membership/MembershipBase.sol";
@@ -22,6 +25,7 @@ import {Entitled} from "contracts/src/spaces/facets/Entitled.sol";
 import {PrepayBase} from "contracts/src/spaces/facets/prepay/PrepayBase.sol";
 import {ReferralsBase} from "contracts/src/spaces/facets/referrals/ReferralsBase.sol";
 import {EntitlementGatedBase} from "contracts/src/spaces/facets/gated/EntitlementGatedBase.sol";
+import {RiverPoints} from "contracts/src/tokens/points/RiverPoints.sol";
 
 /// @title MembershipJoin
 /// @notice Handles the logic for joining a space, including entitlement checks and payment processing
@@ -78,13 +82,13 @@ abstract contract MembershipJoin is
       : IMembership.joinSpaceWithReferral.selector;
 
     bytes32 transactionId = _registerTransaction(
-      sender,
+      receiver,
       _encodeJoinSpaceData(selector, sender, receiver, referralData),
       msg.value
     );
 
     (bool isEntitled, bool isCrosschainPending) = _checkEntitlement(
-      sender,
+      receiver,
       transactionId
     );
 
@@ -157,18 +161,18 @@ abstract contract MembershipJoin is
 
   /// @notice Checks if a user is entitled to join the space and handles the entitlement process
   /// @dev This function checks both local and crosschain entitlements
-  /// @param sender The address of the user trying to join the space
+  /// @param receiver The address of the user trying to join the space
   /// @param transactionId The unique identifier for this join transaction
   /// @return isEntitled A boolean indicating whether the user is entitled to join
   /// @return isCrosschainPending A boolean indicating if a crosschain entitlement check is pending
   function _checkEntitlement(
-    address sender,
+    address receiver,
     bytes32 transactionId
   ) internal returns (bool isEntitled, bool isCrosschainPending) {
     IRolesBase.Role[] memory roles = _getRolesWithPermission(
       Permissions.JoinSpace
     );
-    address[] memory linkedWallets = _getLinkedWalletsWithUser(sender);
+    address[] memory linkedWallets = _getLinkedWalletsWithUser(receiver);
 
     uint256 totalRoles = roles.length;
 
@@ -186,6 +190,7 @@ abstract contract MembershipJoin is
 
         if (entitlement.isCrosschain()) {
           _requestEntitlementCheck(
+            receiver,
             transactionId,
             IRuleEntitlement(address(entitlement)),
             role.id
@@ -296,6 +301,20 @@ abstract contract MembershipJoin is
 
     _releaseCapturedValue(transactionId, payment);
     _captureData(transactionId, "");
+
+    // calculate points and credit them
+    RiverPoints pointsToken = RiverPoints(
+      IImplementationRegistry(_getSpaceFactory()).getLatestImplementation(
+        bytes32("RiverAirdrop")
+      )
+    );
+    uint256 points = pointsToken.getPoints(
+      IRiverPointsBase.Action.JoinSpace,
+      abi.encode(protocolFee)
+    );
+
+    pointsToken.mint(sender, points);
+    pointsToken.mint(_owner(), points);
   }
 
   /// @notice Issues a membership token to the receiver

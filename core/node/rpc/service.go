@@ -8,6 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/river-build/river/core/node/notifications"
+
 	"connectrpc.com/otelconnect"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/trace"
@@ -26,15 +28,18 @@ import (
 	"github.com/river-build/river/core/xchain/entitlement"
 )
 
+type HttpClientMakerFunc = func(context.Context, *config.Config) (*http.Client, error)
+
 type Service struct {
 	// Context and config
-	serverCtx     context.Context
-	config        *config.Config
-	instanceId    string
-	defaultLogger *slog.Logger
-	wallet        *crypto.Wallet
-	startTime     time.Time
-	mode          string
+	serverCtx       context.Context
+	serverCtxCancel context.CancelFunc
+	config          *config.Config
+	instanceId      string
+	defaultLogger   *slog.Logger
+	wallet          *crypto.Wallet
+	startTime       time.Time
+	mode            string
 
 	// exitSignal is used to report critical errors from background task and RPC handlers
 	// that should cause the service to stop. For example, if new instance for
@@ -51,6 +56,9 @@ type Service struct {
 	syncHandler        river_sync.Handler
 	scrubTaskProcessor scrub.StreamScrubTaskProcessor
 
+	// Notifications
+	notifications notifications.UserPreferencesStore
+
 	// River chain
 	riverChain       *crypto.Blockchain
 	registryContract *registries.RiverRegistryContract
@@ -66,15 +74,19 @@ type Service struct {
 	entitlementEvaluator *entitlement.Evaluator
 
 	// Network
-	listener   net.Listener
-	httpServer *http.Server
-	mux        httpMux
+	listener        net.Listener
+	httpServer      *http.Server
+	mux             httpMux
+	httpClientMaker HttpClientMakerFunc
 
 	// Status string
 	status atomic.Pointer[string]
 
 	// Archiver is not nil if running in archive mode
 	Archiver *Archiver
+
+	// NotificationService is not nil if running in notification mode
+	NotificationService *notifications.Service
 
 	// Metrics
 	metrics               infra.MetricsFactory
