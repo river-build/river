@@ -13,7 +13,9 @@ type AgentConnectConfig = Omit<SyncAgentConfig, 'context' | 'onTokenExpired'>
  *
  * ### Bearer Token
  * ```tsx
+ * import { useAgentConnection } from '@river-build/react-sdk'
  * import { makeRiverConfig } from '@river-build/sdk'
+ * import { useState } from 'react'
  *
  * const riverConfig = makeRiverConfig('gamma')
  *
@@ -39,6 +41,7 @@ type AgentConnectConfig = Omit<SyncAgentConfig, 'context' | 'onTokenExpired'>
  * If you're using Wagmi and Viem, you can use the [`useEthersSigner`](https://wagmi.sh/react/guides/ethers#usage-1) hook to get an ethers.js v5 Signer from a Viem Wallet Client.
  *
  * ```tsx
+ * import { useAgentConnection } from '@river-build/react-sdk'
  * import { makeRiverConfig } from '@river-build/sdk'
  * import { useEthersSigner } from './utils/viem-to-ethers'
  *
@@ -50,7 +53,12 @@ type AgentConnectConfig = Omit<SyncAgentConfig, 'context' | 'onTokenExpired'>
  *
  *   return (
  *     <>
- *       <button onClick={() => connect(signer, { riverConfig })}>
+ *       <button onClick={async () => {
+ *         if (!signer) {
+ *           return
+ *         }
+ *         connect(signer, { riverConfig })
+ *       }}>
  *         Login
  *       </button>
  *       {isAgentConnecting && <span>Connecting... ⏳</span>}

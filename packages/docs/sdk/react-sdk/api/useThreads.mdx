@@ -1,18 +1,19 @@
 ---
-title: useThreadMap
+title: useThreads
 ---
+Hook to get the threads from a stream.
+
 ## Imports
 
 ```ts
-import { useThreadMap } from '@river-build/react-sdk'
+import { useThreads } from '@river-build/react-sdk'
 ```
 
 ## Definition
 
 ```ts
-function useThreadMap(
-  spaceId: string,
-  channelId: string,
+function useThreads(
+  streamId: string,
   config?: ObservableConfig.FromObservable<Threads>,
 ): {
     data: {
@@ -26,24 +27,26 @@ function useThreadMap(
 }
 ```
 
-**Source:** [useThreadMap](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useThreadMap.ts)
+**Source:** [useThreads](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useThreads.ts)
 
 ## Parameters
 
-### spaceId
+### streamId
 
 - **Type:** `string`
 
-### channelId
-
-- **Type:** `string`
+The id of the stream to get the threads from.
 
 ### config
 
 - **Type:** `ObservableConfig.FromObservable<Threads>`
 - **Optional**
 
+Configuration options for the observable.
+
 ## Return Type
+
+The threads of the stream as a map from the message eventId to a thread.
 
 ```ts
 {

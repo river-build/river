@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -30,24 +31,24 @@ type (
 		// VAPID protocol to authenticate the message.
 		SendWebPushNotification(
 			ctx context.Context,
-		// subscription object as returned by the browser on enabling subscriptions.
+			// subscription object as returned by the browser on enabling subscriptions.
 			subscription *webpush.Subscription,
-		// event hash
+			// event hash
 			eventHash common.Hash,
-		// payload of the message
+			// payload of the message
 			payload []byte,
-		) error
+		) (expired bool, err error)
 
 		// SendApplePushNotification sends a push notification to the iOS app
 		SendApplePushNotification(
 			ctx context.Context,
-		// sub APN
+			// sub APN
 			sub *types.APNPushSubscription,
-		// event hash
+			// event hash
 			eventHash common.Hash,
-		// payload is sent to the APP
+			// payload is sent to the APP
 			payload *payload2.Payload,
-		) error
+		) (bool, error)
 	}
 
 	MessageNotifications struct {
@@ -124,26 +125,41 @@ func NewMessageNotifier(
 
 	if authKey == "" {
 		return nil, RiverError(protocol.Err_BAD_CONFIG, "Missing APN auth key").
-			Func("NewPushMessageNotifications")
+			Func("NewMessageNotifier")
 	}
 
 	blockPrivateKey, _ := pem.Decode([]byte(authKey))
 	if blockPrivateKey == nil {
 		return nil, RiverError(protocol.Err_BAD_CONFIG, "Invalid APN auth key").
-			Func("NewPushMessageNotifications")
+			Func("NewMessageNotifier")
 	}
 
 	rawKey, err := x509.ParsePKCS8PrivateKey(blockPrivateKey.Bytes)
 	if err != nil {
 		return nil, AsRiverError(err).
 			Message("Unable to parse APN auth key").
-			Func("SendAPNNotification")
+			Func("NewMessageNotifier")
 	}
 
 	apnJwtSignKey, ok := rawKey.(*ecdsa.PrivateKey)
 	if !ok {
 		return nil, RiverError(protocol.Err_BAD_CONFIG, "Invalid APN JWT signing key").
-			Func("SendAPNNotification")
+			Func("NewMessageNotifier")
+	}
+
+	if cfg.Web.Vapid.PrivateKey == "" {
+		return nil, RiverError(protocol.Err_BAD_CONFIG, "Missing VAPID private key").
+			Func("NewMessageNotifier")
+	}
+
+	if cfg.Web.Vapid.PublicKey == "" {
+		return nil, RiverError(protocol.Err_BAD_CONFIG, "Missing VAPID public key").
+			Func("NewMessageNotifier")
+	}
+
+	if cfg.Web.Vapid.Subject == "" {
+		return nil, RiverError(protocol.Err_BAD_CONFIG, "Missing VAPID subject").
+			Func("NewMessageNotifier")
 	}
 
 	webPushSend := metricsFactory.NewCounterVecEx(
@@ -177,10 +193,10 @@ func (n *MessageNotifications) SendWebPushNotification(
 	subscription *webpush.Subscription,
 	eventHash common.Hash,
 	payload []byte,
-) error {
+) (expired bool, err error) {
 	options := &webpush.Options{
 		Subscriber:      n.vapidSubject,
-		TTL:             12 * 60 * 60, // 12h
+		TTL:             30,
 		Urgency:         webpush.UrgencyHigh,
 		VAPIDPublicKey:  n.vapidPublicKey,
 		VAPIDPrivateKey: n.vapidPrivateKey,
@@ -189,23 +205,33 @@ func (n *MessageNotifications) SendWebPushNotification(
 	res, err := webpush.SendNotificationWithContext(ctx, payload, subscription, options)
 	if err != nil {
 		n.webPushSent.With(prometheus.Labels{"result": StatusFailure}).Inc()
-		return AsRiverError(err).
+		return false, AsRiverError(err).
 			Message("Send notification with WebPush failed").
-			Func("SendAPNNotification")
+			Func("SendWebPushNotification")
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode == http.StatusCreated {
 		n.webPushSent.With(prometheus.Labels{"result": StatusSuccess}).Inc()
-		return nil
+		dlog.FromCtx(ctx).Info("Web push notification sent", "event", eventHash)
+		return false, nil
 	}
 
 	n.webPushSent.With(prometheus.Labels{"result": StatusFailure}).Inc()
-	return RiverError(protocol.Err_UNAVAILABLE,
+
+	riverErr := RiverError(protocol.Err_UNAVAILABLE,
 		"Send notification with web push vapid failed",
 		"statusCode", res.StatusCode,
 		"status", res.Status,
-	).Func("SendWebNotification")
+		"event", eventHash,
+	).Func("SendWebPushNotification")
+
+	if resBody, err := io.ReadAll(res.Body); err == nil && len(resBody) > 0 {
+		riverErr = riverErr.Tag("msg", string(resBody))
+	}
+
+	subExpired := res.StatusCode == http.StatusGone
+	return subExpired, riverErr
 }
 
 func (n *MessageNotifications) SendApplePushNotification(
@@ -213,7 +239,7 @@ func (n *MessageNotifications) SendApplePushNotification(
 	sub *types.APNPushSubscription,
 	eventHash common.Hash,
 	payload *payload2.Payload,
-) error {
+) (bool, error) {
 	notification := &apns2.Notification{
 		DeviceToken: hex.EncodeToString(sub.DeviceToken),
 		Topic:       n.apnsAppBundleID,
@@ -237,7 +263,7 @@ func (n *MessageNotifications) SendApplePushNotification(
 	res, err := client.PushWithContext(ctx, notification)
 	if err != nil {
 		n.apnSent.With(prometheus.Labels{"result": StatusFailure}).Inc()
-		return AsRiverError(err).
+		return false, AsRiverError(err).
 			Message("Send notification to APNS failed").
 			Func("SendAPNNotification")
 	}
@@ -252,16 +278,20 @@ func (n *MessageNotifications) SendApplePushNotification(
 		}
 		log.Info("APN notification sent")
 
-		return nil
+		return false, nil
 	}
 
 	n.apnSent.With(prometheus.Labels{"result": StatusFailure}).Inc()
-	return RiverError(protocol.Err_UNAVAILABLE,
+
+	subExpired := res.StatusCode == http.StatusGone
+
+	return subExpired, RiverError(protocol.Err_UNAVAILABLE,
 		"Send notification to APNS failed",
 		"statusCode", res.StatusCode,
 		"apnsID", res.ApnsID,
 		"reason", res.Reason,
 		"deviceToken", sub.DeviceToken,
+		"event", eventHash,
 	).Func("SendAPNNotification")
 }
 
@@ -270,7 +300,7 @@ func (n *MessageNotificationsSimulator) SendWebPushNotification(
 	subscription *webpush.Subscription,
 	eventHash common.Hash,
 	payload []byte,
-) error {
+) (bool, error) {
 	log := dlog.FromCtx(ctx)
 	log.Info("SendWebPushNotification",
 		"keys.p256dh", subscription.Keys.P256dh,
@@ -282,7 +312,7 @@ func (n *MessageNotificationsSimulator) SendWebPushNotification(
 
 	n.webPushSent.With(prometheus.Labels{"result": StatusSuccess}).Inc()
 
-	return nil
+	return false, nil
 }
 
 func (n *MessageNotificationsSimulator) SendApplePushNotification(
@@ -290,7 +320,7 @@ func (n *MessageNotificationsSimulator) SendApplePushNotification(
 	sub *types.APNPushSubscription,
 	eventHash common.Hash,
 	payload *payload2.Payload,
-) error {
+) (bool, error) {
 	log := dlog.FromCtx(ctx)
 	log.Debug("SendApplePushNotification",
 		"deviceToken", sub.DeviceToken,
@@ -299,5 +329,5 @@ func (n *MessageNotificationsSimulator) SendApplePushNotification(
 
 	n.apnSent.With(prometheus.Labels{"result": StatusSuccess}).Inc()
 
-	return nil
+	return false, nil
 }

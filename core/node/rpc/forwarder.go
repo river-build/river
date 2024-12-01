@@ -2,6 +2,9 @@ package rpc
 
 import (
 	"context"
+	"errors"
+	"net"
+	"time"
 
 	"github.com/river-build/river/core/node/utils"
 
@@ -56,7 +59,22 @@ func peerNodeRequestWithRetries[T any](
 			return resp, nil
 		}
 
-		if IsConnectNetworkError(err) {
+		retry := false
+		// TODO: move to a helper function.
+		if connectErr := new(connect.Error); errors.As(err, &connectErr) {
+			if connect.IsWireError(connectErr) {
+				// Error is received from another node. TODO: classify into retryable and non-retryable.
+				retry = true
+			} else {
+				// Error is produced locally.
+				// Check if it's a network error and retry in this case.
+				if networkError := new(net.OpError); errors.As(connectErr, &networkError) {
+					retry = true
+				}
+			}
+		}
+
+		if retry {
 			// Mark peer as unavailable.
 			nodes.AdvanceStickyPeer(peer)
 		} else {
@@ -116,6 +134,7 @@ func peerNodeStreamingResponseWithRetries(
 			return nil
 		}
 
+		// TODO: fix to same logic as peerNodeRequestWithRetries.
 		if IsConnectNetworkError(err) && !hasStreamed {
 			// Mark peer as unavailable.
 			nodes.AdvanceStickyPeer(peer)
@@ -145,54 +164,51 @@ func (s *Service) asAnnotatedRiverError(err error) *RiverErrorImpl {
 		Tag("nodeUrl", s.config.Address)
 }
 
+type connectHandler[Req, Res any] func(context.Context, *connect.Request[Req]) (*connect.Response[Res], error)
+
+func executeConnectHandler[Req, Res any](
+	ctx context.Context,
+	req *connect.Request[Req],
+	service *Service,
+	handler connectHandler[Req, Res],
+	methodName string,
+) (*connect.Response[Res], error) {
+	ctx, log := utils.CtxAndLogForRequest(ctx, req)
+	log.Debug("Handler ENTER", "method", methodName)
+
+	startTime := time.Now()
+	resp, e := handler(ctx, req)
+	elapsed := time.Since(startTime)
+	if e != nil {
+		err := AsRiverError(e).
+			Tags(
+				"nodeAddress", service.wallet.Address,
+				"nodeUrl", service.config.Address,
+				"elapsed", elapsed,
+			).
+			Func(methodName)
+		if withStreamId, ok := req.Any().(streamIdProvider); ok {
+			err = err.Tag("streamId", withStreamId.GetStreamId())
+		}
+		_ = err.LogWarn(log)
+		return nil, err.AsConnectError()
+	}
+	log.Debug("Handler LEAVE", "method", methodName, "response", resp.Msg, "elapsed", elapsed)
+	return resp, nil
+}
+
 func (s *Service) CreateStream(
 	ctx context.Context,
 	req *connect.Request[CreateStreamRequest],
 ) (*connect.Response[CreateStreamResponse], error) {
-	ctx, log := utils.CtxAndLogForRequest(ctx, req)
-	log.Debug("CreateStream REQUEST", "streamId", req.Msg.StreamId)
-	r, e := s.createStreamImpl(ctx, req)
-	if e != nil {
-		return nil, s.asAnnotatedRiverError(e).
-			Func("CreateStream").
-			Tag("streamId", req.Msg.StreamId).
-			LogWarn(log).
-			AsConnectError()
-	}
-	var numMiniblocks int
-	var numEvents int
-	var firstMiniblockHash []byte
-	if s := r.Msg.GetStream(); s != nil {
-		numMiniblocks = len(s.GetMiniblocks())
-		numEvents = len(s.GetEvents())
-		if numMiniblocks > 0 {
-			firstMiniblockHash = s.GetMiniblocks()[0].GetHeader().GetHash()
-		}
-	}
-	log.Debug("CreateStream SUCCESS",
-		"streamId", req.Msg.StreamId,
-		"numMiniblocks", numMiniblocks,
-		"numEvents", numEvents,
-		"firstMiniblockHash", firstMiniblockHash)
-	return r, nil
+	return executeConnectHandler(ctx, req, s, s.createStreamImpl, "CreateStream")
 }
 
 func (s *Service) GetStream(
 	ctx context.Context,
 	req *connect.Request[GetStreamRequest],
 ) (*connect.Response[GetStreamResponse], error) {
-	ctx, log := utils.CtxAndLogForRequest(ctx, req)
-	log.Debug("GetStream ENTER")
-	r, e := s.getStreamImpl(ctx, req)
-	if e != nil {
-		return nil, s.asAnnotatedRiverError(e).
-			Func("GetStream").
-			Tag("req.Msg.StreamId", req.Msg.StreamId).
-			LogWarn(log).
-			AsConnectError()
-	}
-	log.Debug("GetStream LEAVE", "response", r.Msg)
-	return r, nil
+	return executeConnectHandler(ctx, req, s, s.getStreamImpl, "GetStream")
 }
 
 func (s *Service) GetStreamEx(
@@ -321,19 +337,7 @@ func (s *Service) GetMiniblocks(
 	ctx context.Context,
 	req *connect.Request[GetMiniblocksRequest],
 ) (*connect.Response[GetMiniblocksResponse], error) {
-	ctx, log := utils.CtxAndLogForRequest(ctx, req)
-	log.Debug("GetMiniblocks ENTER", "req", req.Msg)
-	r, e := s.getMiniblocksImpl(ctx, req)
-	if e != nil {
-		return nil, s.asAnnotatedRiverError(e).
-			Func("GetMiniblocks").
-			Tag("req.Msg.StreamId", req.Msg.StreamId).
-			LogWarn(log).
-			AsConnectError()
-	}
-
-	log.Debug("GetMiniblocks LEAVE", "response", r.Msg)
-	return r, nil
+	return executeConnectHandler(ctx, req, s, s.getMiniblocksImpl, "GetMiniblocks")
 }
 
 func (s *Service) getMiniblocksImpl(
@@ -373,18 +377,7 @@ func (s *Service) GetLastMiniblockHash(
 	ctx context.Context,
 	req *connect.Request[GetLastMiniblockHashRequest],
 ) (*connect.Response[GetLastMiniblockHashResponse], error) {
-	ctx, log := utils.CtxAndLogForRequest(ctx, req)
-	log.Debug("GetLastMiniblockHash ENTER", "req", req.Msg)
-	r, e := s.getLastMiniblockHashImpl(ctx, req)
-	if e != nil {
-		return nil, s.asAnnotatedRiverError(e).
-			Func("GetLastMiniblockHash").
-			Tag("req.Msg.StreamId", req.Msg.StreamId).
-			LogWarn(log).
-			AsConnectError()
-	}
-	log.Debug("GetLastMiniblockHash LEAVE", "response", r.Msg)
-	return r, nil
+	return executeConnectHandler(ctx, req, s, s.getLastMiniblockHashImpl, "GetLastMiniblockHash")
 }
 
 func (s *Service) getLastMiniblockHashImpl(
@@ -424,18 +417,7 @@ func (s *Service) AddEvent(
 	ctx context.Context,
 	req *connect.Request[AddEventRequest],
 ) (*connect.Response[AddEventResponse], error) {
-	ctx, log := utils.CtxAndLogForRequest(ctx, req)
-	log.Debug("AddEvent ENTER", "req", req.Msg)
-	r, e := s.addEventImpl(ctx, req)
-	if e != nil {
-		return nil, s.asAnnotatedRiverError(e).
-			Func("AddEvent").
-			Tag("req.Msg.StreamId", req.Msg.StreamId).
-			LogWarn(log).
-			AsConnectError()
-	}
-	log.Debug("AddEvent LEAVE", "req.Msg.StreamId", req.Msg.StreamId)
-	return r, nil
+	return executeConnectHandler(ctx, req, s, s.addEventImpl, "AddEvent")
 }
 
 func (s *Service) addEventImpl(

@@ -4,9 +4,11 @@ pragma solidity ^0.8.23;
 // interfaces
 import {IEntitlement} from "contracts/src/spaces/entitlements/IEntitlement.sol";
 import {IPartnerRegistryBase, IPartnerRegistry} from "contracts/src/factory/facets/partner/IPartnerRegistry.sol";
+import {IImplementationRegistry} from "contracts/src/factory/facets/registry/IImplementationRegistry.sol";
 import {IRolesBase} from "contracts/src/spaces/facets/roles/IRoles.sol";
 import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {IMembership, IMembershipBase} from "contracts/src/spaces/facets/membership/IMembership.sol";
+import {IRiverPointsBase} from "contracts/src/tokens/points/IRiverPoints.sol";
 
 // libraries
 import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
@@ -22,6 +24,7 @@ import {Entitled} from "contracts/src/spaces/facets/Entitled.sol";
 import {PrepayBase} from "contracts/src/spaces/facets/prepay/PrepayBase.sol";
 import {ReferralsBase} from "contracts/src/spaces/facets/referrals/ReferralsBase.sol";
 import {EntitlementGatedBase} from "contracts/src/spaces/facets/gated/EntitlementGatedBase.sol";
+import {RiverPoints} from "contracts/src/tokens/points/RiverPoints.sol";
 
 /// @title MembershipJoin
 /// @notice Handles the logic for joining a space, including entitlement checks and payment processing
@@ -289,7 +292,7 @@ abstract contract MembershipJoin is
     address sender,
     uint256 payment,
     uint256 surplus,
-    uint256
+    uint256 protocolFee
   ) internal {
     if (surplus > 0) {
       MembershipBase.transferIn(sender, surplus);
@@ -297,6 +300,19 @@ abstract contract MembershipJoin is
 
     _releaseCapturedValue(transactionId, payment);
     _captureData(transactionId, "");
+
+    // calculate points and credit them
+    RiverPoints pointsToken = RiverPoints(
+      IImplementationRegistry(MembershipBase.getSpaceFactory())
+        .getLatestImplementation(bytes32("RiverAirdrop"))
+    );
+    uint256 points = pointsToken.getPoints(
+      IRiverPointsBase.Action.JoinSpace,
+      abi.encode(protocolFee)
+    );
+
+    pointsToken.mint(sender, points);
+    pointsToken.mint(_owner(), points);
   }
 
   /// @notice Issues a membership token to the receiver
