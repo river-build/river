@@ -138,18 +138,13 @@ abstract contract DropFacetBase is IDropFacetBase {
           DropFacet__ClaimConditionsNotInAscendingOrder.selector
         );
       }
-      _verifyEnoughBalance(
-        newCondition.currency,
-        IERC20(newCondition.currency).balanceOf(address(this)) +
-          newCondition.maxClaimableSupply
-      );
-    } else {
-      // verify enough balance
-      _verifyEnoughBalance(
-        newCondition.currency,
-        newCondition.maxClaimableSupply
-      );
     }
+
+    // verify enough balance
+    _verifyEnoughBalance(
+      newCondition.currency,
+      newCondition.maxClaimableSupply
+    );
 
     _updateClaimCondition(ds.conditionById[newConditionId], newCondition);
 
