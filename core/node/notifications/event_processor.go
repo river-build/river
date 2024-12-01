@@ -23,6 +23,21 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// MaxWebPushAllowedNotificationStreamEventPayloadSize is the max length of a serialized stream
+// event that is included in the notification payload. If the event is larger it must not be
+// included because the push service will likely refuse it. Clients must support notifications
+// without the stream event and show the user the notification without the decrypted contents.
+// Deep linking should still be possible with the remaining meta-data.
+const MaxWebPushAllowedNotificationStreamEventPayloadSize = 3 * 1024
+
+// MaxAPNAllowedNotificationStreamEventPayloadSize is the max length of a serialized stream
+// event that is included in Apple push notification payload. If the event is larger it must not
+// be included because the push service will refuse it. Clients must support notifications without
+// the stream event and show the user the notification without the decrypted contents. Deep
+// linking should still be possible with the remaining meta-data.
+// https://developer.apple.com/documentation/usernotifications/generating-a-remote-notification
+const MaxAPNAllowedNotificationStreamEventPayloadSize = 2500
+
 // MessageToNotificationsProcessor implements events.StreamEventListener and for each stream event determines
 // if it needs to send a notification, to who and sends it.
 type MessageToNotificationsProcessor struct {
@@ -302,10 +317,13 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 
 	if len(userPref.Subscriptions.WebPush) > 0 {
 		webPayload := map[string]interface{}{
-			"event":     eventBytesHex,
 			"channelId": hex.EncodeToString(channelID[:]),
 			"kind":      kind,
 			"senderId":  hex.EncodeToString(event.Event.CreatorAddress),
+		}
+
+		if len(eventBytesHex) <= MaxWebPushAllowedNotificationStreamEventPayloadSize {
+			webPayload["event"] = eventBytesHex
 		}
 
 		if len(receivers) > 0 {
@@ -332,30 +350,33 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 					"event", event.Hash,
 					"channelID", channelID,
 				)
-			} else if !subscriptionExpired {
+			} else if subscriptionExpired {
+				if err := p.cache.RemoveExpiredWebPushSubscription(ctx, userPref.UserID, sub.Sub); err != nil {
+					p.log.Error("Unable to remove expired webpush subscription from cache",
+						"user", userPref.UserID, "err", err)
+				} else {
+					p.log.Warn("Removed expired webpush subscription from cache", "user", userPref.UserID)
+				}
+			} else {
 				p.log.Error("Unable to send web push notification",
 					"user",
 					user, "err", err,
 					"event", event.Hash,
 					"channelID", channelID,
 				)
-			} else {
-				if err := p.cache.RemoveExpiredWebPushSubscription(ctx, userPref.UserID, sub.Sub); err != nil {
-					p.log.Error("Unable to remove expired webpush subscription from cache",
-						"user", userPref.UserID, "err", err)
-				} else {
-					p.log.Debug("Removed expired webpush subscription from cache", "user", userPref.UserID)
-				}
 			}
 		}
 	}
 
 	if len(userPref.Subscriptions.APNPush) > 0 {
 		apnPayload := map[string]interface{}{
-			"event":     eventBytesHex,
 			"channelId": hex.EncodeToString(channelID[:]),
 			"kind":      kind,
 			"senderId":  hex.EncodeToString(event.Event.CreatorAddress),
+		}
+
+		if len(eventBytesHex) <= MaxAPNAllowedNotificationStreamEventPayloadSize {
+			apnPayload["event"] = eventBytesHex
 		}
 
 		if len(receivers) > 0 {
@@ -385,7 +406,15 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 					"deviceToken", sub.DeviceToken,
 					"env", sub.Environment,
 				)
-			} else if !subscriptionExpired {
+			} else if subscriptionExpired {
+				if err := p.cache.RemoveAPNSubscription(ctx, sub.DeviceToken, userPref.UserID); err != nil {
+					p.log.Error("Unable to remove expired APN subscription from cache",
+						"user", userPref.UserID, "deviceToken", sub.DeviceToken, "err", err)
+				} else {
+					p.log.Warn("Removed expired APN subscription from cache",
+						"user", userPref.UserID, "deviceToken", sub.DeviceToken)
+				}
+			} else {
 				p.log.Error("Unable to send APN notification",
 					"user", user,
 					"user", user,
@@ -394,14 +423,6 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 					"deviceToken", sub.DeviceToken,
 					"env", sub.Environment,
 					"err", err)
-			} else {
-				if err := p.cache.RemoveAPNSubscription(ctx, sub.DeviceToken, userPref.UserID); err != nil {
-					p.log.Error("Unable to remove expired APN subscription from cache",
-						"user", userPref.UserID, "deviceToken", sub.DeviceToken, "err", err)
-				} else {
-					p.log.Debug("Removed expired APN subscription from cache",
-						"user", userPref.UserID, "deviceToken", sub.DeviceToken)
-				}
 			}
 		}
 	}
