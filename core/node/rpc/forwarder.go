@@ -190,7 +190,7 @@ func executeConnectHandler[Req, Res any](
 		if withStreamId, ok := req.Any().(streamIdProvider); ok {
 			err = err.Tag("streamId", withStreamId.GetStreamId())
 		}
-		err.LogWarn(log)
+		_ = err.LogWarn(log)
 		return nil, err.AsConnectError()
 	}
 	log.Debug("Handler LEAVE", "method", methodName, "response", resp.Msg, "elapsed", elapsed)
