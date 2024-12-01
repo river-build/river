@@ -20,13 +20,18 @@ import (
 type Facet struct {
 	FacetAddress common.Address
 	Selectors    [][4]byte `json:",omitempty"`
-	SelectorsHex []string  `abi:"-"`
+	SelectorsHex []string  `                  abi:"-"`
 	ContractName string    `json:",omitempty"`
 	BytecodeHash string    `json:",omitempty"`
 }
 
 // ReadAllFacets reads all the facets from the given Diamond contract address
-func ReadAllFacets(client *ethclient.Client, contractAddress string, basescanAPIKey string, fetchBytecode bool) ([]Facet, error) {
+func ReadAllFacets(
+	client *ethclient.Client,
+	contractAddress string,
+	basescanAPIKey string,
+	fetchBytecode bool,
+) ([]Facet, error) {
 	if client == nil {
 		return nil, fmt.Errorf("Ethereum client is nil")
 	}
@@ -84,25 +89,34 @@ func ReadAllFacets(client *ethclient.Client, contractAddress string, basescanAPI
 		return nil, fmt.Errorf("failed to unpack result: %w", err)
 	}
 
-	basescanUrl, err := GetBasescanUrl(client)
+	chainScanUrl, err := GetChainScanUrl(client)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get Basescan URL: %w", err)
+		return nil, fmt.Errorf("failed to get ChainScan URL: %w", err)
 	}
 
 	for i, facet := range facets {
 		// Throttle API calls to 2 per second to avoid being rate limited
 		time.Sleep(500 * time.Millisecond)
 
-		// read contract name from basescan source code api
-		contractName, err := GetContractNameFromBasescan(basescanUrl, facet.FacetAddress.Hex(), basescanAPIKey)
+		chainId, err := client.ChainID(context.Background())
 		if err != nil {
-			return nil, fmt.Errorf(
-				"failed to get contract name from Basescan: %w",
-				err,
-			)
+			return nil, fmt.Errorf("failed to get chain ID: %w", err)
 		}
+		if chainId.Int64() == 6524490 || chainId.Int64() == 550 {
+			Log.Warn().Msg("ChainScan API is not supported for River Devnet or Mainnet")
+		} else {
 
-		facets[i].ContractName = contractName
+			// read contract name from chainscan source code api
+			contractName, err := GetContractNameFromBasescan(chainScanUrl, facet.FacetAddress.Hex(), basescanAPIKey)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"failed to get contract name from Basescan: %w",
+					err,
+				)
+			}
+
+			facets[i].ContractName = contractName
+		}
 
 		if fetchBytecode {
 			data, err := contractABI.Pack("facetFunctionSelectors", facet.FacetAddress)
@@ -178,8 +192,8 @@ func CreateEthereumClient(rpcUrl string) (*ethclient.Client, error) {
 	return client, nil
 }
 
-// GetBasescanUrl determines the appropriate Basescan API URL based on the chain ID
-func GetBasescanUrl(client *ethclient.Client) (string, error) {
+// GetChainScanUrl determines the appropriate ChainScan API URL based on the chain ID
+func GetChainScanUrl(client *ethclient.Client) (string, error) {
 	chainID, err := client.ChainID(context.Background())
 	if err != nil {
 		return "", fmt.Errorf("failed to get chain ID: %w", err)
@@ -190,6 +204,10 @@ func GetBasescanUrl(client *ethclient.Client) (string, error) {
 		return "https://api.basescan.org", nil
 	case 84532: // Base Sepolia
 		return "https://api-sepolia.basescan.org", nil
+	case 6524490: // River Devnet
+		return "https://testnet.explorer.river.build/api?", nil
+	case 550: // River Mainnet
+		return "https://explorer.river.build/api?", nil
 	default:
 		return "", fmt.Errorf("unsupported chain ID: %d", chainID)
 	}

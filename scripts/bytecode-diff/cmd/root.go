@@ -16,7 +16,7 @@ var (
 	supportedEnvironments = []string{"alpha", "gamma", "omega"}
 	baseRpcUrl            string
 	riverRpcUrl           string
-	riverTestnetRpcUrl    string
+	riverDevnetRpcUrl     string
 	facetSourcePath       string
 	compiledFacetsPath    string
 	sourceDiffDir         string
@@ -50,7 +50,7 @@ func init() {
 	rootCmd.Flags().StringVarP(&baseRpcUrl, "base-rpc", "b", "", "Base RPC provider URL")
 	rootCmd.Flags().StringVarP(&baseSepoliaRpcUrl, "base-sepolia-rpc", "", "", "Base Sepolia RPC provider URL")
 	rootCmd.Flags().StringVarP(&riverRpcUrl, "river-rpc", "r", "", "River RPC provider URL")
-	rootCmd.Flags().StringVarP(&riverTestnetRpcUrl, "river-testnet-rpc", "", "", "River Testnet RPC provider URL")
+	rootCmd.Flags().StringVarP(&riverDevnetRpcUrl, "river-devnet-rpc", "", "", "River Devnet RPC provider URL")
 	rootCmd.Flags().BoolVarP(&sourceDiff, "source-diff-only", "s", false, "Run source code diff")
 	rootCmd.Flags().StringVar(&sourceDiffDir, "source-diff-log", "source-diffs", "Path to diff log file")
 	rootCmd.Flags().StringVar(&compiledFacetsPath, "compiled-facets", "../../contracts/out", "Path to compiled facets")
@@ -170,6 +170,11 @@ var rootCmd = &cobra.Command{
 			BaseSepoliaRpcUrl: baseSepoliaRpcUrl,
 			BasescanAPIKey:    os.Getenv("BASESCAN_API_KEY"),
 		}
+		riverConfig := utils.RiverChainConfig{
+			MainnetRpcUrl:   riverRpcUrl,
+			DevnetRpcUrl:    riverDevnetRpcUrl,
+			RiverScanApiKey: os.Getenv("RIVERSCAN_API_KEY"),
+		}
 		if sourceDiff {
 
 			log.Info().
@@ -177,7 +182,10 @@ var rootCmd = &cobra.Command{
 				Str("compiledFacetsPath", compiledFacetsPath).
 				Msg("Running diff for facet path recursively only compiled facet contracts")
 
-			if err := executeSourceDiff(verbose, baseConfig, facetSourcePath, compiledFacetsPath, sourceDiffDir); err != nil {
+			if err := executeSourceDiff(verbose, struct {
+				BaseConfig  utils.BaseConfig
+				RiverConfig utils.RiverChainConfig
+			}{baseConfig, riverConfig}, facetSourcePath, compiledFacetsPath, sourceDiffDir); err != nil {
 				log.Fatal().Err(err).Msg("Error executing source diff")
 				return
 			}
@@ -222,7 +230,10 @@ var rootCmd = &cobra.Command{
 
 func executeSourceDiff(
 	verbose bool,
-	baseConfig utils.BaseConfig,
+	chainConfig struct {
+		BaseConfig  utils.BaseConfig
+		RiverConfig utils.RiverChainConfig
+	},
 	facetSourcePath, compiledFacetsPath string,
 	reportOutDir string,
 ) error {
@@ -256,22 +267,56 @@ func executeSourceDiff(
 	const sourceEnvironment = "alpha"
 
 	sourceDeploymentsPath := filepath.Join(deploymentsPath, sourceEnvironment)
-	sourceDiamonds, err := utils.GetDiamondAddresses(sourceDeploymentsPath, baseDiamonds, verbose)
+	baseSourceDiamonds, err := utils.GetDiamondAddresses(
+		sourceDeploymentsPath,
+		baseDiamonds,
+		utils.BASE,
+		verbose,
+	)
+
+	riverSourceDiamonds, err := utils.GetDiamondAddresses(
+		sourceDeploymentsPath,
+		riverDiamonds,
+		utils.RIVER,
+		verbose,
+	)
 
 	// Create Ethereum client
-	client, err := utils.CreateEthereumClient(baseConfig.BaseSepoliaRpcUrl)
+	baseClient, err := utils.CreateEthereumClient(chainConfig.BaseConfig.BaseSepoliaRpcUrl)
 	if err != nil {
-		log.Error().Err(err).Msg("Error creating Ethereum client")
+		log.Error().Err(err).Msg("Error creating Base Ethereum client")
 		return err
 	}
-	defer client.Close()
+	defer baseClient.Close()
+
+	riverClient, err := utils.CreateEthereumClient(chainConfig.RiverConfig.DevnetRpcUrl)
+	if err != nil {
+		log.Error().Err(err).Msg("Error creating River Ethereum client")
+		return err
+	}
+	defer riverClient.Close()
 
 	alphaFacets := make(map[utils.DiamondName][]utils.Facet)
-	for diamondName, diamondAddress := range sourceDiamonds {
+	for diamondName, diamondAddress := range baseSourceDiamonds {
 		// read all facet addresses, names from diamond contract
-		facets, err := utils.ReadAllFacets(client, diamondAddress, baseConfig.BasescanAPIKey, false)
+		facets, err := utils.ReadAllFacets(baseClient, diamondAddress, chainConfig.BaseConfig.BasescanAPIKey, false)
 		if err != nil {
-			log.Error().Err(err).Str("diamond", string(diamondName)).Msg("Error reading all facets for source diamond")
+			log.Error().
+				Err(err).
+				Str("diamond", string(diamondName)).
+				Msg("Error reading all facets for Base source diamond")
+			return err
+		}
+		alphaFacets[utils.DiamondName(diamondName)] = facets
+	}
+
+	for diamondName, diamondAddress := range riverSourceDiamonds {
+		facets, err := utils.ReadAllFacets(riverClient, diamondAddress, chainConfig.RiverConfig.RiverScanApiKey, false)
+		if err != nil {
+			log.Error().
+				Err(err).
+				Str("diamond", string(diamondName)).
+				Msg("Error reading all facets for River source diamond")
 			return err
 		}
 		alphaFacets[utils.DiamondName(diamondName)] = facets
@@ -310,13 +355,13 @@ func executeEnvrionmentDiff(
 ) error {
 	// walk environment diamonds and get all facet addresses from DiamondLoupe facet view
 	sourceDeploymentsPath := filepath.Join(deploymentsPath, sourceEnvironment)
-	sourceDiamonds, err := utils.GetDiamondAddresses(sourceDeploymentsPath, baseDiamonds, verbose)
+	sourceDiamonds, err := utils.GetDiamondAddresses(sourceDeploymentsPath, baseDiamonds, utils.BASE, verbose)
 	if err != nil {
 		log.Error().Err(err).Msgf("Error getting diamond addresses for source environment %s", sourceEnvironment)
 		return err
 	}
 	targetDeploymentsPath := filepath.Join(deploymentsPath, targetEnvironment)
-	targetDiamonds, err := utils.GetDiamondAddresses(targetDeploymentsPath, baseDiamonds, verbose)
+	targetDiamonds, err := utils.GetDiamondAddresses(targetDeploymentsPath, baseDiamonds, utils.BASE, verbose)
 	if err != nil {
 		log.Error().Err(err).Msgf("Error getting diamond addresses for target environment %s", targetEnvironment)
 		return err

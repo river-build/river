@@ -204,5 +204,8 @@ func init() {
 	AddHashesCmd.Flags().StringVar(&baseRpcUrl, "base-rpc-url", os.Getenv("BASE_RPC_URL"), "Base RPC URL")
 	AddHashesCmd.Flags().
 		StringVar(&baseSepoliaRpcUrl, "base-sepolia-rpc-url", os.Getenv("BASE_SEPOLIA_RPC_URL"), "Base Sepolia RPC URL")
+	AddHashesCmd.Flags().StringVar(&riverRpcUrl, "river-rpc-url", os.Getenv("RIVER_RPC_URL"), "River RPC URL")
+	AddHashesCmd.Flags().
+		StringVar(&riverDevnetRpcUrl, "river-devnet-rpc-url", os.Getenv("RIVER_DEVNET_RPC_URL"), "River Devnet RPC URL")
 	AddHashesCmd.Flags().BoolVar(&htmlRender, "html-render", true, "Render output as HTML")
 }

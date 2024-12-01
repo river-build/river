@@ -567,11 +567,16 @@ func Contains(slice []string, item string) bool {
 	return false
 }
 
-func GetDiamondAddresses(basePath string, diamonds []Diamond, verbose bool) (map[Diamond]string, error) {
+func GetDiamondAddresses(
+	basePath string,
+	diamonds []Diamond,
+	chain ChainName,
+	verbose bool,
+) (map[Diamond]string, error) {
 	diamondAddresses := make(map[Diamond]string)
 
 	for _, diamond := range diamonds {
-		filePath := filepath.Join(basePath, "base", "addresses", fmt.Sprintf("%s.json", diamond))
+		filePath := filepath.Join(basePath, string(chain), "addresses", fmt.Sprintf("%s.json", diamond))
 
 		data, err := os.ReadFile(filePath)
 		if err != nil {
