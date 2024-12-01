@@ -62,8 +62,6 @@ func (s *Service) addParsedEvent(
 	localStream SyncStream,
 	streamView StreamView,
 ) error {
-	_, _ = s.scrubTaskProcessor.TryScheduleScrub(ctx, localStream, false)
-
 	// TODO: here it should loop and re-check the rules if view was updated in the meantime.
 
 	canAddEvent, chainAuthArgsList, sideEffects, err := rules.CanAddEvent(

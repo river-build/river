@@ -29,17 +29,7 @@ type MiniblockStream interface {
 	GetMiniblocks(ctx context.Context, fromInclusive int64, ToExclusive int64) ([]*Miniblock, bool, error)
 }
 
-// A ScrubTrackable tracks and updates the last time a stream was scrubbed. Scrubbing is a
-// process where the stream node analyzes stream membership for members that have lost
-// membership entitlements and generates LEAVE events to boot them from the stream. At this
-// time, we only apply scrubbing to channels, which are a subset of joinable streams.
-type ScrubTrackable interface {
-	LastScrubbedTime() time.Time
-	MarkScrubbed(ctx context.Context)
-}
-
 type Stream interface {
-	ScrubTrackable
 	AddableStream
 	MiniblockStream
 
@@ -154,20 +144,6 @@ func (s *streamImpl) setView(view *streamViewImpl) {
 		}
 		s.local.pendingCandidates = nil
 	}
-}
-
-func (s *streamImpl) LastScrubbedTime() time.Time {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	return s.local.lastScrubbedTime
-}
-
-func (s *streamImpl) MarkScrubbed(ctx context.Context) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.local.lastScrubbedTime = time.Now()
 }
 
 // Should be called with lock held
@@ -539,6 +515,9 @@ func (s *streamImpl) getViewIfLocal(ctx context.Context) (*streamViewImpl, error
 	var view *streamViewImpl
 	if isLocal {
 		view = s.view()
+		if view != nil {
+			s.maybeScrubLocked()
+		}
 	}
 	s.mu.RUnlock()
 	if !isLocal {
@@ -554,6 +533,7 @@ func (s *streamImpl) getViewIfLocal(ctx context.Context) (*streamViewImpl, error
 	if err := s.loadInternal(ctx); err != nil {
 		return nil, err
 	}
+	s.maybeScrubLocked()
 	return s.view(), nil
 }
 
@@ -584,9 +564,31 @@ func (s *streamImpl) tryGetView() StreamView {
 	defer s.mu.RUnlock()
 	// Return nil interface, if implementation is nil. This is go for you.
 	if s.local != nil && s.view() != nil {
+		s.maybeScrubLocked()
 		return s.view()
 	} else {
 		return nil
+	}
+}
+
+func (s *streamImpl) maybeScrubLocked() {
+	if !ValidChannelStreamId(&s.streamId) {
+		return
+	}
+
+	if s.params.Config.Scrubbing.ScrubEligibleDuration > 0 &&
+		time.Since(s.local.lastScrubbedTime) > s.params.Config.Scrubbing.ScrubEligibleDuration {
+		s.params.Scrubber.Scrub(s.streamId)
+		// Needs write lock to reset last scrubbed time.
+		go s.resetLastScrubbed()
+	}
+}
+
+func (s *streamImpl) resetLastScrubbed() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.local != nil {
+		s.local.lastScrubbedTime = time.Now()
 	}
 }
 
