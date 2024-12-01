@@ -44,7 +44,7 @@ jobs:
     Common_CI:
         permissions: write-all
         if: github.event_name != 'workflow_dispatch' || !inputs.skip_common_ci
-        runs-on: ubuntu-latest-8-cores
+        runs-on: ubuntu-latest
         timeout-minutes: 30
 
         steps:
@@ -172,7 +172,7 @@ jobs:
     Multinode:
         permissions: write-all
         if: github.event_name != 'workflow_dispatch' || !inputs.skip_multinode
-        runs-on: ubuntu-latest-8-cores
+        runs-on: ubuntu-latest
         timeout-minutes: 30
         services:
             postgres-core:
@@ -311,7 +311,7 @@ jobs:
     Multinode_Ent:
         permissions: write-all
         if: github.event_name != 'workflow_dispatch' || !inputs.skip_multinode_ent
-        runs-on: ubuntu-latest-8-cores
+        runs-on: ubuntu-latest
         timeout-minutes: 40
         services:
             postgres-core:
@@ -446,7 +446,7 @@ jobs:
     Multinode_Ent_Legacy:
         permissions: write-all
         if: github.event_name != 'workflow_dispatch' || !inputs.skip_multinode_ent_legacy
-        runs-on: ubuntu-latest-8-cores
+        runs-on: ubuntu-latest
         timeout-minutes: 40
         services:
             postgres-core:
@@ -575,7 +575,7 @@ jobs:
     Go_Tests:
         permissions: write-all
         if: github.event_name != 'workflow_dispatch' || !inputs.skip_go
-        runs-on: ubuntu-latest-8-cores
+        runs-on: ubuntu-latest
         timeout-minutes: 30
         services:
             postgres-core:
@@ -672,7 +672,7 @@ jobs:
     XChain_Integration:
         permissions: write-all
         if: github.event_name != 'workflow_dispatch' || !inputs.skip_xchain_integration
-        runs-on: ubuntu-latest-8-cores
+        runs-on: ubuntu-latest
         timeout-minutes: 30
 
         steps:
