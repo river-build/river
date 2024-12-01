@@ -38,7 +38,10 @@ type StreamCacheParams struct {
 
 type StreamCache interface {
 	Params() *StreamCacheParams
-	GetStream(ctx context.Context, streamId StreamId) (SyncStream, error)
+	// GetStreamWaitForLocal is a transitional method to support existing GetStream API before block number are wired through APIs.
+	GetStreamWaitForLocal(ctx context.Context, streamId StreamId) (SyncStream, error)
+	// GetStreamNoWait is a transitional method to support existing GetStream API before block number are wired through APIs.
+	GetStreamNoWait(ctx context.Context, streamId StreamId) (SyncStream, error)
 	ForceFlushAll(ctx context.Context)
 	GetLoadedViews(ctx context.Context) []StreamView
 	GetMbCandidateStreams(ctx context.Context) []*streamImpl
@@ -393,18 +396,30 @@ func (s *streamCacheImpl) createStreamStorage(
 	}
 }
 
-func (s *streamCacheImpl) GetStream(ctx context.Context, streamId StreamId) (SyncStream, error) {
-	stream, err := s.getStreamImpl(ctx, streamId)
+func (s *streamCacheImpl) GetStreamWaitForLocal(ctx context.Context, streamId StreamId) (SyncStream, error) {
+	stream, err := s.getStreamImpl(ctx, streamId, true)
 	if err != nil {
 		return nil, err
 	}
 	return stream, nil
 }
 
-func (s *streamCacheImpl) getStreamImpl(ctx context.Context, streamId StreamId) (*streamImpl, error) {
+func (s *streamCacheImpl) GetStreamNoWait(ctx context.Context, streamId StreamId) (SyncStream, error) {
+	stream, err := s.getStreamImpl(ctx, streamId, false)
+	if err != nil {
+		return nil, err
+	}
+	return stream, nil
+}
+
+func (s *streamCacheImpl) getStreamImpl(
+	ctx context.Context,
+	streamId StreamId,
+	waitForLocal bool,
+) (*streamImpl, error) {
 	stream, _ := s.cache.Load(streamId)
 	if stream == nil {
-		return s.tryLoadStreamRecord(ctx, streamId, true)
+		return s.tryLoadStreamRecord(ctx, streamId, waitForLocal)
 	}
 	return stream, nil
 }

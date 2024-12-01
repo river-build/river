@@ -270,7 +270,7 @@ func TestScrubStreamTaskProcessor(t *testing.T) {
 			service := tester.nodes[0].service
 			streamCache := service.cache
 
-			stream, err := streamCache.GetStream(ctx, channelId)
+			stream, err := streamCache.GetStreamWaitForLocal(ctx, channelId)
 			require.NoError(err)
 
 			view, err := stream.GetView(ctx)

@@ -255,7 +255,7 @@ func (tp *streamScrubTaskProcessorImpl) processTask(task *streamScrubTask) {
 		defer span.End()
 	}
 
-	stream, err := tp.cache.GetStream(tp.ctx, task.channelId)
+	stream, err := tp.cache.GetStreamNoWait(tp.ctx, task.channelId)
 	if err != nil {
 		log.Error("Unable to get stream from cache", "error", err)
 		return

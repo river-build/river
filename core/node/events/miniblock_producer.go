@@ -256,7 +256,7 @@ func (p *miniblockProducer) TestMakeMiniblock(
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	stream, err := p.streamCache.GetStream(ctx, streamId)
+	stream, err := p.streamCache.GetStreamWaitForLocal(ctx, streamId)
 	if err != nil {
 		return nil, err
 	}

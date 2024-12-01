@@ -21,7 +21,7 @@ type remoteStream struct {
 var _ Stream = (*remoteStream)(nil)
 
 func (s *Service) loadStream(ctx context.Context, streamId StreamId) (Stream, error) {
-	stream, err := s.cache.GetStream(ctx, streamId)
+	stream, err := s.cache.GetStreamNoWait(ctx, streamId)
 	if err != nil {
 		return nil, err
 	}

@@ -35,7 +35,7 @@ func (s *streamCacheImpl) syncStreamFromPeers(
 	streamId StreamId,
 	lastMbInContract *MiniblockRef,
 ) error {
-	stream, err := s.getStreamImpl(ctx, streamId)
+	stream, err := s.getStreamImpl(ctx, streamId, false)
 	if err != nil {
 		return err
 	}

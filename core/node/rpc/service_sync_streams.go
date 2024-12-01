@@ -65,7 +65,7 @@ func (s *Service) SyncStreams(
 			}
 
 			// If the added stream is local, schedule a scrub.
-			if stream, _ := s.cache.GetStream(ctx, streamId); stream != nil {
+			if stream, _ := s.cache.GetStreamWaitForLocal(ctx, streamId); stream != nil {
 				_, _ = s.scrubTaskProcessor.TryScheduleScrub(ctx, stream, false)
 			}
 		}
@@ -101,7 +101,7 @@ func (s *Service) AddStreamToSync(
 			)
 		} else {
 			// If the stream is local, schedule a scrub.
-			if stream, _ := s.cache.GetStream(ctx, streamId); stream != nil {
+			if stream, _ := s.cache.GetStreamWaitForLocal(ctx, streamId); stream != nil {
 				_, _ = s.scrubTaskProcessor.TryScheduleScrub(ctx, stream, false)
 			}
 		}

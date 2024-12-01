@@ -94,7 +94,7 @@ func (s *Service) createStream(ctx context.Context, req *CreateStreamRequest) (*
 			return nil, RiverError(Err_PERMISSION_DENIED, "invalid user id", "requiredUser", userAddress)
 		}
 		userStreamId := UserStreamIdFromAddr(addr)
-		_, err = s.cache.GetStream(ctx, userStreamId)
+		_, err = s.cache.GetStreamNoWait(ctx, userStreamId)
 		if err != nil {
 			return nil, RiverError(Err_PERMISSION_DENIED, "user does not exist", "requiredUser", userAddress)
 		}
@@ -163,7 +163,7 @@ func (s *Service) createReplicatedStream(
 	var localSyncCookie *SyncCookie
 	if isLocal {
 		sender.GoLocal(func() error {
-			st, err := s.cache.GetStream(ctx, streamId)
+			st, err := s.cache.GetStreamNoWait(ctx, streamId)
 			if err != nil {
 				return err
 			}

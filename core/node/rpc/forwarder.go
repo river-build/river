@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"time"
 
@@ -241,7 +242,9 @@ func (s *Service) getStreamImpl(
 		return nil, err
 	}
 
-	stream, err := s.cache.GetStream(ctx, streamId)
+	fmt.Println("GetStreamImpl", "streamId", streamId)
+
+	stream, err := s.cache.GetStreamNoWait(ctx, streamId)
 	if err != nil {
 		if req.Msg.Optional && AsRiverError(err).Code == Err_NOT_FOUND {
 			return connect.NewResponse(&GetStreamResponse{}), nil
@@ -249,6 +252,8 @@ func (s *Service) getStreamImpl(
 			return nil, err
 		}
 	}
+
+	fmt.Println("GetStreamImpl before view", "stream", stream)
 
 	// Check that stream is marked as accessed in this case (i.e. timestamp is set)
 	view, err := stream.GetViewIfLocal(ctx)
@@ -285,7 +290,7 @@ func (s *Service) getStreamExImpl(
 		return err
 	}
 
-	nodes, err := s.cache.GetStream(ctx, streamId)
+	nodes, err := s.cache.GetStreamNoWait(ctx, streamId)
 	if err != nil {
 		return err
 	}
@@ -357,7 +362,7 @@ func (s *Service) getMiniblocksImpl(
 		return nil, err
 	}
 
-	stream, err := s.cache.GetStream(ctx, streamId)
+	stream, err := s.cache.GetStreamNoWait(ctx, streamId)
 	if err != nil {
 		return nil, err
 	}
@@ -397,7 +402,7 @@ func (s *Service) getLastMiniblockHashImpl(
 		return nil, err
 	}
 
-	stream, err := s.cache.GetStream(ctx, streamId)
+	stream, err := s.cache.GetStreamNoWait(ctx, streamId)
 	if err != nil {
 		return nil, err
 	}
@@ -442,7 +447,7 @@ func (s *Service) addEventImpl(
 		return nil, err
 	}
 
-	stream, err := s.cache.GetStream(ctx, streamId)
+	stream, err := s.cache.GetStreamNoWait(ctx, streamId)
 	if err != nil {
 		return nil, err
 	}
