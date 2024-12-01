@@ -57,6 +57,12 @@ type testParams struct {
 	numInstances    int
 }
 
+type noopScrubber struct{}
+
+var _ Scrubber = (*noopScrubber)(nil)
+
+func (n *noopScrubber) Scrub(streamId StreamId) bool { return false }
+
 // makeCacheTestContext creates a test context with a blockchain and a stream registry for stream cache tests.
 // It doesn't create a stream cache itself. Call initCache to create a stream cache.
 func makeCacheTestContext(t *testing.T, p testParams) (context.Context, *cacheTestContext) {
@@ -133,6 +139,7 @@ func makeCacheTestContext(t *testing.T, p testParams) (context.Context, *cacheTe
 			ChainMonitor:            bc.ChainMonitor,
 			Metrics:                 infra.NewMetricsFactory(nil, "", ""),
 			RemoteMiniblockProvider: ctc,
+			Scrubber:                &noopScrubber{},
 		}
 
 		inst := &cacheTestInstance{

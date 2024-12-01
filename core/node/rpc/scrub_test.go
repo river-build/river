@@ -15,6 +15,7 @@ import (
 	"github.com/river-build/river/core/node/base/test"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/infra"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/scrub"
@@ -288,25 +289,23 @@ func TestScrubStreamTaskProcessor(t *testing.T) {
 			}
 
 			eventAdder := NewObservingEventAdder(service)
-			taskScrubber, err := scrub.NewStreamScrubTasksProcessor(
+			taskScrubber := scrub.NewStreamScrubTasksProcessor(
 				ctx,
 				streamCache,
 				eventAdder,
 				tc.mockChainAuth,
 				service.config,
-				nil,
+				infra.NewMetricsFactory(nil, "", ""),
 				nil,
 				common.Address{},
 			)
-			require.NoError(err)
 
 			// We check for the scrub to finish by waiting for the last scrubbed timestamp on the
 			// stream to exceed this value. The previous channel operations likely already triggered
 			// a scrub on the stream, so this value is already nonzero.
 			now := time.Now()
 
-			scheduled, err := taskScrubber.TryScheduleScrub(ctx, stream, true)
-			require.Nil(err, "task scheduling error")
+			scheduled := taskScrubber.Scrub(channelId)
 			require.True(scheduled)
 
 			require.NoError(err)

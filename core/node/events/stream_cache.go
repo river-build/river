@@ -24,6 +24,12 @@ import (
 	"github.com/river-build/river/core/node/storage"
 )
 
+type Scrubber interface {
+	// Scrub schedules a scrub for the given channel.
+	// Returns true if the scrub was scheduled, false if it was already pending.
+	Scrub(channelId StreamId) bool
+}
+
 type StreamCacheParams struct {
 	Storage                 storage.StreamStorage
 	Wallet                  *crypto.Wallet
@@ -35,6 +41,7 @@ type StreamCacheParams struct {
 	ChainMonitor            crypto.ChainMonitor // TODO: delete and use RiverChain.ChainMonitor
 	Metrics                 infra.MetricsFactory
 	RemoteMiniblockProvider RemoteMiniblockProvider
+	Scrubber                Scrubber
 }
 
 type StreamCache interface {

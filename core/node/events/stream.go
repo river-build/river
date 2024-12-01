@@ -531,6 +531,7 @@ func (s *streamImpl) getView(ctx context.Context) (*streamViewImpl, error) {
 	if err := s.loadInternal(ctx); err != nil {
 		return nil, err
 	}
+	s.maybeScrubLocked()
 	return s.view(), nil
 }
 
@@ -549,9 +550,21 @@ func (s *streamImpl) tryGetView() StreamView {
 	defer s.mu.RUnlock()
 	// Return nil interface, if implementation is nil. This is go for you.
 	if s.local != nil && s.view() != nil {
+		s.maybeScrubLocked()
 		return s.view()
 	} else {
 		return nil
+	}
+}
+
+func (s *streamImpl) maybeScrubLocked() {
+	if !ValidChannelStreamId(&s.streamId) {
+		return
+	}
+
+	if s.params.Config.Scrubbing.ScrubEligibleDuration > 0 &&
+		time.Since(s.local.lastScrubbedTime) > s.params.Config.Scrubbing.ScrubEligibleDuration {
+		s.params.Scrubber.Scrub(s.streamId)
 	}
 }
 

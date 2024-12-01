@@ -188,10 +188,6 @@ func (s *Service) start(opts *ServerStartOpts) error {
 
 	s.initHandlers()
 
-	if err := s.initScrubbing(s.serverCtx); err != nil {
-		return AsRiverError(err).Message("Failed to initialize scrubbing").LogError(s.defaultLogger)
-	}
-
 	s.SetStatus("OK")
 
 	addr := s.listener.Addr().String()
@@ -676,6 +672,16 @@ func (s *Service) initCacheAndSync() error {
 			ChainMonitor:            s.riverChain.ChainMonitor,
 			Metrics:                 s.metrics,
 			RemoteMiniblockProvider: s,
+			Scrubber: scrub.NewStreamScrubTasksProcessor(
+				s.serverCtx,
+				s.cache,
+				s,
+				s.chainAuth,
+				s.config,
+				s.metrics,
+				s.otelTracer,
+				s.wallet.Address,
+			),
 		},
 	)
 	if err != nil {
@@ -691,26 +697,6 @@ func (s *Service) initCacheAndSync() error {
 		s.otelTracer,
 	)
 
-	return nil
-}
-
-func (s *Service) initScrubbing(ctx context.Context) (err error) {
-	ctx, cancel := context.WithCancel(ctx)
-	s.onClose(cancel)
-
-	s.scrubTaskProcessor, err = scrub.NewStreamScrubTasksProcessor(
-		ctx,
-		s.cache,
-		s,
-		s.chainAuth,
-		s.config,
-		s.metrics,
-		s.otelTracer,
-		s.wallet.Address,
-	)
-	if err != nil {
-		return AsRiverError(err, Err_BAD_CONFIG).Message("Unable to instantiate stream scrub task processor")
-	}
 	return nil
 }
 
