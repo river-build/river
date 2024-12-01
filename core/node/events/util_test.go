@@ -154,7 +154,8 @@ func makeCacheTestContext(t *testing.T, p testParams) (context.Context, *cacheTe
 }
 
 func (ctc *cacheTestContext) initCache(n int, opts *MiniblockProducerOpts) *streamCacheImpl {
-	streamCache, err := NewStreamCache(ctc.ctx, ctc.instances[n].params)
+	streamCache := NewStreamCache(ctc.ctx, ctc.instances[n].params)
+	err := streamCache.Start(ctc.ctx)
 	ctc.require.NoError(err)
 	ctc.instances[n].cache = streamCache
 	ctc.instances[n].mbProducer = NewMiniblockProducer(ctc.ctx, streamCache, opts)

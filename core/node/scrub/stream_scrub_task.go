@@ -3,7 +3,6 @@ package scrub
 import (
 	"context"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/gammazero/workerpool"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/puzpuzpuz/xsync/v3"
@@ -52,7 +51,6 @@ func NewStreamScrubTasksProcessor(
 	cfg *config.Config,
 	metrics infra.MetricsFactory,
 	tracer trace.Tracer,
-	nodeAddress common.Address,
 ) *streamScrubTaskProcessorImpl {
 	proc := &streamScrubTaskProcessorImpl{
 		ctx:          ctx,
@@ -250,7 +248,6 @@ func (tp *streamScrubTaskProcessorImpl) processTaskImpl(
 	if err != nil {
 		return err
 	}
-	defer stream.MarkScrubbed(ctx)
 
 	// TODO: GetViewIfLocal
 	view, err := stream.GetView(tp.ctx)
