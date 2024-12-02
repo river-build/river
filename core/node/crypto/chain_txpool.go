@@ -425,7 +425,6 @@ func NewTransactionPoolWithPoliciesFromConfig(
 	riverClient BlockchainClient,
 	wallet *Wallet,
 	chainMonitor ChainMonitor,
-	initialBlockNumber BlockNumber,
 	disableReplacePendingTransactionOnBoot bool,
 	metrics infra.MetricsFactory,
 	tracer trace.Tracer,
@@ -450,7 +449,7 @@ func NewTransactionPoolWithPoliciesFromConfig(
 
 	return NewTransactionPoolWithPolicies(
 		ctx, riverClient, wallet, replacementPolicy, pricePolicy, chainMonitor,
-		initialBlockNumber, disableReplacePendingTransactionOnBoot, metrics, tracer)
+		disableReplacePendingTransactionOnBoot, metrics, tracer)
 }
 
 // NewTransactionPoolWithPolicies creates an in-memory transaction pool that tracks transactions that are submitted
@@ -465,7 +464,6 @@ func NewTransactionPoolWithPolicies(
 	replacePolicy TransactionPoolReplacePolicy,
 	pricePolicy TransactionPricePolicy,
 	chainMonitor ChainMonitor,
-	initialBlockNumber BlockNumber,
 	disableReplacePendingTransactionOnBoot bool,
 	metrics infra.MetricsFactory,
 	tracer trace.Tracer,
