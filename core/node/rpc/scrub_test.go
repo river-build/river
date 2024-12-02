@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"sync"
 	"testing"
 	"time"
 
@@ -141,6 +142,7 @@ type ObservingEventAdder struct {
 		streamId StreamId
 		payload  IsStreamEvent_Payload
 	}
+	mu sync.Mutex
 }
 
 func NewObservingEventAdder(adder scrub.EventAdder) *ObservingEventAdder {
@@ -154,6 +156,12 @@ func (o *ObservingEventAdder) AddEventPayload(
 	streamId StreamId,
 	payload IsStreamEvent_Payload,
 ) error {
+	err := o.adder.AddEventPayload(ctx, streamId, payload)
+	if err != nil {
+		return err
+	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
 	o.observedEvents = append(
 		o.observedEvents,
 		struct {
@@ -164,8 +172,16 @@ func (o *ObservingEventAdder) AddEventPayload(
 			payload:  payload,
 		},
 	)
+	return nil
+}
 
-	return o.adder.AddEventPayload(ctx, streamId, payload)
+func (o *ObservingEventAdder) ObservedEvents() []struct {
+	streamId StreamId
+	payload  IsStreamEvent_Payload
+} {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return slices.Clone(o.observedEvents)
 }
 
 func TestScrubStreamTaskProcessor(t *testing.T) {
@@ -289,8 +305,8 @@ func TestScrubStreamTaskProcessor(t *testing.T) {
 						// All users booted, included channel creator
 						// TODO: FIX: in TestScrubStreamTaskProcessor/always_false_chain_auth_boots_all_users
 						// event for one of the users is emitted twice. Why?
-						// assert.Len(eventAdder.observedEvents, len(tc.expectedBootedUsers))
-						assert.GreaterOrEqual(len(eventAdder.observedEvents), len(tc.expectedBootedUsers))
+						// assert.Len(eventAdder.ObservedEvents(), len(tc.expectedBootedUsers))
+						assert.GreaterOrEqual(len(eventAdder.ObservedEvents()), len(tc.expectedBootedUsers))
 					}
 				},
 				10*time.Second,
