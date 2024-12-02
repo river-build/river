@@ -23,7 +23,6 @@ import (
 	. "github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/registries"
 	river_sync "github.com/river-build/river/core/node/rpc/sync"
-	"github.com/river-build/river/core/node/scrub"
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/xchain/entitlement"
 )
@@ -51,10 +50,9 @@ type Service struct {
 	storage         storage.StreamStorage
 
 	// Streams
-	cache              events.StreamCache
-	mbProducer         events.MiniblockProducer
-	syncHandler        river_sync.Handler
-	scrubTaskProcessor scrub.StreamScrubTaskProcessor
+	cache       events.StreamCache
+	mbProducer  events.MiniblockProducer
+	syncHandler river_sync.Handler
 
 	// Notifications
 	notifications notifications.UserPreferencesStore
@@ -126,4 +124,12 @@ func (s *Service) Storage() storage.StreamStorage {
 
 func (s *Service) MetricsRegistry() *prometheus.Registry {
 	return s.metrics.Registry()
+}
+
+func (s *Service) BaseChain() *crypto.Blockchain {
+	return s.baseChain
+}
+
+func (s *Service) RiverChain() *crypto.Blockchain {
+	return s.riverChain
 }
