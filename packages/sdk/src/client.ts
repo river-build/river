@@ -1173,8 +1173,12 @@ export class Client
 
         const request = this._getStream(streamId)
         this.getStreamRequests.set(streamId, request)
-        const streamView = await request
-        this.getStreamRequests.delete(streamId)
+        let streamView: StreamStateView
+        try {
+            streamView = await request
+        } finally {
+            this.getStreamRequests.delete(streamId)
+        }
         return streamView
     }
 
@@ -1219,8 +1223,12 @@ export class Client
         }
         const request = this._getStreamEx(streamId)
         this.getStreamExRequests.set(streamId, request)
-        const streamView = await request
-        this.getStreamExRequests.delete(streamId)
+        let streamView: StreamStateView
+        try {
+            streamView = await request
+        } finally {
+            this.getStreamExRequests.delete(streamId)
+        }
         return streamView
     }
 
