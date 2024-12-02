@@ -48,7 +48,7 @@ export class EpochKey {
         streamId: string,
         epoch: bigint,
         openEpochSecret: MlsSecret,
-        derivedKeys: DerivedKeys
+        derivedKeys: DerivedKeys,
     ): EpochKey {
         return new EpochKey(streamId, epoch, {
             status: 'EPOCH_KEY_OPEN',
@@ -72,5 +72,9 @@ export class EpochKey {
             sealedEpochSecret: this.state.sealedEpochSecret,
             announced: this.state.announced,
         }
+    }
+
+    public markAnnounced() {
+        this.state.announced = true
     }
 }

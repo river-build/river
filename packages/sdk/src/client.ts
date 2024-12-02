@@ -2567,6 +2567,85 @@ export class Client
         }
     }
 
+    private async mls_announceKeys(
+        streamId: string,
+        currentEpoch: bigint,
+        maxDelayMS: number = 3000,
+    ): Promise<void> {
+        if (!this.mlsCrypto) {
+            throw new Error('mls backend not initialized')
+        }
+
+        // Wait random delay to give others a chance to share the key
+        const delay = Math.random() * maxDelayMS
+        await new Promise((resolve) => setTimeout(resolve, delay))
+
+        const previousEpoch = currentEpoch - 1n
+        let previousEpochKey = await this.mlsCrypto.epochKeyService.getEpochKey(
+            streamId,
+            previousEpoch,
+        )
+
+        if (previousEpochKey?.state.announced) {
+            this.mlsCrypto.log(`Epoch ${previousEpoch} key announcement already received`)
+            return
+        }
+
+        const currentEpochKey = await this.mlsCrypto.epochKeyService.getEpochKey(
+            streamId,
+            currentEpoch,
+        )
+
+        if (
+            currentEpochKey?.state.status === 'EPOCH_KEY_OPEN' &&
+            previousEpochKey?.state.status === 'EPOCH_KEY_OPEN'
+        ) {
+            if (!previousEpochKey.state.sealedEpochSecret) {
+                this.mlsCrypto.log('sealing previous epoch', {
+                    epoch: currentEpoch,
+                })
+                await this.mlsCrypto.epochKeyService.sealEpochSecret(
+                    streamId,
+                    previousEpoch,
+                    currentEpochKey.state,
+                )
+                previousEpochKey = await this.mlsCrypto.epochKeyService.getEpochKey(
+                    streamId,
+                    previousEpoch,
+                )
+            }
+
+            if (
+                previousEpochKey?.state.status !== 'EPOCH_KEY_OPEN' ||
+                previousEpochKey?.state.sealedEpochSecret === undefined
+            ) {
+                throw new Error('Previous key not sealed (programmer error)')
+            }
+            // Announcing previous epoch secret
+            try {
+                const sealedEpochSecret = previousEpochKey.state.sealedEpochSecret.toBytes()
+                this.mlsCrypto.log('announcing key', {
+                    epoch: previousEpoch,
+                    key: shortenHexString(bin_toHexString(sealedEpochSecret)),
+                })
+                await this.makeEventAndAddToStream(
+                    streamId,
+                    make_MemberPayload_Mls({
+                        content: {
+                            case: 'keyAnnouncement',
+                            value: {
+                                key: sealedEpochSecret,
+                                epoch: previousEpoch,
+                            },
+                        },
+                    }),
+                )
+            } catch (error) {
+                this.mlsCrypto.log('error announcing key', error)
+            }
+        }
+    }
+
     public async mls_didReceiveExternalJoin(externalJoin: MlsExternalJoin): Promise<void> {
         if (!this.mlsCrypto) {
             throw new Error('mls backend not initialized')
@@ -2588,62 +2667,9 @@ export class Client
             this.mlsCrypto.log('trying to rejoin group')
             await this.mls_joinOrCreateGroup(streamId)
         } else {
-            // NOTE: We can announce the key as we are now switching to a new epoch
-            const groupState = await this.mlsCrypto.groupStore.getGroup(streamId)
-            if (
-                groupState &&
-                groupState.state.status === 'GROUP_ACTIVE' &&
-                groupState.state.group.currentEpoch > 0
-            ) {
-                const currentEpoch = groupState.state.group.currentEpoch
-                const previousEpoch = groupState.state.group.currentEpoch - 1n
-                const currentEpochKey = await this.mlsCrypto.epochKeyService.getEpochKey(
-                    streamId,
-                    currentEpoch,
-                )
-                const previousEpochKey = await this.mlsCrypto.epochKeyService.getEpochKey(
-                    streamId,
-                    previousEpoch,
-                )
-                if (
-                    currentEpochKey?.state.status === 'EPOCH_KEY_OPEN' &&
-                    previousEpochKey?.state.status === 'EPOCH_KEY_OPEN'
-                ) {
-                    if (!previousEpochKey.state.sealedEpochSecret) {
-                        this.mlsCrypto.log('sealing previous epoch', {
-                            epoch: groupState.state.group.currentEpoch,
-                        })
-                        previousEpochKey.state.sealedEpochSecret =
-                            await this.mlsCrypto.cipherSuite.seal(
-                                currentEpochKey.state.publicKey,
-                                previousEpochKey.state.openEpochSecret.toBytes(),
-                            )
-                    }
-
-                    // Announcing previous epoch secret
-                    try {
-                        const sealedEpochSecret = previousEpochKey.state.sealedEpochSecret.toBytes()
-                        this.mlsCrypto.log('announcing key', {
-                            epoch: previousEpoch,
-                            key: shortenHexString(bin_toHexString(sealedEpochSecret)),
-                        })
-                        await this.makeEventAndAddToStream(
-                            streamId,
-                            make_MemberPayload_Mls({
-                                content: {
-                                    case: 'keyAnnouncement',
-                                    value: {
-                                        key: sealedEpochSecret,
-                                        epoch: previousEpoch,
-                                    },
-                                },
-                            }),
-                        )
-                    } catch (error) {
-                        this.mlsCrypto.log('error announcing key', error)
-                    }
-                }
-            }
+            // We can announce the group key now that we are switching to a different epoch.
+            // NOTE: we need to await this, otherwise weird stuff will happen
+            await this.mls_announceKeys(streamId, after.state.group.currentEpoch)
         }
     }
 }

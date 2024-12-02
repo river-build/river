@@ -360,7 +360,7 @@ export class MlsCrypto {
         streamId: string,
         key: { epoch: bigint; key: Uint8Array },
     ): Promise<void> {
-        await this.epochKeyService.addSealedEpochSecret(streamId, key.epoch, key.key)
+        await this.epochKeyService.addAnnouncedSealedEpochSecret(streamId, key.epoch, key.key)
     }
 
     public async epochFor(streamId: string): Promise<bigint> {

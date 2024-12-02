@@ -1,6 +1,7 @@
 import {
     CipherSuite as MlsCipherSuite,
     HpkeCiphertext,
+    HpkePublicKey,
     Secret as MlsSecret,
 } from '@river-build/mls-rs-wasm'
 import { MlsStore } from './mlsStore'
@@ -22,7 +23,30 @@ export class EpochKeyService {
         return await this.epochKeyStore.getEpochKey(streamId, epoch)
     }
 
-    public async addSealedEpochSecret(
+    public async sealEpochSecret(
+        streamId: string,
+        epoch: bigint,
+        { publicKey }: { publicKey: HpkePublicKey },
+    ): Promise<void> {
+        this.log('sealEpochSecret', {
+            streamId,
+            epoch,
+            publicKey: shortenHexString(bin_toHexString(publicKey.toBytes())),
+        })
+        const epochKey = await this.epochKeyStore.getEpochKey(streamId, epoch)
+        if (!epochKey) {
+            throw new Error('Epoch key not found')
+        }
+        if (epochKey.state.status !== 'EPOCH_KEY_OPEN') {
+            throw new Error('Epoch key not open')
+        }
+        const openEpochSecretBytes = epochKey.state.openEpochSecret.toBytes()
+        const sealedEpochSecret = await this.cipherSuite.seal(publicKey, openEpochSecretBytes)
+        epochKey.addSealedEpochSecret(sealedEpochSecret)
+        await this.epochKeyStore.setEpochKeyState(epochKey)
+    }
+
+    public async addAnnouncedSealedEpochSecret(
         streamId: string,
         epoch: bigint,
         sealedEpochSecretBytes: Uint8Array,
@@ -40,6 +64,7 @@ export class EpochKeyService {
             } else {
                 epochKey.addSealedEpochSecret(sealedEpochSecret)
             }
+            epochKey.markAnnounced()
             await this.epochKeyStore.setEpochKeyState(epochKey)
             if (epochKey.state.status === 'EPOCH_KEY_SEALED') {
                 const nextEpochKey = await this.epochKeyStore.getEpochKey(streamId, epoch + 1n)
