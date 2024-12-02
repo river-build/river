@@ -3,7 +3,6 @@ package rpc
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net"
 	"time"
 
@@ -242,8 +241,6 @@ func (s *Service) getStreamImpl(
 		return nil, err
 	}
 
-	fmt.Println("GetStreamImpl", "streamId", streamId)
-
 	stream, err := s.cache.GetStreamNoWait(ctx, streamId)
 	if err != nil {
 		if req.Msg.Optional && AsRiverError(err).Code == Err_NOT_FOUND {
@@ -252,8 +249,6 @@ func (s *Service) getStreamImpl(
 			return nil, err
 		}
 	}
-
-	fmt.Println("GetStreamImpl before view", "stream", stream)
 
 	// Check that stream is marked as accessed in this case (i.e. timestamp is set)
 	view, err := stream.GetViewIfLocal(ctx)

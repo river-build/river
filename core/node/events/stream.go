@@ -555,6 +555,9 @@ func (s *streamImpl) GetViewIfLocal(ctx context.Context) (StreamView, error) {
 	if err != nil {
 		return nil, err
 	}
+	if view == nil {
+		return nil, nil
+	}
 	return view, nil
 }
 
