@@ -15,7 +15,6 @@ import (
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/nodes"
-	. "github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
@@ -93,7 +92,7 @@ type streamImpl struct {
 	// lastAccessedTime keeps track of when the stream was last used by a client
 	lastAccessedTime time.Time
 
-	nodesLocked StreamNodesWithoutLock
+	nodesLocked nodes.StreamNodesWithoutLock
 
 	// local is not nil if stream is local to current node. local and all fields of local are protected by mu.
 	local *localStreamState
