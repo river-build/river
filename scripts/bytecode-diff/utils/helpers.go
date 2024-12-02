@@ -23,26 +23,12 @@ type DiamondAddresses struct {
 	RiverDiamonds map[Diamond]string
 }
 
-func InitializeClientsAndDiamonds(
+func InitializeDiamonds(
 	deploymentsPath string,
-	baseRpcUrl string,
-	riverRpcUrl string,
 	baseDiamonds []Diamond,
 	riverDiamonds []Diamond,
 	verbose bool,
-) (*ChainClients, *DiamondAddresses, error) {
-	// Create Ethereum clients
-	baseClient, err := CreateEthereumClient(baseRpcUrl)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	riverClient, err := CreateEthereumClient(riverRpcUrl)
-	if err != nil {
-		baseClient.Close()
-		return nil, nil, err
-	}
-
+) (*DiamondAddresses, error) {
 	// Get diamond addresses
 	baseDiamondAddresses, err := GetDiamondAddresses(
 		deploymentsPath,
@@ -51,9 +37,7 @@ func InitializeClientsAndDiamonds(
 		verbose,
 	)
 	if err != nil {
-		baseClient.Close()
-		riverClient.Close()
-		return nil, nil, err
+		return nil, err
 	}
 
 	riverDiamondAddresses, err := GetDiamondAddresses(
@@ -63,14 +47,7 @@ func InitializeClientsAndDiamonds(
 		verbose,
 	)
 	if err != nil {
-		baseClient.Close()
-		riverClient.Close()
-		return nil, nil, err
-	}
-
-	clients := &ChainClients{
-		BaseClient:  baseClient,
-		RiverClient: riverClient,
+		return nil, err
 	}
 
 	diamonds := &DiamondAddresses{
@@ -78,5 +55,30 @@ func InitializeClientsAndDiamonds(
 		RiverDiamonds: riverDiamondAddresses,
 	}
 
-	return clients, diamonds, nil
+	return diamonds, nil
+}
+
+func InitializeClients(
+	baseRpcUrl string,
+	riverRpcUrl string,
+	verbose bool,
+) (*ChainClients, error) {
+	// Create Ethereum clients
+	baseClient, err := CreateEthereumClient(baseRpcUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	riverClient, err := CreateEthereumClient(riverRpcUrl)
+	if err != nil {
+		baseClient.Close()
+		return nil, err
+	}
+
+	clients := &ChainClients{
+		BaseClient:  baseClient,
+		RiverClient: riverClient,
+	}
+
+	return clients, nil
 }

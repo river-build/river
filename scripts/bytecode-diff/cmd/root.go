@@ -221,7 +221,10 @@ var rootCmd = &cobra.Command{
 
 			log.Info().Str("sourceEnvironment", sourceEnvironment).Str("targetEnvironment", targetEnvironment).Msg("Running diff for environment")
 
-			if err := executeEnvrionmentDiff(verbose, baseConfig, deploymentsPath, sourceEnvironment, targetEnvironment, reportOutDir); err != nil {
+			if err := executeEnvrionmentDiff(verbose, struct {
+				BaseConfig  utils.BaseConfig
+				RiverConfig utils.RiverChainConfig
+			}{baseConfig, riverConfig}, deploymentsPath, sourceEnvironment, targetEnvironment, reportOutDir); err != nil {
 				log.Fatal().Err(err).Msg("Error executing environment diff")
 			}
 		}
@@ -267,10 +270,19 @@ func executeSourceDiff(
 	const sourceEnvironment = "alpha"
 	sourceDeploymentsPath := filepath.Join(deploymentsPath, sourceEnvironment)
 
-	clients, diamonds, err := utils.InitializeClientsAndDiamonds(
-		sourceDeploymentsPath,
+	clients, err := utils.InitializeClients(
 		chainConfig.BaseConfig.BaseSepoliaRpcUrl,
 		chainConfig.RiverConfig.DevnetRpcUrl,
+		verbose,
+	)
+	if err != nil {
+		return err
+	}
+
+	defer clients.CloseAll()
+
+	diamonds, err := utils.InitializeDiamonds(
+		sourceDeploymentsPath,
 		baseDiamonds,
 		riverDiamonds,
 		verbose,
@@ -278,7 +290,6 @@ func executeSourceDiff(
 	if err != nil {
 		return err
 	}
-	defer clients.CloseAll()
 
 	baseSourceDiamonds := diamonds.BaseDiamonds
 	riverSourceDiamonds := diamonds.RiverDiamonds
@@ -353,41 +364,68 @@ func executeSourceDiff(
 
 func executeEnvrionmentDiff(
 	verbose bool,
-	baseConfig utils.BaseConfig,
+	chainConfig struct {
+		BaseConfig  utils.BaseConfig
+		RiverConfig utils.RiverChainConfig
+	},
 	deploymentsPath, sourceEnvironment, targetEnvironment string,
 	reportOutDir string,
 ) error {
 	// walk environment diamonds and get all facet addresses from DiamondLoupe facet view
 	sourceDeploymentsPath := filepath.Join(deploymentsPath, sourceEnvironment)
-	sourceDiamonds, err := utils.GetDiamondAddresses(sourceDeploymentsPath, baseDiamonds, utils.BASE, verbose)
+	targetDeploymentsPath := filepath.Join(deploymentsPath, targetEnvironment)
+	baseSourceDiamonds, err := utils.GetDiamondAddresses(sourceDeploymentsPath, baseDiamonds, utils.BASE, verbose)
 	if err != nil {
-		log.Error().Err(err).Msgf("Error getting diamond addresses for source environment %s", sourceEnvironment)
+		log.Error().
+			Err(err).
+			Msgf("Error getting %s diamond addresses for source environment %s", utils.BASE, sourceEnvironment)
 		return err
 	}
-	targetDeploymentsPath := filepath.Join(deploymentsPath, targetEnvironment)
-	targetDiamonds, err := utils.GetDiamondAddresses(targetDeploymentsPath, baseDiamonds, utils.BASE, verbose)
+	baseTargetDiamonds, err := utils.GetDiamondAddresses(targetDeploymentsPath, baseDiamonds, utils.BASE, verbose)
 	if err != nil {
-		log.Error().Err(err).Msgf("Error getting diamond addresses for target environment %s", targetEnvironment)
+		log.Error().
+			Err(err).
+			Msgf("Error getting %s diamond addresses for target environment %s", utils.BASE, targetEnvironment)
+		return err
+	}
+	riverSourceDiamonds, err := utils.GetDiamondAddresses(sourceDeploymentsPath, riverDiamonds, utils.RIVER, verbose)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Msgf("Error getting %s diamond addresses for source environment %s", utils.RIVER, sourceEnvironment)
+		return err
+	}
+	riverTargetDiamonds, err := utils.GetDiamondAddresses(targetDeploymentsPath, riverDiamonds, utils.RIVER, verbose)
+	if err != nil {
+		log.Error().
+			Err(err).
+			Msgf("Error getting %s diamond addresses for target environment %s", utils.RIVER, targetEnvironment)
 		return err
 	}
 	// Create Ethereum client
 	clients, err := utils.CreateEthereumClients(
-		baseConfig.BaseRpcUrl,
-		baseConfig.BaseSepoliaRpcUrl,
+		struct {
+			BaseMainnetRpcUrl  string
+			BaseSepoliaRpcUrl  string
+			RiverMainnetRpcUrl string
+			RiverTestnetRpcUrl string
+		}{chainConfig.BaseConfig.BaseRpcUrl, chainConfig.BaseConfig.BaseSepoliaRpcUrl, chainConfig.RiverConfig.MainnetRpcUrl, chainConfig.RiverConfig.DevnetRpcUrl},
 		sourceEnvironment,
 		targetEnvironment,
 		verbose,
 	)
 	defer func() {
 		for _, client := range clients {
-			client.Close()
+			client.BaseRpcClient.Close()
+			client.RiverRpcClient.Close()
 		}
 	}()
 	// getCode for all facet addresses over base rpc url and compare with compiled hashes
 	sourceFacets := make(map[string][]utils.Facet)
 	baseScanChain := utils.BaseChainScan{}
+	riverScanChain := utils.RiverChainScan{}
 
-	for diamondName, diamondAddress := range sourceDiamonds {
+	for diamondName, diamondAddress := range baseSourceDiamonds {
 		if verbose {
 			log.Info().
 				Str("diamondName", fmt.Sprintf("%s", diamondName)).
@@ -395,9 +433,9 @@ func executeEnvrionmentDiff(
 				Msg("source Diamond Address")
 		}
 		facets, err := utils.ReadAllFacets(
-			clients[sourceEnvironment],
+			clients[sourceEnvironment].BaseRpcClient,
 			diamondAddress,
-			baseConfig.BasescanAPIKey,
+			chainConfig.BaseConfig.BasescanAPIKey,
 			true,
 			&baseScanChain,
 		)
@@ -405,7 +443,33 @@ func executeEnvrionmentDiff(
 			log.Error().Err(err).Msgf("Error reading all facets for source diamond %s", diamondName)
 			return err
 		}
-		err = utils.AddContractCodeHashes(clients[sourceEnvironment], facets)
+		err = utils.AddContractCodeHashes(clients[sourceEnvironment].BaseRpcClient, facets)
+		if err != nil {
+			log.Error().Err(err).Msgf("Error adding contract code hashes for source diamond %s", diamondName)
+			return err
+		}
+		sourceFacets[string(diamondName)] = facets
+	}
+
+	for diamondName, diamondAddress := range riverSourceDiamonds {
+		if verbose {
+			log.Info().
+				Str("diamondName", fmt.Sprintf("%s", diamondName)).
+				Str("diamondAddress", diamondAddress).
+				Msg("source Diamond Address")
+		}
+		facets, err := utils.ReadAllFacets(
+			clients[sourceEnvironment].RiverRpcClient,
+			diamondAddress,
+			chainConfig.RiverConfig.RiverScanApiKey,
+			true,
+			&riverScanChain,
+		)
+		if err != nil {
+			log.Error().Err(err).Msgf("Error reading all facets for source diamond %s", diamondName)
+			return err
+		}
+		err = utils.AddContractCodeHashes(clients[sourceEnvironment].RiverRpcClient, facets)
 		if err != nil {
 			log.Error().Err(err).Msgf("Error adding contract code hashes for source diamond %s", diamondName)
 			return err
@@ -414,11 +478,11 @@ func executeEnvrionmentDiff(
 	}
 
 	targetFacets := make(map[string][]utils.Facet)
-	for diamondName, diamondAddress := range targetDiamonds {
+	for diamondName, diamondAddress := range baseTargetDiamonds {
 		facets, err := utils.ReadAllFacets(
-			clients[targetEnvironment],
+			clients[targetEnvironment].BaseRpcClient,
 			diamondAddress,
-			baseConfig.BasescanAPIKey,
+			chainConfig.BaseConfig.BasescanAPIKey,
 			true,
 			&baseScanChain,
 		)
@@ -426,13 +490,40 @@ func executeEnvrionmentDiff(
 			log.Error().Err(err).Msgf("Error reading all facets for target diamond %s", diamondName)
 			return err
 		}
-		err = utils.AddContractCodeHashes(clients[targetEnvironment], facets)
+		err = utils.AddContractCodeHashes(clients[targetEnvironment].BaseRpcClient, facets)
 		if err != nil {
 			log.Error().Err(err).Msgf("Error adding contract code hashes for target diamond %s", diamondName)
 			return err
 		}
 		targetFacets[string(diamondName)] = facets
 	}
+
+	for diamondName, diamondAddress := range riverTargetDiamonds {
+		if verbose {
+			log.Info().
+				Str("diamondName", fmt.Sprintf("%s", diamondName)).
+				Str("diamondAddress", diamondAddress).
+				Msg("target Diamond Address")
+		}
+		facets, err := utils.ReadAllFacets(
+			clients[targetEnvironment].RiverRpcClient,
+			diamondAddress,
+			chainConfig.RiverConfig.RiverScanApiKey,
+			true,
+			&riverScanChain,
+		)
+		if err != nil {
+			log.Error().Err(err).Msgf("Error reading all facets for target diamond %s", diamondName)
+			return err
+		}
+		err = utils.AddContractCodeHashes(clients[sourceEnvironment].RiverRpcClient, facets)
+		if err != nil {
+			log.Error().Err(err).Msgf("Error adding contract code hashes for target diamond %s", diamondName)
+			return err
+		}
+		targetFacets[string(diamondName)] = facets
+	}
+
 	if verbose {
 		for diamondName, facets := range sourceFacets {
 			log.Info().Str("diamondName", diamondName).Msg("source Facets for Diamond contract")

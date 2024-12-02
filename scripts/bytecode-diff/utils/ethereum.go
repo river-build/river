@@ -156,28 +156,49 @@ func ReadAllFacets(
 }
 
 func CreateEthereumClients(
-	baseRpcUrl string,
-	baseSepoliaRpcUrl string,
+	chainConfig struct {
+		BaseMainnetRpcUrl  string
+		BaseSepoliaRpcUrl  string
+		RiverMainnetRpcUrl string
+		RiverTestnetRpcUrl string
+	},
 	sourceEnvironment string,
 	targetEnvironment string,
 	verbose bool,
-) (map[string]*ethclient.Client, error) {
-	clients := make(map[string]*ethclient.Client)
+) (map[string]struct {
+	BaseRpcClient  *ethclient.Client
+	RiverRpcClient *ethclient.Client
+}, error,
+) {
+	clients := make(map[string]struct {
+		BaseRpcClient  *ethclient.Client
+		RiverRpcClient *ethclient.Client
+	})
 
 	for _, env := range []string{sourceEnvironment, targetEnvironment} {
-		var rpcUrl string
+		var baseRpcUrl string
+		var riverRpcUrl string
 		if env == "alpha" || env == "gamma" {
-			rpcUrl = baseSepoliaRpcUrl
+			baseRpcUrl = chainConfig.BaseSepoliaRpcUrl
+			riverRpcUrl = chainConfig.RiverTestnetRpcUrl
 		} else {
-			rpcUrl = baseRpcUrl
+			baseRpcUrl = chainConfig.BaseMainnetRpcUrl
+			riverRpcUrl = chainConfig.RiverMainnetRpcUrl
 		}
 
-		client, err := ethclient.Dial(rpcUrl)
+		baseClient, err := ethclient.Dial(baseRpcUrl)
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to the Ethereum client for %s: %w", env, err)
+		}
+		riverClient, err := ethclient.Dial(riverRpcUrl)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to the Ethereum client for %s: %w", env, err)
 		}
 
-		clients[env] = client
+		clients[env] = struct {
+			BaseRpcClient  *ethclient.Client
+			RiverRpcClient *ethclient.Client
+		}{baseClient, riverClient}
 
 		if verbose {
 			Log.Info().Msgf("Successfully connected to Ethereum client for %s", env)
