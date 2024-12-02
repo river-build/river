@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"net/http"
+
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/river-build/river/core/node/crypto"
@@ -19,7 +21,6 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
-	"net/http"
 )
 
 func runStreamGetEventCmd(cmd *cobra.Command, args []string) error {
@@ -55,7 +56,7 @@ func runStreamGetEventCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	nodes := nodes.NewStreamNodes(stream.Nodes, common.Address{})
+	nodes := nodes.NewStreamNodesWithLock(stream.Nodes, common.Address{})
 	remoteNodeAddress := nodes.GetStickyPeer()
 
 	remote, err := registryContract.NodeRegistry.GetNode(nil, remoteNodeAddress)
