@@ -46,6 +46,7 @@ type SourceFacetDiff struct {
 	Diamond   string            `yaml:"diamond"`
 	Facets    []FacetSourceDiff `yaml:"facets"`
 	NumFacets uint              `yaml:"numFacets"`
+	ChainName string            `yaml:"chainName"`
 }
 
 type SourceDiffReport struct {
@@ -222,9 +223,10 @@ func generateReport(
 	for diamond, facets := range envFacets {
 		updatedFacets := []FacetSourceDiff{}
 		existingFacets := []FacetSourceDiff{}
-
+		var chainName string
 		for _, facet := range facets {
 			facetName := FacetName(facet.ContractName)
+			chainName = facet.ChainName
 			currentHash, exists := currentHashes[facetName]
 			if !exists {
 				continue // Skip if the facet is not in the compiled hashes
@@ -249,6 +251,7 @@ func generateReport(
 				Diamond:   string(diamond),
 				Facets:    updatedFacets,
 				NumFacets: uint(len(updatedFacets)),
+				ChainName: chainName,
 			})
 		}
 		if len(existingFacets) > 0 {
@@ -256,6 +259,7 @@ func generateReport(
 				Diamond:   string(diamond),
 				Facets:    existingFacets,
 				NumFacets: uint(len(existingFacets)),
+				ChainName: chainName,
 			})
 		}
 	}

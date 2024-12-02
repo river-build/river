@@ -24,11 +24,15 @@ type Facet struct {
 	SelectorsHex []string  `                  abi:"-"`
 	ContractName string    `json:",omitempty"`
 	BytecodeHash string    `json:",omitempty"`
+	ChainName    string    `json:",omitempty"`
 }
 
 type ScanChain interface {
 	GetContractName(url, address, apiKey string) (string, error)
-	GetChainScanUrl(*ethclient.Client) (string, error)
+	GetChainScanInfo(*ethclient.Client) (struct {
+		URL       string
+		ChainName string
+	}, error)
 }
 
 // ReadAllFacets reads all the facets from the given Diamond contract address
@@ -96,7 +100,7 @@ func ReadAllFacets(
 		return nil, fmt.Errorf("failed to unpack result: %w", err)
 	}
 
-	chainScanUrl, err := scanChain.GetChainScanUrl(client)
+	chain, err := scanChain.GetChainScanInfo(client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ChainScan URL: %w", err)
 	}
@@ -106,16 +110,17 @@ func ReadAllFacets(
 		time.Sleep(500 * time.Millisecond)
 
 		// read contract name from chainscan source code api
-		contractName, err := scanChain.GetContractName(chainScanUrl, facet.FacetAddress.Hex(), scanAPIKey)
+		contractName, err := scanChain.GetContractName(chain.URL, facet.FacetAddress.Hex(), scanAPIKey)
 		if err != nil {
 			log.Warn().
-				Str("chainScanUrl", chainScanUrl).
+				Str("chainScanUrl", chain.URL).
 				Err(err).
 				Msg("Failed to get contract name from ChainScan API, continuing")
 			continue
 		}
 
 		facets[i].ContractName = contractName
+		facets[i].ChainName = chain.ChainName
 
 		if fetchBytecode {
 			data, err := contractABI.Pack("facetFunctionSelectors", facet.FacetAddress)
@@ -193,20 +198,36 @@ func CreateEthereumClient(rpcUrl string) (*ethclient.Client, error) {
 
 type BaseChainScan struct{}
 
-// GetChainScanUrl determines the appropriate ChainScan API URL based on the chain ID
-func (b *BaseChainScan) GetChainScanUrl(client *ethclient.Client) (string, error) {
+// GetChainScanInfo determines the appropriate ChainScan API URL based on the chain ID
+func (b *BaseChainScan) GetChainScanInfo(client *ethclient.Client) (struct {
+	URL       string
+	ChainName string
+}, error,
+) {
 	chainID, err := client.ChainID(context.Background())
 	if err != nil {
-		return "", fmt.Errorf("failed to get chain ID: %w", err)
+		return struct {
+			URL       string
+			ChainName string
+		}{}, fmt.Errorf("failed to get chain ID: %w", err)
 	}
 
 	switch chainID.Int64() {
 	case 8453: // Base Mainnet
-		return "https://api.basescan.org", nil
+		return struct {
+			URL       string
+			ChainName string
+		}{"https://api.basescan.org", "Base Mainnet"}, nil
 	case 84532: // Base Sepolia
-		return "https://api-sepolia.basescan.org", nil
+		return struct {
+			URL       string
+			ChainName string
+		}{"https://api-sepolia.basescan.org", "Base Sepolia"}, nil
 	default:
-		return "", fmt.Errorf("unsupported chain ID: %d", chainID)
+		return struct {
+			URL       string
+			ChainName string
+		}{}, fmt.Errorf("unsupported chain ID: %d", chainID)
 	}
 }
 
@@ -257,20 +278,36 @@ func (b *BaseChainScan) GetContractName(baseURL, address, apiKey string) (string
 
 type RiverChainScan struct{}
 
-// GetChainScanUrl determines the appropriate ChainScan API URL based on the chain ID
-func (b *RiverChainScan) GetChainScanUrl(client *ethclient.Client) (string, error) {
+// GetChainScanInfo determines the appropriate ChainScan API URL based on the chain ID
+func (b *RiverChainScan) GetChainScanInfo(client *ethclient.Client) (struct {
+	URL       string
+	ChainName string
+}, error,
+) {
 	chainID, err := client.ChainID(context.Background())
 	if err != nil {
-		return "", fmt.Errorf("failed to get chain ID: %w", err)
+		return struct {
+			URL       string
+			ChainName string
+		}{}, fmt.Errorf("failed to get chain ID: %w", err)
 	}
 
 	switch chainID.Int64() {
 	case 6524490: // River Devnet
-		return "https://testnet.explorer.river.build/api/v2", nil
+		return struct {
+			URL       string
+			ChainName string
+		}{"https://testnet.explorer.river.build/api/v2", "River Testnet"}, nil
 	case 550: // River Mainnet
-		return "https://explorer.river.build/api/v2", nil
+		return struct {
+			URL       string
+			ChainName string
+		}{"https://explorer.river.build/api/v2", "River Mainnet"}, nil
 	default:
-		return "", fmt.Errorf("unsupported chain ID: %d", chainID)
+		return struct {
+			URL       string
+			ChainName string
+		}{}, fmt.Errorf("unsupported chain ID: %d", chainID)
 	}
 }
 
