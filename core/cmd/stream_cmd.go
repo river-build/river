@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"strconv"
-
 	"net/http"
+	"strconv"
 
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/infra"
@@ -18,9 +21,6 @@ import (
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/registries"
 	"github.com/river-build/river/core/node/shared"
-	"github.com/spf13/cobra"
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
 )
 
 func runStreamGetEventCmd(cmd *cobra.Command, args []string) error {
@@ -70,7 +70,6 @@ func runStreamGetEventCmd(cmd *cobra.Command, args []string) error {
 		StreamId: streamID[:],
 		Optional: false,
 	}))
-
 	if err != nil {
 		return err
 	}
@@ -92,7 +91,6 @@ func runStreamGetEventCmd(cmd *cobra.Command, args []string) error {
 		FromInclusive: from,
 		ToExclusive:   to,
 	}))
-
 	if err != nil {
 		return err
 	}
@@ -105,7 +103,6 @@ func runStreamGetEventCmd(cmd *cobra.Command, args []string) error {
 				ExpectedBlockNumber: from + int64(n),
 			},
 		)
-
 		if err != nil {
 			return err
 		}
