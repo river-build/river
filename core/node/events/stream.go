@@ -1009,7 +1009,6 @@ func (s *streamImpl) applyStreamEvents(
 		return
 	}
 
-	// TODO: refactor locking
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
