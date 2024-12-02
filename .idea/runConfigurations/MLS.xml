@@ -6,7 +6,7 @@
     <jest-package value="$PROJECT_DIR$/node_modules/jest" />
     <working-dir value="$PROJECT_DIR$" />
     <envs>
-      <env name="DEBUG" value="jest" />
+      <env name="DEBUG" value="jest,*error*" />
       <env name="NODE_ENV" value="development" />
       <env name="NODE_EXTRA_CA_CERTS" value="$USER_HOME$/river-ca-cert.pem" />
       <env name="NODE_TLS_REJECT_UNAUTHORIZED" value="0" />
