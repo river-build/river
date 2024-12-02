@@ -265,8 +265,8 @@ func executeSourceDiff(
 	}
 	// read all addresses of facets from alpha deployed diamond contracts
 	const sourceEnvironment = "alpha"
-
 	sourceDeploymentsPath := filepath.Join(deploymentsPath, sourceEnvironment)
+
 	baseSourceDiamonds, err := utils.GetDiamondAddresses(
 		sourceDeploymentsPath,
 		baseDiamonds,
@@ -296,10 +296,20 @@ func executeSourceDiff(
 	}
 	defer riverClient.Close()
 
+	baseScanChain := utils.BaseChainScan{}
+	riverScanChain := utils.RiverChainScan{}
+
 	alphaFacets := make(map[utils.DiamondName][]utils.Facet)
+	// process base diamonds' facets
 	for diamondName, diamondAddress := range baseSourceDiamonds {
 		// read all facet addresses, names from diamond contract
-		facets, err := utils.ReadAllFacets(baseClient, diamondAddress, chainConfig.BaseConfig.BasescanAPIKey, false)
+		facets, err := utils.ReadAllFacets(
+			baseClient,
+			diamondAddress,
+			chainConfig.BaseConfig.BasescanAPIKey,
+			false,
+			&baseScanChain,
+		)
 		if err != nil {
 			log.Error().
 				Err(err).
@@ -310,8 +320,15 @@ func executeSourceDiff(
 		alphaFacets[utils.DiamondName(diamondName)] = facets
 	}
 
+	// process river chain diamonds' facets
 	for diamondName, diamondAddress := range riverSourceDiamonds {
-		facets, err := utils.ReadAllFacets(riverClient, diamondAddress, chainConfig.RiverConfig.RiverScanApiKey, false)
+		facets, err := utils.ReadAllFacets(
+			riverClient,
+			diamondAddress,
+			chainConfig.RiverConfig.RiverScanApiKey,
+			false,
+			&riverScanChain,
+		)
 		if err != nil {
 			log.Error().
 				Err(err).
@@ -381,6 +398,7 @@ func executeEnvrionmentDiff(
 	}()
 	// getCode for all facet addresses over base rpc url and compare with compiled hashes
 	sourceFacets := make(map[string][]utils.Facet)
+	baseScanChain := utils.BaseChainScan{}
 
 	for diamondName, diamondAddress := range sourceDiamonds {
 		if verbose {
@@ -389,7 +407,13 @@ func executeEnvrionmentDiff(
 				Str("diamondAddress", diamondAddress).
 				Msg("source Diamond Address")
 		}
-		facets, err := utils.ReadAllFacets(clients[sourceEnvironment], diamondAddress, baseConfig.BasescanAPIKey, true)
+		facets, err := utils.ReadAllFacets(
+			clients[sourceEnvironment],
+			diamondAddress,
+			baseConfig.BasescanAPIKey,
+			true,
+			&baseScanChain,
+		)
 		if err != nil {
 			log.Error().Err(err).Msgf("Error reading all facets for source diamond %s", diamondName)
 			return err
@@ -404,7 +428,13 @@ func executeEnvrionmentDiff(
 
 	targetFacets := make(map[string][]utils.Facet)
 	for diamondName, diamondAddress := range targetDiamonds {
-		facets, err := utils.ReadAllFacets(clients[targetEnvironment], diamondAddress, baseConfig.BasescanAPIKey, true)
+		facets, err := utils.ReadAllFacets(
+			clients[targetEnvironment],
+			diamondAddress,
+			baseConfig.BasescanAPIKey,
+			true,
+			&baseScanChain,
+		)
 		if err != nil {
 			log.Error().Err(err).Msgf("Error reading all facets for target diamond %s", diamondName)
 			return err

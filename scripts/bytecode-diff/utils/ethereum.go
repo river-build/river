@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/rs/zerolog/log"
 )
 
 // Facet represents the struct returned by the facets() function
@@ -25,12 +26,18 @@ type Facet struct {
 	BytecodeHash string    `json:",omitempty"`
 }
 
+type ScanChain interface {
+	GetContractName(url, address, apiKey string) (string, error)
+	GetChainScanUrl(*ethclient.Client) (string, error)
+}
+
 // ReadAllFacets reads all the facets from the given Diamond contract address
 func ReadAllFacets(
 	client *ethclient.Client,
 	contractAddress string,
-	basescanAPIKey string,
+	scanAPIKey string,
 	fetchBytecode bool,
+	scanChain ScanChain,
 ) ([]Facet, error) {
 	if client == nil {
 		return nil, fmt.Errorf("Ethereum client is nil")
@@ -89,7 +96,7 @@ func ReadAllFacets(
 		return nil, fmt.Errorf("failed to unpack result: %w", err)
 	}
 
-	chainScanUrl, err := GetChainScanUrl(client)
+	chainScanUrl, err := scanChain.GetChainScanUrl(client)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ChainScan URL: %w", err)
 	}
@@ -98,25 +105,17 @@ func ReadAllFacets(
 		// Throttle API calls to 2 per second to avoid being rate limited
 		time.Sleep(500 * time.Millisecond)
 
-		chainId, err := client.ChainID(context.Background())
+		// read contract name from chainscan source code api
+		contractName, err := scanChain.GetContractName(chainScanUrl, facet.FacetAddress.Hex(), scanAPIKey)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get chain ID: %w", err)
+			log.Warn().
+				Str("chainScanUrl", chainScanUrl).
+				Err(err).
+				Msg("Failed to get contract name from ChainScan API, continuing")
+			continue
 		}
-		if chainId.Int64() == 6524490 || chainId.Int64() == 550 {
-			Log.Warn().Msg("ChainScan API is not supported for River Devnet or Mainnet")
-		} else {
 
-			// read contract name from chainscan source code api
-			contractName, err := GetContractNameFromBasescan(chainScanUrl, facet.FacetAddress.Hex(), basescanAPIKey)
-			if err != nil {
-				return nil, fmt.Errorf(
-					"failed to get contract name from Basescan: %w",
-					err,
-				)
-			}
-
-			facets[i].ContractName = contractName
-		}
+		facets[i].ContractName = contractName
 
 		if fetchBytecode {
 			data, err := contractABI.Pack("facetFunctionSelectors", facet.FacetAddress)
@@ -192,8 +191,10 @@ func CreateEthereumClient(rpcUrl string) (*ethclient.Client, error) {
 	return client, nil
 }
 
+type BaseChainScan struct{}
+
 // GetChainScanUrl determines the appropriate ChainScan API URL based on the chain ID
-func GetChainScanUrl(client *ethclient.Client) (string, error) {
+func (b *BaseChainScan) GetChainScanUrl(client *ethclient.Client) (string, error) {
 	chainID, err := client.ChainID(context.Background())
 	if err != nil {
 		return "", fmt.Errorf("failed to get chain ID: %w", err)
@@ -204,17 +205,13 @@ func GetChainScanUrl(client *ethclient.Client) (string, error) {
 		return "https://api.basescan.org", nil
 	case 84532: // Base Sepolia
 		return "https://api-sepolia.basescan.org", nil
-	case 6524490: // River Devnet
-		return "https://testnet.explorer.river.build/api?", nil
-	case 550: // River Mainnet
-		return "https://explorer.river.build/api?", nil
 	default:
 		return "", fmt.Errorf("unsupported chain ID: %d", chainID)
 	}
 }
 
-// GetContractNameFromBasescan retrieves the contract name for a given address using the appropriate Basescan API
-func GetContractNameFromBasescan(baseURL, address, apiKey string) (string, error) {
+// GetContractName retrieves the contract name for a given address using the appropriate Basescan API
+func (b *BaseChainScan) GetContractName(baseURL, address, apiKey string) (string, error) {
 	url := fmt.Sprintf("%s/api?module=contract&action=getsourcecode&address=%s&apikey=%s", baseURL, address, apiKey)
 
 	resp, err := http.Get(url)
@@ -256,6 +253,67 @@ func GetContractNameFromBasescan(baseURL, address, apiKey string) (string, error
 	}
 
 	return result.Result[0].ContractName, nil
+}
+
+type RiverChainScan struct{}
+
+// GetChainScanUrl determines the appropriate ChainScan API URL based on the chain ID
+func (b *RiverChainScan) GetChainScanUrl(client *ethclient.Client) (string, error) {
+	chainID, err := client.ChainID(context.Background())
+	if err != nil {
+		return "", fmt.Errorf("failed to get chain ID: %w", err)
+	}
+
+	switch chainID.Int64() {
+	case 6524490: // River Devnet
+		return "https://testnet.explorer.river.build/api/v2", nil
+	case 550: // River Mainnet
+		return "https://explorer.river.build/api/v2", nil
+	default:
+		return "", fmt.Errorf("unsupported chain ID: %d", chainID)
+	}
+}
+
+// GetContractName retrieves the contract name for a given address using the appropriate Riverscan API
+func (b *RiverChainScan) GetContractName(riverscanURL, address, apiKey string) (string, error) {
+	url := fmt.Sprintf("%s/smart-contracts?q=%s&filter=solidity", riverscanURL, address)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", fmt.Errorf("failed to make request to Riverscan API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("Riverscan API returned non-200 status code: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	Log.Debug().Msgf("Raw Riverscan JSON response: %s", string(body))
+
+	var result struct {
+		Items []struct {
+			Address struct {
+				Hash string `json:"hash"`
+				Name string `json:"name"`
+			} `json:"address"`
+		} `json:"items"`
+	}
+
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		return "", fmt.Errorf("failed to unmarshal JSON response: %w", err)
+	}
+
+	if len(result.Items) == 0 {
+		return "", fmt.Errorf("no contract found for address %s", address)
+	}
+
+	return result.Items[0].Address.Name, nil
 }
 
 // GetContractCodeHash fetches the deployed code and calculates its keccak256 hash
