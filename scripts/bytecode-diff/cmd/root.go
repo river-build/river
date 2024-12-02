@@ -267,34 +267,21 @@ func executeSourceDiff(
 	const sourceEnvironment = "alpha"
 	sourceDeploymentsPath := filepath.Join(deploymentsPath, sourceEnvironment)
 
-	baseSourceDiamonds, err := utils.GetDiamondAddresses(
+	clients, diamonds, err := utils.InitializeClientsAndDiamonds(
 		sourceDeploymentsPath,
+		chainConfig.BaseConfig.BaseSepoliaRpcUrl,
+		chainConfig.RiverConfig.DevnetRpcUrl,
 		baseDiamonds,
-		utils.BASE,
-		verbose,
-	)
-
-	riverSourceDiamonds, err := utils.GetDiamondAddresses(
-		sourceDeploymentsPath,
 		riverDiamonds,
-		utils.RIVER,
 		verbose,
 	)
-
-	// Create Ethereum client
-	baseClient, err := utils.CreateEthereumClient(chainConfig.BaseConfig.BaseSepoliaRpcUrl)
 	if err != nil {
-		log.Error().Err(err).Msg("Error creating Base Ethereum client")
 		return err
 	}
-	defer baseClient.Close()
+	defer clients.CloseAll()
 
-	riverClient, err := utils.CreateEthereumClient(chainConfig.RiverConfig.DevnetRpcUrl)
-	if err != nil {
-		log.Error().Err(err).Msg("Error creating River Ethereum client")
-		return err
-	}
-	defer riverClient.Close()
+	baseSourceDiamonds := diamonds.BaseDiamonds
+	riverSourceDiamonds := diamonds.RiverDiamonds
 
 	baseScanChain := utils.BaseChainScan{}
 	riverScanChain := utils.RiverChainScan{}
@@ -304,7 +291,7 @@ func executeSourceDiff(
 	for diamondName, diamondAddress := range baseSourceDiamonds {
 		// read all facet addresses, names from diamond contract
 		facets, err := utils.ReadAllFacets(
-			baseClient,
+			clients.BaseClient,
 			diamondAddress,
 			chainConfig.BaseConfig.BasescanAPIKey,
 			false,
@@ -323,7 +310,7 @@ func executeSourceDiff(
 	// process river chain diamonds' facets
 	for diamondName, diamondAddress := range riverSourceDiamonds {
 		facets, err := utils.ReadAllFacets(
-			riverClient,
+			clients.RiverClient,
 			diamondAddress,
 			chainConfig.RiverConfig.RiverScanApiKey,
 			false,
