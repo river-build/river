@@ -27,6 +27,7 @@ import (
 	. "github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/rpc/render"
 	"github.com/river-build/river/core/node/rpc/statusinfo"
+	"github.com/river-build/river/core/node/storage"
 )
 
 func formatDurationToMs(d time.Duration) string {
@@ -224,6 +225,17 @@ func getEthBalance(
 	}
 }
 
+func getPgxPoolStatus(
+	ctx context.Context,
+	result *storage.PostgresStatusResult,
+	poolInfo *storage.PgxPoolInfo,
+	wg *sync.WaitGroup,
+) {
+	defer wg.Done()
+
+	*result = storage.PreparePostgresStatus(ctx, *poolInfo)
+}
+
 func GetRiverNetworkStatus(
 	ctx context.Context,
 	cfg *config.Config,
@@ -231,6 +243,7 @@ func GetRiverNetworkStatus(
 	riverChain *crypto.Blockchain,
 	baseChain *crypto.Blockchain,
 	connectOtelIterceptor *otelconnect.Interceptor,
+	storagePoolInfo *storage.PgxPoolInfo,
 ) (*statusinfo.RiverStatus, error) {
 	startTime := time.Now()
 
@@ -248,14 +261,14 @@ func GetRiverNetworkStatus(
 	}
 	http11client.Timeout = cfg.Network.GetHttpRequestTimeout()
 
-	http20client, err := http_client.GetHttpClient(ctx)
+	http20client, err := http_client.GetHttpClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
 	defer http20client.CloseIdleConnections()
 	http20client.Timeout = cfg.Network.GetHttpRequestTimeout()
 
-	grpcHttpClient, err := http_client.GetHttpClient(ctx)
+	grpcHttpClient, err := http_client.GetHttpClient(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -295,12 +308,45 @@ func GetRiverNetworkStatus(
 			wg.Add(1)
 			go getEthBalance(ctx, &r.BaseEthBalance, baseChain, n.Address(), &wg)
 		}
+
+		// Report PostgresStatusResult for local node only iff storage debug endpoint is enabled
+		if n.Address() == riverChain.Wallet.Address &&
+			storagePoolInfo != nil &&
+			cfg.EnableDebugEndpoints &&
+			cfg.DebugEndpoints.EnableStorageEndpoint {
+			wg.Add(1)
+
+			r.PostgresStatus = &storage.PostgresStatusResult{}
+			go getPgxPoolStatus(ctx, r.PostgresStatus, storagePoolInfo, &wg)
+		}
 	}
 
 	wg.Wait()
 
 	data.Elapsed = formatDurationToMs(time.Since(startTime))
 	return data, nil
+}
+
+func (s *Service) handleDebugStorage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	log := s.defaultLogger
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	status := &storage.PostgresStatusResult{}
+
+	go getPgxPoolStatus(ctx, status, s.storagePoolInfo, &wg)
+
+	wg.Wait()
+
+	err := render.ExecuteAndWrite(&render.StorageData{Status: status}, w)
+	if !s.config.Log.Simplify {
+		log.Info("Node storage status", "data", status)
+	}
+	if err != nil {
+		log.Error("Error getting data or rendering template for debug/storage", "err", err)
+		http.Error(w, "Internal Server Error: "+err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func (s *Service) handleDebugMulti(w http.ResponseWriter, r *http.Request) {
@@ -320,6 +366,7 @@ func (s *Service) handleDebugMulti(w http.ResponseWriter, r *http.Request) {
 		s.riverChain,
 		s.baseChain,
 		s.otelConnectIterceptor,
+		s.storagePoolInfo,
 	)
 	if err == nil {
 		err = render.ExecuteAndWrite(&render.DebugMultiData{Status: status}, w)
@@ -351,6 +398,7 @@ func (s *Service) handleDebugMultiJson(w http.ResponseWriter, r *http.Request) {
 		s.riverChain,
 		s.baseChain,
 		s.otelConnectIterceptor,
+		s.storagePoolInfo,
 	)
 	if err == nil {
 		// Write status as json

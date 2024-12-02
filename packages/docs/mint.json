@@ -1,0 +1,217 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "River",
+  "feedback": {
+    "thumbsRating": true,
+    "suggestEdit": true
+  },
+  "modeToggle": {
+    "default": "dark",
+    "isHidden": true
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "favicon": "/favicon.png",
+  "colors": {
+    "primary": "#8c84f7",
+    "light": "#8c84f7",
+    "dark": "#8c84f7",
+    "anchors": {
+      "from": "#8c84f7",
+      "to": "#8c84f7"
+    },
+    "background": {
+      "light": "#02000A",
+      "dark": "#02000A"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "X (Ex. Twitter)",
+      "url": "https://twitter.com/buildonriver"
+    },
+    {
+      "name": "Github",
+      "url": "https://github.com/river-build"
+    }
+  ],
+  "tabs": [],
+  "navigation": [
+    {
+      "group": "Learn",
+      "pages": [
+        "introduction",
+        {
+          "group": "River Smart Contracts",
+          "pages": [
+            "river-smart-contracts/overview",
+            "river-smart-contracts/space-ownership",
+            "river-smart-contracts/space-membership",
+            "river-smart-contracts/pricing-modules",
+            "river-smart-contracts/roles-entitlements",
+            "river-smart-contracts/upgradeability",
+            "river-smart-contracts/contracts"
+          ]
+        },
+        {
+          "group": "River Messaging Protocol",
+          "pages": [
+            "river-messaging-protocol/overview",
+            "river-messaging-protocol/node-operators",
+            {
+              "group": "River Chain",
+              "pages": [
+                "river-messaging-protocol/river-chain/overview",
+                "river-messaging-protocol/river-chain/node-registry",
+                "river-messaging-protocol/river-chain/stream-registry"
+              ]
+            },
+            {
+              "group": "Stream Nodes",
+              "pages": [
+                "river-messaging-protocol/stream-nodes/overview",
+                "river-messaging-protocol/stream-nodes/stream-allocation",
+                "river-messaging-protocol/stream-nodes/event-lifecycle"
+              ]
+            },
+            {
+              "group": "Concepts",
+              "pages": [
+                "concepts/mini-blocks",
+                "concepts/stream-checkpointing",
+                "concepts/encryption",
+                "concepts/rebalancing",
+                "concepts/chunk-management",
+                "concepts/snapshotting",
+                "concepts/cross-chain-entitlement-checking",
+                "concepts/node-node-communication",
+                "concepts/network-partitioning"
+              ]
+            }
+          ]
+        },
+        {
+          "group": "River DAO",
+          "pages": [
+            "river-dao/overview",
+            "river-dao/governance-framework",
+            "river-dao/stakeholders",
+            "river-dao/proposals",
+            "river-dao/stages"
+          ]
+        },
+        {
+          "group": "RVR Token",
+          "pages": [
+            "rvr-token/utility",
+            "rvr-token/economics",
+            "rvr-token/mechanics",
+            "rvr-token/delegation",
+            "rvr-token/distribution",
+            "rvr-token/claiming"
+          ]
+        },
+        "FAQs"
+      ]
+    },
+    {
+      "group": "Run",
+      "pages": [
+        "run/introduction",
+        {
+          "group": "Node Operator Tutorials",
+          "pages": [
+            "run/node-operator/system-requirements-installation",
+            "run/node-operator/system-configuration-steps",
+            "run/node-operator/node-best-practices",
+            "run/node-operator/register-river-operator",
+            "run/node-operator/register-river-stream-node",
+            "run/node-operator/upgrade-river-stream-node",
+            "run/node-operator/node-observability"
+          ]
+        },
+        {
+          "group": "Run Tutorials",
+          "pages": [
+            "run/river-stream-node"
+          ]
+        },
+        {
+          "group": "Resources",
+          "pages": [
+            "run/contracts",
+            "run/release-process"
+          ]
+        }
+      ]
+    },
+    {
+      "group": "Build",
+      "pages": [
+        "build/river-messaging-datastructures",
+        "build/delegate-key-signing",
+        "build/river-encryption",
+        {
+          "group": "Recipes",
+          "pages": [
+            "river-recipes/adding-events"
+          ]
+        }
+      ]
+    },
+    {
+      "group": "React SDK",
+      "pages": [
+        "sdk/react-sdk/getting-started",
+        {
+          "group": "API",
+          "pages": [
+            "sdk/react-sdk/api/connectRiver",
+            "sdk/react-sdk/api/connectRiverWithBearerToken",
+            "sdk/react-sdk/api/getRoom",
+            "sdk/react-sdk/api/RiverSyncProvider",
+            "sdk/react-sdk/api/signAndConnect",
+            "sdk/react-sdk/api/useAgentConnection",
+            "sdk/react-sdk/api/useChannel",
+            "sdk/react-sdk/api/useCreateChannel",
+            "sdk/react-sdk/api/useCreateDm",
+            "sdk/react-sdk/api/useCreateGdm",
+            "sdk/react-sdk/api/useCreateSpace",
+            "sdk/react-sdk/api/useDm",
+            "sdk/react-sdk/api/useGdm",
+            "sdk/react-sdk/api/useJoinSpace",
+            "sdk/react-sdk/api/useMember",
+            "sdk/react-sdk/api/useMemberList",
+            "sdk/react-sdk/api/useMyMember",
+            "sdk/react-sdk/api/useObservable",
+            "sdk/react-sdk/api/useReactions",
+            "sdk/react-sdk/api/useRedact",
+            "sdk/react-sdk/api/useRiver",
+            "sdk/react-sdk/api/useRiverAuthStatus",
+            "sdk/react-sdk/api/useScrollback",
+            "sdk/react-sdk/api/useSendMessage",
+            "sdk/react-sdk/api/useSendReaction",
+            "sdk/react-sdk/api/useSetDisplayName",
+            "sdk/react-sdk/api/useSetEnsAddress",
+            "sdk/react-sdk/api/useSetNft",
+            "sdk/react-sdk/api/useSetUsername",
+            "sdk/react-sdk/api/useSpace",
+            "sdk/react-sdk/api/useSyncAgent",
+            "sdk/react-sdk/api/useThreads",
+            "sdk/react-sdk/api/useTimeline",
+            "sdk/react-sdk/api/useUserDms",
+            "sdk/react-sdk/api/useUserGdms",
+            "sdk/react-sdk/api/useUserSpaces"
+          ]
+        }
+      ]
+    }
+  ],
+  "footerSocials": {
+    "twitter": "https://twitter.com/buildonriver",
+    "github": "https://github.com/river-build",
+    "website": "https://towns.com"
+  }
+}

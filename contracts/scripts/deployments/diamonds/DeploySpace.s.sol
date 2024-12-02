@@ -12,7 +12,6 @@ import {DiamondHelper} from "contracts/test/diamond/Diamond.t.sol";
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 
 import {TokenPausableHelper} from "contracts/test/diamond/pausable/token/TokenPausableSetup.sol";
-import {ERC721AHelper} from "contracts/test/diamond/erc721a/ERC721ASetup.sol";
 
 // Facets
 import {MultiInit} from "contracts/src/diamond/initializers/MultiInit.sol";
@@ -33,7 +32,7 @@ import {DeployChannels} from "contracts/scripts/deployments/facets/DeployChannel
 import {DeployTokenPausable} from "contracts/scripts/deployments/facets/DeployTokenPausable.s.sol";
 import {DeployPrepayFacet} from "contracts/scripts/deployments/facets/DeployPrepayFacet.s.sol";
 import {DeployReferrals} from "contracts/scripts/deployments/facets/DeployReferrals.s.sol";
-import {DeployERC721A} from "contracts/scripts/deployments/facets/DeployERC721A.s.sol";
+import {DeployMembershipToken} from "contracts/scripts/deployments/facets/DeployMembershipToken.s.sol";
 import {DeploySpaceEntitlementGated} from "contracts/scripts/deployments/facets/DeploySpaceEntitlementGated.s.sol";
 import {DeployMultiInit} from "contracts/scripts/deployments/utils/DeployMultiInit.s.sol";
 
@@ -60,7 +59,7 @@ contract DeploySpace is DiamondHelper, Deployer {
 
   DeployPrepayFacet prepayHelper = new DeployPrepayFacet();
   DeployReferrals referralsHelper = new DeployReferrals();
-  DeployERC721A erc721aHelper = new DeployERC721A();
+  DeployMembershipToken membershipTokenHelper = new DeployMembershipToken();
   DeploySpaceEntitlementGated entitlementGatedHelper =
     new DeploySpaceEntitlementGated();
   DeployMultiInit deployMultiInit = new DeployMultiInit();
@@ -77,7 +76,7 @@ contract DeploySpace is DiamondHelper, Deployer {
   address membershipReferral;
   address banning;
   address entitlementGated;
-  address erc721a;
+  address membershipToken;
   address erc721aQueryable;
   address membershipMetadata;
   address entitlementDataQueryable;
@@ -121,7 +120,7 @@ contract DeploySpace is DiamondHelper, Deployer {
   function diamondInitParams(
     address deployer
   ) public returns (Diamond.InitParams memory) {
-    erc721a = erc721aHelper.deploy(deployer);
+    membershipToken = membershipTokenHelper.deploy(deployer);
     erc721aQueryable = erc721aQueryableHelper.deploy(deployer);
     banning = banningHelper.deploy(deployer);
     membership = membershipHelper.deploy(deployer);
@@ -136,7 +135,7 @@ contract DeploySpace is DiamondHelper, Deployer {
     referrals = referralsHelper.deploy(deployer);
     entitlementGated = entitlementGatedHelper.deploy(deployer);
 
-    erc721aHelper.removeSelector(IERC721A.tokenURI.selector);
+    membershipTokenHelper.removeSelector(IERC721A.tokenURI.selector);
 
     addCut(
       entitlementsHelper.makeCut(entitlements, IDiamond.FacetCutAction.Add)
@@ -146,7 +145,12 @@ contract DeploySpace is DiamondHelper, Deployer {
       tokenPausableHelper.makeCut(tokenPausable, IDiamond.FacetCutAction.Add)
     );
     addCut(channelsHelper.makeCut(channels, IDiamond.FacetCutAction.Add));
-    addCut(erc721aHelper.makeCut(erc721a, IDiamond.FacetCutAction.Add));
+    addCut(
+      membershipTokenHelper.makeCut(
+        membershipToken,
+        IDiamond.FacetCutAction.Add
+      )
+    );
     addCut(membershipHelper.makeCut(membership, IDiamond.FacetCutAction.Add));
 
     addCut(banningHelper.makeCut(banning, IDiamond.FacetCutAction.Add));
@@ -187,6 +191,109 @@ contract DeploySpace is DiamondHelper, Deployer {
           _initDatas
         )
       });
+  }
+
+  function diamondInitParamsFromFacets(
+    address deployer,
+    string[] memory facets
+  ) public {
+    for (uint256 i = 0; i < facets.length; i++) {
+      bytes32 facetNameHash = keccak256(abi.encodePacked(facets[i]));
+
+      if (facetNameHash == keccak256(abi.encodePacked("MembershipToken"))) {
+        membershipToken = membershipTokenHelper.deploy(deployer);
+        membershipTokenHelper.removeSelector(IERC721A.tokenURI.selector);
+        addCut(
+          membershipTokenHelper.makeCut(
+            membershipToken,
+            IDiamond.FacetCutAction.Add
+          )
+        );
+      } else if (
+        facetNameHash == keccak256(abi.encodePacked("ERC721AQueryable"))
+      ) {
+        erc721aQueryable = erc721aQueryableHelper.deploy(deployer);
+        addCut(
+          erc721aQueryableHelper.makeCut(
+            erc721aQueryable,
+            IDiamond.FacetCutAction.Add
+          )
+        );
+      } else if (facetNameHash == keccak256(abi.encodePacked("Banning"))) {
+        banning = banningHelper.deploy(deployer);
+        addCut(banningHelper.makeCut(banning, IDiamond.FacetCutAction.Add));
+      } else if (
+        facetNameHash == keccak256(abi.encodePacked("MembershipFacet"))
+      ) {
+        membership = membershipHelper.deploy(deployer);
+        addCut(
+          membershipHelper.makeCut(membership, IDiamond.FacetCutAction.Add)
+        );
+      } else if (
+        facetNameHash == keccak256(abi.encodePacked("MembershipMetadata"))
+      ) {
+        membershipMetadata = membershipMetadataHelper.deploy(deployer);
+        addCut(
+          membershipMetadataHelper.makeCut(
+            membershipMetadata,
+            IDiamond.FacetCutAction.Add
+          )
+        );
+      } else if (
+        facetNameHash == keccak256(abi.encodePacked("EntitlementDataQueryable"))
+      ) {
+        entitlementDataQueryable = entitlementDataQueryableHelper.deploy(
+          deployer
+        );
+        addCut(
+          entitlementDataQueryableHelper.makeCut(
+            entitlementDataQueryable,
+            IDiamond.FacetCutAction.Add
+          )
+        );
+      } else if (
+        facetNameHash == keccak256(abi.encodePacked("EntitlementsManager"))
+      ) {
+        entitlements = entitlementsHelper.deploy(deployer);
+        addCut(
+          entitlementsHelper.makeCut(entitlements, IDiamond.FacetCutAction.Add)
+        );
+      } else if (facetNameHash == keccak256(abi.encodePacked("Roles"))) {
+        roles = rolesHelper.deploy(deployer);
+        addCut(rolesHelper.makeCut(roles, IDiamond.FacetCutAction.Add));
+      } else if (facetNameHash == keccak256(abi.encodePacked("Channels"))) {
+        channels = channelsHelper.deploy(deployer);
+        addCut(channelsHelper.makeCut(channels, IDiamond.FacetCutAction.Add));
+      } else if (
+        facetNameHash == keccak256(abi.encodePacked("TokenPausableFacet"))
+      ) {
+        tokenPausable = tokenPausableHelper.deploy(deployer);
+        addCut(
+          tokenPausableHelper.makeCut(
+            tokenPausable,
+            IDiamond.FacetCutAction.Add
+          )
+        );
+      } else if (facetNameHash == keccak256(abi.encodePacked("PrepayFacet"))) {
+        prepay = prepayHelper.deploy(deployer);
+        addCut(prepayHelper.makeCut(prepay, IDiamond.FacetCutAction.Add));
+      } else if (
+        facetNameHash == keccak256(abi.encodePacked("ReferralsFacet"))
+      ) {
+        referrals = referralsHelper.deploy(deployer);
+        addCut(referralsHelper.makeCut(referrals, IDiamond.FacetCutAction.Add));
+      } else if (
+        facetNameHash == keccak256(abi.encodePacked("SpaceEntitlementGated"))
+      ) {
+        entitlementGated = entitlementGatedHelper.deploy(deployer);
+        addCut(
+          entitlementGatedHelper.makeCut(
+            entitlementGated,
+            IDiamond.FacetCutAction.Add
+          )
+        );
+      }
+    }
   }
 
   function __deploy(address deployer) public override returns (address) {

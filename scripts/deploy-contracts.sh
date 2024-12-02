@@ -55,16 +55,18 @@ make deploy-any-local context=$RIVER_ENV rpc=base_anvil type=utils contract=Depl
 make deploy-any-local context=$RIVER_ENV rpc=base_anvil type=diamonds contract=DeploySpace
 make deploy-any-local context=$RIVER_ENV rpc=base_anvil type=diamonds contract=DeploySpaceOwner
 make deploy-any-local context=$RIVER_ENV rpc=base_anvil type=utils contract=DeployUserEntitlement
-make deploy-any-local context=$RIVER_ENV rpc=base_anvil type=utils contract=DeployTieredLogPricing
+make deploy-any-local context=$RIVER_ENV rpc=base_anvil type=utils contract=DeployTieredLogPricingV2
+make deploy-any-local context=$RIVER_ENV rpc=base_anvil type=utils contract=DeployTieredLogPricingV3
 make deploy-any-local context=$RIVER_ENV rpc=base_anvil type=utils contract=DeployFixedPricing
 make deploy-any-local context=$RIVER_ENV rpc=base_anvil type=diamonds contract=DeploySpaceFactory
+make deploy-any-local context=$RIVER_ENV rpc=base_anvil type=diamonds contract=DeployRiverAirdrop
 make interact-any-local context=$RIVER_ENV rpc=base_anvil contract=InteractPostDeploy
-
+make interact-any-local context=$RIVER_ENV rpc=base_anvil contract=InteractSetDefaultUriLocalhost
+make interact-any-local context=$RIVER_ENV rpc=base_anvil contract=InteractClaimCondition
 # Utils
 make deploy-any-local context=$RIVER_ENV rpc=base_anvil type=utils contract=DeployMember
 make deploy-any-local context=$RIVER_ENV rpc=base_anvil type=utils contract=DeployMockNFT
 make deploy-any-local context=$RIVER_ENV rpc=base_anvil type=utils contract=DeployEntitlementGatedExample
-make deploy-any-local context=$RIVER_ENV rpc=base_anvil type=utils contract=DeployCustomEntitlementExample
 
 # River Registry
 make deploy-any-local context=$RIVER_ENV rpc=river_anvil type=diamonds contract=DeployRiverRegistry

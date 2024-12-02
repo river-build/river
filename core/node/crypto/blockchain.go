@@ -2,9 +2,10 @@ package crypto
 
 import (
 	"context"
-	"go.opentelemetry.io/otel/trace"
 	"math/big"
 	"time"
+
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -134,7 +135,8 @@ func NewBlockchainWithClient(
 	if wallet != nil {
 		bc.Wallet = wallet
 		bc.TxPool, err = NewTransactionPoolWithPoliciesFromConfig(
-			ctx, cfg, bc.Client, wallet, bc.ChainMonitor, initialBlockNum, metrics, tracer)
+			ctx, cfg, bc.Client, wallet, bc.ChainMonitor,
+			cfg.DisableReplacePendingTransactionOnBoot, metrics, tracer)
 		if err != nil {
 			return nil, err
 		}

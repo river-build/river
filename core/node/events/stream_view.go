@@ -36,16 +36,17 @@ type StreamView interface {
 	MiniblocksFromLastSnapshot() []*Miniblock
 	SyncCookie(localNodeAddress common.Address) *SyncCookie
 	LastBlock() *MiniblockInfo
+	Blocks() []*MiniblockInfo
 	ValidateNextEvent(
 		ctx context.Context,
-		cfg crypto.OnChainConfiguration,
+		cfg *crypto.OnChainSettings,
 		parsedEvent *ParsedEvent,
 		currentTime time.Time,
 	) error
 	GetStats() StreamViewStats
 	ProposeNextMiniblock(
 		ctx context.Context,
-		cfg crypto.OnChainConfiguration,
+		cfg *crypto.OnChainSettings,
 		forceSnapshot bool,
 	) (*MiniblockProposal, error)
 	IsMember(userAddress []byte) (bool, error)
@@ -68,8 +69,8 @@ func MakeStreamView(
 			return nil, err
 		}
 		miniblocks[i] = miniblock
-		lastMiniblockNumber = miniblock.header().MiniblockNum
-		if snapshotIndex == -1 && miniblock.header().Snapshot != nil {
+		lastMiniblockNumber = miniblock.Header().MiniblockNum
+		if snapshotIndex == -1 && miniblock.Header().Snapshot != nil {
 			snapshotIndex = i
 		}
 	}
@@ -107,7 +108,7 @@ func MakeStreamView(
 		}
 	}
 
-	lastBlockHeader := miniblocks[len(miniblocks)-1].header()
+	lastBlockHeader := miniblocks[len(miniblocks)-1].Header()
 	generation := lastBlockHeader.MiniblockNum + 1
 	eventNumOffset := lastBlockHeader.EventNumOffset + int64(
 		len(lastBlockHeader.EventHashes),
@@ -139,9 +140,9 @@ func MakeRemoteStreamView(ctx context.Context, resp *GetStreamResponse) (*stream
 		if err != nil {
 			return nil, err
 		}
-		lastMiniblockNumber = miniblock.header().MiniblockNum
+		lastMiniblockNumber = miniblock.Header().MiniblockNum
 		miniblocks[i] = miniblock
-		if miniblock.header().Snapshot != nil {
+		if miniblock.Header().Snapshot != nil {
 			snapshotIndex = i
 		}
 	}
@@ -170,7 +171,7 @@ func MakeRemoteStreamView(ctx context.Context, resp *GetStreamResponse) (*stream
 		}
 	}
 
-	lastBlockHeader := miniblocks[len(miniblocks)-1].header()
+	lastBlockHeader := miniblocks[len(miniblocks)-1].Header()
 	generation := lastBlockHeader.MiniblockNum + 1
 	eventNumOffset := lastBlockHeader.EventNumOffset + int64(
 		len(lastBlockHeader.EventHashes),
@@ -223,18 +224,21 @@ func (r *streamViewImpl) LastBlock() *MiniblockInfo {
 	return r.blocks[len(r.blocks)-1]
 }
 
-// Returns nil if there are no events to propose.
+func (r *streamViewImpl) Blocks() []*MiniblockInfo {
+	return r.blocks
+}
+
 func (r *streamViewImpl) ProposeNextMiniblock(
 	ctx context.Context,
-	cfg crypto.OnChainConfiguration,
+	cfg *crypto.OnChainSettings,
 	forceSnapshot bool,
 ) (*MiniblockProposal, error) {
-	if r.minipool.events.Len() == 0 && !forceSnapshot {
-		return nil, nil
-	}
-	hashes := make([][]byte, 0, r.minipool.events.Len())
-	for _, e := range r.minipool.events.Values {
-		hashes = append(hashes, e.Hash[:])
+	var hashes [][]byte
+	if r.minipool.events.Len() != 0 {
+		hashes = make([][]byte, 0, r.minipool.events.Len())
+		for _, e := range r.minipool.events.Values {
+			hashes = append(hashes, e.Hash[:])
+		}
 	}
 	return &MiniblockProposal{
 		Hashes:            hashes,
@@ -280,20 +284,20 @@ func (r *streamViewImpl) makeMiniblockHeader(
 
 	var snapshot *Snapshot
 	last := r.LastBlock()
-	eventNumOffset := last.header().EventNumOffset + int64(len(last.events)) + 1 // +1 for header
-	nextMiniblockNum := last.header().MiniblockNum + 1
-	miniblockNumOfPrevSnapshot := last.header().PrevSnapshotMiniblockNum
-	if last.header().Snapshot != nil {
-		miniblockNumOfPrevSnapshot = last.header().MiniblockNum
+	eventNumOffset := last.Header().EventNumOffset + int64(len(last.events())) + 1 // +1 for header
+	nextMiniblockNum := last.Header().MiniblockNum + 1
+	miniblockNumOfPrevSnapshot := last.Header().PrevSnapshotMiniblockNum
+	if last.Header().Snapshot != nil {
+		miniblockNumOfPrevSnapshot = last.Header().MiniblockNum
 	}
 	if proposal.ShouldSnapshot {
 		snapshot = proto.Clone(r.snapshot).(*Snapshot)
 		// update all blocks since last snapshot
 		for i := r.snapshotIndex + 1; i < len(r.blocks); i++ {
 			block := r.blocks[i]
-			miniblockNum := block.header().MiniblockNum
-			for j, e := range block.events {
-				offset := block.header().EventNumOffset
+			miniblockNum := block.Header().MiniblockNum
+			for j, e := range block.events() {
+				offset := block.Header().EventNumOffset
 				err := Update_Snapshot(snapshot, e, miniblockNum, offset+int64(j))
 				if err != nil {
 					log.Error("Failed to update snapshot",
@@ -319,7 +323,7 @@ func (r *streamViewImpl) makeMiniblockHeader(
 
 	return &MiniblockHeader{
 		MiniblockNum:             nextMiniblockNum,
-		Timestamp:                NextMiniblockTimestamp(last.header().Timestamp),
+		Timestamp:                NextMiniblockTimestamp(last.Header().Timestamp),
 		EventHashes:              hashes,
 		PrevMiniblockHash:        last.headerEvent.Hash[:],
 		Snapshot:                 snapshot,
@@ -331,15 +335,17 @@ func (r *streamViewImpl) makeMiniblockHeader(
 	}, events, nil
 }
 
+// copyAndApplyBlock copies the current view and applies the given miniblock to it.
+// Returns the new view and the events that were in the applied miniblock, but not in the minipool.
 func (r *streamViewImpl) copyAndApplyBlock(
 	miniblock *MiniblockInfo,
-	cfg crypto.OnChainConfiguration,
-) (*streamViewImpl, error) {
-	recencyConstraintsGenerations := int(cfg.Get().RecencyConstraintsGen)
+	cfg *crypto.OnChainSettings,
+) (*streamViewImpl, []*Envelope, error) {
+	recencyConstraintsGenerations := int(cfg.RecencyConstraintsGen)
 
 	header := miniblock.headerEvent.Event.GetMiniblockHeader()
 	if header == nil {
-		return nil, RiverError(
+		return nil, nil, RiverError(
 			Err_INTERNAL,
 			"streamViewImpl: non block event not allowed",
 			"stream",
@@ -350,18 +356,18 @@ func (r *streamViewImpl) copyAndApplyBlock(
 	}
 
 	lastBlock := r.LastBlock()
-	if header.MiniblockNum != lastBlock.header().MiniblockNum+1 {
-		return nil, RiverError(
+	if header.MiniblockNum != lastBlock.Header().MiniblockNum+1 {
+		return nil, nil, RiverError(
 			Err_BAD_BLOCK,
 			"streamViewImpl: block number mismatch",
 			"expected",
-			lastBlock.header().MiniblockNum+1,
+			lastBlock.Header().MiniblockNum+1,
 			"actual",
 			header.MiniblockNum,
 		)
 	}
 	if !bytes.Equal(lastBlock.headerEvent.Hash[:], header.PrevMiniblockHash) {
-		return nil, RiverError(
+		return nil, nil, RiverError(
 			Err_BAD_BLOCK,
 			"streamViewImpl: block hash mismatch",
 			"expected",
@@ -376,11 +382,12 @@ func (r *streamViewImpl) copyAndApplyBlock(
 		remaining[k] = v
 	}
 
-	for _, e := range miniblock.events {
+	newEvents := []*Envelope{}
+	for _, e := range miniblock.events() {
 		if _, ok := remaining[e.Hash]; ok {
 			delete(remaining, e.Hash)
 		} else {
-			return nil, RiverError(Err_BAD_BLOCK, "streamViewImpl: block event not found", "stream", r.streamId, "event_hash", FormatHash(e.Hash))
+			newEvents = append(newEvents, e.Envelope)
 		}
 	}
 
@@ -415,7 +422,7 @@ func (r *streamViewImpl) copyAndApplyBlock(
 		minipool:      newMiniPoolInstance(minipoolEvents, generation, eventNumOffset),
 		snapshot:      snapshot,
 		snapshotIndex: snapshotIndex,
-	}, nil
+	}, newEvents, nil
 }
 
 func (r *streamViewImpl) StreamId() *StreamId {
@@ -428,16 +435,16 @@ func (r *streamViewImpl) InceptionPayload() IsInceptionPayload {
 
 func (r *streamViewImpl) indexOfMiniblockWithNum(mininblockNum int64) (int, error) {
 	if len(r.blocks) > 0 {
-		diff := int(mininblockNum - r.blocks[0].header().MiniblockNum)
+		diff := int(mininblockNum - r.blocks[0].Header().MiniblockNum)
 		if diff >= 0 && diff < len(r.blocks) {
-			if r.blocks[diff].header().MiniblockNum != mininblockNum {
+			if r.blocks[diff].Header().MiniblockNum != mininblockNum {
 				return 0, RiverError(
 					Err_INTERNAL,
 					"indexOfMiniblockWithNum block number mismatch",
 					"requested",
 					mininblockNum,
 					"actual",
-					r.blocks[diff].header().MiniblockNum,
+					r.blocks[diff].Header().MiniblockNum,
 				)
 			}
 			return diff, nil
@@ -448,9 +455,9 @@ func (r *streamViewImpl) indexOfMiniblockWithNum(mininblockNum int64) (int, erro
 			"requested",
 			mininblockNum,
 			"min",
-			r.blocks[0].header().MiniblockNum,
+			r.blocks[0].Header().MiniblockNum,
 			"max",
-			r.blocks[len(r.blocks)-1].header().MiniblockNum,
+			r.blocks[len(r.blocks)-1].Header().MiniblockNum,
 		)
 	}
 	return 0, RiverError(
@@ -533,8 +540,8 @@ func (r *streamViewImpl) SyncCookie(localNodeAddress common.Address) *SyncCookie
 	}
 }
 
-func (r *streamViewImpl) shouldSnapshot(ctx context.Context, cfg crypto.OnChainConfiguration) bool {
-	minEventsPerSnapshot := int(cfg.Get().MinSnapshotEvents.ForType(r.streamId.Type()))
+func (r *streamViewImpl) shouldSnapshot(ctx context.Context, cfg *crypto.OnChainSettings) bool {
+	minEventsPerSnapshot := int(cfg.MinSnapshotEvents.ForType(r.streamId.Type()))
 
 	count := 0
 	// count the events in the minipool
@@ -545,10 +552,10 @@ func (r *streamViewImpl) shouldSnapshot(ctx context.Context, cfg crypto.OnChainC
 	// count the events in blocks since the last snapshot
 	for i := len(r.blocks) - 1; i >= 0; i-- {
 		block := r.blocks[i]
-		if block.header().Snapshot != nil {
+		if block.Header().Snapshot != nil {
 			break
 		}
-		count += len(block.events)
+		count += len(block.events())
 		if count >= minEventsPerSnapshot {
 			return true
 		}
@@ -558,7 +565,7 @@ func (r *streamViewImpl) shouldSnapshot(ctx context.Context, cfg crypto.OnChainC
 
 func (r *streamViewImpl) ValidateNextEvent(
 	ctx context.Context,
-	cfg crypto.OnChainConfiguration,
+	cfg *crypto.OnChainSettings,
 	parsedEvent *ParsedEvent,
 	currentTime time.Time,
 ) error {
@@ -566,25 +573,59 @@ func (r *streamViewImpl) ValidateNextEvent(
 	// the event should not already exist in any block after the preceding miniblock
 	// the event should not exist in the minipool
 	foundBlockAt := -1
+	var foundBlock *MiniblockInfo
 	// loop over blocks backwards to find block with preceding miniblock hash
 	for i := len(r.blocks) - 1; i >= 0; i-- {
 		block := r.blocks[i]
-		if bytes.Equal(block.headerEvent.Hash[:], parsedEvent.Event.PrevMiniblockHash) {
+		if block.headerEvent.Hash == parsedEvent.MiniblockRef.Hash {
 			foundBlockAt = i
+			foundBlock = block
 			break
 		}
 	}
-	// ensure that we found it
-	if foundBlockAt == -1 {
-		return RiverError(
-			Err_BAD_PREV_MINIBLOCK_HASH,
-			"prevMiniblockHash not found in recent blocks",
-			"event",
-			parsedEvent.ShortDebugStr(),
-			"expected",
-			FormatFullHash(r.LastBlock().headerEvent.Hash),
-		)
+
+	if foundBlock == nil {
+		if parsedEvent.MiniblockRef.Num > r.LastBlock().Ref.Num {
+			return RiverError(
+				Err_MINIBLOCK_TOO_NEW,
+				"prevMiniblockNum is greater than the last miniblock number in the stream",
+				"lastBlockNum",
+				r.LastBlock().Ref.Num,
+				"eventPrevMiniblockNum",
+				parsedEvent.MiniblockRef.Num,
+				"streamId",
+				r.streamId,
+			)
+		} else {
+			return RiverError(
+				Err_BAD_PREV_MINIBLOCK_HASH,
+				"prevMiniblockHash not found in recent blocks",
+				"event",
+				parsedEvent.ShortDebugStr(),
+				"expected",
+				FormatFullHash(r.LastBlock().headerEvent.Hash),
+			)
+		}
 	}
+
+	// for backcompat, do not check that the number of miniblock matches if it's set to 0
+	if parsedEvent.MiniblockRef.Num != 0 {
+		if foundBlock.Ref.Num != parsedEvent.MiniblockRef.Num {
+			return RiverError(
+				Err_BAD_PREV_MINIBLOCK_HASH,
+				"prevMiniblockNum does not match the miniblock number in the block",
+				"blockNum",
+				foundBlock.Ref.Num,
+				"eventPrevMiniblockNum",
+				parsedEvent.MiniblockRef.Num,
+				"streamId",
+				r.streamId,
+				"blockHash",
+				foundBlock.headerEvent.Hash,
+			)
+		}
+	}
+
 	// make sure we're recent
 	// if the user isn't adding the latest block, allow it if the block after was recently created
 	if foundBlockAt < len(r.blocks)-1 && !r.isRecentBlock(ctx, cfg, r.blocks[foundBlockAt+1], currentTime) {
@@ -600,7 +641,7 @@ func (r *streamViewImpl) ValidateNextEvent(
 	// loop forwards from foundBlockAt and check for duplicate event
 	for i := foundBlockAt + 1; i < len(r.blocks); i++ {
 		block := r.blocks[i]
-		for _, e := range block.events {
+		for _, e := range block.events() {
 			if e.Hash == parsedEvent.Hash {
 				return RiverError(
 					Err_DUPLICATE_EVENT,
@@ -630,32 +671,32 @@ func (r *streamViewImpl) ValidateNextEvent(
 
 func (r *streamViewImpl) isRecentBlock(
 	ctx context.Context,
-	cfg crypto.OnChainConfiguration,
+	cfg *crypto.OnChainSettings,
 	block *MiniblockInfo,
 	currentTime time.Time,
 ) bool {
-	maxAgeDuration := cfg.Get().RecencyConstraintsAge
-	diff := currentTime.Sub(block.header().Timestamp.AsTime())
+	maxAgeDuration := cfg.RecencyConstraintsAge
+	diff := currentTime.Sub(block.Header().Timestamp.AsTime())
 	return diff <= maxAgeDuration
 }
 
 func (r *streamViewImpl) GetStats() StreamViewStats {
 	stats := StreamViewStats{
-		FirstMiniblockNum: r.blocks[0].Num,
-		LastMiniblockNum:  r.LastBlock().Num,
+		FirstMiniblockNum: r.blocks[0].Ref.Num,
+		LastMiniblockNum:  r.LastBlock().Ref.Num,
 		EventsInMinipool:  r.minipool.events.Len(),
 	}
 
 	for _, block := range r.blocks {
-		stats.EventsInMiniblocks += len(block.events) + 1 // +1 for header
-		if block.header().Snapshot != nil {
+		stats.EventsInMiniblocks += len(block.events()) + 1 // +1 for header
+		if block.Header().Snapshot != nil {
 			stats.SnapshotsInMiniblocks++
 		}
 	}
 
-	stats.TotalEventsEver = int(r.blocks[r.snapshotIndex].header().EventNumOffset)
+	stats.TotalEventsEver = int(r.blocks[r.snapshotIndex].Header().EventNumOffset)
 	for _, block := range r.blocks[r.snapshotIndex:] {
-		stats.TotalEventsEver += len(block.events) + 1 // +1 for header
+		stats.TotalEventsEver += len(block.events()) + 1 // +1 for header
 	}
 	stats.TotalEventsEver += r.minipool.events.Len()
 

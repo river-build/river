@@ -23,12 +23,12 @@ library SpaceDelegationStorage {
     mapping(address operator => EnumerableSet.AddressSet) spacesByOperator;
     mapping(address space => address operator) operatorBySpace;
     mapping(address space => uint256) spaceDelegationTime;
+    address spaceFactory;
   }
 
   function layout() internal pure returns (Layout storage s) {
-    bytes32 slot = STORAGE_SLOT;
     assembly {
-      s.slot := slot
+      s.slot := STORAGE_SLOT
     }
   }
 }

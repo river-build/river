@@ -1,57 +1,95 @@
 import {
+	DEFAULT_RETRY_PARAMS,
 	ParsedStreamResponse,
+	StreamRpcClient,
 	StreamStateView,
+	UnpackEnvelopeOpts,
 	decryptAESGCM,
+	loggingInterceptor,
+	retryInterceptor,
 	streamIdAsBytes,
 	streamIdAsString,
 	unpackStream,
 } from '@river-build/sdk'
-import { PromiseClient, createPromiseClient } from '@connectrpc/connect'
+import { createPromiseClient } from '@connectrpc/connect'
 import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-node'
 import { StreamService } from '@river-build/proto'
 import { filetypemime } from 'magic-bytes.js'
 import { FastifyBaseLogger } from 'fastify'
+import { LRUCache } from 'lru-cache'
 
-import { MediaContent, StreamIdHex } from './types'
+import { MediaContent } from './types'
 import { getNodeForStream } from './streamRegistry'
 
+const STREAM_METADATA_SERVICE_DEFAULT_UNPACK_OPTS: UnpackEnvelopeOpts = {
+	disableHashValidation: true,
+	disableSignatureValidation: true,
+}
+
+const streamLocationCache = new LRUCache<string, string>({ max: 5000 })
 const clients = new Map<string, StreamRpcClient>()
+const streamClientRequests = new Map<string, Promise<StreamRpcClient>>()
+const streamRequests = new Map<string, Promise<StreamStateView>>()
+const mediaRequests = new Map<string, Promise<MediaContent>>()
 
-const contentCache: Record<string, MediaContent | undefined> = {}
-
-export type StreamRpcClient = PromiseClient<typeof StreamService> & { url?: string }
-
-function makeStreamRpcClient(logger: FastifyBaseLogger, url: string): StreamRpcClient {
-	logger.info({ url }, 'Connecting')
-
+let nextRpcClientNum = 0
+export function makeStreamRpcClient(url: string): StreamRpcClient {
+	const transportId = nextRpcClientNum++
+	const retryParams = DEFAULT_RETRY_PARAMS
 	const options: ConnectTransportOptions = {
 		httpVersion: '2',
 		baseUrl: url,
+		interceptors: [loggingInterceptor(transportId), retryInterceptor(retryParams)],
+		defaultTimeoutMs: undefined, // default timeout is undefined, we add a timeout in the retryInterceptor
 	}
 
 	const transport = createConnectTransport(options)
-	const client: StreamRpcClient = createPromiseClient(StreamService, transport)
+	const client = createPromiseClient(StreamService, transport) as StreamRpcClient
 	client.url = url
+	client.opts = {
+		retryParams: retryParams,
+	}
 	return client
 }
 
-async function getStreamClient(logger: FastifyBaseLogger, streamId: `0x${string}`) {
-	const node = await getNodeForStream(logger, streamId)
-	let url = node?.url
-	if (!clients.has(url)) {
-		const client = makeStreamRpcClient(logger, url)
-		clients.set(client.url!, client)
-		url = client.url!
+async function _getStreamClient(logger: FastifyBaseLogger, streamId: string) {
+	let url = streamLocationCache.get(streamId)
+	if (!url) {
+		const node = await getNodeForStream(logger, streamId)
+		url = node.url
+		streamLocationCache.set(streamId, url)
 	}
-	logger.info({ url }, 'client connected to node')
-
-	const client = clients.get(url)
+	let client = clients.get(url)
 	if (!client) {
-		logger.error({ url }, 'Failed to get client for url')
-		throw new Error('Failed to get client for url')
+		logger.info({ url }, 'Connecting')
+		client = makeStreamRpcClient(url)
+		clients.set(url, client)
 	}
+	return client
+}
 
-	return { client, lastMiniblockNum: node.lastMiniblockNum }
+async function getStreamClient(
+	logger: FastifyBaseLogger,
+	streamId: string,
+): Promise<StreamRpcClient> {
+	const existing = streamClientRequests.get(streamId)
+	if (existing) {
+		return existing
+	}
+	try {
+		const promise = _getStreamClient(logger, streamId)
+		streamClientRequests.set(streamId, promise)
+		return await promise
+	} finally {
+		streamClientRequests.delete(streamId)
+	}
+}
+
+function removeClient(logger: FastifyBaseLogger, clientToRemove: StreamRpcClient) {
+	logger.info({ url: clientToRemove.url }, 'removeClient')
+	if (clientToRemove.url) {
+		clients.delete(clientToRemove.url)
+	}
 }
 
 function streamViewFromUnpackedResponse(
@@ -142,85 +180,91 @@ async function mediaContentFromStreamView(
 	}
 }
 
-function stripHexPrefix(hexString: string): string {
-	if (hexString.startsWith('0x')) {
-		return hexString.slice(2)
+export async function _getStream(
+	logger: FastifyBaseLogger,
+	streamId: string,
+	opts: UnpackEnvelopeOpts = STREAM_METADATA_SERVICE_DEFAULT_UNPACK_OPTS,
+): Promise<StreamStateView> {
+	const client = await getStreamClient(logger, streamId)
+	logger.info(
+		{
+			nodeUrl: client.url,
+			streamId,
+		},
+		'getStream',
+	)
+
+	try {
+		const start = Date.now()
+
+		const response = await client.getStream({
+			streamId: streamIdAsBytes(streamId),
+		})
+
+		const duration_ms = Date.now() - start
+		logger.info(
+			{
+				duration_ms,
+			},
+			'getStream finished',
+		)
+
+		const unpackedResponse = await unpackStream(response.stream, opts)
+		return streamViewFromUnpackedResponse(streamId, unpackedResponse)
+	} catch (e) {
+		logger.error(
+			{ url: client.url, streamId, err: e },
+			'getStream failed, removing client from cache',
+		)
+		removeClient(logger, client)
+		throw e
 	}
-	return hexString
 }
 
 export async function getStream(
 	logger: FastifyBaseLogger,
 	streamId: string,
+	opts: UnpackEnvelopeOpts = STREAM_METADATA_SERVICE_DEFAULT_UNPACK_OPTS,
 ): Promise<StreamStateView> {
-	const result = await getStreamClient(logger, `0x${streamId}`)
-	const client = result.client
-	const lastMiniblockNum = result.lastMiniblockNum
-
-	if (!client) {
-		logger.error({ streamId }, 'Failed to get client for stream')
-		throw new Error(`Failed to get client for stream ${streamId}`)
+	const existing = streamRequests.get(streamId)
+	if (existing) {
+		return existing
 	}
+	try {
+		const promise = _getStream(logger, streamId, opts)
+		streamRequests.set(streamId, promise)
+		return await promise
+	} finally {
+		streamRequests.delete(streamId)
+	}
+}
 
-	logger.info(
-		{
-			nodeUrl: client.url,
-			streamId,
-			lastMiniblockNum: lastMiniblockNum.toString(),
-		},
-		'getStream',
-	)
-
-	const start = Date.now()
-
-	const response = await client.getStream({
-		streamId: streamIdAsBytes(streamId),
-	})
-
-	const duration_ms = Date.now() - start
-	logger.info(
-		{
-			duration_ms,
-		},
-		'getStream finished',
-	)
-
-	const unpackedResponse = await unpackStream(response.stream)
-	return streamViewFromUnpackedResponse(streamId, unpackedResponse)
+export async function _getMediaStreamContent(
+	logger: FastifyBaseLogger,
+	streamId: string,
+	secret: Uint8Array,
+	iv: Uint8Array,
+): Promise<MediaContent> {
+	const sv = await getStream(logger, streamId)
+	const result = await mediaContentFromStreamView(logger, sv, secret, iv)
+	return result
 }
 
 export async function getMediaStreamContent(
 	logger: FastifyBaseLogger,
-	fullStreamId: StreamIdHex,
+	streamId: string,
 	secret: Uint8Array,
 	iv: Uint8Array,
-): Promise<MediaContent | { data: null; mimeType: null }> {
-	const toHexString = (byteArray: Uint8Array) => {
-		return Array.from(byteArray, (byte) => byte.toString(16).padStart(2, '0')).join('')
+): Promise<MediaContent> {
+	const existing = mediaRequests.get(streamId)
+	if (existing) {
+		return existing
 	}
-
-	const secretHex = toHexString(secret)
-	const ivHex = toHexString(iv)
-
-	/*
-	if (contentCache[concatenatedString]) {
-		return contentCache[concatenatedString];
+	try {
+		const promise = _getMediaStreamContent(logger, streamId, secret, iv)
+		mediaRequests.set(streamId, promise)
+		return await promise
+	} finally {
+		mediaRequests.delete(streamId)
 	}
-	*/
-
-	const streamId = stripHexPrefix(fullStreamId)
-	const sv = await getStream(logger, streamId)
-
-	if (!sv) {
-		logger.error({ streamId }, 'Failed to get stream')
-		throw new Error(`Failed to get stream ${streamId}`)
-	}
-
-	const result = await mediaContentFromStreamView(logger, sv, secret, iv)
-
-	// Cache the result
-	const concatenatedString = `${fullStreamId}${secretHex}${ivHex}`
-	contentCache[concatenatedString] = result
-
-	return result
 }

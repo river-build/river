@@ -23,6 +23,7 @@ import {Architect} from "contracts/src/factory/facets/architect/Architect.sol";
 
 // mocks
 import {MockERC721} from "contracts/test/mocks/MockERC721.sol";
+import {CreateSpaceFacet} from "contracts/src/factory/facets/create/CreateSpace.sol";
 
 contract IntegrationCreateSpace is
   BaseSetup,
@@ -31,10 +32,12 @@ contract IntegrationCreateSpace is
   IRuleEntitlementBase
 {
   Architect public spaceArchitect;
+  CreateSpaceFacet public createSpaceFacet;
 
   function setUp() public override {
     super.setUp();
     spaceArchitect = Architect(spaceFactory);
+    createSpaceFacet = CreateSpaceFacet(spaceFactory);
   }
 
   function test_fuzz_createEveryoneSpace(
@@ -48,7 +51,7 @@ contract IntegrationCreateSpace is
     spaceInfo.membership.settings.pricingModule = pricingModule;
 
     vm.prank(founder);
-    address newSpace = spaceArchitect.createSpace(spaceInfo);
+    address newSpace = createSpaceFacet.createSpace(spaceInfo);
 
     // assert everyone can join
     assertTrue(
@@ -71,11 +74,12 @@ contract IntegrationCreateSpace is
 
     SpaceInfo memory spaceInfo = _createUserSpaceInfo(spaceId, users);
     spaceInfo.membership.settings.pricingModule = pricingModule;
+    spaceInfo.membership.settings.freeAllocation = FREE_ALLOCATION;
     spaceInfo.membership.permissions = new string[](1);
     spaceInfo.membership.permissions[0] = Permissions.Read;
 
     vm.prank(founder);
-    address newSpace = spaceArchitect.createSpace(spaceInfo);
+    address newSpace = createSpaceFacet.createSpace(spaceInfo);
 
     assertTrue(
       IEntitlementsManager(newSpace).isEntitledToSpace(
@@ -131,17 +135,9 @@ contract IntegrationCreateSpace is
     spaceInfo.membership.settings.pricingModule = pricingModule;
 
     vm.prank(founder);
-    spaceArchitect.createSpace(spaceInfo);
+    createSpaceFacet.createSpace(spaceInfo);
 
     MockERC721(mock).mint(user, 1);
-
-    // TODO: Add asserts for the entitlements
-    // assertTrue(
-    //   IEntitlementsManager(newSpace).isEntitledToSpace(
-    //     user,
-    //     Permissions.JoinSpace
-    //   )
-    // );
   }
 
   // =============================================================
@@ -159,9 +155,10 @@ contract IntegrationCreateSpace is
     // create space with default channel
     SpaceInfo memory spaceInfo = _createEveryoneSpaceInfo(spaceId);
     spaceInfo.membership.settings.pricingModule = pricingModule;
+    spaceInfo.membership.settings.freeAllocation = FREE_ALLOCATION;
 
     vm.prank(founder);
-    address newSpace = spaceArchitect.createSpace(spaceInfo);
+    address newSpace = createSpaceFacet.createSpace(spaceInfo);
 
     vm.prank(member);
     IMembership(newSpace).joinSpace(member);
@@ -269,7 +266,7 @@ contract IntegrationCreateSpace is
 
     vm.deal(founder, cost);
     vm.prank(founder);
-    address newSpace = spaceArchitect.createSpaceWithPrepay{value: cost}(
+    address newSpace = createSpaceFacet.createSpaceWithPrepay{value: cost}(
       spaceInfo
     );
 

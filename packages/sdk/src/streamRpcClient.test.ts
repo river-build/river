@@ -129,9 +129,12 @@ describe('streamRpcClient using v2 sync', () => {
         let syncId: string | undefined = undefined
         const syncCookie = alicesStream.stream!.nextSyncCookie!
 
-        const aliceStreamIterable: AsyncIterable<SyncStreamsResponse> = alice.syncStreams({
-            syncPos: [syncCookie],
-        })
+        const aliceStreamIterable: AsyncIterable<SyncStreamsResponse> = alice.syncStreams(
+            {
+                syncPos: [syncCookie],
+            },
+            { timeoutMs: -1 },
+        )
         await expect(
             waitForSyncStreams(aliceStreamIterable, async (res) => {
                 syncId = res.syncId
@@ -225,9 +228,12 @@ describe('streamRpcClient using v2 sync', () => {
 
         /** Act */
         // bob calls syncStreams, and waits for the syncId in the response stream
-        const bobSyncStreams: AsyncIterable<SyncStreamsResponse> = bob.syncStreams({
-            syncPos: [],
-        })
+        const bobSyncStreams: AsyncIterable<SyncStreamsResponse> = bob.syncStreams(
+            {
+                syncPos: [],
+            },
+            { timeoutMs: -1 },
+        )
         // bob reads the syncId from the response stream
         let syncId: string | undefined = undefined
         for await (const resp of bobSyncStreams) {
@@ -251,7 +257,7 @@ describe('streamRpcClient using v2 sync', () => {
             event,
         })
         // bob adds alice's channel to his syncStreams
-        const bobsChannelStream = await bob.getStream({ streamId: channelId })
+        const bobsChannelStream = await bob.getStream({ streamId: channelId }, { timeoutMs: -1 })
         await bob.addStreamToSync({
             syncId: syncId!,
             syncPos: bobsChannelStream.stream!.nextSyncCookie!,
@@ -304,6 +310,16 @@ describe('streamRpcClient', () => {
         const result = await client.info({ debug: ['graffiti'] })
         expect(result).toBeDefined()
         expect(result.graffiti).toEqual('River Node welcomes you!')
+    })
+
+    test('ping', async () => {
+        // ping is a debug endpoint, so it's not available in production
+        const client = await makeTestRpcClient()
+        log('ping', 'url', client.url)
+        expect(client).toBeDefined()
+        const result = await client.info({ debug: ['ping'] })
+        expect(result).toBeDefined()
+        expect(result.graffiti).toEqual('pong')
     })
 
     test('error', async () => {
@@ -534,9 +550,12 @@ describe('streamRpcClient', () => {
         })
         if (!userAlice.stream) throw new Error('userAlice stream not found')
         let aliceSyncCookie = userAlice.stream.nextSyncCookie
-        const aliceSyncStreams = alice.syncStreams({
-            syncPos: aliceSyncCookie ? [aliceSyncCookie] : [],
-        })
+        const aliceSyncStreams = alice.syncStreams(
+            {
+                syncPos: aliceSyncCookie ? [aliceSyncCookie] : [],
+            },
+            { timeoutMs: -1 },
+        )
 
         let syncId
 
@@ -636,7 +655,7 @@ describe('streamRpcClient', () => {
         const channel = await alice.getStream({ streamId: channelId })
         let messageCount = 0
         if (!channel.stream) throw new Error('channel stream not found')
-        const envelopes = await unpackStreamEnvelopes(channel.stream)
+        const envelopes = await unpackStreamEnvelopes(channel.stream, undefined)
         envelopes.forEach((e) => {
             const p = e.event.payload
             if (p?.case === 'channelPayload' && p.value.content.case === 'message') {
@@ -1035,7 +1054,7 @@ const waitForEvent = async (
             stream?.nextSyncCookie?.streamId &&
             bin_equal(stream.nextSyncCookie.streamId, streamIdToBytes(streamId))
         ) {
-            const events = await unpackStreamEnvelopes(stream)
+            const events = await unpackStreamEnvelopes(stream, undefined)
             for (const e of events) {
                 if (matcher(e)) {
                     return stream.nextSyncCookie

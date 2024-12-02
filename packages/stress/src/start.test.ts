@@ -1,19 +1,19 @@
-import { dlogger } from '@river-build/dlog'
-import { printSystemInfo } from './utils/systemInfo'
+import { getSystemInfo } from './utils/systemInfo'
 import { setupChat, startStressChat } from './mode/chat/root_chat'
 import { genShortId, makeRiverConfig } from '@river-build/sdk'
 import { LocalhostWeb3Provider } from '@river-build/web3'
+import { getLogger } from './utils/logger'
 
-const logger = dlogger('stress:test')
+const logger = getLogger('stress:test')
 
 describe('run.test.ts', () => {
     it('just runs', () => {
-        printSystemInfo(logger)
+        logger.info(getSystemInfo(), 'systemInfo')
         expect(true).toBe(true)
     })
 
     // run a very short test
-    test('setup and run test', async () => {
+    it('setup and run test', async () => {
         const config = makeRiverConfig()
         const rootProvider = new LocalhostWeb3Provider(config.base.rpcUrl)
         await rootProvider.fundWallet()
@@ -51,7 +51,7 @@ describe('run.test.ts', () => {
         expect(result.summary.checkinCounts).toBeDefined()
         for (const key in result.summary.checkinCounts) {
             const value = result.summary.checkinCounts[key]
-            logger.log('checkinCounts key', key, value)
+            logger.info({ key, value }, 'checkinCounts')
             expect(value).toBeDefined()
             // expect(value[totalClients.toString()]).toBe(totalClients) // todo aellis renable
         }

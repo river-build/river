@@ -24,7 +24,7 @@ message Miniblock {
 message Envelope {
     /**
      * Hash of event.
-     * While hash can be recalculated from the event, having it here explicitely
+     * While hash can be recalculated from the event, having it here explicitly
      * makes it easier to work with event.
      * For the event to be valid, must match hash of event field. 
      */
@@ -59,7 +59,7 @@ message StreamEvent {
       * delegate_sig allows event to be signed by a delegate keypair 
       *
       * delegate_sig constains signature of the 
-      * public key of the delegate keypair + the delegate_expirary_epoch_ms.
+      * public key of the delegate keypair + the delegate_expiry_epoch_ms.
       * User's wallet is used to produce this signature.
       * 
       * If present, for the event to be valid:
@@ -84,6 +84,12 @@ message StreamEvent {
     
     /** DelegateExpiry is the time when the delegate signature expires. */
     int64 delegate_expiry_epoch_ms = 6;
+
+    /** Tags are optional, used for external systems to deliver notifications. */
+    Tags tags = 7;
+
+    /** prev_miniblock_num contains miniblock number for prev_miniblock_hash. */
+    int64 prev_miniblock_num = 8;
 
     /** Variable-type payload. 
       * Payloads should obey the following rules:
@@ -655,6 +661,14 @@ message Minipool {
     repeated Envelope events = 1;
 }
 
+message Tags {
+    MessageInteractionType message_interaction_type = 1;
+    repeated GroupMentionType group_mention_types = 2;
+    repeated bytes mentioned_user_addresses = 3;
+    repeated bytes participating_user_addresses = 4;
+    optional bytes thread_id = 5;
+}
+
 // GetStreamExResponse is a stream of raw data that represents the current state of the requested stream.
 // These responses represent streams that are not expected to change once finalized, and have a optimized code path
 // for retrieval. Response may potentially be very large, and are streamed back to the client. The client is expected
@@ -768,6 +782,34 @@ message RemoveStreamFromSyncRequest {
 
 message RemoveStreamFromSyncResponse {}
 
+// ModifySyncRequest adds or removes streams from an existing sync session.
+message ModifySyncRequest {
+  // sync_id is the id of the sync session.
+  string sync_id = 1;
+  // add_streams contains the stream cookies for streams to add to the stream sync session.
+  repeated SyncCookie add_streams = 2;
+  // remove_streams contains the stream id's to remove from the sync session.
+  repeated bytes remove_streams = 3;
+}
+
+// SyncStreamOpStatus contains details why adding or removing a stream to/from a sync session failed.
+message SyncStreamOpStatus {
+  // stream_id that failed to add/remove to/from the sync session.
+  bytes stream_id = 1;
+  // code represents the error code
+  int32 code = 2;
+  // message describing what happened
+  string message = 3;
+}
+
+// ModifySyncResponse contains the details of a stream sync modification request.
+message ModifySyncResponse {
+  // List with streams that failed to add to the sync operation.
+  repeated SyncStreamOpStatus adds = 1;
+  // List with streams that failed to be removed from the sync operation.
+  repeated SyncStreamOpStatus removals = 2;
+}
+
 // CancelSyncRequest cancels the sync session.
 message CancelSyncRequest {
     // sync_id is the unique id of the sync session.
@@ -805,6 +847,12 @@ service StreamService {
     rpc AddEvent(AddEventRequest) returns (AddEventResponse);
     rpc SyncStreams(SyncStreamsRequest) returns (stream SyncStreamsResponse);
     rpc AddStreamToSync(AddStreamToSyncRequest) returns (AddStreamToSyncResponse);
+    // ModifySync adds/removes streams to/from an in progress sync session.
+    // The client must check ModifySyncResponse to determine which streams failed to add/remove.
+    //
+    // Note that it is possible for the client to receive stream updates for streams that are added
+    // or stops receiving stream updates for streams that are removed before this calls returns.
+    rpc ModifySync(ModifySyncRequest) returns (ModifySyncResponse);
     rpc CancelSync(CancelSyncRequest) returns (CancelSyncResponse);
     rpc RemoveStreamFromSync(RemoveStreamFromSyncRequest) returns (RemoveStreamFromSyncResponse);
     rpc Info(InfoRequest) returns (InfoResponse);
@@ -833,6 +881,21 @@ enum ChannelOp {
     CO_DELETED = 2;
     CO_UPDATED = 4;
 }
+
+enum MessageInteractionType {
+    MESSAGE_INTERACTION_TYPE_UNSPECIFIED = 0;
+    MESSAGE_INTERACTION_TYPE_REPLY = 1;
+    MESSAGE_INTERACTION_TYPE_REACTION = 2;
+    MESSAGE_INTERACTION_TYPE_POST = 3;
+    MESSAGE_INTERACTION_TYPE_EDIT = 4;
+    MESSAGE_INTERACTION_TYPE_REDACTION = 5;
+}
+
+enum GroupMentionType {
+    GROUP_MENTION_TYPE_UNSPECIFIED = 0;
+    GROUP_MENTION_TYPE_AT_CHANNEL = 1;
+}
+
 
 // Codes from 1 to 16 match gRPC/Connect codes.
 enum Err {
@@ -949,4 +1012,9 @@ enum Err {
     MINIPOOL_MISSING_EVENTS = 60;
     STREAM_LAST_BLOCK_MISMATCH = 61;
     DOWNSTREAM_NETWORK_ERROR = 62;
+
+    // Stream replica on the local node does not have miniblock with given number yet.
+    // This is a temporary state and the node will have the miniblock at a later point in time.
+    // The client should retry with an increasing delay, starting at 100ms.
+    MINIBLOCK_TOO_NEW = 63;
 }

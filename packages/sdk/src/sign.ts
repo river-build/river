@@ -9,6 +9,7 @@ import {
     Miniblock,
     StreamAndCookie,
     SyncCookie,
+    Tags,
 } from '@river-build/proto'
 import { assertBytes } from 'ethereum-cryptography/utils'
 import { recoverPublicKey, signSync, verify } from 'ethereum-cryptography/secp256k1'
@@ -16,11 +17,26 @@ import { genIdBlob, streamIdAsBytes, streamIdAsString, userIdFromAddress } from 
 import { ParsedEvent, ParsedMiniblock, ParsedStreamAndCookie, ParsedStreamResponse } from './types'
 import { SignerContext, checkDelegateSig } from './signerContext'
 import { keccak256 } from 'ethereum-cryptography/keccak'
+import { createHash } from 'crypto'
+
+export interface UnpackEnvelopeOpts {
+    // the client recreates the hash from the event bytes in the envelope
+    // and compares it to the hash in the envelope.
+    // if this is true, we skip the hash check
+    // this operation is cheap, but it can be useful to skip if you can trust the source of the envelope
+    disableHashValidation?: boolean
+    // the client derives the creator address from the signature in the envelope
+    // and compares it to the creator address on the event.
+    // if this is true, we skip the signature check
+    // this operation is relatively expensive, and can be evaluated later
+    disableSignatureValidation?: boolean
+}
 
 export const _impl_makeEvent_impl_ = async (
     context: SignerContext,
     payload: PlainMessage<StreamEvent>['payload'],
     prevMiniblockHash?: Uint8Array,
+    tags?: PlainMessage<Tags>,
 ): Promise<Envelope> => {
     const streamEvent = new StreamEvent({
         creatorAddress: context.creatorAddress,
@@ -28,6 +44,7 @@ export const _impl_makeEvent_impl_ = async (
         prevMiniblockHash,
         payload,
         createdAtEpochMs: BigInt(Date.now()),
+        tags,
     })
     if (context.delegateSig !== undefined) {
         streamEvent.delegateSig = context.delegateSig
@@ -45,6 +62,7 @@ export const makeEvent = async (
     context: SignerContext,
     payload: PlainMessage<StreamEvent>['payload'],
     prevMiniblockHash?: Uint8Array,
+    tags?: PlainMessage<Tags>,
 ): Promise<Envelope> => {
     // const pl: Payload = payload instanceof Payload ? payload : new Payload(payload)
     const pl = payload // todo check this
@@ -62,7 +80,7 @@ export const makeEvent = async (
         )
     }
 
-    return _impl_makeEvent_impl_(context, pl, prevMiniblockHash)
+    return _impl_makeEvent_impl_(context, pl, prevMiniblockHash, tags)
 }
 
 export const makeEvents = async (
@@ -78,9 +96,12 @@ export const makeEvents = async (
     return events
 }
 
-export const unpackStream = async (stream?: StreamAndCookie): Promise<ParsedStreamResponse> => {
+export const unpackStream = async (
+    stream: StreamAndCookie | undefined,
+    opts: UnpackEnvelopeOpts | undefined,
+): Promise<ParsedStreamResponse> => {
     assert(stream !== undefined, 'bad stream')
-    const streamAndCookie = await unpackStreamAndCookie(stream)
+    const streamAndCookie = await unpackStreamAndCookie(stream, opts)
     assert(
         stream.miniblocks.length > 0,
         `bad stream: no blocks ${streamIdAsString(streamAndCookie.nextSyncCookie.streamId)}`,
@@ -109,7 +130,10 @@ export const unpackStream = async (stream?: StreamAndCookie): Promise<ParsedStre
     }
 }
 
-export const unpackStreamEx = async (miniblocks: Miniblock[]): Promise<ParsedStreamResponse> => {
+export const unpackStreamEx = async (
+    miniblocks: Miniblock[],
+    opts: UnpackEnvelopeOpts | undefined,
+): Promise<ParsedStreamResponse> => {
     const streamAndCookie: StreamAndCookie = new StreamAndCookie()
     streamAndCookie.events = []
     streamAndCookie.miniblocks = miniblocks
@@ -118,18 +142,19 @@ export const unpackStreamEx = async (miniblocks: Miniblock[]): Promise<ParsedStr
     // need to be non-null to avoid runtime errors when unpacking the stream into a StreamStateView,
     // which parses content by type.
     streamAndCookie.nextSyncCookie = new SyncCookie()
-    return unpackStream(streamAndCookie)
+    return unpackStream(streamAndCookie, opts)
 }
 
 export const unpackStreamAndCookie = async (
     streamAndCookie: StreamAndCookie,
+    opts: UnpackEnvelopeOpts | undefined,
 ): Promise<ParsedStreamAndCookie> => {
     assert(streamAndCookie.nextSyncCookie !== undefined, 'bad stream: no cookie')
     const miniblocks = await Promise.all(
-        streamAndCookie.miniblocks.map(async (mb) => await unpackMiniblock(mb)),
+        streamAndCookie.miniblocks.map(async (mb) => await unpackMiniblock(mb, opts)),
     )
     return {
-        events: await unpackEnvelopes(streamAndCookie.events),
+        events: await unpackEnvelopes(streamAndCookie.events, opts),
         nextSyncCookie: streamAndCookie.nextSyncCookie,
         miniblocks: miniblocks,
     }
@@ -138,7 +163,7 @@ export const unpackStreamAndCookie = async (
 // returns all events + the header event and pointer to header content
 export const unpackMiniblock = async (
     miniblock: Miniblock,
-    opts?: { disableChecks: boolean },
+    opts: UnpackEnvelopeOpts | undefined,
 ): Promise<ParsedMiniblock> => {
     check(isDefined(miniblock.header), 'Miniblock header is not set')
     const header = await unpackEnvelope(miniblock.header, opts)
@@ -156,66 +181,70 @@ export const unpackMiniblock = async (
 
 export const unpackEnvelope = async (
     envelope: Envelope,
-    opts?: { disableChecks: boolean },
+    opts: UnpackEnvelopeOpts | undefined,
 ): Promise<ParsedEvent> => {
     check(hasElements(envelope.event), 'Event base is not set', Err.BAD_EVENT)
     check(hasElements(envelope.hash), 'Event hash is not set', Err.BAD_EVENT)
     check(hasElements(envelope.signature), 'Event signature is not set', Err.BAD_EVENT)
 
     const event = StreamEvent.fromBinary(envelope.event)
+    let hash = envelope.hash
 
-    const runChecks = opts?.disableChecks !== true
-    if (runChecks) {
-        const hash = riverHash(envelope.event)
+    const doCheckEventHash = opts?.disableHashValidation !== true
+    if (doCheckEventHash) {
+        hash = riverHash(envelope.event)
         check(bin_equal(hash, envelope.hash), 'Event id is not valid', Err.BAD_EVENT_ID)
-
-        const recoveredPubKey = riverRecoverPubKey(hash, envelope.signature)
-
-        if (!hasElements(event.delegateSig)) {
-            const address = publicKeyToAddress(recoveredPubKey)
-            check(
-                bin_equal(address, event.creatorAddress),
-                'Event signature is not valid',
-                Err.BAD_EVENT_SIGNATURE,
-            )
-        } else {
-            checkDelegateSig({
-                delegatePubKey: recoveredPubKey,
-                creatorAddress: event.creatorAddress,
-                delegateSig: event.delegateSig,
-                expiryEpochMs: event.delegateExpiryEpochMs,
-            })
-        }
-
-        if (event.prevMiniblockHash) {
-            // TODO replace with a proper check
-            // check(
-            //     bin_equal(e.prevEvents[0], prevEventHash),
-            //     'prevEvents[0] is not valid',
-            //     Err.BAD_PREV_EVENTS,
-            // )
-        }
     }
 
-    return makeParsedEvent(event, envelope.hash)
+    const doCheckEventSignature = opts?.disableSignatureValidation !== true
+    if (doCheckEventSignature) {
+        checkEventSignature(event, hash, envelope.signature)
+    }
+
+    return makeParsedEvent(event, envelope.hash, envelope.signature)
 }
 
-export function makeParsedEvent(event: StreamEvent, hash?: Uint8Array) {
+export function checkEventSignature(event: StreamEvent, hash: Uint8Array, signature: Uint8Array) {
+    const recoveredPubKey = riverRecoverPubKey(hash, signature)
+
+    if (!hasElements(event.delegateSig)) {
+        const address = publicKeyToAddress(recoveredPubKey)
+        check(
+            bin_equal(address, event.creatorAddress),
+            'Event signature is not valid',
+            Err.BAD_EVENT_SIGNATURE,
+        )
+    } else {
+        checkDelegateSig({
+            delegatePubKey: recoveredPubKey,
+            creatorAddress: event.creatorAddress,
+            delegateSig: event.delegateSig,
+            expiryEpochMs: event.delegateExpiryEpochMs,
+        })
+    }
+}
+
+export function makeParsedEvent(
+    event: StreamEvent,
+    hash: Uint8Array | undefined,
+    signature: Uint8Array | undefined,
+) {
     hash = hash ?? riverHash(event.toBinary())
     return {
         event,
         hash,
         hashStr: bin_toHexString(hash),
+        signature,
         prevMiniblockHashStr: event.prevMiniblockHash
             ? bin_toHexString(event.prevMiniblockHash)
             : undefined,
         creatorUserId: userIdFromAddress(event.creatorAddress),
-    }
+    } satisfies ParsedEvent
 }
 
 export const unpackEnvelopes = async (
     event: Envelope[],
-    opts?: { disableChecks: boolean },
+    opts: UnpackEnvelopeOpts | undefined,
 ): Promise<ParsedEvent[]> => {
     const ret: ParsedEvent[] = []
     //let prevEventHash: Uint8Array | undefined = undefined
@@ -229,15 +258,18 @@ export const unpackEnvelopes = async (
 }
 
 // First unpacks miniblocks, including header events, then unpacks events from the minipool
-export const unpackStreamEnvelopes = async (stream: StreamAndCookie): Promise<ParsedEvent[]> => {
+export const unpackStreamEnvelopes = async (
+    stream: StreamAndCookie,
+    opts: UnpackEnvelopeOpts | undefined,
+): Promise<ParsedEvent[]> => {
     const ret: ParsedEvent[] = []
 
     for (const mb of stream.miniblocks) {
-        ret.push(...(await unpackEnvelopes(mb.events)))
-        ret.push(await unpackEnvelope(mb.header!))
+        ret.push(...(await unpackEnvelopes(mb.events, opts)))
+        ret.push(await unpackEnvelope(mb.header!, opts))
     }
 
-    ret.push(...(await unpackEnvelopes(stream.events)))
+    ret.push(...(await unpackEnvelopes(stream.events, opts)))
     return ret
 }
 
@@ -266,11 +298,29 @@ function numberToUint8Array64LE(num: number): Uint8Array {
     return result
 }
 
-function bigintToUint8Array64LE(num: bigint): Uint8Array {
+function bigintToUint8Array64(num: bigint, endianMode: 'bigEndian' | 'littleEndian'): Uint8Array {
     const buffer = new ArrayBuffer(8)
     const view = new DataView(buffer)
-    view.setBigInt64(0, num, true) // true for little endian
+    view.setBigInt64(0, num, endianMode === 'littleEndian') // true for little endian
     return new Uint8Array(buffer)
+}
+
+// Returns the absolute value of this BigInt as a big-endian byte array
+function bigIntToBytes(value: bigint): Uint8Array {
+    const abs = value < 0n ? -value : value
+    // Calculate the byte length needed to represent the BigInt
+    const byteLength = Math.ceil(abs.toString(16).length / 2)
+
+    // Create a buffer of the required length
+    const buffer = new Uint8Array(byteLength)
+
+    // Fill the buffer with the big-endian representation of the BigInt
+    let temp = abs
+    for (let i = byteLength - 1; i >= 0; i--) {
+        buffer[i] = Number(temp & 0xffn) // Extract last 8 bits
+        temp >>= 8n // Shift right by 8 bits
+    }
+    return buffer
 }
 
 function pushByteToUint8Array(arr: Uint8Array, byte: number): Uint8Array {
@@ -306,7 +356,7 @@ export function riverDelegateHashSrc(
     assertBytes(devicePublicKey)
     check(expiryEpochMs >= 0, 'Expiry should be positive')
     check(devicePublicKey.length === 64 || devicePublicKey.length === 65, 'Bad public key')
-    const expiryBytes = bigintToUint8Array64LE(expiryEpochMs)
+    const expiryBytes = bigintToUint8Array64(expiryEpochMs, 'littleEndian')
     const retVal = new Uint8Array(
         RIVER_SIG_HEADER.length + devicePublicKey.length + expiryBytes.length,
     )
@@ -314,6 +364,25 @@ export function riverDelegateHashSrc(
     retVal.set(devicePublicKey, RIVER_SIG_HEADER.length)
     retVal.set(expiryBytes, RIVER_SIG_HEADER.length + devicePublicKey.length)
     return retVal
+}
+
+export function notificationServiceHash(
+    userId: Uint8Array,
+    expiration: bigint, // unix seconds
+    challenge: Uint8Array,
+) {
+    const PREFIX = 'NS_AUTH:'
+    const prefixBytes = new TextEncoder().encode(PREFIX)
+    const expirationBytes = bigIntToBytes(expiration)
+    // aellis - i don't understand why we need to slice here, the go and ios code both truncate the leading 0's
+    check(userId.length === 20, 'User ID should be 20 bytes')
+    check(challenge.length === 16, 'Challenge should be 16 bytes')
+    return createHash('sha256')
+        .update(prefixBytes)
+        .update(userId)
+        .update(expirationBytes)
+        .update(challenge)
+        .digest()
 }
 
 export async function riverSign(

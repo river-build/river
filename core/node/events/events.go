@@ -17,7 +17,7 @@ import (
 func MakeStreamEvent(
 	wallet *crypto.Wallet,
 	payload IsStreamEvent_Payload,
-	prevMiniblockHash []byte,
+	prevMiniblock *MiniblockRef,
 ) (*StreamEvent, error) {
 	salt := make([]byte, 32)
 	_, err := rand.Read(salt)
@@ -29,11 +29,36 @@ func MakeStreamEvent(
 	epochMillis := time.Now().UnixNano() / int64(time.Millisecond)
 
 	event := &StreamEvent{
-		CreatorAddress:    wallet.Address.Bytes(),
-		Salt:              salt,
-		PrevMiniblockHash: prevMiniblockHash,
-		Payload:           payload,
-		CreatedAtEpochMs:  epochMillis,
+		CreatorAddress:   wallet.Address.Bytes(),
+		Salt:             salt,
+		Payload:          payload,
+		CreatedAtEpochMs: epochMillis,
+	}
+
+	if prevMiniblock != nil && prevMiniblock.Hash != (common.Hash{}) {
+		event.PrevMiniblockHash = prevMiniblock.Hash[:]
+		event.PrevMiniblockNum = prevMiniblock.Num
+	}
+
+	return event, nil
+}
+
+func MakeStreamEventWithTags(
+	wallet *crypto.Wallet,
+	payload IsStreamEvent_Payload,
+	prevMiniblock *MiniblockRef,
+	tags *Tags,
+) (*StreamEvent, error) {
+	event, err := MakeStreamEvent(wallet, payload, prevMiniblock)
+	if err != nil {
+		return nil, err
+	}
+
+	event.Tags = tags
+
+	if prevMiniblock != nil && prevMiniblock.Hash != (common.Hash{}) {
+		event.PrevMiniblockHash = prevMiniblock.Hash[:]
+		event.PrevMiniblockNum = prevMiniblock.Num
 	}
 
 	return event, nil
@@ -42,7 +67,7 @@ func MakeStreamEvent(
 func MakeDelegatedStreamEvent(
 	wallet *crypto.Wallet,
 	payload IsStreamEvent_Payload,
-	prevMiniblockHash []byte,
+	prevMiniblock *MiniblockRef,
 	delegateSig []byte,
 ) (*StreamEvent, error) {
 	salt := make([]byte, 32)
@@ -57,7 +82,8 @@ func MakeDelegatedStreamEvent(
 	event := &StreamEvent{
 		CreatorAddress:    wallet.Address.Bytes(),
 		Salt:              salt,
-		PrevMiniblockHash: prevMiniblockHash,
+		PrevMiniblockHash: prevMiniblock.Hash[:],
+		PrevMiniblockNum:  prevMiniblock.Num,
 		Payload:           payload,
 		DelegateSig:       delegateSig,
 		CreatedAtEpochMs:  epochMillis,
@@ -90,9 +116,22 @@ func MakeEnvelopeWithEvent(wallet *crypto.Wallet, streamEvent *StreamEvent) (*En
 func MakeEnvelopeWithPayload(
 	wallet *crypto.Wallet,
 	payload IsStreamEvent_Payload,
-	prevMiniblockHash []byte,
+	prevMiniblock *MiniblockRef,
 ) (*Envelope, error) {
-	streamEvent, err := MakeStreamEvent(wallet, payload, prevMiniblockHash)
+	streamEvent, err := MakeStreamEvent(wallet, payload, prevMiniblock)
+	if err != nil {
+		return nil, err
+	}
+	return MakeEnvelopeWithEvent(wallet, streamEvent)
+}
+
+func MakeEnvelopeWithPayloadAndTags(
+	wallet *crypto.Wallet,
+	payload IsStreamEvent_Payload,
+	prevMiniblock *MiniblockRef,
+	tags *Tags,
+) (*Envelope, error) {
+	streamEvent, err := MakeStreamEventWithTags(wallet, payload, prevMiniblock, tags)
 	if err != nil {
 		return nil, err
 	}
@@ -102,9 +141,9 @@ func MakeEnvelopeWithPayload(
 func MakeParsedEventWithPayload(
 	wallet *crypto.Wallet,
 	payload IsStreamEvent_Payload,
-	prevMiniblockHash []byte,
+	prevMiniblock *MiniblockRef,
 ) (*ParsedEvent, error) {
-	streamEvent, err := MakeStreamEvent(wallet, payload, prevMiniblockHash)
+	streamEvent, err := MakeStreamEvent(wallet, payload, prevMiniblock)
 	if err != nil {
 		return nil, err
 	}
@@ -114,12 +153,11 @@ func MakeParsedEventWithPayload(
 		return nil, err
 	}
 
-	prevMiniBlockHash := common.BytesToHash(prevMiniblockHash)
 	return &ParsedEvent{
-		Event:             streamEvent,
-		Envelope:          envelope,
-		Hash:              common.BytesToHash(envelope.Hash),
-		PrevMiniblockHash: &prevMiniBlockHash,
+		Event:        streamEvent,
+		Envelope:     envelope,
+		Hash:         common.BytesToHash(envelope.Hash),
+		MiniblockRef: prevMiniblock,
 	}, nil
 }
 
@@ -159,6 +197,40 @@ func Make_MemberPayload_DisplayName(displayName *EncryptedData) *StreamEvent_Mem
 			Content: &MemberPayload_DisplayName{
 				DisplayName: displayName,
 			},
+		},
+	}
+}
+
+func Make_DmChannelPayload_Inception(
+	streamId StreamId,
+	firstPartyAddress common.Address,
+	secondPartyAddress common.Address,
+	settings *StreamSettings,
+) *StreamEvent_DmChannelPayload {
+	return &StreamEvent_DmChannelPayload{
+		DmChannelPayload: &DmChannelPayload{
+			Content: &DmChannelPayload_Inception_{
+				Inception: &DmChannelPayload_Inception{
+					StreamId:           streamId[:],
+					FirstPartyAddress:  firstPartyAddress[:],
+					SecondPartyAddress: secondPartyAddress[:],
+					Settings:           settings,
+				},
+			},
+		}}
+}
+
+func Make_GdmChannelPayload_Inception(
+	streamId StreamId,
+	settings *StreamSettings,
+) *StreamEvent_GdmChannelPayload {
+	return &StreamEvent_GdmChannelPayload{
+		GdmChannelPayload: &GdmChannelPayload{
+			Content: &GdmChannelPayload_Inception_{
+				Inception: &GdmChannelPayload_Inception{
+					StreamId: streamId[:],
+					Settings: settings,
+				}},
 		},
 	}
 }
@@ -206,6 +278,30 @@ func Make_ChannelPayload_Membership(
 		spaceIdBytes = nil
 	}
 	return Make_MemberPayload_Membership(op, userAddress, initiatorAddress, spaceIdBytes)
+}
+
+func Make_DMChannelPayload_Message(content string) *StreamEvent_DmChannelPayload {
+	return &StreamEvent_DmChannelPayload{
+		DmChannelPayload: &DmChannelPayload{
+			Content: &DmChannelPayload_Message{
+				Message: &EncryptedData{
+					Ciphertext: content,
+				},
+			},
+		},
+	}
+}
+
+func Make_GDMChannelPayload_Message(content string) *StreamEvent_GdmChannelPayload {
+	return &StreamEvent_GdmChannelPayload{
+		GdmChannelPayload: &GdmChannelPayload{
+			Content: &GdmChannelPayload_Message{
+				Message: &EncryptedData{
+					Ciphertext: content,
+				},
+			},
+		},
+	}
 }
 
 func Make_ChannelPayload_Message(content string) *StreamEvent_ChannelPayload {
@@ -394,6 +490,18 @@ func Make_UserSettingsPayload_UserBlock(userBlock *UserSettingsPayload_UserBlock
 		UserSettingsPayload: &UserSettingsPayload{
 			Content: &UserSettingsPayload_UserBlock_{
 				UserBlock: userBlock,
+			},
+		},
+	}
+}
+
+func Make_UserSettingsPayload_FullyReadMarkers(
+	fullyReadMarkers *UserSettingsPayload_FullyReadMarkers,
+) *StreamEvent_UserSettingsPayload {
+	return &StreamEvent_UserSettingsPayload{
+		UserSettingsPayload: &UserSettingsPayload{
+			Content: &UserSettingsPayload_FullyReadMarkers_{
+				FullyReadMarkers: fullyReadMarkers,
 			},
 		},
 	}

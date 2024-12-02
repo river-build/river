@@ -17,6 +17,7 @@ import {SpaceHelper} from "contracts/test/spaces/SpaceHelper.sol";
 import {DeploySpaceOwnerFacet, SpaceOwner} from "contracts/scripts/deployments/facets/DeploySpaceOwnerFacet.s.sol";
 import {DeployArchitect} from "contracts/scripts/deployments/facets/DeployArchitect.s.sol";
 
+import {ICreateSpace} from "contracts/src/factory/facets/create/ICreateSpace.sol";
 contract ForkSpaceOwner is
   IArchitectBase,
   ISpaceOwnerBase,
@@ -67,7 +68,7 @@ contract ForkSpaceOwner is
     diamondCut.diamondCut(cut, address(0), new bytes(0));
 
     bytes4[] memory architectSelectors = new bytes4[](1);
-    architectSelectors[0] = IArchitect.createSpace.selector;
+    architectSelectors[0] = ICreateSpace.createSpace.selector;
     IDiamond.FacetCut[] memory architectCut = new IDiamond.FacetCut[](1);
     architectCut[0] = IDiamond.FacetCut({
       facetAddress: architectFacet,
@@ -90,17 +91,10 @@ contract ForkSpaceOwner is
       .settings
       .pricingModule = 0x7E49Fcec32E060a3D710d568B249c0ED69f01005;
 
-    IArchitect spaceArchitect = IArchitect(spaceFactory);
+    ICreateSpace spaceArchitect = ICreateSpace(spaceFactory);
 
     vm.prank(founder);
-    address spaceAdd = spaceArchitect.createSpace(spaceInfo);
-
-    Space memory space = SpaceOwner(spaceOwnerDiamond).getSpaceInfo(spaceAdd);
-    // verify space.shortDescription is longer than 0
-    assertTrue(
-      bytes(space.shortDescription).length > 0,
-      "Short description is empty"
-    );
+    spaceArchitect.createSpace(spaceInfo);
   }
 
   function test_getSpaceInfo() external view onlyForked {

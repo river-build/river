@@ -17,25 +17,38 @@ func mbDataForNumb(n int64) []byte {
 }
 
 func TestArchive(t *testing.T) {
-	require := require.New(t)
+	t.Run("TestArchive_legacy", func(t *testing.T) {
+		params := setupStreamStorageTest(t, false)
+		testArchive(params)
+	})
 
-	ctx, pg, testParams := setupTest()
-	defer testParams.closer()
+	t.Run("TestArchive_migrated", func(t *testing.T) {
+		params := setupStreamStorageTest(t, true)
+		testArchive(params)
+	})
+}
+
+func testArchive(params *testStreamStoreParams) {
+	require := require.New(params.t)
+
+	ctx := params.ctx
+	pgStreamStore := params.pgStreamStore
+	defer params.closer()
 
 	streamId1 := testutils.FakeStreamId(STREAM_CHANNEL_BIN)
 
-	_, err := pg.GetMaxArchivedMiniblockNumber(ctx, streamId1)
+	_, err := pgStreamStore.GetMaxArchivedMiniblockNumber(ctx, streamId1)
 	require.Error(err)
 	require.Equal(Err_NOT_FOUND, AsRiverError(err).Code)
 
-	err = pg.CreateStreamArchiveStorage(ctx, streamId1)
+	err = pgStreamStore.CreateStreamArchiveStorage(ctx, streamId1)
 	require.NoError(err)
 
-	err = pg.CreateStreamArchiveStorage(ctx, streamId1)
+	err = pgStreamStore.CreateStreamArchiveStorage(ctx, streamId1)
 	require.Error(err)
 	require.Equal(Err_ALREADY_EXISTS, AsRiverError(err).Code)
 
-	bn, err := pg.GetMaxArchivedMiniblockNumber(ctx, streamId1)
+	bn, err := pgStreamStore.GetMaxArchivedMiniblockNumber(ctx, streamId1)
 	require.NoError(err)
 	require.Equal(int64(-1), bn)
 
@@ -45,13 +58,13 @@ func TestArchive(t *testing.T) {
 		mbDataForNumb(2),
 	}
 
-	err = pg.WriteArchiveMiniblocks(ctx, streamId1, 1, data)
+	err = pgStreamStore.WriteArchiveMiniblocks(ctx, streamId1, 1, data)
 	require.Error(err)
 
-	err = pg.WriteArchiveMiniblocks(ctx, streamId1, 0, data)
+	err = pgStreamStore.WriteArchiveMiniblocks(ctx, streamId1, 0, data)
 	require.NoError(err)
 
-	readMBs, err := pg.ReadMiniblocks(ctx, streamId1, 0, 3)
+	readMBs, err := pgStreamStore.ReadMiniblocks(ctx, streamId1, 0, 3)
 	require.NoError(err)
 	require.Len(readMBs, 3)
 	require.Equal(data, readMBs)
@@ -62,24 +75,24 @@ func TestArchive(t *testing.T) {
 		mbDataForNumb(5),
 	}
 
-	bn, err = pg.GetMaxArchivedMiniblockNumber(ctx, streamId1)
+	bn, err = pgStreamStore.GetMaxArchivedMiniblockNumber(ctx, streamId1)
 	require.NoError(err)
 	require.Equal(int64(2), bn)
 
-	err = pg.WriteArchiveMiniblocks(ctx, streamId1, 2, data2)
+	err = pgStreamStore.WriteArchiveMiniblocks(ctx, streamId1, 2, data2)
 	require.Error(err)
 
-	err = pg.WriteArchiveMiniblocks(ctx, streamId1, 10, data2)
+	err = pgStreamStore.WriteArchiveMiniblocks(ctx, streamId1, 10, data2)
 	require.Error(err)
 
-	err = pg.WriteArchiveMiniblocks(ctx, streamId1, 3, data2)
+	err = pgStreamStore.WriteArchiveMiniblocks(ctx, streamId1, 3, data2)
 	require.NoError(err)
 
-	readMBs, err = pg.ReadMiniblocks(ctx, streamId1, 0, 8)
+	readMBs, err = pgStreamStore.ReadMiniblocks(ctx, streamId1, 0, 8)
 	require.NoError(err)
 	require.Equal(append(data, data2...), readMBs)
 
-	bn, err = pg.GetMaxArchivedMiniblockNumber(ctx, streamId1)
+	bn, err = pgStreamStore.GetMaxArchivedMiniblockNumber(ctx, streamId1)
 	require.NoError(err)
 	require.Equal(int64(5), bn)
 }

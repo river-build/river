@@ -17,7 +17,9 @@ func GetDefaultConfig() *Config {
 	return &Config{
 		Port: 443,
 		Database: DatabaseConfig{
-			StartupDelay: 2 * time.Second,
+			StartupDelay:          2 * time.Second,
+			NumPartitions:         256,
+			MigrateStreamCreation: true,
 		},
 		StorageType:  "postgres",
 		DisableHttps: false,
@@ -37,6 +39,11 @@ func GetDefaultConfig() *Config {
 		},
 		// TODO: ArchitectContract: ContractConfig{},
 		// TODO: RegistryContract:  ContractConfig{},
+		StreamReconciliation: StreamReconciliationConfig{
+			InitialWorkerPoolSize: 4,
+			OnlineWorkerPoolSize:  32,
+			GetMiniblocksPageSize: 128,
+		},
 		Log: LogConfig{
 			Level:   "info", // NOTE: this default is replaced by flag value
 			Console: true,   // NOTE: this default is replaced by flag value
@@ -56,12 +63,24 @@ func GetDefaultConfig() *Config {
 			PrintStatsPeriod: 10 * time.Second,
 		},
 		DebugEndpoints: DebugEndpointsConfig{
-			Cache:           true,
-			Memory:          true,
-			PProf:           false,
-			Stacks:          true,
-			StacksMaxSizeKb: 5 * 1024,
-			TxPool:          true,
+			Cache:                 true,
+			Memory:                true,
+			PProf:                 false,
+			Stacks:                true,
+			StacksMaxSizeKb:       5 * 1024,
+			TxPool:                true,
+			EnableStorageEndpoint: true,
+		},
+		Scrubbing: ScrubbingConfig{
+			ScrubEligibleDuration: 4 * time.Hour,
+		},
+		RiverRegistry: RiverRegistryConfig{
+			PageSize:               5000,
+			ParallelReaders:        8,
+			MaxRetries:             100,
+			MaxRetryElapsedTime:    5 * time.Minute,
+			SingleCallTimeout:      30 * time.Second, // geth internal timeout is 30 seconds
+			ProgressReportInterval: 10 * time.Second,
 		},
 	}
 }
@@ -98,6 +117,12 @@ type Config struct {
 	Metrics             MetricsConfig
 	PerformanceTracking PerformanceTrackingConfig
 
+	// Scrubbing
+	Scrubbing ScrubbingConfig
+
+	// Stream reconciliation
+	StreamReconciliation StreamReconciliationConfig
+
 	// Network configuration
 	Network NetworkConfig
 
@@ -110,7 +135,7 @@ type Config struct {
 	// ShutdownTimeout is the time the node waits for the graceful shutdown of the server.
 	// Then all active connections are closed and the node exits.
 	// If StandByOnStart is true, it's recommended to set it to the half of DatabaseConfig.StartupDelay.
-	// If set to 0, then default value is used. To disable the timeout set to 1ms or less.
+	// If set to 0, timeout is disabled and node will close all connections immediately.
 	ShutdownTimeout time.Duration
 
 	// Graffiti is returned in status and info requests.
@@ -118,6 +143,9 @@ type Config struct {
 
 	// Should be set if node is run in archive mode.
 	Archive ArchiveConfig
+
+	// Notifications must be set when run in notification mode.
+	Notifications NotificationsConfig
 
 	// Feature flags
 	// Used to disable functionality for some testing setups.
@@ -141,15 +169,9 @@ type Config struct {
 
 	ChainConfigs map[uint64]*ChainConfig `mapstructure:"-"` // This is a derived field from Chains.
 
-	// XChainBlockchains is a list of chain IDs that are allowed to be used in xChain checks.
-	// TODO: this value is going to be moved on-chain so same setting is shared between all nodes and clients.
-	// If value is not set, as a fallback ChainConfigs keys are used.
-	XChainBlockchains []uint64
-
 	// extra xChain configuration
-	EntitlementContract           ContractConfig `mapstructure:"entitlement_contract"`
-	TestEntitlementContract       ContractConfig `mapstructure:"test_contract"`
-	TestCustomEntitlementContract ContractConfig `mapstructure:"test_custom_entitlement_contract"`
+	EntitlementContract     ContractConfig `mapstructure:"entitlement_contract"`
+	TestEntitlementContract ContractConfig `mapstructure:"test_contract"`
 
 	// History indicates how far back xchain must look for entitlement check requests after start
 	History time.Duration
@@ -162,6 +184,9 @@ type Config struct {
 	EnableDebugEndpoints bool
 
 	DebugEndpoints DebugEndpointsConfig
+
+	// RiverRegistry contains settings for calling registry contract on River chain.
+	RiverRegistry RiverRegistryConfig
 }
 
 type TLSConfig struct {
@@ -187,20 +212,36 @@ func (nc *NetworkConfig) GetHttpRequestTimeout() time.Duration {
 }
 
 type DatabaseConfig struct {
-	Url                       string `dlog:"omit" json:"-" yaml:"-"` // Sensitive data, omitted from logging.
-	Host                      string
-	Port                      int
-	User                      string
-	Password                  string `dlog:"omit" json:"-" yaml:"-"` // Sensitive data, omitted from logging.
-	Database                  string
-	Extra                     string
-	StreamingConnectionsRatio float32
+	Url      string `dlog:"omit" json:"-" yaml:"-"` // Sensitive data, omitted from logging.
+	Host     string
+	Port     int
+	User     string
+	Password string `dlog:"omit" json:"-" yaml:"-"` // Sensitive data, omitted from logging.
+	Database string
+	Extra    string
 
 	// StartupDelay is the time the node waits between taking control of the database and starting the server
 	// if other nodes' records are found in the database.
 	// If StandByOnStart is true, it's recommended to set it to the double of Config.ShutdownTimeout.
 	// If set to 0, then default value is used. To disable the delay set to 1ms or less.
 	StartupDelay time.Duration
+
+	// IsolationLevel is the transaction isolation level to use for the database operations.
+	// Allowed values: "serializable", "repeatable read", "read committed".
+	// If not set or value can't be parsed, defaults to "serializable".
+	// Intention is to migrate to "read committed" for performance reasons after testing is complete.
+	IsolationLevel string
+
+	// MigrateStreamCreation indicates to the database that all new streams should be allocated
+	// in one of the 256 pre-allocated stream partitions for either regular or media streams instead
+	// of allocating new tables per stream according to the legacy schema. If this flag is unset, a
+	// node will continue to allocate new tables for each stream as it is created.
+	MigrateStreamCreation bool
+
+	// NumPartitions specifies the number of partitions to use when creating the schema for stream
+	// data storage. If <= 0, a default value of 256 will be used. No more than 256 partitions is
+	// supported at this time.
+	NumPartitions int
 }
 
 func (c DatabaseConfig) GetUrl() string {
@@ -249,6 +290,9 @@ type ChainConfig struct {
 
 	TransactionPool TransactionPoolConfig
 
+	// DisableReplacePendingTransactionOnBoot will not try to replace transaction that are pending after start.
+	DisableReplacePendingTransactionOnBoot bool
+
 	// TODO: these need to be removed from here
 	LinkedWalletsLimit                        int
 	ContractCallsTimeoutMs                    int
@@ -260,6 +304,8 @@ type ChainConfig struct {
 	PositiveEntitlementManagerCacheTTLSeconds int
 	NegativeEntitlementManagerCacheSize       int
 	NegativeEntitlementManagerCacheTTLSeconds int
+	LinkedWalletCacheSize                     int
+	LinkedWalletCacheTTLSeconds               int
 }
 
 func (c ChainConfig) BlockTime() time.Duration {
@@ -313,6 +359,68 @@ type ArchiveConfig struct {
 	StreamsContractCallPageSize int64 // If 0, default to 5000.
 }
 
+type APNPushNotificationsConfig struct {
+	// IosAppBundleID is used as the topic ID for notifications.
+	AppBundleID string
+	// Expiration holds the duration in which the notification must be delivered. After that
+	// the server might drop the notification. If set to 0 a default of 12 hours is used.
+	Expiration time.Duration
+	// KeyID from developer account (Certificates, Identifiers & Profiles -> Keys)
+	KeyID string
+	// TeamID from developer account (View Account -> Membership)
+	TeamID string
+	// AuthKey contains the private key to authenticate the notification service with the APN service
+	AuthKey string
+}
+
+type WebPushVapidNotificationConfig struct {
+	// PrivateKey is the private key of the public key that is shared with the client
+	// and used to sign push notifications that allows the client to verify the incoming
+	// notification for origin and validity.
+	PrivateKey string
+	// PublicKey as shared with the client that is used for subscribing and verifying
+	// the incoming push notification.
+	PublicKey string
+	// Subject must either be a URL or a 'mailto:' address.
+	Subject string
+}
+
+type WebPushNotificationConfig struct {
+	Vapid WebPushVapidNotificationConfig
+}
+
+type NotificationsConfig struct {
+	// SubscriptionExpirationDuration if the client isn't seen within this duration stop sending
+	// notifications to it. Defaults to 90 days.
+	SubscriptionExpirationDuration time.Duration
+	// Simulate if set to true uses the simulator notification backend that doesn't
+	// send notifications to the client but only logs them.
+	// This is intended for development purposes. Defaults to false.
+	Simulate bool
+	// APN holds the Apple Push Notification settings
+	APN APNPushNotificationsConfig
+	// Web holds the Web Push notification settings
+	Web WebPushNotificationConfig `mapstructure:"webpush"`
+
+	// Authentication holds configuration for the Client API authentication service.
+	Authentication struct {
+		// ChallengeTimeout is the lifetime an authentication challenge is valid (default=30s).
+		ChallengeTimeout time.Duration
+		// SessionTokenKey contains the configuration for the JWT session token.
+		SessionToken struct {
+			// Lifetime indicates how long a session token is valid (default=30m).
+			Lifetime time.Duration
+			// Key holds the secret key that is used to sign the session token.
+			Key struct {
+				// Algorithm indicates how the session token is signed (only HS256 is supported)
+				Algorithm string
+				// Key holds the hex encoded key
+				Key string
+			}
+		}
+	}
+}
+
 type LogConfig struct {
 	Level        string // Used for both file and console if their levels not set explicitly
 	File         string // Path to log file
@@ -348,6 +456,30 @@ type DebugEndpointsConfig struct {
 	Stacks          bool
 	StacksMaxSizeKb int
 	TxPool          bool
+
+	// Make storage statistics available via debug endpoints. This may involve running queries
+	// on the underlying database.
+	EnableStorageEndpoint bool
+}
+
+type RiverRegistryConfig struct {
+	// PageSize is the number of streams to read from the contract at once using GetPaginatedStreams.
+	PageSize int
+
+	// Number of parallel readers to use when reading streams from the contract.
+	ParallelReaders int
+
+	// If not 0, stop retrying failed GetPaginatedStreams calls after this number of retries.
+	MaxRetries int
+
+	// Stop retrying failed GetPaginatedStreams calls after this duration.
+	MaxRetryElapsedTime time.Duration
+
+	// Timeout for a singe call to GetPaginatedStreams.
+	SingleCallTimeout time.Duration
+
+	// ProgressReportInterval is the interval at which to report progress of the GetPaginatedStreams calls.
+	ProgressReportInterval time.Duration
 }
 
 func (ac *ArchiveConfig) GetReadMiniblocksSize() uint64 {
@@ -388,6 +520,24 @@ func (ac *ArchiveConfig) GetStreamsContractCallPageSize() int64 {
 	return ac.StreamsContractCallPageSize
 }
 
+type ScrubbingConfig struct {
+	// ScrubEligibleDuration is the minimum length of time that must pass before a stream is eligible
+	// to be re-scrubbed.
+	// If 0, scrubbing is disabled.
+	ScrubEligibleDuration time.Duration
+}
+
+type StreamReconciliationConfig struct {
+	// InitialWorkerPoolSize is the size of the worker pool for initial background stream reconciliation tasks on node start.
+	InitialWorkerPoolSize int
+
+	// OnlineWorkerPoolSize is the size of the worker pool for ongoing stream reconciliation tasks.
+	OnlineWorkerPoolSize int
+
+	// GetMiniblocksPageSize is the number of miniblocks to read at once from the remote node.
+	GetMiniblocksPageSize int64
+}
+
 type FilterConfig struct {
 	// If set, only archive streams hosted on the nodes with the specified addresses.
 	Nodes []string
@@ -420,10 +570,6 @@ func (c *Config) GetWalletLinkContractAddress() common.Address {
 
 func (c *Config) GetTestEntitlementContractAddress() common.Address {
 	return c.TestEntitlementContract.Address
-}
-
-func (c *Config) GetTestCustomEntitlementContractAddress() common.Address {
-	return c.TestCustomEntitlementContract.Address
 }
 
 func (c *Config) Init() error {
@@ -508,13 +654,6 @@ func (c *Config) parseChains() error {
 		}
 	}
 	c.ChainConfigs = chainConfigs
-
-	// If XChainBlockchains is not set, use all chain IDs from ChainConfigs.
-	if len(c.XChainBlockchains) == 0 {
-		for chainID := range chainConfigs {
-			c.XChainBlockchains = append(c.XChainBlockchains, chainID)
-		}
-	}
 
 	return nil
 }

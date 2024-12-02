@@ -12,6 +12,7 @@ import (
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/base"
 	. "github.com/river-build/river/core/node/protocol"
+	"github.com/river-build/river/core/node/registries"
 	"github.com/river-build/river/core/xchain/contracts"
 	"github.com/river-build/river/core/xchain/entitlement"
 	"github.com/river-build/river/core/xchain/util"
@@ -41,6 +42,10 @@ type (
 		config          *config.Config
 		cancel          context.CancelFunc
 		evaluator       *entitlement.Evaluator
+
+		riverChain       *crypto.Blockchain
+		registryContract *registries.RiverRegistryContract
+		chainConfig      crypto.OnChainConfiguration
 
 		// Metrics
 		metrics                           infra.MetricsFactory
@@ -77,10 +82,15 @@ type XChain interface {
 
 // New creates a new xchain instance that reads entitlement requests from Base,
 // processes the requests and writes the results back to Base.
+// Note: sometimes we pass in a shared baseChain created by the stream service.
+// The stream service does not monitor the base chain for events, so in instances
+// where the provided baseChain is not nil we expect the xchain service to be
+// responsible for chain monitoring.
 func New(
 	ctx context.Context,
 	cfg *config.Config,
 	baseChain *crypto.Blockchain,
+	riverChain *crypto.Blockchain,
 	workerID int,
 	metricsRegistry *prometheus.Registry,
 ) (server *xchain, err error) {
@@ -95,7 +105,42 @@ func New(
 
 	metrics := infra.NewMetricsFactory(metricsRegistry, "river", "xchain")
 
-	evaluator, err := entitlement.NewEvaluatorFromConfig(ctx, cfg, metrics)
+	var wallet *crypto.Wallet
+	if baseChain == nil {
+		wallet, err = util.LoadWallet(ctx)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		wallet = baseChain.Wallet
+	}
+
+	if riverChain == nil {
+		riverChain, err = crypto.NewBlockchain(ctx, &cfg.RiverChain, wallet, metrics, nil)
+		if err != nil {
+			return nil, err
+		}
+		riverChain.StartChainMonitor(ctx)
+	}
+
+	registryContract, err := registries.NewRiverRegistryContract(
+		ctx,
+		riverChain,
+		&cfg.RegistryContract,
+		&cfg.RiverRegistry,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	chainConfig, err := crypto.NewOnChainConfig(
+		ctx, riverChain.Client, registryContract.Address, riverChain.InitialBlockNum, riverChain.ChainMonitor,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	evaluator, err := entitlement.NewEvaluatorFromConfig(ctx, cfg, chainConfig, metrics)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +158,8 @@ func New(
 	var (
 		log = dlog.FromCtx(ctx).
 			With("worker_id", workerID).
-			With("application", "xchain")
+			With("application", "xchain").
+			With("nodeAddress", wallet.Address.Hex())
 		checkerContract = bind.NewBoundContract(
 			cfg.GetEntitlementContractAddress(),
 			*checkerABI,
@@ -123,36 +169,25 @@ func New(
 		)
 	)
 
-	log.Info("Starting xchain node", "cfg", cfg)
-
-	var wallet *crypto.Wallet
-	if baseChain == nil {
-		wallet, err = util.LoadWallet(ctx)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		wallet = baseChain.Wallet
-	}
-	log = log.With("nodeAddress", wallet.Address.Hex())
+	log.Info("Starting xchain node", "cfg", cfg, "onChainConfig", chainConfig.Get())
 
 	if baseChain == nil {
 		baseChain, err = crypto.NewBlockchain(ctx, &cfg.BaseChain, wallet, metrics, nil)
 		if err != nil {
 			return nil, err
 		}
-		// determine from which block to start processing entitlement check requests
-		startBlock, err := util.StartBlockNumberWithHistory(ctx, baseChain.Client, cfg.History)
-		if err != nil {
-			return nil, err
-		}
-		if startBlock < baseChain.InitialBlockNum.AsUint64() {
-			baseChain.InitialBlockNum = crypto.BlockNumber(startBlock)
-		}
-
-		log.Info("Start processing entitlement check requests", "startBlock", baseChain.InitialBlockNum)
-		baseChain.StartChainMonitor(ctx)
 	}
+	// determine from which block to start processing entitlement check requests
+	startBlock, err := util.StartBlockNumberWithHistory(ctx, baseChain.Client, cfg.History)
+	if err != nil {
+		return nil, err
+	}
+	if startBlock < baseChain.InitialBlockNum.AsUint64() {
+		baseChain.InitialBlockNum = crypto.BlockNumber(startBlock)
+	}
+
+	log.Info("Start processing entitlement check requests", "startBlock", baseChain.InitialBlockNum)
+	baseChain.StartChainMonitor(ctx)
 
 	decoder, err := crypto.NewEVMErrorDecoder(
 		base.IEntitlementCheckerMetaData,
@@ -179,6 +214,10 @@ func New(
 		evmErrDecoder:   decoder,
 		config:          cfg,
 		evaluator:       evaluator,
+
+		riverChain:       riverChain,
+		registryContract: registryContract,
+		chainConfig:      chainConfig,
 
 		metrics:                   metrics,
 		entitlementCheckRequested: entCounter.MustCurryWith(map[string]string{"op": "requested"}),

@@ -127,15 +127,14 @@
   },
   "settings": {
     "remappings": [
-      "@openzeppelin/=lib/@openzeppelin/",
-      "@prb/math/=lib/@prb/math/src/",
-      "@prb/test/=lib/@prb/test/src/",
-      "account-abstraction/=lib/account-abstraction/contracts/",
-      "base64/=lib/base64/",
-      "ds-test/=lib/ds-test/src/",
-      "forge-std/=lib/forge-std/src/",
-      "hardhat-deploy/=lib/hardhat-deploy/",
-      "solady/=lib/solady/src/"
+      "@openzeppelin/=node_modules/@openzeppelin/",
+      "@prb/math/=node_modules/@prb/math/src/",
+      "@prb/test/=node_modules/@prb/test/src/",
+      "account-abstraction/=node_modules/account-abstraction/contracts/",
+      "ds-test/=node_modules/ds-test/src/",
+      "forge-std/=node_modules/forge-std/src/",
+      "hardhat-deploy/=node_modules/hardhat-deploy/",
+      "solady/=node_modules/solady/src/"
     ],
     "optimizer": {
       "enabled": true,
@@ -161,10 +160,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol": {
-      "keccak256": "0x53121c9c2db2eeaa44090110909be15a494f343daa98fb41c0136497c8b2d99a",
+      "keccak256": "0x362d73e7b5a9626ffb3c76ebd7c41cae6240ce0a8d2ec401df345814a39b303b",
       "urls": [
-        "bzz-raw://c1c6a4bc911f33568d25669f96996377efbf4e2b28dd54f9bf7c3795dae49f90",
-        "dweb:/ipfs/QmXPaHFcWoPvRvqgMwgFWS91tmgMyNUn93bCzGGFRujtLw"
+        "bzz-raw://c750b186885d1af5cda10755c8443629b270d18b221c1054a7e9344adbea7ce4",
+        "dweb:/ipfs/QmcwkJjGj8PGy43KRRh2c4ggcjBVD65XDsoq8H5LozTeN2"
       ],
       "license": "MIT"
     }

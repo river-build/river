@@ -57,7 +57,7 @@ func DeleteTestSchema(ctx context.Context, dbUrl string, schemaName string) erro
 	return err
 }
 
-func StartDB(ctx context.Context) (*config.DatabaseConfig, string, func(), error) {
+func ConfigureDB(ctx context.Context) (*config.DatabaseConfig, string, func(), error) {
 	dbSchemaName := os.Getenv("TEST_DATABASE_SCHEMA_NAME")
 	if dbSchemaName == "" {
 		b := make([]byte, 16)
@@ -76,14 +76,14 @@ func StartDB(ctx context.Context) (*config.DatabaseConfig, string, func(), error
 		}, dbSchemaName, func() {}, nil
 	} else {
 		cfg := &config.DatabaseConfig{
-			Host:                      "localhost",
-			Port:                      5433,
-			User:                      "postgres",
-			Password:                  "postgres",
-			Database:                  "river",
-			Extra:                     "?sslmode=disable&pool_max_conns=1000",
-			StreamingConnectionsRatio: 0.1,
-			StartupDelay:              2 * time.Millisecond,
+			Host:          "localhost",
+			Port:          5433,
+			User:          "postgres",
+			Password:      "postgres",
+			Database:      "river",
+			Extra:         "?sslmode=disable&pool_max_conns=1000",
+			StartupDelay:  2 * time.Millisecond,
+			NumPartitions: 4,
 		}
 		return cfg,
 			dbSchemaName,

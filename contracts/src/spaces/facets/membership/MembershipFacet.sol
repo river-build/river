@@ -12,6 +12,7 @@ import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.s
 import {ReentrancyGuard} from "contracts/src/diamond/facets/reentrancy/ReentrancyGuard.sol";
 import {MembershipJoin} from "./join/MembershipJoin.sol";
 import {Facet} from "contracts/src/diamond/facets/Facet.sol";
+
 contract MembershipFacet is
   IMembership,
   MembershipJoin,
@@ -23,10 +24,18 @@ contract MembershipFacet is
   // =============================================================
 
   /// @inheritdoc IMembership
-  function withdraw(address account) external onlyOwner {
+  function withdraw(address account) external onlyOwner nonReentrant {
     if (account == address(0)) revert Membership__InvalidAddress();
+
+    // get the balance
     uint256 balance = _getCreatorBalance();
+
+    // verify the balance is not 0
     if (balance == 0) revert Membership__InsufficientPayment();
+
+    // reset the balance
+    _setCreatorBalance(0);
+
     CurrencyTransfer.transferCurrency(
       _getMembershipCurrency(),
       address(this),
@@ -41,7 +50,8 @@ contract MembershipFacet is
 
   /// @inheritdoc IMembership
   function joinSpace(address receiver) external payable nonReentrant {
-    _joinSpaceWithReferral(receiver, ReferralTypes(address(0), address(0), ""));
+    ReferralTypes memory emptyReferral;
+    _joinSpaceWithReferral(receiver, emptyReferral);
   }
 
   /// @inheritdoc IMembership

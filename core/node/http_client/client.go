@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"golang.org/x/net/http2"
 
+	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/dlog"
 )
 
@@ -56,10 +58,12 @@ func getTLSConfig(ctx context.Context) *tls.Config {
 // set using any CA set in the config file. Needed so we can use a
 // test CA in the test suite. Running under github action environment
 // there was no other way to get the test CA into the client.
-func GetHttpClient(ctx context.Context) (*http.Client, error) {
+func GetHttpClient(ctx context.Context, cfg *config.Config) (*http.Client, error) {
 	return &http.Client{
 		Transport: &http2.Transport{
 			TLSClientConfig: getTLSConfig(ctx),
+			ReadIdleTimeout: 20 * time.Second, // send http2 ping on idle connection for keep alive
+			PingTimeout:     15 * time.Second, // http2 ping must be received within 15s, if not connection is closed
 		},
 	}, nil
 }

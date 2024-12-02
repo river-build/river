@@ -144,7 +144,7 @@ func CanAddEvent(
 		return false, nil, nil, RiverError(Err_INVALID_ARGUMENT, "event has no prevMiniblockHash")
 	}
 	// check preceding miniblock hash
-	err := streamView.ValidateNextEvent(ctx, chainConfig, parsedEvent, currentTime)
+	err := streamView.ValidateNextEvent(ctx, chainConfig.Get(), parsedEvent, currentTime)
 	if err != nil {
 		return false, nil, nil, err
 	}
@@ -942,11 +942,18 @@ func (ru *aeMembershipRules) spaceMembershipEntitlements() (*auth.ChainAuthArgs,
 		return nil, nil
 	}
 
-	chainAuthArgs := auth.NewChainAuthArgsForSpace(
-		*streamId,
-		permissionUser,
-		permission,
-	)
+	var chainAuthArgs *auth.ChainAuthArgs
+	// Space joins are a special case as they do not require an entitlement check. We simply
+	// verify that the user is a space member.
+	if ru.membership.Op == MembershipOp_SO_JOIN {
+		chainAuthArgs = auth.NewChainAuthArgsForIsSpaceMember(*streamId, permissionUser)
+	} else {
+		chainAuthArgs = auth.NewChainAuthArgsForSpace(
+			*streamId,
+			permissionUser,
+			permission,
+		)
+	}
 	return chainAuthArgs, nil
 }
 
@@ -968,6 +975,17 @@ func (ru *aeMembershipRules) channelMembershipEntitlements() (*auth.ChainAuthArg
 	spaceId, err := shared.StreamIdFromBytes(inception.SpaceId)
 	if err != nil {
 		return nil, err
+	}
+
+
+	// ModifyBanning is a space level permission
+	// but users with this entitlement should also be entitled to kick users from the channel
+	if permission == auth.PermissionModifyBanning {
+		return auth.NewChainAuthArgsForSpace(
+			spaceId,
+			permissionUser,
+			permission,
+		), nil
 	}
 
 	chainAuthArgs := auth.NewChainAuthArgsForChannel(
@@ -1136,7 +1154,7 @@ func (ru *aeMembershipRules) getPermissionForMembershipOp() (auth.Permission, st
 			)
 		}
 		if userId != initiatorId {
-			return auth.PermissionBan, initiatorId, nil
+			return auth.PermissionModifyBanning, initiatorId, nil
 		} else {
 			return auth.PermissionUndefined, userId, nil
 		}

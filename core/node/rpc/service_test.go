@@ -3,12 +3,9 @@ package rpc
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"math/rand"
-	"net"
-	"net/http"
 	"os"
 	"slices"
 	"strconv"
@@ -17,20 +14,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/river-build/river/core/node/base"
-
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common"
 	eth_crypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/http2"
 	"google.golang.org/protobuf/proto"
 
+	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
-	"github.com/river-build/river/core/node/nodes"
 	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	river_sync "github.com/river-build/river/core/node/rpc/sync"
@@ -38,25 +32,13 @@ import (
 	"github.com/river-build/river/core/node/testutils"
 )
 
-func setupTestHttpClient() {
-	nodes.TestHttpClientMaker = func() *http.Client {
-		return &http.Client{
-			Transport: &http2.Transport{
-				// So http2.Transport doesn't complain the URL scheme isn't 'https'
-				AllowHTTP: true,
-				// Pretend we are dialing a TLS endpoint. (Note, we ignore the passed tls.Config)
-				DialTLSContext: func(ctx context.Context, network, addr string, cfg *tls.Config) (net.Conn, error) {
-					var d net.Dialer
-					return d.DialContext(ctx, network, addr)
-				},
-			},
-		}
-	}
-}
-
 func TestMain(m *testing.M) {
-	setupTestHttpClient()
-	os.Exit(m.Run())
+	c := m.Run()
+	if c != 0 {
+		os.Exit(c)
+	}
+
+	crypto.TestMainForLeaksIgnoreGeth()
 }
 
 func createUserMetadataStream(
@@ -156,7 +138,7 @@ func createUserSettingsStream(
 	wallet *crypto.Wallet,
 	client protocolconnect.StreamServiceClient,
 	streamSettings *protocol.StreamSettings,
-) (StreamId, *protocol.SyncCookie, []byte, error) {
+) (StreamId, *protocol.SyncCookie, *MiniblockRef, error) {
 	streamdId := UserSettingStreamIdFromAddr(wallet.Address)
 	inception, err := events.MakeEnvelopeWithPayload(
 		wallet,
@@ -173,7 +155,7 @@ func createUserSettingsStream(
 	if err != nil {
 		return StreamId{}, nil, nil, err
 	}
-	return streamdId, res.Msg.Stream.NextSyncCookie, inception.Hash, nil
+	return streamdId, res.Msg.Stream.NextSyncCookie, MiniblockRefFromCookie(res.Msg.Stream.NextSyncCookie), nil
 }
 
 func createSpace(
@@ -227,7 +209,7 @@ func createChannel(
 	spaceId StreamId,
 	channelStreamId StreamId,
 	streamSettings *protocol.StreamSettings,
-) (*protocol.SyncCookie, []byte, error) {
+) (*protocol.SyncCookie, *MiniblockRef, error) {
 	channel, err := events.MakeEnvelopeWithPayload(
 		wallet,
 		events.Make_ChannelPayload_Inception(
@@ -268,8 +250,11 @@ func createChannel(
 	if len(reschannel.Msg.Stream.Miniblocks) == 0 {
 		return nil, nil, fmt.Errorf("expected at least one miniblock")
 	}
-	miniblockHash := reschannel.Msg.Stream.Miniblocks[len(reschannel.Msg.Stream.Miniblocks)-1].Header.Hash
-	return reschannel.Msg.Stream.NextSyncCookie, miniblockHash, nil
+	lastMb := reschannel.Msg.Stream.Miniblocks[len(reschannel.Msg.Stream.Miniblocks)-1]
+	return reschannel.Msg.Stream.NextSyncCookie, &MiniblockRef{
+		Hash: common.BytesToHash(lastMb.Header.Hash),
+		Num:  0,
+	}, nil
 }
 
 func addUserBlockedFillerEvent(
@@ -277,18 +262,8 @@ func addUserBlockedFillerEvent(
 	wallet *crypto.Wallet,
 	client protocolconnect.StreamServiceClient,
 	streamId StreamId,
-	prevMiniblockHash []byte,
+	prevMiniblockRef *MiniblockRef,
 ) error {
-	if prevMiniblockHash == nil {
-		resp, err := client.GetLastMiniblockHash(ctx, connect.NewRequest(&protocol.GetLastMiniblockHashRequest{
-			StreamId: streamId[:],
-		}))
-		if err != nil {
-			return err
-		}
-		prevMiniblockHash = resp.Msg.Hash
-	}
-
 	addr := crypto.GetTestAddress()
 	ev, err := events.MakeEnvelopeWithPayload(
 		wallet,
@@ -299,7 +274,7 @@ func addUserBlockedFillerEvent(
 				EventNum:  22,
 			},
 		),
-		prevMiniblockHash,
+		prevMiniblockRef,
 	)
 	if err != nil {
 		return err
@@ -317,7 +292,7 @@ func makeMiniblock(
 	streamId StreamId,
 	forceSnapshot bool,
 	lastKnownMiniblockNum int64,
-) ([]byte, int64, error) {
+) (*MiniblockRef, error) {
 	resp, err := client.Info(ctx, connect.NewRequest(&protocol.InfoRequest{
 		Debug: []string{
 			"make_miniblock",
@@ -327,17 +302,22 @@ func makeMiniblock(
 		},
 	}))
 	if err != nil {
-		return nil, -1, err
+		return nil, AsRiverError(err, protocol.Err_INTERNAL).
+			Message("client.Info make_miniblock failed").
+			Func("makeMiniblock")
 	}
 	var hashBytes []byte
 	if resp.Msg.Graffiti != "" {
 		hashBytes = common.FromHex(resp.Msg.Graffiti)
 	}
-	num := int64(-1)
+	num := int64(0)
 	if resp.Msg.Version != "" {
 		num, _ = strconv.ParseInt(resp.Msg.Version, 10, 64)
 	}
-	return hashBytes, num, nil
+	return &MiniblockRef{
+		Hash: common.BytesToHash(hashBytes),
+		Num:  num,
+	}, nil
 }
 
 func testMethods(tester *serviceTester) {
@@ -391,7 +371,7 @@ func testMethodsWithClient(tester *serviceTester, client protocolconnect.StreamS
 		Optional: true,
 	}))
 	require.NoError(err)
-	require.NotNil(resp.Msg, "expected user stream to not exist")
+	require.NotNil(resp.Msg, "expected user stream to exist")
 
 	// create user stream for user 2
 	resuser, _, err := createUser(ctx, wallet2, client, nil)
@@ -431,7 +411,10 @@ func testMethodsWithClient(tester *serviceTester, client protocolconnect.StreamS
 			nil,
 			spaceId[:],
 		),
-		resuser.PrevMiniblockHash,
+		&MiniblockRef{
+			Hash: common.BytesToHash(resuser.PrevMiniblockHash),
+			Num:  resuser.MinipoolGen - 1,
+		},
 	)
 	require.NoError(err)
 
@@ -446,9 +429,9 @@ func testMethodsWithClient(tester *serviceTester, client protocolconnect.StreamS
 	)
 	require.NoError(err)
 
-	_, newMbNum, err := makeMiniblock(ctx, client, channelId, false, 0)
+	newMbRef, err := makeMiniblock(ctx, client, channelId, false, 0)
 	require.NoError(err)
-	require.Greater(newMbNum, int64(0))
+	require.Greater(newMbRef.Num, int64(0))
 
 	message, err := events.MakeEnvelopeWithPayload(
 		wallet2,
@@ -468,9 +451,9 @@ func testMethodsWithClient(tester *serviceTester, client protocolconnect.StreamS
 	)
 	require.NoError(err)
 
-	_, newMbNum2, err := makeMiniblock(ctx, client, channelId, false, 0)
+	newMbRef2, err := makeMiniblock(ctx, client, channelId, false, 0)
 	require.NoError(err)
-	require.Greater(newMbNum2, newMbNum)
+	require.Greater(newMbRef2.Num, newMbRef.Num)
 
 	_, err = client.GetMiniblocks(ctx, connect.NewRequest(&protocol.GetMiniblocksRequest{
 		StreamId:      channelId[:],
@@ -1027,7 +1010,6 @@ func TestForwardingWithRetries(t *testing.T) {
 			// Stream registry seems biased to allocate locally so we'll make requests from a different node
 			// to increase likelyhood of retries.
 			client0 := serviceTester.testClient(0)
-			client4 := serviceTester.testClient(4)
 
 			// Allocate TestStreams user streams
 			for i := 0; i < TestStreams; i++ {
@@ -1052,6 +1034,7 @@ func TestForwardingWithRetries(t *testing.T) {
 			serviceTester.CloseNode(0)
 			serviceTester.CloseNode(1)
 
+			client4 := serviceTester.testClient(4)
 			// All stream requests should succeed.
 			for _, streamId := range userStreamIds {
 				requester(t, ctx, client4, streamId)
@@ -1200,7 +1183,10 @@ func TestUnstableStreams(t *testing.T) {
 			userJoin, err := events.MakeEnvelopeWithPayload(
 				wallet,
 				events.Make_UserPayload_Membership(protocol.MembershipOp_SO_JOIN, channelId, nil, spaceID[:]),
-				miniBlockHashResp.Msg.GetHash(),
+				&MiniblockRef{
+					Hash: common.BytesToHash(miniBlockHashResp.Msg.GetHash()),
+					Num:  miniBlockHashResp.Msg.GetMiniblockNum(),
+				},
 			)
 			req.NoError(err)
 
@@ -1475,7 +1461,7 @@ func sendMessagesAndReceive(
 		message, err := events.MakeEnvelopeWithPayload(
 			wallet,
 			events.Make_ChannelPayload_Message(msgContents),
-			getStreamResp.Msg.GetStream().GetNextSyncCookie().GetPrevMiniblockHash(),
+			MiniblockRefFromCookie(getStreamResp.Msg.GetStream().GetNextSyncCookie()),
 		)
 		require.NoError(err)
 
@@ -1592,7 +1578,7 @@ func TestSyncSubscriptionWithTooSlowClient(t *testing.T) {
 		wallets  []*crypto.Wallet
 		users    []*protocol.SyncCookie
 		channels []*protocol.SyncCookie
-		syncID   = base.GenNanoid()
+		syncID   = GenNanoid()
 	)
 
 	// create users that will join and add messages to channels.
@@ -1658,7 +1644,7 @@ func TestSyncSubscriptionWithTooSlowClient(t *testing.T) {
 			userJoin, err := events.MakeEnvelopeWithPayload(
 				wallet,
 				events.Make_UserPayload_Membership(protocol.MembershipOp_SO_JOIN, channelId, nil, spaceID[:]),
-				miniBlockHashResp.Msg.GetHash(),
+				MiniblockRefFromLastHash(miniBlockHashResp.Msg),
 			)
 			req.NoError(err)
 
@@ -1696,7 +1682,7 @@ func TestSyncSubscriptionWithTooSlowClient(t *testing.T) {
 		message, err := events.MakeEnvelopeWithPayload(
 			wallet,
 			events.Make_ChannelPayload_Message(msgContents),
-			getStreamResp.Msg.GetStream().GetNextSyncCookie().GetPrevMiniblockHash(),
+			MiniblockRefFromCookie(getStreamResp.Msg.GetStream().GetNextSyncCookie()),
 		)
 		req.NoError(err)
 
@@ -1718,7 +1704,7 @@ func TestSyncSubscriptionWithTooSlowClient(t *testing.T) {
 	req.Eventuallyf(func() bool {
 		select {
 		case err := <-syncOpResult:
-			var riverErr *base.RiverErrorImpl
+			var riverErr *RiverErrorImpl
 			if errors.As(err, &riverErr) {
 				req.Equal(riverErr.Code, protocol.Err_BUFFER_FULL, "unexpected error code")
 				return true

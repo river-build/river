@@ -1,8 +1,18 @@
 import { useAccount, useConnect } from 'wagmi'
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { useEffect, useState } from 'react'
+import { useAgentConnection } from '@river-build/react-sdk'
+import { useNavigate } from 'react-router-dom'
+import { GitHubLogoIcon } from '@radix-ui/react-icons'
+import { Book, ExternalLink } from 'lucide-react'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { RiverEnvSwitcherContent } from '@/components/dialog/env-switcher'
 import { Dialog } from '@/components/ui/dialog'
+import { Block } from '@/components/ui/block'
+import { RiverBeaver } from '@/components/river-beaver'
+import { TownsIcon } from '@/components/towns-icon'
+import { cn } from '@/utils'
+
+const isDev = import.meta.env.DEV
 
 export const AuthRoute = () => {
     const [open, setOpen] = useState<{ state: boolean; from: 'wallet' | 'bearer' }>({
@@ -10,43 +20,182 @@ export const AuthRoute = () => {
         from: 'wallet',
     })
 
+    const { isAgentConnected } = useAgentConnection()
+    const navigate = useNavigate()
+    useEffect(() => {
+        if (isAgentConnected) {
+            navigate('/')
+        }
+    }, [isAgentConnected, navigate])
+
     return (
-        <div className="flex flex-col items-center gap-6">
-            <div className="max-w-lg space-y-4">
-                <h1 className="text-center text-2xl font-bold">Connect to River</h1>
-                <p className="text-center text-sm  text-zinc-500">
-                    You can use a bearer token, or connect straight to the network using your
-                    wallet.
+        <div className="container mx-auto px-4 py-8">
+            {/* Main Content */}
+            <div className={cn('mx-auto max-w-3xl space-y-6 text-center', isDev && 'max-w-4xl')}>
+                <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
+                    Welcome to River Playground
+                </h1>
+                <p className="text-lg text-muted-foreground">
+                    An interactive environment for testing and experimenting with{' '}
+                    <a
+                        href="https://river.build"
+                        target="_blank"
+                        className="inline-flex items-center font-semibold underline-offset-4 hover:underline"
+                    >
+                        River Protocol
+                        <RiverBeaver className="ml-2 size-4" />
+                    </a>
                 </p>
-            </div>
-            <div className="flex w-full max-w-lg items-center justify-center gap-4">
-                <Button variant="outline" onClick={() => setOpen({ state: true, from: 'bearer' })}>
-                    Connect using bearer token
-                </Button>
-                <Dialog
-                    open={open.state}
-                    onOpenChange={(open) => setOpen((prev) => ({ ...prev, state: open }))}
+
+                {/* Quick Links */}
+                <div
+                    className={cn(
+                        'my-12 grid grid-cols-1 gap-4 md:grid-cols-2',
+                        isDev && 'md:grid-cols-3',
+                    )}
                 >
-                    <RiverEnvSwitcherContent allowBearerToken={open.from === 'bearer'} />
-                </Dialog>
-                <ChainConnectButton
-                    onWalletConnect={() => setOpen({ state: true, from: 'wallet' })}
-                />
+                    <Block
+                        variant="primary"
+                        className="flex flex-col justify-between p-6 transition-shadow hover:shadow-md"
+                    >
+                        <div className="space-y-4">
+                            <GitHubLogoIcon className="mx-auto h-8 w-8" />
+                            <h2 className="text-xl font-semibold">Open Source</h2>
+                            <p className="text-sm text-muted-foreground">
+                                View the source code on GitHub and contribute to the project
+                            </p>
+                        </div>
+                        <a
+                            className={buttonVariants({
+                                variant: 'outline',
+                                className: 'mt-4 w-full',
+                            })}
+                            href="https://github.com/river-build/river/tree/main/packages/playground"
+                            target="_blank"
+                        >
+                            View Repository <ExternalLink className="ml-2 size-4" />
+                        </a>
+                    </Block>
+                    {isDev && (
+                        <Block
+                            variant="primary"
+                            className="flex flex-col justify-between p-6 transition-shadow hover:shadow-md"
+                        >
+                            <div className="space-y-4">
+                                <TownsIcon className="mx-auto h-8 w-8" />
+                                <h2 className="text-xl font-semibold">Community</h2>
+                                <p className="text-sm text-muted-foreground">
+                                    Join the River Developer Community on Towns for support
+                                </p>
+                            </div>
+                            <a
+                                className={buttonVariants({
+                                    variant: 'outline',
+                                    className: 'mt-4 w-full',
+                                })}
+                                href="https://app.towns.com/t/0xb089fc1acdea8b1da28463a2272d6fd3fe66a75b/"
+                                target="_blank"
+                            >
+                                Join Community <ExternalLink className="ml-2 size-4" />
+                            </a>
+                        </Block>
+                    )}
+                    <Block
+                        variant="primary"
+                        className="flex flex-col justify-between p-6 transition-shadow hover:shadow-md"
+                    >
+                        <div className="space-y-4">
+                            <Book className="mx-auto h-8 w-8" />
+                            <h2 className="text-xl font-semibold">Documentation</h2>
+                            <p className="text-sm text-muted-foreground">
+                                Learn how to use River Protocol with our comprehensive docs
+                            </p>
+                        </div>
+                        <a
+                            className={buttonVariants({
+                                variant: 'outline',
+                                className: 'mt-4 w-full',
+                            })}
+                            href="https://docs.river.build"
+                            target="_blank"
+                        >
+                            Read Docs <ExternalLink className="ml-2 size-4" />
+                        </a>
+                    </Block>
+                </div>
+
+                {/* Auth Options */}
+                <div className="flex flex-col gap-4">
+                    <p className="text-muted-foreground">
+                        Choose your preferred method to get started below.
+                    </p>
+
+                    <div className="mx-auto w-full max-w-lg space-y-4">
+                        <div className="space-y-2">
+                            <Button
+                                variant="outline"
+                                className="w-full max-w-sm"
+                                onClick={() => setOpen({ state: true, from: 'bearer' })}
+                            >
+                                Connect using bearer token
+                            </Button>
+                            <p className="text-sm text-muted-foreground">
+                                Type{' '}
+                                <code className="rounded-md bg-muted px-1 font-mono text-foreground">
+                                    /bearer-token
+                                </code>{' '}
+                                in any{' '}
+                                <a
+                                    href="https://app.towns.com"
+                                    target="_blank"
+                                    className="font-semibold underline-offset-4 hover:underline"
+                                >
+                                    Towns
+                                </a>{' '}
+                                chat to export your bearer token.
+                            </p>
+                        </div>
+                        <hr className="mx-auto w-full max-w-sm" />
+                        <div className="space-y-2">
+                            <Dialog
+                                open={open.state}
+                                onOpenChange={(open) =>
+                                    setOpen((prev) => ({ ...prev, state: open }))
+                                }
+                            >
+                                <RiverEnvSwitcherContent
+                                    allowBearerToken={open.from === 'bearer'}
+                                    onClose={() => setOpen((prev) => ({ ...prev, state: false }))}
+                                />
+                            </Dialog>
+                            <ChainConnectButton
+                                className="w-full max-w-sm"
+                                onWalletConnect={() => setOpen({ state: true, from: 'wallet' })}
+                            />
+                            <p className="text-sm text-muted-foreground">
+                                Use your existing wallet to connect to the network.
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     )
 }
 
-const ChainConnectButton = (props: { onWalletConnect: () => void }) => {
+const ChainConnectButton = (props: { onWalletConnect: () => void; className?: string }) => {
     const { connector: activeConnector } = useAccount()
-    const { connectors, connect, error, isLoading } = useConnect({
-        onSuccess: props.onWalletConnect,
+    const { connectors, connect, error, isPending } = useConnect({
+        mutation: {
+            onSuccess: props.onWalletConnect,
+        },
     })
 
     return (
-        <div>
+        <div className="space-y-1.5">
             {connectors.map((connector) => (
                 <Button
+                    className={props.className}
                     key={connector.id}
                     onClick={() => {
                         if (activeConnector?.id === connector.id) {
@@ -59,7 +208,7 @@ const ChainConnectButton = (props: { onWalletConnect: () => void }) => {
                     {activeConnector?.id === connector.id
                         ? `Continue with ${connector.name}`
                         : connector.name}
-                    {isLoading && ' (connecting)'}
+                    {isPending && ' (connecting)'}
                 </Button>
             ))}
             {error && <div>{error.message}</div>}

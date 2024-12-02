@@ -11,15 +11,16 @@ import (
 	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/crypto"
 	. "github.com/river-build/river/core/node/protocol"
+	. "github.com/river-build/river/core/node/shared"
 )
 
 type ParsedEvent struct {
-	Event             *StreamEvent
-	Envelope          *Envelope
-	Hash              common.Hash
-	PrevMiniblockHash *common.Hash `dlog:"omit"`
-	SignerPubKey      []byte
-	shortDebugStr     string
+	Event         *StreamEvent
+	Envelope      *Envelope
+	Hash          common.Hash
+	MiniblockRef  *MiniblockRef
+	SignerPubKey  []byte
+	shortDebugStr string
 }
 
 func (e *ParsedEvent) GetEnvelopeBytes() ([]byte, error) {
@@ -52,7 +53,6 @@ func ParseEvent(envelope *Envelope) (*ParsedEvent, error) {
 	}
 
 	if len(streamEvent.DelegateSig) > 0 {
-
 		err := CheckDelegateSig(
 			streamEvent.CreatorAddress,
 			signerPubKey,
@@ -69,17 +69,21 @@ func ParseEvent(envelope *Envelope) (*ParsedEvent, error) {
 	} else {
 		address := PublicKeyToAddress(signerPubKey)
 		if !bytes.Equal(address.Bytes(), streamEvent.CreatorAddress) {
-			return nil, RiverError(Err_BAD_EVENT_SIGNATURE, "Bad signature provided", "computed address", address, "event creatorAddress", streamEvent.CreatorAddress)
+			return nil, RiverError(Err_BAD_EVENT_SIGNATURE, "Bad signature provided",
+				"computed address", address,
+				"event creatorAddress", streamEvent.CreatorAddress)
 		}
 	}
 
-	PrevMiniblockHash := common.BytesToHash(streamEvent.PrevMiniblockHash)
 	return &ParsedEvent{
-		Event:             &streamEvent,
-		Envelope:          envelope,
-		Hash:              common.BytesToHash(envelope.Hash),
-		PrevMiniblockHash: &PrevMiniblockHash,
-		SignerPubKey:      signerPubKey,
+		Event:    &streamEvent,
+		Envelope: envelope,
+		Hash:     common.BytesToHash(envelope.Hash),
+		MiniblockRef: &MiniblockRef{
+			Hash: common.BytesToHash(streamEvent.PrevMiniblockHash),
+			Num:  streamEvent.PrevMiniblockNum,
+		},
+		SignerPubKey: signerPubKey,
 	}, nil
 }
 

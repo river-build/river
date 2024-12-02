@@ -2,17 +2,18 @@ import {
     useAccount,
     useDisconnect,
     useSendTransaction,
-    useSwitchNetwork,
-    useWaitForTransaction,
+    useSwitchChain,
+    useWaitForTransactionReceipt,
 } from 'wagmi'
 
-import { base, baseSepolia, foundry } from 'viem/chains'
-import { useRiverConnection } from '@river-build/react-sdk'
+import { foundry } from 'viem/chains'
+import { useAgentConnection } from '@river-build/react-sdk'
 import { makeRiverConfig } from '@river-build/sdk'
 import { privateKeyToAccount } from 'viem/accounts'
 import { parseEther } from 'viem'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { getWeb3Deployment, getWeb3Deployments } from '@river-build/web3'
 import { deleteAuth, storeAuth } from '@/utils/persist-auth'
 import { useEthersSigner } from '@/utils/viem-to-ethers'
 import { Button } from '../ui/button'
@@ -28,49 +29,55 @@ import {
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 
-const environments = [
-    { id: 'gamma', name: 'Gamma', chainId: baseSepolia.id },
-    { id: 'omega', name: 'Omega', chainId: base.id },
-    { id: 'local_multi', name: 'Local Multi', chainId: foundry.id },
-] as const
+const environments = getWeb3Deployments().map((id) => ({
+    id: id,
+    name: id,
+    chainId: getWeb3Deployment(id).base.chainId,
+}))
 
 export type Env = (typeof environments)[number]
 
 export const RiverEnvSwitcher = () => {
-    const { isConnected } = useRiverConnection()
+    const { isAgentConnected } = useAgentConnection()
+    const [open, setOpen] = useState(false)
 
     return (
-        <Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline">
-                    {isConnected ? 'Switch environment or disconnect' : `Connect to River`}
+                <Button variant="outline" onClick={() => setOpen(true)}>
+                    {isAgentConnected ? 'Switch environment or disconnect' : `Connect to River`}
                 </Button>
             </DialogTrigger>
-            <RiverEnvSwitcherContent allowBearerToken />
+            <RiverEnvSwitcherContent allowBearerToken onClose={() => setOpen(false)} />
         </Dialog>
     )
 }
 
-export const RiverEnvSwitcherContent = (props: { allowBearerToken: boolean }) => {
+export const RiverEnvSwitcherContent = (props: {
+    allowBearerToken: boolean
+    onClose: () => void
+}) => {
     const {
         connect,
         connectUsingBearerToken,
         disconnect,
-        isConnected,
+        isAgentConnected,
         env: currentEnv,
-    } = useRiverConnection()
-    const { switchNetwork } = useSwitchNetwork()
+    } = useAgentConnection()
+    const { switchChain } = useSwitchChain()
     const { disconnect: disconnectWallet } = useDisconnect()
-    const signer = useEthersSigner()
     const [bearerToken, setBearerToken] = useState('')
     const navigate = useNavigate()
+    const signer = useEthersSigner()
 
     return (
         <DialogContent className="gap-6">
             <DialogHeader>
-                <DialogTitle>{isConnected ? 'Switch environment' : 'Connect to River'}</DialogTitle>
+                <DialogTitle>
+                    {isAgentConnected ? 'Switch environment' : 'Connect to River'}
+                </DialogTitle>
                 <DialogDescription>
-                    {isConnected
+                    {isAgentConnected
                         ? 'Select the environment you want to switch to. You can also disconnect.'
                         : 'Select the environment you want to connect to.'}
                 </DialogDescription>
@@ -93,7 +100,7 @@ export const RiverEnvSwitcherContent = (props: { allowBearerToken: boolean }) =>
                         <DialogClose asChild key={id}>
                             <Button
                                 variant="outline"
-                                disabled={currentEnv === id && isConnected}
+                                disabled={currentEnv === id && isAgentConnected}
                                 onClick={async () => {
                                     const riverConfig = makeRiverConfig(id)
                                     if (props.allowBearerToken) {
@@ -107,9 +114,8 @@ export const RiverEnvSwitcherContent = (props: { allowBearerToken: boolean }) =>
                                             })
                                         }
                                     } else {
-                                        switchNetwork?.(chainId)
+                                        switchChain?.({ chainId })
                                         if (!signer) {
-                                            console.error('No signer')
                                             return
                                         }
                                         await connect(signer, {
@@ -120,16 +126,17 @@ export const RiverEnvSwitcherContent = (props: { allowBearerToken: boolean }) =>
                                             }
                                         })
                                     }
-                                    navigate('/t')
+                                    navigate('/')
+                                    props.onClose()
                                 }}
                             >
-                                {name} {isConnected && currentEnv === id && '(connected)'}
+                                {name} {isAgentConnected && currentEnv === id && '(connected)'}
                             </Button>
                         </DialogClose>
                     ))}
                     {currentEnv === 'local_multi' && <FundWallet />}
                 </div>
-                {isConnected && (
+                {isAgentConnected && (
                     <Button
                         className="w-full"
                         variant="destructive"
@@ -137,6 +144,8 @@ export const RiverEnvSwitcherContent = (props: { allowBearerToken: boolean }) =>
                             disconnect()
                             disconnectWallet()
                             deleteAuth()
+                            navigate('/')
+                            props.onClose()
                         }}
                     >
                         Disconnect
@@ -155,14 +164,14 @@ const AnvilAccount = privateKeyToAccount(
 const FundWallet = () => {
     const { address } = useAccount()
 
-    const { sendTransaction, data: tx, isLoading } = useSendTransaction()
-    const { isSuccess, isLoading: isTxPending } = useWaitForTransaction({ hash: tx?.hash })
+    const { sendTransaction, data: hash, isPending: isSendingTx } = useSendTransaction()
+    const { isSuccess, isPending: isTxPending } = useWaitForTransactionReceipt({ hash })
 
     return (
         <>
             <Button
                 variant="outline"
-                disabled={isLoading || isTxPending}
+                disabled={isSendingTx || isTxPending}
                 onClick={() =>
                     sendTransaction({
                         account: AnvilAccount,
@@ -172,7 +181,7 @@ const FundWallet = () => {
                     })
                 }
             >
-                Fund Local Wallet {isSuccess && '✅'} {(isLoading || isTxPending) && '⏳'}
+                Fund Local Wallet {isSuccess && '✅'} {(isSendingTx || isTxPending) && '⏳'}
             </Button>
         </>
     )

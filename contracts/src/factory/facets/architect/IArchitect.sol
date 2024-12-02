@@ -9,6 +9,7 @@ import {IUserEntitlement} from "contracts/src/spaces/entitlements/user/IUserEnti
 import {IRuleEntitlement} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {IRuleEntitlementV2} from "contracts/src/spaces/entitlements/rule/IRuleEntitlement.sol";
 import {ISpaceOwner} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
+import {ISpaceProxyInitializer} from "contracts/src/spaces/facets/proxy/ISpaceProxyInitializer.sol";
 
 // contracts
 interface IArchitectBase {
@@ -16,11 +17,31 @@ interface IArchitectBase {
   //                           STRUCTS
   // =============================================================
 
+  struct MembershipRequirementsOld {
+    bool everyone;
+    address[] users;
+    bytes ruleData;
+  }
+
+  struct MembershipOld {
+    IMembershipBase.Membership settings;
+    MembershipRequirementsOld requirements;
+    string[] permissions;
+  }
+
+  struct CreateSpaceOld {
+    Metadata metadata;
+    MembershipOld membership;
+    ChannelInfo channel;
+    Prepay prepay;
+  }
+
   // Latest
   struct MembershipRequirements {
     bool everyone;
     address[] users;
     bytes ruleData;
+    bool syncEntitlements;
   }
 
   struct Membership {
@@ -36,10 +57,10 @@ interface IArchitectBase {
   struct SpaceInfo {
     string name;
     string uri;
-    Membership membership;
-    ChannelInfo channel;
     string shortDescription;
     string longDescription;
+    Membership membership;
+    ChannelInfo channel;
   }
 
   struct Metadata {
@@ -78,6 +99,7 @@ interface IArchitectBase {
   error Architect__InvalidAddress();
   error Architect__NotContract();
   error Architect__InvalidPricingModule();
+  event Architect__ProxyInitializerSet(address indexed proxyInitializer);
 }
 
 interface IArchitect is IArchitectBase {
@@ -89,16 +111,6 @@ interface IArchitect is IArchitectBase {
   ) external view returns (address space);
 
   function getTokenIdBySpace(address space) external view returns (uint256);
-
-  /// @notice Creates a new space
-  /// @param SpaceInfo Space information
-  function createSpace(SpaceInfo memory SpaceInfo) external returns (address);
-
-  /// @notice Creates a new space with a prepayment
-  /// @param createSpace Space information
-  function createSpaceWithPrepay(
-    CreateSpace memory createSpace
-  ) external payable returns (address);
 
   // =============================================================
   //                         Implementations
@@ -120,4 +132,18 @@ interface IArchitect is IArchitectBase {
       IRuleEntitlementV2 ruleEntitlementImplementation,
       IRuleEntitlement legacyRuleEntitlement
     );
+
+  // =============================================================
+  //                    Proxy Initializer
+  // =============================================================
+  /// @notice Retrieves the current proxy initializer
+  /// @return The address of the current ISpaceProxyInitializer contract
+  function getProxyInitializer() external view returns (ISpaceProxyInitializer);
+
+  /// @notice Sets a new proxy initializer
+  /// @param proxyInitializer The address of the new ISpaceProxyInitializer contract to be set
+  /// @dev This function should only be callable by the contract owner or authorized roles
+  function setProxyInitializer(
+    ISpaceProxyInitializer proxyInitializer
+  ) external;
 }

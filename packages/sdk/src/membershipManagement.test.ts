@@ -5,8 +5,8 @@
 import { dlog } from '@river-build/dlog'
 import {
     makeUserContextFromWallet,
-    getDynamicPricingModule,
     createVersionedSpace,
+    getFreeSpacePricingSetup,
 } from './util.test'
 import {
     isValidStreamId,
@@ -28,7 +28,7 @@ import { makeBaseChainConfig } from './riverConfig'
 const log = dlog('csb:test:membershipManagement')
 
 describe('membershipManagement', () => {
-    test('annoint memberships', async () => {
+    test('anoint memberships', async () => {
         // make a space and mint some memberships for friends
 
         log('start')
@@ -40,9 +40,9 @@ describe('membershipManagement', () => {
         const spaceDapp = createSpaceDapp(bobProvider, baseConfig.chainConfig)
 
         // create a user stream
-        const pricingModules = await spaceDapp.listPricingModules()
-        const dynamicPricingModule = getDynamicPricingModule(pricingModules)
-        expect(dynamicPricingModule).toBeDefined()
+        const { fixedPricingModuleAddress, freeAllocation, price } = await getFreeSpacePricingSetup(
+            spaceDapp,
+        )
 
         // create a space stream,
         log('Bob created user, about to create space')
@@ -51,19 +51,20 @@ describe('membershipManagement', () => {
             settings: {
                 name: 'Everyone',
                 symbol: 'MEMBER',
-                price: 0,
+                price,
                 maxSupply: 1000,
                 duration: 0,
                 currency: ETH_ADDRESS,
                 feeRecipient: userIdFromAddress(bobsContext.creatorAddress),
-                freeAllocation: 0,
-                pricingModule: dynamicPricingModule!.module,
+                freeAllocation,
+                pricingModule: fixedPricingModuleAddress,
             },
             permissions: [Permission.Read, Permission.Write],
             requirements: {
                 everyone: true,
                 users: [],
                 ruleData: NoopRuleData,
+                syncEntitlements: false,
             },
         }
 
@@ -81,7 +82,7 @@ describe('membershipManagement', () => {
         const receipt = await transaction.wait()
         log('transaction receipt')
         expect(receipt.status).toEqual(1)
-        const spaceAddress = spaceDapp.getSpaceAddress(receipt)
+        const spaceAddress = spaceDapp.getSpaceAddress(receipt, bobProvider.wallet.address)
         expect(spaceAddress).toBeDefined()
         const spaceId = makeSpaceStreamId(spaceAddress!)
         expect(isValidStreamId(spaceId)).toBe(true)

@@ -1,0 +1,60 @@
+---
+title: useCreateChannel
+---
+Hook to create a channel.
+
+## Imports
+
+```ts
+import { useCreateChannel } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useCreateChannel(
+  spaceId: string,
+  config?: ActionConfig<Space['createChannel']>,
+): {
+    data: string | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    createChannel: (channelName: string, signer: Signer, opts?: {
+        topic?: string | undefined;
+    } | undefined) => Promise<string>;
+}
+```
+
+**Source:** [useCreateChannel](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useCreateChannel.ts)
+
+## Parameters
+
+### spaceId
+
+- **Type:** `string`
+
+### config
+
+- **Type:** `ActionConfig<Space['createChannel']>`
+- **Optional**
+
+Configuration options for the action.
+
+## Return Type
+
+The `createChannel` action and its loading state.
+
+```ts
+{
+    data: string | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    createChannel: (channelName: string, signer: Signer, opts?: {
+        topic?: string | undefined;
+    } | undefined) => Promise<string>;
+}
+```

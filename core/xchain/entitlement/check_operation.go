@@ -179,11 +179,13 @@ func (e *Evaluator) evaluateMockOperation(
 	if result != nil {
 		return false, result
 	}
-	if op.ChainID.Sign() != 0 {
-		return true, nil
-	} else {
-		return false, nil
+
+	if (op.ContractAddress != common.Address{}) {
+		// Grab last byte of contract address as a unique identifier of which check
+		// caused the error, for ease of debugging test cases.
+		return false, fmt.Errorf("intentional failure (%.2x)", op.ContractAddress[19])
 	}
+	return op.ChainID.Sign() != 0, nil
 }
 
 func (e *Evaluator) evaluateIsEntitledOperation(
@@ -198,7 +200,7 @@ func (e *Evaluator) evaluateIsEntitledOperation(
 		return false, fmt.Errorf("evaluateIsEntitledOperation: Chain ID %v not found", op.ChainID)
 	}
 
-	customEntitlementChecker, err := base.NewICustomEntitlement(
+	crossChainEntitlementChecker, err := base.NewICrossChainEntitlement(
 		op.ContractAddress,
 		client,
 	)
@@ -212,9 +214,10 @@ func (e *Evaluator) evaluateIsEntitledOperation(
 	}
 	for _, wallet := range linkedWallets {
 		// Check if the caller is entitled
-		isEntitled, err := customEntitlementChecker.IsEntitled(
+		isEntitled, err := crossChainEntitlementChecker.IsEntitled(
 			&bind.CallOpts{Context: ctx},
 			[]common.Address{wallet},
+			op.Params,
 		)
 		if err != nil {
 			log.Error("Failed to check if caller is entitled",

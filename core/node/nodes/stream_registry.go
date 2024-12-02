@@ -3,7 +3,6 @@ package nodes
 import (
 	"context"
 	"hash/fnv"
-	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -17,8 +16,6 @@ import (
 
 type StreamRegistry interface {
 	// GetStreamInfo: returns nodes, error
-	GetStreamInfo(ctx context.Context, streamId StreamId) (StreamNodes, error)
-	// GetStreamInfo: returns nodes, error
 	AllocateStream(
 		ctx context.Context,
 		streamId StreamId,
@@ -28,43 +25,29 @@ type StreamRegistry interface {
 }
 
 type streamRegistryImpl struct {
-	localNodeAddress common.Address
-	nodeRegistry     NodeRegistry
-	onChainConfig    crypto.OnChainConfiguration
-	contract         *registries.RiverRegistryContract
-
-	streamNodeCache sync.Map
+	blockchain    *crypto.Blockchain
+	nodeRegistry  NodeRegistry
+	onChainConfig crypto.OnChainConfiguration
+	contract      *registries.RiverRegistryContract
 }
 
 var _ StreamRegistry = (*streamRegistryImpl)(nil)
 
 func NewStreamRegistry(
-	localNodeAddress common.Address,
+	ctx context.Context,
+	blockchain *crypto.Blockchain,
 	nodeRegistry NodeRegistry,
 	contract *registries.RiverRegistryContract,
 	onChainConfig crypto.OnChainConfiguration,
-) *streamRegistryImpl {
-	return &streamRegistryImpl{
-		localNodeAddress: localNodeAddress,
-		nodeRegistry:     nodeRegistry,
-		onChainConfig:    onChainConfig,
-		contract:         contract,
-	}
-}
-
-func (sr *streamRegistryImpl) GetStreamInfo(ctx context.Context, streamId StreamId) (StreamNodes, error) {
-	if streamNodes, ok := sr.streamNodeCache.Load(streamId); ok {
-		return streamNodes.(StreamNodes), nil
+) (*streamRegistryImpl, error) {
+	impl := &streamRegistryImpl{
+		blockchain:    blockchain,
+		nodeRegistry:  nodeRegistry,
+		onChainConfig: onChainConfig,
+		contract:      contract,
 	}
 
-	ret, err := sr.contract.GetStream(ctx, streamId)
-	if err != nil {
-		return nil, err
-	}
-
-	streamNodes := NewStreamNodes(ret.Nodes, sr.localNodeAddress)
-	sr.streamNodeCache.Store(streamId, streamNodes)
-	return streamNodes, nil
+	return impl, nil
 }
 
 func (sr *streamRegistryImpl) AllocateStream(

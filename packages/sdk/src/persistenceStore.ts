@@ -12,7 +12,7 @@ import { isDefined } from './check'
 
 const DEFAULT_RETRY_COUNT = 2
 const log = dlog('csb:persistence')
-const logError = dlogError('csb:persistence')
+const logError = dlogError('csb:persistence:error')
 
 async function fnReadRetryer<T>(
     fn: () => Promise<T | undefined>,
@@ -78,7 +78,11 @@ export interface IPersistenceStore {
     >
     saveSyncedStream(streamId: string, syncedStream: PersistedSyncedStream): Promise<void>
     saveMiniblock(streamId: string, miniblock: ParsedMiniblock): Promise<void>
-    saveMiniblocks(streamId: string, miniblocks: ParsedMiniblock[]): Promise<void>
+    saveMiniblocks(
+        streamId: string,
+        miniblocks: ParsedMiniblock[],
+        direction: 'forward' | 'backward',
+    ): Promise<void>
     getMiniblock(streamId: string, miniblockNum: bigint): Promise<ParsedMiniblock | undefined>
     getMiniblocks(
         streamId: string,
@@ -99,6 +103,16 @@ export class PersistenceStore extends Dexie implements IPersistenceStore {
             cleartexts: 'eventId',
             syncedStreams: 'streamId',
             miniblocks: '[streamId+miniblockNum]',
+        })
+
+        // Version 2: added a signature to the saved event, drop all saved miniblocks
+        this.version(2).upgrade((tx) => {
+            return tx.table('miniblocks').toCollection().delete()
+        })
+
+        // Version 3: added a signature to the saved event, drop all saved synced streams
+        this.version(3).upgrade((tx) => {
+            return tx.table('syncedStreams').toCollection().delete()
         })
 
         this.requestPersistentStorage()
@@ -147,7 +161,7 @@ export class PersistenceStore extends Dexie implements IPersistenceStore {
 
     async saveMiniblock(streamId: string, miniblock: ParsedMiniblock) {
         log('saving miniblock', streamId)
-        const cachedMiniblock = parsedMiniblockToPersistedMiniblock(miniblock)
+        const cachedMiniblock = parsedMiniblockToPersistedMiniblock(miniblock, 'forward')
         await this.miniblocks.put({
             streamId: streamId,
             miniblockNum: miniblock.header.miniblockNum.toString(),
@@ -155,13 +169,17 @@ export class PersistenceStore extends Dexie implements IPersistenceStore {
         })
     }
 
-    async saveMiniblocks(streamId: string, miniblocks: ParsedMiniblock[]) {
+    async saveMiniblocks(
+        streamId: string,
+        miniblocks: ParsedMiniblock[],
+        direction: 'forward' | 'backward',
+    ) {
         await this.miniblocks.bulkPut(
             miniblocks.map((mb) => {
                 return {
                     streamId: streamId,
                     miniblockNum: mb.header.miniblockNum.toString(),
-                    data: parsedMiniblockToPersistedMiniblock(mb).toBinary(),
+                    data: parsedMiniblockToPersistedMiniblock(mb, direction).toBinary(),
                 }
             }),
         )
@@ -262,7 +280,11 @@ export class StubPersistenceStore implements IPersistenceStore {
         return Promise.resolve()
     }
 
-    async saveMiniblocks(streamId: string, miniblocks: ParsedMiniblock[]) {
+    async saveMiniblocks(
+        streamId: string,
+        miniblocks: ParsedMiniblock[],
+        direction: 'forward' | 'backward',
+    ) {
         return Promise.resolve()
     }
 

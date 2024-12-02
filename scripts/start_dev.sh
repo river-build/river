@@ -22,6 +22,16 @@ if ! command -v brew &> /dev/null; then
 fi
 
 # Install Tmux using Homebrew if not present
+if ! command -v just &> /dev/null; then
+    echo "just is not installed. Installing it using Homebrew..."
+    if ! brew install just; then
+        echo "Failed to install just."
+        exit 1
+    fi
+    echo "just installed successfully."
+fi
+
+# Install Tmux using Homebrew if not present
 if ! command -v tmux &> /dev/null; then
     echo "Tmux is not installed. Installing it using Homebrew..."
     if ! brew install tmux; then
@@ -56,6 +66,14 @@ yarn install
 # Create a new tmux session
 tmux new-session -d -s $SESSION_NAME
 
+
+# Start chains and Postgres in separate panes of the same window
+tmux new-window -t $SESSION_NAME -n 'BlockChains_base'
+tmux send-keys -t $SESSION_NAME:'BlockChains_base' "./scripts/start-local-basechain.sh &" C-m
+tmux new-window -t $SESSION_NAME -n 'BlockChains_river'
+tmux send-keys -t $SESSION_NAME:'BlockChains_river' "./scripts/start-local-riverchain.sh &" C-m
+
+
 # Start contract build in background
 pushd contracts
 set -a
@@ -65,12 +83,6 @@ make build & BUILD_PID=$!
 popd
 
 ./core/scripts/launch_storage.sh &
-
-# Start chains and Postgres in separate panes of the same window
-tmux new-window -t $SESSION_NAME -n 'BlockChains_base'
-tmux send-keys -t $SESSION_NAME:'BlockChains_base' "./scripts/start-local-basechain.sh &" C-m
-tmux new-window -t $SESSION_NAME -n 'BlockChains_river'
-tmux send-keys -t $SESSION_NAME:'BlockChains_river' "./scripts/start-local-riverchain.sh &" C-m
 
 # Function to wait for a specific port
 wait_for_port() {
@@ -101,8 +113,8 @@ wait_for_process "$BUILD_PID" "build"
 echo "STARTED ALL CHAINS AND BUILT ALL CONTRACTS"
 
 # Now generate the core server config
-./scripts/configure-nodes.sh --multi
-./scripts/configure-nodes.sh --multi_ne
+(cd ./core && just RUN_ENV=multi config build)
+(cd ./core && just RUN_ENV=multi_ne config build)
 
 # Continue with rest of the script
 echo "Continuing with the rest of the script..."
@@ -117,8 +129,8 @@ commands=(
     "watch_proto:cd packages/proto && yarn watch"
     "watch_web3:cd packages/web3 && yarn watch"
     "watch_go:cd protocol && yarn watch:go"
-    "core_multi:./core/node/run_multi.sh -r"
-    "core_multi_ne:./core/node/run_multi.sh -r --de"
+    "core_multi:(cd ./core && just RUN_ENV=multi run)"
+    "core_multi_ne:(cd ./core && just RUN_ENV=multi_ne run)"
     "river_stream_metadata_multi_ne:yarn workspace @river-build/stream-metadata dev:local_multi_ne"
 )
 

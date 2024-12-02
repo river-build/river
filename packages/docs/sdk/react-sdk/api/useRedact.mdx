@@ -1,0 +1,87 @@
+---
+title: useRedact
+---
+Hook to redact a message in a stream.
+
+## Imports
+
+```ts
+import { useRedact } from '@river-build/react-sdk'
+```
+
+## Examples
+
+### Redact a message
+
+You can use `redactEvent` to redact a message in a stream.
+```ts
+import { useRedact } from '@river-build/react-sdk'
+
+const { redactEvent } = useRedact(streamId)
+redactEvent({ eventId: messageEventId })
+```
+### Redact a message reaction
+
+You can also use `redactEvent` to redact a message reaction in a stream.
+```ts
+import { useRedact } from '@river-build/react-sdk'
+
+const { redactEvent } = useRedact(streamId)
+redactEvent({ eventId: reactionEventId })
+```
+
+## Definition
+
+```ts
+function useRedact(
+  streamId: string,
+  config?: ActionConfig<Channel['redactEvent']>,
+): {
+    data: {
+        eventId: string;
+    } | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    redactEvent: (eventId: string) => Promise<{
+        eventId: string;
+    }>;
+}
+```
+
+**Source:** [useRedact](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useRedact.ts)
+
+## Parameters
+
+### streamId
+
+- **Type:** `string`
+
+The id of the stream to redact the message in.
+
+### config
+
+- **Type:** `ActionConfig<Channel['redactEvent']>`
+- **Optional**
+
+Configuration options for the action.
+
+## Return Type
+
+The `redactEvent` action and its loading state.
+
+```ts
+{
+    data: {
+        eventId: string;
+    } | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    redactEvent: (eventId: string) => Promise<{
+        eventId: string;
+    }>;
+}
+```

@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/river-build/river/core/node/rpc/sync"
-	"github.com/river-build/river/core/node/utils"
 	"log/slog"
 	"strconv"
+	"time"
+
+	"github.com/river-build/river/core/node/rpc/sync"
+	"github.com/river-build/river/core/node/utils"
 
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -62,7 +64,12 @@ func (s *Service) info(
 		}
 
 		if s.config.EnableTestAPIs {
-			if debug == "panic" {
+			if debug == "ping" {
+				log.Info("PINGED")
+				return connect.NewResponse(&InfoResponse{
+					Graffiti: "pong",
+				}), nil
+			} else if debug == "panic" {
 				log.Error("panic requested through Info request")
 				panic("panic requested through Info request")
 			} else if debug == "flush_cache" {
@@ -77,6 +84,23 @@ func (s *Service) info(
 				return connect.NewResponse(&InfoResponse{
 					Graffiti: "exiting...",
 				}), nil
+			} else if debug == "sleep" {
+				sleepDuration := 30 * time.Second
+				log.Info("SLEEPING FOR", "sleepDuration", sleepDuration)
+				select {
+				case <-time.After(sleepDuration):
+					// Sleep completed
+					log.Info("Sleep completed")
+					return connect.NewResponse(&InfoResponse{
+						Graffiti: fmt.Sprintf("slept for %v", sleepDuration),
+					}), nil
+				case <-ctx.Done():
+					// Context was canceled
+					log.Info("Sleep canceled due to context cancellation")
+					return connect.NewResponse(&InfoResponse{
+						Graffiti: "Context canceled",
+					}), nil
+				}
 			}
 		}
 	}
@@ -151,25 +175,25 @@ func (s *Service) debugInfoMakeMiniblock(
 		lastKnownMiniblockNum,
 	)
 
-	nodes, err := s.streamRegistry.GetStreamInfo(ctx, streamId)
+	stream, err := s.cache.GetStreamNoWait(ctx, streamId)
 	if err != nil {
 		return nil, err
 	}
-	if nodes.IsLocal() {
-		hash, num, err := s.mbProducer.TestMakeMiniblock(ctx, streamId, forceSnapshot)
+	if stream.IsLocal() {
+		ref, err := s.mbProducer.TestMakeMiniblock(ctx, streamId, forceSnapshot)
 		if err != nil {
 			return nil, err
 		}
-		if lastKnownMiniblockNum >= 0 && num <= lastKnownMiniblockNum {
+		if lastKnownMiniblockNum >= 0 && ref.Num <= lastKnownMiniblockNum {
 			return nil, RiverError(Err_DEBUG_ERROR, "miniblock not created")
 		}
 		g := ""
-		if (hash != common.Hash{}) {
-			g = hash.Hex()
+		if ref.Hash != (common.Hash{}) {
+			g = ref.Hash.Hex()
 		}
 		v := ""
-		if num > -1 {
-			v = strconv.FormatInt(num, 10)
+		if ref.Num > -1 {
+			v = strconv.FormatInt(ref.Num, 10)
 		}
 		return connect.NewResponse(&InfoResponse{
 			Graffiti: g,
@@ -178,7 +202,7 @@ func (s *Service) debugInfoMakeMiniblock(
 	} else {
 		return peerNodeRequestWithRetries(
 			ctx,
-			nodes,
+			stream,
 			s,
 			func(ctx context.Context, stub StreamServiceClient) (*connect.Response[InfoResponse], error) {
 				return stub.Info(ctx, request)

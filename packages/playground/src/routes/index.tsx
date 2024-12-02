@@ -1,38 +1,40 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { RootLayout } from './layout'
 import { IndexRoute } from './root'
+import { AuthRoute } from './auth'
 
 export const router = createBrowserRouter([
+    {
+        path: '/auth',
+        element: <RootLayout center noHeader />,
+        children: [
+            {
+                index: true,
+                element: <AuthRoute />,
+            },
+        ],
+    },
     {
         path: '/',
         element: <RootLayout />,
         children: [
             {
-                path: '/',
+                index: true,
                 element: <IndexRoute />,
-            },
-            {
-                path: '/auth',
-                lazy: async () => {
-                    const { AuthRoute } = await import('./auth')
-                    return {
-                        Component: AuthRoute,
-                    }
-                },
             },
             {
                 path: '/t',
                 lazy: async () => {
-                    const { SelectSpaceRoute } = await import('./t/spaces')
+                    const { DashboardRoute } = await import('./t/dashboard')
                     return {
-                        Component: SelectSpaceRoute,
+                        Component: DashboardRoute,
                     }
                 },
             },
             {
                 path: '/t/:spaceId',
                 lazy: async () => {
-                    const { SelectChannelRoute } = await import('./t/channels')
+                    const { SelectChannelRoute } = await import('./t/space-channels')
                     return {
                         Component: SelectChannelRoute,
                     }
@@ -41,9 +43,38 @@ export const router = createBrowserRouter([
                     {
                         path: '/t/:spaceId/:channelId',
                         lazy: async () => {
-                            const { TimelineRoute } = await import('./t/timeline')
+                            const { ChannelTimelineRoute } = await import('./t/channel-timeline')
                             return {
-                                Component: TimelineRoute,
+                                Component: ChannelTimelineRoute,
+                            }
+                        },
+                    },
+                ],
+            },
+            {
+                path: '/m',
+                lazy: async () => {
+                    const { DashboardRoute } = await import('./t/dashboard')
+                    return {
+                        Component: DashboardRoute,
+                    }
+                },
+                children: [
+                    {
+                        path: '/m/gdm/:gdmStreamId',
+                        lazy: async () => {
+                            const { GdmTimelineRoute } = await import('./m/gdm-timeline')
+                            return {
+                                Component: GdmTimelineRoute,
+                            }
+                        },
+                    },
+                    {
+                        path: '/m/dm/:dmStreamId',
+                        lazy: async () => {
+                            const { DmTimelineRoute } = await import('./m/dm-timeline')
+                            return {
+                                Component: DmTimelineRoute,
                             }
                         },
                     },
@@ -55,6 +86,15 @@ export const router = createBrowserRouter([
                     const { ComponentsRoute } = await import('./components')
                     return {
                         Component: ComponentsRoute,
+                    }
+                },
+            },
+            {
+                path: 'inspect',
+                lazy: async () => {
+                    const { InspectRoute } = await import('./inspect/root')
+                    return {
+                        Component: InspectRoute,
                     }
                 },
             },

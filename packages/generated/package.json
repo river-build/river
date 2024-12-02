@@ -1,9 +1,10 @@
 {
     "name": "@river-build/generated",
-    "version": "0.0.62",
+    "version": "0.0.120",
     "packageManager": "yarn@3.8.0",
     "scripts": {
-        "preinstall": "node ./scripts/make-config.js",
-        "make-config": "node ./scripts/make-config.js"
+        "build": "yarn make-config",
+        "make-config": "node ./scripts/make-config.js",
+        "preinstall": "node ./scripts/make-config.js"
     }
 }

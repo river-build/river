@@ -5,8 +5,8 @@
 import {
     makeUserContextFromWallet,
     makeTestClient,
-    getDynamicPricingModule,
     createVersionedSpace,
+    getFreeSpacePricingSetup,
 } from './util.test'
 import { makeDefaultChannelStreamId, makeSpaceStreamId } from './id'
 import { ethers, Wallet } from 'ethers'
@@ -59,28 +59,28 @@ describe('mediaWithEntitlements', () => {
         await provider.fundWallet()
         const spaceDapp = createSpaceDapp(provider, baseConfig.chainConfig)
 
-        const pricingModules = await spaceDapp.listPricingModules()
-        const dynamicPricingModule = getDynamicPricingModule(pricingModules)
-        expect(dynamicPricingModule).toBeDefined()
-
+        const { fixedPricingModuleAddress, freeAllocation, price } = await getFreeSpacePricingSetup(
+            spaceDapp,
+        )
         // create a space stream,
         const membershipInfo: LegacyMembershipStruct = {
             settings: {
                 name: 'Everyone',
                 symbol: 'MEMBER',
-                price: 0,
+                price,
                 maxSupply: 1000,
                 duration: 0,
                 currency: ETH_ADDRESS,
                 feeRecipient: bobClient.userId,
-                freeAllocation: 0,
-                pricingModule: dynamicPricingModule!.module,
+                freeAllocation,
+                pricingModule: fixedPricingModuleAddress,
             },
             permissions: [Permission.Read, Permission.Write],
             requirements: {
                 everyone: true,
                 users: [],
                 ruleData: NoopRuleData,
+                syncEntitlements: false,
             },
         }
 
@@ -98,7 +98,7 @@ describe('mediaWithEntitlements', () => {
 
         const receipt = await transaction.wait()
         log('transaction receipt', receipt)
-        const spaceAddress = spaceDapp.getSpaceAddress(receipt)
+        const spaceAddress = spaceDapp.getSpaceAddress(receipt, provider.wallet.address)
         expect(spaceAddress).toBeDefined()
         const spaceStreamId = makeSpaceStreamId(spaceAddress!)
         const channelId = makeDefaultChannelStreamId(spaceAddress!)
@@ -122,7 +122,7 @@ describe('mediaWithEntitlements', () => {
         )
         const receipt2 = await transaction2.wait()
         log('transaction2 receipt', receipt2)
-        const space2Address = spaceDapp.getSpaceAddress(receipt)
+        const space2Address = spaceDapp.getSpaceAddress(receipt, provider.wallet.address)
         expect(space2Address).toBeDefined()
         const space2Id = makeSpaceStreamId(space2Address!)
         await spaceDapp.joinSpace(space2Id, aliceClient.userId, provider.wallet)
@@ -157,28 +157,29 @@ describe('mediaWithEntitlements', () => {
         await provider.fundWallet()
         const spaceDapp = createSpaceDapp(provider, baseConfig.chainConfig)
 
-        const pricingModules = await spaceDapp.listPricingModules()
-        const dynamicPricingModule = getDynamicPricingModule(pricingModules)
-        expect(dynamicPricingModule).toBeDefined()
+        const { fixedPricingModuleAddress, freeAllocation, price } = await getFreeSpacePricingSetup(
+            spaceDapp,
+        )
 
         // create a space stream,
         const membershipInfo: LegacyMembershipStruct = {
             settings: {
                 name: 'Everyone',
                 symbol: 'MEMBER',
-                price: 0,
+                price,
                 maxSupply: 1000,
                 duration: 0,
                 currency: ETH_ADDRESS,
                 feeRecipient: bobClient.userId,
-                freeAllocation: 0,
-                pricingModule: dynamicPricingModule!.module,
+                freeAllocation,
+                pricingModule: fixedPricingModuleAddress,
             },
             permissions: [Permission.Read, Permission.Write],
             requirements: {
                 everyone: true,
                 users: [],
                 ruleData: NoopRuleData,
+                syncEntitlements: false,
             },
         }
 
@@ -196,7 +197,7 @@ describe('mediaWithEntitlements', () => {
 
         const receipt = await transaction.wait()
         log('transaction receipt', receipt)
-        const spaceAddress = spaceDapp.getSpaceAddress(receipt)
+        const spaceAddress = spaceDapp.getSpaceAddress(receipt, provider.wallet.address)
         expect(spaceAddress).toBeDefined()
         const spaceStreamId = makeSpaceStreamId(spaceAddress!)
         await bobClient.initializeUser({ spaceId: spaceStreamId })

@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+
 	"github.com/river-build/river/core/node/utils"
 
 	"connectrpc.com/connect"
@@ -39,10 +40,16 @@ func (s *Service) allocateStream(ctx context.Context, req *AllocateStreamRequest
 
 	// TODO: check request is signed by correct node
 	// TODO: all checks that should be done on create?
-	_, view, err := s.cache.CreateStream(ctx, streamId)
+	stream, err := s.cache.GetStreamWaitForLocal(ctx, streamId)
 	if err != nil {
 		return nil, err
 	}
+
+	view, err := stream.GetView(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	return &AllocateStreamResponse{
 		SyncCookie: view.SyncCookie(s.wallet.Address),
 	}, nil
@@ -82,7 +89,7 @@ func (s *Service) newEventReceived(
 		return nil, err
 	}
 
-	stream, err := s.cache.GetSyncStream(ctx, streamId)
+	stream, err := s.cache.GetStreamWaitForLocal(ctx, streamId)
 	if err != nil {
 		return nil, err
 	}
@@ -130,14 +137,23 @@ func (s *Service) proposeMiniblock(
 		return nil, err
 	}
 
-	_, view, err := s.cache.GetStream(ctx, streamId)
+	stream, err := s.cache.GetStreamWaitForLocal(ctx, streamId)
 	if err != nil {
 		return nil, err
 	}
 
-	proposal, err := view.ProposeNextMiniblock(ctx, s.chainConfig, req.DebugForceSnapshot)
+	view, err := stream.GetView(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	proposal, err := view.ProposeNextMiniblock(ctx, s.chainConfig.Get(), req.DebugForceSnapshot)
+	if err != nil {
+		return nil, err
+	}
+
+	if proposal == nil {
+		return nil, RiverError(Err_MINIPOOL_MISSING_EVENTS, "Empty stream minipool")
 	}
 
 	return &ProposeMiniblockResponse{
@@ -173,7 +189,7 @@ func (s *Service) saveMiniblockCandidate(
 		return nil, err
 	}
 
-	stream, err := s.cache.GetSyncStream(ctx, streamId)
+	stream, err := s.cache.GetStreamWaitForLocal(ctx, streamId)
 	if err != nil {
 		return nil, err
 	}

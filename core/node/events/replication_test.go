@@ -13,17 +13,18 @@ func TestReplicatedMbProduction(t *testing.T) {
 
 	tc.initAllCaches(&MiniblockProducerOpts{TestDisableMbProdcutionOnBlock: true})
 
-	streamId, streamNodes, prevMbHash := tc.createReplStream()
+	streamId, streamNodes, prevMb := tc.createReplStream()
 
 	for range 20 {
-		tc.addReplEvent(streamId, prevMbHash, streamNodes)
+		tc.addReplEvent(streamId, prevMb, streamNodes)
 	}
 
 	leaderAddr := streamNodes[0]
 	leader := tc.instancesByAddr[leaderAddr]
 
-	stream, err := leader.cache.getStreamImpl(ctx, streamId)
+	stream, err := leader.cache.getStreamImpl(ctx, streamId, true)
 	require.NoError(err)
+	require.True(stream.IsLocal())
 	job := leader.mbProducer.trySchedule(ctx, stream)
 	require.NotNil(job)
 	require.Eventually(

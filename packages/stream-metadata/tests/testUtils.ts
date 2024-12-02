@@ -1,9 +1,7 @@
 import 'fake-indexeddb/auto' // used to mock indexdb in dexie, don't remove
 
 import { ethers } from 'ethers'
-import { createPromiseClient } from '@connectrpc/connect'
-import { ConnectTransportOptions, createConnectTransport } from '@connectrpc/connect-node'
-import { ChunkedMedia, MediaInfo, StreamService } from '@river-build/proto'
+import { ChunkedMedia, MediaInfo } from '@river-build/proto'
 import {
 	Client,
 	encryptAESGCM,
@@ -28,7 +26,7 @@ import {
 
 import { config } from '../src/environment'
 import { getRiverRegistry } from '../src/evmRpcClient'
-import { StreamRpcClient } from '../src/riverStreamRpcClient'
+import { makeStreamRpcClient } from '../src/riverStreamRpcClient'
 
 export function isTest(): boolean {
 	return (
@@ -44,10 +42,8 @@ export function makeUniqueSpaceStreamId(): string {
 
 export function getTestServerUrl() {
 	// use the .env.test config to derive the baseURL of the server under test
-	const { host, port, riverEnv } = config
-	const protocol = riverEnv.startsWith('local') ? 'http' : 'https'
-	const baseURL = `${protocol}://${host}:${port}`
-	return baseURL
+	const { streamMetadataBaseUrl } = config
+	return streamMetadataBaseUrl
 }
 
 export async function getAnyNodeUrlFromRiverRegistry() {
@@ -62,19 +58,6 @@ export async function getAnyNodeUrlFromRiverRegistry() {
 	const anyNode = nodes[randomIndex]
 
 	return anyNode.url
-}
-
-export function makeStreamRpcClient(url: string): StreamRpcClient {
-	const options: ConnectTransportOptions = {
-		httpVersion: '2',
-		baseUrl: url,
-	}
-
-	const transport = createConnectTransport(options)
-	const client: StreamRpcClient = createPromiseClient(StreamService, transport)
-	client.url = url
-
-	return client
 }
 
 export function makeEthersProvider(wallet: ethers.Wallet) {
@@ -225,6 +208,7 @@ export async function makeCreateSpaceParams(
 			everyone: true,
 			users: [],
 			ruleData: NoopRuleData,
+			syncEntitlements: false,
 		},
 	}
 	// all create space args

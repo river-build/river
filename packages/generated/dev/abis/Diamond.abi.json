@@ -180,11 +180,6 @@
   },
   {
     "type": "error",
-    "name": "DiamondCut_InvalidFacetCutAction",
-    "inputs": []
-  },
-  {
-    "type": "error",
     "name": "DiamondCut_InvalidFacetCutLength",
     "inputs": []
   },
@@ -227,7 +222,7 @@
   },
   {
     "type": "error",
-    "name": "FailedInnerCall",
+    "name": "FailedCall",
     "inputs": []
   },
   {

@@ -1,7 +1,7 @@
 import { Err, SyncCookie, SyncOp, SyncStreamsResponse } from '@river-build/proto'
 import { DLogger, dlog, dlogError } from '@river-build/dlog'
 import { StreamRpcClient } from './makeStreamRpcClient'
-import { unpackStream, unpackStreamAndCookie } from './sign'
+import { UnpackEnvelopeOpts, unpackStream, unpackStreamAndCookie } from './sign'
 import { SyncedStreamEvents } from './streamEvents'
 import TypedEmitter from 'typed-emitter'
 import { nanoid } from 'nanoid'
@@ -20,20 +20,20 @@ export enum SyncState {
 }
 
 /**
- * See https://www.notion.so/herenottherelabs/RFC-Sync-hardening-e0552a4ed68a4d07b42ae34c69ee1bec?pvs=4#861081756f86423ea668c62b9eb76f4b
- Valid state transitions:
-	[*] --> NotSyncing
-	NotSyncing --> Starting
-	Starting --> Syncing
-	Starting --> Canceling: failed / stop sync
-	Starting --> Retrying: connection error 
-	Syncing --> Canceling: connection aborted / stop sync
-	Syncing --> Retrying: connection error
-    Syncing --> Syncing: resync
-	Retrying --> Canceling: stop sync
-	Retrying --> Syncing: resume
-    Retrying --> Retrying: still retrying
-	Canceling --> NotSyncing
+ * Valid state transitions:
+ * - [*] -\> NotSyncing
+ * - NotSyncing -\> Starting
+ * - Starting -\> Syncing
+ * - Starting -\> Canceling: failed / stop sync
+ * - Starting -\> Retrying: connection error
+ * - Syncing -\> Canceling: connection aborted / stop sync
+ * - Syncing -\> Retrying: connection error
+ * - Syncing -\> Syncing: resync
+ * - Retrying -\> Canceling: stop sync
+ * - Retrying -\> Syncing: resume
+ * - Retrying -\> Retrying: still retrying
+ * - Canceling -\> NotSyncing
+ * @see https://www.notion.so/herenottherelabs/RFC-Sync-hardening-e0552a4ed68a4d07b42ae34c69ee1bec?pvs=4#861081756f86423ea668c62b9eb76f4b
  */
 export const stateConstraints: Record<SyncState, Set<SyncState>> = {
     [SyncState.NotSyncing]: new Set([SyncState.Starting]),
@@ -123,6 +123,7 @@ export class SyncedStreamsLoop {
         rpcClient: StreamRpcClient,
         streams: { syncCookie: SyncCookie; stream: ISyncedStream }[],
         logNamespace: string,
+        readonly unpackEnvelopeOpts: UnpackEnvelopeOpts | undefined,
     ) {
         this.rpcClient = rpcClient
         this.clientEmitter = clientEmitter
@@ -316,9 +317,12 @@ export class SyncedStreamsLoop {
                             // syncId needs to be reset before starting a new syncStreams
                             // syncStreams() should return a new syncId
                             this.syncId = undefined
-                            const streams = this.rpcClient.syncStreams({
-                                syncPos: syncCookies,
-                            })
+                            const streams = this.rpcClient.syncStreams(
+                                {
+                                    syncPos: syncCookies,
+                                },
+                                { timeoutMs: -1 },
+                            )
 
                             const iterator = streams[Symbol.asyncIterator]()
 
@@ -675,11 +679,14 @@ export class SyncedStreamsLoop {
                         this.log('sync got stream', streamId, 'NOT FOUND')
                     } else if (syncStream.syncReset) {
                         this.log('initStream from sync reset', streamId, 'RESET')
-                        const response = await unpackStream(syncStream)
+                        const response = await unpackStream(syncStream, this.unpackEnvelopeOpts)
                         streamRecord.syncCookie = response.streamAndCookie.nextSyncCookie
                         await streamRecord.stream.initializeFromResponse(response)
                     } else {
-                        const streamAndCookie = await unpackStreamAndCookie(syncStream)
+                        const streamAndCookie = await unpackStreamAndCookie(
+                            syncStream,
+                            this.unpackEnvelopeOpts,
+                        )
                         streamRecord.syncCookie = streamAndCookie.nextSyncCookie
                         await streamRecord.stream.appendEvents(
                             streamAndCookie.events,

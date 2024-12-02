@@ -8,7 +8,8 @@ import {MembershipBaseSetup} from "../MembershipBaseSetup.sol";
 import {IEntitlementGated} from "contracts/src/spaces/facets/gated/IEntitlementGated.sol";
 import {IEntitlementGatedBase} from "contracts/src/spaces/facets/gated/IEntitlementGated.sol";
 import {IEntitlementCheckerBase} from "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol";
-import {IArchitect, IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.sol";
+import {IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.sol";
+import {ICreateSpace} from "contracts/src/factory/facets/create/ICreateSpace.sol";
 
 //libraries
 import {Vm} from "forge-std/Test.sol";
@@ -40,6 +41,15 @@ contract MembershipJoinSpaceTest is
 
   function test_joinSpaceOnly() external givenAliceHasMintedMembership {
     assertEq(membershipToken.balanceOf(alice), 1);
+  }
+
+  function test_joinDynamicSpace() external {
+    uint256 membershipFee = platformReqs.getMembershipFee();
+
+    vm.deal(alice, membershipFee);
+    vm.startPrank(alice);
+    MembershipFacet(dynamicSpace).joinSpace{value: membershipFee}(alice);
+    vm.stopPrank();
   }
 
   function test_joinSpaceMultipleTimes()
@@ -123,7 +133,9 @@ contract MembershipJoinSpaceTest is
       }
 
       vm.prank(selectedNodes[i]);
-      vm.expectRevert(EntitlementGated_TransactionNotRegistered.selector);
+      vm.expectRevert(
+        EntitlementGated_TransactionCheckAlreadyCompleted.selector
+      );
       _entitlementGated.postEntitlementCheckResult(
         transactionId,
         roleId,
@@ -222,7 +234,7 @@ contract MembershipJoinSpaceTest is
     // Further node votes to the terminated transaction should cause reversion due to cleaned up txn.
     vm.expectRevert(
       abi.encodeWithSelector(
-        IEntitlementGatedBase.EntitlementGated_TransactionNotRegistered.selector
+        IEntitlementGatedBase.EntitlementGated_NodeNotFound.selector
       )
     );
     EntitlementCheckRequestEvent memory finalRequest = entitlementCheckRequests[
@@ -275,7 +287,9 @@ contract MembershipJoinSpaceTest is
       }
 
       vm.prank(selectedNodes[i]);
-      vm.expectRevert(EntitlementGated_TransactionNotRegistered.selector);
+      vm.expectRevert(
+        EntitlementGated_TransactionCheckAlreadyCompleted.selector
+      );
       IEntitlementGated(contractAddress).postEntitlementCheckResult(
         transactionId,
         roleId,
@@ -372,7 +386,6 @@ contract MembershipJoinSpaceTest is
     vm.prank(founder);
     membership.setMembershipLimit(1);
 
-    assertTrue(membership.getMembershipPrice() == 0);
     assertTrue(membership.getMembershipLimit() == 1);
 
     vm.prank(alice);
@@ -539,7 +552,7 @@ contract MembershipJoinSpaceTest is
     freeAllocationInfo.membership.settings.freeAllocation = 1;
 
     vm.prank(founder);
-    address freeAllocationSpace = IArchitect(spaceFactory).createSpace(
+    address freeAllocationSpace = ICreateSpace(spaceFactory).createSpace(
       freeAllocationInfo
     );
 
@@ -550,5 +563,18 @@ contract MembershipJoinSpaceTest is
     vm.prank(bob);
     vm.expectRevert(Membership__InsufficientPayment.selector);
     freeAllocationMembership.joinSpace(bob);
+  }
+
+  function test_joinSpace_withFeeOnlyPrice() external {
+    uint256 fee = platformReqs.getMembershipFee();
+
+    vm.prank(founder);
+    membership.setMembershipPrice(fee);
+
+    vm.deal(alice, fee);
+    vm.prank(alice);
+    membership.joinSpace{value: fee}(alice);
+
+    assertEq(membershipToken.balanceOf(alice), 1);
   }
 }

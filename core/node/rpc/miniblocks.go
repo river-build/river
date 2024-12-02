@@ -59,3 +59,28 @@ func (s *Service) SaveMbCandidate(
 
 	return err
 }
+
+// GetMbs returns a range of miniblocks from the given stream.
+func (s *Service) GetMbs(
+	ctx context.Context,
+	node common.Address,
+	streamId StreamId,
+	fromInclusive int64,
+	toExclusive int64,
+) ([]*Miniblock, error) {
+	remote, err := s.nodeRegistry.GetStreamServiceClientForAddress(node)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := remote.GetMiniblocks(ctx, connect.NewRequest(&GetMiniblocksRequest{
+		StreamId:      streamId[:],
+		FromInclusive: fromInclusive,
+		ToExclusive:   toExclusive,
+	}))
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Msg.GetMiniblocks(), nil
+}

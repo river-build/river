@@ -15,13 +15,10 @@ import (
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
-	"github.com/river-build/river/core/node/http_client"
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/registries"
 )
-
-var TestHttpClientMaker func() *http.Client
 
 type NodeRegistry interface {
 	GetNode(address common.Address) (*NodeRecord, error)
@@ -54,24 +51,10 @@ func LoadNodeRegistry(
 	localNodeAddress common.Address,
 	appliedBlockNum crypto.BlockNumber,
 	chainMonitor crypto.ChainMonitor,
+	httpClient *http.Client,
 	connectOtelIterceptor *otelconnect.Interceptor,
 ) (*nodeRegistryImpl, error) {
 	log := dlog.FromCtx(ctx)
-
-	var err error
-	var client *http.Client
-	if TestHttpClientMaker != nil {
-		client = TestHttpClientMaker()
-		log.Warn("Using test http client")
-	} else {
-		client, err = http_client.GetHttpClient(ctx)
-		if err != nil {
-			log.Error("Error getting http client", "err", err)
-			return nil, AsRiverError(err, Err_BAD_CONFIG).
-				Message("Unable to get http client").
-				Func("LoadNodeRegistry")
-		}
-	}
 
 	nodes, err := contract.GetAllNodes(ctx, appliedBlockNum)
 	if err != nil {
@@ -86,7 +69,7 @@ func LoadNodeRegistry(
 	ret := &nodeRegistryImpl{
 		contract:         contract,
 		localNodeAddress: localNodeAddress,
-		httpClient:       client,
+		httpClient:       httpClient,
 		nodes:            make(map[common.Address]*NodeRecord, len(nodes)),
 		appliedBlockNum:  appliedBlockNum,
 		connectOpts:      connectOpts,
@@ -182,10 +165,18 @@ func (n *nodeRegistryImpl) OnNodeAdded(ctx context.Context, event types.Log) {
 
 	if _, exists := n.nodes[e.NodeAddress]; !exists {
 		// TODO: add operator to NodeAdded event
-		nodeRecord := n.addNode(e.NodeAddress, e.Url, e.Status, common.Address{})
-		log.Info("NodeRegistry: NodeAdded", "node", nodeRecord.address, "blockNum", event.BlockNumber)
+		nodeRecord := n.addNode(e.NodeAddress, e.Url, e.Status, e.Operator)
+		log.Info(
+			"NodeRegistry: NodeAdded",
+			"node",
+			nodeRecord.address,
+			"blockNum",
+			event.BlockNumber,
+			"operator",
+			e.Operator,
+		)
 	} else {
-		log.Error("NodeRegistry: Got NodeAdded for node that already exists in NodeRegistry", "blockNum", event.BlockNumber, "node", e.NodeAddress, "nodes", n.nodes)
+		log.Error("NodeRegistry: Got NodeAdded for node that already exists in NodeRegistry", "blockNum", event.BlockNumber, "node", e.NodeAddress, "operator", e.Operator, "nodes", n.nodes)
 	}
 }
 

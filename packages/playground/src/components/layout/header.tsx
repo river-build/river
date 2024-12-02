@@ -1,27 +1,32 @@
 import {
+    useAgentConnection,
     useRiver,
     useRiverAuthStatus,
-    useRiverConnection,
     useSyncAgent,
 } from '@river-build/react-sdk'
 import { useLocation, useParams } from 'react-router-dom'
 import { useState } from 'react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { RiverBeaver } from '@/components/river-beaver'
 import { RiverEnvSwitcher } from '../dialog/env-switcher'
 import { Button } from '../ui/button'
 import { UpdateMetadata } from '../form/metadata/update'
+import { Avatar } from '../ui/avatar'
 
 export const LayoutHeader = () => {
     const location = useLocation()
     const isAuthRoute = location.pathname.startsWith('/auth')
-    const { isConnected } = useRiverConnection()
+    const { isAgentConnected } = useAgentConnection()
 
     return (
-        <header className="flex justify-between border-b border-zinc-200 px-4 py-3">
-            <h1 className="text-2xl font-bold">River Playground</h1>
+        <header className="flex justify-between border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+            <div className="flex items-center gap-2">
+                <RiverBeaver />
+                <h1 className="text-2xl font-bold">River Playground</h1>
+            </div>
             <div className="flex items-center gap-6">
                 {!isAuthRoute && <RiverEnvSwitcher />}
-                {isConnected && <Profile />}
+                {isAgentConnected && <Profile />}
             </div>
         </header>
     )
@@ -37,7 +42,7 @@ const Profile = () => {
     return (
         <Sheet>
             <SheetTrigger>
-                <img src="/pp1.png" alt="profile" className="h-8 w-8 rounded-full" />
+                <Avatar userId={user.id} className="h-8 w-8" />
             </SheetTrigger>
             <SheetContent side="right" className="flex flex-col justify-between">
                 <div className="flex flex-col gap-2">
@@ -71,7 +76,12 @@ const Profile = () => {
                                 </Button>
                             )}
                         </div>
-                        <UpdateMetadata spaceId={spaceId} use={using} />
+                        <UpdateMetadata
+                            key={using}
+                            spaceId={spaceId}
+                            use={using}
+                            channelId={channelId}
+                        />
                     </div>
                 )}
             </SheetContent>

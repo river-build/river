@@ -2,7 +2,7 @@ import { UserEntitlementShim as UserEntitlementShimV3 } from './v3/UserEntitleme
 import {
     IMembershipBase as IMembershipBaseV3,
     IArchitectBase as ISpaceArchitectBaseV3,
-} from './v3/ISpaceArchitectShim'
+} from './v3/ICreateSpaceShim'
 import { ILegacyArchitectBase } from './v3/ILegacySpaceArchitectShim'
 import { IRolesBase as IRolesBaseV3 } from './v3/IRolesShim'
 import { RuleEntitlementShim } from './v3/RuleEntitlementShim'
@@ -12,19 +12,35 @@ import { IPricingModulesBase } from './v3/IPricingShim'
 import { RuleEntitlementV2Shim } from './v3/RuleEntitlementV2Shim'
 import { NoopRuleData } from './entitlement'
 
-import { CreateSpaceParams, CreateLegacySpaceParams } from './ISpaceDapp'
+import {
+    CreateSpaceParams,
+    CreateLegacySpaceParams,
+    UpdateChannelParams,
+    UpdateChannelAccessParams,
+} from './ISpaceDapp'
 
 export const Permission = {
-    Undefined: 'Undefined', // No permission required
+    /** No permission required. */
+    Undefined: 'Undefined',
+    /** Read event permission. */
     Read: 'Read',
+    /** Write event permission. */
     Write: 'Write',
+    /** Invite user permission. */
     Invite: 'Invite',
+    /** Join space permission. */
     JoinSpace: 'JoinSpace',
+    /** Redact events permission. */
     Redact: 'Redact',
-    Ban: 'Ban',
+    /** Modify or ban user permission. */
+    ModifyBanning: 'ModifyBanning',
+    /** Pin/unpin events permission. */
     PinMessage: 'PinMessage',
+    /** Add or remove channels permission. */
     AddRemoveChannels: 'AddRemoveChannels',
+    /** Modify space settings permission. */
     ModifySpaceSettings: 'ModifySpaceSettings',
+    /** React to a message permission. */
     React: 'React',
 } as const
 
@@ -119,22 +135,31 @@ export interface ChannelMetadata {
  * Channel details from multiple contract sources
  */
 export interface ChannelDetails {
+    /** The River `spaceId` which this channel belongs. */
     spaceNetworkId: string
+    /** The River `channelId` of the channel. */
     channelNetworkId: string
+    /** The name of the channel. */
     name: string
+    /** Whether the channel is disabled. */
     disabled: boolean
+    /** The roles defined for the channel {@link RoleEntitlements}. */
     roles: RoleEntitlements[]
+    /** The description of the channel. */
     description?: string
 }
 
-/**
- * Role details for a channel from multiple contract sources
- */
+/** Role details for a channel from multiple contract sources */
 export interface RoleEntitlements {
+    /** The id of the role. */
     roleId: number
+    /** The name of the role. */
     name: string
+    /** The permissions that this role has. @see {@link Permission} */
     permissions: Permission[]
+    /** The userIds that are in this role. */
     users: string[]
+    /** @internal The River struct that represents the rule data of the role {@link VersionedRuleData}. */
     ruleData: VersionedRuleData
 }
 
@@ -177,6 +202,15 @@ export function isRuleEntitlementV2(
     return entitlement.moduleType === EntitlementModuleType.RuleEntitlementV2
 }
 
+export const isUpdateChannelStatusParams = (
+    params: UpdateChannelParams,
+): params is UpdateChannelAccessParams => {
+    return (
+        'disabled' in params &&
+        !('roleIds' in params || 'channelName' in params || 'channelDescription' in params)
+    )
+}
+
 export function isStringArray(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     args: any,
@@ -188,7 +222,10 @@ export type MembershipInfo = Pick<
     MembershipInfoStruct,
     'maxSupply' | 'currency' | 'feeRecipient' | 'price' | 'duration' | 'pricingModule'
 > &
-    TotalSupplyInfo
+    TotalSupplyInfo & {
+        prepaidSupply: number
+        remainingFreeSupply: number
+    }
 
 export type TotalSupplyInfo = Pick<TotalSupplyOutputStruct, 'totalSupply'>
 

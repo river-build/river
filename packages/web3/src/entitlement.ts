@@ -1,4 +1,4 @@
-import type { ExtractAbiFunction } from 'abitype'
+import { type ExtractAbiFunction } from 'abitype'
 import { IRuleEntitlementBase, IRuleEntitlementAbi } from './v3/IRuleEntitlementShim'
 import { IRuleEntitlementV2Base, IRuleEntitlementV2Abi } from './v3/IRuleEntitlementV2Shim'
 import { dlogger } from '@river-build/dlog'
@@ -289,6 +289,11 @@ export function decodeRuleData(entitlementData: Hex): IRuleEntitlementBase.RuleD
 }
 
 export function encodeRuleDataV2(ruleData: IRuleEntitlementV2Base.RuleDataV2Struct): Hex {
+    // If we encounter a no-op rule data, just encode as empty bytes.
+    if (ruleData.operations.length === 0) {
+        return '0x'
+    }
+
     const getRuleDataV2Abi: ExtractAbiFunction<typeof IRuleEntitlementV2Abi, 'getRuleDataV2'> =
         getAbiItem({
             abi: IRuleEntitlementV2Abi,
@@ -303,6 +308,14 @@ export function encodeRuleDataV2(ruleData: IRuleEntitlementV2Base.RuleDataV2Stru
 }
 
 export function decodeRuleDataV2(entitlementData: Hex): IRuleEntitlementV2Base.RuleDataV2Struct {
+    if (entitlementData === '0x') {
+        return {
+            operations: [],
+            checkOperations: [],
+            logicalOperations: [],
+        } as IRuleEntitlementV2Base.RuleDataV2Struct
+    }
+
     const getRuleDataV2Abi: ExtractAbiFunction<typeof IRuleEntitlementV2Abi, 'getRuleDataV2'> =
         getAbiItem({
             abi: IRuleEntitlementV2Abi,
@@ -605,7 +618,12 @@ async function evaluateCheckOperation(
                 controller.abort()
                 return zeroAddress
             }
-            return evaluateCustomEntitledOperation(operation, controller, provider, linkedWallets)
+            return evaluateCrossChainEntitlementOperation(
+                operation,
+                controller,
+                provider,
+                linkedWallets,
+            )
         }
         case CheckOperationType.ETH_BALANCE: {
             const etherChainProviders = await findEtherChainProviders(xchainConfig)
@@ -749,12 +767,135 @@ export function createExternalNFTStruct(
     return createOperationsTree(defaultChain, options?.logicalOp ?? LogicalOperationType.OR)
 }
 
+export class DecodedCheckOperationBuilder {
+    private decodedCheckOp: Partial<DecodedCheckOperation> = {}
+
+    public setType(checkOpType: CheckOperationType): this {
+        this.decodedCheckOp.type = checkOpType
+        return this
+    }
+
+    public setChainId(chainId: bigint): this {
+        this.decodedCheckOp.chainId = chainId
+        return this
+    }
+
+    public setThreshold(threshold: bigint): this {
+        this.decodedCheckOp.threshold = threshold
+        return this
+    }
+
+    public setAddress(address: Address): this {
+        this.decodedCheckOp.address = address
+        return this
+    }
+
+    public setTokenId(tokenId: bigint): this {
+        this.decodedCheckOp.tokenId = tokenId
+        return this
+    }
+
+    public setByteEncodedParams(params: Hex): this {
+        this.decodedCheckOp.byteEncodedParams = params
+        return this
+    }
+
+    public build(): DecodedCheckOperation {
+        if (this.decodedCheckOp.type === undefined) {
+            throw new Error('DecodedCheckOperation requires a type')
+        }
+
+        const opStr = checkOpString(this.decodedCheckOp.type)
+
+        // For contract-related checks, assert set values for chain id and contract address
+        switch (this.decodedCheckOp.type) {
+            case CheckOperationType.ERC1155:
+            case CheckOperationType.ERC20:
+            case CheckOperationType.ERC721:
+            case CheckOperationType.ISENTITLED:
+                if (this.decodedCheckOp.chainId === undefined) {
+                    throw new Error(`DecodedCheckOperation of type ${opStr} requires a chainId`)
+                }
+                if (this.decodedCheckOp.address === undefined) {
+                    throw new Error(`DecodedCheckOperation of type ${opStr} requires an address`)
+                }
+        }
+
+        // threshold check
+        switch (this.decodedCheckOp.type) {
+            case CheckOperationType.ERC1155:
+            case CheckOperationType.ETH_BALANCE:
+            case CheckOperationType.ERC20:
+            case CheckOperationType.ERC721:
+                if (this.decodedCheckOp.threshold === undefined) {
+                    throw new Error(`DecodedCheckOperation of type ${opStr} requires a threshold`)
+                }
+        }
+
+        // tokenId check
+        if (
+            this.decodedCheckOp.type === CheckOperationType.ERC1155 &&
+            this.decodedCheckOp.tokenId === undefined
+        ) {
+            throw new Error(`DecodedCheckOperation of type ${opStr} requires a tokenId`)
+        }
+
+        // byte-encoded params check
+        if (
+            this.decodedCheckOp.type === CheckOperationType.ISENTITLED &&
+            this.decodedCheckOp.byteEncodedParams === undefined
+        ) {
+            throw new Error(`DecodedCheckOperation of type ${opStr} requires byteEncodedParams`)
+        }
+
+        switch (this.decodedCheckOp.type) {
+            case CheckOperationType.ERC20:
+            case CheckOperationType.ERC721:
+                return {
+                    type: this.decodedCheckOp.type,
+                    chainId: this.decodedCheckOp.chainId!,
+                    address: this.decodedCheckOp.address!,
+                    threshold: this.decodedCheckOp.threshold!,
+                }
+
+            case CheckOperationType.ERC1155:
+                return {
+                    type: CheckOperationType.ERC1155,
+                    chainId: this.decodedCheckOp.chainId!,
+                    address: this.decodedCheckOp.address!,
+                    threshold: this.decodedCheckOp.threshold!,
+                    tokenId: this.decodedCheckOp.tokenId!,
+                }
+
+            case CheckOperationType.ETH_BALANCE:
+                return {
+                    type: CheckOperationType.ETH_BALANCE,
+                    threshold: this.decodedCheckOp.threshold!,
+                }
+
+            case CheckOperationType.ISENTITLED:
+                return {
+                    type: CheckOperationType.ISENTITLED,
+                    address: this.decodedCheckOp.address!,
+                    chainId: this.decodedCheckOp.chainId!,
+                    byteEncodedParams: this.decodedCheckOp.byteEncodedParams!,
+                }
+
+            default:
+                throw new Error(
+                    `Check operation type ${opStr} unrecognized or not used in production`,
+                )
+        }
+    }
+}
+
 export type DecodedCheckOperation = {
     type: CheckOperationType
-    chainId: bigint
-    address: Address
+    chainId?: bigint
+    address?: Address
     threshold?: bigint
     tokenId?: bigint
+    byteEncodedParams?: Hex
 }
 
 export function createOperationsTree(
@@ -774,14 +915,19 @@ export function createOperationsTree(
         switch (op.type) {
             case CheckOperationType.ERC20:
             case CheckOperationType.ERC721:
-            case CheckOperationType.ETH_BALANCE:
                 params = encodeThresholdParams({ threshold: op.threshold ?? BigInt(1) })
+                break
+            case CheckOperationType.ETH_BALANCE:
+                params = encodeThresholdParams({ threshold: op.threshold ?? BigInt(0) })
                 break
             case CheckOperationType.ERC1155:
                 params = encodeERC1155Params({
                     threshold: op.threshold ?? BigInt(1),
                     tokenId: op.tokenId ?? BigInt(0),
                 })
+                break
+            case CheckOperationType.ISENTITLED:
+                params = op.byteEncodedParams ?? `0x`
                 break
             default:
                 params = '0x'
@@ -790,8 +936,8 @@ export function createOperationsTree(
         return {
             opType: OperationType.CHECK,
             checkType: op.type,
-            chainId: op.chainId,
-            contractAddress: op.address,
+            chainId: op.chainId ?? 1n,
+            contractAddress: op.address ?? zeroAddress,
             params,
         }
     })
@@ -839,12 +985,18 @@ export function createDecodedCheckOperationFromTree(
                 })
             } else if (
                 operation.checkType === CheckOperationType.ERC20 ||
-                operation.checkType === CheckOperationType.ERC721
+                operation.checkType === CheckOperationType.ERC721 ||
+                operation.checkType === CheckOperationType.ETH_BALANCE
             ) {
                 const { threshold } = decodeThresholdParams(operation.params)
                 checkOpSubsets.push({
                     ...op,
                     threshold,
+                })
+            } else if (operation.checkType === CheckOperationType.ISENTITLED) {
+                checkOpSubsets.push({
+                    ...op,
+                    byteEncodedParams: operation.params,
                 })
             }
         }
@@ -910,7 +1062,7 @@ async function evaluateERC20Operation(
     )
 }
 
-async function evaluateCustomEntitledOperation(
+async function evaluateCrossChainEntitlementOperation(
     operation: CheckOperationV2,
     controller: AbortController,
     provider: ethers.providers.BaseProvider,
@@ -918,12 +1070,12 @@ async function evaluateCustomEntitledOperation(
 ): Promise<EntitledWalletOrZeroAddress> {
     const contract = new ethers.Contract(
         operation.contractAddress,
-        ['function isEntitled(address[]) view returns (bool)'],
+        ['function isEntitled(address[], bytes) view returns (bool)'],
         provider,
     )
     return await Promise.any(
         linkedWallets.map(async (wallet): Promise<Address> => {
-            const isEntitled = await contract.callStatic.isEntitled([wallet])
+            const isEntitled = await contract.callStatic.isEntitled([wallet], operation.params)
             if (isEntitled === true) {
                 return wallet as Address
             }

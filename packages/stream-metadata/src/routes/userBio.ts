@@ -9,6 +9,11 @@ const paramsSchema = z.object({
 	userId: z.string().min(1, 'userId parameter is required'),
 })
 
+const CACHE_CONTROL = {
+	200: 'public, max-age=30, s-maxage=3600, stale-while-revalidate=3600',
+	404: 'public, max-age=5, s-maxage=3600',
+}
+
 export async function fetchUserBio(request: FastifyRequest, reply: FastifyReply) {
 	const logger = request.log.child({ name: fetchUserBio.name })
 	const parseResult = paramsSchema.safeParse(request.params)
@@ -28,32 +33,32 @@ export async function fetchUserBio(request: FastifyRequest, reply: FastifyReply)
 
 	logger.info({ userId }, 'Fetching user bio')
 
-	let stream: StreamStateView | undefined
+	let stream: StreamStateView
 	try {
 		const userMetadataStreamId = makeStreamId(StreamPrefix.UserMetadata, userId)
 		stream = await getStream(logger, userMetadataStreamId)
 	} catch (error) {
 		logger.error(
 			{
-				error,
+				err: error,
 				userId,
 			},
 			'Failed to get stream',
 		)
-		return reply.code(404).send('Stream not found')
-	}
-
-	if (!stream) {
-		return reply.code(404).send('Stream not found')
+		return reply.code(404).header('Cache-Control', CACHE_CONTROL[404]).send('Stream not found')
 	}
 
 	const protobufBio = await getUserBio(stream)
 	if (!protobufBio) {
-		return reply.code(404).send('bio not found')
+		logger.info({ userId, streamId: stream.streamId }, 'bio not found')
+		return reply.code(404).header('Cache-Control', CACHE_CONTROL[404]).send('bio not found')
 	}
 	const bio = protobufBio.bio
 
-	return reply.header('Content-Type', 'application/json').send({ bio })
+	return reply
+		.header('Content-Type', 'application/json')
+		.header('Cache-Control', CACHE_CONTROL[200])
+		.send({ bio })
 }
 
 async function getUserBio(streamView: StreamStateView) {

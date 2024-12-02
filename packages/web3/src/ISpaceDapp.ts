@@ -44,15 +44,29 @@ export interface CreateSpaceParams {
     membership: MembershipStruct
     shortDescription?: string
     longDescription?: string
+    prepaySupply?: number
 }
 
-export interface UpdateChannelParams {
+export interface UpdateChannelMetadataParams {
     spaceId: string
     channelId: string
     channelName: string
     channelDescription: string
     roleIds: number[]
     disabled?: boolean
+}
+
+export interface UpdateChannelAccessParams {
+    spaceId: string
+    channelId: string
+    disabled: boolean
+}
+
+export type UpdateChannelParams = UpdateChannelMetadataParams | UpdateChannelAccessParams
+
+export interface RemoveChannelParams {
+    spaceId: string
+    channelId: string
 }
 
 export interface LegacyUpdateRoleParams {
@@ -190,6 +204,11 @@ export interface ISpaceDapp {
         signer: SignerType,
         txnOpts?: TransactionOpts,
     ): Promise<TransactionType>
+    refreshMetadata(
+        spaceId: string,
+        signer: ethers.Signer,
+        txnOpts?: TransactionOpts,
+    ): Promise<ContractTransaction>
     encodedUpdateChannelData(space: Space, params: UpdateChannelParams): Promise<BytesLike[]>
     getChannels: (spaceId: string) => Promise<ChannelMetadata[]>
     getChannelDetails: (spaceId: string, channelId: string) => Promise<ChannelDetails | null>
@@ -224,6 +243,11 @@ export interface ISpaceDapp {
     ) => Promise<(ethers.utils.LogDescription | undefined)[]>
     updateChannel: (
         params: UpdateChannelParams,
+        signer: SignerType,
+        txnOpts?: TransactionOpts,
+    ) => Promise<TransactionType>
+    removeChannel: (
+        params: RemoveChannelParams,
         signer: SignerType,
         txnOpts?: TransactionOpts,
     ) => Promise<TransactionType>
@@ -269,7 +293,11 @@ export interface ISpaceDapp {
     ) => Promise<TransactionType>
     getSpace(spaceId: string): Space | undefined
     getSpaceMembershipTokenAddress: (spaceId: string) => Promise<string>
-    getJoinSpacePrice: (spaceId: string) => Promise<BigNumber>
+    getJoinSpacePriceDetails: (spaceId: string) => Promise<{
+        price: ethers.BigNumber
+        prepaidSupply: ethers.BigNumber
+        remainingFreeSupply: ethers.BigNumber
+    }>
     joinSpace: (
         spaceId: string,
         recipient: string,
@@ -279,7 +307,7 @@ export interface ISpaceDapp {
     getMembershipSupply: (spaceId: string) => Promise<TotalSupplyInfo>
     getMembershipInfo: (spaceId: string) => Promise<MembershipInfo>
     getWalletLink: () => WalletLinkV3
-    getSpaceAddress: (receipt: ContractReceipt) => string | undefined
+    getSpaceAddress: (receipt: ContractReceipt, senderAddress: string) => string | undefined
     listPricingModules: () => Promise<PricingModuleStruct[]>
     setMembershipPrice: (
         spaceId: string,
@@ -312,4 +340,10 @@ export interface ISpaceDapp {
         receiver: string,
         abortController?: AbortController,
     ) => Promise<{ issued: true; tokenId: string } | { issued: false; tokenId: undefined }>
+    getMembershipFreeAllocation: (spaceId: string) => Promise<BigNumber>
+    withdrawSpaceFunds: (
+        spaceId: string,
+        recipient: string,
+        signer: SignerType,
+    ) => Promise<TransactionType>
 }

@@ -28,6 +28,7 @@ import {Vm} from "forge-std/Test.sol";
 
 import {Architect} from "contracts/src/factory/facets/architect/Architect.sol";
 import {MembershipFacet} from "contracts/src/spaces/facets/membership/MembershipFacet.sol";
+import {CreateSpaceFacet} from "contracts/src/factory/facets/create/CreateSpace.sol";
 
 contract MembershipBaseSetup is
   IMembershipBase,
@@ -65,6 +66,7 @@ contract MembershipBaseSetup is
   address internal feeRecipient;
 
   address internal userSpace;
+  address internal dynamicSpace;
 
   function setUp() public virtual override {
     super.setUp();
@@ -87,10 +89,18 @@ contract MembershipBaseSetup is
       allowedUsers
     );
     userSpaceInfo.membership.settings.pricingModule = fixedPricingModule;
+    userSpaceInfo.membership.settings.freeAllocation = FREE_ALLOCATION;
+
+    IArchitectBase.SpaceInfo memory dynamicSpaceInfo = _createUserSpaceInfo(
+      "DynamicSpace",
+      allowedUsers
+    );
+    dynamicSpaceInfo.membership.settings.pricingModule = pricingModule;
 
     vm.startPrank(founder);
     // user space is a space where only alice and charlie are allowed along with the founder
-    userSpace = Architect(spaceFactory).createSpace(userSpaceInfo);
+    userSpace = CreateSpaceFacet(spaceFactory).createSpace(userSpaceInfo);
+    dynamicSpace = CreateSpaceFacet(spaceFactory).createSpace(dynamicSpaceInfo);
     vm.stopPrank();
 
     membership = MembershipFacet(userSpace);

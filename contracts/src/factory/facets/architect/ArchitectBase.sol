@@ -16,6 +16,7 @@ import {IManagedProxyBase} from "contracts/src/diamond/proxy/managed/IManagedPro
 import {IMembershipBase} from "contracts/src/spaces/facets/membership/IMembership.sol";
 import {IERC721A} from "contracts/src/diamond/facets/token/ERC721A/IERC721A.sol";
 import {ISpaceOwner} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
+import {ISpaceProxyInitializer} from "contracts/src/spaces/facets/proxy/ISpaceProxyInitializer.sol";
 import {IPrepay} from "contracts/src/spaces/facets/prepay/IPrepay.sol";
 
 // libraries
@@ -31,11 +32,16 @@ import {Permissions} from "contracts/src/spaces/facets/Permissions.sol";
 import {Factory} from "contracts/src/utils/Factory.sol";
 import {SpaceProxy} from "contracts/src/spaces/facets/proxy/SpaceProxy.sol";
 import {PricingModulesBase} from "contracts/src/factory/facets/architect/pricing/PricingModulesBase.sol";
-
+import {SpaceProxyInitializer} from "contracts/src/spaces/facets/proxy/SpaceProxyInitializer.sol";
 // modules
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-abstract contract ArchitectBase is Factory, IArchitectBase, PricingModulesBase {
+abstract contract ArchitectBase is
+  Factory,
+  IArchitectBase,
+  IRolesBase,
+  PricingModulesBase
+{
   using StringSet for StringSet.Set;
   using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -121,20 +127,47 @@ abstract contract ArchitectBase is Factory, IArchitectBase, PricingModulesBase {
     IEntitlementsManager(spaceAddress).addImmutableEntitlements(entitlements);
 
     // create minter role with requirements
-    _createMinterEntitlement(
-      spaceAddress,
-      userEntitlement,
-      ruleEntitlement,
-      spaceInfo.membership.requirements
-    );
+    string[] memory joinPermissions = new string[](1);
+    joinPermissions[0] = Permissions.JoinSpace;
+    if (spaceInfo.membership.requirements.everyone) {
+      _createEveryoneEntitlement(
+        spaceAddress,
+        MINTER_ROLE,
+        joinPermissions,
+        userEntitlement
+      );
+    } else {
+      _createEntitlementForRole(
+        spaceAddress,
+        MINTER_ROLE,
+        joinPermissions,
+        spaceInfo.membership.requirements,
+        userEntitlement,
+        ruleEntitlement
+      );
+    }
 
-    // create member role with membership as the requirement
-    uint256 memberRoleId = _createMemberEntitlement(
-      spaceAddress,
-      spaceInfo.membership.settings.name,
-      spaceInfo.membership.permissions,
-      userEntitlement
-    );
+    uint256 memberRoleId;
+
+    // if entitlement are synced, create a role with the membership requirements
+    if (spaceInfo.membership.requirements.syncEntitlements) {
+      memberRoleId = _createEntitlementForRole(
+        spaceAddress,
+        spaceInfo.membership.settings.name,
+        spaceInfo.membership.permissions,
+        spaceInfo.membership.requirements,
+        userEntitlement,
+        ruleEntitlement
+      );
+    } else {
+      // else create a role with the everyone entitlement
+      memberRoleId = _createEveryoneEntitlement(
+        spaceAddress,
+        spaceInfo.membership.settings.name,
+        spaceInfo.membership.permissions,
+        userEntitlement
+      );
+    }
 
     // create default channel
     _createDefaultChannel(spaceAddress, memberRoleId, spaceInfo.channel);
@@ -194,6 +227,28 @@ abstract contract ArchitectBase is Factory, IArchitectBase, PricingModulesBase {
   }
 
   // =============================================================
+  //                         Proxy Initializer
+  // =============================================================
+  function _getProxyInitializer()
+    internal
+    view
+    returns (ISpaceProxyInitializer)
+  {
+    return ImplementationStorage.layout().proxyInitializer;
+  }
+
+  function _setProxyInitializer(
+    ISpaceProxyInitializer proxyInitializer
+  ) internal {
+    ImplementationStorage.Layout storage ds = ImplementationStorage.layout();
+    ds.proxyInitializer = proxyInitializer;
+
+    emit Architect__ProxyInitializerSet(address(proxyInitializer));
+  }
+
+  // =============================================================
+
+  // =============================================================
   //                  Internal Channel Helpers
   // =============================================================
 
@@ -219,84 +274,87 @@ abstract contract ArchitectBase is Factory, IArchitectBase, PricingModulesBase {
   // =============================================================
   //                  Internal Entitlement Helpers
   // =============================================================
-
-  function _createMinterEntitlement(
+  function _createEntitlementForRole(
     address spaceAddress,
+    string memory roleName,
+    string[] memory permissions,
+    MembershipRequirements memory requirements,
     IUserEntitlement userEntitlement,
-    IRuleEntitlement ruleEntitlement,
-    MembershipRequirements memory requirements
+    IRuleEntitlement ruleEntitlement
   ) internal returns (uint256 roleId) {
-    string[] memory joinPermissions = new string[](1);
-    joinPermissions[0] = Permissions.JoinSpace;
+    uint256 entitlementCount = 0;
+    uint256 userReqsLen = requirements.users.length;
+    uint256 ruleReqsLen = requirements.ruleData.length;
 
-    roleId = IRoles(spaceAddress).createRole(
-      MINTER_ROLE,
-      joinPermissions,
-      new IRolesBase.CreateEntitlement[](0)
+    if (userReqsLen > 0) {
+      ++entitlementCount;
+    }
+
+    if (ruleReqsLen > 0) {
+      ++entitlementCount;
+    }
+
+    CreateEntitlement[] memory entitlements = new CreateEntitlement[](
+      entitlementCount
     );
 
-    if (requirements.everyone) {
-      address[] memory users = new address[](1);
-      users[0] = EVERYONE_ADDRESS;
+    uint256 entitlementIndex;
 
-      IRoles(spaceAddress).addRoleToEntitlement(
-        roleId,
-        IRolesBase.CreateEntitlement({
-          module: userEntitlement,
-          data: abi.encode(users)
-        })
-      );
-    } else {
-      if (requirements.users.length != 0) {
-        // validate users
-        for (uint256 i = 0; i < requirements.users.length; ) {
-          Validator.checkAddress(requirements.users[i]);
-          unchecked {
-            i++;
-          }
-        }
-
-        IRoles(spaceAddress).addRoleToEntitlement(
-          roleId,
-          IRolesBase.CreateEntitlement({
-            module: userEntitlement,
-            data: abi.encode(requirements.users)
-          })
-        );
+    if (userReqsLen != 0) {
+      // validate users
+      for (uint256 i; i < userReqsLen; ++i) {
+        Validator.checkAddress(requirements.users[i]);
       }
 
-      if (requirements.ruleData.length > 0) {
-        IRoles(spaceAddress).addRoleToEntitlement(
-          roleId,
-          IRolesBase.CreateEntitlement({
-            module: ruleEntitlement,
-            data: requirements.ruleData
-          })
-        );
-      }
+      entitlements[entitlementIndex++] = CreateEntitlement({
+        module: userEntitlement,
+        data: abi.encode(requirements.users)
+      });
     }
-    return roleId;
+
+    if (ruleReqsLen > 0) {
+      entitlements[entitlementIndex++] = CreateEntitlement({
+        module: ruleEntitlement,
+        data: requirements.ruleData
+      });
+    }
+
+    roleId = _createRoleWithEntitlements(
+      spaceAddress,
+      roleName,
+      permissions,
+      entitlements
+    );
   }
 
-  function _createMemberEntitlement(
+  function _createEveryoneEntitlement(
     address spaceAddress,
-    string memory memberName,
-    string[] memory memberPermissions,
+    string memory roleName,
+    string[] memory permissions,
     IUserEntitlement userEntitlement
   ) internal returns (uint256 roleId) {
     address[] memory users = new address[](1);
     users[0] = EVERYONE_ADDRESS;
 
-    IRolesBase.CreateEntitlement[]
-      memory entitlements = new IRolesBase.CreateEntitlement[](1);
+    CreateEntitlement[] memory entitlements = new CreateEntitlement[](1);
     entitlements[0].module = userEntitlement;
     entitlements[0].data = abi.encode(users);
 
-    roleId = IRoles(spaceAddress).createRole(
-      memberName,
-      memberPermissions,
+    roleId = _createRoleWithEntitlements(
+      spaceAddress,
+      roleName,
+      permissions,
       entitlements
     );
+  }
+
+  function _createRoleWithEntitlements(
+    address spaceAddress,
+    string memory roleName,
+    string[] memory permissions,
+    CreateEntitlement[] memory entitlements
+  ) internal returns (uint256 roleId) {
+    return IRoles(spaceAddress).createRole(roleName, permissions, entitlements);
   }
 
   // =============================================================
@@ -353,20 +411,31 @@ abstract contract ArchitectBase is Factory, IArchitectBase, PricingModulesBase {
       membershipSettings.feeRecipient = msg.sender;
     }
 
+    address proxyInitializer = address(
+      ImplementationStorage.layout().proxyInitializer
+    );
+
     // calculate init code
     initCode = abi.encodePacked(
       type(SpaceProxy).creationCode,
       abi.encode(
-        msg.sender,
         IManagedProxyBase.ManagedProxy({
           managerSelector: IProxyManager.getImplementation.selector,
           manager: address(this)
         }),
-        ITokenOwnableBase.TokenOwnable({
-          collection: spaceToken,
-          tokenId: spaceTokenId
-        }),
-        membershipSettings
+        proxyInitializer,
+        abi.encodeCall(
+          SpaceProxyInitializer.initialize,
+          (
+            msg.sender,
+            address(this),
+            ITokenOwnableBase.TokenOwnable({
+              collection: spaceToken,
+              tokenId: spaceTokenId
+            }),
+            membershipSettings
+          )
+        )
       )
     );
   }

@@ -15,6 +15,7 @@ const BoolFromStringSchema = BoolStringSchema.transform((str) => str === 'true')
 
 const envMainSchema = z.object({
 	RIVER_ENV: z.string(),
+	ENVIRONMENT: z.string(),
 	RIVER_CHAIN_RPC_URL: z.string().url(),
 	BASE_CHAIN_RPC_URL: z.string().url(),
 	RIVER_STREAM_METADATA_BASE_URL: z.string().url(),
@@ -24,6 +25,9 @@ const envMainSchema = z.object({
 	LOG_PRETTY: BoolFromStringSchema.optional().default('true'),
 	OPENSEA_API_KEY: z.string().optional(),
 	CLOUDFRONT_DISTRIBUTION_ID: z.string().optional(),
+	TRACING_ENABLED: BoolFromStringSchema.optional().default('false'),
+	PROFILING_ENABLED: BoolFromStringSchema.optional().default('false'),
+	DD_GIT_COMMIT_SHA: z.string().optional(),
 })
 
 function makeConfig() {
@@ -35,7 +39,8 @@ function makeConfig() {
 	const cloudfront = envMain.CLOUDFRONT_DISTRIBUTION_ID
 		? {
 				distributionId: envMain.CLOUDFRONT_DISTRIBUTION_ID,
-				invalidationConfirmationWait: 5000, // wait 5 seconds between each invalidation attempt
+				invalidationConfirmationWait: 30 * 1000,
+				// wait 30 seconds between each invalidation attempt
 				invalidationConfirmationMaxAttempts: 10, // maximum of 10 attempts
 		  }
 		: undefined
@@ -64,6 +69,15 @@ function makeConfig() {
 		instance: {
 			id: v4(),
 			deployedAt: new Date().toISOString(),
+		},
+		version: envMain.DD_GIT_COMMIT_SHA,
+		apm: {
+			tracingEnabled: envMain.TRACING_ENABLED,
+			profilingEnabled: envMain.PROFILING_ENABLED,
+			environment: envMain.ENVIRONMENT,
+		},
+		healthCheck: {
+			timeout: 5000, // 5 seconds
 		},
 	}
 }

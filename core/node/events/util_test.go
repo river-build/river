@@ -4,13 +4,17 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/river-build/river/core/config"
+	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/base/test"
 	"github.com/river-build/river/core/node/crypto"
+	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
 	. "github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
@@ -53,6 +57,12 @@ type testParams struct {
 	numInstances    int
 }
 
+type noopScrubber struct{}
+
+var _ Scrubber = (*noopScrubber)(nil)
+
+func (n *noopScrubber) Scrub(streamId StreamId) bool { return false }
+
 // makeCacheTestContext creates a test context with a blockchain and a stream registry for stream cache tests.
 // It doesn't create a stream cache itself. Call initCache to create a stream cache.
 func makeCacheTestContext(t *testing.T, p testParams) (context.Context, *cacheTestContext) {
@@ -87,36 +97,49 @@ func makeCacheTestContext(t *testing.T, p testParams) (context.Context, *cacheTe
 
 	setOnChainStreamConfig(t, ctx, btc, p)
 
+	baseCtx := ctx
 	for i := range p.numInstances {
+		log := dlog.FromCtx(baseCtx)
+		log = log.With("instance", i)
+		ctx = dlog.CtxWithLog(baseCtx, log)
+
 		ctc.require.NoError(btc.InitNodeRecord(ctx, i, "fakeurl"))
 
 		bc := btc.GetBlockchain(ctx, i)
 		bc.StartChainMonitor(ctx)
 
-		pg := storage.NewTestPgStore(ctx)
-		t.Cleanup(pg.Close)
+		streamStore := storage.NewTestStreamStore(ctx)
+		t.Cleanup(streamStore.Close)
 
 		cfg := btc.RegistryConfig()
-		registry, err := registries.NewRiverRegistryContract(ctx, bc, &cfg)
+		registry, err := registries.NewRiverRegistryContract(
+			ctx,
+			bc,
+			&cfg,
+			&config.GetDefaultConfig().RiverRegistry,
+		)
 		ctc.require.NoError(err)
 
 		blockNumber := btc.BlockNum(ctx)
 
-		nr, err := LoadNodeRegistry(ctx, registry, bc.Wallet.Address, blockNumber, bc.ChainMonitor, nil)
+		nr, err := LoadNodeRegistry(ctx, registry, bc.Wallet.Address, blockNumber, bc.ChainMonitor, nil, nil)
 		ctc.require.NoError(err)
 
-		sr := NewStreamRegistry(bc.Wallet.Address, nr, registry, btc.OnChainConfig)
+		sr, err := NewStreamRegistry(ctx, bc, nr, registry, btc.OnChainConfig)
+		ctc.require.NoError(err)
 
 		params := &StreamCacheParams{
-			Storage:                 pg.Storage,
+			Storage:                 streamStore.Storage,
 			Wallet:                  bc.Wallet,
 			RiverChain:              bc,
 			Registry:                registry,
 			ChainConfig:             btc.OnChainConfig,
+			Config:                  config.GetDefaultConfig(),
 			AppliedBlockNum:         blockNumber,
 			ChainMonitor:            bc.ChainMonitor,
 			Metrics:                 infra.NewMetricsFactory(nil, "", ""),
 			RemoteMiniblockProvider: ctc,
+			Scrubber:                &noopScrubber{},
 		}
 
 		inst := &cacheTestInstance{
@@ -127,11 +150,12 @@ func makeCacheTestContext(t *testing.T, p testParams) (context.Context, *cacheTe
 		ctc.instancesByAddr[bc.Wallet.Address] = inst
 	}
 
-	return ctx, ctc
+	return baseCtx, ctc
 }
 
 func (ctc *cacheTestContext) initCache(n int, opts *MiniblockProducerOpts) *streamCacheImpl {
-	streamCache, err := NewStreamCache(ctc.ctx, ctc.instances[n].params)
+	streamCache := NewStreamCache(ctc.ctx, ctc.instances[n].params)
+	err := streamCache.Start(ctc.ctx)
 	ctc.require.NoError(err)
 	ctc.instances[n].cache = streamCache
 	ctc.instances[n].mbProducer = NewMiniblockProducer(ctc.ctx, streamCache, opts)
@@ -144,30 +168,44 @@ func (ctc *cacheTestContext) initAllCaches(opts *MiniblockProducerOpts) {
 	}
 }
 
-func (ctc *cacheTestContext) createReplStream() (StreamId, []common.Address, []byte) {
+func (ctc *cacheTestContext) createReplStream() (StreamId, []common.Address, *MiniblockRef) {
 	streamId := testutils.FakeStreamId(STREAM_USER_SETTINGS_BIN)
-	mb := MakeGenesisMiniblockForUserSettingsStream(ctc.t, ctc.clientWallet, streamId)
-	mbBytes, err := proto.Marshal(mb)
+	mb := MakeGenesisMiniblockForUserSettingsStream(ctc.t, ctc.clientWallet, ctc.instances[0].params.Wallet, streamId)
+	mbBytes, err := mb.ToBytes()
 	ctc.require.NoError(err)
 
 	nodes, err := ctc.instances[0].streamRegistry.AllocateStream(
 		ctc.ctx,
 		streamId,
-		common.BytesToHash(mb.Header.Hash),
+		common.BytesToHash(mb.Proto.Header.Hash),
 		mbBytes,
 	)
 	ctc.require.NoError(err)
 	ctc.require.Len(nodes, ctc.testParams.replFactor)
 
 	for _, n := range nodes {
-		_, _, err = ctc.instancesByAddr[n].cache.CreateStream(ctc.ctx, streamId)
+		var s SyncStream
+		var err error
+		for {
+			s, err = ctc.instancesByAddr[n].cache.GetStreamWaitForLocal(ctc.ctx, streamId)
+			if !IsRiverErrorCode(err, Err_NOT_FOUND) {
+				break
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+		ctc.require.NoError(err)
+		_, err = s.GetView(ctc.ctx)
 		ctc.require.NoError(err)
 	}
 
-	return streamId, nodes, mb.Header.Hash
+	return streamId, nodes, &MiniblockRef{Hash: common.Hash(mb.Proto.Header.Hash), Num: 0}
 }
 
-func (ctc *cacheTestContext) addReplEvent(streamId StreamId, prevMiniblockHash []byte, nodes []common.Address) {
+func (ctc *cacheTestContext) addReplEvent(
+	streamId StreamId,
+	prevMiniblock *MiniblockRef,
+	nodes []common.Address,
+) {
 	addr := crypto.GetTestAddress()
 	ev, err := MakeParsedEventWithPayload(
 		ctc.clientWallet,
@@ -178,12 +216,12 @@ func (ctc *cacheTestContext) addReplEvent(streamId StreamId, prevMiniblockHash [
 				EventNum:  22,
 			},
 		),
-		prevMiniblockHash,
+		prevMiniblock,
 	)
 	ctc.require.NoError(err)
 
 	for _, n := range nodes {
-		stream, err := ctc.instancesByAddr[n].cache.GetSyncStream(ctc.ctx, streamId)
+		stream, err := ctc.instancesByAddr[n].cache.GetStreamWaitForLocal(ctc.ctx, streamId)
 		ctc.require.NoError(err)
 
 		err = stream.AddEvent(ctc.ctx, ev)
@@ -214,7 +252,9 @@ func (ctc *cacheTestContext) createStream(
 	genesisMiniblock *Miniblock,
 ) (SyncStream, StreamView) {
 	ctc.createStreamNoCache(streamId, genesisMiniblock)
-	s, v, err := ctc.instances[0].cache.CreateStream(ctc.ctx, streamId)
+	s, err := ctc.instances[0].cache.GetStreamWaitForLocal(ctc.ctx, streamId)
+	ctc.require.NoError(err)
+	v, err := s.GetView(ctc.ctx)
 	ctc.require.NoError(err)
 	return s, v
 }
@@ -234,22 +274,22 @@ func (ctc *cacheTestContext) allocateStreams(count int) map[StreamId]*Miniblock 
 			defer wg.Done()
 
 			streamID := testutils.FakeStreamId(STREAM_SPACE_BIN)
-			mb := MakeGenesisMiniblockForSpaceStream(ctc.t, ctc.clientWallet, streamID)
-			ctc.createStreamNoCache(streamID, mb)
+			mb := MakeGenesisMiniblockForSpaceStream(ctc.t, ctc.clientWallet, ctc.instances[0].params.Wallet, streamID)
+			ctc.createStreamNoCache(streamID, mb.Proto)
 
 			mu.Lock()
 			defer mu.Unlock()
-			genesisBlocks[streamID] = mb
+			genesisBlocks[streamID] = mb.Proto
 		}()
 	}
 	wg.Wait()
 	return genesisBlocks
 }
 
-func (ctc *cacheTestContext) makeMiniblock(inst int, streamId StreamId, forceSnapshot bool) (common.Hash, int64) {
-	h, n, err := ctc.instances[inst].mbProducer.TestMakeMiniblock(ctc.ctx, streamId, forceSnapshot)
+func (ctc *cacheTestContext) makeMiniblock(inst int, streamId StreamId, forceSnapshot bool) *MiniblockRef {
+	ref, err := ctc.instances[inst].mbProducer.TestMakeMiniblock(ctc.ctx, streamId, forceSnapshot)
 	ctc.require.NoError(err)
-	return h, n
+	return ref
 }
 
 func (ctc *cacheTestContext) GetMbProposal(
@@ -260,17 +300,20 @@ func (ctc *cacheTestContext) GetMbProposal(
 ) (*MiniblockProposal, error) {
 	inst := ctc.instancesByAddr[node]
 
-	stream, err := inst.cache.getStreamImpl(ctx, streamId)
+	stream, err := inst.cache.getStreamImpl(ctx, streamId, true)
 	if err != nil {
 		return nil, err
 	}
 
-	view, err := stream.getView(ctx)
+	view, err := stream.getViewIfLocal(ctx)
 	if err != nil {
 		return nil, err
 	}
+	if view == nil {
+		return nil, RiverError(Err_INTERNAL, "GetMbProposal: stream is not local")
+	}
 
-	proposal, err := view.ProposeNextMiniblock(ctx, inst.params.ChainConfig, forceSnapshot)
+	proposal, err := view.ProposeNextMiniblock(ctx, inst.params.ChainConfig.Get(), forceSnapshot)
 	if err != nil {
 		return nil, err
 	}
@@ -285,12 +328,37 @@ func (ctc *cacheTestContext) SaveMbCandidate(
 ) error {
 	inst := ctc.instancesByAddr[node]
 
-	stream, err := inst.cache.getStreamImpl(ctx, streamId)
+	stream, err := inst.cache.getStreamImpl(ctx, streamId, true)
 	if err != nil {
 		return err
 	}
 
 	return stream.SaveMiniblockCandidate(ctx, mb)
+}
+
+func (ctc *cacheTestContext) GetMbs(
+	ctx context.Context,
+	node common.Address,
+	streamId StreamId,
+	fromInclusive int64,
+	toExclusive int64,
+) ([]*Miniblock, error) {
+	for _, instance := range ctc.instances {
+		if node == instance.params.Wallet.Address {
+			stream, err := instance.cache.getStreamImpl(ctx, streamId, true)
+			if err != nil {
+				return nil, err
+			}
+
+			mbs, _, err := stream.GetMiniblocks(ctx, fromInclusive, toExclusive)
+			if err != nil {
+				return nil, err
+			}
+			return mbs, nil
+		}
+	}
+
+	return nil, RiverError(Err_INTERNAL, "TEST: cacheTestContext::GetMbs node not found")
 }
 
 func setOnChainStreamConfig(t *testing.T, ctx context.Context, btc *crypto.BlockchainTestContext, p testParams) {

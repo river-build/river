@@ -37,6 +37,7 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
   }
 
   function _requestEntitlementCheck(
+    address callerAddress,
     bytes32 transactionId,
     IRuleEntitlement entitlement,
     uint256 roleId
@@ -65,21 +66,21 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
     if (!transaction.hasBenSet) {
       transaction.hasBenSet = true;
       transaction.entitlement = entitlement;
-      transaction.clientAddress = msg.sender;
+      transaction.clientAddress = callerAddress;
     }
 
     transaction.roleIds.push(roleId);
 
     uint256 length = selectedNodes.length;
-    NodeVote[] storage nodeVotes = transaction.nodeVotesArray[roleId];
+    NodeVote[] storage nodeVotesForRole = transaction.nodeVotesArray[roleId];
     for (uint256 i; i < length; ++i) {
-      nodeVotes.push(
+      nodeVotesForRole.push(
         NodeVote({node: selectedNodes[i], vote: NodeVoteStatus.NOT_VOTED})
       );
     }
 
     ds.entitlementChecker.requestEntitlementCheck(
-      msg.sender,
+      callerAddress,
       transactionId,
       roleId,
       selectedNodes
@@ -112,23 +113,23 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
     uint256 passed = 0;
     uint256 failed = 0;
 
-    NodeVote[] storage nodeVotes = transaction.nodeVotesArray[roleId];
-    uint256 transactionNodesLength = nodeVotes.length;
+    NodeVote[] storage nodeVotesForRole = transaction.nodeVotesArray[roleId];
+    uint256 transactionNodesLength = nodeVotesForRole.length;
 
     for (uint256 i; i < transactionNodesLength; ++i) {
-      NodeVote storage tempVote = nodeVotes[i];
+      NodeVote storage currentVote = nodeVotesForRole[i];
 
       // Update vote if not yet voted
-      if (tempVote.node == msg.sender) {
-        if (tempVote.vote != NodeVoteStatus.NOT_VOTED) {
+      if (currentVote.node == msg.sender) {
+        if (currentVote.vote != NodeVoteStatus.NOT_VOTED) {
           revert EntitlementGated_NodeAlreadyVoted();
         }
-        tempVote.vote = result;
+        currentVote.vote = result;
         found = true;
       }
 
       unchecked {
-        NodeVoteStatus currentStatus = tempVote.vote;
+        NodeVoteStatus currentStatus = currentVote.vote;
         // Count votes
         if (currentStatus == NodeVoteStatus.PASSED) {
           ++passed;
@@ -146,13 +147,37 @@ abstract contract EntitlementGatedBase is IEntitlementGatedBase {
       passed > transactionNodesLength / 2 || failed > transactionNodesLength / 2
     ) {
       transaction.isCompleted[roleId] = true;
-      NodeVoteStatus finalStatus = passed > failed
+      NodeVoteStatus finalStatusForRole = passed > failed
         ? NodeVoteStatus.PASSED
         : NodeVoteStatus.FAILED;
-      _onEntitlementCheckResultPosted(transactionId, finalStatus);
-      emit EntitlementCheckResultPosted(transactionId, finalStatus);
-      _removeTransaction(transactionId);
+
+      bool allRoleIdsCompleted = _checkAllRoleIdsCompleted(transactionId);
+
+      if (finalStatusForRole == NodeVoteStatus.PASSED || allRoleIdsCompleted) {
+        _onEntitlementCheckResultPosted(transactionId, finalStatusForRole);
+        emit EntitlementCheckResultPosted(transactionId, finalStatusForRole);
+      }
+
+      if (allRoleIdsCompleted) {
+        _removeTransaction(transactionId);
+      }
     }
+  }
+
+  function _checkAllRoleIdsCompleted(
+    bytes32 transactionId
+  ) internal view returns (bool) {
+    EntitlementGatedStorage.Layout storage ds = EntitlementGatedStorage
+      .layout();
+
+    Transaction storage transaction = ds.transactions[transactionId];
+    uint256 roleIdsLength = transaction.roleIds.length;
+    for (uint256 i; i < roleIdsLength; ++i) {
+      if (!transaction.isCompleted[transaction.roleIds[i]]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   function _removeTransaction(bytes32 transactionId) internal {

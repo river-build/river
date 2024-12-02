@@ -1,5 +1,5 @@
 import { SyncCookie } from '@river-build/proto'
-import { DLogger, dlog, dlogError, shortenHexString } from '@river-build/dlog'
+import { DLogger, check, dlog, dlogError, shortenHexString } from '@river-build/dlog'
 import { StreamRpcClient } from './makeStreamRpcClient'
 import { SyncedStreamEvents } from './streamEvents'
 import TypedEmitter from 'typed-emitter'
@@ -7,6 +7,7 @@ import { isDefined } from './check'
 import { streamIdAsString } from './id'
 import { PingInfo, SyncState, SyncedStreamsLoop } from './syncedStreamsLoop'
 import { SyncedStream } from './syncedStream'
+import { UnpackEnvelopeOpts } from './sign'
 
 export class SyncedStreams {
     private syncedStreamsLoop: SyncedStreamsLoop | undefined
@@ -27,6 +28,7 @@ export class SyncedStreams {
         userId: string,
         rpcClient: StreamRpcClient,
         clientEmitter: TypedEmitter<SyncedStreamEvents>,
+        private readonly unpackEnvelopeOpts: UnpackEnvelopeOpts | undefined,
     ) {
         this.userId = userId
         this.rpcClient = rpcClient
@@ -60,7 +62,9 @@ export class SyncedStreams {
 
     public set(streamId: string | Uint8Array, stream: SyncedStream): void {
         this.log('stream set', streamId)
-        this.streams.set(streamIdAsString(streamId), stream)
+        const id = streamIdAsString(streamId)
+        check(id.length > 0, 'streamId cannot be empty')
+        this.streams.set(id, stream)
     }
 
     public delete(inStreamId: string | Uint8Array): void {
@@ -104,6 +108,7 @@ export class SyncedStreams {
             this.rpcClient,
             streamRecords,
             this.logNamespace,
+            this.unpackEnvelopeOpts,
         )
         await this.syncedStreamsLoop.start()
     }

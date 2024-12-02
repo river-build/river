@@ -4,6 +4,8 @@ import {
     ChannelMetadata,
     EntitlementModuleType,
     isPermission,
+    isUpdateChannelStatusParams,
+    MembershipInfo,
     Permission,
     PricingModuleStruct,
     RoleDetails,
@@ -15,11 +17,12 @@ import {
     CreateSpaceParams,
     ISpaceDapp,
     TransactionOpts,
-    UpdateChannelParams,
     LegacyUpdateRoleParams,
     UpdateRoleParams,
     SetChannelPermissionOverridesParams,
     ClearChannelPermissionOverridesParams,
+    RemoveChannelParams,
+    UpdateChannelParams,
 } from '../ISpaceDapp'
 import { LOCALHOST_CHAIN_ID } from '../Web3Constants'
 import { IRolesBase } from './IRolesShim'
@@ -37,7 +40,7 @@ import {
     UserEntitlementShim,
 } from './index'
 import { PricingModules } from './PricingModules'
-import { dlogger, isJest } from '@river-build/dlog'
+import { dlogger, isTestEnv } from '@river-build/dlog'
 import { EVERYONE_ADDRESS, stringifyChannelMetadataJSON, NoEntitledWalletError } from '../Utils'
 import {
     XchainConfig,
@@ -178,7 +181,7 @@ export class SpaceDapp implements ISpaceDapp {
             provider.pollingInterval = 250
         }
 
-        const isLocalDev = isJest() || config.chainId === LOCALHOST_CHAIN_ID
+        const isLocalDev = isTestEnv() || config.chainId === LOCALHOST_CHAIN_ID
         const cacheOpts = {
             positiveCacheTTLSeconds: isLocalDev ? 5 : 15 * 60,
             negativeCacheTTLSeconds: 2,
@@ -324,20 +327,27 @@ export class SpaceDapp implements ISpaceDapp {
         signer: ethers.Signer,
         txnOpts?: TransactionOpts,
     ): Promise<ContractTransaction> {
-        const spaceInfo = {
-            name: params.spaceName,
-            uri: params.uri,
-            membership: params.membership,
-            channel: {
-                metadata: params.channelName || '',
-            },
-            shortDescription: params.shortDescription ?? '',
-            longDescription: params.longDescription ?? '',
-        }
-        return wrapTransaction(
-            () => this.spaceRegistrar.SpaceArchitect.write(signer).createSpace(spaceInfo),
-            txnOpts,
-        )
+        return wrapTransaction(() => {
+            const createSpaceFunction = this.spaceRegistrar.CreateSpace.write(signer)[
+                'createSpaceWithPrepay(((string,string,string,string),((string,string,uint256,uint256,uint64,address,address,uint256,address),(bool,address[],bytes,bool),string[]),(string),(uint256)))'
+            ] as (arg: any) => Promise<ContractTransaction>
+
+            return createSpaceFunction({
+                channel: {
+                    metadata: params.channelName || '',
+                },
+                membership: params.membership,
+                metadata: {
+                    name: params.spaceName,
+                    uri: params.uri,
+                    longDescription: params.longDescription || '',
+                    shortDescription: params.shortDescription || '',
+                },
+                prepay: {
+                    supply: params.prepaySupply ?? 0,
+                },
+            })
+        }, txnOpts)
     }
 
     public async createChannel(
@@ -459,6 +469,23 @@ export class SpaceDapp implements ISpaceDapp {
         return space.getChannels()
     }
 
+    public async tokenURI(spaceId: string) {
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+        const spaceInfo = await space.getSpaceInfo()
+        return space.SpaceOwnerErc721A.read.tokenURI(spaceInfo.tokenId)
+    }
+
+    public memberTokenURI(spaceId: string, tokenId: string) {
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+        return space.ERC721A.read.tokenURI(tokenId)
+    }
+
     public async getChannelDetails(
         spaceId: string,
         channelNetworkId: string,
@@ -517,8 +544,8 @@ export class SpaceDapp implements ISpaceDapp {
             owner,
             disabled,
             uri: (spaceInfo.uri as string) ?? '',
-            tokenId: spaceInfo.tokenId as ethers.BigNumber,
-            createdAt: spaceInfo.createdAt as ethers.BigNumber,
+            tokenId: ethers.BigNumber.from(spaceInfo.tokenId).toString(),
+            createdAt: ethers.BigNumber.from(spaceInfo.createdAt).toString(),
             shortDescription: (spaceInfo.shortDescription as string) ?? '',
             longDescription: (spaceInfo.longDescription as string) ?? '',
         }
@@ -1007,10 +1034,19 @@ export class SpaceDapp implements ISpaceDapp {
     }
 
     public async encodedUpdateChannelData(space: Space, params: UpdateChannelParams) {
+        const channelId = ensureHexPrefix(params.channelId)
+
+        if (isUpdateChannelStatusParams(params)) {
+            // When enabling or disabling channels, passing names and roles is not required.
+            // To ensure the contract accepts this exception, the metadata argument should be left empty.
+            return [
+                space.Channels.interface.encodeFunctionData('updateChannel', [channelId, '', true]),
+            ]
+        }
+
         // data for the multicall
         const encodedCallData: BytesLike[] = []
 
-        const channelId = ensureHexPrefix(params.channelId)
         // update the channel metadata
         encodedCallData.push(
             space.Channels.interface.encodeFunctionData('updateChannel', [
@@ -1032,6 +1068,21 @@ export class SpaceDapp implements ISpaceDapp {
             encodedCallData.push(callData)
         }
         return encodedCallData
+    }
+
+    public async removeChannel(
+        params: RemoveChannelParams,
+        signer: ethers.Signer,
+        txnOpts?: TransactionOpts,
+    ): Promise<ContractTransaction> {
+        const space = this.getSpace(params.spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${params.spaceId}" is not found.`)
+        }
+        return wrapTransaction(
+            () => space.Channels.write(signer).removeChannel(params.channelId),
+            txnOpts,
+        )
     }
 
     public async legacyUpdateRole(
@@ -1277,17 +1328,48 @@ export class SpaceDapp implements ISpaceDapp {
         return space.Membership.address
     }
 
-    public async getJoinSpacePrice(spaceId: string): Promise<ethers.BigNumber> {
+    public async getJoinSpacePriceDetails(spaceId: string): Promise<{
+        price: ethers.BigNumber
+        prepaidSupply: ethers.BigNumber
+        remainingFreeSupply: ethers.BigNumber
+    }> {
         const space = this.getSpace(spaceId)
         if (!space) {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
         }
+        // membershipPrice is either the maximum of either the price set during space creation, or the PlatformRequirements membership fee
+        // it will alawys be a value regardless of whether the space has free allocations or prepaid memberships
+        const membershipPrice = await space.Membership.read.getMembershipPrice()
+        // totalSupply = number of memberships minted
+        const totalSupply = await space.ERC721A.read.totalSupply()
+        // free allocation is set at space creation and is unchanging - it neither increases nor decreases
+        // if totalSupply < freeAllocation, the contracts won't charge for minting a membership nft,
+        // else it will charge the membershipPrice
+        const freeAllocation = await this.getMembershipFreeAllocation(spaceId)
+        // prepaidSupply = number of additional prepaid memberships
+        // if any prepaid memberships have been purchased, the contracts won't charge for minting a membership nft,
+        // else it will charge the membershipPrice
         const prepaidSupply = await space.Prepay.read.prepaidMembershipSupply()
+        // remainingFreeSupply
+        // if totalSupply < freeAllocation, freeAllocation + prepaid - minted memberships
+        // else the remaining prepaidSupply if any
+        const remainingFreeSupply = totalSupply.lt(freeAllocation)
+            ? freeAllocation.add(prepaidSupply).sub(totalSupply)
+            : prepaidSupply
 
-        if (prepaidSupply.gt(0)) {
-            return ethers.BigNumber.from(0)
+        return {
+            price: remainingFreeSupply.gt(0) ? ethers.BigNumber.from(0) : membershipPrice,
+            prepaidSupply,
+            remainingFreeSupply,
         }
-        return space.Membership.read.getMembershipPrice()
+    }
+
+    public async getMembershipFreeAllocation(spaceId: string) {
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+        return space.Membership.read.getMembershipFreeAllocation()
     }
 
     public async joinSpace(
@@ -1312,7 +1394,7 @@ export class SpaceDapp implements ISpaceDapp {
 
         logger.log('joinSpace before blockNumber', Date.now() - getSpaceStart, blockNumber)
         const getPriceStart = Date.now()
-        const price = await space.Membership.read.getMembershipPrice()
+        const { price } = await this.getJoinSpacePriceDetails(spaceId)
         logger.log('joinSpace getMembershipPrice', Date.now() - getPriceStart)
         const wrapStart = Date.now()
         const result = await wrapTransaction(async () => {
@@ -1365,26 +1447,36 @@ export class SpaceDapp implements ISpaceDapp {
         if (!space) {
             throw new Error(`Space with spaceId "${spaceId}" is not found.`)
         }
-        const [price, limit, currency, feeRecipient, duration, totalSupply, pricingModule] =
-            await Promise.all([
-                this.getJoinSpacePrice(spaceId),
-                space.Membership.read.getMembershipLimit(),
-                space.Membership.read.getMembershipCurrency(),
-                space.Ownable.read.owner(),
-                space.Membership.read.getMembershipDuration(),
-                space.ERC721A.read.totalSupply(),
-                space.Membership.read.getMembershipPricingModule(),
-            ])
+        const [
+            joinSpacePriceDetails,
+            limit,
+            currency,
+            feeRecipient,
+            duration,
+            totalSupply,
+            pricingModule,
+        ] = await Promise.all([
+            this.getJoinSpacePriceDetails(spaceId),
+            space.Membership.read.getMembershipLimit(),
+            space.Membership.read.getMembershipCurrency(),
+            space.Ownable.read.owner(),
+            space.Membership.read.getMembershipDuration(),
+            space.ERC721A.read.totalSupply(),
+            space.Membership.read.getMembershipPricingModule(),
+        ])
+        const { price, prepaidSupply, remainingFreeSupply } = joinSpacePriceDetails
 
         return {
-            price: price, // keep as BigNumber (wei)
+            price, // keep as BigNumber (wei)
             maxSupply: limit.toNumber(),
             currency: currency,
             feeRecipient: feeRecipient,
             duration: duration.toNumber(),
             totalSupply: totalSupply.toNumber(),
             pricingModule: pricingModule,
-        }
+            prepaidSupply: prepaidSupply.toNumber(),
+            remainingFreeSupply: remainingFreeSupply.toNumber(),
+        } satisfies MembershipInfo
     }
 
     public getWalletLink(): WalletLink {
@@ -1491,26 +1583,49 @@ export class SpaceDapp implements ISpaceDapp {
         return createEntitlementStruct(space, params.users, params.ruleData)
     }
 
-    public getSpaceAddress(receipt: ContractReceipt): string | undefined {
-        const eventName = 'SpaceCreated'
+    public async refreshMetadata(
+        spaceId: string,
+        signer: ethers.Signer,
+        txnOpts?: TransactionOpts,
+    ): Promise<ContractTransaction> {
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+        return wrapTransaction(
+            () => space.Membership.metadata.write(signer).refreshMetadata(),
+            txnOpts,
+        )
+    }
+
+    /**
+     * Get the space address from the receipt and sender address
+     * @param receipt - The receipt from the transaction
+     * @param senderAddress - The address of the sender. Required for the case of a receipt containing multiple events of the same type.
+     * @returns The space address or undefined if the receipt is not successful
+     */
+    public getSpaceAddress(receipt: ContractReceipt, senderAddress: string): string | undefined {
         if (receipt.status !== 1) {
             return undefined
         }
         for (const receiptLog of receipt.logs) {
-            try {
-                // Parse the log with the contract interface
-                const parsedLog = this.spaceRegistrar.SpaceArchitect.interface.parseLog(receiptLog)
-                if (parsedLog.name === eventName) {
-                    // If the log matches the event we're looking for, do something with it
-                    // parsedLog.args contains the event arguments as an object
-                    logger.log(`Event ${eventName} found: `, parsedLog.args)
-                    return parsedLog.args.space as string
-                }
-            } catch (error) {
-                // This log wasn't from the contract we're interested in
+            const spaceAddress = this.spaceRegistrar.SpaceArchitect.getSpaceAddressFromLog(
+                receiptLog,
+                senderAddress,
+            )
+            if (spaceAddress) {
+                return spaceAddress
             }
         }
         return undefined
+    }
+
+    public withdrawSpaceFunds(spaceId: string, recipient: string, signer: ethers.Signer) {
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+        return space.Membership.write(signer).withdraw(recipient)
     }
 
     // If the caller doesn't provide an abort controller, listenForMembershipToken will create one
@@ -1542,7 +1657,7 @@ async function wrapTransaction(
     txFn: () => Promise<ContractTransaction>,
     txnOpts?: TransactionOpts,
 ): Promise<ContractTransaction> {
-    const retryLimit = txnOpts?.retryCount ?? isJest() ? 3 : 0
+    const retryLimit = txnOpts?.retryCount ?? isTestEnv() ? 3 : 0
 
     const runTx = async () => {
         let retryCount = 0

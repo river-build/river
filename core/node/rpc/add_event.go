@@ -6,10 +6,11 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
 	. "github.com/river-build/river/core/node/events"
-	. "github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/rules"
 	. "github.com/river-build/river/core/node/shared"
@@ -18,7 +19,8 @@ import (
 func (s *Service) localAddEvent(
 	ctx context.Context,
 	req *connect.Request[AddEventRequest],
-	nodes StreamNodes,
+	localStream SyncStream,
+	streamView StreamView,
 ) (*connect.Response[AddEventResponse], error) {
 	log := dlog.FromCtx(ctx)
 
@@ -34,7 +36,7 @@ func (s *Service) localAddEvent(
 
 	log.Debug("localAddEvent", "parsedEvent", parsedEvent)
 
-	err = s.addParsedEvent(ctx, streamId, parsedEvent, nodes)
+	err = s.addParsedEvent(ctx, streamId, parsedEvent, localStream, streamView)
 	if err != nil && req.Msg.Optional {
 		// aellis 5/2024 - we only want to wrap errors from canAddEvent,
 		// currently this is catching all errors, which is not ideal
@@ -57,12 +59,10 @@ func (s *Service) addParsedEvent(
 	ctx context.Context,
 	streamId StreamId,
 	parsedEvent *ParsedEvent,
-	nodes StreamNodes,
+	localStream SyncStream,
+	streamView StreamView,
 ) error {
-	localStream, streamView, err := s.cache.GetStream(ctx, streamId)
-	if err != nil {
-		return err
-	}
+	// TODO: here it should loop and re-check the rules if view was updated in the meantime.
 
 	canAddEvent, chainAuthArgsList, sideEffects, err := rules.CanAddEvent(
 		ctx,
@@ -93,7 +93,7 @@ func (s *Service) addParsedEvent(
 		// If no chainAuthArgs grant entitlement, execute the OnChainAuthFailure side effect.
 		if !isEntitled {
 			if sideEffects.OnChainAuthFailure != nil {
-				err := s.addEventPayload(
+				err := s.AddEventPayload(
 					ctx,
 					sideEffects.OnChainAuthFailure.StreamId,
 					sideEffects.OnChainAuthFailure.Payload,
@@ -112,7 +112,7 @@ func (s *Service) addParsedEvent(
 	}
 
 	if sideEffects.RequiredParentEvent != nil {
-		err := s.addEventPayload(ctx, sideEffects.RequiredParentEvent.StreamId, sideEffects.RequiredParentEvent.Payload)
+		err := s.AddEventPayload(ctx, sideEffects.RequiredParentEvent.StreamId, sideEffects.RequiredParentEvent.Payload)
 		if err != nil {
 			return err
 		}
@@ -121,7 +121,7 @@ func (s *Service) addParsedEvent(
 	stream := &replicatedStream{
 		streamId:    streamId.String(),
 		localStream: localStream,
-		nodes:       nodes,
+		nodes:       localStream,
 		service:     s,
 	}
 
@@ -133,7 +133,7 @@ func (s *Service) addParsedEvent(
 	return nil
 }
 
-func (s *Service) addEventPayload(ctx context.Context, streamId StreamId, payload IsStreamEvent_Payload) error {
+func (s *Service) AddEventPayload(ctx context.Context, streamId StreamId, payload IsStreamEvent_Payload) error {
 	hashRequest := &GetLastMiniblockHashRequest{
 		StreamId: streamId[:],
 	}
@@ -141,7 +141,10 @@ func (s *Service) addEventPayload(ctx context.Context, streamId StreamId, payloa
 	if err != nil {
 		return err
 	}
-	envelope, err := MakeEnvelopeWithPayload(s.wallet, payload, hashResponse.Msg.Hash)
+	envelope, err := MakeEnvelopeWithPayload(s.wallet, payload, &MiniblockRef{
+		Hash: common.BytesToHash(hashResponse.Msg.Hash),
+		Num:  hashResponse.Msg.MiniblockNum,
+	})
 	if err != nil {
 		return err
 	}

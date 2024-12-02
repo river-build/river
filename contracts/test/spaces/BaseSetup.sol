@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-// interfaces
+// utils
 import {TestUtils} from "contracts/test/utils/TestUtils.sol";
+
+import {SimpleAccountFactory} from "account-abstraction/samples/SimpleAccountFactory.sol";
+import {SimpleAccount} from "account-abstraction/samples/SimpleAccount.sol";
+
+// interfaces
 import {IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.sol";
 import {IEntitlementChecker} from "contracts/src/base/registry/facets/checker/IEntitlementChecker.sol";
 import {IImplementationRegistry} from "contracts/src/factory/facets/registry/IImplementationRegistry.sol";
@@ -10,13 +15,15 @@ import {IWalletLink} from "contracts/src/factory/facets/wallet-link/IWalletLink.
 import {ISpaceOwner} from "contracts/src/spaces/facets/owner/ISpaceOwner.sol";
 import {IMainnetDelegation} from "contracts/src/tokens/river/base/delegation/IMainnetDelegation.sol";
 import {INodeOperator} from "contracts/src/base/registry/facets/operator/INodeOperator.sol";
-import {EIP712Facet} from "contracts/src/diamond/utils/cryptography/signature/EIP712Facet.sol";
-import {NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
+import {IEntryPoint} from "account-abstraction/interfaces/IEntryPoint.sol";
+import {ICreateSpace} from "contracts/src/factory/facets/create/ICreateSpace.sol";
 
 // libraries
 import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 // contracts
+import {EIP712Facet} from "contracts/src/diamond/utils/cryptography/signature/EIP712Facet.sol";
+import {NodeOperatorStatus} from "contracts/src/base/registry/facets/operator/NodeOperatorStorage.sol";
 import {MockMessenger} from "contracts/test/mocks/MockMessenger.sol";
 
 // deployments
@@ -32,12 +39,14 @@ import {DeploySpaceFactory} from "contracts/scripts/deployments/diamonds/DeployS
 import {DeployRiverBase} from "contracts/scripts/deployments/utils/DeployRiverBase.s.sol";
 import {DeployProxyBatchDelegation} from "contracts/scripts/deployments/utils/DeployProxyBatchDelegation.s.sol";
 import {DeployBaseRegistry} from "contracts/scripts/deployments/diamonds/DeployBaseRegistry.s.sol";
+import {DeployRiverAirdrop} from "contracts/scripts/deployments/diamonds/DeployRiverAirdrop.s.sol";
 
 /*
  * @notice - This is the base setup to start testing the entire suite of contracts
  * @dev - This contract is inherited by all other test contracts, it will create one diamond contract which represent the factory contract that creates all spaces
  */
 contract BaseSetup is TestUtils, SpaceHelper {
+  uint256 internal constant FREE_ALLOCATION = 1_000;
   string public constant LINKED_WALLET_MESSAGE = "Link your external wallet";
   bytes32 private constant _LINKED_WALLET_TYPEHASH =
     0x6bb89d031fcd292ecd4c0e6855878b7165cebc3a2f35bc6bbac48c088dd8325c;
@@ -51,6 +60,7 @@ contract BaseSetup is TestUtils, SpaceHelper {
   DeployRiverBase internal deployRiverTokenBase = new DeployRiverBase();
   DeployProxyBatchDelegation internal deployProxyBatchDelegation =
     new DeployProxyBatchDelegation();
+  DeployRiverAirdrop internal deployRiverAirdrop = new DeployRiverAirdrop();
 
   address[] internal operators;
   address[] internal nodes;
@@ -64,6 +74,7 @@ contract BaseSetup is TestUtils, SpaceHelper {
   address internal userEntitlement;
   address internal ruleEntitlement;
   address internal legacyRuleEntitlement;
+
   address internal spaceOwner;
 
   address internal baseRegistry;
@@ -78,6 +89,11 @@ contract BaseSetup is TestUtils, SpaceHelper {
 
   address internal pricingModule;
   address internal fixedPricingModule;
+  address internal tieredPricingModule;
+
+  address internal riverAirdrop;
+
+  SimpleAccountFactory internal simpleAccountFactory;
 
   IEntitlementChecker internal entitlementChecker;
   IImplementationRegistry internal implementationRegistry;
@@ -94,7 +110,16 @@ contract BaseSetup is TestUtils, SpaceHelper {
 
     operators = _createAccounts(10);
 
+    // Simple Account Factory
+    simpleAccountFactory = new SimpleAccountFactory(
+      IEntryPoint(_randomAddress())
+    );
+
+    // River Token
+    riverToken = deployRiverTokenBase.deploy(deployer);
+
     // Base Registry
+    deployBaseRegistry.setDependencies({riverToken_: riverToken});
     baseRegistry = deployBaseRegistry.deploy(deployer);
     entitlementChecker = IEntitlementChecker(baseRegistry);
     nodeOperator = INodeOperator(baseRegistry);
@@ -116,23 +141,29 @@ contract BaseSetup is TestUtils, SpaceHelper {
     ruleEntitlement = deploySpaceFactory.ruleEntitlement();
     legacyRuleEntitlement = deploySpaceFactory.legacyRuleEntitlement();
     spaceOwner = deploySpaceFactory.spaceOwner();
-    pricingModule = deploySpaceFactory.tieredLogPricing();
+    pricingModule = deploySpaceFactory.tieredLogPricingV3();
     fixedPricingModule = deploySpaceFactory.fixedPricing();
     walletLink = IWalletLink(spaceFactory);
     implementationRegistry = IImplementationRegistry(spaceFactory);
     eip712Facet = EIP712Facet(spaceFactory);
 
+    // River Airdrop
+    deployRiverAirdrop.setBaseRegistry(baseRegistry);
+    deployRiverAirdrop.setSpaceFactory(spaceFactory);
+    riverAirdrop = deployRiverAirdrop.deploy(deployer);
+
     // Base Registry Diamond
-    riverToken = deployRiverTokenBase.deploy(deployer);
     bridge = deployRiverTokenBase.bridgeBase();
 
     // POST DEPLOY
     vm.startPrank(deployer);
     ISpaceOwner(spaceOwner).setFactory(spaceFactory);
     IImplementationRegistry(spaceFactory).addImplementation(baseRegistry);
+    IImplementationRegistry(spaceFactory).addImplementation(riverAirdrop);
     ISpaceDelegation(baseRegistry).setRiverToken(riverToken);
     ISpaceDelegation(baseRegistry).setMainnetDelegation(baseRegistry);
     IMainnetDelegation(baseRegistry).setProxyDelegation(mainnetProxyDelegation);
+    ISpaceDelegation(baseRegistry).setSpaceFactory(spaceFactory);
     MockMessenger(messenger).setXDomainMessageSender(mainnetProxyDelegation);
     vm.stopPrank();
 
@@ -150,17 +181,14 @@ contract BaseSetup is TestUtils, SpaceHelper {
         "BaseSetupEveryoneSpace"
       );
     everyoneSpaceInfo.membership.settings.pricingModule = fixedPricingModule;
+    everyoneSpaceInfo.membership.settings.freeAllocation = FREE_ALLOCATION;
 
     vm.startPrank(founder);
-    space = Architect(spaceFactory).createSpace(spaceInfo);
-    everyoneSpace = Architect(spaceFactory).createSpace(everyoneSpaceInfo);
+    // create a dummy space so the next one starts at 1
+    ICreateSpace(spaceFactory).createSpace(spaceInfo);
+    space = ICreateSpace(spaceFactory).createSpace(spaceInfo);
+    everyoneSpace = ICreateSpace(spaceFactory).createSpace(everyoneSpaceInfo);
     vm.stopPrank();
-  }
-
-  /// @dev Skips the test run if the account is not an EOA
-  modifier assumeEOA(address account) {
-    vm.assume(account != address(0) && account.code.length == 0);
-    _;
   }
 
   function _registerOperators() internal {
@@ -252,5 +280,11 @@ contract BaseSetup is TestUtils, SpaceHelper {
           nonce
         )
       );
+  }
+
+  function _createSimpleAccount(
+    address owner
+  ) internal returns (SimpleAccount) {
+    return simpleAccountFactory.createAccount(owner, _randomUint256());
   }
 }

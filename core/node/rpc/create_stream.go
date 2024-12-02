@@ -68,7 +68,11 @@ func (s *Service) createStream(ctx context.Context, req *CreateStreamRequest) (*
 	// check that the creator satisfies the required memberships reqirements
 	if csRules.RequiredMemberships != nil {
 		// load the creator's user stream
-		_, creatorStreamView, err := s.loadStream(ctx, csRules.CreatorStreamId)
+		stream, err := s.loadStream(ctx, csRules.CreatorStreamId)
+		var creatorStreamView StreamView
+		if err == nil {
+			creatorStreamView, err = stream.GetView(ctx)
+		}
 		if err != nil {
 			return nil, RiverError(Err_PERMISSION_DENIED, "failed to load creator stream", "err", err)
 		}
@@ -90,7 +94,7 @@ func (s *Service) createStream(ctx context.Context, req *CreateStreamRequest) (*
 			return nil, RiverError(Err_PERMISSION_DENIED, "invalid user id", "requiredUser", userAddress)
 		}
 		userStreamId := UserStreamIdFromAddr(addr)
-		_, err = s.streamRegistry.GetStreamInfo(ctx, userStreamId)
+		_, err = s.cache.GetStreamNoWait(ctx, userStreamId)
 		if err != nil {
 			return nil, RiverError(Err_PERMISSION_DENIED, "user does not exist", "requiredUser", userAddress)
 		}
@@ -122,7 +126,7 @@ func (s *Service) createStream(ctx context.Context, req *CreateStreamRequest) (*
 	// add derived events
 	if csRules.DerivedEvents != nil {
 		for _, de := range csRules.DerivedEvents {
-			err := s.addEventPayload(ctx, de.StreamId, de.Payload)
+			err := s.AddEventPayload(ctx, de.StreamId, de.Payload)
 			if err != nil {
 				return nil, RiverError(Err_INTERNAL, "failed to add derived event", "err", err)
 			}
@@ -152,13 +156,18 @@ func (s *Service) createReplicatedStream(
 		return nil, err
 	}
 
-	nodes := NewStreamNodes(nodesList, s.wallet.Address)
-	sender := NewQuorumPool(nodes.NumRemotes())
+	nodes := NewStreamNodesWithLock(nodesList, s.wallet.Address)
+	remotes, isLocal := nodes.GetRemotesAndIsLocal()
+	sender := NewQuorumPool(len(remotes))
 
 	var localSyncCookie *SyncCookie
-	if nodes.IsLocal() {
+	if isLocal {
 		sender.GoLocal(func() error {
-			_, sv, err := s.cache.CreateStream(ctx, streamId)
+			st, err := s.cache.GetStreamNoWait(ctx, streamId)
+			if err != nil {
+				return err
+			}
+			sv, err := st.GetView(ctx)
 			if err != nil {
 				return err
 			}
@@ -169,8 +178,8 @@ func (s *Service) createReplicatedStream(
 
 	var remoteSyncCookie *SyncCookie
 	var remoteSyncCookieOnce sync.Once
-	if nodes.NumRemotes() > 0 {
-		for _, n := range nodes.GetRemotes() {
+	if len(remotes) > 0 {
+		for _, n := range remotes {
 			sender.GoRemote(
 				n,
 				func(node common.Address) error {

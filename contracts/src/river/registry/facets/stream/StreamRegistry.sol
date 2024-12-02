@@ -172,7 +172,7 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
   function placeStreamOnNode(
     bytes32 streamId,
     address nodeAddress
-  ) external onlyStream(streamId) onlyNode(nodeAddress) {
+  ) external onlyStream(streamId) onlyNode(msg.sender) {
     Stream storage stream = ds.streamById[streamId];
 
     // validate that the node is not already on the stream
@@ -191,7 +191,7 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
   function removeStreamFromNode(
     bytes32 streamId,
     address nodeAddress
-  ) external onlyStream(streamId) onlyNode(nodeAddress) {
+  ) external onlyStream(streamId) onlyNode(msg.sender) {
     Stream storage stream = ds.streamById[streamId];
 
     bool found = false;
@@ -234,17 +234,15 @@ contract StreamRegistry is IStreamRegistry, RegistryModifiers {
     uint256 start,
     uint256 stop
   ) external view returns (StreamWithId[] memory, bool) {
-    require(start < stop, RiverRegistryErrors.BAD_ARG);
-
-    StreamWithId[] memory streams = new StreamWithId[](stop - start);
+    if (start >= stop) revert(RiverRegistryErrors.BAD_ARG);
 
     uint256 streamCount = ds.streams.length();
+    uint256 maxStreamIndex = stop > streamCount ? streamCount : stop;
+    uint256 count = maxStreamIndex > start ? maxStreamIndex - start : 0;
 
-    for (
-      uint256 i = 0;
-      ((start + i) < streamCount) && ((start + i) < stop);
-      ++i
-    ) {
+    StreamWithId[] memory streams = new StreamWithId[](count);
+
+    for (uint256 i = 0; i < count; ++i) {
       bytes32 id = ds.streams.at(start + i);
       streams[i] = StreamWithId({id: id, stream: ds.streamById[id]});
     }

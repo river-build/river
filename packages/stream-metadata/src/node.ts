@@ -1,3 +1,5 @@
+import './tracer' // must come before importing any instrumented module.
+
 import { Server as HTTPServer, IncomingMessage, ServerResponse } from 'http'
 import { Server as HTTPSServer } from 'https'
 
@@ -13,8 +15,11 @@ import { fetchSpaceMetadata } from './routes/spaceMetadata'
 import { fetchUserProfileImage } from './routes/profileImage'
 import { fetchUserBio } from './routes/userBio'
 import { fetchMedia } from './routes/media'
-import { spaceRefresh } from './routes/spaceRefresh'
+import { spaceRefresh, spaceRefreshOnResponse } from './routes/spaceRefresh'
 import { userRefresh } from './routes/userRefresh'
+import { addCacheControlCheck } from './check-cache-control'
+import { fetchSpaceMemberMetadata } from './routes/spaceMemberMetadata'
+import { fetchRefreshStatus } from './routes/refreshStatus'
 
 // Set the process title to 'stream-metadata' so it can be easily identified
 // or killed with `pkill stream-metadata`
@@ -24,6 +29,9 @@ const logger = getLogger('server')
 
 logger.info(
 	{
+		instance: config.instance,
+		apm: config.apm,
+		version: config.version,
 		riverEnv: config.riverEnv,
 		chainId: config.web3Config.river.chainId,
 		port: config.port,
@@ -40,21 +48,46 @@ logger.info(
 /*
  * Server setup
  */
-export type Server = FastifyInstance<
-	HTTPServer | HTTPSServer,
-	IncomingMessage,
-	ServerResponse,
-	typeof logger
->
+export type Server = FastifyInstance<HTTPServer | HTTPSServer, IncomingMessage, ServerResponse>
 
 const server = Fastify({
-	logger,
+	logger: false,
 	genReqId: () => uuidv4(),
 })
 
 server.addHook('onRequest', (request, reply, done) => {
-	const reqId = request.id // Use Fastify's generated reqId, which is now a UUID
-	request.log = request.log.child({ reqId })
+	request.log = logger.child({
+		req: {
+			id: request.id,
+			url: request.url,
+			query: request.query,
+			params: request.params,
+			routerPath: request.routerPath,
+			method: request.method,
+			ip: request.ip,
+			ips: request.ips,
+		},
+	})
+
+	request.log.info('incoming request')
+
+	done()
+})
+
+server.addHook('onResponse', (request, reply, done) => {
+	request.log.info(
+		{
+			res: {
+				statusCode: reply.statusCode,
+				elapsedTime: reply.elapsedTime,
+				headers: {
+					'cache-control': reply.getHeader('cache-control'),
+				},
+			},
+		},
+		'request completed',
+	)
+
 	done()
 })
 
@@ -72,14 +105,23 @@ export function setupRoutes(srv: Server) {
 	/*
 	 * Routes
 	 */
-	srv.get('/health', checkHealth)
-	srv.get('/space/:spaceAddress', async (request, reply) => fetchSpaceMetadata(request, reply))
-	srv.get('/space/:spaceAddress/image', fetchSpaceImage)
-	srv.get('/space/:spaceAddress/refresh', spaceRefresh)
-	srv.get('/user/:userId/image', fetchUserProfileImage)
-	srv.get('/user/:userId/refresh', userRefresh)
-	srv.get('/user/:userId/bio', fetchUserBio)
+
+	// cached
 	srv.get('/media/:mediaStreamId', fetchMedia)
+	srv.get('/user/:userId/image', fetchUserProfileImage)
+	srv.get('/space/:spaceAddress/image', fetchSpaceImage)
+	srv.get('/space/:spaceAddress/image/:eventId', fetchSpaceImage)
+	srv.get('/space/:spaceAddress', fetchSpaceMetadata)
+	srv.get('/space/:spaceAddress/token/:tokenId', fetchSpaceMemberMetadata)
+	srv.get('/user/:userId/bio', fetchUserBio)
+
+	// not cached
+	srv.get('/health', checkHealth)
+	srv.get('/refreshStatus/:invalidationId', fetchRefreshStatus)
+
+	// should be rate-limited, but not yet
+	srv.get('/space/:spaceAddress/refresh', { onResponse: spaceRefreshOnResponse }, spaceRefresh)
+	srv.get('/user/:userId/refresh', userRefresh)
 
 	// Fastify will return 404 for any unmatched routes
 }
@@ -97,6 +139,7 @@ export function getServerUrl(srv: Server) {
 
 process.on('SIGTERM', async () => {
 	try {
+		logger.warn('Received SIGTERM, shutting down server')
 		await server.close()
 		logger.info('Server closed gracefully')
 		process.exit(0)
@@ -110,6 +153,9 @@ async function main() {
 	try {
 		await registerPlugins(server)
 		setupRoutes(server)
+		addCacheControlCheck(server, {
+			skippedRoutes: ['/refresh', '/health', '/refreshStatus'],
+		})
 		await server.listen({
 			port: config.port,
 			host: config.host,

@@ -1,0 +1,509 @@
+set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
+set export
+
+RUN_ENV := env_var("RUN_ENV")
+ENV_PATH_BASE := './env/local'
+ENV_PATH := ENV_PATH_BASE / RUN_ENV
+ENV_FILE := ENV_PATH / "env.env"
+RUN_BASE := './run_files' / RUN_ENV
+RIVER_ENV := 'local_' + RUN_ENV
+CONTRACTS_DIR := '../packages/generated/deployments' / RIVER_ENV
+INSTANCE_BASE := RUN_BASE
+RPC_BASE := 'http://127.0.0.1:8545'
+RPC_RIVER := 'http://127.0.0.1:8546'
+BASE_EXECUTION_CLIENT := env_var_or_default("BASE_EXECUTION_CLIENT", "")
+
+OPERATOR_ADDRESS := `source ../contracts/.env.localhost && echo "${SENDER_ADDRESS}"`
+LOCAL_PRIVATE_KEY := `source ../contracts/.env.localhost && echo "${LOCAL_PRIVATE_KEY}"`
+
+# Set to "-x" to log bash commands
+JUST_BASH_OPTS := env_var_or_default("JUST_BASH_OPTS", "")
+BASH_OPTS := '-euo pipefail ' + JUST_BASH_OPTS
+
+default:
+    @just --list
+
+help:
+    @just --list
+
+print-env:
+    @echo "RUN_ENV=${RUN_ENV}"
+    @echo "ENV_PATH_BASE=${ENV_PATH_BASE}"
+    @echo "ENV_PATH=${ENV_PATH}"
+    @echo "ENV_FILE=${ENV_FILE}"
+    @echo "RUN_BASE=${RUN_BASE}"
+    @echo "RIVER_ENV=${RIVER_ENV}"
+    @echo "CONTRACTS_DIR=${CONTRACTS_DIR}"
+    @echo "INSTANCE_BASE=${INSTANCE_BASE}"
+    @echo "RPC_BASE=${RPC_BASE}"
+    @echo "RPC_RIVER=${RPC_RIVER}"
+    @echo "OPERATOR_ADDRESS=${OPERATOR_ADDRESS}"
+    @echo "LOCAL_PRIVATE_KEY=${LOCAL_PRIVATE_KEY}"
+    @echo "BASE_EXECUTION_CLIENT=${BASE_EXECUTION_CLIENT}"
+
+clean:
+    @rm -rf ${RUN_BASE}
+
+_anvil-start $NAME $PORT $CHAIN_ID:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    mkdir -p ./run_files/anvil
+    if nc -z localhost ${PORT} > /dev/null 2>&1; then
+        echo "Anvil already running on port ${PORT}"
+    else
+        echo "Starting ${NAME} on port ${PORT}"
+        mkdir -p ./run_files/anvil
+        nohup anvil --chain-id ${CHAIN_ID} \
+            --port ${PORT} \
+            --block-time 1 \
+            > ./run_files/anvil/${NAME}.log 2>&1 &
+        ../scripts/wait-for-port.sh ${PORT} anvil_${NAME}
+    fi
+
+anvil-base: 
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    if [ "${BASE_EXECUTION_CLIENT}" != "geth_dev" ]; then
+        just _anvil-start "base" "8545" "31337"
+    fi
+
+
+anvil-base-stop:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    if [ "${BASE_EXECUTION_CLIENT}" != "geth_dev" ]; then
+        ../scripts/kill-on-port.sh 8545 anvil_base
+    fi
+
+anvil-river: (_anvil-start "river" "8546" "31338")
+
+anvil-river-stop:
+    ../scripts/kill-on-port.sh 8546 anvil_river
+
+anvils: anvil-base anvil-river
+
+anvils-stop: anvil-base-stop anvil-river-stop
+
+anvils-tail-logs:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    tail -n 10 -F ./run_files/anvil/*.log
+
+storage-start:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    if nc -z localhost 5433 > /dev/null 2>&1; then
+        echo "Postgres already running on port 5433"
+    else
+        echo "Starting Postgres"
+        cd ./scripts
+        docker compose --project-name river up --detach --wait
+    fi
+
+storage-stop:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    cd ./scripts
+    docker compose --project-name river down
+
+storage-clean:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    cd ./scripts
+    docker compose --project-name river down --volumes --rmi all
+
+deploy-contracts: anvils
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    echo "Deploying contracts"
+    mkdir -p ${RUN_BASE}
+    ../scripts/deploy-contracts.sh
+    echo "" > ${RUN_BASE}/contracts.env
+    echo "RIVER_ARCHITECTCONTRACT_ADDRESS=$(jq -r '.address' ${CONTRACTS_DIR}/base/addresses/spaceFactory.json)" >> ${RUN_BASE}/contracts.env
+    echo "RIVER_ENTITLEMENT_CONTRACT_ADDRESS=$(jq -r '.address' ${CONTRACTS_DIR}/base/addresses/baseRegistry.json)" >> ${RUN_BASE}/contracts.env
+    echo "RIVER_REGISTRYCONTRACT_ADDRESS=$(jq -r '.address' ${CONTRACTS_DIR}/river/addresses/riverRegistry.json)" >> ${RUN_BASE}/contracts.env
+    echo "RIVER_TEST_CONTRACT_ADDRESS=$(jq -r '.address' ${CONTRACTS_DIR}/base/addresses/entitlementGatedExample.json)" >> ${RUN_BASE}/contracts.env
+
+_config-instance $INSTANCE_NUM $INSTANCE_DIR:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    mkdir -p ${INSTANCE_DIR}/{config,logs,wallet,certs}
+    echo "RIVER_PORT=$((${RPC_PORT} + ${INSTANCE_NUM}))" > ${INSTANCE_DIR}/config/config.env
+    if [ ! -f "${INSTANCE_DIR}/wallet/private_key" ]; then
+        cast wallet new --json > "${INSTANCE_DIR}/wallet/wallet.json"
+        jq -r '.[0].address' "${INSTANCE_DIR}/wallet/wallet.json" > "${INSTANCE_DIR}/wallet/node_address"
+        jq -r '.[0].private_key' "${INSTANCE_DIR}/wallet/wallet.json" | sed 's/^0x//' > "${INSTANCE_DIR}/wallet/private_key"
+    fi
+    if [ ! -f "${INSTANCE_DIR}/certs/cert.pem" ]; then
+        ./scripts/generate-certs.sh $(realpath ${INSTANCE_DIR}/certs)
+    fi
+    # Next command fails if running with geth, ignore error
+    cast rpc -r ${RPC_BASE} anvil_setBalance $(cat "${INSTANCE_DIR}/wallet/node_address") 0xfffffffffffffffffffffffffffffffffffffffffffffffffff || true
+    cast rpc -r ${RPC_RIVER} anvil_setBalance $(cat "${INSTANCE_DIR}/wallet/node_address") 0xfffffffffffffffffffffffffffffffffffffffffffffffffff
+
+
+config-instances: (_loop-instances "_config-instance")
+
+_remove-instance $INSTANCE_NUM $INSTANCE_DIR:
+    @rm -rf ${INSTANCE_DIR}
+
+remove-instances: (_loop-instances "_remove-instance")
+
+just-config-base-chain:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    if [ "${DISABLE_BASE_CHAIN}" != "true" ]; then
+        source ${RUN_BASE}/contracts.env
+        cast send \
+            --rpc-url ${RPC_BASE} \
+            --private-key $LOCAL_PRIVATE_KEY \
+            $RIVER_ENTITLEMENT_CONTRACT_ADDRESS \
+            "registerOperator(address)" \
+            $OPERATOR_ADDRESS > /dev/null
+        cast send \
+            --rpc-url ${RPC_BASE} \
+            --private-key $LOCAL_PRIVATE_KEY \
+            $RIVER_ENTITLEMENT_CONTRACT_ADDRESS \
+            "setOperatorStatus(address,uint8)" \
+            $OPERATOR_ADDRESS \
+            2 > /dev/null
+    fi
+
+config-base-chain: deploy-contracts just-config-base-chain
+
+# Run build node binary for environment
+[positional-arguments]
+run-bin *args:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    cd ${RUN_BASE}
+    mkdir -p logs
+    RIVER_PORT=80 ./bin/river_node \
+        --config common.yaml \
+        --config config.yaml \
+        --config contracts.env \
+        "$@"
+
+# Run node from source with go run (for debugging)
+[positional-arguments]
+run-go *args:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    cd ${RUN_BASE}
+    mkdir -p logs
+    go run ../../river_node/main.go \
+        --config common.yaml \
+        --config config.yaml \
+        --config contracts.env \
+        "$@"
+
+# Run node from source with go run with config for instance N
+[positional-arguments]
+_run-go-inst $INSTANCE_NUM $INSTANCE_DIR *args:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    cd ${INSTANCE_DIR}
+    mkdir -p logs
+    shift 2
+    go run ../../../river_node/main.go \
+        --config ../common.yaml \
+        --config ../config.yaml \
+        --config ../contracts.env \
+        --config config/config.env \
+        "$@"
+
+# Run node from source with go run with config for instance N
+[positional-arguments]
+run-go-inst $INSTANCE_NUM *args:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    INSTANCE_NAME=$(printf "%02d" ${INSTANCE_NUM})
+    INSTANCE_DIR="${INSTANCE_BASE}/${INSTANCE_NAME}"
+    shift
+    just _run-go-inst ${INSTANCE_NUM} ${INSTANCE_DIR} "$@"
+
+# Run node from source with go run with for each instance
+[positional-arguments]
+run-go-all *args: 
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    just _loop-instances-seq-args _run-go-inst "$@"
+
+just-config-river-chain:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    PRIVATE_KEY=${LOCAL_PRIVATE_KEY} \
+        just run-bin \
+        on-chain-config set-csv ../../${ENV_PATH}/on_chain.csv
+
+config-river-chain: deploy-contracts config-root build just-config-river-chain
+
+config-root:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    mkdir -p ${RUN_BASE}
+    cp ${ENV_PATH_BASE}/common/common.yaml ${RUN_BASE}/common.yaml
+    cp ${ENV_PATH_BASE}/common/run.sh ${RUN_BASE}/run.sh
+    cp ${ENV_PATH}/config.yaml ${RUN_BASE}/config.yaml
+
+_register-node-base $INSTANCE_NUM $INSTANCE_DIR:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    if [ "${DISABLE_BASE_CHAIN}" != "true" ]; then
+        source ${RUN_BASE}/contracts.env
+        NODE_ADDRESS=$(cat ${INSTANCE_DIR}/wallet/node_address)
+        cast send \
+            --rpc-url ${RPC_BASE} \
+            --private-key $LOCAL_PRIVATE_KEY \
+            $RIVER_ENTITLEMENT_CONTRACT_ADDRESS \
+            "registerNode(address)" \
+            $NODE_ADDRESS > /dev/null
+    fi
+
+just-register-nodes-base: (_loop-instances-seq "_register-node-base")
+
+register-nodes-base: config-base-chain config-instances just-register-nodes-base
+
+_register-node-river $INSTANCE_NUM $INSTANCE_DIR:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    source ${RUN_BASE}/contracts.env
+    NODE_ADDRESS=$(cat ${INSTANCE_DIR}/wallet/node_address)
+    source ${INSTANCE_DIR}/config/config.env
+    cast send \
+        --rpc-url ${RPC_RIVER} \
+        --private-key $LOCAL_PRIVATE_KEY \
+        $RIVER_REGISTRYCONTRACT_ADDRESS \
+        "registerNode(address,string,uint8)" \
+        $NODE_ADDRESS \
+        https://localhost:${RIVER_PORT} \
+        2 > /dev/null
+
+just-register-nodes-river: (_loop-instances-seq "_register-node-river")
+
+register-nodes-river: config-river-chain config-instances just-register-nodes-river
+
+config: config-root register-nodes-base register-nodes-river storage-start
+
+build:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    OUTPUT=${RUN_BASE}/bin/river_node
+    echo "Building node binary ${OUTPUT}"
+    mkdir -p ${RUN_BASE}/bin
+    go build \
+        -o ${OUTPUT} \
+        -race \
+        -ldflags="-X github.com/river-build/river/core/river_node/version.branch=$(git rev-parse --abbrev-ref HEAD) -X github.com/river-build/river/core/river_node/version.commit=$(git describe --tags --always --dirty)" \
+        ./river_node/main.go
+
+_run-node $INSTANCE_NUM $INSTANCE_DIR:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    RUN_ARGS=${RUN_ARGS:-}
+    RUN_CMD=${RUN_CMD:-run}
+    if [ "${DISABLE_BASE_CHAIN}" == "true" ]; then
+        RUN_CMD="run stream"
+    fi
+    cd ${INSTANCE_DIR}
+    ../bin/river_node ${RUN_CMD} \
+        --config ../common.yaml \
+        --config ../contracts.env \
+        --config ../config.yaml \
+        --config config/config.env \
+        ${RUN_ARGS} \
+        > ./logs/tty.stdout.log 2> ./logs/tty.stderr.log &
+
+_stop-node $INSTANCE_NUM $INSTANCE_DIR:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    if [ ! -f "${INSTANCE_DIR}/config/config.env" ]; then
+        exit 0
+    fi
+    source ${INSTANCE_DIR}/config/config.env
+    ../scripts/kill-on-port.sh ${RIVER_PORT} instance_${INSTANCE_NUM}
+
+# Stop all nodes
+stop: (_loop-instances "_stop-node")
+
+_wait-node $INSTANCE_NUM $INSTANCE_DIR:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    source ${INSTANCE_DIR}/config/config.env
+    cd ..
+    yarn wait-on https://localhost:${RIVER_PORT}/status?blockchain=1 --timeout=300000
+
+_wait-ctrl-c:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    echo "CTRL+C TO EXIT"
+    bash -c 'trap "exit 0" INT TERM; while true; do sleep 1; done'
+
+# Tail logs from all instances starting with 500 last lines
+tail-logs:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    shopt -s nullglob
+    LOGS=(${INSTANCE_BASE}/*/logs/tty.*.log)
+    tail -n 500 -F ${LOGS[@]}
+
+# Tail logs from all instances starting with 10 last lines
+tail-logs-short:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    shopt -s nullglob
+    LOGS=(${INSTANCE_BASE}/*/logs/tty.*.log)
+    tail -n 10 -F ${LOGS[@]}
+
+# Tail new logs from all instances
+tail-logs-new:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    shopt -s nullglob
+    LOGS=(${INSTANCE_BASE}/*/logs/tty.*.log)
+    tail -n 0 -F ${LOGS[@]}
+
+# Print last 10 lines from each instance log
+print-logs:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    shopt -s nullglob
+    LOGS=(${INSTANCE_BASE}/*/logs/tty.*.log)
+    tail -n 10 ${LOGS[@]}
+
+# Tail stderr from all instances
+tail-stderr:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    shopt -s nullglob
+    LOGS=(${INSTANCE_BASE}/*/logs/tty.stderr.log)
+    tail -n 500 -F ${LOGS[@]}
+
+# Print stderr from all instances
+print-stderr:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    shopt -s nullglob
+    LOGS=(${INSTANCE_BASE}/*/logs/tty.stderr.log)
+    tail -n 10000 ${LOGS[@]}
+
+# Exits with error if any instance has non-empty stderr
+check-stderr:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    shopt -s nullglob
+    LOGS=(${INSTANCE_BASE}/*/logs/tty.stderr.log)
+    RESULT=$(tail -q ${LOGS[@]})
+    if [ -n "${RESULT}" ]; then
+        tail -n 10000 ${LOGS[@]}
+        echo "ERROR: Found non-empty stderr logs"
+        exit 1
+    fi
+
+_start-all: (_loop-instances "_run-node")
+
+_wait-all: (_loop-instances "_wait-node")
+
+# Config, build, and start nodes in background. Alias: cbs
+config-and-start: stop config build start
+
+alias cbs := config-and-start
+
+# Start nodes in background, config and build should be run before
+start: _start-all _wait-all
+
+# Config, build, and run nodes in foreground, CTRL-C to exit
+config-and-run: stop config build run
+
+# Config, build, and run nodes in foreground tailing logs
+config-run-tail: stop config build run-and-tail
+
+# Run nodes in foreground, config and build should be run before, CTRL-C to exit
+run: _start-all _wait-all _wait-ctrl-c stop
+
+# Start nodes in foreground tailing logs, config and build should be run before
+run-and-tail: _start-all _wait-all tail-logs stop
+
+# Stop, build, and start nodes in background
+restart: stop build start
+
+_loop-instances-seq $CMD:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    for ((i=0; i<${NUM_INSTANCES}; i++)); do
+        INSTANCE_NAME=$(printf "%02d" ${i})
+        INSTANCE_DIR="${INSTANCE_BASE}/${INSTANCE_NAME}"
+        echo "Running ${CMD} for instance ${i}"
+        just ${CMD} ${i} ${INSTANCE_DIR}
+    done
+
+[positional-arguments]
+_loop-instances-seq-args $CMD *args:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    shift
+    source ${ENV_FILE}
+    for ((i=0; i<${NUM_INSTANCES}; i++)); do
+        INSTANCE_NAME=$(printf "%02d" ${i})
+        INSTANCE_DIR="${INSTANCE_BASE}/${INSTANCE_NAME}"
+        echo "Running ${CMD} for instance ${i} with args $@"
+        just ${CMD} ${i} ${INSTANCE_DIR} "$@"
+    done
+
+# Loop instances without stopping on error, return 0 if all succeeded, 1 if any failed
+_loop-instances-seq-nostop $CMD:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    EXIT_CODE=0
+    for ((i=0; i<${NUM_INSTANCES}; i++)); do
+        INSTANCE_NAME=$(printf "%02d" ${i})
+        INSTANCE_DIR="${INSTANCE_BASE}/${INSTANCE_NAME}"
+        echo "Running ${CMD} for instance ${i}"
+        just ${CMD} ${i} ${INSTANCE_DIR} || EXIT_CODE=1
+    done
+    exit ${EXIT_CODE}
+
+_loop-instances-parallel $CMD:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    seq 0 $((${NUM_INSTANCES}-1)) | parallel -j0 --line-buffer \
+        'INSTANCE_NAME=$(printf "%02d" {})
+         INSTANCE_DIR="${INSTANCE_BASE}/${INSTANCE_NAME}"
+         just ${CMD} {} ${INSTANCE_DIR}'
+
+# _loop-instances $CMD:
+#     #!/usr/bin/env -S bash {{BASH_OPTS}}
+#     if command -v parallel &> /dev/null; then
+#         just _loop-instances-parallel "${CMD}"
+#     else
+#         just _loop-instances-seq "${CMD}"
+#     fi
+
+_loop-instances CMD: (_loop-instances-seq CMD)
+
+_ping-anvil $URL $NAME:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    echo "PINGING ${NAME} ON ${URL}"
+    cast chain-id -r ${URL}
+
+ping-anvil-base: (_ping-anvil RPC_BASE "base")
+
+ping-anvil-river: (_ping-anvil RPC_RIVER "river")
+
+ping-anvils: ping-anvil-base ping-anvil-river
+
+_ping-instance-tcp $INSTANCE_NUM $INSTANCE_DIR:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    source ${ENV_FILE}
+    source ${INSTANCE_DIR}/config/config.env
+    if ! (nc -z localhost ${RIVER_PORT} > /dev/null 2>&1); then
+        echo "No instance ${INSTANCE_NUM} on port ${RIVER_PORT}"
+        exit 1
+    fi
+
+ping-instances-tcp: (_loop-instances-seq-nostop "_ping-instance-tcp")
+
+# Invoke cast with -r for river chain.
+[positional-arguments]
+cast-river +args:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    METHOD=$1
+    shift
+    cast ${METHOD} -r ${RPC_RIVER} "$@"
+
+# Invoke cast with -r for base chain.
+[positional-arguments]
+cast-base *args:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    METHOD=$1
+    shift
+    cast ${METHOD} -r ${RPC_BASE} "$@"

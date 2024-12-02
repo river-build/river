@@ -3,12 +3,13 @@ package render
 import (
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/rpc/statusinfo"
+	"github.com/river-build/river/core/node/storage"
 )
 
 // RenderableData is the interface for all data that can be rendered
 type RenderableData interface {
 	*AvailableDebugHandlersData | *CacheData | *TransactionPoolData | *OnChainConfigData |
-		*GoRoutineData | *MemStatsData | *InfoIndexData | *DebugMultiData
+		*GoRoutineData | *SystemStatsData | *InfoIndexData | *DebugMultiData | *StorageData
 
 	// TemplateName returns the name of the template to be used for rendering
 	TemplateName() string
@@ -68,16 +69,23 @@ type GoRoutineStack struct {
 }
 
 // Struct for memory stats
-type MemStatsData struct {
+type SystemStatsData struct {
+	// Stats specific to this process
 	MemAlloc      uint64
 	TotalAlloc    uint64
 	Sys           uint64
 	NumLiveObjs   uint64
 	NumGoroutines int
+
+	// System-wide
+	TotalMemory     uint64
+	UsedMemory      uint64
+	AvailableMemory uint64
+	CpuUsagePercent float64
 }
 
-func (d MemStatsData) TemplateName() string {
-	return "templates/debug/memory.template.html"
+func (d SystemStatsData) TemplateName() string {
+	return "templates/debug/stats.template.html"
 }
 
 type AvailableDebugHandlersData struct {
@@ -103,6 +111,14 @@ type DebugMultiData struct {
 
 func (d DebugMultiData) TemplateName() string {
 	return "templates/debug/multi.template.html"
+}
+
+type StorageData struct {
+	Status *storage.PostgresStatusResult
+}
+
+func (s StorageData) TemplateName() string {
+	return "templates/debug/storage.template.html"
 }
 
 type OnChainConfigData struct {

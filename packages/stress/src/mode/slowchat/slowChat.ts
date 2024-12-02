@@ -1,9 +1,10 @@
-import { dlogger } from '@river-build/dlog'
 import { StressClient } from '../../utils/stressClient'
 import { ChatConfig } from '../common/types'
+import { RiverTimelineEvent, type TimelineEvent } from '@river-build/sdk'
+import { getLogger } from '../../utils/logger'
 
 export async function slowChat(client: StressClient, chatConfig: ChatConfig) {
-    const logger = dlogger(`stress:slowChat:${client.logId}`)
+    const logger = getLogger('stress:slowChat', { logId: client.logId })
     const channelId = chatConfig.announceChannelId
     const start = Date.now()
     const end = start + chatConfig.duration * 1000
@@ -13,7 +14,7 @@ export async function slowChat(client: StressClient, chatConfig: ChatConfig) {
         (_, i) => i,
     ).map((i) => i * chatConfig.clientsPerProcess)
     if (client.clientIndex === 0) {
-        logger.log(`processLeaders: ${processLeaders.join(', ')}`)
+        logger.info({ processLeaders }, 'processLeaders')
     }
     // if we have more process leaders than intervals we need to adjust logic
     if (processLeaders.length > 12) {
@@ -43,7 +44,7 @@ export async function slowChat(client: StressClient, chatConfig: ChatConfig) {
     }
 
     if (client.clientIndex === 0) {
-        logger.log(`expected messages: ${expectedMessages.map((m) => m.message).join(', ')}`)
+        logger.info({ expectedMessages }, 'expected messages')
     }
 
     const sentMessages: string[] = []
@@ -54,12 +55,15 @@ export async function slowChat(client: StressClient, chatConfig: ChatConfig) {
             .getSpace(chatConfig.spaceId)
             .getChannel(channelId)
             .timeline.events.value.filter((event) =>
-                event.text.includes(`${chatConfig.sessionId}:`),
+                checkTextInMessageEvent(event, `${chatConfig.sessionId}:`),
             )
         for (const message of messages) {
-            if (!seenMessages.includes(message.text)) {
-                //logger.log(`I seen it: ${message.text}`)
-                seenMessages.push(message.text)
+            const messageBody =
+                message.content?.kind === RiverTimelineEvent.RoomMessage
+                    ? message.content?.body
+                    : ''
+            if (!seenMessages.includes(messageBody)) {
+                seenMessages.push(messageBody)
             }
         }
 
@@ -71,7 +75,7 @@ export async function slowChat(client: StressClient, chatConfig: ChatConfig) {
                     start + toSend.sendAt < Date.now() &&
                     !sentMessages.includes(toSend.message)
                 ) {
-                    logger.log(`${client.logId} sending message: ${toSend.message}`)
+                    logger.info({ message: toSend.message }, 'sending message')
                     sentMessages.push(toSend.message)
                     await client.sendMessage(channelId, toSend.message)
                 }
@@ -80,5 +84,8 @@ export async function slowChat(client: StressClient, chatConfig: ChatConfig) {
         await new Promise((resolve) => setTimeout(resolve, 5000))
     }
 
-    logger.log('result', { clientIndex: client.clientIndex, sentMessages, seenMessages })
+    logger.info({ clientIndex: client.clientIndex, sentMessages, seenMessages }, 'result')
 }
+
+const checkTextInMessageEvent = (event: TimelineEvent, message: string) =>
+    event.content?.kind === RiverTimelineEvent.RoomMessage && event.content?.body.includes(message)

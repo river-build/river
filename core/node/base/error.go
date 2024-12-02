@@ -106,6 +106,17 @@ func (e *RiverErrorImpl) Error() string {
 	return sb.String()
 }
 
+func (e *RiverErrorImpl) Unwrap() error {
+	return e.Base
+}
+
+func (e *RiverErrorImpl) Is(target error) bool {
+	if riverErr, ok := target.(*RiverErrorImpl); ok && riverErr.Code == e.Code {
+		return true
+	}
+	return errors.Is(e.Base, target)
+}
+
 func (e *RiverErrorImpl) WriteMessage(sb *strings.Builder) {
 	for i := len(e.Funcs) - 1; i >= 0; i-- {
 		sb.WriteString(e.Funcs[i])
@@ -195,6 +206,13 @@ func (e *RiverErrorImpl) Message(msg string) *RiverErrorImpl {
 func IsRiverError(err error) bool {
 	_, ok := err.(*RiverErrorImpl)
 	return ok
+}
+
+func IsRiverErrorCode(err error, code protocol.Err) bool {
+	if e, ok := err.(*RiverErrorImpl); ok {
+		return e.Code == code
+	}
+	return false
 }
 
 func IsConnectNetworkError(err error) bool {
@@ -367,6 +385,10 @@ func (e *RiverErrorImpl) LogInfo(l *slog.Logger) *RiverErrorImpl {
 
 func (e *RiverErrorImpl) LogDebug(l *slog.Logger) *RiverErrorImpl {
 	return e.LogWithLevel(l, slog.LevelDebug)
+}
+
+func (e *RiverErrorImpl) LogLevel(l *slog.Logger, level slog.Level) *RiverErrorImpl {
+	return e.LogWithLevel(l, level)
 }
 
 func ToConnectError(err error) *connect.Error {
