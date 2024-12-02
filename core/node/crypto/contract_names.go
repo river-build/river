@@ -17,6 +17,7 @@ import (
 // This class can support multiple contracts but is best used for a single diamond since it
 // can only store a maximum of 1 entry per selector.
 type ContractNameMap interface {
+	// This is not thread-safe and is intended to be called from an init() method.
 	RegisterABI(contractName string, abi *abi.ABI)
 	GetMethodName(selector uint32) (string, bool)
 }
@@ -30,7 +31,14 @@ func (cnm *contractNameMap) RegisterABI(contractName string, abi *abi.ABI) {
 	cnm.abis = append(cnm.abis, abi)
 	for _, method := range abi.Methods {
 		encoded := binary.BigEndian.Uint32(method.ID)
-		cnm.selectorNames[encoded] = fmt.Sprintf("%s.%s", contractName, method.Name)
+		if _, ok := cnm.selectorNames[encoded]; ok {
+			// Some contracts share the same selectors, for example ERC20 and ERC721 have
+			// a balanceOf with the same signature. In this case, lets just store the
+			// method name.
+			cnm.selectorNames[encoded] = method.Name
+		} else {
+			cnm.selectorNames[encoded] = fmt.Sprintf("%s.%s", contractName, method.Name)
+		}
 	}
 }
 
