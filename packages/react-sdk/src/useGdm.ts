@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { GdmModel } from '@river-build/sdk'
+import type { Gdm } from '@river-build/sdk'
 import { useSyncAgent } from './useSyncAgent'
 import { type ObservableConfig, useObservable } from './useObservable'
 
@@ -10,7 +10,7 @@ import { type ObservableConfig, useObservable } from './useObservable'
  * @param config - Configuration options for the observable.
  * @returns The GdmModel of the Group DM.
  */
-export const useGdm = (streamId: string, config?: ObservableConfig.FromData<GdmModel>) => {
+export const useGdm = (streamId: string, config?: ObservableConfig.FromObservable<Gdm>) => {
     const sync = useSyncAgent()
     const gdm = useMemo(() => sync.gdms.getGdm(streamId), [streamId, sync])
     return useObservable(gdm, config)

@@ -1,19 +1,16 @@
 import { Outlet, useNavigate } from 'react-router-dom'
-import { Suspense, useCallback, useMemo, useState } from 'react'
+import { Suspense, useCallback, useState } from 'react'
 import {
     useDm,
     useGdm,
     useMember,
     useMemberList,
-    useObservable,
     useSpace,
     useSyncAgent,
     useUserDms,
     useUserGdms,
     useUserSpaces,
 } from '@river-build/react-sdk'
-import { suspend } from 'suspend-react'
-import { Myself } from '@river-build/sdk'
 import { DoorOpenIcon, PlusIcon } from 'lucide-react'
 import { GridSidePanel } from '@/components/layout/grid-side-panel'
 import { Button } from '@/components/ui/button'
@@ -120,11 +117,14 @@ export const DashboardRoute = () => {
                     <ScrollArea className="flex min-h-max">
                         <div className="flex flex-col gap-1">
                             {spaceIds.map((spaceId) => (
-                                <SpaceInfo
+                                <Suspense
                                     key={spaceId}
-                                    spaceId={spaceId}
-                                    onSpaceChange={navigateToSpace}
-                                />
+                                    fallback={
+                                        <div className="h-8 w-52 animate-pulse rounded-sm bg-secondary" />
+                                    }
+                                >
+                                    <SpaceInfo spaceId={spaceId} onSpaceChange={navigateToSpace} />
+                                </Suspense>
                             ))}
                         </div>
                     </ScrollArea>
@@ -140,11 +140,17 @@ export const DashboardRoute = () => {
                     <ScrollArea className="flex min-h-max">
                         <div className="flex flex-col gap-1">
                             {gdmStreamIds.map((gdmStreamId) => (
-                                <GdmInfo
+                                <Suspense
                                     key={gdmStreamId}
-                                    gdmStreamId={gdmStreamId}
-                                    onGdmChange={navigateToGdm}
-                                />
+                                    fallback={
+                                        <div className="h-8 w-52 animate-pulse rounded-sm bg-secondary" />
+                                    }
+                                >
+                                    <GdmInfo
+                                        gdmStreamId={gdmStreamId}
+                                        onGdmChange={navigateToGdm}
+                                    />
+                                </Suspense>
                             ))}
                         </div>
                     </ScrollArea>
@@ -184,12 +190,13 @@ export const DashboardRoute = () => {
                     <ScrollArea className="flex min-h-max">
                         <div className="flex flex-col gap-2">
                             {dmStreamIds.map((dmStreamId) => (
-                                <Suspense key={dmStreamId} fallback={<div>Loading...</div>}>
-                                    <NoSuspenseDmInfo
-                                        key={dmStreamId}
-                                        dmStreamId={dmStreamId}
-                                        onDmChange={navigateToDm}
-                                    />
+                                <Suspense
+                                    key={dmStreamId}
+                                    fallback={
+                                        <div className="h-8 w-52 animate-pulse rounded-sm bg-secondary" />
+                                    }
+                                >
+                                    <DmInfo dmStreamId={dmStreamId} onDmChange={navigateToDm} />
                                 </Suspense>
                             ))}
                         </div>
@@ -213,7 +220,7 @@ const SpaceInfo = ({
     spaceId: string
     onSpaceChange: (spaceId: string) => void
 }) => {
-    const { data: space } = useSpace(spaceId)
+    const { data: space } = useSpace(spaceId, { suspense: true })
     return (
         <div>
             <Button variant="outline" onClick={() => onSpaceChange(space.id)}>
@@ -230,7 +237,7 @@ const GdmInfo = ({
     gdmStreamId: string
     onGdmChange: (gdmStreamId: string) => void
 }) => {
-    const { data: gdm } = useGdm(gdmStreamId)
+    const { data: gdm } = useGdm(gdmStreamId, { suspense: true })
     return (
         <div>
             <Button variant="outline" onClick={() => onGdmChange(gdm.id)}>
@@ -240,7 +247,6 @@ const GdmInfo = ({
     )
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const DmInfo = ({
     dmStreamId,
     onDmChange,
@@ -249,51 +255,15 @@ const DmInfo = ({
     onDmChange: (dmStreamId: string) => void
 }) => {
     const sync = useSyncAgent()
-    const { data: dm } = useDm(dmStreamId)
-    const member = useMemo(() => {
-        const dm = sync.dms.getDm(dmStreamId)
-        // TODO: We may want to move this to the core of react-sdk
-        // Adding a `suspense` option to the `useObservable` hook would make this easier.
-        const members = suspend(async () => {
-            await dm.members.when((x) => x.data.initialized === true)
-            return dm.members
-        }, [dmStreamId, sync, dm])
-        const other = members.data.userIds.find((userId) => userId !== sync.userId)
-        if (!other) {
-            return members.myself
-        }
-        return members.get(other)
-    }, [dmStreamId, sync])
-    const {
-        data: { userId, username, displayName },
-    } = useObservable(member instanceof Myself ? member.member : member)
-
-    return (
-        <button className="flex items-center gap-2" onClick={() => onDmChange(dm.id)}>
-            <Avatar userId={userId} className="size-10 border border-neutral-200" />
-            <p className="font-mono text-sm font-medium">
-                {userId === sync.userId ? 'You' : displayName || username || shortenAddress(userId)}
-            </p>
-        </button>
+    const { data: dm } = useDm(dmStreamId, { suspense: true })
+    const { data: members } = useMemberList(dmStreamId, { suspense: true })
+    const { userId, username, displayName } = useMember(
+        {
+            streamId: dmStreamId,
+            userId: members.userIds.find((userId) => userId !== sync.userId) || sync.userId,
+        },
+        { suspense: true },
     )
-}
-
-// Without suspense, we can't wait for initialization.
-// In this case, we will default user to be ourselves until the dm is initialized so we can get the correct user
-const NoSuspenseDmInfo = ({
-    dmStreamId,
-    onDmChange,
-}: {
-    dmStreamId: string
-    onDmChange: (dmStreamId: string) => void
-}) => {
-    const sync = useSyncAgent()
-    const { data: dm } = useDm(dmStreamId)
-    const { data: members } = useMemberList(dmStreamId)
-    const { userId, username, displayName } = useMember({
-        streamId: dmStreamId,
-        userId: members.userIds.find((userId) => userId !== sync.userId) || sync.userId,
-    })
 
     return (
         <button className="flex items-center gap-2" onClick={() => onDmChange(dm.id)}>

@@ -74,7 +74,7 @@ export const SelectChannelRoute = () => {
                                 </Dialog>
                             </div>
                         </div>
-                        <ScrollArea className="flex h-[calc(100dvh-18rem)]">
+                        <ScrollArea className="flex h-[calc(100dvh-8px)]">
                             <div className="flex flex-col gap-1">
                                 {space.channelIds.map((channelId) => (
                                     <ChannelInfo

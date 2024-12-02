@@ -15,7 +15,7 @@ type SyncSelector = SyncAgent['observables']
  */
 export function useRiver<T>(
     selector: (sync: SyncSelector) => Observable<T>,
-    config?: ObservableConfig.FromData<T>,
+    config?: ObservableConfig.FromObservable<ReturnType<typeof selector>>,
 ) {
     const syncAgent = useSyncAgent()
     return useObservable(selector(syncAgent.observables), config)
