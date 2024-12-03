@@ -21,7 +21,7 @@ import {DeployOwnable} from "contracts/scripts/deployments/facets/DeployOwnable.
 import {DeployDropFacet} from "contracts/scripts/deployments/facets/DeployDropFacet.s.sol";
 import {DeployRiverPoints} from "contracts/scripts/deployments/facets/DeployRiverPoints.s.sol";
 import {DeployMetadata} from "contracts/scripts/deployments/facets/DeployMetadata.s.sol";
-
+import {DeployCheckIn} from "contracts/scripts/deployments/facets/DeployCheckIn.s.sol";
 contract DeployRiverAirdrop is DiamondHelper, Deployer {
   address internal BASE_REGISTRY = address(0);
   address internal SPACE_FACTORY = address(0);
@@ -34,7 +34,7 @@ contract DeployRiverAirdrop is DiamondHelper, Deployer {
   DeployDropFacet dropHelper = new DeployDropFacet();
   DeployRiverPoints pointsHelper = new DeployRiverPoints();
   DeployMetadata metadataHelper = new DeployMetadata();
-
+  DeployCheckIn checkInHelper = new DeployCheckIn();
   address multiInit;
   address diamondCut;
   address diamondLoupe;
@@ -44,7 +44,7 @@ contract DeployRiverAirdrop is DiamondHelper, Deployer {
   address dropFacet;
   address pointsFacet;
   address metadata;
-
+  address checkInFacet;
   function versionName() public pure override returns (string memory) {
     return "riverAirdrop";
   }
@@ -108,6 +108,7 @@ contract DeployRiverAirdrop is DiamondHelper, Deployer {
     dropFacet = dropHelper.deploy(deployer);
     pointsFacet = pointsHelper.deploy(deployer);
     metadata = metadataHelper.deploy(deployer);
+    checkInFacet = checkInHelper.deploy(deployer);
 
     addFacet(
       dropHelper.makeCut(dropFacet, IDiamond.FacetCutAction.Add),
@@ -123,6 +124,11 @@ contract DeployRiverAirdrop is DiamondHelper, Deployer {
       metadataHelper.makeCut(metadata, IDiamond.FacetCutAction.Add),
       metadata,
       metadataHelper.makeInitData(bytes32("RiverAirdrop"), "")
+    );
+    addFacet(
+      checkInHelper.makeCut(checkInFacet, IDiamond.FacetCutAction.Add),
+      checkInFacet,
+      checkInHelper.makeInitData("")
     );
 
     return
