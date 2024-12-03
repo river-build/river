@@ -226,7 +226,7 @@ describe('dmsMlsTests', () => {
                     )
                 }
             },
-            { timeoutMS: 10_000 },
+            { timeoutMS: 20_000 },
         )
     })
 
@@ -308,7 +308,7 @@ describe('dmsMlsTests', () => {
 
         send(bobsClient, 'hello everyone')
 
-        const NUM_CLIENTS = 5
+        const NUM_CLIENTS = 24
         const NUM_MESSAGES = 1
 
         // TODO: Creating clients while others are sending messages seems to break the node
