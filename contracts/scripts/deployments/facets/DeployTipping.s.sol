@@ -7,16 +7,17 @@ pragma solidity ^0.8.24;
 
 //contracts
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
-import {Tipping} from "contracts/src/spaces/facets/tipping/Tipping.sol";
+import {TippingFacet} from "contracts/src/spaces/facets/tipping/TippingFacet.sol";
 import {FacetHelper} from "contracts/test/diamond/Facet.t.sol";
 
 contract DeployTipping is FacetHelper, Deployer {
   constructor() {
-    addSelector(Tipping.tip.selector);
+    addSelector(TippingFacet.tip.selector);
+    addSelector(TippingFacet.getTipsByCurrencyByTokenId.selector);
   }
 
   function initializer() public pure override returns (bytes4) {
-    return Tipping.__Tipping_init.selector;
+    return TippingFacet.__Tipping_init.selector;
   }
 
   function versionName() public pure override returns (string memory) {
@@ -25,7 +26,7 @@ contract DeployTipping is FacetHelper, Deployer {
 
   function __deploy(address deployer) public override returns (address) {
     vm.startBroadcast(deployer);
-    Tipping tipping = new Tipping();
+    TippingFacet tipping = new TippingFacet();
     vm.stopBroadcast();
     return address(tipping);
   }

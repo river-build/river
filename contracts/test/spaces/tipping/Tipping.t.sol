@@ -10,7 +10,7 @@ import {IERC721ABase} from "contracts/src/diamond/facets/token/ERC721A/IERC721A.
 import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.sol";
 
 // contracts
-import {Tipping} from "contracts/src/spaces/facets/tipping/Tipping.sol";
+import {TippingFacet} from "contracts/src/spaces/facets/tipping/TippingFacet.sol";
 import {IntrospectionFacet} from "contracts/src/diamond/facets/introspection/IntrospectionFacet.sol";
 import {MembershipFacet} from "contracts/src/spaces/facets/membership/MembershipFacet.sol";
 
@@ -22,7 +22,7 @@ import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
   DeployMockERC20 internal deployERC20 = new DeployMockERC20();
 
-  Tipping internal tipping;
+  TippingFacet internal tipping;
   IntrospectionFacet internal introspection;
   MembershipFacet internal membership;
   IERC721AQueryable internal token;
@@ -30,7 +30,7 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
 
   function setUp() public override {
     super.setUp();
-    tipping = Tipping(everyoneSpace);
+    tipping = TippingFacet(everyoneSpace);
     introspection = IntrospectionFacet(everyoneSpace);
     membership = MembershipFacet(everyoneSpace);
     token = IERC721AQueryable(everyoneSpace);
@@ -78,6 +78,13 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
 
     assertEq(receiver.balance, amount);
     assertEq(sender.balance, 0);
+    assertEq(
+      tipping.getTipsByCurrencyByTokenId(
+        tokenId,
+        CurrencyTransfer.NATIVE_TOKEN
+      ),
+      amount
+    );
   }
 
   function test_tipERC20(

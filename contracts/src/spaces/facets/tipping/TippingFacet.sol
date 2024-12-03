@@ -11,7 +11,7 @@ import {TippingBase} from "./TippingBase.sol";
 import {ERC721ABase} from "contracts/src/diamond/facets/token/ERC721A/ERC721ABase.sol";
 import {Facet} from "contracts/src/diamond/facets/Facet.sol";
 
-contract Tipping is ITipping, ERC721ABase, Facet {
+contract TippingFacet is ITipping, ERC721ABase, Facet {
   function __Tipping_init() external onlyInitializing {
     _addInterface(type(ITipping).interfaceId);
   }
@@ -48,6 +48,13 @@ contract Tipping is ITipping, ERC721ABase, Facet {
 
   function tipCurrencies() external view returns (address[] memory) {
     return TippingBase.currencies();
+  }
+
+  function getTipsByCurrencyByTokenId(
+    uint256 tokenId,
+    address currency
+  ) external view returns (uint256) {
+    return TippingBase.getTipsByCurrencyByTokenId(tokenId, currency);
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/

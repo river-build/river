@@ -42,6 +42,13 @@ library TippingBase {
     CurrencyTransfer.transferCurrency(currency, sender, receiver, amount);
   }
 
+  function getTipsByCurrencyByTokenId(
+    uint256 tokenId,
+    address currency
+  ) internal view returns (uint256) {
+    return layout().tipsByCurrencyByTokenId[tokenId][currency];
+  }
+
   function currencies() internal view returns (address[] memory) {
     return layout().currencies.values();
   }
