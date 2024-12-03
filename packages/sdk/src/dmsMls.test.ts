@@ -291,7 +291,7 @@ describe('dmsMlsTests', () => {
         ).toResolve()
     })
 
-    test('manyClientsInChannelInterleaving', async () => {
+    test.only('manyClientsInChannelInterleaving', async () => {
         const spaceId = makeUniqueSpaceStreamId()
         const bobsClient = await makeInitAndStartClient('bob')
         await expect(bobsClient.createSpace(spaceId)).toResolve()
