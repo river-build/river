@@ -138,7 +138,7 @@ func (ic *otelEthClient) SendTransaction(ctx context.Context, tx *types.Transact
 
 		span.SetAttributes(attribute.String("tx_hash", tx.Hash().String()))
 		data := tx.Data()
-		methodName := getMethodName(&data)
+		methodName := getMethodName(data)
 		span.SetAttributes(attribute.String("method_name", methodName))
 	}
 
@@ -183,14 +183,14 @@ func extractCallErrorStatus(err error) string {
 	return "fail"
 }
 
-func getMethodName(data *[]byte) string {
+func getMethodName(data []byte) string {
 	var methodName string
-	if len(*data) > 4 {
-		selector := binary.BigEndian.Uint32(*data)
+	if len(data) > 4 {
+		selector := binary.BigEndian.Uint32(data)
 		var defined bool
 		methodName, defined = GetSelectorMethodName(selector)
 		if !defined {
-			return hex.EncodeToString((*data)[:4])
+			return hex.EncodeToString(data[:4])
 		}
 	}
 	return methodName
@@ -208,7 +208,7 @@ func (ic *otelEthClient) makeEthCallWithTraceAndMetrics(
 		_, span = ic.tracer.Start(ctx, "eth_call")
 		defer span.End()
 
-		methodName = getMethodName(&msg.Data)
+		methodName = getMethodName(msg.Data)
 		span.SetAttributes(attribute.String("method_name", methodName))
 	}
 
@@ -221,7 +221,7 @@ func (ic *otelEthClient) makeEthCallWithTraceAndMetrics(
 		}
 
 		if methodName == "" {
-			methodName = getMethodName(&msg.Data)
+			methodName = getMethodName(msg.Data)
 		}
 		ic.ethCalls.With(
 			prometheus.Labels{
@@ -265,7 +265,7 @@ func (ic *otelEthClient) PendingCallContract(ctx context.Context, msg ethereum.C
 		ctx, span = ic.tracer.Start(ctx, "eth_pendingCallContract")
 		defer span.End()
 
-		methodName := getMethodName(&msg.Data)
+		methodName := getMethodName(msg.Data)
 		span.SetAttributes(attribute.String("method_name", methodName))
 	}
 
