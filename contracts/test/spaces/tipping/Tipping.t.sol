@@ -19,6 +19,9 @@ import {DeployMockERC20, MockERC20} from "contracts/scripts/deployments/utils/De
 // helpers
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 
+// debugging
+import {console} from "forge-std/console.sol";
+
 contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
   DeployMockERC20 internal deployERC20 = new DeployMockERC20();
 
@@ -66,6 +69,7 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
     vm.expectEmit(address(tipping));
     emit Tip(tokenId, CurrencyTransfer.NATIVE_TOKEN, sender, receiver, amount);
     emit TipMessage(messageId, channelId);
+    vm.startSnapshotGas("tipEth");
     tipping.tip{value: amount}(
       TipRequest({
         tokenId: tokenId,
@@ -75,6 +79,9 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
         channelId: channelId
       })
     );
+    uint256 gasUsed = vm.stopSnapshotGas();
+
+    assertLt(gasUsed, 200_000);
 
     assertEq(receiver.balance, amount);
     assertEq(sender.balance, 0);
@@ -104,6 +111,7 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
     vm.expectEmit(address(tipping));
     emit Tip(tokenId, address(mockERC20), sender, receiver, amount);
     emit TipMessage(messageId, channelId);
+    vm.startSnapshotGas("tipERC20");
     tipping.tip(
       TipRequest({
         tokenId: tokenId,
@@ -113,8 +121,10 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
         channelId: channelId
       })
     );
+    uint256 gasUsed = vm.stopSnapshotGas();
     vm.stopPrank();
 
+    assertLt(gasUsed, 200_000);
     assertEq(mockERC20.balanceOf(sender), 0);
     assertEq(mockERC20.balanceOf(receiver), amount);
     assertEq(
