@@ -91,16 +91,13 @@ func NewInstrumentedEthClient(
 	metrics infra.MetricsFactory,
 	tracer trace.Tracer,
 ) *otelEthClient {
-	var ethCalls *prometheus.CounterVec
-	if metrics != nil {
-		ethCalls = metrics.NewCounterVecEx(
-			"eth_calls",
-			"Number of eth_calls made by an instrumented client",
-			"chain_id",
-			"method_name",
-			"status",
-		)
-	}
+	ethCalls := metrics.NewCounterVecEx(
+		"eth_calls",
+		"Number of eth_calls made by an instrumented client",
+		"chain_id",
+		"method_name",
+		"status",
+	)
 
 	return &otelEthClient{
 		Client:   client,
@@ -214,23 +211,23 @@ func (ic *otelEthClient) makeEthCallWithTraceAndMetrics(
 
 	data, err := call()
 
-	if ic.ethCalls != nil {
-		status := "ok"
-		if err != nil {
-			status = extractCallErrorStatus(err)
-		}
-
-		if methodName == "" {
-			methodName = getMethodName(msg.Data)
-		}
-		ic.ethCalls.With(
-			prometheus.Labels{
-				"chain_id":    ic.chainId,
-				"method_name": methodName,
-				"status":      status,
-			},
-		).Inc()
+	status := "ok"
+	if err != nil {
+		status = extractCallErrorStatus(err)
 	}
+
+	// If tracer was nil, we may not have computed the method name.
+	if methodName == "" {
+		methodName = getMethodName(msg.Data)
+	}
+
+	ic.ethCalls.With(
+		prometheus.Labels{
+			"chain_id":    ic.chainId,
+			"method_name": methodName,
+			"status":      status,
+		},
+	).Inc()
 
 	return data, err
 }
