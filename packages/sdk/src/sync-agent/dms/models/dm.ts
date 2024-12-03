@@ -117,7 +117,7 @@ export class Dm extends PersistedObservable<DmModel> {
 
     private onStreamInitialized = (streamId: string) => {
         if (this.data.id === streamId) {
-            logger.info('Dm stream initialized', streamId)
+            logger.log('Dm stream initialized', streamId)
             const stream = this.riverConnection.client?.stream(streamId)
             check(isDefined(stream), 'stream is not defined')
             const view = stream.view.dmChannelContent
