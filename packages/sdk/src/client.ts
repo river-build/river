@@ -196,6 +196,7 @@ export class Client
 
     private getStreamRequests: Map<string, Promise<StreamStateView>> = new Map()
     private getStreamExRequests: Map<string, Promise<StreamStateView>> = new Map()
+    private initStreamRequests: Map<string, Promise<Stream>> = new Map()
     private getScrollbackRequests: Map<string, ReturnType<typeof this.scrollback>> = new Map()
     private creatingStreamIds = new Set<string>()
     private entitlementsDelegate: EntitlementsDelegate
@@ -1189,8 +1190,12 @@ export class Client
 
         const request = this._getStream(streamId)
         this.getStreamRequests.set(streamId, request)
-        const streamView = await request
-        this.getStreamRequests.delete(streamId)
+        let streamView: StreamStateView
+        try {
+            streamView = await request
+        } finally {
+            this.getStreamRequests.delete(streamId)
+        }
         return streamView
     }
 
@@ -1235,8 +1240,12 @@ export class Client
         }
         const request = this._getStreamEx(streamId)
         this.getStreamExRequests.set(streamId, request)
-        const streamView = await request
-        this.getStreamExRequests.delete(streamId)
+        let streamView: StreamStateView
+        try {
+            streamView = await request
+        } finally {
+            this.getStreamExRequests.delete(streamId)
+        }
         return streamView
     }
 
@@ -1284,6 +1293,27 @@ export class Client
     }
 
     async initStream(
+        streamId: string | Uint8Array,
+        allowGetStream: boolean = true,
+    ): Promise<Stream> {
+        const streamIdStr = streamIdAsString(streamId)
+        const existingRequest = this.initStreamRequests.get(streamIdStr)
+        if (existingRequest) {
+            this.logCall('initStream: had existing request for', streamIdStr, 'returning promise')
+            return existingRequest
+        }
+        const request = this._initStream(streamId, allowGetStream)
+        this.initStreamRequests.set(streamIdStr, request)
+        let stream: Stream
+        try {
+            stream = await request
+        } finally {
+            this.initStreamRequests.delete(streamIdStr)
+        }
+        return stream
+    }
+
+    private async _initStream(
         streamId: string | Uint8Array,
         allowGetStream: boolean = true,
     ): Promise<Stream> {
@@ -2125,12 +2155,14 @@ export class Client
         tags?: PlainMessage<Tags>,
         retryCount?: number,
     ): Promise<{ prevMiniblockHash: Uint8Array; eventId: string; error?: AddEventResponse_Error }> {
-        const event = await makeEvent(this.signerContext, payload, prevMiniblockHash)
+        const streamIdStr = streamIdAsString(streamId)
+        check(isDefined(streamIdStr) && streamIdStr !== '', 'streamId must be defined')
+        const event = await makeEvent(this.signerContext, payload, prevMiniblockHash, tags)
         const eventId = bin_toHexString(event.hash)
         if (localId) {
             // when we have a localId, we need to update the local event with the eventId
             const stream = this.streams.get(streamId)
-            assert(stream !== undefined, 'unknown stream ' + streamIdAsString(streamId))
+            assert(stream !== undefined, 'unknown stream ' + streamIdStr)
             stream.updateLocalEvent(localId, eventId, 'sending')
         }
 
@@ -2232,6 +2264,8 @@ export class Client
             throw new Error('userId must be set to reset crypto')
         }
         this.cryptoBackend = undefined
+        await this.decryptionExtensions?.stop()
+        this.decryptionExtensions = undefined
         await this.cryptoStore.deleteAccount(this.userId)
         await this.initCrypto()
         await this.uploadDeviceKeys()

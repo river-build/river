@@ -1,0 +1,77 @@
+---
+title: useSendReaction
+---
+Hook to send a reaction to a message in a stream.
+
+Reaction can be any string value, including emojis.
+
+## Imports
+
+```ts
+import { useSendReaction } from '@river-build/react-sdk'
+```
+
+## Examples
+
+```ts
+import { useSendReaction } from '@river-build/react-sdk'
+
+const { sendReaction } = useSendReaction('stream-id')
+sendReaction(messageEventId, '🔥')
+```
+
+## Definition
+
+```ts
+function useSendReaction(
+  streamId: string,
+  config?: ActionConfig<Channel['sendReaction']>,
+): {
+    data: {
+        eventId: string;
+    } | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    sendReaction: (refEventId: string, reaction: string) => Promise<{
+        eventId: string;
+    }>;
+}
+```
+
+**Source:** [useSendReaction](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useSendReaction.ts)
+
+## Parameters
+
+### streamId
+
+- **Type:** `string`
+
+The id of the stream to send the reaction to.
+
+### config
+
+- **Type:** `ActionConfig<Channel['sendReaction']>`
+- **Optional**
+
+Configuration options for the action.
+
+## Return Type
+
+The `sendReaction` action and its loading state.
+
+```ts
+{
+    data: {
+        eventId: string;
+    } | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    sendReaction: (refEventId: string, reaction: string) => Promise<{
+        eventId: string;
+    }>;
+}
+```

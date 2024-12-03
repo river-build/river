@@ -9,9 +9,11 @@ import {IArchitectBase} from "contracts/src/factory/facets/architect/IArchitect.
 import {ILegacyArchitect, ILegacyArchitectBase} from "contracts/test/mocks/legacy/IMockLegacyArchitect.sol";
 import {IMembership} from "contracts/src/spaces/facets/membership/IMembership.sol";
 import {IPricingModulesBase} from "contracts/src/factory/facets/architect/pricing/IPricingModules.sol";
+import {ICreateSpace} from "contracts/src/factory/facets/create/ICreateSpace.sol";
+import {IPlatformRequirements} from "contracts/src/factory/facets/platform/requirements/IPlatformRequirements.sol";
 
 //libraries
-
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 //contracts
 import {SpaceHelper} from "contracts/test/spaces/SpaceHelper.sol";
 import {Architect} from "contracts/src/factory/facets/architect/Architect.sol";
@@ -44,27 +46,60 @@ contract ForkCreateSpace is
     return address(0);
   }
 
+  function test_joinForkSpaceAlpha() external onlyForked {
+    address space = 0x0ca3c941cF5d9229EDd9Be592C06AE59c6A8ACF0;
+    address user = 0x696f2C1C73c8a6f39Dec5FD375C37b20a74D4C20;
+    address spaceFactory = 0xC09Ac0FFeecAaE5100158247512DC177AeacA3e3;
+
+    uint256 price = IMembership(space).getMembershipPrice();
+    uint256 fee = IPlatformRequirements(spaceFactory).getMembershipFee();
+
+    uint256 value = FixedPointMathLib.max(price, fee);
+
+    vm.startPrank(user);
+    IMembership(space).joinSpace{value: value}(user);
+    vm.stopPrank();
+  }
+
   function test_createForkSpaceAlpha() external onlyForked {
     address founder = _randomAddress();
     address spaceFactory = 0xC09Ac0FFeecAaE5100158247512DC177AeacA3e3;
 
-    ILegacyArchitect spaceArchitect = ILegacyArchitect(spaceFactory);
+    ILegacyArchitect legacyCreateSpace = ILegacyArchitect(spaceFactory);
+    ICreateSpace createSpace = ICreateSpace(spaceFactory);
 
-    ILegacyArchitectBase.SpaceInfo memory spaceInfo = _createLegacySpaceInfo(
+    ILegacyArchitectBase.SpaceInfo
+      memory legacySpaceInfo = _createLegacySpaceInfo("fork-space");
+    CreateSpace memory createSpaceInfo = _createSpaceWithPrepayInfo(
       "fork-space"
     );
+
     address dynamicPricingModule = getDynamicPricingModule(spaceFactory);
 
     console.log("Dynamic Pricing Module: %s", dynamicPricingModule);
 
     assertNotEq(dynamicPricingModule, address(0));
 
-    spaceInfo.membership.settings.pricingModule = dynamicPricingModule;
+    legacySpaceInfo.membership.settings.pricingModule = dynamicPricingModule;
+    createSpaceInfo.membership.settings.pricingModule = dynamicPricingModule;
 
-    vm.prank(founder);
-    address space = spaceArchitect.createSpace(spaceInfo);
+    vm.startPrank(founder);
+    address legacySpace = legacyCreateSpace.createSpace(legacySpaceInfo);
+    address modernSpace = createSpace.createSpaceWithPrepay(createSpaceInfo);
+    vm.stopPrank();
 
-    address pricingModule = IMembership(space).getMembershipPricingModule();
-    assertEq(pricingModule, spaceInfo.membership.settings.pricingModule);
+    address legacyPricingModule = IMembership(legacySpace)
+      .getMembershipPricingModule();
+    assertEq(
+      legacyPricingModule,
+      legacySpaceInfo.membership.settings.pricingModule
+    );
+
+    address modernPricingModule = IMembership(modernSpace)
+      .getMembershipPricingModule();
+    assertEq(
+      modernPricingModule,
+      createSpaceInfo.membership.settings.pricingModule
+    );
   }
 }

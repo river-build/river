@@ -1,0 +1,72 @@
+---
+title: useScrollback
+---
+Hook to get the scrollback action for a stream.
+
+Scrollback is the action of getting miniblocks from a stream before a certain point in time. Getting miniblocks means that new events that are possibly new messages, reactions and so on are fetched.
+
+## Imports
+
+```ts
+import { useScrollback } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useScrollback(
+  streamId: string,
+  config?: ActionConfig<MessageTimeline['scrollback']>,
+): {
+    data: {
+        terminus: boolean;
+        firstEvent?: TimelineEvent | undefined;
+    } | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    scrollback: () => Promise<{
+        terminus: boolean;
+        firstEvent?: TimelineEvent | undefined;
+    }>;
+}
+```
+
+**Source:** [useScrollback](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useScrollback.ts)
+
+## Parameters
+
+### streamId
+
+- **Type:** `string`
+
+The id of the stream to get the scrollback action for.
+
+### config
+
+- **Type:** `ActionConfig<MessageTimeline['scrollback']>`
+- **Optional**
+
+Configuration options for the action.
+
+## Return Type
+
+The `scrollback` action and its loading state.
+
+```ts
+{
+    data: {
+        terminus: boolean;
+        firstEvent?: TimelineEvent | undefined;
+    } | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    scrollback: () => Promise<{
+        terminus: boolean;
+        firstEvent?: TimelineEvent | undefined;
+    }>;
+}
+```

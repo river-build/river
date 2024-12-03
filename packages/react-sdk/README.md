@@ -26,6 +26,7 @@ import { RiverSyncProvider, useAgentConnection } from "@river-build/react-sdk";
 import { makeRiverConfig } from "@river-build/sdk";
 import { WagmiProvider } from "wagmi";
 import { useEthersSigner } from "./utils/viem-to-ethers";
+import { wagmiConfig } from "./config/wagmi";
 
 const riverConfig = makeRiverConfig("gamma");
 
@@ -44,10 +45,11 @@ const ConnectRiver = () => {
   return (
     <>
       <button
-        onClick={() => {
-          if (signer) {
-            connect(signer, { riverConfig });
+        onClick={async () => {
+          if (!signer) {
+            return;
           }
+          connect(signer, { riverConfig });
         }}
       >
         {isConnecting ? "Disconnect" : "Connect"}

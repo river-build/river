@@ -148,7 +148,7 @@ func addEventToView(
 }
 
 func getView(t *testing.T, ctx context.Context, stream *streamImpl) *streamViewImpl {
-	view, err := stream.getView(ctx)
+	view, err := stream.getViewIfLocal(ctx)
 	require.NoError(t, err)
 	require.NotNil(t, view)
 	return view
@@ -248,12 +248,13 @@ func TestCandidatePromotionCandidateInPlace(t *testing.T) {
 	addEventToStream(t, ctx, tt.instances[0].params, stream, "1", view.LastBlock().Ref)
 	addEventToStream(t, ctx, tt.instances[0].params, stream, "2", view.LastBlock().Ref)
 
+	remotes, _ := stream.GetRemotesAndIsLocal()
 	proposal, err := mbProduceCandiate_Make(
 		ctx,
 		tt.instances[0].params,
 		getView(t, ctx, stream),
 		false,
-		stream.nodes.GetRemotes(),
+		remotes,
 	)
 	require.NoError(err)
 	mb := proposal.headerEvent.Event.GetMiniblockHeader()
@@ -270,7 +271,7 @@ func TestCandidatePromotionCandidateInPlace(t *testing.T) {
 
 	require.NoError(stream.promoteCandidate(ctx, proposal.Ref))
 
-	view, err = stream.getView(ctx)
+	view, err = stream.getViewIfLocal(ctx)
 	require.NoError(err)
 	require.EqualValues(proposal.Ref, view.LastBlock().Ref)
 	require.Equal(0, view.minipool.events.Len())
@@ -294,7 +295,7 @@ func TestCandidatePromotionCandidateIsDelayed(t *testing.T) {
 	syncStream, viewInt := tt.createStream(spaceStreamId, genesisMb.Proto)
 	stream := syncStream.(*streamImpl)
 	view := viewInt.(*streamViewImpl)
-	remotes := stream.nodes.GetRemotes()
+	remotes, _ := stream.GetRemotesAndIsLocal()
 
 	addEventToStream(t, ctx, params, stream, "1", view.LastBlock().Ref)
 	addEventToStream(t, ctx, params, stream, "2", view.LastBlock().Ref)
@@ -315,8 +316,8 @@ func TestCandidatePromotionCandidateIsDelayed(t *testing.T) {
 	view = getView(t, ctx, stream)
 	require.Equal(int64(0), view.LastBlock().Ref.Num)
 	require.Equal(2, view.minipool.size())
-	require.Len(stream.pendingCandidates, 1)
-	require.EqualValues(proposal1.Ref, stream.pendingCandidates[0])
+	require.Len(stream.local.pendingCandidates, 1)
+	require.EqualValues(proposal1.Ref, stream.local.pendingCandidates[0])
 
 	require.NoError(stream.SaveMiniblockCandidate(ctx, proposal1.Proto))
 
@@ -361,7 +362,7 @@ func TestCandidatePromotionCandidateIsDelayed(t *testing.T) {
 		require.NoError(stream.promoteCandidate(ctx, proposal2.Ref))
 		require.NoError(stream.promoteCandidate(ctx, proposal3.Ref))
 		require.NoError(stream.promoteCandidate(ctx, proposal4.Ref))
-		require.Len(stream.pendingCandidates, 3)
+		require.Len(stream.local.pendingCandidates, 3)
 
 		if i == 0 {
 			require.NoError(stream.SaveMiniblockCandidate(ctx, proposal2.Proto))

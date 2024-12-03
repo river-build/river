@@ -1,0 +1,58 @@
+---
+title: useReactions
+---
+Hook to get the reactions of a specific stream.
+
+## Imports
+
+```ts
+import { useReactions } from '@river-build/react-sdk'
+```
+
+## Definition
+
+```ts
+function useReactions(
+  streamId: string,
+  config?: ObservableConfig.FromData<ReactionsMap>,
+): {
+    data: ReactionsMap;
+    error: undefined;
+    status: "loading" | "loaded";
+    isLoading: boolean;
+    isError: false;
+    isLoaded: boolean;
+}
+```
+
+**Source:** [useReactions](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useReactions.ts)
+
+## Parameters
+
+### streamId
+
+- **Type:** `string`
+
+The id of the stream to get the reactions of.
+
+### config
+
+- **Type:** `ObservableConfig.FromData<ReactionsMap>`
+- **Optional**
+
+Configuration options for the observable.
+
+## Return Type
+
+The reactions of the stream as a map from the message eventId to the reaction.
+
+```ts
+{
+    data: ReactionsMap;
+    error: undefined;
+    status: "loading" | "loaded";
+    isLoading: boolean;
+    isError: false;
+    isLoaded: boolean;
+}
+```

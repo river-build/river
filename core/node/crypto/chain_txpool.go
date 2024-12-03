@@ -17,13 +17,15 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/puzpuzpuz/xsync/v3"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/river-build/river/core/config"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
 	. "github.com/river-build/river/core/node/protocol"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
 )
 
 type (
@@ -106,7 +108,7 @@ type (
 
 	// pendingTransactionPool keeps track of transactions that are submitted but the receipt has not been retrieved.
 	pendingTransactionPool struct {
-		pendingTxs sync.Map
+		pendingTxs *xsync.MapOf[uint64, *txPoolPendingTransaction]
 
 		client  BlockchainClient
 		wallet  *Wallet
@@ -141,6 +143,7 @@ var (
 )
 
 func newPendingTransactionPool(
+	ctx context.Context,
 	monitor ChainMonitor,
 	client BlockchainClient,
 	chainID *big.Int,
@@ -188,6 +191,7 @@ func newPendingTransactionPool(
 	)
 
 	ptp := &pendingTransactionPool{
+		pendingTxs:    xsync.NewMapOf[uint64, *txPoolPendingTransaction](),
 		client:        client,
 		wallet:        wallet,
 		chainID:       chainID.Uint64(),
@@ -205,7 +209,7 @@ func newPendingTransactionPool(
 		transactionGasTip:                 transactionGasTip.MustCurryWith(curryLabels),
 	}
 
-	go ptp.run()
+	go ptp.run(ctx)
 
 	monitor.OnHeader(ptp.checkPendingTransactions)
 
@@ -216,17 +220,28 @@ func (pool *pendingTransactionPool) PendingTransactionsCount() int64 {
 	return pool.pendingTxCount.Load()
 }
 
-func (pool *pendingTransactionPool) run() {
-	for ptx := range pool.addPendingTx {
-		pool.pendingTxs.Store(ptx.tx.Nonce(), ptx)
-		pool.pendingTxCount.Add(1)
+func (pool *pendingTransactionPool) appendPendingTx(ctx context.Context, ptx *txPoolPendingTransaction) {
+	// Read before storing to avoid data race
+	gasCap, _ := ptx.tx.GasFeeCap().Float64()
+	tipCap, _ := ptx.tx.GasTipCap().Float64()
 
-		// metrics
-		gasCap, _ := ptx.tx.GasFeeCap().Float64()
-		tipCap, _ := ptx.tx.GasTipCap().Float64()
-		pool.transactionsPending.Add(1)
-		pool.transactionGasCap.With(prometheus.Labels{"replacement": "false"}).Set(gasCap)
-		pool.transactionGasTip.With(prometheus.Labels{"replacement": "false"}).Set(tipCap)
+	pool.pendingTxs.Store(ptx.tx.Nonce(), ptx)
+	pool.pendingTxCount.Add(1)
+
+	// metrics
+	pool.transactionsPending.Add(1)
+	pool.transactionGasCap.With(prometheus.Labels{"replacement": "false"}).Set(gasCap)
+	pool.transactionGasTip.With(prometheus.Labels{"replacement": "false"}).Set(tipCap)
+}
+
+func (pool *pendingTransactionPool) run(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case ptx := <-pool.addPendingTx:
+			pool.appendPendingTx(ctx, ptx)
+		}
 	}
 }
 
@@ -308,12 +323,8 @@ func (pool *pendingTransactionPool) checkPendingTransactions(ctx context.Context
 
 	// drop transactions that have a receipt available from the pool and check others if it is time to send a
 	// replacement transactions
-	pool.pendingTxs.Range(func(k, v interface{}) bool {
-		var (
-			ptx          = v.(*txPoolPendingTransaction)
-			ptxNonce     = k.(uint64)
-			ptxConfirmed = ptxNonce <= nonce
-		)
+	pool.pendingTxs.Range(func(ptxNonce uint64, ptx *txPoolPendingTransaction) bool {
+		ptxConfirmed := ptxNonce <= nonce
 
 		if ptxConfirmed {
 			ptx.receiptPolls++
@@ -343,6 +354,8 @@ func (pool *pendingTransactionPool) checkPendingTransactions(ctx context.Context
 				// with the same nonce was already included in the canonical chain. When the rpc node caught up the tx
 				// was dropped from the rpc node tx pool and therefor we never get a receipt for it. Closing
 				// ptx.listener will yield an error to the client waiting for the receipt that it is not available.
+
+				// TODO: FIX: it seems that not all counters are updated here correctly? see closeTx
 				pool.transactionReceiptsMissing.Add(1)
 				pool.pendingTxs.Delete(nonce)
 				close(ptx.listener) // this will return an error that the receipt wasn't available when waiting for it
@@ -412,7 +425,6 @@ func NewTransactionPoolWithPoliciesFromConfig(
 	riverClient BlockchainClient,
 	wallet *Wallet,
 	chainMonitor ChainMonitor,
-	initialBlockNumber BlockNumber,
 	disableReplacePendingTransactionOnBoot bool,
 	metrics infra.MetricsFactory,
 	tracer trace.Tracer,
@@ -437,7 +449,7 @@ func NewTransactionPoolWithPoliciesFromConfig(
 
 	return NewTransactionPoolWithPolicies(
 		ctx, riverClient, wallet, replacementPolicy, pricePolicy, chainMonitor,
-		initialBlockNumber, disableReplacePendingTransactionOnBoot, metrics, tracer)
+		disableReplacePendingTransactionOnBoot, metrics, tracer)
 }
 
 // NewTransactionPoolWithPolicies creates an in-memory transaction pool that tracks transactions that are submitted
@@ -452,7 +464,6 @@ func NewTransactionPoolWithPolicies(
 	replacePolicy TransactionPoolReplacePolicy,
 	pricePolicy TransactionPricePolicy,
 	chainMonitor ChainMonitor,
-	initialBlockNumber BlockNumber,
 	disableReplacePendingTransactionOnBoot bool,
 	metrics infra.MetricsFactory,
 	tracer trace.Tracer,
@@ -494,7 +505,7 @@ func NewTransactionPoolWithPolicies(
 		transactionSubmitted: transactionsSubmittedCounter.MustCurryWith(curryLabels),
 		walletBalance:        walletBalance.With(curryLabels),
 		pendingTransactionPool: newPendingTransactionPool(
-			chainMonitor, client, chainID, wallet, replacePolicy, pricePolicy, metrics),
+			ctx, chainMonitor, client, chainID, wallet, replacePolicy, pricePolicy, metrics),
 	}
 
 	chainMonitor.OnHeader(txPool.Balance)
@@ -685,10 +696,10 @@ func (r *transactionPool) Submit(
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	return r.submitNoLock(ctx, name, createTx, true)
+	return r.submitLocked(ctx, name, createTx, true)
 }
 
-func (r *transactionPool) submitNoLock(
+func (r *transactionPool) submitLocked(
 	ctx context.Context,
 	name string,
 	createTx CreateTransaction,
@@ -735,7 +746,7 @@ func (r *transactionPool) submitNoLock(
 		// caught up the fetched nonce can be too low. Fetch the nonce again recovers from this scenario.
 		if canRetry && strings.Contains(strings.ToLower(err.Error()), "nonce too low") {
 			r.lastNonce = nil
-			return r.submitNoLock(ctx, name, createTx, false)
+			return r.submitLocked(ctx, name, createTx, false)
 		}
 		return nil, err
 	}
