@@ -132,13 +132,13 @@ func testGDMNotifications(
 	authClient protocolconnect.AuthenticationServiceClient,
 	notifications *notificationCapture,
 ) {
-	tester.sequentialSubtest("MessageWithNoMentionsRepliesAndReaction", func(tester *serviceTester) {
+	tester.parallelSubtest("MessageWithNoMentionsRepliesAndReaction", func(tester *serviceTester) {
 		ctx := tester.ctx
 		test := setupGDMNotificationTest(ctx, tester, notificationClient, authClient)
 		testGDMMessageWithNoMentionsRepliesAndReaction(ctx, test, notifications)
 	})
 
-	tester.sequentialSubtest("APNUnsubscribe", func(tester *serviceTester) {
+	tester.parallelSubtest("APNUnsubscribe", func(tester *serviceTester) {
 		ctx := tester.ctx
 		test := setupGDMNotificationTest(ctx, tester, notificationClient, authClient)
 		testGDMAPNNotificationAfterUnsubscribe(ctx, test, notifications)
