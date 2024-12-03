@@ -16,6 +16,7 @@ contract TippingFacet is ITipping, ERC721ABase, Facet {
     _addInterface(type(ITipping).interfaceId);
   }
 
+  /// @inheritdoc ITipping
   function tip(TipRequest calldata tipRequest) external payable {
     address sender = msg.sender;
     address receiver = _ownerOf(tipRequest.tokenId);
@@ -46,15 +47,17 @@ contract TippingFacet is ITipping, ERC721ABase, Facet {
     emit TipMessage(tipRequest.messageId, tipRequest.channelId);
   }
 
-  function tipCurrencies() external view returns (address[] memory) {
-    return TippingBase.currencies();
+  /// @inheritdoc ITipping
+  function tippingCurrencies() external view returns (address[] memory) {
+    return TippingBase.tippingCurrencies();
   }
 
-  function getTipsByCurrencyByTokenId(
+  /// @inheritdoc ITipping
+  function tipsByCurrencyByTokenId(
     uint256 tokenId,
     address currency
   ) external view returns (uint256) {
-    return TippingBase.getTipsByCurrencyByTokenId(tokenId, currency);
+    return TippingBase.tipsByCurrencyByTokenId(tokenId, currency);
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/

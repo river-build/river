@@ -79,12 +79,10 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
     assertEq(receiver.balance, amount);
     assertEq(sender.balance, 0);
     assertEq(
-      tipping.getTipsByCurrencyByTokenId(
-        tokenId,
-        CurrencyTransfer.NATIVE_TOKEN
-      ),
+      tipping.tipsByCurrencyByTokenId(tokenId, CurrencyTransfer.NATIVE_TOKEN),
       amount
     );
+    assertContains(tipping.tippingCurrencies(), CurrencyTransfer.NATIVE_TOKEN);
   }
 
   function test_tipERC20(
@@ -119,6 +117,11 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
 
     assertEq(mockERC20.balanceOf(sender), 0);
     assertEq(mockERC20.balanceOf(receiver), amount);
+    assertEq(
+      tipping.tipsByCurrencyByTokenId(tokenId, address(mockERC20)),
+      amount
+    );
+    assertContains(tipping.tippingCurrencies(), address(mockERC20));
   }
 
   function test_revertWhenTokenDoesNotExist(

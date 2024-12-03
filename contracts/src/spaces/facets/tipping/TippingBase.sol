@@ -2,7 +2,6 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {ITippingBase} from "contracts/src/spaces/facets/tipping/ITipping.sol";
 
 // libraries
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
@@ -42,14 +41,14 @@ library TippingBase {
     CurrencyTransfer.transferCurrency(currency, sender, receiver, amount);
   }
 
-  function getTipsByCurrencyByTokenId(
+  function tipsByCurrencyByTokenId(
     uint256 tokenId,
     address currency
   ) internal view returns (uint256) {
     return layout().tipsByCurrencyByTokenId[tokenId][currency];
   }
 
-  function currencies() internal view returns (address[] memory) {
+  function tippingCurrencies() internal view returns (address[] memory) {
     return layout().currencies.values();
   }
 }
