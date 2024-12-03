@@ -376,7 +376,7 @@ func (s *PostgresStreamStore) createStreamArchiveStorageTx(
 			`INSERT INTO es (stream_id, latest_snapshot_miniblock, migrated) VALUES ($1, -1, false);
 			CREATE TABLE {{miniblocks}} PARTITION OF miniblocks FOR VALUES IN ($1);`,
 			streamId,
-			false,
+			s.config.MigrateStreamCreation,
 		)
 	}
 	_, err := tx.Exec(ctx, sql, streamId)

@@ -76,14 +76,15 @@ func ConfigureDB(ctx context.Context) (*config.DatabaseConfig, string, func(), e
 		}, dbSchemaName, func() {}, nil
 	} else {
 		cfg := &config.DatabaseConfig{
-			Host:          "localhost",
-			Port:          5433,
-			User:          "postgres",
-			Password:      "postgres",
-			Database:      "river",
-			Extra:         "?sslmode=disable&pool_max_conns=1000",
-			StartupDelay:  2 * time.Millisecond,
-			NumPartitions: 4,
+			Host:                  "localhost",
+			Port:                  5433,
+			User:                  "postgres",
+			Password:              "postgres",
+			Database:              "river",
+			Extra:                 "?sslmode=disable&pool_max_conns=1000",
+			StartupDelay:          2 * time.Millisecond,
+			NumPartitions:         4,
+			MigrateStreamCreation: true,
 		}
 		return cfg,
 			dbSchemaName,
