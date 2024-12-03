@@ -2,11 +2,14 @@ package rpc
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"hash/fnv"
+	"io"
 	"log"
 	"math/big"
 	"net"
+	"net/http"
 	"slices"
 	"testing"
 	"time"
@@ -22,11 +25,12 @@ import (
 	"github.com/river-build/river/core/contracts/river"
 	"github.com/river-build/river/core/node/base/test"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/nodes"
+	"github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/node/testutils/dbtestutils"
+	"github.com/river-build/river/core/node/testutils/testcert"
 )
 
 type testNodeRecord struct {
@@ -67,6 +71,19 @@ type serviceTesterOpts struct {
 	start             bool
 }
 
+func makeTestListenerNoCleanup(t *testing.T) (net.Listener, string) {
+	listener, err := net.Listen("tcp", "localhost:0")
+	require.NoError(t, err)
+	listener = tls.NewListener(listener, testcert.GetHttp2LocalhostTLSConfig())
+	return listener, "https://" + listener.Addr().String()
+}
+
+func makeTestListener(t *testing.T) (net.Listener, string) {
+	l, url := makeTestListenerNoCleanup(t)
+	t.Cleanup(func() { _ = l.Close() })
+	return l, url
+}
+
 func newServiceTester(t *testing.T, opts serviceTesterOpts) *serviceTester {
 	t.Parallel()
 
@@ -79,8 +96,6 @@ func newServiceTester(t *testing.T, opts serviceTesterOpts) *serviceTester {
 	}
 
 	ctx, ctxCancel := test.NewTestContext()
-	t.Cleanup(ctxCancel)
-
 	require := require.New(t)
 
 	st := &serviceTester{
@@ -93,27 +108,20 @@ func newServiceTester(t *testing.T, opts serviceTesterOpts) *serviceTester {
 		opts:      opts,
 	}
 
+	// Cleanup context on test completion even if no other cleanups are registered.
+	st.cleanup(func() {})
+
 	btc, err := crypto.NewBlockchainTestContext(
 		st.ctx,
 		crypto.TestParams{NumKeys: opts.numNodes, MineOnTx: true, AutoMine: true},
 	)
 	require.NoError(err)
 	st.btc = btc
-	t.Cleanup(st.btc.Close)
+	st.cleanup(st.btc.Close)
 
 	for i := 0; i < opts.numNodes; i++ {
 		st.nodes[i] = &testNodeRecord{}
-
-		// This is a hack to get the port number of the listener
-		// so we can register it in the contract before starting
-		// the server
-		listener, err := net.Listen("tcp", "localhost:0")
-		require.NoError(err)
-		st.nodes[i].listener = listener
-
-		port := listener.Addr().(*net.TCPAddr).Port
-
-		st.nodes[i].url = fmt.Sprintf("http://localhost:%d", port)
+		st.nodes[i].listener, st.nodes[i].url = st.makeTestListener()
 	}
 
 	st.startAutoMining()
@@ -133,7 +141,61 @@ func newServiceTester(t *testing.T, opts serviceTesterOpts) *serviceTester {
 	return st
 }
 
-func (st serviceTester) CloseNode(i int) {
+// Returns a new serviceTester instance for a makeSubtest.
+//
+// The new instance shares nodes with the parent instance,
+// if parallel tests are run, node restarts or other changes should not be performed.
+func (st *serviceTester) makeSubtest(t *testing.T) *serviceTester {
+	var sub serviceTester = *st
+	sub.t = t
+	sub.ctx, sub.ctxCancel = context.WithCancel(st.ctx)
+	sub.require = require.New(t)
+
+	// Cleanup context on subtest completion even if no other cleanups are registered.
+	sub.cleanup(func() {})
+
+	return &sub
+}
+
+func (st *serviceTester) parallelSubtest(name string, test func(*serviceTester)) {
+	st.t.Run(name, func(t *testing.T) {
+		t.Parallel()
+		test(st.makeSubtest(t))
+	})
+}
+
+func (st *serviceTester) sequentialSubtest(name string, test func(*serviceTester)) {
+	st.t.Run(name, func(t *testing.T) {
+		test(st.makeSubtest(t))
+	})
+}
+
+func (st *serviceTester) cleanup(f any) {
+	st.t.Cleanup(func() {
+		st.t.Helper()
+		// On first cleanup call cancel context for the current test, so relevant shutdowns are started.
+		if st.ctxCancel != nil {
+			st.ctxCancel()
+			st.ctxCancel = nil
+		}
+		switch f := f.(type) {
+		case func():
+			f()
+		case func() error:
+			_ = f()
+		default:
+			panic(fmt.Sprintf("unsupported cleanup type: %T", f))
+		}
+	})
+}
+
+func (st *serviceTester) makeTestListener() (net.Listener, string) {
+	l, url := makeTestListenerNoCleanup(st.t)
+	st.cleanup(l.Close)
+	return l, url
+}
+
+func (st *serviceTester) CloseNode(i int) {
 	if st.nodes[i] != nil {
 		st.nodes[i].Close(st.ctx, st.dbUrl)
 	}
@@ -202,6 +264,7 @@ func (st *serviceTester) startAutoMining() {
 type startOpts struct {
 	configUpdater func(cfg *config.Config)
 	listeners     []net.Listener
+	scrubberMaker func(ctx context.Context, s *Service) events.Scrubber
 }
 
 func (st *serviceTester) startNodes(start, stop int, opts ...startOpts) {
@@ -219,7 +282,7 @@ func (st *serviceTester) getConfig(opts ...startOpts) *config.Config {
 
 	cfg := config.GetDefaultConfig()
 	cfg.DisableBaseChain = true
-	cfg.DisableHttps = true
+	cfg.DisableHttps = false
 	cfg.RegistryContract = st.btc.RegistryConfig()
 	cfg.Database = config.DatabaseConfig{
 		Url:                   st.dbUrl,
@@ -260,7 +323,12 @@ func (st *serviceTester) startSingle(i int, opts ...startOpts) error {
 	}
 
 	bc := st.btc.GetBlockchain(st.ctx, i)
-	service, err := StartServer(st.ctx, cfg, bc, listener)
+	service, err := StartServer(st.ctx, cfg, &ServerStartOpts{
+		RiverChain:      bc,
+		Listener:        listener,
+		HttpClientMaker: testcert.GetHttp2LocalhostTLSClient,
+		ScrubberMaker:   options.scrubberMaker,
+	})
 	if err != nil {
 		if service != nil {
 			// Sanity check
@@ -272,23 +340,26 @@ func (st *serviceTester) startSingle(i int, opts ...startOpts) error {
 	st.nodes[i].service = service
 	st.nodes[i].address = bc.Wallet.Address
 
-	st.t.Cleanup(func() {
-		// Cancel context here: t.Cleanup calls functions in reverse order,
-		// but it's better to cancel context first.
-		// Since it's ok to cancel context multiple times, it's safe to cancel it here.
-		st.ctxCancel()
-		st.nodes[i].Close(st.ctx, st.dbUrl)
-	})
+	var nodeRecord testNodeRecord = *st.nodes[i]
+
+	st.cleanup(func() { nodeRecord.Close(st.ctx, st.dbUrl) })
 
 	return nil
 }
 
 func (st *serviceTester) testClient(i int) protocolconnect.StreamServiceClient {
-	return testClient(st.nodes[i].url)
+	return st.testClientForUrl(st.nodes[i].url)
 }
 
-func testClient(url string) protocolconnect.StreamServiceClient {
-	return protocolconnect.NewStreamServiceClient(nodes.TestHttpClientMaker(), url, connect.WithGRPCWeb())
+func (st *serviceTester) testClientForUrl(url string) protocolconnect.StreamServiceClient {
+	httpClient, _ := testcert.GetHttp2LocalhostTLSClient(st.ctx, st.getConfig())
+	return protocolconnect.NewStreamServiceClient(httpClient, url, connect.WithGRPCWeb())
+}
+
+func (st *serviceTester) httpClient() *http.Client {
+	c, err := testcert.GetHttp2LocalhostTLSClient(st.ctx, st.getConfig())
+	st.require.NoError(err)
+	return c
 }
 
 func bytesHash(b []byte) uint64 {
@@ -407,4 +478,13 @@ func (st *serviceTester) eventuallyCompareStreamDataInStorage(
 		20*time.Second,
 		100*time.Millisecond,
 	)
+}
+
+func (st *serviceTester) httpGet(url string) string {
+	resp, err := st.httpClient().Get(url)
+	st.require.NoError(err)
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	st.require.NoError(err)
+	return string(body)
 }

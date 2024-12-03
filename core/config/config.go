@@ -17,8 +17,9 @@ func GetDefaultConfig() *Config {
 	return &Config{
 		Port: 443,
 		Database: DatabaseConfig{
-			StartupDelay:  2 * time.Second,
-			NumPartitions: 256,
+			StartupDelay:          2 * time.Second,
+			NumPartitions:         256,
+			MigrateStreamCreation: true,
 		},
 		StorageType:  "postgres",
 		DisableHttps: false,
@@ -303,8 +304,8 @@ type ChainConfig struct {
 	PositiveEntitlementManagerCacheTTLSeconds int
 	NegativeEntitlementManagerCacheSize       int
 	NegativeEntitlementManagerCacheTTLSeconds int
-	LinkedWalletCacheSize             int
-	LinkedWalletCacheTTLSeconds       int
+	LinkedWalletCacheSize                     int
+	LinkedWalletCacheTTLSeconds               int
 }
 
 func (c ChainConfig) BlockTime() time.Duration {
@@ -522,7 +523,7 @@ func (ac *ArchiveConfig) GetStreamsContractCallPageSize() int64 {
 type ScrubbingConfig struct {
 	// ScrubEligibleDuration is the minimum length of time that must pass before a stream is eligible
 	// to be re-scrubbed.
-	// If unset, it defaults to 1 hour.
+	// If 0, scrubbing is disabled.
 	ScrubEligibleDuration time.Duration
 }
 
