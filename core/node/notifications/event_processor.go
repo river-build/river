@@ -42,7 +42,7 @@ func NewNotificationMessageProcessor(
 	notifier push.MessageNotifier,
 ) *MessageToNotificationsProcessor {
 	subscriptionExpiration := 90 * 24 * time.Hour // 90 days default
-	if config.SubscriptionExpirationDuration != time.Duration(0) {
+	if config.SubscriptionExpirationDuration > time.Duration(0) {
 		subscriptionExpiration = config.SubscriptionExpirationDuration
 	}
 
@@ -61,6 +61,7 @@ func NewNotificationMessageProcessor(
 // to messages or replies and reactions and use that list to iterate over the group members to determine to who send a
 // notification instead of walking over the entire member list for each message.
 func (p *MessageToNotificationsProcessor) OnMessageEvent(
+	ctx context.Context,
 	channelID shared.StreamId,
 	spaceID *shared.StreamId,
 	members mapset.Set[string],
@@ -178,7 +179,7 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 	recipients.Remove(sender)
 
 	for user, userPref := range usersToNotify {
-		p.sendNotification(user, userPref, spaceID, channelID, event, kind, members)
+		p.sendNotification(ctx, user, userPref, spaceID, channelID, event, kind, members)
 	}
 }
 
@@ -277,6 +278,7 @@ func (p *MessageToNotificationsProcessor) onSpaceChannelPayload(
 }
 
 func (p *MessageToNotificationsProcessor) sendNotification(
+	ctx context.Context,
 	user common.Address,
 	userPref *types.UserPreferences,
 	spaceID *shared.StreamId,
@@ -320,22 +322,38 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 
 		for _, sub := range userPref.Subscriptions.WebPush {
 			if time.Since(sub.LastSeen) >= p.subscriptionExpiration {
+				p.log.Warn("Ignore WebPush subscription due to no activity",
+					"user", user,
+					"event", event.Hash,
+					"channelID", channelID,
+					"lastSeen", sub.LastSeen,
+					"since", time.Since(sub.LastSeen),
+					"sub.expiration", p.subscriptionExpiration,
+				)
 				continue
 			}
 
-			if err := p.sendWebPushNotification(channelID, sub.Sub, event, webPayload); err == nil {
+			subscriptionExpired, err := p.sendWebPushNotification(ctx, channelID, sub.Sub, event, webPayload)
+			if err == nil {
 				p.log.Debug("Successfully sent web push notification",
 					"user", user,
 					"event", event.Hash,
 					"channelID", channelID,
 				)
-			} else {
+			} else if !subscriptionExpired {
 				p.log.Error("Unable to send web push notification",
 					"user",
 					user, "err", err,
 					"event", event.Hash,
 					"channelID", channelID,
 				)
+			} else {
+				if err := p.cache.RemoveExpiredWebPushSubscription(ctx, userPref.UserID, sub.Sub); err != nil {
+					p.log.Error("Unable to remove expired webpush subscription",
+						"user", userPref.UserID, "err", err)
+				} else {
+					p.log.Info("Removed expired webpush subscription", "user", userPref.UserID)
+				}
 			}
 		}
 	}
@@ -362,10 +380,20 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 
 		for _, sub := range userPref.Subscriptions.APNPush {
 			if time.Since(sub.LastSeen) >= p.subscriptionExpiration {
+				p.log.Warn("Ignore APN subscription due to no activity",
+					"user", user,
+					"event", event.Hash,
+					"channelID", channelID,
+					"lastSeen", sub.LastSeen,
+					"since", time.Since(sub.LastSeen),
+					"sub.expiration", p.subscriptionExpiration,
+				)
 				continue
 			}
 
-			if err := p.sendAPNNotification(channelID, sub, event, apnPayload); err == nil {
+			subscriptionExpired, err := p.sendAPNNotification(channelID, sub, event, apnPayload)
+
+			if err == nil {
 				p.log.Debug("Successfully sent APN notification",
 					"user", user,
 					"event", event.Hash,
@@ -373,7 +401,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 					"deviceToken", sub.DeviceToken,
 					"env", sub.Environment,
 				)
-			} else {
+			} else if !subscriptionExpired {
 				p.log.Error("Unable to send APN notification",
 					"user", user,
 					"user", user,
@@ -382,21 +410,25 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 					"deviceToken", sub.DeviceToken,
 					"env", sub.Environment,
 					"err", err)
+			} else {
+				if err := p.cache.RemoveAPNSubscription(ctx, sub.DeviceToken, userPref.UserID); err != nil {
+					p.log.Error("Unable to remove expired APN subscription",
+						"user", userPref.UserID, "err", err)
+				} else {
+					p.log.Info("Removed expired APN subscription", "user", userPref.UserID)
+				}
 			}
 		}
 	}
 }
 
 func (p *MessageToNotificationsProcessor) sendWebPushNotification(
+	ctx context.Context,
 	streamID shared.StreamId,
 	sub *webpush.Subscription,
 	event *events.ParsedEvent,
 	content map[string]interface{},
-) error {
-	// lint:ignore context.Background() is fine here
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
+) (bool, error) {
 	payload, _ := json.Marshal(map[string]interface{}{
 		"channelId": streamID,
 		"payload":   content,
@@ -410,7 +442,7 @@ func (p *MessageToNotificationsProcessor) sendAPNNotification(
 	sub *types.APNPushSubscription,
 	event *events.ParsedEvent,
 	content map[string]interface{},
-) error {
+) (bool, error) {
 	// lint:ignore context.Background() is fine here
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -420,7 +452,8 @@ func (p *MessageToNotificationsProcessor) sendAPNNotification(
 		Custom("content", content).
 		ThreadID(streamID.String()).
 		ContentAvailable().
-		MutableContent()
+		MutableContent().
+		Sound("default")
 
 	if p.log.Enabled(ctx, slog.LevelDebug) {
 		p.log.Debug("APN Notification",

@@ -2,8 +2,8 @@ import {
     useAccount,
     useDisconnect,
     useSendTransaction,
-    useSwitchNetwork,
-    useWaitForTransaction,
+    useSwitchChain,
+    useWaitForTransactionReceipt,
 } from 'wagmi'
 
 import { foundry } from 'viem/chains'
@@ -64,11 +64,11 @@ export const RiverEnvSwitcherContent = (props: {
         isAgentConnected,
         env: currentEnv,
     } = useAgentConnection()
-    const { switchNetwork } = useSwitchNetwork()
+    const { switchChain } = useSwitchChain()
     const { disconnect: disconnectWallet } = useDisconnect()
-    const signer = useEthersSigner()
     const [bearerToken, setBearerToken] = useState('')
     const navigate = useNavigate()
+    const signer = useEthersSigner()
 
     return (
         <DialogContent className="gap-6">
@@ -114,9 +114,8 @@ export const RiverEnvSwitcherContent = (props: {
                                             })
                                         }
                                     } else {
-                                        switchNetwork?.(chainId)
+                                        switchChain?.({ chainId })
                                         if (!signer) {
-                                            console.error('No signer')
                                             return
                                         }
                                         await connect(signer, {
@@ -165,14 +164,14 @@ const AnvilAccount = privateKeyToAccount(
 const FundWallet = () => {
     const { address } = useAccount()
 
-    const { sendTransaction, data: tx, isLoading } = useSendTransaction()
-    const { isSuccess, isLoading: isTxPending } = useWaitForTransaction({ hash: tx?.hash })
+    const { sendTransaction, data: hash, isPending: isSendingTx } = useSendTransaction()
+    const { isSuccess, isPending: isTxPending } = useWaitForTransactionReceipt({ hash })
 
     return (
         <>
             <Button
                 variant="outline"
-                disabled={isLoading || isTxPending}
+                disabled={isSendingTx || isTxPending}
                 onClick={() =>
                     sendTransaction({
                         account: AnvilAccount,
@@ -182,7 +181,7 @@ const FundWallet = () => {
                     })
                 }
             >
-                Fund Local Wallet {isSuccess && '✅'} {(isLoading || isTxPending) && '⏳'}
+                Fund Local Wallet {isSuccess && '✅'} {(isSendingTx || isTxPending) && '⏳'}
             </Button>
         </>
     )

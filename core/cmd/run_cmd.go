@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/river-build/river/core/config"
+	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/rpc"
 	"github.com/river-build/river/core/xchain/server"
@@ -18,7 +19,7 @@ import (
 
 func runServices(ctx context.Context, cfg *config.Config, stream bool, xchain bool) error {
 	var err error
-	err = setupProfiler(ctx, cfg)
+	err = setupProfiler(ctx, "river-node", cfg)
 	if err != nil {
 		return err
 	}
@@ -30,21 +31,24 @@ func runServices(ctx context.Context, cfg *config.Config, stream bool, xchain bo
 
 	var streamService *rpc.Service
 	var metricsRegistry *prometheus.Registry
+	var baseChain *crypto.Blockchain
+	var riverChain *crypto.Blockchain
 	if stream {
-		streamService, err = rpc.StartServer(ctx, cfg, nil, nil)
+		streamService, err = rpc.StartServer(ctx, cfg, nil)
 		if err != nil {
 			log.Error("Failed to start server", "error", err)
 			return err
 		}
 		defer streamService.Close()
 		metricsRegistry = streamService.MetricsRegistry()
+		baseChain = streamService.BaseChain()
+		riverChain = streamService.RiverChain()
 	}
 
-	// TODO: wire blockchain and tracer to xchain
 	var xchainService server.XChain
 	var wg sync.WaitGroup
 	if xchain {
-		xchainService, err = server.New(ctx, cfg, nil, nil, 1, metricsRegistry)
+		xchainService, err = server.New(ctx, cfg, baseChain, riverChain, 1, metricsRegistry)
 		if err != nil {
 			return err
 		}

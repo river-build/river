@@ -17,8 +17,9 @@ func GetDefaultConfig() *Config {
 	return &Config{
 		Port: 443,
 		Database: DatabaseConfig{
-			StartupDelay:  2 * time.Second,
-			NumPartitions: 256,
+			StartupDelay:          2 * time.Second,
+			NumPartitions:         256,
+			MigrateStreamCreation: true,
 		},
 		StorageType:  "postgres",
 		DisableHttps: false,
@@ -134,7 +135,7 @@ type Config struct {
 	// ShutdownTimeout is the time the node waits for the graceful shutdown of the server.
 	// Then all active connections are closed and the node exits.
 	// If StandByOnStart is true, it's recommended to set it to the half of DatabaseConfig.StartupDelay.
-	// If set to 0, then default value is used. To disable the timeout set to 1ms or less.
+	// If set to 0, timeout is disabled and node will close all connections immediately.
 	ShutdownTimeout time.Duration
 
 	// Graffiti is returned in status and info requests.
@@ -303,6 +304,8 @@ type ChainConfig struct {
 	PositiveEntitlementManagerCacheTTLSeconds int
 	NegativeEntitlementManagerCacheSize       int
 	NegativeEntitlementManagerCacheTTLSeconds int
+	LinkedWalletCacheSize                     int
+	LinkedWalletCacheTTLSeconds               int
 }
 
 func (c ChainConfig) BlockTime() time.Duration {
@@ -520,7 +523,7 @@ func (ac *ArchiveConfig) GetStreamsContractCallPageSize() int64 {
 type ScrubbingConfig struct {
 	// ScrubEligibleDuration is the minimum length of time that must pass before a stream is eligible
 	// to be re-scrubbed.
-	// If unset, it defaults to 1 hour.
+	// If 0, scrubbing is disabled.
 	ScrubEligibleDuration time.Duration
 }
 

@@ -2,9 +2,6 @@ package rpc
 
 import (
 	"context"
-	"io"
-	"net"
-	"net/http"
 	"sync"
 	"testing"
 	"time"
@@ -13,8 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
+	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/events"
@@ -26,6 +23,7 @@ import (
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
 	"github.com/river-build/river/core/node/testutils/dbtestutils"
+	"github.com/river-build/river/core/node/testutils/testcert"
 )
 
 func fillUserSettingsStreamWithData(
@@ -42,12 +40,20 @@ func fillUserSettingsStreamWithData(
 		for j := 0; j < numEventsPerMB; j++ {
 			err = addUserBlockedFillerEvent(ctx, wallet, client, streamId, prevMB)
 			if err != nil {
-				return nil, err
+				return nil, AsRiverError(
+					err,
+					Err_INTERNAL,
+				).Message("Failed to add event to stream").
+					Func("fillUserSettingsStreamWithData")
 			}
 		}
 		prevMB, err = makeMiniblock(ctx, client, streamId, false, prevMB.Num)
 		if err != nil {
-			return nil, err
+			return nil, AsRiverError(
+				err,
+				Err_INTERNAL,
+			).Message("Failed to create miniblock").
+				Func("fillUserSettingsStreamWithData")
 		}
 	}
 	return prevMB, nil
@@ -84,14 +90,14 @@ func createUserSettingsStreamsWithData(
 				&StreamSettings{DisableMiniblockCreation: true},
 			)
 			if err != nil {
-				errChan <- err
+				errChan <- AsRiverError(err, Err_INTERNAL).Message("Failed to create stream").Func("createUserSettingsStreamsWithData")
 				return
 			}
 			streamIds[i] = streamId
 
 			_, err = fillUserSettingsStreamWithData(ctx, streamId, wallet, client, numMBs, numEventsPerMB, mbRef)
 			if err != nil {
-				errChan <- err
+				errChan <- AsRiverError(err, Err_INTERNAL).Message("Failed to fill stream with data").Func("createUserSettingsStreamsWithData")
 				return
 			}
 		}(i)
@@ -237,6 +243,7 @@ func TestArchiveOneStream(t *testing.T) {
 	)
 	require.NoError(err)
 
+	httpClient, _ := testcert.GetHttp2LocalhostTLSClient(ctx, nil)
 	var nodeRegistry nodes.NodeRegistry
 	nodeRegistry, err = nodes.LoadNodeRegistry(
 		ctx,
@@ -244,6 +251,7 @@ func TestArchiveOneStream(t *testing.T) {
 		common.Address{},
 		bc.InitialBlockNum,
 		bc.ChainMonitor,
+		httpClient,
 		nil,
 	)
 	require.NoError(err)
@@ -254,6 +262,7 @@ func TestArchiveOneStream(t *testing.T) {
 
 	pool, err := storage.CreateAndValidatePgxPool(ctx, dbCfg, schema, nil)
 	require.NoError(err)
+	tester.cleanup(pool.Pool.Close)
 
 	streamStorage, err := storage.NewPostgresStreamStore(
 		ctx,
@@ -285,7 +294,7 @@ func TestArchiveOneStream(t *testing.T) {
 	require.Zero(num) // Only genesis miniblock is created
 
 	// Add event to the stream, create miniblock, and archive it
-	err = addUserBlockedFillerEvent(ctx, wallet, client, streamId, MiniblockRefFromContractRecord(&streamRecord))
+	err = addUserBlockedFillerEvent(ctx, wallet, client, streamId, river.MiniblockRefFromContractRecord(&streamRecord))
 	require.NoError(err)
 
 	mbRef, err := makeMiniblock(ctx, client, streamId, false, 0)
@@ -326,6 +335,15 @@ func TestArchiveOneStream(t *testing.T) {
 	require.NoError(compareStreamMiniblocks(t, ctx, streamId, streamStorage, client))
 }
 
+func makeTestServerOpts(tester *serviceTester) *ServerStartOpts {
+	listener, _ := tester.makeTestListener()
+	return &ServerStartOpts{
+		RiverChain:      tester.btc.NewWalletAndBlockchain(tester.ctx),
+		Listener:        listener,
+		HttpClientMaker: testcert.GetHttp2LocalhostTLSClient,
+	}
+}
+
 func TestArchive100Streams(t *testing.T) {
 	tester := newServiceTester(t, serviceTesterOpts{numNodes: 10, start: true})
 	ctx := tester.ctx
@@ -342,13 +360,15 @@ func TestArchive100Streams(t *testing.T) {
 	archiveCfg := tester.getConfig()
 	archiveCfg.Archive.ArchiveId = "arch" + GenShortNanoid()
 
-	listener, err := net.Listen("tcp", "localhost:0")
-	require.NoError(err)
-
-	archiverBC := tester.btc.NewWalletAndBlockchain(ctx)
 	serverCtx, serverCancel := context.WithCancel(ctx)
-	arch, err := StartServerInArchiveMode(serverCtx, archiveCfg, archiverBC, listener, true)
+	arch, err := StartServerInArchiveMode(
+		serverCtx,
+		archiveCfg,
+		makeTestServerOpts(tester),
+		true,
+	)
 	require.NoError(err)
+	tester.cleanup(arch.Close)
 
 	arch.Archiver.WaitForStart()
 	require.Len(arch.ExitSignal(), 0)
@@ -378,13 +398,10 @@ func TestArchive100StreamsWithData(t *testing.T) {
 	archiveCfg.Archive.ArchiveId = "arch" + GenShortNanoid()
 	archiveCfg.Archive.ReadMiniblocksSize = 3
 
-	listener, err := net.Listen("tcp", "localhost:0")
-	require.NoError(err)
-
-	archiverBC := tester.btc.NewWalletAndBlockchain(ctx)
 	serverCtx, serverCancel := context.WithCancel(ctx)
-	arch, err := StartServerInArchiveMode(serverCtx, archiveCfg, archiverBC, listener, true)
+	arch, err := StartServerInArchiveMode(serverCtx, archiveCfg, makeTestServerOpts(tester), true)
 	require.NoError(err)
+	tester.cleanup(arch.Close)
 
 	arch.Archiver.WaitForStart()
 	require.Len(arch.ExitSignal(), 0)
@@ -400,15 +417,6 @@ func TestArchive100StreamsWithData(t *testing.T) {
 	require.Equal(uint64(100), stats.StreamsExamined)
 	require.GreaterOrEqual(stats.SuccessOpsCount, uint64(100))
 	require.Zero(stats.FailedOpsCount)
-}
-
-func httpGet(t *testing.T, url string) string {
-	resp, err := http.Get(url)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	return string(body)
 }
 
 func TestArchiveContinuous(t *testing.T) {
@@ -431,18 +439,14 @@ func TestArchiveContinuous(t *testing.T) {
 	archiveCfg.Archive.ArchiveId = "arch" + GenShortNanoid()
 	archiveCfg.Archive.ReadMiniblocksSize = 3
 
-	listener, err := net.Listen("tcp", "localhost:0")
-	require.NoError(err)
-
-	archiverBC := tester.btc.NewWalletAndBlockchain(ctx)
 	serverCtx, serverCancel := context.WithCancel(ctx)
-	arch, err := StartServerInArchiveMode(serverCtx, archiveCfg, archiverBC, listener, false)
+	arch, err := StartServerInArchiveMode(serverCtx, archiveCfg, makeTestServerOpts(tester), false)
 	require.NoError(err)
-
+	tester.cleanup(arch.Close)
 	arch.Archiver.WaitForStart()
 	require.Len(arch.ExitSignal(), 0)
 
-	status := httpGet(t, "http://"+listener.Addr().String()+"/status")
+	status := tester.httpGet("https://" + arch.listener.Addr().String() + "/status")
 	require.Contains(status, "OK")
 
 	require.EventuallyWithT(
