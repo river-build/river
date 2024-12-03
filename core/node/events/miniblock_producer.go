@@ -214,7 +214,7 @@ func (p *miniblockProducer) isLocalLeaderOnCurrentBlock(
 	stream *streamImpl,
 	blockNum crypto.BlockNumber,
 ) bool {
-	streamNodes := stream.nodes.GetNodes()
+	streamNodes := stream.GetNodes()
 	if len(streamNodes) == 0 {
 		return false
 	}
@@ -253,7 +253,10 @@ func (p *miniblockProducer) TestMakeMiniblock(
 	streamId StreamId,
 	forceSnapshot bool,
 ) (*MiniblockRef, error) {
-	stream, err := p.streamCache.GetStream(ctx, streamId)
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	stream, err := p.streamCache.GetStreamWaitForLocal(ctx, streamId)
 	if err != nil {
 		return nil, err
 	}
@@ -298,18 +301,47 @@ func (p *miniblockProducer) TestMakeMiniblock(
 }
 
 func combineProposals(
+	ctx context.Context,
 	remoteQuorumNum int,
 	local *MiniblockProposal,
 	remote []*MiniblockProposal,
 ) (*MiniblockProposal, error) {
+	log := dlog.FromCtx(ctx)
 	// Filter remotes that don't match local prerequisites.
 	remote = slices.DeleteFunc(remote, func(p *MiniblockProposal) bool {
-		return p.NewMiniblockNum != local.NewMiniblockNum || !bytes.Equal(p.PrevMiniblockHash, local.PrevMiniblockHash)
+		if p.NewMiniblockNum != local.NewMiniblockNum {
+			log.Info(
+				"combineProposals: ignoring remote proposal: mb number mismatch",
+				"remoteNum",
+				p.NewMiniblockNum,
+				"localNum",
+				local.NewMiniblockNum,
+			)
+			return true
+		}
+		if !bytes.Equal(p.PrevMiniblockHash, local.PrevMiniblockHash) {
+			log.Info(
+				"combineProposals: ignoring remote proposal: prev hash mismatch",
+				"remoteHash",
+				p.PrevMiniblockHash,
+				"localHash",
+				local.PrevMiniblockHash,
+			)
+			return true
+		}
+		return false
 	})
 
 	// Check if we have enough remote proposals.
 	if len(remote) < remoteQuorumNum {
-		return nil, RiverError(Err_INTERNAL, "combineProposals: not enough remote proposals")
+		return nil, RiverError(
+			Err_INTERNAL,
+			"combineProposals: not enough remote proposals",
+			"remoteNum",
+			len(remote),
+			"remoteQuorumNum",
+			remoteQuorumNum,
+		)
 	}
 
 	all := append(remote, local)
@@ -397,16 +429,19 @@ func mbProduceCandidate(
 	stream *streamImpl,
 	forceSnapshot bool,
 ) (*MiniblockInfo, error) {
-	remoteNodes, isLocal := stream.nodes.GetRemotesAndIsLocal()
+	remoteNodes, isLocal := stream.GetRemotesAndIsLocal()
 	// TODO: this is a sanity check, but in general mb production code needs to be hardened
 	// to handle scenario when local node is removed from the stream.
 	if !isLocal {
 		return nil, RiverError(Err_INTERNAL, "Not a local stream")
 	}
 
-	view, err := stream.getView(ctx)
+	view, err := stream.getViewIfLocal(ctx)
 	if err != nil {
 		return nil, err
+	}
+	if view == nil {
+		return nil, RiverError(Err_INTERNAL, "mbProduceCandidate: stream is not local")
 	}
 
 	mbInfo, err := mbProduceCandiate_Make(ctx, params, view, forceSnapshot, remoteNodes)
@@ -460,7 +495,7 @@ func mbProduceCandiate_Make(
 			return nil, RiverError(Err_INTERNAL, "mbProposeAndStore: not enough remote proposals")
 		}
 
-		combinedProposal, err = combineProposals(remoteQuorumNum, localProposal, remoteProposals)
+		combinedProposal, err = combineProposals(ctx, remoteQuorumNum, localProposal, remoteProposals)
 		if err != nil {
 			return nil, err
 		}
