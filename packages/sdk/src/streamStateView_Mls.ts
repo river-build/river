@@ -20,6 +20,7 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
     private commits: Uint8Array[] = []
     private deviceKeys: { [key: string]: MemberPayload_Snapshot_MlsGroup_DeviceKeys } = {}
     public currentEpoch: bigint = 0n
+    private _highestSeenEpoch: bigint = 0n
 
     constructor(streamId: string) {
         super()
@@ -36,6 +37,7 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
         this.commits = snapshot.commits
         this.deviceKeys = snapshot.deviceKeys
         this.currentEpoch = snapshot.currentEpoch
+        this.recordHighestSeenEpoch(this.currentEpoch)
 
         for (const commit of snapshot.commits) {
             encryptionEmitter?.emit('mlsCommit', this.streamId, commit)
@@ -91,6 +93,7 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
                     this.commits.push(payload.content.value.commit)
                     this.latestGroupInfo = payload.content.value.groupInfoWithExternalKey
                     this.currentEpoch = payload.content.value.epoch
+                    this.recordHighestSeenEpoch(this.currentEpoch)
                     encryptionEmitter?.emit(
                         'mlsExternalJoin',
                         this.streamId,
@@ -121,6 +124,16 @@ export class StreamStateView_Mls extends StreamStateView_AbstractContent {
         _stateEmitter: TypedEmitter<StreamStateEvents> | undefined,
     ): void {
         //
+    }
+
+    get highestSeenEpoch(): bigint {
+        return this._highestSeenEpoch
+    }
+
+    private recordHighestSeenEpoch(epoch: bigint) {
+        if (epoch > this._highestSeenEpoch) {
+            this._highestSeenEpoch = epoch
+        }
     }
 
     // private emitCommit(
