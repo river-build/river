@@ -1,4 +1,3 @@
-import { MlsStore } from './mlsStore'
 import { DLogger } from '@river-build/dlog'
 import { GroupState, Group } from './group'
 
@@ -12,10 +11,9 @@ export interface IGroupStore {
 
 export class GroupStore implements IGroupStore {
     private groups: Map<string, GroupState> = new Map()
-    mlsStore: MlsStore
     log: DLogger
-    constructor(mlsStore: MlsStore, log: DLogger) {
-        this.mlsStore = mlsStore
+
+    constructor(log: DLogger) {
         this.log = log
     }
 

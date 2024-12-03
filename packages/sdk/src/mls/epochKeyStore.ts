@@ -4,19 +4,18 @@ import {
     HpkePublicKey,
     Secret as MlsSecret,
 } from '@river-build/mls-rs-wasm'
-import { MlsStore } from './mlsStore'
 import { bin_toHexString, DLogger, shortenHexString } from '@river-build/dlog'
 import { DerivedKeys, EpochKey, EpochKeyState } from './epochKey'
 
 export class EpochKeyService {
-    private epochKeyStore: EpochKeyStore
+    private epochKeyStore: IEpochKeyStore
     private cipherSuite: MlsCipherSuite
     log: DLogger
 
-    public constructor(cipherSuite: MlsCipherSuite, mlsStore: MlsStore, log: DLogger) {
+    public constructor(cipherSuite: MlsCipherSuite, epochKeyStore: IEpochKeyStore, log: DLogger) {
         this.log = log
         this.cipherSuite = cipherSuite
-        this.epochKeyStore = new EpochKeyStore(this.log)
+        this.epochKeyStore = epochKeyStore
     }
 
     public async getEpochKey(streamId: string, epoch: bigint): Promise<EpochKey | undefined> {
@@ -130,7 +129,12 @@ function epochKeyId(streamId: string, epoch: bigint): EpochKeyId {
     return `${streamId}/${epoch}` as EpochKeyId
 }
 
-export class EpochKeyStore {
+export interface IEpochKeyStore {
+    getEpochKey(streamId: string, epoch: bigint): Promise<EpochKey | undefined>
+    setEpochKeyState(epochKey: EpochKey): Promise<void>
+}
+
+export class EpochKeyStore implements IEpochKeyStore {
     private epochKeySates: Map<EpochKeyId, EpochKeyState> = new Map()
     log: DLogger
 

@@ -5,9 +5,8 @@ import {
     HpkeCiphertext,
 } from '@river-build/mls-rs-wasm'
 import { EncryptedData } from '@river-build/proto'
-import { EpochKeyService } from './epochKeyStore'
-import { GroupStore } from './groupStore'
-import { MlsStore } from './mlsStore'
+import { EpochKeyService, EpochKeyStore, IEpochKeyStore } from './epochKeyStore'
+import { GroupStore, IGroupStore } from './groupStore'
 import { dlog, DLogger, bin_toHexString, shortenHexString } from '@river-build/dlog'
 import { Group } from './group'
 
@@ -55,7 +54,7 @@ export class MlsCrypto {
     private client!: MlsClient
     private userAddress: Uint8Array
     public deviceKey: Uint8Array
-    private mlsStore: MlsStore
+    private epochKeyStore: IEpochKeyStore
     private nickname: string
     readonly log: DLogger
     public awaitTimeoutMS: number = 5_000
@@ -63,7 +62,7 @@ export class MlsCrypto {
     awaitingGroupActive: Map<string, Awaiter> = new Map()
     cipherSuite: MlsCipherSuite = new MlsCipherSuite()
     epochKeyService: EpochKeyService
-    groupStore: GroupStore
+    groupStore: IGroupStore
 
     constructor(userAddress: Uint8Array, deviceKey: Uint8Array, nickname?: string) {
         this.userAddress = userAddress
@@ -74,9 +73,9 @@ export class MlsCrypto {
             this.nickname = bin_toHexString(this.userAddress)
         }
         this.log = log.extend(this.nickname)
-        this.mlsStore = new MlsStore(deviceKey, this.log)
-        this.groupStore = new GroupStore(this.mlsStore, this.log)
-        this.epochKeyService = new EpochKeyService(this.cipherSuite, this.mlsStore, this.log)
+        this.groupStore = new GroupStore(this.log)
+        this.epochKeyStore = new EpochKeyStore(this.log)
+        this.epochKeyService = new EpochKeyService(this.cipherSuite, this.epochKeyStore, this.log)
     }
 
     public async initialize() {
