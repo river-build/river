@@ -6,6 +6,7 @@ import {
     useMember,
     useMemberList,
     useObservable,
+    useReadMarker,
     useSpace,
     useSyncAgent,
     useUserDms,
@@ -231,10 +232,13 @@ const GdmInfo = ({
     onGdmChange: (gdmStreamId: string) => void
 }) => {
     const { data: gdm } = useGdm(gdmStreamId)
+    const { markers } = useReadMarker()
+    const readMarker = markers?.[gdmStreamId]
     return (
         <div>
             <Button variant="outline" onClick={() => onGdmChange(gdm.id)}>
                 {gdm.metadata?.name || 'Unnamed Gdm'}
+                {readMarker?.room.isUnread && ` (new messages)`}
             </Button>
         </div>
     )
@@ -294,6 +298,8 @@ const NoSuspenseDmInfo = ({
         streamId: dmStreamId,
         userId: members.userIds.find((userId) => userId !== sync.userId) || sync.userId,
     })
+    const { markers } = useReadMarker()
+    const readMarker = markers?.[dmStreamId]
 
     return (
         <button className="flex items-center gap-2" onClick={() => onDmChange(dm.id)}>
@@ -304,6 +310,7 @@ const NoSuspenseDmInfo = ({
             />
             <p className="font-mono text-sm font-medium">
                 {userId === sync.userId ? 'You' : displayName || username || shortenAddress(userId)}
+                {readMarker?.room.isUnread && ` (new messages)`}
             </p>
         </button>
     )
