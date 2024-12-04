@@ -1,22 +1,22 @@
 'use client'
 
-import { type Channel, Space, assert } from '@river-build/sdk'
+import { Channel, Space, assert } from '@river-build/sdk'
 import { type ActionConfig, useAction } from './internals/useAction'
 import { useSyncAgent } from './useSyncAgent'
 import { getRoom } from './utils'
 
 /**
- * Hook to redact your own message in a channel stream.
+ * Hook to redact any message in a channel if you're an admin.
  * @example
  *
  * ### Redact a message
  *
- * You can use `redact` to redact a message in a stream.
+ * You can use `adminRedact` to redact a message in a stream.
  * ```ts
- * import { useRedact } from '@river-build/react-sdk'
+ * import { useAdminRedact } from '@river-build/react-sdk'
  *
- * const { redact } = useRedact(streamId)
- * redact({ eventId: messageEventId })
+ * const { adminRedact } = useAdminRedact(streamId)
+ * adminRedact({ eventId: messageEventId })
  * ```
  *
  * ### Redact a message reaction
@@ -32,14 +32,14 @@ import { getRoom } from './utils'
  * @param config - Configuration options for the action.
  * @returns The `redact` action and its loading state.
  */
-export const useRedact = (streamId: string, config?: ActionConfig<Channel['redact']>) => {
+export const useAdminRedact = (streamId: string, config?: ActionConfig<Channel['adminRedact']>) => {
     const sync = useSyncAgent()
     const room = getRoom(sync, streamId)
-    assert(!(room instanceof Space), 'Space does not have reactions')
-    const { action: redact, ...rest } = useAction(room, 'redact', config)
+    assert(!(room instanceof Space), 'Spaces dont have timeline to redact')
+    const { action: adminRedact, ...rest } = useAction(room, 'adminRedact', config)
 
     return {
-        redact,
+        adminRedact,
         ...rest,
     }
 }
