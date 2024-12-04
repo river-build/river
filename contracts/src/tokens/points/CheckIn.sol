@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {ICheckInBase} from "contracts/src/tokens/checkin/ICheckIn.sol";
+import {IRiverPointsBase} from "contracts/src/tokens/points/IRiverPoints.sol";
 
 // libraries
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
@@ -35,28 +35,20 @@ library CheckIn {
     }
   }
 
-  /// @notice Allows a user to check in and earn points based on their streak
-  /// @dev Users must wait at least 24 hours between check-ins
-  /// @dev If a user checks in within 48 hours of their last check-in, their streak continues
-  /// @dev Otherwise, their streak resets to 1
-  function checkIn(address user) internal {
-    uint256 currentTime = block.timestamp;
-    RiverPointsStorage.Layout storage points = RiverPointsStorage.layout();
-    CheckInData storage userCheckIn = layout().checkInsByAddress[user];
-    uint256 lastCheckIn = userCheckIn.lastCheckIn;
-    uint256 currentStreak = userCheckIn.streak;
-
+  function getPointsAndStreak(
+    uint256 lastCheckIn,
+    uint256 currentStreak
+  ) internal view returns (uint256 pointsToAward, uint256 streak) {
     // First time checking in
     if (lastCheckIn == 0) {
-      (userCheckIn.streak, userCheckIn.lastCheckIn) = (1, currentTime);
-      points.inner.mint(user, 1 ether);
-      emit ICheckInBase.CheckedIn(user, 1 ether, 1, currentTime);
-      return;
+      return (1 ether, 1); // equivalent to 1 point
     }
+
+    uint256 currentTime = block.timestamp;
 
     // Must wait at least 24 hours between check-ins
     if (currentTime <= lastCheckIn + CHECK_IN_WAIT_PERIOD) {
-      CustomRevert.revertWith(ICheckInBase.CheckInPeriodNotPassed.selector);
+      return (0, 0);
     }
 
     // Update streak based on timing
@@ -65,18 +57,14 @@ library CheckIn {
     uint256 newStreak = isWithinForgiveness ? currentStreak + 1 : 1;
 
     // Calculate points based on new streak
-    uint256 pointsToAward = newStreak > MAX_STREAK_PER_CHECKIN
+    pointsToAward = newStreak > MAX_STREAK_PER_CHECKIN
       ? MAX_POINTS_PER_CHECKIN
       : newStreak * 1 ether;
 
-    // Update storage (combined writes)
-    (userCheckIn.streak, userCheckIn.lastCheckIn) = (newStreak, currentTime);
-    points.inner.mint(user, pointsToAward);
-
-    emit ICheckInBase.CheckedIn(user, pointsToAward, newStreak, currentTime);
+    return (pointsToAward, newStreak);
   }
 
-  function getStreak(address user) internal view returns (uint256) {
+  function getCurrentStreak(address user) internal view returns (uint256) {
     return layout().checkInsByAddress[user].streak;
   }
 

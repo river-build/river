@@ -10,6 +10,7 @@ import {IRiverPoints} from "./IRiverPoints.sol";
 // libraries
 import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 import {RiverPointsStorage} from "./RiverPointsStorage.sol";
+import {CheckIn} from "./CheckIn.sol";
 
 // contracts
 import {Facet} from "contracts/src/diamond/facets/Facet.sol";
@@ -54,7 +55,7 @@ contract RiverPoints is IERC20Metadata, IRiverPoints, OwnableBase, Facet {
   function getPoints(
     Action action,
     bytes calldata data
-  ) external pure returns (uint256 points) {
+  ) external view returns (uint256 points) {
     if (action == Action.JoinSpace) {
       uint256 protocolFee = abi.decode(data, (uint256));
       if (protocolFee <= 0.0003 ether) {
@@ -65,6 +66,52 @@ contract RiverPoints is IERC20Metadata, IRiverPoints, OwnableBase, Facet {
         points = protocolFee * 3_000_000;
       }
     }
+
+    if (action == Action.CheckIn) {
+      (uint256 lastCheckIn, uint256 streak) = abi.decode(
+        data,
+        (uint256, uint256)
+      );
+      (points, ) = CheckIn.getPointsAndStreak(lastCheckIn, streak);
+    }
+  }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                           CHECKIN                          */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  /// @inheritdoc IRiverPoints
+  function checkIn() external {
+    CheckIn.CheckInData storage userCheckIn = CheckIn
+      .layout()
+      .checkInsByAddress[msg.sender];
+
+    (uint256 pointsToAward, uint256 newStreak) = CheckIn.getPointsAndStreak(
+      userCheckIn.lastCheckIn,
+      userCheckIn.streak
+    );
+
+    // Must wait at least 24 hours between check-ins
+    if (pointsToAward == 0 && newStreak == 0) {
+      CustomRevert.revertWith(RiverPoints__CheckInPeriodNotPassed.selector);
+    }
+
+    (userCheckIn.streak, userCheckIn.lastCheckIn) = (
+      newStreak,
+      block.timestamp
+    );
+    RiverPointsStorage.layout().inner.mint(msg.sender, pointsToAward);
+    emit CheckedIn(msg.sender, pointsToAward, newStreak, block.timestamp);
+  }
+
+  /// @inheritdoc IRiverPoints
+  function getCurrentStreak(address user) external view returns (uint256) {
+    return CheckIn.getCurrentStreak(user);
+  }
+
+  /// @inheritdoc IRiverPoints
+  function getLastCheckIn(address user) external view returns (uint256) {
+    return CheckIn.getLastCheckIn(user);
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
