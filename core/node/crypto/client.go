@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"runtime"
 	"strings"
 
 	"github.com/ethereum/go-ethereum"
@@ -20,6 +21,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
 )
 
@@ -182,7 +184,7 @@ func extractCallErrorStatus(err error) string {
 
 func getMethodName(data []byte) string {
 	var methodName string
-	if len(data) > 4 {
+	if len(data) >= 4 {
 		selector := binary.BigEndian.Uint32(data)
 		var defined bool
 		methodName, defined = GetSelectorMethodName(selector)
@@ -219,6 +221,15 @@ func (ic *otelEthClient) makeEthCallWithTraceAndMetrics(
 	// If tracer was nil, we may not have computed the method name.
 	if methodName == "" {
 		methodName = getMethodName(msg.Data)
+	}
+
+	if methodName == "" {
+		log := dlog.FromCtx(ctx)
+		log.Info("Empty method name", "data", msg.Data)
+
+		buf := make([]byte, 1024)
+		n := runtime.Stack(buf, false)
+		fmt.Printf("Call stack:\n%s\n", buf[:n])
 	}
 
 	ic.ethCalls.With(
