@@ -297,7 +297,11 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 
 	var receivers []string
 	if channelID.Type() == shared.STREAM_DM_CHANNEL_BIN || channelID.Type() == shared.STREAM_GDM_CHANNEL_BIN {
-		receivers = members.ToSlice()
+		for _, member := range members.ToSlice() {
+			if member != user.Hex() {
+				receivers = append(receivers, member)
+			}
+		}
 	}
 
 	if len(userPref.Subscriptions.WebPush) > 0 {
