@@ -98,9 +98,9 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 	case MessageInteractionType_MESSAGE_INTERACTION_TYPE_POST:
 		kind = "new_message"
 	case MessageInteractionType_MESSAGE_INTERACTION_TYPE_EDIT:
-		kind = "new_message"
+		return
 	case MessageInteractionType_MESSAGE_INTERACTION_TYPE_REDACTION:
-		kind = "new_message"
+		return
 	}
 
 	members.Each(func(member string) bool {
