@@ -179,7 +179,7 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 	recipients.Remove(sender)
 
 	for user, userPref := range usersToNotify {
-		p.sendNotification(ctx, user, userPref, spaceID, channelID, event, kind, members)
+		p.sendNotification(ctx, user, sender, userPref, spaceID, channelID, event, kind, members)
 	}
 }
 
@@ -280,6 +280,7 @@ func (p *MessageToNotificationsProcessor) onSpaceChannelPayload(
 func (p *MessageToNotificationsProcessor) sendNotification(
 	ctx context.Context,
 	user common.Address,
+	sender common.Address,
 	userPref *types.UserPreferences,
 	spaceID *shared.StreamId,
 	channelID shared.StreamId,
@@ -298,7 +299,7 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 	var receivers []string
 	if channelID.Type() == shared.STREAM_DM_CHANNEL_BIN || channelID.Type() == shared.STREAM_GDM_CHANNEL_BIN {
 		for _, member := range members.ToSlice() {
-			if member != user.Hex() {
+			if member != sender.Hex() {
 				receivers = append(receivers, member)
 			}
 		}
