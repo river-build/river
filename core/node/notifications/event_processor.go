@@ -281,12 +281,12 @@ func (p *MessageToNotificationsProcessor) onSpaceChannelPayload(
 			if participating {
 				return true, "reaction"
 			}
-		case MessageInteractionType_MESSAGE_INTERACTION_TYPE_POST:
+		case MessageInteractionType_MESSAGE_INTERACTION_TYPE_POST,
+			MessageInteractionType_MESSAGE_INTERACTION_TYPE_UNSPECIFIED:
 			return true, "new_message"
 
 		case MessageInteractionType_MESSAGE_INTERACTION_TYPE_EDIT,
-			MessageInteractionType_MESSAGE_INTERACTION_TYPE_REDACTION,
-			MessageInteractionType_MESSAGE_INTERACTION_TYPE_UNSPECIFIED:
+			MessageInteractionType_MESSAGE_INTERACTION_TYPE_REDACTION:
 			// break instead of return to allow the log below to fire
 			break
 		}
