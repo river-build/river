@@ -26,9 +26,11 @@ import (
 	"github.com/river-build/river/core/node/base/test"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
+	"github.com/river-build/river/core/node/testutils"
 	"github.com/river-build/river/core/node/testutils/dbtestutils"
 	"github.com/river-build/river/core/node/testutils/testcert"
 )
@@ -487,4 +489,120 @@ func (st *serviceTester) httpGet(url string) string {
 	body, err := io.ReadAll(resp.Body)
 	st.require.NoError(err)
 	return string(body)
+}
+
+type testClient struct {
+	ctx     context.Context
+	require *require.Assertions
+	client  protocolconnect.StreamServiceClient
+	wallet  *crypto.Wallet
+}
+
+func (st *serviceTester) newTestClient(i int) *testClient {
+	wallet, err := crypto.NewWallet(st.ctx)
+	st.require.NoError(err)
+	return &testClient{
+		ctx:     st.ctx,
+		require: st.require,
+		client:  st.testClient(i),
+		wallet:  wallet,
+	}
+}
+
+func (tc *testClient) withRequireFor(t *assert.CollectT) *testClient {
+	var tcc testClient = *tc
+	tcc.require = require.New(t)
+	return &tcc
+}
+
+func (tc *testClient) createUserStream(
+	streamSettings ...*protocol.StreamSettings,
+) *MiniblockRef {
+	var ss *protocol.StreamSettings
+	if len(streamSettings) > 0 {
+		ss = streamSettings[0]
+	}
+	cookie, _, err := createUser(tc.ctx, tc.wallet, tc.client, ss)
+	tc.require.NoError(err)
+	return &MiniblockRef{
+		Hash: common.BytesToHash(cookie.PrevMiniblockHash),
+		Num:  cookie.MinipoolGen - 1,
+	}
+}
+
+func (tc *testClient) createSpace(
+	streamSettings ...*protocol.StreamSettings,
+) (StreamId, *MiniblockRef) {
+	spaceId := testutils.FakeStreamId(STREAM_SPACE_BIN)
+	var ss *protocol.StreamSettings
+	if len(streamSettings) > 0 {
+		ss = streamSettings[0]
+	}
+	cookie, _, err := createSpace(tc.ctx, tc.wallet, tc.client, spaceId, ss)
+	tc.require.NoError(err)
+	tc.require.NotNil(cookie)
+	return spaceId, &MiniblockRef{
+		Hash: common.BytesToHash(cookie.PrevMiniblockHash),
+		Num:  cookie.MinipoolGen - 1,
+	}
+}
+
+func (tc *testClient) createChannel(
+	spaceId StreamId,
+	streamSettings ...*protocol.StreamSettings,
+) (StreamId, *MiniblockRef) {
+	channelId := testutils.FakeStreamId(STREAM_CHANNEL_BIN)
+	var ss *protocol.StreamSettings
+	if len(streamSettings) > 0 {
+		ss = streamSettings[0]
+	}
+	cookie, _, err := createChannel(tc.ctx, tc.wallet, tc.client, spaceId, channelId, ss)
+	tc.require.NoError(err)
+	return channelId, &MiniblockRef{
+		Hash: common.BytesToHash(cookie.PrevMiniblockHash),
+		Num:  cookie.MinipoolGen - 1,
+	}
+}
+
+func (tc *testClient) joinChannel(spaceId StreamId, channelId StreamId, mb *MiniblockRef) {
+	userJoin, err := events.MakeEnvelopeWithPayload(
+		tc.wallet,
+		events.Make_UserPayload_Membership(
+			protocol.MembershipOp_SO_JOIN,
+			channelId,
+			nil,
+			spaceId[:],
+		),
+		mb,
+	)
+	tc.require.NoError(err)
+
+	userStreamId := UserStreamIdFromAddr(tc.wallet.Address)
+	_, err = tc.client.AddEvent(
+		tc.ctx,
+		connect.NewRequest(
+			&protocol.AddEventRequest{
+				StreamId: userStreamId[:],
+				Event:    userJoin,
+			},
+		),
+	)
+	tc.require.NoError(err)
+}
+
+func (tc *testClient) getStream(streamId StreamId) *protocol.StreamAndCookie {
+	resp, err := tc.client.GetStream(tc.ctx, connect.NewRequest(&protocol.GetStreamRequest{
+		StreamId: streamId[:],
+	}))
+	tc.require.NoError(err)
+	tc.require.NotNil(resp.Msg)
+	tc.require.NotNil(resp.Msg.Stream)
+	return resp.Msg.Stream
+}
+
+func (tc *testClient) observeMemberships(streamId StreamId, expectedMemberships []StreamId) {
+	tc.require.EventuallyWithT(func(t *assert.CollectT) {
+		tcc := tc.withRequireFor(t)
+		_ = tcc.getStream(streamId)
+	}, 5*time.Second, 100*time.Millisecond)
 }
