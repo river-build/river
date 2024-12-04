@@ -166,7 +166,6 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 			if spaceID != nil {
 				if p.onSpaceChannelPayload(*spaceID, channelID, participant, pref, event) {
 					usersToNotify[participant] = pref
-					kind = "reply_to"
 				}
 				recipients.Add(participant)
 			} else {
@@ -263,7 +262,13 @@ func (p *MessageToNotificationsProcessor) onSpaceChannelPayload(
 	participating := isParticipating(participant, tags.GetParticipatingUserAddresses())
 
 	// for non-reaction events send a notification to all users
-	if userPref.WantNotificationForSpaceChannelMessage(spaceID, channelID, mentioned, participating, messageInteractionType) {
+	if userPref.WantNotificationForSpaceChannelMessage(
+		spaceID,
+		channelID,
+		mentioned,
+		participating,
+		messageInteractionType,
+	) {
 		return true
 	}
 
