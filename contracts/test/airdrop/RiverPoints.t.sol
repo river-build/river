@@ -16,9 +16,6 @@ import {River} from "contracts/src/tokens/river/base/River.sol";
 import {RiverPoints} from "contracts/src/tokens/points/RiverPoints.sol";
 import {BaseRegistryTest} from "../base/registry/BaseRegistry.t.sol";
 
-// debugging
-import {console} from "forge-std/console.sol";
-
 contract RiverPointsTest is
   BaseRegistryTest,
   IOwnableBase,

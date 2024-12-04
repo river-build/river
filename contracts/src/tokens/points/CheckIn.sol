@@ -1,12 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.23;
+pragma solidity ^0.8.24;
 
 // interfaces
-import {IRiverPointsBase} from "contracts/src/tokens/points/IRiverPoints.sol";
 
 // libraries
-import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
-import {RiverPointsStorage} from "contracts/src/tokens/points/RiverPointsStorage.sol";
 
 // contracts
 
@@ -15,7 +12,7 @@ library CheckIn {
   bytes32 internal constant STORAGE_SLOT =
     0x62755009e737dbac2f30b2876987ec999edfaa30486a87d0930a58dbf1ec6800;
 
-  uint256 internal constant MAX_STREAK_PER_CHECKIN = 30; // Maximum points per check-in
+  uint256 internal constant MAX_STREAK_PER_CHECKIN = 30; // Maximum streak per check-in
   uint256 internal constant MAX_POINTS_PER_CHECKIN = 30 ether; // Maximum points per check-in
   uint256 internal constant CHECK_IN_FORGIVENESS_PERIOD = 2 days; // Time window to continue streak
   uint256 internal constant CHECK_IN_WAIT_PERIOD = 1 days; // Time between check-ins
