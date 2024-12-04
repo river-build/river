@@ -15,7 +15,7 @@ You can start a new River project in two ways:
 
 ### Using create-river-build-app (Recommended)
 
-The easiest way to get started is using `create-river-build-app`. This will set up a new React project with all the necessary dependencies and configurations.
+The easiest way to get started is using `create-river-build-app` and follow the instructions in the terminal. This will set up a new React project with all the necessary dependencies and configurations.
 
 ```bash
 # npm
@@ -99,12 +99,11 @@ You can connect to River using either a Web3 wallet (recommended) or a bearer to
 River has three networks:
 - `omega` - The River mainnet, uses Base as the EVM chain
 - `gamma` - The River testnet, uses Base Sepolia as the EVM chain
-- `alpha` - The River testnet, uses Base Sepolia as the EVM chain
 
-If you're not sure which network to use, `alpha` is a good starting point.
+If you're not sure which network to use, `gamma` is a good starting point.
 
 <Note>
-You can use other alpha clients like [Towns (alpha)](https://app.alpha.towns.com) or the [River Playground](https://river-sample-app.vercel.app) to help you inspect messages on the `alpha` network.
+You can use other gamma clients like [Towns (gamma)](https://app.gamma.towns.com) or the [River Playground](https://river-sample-app.vercel.app) to help you inspect messages on the `gamma` network.
 </Note>
 
 ### Using a Web3 Wallet
@@ -115,7 +114,7 @@ import { makeRiverConfig } from "@river-build/sdk";
 import { getEthersSigner } from "./utils/viem-to-ethers";
 import { wagmiConfig } from "./config/wagmi";
 
-const riverConfig = makeRiverConfig("alpha");
+const riverConfig = makeRiverConfig("gamma");
 
 function ConnectButton() {
   const { connect, isAgentConnecting, isAgentConnected } = useAgentConnection();
@@ -154,7 +153,7 @@ If you have a Towns account, you can get your bearer token from there. Type `/be
 import { useAgentConnection } from "@river-build/react-sdk";
 import { makeRiverConfig } from "@river-build/sdk";
 
-const riverConfig = makeRiverConfig("alpha");
+const riverConfig = makeRiverConfig("gamma");
 
 function ConnectButton() {
   const { connectUsingBearerToken, isAgentConnecting, isAgentConnected } = useAgentConnection();
