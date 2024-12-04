@@ -78,15 +78,8 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 	}
 	l.Debug("Process event")
 
-	usersToNotify := make(map[common.Address]*types.UserPreferences)
 	kind := "new_message"
-	recipients := mapset.NewSet[common.Address]()
-	sender := common.BytesToAddress(event.Event.CreatorAddress)
 	tags := event.Event.GetTags()
-
-	if slices.Contains(tags.GetGroupMentionTypes(), GroupMentionType_GROUP_MENTION_TYPE_AT_CHANNEL) {
-		kind = "@channel"
-	}
 
 	switch tags.GetMessageInteractionType() {
 	case MessageInteractionType_MESSAGE_INTERACTION_TYPE_REPLY:
@@ -98,9 +91,17 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 	case MessageInteractionType_MESSAGE_INTERACTION_TYPE_POST:
 		kind = "new_message"
 	case MessageInteractionType_MESSAGE_INTERACTION_TYPE_EDIT:
-		kind = "new_message"
+		return
 	case MessageInteractionType_MESSAGE_INTERACTION_TYPE_REDACTION:
-		kind = "new_message"
+		return
+	}
+
+	usersToNotify := make(map[common.Address]*types.UserPreferences)
+	recipients := mapset.NewSet[common.Address]()
+	sender := common.BytesToAddress(event.Event.CreatorAddress)
+
+	if slices.Contains(tags.GetGroupMentionTypes(), GroupMentionType_GROUP_MENTION_TYPE_AT_CHANNEL) {
+		kind = "@channel"
 	}
 
 	members.Each(func(member string) bool {
