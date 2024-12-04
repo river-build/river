@@ -34,14 +34,13 @@ library CheckIn {
 
   function getPointsAndStreak(
     uint256 lastCheckIn,
-    uint256 currentStreak
-  ) internal view returns (uint256 pointsToAward, uint256 streak) {
+    uint256 currentStreak,
+    uint256 currentTime
+  ) internal pure returns (uint256 pointsToAward, uint256 streak) {
     // First time checking in
     if (lastCheckIn == 0) {
       return (1 ether, 1); // equivalent to 1 point
     }
-
-    uint256 currentTime = block.timestamp;
 
     // Must wait at least 24 hours between check-ins
     if (currentTime <= lastCheckIn + CHECK_IN_WAIT_PERIOD) {

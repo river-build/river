@@ -55,7 +55,7 @@ contract RiverPoints is IERC20Metadata, IRiverPoints, OwnableBase, Facet {
   function getPoints(
     Action action,
     bytes calldata data
-  ) external view returns (uint256 points) {
+  ) external pure returns (uint256 points) {
     if (action == Action.JoinSpace) {
       uint256 protocolFee = abi.decode(data, (uint256));
       if (protocolFee <= 0.0003 ether) {
@@ -68,11 +68,11 @@ contract RiverPoints is IERC20Metadata, IRiverPoints, OwnableBase, Facet {
     }
 
     if (action == Action.CheckIn) {
-      (uint256 lastCheckIn, uint256 streak) = abi.decode(
+      (uint256 lastCheckIn, uint256 streak, uint256 currentTime) = abi.decode(
         data,
-        (uint256, uint256)
+        (uint256, uint256, uint256)
       );
-      (points, ) = CheckIn.getPointsAndStreak(lastCheckIn, streak);
+      (points, ) = CheckIn.getPointsAndStreak(lastCheckIn, streak, currentTime);
     }
   }
 
@@ -88,7 +88,8 @@ contract RiverPoints is IERC20Metadata, IRiverPoints, OwnableBase, Facet {
 
     (uint256 pointsToAward, uint256 newStreak) = CheckIn.getPointsAndStreak(
       userCheckIn.lastCheckIn,
-      userCheckIn.streak
+      userCheckIn.streak,
+      block.timestamp
     );
 
     // Must wait at least 24 hours between check-ins

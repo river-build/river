@@ -127,7 +127,8 @@ contract RiverPointsTest is
     uint256 currentPoints = pointsFacet.balanceOf(user);
     (uint256 pointsToAward, uint256 newStreak) = CheckIn.getPointsAndStreak(
       pointsFacet.getLastCheckIn(user),
-      currentStreak
+      currentStreak,
+      block.timestamp
     );
 
     vm.prank(user);
