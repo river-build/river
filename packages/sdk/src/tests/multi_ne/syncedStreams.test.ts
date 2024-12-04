@@ -2,7 +2,6 @@
  * @group main
  */
 
-/* eslint-disable jest/no-commented-out-tests */
 import { makeEvent, unpackStream } from '../../sign'
 import { SyncedStreams } from '../../syncedStreams'
 import { SyncState, stateConstraints } from '../../syncedStreamsLoop'

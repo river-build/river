@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable jest/no-standalone-expect */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { _impl_makeEvent_impl_, publicKeyToAddress, unpackStreamEnvelopes } from '../sign'
 
