@@ -164,10 +164,8 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 			recipients.Add(participant)
 		case *StreamEvent_ChannelPayload:
 			if spaceID != nil {
-				sendNotification, notificationKind := p.onSpaceChannelPayload(*spaceID, channelID, participant, pref, event)
-				if sendNotification {
+				if p.onSpaceChannelPayload(*spaceID, channelID, participant, pref, event) {
 					usersToNotify[participant] = pref
-					kind = notificationKind
 				}
 				recipients.Add(participant)
 			} else {
@@ -251,15 +249,13 @@ func (p *MessageToNotificationsProcessor) onGDMChannelPayload(
 	return false
 }
 
-// onSpaceChannelPayload returns sendNotification: true if a notification should be sent
-// notificationKind contains the kind of notification to send
 func (p *MessageToNotificationsProcessor) onSpaceChannelPayload(
 	spaceID shared.StreamId,
 	channelID shared.StreamId,
 	participant common.Address,
 	userPref *types.UserPreferences,
 	event *events.ParsedEvent,
-) (sendNotification bool, notificationKind string) {
+) bool {
 	tags := event.Event.GetTags()
 	messageInteractionType := event.Event.GetTags().GetMessageInteractionType()
 	mentioned := isMentioned(participant, tags.GetGroupMentionTypes(), tags.GetMentionedUserAddresses())
@@ -273,24 +269,7 @@ func (p *MessageToNotificationsProcessor) onSpaceChannelPayload(
 		participating,
 		messageInteractionType,
 	) {
-		switch messageInteractionType {
-		case MessageInteractionType_MESSAGE_INTERACTION_TYPE_REPLY:
-			if participating || mentioned {
-				return true, "reply_to"
-			}
-		case MessageInteractionType_MESSAGE_INTERACTION_TYPE_REACTION:
-			if participating {
-				return true, "reaction"
-			}
-		case MessageInteractionType_MESSAGE_INTERACTION_TYPE_POST,
-			MessageInteractionType_MESSAGE_INTERACTION_TYPE_UNSPECIFIED:
-			return true, "new_message"
-
-		case MessageInteractionType_MESSAGE_INTERACTION_TYPE_EDIT,
-			MessageInteractionType_MESSAGE_INTERACTION_TYPE_REDACTION:
-			// break instead of return to allow the log below to fire
-			break
-		}
+		return true
 	}
 
 	p.log.Debug("User don't want to receive notification for space channel message",
@@ -301,7 +280,7 @@ func (p *MessageToNotificationsProcessor) onSpaceChannelPayload(
 		"mentioned", mentioned,
 		"messageType", messageInteractionType)
 
-	return false, ""
+	return false
 }
 
 func (p *MessageToNotificationsProcessor) sendNotification(
