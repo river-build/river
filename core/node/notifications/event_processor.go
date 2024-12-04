@@ -298,8 +298,9 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 
 	var receivers []string
 	if channelID.Type() == shared.STREAM_DM_CHANNEL_BIN || channelID.Type() == shared.STREAM_GDM_CHANNEL_BIN {
+		senderHex := sender.Hex()
 		for _, member := range members.ToSlice() {
-			if member != sender.Hex() {
+			if member != senderHex {
 				receivers = append(receivers, member)
 			}
 		}
