@@ -27,11 +27,6 @@ interface ICheckIn is ICheckInBase {
   /// @dev Otherwise, their streak resets to 1
   function checkIn() external;
 
-  /// @notice Gets the total points accumulated by a user from check-ins
-  /// @param user The address of the user to query
-  /// @return The total points earned by the user
-  function getPoints(address user) external view returns (uint256);
-
   /// @notice Gets the current check-in streak for a user
   /// @param user The address of the user to query
   /// @return The current streak count for the user

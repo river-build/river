@@ -21,10 +21,6 @@ contract CheckInFacet is ICheckIn, Facet {
     CheckIn.checkIn(msg.sender);
   }
 
-  function getPoints(address user) external view returns (uint256) {
-    return CheckIn.getPoints(user);
-  }
-
   function getStreak(address user) external view returns (uint256) {
     return CheckIn.getStreak(user);
   }
