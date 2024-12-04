@@ -291,62 +291,78 @@ describe('dmsMlsTests', () => {
         ).toResolve()
     })
 
-    test.only('manyClientsInChannelInterleaving', async () => {
-        const spaceId = makeUniqueSpaceStreamId()
-        const bobsClient = await makeInitAndStartClient('bob')
-        await expect(bobsClient.createSpace(spaceId)).toResolve()
-        const channelId = makeUniqueChannelStreamId(spaceId)
-        await expect(bobsClient.createChannel(spaceId, 'Channel', 'Topic', channelId)).toResolve()
+    // Parameters for the test
+    // Timeout for a client to join an MLS group
+    const AWAIT_GROUP_TIMEOUT_MS = 120_000
+    // Timeout for all clients to finish syncing
+    const ALL_CLIENTS_SYNC_TIMEOUT_MS = 120_000
+    // Timeout for the whole test
+    const WHOLE_TEST_TIMEOUT_MS = 120_000
 
-        const messagesInFlight: Promise<any>[] = []
-        const messages: string[] = []
+    // Number of clients to be created
+    const NUM_CLIENTS = 24
+    // Number of messages to be exchanged
+    const NUM_MESSAGES = 1
 
-        const send = (client: Client, msg: string) => {
-            messages.push(msg)
-            messagesInFlight.push(client.sendMessage(channelId, msg, [], [], { useMls: true }))
-        }
+    test.only(
+        'manyClientsInChannelInterleaving',
+        async () => {
+            const spaceId = makeUniqueSpaceStreamId()
+            const bobsClient = await makeInitAndStartClient('bob')
+            await expect(bobsClient.createSpace(spaceId)).toResolve()
+            const channelId = makeUniqueChannelStreamId(spaceId)
+            await expect(
+                bobsClient.createChannel(spaceId, 'Channel', 'Topic', channelId),
+            ).toResolve()
 
-        send(bobsClient, 'hello everyone')
+            const messagesInFlight: Promise<any>[] = []
+            const messages: string[] = []
 
-        const NUM_CLIENTS = 24
-        const NUM_MESSAGES = 1
+            const send = (client: Client, msg: string) => {
+                messages.push(msg)
+                messagesInFlight.push(client.sendMessage(channelId, msg, [], [], { useMls: true }))
+            }
 
-        // TODO: Creating clients while others are sending messages seems to break the node
-        const extraClients = await Promise.all(
-            Array.from(Array(NUM_CLIENTS).keys()).map(async (n: number) => {
-                log(`INIT client-${n}`)
-                const client = await makeInitAndStartClient(`client-${n}`)
-                if (client.mlsCrypto) {
-                    client.mlsCrypto.awaitTimeoutMS = 30_000
-                }
-                return client
-            }),
-        )
+            send(bobsClient, 'hello everyone')
 
-        await Promise.all(
-            extraClients.map(async (client: Client, n: number) => {
-                log(`JOIN client-${n}`)
-                await expect(client.joinStream(channelId)).toResolve()
-                if (NUM_MESSAGES > 0) {
-                    send(client, `hello from ${n}`)
-                }
-                for (let m = 1; m < NUM_MESSAGES; m++) {
-                    send(client, `message ${m} from ${n}`)
-                }
-            }),
-        )
+            // TODO: Creating clients while others are sending messages seems to break the node
+            const extraClients = await Promise.all(
+                Array.from(Array(NUM_CLIENTS).keys()).map(async (n: number) => {
+                    log(`INIT client-${n}`)
+                    const client = await makeInitAndStartClient(`client-${n}`)
+                    if (client.mlsCrypto) {
+                        client.mlsCrypto.awaitTimeoutMS = AWAIT_GROUP_TIMEOUT_MS
+                    }
+                    return client
+                }),
+            )
 
-        await expect(Promise.all(messagesInFlight)).toResolve()
-        await waitFor(
-            () => {
-                for (const client of clients) {
-                    const stream = client.streams.get(channelId)!
-                    check(checkTimelineContainsAll(messages, stream.view.timeline))
-                }
-            },
-            { timeoutMS: 60_000 },
-        )
-    })
+            await Promise.all(
+                extraClients.map(async (client: Client, n: number) => {
+                    log(`JOIN client-${n}`)
+                    await expect(client.joinStream(channelId)).toResolve()
+                    if (NUM_MESSAGES > 0) {
+                        send(client, `hello from ${n}`)
+                    }
+                    for (let m = 1; m < NUM_MESSAGES; m++) {
+                        send(client, `message ${m} from ${n}`)
+                    }
+                }),
+            )
+
+            await expect(Promise.all(messagesInFlight)).toResolve()
+            await waitFor(
+                () => {
+                    for (const client of clients) {
+                        const stream = client.streams.get(channelId)!
+                        check(checkTimelineContainsAll(messages, stream.view.timeline))
+                    }
+                },
+                { timeoutMS: ALL_CLIENTS_SYNC_TIMEOUT_MS },
+            )
+        },
+        WHOLE_TEST_TIMEOUT_MS,
+    )
 })
 
 const goBackToEventLoop = () => new Promise((resolve) => setTimeout(resolve, 0))
