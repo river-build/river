@@ -279,7 +279,7 @@ describe('syncStreams', () => {
 //         await alicesSyncedStreams.addStreamToSync(streamAndCookie.nextSyncCookie)
 
 //         /** Assert */
-//         await expect(done.expectToSucceed()).toResolve()
+//         await expect(done.expectToSucceed()).resolves.not.toThrow()
 //         expect(syncId).toBeDefined()
 //         expect(endedSyncId).toEqual(syncId)
 //         expect(statesSeen).toEqual(
