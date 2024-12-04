@@ -80,8 +80,6 @@ func setupStreamStorageTest(t *testing.T) *testStreamStoreParams {
 	return params
 }
 
-type testFunc func(*testStreamStoreParams)
-
 func promoteMiniblockCandidate(
 	ctx context.Context,
 	pgStreamStore *PostgresStreamStore,
@@ -218,7 +216,7 @@ func TestPostgresStreamStore(t *testing.T) {
 	require.True(IsRiverErrorCode(err, Err_NOT_FOUND))
 }
 
-func testPromoteMiniblockCandidate(t *testing.T) {
+func TestPromoteMiniblockCandidate(t *testing.T) {
 	params := setupStreamStorageTest(t)
 	ctx := params.ctx
 	pgStreamStore := params.pgStreamStore
