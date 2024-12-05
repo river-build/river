@@ -154,7 +154,7 @@ func newPendingTransactionPool(
 ) *pendingTransactionPool {
 	transactionsReplacedCounter := metrics.NewCounterVecEx(
 		"txpool_replaced", "Number of replacement transactions submitted",
-		"chain_id", "address", "func_selector",
+		"chain_id", "address", "method_name",
 	)
 	transactionsPendingCounter := metrics.NewGaugeVecEx(
 		"txpool_pending", "Number of transactions that are waiting to be included in the chain",
@@ -393,13 +393,13 @@ func (pool *pendingTransactionPool) checkPendingTransactions(ctx context.Context
 				ptx.txHashes = append(ptx.txHashes, tx.Hash())
 				ptx.lastSubmit = time.Now()
 
-				funcSelector := funcSelectorFromTxForMetrics(tx)
+				methodName := getMethodName(tx.Data())
 				gasCap, _ := tx.GasFeeCap().Float64()
 				tipCap, _ := tx.GasTipCap().Float64()
 
 				pool.replacementsSent.Add(1)
 				pool.lastReplacementSent.Store(ptx.lastSubmit.Unix())
-				pool.transactionsReplaced.With(prometheus.Labels{"func_selector": funcSelector}).Add(1)
+				pool.transactionsReplaced.With(prometheus.Labels{"method_name": methodName}).Add(1)
 				pool.transactionGasCap.With(prometheus.Labels{"replacement": "false"}).Set(gasCap)
 				pool.transactionGasTip.With(prometheus.Labels{"replacement": "false"}).Set(tipCap)
 			} else if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
@@ -485,7 +485,7 @@ func NewTransactionPoolWithPolicies(
 
 	transactionsSubmittedCounter := metrics.NewCounterVecEx(
 		"txpool_submitted", "Number of transactions submitted",
-		"chain_id", "address", "func_selector",
+		"chain_id", "address", "method_name",
 	)
 
 	walletBalance := metrics.NewGaugeVecEx(
@@ -772,8 +772,8 @@ func (r *transactionPool) submitLocked(
 	r.pendingTransactionPool.addPendingTx <- pendingTx
 
 	// metrics
-	funcSelector := funcSelectorFromTxForMetrics(tx)
-	r.transactionSubmitted.With(prometheus.Labels{"func_selector": funcSelector}).Add(1)
+	methodName := getMethodName(tx.Data())
+	r.transactionSubmitted.With(prometheus.Labels{"method_name": methodName}).Add(1)
 
 	log := dlog.FromCtx(ctx)
 	log.Debug(
@@ -822,11 +822,4 @@ func (r *transactionPool) ReplacementTransactionsCount() int64 {
 
 func (r *transactionPool) LastReplacementTransactionUnix() int64 {
 	return r.pendingTransactionPool.lastReplacementSent.Load()
-}
-
-func funcSelectorFromTxForMetrics(tx *types.Transaction) string {
-	if len(tx.Data()) >= 4 {
-		return hex.EncodeToString(tx.Data()[:4])
-	}
-	return "unknown"
 }
