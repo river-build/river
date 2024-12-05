@@ -1,7 +1,7 @@
 ---
 title: useRedact
 ---
-Hook to redact a message in a stream.
+Hook to redact your own message in a channel stream.
 
 ## Imports
 
@@ -13,21 +13,21 @@ import { useRedact } from '@river-build/react-sdk'
 
 ### Redact a message
 
-You can use `redactEvent` to redact a message in a stream.
+You can use `redact` to redact a message in a stream.
 ```ts
 import { useRedact } from '@river-build/react-sdk'
 
-const { redactEvent } = useRedact(streamId)
-redactEvent({ eventId: messageEventId })
+const { redact } = useRedact(streamId)
+redact({ eventId: messageEventId })
 ```
 ### Redact a message reaction
 
-You can also use `redactEvent` to redact a message reaction in a stream.
+You can also use `redact` to redact a message reaction in a stream.
 ```ts
 import { useRedact } from '@river-build/react-sdk'
 
-const { redactEvent } = useRedact(streamId)
-redactEvent({ eventId: reactionEventId })
+const { redact } = useRedact(streamId)
+redact({ eventId: reactionEventId })
 ```
 
 ## Definition
@@ -35,7 +35,7 @@ redactEvent({ eventId: reactionEventId })
 ```ts
 function useRedact(
   streamId: string,
-  config?: ActionConfig<Channel['redactEvent']>,
+  config?: ActionConfig<Channel['redact']>,
 ): {
     data: {
         eventId: string;
@@ -44,7 +44,7 @@ function useRedact(
     isPending: boolean;
     isSuccess: boolean;
     isError: boolean;
-    redactEvent: (eventId: string) => Promise<{
+    redact: (eventId: string, reason?: string | undefined) => Promise<{
         eventId: string;
     }>;
 }
@@ -62,14 +62,14 @@ The id of the stream to redact the message in.
 
 ### config
 
-- **Type:** `ActionConfig<Channel['redactEvent']>`
+- **Type:** `ActionConfig<Channel['redact']>`
 - **Optional**
 
 Configuration options for the action.
 
 ## Return Type
 
-The `redactEvent` action and its loading state.
+The `redact` action and its loading state.
 
 ```ts
 {
@@ -80,7 +80,7 @@ The `redactEvent` action and its loading state.
     isPending: boolean;
     isSuccess: boolean;
     isError: boolean;
-    redactEvent: (eventId: string) => Promise<{
+    redact: (eventId: string, reason?: string | undefined) => Promise<{
         eventId: string;
     }>;
 }
