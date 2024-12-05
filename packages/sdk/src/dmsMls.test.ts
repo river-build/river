@@ -293,16 +293,16 @@ describe('dmsMlsTests', () => {
 
     // Parameters for the test
     // Timeout for a client to join an MLS group
-    const AWAIT_GROUP_TIMEOUT_MS = 120_000
+    const AWAIT_GROUP_TIMEOUT_MS = 240_000
     // Timeout for all clients to finish syncing
-    const ALL_CLIENTS_SYNC_TIMEOUT_MS = 120_000
+    const ALL_CLIENTS_SYNC_TIMEOUT_MS = 240_000
     // Timeout for the whole test
-    const WHOLE_TEST_TIMEOUT_MS = 120_000
+    const WHOLE_TEST_TIMEOUT_MS = 240_000
 
     // Number of clients to be created
-    const NUM_CLIENTS = 24
+    const NUM_CLIENTS = 64
     // Number of messages to be exchanged
-    const NUM_MESSAGES = 1
+    const NUM_MESSAGES = 5
 
     test.only(
         'manyClientsInChannelInterleaving',
