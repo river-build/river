@@ -159,7 +159,7 @@ func New(
 		log = dlog.FromCtx(ctx).
 			With("worker_id", workerID).
 			With("application", "xchain").
-			With("nodeAddress", wallet.Address.Hex())
+			With("nodeAddress", wallet.Hex())
 		checkerContract = bind.NewBoundContract(
 			cfg.GetEntitlementContractAddress(),
 			*checkerABI,
@@ -269,7 +269,7 @@ func (x *xchain) Log(ctx context.Context) *slog.Logger {
 	return dlog.FromCtx(ctx).
 		With("worker_id", x.workerID).
 		With("application", "xchain").
-		With("nodeAddress", x.baseChain.Wallet.Address.Hex())
+		With("nodeAddress", x.baseChain.Wallet.Hex())
 }
 
 // isRegistered returns an indication if this instance is registered by its operator as a xchain node.
@@ -301,7 +301,7 @@ func (x *xchain) Run(ctx context.Context) {
 	log.Info(
 		"Starting xchain node",
 		"entitlementAddress", entitlementAddress.Hex(),
-		"nodeAddress", x.baseChain.Wallet.Address.Hex(),
+		"nodeAddress", x.baseChain.Wallet.Hex(),
 	)
 
 	if x.metricsPublisher != nil {
@@ -396,7 +396,7 @@ func (x *xchain) handleEntitlementCheckRequest(
 	log.Debug(
 		"EntitlementCheckRequested not for this xchain instance",
 		"selectedNodes", request.SelectedNodes,
-		"nodeAddress", x.baseChain.Wallet.Address.Hex(),
+		"nodeAddress", x.baseChain.Wallet.Hex(),
 	)
 	return nil, nil // request not for this xchain instance
 }

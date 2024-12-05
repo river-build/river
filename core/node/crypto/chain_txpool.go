@@ -179,7 +179,7 @@ func newPendingTransactionPool(
 		"chain_id", "address",
 	)
 
-	curryLabels := prometheus.Labels{"chain_id": chainID.String(), "address": wallet.Address.String()}
+	curryLabels := prometheus.Labels{"chain_id": chainID.String(), "address": wallet.Hex()}
 
 	transactionGasCap := metrics.NewGaugeVecEx(
 		"txpool_tx_fee_cap_wei", "Latest submitted EIP1559 transaction gas fee cap",
@@ -493,7 +493,7 @@ func NewTransactionPoolWithPolicies(
 		"chain_id", "address",
 	)
 
-	curryLabels := prometheus.Labels{"chain_id": chainID.String(), "address": wallet.Address.String()}
+	curryLabels := prometheus.Labels{"chain_id": chainID.String(), "address": wallet.Hex()}
 	txPool := &transactionPool{
 		client:               client,
 		wallet:               wallet,
@@ -575,7 +575,7 @@ func (r *transactionPool) sendReplacementTransactions(ctx context.Context) {
 	)
 
 	log.Warn("Try to replace pending transactions from previous run",
-		"wallet", r.wallet.Address, "from", nonce, "to", pendingNonce)
+		"wallet", r.wallet.Hex(), "from", nonce, "to", pendingNonce)
 
 	for nonce < pendingNonce {
 		opts := &bind.TransactOpts{

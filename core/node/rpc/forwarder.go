@@ -169,7 +169,7 @@ func peerNodeStreamingResponseWithRetries(
 
 func (s *Service) asAnnotatedRiverError(err error) *RiverErrorImpl {
 	return AsRiverError(err).
-		Tag("nodeAddress", s.wallet.Address).
+		Tag("nodeAddress", s.wallet.Hex()).
 		Tag("nodeUrl", s.config.Address)
 }
 
@@ -191,7 +191,7 @@ func executeConnectHandler[Req, Res any](
 	if e != nil {
 		err := AsRiverError(e).
 			Tags(
-				"nodeAddress", service.wallet.Address.Hex(),
+				"nodeAddress", service.wallet.Hex(),
 				"nodeUrl", service.config.Address,
 				"elapsed", elapsed,
 			).
@@ -483,7 +483,7 @@ func (s *Service) addEventImpl(
 
 	newReq := connect.NewRequest(req.Msg)
 	newReq.Header().Set(RiverNoForwardHeader, RiverNoForwardValue)
-	newReq.Header().Set(RiverFromNodeHeader, s.wallet.Address.Hex())
+	newReq.Header().Set(RiverFromNodeHeader, s.wallet.Hex())
 	newReq.Header().Set(RiverToNodeHeader, firstRemote.Hex())
 	ret, err := stub.AddEvent(ctx, newReq)
 	if err != nil {

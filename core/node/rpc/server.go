@@ -282,7 +282,7 @@ func (s *Service) initWallet() error {
 
 	// Add node address info to the logger
 	if !s.config.Log.Simplify {
-		s.defaultLogger = s.defaultLogger.With("nodeAddress", wallet.Address.Hex())
+		s.defaultLogger = s.defaultLogger.With("nodeAddress", wallet.Hex())
 		s.serverCtx = dlog.CtxWithLog(ctx, s.defaultLogger)
 		slog.SetDefault(s.defaultLogger)
 	}
@@ -392,7 +392,7 @@ func (s *Service) prepareStore() error {
 		var schema string
 		switch s.mode {
 		case ServerModeFull:
-			schema = storage.DbSchemaNameFromAddress(s.wallet.Address.Hex())
+			schema = storage.DbSchemaNameFromAddress(s.wallet.Hex())
 		case ServerModeArchive:
 			schema = storage.DbSchemaNameForArchive(s.config.Archive.ArchiveId)
 		case ServerModeNotification:

@@ -160,7 +160,7 @@ func (s *Service) getStatusResponse(ctx context.Context, url *url.URL) (*statusi
 
 	var addr string
 	if s.wallet != nil {
-		addr = s.wallet.Address.Hex()
+		addr = s.wallet.Hex()
 	}
 	statusStr := s.GetStatus()
 	if status != http.StatusOK {

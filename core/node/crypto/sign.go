@@ -90,6 +90,7 @@ type Wallet struct {
 	PrivateKeyStruct *ecdsa.PrivateKey
 	PrivateKey       []byte
 	Address          common.Address
+	AddressHex       string
 }
 
 func NewWallet(ctx context.Context) (*Wallet, error) {
@@ -114,6 +115,7 @@ func NewWallet(ctx context.Context) (*Wallet, error) {
 			PrivateKeyStruct: key,
 			PrivateKey:       crypto.FromECDSA(key),
 			Address:          address,
+			AddressHex:       address.Hex(),
 		},
 		nil
 }
@@ -143,6 +145,7 @@ func NewWalletFromPrivKey(ctx context.Context, privKey string) (*Wallet, error) 
 			PrivateKeyStruct: k,
 			PrivateKey:       crypto.FromECDSA(k),
 			Address:          address,
+			AddressHex:       address.Hex(),
 		},
 		nil
 }
@@ -176,6 +179,7 @@ func LoadWallet(ctx context.Context, filename string) (*Wallet, error) {
 			PrivateKeyStruct: key,
 			PrivateKey:       crypto.FromECDSA(key),
 			Address:          address,
+			AddressHex:       address.Hex(),
 		},
 		nil
 }
@@ -349,9 +353,16 @@ func ToEthMessageHash(messageHash []byte) []byte {
 }
 
 func (w Wallet) String() string {
-	return w.Address.Hex()
+	return w.AddressHex
 }
 
 func (w Wallet) GoString() string {
-	return w.Address.Hex()
+	return w.AddressHex
+}
+
+func (w *Wallet) Hex() string {
+	if w.AddressHex == "" {
+		w.AddressHex = w.Address.Hex()
+	}
+	return w.AddressHex
 }
