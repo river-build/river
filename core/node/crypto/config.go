@@ -95,6 +95,8 @@ type OnChainSettings struct {
 	StreamCacheExpiration    time.Duration `mapstructure:"stream.cacheExpirationMs"`
 	StreamCachePollIntterval time.Duration `mapstructure:"stream.cacheExpirationPollIntervalMs"`
 
+	MbsListLimit uint64 `mapstructure:"stream.miniblocksListLimit"`
+
 	MembershipLimits MembershipLimitsSettings `mapstructure:",squash"`
 
 	XChain XChainSettings `mapstructure:",squash"`
@@ -163,6 +165,8 @@ func DefaultOnChainSettings() *OnChainSettings {
 
 		StreamCacheExpiration:    5 * time.Minute,
 		StreamCachePollIntterval: 30 * time.Second,
+
+		MbsListLimit: 100,
 
 		MembershipLimits: MembershipLimitsSettings{
 			GDM: 48,
