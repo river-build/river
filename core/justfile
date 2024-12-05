@@ -302,7 +302,7 @@ _run-node $INSTANCE_NUM $INSTANCE_DIR:
         --config ../contracts.env \
         --config ../config.yaml \
         --config config/config.env \
-        ${RUN_ARGS} --log_level debug \
+        ${RUN_ARGS} \
         > ./logs/tty.stdout.log 2> ./logs/tty.stderr.log &
 
 _stop-node $INSTANCE_NUM $INSTANCE_DIR:
