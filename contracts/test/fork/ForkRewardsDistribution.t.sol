@@ -39,6 +39,8 @@ contract ForkRewardsDistributionTest is
 
   address internal constant baseRegistry =
     0x7c0422b31401C936172C897802CF0373B35B7698;
+  address internal constant spaceFactory =
+    0x9978c826d93883701522d2CA645d5436e5654252;
   uint256 internal constant rewardDuration = 14 days;
 
   DeployRewardsDistributionV2 internal distributionV2Helper;
@@ -211,9 +213,6 @@ contract ForkRewardsDistributionTest is
     reward = bound(reward, rewardDuration, 1e27);
     deal(address(river), address(rewardsDistributionFacet), reward, true);
 
-    vm.prank(owner);
-    rewardsDistributionFacet.setRewardNotifier(owner, true);
-
     vm.expectEmit(address(rewardsDistributionFacet));
     emit NotifyRewardAmount(owner, reward);
 
@@ -278,6 +277,32 @@ contract ForkRewardsDistributionTest is
     verifyClaim(beneficiary, beneficiary, reward, currentReward, timeLapse);
   }
 
+  /// forge-config: default.fuzz.runs = 64
+  function test_fuzz_claimReward_byOperator(
+    uint96 amount,
+    uint256 rewardAmount,
+    uint256 timeLapse
+  ) public {
+    address operator = activeOperators[0];
+    timeLapse = bound(timeLapse, 0, rewardDuration);
+    amount = uint96(bound(amount, 1 ether, type(uint96).max));
+
+    test_fuzz_notifyRewardAmount(rewardAmount);
+    stake(address(this), amount, address(this), operator);
+
+    vm.warp(block.timestamp + timeLapse);
+
+    uint256 currentReward = rewardsDistributionFacet.currentReward(operator);
+
+    vm.expectEmit(address(rewardsDistributionFacet));
+    emit ClaimReward(operator, operator, currentReward);
+
+    vm.prank(operator);
+    uint256 reward = rewardsDistributionFacet.claimReward(operator, operator);
+
+    verifyClaim(operator, operator, reward, currentReward, timeLapse);
+  }
+
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                           HELPER                           */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
@@ -318,12 +343,15 @@ contract ForkRewardsDistributionTest is
       rewardDuration
     );
 
-    vm.prank(owner);
+    vm.startPrank(owner);
     IDiamondCut(baseRegistry).diamondCut(
       facetCuts,
       distributionV2Impl,
       initPayload
     );
+    rewardsDistributionFacet.setRewardNotifier(owner, true);
+    SpaceDelegationFacet(baseRegistry).setSpaceFactory(spaceFactory);
+    vm.stopPrank();
   }
 
   function getActiveOperators() internal {
