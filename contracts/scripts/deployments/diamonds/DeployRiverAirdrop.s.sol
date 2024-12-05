@@ -44,7 +44,7 @@ contract DeployRiverAirdrop is DiamondHelper, Deployer {
   address dropFacet;
   address pointsFacet;
   address metadata;
-  address checkInFacet;
+
   function versionName() public pure override returns (string memory) {
     return "riverAirdrop";
   }
