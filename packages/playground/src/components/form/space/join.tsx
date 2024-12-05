@@ -22,7 +22,6 @@ export const JoinSpace = (props: { onJoinSpace: (spaceId: string) => void }) => 
     const { onJoinSpace } = props
     const { joinSpace, isPending } = useJoinSpace()
     const signer = useEthersSigner()
-
     const form = useForm<z.infer<typeof joinSpaceFormSchema>>({
         resolver: zodResolver(joinSpaceFormSchema),
         defaultValues: { spaceId: '' },

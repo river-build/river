@@ -85,7 +85,7 @@ func (s *Service) info(
 					Graffiti: "exiting...",
 				}), nil
 			} else if debug == "sleep" {
-				sleepDuration := 30 * time.Second 
+				sleepDuration := 30 * time.Second
 				log.Info("SLEEPING FOR", "sleepDuration", sleepDuration)
 				select {
 				case <-time.After(sleepDuration):
@@ -175,11 +175,11 @@ func (s *Service) debugInfoMakeMiniblock(
 		lastKnownMiniblockNum,
 	)
 
-	nodes, err := s.cache.GetStreamInfo(ctx, streamId)
+	stream, err := s.cache.GetStreamNoWait(ctx, streamId)
 	if err != nil {
 		return nil, err
 	}
-	if nodes.IsLocal() {
+	if stream.IsLocal() {
 		ref, err := s.mbProducer.TestMakeMiniblock(ctx, streamId, forceSnapshot)
 		if err != nil {
 			return nil, err
@@ -202,7 +202,7 @@ func (s *Service) debugInfoMakeMiniblock(
 	} else {
 		return peerNodeRequestWithRetries(
 			ctx,
-			nodes,
+			stream,
 			s,
 			func(ctx context.Context, stub StreamServiceClient) (*connect.Response[InfoResponse], error) {
 				return stub.Info(ctx, request)

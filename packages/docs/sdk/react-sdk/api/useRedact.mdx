@@ -1,10 +1,33 @@
 ---
 title: useRedact
 ---
+Hook to redact your own message in a channel stream.
+
 ## Imports
 
 ```ts
 import { useRedact } from '@river-build/react-sdk'
+```
+
+## Examples
+
+### Redact a message
+
+You can use `redact` to redact a message in a stream.
+```ts
+import { useRedact } from '@river-build/react-sdk'
+
+const { redact } = useRedact(streamId)
+redact({ eventId: messageEventId })
+```
+### Redact a message reaction
+
+You can also use `redact` to redact a message reaction in a stream.
+```ts
+import { useRedact } from '@river-build/react-sdk'
+
+const { redact } = useRedact(streamId)
+redact({ eventId: reactionEventId })
 ```
 
 ## Definition
@@ -12,7 +35,7 @@ import { useRedact } from '@river-build/react-sdk'
 ```ts
 function useRedact(
   streamId: string,
-  config?: ActionConfig<Channel['redactEvent']>,
+  config?: ActionConfig<Channel['redact']>,
 ): {
     data: {
         eventId: string;
@@ -21,7 +44,7 @@ function useRedact(
     isPending: boolean;
     isSuccess: boolean;
     isError: boolean;
-    redactEvent: (eventId: string) => Promise<{
+    redact: (eventId: string, reason?: string | undefined) => Promise<{
         eventId: string;
     }>;
 }
@@ -35,12 +58,18 @@ function useRedact(
 
 - **Type:** `string`
 
+The id of the stream to redact the message in.
+
 ### config
 
-- **Type:** `ActionConfig<Channel['redactEvent']>`
+- **Type:** `ActionConfig<Channel['redact']>`
 - **Optional**
 
+Configuration options for the action.
+
 ## Return Type
+
+The `redact` action and its loading state.
 
 ```ts
 {
@@ -51,7 +80,7 @@ function useRedact(
     isPending: boolean;
     isSuccess: boolean;
     isError: boolean;
-    redactEvent: (eventId: string) => Promise<{
+    redact: (eventId: string, reason?: string | undefined) => Promise<{
         eventId: string;
     }>;
 }

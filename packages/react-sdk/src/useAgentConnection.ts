@@ -53,7 +53,12 @@ type AgentConnectConfig = Omit<SyncAgentConfig, 'context' | 'onTokenExpired'>
  *
  *   return (
  *     <>
- *       <button onClick={() => connect(signer, { riverConfig })}>
+ *       <button onClick={async () => {
+ *         if (!signer) {
+ *           return
+ *         }
+ *         connect(signer, { riverConfig })
+ *       }}>
  *         Login
  *       </button>
  *       {isAgentConnecting && <span>Connecting... ⏳</span>}

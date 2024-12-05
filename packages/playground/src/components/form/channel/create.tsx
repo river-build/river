@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
 const formSchema = z.object({
-    channelName: z.string().min(1, { message: 'Space name is required' }),
+    channelName: z.string().min(1, { message: 'Channel name is required' }),
 })
 
 export const CreateChannel = (props: {
