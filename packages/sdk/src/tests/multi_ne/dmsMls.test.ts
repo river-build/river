@@ -3,16 +3,16 @@
  */
 
 import { check, dlog } from '@river-build/dlog'
-import { Client } from './client'
+import { Client } from '../../client'
 import {
     getChannelMessagePayload,
     makeTestClient,
     makeUniqueSpaceStreamId,
     waitFor,
-} from './util.test'
+} from '../testUtils'
 
-import { StreamTimelineEvent } from './types'
-import { makeUniqueChannelStreamId } from './id'
+import { StreamTimelineEvent } from '../../types'
+import { makeUniqueChannelStreamId } from '../../id'
 
 const log = dlog('test:mls')
 
@@ -40,16 +40,16 @@ describe('dmsMlsTests', () => {
         clients = []
     })
 
-    test('clientCanSendMlsPayloadInDM', async () => {
+    it('clientCanSendMlsPayloadInDM', async () => {
         const alicesClient = await makeInitAndStartClient('alice')
         const bobsClient = await makeInitAndStartClient('bob')
         const { streamId } = await bobsClient.createDMChannel(alicesClient.userId)
-        await expect(bobsClient.waitForStream(streamId)).toResolve()
-        await expect(alicesClient.waitForStream(streamId)).toResolve()
+        await expect(bobsClient.waitForStream(streamId)).resolves.toBeDefined()
+        await expect(alicesClient.waitForStream(streamId)).resolves.toBeDefined()
 
         await expect(
             alicesClient.sendMessage(streamId, 'hello bob', [], [], { useMls: true }),
-        ).toResolve()
+        ).resolves.toBeDefined()
 
         await waitFor(
             () => {
@@ -61,7 +61,7 @@ describe('dmsMlsTests', () => {
 
         await expect(
             bobsClient.sendMessage(streamId, 'hello alice', [], [], { useMls: true }),
-        ).toResolve()
+        ).resolves.toBeDefined()
 
         // Not sure both are active
         await waitFor(
@@ -99,7 +99,7 @@ describe('dmsMlsTests', () => {
         for (const message of messages) {
             await expect(
                 bobsClient.sendMessage(streamId, message, [], [], { useMls: true }),
-            ).toResolve()
+            ).resolves.toBeDefined()
         }
 
         await waitFor(
@@ -114,7 +114,7 @@ describe('dmsMlsTests', () => {
         )
     })
 
-    test('threeClientsCanJoin', async () => {
+    it('threeClientsCanJoin', async () => {
         const aliceClient = await makeInitAndStartClient('alice')
         const bobClient = await makeInitAndStartClient('bob')
         const charlieClient = await makeInitAndStartClient('charlie')
@@ -123,13 +123,13 @@ describe('dmsMlsTests', () => {
             bobClient.userId,
             charlieClient.userId,
         ])
-        await expect(aliceClient.waitForStream(streamId)).toResolve()
-        await expect(bobClient.waitForStream(streamId)).toResolve()
-        await expect(charlieClient.waitForStream(streamId)).toResolve()
+        await expect(aliceClient.waitForStream(streamId)).resolves.toBeDefined()
+        await expect(bobClient.waitForStream(streamId)).resolves.toBeDefined()
+        await expect(charlieClient.waitForStream(streamId)).resolves.toBeDefined()
 
         await expect(
             aliceClient.sendMessage(streamId, 'hello all', [], [], { useMls: true }),
-        ).toResolve()
+        ).resolves.toBeDefined()
 
         await waitFor(
             () => {
@@ -156,7 +156,7 @@ describe('dmsMlsTests', () => {
         )
     })
 
-    test('moreClientsCanJoin', async () => {
+    it('moreClientsCanJoin', async () => {
         const alicesClient = await makeInitAndStartClient('alice')
         const bobsClient = await makeInitAndStartClient('bob')
         const charliesClient = await makeInitAndStartClient('charlie')
@@ -165,15 +165,15 @@ describe('dmsMlsTests', () => {
             alicesClient.userId,
             charliesClient.userId,
         ])
-        await expect(bobsClient.waitForStream(streamId)).toResolve()
-        await expect(alicesClient.waitForStream(streamId)).toResolve()
-        await expect(charliesClient.waitForStream(streamId)).toResolve()
+        await expect(bobsClient.waitForStream(streamId)).resolves.toBeDefined()
+        await expect(alicesClient.waitForStream(streamId)).resolves.toBeDefined()
+        await expect(charliesClient.waitForStream(streamId)).resolves.toBeDefined()
 
         // alice's message will:
 
         await expect(
             alicesClient.sendMessage(streamId, 'hello bob', [], [], { useMls: true }),
-        ).toResolve()
+        ).resolves.toBeDefined()
 
         await waitFor(() => {
             const bobStream = bobsClient.streams.get(streamId)
@@ -191,7 +191,7 @@ describe('dmsMlsTests', () => {
 
         await expect(
             bobsClient.sendMessage(streamId, 'hello alice', [], [], { useMls: true }),
-        ).toResolve()
+        ).resolves.toBeDefined()
 
         await waitFor(() => {
             const aliceStream = alicesClient.streams.get(streamId)!
@@ -206,12 +206,12 @@ describe('dmsMlsTests', () => {
         // add 3 more users
         for (let i = 0; i < 2; i++) {
             const client = await makeInitAndStartClient(`client-${i}`)
-            await expect(bobsClient.joinUser(streamId, client.userId)).toResolve()
+            await expect(bobsClient.joinUser(streamId, client.userId)).resolves.toBeDefined()
             addedClients.push(client)
         }
 
         for (const client of addedClients) {
-            await expect(client.waitForStream(streamId)).toResolve()
+            await expect(client.waitForStream(streamId)).resolves.toBeDefined()
         }
 
         await waitFor(
@@ -230,13 +230,15 @@ describe('dmsMlsTests', () => {
         )
     })
 
-    test.skip('manyClientsInChannel', async () => {
+    it.skip('manyClientsInChannel', async () => {
         const spaceId = makeUniqueSpaceStreamId()
         const bobsClient = await makeInitAndStartClient('bob')
-        await expect(bobsClient.createSpace(spaceId)).toResolve()
+        await expect(bobsClient.createSpace(spaceId)).resolves.toBeDefined()
 
         const channelId = makeUniqueChannelStreamId(spaceId)
-        await expect(bobsClient.createChannel(spaceId, 'Channel', 'Topic', channelId)).toResolve()
+        await expect(
+            bobsClient.createChannel(spaceId, 'Channel', 'Topic', channelId),
+        ).resolves.toBeDefined()
 
         await Promise.all(
             Array.from(Array(12).keys()).map(async (n) => {
@@ -245,19 +247,21 @@ describe('dmsMlsTests', () => {
                 if (client.mlsCrypto) {
                     client.mlsCrypto.awaitTimeoutMS = 30_000
                 }
-                await expect(client.joinStream(channelId)).toResolve()
-                await expect(client.waitForStream(channelId)).toResolve()
+                await expect(client.joinStream(channelId)).resolves.toBeDefined()
+                await expect(client.waitForStream(channelId)).resolves.toBeDefined()
             }),
         )
 
         await expect(
             bobsClient.sendMessage(channelId, 'hello everyone', [], [], { useMls: true }),
-        ).toResolve()
+        ).resolves.toBeDefined()
 
         const messages: string[] = []
         for (const [idx, client] of clients.entries()) {
             const msg = `hello ${idx}`
-            await expect(client.sendMessage(channelId, msg, [], [], { useMls: true })).toResolve()
+            await expect(
+                client.sendMessage(channelId, msg, [], [], { useMls: true }),
+            ).resolves.toBeDefined()
             messages.push(msg)
         }
 
@@ -276,7 +280,7 @@ describe('dmsMlsTests', () => {
                 },
                 { timeoutMS: 10000 },
             ),
-        ).toResolve()
+        ).resolves.toBeDefined()
 
         await expect(
             await waitFor(async () => {
@@ -288,15 +292,17 @@ describe('dmsMlsTests', () => {
                     )
                 }
             }),
-        ).toResolve()
+        ).resolves.toBeDefined()
     })
 
-    test('manyClientsInChannelInterleaving', async () => {
+    it('manyClientsInChannelInterleaving', async () => {
         const spaceId = makeUniqueSpaceStreamId()
         const bobsClient = await makeInitAndStartClient('bob')
-        await expect(bobsClient.createSpace(spaceId)).toResolve()
+        await expect(bobsClient.createSpace(spaceId)).resolves.toBeDefined()
         const channelId = makeUniqueChannelStreamId(spaceId)
-        await expect(bobsClient.createChannel(spaceId, 'Channel', 'Topic', channelId)).toResolve()
+        await expect(
+            bobsClient.createChannel(spaceId, 'Channel', 'Topic', channelId),
+        ).resolves.toBeDefined()
 
         const messagesInFlight: Promise<any>[] = []
         const messages: string[] = []
@@ -326,7 +332,7 @@ describe('dmsMlsTests', () => {
         await Promise.all(
             extraClients.map(async (client: Client, n: number) => {
                 log(`JOIN client-${n}`)
-                await expect(client.joinStream(channelId)).toResolve()
+                await expect(client.joinStream(channelId)).resolves.toBeDefined()
                 if (NUM_MESSAGES > 0) {
                     send(client, `hello from ${n}`)
                 }
@@ -336,7 +342,7 @@ describe('dmsMlsTests', () => {
             }),
         )
 
-        await expect(Promise.all(messagesInFlight)).toResolve()
+        await expect(Promise.all(messagesInFlight)).resolves.toBeDefined()
         await waitFor(
             () => {
                 for (const client of clients) {

@@ -2,7 +2,7 @@
  * @group main
  */
 
-import { Awaiter, MlsCrypto } from './mls'
+import { Awaiter, MlsCrypto } from '../../mls'
 
 async function initializeCrypto(
     userAddress: Uint8Array,
@@ -35,12 +35,12 @@ describe('Awaiter', () => {
     it('should be possible to resolve it', async () => {
         const a = new Awaiter(1_000)
         a.resolve()
-        await expect(a.promise).toResolve()
+        await expect(a.promise).resolves.toBeUndefined()
     }, 1_000)
 
     it('should timout if not resolved', async () => {
         const a = new Awaiter(0)
-        await expect(a.promise).toReject()
+        await expect(a.promise).rejects.toThrow()
     }, 1_000)
 })
 
@@ -140,7 +140,7 @@ describe('CreateGroup', () => {
             groupInfoWithExternalKey,
         )
 
-        await expect(awaiting).toResolve()
+        await expect(awaiting).resolves.toBeUndefined()
     }, 1000)
 
     it('awaitGroupActive should block until group is active via external join', async () => {
@@ -154,12 +154,12 @@ describe('CreateGroup', () => {
         const awaiting = crypto.awaitGroupActive(streamId)
         const { groupInfo, commit } = await crypto.externalJoin(streamId, groupInfoWithExternalKey)
         await crypto.handleExternalJoin(streamId, userAddress, deviceKey, commit, groupInfo, 1n)
-        await expect(awaiting).toResolve()
+        await expect(awaiting).resolves.toBeUndefined()
     }, 1000)
 
     it('awaitGroupActive should timeout', async () => {
         const crypto = await initializeCrypto(userAddress, deviceKey)
         crypto.awaitTimeoutMS = 0
-        await expect(crypto.awaitGroupActive(streamId)).toReject()
+        await expect(crypto.awaitGroupActive(streamId)).rejects.toThrow()
     })
 })
