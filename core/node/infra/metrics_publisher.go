@@ -13,6 +13,7 @@ import (
 	"github.com/river-build/river/core/node/dlog"
 )
 
+// In practice, most rpc calls seem to land between 10 and 50ms, sometimes up to 100ms.
 var DefaultRpcDurationBucketsSeconds = []float64{
 	0.01,
 	0.05,
@@ -20,7 +21,6 @@ var DefaultRpcDurationBucketsSeconds = []float64{
 	0.5,
 	1.0,
 	5.0,
-	10,
 }
 
 var DefaultDbTxDurationBucketsSeconds = []float64{
