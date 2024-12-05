@@ -14,6 +14,7 @@ import (
 )
 
 // In practice, most rpc calls seem to land between 10 and 50ms, sometimes up to 100ms.
+// Entitlement calls can sometimes take up to 2s.
 var DefaultRpcDurationBucketsSeconds = []float64{
 	0.01,
 	0.05,
@@ -23,6 +24,7 @@ var DefaultRpcDurationBucketsSeconds = []float64{
 	5.0,
 }
 
+// Most db operations appear to complete in <= 60ms in practice.
 var DefaultDbTxDurationBucketsSeconds = []float64{
 	.001,
 	.003,
