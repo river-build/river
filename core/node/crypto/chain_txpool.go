@@ -164,15 +164,18 @@ func newPendingTransactionPool(
 		"txpool_processed", "Number of submitted transactions that are included in the chain",
 		"chain_id", "address", "status",
 	)
+
+	// 1, 3, 5, 7, 9s
+	txPoolHistogramBuckets := prometheus.LinearBuckets(1.0, 2.0, 5)
 	transactionTotalInclusionDuration := metrics.NewHistogramVecEx(
 		"txpool_tx_total_inclusion_duration_sec",
 		"How long it takes before a transaction is included in the chain since first submit",
-		prometheus.LinearBuckets(1.0, 2.0, 10), "chain_id", "address",
+		txPoolHistogramBuckets, "chain_id", "address",
 	)
 	transactionInclusionDuration := metrics.NewHistogramVecEx(
 		"txpool_tx_inclusion_duration_sec",
 		"How long it takes before a transaction is included in the chain since last submit",
-		prometheus.LinearBuckets(1.0, 2.0, 10), "chain_id", "address",
+		txPoolHistogramBuckets, "chain_id", "address",
 	)
 	transactionReceiptsMissingCounter := metrics.NewCounterVecEx(
 		"txpool_missing_tx_receipts", "Number of receipts missing for submitted transactions",
