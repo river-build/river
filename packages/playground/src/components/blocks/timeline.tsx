@@ -113,6 +113,8 @@ export const SendMessage = ({ streamId }: { streamId: string }) => {
                 className="grid grid-cols-[1fr,auto] gap-2"
                 onSubmit={form.handleSubmit(async ({ message }) => {
                     sendMessage(message)
+                    // reset the form:
+                    form.setValue('message', '')
                 })}
             >
                 <FormField
