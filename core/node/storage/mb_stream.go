@@ -13,7 +13,6 @@ type miniblocksDataStream struct {
 	rows     pgx.Rows
 	err      error
 	block    Miniblock
-	seqNum   int
 	prevSeq  int
 	streamId StreamId
 }
