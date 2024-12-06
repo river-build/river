@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/ethereum/go-ethereum/common"
+	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
 )
 
@@ -25,7 +26,7 @@ type MiniblocksDataStream interface {
 	Next() bool
 
 	// Miniblock returns the current miniblock data.
-	Miniblock() []byte
+	Miniblock() *Miniblock
 
 	// Err returns any error encountered during iteration.
 	Err() error

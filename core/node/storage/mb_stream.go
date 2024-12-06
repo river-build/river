@@ -12,7 +12,7 @@ import (
 type miniblocksDataStream struct {
 	rows     pgx.Rows
 	err      error
-	block    []byte
+	block    Miniblock
 	seqNum   int
 	prevSeq  int
 	streamId StreamId
@@ -54,8 +54,8 @@ func (m *miniblocksDataStream) Next() bool {
 }
 
 // Miniblock returns the current miniblock data.
-func (m *miniblocksDataStream) Miniblock() []byte {
-	return m.block
+func (m *miniblocksDataStream) Miniblock() *Miniblock {
+	return &m.block
 }
 
 // Err returns any error encountered during iteration.

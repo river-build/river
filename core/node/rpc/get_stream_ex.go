@@ -4,9 +4,6 @@ import (
 	"context"
 
 	"connectrpc.com/connect"
-	"google.golang.org/protobuf/proto"
-
-	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"
 )
@@ -27,15 +24,9 @@ func (s *Service) localGetStreamEx(
 	}
 
 	for miniblocksDs.Next() {
-		var miniblock Miniblock
-		err = proto.Unmarshal(miniblocksDs.Miniblock(), &miniblock)
-		if err != nil {
-			return WrapRiverError(Err_BAD_BLOCK, err).Message("Unable to unmarshal miniblock")
-		}
-
 		if err := resp.Send(&GetStreamExResponse{
 			Data: &GetStreamExResponse_Miniblock{
-				Miniblock: &miniblock,
+				Miniblock: miniblocksDs.Miniblock(),
 			},
 		}); err != nil {
 			return err
