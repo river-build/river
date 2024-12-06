@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"encoding/json"
+
 	"github.com/jackc/pgx/v5/pgtype"
 	"google.golang.org/protobuf/proto"
 )
