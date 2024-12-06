@@ -173,6 +173,7 @@
             "sdk/react-sdk/api/getRoom",
             "sdk/react-sdk/api/RiverSyncProvider",
             "sdk/react-sdk/api/signAndConnect",
+            "sdk/react-sdk/api/useAdminRedact",
             "sdk/react-sdk/api/useAgentConnection",
             "sdk/react-sdk/api/useChannel",
             "sdk/react-sdk/api/useCreateChannel",
