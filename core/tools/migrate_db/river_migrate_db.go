@@ -1513,17 +1513,23 @@ func copyPart(
 	source *pgxpool.Conn,
 	tx pgx.Tx,
 	streamId string,
+	sourceMigrated bool,
 	table string,
 	force bool,
 	sourceInfo *dbInfo,
 	targetSchemaMetadata schemaMetadata,
 ) error {
-	srcPartition := getTableName(table, streamId)
+	var srcPartition string
+	if sourceMigrated {
+		srcPartition = getPartitionName(table, streamId, 256)
+	} else {
+		srcPartition = getTableName(table, streamId)
+	}
 	var targetPartition string
 	if targetSchemaMetadata.migrated {
 		targetPartition = getPartitionName(table, streamId, targetSchemaMetadata.numPartitions)
 	} else {
-		targetPartition = srcPartition
+		targetPartition = getTableName(table, streamId)
 	}
 
 	if verbose {
@@ -1715,8 +1721,9 @@ func copyStream(
 	}
 
 	var latestSnapshotMiniblock int64
-	err := source.QueryRow(ctx, "SELECT latest_snapshot_miniblock FROM es WHERE stream_id = $1", streamId).
-		Scan(&latestSnapshotMiniblock)
+	var migrated bool
+	err := source.QueryRow(ctx, "SELECT latest_snapshot_miniblock, migrated FROM es WHERE stream_id = $1", streamId).
+		Scan(&latestSnapshotMiniblock, &migrated)
 	if err != nil {
 		return wrapError("Failed to read latest snapshot miniblock for stream "+streamId, err)
 	}
@@ -1736,15 +1743,17 @@ func copyStream(
 		return wrapError("Failed to insert into es for stream "+streamId, err)
 	}
 
-	err = copyPart(ctx, source, tx, streamId, "minipools", force, sourceInfo, targetSchemaMetadata)
+	fmt.Printf("stream migrated %v %v\n", streamId, migrated)
+
+	err = copyPart(ctx, source, tx, streamId, migrated, "minipools", force, sourceInfo, targetSchemaMetadata)
 	if err != nil {
 		return err
 	}
-	err = copyPart(ctx, source, tx, streamId, "miniblocks", force, sourceInfo, targetSchemaMetadata)
+	err = copyPart(ctx, source, tx, streamId, migrated, "miniblocks", force, sourceInfo, targetSchemaMetadata)
 	if err != nil {
 		return err
 	}
-	err = copyPart(ctx, source, tx, streamId, "miniblock_candidates", force, sourceInfo, targetSchemaMetadata)
+	err = copyPart(ctx, source, tx, streamId, migrated, "miniblock_candidates", force, sourceInfo, targetSchemaMetadata)
 	if err != nil {
 		return err
 	}
@@ -2255,8 +2264,27 @@ func compareMiniblockContents(
 	targetSchemaMetadata schemaMetadata,
 	streamId string,
 ) error {
-	srcPartition := getTableName("miniblocks", streamId)
-	targetPartition := srcPartition
+	var migrated bool
+	var latestSnapshotMiniblock int
+
+	err := source.QueryRow(
+		ctx,
+		"SELECT latest_snapshot_miniblock, migrated from es where stream_id = $1",
+		streamId,
+	).Scan(&latestSnapshotMiniblock, &migrated)
+	if err != nil {
+		fmt.Println("Error reading stream from es table:", err)
+		os.Exit(1)
+	}
+
+	var srcPartition string
+	if migrated {
+		srcPartition = getPartitionName("miniblocks", streamId, 256)
+	} else {
+		srcPartition = getTableName("miniblocks", streamId)
+	}
+
+	targetPartition := getTableName("miniblocks", streamId)
 	if targetSchemaMetadata.migrated {
 		targetPartition = getPartitionName("miniblocks", streamId, targetSchemaMetadata.numPartitions)
 	}
@@ -2349,8 +2377,27 @@ func compareMiniblockCandidateContents(
 	targetSchemaMetadata schemaMetadata,
 	streamId string,
 ) error {
-	srcPartition := getTableName("miniblock_candidates", streamId)
-	targetPartition := srcPartition
+	var migrated bool
+	var latestSnapshotMiniblock int
+
+	err := source.QueryRow(
+		ctx,
+		"SELECT latest_snapshot_miniblock, migrated from es where stream_id = $1",
+		streamId,
+	).Scan(&latestSnapshotMiniblock, &migrated)
+	if err != nil {
+		fmt.Println("Error reading stream from es table:", err)
+		os.Exit(1)
+	}
+
+	var srcPartition string
+	if migrated {
+		srcPartition = getPartitionName("miniblock_candidates", streamId, 256)
+	} else {
+		srcPartition = getTableName("miniblock_candidates", streamId)
+	}
+
+	targetPartition := getTableName("miniblock_candidates", streamId)
 	if targetSchemaMetadata.migrated {
 		targetPartition = getPartitionName("miniblock_candidates", streamId, targetSchemaMetadata.numPartitions)
 	}
@@ -2532,8 +2579,27 @@ func compareMinipoolContents(
 	targetSchemaMetadata schemaMetadata,
 	streamId string,
 ) error {
-	srcPartition := getTableName("minipools", streamId)
-	targetPartition := srcPartition
+	var migrated bool
+	var latestSnapshotMiniblock int
+
+	err := source.QueryRow(
+		ctx,
+		"SELECT latest_snapshot_miniblock, migrated from es where stream_id = $1",
+		streamId,
+	).Scan(&latestSnapshotMiniblock, &migrated)
+	if err != nil {
+		fmt.Println("Error reading stream from es table:", err)
+		os.Exit(1)
+	}
+
+	var srcPartition string
+	if migrated {
+		srcPartition = getPartitionName("minipools", streamId, 256)
+	} else {
+		srcPartition = getTableName("minipools", streamId)
+	}
+
+	targetPartition := getTableName("minipools", streamId)
 	if targetSchemaMetadata.migrated {
 		targetPartition = getPartitionName("minipools", streamId, targetSchemaMetadata.numPartitions)
 	}
