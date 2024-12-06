@@ -6,8 +6,7 @@
         "@openzeppelin/contracts": "^5.1.0",
         "@openzeppelin/contracts-upgradeable": "^5.1.0",
         "@prb/math": "^4.1.0",
-        "account-abstraction": "github:eth-infinitism/account-abstraction",
-        "@solady": "^0.0.267"
+        "account-abstraction": "github:eth-infinitism/account-abstraction"
     },
     "devDependencies": {
         "@prb/test": "^0.6.4",
