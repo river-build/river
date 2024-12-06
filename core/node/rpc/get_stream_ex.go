@@ -21,18 +21,14 @@ func (s *Service) localGetStreamEx(
 		return err
 	}
 
-	var miniblockNumber int64 = 0
-	for {
-		miniblocks, err := s.storage.ReadMiniblocks(ctx, streamId, miniblockNumber, miniblockNumber+1)
-		if err != nil {
-			return err
-		}
-		if len(miniblocks) == 0 {
-			break
-		}
+	miniblocksDs, err := s.storage.ReadMiniblocksByStream(ctx, streamId)
+	if err != nil {
+		return err
+	}
 
+	for miniblocksDs.Next() {
 		var miniblock Miniblock
-		err = proto.Unmarshal(miniblocks[0], &miniblock)
+		err = proto.Unmarshal(miniblocksDs.Miniblock(), &miniblock)
 		if err != nil {
 			return WrapRiverError(Err_BAD_BLOCK, err).Message("Unable to unmarshal miniblock")
 		}
@@ -44,12 +40,15 @@ func (s *Service) localGetStreamEx(
 		}); err != nil {
 			return err
 		}
+	}
 
-		miniblockNumber++
+	// Check if there was an error during iteration.
+	if err = miniblocksDs.Err(); err != nil {
+		return err
 	}
 
 	// Send back an empty response to signal the end of the stream.
-	if err := resp.Send(&GetStreamExResponse{}); err != nil {
+	if err = resp.Send(&GetStreamExResponse{}); err != nil {
 		return err
 	}
 

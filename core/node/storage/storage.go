@@ -19,6 +19,21 @@ type ReadStreamFromLastSnapshotResult struct {
 	MinipoolEnvelopes       [][]byte
 }
 
+// MiniblocksDataStream is an interface for reading miniblocks from a stream.
+type MiniblocksDataStream interface {
+	// Next returns true if there are more miniblocks to read.
+	Next() bool
+
+	// Miniblock returns the current miniblock data.
+	Miniblock() []byte
+
+	// Err returns any error encountered during iteration.
+	Err() error
+
+	// Close closes the stream.
+	Close()
+}
+
 type StreamStorage interface {
 	// CreateStreamStorage creates a new stream with the given genesis miniblock at index 0.
 	// Last snapshot minblock index is set to 0.
@@ -35,10 +50,13 @@ type StreamStorage interface {
 		numToRead int,
 	) (*ReadStreamFromLastSnapshotResult, error)
 
-	// Returns miniblocks with miniblockNum or "generation" from fromInclusive, to toExlusive.
+	// ReadMiniblocks returns miniblocks with miniblockNum or "generation" from fromInclusive, to toExlusive.
 	ReadMiniblocks(ctx context.Context, streamId StreamId, fromInclusive int64, toExclusive int64) ([][]byte, error)
 
-	// Adds event to the given minipool.
+	// ReadMiniblocksByStream returns miniblocks data stream for the given stream.
+	ReadMiniblocksByStream(ctx context.Context, streamId StreamId) (MiniblocksDataStream, error)
+
+	// WriteEvent adds event to the given minipool.
 	// Current generation of minipool should match minipoolGeneration,
 	// and there should be exactly minipoolSlot events in the minipool.
 	WriteEvent(
