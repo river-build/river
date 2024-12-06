@@ -18,24 +18,13 @@ func (s *Service) localGetStreamEx(
 		return err
 	}
 
-	miniblocksDs, err := s.storage.ReadMiniblocksByStream(ctx, streamId)
-	if err != nil {
-		return err
-	}
-	defer miniblocksDs.Close()
-
-	for miniblocksDs.Next() {
-		if err := resp.Send(&GetStreamExResponse{
+	if err = s.storage.ReadMiniblocksByStream(ctx, streamId, func(mb *Miniblock) error {
+		return resp.Send(&GetStreamExResponse{
 			Data: &GetStreamExResponse_Miniblock{
-				Miniblock: miniblocksDs.Miniblock(),
+				Miniblock: mb,
 			},
-		}); err != nil {
-			return err
-		}
-	}
-
-	// Check if there was an error during iteration.
-	if err = miniblocksDs.Err(); err != nil {
+		})
+	}); err != nil {
 		return err
 	}
 

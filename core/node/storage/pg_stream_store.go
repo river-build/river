@@ -871,35 +871,29 @@ func (s *PostgresStreamStore) readMiniblocksTx(
 func (s *PostgresStreamStore) ReadMiniblocksByStream(
 	ctx context.Context,
 	streamId StreamId,
-) (MiniblocksDataStream, error) {
-	var miniblocksDs MiniblocksDataStream
-	err := s.txRunnerWithUUIDCheck(
+	onEachMb func(mb *Miniblock) error,
+) error {
+	return s.txRunnerWithUUIDCheck(
 		ctx,
 		"ReadMiniblocksByStream",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
-			var err error
-			miniblocksDs, err = s.readMiniblocksByStreamTx(ctx, tx, streamId)
-			return err
+			return s.readMiniblocksByStreamTx(ctx, tx, streamId, onEachMb)
 		},
 		nil,
 		"streamId", streamId,
 	)
-	if err != nil {
-		return nil, err
-	}
-
-	return miniblocksDs, nil
 }
 
 func (s *PostgresStreamStore) readMiniblocksByStreamTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
-) (MiniblocksDataStream, error) {
+	onEachMb func(mb *Miniblock) error,
+) error {
 	_, migrated, err := s.lockStream(ctx, tx, streamId, false)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	rows, err := tx.Query(
@@ -912,10 +906,16 @@ func (s *PostgresStreamStore) readMiniblocksByStreamTx(
 		streamId,
 	)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return newMiniblocksDataStream(rows, streamId), nil
+	var seqNum int
+	mb := new(Miniblock)
+	_, err = pgx.ForEachRow(rows, []any{&seqNum, &mb}, func() error {
+		return onEachMb(mb)
+	})
+
+	return err
 }
 
 // WriteMiniblockCandidate adds a miniblock proposal candidate. When the miniblock is finalized, the node will promote the
