@@ -2596,7 +2596,7 @@ func compareMinipoolContents(
 	if migrated {
 		srcPartition = getPartitionName("minipools", streamId, 256)
 	} else {
-		srcPartition = getTableName("minibpools", streamId)
+		srcPartition = getTableName("minipools", streamId)
 	}
 
 	targetPartition := getTableName("minipools", streamId)
