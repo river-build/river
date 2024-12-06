@@ -298,7 +298,7 @@ contract DeployBaseRegistry is DiamondHelper, Deployer {
   function diamondInitHelper(
     address deployer,
     string[] memory facetNames
-  ) external returns (FacetCut[] memory) {
+  ) external override returns (FacetCut[] memory) {
     diamondInitParamsFromFacets(deployer, facetNames);
     return this.getCuts();
   }

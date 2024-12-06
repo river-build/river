@@ -63,13 +63,6 @@ abstract contract AlphaHelper is Interaction, DiamondHelper, IDiamondLoupeBase {
     clearCuts();
   }
 
-  function diamondInitHelper(
-    address, // deployer
-    string[] memory // facetNames
-  ) external pure returns (FacetCut[] memory) {
-    return new FacetCut[](0);
-  }
-
   function removeRemoteFacetsByAddresses(
     address deployer,
     address diamond,

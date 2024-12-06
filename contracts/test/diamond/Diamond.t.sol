@@ -54,6 +54,13 @@ abstract contract DiamondHelper is IDiamondInitHelper {
     return _cuts;
   }
 
+  function diamondInitHelper(
+    address, // deployer
+    string[] memory // facetNames
+  ) external virtual returns (FacetCut[] memory) {
+    return new FacetCut[](0);
+  }
+
   function _resetIndex() internal {
     _index = 0;
   }
