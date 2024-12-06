@@ -1,0 +1,87 @@
+---
+title: useAdminRedact
+---
+Hook to redact any message in a channel if you're an admin.
+
+## Imports
+
+```ts
+import { useAdminRedact } from '@river-build/react-sdk'
+```
+
+## Examples
+
+### Redact a message
+
+You can use `adminRedact` to redact a message in a stream.
+```ts
+import { useAdminRedact } from '@river-build/react-sdk'
+
+const { adminRedact } = useAdminRedact(streamId)
+adminRedact({ eventId: messageEventId })
+```
+### Redact a message reaction
+
+You can also use `redact` to redact a message reaction in a stream.
+```ts
+import { useRedact } from '@river-build/react-sdk'
+
+const { redact } = useRedact(streamId)
+redact({ eventId: reactionEventId })
+```
+
+## Definition
+
+```ts
+function useAdminRedact(
+  streamId: string,
+  config?: ActionConfig<Channel['adminRedact']>,
+): {
+    data: {
+        eventId: string;
+    } | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    adminRedact: (eventId: string) => Promise<{
+        eventId: string;
+    }>;
+}
+```
+
+**Source:** [useAdminRedact](https://github.com/river-build/river/blob/main/packages/react-sdk/src/useAdminRedact.ts)
+
+## Parameters
+
+### streamId
+
+- **Type:** `string`
+
+The id of the stream to redact the message in.
+
+### config
+
+- **Type:** `ActionConfig<Channel['adminRedact']>`
+- **Optional**
+
+Configuration options for the action.
+
+## Return Type
+
+The `redact` action and its loading state.
+
+```ts
+{
+    data: {
+        eventId: string;
+    } | undefined;
+    error: Error | undefined;
+    isPending: boolean;
+    isSuccess: boolean;
+    isError: boolean;
+    adminRedact: (eventId: string) => Promise<{
+        eventId: string;
+    }>;
+}
+```
