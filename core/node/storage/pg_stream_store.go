@@ -875,7 +875,7 @@ func (s *PostgresStreamStore) ReadMiniblocksByStream(
 	var miniblocksDs MiniblocksDataStream
 	err := s.txRunnerWithUUIDCheck(
 		ctx,
-		"ReadMiniblocks",
+		"ReadMiniblocksByStream",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
 			var err error
