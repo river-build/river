@@ -4,7 +4,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	. "github.com/river-build/river/core/node/base"
-	.
+	. "github.com/river-build/river/core/node/protocol"
+	. "github.com/river-build/river/core/node/shared"
 )
 
 // miniblocksDataStream implements MiniblocksDataStream interface for reading miniblocks from a stream.
