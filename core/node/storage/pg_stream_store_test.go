@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -28,6 +29,11 @@ type testStreamStoreParams struct {
 	schema        string
 	config        *config.DatabaseConfig
 	closer        func()
+	// For retaining schema and manually closing the store, use
+	// the following two cleanup functions to manually delete the
+	// schema and cancel the test context.
+	schemaDeleter func()
+	ctxCloser     func()
 	exitSignal    chan error
 	migrated      bool
 }
@@ -74,12 +80,14 @@ func setupStreamStorageTest(t *testing.T, migrateStreamCreation bool) *testStrea
 		schema:        dbSchemaName,
 		config:        dbCfg,
 		exitSignal:    exitSignal,
-		closer: func() {
+		closer: sync.OnceFunc(func() {
 			store.Close(ctx)
 			dbCloser()
 			ctxCloser()
-		},
-		migrated: migrateStreamCreation,
+		}),
+		schemaDeleter: dbCloser,
+		ctxCloser:     ctxCloser,
+		migrated:      migrateStreamCreation,
 	}
 
 	return params
@@ -616,7 +624,8 @@ func testExitIfSecondStorageCreated(params *testStreamStoreParams) {
 	require := require.New(params.t)
 	ctx := params.ctx
 	pgStreamStore := params.pgStreamStore
-	defer params.closer()
+	defer params.schemaDeleter()
+	defer params.ctxCloser()
 
 	// Give listener thread some time to start
 	time.Sleep(500 * time.Millisecond)
@@ -636,15 +645,21 @@ func testExitIfSecondStorageCreated(params *testStreamStoreParams) {
 
 	instanceId2 := GenShortNanoid()
 	exitSignal2 := make(chan error, 1)
-	pgStreamStore2, err := NewPostgresStreamStore(
-		ctx,
-		pool,
-		instanceId2,
-		exitSignal2,
-		infra.NewMetricsFactory(nil, "", ""),
-	)
-	require.NoError(err)
-	defer pgStreamStore2.Close(ctx)
+
+	var secondStoreInitialized sync.WaitGroup
+	secondStoreInitialized.Add(1)
+	var pgStreamStore2 *PostgresStreamStore
+	go func() {
+		pgStreamStore2, err = NewPostgresStreamStore(
+			ctx,
+			pool,
+			instanceId2,
+			exitSignal2,
+			infra.NewMetricsFactory(nil, "", ""),
+		)
+		require.NoError(err)
+		secondStoreInitialized.Done()
+	}()
 
 	// Give listener thread for the first store some time to detect the notification and emit an error
 	time.Sleep(500 * time.Millisecond)
@@ -652,6 +667,10 @@ func testExitIfSecondStorageCreated(params *testStreamStoreParams) {
 	exitErr := <-params.exitSignal
 	require.Error(exitErr)
 	require.Equal(Err_RESOURCE_EXHAUSTED, AsRiverError(exitErr).Code)
+	pgStreamStore.Close(ctx)
+
+	secondStoreInitialized.Wait()
+	defer pgStreamStore2.Close(ctx)
 
 	result, err := pgStreamStore2.ReadStreamFromLastSnapshot(ctx, streamId, 0)
 	require.NoError(err)
