@@ -22,6 +22,7 @@ func (s *Service) localGetStreamEx(
 	if err != nil {
 		return err
 	}
+	defer miniblocksDs.Close()
 
 	for miniblocksDs.Next() {
 		if err := resp.Send(&GetStreamExResponse{

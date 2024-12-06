@@ -790,7 +790,7 @@ func (s *PostgresStreamStore) ReadMiniblocks(
 	fromInclusive int64,
 	toExclusive int64,
 ) ([][]byte, error) {
-	miniblocks := make([][]byte, 0, toExclusive-fromInclusive)
+	var miniblocks [][]byte
 	err := s.txRunnerWithUUIDCheck(
 		ctx,
 		"ReadMiniblocks",
@@ -841,7 +841,7 @@ func (s *PostgresStreamStore) readMiniblocksTx(
 	defer miniblocksRow.Close()
 
 	// Retrieve miniblocks starting from the latest miniblock with snapshot
-	var miniblocks [][]byte
+	miniblocks := make([][]byte, 0, toExclusive-fromInclusive)
 
 	var prevSeqNum int = -1 // There is no negative generation, so we use it as a flag on the first step of the loop during miniblocks sequence check
 	for miniblocksRow.Next() {
