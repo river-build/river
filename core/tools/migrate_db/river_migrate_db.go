@@ -1743,6 +1743,8 @@ func copyStream(
 		return wrapError("Failed to insert into es for stream "+streamId, err)
 	}
 
+	fmt.Printf("stream migrated %v %v\n", streamId, migrated)
+
 	err = copyPart(ctx, source, tx, streamId, migrated, "minipools", force, sourceInfo, targetSchemaMetadata)
 	if err != nil {
 		return err
