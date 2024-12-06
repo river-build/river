@@ -327,10 +327,12 @@ func (s *PostgresStreamStore) initStreamStorage(ctx context.Context) error {
 	// In the meantime, any other nodes should detect the new entry in the table and
 	// shut themselves down.
 	ctx, cancel := context.WithCancel(ctx)
-	s.acquireSchemaLock(ctx)
+	err = s.acquireSchemaLock(ctx)
 	s.cleanupLockFunc = cancel
 
-	return nil
+	return AsRiverError(err, Err_DB_OPERATION_FAILURE).
+		Message("Unable to acquire lock on database schema").
+		Func("initStreamStorage")
 }
 
 // txRunner runs transactions against the underlying postgres store. This override
