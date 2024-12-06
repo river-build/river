@@ -225,7 +225,7 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 			}
 
 			if !acquired {
-				err = AsRiverError(fmt.Errorf("Lock was not available"), Err_RESOURCE_EXHAUSTED).
+				err = AsRiverError(fmt.Errorf("lock was not available"), Err_RESOURCE_EXHAUSTED).
 					Message("Lost connection and unable to re-acquire schema lock").
 					Func("maintainSchemaLock").
 					Tag("schema", s.schemaName).
