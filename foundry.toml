@@ -29,6 +29,7 @@ src = 'packages/llama/src'
 test = 'packages/llama/test'
 out = 'packages/llama/out'
 block_timestamp = 1
+ffi = true
 
 [etherscan]
 sepolia = { chain = 11155111, key = "${ETHERSCAN_API_KEY}" }
