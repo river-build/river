@@ -6515,6 +6515,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@river-build/llama@workspace:packages/llama-fork":
+  version: 0.0.0-use.local
+  resolution: "@river-build/llama@workspace:packages/llama-fork"
+  dependencies:
+    "@openzeppelin/contracts": ^5.1.0
+    forge-std: "github:foundry-rs/forge-std#v1.9.4"
+  languageName: unknown
+  linkType: soft
+
 "@river-build/metrics-discovery@workspace:packages/metrics-discovery":
   version: 0.0.0-use.local
   resolution: "@river-build/metrics-discovery@workspace:packages/metrics-discovery"

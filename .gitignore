@@ -25,6 +25,9 @@ contracts/.openzeppelin/unknown-*.json
 contracts/docs/coverage
 contracts/.env
 contracts/.env.tpl
+packages/llama/.env
+packages/llama/cache
+packages/llama/out
 
 abi/
 
