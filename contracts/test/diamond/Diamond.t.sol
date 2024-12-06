@@ -8,7 +8,14 @@ pragma solidity ^0.8.0;
 //contracts
 import {IDiamond, Diamond} from "contracts/src/diamond/Diamond.sol";
 
-abstract contract DiamondHelper is IDiamond {
+interface IDiamondInitHelper is IDiamond {
+  function diamondInitHelper(
+    address deployer,
+    string[] memory facetNames
+  ) external returns (FacetCut[] memory);
+}
+
+abstract contract DiamondHelper is IDiamondInitHelper {
   string public name = "DiamondHelper";
 
   uint256 private _index = 0;
