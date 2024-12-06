@@ -152,10 +152,7 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 	conn *pgxpool.Conn,
 ) {
 	log := dlog.FromCtx(ctx)
-	defer func() {
-		log.Info("Releasing connection")
-		conn.Release()
-	}()
+	defer conn.Release()
 
 	lockId := xxhash.Sum64String(s.schemaName)
 
@@ -182,11 +179,6 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 
 			// Attempt to re-acquire a connection
 			conn, err = s.acquireConnection(ctx)
-			log.Info("Acquired connection")
-			defer func() {
-				log.Info("Releasing connection")
-				conn.Release()
-			}()
 
 			// Shutdown the node for non-cancellation errors
 			if errors.Is(err, context.Canceled) {
@@ -201,6 +193,9 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 					LogError(dlog.FromCtx(ctx))
 				s.exitSignal <- err
 			}
+
+			log.Info("Acquired connection")
+			defer conn.Release()
 
 			// Attempt to re-establish the lock
 			var acquired bool
