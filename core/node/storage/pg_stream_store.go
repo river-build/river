@@ -330,9 +330,13 @@ func (s *PostgresStreamStore) initStreamStorage(ctx context.Context) error {
 	err = s.acquireSchemaLock(ctx)
 	s.cleanupLockFunc = cancel
 
-	return AsRiverError(err, Err_DB_OPERATION_FAILURE).
-		Message("Unable to acquire lock on database schema").
-		Func("initStreamStorage")
+	if err != nil {
+		return AsRiverError(err, Err_DB_OPERATION_FAILURE).
+			Message("Unable to acquire lock on database schema").
+			Func("initStreamStorage")
+	}
+
+	return nil
 }
 
 // txRunner runs transactions against the underlying postgres store. This override
