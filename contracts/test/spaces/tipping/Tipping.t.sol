@@ -45,12 +45,11 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
     vm.assume(sender != address(0) && sender.code.length == 0);
     vm.assume(receiver != address(0) && receiver.code.length == 0);
 
-    vm.startPrank(sender);
+    vm.prank(sender);
     membership.joinSpace(sender);
-    vm.stopPrank();
-    vm.startPrank(receiver);
+
+    vm.prank(receiver);
     membership.joinSpace(receiver);
-    vm.stopPrank();
     _;
   }
 
@@ -86,7 +85,7 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
     assertEq(receiver.balance, amount);
     assertEq(sender.balance, 0);
     assertEq(
-      tipping.tipsByCurrencyByTokenId(tokenId, CurrencyTransfer.NATIVE_TOKEN),
+      tipping.tipsByCurrencyAndTokenId(tokenId, CurrencyTransfer.NATIVE_TOKEN),
       amount
     );
     assertContains(tipping.tippingCurrencies(), CurrencyTransfer.NATIVE_TOKEN);
@@ -128,7 +127,7 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
     assertEq(mockERC20.balanceOf(sender), 0);
     assertEq(mockERC20.balanceOf(receiver), amount);
     assertEq(
-      tipping.tipsByCurrencyByTokenId(tokenId, address(mockERC20)),
+      tipping.tipsByCurrencyAndTokenId(tokenId, address(mockERC20)),
       amount
     );
     assertContains(tipping.tippingCurrencies(), address(mockERC20));

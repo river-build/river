@@ -58,7 +58,7 @@ interface ITipping is ITippingBase {
   /// @param tokenId The token ID to get tips for
   /// @param currency The currency address to get tips in
   /// @return The total amount of tips received in the specified currency
-  function tipsByCurrencyByTokenId(
+  function tipsByCurrencyAndTokenId(
     uint256 tokenId,
     address currency
   ) external view returns (uint256);

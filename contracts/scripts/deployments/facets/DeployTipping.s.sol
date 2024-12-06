@@ -13,7 +13,7 @@ import {FacetHelper} from "contracts/test/diamond/Facet.t.sol";
 contract DeployTipping is FacetHelper, Deployer {
   constructor() {
     addSelector(TippingFacet.tip.selector);
-    addSelector(TippingFacet.tipsByCurrencyByTokenId.selector);
+    addSelector(TippingFacet.tipsByCurrencyAndTokenId.selector);
     addSelector(TippingFacet.tippingCurrencies.selector);
   }
 

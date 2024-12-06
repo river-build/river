@@ -6,6 +6,7 @@ import {ITipping} from "./ITipping.sol";
 
 // libraries
 import {TippingBase} from "./TippingBase.sol";
+import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 
 // contracts
 import {ERC721ABase} from "contracts/src/diamond/facets/token/ERC721A/ERC721ABase.sol";
@@ -18,18 +19,17 @@ contract TippingFacet is ITipping, ERC721ABase, Facet {
 
   /// @inheritdoc ITipping
   function tip(TipRequest calldata tipRequest) external payable {
-    address sender = msg.sender;
     address receiver = _ownerOf(tipRequest.tokenId);
 
     _validateTipRequest(
-      sender,
+      msg.sender,
       receiver,
       tipRequest.currency,
       tipRequest.amount
     );
 
     TippingBase.tip(
-      sender,
+      msg.sender,
       receiver,
       tipRequest.tokenId,
       tipRequest.currency,
@@ -39,7 +39,7 @@ contract TippingFacet is ITipping, ERC721ABase, Facet {
     emit Tip(
       tipRequest.tokenId,
       tipRequest.currency,
-      sender,
+      msg.sender,
       receiver,
       tipRequest.amount
     );
@@ -53,7 +53,7 @@ contract TippingFacet is ITipping, ERC721ABase, Facet {
   }
 
   /// @inheritdoc ITipping
-  function tipsByCurrencyByTokenId(
+  function tipsByCurrencyAndTokenId(
     uint256 tokenId,
     address currency
   ) external view returns (uint256) {
@@ -70,9 +70,11 @@ contract TippingFacet is ITipping, ERC721ABase, Facet {
     address currency,
     uint256 amount
   ) internal view {
-    if (currency == address(0)) revert CurrencyIsZero();
-    if (sender == receiver) revert CannotTipSelf();
-    if (amount == 0) revert AmountIsZero();
-    if (_balanceOf(sender) == 0) revert SenderIsNotMember();
+    if (currency == address(0))
+      CustomRevert.revertWith(CurrencyIsZero.selector);
+    if (sender == receiver) CustomRevert.revertWith(CannotTipSelf.selector);
+    if (amount == 0) CustomRevert.revertWith(AmountIsZero.selector);
+    if (_balanceOf(sender) == 0)
+      CustomRevert.revertWith(SenderIsNotMember.selector);
   }
 }
