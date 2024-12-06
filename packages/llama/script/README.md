@@ -1,9 +1,10 @@
 # Llama Scripts
 
 The current Llama scripts are:
-* `DeployLlamaFactory.s.sol`, which deploys the LlamaFactory, logic/implementation contracts, and LlamaLens to new chains
-* `DeployLlamaInstance.s.sol`, which deploys new Llama instances using a JSON-based configuration
-* `ConfigureAdvancedLlamaInstance.s.sol`, which completes the initialization of advanced instance deployments with a code-based configuration
+
+- `DeployLlamaFactory.s.sol`, which deploys the LlamaFactory, logic/implementation contracts, and LlamaLens to new chains
+- `DeployLlamaInstance.s.sol`, which deploys new Llama instances using a JSON-based configuration
+- `ConfigureAdvancedLlamaInstance.s.sol`, which completes the initialization of advanced instance deployments with a code-based configuration
 
 Additionally, both `DeployLlamaFactory` and `DeployLlamaInstance` are called during the test bootstrap process to establish the state against which most of the test suite runs.
 
@@ -12,6 +13,7 @@ Additionally, both `DeployLlamaFactory` and `DeployLlamaInstance` are called dur
 Before running any script that deploys a new Llama instance, it is important to understand the one special-cased role ID and permission ID in the system.
 
 A newly deployed Llama instance may be unusable if not properly configured. In particular, the core requirements are:
+
 - A policyholder can call the policy's `setRolePermission` method.
 - The strategy used when calling that method can be executed.
 
@@ -28,7 +30,7 @@ A key part of ensuring the instance is not misconfigured is ensuring that the `b
 
 ### Standard vs Advanced Deployments
 
-Standard deployments define their instance configuration in a JSON file. The `DeployLlamaInstance` script uses this JSON-based configuration as the input to call the `LlamaFactory` deploy function. This is the preferred deployment method for most instances. 
+Standard deployments define their instance configuration in a JSON file. The `DeployLlamaInstance` script uses this JSON-based configuration as the input to call the `LlamaFactory` deploy function. This is the preferred deployment method for most instances.
 
 For instances that want a more flexible, code-based deployment method, they can use the `DeployLlamaInstance` script along with the `ConfigureAdvancedInstance` script. This can be used to handle advanced use cases such as configuring both absolute and relative strategies. The `DeployLlamaInstance` script is run using a configuration similar to `script/input/31337/advancedInstanceConfig.json`. This deploys the instance with a single configuration bot policyholder. The configuration file for advanced deployments must have an instant execution strategy as the bootstrap strategy (first strategy in `initialStrategies`) and role #1 must be assigned to the deployer of the `ConfigureAdvancedInstance` script.
 
@@ -45,6 +47,7 @@ To start anvil:
 # Start anvil, forking from the desired network.
 anvil --fork-url $OPTIMISM_RPC_URL
 ```
+
 Next, set `SCRIPT_PRIVATE_KEY` in your `.env` file. For a dry run, you can just
 use one of the pre-provisioned private keys that anvil provides on startup.
 
@@ -72,7 +75,7 @@ been run for a given chain. So follow the instructions above before continuing
 here.
 
 Once `DeployLlamaFactory` has been run, set a `SCRIPT_DEPLOYER_ADDRESS` in your `.env` that corresponds to the `SCRIPT_PRIVATE_KEY` that you want deploy the Llama instance.
-It does *not* have to be the same address that did the initial deploy, but it could be.
+It does _not_ have to be the same address that did the initial deploy, but it could be.
 Add your desired Llama instance configuration JSON file to `script/input/<CHAIN_ID_OF_DEPLOYMENT_CHAIN>` and update the `run-deploy-instance-script` command in the `justfile` to match your configuration's filename.
 
 Once your `.env` file is configured and anvil is running, you can perform a dry
