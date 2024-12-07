@@ -492,7 +492,9 @@ func (st *serviceTester) httpGet(url string) string {
 }
 
 type testClient struct {
+	t            *testing.T
 	ctx          context.Context
+	assert       *assert.Assertions
 	require      *require.Assertions
 	client       protocolconnect.StreamServiceClient
 	wallet       *crypto.Wallet
@@ -504,7 +506,9 @@ func (st *serviceTester) newTestClient(i int) *testClient {
 	wallet, err := crypto.NewWallet(st.ctx)
 	st.require.NoError(err)
 	return &testClient{
+		t:            st.t,
 		ctx:          st.ctx,
+		assert:       assert.New(st.t),
 		require:      st.require,
 		client:       st.testClient(i),
 		wallet:       wallet,
@@ -516,6 +520,7 @@ func (st *serviceTester) newTestClient(i int) *testClient {
 func (tc *testClient) withRequireFor(t require.TestingT) *testClient {
 	var tcc testClient = *tc
 	tcc.require = require.New(t)
+	tcc.assert = assert.New(t)
 	return &tcc
 }
 
@@ -649,6 +654,13 @@ func (tc *testClient) listen(channelId StreamId, userIds []common.Address, messa
 			}
 		}
 		tc.require.NotZero(notEmptyCount, "internal: conversation can't have empty step")
+		tc.require.GreaterOrEqual(
+			len(msgs),
+			notEmptyCount,
+			"Not enough was said, left %#v, expected %#v",
+			msgs,
+			expected,
+		)
 		current := msgs[:notEmptyCount]
 		msgs = msgs[notEmptyCount:]
 		expectedWithUserIds := []usersMessage{}
@@ -743,9 +755,9 @@ func (tcs testClients) requireMembership(streamId StreamId, expectedMemberships 
 	} else {
 		expected = tcs.userIds()
 	}
-	for _, tc := range tcs {
+	tcs.parallelForAll(func(tc *testClient) {
 		tc.requireMembership(streamId, expected)
-	}
+	})
 }
 
 func (tcs testClients) userIds() []common.Address {
@@ -757,16 +769,54 @@ func (tcs testClients) userIds() []common.Address {
 }
 
 func (tcs testClients) listen(channelId StreamId, messages [][]string) {
-	for _, tc := range tcs {
-		tc.listen(channelId, tcs.userIds(), messages)
-	}
+	userIds := tcs.userIds()
+	tcs.parallelForAll(func(tc *testClient) {
+		tc.listen(channelId, userIds, messages)
+	})
 }
 
 func (tcs testClients) say(channelId StreamId, messages ...string) {
-	tcs[0].require.LessOrEqual(len(messages), len(tcs))
-	for i, msg := range messages {
+	parallel(tcs, func(tc *testClient, msg string) {
 		if msg != "" {
-			tcs[i].say(channelId, msg)
+			tc.say(channelId, msg)
+		}
+	}, messages...)
+}
+
+// parallel calls each function for client with the same index in parallel.
+func parallel[Params any](tcs testClients, f func(*testClient, Params), params ...Params) {
+	tcs[0].require.LessOrEqual(len(params), len(tcs))
+	resultC := make(chan int, len(params))
+	for i, p := range params {
+		go func() {
+			defer func() {
+				resultC <- i
+			}()
+			f(tcs[i], p)
+		}()
+	}
+	for range params {
+		i := <-resultC
+		if tcs[i].t.Failed() {
+			return
+		}
+	}
+}
+
+func (tcs testClients) parallelForAll(f func(*testClient)) {
+	resultC := make(chan int, len(tcs))
+	for i, tc := range tcs {
+		go func() {
+			defer func() {
+				resultC <- i
+			}()
+			f(tc)
+		}()
+	}
+	for range tcs {
+		i := <-resultC
+		if tcs[i].t.Failed() {
+			return
 		}
 	}
 }

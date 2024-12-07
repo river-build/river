@@ -31,11 +31,18 @@ func TestReplMulticlientSimple(t *testing.T) {
 	allClients = append(allClients, carol)
 	allClients.requireMembership(channelId)
 
-	allClients.say(channelId, "hello from Alice", "hello from Bob", "hello from Carol")
+	phrases1 := []string{"hello from Alice", "hello from Bob", "hello from Carol"}
+	allClients.say(channelId, phrases1...)
 
-	allClients.listen(channelId, [][]string{
-		{"hello from Alice", "hello from Bob", "hello from Carol"},
-	})
+	allClients.listen(channelId, [][]string{phrases1})
+
+	phrases2 := []string{"hello from Alice 2", "hello from Bob 2", "hello from Carol 2"}
+	allClients.say(channelId, phrases2...)
+	allClients.listen(channelId, [][]string{phrases1, phrases2})
+
+	phrases3 := []string{"", "hello from Bob 3", ""}
+	allClients.say(channelId, phrases3...)
+	allClients.listen(channelId, [][]string{phrases1, phrases2, phrases3})
 }
 
 func TestReplSpeakUntilMbTrim(t *testing.T) {
