@@ -1451,39 +1451,6 @@ func (s *PostgresStreamStore) getStreamsNumberTx(ctx context.Context, tx pgx.Tx)
 	return count, nil
 }
 
-func (s *PostgresStreamStore) compareUUID(ctx context.Context, tx pgx.Tx) error {
-	log := dlog.FromCtx(ctx)
-
-	rows, err := tx.Query(ctx, "SELECT uuid FROM singlenodekey")
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	allIds := []string{}
-	for rows.Next() {
-		var id string
-		err = rows.Scan(&id)
-		if err != nil {
-			return err
-		}
-		allIds = append(allIds, id)
-	}
-
-	if len(allIds) == 1 && allIds[0] == s.nodeUUID {
-		return nil
-	}
-
-	err = RiverError(Err_RESOURCE_EXHAUSTED, "No longer a current node, shutting down").
-		Func("pg.compareUUID").
-		Tag("currentUUID", s.nodeUUID).
-		Tag("schema", s.schemaName).
-		Tag("newUUIDs", allIds).
-		LogError(log)
-	s.exitSignal <- err
-	return err
-}
-
 // Close removes instance record from singlenodekey table, releases the listener connection, and
 // closes the postgres connection pool
 func (s *PostgresStreamStore) Close(ctx context.Context) {
