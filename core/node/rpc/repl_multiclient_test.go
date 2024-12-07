@@ -8,8 +8,6 @@ import (
 
 func TestReplMulticlientSimple(t *testing.T) {
 	tt := newServiceTester(t, serviceTesterOpts{numNodes: 5, replicationFactor: 5, start: true})
-	// ctx := tt.ctx
-	// require := tt.require
 
 	alice := tt.newTestClient(0)
 
