@@ -2,39 +2,23 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {IDiamondLoupe, IDiamondLoupeBase} from "contracts/src/diamond/facets/loupe/IDiamondLoupe.sol";
 import {IDiamondCut} from "contracts/src/diamond/facets/cut/IDiamondCut.sol";
-import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import {IERC173} from "contracts/src/diamond/facets/ownable/IERC173.sol";
-import {IOwnablePending} from "contracts/src/diamond/facets/ownable/pending/IOwnablePending.sol";
-import {IDiamondInitHelper} from "contracts/test/diamond/Diamond.t.sol";
-
-import {Diamond} from "contracts/src/diamond/Diamond.sol";
-import {DiamondHelper} from "contracts/test/diamond/Diamond.t.sol";
 
 // libraries
 import {stdJson} from "forge-std/StdJson.sol";
 import "forge-std/console.sol";
 
 // contracts
-import {DeployHelpers} from "../common/DeployHelpers.s.sol";
 import {AlphaHelper} from "contracts/scripts/interactions/helpers/AlphaHelper.sol";
 
-import {DeploySpace} from "contracts/scripts/deployments/diamonds/DeploySpace.s.sol";
-import {DeploySpaceFactory} from "contracts/scripts/deployments/diamonds/DeploySpaceFactory.s.sol";
-import {DeployBaseRegistry} from "contracts/scripts/deployments/diamonds/DeployBaseRegistry.s.sol";
-import {DeploySpaceOwner} from "contracts/scripts/deployments/diamonds/DeploySpaceOwner.s.sol";
+import {DeployRiverRegistry} from "contracts/scripts/deployments/diamonds/DeployRiverRegistry.s.sol";
+import {IDiamondInitHelper} from "contracts/test/diamond/Diamond.t.sol";
 
-contract InteractAlphaSparse is AlphaHelper {
-  using stdJson for string;
-
+contract InteractRiverAlphaSparse is AlphaHelper {
   mapping(string => address) private diamondDeployments;
 
   constructor() {
-    diamondDeployments["space"] = address(new DeploySpace());
-    diamondDeployments["spaceFactory"] = address(new DeploySpaceFactory());
-    diamondDeployments["baseRegistry"] = address(new DeployBaseRegistry());
-    diamondDeployments["spaceOwner"] = address(new DeploySpaceOwner());
+    diamondDeployments["riverRegistry"] = address(new DeployRiverRegistry());
   }
 
   string constant DEFAULT_JSON_FILE = "compiled_source_diff.json";
