@@ -389,7 +389,7 @@ func TestArchive100Streams(t *testing.T) {
 }
 
 func TestArchive100StreamsWithData(t *testing.T) {
-	tester := newServiceTester(t, serviceTesterOpts{numNodes: 10, start: true})
+	tester := newServiceTester(t, serviceTesterOpts{numNodes: 10, start: true, printTestLogs: true})
 	ctx := tester.ctx
 	require := tester.require
 
