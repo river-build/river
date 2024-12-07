@@ -142,6 +142,18 @@ func NewPostgresStreamStore(
 	return store, nil
 }
 
+func (s *PostgresStreamStore) debugLogConnectionPid(ctx context.Context, conn *pgxpool.Conn) {
+	log := dlog.FromCtx(ctx)
+
+	var pid int
+	err := conn.QueryRow(context.Background(), "SELECT pg_backend_pid();").Scan(&pid)
+	if err != nil {
+		log.Error("Failed to get connection PID", "error", err)
+	} else {
+		log.Info("Connection PID", "id", pid)
+	}
+}
+
 // maintainSchemaLock periodically checks the connection that established the
 // lock on the schema and will attempt to establish a new connection and take
 // the lock again if the connection is lost. If the lock is lost and cannot be
@@ -156,10 +168,17 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 
 	lockId := xxhash.Sum64String(s.schemaName)
 
+	count := 0
 	for {
 		// Check for connection health with a ping. Also, maintain the connection in the
 		// case of idle timeouts.
 		err := conn.Ping(ctx)
+		count++
+
+		if count%10 == 0 {
+			log.Info("DB Ping!", "error", err)
+		}
+
 		if err != nil {
 			// We expect cancellation only on node shutdown. In this case,
 			// do not send an error signal.
@@ -195,6 +214,7 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 			}
 
 			log.Info("Acquired connection")
+			s.debugLogConnectionPid(ctx, conn)
 			defer conn.Release()
 
 			// Attempt to re-establish the lock
@@ -247,6 +267,7 @@ func (s *PostgresStreamStore) acquireSchemaLock(ctx context.Context) error {
 		return err
 	}
 
+	s.debugLogConnectionPid(ctx, conn)
 	log.Info("Acquiring schema lock", "lockId", lockId, "nodeUUID", s.nodeUUID)
 
 	var lockWasUnavailable bool
@@ -360,31 +381,6 @@ func (s *PostgresStreamStore) txRunner(
 	)
 }
 
-// txRunnerWithUUIDCheck conditionally run the transaction only if a check against the
-// singlenodekey table shows that this is still the only node writing to the database.
-func (s *PostgresStreamStore) txRunnerWithUUIDCheck(
-	ctx context.Context,
-	name string,
-	accessMode pgx.TxAccessMode,
-	txFn func(context.Context, pgx.Tx) error,
-	opts *txRunnerOpts,
-	tags ...any,
-) error {
-	return s.txRunner(
-		ctx,
-		name,
-		accessMode,
-		func(ctx context.Context, txn pgx.Tx) error {
-			if err := s.compareUUID(ctx, txn); err != nil {
-				return err
-			}
-			return txFn(ctx, txn)
-		},
-		opts,
-		tags...,
-	)
-}
-
 // CreatePartitionSuffix determines the partition mapping for a particular stream id the
 // hex encoding of the first byte of the xxHash of the stream ID.
 func CreatePartitionSuffix(streamId StreamId, numPartitions int) string {
@@ -438,7 +434,7 @@ func (s *PostgresStreamStore) CreateStreamStorage(
 	streamId StreamId,
 	genesisMiniblock []byte,
 ) error {
-	return s.txRunnerWithUUIDCheck(
+	return s.txRunner(
 		ctx,
 		"CreateStreamStorage",
 		pgx.ReadWrite,
@@ -528,7 +524,7 @@ func (s *PostgresStreamStore) CreateStreamArchiveStorage(
 	ctx context.Context,
 	streamId StreamId,
 ) error {
-	return s.txRunnerWithUUIDCheck(
+	return s.txRunner(
 		ctx,
 		"CreateStreamArchiveStorage",
 		pgx.ReadWrite,
@@ -571,7 +567,7 @@ func (s *PostgresStreamStore) GetMaxArchivedMiniblockNumber(
 	streamId StreamId,
 ) (int64, error) {
 	var maxArchivedMiniblockNumber int64
-	err := s.txRunnerWithUUIDCheck(
+	err := s.txRunner(
 		ctx,
 		"GetMaxArchivedMiniblockNumber",
 		pgx.ReadWrite,
@@ -634,7 +630,7 @@ func (s *PostgresStreamStore) WriteArchiveMiniblocks(
 	startMiniblockNum int64,
 	miniblocks [][]byte,
 ) error {
-	return s.txRunnerWithUUIDCheck(
+	return s.txRunner(
 		ctx,
 		"WriteArchiveMiniblocks",
 		pgx.ReadWrite,
@@ -699,7 +695,7 @@ func (s *PostgresStreamStore) ReadStreamFromLastSnapshot(
 	numToRead int,
 ) (*ReadStreamFromLastSnapshotResult, error) {
 	var ret *ReadStreamFromLastSnapshotResult
-	err := s.txRunnerWithUUIDCheck(
+	err := s.txRunner(
 		ctx,
 		"ReadStreamFromLastSnapshot",
 		pgx.ReadWrite,
@@ -861,7 +857,7 @@ func (s *PostgresStreamStore) WriteEvent(
 	minipoolSlot int,
 	envelope []byte,
 ) error {
-	return s.txRunnerWithUUIDCheck(
+	return s.txRunner(
 		ctx,
 		"WriteEvent",
 		pgx.ReadWrite,
@@ -967,7 +963,7 @@ func (s *PostgresStreamStore) ReadMiniblocks(
 	toExclusive int64,
 ) ([][]byte, error) {
 	var miniblocks [][]byte
-	err := s.txRunnerWithUUIDCheck(
+	err := s.txRunner(
 		ctx,
 		"ReadMiniblocks",
 		pgx.ReadWrite,
@@ -1049,7 +1045,7 @@ func (s *PostgresStreamStore) WriteMiniblockCandidate(
 	blockNumber int64,
 	miniblock []byte,
 ) error {
-	return s.txRunnerWithUUIDCheck(
+	return s.txRunner(
 		ctx,
 		"WriteMiniblockCandidate",
 		pgx.ReadWrite,
@@ -1129,7 +1125,7 @@ func (s *PostgresStreamStore) ReadMiniblockCandidate(
 	blockNumber int64,
 ) ([]byte, error) {
 	var miniblock []byte
-	err := s.txRunnerWithUUIDCheck(
+	err := s.txRunner(
 		ctx,
 		"ReadMiniblockCandidate",
 		pgx.ReadWrite,
@@ -1213,7 +1209,7 @@ func (s *PostgresStreamStore) WriteMiniblocks(
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	return s.txRunnerWithUUIDCheck(
+	return s.txRunner(
 		ctx,
 		"WriteMiniblocks",
 		pgx.ReadWrite,
@@ -1427,7 +1423,7 @@ func (s *PostgresStreamStore) writeMiniblocksTx(
 
 func (s *PostgresStreamStore) GetStreamsNumber(ctx context.Context) (int, error) {
 	var count int
-	err := s.txRunnerWithUUIDCheck(
+	err := s.txRunner(
 		ctx,
 		"GetStreamsNumber",
 		pgx.ReadOnly,
@@ -1526,7 +1522,7 @@ func (s *PostgresStreamStore) cleanupStreamStorageTx(ctx context.Context, tx pgx
 // GetStreams returns a list of all event streams
 func (s *PostgresStreamStore) GetStreams(ctx context.Context) ([]StreamId, error) {
 	var streams []StreamId
-	err := s.txRunnerWithUUIDCheck(
+	err := s.txRunner(
 		ctx,
 		"GetStreams",
 		pgx.ReadOnly,
@@ -1570,7 +1566,7 @@ func (s *PostgresStreamStore) getStreamsTx(ctx context.Context, tx pgx.Tx) ([]St
 }
 
 func (s *PostgresStreamStore) DeleteStream(ctx context.Context, streamId StreamId) error {
-	return s.txRunnerWithUUIDCheck(
+	return s.txRunner(
 		ctx,
 		"DeleteStream",
 		pgx.ReadWrite,
@@ -1811,7 +1807,7 @@ func (s *PostgresStreamStore) DebugReadStreamData(
 	streamId StreamId,
 ) (*DebugReadStreamDataResult, error) {
 	var ret *DebugReadStreamDataResult
-	err := s.txRunnerWithUUIDCheck(
+	err := s.txRunner(
 		ctx,
 		"DebugReadStreamData",
 		pgx.ReadWrite,
@@ -1929,7 +1925,7 @@ func (s *PostgresStreamStore) GetLastMiniblockNumber(
 	streamID StreamId,
 ) (int64, error) {
 	var ret int64
-	err := s.txRunnerWithUUIDCheck(
+	err := s.txRunner(
 		ctx,
 		"GetLastMiniblockNumber",
 		pgx.ReadWrite,
