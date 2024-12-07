@@ -71,6 +71,7 @@ type serviceTesterOpts struct {
 	numNodes          int
 	replicationFactor int
 	start             bool
+	btcParams         *crypto.TestParams
 }
 
 func makeTestListenerNoCleanup(t *testing.T) (net.Listener, string) {
@@ -113,9 +114,15 @@ func newServiceTester(t *testing.T, opts serviceTesterOpts) *serviceTester {
 	// Cleanup context on test completion even if no other cleanups are registered.
 	st.cleanup(func() {})
 
+	btcParams := opts.btcParams
+	if btcParams == nil {
+		btcParams = &crypto.TestParams{NumKeys: opts.numNodes, MineOnTx: true, AutoMine: true}
+	} else if btcParams.NumKeys == 0 {
+		btcParams.NumKeys = opts.numNodes
+	}
 	btc, err := crypto.NewBlockchainTestContext(
 		st.ctx,
-		crypto.TestParams{NumKeys: opts.numNodes, MineOnTx: true, AutoMine: true},
+		*btcParams,
 	)
 	require.NoError(err)
 	st.btc = btc
@@ -783,7 +790,7 @@ func (tcs testClients) say(channelId StreamId, messages ...string) {
 	}, messages...)
 }
 
-// parallel calls each function for client with the same index in parallel.
+// parallel spreads params over clients calling provided function in parallel.
 func parallel[Params any](tcs testClients, f func(*testClient, Params), params ...Params) {
 	tcs[0].require.LessOrEqual(len(params), len(tcs))
 	resultC := make(chan int, len(params))
