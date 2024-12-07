@@ -287,7 +287,7 @@ func (st *serviceTester) getConfig(opts ...startOpts) *config.Config {
 	cfg.Database = config.DatabaseConfig{
 		Url:                   st.dbUrl,
 		StartupDelay:          2 * time.Millisecond,
-		NumPartitions:         4,
+		NumPartitions:         8,
 		MigrateStreamCreation: true,
 	}
 	cfg.Network = config.NetworkConfig{
