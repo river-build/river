@@ -25,10 +25,12 @@ import (
 	"github.com/river-build/river/core/contracts/river"
 	"github.com/river-build/river/core/node/base/test"
 	"github.com/river-build/river/core/node/crypto"
-	"github.com/river-build/river/core/node/events"
+	. "github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	. "github.com/river-build/river/core/node/shared"
 	"github.com/river-build/river/core/node/storage"
+	"github.com/river-build/river/core/node/testutils"
 	"github.com/river-build/river/core/node/testutils/dbtestutils"
 	"github.com/river-build/river/core/node/testutils/testcert"
 )
@@ -264,7 +266,7 @@ func (st *serviceTester) startAutoMining() {
 type startOpts struct {
 	configUpdater func(cfg *config.Config)
 	listeners     []net.Listener
-	scrubberMaker func(ctx context.Context, s *Service) events.Scrubber
+	scrubberMaker func(ctx context.Context, s *Service) Scrubber
 }
 
 func (st *serviceTester) startNodes(start, stop int, opts ...startOpts) {
@@ -487,4 +489,284 @@ func (st *serviceTester) httpGet(url string) string {
 	body, err := io.ReadAll(resp.Body)
 	st.require.NoError(err)
 	return string(body)
+}
+
+type testClient struct {
+	ctx          context.Context
+	require      *require.Assertions
+	client       protocolconnect.StreamServiceClient
+	wallet       *crypto.Wallet
+	userId       common.Address
+	userStreamId StreamId
+}
+
+func (st *serviceTester) newTestClient(i int) *testClient {
+	wallet, err := crypto.NewWallet(st.ctx)
+	st.require.NoError(err)
+	return &testClient{
+		ctx:          st.ctx,
+		require:      st.require,
+		client:       st.testClient(i),
+		wallet:       wallet,
+		userId:       wallet.Address,
+		userStreamId: UserStreamIdFromAddr(wallet.Address),
+	}
+}
+
+func (tc *testClient) withRequireFor(t require.TestingT) *testClient {
+	var tcc testClient = *tc
+	tcc.require = require.New(t)
+	return &tcc
+}
+
+func (tc *testClient) createUserStream(
+	streamSettings ...*protocol.StreamSettings,
+) *MiniblockRef {
+	var ss *protocol.StreamSettings
+	if len(streamSettings) > 0 {
+		ss = streamSettings[0]
+	}
+	cookie, _, err := createUser(tc.ctx, tc.wallet, tc.client, ss)
+	tc.require.NoError(err)
+	return &MiniblockRef{
+		Hash: common.BytesToHash(cookie.PrevMiniblockHash),
+		Num:  cookie.MinipoolGen - 1,
+	}
+}
+
+func (tc *testClient) createSpace(
+	streamSettings ...*protocol.StreamSettings,
+) (StreamId, *MiniblockRef) {
+	spaceId := testutils.FakeStreamId(STREAM_SPACE_BIN)
+	var ss *protocol.StreamSettings
+	if len(streamSettings) > 0 {
+		ss = streamSettings[0]
+	}
+	cookie, _, err := createSpace(tc.ctx, tc.wallet, tc.client, spaceId, ss)
+	tc.require.NoError(err)
+	tc.require.NotNil(cookie)
+	return spaceId, &MiniblockRef{
+		Hash: common.BytesToHash(cookie.PrevMiniblockHash),
+		Num:  cookie.MinipoolGen - 1,
+	}
+}
+
+func (tc *testClient) createChannel(
+	spaceId StreamId,
+	streamSettings ...*protocol.StreamSettings,
+) (StreamId, *MiniblockRef) {
+	channelId := testutils.FakeStreamId(STREAM_CHANNEL_BIN)
+	var ss *protocol.StreamSettings
+	if len(streamSettings) > 0 {
+		ss = streamSettings[0]
+	}
+	cookie, _, err := createChannel(tc.ctx, tc.wallet, tc.client, spaceId, channelId, ss)
+	tc.require.NoError(err)
+	return channelId, &MiniblockRef{
+		Hash: common.BytesToHash(cookie.PrevMiniblockHash),
+		Num:  cookie.MinipoolGen - 1,
+	}
+}
+
+func (tc *testClient) joinChannel(spaceId StreamId, channelId StreamId, mb *MiniblockRef) {
+	userJoin, err := MakeEnvelopeWithPayload(
+		tc.wallet,
+		Make_UserPayload_Membership(
+			protocol.MembershipOp_SO_JOIN,
+			channelId,
+			nil,
+			spaceId[:],
+		),
+		mb,
+	)
+	tc.require.NoError(err)
+
+	userStreamId := UserStreamIdFromAddr(tc.wallet.Address)
+	_, err = tc.client.AddEvent(
+		tc.ctx,
+		connect.NewRequest(
+			&protocol.AddEventRequest{
+				StreamId: userStreamId[:],
+				Event:    userJoin,
+			},
+		),
+	)
+	tc.require.NoError(err)
+}
+
+func (tc *testClient) getLastMiniblockHash(streamId StreamId) *MiniblockRef {
+	resp, err := tc.client.GetLastMiniblockHash(tc.ctx, connect.NewRequest(&protocol.GetLastMiniblockHashRequest{
+		StreamId: streamId[:],
+	}))
+	tc.require.NoError(err)
+	return &MiniblockRef{
+		Hash: common.BytesToHash(resp.Msg.GetHash()),
+		Num:  resp.Msg.GetMiniblockNum(),
+	}
+}
+
+func (tc *testClient) say(channelId StreamId, message string) {
+	ref := tc.getLastMiniblockHash(channelId)
+	envelope, err := MakeEnvelopeWithPayload(tc.wallet, Make_ChannelPayload_Message(message), ref)
+	tc.require.NoError(err)
+	_, err = tc.client.AddEvent(tc.ctx, connect.NewRequest(&protocol.AddEventRequest{
+		StreamId: channelId[:],
+		Event:    envelope,
+	}))
+	tc.require.NoError(err)
+}
+
+type usersMessage struct {
+	userId  common.Address
+	message string
+}
+
+func (tc *testClient) getAllMessages(channelId StreamId) []usersMessage {
+	_, view := tc.getStreamAndView(channelId, true)
+
+	messages := []usersMessage{}
+	for e := range view.AllEvents() {
+		payload := e.GetChannelMessage()
+		if payload != nil {
+			messages = append(messages, usersMessage{
+				userId:  crypto.PublicKeyToAddress(e.SignerPubKey),
+				message: string(payload.Message.Ciphertext),
+			})
+		}
+	}
+
+	return messages
+}
+
+// messages are partially sorted, i.e. messages in the channel that match sub-slices can be in any order; each []string should match userIds saying it.
+func (tc *testClient) listen(channelId StreamId, userIds []common.Address, messages [][]string) {
+	msgs := tc.getAllMessages(channelId)
+	for _, expected := range messages {
+		notEmptyCount := 0
+		for _, e := range expected {
+			if e != "" {
+				notEmptyCount++
+			}
+		}
+		tc.require.NotZero(notEmptyCount, "internal: conversation can't have empty step")
+		current := msgs[:notEmptyCount]
+		msgs = msgs[notEmptyCount:]
+		expectedWithUserIds := []usersMessage{}
+		for i, e := range expected {
+			if e != "" {
+				expectedWithUserIds = append(expectedWithUserIds, usersMessage{userId: userIds[i], message: e})
+			}
+		}
+		tc.require.ElementsMatch(expectedWithUserIds, current)
+	}
+}
+
+func (tc *testClient) getStream(streamId StreamId) *protocol.StreamAndCookie {
+	resp, err := tc.client.GetStream(tc.ctx, connect.NewRequest(&protocol.GetStreamRequest{
+		StreamId: streamId[:],
+	}))
+	tc.require.NoError(err)
+	tc.require.NotNil(resp.Msg)
+	tc.require.NotNil(resp.Msg.Stream)
+	return resp.Msg.Stream
+}
+
+func (tc *testClient) getStreamAndView(
+	streamId StreamId,
+	history ...bool,
+) (*protocol.StreamAndCookie, JoinableStreamView) {
+	stream := tc.getStream(streamId)
+	var view JoinableStreamView
+	var err error
+	view, err = MakeRemoteStreamView(tc.ctx, stream)
+	tc.require.NoError(err)
+	tc.require.NotNil(view)
+
+	if len(history) > 0 && history[0] {
+		mbs := view.Miniblocks()
+		tc.require.NotEmpty(mbs)
+		if mbs[0].Ref.Num > 0 {
+			view = tc.addHistoryToView(view)
+		}
+	}
+	return stream, view
+}
+
+func (tc *testClient) getMiniblocks(streamId StreamId, fromInclusive, toExclusive int64) []*MiniblockInfo {
+	resp, err := tc.client.GetMiniblocks(tc.ctx, connect.NewRequest(&protocol.GetMiniblocksRequest{
+		StreamId:      streamId[:],
+		FromInclusive: fromInclusive,
+		ToExclusive:   toExclusive,
+	}))
+	tc.require.NoError(err)
+	mbs, err := NewMiniblocksInfoFromProtos(resp.Msg.Miniblocks, NewMiniblockInfoFromProtoOpts{
+		ExpectedBlockNumber: fromInclusive,
+	})
+	tc.require.NoError(err)
+	return mbs
+}
+
+func (tc *testClient) addHistoryToView(
+	view JoinableStreamView,
+) JoinableStreamView {
+	firstMbNum := view.Miniblocks()[0].Ref.Num
+	if firstMbNum == 0 {
+		return view
+	}
+
+	mbs := tc.getMiniblocks(*view.StreamId(), 0, firstMbNum)
+	newView, err := view.CopyAndPrependMiniblocks(mbs)
+	tc.require.NoError(err)
+	return newView.(JoinableStreamView)
+}
+
+func (tc *testClient) requireMembership(streamId StreamId, expectedMemberships []common.Address) {
+	tc.require.EventuallyWithT(func(t *assert.CollectT) {
+		tcc := tc.withRequireFor(t)
+		_, view := tcc.getStreamAndView(streamId)
+		members, err := view.GetChannelMembers()
+		tcc.require.NoError(err)
+		actualMembers := []common.Address{}
+		for _, a := range members.ToSlice() {
+			actualMembers = append(actualMembers, common.HexToAddress(a))
+		}
+		tcc.require.ElementsMatch(expectedMemberships, actualMembers)
+	}, 5*time.Second, 100*time.Millisecond)
+}
+
+type testClients []*testClient
+
+func (tcs testClients) requireMembership(streamId StreamId, expectedMemberships ...[]common.Address) {
+	var expected []common.Address
+	if len(expectedMemberships) > 0 {
+		expected = expectedMemberships[0]
+	} else {
+		expected = tcs.userIds()
+	}
+	for _, tc := range tcs {
+		tc.requireMembership(streamId, expected)
+	}
+}
+
+func (tcs testClients) userIds() []common.Address {
+	userIds := []common.Address{}
+	for _, tc := range tcs {
+		userIds = append(userIds, tc.userId)
+	}
+	return userIds
+}
+
+func (tcs testClients) listen(channelId StreamId, messages [][]string) {
+	for _, tc := range tcs {
+		tc.listen(channelId, tcs.userIds(), messages)
+	}
+}
+
+func (tcs testClients) say(channelId StreamId, messages ...string) {
+	tcs[0].require.LessOrEqual(len(messages), len(tcs))
+	for i, msg := range messages {
+		if msg != "" {
+			tcs[i].say(channelId, msg)
+		}
+	}
 }
