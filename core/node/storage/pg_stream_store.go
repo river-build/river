@@ -778,6 +778,7 @@ func (s *PostgresStreamStore) writeEventTx(
 	return nil
 }
 
+// ReadMiniblocks returns miniblocks with miniblockNum or "generation" from fromInclusive, to toExlusive.
 // Supported consistency checks:
 // 1. There are no gaps in miniblocks sequence
 // TODO: Do we want to check that if we get miniblocks an toIndex is greater or equal block with latest snapshot, than in results we will have at least
@@ -807,6 +808,7 @@ func (s *PostgresStreamStore) ReadMiniblocks(
 	if err != nil {
 		return nil, err
 	}
+
 	return miniblocks, nil
 }
 
@@ -839,7 +841,7 @@ func (s *PostgresStreamStore) readMiniblocksTx(
 	defer miniblocksRow.Close()
 
 	// Retrieve miniblocks starting from the latest miniblock with snapshot
-	var miniblocks [][]byte
+	miniblocks := make([][]byte, 0, toExclusive-fromInclusive)
 
 	var prevSeqNum int = -1 // There is no negative generation, so we use it as a flag on the first step of the loop during miniblocks sequence check
 	for miniblocksRow.Next() {
@@ -861,6 +863,59 @@ func (s *PostgresStreamStore) readMiniblocksTx(
 		miniblocks = append(miniblocks, blockdata)
 	}
 	return miniblocks, nil
+}
+
+// ReadMiniblocksByStream returns miniblocks data stream by the given stream ID.
+// It does not read data from the database, but returns a MiniblocksDataStream object that can be used to read miniblocks.
+// Client should call Close() on the returned MiniblocksDataStream object when done.
+func (s *PostgresStreamStore) ReadMiniblocksByStream(
+	ctx context.Context,
+	streamId StreamId,
+	onEachMb func(mb *Miniblock) error,
+) error {
+	return s.txRunnerWithUUIDCheck(
+		ctx,
+		"ReadMiniblocksByStream",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) error {
+			return s.readMiniblocksByStreamTx(ctx, tx, streamId, onEachMb)
+		},
+		nil,
+		"streamId", streamId,
+	)
+}
+
+func (s *PostgresStreamStore) readMiniblocksByStreamTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	streamId StreamId,
+	onEachMb func(mb *Miniblock) error,
+) error {
+	_, migrated, err := s.lockStream(ctx, tx, streamId, false)
+	if err != nil {
+		return err
+	}
+
+	rows, err := tx.Query(
+		ctx,
+		s.sqlForStream(
+			"SELECT blockdata, seq_num FROM {{miniblocks}} WHERE stream_id = $1 ORDER BY seq_num",
+			streamId,
+			migrated,
+		),
+		streamId,
+	)
+	if err != nil {
+		return err
+	}
+
+	var seqNum int
+	mb := new(Miniblock)
+	_, err = pgx.ForEachRow(rows, []any{&seqNum, &mb}, func() error {
+		return onEachMb(mb)
+	})
+
+	return err
 }
 
 // WriteMiniblockCandidate adds a miniblock proposal candidate. When the miniblock is finalized, the node will promote the

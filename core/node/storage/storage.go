@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/ethereum/go-ethereum/common"
+	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
 )
 
@@ -35,10 +36,13 @@ type StreamStorage interface {
 		numToRead int,
 	) (*ReadStreamFromLastSnapshotResult, error)
 
-	// Returns miniblocks with miniblockNum or "generation" from fromInclusive, to toExlusive.
+	// ReadMiniblocks returns miniblocks with miniblockNum or "generation" from fromInclusive, to toExlusive.
 	ReadMiniblocks(ctx context.Context, streamId StreamId, fromInclusive int64, toExclusive int64) ([][]byte, error)
 
-	// Adds event to the given minipool.
+	// ReadMiniblocksByStream calls onEachMb for each selected miniblock
+	ReadMiniblocksByStream(ctx context.Context, streamId StreamId, onEachMb func(mb *Miniblock) error) error
+
+	// WriteEvent adds event to the given minipool.
 	// Current generation of minipool should match minipoolGeneration,
 	// and there should be exactly minipoolSlot events in the minipool.
 	WriteEvent(
