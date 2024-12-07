@@ -3,11 +3,30 @@ package rpc
 import (
 	"fmt"
 	"testing"
+	"time"
+
+	"github.com/river-build/river/core/node/crypto"
 	//. "github.com/river-build/river/core/node/shared"
 )
 
+func newServiceTesterForReplication(t *testing.T) *serviceTester {
+	return newServiceTester(
+		t,
+		serviceTesterOpts{
+			numNodes:          5,
+			replicationFactor: 5,
+			start:             true,
+			btcParams: &crypto.TestParams{
+				AutoMine:         true,
+				AutoMineInterval: 200 * time.Millisecond,
+				MineOnTx:         false,
+			},
+		},
+	)
+}
+
 func TestReplMulticlientSimple(t *testing.T) {
-	tt := newServiceTester(t, serviceTesterOpts{numNodes: 5, replicationFactor: 5, start: true})
+	tt := newServiceTesterForReplication(t)
 
 	alice := tt.newTestClient(0)
 
@@ -44,7 +63,7 @@ func TestReplMulticlientSimple(t *testing.T) {
 }
 
 func TestReplSpeakUntilMbTrim(t *testing.T) {
-	tt := newServiceTester(t, serviceTesterOpts{numNodes: 5, replicationFactor: 5, start: true})
+	tt := newServiceTesterForReplication(t)
 	require := tt.require
 
 	alice := tt.newTestClient(0)
