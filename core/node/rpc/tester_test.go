@@ -524,7 +524,7 @@ func (st *serviceTester) newTestClient(i int) *testClient {
 		wallet:       wallet,
 		userId:       wallet.Address,
 		userStreamId: UserStreamIdFromAddr(wallet.Address),
-		name:         wallet.Address.Hex()[2:8],
+		name:         fmt.Sprintf("%d-%s", i, wallet.Address.Hex()[2:8]),
 	}
 }
 
@@ -745,6 +745,20 @@ func (tc *testClient) getAllMessages(channelId StreamId) userMessages {
 	return messages
 }
 
+func (tc *testClient) eventually(f func(*testClient), t ...time.Duration) {
+	waitFor := 5 * time.Second
+	if len(t) > 0 {
+		waitFor = t[0]
+	}
+	tick := 100 * time.Millisecond
+	if len(t) > 1 {
+		tick = t[1]
+	}
+	tc.require.EventuallyWithT(func(t *assert.CollectT) {
+		f(tc.withRequireFor(t))
+	}, waitFor, tick)
+}
+
 func (tc *testClient) listen(channelId StreamId, userIds []common.Address, messages [][]string) {
 	expected := flattenUserMessages(userIds, messages)
 	tc.listenImpl(channelId, expected)
@@ -752,19 +766,21 @@ func (tc *testClient) listen(channelId StreamId, userIds []common.Address, messa
 
 func (tc *testClient) listenImpl(channelId StreamId, expected userMessages) {
 	actual := tc.getAllMessages(channelId)
-	expectedExtra, actualExtra := diffUserMessages(expected, actual)
-	if len(expectedExtra) > 0 {
-		tc.require.FailNow(
-			"Didn't receive all messages",
-			"client %s\nexpectedExtra:%vactualExtra:%v",
-			tc.name,
-			expectedExtra,
-			actualExtra,
-		)
-	}
-	if len(actualExtra) > 0 {
-		tc.require.FailNow("Received unexpected messages", "expected:%vactualExtra:%v", expected, actualExtra)
-	}
+	tc.eventually(func(tc *testClient) {
+		expectedExtra, actualExtra := diffUserMessages(expected, actual)
+		if len(expectedExtra) > 0 {
+			tc.require.FailNow(
+				"Didn't receive all messages",
+				"client %s\nexpectedExtra:%vactualExtra:%v",
+				tc.name,
+				expectedExtra,
+				actualExtra,
+			)
+		}
+		if len(actualExtra) > 0 {
+			tc.require.FailNow("Received unexpected messages", "actualExtra:%v", actualExtra)
+		}
+	})
 }
 
 func (tc *testClient) getStream(streamId StreamId) *protocol.StreamAndCookie {
@@ -827,17 +843,16 @@ func (tc *testClient) addHistoryToView(
 }
 
 func (tc *testClient) requireMembership(streamId StreamId, expectedMemberships []common.Address) {
-	tc.require.EventuallyWithT(func(t *assert.CollectT) {
-		tcc := tc.withRequireFor(t)
-		_, view := tcc.getStreamAndView(streamId)
+	tc.eventually(func(tc *testClient) {
+		_, view := tc.getStreamAndView(streamId)
 		members, err := view.GetChannelMembers()
-		tcc.require.NoError(err)
+		tc.require.NoError(err)
 		actualMembers := []common.Address{}
 		for _, a := range members.ToSlice() {
 			actualMembers = append(actualMembers, common.HexToAddress(a))
 		}
-		tcc.require.ElementsMatch(expectedMemberships, actualMembers)
-	}, 5*time.Second, 100*time.Millisecond)
+		tc.require.ElementsMatch(expectedMemberships, actualMembers)
+	})
 }
 
 type testClients []*testClient
@@ -892,7 +907,7 @@ func parallel[Params any](tcs testClients, f func(*testClient, Params), params .
 	for range params {
 		i := <-resultC
 		if tcs[i].t.Failed() {
-			tcs[i].t.Fatalf("client %d %s failed", i, tcs[i].name)
+			tcs[i].t.Fatalf("client %s failed", tcs[i].name)
 			return
 		}
 	}
@@ -911,7 +926,7 @@ func (tcs testClients) parallelForAll(f func(*testClient)) {
 	for range tcs {
 		i := <-resultC
 		if tcs[i].t.Failed() {
-			tcs[i].t.Fatalf("client %d %s failed", i, tcs[i].name)
+			tcs[i].t.Fatalf("client %s failed", tcs[i].name)
 			return
 		}
 	}
