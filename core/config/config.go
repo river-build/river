@@ -242,6 +242,9 @@ type DatabaseConfig struct {
 	// data storage. If <= 0, a default value of 256 will be used. No more than 256 partitions is
 	// supported at this time.
 	NumPartitions int
+
+	// DebugTransactions enables tracking of few last transactions in the database.
+	DebugTransactions bool
 }
 
 func (c DatabaseConfig) GetUrl() string {
