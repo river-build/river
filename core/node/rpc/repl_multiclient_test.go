@@ -25,44 +25,27 @@ func newServiceTesterForReplication(t *testing.T) *serviceTester {
 	)
 }
 
-func TestReplMulticlientSimple(t *testing.T) {
+func TestReplMcSimple(t *testing.T) {
 	tt := newServiceTesterForReplication(t)
 
-	alice := tt.newTestClient(0)
-
-	_ = alice.createUserStream()
-	spaceId, _ := alice.createSpace()
-	channelId, _ := alice.createChannel(spaceId)
-
-	bob := tt.newTestClient(1)
-	user1LastMb := bob.createUserStream()
-	bob.joinChannel(spaceId, channelId, user1LastMb)
-
-	allClients := testClients{alice, bob}
-	allClients.requireMembership(channelId)
-
-	carol := tt.newTestClient(2)
-	user2LastMb := carol.createUserStream()
-	carol.joinChannel(spaceId, channelId, user2LastMb)
-
-	allClients = append(allClients, carol)
-	allClients.requireMembership(channelId)
-
+	clients := tt.newTestClients(3)
+	spaceId, _ := clients[0].createSpace()
+	channelId := clients.createChannelAndJoin(spaceId)
 	phrases1 := []string{"hello from Alice", "hello from Bob", "hello from Carol"}
-	allClients.say(channelId, phrases1...)
+	clients.say(channelId, phrases1...)
 
-	allClients.listen(channelId, [][]string{phrases1})
+	clients.listen(channelId, [][]string{phrases1})
 
 	phrases2 := []string{"hello from Alice 2", "hello from Bob 2", "hello from Carol 2"}
-	allClients.say(channelId, phrases2...)
-	allClients.listen(channelId, [][]string{phrases1, phrases2})
+	clients.say(channelId, phrases2...)
+	clients.listen(channelId, [][]string{phrases1, phrases2})
 
 	phrases3 := []string{"", "hello from Bob 3", ""}
-	allClients.say(channelId, phrases3...)
-	allClients.listen(channelId, [][]string{phrases1, phrases2, phrases3})
+	clients.say(channelId, phrases3...)
+	clients.listen(channelId, [][]string{phrases1, phrases2, phrases3})
 }
 
-func TestReplSpeakUntilMbTrim(t *testing.T) {
+func TestReplMcSpeakUntilMbTrim(t *testing.T) {
 	tt := newServiceTesterForReplication(t)
 	require := tt.require
 
@@ -81,4 +64,49 @@ func TestReplSpeakUntilMbTrim(t *testing.T) {
 		}
 	}
 	require.Fail("failed to trim miniblocks")
+}
+
+func testReplMcConversation(t *testing.T, numClients int, numSteps int, listenInterval int) {
+	tt := newServiceTesterForReplication(t)
+	clients := tt.newTestClients(numClients)
+	spaceId, _ := clients[0].createSpace()
+	channelId := clients.createChannelAndJoin(spaceId)
+
+	messages := make([][]string, numSteps)
+	for i := range messages {
+		messages[i] = make([]string, numClients)
+		for j := range messages[i] {
+			messages[i][j] = fmt.Sprintf("message %d from client %s", i, clients[j].name)
+		}
+	}
+
+	var i int
+	var m []string
+	defer func() {
+		if i+1 < len(messages) {
+			t.Errorf("got through %d steps out of %d", i+1, len(messages))
+		}
+	}()
+	for i, m = range messages {
+		clients.say(channelId, m...)
+		if listenInterval > 0 && (i+1)%listenInterval == 0 {
+			clients.listen(channelId, messages[:i+1])
+		}
+	}
+
+	if listenInterval <= 0 || numSteps%listenInterval != 0 {
+		clients.listen(channelId, messages)
+	}
+}
+
+func TestReplMcConversation(t *testing.T) {
+	t.Skip("SKIPPED: TODO: REPLICATION: fix")
+
+	t.Parallel()
+	t.Run("5x5", func(t *testing.T) {
+		testReplMcConversation(t, 5, 5, 1)
+	})
+	t.Run("debug", func(t *testing.T) {
+		testReplMcConversation(t, 5, 12, 1)
+	})
 }

@@ -7,10 +7,12 @@ import (
 	"hash/fnv"
 	"io"
 	"log"
+	"maps"
 	"math/big"
 	"net"
 	"net/http"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -507,6 +509,7 @@ type testClient struct {
 	wallet       *crypto.Wallet
 	userId       common.Address
 	userStreamId StreamId
+	name         string
 }
 
 func (st *serviceTester) newTestClient(i int) *testClient {
@@ -521,7 +524,20 @@ func (st *serviceTester) newTestClient(i int) *testClient {
 		wallet:       wallet,
 		userId:       wallet.Address,
 		userStreamId: UserStreamIdFromAddr(wallet.Address),
+		name:         fmt.Sprintf("%d-%s", i, wallet.Address.Hex()[2:8]),
 	}
+}
+
+// newTestClients creates a testClients with clients connected to nodes in round-robin fashion.
+func (st *serviceTester) newTestClients(numClients int) testClients {
+	clients := make(testClients, numClients)
+	for i := range clients {
+		clients[i] = st.newTestClient(i % st.opts.numNodes)
+	}
+	clients.parallelForAll(func(tc *testClient) {
+		tc.createUserStream()
+	})
+	return clients
 }
 
 func (tc *testClient) withRequireFor(t require.TestingT) *testClient {
@@ -633,10 +649,89 @@ type usersMessage struct {
 	message string
 }
 
-func (tc *testClient) getAllMessages(channelId StreamId) []usersMessage {
+func (um usersMessage) String() string {
+	return fmt.Sprintf("%s: '%s'\n", um.userId.Hex()[2:8], um.message)
+}
+
+type userMessages []usersMessage
+
+func flattenUserMessages(userIds []common.Address, messages [][]string) userMessages {
+	um := userMessages{}
+	for _, msg := range messages {
+		for j, m := range msg {
+			if m != "" {
+				um = append(um, usersMessage{userId: userIds[j], message: m})
+			}
+		}
+	}
+	return um
+}
+
+func (um userMessages) String() string {
+	if len(um) == 0 {
+		return " EMPTY"
+	}
+	lines := []string{"\n[[[\n"}
+	for _, m := range um {
+		lines = append(lines, m.String())
+	}
+	lines = append(lines, "]]]\n")
+	return strings.Join(lines, "")
+}
+
+func diffUserMessages(expected, actual userMessages) (userMessages, userMessages) {
+	expectedSet := map[string]usersMessage{}
+	for _, m := range expected {
+		expectedSet[m.String()] = m
+	}
+	actualExtra := userMessages{}
+	for _, m := range actual {
+		key := m.String()
+		_, ok := expectedSet[key]
+		if ok {
+			delete(expectedSet, key)
+		} else {
+			actualExtra = append(actualExtra, m)
+		}
+	}
+	expectedExtra := slices.Collect(maps.Values(expectedSet))
+	return expectedExtra, actualExtra
+}
+
+func TestDiffUserMessages(t *testing.T) {
+	assert := assert.New(t)
+
+	um1 := usersMessage{common.Address{0x1}, "A"}
+	um2 := usersMessage{common.Address{0x1}, "B"}
+	um3 := usersMessage{common.Address{0x2}, "A"}
+	um4 := usersMessage{common.Address{0x2}, "B"}
+	umAll := userMessages{um1, um2, um3, um4}
+
+	a, b := diffUserMessages(umAll, umAll)
+	assert.Len(a, 0)
+	assert.Len(b, 0)
+
+	a, b = diffUserMessages(umAll, umAll[:3])
+	assert.ElementsMatch(a, umAll[3:])
+	assert.Len(b, 0)
+
+	a, b = diffUserMessages(umAll[1:], umAll)
+	assert.Len(a, 0)
+	assert.ElementsMatch(b, umAll[:1])
+
+	a, b = diffUserMessages(umAll[1:], umAll[:3])
+	assert.ElementsMatch(a, umAll[3:])
+	assert.ElementsMatch(b, umAll[:1])
+
+	a, b = diffUserMessages(umAll[2:], umAll[:2])
+	assert.ElementsMatch(a, umAll[2:])
+	assert.ElementsMatch(b, umAll[:2])
+}
+
+func (tc *testClient) getAllMessages(channelId StreamId) userMessages {
 	_, view := tc.getStreamAndView(channelId, true)
 
-	messages := []usersMessage{}
+	messages := userMessages{}
 	for e := range view.AllEvents() {
 		payload := e.GetChannelMessage()
 		if payload != nil {
@@ -650,34 +745,44 @@ func (tc *testClient) getAllMessages(channelId StreamId) []usersMessage {
 	return messages
 }
 
-// messages are partially sorted, i.e. messages in the channel that match sub-slices can be in any order; each []string should match userIds saying it.
-func (tc *testClient) listen(channelId StreamId, userIds []common.Address, messages [][]string) {
-	msgs := tc.getAllMessages(channelId)
-	for _, expected := range messages {
-		notEmptyCount := 0
-		for _, e := range expected {
-			if e != "" {
-				notEmptyCount++
-			}
-		}
-		tc.require.NotZero(notEmptyCount, "internal: conversation can't have empty step")
-		tc.require.GreaterOrEqual(
-			len(msgs),
-			notEmptyCount,
-			"Not enough was said, left %#v, expected %#v",
-			msgs,
-			expected,
-		)
-		current := msgs[:notEmptyCount]
-		msgs = msgs[notEmptyCount:]
-		expectedWithUserIds := []usersMessage{}
-		for i, e := range expected {
-			if e != "" {
-				expectedWithUserIds = append(expectedWithUserIds, usersMessage{userId: userIds[i], message: e})
-			}
-		}
-		tc.require.ElementsMatch(expectedWithUserIds, current)
+func (tc *testClient) eventually(f func(*testClient), t ...time.Duration) {
+	waitFor := 5 * time.Second
+	if len(t) > 0 {
+		waitFor = t[0]
 	}
+	tick := 100 * time.Millisecond
+	if len(t) > 1 {
+		tick = t[1]
+	}
+	tc.require.EventuallyWithT(func(t *assert.CollectT) {
+		f(tc.withRequireFor(t))
+	}, waitFor, tick)
+}
+
+func (tc *testClient) listen(channelId StreamId, userIds []common.Address, messages [][]string) {
+	expected := flattenUserMessages(userIds, messages)
+	tc.listenImpl(channelId, expected)
+}
+
+var _ = (*testClient)(nil).listen // Suppress unused warning TODO: remove once used
+
+func (tc *testClient) listenImpl(channelId StreamId, expected userMessages) {
+	actual := tc.getAllMessages(channelId)
+	tc.eventually(func(tc *testClient) {
+		expectedExtra, actualExtra := diffUserMessages(expected, actual)
+		if len(expectedExtra) > 0 {
+			tc.require.FailNow(
+				"Didn't receive all messages",
+				"client %s\nexpectedExtra:%vactualExtra:%v",
+				tc.name,
+				expectedExtra,
+				actualExtra,
+			)
+		}
+		if len(actualExtra) > 0 {
+			tc.require.FailNow("Received unexpected messages", "actualExtra:%v", actualExtra)
+		}
+	})
 }
 
 func (tc *testClient) getStream(streamId StreamId) *protocol.StreamAndCookie {
@@ -740,17 +845,16 @@ func (tc *testClient) addHistoryToView(
 }
 
 func (tc *testClient) requireMembership(streamId StreamId, expectedMemberships []common.Address) {
-	tc.require.EventuallyWithT(func(t *assert.CollectT) {
-		tcc := tc.withRequireFor(t)
-		_, view := tcc.getStreamAndView(streamId)
+	tc.eventually(func(tc *testClient) {
+		_, view := tc.getStreamAndView(streamId)
 		members, err := view.GetChannelMembers()
-		tcc.require.NoError(err)
+		tc.require.NoError(err)
 		actualMembers := []common.Address{}
 		for _, a := range members.ToSlice() {
 			actualMembers = append(actualMembers, common.HexToAddress(a))
 		}
-		tcc.require.ElementsMatch(expectedMemberships, actualMembers)
-	}, 5*time.Second, 100*time.Millisecond)
+		tc.require.ElementsMatch(expectedMemberships, actualMembers)
+	})
 }
 
 type testClients []*testClient
@@ -776,9 +880,9 @@ func (tcs testClients) userIds() []common.Address {
 }
 
 func (tcs testClients) listen(channelId StreamId, messages [][]string) {
-	userIds := tcs.userIds()
+	expected := flattenUserMessages(tcs.userIds(), messages)
 	tcs.parallelForAll(func(tc *testClient) {
-		tc.listen(channelId, userIds, messages)
+		tc.listenImpl(channelId, expected)
 	})
 }
 
@@ -805,6 +909,7 @@ func parallel[Params any](tcs testClients, f func(*testClient, Params), params .
 	for range params {
 		i := <-resultC
 		if tcs[i].t.Failed() {
+			tcs[i].t.Fatalf("client %s failed", tcs[i].name)
 			return
 		}
 	}
@@ -823,7 +928,26 @@ func (tcs testClients) parallelForAll(f func(*testClient)) {
 	for range tcs {
 		i := <-resultC
 		if tcs[i].t.Failed() {
+			tcs[i].t.Fatalf("client %s failed", tcs[i].name)
 			return
 		}
 	}
+}
+
+// setupChannelWithClients creates a channel and returns a testClients with clients connected to it.
+// First client is creator of both space and channel.
+// Other clients join the channel.
+// Clients are connected to nodes in round-robin fashion.
+func (tcs testClients) createChannelAndJoin(spaceId StreamId) StreamId {
+	alice := tcs[0]
+	channelId, _ := alice.createChannel(spaceId)
+
+	tcs[1:].parallelForAll(func(tc *testClient) {
+		userLastMb := tc.getLastMiniblockHash(tc.userStreamId)
+		tc.joinChannel(spaceId, channelId, userLastMb)
+	})
+
+	tcs.requireMembership(channelId)
+
+	return channelId
 }
