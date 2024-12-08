@@ -51,41 +51,65 @@ func Logf(t TestingLogger, format string, a ...any) {
 	}
 }
 
-type TestFmt struct {
-	t TestingLogger
-}
-
-// New returns a new TestFmt that logs to the given testing logger if RIVER_TEST_PRINT is set.
-func New(t TestingLogger) TestFmt {
-	return TestFmt{t}
-}
-
-func (f TestFmt) Print(a ...any) {
-	Print(f.t, a...)
-}
-
-func (f TestFmt) Printf(format string, a ...any) {
-	Printf(f.t, format, a...)
-}
-
-func (f TestFmt) Println(a ...any) {
-	Println(f.t, a...)
-}
-
-func (f TestFmt) Log(a ...any) {
-	Log(f.t, a...)
-}
-
-func (f TestFmt) Logf(format string, a ...any) {
-	Logf(f.t, format, a...)
-}
-
 func Enabled() bool {
 	return enabled
 }
 
 func Enable(v bool) {
 	enabled = v
+}
+
+type TestFmt struct {
+	t       TestingLogger
+	enabled bool
+}
+
+// New returns a new TestFmt that logs to the given testing logger if RIVER_TEST_PRINT is set.
+func New(t TestingLogger) *TestFmt {
+	return &TestFmt{t, enabled}
+}
+
+func (f *TestFmt) Print(a ...any) {
+	if f.enabled {
+		f.t.Helper()
+		f.t.Log(a...)
+	}
+}
+
+func (f *TestFmt) Printf(format string, a ...any) {
+	if f.enabled {
+		f.t.Helper()
+		f.t.Logf(format, a...)
+	}
+}
+
+func (f *TestFmt) Println(a ...any) {
+	if f.enabled {
+		f.t.Helper()
+		f.t.Log(a...)
+	}
+}
+
+func (f *TestFmt) Log(a ...any) {
+	if f.enabled {
+		f.t.Helper()
+		f.t.Log(a...)
+	}
+}
+
+func (f *TestFmt) Logf(format string, a ...any) {
+	if f.enabled {
+		f.t.Helper()
+		f.t.Logf(format, a...)
+	}
+}
+
+func (f *TestFmt) Enabled() bool {
+	return f.enabled
+}
+
+func (f *TestFmt) Enable(v bool) {
+	f.enabled = v
 }
 
 var enabled bool
