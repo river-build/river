@@ -701,10 +701,10 @@ func diffUserMessages(expected, actual userMessages) (userMessages, userMessages
 func TestDiffUserMessages(t *testing.T) {
 	assert := assert.New(t)
 
-	um1 := usersMessage{common.HexToAddress("0x1"), "A"}
-	um2 := usersMessage{common.HexToAddress("0x1"), "B"}
-	um3 := usersMessage{common.HexToAddress("0x2"), "A"}
-	um4 := usersMessage{common.HexToAddress("0x2"), "B"}
+	um1 := usersMessage{common.Address{0x1}, "A"}
+	um2 := usersMessage{common.Address{0x1}, "B"}
+	um3 := usersMessage{common.Address{0x2}, "A"}
+	um4 := usersMessage{common.Address{0x2}, "B"}
 	umAll := userMessages{um1, um2, um3, um4}
 
 	a, b := diffUserMessages(umAll, umAll)
@@ -763,6 +763,8 @@ func (tc *testClient) listen(channelId StreamId, userIds []common.Address, messa
 	expected := flattenUserMessages(userIds, messages)
 	tc.listenImpl(channelId, expected)
 }
+
+var _ = (*testClient)(nil).listen // Suppress unused warning TODO: remove once used
 
 func (tc *testClient) listenImpl(channelId StreamId, expected userMessages) {
 	actual := tc.getAllMessages(channelId)
