@@ -27,6 +27,7 @@ import (
 	"github.com/river-build/river/core/contracts/river"
 	"github.com/river-build/river/core/node/base/test"
 	"github.com/river-build/river/core/node/crypto"
+	"github.com/river-build/river/core/node/dlog"
 	. "github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
@@ -301,6 +302,7 @@ func (st *serviceTester) getConfig(opts ...startOpts) *config.Config {
 		NumPartitions:         4,
 		MigrateStreamCreation: true,
 	}
+	cfg.Log.Simplify = true
 	cfg.Network = config.NetworkConfig{
 		NumRetries: 3,
 	}
@@ -333,18 +335,18 @@ func (st *serviceTester) startSingle(i int, opts ...startOpts) error {
 		listener = options.listeners[i]
 	}
 
-	bc := st.btc.GetBlockchain(st.ctx, i)
-	service, err := StartServer(st.ctx, cfg, &ServerStartOpts{
+	logger := dlog.FromCtx(st.ctx).With("nodeNum", i, "test", st.t.Name())
+	ctx := dlog.CtxWithLog(st.ctx, logger)
+
+	bc := st.btc.GetBlockchain(ctx, i)
+	service, err := StartServer(ctx, cfg, &ServerStartOpts{
 		RiverChain:      bc,
 		Listener:        listener,
 		HttpClientMaker: testcert.GetHttp2LocalhostTLSClient,
 		ScrubberMaker:   options.scrubberMaker,
 	})
 	if err != nil {
-		if service != nil {
-			// Sanity check
-			panic("service should be nil")
-		}
+		st.require.Nil(service)
 		return err
 	}
 
