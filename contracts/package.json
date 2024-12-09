@@ -13,7 +13,7 @@
         "snapshot": "make snapshot",
         "sync": "make update",
         "test": "yarn test:unit",
-        "test:unit": "make test"
+        "test:unit": "forge test --ffi"
     },
     "dependencies": {
         "@openzeppelin/contracts": "^5.1.0",
