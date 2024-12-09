@@ -1,7 +1,6 @@
 package rpc
 
 import (
-	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -18,7 +17,7 @@ func TestGetStreamEx(t *testing.T) {
 			start:    true,
 			btcParams: &crypto.TestParams{
 				AutoMine:         true,
-				AutoMineInterval: 200 * time.Millisecond,
+				AutoMineInterval: 10 * time.Millisecond,
 				MineOnTx:         true,
 			},
 		},
@@ -35,26 +34,18 @@ func TestGetStreamEx(t *testing.T) {
 	}
 
 	require.Eventually(func() bool {
-		mbs := make([]*protocol.Miniblock, 0, 100)
+		mbs := make([]*protocol.Miniblock, 0, 102)
 		alice.getStreamEx(channelId, func(mb *protocol.Miniblock) {
 			mbs = append(mbs, mb)
 		})
-		t.Logf("mbs %d", len(mbs))
-		//if len(mbs) != 100 {
-		//	return false
-		//}
 
+		events := make([]*protocol.Envelope, 0, 102)
 		for _, mb := range mbs {
-			require.NotNil(mb)
-
 			for _, event := range mb.GetEvents() {
-				eventRaw, _ := json.MarshalIndent(event.GetEvent(), "", "  ")
-				fmt.Println(string(eventRaw))
+				events = append(events, event)
 			}
-
 		}
 
-		return true
+		return len(events) == 102
 	}, time.Second*5, time.Millisecond*200)
-
 }
