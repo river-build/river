@@ -26,7 +26,7 @@ func NewTestContextWithOptionalLogging(logLevel string) (context.Context, contex
 			&dlog.PrettyHandlerOptions{
 				Level:         level,
 				PrintLongTime: false,
-				Colors:        dlog.ColorMap_Enabled,
+				// Colors:        dlog.ColorMap_Enabled,
 			},
 		)
 	} else {
