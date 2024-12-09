@@ -213,13 +213,6 @@ func (s *Service) initInstance(mode string, opts *ServerStartOpts) {
 		s.httpClientMaker = http_client.GetHttpClient
 	}
 
-	port := s.config.Port
-	if port == 0 && s.listener != nil {
-		addr := s.listener.Addr().(*net.TCPAddr)
-		if addr != nil {
-			port = addr.Port
-		}
-	}
 	if !s.config.Log.Simplify {
 		s.defaultLogger = dlog.FromCtx(s.serverCtx).With(
 			"instanceId", s.instanceId,
@@ -227,9 +220,11 @@ func (s *Service) initInstance(mode string, opts *ServerStartOpts) {
 			"nodeType", "stream",
 		)
 	} else {
-		s.defaultLogger = dlog.FromCtx(s.serverCtx).With(
-			"port", port,
-		)
+		if s.config.Port != 0 {
+			s.defaultLogger = dlog.FromCtx(s.serverCtx).With(
+				"port", s.config.Port,
+			)
+		}
 	}
 	s.serverCtx = dlog.CtxWithLog(s.serverCtx, s.defaultLogger)
 
@@ -238,14 +233,15 @@ func (s *Service) initInstance(mode string, opts *ServerStartOpts) {
 		apnPrivateAuthKey      = s.config.Notifications.APN.AuthKey
 		sessionTokenPrivateKey = s.config.Notifications.Authentication.SessionToken.Key.Key
 	)
+	// TODO: set omit tag on sensitive fields instead of manually hiding them
 	s.config.Notifications.Web.Vapid.PrivateKey = "<hidden>"
 	s.config.Notifications.APN.AuthKey = "<hidden>"
 	s.config.Notifications.Authentication.SessionToken.Key.Key = "<hidden>"
 
+	// TODO: refactor to load wallet before so node address is logged here as well
 	s.defaultLogger.Info(
-		"Starting server",
+		"Server config",
 		"config", s.config,
-		"mode", mode,
 		"version", version.GetFullVersion(),
 	)
 
