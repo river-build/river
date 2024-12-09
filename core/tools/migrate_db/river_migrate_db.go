@@ -9,7 +9,6 @@ import (
 	"os"
 	"slices"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -674,76 +673,6 @@ func queryPartitions(ctx context.Context, pool *pgxpool.Pool, table string) ([]s
 	return parts, nil
 }
 
-var partitionsUseFastCreate = false
-
-const miniblocksSql = `
-CREATE TABLE IF NOT EXISTS %[1]s (
-  stream_id CHAR(64) STORAGE PLAIN NOT NULL,
-  seq_num BIGINT NOT NULL,
-  blockdata BYTEA STORAGE EXTERNAL NOT NULL,
-  PRIMARY KEY (stream_id, seq_num)
-  )
-`
-
-const minipoolsSql = `
-CREATE TABLE IF NOT EXISTS %[1]s (
-  stream_id CHAR(64) STORAGE PLAIN NOT NULL,
-  generation BIGINT NOT NULL,
-  slot_num BIGINT NOT NULL,
-  envelope BYTEA STORAGE EXTERNAL,
-  PRIMARY KEY (stream_id, generation, slot_num)
-  )
-`
-
-const miniblockCandidatesSql = `
-CREATE TABLE IF NOT EXISTS %[1]s (
-  stream_id CHAR(64) STORAGE PLAIN NOT NULL,
-  seq_num BIGINT NOT NULL,
-  block_hash CHAR(64) STORAGE PLAIN NOT NULL,
-  blockdata BYTEA STORAGE EXTERNAL NOT NULL,
-  PRIMARY KEY (stream_id, seq_num, block_hash)
-  )
-`
-
-func getMissingPartitionsSql(
-	ctx context.Context,
-	stream_ids []string,
-	pool *pgxpool.Pool,
-	table string,
-) ([][]string, error) {
-	var ret [][]string
-	parts, err := queryPartitions(ctx, pool, table)
-	if err != nil {
-		return nil, err
-	}
-	pp := map[string]bool{}
-	for _, p := range parts {
-		pp[p] = true
-	}
-
-	for _, id := range stream_ids {
-		partName := getPartitionName(table, id, 256)
-		if !pp[partName] {
-			ret = append(
-				ret,
-				[]string{fmt.Sprintf(
-					"CREATE TABLE IF NOT EXISTS %s PARTITION OF %s FOR VALUES IN ('%s')",
-					partName,
-					table,
-					id,
-				)},
-			)
-		}
-	}
-	return ret, nil
-}
-
-type partDesc struct {
-	stream_id string
-	table     string
-	part      string
-}
-
 func chunk(slice [][]string, size int) [][]string {
 	var ret [][]string
 	for i := 0; i < len(slice); i += size {
@@ -759,14 +688,6 @@ func chunk(slice [][]string, size int) [][]string {
 
 func chunk2[T any](slice []T, size int) [][]T {
 	var ret [][]T
-	for i := 0; i < len(slice); i += size {
-		ret = append(ret, slice[i:min(len(slice), i+size)])
-	}
-	return ret
-}
-
-func chunkParts(slice []partDesc, size int) [][]partDesc {
-	var ret [][]partDesc
 	for i := 0; i < len(slice); i += size {
 		ret = append(ret, slice[i:min(len(slice), i+size)])
 	}
@@ -986,111 +907,6 @@ func executeInParallelInTx[T any](
 		}
 		return nil
 	})
-}
-
-func createPartitionTables(
-	ctx context.Context,
-	pool *pgxpool.Pool,
-	parts []partDesc,
-) error {
-	conn, err := pool.Acquire(ctx)
-	if err != nil {
-		return wrapError("Failed to acquire connection", err)
-	}
-	defer conn.Release()
-
-	for _, part := range parts {
-		var sql string
-		switch part.table {
-		case "minipools":
-			sql = minipoolsSql
-		case "miniblocks":
-			sql = miniblocksSql
-		case "miniblock_candidates":
-			sql = miniblockCandidatesSql
-		default:
-			return fmt.Errorf("unknown table: %s", part.table)
-		}
-
-		_, err = conn.Exec(ctx, fmt.Sprintf(sql, part.part))
-		if err != nil {
-			return fmt.Errorf("failed to create partition table %s for %s: %w", part.part, part.table, err)
-		}
-	}
-
-	return nil
-}
-
-func attachPartitions(
-	ctx context.Context,
-	pool *pgxpool.Pool,
-	parts []partDesc,
-	progressCounter *atomic.Int64,
-) error {
-	batch := &pgx.Batch{}
-	for _, part := range parts {
-		batch.Queue(
-			fmt.Sprintf(
-				"ALTER TABLE %s ATTACH PARTITION %s FOR VALUES IN ('%s')",
-				part.table,
-				part.part,
-				part.stream_id,
-			),
-		)
-	}
-	err := pool.SendBatch(ctx, batch).Close()
-	if err != nil {
-		return fmt.Errorf("failed to attach partitions: %w", err)
-	}
-	progressCounter.Add(int64(len(parts)))
-	return nil
-}
-
-func createPartitionsWorker(
-	ctx context.Context,
-	pool *pgxpool.Pool,
-	parts []partDesc,
-	progressCounter *atomic.Int64,
-	wg *sync.WaitGroup,
-) {
-	defer wg.Done()
-
-	txSize := viper.GetInt("RIVER_DB_PARTITION_TX_SIZE")
-	if txSize <= 0 {
-		txSize = 10
-	}
-	numWorkers := viper.GetInt("RIVER_DB_PARTITION_WORKERS")
-	if numWorkers <= 0 {
-		numWorkers = 8
-	}
-	numAttachWorkers := viper.GetInt("RIVER_DB_ATTACH_WORKERS")
-	if numAttachWorkers <= 0 {
-		numAttachWorkers = 1
-	}
-
-	workerPool := workerpool.New(numWorkers)
-	attachWorkerPool := workerpool.New(numAttachWorkers)
-
-	workItems := chunkParts(parts, txSize)
-	for _, workItem := range workItems {
-		workerPool.Submit(func() {
-			err := createPartitionTables(ctx, pool, workItem)
-			if err != nil {
-				fmt.Println("ERROR:", err)
-				os.Exit(1)
-			}
-			attachWorkerPool.Submit(func() {
-				err := attachPartitions(ctx, pool, workItem, progressCounter)
-				if err != nil {
-					fmt.Println("ERROR:", err)
-					os.Exit(1)
-				}
-			})
-		})
-	}
-
-	workerPool.StopWait()
-	attachWorkerPool.StopWait()
 }
 
 func printPartitions(ctx context.Context, pool *pgxpool.Pool) error {
