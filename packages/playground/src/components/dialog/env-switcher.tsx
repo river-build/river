@@ -16,6 +16,8 @@ import { useNavigate } from 'react-router-dom'
 import { getWeb3Deployment, getWeb3Deployments } from '@river-build/web3'
 import { deleteAuth, storeAuth } from '@/utils/persist-auth'
 import { useEthersSigner } from '@/utils/viem-to-ethers'
+import { workerPool } from '@/utils/workers'
+import { UnpackerWorker } from '@/utils/unpack-worker'
 import { Button } from '../ui/button'
 import {
     Dialog,
@@ -127,6 +129,7 @@ export const RiverEnvSwitcherContent = (props: {
                                                 if (bearerToken) {
                                                     await connectUsingBearerToken(bearerToken, {
                                                         riverConfig,
+                                                        unpacker: new UnpackerWorker(workerPool),
                                                     }).then((sync) => {
                                                         if (sync?.config.context) {
                                                             storeAuth(
@@ -143,6 +146,7 @@ export const RiverEnvSwitcherContent = (props: {
                                                 }
                                                 await connect(signer, {
                                                     riverConfig,
+                                                    unpacker: new UnpackerWorker(workerPool),
                                                 }).then((sync) => {
                                                     if (sync?.config.context) {
                                                         storeAuth(sync?.config.context, riverConfig)
