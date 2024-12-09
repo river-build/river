@@ -1717,3 +1717,28 @@ func TestSyncSubscriptionWithTooSlowClient(t *testing.T) {
 		}
 	}, 20*time.Second, 100*time.Millisecond, "sync operation not stopped within reasonable time")
 }
+
+// TestGetMiniblocksRangeLimit checks that GetMiniblocks endpoint has a validation for a max range of blocks
+// to be fetched at once.
+func TestGetMiniblocksRangeLimit(t *testing.T) {
+	tt := newServiceTester(t, serviceTesterOpts{numNodes: 5, start: true})
+
+	alice := tt.newTestClient(0)
+	_ = alice.createUserStream()
+	spaceId, _ := alice.createSpace()
+	channelId, _ := alice.createChannel(spaceId)
+
+	resp, err := alice.client.GetMiniblocks(alice.ctx, connect.NewRequest(&protocol.GetMiniblocksRequest{
+		StreamId:      channelId[:],
+		FromInclusive: 0,
+		ToExclusive:   101,
+	}))
+	tt.require.Nil(resp)
+	tt.require.Error(err)
+	tt.require.Contains(err.Error(), "Requested miniblock count exceeds limit")
+
+	var connectErr *connect.Error
+	tt.require.True(errors.As(err, &connectErr))
+	tt.require.Equal(connectErr.Code(), connect.CodeInvalidArgument)
+	tt.require.Contains(connectErr.Message(), "Requested miniblock count exceeds limit")
+}
