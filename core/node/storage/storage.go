@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/ethereum/go-ethereum/common"
+
 	. "github.com/river-build/river/core/node/shared"
 )
 
@@ -144,7 +145,6 @@ type EventDescriptor struct {
 type DebugReadStreamDataResult struct {
 	StreamId                   StreamId
 	LatestSnapshotMiniblockNum int64
-	Migrated                   bool
 	Miniblocks                 []MiniblockDescriptor
 	Events                     []EventDescriptor
 	MbCandidates               []MiniblockDescriptor

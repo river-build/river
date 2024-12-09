@@ -31,20 +31,6 @@ func wrapError(message string, err error) error {
 	return fmt.Errorf("%s: %w", message, err)
 }
 
-func getTableName(table string, streamId string) string {
-	sharedStreamId, err := shared.StreamIdFromString(streamId)
-	if err != nil {
-		fmt.Println("Bad stream id: ", streamId)
-		os.Exit(1)
-	}
-	suffix := storage.CreateTableSuffix(sharedStreamId)
-	tableName := fmt.Sprintf("%s_%s", table, suffix)
-	if len(tableName) > 63 {
-		tableName = tableName[:63]
-	}
-	return tableName
-}
-
 func getPartitionName(table string, streamId string, numPartitions int) string {
 	sharedStreamId, err := shared.StreamIdFromString(streamId)
 	if err != nil {
@@ -487,12 +473,7 @@ func init() {
 }
 
 func escapedSql(sql string, streamId string, metadata schemaMetadata) string {
-	var suffix string
-	if metadata.migrated {
-		suffix = getPartitionName("", streamId, metadata.numPartitions)
-	} else {
-		suffix = getTableName("", streamId)
-	}
+	suffix := getPartitionName("", streamId, metadata.numPartitions)
 
 	sql = strings.ReplaceAll(
 		sql,
@@ -741,7 +722,7 @@ func getMissingPartitionsSql(
 	}
 
 	for _, id := range stream_ids {
-		partName := getTableName(table, id)
+		partName := getPartitionName(table, id, 256)
 		if !pp[partName] {
 			ret = append(
 				ret,
@@ -761,35 +742,6 @@ type partDesc struct {
 	stream_id string
 	table     string
 	part      string
-}
-
-func getMissingPartitions(
-	ctx context.Context,
-	stream_ids []string,
-	pool *pgxpool.Pool,
-	table string,
-) ([]partDesc, error) {
-	parts, err := queryPartitions(ctx, pool, table)
-	if err != nil {
-		return nil, err
-	}
-	pp := map[string]bool{}
-	for _, p := range parts {
-		pp[p] = true
-	}
-
-	var ret []partDesc
-	for _, id := range stream_ids {
-		partName := getTableName(table, id)
-		if !pp[partName] {
-			ret = append(ret, partDesc{
-				stream_id: id,
-				table:     table,
-				part:      partName,
-			})
-		}
-	}
-	return ret, nil
 }
 
 func chunk(slice [][]string, size int) [][]string {
@@ -1141,144 +1093,6 @@ func createPartitionsWorker(
 	attachWorkerPool.StopWait()
 }
 
-func createPartitionsFast(
-	ctx context.Context,
-	sourcePool *pgxpool.Pool,
-	targetPool *pgxpool.Pool,
-) error {
-	stream_ids, _, _, err := getStreamIds(ctx, sourcePool)
-	if err != nil {
-		return wrapError("Failed to get stream ids from source", err)
-	}
-
-	mp_parts, err := getMissingPartitions(ctx, stream_ids, targetPool, "minipools")
-	if err != nil {
-		return wrapError("Failed to get missing minipools partitions", err)
-	}
-	if len(mp_parts) > 0 {
-		fmt.Println("Creating minipools partitions:", len(mp_parts))
-	} else {
-		fmt.Println("All minipools partitions already exist")
-	}
-
-	mb_parts, err := getMissingPartitions(ctx, stream_ids, targetPool, "miniblocks")
-	if err != nil {
-		return wrapError("Failed to get missing miniblocks partitions", err)
-	}
-	if len(mb_parts) > 0 {
-		fmt.Println("Creating miniblocks partitions:", len(mb_parts))
-	} else {
-		fmt.Println("All miniblocks partitions already exist")
-	}
-
-	cand_parts, err := getMissingPartitions(ctx, stream_ids, targetPool, "miniblock_candidates")
-	if err != nil {
-		return wrapError("Failed to get missing miniblock_candidates partitions", err)
-	}
-	if len(cand_parts) > 0 {
-		fmt.Println("Creating miniblock_candidates partitions:", len(cand_parts))
-	} else {
-		fmt.Println("All miniblock_candidates partitions already exist")
-	}
-
-	var wg sync.WaitGroup
-	var progressCounter atomic.Int64
-
-	go reportProgress(ctx, "Partitions created:", &progressCounter)
-
-	if len(mp_parts) > 0 {
-		wg.Add(1)
-		go createPartitionsWorker(ctx, targetPool, mp_parts, &progressCounter, &wg)
-	}
-
-	if len(mb_parts) > 0 {
-		wg.Add(1)
-		go createPartitionsWorker(ctx, targetPool, mb_parts, &progressCounter, &wg)
-	}
-
-	if len(cand_parts) > 0 {
-		wg.Add(1)
-		go createPartitionsWorker(ctx, targetPool, cand_parts, &progressCounter, &wg)
-	}
-
-	wg.Wait()
-
-	return nil
-}
-
-func createPartitionsSlow(
-	ctx context.Context,
-	sourcePool *pgxpool.Pool,
-	targetPool *pgxpool.Pool,
-) error {
-	stream_ids, _, _, err := getStreamIds(ctx, sourcePool)
-	if err != nil {
-		return wrapError("Failed to get stream ids from source", err)
-	}
-
-	mp_sql, err := getMissingPartitionsSql(ctx, stream_ids, targetPool, "minipools")
-	if err != nil {
-		return wrapError("Failed to get missing minipools partitions", err)
-	}
-
-	mb_sql, err := getMissingPartitionsSql(ctx, stream_ids, targetPool, "miniblocks")
-	if err != nil {
-		return wrapError("Failed to get missing miniblocks partitions", err)
-	}
-
-	cand_sql, err := getMissingPartitionsSql(ctx, stream_ids, targetPool, "miniblock_candidates")
-	if err != nil {
-		return wrapError("Failed to get missing miniblock_candidates partitions", err)
-	}
-
-	sql := append(mp_sql, mb_sql...)
-	sql = append(sql, cand_sql...)
-
-	if len(sql) == 0 {
-		fmt.Println("All partitions already exist")
-		return nil
-	}
-	fmt.Println("Creating partitions:", len(sql))
-
-	return executeSqlInParallel(ctx, targetPool, sql, "Partitions created:", true)
-}
-
-var targetPartitionCmd = &cobra.Command{
-	Use:   "partition",
-	Short: "Create partitions matching source in target database",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx := cmd.Context()
-		sourcePool, sourceInfo, err := getSourceDbPool(ctx, true)
-		if err != nil {
-			return err
-		}
-		err = testDbConnection(ctx, sourcePool, sourceInfo)
-		if err != nil {
-			return err
-		}
-
-		targetPool, targetInfo, err := getTargetDbPool(ctx, true)
-		if err != nil {
-			return err
-		}
-		err = testDbConnection(ctx, targetPool, targetInfo)
-		if err != nil {
-			return err
-		}
-
-		if partitionsUseFastCreate {
-			return createPartitionsFast(ctx, sourcePool, targetPool)
-		} else {
-			return createPartitionsSlow(ctx, sourcePool, targetPool)
-		}
-	},
-}
-
-func init() {
-	targetCmd.AddCommand(targetPartitionCmd)
-	targetPartitionCmd.Flags().BoolVar(&partitionsUseFastCreate, "fast", false, "Use fast partition creation")
-}
-
 func printPartitions(ctx context.Context, pool *pgxpool.Pool) error {
 	parts, err := queryPartitions(ctx, pool, "minipools")
 	if err != nil {
@@ -1376,19 +1190,19 @@ func deleteStream(ctx context.Context, tx pgx.Tx, streamId string) error {
 		return fmt.Errorf("failed to delete stream %s: %w", streamId, err)
 	}
 
-	mp_part := getTableName("minipools", streamId)
+	mp_part := getPartitionName("minipools", streamId, 256)
 	_, err = tx.Exec(ctx, "DELETE FROM "+mp_part+" WHERE stream_id = $1", streamId)
 	if err != nil {
 		return fmt.Errorf("failed to delete minipools partition %s: %w", mp_part, err)
 	}
 
-	mb_part := getTableName("miniblocks", streamId)
+	mb_part := getPartitionName("miniblocks", streamId, 256)
 	_, err = tx.Exec(ctx, "DELETE FROM "+mb_part+" WHERE stream_id = $1", streamId)
 	if err != nil {
 		return fmt.Errorf("failed to delete miniblocks partition %s: %w", mb_part, err)
 	}
 
-	cand_part := getTableName("miniblock_candidates", streamId)
+	cand_part := getPartitionName("miniblock_candidates", streamId, 256)
 	_, err = tx.Exec(ctx, "DELETE FROM "+cand_part+" WHERE stream_id = $1", streamId)
 	if err != nil {
 		return fmt.Errorf("failed to delete miniblock_candidates partition %s: %w", cand_part, err)
@@ -1518,13 +1332,8 @@ func copyPart(
 	sourceInfo *dbInfo,
 	targetSchemaMetadata schemaMetadata,
 ) error {
-	srcPartition := getTableName(table, streamId)
-	var targetPartition string
-	if targetSchemaMetadata.migrated {
-		targetPartition = getPartitionName(table, streamId, targetSchemaMetadata.numPartitions)
-	} else {
-		targetPartition = srcPartition
-	}
+	srcPartition := getPartitionName(table, streamId, 256)
+	targetPartition := getPartitionName(table, streamId, targetSchemaMetadata.numPartitions)
 
 	if verbose {
 		fmt.Printf("Querying %v to copy to %v for stream %v...\n", srcPartition, targetPartition, streamId)
@@ -1612,7 +1421,7 @@ func migratePart(
 	dbInfo *dbInfo,
 	dbSchemaMetadata schemaMetadata,
 ) error {
-	partition := getTableName(table, streamId)
+	partition := getPartitionName(table, streamId, 256)
 	targetPartition := getPartitionName(table, streamId, dbSchemaMetadata.numPartitions)
 
 	if verbose {
@@ -1914,7 +1723,6 @@ func copyData(
 	target *pgxpool.Pool,
 	force bool,
 	sourceInfo *dbInfo,
-	migrateStreamSchema bool,
 ) error {
 	sourceStreamIds, _, _, err := getStreamIds(ctx, source)
 	if err != nil {
@@ -1958,21 +1766,16 @@ func copyData(
 	}
 
 	var targetSchemaMetadata schemaMetadata
-	if migrateStreamSchema {
-		// fmt.Println("Using numWorkers=1 for copy with stream migration")
-		// numWorkers = 1
-
-		fmt.Println("Reading partition settings from target database...")
-		numPartitions, err := getNumPartitionSettings(ctx, target)
-		if err != nil {
-			fmt.Println("Error reading partition settings: ", err)
-			os.Exit(1)
-		}
-		fmt.Println("Target database partitions:", numPartitions)
-
-		targetSchemaMetadata.migrated = true
-		targetSchemaMetadata.numPartitions = numPartitions
+	fmt.Println("Reading partition settings from target database...")
+	numPartitions, err := getNumPartitionSettings(ctx, target)
+	if err != nil {
+		fmt.Println("Error reading partition settings: ", err)
+		os.Exit(1)
 	}
+	fmt.Println("Target database partitions:", numPartitions)
+
+	targetSchemaMetadata.migrated = true
+	targetSchemaMetadata.numPartitions = numPartitions
 
 	workerPool := workerpool.New(numWorkers)
 	workItems := chunk2(newStreamIds, txSize)
@@ -2064,9 +1867,8 @@ func migrateData(
 }
 
 var (
-	copyCmdForce        bool
-	migrateStreamSchema bool
-	copyCmd             = &cobra.Command{
+	copyCmdForce bool
+	copyCmd      = &cobra.Command{
 		Use:   "copy",
 		Short: "Copy data from source to target database",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -2089,18 +1891,7 @@ var (
 				return err
 			}
 
-			if migrateStreamSchema {
-				if verbose {
-					fmt.Println("Skipping partition creation")
-				}
-			} else {
-				err = createPartitionsSlow(ctx, sourcePool, targetPool)
-				if err != nil {
-					return err
-				}
-			}
-
-			return copyData(ctx, sourcePool, targetPool, copyCmdForce, sourceInfo, migrateStreamSchema)
+			return copyData(ctx, sourcePool, targetPool, copyCmdForce, sourceInfo)
 		},
 	}
 )
@@ -2109,8 +1900,6 @@ func init() {
 	rootCmd.AddCommand(copyCmd)
 	copyCmd.Flags().BoolVar(&copyCmdForce, "force", false, "Force copy even if target already has data")
 	copyCmd.Flags().BoolVar(&copyBypass, "bypass", false, "Bypass reading data into memory (another copy method)")
-	copyCmd.Flags().
-		BoolVarP(&migrateStreamSchema, "migrate_stream_schema", "m", false, "Copy stream data into migrated tables on target db")
 }
 
 var migrateCmd = &cobra.Command{
@@ -2143,11 +1932,8 @@ func compareTableCounts(
 	streamId string,
 	table string,
 ) error {
-	srcPartition := getTableName(table, streamId)
-	targetPartition := srcPartition
-	if targetSchemaMetadata.migrated {
-		targetPartition = getPartitionName(table, streamId, targetSchemaMetadata.numPartitions)
-	}
+	srcPartition := getPartitionName(table, streamId, 256)
+	targetPartition := getPartitionName(table, streamId, targetSchemaMetadata.numPartitions)
 
 	var sourceCount int
 	err := source.QueryRow(ctx, fmt.Sprintf("SELECT count(*) FROM %s WHERE stream_id = $1", srcPartition), streamId).
@@ -2255,11 +2041,8 @@ func compareMiniblockContents(
 	targetSchemaMetadata schemaMetadata,
 	streamId string,
 ) error {
-	srcPartition := getTableName("miniblocks", streamId)
-	targetPartition := srcPartition
-	if targetSchemaMetadata.migrated {
-		targetPartition = getPartitionName("miniblocks", streamId, targetSchemaMetadata.numPartitions)
-	}
+	srcPartition := getPartitionName("miniblocks", streamId, 256)
+	targetPartition := getPartitionName("miniblocks", streamId, targetSchemaMetadata.numPartitions)
 
 	rows, err := source.Query(
 		ctx,
@@ -2349,11 +2132,8 @@ func compareMiniblockCandidateContents(
 	targetSchemaMetadata schemaMetadata,
 	streamId string,
 ) error {
-	srcPartition := getTableName("miniblock_candidates", streamId)
-	targetPartition := srcPartition
-	if targetSchemaMetadata.migrated {
-		targetPartition = getPartitionName("miniblock_candidates", streamId, targetSchemaMetadata.numPartitions)
-	}
+	srcPartition := getPartitionName("miniblock_candidates", streamId, 256)
+	targetPartition := getPartitionName("miniblock_candidates", streamId, targetSchemaMetadata.numPartitions)
 
 	exists, err := tableExists(ctx, source, sourceInfo, srcPartition)
 	if err != nil {
@@ -2532,11 +2312,8 @@ func compareMinipoolContents(
 	targetSchemaMetadata schemaMetadata,
 	streamId string,
 ) error {
-	srcPartition := getTableName("minipools", streamId)
-	targetPartition := srcPartition
-	if targetSchemaMetadata.migrated {
-		targetPartition = getPartitionName("minipools", streamId, targetSchemaMetadata.numPartitions)
-	}
+	srcPartition := getPartitionName("minipools", streamId, 256)
+	targetPartition := getPartitionName("minipools", streamId, targetSchemaMetadata.numPartitions)
 
 	// Multimap: seq_num -> hash -> block data
 	srcGeneration := int64(-1)
@@ -2741,15 +2518,12 @@ var validateCmd = &cobra.Command{
 		workerPool := workerpool.New(numWorkers)
 
 		var targetSchemaMetadata schemaMetadata
-		if targetMigrated {
-			targetSchemaMetadata.migrated = true
-			numPartitions, err := getNumPartitionSettings(ctx, targetPool)
-			if err != nil {
-				fmt.Println("Error reading num_partitions setting from target: ", err)
-				os.Exit(1)
-			}
-			targetSchemaMetadata.numPartitions = numPartitions
+		numPartitions, err := getNumPartitionSettings(ctx, targetPool)
+		if err != nil {
+			fmt.Println("Error reading num_partitions setting from target: ", err)
+			os.Exit(1)
 		}
+		targetSchemaMetadata.numPartitions = numPartitions
 
 		progressCounter := &atomic.Int64{}
 		for _, id := range targetStreamIds {
@@ -2777,14 +2551,9 @@ var validateCmd = &cobra.Command{
 	},
 }
 
-var (
-	compareBinary  bool
-	targetMigrated bool
-)
+var compareBinary bool
 
 func init() {
-	validateCmd.Flags().
-		BoolVarP(&targetMigrated, "migrated", "m", false, "Compare stream data in migrated schema on target")
 	validateCmd.Flags().
 		BoolVarP(&compareBinary, "compary_binary", "b", false, "Compare binary stream data on source and target")
 	rootCmd.AddCommand(validateCmd)
