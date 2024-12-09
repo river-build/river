@@ -1,3 +1,7 @@
+# WARNING
+
+This script has been updated to remove all data migration logic after all public networks migrated to the current stream schema. However, it has not been carefully tested since this change and should be relied upon with caution.
+
 ### Build migration tool
 
 Update `river_migrate_db.env` with correct parameters.
@@ -12,7 +16,7 @@ go build -o river_migrate_db .
 
 Note: shutdown node process connected to source DB during migration process below.
 
-### Run migration tool creating target partitions matching source
+### Run migration tool
 
     ./river_migrate_db target create  # create target schema (i.e. db partition)
     ./river_migrate_db target init  # create targe tables
@@ -25,7 +29,7 @@ Note: shutdown node process connected to source DB during migration process belo
     ./river_migrate_db source inspect <streamId>
     ./river_migrate_db target inspect <streamId>
 
-    # reconfigure container to use target db
+    # reconfigure node container to use target db & estart node
 
 For command-line options use `help` command.
 

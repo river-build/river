@@ -1,7 +1,3 @@
-# Note
-
-This script has been updated to remove all data migration logic after all public networks migrated to the current stream schema. However, it has not been carefully tested since this change and should be used with extreme caution.
-
 # Installing proto compiler
 
     brew install protobuf
