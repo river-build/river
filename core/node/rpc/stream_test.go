@@ -41,9 +41,7 @@ func TestGetStreamEx(t *testing.T) {
 
 		events := make([]*protocol.Envelope, 0, 102)
 		for _, mb := range mbs {
-			for _, event := range mb.GetEvents() {
-				events = append(events, event)
-			}
+			events = append(events, mb.GetEvents()...)
 		}
 
 		return len(events) == 102
