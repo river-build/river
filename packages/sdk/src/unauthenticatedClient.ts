@@ -2,10 +2,11 @@ import debug from 'debug'
 import { DLogger, check, dlog, dlogError } from '@river-build/dlog'
 import { hasElements, isDefined } from './check'
 import { StreamRpcClient } from './makeStreamRpcClient'
-import { UnpackEnvelopeOpts, unpackMiniblock, unpackStream } from './sign'
+import { UnpackEnvelopeOpts } from './sign'
 import { StreamStateView } from './streamStateView'
 import { ParsedMiniblock, StreamTimelineEvent } from './types'
 import { streamIdAsString, streamIdAsBytes, userIdFromAddress, makeUserStreamId } from './id'
+import { Unpacker } from './unpacker'
 
 const SCROLLBACK_MAX_COUNT = 20
 const SCROLLBACK_MULTIPLIER = 4n
@@ -19,6 +20,7 @@ export class UnauthenticatedClient {
 
     private readonly userId = 'unauthenticatedClientUser'
     private getScrollbackRequests: Map<string, ReturnType<typeof this.scrollback>> = new Map()
+    private unpacker: Unpacker
 
     constructor(
         rpcClient: StreamRpcClient,
@@ -28,6 +30,7 @@ export class UnauthenticatedClient {
             disableSignatureValidation: true,
             disableHashValidation: true,
         },
+        unpacker?: Unpacker,
     ) {
         if (logNamespaceFilter) {
             debug.enable(logNamespaceFilter)
@@ -44,6 +47,7 @@ export class UnauthenticatedClient {
         this.unpackEnvelopeOpts = opts
 
         this.logCall('new UnauthenticatedClient')
+        this.unpacker = unpacker ?? new Unpacker()
     }
 
     async userWithAddressExists(address: Uint8Array): Promise<boolean> {
@@ -74,10 +78,8 @@ export class UnauthenticatedClient {
                 isDefined(response.stream) && hasElements(response.stream.miniblocks),
                 'got bad stream',
             )
-            const { streamAndCookie, snapshot, prevSnapshotMiniblockNum } = await unpackStream(
-                response.stream,
-                this.unpackEnvelopeOpts,
-            )
+            const { streamAndCookie, snapshot, prevSnapshotMiniblockNum } =
+                await this.unpacker.unpackStream(response.stream, this.unpackEnvelopeOpts)
             const streamView = new StreamStateView(this.userId, streamIdAsString(streamId))
 
             streamView.initialize(
@@ -212,7 +214,10 @@ export class UnauthenticatedClient {
 
         const unpackedMiniblocks: ParsedMiniblock[] = []
         for (const miniblock of response.miniblocks) {
-            const unpackedMiniblock = await unpackMiniblock(miniblock, this.unpackEnvelopeOpts)
+            const unpackedMiniblock = await this.unpacker.unpackMiniblock(
+                miniblock,
+                this.unpackEnvelopeOpts,
+            )
             unpackedMiniblocks.push(unpackedMiniblock)
         }
         return {
