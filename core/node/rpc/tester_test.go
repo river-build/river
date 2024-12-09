@@ -805,6 +805,7 @@ func (tc *testClient) getStreamEx(streamId StreamId, onEachMb func(*protocol.Min
 	for resp.Receive() {
 		onEachMb(resp.Msg().GetMiniblock())
 	}
+	tc.require.NoError(resp.Err())
 	tc.require.NoError(resp.Close())
 }
 

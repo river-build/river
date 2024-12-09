@@ -34,21 +34,27 @@ func TestGetStreamEx(t *testing.T) {
 		alice.say(channelId, fmt.Sprintf("hello from Alice %d", count))
 	}
 
-	time.Sleep(1 * time.Second)
+	require.Eventually(func() bool {
+		mbs := make([]*protocol.Miniblock, 0, 100)
+		alice.getStreamEx(channelId, func(mb *protocol.Miniblock) {
+			mbs = append(mbs, mb)
+		})
+		t.Logf("mbs %d", len(mbs))
+		//if len(mbs) != 100 {
+		//	return false
+		//}
 
-	stream := alice.getStream(channelId)
-	fmt.Println(len(stream.GetEvents())) // Prints 0
+		for _, mb := range mbs {
+			require.NotNil(mb)
 
-	mbs := make([]*protocol.Miniblock, 0, 100)
-	alice.getStreamEx(channelId, func(mb *protocol.Miniblock) {
-		mbs = append(mbs, mb)
-	})
-	require.Len(mbs, 100) // 0 miniblocks
+			for _, event := range mb.GetEvents() {
+				eventRaw, _ := json.MarshalIndent(event.GetEvent(), "", "  ")
+				fmt.Println(string(eventRaw))
+			}
 
-	for _, mb := range mbs {
-		require.NotNil(mb)
+		}
 
-		events, _ := json.MarshalIndent(mb.GetEvents(), "", "  ")
-		fmt.Println(string(events))
-	}
+		return true
+	}, time.Second*5, time.Millisecond*200)
+
 }

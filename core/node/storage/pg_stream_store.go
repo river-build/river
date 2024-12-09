@@ -871,7 +871,7 @@ func (s *PostgresStreamStore) readMiniblocksTx(
 func (s *PostgresStreamStore) ReadMiniblocksByStream(
 	ctx context.Context,
 	streamId StreamId,
-	onEachMb func(mb *Miniblock) error,
+	onEachMb func(blockdata []byte, seqNum int) error,
 ) error {
 	return s.txRunnerWithUUIDCheck(
 		ctx,
@@ -889,7 +889,7 @@ func (s *PostgresStreamStore) readMiniblocksByStreamTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
-	onEachMb func(mb *Miniblock) error,
+	onEachMb func(blockdata []byte, seqNum int) error,
 ) error {
 	_, migrated, err := s.lockStream(ctx, tx, streamId, false)
 	if err != nil {
@@ -909,10 +909,19 @@ func (s *PostgresStreamStore) readMiniblocksByStreamTx(
 		return err
 	}
 
+	var prevSeqNum = -1
+	var blockdata []byte
 	var seqNum int
-	mb := new(Miniblock)
-	_, err = pgx.ForEachRow(rows, []any{&seqNum, &mb}, func() error {
-		return onEachMb(mb)
+	_, err = pgx.ForEachRow(rows, []any{&blockdata, &seqNum}, func() error {
+		if (prevSeqNum != -1) && (seqNum != prevSeqNum+1) {
+			// There is a gap in sequence numbers
+			return RiverError(Err_MINIBLOCKS_STORAGE_FAILURE, "Miniblocks consistency violation").
+				Tag("ActualBlockNumber", seqNum).Tag("ExpectedBlockNumber", prevSeqNum+1).Tag("streamId", streamId)
+		}
+
+		prevSeqNum = seqNum
+
+		return onEachMb(blockdata, seqNum)
 	})
 
 	return err
