@@ -297,10 +297,9 @@ func (st *serviceTester) getConfig(opts ...startOpts) *config.Config {
 	cfg.DisableHttps = false
 	cfg.RegistryContract = st.btc.RegistryConfig()
 	cfg.Database = config.DatabaseConfig{
-		Url:                   st.dbUrl,
-		StartupDelay:          2 * time.Millisecond,
-		NumPartitions:         4,
-		MigrateStreamCreation: true,
+		Url:           st.dbUrl,
+		StartupDelay:  2 * time.Millisecond,
+		NumPartitions: 4,
 	}
 	cfg.Log.Simplify = true
 	cfg.Network = config.NetworkConfig{
