@@ -480,8 +480,6 @@ func makeTestBlockchain(
 		panic(err)
 	}
 
-	bc.StartChainMonitor(ctx)
-
 	return bc
 }
 
