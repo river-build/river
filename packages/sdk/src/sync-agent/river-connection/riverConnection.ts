@@ -20,6 +20,7 @@ import { RetryParams, expiryInterceptor } from '../../rpcInterceptors'
 import { Stream } from '../../stream'
 import { isDefined } from '../../check'
 import { UnpackEnvelopeOpts } from '../../sign'
+import type { Unpacker } from '../../unpacker'
 
 const logger = dlogger('csb:riverConnection')
 
@@ -34,6 +35,7 @@ export interface ClientParams {
     encryptionDevice?: EncryptionDeviceInitOpts
     onTokenExpired?: () => void
     unpackEnvelopeOpts?: UnpackEnvelopeOpts
+    unpacker?: Unpacker
 }
 
 export type OnStoppedFn = () => void
@@ -171,6 +173,7 @@ export class RiverConnection extends PersistedObservable<RiverConnectionModel> {
             this.clientParams.persistenceStoreName,
             this.clientParams.logNamespaceFilter,
             this.clientParams.highPriorityStreamIds,
+            this.clientParams.unpacker,
             this.clientParams.unpackEnvelopeOpts,
         )
         client.setMaxListeners(100)

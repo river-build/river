@@ -1,7 +1,7 @@
 import { Err, SyncCookie, SyncOp, SyncStreamsResponse } from '@river-build/proto'
 import { DLogger, dlog, dlogError } from '@river-build/dlog'
 import { StreamRpcClient } from './makeStreamRpcClient'
-import { UnpackEnvelopeOpts, unpackStream, unpackStreamAndCookie } from './sign'
+import { UnpackEnvelopeOpts } from './sign'
 import { SyncedStreamEvents } from './streamEvents'
 import TypedEmitter from 'typed-emitter'
 import { nanoid } from 'nanoid'
@@ -10,6 +10,7 @@ import { streamIdAsBytes, streamIdAsString } from './id'
 import { ParsedEvent, ParsedStreamResponse } from './types'
 import { logNever } from './check'
 import { errorContains } from './rpcInterceptors'
+import { Unpacker } from './unpacker'
 
 export enum SyncState {
     Canceling = 'Canceling', // syncLoop, maybe syncId if was syncing, not is was starting or retrying
@@ -117,6 +118,7 @@ export class SyncedStreamsLoop {
         currentSequence: 0,
         nonces: {},
     }
+    private unpacker = new Unpacker()
 
     constructor(
         clientEmitter: TypedEmitter<SyncedStreamEvents>,
@@ -124,6 +126,7 @@ export class SyncedStreamsLoop {
         streams: { syncCookie: SyncCookie; stream: ISyncedStream }[],
         logNamespace: string,
         readonly unpackEnvelopeOpts: UnpackEnvelopeOpts | undefined,
+        unpacker?: Unpacker,
     ) {
         this.rpcClient = rpcClient
         this.clientEmitter = clientEmitter
@@ -135,6 +138,7 @@ export class SyncedStreamsLoop {
         )
         this.logSync = dlog('csb:cl:sync').extend(logNamespace)
         this.logError = dlogError('csb:cl:sync:stream').extend(logNamespace)
+        this.unpacker = unpacker ?? new Unpacker()
     }
 
     public get syncState(): SyncState {
@@ -679,11 +683,14 @@ export class SyncedStreamsLoop {
                         this.log('sync got stream', streamId, 'NOT FOUND')
                     } else if (syncStream.syncReset) {
                         this.log('initStream from sync reset', streamId, 'RESET')
-                        const response = await unpackStream(syncStream, this.unpackEnvelopeOpts)
+                        const response = await this.unpacker.unpackStream(
+                            syncStream,
+                            this.unpackEnvelopeOpts,
+                        )
                         streamRecord.syncCookie = response.streamAndCookie.nextSyncCookie
                         await streamRecord.stream.initializeFromResponse(response)
                     } else {
-                        const streamAndCookie = await unpackStreamAndCookie(
+                        const streamAndCookie = await this.unpacker.unpackStreamAndCookie(
                             syncStream,
                             this.unpackEnvelopeOpts,
                         )

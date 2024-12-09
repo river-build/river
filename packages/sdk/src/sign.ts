@@ -1,23 +1,15 @@
 import { PlainMessage } from '@bufbuild/protobuf'
 import { bin_equal, bin_fromHexString, bin_toHexString, check } from '@river-build/dlog'
-import { isDefined, assert, hasElements } from './check'
-import {
-    Envelope,
-    EventRef,
-    StreamEvent,
-    Err,
-    Miniblock,
-    StreamAndCookie,
-    SyncCookie,
-    Tags,
-} from '@river-build/proto'
+import { isDefined, hasElements } from './check'
+import { Envelope, EventRef, StreamEvent, Err, Tags } from '@river-build/proto'
 import { assertBytes } from 'ethereum-cryptography/utils'
 import { recoverPublicKey, signSync, verify } from 'ethereum-cryptography/secp256k1'
-import { genIdBlob, streamIdAsBytes, streamIdAsString, userIdFromAddress } from './id'
-import { ParsedEvent, ParsedMiniblock, ParsedStreamAndCookie, ParsedStreamResponse } from './types'
+import { genIdBlob, streamIdAsBytes, userIdFromAddress } from './id'
+import { ParsedEvent } from './types'
 import { SignerContext, checkDelegateSig } from './signerContext'
 import { keccak256 } from 'ethereum-cryptography/keccak'
 import { createHash } from 'crypto'
+import { Unpacker } from './unpacker'
 
 export interface UnpackEnvelopeOpts {
     // the client recreates the hash from the event bytes in the envelope
@@ -96,113 +88,21 @@ export const makeEvents = async (
     return events
 }
 
-export const unpackStream = async (
-    stream: StreamAndCookie | undefined,
-    opts: UnpackEnvelopeOpts | undefined,
-): Promise<ParsedStreamResponse> => {
-    assert(stream !== undefined, 'bad stream')
-    const streamAndCookie = await unpackStreamAndCookie(stream, opts)
-    assert(
-        stream.miniblocks.length > 0,
-        `bad stream: no blocks ${streamIdAsString(streamAndCookie.nextSyncCookie.streamId)}`,
-    )
-
-    const snapshot = streamAndCookie.miniblocks[0].header.snapshot
-    const prevSnapshotMiniblockNum = streamAndCookie.miniblocks[0].header.prevSnapshotMiniblockNum
-    assert(
-        snapshot !== undefined,
-        `bad block: snapshot is undefined ${streamIdAsString(
-            streamAndCookie.nextSyncCookie.streamId,
-        )}`,
-    )
-    const eventIds = [
-        ...streamAndCookie.miniblocks.flatMap(
-            (mb) => mb.events.map((e) => e.hashStr),
-            streamAndCookie.events.map((e) => e.hashStr),
-        ),
-    ]
-
-    return {
-        streamAndCookie,
-        snapshot,
-        prevSnapshotMiniblockNum,
-        eventIds,
-    }
-}
-
-export const unpackStreamEx = async (
-    miniblocks: Miniblock[],
-    opts: UnpackEnvelopeOpts | undefined,
-): Promise<ParsedStreamResponse> => {
-    const streamAndCookie: StreamAndCookie = new StreamAndCookie()
-    streamAndCookie.events = []
-    streamAndCookie.miniblocks = miniblocks
-    // We don't need to set a valid nextSyncCookie here, as we are currently using getStreamEx only
-    // for fetching media streams, and the result does not return a nextSyncCookie. However, it does
-    // need to be non-null to avoid runtime errors when unpacking the stream into a StreamStateView,
-    // which parses content by type.
-    streamAndCookie.nextSyncCookie = new SyncCookie()
-    return unpackStream(streamAndCookie, opts)
-}
-
-export const unpackStreamAndCookie = async (
-    streamAndCookie: StreamAndCookie,
-    opts: UnpackEnvelopeOpts | undefined,
-): Promise<ParsedStreamAndCookie> => {
-    assert(streamAndCookie.nextSyncCookie !== undefined, 'bad stream: no cookie')
-    const miniblocks = await Promise.all(
-        streamAndCookie.miniblocks.map(async (mb) => await unpackMiniblock(mb, opts)),
-    )
-    return {
-        events: await unpackEnvelopes(streamAndCookie.events, opts),
-        nextSyncCookie: streamAndCookie.nextSyncCookie,
-        miniblocks: miniblocks,
-    }
-}
-
-// returns all events + the header event and pointer to header content
-export const unpackMiniblock = async (
-    miniblock: Miniblock,
-    opts: UnpackEnvelopeOpts | undefined,
-): Promise<ParsedMiniblock> => {
-    check(isDefined(miniblock.header), 'Miniblock header is not set')
-    const header = await unpackEnvelope(miniblock.header, opts)
-    check(
-        header.event.payload.case === 'miniblockHeader',
-        `bad miniblock header: wrong case received: ${header.event.payload.case}`,
-    )
-    const events = await unpackEnvelopes(miniblock.events, opts)
-    return {
-        hash: miniblock.header.hash,
-        header: header.event.payload.value,
-        events: [...events, header],
-    }
-}
-
-export const unpackEnvelope = async (
-    envelope: Envelope,
-    opts: UnpackEnvelopeOpts | undefined,
-): Promise<ParsedEvent> => {
-    check(hasElements(envelope.event), 'Event base is not set', Err.BAD_EVENT)
-    check(hasElements(envelope.hash), 'Event hash is not set', Err.BAD_EVENT)
-    check(hasElements(envelope.signature), 'Event signature is not set', Err.BAD_EVENT)
-
-    const event = StreamEvent.fromBinary(envelope.event)
-    let hash = envelope.hash
-
-    const doCheckEventHash = opts?.disableHashValidation !== true
-    if (doCheckEventHash) {
-        hash = riverHash(envelope.event)
-        check(bin_equal(hash, envelope.hash), 'Event id is not valid', Err.BAD_EVENT_ID)
-    }
-
-    const doCheckEventSignature = opts?.disableSignatureValidation !== true
-    if (doCheckEventSignature) {
-        checkEventSignature(event, hash, envelope.signature)
-    }
-
-    return makeParsedEvent(event, envelope.hash, envelope.signature)
-}
+const unpacker = new Unpacker()
+/** @deprecated use Unpacker instead */
+export const unpackStream = unpacker.unpackStream
+/** @deprecated use Unpacker instead */
+export const unpackStreamEnvelopes = unpacker.unpackStreamEnvelopes
+/** @deprecated use Unpacker instead */
+export const unpackEnvelope = unpacker.unpackEnvelope
+/** @deprecated use Unpacker instead */
+export const unpackEnvelopes = unpacker.unpackEnvelopes
+/** @deprecated use Unpacker instead */
+export const unpackStreamEx = unpacker.unpackStreamEx
+/** @deprecated use Unpacker instead */
+export const unpackStreamAndCookie = unpacker.unpackStreamAndCookie
+/** @deprecated use Unpacker instead */
+export const unpackMiniblock = unpacker.unpackMiniblock
 
 export function checkEventSignature(event: StreamEvent, hash: Uint8Array, signature: Uint8Array) {
     const recoveredPubKey = riverRecoverPubKey(hash, signature)
@@ -240,37 +140,6 @@ export function makeParsedEvent(
             : undefined,
         creatorUserId: userIdFromAddress(event.creatorAddress),
     } satisfies ParsedEvent
-}
-
-export const unpackEnvelopes = async (
-    event: Envelope[],
-    opts: UnpackEnvelopeOpts | undefined,
-): Promise<ParsedEvent[]> => {
-    const ret: ParsedEvent[] = []
-    //let prevEventHash: Uint8Array | undefined = undefined
-    for (const e of event) {
-        // TODO: this handling of prevEventHash is not correct,
-        // hashes should be checked against all preceding events in the stream.
-        ret.push(await unpackEnvelope(e, opts))
-        //prevEventHash = e.hash!
-    }
-    return ret
-}
-
-// First unpacks miniblocks, including header events, then unpacks events from the minipool
-export const unpackStreamEnvelopes = async (
-    stream: StreamAndCookie,
-    opts: UnpackEnvelopeOpts | undefined,
-): Promise<ParsedEvent[]> => {
-    const ret: ParsedEvent[] = []
-
-    for (const mb of stream.miniblocks) {
-        ret.push(...(await unpackEnvelopes(mb.events, opts)))
-        ret.push(await unpackEnvelope(mb.header!, opts))
-    }
-
-    ret.push(...(await unpackEnvelopes(stream.events, opts)))
-    return ret
 }
 
 export const makeEventRef = (streamId: string | Uint8Array, event: Envelope): EventRef => {
