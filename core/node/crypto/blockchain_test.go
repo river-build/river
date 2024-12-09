@@ -32,9 +32,9 @@ func TestBlockchain(t *testing.T) {
 	owner := tc.DeployerBlockchain
 	tc.Commit(ctx)
 
-	bc1 := tc.GetBlockchain(ctx, 0)
+	bc1 := tc.GetBlockchain(ctx, 0, true)
 	defer bc1.Close()
-	bc2 := tc.GetBlockchain(ctx, 1)
+	bc2 := tc.GetBlockchain(ctx, 1, true)
 	defer bc2.Close()
 
 	nodeAddr1 := bc1.Wallet.Address
@@ -219,9 +219,9 @@ func TestBlockchainMultiMonitor(t *testing.T) {
 
 	var (
 		deployer        = tc.DeployerBlockchain
-		node            = tc.GetBlockchain(ctx, 0)
-		chain0          = tc.GetBlockchain(ctx, 1)
-		chain1          = tc.GetBlockchain(ctx, 2)
+		node            = tc.GetBlockchain(ctx, 0, true)
+		chain0          = tc.GetBlockchain(ctx, 1, true)
+		chain1          = tc.GetBlockchain(ctx, 2, true)
 		collectedEvents = make(chan types.Log, 10)
 		nodeAddedTopic  = abi.Events["NodeAdded"].ID
 		bindLogCallback = func(ctx context.Context, log types.Log) { collectedEvents <- log }

@@ -480,19 +480,17 @@ func makeTestBlockchain(
 		panic(err)
 	}
 
-	bc.StartChainMonitor(ctx)
-
 	return bc
 }
 
-func (c *BlockchainTestContext) GetBlockchain(ctx context.Context, index int) *Blockchain {
+func (c *BlockchainTestContext) GetBlockchain(ctx context.Context, index int, start bool) *Blockchain {
 	if index >= len(c.Wallets) {
 		return nil
 	}
 	return makeTestBlockchain(ctx, c.Wallets[index], c.Client())
 }
 
-func (c *BlockchainTestContext) NewWalletAndBlockchain(ctx context.Context) *Blockchain {
+func (c *BlockchainTestContext) NewWalletAndBlockchain(ctx context.Context, start bool) *Blockchain {
 	wallet, err := NewWallet(ctx)
 	if err != nil {
 		panic(err)
@@ -654,7 +652,7 @@ type NoopChainMonitor struct{}
 
 var _ ChainMonitor = NoopChainMonitor{}
 
-func (NoopChainMonitor) RunWithBlockPeriod(
+func (NoopChainMonitor) Start(
 	context.Context,
 	BlockchainClient,
 	BlockNumber,

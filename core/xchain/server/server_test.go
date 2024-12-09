@@ -103,7 +103,7 @@ func newServiceTester(numNodes int, require *require.Assertions) *serviceTester 
 	)
 	require.NoError(err)
 	st.btc = btc
-	st.clientSimBlockchain = st.btc.GetBlockchain(st.ctx, len(st.nodes))
+	st.clientSimBlockchain = st.btc.GetBlockchain(st.ctx, len(st.nodes), true)
 
 	st.deployXchainTestContracts()
 
@@ -266,7 +266,7 @@ func (st *serviceTester) Start(t *testing.T) {
 
 	for i := 0; i < len(st.nodes); i++ {
 		st.nodes[i] = &testNodeRecord{}
-		bc := st.btc.GetBlockchain(st.ctx, i)
+		bc := st.btc.GetBlockchain(st.ctx, i, true)
 
 		// register node
 		pendingTx, err := bc.TxPool.Submit(

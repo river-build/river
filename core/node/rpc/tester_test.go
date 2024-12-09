@@ -333,7 +333,7 @@ func (st *serviceTester) startSingle(i int, opts ...startOpts) error {
 		listener = options.listeners[i]
 	}
 
-	bc := st.btc.GetBlockchain(st.ctx, i)
+	bc := st.btc.GetBlockchain(st.ctx, i, false)
 	service, err := StartServer(st.ctx, cfg, &ServerStartOpts{
 		RiverChain:      bc,
 		Listener:        listener,

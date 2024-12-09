@@ -28,7 +28,7 @@ func TestNodeEvents(t *testing.T) {
 
 	owner := tt.DeployerBlockchain
 
-	bc := tt.GetBlockchain(ctx, 0)
+	bc := tt.GetBlockchain(ctx, 0, true)
 
 	rr, err := NewRiverRegistryContract(
 		ctx,
@@ -198,9 +198,9 @@ func TestStreamEvents(t *testing.T) {
 	owner := tc.DeployerBlockchain
 	tc.Commit(ctx)
 
-	bc1 := tc.GetBlockchain(ctx, 0)
+	bc1 := tc.GetBlockchain(ctx, 0, true)
 	defer bc1.Close()
-	bc2 := tc.GetBlockchain(ctx, 1)
+	bc2 := tc.GetBlockchain(ctx, 1, true)
 	defer bc2.Close()
 
 	nodeAddr1 := bc1.Wallet.Address

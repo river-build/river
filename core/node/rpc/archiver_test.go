@@ -233,7 +233,7 @@ func TestArchiveOneStream(t *testing.T) {
 	archiveCfg.Archive.ArchiveId = "arch" + GenShortNanoid()
 	archiveCfg.Archive.ReadMiniblocksSize = 3
 
-	bc := tester.btc.NewWalletAndBlockchain(ctx)
+	bc := tester.btc.NewWalletAndBlockchain(ctx, true)
 
 	registryContract, err := registries.NewRiverRegistryContract(
 		ctx,
@@ -338,7 +338,7 @@ func TestArchiveOneStream(t *testing.T) {
 func makeTestServerOpts(tester *serviceTester) *ServerStartOpts {
 	listener, _ := tester.makeTestListener()
 	return &ServerStartOpts{
-		RiverChain:      tester.btc.NewWalletAndBlockchain(tester.ctx),
+		RiverChain:      tester.btc.NewWalletAndBlockchain(tester.ctx, false),
 		Listener:        listener,
 		HttpClientMaker: testcert.GetHttp2LocalhostTLSClient,
 	}
