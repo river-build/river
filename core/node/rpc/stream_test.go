@@ -14,37 +14,39 @@ func TestGetStreamEx(t *testing.T) {
 	tt := newServiceTester(
 		t,
 		serviceTesterOpts{
-			numNodes:          5,
-			replicationFactor: 5,
-			start:             true,
+			numNodes: 1,
+			start:    true,
 			btcParams: &crypto.TestParams{
 				AutoMine:         true,
 				AutoMineInterval: 200 * time.Millisecond,
-				MineOnTx:         false,
+				MineOnTx:         true,
 			},
 		},
 	)
+	require := tt.require
 
-	clients := tt.newTestClients(3)
-	spaceId, _ := clients[0].createSpace()
-	channelId := clients.createChannelAndJoin(spaceId)
+	alice := tt.newTestClient(0)
+	_ = alice.createUserStream()
+	spaceId, _ := alice.createSpace()
+	channelId, _ := alice.createChannel(spaceId)
 
-	phrases1 := []string{"hello from Alice", "hello from Bob", "hello from Carol"}
-	clients.say(channelId, phrases1...)
-	clients.listen(channelId, [][]string{phrases1})
+	for count := range 100 {
+		alice.say(channelId, fmt.Sprintf("hello from Alice %d", count))
+	}
 
-	phrases2 := []string{"hello from Alice 2", "hello from Bob 2", "hello from Carol 2"}
-	clients.say(channelId, phrases2...)
-	clients.listen(channelId, [][]string{phrases1, phrases2})
+	time.Sleep(1 * time.Second)
 
-	mbs := make([]*protocol.Miniblock, 0, 6)
-	clients[0].getStreamEx(spaceId, func(mb *protocol.Miniblock) {
+	stream := alice.getStream(channelId)
+	fmt.Println(len(stream.GetEvents())) // Prints 0
+
+	mbs := make([]*protocol.Miniblock, 0, 100)
+	alice.getStreamEx(channelId, func(mb *protocol.Miniblock) {
 		mbs = append(mbs, mb)
 	})
-	tt.require.Len(mbs, 6)
+	require.Len(mbs, 100) // 0 miniblocks
 
 	for _, mb := range mbs {
-		tt.require.NotNil(mb)
+		require.NotNil(mb)
 
 		events, _ := json.MarshalIndent(mb.GetEvents(), "", "  ")
 		fmt.Println(string(events))
