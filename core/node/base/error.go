@@ -70,6 +70,14 @@ func FormatCallstack(skip int) string {
 	return sb.String()
 }
 
+func MaybeFormatCallstack(skip int) string {
+	if isDebugCallStack {
+		return FormatCallstack(skip)
+	} else {
+		return ""
+	}
+}
+
 func RiverError(code protocol.Err, msg string, tags ...any) *RiverErrorImpl {
 	e := &RiverErrorImpl{
 		Code: code,

@@ -654,7 +654,7 @@ type NoopChainMonitor struct{}
 
 var _ ChainMonitor = NoopChainMonitor{}
 
-func (NoopChainMonitor) RunWithBlockPeriod(
+func (NoopChainMonitor) Start(
 	context.Context,
 	BlockchainClient,
 	BlockNumber,

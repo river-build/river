@@ -163,7 +163,7 @@ func (b *Blockchain) GetBlockNumber(ctx context.Context) (BlockNumber, error) {
 
 // TODO: refactor to start chain monitor in NewBlockchainWithClient
 func (b *Blockchain) StartChainMonitor(ctx context.Context) {
-	go b.ChainMonitor.RunWithBlockPeriod(
+	b.ChainMonitor.Start(
 		ctx,
 		b.Client,
 		b.InitialBlockNum,

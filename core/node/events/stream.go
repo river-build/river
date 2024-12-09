@@ -291,15 +291,42 @@ func (s *streamImpl) applyMiniblockImplLocked(
 	miniblockBytes []byte,
 ) error {
 	// Check if the miniblock is already applied.
-	if miniblock.Ref.Num <= s.view().LastBlock().Ref.Num {
+	prevSV := s.view()
+	prevLastBlock := prevSV.LastBlock().Ref
+	if miniblock.Ref.Num <= prevLastBlock.Num {
+		matchingMb, _ := prevSV.blockWithNum(miniblock.Ref.Num)
+		if matchingMb != nil {
+			if matchingMb.Ref.Hash != miniblock.Ref.Hash {
+				return RiverError(Err_BAD_BLOCK, "applyMiniblockImplLocked: already applied block has different hash!").
+					Tags(
+						"streamId", s.streamId,
+						"requestedBlock", miniblock.Ref,
+						"appliedBlock", matchingMb.Ref,
+						"lastBlock", prevLastBlock,
+					).
+					LogError(dlog.FromCtx(ctx))
+			}
+		}
+		dlog.FromCtx(ctx).
+			Error("applyMiniblockImplLocked: this block is already applied", "streamId", s.streamId, "block", miniblock.Ref, "callstack", MaybeFormatCallstack(2))
 		return nil
 	}
 
+	var err error
+	defer func() {
+		if err != nil {
+			dlog.FromCtx(ctx).
+				Error("applyMiniblockImplLocked: Applied miniblock ERROR", "error", err, "streamId", s.streamId, "block", miniblock.Ref, "callstack", MaybeFormatCallstack(2))
+		} else {
+			dlog.FromCtx(ctx).
+				Error("applyMiniblockImplLocked: Applied miniblock", "streamId", s.streamId, "block", miniblock.Ref, "callstack", MaybeFormatCallstack(2))
+		}
+	}()
 	// TODO: strict check here.
 	// TODO: tests for this.
 
 	// Lets see if this miniblock can be applied.
-	prevSV := s.view()
+
 	newSV, newEvents, err := prevSV.copyAndApplyBlock(miniblock, s.params.ChainConfig.Get())
 	if err != nil {
 		return err
@@ -350,10 +377,6 @@ func (s *streamImpl) promoteCandidateLocked(ctx context.Context, mb *MiniblockRe
 		return nil
 	}
 
-	if s.local == nil {
-		return nil
-	}
-
 	if err := s.loadInternal(ctx); err != nil {
 		return err
 	}
@@ -364,12 +387,12 @@ func (s *streamImpl) promoteCandidateLocked(ctx context.Context, mb *MiniblockRe
 		// Log error if hash doesn't match.
 		appliedMb, _ := s.view().blockWithNum(mb.Num)
 		if appliedMb != nil && appliedMb.Ref.Hash != mb.Hash {
-			dlog.FromCtx(ctx).Error("PromoteCandidate: Miniblock is already applied",
+			dlog.FromCtx(ctx).Error("PromoteCandidate: Miniblock with different hash is already applied!",
 				"streamId", s.streamId,
-				"blockNum", mb.Num,
-				"blockHash", mb.Hash,
-				"lastBlockNum", s.view().LastBlock().Ref.Num,
-				"lastBlockHash", s.view().LastBlock().Ref.Hash,
+				"requestedBlock", mb,
+				"appliedBlock", appliedMb.Ref,
+				"lastBlock", s.view().LastBlock().Ref,
+				"callstack", MaybeFormatCallstack(2),
 			)
 		}
 		return nil

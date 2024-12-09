@@ -2,10 +2,12 @@ package rpc
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/river-build/river/core/node/crypto"
+	"github.com/river-build/river/core/node/testutils/testfmt"
 	//. "github.com/river-build/river/core/node/shared"
 )
 
@@ -18,7 +20,7 @@ func newServiceTesterForReplication(t *testing.T) *serviceTester {
 			start:             true,
 			btcParams: &crypto.TestParams{
 				AutoMine:         true,
-				AutoMineInterval: 200 * time.Millisecond,
+				AutoMineInterval: 1000 * time.Millisecond,
 				MineOnTx:         false,
 			},
 		},
@@ -67,6 +69,7 @@ func TestReplMcSpeakUntilMbTrim(t *testing.T) {
 }
 
 func testReplMcConversation(t *testing.T, numClients int, numSteps int, listenInterval int) {
+	f := testfmt.New(t)
 	tt := newServiceTesterForReplication(t)
 	clients := tt.newTestClients(numClients)
 	spaceId, _ := clients[0].createSpace()
@@ -76,7 +79,7 @@ func testReplMcConversation(t *testing.T, numClients int, numSteps int, listenIn
 	for i := range messages {
 		messages[i] = make([]string, numClients)
 		for j := range messages[i] {
-			messages[i][j] = fmt.Sprintf("message %d from client %s", i, clients[j].name)
+			messages[i][j] = fmt.Sprintf("%s: step %d", clients[j].name, i)
 		}
 	}
 
@@ -88,25 +91,31 @@ func testReplMcConversation(t *testing.T, numClients int, numSteps int, listenIn
 		}
 	}()
 	for i, m = range messages {
+		f.Logf("step %d: %s", i, strings.Join(m, ", "))
 		clients.say(channelId, m...)
 		if listenInterval > 0 && (i+1)%listenInterval == 0 {
+			f.Logf("    step %d: listening", i)
 			clients.listen(channelId, messages[:i+1])
 		}
 	}
 
 	if listenInterval <= 0 || numSteps%listenInterval != 0 {
+		f.Log("final: listening")
 		clients.listen(channelId, messages)
 	}
+
+	f.Log("DONE")
 }
 
 func TestReplMcConversation(t *testing.T) {
-	t.Skip("SKIPPED: TODO: REPLICATION: fix")
+	// t.Skip("SKIPPED: TODO: REPLICATION: fix")
 
 	t.Parallel()
 	t.Run("5x5", func(t *testing.T) {
 		testReplMcConversation(t, 5, 5, 1)
 	})
 	t.Run("debug", func(t *testing.T) {
-		testReplMcConversation(t, 5, 12, 1)
+		// testReplMcConversation(t, 5, 12, 1)
+		testReplMcConversation(t, 5, 100, 10)
 	})
 }
