@@ -109,7 +109,7 @@ func TestReplacementTxOnBoot(t *testing.T) {
 	}
 
 	// submit some transactions and don't mint any new blocks -> "pending stuck"
-	bc := tc.GetBlockchain(rootCtx, 0, true)
+	bc := tc.GetBlockchain(rootCtx, 0)
 	require.NotNil(bc)
 
 	testWallet, err := crypto.NewWallet(ctx)

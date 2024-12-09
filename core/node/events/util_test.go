@@ -105,7 +105,7 @@ func makeCacheTestContext(t *testing.T, p testParams) (context.Context, *cacheTe
 
 		ctc.require.NoError(btc.InitNodeRecord(ctx, i, "fakeurl"))
 
-		bc := btc.GetBlockchain(ctx, i, true)
+		bc := btc.GetBlockchain(ctx, i)
 
 		streamStore := storage.NewTestStreamStore(ctx)
 		t.Cleanup(streamStore.Close)
