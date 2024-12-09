@@ -6,8 +6,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/river-build/river/core/node/utils"
-
 	"connectrpc.com/connect"
 
 	. "github.com/river-build/river/core/node/base"
@@ -16,6 +14,7 @@ import (
 	. "github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/shared"
+	"github.com/river-build/river/core/node/utils"
 )
 
 const (
@@ -359,14 +358,6 @@ func (s *Service) getMiniblocksImpl(
 	ctx context.Context,
 	req *connect.Request[GetMiniblocksRequest],
 ) (*connect.Response[GetMiniblocksResponse], error) {
-	count := uint64(req.Msg.ToExclusive - req.Msg.FromInclusive)
-	if limit := s.chainConfig.Get().MbsListLimit; limit > 0 && count > limit {
-		return nil, RiverError(Err_INVALID_ARGUMENT, "Requested miniblock count exceeds limit").
-			Func("getMiniblocksImpl").
-			Tag("count", count).
-			Tag("limit", limit)
-	}
-
 	streamId, err := shared.StreamIdFromBytes(req.Msg.StreamId)
 	if err != nil {
 		return nil, err

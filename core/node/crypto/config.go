@@ -166,7 +166,7 @@ func DefaultOnChainSettings() *OnChainSettings {
 		StreamCacheExpiration:    5 * time.Minute,
 		StreamCachePollIntterval: 30 * time.Second,
 
-		MbsListLimit: 100,
+		MbsListLimit: 200,
 
 		MembershipLimits: MembershipLimitsSettings{
 			GDM: 48,

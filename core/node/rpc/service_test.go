@@ -1721,24 +1721,41 @@ func TestSyncSubscriptionWithTooSlowClient(t *testing.T) {
 // TestGetMiniblocksRangeLimit checks that GetMiniblocks endpoint has a validation for a max range of blocks
 // to be fetched at once.
 func TestGetMiniblocksRangeLimit(t *testing.T) {
-	tt := newServiceTester(t, serviceTesterOpts{numNodes: 5, start: true})
+	const expectedLimit = 200
+	tt := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true})
 
 	alice := tt.newTestClient(0)
 	_ = alice.createUserStream()
 	spaceId, _ := alice.createSpace()
 	channelId, _ := alice.createChannel(spaceId)
 
-	resp, err := alice.client.GetMiniblocks(alice.ctx, connect.NewRequest(&protocol.GetMiniblocksRequest{
-		StreamId:      channelId[:],
-		FromInclusive: 0,
-		ToExclusive:   101,
-	}))
-	tt.require.Nil(resp)
-	tt.require.Error(err)
-	tt.require.Contains(err.Error(), "Requested miniblock count exceeds limit")
+	// Here we create a miniblock for each message sent by Alice.
+	// Creating a bit more miniblocks than limit.
+	var lastMbNum int64
+	for count := range expectedLimit + 10 {
+		alice.say(channelId, fmt.Sprintf("hello from Alice %d", count))
+		mb, err := makeMiniblock(tt.ctx, alice.client, channelId, false, lastMbNum)
+		tt.require.NoError(err)
+		lastMbNum = mb.Num
+	}
 
-	var connectErr *connect.Error
-	tt.require.True(errors.As(err, &connectErr))
-	tt.require.Equal(connectErr.Code(), connect.CodeInvalidArgument)
-	tt.require.Contains(connectErr.Message(), "Requested miniblock count exceeds limit")
+	tt.require.Eventually(func() bool {
+		// Requesting a list of miniblocks with the limit > max limit and expect to return "limit" miniblocks.
+		resp, err := alice.client.GetMiniblocks(alice.ctx, connect.NewRequest(&protocol.GetMiniblocksRequest{
+			StreamId:      channelId[:],
+			FromInclusive: 5,
+			ToExclusive:   expectedLimit + 100,
+		}))
+		tt.require.NoError(err)
+
+		if len(resp.Msg.GetMiniblocks()) != expectedLimit {
+			return false
+		}
+
+		tt.require.Equal(int64(5), resp.Msg.GetFromInclusive())
+		tt.require.Equal(int64(expectedLimit), resp.Msg.GetLimit())
+		tt.require.Len(resp.Msg.GetMiniblocks(), expectedLimit)
+
+		return true
+	}, 20*time.Second, 100*time.Millisecond)
 }
