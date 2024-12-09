@@ -302,6 +302,7 @@ func (st *serviceTester) getConfig(opts ...startOpts) *config.Config {
 		NumPartitions:         4,
 		MigrateStreamCreation: true,
 	}
+	cfg.Log.Simplify = true
 	cfg.Network = config.NetworkConfig{
 		NumRetries: 3,
 	}
