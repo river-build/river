@@ -480,8 +480,6 @@ func makeTestBlockchain(
 		panic(err)
 	}
 
-	bc.StartChainMonitor(ctx)
-
 	return bc
 }
 
@@ -654,7 +652,7 @@ type NoopChainMonitor struct{}
 
 var _ ChainMonitor = NoopChainMonitor{}
 
-func (NoopChainMonitor) RunWithBlockPeriod(
+func (NoopChainMonitor) Start(
 	context.Context,
 	BlockchainClient,
 	BlockNumber,

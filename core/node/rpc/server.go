@@ -184,8 +184,6 @@ func (s *Service) start(opts *ServerStartOpts) error {
 		return AsRiverError(err).Message("Failed to init cache and sync").LogError(s.defaultLogger)
 	}
 
-	s.riverChain.StartChainMonitor(s.serverCtx)
-
 	s.initHandlers()
 
 	s.SetStatus("OK")
