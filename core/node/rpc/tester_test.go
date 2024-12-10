@@ -74,7 +74,6 @@ type serviceTesterOpts struct {
 	numNodes          int
 	replicationFactor int
 	start             bool
-	printTestLogs     bool
 	btcParams         *crypto.TestParams
 }
 
@@ -102,13 +101,7 @@ func newServiceTester(t *testing.T, opts serviceTesterOpts) *serviceTester {
 		opts.replicationFactor = 1
 	}
 
-	var ctx context.Context
-	var ctxCancel func()
-	if opts.printTestLogs {
-		ctx, ctxCancel = test.NewTestContextWithOptionalLogging("info")
-	} else {
-		ctx, ctxCancel = test.NewTestContext()
-	}
+	ctx, ctxCancel := test.NewTestContext()
 	require := require.New(t)
 
 	st := &serviceTester{
