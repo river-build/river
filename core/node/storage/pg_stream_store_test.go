@@ -235,9 +235,9 @@ func TestPromoteMiniblockCandidate(t *testing.T) {
 
 	// Miniblock candidate seq number must be at least current
 	err := pgStreamStore.WriteMiniblockCandidate(ctx, streamId, candidateHash, 0, miniblock_bytes)
-	require.ErrorContains(err, "Miniblock proposal blockNumber mismatch")
-	require.Equal(AsRiverError(err).GetTag("ExpectedBlockNumber"), int64(1))
-	require.Equal(AsRiverError(err).GetTag("ActualBlockNumber"), int64(0))
+	require.True(IsRiverErrorCode(err, Err_MINIBLOCKS_STORAGE_FAILURE))
+	require.Equal(AsRiverError(err).GetTag("LastBlockInStorage"), int64(0))
+	require.Equal(AsRiverError(err).GetTag("CandidateBlockNumber"), int64(0))
 
 	// Future candidates fine
 	err = pgStreamStore.WriteMiniblockCandidate(ctx, streamId, candidateHash_block2, 2, miniblock_bytes)
