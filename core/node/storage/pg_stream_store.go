@@ -876,7 +876,7 @@ func (s *PostgresStreamStore) ReadMiniblocksByStream(
 	return s.txRunnerWithUUIDCheck(
 		ctx,
 		"ReadMiniblocksByStream",
-		pgx.ReadWrite,
+		pgx.ReadOnly,
 		func(ctx context.Context, tx pgx.Tx) error {
 			return s.readMiniblocksByStreamTx(ctx, tx, streamId, onEachMb)
 		},
