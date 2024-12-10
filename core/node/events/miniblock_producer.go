@@ -260,6 +260,11 @@ func (p *miniblockProducer) TestMakeMiniblock(
 	if err != nil {
 		return nil, err
 	}
+	log := dlog.FromCtx(ctx)
+	log.Info("GetStreamWaitForLocal passed",
+		"streamId",
+		streamId,
+	)
 
 	job := &mbJob{
 		stream: stream.(*streamImpl),
@@ -270,13 +275,19 @@ func (p *miniblockProducer) TestMakeMiniblock(
 	for {
 		actual, _ := p.jobs.LoadOrStore(streamId, job)
 		if actual == job {
+			log.Info("Starting mb creation job", "streamId", streamId)
 			go p.jobStart(ctx, job, forceSnapshot)
 			break
+		} else {
+			log.Info("A pending job exists for creating a miniblock, waiting", "streamId", streamId)
 		}
 
 		err = SleepWithContext(ctx, 10*time.Millisecond)
 		if err != nil {
-			return nil, err
+			return nil, AsRiverError(err, Err_INTERNAL).
+				Func("TestMakeMiniblock").
+				Message("Timed out while waiting for make_miniblock job to be scheduled").
+				Tag("streamId", streamId)
 		}
 	}
 
@@ -288,7 +299,10 @@ func (p *miniblockProducer) TestMakeMiniblock(
 
 		err = SleepWithContext(ctx, 10*time.Millisecond)
 		if err != nil {
-			return nil, err
+			return nil, AsRiverError(err, Err_INTERNAL).
+				Func("TestMakeMiniblock").
+				Message("Timed out while waiting for make_miniblokc job to terminate").
+				Tag("streamId", streamId)
 		}
 	}
 

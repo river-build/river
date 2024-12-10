@@ -28,6 +28,7 @@ import (
 	"github.com/river-build/river/core/contracts/river"
 	"github.com/river-build/river/core/contracts/river/deploy"
 	. "github.com/river-build/river/core/node/base"
+	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
 	. "github.com/river-build/river/core/node/protocol"
 )
@@ -96,6 +97,9 @@ func initSimulated(ctx context.Context, numKeys int) ([]*Wallet, *simulated.Back
 		}
 		genesisAlloc[wallets[i].Address] = types.Account{Balance: Eth_100}
 	}
+
+	log := dlog.FromCtx(ctx)
+	log.Info("Creating new simulated backend")
 
 	backend := simulated.NewBackend(genesisAlloc, simulated.WithBlockGasLimit(30_000_000))
 	return wallets, backend, nil
@@ -679,10 +683,17 @@ func (NoopChainMonitor) OnStopped(OnChainMonitorStoppedCallback) {}
 // Run individual tests with -run to find specific leaking tests.
 func TestMainForLeaksIgnoreGeth() {
 	// Geth's simulated backend leaks a lot of goroutines.
-	// Unfortunately goleak doesn't have optiosn to ignore by module or package,
+	// Unfortunately goleak doesn't have options to ignore by module or package,
 	// so some custom error string parsing is required to filter them out.
+
+	// pgx also sometimes has a "leaked" goroutine that takes about 500ms to terminate after
+	// a pool is closed. Here we can configure ignoring this as it is a specific function.
+	ignorePgxPoolHealthCheck := goleak.IgnoreAnyFunction(
+		"github.com/jackc/pgx/v5/pgxpool.(*Pool).triggerHealthCheck.func1",
+	)
+
 	now := time.Now()
-	err := goleak.Find()
+	err := goleak.Find(ignorePgxPoolHealthCheck)
 	elapsed := time.Since(now)
 	if err != nil {
 		msg := err.Error()
