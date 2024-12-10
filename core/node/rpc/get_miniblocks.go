@@ -22,7 +22,6 @@ func (s *Service) localGetMiniblocks(
 	}
 
 	limit := int64(s.chainConfig.Get().GetMiniblocksMaxPageSize)
-	return nil, RiverError(Err_INVALID_ARGUMENT, "invalid range", "limit", limit)
 	if limit > 0 && toExclusive-req.Msg.FromInclusive > limit {
 		toExclusive = req.Msg.FromInclusive + limit
 	}

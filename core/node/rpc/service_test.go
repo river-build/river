@@ -1723,7 +1723,12 @@ func TestSyncSubscriptionWithTooSlowClient(t *testing.T) {
 func TestGetMiniblocksRangeLimit(t *testing.T) {
 	const expectedLimit = 200
 	tt := newServiceTester(t, serviceTesterOpts{numNodes: 1, start: true})
-	tt.btc.SetConfigValue(t, tt.ctx, crypto.StreamGetMiniblocksMaxPageSizeConfigKey, crypto.ABIEncodeUint64(uint64(expectedLimit)))
+	tt.btc.SetConfigValue(
+		t,
+		tt.ctx,
+		crypto.StreamGetMiniblocksMaxPageSizeConfigKey,
+		crypto.ABIEncodeUint64(uint64(expectedLimit)),
+	)
 
 	alice := tt.newTestClient(0)
 	_ = alice.createUserStream()
@@ -1747,11 +1752,7 @@ func TestGetMiniblocksRangeLimit(t *testing.T) {
 		ToExclusive:   5,
 	}))
 	tt.require.Nil(resp)
-	tt.require.Error(err)
-	fmt.Println(err)
-	var riverErr *RiverErrorImpl
-	tt.require.True(errors.As(err, &riverErr))
-	tt.require.Equal(riverErr.Code, protocol.Err_INVALID_ARGUMENT, "invalid range")
+	tt.require.ErrorContains(err, "invalid range")
 
 	tt.require.Eventually(func() bool {
 		// Requesting a list of miniblocks with the limit > max limit and expect to return "limit" miniblocks.

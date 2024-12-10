@@ -145,13 +145,6 @@ func newServiceTester(t *testing.T, opts serviceTesterOpts) *serviceTester {
 		crypto.ABIEncodeUint64(uint64(opts.replicationFactor)),
 	)
 
-	st.btc.SetConfigValue(
-		t,
-		ctx,
-		crypto.StreamGetMiniblocksMaxPageSizeConfigKey,
-		crypto.ABIEncodeUint64(uint64(200)),
-	)
-
 	if opts.start {
 		st.initNodeRecords(0, opts.numNodes, river.NodeStatus_Operational)
 		st.startNodes(0, opts.numNodes)
