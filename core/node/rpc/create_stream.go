@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
 	"google.golang.org/protobuf/proto"
 
@@ -15,8 +16,6 @@ import (
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/rules"
 	. "github.com/river-build/river/core/node/shared"
-
-	"connectrpc.com/connect"
 )
 
 func (s *Service) createStreamImpl(
