@@ -5,6 +5,7 @@ import (
 
 	"connectrpc.com/connect"
 
+	. "github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/events"
 	. "github.com/river-build/river/core/node/protocol"
 )
@@ -15,7 +16,13 @@ func (s *Service) localGetMiniblocks(
 	stream SyncStream,
 ) (*connect.Response[GetMiniblocksResponse], error) {
 	toExclusive := req.Msg.ToExclusive
-	limit := int64(s.chainConfig.Get().MbsListLimit)
+
+	if toExclusive <= req.Msg.FromInclusive {
+		return nil, RiverError(Err_INVALID_ARGUMENT, "invalid range")
+	}
+
+	limit := int64(s.chainConfig.Get().GetMiniblocksMaxPageSize)
+	return nil, RiverError(Err_INVALID_ARGUMENT, "invalid range", "limit", limit)
 	if limit > 0 && toExclusive-req.Msg.FromInclusive > limit {
 		toExclusive = req.Msg.FromInclusive + limit
 	}
