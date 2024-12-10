@@ -20,7 +20,7 @@ func newServiceTesterForReplication(t *testing.T) *serviceTester {
 			start:             true,
 			btcParams: &crypto.TestParams{
 				AutoMine:         true,
-				AutoMineInterval: 1000 * time.Millisecond,
+				AutoMineInterval: 200 * time.Millisecond,
 				MineOnTx:         false,
 			},
 		},
@@ -28,7 +28,7 @@ func newServiceTesterForReplication(t *testing.T) *serviceTester {
 }
 
 func TestReplMcSimple(t *testing.T) {
-	t.Skip("SKIPPED: TODO: REPLICATION: fix")
+	// t.Skip("SKIPPED: TODO: REPLICATION: fix")
 
 	tt := newServiceTesterForReplication(t)
 
