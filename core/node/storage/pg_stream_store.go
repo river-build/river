@@ -1002,7 +1002,7 @@ func (s *PostgresStreamStore) ReadMiniblocksByStream(
 	streamId StreamId,
 	onEachMb func(blockdata []byte, seqNum int) error,
 ) error {
-	return s.txRunnerWithUUIDCheck(
+	return s.txRunner(
 		ctx,
 		"ReadMiniblocksByStream",
 		pgx.ReadWrite,
@@ -1020,7 +1020,7 @@ func (s *PostgresStreamStore) readMiniblocksByStreamTx(
 	streamId StreamId,
 	onEachMb func(blockdata []byte, seqNum int) error,
 ) error {
-	_, migrated, err := s.lockStream(ctx, tx, streamId, false)
+	_, err := s.lockStream(ctx, tx, streamId, false)
 	if err != nil {
 		return err
 	}
@@ -1030,7 +1030,6 @@ func (s *PostgresStreamStore) readMiniblocksByStreamTx(
 		s.sqlForStream(
 			"SELECT blockdata, seq_num FROM {{miniblocks}} WHERE stream_id = $1 ORDER BY seq_num",
 			streamId,
-			migrated,
 		),
 		streamId,
 	)
@@ -1038,7 +1037,7 @@ func (s *PostgresStreamStore) readMiniblocksByStreamTx(
 		return err
 	}
 
-	var prevSeqNum = -1
+	prevSeqNum := -1
 	var blockdata []byte
 	var seqNum int
 	_, err = pgx.ForEachRow(rows, []any{&blockdata, &seqNum}, func() error {
