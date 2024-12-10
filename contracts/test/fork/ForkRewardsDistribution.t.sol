@@ -263,7 +263,7 @@ contract ForkRewardsDistributionTest is
     stake(address(this), 1 ether, address(this), operator0);
     stake(depositor, amount, beneficiary, operator1);
 
-    vm.warp(block.timestamp + timeLapse);
+    skip(timeLapse);
 
     uint256 currentReward = rewardsDistributionFacet.currentReward(beneficiary);
 
@@ -292,7 +292,7 @@ contract ForkRewardsDistributionTest is
     test_fuzz_notifyRewardAmount(rewardAmount);
     stake(address(this), amount, address(this), operator);
 
-    vm.warp(block.timestamp + timeLapse);
+    skip(timeLapse);
 
     uint256 currentReward = rewardsDistributionFacet.currentReward(operator);
 
