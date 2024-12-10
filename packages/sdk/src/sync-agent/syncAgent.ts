@@ -24,6 +24,7 @@ import type { EncryptionDeviceInitOpts } from '@river-build/encryption'
 import { Gdms, type GdmsModel } from './gdms/gdms'
 import { Dms, DmsModel } from './dms/dms'
 import { UnpackEnvelopeOpts } from '../sign'
+import type { Unpacker } from '../unpacker'
 
 export interface SyncAgentConfig {
     context: SignerContext
@@ -37,6 +38,7 @@ export interface SyncAgentConfig {
     encryptionDevice?: EncryptionDeviceInitOpts
     onTokenExpired?: () => void
     unpackEnvelopeOpts?: UnpackEnvelopeOpts
+    unpacker?: Unpacker
 }
 
 export class SyncAgent {
@@ -88,6 +90,7 @@ export class SyncAgent {
             encryptionDevice: config.encryptionDevice,
             onTokenExpired: config.onTokenExpired,
             unpackEnvelopeOpts: config.unpackEnvelopeOpts,
+            unpacker: config.unpacker,
         })
 
         this.user = new User(this.userId, this.store, this.riverConnection)

@@ -9,6 +9,8 @@ import { type SyncAgent } from '@river-build/sdk'
 import { router } from './routes'
 import { wagmiConfig } from './config/wagmi'
 import { loadAuth } from './utils/persist-auth'
+import { workerPool } from './utils/workers'
+import { UnpackerWorker } from './utils/unpack-worker'
 
 function App() {
     const [queryClient] = useState(() => new QueryClient())
@@ -19,6 +21,7 @@ function App() {
         if (persistedAuth) {
             connectRiver(persistedAuth.signerContext, {
                 riverConfig: persistedAuth.riverConfig,
+                unpacker: new UnpackerWorker(workerPool),
             }).then((syncAgent) => setSyncAgent(syncAgent))
         }
     }, [persistedAuth])

@@ -6,6 +6,22 @@ import { replaceCodePlugin } from 'vite-plugin-replace'
 import tsconfigPaths from 'vite-tsconfig-paths'
 import path from 'path'
 
+const fixExport = replaceCodePlugin({
+    replacements: [
+        {
+            from: `if ((crypto && crypto.getRandomValues) || !process.browser) {
+  exports.randomFill = randomFill
+  exports.randomFillSync = randomFillSync
+} else {
+  exports.randomFill = oldBrowser
+  exports.randomFillSync = oldBrowser
+}`,
+            to: `exports.randomFill = randomFill
+exports.randomFillSync = randomFillSync`,
+        },
+    ],
+})
+
 // https://vitejs.dev/config/
 export default ({ mode }: { mode: string }) => {
     const env = loadEnv(mode, process.cwd(), '')
@@ -20,21 +36,7 @@ export default ({ mode }: { mode: string }) => {
         },
         plugins: [
             tsconfigPaths(),
-            replaceCodePlugin({
-                replacements: [
-                    {
-                        from: `if ((crypto && crypto.getRandomValues) || !process.browser) {
-  exports.randomFill = randomFill
-  exports.randomFillSync = randomFillSync
-} else {
-  exports.randomFill = oldBrowser
-  exports.randomFillSync = oldBrowser
-}`,
-                        to: `exports.randomFill = randomFill
-exports.randomFillSync = randomFillSync`,
-                    },
-                ],
-            }),
+            fixExport,
             checker({
                 typescript: true,
                 eslint: {
@@ -44,6 +46,9 @@ exports.randomFillSync = randomFillSync`,
             nodePolyfills(),
             react(),
         ],
+        worker: {
+            plugins: () => [fixExport],
+        },
         resolve: {
             alias: {
                 '@': path.resolve(__dirname, './src'),

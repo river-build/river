@@ -6587,6 +6587,7 @@ __metadata:
     vite-plugin-replace: ^0.1.1
     vite-tsconfig-paths: ^5.1.3
     wagmi: ^2.13.0
+    workerpool: ^9.2.0
     zod: ^3.21.4
   languageName: unknown
   linkType: soft
@@ -30410,6 +30411,13 @@ __metadata:
   version: 6.2.1
   resolution: "workerpool@npm:6.2.1"
   checksum: c2c6eebbc5225f10f758d599a5c016fa04798bcc44e4c1dffb34050cd361d7be2e97891aa44419e7afe647b1f767b1dc0b85a5e046c409d890163f655028b09d
+  languageName: node
+  linkType: hard
+
+"workerpool@npm:^9.2.0":
+  version: 9.2.0
+  resolution: "workerpool@npm:9.2.0"
+  checksum: fb6350905e890e3254a73b7b369aa6af464cc7c22442d5d431dc476cbcee377e86ffd0929421b64c1314444f2ddd6885f065e1cba99fb1c7c48c5bd547906ab1
   languageName: node
   linkType: hard
 
