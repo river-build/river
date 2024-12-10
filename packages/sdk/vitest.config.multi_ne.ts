@@ -18,6 +18,7 @@ export default mergeConfig(
                 deps: {
                     inline: [
                         '@river-build/mls-rs-wasm',
+                        '@matrix-org/olm'
                     ]
                 }
             },
