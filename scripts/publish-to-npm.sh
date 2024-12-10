@@ -45,6 +45,7 @@ if [ $exit_status_yarn -ne 0 ]; then
     exit 1
 fi
 
+# generate docs
 yarn workspace @river-build/react-sdk gen
 exit_status_docgen=$?
 
@@ -56,6 +57,14 @@ fi
 git add packages/docs/
 git commit -m "docs for version ${VERSION_PREFIX}"
 
+# copy contracts
+rm -rf packages/generated/deployments
+cp -r contracts/deployments packages/generated/deployments
+
+git add packages/generated/deployments
+git commit -m "contract addresses for ${VERSION_PREFIX}"
+
+#push
 git push -u origin "${BRANCH_NAME}"
 
 # Get the new patch version from Lerna and tag it
