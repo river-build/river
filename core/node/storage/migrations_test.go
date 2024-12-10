@@ -12,7 +12,7 @@ import (
 func TestMigrateExistingDb(t *testing.T) {
 	require := require.New(t)
 
-	testParams := setupStreamStorageTest(t, true)
+	testParams := setupStreamStorageTest(t)
 	ctx := testParams.ctx
 
 	// Tear down the store and defer remaining cleanup
