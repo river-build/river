@@ -1467,8 +1467,6 @@ func (s *PostgresStreamStore) getStreamsNumberTx(ctx context.Context, tx pgx.Tx)
 // Close removes instance record from singlenodekey table, releases the listener connection, and
 // closes the postgres connection pool
 func (s *PostgresStreamStore) Close(ctx context.Context) {
-	log := dlog.FromCtx(ctx)
-	log.Info("Closing storage", "nodeUUID", s.nodeUUID)
 	err := s.CleanupStreamStorage(ctx)
 	if err != nil {
 		log := dlog.FromCtx(ctx)

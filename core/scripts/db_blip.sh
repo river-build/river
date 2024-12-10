@@ -1,5 +1,5 @@
-# To test node resiliency in the event of intermittent network outages,
-# do the following:
+# To test node resiliency in the event of intermittent network outages between
+# the node and the database, do the following:
 #
 # 1. Update the docker-compose.yaml exposed port for postgres from 5433 to
 # another port, such as 6433
