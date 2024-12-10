@@ -146,7 +146,7 @@ func (s *PostgresStreamStore) debugLogConnectionPid(ctx context.Context, conn *p
 	log := dlog.FromCtx(ctx)
 
 	var pid int
-	err := conn.QueryRow(context.Background(), "SELECT pg_backend_pid();").Scan(&pid)
+	err := conn.QueryRow(ctx, "SELECT pg_backend_pid();").Scan(&pid)
 	if err != nil {
 		log.Error("Failed to get connection PID", "error", err)
 	} else {
@@ -183,7 +183,6 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 			// We expect cancellation only on node shutdown. In this case,
 			// do not send an error signal.
 			if errors.Is(err, context.Canceled) {
-				log.Info("Detecting context cancellation, returning")
 				return
 			}
 
@@ -201,7 +200,6 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 
 			// Shutdown the node for non-cancellation errors
 			if errors.Is(err, context.Canceled) {
-				log.Info("Detecting context cancellation, returning")
 				return
 			} else if err != nil {
 				err = AsRiverError(err, Err_RESOURCE_EXHAUSTED).
@@ -227,7 +225,6 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 
 			// Shutdown the node for non-cancellation errors.
 			if errors.Is(err, context.Canceled) {
-				log.Info("Detecting context cancellation, returning")
 				return
 			} else if err != nil {
 				err = AsRiverError(err, Err_RESOURCE_EXHAUSTED).
