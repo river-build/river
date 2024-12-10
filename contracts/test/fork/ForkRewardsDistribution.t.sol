@@ -65,9 +65,10 @@ contract ForkRewardsDistributionTest is
   function test_fuzz_stake(
     address depositor,
     uint96 amount,
-    address beneficiary
+    address beneficiary,
+    uint256 seed
   ) public returns (uint256 depositId) {
-    address operator = activeOperators[0];
+    address operator = randomOperator(seed);
     vm.assume(depositor != address(rewardsDistributionFacet));
     vm.assume(beneficiary != address(0) && beneficiary != operator);
 
@@ -87,9 +88,10 @@ contract ForkRewardsDistributionTest is
   function test_fuzz_increaseStake(
     uint96 amount0,
     uint96 amount1,
-    address beneficiary
+    address beneficiary,
+    uint256 seed
   ) public {
-    address operator = activeOperators[0];
+    address operator = randomOperator(seed);
     vm.assume(beneficiary != address(0) && beneficiary != operator);
     amount0 = uint96(bound(amount0, 1, type(uint96).max));
     amount1 = uint96(bound(amount1, 0, type(uint96).max - amount0));
@@ -120,9 +122,14 @@ contract ForkRewardsDistributionTest is
   }
 
   /// forge-config: default.fuzz.runs = 64
-  function test_fuzz_redelegate(uint96 amount) public {
-    address operator0 = activeOperators[0];
-    address operator1 = activeOperators[1];
+  function test_fuzz_redelegate(
+    uint96 amount,
+    uint256 seed0,
+    uint256 seed1
+  ) public {
+    address operator0 = randomOperator(seed0);
+    address operator1 = randomOperator(seed1);
+    vm.assume(operator0 != operator1);
 
     uint256 depositId = stake(address(this), amount, address(this), operator0);
 
@@ -149,9 +156,10 @@ contract ForkRewardsDistributionTest is
   /// forge-config: default.fuzz.runs = 64
   function test_fuzz_changeBeneficiary(
     uint96 amount,
-    address beneficiary
+    address beneficiary,
+    uint256 seed
   ) public {
-    address operator = activeOperators[0];
+    address operator = randomOperator(seed);
     vm.assume(beneficiary != address(0) && beneficiary != operator);
 
     uint256 depositId = stake(address(this), amount, address(this), operator);
@@ -174,9 +182,10 @@ contract ForkRewardsDistributionTest is
   /// forge-config: default.fuzz.runs = 64
   function test_fuzz_initiateWithdraw(
     uint96 amount,
-    address beneficiary
+    address beneficiary,
+    uint256 seed
   ) public returns (uint256 depositId) {
-    address operator = activeOperators[0];
+    address operator = randomOperator(seed);
     vm.assume(beneficiary != address(0) && beneficiary != operator);
 
     depositId = stake(address(this), amount, beneficiary, operator);
@@ -192,10 +201,11 @@ contract ForkRewardsDistributionTest is
   /// forge-config: default.fuzz.runs = 64
   function test_fuzz_withdraw(
     uint96 amount,
-    address beneficiary
+    address beneficiary,
+    uint256 seed
   ) public returns (uint256 depositId) {
-    address operator = activeOperators[0];
-    depositId = test_fuzz_initiateWithdraw(amount, beneficiary);
+    address operator = randomOperator(seed);
+    depositId = test_fuzz_initiateWithdraw(amount, beneficiary, seed);
 
     address proxy = rewardsDistributionFacet.delegationProxyById(depositId);
     uint256 cd = river.lockCooldown(proxy);
@@ -242,10 +252,12 @@ contract ForkRewardsDistributionTest is
     uint96 amount,
     address beneficiary,
     uint256 rewardAmount,
-    uint256 timeLapse
+    uint256 timeLapse,
+    uint256 seed0,
+    uint256 seed1
   ) public {
-    address operator0 = activeOperators[0];
-    address operator1 = activeOperators[1];
+    address operator0 = randomOperator(seed0);
+    address operator1 = randomOperator(seed1);
     vm.assume(
       depositor != address(this) &&
         depositor != address(rewardsDistributionFacet)
@@ -283,9 +295,10 @@ contract ForkRewardsDistributionTest is
   function test_fuzz_claimReward_byOperator(
     uint96 amount,
     uint256 rewardAmount,
-    uint256 timeLapse
+    uint256 timeLapse,
+    uint256 seed
   ) public {
-    address operator = activeOperators[0];
+    address operator = randomOperator(seed);
     timeLapse = bound(timeLapse, 0, rewardDuration);
     amount = uint96(bound(amount, 1 ether, type(uint96).max));
 
@@ -366,6 +379,10 @@ contract ForkRewardsDistributionTest is
         activeOperators.push(operators[i]);
       }
     }
+  }
+
+  function randomOperator(uint256 seed) internal view returns (address) {
+    return activeOperators[seed % activeOperators.length];
   }
 
   function getCommissionRate(address operator) internal view returns (uint256) {
