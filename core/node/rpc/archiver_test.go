@@ -9,6 +9,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/gammazero/workerpool"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/river-build/river/core/contracts/river"
@@ -74,9 +75,10 @@ func createUserSettingsStreamsWithData(
 
 	var wg sync.WaitGroup
 	wg.Add(numStreams)
+	wp := workerpool.New(10)
 
 	for i := 0; i < numStreams; i++ {
-		go func(i int) {
+		wp.Submit(func() {
 			defer wg.Done()
 			wallet, err := crypto.NewWallet(ctx)
 			if err != nil {
@@ -102,10 +104,11 @@ func createUserSettingsStreamsWithData(
 				errChan <- AsRiverError(err, Err_INTERNAL).Message("Failed to fill stream with data").Func("createUserSettingsStreamsWithData").Tag("streamNum", i)
 				return
 			}
-		}(i)
+		})
 	}
 
 	wg.Wait()
+
 	if len(errChan) > 0 {
 		return nil, nil, <-errChan
 	}
