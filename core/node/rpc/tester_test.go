@@ -797,6 +797,18 @@ func (tc *testClient) getStream(streamId StreamId) *protocol.StreamAndCookie {
 	return resp.Msg.Stream
 }
 
+func (tc *testClient) getStreamEx(streamId StreamId, onEachMb func(*protocol.Miniblock)) {
+	resp, err := tc.client.GetStreamEx(tc.ctx, connect.NewRequest(&protocol.GetStreamExRequest{
+		StreamId: streamId[:],
+	}))
+	tc.require.NoError(err)
+	for resp.Receive() {
+		onEachMb(resp.Msg().GetMiniblock())
+	}
+	tc.require.NoError(resp.Err())
+	tc.require.NoError(resp.Close())
+}
+
 func (tc *testClient) getStreamAndView(
 	streamId StreamId,
 	history ...bool,
