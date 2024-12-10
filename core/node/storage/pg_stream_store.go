@@ -899,7 +899,7 @@ func (s *PostgresStreamStore) WriteMiniblockCandidate(
 		"WriteMiniblockCandidate",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
-			return s.writeBlockProposalTxn(ctx, tx, streamId, blockHash, blockNumber, miniblock)
+			return s.writeMiniblockCandidateTx(ctx, tx, streamId, blockHash, blockNumber, miniblock)
 		},
 		nil,
 		"streamId", streamId,
@@ -910,7 +910,7 @@ func (s *PostgresStreamStore) WriteMiniblockCandidate(
 
 // Supported consistency checks:
 // 1. Proposal block number is current miniblock block number + 1
-func (s *PostgresStreamStore) writeBlockProposalTxn(
+func (s *PostgresStreamStore) writeMiniblockCandidateTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
@@ -938,10 +938,10 @@ func (s *PostgresStreamStore) writeBlockProposalTxn(
 	if seqNum == nil {
 		return RiverError(Err_NOT_FOUND, "No blocks for the stream found in block storage")
 	}
-	// Proposal should be for or after the next block number. Candidates from before the next block number are rejected.
-	if blockNumber < *seqNum+1 {
-		return RiverError(Err_MINIBLOCKS_STORAGE_FAILURE, "Miniblock proposal blockNumber mismatch").
-			Tag("ExpectedBlockNumber", *seqNum+1).Tag("ActualBlockNumber", blockNumber)
+	// Candidate block number should be greater than the last block number in storage.
+	if blockNumber <= *seqNum {
+		return RiverError(Err_MINIBLOCKS_STORAGE_FAILURE, "Candidate is too old").
+			Tag("LastBlockInStorage", *seqNum).Tag("CandidateBlockNumber", blockNumber)
 	}
 
 	// insert miniblock proposal into miniblock_candidates table
