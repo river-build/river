@@ -215,14 +215,15 @@ func New(
 		"name",
 	)
 	x := &xchain{
-		workerID:        workerID,
-		checker:         checker,
-		checkerABI:      checkerABI,
-		checkerContract: checkerContract,
-		baseChain:       baseChain,
-		evmErrDecoder:   decoder,
-		config:          cfg,
-		evaluator:       evaluator,
+		workerID:            workerID,
+		checker:             checker,
+		checkerABI:          checkerABI,
+		checkerContract:     checkerContract,
+		baseChain:           baseChain,
+		baseChainStartBlock: baseChainStartBlock,
+		evmErrDecoder:       decoder,
+		config:              cfg,
+		evaluator:           evaluator,
 
 		riverChain:       riverChain,
 		registryContract: registryContract,
