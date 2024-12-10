@@ -73,13 +73,10 @@ func createUserSettingsStreamsWithData(
 	streamIds := make([]StreamId, numStreams)
 	errChan := make(chan error, numStreams)
 
-	var wg sync.WaitGroup
-	wg.Add(numStreams)
 	wp := workerpool.New(10)
 
 	for i := 0; i < numStreams; i++ {
 		wp.Submit(func() {
-			defer wg.Done()
 			wallet, err := crypto.NewWallet(ctx)
 			if err != nil {
 				errChan <- err
@@ -107,7 +104,7 @@ func createUserSettingsStreamsWithData(
 		})
 	}
 
-	wg.Wait()
+	wp.StopWait()
 
 	if len(errChan) > 0 {
 		return nil, nil, <-errChan
