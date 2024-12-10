@@ -12,7 +12,8 @@ import {IDiamondCut} from "contracts/src/diamond/facets/cut/IDiamondCut.sol";
 import {IDiamondLoupe} from "contracts/src/diamond/facets/loupe/IDiamondLoupe.sol";
 import {IDiamond} from "contracts/src/diamond/IDiamond.sol";
 import {INodeOperator} from "contracts/src/base/registry/facets/operator/INodeOperator.sol";
-import {IMainnetDelegationBase} from "contracts/src/tokens/river/base/delegation/IMainnetDelegation.sol";
+import {IMainnetDelegationBase, IMainnetDelegation} from "contracts/src/tokens/river/base/delegation/IMainnetDelegation.sol";
+import {ICrossDomainMessenger} from "contracts/src/tokens/river/mainnet/delegation/ICrossDomainMessenger.sol";
 
 //libraries
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
@@ -292,6 +293,65 @@ contract ForkRewardsDistributionTest is
   }
 
   /// forge-config: default.fuzz.runs = 64
+  function test_fuzz_claimReward_byMainnetDelegator(
+    address delegator,
+    address claimer,
+    uint96 amount,
+    uint256 rewardAmount,
+    uint256 timeLapse,
+    uint256 seed0,
+    uint256 seed1
+  ) public {
+    address operator0 = randomOperator(seed0);
+    address operator1 = randomOperator(seed1);
+    vm.assume(
+      delegator != operator0 &&
+        delegator != operator1 &&
+        delegator != address(this) &&
+        delegator != address(rewardsDistributionFacet)
+    );
+    vm.assume(
+      claimer != address(0) &&
+        claimer != delegator &&
+        claimer != operator0 &&
+        claimer != operator1 &&
+        claimer != address(this) &&
+        claimer != address(rewardsDistributionFacet)
+    );
+    amount = uint96(bound(amount, 1, type(uint96).max - 1 ether));
+    timeLapse = bound(timeLapse, 0, rewardDuration);
+
+    test_fuzz_notifyRewardAmount(rewardAmount);
+    stake(address(this), 1 ether, address(this), operator0);
+
+    address messenger = IMainnetDelegation(baseRegistry).getMessenger();
+    address proxyDelegation = IMainnetDelegation(baseRegistry)
+      .getProxyDelegation();
+
+    mockMessenger(messenger, proxyDelegation);
+    IMainnetDelegation(baseRegistry).setDelegation(
+      delegator,
+      operator1,
+      amount
+    );
+
+    mockMessenger(messenger, proxyDelegation);
+    IMainnetDelegation(baseRegistry).setAuthorizedClaimer(delegator, claimer);
+
+    skip(timeLapse);
+
+    uint256 currentReward = rewardsDistributionFacet.currentReward(delegator);
+
+    vm.expectEmit(address(rewardsDistributionFacet));
+    emit ClaimReward(delegator, delegator, currentReward);
+
+    vm.prank(delegator);
+    uint256 reward = rewardsDistributionFacet.claimReward(delegator, delegator);
+
+    verifyClaim(delegator, delegator, reward, currentReward, timeLapse);
+  }
+
+  /// forge-config: default.fuzz.runs = 64
   function test_fuzz_claimReward_byOperator(
     uint96 amount,
     uint256 rewardAmount,
@@ -408,5 +468,16 @@ contract ForkRewardsDistributionTest is
 
     depositId = rewardsDistributionFacet.stake(amount, operator, beneficiary);
     vm.stopPrank();
+  }
+
+  function mockMessenger(address messenger, address proxyDelegation) internal {
+    vm.prank(address(messenger));
+    vm.mockCall(
+      messenger,
+      abi.encodeWithSelector(
+        ICrossDomainMessenger.xDomainMessageSender.selector
+      ),
+      abi.encode(proxyDelegation)
+    );
   }
 }
