@@ -45,7 +45,11 @@ func fillUserSettingsStreamWithData(
 					err,
 					Err_INTERNAL,
 				).Message("Failed to add event to stream").
-					Func("fillUserSettingsStreamWithData")
+					Func("fillUserSettingsStreamWithData").
+					Tag("streamId", streamId).
+					Tag("miniblockNum", i).
+					Tag("mbEventNum", j).
+					Tag("numMbs", numMBs)
 			}
 		}
 		prevMB, err = makeMiniblock(ctx, client, streamId, false, prevMB.Num)
@@ -55,6 +59,7 @@ func fillUserSettingsStreamWithData(
 				Err_INTERNAL,
 			).Message("Failed to create miniblock").
 				Func("fillUserSettingsStreamWithData").
+				Tag("streamId", streamId).
 				Tag("miniblockNum", i).
 				Tag("numMbs", numMBs)
 		}
@@ -91,14 +96,22 @@ func createUserSettingsStreamsWithData(
 				&StreamSettings{DisableMiniblockCreation: true},
 			)
 			if err != nil {
-				errChan <- AsRiverError(err, Err_INTERNAL).Message("Failed to create stream").Func("createUserSettingsStreamsWithData").Tag("streamNum", i)
+				errChan <- AsRiverError(err, Err_INTERNAL).
+					Message("Failed to create stream").
+					Func("createUserSettingsStreamsWithData").
+					Tag("streamNum", i).
+					Tag("streamId", streamId)
 				return
 			}
 			streamIds[i] = streamId
 
 			_, err = fillUserSettingsStreamWithData(ctx, streamId, wallet, client, numMBs, numEventsPerMB, mbRef)
 			if err != nil {
-				errChan <- AsRiverError(err, Err_INTERNAL).Message("Failed to fill stream with data").Func("createUserSettingsStreamsWithData").Tag("streamNum", i)
+				errChan <- AsRiverError(err, Err_INTERNAL).
+					Message("Failed to fill stream with data").
+					Func("createUserSettingsStreamsWithData").
+					Tag("streamNum", i).
+					Tag("streamId", streamId)
 				return
 			}
 		})

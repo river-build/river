@@ -200,15 +200,6 @@ func (s *Service) debugInfoMakeMiniblock(
 			Version:  v,
 		}), nil
 	} else {
-		log.Info(
-			"Forwarding debug request to make miniblock to another node...",
-			"stream_id",
-			streamId,
-			"force_snapshot",
-			forceSnapshot,
-			"last_known_miniblock_num",
-			lastKnownMiniblockNum,
-		)
 		return peerNodeRequestWithRetries(
 			ctx,
 			stream,

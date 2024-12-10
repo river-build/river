@@ -192,7 +192,6 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 			// session so we can go ahead and re-take the lock from a new session.
 			conn.Conn().Close(ctx)
 			// Fine to call multiple times.
-			log.Info("Releasing conn")
 			conn.Release()
 
 			// Attempt to re-acquire a connection
@@ -211,7 +210,7 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 				s.exitSignal <- err
 			}
 
-			log.Info("Acquired connection")
+			log.Info("maintainSchemaLock: reacquired connection, re-establishing session lock")
 			s.debugLogConnectionPid(ctx, conn)
 			defer conn.Release()
 
@@ -237,7 +236,7 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 			}
 
 			if !acquired {
-				err = AsRiverError(fmt.Errorf("lock was not available"), Err_RESOURCE_EXHAUSTED).
+				err = AsRiverError(fmt.Errorf("schema lock was not available"), Err_RESOURCE_EXHAUSTED).
 					Message("Lost connection and unable to re-acquire schema lock").
 					Func("maintainSchemaLock").
 					Tag("schema", s.schemaName).
@@ -275,8 +274,16 @@ func (s *PostgresStreamStore) acquireSchemaLock(ctx context.Context) error {
 			"select pg_try_advisory_lock($1)",
 			lockId,
 		).Scan(&acquired)
-		log.Info("Attempted to take the lock...", "err", err)
 		if err != nil {
+			log.Error(
+				"acquireSchemaLock: failed to acquire schema lock",
+				"lockId",
+				lockId,
+				"err",
+				err,
+				"nodeUUID",
+				s.nodeUUID,
+			)
 			return AsRiverError(
 				err,
 				Err_DB_OPERATION_FAILURE,
@@ -285,13 +292,20 @@ func (s *PostgresStreamStore) acquireSchemaLock(ctx context.Context) error {
 		}
 
 		if acquired {
-			log.Info("Lock acquired!", "lockId", lockId, "nodeUUID", s.nodeUUID)
+			log.Debug("Schema lock acquired", "lockId", lockId, "nodeUUID", s.nodeUUID)
 			break
 		}
 
 		lockWasUnavailable = true
 		time.Sleep(1 * time.Second)
-		log.Info("Unable to acquire lock on schema, retrying...", "lockId", lockId)
+
+		log.Debug(
+			"Unable to acquire lock on schema, retrying...",
+			"lockId",
+			lockId,
+			"nodeUUID",
+			s.nodeUUID,
+		)
 	}
 
 	// If we were not initially able to acquire the lock, delay startup after lock
