@@ -2,10 +2,10 @@
 pragma solidity ^0.8.19;
 
 // utils
+import {DeployBase} from "contracts/scripts/common/DeployBase.s.sol";
 import {TestUtils} from "../utils/TestUtils.sol";
 import {RewardsVerifier} from "../base/registry/RewardsVerifier.t.sol";
 import {DeployRewardsDistributionV2} from "contracts/scripts/deployments/facets/DeployRewardsDistributionV2.s.sol";
-import "forge-std/console.sol";
 
 //interfaces
 import {IDiamondCut} from "contracts/src/diamond/facets/cut/IDiamondCut.sol";
@@ -30,6 +30,7 @@ import {River} from "contracts/src/tokens/river/base/River.sol";
 import {SpaceDelegationFacet} from "contracts/src/base/registry/facets/delegation/SpaceDelegationFacet.sol";
 
 contract ForkRewardsDistributionTest is
+  DeployBase,
   RewardsVerifier,
   TestUtils,
   IDiamond,
@@ -37,12 +38,9 @@ contract ForkRewardsDistributionTest is
 {
   using FixedPointMathLib for uint256;
 
-  address internal constant baseRegistry =
-    0x7c0422b31401C936172C897802CF0373B35B7698;
-  address internal constant spaceFactory =
-    0x9978c826d93883701522d2CA645d5436e5654252;
   uint256 internal constant rewardDuration = 14 days;
-
+  address internal baseRegistry;
+  address internal spaceFactory;
   DeployRewardsDistributionV2 internal distributionV2Helper;
   address internal owner;
   address[] internal activeOperators;
@@ -50,7 +48,11 @@ contract ForkRewardsDistributionTest is
   function setUp() public {
     vm.createSelectFork("base", 23200000);
 
-    river = River(0x91930fd11ABAa5241241d3B07c02A8d0B5ac1920);
+    vm.setEnv("DEPLOYMENT_CONTEXT", "omega");
+
+    baseRegistry = getDeployment("baseRegistry");
+    spaceFactory = getDeployment("spaceFactory");
+    river = River(getDeployment("river"));
     rewardsDistributionFacet = RewardsDistribution(baseRegistry);
     owner = OwnableFacet(baseRegistry).owner();
 
