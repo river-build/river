@@ -142,16 +142,8 @@ func NewPostgresStreamStore(
 	return store, nil
 }
 
-func (s *PostgresStreamStore) debugLogConnectionPid(ctx context.Context, conn *pgxpool.Conn) {
-	log := dlog.FromCtx(ctx)
-
-	var pid int
-	err := conn.QueryRow(ctx, "SELECT pg_backend_pid();").Scan(&pid)
-	if err != nil {
-		log.Error("Failed to get connection PID", "error", err)
-	} else {
-		log.Info("Connection PID", "id", pid)
-	}
+func (s *PostgresStreamStore) computeLockIdFromSchema() int64 {
+	return (int64)(xxhash.Sum64String(s.schemaName))
 }
 
 // maintainSchemaLock periodically checks the connection that established the
@@ -166,7 +158,7 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 	log := dlog.FromCtx(ctx)
 	defer conn.Release()
 
-	lockId := xxhash.Sum64String(s.schemaName)
+	lockId := s.computeLockIdFromSchema()
 
 	count := 0
 	for {
@@ -202,23 +194,23 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 				return
 			} else if err != nil {
 				err = AsRiverError(err, Err_RESOURCE_EXHAUSTED).
-					Message("Lost connection and unable to re-acquire schema lock").
+					Message("Lost connection and unable to re-acquire a connection").
 					Func("maintainSchemaLock").
 					Tag("schema", s.schemaName).
 					Tag("lockId", lockId).
 					LogError(dlog.FromCtx(ctx))
 				s.exitSignal <- err
+				return
 			}
 
 			log.Info("maintainSchemaLock: reacquired connection, re-establishing session lock")
-			s.debugLogConnectionPid(ctx, conn)
 			defer conn.Release()
 
 			// Attempt to re-establish the lock
 			var acquired bool
 			err := conn.QueryRow(
 				ctx,
-				"select pg_advisory_lock($1)",
+				"select pg_try_advisory_lock($1)",
 				lockId,
 			).Scan(&acquired)
 
@@ -255,7 +247,7 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 // go routine to periodically check the connection maintaining the lock.
 func (s *PostgresStreamStore) acquireSchemaLock(ctx context.Context) error {
 	log := dlog.FromCtx(ctx)
-	lockId := (int64)(xxhash.Sum64String(s.schemaName))
+	lockId := s.computeLockIdFromSchema()
 
 	// Acquire connection
 	conn, err := s.acquireConnection(ctx)
@@ -263,8 +255,7 @@ func (s *PostgresStreamStore) acquireSchemaLock(ctx context.Context) error {
 		return err
 	}
 
-	s.debugLogConnectionPid(ctx, conn)
-	log.Info("Acquiring schema lock", "lockId", lockId, "nodeUUID", s.nodeUUID)
+	log.Info("Acquiring lock on database schema", "lockId", lockId, "nodeUUID", s.nodeUUID)
 
 	var lockWasUnavailable bool
 	for {
@@ -275,31 +266,25 @@ func (s *PostgresStreamStore) acquireSchemaLock(ctx context.Context) error {
 			lockId,
 		).Scan(&acquired)
 		if err != nil {
-			log.Error(
-				"acquireSchemaLock: failed to acquire schema lock",
-				"lockId",
-				lockId,
-				"err",
-				err,
-				"nodeUUID",
-				s.nodeUUID,
-			)
 			return AsRiverError(
 				err,
 				Err_DB_OPERATION_FAILURE,
 			).Message("Could not acquire lock on schema").
-				Func("acquireSchemaLock")
+				Func("acquireSchemaLock").
+				Tag("lockId", lockId).
+				Tag("nodeUUID", s.nodeUUID).
+				LogError(log)
 		}
 
 		if acquired {
-			log.Debug("Schema lock acquired", "lockId", lockId, "nodeUUID", s.nodeUUID)
+			log.Info("Schema lock acquired", "lockId", lockId, "nodeUUID", s.nodeUUID)
 			break
 		}
 
 		lockWasUnavailable = true
 		time.Sleep(1 * time.Second)
 
-		log.Debug(
+		log.Info(
 			"Unable to acquire lock on schema, retrying...",
 			"lockId",
 			lockId,
@@ -309,7 +294,7 @@ func (s *PostgresStreamStore) acquireSchemaLock(ctx context.Context) error {
 	}
 
 	// If we were not initially able to acquire the lock, delay startup after lock
-	// acquisition to give the other node any needed time to fully shut down.
+	// acquisition to give the other node any needed time to fully release all resources.
 	if lockWasUnavailable {
 		delay := s.config.StartupDelay
 		if delay == 0 {
@@ -333,6 +318,7 @@ func (s *PostgresStreamStore) acquireSchemaLock(ctx context.Context) error {
 }
 
 func (s *PostgresStreamStore) initStreamStorage(ctx context.Context) error {
+	dlog.FromCtx(ctx).Info("Detecting other instances")
 	err := s.txRunner(
 		ctx,
 		"listOtherInstances",
@@ -344,6 +330,7 @@ func (s *PostgresStreamStore) initStreamStorage(ctx context.Context) error {
 		return err
 	}
 
+	dlog.FromCtx(ctx).Info("Establishing database usage")
 	err = s.txRunner(
 		ctx,
 		"initializeSingleNodeKey",
@@ -1704,7 +1691,8 @@ func (s *PostgresStreamStore) acquireConnection(ctx context.Context) (*pgxpool.C
 
 	log := dlog.FromCtx(ctx)
 
-	retries := 5
+	// 20 retries * 1s delay = 20s of connection attempts
+	retries := 20
 	for i := 0; i < retries; i++ {
 		conn, err = s.pool.Acquire(ctx)
 		if err == nil {
@@ -1716,10 +1704,16 @@ func (s *PostgresStreamStore) acquireConnection(ctx context.Context) (*pgxpool.C
 			break
 		}
 
-		log.Debug("Failed to acquire pgx connection, retrying", "error", err)
+		log.Info(
+			"Failed to acquire pgx connection, retrying",
+			"error",
+			err,
+			"nthRetry",
+			i+1,
+		)
 
 		// In the event of networking issues, wait a small period of time for recovery.
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(500 * time.Millisecond)
 	}
 
 	log.Error("Failed to acquire pgx connection", "error", err)
