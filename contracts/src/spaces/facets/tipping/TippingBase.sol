@@ -44,8 +44,10 @@ library TippingBase {
 
     ds.currencies.add(currency);
     ds.tipsByCurrencyByTokenId[tokenId][currency] += amount;
-    ds.tippingStatsByCurrency[currency].tipAmount += amount;
-    ds.tippingStatsByCurrency[currency].totalTips += 1;
+
+    TippingStats storage stats = ds.tippingStatsByCurrency[currency];
+    stats.tipAmount += amount;
+    stats.totalTips += 1;
 
     CurrencyTransfer.transferCurrency(currency, sender, receiver, amount);
   }
