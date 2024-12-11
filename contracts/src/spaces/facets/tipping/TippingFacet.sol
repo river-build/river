@@ -60,6 +60,52 @@ contract TippingFacet is ITipping, ERC721ABase, Facet {
     return TippingBase.tipsByCurrencyByTokenId(tokenId, currency);
   }
 
+  /// @inheritdoc ITipping
+  function getTotalTipAmountByCurrency(
+    address currency
+  ) external view returns (uint256) {
+    return TippingBase.getTotalTipAmountByCurrency(currency);
+  }
+
+  /// @inheritdoc ITipping
+  function getTotalTipCountByCurrency(
+    address currency
+  ) external view returns (uint256) {
+    return TippingBase.getTotalTipCountByCurrency(currency);
+  }
+
+  /// @inheritdoc ITipping
+  function getTipsReceivedByCurrency(
+    address user,
+    address currency
+  ) external view returns (uint256) {
+    return TippingBase.getTipsReceivedByCurrency(user, currency);
+  }
+
+  /// @inheritdoc ITipping
+  function getTipsSentByCurrency(
+    address user,
+    address currency
+  ) external view returns (uint256) {
+    return TippingBase.getTipsSentByCurrency(user, currency);
+  }
+
+  /// @inheritdoc ITipping
+  function getTipsReceivedCountByCurrency(
+    address user,
+    address currency
+  ) external view returns (uint256) {
+    return TippingBase.getTipsReceivedCountByCurrency(user, currency);
+  }
+
+  /// @inheritdoc ITipping
+  function getTipsSentCountByCurrency(
+    address user,
+    address currency
+  ) external view returns (uint256) {
+    return TippingBase.getTipsSentCountByCurrency(user, currency);
+  }
+
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                         Internal                           */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/

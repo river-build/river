@@ -66,4 +66,54 @@ interface ITipping is ITippingBase {
   /// @notice Gets the list of currencies that have been tipped to the space
   /// @return An array of currency addresses
   function tippingCurrencies() external view returns (address[] memory);
+
+  /// @notice Gets the total amount of tips received for a currency
+  /// @param currency The currency address to get tips for
+  /// @return The total amount of tips received in the specified currency
+  function getTotalTipAmountByCurrency(
+    address currency
+  ) external view returns (uint256);
+
+  /// @notice Gets the total count of tips received for a currency
+  /// @param currency The currency address to get tips for
+  /// @return The total count of tips received in the specified currency
+  function getTotalTipCountByCurrency(
+    address currency
+  ) external view returns (uint256);
+
+  /// @notice Gets the total amount of tips received for a user
+  /// @param user The user address to get tips for
+  /// @param currency The currency address to get tips for
+  /// @return The total amount of tips received in the specified currency
+  function getTipsReceivedByCurrency(
+    address user,
+    address currency
+  ) external view returns (uint256);
+
+  /// @notice Gets the total amount of tips sent for a user
+  /// @param user The user address to get tips for
+  /// @param currency The currency address to get tips for
+  /// @return The total amount of tips sent in the specified currency
+  function getTipsSentByCurrency(
+    address user,
+    address currency
+  ) external view returns (uint256);
+
+  /// @notice Gets the total count of tips received for a user
+  /// @param user The user address to get tips for
+  /// @param currency The currency address to get tips for
+  /// @return The total count of tips received in the specified currency
+  function getTipsReceivedCountByCurrency(
+    address user,
+    address currency
+  ) external view returns (uint256);
+
+  /// @notice Gets the total count of tips sent for a user
+  /// @param user The user address to get tips for
+  /// @param currency The currency address to get tips for
+  /// @return The total count of tips sent in the specified currency
+  function getTipsSentCountByCurrency(
+    address user,
+    address currency
+  ) external view returns (uint256);
 }

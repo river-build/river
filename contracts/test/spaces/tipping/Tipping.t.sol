@@ -80,7 +80,7 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
     );
     uint256 gasUsed = vm.stopSnapshotGas();
 
-    assertLt(gasUsed, 200_000);
+    assertLt(gasUsed, 300_000);
 
     assertEq(receiver.balance, amount);
     assertEq(sender.balance, 0);
@@ -123,7 +123,7 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
     uint256 gasUsed = vm.stopSnapshotGas();
     vm.stopPrank();
 
-    assertLt(gasUsed, 200_000);
+    assertLt(gasUsed, 300_000);
     assertEq(mockERC20.balanceOf(sender), 0);
     assertEq(mockERC20.balanceOf(receiver), amount);
     assertEq(
