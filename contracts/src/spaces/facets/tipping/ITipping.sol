@@ -70,22 +70,18 @@ interface ITipping is ITippingBase {
   /// @notice Gets the total amount of tips received for a currency
   /// @param currency The currency address to get tips for
   /// @return The total amount of tips received in the specified currency
-  function getTotalTipAmountByCurrency(
-    address currency
-  ) external view returns (uint256);
+  function getTotalTipAmount(address currency) external view returns (uint256);
 
   /// @notice Gets the total count of tips received for a currency
   /// @param currency The currency address to get tips for
   /// @return The total count of tips received in the specified currency
-  function getTotalTipCountByCurrency(
-    address currency
-  ) external view returns (uint256);
+  function getTotalTipCount(address currency) external view returns (uint256);
 
   /// @notice Gets the total amount of tips received for a user
   /// @param user The user address to get tips for
   /// @param currency The currency address to get tips for
   /// @return The total amount of tips received in the specified currency
-  function getTipsReceivedByCurrency(
+  function getTipsReceived(
     address user,
     address currency
   ) external view returns (uint256);
@@ -94,7 +90,7 @@ interface ITipping is ITippingBase {
   /// @param user The user address to get tips for
   /// @param currency The currency address to get tips for
   /// @return The total amount of tips sent in the specified currency
-  function getTipsSentByCurrency(
+  function getTipsSent(
     address user,
     address currency
   ) external view returns (uint256);
@@ -103,7 +99,7 @@ interface ITipping is ITippingBase {
   /// @param user The user address to get tips for
   /// @param currency The currency address to get tips for
   /// @return The total count of tips received in the specified currency
-  function getTipsReceivedCountByCurrency(
+  function getTipsReceivedCount(
     address user,
     address currency
   ) external view returns (uint256);
@@ -112,7 +108,7 @@ interface ITipping is ITippingBase {
   /// @param user The user address to get tips for
   /// @param currency The currency address to get tips for
   /// @return The total count of tips sent in the specified currency
-  function getTipsSentCountByCurrency(
+  function getTipsSentCount(
     address user,
     address currency
   ) external view returns (uint256);

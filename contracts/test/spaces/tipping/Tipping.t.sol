@@ -80,7 +80,7 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
     );
     uint256 gasUsed = vm.stopSnapshotGas();
 
-    assertLt(gasUsed, 300_000);
+    assertLt(gasUsed, 250_000);
 
     assertEq(receiver.balance, amount);
     assertEq(sender.balance, 0);
@@ -91,38 +91,26 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
     assertContains(tipping.tippingCurrencies(), CurrencyTransfer.NATIVE_TOKEN);
 
     // Check total tip amounts and counts
-    assertEq(
-      tipping.getTotalTipAmountByCurrency(CurrencyTransfer.NATIVE_TOKEN),
-      amount
-    );
-    assertEq(
-      tipping.getTotalTipCountByCurrency(CurrencyTransfer.NATIVE_TOKEN),
-      1
-    );
+    assertEq(tipping.getTotalTipAmount(CurrencyTransfer.NATIVE_TOKEN), amount);
+    assertEq(tipping.getTotalTipCount(CurrencyTransfer.NATIVE_TOKEN), 1);
 
     // Check receiver's tip amounts and counts
     assertEq(
-      tipping.getTipsReceivedByCurrency(
-        receiver,
-        CurrencyTransfer.NATIVE_TOKEN
-      ),
+      tipping.getTipsReceived(receiver, CurrencyTransfer.NATIVE_TOKEN),
       amount
     );
     assertEq(
-      tipping.getTipsReceivedCountByCurrency(
-        receiver,
-        CurrencyTransfer.NATIVE_TOKEN
-      ),
+      tipping.getTipsReceivedCount(receiver, CurrencyTransfer.NATIVE_TOKEN),
       1
     );
 
     // Check sender's tip amounts and counts
     assertEq(
-      tipping.getTipsSentByCurrency(sender, CurrencyTransfer.NATIVE_TOKEN),
+      tipping.getTipsSent(sender, CurrencyTransfer.NATIVE_TOKEN),
       amount
     );
     assertEq(
-      tipping.getTipsSentCountByCurrency(sender, CurrencyTransfer.NATIVE_TOKEN),
+      tipping.getTipsSentCount(sender, CurrencyTransfer.NATIVE_TOKEN),
       1
     );
   }
@@ -159,7 +147,7 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
     uint256 gasUsed = vm.stopSnapshotGas();
     vm.stopPrank();
 
-    assertLt(gasUsed, 300_000);
+    assertLt(gasUsed, 250_000);
     assertEq(mockERC20.balanceOf(sender), 0);
     assertEq(mockERC20.balanceOf(receiver), amount);
     assertEq(

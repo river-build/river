@@ -61,49 +61,45 @@ contract TippingFacet is ITipping, ERC721ABase, Facet {
   }
 
   /// @inheritdoc ITipping
-  function getTotalTipAmountByCurrency(
-    address currency
-  ) external view returns (uint256) {
-    return TippingBase.getTotalTipAmountByCurrency(currency);
+  function getTotalTipAmount(address currency) external view returns (uint256) {
+    return TippingBase.getTotalTipAmount(currency);
   }
 
   /// @inheritdoc ITipping
-  function getTotalTipCountByCurrency(
-    address currency
-  ) external view returns (uint256) {
-    return TippingBase.getTotalTipCountByCurrency(currency);
+  function getTotalTipCount(address currency) external view returns (uint256) {
+    return TippingBase.getTotalTipCount(currency);
   }
 
   /// @inheritdoc ITipping
-  function getTipsReceivedByCurrency(
+  function getTipsReceived(
     address user,
     address currency
   ) external view returns (uint256) {
-    return TippingBase.getTipsReceivedByCurrency(user, currency);
+    return TippingBase.getTipsReceived(user, currency);
   }
 
   /// @inheritdoc ITipping
-  function getTipsSentByCurrency(
+  function getTipsSent(
     address user,
     address currency
   ) external view returns (uint256) {
-    return TippingBase.getTipsSentByCurrency(user, currency);
+    return TippingBase.getTipsSent(user, currency);
   }
 
   /// @inheritdoc ITipping
-  function getTipsReceivedCountByCurrency(
+  function getTipsReceivedCount(
     address user,
     address currency
   ) external view returns (uint256) {
-    return TippingBase.getTipsReceivedCountByCurrency(user, currency);
+    return TippingBase.getTipsReceivedCount(user, currency);
   }
 
   /// @inheritdoc ITipping
-  function getTipsSentCountByCurrency(
+  function getTipsSentCount(
     address user,
     address currency
   ) external view returns (uint256) {
-    return TippingBase.getTipsSentCountByCurrency(user, currency);
+    return TippingBase.getTipsSentCount(user, currency);
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
