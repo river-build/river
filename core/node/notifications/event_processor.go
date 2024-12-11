@@ -107,14 +107,8 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 	members.Each(func(member string) bool {
 		var (
 			participant = common.HexToAddress(member)
-			pref, err   = p.cache.GetUserPreferences(context.Background(), participant) // lint:ignore context.Background() is fine here
+			pref, err   = p.cache.GetUserPreferences(ctx, participant)
 		)
-
-		if slices.ContainsFunc(tags.GetMentionedUserAddresses(), func(member []byte) bool {
-			return bytes.Equal(member, participant[:])
-		}) {
-			kind = "mention"
-		}
 
 		if err != nil {
 			p.log.Warn("Unable to retrieve user preference to determine if notification must be send",
@@ -123,6 +117,12 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 				"err", err,
 			)
 			return false
+		}
+
+		if slices.ContainsFunc(tags.GetMentionedUserAddresses(), func(member []byte) bool {
+			return bytes.Equal(member, participant[:])
+		}) {
+			kind = "mention"
 		}
 
 		//
@@ -153,7 +153,6 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 			if p.onDMChannelPayload(channelID, participant, pref, event) {
 				usersToNotify[participant] = pref
 				kind = "direct_message"
-				recipients.Add(participant)
 			}
 			recipients.Add(participant)
 		case *StreamEvent_GdmChannelPayload:
@@ -168,7 +167,7 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 				}
 				recipients.Add(participant)
 			} else {
-				p.log.Error("Space channel misses spaceID", "channel", channelID)
+				p.log.Error("Space channel message missing spaceID", "channel", channelID)
 			}
 		}
 
