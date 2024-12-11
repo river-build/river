@@ -191,6 +191,7 @@ func (s *streamImpl) ApplyMiniblock(ctx context.Context, miniblock *MiniblockInf
 // importMiniblocks imports the given miniblocks.
 func (s *streamImpl) importMiniblocks(
 	ctx context.Context,
+	nodes []common.Address,
 	miniblocks []*MiniblockInfo,
 ) error {
 	if len(miniblocks) == 0 {
@@ -199,11 +200,12 @@ func (s *streamImpl) importMiniblocks(
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.importMiniblocksLocked(ctx, miniblocks)
+	return s.importMiniblocksLocked(ctx, nodes, miniblocks)
 }
 
 func (s *streamImpl) importMiniblocksLocked(
 	ctx context.Context,
+	nodes []common.Address,
 	miniblocks []*MiniblockInfo,
 ) error {
 	firstMbNum := miniblocks[0].Ref.Num
@@ -222,7 +224,7 @@ func (s *streamImpl) importMiniblocksLocked(
 	if s.view() == nil {
 		// Do we have genesis miniblock?
 		if miniblocks[0].Header().MiniblockNum == 0 {
-			err := s.initFromGenesis(ctx, miniblocks[0], blocksToWriteToStorage[0].Data)
+			err := s.initFromGenesis(ctx, nodes, miniblocks[0], blocksToWriteToStorage[0].Data)
 			if err != nil {
 				return err
 			}
@@ -413,6 +415,7 @@ func (s *streamImpl) schedulePromotionLocked(ctx context.Context, mb *MiniblockR
 
 func (s *streamImpl) initFromGenesis(
 	ctx context.Context,
+	nodes []common.Address,
 	genesisInfo *MiniblockInfo,
 	genesisBytes []byte,
 ) error {
@@ -432,7 +435,7 @@ func (s *streamImpl) initFromGenesis(
 			Func("initFromGenesis")
 	}
 
-	if err := s.params.Storage.CreateStreamStorage(ctx, s.streamId, genesisBytes); err != nil {
+	if err := s.params.Storage.CreateStreamStorage(ctx, s.streamId, nodes, registeredGenesisHash, genesisBytes); err != nil {
 		// TODO: this error is not handle correctly here: if stream is in storage, caller of this initFromGenesis
 		// should read it from storage.
 		if AsRiverError(err).Code != Err_ALREADY_EXISTS {
@@ -459,7 +462,7 @@ func (s *streamImpl) initFromGenesis(
 
 func (s *streamImpl) initFromBlockchain(ctx context.Context) error {
 	// TODO: move this call out of the lock
-	record, _, mb, blockNum, err := s.params.Registry.GetStreamWithGenesis(ctx, s.streamId)
+	record, mbHash, mb, blockNum, err := s.params.Registry.GetStreamWithGenesis(ctx, s.streamId)
 	if err != nil {
 		return err
 	}
@@ -486,7 +489,7 @@ func (s *streamImpl) initFromBlockchain(ctx context.Context) error {
 		)
 	}
 
-	err = s.params.Storage.CreateStreamStorage(ctx, s.streamId, mb)
+	err = s.params.Storage.CreateStreamStorage(ctx, s.streamId, record.Nodes, mbHash, mb)
 	if err != nil {
 		return err
 	}
@@ -946,7 +949,7 @@ func (s *streamImpl) tryApplyCandidate(ctx context.Context, mb *MiniblockInfo) (
 	if len(s.local.pendingCandidates) > 0 {
 		pending := s.local.pendingCandidates[0]
 		if mb.Ref.Num == pending.Num && mb.Ref.Hash == pending.Hash {
-			err = s.importMiniblocksLocked(ctx, []*MiniblockInfo{mb})
+			err = s.importMiniblocksLocked(ctx, s.nodesLocked.GetNodes(), []*MiniblockInfo{mb})
 			if err != nil {
 				return false, err
 			}
@@ -971,7 +974,7 @@ func (s *streamImpl) tryReadAndApplyCandidateLocked(ctx context.Context, mbRef *
 	if err == nil {
 		miniblock, err := NewMiniblockInfoFromBytes(miniblockBytes, mbRef.Num)
 		if err == nil {
-			err = s.importMiniblocksLocked(ctx, []*MiniblockInfo{miniblock})
+			err = s.importMiniblocksLocked(ctx, s.nodesLocked.GetNodes(), []*MiniblockInfo{miniblock})
 			if err == nil {
 				return true
 			}
@@ -1034,6 +1037,9 @@ func (s *streamImpl) applyStreamEvents(
 			err := s.nodesLocked.Update(event, s.params.Wallet.Address)
 			if err != nil {
 				dlog.FromCtx(ctx).Error("applyStreamEventsNoLock: failed to update nodes", "err", err, "streamId", s.streamId)
+			}
+			if s.nodesLocked.IsLocal() {
+				// TODO: update streams metadata table
 			}
 		default:
 			dlog.FromCtx(ctx).Error("applyStreamEventsNoLock: unknown event", "event", event, "streamId", s.streamId)

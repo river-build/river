@@ -254,6 +254,8 @@ func (s *PostgresStreamStore) sqlForStream(sql string, streamId StreamId) string
 func (s *PostgresStreamStore) CreateStreamStorage(
 	ctx context.Context,
 	streamId StreamId,
+	nodes []common.Address,
+	genesisMiniblockHash common.Hash,
 	genesisMiniblock []byte,
 ) error {
 	return s.txRunnerWithUUIDCheck(
@@ -261,7 +263,7 @@ func (s *PostgresStreamStore) CreateStreamStorage(
 		"CreateStreamStorage",
 		pgx.ReadWrite,
 		func(ctx context.Context, tx pgx.Tx) error {
-			return s.createStreamStorageTx(ctx, tx, streamId, genesisMiniblock)
+			return s.createStreamStorageTx(ctx, tx, streamId, nodes, genesisMiniblockHash, genesisMiniblock)
 		},
 		nil,
 		"streamId", streamId,
@@ -305,16 +307,28 @@ func (s *PostgresStreamStore) createStreamStorageTx(
 	ctx context.Context,
 	tx pgx.Tx,
 	streamId StreamId,
+	nodes []common.Address,
+	genesisMiniblockHash common.Hash,
 	genesisMiniblock []byte,
 ) error {
 	sql := s.sqlForStream(
 		`
 			INSERT INTO es (stream_id, latest_snapshot_miniblock, migrated) VALUES ($1, 0, true);
-			INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, 0, $2);
-			INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, 1, -1);`,
+			INSERT INTO {{miniblocks}} (stream_id, seq_num, blockdata) VALUES ($1, 0, $4);
+			INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, 1, -1);
+			INSERT INTO streams_metadata (stream_id, nodes, miniblock_hash, miniblock_num, is_sealed) VALUES ($1, $2, $3, 0, false) ON CONFLICT (stream_id) DO NOTHING;`,
+
 		streamId,
 	)
-	_, err := tx.Exec(ctx, sql, streamId, genesisMiniblock)
+
+	nodeAddrs := make([]string, 0, len(nodes))
+	for _, node := range nodes {
+		nodeAddrs = append(nodeAddrs, hex.EncodeToString(node[:]))
+	}
+
+	hash := hex.EncodeToString(genesisMiniblockHash[:])
+
+	_, err := tx.Exec(ctx, sql, streamId, nodeAddrs, hash, genesisMiniblock)
 	if err != nil {
 		if pgerr, ok := err.(*pgconn.PgError); ok && pgerr.Code == pgerrcode.UniqueViolation {
 			return WrapRiverError(Err_ALREADY_EXISTS, err).Message("stream already exists")
@@ -1189,15 +1203,21 @@ func (s *PostgresStreamStore) writeMiniblocksTx(
 		)
 	}
 
+	lastMbNumberInMiniblocks := miniblocks[len(miniblocks)-1].Number
+	lastMbHashInMiniblocks := miniblocks[len(miniblocks)-1].Hash
+
 	// Insert -1 marker and all new minipool events into minipool.
 	_, err = tx.Exec(
 		ctx,
 		s.sqlForStream(
-			"INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, $2, -1)",
+			`INSERT INTO {{minipools}} (stream_id, generation, slot_num) VALUES ($1, $2, -1);
+				UPDATE streams_metadata set miniblock_hash=$3, miniblock_num=$4 WHERE stream_id = $1 `,
 			streamId,
 		),
 		streamId,
 		newMinipoolGeneration,
+		hex.EncodeToString(lastMbHashInMiniblocks[:]),
+		lastMbNumberInMiniblocks,
 	)
 	if err != nil {
 		return err
@@ -1778,7 +1798,7 @@ func (s *PostgresStreamStore) allStreamsMetaDataTx(
 ) (map[StreamId]*StreamMetadata, int64, error) {
 	streamMetaDataRows, err := tx.Query(
 		ctx,
-		`SELECT stream_id, riverblock_num, riverblock_log_index, nodes, miniblock_hash, miniblock_num  FROM streams_metadata`,
+		`SELECT stream_id, nodes, miniblock_hash, miniblock_num  FROM streams_metadata`,
 	)
 	if err != nil {
 		return nil, 0, err
@@ -1820,12 +1840,10 @@ func (s *PostgresStreamStore) allStreamsMetaDataTx(
 		lastBlock = max(lastBlock, riverBlockNum)
 
 		results[streamID] = &StreamMetadata{
-			StreamId:                streamID,
-			RiverChainBlockNumber:   uint64(riverBlockNum),
-			RiverChainBlockLogIndex: uint(riverBlockLogIndex),
-			Nodes:                   nodes,
-			MiniblockHash:           common.HexToHash(miniBlockHashStr),
-			MiniblockNumber:         miniBlockNum,
+			StreamId:        streamID,
+			Nodes:           nodes,
+			MiniblockHash:   common.HexToHash(miniBlockHashStr),
+			MiniblockNumber: miniBlockNum,
 		}
 	}
 
@@ -1854,32 +1872,30 @@ func (s *PostgresStreamStore) updateStreamsMetaDataTx(
 	streams map[StreamId]*StreamMetadata,
 	removals []StreamId,
 ) error {
-	upserts := `INSERT INTO streams_metadata (stream_id, riverblock_num, riverblock_log_index, nodes, miniblock_hash, miniblock_num) 
-		VALUES (@stream_id, @riverblock_num, @riverblock_log_index, @nodes, @miniblock_hash, @miniblock_num) 
-		ON CONFLICT (stream_id) DO UPDATE SET riverblock_num = @riverblock_num, riverblock_log_index=@riverblock_log_index, nodes=@nodes, miniblock_hash=@miniblock_hash, miniblock_num=@miniblock_num`
+	upserts := `INSERT INTO streams_metadata (stream_id, nodes, miniblock_hash, miniblock_num, is_sealed) 
+		VALUES (@stream_id, @nodes, @miniblock_hash, @miniblock_num, @is_sealed) 
+		ON CONFLICT (stream_id) DO UPDATE SET nodes=@nodes, miniblock_hash=@miniblock_hash, miniblock_num=@miniblock_num`
 	remove := `DELETE FROM streams_metadata WHERE stream_id = $1`
 
 	batch := &pgx.Batch{}
 	for _, stream := range streams {
-		var nodes []string
-		for addr := range slices.Values(nodes) {
-			nodes = append(nodes, addr)
+		nodes := make([]string, len(stream.Nodes))
+		for i, node := range stream.Nodes {
+			nodes[i] = hex.EncodeToString(node[:0])
 		}
-
 		args := pgx.NamedArgs{
-			"stream_id":            stream.StreamId.String(),
-			"riverblock_num":       stream.RiverChainBlockNumber,
-			"riverblock_log_index": stream.RiverChainBlockLogIndex,
-			"nodes":                nodes,
-			"miniblock_hash":       stream.MiniblockHash.String(),
-			"miniblock_num":        stream.MiniblockNumber,
+			"stream_id":      stream.StreamId,
+			"nodes":          nodes,
+			"miniblock_hash": hex.EncodeToString(stream.MiniblockHash[:]),
+			"miniblock_num":  stream.MiniblockNumber,
+			"is_sealed":      stream.IsSealed,
 		}
 
 		batch.Queue(upserts, args)
 	}
 
 	for _, streamID := range removals {
-		args := pgx.NamedArgs{"stream_id": streamID.String()}
+		args := pgx.NamedArgs{"stream_id": streamID}
 		batch.Queue(remove, args)
 	}
 

@@ -2,18 +2,17 @@ package events
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"slices"
 	"sync/atomic"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/gammazero/workerpool"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/puzpuzpuz/xsync/v3"
-
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
@@ -204,12 +203,10 @@ func (s *streamCacheImpl) retrieveFromRiverChain(ctx context.Context) (map[Strea
 		func(stream *registries.GetStreamResult) bool {
 			if slices.Contains(stream.Nodes, s.params.Wallet.Address) {
 				streams[stream.StreamId] = &storage.StreamMetadata{
-					StreamId:                stream.StreamId,
-					RiverChainBlockNumber:   s.params.AppliedBlockNum.AsUint64(),
-					RiverChainBlockLogIndex: storage.RiverChainBlockLogIndexUnspecified,
-					Nodes:                   stream.Nodes,
-					MiniblockHash:           stream.LastMiniblockHash,
-					MiniblockNumber:         int64(stream.LastMiniblockNum),
+					StreamId:        stream.StreamId,
+					Nodes:           stream.Nodes,
+					MiniblockHash:   stream.LastMiniblockHash,
+					MiniblockNumber: int64(stream.LastMiniblockNum),
 				}
 			}
 			return true
@@ -227,19 +224,20 @@ func (s *streamCacheImpl) retrieveFromRiverChain(ctx context.Context) (map[Strea
 // to this node and a list of streams that are removed from this node.
 func (s *streamCacheImpl) applyDeltas(
 	ctx context.Context,
-	lastBlock int64,
+	lastDBBlock int64,
 	streams map[StreamId]*storage.StreamMetadata,
 ) (removals []StreamId, err error) {
-	if lastBlock > int64(s.params.AppliedBlockNum.AsUint64()) {
+	if lastDBBlock > int64(s.params.AppliedBlockNum.AsUint64()) {
 		return nil, RiverError(Err_BAD_BLOCK_NUMBER, "Local database is ahead of River Chain").
 			Func("loadStreamsUpdatesFromRiverChain").
-			Tags("riverChainLastBlock", lastBlock, "appliedBlockNum", s.params.AppliedBlockNum)
+			Tags("riverChainLastBlock", lastDBBlock, "appliedBlockNum", s.params.AppliedBlockNum)
 	}
 
 	// fetch and apply changes that happened since latest sync
 	var (
+		log                    = dlog.FromCtx(ctx)
 		streamRegistryContract = s.params.Registry.StreamRegistry.BoundContract()
-		from                   = lastBlock
+		from                   = lastDBBlock + 1
 		to                     = int64(s.params.AppliedBlockNum.AsUint64())
 		query                  = ethereum.FilterQuery{
 			Addresses: []common.Address{s.params.Registry.Address},
@@ -249,104 +247,110 @@ func (s *streamCacheImpl) applyDeltas(
 				s.params.Registry.StreamRegistryAbi.Events[river.Event_StreamPlacementUpdated].ID,
 			}},
 		}
-		maxBlockRange = int64(2000)
+		maxBlockRange = int64(2000) // if too large the number of events in a single rpc call can become too big
+		retryCounter  = 0
 	)
 
 	for from <= to {
 		toBlock := min(from+maxBlockRange, to)
-
-		query.FromBlock = big.NewInt(from)
-		query.ToBlock = big.NewInt(toBlock)
+		query.FromBlock, query.ToBlock = big.NewInt(from), big.NewInt(toBlock)
 
 		logs, err := s.params.RiverChain.Client.FilterLogs(ctx, query)
 		if err != nil {
-			return nil, WrapRiverError(Err_CANNOT_CALL_CONTRACT, err).
-				Message("Unable to fetch stream changes").
-				Tags("from", from, "to", toBlock).
-				Func("retrieveFromDeltas")
+			log.Error("Unable to retrieve logs from RiverChain", "retry", retryCounter, "err", err)
+
+			retryCounter++
+			if retryCounter > 40 {
+				return nil, WrapRiverError(Err_CANNOT_CALL_CONTRACT, err).
+					Message("Unable to fetch stream changes").
+					Tags("from", from, "to", toBlock).
+					Func("retrieveFromDeltas")
+			}
+
+			select {
+			case <-time.After(3 * time.Second):
+				continue
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
 		}
 
-		for _, log := range logs {
-			if len(log.Topics) == 0 {
+		for _, event := range logs {
+			if len(event.Topics) == 0 {
 				continue
 			}
 
-			switch log.Topics[0] {
+			switch event.Topics[0] {
 			case s.params.Registry.StreamRegistryAbi.Events[river.Event_StreamAllocated].ID:
-				event := new(river.StreamRegistryV1StreamAllocated)
-				if err := streamRegistryContract.UnpackLog(event, river.Event_StreamAllocated, log); err != nil {
-					return nil, WrapRiverError(Err_BAD_EVENT, err).
-						Tags("transaction", log.TxHash, "logIdx", log.Index).
-						Message("Unable to unpack stream allocated log").
-						Func("retrieveFromDeltas")
+				streamAllocatedEvent := new(river.StreamRegistryV1StreamAllocated)
+				if err := streamRegistryContract.UnpackLog(event, river.Event_StreamAllocated, event); err != nil {
+					log.Error("Unable to unpack StreamRegistryV1StreamAllocated event",
+						"transaction", event.TxHash, "logIdx", event.Index, "err", err)
+					continue
 				}
 
-				if slices.Contains(event.Nodes, s.params.Wallet.Address) {
-					streams[event.StreamId] = &storage.StreamMetadata{
-						StreamId:                event.StreamId,
-						RiverChainBlockNumber:   log.BlockNumber,
-						RiverChainBlockLogIndex: log.Index,
-						Nodes:                   event.Nodes,
-						MiniblockHash:           event.GenesisMiniblockHash,
-						MiniblockNumber:         0,
-						IsSealed:                false,
+				if slices.Contains(streamAllocatedEvent.Nodes, s.params.Wallet.Address) {
+					streams[streamAllocatedEvent.StreamId] = &storage.StreamMetadata{
+						StreamId:        streamAllocatedEvent.StreamId,
+						Nodes:           streamAllocatedEvent.Nodes,
+						MiniblockHash:   streamAllocatedEvent.GenesisMiniblockHash,
+						MiniblockNumber: 0,
+						IsSealed:        false,
 					}
 				}
 
 			case s.params.Registry.StreamRegistryAbi.Events[river.Event_StreamLastMiniblockUpdated].ID:
-				event := new(river.StreamRegistryV1StreamLastMiniblockUpdated)
-				if err := streamRegistryContract.UnpackLog(event, river.Event_StreamLastMiniblockUpdated, log); err != nil {
-					return nil, WrapRiverError(Err_BAD_EVENT, err).
-						Tags("transaction", log.TxHash, "logIdx", log.Index).
-						Message("Unable to unpack stream last miniblock updated log").
-						Func("retrieveFromDeltas")
+				lastMiniblockUpdatedEvent := new(river.StreamRegistryV1StreamLastMiniblockUpdated)
+				if err := streamRegistryContract.UnpackLog(event, river.Event_StreamLastMiniblockUpdated, event); err != nil {
+					log.Error("Unable to unpack StreamRegistryV1StreamLastMiniblockUpdated event",
+						"transaction", event.TxHash, "logIdx", event.Index, "err", err)
+					continue
 				}
 
-				if stream, ok := streams[event.StreamId]; ok {
-					stream.MiniblockHash = common.BytesToHash(event.LastMiniblockHash[:])
-					stream.MiniblockNumber = int64(event.LastMiniblockNum)
-					stream.IsSealed = event.IsSealed
+				if stream, ok := streams[lastMiniblockUpdatedEvent.StreamId]; ok {
+					stream.MiniblockHash = common.BytesToHash(lastMiniblockUpdatedEvent.LastMiniblockHash[:])
+					stream.MiniblockNumber = int64(lastMiniblockUpdatedEvent.LastMiniblockNum)
+					stream.IsSealed = lastMiniblockUpdatedEvent.IsSealed
 				}
 
 			case s.params.Registry.StreamRegistryAbi.Events[river.Event_StreamPlacementUpdated].ID:
-				event := new(river.StreamRegistryV1StreamPlacementUpdated)
-				if err := streamRegistryContract.UnpackLog(event, river.Event_StreamPlacementUpdated, log); err != nil {
-					return nil, WrapRiverError(Err_BAD_EVENT, err).
-						Tags("transaction", log.TxHash, "logIdx", log.Index).
-						Message("Unable to unpack stream placement updated log").
-						Func("retrieveFromDeltas")
+				streamPlacementUpdatedEvent := new(river.StreamRegistryV1StreamPlacementUpdated)
+				if err := streamRegistryContract.UnpackLog(event, river.Event_StreamPlacementUpdated, event); err != nil {
+					log.Error("Unable to unpack StreamRegistryV1StreamPlacementUpdated event",
+						"transaction", event.TxHash, "logIdx", event.Index, "err", err)
+					continue
 				}
 
-				if s.params.Wallet.Address == event.NodeAddress {
-					if event.IsAdded { // stream was replaced to this node
-						retrievedStream, err := s.params.Registry.GetStream(ctx, event.StreamId, s.params.AppliedBlockNum)
+				if s.params.Wallet.Address == streamPlacementUpdatedEvent.NodeAddress {
+					if streamPlacementUpdatedEvent.IsAdded { // stream was replaced to this node
+						retrievedStream, err := s.params.Registry.GetStream(
+							ctx, streamPlacementUpdatedEvent.StreamId, s.params.AppliedBlockNum)
 						if err != nil {
 							return nil, WrapRiverError(Err_BAD_EVENT, err).
-								Tags("stream", event.StreamId, "transaction", log.TxHash, "logIdx", log.Index).
+								Tags("stream", streamPlacementUpdatedEvent.StreamId, "transaction", event.TxHash, "logIdx", event.Index).
 								Message("Unable to retrieve replaced stream").
 								Func("retrieveFromDeltas")
 						}
 
-						streams[event.StreamId] = &storage.StreamMetadata{
-							StreamId:                event.StreamId,
-							RiverChainBlockNumber:   log.BlockNumber,
-							RiverChainBlockLogIndex: log.Index,
-							Nodes:                   retrievedStream.Nodes,
-							MiniblockHash:           retrievedStream.LastMiniblockHash,
-							MiniblockNumber:         int64(retrievedStream.LastMiniblockNum),
-							IsSealed:                false,
+						streams[streamPlacementUpdatedEvent.StreamId] = &storage.StreamMetadata{
+							StreamId:        streamPlacementUpdatedEvent.StreamId,
+							Nodes:           retrievedStream.Nodes,
+							MiniblockHash:   retrievedStream.LastMiniblockHash,
+							MiniblockNumber: int64(retrievedStream.LastMiniblockNum),
+							IsSealed:        false,
 						}
 
 						slices.DeleteFunc(removals, func(streamID StreamId) bool {
-							return streamID == event.StreamId
+							return streamID == streamPlacementUpdatedEvent.StreamId
 						})
 					} else { // stream was replaced away from this node
-						removals = append(removals, event.StreamId)
+						removals = append(removals, streamPlacementUpdatedEvent.StreamId)
 					}
 				}
 			}
 		}
 
+		retryCounter = 0
 		from = toBlock + 1
 	}
 
@@ -394,10 +398,11 @@ func (s *streamCacheImpl) onStreamAllocated(
 			lastAccessedTime:    time.Now(),
 			local:               &localStreamState{},
 		}
+
 		stream.nodesLocked.Reset(event.Nodes, s.params.Wallet.Address)
-		stream, created, err := s.createStreamStorage(ctx, stream, event.GenesisMiniblock)
+		stream, created, err := s.createStreamStorage(ctx, stream, event.Nodes, event.GenesisMiniblockHash, event.GenesisMiniblock)
 		if err != nil {
-			dlog.FromCtx(ctx).Error("Failed to allocate stream", "err", err, "streamId", stream.streamId)
+			dlog.FromCtx(ctx).Error("Failed to allocate stream", "err", err, "streamId", StreamId(event.StreamId))
 		}
 		if created && len(otherEvents) > 0 {
 			stream.applyStreamEvents(ctx, otherEvents, blockNum)
@@ -477,7 +482,7 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 	// Blockchain record is already created, but this fact is not reflected yet in local storage.
 	// This may happen if somebody observes record allocation on blockchain and tries to get stream
 	// while local storage is being initialized.
-	record, _, mb, blockNum, err := s.params.Registry.GetStreamWithGenesis(ctx, streamId)
+	record, mbHash, mb, blockNum, err := s.params.Registry.GetStreamWithGenesis(ctx, streamId)
 	if err != nil {
 		if !waitForLocal {
 			return nil, err
@@ -535,13 +540,15 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 		)
 	}
 
-	stream, _, err = s.createStreamStorage(ctx, stream, mb)
+	stream, _, err = s.createStreamStorage(ctx, stream, record.Nodes, mbHash, mb)
 	return stream, err
 }
 
 func (s *streamCacheImpl) createStreamStorage(
 	ctx context.Context,
 	stream *streamImpl,
+	nodes []common.Address,
+	mbHash common.Hash,
 	mb []byte,
 ) (*streamImpl, bool, error) {
 	// Lock stream, so parallel creators have to wait for the stream to be intialized.
@@ -552,7 +559,7 @@ func (s *streamCacheImpl) createStreamStorage(
 		// TODO: delete entry on failures below?
 
 		// Our stream won the race, put into storage.
-		err := s.params.Storage.CreateStreamStorage(ctx, stream.streamId, mb)
+		err := s.params.Storage.CreateStreamStorage(ctx, stream.streamId, nodes, mbHash, mb)
 		if err != nil {
 			if AsRiverError(err).Code == Err_ALREADY_EXISTS {
 				// Attempt to load stream from storage. Might as well do it while under lock.

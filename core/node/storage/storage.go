@@ -25,7 +25,7 @@ type StreamStorage interface {
 	// CreateStreamStorage creates a new stream with the given genesis miniblock at index 0.
 	// Last snapshot minblock index is set to 0.
 	// Minipool is set to generation number 1 (i.e. number of miniblock that is going to be produced next) and is empty.
-	CreateStreamStorage(ctx context.Context, streamId StreamId, genesisMiniblock []byte) error
+	CreateStreamStorage(ctx context.Context, streamId StreamId, nodes []common.Address, genesisMiniblockHash common.Hash, genesisMiniblock []byte) error
 
 	// ReadStreamFromLastSnapshot reads last stream miniblocks and guarantees that last snapshot miniblock is included.
 	// It attempts to read at least numToRead miniblocks, but may return less if there are not enough miniblocks in storage,
@@ -175,14 +175,6 @@ type DebugReadStreamDataResult struct {
 type StreamMetadata struct {
 	// StreamId is the unique stream identifier
 	StreamId StreamId
-	// RiverChainBlockNumber contains the river chain block number from which the nodes and
-	// miniblock data is taken.
-	RiverChainBlockNumber uint64
-	// RiverChainBlockLogIndex contains the transaction index from which the nodes and
-	// miniblock data is taken. Can be 9_999_999 in case the record was created for the
-	// first time from the state at RiverChainBlockNumber and not through an update from
-	// an event/log.
-	RiverChainBlockLogIndex uint
 	// Nodes that this stream is managed by.
 	Nodes []common.Address
 	// MiniblockHash contains the latest miniblock hash for this stream as locally known.

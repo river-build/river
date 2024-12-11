@@ -123,7 +123,7 @@ func (s *streamCacheImpl) syncStreamFromSinglePeer(
 			mbs[i] = mb
 		}
 
-		err = stream.importMiniblocks(ctx, mbs)
+		err = stream.importMiniblocks(ctx, stream.nodesLocked.GetNodes(), mbs)
 		if err != nil {
 			return currentFromInclusive, err
 		}
