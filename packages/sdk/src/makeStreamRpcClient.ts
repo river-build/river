@@ -83,27 +83,24 @@ export async function getMiniblocks(
 ): Promise<{ miniblocks: ParsedMiniblock[]; terminus: boolean }> {
     const allMiniblocks: ParsedMiniblock[] = []
     let currentFromInclusive = fromInclusive
-    let currentToExclusive = toExclusive
     let reachedTerminus = false
 
-    while (currentFromInclusive < currentToExclusive && !reachedTerminus) {
-        const { miniblocks, terminus, nextFromInclusive, nextToExclusive } =
-            await fetchMiniblocksFromRpc(
-                client,
-                streamId,
-                currentFromInclusive,
-                currentToExclusive,
-                unpackEnvelopeOpts,
-            )
+    while (currentFromInclusive < toExclusive && !reachedTerminus) {
+        const { miniblocks, terminus, nextFromInclusive } = await fetchMiniblocksFromRpc(
+            client,
+            streamId,
+            currentFromInclusive,
+            toExclusive,
+            unpackEnvelopeOpts,
+        )
 
         allMiniblocks.push(...miniblocks)
 
         // Update the range based on the response
         currentFromInclusive = nextFromInclusive
-        currentToExclusive = nextToExclusive
 
         // If the terminus flag is set or we've covered the full range, break the loop
-        reachedTerminus = terminus || currentFromInclusive >= currentToExclusive
+        reachedTerminus = terminus || currentFromInclusive >= toExclusive
     }
 
     return {
@@ -122,7 +119,6 @@ export async function fetchMiniblocksFromRpc(
     miniblocks: ParsedMiniblock[]
     terminus: boolean
     nextFromInclusive: bigint
-    nextToExclusive: bigint
 }> {
     const response = await client.getMiniblocks({
         streamId: streamIdAsBytes(streamId),
@@ -139,7 +135,6 @@ export async function fetchMiniblocksFromRpc(
     return {
         miniblocks: miniblocks,
         terminus: response.terminus,
-        nextFromInclusive: response.fromInclusive,
-        nextToExclusive: response.fromInclusive + BigInt(response.miniblocks.length),
+        nextFromInclusive: response.fromInclusive + BigInt(response.miniblocks.length),
     }
 }
