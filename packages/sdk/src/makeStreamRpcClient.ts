@@ -85,7 +85,7 @@ export async function getMiniblocks(
     let currentFromInclusive = fromInclusive
     let reachedTerminus = false
 
-    while (currentFromInclusive < toExclusive && !reachedTerminus) {
+    while (currentFromInclusive <= toExclusive) {
         const { miniblocks, terminus, nextFromInclusive } = await fetchMiniblocksFromRpc(
             client,
             streamId,
@@ -95,12 +95,13 @@ export async function getMiniblocks(
         )
 
         allMiniblocks.push(...miniblocks)
-
-        // Update the range based on the response
         currentFromInclusive = nextFromInclusive
 
-        // If the terminus flag is set or we've covered the full range, break the loop
-        reachedTerminus = terminus || currentFromInclusive >= toExclusive
+        // Set the terminus to true if we got at least one response with reached terminus
+        // The behaviour around this flag is not implemented yet
+        if (terminus && !reachedTerminus) {
+            reachedTerminus = true
+        }
     }
 
     return {
