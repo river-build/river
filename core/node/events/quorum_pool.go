@@ -2,7 +2,6 @@ package events
 
 import (
 	"context"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -42,9 +41,13 @@ func (q *QuorumPool) GoRemotes(
 ) {
 	// Reset cancel on ctx to avoid canceling remotes in progress:
 	// Wait() completes when quorum is achieved and some remotes are still in progress.
+	deadline, ok := ctx.Deadline()
 	ctx = context.WithoutCancel(ctx)
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second) // TODO: make configurable
-	defer cancel()
+	if ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(ctx, deadline)
+		defer cancel()
+	}
 
 	q.remoteErrChannel = make(chan error, len(nodes))
 	q.remotes += len(nodes)
