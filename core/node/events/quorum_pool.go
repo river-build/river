@@ -25,12 +25,12 @@ func (q *QuorumPool) GoLocal(ctx context.Context, f func(ctx context.Context) er
 	q.localErrChannel = make(chan error, 1)
 	go func() {
 		err := f(ctx)
+		q.localErrChannel <- err
 		if err != nil {
 			tags := []any{"error", err}
 			tags = append(tags, q.tags...)
 			dlog.FromCtx(ctx).Warn("QuorumPool: GoLocal: Error", tags...)
 		}
-		q.localErrChannel <- err
 	}()
 }
 
@@ -39,32 +39,40 @@ func (q *QuorumPool) GoRemotes(
 	nodes []common.Address,
 	f func(ctx context.Context, node common.Address) error,
 ) {
+	q.remoteErrChannel = make(chan error, len(nodes))
+	q.remotes += len(nodes)
+	for _, node := range nodes {
+		go q.executeRemote(ctx, node, f)
+	}
+}
+
+func (q *QuorumPool) executeRemote(
+	ctx context.Context,
+	node common.Address,
+	f func(ctx context.Context, node common.Address) error,
+) {
 	// Reset cancel on ctx to avoid canceling remotes in progress:
 	// Wait() completes when quorum is achieved and some remotes are still in progress.
 	deadline, ok := ctx.Deadline()
 	ctx = context.WithoutCancel(ctx)
 	if ok {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithDeadline(ctx, deadline)
-		defer cancel()
+		var ctxCancel context.CancelFunc
+		ctx, ctxCancel = context.WithDeadline(ctx, deadline)
+		defer ctxCancel()
 	}
 
-	q.remoteErrChannel = make(chan error, len(nodes))
-	q.remotes += len(nodes)
-	for _, node := range nodes {
-		go func(node common.Address) {
-			err := f(ctx, node)
-			if err != nil {
-				tags := []any{"error", err, "node", node}
-				tags = append(tags, q.tags...)
-				dlog.FromCtx(ctx).Warn("QuorumPool: GoRemotes: Error", tags...)
-			}
-			q.remoteErrChannel <- err
-		}(node)
+	err := f(ctx, node)
+	q.remoteErrChannel <- err
+
+	if err != nil {
+		tags := []any{"error", err, "node", node}
+		tags = append(tags, q.tags...)
+		dlog.FromCtx(ctx).Warn("QuorumPool: GoRemotes: Error", tags...)
 	}
 }
 
 func (q *QuorumPool) Wait() error {
+	// TODO: FIX: REPLICATION: succeed if enough remotes succeed even if local fails.
 	// First wait for local if any.
 	if q.localErrChannel != nil {
 		if err := <-q.localErrChannel; err != nil {
