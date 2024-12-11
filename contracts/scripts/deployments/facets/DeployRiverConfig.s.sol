@@ -8,7 +8,7 @@ pragma solidity ^0.8.23;
 //contracts
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 import {RiverConfig} from "contracts/src/river/registry/facets/config/RiverConfig.sol";
-import {FacetHelper, FacetInit} from "contracts/test/diamond/Facet.t.sol";
+import {FacetHelper} from "contracts/test/diamond/Facet.t.sol";
 import {IDiamond} from "contracts/src/diamond/Diamond.sol";
 
 contract DeployRiverConfig is FacetHelper, Deployer {
@@ -41,14 +41,14 @@ contract DeployRiverConfig is FacetHelper, Deployer {
   function facetInitHelper(
     address deployer,
     address facetAddress
-  ) external override returns (FacetInit memory) {
+  ) external override returns (FacetCut memory, bytes memory) {
     IDiamond.FacetCut memory facetCut = this.makeCut(
       facetAddress,
       IDiamond.FacetCutAction.Add
     );
     address[] memory configManagers = new address[](1);
     configManagers[0] = deployer;
-    return FacetInit({cut: facetCut, config: makeInitData(configManagers)});
+    return (facetCut, makeInitData(configManagers));
   }
 
   function __deploy(address deployer) public override returns (address) {

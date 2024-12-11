@@ -8,16 +8,11 @@ import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 import {IDiamond, Diamond} from "contracts/src/diamond/Diamond.sol";
 
 //libraries
-struct FacetInit {
-  IDiamond.FacetCut cut;
-  bytes config;
-}
-
 interface IFacetHelper {
   function facetInitHelper(
     address, // deployer
     address // facetAddress
-  ) external returns (FacetInit memory);
+  ) external returns (IDiamond.FacetCut memory, bytes memory);
 }
 
 //contracts
@@ -142,12 +137,8 @@ abstract contract FacetHelper is IDiamond, IFacetHelper {
   function facetInitHelper(
     address deployer,
     address facetAddress
-  ) external virtual returns (FacetInit memory) {
+  ) external virtual returns (IDiamond.FacetCut memory, bytes memory) {
     bytes memory initData = abi.encode(deployer);
-    return
-      FacetInit({
-        cut: makeCut(facetAddress, FacetCutAction.Add),
-        config: makeInitData(initData)
-      });
+    return (makeCut(facetAddress, FacetCutAction.Add), makeInitData(initData));
   }
 }

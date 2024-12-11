@@ -8,7 +8,7 @@ import {IDiamond} from "contracts/src/diamond/IDiamond.sol";
 import {DiamondHelper} from "contracts/test/diamond/Diamond.t.sol";
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 import {Diamond} from "contracts/src/diamond/Diamond.sol";
-import {FacetHelper, FacetInit} from "contracts/test/diamond/Facet.t.sol";
+import {FacetHelper} from "contracts/test/diamond/Facet.t.sol";
 import {DeployDiamondCut} from "contracts/scripts/deployments/facets/DeployDiamondCut.s.sol";
 import {DeployDiamondLoupe} from "contracts/scripts/deployments/facets/DeployDiamondLoupe.s.sol";
 import {DeployIntrospection} from "contracts/scripts/deployments/facets/DeployIntrospection.s.sol";
@@ -151,12 +151,13 @@ contract DeployRiverRegistry is DiamondHelper, Deployer {
       if (facetHelperAddress != address(0)) {
         // deploy facet
         address facetAddress = Deployer(facetHelperAddress).deploy(deployer);
-        FacetInit memory facetInit = FacetHelper(facetHelperAddress)
-          .facetInitHelper(deployer, facetAddress);
-        if (facetInit.config.length > 0) {
-          addFacet(facetInit.cut, facetAddress, facetInit.config);
+        (FacetCut memory cut, bytes memory config) = FacetHelper(
+          facetHelperAddress
+        ).facetInitHelper(deployer, facetAddress);
+        if (config.length > 0) {
+          addFacet(cut, facetAddress, config);
         } else {
-          addCut(facetInit.cut);
+          addCut(cut);
         }
       }
     }
