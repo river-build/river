@@ -1923,8 +1923,8 @@ export class Client
         )
 
         return {
-            miniblocks: [...cachedMiniblocks, ...miniblocks],
             terminus: terminus,
+            miniblocks: [...cachedMiniblocks, ...miniblocks],
         }
     }
 
