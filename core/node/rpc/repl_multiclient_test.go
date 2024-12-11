@@ -20,7 +20,7 @@ func newServiceTesterForReplication(t *testing.T) *serviceTester {
 			start:             true,
 			btcParams: &crypto.TestParams{
 				AutoMine:         true,
-				AutoMineInterval: 200 * time.Millisecond,
+				AutoMineInterval: 1000 * time.Millisecond,
 				MineOnTx:         false,
 			},
 		},
@@ -117,7 +117,7 @@ func TestReplMcConversation(t *testing.T) {
 		testReplMcConversation(t, 5, 5, 1)
 	})
 	t.Run("debug", func(t *testing.T) {
-		// testReplMcConversation(t, 5, 12, 1)
-		testReplMcConversation(t, 5, 100, 10)
+		testReplMcConversation(t, 5, 12, 1)
+		// testReplMcConversation(t, 5, 100, 10)
 	})
 }

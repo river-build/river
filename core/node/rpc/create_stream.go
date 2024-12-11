@@ -161,7 +161,7 @@ func (s *Service) createReplicatedStream(
 
 	var localSyncCookie *SyncCookie
 	if isLocal {
-		sender.GoLocal(func() error {
+		sender.GoLocal(ctx, func(ctx context.Context) error {
 			st, err := s.cache.GetStreamNoWait(ctx, streamId)
 			if err != nil {
 				return err
@@ -180,8 +180,9 @@ func (s *Service) createReplicatedStream(
 	if len(remotes) > 0 {
 		for _, n := range remotes {
 			sender.GoRemote(
+				ctx,
 				n,
-				func(node common.Address) error {
+				func(ctx context.Context, node common.Address) error {
 					stub, err := s.nodeRegistry.GetNodeToNodeClientForAddress(node)
 					if err != nil {
 						return err

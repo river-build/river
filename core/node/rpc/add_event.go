@@ -119,7 +119,7 @@ func (s *Service) addParsedEvent(
 	}
 
 	stream := &replicatedStream{
-		streamId:    streamId.String(),
+		streamId:    streamId,
 		localStream: localStream,
 		nodes:       localStream,
 		service:     s,

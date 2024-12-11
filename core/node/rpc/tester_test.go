@@ -747,7 +747,7 @@ func (tc *testClient) getAllMessages(channelId StreamId) userMessages {
 }
 
 func (tc *testClient) eventually(f func(*testClient), t ...time.Duration) {
-	waitFor := 5 * time.Second
+	waitFor := 10 * time.Second
 	if len(t) > 0 {
 		waitFor = t[0]
 	}

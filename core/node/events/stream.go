@@ -319,7 +319,7 @@ func (s *streamImpl) applyMiniblockImplLocked(
 				Error("applyMiniblockImplLocked: Applied miniblock ERROR", "error", err, "streamId", s.streamId, "block", miniblock.Ref, "callstack", MaybeFormatCallstack(2))
 		} else {
 			dlog.FromCtx(ctx).
-				Error("applyMiniblockImplLocked: Applied miniblock", "streamId", s.streamId, "block", miniblock.Ref, "callstack", MaybeFormatCallstack(2))
+				Debug("applyMiniblockImplLocked: Applied miniblock", "streamId", s.streamId, "block", miniblock.Ref, "callstack", MaybeFormatCallstack(2))
 		}
 	}()
 	// TODO: strict check here.

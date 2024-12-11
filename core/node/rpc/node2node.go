@@ -2,6 +2,10 @@ package rpc
 
 import (
 	"context"
+	"fmt"
+	"time"
+
+	"golang.org/x/exp/rand"
 
 	"github.com/river-build/river/core/node/utils"
 
@@ -59,10 +63,16 @@ func (s *Service) NewEventReceived(
 	ctx context.Context,
 	req *connect.Request[NewEventReceivedRequest],
 ) (*connect.Response[NewEventReceivedResponse], error) {
+	time.Sleep(time.Duration(rand.Int63n(1000)) * time.Millisecond)
 	ctx, log := utils.CtxAndLogForRequest(ctx, req)
 	log.Debug("NewEventReceived ENTER")
 	r, e := s.newEventReceived(ctx, req.Msg)
+	if ctx.Err() != nil {
+		fmt.Println("NewEventReceived=====================================", "ctxIsClosed", ctx.Err())
+	}
 	if e != nil {
+
+		log.Warn("NewEventReceived=====================================", "error", e, "ctxIsClosed", ctx.Err())
 		return nil, AsRiverError(
 			e,
 		).Func("NewEventReceived").

@@ -1,7 +1,11 @@
 package events
 
 import (
+	"context"
+
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/river-build/river/core/node/dlog"
 )
 
 type QuorumPool struct {
@@ -20,18 +24,28 @@ func NewQuorumPool(maxRemotes int) *QuorumPool {
 	}
 }
 
-func (q *QuorumPool) GoLocal(f func() error) {
+func (q *QuorumPool) GoLocal(ctx context.Context, f func(ctx context.Context) error) {
 	q.localErrChannel = make(chan error, 1)
 	go func() {
-		err := f()
+		err := f(ctx)
+		if err != nil {
+			dlog.FromCtx(ctx).Warn("Local error", "error", err)
+		}
 		q.localErrChannel <- err
 	}()
 }
 
-func (q *QuorumPool) GoRemote(node common.Address, f func(node common.Address) error) {
+func (q *QuorumPool) GoRemote(
+	ctx context.Context,
+	node common.Address,
+	f func(ctx context.Context, node common.Address) error,
+) {
 	q.remotes++
 	go func(node common.Address) {
-		err := f(node)
+		err := f(ctx, node)
+		if err != nil {
+			dlog.FromCtx(ctx).Warn("Remote error", "node", node, "error", err)
+		}
 		q.remoteErrChannel <- err
 	}(node)
 }
