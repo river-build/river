@@ -16,7 +16,7 @@ type QuorumPool struct {
 	tags             []any
 }
 
-func NewQuorumPool(maxRemotes int, tags ...any) *QuorumPool {
+func NewQuorumPool(tags ...any) *QuorumPool {
 	return &QuorumPool{
 		tags: tags,
 	}

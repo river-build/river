@@ -157,7 +157,7 @@ func (s *Service) createReplicatedStream(
 
 	nodes := NewStreamNodesWithLock(nodesList, s.wallet.Address)
 	remotes, isLocal := nodes.GetRemotesAndIsLocal()
-	sender := NewQuorumPool(len(remotes))
+	sender := NewQuorumPool("method", "createReplicatedStream", "streamId", streamId)
 
 	var localSyncCookie *SyncCookie
 	if isLocal {

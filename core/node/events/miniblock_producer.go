@@ -538,7 +538,7 @@ func mbProduceCandiate_Save(
 	mbInfo *MiniblockInfo,
 	remoteNodes []common.Address,
 ) error {
-	qp := NewQuorumPool(len(remoteNodes))
+	qp := NewQuorumPool("method", "mbProduceCandiate_Save", "streamId", streamId, "miniblock", mbInfo.Ref)
 
 	qp.GoLocal(ctx, func(ctx context.Context) error {
 		miniblockBytes, err := mbInfo.ToBytes()

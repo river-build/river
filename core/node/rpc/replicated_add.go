@@ -29,7 +29,7 @@ func (r *replicatedStream) AddEvent(ctx context.Context, event *ParsedEvent) err
 		return r.localStream.AddEvent(ctx, event)
 	}
 
-	sender := NewQuorumPool(len(remotes))
+	sender := NewQuorumPool("method", "replicatedStream.AddEvent", "streamId", r.streamId)
 
 	sender.GoLocal(ctx, func(ctx context.Context) error {
 		return r.localStream.AddEvent(ctx, event)
