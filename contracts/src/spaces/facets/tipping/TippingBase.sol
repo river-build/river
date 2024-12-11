@@ -18,6 +18,12 @@ library TippingBase {
   struct Layout {
     EnumerableSet.AddressSet currencies;
     mapping(uint256 tokenId => mapping(address currency => uint256 amount)) tipsByCurrencyByTokenId;
+    mapping(address currency => uint256 amount) totalTipAmountByCurrency;
+    mapping(address currency => uint256 count) totalTipCountByCurrency;
+    mapping(address user => mapping(address currency => uint256 amount)) tipsReceivedByCurrency;
+    mapping(address user => mapping(address currency => uint256 amount)) tipsSentByCurrency;
+    mapping(address user => uint256 count) tipsReceivedCount;
+    mapping(address user => uint256 count) tipsSentCount;
   }
 
   function layout() internal pure returns (Layout storage l) {
@@ -37,6 +43,12 @@ library TippingBase {
 
     ds.currencies.add(currency);
     ds.tipsByCurrencyByTokenId[tokenId][currency] += amount;
+    ds.totalTipAmountByCurrency[currency] += amount;
+    ds.totalTipCountByCurrency[currency] += 1;
+    ds.tipsReceivedByCurrency[receiver][currency] += amount;
+    ds.tipsSentByCurrency[sender][currency] += amount;
+    ds.tipsReceivedCount[receiver] += 1;
+    ds.tipsSentCount[sender] += 1;
 
     CurrencyTransfer.transferCurrency(currency, sender, receiver, amount);
   }
@@ -50,5 +62,39 @@ library TippingBase {
 
   function tippingCurrencies() internal view returns (address[] memory) {
     return layout().currencies.values();
+  }
+
+  function getTotalTipAmountByCurrency(
+    address currency
+  ) internal view returns (uint256) {
+    return layout().totalTipAmountByCurrency[currency];
+  }
+
+  function getTotalTipCountByCurrency(
+    address currency
+  ) internal view returns (uint256) {
+    return layout().totalTipCountByCurrency[currency];
+  }
+
+  function getTipsReceivedByCurrency(
+    address user,
+    address currency
+  ) internal view returns (uint256) {
+    return layout().tipsReceivedByCurrency[user][currency];
+  }
+
+  function getTipsSentByCurrency(
+    address user,
+    address currency
+  ) internal view returns (uint256) {
+    return layout().tipsSentByCurrency[user][currency];
+  }
+
+  function getTipsReceivedCount(address user) internal view returns (uint256) {
+    return layout().tipsReceivedCount[user];
+  }
+
+  function getTipsSentCount(address user) internal view returns (uint256) {
+    return layout().tipsSentCount[user];
   }
 }
