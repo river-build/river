@@ -13,21 +13,22 @@ import {StreamRegistry} from "contracts/src/river/registry/facets/stream/StreamR
 
 contract DeployStreamRegistry is FacetHelper, Deployer {
   constructor() {
+    // addSelector(StreamRegistry.getStreams.selector);
+    // addSelector(StreamRegistry.getStreamByIndex.selector);
+
     addSelector(StreamRegistry.allocateStream.selector);
     addSelector(StreamRegistry.getStream.selector);
-    addSelector(StreamRegistry.getStreams.selector);
-    addSelector(StreamRegistry.getStreamByIndex.selector);
     addSelector(StreamRegistry.getStreamWithGenesis.selector);
     addSelector(StreamRegistry.setStreamLastMiniblock.selector);
-    addSelector(StreamRegistry.setStreamLastMiniblockBatch.selector);
-    addSelector(StreamRegistry.placeStreamOnNode.selector);
+    addSelector(StreamRegistry.setStreamLastMiniblockBatch.selector); // reduce to only this
+    addSelector(StreamRegistry.placeStreamOnNode.selector); // future
     addSelector(StreamRegistry.removeStreamFromNode.selector);
-    addSelector(StreamRegistry.getStreamCount.selector);
-    addSelector(StreamRegistry.getAllStreamIds.selector);
-    addSelector(StreamRegistry.getAllStreams.selector);
-    addSelector(StreamRegistry.getPaginatedStreams.selector);
-    addSelector(StreamRegistry.getStreamsOnNode.selector);
-    addSelector(StreamRegistry.getStreamCountOnNode.selector);
+    addSelector(StreamRegistry.getStreamCount.selector); // monitoring
+    addSelector(StreamRegistry.getPaginatedStreams.selector); // only interested for stream on a single node
+    // addSelector(StreamRegistry.getAllStreamIds.selector);
+    // addSelector(StreamRegistry.getAllStreams.selector);
+    // addSelector(StreamRegistry.getStreamsOnNode.selector);
+    // addSelector(StreamRegistry.getStreamCountOnNode.selector);
   }
 
   function versionName() public pure override returns (string memory) {
