@@ -31,7 +31,7 @@ func (r *replicatedStream) AddEvent(ctx context.Context, event *ParsedEvent) err
 
 	sender := NewQuorumPool(len(remotes))
 
-	sender.GoLocal(func() error {
+	sender.GoLocal(ctx, func(ctx context.Context) error {
 		return r.localStream.AddEvent(ctx, event)
 	})
 
@@ -40,27 +40,22 @@ func (r *replicatedStream) AddEvent(ctx context.Context, event *ParsedEvent) err
 		if err != nil {
 			return err
 		}
-		for _, n := range remotes {
-			sender.GoRemote(
-				n,
-				func(node common.Address) error {
-					stub, err := r.service.nodeRegistry.GetNodeToNodeClientForAddress(node)
-					if err != nil {
-						return err
-					}
-					_, err = stub.NewEventReceived(
-						ctx,
-						connect.NewRequest[NewEventReceivedRequest](
-							&NewEventReceivedRequest{
-								StreamId: streamId[:],
-								Event:    event.Envelope,
-							},
-						),
-					)
-					return err
-				},
+		sender.GoRemotes(ctx, remotes, func(ctx context.Context, node common.Address) error {
+			stub, err := r.service.nodeRegistry.GetNodeToNodeClientForAddress(node)
+			if err != nil {
+				return err
+			}
+			_, err = stub.NewEventReceived(
+				ctx,
+				connect.NewRequest[NewEventReceivedRequest](
+					&NewEventReceivedRequest{
+						StreamId: streamId[:],
+						Event:    event.Envelope,
+					},
+				),
 			)
-		}
+			return err
+		})
 	}
 
 	return sender.Wait()

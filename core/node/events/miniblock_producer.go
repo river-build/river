@@ -540,7 +540,7 @@ func mbProduceCandiate_Save(
 ) error {
 	qp := NewQuorumPool(len(remoteNodes))
 
-	qp.GoLocal(func() error {
+	qp.GoLocal(ctx, func(ctx context.Context) error {
 		miniblockBytes, err := mbInfo.ToBytes()
 		if err != nil {
 			return err
@@ -555,11 +555,9 @@ func mbProduceCandiate_Save(
 		)
 	})
 
-	for _, node := range remoteNodes {
-		qp.GoRemote(node, func(node common.Address) error {
-			return params.RemoteMiniblockProvider.SaveMbCandidate(ctx, node, streamId, mbInfo.Proto)
-		})
-	}
+	qp.GoRemotes(ctx, remoteNodes, func(ctx context.Context, node common.Address) error {
+		return params.RemoteMiniblockProvider.SaveMbCandidate(ctx, node, streamId, mbInfo.Proto)
+	})
 
 	return qp.Wait()
 }
