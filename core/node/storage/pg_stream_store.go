@@ -1747,6 +1747,146 @@ func (s *PostgresStreamStore) getLastMiniblockNumberTx(
 	return maxSeqNum, nil
 }
 
+func (s *PostgresStreamStore) AllStreamsMetaData(ctx context.Context) (map[StreamId]*StreamMetadata, int64, error) {
+	var (
+		ret       map[StreamId]*StreamMetadata
+		lastBlock int64
+	)
+
+	err := s.txRunnerWithUUIDCheck(
+		ctx,
+		"AllStreamsMetaData",
+		pgx.ReadOnly,
+		func(ctx context.Context, tx pgx.Tx) error {
+			var err error
+			ret, lastBlock, err = s.allStreamsMetaDataTx(ctx, tx)
+			return err
+		},
+		nil,
+	)
+
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return ret, lastBlock, nil
+}
+
+func (s *PostgresStreamStore) allStreamsMetaDataTx(
+	ctx context.Context,
+	tx pgx.Tx,
+) (map[StreamId]*StreamMetadata, int64, error) {
+	streamMetaDataRows, err := tx.Query(
+		ctx,
+		`SELECT stream_id, riverblock_num, riverblock_log_index, nodes, miniblock_hash, miniblock_num  FROM streams_metadata`,
+	)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer streamMetaDataRows.Close()
+
+	var (
+		lastBlock int64
+		results   = make(map[StreamId]*StreamMetadata)
+	)
+
+	for streamMetaDataRows.Next() {
+		var (
+			streamIDStr        string
+			riverBlockNum      int64
+			riverBlockLogIndex int64
+			nodesStr           []string
+			miniBlockHashStr   string
+			miniBlockNum       int64
+		)
+
+		if err := streamMetaDataRows.Scan(&streamIDStr, &riverBlockNum,
+			&riverBlockLogIndex, &nodesStr, &miniBlockHashStr, &miniBlockNum); err != nil {
+			return nil, 0, err
+		}
+
+		streamID, err := StreamIdFromString(streamIDStr)
+		if err != nil {
+			return nil, 0, WrapRiverError(Err_BAD_STREAM_ID, err).
+				Tag("streamId", streamIDStr).
+				Message("corrupt record in streams_metadata table")
+		}
+
+		nodes := make([]common.Address, len(nodesStr))
+		for i, nodeStr := range nodesStr {
+			nodes[i] = common.HexToAddress(nodeStr)
+		}
+
+		lastBlock = max(lastBlock, riverBlockNum)
+
+		results[streamID] = &StreamMetadata{
+			StreamId:                streamID,
+			RiverChainBlockNumber:   uint64(riverBlockNum),
+			RiverChainBlockLogIndex: uint(riverBlockLogIndex),
+			Nodes:                   nodes,
+			MiniblockHash:           common.HexToHash(miniBlockHashStr),
+			MiniblockNumber:         miniBlockNum,
+		}
+	}
+
+	return results, lastBlock, nil
+}
+
+func (s *PostgresStreamStore) UpdateStreamsMetaData(
+	ctx context.Context,
+	streams map[StreamId]*StreamMetadata,
+	removals []StreamId,
+) error {
+	return s.txRunnerWithUUIDCheck(
+		ctx,
+		"UpdateStreamsMetaData",
+		pgx.ReadWrite,
+		func(ctx context.Context, tx pgx.Tx) error {
+			return s.updateStreamsMetaDataTx(ctx, tx, streams, removals)
+		},
+		nil,
+	)
+}
+
+func (s *PostgresStreamStore) updateStreamsMetaDataTx(
+	ctx context.Context,
+	tx pgx.Tx,
+	streams map[StreamId]*StreamMetadata,
+	removals []StreamId,
+) error {
+	upserts := `INSERT INTO streams_metadata (stream_id, riverblock_num, riverblock_log_index, nodes, miniblock_hash, miniblock_num) 
+		VALUES (@stream_id, @riverblock_num, @riverblock_log_index, @nodes, @miniblock_hash, @miniblock_num) 
+		ON CONFLICT (stream_id) DO UPDATE SET riverblock_num = @riverblock_num, riverblock_log_index=@riverblock_log_index, nodes=@nodes, miniblock_hash=@miniblock_hash, miniblock_num=@miniblock_num`
+	remove := `DELETE FROM streams_metadata WHERE stream_id = $1`
+
+	batch := &pgx.Batch{}
+	for _, stream := range streams {
+		var nodes []string
+		for addr := range slices.Values(nodes) {
+			nodes = append(nodes, addr)
+		}
+
+		args := pgx.NamedArgs{
+			"stream_id":            stream.StreamId.String(),
+			"riverblock_num":       stream.RiverChainBlockNumber,
+			"riverblock_log_index": stream.RiverChainBlockLogIndex,
+			"nodes":                nodes,
+			"miniblock_hash":       stream.MiniblockHash.String(),
+			"miniblock_num":        stream.MiniblockNumber,
+		}
+
+		batch.Queue(upserts, args)
+	}
+
+	for _, streamID := range removals {
+		args := pgx.NamedArgs{"stream_id": streamID.String()}
+		batch.Queue(remove, args)
+	}
+
+	results := tx.SendBatch(ctx, batch)
+	return results.Close()
+}
+
 func getCurrentNodeProcessInfo(currentSchemaName string) string {
 	currentHostname, err := os.Hostname()
 	if err != nil {
