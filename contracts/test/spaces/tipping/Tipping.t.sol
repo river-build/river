@@ -89,6 +89,42 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
       amount
     );
     assertContains(tipping.tippingCurrencies(), CurrencyTransfer.NATIVE_TOKEN);
+
+    // Check total tip amounts and counts
+    assertEq(
+      tipping.getTotalTipAmountByCurrency(CurrencyTransfer.NATIVE_TOKEN),
+      amount
+    );
+    assertEq(
+      tipping.getTotalTipCountByCurrency(CurrencyTransfer.NATIVE_TOKEN),
+      1
+    );
+
+    // Check receiver's tip amounts and counts
+    assertEq(
+      tipping.getTipsReceivedByCurrency(
+        receiver,
+        CurrencyTransfer.NATIVE_TOKEN
+      ),
+      amount
+    );
+    assertEq(
+      tipping.getTipsReceivedCountByCurrency(
+        receiver,
+        CurrencyTransfer.NATIVE_TOKEN
+      ),
+      1
+    );
+
+    // Check sender's tip amounts and counts
+    assertEq(
+      tipping.getTipsSentByCurrency(sender, CurrencyTransfer.NATIVE_TOKEN),
+      amount
+    );
+    assertEq(
+      tipping.getTipsSentCountByCurrency(sender, CurrencyTransfer.NATIVE_TOKEN),
+      1
+    );
   }
 
   function test_tipERC20(
