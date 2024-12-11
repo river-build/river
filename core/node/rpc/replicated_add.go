@@ -24,7 +24,6 @@ var _ AddableStream = (*replicatedStream)(nil)
 
 func (r *replicatedStream) AddEvent(ctx context.Context, event *ParsedEvent) error {
 	remotes, _ := r.nodes.GetRemotesAndIsLocal()
-	// TODO: remove
 	if len(remotes) == 0 {
 		return r.localStream.AddEvent(ctx, event)
 	}
