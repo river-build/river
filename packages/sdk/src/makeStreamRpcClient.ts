@@ -118,7 +118,12 @@ export async function fetchMiniblocksFromRpc(
     fromInclusive: bigint,
     toExclusive: bigint,
     unpackEnvelopeOpts: UnpackEnvelopeOpts | undefined,
-): Promise<{ miniblocks: ParsedMiniblock[]; terminus: boolean; nextFromInclusive: bigint; nextToExclusive: bigint }> {
+): Promise<{
+    miniblocks: ParsedMiniblock[]
+    terminus: boolean
+    nextFromInclusive: bigint
+    nextToExclusive: bigint
+}> {
     const response = await client.getMiniblocks({
         streamId: streamIdAsBytes(streamId),
         fromInclusive,
