@@ -2,7 +2,7 @@ import { IDropFacetShim } from './IDropFacetShim'
 import { BaseChainConfig } from '../IStaticContractsInfo'
 import { ethers } from 'ethers'
 
-export class Drop {
+export class RiverAirdropDapp {
     public readonly dropFacet: IDropFacetShim
 
     constructor(config: BaseChainConfig, provider: ethers.providers.Provider) {
