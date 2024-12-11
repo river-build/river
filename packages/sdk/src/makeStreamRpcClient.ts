@@ -10,7 +10,10 @@ import {
     retryInterceptor,
     type RetryParams,
 } from './rpcInterceptors'
+import { UnpackEnvelopeOpts, unpackMiniblock } from './sign'
 import { RpcOptions, createHttp2ConnectTransport } from './rpcCommon'
+import { streamIdAsBytes } from './id'
+import { ParsedMiniblock } from './types'
 
 const logInfo = dlog('csb:rpc:info')
 let nextRpcClientNum = 0
@@ -69,4 +72,69 @@ export function getMaxTimeoutMs(opts: StreamRpcClientOptions): number {
             opts.retryParams.defaultTimeoutMs ?? 0 + getRetryDelayMs(i, opts.retryParams)
     }
     return maxTimeoutMs
+}
+
+export async function getMiniblocks(
+    client: StreamRpcClient,
+    streamId: string | Uint8Array,
+    fromInclusive: bigint,
+    toExclusive: bigint,
+    unpackEnvelopeOpts: UnpackEnvelopeOpts | undefined,
+): Promise<{ miniblocks: ParsedMiniblock[]; terminus: boolean }> {
+    const allMiniblocks: ParsedMiniblock[] = []
+    let currentFromInclusive = fromInclusive
+    let currentToExclusive = toExclusive
+    let reachedTerminus = false
+
+    while (currentFromInclusive < currentToExclusive && !reachedTerminus) {
+        const { miniblocks, terminus, nextFromInclusive, nextToExclusive } =
+            await fetchMiniblocksFromRpc(
+                client,
+                streamId,
+                currentFromInclusive,
+                currentToExclusive,
+                unpackEnvelopeOpts,
+            )
+
+        allMiniblocks.push(...miniblocks)
+
+        // Update the range based on the response
+        currentFromInclusive = nextFromInclusive
+        currentToExclusive = nextToExclusive
+
+        // If the terminus flag is set or we've covered the full range, break the loop
+        reachedTerminus = terminus || currentFromInclusive >= currentToExclusive
+    }
+
+    return {
+        miniblocks: allMiniblocks,
+        terminus: reachedTerminus,
+    }
+}
+
+export async function fetchMiniblocksFromRpc(
+    client: StreamRpcClient,
+    streamId: string | Uint8Array,
+    fromInclusive: bigint,
+    toExclusive: bigint,
+    unpackEnvelopeOpts: UnpackEnvelopeOpts | undefined,
+): Promise<{ miniblocks: ParsedMiniblock[]; terminus: boolean; nextFromInclusive: bigint; nextToExclusive: bigint }> {
+    const response = await client.getMiniblocks({
+        streamId: streamIdAsBytes(streamId),
+        fromInclusive,
+        toExclusive,
+    })
+
+    const miniblocks: ParsedMiniblock[] = []
+    for (const miniblock of response.miniblocks) {
+        const unpackedMiniblock = await unpackMiniblock(miniblock, unpackEnvelopeOpts)
+        miniblocks.push(unpackedMiniblock)
+    }
+
+    return {
+        miniblocks: miniblocks,
+        terminus: response.terminus,
+        nextFromInclusive: response.fromInclusive,
+        nextToExclusive: response.fromInclusive + BigInt(response.miniblocks.length),
+    }
 }
