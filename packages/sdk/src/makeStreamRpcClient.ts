@@ -85,7 +85,7 @@ export async function getMiniblocks(
     let currentFromInclusive = fromInclusive
     let reachedTerminus = false
 
-    while (currentFromInclusive <= toExclusive) {
+    while (currentFromInclusive < toExclusive) {
         const { miniblocks, terminus, nextFromInclusive } = await fetchMiniblocksFromRpc(
             client,
             streamId,

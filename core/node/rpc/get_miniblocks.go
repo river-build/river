@@ -17,7 +17,7 @@ func (s *Service) localGetMiniblocks(
 ) (*connect.Response[GetMiniblocksResponse], error) {
 	toExclusive := req.Msg.ToExclusive
 
-	if toExclusive < req.Msg.FromInclusive {
+	if toExclusive <= req.Msg.FromInclusive {
 		return nil, RiverError(Err_INVALID_ARGUMENT, "invalid range")
 	}
 
