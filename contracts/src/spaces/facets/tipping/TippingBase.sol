@@ -22,8 +22,8 @@ library TippingBase {
     mapping(address currency => uint256 count) totalTipCountByCurrency;
     mapping(address user => mapping(address currency => uint256 amount)) tipsReceivedByCurrency;
     mapping(address user => mapping(address currency => uint256 amount)) tipsSentByCurrency;
-    mapping(address user => uint256 count) tipsReceivedCount;
-    mapping(address user => uint256 count) tipsSentCount;
+    mapping(address user => mapping(address currency => uint256 count)) tipsReceivedCountByCurrency;
+    mapping(address user => mapping(address currency => uint256 count)) tipsSentCountByCurrency;
   }
 
   function layout() internal pure returns (Layout storage l) {
@@ -47,8 +47,8 @@ library TippingBase {
     ds.totalTipCountByCurrency[currency] += 1;
     ds.tipsReceivedByCurrency[receiver][currency] += amount;
     ds.tipsSentByCurrency[sender][currency] += amount;
-    ds.tipsReceivedCount[receiver] += 1;
-    ds.tipsSentCount[sender] += 1;
+    ds.tipsReceivedCountByCurrency[receiver][currency] += 1;
+    ds.tipsSentCountByCurrency[sender][currency] += 1;
 
     CurrencyTransfer.transferCurrency(currency, sender, receiver, amount);
   }
@@ -90,11 +90,17 @@ library TippingBase {
     return layout().tipsSentByCurrency[user][currency];
   }
 
-  function getTipsReceivedCount(address user) internal view returns (uint256) {
-    return layout().tipsReceivedCount[user];
+  function getTipsReceivedCountByCurrency(
+    address user,
+    address currency
+  ) internal view returns (uint256) {
+    return layout().tipsReceivedCountByCurrency[user][currency];
   }
 
-  function getTipsSentCount(address user) internal view returns (uint256) {
-    return layout().tipsSentCount[user];
+  function getTipsSentCountByCurrency(
+    address user,
+    address currency
+  ) internal view returns (uint256) {
+    return layout().tipsSentCountByCurrency[user][currency];
   }
 }
