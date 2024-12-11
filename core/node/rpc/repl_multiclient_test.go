@@ -26,7 +26,7 @@ func newServiceTesterForReplication(t *testing.T) *serviceTester {
 }
 
 func TestReplMcSimple(t *testing.T) {
-	t.Skip("SKIPPED: TODO: REPLICATION: fix")
+	// t.Skip("SKIPPED: TODO: REPLICATION: fix")
 
 	tt := newServiceTesterForReplication(t)
 
@@ -102,7 +102,7 @@ func testReplMcConversation(t *testing.T, numClients int, numSteps int, listenIn
 }
 
 func TestReplMcConversation(t *testing.T) {
-	t.Skip("SKIPPED: TODO: REPLICATION: fix")
+	// t.Skip("SKIPPED: TODO: REPLICATION: fix")
 
 	t.Parallel()
 	t.Run("5x5", func(t *testing.T) {
