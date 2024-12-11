@@ -595,8 +595,20 @@ func (s *PostgresEventStore) init(
 
 // Close closes the connection pool
 func (s *PostgresEventStore) Close(ctx context.Context) {
-	s.pool.Close()
-	s.streamingPool.Close()
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		s.pool.Close()
+		wg.Done()
+	}()
+
+	go func() {
+		s.streamingPool.Close()
+		wg.Done()
+	}()
+
+	wg.Wait()
 }
 
 func (s *PostgresEventStore) InitStorage(ctx context.Context) error {
