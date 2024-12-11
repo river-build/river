@@ -30,10 +30,13 @@ import (
 
 type PostgresEventStore struct {
 	config     *config.DatabaseConfig
-	pool       *pgxpool.Pool
-	poolConfig *pgxpool.Config
 	schemaName string
 	dbUrl      string
+
+	pool                *pgxpool.Pool
+	poolConfig          *pgxpool.Config
+	streamingPool       *pgxpool.Pool
+	streamingPoolConfig *pgxpool.Config
 
 	preMigrationTx func(context.Context, pgx.Tx) error
 	migrationDir   fs.FS
@@ -55,6 +58,7 @@ const (
 
 type txRunnerOpts struct {
 	skipLoggingNotFound bool
+	useStreamingPool    bool
 }
 
 func rollbackTx(ctx context.Context, tx pgx.Tx) {
@@ -67,7 +71,12 @@ func (s *PostgresEventStore) txRunnerInner(
 	txFn func(context.Context, pgx.Tx) error,
 	opts *txRunnerOpts,
 ) error {
-	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: s.isolationLevel, AccessMode: accessMode})
+	pool := s.pool
+	if opts != nil && opts.useStreamingPool {
+		pool = s.streamingPool
+	}
+
+	tx, err := pool.BeginTx(ctx, pgx.TxOptions{IsoLevel: s.isolationLevel, AccessMode: accessMode})
 	if err != nil {
 		return err
 	}
@@ -181,29 +190,31 @@ func (s *PostgresEventStore) txRunner(
 }
 
 type PgxPoolInfo struct {
-	Pool       *pgxpool.Pool
-	PoolConfig *pgxpool.Config
-	Url        string
-	Schema     string
-	Config     *config.DatabaseConfig
+	Pool              *pgxpool.Pool
+	PoolConfig        *pgxpool.Config
+	StreamingPool     *pgxpool.Pool
+	StreamingPoolConf *pgxpool.Config
+	Url               string
+	Schema            string
+	Config            *config.DatabaseConfig
 }
 
-func createAndValidatePgxPool(
+func createPgxPool(
 	ctx context.Context,
-	cfg *config.DatabaseConfig,
+	databaseUrl string,
 	databaseSchemaName string,
 	tracerProvider trace.TracerProvider,
-) (*PgxPoolInfo, error) {
-	databaseUrl := cfg.GetUrl()
-
+	name string,
+) (*pgxpool.Pool, *pgxpool.Config, error) {
 	poolConf, err := pgxpool.ParseConfig(databaseUrl)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// In general, it should be possible to add database schema name into database url as a parameter search_path (&search_path=database_schema_name)
 	// For some reason it doesn't work so have to put it into config explicitly
 	poolConf.ConnConfig.RuntimeParams["search_path"] = databaseSchemaName
+	poolConf.ConnConfig.RuntimeParams["application_name"] = name
 
 	poolConf.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 
@@ -217,20 +228,44 @@ func createAndValidatePgxPool(
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolConf)
 	if err != nil {
+		return nil, nil, err
+	}
+
+	if err = pool.Ping(ctx); err != nil {
+		return nil, nil, err
+	}
+
+	return pool, poolConf, nil
+}
+
+func createAndValidatePgxPool(
+	ctx context.Context,
+	cfg *config.DatabaseConfig,
+	databaseSchemaName string,
+	tracerProvider trace.TracerProvider,
+) (*PgxPoolInfo, error) {
+	databaseUrl := cfg.GetUrl()
+
+	// This connection pool is used for any queries apart from large number of rows selection
+	pool, poolConf, err := createPgxPool(ctx, databaseUrl, databaseSchemaName, tracerProvider, "regular")
+	if err != nil {
 		return nil, err
 	}
 
-	err = pool.Ping(ctx)
+	// This connection pool is used to select large number of rows and stream them directly into a client
+	streamingPool, streamingPoolConf, err := createPgxPool(ctx, databaseUrl, databaseSchemaName, tracerProvider, "streaming")
 	if err != nil {
 		return nil, err
 	}
 
 	return &PgxPoolInfo{
-		Pool:       pool,
-		PoolConfig: poolConf,
-		Url:        databaseUrl,
-		Schema:     databaseSchemaName,
-		Config:     cfg,
+		Pool:              pool,
+		PoolConfig:        poolConf,
+		StreamingPool:     streamingPool,
+		StreamingPoolConf: streamingPoolConf,
+		Url:               databaseUrl,
+		Schema:            databaseSchemaName,
+		Config:            cfg,
 	}, nil
 }
 
@@ -514,6 +549,8 @@ func (s *PostgresEventStore) init(
 	s.config = poolInfo.Config
 	s.pool = poolInfo.Pool
 	s.poolConfig = poolInfo.PoolConfig
+	s.streamingPool = poolInfo.StreamingPool
+	s.streamingPoolConfig = poolInfo.StreamingPoolConf
 	s.schemaName = poolInfo.Schema
 	s.dbUrl = poolInfo.Url
 
@@ -559,6 +596,7 @@ func (s *PostgresEventStore) init(
 // Close closes the connection pool
 func (s *PostgresEventStore) Close(ctx context.Context) {
 	s.pool.Close()
+	s.streamingPool.Close()
 }
 
 func (s *PostgresEventStore) InitStorage(ctx context.Context) error {
