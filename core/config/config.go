@@ -17,8 +17,8 @@ func GetDefaultConfig() *Config {
 	return &Config{
 		Port: 443,
 		Database: DatabaseConfig{
-			StartupDelay:          2 * time.Second,
-			NumPartitions:         256,
+			StartupDelay:  2 * time.Second,
+			NumPartitions: 256,
 		},
 		StorageType:  "postgres",
 		DisableHttps: false,
@@ -196,6 +196,7 @@ type TLSConfig struct {
 
 type NetworkConfig struct {
 	NumRetries int
+
 	// RequestTimeout only applies to unary requests.
 	RequestTimeout time.Duration
 
