@@ -671,6 +671,31 @@ describe('memberMetadataTests', () => {
         await bobsClient.createChannel(spaceId, 'secret channel', 'messaging like spies', channelId)
         await bobsClient.waitForStream(channelId)
 
-        await bobsClient.setMlsEnabled(channelId, true)
+        // initial value is "false"
+        expect(bobsClient.stream(channelId)?.view.membershipContent.mlsEnabled).toBe(false)
+
+        // set mls enabled to true
+        const truePromise = makeDonePromise()
+        bobsClient.once('streamMlsUpdated', (updatedStreamId, value) => {
+            expect(updatedStreamId).toBe(channelId)
+            expect(value).toBe(true)
+            truePromise.done()
+        })
+
+        await expect(bobsClient.setMlsEnabled(channelId, true)).resolves.not.toThrow()
+        await truePromise.expectToSucceed()
+        expect(bobsClient.stream(channelId)?.view.membershipContent.mlsEnabled).toBe(true)
+
+        // toggle back to to false
+        const falsePromise = makeDonePromise()
+        bobsClient.once('streamMlsUpdated', (updatedStreamId, value) => {
+            expect(updatedStreamId).toBe(channelId)
+            expect(value).toBe(false)
+            falsePromise.done()
+        })
+
+        await expect(bobsClient.setMlsEnabled(channelId, false)).resolves.not.toThrow()
+        await falsePromise.expectToSucceed()
+        expect(bobsClient.stream(channelId)?.view.membershipContent.mlsEnabled).toBe(false)
     })
 })

@@ -310,6 +310,7 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
                 break
             case 'mlsEnabled':
                 this.mlsEnabled = payload.content.value
+                stateEmitter?.emit('streamMlsUpdated', this.streamId, payload.content.value)
                 break
             case undefined:
                 break
