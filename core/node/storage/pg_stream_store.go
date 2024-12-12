@@ -167,7 +167,7 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 		err := conn.Ping(ctx)
 		count++
 
-		if count%10 == 0 {
+		if count%100 == 0 {
 			log.Debug("DB Ping!", "error", err)
 		}
 
