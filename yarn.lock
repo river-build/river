@@ -6530,6 +6530,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@river-build/mls-rs-wasm@npm:^0.0.4":
+  version: 0.0.4
+  resolution: "@river-build/mls-rs-wasm@npm:0.0.4"
+  checksum: 9cb4cca4222bc260ae880395441b21b75a79486b07aeb0cdc39342ad510e836bd4ec87f93b5fd483da8827f2460cbe588c1e2703d7542be25acffe10f6d78eaa
+  languageName: node
+  linkType: hard
+
 "@river-build/playground@workspace:packages/playground":
   version: 0.0.0-use.local
   resolution: "@river-build/playground@workspace:packages/playground"
@@ -6665,6 +6672,7 @@ __metadata:
     "@ethereumjs/util": ^8.0.1
     "@river-build/dlog": "workspace:^"
     "@river-build/encryption": "workspace:^"
+    "@river-build/mls-rs-wasm": ^0.0.4
     "@river-build/proto": "workspace:^"
     "@river-build/web3": "workspace:^"
     "@testing-library/react": ^14.2.1
