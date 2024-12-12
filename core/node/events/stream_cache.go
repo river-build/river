@@ -2,6 +2,7 @@ package events
 
 import (
 	"context"
+	"fmt"
 	"runtime/debug"
 	"slices"
 	"sync/atomic"
@@ -351,6 +352,10 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 		if loaded {
 			log.Warn(
 				"STREAM_CACHE_DEBUG when storing, loaded existing stream for remote stream in cache. This is not necessarily an error",
+				"thisStreamPtr",
+				fmt.Sprintf("%p", oldStream),
+				"creationStreamPtr",
+				fmt.Sprintf("%p", stream),
 				"streamId",
 				stream.streamId,
 				"thisThreadCreationStacktrace",
@@ -435,6 +440,10 @@ func (s *streamCacheImpl) createStreamStorage(
 
 		log.Warn(
 			"STREAM_CACHE_DEBUG createStreamStorage detected existing entry when trying to store stream",
+			"thisStreamPtr",
+			fmt.Sprintf("%p", stream),
+			"originalStreamPtr",
+			fmt.Sprintf("%p", entry),
 			"streamId",
 			stream.streamId,
 			"entryId",

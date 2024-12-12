@@ -3,6 +3,7 @@ package events
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"runtime/debug"
 	"slices"
 	"sync"
@@ -711,6 +712,8 @@ func (s *streamImpl) addEventImpl(ctx context.Context, event *ParsedEvent) error
 		log := dlog.FromCtx(ctx)
 		log.Error(
 			"stream.addEventImpl failed",
+			"streamPtr",
+			fmt.Sprintf("%p", s),
 			"streamId",
 			s.streamId,
 			"err",
