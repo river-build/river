@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/jackc/pgerrcode"
@@ -285,13 +284,10 @@ func setupPostgresMetrics(ctx context.Context, pool PgxPoolInfo, factory infra.M
 	var (
 		lastVersion  string
 		lastSystemID string
-		mu           sync.Mutex
 	)
 
 	updateMetrics := func() {
 		status := getStatus()
-		mu.Lock()
-		defer mu.Unlock()
 
 		if status.Version != lastVersion {
 			versionGauge.Reset()
