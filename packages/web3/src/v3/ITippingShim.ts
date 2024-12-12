@@ -8,7 +8,7 @@ import { BaseContractShim } from './BaseContractShim'
 
 import DevAbi from '@river-build/generated/dev/abis/ITipping.abi.json' assert { type: 'json' }
 
-export class ITipping extends BaseContractShim<LocalhostContract, LocalhostInterface> {
+export class ITippingShim extends BaseContractShim<LocalhostContract, LocalhostInterface> {
     constructor(address: string, provider: ethers.providers.Provider | undefined) {
         super(address, provider, DevAbi)
     }

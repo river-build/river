@@ -30,7 +30,7 @@ import { RuleEntitlementShim } from './RuleEntitlementShim'
 import { RuleEntitlementV2Shim } from './RuleEntitlementV2Shim'
 import { IRuleEntitlementBase, IRuleEntitlementV2Base } from '.'
 import { IBanningShim } from './IBanningShim'
-import { ITipping } from './ITipping'
+import { ITippingShim } from './ITippingShim'
 import { IERC721AQueryableShim } from './IERC721AQueryableShim'
 import { IEntitlementDataQueryableShim } from './IEntitlementDataQueryableShim'
 import { BaseChainConfig } from '../IStaticContractsInfo'
@@ -61,7 +61,7 @@ export class Space {
     private readonly prepay: IPrepayShim
     private readonly erc721A: IERC721AShim
     private readonly spaceOwnerErc721A: IERC721AShim
-    private readonly tipping: ITipping
+    private readonly tipping: ITippingShim
 
     constructor(
         address: string,
@@ -89,7 +89,7 @@ export class Space {
         this.entitlementDataQueryable = new IEntitlementDataQueryableShim(address, provider)
         this.prepay = new IPrepayShim(address, provider)
         this.erc721A = new IERC721AShim(address, provider)
-        this.tipping = new ITipping(address, provider)
+        this.tipping = new ITippingShim(address, provider)
     }
 
     private getAllShims() {
@@ -176,7 +176,7 @@ export class Space {
         return this.spaceOwnerErc721A
     }
 
-    public get Tipping(): ITipping {
+    public get Tipping(): ITippingShim {
         return this.tipping
     }
 
