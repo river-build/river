@@ -12,7 +12,6 @@ import (
 	"github.com/gammazero/workerpool"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/puzpuzpuz/xsync/v3"
-	"gopkg.in/DataDog/dd-trace-go.v1/internal/log"
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/river"
@@ -350,7 +349,7 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 		stream, loaded = s.cache.LoadOrStore(streamId, stream)
 
 		if loaded {
-			log.Warn(
+			dlog.FromCtx(ctx).Warn(
 				"STREAM_CACHE_DEBUG when storing, loaded existing stream for remote stream in cache. This is not necessarily an error",
 				"thisStreamPtr",
 				fmt.Sprintf("%p", oldStream),
@@ -438,7 +437,7 @@ func (s *streamCacheImpl) createStreamStorage(
 			return nil, false, RiverError(Err_INTERNAL, "tryLoadStreamRecord: Cache corruption", "streamId", stream.streamId)
 		}
 
-		log.Warn(
+		dlog.FromCtx(ctx).Warn(
 			"STREAM_CACHE_DEBUG createStreamStorage detected existing entry when trying to store stream",
 			"thisStreamPtr",
 			fmt.Sprintf("%p", stream),
