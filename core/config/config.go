@@ -84,6 +84,7 @@ func GetDefaultConfig() *Config {
 	}
 }
 
+// Config is the main configuration structure for the node.
 // Viper uses mapstructure module to marshal settings into config struct.
 type Config struct {
 	// Network
@@ -202,6 +203,9 @@ type NetworkConfig struct {
 
 	// If unset or <= 0, 5 seconds is used.
 	HttpRequestTimeout time.Duration
+
+	// RpcStreamingTimeout is the timeout for streaming RPC calls.
+	RpcStreamingTimeout time.Duration
 }
 
 func (nc *NetworkConfig) GetHttpRequestTimeout() time.Duration {
@@ -209,6 +213,16 @@ func (nc *NetworkConfig) GetHttpRequestTimeout() time.Duration {
 		return 5 * time.Second
 	}
 	return nc.HttpRequestTimeout
+}
+
+// GetRpcStreamingTimeout returns the timeout for streaming RPC calls.
+// If unset or <= 0, a minute is used.
+func (nc *NetworkConfig) GetRpcStreamingTimeout() time.Duration {
+	if nc.RpcStreamingTimeout <= 0 {
+		return time.Minute
+	}
+
+	return nc.RpcStreamingTimeout
 }
 
 type DatabaseConfig struct {

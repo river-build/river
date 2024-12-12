@@ -695,7 +695,7 @@ func (s *Service) initCacheAndSync(opts *ServerStartOpts) error {
 }
 
 func (s *Service) initHandlers() {
-	ii := []connect.Interceptor{}
+	ii := make([]connect.Interceptor, 0, 3)
 	if s.otelConnectIterceptor != nil {
 		ii = append(ii, s.otelConnectIterceptor)
 	}
@@ -704,7 +704,7 @@ func (s *Service) initHandlers() {
 
 	interceptors := connect.WithInterceptors(ii...)
 	streamServicePattern, streamServiceHandler := protocolconnect.NewStreamServiceHandler(s, interceptors)
-	streamServiceHandler = controller(streamServiceHandler, s.config.Network.RequestTimeout)
+	streamServiceHandler = rpcStreamingTimeoutController(streamServiceHandler, s.config.Network.GetRpcStreamingTimeout())
 	s.mux.Handle(streamServicePattern, newHttpHandler(streamServiceHandler, s.defaultLogger))
 
 	nodeServicePattern, nodeServiceHandler := protocolconnect.NewNodeToNodeHandler(s, interceptors)
@@ -824,12 +824,13 @@ func loadCertFromFiles(
 	return &cert, nil
 }
 
-// controller is a wrapper for the StreamServiceHandler handler that sets a write deadline for stream endpoints.
+// rpcStreamingTimeoutController is a wrapper for the StreamServiceHandler handler that sets a write deadline for streaming endpoints.
 // TODO: Remove this when connect-go finally supports deadlines.
 // TODO: https://github.com/connectrpc/connect-go/issues/604
-func controller(h http.Handler, timeout time.Duration) http.Handler {
+func rpcStreamingTimeoutController(h http.Handler, timeout time.Duration) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == protocolconnect.StreamServiceGetStreamExProcedure {
+		if r.URL.Path == protocolconnect.StreamServiceGetStreamExProcedure ||
+			r.URL.Path == protocolconnect.StreamServiceSyncStreamsProcedure {
 			control := http.NewResponseController(w)
 			_ = control.SetWriteDeadline(time.Now().Add(timeout))
 		}
