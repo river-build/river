@@ -828,6 +828,10 @@ func loadCertFromFiles(
 // TODO: Remove this when connect-go finally supports deadlines.
 // TODO: https://github.com/connectrpc/connect-go/issues/604
 func rpcStreamingTimeoutController(h http.Handler, timeout time.Duration) http.Handler {
+	if timeout == 0 {
+		return h
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == protocolconnect.StreamServiceGetStreamExProcedure ||
 			r.URL.Path == protocolconnect.StreamServiceSyncStreamsProcedure {
