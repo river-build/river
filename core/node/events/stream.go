@@ -3,6 +3,7 @@ package events
 import (
 	"bytes"
 	"context"
+	"runtime/debug"
 	"slices"
 	"sync"
 	"time"
@@ -76,6 +77,9 @@ func SyncStreamsResponseFromStreamAndCookie(result *StreamAndCookie) *SyncStream
 }
 
 type streamImpl struct {
+	// DEBUG
+	creationTrace string
+
 	params *StreamCacheParams
 
 	streamId StreamId
@@ -704,6 +708,20 @@ func (s *streamImpl) addEventImpl(ctx context.Context, event *ParsedEvent) error
 	// TODO: for some classes of errors, it's not clear if event was added or not
 	// for those, perhaps entire Stream structure should be scrapped and reloaded
 	if err != nil {
+		log := dlog.FromCtx(ctx)
+		log.Error(
+			"stream.addEventImpl failed",
+			"streamId",
+			s.streamId,
+			"err",
+			err,
+			"inMemoryBlocks",
+			len(s.view().blocks),
+			"creationStacktrace",
+			s.creationTrace,
+			"thisStacktrace",
+			string(debug.Stack()),
+		)
 		return err
 	}
 
