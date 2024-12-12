@@ -24,7 +24,7 @@ func NewTestContext() (context.Context, context.CancelFunc) {
 			&dlog.PrettyHandlerOptions{
 				Level:         level,
 				PrintLongTime: false,
-				Colors:        dlog.ColorMap_Enabled,
+				Colors:        dlog.ColorMap_Disabled,
 			},
 		)
 	}
