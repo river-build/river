@@ -134,6 +134,7 @@ import {
     make_SpacePayload_SpaceImage,
     make_UserMetadataPayload_ProfileImage,
     make_UserMetadataPayload_Bio,
+    make_MemberPayload_MlsEnabled,
 } from './types'
 
 import debug from 'debug'
@@ -873,6 +874,25 @@ export class Client
         const event = make_GDMChannelPayload_ChannelProperties(encryptedData)
         return this.makeEventAndAddToStream(streamId, event, {
             method: 'updateGDMChannelProperties',
+        })
+    }
+
+    async setMlsEnabled(streamId: string, mlsEnabled: boolean) {
+        assert(
+            isChannelStreamId(streamId) ||
+                isSpaceStreamId(streamId) ||
+                isDMChannelStreamId(streamId) ||
+                isGDMChannelStreamId(streamId),
+            'channelId must be a valid streamId',
+        )
+        const stream = this.stream(streamId)
+        check(isDefined(stream), 'stream not found')
+        check(
+            stream.view.membershipContent.mlsEnabled != mlsEnabled,
+            `mlsEnabled is already set to ${mlsEnabled}`,
+        )
+        return this.makeEventAndAddToStream(streamId, make_MemberPayload_MlsEnabled(mlsEnabled), {
+            method: 'setMlsEnabled',
         })
     }
 

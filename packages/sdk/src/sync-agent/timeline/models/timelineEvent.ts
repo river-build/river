@@ -36,6 +36,7 @@ import {
     type SpaceUsernameEvent,
     type TimelineEvent,
     type UnpinEvent,
+    type MlsEnabledEvent,
     type ChannelCreateEvent,
     type RoomCreateEvent,
     type RoomMemberEvent,
@@ -354,6 +355,13 @@ function toTownsContent_MemberPayload(
                     userId: message.creatorUserId,
                     unpinnedEventId: bin_toHexString(value.content.value.eventId),
                 } satisfies UnpinEvent,
+            }
+        case 'mlsEnabled':
+            return {
+                content: {
+                    kind: RiverTimelineEvent.MlsEnabled,
+                    mlsEnabled: value.content.value,
+                } satisfies MlsEnabledEvent,
             }
         case undefined:
             return { error: `Undefined payload case: ${description}` }
@@ -918,6 +926,8 @@ export function getFallbackContent(
             return `pinnedEventId: ${content.pinnedEventId} by: ${content.userId}`
         case RiverTimelineEvent.Unpin:
             return `unpinnedEventId: ${content.unpinnedEventId} by: ${content.userId}`
+        case RiverTimelineEvent.MlsEnabled:
+            return `mlsEnabled: ${content.mlsEnabled}`
     }
 }
 

@@ -544,6 +544,9 @@ func update_Snapshot_Member(
 		}
 		snapshot.Pins = snapPins
 		return nil
+	case *MemberPayload_MlsEnabled:
+		snapshot.MlsEnabled = content.MlsEnabled
+		return nil
 	default:
 		return RiverError(Err_INVALID_ARGUMENT, "unknown membership payload type %T", memberPayload.Content)
 	}

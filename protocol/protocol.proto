@@ -169,6 +169,7 @@ message MemberPayload {
         
         repeated Member joined = 1;
         repeated SnappedPin pins = 2;
+        bool mlsEnabled = 3;
     }
 
     message Membership {
@@ -221,6 +222,7 @@ message MemberPayload {
         Nft nft = 7;
         Pin pin = 8;
         Unpin unpin = 9;
+        bool mlsEnabled = 10;
     }
 }
 

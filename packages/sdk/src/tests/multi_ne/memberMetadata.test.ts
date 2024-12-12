@@ -4,7 +4,7 @@
 
 import { MemberPayload_Nft } from '@river-build/proto'
 import { Client } from '../../client'
-import { userIdFromAddress } from '../../id'
+import { makeUniqueChannelStreamId, userIdFromAddress } from '../../id'
 import {
     makeDonePromise,
     makeRandomUserAddress,
@@ -658,5 +658,19 @@ describe('memberMetadataTests', () => {
         await bobsClient.waitForStream(streamId)
 
         await expect(bobsClient.setNft(streamId, '', 0, '')).resolves.not.toThrow()
+    })
+
+    test('clientCanSetMls', async () => {
+        await expect(bobsClient.initializeUser()).resolves.not.toThrow()
+        bobsClient.startSync()
+        const spaceId = makeUniqueSpaceStreamId()
+        const channelId = makeUniqueChannelStreamId(spaceId)
+        await bobsClient.createSpace(spaceId)
+        await bobsClient.waitForStream(spaceId)
+
+        await bobsClient.createChannel(spaceId, 'secret channel', 'messaging like spies', channelId)
+        await bobsClient.waitForStream(channelId)
+
+        await bobsClient.setMlsEnabled(channelId, true)
     })
 })

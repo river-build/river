@@ -48,6 +48,7 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
     readonly solicitHelper: StreamStateView_Members_Solicitations
     readonly memberMetadata: StreamStateView_MemberMetadata
     readonly pins: Pin[] = []
+    mlsEnabled: boolean = false
 
     constructor(streamId: string) {
         super()
@@ -150,6 +151,8 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
                 )
             }
         })
+
+        this.mlsEnabled = snapshot.members.mlsEnabled
     }
 
     prependEvent(
@@ -305,6 +308,9 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
                     this.removePin(eventId, stateEmitter)
                 }
                 break
+            case 'mlsEnabled':
+                this.mlsEnabled = payload.content.value
+                break
             case undefined:
                 break
             default:
@@ -353,6 +359,8 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
             case 'pin':
                 break
             case 'unpin':
+                break
+            case 'mlsEnabled':
                 break
             case undefined:
                 break

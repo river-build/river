@@ -784,6 +784,20 @@ export const make_MemberPayload_KeySolicitation = (
     }
 }
 
+export const make_MemberPayload_MlsEnabled = (
+    content: boolean,
+): PlainMessage<StreamEvent>['payload'] => {
+    return {
+        case: 'memberPayload',
+        value: {
+            content: {
+                case: 'mlsEnabled',
+                value: content,
+            },
+        },
+    }
+}
+
 export const make_DMChannelPayload_Message = (
     value: PlainMessage<EncryptedData>,
 ): PlainMessage<StreamEvent>['payload'] => {
