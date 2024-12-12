@@ -2,6 +2,7 @@ package events
 
 import (
 	"context"
+	"errors"
 
 	"github.com/ethereum/go-ethereum/common"
 
@@ -39,6 +40,9 @@ func (q *QuorumPool) GoRemotes(
 	nodes []common.Address,
 	f func(ctx context.Context, node common.Address) error,
 ) {
+	if len(nodes) == 0 {
+		return
+	}
 	q.remoteErrChannel = make(chan error, len(nodes))
 	q.remotes += len(nodes)
 	for _, node := range nodes {
@@ -51,20 +55,16 @@ func (q *QuorumPool) executeRemote(
 	node common.Address,
 	f func(ctx context.Context, node common.Address) error,
 ) {
-	// Reset cancel on ctx to avoid canceling remotes in progress:
-	// Wait() completes when quorum is achieved and some remotes are still in progress.
-	deadline, ok := ctx.Deadline()
-	ctx = context.WithoutCancel(ctx)
-	if ok {
-		var ctxCancel context.CancelFunc
-		ctx, ctxCancel = context.WithDeadline(ctx, deadline)
-		defer ctxCancel()
-	}
-
 	err := f(ctx, node)
 	q.remoteErrChannel <- err
 
-	if err != nil {
+	// Cancel error is expected here: Wait() returns once quorum is achieved
+	// and some remotes are still in progress.
+	// Eventually Wait caller is going to cancel the context.
+	// On the receiver side, write operations should be detached from cancelable contexts
+	// (grpc transmits context cancellation from client to server), i.e. once local write
+	// operation is started, it should not be cancelled and should proceed to completion.
+	if err != nil && !errors.Is(err, context.Canceled) {
 		tags := []any{"error", err, "node", node}
 		tags = append(tags, q.tags...)
 		dlog.FromCtx(ctx).Warn("QuorumPool: GoRemotes: Error", tags...)
