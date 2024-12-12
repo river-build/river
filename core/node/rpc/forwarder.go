@@ -209,6 +209,8 @@ func (s *Service) CreateStream(
 	ctx context.Context,
 	req *connect.Request[CreateStreamRequest],
 ) (*connect.Response[CreateStreamResponse], error) {
+	ctx, cancel := utils.UncancelContext(ctx, 20*time.Second, 40*time.Second)
+	defer cancel()
 	return executeConnectHandler(ctx, req, s, s.createStreamImpl, "CreateStream")
 }
 
@@ -436,6 +438,8 @@ func (s *Service) AddEvent(
 	ctx context.Context,
 	req *connect.Request[AddEventRequest],
 ) (*connect.Response[AddEventResponse], error) {
+	ctx, cancel := utils.UncancelContext(ctx, 10*time.Second, 20*time.Second)
+	defer cancel()
 	return executeConnectHandler(ctx, req, s, s.addEventImpl, "AddEvent")
 }
 

@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"connectrpc.com/connect"
 
@@ -33,4 +34,21 @@ func CtxAndLogForRequest[T any](ctx context.Context, req *connect.Request[T]) (c
 	}
 
 	return ctx, log
+}
+
+func UncancelContext(
+	ctx context.Context,
+	minTimeout, defaultTimeout time.Duration,
+) (context.Context, context.CancelFunc) {
+	deadline, ok := ctx.Deadline()
+	now := time.Now()
+	if ok {
+		if deadline.Before(now.Add(minTimeout)) {
+			deadline = now.Add(minTimeout)
+		}
+	} else {
+		deadline = now.Add(defaultTimeout)
+	}
+	ctx = context.WithoutCancel(ctx)
+	return context.WithDeadline(ctx, deadline)
 }
