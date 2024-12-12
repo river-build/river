@@ -157,11 +157,11 @@ func (s *Service) createReplicatedStream(
 
 	nodes := NewStreamNodesWithLock(nodesList, s.wallet.Address)
 	remotes, isLocal := nodes.GetRemotesAndIsLocal()
-	sender := NewQuorumPool(len(remotes))
+	sender := NewQuorumPool("method", "createReplicatedStream", "streamId", streamId)
 
 	var localSyncCookie *SyncCookie
 	if isLocal {
-		sender.GoLocal(func() error {
+		sender.GoLocal(ctx, func(ctx context.Context) error {
 			st, err := s.cache.GetStreamNoWait(ctx, streamId)
 			if err != nil {
 				return err
@@ -178,33 +178,28 @@ func (s *Service) createReplicatedStream(
 	var remoteSyncCookie *SyncCookie
 	var remoteSyncCookieOnce sync.Once
 	if len(remotes) > 0 {
-		for _, n := range remotes {
-			sender.GoRemote(
-				n,
-				func(node common.Address) error {
-					stub, err := s.nodeRegistry.GetNodeToNodeClientForAddress(node)
-					if err != nil {
-						return err
-					}
-					r, err := stub.AllocateStream(
-						ctx,
-						connect.NewRequest[AllocateStreamRequest](
-							&AllocateStreamRequest{
-								StreamId:  streamId[:],
-								Miniblock: mb,
-							},
-						),
-					)
-					if err != nil {
-						return err
-					}
-					remoteSyncCookieOnce.Do(func() {
-						remoteSyncCookie = r.Msg.SyncCookie
-					})
-					return nil
-				},
+		sender.GoRemotes(ctx, remotes, func(ctx context.Context, node common.Address) error {
+			stub, err := s.nodeRegistry.GetNodeToNodeClientForAddress(node)
+			if err != nil {
+				return err
+			}
+			r, err := stub.AllocateStream(
+				ctx,
+				connect.NewRequest[AllocateStreamRequest](
+					&AllocateStreamRequest{
+						StreamId:  streamId[:],
+						Miniblock: mb,
+					},
+				),
 			)
-		}
+			if err != nil {
+				return err
+			}
+			remoteSyncCookieOnce.Do(func() {
+				remoteSyncCookie = r.Msg.SyncCookie
+			})
+			return nil
+		})
 	}
 
 	err = sender.Wait()
