@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	StreamStorageTypePostgres       = "postgres"
-	NotificationStorageTypePostgres = "postgres"
+	StreamStorageTypePostgres          = "postgres"
+	NotificationStorageTypePostgres    = "postgres"
+	RiverChainBlockLogIndexUnspecified = 9_999_999
 )
 
 type ReadStreamFromLastSnapshotResult struct {
@@ -24,7 +25,7 @@ type StreamStorage interface {
 	// CreateStreamStorage creates a new stream with the given genesis miniblock at index 0.
 	// Last snapshot minblock index is set to 0.
 	// Minipool is set to generation number 1 (i.e. number of miniblock that is going to be produced next) and is empty.
-	CreateStreamStorage(ctx context.Context, streamId StreamId, genesisMiniblock []byte) error
+	CreateStreamStorage(ctx context.Context, streamId StreamId, nodes []common.Address, genesisMiniblockHash common.Hash, genesisMiniblock []byte) error
 
 	// ReadStreamFromLastSnapshot reads last stream miniblocks and guarantees that last snapshot miniblock is included.
 	// It attempts to read at least numToRead miniblocks, but may return less if there are not enough miniblocks in storage,
@@ -117,6 +118,23 @@ type StreamStorage interface {
 	// GetLastMiniblockNumber returns the last miniblock number for the given stream from storage.
 	GetLastMiniblockNumber(ctx context.Context, streamID StreamId) (int64, error)
 
+	// AllStreamsMetaData returns all available stream metadata. Stream metadata is a local copy
+	// of streams data as stored in the River chain stream registry. Its purpose is to provide a
+	// fast local cache of stream data allowing the node to only fetch changes that happened since
+	// the last time this local copy was updated. Each metadata record contains the River chain
+	// block number and log index that indicates when the last time the record was updated from
+	// chain.
+	AllStreamsMetaData(ctx context.Context) (map[StreamId]*StreamMetadata, int64, error)
+
+	// UpdateStreamsMetaData updates for all given streams their metadata.
+	// This performs an upsert on the given `upserts` allowing for new streams to be inserted and
+	// existing streams to be updated. Records in the given `removals` collection are deleted.
+	UpdateStreamsMetaData(
+		ctx context.Context,
+		streams map[StreamId]*StreamMetadata,
+		removals []StreamId,
+	) error
+
 	Close(ctx context.Context)
 }
 
@@ -151,4 +169,20 @@ type DebugReadStreamDataResult struct {
 	Miniblocks                 []MiniblockDescriptor
 	Events                     []EventDescriptor
 	MbCandidates               []MiniblockDescriptor
+}
+
+// StreamMetadata represents stream metadata.
+type StreamMetadata struct {
+	// StreamId is the unique stream identifier
+	StreamId StreamId
+	// Nodes that this stream is managed by.
+	Nodes []common.Address
+	// MiniblockHash contains the latest miniblock hash for this stream as locally known.
+	MiniblockHash common.Hash
+	// MiniblockNumber contains the latest miniblock number for this stream as locally known.
+	MiniblockNumber int64
+	// IsSealed indicates that no more blocks can be added to the stream.
+	IsSealed bool
+	// dirty is an internal bool indicating if the record was changed
+	dirty bool
 }

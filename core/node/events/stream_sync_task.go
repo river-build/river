@@ -5,7 +5,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gammazero/workerpool"
-
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
 	. "github.com/river-build/river/core/node/protocol"
@@ -124,7 +123,7 @@ func (s *streamCacheImpl) syncStreamFromSinglePeer(
 			mbs[i] = mb
 		}
 
-		err = stream.importMiniblocks(ctx, mbs)
+		err = stream.importMiniblocks(ctx, stream.nodesLocked.GetNodes(), mbs)
 		if err != nil {
 			return currentFromInclusive, err
 		}
