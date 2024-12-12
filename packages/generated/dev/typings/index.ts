@@ -32,6 +32,7 @@ export type { IRoles } from "./IRoles";
 export type { ISpaceDelegation } from "./ISpaceDelegation";
 export type { ISpaceOwner } from "./ISpaceOwner";
 export type { IStreamRegistry } from "./IStreamRegistry";
+export type { ITipping } from "./ITipping";
 export type { IWalletLink } from "./IWalletLink";
 export type { Member } from "./Member";
 export type { MembershipFacet } from "./MembershipFacet";
@@ -76,6 +77,7 @@ export { IRuleEntitlementV2__factory } from "./factories/IRuleEntitlement.sol/IR
 export { ISpaceDelegation__factory } from "./factories/ISpaceDelegation__factory";
 export { ISpaceOwner__factory } from "./factories/ISpaceOwner__factory";
 export { IStreamRegistry__factory } from "./factories/IStreamRegistry__factory";
+export { ITipping__factory } from "./factories/ITipping__factory";
 export { IWalletLink__factory } from "./factories/IWalletLink__factory";
 export { Member__factory } from "./factories/Member__factory";
 export { MembershipFacet__factory } from "./factories/MembershipFacet__factory";
