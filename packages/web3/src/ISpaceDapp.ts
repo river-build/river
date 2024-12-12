@@ -25,6 +25,7 @@ import {
 import { PricingModules } from './v3/PricingModules'
 import { BaseChainConfig } from './IStaticContractsInfo'
 import { PlatformRequirements } from './v3/PlatformRequirements'
+import { RiverPoints } from './v3/RiverPoints'
 
 export type SignerType = ethers.Signer
 
@@ -121,6 +122,7 @@ export interface ISpaceDapp {
     readonly walletLink: WalletLinkV3
     readonly pricingModules: PricingModules
     readonly platformRequirements: PlatformRequirements
+    readonly riverPoints: RiverPoints
     isLegacySpace: (spaceId: string) => Promise<boolean>
     addRoleToChannel: (
         spaceId: string,

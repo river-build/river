@@ -52,6 +52,7 @@ import { PlatformRequirements } from './PlatformRequirements'
 import { EntitlementDataStructOutput } from './IEntitlementDataQueryableShim'
 import { CacheResult, EntitlementCache, Keyable } from '../EntitlementCache'
 import { RuleEntitlementV2Shim } from './RuleEntitlementV2Shim'
+import { RiverPoints } from './RiverPoints'
 
 const logger = dlogger('csb:SpaceDapp:debug')
 
@@ -157,6 +158,7 @@ export class SpaceDapp implements ISpaceDapp {
     public readonly pricingModules: PricingModules
     public readonly walletLink: WalletLink
     public readonly platformRequirements: PlatformRequirements
+    public readonly riverPoints: RiverPoints
 
     public readonly entitlementCache: EntitlementCache<EntitlementRequest, EntitlementData[]>
     public readonly entitledWalletCache: EntitlementCache<EntitlementRequest, EntitledWallet>
@@ -173,6 +175,7 @@ export class SpaceDapp implements ISpaceDapp {
             config.addresses.spaceFactory,
             provider,
         )
+        this.riverPoints = new RiverPoints(config, provider)
 
         // For RPC providers that pool for events, we need to set the polling interval to a lower value
         // so that we don't miss events that may be emitted in between polling intervals. The Ethers
