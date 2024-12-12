@@ -1091,11 +1091,11 @@ func (s *PostgresStreamStore) debugGetLatestMiniblockNum(
 	tx pgx.Tx,
 	streamId StreamId,
 ) (int64, error) {
-	var seqNum int64
+	var seqNum *int64
 	rows, err := tx.Query(
 		ctx,
 		s.sqlForStream(
-			"SELECT MAX(seq_num) as latest_blocks_number FROM {{miniblocks}} WHERE stream_id = $1",
+			"SELECT MAX(seq_num) as latest_block_number FROM {{miniblocks}} WHERE stream_id = $1",
 			streamId,
 		),
 		streamId,
@@ -1120,7 +1120,7 @@ func (s *PostgresStreamStore) debugGetLatestMiniblockNum(
 		return -1, RiverError(Err_NOT_FOUND, "No miniblocks found for stream")
 	}
 
-	return seqNum, nil
+	return *seqNum, nil
 }
 
 // Supported consistency checks:
