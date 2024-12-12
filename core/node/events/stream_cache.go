@@ -361,10 +361,6 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 				oldStream.creationTrace,
 				"streamCreationStacktrace",
 				stream.creationTrace,
-				"thisThreadStream",
-				oldStream,
-				"creationStream",
-				stream,
 			)
 		}
 
@@ -451,10 +447,6 @@ func (s *streamCacheImpl) createStreamStorage(
 			stream.creationTrace,
 			"originalStreamStackTrace",
 			entry.creationTrace,
-			"originalStream",
-			entry,
-			"thisThreadStream",
-			stream,
 		)
 
 		return entry, false, nil
