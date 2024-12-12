@@ -6530,6 +6530,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@river-build/mls-rs-wasm-node@npm:^0.0.4":
+  version: 0.0.4
+  resolution: "@river-build/mls-rs-wasm-node@npm:0.0.4"
+  checksum: 11983d654e4b48f3f5c61a3c662717e9697b72e986e41b19e26876c8f96136ee896e5eaf9ed166273f220d46ed63d41c7a0d55be4af0dbd2571be23c73a835c4
+  languageName: node
+  linkType: hard
+
 "@river-build/mls-rs-wasm@npm:^0.0.4":
   version: 0.0.4
   resolution: "@river-build/mls-rs-wasm@npm:0.0.4"
@@ -6756,6 +6763,7 @@ __metadata:
     "@bufbuild/protobuf": ^1.9.0
     "@river-build/dlog": "workspace:^"
     "@river-build/encryption": "workspace:^"
+    "@river-build/mls-rs-wasm-node": ^0.0.4
     "@river-build/proto": "workspace:^"
     "@river-build/sdk": "workspace:^"
     "@river-build/web3": "workspace:^"
@@ -6766,7 +6774,6 @@ __metadata:
     "@typescript-eslint/parser": ^7.14.1
     esbuild: ^0.21.5
     esbuild-plugin-pino: ^2.2.0
-    esbuild-plugin-wasm: ^1.1.0
     eslint: ^8.53.0
     eslint-import-resolver-typescript: ^3.5.5
     eslint-plugin-import: ^2.27.5
@@ -13863,13 +13870,6 @@ __metadata:
   peerDependencies:
     esbuild: ^0.17.1 || ^0.18.0 || ^0.19.0 || ^0.20.0 || ^0.21.0
   checksum: 7dace40169cfeb583c493ef6d82db7892598502d1717a9d02a5f7b1025068003c4d8c1c9f72cc0a4962414f9a4ecc0889f62ed3624136203d56d4f175e6cc8c5
-  languageName: node
-  linkType: hard
-
-"esbuild-plugin-wasm@npm:^1.1.0":
-  version: 1.1.0
-  resolution: "esbuild-plugin-wasm@npm:1.1.0"
-  checksum: 382df12ecb92634d0f526cad4792b0ac5dc8016cdf63e23d9ee099f0f2c530855463cc45045c4a6ec10a6a1bd2ff59b5c4b24e6314a361fa70cc57645caf602b
   languageName: node
   linkType: hard
 
