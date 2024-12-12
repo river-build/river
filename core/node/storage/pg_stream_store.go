@@ -746,7 +746,7 @@ func (s *PostgresStreamStore) readStreamFromLastSnapshotTx(
 	if !(readFirstSeqNum <= snapshotMiniblockIndex && snapshotMiniblockIndex <= readLastSeqNum) {
 		return nil, RiverError(
 			Err_INTERNAL,
-			"Miniblocks consistency violation - snapshotMiniblocIndex is out of range",
+			"Miniblocks consistency violation - snapshotMiniblockIndex is out of range",
 			"snapshotMiniblockIndex", snapshotMiniblockIndex,
 			"readFirstSeqNum", readFirstSeqNum,
 			"readLastSeqNum", readLastSeqNum)

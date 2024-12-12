@@ -339,7 +339,23 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 	stream.nodesLocked.Reset(record.Nodes, s.params.Wallet.Address)
 
 	if !stream.nodesLocked.IsLocal() {
-		stream, _ = s.cache.LoadOrStore(streamId, stream)
+		oldStream := stream
+		var loaded bool
+		stream, loaded = s.cache.LoadOrStore(streamId, stream)
+
+		if stream != oldStream {
+			dlog.FromCtx(ctx).Info(
+				"cache LoadOrStore conflict",
+				"streamId",
+				streamId,
+				"loaded",
+				loaded,
+				"oldStream",
+				oldStream,
+				"stream",
+				stream,
+			)
+		}
 		return stream, nil
 	}
 
@@ -374,6 +390,7 @@ func (s *streamCacheImpl) createStreamStorage(
 		// TODO: delete entry on failures below?
 
 		// Our stream won the race, put into storage.
+		// TODO: if our stream won the race why would anything be in storage?
 		err := s.params.Storage.CreateStreamStorage(ctx, stream.streamId, mb)
 		if err != nil {
 			if AsRiverError(err).Code == Err_ALREADY_EXISTS {
