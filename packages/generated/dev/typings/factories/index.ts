@@ -30,6 +30,7 @@ export { IRoles__factory } from "./IRoles__factory";
 export { ISpaceDelegation__factory } from "./ISpaceDelegation__factory";
 export { ISpaceOwner__factory } from "./ISpaceOwner__factory";
 export { IStreamRegistry__factory } from "./IStreamRegistry__factory";
+export { ITipping__factory } from "./ITipping__factory";
 export { IWalletLink__factory } from "./IWalletLink__factory";
 export { Member__factory } from "./Member__factory";
 export { MembershipFacet__factory } from "./MembershipFacet__factory";
