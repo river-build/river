@@ -872,16 +872,18 @@ func (s *PostgresStreamStore) writeEventTx(
 			return err
 		}
 		if generation != minipoolGeneration {
-			seqNum, _ := s.debugGetLatestMiniblockNum(ctx, tx, streamId)
+			seqNum, mbErr := s.debugGetLatestMiniblockNum(ctx, tx, streamId)
 			return RiverError(Err_DB_OPERATION_FAILURE, "Wrong event generation in minipool").
 				Tag("ExpectedGeneration", minipoolGeneration).Tag("ActualGeneration", generation).
-				Tag("SlotNumber", slotNum).Tag("maxMiniblockNum", seqNum)
+				Tag("SlotNumber", slotNum).Tag("maxMiniblockNum", seqNum).Tag("mbErr", mbErr).
+				Tag("partition", CreatePartitionSuffix(streamId, s.numPartitions))
 		}
 		if slotNum != counter {
-			seqNum, _ := s.debugGetLatestMiniblockNum(ctx, tx, streamId)
+			seqNum, mbErr := s.debugGetLatestMiniblockNum(ctx, tx, streamId)
 			return RiverError(Err_DB_OPERATION_FAILURE, "Wrong slot number in minipool").
 				Tag("ExpectedSlotNumber", counter).Tag("ActualSlotNumber", slotNum).
-				Tag("maxMiniblockNum", seqNum)
+				Tag("maxMiniblockNum", seqNum).Tag("mbErr", mbErr).
+				Tag("partition", CreatePartitionSuffix(streamId, s.numPartitions))
 		}
 		// Slots number for envelopes start from 1, so we skip counter equal to zero
 		counter++
@@ -890,10 +892,11 @@ func (s *PostgresStreamStore) writeEventTx(
 	// At this moment counter should be equal to minipoolSlot otherwise it is discrepancy of actual and expected records in minipool
 	// Keep in mind that there is service record with seqNum equal to -1
 	if counter != minipoolSlot {
-		seqNum, _ := s.debugGetLatestMiniblockNum(ctx, tx, streamId)
+		seqNum, mbErr := s.debugGetLatestMiniblockNum(ctx, tx, streamId)
 		return RiverError(Err_DB_OPERATION_FAILURE, "Wrong number of records in minipool").
 			Tag("ActualRecordsNumber", counter).Tag("ExpectedRecordsNumber", minipoolSlot).
-			Tag("maxMiniblockNum", seqNum)
+			Tag("maxMiniblockNum", seqNum).Tag("mbErr", mbErr).
+			Tag("partition", CreatePartitionSuffix(streamId, s.numPartitions))
 	}
 
 	// All checks passed - we need to insert event into minipool
