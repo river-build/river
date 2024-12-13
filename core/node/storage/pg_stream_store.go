@@ -142,6 +142,9 @@ func NewPostgresStreamStore(
 	return store, nil
 }
 
+// computeLockIdFromSchema computes an int64 which is a hash of the schema name.
+// We will use this int64 as the key of a pg advisory lock to ensure only one
+// node has R/W access to the schema at a time.
 func (s *PostgresStreamStore) computeLockIdFromSchema() int64 {
 	return (int64)(xxhash.Sum64String(s.schemaName))
 }
@@ -872,24 +875,12 @@ func (s *PostgresStreamStore) writeEventTx(
 			return err
 		}
 		if generation != minipoolGeneration {
-			deadline, ok := ctx.Deadline()
-			seqNum, mbErr := s.debugGetLatestMiniblockNum(ctx, tx, streamId)
 			return RiverError(Err_DB_OPERATION_FAILURE, "Wrong event generation in minipool").
-				Tag("ExpectedGeneration", minipoolGeneration).Tag("ActualGeneration", generation).
-				Tag("SlotNumber", slotNum).Tag("maxMiniblockNum", seqNum).Tag("mbErr", mbErr).
-				Tag("partition", CreatePartitionSuffix(streamId, s.numPartitions)).
-				Tag("deadline", deadline).Tag("deadlineOk", ok).
-				Tag("now", time.Now())
+				Tag("ExpectedGeneration", minipoolGeneration).Tag("ActualGeneration", generation)
 		}
 		if slotNum != counter {
-			deadline, ok := ctx.Deadline()
-			seqNum, mbErr := s.debugGetLatestMiniblockNum(ctx, tx, streamId)
 			return RiverError(Err_DB_OPERATION_FAILURE, "Wrong slot number in minipool").
-				Tag("ExpectedSlotNumber", counter).Tag("ActualSlotNumber", slotNum).
-				Tag("maxMiniblockNum", seqNum).Tag("mbErr", mbErr).
-				Tag("partition", CreatePartitionSuffix(streamId, s.numPartitions)).
-				Tag("deadline", deadline).Tag("deadlineOk", ok).
-				Tag("now", time.Now())
+				Tag("ExpectedSlotNumber", counter).Tag("ActualSlotNumber", slotNum)
 		}
 		// Slots number for envelopes start from 1, so we skip counter equal to zero
 		counter++
@@ -898,14 +889,8 @@ func (s *PostgresStreamStore) writeEventTx(
 	// At this moment counter should be equal to minipoolSlot otherwise it is discrepancy of actual and expected records in minipool
 	// Keep in mind that there is service record with seqNum equal to -1
 	if counter != minipoolSlot {
-		deadline, ok := ctx.Deadline()
-		seqNum, mbErr := s.debugGetLatestMiniblockNum(ctx, tx, streamId)
 		return RiverError(Err_DB_OPERATION_FAILURE, "Wrong number of records in minipool").
-			Tag("ActualRecordsNumber", counter).Tag("ExpectedRecordsNumber", minipoolSlot).
-			Tag("maxMiniblockNum", seqNum).Tag("mbErr", mbErr).
-			Tag("partition", CreatePartitionSuffix(streamId, s.numPartitions)).
-			Tag("deadline", deadline).Tag("deadlineOk", ok).
-			Tag("now", time.Now())
+			Tag("ActualRecordsNumber", counter).Tag("ExpectedRecordsNumber", minipoolSlot)
 	}
 
 	// All checks passed - we need to insert event into minipool
@@ -1094,45 +1079,6 @@ func (s *PostgresStreamStore) WriteMiniblockCandidate(
 		"blockHash", blockHash,
 		"blockNumber", blockNumber,
 	)
-}
-
-// For debugging, I plan to remove this but just in case, don't call it unless something has already
-// gone wrong.
-func (s *PostgresStreamStore) debugGetLatestMiniblockNum(
-	ctx context.Context,
-	tx pgx.Tx,
-	streamId StreamId,
-) (int64, error) {
-	var seqNum *int64
-	rows, err := tx.Query(
-		ctx,
-		s.sqlForStream(
-			"SELECT MAX(seq_num) as latest_block_number FROM {{miniblocks}} WHERE stream_id = $1",
-			streamId,
-		),
-		streamId,
-	)
-	if err != nil {
-		return -10, err
-	}
-
-	sawRow := false
-	// Since this is a max query lets just assume a maximum of 1 row is seen here. This is for
-	// debugging anyway.
-	for rows.Next() {
-		sawRow = true
-		err = rows.Scan(&seqNum)
-	}
-
-	if err != nil {
-		return -10, err
-	}
-
-	if !sawRow {
-		return -1, RiverError(Err_NOT_FOUND, "No miniblocks found for stream")
-	}
-
-	return *seqNum, nil
 }
 
 // Supported consistency checks:

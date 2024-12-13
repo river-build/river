@@ -340,7 +340,6 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 
 	if !stream.nodesLocked.IsLocal() {
 		stream, _ = s.cache.LoadOrStore(streamId, stream)
-
 		return stream, nil
 	}
 
@@ -370,13 +369,11 @@ func (s *streamCacheImpl) createStreamStorage(
 	// Lock stream, so parallel creators have to wait for the stream to be intialized.
 	stream.mu.Lock()
 	defer stream.mu.Unlock()
-
 	entry, loaded := s.cache.LoadOrStore(stream.streamId, stream)
 	if !loaded {
 		// TODO: delete entry on failures below?
 
 		// Our stream won the race, put into storage.
-		// TODO: if our stream won the race why would anything be in storage?
 		err := s.params.Storage.CreateStreamStorage(ctx, stream.streamId, mb)
 		if err != nil {
 			if AsRiverError(err).Code == Err_ALREADY_EXISTS {
@@ -409,7 +406,6 @@ func (s *streamCacheImpl) createStreamStorage(
 		if entry == nil {
 			return nil, false, RiverError(Err_INTERNAL, "tryLoadStreamRecord: Cache corruption", "streamId", stream.streamId)
 		}
-
 		return entry, false, nil
 	}
 }

@@ -668,7 +668,7 @@ jobs:
               working-directory: core
 
             - name: Run node tests
-              run: RIVER_TEST_LOG=info RIVER_TEST_PRINT=1 go test -race -timeout 24m -v -parallel 1 -count 1 -p 8 ./...
+              run: go test -race -timeout 24m -v -parallel 1 -count 1 -p 8 ./...
               working-directory: core
 
     XChain_Integration:
