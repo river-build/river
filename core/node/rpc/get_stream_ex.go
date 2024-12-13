@@ -2,6 +2,8 @@ package rpc
 
 import (
 	"context"
+	"errors"
+	"time"
 
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/proto"
@@ -21,17 +23,45 @@ func (s *Service) localGetStreamEx(
 		return err
 	}
 
+	perSendTimeout := ctx.Value("send_timeout").(time.Duration)
+
 	if err = s.storage.ReadMiniblocksByStream(ctx, streamId, func(blockdata []byte, seqNum int) error {
 		var mb Miniblock
-		if err = proto.Unmarshal(blockdata, &mb); err != nil {
+		if err := proto.Unmarshal(blockdata, &mb); err != nil {
 			return WrapRiverError(Err_BAD_BLOCK, err).Message("Unable to unmarshal miniblock")
 		}
 
-		return resp.Send(&GetStreamExResponse{
-			Data: &GetStreamExResponse_Miniblock{
-				Miniblock: &mb,
-			},
-		})
+		// Create a per-send context with timeout
+		sendCtx, cancel := context.WithTimeout(ctx, perSendTimeout)
+		defer cancel()
+
+		errCh := make(chan error, 1)
+
+		// Send operation in a goroutine to allow for timeout handling
+		go func() {
+			errCh <- resp.Send(&GetStreamExResponse{
+				Data: &GetStreamExResponse_Miniblock{
+					Miniblock: &mb,
+				},
+			})
+		}()
+
+		select {
+		case err := <-errCh:
+			if err != nil {
+				// Log and return only critical errors
+				if errors.Is(sendCtx.Err(), context.DeadlineExceeded) {
+					return RiverError(Err_DEADLINE_EXCEEDED, "send operation timed out").Tag("seqNum", seqNum)
+				}
+
+				return err
+			}
+		case <-sendCtx.Done():
+			// Timeout occurred
+			return RiverError(Err_DEADLINE_EXCEEDED, "send operation timed out").Tag("seqNum", seqNum)
+		}
+
+		return nil
 	}); err != nil {
 		return err
 	}
