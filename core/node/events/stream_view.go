@@ -496,8 +496,8 @@ func (r *streamViewImpl) forEachEvent(
 	}
 
 	for i := startBlock; i < len(r.blocks); i++ {
-		err := r.blocks[i].forEachEvent(op)
-		if err != nil {
+		cont, err := r.blocks[i].forEachEvent(op)
+		if err != nil || !cont {
 			return err
 		}
 	}
