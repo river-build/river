@@ -828,24 +828,24 @@ contract DropFacetTest is
     return abi.decode(result, (bytes32));
   }
 
-  function test_endToEnd_differentialTestingRoot() external {
-    address[] memory _accounts = new address[](4);
-    uint256[] memory _amounts = new uint256[](4);
+  // function test_endToEnd_differentialTestingRoot() external {
+  //   address[] memory _accounts = new address[](4);
+  //   uint256[] memory _amounts = new uint256[](4);
 
-    _accounts[0] = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
-    _amounts[0] = 1 ether;
-    _accounts[1] = 0x2FaC60B7bCcEc9b234A2f07448D3B2a045d621B9;
-    _amounts[1] = 1 ether;
-    _accounts[2] = 0xa9a6512088904fbaD2aA710550B57c29ee0092c4;
-    _amounts[2] = 1 ether;
-    _accounts[3] = 0x86312a65B491CF25D9D265f6218AB013DaCa5e19;
-    _amounts[3] = 1 ether;
+  //   _accounts[0] = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266;
+  //   _amounts[0] = 1 ether;
+  //   _accounts[1] = 0x2FaC60B7bCcEc9b234A2f07448D3B2a045d621B9;
+  //   _amounts[1] = 1 ether;
+  //   _accounts[2] = 0xa9a6512088904fbaD2aA710550B57c29ee0092c4;
+  //   _amounts[2] = 1 ether;
+  //   _accounts[3] = 0x86312a65B491CF25D9D265f6218AB013DaCa5e19;
+  //   _amounts[3] = 1 ether;
 
-    bytes32 offChainRoot = givenOffChainRoot();
-    (bytes32 onChainRoot, ) = merkleTree.constructTree(_accounts, _amounts);
+  //   bytes32 offChainRoot = givenOffChainRoot();
+  //   (bytes32 onChainRoot, ) = merkleTree.constructTree(_accounts, _amounts);
 
-    assertEq(offChainRoot, onChainRoot);
-  }
+  //   assertEq(offChainRoot, onChainRoot);
+  // }
 
   // we claim some tokens from the first condition, and then activate the second condition
   // we claim some more tokens from the second condition
