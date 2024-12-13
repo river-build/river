@@ -872,18 +872,24 @@ func (s *PostgresStreamStore) writeEventTx(
 			return err
 		}
 		if generation != minipoolGeneration {
+			deadline, ok := ctx.Deadline()
 			seqNum, mbErr := s.debugGetLatestMiniblockNum(ctx, tx, streamId)
 			return RiverError(Err_DB_OPERATION_FAILURE, "Wrong event generation in minipool").
 				Tag("ExpectedGeneration", minipoolGeneration).Tag("ActualGeneration", generation).
 				Tag("SlotNumber", slotNum).Tag("maxMiniblockNum", seqNum).Tag("mbErr", mbErr).
-				Tag("partition", CreatePartitionSuffix(streamId, s.numPartitions))
+				Tag("partition", CreatePartitionSuffix(streamId, s.numPartitions)).
+				Tag("deadline", deadline).Tag("deadlineOk", ok).
+				Tag("now", time.Now())
 		}
 		if slotNum != counter {
+			deadline, ok := ctx.Deadline()
 			seqNum, mbErr := s.debugGetLatestMiniblockNum(ctx, tx, streamId)
 			return RiverError(Err_DB_OPERATION_FAILURE, "Wrong slot number in minipool").
 				Tag("ExpectedSlotNumber", counter).Tag("ActualSlotNumber", slotNum).
 				Tag("maxMiniblockNum", seqNum).Tag("mbErr", mbErr).
-				Tag("partition", CreatePartitionSuffix(streamId, s.numPartitions))
+				Tag("partition", CreatePartitionSuffix(streamId, s.numPartitions)).
+				Tag("deadline", deadline).Tag("deadlineOk", ok).
+				Tag("now", time.Now())
 		}
 		// Slots number for envelopes start from 1, so we skip counter equal to zero
 		counter++
@@ -892,11 +898,14 @@ func (s *PostgresStreamStore) writeEventTx(
 	// At this moment counter should be equal to minipoolSlot otherwise it is discrepancy of actual and expected records in minipool
 	// Keep in mind that there is service record with seqNum equal to -1
 	if counter != minipoolSlot {
+		deadline, ok := ctx.Deadline()
 		seqNum, mbErr := s.debugGetLatestMiniblockNum(ctx, tx, streamId)
 		return RiverError(Err_DB_OPERATION_FAILURE, "Wrong number of records in minipool").
 			Tag("ActualRecordsNumber", counter).Tag("ExpectedRecordsNumber", minipoolSlot).
 			Tag("maxMiniblockNum", seqNum).Tag("mbErr", mbErr).
-			Tag("partition", CreatePartitionSuffix(streamId, s.numPartitions))
+			Tag("partition", CreatePartitionSuffix(streamId, s.numPartitions)).
+			Tag("deadline", deadline).Tag("deadlineOk", ok).
+			Tag("now", time.Now())
 	}
 
 	// All checks passed - we need to insert event into minipool
