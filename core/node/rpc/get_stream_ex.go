@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"connectrpc.com/connect"
@@ -44,23 +43,17 @@ func (s *Service) localGetStreamEx(
 
 		// Setting up the interruption logic if per-send timeout is provided
 		if perSendTimeout > 0 {
-			// Create a per-send context with timeout
-			sendCtx, cancel := context.WithTimeout(ctx, perSendTimeout)
-			defer cancel()
+			timeout := time.After(perSendTimeout)
 
 			select {
 			case err := <-errCh:
 				if err != nil {
-					// Log and return only critical errors
-					if errors.Is(sendCtx.Err(), context.DeadlineExceeded) {
-						return RiverError(Err_DEADLINE_EXCEEDED, "send operation timed out").Tag("seqNum", seqNum)
-					}
-
-					return err
+					return WrapRiverError(Err_INTERNAL, err).Message("Unable to send miniblock")
 				}
-			case <-sendCtx.Done():
-				// Timeout occurred
-				return RiverError(Err_DEADLINE_EXCEEDED, "send operation timed out").Tag("seqNum", seqNum)
+
+				return nil
+			case <-timeout:
+				return RiverError(Err_DEADLINE_EXCEEDED, "Send operation timed out").Tag("seqNum", seqNum)
 			}
 		}
 
