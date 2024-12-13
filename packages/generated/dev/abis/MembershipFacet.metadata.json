@@ -2116,10 +2116,10 @@
       "license": "MIT"
     },
     "contracts/src/spaces/facets/membership/join/MembershipJoin.sol": {
-      "keccak256": "0x5038b4adfa739ddbaa239865ac6dbdb2e2fbd5432c0218853f152511ff09bf44",
+      "keccak256": "0xb85d21293be568297f8306fb07271838cef0f160ed06eb390900faec238ca6d6",
       "urls": [
-        "bzz-raw://0e1a637b97492e3f9b50b04958e60f0adcc2aaa9edfe878def510d06d5594cb6",
-        "dweb:/ipfs/QmYEjcisqYuJNPiaXpr19cat1spt4Jcx14tyg48mgcBxqm"
+        "bzz-raw://ff35928775339da72945dcf8385b8015cea4cade74a32fc6b166e3a29d5c26f9",
+        "dweb:/ipfs/QmcWxFSgE22cNb9e5yKBKKMqoxmfDqqmiiMo5VEvrbqZtu"
       ],
       "license": "MIT"
     },

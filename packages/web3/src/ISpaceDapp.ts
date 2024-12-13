@@ -346,4 +346,17 @@ export interface ISpaceDapp {
         recipient: string,
         signer: SignerType,
     ) => Promise<TransactionType>
+    tip: (
+        args: {
+            spaceId: string
+            tokenId: string
+            currency: string
+            amount: bigint
+            messageId: string
+            channelId: string
+        },
+        signer: SignerType,
+    ) => Promise<TransactionType>
+    getLinkedWallets: (wallet: string) => Promise<string[]>
+    getTokenIdOfOwner: (spaceId: string, owner: string) => Promise<string | undefined>
 }
