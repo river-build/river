@@ -78,9 +78,6 @@ func SyncStreamsResponseFromStreamAndCookie(result *StreamAndCookie) *SyncStream
 }
 
 type streamImpl struct {
-	// DEBUG
-	creationTrace string
-
 	params *StreamCacheParams
 
 	streamId StreamId
@@ -750,8 +747,6 @@ func (s *streamImpl) addEventLocked(ctx context.Context, event *ParsedEvent) err
 			err,
 			"inMemoryBlocks",
 			len(s.view().blocks),
-			"creationStacktrace",
-			s.creationTrace,
 			"thisStacktrace",
 			string(debug.Stack()),
 		)

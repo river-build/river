@@ -2,8 +2,6 @@ package events
 
 import (
 	"context"
-	"fmt"
-	"runtime/debug"
 	"slices"
 	"sync/atomic"
 	"time"
@@ -135,7 +133,6 @@ func (s *streamCacheImpl) Start(ctx context.Context) error {
 	initialSyncWorkerPool := workerpool.New(s.params.Config.StreamReconciliation.InitialWorkerPoolSize)
 	for _, stream := range localStreamResults {
 		si := &streamImpl{
-			creationTrace:       string(debug.Stack()),
 			params:              s.params,
 			streamId:            stream.StreamId,
 			lastAppliedBlockNum: s.params.AppliedBlockNum,
@@ -213,7 +210,6 @@ func (s *streamCacheImpl) onStreamAllocated(
 ) {
 	if slices.Contains(event.Nodes, s.params.Wallet.Address) {
 		stream := &streamImpl{
-			creationTrace:       string(debug.Stack()),
 			params:              s.params,
 			streamId:            StreamId(event.StreamId),
 			lastAppliedBlockNum: blockNum,
@@ -335,7 +331,6 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 	}
 
 	stream := &streamImpl{
-		creationTrace:       string(debug.Stack()),
 		params:              s.params,
 		streamId:            streamId,
 		lastAppliedBlockNum: blockNum,
@@ -344,25 +339,7 @@ func (s *streamCacheImpl) tryLoadStreamRecord(
 	stream.nodesLocked.Reset(record.Nodes, s.params.Wallet.Address)
 
 	if !stream.nodesLocked.IsLocal() {
-		oldStream := stream
-		var loaded bool
-		stream, loaded = s.cache.LoadOrStore(streamId, stream)
-
-		if loaded {
-			dlog.FromCtx(ctx).Warn(
-				"STREAM_CACHE_DEBUG when storing, loaded existing stream for remote stream in cache. This is not necessarily an error",
-				"thisStreamPtr",
-				fmt.Sprintf("%p", oldStream),
-				"creationStreamPtr",
-				fmt.Sprintf("%p", stream),
-				"streamId",
-				stream.streamId,
-				"thisThreadCreationStacktrace",
-				oldStream.creationTrace,
-				"streamCreationStacktrace",
-				stream.creationTrace,
-			)
-		}
+		stream, _ = s.cache.LoadOrStore(streamId, stream)
 
 		return stream, nil
 	}
@@ -432,22 +409,6 @@ func (s *streamCacheImpl) createStreamStorage(
 		if entry == nil {
 			return nil, false, RiverError(Err_INTERNAL, "tryLoadStreamRecord: Cache corruption", "streamId", stream.streamId)
 		}
-
-		dlog.FromCtx(ctx).Warn(
-			"STREAM_CACHE_DEBUG createStreamStorage detected existing entry when trying to store stream",
-			"thisStreamPtr",
-			fmt.Sprintf("%p", stream),
-			"originalStreamPtr",
-			fmt.Sprintf("%p", entry),
-			"streamId",
-			stream.streamId,
-			"entryId",
-			entry.streamId,
-			"thisThreadStackTrace",
-			stream.creationTrace,
-			"originalStreamStackTrace",
-			entry.creationTrace,
-		)
 
 		return entry, false, nil
 	}
