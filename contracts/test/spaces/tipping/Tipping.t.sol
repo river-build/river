@@ -19,9 +19,6 @@ import {DeployMockERC20, MockERC20} from "contracts/scripts/deployments/utils/De
 // helpers
 import {BaseSetup} from "contracts/test/spaces/BaseSetup.sol";
 
-// debugging
-import {console} from "forge-std/console.sol";
-
 contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
   DeployMockERC20 internal deployERC20 = new DeployMockERC20();
 
@@ -41,6 +38,9 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
   }
 
   modifier givenUsersAreMembers(address sender, address receiver) {
+    assumeNotPrecompile(sender);
+    assumeNotPrecompile(receiver);
+
     vm.assume(sender != receiver);
     vm.assume(sender != address(0) && sender.code.length == 0);
     vm.assume(receiver != address(0) && receiver.code.length == 0);
@@ -81,11 +81,15 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
     uint256 gasUsed = vm.stopSnapshotGas();
 
     assertLt(gasUsed, 200_000);
-
     assertEq(receiver.balance, amount);
     assertEq(sender.balance, 0);
     assertEq(
       tipping.tipsByCurrencyAndTokenId(tokenId, CurrencyTransfer.NATIVE_TOKEN),
+      amount
+    );
+    assertEq(tipping.totalTipsByCurrency(CurrencyTransfer.NATIVE_TOKEN), 1);
+    assertEq(
+      tipping.tipAmountByCurrency(CurrencyTransfer.NATIVE_TOKEN),
       amount
     );
     assertContains(tipping.tippingCurrencies(), CurrencyTransfer.NATIVE_TOKEN);
@@ -130,6 +134,8 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
       tipping.tipsByCurrencyAndTokenId(tokenId, address(mockERC20)),
       amount
     );
+    assertEq(tipping.totalTipsByCurrency(address(mockERC20)), 1);
+    assertEq(tipping.tipAmountByCurrency(address(mockERC20)), amount);
     assertContains(tipping.tippingCurrencies(), address(mockERC20));
   }
 
