@@ -23,17 +23,13 @@ func (s *Service) localGetStreamEx(
 		return err
 	}
 
-	perSendTimeout := ctx.Value("send_timeout").(time.Duration)
+	perSendTimeout := ctx.Value(perSendTimeoutVal{}).(time.Duration)
 
 	if err = s.storage.ReadMiniblocksByStream(ctx, streamId, func(blockdata []byte, seqNum int) error {
 		var mb Miniblock
 		if err := proto.Unmarshal(blockdata, &mb); err != nil {
 			return WrapRiverError(Err_BAD_BLOCK, err).Message("Unable to unmarshal miniblock")
 		}
-
-		// Create a per-send context with timeout
-		sendCtx, cancel := context.WithTimeout(ctx, perSendTimeout)
-		defer cancel()
 
 		errCh := make(chan error, 1)
 
@@ -46,22 +42,30 @@ func (s *Service) localGetStreamEx(
 			})
 		}()
 
-		select {
-		case err := <-errCh:
-			if err != nil {
-				// Log and return only critical errors
-				if errors.Is(sendCtx.Err(), context.DeadlineExceeded) {
-					return RiverError(Err_DEADLINE_EXCEEDED, "send operation timed out").Tag("seqNum", seqNum)
-				}
+		// Setting up the interruption logic if per-send timeout is provided
+		if perSendTimeout > 0 {
+			// Create a per-send context with timeout
+			sendCtx, cancel := context.WithTimeout(ctx, perSendTimeout)
+			defer cancel()
 
-				return err
+			select {
+			case err := <-errCh:
+				if err != nil {
+					// Log and return only critical errors
+					if errors.Is(sendCtx.Err(), context.DeadlineExceeded) {
+						return RiverError(Err_DEADLINE_EXCEEDED, "send operation timed out").Tag("seqNum", seqNum)
+					}
+
+					return err
+				}
+			case <-sendCtx.Done():
+				// Timeout occurred
+				return RiverError(Err_DEADLINE_EXCEEDED, "send operation timed out").Tag("seqNum", seqNum)
 			}
-		case <-sendCtx.Done():
-			// Timeout occurred
-			return RiverError(Err_DEADLINE_EXCEEDED, "send operation timed out").Tag("seqNum", seqNum)
 		}
 
-		return nil
+		// Otherwise just wait for the send operation to be completed
+		return <-errCh
 	}); err != nil {
 		return err
 	}
