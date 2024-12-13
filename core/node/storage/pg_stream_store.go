@@ -1727,7 +1727,7 @@ func (s *PostgresStreamStore) acquireConnection(ctx context.Context) (*pgxpool.C
 }
 
 // listenForNewNodes maintains an open connection with postgres that listens for
-// changes to the singlenode table in order to detect startup of competing nodes.
+// changes to the singlenodekey table in order to detect startup of competing nodes.
 // Call it with a cancellable context and the method will return when the context is
 // cancelled. Call it after storage has been initialized in order to not receive a
 // notification when this node updates the table with it's own entry.

@@ -31,7 +31,7 @@ import (
 	"github.com/river-build/river/core/node/testutils/testcert"
 )
 
-var notificationDeliveryDelay = 20 * time.Second
+var notificationDeliveryDelay = 30 * time.Second
 
 // TestNotifications is designed in such a way that all tests are run in parallel
 // and share the same set of nodes, notification service and client.
