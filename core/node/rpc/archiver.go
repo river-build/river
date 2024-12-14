@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -10,12 +11,14 @@ import (
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/river"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
+	"github.com/river-build/river/core/node/infra"
 	"github.com/river-build/river/core/node/nodes"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/registries"
@@ -23,11 +26,44 @@ import (
 	"github.com/river-build/river/core/node/storage"
 )
 
+// nodeUpdateGracePeriod describes the maximum delay we would expect to see
+// when a stream's miniblocks updates in the registry before we consider a
+// node behind of it does not have the latest miniblock.
+// Two blocks plus change
+var nodeUpdateGracePeriod = 5 * time.Second
+
+type contractState struct {
+	// Everything in the registry state is protected by this mutex.
+	mu                  sync.Mutex
+	numBlocksInContract int64
+	// This is the last time we saw an event to update the miniblock count for the
+	// stream. lastContractMiniblockUpdate should always be updated with numBlocksInContract.
+	lastContractMiniblockUpdate time.Time
+}
+
+func (cs *contractState) UpdateNumBlocksInContract(blocks int64) {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	cs.numBlocksInContract = blocks
+	cs.lastContractMiniblockUpdate = time.Now()
+}
+
+func (cs *contractState) NumBlocksIncontract() (int64, time.Time) {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	return cs.numBlocksInContract, cs.lastContractMiniblockUpdate
+}
+
 type ArchiveStream struct {
-	streamId            StreamId
-	nodes               nodes.StreamNodes
-	numBlocksInContract atomic.Int64
-	numBlocksInDb       atomic.Int64 // -1 means not loaded
+	streamId StreamId
+	nodes    nodes.StreamNodes
+
+	// registryState describes the state of the stream as reported by the stream
+	// registry.
+	registryState contractState
+	numBlocksInDb atomic.Int64 // -1 means not loaded
 
 	// Mutex is used so only one archive operation is performed at a time.
 	mu sync.Mutex
@@ -38,7 +74,7 @@ func NewArchiveStream(streamId StreamId, nn *[]common.Address, lastKnownMinibloc
 		streamId: streamId,
 		nodes:    nodes.NewStreamNodesWithLock(*nn, common.Address{}),
 	}
-	stream.numBlocksInContract.Store(int64(lastKnownMiniblock + 1))
+	stream.registryState.UpdateNumBlocksInContract(int64(lastKnownMiniblock + 1))
 	stream.numBlocksInDb.Store(-1)
 
 	return stream
@@ -61,6 +97,7 @@ type Archiver struct {
 	// set to done when archiver has started
 	startedWG sync.WaitGroup
 
+	// Statistics
 	streamsExamined            atomic.Uint64
 	streamsCreated             atomic.Uint64
 	streamsUpToDate            atomic.Uint64
@@ -70,6 +107,10 @@ type Archiver struct {
 	newStreamAllocated         atomic.Uint64
 	streamPlacementUpdated     atomic.Uint64
 	streamLastMiniblockUpdated atomic.Uint64
+
+	// metrics
+	nodeBehindEvents *prometheus.CounterVec
+	nodeAdvances     *prometheus.CounterVec
 }
 
 type ArchiverStats struct {
@@ -101,6 +142,82 @@ func NewArchiver(
 	return a
 }
 
+func (a *Archiver) setupStatisticsMetrics(factory infra.MetricsFactory) {
+	statsMetrics := []struct {
+		name     string
+		help     string
+		getValue func() float64
+	}{
+		{
+			"streams_examined",
+			"Total streams monitored by the archiver",
+			func() float64 { return float64(a.streamsExamined.Load()) },
+		},
+		{
+			"streams_created",
+			"Total streams allocated on disk by the archiver since the last boot",
+			func() float64 { return float64(a.streamsCreated.Load()) },
+		},
+		{
+			"streams_up_to_date",
+			"Total ArchiveStream executions that did not see stream updates",
+			func() float64 { return float64(a.streamsUpToDate.Load()) },
+		},
+		{
+			"success_ops_count",
+			"Total successful ArchiveStream executions",
+			func() float64 { return float64(a.successOpsCount.Load()) },
+		},
+		{
+			"failed_ops_count",
+			"Total failed ArchiveStream executions",
+			func() float64 { return float64(a.failedOpsCount.Load()) },
+		},
+		{
+			"miniblocks_processed",
+			"Total miniblocks downloaded and stored since the last boot",
+			func() float64 { return float64(a.miniblocksProcessed.Load()) },
+		},
+		{
+			"new_stream_allocated",
+			"Total streams allocated in response to detected stream allocation events",
+			func() float64 { return float64(a.newStreamAllocated.Load()) },
+		},
+		{
+			"stream_placement_updated",
+			"Total stream placement changes",
+			func() float64 { return float64(a.streamPlacementUpdated.Load()) },
+		},
+		{
+			"stream_last_miniblock_updated",
+			"Total miniblock update events",
+			func() float64 { return float64(a.streamLastMiniblockUpdated.Load()) },
+		},
+	}
+
+	for _, metric := range statsMetrics {
+		factory.NewGaugeFunc(
+			prometheus.GaugeOpts{
+				Name: fmt.Sprintf("stats_%s", metric.name),
+				Help: metric.help,
+			},
+			metric.getValue,
+		)
+	}
+
+	a.nodeBehindEvents = factory.NewCounterVecEx(
+		"node_behind_events",
+		"Total times a node was considered to have an out of date stream record",
+		"node_address",
+	)
+
+	a.nodeAdvances = factory.NewCounterVecEx(
+		"node_advances",
+		"Total times a node was advanced, indicating it was behind or returned an error response",
+		"node_address",
+	)
+}
+
 func (a *Archiver) addNewStream(
 	ctx context.Context,
 	streamId StreamId,
@@ -120,6 +237,9 @@ func (a *Archiver) addNewStream(
 	a.streamsExamined.Add(1)
 }
 
+// ArchiveStream attempts to add all new miniblocks seen, according to the registry contract,
+// since the last time the stream was archived into storage.  It creates a new stream for
+// streams that have not yet been seen.
 func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) error {
 	log := dlog.FromCtx(ctx)
 
@@ -155,7 +275,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 		}
 	}
 
-	mbsInContract := stream.numBlocksInContract.Load()
+	mbsInContract, lastUpdated := stream.registryState.NumBlocksIncontract()
 	if mbsInDb >= mbsInContract {
 		a.streamsUpToDate.Add(1)
 		return nil
@@ -198,20 +318,47 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 				"streamId",
 				stream.streamId,
 			)
+			if a.nodeAdvances != nil {
+				a.nodeAdvances.With(prometheus.Labels{"node_address": nodeAddr.String()}).Inc()
+			}
 			stream.nodes.AdvanceStickyPeer(nodeAddr)
 			return err
 		}
 
 		if (err != nil && AsRiverError(err).Code == Err_NOT_FOUND) || resp.Msg == nil || len(resp.Msg.Miniblocks) == 0 {
-			log.Info(
-				"ArchiveStream: GetMiniblocks did not return data, remote storage is not up-to-date with contract yet",
-				"streamId",
-				stream.streamId,
-				"fromInclusive",
-				mbsInDb,
-				"toExclusive",
-				toBlock,
-			)
+			if time.Since(lastUpdated) > nodeUpdateGracePeriod {
+				log.Warn(
+					"ArchiveStream: remote storage is not up-to-date with contract after grace period, advancing node",
+					"streamId",
+					stream.streamId,
+					"fromInclusive",
+					mbsInDb,
+					"toExclusive",
+					toBlock,
+					"gracePeriod",
+					nodeUpdateGracePeriod,
+					"nodeAddr",
+					nodeAddr,
+				)
+				// We now consider this node behind for this stream. Let's advance it.
+				if a.nodeAdvances != nil {
+					nodeAddress := prometheus.Labels{"node_address": nodeAddr.String()}
+					a.nodeAdvances.With(nodeAddress).Inc()
+					a.nodeBehindEvents.With(nodeAddress).Inc()
+				}
+				stream.nodes.AdvanceStickyPeer(nodeAddr)
+			} else {
+				log.Debug(
+					"ArchiveStream: GetMiniblocks did not return data, remote storage is not up-to-date with contract yet",
+					"streamId",
+					stream.streamId,
+					"fromInclusive",
+					mbsInDb,
+					"toExclusive",
+					toBlock,
+				)
+			}
+
 			// Reschedule with delay.
 			streamId := stream.streamId
 			time.AfterFunc(time.Second, func() {
@@ -258,17 +405,19 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 	return nil
 }
 
-func (a *Archiver) Start(ctx context.Context, once bool, exitSignal chan<- error) {
+func (a *Archiver) Start(ctx context.Context, once bool, metrics infra.MetricsFactory, exitSignal chan<- error) {
 	defer a.startedWG.Done()
-	err := a.startImpl(ctx, once)
+	err := a.startImpl(ctx, once, metrics)
 	if err != nil {
 		exitSignal <- err
 	}
 }
 
-func (a *Archiver) startImpl(ctx context.Context, once bool) error {
+func (a *Archiver) startImpl(ctx context.Context, once bool, metrics infra.MetricsFactory) error {
 	if once {
 		a.tasksWG = &sync.WaitGroup{}
+	} else if metrics != nil {
+		a.setupStatisticsMetrics(metrics)
 	}
 
 	numWorkers := a.config.GetWorkerPoolSize()
@@ -369,7 +518,7 @@ func (a *Archiver) onStreamLastMiniblockUpdated(
 		return
 	}
 	stream := record.(*ArchiveStream)
-	stream.numBlocksInContract.Store(int64(event.LastMiniblockNum + 1))
+	stream.registryState.UpdateNumBlocksInContract(int64(event.LastMiniblockNum + 1))
 	a.tasks <- id
 }
 
