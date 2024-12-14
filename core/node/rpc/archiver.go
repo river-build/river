@@ -144,6 +144,27 @@ func NewArchiver(
 	return a
 }
 
+// getStaleStreams iterates over all streams in the in-memory cache and collects stale
+// stream ids. This list does not represent a snapshot of the node at any particular state,
+// as the cache iteration is not thread-safe. However, all streams reported as stale either
+// are or were recently stale, and all streams not reported either are not or recently were
+// not stale, so this is "good enough".
+func (a *Archiver) getStaleStreams() map[StreamId]struct{} {
+	staleStreams := make(map[StreamId]struct{}, 0)
+
+	a.streams.Range(
+		func(key, value any) bool {
+			stream, ok := value.(*ArchiveStream)
+			if ok && stream.stale.Load() {
+				staleStreams[stream.streamId] = struct{}{}
+			}
+			return true
+		},
+	)
+
+	return staleStreams
+}
+
 func (a *Archiver) setupStatisticsMetrics(factory infra.MetricsFactory) {
 	statsMetrics := []struct {
 		name     string
