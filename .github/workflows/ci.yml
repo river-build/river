@@ -244,6 +244,14 @@ jobs:
             - name: Install node dependencies
               run: yarn install --immutable
 
+            - name: Read Turbo cache
+              uses: actions/cache/restore@v4
+              with:
+                  path: .turbo
+                  key: ${{ runner.os }}-turbo-${{ github.ref_name}}
+                  restore-keys: |
+                      ${{ runner.os }}-turbo-main
+
             - name: Build all packages
               run: yarn build
 
@@ -260,14 +268,6 @@ jobs:
 
             - name: Print Yarn package versions
               run: yarn info --name-only --all
-
-            - name: Read Turbo cache
-              uses: actions/cache/restore@v4
-              with:
-                  path: .turbo
-                  key: ${{ runner.os }}-turbo-${{ github.ref_name}}
-                  restore-keys: |
-                      ${{ runner.os }}-turbo-main
 
             - name: create db
               run: psql -h localhost -p 5433 -U postgres -f scripts/sql/create_db.sql
