@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/base"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/infra"
@@ -240,7 +241,9 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 				s.exitSignal <- err
 			}
 
-			time.Sleep(1 * time.Second)
+			if err = base.SleepWithContext(ctx, 1*time.Second); err != nil {
+				return
+			}
 		}
 	}
 }
@@ -285,7 +288,9 @@ func (s *PostgresStreamStore) acquireSchemaLock(ctx context.Context) error {
 		}
 
 		lockWasUnavailable = true
-		time.Sleep(1 * time.Second)
+		if err = base.SleepWithContext(ctx, 1*time.Second); err != nil {
+			return err
+		}
 
 		log.Info(
 			"Unable to acquire lock on schema, retrying...",
@@ -311,7 +316,11 @@ func (s *PostgresStreamStore) acquireSchemaLock(ctx context.Context) error {
 				"delay",
 				delay,
 			)
-			time.Sleep(delay)
+
+			// Be responsive to context cancellations
+			if err = base.SleepWithContext(ctx, delay); err != nil {
+				return err
+			}
 		}
 	}
 
