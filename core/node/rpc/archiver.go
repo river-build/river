@@ -32,10 +32,6 @@ import (
 // Two blocks plus change
 var nodeUpdateGracePeriod = 5 * time.Second
 
-// nodeAcceptableMiniblocksBehind describes how many blocks behind the contract
-// the node can fall before we consider the node to be behind.
-var nodeAcceptableMiniblocksBehind = 3
-
 type contractState struct {
 	// Everything in the registry state is protected by this mutex.
 	mu                  sync.Mutex
@@ -68,6 +64,8 @@ type ArchiveStream struct {
 	// registry.
 	registryState contractState
 	numBlocksInDb atomic.Int64 // -1 means not loaded
+
+	stale atomic.Bool
 
 	// Mutex is used so only one archive operation is performed at a time.
 	mu sync.Mutex
@@ -242,21 +240,11 @@ func (a *Archiver) addNewStream(
 }
 
 func (a *Archiver) onNodeBehind(
-	ctx context.Context,
 	stream *ArchiveStream,
 	nodeAddr common.Address,
-	tags ...any,
 ) {
-	log := dlog.FromCtx(ctx).With(tags...)
-	log.Warn(
-		"ArchiveStream: remote storage is not up-to-date with contract after grace period, advancing node",
-		"streamId",
-		stream.streamId,
-		"gracePeriod",
-		nodeUpdateGracePeriod,
-		"nodeAddr",
-		nodeAddr,
-	)
+	// Mark the stream as stale and advance the node pointer.
+	stream.stale.Store(true)
 	// We now consider this node behind for this stream. Let's advance it.
 	if a.nodeAdvances != nil {
 		nodeAddress := prometheus.Labels{"node_address": nodeAddr.String()}
@@ -304,7 +292,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 		}
 	}
 
-	mbsInContract, lastUpdated := stream.registryState.NumBlocksIncontract()
+	mbsInContract, contractMbsUpdated := stream.registryState.NumBlocksIncontract()
 	if mbsInDb >= mbsInContract {
 		a.streamsUpToDate.Add(1)
 		return nil
@@ -355,17 +343,10 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 		}
 
 		if (err != nil && AsRiverError(err).Code == Err_NOT_FOUND) || resp.Msg == nil || len(resp.Msg.Miniblocks) == 0 {
-			if time.Since(lastUpdated) > nodeUpdateGracePeriod {
+			if time.Since(contractMbsUpdated) > nodeUpdateGracePeriod {
 				a.onNodeBehind(
-					ctx,
 					stream,
 					nodeAddr,
-					"fromInclusive",
-					mbsInDb,
-					"toExclusive",
-					toBlock,
-					"gracePeriod",
-					nodeUpdateGracePeriod,
 				)
 			} else {
 				log.Debug(
@@ -420,23 +401,12 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 		mbsInDb += int64(len(serialized))
 		stream.numBlocksInDb.Store(mbsInDb)
 
-		// Validate that the node responded with enough miniblocks to not be considered behind still.
-		if mbsInContract-mbsInDb >= int64(nodeAcceptableMiniblocksBehind) {
-			a.onNodeBehind(
-				ctx,
-				stream,
-				nodeAddr,
-				"blocksBehind",
-				mbsInContract-mbsInDb,
-				"mbsInContract",
-				mbsInContract,
-				"mbsInDb",
-				mbsInDb,
-			)
-		}
-
 		a.miniblocksProcessed.Add(uint64(len(serialized)))
 	}
+
+	// All blocks processed, mark stream as current
+	stream.stale.Store(false)
+
 	return nil
 }
 
