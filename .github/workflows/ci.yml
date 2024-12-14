@@ -261,13 +261,13 @@ jobs:
             - name: Print Yarn package versions
               run: yarn info --name-only --all
 
-            - name: Maintain Turbo cache
-              uses: actions/cache@v4
+            - name: Read Turbo cache
+              uses: actions/cache/restore@v4
               with:
-                  path: node_modules/.cache/turbo
-                  key: ${{ runner.os }}-turbo-${{ github.run_id }}
+                  path: .turbo
+                  key: ${{ runner.os }}-turbo-${{ github.ref_name}}
                   restore-keys: |
-                      ${{ runner.os }}-turbo-
+                      ${{ runner.os }}-turbo-main
 
             - name: create db
               run: psql -h localhost -p 5433 -U postgres -f scripts/sql/create_db.sql
@@ -397,13 +397,13 @@ jobs:
             - name: Print Yarn package versions
               run: yarn info --name-only --all
 
-            - name: Maintain Turbo cache
-              uses: actions/cache@v4
+            - name: Read Turbo cache
+              uses: actions/cache/restore@v4
               with:
-                  path: node_modules/.cache/turbo
-                  key: ${{ runner.os }}-turbo-${{ github.run_id }}
+                  path: .turbo
+                  key: ${{ runner.os }}-turbo-${{ github.ref_name}}
                   restore-keys: |
-                      ${{ runner.os }}-turbo-
+                      ${{ runner.os }}-turbo-main
 
             - name: create db
               run: psql -h localhost -p 5433 -U postgres -f scripts/sql/create_db.sql
