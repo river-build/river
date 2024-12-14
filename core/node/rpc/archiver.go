@@ -32,6 +32,10 @@ import (
 // Two blocks plus change
 var nodeUpdateGracePeriod = 5 * time.Second
 
+// nodeAcceptableMiniblocksBehind describes how many blocks behind the contract
+// the node can fall before we consider the node to be behind.
+var nodeAcceptableMiniblocksBehind = 3
+
 type contractState struct {
 	// Everything in the registry state is protected by this mutex.
 	mu                  sync.Mutex
@@ -237,6 +241,31 @@ func (a *Archiver) addNewStream(
 	a.streamsExamined.Add(1)
 }
 
+func (a *Archiver) onNodeBehind(
+	ctx context.Context,
+	stream *ArchiveStream,
+	nodeAddr common.Address,
+	tags ...any,
+) {
+	log := dlog.FromCtx(ctx).With(tags...)
+	log.Warn(
+		"ArchiveStream: remote storage is not up-to-date with contract after grace period, advancing node",
+		"streamId",
+		stream.streamId,
+		"gracePeriod",
+		nodeUpdateGracePeriod,
+		"nodeAddr",
+		nodeAddr,
+	)
+	// We now consider this node behind for this stream. Let's advance it.
+	if a.nodeAdvances != nil {
+		nodeAddress := prometheus.Labels{"node_address": nodeAddr.String()}
+		a.nodeAdvances.With(nodeAddress).Inc()
+		a.nodeBehindEvents.With(nodeAddress).Inc()
+	}
+	stream.nodes.AdvanceStickyPeer(nodeAddr)
+}
+
 // ArchiveStream attempts to add all new miniblocks seen, according to the registry contract,
 // since the last time the stream was archived into storage.  It creates a new stream for
 // streams that have not yet been seen.
@@ -327,26 +356,17 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 
 		if (err != nil && AsRiverError(err).Code == Err_NOT_FOUND) || resp.Msg == nil || len(resp.Msg.Miniblocks) == 0 {
 			if time.Since(lastUpdated) > nodeUpdateGracePeriod {
-				log.Warn(
-					"ArchiveStream: remote storage is not up-to-date with contract after grace period, advancing node",
-					"streamId",
-					stream.streamId,
+				a.onNodeBehind(
+					ctx,
+					stream,
+					nodeAddr,
 					"fromInclusive",
 					mbsInDb,
 					"toExclusive",
 					toBlock,
 					"gracePeriod",
 					nodeUpdateGracePeriod,
-					"nodeAddr",
-					nodeAddr,
 				)
-				// We now consider this node behind for this stream. Let's advance it.
-				if a.nodeAdvances != nil {
-					nodeAddress := prometheus.Labels{"node_address": nodeAddr.String()}
-					a.nodeAdvances.With(nodeAddress).Inc()
-					a.nodeBehindEvents.With(nodeAddress).Inc()
-				}
-				stream.nodes.AdvanceStickyPeer(nodeAddr)
 			} else {
 				log.Debug(
 					"ArchiveStream: GetMiniblocks did not return data, remote storage is not up-to-date with contract yet",
@@ -399,6 +419,21 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 		}
 		mbsInDb += int64(len(serialized))
 		stream.numBlocksInDb.Store(mbsInDb)
+
+		// Validate that the node responded with enough miniblocks to not be considered behind still.
+		if mbsInContract-mbsInDb >= int64(nodeAcceptableMiniblocksBehind) {
+			a.onNodeBehind(
+				ctx,
+				stream,
+				nodeAddr,
+				"blocksBehind",
+				mbsInContract-mbsInDb,
+				"mbsInContract",
+				mbsInContract,
+				"mbsInDb",
+				mbsInDb,
+			)
+		}
 
 		a.miniblocksProcessed.Add(uint64(len(serialized)))
 	}
