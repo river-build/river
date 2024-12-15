@@ -17,6 +17,18 @@
             "dependsOn": ["build"],
             "cache": true
         },
+        "test:ci:multi:ent": {
+            "dependsOn": ["build"],
+            "cache": true
+        },
+        "test:ci:multi:ent:legacy": {
+            "dependsOn": ["build"],
+            "cache": true
+        },
+        "test:ci:with-entitlements": {
+            "dependsOn": ["build"],
+            "cache": true
+        },
         "test:unit": {
             "dependsOn": ["build"],
             "cache": true
