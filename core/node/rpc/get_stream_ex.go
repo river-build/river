@@ -30,6 +30,7 @@ func (s *Service) localGetStreamEx(
 			return WrapRiverError(Err_BAD_BLOCK, err).Message("Unable to unmarshal miniblock")
 		}
 
+		timeout := time.After(perSendTimeout)
 		errCh := make(chan error, 1)
 
 		// Send operation in a goroutine to allow for timeout handling
@@ -43,18 +44,16 @@ func (s *Service) localGetStreamEx(
 
 		// Setting up the interruption logic if per-send timeout is provided
 		if perSendTimeout > 0 {
-			timeout := time.After(perSendTimeout)
-
 			select {
 			case err := <-errCh:
 				if err != nil {
 					return WrapRiverError(Err_INTERNAL, err).Message("Unable to send miniblock")
 				}
-
-				return nil
 			case <-timeout:
 				return RiverError(Err_DEADLINE_EXCEEDED, "Send operation timed out").Tag("seqNum", seqNum)
 			}
+
+			return nil
 		}
 
 		// Otherwise just wait for the send operation to be completed

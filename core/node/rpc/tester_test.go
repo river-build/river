@@ -303,7 +303,8 @@ func (st *serviceTester) getConfig(opts ...startOpts) *config.Config {
 	}
 	cfg.Log.Simplify = true
 	cfg.Network = config.NetworkConfig{
-		NumRetries: 3,
+		NumRetries:        3,
+		RpcPerSendTimeout: time.Second * 3,
 	}
 	cfg.ShutdownTimeout = 2 * time.Millisecond
 	cfg.StreamReconciliation = config.StreamReconciliationConfig{
