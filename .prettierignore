@@ -23,7 +23,7 @@ core/node/.mockery.yaml
 core/node/auth/contracts/*.json
 core/node/registries/contracts/*.json
 packages/encryption-pkg/turbo.json
-contracts/cache/*
+contracts/contracts-cache/*
 contracts/deployments/*
 contracts/addresses/*
 contracts/lib/*
