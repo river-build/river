@@ -764,12 +764,11 @@ func (tc *testClient) eventually(f func(*testClient), t ...time.Duration) {
 	}, waitFor, tick)
 }
 
+//nolint:unused
 func (tc *testClient) listen(channelId StreamId, userIds []common.Address, messages [][]string) {
 	expected := flattenUserMessages(userIds, messages)
 	tc.listenImpl(channelId, expected)
 }
-
-var _ = (*testClient)(nil).listen // Suppress unused warning TODO: remove once used
 
 func (tc *testClient) listenImpl(channelId StreamId, expected userMessages) {
 	tc.eventually(func(tc *testClient) {
@@ -1071,6 +1070,7 @@ func (tcs testClients) compareNowImpl(t require.TestingT, streamId StreamId) []*
 	return nil
 }
 
+//nolint:unused
 func (tcs testClients) compareNow(streamId StreamId) {
 	if len(tcs) < 2 {
 		panic("need at least 2 clients to compare")
@@ -1083,8 +1083,6 @@ func (tcs testClients) compareNow(streamId StreamId) {
 		tcs[0].t.FailNow()
 	}
 }
-
-var _ = (*testClients)(nil).compareNow // Suppress unused warning TODO: remove once used
 
 func (tcs testClients) compare(streamId StreamId) {
 	if len(tcs) < 2 {
