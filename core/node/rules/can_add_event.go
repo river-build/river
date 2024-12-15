@@ -534,10 +534,10 @@ func (params *aeParams) creatorIsMember() (bool, error) {
 		return false, RiverError(
 			Err_PERMISSION_DENIED,
 			"event creator is not a member of the stream",
-			"creatorAddress",
-			creatorAddress,
-			"streamId",
-			params.streamView.StreamId(),
+			"creatorAddress", creatorAddress,
+			"streamId", params.streamView.StreamId(),
+			"miniblockReferencedByEvent", params.parsedEvent.MiniblockRef,
+			"lastMiniblockInStream", params.streamView.LastBlock().Ref,
 		)
 	}
 	return true, nil
