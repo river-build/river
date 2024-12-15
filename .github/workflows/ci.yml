@@ -105,14 +105,14 @@ jobs:
               if: ${{ !cancelled() && steps.setup_success.outcome == 'success' }}
               run: yarn syncpack:check
 
+            - name: Prettier
+              if: ${{ !cancelled() && steps.setup_success.outcome == 'success' }}
+              run: yarn prettier:check
+
             - name: Build
               id: ts_build
               if: ${{ !cancelled() && steps.setup_success.outcome == 'success' }}
               run: yarn build
-
-            - name: Prettier
-              if: ${{ !cancelled() && steps.setup_success.outcome == 'success' }}
-              run: yarn prettier:check
 
             - name: Lint
               if: ${{ !cancelled() && steps.setup_success.outcome == 'success' }}
@@ -289,8 +289,7 @@ jobs:
               run: just RUN_ENV=multi_ne config-and-start
 
             - name: Run SDK Tests (without entitlements)
-              working-directory: packages/sdk
-              run: yarn test:ci:multi:ne
+              run: yarn turbo run test:ci:multi:ne --filter=@river-build/sdk
 
             - name: Run Stream Metadata Nodes
               run: |
