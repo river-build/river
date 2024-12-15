@@ -297,8 +297,7 @@ jobs:
                   yarn wait-on http://localhost:3003/health --timeout=120000 --i=5000 --verbose
 
             - name: Run Stream Metadata Tests (without entitlements)
-              working-directory: packages/stream-metadata
-              run: yarn test:integration
+              run: yarn turbo run test:integration --filter=@river-build/stream-metadata
 
             - name: Archive River Node Logs and Settings
               if: always()

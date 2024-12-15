@@ -9,6 +9,10 @@
             "dependsOn": ["build"],
             "cache": true
         },
+        "test:integration": {
+            "dependsOn": ["build"],
+            "cache": true
+        },
         "test:ci:multi:ne": {
             "dependsOn": ["build"],
             "cache": true
