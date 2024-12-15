@@ -93,7 +93,7 @@ jobs:
               uses: actions/cache/@v4
               with:
                   path: .turbo
-                  key: ${{ runner.os }}-turbo-${{ github.ref_name}}
+                  key: ${{ runner.os }}-turbo-${{ github.ref_name}}-common
                   restore-keys: |
                       ${{ runner.os }}-turbo-main
 
@@ -248,8 +248,9 @@ jobs:
               uses: actions/cache/restore@v4
               with:
                   path: .turbo
-                  key: ${{ runner.os }}-turbo-${{ github.ref_name}}
+                  key: ${{ runner.os }}-turbo-${{ github.ref_name}}-multinode
                   restore-keys: |
+                      ${{ runner.os }}-turbo-${{ github.ref_name}}-common
                       ${{ runner.os }}-turbo-main
 
             - name: Build all packages
@@ -399,8 +400,9 @@ jobs:
               uses: actions/cache/restore@v4
               with:
                   path: .turbo
-                  key: ${{ runner.os }}-turbo-${{ github.ref_name}}
+                  key: ${{ runner.os }}-turbo-${{ github.ref_name}}-multinode-ent
                   restore-keys: |
+                      ${{ runner.os }}-turbo-${{ github.ref_name}}-common
                       ${{ runner.os }}-turbo-main
 
             - name: create db
@@ -534,8 +536,9 @@ jobs:
               uses: actions/cache/restore@v4
               with:
                   path: .turbo
-                  key: ${{ runner.os }}-turbo-${{ github.ref_name}}
+                  key: ${{ runner.os }}-turbo-${{ github.ref_name}}-multinode-ent-legacy
                   restore-keys: |
+                      ${{ runner.os }}-turbo-${{ github.ref_name}}-common
                       ${{ runner.os }}-turbo-main
 
             - name: create db
@@ -709,14 +712,6 @@ jobs:
 
             - name: Print Yarn package versions
               run: yarn info --name-only --all
-
-            - name: Read Turbo cache
-              uses: actions/cache/restore@v4
-              with:
-                  path: .turbo
-                  key: ${{ runner.os }}-turbo-${{ github.ref_name}}
-                  restore-keys: |
-                      ${{ runner.os }}-turbo-main
 
             - name: Run Integration Tests
               run: make integration_tests
