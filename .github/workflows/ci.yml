@@ -719,7 +719,15 @@ jobs:
 
     Slack_Notification:
         # NOTE: We should make sure that new jobs get added here
-        needs: [Common_CI, Multinode, Multinode_Ent, Go_Tests, XChain_Integration]
+        needs:
+            [
+                Common_CI,
+                Multinode,
+                Multinode_Ent,
+                Multinode_Ent_Legacy,
+                Go_Tests,
+                XChain_Integration,
+            ]
         if: failure()
         runs-on: ubuntu-latest
         steps:
