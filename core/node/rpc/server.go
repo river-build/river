@@ -695,7 +695,7 @@ func (s *Service) initCacheAndSync(opts *ServerStartOpts) error {
 }
 
 func (s *Service) initHandlers() {
-	ii := []connect.Interceptor{}
+	ii := make([]connect.Interceptor, 0, 3)
 	if s.otelConnectIterceptor != nil {
 		ii = append(ii, s.otelConnectIterceptor)
 	}
@@ -704,6 +704,11 @@ func (s *Service) initHandlers() {
 
 	interceptors := connect.WithInterceptors(ii...)
 	streamServicePattern, streamServiceHandler := protocolconnect.NewStreamServiceHandler(s, interceptors)
+	streamServiceHandler = rpcStreamingTimeoutController(
+		streamServiceHandler,
+		s.config.Network.GetRpcStreamingTimeout(),
+		s.config.Network.GetRpcPerSendTimeout(),
+	)
 	s.mux.Handle(streamServicePattern, newHttpHandler(streamServiceHandler, s.defaultLogger))
 
 	nodeServicePattern, nodeServiceHandler := protocolconnect.NewNodeToNodeHandler(s, interceptors)
@@ -823,8 +828,32 @@ func loadCertFromFiles(
 	return &cert, nil
 }
 
-// Struct to match the JSON structure.
-type CertKey struct {
-	Cert string `json:"cert"`
-	Key  string `json:"key"`
+// perSendTimeoutVal is the context key of the per-send timeout parameter value
+type perSendTimeoutVal struct{}
+
+// rpcStreamingTimeoutController is a wrapper for the StreamServiceHandler handler that sets a write deadline for streaming endpoints.
+// TODO: Remove this when connect-go finally supports deadlines.
+// TODO: https://github.com/connectrpc/connect-go/issues/604
+func rpcStreamingTimeoutController(h http.Handler, streamTimeout, sendTimeout time.Duration) http.Handler {
+	if streamTimeout <= 0 && sendTimeout <= 0 {
+		return h
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Sent a timeout per streaming connection
+		if streamTimeout > 0 &&
+			(r.URL.Path == protocolconnect.StreamServiceGetStreamExProcedure ||
+				r.URL.Path == protocolconnect.StreamServiceSyncStreamsProcedure) {
+			control := http.NewResponseController(w)
+			_ = control.SetWriteDeadline(time.Now().Add(streamTimeout))
+		}
+
+		// Pass the per-send timeout via the request context to handler
+		if sendTimeout > 0 {
+			ctx := context.WithValue(r.Context(), perSendTimeoutVal{}, sendTimeout)
+			r = r.WithContext(ctx)
+		}
+
+		h.ServeHTTP(w, r)
+	})
 }

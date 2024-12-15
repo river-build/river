@@ -17,8 +17,8 @@ func GetDefaultConfig() *Config {
 	return &Config{
 		Port: 443,
 		Database: DatabaseConfig{
-			StartupDelay:          2 * time.Second,
-			NumPartitions:         256,
+			StartupDelay:  2 * time.Second,
+			NumPartitions: 256,
 		},
 		StorageType:  "postgres",
 		DisableHttps: false,
@@ -84,6 +84,7 @@ func GetDefaultConfig() *Config {
 	}
 }
 
+// Config is the main configuration structure for the node.
 // Viper uses mapstructure module to marshal settings into config struct.
 type Config struct {
 	// Network
@@ -196,11 +197,18 @@ type TLSConfig struct {
 
 type NetworkConfig struct {
 	NumRetries int
+
 	// RequestTimeout only applies to unary requests.
 	RequestTimeout time.Duration
 
 	// If unset or <= 0, 5 seconds is used.
 	HttpRequestTimeout time.Duration
+
+	// RpcStreamingTimeout is the timeout for streaming RPC calls.
+	RpcStreamingTimeout time.Duration
+
+	// RpcPerSendTimeout is the timeout for the send operation during RPC streaming.
+	RpcPerSendTimeout time.Duration
 }
 
 func (nc *NetworkConfig) GetHttpRequestTimeout() time.Duration {
@@ -208,6 +216,26 @@ func (nc *NetworkConfig) GetHttpRequestTimeout() time.Duration {
 		return 5 * time.Second
 	}
 	return nc.HttpRequestTimeout
+}
+
+// GetRpcStreamingTimeout returns the timeout for streaming RPC calls.
+// If unset or <= 0, a minute is used.
+func (nc *NetworkConfig) GetRpcStreamingTimeout() time.Duration {
+	if nc.RpcStreamingTimeout <= 0 {
+		return time.Minute
+	}
+
+	return nc.RpcStreamingTimeout
+}
+
+// GetRpcPerSendTimeout returns the timeout for the send streaming operation.
+// If unset or <= 0, 10 secs is used.
+func (nc *NetworkConfig) GetRpcPerSendTimeout() time.Duration {
+	if nc.RpcPerSendTimeout <= 0 {
+		return time.Second * 10
+	}
+
+	return nc.RpcPerSendTimeout
 }
 
 type DatabaseConfig struct {
