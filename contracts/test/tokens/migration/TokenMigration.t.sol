@@ -5,9 +5,9 @@ pragma solidity ^0.8.19;
 import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 
 //interfaces
-import {IPausableBase} from "contracts/src/diamond/facets/pausable/IPausable.sol";
+import {IPausableBase} from "@river-build/diamond/src/facets/pausable/IPausable.sol";
 import {ITokenMigrationBase} from "contracts/src/tokens/migration/ITokenMigration.sol";
-import {IOwnableBase} from "contracts/src/diamond/facets/ownable/IERC173.sol";
+import {IOwnableBase} from "@river-build/diamond/src/facets/ownable/IERC173.sol";
 
 //libraries
 import {Validator__InvalidAddress} from "contracts/src/utils/Validator.sol";
@@ -18,7 +18,7 @@ import {MockERC20} from "contracts/test/mocks/MockERC20.sol";
 
 // facets
 import {TokenMigrationFacet} from "contracts/src/tokens/migration/TokenMigration.sol";
-import {PausableFacet} from "contracts/src/diamond/facets/pausable/PausableFacet.sol";
+import {PausableFacet} from "@river-build/diamond/src/facets/pausable/PausableFacet.sol";
 
 contract TokenMigrationTest is
   TestUtils,

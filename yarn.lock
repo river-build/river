@@ -6434,6 +6434,7 @@ __metadata:
     "@openzeppelin/contracts-upgradeable": ^5.1.0
     "@prb/math": ^4.1.0
     "@prb/test": ^0.6.4
+    "@river-build/diamond": "github:river-build/diamond#138fcb3b0efbda94563d3b72e3dd7106261abdc4"
     account-abstraction: "github:eth-infinitism/account-abstraction"
     ds-test: "github:dapphub/ds-test"
     forge-std: "github:foundry-rs/forge-std#v1.9.4"
@@ -6443,6 +6444,16 @@ __metadata:
     solhint: ^5.0.3
   languageName: unknown
   linkType: soft
+
+"@river-build/diamond@github:river-build/diamond#138fcb3b0efbda94563d3b72e3dd7106261abdc4":
+  version: 1.1.0
+  resolution: "@river-build/diamond@https://github.com/river-build/diamond.git#commit=138fcb3b0efbda94563d3b72e3dd7106261abdc4"
+  dependencies:
+    "@openzeppelin/contracts": ^5.1.0
+    solady: ^0.0.281
+  checksum: 9e6b9386cdf4655ac8534cfbc9637d9362d382e2e29989bf073c87cbe6f97e62b961662beb06cb052d5b1c5cd61ba2615a84e53f014f4281a46c0dd2957ad491
+  languageName: node
+  linkType: hard
 
 "@river-build/dlog@workspace:^, @river-build/dlog@workspace:packages/dlog":
   version: 0.0.0-use.local
@@ -26821,6 +26832,13 @@ __metadata:
   version: 0.0.267
   resolution: "solady@npm:0.0.267"
   checksum: 67726bf72e4e86d9dfad3998da0b3e5ef2ef5e72d496e374c18806b098d3d0383f0ded5bd358161e6fe5f518dc6b4b6dab28586c4c1074b51c8f2ec257a409a4
+  languageName: node
+  linkType: hard
+
+"solady@npm:^0.0.281":
+  version: 0.0.281
+  resolution: "solady@npm:0.0.281"
+  checksum: c36dafdde5d732d13d2f28a1437350ecd2ba71000ab765bc74028d41fbe098bc934714bf28af7323feb5c227d9ab110a015fca8ae077b3ebca6f6dfa01b44224
   languageName: node
   linkType: hard
 

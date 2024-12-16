@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import {LibClone} from "solady/utils/LibClone.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
-import {Initializable_AlreadyInitialized} from "contracts/src/diamond/facets/initializable/Initializable.sol";
+import {Initializable_AlreadyInitialized} from "@river-build/diamond/src/facets/initializable/Initializable.sol";
 import {DeployRiverBase} from "contracts/scripts/deployments/utils/DeployRiverBase.s.sol";
 import {DelegationProxy} from "contracts/src/base/registry/facets/distribution/v2/DelegationProxy.sol";
 
