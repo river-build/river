@@ -90,7 +90,7 @@ jobs:
               run: ./scripts/bc-all-start.sh
 
             - name: Maintain Turbo cache
-              uses: actions/cache/@v4
+              uses: actions/cache@v4
               with:
                   path: .turbo
                   key: ${{ runner.os }}-turbo-${{ github.ref_name}}-common
@@ -245,7 +245,7 @@ jobs:
               run: yarn install --immutable
 
             - name: Maintain Turbo cache
-              uses: actions/cache/@v4
+              uses: actions/cache@v4
               with:
                   path: .turbo
                   key: ${{ runner.os }}-turbo-${{ github.ref_name}}-multinode
@@ -397,7 +397,7 @@ jobs:
               run: yarn info --name-only --all
 
             - name: Maintain Turbo cache
-              uses: actions/cache/@v4
+              uses: actions/cache@v4
               with:
                   path: .turbo
                   key: ${{ runner.os }}-turbo-${{ github.ref_name}}-multinode-ent
@@ -533,7 +533,7 @@ jobs:
               run: yarn info --name-only --all
 
             - name: Maintain Turbo cache
-              uses: actions/cache/@v4
+              uses: actions/cache@v4
               with:
                   path: .turbo
                   key: ${{ runner.os }}-turbo-${{ github.ref_name}}-multinode-ent-legacy
