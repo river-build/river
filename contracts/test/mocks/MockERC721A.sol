@@ -6,9 +6,9 @@ pragma solidity ^0.8.23;
 // libraries
 
 // contracts
-import {ERC721ABase} from "contracts/src/diamond/facets/token/ERC721A/ERC721ABase.sol";
+import {ERC721A} from "contracts/src/diamond/facets/token/ERC721A/ERC721A.sol";
 
-contract MockERC721A is ERC721ABase {
+contract MockERC721A is ERC721A {
   constructor() {
     __ERC721ABase_init("TownsTest", "TNFT");
   }
