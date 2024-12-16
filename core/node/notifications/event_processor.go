@@ -12,6 +12,9 @@ import (
 	"github.com/SherClockHolmes/webpush-go"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/sideshow/apns2/payload"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
@@ -19,9 +22,22 @@ import (
 	"github.com/river-build/river/core/node/notifications/types"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"
-	"github.com/sideshow/apns2/payload"
-	"google.golang.org/protobuf/proto"
 )
+
+// MaxWebPushAllowedNotificationStreamEventPayloadSize is the max length of a serialized stream
+// event that is included in the notification payload. If the event is larger it must not be
+// included because the push service will likely refuse it. Clients must support notifications
+// without the stream event and show the user the notification without the decrypted contents.
+// Deep linking should still be possible with the remaining meta-data.
+const MaxWebPushAllowedNotificationStreamEventPayloadSize = 3 * 1024
+
+// MaxAPNAllowedNotificationStreamEventPayloadSize is the max length of a serialized stream
+// event that is included in Apple push notification payload. If the event is larger it must not
+// be included because the push service will refuse it. Clients must support notifications without
+// the stream event and show the user the notification without the decrypted contents. Deep
+// linking should still be possible with the remaining meta-data.
+// https://developer.apple.com/documentation/usernotifications/generating-a-remote-notification
+const MaxAPNAllowedNotificationStreamEventPayloadSize = 2500
 
 // MessageToNotificationsProcessor implements events.StreamEventListener and for each stream event determines
 // if it needs to send a notification, to who and sends it.
@@ -107,7 +123,10 @@ func (p *MessageToNotificationsProcessor) OnMessageEvent(
 	members.Each(func(member string) bool {
 		var (
 			participant = common.HexToAddress(member)
-			pref, err   = p.cache.GetUserPreferences(context.Background(), participant) // lint:ignore context.Background() is fine here
+			pref, err   = p.cache.GetUserPreferences(
+				context.Background(),
+				participant,
+			) // lint:ignore context.Background() is fine here
 		)
 
 		if slices.ContainsFunc(tags.GetMentionedUserAddresses(), func(member []byte) bool {
@@ -307,10 +326,13 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 
 	if len(userPref.Subscriptions.WebPush) > 0 {
 		webPayload := map[string]interface{}{
-			"event":     eventBytesHex,
 			"channelId": hex.EncodeToString(channelID[:]),
 			"kind":      kind,
 			"senderId":  hex.EncodeToString(event.Event.CreatorAddress),
+		}
+
+		if len(eventBytesHex) <= MaxWebPushAllowedNotificationStreamEventPayloadSize {
+			webPayload["event"] = eventBytesHex
 		}
 
 		if len(receivers) > 0 {
@@ -365,10 +387,13 @@ func (p *MessageToNotificationsProcessor) sendNotification(
 
 	if len(userPref.Subscriptions.APNPush) > 0 {
 		apnPayload := map[string]interface{}{
-			"event":     eventBytesHex,
 			"channelId": hex.EncodeToString(channelID[:]),
 			"kind":      kind,
 			"senderId":  hex.EncodeToString(event.Event.CreatorAddress),
+		}
+
+		if len(eventBytesHex) <= MaxAPNAllowedNotificationStreamEventPayloadSize {
+			apnPayload["event"] = eventBytesHex
 		}
 
 		if len(receivers) > 0 {
