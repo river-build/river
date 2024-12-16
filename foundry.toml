@@ -14,7 +14,7 @@ script = "contracts/scripts" # The path to the contract scripts relative to the 
 solc_version = "0.8.24" # Uses a single Solidity compiler version for the project
 src = "contracts" # The path to the contract sources relative to the root of the project.
 test = "contracts/test" # The path to the test contract sources relative to the root of the project.
-cache_path = "contracts/contracts-cache" # The path to the cache, relative to the root of the project.
+cache_path = "contracts/cache" # The path to the cache, relative to the root of the project.
 verbosity = 3 # The verbosity level to use during tests.
 fs_permissions = [
   { access = "read-write", path = "./contracts/deployments" },
