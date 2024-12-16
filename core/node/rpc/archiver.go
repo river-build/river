@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -49,7 +48,7 @@ func (cs *contractState) UpdateNumBlocksInContract(blocks int64) {
 	cs.lastContractMiniblockUpdate = time.Now()
 }
 
-func (cs *contractState) NumBlocksIncontract() (int64, time.Time) {
+func (cs *contractState) NumBlocksInContract() (int64, time.Time) {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
@@ -145,67 +144,69 @@ func NewArchiver(
 }
 
 func (a *Archiver) setupStatisticsMetrics(factory infra.MetricsFactory) {
-	statsMetrics := []struct {
-		name     string
-		help     string
-		getValue func() float64
-	}{
-		{
-			"streams_examined",
-			"Total streams monitored by the archiver",
-			func() float64 { return float64(a.streamsExamined.Load()) },
+	factory.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "stats_streams_examined",
+			Help: "Total streams monitored by the archiver",
 		},
-		{
-			"streams_created",
-			"Total streams allocated on disk by the archiver since the last boot",
-			func() float64 { return float64(a.streamsCreated.Load()) },
+		func() float64 { return float64(a.streamsExamined.Load()) },
+	)
+	factory.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "stats_streams_created",
+			Help: "Total streams allocated on disk by the archiver since the last boot",
 		},
-		{
-			"streams_up_to_date",
-			"Total ArchiveStream executions that did not see stream updates",
-			func() float64 { return float64(a.streamsUpToDate.Load()) },
+		func() float64 { return float64(a.streamsCreated.Load()) },
+	)
+	factory.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "stats_streams_up_to_date",
+			Help: "Total ArchiveStream executions that did not see stream updates",
 		},
-		{
-			"success_ops_count",
-			"Total successful ArchiveStream executions",
-			func() float64 { return float64(a.successOpsCount.Load()) },
+		func() float64 { return float64(a.streamsUpToDate.Load()) },
+	)
+	factory.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "stats_success_ops_count",
+			Help: "Total successful ArchiveStream executions",
 		},
-		{
-			"failed_ops_count",
-			"Total failed ArchiveStream executions",
-			func() float64 { return float64(a.failedOpsCount.Load()) },
+		func() float64 { return float64(a.successOpsCount.Load()) },
+	)
+	factory.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "stats_failed_ops_count",
+			Help: "Total failed ArchiveStream executions",
 		},
-		{
-			"miniblocks_processed",
-			"Total miniblocks downloaded and stored since the last boot",
-			func() float64 { return float64(a.miniblocksProcessed.Load()) },
+		func() float64 { return float64(a.failedOpsCount.Load()) },
+	)
+	factory.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "stats_miniblocks_processed",
+			Help: "Total miniblocks downloaded and stored since the last boot",
 		},
-		{
-			"new_stream_allocated",
-			"Total streams allocated in response to detected stream allocation events",
-			func() float64 { return float64(a.newStreamAllocated.Load()) },
+		func() float64 { return float64(a.miniblocksProcessed.Load()) },
+	)
+	factory.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "stats_new_stream_allocated",
+			Help: "Total streams allocated in response to detected stream allocation events",
 		},
-		{
-			"stream_placement_updated",
-			"Total stream placement changes",
-			func() float64 { return float64(a.streamPlacementUpdated.Load()) },
+		func() float64 { return float64(a.newStreamAllocated.Load()) },
+	)
+	factory.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "stats_stream_placement_updated",
+			Help: "Total stream placement changes",
 		},
-		{
-			"stream_last_miniblock_updated",
-			"Total miniblock update events",
-			func() float64 { return float64(a.streamLastMiniblockUpdated.Load()) },
+		func() float64 { return float64(a.streamPlacementUpdated.Load()) },
+	)
+	factory.NewGaugeFunc(
+		prometheus.GaugeOpts{
+			Name: "stats_stream_last_miniblock_updated",
+			Help: "Total miniblock update events",
 		},
-	}
-
-	for _, metric := range statsMetrics {
-		factory.NewGaugeFunc(
-			prometheus.GaugeOpts{
-				Name: fmt.Sprintf("stats_%s", metric.name),
-				Help: metric.help,
-			},
-			metric.getValue,
-		)
-	}
+		func() float64 { return float64(a.streamLastMiniblockUpdated.Load()) },
+	)
 
 	a.nodeBehindEvents = factory.NewCounterVecEx(
 		"node_behind_events",
@@ -292,7 +293,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 		}
 	}
 
-	mbsInContract, contractMbsUpdated := stream.registryState.NumBlocksIncontract()
+	mbsInContract, contractMbsUpdated := stream.registryState.NumBlocksInContract()
 	if mbsInDb >= mbsInContract {
 		a.streamsUpToDate.Add(1)
 		return nil
