@@ -93,9 +93,10 @@ jobs:
               uses: actions/cache@v4
               with:
                   path: .turbo
-                  key: ${{ runner.os }}-turbo-${{ github.ref_name}}-common
+                  key: ${{ runner.os }}-turbo-common-${{ github.ref_name}}
                   restore-keys: |
-                      ${{ runner.os }}-turbo-main
+                      ${{ runner.os }}-turbo-common-main
+                      ${{ runner.os }}-turbo-common-
 
             - name: Setup Done
               id: setup_success
@@ -248,10 +249,11 @@ jobs:
               uses: actions/cache@v4
               with:
                   path: .turbo
-                  key: ${{ runner.os }}-turbo-${{ github.ref_name}}-multinode
+                  key: ${{ runner.os }}-turbo-multinode-${{ github.ref_name}}
                   restore-keys: |
-                      ${{ runner.os }}-turbo-${{ github.ref_name}}-common
-                      ${{ runner.os }}-turbo-main
+                      ${{ runner.os }}-turbo-common-${{ github.ref_name}}
+                      ${{ runner.os }}-turbo-common-main
+                      ${{ runner.os }}-turbo-common-
 
             - name: Build all packages
               run: yarn build
@@ -400,10 +402,11 @@ jobs:
               uses: actions/cache@v4
               with:
                   path: .turbo
-                  key: ${{ runner.os }}-turbo-${{ github.ref_name}}-multinode-ent
+                  key: ${{ runner.os }}-turbo-multinode-ent-${{ github.ref_name}}
                   restore-keys: |
-                      ${{ runner.os }}-turbo-${{ github.ref_name}}-common
-                      ${{ runner.os }}-turbo-main
+                      ${{ runner.os }}-turbo-common-${{ github.ref_name}}
+                      ${{ runner.os }}-turbo-common-main
+                      ${{ runner.os }}-turbo-common-
 
             - name: create db
               run: psql -h localhost -p 5433 -U postgres -f scripts/sql/create_db.sql
@@ -536,10 +539,11 @@ jobs:
               uses: actions/cache@v4
               with:
                   path: .turbo
-                  key: ${{ runner.os }}-turbo-${{ github.ref_name}}-multinode-ent-legacy
+                  key: ${{ runner.os }}-turbo-multinode-ent-legacy-${{ github.ref_name}}
                   restore-keys: |
-                      ${{ runner.os }}-turbo-${{ github.ref_name}}-common
-                      ${{ runner.os }}-turbo-main
+                      ${{ runner.os }}-turbo-common-${{ github.ref_name}}
+                      ${{ runner.os }}-turbo-common-main
+                      ${{ runner.os }}-turbo-common-
 
             - name: create db
               run: psql -h localhost -p 5433 -U postgres -f scripts/sql/create_db.sql
