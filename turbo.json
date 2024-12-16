@@ -3,39 +3,39 @@
     "tasks": {
         "test": {
             "dependsOn": ["build"],
-            "cache": true
+            "cache": false
         },
         "test:ci": {
             "dependsOn": ["build"],
-            "cache": true
+            "cache": false
         },
         "test:integration": {
             "dependsOn": ["build"],
-            "cache": true
+            "cache": false
         },
         "test:ci:multi:ne": {
             "dependsOn": ["build"],
-            "cache": true
+            "cache": false
         },
         "test:ci:multi:ent": {
             "dependsOn": ["build"],
-            "cache": true
+            "cache": false
         },
         "test:ci:multi:ent:legacy": {
             "dependsOn": ["build"],
-            "cache": true
+            "cache": false
         },
         "test:ci:with-entitlements": {
             "dependsOn": ["build"],
-            "cache": true
+            "cache": false
         },
         "test:unit": {
             "dependsOn": ["build"],
-            "cache": true
+            "cache": false
         },
         "test:build": {
             "dependsOn": ["build"],
-            "cache": true
+            "cache": false
         },
         "build": {
             // note: output globs are relative to each package's `package.json`
