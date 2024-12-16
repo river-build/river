@@ -1736,15 +1736,7 @@ func copyStream(
 		return wrapError("Failed to insert into es for stream "+streamId, err)
 	}
 
-	err = copyPart(ctx, source, tx, streamId, "minipools", force, sourceInfo, targetSchemaMetadata)
-	if err != nil {
-		return err
-	}
 	err = copyPart(ctx, source, tx, streamId, "miniblocks", force, sourceInfo, targetSchemaMetadata)
-	if err != nil {
-		return err
-	}
-	err = copyPart(ctx, source, tx, streamId, "miniblock_candidates", force, sourceInfo, targetSchemaMetadata)
 	if err != nil {
 		return err
 	}
@@ -1791,15 +1783,7 @@ func migrateStream(
 		return fmt.Errorf("unexpected es update for stream %s: expected 1 row, saw %d", streamId, tag.RowsAffected())
 	}
 
-	err = migratePart(ctx, pool, tx, streamId, "minipools", dbInfo, dbSchemaMetadata)
-	if err != nil {
-		return err
-	}
 	err = migratePart(ctx, pool, tx, streamId, "miniblocks", dbInfo, dbSchemaMetadata)
-	if err != nil {
-		return err
-	}
-	err = migratePart(ctx, pool, tx, streamId, "miniblock_candidates", dbInfo, dbSchemaMetadata)
 	if err != nil {
 		return err
 	}
@@ -2195,15 +2179,7 @@ func compareAllTableCounts(
 	}
 	defer targetConn.Release()
 
-	err = compareTableCounts(ctx, sourceConn, targetConn, targetSchemaMetadata, streamId, "minipools")
-	if err != nil {
-		return err
-	}
 	err = compareTableCounts(ctx, sourceConn, targetConn, targetSchemaMetadata, streamId, "miniblocks")
-	if err != nil {
-		return err
-	}
-	err = compareTableCounts(ctx, sourceConn, targetConn, targetSchemaMetadata, streamId, "miniblock_candidates")
 	if err != nil {
 		return err
 	}
@@ -2231,16 +2207,6 @@ func compareAllTableContents(
 	defer targetConn.Release()
 
 	err = compareMiniblockContents(ctx, sourceConn, targetConn, targetSchemaMetadata, streamId)
-	if err != nil {
-		return err
-	}
-
-	err = compareMiniblockCandidateContents(ctx, sourceConn, targetConn, sourceInfo, targetSchemaMetadata, streamId)
-	if err != nil {
-		return err
-	}
-
-	err = compareMinipoolContents(ctx, sourceConn, targetConn, targetSchemaMetadata, streamId)
 	if err != nil {
 		return err
 	}
