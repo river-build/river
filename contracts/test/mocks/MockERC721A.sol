@@ -6,11 +6,11 @@ pragma solidity ^0.8.23;
 // libraries
 
 // contracts
-import {ERC721A} from "contracts/src/diamond/facets/token/ERC721A/ERC721A.sol";
+import {ERC721ABase} from "contracts/src/diamond/facets/token/ERC721A/ERC721ABase.sol";
 
-contract MockERC721A is ERC721A {
+contract MockERC721A is ERC721ABase {
   constructor() {
-    __ERC721A_init_unchained("TownsTest", "TNFT");
+    __ERC721ABase_init("TownsTest", "TNFT");
   }
 
   function mintTo(address to) external returns (uint256 tokenId) {

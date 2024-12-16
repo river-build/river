@@ -12,7 +12,6 @@ import {Diamond} from "@river-build/diamond/src/Diamond.sol";
 import {MultiInit} from "@river-build/diamond/src/initializers/MultiInit.sol";
 
 // mocks
-import {DeployERC721A} from "contracts/scripts/deployments/facets/DeployERC721A.s.sol";
 import {DeployMockERC721A} from "contracts/scripts/deployments/utils/DeployMockERC721A.s.sol";
 
 // contracts
@@ -28,7 +27,6 @@ contract DeployMockNFT is DiamondHelper, Deployer {
   DeployMultiInit multiInitHelper = new DeployMultiInit();
 
   DeployMockERC721A mockERC721Helper = new DeployMockERC721A();
-  DeployERC721A erc721aHelper = new DeployERC721A();
 
   address diamondCut;
   address diamondLoupe;
@@ -43,13 +41,10 @@ contract DeployMockNFT is DiamondHelper, Deployer {
     address deployer
   ) internal returns (Diamond.InitParams memory) {
     address multiInit = multiInitHelper.deploy(deployer);
-
     diamondCut = diamondCutHelper.deploy(deployer);
     diamondLoupe = loupeHelper.deploy(deployer);
     introspection = introspectionHelper.deploy(deployer);
     erc721aMock = mockERC721Helper.deploy(deployer);
-
-    mockERC721Helper.addSelectors(erc721aHelper.selectors());
 
     addFacet(
       diamondCutHelper.makeCut(diamondCut, IDiamond.FacetCutAction.Add),
@@ -66,11 +61,7 @@ contract DeployMockNFT is DiamondHelper, Deployer {
       introspection,
       introspectionHelper.makeInitData("")
     );
-    addFacet(
-      mockERC721Helper.makeCut(erc721aMock, IDiamond.FacetCutAction.Add),
-      erc721aMock,
-      mockERC721Helper.makeInitData("")
-    );
+    addCut(mockERC721Helper.makeCut(erc721aMock, IDiamond.FacetCutAction.Add));
 
     return
       Diamond.InitParams({
