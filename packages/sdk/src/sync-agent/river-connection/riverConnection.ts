@@ -245,7 +245,7 @@ export class RiverConnection extends PersistedObservable<RiverConnectionModel> {
                     await this.client.stop()
                     this.client = undefined
                     await this.createStreamsClient()
-                    
+
                     if (loginContext.cancelled) {
                         logger.log('login cancelled after error')
                         break
