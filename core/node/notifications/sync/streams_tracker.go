@@ -9,8 +9,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prometheus/client_golang/prometheus"
-	"golang.org/x/sync/semaphore"
-
 	"github.com/river-build/river/core/contracts/river"
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
@@ -19,6 +17,7 @@ import (
 	"github.com/river-build/river/core/node/nodes"
 	"github.com/river-build/river/core/node/registries"
 	"github.com/river-build/river/core/node/shared"
+	"golang.org/x/sync/semaphore"
 )
 
 // maxConcurrentNodeRequests is the maximum number of concurrent
@@ -31,12 +30,13 @@ type StreamsTracker struct {
 	riverRegistry  *registries.RiverRegistryContract
 	// prevent making too many requests at the same time to a remote.
 	// keep per remote a worker pool that limits the number of concurrent requests.
-	workerPool    map[common.Address]*semaphore.Weighted
-	onChainConfig crypto.OnChainConfiguration
-	listener      events.StreamEventListener
-	storage       events.UserPreferencesStore
-	metrics       *streamsTrackerWorkerMetrics
-	tracked       sync.Map // map[shared.StreamId] = struct{}
+	workerPool          map[common.Address]*semaphore.Weighted
+	onChainConfig       crypto.OnChainConfiguration
+	listener            events.StreamEventListener
+	storage             events.UserPreferencesStore
+	metrics             *streamsTrackerWorkerMetrics
+	tracked             sync.Map // map[shared.StreamId] = struct{}
+	streamsSyncObserver StreamsObserver
 }
 
 // NewStreamsTracker create stream tracker instance.
@@ -84,6 +84,10 @@ func NewStreamsTracker(
 			"sync_pong",
 			"Number of received stream sync pong replies",
 		),
+		SyncStreamsMissingMiniBlocks: metricsFactory.NewCounter(prometheus.CounterOpts{
+			Name: "sync_streams_out_of_sync",
+			Help: "Number of streams that have reported missing sync miniblock updates",
+		}),
 	}
 
 	tracker := &StreamsTracker{
@@ -95,6 +99,8 @@ func NewStreamsTracker(
 		storage:        storage,
 		metrics:        metrics,
 	}
+
+	tracker.streamsSyncObserver = NewReceivedMiniblocksObserver(tracker, 5, 0)
 
 	// subscribe to stream events in river registry
 	if err := tracker.riverRegistry.OnStreamEvent(
@@ -110,6 +116,16 @@ func NewStreamsTracker(
 	return tracker, nil
 }
 
+func (tracker *StreamsTracker) ReportMissingSyncMiniBlock(
+	ctx context.Context,
+	streamID shared.StreamId,
+	missingMiniBlock int64,
+) {
+	dlog.FromCtx(ctx).
+		Debug("Stream sync missing miniblock", "stream", streamID, "miniblock", missingMiniBlock)
+	tracker.metrics.SyncStreamsMissingMiniBlocks.Inc()
+}
+
 // Run the stream tracker workers until the given ctx expires.
 func (tracker *StreamsTracker) Run(ctx context.Context) error {
 	// load streams and distribute streams by hashing the stream id over buckets and assign each bucket
@@ -122,6 +138,8 @@ func (tracker *StreamsTracker) Run(ctx context.Context) error {
 		streamsLoadedProgress = 0
 		start                 = time.Now()
 	)
+
+	go tracker.streamsSyncObserver.Run(ctx, 30*time.Second)
 
 	err := tracker.riverRegistry.ForAllStreams(
 		ctx,
@@ -169,7 +187,7 @@ func (tracker *StreamsTracker) Run(ctx context.Context) error {
 				// start tracking the stream until ctx expires
 				tracker.tasks.Add(1)
 				go func() {
-					st := StreamTrackerConnectGo{}
+					st := StreamTrackerConnectGo{observer: tracker.streamsSyncObserver}
 					idx := rand.Int63n(int64(len(tracker.nodeRegistries)))
 					st.Run(ctx, stream, tracker.nodeRegistries[idx], workerPool, tracker.onChainConfig,
 						tracker.listener, tracker.storage, tracker.metrics,
@@ -230,7 +248,7 @@ func (tracker *StreamsTracker) OnStreamAllocated(
 
 		tracker.tasks.Add(1)
 		go func() {
-			st := StreamTrackerConnectGo{}
+			st := StreamTrackerConnectGo{observer: tracker.streamsSyncObserver}
 			stream := &registries.GetStreamResult{
 				StreamId: streamID,
 				Nodes:    event.Nodes,
@@ -246,10 +264,17 @@ func (tracker *StreamsTracker) OnStreamAllocated(
 }
 
 func (tracker *StreamsTracker) OnStreamLastMiniblockUpdated(
+	_ context.Context,
+	event *river.StreamRegistryV1StreamLastMiniblockUpdated,
+) {
+	tracker.streamsSyncObserver.OnRegistryUpdate(event.StreamId, int64(event.LastMiniblockNum))
+}
+
+func NoopOnStreamLastMiniblockUpdated(
 	context.Context,
 	*river.StreamRegistryV1StreamLastMiniblockUpdated,
 ) {
-	// miniblocks are processed when a stream event with a block header is received for the stream
+	// do nothing
 }
 
 func (tracker *StreamsTracker) OnStreamPlacementUpdated(
