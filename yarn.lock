@@ -6434,7 +6434,7 @@ __metadata:
     "@openzeppelin/contracts-upgradeable": ^5.1.0
     "@prb/math": ^4.1.0
     "@prb/test": ^0.6.4
-    "@river-build/diamond": "github:river-build/diamond#138fcb3b0efbda94563d3b72e3dd7106261abdc4"
+    "@river-build/diamond": "github:river-build/diamond#8341c4888cf74329663abe4d34b96a07c21c7677"
     account-abstraction: "github:eth-infinitism/account-abstraction"
     ds-test: "github:dapphub/ds-test"
     forge-std: "github:foundry-rs/forge-std#v1.9.4"
@@ -6445,13 +6445,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@river-build/diamond@github:river-build/diamond#138fcb3b0efbda94563d3b72e3dd7106261abdc4":
+"@river-build/diamond@github:river-build/diamond#8341c4888cf74329663abe4d34b96a07c21c7677":
   version: 1.1.0
-  resolution: "@river-build/diamond@https://github.com/river-build/diamond.git#commit=138fcb3b0efbda94563d3b72e3dd7106261abdc4"
+  resolution: "@river-build/diamond@https://github.com/river-build/diamond.git#commit=8341c4888cf74329663abe4d34b96a07c21c7677"
   dependencies:
     "@openzeppelin/contracts": ^5.1.0
     solady: ^0.0.281
-  checksum: 9e6b9386cdf4655ac8534cfbc9637d9362d382e2e29989bf073c87cbe6f97e62b961662beb06cb052d5b1c5cd61ba2615a84e53f014f4281a46c0dd2957ad491
+  checksum: d71fac5e767f285471723c8d4a2dd99e2b8265410ed5498323818a35bf9cda9e9897dca397e95687d84bf93c7b7d1ec77407c73159c4e490d36aedf68de7f855
   languageName: node
   linkType: hard
 
