@@ -560,6 +560,9 @@ jobs:
               run: just RUN_ENV=multi config-and-start
               working-directory: core
 
+            - name: Build & Test (with entitlements)
+              run: yarn csb:turbo-no-sdk
+
             - name: Run River Tests Against Legacy Spaces (with entitlements)
               run: yarn turbo run test:ci:multi:ent:legacy --filter=@river-build/sdk
 
