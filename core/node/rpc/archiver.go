@@ -469,7 +469,10 @@ func (a *Archiver) startImpl(ctx context.Context, once bool, metrics infra.Metri
 				"pageSize",
 				pageSize,
 			)
-			SleepWithContext(ctx, 500*time.Millisecond)
+			err = SleepWithContext(ctx, 500*time.Millisecond)
+			if err != nil {
+				return err
+			}
 		}
 
 		if err != nil {
