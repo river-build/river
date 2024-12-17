@@ -4,7 +4,7 @@ pragma solidity ^0.8.23;
 import {Facet} from "@river-build/diamond/src/facets/Facet.sol";
 import {OwnableBase} from "@river-build/diamond/src/facets/ownable/OwnableBase.sol";
 
-contract UpgradeableBeaconBase {
+abstract contract UpgradeableBeaconBase {
   /// @dev The new implementation is not a deployed contract.
   error NewImplementationHasNoCode();
 
