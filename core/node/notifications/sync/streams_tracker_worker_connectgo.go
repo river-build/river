@@ -14,8 +14,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prometheus/client_golang/prometheus"
-	"golang.org/x/sync/semaphore"
-
 	"github.com/river-build/river/core/node/crypto"
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
@@ -24,9 +22,12 @@ import (
 	"github.com/river-build/river/core/node/protocol/protocolconnect"
 	"github.com/river-build/river/core/node/registries"
 	"github.com/river-build/river/core/node/shared"
+	"golang.org/x/sync/semaphore"
 )
 
-type StreamTrackerConnectGo struct{}
+type StreamTrackerConnectGo struct {
+	observer StreamsObserver
+}
 
 func channelLabelType(streamID shared.StreamId) string {
 	switch streamID.Type() {
@@ -272,8 +273,16 @@ func (s *StreamTrackerConnectGo) Run(
 
 				// apply update
 				for _, event := range update.GetStream().GetEvents() {
-					if err := trackedStream.HandleEvent(syncCtx, event); err != nil {
+					parsedEvent, err := events.ParseEvent(event)
+					if err != nil {
+						log.Error("Unable to parse event", "stream", streamID, "err", err)
+						continue
+					}
+					if err := trackedStream.HandleEvent(syncCtx, parsedEvent); err != nil {
 						log.Error("Unable to handle event", "stream", streamID, "err", err)
+					}
+					if header := parsedEvent.Event.GetMiniblockHeader(); header != nil {
+						s.observer.OnSyncUpdate(streamID, header.GetMiniblockNum(), false)
 					}
 				}
 

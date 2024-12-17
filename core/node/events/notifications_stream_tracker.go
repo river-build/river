@@ -92,19 +92,14 @@ func NewNotificationsStreamTrackerFromStreamAndCookie(
 
 func (ts *TrackedNotificationStreamView) HandleEvent(
 	ctx context.Context,
-	event *Envelope,
+	event *ParsedEvent,
 ) error {
-	parsedEvent, err := ParseEvent(event)
-	if err != nil {
-		return err
-	}
-
-	if parsedEvent.Event.GetMiniblockHeader() != nil { // clean up minipool
-		return ts.applyMiniblockHeader(parsedEvent)
+	if event.Event.GetMiniblockHeader() != nil { // clean up minipool
+		return ts.applyMiniblockHeader(event)
 	}
 
 	// add event calls the message listener that send notifications when needed
-	return ts.addEvent(ctx, parsedEvent)
+	return ts.addEvent(ctx, event)
 }
 
 func (ts *TrackedNotificationStreamView) LatestSyncCookie() *SyncCookie {
