@@ -21,9 +21,6 @@ import {MockERC20} from "contracts/test/mocks/MockERC20.sol";
 import {TokenMigrationFacet} from "contracts/src/tokens/migration/TokenMigration.sol";
 import {PausableFacet} from "contracts/src/diamond/facets/pausable/PausableFacet.sol";
 
-// debuggging
-import {console} from "forge-std/console.sol";
-
 contract TokenMigrationTest is
   TestUtils,
   IPausableBase,

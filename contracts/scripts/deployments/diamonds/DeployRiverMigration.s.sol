@@ -50,6 +50,14 @@ contract DeployRiverMigration is DiamondHelper, Deployer {
     NEW_TOKEN = _newToken;
   }
 
+  function getTokens() public returns (address, address) {
+    if (OLD_TOKEN == address(0) && NEW_TOKEN == address(0)) {
+      return (getDeployment("oldRiver"), getDeployment("river"));
+    }
+
+    return (OLD_TOKEN, NEW_TOKEN);
+  }
+
   function addImmutableCuts(address deployer) internal {
     multiInit = deployMultiInit.deploy(deployer);
     diamondCut = diamondCutHelper.deploy(deployer);
@@ -90,10 +98,12 @@ contract DeployRiverMigration is DiamondHelper, Deployer {
   ) public returns (Diamond.InitParams memory) {
     tokenMigration = tokenMigrationHelper.deploy(deployer);
 
+    (address oldToken, address newToken) = getTokens();
+
     addFacet(
       tokenMigrationHelper.makeCut(tokenMigration, IDiamond.FacetCutAction.Add),
       tokenMigration,
-      tokenMigrationHelper.makeInitData(OLD_TOKEN, NEW_TOKEN)
+      tokenMigrationHelper.makeInitData(oldToken, newToken)
     );
 
     return
