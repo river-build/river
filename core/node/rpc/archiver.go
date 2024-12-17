@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prometheus/client_golang/prometheus"
+	"gopkg.in/DataDog/dd-trace-go.v1/internal/log"
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/river"
@@ -435,6 +436,7 @@ func (a *Archiver) startImpl(ctx context.Context, once bool, metrics infra.Metri
 	pageSize := a.config.GetStreamsContractCallPageSize()
 
 	blockNum := a.contract.Blockchain.InitialBlockNum
+	log.Info("Reading stream registry for contract state of streams", "blockNum", blockNum, "pageSize", pageSize)
 
 	callOpts := &bind.CallOpts{
 		Context:     ctx,
@@ -468,9 +470,21 @@ func (a *Archiver) startImpl(ctx context.Context, once bool, metrics infra.Metri
 			log.Debug("Adding stream via detecting presence in stream registry", "streamId", stream.Id)
 			a.addNewStream(ctx, stream.Id, &stream.Stream.Nodes, stream.Stream.LastMiniblockNum)
 		}
+		if lastPage {
+			log.Info(
+				"Iterated through all contract streams",
+				"pageSize",
+				pageSize,
+				"numStreams",
+				i+int64(len(streams)),
+				"blockNum",
+				blockNum,
+			)
+		}
 	}
 
 	if !once {
+		log.Info("Listening to stream events", "blockNum", blockNum+1)
 		err = a.contract.OnStreamEvent(
 			ctx,
 			blockNum+1,
