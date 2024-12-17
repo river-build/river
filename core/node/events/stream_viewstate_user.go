@@ -79,6 +79,6 @@ func (r *streamViewImpl) GetUserMembership(streamId shared.StreamId) (Membership
 		return true, nil // return forEachEvent
 	}
 
-	err = r.forEachEvent(r.snapshotIndex+1, updateFn)
+	err = r.forEachEventNoMinipool(r.snapshotIndex+1, updateFn)
 	return retValue, err
 }

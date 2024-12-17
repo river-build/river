@@ -486,8 +486,20 @@ func (r *streamViewImpl) blockWithNum(mininblockNum int64) (*MiniblockInfo, erro
 	return r.blocks[index], nil
 }
 
-// iterate over events starting at startBlock including events in the minipool
-func (r *streamViewImpl) forEachEvent(
+// forEachEventWithMinipool iterates over events in miniblocks starting at startBlock index in the miniblock array and then over events in the minipool
+func (r *streamViewImpl) forEachEventWithMinipool(
+	startBlock int,
+	op func(e *ParsedEvent, minibockNum int64, eventNum int64) (bool, error),
+) error {
+	err := r.forEachEventNoMinipool(startBlock, op)
+	if err != nil {
+		return err
+	}
+	return r.minipool.forEachEvent(op)
+}
+
+// forEachEventNoMinipool iterates over events in miniblocks starting at startBlock index in the miniblock array
+func (r *streamViewImpl) forEachEventNoMinipool(
 	startBlock int,
 	op func(e *ParsedEvent, minibockNum int64, eventNum int64) (bool, error),
 ) error {
@@ -501,8 +513,7 @@ func (r *streamViewImpl) forEachEvent(
 			return err
 		}
 	}
-	err := r.minipool.forEachEvent(op)
-	return err
+	return nil
 }
 
 func (r *streamViewImpl) LastEvent() *ParsedEvent {

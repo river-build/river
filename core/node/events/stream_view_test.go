@@ -91,7 +91,7 @@ func TestLoad(t *testing.T) {
 
 	count1 := 0
 	newEnvelopesHashes := make([]common.Hash, 0)
-	_ = view.forEachEvent(0, func(e *ParsedEvent, minibockNum int64, eventNum int64) (bool, error) {
+	_ = view.forEachEventWithMinipool(0, func(e *ParsedEvent, minibockNum int64, eventNum int64) (bool, error) {
 		assert.Equal(t, int64(count1), eventNum)
 		count1++
 		newEnvelopesHashes = append(newEnvelopesHashes, e.Hash)
@@ -180,7 +180,7 @@ func TestLoad(t *testing.T) {
 
 	// check count2
 	count2 := 0
-	err = view.forEachEvent(0, func(e *ParsedEvent, minibockNum int64, eventNum int64) (bool, error) {
+	err = view.forEachEventWithMinipool(0, func(e *ParsedEvent, minibockNum int64, eventNum int64) (bool, error) {
 		assert.Equal(t, int64(count2), eventNum)
 		if count2 < 3 {
 			assert.Equal(t, int64(0), minibockNum)

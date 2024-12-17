@@ -64,7 +64,8 @@ func (r *streamViewImpl) GetChannelInfo(channelId shared.StreamId) (*SpacePayloa
 		return true, nil
 	}
 
-	err = r.forEachEvent(r.snapshotIndex+1, updateFn)
+	// TODO: REPLICATON: FIX: this seems to be incorrect: in replicated case, this will provide incosisten picture across nodes
+	err = r.forEachEventWithMinipool(r.snapshotIndex+1, updateFn)
 	if err != nil {
 		return nil, err
 	}

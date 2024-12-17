@@ -3,6 +3,7 @@ package events
 import (
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/river-build/river/core/node/base"
 	. "github.com/river-build/river/core/node/protocol"
 	"github.com/river-build/river/core/node/shared"
@@ -54,7 +55,8 @@ func (r *streamViewImpl) BlockedUsers() (mapset.Set[common.Address], error) {
 		return true, nil
 	}
 
-	err := r.forEachEvent(r.snapshotIndex+1, updateFn)
+	// TODO: REPLICATON: FIX: do we care about consistency across nodes here? Should blocking be enforced on the client as well?
+	err := r.forEachEventWithMinipool(r.snapshotIndex+1, updateFn)
 	if err != nil {
 		return nil, err
 	}

@@ -193,7 +193,9 @@ func TestSpaceViewState(t *testing.T) {
 	ctx, tt := makeCacheTestContext(t, testParams{
 		defaultMinEventsPerSnapshot: 2,
 	})
-	_ = tt.initCache(0, nil)
+	_ = tt.initCache(0, &MiniblockProducerOpts{
+		TestDisableMbProdcutionOnBlock: true,
+	})
 
 	user1Wallet, _ := crypto.NewWallet(ctx)
 	user2Wallet, _ := crypto.NewWallet(ctx)
@@ -214,9 +216,9 @@ func TestSpaceViewState(t *testing.T) {
 	view0, err := stream.GetView(ctx)
 	require.NoError(t, err)
 	// check that users 2 and 3 are not joined yet,
-	spaceViewStateTest_CheckUserJoined(t, view0.(JoinableStreamView), user1Wallet, true)
-	spaceViewStateTest_CheckUserJoined(t, view0.(JoinableStreamView), user2Wallet, false)
-	spaceViewStateTest_CheckUserJoined(t, view0.(JoinableStreamView), user3Wallet, false)
+	checkUserJoined(t, view0.(JoinableStreamView), user1Wallet, true)
+	checkUserJoined(t, view0.(JoinableStreamView), user2Wallet, false)
+	checkUserJoined(t, view0.(JoinableStreamView), user3Wallet, false)
 	// add two more membership events
 	// user_2
 	joinSpace_T(t, user2Wallet, ctx, stream, []string{user2Id})
@@ -225,10 +227,10 @@ func TestSpaceViewState(t *testing.T) {
 	// get a new view
 	view1, err := stream.GetView(ctx)
 	require.NoError(t, err)
-	// users show up as joined immediately, because we need that information to continue to add events
-	spaceViewStateTest_CheckUserJoined(t, view1.(JoinableStreamView), user1Wallet, true)
-	spaceViewStateTest_CheckUserJoined(t, view1.(JoinableStreamView), user2Wallet, true)
-	spaceViewStateTest_CheckUserJoined(t, view1.(JoinableStreamView), user3Wallet, true)
+	// users are not joined yet, since joins and processed on mb boundaries
+	checkUserJoined(t, view1.(JoinableStreamView), user1Wallet, true)
+	checkUserJoined(t, view1.(JoinableStreamView), user2Wallet, false)
+	checkUserJoined(t, view1.(JoinableStreamView), user3Wallet, false)
 	require.Equal(t, 1, len(stream.view().blocks))
 
 	// make a miniblock
@@ -239,9 +241,9 @@ func TestSpaceViewState(t *testing.T) {
 	view2, err := stream.GetView(ctx)
 	require.NoError(t, err)
 	// check that users are joined
-	spaceViewStateTest_CheckUserJoined(t, view2.(JoinableStreamView), user1Wallet, true)
-	spaceViewStateTest_CheckUserJoined(t, view2.(JoinableStreamView), user2Wallet, true)
-	spaceViewStateTest_CheckUserJoined(t, view2.(JoinableStreamView), user3Wallet, true)
+	checkUserJoined(t, view2.(JoinableStreamView), user1Wallet, true)
+	checkUserJoined(t, view2.(JoinableStreamView), user2Wallet, true)
+	checkUserJoined(t, view2.(JoinableStreamView), user3Wallet, true)
 	// now, turn that block into bytes, then load it back into a view
 	miniblocks := stream.view().MiniblocksFromLastSnapshot()
 	require.Equal(t, 1, len(miniblocks))
@@ -262,20 +264,25 @@ func TestSpaceViewState(t *testing.T) {
 	require.NotNil(t, view3)
 
 	// check that users are joined when loading from the snapshot
-	spaceViewStateTest_CheckUserJoined(t, view3.(JoinableStreamView), user1Wallet, true)
-	spaceViewStateTest_CheckUserJoined(t, view3.(JoinableStreamView), user2Wallet, true)
-	spaceViewStateTest_CheckUserJoined(t, view3.(JoinableStreamView), user3Wallet, true)
+	checkUserJoined(t, view3.(JoinableStreamView), user1Wallet, true)
+	checkUserJoined(t, view3.(JoinableStreamView), user2Wallet, true)
+	checkUserJoined(t, view3.(JoinableStreamView), user3Wallet, true)
 }
 
-func spaceViewStateTest_CheckUserJoined(
+func checkUserJoined(
 	t *testing.T,
 	view JoinableStreamView,
 	userWallet *crypto.Wallet,
 	expected bool,
 ) {
+	t.Helper()
 	joined, err := view.IsMember(userWallet.Address.Bytes())
-	require.NoError(t, err)
-	require.Equal(t, expected, joined)
+	require.NoError(t, err, "IsMember failed")
+	if expected {
+		require.True(t, joined, "User should be joined")
+	} else {
+		require.False(t, joined, "User should not be joined")
+	}
 }
 
 func TestChannelViewState_JoinedMembers(t *testing.T) {

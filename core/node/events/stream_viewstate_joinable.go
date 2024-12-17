@@ -52,7 +52,7 @@ func (r *streamViewImpl) GetChannelMembers() (mapset.Set[string], error) {
 		return true, nil
 	}
 
-	err := r.forEachEvent(r.snapshotIndex+1, updateFn)
+	err := r.forEachEventNoMinipool(r.snapshotIndex+1, updateFn)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func (r *streamViewImpl) GetMembership(userAddress []byte) (protocol.MembershipO
 		return true, nil
 	}
 
-	err := r.forEachEvent(r.snapshotIndex+1, updateFn)
+	err := r.forEachEventNoMinipool(r.snapshotIndex+1, updateFn)
 	if err != nil {
 		return retValue, err
 	}
@@ -131,7 +131,7 @@ func (r *streamViewImpl) GetKeySolicitations(userAddress []byte) ([]*protocol.Me
 		return true, nil
 	}
 
-	err := r.forEachEvent(r.snapshotIndex+1, updateFn)
+	err := r.forEachEventNoMinipool(r.snapshotIndex+1, updateFn)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func (r *streamViewImpl) GetPinnedMessages() ([]*protocol.MemberPayload_SnappedP
 		return true, nil
 	}
 
-	err := r.forEachEvent(r.snapshotIndex+1, updateFn)
+	err := r.forEachEventNoMinipool(r.snapshotIndex+1, updateFn)
 	if err != nil {
 		return nil, err
 	}

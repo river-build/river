@@ -669,6 +669,11 @@ message Tags {
     optional bytes thread_id = 5;
 }
 
+message MiniblockReference {
+    int64 num = 1;
+    bytes hash = 2;
+}
+
 // GetStreamExResponse is a stream of raw data that represents the current state of the requested stream.
 // These responses represent streams that are not expected to change once finalized, and have a optimized code path
 // for retrieval. Response may potentially be very large, and are streamed back to the client. The client is expected
@@ -684,6 +689,10 @@ message CreateStreamRequest {
     repeated Envelope events = 1;
     bytes stream_id = 2; // stream_id should match the stream_id in the inception payload of the first event
     map<string, bytes> metadata = 3;
+
+    // creator_stream_miniblock specifies the miniblock at which the creator stream
+    // contains necessary membership events for this request to succeed.
+    MiniblockReference creator_stream_miniblock = 4;
  }
 
 message CreateStreamResponse {

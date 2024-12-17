@@ -829,9 +829,9 @@ func (s *streamImpl) Sub(ctx context.Context, cookie *SyncCookie, receiver SyncR
 			return nil
 		}
 
-		// append events from blocks
+		// append events from blocks and minipool
 		envelopes := make([]*Envelope, 0, 16)
-		err = s.view().forEachEvent(miniblockIndex, func(e *ParsedEvent, minibockNum int64, eventNum int64) (bool, error) {
+		err = s.view().forEachEventWithMinipool(miniblockIndex, func(e *ParsedEvent, minibockNum int64, eventNum int64) (bool, error) {
 			envelopes = append(envelopes, e.Envelope)
 			return true, nil
 		})
