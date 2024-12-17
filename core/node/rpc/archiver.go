@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/prometheus/client_golang/prometheus"
-	"gopkg.in/DataDog/dd-trace-go.v1/internal/log"
 
 	"github.com/river-build/river/core/config"
 	"github.com/river-build/river/core/contracts/river"
@@ -436,6 +435,8 @@ func (a *Archiver) startImpl(ctx context.Context, once bool, metrics infra.Metri
 	pageSize := a.config.GetStreamsContractCallPageSize()
 
 	blockNum := a.contract.Blockchain.InitialBlockNum
+
+	log := dlog.FromCtx(ctx)
 	log.Info("Reading stream registry for contract state of streams", "blockNum", blockNum, "pageSize", pageSize)
 
 	callOpts := &bind.CallOpts{
