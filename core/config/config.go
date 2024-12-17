@@ -446,6 +446,7 @@ type DebugEndpointsConfig struct {
 	Stacks          bool
 	StacksMaxSizeKb int
 	TxPool          bool
+	Archive         bool
 
 	// Make storage statistics available via debug endpoints. This may involve running queries
 	// on the underlying database.
