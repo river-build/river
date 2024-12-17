@@ -423,6 +423,7 @@ func (a *Archiver) startImpl(ctx context.Context, once bool, metrics infra.Metri
 	if once {
 		a.tasksWG = &sync.WaitGroup{}
 	} else if metrics != nil {
+		dlog.FromCtx(ctx).Info("Setting up metrics")
 		a.setupStatisticsMetrics(metrics)
 	}
 
