@@ -1413,7 +1413,7 @@ describe.concurrent('createOperationsTree', () => {
 })
 
 describe.concurrent('evaluateOperationsForEntitledWallet', () => {
-    it.only.concurrent('4 checks - evaluateOperationsForEntitledWallet', async () => {
+    it.concurrent('4 checks - evaluateOperationsForEntitledWallet', async () => {
         const checkOp: DecodedCheckOperation[] = [
             // pass
             {
