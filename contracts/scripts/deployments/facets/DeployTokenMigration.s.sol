@@ -15,6 +15,7 @@ contract DeployTokenMigration is FacetHelper, Deployer {
   constructor() {
     addSelector(TokenMigrationFacet.migrate.selector);
     addSelector(TokenMigrationFacet.emergencyWithdraw.selector);
+    addSelector(TokenMigrationFacet.tokens.selector);
   }
 
   function initializer() public pure override returns (bytes4) {

@@ -23,7 +23,7 @@ import {DeployTokenMigration} from "contracts/scripts/deployments/facets/DeployT
 
 contract DeployRiverMigration is DiamondHelper, Deployer {
   address OLD_TOKEN = 0x0000000000000000000000000000000000000000;
-  address NEW_TOKEN = 0x0000000000000000000000000000000000000001;
+  address NEW_TOKEN = 0x0000000000000000000000000000000000000000;
 
   DeployMultiInit deployMultiInit = new DeployMultiInit();
   DeployDiamondCut diamondCutHelper = new DeployDiamondCut();

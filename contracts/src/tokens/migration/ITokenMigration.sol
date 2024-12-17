@@ -33,4 +33,7 @@ interface ITokenMigration is ITokenMigrationBase {
   /// @notice Allows the owner to withdraw tokens from the contract
   /// @dev Only callable by contract owner
   function emergencyWithdraw(IERC20 token, address to) external;
+
+  /// @notice Returns the token pair
+  function tokens() external view returns (IERC20 oldToken, IERC20 newToken);
 }

@@ -58,6 +58,11 @@ contract TestUtils is Test {
     // solhint-enable
   }
 
+  function getJsonAddress(string memory path) internal view returns (address) {
+    string memory data = vm.readFile(path);
+    return vm.parseJsonAddress(data, ".address");
+  }
+
   function getMappingValueSlot(
     uint256 mappingSlot,
     uint256 key

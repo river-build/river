@@ -14,13 +14,11 @@ import {Validator} from "contracts/src/utils/Validator.sol";
 // contracts
 import {PausableBase} from "contracts/src/diamond/facets/pausable/PausableBase.sol";
 import {OwnableBase} from "contracts/src/diamond/facets/ownable/OwnableBase.sol";
-import {ReentrancyGuard} from "contracts/src/diamond/facets/reentrancy/ReentrancyGuard.sol";
 import {Facet} from "contracts/src/diamond/facets/Facet.sol";
 
 contract TokenMigrationFacet is
   OwnableBase,
   PausableBase,
-  ReentrancyGuard,
   Facet,
   ITokenMigration
 {
@@ -38,7 +36,7 @@ contract TokenMigrationFacet is
   }
 
   /// @inheritdoc ITokenMigration
-  function migrate(address account) external whenNotPaused nonReentrant {
+  function migrate(address account) external whenNotPaused {
     Validator.checkAddress(account);
 
     TokenMigrationStorage.Layout storage ds = TokenMigrationStorage.layout();
@@ -74,6 +72,14 @@ contract TokenMigrationFacet is
     uint256 balance = token.balanceOf(address(this));
     address(token).safeTransfer(to, balance);
     emit EmergencyWithdraw(address(token), to, balance);
+  }
+
+  /// @inheritdoc ITokenMigration
+  function tokens() external view returns (IERC20 oldToken, IERC20 newToken) {
+    return (
+      TokenMigrationStorage.layout().oldToken,
+      TokenMigrationStorage.layout().newToken
+    );
   }
 
   // =============================================================
