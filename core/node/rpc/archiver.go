@@ -447,12 +447,31 @@ func (a *Archiver) startImpl(ctx context.Context, once bool, metrics infra.Metri
 	lastPage := false
 	var err error
 	var streams []river.StreamWithId
+	retries := 3
 	for i := int64(0); !lastPage; i += pageSize {
-		streams, lastPage, err = a.contract.StreamRegistry.GetPaginatedStreams(
-			callOpts,
-			big.NewInt(i),
-			big.NewInt(i+pageSize),
-		)
+		for retry := 0; retries < 3; retry += 1 {
+			streams, lastPage, err = a.contract.StreamRegistry.GetPaginatedStreams(
+				callOpts,
+				big.NewInt(i),
+				big.NewInt(i+pageSize),
+			)
+			if err == nil {
+				break
+			}
+			log.Warn(
+				"Encountered error when calling GetPaginatedStreams",
+				"retry",
+				retry,
+				"error",
+				err,
+				"i",
+				i,
+				"pageSize",
+				pageSize,
+			)
+			SleepWithContext(ctx, 500*time.Millisecond)
+		}
+
 		if err != nil {
 			return WrapRiverError(
 				Err_CANNOT_CALL_CONTRACT,
