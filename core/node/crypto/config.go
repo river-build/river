@@ -585,7 +585,11 @@ func ABIDecodeString(data []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return args[0].(string), nil
+	str, ok := args[0].(string)
+	if !ok {
+		return "", fmt.Errorf("AbiDecodeString: argument does not resolve to string")
+	}
+	return str, nil
 }
 
 func abiBytesToTypeDecoder(ctx context.Context) mapstructure.DecodeHookFuncValue {
