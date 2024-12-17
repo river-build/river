@@ -481,8 +481,6 @@ func (a *Archiver) startImpl(ctx context.Context, once bool, metrics infra.Metri
 		if err != nil {
 			return err
 		}
-
-		go a.printStats(ctx)
 	}
 
 	return nil
@@ -580,24 +578,6 @@ func (a *Archiver) worker(ctx context.Context) {
 			if a.tasksWG != nil {
 				a.tasksWG.Done()
 			}
-		}
-	}
-}
-
-func (a *Archiver) printStats(ctx context.Context) {
-	log := dlog.FromCtx(ctx)
-	period := a.config.GetPrintStatsPeriod()
-	if period <= 0 {
-		return
-	}
-	ticker := time.NewTicker(period)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			log.Info("Archiver stats", "stats", a.GetStats())
 		}
 	}
 }
