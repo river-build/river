@@ -685,6 +685,9 @@ export async function evaluateOperationsForEntitledWallet(
     linkedWallets: string[],
     xchainConfig: XchainConfig,
 ) {
+    if (operations.length === 0) {
+        return zeroAddress
+    }
     const controller = new AbortController()
     const root = postOrderArrayToTree(operations)
     const result = evaluateTree(controller, linkedWallets, xchainConfig, root)
