@@ -86,6 +86,42 @@ contract ForkRewardsDistributionTest is
   }
 
   /// forge-config: default.fuzz.runs = 64
+  function test_fuzz_stake_mainnetDelegation_shouldNotStartWith0(
+    address delegator,
+    uint96 amount,
+    uint256 seed
+  ) public {
+    address operator = randomOperator(seed);
+    amount = uint96(bound(amount, 1, type(uint96).max / 2));
+    vm.assume(delegator != address(rewardsDistributionFacet));
+    vm.assume(delegator != address(0) && delegator != operator);
+
+    address messenger = IMainnetDelegation(baseRegistry).getMessenger();
+    address proxyDelegation = IMainnetDelegation(baseRegistry)
+      .getProxyDelegation();
+
+    mockMessenger(messenger, proxyDelegation);
+    IMainnetDelegation(baseRegistry).setDelegation(delegator, operator, amount);
+    assertEq(
+      IMainnetDelegation(baseRegistry).getDepositIdByDelegator(delegator),
+      0
+    );
+    assertEq(
+      rewardsDistributionFacet.stakedByDepositor(
+        address(rewardsDistributionFacet)
+      ),
+      amount
+    );
+
+    mockMessenger(messenger, proxyDelegation);
+    IMainnetDelegation(baseRegistry).setDelegation(delegator, operator, amount);
+    assertEq(
+      IMainnetDelegation(baseRegistry).getDepositIdByDelegator(delegator),
+      1
+    );
+  }
+
+  /// forge-config: default.fuzz.runs = 64
   function test_fuzz_increaseStake(
     uint96 amount0,
     uint96 amount1,
