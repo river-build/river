@@ -239,10 +239,10 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 					LogError(dlog.FromCtx(ctx))
 				s.exitSignal <- err
 			}
-
-			if err = SleepWithContext(ctx, 1*time.Second); err != nil {
-				return
-			}
+		}
+		// Wait 1s between db pings.
+		if err = SleepWithContext(ctx, 1*time.Second); err != nil {
+			return
 		}
 	}
 }
