@@ -80,7 +80,7 @@ contract TokenMigrationFacet is
   //                           Internal
   // =============================================================
 
-  function _validateTokens(IERC20 oldToken, IERC20 newToken) internal view {
+  function _validateTokens(IERC20 oldToken, IERC20 newToken) internal pure {
     if (address(oldToken) == address(0) || address(newToken) == address(0))
       CustomRevert.revertWith(TokenMigration__InvalidTokens.selector);
   }

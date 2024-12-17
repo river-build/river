@@ -2,6 +2,7 @@
 pragma solidity ^0.8.23;
 
 // interfaces
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 // libraries
 
@@ -29,7 +30,7 @@ interface ITokenMigration is ITokenMigrationBase {
   /// @dev The account must have a non-zero balance of old tokens and have approved this contract
   function migrate(address account) external;
 
-  /// @notice Allows the owner to withdraw any remaining old tokens from the contract
+  /// @notice Allows the owner to withdraw tokens from the contract
   /// @dev Only callable by contract owner
-  function withdrawTokens() external;
+  function emergencyWithdraw(IERC20 token, address to) external;
 }
