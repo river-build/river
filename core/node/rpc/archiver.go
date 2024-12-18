@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -27,7 +28,14 @@ import (
 // when a stream's miniblocks updates in the registry before we consider a
 // node behind of it does not have the latest miniblock.
 // Two blocks plus change
-var nodeUpdateGracePeriod = 5 * time.Second
+var (
+	nodeUpdateGracePeriod = 5 * time.Second
+	// For streams that cannot be updated to the current contract state, this is the
+	// grace period we give before we consider this stream to be corrupt.
+	// By the time a stream is this out of date with the contract state, we should have
+	// cycled through every node that hosts the replicated stream.
+	staleStreamGracePeriod = 100 * time.Second
+)
 
 type contractState struct {
 	// Everything in the registry state is protected by this mutex.
@@ -62,7 +70,7 @@ type ArchiveStream struct {
 	registryState contractState
 	numBlocksInDb atomic.Int64 // -1 means not loaded
 
-	stale atomic.Bool
+	corrupt atomic.Bool
 
 	// Mutex is used so only one archive operation is performed at a time.
 	mu sync.Mutex
@@ -224,20 +232,24 @@ func (a *Archiver) setupStatisticsMetrics(factory infra.MetricsFactory) {
 // as the cache iteration is not thread-safe. However, all streams reported as stale either
 // are or were recently stale, and all streams not reported either are not or recently were
 // not stale, so this is "good enough".
-func (a *Archiver) getStaleStreams() map[StreamId]struct{} {
-	staleStreams := make(map[StreamId]struct{}, 0)
+func (a *Archiver) getCorruptStreams(ctx context.Context) map[StreamId]*ArchiveStream {
+	corruptStreams := make(map[StreamId]*ArchiveStream, 0)
 
 	a.streams.Range(
 		func(key, value any) bool {
 			stream, ok := value.(*ArchiveStream)
-			if ok && stream.stale.Load() {
-				staleStreams[stream.streamId] = struct{}{}
+			if ok && stream.corrupt.Load() {
+				corruptStreams[stream.streamId] = stream
+			} else if !ok {
+				dlog.FromCtx(ctx).
+					Error("Unexpected value stored in stream cache (not an ArchiveStream)", "value", value)
 			}
+
 			return true
 		},
 	)
 
-	return staleStreams
+	return corruptStreams
 }
 
 func (a *Archiver) addNewStream(
@@ -259,12 +271,11 @@ func (a *Archiver) addNewStream(
 	a.streamsExamined.Add(1)
 }
 
+// Consider this node behind for this stream and advance the node pointer
 func (a *Archiver) onNodeBehind(
 	stream *ArchiveStream,
 	nodeAddr common.Address,
 ) {
-	// Mark the stream as stale and advance the node pointer.
-	stream.stale.Store(true)
 	// We now consider this node behind for this stream. Let's advance it.
 	if a.nodeAdvances != nil {
 		nodeAddress := prometheus.Labels{"node_address": nodeAddr.String()}
@@ -354,16 +365,36 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 				err,
 				"streamId",
 				stream.streamId,
+				"node",
+				nodeAddr.Hex(),
 			)
 			if a.nodeAdvances != nil {
 				a.nodeAdvances.With(prometheus.Labels{"node_address": nodeAddr.String()}).Inc()
 			}
 			stream.nodes.AdvanceStickyPeer(nodeAddr)
+
+			if time.Since(contractMbsUpdated) < staleStreamGracePeriod {
+				// We remove the stream from the rotation when it passes the grace period for stale
+				// streams. Keeping it here gives us a chance to fetch the stream if a node is booting
+				// and unavailable for an intermittent period, or fetch from another node if a single
+				// node is unavailable.
+				time.AfterFunc(5*time.Second, func() {
+					a.tasks <- stream.streamId
+				})
+			} else {
+				// Mark this stream as corrupt
+				stream.corrupt.Store(true)
+			}
+
 			return err
 		}
 
 		if (err != nil && AsRiverError(err).Code == Err_NOT_FOUND) || resp.Msg == nil || len(resp.Msg.Miniblocks) == 0 {
-			if time.Since(contractMbsUpdated) > nodeUpdateGracePeriod {
+			if time.Since(contractMbsUpdated) > staleStreamGracePeriod {
+				stream.corrupt.Store(true)
+				// Do not re-insert this stream back into the task queue, it is now considered un-updatable.
+				return nil
+			} else if time.Since(contractMbsUpdated) > nodeUpdateGracePeriod {
 				a.onNodeBehind(
 					stream,
 					nodeAddr,
@@ -424,14 +455,34 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 		a.miniblocksProcessed.Add(uint64(len(serialized)))
 	}
 
-	// All blocks processed, mark stream as current
-	stream.stale.Store(false)
-
 	return nil
+}
+
+func (a *Archiver) emitPeriodicCorruptStreamReport(ctx context.Context) {
+	ticker := time.NewTicker(15 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			corruptStreams := a.getCorruptStreams(ctx)
+
+			var builder strings.Builder
+			for _, as := range corruptStreams {
+				builder.WriteString(as.streamId.String())
+				builder.WriteString("\n")
+			}
+			dlog.FromCtx(ctx).
+				Info("Corrupt streams report", "total", len(corruptStreams), "streams", builder.String())
+		}
+	}
 }
 
 func (a *Archiver) Start(ctx context.Context, once bool, metrics infra.MetricsFactory, exitSignal chan<- error) {
 	defer a.startedWG.Done()
+	go a.emitPeriodicCorruptStreamReport(ctx)
 	err := a.startImpl(ctx, once, metrics)
 	if err != nil {
 		exitSignal <- err
