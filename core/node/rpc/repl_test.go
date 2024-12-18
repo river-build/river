@@ -15,7 +15,7 @@ import (
 )
 
 func TestReplCreate(t *testing.T) {
-	tt := newServiceTester(t, serviceTesterOpts{numNodes: 5, replicationFactor: 5, start: true, printTestLogs: true})
+	tt := newServiceTester(t, serviceTesterOpts{numNodes: 5, replicationFactor: 5, start: true})
 	ctx := tt.ctx
 	require := tt.require
 
@@ -35,7 +35,7 @@ func TestReplCreate(t *testing.T) {
 }
 
 func TestReplAdd(t *testing.T) {
-	tt := newServiceTester(t, serviceTesterOpts{numNodes: 5, replicationFactor: 5, start: true})
+	tt := newServiceTester(t, serviceTesterOpts{numNodes: 5, replicationFactor: 5, start: true, printTestLogs: true})
 	ctx := tt.ctx
 	require := tt.require
 
