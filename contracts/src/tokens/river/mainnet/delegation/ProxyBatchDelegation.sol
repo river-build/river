@@ -54,14 +54,18 @@ contract ProxyBatchDelegation is IProxyBatchDelegation {
   }
 
   function sendDelegatorsFirst(uint32 minGasLimit) external {
-    address[] memory delegators = rvr.getDelegators();
-    uint256 length = delegators.length;
-    address[] memory delegates = new address[](length);
-    address[] memory authorizedClaimers = new address[](length);
-    uint256[] memory quantities = new uint256[](length);
+    address[] memory allDelegators = rvr.getDelegators();
+    uint256 length = allDelegators.length;
 
-    for (uint256 i; i < length / 2; ++i) {
-      address delegator = delegators[i];
+    uint256 halfLength = length / 2;
+    address[] memory delegators = new address[](halfLength);
+    address[] memory delegates = new address[](halfLength);
+    address[] memory authorizedClaimers = new address[](halfLength);
+    uint256[] memory quantities = new uint256[](halfLength);
+
+    for (uint256 i; i < halfLength; ++i) {
+      address delegator = allDelegators[i];
+      delegators[i] = delegator;
       authorizedClaimers[i] = claimers.getAuthorizedClaimer(delegator);
       delegates[i] = _delegates(address(rvr), delegator);
       quantities[i] = SafeTransferLib.balanceOf(address(rvr), delegator);
@@ -81,17 +85,23 @@ contract ProxyBatchDelegation is IProxyBatchDelegation {
   }
 
   function sendDelegatorsSecond(uint32 minGasLimit) external {
-    address[] memory delegators = rvr.getDelegators();
-    uint256 length = delegators.length;
-    address[] memory delegates = new address[](length);
-    address[] memory authorizedClaimers = new address[](length);
-    uint256[] memory quantities = new uint256[](length);
+    address[] memory allDelegators = rvr.getDelegators();
+    uint256 length = allDelegators.length;
 
-    for (uint256 i = length / 2; i < length; ++i) {
+    uint256 halfLength = length / 2;
+    address[] memory delegators = new address[](halfLength);
+    address[] memory delegates = new address[](halfLength);
+    address[] memory authorizedClaimers = new address[](halfLength);
+    uint256[] memory quantities = new uint256[](halfLength);
+
+    uint256 j;
+    for (uint256 i = halfLength; i < length; ++i) {
       address delegator = delegators[i];
-      authorizedClaimers[i] = claimers.getAuthorizedClaimer(delegator);
-      delegates[i] = _delegates(address(rvr), delegator);
-      quantities[i] = SafeTransferLib.balanceOf(address(rvr), delegator);
+      delegators[j] = delegator;
+      authorizedClaimers[j] = claimers.getAuthorizedClaimer(delegator);
+      delegates[j] = _delegates(address(rvr), delegator);
+      quantities[j] = SafeTransferLib.balanceOf(address(rvr), delegator);
+      ++j;
     }
 
     ICrossDomainMessenger(MESSENGER).sendMessage(
