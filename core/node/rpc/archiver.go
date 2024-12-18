@@ -445,6 +445,10 @@ func (a *Archiver) startImpl(ctx context.Context, once bool, metrics infra.Metri
 		"totalCount",
 		totalCount,
 	)
+
+	// Copy page size to the river registry contract for implicit use with ForAllStreams
+	a.contract.Settings.PageSize = int(a.config.GetStreamsContractCallPageSize())
+
 	if err := a.contract.ForAllStreams(
 		ctx,
 		blockNum,
