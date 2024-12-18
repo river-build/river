@@ -42,6 +42,45 @@ contract RewardsDistributionV2Test is
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
+  /*                       ADMIN FUNCTIONS                      */
+  /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
+
+  function test_setRewardNotifier_revertIf_notOwner() public {
+    address caller = _randomAddress();
+    vm.prank(caller);
+    vm.expectRevert(abi.encodeWithSelector(Ownable__NotOwner.selector, caller));
+    rewardsDistributionFacet.setRewardNotifier(caller, true);
+  }
+
+  function test_fuzz_setRewardNotifier(
+    address notifier,
+    bool isRewardNotifier
+  ) public {
+    vm.expectEmit(address(rewardsDistributionFacet));
+    emit RewardNotifierSet(notifier, isRewardNotifier);
+
+    vm.prank(deployer);
+    rewardsDistributionFacet.setRewardNotifier(notifier, isRewardNotifier);
+  }
+
+  function test_setPeriodRewardAmount_revertIf_notOwner() public {
+    address caller = _randomAddress();
+    vm.prank(caller);
+    vm.expectRevert(abi.encodeWithSelector(Ownable__NotOwner.selector, caller));
+    rewardsDistributionFacet.setPeriodRewardAmount(1);
+  }
+
+  function test_fuzz_setPeriodRewardAmount(uint256 reward) public {
+    vm.expectEmit(address(rewardsDistributionFacet));
+    emit PeriodRewardAmountSet(reward);
+
+    vm.prank(deployer);
+    rewardsDistributionFacet.setPeriodRewardAmount(reward);
+
+    assertEq(rewardsDistributionFacet.getPeriodRewardAmount(), reward);
+  }
+
+  /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
   /*                      DELEGATION PROXY                      */
   /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
@@ -53,7 +92,7 @@ contract RewardsDistributionV2Test is
   }
 
   function test_fuzz_upgradeDelegationProxy(address newImplementation) public {
-    vm.assume(uint160(newImplementation) > 10);
+    assumeNotPrecompile(newImplementation);
     vm.assume(newImplementation.code.length == 0);
     vm.etch(newImplementation, type(DelegationProxy).runtimeCode);
 
@@ -683,7 +722,7 @@ contract RewardsDistributionV2Test is
     rewardsDistributionFacet.changeBeneficiary(depositId, newBeneficiary);
   }
 
-  function test_initiateWithdraw_claimReward(
+  function test_fuzz_initiateWithdraw_claimReward(
     uint96 amount,
     address operator,
     uint256 commissionRate,
@@ -720,6 +759,42 @@ contract RewardsDistributionV2Test is
     );
 
     assertEq(reward, currentReward, "reward");
+  }
+
+  function test_initiateWithdraw_stopEarningRewards() public {
+    // Step 1: Stake and notify rewards
+    address depositor = makeAddr("DEPOSITOR");
+
+    test_notifyRewardAmount();
+    test_stake();
+    uint256 depositId = test_fuzz_stake(
+      depositor,
+      1 ether,
+      makeAddr("OPERATOR2"),
+      0,
+      depositor
+    );
+
+    // Step 2: Verify earnings are accumulating before the initiation of withdrawal
+    vm.warp(block.timestamp + rewardDuration / 2);
+
+    vm.prank(depositor);
+    uint256 initialRewards = rewardsDistributionFacet.claimReward(
+      depositor,
+      depositor
+    );
+    assertTrue(initialRewards > 0);
+
+    // Step 3: Initiate withdrawal
+    vm.prank(depositor);
+    rewardsDistributionFacet.initiateWithdraw(depositId);
+
+    // Step 4: Verify that no new rewards are accumulating after the withdrawal is initiated
+    vm.warp(block.timestamp + rewardDuration / 2);
+    uint256 postWithdrawRewards = rewardsDistributionFacet.currentReward(
+      depositor
+    );
+    assertEq(postWithdrawRewards, 0);
   }
 
   function test_withdraw_revertIf_notDepositor() public {
