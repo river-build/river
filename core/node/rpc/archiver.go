@@ -24,17 +24,22 @@ import (
 	"github.com/river-build/river/core/node/storage"
 )
 
-// nodeUpdateGracePeriod describes the maximum delay we would expect to see
-// when a stream's miniblocks updates in the registry before we consider a
-// node behind of it does not have the latest miniblock.
-// Two blocks plus change
 var (
+	// nodeUpdateGracePeriod describes the maximum delay we would expect to see
+	// when a stream's miniblocks updates in the registry before we consider a
+	// node behind and attempt to advance to the next peer to retrieve the miniblock.
+	// Two blocks plus change
 	nodeUpdateGracePeriod = 5 * time.Second
+
 	// For streams that cannot be updated to the current contract state, this is the
 	// grace period we give before we consider this stream to be corrupt.
 	// By the time a stream is this out of date with the contract state, we should have
 	// cycled through every node that hosts the replicated stream.
 	staleStreamGracePeriod = 100 * time.Second
+
+	// If for some reason the contract state continues to advance, but we are unable to
+	// download miniblocks past a certain point, consider the stream corrupt.
+	maxBlocksBehind = 50
 )
 
 type contractState struct {
@@ -285,6 +290,15 @@ func (a *Archiver) onNodeBehind(
 	stream.nodes.AdvanceStickyPeer(nodeAddr)
 }
 
+// isCorrupt determines whether we consider a stream corrupt. We consider a stream corrupt
+// if we have not been able to catch up to the current contract block for a certain period
+// of time, or alternatively if we are unable to download the current miniblock(s) from any
+// of the replicas that host the node, and advance the stream locally.
+func isCorrupt(mbsInContract int64, mbsInDb int64, timeSinceLastContractUpdate time.Time) bool {
+	return time.Since(timeSinceLastContractUpdate) > staleStreamGracePeriod ||
+		mbsInContract-mbsInDb > int64(maxBlocksBehind)
+}
+
 // ArchiveStream attempts to add all new miniblocks seen, according to the registry contract,
 // since the last time the stream was archived into storage.  It creates a new stream for
 // streams that have not yet been seen.
@@ -373,24 +387,24 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 			}
 			stream.nodes.AdvanceStickyPeer(nodeAddr)
 
-			if time.Since(contractMbsUpdated) < staleStreamGracePeriod {
+			if isCorrupt(mbsInContract, mbsInDb, contractMbsUpdated) {
+				// Mark this stream as corrupt
+				stream.corrupt.Store(true)
+			} else {
 				// We remove the stream from the rotation when it passes the grace period for stale
 				// streams. Keeping it here gives us a chance to fetch the stream if a node is booting
-				// and unavailable for an intermittent period, or fetch from another node if a single
-				// node is unavailable.
+				// or otherwise unavailable for an intermittent period, or fetch from another node if
+				// only a subset of nodes are unavailable.
 				time.AfterFunc(5*time.Second, func() {
 					a.tasks <- stream.streamId
 				})
-			} else {
-				// Mark this stream as corrupt
-				stream.corrupt.Store(true)
 			}
 
 			return err
 		}
 
 		if (err != nil && AsRiverError(err).Code == Err_NOT_FOUND) || resp.Msg == nil || len(resp.Msg.Miniblocks) == 0 {
-			if time.Since(contractMbsUpdated) > staleStreamGracePeriod {
+			if isCorrupt(mbsInContract, mbsInDb, contractMbsUpdated) {
 				stream.corrupt.Store(true)
 				// Do not re-insert this stream back into the task queue, it is now considered un-updatable.
 				return nil
