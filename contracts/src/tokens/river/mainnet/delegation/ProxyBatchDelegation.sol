@@ -54,8 +54,8 @@ contract ProxyBatchDelegation is IProxyBatchDelegation {
   }
 
   function sendDelegators(uint32 minGasLimit, uint8 half) external {
-    address[] memory delegators = rvr.getDelegators();
-    uint256 length = delegators.length;
+    address[] memory allDelegators = rvr.getDelegators();
+    uint256 length = allDelegators.length;
     uint256 halfLength = length / 2;
 
     uint256 start;
@@ -72,6 +72,7 @@ contract ProxyBatchDelegation is IProxyBatchDelegation {
       sliceLength = length - halfLength;
     }
 
+    address[] memory delegators = new address[](sliceLength);
     address[] memory delegates = new address[](sliceLength);
     address[] memory authorizedClaimers = new address[](sliceLength);
     uint256[] memory quantities = new uint256[](sliceLength);
@@ -79,7 +80,8 @@ contract ProxyBatchDelegation is IProxyBatchDelegation {
     // Use a separate array index to avoid out-of-range issues
     uint256 arrayIndex = 0;
     for (uint256 i = start; i < end; ++i) {
-      address delegator = delegators[i];
+      address delegator = allDelegators[i];
+      delegators[arrayIndex] = delegator;
       authorizedClaimers[arrayIndex] = claimers.getAuthorizedClaimer(delegator);
       delegates[arrayIndex] = _delegates(address(rvr), delegator);
       quantities[arrayIndex] = SafeTransferLib.balanceOf(
