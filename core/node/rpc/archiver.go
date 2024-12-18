@@ -298,6 +298,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 	mbsInContract := stream.numBlocksInContract.Load()
 	if mbsInDb >= mbsInContract {
 		a.streamsUpToDate.Add(1)
+		stream.consecutiveUpdateFailures.Store(0)
 		return nil
 	}
 
