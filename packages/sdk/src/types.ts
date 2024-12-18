@@ -784,15 +784,17 @@ export const make_MemberPayload_KeySolicitation = (
     }
 }
 
-export const make_MemberPayload_MlsEnabled = (
-    content: boolean,
+export const make_MemberPayload_EncryptionAlgorithm = (
+    content?: string,
 ): PlainMessage<StreamEvent>['payload'] => {
     return {
         case: 'memberPayload',
         value: {
             content: {
-                case: 'mlsEnabled',
-                value: content,
+                case: 'encryptionAlgorithm',
+                value: {
+                    algorithm: content,
+                },
             },
         },
     }

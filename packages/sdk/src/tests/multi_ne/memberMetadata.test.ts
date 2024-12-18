@@ -672,30 +672,40 @@ describe('memberMetadataTests', () => {
         await bobsClient.waitForStream(channelId)
 
         // initial value is "false"
-        expect(bobsClient.stream(channelId)?.view.membershipContent.mlsEnabled).toBe(false)
+        expect(bobsClient.stream(channelId)?.view.membershipContent.encryptionAlgorithm).toBe(
+            undefined,
+        )
 
         // set mls enabled to true
         const truePromise = makeDonePromise()
-        bobsClient.once('streamMlsUpdated', (updatedStreamId, value) => {
+        bobsClient.once('streamEncryptionAlgorithmUpdated', (updatedStreamId, value) => {
             expect(updatedStreamId).toBe(channelId)
-            expect(value).toBe(true)
+            expect(value).toBe('mls_0.0.1')
             truePromise.done()
         })
 
-        await expect(bobsClient.setMlsEnabled(channelId, true)).resolves.not.toThrow()
+        await expect(
+            bobsClient.setStreamEncryptionAlgorithm(channelId, 'mls_0.0.1'),
+        ).resolves.not.toThrow()
         await truePromise.expectToSucceed()
-        expect(bobsClient.stream(channelId)?.view.membershipContent.mlsEnabled).toBe(true)
+        expect(bobsClient.stream(channelId)?.view.membershipContent.encryptionAlgorithm).toBe(
+            'mls_0.0.1',
+        )
 
         // toggle back to to false
         const falsePromise = makeDonePromise()
-        bobsClient.once('streamMlsUpdated', (updatedStreamId, value) => {
+        bobsClient.once('streamEncryptionAlgorithmUpdated', (updatedStreamId, value) => {
             expect(updatedStreamId).toBe(channelId)
-            expect(value).toBe(false)
+            expect(value).toBe(undefined)
             falsePromise.done()
         })
 
-        await expect(bobsClient.setMlsEnabled(channelId, false)).resolves.not.toThrow()
+        await expect(
+            bobsClient.setStreamEncryptionAlgorithm(channelId, undefined),
+        ).resolves.not.toThrow()
         await falsePromise.expectToSucceed()
-        expect(bobsClient.stream(channelId)?.view.membershipContent.mlsEnabled).toBe(false)
+        expect(bobsClient.stream(channelId)?.view.membershipContent.encryptionAlgorithm).toBe(
+            undefined,
+        )
     })
 })

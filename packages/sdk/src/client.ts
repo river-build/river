@@ -134,7 +134,7 @@ import {
     make_SpacePayload_SpaceImage,
     make_UserMetadataPayload_ProfileImage,
     make_UserMetadataPayload_Bio,
-    make_MemberPayload_MlsEnabled,
+    make_MemberPayload_EncryptionAlgorithm,
 } from './types'
 
 import debug from 'debug'
@@ -877,7 +877,7 @@ export class Client
         })
     }
 
-    async setMlsEnabled(streamId: string, mlsEnabled: boolean) {
+    async setStreamEncryptionAlgorithm(streamId: string, encryptionAlgorithm?: string) {
         assert(
             isChannelStreamId(streamId) ||
                 isSpaceStreamId(streamId) ||
@@ -888,12 +888,16 @@ export class Client
         const stream = this.stream(streamId)
         check(isDefined(stream), 'stream not found')
         check(
-            stream.view.membershipContent.mlsEnabled != mlsEnabled,
-            `mlsEnabled is already set to ${mlsEnabled}`,
+            stream.view.membershipContent.encryptionAlgorithm != encryptionAlgorithm,
+            `mlsEnabled is already set to ${encryptionAlgorithm}`,
         )
-        return this.makeEventAndAddToStream(streamId, make_MemberPayload_MlsEnabled(mlsEnabled), {
-            method: 'setMlsEnabled',
-        })
+        return this.makeEventAndAddToStream(
+            streamId,
+            make_MemberPayload_EncryptionAlgorithm(encryptionAlgorithm),
+            {
+                method: 'setMlsEnabled',
+            },
+        )
     }
 
     async sendFullyReadMarkers(

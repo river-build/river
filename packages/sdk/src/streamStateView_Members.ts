@@ -48,7 +48,7 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
     readonly solicitHelper: StreamStateView_Members_Solicitations
     readonly memberMetadata: StreamStateView_MemberMetadata
     readonly pins: Pin[] = []
-    mlsEnabled: boolean = false
+    encryptionAlgorithm?: string = undefined
 
     constructor(streamId: string) {
         super()
@@ -152,7 +152,7 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
             }
         })
 
-        this.mlsEnabled = snapshot.members.mlsEnabled
+        this.encryptionAlgorithm = snapshot.members.encryptionAlgorithm?.algorithm
     }
 
     prependEvent(
@@ -308,9 +308,13 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
                     this.removePin(eventId, stateEmitter)
                 }
                 break
-            case 'mlsEnabled':
-                this.mlsEnabled = payload.content.value
-                stateEmitter?.emit('streamMlsUpdated', this.streamId, payload.content.value)
+            case 'encryptionAlgorithm':
+                this.encryptionAlgorithm = payload.content.value.algorithm
+                stateEmitter?.emit(
+                    'streamEncryptionAlgorithmUpdated',
+                    this.streamId,
+                    this.encryptionAlgorithm,
+                )
                 break
             case 'mls':
                 break
@@ -363,7 +367,7 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
                 break
             case 'unpin':
                 break
-            case 'mlsEnabled':
+            case 'encryptionAlgorithm':
                 break
             case 'mls':
                 break
