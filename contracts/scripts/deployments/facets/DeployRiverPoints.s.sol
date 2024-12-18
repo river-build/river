@@ -43,6 +43,18 @@ contract DeployRiverPoints is Deployer, FacetHelper {
     return abi.encodeWithSelector(initializer(), spaceFactory);
   }
 
+  function facetInitHelper(
+    address deployer,
+    address facetAddress
+  ) external override returns (FacetCut memory, bytes memory) {
+    IDiamond.FacetCut memory facetCut = this.makeCut(
+      facetAddress,
+      IDiamond.FacetCutAction.Add
+    );
+    console.log("facetInitHelper: deployer", deployer);
+    return (facetCut, makeInitData(getDeployment("spaceFactory")));
+  }
+
   function __deploy(address deployer) public override returns (address) {
     vm.startBroadcast(deployer);
     RiverPoints riverPointsFacet = new RiverPoints();
