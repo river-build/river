@@ -85,6 +85,7 @@ export type TimelineEvent_OneOf =
     | RoomMessageEncryptedRefEvent
     | UnpinEvent
     | MlsEnabledEvent
+    | MlsEvent
 
 export enum RiverTimelineEvent {
     BlockchainTransaction = 'blockchain.transaction',
@@ -113,6 +114,7 @@ export enum RiverTimelineEvent {
     SpaceNft = 'm.space.nft',
     Unpin = 'm.unpin',
     MlsEnabled = 'm.mls_enabled',
+    Mls = 'm.mls',
 }
 
 export interface MiniblockHeaderEvent {
@@ -213,6 +215,10 @@ export interface UnpinEvent {
 export interface MlsEnabledEvent {
     kind: RiverTimelineEvent.MlsEnabled
     mlsEnabled: boolean
+}
+
+export interface MlsEvent {
+    kind: RiverTimelineEvent.Mls
 }
 
 export interface RoomMessageEncryptedEvent {

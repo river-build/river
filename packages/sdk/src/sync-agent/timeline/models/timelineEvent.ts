@@ -363,6 +363,14 @@ function toTownsContent_MemberPayload(
                     mlsEnabled: value.content.value,
                 } satisfies MlsEnabledEvent,
             }
+        case 'mls':
+            return {
+                content: {
+                    kind: RiverTimelineEvent.Mls,
+                },
+            }
+            break
+
         case undefined:
             return { error: `Undefined payload case: ${description}` }
         default:
@@ -928,6 +936,8 @@ export function getFallbackContent(
             return `unpinnedEventId: ${content.unpinnedEventId} by: ${content.userId}`
         case RiverTimelineEvent.MlsEnabled:
             return `mlsEnabled: ${content.mlsEnabled}`
+        case RiverTimelineEvent.Mls:
+            return `mlsEvent`
     }
 }
 
