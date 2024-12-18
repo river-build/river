@@ -6531,17 +6531,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@river-build/mls-rs-wasm-node@npm:^0.0.4":
-  version: 0.0.4
-  resolution: "@river-build/mls-rs-wasm-node@npm:0.0.4"
-  checksum: 11983d654e4b48f3f5c61a3c662717e9697b72e986e41b19e26876c8f96136ee896e5eaf9ed166273f220d46ed63d41c7a0d55be4af0dbd2571be23c73a835c4
+"@river-build/mls-rs-wasm-node@npm:^0.0.6":
+  version: 0.0.6
+  resolution: "@river-build/mls-rs-wasm-node@npm:0.0.6"
+  checksum: dab84d1b0a4ef92593cdd899ffb71646c41bccea389671b61d4d26fd1eedd07f55b83fb86aab115e8ce8d8b4486e64dc9f9fe4395e5aa074c623a46181d9f373
   languageName: node
   linkType: hard
 
-"@river-build/mls-rs-wasm@npm:^0.0.4":
-  version: 0.0.4
-  resolution: "@river-build/mls-rs-wasm@npm:0.0.4"
-  checksum: 9cb4cca4222bc260ae880395441b21b75a79486b07aeb0cdc39342ad510e836bd4ec87f93b5fd483da8827f2460cbe588c1e2703d7542be25acffe10f6d78eaa
+"@river-build/mls-rs-wasm@npm:^0.0.6":
+  version: 0.0.6
+  resolution: "@river-build/mls-rs-wasm@npm:0.0.6"
+  checksum: a1c467e8172c7c7d6a25516fd3b500b11434dabd597bc2ae413ada6d084761967468115b2236456c9eaecb1b26862c9b56a50e3f95976f1c4fe8575e8103be4f
   languageName: node
   linkType: hard
 
@@ -6681,7 +6681,7 @@ __metadata:
     "@ethereumjs/util": ^8.0.1
     "@river-build/dlog": "workspace:^"
     "@river-build/encryption": "workspace:^"
-    "@river-build/mls-rs-wasm": ^0.0.4
+    "@river-build/mls-rs-wasm": ^0.0.6
     "@river-build/proto": "workspace:^"
     "@river-build/web3": "workspace:^"
     "@testing-library/react": ^14.2.1
@@ -6765,7 +6765,7 @@ __metadata:
     "@bufbuild/protobuf": ^1.9.0
     "@river-build/dlog": "workspace:^"
     "@river-build/encryption": "workspace:^"
-    "@river-build/mls-rs-wasm-node": ^0.0.4
+    "@river-build/mls-rs-wasm-node": ^0.0.6
     "@river-build/proto": "workspace:^"
     "@river-build/sdk": "workspace:^"
     "@river-build/web3": "workspace:^"
