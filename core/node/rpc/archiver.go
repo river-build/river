@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -26,7 +27,7 @@ import (
 
 // maxFailedConsecutiveUpdates is the maximum number of consecutive update failures allowed
 // before a stream is considered corrupt.
-var maxFailedConsecutiveUpdates = uint32(50)
+var maxFailedConsecutiveUpdates = uint32(5)
 
 type contractState struct {
 	// Everything in the registry state is protected by this mutex.
@@ -346,7 +347,9 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 
 			if stream.consecutiveUpdateFailures.Load() >= maxFailedConsecutiveUpdates {
 				// Mark this stream as corrupt
+				log.Info("Marking stream as corrupt", "stream", stream.streamId, "lastErr", err)
 				stream.corrupt.Store(true)
+				return err
 			} else {
 				// We remove the stream from the rotation when it fails to update consecutively past
 				// the maximum allowed. Keeping it here gives us a chance to fetch the stream if a node
@@ -356,16 +359,17 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 				time.AfterFunc(5*time.Second, func() {
 					a.tasks <- stream.streamId
 				})
+				return nil
 			}
 
-			return err
 		}
 
 		if (err != nil && AsRiverError(err).Code == Err_NOT_FOUND) || resp.Msg == nil || len(resp.Msg.Miniblocks) == 0 {
 			if stream.consecutiveUpdateFailures.Load() >= maxFailedConsecutiveUpdates {
 				stream.corrupt.Store(true)
+				log.Info("Marking stream as corrupt due to missing miniblocks", "err", err, "mbsInDb", mbsInDb)
 				// Do not re-insert this stream back into the task queue, it is now considered un-updatable.
-				return nil
+				return fmt.Errorf("Stream %s unable to be updated, marked as corrupt", stream.streamId)
 			} else {
 				log.Debug(
 					"ArchiveStream: GetMiniblocks did not return data, remote storage is not up-to-date with contract yet",
@@ -395,10 +399,6 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 				return nil
 			}
 		}
-
-		// Update the consecutive updates counter to reflect that the miniblocks were available
-		// on the network.
-		stream.consecutiveUpdateFailures.Store(0)
 
 		msg := resp.Msg
 
@@ -436,11 +436,14 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 		a.miniblocksProcessed.Add(uint64(len(serialized)))
 	}
 
+	// Update the consecutive updates counter to reflect that the miniblocks were available
+	// on the network.
+	stream.consecutiveUpdateFailures.Store(0)
 	return nil
 }
 
 func (a *Archiver) emitPeriodicCorruptStreamReport(ctx context.Context) {
-	ticker := time.NewTicker(15 * time.Minute)
+	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
 
 	for {
@@ -623,6 +626,7 @@ func (a *Archiver) worker(ctx context.Context) {
 			if err != nil {
 				log.Error("archiver.worker: Failed to archive stream", "error", err, "streamId", streamId)
 				a.failedOpsCount.Add(1)
+				record.(*ArchiveStream).consecutiveUpdateFailures.Add(1)
 			} else {
 				a.successOpsCount.Add(1)
 			}
