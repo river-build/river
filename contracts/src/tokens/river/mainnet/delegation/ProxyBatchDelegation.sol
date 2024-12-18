@@ -53,14 +53,41 @@ contract ProxyBatchDelegation is IProxyBatchDelegation {
     );
   }
 
-  function sendDelegators(uint32 minGasLimit) external {
+  function sendDelegatorsFirst(uint32 minGasLimit) external {
     address[] memory delegators = rvr.getDelegators();
     uint256 length = delegators.length;
     address[] memory delegates = new address[](length);
     address[] memory authorizedClaimers = new address[](length);
     uint256[] memory quantities = new uint256[](length);
 
-    for (uint256 i; i < length; ++i) {
+    for (uint256 i; i < length / 2; ++i) {
+      address delegator = delegators[i];
+      authorizedClaimers[i] = claimers.getAuthorizedClaimer(delegator);
+      delegates[i] = _delegates(address(rvr), delegator);
+      quantities[i] = SafeTransferLib.balanceOf(address(rvr), delegator);
+    }
+
+    ICrossDomainMessenger(MESSENGER).sendMessage(
+      TARGET,
+      abi.encodeWithSelector(
+        IMainnetDelegation.setBatchDelegation.selector,
+        delegators,
+        delegates,
+        authorizedClaimers,
+        quantities
+      ),
+      minGasLimit
+    );
+  }
+
+  function sendDelegatorsSecond(uint32 minGasLimit) external {
+    address[] memory delegators = rvr.getDelegators();
+    uint256 length = delegators.length;
+    address[] memory delegates = new address[](length);
+    address[] memory authorizedClaimers = new address[](length);
+    uint256[] memory quantities = new uint256[](length);
+
+    for (uint256 i = length / 2; i < length; ++i) {
       address delegator = delegators[i];
       authorizedClaimers[i] = claimers.getAuthorizedClaimer(delegator);
       delegates[i] = _delegates(address(rvr), delegator);
