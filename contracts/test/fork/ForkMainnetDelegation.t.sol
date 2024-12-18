@@ -5,7 +5,7 @@ pragma solidity ^0.8.19;
 import {TestUtils} from "contracts/test/utils/TestUtils.sol";
 
 //interfaces
-import {IERC173} from "contracts/src/diamond/facets/ownable/IERC173.sol";
+import {IERC173} from "@river-build/diamond/src/facets/ownable/IERC173.sol";
 import {INodeOperator} from "contracts/src/base/registry/facets/operator/INodeOperator.sol";
 import {IMainnetDelegationBase} from "contracts/src/tokens/river/base/delegation/IMainnetDelegation.sol";
 
