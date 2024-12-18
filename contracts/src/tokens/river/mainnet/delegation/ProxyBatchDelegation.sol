@@ -53,14 +53,17 @@ contract ProxyBatchDelegation is IProxyBatchDelegation {
     );
   }
 
-  function sendDelegators(uint32 minGasLimit) external {
+  function sendDelegators(uint32 minGasLimit, uint8 half) external {
     address[] memory delegators = rvr.getDelegators();
     uint256 length = delegators.length;
+    uint256 start = (half == 1) ? length / 2 : 0;
+    uint256 end = (half == 1) ? length : length / 2;
+
     address[] memory delegates = new address[](length);
     address[] memory authorizedClaimers = new address[](length);
     uint256[] memory quantities = new uint256[](length);
 
-    for (uint256 i; i < length; ++i) {
+    for (uint256 i = start; i < end; ++i) {
       address delegator = delegators[i];
       authorizedClaimers[i] = claimers.getAuthorizedClaimer(delegator);
       delegates[i] = _delegates(address(rvr), delegator);
