@@ -31,6 +31,11 @@ var (
 	// Two blocks plus change
 	nodeUpdateGracePeriod = 5 * time.Second
 
+	// nodeBehindBlocksBehind is the maximum blocks a stream can fall behind the contract
+	// before we consider this node to be "behind" and advance to the next peer to
+	// retrieve the miniblock.
+	nodeBehindBlocksBehind = 2
+
 	// For streams that cannot be updated to the current contract state, this is the
 	// grace period we give before we consider this stream to be corrupt.
 	// By the time a stream is this out of date with the contract state, we should have
@@ -298,6 +303,12 @@ func isCorrupt(mbsInContract int64, mbsInDb int64, timeSinceLastContractUpdate t
 		mbsInContract-mbsInDb > int64(maxBlocksBehind)
 }
 
+// isBehind determines when we consider a node to be behind and advance the peer.
+func isBehind(mbsInContract int64, mbsInDb int64, timeSinceLastContractUpdate time.Time) bool {
+	return time.Since(timeSinceLastContractUpdate) > nodeUpdateGracePeriod ||
+		mbsInContract-mbsInDb > int64(nodeBehindBlocksBehind)
+}
+
 // ArchiveStream attempts to add all new miniblocks seen, according to the registry contract,
 // since the last time the stream was archived into storage.  It creates a new stream for
 // streams that have not yet been seen.
@@ -407,7 +418,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 				stream.corrupt.Store(true)
 				// Do not re-insert this stream back into the task queue, it is now considered un-updatable.
 				return nil
-			} else if time.Since(contractMbsUpdated) > nodeUpdateGracePeriod {
+			} else if isBehind(mbsInContract, mbsInDb, contractMbsUpdated) {
 				a.onNodeBehind(
 					stream,
 					nodeAddr,
@@ -426,6 +437,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 
 			// Reschedule with delay.
 			streamId := stream.streamId
+			// Since there was no error response, let's try again after a short period.
 			time.AfterFunc(time.Second, func() {
 				a.tasks <- streamId
 			})
