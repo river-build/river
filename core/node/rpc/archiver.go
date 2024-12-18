@@ -232,11 +232,10 @@ func (a *Archiver) setupStatisticsMetrics(factory infra.MetricsFactory) {
 	)
 }
 
-// getStaleStreams iterates over all streams in the in-memory cache and collects stale
-// stream ids. This list does not represent a snapshot of the node at any particular state,
-// as the cache iteration is not thread-safe. However, all streams reported as stale either
-// are or were recently stale, and all streams not reported either are not or recently were
-// not stale, so this is "good enough".
+// getCorruptStreams iterates over all streams in the in-memory cache and collects ids for
+// streams that are considered corrupt. This list does not represent a snapshot of the archiver
+// at any particular state, as the cache iteration is not thread-safe. However, for the purposes
+// of generating a periodic report of corrupt streams, this is good enough.
 func (a *Archiver) getCorruptStreams(ctx context.Context) map[StreamId]*ArchiveStream {
 	corruptStreams := make(map[StreamId]*ArchiveStream, 0)
 
