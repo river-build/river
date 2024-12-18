@@ -95,19 +95,6 @@ func (s *Service) registerDebugHandlers(enableDebugEndpoints bool, cfg config.De
 	if cfg.TxPool || enableDebugEndpoints {
 		handler.Handle(mux, "/debug/txpool", &txpoolHandler{riverTxPool: s.riverChain.TxPool})
 	}
-
-	if s.mode == "archive" && (cfg.Archive || enableDebugEndpoints) {
-		handler.Handle(mux, "/debug/archive", &archiveHandler{archiver: s.Archiver})
-	}
-}
-
-type archiveHandler struct {
-	archiver *Archiver
-}
-
-func (a *archiveHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	
-
 }
 
 type stacksHandler struct {
