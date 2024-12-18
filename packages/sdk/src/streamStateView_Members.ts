@@ -305,6 +305,10 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
                     this.removePin(eventId, stateEmitter)
                 }
                 break
+            case 'memberBlockchainTransaction':
+                break
+            case 'mls':
+                break
             case undefined:
                 break
             default:
@@ -353,6 +357,10 @@ export class StreamStateView_Members extends StreamStateView_AbstractContent {
             case 'pin':
                 break
             case 'unpin':
+                break
+            case 'memberBlockchainTransaction':
+                break
+            case 'mls':
                 break
             case undefined:
                 break

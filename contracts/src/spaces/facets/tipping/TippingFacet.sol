@@ -10,7 +10,7 @@ import {CustomRevert} from "contracts/src/utils/libraries/CustomRevert.sol";
 
 // contracts
 import {ERC721ABase} from "contracts/src/diamond/facets/token/ERC721A/ERC721ABase.sol";
-import {Facet} from "contracts/src/diamond/facets/Facet.sol";
+import {Facet} from "@river-build/diamond/src/facets/Facet.sol";
 
 contract TippingFacet is ITipping, ERC721ABase, Facet {
   function __Tipping_init() external onlyInitializing {
@@ -58,6 +58,20 @@ contract TippingFacet is ITipping, ERC721ABase, Facet {
     address currency
   ) external view returns (uint256) {
     return TippingBase.tipsByCurrencyByTokenId(tokenId, currency);
+  }
+
+  /// @inheritdoc ITipping
+  function totalTipsByCurrency(
+    address currency
+  ) external view returns (uint256) {
+    return TippingBase.totalTipsByCurrency(currency);
+  }
+
+  /// @inheritdoc ITipping
+  function tipAmountByCurrency(
+    address currency
+  ) external view returns (uint256) {
+    return TippingBase.tipAmountByCurrency(currency);
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/

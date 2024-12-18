@@ -2,13 +2,13 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {IDiamond} from "contracts/src/diamond/IDiamond.sol";
+import {IDiamond} from "@river-build/diamond/src/IDiamond.sol";
 
 // helpers
 import {DiamondHelper} from "contracts/test/diamond/Diamond.t.sol";
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
-import {Diamond} from "contracts/src/diamond/Diamond.sol";
-
+import {Diamond} from "@river-build/diamond/src/Diamond.sol";
+import {FacetHelper} from "contracts/test/diamond/Facet.t.sol";
 import {DeployDiamondCut} from "contracts/scripts/deployments/facets/DeployDiamondCut.s.sol";
 import {DeployDiamondLoupe} from "contracts/scripts/deployments/facets/DeployDiamondLoupe.s.sol";
 import {DeployIntrospection} from "contracts/scripts/deployments/facets/DeployIntrospection.s.sol";
@@ -25,7 +25,7 @@ import {DeployOperatorRegistry} from "contracts/scripts/deployments/facets/Deplo
 import {OperatorRegistry} from "contracts/src/river/registry/facets/operator/OperatorRegistry.sol";
 import {RiverConfig} from "contracts/src/river/registry/facets/config/RiverConfig.sol";
 
-import {MultiInit} from "contracts/src/diamond/initializers/MultiInit.sol";
+import {MultiInit} from "@river-build/diamond/src/initializers/MultiInit.sol";
 
 contract DeployRiverRegistry is DiamondHelper, Deployer {
   DeployDiamondCut internal cutHelper = new DeployDiamondCut();
@@ -55,6 +55,15 @@ contract DeployRiverRegistry is DiamondHelper, Deployer {
 
   address[] internal operators = new address[](1);
   address[] internal configManagers = new address[](1);
+
+  mapping(string => address) private facetDeployments;
+
+  constructor() {
+    facetDeployments["riverConfig"] = address(riverConfigHelper);
+    facetDeployments["nodeRegistry"] = address(nodeRegistryHelper);
+    facetDeployments["streamRegistry"] = address(streamRegistryHelper);
+    facetDeployments["operatorRegistry"] = address(operatorRegistryHelper);
+  }
 
   function versionName() public pure override returns (string memory) {
     return "riverRegistry";
@@ -130,6 +139,36 @@ contract DeployRiverRegistry is DiamondHelper, Deployer {
           _initDatas
         )
       });
+  }
+
+  function diamondInitParamsFromFacets(
+    address deployer,
+    string[] memory facets
+  ) public {
+    for (uint256 i = 0; i < facets.length; i++) {
+      string memory facetName = facets[i];
+      address facetHelperAddress = facetDeployments[facetName];
+      if (facetHelperAddress != address(0)) {
+        // deploy facet
+        address facetAddress = Deployer(facetHelperAddress).deploy(deployer);
+        (FacetCut memory cut, bytes memory config) = FacetHelper(
+          facetHelperAddress
+        ).facetInitHelper(deployer, facetAddress);
+        if (config.length > 0) {
+          addFacet(cut, facetAddress, config);
+        } else {
+          addCut(cut);
+        }
+      }
+    }
+  }
+
+  function diamondInitHelper(
+    address deployer,
+    string[] memory facetNames
+  ) external override returns (FacetCut[] memory) {
+    diamondInitParamsFromFacets(deployer, facetNames);
+    return this.getCuts();
   }
 
   function __deploy(address deployer) public override returns (address) {

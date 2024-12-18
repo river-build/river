@@ -17,8 +17,8 @@ func GetDefaultConfig() *Config {
 	return &Config{
 		Port: 443,
 		Database: DatabaseConfig{
-			StartupDelay:          2 * time.Second,
-			NumPartitions:         256,
+			StartupDelay:  2 * time.Second,
+			NumPartitions: 256,
 		},
 		StorageType:  "postgres",
 		DisableHttps: false,
@@ -58,9 +58,6 @@ func GetDefaultConfig() *Config {
 		StandByPollPeriod: 500 * time.Millisecond,
 		ShutdownTimeout:   1 * time.Second,
 		History:           30 * time.Second,
-		Archive: ArchiveConfig{
-			PrintStatsPeriod: 10 * time.Second,
-		},
 		DebugEndpoints: DebugEndpointsConfig{
 			Cache:                 true,
 			Memory:                true,
@@ -345,9 +342,6 @@ type ArchiveConfig struct {
 	// Number of miniblocks to read at once from the remote node.
 	ReadMiniblocksSize uint64
 
-	DisablePrintStats bool
-	PrintStatsPeriod  time.Duration // If 0, default to 1 minute.
-
 	TaskQueueSize int // If 0, default to 100000.
 
 	WorkerPoolSize int // If 0, default to 20.
@@ -485,16 +479,6 @@ func (ac *ArchiveConfig) GetReadMiniblocksSize() uint64 {
 	return ac.ReadMiniblocksSize
 }
 
-func (ac *ArchiveConfig) GetPrintStatsPeriod() time.Duration {
-	if ac.DisablePrintStats {
-		return 0
-	}
-	if ac.PrintStatsPeriod <= 0 {
-		return time.Minute
-	}
-	return ac.PrintStatsPeriod
-}
-
 func (ac *ArchiveConfig) GetTaskQueueSize() int {
 	if ac.TaskQueueSize <= 0 {
 		return 100000
@@ -511,7 +495,7 @@ func (ac *ArchiveConfig) GetWorkerPoolSize() int {
 
 func (ac *ArchiveConfig) GetStreamsContractCallPageSize() int64 {
 	if ac.StreamsContractCallPageSize <= 0 {
-		return 5000
+		return 1000
 	}
 	return ac.StreamsContractCallPageSize
 }

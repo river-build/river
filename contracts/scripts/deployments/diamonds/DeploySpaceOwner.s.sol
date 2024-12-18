@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 // interface
-import {IDiamond, Diamond} from "contracts/src/diamond/Diamond.sol";
+import {IDiamond, Diamond} from "@river-build/diamond/src/Diamond.sol";
 
 // libraries
 
@@ -143,6 +143,14 @@ contract DeploySpaceOwner is DiamondHelper, Deployer {
         );
       }
     }
+  }
+
+  function diamondInitHelper(
+    address deployer,
+    string[] memory facetNames
+  ) external override returns (FacetCut[] memory) {
+    diamondInitParamsFromFacets(deployer, facetNames);
+    return this.getCuts();
   }
 
   function __deploy(address deployer) public override returns (address) {

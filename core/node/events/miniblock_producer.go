@@ -276,7 +276,10 @@ func (p *miniblockProducer) TestMakeMiniblock(
 
 		err = SleepWithContext(ctx, 10*time.Millisecond)
 		if err != nil {
-			return nil, err
+			return nil, AsRiverError(err, Err_INTERNAL).
+				Func("TestMakeMiniblock").
+				Message("Timed out while waiting for make_miniblock job to be scheduled").
+				Tag("streamId", streamId)
 		}
 	}
 
@@ -288,7 +291,10 @@ func (p *miniblockProducer) TestMakeMiniblock(
 
 		err = SleepWithContext(ctx, 10*time.Millisecond)
 		if err != nil {
-			return nil, err
+			return nil, AsRiverError(err, Err_INTERNAL).
+				Func("TestMakeMiniblock").
+				Message("Timed out while waiting for make_miniblock job to terminate").
+				Tag("streamId", streamId)
 		}
 	}
 
@@ -538,7 +544,7 @@ func mbProduceCandiate_Save(
 	mbInfo *MiniblockInfo,
 	remoteNodes []common.Address,
 ) error {
-	qp := NewQuorumPool(len(remoteNodes))
+	qp := NewQuorumPool("method", "mbProduceCandiate_Save", "streamId", streamId, "miniblock", mbInfo.Ref)
 
 	qp.GoLocal(ctx, func(ctx context.Context) error {
 		miniblockBytes, err := mbInfo.ToBytes()
@@ -555,11 +561,9 @@ func mbProduceCandiate_Save(
 		)
 	})
 
-	for _, node := range remoteNodes {
-		qp.GoRemote(ctx, node, func(ctx context.Context, node common.Address) error {
-			return params.RemoteMiniblockProvider.SaveMbCandidate(ctx, node, streamId, mbInfo.Proto)
-		})
-	}
+	qp.GoRemotes(ctx, remoteNodes, func(ctx context.Context, node common.Address) error {
+		return params.RemoteMiniblockProvider.SaveMbCandidate(ctx, node, streamId, mbInfo.Proto)
+	})
 
 	return qp.Wait()
 }

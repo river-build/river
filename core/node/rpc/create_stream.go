@@ -64,6 +64,17 @@ func (s *Service) createStream(ctx context.Context, req *CreateStreamRequest) (*
 		return nil, err
 	}
 
+	// check that streams exist for derived events that will be added later
+	if csRules.DerivedEvents != nil {
+		for _, event := range csRules.DerivedEvents {
+			streamIdBytes := event.StreamId
+			stream, err := s.cache.GetStreamNoWait(ctx, streamIdBytes)
+			if err != nil || stream == nil {
+				return nil, RiverError(Err_PERMISSION_DENIED, "stream does not exist", "streamId", streamIdBytes)
+			}
+		}
+	}
+
 	// check that the creator satisfies the required memberships reqirements
 	if csRules.RequiredMemberships != nil {
 		// load the creator's user stream
@@ -157,7 +168,7 @@ func (s *Service) createReplicatedStream(
 
 	nodes := NewStreamNodesWithLock(nodesList, s.wallet.Address)
 	remotes, isLocal := nodes.GetRemotesAndIsLocal()
-	sender := NewQuorumPool(len(remotes))
+	sender := NewQuorumPool("method", "createReplicatedStream", "streamId", streamId)
 
 	var localSyncCookie *SyncCookie
 	if isLocal {
@@ -178,6 +189,7 @@ func (s *Service) createReplicatedStream(
 	var remoteSyncCookie *SyncCookie
 	var remoteSyncCookieOnce sync.Once
 	if len(remotes) > 0 {
+<<<<<<< HEAD
 		for _, n := range remotes {
 			sender.GoRemote(
 				ctx,
@@ -204,8 +216,30 @@ func (s *Service) createReplicatedStream(
 					})
 					return nil
 				},
+=======
+		sender.GoRemotes(ctx, remotes, func(ctx context.Context, node common.Address) error {
+			stub, err := s.nodeRegistry.GetNodeToNodeClientForAddress(node)
+			if err != nil {
+				return err
+			}
+			r, err := stub.AllocateStream(
+				ctx,
+				connect.NewRequest[AllocateStreamRequest](
+					&AllocateStreamRequest{
+						StreamId:  streamId[:],
+						Miniblock: mb,
+					},
+				),
+>>>>>>> origin/main
 			)
-		}
+			if err != nil {
+				return err
+			}
+			remoteSyncCookieOnce.Do(func() {
+				remoteSyncCookie = r.Msg.SyncCookie
+			})
+			return nil
+		})
 	}
 
 	err = sender.Wait()

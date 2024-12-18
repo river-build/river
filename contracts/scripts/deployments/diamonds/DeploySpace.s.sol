@@ -2,7 +2,7 @@
 pragma solidity ^0.8.23;
 
 //interfaces
-import {IDiamond, Diamond} from "contracts/src/diamond/Diamond.sol";
+import {IDiamond, Diamond} from "@river-build/diamond/src/Diamond.sol";
 import {IERC721A} from "contracts/src/diamond/facets/token/ERC721A/IERC721A.sol";
 
 //libraries
@@ -11,10 +11,8 @@ import {IERC721A} from "contracts/src/diamond/facets/token/ERC721A/IERC721A.sol"
 import {DiamondHelper} from "contracts/test/diamond/Diamond.t.sol";
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 
-import {TokenPausableHelper} from "contracts/test/diamond/pausable/token/TokenPausableSetup.sol";
-
 // Facets
-import {MultiInit} from "contracts/src/diamond/initializers/MultiInit.sol";
+import {MultiInit} from "@river-build/diamond/src/initializers/MultiInit.sol";
 
 import {DeployDiamondCut} from "contracts/scripts/deployments/facets/DeployDiamondCut.s.sol";
 import {DeployDiamondLoupe} from "contracts/scripts/deployments/facets/DeployDiamondLoupe.s.sol";
@@ -297,6 +295,14 @@ contract DeploySpace is DiamondHelper, Deployer {
         );
       }
     }
+  }
+
+  function diamondInitHelper(
+    address deployer,
+    string[] memory facetNames
+  ) external override returns (FacetCut[] memory) {
+    diamondInitParamsFromFacets(deployer, facetNames);
+    return this.getCuts();
   }
 
   function __deploy(address deployer) public override returns (address) {

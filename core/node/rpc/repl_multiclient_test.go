@@ -70,8 +70,12 @@ func TestReplMcSpeakUntilMbTrim(t *testing.T) {
 	require.Fail("failed to trim miniblocks")
 }
 
+<<<<<<< HEAD
 func testReplMcConversation(t *testing.T, numClients int, numSteps int, listenInterval int) {
 	f := testfmt.New(t)
+=======
+func testReplMcConversation(t *testing.T, numClients int, numSteps int, listenInterval int, compareInterval int) {
+>>>>>>> origin/main
 	tt := newServiceTesterForReplication(t)
 	clients := tt.newTestClients(numClients)
 	spaceId, _ := clients[0].createSpace()
@@ -90,6 +94,9 @@ func testReplMcConversation(t *testing.T, numClients int, numSteps int, listenIn
 	defer func() {
 		if i+1 < len(messages) {
 			t.Errorf("got through %d steps out of %d", i+1, len(messages))
+			testfmt.Println(t, "Comparing all streams")
+			clients.compare(channelId)
+			testfmt.Println(t, "Compared all streams")
 		}
 	}()
 	for i, m = range messages {
@@ -99,6 +106,9 @@ func testReplMcConversation(t *testing.T, numClients int, numSteps int, listenIn
 			f.Logf("    step %d: listening", i)
 			clients.listen(channelId, messages[:i+1])
 		}
+		if compareInterval > 0 && (i+1)%compareInterval == 0 {
+			clients.compare(channelId)
+		}
 	}
 
 	if listenInterval <= 0 || numSteps%listenInterval != 0 {
@@ -106,18 +116,39 @@ func testReplMcConversation(t *testing.T, numClients int, numSteps int, listenIn
 		clients.listen(channelId, messages)
 	}
 
+<<<<<<< HEAD
 	f.Log("DONE")
 }
 
 func TestReplMcConversation(t *testing.T) {
 	// t.Skip("SKIPPED: TODO: REPLICATION: fix")
 
+=======
+	if compareInterval <= 0 || numSteps%compareInterval != 0 {
+		clients.compare(channelId)
+	}
+}
+
+func TestReplMcConversation(t *testing.T) {
+>>>>>>> origin/main
 	t.Parallel()
 	t.Run("5x5", func(t *testing.T) {
-		testReplMcConversation(t, 5, 5, 1)
+		testReplMcConversation(t, 5, 5, 1, 1)
 	})
+<<<<<<< HEAD
 	t.Run("debug", func(t *testing.T) {
 		testReplMcConversation(t, 5, 12, 1)
 		// testReplMcConversation(t, 5, 100, 10)
+=======
+	t.Run("5x100", func(t *testing.T) {
+		testReplMcConversation(t, 5, 100, 10, 100)
+	})
+	t.Run("10x1000", func(t *testing.T) {
+		t.Skip("TODO: REPLICATON: FIX: flaky on CI")
+		if testing.Short() {
+			t.Skip("skipping 10x1000 in short mode")
+		}
+		testReplMcConversation(t, 10, 1000, 20, 1000)
+>>>>>>> origin/main
 	})
 }

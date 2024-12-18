@@ -36,6 +36,7 @@ import { SpaceInfo } from '../types'
 import {
     IRuleEntitlementBase,
     IRuleEntitlementV2Base,
+    RiverAirdropDapp,
     UNKNOWN_ERROR,
     UserEntitlementShim,
 } from './index'
@@ -157,6 +158,7 @@ export class SpaceDapp implements ISpaceDapp {
     public readonly pricingModules: PricingModules
     public readonly walletLink: WalletLink
     public readonly platformRequirements: PlatformRequirements
+    public readonly airdrop: RiverAirdropDapp
 
     public readonly entitlementCache: EntitlementCache<EntitlementRequest, EntitlementData[]>
     public readonly entitledWalletCache: EntitlementCache<EntitlementRequest, EntitledWallet>
@@ -173,6 +175,7 @@ export class SpaceDapp implements ISpaceDapp {
             config.addresses.spaceFactory,
             provider,
         )
+        this.airdrop = new RiverAirdropDapp(config, provider)
 
         // For RPC providers that pool for events, we need to set the polling interval to a lower value
         // so that we don't miss events that may be emitted in between polling intervals. The Ethers
@@ -1644,6 +1647,66 @@ export class SpaceDapp implements ISpaceDapp {
         }
 
         return space.Membership.listenForMembershipToken(receiver, abortController)
+    }
+
+    /**
+     * Get the token id for the owner
+     * Returns the first token id matched from the linked wallets of the owner
+     * @param spaceId - The space id
+     * @param owner - The owner
+     * @returns The token id
+     */
+    public async getTokenIdOfOwner(spaceId: string, owner: string): Promise<string | undefined> {
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+        const linkedWallets = await this.getLinkedWallets(owner)
+        const tokenIds = await space.getTokenIdsOfOwner(linkedWallets)
+        return tokenIds[0]
+    }
+
+    /**
+     * Tip a user
+     * @param args
+     * @param args.spaceId - The space id
+     * @param args.tokenId - The token id to tip. Obtainable from getTokenIdOfOwner
+     * @param args.currency - The currency to tip - address or 0xEeeeeeeeee... for native currency
+     * @param args.amount - The amount to tip
+     * @param args.messageId - The message id - needs to be hex encoded to 64 characters
+     * @param args.channelId - The channel id - needs to be hex encoded to 64 characters
+     * @param signer - The signer to use for the tip
+     * @returns The transaction
+     */
+    public async tip(
+        args: {
+            spaceId: string
+            tokenId: string
+            currency: string
+            amount: bigint
+            messageId: string
+            channelId: string
+        },
+        signer: ethers.Signer,
+    ): Promise<ContractTransaction> {
+        const { spaceId, tokenId, currency, amount, messageId, channelId } = args
+        const space = this.getSpace(spaceId)
+        if (!space) {
+            throw new Error(`Space with spaceId "${spaceId}" is not found.`)
+        }
+
+        return space.Tipping.write(signer).tip(
+            {
+                tokenId,
+                currency,
+                amount,
+                messageId: ensureHexPrefix(messageId),
+                channelId: ensureHexPrefix(channelId),
+            },
+            {
+                value: amount,
+            },
+        )
     }
 }
 

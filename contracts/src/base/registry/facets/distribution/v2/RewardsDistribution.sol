@@ -13,11 +13,11 @@ import {StakingRewards} from "./StakingRewards.sol";
 import {RewardsDistributionStorage} from "./RewardsDistributionStorage.sol";
 
 // contracts
-import {Facet} from "contracts/src/diamond/facets/Facet.sol";
-import {OwnableBase} from "contracts/src/diamond/facets/ownable/OwnableBase.sol";
+import {Facet} from "@river-build/diamond/src/facets/Facet.sol";
+import {OwnableBase} from "@river-build/diamond/src/facets/ownable/OwnableBase.sol";
 import {UpgradeableBeaconBase} from "contracts/src/diamond/facets/beacon/UpgradeableBeacon.sol";
-import {Nonces} from "contracts/src/diamond/utils/Nonces.sol";
-import {EIP712Base} from "contracts/src/diamond/utils/cryptography/signature/EIP712Base.sol";
+import {Nonces} from "@river-build/diamond/src/utils/Nonces.sol";
+import {EIP712Base} from "@river-build/diamond/src/utils/cryptography/signature/EIP712Base.sol";
 import {MainnetDelegationBase} from "contracts/src/tokens/river/base/delegation/MainnetDelegationBase.sol";
 import {DelegationProxy} from "./DelegationProxy.sol";
 import {RewardsDistributionBase} from "./RewardsDistributionBase.sol";
@@ -83,6 +83,13 @@ contract RewardsDistribution is
     RewardsDistributionStorage.layout().isRewardNotifier[notifier] = enabled;
 
     emit RewardNotifierSet(notifier, enabled);
+  }
+
+  /// @inheritdoc IRewardsDistribution
+  function setPeriodRewardAmount(uint256 amount) external onlyOwner {
+    RewardsDistributionStorage.layout().periodRewardAmount = amount;
+
+    emit PeriodRewardAmountSet(amount);
   }
 
   /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
@@ -473,5 +480,10 @@ contract RewardsDistribution is
     assembly {
       result := sload(_UPGRADEABLE_BEACON_IMPLEMENTATION_SLOT)
     }
+  }
+
+  /// @inheritdoc IRewardsDistribution
+  function getPeriodRewardAmount() external view returns (uint256) {
+    return RewardsDistributionStorage.layout().periodRewardAmount;
   }
 }

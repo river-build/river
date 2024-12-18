@@ -2,10 +2,14 @@ package rpc
 
 import (
 	"context"
+<<<<<<< HEAD
 	"fmt"
 	"time"
 
 	"golang.org/x/exp/rand"
+=======
+	"time"
+>>>>>>> origin/main
 
 	"github.com/river-build/river/core/node/utils"
 
@@ -22,6 +26,8 @@ func (s *Service) AllocateStream(
 	req *connect.Request[AllocateStreamRequest],
 ) (*connect.Response[AllocateStreamResponse], error) {
 	ctx, log := utils.CtxAndLogForRequest(ctx, req)
+	ctx, cancel := utils.UncancelContext(ctx, 10*time.Second, 20*time.Second)
+	defer cancel()
 	log.Debug("AllocateStream ENTER")
 	r, e := s.allocateStream(ctx, req.Msg)
 	if e != nil {
@@ -65,6 +71,8 @@ func (s *Service) NewEventReceived(
 ) (*connect.Response[NewEventReceivedResponse], error) {
 	time.Sleep(time.Duration(rand.Int63n(1000)) * time.Millisecond)
 	ctx, log := utils.CtxAndLogForRequest(ctx, req)
+	ctx, cancel := utils.UncancelContext(ctx, 5*time.Second, 10*time.Second)
+	defer cancel()
 	log.Debug("NewEventReceived ENTER")
 	r, e := s.newEventReceived(ctx, req.Msg)
 	if ctx.Err() != nil {
@@ -176,6 +184,8 @@ func (s *Service) SaveMiniblockCandidate(
 	req *connect.Request[SaveMiniblockCandidateRequest],
 ) (*connect.Response[SaveMiniblockCandidateResponse], error) {
 	ctx, log := utils.CtxAndLogForRequest(ctx, req)
+	ctx, cancel := utils.UncancelContext(ctx, 5*time.Second, 10*time.Second)
+	defer cancel()
 	log.Debug("SaveMiniblockCandidate ENTER")
 	r, e := s.saveMiniblockCandidate(ctx, req.Msg)
 	if e != nil {

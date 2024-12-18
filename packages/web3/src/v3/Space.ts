@@ -30,6 +30,7 @@ import { RuleEntitlementShim } from './RuleEntitlementShim'
 import { RuleEntitlementV2Shim } from './RuleEntitlementV2Shim'
 import { IRuleEntitlementBase, IRuleEntitlementV2Base } from '.'
 import { IBanningShim } from './IBanningShim'
+import { ITippingShim } from './ITippingShim'
 import { IERC721AQueryableShim } from './IERC721AQueryableShim'
 import { IEntitlementDataQueryableShim } from './IEntitlementDataQueryableShim'
 import { BaseChainConfig } from '../IStaticContractsInfo'
@@ -60,6 +61,7 @@ export class Space {
     private readonly prepay: IPrepayShim
     private readonly erc721A: IERC721AShim
     private readonly spaceOwnerErc721A: IERC721AShim
+    private readonly tipping: ITippingShim
 
     constructor(
         address: string,
@@ -87,6 +89,7 @@ export class Space {
         this.entitlementDataQueryable = new IEntitlementDataQueryableShim(address, provider)
         this.prepay = new IPrepayShim(address, provider)
         this.erc721A = new IERC721AShim(address, provider)
+        this.tipping = new ITippingShim(address, provider)
     }
 
     private getAllShims() {
@@ -105,6 +108,7 @@ export class Space {
             this.entitlementDataQueryable,
             this.prepay,
             this.erc721A,
+            this.tipping,
         ] as const
     }
 
@@ -170,6 +174,24 @@ export class Space {
 
     public get SpaceOwnerErc721A(): IERC721AShim {
         return this.spaceOwnerErc721A
+    }
+
+    public get Tipping(): ITippingShim {
+        return this.tipping
+    }
+
+    public async totalTips({ currency }: { currency: string }): Promise<{
+        count: bigint
+        amount: bigint
+    }> {
+        const [count, amount] = await Promise.all([
+            this.tipping.totalTipsByCurrency(currency),
+            this.tipping.tipAmountByCurrency(currency),
+        ])
+        return {
+            count,
+            amount,
+        }
     }
 
     public getSpaceInfo(): Promise<ISpaceOwnerBase.SpaceStruct> {
@@ -463,6 +485,14 @@ export class Space {
             users: entitlementDetails.users,
             ruleData: entitlementDetails.ruleData,
         }
+    }
+
+    public async getTokenIdsOfOwner(linkedWallets: string[]): Promise<string[]> {
+        const tokenPromises = linkedWallets.map((wallet) =>
+            this.erc721AQueryable.read.tokensOfOwner(wallet),
+        )
+        const allTokenArrays = await Promise.all(tokenPromises)
+        return allTokenArrays.flat().map((token) => token.toString())
     }
 
     /**
