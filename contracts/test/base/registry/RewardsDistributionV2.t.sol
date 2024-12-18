@@ -1012,6 +1012,7 @@ contract RewardsDistributionV2Test is
     uint256 rewardAmount,
     uint256 timeLapse
   ) public {
+    vm.assume(beneficiary != address(rewardsDistributionFacet));
     depositors[0] = beneficiary;
     sanitizeAmounts(amounts);
     timeLapse = bound(timeLapse, 0, rewardDuration);
