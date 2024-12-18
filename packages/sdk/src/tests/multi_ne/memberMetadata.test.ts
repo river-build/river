@@ -671,12 +671,12 @@ describe('memberMetadataTests', () => {
         await bobsClient.createChannel(spaceId, 'secret channel', 'messaging like spies', channelId)
         await bobsClient.waitForStream(channelId)
 
-        // initial value is "false"
+        // initial value is "undefined"
         expect(bobsClient.stream(channelId)?.view.membershipContent.encryptionAlgorithm).toBe(
             undefined,
         )
 
-        // set mls enabled to true
+        // set mls enabled to mls_0.0.1
         const truePromise = makeDonePromise()
         bobsClient.once('streamEncryptionAlgorithmUpdated', (updatedStreamId, value) => {
             expect(updatedStreamId).toBe(channelId)
@@ -692,7 +692,7 @@ describe('memberMetadataTests', () => {
             'mls_0.0.1',
         )
 
-        // toggle back to to false
+        // toggle back to to undefined
         const falsePromise = makeDonePromise()
         bobsClient.once('streamEncryptionAlgorithmUpdated', (updatedStreamId, value) => {
             expect(updatedStreamId).toBe(channelId)
