@@ -56,18 +56,37 @@ contract ProxyBatchDelegation is IProxyBatchDelegation {
   function sendDelegators(uint32 minGasLimit, uint8 half) external {
     address[] memory delegators = rvr.getDelegators();
     uint256 length = delegators.length;
-    uint256 start = (half == 1) ? length / 2 : 0;
-    uint256 end = (half == 1) ? length : length / 2;
+    uint256 halfLength = length / 2;
 
-    address[] memory delegates = new address[](length);
-    address[] memory authorizedClaimers = new address[](length);
-    uint256[] memory quantities = new uint256[](length);
+    uint256 start;
+    uint256 end;
+    uint256 sliceLength;
 
+    if (half == 0) {
+      start = 0;
+      end = halfLength;
+      sliceLength = halfLength;
+    } else {
+      start = halfLength;
+      end = length;
+      sliceLength = length - halfLength;
+    }
+
+    address[] memory delegates = new address[](sliceLength);
+    address[] memory authorizedClaimers = new address[](sliceLength);
+    uint256[] memory quantities = new uint256[](sliceLength);
+
+    // Use a separate array index to avoid out-of-range issues
+    uint256 arrayIndex = 0;
     for (uint256 i = start; i < end; ++i) {
       address delegator = delegators[i];
-      authorizedClaimers[i] = claimers.getAuthorizedClaimer(delegator);
-      delegates[i] = _delegates(address(rvr), delegator);
-      quantities[i] = SafeTransferLib.balanceOf(address(rvr), delegator);
+      authorizedClaimers[arrayIndex] = claimers.getAuthorizedClaimer(delegator);
+      delegates[arrayIndex] = _delegates(address(rvr), delegator);
+      quantities[arrayIndex] = SafeTransferLib.balanceOf(
+        address(rvr),
+        delegator
+      );
+      arrayIndex++;
     }
 
     ICrossDomainMessenger(MESSENGER).sendMessage(
