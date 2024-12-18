@@ -24,28 +24,9 @@ import (
 	"github.com/river-build/river/core/node/storage"
 )
 
-var (
-	// nodeUpdateGracePeriod describes the maximum delay we would expect to see
-	// when a stream's miniblocks updates in the registry before we consider a
-	// node behind and attempt to advance to the next peer to retrieve the miniblock.
-	// Two blocks plus change
-	nodeUpdateGracePeriod = 5 * time.Second
-
-	// nodeBehindBlocksBehind is the maximum blocks a stream can fall behind the contract
-	// before we consider this node to be "behind" and advance to the next peer to
-	// retrieve the miniblock.
-	nodeBehindBlocksBehind = 2
-
-	// For streams that cannot be updated to the current contract state, this is the
-	// grace period we give before we consider this stream to be corrupt.
-	// By the time a stream is this out of date with the contract state, we should have
-	// cycled through every node that hosts the replicated stream.
-	staleStreamGracePeriod = 100 * time.Second
-
-	// If for some reason the contract state continues to advance, but we are unable to
-	// download miniblocks past a certain point, consider the stream corrupt.
-	maxBlocksBehind = 50
-)
+// maxFailedConsecutiveUpdates is the maximum number of consecutive update failures allowed
+// before a stream is considered corrupt.
+var maxFailedConsecutiveUpdates = uint32(50)
 
 type contractState struct {
 	// Everything in the registry state is protected by this mutex.
@@ -77,10 +58,12 @@ type ArchiveStream struct {
 
 	// registryState describes the state of the stream as reported by the stream
 	// registry.
-	registryState contractState
-	numBlocksInDb atomic.Int64 // -1 means not loaded
+	numBlocksInContract atomic.Int64
+	numBlocksInDb       atomic.Int64 // -1 means not loaded
 
 	corrupt atomic.Bool
+
+	consecutiveUpdateFailures atomic.Uint32
 
 	// Mutex is used so only one archive operation is performed at a time.
 	mu sync.Mutex
@@ -91,7 +74,7 @@ func NewArchiveStream(streamId StreamId, nn *[]common.Address, lastKnownMinibloc
 		streamId: streamId,
 		nodes:    nodes.NewStreamNodesWithLock(*nn, common.Address{}),
 	}
-	stream.registryState.UpdateNumBlocksInContract(int64(lastKnownMiniblock + 1))
+	stream.numBlocksInContract.Store(int64(lastKnownMiniblock + 1))
 	stream.numBlocksInDb.Store(-1)
 
 	return stream
@@ -126,8 +109,7 @@ type Archiver struct {
 	streamLastMiniblockUpdated atomic.Uint64
 
 	// metrics
-	nodeBehindEvents *prometheus.CounterVec
-	nodeAdvances     *prometheus.CounterVec
+	nodeAdvances *prometheus.CounterVec
 }
 
 type ArchiverStats struct {
@@ -224,12 +206,6 @@ func (a *Archiver) setupStatisticsMetrics(factory infra.MetricsFactory) {
 		func() float64 { return float64(a.streamLastMiniblockUpdated.Load()) },
 	)
 
-	a.nodeBehindEvents = factory.NewCounterVecEx(
-		"node_behind_events",
-		"Total times a node was considered to have an out of date stream record",
-		"node_address",
-	)
-
 	a.nodeAdvances = factory.NewCounterVecEx(
 		"node_advances",
 		"Total times a node was advanced, indicating it was behind or returned an error response",
@@ -280,35 +256,6 @@ func (a *Archiver) addNewStream(
 	a.streamsExamined.Add(1)
 }
 
-// Consider this node behind for this stream and advance the node pointer
-func (a *Archiver) onNodeBehind(
-	stream *ArchiveStream,
-	nodeAddr common.Address,
-) {
-	// We now consider this node behind for this stream. Let's advance it.
-	if a.nodeAdvances != nil {
-		nodeAddress := prometheus.Labels{"node_address": nodeAddr.String()}
-		a.nodeAdvances.With(nodeAddress).Inc()
-		a.nodeBehindEvents.With(nodeAddress).Inc()
-	}
-	stream.nodes.AdvanceStickyPeer(nodeAddr)
-}
-
-// isCorrupt determines whether we consider a stream corrupt. We consider a stream corrupt
-// if we have not been able to catch up to the current contract block for a certain period
-// of time, or alternatively if we are unable to download the current miniblock(s) from any
-// of the replicas that host the node, and advance the stream locally.
-func isCorrupt(mbsInContract int64, mbsInDb int64, timeSinceLastContractUpdate time.Time) bool {
-	return time.Since(timeSinceLastContractUpdate) > staleStreamGracePeriod ||
-		mbsInContract-mbsInDb > int64(maxBlocksBehind)
-}
-
-// isBehind determines when we consider a node to be behind and advance the peer.
-func isBehind(mbsInContract int64, mbsInDb int64, timeSinceLastContractUpdate time.Time) bool {
-	return time.Since(timeSinceLastContractUpdate) > nodeUpdateGracePeriod ||
-		mbsInContract-mbsInDb > int64(nodeBehindBlocksBehind)
-}
-
 // ArchiveStream attempts to add all new miniblocks seen, according to the registry contract,
 // since the last time the stream was archived into storage.  It creates a new stream for
 // streams that have not yet been seen.
@@ -347,7 +294,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 		}
 	}
 
-	mbsInContract, contractMbsUpdated := stream.registryState.NumBlocksInContract()
+	mbsInContract := stream.numBlocksInContract.Load()
 	if mbsInDb >= mbsInContract {
 		a.streamsUpToDate.Add(1)
 		return nil
@@ -397,14 +344,15 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 			}
 			stream.nodes.AdvanceStickyPeer(nodeAddr)
 
-			if isCorrupt(mbsInContract, mbsInDb, contractMbsUpdated) {
+			if stream.consecutiveUpdateFailures.Load() >= maxFailedConsecutiveUpdates {
 				// Mark this stream as corrupt
 				stream.corrupt.Store(true)
 			} else {
-				// We remove the stream from the rotation when it passes the grace period for stale
-				// streams. Keeping it here gives us a chance to fetch the stream if a node is booting
-				// or otherwise unavailable for an intermittent period, or fetch from another node if
-				// only a subset of nodes are unavailable.
+				// We remove the stream from the rotation when it fails to update consecutively past
+				// the maximum allowed. Keeping it here gives us a chance to fetch the stream if a node
+				// is booting or otherwise unavailable for an intermittent period, or fetch from another
+				// node if only a subset of nodes are unavailable.
+				stream.consecutiveUpdateFailures.Add(1)
 				time.AfterFunc(5*time.Second, func() {
 					a.tasks <- stream.streamId
 				})
@@ -414,15 +362,10 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 		}
 
 		if (err != nil && AsRiverError(err).Code == Err_NOT_FOUND) || resp.Msg == nil || len(resp.Msg.Miniblocks) == 0 {
-			if isCorrupt(mbsInContract, mbsInDb, contractMbsUpdated) {
+			if stream.consecutiveUpdateFailures.Load() >= maxFailedConsecutiveUpdates {
 				stream.corrupt.Store(true)
 				// Do not re-insert this stream back into the task queue, it is now considered un-updatable.
 				return nil
-			} else if isBehind(mbsInContract, mbsInDb, contractMbsUpdated) {
-				a.onNodeBehind(
-					stream,
-					nodeAddr,
-				)
 			} else {
 				log.Debug(
 					"ArchiveStream: GetMiniblocks did not return data, remote storage is not up-to-date with contract yet",
@@ -433,16 +376,29 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 					"toExclusive",
 					toBlock,
 				)
-			}
 
-			// Reschedule with delay.
-			streamId := stream.streamId
-			// Since there was no error response, let's try again after a short period.
-			time.AfterFunc(time.Second, func() {
-				a.tasks <- streamId
-			})
-			return nil
+				stream.consecutiveUpdateFailures.Add(1)
+
+				// Advance the peer if applicable
+				if a.nodeAdvances != nil {
+					a.nodeAdvances.With(prometheus.Labels{"node_address": nodeAddr.String()}).Inc()
+				}
+				stream.nodes.AdvanceStickyPeer(nodeAddr)
+
+				// Reschedule with delay.
+				streamId := stream.streamId
+
+				// Since there was no error response, let's try again after a short period.
+				time.AfterFunc(time.Second, func() {
+					a.tasks <- streamId
+				})
+				return nil
+			}
 		}
+
+		// Update the consecutive updates counter to reflect that the miniblocks were available
+		// on the network.
+		stream.consecutiveUpdateFailures.Store(0)
 
 		msg := resp.Msg
 
@@ -617,7 +573,7 @@ func (a *Archiver) onStreamLastMiniblockUpdated(
 		return
 	}
 	stream := record.(*ArchiveStream)
-	stream.registryState.UpdateNumBlocksInContract(int64(event.LastMiniblockNum + 1))
+	stream.numBlocksInContract.Store(int64(event.LastMiniblockNum + 1))
 	a.tasks <- id
 }
 
