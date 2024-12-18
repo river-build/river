@@ -11,7 +11,7 @@ import {CurrencyTransfer} from "contracts/src/utils/libraries/CurrencyTransfer.s
 
 // contracts
 import {TippingFacet} from "contracts/src/spaces/facets/tipping/TippingFacet.sol";
-import {IntrospectionFacet} from "contracts/src/diamond/facets/introspection/IntrospectionFacet.sol";
+import {IntrospectionFacet} from "@river-build/diamond/src/facets/introspection/IntrospectionFacet.sol";
 import {MembershipFacet} from "contracts/src/spaces/facets/membership/MembershipFacet.sol";
 
 import {DeployMockERC20, MockERC20} from "contracts/scripts/deployments/utils/DeployMockERC20.s.sol";
@@ -43,7 +43,9 @@ contract TippingTest is BaseSetup, ITippingBase, IERC721ABase {
 
     vm.assume(sender != receiver);
     vm.assume(sender != address(0) && sender.code.length == 0);
-    vm.assume(receiver != address(0) && receiver.code.length == 0);
+    // exclude precompiles
+    vm.assume(uint256(uint160(receiver)) > 10);
+    vm.assume(receiver.code.length == 0);
 
     vm.prank(sender);
     membership.joinSpace(sender);

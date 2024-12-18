@@ -2,17 +2,17 @@
 pragma solidity ^0.8.19;
 
 //interfaces
-import {IDiamond} from "contracts/src/diamond/IDiamond.sol";
+import {IDiamond} from "@river-build/diamond/src/IDiamond.sol";
 
 //libraries
 
 //contracts
-import {Diamond} from "contracts/src/diamond/Diamond.sol";
-import {DiamondHelper} from "contracts/test/diamond/Diamond.t.sol";
+import {Diamond} from "@river-build/diamond/src/Diamond.sol";
+import {DiamondHelper} from "@river-build/diamond/scripts/common/helpers/DiamondHelper.s.sol";
 import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 
 // deployers
-import {MultiInit} from "contracts/src/diamond/initializers/MultiInit.sol";
+import {MultiInit} from "@river-build/diamond/src/initializers/MultiInit.sol";
 import {DeployMultiInit} from "contracts/scripts/deployments/utils/DeployMultiInit.s.sol";
 import {DeployDiamondCut} from "contracts/scripts/deployments/facets/DeployDiamondCut.s.sol";
 import {DeployDiamondLoupe} from "contracts/scripts/deployments/facets/DeployDiamondLoupe.s.sol";
@@ -23,7 +23,7 @@ import {DeployTokenMigration} from "contracts/scripts/deployments/facets/DeployT
 
 contract DeployRiverMigration is DiamondHelper, Deployer {
   address OLD_TOKEN = 0x0000000000000000000000000000000000000000;
-  address NEW_TOKEN = 0x0000000000000000000000000000000000000001;
+  address NEW_TOKEN = 0x0000000000000000000000000000000000000000;
 
   DeployMultiInit deployMultiInit = new DeployMultiInit();
   DeployDiamondCut diamondCutHelper = new DeployDiamondCut();
@@ -48,6 +48,14 @@ contract DeployRiverMigration is DiamondHelper, Deployer {
   function setTokens(address _oldToken, address _newToken) external {
     OLD_TOKEN = _oldToken;
     NEW_TOKEN = _newToken;
+  }
+
+  function getTokens() public returns (address, address) {
+    if (OLD_TOKEN == address(0) && NEW_TOKEN == address(0)) {
+      return (getDeployment("oldRiver"), getDeployment("river"));
+    }
+
+    return (OLD_TOKEN, NEW_TOKEN);
   }
 
   function addImmutableCuts(address deployer) internal {
@@ -90,10 +98,12 @@ contract DeployRiverMigration is DiamondHelper, Deployer {
   ) public returns (Diamond.InitParams memory) {
     tokenMigration = tokenMigrationHelper.deploy(deployer);
 
+    (address oldToken, address newToken) = getTokens();
+
     addFacet(
       tokenMigrationHelper.makeCut(tokenMigration, IDiamond.FacetCutAction.Add),
       tokenMigration,
-      tokenMigrationHelper.makeInitData(OLD_TOKEN, NEW_TOKEN)
+      tokenMigrationHelper.makeInitData(oldToken, newToken)
     );
 
     return
