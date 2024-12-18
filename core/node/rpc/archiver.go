@@ -27,7 +27,7 @@ import (
 
 // maxFailedConsecutiveUpdates is the maximum number of consecutive update failures allowed
 // before a stream is considered corrupt.
-var maxFailedConsecutiveUpdates = uint32(5)
+var maxFailedConsecutiveUpdates = uint32(50)
 
 type contractState struct {
 	// Everything in the registry state is protected by this mutex.
@@ -444,7 +444,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 }
 
 func (a *Archiver) emitPeriodicCorruptStreamReport(ctx context.Context) {
-	ticker := time.NewTicker(15 * time.Second)
+	ticker := time.NewTicker(15 * time.Minute)
 	defer ticker.Stop()
 
 	for {
