@@ -233,8 +233,8 @@ func (s *PostgresStreamStore) maintainSchemaLock(
 				s.exitSignal <- err
 			}
 		}
-		// Wait 1s between db pings.
-		if err = SleepWithContext(ctx, 100*time.Millisecond); err != nil {
+
+		if err = SleepWithContext(ctx, 1*time.Second); err != nil {
 			return
 		}
 	}
@@ -890,8 +890,15 @@ func (s *PostgresStreamStore) writeEventTx(
 	// At this moment counter should be equal to minipoolSlot otherwise it is discrepancy of actual and expected records in minipool
 	// Keep in mind that there is service record with seqNum equal to -1
 	if counter != minipoolSlot {
+		var seqNum int
+		mbErr := tx.QueryRow(
+			ctx,
+			s.sqlForStream("select max(seq_num) from {{miniblocks}} where stream_id = $1", streamId),
+			streamId,
+		).Scan(&seqNum)
 		return RiverError(Err_DB_OPERATION_FAILURE, "Wrong number of records in minipool").
-			Tag("ActualRecordsNumber", counter).Tag("ExpectedRecordsNumber", minipoolSlot)
+			Tag("ActualRecordsNumber", counter).Tag("ExpectedRecordsNumber", minipoolSlot).
+			Tag("maxSeqNum", seqNum).Tag("mbErr", mbErr)
 	}
 
 	// All checks passed - we need to insert event into minipool
@@ -1626,7 +1633,9 @@ func (s *PostgresStreamStore) listOtherInstancesTx(ctx context.Context, tx pgx.T
 		}
 		if delay > 0 {
 			log.Info("singlenodekey is not empty; Delaying startup to let other instance exit", "delay", delay)
-			time.Sleep(delay)
+			if err = SleepWithContext(ctx, delay); err != nil {
+				return AsRiverError(err, Err_DB_OPERATION_FAILURE).Message("Could not list other instances")
+			}
 		}
 	}
 
@@ -1678,7 +1687,9 @@ func (s *PostgresStreamStore) acquireListeningConnection(ctx context.Context) *p
 		log.Debug("Failed to acquire listening connection, retrying", "error", err)
 
 		// In the event of networking issues, wait a small period of time for recovery.
-		time.Sleep(100 * time.Millisecond)
+		if err = SleepWithContext(ctx, 100*time.Millisecond); err != nil {
+			return nil
+		}
 	}
 }
 
@@ -1714,7 +1725,9 @@ func (s *PostgresStreamStore) acquireConnection(ctx context.Context) (*pgxpool.C
 		)
 
 		// In the event of networking issues, wait a small period of time for recovery.
-		time.Sleep(500 * time.Millisecond)
+		if err = SleepWithContext(ctx, 500*time.Millisecond); err != nil {
+			break
+		}
 	}
 
 	log.Error("Failed to acquire pgx connection", "error", err)

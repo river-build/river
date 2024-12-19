@@ -192,6 +192,8 @@ func executeConnectHandler[Req, Res any](
 			Tags(
 				"nodeAddress", service.wallet.Address.Hex(),
 				"nodeUrl", service.config.Address,
+				"handler", methodName,
+				//				"req.Msg", req.Msg,
 				"elapsed", elapsed,
 			).
 			Func(methodName)

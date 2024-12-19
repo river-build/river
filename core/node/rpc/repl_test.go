@@ -8,6 +8,7 @@ import (
 
 	"github.com/river-build/river/core/contracts/river"
 	"github.com/river-build/river/core/node/crypto"
+	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/events"
 	"github.com/river-build/river/core/node/protocol"
 	. "github.com/river-build/river/core/node/shared"
@@ -51,6 +52,9 @@ func TestReplAdd(t *testing.T) {
 			DisableMiniblockCreation: true,
 		},
 	)
+
+	dlog.FromCtx(tt.ctx).Error("User settings stream", "streamId", streamId)
+
 	require.NoError(err)
 
 	require.NoError(addUserBlockedFillerEvent(ctx, wallet, client, streamId, MiniblockRefFromCookie(cookie)))
