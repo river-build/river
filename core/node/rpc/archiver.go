@@ -28,30 +28,6 @@ import (
 // before a stream is considered corrupt.
 var maxFailedConsecutiveUpdates = uint32(50)
 
-type contractState struct {
-	// Everything in the registry state is protected by this mutex.
-	mu                  sync.Mutex
-	numBlocksInContract int64
-	// This is the last time we saw an event to update the miniblock count for the
-	// stream. lastContractMiniblockUpdate should always be updated with numBlocksInContract.
-	lastContractMiniblockUpdate time.Time
-}
-
-func (cs *contractState) UpdateNumBlocksInContract(blocks int64) {
-	cs.mu.Lock()
-	defer cs.mu.Unlock()
-
-	cs.numBlocksInContract = blocks
-	cs.lastContractMiniblockUpdate = time.Now()
-}
-
-func (cs *contractState) NumBlocksInContract() (int64, time.Time) {
-	cs.mu.Lock()
-	defer cs.mu.Unlock()
-
-	return cs.numBlocksInContract, cs.lastContractMiniblockUpdate
-}
-
 type ArchiveStream struct {
 	streamId StreamId
 	nodes    nodes.StreamNodes
