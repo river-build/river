@@ -1,7 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
-import { Message, PartialMessage, PlainMessage } from '@bufbuild/protobuf'
+import { Message, PlainMessage } from '@bufbuild/protobuf'
 import { Permission } from '@river-build/web3'
 import {
     MembershipOp,
@@ -31,7 +28,6 @@ import {
     UserBio,
     Tags,
     BlockchainTransaction,
-    BlockchainTransactionKind,
 } from '@river-build/proto'
 import {
     bin_fromHexString,
@@ -137,6 +133,7 @@ import {
     make_UserMetadataPayload_Bio,
     make_UserPayload_BlockchainTransaction,
     ContractReceipt,
+    make_MemberPayload_EncryptionAlgorithm,
 } from './types'
 
 import debug from 'debug'
@@ -877,6 +874,29 @@ export class Client
         return this.makeEventAndAddToStream(streamId, event, {
             method: 'updateGDMChannelProperties',
         })
+    }
+
+    async setStreamEncryptionAlgorithm(streamId: string, encryptionAlgorithm?: string) {
+        assert(
+            isChannelStreamId(streamId) ||
+                isSpaceStreamId(streamId) ||
+                isDMChannelStreamId(streamId) ||
+                isGDMChannelStreamId(streamId),
+            'channelId must be a valid streamId',
+        )
+        const stream = this.stream(streamId)
+        check(isDefined(stream), 'stream not found')
+        check(
+            stream.view.membershipContent.encryptionAlgorithm != encryptionAlgorithm,
+            `mlsEnabled is already set to ${encryptionAlgorithm}`,
+        )
+        return this.makeEventAndAddToStream(
+            streamId,
+            make_MemberPayload_EncryptionAlgorithm(encryptionAlgorithm),
+            {
+                method: 'setMlsEnabled',
+            },
+        )
     }
 
     async sendFullyReadMarkers(
@@ -1885,11 +1905,10 @@ export class Client
     async addTransaction(
         chainId: number,
         receipt: ContractReceipt,
-        metadata?: Omit<PartialMessage<BlockchainTransaction>, 'receipt'>,
+        content?: PlainMessage<BlockchainTransaction>['content'],
     ): Promise<{ eventId: string }> {
         check(isDefined(this.userStreamId))
         const transaction = {
-            kind: metadata?.kind ?? BlockchainTransactionKind.UNSPECIFIED,
             receipt: {
                 chainId: BigInt(chainId),
                 transactionHash: bin_fromHexString(receipt.transactionHash),
@@ -1902,7 +1921,7 @@ export class Client
                     data: bin_fromHexString(log.data),
                 })),
             },
-            ...metadata,
+            content: content ?? { case: undefined },
         } satisfies PlainMessage<BlockchainTransaction>
         const event = make_UserPayload_BlockchainTransaction(transaction)
         return this.makeEventAndAddToStream(this.userStreamId, event, {
@@ -1920,12 +1939,14 @@ export class Client
         currency: string,
     ): Promise<{ eventId: string }> {
         return this.addTransaction(chainId, receipt, {
-            kind: BlockchainTransactionKind.TIP,
-            streamId: streamIdAsBytes(streamId),
-            refEventId: bin_fromHexString(refEventId),
-            toUserAddress: addressFromUserId(toUserId),
-            quantity: quantity,
-            currency: bin_fromHexString(currency),
+            case: 'tip',
+            value: {
+                streamId: streamIdAsBytes(streamId),
+                refEventId: bin_fromHexString(refEventId),
+                toUserAddress: addressFromUserId(toUserId),
+                quantity: quantity,
+                currency: bin_fromHexString(currency),
+            },
         })
     }
 
