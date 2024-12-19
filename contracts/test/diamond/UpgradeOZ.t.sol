@@ -41,7 +41,6 @@ contract UpgradeOZTest is TestUtils, IDiamond {
 
   function test_upgradeDiamondCutFacet() public {
     // Deploy a new version of the DiamondCutFacet contract
-    diamondHelper = new DeployDiamond();
     address diamondCut = diamondCutHelper.deploy(deployer);
 
     // Create a cut to replace the existing DiamondCutFacet with the new version
