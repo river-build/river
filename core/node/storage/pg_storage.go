@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/exaring/otelpgx"
@@ -47,6 +48,8 @@ type PostgresEventStore struct {
 	isolationLevel pgx.TxIsoLevel
 
 	txTracker pgTxTracker
+
+	Retries atomic.Int64
 }
 
 // var _ StreamStorage = (*PostgresEventStore)(nil)
@@ -139,6 +142,7 @@ func (s *PostgresEventStore) txRunner(
 
 			if pgErr, ok := err.(*pgconn.PgError); ok {
 				if pgErr.Code == pgerrcode.SerializationFailure || pgErr.Code == pgerrcode.DeadlockDetected {
+					s.Retries.Add(1)
 					s.txTracker.track("RETRY", name, tags...)
 					log.Warn(
 						"pg.txRunner: retrying transaction due to serialization failure",

@@ -72,6 +72,7 @@ type serviceTester struct {
 	btc       *crypto.BlockchainTestContext
 	nodes     []*testNodeRecord
 	opts      serviceTesterOpts
+	retries   []int
 }
 
 type serviceTesterOpts struct {
@@ -122,6 +123,7 @@ func newServiceTester(t *testing.T, opts serviceTesterOpts) *serviceTester {
 		require:   require,
 		dbUrl:     dbtestutils.GetTestDbUrl(),
 		nodes:     make([]*testNodeRecord, opts.numNodes),
+		retries:   make([]int, opts.numNodes),
 		opts:      opts,
 	}
 
@@ -494,11 +496,19 @@ func (st *serviceTester) eventuallyCompareStreamDataInStorage(
 	expectedMbs int,
 	expectedEvents int,
 ) {
+	time.Sleep(10 * time.Second)
+
+	retries := 0
+	for _, node := range st.nodes {
+		retries += int(node.service.storage.(*storage.PostgresStreamStore).Retries.Load())
+	}
+	st.t.Log("Total retries", retries)
+
 	st.require.EventuallyWithT(
 		func(t *assert.CollectT) {
 			st.compareStreamDataInStorage(t, streamId, expectedMbs, expectedEvents)
 		},
-		20*time.Second,
+		10*time.Second,
 		100*time.Millisecond,
 	)
 }
