@@ -462,6 +462,8 @@ func (s *Service) addEventImpl(
 		return nil, err
 	}
 
+	dlog.FromCtx(ctx).Debug("AddEvent", "hash", req.Msg.Event.Hash, "stream", req.Msg.StreamId)
+
 	if view != nil {
 		return s.localAddEvent(ctx, req, stream, view)
 	}
