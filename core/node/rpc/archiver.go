@@ -366,7 +366,8 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 		}
 
 		if (err != nil && AsRiverError(err).Code == Err_NOT_FOUND) || resp.Msg == nil || len(resp.Msg.Miniblocks) == 0 {
-			// increment failures
+			// If the stream is unable to fully update, consider this attempt to archive the stream as
+			// a failure, but not an error.
 			stream.IncrementConsecutiveFailures()
 
 			log.Debug(
