@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+# sanity check; are the mls tools installed?
+exec /usr/bin/mls-tools version
+
 if [ -z "$RUN_MODE" ]; then
     echo "RUN_MODE is not set. Defaulting to full node"
     RUN_MODE="full"
