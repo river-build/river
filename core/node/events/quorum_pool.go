@@ -46,6 +46,7 @@ func (q *QuorumPool) GoRemotes(
 	q.remoteErrChannel = make(chan error, len(nodes))
 	q.remotes += len(nodes)
 	for _, node := range nodes {
+		ctx := context.WithoutCancel(ctx)
 		go q.executeRemote(ctx, node, f)
 	}
 }
