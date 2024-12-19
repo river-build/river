@@ -1,4 +1,4 @@
-use river_mls_protocol::msl_server::MslServer;
+use river_mls_protocol::{msl_server::MslServer, InfoRequest, InfoResponse};
 
 use std::path::Path;
 #[cfg(unix)]
@@ -30,7 +30,14 @@ impl river_mls_protocol::msl_server::Msl for MslService {
 
         Ok(Response::new(reply))
     }
+
+    async fn info(&self, _: Request<InfoRequest>) -> Result<Response<InfoResponse>, Status> {
+        let mut reply = InfoResponse::default();
+        reply.graffiti = "MLS Service welcomes you".to_string();
+        Ok(Response::new(reply))
+    }
 }
+
 
 #[cfg(unix)]
 #[tokio::main]

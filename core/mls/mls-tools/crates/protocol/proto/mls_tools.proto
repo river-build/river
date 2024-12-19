@@ -49,7 +49,12 @@ message InitialGroupInfoRequest {
 }
 
 message InitialGroupInfoResponse {}
+message InfoRequest {}
+message InfoResponse {
+    string graffiti = 1;
+}
 
 service Msl {
+    rpc Info(InfoRequest) returns(InfoResponse) {}
     rpc InitialGroupInfo(InitialGroupInfoRequest)  returns(InitialGroupInfoResponse) {}
 }
