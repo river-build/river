@@ -21,6 +21,8 @@ import {Deployer} from "contracts/scripts/common/Deployer.s.sol";
 import {DiamondHelper} from "contracts/test/diamond/Diamond.t.sol";
 import {FacetHelper} from "@river-build/diamond/scripts/common/helpers/FacetHelper.s.sol";
 
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
 contract UpgradeOZTest is TestUtils, IDiamond {
   DeployDiamond diamondHelper = new DeployDiamond();
   DeployMockFacet mockFacetHelper = new DeployMockFacet();
@@ -38,27 +40,30 @@ contract UpgradeOZTest is TestUtils, IDiamond {
   }
 
   function test_upgradeDiamondCutFacet() public {
+    // Deploy a new version of the DiamondCutFacet contract
     diamondHelper = new DeployDiamond();
-
     address diamondCut = diamondCutHelper.deploy(deployer);
 
+    // Create a cut to replace the existing DiamondCutFacet with the new version
     FacetCut[] memory _cuts = new FacetCut[](1);
     _cuts[0] = diamondCutHelper.makeCut(
       diamondCut,
       IDiamond.FacetCutAction.Replace
     );
 
+    // Execute the upgrade of DiamondCutFacet through the diamond proxy
     vm.broadcast(deployer);
     IDiamondCut(diamond).diamondCut(_cuts, address(0), "");
 
+    // Create a cut to add the MockFacet functionality
     _cuts = new FacetCut[](1);
     _cuts[0] = mockFacetHelper.makeCut(mockFacet, IDiamond.FacetCutAction.Add);
 
+    // Add the MockFacet through the newly upgraded DiamondCutFacet
     vm.broadcast(deployer);
+    vm.expectEmit(address(diamond));
+    emit Initializable.Initialized(1);
     IDiamondCut(diamond).diamondCut(_cuts, address(0), "");
-
-    mockFacetHelper = new DeployMockFacet();
-    mockFacet = mockFacetHelper.deploy(deployer);
   }
 }
 
