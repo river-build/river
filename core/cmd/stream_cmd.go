@@ -214,25 +214,23 @@ func runStreamGetMiniblockCmd(cmd *cobra.Command, args []string) error {
 		if info.HeaderEvent().Hash == miniblockHash {
 			mbHeader, ok := info.HeaderEvent().Event.Payload.(*protocol.StreamEvent_MiniblockHeader)
 			if !ok {
-				return fmt.Errorf("Unable to parse header event as miniblock header")
+				return fmt.Errorf("unable to parse header event as miniblock header")
 			}
 
 			if len(mbHeader.MiniblockHeader.EventHashes) != len(miniblock.Events) {
-				return fmt.Errorf("Malformatted miniblock: header event count and miniblock event count do not match")
+				return fmt.Errorf("malformatted miniblock: header event count and miniblock event count do not match")
 			}
 
 			for i, hash := range mbHeader.MiniblockHeader.EventHashes {
 				if !bytes.Equal(miniblock.Events[i].Hash, hash) {
 					return fmt.Errorf(
-						"Event %d hashes do not match: %v v %v in the header",
+						"event %d hashes do not match: %v v %v in the header",
 						i,
 						hex.EncodeToString(miniblock.Events[i].Hash),
 						hex.EncodeToString(hash),
 					)
 				}
 			}
-
-			
 
 			fmt.Printf("\nMiniblock\n=========\n%s\n", protojson.Format(miniblock))
 
