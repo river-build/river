@@ -109,7 +109,7 @@ func newServiceTester(t *testing.T, opts serviceTesterOpts) *serviceTester {
 	var ctx context.Context
 	var ctxCancel func()
 	if opts.printTestLogs {
-		ctx, ctxCancel = test.NewTestContextWithLogging("debug")
+		ctx, ctxCancel = test.NewTestContextWithLogging("error")
 	} else {
 		ctx, ctxCancel = test.NewTestContext()
 	}
