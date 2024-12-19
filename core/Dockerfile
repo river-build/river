@@ -3,7 +3,7 @@ FROM golang:1.23.3-alpine3.20 as builder
 
 # Install build-base for GCC (C compiler and related tools), git, and other dependencies.
 # Install libsecp256k1-dev if available or compile it from source.
-RUN apk add --no-cache build-base git libsecp256k1-dev cargo
+RUN apk add --no-cache build-base git libsecp256k1-dev cargo protobuf-dev
 
 ARG VER_VERSION=version_unset
 ARG VER_BRANCH=branch_unset
@@ -25,7 +25,7 @@ RUN go build \
 # Build mls-tools
 WORKDIR /build/mls/mls-tools
 RUN cargo build --release
-RUN mv -f ./target/release/mls-tools /bin/mls-tools
+RUN mv -f ./target/release/tool /bin/mls-tools
 RUN /bin/mls-tools version
 
 # Final stage
