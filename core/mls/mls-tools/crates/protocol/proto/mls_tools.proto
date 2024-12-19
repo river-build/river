@@ -52,6 +52,7 @@ message InitialGroupInfoResponse {}
 message InfoRequest {}
 message InfoResponse {
     string graffiti = 1;
+    string git = 2;
 }
 
 service Msl {
