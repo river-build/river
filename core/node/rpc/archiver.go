@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -62,12 +61,23 @@ type ArchiveStream struct {
 	numBlocksInContract atomic.Int64
 	numBlocksInDb       atomic.Int64 // -1 means not loaded
 
-	corrupt atomic.Bool
-
+	corrupt                   atomic.Bool
 	consecutiveUpdateFailures atomic.Uint32
 
 	// Mutex is used so only one archive operation is performed at a time.
 	mu sync.Mutex
+}
+
+func (as *ArchiveStream) IncrementConsecutiveFailures() {
+	as.consecutiveUpdateFailures.Add(1)
+	if as.consecutiveUpdateFailures.Load() >= maxFailedConsecutiveUpdates {
+		as.corrupt.Store(true)
+	}
+}
+
+func (as *ArchiveStream) ResetConsecutiveFailures() {
+	as.consecutiveUpdateFailures.Store(0)
+	as.corrupt.Store(false)
 }
 
 func NewArchiveStream(streamId StreamId, nn *[]common.Address, lastKnownMiniblock uint64) *ArchiveStream {
@@ -298,7 +308,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 	mbsInContract := stream.numBlocksInContract.Load()
 	if mbsInDb >= mbsInContract {
 		a.streamsUpToDate.Add(1)
-		stream.consecutiveUpdateFailures.Store(0)
+		stream.ResetConsecutiveFailures()
 		return nil
 	}
 
@@ -341,64 +351,46 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 				"node",
 				nodeAddr.Hex(),
 			)
+
+			// Advance node
 			if a.nodeAdvances != nil {
 				a.nodeAdvances.With(prometheus.Labels{"node_address": nodeAddr.String()}).Inc()
 			}
 			stream.nodes.AdvanceStickyPeer(nodeAddr)
 
-			if stream.consecutiveUpdateFailures.Load() >= maxFailedConsecutiveUpdates {
-				// Mark this stream as corrupt
-				log.Info("Marking stream as corrupt", "stream", stream.streamId, "lastErr", err)
-				stream.corrupt.Store(true)
-				return err
-			} else {
-				// We remove the stream from the rotation when it fails to update consecutively past
-				// the maximum allowed. Keeping it here gives us a chance to fetch the stream if a node
-				// is booting or otherwise unavailable for an intermittent period, or fetch from another
-				// node if only a subset of nodes are unavailable.
-				stream.consecutiveUpdateFailures.Add(1)
-				time.AfterFunc(5*time.Second, func() {
-					a.tasks <- stream.streamId
-				})
-				return nil
-			}
-
+			// reschedule
+			time.AfterFunc(5*time.Second, func() {
+				a.tasks <- stream.streamId
+			})
+			return err
 		}
 
 		if (err != nil && AsRiverError(err).Code == Err_NOT_FOUND) || resp.Msg == nil || len(resp.Msg.Miniblocks) == 0 {
-			if stream.consecutiveUpdateFailures.Load() >= maxFailedConsecutiveUpdates {
-				stream.corrupt.Store(true)
-				log.Info("Marking stream as corrupt due to missing miniblocks", "err", err, "mbsInDb", mbsInDb)
-				// Do not re-insert this stream back into the task queue, it is now considered un-updatable.
-				return fmt.Errorf("Stream %s unable to be updated, marked as corrupt", stream.streamId)
-			} else {
-				log.Debug(
-					"ArchiveStream: GetMiniblocks did not return data, remote storage is not up-to-date with contract yet",
-					"streamId",
-					stream.streamId,
-					"fromInclusive",
-					mbsInDb,
-					"toExclusive",
-					toBlock,
-				)
+			// increment failures
+			stream.IncrementConsecutiveFailures()
 
-				stream.consecutiveUpdateFailures.Add(1)
+			log.Debug(
+				"ArchiveStream: GetMiniblocks did not return data, remote storage is not up-to-date with contract yet",
+				"streamId",
+				stream.streamId,
+				"fromInclusive",
+				mbsInDb,
+				"toExclusive",
+				toBlock,
+			)
 
-				// Advance the peer if applicable
-				if a.nodeAdvances != nil {
-					a.nodeAdvances.With(prometheus.Labels{"node_address": nodeAddr.String()}).Inc()
-				}
-				stream.nodes.AdvanceStickyPeer(nodeAddr)
-
-				// Reschedule with delay.
-				streamId := stream.streamId
-
-				// Since there was no error response, let's try again after a short period.
-				time.AfterFunc(time.Second, func() {
-					a.tasks <- streamId
-				})
-				return nil
+			// Advance node
+			if a.nodeAdvances != nil {
+				a.nodeAdvances.With(prometheus.Labels{"node_address": nodeAddr.String()}).Inc()
 			}
+			stream.nodes.AdvanceStickyPeer(nodeAddr)
+
+			// Reschedule with delay.
+			streamId := stream.streamId
+			time.AfterFunc(time.Second, func() {
+				a.tasks <- streamId
+			})
+			return nil
 		}
 
 		msg := resp.Msg
@@ -439,7 +431,7 @@ func (a *Archiver) ArchiveStream(ctx context.Context, stream *ArchiveStream) err
 
 	// Update the consecutive updates counter to reflect that the miniblocks were available
 	// on the network.
-	stream.consecutiveUpdateFailures.Store(0)
+	stream.ResetConsecutiveFailures()
 	return nil
 }
 
@@ -627,7 +619,7 @@ func (a *Archiver) worker(ctx context.Context) {
 			if err != nil {
 				log.Error("archiver.worker: Failed to archive stream", "error", err, "streamId", streamId)
 				a.failedOpsCount.Add(1)
-				record.(*ArchiveStream).consecutiveUpdateFailures.Add(1)
+				record.(*ArchiveStream).IncrementConsecutiveFailures()
 			} else {
 				a.successOpsCount.Add(1)
 			}
