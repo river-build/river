@@ -39,6 +39,18 @@ contract DeployDropFacet is Deployer, FacetHelper {
     return abi.encodeWithSelector(initializer(), stakingContract);
   }
 
+  function facetInitHelper(
+    address deployer,
+    address facetAddress
+  ) external override returns (FacetCut memory, bytes memory) {
+    IDiamond.FacetCut memory facetCut = this.makeCut(
+      facetAddress,
+      IDiamond.FacetCutAction.Add
+    );
+    console.log("facetInitHelper: deployer", deployer);
+    return (facetCut, makeInitData(getDeployment("baseRegistry")));
+  }
+
   function __deploy(address deployer) public override returns (address) {
     vm.startBroadcast(deployer);
     DropFacet dropFacet = new DropFacet();
