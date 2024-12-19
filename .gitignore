@@ -83,5 +83,5 @@ go.work.sum
 
 .idea
 
-mls/mls-tools/target
+core/mls/mls-tools/target
 
