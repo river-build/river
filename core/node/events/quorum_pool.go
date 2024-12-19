@@ -55,6 +55,7 @@ func (q *QuorumPool) executeRemote(
 	node common.Address,
 	f func(ctx context.Context, node common.Address) error,
 ) {
+	dlog.FromCtx(ctx).Error("executeRemote", "node", node, "f", f)
 	err := f(ctx, node)
 	q.remoteErrChannel <- err
 
