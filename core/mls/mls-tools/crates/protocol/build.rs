@@ -14,7 +14,8 @@ fn main() {
             ".",
             r#"#[serde(rename_all = "camelCase")]"#
         )
-        .build_server(false)
+        .build_server(true)
+        .build_client(false)
         .compile_protos(&["proto/mls_tools.proto"], &["proto"])
         .unwrap();
 }

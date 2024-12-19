@@ -42,3 +42,14 @@ message MlsValidationResponse {
 
     ValidationResult result = 1;
 }
+
+message InitialGroupInfoRequest {
+    bytes group_info_message = 1;
+    bytes external_group_snapshot = 2;
+}
+
+message InitialGroupInfoResponse {}
+
+service Msl {
+    rpc InitialGroupInfo(InitialGroupInfoRequest)  returns(InitialGroupInfoResponse) {}
+}

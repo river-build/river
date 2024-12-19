@@ -7,13 +7,13 @@ use river_mls_protocol::mls_validation_response::ValidationResult;
 
 fn main() {
 
-    let filename = match std::env::args().nth(1) {
-        Some(arg_str) => arg_str,
-        None => {
-            println!("missing json encoded protobuf");
-            exit(1)
-        }
-    };
+    // let filename = match std::env::args().nth(1) {
+    //     Some(arg_str) => arg_str,
+    //     None => {
+    //         println!("missing json encoded protobuf");
+    //         exit(1)
+    //     }
+    // };
 
     if filename == "version" {
         println!("1.0.0");
