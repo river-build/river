@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
+
 func InfoRequest() (*mls_tools.InfoResponse, error) {
 	client, err := grpc.NewClient("unix:/tmp/mls_service",
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
