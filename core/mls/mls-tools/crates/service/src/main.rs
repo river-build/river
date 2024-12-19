@@ -45,7 +45,7 @@ impl river_mls_protocol::mls_server::Mls for MlsService {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = "/tmp/mls_service";
-    std::fs::remove_file(path).unwrap();
+    std::fs::remove_file(path).unwrap_or_default();
     std::fs::create_dir_all(Path::new(path).parent().unwrap())?;
 
     let mls_service = MlsService::default();
