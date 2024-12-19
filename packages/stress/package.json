@@ -31,7 +31,7 @@
         "pino-pretty": "^10.2.3"
     },
     "devDependencies": {
-        "@river-build/mls-rs-wasm-node": "^0.0.8",
+        "@river-build/mls-rs-wasm-node": "^0.0.9",
         "@types/debug": "^4.1.8",
         "@types/lodash": "^4.14.186",
         "@types/node": "^20.5.0",
