@@ -35,7 +35,7 @@ impl river_mls_protocol::msl_server::Msl for MslService {
         let mut reply = InfoResponse::default();
         reply.graffiti = "MLS Service welcomes you".to_string();
         reply.git = env!("GIT_HASH").to_string();
-        
+
         Ok(Response::new(reply))
     }
 }

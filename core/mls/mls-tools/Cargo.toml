@@ -8,9 +8,9 @@ resolver = "2"
 version = "0.0.0-beta.0"
 edition = "2021"
 rust-version = "1.78"
-license = "Apache-2.0"
+license = "MIT"
 homepage = "https://river.build"
-repository = "https://github.com/bas-vk/river-rs"
+repository = "https://github.com/river-build/river"
 exclude = [".github/"]
 
 [workspace.lints]
