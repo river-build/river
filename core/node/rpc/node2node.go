@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"google.golang.org/protobuf/encoding/protojson"
+
 	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/utils"
 
@@ -89,6 +91,8 @@ func (s *Service) newEventReceived(
 	if err != nil {
 		return nil, err
 	}
+
+	dlog.FromCtx(ctx).Error("NewEventReceived", "stream", streamId, "event", protojson.Format(req.Event))
 
 	// TODO: check request is signed by correct node
 	parsedEvent, err := ParseEvent(req.Event)

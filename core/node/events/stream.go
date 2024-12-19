@@ -682,6 +682,10 @@ func (s *streamImpl) GetMiniblocks(
 // AddEvent adds an event to the stream.
 // AddEvent is thread-safe.
 func (s *streamImpl) AddEvent(ctx context.Context, event *ParsedEvent) error {
+	log := dlog.FromCtx(ctx)
+	log.Error("localStream AddEvent", "stream", s.streamId, "event", event)
+	defer log.Error("localStream AddEvent complete", "stream", s.streamId, "event", event)
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.loadInternal(ctx); err != nil {
