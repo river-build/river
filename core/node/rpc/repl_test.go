@@ -44,6 +44,7 @@ func TestReplAdd(t *testing.T) {
 
 	wallet, err := crypto.NewWallet(ctx)
 	require.NoError(err)
+	dlog.FromCtx(tt.ctx).Error("Start test")
 	streamId, cookie, _, err := createUserSettingsStream(
 		ctx,
 		wallet,
