@@ -1,4 +1,4 @@
-use river_mls_protocol::{msl_server::MslServer, InfoRequest, InfoResponse};
+use river_mls_protocol::{mls_server::MlsServer, InfoRequest, InfoResponse};
 
 use std::path::Path;
 #[cfg(unix)]
@@ -10,10 +10,10 @@ use tonic::{transport::Server, Request, Response, Status};
 use river_mls_protocol::{InitialGroupInfoRequest, InitialGroupInfoResponse};
 
 #[derive(Default, Debug)]
-pub struct MslService {}
+pub struct MlsService {}
 
 #[tonic::async_trait]
-impl river_mls_protocol::msl_server::Msl for MslService {
+impl river_mls_protocol::mls_server::Mls for MlsService {
     async fn initial_group_info(&self, request: Request<InitialGroupInfoRequest>)
         -> Result<Response<InitialGroupInfoResponse>, Status> {
 
@@ -47,12 +47,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = "/tmp/mls_service";
     std::fs::create_dir_all(Path::new(path).parent().unwrap())?;
 
-    let msl_service = MslService::default();
+    let mls_service = MlsService::default();
     let uds = UnixListener::bind(path)?;
     let uds_stream = UnixListenerStream::new(uds);
 
     Server::builder()
-        .add_service(MslServer::new(msl_service))
+        .add_service(MlsServer::new(mls_service))
         .serve_with_incoming(uds_stream)
         .await?;
 

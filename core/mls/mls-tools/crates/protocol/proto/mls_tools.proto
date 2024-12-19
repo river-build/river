@@ -55,7 +55,7 @@ message InfoResponse {
     string git = 2;
 }
 
-service Msl {
+service Mls {
     rpc Info(InfoRequest) returns(InfoResponse) {}
     rpc InitialGroupInfo(InitialGroupInfoRequest)  returns(InitialGroupInfoResponse) {}
 }
