@@ -112,7 +112,8 @@ contract ProxyBatchDelegationTest is BaseSetup, IMainnetDelegationBase {
   }
 
   function test_sendDelegations(
-    bool firstHalf
+    bool firstHalf,
+    uint256 seed
   )
     external
     givenUsersHaveTokens
@@ -129,9 +130,7 @@ contract ProxyBatchDelegationTest is BaseSetup, IMainnetDelegationBase {
     uint256 halfSize = end - start;
 
     // Pick a random index within the chosen half
-    uint256 randomIndex = start +
-      (uint256(keccak256(abi.encodePacked(block.timestamp, block.number))) %
-        halfSize);
+    uint256 randomIndex = start + (seed % halfSize);
 
     address randomUser = _users[randomIndex];
 
