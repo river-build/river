@@ -3,7 +3,7 @@ FROM golang:1.23.3-alpine3.20 as builder
 
 # Install build-base for GCC (C compiler and related tools), git, and other dependencies.
 # Install libsecp256k1-dev if available or compile it from source.
-RUN apk add --no-cache build-base git libsecp256k1-dev
+RUN apk add --no-cache build-base git libsecp256k1-dev cargo
 
 ARG VER_VERSION=version_unset
 ARG VER_BRANCH=branch_unset
@@ -22,6 +22,12 @@ RUN go build \
     -ldflags="-X github.com/river-build/river/core/river_node/version.version=$VER_VERSION -X github.com/river-build/river/core/river_node/version.branch=$VER_BRANCH -X github.com/river-build/river/core/river_node/version.commit=$VER_COMMIT" \
     ./river_node
 
+# Build mls-tools
+WORKDIR /build/mls/mls-tools
+RUN cargo build --release
+RUN mv -f ./target/release/mls-tools /bin/mls-tools
+RUN /bin/mls-tools version
+
 # Final stage
 FROM alpine:latest
 LABEL org.opencontainers.image.title="River Node" \
@@ -30,11 +36,12 @@ LABEL org.opencontainers.image.title="River Node" \
     org.opencontainers.image.licenses="MIT"
 
 # Install dependencies
-RUN apk add --no-cache libcap curl && \
+RUN apk add --no-cache libcap curl libgcc libstdc++ ncurses-libs && \
     adduser -D riveruser
 
 COPY docker/run.sh /etc/run.sh
 COPY --from=builder /bin/river_node /usr/bin/river_node
+COPY --from=builder /bin/mls-tools /usr/bin/mls-tools
 
 # Use setcap to allow the web server binary to bind to privileged ports
 RUN setcap 'cap_net_bind_service=+ep' /usr/bin/river_node
