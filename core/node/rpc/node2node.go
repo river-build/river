@@ -4,6 +4,9 @@ import (
 	"context"
 	"time"
 
+	"google.golang.org/protobuf/encoding/protojson"
+
+	"github.com/river-build/river/core/node/dlog"
 	"github.com/river-build/river/core/node/utils"
 
 	"connectrpc.com/connect"
@@ -18,6 +21,7 @@ func (s *Service) AllocateStream(
 	ctx context.Context,
 	req *connect.Request[AllocateStreamRequest],
 ) (*connect.Response[AllocateStreamResponse], error) {
+	dlog.FromCtx(ctx).Error("Allocate stream", "streamId", req.Msg.StreamId)
 	ctx, log := utils.CtxAndLogForRequest(ctx, req)
 	ctx, cancel := utils.UncancelContext(ctx, 10*time.Second, 20*time.Second)
 	defer cancel()
@@ -87,6 +91,8 @@ func (s *Service) newEventReceived(
 	if err != nil {
 		return nil, err
 	}
+
+	dlog.FromCtx(ctx).Error("NewEventReceived", "stream", streamId, "event", protojson.Format(req.Event))
 
 	// TODO: check request is signed by correct node
 	parsedEvent, err := ParseEvent(req.Event)
