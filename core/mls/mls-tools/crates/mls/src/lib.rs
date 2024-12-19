@@ -184,7 +184,7 @@ mod tests {
     };
     const CIPHERSUITE: CipherSuite = CipherSuite::P256_AES128;
     use mls_rs::mls_rules::{CommitOptions, DefaultMlsRules};
-    use mls_tools::mls_validation_request;
+    use river_mls_protocol::mls_validation_request;
     type ClientConfig = WithIdentityProvider<BasicIdentityProvider, WithCryptoProvider<RustCryptoProvider, BaseConfig>>;
     type ProviderCipherSuite = <RustCryptoProvider as CryptoProvider>::CipherSuiteProvider;
     
@@ -313,10 +313,9 @@ mod tests {
             commits: commits.iter().map(|commit| commit.to_bytes().unwrap()).collect(),
             proposed_external_join_info_message: alice_group_info_message.to_bytes().unwrap(),
             proposed_external_join_commit: alice_commit.to_bytes().unwrap(),
-            special_fields: SpecialFields::default(),
         };
         let result = validate_external_join_request(request);
-        assert_eq!(result.result, ValidationResult::VALID.into());
+        assert_eq!(result.result, ValidationResult::Valid.into());
     }
 
 }
