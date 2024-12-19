@@ -1,24 +1,20 @@
-#[path = "./mls_tools.rs"]
-pub mod mls_tools;
-
-use mls_tools::mls_validation_request::ExternalJoinRequest;
-use mls_tools::mls_validation_request::InitialGroupInfoRequest;
-use mls_tools::mls_validation_response::ValidationResult;
-use mls_tools::MlsValidationResponse;
 use mls_rs::extension::built_in::ExternalPubExt;
-use mls_rs::external_client::ExternalSnapshot;
-use protobuf::SpecialFields;
+use mls_rs::external_client::*;
+use mls_rs::MlsMessage;
 use mls_rs::external_client::builder::ExternalBaseConfig;
 use mls_rs::external_client::builder::WithCryptoProvider as ExternalWithCryptoProvider;
 use mls_rs::external_client::builder::WithIdentityProvider as ExternalWithIdentityProvider;
 use mls_rs::external_client::ExternalClient;
 use mls_rs::identity::basic::BasicIdentityProvider;
-
-use mls_rs::MlsMessage;
 use mls_rs_crypto_rustcrypto::RustCryptoProvider;
+
+use river_mls_protocol::mls_validation_response::*;
+use river_mls_protocol::mls_validation_request::*;
+use river_mls_protocol::MlsValidationResponse;
+
 type ExternalConfig = ExternalWithIdentityProvider<
-BasicIdentityProvider,
-ExternalWithCryptoProvider<RustCryptoProvider, ExternalBaseConfig>,
+    BasicIdentityProvider,
+    ExternalWithCryptoProvider<RustCryptoProvider, ExternalBaseConfig>,
 >;
 
 fn create_external_client() -> ExternalClient<ExternalConfig> {
@@ -34,64 +30,57 @@ pub fn validate_initial_group_info_request(request: InitialGroupInfoRequest) -> 
     let external_client = create_external_client();
     let group_info_message = match MlsMessage::from_bytes(&request.group_info_message) {
         Ok(group_info_message) => group_info_message,
-        Err(_) => return MlsValidationResponse { result: ValidationResult::INVALID_GROUP_INFO.into(), special_fields: SpecialFields::default() }
+        Err(_) => return MlsValidationResponse { result: ValidationResult::InvalidGroupInfo.into() }
     };
 
     let external_group_snapshot = match ExternalSnapshot::from_bytes(&request.external_group_snapshot) {
         Ok(external_group_snapshot) => external_group_snapshot,
-        Err(_) => return MlsValidationResponse { 
-            result: ValidationResult::INVALID_EXTERNAL_GROUP.into(), 
-            special_fields: SpecialFields::default() 
+        Err(_) => return MlsValidationResponse {
+            result: ValidationResult::InvalidExternalGroup.into(),
         }
     };
-    
+
     let external_group = match external_client.load_group(external_group_snapshot) {
         Ok(group) => group,
-        Err(_) => return MlsValidationResponse { 
-            result: ValidationResult::INVALID_EXTERNAL_GROUP.into(), 
-            special_fields: SpecialFields::default() 
+        Err(_) => return MlsValidationResponse {
+            result: ValidationResult::InvalidExternalGroup.into(),
         }
     };
 
     let group_info = match group_info_message.into_group_info() {
         Some(group_info) => group_info,
-        None => return MlsValidationResponse { 
-            result: ValidationResult::INVALID_GROUP_INFO.into(), 
-            special_fields: SpecialFields::default() 
+        None => return MlsValidationResponse {
+            result: ValidationResult::InvalidGroupInfo.into(),
         }
     };
 
     if group_info.group_context().epoch() != 0 {
         return MlsValidationResponse {
-            result: ValidationResult::INVALID_GROUP_INFO_EPOCH.into(),
-            special_fields: SpecialFields::default(),
+            result: ValidationResult::InvalidGroupInfoEpoch.into(),
         };
     }
 
     if external_group.group_context().epoch() != 0 {
         return MlsValidationResponse {
-            result: ValidationResult::INVALID_EXTERNAL_GROUP_EPOCH.into(),
-            special_fields: SpecialFields::default(),
+            result: ValidationResult::InvalidExternalGroupEpoch.into(),
         };
     }
 
     match group_info.extensions().get_as::<ExternalPubExt>() {
-        Ok(extensions) => {        
+        Ok(extensions) => {
             match extensions {
                 Some(_) => {}
                 None => {
                     println!("no external pub extension");
                     return MlsValidationResponse {
-                        result: ValidationResult::INVALID_GROUP_INFO_MISSING_PUB_KEY_EXTENSION.into(),
-                        special_fields: SpecialFields::default(),
+                        result: ValidationResult::InvalidGroupInfoMissingPubKeyExtension.into(),
                     };
                 }
             }
         }
         Err(_) => {
             return MlsValidationResponse {
-                result: ValidationResult::INVALID_GROUP_INFO.into(),
-                special_fields: SpecialFields::default(),
+                result: ValidationResult::InvalidGroupInfo.into(),
             };
         }
     }
@@ -100,14 +89,12 @@ pub fn validate_initial_group_info_request(request: InitialGroupInfoRequest) -> 
         Ok(_) => {}
         Err(_) => {
             return MlsValidationResponse {
-                result: ValidationResult::INVALID_EXTERNAL_GROUP_MISSING_TREE.into(),
-                special_fields: SpecialFields::default(),
+                result: ValidationResult::InvalidExternalGroupMissingTree.into(),
             };
         }
     }
     return MlsValidationResponse {
-        result: ValidationResult::VALID.into(),
-        special_fields: SpecialFields::default(),
+        result: ValidationResult::Valid.into(),
     };
 }
 
@@ -117,78 +104,68 @@ pub fn validate_external_join_request(request: ExternalJoinRequest) -> MlsValida
 
     let external_group_snapshot = match ExternalSnapshot::from_bytes(&request.external_group_snapshot) {
         Ok(external_group_snapshot) => external_group_snapshot,
-        Err(_) => return MlsValidationResponse { 
-            result: ValidationResult::INVALID_EXTERNAL_GROUP.into(), 
-            special_fields: SpecialFields::default() 
+        Err(_) => return MlsValidationResponse {
+            result: ValidationResult::InvalidExternalGroup.into(),
         }
     };
 
     let mut external_group = match external_client.load_group(external_group_snapshot) {
         Ok(group) => group,
-        Err(_) => return MlsValidationResponse { 
-            result: ValidationResult::INVALID_EXTERNAL_GROUP.into(), 
-            special_fields: SpecialFields::default() 
+        Err(_) => return MlsValidationResponse {
+            result: ValidationResult::InvalidExternalGroup.into(),
         }
     };
 
     for commit_bytes in request.commits {
         let commit = match MlsMessage::from_bytes(&commit_bytes) {
             Ok(commit) => commit,
-            Err(_) => return MlsValidationResponse { 
-                result: ValidationResult::INVALID_COMMIT.into(), 
-                special_fields: SpecialFields::default() 
+            Err(_) => return MlsValidationResponse {
+                result: ValidationResult::InvalidCommit.into(),
             }
         };
-        
+
         if external_group.process_incoming_message(commit).is_err() {
             return MlsValidationResponse {
-                result: ValidationResult::INVALID_COMMIT.into(),
-                special_fields: SpecialFields::default(),
+                result: ValidationResult::InvalidCommit.into(),
             };
         }
     }
 
     let proposed_group_info_mls_message = match MlsMessage::from_bytes(&request.proposed_external_join_info_message) {
         Ok(group_info_message) => group_info_message,
-        Err(_) => return MlsValidationResponse { 
-            result: ValidationResult::INVALID_GROUP_INFO.into(), 
-            special_fields: SpecialFields::default() 
+        Err(_) => return MlsValidationResponse {
+            result: ValidationResult::InvalidGroupInfo.into(),
         }
     };
 
     let proposed_group_info_message = match proposed_group_info_mls_message.into_group_info() {
         Some(group_info) => group_info,
-        None => return MlsValidationResponse { 
-            result: ValidationResult::INVALID_GROUP_INFO.into(), 
-            special_fields: SpecialFields::default() 
+        None => return MlsValidationResponse {
+            result: ValidationResult::InvalidGroupInfo.into(),
         }
     };
-    
+
     if proposed_group_info_message.group_context().epoch() != external_group.group_context().epoch() + 1 {
         return MlsValidationResponse {
-            result: ValidationResult::INVALID_GROUP_INFO_EPOCH.into(),
-            special_fields: SpecialFields::default(),
+            result: ValidationResult::InvalidExternalGroupEpoch.into(),
         };
     }
 
     let proposed_external_join_commit = match MlsMessage::from_bytes(&request.proposed_external_join_commit) {
         Ok(commit) => commit,
-        Err(_) => return MlsValidationResponse { 
-            result: ValidationResult::INVALID_COMMIT.into(), 
-            special_fields: SpecialFields::default() 
+        Err(_) => return MlsValidationResponse {
+            result: ValidationResult::InvalidCommit.into(),
         }
     };
 
     if proposed_external_join_commit.epoch() != Some(external_group.group_context().epoch()) {
         return MlsValidationResponse {
-            result: ValidationResult::INVALID_GROUP_INFO_EPOCH.into(),
-            special_fields: SpecialFields::default(),
+            result: ValidationResult::InvalidExternalGroupEpoch.into(),
         };
     }
 
     return MlsValidationResponse {
-        result: ValidationResult::VALID.into(),
-        special_fields: SpecialFields::default(),
+        result: ValidationResult::Valid.into(),
     };
 }
 
@@ -225,7 +202,7 @@ mod tests {
     ) -> (SignatureSecretKey, SigningIdentity) {
         let cipher_suite = cipher_suite_provider(crypto_provider);
         let (secret, public) = cipher_suite.signature_key_generate().unwrap();
-        
+
         let basic_identity = BasicCredential::new(name.to_vec());
         let signing_identity = SigningIdentity::new(basic_identity.into_credential(), public);
         (secret, signing_identity)
@@ -278,11 +255,10 @@ mod tests {
         let request = InitialGroupInfoRequest {
             group_info_message: bob_group_info_message.to_bytes().unwrap(),
             external_group_snapshot: external_group_snapshot.to_bytes().unwrap(),
-            special_fields: SpecialFields::default(),
         };
 
         let response = validate_initial_group_info_request(request);
-        assert_eq!(response.result, ValidationResult::VALID.into());
+        assert_eq!(response.result, ValidationResult::Valid.into());
     }
 
     #[test]
@@ -300,11 +276,10 @@ mod tests {
         let request = InitialGroupInfoRequest {
             group_info_message: bob_group_info_message.to_bytes().unwrap(),
             external_group_snapshot: external_group_snapshot.to_bytes().unwrap(),
-            special_fields: SpecialFields::default(),
         };
 
         let response = validate_initial_group_info_request(request);
-        assert_eq!(response.result, ValidationResult::INVALID_GROUP_INFO_MISSING_PUB_KEY_EXTENSION.into());
+        assert_eq!(response.result, ValidationResult::InvalidGroupInfoMissingPubKeyExtension.into());
     }
 
     #[test]
