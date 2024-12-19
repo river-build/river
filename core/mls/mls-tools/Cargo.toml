@@ -1,0 +1,10 @@
+[package]
+name = "mls-tools"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+mls-rs = { version = "0.43.1", features = ["external_client"] }
+mls-rs-crypto-rustcrypto = { version = "0.12.0", default-features = false, features = ["std"] }
+protobuf = "3.7.1"
+protobuf-json-mapping = "3.7.1"

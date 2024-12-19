@@ -1,0 +1,6 @@
+default:
+    just --list
+
+build-protobufs:
+    protoc --rs_out ./src/lib ./protos/mls_tools.proto
+
