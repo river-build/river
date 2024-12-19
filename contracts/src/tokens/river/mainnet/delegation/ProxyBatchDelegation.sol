@@ -2,23 +2,23 @@
 pragma solidity ^0.8.23;
 
 // interfaces
-import {ICrossDomainMessenger} from "./ICrossDomainMessenger.sol";
+import {IVotesEnumerable} from "contracts/src/diamond/facets/governance/votes/enumerable/IVotesEnumerable.sol";
+import {IAuthorizedClaimers} from "contracts/src/tokens/river/mainnet/claimer/IAuthorizedClaimers.sol";
 import {IMainnetDelegation} from "contracts/src/tokens/river/base/delegation/IMainnetDelegation.sol";
+import {ICrossDomainMessenger} from "./ICrossDomainMessenger.sol";
 import {IProxyBatchDelegation} from "./IProxyBatchDelegation.sol";
 
 // libraries
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
 // contracts
-import {River} from "contracts/src/tokens/river/mainnet/River.sol";
-import {AuthorizedClaimers} from "contracts/src/tokens/river/mainnet/claimer/AuthorizedClaimers.sol";
 
 contract ProxyBatchDelegation is IProxyBatchDelegation {
   address public immutable MESSENGER;
   address public immutable TARGET;
 
-  River internal immutable rvr;
-  AuthorizedClaimers internal immutable claimers;
+  address public immutable RIVER;
+  IAuthorizedClaimers public immutable CLAIMERS;
 
   constructor(
     address _rvr,
@@ -26,51 +26,41 @@ contract ProxyBatchDelegation is IProxyBatchDelegation {
     address _messenger,
     address _target
   ) {
-    rvr = River(_rvr);
-    claimers = AuthorizedClaimers(_claimers);
-
+    RIVER = _rvr;
+    CLAIMERS = IAuthorizedClaimers(_claimers);
     MESSENGER = _messenger;
     TARGET = _target;
   }
 
   function sendAuthorizedClaimers(uint32 minGasLimit) external {
-    address[] memory delegators = rvr.getDelegators();
+    address[] memory delegators = IVotesEnumerable(RIVER).getDelegators();
     uint256 length = delegators.length;
     address[] memory authorizedClaimers = new address[](length);
 
     for (uint256 i; i < length; ++i) {
-      authorizedClaimers[i] = claimers.getAuthorizedClaimer(delegators[i]);
+      authorizedClaimers[i] = CLAIMERS.getAuthorizedClaimer(delegators[i]);
     }
 
     ICrossDomainMessenger(MESSENGER).sendMessage(
       TARGET,
-      abi.encodeWithSelector(
-        IMainnetDelegation.setBatchAuthorizedClaimers.selector,
-        delegators,
-        authorizedClaimers
+      abi.encodeCall(
+        IMainnetDelegation.setBatchAuthorizedClaimers,
+        (delegators, authorizedClaimers)
       ),
       minGasLimit
     );
   }
 
-  function sendDelegators(uint32 minGasLimit, uint8 half) external {
-    address[] memory allDelegators = rvr.getDelegators();
-    uint256 length = allDelegators.length;
-    uint256 halfLength = length / 2;
-
+  function sendDelegators(uint32 minGasLimit, bool firstHalf) external {
+    address[] memory allDelegators = IVotesEnumerable(RIVER).getDelegators();
     uint256 start;
     uint256 end;
-    uint256 sliceLength;
-
-    if (half == 0) {
-      start = 0;
-      end = halfLength;
-      sliceLength = halfLength;
-    } else {
-      start = halfLength;
-      end = length;
-      sliceLength = length - halfLength;
+    {
+      uint256 length = allDelegators.length;
+      uint256 halfLength = length >> 1;
+      (start, end) = firstHalf ? (0, halfLength) : (halfLength, length);
     }
+    uint256 sliceLength = end - start;
 
     address[] memory delegators = new address[](sliceLength);
     address[] memory delegates = new address[](sliceLength);
@@ -82,23 +72,17 @@ contract ProxyBatchDelegation is IProxyBatchDelegation {
     for (uint256 i = start; i < end; ++i) {
       address delegator = allDelegators[i];
       delegators[arrayIndex] = delegator;
-      authorizedClaimers[arrayIndex] = claimers.getAuthorizedClaimer(delegator);
-      delegates[arrayIndex] = _delegates(address(rvr), delegator);
-      quantities[arrayIndex] = SafeTransferLib.balanceOf(
-        address(rvr),
-        delegator
-      );
-      arrayIndex++;
+      authorizedClaimers[arrayIndex] = CLAIMERS.getAuthorizedClaimer(delegator);
+      delegates[arrayIndex] = _delegates(RIVER, delegator);
+      quantities[arrayIndex] = SafeTransferLib.balanceOf(RIVER, delegator);
+      ++arrayIndex;
     }
 
     ICrossDomainMessenger(MESSENGER).sendMessage(
       TARGET,
-      abi.encodeWithSelector(
-        IMainnetDelegation.setBatchDelegation.selector,
-        delegators,
-        delegates,
-        authorizedClaimers,
-        quantities
+      abi.encodeCall(
+        IMainnetDelegation.setBatchDelegation,
+        (delegators, delegates, authorizedClaimers, quantities)
       ),
       minGasLimit
     );
