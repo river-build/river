@@ -69,6 +69,8 @@ func (q *QuorumPool) executeRemote(
 		tags := []any{"error", err, "node", node}
 		tags = append(tags, q.tags...)
 		dlog.FromCtx(ctx).Warn("QuorumPool: GoRemotes: Error", tags...)
+	} else if err != nil {
+		dlog.FromCtx(ctx).Error("Context cancellation executeRemote", "node", node, "f", f)
 	}
 }
 
