@@ -735,7 +735,8 @@ func (s *streamImpl) addEventLocked(ctx context.Context, event *ParsedEvent) err
 	// for those, perhaps entire Stream structure should be scrapped and reloaded
 	if err != nil {
 		return AsRiverError(err, Err_DB_OPERATION_FAILURE).
-			Tag("inMemoryBlocks", len(s.view().blocks))
+			Tag("inMemoryBlocks", len(s.view().blocks)).
+			Tag("inMemoryEvents", s.view().minipool.events)
 	}
 
 	s.setView(newSV)

@@ -473,6 +473,7 @@ func mbProduceCandiate_Make(
 	forceSnapshot bool,
 	remoteNodes []common.Address,
 ) (*MiniblockInfo, error) {
+	dlog.FromCtx(ctx).Error("Making miniblock for stream", "stream", view.streamId)
 	localProposal, err := view.ProposeNextMiniblock(ctx, params.ChainConfig.Get(), forceSnapshot)
 	if err != nil {
 		return nil, err
@@ -658,6 +659,8 @@ func (p *miniblockProducer) submitProposalBatch(ctx context.Context, proposals [
 					"err",
 					err,
 				)
+			} else {
+				log.Error("applied miniblock", "stream", job.stream.streamId, "hash", job.candidate.headerEvent.Hash)
 			}
 		}
 		p.jobDone(ctx, job)
