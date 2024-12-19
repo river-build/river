@@ -70,7 +70,7 @@ contract ForkProxyBatchDelegationTest is TestUtils {
     assertGt(message.length, 0, "message not found");
 
     // switch to the base fork
-    vm.createSelectFork("base", 23920000);
+    vm.createSelectFork("base", 23925711);
 
     address getMessenger = IMainnetDelegation(BASE_REGISTRY).getMessenger();
     vm.etch(getMessenger, type(MockMessenger).runtimeCode);
