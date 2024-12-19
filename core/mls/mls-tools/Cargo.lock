@@ -1555,37 +1555,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "protobuf"
-version = "3.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3a7c64d9bf75b1b8d981124c14c179074e8caa7dfe7b6a12e6222ddcd0c8f72"
-dependencies = [
- "once_cell",
- "protobuf-support",
- "thiserror",
-]
-
-[[package]]
-name = "protobuf-json-mapping"
-version = "3.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b445cf83c9303695e6c423d269759e139b6182d2f1171e18afda7078a764336"
-dependencies = [
- "protobuf",
- "protobuf-support",
- "thiserror",
-]
-
-[[package]]
-name = "protobuf-support"
-version = "3.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b088fd20b938a875ea00843b6faf48579462630015c3788d397ad6a786663252"
-dependencies = [
- "thiserror",
-]
-
-[[package]]
 name = "quote"
 version = "1.0.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2233,16 +2202,6 @@ dependencies = [
  "prost-types",
  "quote",
  "syn 2.0.90",
-]
-
-[[package]]
-name = "tool"
-version = "0.0.0-beta.0"
-dependencies = [
- "protobuf-json-mapping",
- "river-mls",
- "river-mls-protocol",
- "serde_json",
 ]
 
 [[package]]

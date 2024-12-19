@@ -5,12 +5,11 @@ use std::path::Path;
 use tokio::net::UnixListener;
 #[cfg(unix)]
 use tokio_stream::wrappers::UnixListenerStream;
-#[cfg(unix)]
-use tonic::transport::server::UdsConnectInfo;
+
 use tonic::{transport::Server, Request, Response, Status};
 use river_mls_protocol::{InitialGroupInfoRequest, InitialGroupInfoResponse};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct MslService {}
 
 #[tonic::async_trait]
