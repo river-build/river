@@ -729,7 +729,7 @@ func (s *PostgresStreamStore) writeEventTx(
 		return RiverError(Err_DB_OPERATION_FAILURE, "Wrong number of records in minipool").
 			Tag("ActualRecordsNumber", counter).Tag("ExpectedRecordsNumber", minipoolSlot).
 			Tag("maxSeqNum", seqNum).Tag("mbErr", mbErr)
-	}	}
+	}
 
 	// All checks passed - we need to insert event into minipool
 	_, err = tx.Exec(
