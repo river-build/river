@@ -276,7 +276,15 @@ register-nodes-river: config-river-chain config-instances just-register-nodes-ri
 
 config: config-root register-nodes-base register-nodes-river storage-start
 
-build:
+_build-mls:
+    #!/usr/bin/env -S bash {{BASH_OPTS}}
+    OUTPUT=${RUN_BASE}/bin/mls_service
+    echo "Building MLS ${OUTPUT}"
+    mkdir -p ${RUN_BASE}/bin
+    cargo build --release --manifest-path ../mls/mls-tools/crates/service/Cargo.toml
+    mv ../mls/mls-tools/target/release/service ${OUTPUT}
+
+_build-node:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
     source ${ENV_FILE}
     OUTPUT=${RUN_BASE}/bin/river_node
@@ -287,6 +295,8 @@ build:
         -race \
         -ldflags="-X github.com/river-build/river/core/river_node/version.branch=$(git rev-parse --abbrev-ref HEAD) -X github.com/river-build/river/core/river_node/version.commit=$(git describe --tags --always --dirty)" \
         ./river_node/main.go
+
+build: _build-mls _build-node
 
 _run-node $INSTANCE_NUM $INSTANCE_DIR:
     #!/usr/bin/env -S bash {{BASH_OPTS}}
