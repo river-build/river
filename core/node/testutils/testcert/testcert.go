@@ -108,7 +108,7 @@ func GetHttp2LocalhostTLSClient(ctx context.Context, cfg *config.Config) (*http.
 			// This setting limits the duration of attempting to establish a connection to
 			// another node.
 			DialContext: (&net.Dialer{
-				Timeout:   500 * time.Millisecond,
+				Timeout:   2 * time.Second,
 				KeepAlive: 30 * time.Second,
 			}).DialContext,
 
